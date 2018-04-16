@@ -1458,6 +1458,55 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
   }
 }
 
+/* Helper function: Set up periodic_events[] that only matches the given
+ * roles. */
+static void
+setup_periodic_events_by_roles(uint32_t roles)
+{
+  for (int i = 0; periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &periodic_events[i];
+    if (item->roles & roles) {
+      periodic_event_setup(item);
+    }
+  }
+}
+
+/* Helper function: Set up all events in periodic_events[] and filter them by
+ * roles for which we are configured for. */
+static void
+setup_periodic_events(void)
+{
+  const or_options_t *options = get_options();
+
+  /* At this stage, we are booting up so we need to know for which roles this
+   * tor instance has. */
+  int is_bridge = options->BridgeRelay;
+  int is_client = any_client_port_set(options);
+  int is_relay = server_mode(options);
+  int is_dirauth = authdir_mode_v3(options);
+  int is_bridgeauth = authdir_mode_bridge(options);
+  int is_hidden_service = !!hs_service_get_num_services();
+
+  if (is_bridge) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_BRIDGE);
+  }
+  if (is_client) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_CLIENT);
+  }
+  if (is_relay) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_RELAY);
+  }
+  if (is_dirauth) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_DIRAUTH);
+  }
+  if (is_bridgeauth) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_BRIDGEAUTH);
+  }
+  if (is_hidden_service) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_HS_SERVICE);
+  }
+}
+
 /** Set up all the members of periodic_events[], and configure them all to be
  * launched from a callback. */
 STATIC void
@@ -1466,10 +1515,8 @@ initialize_periodic_events(void)
   tor_assert(periodic_events_initialized == 0);
   periodic_events_initialized = 1;
 
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_setup(&periodic_events[i]);
-  }
+  /* Set the periodic events which will be done by roles. */
+  setup_periodic_events();
 
 #define NAMED_CALLBACK(name) \
   STMT_BEGIN name ## _event = find_periodic_event( #name ); STMT_END

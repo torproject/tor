@@ -140,6 +140,8 @@ void vote_routerstatus_free_(vote_routerstatus_t *rs);
 #define vote_routerstatus_free(rs) \
   FREE_AND_NULL(vote_routerstatus_t, vote_routerstatus_free_, (rs))
 
+int any_client_port_set(const or_options_t *options);
+
 #ifdef NETWORKSTATUS_PRIVATE
 #ifdef TOR_UNIT_TESTS
 STATIC int networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
