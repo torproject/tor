@@ -2464,7 +2464,7 @@ count_acceptable_nodes, (smartlist_t *nodes))
     if (! node->is_valid)
 //      log_debug(LD_CIRC,"Nope, the directory says %d is not valid.",i);
       continue;
-    if (! node_has_descriptor(node))
+    if (! node_has_any_descriptor(node))
       continue;
     /* The node has a descriptor, so we can just check the ntor key directly */
     if (!node_has_curve25519_onion_key(node))

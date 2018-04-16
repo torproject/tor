@@ -3498,7 +3498,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       connection_printf_to_buf(conn, "552 No such router \"%s\"\r\n", n);
       goto done;
     }
-    if (!node_has_descriptor(node)) {
+    if (!node_has_any_descriptor(node)) {
       connection_printf_to_buf(conn, "552 No descriptor for \"%s\"\r\n", n);
       goto done;
     }

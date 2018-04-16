@@ -2758,7 +2758,7 @@ frac_nodes_with_descriptors(const smartlist_t *sl,
       total <= 0.0) {
     int n_with_descs = 0;
     SMARTLIST_FOREACH(sl, const node_t *, node, {
-      if (node_has_descriptor(node))
+      if (node_has_any_descriptor(node))
         n_with_descs++;
     });
     return ((double)n_with_descs) / (double)smartlist_len(sl);
@@ -2766,7 +2766,7 @@ frac_nodes_with_descriptors(const smartlist_t *sl,
 
   present = 0.0;
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
-    if (node_has_descriptor(node))
+    if (node_has_any_descriptor(node))
       present += bandwidths[node_sl_idx];
   } SMARTLIST_FOREACH_END(node);
 
