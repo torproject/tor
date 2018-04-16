@@ -1419,7 +1419,9 @@ reset_all_main_loop_timers(void)
 {
   int i;
   for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_reschedule(&periodic_events[i]);
+    if (periodic_event_is_enabled(&periodic_events[i])) {
+      periodic_event_reschedule(&periodic_events[i]);
+    }
   }
 }
 
@@ -1454,7 +1456,9 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
   tor_event_free(initialize_periodic_events_event);
   int i;
   for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_launch(&periodic_events[i]);
+    if (periodic_event_is_enabled(&periodic_events[i])) {
+      periodic_event_launch(&periodic_events[i]);
+    }
   }
 }
 
@@ -1465,7 +1469,9 @@ setup_periodic_events_by_roles(uint32_t roles)
 {
   for (int i = 0; periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &periodic_events[i];
-    if (item->roles & roles) {
+    /* Only set up if the roles matches and if the event isn't already
+     * enabled. */
+    if ((item->roles & roles) && !periodic_event_is_enabled(item)) {
       periodic_event_setup(item);
     }
   }
@@ -1552,7 +1558,9 @@ void
 reschedule_descriptor_update_check(void)
 {
   tor_assert(check_descriptor_event);
-  periodic_event_reschedule(check_descriptor_event);
+  if (periodic_event_is_enabled(check_descriptor_event)) {
+    periodic_event_reschedule(check_descriptor_event);
+  }
 }
 
 /**
@@ -1565,8 +1573,12 @@ reschedule_directory_downloads(void)
   tor_assert(fetch_networkstatus_event);
   tor_assert(launch_descriptor_fetches_event);
 
-  periodic_event_reschedule(fetch_networkstatus_event);
-  periodic_event_reschedule(launch_descriptor_fetches_event);
+  if (periodic_event_is_enabled(fetch_networkstatus_event)) {
+    periodic_event_reschedule(fetch_networkstatus_event);
+  }
+  if (periodic_event_is_enabled(launch_descriptor_fetches_event)) {
+    periodic_event_reschedule(launch_descriptor_fetches_event);
+  }
 }
 
 #define LONGEST_TIMER_PERIOD (30 * 86400)
@@ -2540,7 +2552,9 @@ dns_servers_relaunch_checks(void)
     dns_reset_correctness_checks();
     if (periodic_events_initialized) {
       tor_assert(check_dns_honesty_event);
-      periodic_event_reschedule(check_dns_honesty_event);
+      if (periodic_event_is_enabled(check_dns_honesty_event)) {
+        periodic_event_reschedule(check_dns_honesty_event);
+      }
     }
   }
 }
