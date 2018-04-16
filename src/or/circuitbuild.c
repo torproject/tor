@@ -1827,7 +1827,7 @@ ap_stream_wants_exit_attention(connection_t *conn)
  * Return NULL if we can't find any suitable routers.
  */
 static const node_t *
-choose_good_exit_server_general(int need_uptime, int need_capacity)
+choose_good_exit_server_general(router_crn_flags_t flags)
 {
   int *n_supported;
   int n_pending_connections = 0;
@@ -1837,6 +1837,9 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
   const or_options_t *options = get_options();
   const smartlist_t *the_nodes;
   const node_t *selected_node=NULL;
+  const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
+  const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
+  const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
 
   connections = get_connection_array();
 
@@ -1869,7 +1872,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
        */
       continue;
     }
-    if (!node_has_preferred_descriptor(node, 0)) {
+    if (!node_has_preferred_descriptor(node, direct_conn)) {
       n_supported[i] = -1;
       continue;
     }
@@ -1982,7 +1985,8 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
                  need_capacity?", fast":"",
                  need_uptime?", stable":"");
         tor_free(n_supported);
-        return choose_good_exit_server_general(0, 0);
+        flags &= ~(CRN_NEED_UPTIME|CRN_NEED_CAPACITY);
+        return choose_good_exit_server_general(flags);
       }
       log_notice(LD_CIRC, "All routers are down or won't exit%s -- "
                  "choosing a doomed exit at random.",
@@ -2229,17 +2233,11 @@ pick_restricted_middle_node(router_crn_flags_t flags,
  * toward the preferences in 'options'.
  */
 static const node_t *
-choose_good_exit_server(origin_circuit_t *circ, int need_uptime,
-                        int need_capacity, int is_internal, int need_hs_v3)
+choose_good_exit_server(origin_circuit_t *circ,
+                        router_crn_flags_t flags, int is_internal)
 {
   const or_options_t *options = get_options();
-  router_crn_flags_t flags = CRN_NEED_DESC;
-  if (need_uptime)
-    flags |= CRN_NEED_UPTIME;
-  if (need_capacity)
-    flags |= CRN_NEED_CAPACITY;
-  if (need_hs_v3)
-    flags |= CRN_RENDEZVOUS_V3;
+  flags |= CRN_NEED_DESC;
 
   switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_HSDIR_GET:
@@ -2253,7 +2251,7 @@ choose_good_exit_server(origin_circuit_t *circ, int need_uptime,
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, options->ExcludeNodes, flags);
       else
-        return choose_good_exit_server_general(need_uptime,need_capacity);
+        return choose_good_exit_server_general(flags);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       {
         /* Pick a new RP */
@@ -2378,15 +2376,22 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
              extend_info_describe(exit_ei));
     exit_ei = extend_info_dup(exit_ei);
   } else { /* we have to decide one */
+    router_crn_flags_t flags = CRN_NEED_DESC;
+    if (state->need_uptime)
+      flags |= CRN_NEED_UPTIME;
+    if (state->need_capacity)
+      flags |= CRN_NEED_CAPACITY;
+    if (is_hs_v3_rp_circuit)
+      flags |= CRN_RENDEZVOUS_V3;
+    if (state->onehop_tunnel)
+      flags |= CRN_DIRECT_CONN;
     const node_t *node =
-      choose_good_exit_server(circ, state->need_uptime,
-                              state->need_capacity, state->is_internal,
-                              is_hs_v3_rp_circuit);
+      choose_good_exit_server(circ, flags, state->is_internal);
     if (!node) {
       log_warn(LD_CIRC,"Failed to choose an exit server");
       return -1;
     }
-    exit_ei = extend_info_from_node(node, 0);
+    exit_ei = extend_info_from_node(node, state->onehop_tunnel);
     if (BUG(exit_ei == NULL))
       return -1;
   }
