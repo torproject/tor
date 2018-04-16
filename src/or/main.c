@@ -1316,34 +1316,34 @@ static int periodic_events_initialized = 0;
 #undef CALLBACK
 #define CALLBACK(name) \
   static int name ## _callback(time_t, const or_options_t *)
-CALLBACK(rotate_onion_key);
-CALLBACK(check_onion_keys_expiry_time);
-CALLBACK(check_ed_keys);
-CALLBACK(launch_descriptor_fetches);
-CALLBACK(rotate_x509_certificate);
 CALLBACK(add_entropy);
-CALLBACK(launch_reachability_tests);
-CALLBACK(downrate_stability);
-CALLBACK(save_stability);
 CALLBACK(check_authority_cert);
-CALLBACK(check_expired_networkstatus);
-CALLBACK(write_stats_file);
-CALLBACK(record_bridge_stats);
-CALLBACK(clean_caches);
-CALLBACK(rend_cache_failure_clean);
-CALLBACK(retry_dns);
-CALLBACK(check_descriptor);
-CALLBACK(check_for_reachability_bw);
-CALLBACK(fetch_networkstatus);
-CALLBACK(retry_listeners);
-CALLBACK(expire_old_ciruits_serverside);
-CALLBACK(check_dns_honesty);
-CALLBACK(write_bridge_ns);
-CALLBACK(heartbeat);
-CALLBACK(clean_consdiffmgr);
-CALLBACK(reset_padding_counts);
 CALLBACK(check_canonical_channels);
+CALLBACK(check_descriptor);
+CALLBACK(check_dns_honesty);
+CALLBACK(check_ed_keys);
+CALLBACK(check_expired_networkstatus);
+CALLBACK(check_for_reachability_bw);
+CALLBACK(check_onion_keys_expiry_time);
+CALLBACK(clean_caches);
+CALLBACK(clean_consdiffmgr);
+CALLBACK(downrate_stability);
+CALLBACK(expire_old_ciruits_serverside);
+CALLBACK(fetch_networkstatus);
+CALLBACK(heartbeat);
 CALLBACK(hs_service);
+CALLBACK(launch_descriptor_fetches);
+CALLBACK(launch_reachability_tests);
+CALLBACK(record_bridge_stats);
+CALLBACK(rend_cache_failure_clean);
+CALLBACK(reset_padding_counts);
+CALLBACK(retry_dns);
+CALLBACK(retry_listeners);
+CALLBACK(rotate_onion_key);
+CALLBACK(rotate_x509_certificate);
+CALLBACK(save_stability);
+CALLBACK(write_bridge_ns);
+CALLBACK(write_stats_file);
 
 #undef CALLBACK
 
@@ -1351,34 +1351,34 @@ CALLBACK(hs_service);
 #define CALLBACK(name) PERIODIC_EVENT(name)
 
 static periodic_event_item_t periodic_events[] = {
-  CALLBACK(rotate_onion_key),
-  CALLBACK(check_onion_keys_expiry_time),
-  CALLBACK(check_ed_keys),
-  CALLBACK(launch_descriptor_fetches),
-  CALLBACK(rotate_x509_certificate),
   CALLBACK(add_entropy),
-  CALLBACK(launch_reachability_tests),
-  CALLBACK(downrate_stability),
-  CALLBACK(save_stability),
   CALLBACK(check_authority_cert),
-  CALLBACK(check_expired_networkstatus),
-  CALLBACK(write_stats_file),
-  CALLBACK(record_bridge_stats),
-  CALLBACK(clean_caches),
-  CALLBACK(rend_cache_failure_clean),
-  CALLBACK(retry_dns),
-  CALLBACK(check_descriptor),
-  CALLBACK(check_for_reachability_bw),
-  CALLBACK(fetch_networkstatus),
-  CALLBACK(retry_listeners),
-  CALLBACK(expire_old_ciruits_serverside),
-  CALLBACK(check_dns_honesty),
-  CALLBACK(write_bridge_ns),
-  CALLBACK(heartbeat),
-  CALLBACK(clean_consdiffmgr),
-  CALLBACK(reset_padding_counts),
   CALLBACK(check_canonical_channels),
+  CALLBACK(check_descriptor),
+  CALLBACK(check_dns_honesty),
+  CALLBACK(check_ed_keys),
+  CALLBACK(check_expired_networkstatus),
+  CALLBACK(check_for_reachability_bw),
+  CALLBACK(check_onion_keys_expiry_time),
+  CALLBACK(clean_caches),
+  CALLBACK(clean_consdiffmgr),
+  CALLBACK(downrate_stability),
+  CALLBACK(expire_old_ciruits_serverside),
+  CALLBACK(fetch_networkstatus),
+  CALLBACK(heartbeat),
   CALLBACK(hs_service),
+  CALLBACK(launch_descriptor_fetches),
+  CALLBACK(launch_reachability_tests),
+  CALLBACK(record_bridge_stats),
+  CALLBACK(rend_cache_failure_clean),
+  CALLBACK(reset_padding_counts),
+  CALLBACK(retry_dns),
+  CALLBACK(retry_listeners),
+  CALLBACK(rotate_onion_key),
+  CALLBACK(rotate_x509_certificate),
+  CALLBACK(save_stability),
+  CALLBACK(write_bridge_ns),
+  CALLBACK(write_stats_file),
   END_OF_PERIODIC_EVENTS
 };
 #undef CALLBACK
