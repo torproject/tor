@@ -5771,6 +5771,10 @@ test_dir_networkstatus_consensus_has_ipv6(void *arg)
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
   tt_assert(has_ipv6);
 
+  mock_networkstatus->consensus_method = MAX_SUPPORTED_CONSENSUS_METHOD + 20;
+  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
+  tt_assert(has_ipv6);
+
   mock_networkstatus->consensus_method =
       MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS + 1;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
