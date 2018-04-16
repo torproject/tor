@@ -2384,7 +2384,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
         const node_t *r;
         int opt = conn->chosen_exit_optional;
         r = node_get_by_nickname(conn->chosen_exit_name, 0);
-        if (r && node_has_descriptor(r)) {
+        if (r && node_has_preferred_descriptor(r, conn->want_onehop ? 1 : 0)) {
           /* We might want to connect to an IPv6 bridge for loading
              descriptors so we use the preferred address rather than
              the primary. */
@@ -2394,7 +2394,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
                      "Discarding this circuit.", conn->chosen_exit_name);
             return -1;
           }
-        } else  { /* ! (r && node_has_descriptor(r)) */
+        } else  { /* ! (r && node_has_preferred_descriptor(...)) */
           log_debug(LD_DIR, "considering %d, %s",
                     want_onehop, conn->chosen_exit_name);
           if (want_onehop && conn->chosen_exit_name[0] == '$') {
