@@ -1,0 +1,4 @@
+  o Major bugfixes (relay, denial of service):
+    - Impose a limit on circuit cell queue size. The limit can be controlled by
+      a consensus parameter. Fixes bug 25226; bugfix on 0.2.4.14-alpha.
+
