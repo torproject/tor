@@ -88,6 +88,8 @@ matrix:
   ## entry under that key outside the "include" clause.
   include:
     - compiler: gcc
+    - compiler: gcc
+      env: COVERAGE_OPTIONS="--enable-coverage"
     ## The "sudo: required" forces non-containerized builds, working
     ## around a Travis CI environment issue: clang LeakAnalyzer fails
     ## because it requires ptrace and the containerized environment no
@@ -100,6 +102,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
   ## Download rustup
   - curl -Ssf -o rustup.sh https://sh.rustup.rs
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
 
 install:
   ## If we're on OSX use brew to install required dependencies (for Linux, see the "apt:" section above)
@@ -113,10 +116,14 @@ install:
 
 script:
   - ./autogen.sh
-  - ./configure $RUST_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening
+  - ./configure $RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - make check
 
 after_failure:
   ## `make check` will leave a log file with more details of test failures.
   - cat test-suite.log
+
+after_success:
+  ## If this build was one that produced coverage, upload it.
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p'; fi
