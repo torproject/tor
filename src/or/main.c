@@ -1458,6 +1458,8 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
   for (i = 0; periodic_events[i].name; ++i) {
     if (periodic_event_is_enabled(&periodic_events[i])) {
       periodic_event_launch(&periodic_events[i]);
+      log_debug(LD_GENERAL, "Launching periodic event %s",
+                periodic_events[i].name);
     }
   }
 }
