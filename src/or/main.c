@@ -1348,37 +1348,54 @@ CALLBACK(write_stats_file);
 #undef CALLBACK
 
 /* Now we declare an array of periodic_event_item_t for each periodic event */
-#define CALLBACK(name) PERIODIC_EVENT(name)
+#define CALLBACK(name, r) PERIODIC_EVENT(name, r)
 
 static periodic_event_item_t periodic_events[] = {
-  CALLBACK(add_entropy),
-  CALLBACK(check_authority_cert),
-  CALLBACK(check_canonical_channels),
-  CALLBACK(check_descriptor),
-  CALLBACK(check_dns_honesty),
-  CALLBACK(check_ed_keys),
-  CALLBACK(check_expired_networkstatus),
-  CALLBACK(check_for_reachability_bw),
-  CALLBACK(check_onion_keys_expiry_time),
-  CALLBACK(clean_caches),
-  CALLBACK(clean_consdiffmgr),
-  CALLBACK(downrate_stability),
-  CALLBACK(expire_old_ciruits_serverside),
-  CALLBACK(fetch_networkstatus),
-  CALLBACK(heartbeat),
-  CALLBACK(hs_service),
-  CALLBACK(launch_descriptor_fetches),
-  CALLBACK(launch_reachability_tests),
-  CALLBACK(record_bridge_stats),
-  CALLBACK(rend_cache_failure_clean),
-  CALLBACK(reset_padding_counts),
-  CALLBACK(retry_dns),
-  CALLBACK(retry_listeners),
-  CALLBACK(rotate_onion_key),
-  CALLBACK(rotate_x509_certificate),
-  CALLBACK(save_stability),
-  CALLBACK(write_bridge_ns),
-  CALLBACK(write_stats_file),
+  /* Everyone needs to run those. */
+  CALLBACK(add_entropy, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(check_expired_networkstatus, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(clean_caches, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(fetch_networkstatus, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(heartbeat, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(launch_descriptor_fetches, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(reset_padding_counts, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(retry_listeners, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(rotate_x509_certificate, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(write_stats_file, PERIODIC_EVENT_ROLE_ALL),
+
+  /* Routers (bridge and relay) only. */
+  CALLBACK(check_descriptor, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(check_ed_keys, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(check_for_reachability_bw, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(check_onion_keys_expiry_time, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(clean_consdiffmgr, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(expire_old_ciruits_serverside, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(retry_dns, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(rotate_onion_key, PERIODIC_EVENT_ROLE_ROUTER),
+
+  /* Authorities (bridge and directory) only. */
+  CALLBACK(downrate_stability, PERIODIC_EVENT_ROLE_AUTHORITIES),
+  CALLBACK(launch_reachability_tests, PERIODIC_EVENT_ROLE_AUTHORITIES),
+  CALLBACK(save_stability, PERIODIC_EVENT_ROLE_AUTHORITIES),
+
+  /* Directory authority only. */
+  CALLBACK(check_authority_cert, PERIODIC_EVENT_ROLE_DIRAUTH),
+
+  /* Relay only. */
+  CALLBACK(check_canonical_channels, PERIODIC_EVENT_ROLE_RELAY),
+  CALLBACK(check_dns_honesty, PERIODIC_EVENT_ROLE_RELAY),
+
+  /* Hidden Service service only. */
+  CALLBACK(hs_service, PERIODIC_EVENT_ROLE_HS_SERVICE),
+
+  /* Bridge only. */
+  CALLBACK(record_bridge_stats, PERIODIC_EVENT_ROLE_BRIDGE),
+
+  /* Client only. */
+  CALLBACK(rend_cache_failure_clean, PERIODIC_EVENT_ROLE_CLIENT),
+
+  /* Bridge Authority only. */
+  CALLBACK(write_bridge_ns, PERIODIC_EVENT_ROLE_BRIDGEAUTH),
   END_OF_PERIODIC_EVENTS
 };
 #undef CALLBACK
