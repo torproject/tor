@@ -767,11 +767,23 @@ circuit_build_times_get_xm(circuit_build_times_t *cbt)
              histogram[nth_max_bin[n]]);
   }
 
-  /* The following assert is safe, because we don't get called when we
-   * haven't observed at least CBT_MIN_MIN_CIRCUITS_TO_OBSERVE circuits. */
+  /* bin_counts can become zero if all of our last CBT_NCIRCUITS_TO_OBSERVE
+   * circuits were abandoned before they completed. This shouldn't happen,
+   * though. We should have reset/re-learned a lower timeout first. */
+  if (bin_counts == 0) {
+    ret = 0;
+    log_warn(LD_CIRC,
+               "No valid circuit build time data out of %d times, %u modes, "
+               "have_timeout=%d, %lfms", cbt->total_build_times, num_modes,
+               cbt->have_computed_timeout, cbt->timeout_ms);
+    goto done;
+  }
+
   tor_assert(bin_counts > 0);
 
   ret /= bin_counts;
+
+ done:
   tor_free(histogram);
   tor_free(nth_max_bin);
 
@@ -1056,6 +1068,10 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
   /* We sort of cheat here and make our samples slightly more pareto-like
    * and less frechet-like. */
   cbt->Xm = circuit_build_times_get_xm(cbt);
+
+  /* If Xm came back 0, then too many circuits were abandoned. */
+  if (cbt->Xm == 0)
+    return 0;
 
   tor_assert(cbt->Xm > 0);
 
