@@ -959,6 +959,8 @@ typedef enum {
 #define CELL_CREATE2 10
 #define CELL_CREATED2 11
 #define CELL_PADDING_NEGOTIATE 12
+#define CELL_CREATE2V 13
+#define CELL_CREATED2V 14
 
 #define CELL_VPADDING 128
 #define CELL_CERTS 129

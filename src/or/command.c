@@ -70,7 +70,9 @@ static void command_handle_incoming_channel(channel_listener_t *listener,
 
 /* These are the main functions for processing cells */
 static void command_process_create_cell(cell_t *cell, channel_t *chan);
+static void command_process_create2v_cell(var_cell_t *cell, channel_t *chan);
 static void command_process_created_cell(cell_t *cell, channel_t *chan);
+static void command_process_created2v_cell(var_cell_t *cell, channel_t *chan);
 static void command_process_relay_cell(cell_t *cell, channel_t *chan);
 static void command_process_destroy_cell(cell_t *cell, channel_t *chan);
 
@@ -91,7 +93,9 @@ cell_command_to_string(uint8_t command)
     case CELL_NETINFO: return "netinfo";
     case CELL_RELAY_EARLY: return "relay_early";
     case CELL_CREATE2: return "create2";
+    case CELL_CREATE2V: return "create2v";
     case CELL_CREATED2: return "created2";
+    case CELL_CREATED2V: return "created2v";
     case CELL_VPADDING: return "vpadding";
     case CELL_CERTS: return "certs";
     case CELL_AUTH_CHALLENGE: return "auth_challenge";
@@ -209,21 +213,40 @@ command_process_cell(channel_t *chan, cell_t *cell)
   }
 }
 
-/** Process an incoming var_cell from a channel; in the current protocol all
- * the var_cells are handshake-related and handled below the channel layer,
- * so this just logs a warning and drops the cell.
+/**
+ * Process an incoming <b>var_cell</b> from a channel, <b>chan</b>.
+ *
+ * In the current protocol nearly all the var_cells are link handshake-related
+ * and handled below the channel layer.  However, a few types of var_cell_t are
+ * handled here, namely those which contain:
+ *
+ *  <ul>
+ *  <li> CREATE2V data
+ *  <li> CREATED2V data
+ *  </ul>
  */
-
 void
 command_process_var_cell(channel_t *chan, var_cell_t *var_cell)
 {
   tor_assert(chan);
   tor_assert(var_cell);
 
-  log_info(LD_PROTOCOL,
-           "Received unexpected var_cell above the channel layer of type %d"
-           "; dropping it.",
-           var_cell->headers.command);
+  switch (var_cell->headers.command) {
+    case CELL_CREATE2V:
+      ++stats_n_create_cells_processed;
+      PROCESS_CELL(create2v, var_cell, chan);
+      break;
+    case CELL_CREATED2V:
+      ++stats_n_created_cells_processed;
+      PROCESS_CELL(created2v, var_cell, chan);
+      break;
+    default:
+      log_info(LD_PROTOCOL,
+               "Received unknown or unexpected var_cell above the "
+               "channel layer of type %d; dropping it.",
+               var_cell->headers.command);
+      break;
+  }
 }
 
 /** Process a 'create' <b>cell</b> that just arrived from <b>chan</b>. Make a
@@ -391,6 +414,19 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   }
 }
 
+/**
+ * Process a 'create2v' <b>cell</b> that just arrived from <b>chan</b>. Make a
+ * new circuit with the p_circ_id specified in cell. Put the circuit in state
+ * onionskin_pending, and pass the onionskin to the cpuworker. Circ will get
+ * picked up again when the cpuworker finishes decrypting it.
+ */
+static void
+command_process_create2v_cell(var_cell_t *cell, channel_t *chan)
+{
+  (void)cell, (void)chan;
+  // XXXisis
+}
+
 /** Process a 'created' <b>cell</b> that just arrived from <b>chan</b>.
  * Find the circuit
  * that it's intended for. If we're not the origin of the circuit, package
@@ -463,6 +499,23 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
     relay_send_command_from_edge(0, circ, command,
                                  (const char*)payload, len, NULL);
   }
+}
+
+/**
+ * Process a created2v <b>cell</b> that just arrived from <b>chan</b>.
+ *
+ * Find the circuit that it's intended for. If we're not the origin of the
+ * circuit, package the 'created2v' cell in an 'extended2' relay cell and pass
+ * it back. If we are the origin of the circuit, send it to
+ * circuit_finish_handshake() to finish processing keys, and then call
+ * circuit_send_next_onion_skin() to extend to the next hop in the circuit if
+ * necessary.
+ */
+static void
+command_process_created2v_cell(var_cell_t *cell, channel_t *chan)
+{
+  (void)cell, (void)chan;
+  // XXXisis
 }
 
 /** Process a 'relay' or 'relay_early' <b>cell</b> that just arrived from

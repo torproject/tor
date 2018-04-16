@@ -53,7 +53,8 @@
  *     too long.
  *   <li>Packaging private keys on the server side in order to pass
  *     them to worker threads.
- *   <li>Encoding and decoding CREATE, CREATED, CREATE2, and CREATED2 cells.
+ *   <li>Encoding and decoding CREATE, CREATED, CREATE2, CREATED2, CREATE2V,
+ *       and CREATED2V cells.
  *   <li>Encoding and decodign EXTEND, EXTENDED, EXTEND2, and EXTENDED2
  *    relay cells.
  * </ul>
@@ -690,6 +691,8 @@ check_create_cell(const create_cell_t *cell, int unknown_ok)
       return -1;
     break;
   case CELL_CREATE2:
+    break;
+  case CELL_CREATE2V:
     break;
   default:
     return -1;
@@ -1337,5 +1340,468 @@ extended_cell_format(uint8_t *command_out, uint16_t *len_out,
   }
 
   return 0;
+}
+
+/*****************************************************************************
+ *                          CREATE2V CELL HANDLING                           *
+ *****************************************************************************/
+
+/**
+ * Allocate memory and create a new <b>create2v_cell_t</b>.
+ *
+ * All variable length fields in the CREATE2V cell's body will be set
+ * to NULL, and all their corresponding lengths set to 0x00.
+ */
+create2v_cell_t*
+create2v_cell_new(void)
+{
+  create2v_cell_t *cell;
+
+  cell = tor_malloc(sizeof(create2v_cell_t));
+  cell->body = create2v_cell_body_new();
+
+  return cell;
+}
+
+/**
+ * Conduct various length checks on some handshake and padding data lengths for
+ * a given <b>handshake_type</b>.
+ *
+ * If <b>is_initiator</b> is true, then lengths are checked for the Alice side
+ * of the handshake, otherwise, if false, the checks are run for Bob's
+ * response.
+ */
+// XXXisis should this instead return bool and report errors rather than
+// asserting?
+static void
+check_handshake_and_padding_len(const uint16_t handshake_type,
+                                const uint16_t handshake_len,
+                                const uint16_t padding_len,
+                                const bool is_initiator)
+{
+  (void)is_initiator; /* TODO: Check lengths once we have a handshake.--isis */
+
+  switch (handshake_type) {
+    /* TODO: When we have handshake types which use wide cells, we should check
+     * that their lengths match the expected lengths here. --isis */
+  default:
+    /* If we've been given handshake_data, make sure we were given a
+     * length in (0,10240]. */
+    tor_assert(handshake_len > 0);
+    tor_assert(handshake_len <= 10240);
+
+    /* If we've been given both handshake_data and padding_data, make
+     * sure their combined reported lengths are not greater than the
+     * maximum. */
+    tor_assert(handshake_len + padding_len <= 10240);
+  }
+}
+
+/**
+ * Initialise a CREATE2V cell.
+ *
+ * Copies <b>handshake_len</b> bytes of <b>handshake_data</b> into the
+ * <b>cell_out</b>'s body.hdata member, and then copies <b>padding_len</b>
+ * bytes of <b>padding_data</b> into the <b>cell_out</b>'s body.ignored member.
+ * Also sets cell_out->body.htype to <b>handshake_type</b>.
+ */
+void
+create2v_cell_init(create2v_cell_t *cell_out,
+                   const uint16_t handshake_type,
+                   const uint8_t *handshake_data,
+                   const uint16_t handshake_len,
+                   const uint8_t *padding_data,
+                   const uint16_t padding_len)
+{
+  tor_assert(cell_out);
+
+  check_handshake_and_padding_len(handshake_type, handshake_len,
+                                  padding_len, true);
+
+  create2v_cell_body_set_htype(cell_out->body, handshake_type);
+  create2v_cell_body_set_hlen(cell_out->body, handshake_len);
+  create2v_cell_body_setlen_hdata(cell_out->body, (size_t)handshake_len);
+  create2v_cell_body_setlen_ignored(cell_out->body, (size_t)padding_len);
+
+  if (handshake_len)
+    memcpy(create2v_cell_body_getarray_hdata(cell_out->body),
+           handshake_data, handshake_len);
+  if (padding_len)
+    memcpy(create2v_cell_body_getarray_ignored(cell_out->body),
+           padding_data, padding_len);
+}
+
+/**
+ * Deallocate a CREATE2V cell.
+ */
+void
+create2v_cell_free(create2v_cell_t *cell)
+{
+  create2v_cell_body_free(cell->body);
+  tor_free(cell);
+}
+
+/**
+ * Given the Create2VMaximumData consensus parameter, calculate the
+ * total maximum allowable size of an incoming CREATE(D)2V buffer.
+ */
+static int
+create2v_cell_calculate_maximum_total(void)
+{
+  return networkstatus_get_create2v_maximum_data(NULL)
+    // XXXisis what about these extra bits of stuff? are we only counting
+    // "ignored" and "hdata" as data? or should we also count all of this?
+    + 2 // for the uint16_t htype
+    + 2 // for the uint16_t hlen
+    + sizeof(size_t) * 4 // for n_ and allocated_ in TRUNNEL_DYNARRAY_HEADs
+    + 1; // for the uint8_t trunnel_error_code_
+}
+
+/**
+ * Check that the encoded length of an incoming CREATE2V or CREATED2V cell is
+ * less than the maximum allowed.
+ *
+ * Returns true if it's okay, and false otherwise.
+ */
+static bool
+create2v_cell_check_encoded_length(const size_t len)
+{
+  const uint16_t max_len = create2v_cell_calculate_maximum_total();
+
+  /* If the incoming buffer is reportedly way larger than that which would fill
+   * the allowable space for hdata and the ignored padding, then fail parsing
+   * early.
+   */
+  if (len > max_len) {
+    log_info(LD_OR, "Received a suspicious CREATE(D)2V cell whose reported "
+             "length (%zd bytes) was greater that the maximum allowed (%hd "
+             "bytes). This is either an attempted DoS, or there exist "
+             "newer/other onion routers speaking a circuit handshake we "
+             "don't know about.", len, max_len);
+    return false;
+  }
+
+  if (len == 0) {
+    log_info(LD_OR, "Received a strange CREATE(D)2V cell whose reported "
+             "length was 0 bytes.");
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Parse the CREATE2V payload at <b>p</b>, which could be up to <b>p_len</b>
+ * bytes long, and use it to fill the fields of <b>cell_out->body</b>.
+ *
+ * Note that part of the body of an EXTEND2V cell is a CREATE2V payload, so
+ * this function is also used for parsing those.
+ *
+ * Returns true if parsing was successful, and false otherwise.
+ */
+static bool
+parse_create2v_payload(create2v_cell_t *cell_out,
+                       const uint8_t *p,
+                       const size_t p_len)
+{
+  create2v_cell_body_t *body;
+
+  /* Check the length before even attempting to parse it. */
+  if (!create2v_cell_check_encoded_length(p_len)) {
+    return false;
+  }
+  create2v_cell_body_parse(&body, p, p_len);
+  cell_out->body = body;
+
+  return create2v_cell_check(cell_out, true);
+}
+
+/**
+ * Parse a CREATE2V cell from <b>cell_in</b> into <b>cell_out</b>.
+ *
+ * Returns true if parsing was successful, and false otherwise.
+ */
+bool
+create2v_cell_parse(create2v_cell_t *cell_out, const var_cell_t *cell_in)
+{
+  switch (cell_in->headers.command) {
+  case CELL_CREATE2V:
+    return parse_create2v_payload(cell_out,
+                                  cell_in->payload,
+                                  cell_in->payload_len);
+  default:
+    return false;
+  }
+}
+
+/**
+ * Run various checks to ensure that a create2v_cell_t, <b>cell</b>, is
+ * well-formed.
+ *
+ * If <b>unknown_ok</b> is true, then handshake types we don't know about yet
+ * are okay.
+ *
+ * In the future, checks such as verifying that the handshake data (for a
+ * particular handshake) should go here.
+ *
+ * Returns true if the <b>cell</b> is okay, and false otherwise.
+ */
+bool
+create2v_cell_check(const create2v_cell_t *cell, bool unknown_ok)
+{
+  const char *not_okay;
+
+  not_okay = create2v_cell_body_check(cell->body);
+
+  if (not_okay) {
+    log_warn(LD_BUG, "Unable to parse a CREATE2V cell: %s", not_okay);
+    return false;
+  }
+
+  switch (create2v_cell_body_get_htype(cell->body)) {
+  case ONION_HANDSHAKE_TYPE_NTOR2_NULL:
+    if (create2v_cell_body_get_hlen(cell->body) >
+        ONION_HANDSHAKE_TYPE_NTOR2_NULL_MAXLEN) {
+      return false;
+    }
+    break;
+  default:
+    if (! unknown_ok)
+      return false;
+  }
+  return true;
+}
+
+/**
+ * Fill <b>cell_out</b> with up to <b>payload_len</b> bytes of a correctly
+ * formatted version of the CREATE2V cell in <b>cell_in</b>.
+ *
+ * If <b>relayed</b> is true, then this is a cell not originating from us.
+ *
+ * Returns true if the formatting was successful, and false otherwise.
+ */
+static bool
+create2v_cell_format_impl(var_cell_t *cell_out,
+                          const size_t payload_len,
+                          const create2v_cell_t *cell_in,
+                          const bool relayed)
+{
+  size_t body_len;
+
+  tor_assert(cell_out);
+  tor_assert(cell_in);
+  tor_assert(cell_in->body);
+
+  body_len = create2v_cell_body_encoded_len(cell_in->body);
+
+  if (!create2v_cell_check(cell_in, relayed))
+    return false;
+  if (body_len > networkstatus_get_create2v_maximum_data(NULL))
+    return false;
+  if (body_len > payload_len)
+    return false;
+
+  memset(cell_out->payload, 0, payload_len);
+  cell_out->headers.command = CELL_CREATE2V;
+  cell_out->payload_len = payload_len;
+
+  if (create2v_cell_body_encode(cell_out->payload,
+                                (size_t)payload_len,
+                                cell_in->body) < 0) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Fill <b>cell_out</b> with up to <b>payload_len</b> bytes of a correctly
+ * formatted version of a CREATE2V cell originating from here in
+ * <b>cell_in</b>.
+ *
+ * Returns true if the formatting was successful, and false otherwise.
+ */
+bool
+create2v_cell_format(var_cell_t *cell_out,
+                     const size_t payload_len,
+                     const create2v_cell_t *cell_in)
+{
+  return create2v_cell_format_impl(cell_out, payload_len, cell_in, false);
+}
+
+/**
+ * Fill <b>cell_out</b> with up to <b>payload_len</b> bytes of a correctly
+ * formatted version of a relayed CREATE2V cell in <b>cell_in</b>.
+ *
+ * Returns true if the formatting was successful, and false otherwise.
+ */
+bool
+create2v_cell_format_relayed(var_cell_t *cell_out,
+                             const size_t payload_len,
+                             const create2v_cell_t *cell_in)
+{
+  return create2v_cell_format_impl(cell_out, payload_len, cell_in, true);
+}
+
+/*****************************************************************************
+ *                          CREATED2V CELL HANDLING                          *
+ *****************************************************************************/
+
+/**
+ * Allocate memory and create a new <b>created2v_cell_t</b>.
+ *
+ * All variable length fields in the CREATED2V cell's body will be set
+ * to NULL, and all their corresponding lengths set to 0x00.
+ */
+created2v_cell_t*
+created2v_cell_new(void)
+{
+  created2v_cell_t *cell;
+
+  cell = tor_malloc(sizeof(created2v_cell_t));
+  cell->body = created2v_cell_body_new();
+
+  return cell;
+}
+
+/**
+ * Initialise a created2v cell, <b>cell_out</b> with some <b>handshake_data</b>
+ * (of <b>handshake_len</b> bytes) for <b>handshake_type</b> and, optionally,
+ * some <b>padding_data</b> (of <b>padding_len</b> bytes).
+ */
+void
+created2v_cell_init(created2v_cell_t *cell_out,
+                    const uint16_t handshake_type, // XXXisis do we have this?
+                    const uint8_t *handshake_data,
+                    const uint16_t handshake_len,
+                    const uint8_t *padding_data,
+                    const uint16_t padding_len)
+{
+  tor_assert(cell_out);
+
+  check_handshake_and_padding_len(handshake_type, handshake_len,
+                                  padding_len, false);
+
+  created2v_cell_body_set_hlen(cell_out->body, handshake_len);
+  created2v_cell_body_setlen_hdata(cell_out->body, (size_t)handshake_len);
+  created2v_cell_body_setlen_ignored(cell_out->body, (size_t)padding_len);
+
+  if (handshake_len)
+    memcpy(created2v_cell_body_getarray_hdata(cell_out->body),
+           handshake_data, handshake_len);
+  if (padding_len)
+    memcpy(created2v_cell_body_getarray_ignored(cell_out->body),
+           padding_data, padding_len);
+}
+
+/**
+ * Deallocate a CREATED2V cell.
+ */
+void
+created2v_cell_free(created2v_cell_t *cell)
+{
+  created2v_cell_body_free(cell->body);
+  tor_free(cell);
+}
+
+/**
+ * Run various checks to ensure that a created2v_cell_t, <b>cell</b>, is
+ * well-formed.
+ *
+ * In the future, checks such as verifying that the handshake data (for a
+ * particular handshake) should go here.
+ */
+bool
+created2v_cell_check(const created2v_cell_t *cell)
+{
+  const created2v_cell_body_t *body = cell->body;
+  const char *not_okay = created2v_cell_body_check(body);
+
+  if (not_okay != NULL) {
+    log_warn(LD_BUG, "Unable to parse a CREATED2V cell: %s", not_okay);
+    return false;
+  }
+
+  /* Do not allow empty responses. */
+  if (!created2v_cell_body_get_hlen(body))
+    return false;
+
+  return true;
+}
+
+/**
+ * Parse the CREATED2V payload at <b>p</b>, which could be up to <b>p_len</b>
+ * bytes long, and use it to fill the fields of <b>cell_out->body</b>.
+ *
+ * Note that part of the body of an EXTENDED2V cell is a CREATED2V payload, so
+ * this function is also used for parsing those.
+ *
+ * Returns true if parsing was successful, and false otherwise.
+ */
+static bool
+parse_created2v_payload(created2v_cell_t *cell_out,
+                        const uint8_t *p,
+                        const size_t p_len)
+{
+  created2v_cell_body_t *body;
+
+  create2v_cell_check_encoded_length(p_len);
+  created2v_cell_body_parse(&body, p, p_len);
+  cell_out->body = body;
+
+  if (created2v_cell_check(cell_out))
+    return true;
+  return false;
+}
+
+/**
+ * Parse a CREATED2V cell from <b>cell_in</b> into <b>cell_out</b>.
+ *
+ * Returns true if parsing was successful, and false otherwise.
+ */
+bool
+created2v_cell_parse(created2v_cell_t *cell_out, const var_cell_t *cell_in)
+{
+  switch (cell_in->headers.command) {
+  case CELL_CREATED2V:
+    return parse_created2v_payload(cell_out,
+                                   cell_in->payload,
+                                   cell_in->payload_len);
+  default:
+    return false;
+  }
+}
+
+/**
+ * Fill <b>cell_out</b> with a correctly formatted version of the CREATED2V
+ * cell in <b>cell_in</b>, up to <b>payload_len</b> bytes long.
+ *
+ * Returns true upon success, otherwise false if something went wrong.
+ */
+bool
+created2v_cell_format(var_cell_t *cell_out,
+                      const size_t payload_len,
+                      const created2v_cell_t *cell_in)
+{
+  size_t body_len;
+
+  body_len = created2v_cell_body_encoded_len(cell_in->body);
+
+  if (!created2v_cell_check(cell_in))
+    return false;
+  if (body_len > networkstatus_get_create2v_maximum_data(NULL))
+    return false;
+  if (body_len > payload_len)
+    return false;
+
+  memset(cell_out->payload, 0, payload_len);
+  cell_out->headers.command = CELL_CREATED2V;
+  cell_out->payload_len = payload_len;
+
+  if (created2v_cell_body_encode(cell_out->payload,
+                                (size_t)payload_len,
+                                cell_in->body) < 0) {
+    return false;
+  }
+  return true;
 }
 

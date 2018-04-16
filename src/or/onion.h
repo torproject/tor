@@ -12,6 +12,14 @@
 #ifndef TOR_ONION_H
 #define TOR_ONION_H
 
+#include "torint.h"
+
+/* Trunnel */
+#include "cell_created2v.h"
+
+struct create2v_cell_body_t;
+struct created2v_cell_body_t;
+
 struct create_cell_t;
 int onion_pending_add(or_circuit_t *circ, struct create_cell_t *onionskin);
 or_circuit_t *onion_next_task(struct create_cell_t **onionskin_out);
@@ -66,6 +74,25 @@ typedef struct create_cell_t {
   uint8_t onionskin[CELL_PAYLOAD_SIZE - 4];
 } create_cell_t;
 
+/**
+ * A parsed CREATE2V cell.
+ */
+typedef struct create2v_cell_t {
+  /**
+   * The body of the cell, containing the htype, hlen, hdata, and ignored
+   * (padding) fields.  Note that the body->hdata is not ready for actual
+   * parsing by handshake code until this struct's <b>finished</b> bit is set.
+   */
+  create2v_cell_body_t *body;
+  /**
+   * Whether or not we're done parsing incoming fragments of this cell.  If the
+   * bit is set to 1, then we've collected all the data that the first cell
+   * fragment specified as the length of all fragments combined.  Otherwise, if
+   * 0, we're still waiting on incoming data.
+   */
+  unsigned int finished: 1;
+} create2v_cell_t;
+
 /** A parsed CREATED, CREATED_FAST, or CREATED2 cell. */
 typedef struct created_cell_t {
   /** The cell command. One of CREATED{,_FAST,2} */
@@ -75,6 +102,18 @@ typedef struct created_cell_t {
   /** The server-side message for the circuit creation handshake. */
   uint8_t reply[CELL_PAYLOAD_SIZE - 2];
 } created_cell_t;
+
+/**
+ * A parsed CREATED2V cell.
+ */
+typedef struct created2v_cell_t {
+  /**
+   * The body of the cell, containing the htype, hlen, hdata, and ignored
+   * (padding) fields.  Note that the body->hdata is not ready for actual
+   * parsing by handshake code until this struct's <b>finished</b> bit is set.
+   */
+  created2v_cell_body_t *body;
+} created2v_cell_t;
 
 /** A parsed RELAY_EXTEND or RELAY_EXTEND2 cell */
 typedef struct extend_cell_t {
@@ -120,6 +159,51 @@ int extend_cell_format(uint8_t *command_out, uint16_t *len_out,
                        uint8_t *payload_out, const extend_cell_t *cell_in);
 int extended_cell_format(uint8_t *command_out, uint16_t *len_out,
                          uint8_t *payload_out, const extended_cell_t *cell_in);
+
+// TODO: Remove these defines when we implement the first handshake that uses
+// CREATE(D)2V cells. --isis
+#ifndef ONION_HANDSHAKE_TYPE_NTOR2_NULL
+#define ONION_HANDSHAKE_TYPE_NTOR2_NULL 0x0003
+#endif
+#ifndef ONION_HANDSHAKE_TYPE_NTOR2_NULL_MAXLEN
+/**
+ * ONION_HANDSHAKE_TYPE_NTOR2_NULL should be defined as equal to
+ * NTOR_ONIONSKIN_LEN.
+ */
+#define ONION_HANDSHAKE_TYPE_NTOR2_NULL_MAXLEN 84
+#endif
+
+create2v_cell_t* create2v_cell_new(void);
+void create2v_cell_init(create2v_cell_t *cell_out,
+                        const uint16_t handshake_type,
+                        const uint8_t *handshake_data,
+                        const uint16_t handshake_len,
+                        const uint8_t *padding_data,
+                        const uint16_t padding_len);
+void create2v_cell_free(create2v_cell_t *cell);
+bool create2v_cell_parse(create2v_cell_t *cell_out, const var_cell_t *cell_in);
+bool create2v_cell_check(const create2v_cell_t *cell, bool unknown_ok);
+bool create2v_cell_format(var_cell_t *cell_out,
+                          const size_t payload_len,
+                          const create2v_cell_t *cell_in);
+bool create2v_cell_format_relayed(var_cell_t *cell_out,
+                                  const size_t payload_len,
+                                  const create2v_cell_t *cell_in);
+
+created2v_cell_t* created2v_cell_new(void);
+void created2v_cell_init(created2v_cell_t *cell_out,
+                         const uint16_t handshake_type,
+                         const uint8_t *handshake_data,
+                         const uint16_t handshake_len,
+                         const uint8_t *padding_data,
+                         const uint16_t padding_len);
+void created2v_cell_free(created2v_cell_t *cell);
+bool created2v_cell_check(const created2v_cell_t *cell);
+bool created2v_cell_parse(created2v_cell_t *cell_out,
+                          const var_cell_t *cell_in);
+bool created2v_cell_format(var_cell_t *cell_out,
+                           const size_t payload_len,
+                           const created2v_cell_t *cell_in);
 
 #endif /* !defined(TOR_ONION_H) */
 
