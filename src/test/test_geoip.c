@@ -453,8 +453,6 @@ test_geoip6_load_file(void *arg)
   char *dhex = NULL;
 
   /* A nonexistant filename should fail. */
-  /* NOTE: this is probably not needed, as the path is the same, just using
-  AF_INET6 */
   tt_int_op(-1, OP_EQ,
             geoip_load_file(AF_INET6, "/you/did/not/put/a/file/here/I/hope"));
 
@@ -491,8 +489,6 @@ test_geoip6_load_file(void *arg)
   tt_str_op(dhex, OP_EQ, geoip_db_digest(AF_INET6));
 
   /* Make sure geoip_free_all() works. */
-  /* NOTE: is this needed here?, if geoip_free_all, it should not change with
-  ipv6 */
   geoip_free_all();
   tt_int_op(1, OP_EQ, geoip_get_n_countries());
   tt_str_op("??", OP_EQ, geoip_get_country_name(0));
@@ -511,13 +507,13 @@ test_geoip_load_2nd_file(void *arg)
 {
   (void)arg;
 
-  /* Load 1nd geoip file */
+  /* Load 1st geoip file */
   const char FNAME[] = SRCDIR "/src/config/geoip";
   tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME));
 
   int num_countries_geoip = geoip_get_n_countries();
 
-  /* Load 2st geoip (empty) file */
+  /* Load 2nd geoip (empty) file */
   const char FNAME2[] = SRCDIR "/src/test/geoip_dummy";
   tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME2));
 
