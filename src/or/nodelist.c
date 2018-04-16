@@ -43,6 +43,7 @@
 #include "or.h"
 #include "address.h"
 #include "address_set.h"
+#include "bridges.h"
 #include "config.h"
 #include "control.h"
 #include "dirserv.h"
@@ -1137,6 +1138,27 @@ node_has_descriptor(const node_t *node)
 {
   return (node->ri ||
           (node->rs && node->md));
+}
+
+/** DOCDOC */
+int
+node_has_preferred_descriptor(const node_t *node,
+                              int for_direct_connect)
+{
+  const int is_bridge = node_is_a_configured_bridge(node);
+  const int we_use_mds = we_use_microdescriptors_for_circuits(get_options());
+
+  if ((is_bridge && for_direct_connect) || !we_use_mds) {
+    /* We need an ri in this case. */
+    if (!node->ri)
+      return 0;
+  } else {
+    /* Otherwise we need an md. */
+    if (node->rs == NULL || node->md == NULL)
+      return 0;
+  }
+
+  return 1;
 }
 
 /** Return the router_purpose of <b>node</b>. */

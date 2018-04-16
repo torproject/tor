@@ -1281,7 +1281,7 @@ node_has_hsdir_index(const node_t *node)
 
   /* A node can't have an HSDir index without a descriptor since we need desc
    * to get its ed25519 key */
-  if (!node_has_descriptor(node)) {
+  if (!node_has_preferred_descriptor(node, 0)) {
     return 0;
   }
 
@@ -1617,7 +1617,7 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str)
     time_t last = hs_lookup_last_hid_serv_request(dir, req_key_str, 0, 0);
     const node_t *node = node_get_by_id(dir->identity_digest);
     if (last + hs_hsdir_requery_period(options) >= now ||
-        !node || !node_has_descriptor(node)) {
+        !node || !node_has_preferred_descriptor(node, 0)) {
       SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
       continue;
     }

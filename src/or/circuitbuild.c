@@ -417,7 +417,7 @@ onion_populate_cpath(origin_circuit_t *circ)
                                     circ->cpath->extend_info->identity_digest);
     /* If we don't know the node and its descriptor, we must be bootstrapping.
      */
-    if (!node || !node_has_descriptor(node)) {
+    if (!node || !node_has_preferred_descriptor(node, 1)) {
       return 0;
     }
   }
@@ -1869,7 +1869,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
        */
       continue;
     }
-    if (!node_has_descriptor(node)) {
+    if (!node_has_preferred_descriptor(node, 0)) {
       n_supported[i] = -1;
       continue;
     }
@@ -2857,17 +2857,8 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
   tor_addr_port_t ap;
   int valid_addr = 0;
 
-  const int is_bridge = node_is_a_configured_bridge(node);
-  const int we_use_mds = we_use_microdescriptors_for_circuits(get_options());
-
-  if ((is_bridge && for_direct_connect) || !we_use_mds) {
-    /* We need an ri in this case. */
-    if (!node->ri)
-      return NULL;
-  } else {
-    /* Otherwise we need an md. */
-    if (node->rs == NULL || node->md == NULL)
-      return NULL;
+  if (!node_has_preferred_descriptor(node, for_direct_connect)) {
+    return NULL;
   }
 
   /* Choose a preferred address first, but fall back to an allowed address.

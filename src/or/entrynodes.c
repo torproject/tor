@@ -192,7 +192,7 @@ guard_has_descriptor(const entry_guard_t *guard)
   const node_t *node = node_get_by_id(guard->identity);
   if (!node)
     return 0;
-  return node_has_descriptor(node);
+  return node_has_preferred_descriptor(node, 1);
 }
 
 /**
@@ -2269,7 +2269,8 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
   // XXXX #20827 check Ed ID.
   if (! node)
     goto fail;
-  if (BUG(usage != GUARD_USAGE_DIRGUARD && !node_has_descriptor(node)))
+  if (BUG(usage != GUARD_USAGE_DIRGUARD &&
+          !node_has_preferred_descriptor(node, 1)))
     goto fail;
 
   *chosen_node_out = node;
