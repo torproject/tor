@@ -2335,7 +2335,7 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
     if (!node->is_running || !node->is_valid)
       continue;
-    if (need_desc && !(node->ri || (node->rs && node->md)))
+    if (need_desc && !node_has_preferred_descriptor(node, direct_conn))
       continue;
     if (node->ri && node->ri->purpose != ROUTER_PURPOSE_GENERAL)
       continue;
