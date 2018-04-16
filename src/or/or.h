@@ -3500,12 +3500,6 @@ typedef struct or_circuit_t {
    * exit-ward queues of this circuit; reset every time when writing
    * buffer stats to disk. */
   uint64_t total_cell_waiting_time;
-
-  /** Maximum cell queue size for a middle relay; this is stored per circuit
-   * so append_cell_to_circuit_queue() can adjust it if it changes.  If set
-   * to zero, it is initialized to the default value.
-   */
-  uint32_t max_middle_cells;
 } or_circuit_t;
 
 #if REND_COOKIE_LEN != DIGEST_LEN

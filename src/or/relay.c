@@ -100,9 +100,6 @@ static void adjust_exit_policy_from_exitpolicy_failure(origin_circuit_t *circ,
                                                   entry_connection_t *conn,
                                                   node_t *node,
                                                   const tor_addr_t *addr);
-#if 0
-static int get_max_middle_cells(void);
-#endif
 
 /** Stop reading on edge connections when we have this many cells
  * waiting on the appropriate queue. */
@@ -2775,6 +2772,60 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
   return n_flushed;
 }
 
+/* Minimum value is the maximum circuit window size.
+ *
+ * SENDME cells makes it that we can control how many cells can be inflight on
+ * a circuit from end to end. This logic makes it that on any circuit cell
+ * queue, we have a maximum of cells possible.
+ *
+ * Because the Tor protocol allows for a client to exit at any hop in a
+ * circuit and a circuit can be of a maximum of 8 hops, so in theory the
+ * normal worst case will be the circuit window start value times the maximum
+ * number of hops (8). Having more cells then that means something is wrong.
+ *
+ * However, because padding cells aren't counted in the package window, we set
+ * the maximum size to a reasonably large size for which we expect that we'll
+ * never reach in theory. And if we ever do because of future changes, we'll
+ * be able to control it with a consensus parameter.
+ *
+ * XXX: Unfortunately, END cells aren't accounted for in the circuit window
+ * which means that for instance if a client opens 8001 streams, the 8001
+ * following END cells will queue up in the circuit which will get closed if
+ * the max limit is 8000. Which is sad because it is allowed by the Tor
+ * protocol. But, we need an upper bound on circuit queue in order to avoid
+ * DoS memory pressure so the default size is a middle ground between not
+ * having any limit and having a very restricted one. This is why we can also
+ * control it through a consensus parameter. */
+#define RELAY_CIRC_CELL_QUEUE_SIZE_MIN CIRCWINDOW_START_MAX
+/* We can't have a consensus parameter above this value. */
+#define RELAY_CIRC_CELL_QUEUE_SIZE_MAX INT32_MAX
+/* Default value is set to a large value so we can handle padding cells
+ * properly which aren't accounted for in the SENDME window. Default is 50000
+ * allowed cells in the queue resulting in ~25MB. */
+#define RELAY_CIRC_CELL_QUEUE_SIZE_DEFAULT \
+  (50 * RELAY_CIRC_CELL_QUEUE_SIZE_MIN)
+
+/* The maximum number of cell a circuit queue can contain. This is updated at
+ * every new consensus and controlled by a parameter. */
+static int32_t max_circuit_cell_queue_size =
+  RELAY_CIRC_CELL_QUEUE_SIZE_DEFAULT;
+
+/* Called when the consensus has changed. At this stage, the global consensus
+ * object has NOT been updated. It is called from
+ * notify_before_networkstatus_changes(). */
+void
+relay_consensus_has_changed(const networkstatus_t *ns)
+{
+  tor_assert(ns);
+
+  /* Update the circuit max cell queue size from the consensus. */
+  max_circuit_cell_queue_size =
+    networkstatus_get_param(ns, "circ_max_cell_queue_size",
+                            RELAY_CIRC_CELL_QUEUE_SIZE_DEFAULT,
+                            RELAY_CIRC_CELL_QUEUE_SIZE_MIN,
+                            RELAY_CIRC_CELL_QUEUE_SIZE_MAX);
+}
+
 /** Add <b>cell</b> to the queue of <b>circ</b> writing to <b>chan</b>
  * transmitting in <b>direction</b>.
  *
@@ -2802,6 +2853,16 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
     orcirc = TO_OR_CIRCUIT(circ);
     queue = &orcirc->p_chan_cells;
     streams_blocked = circ->streams_blocked_on_p_chan;
+  }
+
+  if (PREDICT_UNLIKELY(queue->n >= max_circuit_cell_queue_size)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "%s circuit has %d cells in its queue, maximum allowed is %d. "
+           "Closing circuit for safety reasons.",
+           (exitward) ? "Outbound" : "Inbound", queue->n,
+           max_circuit_cell_queue_size);
+    circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
+    return;
   }
 
   /* Very important that we copy to the circuit queue because all calls to

@@ -1603,6 +1603,7 @@ notify_before_networkstatus_changes(const networkstatus_t *old_c,
 {
   notify_control_networkstatus_changed(old_c, new_c);
   dos_consensus_has_changed(new_c);
+  relay_consensus_has_changed(new_c);
 }
 
 /* Called after a new consensus has been put in the global state. It is safe
