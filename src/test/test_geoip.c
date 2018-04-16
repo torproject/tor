@@ -548,8 +548,10 @@ struct testcase_t geoip_tests[] = {
   { "geoip", test_geoip, TT_FORK, NULL, NULL },
   { "geoip_with_pt", test_geoip_with_pt, TT_FORK, NULL, NULL },
   { "load_file", test_geoip_load_file, TT_FORK|SKIP_ON_WINDOWS, NULL, NULL },
-  { "load_file6", test_geoip6_load_file, TT_FORK, NULL, NULL },
-  { "load_2nd_file", test_geoip_load_2nd_file, TT_FORK, NULL, NULL },
+  { "load_file6", test_geoip6_load_file, TT_FORK | SKIP_ON_WINDOWS,
+    NULL, NULL },
+  { "load_2nd_file", test_geoip_load_2nd_file, TT_FORK | SKIP_ON_WINDOWS,
+    NULL, NULL },
 
   END_OF_TESTCASES
 };
