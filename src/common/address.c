@@ -1223,7 +1223,7 @@ tor_addr_keyed_hash(const struct sipkey *key, const tor_addr_t *addr)
     /* LCOV_EXCL_START */
     tor_fragile_assert();
     return 0;
-    /* LCOV_EXCL_END */
+    /* LCOV_EXCL_STOP */
   }
 }
 
