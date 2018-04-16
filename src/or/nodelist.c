@@ -1131,10 +1131,13 @@ node_is_dir(const node_t *node)
   }
 }
 
-/** Return true iff <b>node</b> has either kind of usable descriptor -- that
- * is, a routerdescriptor or a microdescriptor. */
+/** Return true iff <b>node</b> has either kind of descriptor -- that
+ * is, a routerdescriptor or a microdescriptor.
+ *
+ * You should probably use node_has_preferred_descriptor() instead.
+ **/
 int
-node_has_descriptor(const node_t *node)
+node_has_any_descriptor(const node_t *node)
 {
   return (node->ri ||
           (node->rs && node->md));
