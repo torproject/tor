@@ -1551,6 +1551,21 @@ teardown_periodic_events(void)
   periodic_events_initialized = 0;
 }
 
+/* We just got new options globally set, see if we need to destroy or setup
+ * periodic events. */
+void
+periodic_events_on_new_options(void)
+{
+  /* Only if we've already initialized once the events, teardown them all and
+   * reinitialize. It is just simpler that way instead of going through all
+   * currently enabled events and trying to destroy only the one that could be
+   * affected. */
+  if (periodic_events_initialized) {
+    teardown_periodic_events();
+    initialize_periodic_events();
+  }
+}
+
 /**
  * Update our schedule so that we'll check whether we need to update our
  * descriptor immediately, rather than after up to CHECK_DESCRIPTOR_INTERVAL
