@@ -16,6 +16,7 @@
 // an imaginary time, in timestamp units. Chosen so it will roll over.
 static const uint32_t START_TS = UINT32_MAX-10;
 static const int32_t KB = 1024;
+static const uint32_t GB = (U64_LITERAL(1) << 30);
 
 static void
 test_bwmgt_token_buf_init(void *arg)
@@ -192,6 +193,27 @@ test_bwmgt_token_buf_refill(void *arg)
   ;
 }
 
+/* Test some helper functions we use within the token bucket interface. */
+static void
+test_bwmgt_token_buf_helpers(void *arg)
+{
+  uint32_t ret;
+
+  (void) arg;
+
+  /* The returned value will be OS specific but in any case, it should be
+   * greater than 1 since we are passing 1GB/sec rate. */
+  ret = rate_per_sec_to_rate_per_step(1 * GB);
+  tt_u64_op(ret, OP_GT, 1);
+
+  /* We default to 1 in case rate is 0. */
+  ret = rate_per_sec_to_rate_per_step(0);
+  tt_u64_op(ret, OP_EQ, 1);
+
+ done:
+  ;
+}
+
 #define BWMGT(name)                                          \
   { #name, test_bwmgt_ ## name , 0, NULL, NULL }
 
@@ -200,6 +222,7 @@ struct testcase_t bwmgt_tests[] = {
   BWMGT(token_buf_adjust),
   BWMGT(token_buf_dec),
   BWMGT(token_buf_refill),
+  BWMGT(token_buf_helpers),
   END_OF_TESTCASES
 };
 

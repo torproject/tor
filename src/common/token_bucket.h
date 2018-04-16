@@ -10,6 +10,7 @@
 #define TOR_TOKEN_BUCKET_H
 
 #include "torint.h"
+#include "testsupport.h"
 
 /** Largest allowable burst value for a token buffer. */
 #define TOKEN_BUCKET_MAX_BURST INT32_MAX
@@ -108,6 +109,8 @@ token_bucket_rw_get_write(const token_bucket_rw_t *bucket)
  * where a "step" is defined as this many timestamp ticks.  Keep this
  * a power of two if you can. */
 #define TICKS_PER_STEP 16
+
+STATIC uint32_t rate_per_sec_to_rate_per_step(uint32_t rate);
 
 #endif
 

@@ -108,7 +108,7 @@ token_bucket_raw_dec(token_bucket_raw_t *bucket,
 }
 
 /** Convert a rate in bytes per second to a rate in bytes per step */
-static uint32_t
+STATIC uint32_t
 rate_per_sec_to_rate_per_step(uint32_t rate)
 {
   /*
@@ -117,8 +117,9 @@ rate_per_sec_to_rate_per_step(uint32_t rate)
     (rate / 1000) * to_approximate_msec(TICKS_PER_STEP).  But to minimize
     rounding error, we do it this way instead, and divide last.
   */
+  uint64_t units = (uint64_t) rate * TICKS_PER_STEP;
   uint32_t val = (uint32_t)
-    monotime_coarse_stamp_units_to_approx_msec(rate*TICKS_PER_STEP)/1000;
+    monotime_coarse_stamp_units_to_approx_msec(units) / 1000;
   return val ? val : 1;
 }
 
