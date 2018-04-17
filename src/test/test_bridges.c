@@ -234,7 +234,7 @@ test_bridges_get_configured_bridge_by_orports_digest(void *arg)
   ret = get_configured_bridge_by_orports_digest(digest, orports);
   tt_ptr_op(ret, OP_NE, NULL);
 
-  tt_mem_op(addrport1, OP_EQ, bridge_get_addr_port(ret), sizeof(ret));
+  tt_assert(tor_addr_port_eq(addrport1, bridge_get_addr_port(ret)));
 
  done:
   smartlist_free(orports);
