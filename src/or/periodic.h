@@ -49,11 +49,21 @@ typedef struct periodic_event_item_t {
 
   /* Bitmask of roles define above for which this event applies. */
   uint32_t roles;
+  /* Indicate that this event has been enabled that is scheduled. */
+  unsigned int enabled : 1;
 } periodic_event_item_t;
 
 /** events will get their interval from first execution */
-#define PERIODIC_EVENT(fn, r) { fn##_callback, 0, NULL, #fn, r }
-#define END_OF_PERIODIC_EVENTS { NULL, 0, NULL, NULL, 0 }
+#define PERIODIC_EVENT(fn, r) { fn##_callback, 0, NULL, #fn, r, 0 }
+#define END_OF_PERIODIC_EVENTS { NULL, 0, NULL, NULL, 0, 0 }
+
+/* Return true iff the given event was setup before thus is enabled to be
+ * scheduled. */
+static inline int
+periodic_event_is_enabled(const periodic_event_item_t *item)
+{
+  return item->enabled;
+}
 
 void periodic_event_launch(periodic_event_item_t *event);
 void periodic_event_setup(periodic_event_item_t *event);

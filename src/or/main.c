@@ -1437,6 +1437,32 @@ find_periodic_event(const char *name)
   return NULL;
 }
 
+/** Return a bitmask of the roles this tor instance is configured for using
+ * the given options. */
+static int
+get_my_roles(const or_options_t *options)
+{
+  tor_assert(options);
+
+  int roles = 0;
+  int is_bridge = options->BridgeRelay;
+  int is_client = any_client_port_set(options);
+  int is_relay = server_mode(options);
+  int is_dirauth = authdir_mode_v3(options);
+  int is_bridgeauth = authdir_mode_bridge(options);
+  int is_hidden_service = !!hs_service_get_num_services() ||
+                          !!rend_num_services();
+
+  if (is_bridge) roles |= PERIODIC_EVENT_ROLE_BRIDGE;
+  if (is_client) roles |= PERIODIC_EVENT_ROLE_CLIENT;
+  if (is_relay) roles |= PERIODIC_EVENT_ROLE_RELAY;
+  if (is_dirauth) roles |= PERIODIC_EVENT_ROLE_DIRAUTH;
+  if (is_bridgeauth) roles |= PERIODIC_EVENT_ROLE_BRIDGEAUTH;
+  if (is_hidden_service) roles |= PERIODIC_EVENT_ROLE_HS_SERVICE;
+
+  return roles;
+}
+
 /** Event to run initialize_periodic_events_cb */
 static struct event *initialize_periodic_events_event = NULL;
 
@@ -1451,10 +1477,17 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
   (void) fd;
   (void) events;
   (void) data;
+
+  int roles = get_my_roles(get_options());
+
   tor_event_free(initialize_periodic_events_event);
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_launch(&periodic_events[i]);
+
+  for (int i = 0; periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &periodic_events[i];
+    if (item->roles & roles && !periodic_event_is_enabled(item)) {
+      periodic_event_launch(item);
+      log_debug(LD_GENERAL, "Launching periodic event %s", item->name);
+    }
   }
 }
 
@@ -1466,6 +1499,7 @@ initialize_periodic_events(void)
   tor_assert(periodic_events_initialized == 0);
   periodic_events_initialized = 1;
 
+  /* Set up all periodic events. We'll launch them by roles. */
   int i;
   for (i = 0; periodic_events[i].name; ++i) {
     periodic_event_setup(&periodic_events[i]);
