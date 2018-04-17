@@ -173,7 +173,7 @@ void monotime_coarse_add_msec(monotime_coarse_t *out,
 #define monotime_coarse_add_msec monotime_add_msec
 #endif /* defined(MONOTIME_COARSE_TYPE_IS_DIFFERENT) */
 
-void tor_gettimeofday(struct timeval *timeval);
+MOCK_DECL(void, tor_gettimeofday, (struct timeval *timeval));
 
 #ifdef TOR_UNIT_TESTS
 void tor_sleep_msec(int msec);

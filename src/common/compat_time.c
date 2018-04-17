@@ -71,8 +71,8 @@ tor_sleep_msec(int msec)
 /** Set *timeval to the current time of day.  On error, log and terminate.
  * (Same as gettimeofday(timeval,NULL), but never returns -1.)
  */
-void
-tor_gettimeofday(struct timeval *timeval)
+MOCK_IMPL(void,
+tor_gettimeofday, (struct timeval *timeval))
 {
 #ifdef _WIN32
   /* Epoch bias copied from perl: number of units between windows epoch and
