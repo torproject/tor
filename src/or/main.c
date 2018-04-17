@@ -1483,8 +1483,9 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
 
   for (int i = 0; periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &periodic_events[i];
-    if (item->roles & roles && !periodic_event_is_enabled(item)) {
-      periodic_event_launch(item);
+    if (item->roles & roles) {
+      /* This is safe to be called on an already enabled event. */
+      periodic_event_enable(item);
       log_debug(LD_GENERAL, "Launching periodic event %s", item->name);
     }
   }
@@ -1524,7 +1525,7 @@ teardown_periodic_events(void)
 {
   int i;
   for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_destroy(&periodic_events[i]);
+    periodic_event_disable(&periodic_events[i]);
   }
   periodic_events_initialized = 0;
 }
@@ -1540,18 +1541,13 @@ rescan_periodic_events(const or_options_t *options)
 
   for (int i = 0; periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &periodic_events[i];
-    int is_enabled = periodic_event_is_enabled(item);
-    int need_item = (item->roles & roles);
 
-    /* We need this event but it is *not* enabled. */
-    if (need_item && !is_enabled) {
-      periodic_event_launch(item);
-      continue;
-    }
-    /* We do *not* need this event but it is enabled. */
-    if (!need_item && is_enabled) {
-      periodic_event_destroy(item);
-      continue;
+    /* Enable the event if needed. It is safe to enable an event that was
+     * already enabled. Same goes for disabling it. */
+    if (item->roles & roles) {
+      periodic_event_enable(item);
+    } else {
+      periodic_event_disable(item);
     }
   }
 }
