@@ -1,0 +1,3 @@
+  o Minor features (performance, 32-bit):
+    - Make our timing-wheel code run a tiny bit faster on 32-bit platforms,
+      by preferring 32-bit math to 64-bit. Closes ticket 24688.
