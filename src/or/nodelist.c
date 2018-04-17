@@ -1517,6 +1517,7 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   node_assert_ok(node);
   tor_assert(ap_out);
+  memset(ap_out, 0, sizeof(*ap_out));
 
   /* Check ri first, because rewrite_node_address_for_bridge() updates
    * node->ri with the configured bridge address.
