@@ -1530,6 +1530,47 @@ teardown_periodic_events(void)
   periodic_events_initialized = 0;
 }
 
+/** Do a pass at all our periodic events, destroy those we don't need anymore
+ * and enabled those we need now using the given options. */
+static void
+rescan_periodic_events(const or_options_t *options)
+{
+  tor_assert(options);
+
+  int roles = get_my_roles(options);
+
+  for (int i = 0; periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &periodic_events[i];
+    int is_enabled = periodic_event_is_enabled(item);
+    int need_item = (item->roles & roles);
+
+    /* We need this event but it is *not* enabled. */
+    if (need_item && !is_enabled) {
+      periodic_event_launch(item);
+      continue;
+    }
+    /* We do *not* need this event but it is enabled. */
+    if (!need_item && is_enabled) {
+      periodic_event_destroy(item);
+      continue;
+    }
+  }
+}
+
+/* We just got new options globally set, see if we need to destroy or setup
+ * periodic events. */
+void
+periodic_events_on_new_options(const or_options_t *options)
+{
+  /* Only if we've already initialized once the events, teardown them all and
+   * reinitialize. It is just simpler that way instead of going through all
+   * currently enabled events and trying to destroy only the one that could be
+   * affected. */
+  if (periodic_events_initialized) {
+    rescan_periodic_events(options);
+  }
+}
+
 /**
  * Update our schedule so that we'll check whether we need to update our
  * descriptor immediately, rather than after up to CHECK_DESCRIPTOR_INTERVAL
