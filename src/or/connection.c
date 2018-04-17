@@ -85,6 +85,7 @@
 #include "ext_orport.h"
 #include "geoip.h"
 #include "main.h"
+#include "hibernate.h"
 #include "hs_common.h"
 #include "hs_ident.h"
 #include "nodelist.h"
@@ -2989,6 +2990,10 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
   return 0;
 }
 
+/** When did we last tell the accounting subsystem about transmitted
+ * bandwidth? */
+static time_t last_recorded_accounting_at = 0;
+
 /** Helper: adjusts our bandwidth history and informs the controller as
  * appropriate, given that we have just read <b>num_read</b> bytes and written
  * <b>num_written</b> bytes on <b>conn</b>. */
@@ -3019,6 +3024,20 @@ record_num_bytes_transferred_impl(connection_t *conn,
   }
   if (conn->type == CONN_TYPE_EXIT)
     rep_hist_note_exit_bytes(conn->port, num_written, num_read);
+
+  /* Remember these bytes towards statistics. */
+  stats_increment_bytes_read_and_written(num_read, num_written);
+
+  /* Remember these bytes towards accounting. */
+  if (accounting_is_enabled(get_options())) {
+    if (now > last_recorded_accounting_at && last_recorded_accounting_at) {
+      accounting_add_bytes(num_read, num_written,
+                           now - last_recorded_accounting_at);
+    } else {
+      accounting_add_bytes(num_read, num_written, 0);
+    }
+    last_recorded_accounting_at = now;
+  }
 }
 
 /** We just read <b>num_read</b> and wrote <b>num_written</b> bytes
@@ -5196,6 +5215,7 @@ connection_free_all(void)
 
   tor_free(last_interface_ipv4);
   tor_free(last_interface_ipv6);
+  last_recorded_accounting_at = 0;
 }
 
 /** Log a warning, and possibly emit a control event, that <b>received</b> came

@@ -159,13 +159,6 @@ token_bucket_rw_t global_bucket;
 /* Token bucket for relayed traffic. */
 token_bucket_rw_t global_relayed_bucket;
 
-/** What was the read/write bucket before the last second_elapsed_callback()
- * call?  (used to determine how many bytes we've read). */
-static size_t stats_prev_global_read_bucket;
-/** What was the write bucket before the last second_elapsed_callback() call?
- * (used to determine how many bytes we've written). */
-static size_t stats_prev_global_write_bucket;
-
 /* DOCDOC stats_prev_n_read */
 static uint64_t stats_prev_n_read = 0;
 /* DOCDOC stats_prev_n_written */
@@ -479,19 +472,35 @@ get_connection_array, (void))
   return connection_array;
 }
 
-/** Provides the traffic read and written over the life of the process. */
-
+/**
+ * Return the amount of network traffic read, in bytes, over the life of this
+ * process.
+ */
 MOCK_IMPL(uint64_t,
 get_bytes_read,(void))
 {
   return stats_n_bytes_read;
 }
 
-/* DOCDOC get_bytes_written */
+/**
+ * Return the amount of network traffic read, in bytes, over the life of this
+ * process.
+ */
 MOCK_IMPL(uint64_t,
 get_bytes_written,(void))
 {
   return stats_n_bytes_written;
+}
+
+/**
+ * Increment the amount of network traffic read and written, over the life of
+ * this process.
+ */
+void
+stats_increment_bytes_read_and_written(uint64_t r, uint64_t w)
+{
+  stats_n_bytes_read += r;
+  stats_n_bytes_written += w;
 }
 
 /** Set the event mask on <b>conn</b> to <b>events</b>.  (The event
@@ -2374,12 +2383,7 @@ refill_callback(periodic_timer_t *timer, void *arg)
 {
   struct timeval now;
 
-  size_t bytes_written;
-  size_t bytes_read;
   int milliseconds_elapsed = 0;
-  int seconds_rolled_over = 0;
-
-  const or_options_t *options = get_options();
 
   (void)timer;
   (void)arg;
@@ -2392,27 +2396,12 @@ refill_callback(periodic_timer_t *timer, void *arg)
     if (mdiff > INT_MAX)
       mdiff = INT_MAX;
     milliseconds_elapsed = (int)mdiff;
-    seconds_rolled_over = (int)(now.tv_sec -
-                                refill_timer_current_millisecond.tv_sec);
   }
-
-  bytes_written = stats_prev_global_write_bucket -
-    token_bucket_rw_get_write(&global_bucket);
-  bytes_read = stats_prev_global_read_bucket -
-    token_bucket_rw_get_read(&global_bucket);
-
-  stats_n_bytes_read += bytes_read;
-  stats_n_bytes_written += bytes_written;
-  if (accounting_is_enabled(options) && milliseconds_elapsed >= 0)
-    accounting_add_bytes(bytes_read, bytes_written, seconds_rolled_over);
 
   if (milliseconds_elapsed > 0) {
     connection_bucket_refill_all((time_t)now.tv_sec,
                                  monotime_coarse_get_stamp());
   }
-
-  stats_prev_global_read_bucket = token_bucket_rw_get_read(&global_bucket);
-  stats_prev_global_write_bucket = token_bucket_rw_get_write(&global_bucket);
 
   /* remember what time it is, for next time */
   refill_timer_current_millisecond = now;
@@ -2621,8 +2610,6 @@ do_main_loop(void)
 
   /* Set up our buckets */
   connection_bucket_init();
-  stats_prev_global_read_bucket = token_bucket_rw_get_read(&global_bucket);
-  stats_prev_global_write_bucket = token_bucket_rw_get_write(&global_bucket);
 
   /* initialize the bootstrap status events to know we're starting up */
   control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
@@ -3502,7 +3489,6 @@ tor_free_all(int postfork)
 
   memset(&global_bucket, 0, sizeof(global_bucket));
   memset(&global_relayed_bucket, 0, sizeof(global_relayed_bucket));
-  stats_prev_global_read_bucket = stats_prev_global_write_bucket = 0;
   stats_prev_n_read = stats_prev_n_written = 0;
   stats_n_bytes_read = stats_n_bytes_written = 0;
   time_of_process_start = 0;
