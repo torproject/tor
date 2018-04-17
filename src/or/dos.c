@@ -15,6 +15,7 @@
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
+#include "relay.h"
 #include "router.h"
 
 #include "dos.h"
@@ -622,10 +623,12 @@ dos_log_heartbeat(void)
   char *conn_msg = NULL;
   char *cc_msg = NULL;
   char *single_hop_client_msg = NULL;
+  char *circ_stats_msg = NULL;
 
-  if (!dos_is_enabled()) {
-    goto end;
-  }
+  /* Stats number coming from relay.c append_cell_to_circuit_queue(). */
+  tor_asprintf(&circ_stats_msg,
+               " %" PRIu64 " circuits killed with too many cells.",
+               stats_n_circ_max_cell_reached);
 
   if (dos_cc_enabled) {
     tor_asprintf(&cc_msg,
@@ -647,7 +650,8 @@ dos_log_heartbeat(void)
   }
 
   log_notice(LD_HEARTBEAT,
-             "DoS mitigation since startup:%s%s%s",
+             "DoS mitigation since startup:%s%s%s%s",
+             circ_stats_msg,
              (cc_msg != NULL) ? cc_msg : " [cc not enabled]",
              (conn_msg != NULL) ? conn_msg : " [conn not enabled]",
              (single_hop_client_msg != NULL) ? single_hop_client_msg : "");
@@ -655,8 +659,7 @@ dos_log_heartbeat(void)
   tor_free(conn_msg);
   tor_free(cc_msg);
   tor_free(single_hop_client_msg);
-
- end:
+  tor_free(circ_stats_msg);
   return;
 }
 
