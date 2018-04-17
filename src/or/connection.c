@@ -2814,10 +2814,10 @@ connection_is_rate_limited(connection_t *conn)
     return 1;
 }
 
-/** Did either global write bucket run dry last second? If so,
- * we are likely to run dry again this second, so be stingy with the
- * tokens we just put in. */
-static int write_buckets_empty_last_second = 0;
+/** When was either global write bucket last empty? If this was recent, then
+ * we're probably low on bandwidth, and we should be stingy with our bandwidth
+ * usage. */
+static time_t write_buckets_last_empty_at = -100;
 
 /** How many seconds of no active local circuits will make the
  * connection revert to the "relayed" bandwidth class? */
@@ -2969,8 +2969,11 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
   if (smaller_bucket < attempt)
     return 1; /* not enough space no matter the priority */
 
-  if (write_buckets_empty_last_second)
-    return 1; /* we're already hitting our limits, no more please */
+  {
+    const time_t diff = approx_time() - write_buckets_last_empty_at;
+    if (diff <= 1)
+      return 1; /* we're already hitting our limits, no more please */
+  }
 
   if (priority == 1) { /* old-style v1 query */
     /* Could we handle *two* of these requests within the next two seconds? */
@@ -3042,10 +3045,15 @@ connection_buckets_decrement(connection_t *conn, time_t now,
   if (!connection_is_rate_limited(conn))
     return; /* local IPs are free */
 
+  unsigned flags = 0;
   if (connection_counts_as_relayed_traffic(conn, now)) {
-    token_bucket_rw_dec(&global_relayed_bucket, num_read, num_written);
+    flags = token_bucket_rw_dec(&global_relayed_bucket, num_read, num_written);
   }
-  token_bucket_rw_dec(&global_bucket, num_read, num_written);
+  flags |= token_bucket_rw_dec(&global_bucket, num_read, num_written);
+
+  if (flags & TB_WRITE) {
+    write_buckets_last_empty_at = now;
+  }
   if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
     token_bucket_rw_dec(&or_conn->bucket, num_read, num_written);
@@ -3184,10 +3192,6 @@ void
 connection_bucket_refill_all(time_t now, uint32_t now_ts)
 {
   smartlist_t *conns = get_connection_array();
-
-  write_buckets_empty_last_second =
-    token_bucket_rw_get_write(&global_bucket) <= 0 ||
-    token_bucket_rw_get_write(&global_relayed_bucket) <= 0;
 
   /* refill the global buckets */
   token_bucket_rw_refill(&global_bucket, now_ts);

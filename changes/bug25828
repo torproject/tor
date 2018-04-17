@@ -1,0 +1,7 @@
+  o Minor bugfixes (bandwidth management):
+    - Consider ourselves "low on write bandwidth" if we have exhausted our
+      write bandwidth some time in the last second. This was the
+      documented behavior before, but the actual behavior was to change
+      this value every TokenBucketRefillInterval. Fixes bug 25828; bugfix on
+      0.2.3.5-alpha.
+
