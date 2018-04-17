@@ -3034,7 +3034,7 @@ record_num_bytes_transferred_impl(connection_t *conn,
   if (accounting_is_enabled(get_options())) {
     if (now > last_recorded_accounting_at && last_recorded_accounting_at) {
       accounting_add_bytes(num_read, num_written,
-                           now - last_recorded_accounting_at);
+                           (int)(now - last_recorded_accounting_at));
     } else {
       accounting_add_bytes(num_read, num_written, 0);
     }
