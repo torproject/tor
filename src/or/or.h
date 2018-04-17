@@ -57,6 +57,7 @@
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
+#include <stdbool.h>
 
 #ifdef _WIN32
 #include <winsock2.h>

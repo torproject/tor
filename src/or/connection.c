@@ -772,8 +772,8 @@ connection_close_immediate(connection_t *conn)
   connection_unregister_events(conn);
 
   /* Prevent the event from getting unblocked. */
-  conn->read_blocked_on_bw =
-    conn->write_blocked_on_bw = 0;
+  conn->read_blocked_on_bw = 0;
+  conn->write_blocked_on_bw = 0;
 
   if (SOCKET_OK(conn->s))
     tor_close_socket(conn->s);
@@ -3052,9 +3052,37 @@ connection_buckets_decrement(connection_t *conn, time_t now,
   }
 }
 
+/**
+ * Mark <b>conn</b> as needing to stop reading because bandwidth has been
+ * exhausted.  If <b>is_global_bw</b>, it is closing because global bandwidth
+ * limit has been exhausted.  Otherwise, it is closing because its own
+ * bandwidth limit has been exhausted.
+ */
+void
+connection_read_bw_exhausted(connection_t *conn, bool is_global_bw)
+{
+  (void)is_global_bw;
+  conn->read_blocked_on_bw = 1;
+  connection_stop_reading(conn);
+}
+
+/**
+ * Mark <b>conn</b> as needing to stop reading because write bandwidth has
+ * been exhausted.  If <b>is_global_bw</b>, it is closing because global
+ * bandwidth limit has been exhausted.  Otherwise, it is closing because its
+ * own bandwidth limit has been exhausted.
+*/
+void
+connection_write_bw_exhausted(connection_t *conn, bool is_global_bw)
+{
+  (void)is_global_bw;
+  conn->write_blocked_on_bw = 1;
+  connection_stop_reading(conn);
+}
+
 /** If we have exhausted our global buckets, or the buckets for conn,
  * stop reading. */
-static void
+void
 connection_consider_empty_read_buckets(connection_t *conn)
 {
   const char *reason;
@@ -3062,6 +3090,7 @@ connection_consider_empty_read_buckets(connection_t *conn)
   if (!connection_is_rate_limited(conn))
     return; /* Always okay. */
 
+  bool is_global = true;
   if (token_bucket_rw_get_read(&global_bucket) <= 0) {
     reason = "global read bucket exhausted. Pausing.";
   } else if (connection_counts_as_relayed_traffic(conn, approx_time()) &&
@@ -3071,17 +3100,17 @@ connection_consider_empty_read_buckets(connection_t *conn)
              conn->state == OR_CONN_STATE_OPEN &&
              token_bucket_rw_get_read(&TO_OR_CONN(conn)->bucket) <= 0) {
     reason = "connection read bucket exhausted. Pausing.";
+    is_global = false;
   } else
     return; /* all good, no need to stop it */
 
   LOG_FN_CONN(conn, (LOG_DEBUG, LD_NET, "%s", reason));
-  conn->read_blocked_on_bw = 1;
-  connection_stop_reading(conn);
+  connection_read_bw_exhausted(conn, is_global);
 }
 
 /** If we have exhausted our global buckets, or the buckets for conn,
  * stop writing. */
-static void
+void
 connection_consider_empty_write_buckets(connection_t *conn)
 {
   const char *reason;
@@ -3089,6 +3118,7 @@ connection_consider_empty_write_buckets(connection_t *conn)
   if (!connection_is_rate_limited(conn))
     return; /* Always okay. */
 
+  bool is_global = true;
   if (token_bucket_rw_get_write(&global_bucket) <= 0) {
     reason = "global write bucket exhausted. Pausing.";
   } else if (connection_counts_as_relayed_traffic(conn, approx_time()) &&
@@ -3098,12 +3128,12 @@ connection_consider_empty_write_buckets(connection_t *conn)
              conn->state == OR_CONN_STATE_OPEN &&
              token_bucket_rw_get_write(&TO_OR_CONN(conn)->bucket) <= 0) {
     reason = "connection write bucket exhausted. Pausing.";
+    is_global = false;
   } else
     return; /* all good, no need to stop it */
 
   LOG_FN_CONN(conn, (LOG_DEBUG, LD_NET, "%s", reason));
-  conn->write_blocked_on_bw = 1;
-  connection_stop_writing(conn);
+  connection_write_bw_exhausted(conn, is_global);
 }
 
 /** Initialize the global buckets to the values configured in the
@@ -3768,8 +3798,7 @@ connection_handle_write_impl(connection_t *conn, int force)
         /* Make sure to avoid a loop if the receive buckets are empty. */
         log_debug(LD_NET,"wanted read.");
         if (!connection_is_reading(conn)) {
-          connection_stop_writing(conn);
-          conn->write_blocked_on_bw = 1;
+          connection_write_bw_exhausted(conn, true);
           /* we'll start reading again when we get more tokens in our
            * read bucket; then we'll start writing again too.
            */

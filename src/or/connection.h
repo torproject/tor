@@ -125,6 +125,10 @@ void connection_bucket_init(void);
 void connection_bucket_adjust(const or_options_t *options);
 void connection_bucket_refill(time_t now,
                               uint32_t now_ts);
+void connection_read_bw_exhausted(connection_t *conn, bool is_global_bw);
+void connection_write_bw_exhausted(connection_t *conn, bool is_global_bw);
+void connection_consider_empty_read_buckets(connection_t *conn);
+void connection_consider_empty_write_buckets(connection_t *conn);
 
 int connection_handle_read(connection_t *conn);
 
