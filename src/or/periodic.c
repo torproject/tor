@@ -43,11 +43,21 @@ periodic_event_dispatch(mainloop_event_t *ev, void *data)
   periodic_event_item_t *event = data;
   tor_assert(ev == event->ev);
 
+  if (BUG(!periodic_event_is_enabled(event))) {
+    return;
+  }
+
   time_t now = time(NULL);
   const or_options_t *options = get_options();
 //  log_debug(LD_GENERAL, "Dispatching %s", event->name);
   int r = event->fn(now, options);
   int next_interval = 0;
+
+  if (!periodic_event_is_enabled(event)) {
+    /* The event got disabled from inside its callback; no need to
+     * reschedule. */
+    return;
+  }
 
   /* update the last run time if action was taken */
   if (r==0) {
@@ -114,8 +124,8 @@ periodic_event_launch(periodic_event_item_t *event)
   }
 
   // Initial dispatch
-  periodic_event_dispatch(event->ev, event);
   event->enabled = 1;
+  periodic_event_dispatch(event->ev, event);
 }
 
 /** Release all storage associated with <b>event</b> */
@@ -126,6 +136,35 @@ periodic_event_destroy(periodic_event_item_t *event)
     return;
   mainloop_event_free(event->ev);
   event->last_action_time = 0;
+}
+
+/** Enable the given event which means the event is launched and then the
+ * event's enabled flag is set. This can be called for an event that is
+ * already enabled. */
+void
+periodic_event_enable(periodic_event_item_t *event)
+{
+  tor_assert(event);
+  /* Safely and silently ignore if this event is already enabled. */
+  if (periodic_event_is_enabled(event)) {
+    return;
+  }
+
+  periodic_event_launch(event);
+}
+
+/** Disable the given event which means the event is destroyed and then the
+ * event's enabled flag is unset. This can be called for an event that is
+ * already disabled. */
+void
+periodic_event_disable(periodic_event_item_t *event)
+{
+  tor_assert(event);
+  /* Safely and silently ignore if this event is already disabled. */
+  if (!periodic_event_is_enabled(event)) {
+    return;
+  }
+  mainloop_event_cancel(event->ev);
   event->enabled = 0;
 }
 
