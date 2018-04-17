@@ -3186,6 +3186,34 @@ connection_bucket_adjust(const or_options_t *options)
   }
 }
 
+/**
+ * Cached value of the last coarse-timestamp when we refilled the
+ * global buckets.
+ */
+static uint32_t last_refilled_global_buckets_ts=0;
+/**
+ * Refill the token buckets for a single connection <b>conn</b>, and the
+ * global token buckets as appropriate.  Requires that <b>now_ts</b> is
+ * the time in coarse timestamp units.
+ */
+static void
+connection_bucket_refill_single(connection_t *conn, uint32_t now_ts)
+{
+  /* Note that we only check for equality here: the underlying
+   * token bucket functions can handle moving backwards in time if they
+   * need to. */
+  if (now_ts != last_refilled_global_buckets_ts) {
+    token_bucket_rw_refill(&global_bucket, now_ts);
+    token_bucket_rw_refill(&global_relayed_bucket, now_ts);
+    last_refilled_global_buckets_ts = now_ts;
+  }
+
+  if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
+    or_connection_t *or_conn = TO_OR_CONN(conn);
+    token_bucket_rw_refill(&or_conn->bucket, now_ts);
+  }
+}
+
 /** Time has passed; increment buckets appropriately and re-enable formerly
  * blocked connections. */
 void
@@ -3196,6 +3224,7 @@ connection_bucket_refill_all(time_t now, uint32_t now_ts)
   /* refill the global buckets */
   token_bucket_rw_refill(&global_bucket, now_ts);
   token_bucket_rw_refill(&global_relayed_bucket, now_ts);
+  last_refilled_global_buckets_ts = now_ts;
 
   /* refill the per-connection buckets */
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
@@ -3255,6 +3284,8 @@ connection_handle_read_impl(connection_t *conn)
     return 0; /* do nothing */
 
   conn->timestamp_last_read_allowed = approx_time();
+
+  connection_bucket_refill_single(conn, monotime_coarse_get_stamp());
 
   switch (conn->type) {
     case CONN_TYPE_OR_LISTENER:
@@ -3689,6 +3720,8 @@ connection_handle_write_impl(connection_t *conn, int force)
   }
 
   conn->timestamp_last_write_allowed = now;
+
+  connection_bucket_refill_single(conn, monotime_coarse_get_stamp());
 
   /* Sometimes, "writable" means "connected". */
   if (connection_state_is_connecting(conn)) {
