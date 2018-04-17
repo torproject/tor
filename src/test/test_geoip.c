@@ -511,15 +511,9 @@ test_geoip_load_2nd_file(void *arg)
   const char FNAME[] = SRCDIR "/src/config/geoip";
   tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME));
 
-  int num_countries_geoip = geoip_get_n_countries();
-
   /* Load 2nd geoip (empty) file */
   const char FNAME2[] = SRCDIR "/src/test/geoip_dummy";
   tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME2));
-
-  int num_countries_geoip2 = geoip_get_n_countries();
-  /* FIXME: should not this be different? */
-  /* tt_int_op(num_countries_geoip, OP_NE, num_countries_geoip2); */
 
   /* Check that there is no geoip information for 8.8.8.8, */
   /* since loading the empty 2nd file should have delete it. */
@@ -551,4 +545,3 @@ struct testcase_t geoip_tests[] = {
 
   END_OF_TESTCASES
 };
-
