@@ -115,6 +115,9 @@ uint64_t stats_n_relay_cells_relayed = 0;
  * hop?
  */
 uint64_t stats_n_relay_cells_delivered = 0;
+/** Stats: how many circuits have we closed due to the cell queue limit being
+ * reached (see append_cell_to_circuit_queue()) */
+uint64_t stats_n_circ_max_cell_reached = 0;
 
 /** Used to tell which stream to read from first on a circuit. */
 static tor_weak_rng_t stream_choice_rng = TOR_WEAK_RNG_INIT;
@@ -3041,6 +3044,7 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
            (exitward) ? "Outbound" : "Inbound", queue->n,
            max_circuit_cell_queue_size);
     circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
+    stats_n_circ_max_cell_reached++;
     return;
   }
 
