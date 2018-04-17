@@ -238,13 +238,18 @@ token_bucket_rw_dec_write(token_bucket_rw_t *bucket,
 
 /**
  * As token_bucket_rw_dec_read and token_bucket_rw_dec_write, in a single
- * operation.
+ * operation.  Return a bitmask of TB_READ and TB_WRITE to indicate
+ * which buckets became empty.
  */
-void
+int
 token_bucket_rw_dec(token_bucket_rw_t *bucket,
                     ssize_t n_read, ssize_t n_written)
 {
-  token_bucket_rw_dec_read(bucket, n_read);
-  token_bucket_rw_dec_write(bucket, n_written);
+  int flags = 0;
+  if (token_bucket_rw_dec_read(bucket, n_read))
+    flags |= TB_READ;
+  if (token_bucket_rw_dec_write(bucket, n_written))
+    flags |= TB_WRITE;
+  return flags;
 }
 
