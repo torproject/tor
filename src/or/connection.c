@@ -2845,14 +2845,14 @@ connection_counts_as_relayed_traffic(connection_t *conn, time_t now)
  * write many of them or just a few; and <b>conn_bucket</b> (if
  * non-negative) provides an upper limit for our answer. */
 static ssize_t
-connection_bucket_round_robin(int base, int priority,
-                              ssize_t global_bucket_val, ssize_t conn_bucket)
+connection_bucket_get_share(int base, int priority,
+                            ssize_t global_bucket_val, ssize_t conn_bucket)
 {
   ssize_t at_most;
   ssize_t num_bytes_high = (priority ? 32 : 16) * base;
   ssize_t num_bytes_low = (priority ? 4 : 2) * base;
 
-  /* Do a rudimentary round-robin so one circuit can't hog a connection.
+  /* Do a rudimentary limiting so one circuit can't hog a connection.
    * Pick at most 32 cells, at least 4 cells if possible, and if we're in
    * the middle pick 1/8 of the available bandwidth. */
   at_most = global_bucket_val / 8;
@@ -2899,8 +2899,8 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
     global_bucket_val = MIN(global_bucket_val, relayed);
   }
 
-  return connection_bucket_round_robin(base, priority,
-                                       global_bucket_val, conn_bucket);
+  return connection_bucket_get_share(base, priority,
+                                     global_bucket_val, conn_bucket);
 }
 
 /** How many bytes at most can we write onto this connection? */
@@ -2931,8 +2931,8 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
     global_bucket_val = MIN(global_bucket_val, relayed);
   }
 
-  return connection_bucket_round_robin(base, priority,
-                                       global_bucket_val, conn_bucket);
+  return connection_bucket_get_share(base, priority,
+                                     global_bucket_val, conn_bucket);
 }
 
 /** Return 1 if the global write buckets are low enough that we
