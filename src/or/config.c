@@ -2190,7 +2190,7 @@ options_act(const or_options_t *old_options)
 
     if (options->BandwidthRate != old_options->BandwidthRate ||
         options->BandwidthBurst != old_options->BandwidthBurst ||
-        options->BandwidthRate != old_options->BandwidthRate ||
+        options->RelayBandwidthRate != old_options->RelayBandwidthRate ||
         options->RelayBandwidthBurst != old_options->RelayBandwidthBurst)
       connection_bucket_adjust(options);
 
