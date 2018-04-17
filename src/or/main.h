@@ -86,6 +86,8 @@ uint64_t get_main_loop_success_count(void);
 uint64_t get_main_loop_error_count(void);
 uint64_t get_main_loop_idle_count(void);
 
+void periodic_events_on_new_options(const or_options_t *options);
+
 extern time_t time_of_process_start;
 extern int quiet_level;
 extern token_bucket_rw_t global_bucket;
