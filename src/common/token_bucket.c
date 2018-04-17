@@ -119,7 +119,7 @@ rate_per_sec_to_rate_per_step(uint32_t rate)
   */
   uint64_t units = (uint64_t) rate * TICKS_PER_STEP;
   uint32_t val = (uint32_t)
-    monotime_coarse_stamp_units_to_approx_msec(units) / 1000;
+    (monotime_coarse_stamp_units_to_approx_msec(units) / 1000);
   return val ? val : 1;
 }
 
