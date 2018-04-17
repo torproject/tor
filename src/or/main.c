@@ -150,6 +150,7 @@ static int run_main_loop_until_done(void);
 static void process_signal(int sig);
 static void shutdown_did_not_work_callback(evutil_socket_t fd, short event,
                                            void *arg) ATTR_NORETURN;
+static void rescan_periodic_events(const or_options_t *options);
 
 /********* START VARIABLES **********/
 
@@ -1478,18 +1479,9 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
   (void) events;
   (void) data;
 
-  int roles = get_my_roles(get_options());
-
   tor_event_free(initialize_periodic_events_event);
 
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
-    if (item->roles & roles) {
-      /* This is safe to be called on an already enabled event. */
-      periodic_event_enable(item);
-      log_debug(LD_GENERAL, "Launching periodic event %s", item->name);
-    }
-  }
+  rescan_periodic_events(get_options());
 }
 
 /** Set up all the members of periodic_events[], and configure them all to be
@@ -1546,8 +1538,10 @@ rescan_periodic_events(const or_options_t *options)
     /* Enable the event if needed. It is safe to enable an event that was
      * already enabled. Same goes for disabling it. */
     if (item->roles & roles) {
+      log_debug(LD_GENERAL, "Launching periodic event %s", item->name);
       periodic_event_enable(item);
     } else {
+      log_debug(LD_GENERAL, "Disabling periodic event %s", item->name);
       periodic_event_disable(item);
     }
   }
