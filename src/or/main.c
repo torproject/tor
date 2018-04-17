@@ -2370,43 +2370,6 @@ systemd_watchdog_callback(periodic_timer_t *timer, void *arg)
 }
 #endif /* defined(HAVE_SYSTEMD_209) */
 
-/** Timer: used to invoke refill_callback(). */
-static periodic_timer_t *refill_timer = NULL;
-
-/** Millisecond when refall_callback was last invoked. */
-static struct timeval refill_timer_current_millisecond;
-
-/** Libevent callback: invoked periodically to refill token buckets
- * and count r/w bytes. */
-static void
-refill_callback(periodic_timer_t *timer, void *arg)
-{
-  struct timeval now;
-
-  int milliseconds_elapsed = 0;
-
-  (void)timer;
-  (void)arg;
-
-  tor_gettimeofday(&now);
-
-  /* If this is our first time, no time has passed. */
-  if (refill_timer_current_millisecond.tv_sec) {
-    long mdiff = tv_mdiff(&refill_timer_current_millisecond, &now);
-    if (mdiff > INT_MAX)
-      mdiff = INT_MAX;
-    milliseconds_elapsed = (int)mdiff;
-  }
-
-  if (milliseconds_elapsed > 0) {
-    connection_bucket_refill_all((time_t)now.tv_sec,
-                                 monotime_coarse_get_stamp());
-  }
-
-  /* remember what time it is, for next time */
-  refill_timer_current_millisecond = now;
-}
-
 #ifndef _WIN32
 /** Called when a possibly ignorable libevent error occurs; ensures that we
  * don't get into an infinite loop by ignoring too many errors from
@@ -2706,20 +2669,6 @@ do_main_loop(void)
     }
   }
 #endif /* defined(HAVE_SYSTEMD_209) */
-
-  if (!refill_timer) {
-    struct timeval refill_interval;
-    int msecs = get_options()->TokenBucketRefillInterval;
-
-    refill_interval.tv_sec =  msecs/1000;
-    refill_interval.tv_usec = (msecs%1000)*1000;
-
-    refill_timer = periodic_timer_new(tor_libevent_get_base(),
-                                      &refill_interval,
-                                      refill_callback,
-                                      NULL);
-    tor_assert(refill_timer);
-  }
 
 #ifdef HAVE_SYSTEMD
   {
@@ -3477,7 +3426,6 @@ tor_free_all(int postfork)
   smartlist_free(active_linked_connection_lst);
   periodic_timer_free(second_timer);
   teardown_periodic_events();
-  periodic_timer_free(refill_timer);
   tor_event_free(shutdown_did_not_work_event);
   tor_event_free(initialize_periodic_events_event);
   mainloop_event_free(directory_all_unreachable_cb_event);
@@ -3505,7 +3453,6 @@ tor_free_all(int postfork)
   heartbeat_callback_first_time = 1;
   n_libevent_errors = 0;
   current_second = 0;
-  memset(&refill_timer_current_millisecond, 0, sizeof(struct timeval));
 
   if (!postfork) {
     release_lockfile();

@@ -138,6 +138,8 @@ static const char *proxy_type_to_string(int proxy_type);
 static int get_proxy_type(void);
 const tor_addr_t *conn_get_outbound_address(sa_family_t family,
                   const or_options_t *options, unsigned int conn_type);
+static void blocked_connection_reenable_init(const or_options_t *options);
+static void schedule_blocked_connection_reenable(void);
 
 /** The last addresses that our network interface seemed to have been
  * binding to.  We use this as one way to detect when our IP changes.
@@ -3091,6 +3093,7 @@ connection_read_bw_exhausted(connection_t *conn, bool is_global_bw)
   (void)is_global_bw;
   conn->read_blocked_on_bw = 1;
   connection_stop_reading(conn);
+  schedule_blocked_connection_reenable();
 }
 
 /**
@@ -3105,6 +3108,7 @@ connection_write_bw_exhausted(connection_t *conn, bool is_global_bw)
   (void)is_global_bw;
   conn->write_blocked_on_bw = 1;
   connection_stop_reading(conn);
+  schedule_blocked_connection_reenable();
 }
 
 /** If we have exhausted our global buckets, or the buckets for conn,
@@ -3117,7 +3121,8 @@ connection_consider_empty_read_buckets(connection_t *conn)
   if (!connection_is_rate_limited(conn))
     return; /* Always okay. */
 
-  bool is_global = true;
+  int is_global = 1;
+
   if (token_bucket_rw_get_read(&global_bucket) <= 0) {
     reason = "global read bucket exhausted. Pausing.";
   } else if (connection_counts_as_relayed_traffic(conn, approx_time()) &&
@@ -3185,6 +3190,8 @@ connection_bucket_init(void)
                       (int32_t)options->BandwidthBurst,
                       now_ts);
   }
+
+  blocked_connection_reenable_init(options);
 }
 
 /** Update the global connection bucket settings to a new value. */
@@ -3233,55 +3240,76 @@ connection_bucket_refill_single(connection_t *conn, uint32_t now_ts)
   }
 }
 
-/** Time has passed; increment buckets appropriately and re-enable formerly
- * blocked connections. */
-void
-connection_bucket_refill_all(time_t now, uint32_t now_ts)
+/**
+ * Event to re-enable all connections that were previously blocked on read or
+ * write.
+ */
+static mainloop_event_t *reenable_blocked_connections_ev = NULL;
+
+/** True iff reenable_blocked_connections_ev is currently scheduled. */
+static int reenable_blocked_connections_is_scheduled = 0;
+
+/** Delay after which to run reenable_blocked_connections_ev. */
+static struct timeval reenable_blocked_connections_delay;
+
+/**
+ * Re-enable all connections that were previously blocked on read or write.
+ * This event is scheduled after enough time has elapsed to be sure
+ * that the buckets will refill when the connections have something to do.
+ */
+static void
+reenable_blocked_connections_cb(mainloop_event_t *ev, void *arg)
 {
-  smartlist_t *conns = get_connection_array();
-
-  /* refill the global buckets */
-  token_bucket_rw_refill(&global_bucket, now_ts);
-  token_bucket_rw_refill(&global_relayed_bucket, now_ts);
-  last_refilled_global_buckets_ts = now_ts;
-
-  /* refill the per-connection buckets */
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
-    if (connection_speaks_cells(conn)) {
-      or_connection_t *or_conn = TO_OR_CONN(conn);
-
-      if (conn->state == OR_CONN_STATE_OPEN) {
-        token_bucket_rw_refill(&or_conn->bucket, now_ts);
-      }
-    }
-
-    if (conn->read_blocked_on_bw == 1 /* marked to turn reading back on now */
-        && token_bucket_rw_get_read(&global_bucket) > 0 /* and we can read */
-        && (!connection_counts_as_relayed_traffic(conn, now) ||
-            token_bucket_rw_get_read(&global_relayed_bucket) > 0)
-        && (!connection_speaks_cells(conn) ||
-            conn->state != OR_CONN_STATE_OPEN ||
-            token_bucket_rw_get_read(&TO_OR_CONN(conn)->bucket) > 0)) {
-        /* and either a non-cell conn or a cell conn with non-empty bucket */
-      LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,
-                         "waking up conn (fd %d) for read", (int)conn->s));
-      conn->read_blocked_on_bw = 0;
+  (void)ev;
+  (void)arg;
+  SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
+    if (conn->read_blocked_on_bw == 1) {
       connection_start_reading(conn);
+      conn->read_blocked_on_bw = 0;
     }
-
-    if (conn->write_blocked_on_bw == 1
-        && token_bucket_rw_get_write(&global_bucket) > 0 /* and we can write */
-        && (!connection_counts_as_relayed_traffic(conn, now) ||
-            token_bucket_rw_get_write(&global_relayed_bucket) > 0)
-        && (!connection_speaks_cells(conn) ||
-            conn->state != OR_CONN_STATE_OPEN ||
-            token_bucket_rw_get_write(&TO_OR_CONN(conn)->bucket) > 0)) {
-      LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,
-                         "waking up conn (fd %d) for write", (int)conn->s));
-      conn->write_blocked_on_bw = 0;
+    if (conn->write_blocked_on_bw == 1) {
       connection_start_writing(conn);
+      conn->write_blocked_on_bw = 0;
     }
   } SMARTLIST_FOREACH_END(conn);
+
+  reenable_blocked_connections_is_scheduled = 0;
+}
+
+/**
+ * Initialize the mainloop event that we use to wake up connections that
+ * find themselves blocked on bandwidth.
+ */
+static void
+blocked_connection_reenable_init(const or_options_t *options)
+{
+  if (! reenable_blocked_connections_ev) {
+    reenable_blocked_connections_ev =
+      mainloop_event_new(reenable_blocked_connections_cb, NULL);
+    reenable_blocked_connections_is_scheduled = 0;
+  }
+  time_t sec = options->TokenBucketRefillInterval / 1000;
+  int msec = (options->TokenBucketRefillInterval % 1000);
+  reenable_blocked_connections_delay.tv_sec = sec;
+  reenable_blocked_connections_delay.tv_usec = msec * 1000;
+}
+
+/**
+ * Called when we have blocked a connection for being low on bandwidth:
+ * schedule an event to reenable such connections, if it is not already
+ * scheduled.
+ */
+static void
+schedule_blocked_connection_reenable(void)
+{
+  if (reenable_blocked_connections_is_scheduled)
+    return;
+  if (BUG(reenable_blocked_connections_ev == NULL)) {
+    blocked_connection_reenable_init(get_options());
+  }
+  mainloop_event_schedule(reenable_blocked_connections_ev,
+                          &reenable_blocked_connections_delay);
+  reenable_blocked_connections_is_scheduled = 1;
 }
 
 /** Read bytes from conn-\>s and process them.
@@ -5216,6 +5244,10 @@ connection_free_all(void)
   tor_free(last_interface_ipv4);
   tor_free(last_interface_ipv6);
   last_recorded_accounting_at = 0;
+
+  mainloop_event_free(reenable_blocked_connections_ev);
+  reenable_blocked_connections_is_scheduled = 0;
+  memset(&reenable_blocked_connections_delay, 0, sizeof(struct timeval));
 }
 
 /** Log a warning, and possibly emit a control event, that <b>received</b> came
