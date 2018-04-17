@@ -1680,7 +1680,7 @@ networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
  * XXXX If we need this elsewhere at any point, we should make it nonstatic
  * XXXX and move it into another file.
  */
-static int
+int
 any_client_port_set(const or_options_t *options)
 {
   return (options->SocksPort_set ||

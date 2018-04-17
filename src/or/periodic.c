@@ -78,7 +78,10 @@ periodic_event_dispatch(mainloop_event_t *ev, void *data)
 void
 periodic_event_reschedule(periodic_event_item_t *event)
 {
-  periodic_event_set_interval(event, 1);
+  /* Don't reschedule a disabled event. */
+  if (periodic_event_is_enabled(event)) {
+    periodic_event_set_interval(event, 1);
+  }
 }
 
 /** Initializes the libevent backend for a periodic event. */
@@ -104,9 +107,15 @@ periodic_event_launch(periodic_event_item_t *event)
     log_err(LD_BUG, "periodic_event_launch without periodic_event_setup");
     tor_assert(0);
   }
+  /* Event already enabled? This is a bug */
+  if (periodic_event_is_enabled(event)) {
+    log_err(LD_BUG, "periodic_event_launch on an already enabled event");
+    tor_assert(0);
+  }
 
   // Initial dispatch
   periodic_event_dispatch(event->ev, event);
+  event->enabled = 1;
 }
 
 /** Release all storage associated with <b>event</b> */
@@ -117,5 +126,6 @@ periodic_event_destroy(periodic_event_item_t *event)
     return;
   mainloop_event_free(event->ev);
   event->last_action_time = 0;
+  event->enabled = 0;
 }
 
