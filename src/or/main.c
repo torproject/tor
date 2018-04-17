@@ -2407,8 +2407,8 @@ refill_callback(periodic_timer_t *timer, void *arg)
     accounting_add_bytes(bytes_read, bytes_written, seconds_rolled_over);
 
   if (milliseconds_elapsed > 0) {
-    connection_bucket_refill((time_t)now.tv_sec,
-                             monotime_coarse_get_stamp());
+    connection_bucket_refill_all((time_t)now.tv_sec,
+                                 monotime_coarse_get_stamp());
   }
 
   stats_prev_global_read_bucket = token_bucket_rw_get_read(&global_bucket);

@@ -3178,9 +3178,10 @@ connection_bucket_adjust(const or_options_t *options)
   }
 }
 
-/** Time has passed; increment buckets appropriately. */
+/** Time has passed; increment buckets appropriately and re-enable formerly
+ * blocked connections. */
 void
-connection_bucket_refill(time_t now, uint32_t now_ts)
+connection_bucket_refill_all(time_t now, uint32_t now_ts)
 {
   smartlist_t *conns = get_connection_array();
 

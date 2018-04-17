@@ -123,8 +123,8 @@ ssize_t connection_bucket_write_limit(connection_t *conn, time_t now);
 int global_write_bucket_low(connection_t *conn, size_t attempt, int priority);
 void connection_bucket_init(void);
 void connection_bucket_adjust(const or_options_t *options);
-void connection_bucket_refill(time_t now,
-                              uint32_t now_ts);
+void connection_bucket_refill_all(time_t now,
+                                  uint32_t now_ts);
 void connection_read_bw_exhausted(connection_t *conn, bool is_global_bw);
 void connection_write_bw_exhausted(connection_t *conn, bool is_global_bw);
 void connection_consider_empty_read_buckets(connection_t *conn);
