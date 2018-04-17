@@ -512,6 +512,7 @@ test_geoip_load_2nd_file(void *arg)
   tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME));
 
   /* Load 2nd geoip (empty) file */
+  /* It has to be the same IP address family */
   const char FNAME2[] = SRCDIR "/src/test/geoip_dummy";
   tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME2));
 
