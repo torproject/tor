@@ -78,14 +78,10 @@ mod internal {
     }
 }
 
-// For testing, we expose the pure-Rust implementation of a
-// cryptographically-insecure PRNG which mirrors the implementation of
-// `tor_weak_rng_t` in C.
+// For testing, we expose a pure-Rust implementation.
 #[cfg(test)]
 mod internal {
-    use prng::TorInsecurePrng;
-
-    pub type TorRng = TorInsecurePrng;
+    pub use rand::EntropyRng as TorRng;
 }
 
 // Finally, expose the public functionality of whichever appropriate internal

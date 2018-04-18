@@ -3,6 +3,8 @@
 // See LICENSE for licensing information
 
 // External dependencies
+#[cfg(test)]
+extern crate rand;
 extern crate rand_core;
 
 // Internal dependencies
@@ -12,4 +14,3 @@ extern crate external;
 extern crate tor_log;
 
 pub mod rng;
-pub mod prng;
