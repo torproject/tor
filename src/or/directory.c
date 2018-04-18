@@ -5330,8 +5330,8 @@ find_dl_min_delay(const download_status_t *dls, const or_options_t *options)
           /* During bootstrapping */
           if (!networkstatus_consensus_can_use_extra_fallbacks(options)) {
             /* A bootstrapping client without extra fallback directories */
-            return
-             options->ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay;
+            return options->
+              ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay;
           } else if (dls->want_authority) {
             /* A bootstrapping client with extra fallback directories, but
              * connecting to an authority */
