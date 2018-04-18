@@ -5303,7 +5303,7 @@ connection_dir_finished_connecting(dir_connection_t *conn)
  * Then return a list of int pointers defining download delays in seconds.
  * Helper function for download_status_increment_failure(),
  * download_status_reset(), and download_status_increment_attempt(). */
-STATIC const smartlist_t *
+STATIC int
 find_dl_schedule(const download_status_t *dls, const or_options_t *options)
 {
   switch (dls->schedule) {
@@ -5359,25 +5359,19 @@ find_dl_schedule(const download_status_t *dls, const or_options_t *options)
   }
 
   /* Impossible, but gcc will fail with -Werror without a `return`. */
-  return NULL;
+  return 0;
 }
 
 /** Decide which minimum delay step we want to use based on
  * descriptor type in <b>dls</b> and <b>options</b>.
  * Helper function for download_status_schedule_get_delay(). */
 STATIC int
-find_dl_min_delay(download_status_t *dls, const or_options_t *options)
+find_dl_min_delay(const download_status_t *dls, const or_options_t *options)
 {
   tor_assert(dls);
   tor_assert(options);
 
-  /*
-   * For now, just use the existing schedule config stuff and pick the
-   * first/last entries off to get min/max delay for backoff purposes
-   */
-  const smartlist_t *schedule = find_dl_schedule(dls, options);
-  tor_assert(schedule != NULL && smartlist_len(schedule) >= 2);
-  return *(int *)(smartlist_get(schedule, 0));
+  return find_dl_schedule(dls, options);
 }
 
 /** As next_random_exponential_delay() below, but does not compute a random
@@ -5634,10 +5628,9 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
 static time_t
 download_status_get_initial_delay_from_now(const download_status_t *dls)
 {
-  const smartlist_t *schedule = find_dl_schedule(dls, get_options());
   /* We use constant initial delays, even in exponential backoff
    * schedules. */
-  return time(NULL) + *(int *)smartlist_get(schedule, 0);
+  return time(NULL) + find_dl_min_delay(dls, get_options());
 }
 
 /** Reset <b>dls</b> so that it will be considered downloadable

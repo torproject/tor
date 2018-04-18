@@ -62,7 +62,7 @@ typedef union {
   int *AUTOBOOL;
   time_t *ISOTIME;
   smartlist_t **CSV;
-  smartlist_t **CSV_INTERVAL;
+  int *CSV_INTERVAL;
   config_line_t **LINELIST;
   config_line_t **LINELIST_S;
   config_line_t **LINELIST_V;
