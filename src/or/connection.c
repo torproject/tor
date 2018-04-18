@@ -1,4 +1,4 @@
- /* Copyright (c) 2001 Matej Pfajfar.
+/* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2017, The Tor Project, Inc. */
@@ -138,8 +138,8 @@ static const char *proxy_type_to_string(int proxy_type);
 static int get_proxy_type(void);
 const tor_addr_t *conn_get_outbound_address(sa_family_t family,
                   const or_options_t *options, unsigned int conn_type);
-static void blocked_connection_reenable_init(const or_options_t *options);
-static void schedule_blocked_connection_reenable(void);
+static void reenable_blocked_connection_init(const or_options_t *options);
+static void reenable_blocked_connection_schedule(void);
 
 /** The last addresses that our network interface seemed to have been
  * binding to.  We use this as one way to detect when our IP changes.
@@ -3093,7 +3093,7 @@ connection_read_bw_exhausted(connection_t *conn, bool is_global_bw)
   (void)is_global_bw;
   conn->read_blocked_on_bw = 1;
   connection_stop_reading(conn);
-  schedule_blocked_connection_reenable();
+  reenable_blocked_connection_schedule();
 }
 
 /**
@@ -3108,7 +3108,7 @@ connection_write_bw_exhausted(connection_t *conn, bool is_global_bw)
   (void)is_global_bw;
   conn->write_blocked_on_bw = 1;
   connection_stop_reading(conn);
-  schedule_blocked_connection_reenable();
+  reenable_blocked_connection_schedule();
 }
 
 /** If we have exhausted our global buckets, or the buckets for conn,
@@ -3191,7 +3191,7 @@ connection_bucket_init(void)
                       now_ts);
   }
 
-  blocked_connection_reenable_init(options);
+  reenable_blocked_connection_init(options);
 }
 
 /** Update the global connection bucket settings to a new value. */
@@ -3281,7 +3281,7 @@ reenable_blocked_connections_cb(mainloop_event_t *ev, void *arg)
  * find themselves blocked on bandwidth.
  */
 static void
-blocked_connection_reenable_init(const or_options_t *options)
+reenable_blocked_connection_init(const or_options_t *options)
 {
   if (! reenable_blocked_connections_ev) {
     reenable_blocked_connections_ev =
@@ -3300,12 +3300,12 @@ blocked_connection_reenable_init(const or_options_t *options)
  * scheduled.
  */
 static void
-schedule_blocked_connection_reenable(void)
+reenable_blocked_connection_schedule(void)
 {
   if (reenable_blocked_connections_is_scheduled)
     return;
   if (BUG(reenable_blocked_connections_ev == NULL)) {
-    blocked_connection_reenable_init(get_options());
+    reenable_blocked_connection_init(get_options());
   }
   mainloop_event_schedule(reenable_blocked_connections_ev,
                           &reenable_blocked_connections_delay);
