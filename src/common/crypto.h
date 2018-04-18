@@ -38,6 +38,7 @@ typedef struct aes_cnt_cipher crypto_cipher_t;
 typedef struct crypto_dh_t crypto_dh_t;
 
 /* global state */
+int crypto_init_siphash_key(void);
 int crypto_early_init(void) ATTR_WUR;
 int crypto_global_init(int hardwareAccel,
                        const char *accelName,
