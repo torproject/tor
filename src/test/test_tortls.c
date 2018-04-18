@@ -203,6 +203,17 @@ test_tortls_tor_tls_get_error(void *data)
 }
 
 static void
+library_init(void)
+{
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+  OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
+#else
+  SSL_library_init();
+  SSL_load_error_strings();
+#endif
+}
+
+static void
 test_tortls_get_state_description(void *ignored)
 {
   (void)ignored;
@@ -210,9 +221,7 @@ test_tortls_get_state_description(void *ignored)
   char *buf;
   SSL_CTX *ctx;
 
-  SSL_library_init();
-  SSL_load_error_strings();
-
+  library_init();
   ctx = SSL_CTX_new(SSLv23_method());
 
   buf = tor_malloc_zero(1000);
@@ -274,8 +283,7 @@ test_tortls_get_by_ssl(void *ignored)
   SSL_CTX *ctx;
   SSL *ssl;
 
-  SSL_library_init();
-  SSL_load_error_strings();
+  library_init();
   tor_tls_allocate_tor_tls_object_ex_data_index();
 
   ctx = SSL_CTX_new(SSLv23_method());
@@ -322,8 +330,7 @@ test_tortls_log_one_error(void *ignored)
   SSL_CTX *ctx;
   SSL *ssl = NULL;
 
-  SSL_library_init();
-  SSL_load_error_strings();
+  library_init();
 
   ctx = SSL_CTX_new(SSLv23_method());
   tls = tor_malloc_zero(sizeof(tor_tls_t));
@@ -415,8 +422,7 @@ test_tortls_get_error(void *ignored)
   int ret;
   SSL_CTX *ctx;
 
-  SSL_library_init();
-  SSL_load_error_strings();
+  library_init();
 
   ctx = SSL_CTX_new(SSLv23_method());
   setup_capture_of_logs(LOG_INFO);
@@ -792,8 +798,8 @@ test_tortls_classify_client_ciphers(void *ignored)
   STACK_OF(SSL_CIPHER) *ciphers;
   SSL_CIPHER *tmp_cipher;
 
-  SSL_library_init();
-  SSL_load_error_strings();
+  library_init();
+
   tor_tls_allocate_tor_tls_object_ex_data_index();
 
   tls = tor_malloc_zero(sizeof(tor_tls_t));
@@ -897,8 +903,7 @@ test_tortls_client_is_using_v2_ciphers(void *ignored)
   SSL_SESSION *sess;
   STACK_OF(SSL_CIPHER) *ciphers;
 
-  SSL_library_init();
-  SSL_load_error_strings();
+  library_init();
 
   ctx = SSL_CTX_new(TLSv1_method());
   ssl = SSL_new(ctx);
@@ -1541,8 +1546,8 @@ test_tortls_session_secret_cb(void *ignored)
   STACK_OF(SSL_CIPHER) *ciphers = NULL;
   SSL_CIPHER *one;
 
-  SSL_library_init();
-  SSL_load_error_strings();
+  library_init();
+
   tor_tls_allocate_tor_tls_object_ex_data_index();
 
   tls = tor_malloc_zero(sizeof(tor_tls_t));
@@ -1733,8 +1738,7 @@ test_tortls_find_cipher_by_id(void *ignored)
   fixed_cipher2 = tor_malloc_zero(sizeof(SSL_CIPHER));
   fixed_cipher2->id = 0xC00A;
 
-  SSL_library_init();
-  SSL_load_error_strings();
+  library_init();
 
   ctx = SSL_CTX_new(m);
   ssl = SSL_new(ctx);
@@ -1825,8 +1829,7 @@ test_tortls_server_info_callback(void *ignored)
   SSL_CTX *ctx;
   SSL *ssl;
 
-  SSL_library_init();
-  SSL_load_error_strings();
+  library_init();
 
   ctx = SSL_CTX_new(TLSv1_method());
   ssl = SSL_new(ctx);
