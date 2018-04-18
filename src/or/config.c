@@ -614,16 +614,10 @@ static config_var_t option_vars_[] = {
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
   VAR("__OwningControllerFD",INT,OwningControllerFD, "-1"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
-  V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0, 0, 0, 60, 60, 120, "
-                                 "300, 900, 2147483647"),
-  V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0, 0, 60, 300, 600, "
-                                 "2147483647"),
-  V(TestingServerConsensusDownloadInitialDelay, CSV_INTERVAL, "0, 0, 60, "
-                                 "300, 600, 1800, 1800, 1800, 1800, "
-                                 "1800, 3600, 7200"),
-  V(TestingClientConsensusDownloadInitialDelay, CSV_INTERVAL, "0, 0, 60, "
-                                 "300, 600, 1800, 3600, 3600, 3600, "
-                                 "10800, 21600, 43200"),
+  V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingServerConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingClientConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
   /* With the ClientBootstrapConsensus*Download* below:
    * Clients with only authorities will try:
    *  - at least 3 authorities over 10 seconds, then exponentially backoff,
@@ -639,13 +633,11 @@ static config_var_t option_vars_[] = {
    *
    * When clients have authorities and fallbacks available, they use these
    * schedules: (we stagger the times to avoid thundering herds) */
-  V(ClientBootstrapConsensusAuthorityDownloadInitialDelay, CSV_INTERVAL,
-    "6, 11, 3600, 10800, 25200, 54000, 111600, 262800" /* 3 days + 1 hour */),
-  V(ClientBootstrapConsensusFallbackDownloadInitialDelay, CSV_INTERVAL,
-    "0, 1, 4, 11, 3600, 10800, 25200, 54000, 111600, 262800"),
+  V(ClientBootstrapConsensusAuthorityDownloadInitialDelay, CSV_INTERVAL, "6"),
+  V(ClientBootstrapConsensusFallbackDownloadInitialDelay, CSV_INTERVAL, "0"),
   /* When clients only have authorities available, they use this schedule: */
   V(ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay, CSV_INTERVAL,
-    "0, 3, 7, 3600, 10800, 25200, 54000, 111600, 262800"),
+    "0"),
   /* We don't want to overwhelm slow networks (or mirrors whose replies are
    * blocked), but we also don't want to fail if only some mirrors are
    * blackholed. Clients will try 3 directories simultaneously.
@@ -653,14 +645,12 @@ static config_var_t option_vars_[] = {
   V(ClientBootstrapConsensusMaxInProgressTries, UINT, "3"),
   /* When a client has any running bridges, check each bridge occasionally,
     * whether or not that bridge is actually up. */
-  V(TestingBridgeDownloadInitialDelay, CSV_INTERVAL,
-    "10800, 25200, 54000, 111600, 262800"),
+  V(TestingBridgeDownloadInitialDelay, CSV_INTERVAL,"10800"),
   /* When a client is just starting, or has no running bridges, check each
    * bridge a few times quickly, and then try again later. These schedules
    * are much longer than the other schedules, because we try each and every
    * configured bridge with this schedule. */
-  V(TestingBridgeBootstrapDownloadInitialDelay, CSV_INTERVAL,
-    "0, 30, 90, 600, 3600, 10800, 25200, 54000, 111600, 262800"),
+  V(TestingBridgeBootstrapDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "10 minutes"),
   V(TestingDirConnectionMaxStall, INTERVAL, "5 minutes"),
   OBSOLETE("TestingConsensusMaxDownloadTries"),
@@ -687,12 +677,10 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(EnforceDistinctSubnets,      BOOL,     "0"),
   V(AssumeReachable,             BOOL,     "1"),
   V(AuthDirMaxServersPerAddr,    UINT,     "0"),
-  V(ClientBootstrapConsensusAuthorityDownloadInitialDelay, CSV_INTERVAL,
-    "0, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
-  V(ClientBootstrapConsensusFallbackDownloadInitialDelay, CSV_INTERVAL,
-    "0, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
+  V(ClientBootstrapConsensusAuthorityDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(ClientBootstrapConsensusFallbackDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay, CSV_INTERVAL,
-    "0, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
+    "0"),
   V(ClientDNSRejectInternalAddresses, BOOL,"0"),
   V(ClientRejectInternalAddresses, BOOL,   "0"),
   V(CountPrivateBandwidth,       BOOL,     "1"),
@@ -707,17 +695,12 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
-  V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0, 0, 0, 5, 10, 15, "
-                                 "20, 30, 60"),
-  V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0, 0, 5, 10, 15, 20, "
-                                 "30, 60"),
-  V(TestingServerConsensusDownloadInitialDelay, CSV_INTERVAL, "0, 0, 5, 10, "
-                                 "15, 20, 30, 60"),
-  V(TestingClientConsensusDownloadInitialDelay, CSV_INTERVAL, "0, 0, 5, 10, "
-                                 "15, 20, 30, 60"),
-  V(TestingBridgeDownloadInitialDelay, CSV_INTERVAL, "10, 30, 60"),
-  V(TestingBridgeBootstrapDownloadInitialDelay, CSV_INTERVAL, "0, 0, 5, 10, "
-                                 "15, 20, 30, 60"),
+  V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingServerConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingClientConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingBridgeDownloadInitialDelay, CSV_INTERVAL, "10"),
+  V(TestingBridgeBootstrapDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "5 seconds"),
   V(TestingDirConnectionMaxStall, INTERVAL, "30 seconds"),
   V(TestingEnableConnBwEvent,    BOOL,     "1"),
