@@ -56,10 +56,21 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "container.h"
 #include <string.h>
 
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+#define X509_get_notBefore_const(cert) \
+    X509_get0_notBefore(cert)
+#define X509_get_notAfter_const(cert) \
+    X509_get0_notAfter(cert)
+#define X509_get_notBefore(cert) \
+    X509_getm_notBefore(cert)
+#define X509_get_notAfter(cert) \
+    X509_getm_notAfter(cert)
+#else
 #define X509_get_notBefore_const(cert) \
   ((const ASN1_TIME*) X509_get_notBefore((X509 *)cert))
 #define X509_get_notAfter_const(cert) \
   ((const ASN1_TIME*) X509_get_notAfter((X509 *)cert))
+#endif
 
 /* Copied from or.h */
 #define LEGAL_NICKNAME_CHARACTERS \
@@ -355,8 +366,12 @@ tor_tls_init(void)
   check_no_tls_errors();
 
   if (!tls_library_is_initialized) {
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+    OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
+#else
     SSL_library_init();
     SSL_load_error_strings();
+#endif
 
 #if (SIZEOF_VOID_P >= 8 &&                              \
      OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,1))
