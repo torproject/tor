@@ -126,6 +126,11 @@ static const char unix_socket_prefix[] = "unix:";
  * configuration. */
 static const char unix_q_socket_prefix[] = "unix:\"";
 
+/** macro to help with the bulk rename of *DownloadSchedule to
+ * *DowloadInitialDelay . */
+#define DOWNLOAD_SCHEDULE(name) \
+  { #name "DownloadSchedule", #name "DownloadInitialDelay", 0, 1 }
+
 /** A list of abbreviations and aliases to map command-line options, obsolete
  * option names, or alternative option names, to their current values. */
 static config_abbrev_t option_abbrevs_[] = {
@@ -174,6 +179,16 @@ static config_abbrev_t option_abbrevs_[] = {
   { "SocksSocketsGroupWritable", "UnixSocksGroupWritable", 0, 1},
   { "_HSLayer2Nodes", "HSLayer2Nodes", 0, 1 },
   { "_HSLayer3Nodes", "HSLayer3Nodes", 0, 1 },
+
+  DOWNLOAD_SCHEDULE(ClientBootstrapConsensusAuthority),
+  DOWNLOAD_SCHEDULE(ClientBootstrapConsensusAuthorityOnly),
+  DOWNLOAD_SCHEDULE(ClientBootstrapConsensusFallback),
+  DOWNLOAD_SCHEDULE(TestingBridge),
+  DOWNLOAD_SCHEDULE(TestingBridgeBootstrap),
+  DOWNLOAD_SCHEDULE(TestingClient),
+  DOWNLOAD_SCHEDULE(TestingClientConsensus),
+  DOWNLOAD_SCHEDULE(TestingServer),
+  DOWNLOAD_SCHEDULE(TestingServerConsensus),
 
   { NULL, NULL, 0, 0},
 };
