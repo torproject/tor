@@ -144,6 +144,7 @@ src_test_test_SOURCES = \
 	src/test/test_oom.c \
 	src/test/test_oos.c \
 	src/test/test_options.c \
+	src/test/test_periodic_event.c \
 	src/test/test_policy.c \
 	src/test/test_procmon.c \
 	src/test/test_proto_http.c \

@@ -1351,7 +1351,7 @@ CALLBACK(write_stats_file);
 /* Now we declare an array of periodic_event_item_t for each periodic event */
 #define CALLBACK(name, r) PERIODIC_EVENT(name, r)
 
-static periodic_event_item_t periodic_events[] = {
+STATIC periodic_event_item_t periodic_events[] = {
   /* Everyone needs to run those. */
   CALLBACK(add_entropy, PERIODIC_EVENT_ROLE_ALL),
   CALLBACK(check_expired_networkstatus, PERIODIC_EVENT_ROLE_ALL),
@@ -1440,7 +1440,7 @@ find_periodic_event(const char *name)
 
 /** Return a bitmask of the roles this tor instance is configured for using
  * the given options. */
-static int
+STATIC int
 get_my_roles(const or_options_t *options)
 {
   tor_assert(options);

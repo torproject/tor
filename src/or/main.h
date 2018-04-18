@@ -98,8 +98,13 @@ STATIC void init_connection_lists(void);
 STATIC void close_closeable_connections(void);
 STATIC void initialize_periodic_events(void);
 STATIC void teardown_periodic_events(void);
+STATIC int get_my_roles(const or_options_t *options);
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *connection_array;
+
+/* We need the periodic_event_item_t definition. */
+#include "periodic.h"
+extern periodic_event_item_t periodic_events[];
 #endif
 #endif /* defined(MAIN_PRIVATE) */
 
