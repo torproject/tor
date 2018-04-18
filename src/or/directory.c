@@ -5300,12 +5300,17 @@ connection_dir_finished_connecting(dir_connection_t *conn)
 
 /** Decide which download schedule we want to use based on descriptor type
  * in <b>dls</b> and <b>options</b>.
- * Then return a list of int pointers defining download delays in seconds.
+ *
+ * Then, return the initial delay for that download schedule, in seconds.
+ *
  * Helper function for download_status_increment_failure(),
  * download_status_reset(), and download_status_increment_attempt(). */
 STATIC int
-find_dl_schedule(const download_status_t *dls, const or_options_t *options)
+find_dl_min_delay(const download_status_t *dls, const or_options_t *options)
 {
+  tor_assert(dls);
+  tor_assert(options);
+
   switch (dls->schedule) {
     case DL_SCHED_GENERIC:
       /* Any other directory document */
@@ -5360,18 +5365,6 @@ find_dl_schedule(const download_status_t *dls, const or_options_t *options)
 
   /* Impossible, but gcc will fail with -Werror without a `return`. */
   return 0;
-}
-
-/** Decide which minimum delay step we want to use based on
- * descriptor type in <b>dls</b> and <b>options</b>.
- * Helper function for download_status_schedule_get_delay(). */
-STATIC int
-find_dl_min_delay(const download_status_t *dls, const or_options_t *options)
-{
-  tor_assert(dls);
-  tor_assert(options);
-
-  return find_dl_schedule(dls, options);
 }
 
 /** As next_random_exponential_delay() below, but does not compute a random

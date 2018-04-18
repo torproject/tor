@@ -5432,7 +5432,7 @@ mock_num_bridges_usable(int use_maybe_reachable)
  * fallbacks.
  */
 static void
-test_dir_find_dl_schedule(void* data)
+test_dir_find_dl_min_delay(void* data)
 {
   const char *str = (const char *)data;
 
@@ -5490,20 +5490,20 @@ test_dir_find_dl_schedule(void* data)
   dls.schedule = DL_SCHED_GENERIC;
   /* client */
   mock_options->ClientOnly = 1;
-  tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ, client);
+  tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, client);
   mock_options->ClientOnly = 0;
 
   /* dir mode */
   mock_options->DirPort_set = 1;
   mock_options->DirCache = 1;
-  tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ, server);
+  tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, server);
   mock_options->DirPort_set = 0;
   mock_options->DirCache = 0;
 
   dls.schedule = DL_SCHED_CONSENSUS;
   /* public server mode */
   mock_options->ORPort_set = 1;
-  tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ, server_cons);
+  tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, server_cons);
   mock_options->ORPort_set = 0;
 
   /* client and bridge modes */
@@ -5512,14 +5512,14 @@ test_dir_find_dl_schedule(void* data)
       dls.want_authority = 1;
       /* client */
       mock_options->ClientOnly = 1;
-      tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
                 client_boot_auth_cons);
       mock_options->ClientOnly = 0;
 
       /* bridge relay */
       mock_options->ORPort_set = 1;
       mock_options->BridgeRelay = 1;
-      tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
                 client_boot_auth_cons);
       mock_options->ORPort_set = 0;
       mock_options->BridgeRelay = 0;
@@ -5527,14 +5527,14 @@ test_dir_find_dl_schedule(void* data)
       dls.want_authority = 0;
       /* client */
       mock_options->ClientOnly = 1;
-      tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
                 client_boot_fallback_cons);
       mock_options->ClientOnly = 0;
 
       /* bridge relay */
       mock_options->ORPort_set = 1;
       mock_options->BridgeRelay = 1;
-      tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
                 client_boot_fallback_cons);
       mock_options->ORPort_set = 0;
       mock_options->BridgeRelay = 0;
@@ -5543,14 +5543,14 @@ test_dir_find_dl_schedule(void* data)
       /* dls.want_authority is ignored */
       /* client */
       mock_options->ClientOnly = 1;
-      tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
                 client_boot_auth_only_cons);
       mock_options->ClientOnly = 0;
 
       /* bridge relay */
       mock_options->ORPort_set = 1;
       mock_options->BridgeRelay = 1;
-      tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
                 client_boot_auth_only_cons);
       mock_options->ORPort_set = 0;
       mock_options->BridgeRelay = 0;
@@ -5558,14 +5558,14 @@ test_dir_find_dl_schedule(void* data)
   } else {
     /* client */
     mock_options->ClientOnly = 1;
-    tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
               client_cons);
     mock_options->ClientOnly = 0;
 
     /* bridge relay */
     mock_options->ORPort_set = 1;
     mock_options->BridgeRelay = 1;
-    tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
               client_cons);
     mock_options->ORPort_set = 0;
     mock_options->BridgeRelay = 0;
@@ -5576,9 +5576,9 @@ test_dir_find_dl_schedule(void* data)
   mock_options->ClientOnly = 1;
   mock_options->UseBridges = 1;
   if (num_bridges_usable(0) > 0) {
-    tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ, bridge);
+    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, bridge);
   } else {
-    tt_int_op(find_dl_schedule(&dls, mock_options), OP_EQ, bridge_bootstrap);
+    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, bridge_bootstrap);
   }
 
  done:
@@ -5872,14 +5872,14 @@ struct testcase_t dir_tests[] = {
   DIR(dump_unparseable_descriptors, 0),
   DIR(populate_dump_desc_fifo, 0),
   DIR(populate_dump_desc_fifo_2, 0),
-  DIR_ARG(find_dl_schedule, TT_FORK, "bfd"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "bad"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "cfd"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "cad"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "bfr"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "bar"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "cfr"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "car"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "bfd"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "bad"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "cfd"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "cad"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "bfr"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "bar"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "cfr"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "car"),
   DIR(assumed_flags, 0),
   DIR(networkstatus_compute_bw_weights_v10, 0),
   DIR(platform_str, 0),
