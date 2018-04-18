@@ -1522,8 +1522,8 @@ teardown_periodic_events(void)
   periodic_events_initialized = 0;
 }
 
-/** Do a pass at all our periodic events, destroy those we don't need anymore
- * and enabled those we need now using the given options. */
+/** Do a pass at all our periodic events, disable those we don't need anymore
+ * and enable those we need now using the given options. */
 static void
 rescan_periodic_events(const or_options_t *options)
 {
@@ -1546,15 +1546,15 @@ rescan_periodic_events(const or_options_t *options)
   }
 }
 
-/* We just got new options globally set, see if we need to destroy or setup
+/* We just got new options globally set, see if we need to enabled or disable
  * periodic events. */
 void
 periodic_events_on_new_options(const or_options_t *options)
 {
-  /* Only if we've already initialized once the events, teardown them all and
-   * reinitialize. It is just simpler that way instead of going through all
-   * currently enabled events and trying to destroy only the one that could be
-   * affected. */
+  /* Only if we've already initialized the events, rescan the list which will
+   * enable or disable events depending on our roles. This will be called at
+   * bootup and we don't want this function to initialize the events because
+   * they aren't set up at this stage. */
   if (periodic_events_initialized) {
     rescan_periodic_events(options);
   }
