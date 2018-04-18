@@ -28,7 +28,9 @@ typedef enum config_type_t {
                               * optional whitespace. */
   CONFIG_TYPE_CSV_INTERVAL, /**< A list of strings, separated by commas and
                               * optional whitespace, representing intervals in
-                              * seconds, with optional units */
+                              * seconds, with optional units.  We allow
+                              * multiple values here for legacy reasons, but
+                              * ignore every value after the first. */
   CONFIG_TYPE_LINELIST,     /**< Uninterpreted config lines */
   CONFIG_TYPE_LINELIST_S,   /**< Uninterpreted, context-sensitive config lines,
                              * mixed with other keywords. */
