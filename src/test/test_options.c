@@ -2067,12 +2067,12 @@ test_options_validate__testing(void *ignored)
   ENSURE_DEFAULT(TestingV3AuthVotingStartOffset, 3000);
   ENSURE_DEFAULT(TestingAuthDirTimeToLearnReachability, 3000);
   ENSURE_DEFAULT(TestingEstimatedDescriptorPropagationTime, 3000);
-  ENSURE_DEFAULT(TestingServerDownloadSchedule, 3000);
-  ENSURE_DEFAULT(TestingClientDownloadSchedule, 3000);
-  ENSURE_DEFAULT(TestingServerConsensusDownloadSchedule, 3000);
-  ENSURE_DEFAULT(TestingClientConsensusDownloadSchedule, 3000);
-  ENSURE_DEFAULT(TestingBridgeDownloadSchedule, 3000);
-  ENSURE_DEFAULT(TestingBridgeBootstrapDownloadSchedule, 3000);
+  ENSURE_DEFAULT(TestingServerDownloadInitialDelay, 3000);
+  ENSURE_DEFAULT(TestingClientDownloadInitialDelay, 3000);
+  ENSURE_DEFAULT(TestingServerConsensusDownloadInitialDelay, 3000);
+  ENSURE_DEFAULT(TestingClientConsensusDownloadInitialDelay, 3000);
+  ENSURE_DEFAULT(TestingBridgeDownloadInitialDelay, 3000);
+  ENSURE_DEFAULT(TestingBridgeBootstrapDownloadInitialDelay, 3000);
   ENSURE_DEFAULT(TestingClientMaxIntervalWithoutRequest, 3000);
   ENSURE_DEFAULT(TestingDirConnectionMaxStall, 3000);
   ENSURE_DEFAULT(TestingAuthKeyLifetime, 3000);

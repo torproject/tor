@@ -4316,19 +4316,19 @@ typedef struct {
 
   /** Schedule for when servers should download things in general.  Only
    * altered on testing networks. */
-  smartlist_t *TestingServerDownloadSchedule;
+  int TestingServerDownloadInitialDelay;
 
   /** Schedule for when clients should download things in general.  Only
    * altered on testing networks. */
-  smartlist_t *TestingClientDownloadSchedule;
+  int TestingClientDownloadInitialDelay;
 
   /** Schedule for when servers should download consensuses.  Only altered
    * on testing networks. */
-  smartlist_t *TestingServerConsensusDownloadSchedule;
+  int TestingServerConsensusDownloadInitialDelay;
 
   /** Schedule for when clients should download consensuses.  Only altered
    * on testing networks. */
-  smartlist_t *TestingClientConsensusDownloadSchedule;
+  int TestingClientConsensusDownloadInitialDelay;
 
   /** Schedule for when clients should download consensuses from authorities
    * if they are bootstrapping (that is, they don't have a usable, reasonably
@@ -4338,7 +4338,7 @@ typedef struct {
    * This schedule is incremented by (potentially concurrent) connection
    * attempts, unlike other schedules, which are incremented by connection
    * failures.  Only altered on testing networks. */
-  smartlist_t *ClientBootstrapConsensusAuthorityDownloadSchedule;
+  int ClientBootstrapConsensusAuthorityDownloadInitialDelay;
 
   /** Schedule for when clients should download consensuses from fallback
    * directory mirrors if they are bootstrapping (that is, they don't have a
@@ -4348,7 +4348,7 @@ typedef struct {
    * This schedule is incremented by (potentially concurrent) connection
    * attempts, unlike other schedules, which are incremented by connection
    * failures.  Only altered on testing networks. */
-  smartlist_t *ClientBootstrapConsensusFallbackDownloadSchedule;
+  int ClientBootstrapConsensusFallbackDownloadInitialDelay;
 
   /** Schedule for when clients should download consensuses from authorities
    * if they are bootstrapping (that is, they don't have a usable, reasonably
@@ -4358,15 +4358,15 @@ typedef struct {
    * This schedule is incremented by (potentially concurrent) connection
    * attempts, unlike other schedules, which are incremented by connection
    * failures.  Only altered on testing networks. */
-  smartlist_t *ClientBootstrapConsensusAuthorityOnlyDownloadSchedule;
+  int ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay;
 
   /** Schedule for when clients should download bridge descriptors.  Only
    * altered on testing networks. */
-  smartlist_t *TestingBridgeDownloadSchedule;
+  int TestingBridgeDownloadInitialDelay;
 
   /** Schedule for when clients should download bridge descriptors when they
    * have no running bridges.  Only altered on testing networks. */
-  smartlist_t *TestingBridgeBootstrapDownloadSchedule;
+  int TestingBridgeBootstrapDownloadInitialDelay;
 
   /** When directory clients have only a few descriptors to request, they
    * batch them until they have more, or until this amount of time has

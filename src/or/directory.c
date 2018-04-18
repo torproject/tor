@@ -5311,14 +5311,14 @@ find_dl_schedule(const download_status_t *dls, const or_options_t *options)
       /* Any other directory document */
       if (dir_server_mode(options)) {
         /* A directory authority or directory mirror */
-        return options->TestingServerDownloadSchedule;
+        return options->TestingServerDownloadInitialDelay;
       } else {
-        return options->TestingClientDownloadSchedule;
+        return options->TestingClientDownloadInitialDelay;
       }
     case DL_SCHED_CONSENSUS:
       if (!networkstatus_consensus_can_use_multiple_directories(options)) {
         /* A public relay */
-        return options->TestingServerConsensusDownloadSchedule;
+        return options->TestingServerConsensusDownloadInitialDelay;
       } else {
         /* A client or bridge */
         if (networkstatus_consensus_is_bootstrapping(time(NULL))) {
@@ -5326,33 +5326,33 @@ find_dl_schedule(const download_status_t *dls, const or_options_t *options)
           if (!networkstatus_consensus_can_use_extra_fallbacks(options)) {
             /* A bootstrapping client without extra fallback directories */
             return
-             options->ClientBootstrapConsensusAuthorityOnlyDownloadSchedule;
+             options->ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay;
           } else if (dls->want_authority) {
             /* A bootstrapping client with extra fallback directories, but
              * connecting to an authority */
             return
-             options->ClientBootstrapConsensusAuthorityDownloadSchedule;
+             options->ClientBootstrapConsensusAuthorityDownloadInitialDelay;
           } else {
             /* A bootstrapping client connecting to extra fallback directories
              */
             return
-              options->ClientBootstrapConsensusFallbackDownloadSchedule;
+              options->ClientBootstrapConsensusFallbackDownloadInitialDelay;
           }
         } else {
           /* A client with a reasonably live consensus, with or without
            * certificates */
-          return options->TestingClientConsensusDownloadSchedule;
+          return options->TestingClientConsensusDownloadInitialDelay;
         }
       }
     case DL_SCHED_BRIDGE:
       if (options->UseBridges && num_bridges_usable(0) > 0) {
         /* A bridge client that is sure that one or more of its bridges are
          * running can afford to wait longer to update bridge descriptors. */
-        return options->TestingBridgeDownloadSchedule;
+        return options->TestingBridgeDownloadInitialDelay;
       } else {
         /* A bridge client which might have no running bridges, must try to
          * get bridge descriptors straight away. */
-        return options->TestingBridgeBootstrapDownloadSchedule;
+        return options->TestingBridgeBootstrapDownloadInitialDelay;
       }
     default:
       tor_assert(0);
