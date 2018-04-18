@@ -173,12 +173,6 @@ MAX_LIST_FILE_SIZE = 1024 * 1024
 # meant that we had to rebuild the list more often. We want fallbacks to be
 # stable for 2 years, so we set it to a few months.
 #
-# There was a bug in Tor 0.2.8.1-alpha and earlier where a relay temporarily
-# submits a 0 DirPort when restarted.
-# This causes OnionOO to (correctly) reset its stability timer.
-# Affected relays should upgrade to Tor 0.2.9 or later, which has a fix
-# for this issue.
-#
 # If a relay changes address or port, that's it, it's not useful any more,
 # because clients can't find it
 ADDRESS_AND_PORT_STABLE_DAYS = 90
