@@ -2679,6 +2679,33 @@ test_enty_guard_should_expire_waiting(void *arg)
   tor_free(fake_state);
 }
 
+/** Test that the number of primary guards can be controlled using torrc */
+static void
+test_entry_guard_number_of_primaries(void *arg)
+{
+  (void) arg;
+
+  /* Get default value */
+  tt_int_op(get_n_primary_guards(), OP_EQ, DFLT_N_PRIMARY_GUARDS);
+
+  /* Set number of entry guards, and check number of primaries */
+  get_options_mutable()->NumEntryGuards = 6;
+  tt_int_op(get_n_primary_guards(), OP_EQ, 6);
+
+  /* Check again with directory guards */
+  get_options_mutable()->NumEntryGuards = 0;
+  get_options_mutable()->NumDirectoryGuards = 4;
+  tt_int_op(get_n_primary_guards(), OP_EQ, 4);
+
+  /* Check that the max of the two is always picked */
+  get_options_mutable()->NumEntryGuards = 42;
+  get_options_mutable()->NumDirectoryGuards = 4;
+  tt_int_op(get_n_primary_guards(), OP_EQ, 42);
+
+ done:
+  ;
+}
+
 static void
 mock_directory_initiate_request(directory_request_t *req)
 {
@@ -2826,6 +2853,8 @@ struct testcase_t entrynodes_tests[] = {
     test_entry_guard_parse_from_state_broken, TT_FORK, NULL, NULL },
   { "get_guard_selection_by_name",
     test_entry_guard_get_guard_selection_by_name, TT_FORK, NULL, NULL },
+  { "number_of_primaries",
+    test_entry_guard_number_of_primaries, TT_FORK, NULL, NULL },
   BFN_TEST(choose_selection_initial),
   BFN_TEST(add_single_guard),
   BFN_TEST(node_filter),

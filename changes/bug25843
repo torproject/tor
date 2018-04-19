@@ -1,0 +1,4 @@
+  o Minor bugfixes (entry guards):
+    - If the user has explicitly set NumEntryGuards or NumDirectoryGuards, set
+      the number of our primary guards to that. Fixes bug 25843; bugfix on
+      0.3.0.1-alpha.
