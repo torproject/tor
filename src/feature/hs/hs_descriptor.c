@@ -944,6 +944,53 @@ encrypt_desc_data_and_base64(const hs_descriptor_t *desc,
   return enc_b64;
 }
 
+/* Generate the secret data which is used to encrypt/decrypt the descriptor.
+ *
+ * SECRET_DATA = blinded-public-key
+ * SECRET_DATA = blinded-public-key | descriptor_cookie
+ *
+ * The descriptor_cookie is optional but if it exists, it must be at least
+ * HS_DESC_DESCRIPTOR_COOKIE_LEN bytes long.
+ *
+ * A newly allocated secret data is put in secret_data_out. Return the
+ * length of the secret data. This function cannot fail. */
+static size_t
+build_secret_data(const ed25519_public_key_t *blinded_pubkey,
+                  const uint8_t *descriptor_cookie,
+                  uint8_t **secret_data_out)
+{
+  size_t secret_data_len;
+  uint8_t *secret_data;
+
+  tor_assert(blinded_pubkey);
+  tor_assert(secret_data_out);
+
+  if (descriptor_cookie) {
+    /* If the descriptor cookie is present, we need both the blinded
+     * pubkey and the descriptor cookie as a secret data. */
+    secret_data_len = ED25519_PUBKEY_LEN + HS_DESC_DESCRIPTOR_COOKIE_LEN;
+    secret_data = tor_malloc(secret_data_len);
+
+    memcpy(secret_data,
+           blinded_pubkey->pubkey,
+           ED25519_PUBKEY_LEN);
+    memcpy(secret_data + ED25519_PUBKEY_LEN,
+           descriptor_cookie,
+           HS_DESC_DESCRIPTOR_COOKIE_LEN);
+  } else {
+    /* If the descriptor cookie is not present, we need only the blinded
+     * pubkey as a secret data. */
+    secret_data_len = ED25519_PUBKEY_LEN;
+    secret_data = tor_malloc(secret_data_len);
+    memcpy(secret_data,
+           blinded_pubkey->pubkey,
+           ED25519_PUBKEY_LEN);
+  }
+
+  *secret_data_out = secret_data;
+  return secret_data_len;
+}
+
 /* Generate and encode the superencrypted portion of <b>desc</b>. This also
  * involves generating the encrypted portion of the descriptor, and performing
  * the superencryption. A newly allocated NUL-terminated string pointer
@@ -976,27 +1023,9 @@ encode_superencrypted_data(const hs_descriptor_t *desc,
     goto err;
   }
 
-  if (descriptor_cookie) {
-    /* If the descriptor cookie is present, we need both the blinded
-     * pubkey and the descriptor cookie as a secret data. */
-    secret_data_len = ED25519_PUBKEY_LEN + HS_DESC_DESCRIPTOR_COOKIE_LEN;
-    secret_data = tor_malloc(secret_data_len);
-
-    memcpy(secret_data,
-           desc->plaintext_data.blinded_pubkey.pubkey,
-           ED25519_PUBKEY_LEN);
-    memcpy(secret_data + ED25519_PUBKEY_LEN,
-           descriptor_cookie,
-           HS_DESC_DESCRIPTOR_COOKIE_LEN);
-  } else {
-    /* If the descriptor cookie is not present, we need only the blinded
-     * pubkey as a secret data. */
-    secret_data_len = ED25519_PUBKEY_LEN;
-    secret_data = tor_malloc(secret_data_len);
-    memcpy(secret_data,
-           desc->plaintext_data.blinded_pubkey.pubkey,
-           ED25519_PUBKEY_LEN);
-  }
+  secret_data_len = build_secret_data(&desc->plaintext_data.blinded_pubkey,
+                                      descriptor_cookie,
+                                      &secret_data);
 
   /* Encrypt and b64 the inner layer */
   layer2_b64_ciphertext =
