@@ -390,7 +390,7 @@ test_hsdir_revision_counter_check(void *arg)
     received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
 
     retval = hs_desc_decode_descriptor(received_desc_str,
-                                       subcredential, &received_desc);
+                                       subcredential, NULL, &received_desc);
     tt_int_op(retval, OP_EQ, 0);
     tt_assert(received_desc);
 
@@ -423,7 +423,7 @@ test_hsdir_revision_counter_check(void *arg)
     received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
 
     retval = hs_desc_decode_descriptor(received_desc_str,
-                                       subcredential, &received_desc);
+                                       subcredential, NULL, &received_desc);
     tt_int_op(retval, OP_EQ, 0);
     tt_assert(received_desc);
 
