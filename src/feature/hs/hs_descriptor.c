@@ -1181,6 +1181,42 @@ desc_encode_v3(const hs_descriptor_t *desc,
 
 /* === DECODING === */
 
+/* Given the token tok for an auth client, decode it as
+ * hs_desc_authorized_client_t. tok->args MUST contain at least 3 elements
+ * Return 0 on success else -1 on failure. */
+static int
+decode_auth_client(const directory_token_t *tok,
+                   hs_desc_authorized_client_t *client)
+{
+  int ret = -1;
+
+  tor_assert(tok);
+  tor_assert(tok->n_args >= 3);
+  tor_assert(client);
+
+  if (base64_decode((char *) client->client_id, sizeof(client->client_id),
+                    tok->args[0], strlen(tok->args[0])) !=
+      sizeof(client->client_id)) {
+    goto done;
+  }
+  if (base64_decode((char *) client->iv, sizeof(client->iv),
+                    tok->args[1], strlen(tok->args[1])) !=
+      sizeof(client->iv)) {
+    goto done;
+  }
+  if (base64_decode((char *) client->encrypted_cookie,
+                    sizeof(client->encrypted_cookie),
+                    tok->args[2], strlen(tok->args[2])) !=
+      sizeof(client->encrypted_cookie)) {
+    goto done;
+  }
+
+  /* Success. */
+  ret = 0;
+ done:
+  return ret;
+}
+
 /* Given an encoded string of the link specifiers, return a newly allocated
  * list of decoded link specifiers. Return NULL on error. */
 STATIC smartlist_t *
@@ -1420,6 +1456,73 @@ encrypted_data_length_is_valid(size_t len)
   return 0;
 }
 
+/* Decrypt the descriptor cookie given the descriptor, the auth client,
+ * and the client secret key. On sucess, return 0 and a newly allocated
+ * descriptor cookie descriptor_cookie_out. On error or if the client id
+ * is invalid, return -1 and descriptor_cookie_out is set to
+ * NULL. */
+static int
+decrypt_descriptor_cookie(const hs_descriptor_t *desc,
+                          const hs_desc_authorized_client_t *client,
+                          const curve25519_secret_key_t *client_sk,
+                          uint8_t **descriptor_cookie_out)
+{
+  int ret = -1;
+  uint8_t secret_seed[CURVE25519_OUTPUT_LEN];
+  uint8_t keystream[HS_DESC_CLIENT_ID_LEN + HS_DESC_COOKIE_KEY_LEN];
+  uint8_t *cookie_key = NULL;
+  uint8_t *descriptor_cookie = NULL;
+  crypto_cipher_t *cipher = NULL;
+  crypto_xof_t *xof = NULL;
+
+  tor_assert(desc);
+  tor_assert(client);
+  tor_assert(client_sk);
+  tor_assert(!tor_mem_is_zero(
+        (char *) &desc->superencrypted_data.auth_ephemeral_pubkey,
+        sizeof(desc->superencrypted_data.auth_ephemeral_pubkey)));
+  tor_assert(!tor_mem_is_zero((char *) client_sk,
+                              sizeof(*client_sk)));
+
+  /* Calculate x25519(client_x, hs_Y) */
+  curve25519_handshake(secret_seed, client_sk,
+                       &desc->superencrypted_data.auth_ephemeral_pubkey);
+
+  /* Calculate KEYS = KDF(SECRET_SEED, 40) */
+  xof = crypto_xof_new();
+  crypto_xof_add_bytes(xof, secret_seed, sizeof(secret_seed));
+  crypto_xof_squeeze_bytes(xof, keystream, sizeof(keystream));
+  crypto_xof_free(xof);
+
+  /* If the client id of auth client is not the same as the calculcated
+   * client id, it means that this auth client is invaild according to the
+   * client secret key client_sk. */
+  if (tor_memneq(client->client_id, keystream, HS_DESC_CLIENT_ID_LEN)) {
+    goto done;
+  }
+  cookie_key = keystream + HS_DESC_CLIENT_ID_LEN;
+
+  /* This creates a cipher for AES. It can't fail. */
+  cipher = crypto_cipher_new_with_iv_and_bits(cookie_key, client->iv,
+                                              HS_DESC_COOKIE_KEY_BIT_SIZE);
+  descriptor_cookie = tor_malloc_zero(HS_DESC_DESCRIPTOR_COOKIE_LEN);
+  /* This can't fail. */
+  crypto_cipher_decrypt(cipher, (char *) descriptor_cookie,
+                        (const char *) client->encrypted_cookie,
+                        sizeof(client->encrypted_cookie));
+
+  /* Success. */
+  ret = 0;
+ done:
+  *descriptor_cookie_out = descriptor_cookie;
+  if (cipher) {
+    crypto_cipher_free(cipher);
+  }
+  memwipe(secret_seed, 0, sizeof(secret_seed));
+  memwipe(keystream, 0, sizeof(keystream));
+  return ret;
+}
+
 /** Decrypt an encrypted descriptor layer at <b>encrypted_blob</b> of size
  *  <b>encrypted_blob_size</b>. The descriptor cookie is optional. Use
  *  the descriptor object <b>desc</b> and <b>descriptor_cookie</b>
@@ -1588,18 +1691,30 @@ desc_decrypt_encrypted(const hs_descriptor_t *desc,
 {
   size_t encrypted_len = 0;
   char *encrypted_plaintext = NULL;
+  uint8_t *descriptor_cookie = NULL;
 
   tor_assert(desc);
+  tor_assert(desc->superencrypted_data.clients);
   tor_assert(decrypted_out);
 
-  /* XXX: We need to decrypt the descriptor properly when the client auth
-   * is enabled. */
-  (void) client_sk;
+  /* If the client secret key is provided, try to find a valid descriptor
+   * cookie. Otherwise, leave it NULL. */
+  if (client_sk) {
+    SMARTLIST_FOREACH_BEGIN(desc->superencrypted_data.clients,
+                            hs_desc_authorized_client_t *, client) {
+      /* If we can decrypt the descriptor cookie successfully, we will use that
+       * descriptor cookie and break from the loop. */
+      if (!decrypt_descriptor_cookie(desc, client, client_sk,
+                                     &descriptor_cookie)) {
+        break;
+      }
+    } SMARTLIST_FOREACH_END(client);
+  }
 
   encrypted_len = decrypt_desc_layer(desc,
                                  desc->superencrypted_data.encrypted_blob,
                                  desc->superencrypted_data.encrypted_blob_size,
-                                 NULL, 0, &encrypted_plaintext);
+                                 descriptor_cookie, 0, &encrypted_plaintext);
   if (!encrypted_len) {
     log_warn(LD_REND, "Decrypting encrypted desc failed.");
     goto err;
@@ -1610,6 +1725,10 @@ desc_decrypt_encrypted(const hs_descriptor_t *desc,
   /* In case of error, encrypted_plaintext is already NULL, so the
    * following line makes sense. */
   *decrypted_out = encrypted_plaintext;
+  if (descriptor_cookie) {
+    memwipe(descriptor_cookie, 0, HS_DESC_DESCRIPTOR_COOKIE_LEN);
+  }
+  tor_free(descriptor_cookie);
   /* This makes sense too, because, in case of error, this is zero. */
   return encrypted_len;
 }
@@ -2125,10 +2244,23 @@ desc_decode_superencrypted_v3(const hs_descriptor_t *desc,
   }
 
   /* Extract desc auth client items */
+  if (!superencrypted->clients) {
+    superencrypted->clients = smartlist_new();
+  }
   SMARTLIST_FOREACH_BEGIN(tokens, const directory_token_t *, token) {
     if (token->tp == R3_DESC_AUTH_CLIENT) {
       tor_assert(token->n_args >= 3);
-      /* XXX: Extract each auth client. */
+
+      hs_desc_authorized_client_t *client =
+        tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
+
+      if (decode_auth_client(token, client) < 0) {
+        log_warn(LD_REND, "Descriptor client authorization section can't "
+                          "be decoded.");
+        tor_free(client);
+        goto err;
+      }
+      smartlist_add(superencrypted->clients, client);
     }
   } SMARTLIST_FOREACH_END(token);
 
