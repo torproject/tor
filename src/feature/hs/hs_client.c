@@ -1181,6 +1181,19 @@ can_client_refetch_desc(const ed25519_public_key_t *identity_pk,
   return 0;
 }
 
+/* Return the client auth in the map using the service identity public key.
+ * Return NULL if it does not exist in the map. */
+static hs_client_service_authorization_t *
+find_client_auth(const ed25519_public_key_t *service_identity_pk)
+{
+  /* If the map is not allocated, we can assume that we do not have any client
+   * auth information. */
+  if (!client_auths) {
+    return NULL;
+  }
+  return digest256map_get(client_auths, service_identity_pk->pubkey);
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -1219,10 +1232,18 @@ hs_client_decode_descriptor(const char *desc_str,
   int ret;
   uint8_t subcredential[DIGEST256_LEN];
   ed25519_public_key_t blinded_pubkey;
+  hs_client_service_authorization_t *client_auth = NULL;
+  curve25519_secret_key_t *client_sk = NULL;
 
   tor_assert(desc_str);
   tor_assert(service_identity_pk);
   tor_assert(desc);
+
+  /* Check if we have a client authorization for this service in the map. */
+  client_auth = find_client_auth(service_identity_pk);
+  if (client_auth) {
+    client_sk = &client_auth->enc_seckey;
+  }
 
   /* Create subcredential for this HS so that we can decrypt */
   {
@@ -1233,7 +1254,7 @@ hs_client_decode_descriptor(const char *desc_str,
   }
 
   /* Parse descriptor */
-  ret = hs_desc_decode_descriptor(desc_str, subcredential, desc);
+  ret = hs_desc_decode_descriptor(desc_str, subcredential, client_sk, desc);
   memwipe(subcredential, 0, sizeof(subcredential));
   if (ret < 0) {
     log_warn(LD_GENERAL, "Could not parse received descriptor as client.");

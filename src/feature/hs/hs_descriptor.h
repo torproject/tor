@@ -277,10 +277,14 @@ MOCK_DECL(int,
 
 int hs_desc_decode_descriptor(const char *encoded,
                               const uint8_t *subcredential,
+                              const curve25519_secret_key_t *client_sk,
                               hs_descriptor_t **desc_out);
 int hs_desc_decode_plaintext(const char *encoded,
                              hs_desc_plaintext_data_t *plaintext);
+int hs_desc_decode_superencrypted(const hs_descriptor_t *desc,
+                                 hs_desc_superencrypted_data_t *desc_out);
 int hs_desc_decode_encrypted(const hs_descriptor_t *desc,
+                             const curve25519_secret_key_t *client_sk,
                              hs_desc_encrypted_data_t *desc_out);
 
 size_t hs_desc_obj_size(const hs_descriptor_t *data);
@@ -324,13 +328,12 @@ STATIC int cert_is_valid(tor_cert_t *cert, uint8_t type,
 STATIC int desc_sig_is_valid(const char *b64_sig,
                              const ed25519_public_key_t *signing_pubkey,
                              const char *encoded_desc, size_t encoded_len);
-STATIC size_t decode_superencrypted(const char *message, size_t message_len,
-                                   uint8_t **encrypted_out);
 STATIC void desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc);
 
 MOCK_DECL(STATIC size_t, decrypt_desc_layer,(const hs_descriptor_t *desc,
                                              const uint8_t *encrypted_blob,
                                              size_t encrypted_blob_size,
+                                             const uint8_t *descriptor_cookie,
                                              int is_superencrypted_layer,
                                              char **decrypted_out));
 

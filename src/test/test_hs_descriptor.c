@@ -347,14 +347,15 @@ test_decode_descriptor(void *arg)
                                               subcredential);
 
   /* Give some bad stuff to the decoding function. */
-  ret = hs_desc_decode_descriptor("hladfjlkjadf", subcredential, &decoded);
+  ret = hs_desc_decode_descriptor("hladfjlkjadf", subcredential,
+                                  NULL, &decoded);
   tt_int_op(ret, OP_EQ, -1);
 
   ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
   tt_int_op(ret, OP_EQ, 0);
   tt_assert(encoded);
 
-  ret = hs_desc_decode_descriptor(encoded, subcredential, &decoded);
+  ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
   tt_int_op(ret, OP_EQ, 0);
   tt_assert(decoded);
 
@@ -375,7 +376,7 @@ test_decode_descriptor(void *arg)
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(encoded);
     hs_descriptor_free(decoded);
-    ret = hs_desc_decode_descriptor(encoded, subcredential, &decoded);
+    ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(decoded);
   }
@@ -850,103 +851,6 @@ test_build_authorized_client(void *arg)
   UNMOCK(crypto_strongest_rand);
 }
 
-/* bad desc auth type */
-static const char bad_superencrypted_text1[] = "desc-auth-type scoobysnack\n"
-  "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
-  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
-  "encrypted\n"
-  "-----BEGIN MESSAGE-----\n"
-  "YmVpbmcgb24gbW91bnRhaW5zLCB0aGlua2luZyBhYm91dCBjb21wdXRlcnMsIGlzIG5vdC"
-  "BiYWQgYXQgYWxs\n"
-  "-----END MESSAGE-----\n";
-
-/* bad ephemeral key */
-static const char bad_superencrypted_text2[] = "desc-auth-type x25519\n"
-  "desc-auth-ephemeral-key differentalphabet\n"
-  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
-  "encrypted\n"
-  "-----BEGIN MESSAGE-----\n"
-  "YmVpbmcgb24gbW91bnRhaW5zLCB0aGlua2luZyBhYm91dCBjb21wdXRlcnMsIGlzIG5vdC"
-  "BiYWQgYXQgYWxs\n"
-  "-----END MESSAGE-----\n";
-
-/* bad encrypted msg */
-static const char bad_superencrypted_text3[] = "desc-auth-type x25519\n"
-  "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
-  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
-  "encrypted\n"
-  "-----BEGIN MESSAGE-----\n"
-  "SO SMALL NOT GOOD\n"
-  "-----END MESSAGE-----\n";
-
-static const char correct_superencrypted_text[] = "desc-auth-type x25519\n"
-  "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
-  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
-  "auth-client Od09Qu636Qo /PKLzqewAdS/+0+vZC+MvQ dpw4NFo13zDnuPz45rxrOg\n"
-  "auth-client JRr840iGYN0 8s8cxYqF7Lx23+NducC4Qg zAafl4wPLURkuEjJreZq1g\n"
-  "encrypted\n"
-  "-----BEGIN MESSAGE-----\n"
-  "YmVpbmcgb24gbW91bnRhaW5zLCB0aGlua2luZyBhYm91dCBjb21wdXRlcnMsIGlzIG5vdC"
-  "BiYWQgYXQgYWxs\n"
-  "-----END MESSAGE-----\n";
-
-static const char correct_encrypted_plaintext[] = "being on mountains, "
-  "thinking about computers, is not bad at all";
-
-static void
-test_parse_hs_desc_superencrypted(void *arg)
-{
-  (void) arg;
-  size_t retval;
-  uint8_t *encrypted_out = NULL;
-
-  {
-    setup_full_capture_of_logs(LOG_WARN);
-    retval = decode_superencrypted(bad_superencrypted_text1,
-                                   strlen(bad_superencrypted_text1),
-                                   &encrypted_out);
-    tt_u64_op(retval, OP_EQ, 0);
-    tt_ptr_op(encrypted_out, OP_EQ, NULL);
-    expect_log_msg_containing("Unrecognized desc auth type");
-    teardown_capture_of_logs();
-  }
-
-  {
-    setup_full_capture_of_logs(LOG_WARN);
-    retval = decode_superencrypted(bad_superencrypted_text2,
-                                   strlen(bad_superencrypted_text2),
-                                   &encrypted_out);
-    tt_u64_op(retval, OP_EQ, 0);
-    tt_ptr_op(encrypted_out, OP_EQ, NULL);
-    expect_log_msg_containing("Bogus desc auth key in HS desc");
-    teardown_capture_of_logs();
-  }
-
-  {
-    setup_full_capture_of_logs(LOG_WARN);
-    retval = decode_superencrypted(bad_superencrypted_text3,
-                                   strlen(bad_superencrypted_text3),
-                                   &encrypted_out);
-    tt_u64_op(retval, OP_EQ, 0);
-    tt_ptr_op(encrypted_out, OP_EQ, NULL);
-    expect_log_msg_containing("Length of descriptor\'s encrypted data "
-                              "is too small.");
-    teardown_capture_of_logs();
-  }
-
-  /* Now finally the good one */
-  retval = decode_superencrypted(correct_superencrypted_text,
-                                 strlen(correct_superencrypted_text),
-                                 &encrypted_out);
-
-  tt_u64_op(retval, OP_EQ, strlen(correct_encrypted_plaintext));
-  tt_mem_op(encrypted_out, OP_EQ, correct_encrypted_plaintext,
-            strlen(correct_encrypted_plaintext));
-
- done:
-  tor_free(encrypted_out);
-}
-
 struct testcase_t hs_descriptor[] = {
   /* Encoding tests. */
   { "cert_encoding", test_cert_encoding, TT_FORK,
@@ -979,9 +883,6 @@ struct testcase_t hs_descriptor[] = {
     NULL, NULL },
   { "build_authorized_client", test_build_authorized_client, TT_FORK,
     NULL, NULL },
-
-  { "parse_hs_desc_superencrypted", test_parse_hs_desc_superencrypted,
-    TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
 };
