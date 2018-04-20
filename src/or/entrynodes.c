@@ -118,6 +118,7 @@
 #include "circpathbias.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
+#include "circuituse.h"
 #include "circuitstats.h"
 #include "config.h"
 #include "confparse.h"
@@ -3473,12 +3474,18 @@ guards_update_all(void)
     used. */
 const node_t *
 guards_choose_guard(cpath_build_state_t *state,
-                   circuit_guard_state_t **guard_state_out)
+                    uint8_t purpose,
+                    circuit_guard_state_t **guard_state_out)
 {
   const node_t *r = NULL;
   const uint8_t *exit_id = NULL;
   entry_guard_restriction_t *rst = NULL;
-  if (state && (exit_id = build_state_get_exit_rsa_id(state))) {
+
+  /* Only apply restrictions if we have a specific exit node in mind, and only
+   * if we are not doing vanguard circuits: we don't want to apply guard
+   * restrictions to vanguard circuits. */
+  if (state && !circuit_should_use_vanguards(purpose) &&
+      (exit_id = build_state_get_exit_rsa_id(state))) {
     /* We're building to a targeted exit node, so that node can't be
      * chosen as our guard for this circuit.  Remember that fact in a
      * restriction. */

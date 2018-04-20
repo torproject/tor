@@ -2628,7 +2628,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
     /* This request is for an entry server to use for a regular circuit,
      * and we use entry guard nodes.  Just return one of the guard nodes.  */
     tor_assert(guard_state_out);
-    return guards_choose_guard(state, guard_state_out);
+    return guards_choose_guard(state, purpose, guard_state_out);
   }
 
   excluded = smartlist_new();
