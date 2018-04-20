@@ -1,0 +1,3 @@
+  o Documentation:
+    - Correct an IPv6 error in the documentation for ExitPolicy.
+      Closes ticket 25857.  Patch from "CTassisF".
