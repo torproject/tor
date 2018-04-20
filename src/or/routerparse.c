@@ -2743,8 +2743,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     /* These are implied true by having been included in a consensus made
      * with a given method */
     rs->is_flagged_running = 1; /* Starting with consensus method 4. */
-    if (consensus_method >= MIN_METHOD_FOR_EXCLUDING_INVALID_NODES)
-      rs->is_valid = 1;
+    rs->is_valid = 1; /* Starting with consensus method 24. */
   }
   {
     const char *protocols = NULL, *version = NULL;

@@ -549,12 +549,12 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
 
   tor_assert(most);
 
-  /* If we're producing "a" lines, vote on potential alternative (sets
-   * of) OR port(s) in the winning routerstatuses.
+  /* Vote on potential alternative (sets of) OR port(s) in the winning
+   * routerstatuses.
    *
    * XXX prop186 There's at most one alternative OR port (_the_ IPv6
    * port) for now. */
-  if (consensus_method >= MIN_METHOD_FOR_A_LINES && best_alt_orport_out) {
+  if (best_alt_orport_out) {
     smartlist_t *alt_orports = smartlist_new();
     const tor_addr_port_t *most_alt_orport = NULL;
 
@@ -664,13 +664,6 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
-  if (method == MIN_METHOD_FOR_ED25519_ID_IN_MD) {
-    /* This method was broken due to buggy code accidentally left in
-     * dircollate.c; do not actually use it.
-     */
-    return 0;
-  }
-
   return (method >= MIN_SUPPORTED_CONSENSUS_METHOD) &&
     (method <= MAX_SUPPORTED_CONSENSUS_METHOD);
 }
@@ -1455,19 +1448,14 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                                       n_versioning_servers);
     client_versions = compute_consensus_versions_list(combined_client_versions,
                                                       n_versioning_clients);
-    if (consensus_method >= MIN_METHOD_FOR_PACKAGE_LINES) {
-      packages = compute_consensus_package_lines(votes);
-    } else {
-      packages = tor_strdup("");
-    }
+    packages = compute_consensus_package_lines(votes);
 
     SMARTLIST_FOREACH(combined_server_versions, char *, cp, tor_free(cp));
     SMARTLIST_FOREACH(combined_client_versions, char *, cp, tor_free(cp));
     smartlist_free(combined_server_versions);
     smartlist_free(combined_client_versions);
 
-    if (consensus_method >= MIN_METHOD_FOR_ED25519_ID_VOTING)
-      smartlist_add_strdup(flags, "NoEdConsensus");
+    smartlist_add_strdup(flags, "NoEdConsensus");
 
     smartlist_sort_strings(flags);
     smartlist_uniq_strings(flags);
@@ -1516,7 +1504,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     tor_free(flaglist);
   }
 
-  if (consensus_method >= MIN_METHOD_FOR_RECOMMENDED_PROTOCOLS) {
+  {
     int num_dirauth = get_n_authorities(V3_DIRINFO);
     int idx;
     for (idx = 0; idx < 4; ++idx) {
@@ -1536,7 +1524,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_add_strdup(chunks, "\n");
   }
 
-  if (consensus_method >= MIN_METHOD_FOR_SHARED_RANDOM) {
+  {
     int num_dirauth = get_n_authorities(V3_DIRINFO);
     /* Default value of this is 2/3 of the total number of authorities. For
      * instance, if we have 9 dirauth, the default value is 6. The following
@@ -1601,7 +1589,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(dir_sources);
   }
 
-  if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW) {
+  {
     char *max_unmeasured_param = NULL;
     /* XXXX Extract this code into a common function.  Or don't!  see #19011 */
     if (params) {
@@ -1863,7 +1851,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
         continue;
 
       if (ed_consensus > 0) {
-        tor_assert(consensus_method >= MIN_METHOD_FOR_ED25519_ID_VOTING);
         if (ed_consensus <= total_authorities / 2) {
           log_warn(LD_BUG, "Not enough entries had ed_consensus set; how "
                    "can we have a consensus of %d?", ed_consensus);
@@ -1890,10 +1877,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
       rs_out.published_on = rs->status.published_on;
       rs_out.dir_port = rs->status.dir_port;
       rs_out.or_port = rs->status.or_port;
-      if (consensus_method >= MIN_METHOD_FOR_A_LINES) {
-        tor_addr_copy(&rs_out.ipv6_addr, &alt_orport.addr);
-        rs_out.ipv6_orport = alt_orport.port;
-      }
+      tor_addr_copy(&rs_out.ipv6_addr, &alt_orport.addr);
+      rs_out.ipv6_orport = alt_orport.port;
       rs_out.has_bandwidth = 0;
       rs_out.has_exitsummary = 0;
 
@@ -1923,8 +1908,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         } else if (!strcmp(fl, "Unnamed")) {
           if (is_unnamed)
             smartlist_add(chosen_flags, (char*)fl);
-        } else if (!strcmp(fl, "NoEdConsensus") &&
-                   consensus_method >= MIN_METHOD_FOR_ED25519_ID_VOTING) {
+        } else if (!strcmp(fl, "NoEdConsensus")) {
           if (ed_consensus <= total_authorities/2)
             smartlist_add(chosen_flags, (char*)fl);
         } else {
@@ -1951,8 +1935,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
       /* Starting with consensus method 24, we don't list servers
        * that are not valid in a consensus.  See Proposal 272 */
-      if (!is_valid &&
-          consensus_method >= MIN_METHOD_FOR_EXCLUDING_INVALID_NODES)
+      if (!is_valid)
         continue;
 
       /* Pick the version. */
@@ -1973,8 +1956,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
       /* If it's a guard and we have enough guardfraction votes,
          calculate its consensus guardfraction value. */
-      if (is_guard && num_guardfraction_inputs > 2 &&
-          consensus_method >= MIN_METHOD_FOR_GUARDFRACTION) {
+      if (is_guard && num_guardfraction_inputs > 2) {
         rs_out.has_guardfraction = 1;
         rs_out.guardfraction_percentage = median_uint32(measured_guardfraction,
                                                      num_guardfraction_inputs);
@@ -1991,8 +1973,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         rs_out.has_bandwidth = 1;
         rs_out.bw_is_unmeasured = 1;
         rs_out.bandwidth_kb = median_uint32(bandwidths_kb, num_bandwidths);
-        if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW &&
-            n_authorities_measuring_bandwidth > 2) {
+        if (n_authorities_measuring_bandwidth > 2) {
           /* Cap non-measured bandwidths. */
           if (rs_out.bandwidth_kb > max_unmeasured_bw_kb) {
             rs_out.bandwidth_kb = max_unmeasured_bw_kb;
@@ -2132,8 +2113,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
         char *guardfraction_str = NULL;
-        int unmeasured = rs_out.bw_is_unmeasured &&
-          consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW;
+        int unmeasured = rs_out.bw_is_unmeasured;
 
         /* If we have guardfraction info, include it in the 'w' line. */
         if (rs_out.has_guardfraction) {
@@ -3835,8 +3815,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 
   smartlist_add_asprintf(chunks, "onion-key\n%s", key);
 
-  if (consensus_method >= MIN_METHOD_FOR_NTOR_KEY &&
-      ri->onion_curve25519_pkey) {
+  if (ri->onion_curve25519_pkey) {
     char kbuf[128];
     base64_encode(kbuf, sizeof(kbuf),
                   (const char*)ri->onion_curve25519_pkey->public_key,
@@ -3846,8 +3825,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 
   /* We originally put a lines in the micrdescriptors, but then we worked out
    * that we needed them in the microdesc consensus. See #20916. */
-  if (consensus_method >= MIN_METHOD_FOR_A_LINES &&
-      consensus_method < MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC &&
+  if (consensus_method < MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC &&
       !tor_addr_is_null(&ri->ipv6_addr) && ri->ipv6_orport)
     smartlist_add_asprintf(chunks, "a %s\n",
                            fmt_addrport(&ri->ipv6_addr, ri->ipv6_orport));
@@ -3858,8 +3836,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
   if (summary && strcmp(summary, "reject 1-65535"))
     smartlist_add_asprintf(chunks, "p %s\n", summary);
 
-  if (consensus_method >= MIN_METHOD_FOR_P6_LINES &&
-      ri->ipv6_exit_policy) {
+  if (ri->ipv6_exit_policy) {
     /* XXXX+++ This doesn't match proposal 208, which says these should
      * be taken unchanged from the routerinfo.  That's bogosity, IMO:
      * the proposal should have said to do this instead.*/
@@ -3869,11 +3846,10 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
     tor_free(p6);
   }
 
-  if (consensus_method >= MIN_METHOD_FOR_ID_HASH_IN_MD) {
+  {
     char idbuf[ED25519_BASE64_LEN+1];
     const char *keytype;
-    if (consensus_method >= MIN_METHOD_FOR_ED25519_ID_IN_MD &&
-        ri->cache_info.signing_key_cert &&
+    if (ri->cache_info.signing_key_cert &&
         ri->cache_info.signing_key_cert->signing_key_included) {
       keytype = "ed25519";
       ed25519_public_to_base64(idbuf,
@@ -3951,13 +3927,7 @@ static const struct consensus_method_range_t {
   int low;
   int high;
 } microdesc_consensus_methods[] = {
-  {MIN_SUPPORTED_CONSENSUS_METHOD, MIN_METHOD_FOR_A_LINES - 1},
-  {MIN_METHOD_FOR_A_LINES, MIN_METHOD_FOR_P6_LINES - 1},
-  {MIN_METHOD_FOR_P6_LINES, MIN_METHOD_FOR_NTOR_KEY - 1},
-  {MIN_METHOD_FOR_NTOR_KEY, MIN_METHOD_FOR_ID_HASH_IN_MD - 1},
-  {MIN_METHOD_FOR_ID_HASH_IN_MD, MIN_METHOD_FOR_ED25519_ID_IN_MD - 1},
-  {MIN_METHOD_FOR_ED25519_ID_IN_MD,
-    MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC - 1},
+  {MIN_SUPPORTED_CONSENSUS_METHOD, MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC - 1},
   {MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC, MAX_SUPPORTED_CONSENSUS_METHOD},
   {-1, -1}
 };

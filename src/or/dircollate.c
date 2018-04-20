@@ -25,7 +25,6 @@
 #include "dircollate.h"
 #include "dirvote.h"
 
-static void dircollator_collate_by_rsa(dircollator_t *dc);
 static void dircollator_collate_by_ed25519(dircollator_t *dc);
 
 /** Hashtable entry mapping a pair of digests (actually an ed25519 key and an
@@ -208,46 +207,15 @@ dircollator_add_vote(dircollator_t *dc, networkstatus_t *v)
 void
 dircollator_collate(dircollator_t *dc, int consensus_method)
 {
+  (void) consensus_method;
+
   tor_assert(!dc->is_collated);
   dc->all_rsa_sha1_lst = smartlist_new();
 
-  if (consensus_method < MIN_METHOD_FOR_ED25519_ID_VOTING)
-    dircollator_collate_by_rsa(dc);
-  else
-    dircollator_collate_by_ed25519(dc);
+  dircollator_collate_by_ed25519(dc);
 
   smartlist_sort_digests(dc->all_rsa_sha1_lst);
   dc->is_collated = 1;
-}
-
-/**
- * Collation function for RSA-only consensuses: collate the votes for each
- * entry in <b>dc</b> by their RSA keys.
- *
- * The rule is:
- *    If an RSA identity key is listed by more than half of the authorities,
- *    include that identity, and treat all descriptors with that RSA identity
- *    as describing the same router.
- */
-static void
-dircollator_collate_by_rsa(dircollator_t *dc)
-{
-  const int total_authorities = dc->n_authorities;
-
-  DIGESTMAP_FOREACH(dc->by_rsa_sha1, k, vote_routerstatus_t **, vrs_lst) {
-    int n = 0, i;
-    for (i = 0; i < dc->n_votes; ++i) {
-      if (vrs_lst[i] != NULL)
-        ++n;
-    }
-
-    if (n <= total_authorities / 2)
-      continue;
-
-    smartlist_add(dc->all_rsa_sha1_lst, (char *)k);
-  } DIGESTMAP_FOREACH_END;
-
-  dc->by_collated_rsa_sha1 = dc->by_rsa_sha1;
 }
 
 /**
