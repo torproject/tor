@@ -330,6 +330,7 @@ static void
 test_decode_descriptor(void *arg)
 {
   int ret;
+  int i;
   char *encoded = NULL;
   ed25519_keypair_t signing_kp;
   hs_descriptor_t *desc = NULL;
@@ -379,6 +380,75 @@ test_decode_descriptor(void *arg)
     ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(decoded);
+  }
+
+  /* Decode a descriptor with auth clients. */
+  {
+    uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+    curve25519_keypair_t auth_ephemeral_kp;
+    curve25519_keypair_t client_kp, invalid_client_kp;
+    smartlist_t *clients;
+    hs_desc_authorized_client_t *client, *fake_client;
+    client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
+
+    /* Prepare all the keys needed to build the auth client. */
+    curve25519_keypair_generate(&auth_ephemeral_kp, 0);
+    curve25519_keypair_generate(&client_kp, 0);
+    curve25519_keypair_generate(&invalid_client_kp, 0);
+    crypto_strongest_rand(descriptor_cookie, HS_DESC_DESCRIPTOR_COOKIE_LEN);
+
+    memcpy(&desc->superencrypted_data.auth_ephemeral_pubkey,
+           &auth_ephemeral_kp.pubkey, CURVE25519_PUBKEY_LEN);
+
+    /* Build and add the auth client to the descriptor. */
+    clients = desc->superencrypted_data.clients;
+    if (!clients) {
+      clients = smartlist_new();
+    }
+    hs_desc_build_authorized_client(&client_kp.pubkey,
+                                    &auth_ephemeral_kp.seckey,
+                                    descriptor_cookie, client);
+    smartlist_add(clients, client);
+
+    /* We need to add fake auth clients here. */
+    for (i=0; i < 15; ++i) {
+      fake_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
+      hs_desc_build_fake_authorized_client(fake_client);
+      smartlist_add(clients, fake_client);
+    }
+    desc->superencrypted_data.clients = clients;
+
+    /* Test the encoding/decoding in the following lines. */
+    hs_helper_get_subcred_from_identity_keypair(&signing_kp,
+                                                subcredential);
+    tor_free(encoded);
+    ret = hs_desc_encode_descriptor(desc, &signing_kp,
+                                    descriptor_cookie, &encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    /* If we do not have the client secret key, the decoding must fail. */
+    hs_descriptor_free(decoded);
+    ret = hs_desc_decode_descriptor(encoded, subcredential,
+                                    NULL, &decoded);
+    tt_int_op(ret, OP_LT, 0);
+    tt_assert(!decoded);
+
+    /* If we have an invalid client secret key, the decoding must fail. */
+    hs_descriptor_free(decoded);
+    ret = hs_desc_decode_descriptor(encoded, subcredential,
+                                    &invalid_client_kp.seckey, &decoded);
+    tt_int_op(ret, OP_LT, 0);
+    tt_assert(!decoded);
+
+    /* If we have the client secret key, the decoding must succeed and the
+     * decoded descriptor must be correct. */
+    ret = hs_desc_decode_descriptor(encoded, subcredential,
+                                    &client_kp.seckey, &decoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(decoded);
+
+    hs_helper_desc_equal(desc, decoded);
   }
 
  done:
