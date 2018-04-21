@@ -1,0 +1,21 @@
+[package]
+authors = ["The Tor Project",
+           "Isis Lovecruft <isis@torproject.org>"]
+name = "crypto"
+version = "0.0.1"
+publish = false
+
+[lib]
+name = "crypto"
+path = "lib.rs"
+crate_type = ["rlib", "staticlib"]
+
+[dependencies]
+libc = "=0.2.39"
+digest = "=0.7.2"
+
+[dependencies.external]
+path = "../external"
+
+[dependencies.smartlist]
+path = "../smartlist"

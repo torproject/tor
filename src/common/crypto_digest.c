@@ -268,7 +268,11 @@ crypto_digest_new(void)
 }
 
 /** Allocate and return a new digest object to compute 256-bit digests
- * using <b>algorithm</b>. */
+ * using <b>algorithm</b>.
+ *
+ * C_RUST_COUPLED: `external::crypto_digest::crypto_digest256_new`
+ * C_RUST_COUPLED: `crypto::digest::Sha256::default`
+ */
 crypto_digest_t *
 crypto_digest256_new(digest_algorithm_t algorithm)
 {
@@ -298,6 +302,9 @@ crypto_digest_free_(crypto_digest_t *digest)
 }
 
 /** Add <b>len</b> bytes from <b>data</b> to the digest object.
+ *
+ * C_RUST_COUPLED: `external::crypto_digest::crypto_digest_add_bytess`
+ * C_RUST_COUPLED: `crypto::digest::Sha256::process`
  */
 void
 crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
@@ -335,6 +342,9 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
 /** Compute the hash of the data that has been passed to the digest
  * object; write the first out_len bytes of the result to <b>out</b>.
  * <b>out_len</b> must be \<= DIGEST512_LEN.
+ *
+ * C_RUST_COUPLED: `external::crypto_digest::crypto_digest_get_digest`
+ * C_RUST_COUPLED: `impl digest::FixedOutput for Sha256`
  */
 void
 crypto_digest_get_digest(crypto_digest_t *digest,
@@ -383,6 +393,9 @@ crypto_digest_get_digest(crypto_digest_t *digest,
 
 /** Allocate and return a new digest object with the same state as
  * <b>digest</b>
+ *
+ * C_RUST_COUPLED: `external::crypto_digest::crypto_digest_dup`
+ * C_RUST_COUPLED: `impl Clone for crypto::digest::Sha256`
  */
 crypto_digest_t *
 crypto_digest_dup(const crypto_digest_t *digest)

@@ -1,7 +1,14 @@
 [workspace]
-members = ["tor_util", "protover", "smartlist", "external", "tor_allocate",
-"tor_rust", "tor_log",
+members = [
+    "crypto",
+    "external",
+    "protover",
     "rand",
+    "smartlist",
+    "tor_allocate",
+    "tor_log",
+    "tor_rust",
+    "tor_util",
 ]
 
 [profile.release]

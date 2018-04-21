@@ -1,8 +1,35 @@
 [[package]]
+name = "crypto"
+version = "0.0.1"
+dependencies = [
+ "digest 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "external 0.0.1",
+ "libc 0.2.39 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smartlist 0.0.1",
+]
+
+[[package]]
+name = "digest"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "generic-array 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "external"
 version = "0.0.1"
 dependencies = [
  "libc 0.2.39 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smartlist 0.0.1",
+]
+
+[[package]]
+name = "generic-array"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "typenum 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -87,7 +114,15 @@ dependencies = [
  "tor_log 0.1.0",
 ]
 
+[[package]]
+name = "typenum"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
 [metadata]
+"checksum digest 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)" = "00a49051fef47a72c9623101b19bd71924a45cca838826caae3eaa4d00772603"
+"checksum generic-array 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ef25c5683767570c2bbd7deba372926a55eaae9982d7726ee2a1050239d45b9d"
 "checksum libc 0.2.39 (registry+https://github.com/rust-lang/crates.io-index)" = "f54263ad99207254cf58b5f701ecb432c717445ea2ee8af387334bdd1a03fdff"
 "checksum rand 0.5.0-pre.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7d7a7728c20bfd9fcc6e713e748e787c3d00e5ffd139b3ad1b5be92c5dfbaad5"
 "checksum rand_core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0224284424a4b818387b58d59336c288f99b48f69681aa60cc681fe038bbca5d"
+"checksum typenum 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "13a99dc6780ef33c78780b826cf9d2a78840b72cae9474de4bcaf9051e60ebbd"

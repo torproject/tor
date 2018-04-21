@@ -6,6 +6,9 @@ name = "external"
 [dependencies]
 libc = "=0.2.39"
 
+[dependencies.smartlist]
+path = "../smartlist"
+
 [lib]
 name = "external"
 path = "lib.rs"
