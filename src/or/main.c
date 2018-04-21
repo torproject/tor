@@ -1316,69 +1316,86 @@ static int periodic_events_initialized = 0;
 #undef CALLBACK
 #define CALLBACK(name) \
   static int name ## _callback(time_t, const or_options_t *)
-CALLBACK(rotate_onion_key);
-CALLBACK(check_onion_keys_expiry_time);
-CALLBACK(check_ed_keys);
-CALLBACK(launch_descriptor_fetches);
-CALLBACK(rotate_x509_certificate);
 CALLBACK(add_entropy);
-CALLBACK(launch_reachability_tests);
-CALLBACK(downrate_stability);
-CALLBACK(save_stability);
 CALLBACK(check_authority_cert);
-CALLBACK(check_expired_networkstatus);
-CALLBACK(write_stats_file);
-CALLBACK(record_bridge_stats);
-CALLBACK(clean_caches);
-CALLBACK(rend_cache_failure_clean);
-CALLBACK(retry_dns);
-CALLBACK(check_descriptor);
-CALLBACK(check_for_reachability_bw);
-CALLBACK(fetch_networkstatus);
-CALLBACK(retry_listeners);
-CALLBACK(expire_old_ciruits_serverside);
-CALLBACK(check_dns_honesty);
-CALLBACK(write_bridge_ns);
-CALLBACK(heartbeat);
-CALLBACK(clean_consdiffmgr);
-CALLBACK(reset_padding_counts);
 CALLBACK(check_canonical_channels);
+CALLBACK(check_descriptor);
+CALLBACK(check_dns_honesty);
+CALLBACK(check_ed_keys);
+CALLBACK(check_expired_networkstatus);
+CALLBACK(check_for_reachability_bw);
+CALLBACK(check_onion_keys_expiry_time);
+CALLBACK(clean_caches);
+CALLBACK(clean_consdiffmgr);
+CALLBACK(downrate_stability);
+CALLBACK(expire_old_ciruits_serverside);
+CALLBACK(fetch_networkstatus);
+CALLBACK(heartbeat);
 CALLBACK(hs_service);
+CALLBACK(launch_descriptor_fetches);
+CALLBACK(launch_reachability_tests);
+CALLBACK(record_bridge_stats);
+CALLBACK(rend_cache_failure_clean);
+CALLBACK(reset_padding_counts);
+CALLBACK(retry_dns);
+CALLBACK(retry_listeners);
+CALLBACK(rotate_onion_key);
+CALLBACK(rotate_x509_certificate);
+CALLBACK(save_stability);
+CALLBACK(write_bridge_ns);
+CALLBACK(write_stats_file);
 
 #undef CALLBACK
 
 /* Now we declare an array of periodic_event_item_t for each periodic event */
-#define CALLBACK(name) PERIODIC_EVENT(name)
+#define CALLBACK(name, r) PERIODIC_EVENT(name, r)
 
 static periodic_event_item_t periodic_events[] = {
-  CALLBACK(rotate_onion_key),
-  CALLBACK(check_onion_keys_expiry_time),
-  CALLBACK(check_ed_keys),
-  CALLBACK(launch_descriptor_fetches),
-  CALLBACK(rotate_x509_certificate),
-  CALLBACK(add_entropy),
-  CALLBACK(launch_reachability_tests),
-  CALLBACK(downrate_stability),
-  CALLBACK(save_stability),
-  CALLBACK(check_authority_cert),
-  CALLBACK(check_expired_networkstatus),
-  CALLBACK(write_stats_file),
-  CALLBACK(record_bridge_stats),
-  CALLBACK(clean_caches),
-  CALLBACK(rend_cache_failure_clean),
-  CALLBACK(retry_dns),
-  CALLBACK(check_descriptor),
-  CALLBACK(check_for_reachability_bw),
-  CALLBACK(fetch_networkstatus),
-  CALLBACK(retry_listeners),
-  CALLBACK(expire_old_ciruits_serverside),
-  CALLBACK(check_dns_honesty),
-  CALLBACK(write_bridge_ns),
-  CALLBACK(heartbeat),
-  CALLBACK(clean_consdiffmgr),
-  CALLBACK(reset_padding_counts),
-  CALLBACK(check_canonical_channels),
-  CALLBACK(hs_service),
+  /* Everyone needs to run those. */
+  CALLBACK(add_entropy, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(check_expired_networkstatus, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(clean_caches, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(fetch_networkstatus, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(heartbeat, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(launch_descriptor_fetches, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(reset_padding_counts, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(retry_listeners, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(rotate_x509_certificate, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(write_stats_file, PERIODIC_EVENT_ROLE_ALL),
+
+  /* Routers (bridge and relay) only. */
+  CALLBACK(check_descriptor, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(check_ed_keys, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(check_for_reachability_bw, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(check_onion_keys_expiry_time, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(clean_consdiffmgr, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(expire_old_ciruits_serverside, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(retry_dns, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(rotate_onion_key, PERIODIC_EVENT_ROLE_ROUTER),
+
+  /* Authorities (bridge and directory) only. */
+  CALLBACK(downrate_stability, PERIODIC_EVENT_ROLE_AUTHORITIES),
+  CALLBACK(launch_reachability_tests, PERIODIC_EVENT_ROLE_AUTHORITIES),
+  CALLBACK(save_stability, PERIODIC_EVENT_ROLE_AUTHORITIES),
+
+  /* Directory authority only. */
+  CALLBACK(check_authority_cert, PERIODIC_EVENT_ROLE_DIRAUTH),
+
+  /* Relay only. */
+  CALLBACK(check_canonical_channels, PERIODIC_EVENT_ROLE_RELAY),
+  CALLBACK(check_dns_honesty, PERIODIC_EVENT_ROLE_RELAY),
+
+  /* Hidden Service service only. */
+  CALLBACK(hs_service, PERIODIC_EVENT_ROLE_HS_SERVICE),
+
+  /* Bridge only. */
+  CALLBACK(record_bridge_stats, PERIODIC_EVENT_ROLE_BRIDGE),
+
+  /* Client only. */
+  CALLBACK(rend_cache_failure_clean, PERIODIC_EVENT_ROLE_CLIENT),
+
+  /* Bridge Authority only. */
+  CALLBACK(write_bridge_ns, PERIODIC_EVENT_ROLE_BRIDGEAUTH),
   END_OF_PERIODIC_EVENTS
 };
 #undef CALLBACK
@@ -1420,6 +1437,31 @@ find_periodic_event(const char *name)
   return NULL;
 }
 
+/** Return a bitmask of the roles this tor instance is configured for using
+ * the given options. */
+static int
+get_my_roles(const or_options_t *options)
+{
+  tor_assert(options);
+
+  int roles = 0;
+  int is_bridge = options->BridgeRelay;
+  int is_client = any_client_port_set(options);
+  int is_relay = server_mode(options);
+  int is_dirauth = authdir_mode_v3(options);
+  int is_bridgeauth = authdir_mode_bridge(options);
+  int is_hidden_service = !!hs_service_get_num_services();
+
+  if (is_bridge) roles |= PERIODIC_EVENT_ROLE_BRIDGE;
+  if (is_client) roles |= PERIODIC_EVENT_ROLE_CLIENT;
+  if (is_relay) roles |= PERIODIC_EVENT_ROLE_RELAY;
+  if (is_dirauth) roles |= PERIODIC_EVENT_ROLE_DIRAUTH;
+  if (is_bridgeauth) roles |= PERIODIC_EVENT_ROLE_BRIDGEAUTH;
+  if (is_hidden_service) roles |= PERIODIC_EVENT_ROLE_HS_SERVICE;
+
+  return roles;
+}
+
 /** Event to run initialize_periodic_events_cb */
 static struct event *initialize_periodic_events_event = NULL;
 
@@ -1434,10 +1476,18 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
   (void) fd;
   (void) events;
   (void) data;
+
+  int roles = get_my_roles(get_options());
+
   tor_event_free(initialize_periodic_events_event);
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_launch(&periodic_events[i]);
+
+  for (int i = 0; periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &periodic_events[i];
+    if (item->roles & roles) {
+      /* This is safe to be called on an already enabled event. */
+      periodic_event_enable(item);
+      log_debug(LD_GENERAL, "Launching periodic event %s", item->name);
+    }
   }
 }
 
@@ -1449,6 +1499,7 @@ initialize_periodic_events(void)
   tor_assert(periodic_events_initialized == 0);
   periodic_events_initialized = 1;
 
+  /* Set up all periodic events. We'll launch them by roles. */
   int i;
   for (i = 0; periodic_events[i].name; ++i) {
     periodic_event_setup(&periodic_events[i]);
@@ -1474,9 +1525,45 @@ teardown_periodic_events(void)
 {
   int i;
   for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_destroy(&periodic_events[i]);
+    periodic_event_disable(&periodic_events[i]);
   }
   periodic_events_initialized = 0;
+}
+
+/** Do a pass at all our periodic events, destroy those we don't need anymore
+ * and enabled those we need now using the given options. */
+static void
+rescan_periodic_events(const or_options_t *options)
+{
+  tor_assert(options);
+
+  int roles = get_my_roles(options);
+
+  for (int i = 0; periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &periodic_events[i];
+
+    /* Enable the event if needed. It is safe to enable an event that was
+     * already enabled. Same goes for disabling it. */
+    if (item->roles & roles) {
+      periodic_event_enable(item);
+    } else {
+      periodic_event_disable(item);
+    }
+  }
+}
+
+/* We just got new options globally set, see if we need to destroy or setup
+ * periodic events. */
+void
+periodic_events_on_new_options(const or_options_t *options)
+{
+  /* Only if we've already initialized once the events, teardown them all and
+   * reinitialize. It is just simpler that way instead of going through all
+   * currently enabled events and trying to destroy only the one that could be
+   * affected. */
+  if (periodic_events_initialized) {
+    rescan_periodic_events(options);
+  }
 }
 
 /**

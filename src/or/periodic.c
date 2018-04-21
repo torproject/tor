@@ -78,7 +78,10 @@ periodic_event_dispatch(mainloop_event_t *ev, void *data)
 void
 periodic_event_reschedule(periodic_event_item_t *event)
 {
-  periodic_event_set_interval(event, 1);
+  /* Don't reschedule a disabled event. */
+  if (periodic_event_is_enabled(event)) {
+    periodic_event_set_interval(event, 1);
+  }
 }
 
 /** Initializes the libevent backend for a periodic event. */
@@ -104,6 +107,11 @@ periodic_event_launch(periodic_event_item_t *event)
     log_err(LD_BUG, "periodic_event_launch without periodic_event_setup");
     tor_assert(0);
   }
+  /* Event already enabled? This is a bug */
+  if (periodic_event_is_enabled(event)) {
+    log_err(LD_BUG, "periodic_event_launch on an already enabled event");
+    tor_assert(0);
+  }
 
   // Initial dispatch
   periodic_event_dispatch(event->ev, event);
@@ -117,5 +125,35 @@ periodic_event_destroy(periodic_event_item_t *event)
     return;
   mainloop_event_free(event->ev);
   event->last_action_time = 0;
+}
+
+/** Enable the given event which means the event is launched and then the
+ * event's enabled flag is set. This can be called for an event that is
+ * already enabled. */
+void
+periodic_event_enable(periodic_event_item_t *event)
+{
+  tor_assert(event);
+  /* Safely and silently ignore if this event is already enabled. */
+  if (periodic_event_is_enabled(event)) {
+    return;
+  }
+  periodic_event_launch(event);
+  event->enabled = 1;
+}
+
+/** Disable the given event which means the event is destroyed and then the
+ * event's enabled flag is unset. This can be called for an event that is
+ * already disabled. */
+void
+periodic_event_disable(periodic_event_item_t *event)
+{
+  tor_assert(event);
+  /* Safely and silently ignore if this event is already disabled. */
+  if (!periodic_event_is_enabled(event)) {
+    return;
+  }
+  periodic_event_destroy(event);
+  event->enabled = 0;
 }
 

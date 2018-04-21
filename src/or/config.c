@@ -903,8 +903,13 @@ set_options(or_options_t *new_val, char **msg)
     smartlist_free(elements);
   }
 
-  if (old_options != global_options)
+  if (old_options != global_options) {
     or_options_free(old_options);
+    /* If we are here it means we've successfully applied the new options and
+     * that the global options have been changed to the new values. We'll
+     * check if we need to remove or add periodic events. */
+    periodic_events_on_new_options(global_options);
+  }
 
   return 0;
 }
