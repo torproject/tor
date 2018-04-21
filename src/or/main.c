@@ -1316,69 +1316,86 @@ static int periodic_events_initialized = 0;
 #undef CALLBACK
 #define CALLBACK(name) \
   static int name ## _callback(time_t, const or_options_t *)
-CALLBACK(rotate_onion_key);
-CALLBACK(check_onion_keys_expiry_time);
-CALLBACK(check_ed_keys);
-CALLBACK(launch_descriptor_fetches);
-CALLBACK(rotate_x509_certificate);
 CALLBACK(add_entropy);
-CALLBACK(launch_reachability_tests);
-CALLBACK(downrate_stability);
-CALLBACK(save_stability);
 CALLBACK(check_authority_cert);
-CALLBACK(check_expired_networkstatus);
-CALLBACK(write_stats_file);
-CALLBACK(record_bridge_stats);
-CALLBACK(clean_caches);
-CALLBACK(rend_cache_failure_clean);
-CALLBACK(retry_dns);
-CALLBACK(check_descriptor);
-CALLBACK(check_for_reachability_bw);
-CALLBACK(fetch_networkstatus);
-CALLBACK(retry_listeners);
-CALLBACK(expire_old_ciruits_serverside);
-CALLBACK(check_dns_honesty);
-CALLBACK(write_bridge_ns);
-CALLBACK(heartbeat);
-CALLBACK(clean_consdiffmgr);
-CALLBACK(reset_padding_counts);
 CALLBACK(check_canonical_channels);
+CALLBACK(check_descriptor);
+CALLBACK(check_dns_honesty);
+CALLBACK(check_ed_keys);
+CALLBACK(check_expired_networkstatus);
+CALLBACK(check_for_reachability_bw);
+CALLBACK(check_onion_keys_expiry_time);
+CALLBACK(clean_caches);
+CALLBACK(clean_consdiffmgr);
+CALLBACK(downrate_stability);
+CALLBACK(expire_old_ciruits_serverside);
+CALLBACK(fetch_networkstatus);
+CALLBACK(heartbeat);
 CALLBACK(hs_service);
+CALLBACK(launch_descriptor_fetches);
+CALLBACK(launch_reachability_tests);
+CALLBACK(record_bridge_stats);
+CALLBACK(rend_cache_failure_clean);
+CALLBACK(reset_padding_counts);
+CALLBACK(retry_dns);
+CALLBACK(retry_listeners);
+CALLBACK(rotate_onion_key);
+CALLBACK(rotate_x509_certificate);
+CALLBACK(save_stability);
+CALLBACK(write_bridge_ns);
+CALLBACK(write_stats_file);
 
 #undef CALLBACK
 
 /* Now we declare an array of periodic_event_item_t for each periodic event */
-#define CALLBACK(name) PERIODIC_EVENT(name)
+#define CALLBACK(name, r) PERIODIC_EVENT(name, r)
 
 static periodic_event_item_t periodic_events[] = {
-  CALLBACK(rotate_onion_key),
-  CALLBACK(check_onion_keys_expiry_time),
-  CALLBACK(check_ed_keys),
-  CALLBACK(launch_descriptor_fetches),
-  CALLBACK(rotate_x509_certificate),
-  CALLBACK(add_entropy),
-  CALLBACK(launch_reachability_tests),
-  CALLBACK(downrate_stability),
-  CALLBACK(save_stability),
-  CALLBACK(check_authority_cert),
-  CALLBACK(check_expired_networkstatus),
-  CALLBACK(write_stats_file),
-  CALLBACK(record_bridge_stats),
-  CALLBACK(clean_caches),
-  CALLBACK(rend_cache_failure_clean),
-  CALLBACK(retry_dns),
-  CALLBACK(check_descriptor),
-  CALLBACK(check_for_reachability_bw),
-  CALLBACK(fetch_networkstatus),
-  CALLBACK(retry_listeners),
-  CALLBACK(expire_old_ciruits_serverside),
-  CALLBACK(check_dns_honesty),
-  CALLBACK(write_bridge_ns),
-  CALLBACK(heartbeat),
-  CALLBACK(clean_consdiffmgr),
-  CALLBACK(reset_padding_counts),
-  CALLBACK(check_canonical_channels),
-  CALLBACK(hs_service),
+  /* Everyone needs to run those. */
+  CALLBACK(add_entropy, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(check_expired_networkstatus, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(clean_caches, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(fetch_networkstatus, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(heartbeat, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(launch_descriptor_fetches, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(reset_padding_counts, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(retry_listeners, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(rotate_x509_certificate, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(write_stats_file, PERIODIC_EVENT_ROLE_ALL),
+
+  /* Routers (bridge and relay) only. */
+  CALLBACK(check_descriptor, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(check_ed_keys, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(check_for_reachability_bw, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(check_onion_keys_expiry_time, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(clean_consdiffmgr, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(expire_old_ciruits_serverside, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(retry_dns, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(rotate_onion_key, PERIODIC_EVENT_ROLE_ROUTER),
+
+  /* Authorities (bridge and directory) only. */
+  CALLBACK(downrate_stability, PERIODIC_EVENT_ROLE_AUTHORITIES),
+  CALLBACK(launch_reachability_tests, PERIODIC_EVENT_ROLE_AUTHORITIES),
+  CALLBACK(save_stability, PERIODIC_EVENT_ROLE_AUTHORITIES),
+
+  /* Directory authority only. */
+  CALLBACK(check_authority_cert, PERIODIC_EVENT_ROLE_DIRAUTH),
+
+  /* Relay only. */
+  CALLBACK(check_canonical_channels, PERIODIC_EVENT_ROLE_RELAY),
+  CALLBACK(check_dns_honesty, PERIODIC_EVENT_ROLE_RELAY),
+
+  /* Hidden Service service only. */
+  CALLBACK(hs_service, PERIODIC_EVENT_ROLE_HS_SERVICE),
+
+  /* Bridge only. */
+  CALLBACK(record_bridge_stats, PERIODIC_EVENT_ROLE_BRIDGE),
+
+  /* Client only. */
+  CALLBACK(rend_cache_failure_clean, PERIODIC_EVENT_ROLE_CLIENT),
+
+  /* Bridge Authority only. */
+  CALLBACK(write_bridge_ns, PERIODIC_EVENT_ROLE_BRIDGEAUTH),
   END_OF_PERIODIC_EVENTS
 };
 #undef CALLBACK
@@ -1402,7 +1419,9 @@ reset_all_main_loop_timers(void)
 {
   int i;
   for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_reschedule(&periodic_events[i]);
+    if (periodic_event_is_enabled(&periodic_events[i])) {
+      periodic_event_reschedule(&periodic_events[i]);
+    }
   }
 }
 
@@ -1437,7 +1456,62 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
   tor_event_free(initialize_periodic_events_event);
   int i;
   for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_launch(&periodic_events[i]);
+    if (periodic_event_is_enabled(&periodic_events[i])) {
+      periodic_event_launch(&periodic_events[i]);
+      log_debug(LD_GENERAL, "Launching periodic event %s",
+                periodic_events[i].name);
+    }
+  }
+}
+
+/* Helper function: Set up periodic_events[] that only matches the given
+ * roles. */
+static void
+setup_periodic_events_by_roles(uint32_t roles)
+{
+  for (int i = 0; periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &periodic_events[i];
+    /* Only set up if the roles matches and if the event isn't already
+     * enabled. */
+    if ((item->roles & roles) && !periodic_event_is_enabled(item)) {
+      periodic_event_setup(item);
+    }
+  }
+}
+
+/* Helper function: Set up all events in periodic_events[] and filter them by
+ * roles for which we are configured for. */
+static void
+setup_periodic_events(void)
+{
+  const or_options_t *options = get_options();
+
+  /* At this stage, we are booting up so we need to know for which roles this
+   * tor instance has. */
+  int is_bridge = options->BridgeRelay;
+  int is_client = any_client_port_set(options);
+  int is_relay = server_mode(options);
+  int is_dirauth = authdir_mode_v3(options);
+  int is_bridgeauth = authdir_mode_bridge(options);
+  int is_hidden_service = !!hs_service_get_num_services();
+
+  if (is_bridge) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_BRIDGE);
+  }
+  if (is_client) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_CLIENT);
+  }
+  if (is_relay) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_RELAY);
+  }
+  if (is_dirauth) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_DIRAUTH);
+  }
+  if (is_bridgeauth) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_BRIDGEAUTH);
+  }
+  if (is_hidden_service) {
+    setup_periodic_events_by_roles(PERIODIC_EVENT_ROLE_HS_SERVICE);
   }
 }
 
@@ -1449,10 +1523,8 @@ initialize_periodic_events(void)
   tor_assert(periodic_events_initialized == 0);
   periodic_events_initialized = 1;
 
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_setup(&periodic_events[i]);
-  }
+  /* Set the periodic events which will be done by roles. */
+  setup_periodic_events();
 
 #define NAMED_CALLBACK(name) \
   STMT_BEGIN name ## _event = find_periodic_event( #name ); STMT_END
@@ -1479,6 +1551,21 @@ teardown_periodic_events(void)
   periodic_events_initialized = 0;
 }
 
+/* We just got new options globally set, see if we need to destroy or setup
+ * periodic events. */
+void
+periodic_events_on_new_options(void)
+{
+  /* Only if we've already initialized once the events, teardown them all and
+   * reinitialize. It is just simpler that way instead of going through all
+   * currently enabled events and trying to destroy only the one that could be
+   * affected. */
+  if (periodic_events_initialized) {
+    teardown_periodic_events();
+    initialize_periodic_events();
+  }
+}
+
 /**
  * Update our schedule so that we'll check whether we need to update our
  * descriptor immediately, rather than after up to CHECK_DESCRIPTOR_INTERVAL
@@ -1488,7 +1575,9 @@ void
 reschedule_descriptor_update_check(void)
 {
   tor_assert(check_descriptor_event);
-  periodic_event_reschedule(check_descriptor_event);
+  if (periodic_event_is_enabled(check_descriptor_event)) {
+    periodic_event_reschedule(check_descriptor_event);
+  }
 }
 
 /**
@@ -1501,8 +1590,12 @@ reschedule_directory_downloads(void)
   tor_assert(fetch_networkstatus_event);
   tor_assert(launch_descriptor_fetches_event);
 
-  periodic_event_reschedule(fetch_networkstatus_event);
-  periodic_event_reschedule(launch_descriptor_fetches_event);
+  if (periodic_event_is_enabled(fetch_networkstatus_event)) {
+    periodic_event_reschedule(fetch_networkstatus_event);
+  }
+  if (periodic_event_is_enabled(launch_descriptor_fetches_event)) {
+    periodic_event_reschedule(launch_descriptor_fetches_event);
+  }
 }
 
 #define LONGEST_TIMER_PERIOD (30 * 86400)
@@ -2476,7 +2569,9 @@ dns_servers_relaunch_checks(void)
     dns_reset_correctness_checks();
     if (periodic_events_initialized) {
       tor_assert(check_dns_honesty_event);
-      periodic_event_reschedule(check_dns_honesty_event);
+      if (periodic_event_is_enabled(check_dns_honesty_event)) {
+        periodic_event_reschedule(check_dns_honesty_event);
+      }
     }
   }
 }

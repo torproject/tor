@@ -6,6 +6,29 @@
 
 #define PERIODIC_EVENT_NO_UPDATE (-1)
 
+/* Tor roles for which a periodic event item is for. An event can be for
+ * multiple roles, they can be combined. */
+#define PERIODIC_EVENT_ROLE_CLIENT      (1U << 0)
+#define PERIODIC_EVENT_ROLE_RELAY       (1U << 1)
+#define PERIODIC_EVENT_ROLE_BRIDGE      (1U << 2)
+#define PERIODIC_EVENT_ROLE_DIRAUTH     (1U << 3)
+#define PERIODIC_EVENT_ROLE_BRIDGEAUTH  (1U << 4)
+#define PERIODIC_EVENT_ROLE_HS_SERVICE  (1U << 5)
+
+/* Helper macro to make it a bit less annoying to defined groups of roles that
+ * are often used. */
+
+/* Router that is a Bridge or Relay. */
+#define PERIODIC_EVENT_ROLE_ROUTER \
+  (PERIODIC_EVENT_ROLE_BRIDGE | PERIODIC_EVENT_ROLE_RELAY)
+/* Authorities that is both bridge and directory. */
+#define PERIODIC_EVENT_ROLE_AUTHORITIES \
+  (PERIODIC_EVENT_ROLE_BRIDGEAUTH | PERIODIC_EVENT_ROLE_DIRAUTH)
+/* All roles. */
+#define PERIODIC_EVENT_ROLE_ALL \
+  (PERIODIC_EVENT_ROLE_AUTHORITIES | PERIODIC_EVENT_ROLE_CLIENT | \
+   PERIODIC_EVENT_ROLE_HS_SERVICE | PERIODIC_EVENT_ROLE_ROUTER)
+
 /** Callback function for a periodic event to take action.  The return value
 * influences the next time the function will get called.  Return
 * PERIODIC_EVENT_NO_UPDATE to not update <b>last_action_time</b> and be polled
@@ -23,11 +46,22 @@ typedef struct periodic_event_item_t {
   struct mainloop_event_t *ev; /**< Libevent callback we're using to implement
                                 * this */
   const char *name; /**< Name of the function -- for debug */
+
+  /* Bitmask of roles define above for which this event applies. */
+  uint32_t roles;
 } periodic_event_item_t;
 
 /** events will get their interval from first execution */
-#define PERIODIC_EVENT(fn) { fn##_callback, 0, NULL, #fn }
-#define END_OF_PERIODIC_EVENTS { NULL, 0, NULL, NULL }
+#define PERIODIC_EVENT(fn, r) { fn##_callback, 0, NULL, #fn, r }
+#define END_OF_PERIODIC_EVENTS { NULL, 0, NULL, NULL, 0 }
+
+/* Return true iff the given event was setup before thus is enabled to be
+ * scheduled. */
+static inline int
+periodic_event_is_enabled(const periodic_event_item_t *item)
+{
+  return item->ev != NULL;
+}
 
 void periodic_event_launch(periodic_event_item_t *event);
 void periodic_event_setup(periodic_event_item_t *event);
