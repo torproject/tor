@@ -1140,7 +1140,12 @@ node_has_any_descriptor(const node_t *node)
           (node->rs && node->md));
 }
 
-/** DOCDOC */
+/** Return true iff <b>node</b> has the kind of descriptor we would prefer to
+ * use for it, given our configuration and how we intend to use the node.
+ *
+ * If <b>for_direct_connect</b> is true, we intend to connect to the node
+ * directly, as the first hop of a circuit; otherwise, we intend to connect to
+ * it indirectly, or use it as if we were connecting to it indirectly. */
 int
 node_has_preferred_descriptor(const node_t *node,
                               int for_direct_connect)
@@ -1153,7 +1158,7 @@ node_has_preferred_descriptor(const node_t *node,
     if (!node->ri)
       return 0;
   } else {
-    /* Otherwise we need an md. */
+    /* Otherwise we need an rs and an md. */
     if (node->rs == NULL || node->md == NULL)
       return 0;
   }
