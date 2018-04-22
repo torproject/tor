@@ -1282,7 +1282,7 @@ node_has_hsdir_index(const node_t *node)
   /* A node can't have an HSDir index without a descriptor since we need desc
    * to get its ed25519 key.  for_direct_connect should be zero, since we
    * always use the consensus-indexed node's keys to build the hash ring, even
-   * if some of the consensus-indexed cnodes are also briges. */
+   * if some of the consensus-indexed nodes are also bridges. */
   if (!node_has_preferred_descriptor(node, 0)) {
     return 0;
   }
