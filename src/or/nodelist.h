@@ -46,7 +46,9 @@ void node_get_verbose_nickname(const node_t *node,
 void node_get_verbose_nickname_by_id(const char *id_digest,
                                 char *verbose_name_out);
 int node_is_dir(const node_t *node);
-int node_has_descriptor(const node_t *node);
+int node_has_any_descriptor(const node_t *node);
+int node_has_preferred_descriptor(const node_t *node,
+                                  int for_direct_connect);
 int node_get_purpose(const node_t *node);
 #define node_is_bridge(node) \
   (node_get_purpose((node)) == ROUTER_PURPOSE_BRIDGE)
