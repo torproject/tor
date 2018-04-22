@@ -2705,14 +2705,16 @@ hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
     goto err;
   }
 
-  /* Try to decode what we just encoded. Symmetry is nice! */
-  /* XXX: I need to disable this assertation for now to make the test pass.
-   * I will enable it again when I finish writing the decoding */
-  /* ret = hs_desc_decode_descriptor(*encoded_out, */
-  /*                                 desc->subcredential, NULL); */
-  /* if (BUG(ret < 0)) { */
-  /*   goto err; */
-  /* } */
+  /* Try to decode what we just encoded. Symmetry is nice!, but it is
+   * symmetric only if the client auth is disabled. That is, the descriptor
+   * cookie will be NULL. */
+  if (!descriptor_cookie) {
+    ret = hs_desc_decode_descriptor(*encoded_out, desc->subcredential,
+                                    NULL, NULL);
+    if (BUG(ret < 0)) {
+      goto err;
+    }
+  }
 
   return 0;
 
