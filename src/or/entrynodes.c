@@ -185,7 +185,7 @@ should_apply_guardfraction(const networkstatus_t *ns)
   return options->UseGuardFraction;
 }
 
-/** Return true iff we know a descriptor for <b>guard</b> */
+/** Return true iff we know a preferred descriptor for <b>guard</b> */
 static int
 guard_has_descriptor(const entry_guard_t *guard)
 {
