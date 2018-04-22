@@ -2852,9 +2852,10 @@ extend_info_new(const char *nickname,
  * of the node (i.e. its IPv4 address) unless
  * <b>for_direct_connect</b> is true, in which case the preferred
  * address is used instead. May return NULL if there is not enough
- * info about <b>node</b> to extend to it--for example, if there is no
- * routerinfo_t or microdesc_t, or if for_direct_connect is true and none of
- * the node's addresses are allowed by tor's firewall and IP version config.
+ * info about <b>node</b> to extend to it--for example, if the preferred
+ * routerinfo_t or microdesc_t is missing, or if for_direct_connect is
+ * true and none of the node's addresses is allowed by tor's firewall
+ * and IP version config.
  **/
 extend_info_t *
 extend_info_from_node(const node_t *node, int for_direct_connect)
