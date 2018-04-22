@@ -2251,7 +2251,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
               nu);
 
     SMARTLIST_FOREACH_BEGIN(myexits_unflagged, const node_t *, node) {
-      if (node_has_any_descriptor(node) &&
+      if (node_has_preferred_descriptor(node, 0) &&
           node_exit_policy_rejects_all(node)) {
         SMARTLIST_DEL_CURRENT(myexits_unflagged, node);
         /* this node is not actually an exit */
