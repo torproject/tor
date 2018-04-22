@@ -2448,6 +2448,10 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
 
 /** Return the number of routers in <b>routers</b> that are currently up
  * and available for building circuits through.
+ *
+ * (Note that this function may overcount or undercount, if we have descriptors
+ * thar are note the type we would prefer to use for some particular
+ * router. See bug #25885.)
  */
 MOCK_IMPL(STATIC int,
 count_acceptable_nodes, (smartlist_t *nodes))
