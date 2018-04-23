@@ -1451,7 +1451,8 @@ get_my_roles(const or_options_t *options)
   int is_relay = server_mode(options);
   int is_dirauth = authdir_mode_v3(options);
   int is_bridgeauth = authdir_mode_bridge(options);
-  int is_hidden_service = !!hs_service_get_num_services();
+  int is_hidden_service = !!hs_service_get_num_services() ||
+                          !!rend_num_services();
 
   if (is_bridge) roles |= PERIODIC_EVENT_ROLE_BRIDGE;
   if (is_client) roles |= PERIODIC_EVENT_ROLE_CLIENT;
