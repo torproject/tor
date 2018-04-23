@@ -297,7 +297,7 @@ accounting_get_end_time,(void))
   return interval_end_time;
 }
 
-/** Called from main.c to tell us that <b>seconds</b> seconds have
+/** Called from connection.c to tell us that <b>seconds</b> seconds have
  * passed, <b>n_read</b> bytes have been read, and <b>n_written</b>
  * bytes have been written. */
 void

@@ -1,0 +1,7 @@
+  o Major features (main loop, CPU wakeup):
+    - The bandwidth-limitation logic has been refactored so that
+      bandwidth calculations are performed on-demand, rather than
+      every TokenBucketRefillInterval milliseconds.
+      This change should improve the granularity of our bandwidth
+      calculations, and limit the number of times that the Tor process needs
+      to wake up when it is idle. Closes ticket 25373.

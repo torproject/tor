@@ -159,13 +159,6 @@ token_bucket_rw_t global_bucket;
 /* Token bucket for relayed traffic. */
 token_bucket_rw_t global_relayed_bucket;
 
-/** What was the read/write bucket before the last second_elapsed_callback()
- * call?  (used to determine how many bytes we've read). */
-static size_t stats_prev_global_read_bucket;
-/** What was the write bucket before the last second_elapsed_callback() call?
- * (used to determine how many bytes we've written). */
-static size_t stats_prev_global_write_bucket;
-
 /* DOCDOC stats_prev_n_read */
 static uint64_t stats_prev_n_read = 0;
 /* DOCDOC stats_prev_n_written */
@@ -479,19 +472,35 @@ get_connection_array, (void))
   return connection_array;
 }
 
-/** Provides the traffic read and written over the life of the process. */
-
+/**
+ * Return the amount of network traffic read, in bytes, over the life of this
+ * process.
+ */
 MOCK_IMPL(uint64_t,
 get_bytes_read,(void))
 {
   return stats_n_bytes_read;
 }
 
-/* DOCDOC get_bytes_written */
+/**
+ * Return the amount of network traffic read, in bytes, over the life of this
+ * process.
+ */
 MOCK_IMPL(uint64_t,
 get_bytes_written,(void))
 {
   return stats_n_bytes_written;
+}
+
+/**
+ * Increment the amount of network traffic read and written, over the life of
+ * this process.
+ */
+void
+stats_increment_bytes_read_and_written(uint64_t r, uint64_t w)
+{
+  stats_n_bytes_read += r;
+  stats_n_bytes_written += w;
 }
 
 /** Set the event mask on <b>conn</b> to <b>events</b>.  (The event
@@ -1025,19 +1034,22 @@ conn_close_if_marked(int i)
          * busy Libevent loops where we keep ending up here and returning
          * 0 until we are no longer blocked on bandwidth.
          */
-        if (connection_is_writing(conn)) {
-          conn->write_blocked_on_bw = 1;
-          connection_stop_writing(conn);
+        connection_consider_empty_read_buckets(conn);
+        connection_consider_empty_write_buckets(conn);
+
+        /* Make sure that consider_empty_buckets really disabled the
+         * connection: */
+        if (BUG(connection_is_writing(conn))) {
+          connection_write_bw_exhausted(conn, true);
         }
-        if (connection_is_reading(conn)) {
+        if (BUG(connection_is_reading(conn))) {
           /* XXXX+ We should make this code unreachable; if a connection is
            * marked for close and flushing, there is no point in reading to it
            * at all. Further, checking at this point is a bit of a hack: it
            * would make much more sense to react in
            * connection_handle_read_impl, or to just stop reading in
            * mark_and_flush */
-          conn->read_blocked_on_bw = 1;
-          connection_stop_reading(conn);
+          connection_read_bw_exhausted(conn, true/* kludge. */);
         }
       }
       return 0;
@@ -2358,63 +2370,6 @@ systemd_watchdog_callback(periodic_timer_t *timer, void *arg)
 }
 #endif /* defined(HAVE_SYSTEMD_209) */
 
-/** Timer: used to invoke refill_callback(). */
-static periodic_timer_t *refill_timer = NULL;
-
-/** Millisecond when refall_callback was last invoked. */
-static struct timeval refill_timer_current_millisecond;
-
-/** Libevent callback: invoked periodically to refill token buckets
- * and count r/w bytes. */
-static void
-refill_callback(periodic_timer_t *timer, void *arg)
-{
-  struct timeval now;
-
-  size_t bytes_written;
-  size_t bytes_read;
-  int milliseconds_elapsed = 0;
-  int seconds_rolled_over = 0;
-
-  const or_options_t *options = get_options();
-
-  (void)timer;
-  (void)arg;
-
-  tor_gettimeofday(&now);
-
-  /* If this is our first time, no time has passed. */
-  if (refill_timer_current_millisecond.tv_sec) {
-    long mdiff = tv_mdiff(&refill_timer_current_millisecond, &now);
-    if (mdiff > INT_MAX)
-      mdiff = INT_MAX;
-    milliseconds_elapsed = (int)mdiff;
-    seconds_rolled_over = (int)(now.tv_sec -
-                                refill_timer_current_millisecond.tv_sec);
-  }
-
-  bytes_written = stats_prev_global_write_bucket -
-    token_bucket_rw_get_write(&global_bucket);
-  bytes_read = stats_prev_global_read_bucket -
-    token_bucket_rw_get_read(&global_bucket);
-
-  stats_n_bytes_read += bytes_read;
-  stats_n_bytes_written += bytes_written;
-  if (accounting_is_enabled(options) && milliseconds_elapsed >= 0)
-    accounting_add_bytes(bytes_read, bytes_written, seconds_rolled_over);
-
-  if (milliseconds_elapsed > 0) {
-    connection_bucket_refill((time_t)now.tv_sec,
-                             monotime_coarse_get_stamp());
-  }
-
-  stats_prev_global_read_bucket = token_bucket_rw_get_read(&global_bucket);
-  stats_prev_global_write_bucket = token_bucket_rw_get_write(&global_bucket);
-
-  /* remember what time it is, for next time */
-  refill_timer_current_millisecond = now;
-}
-
 #ifndef _WIN32
 /** Called when a possibly ignorable libevent error occurs; ensures that we
  * don't get into an infinite loop by ignoring too many errors from
@@ -2618,8 +2573,6 @@ do_main_loop(void)
 
   /* Set up our buckets */
   connection_bucket_init();
-  stats_prev_global_read_bucket = token_bucket_rw_get_read(&global_bucket);
-  stats_prev_global_write_bucket = token_bucket_rw_get_write(&global_bucket);
 
   /* initialize the bootstrap status events to know we're starting up */
   control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
@@ -2716,20 +2669,6 @@ do_main_loop(void)
     }
   }
 #endif /* defined(HAVE_SYSTEMD_209) */
-
-  if (!refill_timer) {
-    struct timeval refill_interval;
-    int msecs = get_options()->TokenBucketRefillInterval;
-
-    refill_interval.tv_sec =  msecs/1000;
-    refill_interval.tv_usec = (msecs%1000)*1000;
-
-    refill_timer = periodic_timer_new(tor_libevent_get_base(),
-                                      &refill_interval,
-                                      refill_callback,
-                                      NULL);
-    tor_assert(refill_timer);
-  }
 
 #ifdef HAVE_SYSTEMD
   {
@@ -3487,7 +3426,6 @@ tor_free_all(int postfork)
   smartlist_free(active_linked_connection_lst);
   periodic_timer_free(second_timer);
   teardown_periodic_events();
-  periodic_timer_free(refill_timer);
   tor_event_free(shutdown_did_not_work_event);
   tor_event_free(initialize_periodic_events_event);
   mainloop_event_free(directory_all_unreachable_cb_event);
@@ -3499,7 +3437,6 @@ tor_free_all(int postfork)
 
   memset(&global_bucket, 0, sizeof(global_bucket));
   memset(&global_relayed_bucket, 0, sizeof(global_relayed_bucket));
-  stats_prev_global_read_bucket = stats_prev_global_write_bucket = 0;
   stats_prev_n_read = stats_prev_n_written = 0;
   stats_n_bytes_read = stats_n_bytes_written = 0;
   time_of_process_start = 0;
@@ -3516,7 +3453,6 @@ tor_free_all(int postfork)
   heartbeat_callback_first_time = 1;
   n_libevent_errors = 0;
   current_second = 0;
-  memset(&refill_timer_current_millisecond, 0, sizeof(struct timeval));
 
   if (!postfork) {
     release_lockfile();
