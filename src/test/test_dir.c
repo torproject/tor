@@ -2917,8 +2917,9 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       rs->addr = 0x99008801;
       rs->or_port = 443;
       rs->dir_port = 8000;
-      /* all flags but running cleared */
+      /* all flags but running and valid cleared */
       rs->is_flagged_running = 1;
+      rs->is_valid = 1;
       /*
        * This one has measured bandwidth below the clip cutoff, and
        * so shouldn't be clipped; we'll have to test that it isn't
@@ -2991,8 +2992,9 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       rs->addr = 0xC0000203;
       rs->or_port = 500;
       rs->dir_port = 1999;
-      /* all flags but running cleared */
+      /* all flags but running and valid cleared */
       rs->is_flagged_running = 1;
+      rs->is_valid = 1;
       /*
        * This one has unmeasured bandwidth below the clip cutoff, and
        * so shouldn't be clipped; we'll have to test that it isn't
@@ -3014,7 +3016,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
   if (vrs) {
     vrs->microdesc = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
     tor_asprintf(&vrs->microdesc->microdesc_hash_line,
-                 "m 9,10,11,12,13,14,15,16,17 "
+                 "m 25,26,27,28 "
                  "sha256=xyzajkldsdsajdadlsdjaslsdksdjlsdjsdaskdaaa%d\n",
                  idx);
   }
@@ -3040,7 +3042,7 @@ vote_tweaks_for_umbw(networkstatus_t *v, int voter, time_t now)
   smartlist_clear(v->supported_methods);
   /* Method 17 is MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB */
   smartlist_split_string(v->supported_methods,
-                         "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17",
+                         "25 26 27 28",
                          NULL, 0, -1);
   /* If we're using a non-default clip bandwidth, add it to net_params */
   if (alternate_clip_bw > 0) {
@@ -3202,9 +3204,9 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
     tt_assert(!rs->is_fast);
     tt_assert(!rs->is_possible_guard);
     tt_assert(!rs->is_stable);
-    /* (If it wasn't running it wouldn't be here) */
+    /* (If it wasn't running and valid it wouldn't be here) */
     tt_assert(rs->is_flagged_running);
-    tt_assert(!rs->is_valid);
+    tt_assert(rs->is_valid);
     tt_assert(!rs->is_named);
     /* This one should have measured bandwidth below the clip cutoff */
     tt_assert(rs->has_bandwidth);
@@ -5615,9 +5617,8 @@ test_dir_assumed_flags(void *arg)
   memarea_t *area = memarea_new();
   routerstatus_t *rs = NULL;
 
-  /* First, we should always assume that the Running flag is set, even
-   * when it isn't listed, since the consensus method is always
-   * higher than 4. */
+  /* We can assume that consensus method is higher than 24, so Running and
+   * Valid are always implicitly set */
   const char *str1 =
     "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
        "192.168.0.1 9001 0\n"
@@ -5625,17 +5626,6 @@ test_dir_assumed_flags(void *arg)
     "s Fast Guard Stable\n";
 
   const char *cp = str1;
-  rs = routerstatus_parse_entry_from_string(area, &cp, tokens, NULL, NULL,
-                                            23, FLAV_MICRODESC);
-  tt_assert(rs);
-  tt_assert(rs->is_flagged_running);
-  tt_assert(! rs->is_valid);
-  tt_assert(! rs->is_exit);
-  tt_assert(rs->is_fast);
-  routerstatus_free(rs);
-
-  /* With method 24 or later, we can assume "valid" is set. */
-  cp = str1;
   rs = routerstatus_parse_entry_from_string(area, &cp, tokens, NULL, NULL,
                                             24, FLAV_MICRODESC);
   tt_assert(rs);
@@ -5769,27 +5759,19 @@ test_dir_networkstatus_consensus_has_ipv6(void *arg)
   /* Test the bounds for A lines in the NS consensus */
   mock_options->UseMicrodescriptors = 0;
 
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES;
+  mock_networkstatus->consensus_method = MIN_SUPPORTED_CONSENSUS_METHOD;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
   tt_assert(has_ipv6);
-
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES + 1;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(has_ipv6);
-
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES + 20;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(has_ipv6);
-
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES - 1;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(!has_ipv6);
 
   /* Test the bounds for A lines in the microdesc consensus */
   mock_options->UseMicrodescriptors = 1;
 
   mock_networkstatus->consensus_method =
       MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
+  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
+  tt_assert(has_ipv6);
+
+  mock_networkstatus->consensus_method = MAX_SUPPORTED_CONSENSUS_METHOD + 20;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
   tt_assert(has_ipv6);
 

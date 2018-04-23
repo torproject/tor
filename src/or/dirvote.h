@@ -56,56 +56,10 @@
 #define ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD 0
 
 /** The lowest consensus method that we currently support. */
-#define MIN_SUPPORTED_CONSENSUS_METHOD 13
+#define MIN_SUPPORTED_CONSENSUS_METHOD 25
 
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 28
-
-/** Lowest consensus method where microdesc consensuses omit any entry
- * with no microdesc. */
-#define MIN_METHOD_FOR_MANDATORY_MICRODESC 13
-
-/** Lowest consensus method that contains "a" lines. */
-#define MIN_METHOD_FOR_A_LINES 14
-
-/** Lowest consensus method where microdescs may include a "p6" line. */
-#define MIN_METHOD_FOR_P6_LINES 15
-
-/** Lowest consensus method where microdescs may include an onion-key-ntor
- * line */
-#define MIN_METHOD_FOR_NTOR_KEY 16
-
-/** Lowest consensus method that ensures that authorities output an
- * Unmeasured=1 flag for unmeasured bandwidths */
-#define MIN_METHOD_TO_CLIP_UNMEASURED_BW 17
-
-/** Lowest consensus method where authorities may include an "id" line in
- * microdescriptors. */
-#define MIN_METHOD_FOR_ID_HASH_IN_MD 18
-
-/** Lowest consensus method where we include "package" lines*/
-#define MIN_METHOD_FOR_PACKAGE_LINES 19
-
-/** Lowest consensus method where authorities may include
- * GuardFraction information in microdescriptors. */
-#define MIN_METHOD_FOR_GUARDFRACTION 20
-
-/** Lowest consensus method where authorities may include an "id" line for
- * ed25519 identities in microdescriptors. (Broken; see
- * consensus_method_is_supported() for more info.) */
-#define MIN_METHOD_FOR_ED25519_ID_IN_MD 21
-
-/** Lowest consensus method where authorities vote on ed25519 ids and ensure
- * ed25519 id consistency. */
-#define MIN_METHOD_FOR_ED25519_ID_VOTING 22
-
-/** Lowest consensus method where authorities may include a shared random
- * value(s). */
-#define MIN_METHOD_FOR_SHARED_RANDOM 23
-
-/** Lowest consensus method where authorities drop all nodes that don't get
- * the Valid flag. */
-#define MIN_METHOD_FOR_EXCLUDING_INVALID_NODES 24
 
 /** Lowest consensus method where authorities vote on required/recommended
  * protocols. */
