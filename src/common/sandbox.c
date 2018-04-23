@@ -196,6 +196,9 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(mmap),
 #endif
     SCMP_SYS(munmap),
+#ifdef __NR_nanosleep
+    SCMP_SYS(nanosleep),
+#endif
 #ifdef __NR_prlimit
     SCMP_SYS(prlimit),
 #endif
