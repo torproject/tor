@@ -1834,6 +1834,15 @@ format_iso_time(char *buf, time_t t)
   strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", tor_gmtime_r(&t, &tm));
 }
 
+/** As format_local_iso_time, but use the yyyy-mm-ddThh:mm:ss format to avoid
+ * embedding an internal space. */
+void
+format_local_iso_time_nospace(char *buf, time_t t)
+{
+  format_local_iso_time(buf, t);
+  buf[10] = 'T';
+}
+
 /** As format_iso_time, but use the yyyy-mm-ddThh:mm:ss format to avoid
  * embedding an internal space. */
 void
