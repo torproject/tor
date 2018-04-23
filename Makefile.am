@@ -217,6 +217,26 @@ check-logs:
 	$(top_srcdir)/scripts/maint/checkLogs.pl \
 		$(top_srcdir)/src/*/*.[ch] | sort -n
 
+.PHONY: check-typos
+check-typos:
+	@if test -x "`which misspell 2>&1;true`"; then \
+		echo "Checking for Typos ..."; \
+		(misspell \
+			$(top_srcdir)/src/[^e]*/*.[ch] \
+			$(top_srcdir)/doc \
+			$(top_srcdir)/contrib \
+			$(top_srcdir)/scripts \
+			$(top_srcdir)/README \
+			$(top_srcdir)/ChangeLog \
+			$(top_srcdir)/INSTALL \
+			$(top_srcdir)/ReleaseNotes \
+			$(top_srcdir)/LICENSE); \
+	else \
+		echo "Tor can use misspell to check for typos."; \
+		echo "It seems that you don't have misspell installed."; \
+		echo "You can install the latest version of misspell here: https://github.com/client9/misspell#install"; \
+	fi
+
 .PHONY: check-changes
 check-changes:
 if USEPYTHON

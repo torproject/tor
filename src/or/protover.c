@@ -715,7 +715,7 @@ protover_all_supported(const char *s, char **missing_out)
             versions->high = i;
           }
           /* If the last one to be unsupported is one less than the current
-           * one, we're in a continous range, so set the high field. */
+           * one, we're in a continuous range, so set the high field. */
           if ((versions->high && versions->high == i - 1) ||
               /* Similarly, if the last high wasn't set and we're currently
                * one higher than the low, add current index as the highest

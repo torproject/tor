@@ -1,0 +1,4 @@
+  o Minor features (code quality):
+    - Add optional spell-checking for the Tor codebase, using the "misspell"
+      program.  To use this feature, run "make check-typos".
+      Closes ticket 25024.
