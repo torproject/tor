@@ -5803,8 +5803,6 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
 int
 control_event_stream_bandwidth(edge_connection_t *edge_conn)
 {
-  circuit_t *circ;
-  origin_circuit_t *ocirc;
   struct timeval now;
   char tbuf[ISO_TIME_USEC_LEN+1];
   if (EVENT_IS_INTERESTING(EVENT_STREAM_BANDWIDTH_USED)) {
@@ -5820,12 +5818,6 @@ control_event_stream_bandwidth(edge_connection_t *edge_conn)
                        (unsigned long)edge_conn->n_written,
                        tbuf);
 
-    circ = circuit_get_by_edge_conn(edge_conn);
-    if (circ && CIRCUIT_IS_ORIGIN(circ)) {
-      ocirc = TO_ORIGIN_CIRCUIT(circ);
-      ocirc->n_read_circ_bw += edge_conn->n_read;
-      ocirc->n_written_circ_bw += edge_conn->n_written;
-    }
     edge_conn->n_written = edge_conn->n_read = 0;
   }
 
