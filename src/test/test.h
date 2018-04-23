@@ -239,6 +239,7 @@ extern struct testcase_t nodelist_tests[];
 extern struct testcase_t oom_tests[];
 extern struct testcase_t oos_tests[];
 extern struct testcase_t options_tests[];
+extern struct testcase_t periodic_event_tests[];
 extern struct testcase_t policy_tests[];
 extern struct testcase_t procmon_tests[];
 extern struct testcase_t proto_http_tests[];

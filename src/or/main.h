@@ -87,6 +87,8 @@ uint64_t get_main_loop_success_count(void);
 uint64_t get_main_loop_error_count(void);
 uint64_t get_main_loop_idle_count(void);
 
+void periodic_events_on_new_options(const or_options_t *options);
+
 extern time_t time_of_process_start;
 extern int quiet_level;
 extern token_bucket_rw_t global_bucket;
@@ -97,8 +99,13 @@ STATIC void init_connection_lists(void);
 STATIC void close_closeable_connections(void);
 STATIC void initialize_periodic_events(void);
 STATIC void teardown_periodic_events(void);
+STATIC int get_my_roles(const or_options_t *options);
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *connection_array;
+
+/* We need the periodic_event_item_t definition. */
+#include "periodic.h"
+extern periodic_event_item_t periodic_events[];
 #endif
 #endif /* defined(MAIN_PRIVATE) */
 
