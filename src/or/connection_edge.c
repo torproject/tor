@@ -3526,10 +3526,17 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   n_stream->deliver_window = STREAMWINDOW_START;
 
   if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
+    int ret;
     tor_free(address);
     /* We handle this circuit and stream in this function for all supported
      * hidden service version. */
-    return handle_hs_exit_conn(circ, n_stream);
+    ret = handle_hs_exit_conn(circ, n_stream);
+
+    if (ret == 0) {
+      /* This was a valid cell. Count it as delivered + overhead. */
+      circuit_read_valid_data(origin_circ, rh.length);
+    }
+    return ret;
   }
   tor_strlower(address);
   n_stream->base_.address = address;
