@@ -368,7 +368,8 @@ GENERAL OPTIONS
 
 [[ControlSocket]] **ControlSocket** __Path__::
     Like ControlPort, but listens on a Unix domain socket, rather than a TCP
-    socket. '0' disables ControlSocket (Unix and Unix-like systems only.)
+    socket. '0' disables ControlSocket. (Unix and Unix-like systems only.)
+    (Default: 0)
 
 [[ControlSocketsGroupWritable]] **ControlSocketsGroupWritable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read and
