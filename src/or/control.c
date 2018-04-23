@@ -257,6 +257,8 @@ clear_circ_bw_fields(void)
       continue;
     ocirc = TO_ORIGIN_CIRCUIT(circ);
     ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
+    ocirc->n_overhead_written_circ_bw = ocirc->n_overhead_read_circ_bw = 0;
+    ocirc->n_delivered_written_circ_bw = ocirc->n_delivered_read_circ_bw = 0;
   }
   SMARTLIST_FOREACH_END(circ);
 }
@@ -5908,13 +5910,20 @@ control_event_circ_bandwidth_used(void)
     tor_gettimeofday(&now);
     format_iso_time_nospace_usec(tbuf, &now);
     send_control_event(EVENT_CIRC_BANDWIDTH_USED,
-                       "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu "
-                       "TIME=%s\r\n",
+                       "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu TIME=%s "
+                       "DELIVERED_READ=%lu OVERHEAD_READ=%lu "
+                       "DELIVERED_WRITTEN=%lu OVERHEAD_WRITTEN=%lu\r\n",
                        ocirc->global_identifier,
                        (unsigned long)ocirc->n_read_circ_bw,
                        (unsigned long)ocirc->n_written_circ_bw,
-                       tbuf);
+                       tbuf,
+                       (unsigned long)ocirc->n_delivered_read_circ_bw,
+                       (unsigned long)ocirc->n_overhead_read_circ_bw,
+                       (unsigned long)ocirc->n_delivered_written_circ_bw,
+                       (unsigned long)ocirc->n_overhead_written_circ_bw);
     ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
+    ocirc->n_overhead_written_circ_bw = ocirc->n_overhead_read_circ_bw = 0;
+    ocirc->n_delivered_written_circ_bw = ocirc->n_delivered_read_circ_bw = 0;
   }
   SMARTLIST_FOREACH_END(circ);
 
