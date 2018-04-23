@@ -6,6 +6,7 @@
 *.swo
 # C stuff
 *.o
+*.lo
 *.obj
 # Diff droppings
 *.orig
@@ -128,24 +129,24 @@ uptime-*.json
 /src/Makefile.in
 
 # /src/trace
-/src/trace/libor-trace.a
+/src/trace/libor-trace.la
 
 # /src/common/
 /src/common/Makefile
 /src/common/Makefile.in
-/src/common/libor.a
-/src/common/libor-testing.a
+/src/common/libor.la
+/src/common/libor-testing.la
 /src/common/libor.lib
-/src/common/libor-ctime.a
-/src/common/libor-ctime-testing.a
+/src/common/libor-ctime.la
+/src/common/libor-ctime-testing.la
 /src/common/libor-ctime.lib
-/src/common/libor-crypto.a
-/src/common/libor-crypto-testing.a
+/src/common/libor-crypto.la
+/src/common/libor-crypto-testing.la
 /src/common/libor-crypto.lib
-/src/common/libor-event.a
-/src/common/libor-event-testing.a
+/src/common/libor-event.la
+/src/common/libor-event-testing.la
 /src/common/libor-event.lib
-/src/common/libcurve25519_donna.a
+/src/common/libcurve25519_donna.la
 /src/common/libcurve25519_donna.lib
 
 # /src/config/
@@ -157,11 +158,11 @@ uptime-*.json
 /src/config/torrc.minimal
 
 # /src/ext/
-/src/ext/ed25519/ref10/libed25519_ref10.a
+/src/ext/ed25519/ref10/libed25519_ref10.la
 /src/ext/ed25519/ref10/libed25519_ref10.lib
-/src/ext/ed25519/donna/libed25519_donna.a
+/src/ext/ed25519/donna/libed25519_donna.la
 /src/ext/ed25519/donna/libed25519_donna.lib
-/src/ext/keccak-tiny/libkeccak-tiny.a
+/src/ext/keccak-tiny/libkeccak-tiny.la
 /src/ext/keccak-tiny/libkeccak-tiny.lib
 
 # /src/or/
@@ -171,8 +172,9 @@ uptime-*.json
 /src/or/tor.exe
 /src/or/tor-cov
 /src/or/tor-cov.exe
-/src/or/libtor.a
-/src/or/libtor-testing.a
+/src/or/libtor.la
+/src/or/libtor_api.la
+/src/or/libtor-testing.la
 /src/or/libtor.lib
 
 # /src/rust
@@ -212,7 +214,7 @@ uptime-*.json
 /src/test/fuzz/lf-fuzz-*
 
 # /src/tools/
-/src/tools/libtorrunner.a
+/src/tools/libtorrunner.la
 /src/tools/tor-checkkey
 /src/tools/tor-resolve
 /src/tools/tor-cov-resolve
@@ -227,9 +229,19 @@ uptime-*.json
 /src/tools/Makefile.in
 
 # /src/trunnel/
-/src/trunnel/libor-trunnel-testing.a
-/src/trunnel/libor-trunnel.a
+/src/trunnel/libor-trunnel-testing.la
+/src/trunnel/libor-trunnel.la
 
 # /src/win32/
 /src/win32/Makefile
 /src/win32/Makefile.in
+
+# libtool
+.libs/
+/m4/libtool.m4
+/m4/ltoptions.m4
+/m4/ltsugar.m4
+/m4/ltversion.m4
+/m4/lt~obsolete.m4
+/libtool
+/ltmain.sh

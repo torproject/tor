@@ -20,10 +20,10 @@ EXTHEADERS = \
 
 noinst_HEADERS+= $(EXTHEADERS)
 
-src_ext_ed25519_ref10_libed25519_ref10_a_CFLAGS=\
+src_ext_ed25519_ref10_libed25519_ref10_la_CFLAGS=\
   @CFLAGS_CONSTTIME@
 
-src_ext_ed25519_ref10_libed25519_ref10_a_SOURCES= \
+src_ext_ed25519_ref10_libed25519_ref10_la_SOURCES= \
 	src/ext/ed25519/ref10/fe_0.c \
 	src/ext/ed25519/ref10/fe_1.c \
 	src/ext/ed25519/ref10/fe_add.c \
@@ -95,16 +95,16 @@ ED25519_REF10_HDRS = \
 
 noinst_HEADERS += $(ED25519_REF10_HDRS)
 
-LIBED25519_REF10=src/ext/ed25519/ref10/libed25519_ref10.a
-noinst_LIBRARIES += $(LIBED25519_REF10)
+LIBED25519_REF10=src/ext/ed25519/ref10/libed25519_ref10.la
+noinst_LTLIBRARIES += $(LIBED25519_REF10)
 
-src_ext_ed25519_donna_libed25519_donna_a_CFLAGS=\
+src_ext_ed25519_donna_libed25519_donna_la_CFLAGS=\
   @CFLAGS_CONSTTIME@ \
   -DED25519_CUSTOMRANDOM \
   -DED25519_CUSTOMHASH \
   -DED25519_SUFFIX=_donna
 
-src_ext_ed25519_donna_libed25519_donna_a_SOURCES= \
+src_ext_ed25519_donna_libed25519_donna_la_SOURCES= \
 	src/ext/ed25519/donna/ed25519_tor.c
 
 ED25519_DONNA_HDRS = \
@@ -139,13 +139,13 @@ ED25519_DONNA_HDRS = \
 
 noinst_HEADERS += $(ED25519_DONNA_HDRS)
 
-LIBED25519_DONNA=src/ext/ed25519/donna/libed25519_donna.a
-noinst_LIBRARIES += $(LIBED25519_DONNA)
+LIBED25519_DONNA=src/ext/ed25519/donna/libed25519_donna.la
+noinst_LTLIBRARIES += $(LIBED25519_DONNA)
 
-src_ext_keccak_tiny_libkeccak_tiny_a_CFLAGS=\
+src_ext_keccak_tiny_libkeccak_tiny_la_CFLAGS=\
   @CFLAGS_CONSTTIME@
 
-src_ext_keccak_tiny_libkeccak_tiny_a_SOURCES= \
+src_ext_keccak_tiny_libkeccak_tiny_la_SOURCES= \
 	src/ext/keccak-tiny/keccak-tiny-unrolled.c
 
 LIBKECCAK_TINY_HDRS = \
@@ -153,8 +153,8 @@ LIBKECCAK_TINY_HDRS = \
 
 noinst_HEADERS += $(LIBKECCAK_TINY_HDRS)
 
-LIBKECCAK_TINY=src/ext/keccak-tiny/libkeccak-tiny.a
-noinst_LIBRARIES += $(LIBKECCAK_TINY)
+LIBKECCAK_TINY=src/ext/keccak-tiny/libkeccak-tiny.la
+noinst_LTLIBRARIES += $(LIBKECCAK_TINY)
 
 EXTRA_DIST += \
 	src/ext/timeouts/bench/bench-add.lua 		\

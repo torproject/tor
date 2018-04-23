@@ -6,8 +6,8 @@ endif
 
 src_tools_tor_resolve_SOURCES = src/tools/tor-resolve.c
 src_tools_tor_resolve_LDFLAGS =
-src_tools_tor_resolve_LDADD = src/common/libor.a \
-	src/common/libor-ctime.a \
+src_tools_tor_resolve_LDADD = src/common/libor.la \
+	src/common/libor-ctime.la \
 	$(rust_ldadd) \
 	@TOR_LIB_MATH@ @TOR_LIB_WS32@ @TOR_LIB_USERENV@ 
 
@@ -22,8 +22,8 @@ endif
 
 src_tools_tor_gencert_SOURCES = src/tools/tor-gencert.c
 src_tools_tor_gencert_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
-src_tools_tor_gencert_LDADD = src/common/libor.a src/common/libor-crypto.a \
-	src/common/libor-ctime.a \
+src_tools_tor_gencert_LDADD = src/common/libor.la src/common/libor-crypto.la \
+	src/common/libor-ctime.la \
 	$(LIBKECCAK_TINY) \
 	$(LIBDONNA) \
 	$(rust_ldadd) \
@@ -36,7 +36,7 @@ src_tools_tor_cov_gencert_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
 src_tools_tor_cov_gencert_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 src_tools_tor_cov_gencert_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
 src_tools_tor_cov_gencert_LDADD = src/common/libor-testing.a \
-    src/common/libor-crypto-testing.a \
+    src/common/libor-crypto-testing.la \
     src/common/libor-ctime-testing.a \
     $(LIBKECCAK_TINY) \
     $(LIBDONNA) \
@@ -45,6 +45,6 @@ src_tools_tor_cov_gencert_LDADD = src/common/libor-testing.a \
 endif
 
 if BUILD_LIBTORRUNNER
-noinst_LIBRARIES += src/tools/libtorrunner.a
-src_tools_libtorrunner_a_SOURCES = src/tools/tor_runner.c src/or/tor_api.c
+noinst_LTLIBRARIES += src/tools/libtorrunner.la
+src_tools_libtorrunner_la_SOURCES = src/tools/tor_runner.c src/or/tor_api.c
 endif

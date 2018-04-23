@@ -5,6 +5,7 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
+noinst_LTLIBRARIES=
 noinst_LIBRARIES=
 EXTRA_DIST=
 noinst_HEADERS=

@@ -24,14 +24,14 @@ FUZZING_CFLAGS = \
 FUZZING_LDFLAG = \
 	@TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
 FUZZING_LIBS = \
-	src/or/libtor-testing.a \
-	src/common/libor-crypto-testing.a \
+	src/or/libtor-testing.la \
+	src/common/libor-crypto-testing.la \
 	$(LIBKECCAK_TINY) \
 	$(LIBDONNA) \
-	src/common/libor-testing.a \
-	src/common/libor-ctime-testing.a \
-	src/common/libor-event-testing.a \
-	src/trunnel/libor-trunnel-testing.a \
+	src/common/libor-testing.la \
+	src/common/libor-ctime-testing.la \
+	src/common/libor-event-testing.la \
+	src/trunnel/libor-trunnel-testing.la \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
 	@TOR_LIBEVENT_LIBS@ \
@@ -42,14 +42,14 @@ FUZZING_LIBS = \
 	@TOR_ZSTD_LIBS@
 
 oss-fuzz-prereqs: \
-	src/or/libtor-testing.a \
-	src/common/libor-crypto-testing.a \
+	src/or/libtor-testing.la \
+	src/common/libor-crypto-testing.la \
 	$(LIBKECCAK_TINY) \
 	$(LIBDONNA) \
-	src/common/libor-testing.a \
-	src/common/libor-ctime-testing.a \
-	src/common/libor-event-testing.a \
-	src/trunnel/libor-trunnel-testing.a
+	src/common/libor-testing.la \
+	src/common/libor-ctime-testing.la \
+	src/common/libor-event-testing.la \
+	src/trunnel/libor-trunnel-testing.la
 
 noinst_HEADERS += \
 	src/test/fuzz/fuzzing.h
