@@ -1,0 +1,3 @@
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - Allow the nanosleep() system call, which glibc uses to implement
+      sleep() and usleep(). Fixes bug 24969; bugfix on 0.2.5.1-alpha.
