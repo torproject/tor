@@ -841,6 +841,10 @@ move_hs_state(hs_service_t *src_service, hs_service_t *dst_service)
   /* Let's do a shallow copy */
   dst->intro_circ_retry_started_time = src->intro_circ_retry_started_time;
   dst->num_intro_circ_launched = src->num_intro_circ_launched;
+  /* Freeing a NULL replaycache triggers an info LD_BUG. */
+  if (dst->replay_cache_rend_cookie != NULL) {
+    replaycache_free(dst->replay_cache_rend_cookie);
+  }
   dst->replay_cache_rend_cookie = src->replay_cache_rend_cookie;
 
   src->replay_cache_rend_cookie = NULL; /* steal pointer reference */
