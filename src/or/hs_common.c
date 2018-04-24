@@ -28,7 +28,7 @@
 #include "rendservice.h"
 #include "routerset.h"
 #include "router.h"
-#include "dirauth/shared_random.h"
+#include "shared_random_common.h"
 #include "dirauth/shared_random_state.h"
 
 /* Trunnel */
