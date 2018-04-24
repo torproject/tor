@@ -90,6 +90,8 @@ matrix:
     - compiler: gcc
     - compiler: gcc
       env: COVERAGE_OPTIONS="--enable-coverage"
+    - compiler: gcc
+      env: DISTCHECK="yes"
     ## The "sudo: required" forces non-containerized builds, working
     ## around a Travis CI environment issue: clang LeakAnalyzer fails
     ## because it requires ptrace and the containerized environment no
@@ -118,7 +120,8 @@ script:
   - ./autogen.sh
   - ./configure $RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening
   ## We run `make check` because that's what https://jenkins.torproject.org does.
-  - make check
+  - if [[ "$DISTCHECK" == "" ]]; then make check; fi
+  - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening"; fi
 
 after_failure:
   ## `make check` will leave a log file with more details of test failures.
