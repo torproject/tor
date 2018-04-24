@@ -101,11 +101,40 @@ typedef struct sr_commit_t {
 
 /* API */
 
-/* Public methods: */
+/* Public methods used _outside_ of the module.
+ *
+ * We need to nullify them if the module is disabled. */
+#ifdef HAVE_MODULE_DIRAUTH
 
 int sr_init(int save_to_disk);
 void sr_save_and_cleanup(void);
 void sr_act_post_consensus(const networkstatus_t *consensus);
+
+#else /* HAVE_MODULE_DIRAUTH */
+
+static inline int
+sr_init(int save_to_disk)
+{
+  (void) save_to_disk;
+  /* Always return success. */
+  return 0;
+}
+
+static inline void
+sr_save_and_cleanup(void)
+{
+}
+
+static inline void
+sr_act_post_consensus(const networkstatus_t *consensus)
+{
+  (void) consensus;
+}
+
+#endif /* HAVE_MODULE_DIRAUTH */
+
+/* Public methods used only by dirauth code. */
+
 void sr_handle_received_commits(smartlist_t *commits,
                                 crypto_pk_t *voter_key);
 sr_commit_t *sr_parse_commit(const smartlist_t *args);
