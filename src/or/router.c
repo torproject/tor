@@ -131,7 +131,8 @@ get_onion_key(void)
 }
 
 /** Store a full copy of the current onion key into *<b>key</b>, and a full
- * copy of the most recent onion key into *<b>last</b>.
+ * copy of the most recent onion key into *<b>last</b>.  Store NULL into
+ * a pointer if the corresponding key does not exist.
  */
 void
 dup_onion_keys(crypto_pk_t **key, crypto_pk_t **last)
@@ -139,8 +140,10 @@ dup_onion_keys(crypto_pk_t **key, crypto_pk_t **last)
   tor_assert(key);
   tor_assert(last);
   tor_mutex_acquire(key_lock);
-  tor_assert(onionkey);
-  *key = crypto_pk_copy_full(onionkey);
+  if (onionkey)
+    *key = crypto_pk_copy_full(onionkey);
+  else
+    *last = NULL;
   if (lastonionkey)
     *last = crypto_pk_copy_full(lastonionkey);
   else
@@ -207,10 +210,14 @@ construct_ntor_key_map(void)
 {
   di_digest256_map_t *m = NULL;
 
-  dimap_add_entry(&m,
-                  curve25519_onion_key.pubkey.public_key,
-                  tor_memdup(&curve25519_onion_key,
-                             sizeof(curve25519_keypair_t)));
+  if (!tor_mem_is_zero((const char*)
+                       curve25519_onion_key.pubkey.public_key,
+                       CURVE25519_PUBKEY_LEN)) {
+    dimap_add_entry(&m,
+                    curve25519_onion_key.pubkey.public_key,
+                    tor_memdup(&curve25519_onion_key,
+                               sizeof(curve25519_keypair_t)));
+  }
   if (!tor_mem_is_zero((const char*)
                           last_curve25519_onion_key.pubkey.public_key,
                        CURVE25519_PUBKEY_LEN)) {
