@@ -1,4 +1,7 @@
 version: 1.0.{build}
+
+clone_depth: 50
+
 environment:
   compiler: mingw
 
