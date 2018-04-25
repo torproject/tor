@@ -117,11 +117,6 @@ dirvote_free_all(void)
 
 #endif /* HAVE_MODULE_DIRAUTH */
 
-/* Vote manipulation */
-void ns_detached_signatures_free_(ns_detached_signatures_t *s);
-#define ns_detached_signatures_free(s) \
-  FREE_AND_NULL(ns_detached_signatures_t, ns_detached_signatures_free_, (s))
-
 void dirvote_recalculate_timing(const or_options_t *options, time_t now);
 /* Invoked on timers and by outside triggers. */
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
