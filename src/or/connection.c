@@ -1442,6 +1442,58 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   return NULL;
 }
 
+static connection_t *
+connection_listener_new_for_port(const port_cfg_t *port, int *defer)
+{
+  connection_t *conn;
+  struct sockaddr *listensockaddr;
+  socklen_t listensocklen = 0;
+  char *address=NULL;
+  int real_port = port->port == CFG_AUTO_PORT ? 0 : port->port;
+  tor_assert(real_port <= UINT16_MAX);
+
+  defer = 0;
+  if (port->server_cfg.no_listen) {
+    *defer = 1;
+    return NULL;
+  }
+
+#ifndef _WIN32
+  /* We don't need to be root to create a UNIX socket, so defer until after
+   * setuid. */
+  const or_options_t *options = get_options();
+  if (port->is_unix_addr && !geteuid() && (options->User) &&
+      strcmp(options->User, "root")) {
+    *defer = 1;
+    return NULL;
+  }
+#endif /* !defined(_WIN32) */
+
+  if (port->is_unix_addr) {
+    listensockaddr = (struct sockaddr *)
+      create_unix_sockaddr(port->unix_addr,
+                           &address, &listensocklen);
+  } else {
+    listensockaddr = tor_malloc(sizeof(struct sockaddr_storage));
+    listensocklen = tor_addr_to_sockaddr(&port->addr,
+                                         real_port,
+                                         listensockaddr,
+                                         sizeof(struct sockaddr_storage));
+    address = tor_addr_to_str_dup(&port->addr);
+  }
+
+  if (listensockaddr) {
+    conn = connection_listener_new(listensockaddr, listensocklen,
+                                   port->type, address, port);
+    tor_free(listensockaddr);
+    tor_free(address);
+  } else {
+    conn = NULL;
+  }
+
+  return conn;
+}
+
 /** Do basic sanity checking on a newly received socket. Return 0
  * if it looks ok, else return -1.
  *
@@ -2631,52 +2683,13 @@ retry_listener_ports(smartlist_t *old_conns,
 
   /* Now open all the listeners that are configured but not opened. */
   SMARTLIST_FOREACH_BEGIN(launch, const port_cfg_t *, port) {
-    struct sockaddr *listensockaddr;
-    socklen_t listensocklen = 0;
-    char *address=NULL;
-    connection_t *conn;
-    int real_port = port->port == CFG_AUTO_PORT ? 0 : port->port;
-    tor_assert(real_port <= UINT16_MAX);
-    if (port->server_cfg.no_listen)
-      continue;
+    int skip = 0;
+    connection_t *conn = connection_listener_new_for_port(port, &skip);
 
-#ifndef _WIN32
-    /* We don't need to be root to create a UNIX socket, so defer until after
-     * setuid. */
-    const or_options_t *options = get_options();
-    if (port->is_unix_addr && !geteuid() && (options->User) &&
-        strcmp(options->User, "root"))
-      continue;
-#endif /* !defined(_WIN32) */
-
-    if (port->is_unix_addr) {
-      listensockaddr = (struct sockaddr *)
-        create_unix_sockaddr(port->unix_addr,
-                             &address, &listensocklen);
-    } else {
-      listensockaddr = tor_malloc(sizeof(struct sockaddr_storage));
-      listensocklen = tor_addr_to_sockaddr(&port->addr,
-                                           real_port,
-                                           listensockaddr,
-                                           sizeof(struct sockaddr_storage));
-      address = tor_addr_to_str_dup(&port->addr);
-    }
-
-    if (listensockaddr) {
-      conn = connection_listener_new(listensockaddr, listensocklen,
-                                     port->type, address, port);
-      tor_free(listensockaddr);
-      tor_free(address);
-    } else {
-      conn = NULL;
-    }
-
-    if (!conn) {
+    if (conn && new_conns)
+      smartlist_add(new_conns, conn);
+    else if (!skip)
       r = -1;
-    } else {
-      if (new_conns)
-        smartlist_add(new_conns, conn);
-    }
   } SMARTLIST_FOREACH_END(port);
 
   smartlist_free(launch);
