@@ -3972,7 +3972,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
     }
 
-    if (voter_get_sig_by_algorithm(v, sig->alg)) {
+    if (dirvote_get_voter_sig_by_alg(v, sig->alg)) {
       /* We already parsed a vote with this algorithm from this voter. Use the
          first one. */
       log_fn(LOG_PROTOCOL_WARN, LD_DIR, "We received a networkstatus "
