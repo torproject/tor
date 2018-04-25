@@ -200,7 +200,7 @@ dirvote_get_voter_sig_by_alg(const networkstatus_voter_info_t *voter,
 /** Allocate and return a new authority_cert_t with the same contents as
  * <b>cert</b>. */
 authority_cert_t *
-authority_cert_dup(authority_cert_t *cert)
+dirvote_authority_cert_dup(authority_cert_t *cert)
 {
   authority_cert_t *out = tor_malloc(sizeof(authority_cert_t));
   tor_assert(cert);

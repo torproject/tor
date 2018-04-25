@@ -3131,7 +3131,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   v3_out->voters = smartlist_new();
   smartlist_add(v3_out->voters, voter);
-  v3_out->cert = authority_cert_dup(cert);
+  v3_out->cert = dirvote_authority_cert_dup(cert);
   v3_out->routerstatus_list = routerstatuses;
   /* Note: networkstatus_digest is unset; it won't get set until we actually
    * format the vote. */
