@@ -100,6 +100,7 @@ void dirvote_act(const or_options_t *options, time_t now);
 void dirvote_free_all(void);
 
 void dirvote_parse_sr_commits(networkstatus_t *ns, smartlist_t *tokens);
+void dirvote_free_commits(networkstatus_t *ns);
 
 #else /* HAVE_MODULE_DIRAUTH */
 
@@ -122,6 +123,13 @@ dirvote_parse_sr_commits(networkstatus_t *ns, smartlist_t *tokens)
 {
   (void) ns;
   (void) tokens;
+  return;
+}
+
+static inline void
+dirvote_free_commits(networkstatus_t *ns)
+{
+  (void) ns;
   return;
 }
 
