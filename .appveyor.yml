@@ -8,9 +8,8 @@ environment:
   matrix:
   - target: i686-w64-mingw32
     compiler_path: mingw32
-
-#  - target: x86_64-w64-mingw32
-#    compiler_path: mingw64
+  - target: x86_64-w64-mingw32
+    compiler_path: mingw64
 
 install:
 - ps: >-
