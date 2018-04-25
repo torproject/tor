@@ -113,6 +113,10 @@
 #include <sys/un.h>
 #endif
 
+#if defined(__linux__) || defined(_WIN32)
+#define ENABLE_LISTENER_REBIND
+#endif
+
 static connection_t *connection_listener_new(
                                const struct sockaddr *listensockaddr,
                                socklen_t listensocklen, int type,
@@ -1471,7 +1475,7 @@ connection_listener_new_for_port(const port_cfg_t *port,
 
   defer = 0;
   if (port->server_cfg.no_listen) {
-    *defer = 1;
+    if (defer) *defer = 1;
     return NULL;
   }
 
@@ -1481,7 +1485,7 @@ connection_listener_new_for_port(const port_cfg_t *port,
   const or_options_t *options = get_options();
   if (port->is_unix_addr && !geteuid() && (options->User) &&
       strcmp(options->User, "root")) {
-    *defer = 1;
+    if (defer) *defer = 1;
     return NULL;
   }
 #endif /* !defined(_WIN32) */
@@ -2652,6 +2656,9 @@ retry_listener_ports(smartlist_t *old_conns,
                      smartlist_t *replacements,
                      int control_listeners_only)
 {
+#ifndef ENABLE_LISTENER_REBIND
+  (void)replacements;
+#endif
 
   smartlist_t *launch = smartlist_new();
   int r = 0;
@@ -2700,6 +2707,7 @@ retry_listener_ports(smartlist_t *old_conns,
           found_port = wanted;
           break;
         }
+#ifdef ENABLE_LISTENER_REBIND
         const int may_need_rebind =
           port_matches_exact & bool_neq(tor_addr_is_null(&wanted->addr),
                                         tor_addr_is_null(&conn->addr));
@@ -2712,7 +2720,9 @@ retry_listener_ports(smartlist_t *old_conns,
           smartlist_add(replacements, replacement);
 
           SMARTLIST_DEL_CURRENT(launch, wanted);
+          SMARTLIST_DEL_CURRENT(old_conns, conn);
         }
+#endif
       }
     } SMARTLIST_FOREACH_END(wanted);
 
@@ -2777,6 +2787,7 @@ retry_all_listeners(smartlist_t *replaced_conns,
                            close_all_noncontrol) < 0)
     retval = -1;
 
+#ifdef ENABLE_LISTENER_REBIND
   SMARTLIST_FOREACH_BEGIN(replacements, struct replacement_s *, r) {
     int addr_in_use = 0;
     int skip = 0;
@@ -2806,6 +2817,7 @@ retry_all_listeners(smartlist_t *replaced_conns,
     tor_free(r);
     SMARTLIST_DEL_CURRENT(replacements, r);
   } SMARTLIST_FOREACH_END(r);
+#endif
 
   /* Any members that were still in 'listeners' don't correspond to
    * any configured port.  Kill 'em. */
