@@ -10,6 +10,7 @@
 #include "container.h"
 #include "or.h"
 #include "dirauth/dirvote.h"
+#include "dirvote_common.h"
 #include "nodelist.h"
 #include "routerlist.h"
 #include "test_dir_common.h"
