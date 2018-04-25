@@ -1,0 +1,4 @@
+  o Minor bugfixes (client):
+    - Don't consider Tor running as a client if the ControlPort is open. Fixes
+      bug 26062; bugfix on 0.2.9.4-alpha.
+
