@@ -2318,7 +2318,7 @@ static int
 clean_consdiffmgr_callback(time_t now, const or_options_t *options)
 {
   (void)now;
-  if (server_mode(options)) {
+  if (dir_server_mode(options)) {
     consdiffmgr_cleanup();
   }
   return CDM_CLEAN_CALLBACK_INTERVAL;
