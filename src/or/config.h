@@ -214,6 +214,9 @@ smartlist_t *get_options_from_transport_options_line(const char *line,
                                                      const char *transport);
 smartlist_t *get_options_for_server_transport(const char *transport);
 
+/* Port helper functions. */
+int options_any_client_port_set(const or_options_t *options);
+
 #ifdef CONFIG_PRIVATE
 
 #define CL_PORT_NO_STREAM_OPTIONS (1u<<0)

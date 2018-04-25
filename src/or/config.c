@@ -8433,3 +8433,18 @@ init_cookie_authentication(const char *fname, const char *header,
   return retval;
 }
 
+/**
+ * Return true if any option is set in <b>options</b> to make us behave
+ * as a client.
+ */
+int
+options_any_client_port_set(const or_options_t *options)
+{
+  return (options->SocksPort_set ||
+          options->TransPort_set ||
+          options->NATDPort_set ||
+          options->ControlPort_set ||
+          options->DNSPort_set ||
+          options->HTTPTunnelPort_set);
+}
+

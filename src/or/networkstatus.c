@@ -1691,24 +1691,6 @@ networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
 #endif /* defined(TOR_UNIT_TESTS) */
 
 /**
- * Return true if any option is set in <b>options</b> to make us behave
- * as a client.
- *
- * XXXX If we need this elsewhere at any point, we should make it nonstatic
- * XXXX and move it into another file.
- */
-int
-any_client_port_set(const or_options_t *options)
-{
-  return (options->SocksPort_set ||
-          options->TransPort_set ||
-          options->NATDPort_set ||
-          options->ControlPort_set ||
-          options->DNSPort_set ||
-          options->HTTPTunnelPort_set);
-}
-
-/**
  * Helper for handle_missing_protocol_warning: handles either the
  * client case (if <b>is_client</b> is set) or the server case otherwise.
  */
@@ -1743,7 +1725,7 @@ handle_missing_protocol_warning(const networkstatus_t *c,
                                 const or_options_t *options)
 {
   const int is_server = server_mode(options);
-  const int is_client = any_client_port_set(options) || !is_server;
+  const int is_client = options_any_client_port_set(options) || !is_server;
 
   if (is_server)
     handle_missing_protocol_warning_impl(c, 0);
