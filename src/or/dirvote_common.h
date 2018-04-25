@@ -58,7 +58,7 @@ time_t dirvote_get_start_of_next_interval(time_t now,
                                           int offset);
 time_t dirvote_get_next_valid_after_time(void);
 
-document_signature_t *voter_get_sig_by_algorithm(
+document_signature_t *dirvote_get_voter_sig_by_alg(
                            const networkstatus_voter_info_t *voter,
                            digest_algorithm_t alg);
 

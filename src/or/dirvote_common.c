@@ -182,8 +182,8 @@ dirvote_recalculate_timing(const or_options_t *options, time_t now)
 /** Return the signature made by <b>voter</b> using the algorithm
  * <b>alg</b>, or NULL if none is found. */
 document_signature_t *
-voter_get_sig_by_algorithm(const networkstatus_voter_info_t *voter,
-                           digest_algorithm_t alg)
+dirvote_get_voter_sig_by_alg(const networkstatus_voter_info_t *voter,
+                             digest_algorithm_t alg)
 {
   if (!voter->sigs)
     return NULL;
