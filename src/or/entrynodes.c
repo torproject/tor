@@ -432,14 +432,15 @@ get_guard_confirmed_min_lifetime(void)
 STATIC int
 get_n_primary_guards(void)
 {
-  const int n = get_options()->NumEntryGuards;
-  const int n_dir = get_options()->NumDirectoryGuards;
-  if (n > 5) {
-    return MAX(n_dir, n + n / 2);
-  } else if (n >= 1) {
-    return MAX(n_dir, n * 2);
+  /* If the user has explicitly configured the number of primary guards, do
+   * what the user wishes to do */
+  const int configured_primaries = get_options()->NumPrimaryGuards;
+  if (configured_primaries) {
+    return configured_primaries;
   }
 
+  /* otherwise check for consensus parameter and if that's not set either, just
+   * use the default value. */
   return networkstatus_get_param(NULL,
                                  "guard-n-primary-guards",
                                  DFLT_N_PRIMARY_GUARDS, 1, INT32_MAX);
@@ -454,6 +455,9 @@ get_n_primary_guards_to_use(guard_usage_t usage)
   int configured;
   const char *param_name;
   int param_default;
+
+  /* If the user has explicitly configured the amount of guards, use
+     that. Otherwise, fall back to the default value. */
   if (usage == GUARD_USAGE_DIRGUARD) {
     configured = get_options()->NumDirectoryGuards;
     param_name = "guard-n-primary-dir-guards-to-use";

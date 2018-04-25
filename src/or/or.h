@@ -4148,6 +4148,8 @@ typedef struct {
 
   int NumDirectoryGuards; /**< How many dir guards do we try to establish?
                            * If 0, use value from NumEntryGuards. */
+  int NumPrimaryGuards; /**< How many primary guards do we want? */
+
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */
   /** Should we always fetch our dir info on the mirror schedule (which
    * means directly from the authorities) no matter our other config? */
