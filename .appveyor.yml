@@ -37,7 +37,7 @@ build_script:
             Execute-Bash 'autoreconf -i'
             mkdir "${env:build}"
             Set-Location "${env:build}"
-            Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target}"
+            Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target --disable-asciidoc --enable-fatal-warnings}"
             Execute-Bash "V=1 make -j2"
             Execute-Bash "V=1 make -j2 install"
      }
