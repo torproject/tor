@@ -38,8 +38,8 @@ build_script:
             mkdir "${env:build}"
             Set-Location "${env:build}"
             Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target}"
-            Execute-Bash "V=1 make"
-            Execute-Bash "V=1 make install"
+            Execute-Bash "V=1 make -j2"
+            Execute-Bash "V=1 make -j2 install"
      }
 
 test_script:
@@ -49,7 +49,7 @@ test_script:
             $buildpath = @("C:\msys64\${env:compiler_path}\bin") + $oldpath
             $env:Path = $buildpath -join ';'
             Set-Location "${env:build}"
-            Execute-Bash "VERBOSE=1 make check"
+            Execute-Bash "VERBOSE=1 make -j2 check"
     }
 
 on_success:
