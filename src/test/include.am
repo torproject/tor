@@ -79,7 +79,14 @@ src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 # This seems to matter nowhere but on Windows, but I assure you that it
 # matters a lot there, and is quite hard to debug if you forget to do it.
 
+DIRAUTH_MOD = \
+  src/or/dirauth/dircollate.c				\
+  src/or/dirauth/dirvote.c				\
+  src/or/dirauth/shared_random.c				\
+  src/or/dirauth/shared_random_state.c
+
 src_test_test_SOURCES = \
+  $DIRAUTH_MOD \
 	src/test/log_test_helpers.c \
 	src/test/hs_test_helpers.c \
 	src/test/rend_test_helpers.c \
