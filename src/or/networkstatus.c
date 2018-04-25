@@ -366,9 +366,7 @@ networkstatus_vote_free_(networkstatus_t *ns)
   digestmap_free(ns->desc_digest_map, NULL);
 
   if (ns->sr_info.commits) {
-    SMARTLIST_FOREACH(ns->sr_info.commits, sr_commit_t *, c,
-                      sr_commit_free(c));
-    smartlist_free(ns->sr_info.commits);
+    dirvote_clear_commits(ns);
   }
   tor_free(ns->sr_info.previous_srv);
   tor_free(ns->sr_info.current_srv);
