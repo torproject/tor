@@ -63,7 +63,7 @@ document_signature_t *dirvote_get_voter_sig_by_alg(
                            digest_algorithm_t alg);
 
 /* Cert manipulation */
-authority_cert_t *authority_cert_dup(authority_cert_t *cert);
+authority_cert_t *dirvote_authority_cert_dup(authority_cert_t *cert);
 
 #endif /* TOR_DIRVOTE_COMMON_H */
 
