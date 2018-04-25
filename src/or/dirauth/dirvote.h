@@ -101,6 +101,8 @@ void dirvote_free_all(void);
 
 void dirvote_parse_sr_commits(networkstatus_t *ns, smartlist_t *tokens);
 void dirvote_clear_commits(networkstatus_t *ns);
+void dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
+                                    smartlist_t *dir_items);
 
 #else /* HAVE_MODULE_DIRAUTH */
 
@@ -127,6 +129,15 @@ static inline void
 dirvote_clear_commits(networkstatus_t *ns)
 {
   (void) ns;
+}
+
+static inline void
+dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
+                               smartlist_t *dir_items)
+{
+  (void) url;
+  (void) items;
+  (void) dir_items;
 }
 
 #endif /* HAVE_MODULE_DIRAUTH */
