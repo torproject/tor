@@ -75,3 +75,9 @@ on_failure:
 ## Uncomment to print Remote Desktop Connection details for the build worker:
 # on_finish:
 # - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+
+# Cache our libevent build so that we don't have to rebuild it every time.
+# Re-builds will happen whenever the powershell portion of the "install"
+# section of this file changes.
+cache:
+- C:\projects\libevent -> "${env:APPVEYOR_BUILD_FOLDER}"\.appveyor-libevent-version
