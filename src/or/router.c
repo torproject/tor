@@ -143,7 +143,7 @@ dup_onion_keys(crypto_pk_t **key, crypto_pk_t **last)
   if (onionkey)
     *key = crypto_pk_copy_full(onionkey);
   else
-    *last = NULL;
+    *key = NULL;
   if (lastonionkey)
     *last = crypto_pk_copy_full(lastonionkey);
   else
