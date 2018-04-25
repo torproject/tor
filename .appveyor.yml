@@ -24,8 +24,21 @@ install:
     {
         Execute-Command 'c:\msys64\usr\bin\bash' '-e' '-c' $args
     }
-    Execute-Command "C:\msys64\usr\bin\pacman" -Sy --noconfirm openssl-devel openssl libevent-devel libevent mingw-w64-i686-libevent mingw-w64-x86_64-libevent mingw-w64-i686-openssl mingw-w64-x86_64-openssl mingw-w64-i686-zstd mingw-w64-x86_64-zstd
-
+    if ($env:compiler -eq "mingw") {
+            $oldpath = ${env:Path} -split ';'
+            $buildpath = @("C:\msys64\${env:compiler_path}\bin", "C:\msys64\usr\bin") + $oldpath
+            $env:Path = @($buildpath) -join ';'
+            $env:libeventversionfile = @("${env:APPVEYOR_BUILD_FOLDER}", ".appveyor-libevent-version") -join '\'
+            $env:libeventversion = Get-Content "${env:libeventversionfile}" | Out-String
+            Set-Location ".."
+            Execute-Bash "git clone https://github.com/libevent/libevent"
+            Set-Location "libevent"
+            $env:buildlibevent = (Get-Item -Path ".\").FullName
+            Execute-Bash "git checkout -q ${env:libeventversion}"
+            Execute-Bash "./autogen.sh"
+            Execute-Bash "./configure --prefix=/${env:compiler_path} --host=${env:target} --disable-libevent-regress --disable-samples --disable-openssl"
+            Execute-Bash "make -j2 install"
+    }
 
 build_script:
 - ps: >-
@@ -34,10 +47,11 @@ build_script:
             $buildpath = @("C:\msys64\${env:compiler_path}\bin", "C:\msys64\usr\bin") + $oldpath
             $env:Path = @($buildpath) -join ';'
             $env:build = @("${env:APPVEYOR_BUILD_FOLDER}", $env:target) -join '\'
+            Set-Location "${env:APPVEYOR_BUILD_FOLDER}"
             Execute-Bash 'autoreconf -i'
             mkdir "${env:build}"
             Set-Location "${env:build}"
-            Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target --disable-asciidoc --enable-fatal-warnings}"
+            Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target} --disable-asciidoc --enable-fatal-warnings --with-libevent-dir=${env:APPVEYOR_BUILD_FOLDER}/libevent"
             Execute-Bash "V=1 make -j2"
             Execute-Bash "V=1 make -j2 install"
      }
