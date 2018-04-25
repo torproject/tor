@@ -9,11 +9,13 @@
  **/
 
 #define SHARED_RANDOM_STATE_PRIVATE
+#define TOR_SHARED_RANDOM_COMMON_PRIVATE
 
 #include "or.h"
 #include "shared_random.h"
 #include "config.h"
 #include "confparse.h"
+#include "dirvote_common.h"
 #include "networkstatus.h"
 #include "router.h"
 #include "shared_random_state.h"
