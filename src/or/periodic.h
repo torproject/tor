@@ -14,6 +14,7 @@
 #define PERIODIC_EVENT_ROLE_DIRAUTH     (1U << 3)
 #define PERIODIC_EVENT_ROLE_BRIDGEAUTH  (1U << 4)
 #define PERIODIC_EVENT_ROLE_HS_SERVICE  (1U << 5)
+#define PERIODIC_EVENT_ROLE_DIRSERVER   (1U << 6)
 
 /* Helper macro to make it a bit less annoying to defined groups of roles that
  * are often used. */
