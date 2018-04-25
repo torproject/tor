@@ -3912,3 +3912,57 @@ dirvote_free_commits(networkstatus_t *ns)
   }
 }
 
+/* The given url is the /tor/status-gove GET directory request. Populates the
+ * items list with strings that we can compress on the fly and dir_items with
+ * cached_dir_t objects that have a precompressed deflated version. */
+void
+dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
+                               smartlist_t *dir_items)
+{
+  int current;
+
+  url += strlen("/tor/status-vote/");
+  current = !strcmpstart(url, "current/");
+  url = strchr(url, '/');
+  tor_assert(url);
+  ++url;
+  if (!strcmp(url, "consensus")) {
+    const char *item;
+    tor_assert(!current); /* we handle current consensus specially above,
+                           * since it wants to be spooled. */
+    if ((item = dirvote_get_pending_consensus(FLAV_NS)))
+      smartlist_add(items, (char*)item);
+  } else if (!current && !strcmp(url, "consensus-signatures")) {
+    /* XXXX the spec says that we should implement
+     * current/consensus-signatures too.  It doesn't seem to be needed,
+     * though. */
+    const char *item;
+    if ((item=dirvote_get_pending_detached_signatures()))
+      smartlist_add(items, (char*)item);
+  } else if (!strcmp(url, "authority")) {
+    const cached_dir_t *d;
+    int flags = DGV_BY_ID |
+      (current ? DGV_INCLUDE_PREVIOUS : DGV_INCLUDE_PENDING);
+    if ((d=dirvote_get_vote(NULL, flags)))
+      smartlist_add(dir_items, (cached_dir_t*)d);
+  } else {
+    const cached_dir_t *d;
+    smartlist_t *fps = smartlist_new();
+    int flags;
+    if (!strcmpstart(url, "d/")) {
+      url += 2;
+      flags = DGV_INCLUDE_PENDING | DGV_INCLUDE_PREVIOUS;
+    } else {
+      flags = DGV_BY_ID |
+        (current ? DGV_INCLUDE_PREVIOUS : DGV_INCLUDE_PENDING);
+    }
+    dir_split_resource_into_fingerprints(url, fps, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
+    SMARTLIST_FOREACH(fps, char *, fp, {
+                      if ((d = dirvote_get_vote(fp, flags)))
+                      smartlist_add(dir_items, (cached_dir_t*)d);
+                      tor_free(fp);
+                      });
+    smartlist_free(fps);
+  }
+}
