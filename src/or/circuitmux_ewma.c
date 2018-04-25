@@ -643,7 +643,7 @@ get_circuit_priority_halflife(const or_options_t *options,
     ((double) CMUX_PRIORITY_HALFLIFE_MSEC_DEFAULT) / 1000.0;
 
   /* Try to get it from configuration file first. */
-  if (options && options->CircuitPriorityHalflife < EPSILON) {
+  if (options && options->CircuitPriorityHalflife >= -EPSILON) {
     halflife = options->CircuitPriorityHalflife;
     *source_msg = "CircuitPriorityHalflife in configuration";
     goto end;
