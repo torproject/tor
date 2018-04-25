@@ -61,6 +61,6 @@ on_failure:
 artifacts:
 - path: /${env:compiler_path}
 
-# Uncomment to solve problems
-on_finish:
-- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+## Uncomment to print Remote Desktop Connection details for the build worker:
+# on_finish:
+# - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
