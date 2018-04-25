@@ -2703,25 +2703,6 @@ get_detached_signatures_from_pending_consensuses(pending_consensus_t *pending,
   return signatures;
 }
 
-/** Release all storage held in <b>s</b>. */
-void
-ns_detached_signatures_free_(ns_detached_signatures_t *s)
-{
-  if (!s)
-    return;
-  if (s->signatures) {
-    STRMAP_FOREACH(s->signatures, flavor, smartlist_t *, sigs) {
-      SMARTLIST_FOREACH(sigs, document_signature_t *, sig,
-                        document_signature_free(sig));
-      smartlist_free(sigs);
-    } STRMAP_FOREACH_END;
-    strmap_free(s->signatures, NULL);
-    strmap_free(s->digests, tor_free_);
-  }
-
-  tor_free(s);
-}
-
 /** Entry point: Take whatever voting actions are pending as of <b>now</b>. */
 void
 dirvote_act(const or_options_t *options, time_t now)
