@@ -91,9 +91,29 @@
 
 /*
  * Public API. Used outside of the dirauth subsystem.
+ *
+ * We need to nullify them if the module is disabled.
  */
+#ifdef HAVE_MODULE_DIRAUTH
 
+void dirvote_act(const or_options_t *options, time_t now);
 void dirvote_free_all(void);
+
+#else /* HAVE_MODULE_DIRAUTH */
+
+static inline void
+dirvote_act(const or_options_t *options, time_t now)
+{
+  (void) options;
+  (void) now;
+}
+
+static inline void
+dirvote_free_all(void)
+{
+}
+
+#endif /* HAVE_MODULE_DIRAUTH */
 
 /* Vote manipulation */
 void ns_detached_signatures_free_(ns_detached_signatures_t *s);
@@ -101,7 +121,6 @@ void ns_detached_signatures_free_(ns_detached_signatures_t *s);
   FREE_AND_NULL(ns_detached_signatures_t, ns_detached_signatures_free_, (s))
 
 void dirvote_recalculate_timing(const or_options_t *options, time_t now);
-void dirvote_act(const or_options_t *options, time_t now);
 /* Invoked on timers and by outside triggers. */
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
                                          const char **msg_out,
@@ -114,22 +133,10 @@ MOCK_DECL(const char*, dirvote_get_pending_consensus,
           (consensus_flavor_t flav));
 MOCK_DECL(const char*, dirvote_get_pending_detached_signatures, (void));
 const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
-document_signature_t *voter_get_sig_by_algorithm(
-                           const networkstatus_voter_info_t *voter,
-                           digest_algorithm_t alg);
 
 /*
  * API used _only_ by the dirauth subsystem.
  */
-
-/* Cert manipulation */
-authority_cert_t *authority_cert_dup(authority_cert_t *cert);
-
-void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
-time_t dirvote_get_start_of_next_interval(time_t now,
-                                          int interval,
-                                          int offset);
-time_t dirvote_get_next_valid_after_time(void);
 
 void set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                       node_t *node,

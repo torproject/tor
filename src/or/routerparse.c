@@ -75,6 +75,7 @@
 #include "torcert.h"
 #include "sandbox.h"
 #include "shared_random_common.h"
+#include "dirvote_common.h"
 #include "dirauth/shared_random.h"
 
 #undef log

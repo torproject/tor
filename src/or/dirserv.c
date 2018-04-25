@@ -18,6 +18,7 @@
 #include "control.h"
 #include "directory.h"
 #include "dirserv.h"
+#include "dirvote_common.h"
 #include "hibernate.h"
 #include "keypin.h"
 #include "main.h"

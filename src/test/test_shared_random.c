@@ -16,6 +16,7 @@
 #include "routerlist.h"
 #include "router.h"
 #include "routerparse.h"
+#include "shared_random_common.h"
 #include "networkstatus.h"
 #include "log_test_helpers.h"
 
