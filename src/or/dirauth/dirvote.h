@@ -104,6 +104,14 @@ void dirvote_free_commits(networkstatus_t *ns);
 void dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
                                     smartlist_t *dir_items);
 
+/* Storing signatures and votes functions */
+struct pending_vote_t * dirvote_add_vote(const char *vote_body,
+                                         const char **msg_out,
+                                         int *status_out);
+int dirvote_add_signatures(const char *detached_signatures_body,
+                           const char *source,
+                           const char **msg_out);
+
 #else /* HAVE_MODULE_DIRAUTH */
 
 static inline void
@@ -140,16 +148,32 @@ dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
   (void) dir_items;
 }
 
+static inline struct pending_vote_t *
+dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
+{
+  (void) vote_body;
+  (void) msg_out;
+  (void) status_out;
+  /* If the dirauth module is disabled, this should NEVER be called else we
+   * failed to safeguard the dirauth module. */
+  tor_assert(0);
+}
+
+static inline int
+dirvote_add_signatures(const char *detached_signatures_body, const char *source,
+                       const char **msg_out)
+{
+  (void) detached_signatures_body;
+  (void) source;
+  (void) msg_out;
+  /* If the dirauth module is disabled, this should NEVER be called else we
+   * failed to safeguard the dirauth module. */
+  tor_assert(0);
+}
+
 #endif /* HAVE_MODULE_DIRAUTH */
 
 void dirvote_recalculate_timing(const or_options_t *options, time_t now);
-/* Invoked on timers and by outside triggers. */
-struct pending_vote_t * dirvote_add_vote(const char *vote_body,
-                                         const char **msg_out,
-                                         int *status_out);
-int dirvote_add_signatures(const char *detached_signatures_body,
-                           const char *source,
-                           const char **msg_out);
 /* Item access */
 MOCK_DECL(const char*, dirvote_get_pending_consensus,
           (consensus_flavor_t flav));
