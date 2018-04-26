@@ -99,6 +99,14 @@ static const compress_method_t compress_diffs_with[] = {
 #endif
 };
 
+/**
+ * Event for rescanning the cache.
+ */
+static mainloop_event_t *consdiffmgr_rescan_ev = NULL;
+
+static void consdiffmgr_rescan_cb(mainloop_event_t *ev, void *arg);
+static void mark_cdm_cache_dirty(void);
+
 /** How many different methods will we try to use for diff compression? */
 STATIC unsigned
 n_diff_compression_methods(void)
@@ -372,7 +380,9 @@ cdm_cache_init(void)
   } else {
     consdiffmgr_set_cache_flags();
   }
-  cdm_cache_dirty = 1;
+  consdiffmgr_rescan_ev =
+    mainloop_event_postloop_new(consdiffmgr_rescan_cb, NULL);
+  mark_cdm_cache_dirty();
   cdm_cache_loaded = 0;
 }
 
@@ -1095,6 +1105,24 @@ consdiffmgr_rescan(void)
   cdm_cache_dirty = 0;
 }
 
+/** Callback wrapper for consdiffmgr_rescan */
+static void
+consdiffmgr_rescan_cb(mainloop_event_t *ev, void *arg)
+{
+  (void)ev;
+  (void)arg;
+  consdiffmgr_rescan();
+}
+
+/** Mark the cache as dirty, and schedule a rescan event. */
+static void
+mark_cdm_cache_dirty(void)
+{
+  cdm_cache_dirty = 1;
+  tor_assert(consdiffmgr_rescan_ev);
+  mainloop_event_activate(consdiffmgr_rescan_ev);
+}
+
 /**
  * Helper: compare two files by their from-valid-after and valid-after labels,
  * trying to sort in ascending order by from-valid-after (when present) and
@@ -1219,6 +1247,7 @@ consdiffmgr_free_all(void)
   memset(latest_consensus, 0, sizeof(latest_consensus));
   consensus_cache_free(cons_diff_cache);
   cons_diff_cache = NULL;
+  mainloop_event_free(consdiffmgr_rescan_ev);
 }
 
 /* =====
@@ -1750,7 +1779,7 @@ consensus_compress_worker_replyfn(void *work_)
                  compress_consensus_with,
                  job->out,
                  "consensus");
-  cdm_cache_dirty = 1;
+  mark_cdm_cache_dirty();
 
   unsigned u;
   consensus_flavor_t f = job->flavor;

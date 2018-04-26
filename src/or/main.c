@@ -1730,12 +1730,6 @@ run_scheduled_events(time_t now)
   /* 11b. check pending unconfigured managed proxies */
   if (!net_is_disabled() && pt_proxies_configuration_pending())
     pt_configure_remaining_proxies();
-
-  /* 12. launch diff computations.  (This is free if there are none to
-   * launch.) */
-  if (dir_server_mode(options)) {
-    consdiffmgr_rescan();
-  }
 }
 
 /* Periodic callback: rotate the onion keys after the period defined by the
