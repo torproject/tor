@@ -62,6 +62,7 @@ void reset_all_main_loop_timers(void);
 void reschedule_descriptor_update_check(void);
 void reschedule_directory_downloads(void);
 void mainloop_schedule_postloop_cleanup(void);
+void rescan_periodic_events(const or_options_t *options);
 
 MOCK_DECL(long,get_uptime,(void));
 MOCK_DECL(void,reset_uptime,(void));

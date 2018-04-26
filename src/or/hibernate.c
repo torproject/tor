@@ -1111,10 +1111,18 @@ getinfo_helper_accounting(control_connection_t *conn,
 static void
 on_hibernate_state_change(hibernate_state_t prev_state)
 {
-  (void)prev_state; /* Should we do something with this? */
   control_event_server_status(LOG_NOTICE,
                               "HIBERNATION_STATUS STATUS=%s",
                               hibernate_state_to_string(hibernate_state));
+
+  /* We are changing hibernation state, this can affect the main loop event
+   * list. Rescan it to update the events state. We do this whatever the new
+   * hibernation state because they can each possibly affect an event. The
+   * initial state means we are booting up so we shouldn't scan here because
+   * at this point the events in the list haven't been initialized. */
+  if (prev_state != HIBERNATE_STATE_INITIAL) {
+    rescan_periodic_events(get_options());
+  }
 }
 
 #ifdef TOR_UNIT_TESTS
