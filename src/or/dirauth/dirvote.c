@@ -2729,7 +2729,9 @@ get_detached_signatures_from_pending_consensuses(pending_consensus_t *pending,
   return signatures;
 }
 
-/** Entry point: Take whatever voting actions are pending as of <b>now</b>. */
+/**
+ * Entry point: Take whatever voting actions are pending as of <b>now</b>.
+ */
 void
 dirvote_act(const or_options_t *options, time_t now)
 {
@@ -2750,33 +2752,36 @@ dirvote_act(const or_options_t *options, time_t now)
     tor_free(keys);
     dirvote_recalculate_timing(options, now);
   }
-  if (voting_schedule.voting_starts < now && !voting_schedule.have_voted) {
+
+#define IF_TIME_FOR_NEXT_ACTION(when_field, done_field) \
+  if (voting_schedule.when_field < now && !voting_schedule.done_field) do {
+#define ENDIF } while(0);
+
+  IF_TIME_FOR_NEXT_ACTION(voting_starts, have_voted) {
     log_notice(LD_DIR, "Time to vote.");
     dirvote_perform_vote();
     voting_schedule.have_voted = 1;
-  }
-  if (voting_schedule.fetch_missing_votes < now &&
-      !voting_schedule.have_fetched_missing_votes) {
+  } ENDIF
+  IF_TIME_FOR_NEXT_ACTION(fetch_missing_votes, have_fetched_missing_votes) {
     log_notice(LD_DIR, "Time to fetch any votes that we're missing.");
     dirvote_fetch_missing_votes();
     voting_schedule.have_fetched_missing_votes = 1;
-  }
-  if (voting_schedule.voting_ends < now &&
-      !voting_schedule.have_built_consensus) {
+  } ENDIF
+  IF_TIME_FOR_NEXT_ACTION(voting_ends, have_built_consensus) {
     log_notice(LD_DIR, "Time to compute a consensus.");
     dirvote_compute_consensuses();
     /* XXXX We will want to try again later if we haven't got enough
      * votes yet.  Implement this if it turns out to ever happen. */
     voting_schedule.have_built_consensus = 1;
-  }
-  if (voting_schedule.fetch_missing_signatures < now &&
-      !voting_schedule.have_fetched_missing_signatures) {
+  } ENDIF
+  IF_TIME_FOR_NEXT_ACTION(fetch_missing_signatures,
+                          have_fetched_missing_signatures) {
     log_notice(LD_DIR, "Time to fetch any signatures that we're missing.");
     dirvote_fetch_missing_signatures();
     voting_schedule.have_fetched_missing_signatures = 1;
-  }
-  if (voting_schedule.interval_starts < now &&
-      !voting_schedule.have_published_consensus) {
+  } ENDIF
+  IF_TIME_FOR_NEXT_ACTION(interval_starts,
+                          have_published_consensus) {
     log_notice(LD_DIR, "Time to publish the consensus and discard old votes");
     dirvote_publish_consensus();
     dirvote_clear_votes(0);
@@ -2787,7 +2792,10 @@ dirvote_act(const or_options_t *options, time_t now)
     /* XXXX We will want to try again later if we haven't got enough
      * signatures yet.  Implement this if it turns out to ever happen. */
     dirvote_recalculate_timing(options, now);
-  }
+  } ENDIF
+
+#undef ENDIF
+#undef IF_TIME_FOR_NEXT_ACTION
 }
 
 /** A vote networkstatus_t and its unparsed body: held around so we can
