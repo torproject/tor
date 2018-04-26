@@ -8,6 +8,7 @@
  * \brief Common pieces to implement unit tests.
  **/
 
+#define MAIN_PRIVATE
 #include "orconfig.h"
 #include "or.h"
 #include "control.h"
@@ -16,6 +17,7 @@
 #include "backtrace.h"
 #include "test.h"
 #include "channelpadding.h"
+#include "main.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -290,6 +292,7 @@ main(int c, const char **v)
   }
   rep_hist_init();
   setup_directory();
+  initialize_mainloop_events();
   options_init(options);
   options->DataDirectory = tor_strdup(temp_dir);
   tor_asprintf(&options->KeyDirectory, "%s"PATH_SEPARATOR"keys",

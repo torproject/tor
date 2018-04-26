@@ -2617,6 +2617,20 @@ do_hup(void)
   return 0;
 }
 
+/** Initialize some mainloop_event_t objects that we require. */
+STATIC void
+initialize_mainloop_events(void)
+{
+  if (!schedule_active_linked_connections_event) {
+    schedule_active_linked_connections_event =
+      mainloop_event_postloop_new(schedule_active_linked_connections_cb, NULL);
+  }
+  if (!postloop_cleanup_ev) {
+    postloop_cleanup_ev =
+      mainloop_event_postloop_new(postloop_cleanup_cb, NULL);
+  }
+}
+
 /** Tor main loop. */
 int
 do_main_loop(void)
@@ -2630,14 +2644,7 @@ do_main_loop(void)
     initialize_periodic_events();
   }
 
-  if (!schedule_active_linked_connections_event) {
-    schedule_active_linked_connections_event =
-      mainloop_event_postloop_new(schedule_active_linked_connections_cb, NULL);
-  }
-  if (!postloop_cleanup_ev) {
-    postloop_cleanup_ev =
-      mainloop_event_postloop_new(postloop_cleanup_cb, NULL);
-  }
+  initialize_mainloop_events();
 
   /* initialize dns resolve map, spawn workers if needed */
   if (dns_init() < 0) {
