@@ -2795,12 +2795,13 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
 
     connection_t *new_conn =
      connection_listener_new_for_port(r->new_port, &skip, &addr_in_use);
+    connection_t *old_conn = r->old_conn;
 
     if (skip)
       continue;
 
-    connection_close_immediate(r->old_conn);
-    connection_mark_for_close(r->old_conn);
+    connection_close_immediate(old_conn);
+    connection_mark_for_close(old_conn);
 
     if (addr_in_use) {
       new_conn = connection_listener_new_for_port(r->new_port,
@@ -2810,6 +2811,11 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
     tor_assert(new_conn);
 
     smartlist_add(new_conns, new_conn);
+
+    log_notice(LD_NET, "Closed no-longer-configured %s on %s:%d "
+                       "(replaced by %s:%d)",
+               conn_type_to_string(old_conn->type), old_conn->address,
+               old_conn->port, new_conn->address, new_conn->port);
 
     tor_free(r);
     SMARTLIST_DEL_CURRENT(replacements, r);
