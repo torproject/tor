@@ -1,0 +1,10 @@
+  o Major feature (main loop, CPU usage):
+    - Previously, tor would enable at startup all possible main loop event
+      regardless if it needed them. For instance, directory authorities
+      callbacks were fired up even for client only. We have now refactored this
+      whole interface to only enable the appropriate callbacks depending on what
+      are tor roles (client only, relay, hidden service, etc.). Furthermore,
+      these events now depend on DisableNetwork or the hibernation state in
+      order to enable them. This is a big step towards reducing client CPU usage
+      by reducing the amount of wake ups the daemon does. Closes ticket 25376
+      and 25762.

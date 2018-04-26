@@ -29,6 +29,15 @@
   (PERIODIC_EVENT_ROLE_AUTHORITIES | PERIODIC_EVENT_ROLE_CLIENT | \
    PERIODIC_EVENT_ROLE_HS_SERVICE | PERIODIC_EVENT_ROLE_ROUTER)
 
+/*
+ * Event flags which can change the behavior of an event.
+ */
+
+/* Indicate that the event needs the network meaning that if we are in
+ * DisableNetwork or hibernation mode, the event won't be enabled. This obey
+ * the net_is_disabled() check. */
+#define PERIODIC_EVENT_FLAG_NEED_NET  (1U << 0)
+
 /** Callback function for a periodic event to take action.  The return value
 * influences the next time the function will get called.  Return
 * PERIODIC_EVENT_NO_UPDATE to not update <b>last_action_time</b> and be polled
@@ -49,13 +58,15 @@ typedef struct periodic_event_item_t {
 
   /* Bitmask of roles define above for which this event applies. */
   uint32_t roles;
+  /* Bitmask of flags which can change the behavior of the event. */
+  uint32_t flags;
   /* Indicate that this event has been enabled that is scheduled. */
   unsigned int enabled : 1;
 } periodic_event_item_t;
 
 /** events will get their interval from first execution */
-#define PERIODIC_EVENT(fn, r) { fn##_callback, 0, NULL, #fn, r, 0 }
-#define END_OF_PERIODIC_EVENTS { NULL, 0, NULL, NULL, 0, 0 }
+#define PERIODIC_EVENT(fn, r, f) { fn##_callback, 0, NULL, #fn, r, f, 0 }
+#define END_OF_PERIODIC_EVENTS { NULL, 0, NULL, NULL, 0, 0, 0 }
 
 /* Return true iff the given event was setup before thus is enabled to be
  * scheduled. */
