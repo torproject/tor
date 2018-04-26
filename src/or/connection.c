@@ -3686,7 +3686,6 @@ connection_outbuf_too_full(connection_t *conn)
  * This should help fix slow upload rates.
  */
 static void
-
 update_send_buffer_size(tor_socket_t sock)
 {
 #ifdef _WIN32
