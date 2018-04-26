@@ -16,6 +16,7 @@
 
 #include "or.h"
 #include "config.h"
+#include "hibernate.h"
 #include "hs_service.h"
 #include "main.h"
 #include "periodic.h"
@@ -74,6 +75,9 @@ test_pe_launch(void *arg)
   (void) arg;
 
   hs_init();
+  /* We need to put tor in hibernation live state so the events requiring
+   * network gets enabled. */
+  consider_hibernation(time(NULL));
 
   /* Hack: We'll set a dumb fn() of each events so they don't get called when
    * dispatching them. We just want to test the state of the callbacks, not
