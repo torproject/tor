@@ -2750,15 +2750,13 @@ retry_listener_ports(smartlist_t *old_conns,
  * listeners who are not already open, and only close listeners we no longer
  * want.
  *
- * Add all old conns that should be closed to <b>replaced_conns</b>.
  * Add all new connections to <b>new_conns</b>.
  *
  * If <b>close_all_noncontrol</b> is true, then we only open control
  * listeners, and we close all other listeners.
  */
 int
-retry_all_listeners(smartlist_t *replaced_conns,
-                    smartlist_t *new_conns, int close_all_noncontrol)
+retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
 {
   smartlist_t *listeners = smartlist_new();
   smartlist_t *replacements = smartlist_new();
@@ -2795,7 +2793,6 @@ retry_all_listeners(smartlist_t *replaced_conns,
     if (skip)
       continue;
 
-    // XXX: replaced_conns
     connection_close_immediate(r->old_conn);
     connection_mark_for_close(r->old_conn);
 
@@ -2818,12 +2815,8 @@ retry_all_listeners(smartlist_t *replaced_conns,
   SMARTLIST_FOREACH_BEGIN(listeners, connection_t *, conn) {
     log_notice(LD_NET, "Closing no-longer-configured %s on %s:%d",
                conn_type_to_string(conn->type), conn->address, conn->port);
-    if (replaced_conns) {
-      smartlist_add(replaced_conns, conn);
-    } else {
-      connection_close_immediate(conn);
-      connection_mark_for_close(conn);
-    }
+    connection_close_immediate(conn);
+    connection_mark_for_close(conn);
   } SMARTLIST_FOREACH_END(conn);
 
   smartlist_free(listeners);

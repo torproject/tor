@@ -1362,7 +1362,6 @@ static int
 options_act_reversible(const or_options_t *old_options, char **msg)
 {
   smartlist_t *new_listeners = smartlist_new();
-  smartlist_t *replaced_listeners = smartlist_new();
   or_options_t *options = get_options_mutable();
   int running_tor = options->command == CMD_RUN_TOR;
   int set_conn_limit = 0;
@@ -1446,8 +1445,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
      * networking is disabled, this will close all but the control listeners,
      * but disable those. */
     if (!we_are_hibernating()) {
-      if (retry_all_listeners(replaced_listeners, new_listeners,
-                              options->DisableNetwork) < 0) {
+      if (retry_all_listeners(new_listeners, options->DisableNetwork) < 0) {
         *msg = tor_strdup("Failed to bind one of the listener ports.");
         goto rollback;
       }
@@ -1582,17 +1580,6 @@ options_act_reversible(const or_options_t *old_options, char **msg)
                "Overwrite the log afterwards.", badness);
   }
 
-  SMARTLIST_FOREACH(replaced_listeners, connection_t *, conn,
-  {
-    int marked = conn->marked_for_close;
-    log_notice(LD_NET, "Closing old %s on %s:%d",
-               conn_type_to_string(conn->type), conn->address, conn->port);
-    connection_close_immediate(conn);
-    if (!marked) {
-      connection_mark_for_close(conn);
-    }
-  });
-
   if (set_conn_limit) {
     /*
      * If we adjusted the conn limit, recompute the OOS threshold too
@@ -1646,7 +1633,6 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 
  done:
   smartlist_free(new_listeners);
-  smartlist_free(replaced_listeners);
   return r;
 }
 
