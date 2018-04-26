@@ -2067,6 +2067,7 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
     circuits_pending_close = smartlist_new();
 
   smartlist_add(circuits_pending_close, circ);
+  mainloop_schedule_postloop_cleanup();
 
   log_info(LD_GENERAL, "Circuit %u (id: %" PRIu32 ") marked for close at "
                        "%s:%d (orig reason: %d, new reason: %d)",

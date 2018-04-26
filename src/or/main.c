@@ -446,6 +446,7 @@ add_connection_to_closeable_list(connection_t *conn)
   tor_assert(conn->marked_for_close);
   assert_connection_ok(conn, time(NULL));
   smartlist_add(closeable_connection_lst, conn);
+  mainloop_schedule_postloop_cleanup();
 }
 
 /** Return 1 if conn is on the closeable list, else return 0. */
@@ -1599,6 +1600,30 @@ reschedule_directory_downloads(void)
   periodic_event_reschedule(launch_descriptor_fetches_event);
 }
 
+/** Mainloop callback: clean up circuits, channels, and connections
+ * that are pending close. */
+static void
+postloop_cleanup_cb(mainloop_event_t *ev, void *arg)
+{
+  (void)ev;
+  (void)arg;
+  circuit_close_all_marked();
+  close_closeable_connections();
+  channel_run_cleanup();
+  channel_listener_run_cleanup();
+}
+
+/** Event to run postloop_cleanup_cb */
+static mainloop_event_t *postloop_cleanup_ev=NULL;
+
+/** Schedule a post-loop event to clean up marked channels, connections, and
+ * circuits. */
+void
+mainloop_schedule_postloop_cleanup(void)
+{
+  mainloop_event_activate(postloop_cleanup_ev);
+}
+
 #define LONGEST_TIMER_PERIOD (30 * 86400)
 /** Helper: Return the number of seconds between <b>now</b> and <b>next</b>,
  * clipped to the range [1 second, LONGEST_TIMER_PERIOD]. */
@@ -1710,22 +1735,9 @@ run_scheduled_events(time_t now)
     run_connection_housekeeping(i, now);
   }
 
-  /* 6. And remove any marked circuits... */
-  circuit_close_all_marked();
-
-  /* 8. and blow away any connections that need to die. have to do this now,
-   * because if we marked a conn for close and left its socket -1, then
-   * we'll pass it to poll/select and bad things will happen.
-   */
-  close_closeable_connections();
-
   /* 8b. And if anything in our state is ready to get flushed to disk, we
    * flush it. */
   or_state_save(now);
-
-  /* 8c. Do channel cleanup just like for connections */
-  channel_run_cleanup();
-  channel_listener_run_cleanup();
 
   /* 11b. check pending unconfigured managed proxies */
   if (!net_is_disabled() && pt_proxies_configuration_pending())
@@ -2628,6 +2640,10 @@ do_main_loop(void)
     schedule_active_linked_connections_event =
       mainloop_event_postloop_new(schedule_active_linked_connections_cb, NULL);
   }
+  if (!postloop_cleanup_ev) {
+    postloop_cleanup_ev =
+      mainloop_event_postloop_new(postloop_cleanup_cb, NULL);
+  }
 
   /* initialize dns resolve map, spawn workers if needed */
   if (dns_init() < 0) {
@@ -3512,6 +3528,7 @@ tor_free_all(int postfork)
   tor_event_free(initialize_periodic_events_event);
   mainloop_event_free(directory_all_unreachable_cb_event);
   mainloop_event_free(schedule_active_linked_connections_event);
+  mainloop_event_free(postloop_cleanup_ev);
 
 #ifdef HAVE_SYSTEMD_209
   periodic_timer_free(systemd_watchdog_timer);

@@ -69,6 +69,7 @@
 #include "circuitmux.h"
 #include "entrynodes.h"
 #include "geoip.h"
+#include "main.h"
 #include "nodelist.h"
 #include "relay.h"
 #include "rephist.h"
@@ -404,6 +405,7 @@ channel_register(channel_t *chan)
     /* Put it in the finished list, creating it if necessary */
     if (!finished_channels) finished_channels = smartlist_new();
     smartlist_add(finished_channels, chan);
+    mainloop_schedule_postloop_cleanup();
   } else {
     /* Put it in the active list, creating it if necessary */
     if (!active_channels) active_channels = smartlist_new();
@@ -1548,6 +1550,7 @@ channel_change_state_(channel_t *chan, channel_state_t to_state)
       if (active_channels) smartlist_remove(active_channels, chan);
       if (!finished_channels) finished_channels = smartlist_new();
       smartlist_add(finished_channels, chan);
+      mainloop_schedule_postloop_cleanup();
     }
     /* Need to put on active list? */
     else if (!was_active && is_active) {
@@ -1666,6 +1669,7 @@ channel_listener_change_state(channel_listener_t *chan_l,
       if (active_listeners) smartlist_remove(active_listeners, chan_l);
       if (!finished_listeners) finished_listeners = smartlist_new();
       smartlist_add(finished_listeners, chan_l);
+      mainloop_schedule_postloop_cleanup();
     }
     /* Need to put on active list? */
     else if (!was_active && is_active) {
