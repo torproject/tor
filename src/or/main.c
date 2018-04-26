@@ -1697,12 +1697,6 @@ run_scheduled_events(time_t now)
     circuit_expire_old_circs_as_needed(now);
   }
 
-  if (!net_is_disabled()) {
-    /* This is usually redundant with circuit_build_needed_circs() above,
-     * but it is very fast when there is no work to do. */
-    connection_ap_attach_pending(0);
-  }
-
   /* 5. We do housekeeping for each connection... */
   channel_update_bad_for_new_circs(NULL, 0);
   int i;
