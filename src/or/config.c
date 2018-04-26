@@ -6304,10 +6304,8 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     smartlist_del_keeporder(items, 0);
   }
 
-  while (smartlist_len(items)) {
+  while (smartlist_len(items) > 2) {
     char *flag = smartlist_get(items, 0);
-    if (TOR_ISDIGIT(flag[0]))
-      break;
     if (!strcasecmp(flag, "hs") ||
                !strcasecmp(flag, "no-hs")) {
       log_warn(LD_CONFIG, "The DirAuthority options 'hs' and 'no-hs' are "
