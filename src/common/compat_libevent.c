@@ -494,51 +494,7 @@ tor_libevent_exit_loop_after_callback(struct event_base *base)
   event_base_loopbreak(base);
 }
 
-#if defined(LIBEVENT_VERSION_NUMBER) &&         \
-  LIBEVENT_VERSION_NUMBER >= V(2,1,1) &&        \
-  !defined(TOR_UNIT_TESTS)
-void
-tor_gettimeofday_cached(struct timeval *tv)
-{
-  event_base_gettimeofday_cached(the_event_base, tv);
-}
-void
-tor_gettimeofday_cache_clear(void)
-{
-  event_base_update_cache_time(the_event_base);
-}
-#else /* !(defined(LIBEVENT_VERSION_NUMBER) &&         ...) */
-/** Cache the current hi-res time; the cache gets reset when libevent
- * calls us. */
-static struct timeval cached_time_hires = {0, 0};
-
-/** Return a fairly recent view of the current time. */
-void
-tor_gettimeofday_cached(struct timeval *tv)
-{
-  if (cached_time_hires.tv_sec == 0) {
-    tor_gettimeofday(&cached_time_hires);
-  }
-  *tv = cached_time_hires;
-}
-
-/** Reset the cached view of the current time, so that the next time we try
- * to learn it, we will get an up-to-date value. */
-void
-tor_gettimeofday_cache_clear(void)
-{
-  cached_time_hires.tv_sec = 0;
-}
-
-#ifdef TOR_UNIT_TESTS
-/** For testing: force-update the cached time to a given value. */
-void
-tor_gettimeofday_cache_set(const struct timeval *tv)
-{
-  tor_assert(tv);
-  memcpy(&cached_time_hires, tv, sizeof(*tv));
-}
-
+#if defined(TOR_UNIT_TESTS)
 /** For testing: called post-fork to make libevent reinitialize
  * kernel structures. */
 void
@@ -548,5 +504,4 @@ tor_libevent_postfork(void)
   tor_assert(r == 0);
 }
 #endif /* defined(TOR_UNIT_TESTS) */
-#endif /* defined(LIBEVENT_VERSION_NUMBER) &&         ... */
 

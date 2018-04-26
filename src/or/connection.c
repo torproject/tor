@@ -3440,7 +3440,6 @@ connection_handle_read(connection_t *conn)
 {
   int res;
 
-  tor_gettimeofday_cache_clear();
   res = connection_handle_read_impl(conn);
   return res;
 }
@@ -3983,7 +3982,6 @@ int
 connection_handle_write(connection_t *conn, int force)
 {
     int res;
-    tor_gettimeofday_cache_clear();
     conn->in_connection_handle_write = 1;
     res = connection_handle_write_impl(conn, force);
     conn->in_connection_handle_write = 0;
