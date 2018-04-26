@@ -1,0 +1,6 @@
+  o Minor features (timekeeping, circuit scheduling):
+    - When keeping track of how busy each circuit have been recently on
+      a given connection, use coarse-grained monotonic timers rather than
+      gettimeofday(). This change should marginally increase accuracy
+      and performance.  Implements part of ticket 25927.
+

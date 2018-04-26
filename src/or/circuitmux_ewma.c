@@ -28,7 +28,7 @@
  *
  **/
 
-#define TOR_CIRCUITMUX_EWMA_C_
+#define CIRCUITMUX_EWMA_PRIVATE
 
 #include "orconfig.h"
 
@@ -169,8 +169,6 @@ TO_EWMA_POL_CIRC_DATA(circuitmux_policy_circ_data_t *pol)
 
 static void add_cell_ewma(ewma_policy_data_t *pol, cell_ewma_t *ewma);
 static int compare_cell_ewma_counts(const void *p1, const void *p2);
-static unsigned cell_ewma_tick_from_timeval(const struct timeval *now,
-                                            double *remainder_out);
 static circuit_t * cell_ewma_to_circuit(cell_ewma_t *ewma);
 static inline double get_scale_factor(unsigned from_tick, unsigned to_tick);
 static cell_ewma_t * pop_first_cell_ewma(ewma_policy_data_t *pol);
@@ -238,6 +236,13 @@ circuitmux_policy_t ewma_policy = {
   /*.pick_active_circuit =*/ ewma_pick_active_circuit,
   /*.cmp_cmux =*/ ewma_cmp_cmux
 };
+
+/** Have we initialized the ewma tick-counting logic? */
+static int ewma_ticks_initialized = 0;
+/** At what monotime_coarse_t did the current tick begin? */
+static monotime_coarse_t start_of_current_tick;
+/** What is the number of the current tick? */
+static unsigned current_tick_num;
 
 /*** EWMA method implementations using the below EWMA helper functions ***/
 
@@ -421,8 +426,6 @@ ewma_notify_xmit_cells(circuitmux_t *cmux,
   ewma_policy_circ_data_t *cdata = NULL;
   unsigned int tick;
   double fractional_tick, ewma_increment;
-  /* The current (hi-res) time */
-  struct timeval now_hires;
   cell_ewma_t *cell_ewma, *tmp;
 
   tor_assert(cmux);
@@ -435,8 +438,7 @@ ewma_notify_xmit_cells(circuitmux_t *cmux,
   cdata = TO_EWMA_POL_CIRC_DATA(pol_circ_data);
 
   /* Rescale the EWMAs if needed */
-  tor_gettimeofday_cached(&now_hires);
-  tick = cell_ewma_tick_from_timeval(&now_hires, &fractional_tick);
+  tick = cell_ewma_get_current_tick_and_fraction(&fractional_tick);
 
   if (tick != pol->active_circuit_pqueue_last_recalibrated) {
     scale_active_circuits(pol, tick);
@@ -597,24 +599,48 @@ cell_ewma_to_circuit(cell_ewma_t *ewma)
    rescale.
  */
 
-/** Given a timeval <b>now</b>, compute the cell_ewma tick in which it occurs
- * and the fraction of the tick that has elapsed between the start of the tick
- * and <b>now</b>.  Return the former and store the latter in
- * *<b>remainder_out</b>.
+/**
+ * Initialize the system that tells which ewma tick we are in.
+ */
+STATIC void
+cell_ewma_initialize_ticks(void)
+{
+  if (ewma_ticks_initialized)
+    return;
+  monotime_coarse_get(&start_of_current_tick);
+  crypto_rand((char*)&current_tick_num, sizeof(current_tick_num));
+  ewma_ticks_initialized = 1;
+}
+
+/** Compute the current cell_ewma tick and the fraction of the tick that has
+ * elapsed between the start of the tick and the current time.  Return the
+ * former and store the latter in *<b>remainder_out</b>.
  *
  * These tick values are not meant to be shared between Tor instances, or used
  * for other purposes. */
-
-static unsigned
-cell_ewma_tick_from_timeval(const struct timeval *now,
-                            double *remainder_out)
+STATIC unsigned
+cell_ewma_get_current_tick_and_fraction(double *remainder_out)
 {
-  unsigned res = (unsigned) (now->tv_sec / EWMA_TICK_LEN);
-  /* rem */
-  double rem = (now->tv_sec % EWMA_TICK_LEN) +
-    ((double)(now->tv_usec)) / 1.0e6;
-  *remainder_out = rem / EWMA_TICK_LEN;
-  return res;
+  if (BUG(!ewma_ticks_initialized)) {
+    cell_ewma_initialize_ticks(); // LCOV_EXCL_LINE
+  }
+  monotime_coarse_t now;
+  monotime_coarse_get(&now);
+  // XXXX this does a division operation that can be slow on 32-bit
+  // XXXX systems.
+  int32_t msec_diff =
+    (int32_t)monotime_coarse_diff_msec(&start_of_current_tick,
+                                       &now);
+  if (msec_diff > (1000*EWMA_TICK_LEN)) {
+    unsigned ticks_difference = msec_diff / (1000*EWMA_TICK_LEN);
+    monotime_coarse_add_msec(&start_of_current_tick,
+                             &start_of_current_tick,
+                             ticks_difference * 1000 * EWMA_TICK_LEN);
+    current_tick_num += ticks_difference;
+    msec_diff %= 1000*EWMA_TICK_LEN;
+  }
+  *remainder_out = ((double)msec_diff) / (1.0e3 * EWMA_TICK_LEN);
+  return current_tick_num;
 }
 
 /* Default value for the CircuitPriorityHalflifeMsec consensus parameter in
@@ -677,6 +703,8 @@ cmux_ewma_set_options(const or_options_t *options,
 {
   double halflife;
   const char *source;
+
+  cell_ewma_initialize_ticks();
 
   /* Both options and consensus can be NULL. This assures us to either get a
    * valid configured value or the default one. */
@@ -786,5 +814,14 @@ pop_first_cell_ewma(ewma_policy_data_t *pol)
   return smartlist_pqueue_pop(pol->active_circuit_pqueue,
                               compare_cell_ewma_counts,
                               offsetof(cell_ewma_t, heap_index));
+}
+
+/**
+ * Drop all resources held by circuitmux_ewma.c, and deinitialize the
+ * module. */
+void
+circuitmux_ewma_free_all(void)
+{
+  ewma_ticks_initialized = 0;
 }
 
