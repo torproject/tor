@@ -626,11 +626,8 @@ cell_ewma_get_current_tick_and_fraction(double *remainder_out)
   }
   monotime_coarse_t now;
   monotime_coarse_get(&now);
-  // XXXX this does a division operation that can be slow on 32-bit
-  // XXXX systems.
-  int32_t msec_diff =
-    (int32_t)monotime_coarse_diff_msec(&start_of_current_tick,
-                                       &now);
+  int32_t msec_diff = monotime_coarse_diff_msec32(&start_of_current_tick,
+                                                  &now);
   if (msec_diff > (1000*EWMA_TICK_LEN)) {
     unsigned ticks_difference = msec_diff / (1000*EWMA_TICK_LEN);
     monotime_coarse_add_msec(&start_of_current_tick,

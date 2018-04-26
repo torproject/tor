@@ -173,6 +173,33 @@ void monotime_coarse_add_msec(monotime_coarse_t *out,
 #define monotime_coarse_add_msec monotime_add_msec
 #endif /* defined(MONOTIME_COARSE_TYPE_IS_DIFFERENT) */
 
+/**
+ * As monotime_coarse_diff_msec, but avoid 64-bit division.
+ *
+ * Requires that the difference fit into an int32_t; not for use with
+ * large time differences.
+ */
+int32_t monotime_coarse_diff_msec32_(const monotime_coarse_t *start,
+                                     const monotime_coarse_t *end);
+
+/**
+ * As monotime_coarse_diff_msec, but avoid 64-bit division if it is expensive.
+ *
+ * Requires that the difference fit into an int32_t; not for use with
+ * large time differences.
+ */
+static inline int32_t
+monotime_coarse_diff_msec32(const monotime_coarse_t *start,
+                            const monotime_coarse_t *end)
+{
+#if SIZEOF_VOID_P == 8
+  // on a 64-bit platform, let's assume 64/64 division is cheap.
+  return (int32_t) monotime_coarse_diff_msec(start, end);
+#else
+  return monotime_coarse_diff_msec32_(start, end);
+#endif
+}
+
 MOCK_DECL(void, tor_gettimeofday, (struct timeval *timeval));
 
 #ifdef TOR_UNIT_TESTS
