@@ -150,7 +150,6 @@ static int run_main_loop_until_done(void);
 static void process_signal(int sig);
 static void shutdown_did_not_work_callback(evutil_socket_t fd, short event,
                                            void *arg) ATTR_NORETURN;
-static void rescan_periodic_events(const or_options_t *options);
 
 /********* START VARIABLES **********/
 
@@ -1549,7 +1548,7 @@ teardown_periodic_events(void)
 
 /** Do a pass at all our periodic events, disable those we don't need anymore
  * and enable those we need now using the given options. */
-static void
+void
 rescan_periodic_events(const or_options_t *options)
 {
   tor_assert(options);
