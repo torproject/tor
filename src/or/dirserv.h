@@ -157,6 +157,15 @@ void cached_dir_decref(cached_dir_t *d);
 cached_dir_t *new_cached_dir(char *s, time_t published);
 
 int validate_recommended_package_line(const char *line);
+int dirserv_query_measured_bw_cache_kb(const char *node_id,
+                                       long *bw_out,
+                                       time_t *as_of_out);
+void dirserv_clear_measured_bw_cache(void);
+int dirserv_has_measured_bw(const char *node_id);
+int dirserv_get_measured_bw_cache_size(void);
+void dirserv_count_measured_bws(const smartlist_t *routers);
+int running_long_enough_to_decide_unreachable(void);
+void dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil);
 
 #ifdef DIRSERV_PRIVATE
 
@@ -172,13 +181,7 @@ STATIC int measured_bw_line_apply(measured_bw_line_t *parsed_line,
 
 STATIC void dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
                                time_t as_of);
-STATIC void dirserv_clear_measured_bw_cache(void);
 STATIC void dirserv_expire_measured_bw_cache(time_t now);
-STATIC int dirserv_get_measured_bw_cache_size(void);
-STATIC int dirserv_query_measured_bw_cache_kb(const char *node_id,
-                                              long *bw_out,
-                                              time_t *as_of_out);
-STATIC int dirserv_has_measured_bw(const char *node_id);
 
 STATIC int
 dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,

@@ -20,7 +20,6 @@
 #include "compat.h"
 #include "directory.h"
 #include "dirserv.h"
-#include "dirvote.h"
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hs_cache.h"
@@ -41,13 +40,15 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "routerset.h"
-#include "shared_random.h"
+#include "dirauth/shared_random.h"
 
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #if !defined(OpenBSD)
 #include <malloc.h>
 #endif
 #endif
+
+#include "dirauth/dirvote.h"
 
 /**
  * \file directory.c
@@ -4437,59 +4438,15 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
   {
-    int current;
     ssize_t body_len = 0;
     ssize_t estimated_len = 0;
+    int lifetime = 60; /* XXXX?? should actually use vote intervals. */
     /* This smartlist holds strings that we can compress on the fly. */
     smartlist_t *items = smartlist_new();
     /* This smartlist holds cached_dir_t objects that have a precompressed
      * deflated version. */
     smartlist_t *dir_items = smartlist_new();
-    int lifetime = 60; /* XXXX?? should actually use vote intervals. */
-    url += strlen("/tor/status-vote/");
-    current = !strcmpstart(url, "current/");
-    url = strchr(url, '/');
-    tor_assert(url);
-    ++url;
-    if (!strcmp(url, "consensus")) {
-      const char *item;
-      tor_assert(!current); /* we handle current consensus specially above,
-                             * since it wants to be spooled. */
-      if ((item = dirvote_get_pending_consensus(FLAV_NS)))
-        smartlist_add(items, (char*)item);
-    } else if (!current && !strcmp(url, "consensus-signatures")) {
-      /* XXXX the spec says that we should implement
-       * current/consensus-signatures too.  It doesn't seem to be needed,
-       * though. */
-      const char *item;
-      if ((item=dirvote_get_pending_detached_signatures()))
-        smartlist_add(items, (char*)item);
-    } else if (!strcmp(url, "authority")) {
-      const cached_dir_t *d;
-      int flags = DGV_BY_ID |
-        (current ? DGV_INCLUDE_PREVIOUS : DGV_INCLUDE_PENDING);
-      if ((d=dirvote_get_vote(NULL, flags)))
-        smartlist_add(dir_items, (cached_dir_t*)d);
-    } else {
-      const cached_dir_t *d;
-      smartlist_t *fps = smartlist_new();
-      int flags;
-      if (!strcmpstart(url, "d/")) {
-        url += 2;
-        flags = DGV_INCLUDE_PENDING | DGV_INCLUDE_PREVIOUS;
-      } else {
-        flags = DGV_BY_ID |
-          (current ? DGV_INCLUDE_PREVIOUS : DGV_INCLUDE_PENDING);
-      }
-      dir_split_resource_into_fingerprints(url, fps, NULL,
-                                           DSR_HEX|DSR_SORT_UNIQ);
-      SMARTLIST_FOREACH(fps, char *, fp, {
-          if ((d = dirvote_get_vote(fp, flags)))
-            smartlist_add(dir_items, (cached_dir_t*)d);
-          tor_free(fp);
-        });
-      smartlist_free(fps);
-    }
+    dirvote_dirreq_get_status_vote(url, items, dir_items);
     if (!smartlist_len(dir_items) && !smartlist_len(items)) {
       write_short_http_response(conn, 404, "Not found");
       goto vote_done;

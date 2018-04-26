@@ -18,7 +18,7 @@
 #include "control.h"
 #include "directory.h"
 #include "dirserv.h"
-#include "dirvote.h"
+#include "dirvote_common.h"
 #include "hibernate.h"
 #include "keypin.h"
 #include "main.h"
@@ -33,6 +33,8 @@
 #include "routerparse.h"
 #include "routerset.h"
 #include "torcert.h"
+
+#include "dirauth/dirvote.h"
 
 /**
  * \file dirserv.c
@@ -74,7 +76,6 @@
 static int routers_with_measured_bw = 0;
 
 static void directory_remove_invalid(void);
-static char *format_versions_list(config_line_t *ln);
 struct authdir_config_t;
 static uint32_t
 dirserv_get_status_impl(const char *fp, const char *nickname,
@@ -87,7 +88,6 @@ static const signed_descriptor_t *get_signed_descriptor_by_fp(
                                                         int extrainfo);
 static was_router_added_t dirserv_add_extrainfo(extrainfo_t *ei,
                                                 const char **msg);
-static uint32_t dirserv_get_bandwidth_for_router_kb(const routerinfo_t *ri);
 static uint32_t dirserv_get_credible_bandwidth_kb(const routerinfo_t *ri);
 
 static int spooled_resource_lookup_body(const spooled_resource_t *spooled,
@@ -921,7 +921,7 @@ list_single_server_status(const routerinfo_t *desc, int is_live)
 }
 
 /* DOCDOC running_long_enough_to_decide_unreachable */
-static inline int
+int
 running_long_enough_to_decide_unreachable(void)
 {
   return time_of_process_start
@@ -1054,28 +1054,6 @@ list_server_status_v1(smartlist_t *routers, char **router_status_out,
   smartlist_free(rs_entries);
 
   return 0;
-}
-
-/** Given a (possibly empty) list of config_line_t, each line of which contains
- * a list of comma-separated version numbers surrounded by optional space,
- * allocate and return a new string containing the version numbers, in order,
- * separated by commas.  Used to generate Recommended(Client|Server)?Versions
- */
-static char *
-format_versions_list(config_line_t *ln)
-{
-  smartlist_t *versions;
-  char *result;
-  versions = smartlist_new();
-  for ( ; ln; ln = ln->next) {
-    smartlist_split_string(versions, ln->value, ",",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  }
-  sort_version_list(versions, 1);
-  result = smartlist_join_strings(versions,",",0,NULL);
-  SMARTLIST_FOREACH(versions,char *,s,tor_free(s));
-  smartlist_free(versions);
-  return result;
 }
 
 /** Return 1 if <b>ri</b>'s descriptor is "active" -- running, valid,
@@ -1467,6 +1445,24 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
     (have_mbw || !require_mbw);
 }
 
+/** Look through the routerlist, and using the measured bandwidth cache count
+ * how many measured bandwidths we know.  This is used to decide whether we
+ * ever trust advertised bandwidths for purposes of assigning flags. */
+void
+dirserv_count_measured_bws(const smartlist_t *routers)
+{
+  /* Initialize this first */
+  routers_with_measured_bw = 0;
+
+  /* Iterate over the routerlist and count measured bandwidths */
+  SMARTLIST_FOREACH_BEGIN(routers, const routerinfo_t *, ri) {
+    /* Check if we know a measured bandwidth for this one */
+    if (dirserv_has_measured_bw(ri->cache_info.identity_digest)) {
+      ++routers_with_measured_bw;
+    }
+  } SMARTLIST_FOREACH_END(ri);
+}
+
 /** Look through the routerlist, the Mean Time Between Failure history, and
  * the Weighted Fractional Uptime history, and use them to set thresholds for
  * the Stable, Fast, and Guard flags.  Update the fields stable_uptime,
@@ -1474,7 +1470,7 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
  * guard_bandwidth_including_exits, and guard_bandwidth_excluding_exits.
  *
  * Also, set the is_exit flag of each router appropriately. */
-static void
+void
 dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
 {
   int n_active, n_active_nonexit, n_familiar;
@@ -1705,7 +1701,7 @@ dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
 }
 
 /** Clear and free the measured bandwidth cache */
-STATIC void
+void
 dirserv_clear_measured_bw_cache(void)
 {
   if (mbw_cache) {
@@ -1737,18 +1733,10 @@ dirserv_expire_measured_bw_cache(time_t now)
   }
 }
 
-/** Get the current size of the measured bandwidth cache */
-STATIC int
-dirserv_get_measured_bw_cache_size(void)
-{
-  if (mbw_cache) return digestmap_size(mbw_cache);
-  else return 0;
-}
-
 /** Query the cache by identity digest, return value indicates whether
  * we found it. The bw_out and as_of_out pointers receive the cached
  * bandwidth value and the time it was cached if not NULL. */
-STATIC int
+int
 dirserv_query_measured_bw_cache_kb(const char *node_id, long *bw_kb_out,
                                    time_t *as_of_out)
 {
@@ -1769,61 +1757,18 @@ dirserv_query_measured_bw_cache_kb(const char *node_id, long *bw_kb_out,
 }
 
 /** Predicate wrapper for dirserv_query_measured_bw_cache() */
-STATIC int
+int
 dirserv_has_measured_bw(const char *node_id)
 {
   return dirserv_query_measured_bw_cache_kb(node_id, NULL, NULL);
 }
 
-/** Get the best estimate of a router's bandwidth for dirauth purposes,
- * preferring measured to advertised values if available. */
-
-static uint32_t
-dirserv_get_bandwidth_for_router_kb(const routerinfo_t *ri)
+/** Get the current size of the measured bandwidth cache */
+int
+dirserv_get_measured_bw_cache_size(void)
 {
-  uint32_t bw_kb = 0;
-  /*
-   * Yeah, measured bandwidths in measured_bw_line_t are (implicitly
-   * signed) longs and the ones router_get_advertised_bandwidth() returns
-   * are uint32_t.
-   */
-  long mbw_kb = 0;
-
-  if (ri) {
-    /*
-   * * First try to see if we have a measured bandwidth; don't bother with
-     * as_of_out here, on the theory that a stale measured bandwidth is still
-     * better to trust than an advertised one.
-     */
-    if (dirserv_query_measured_bw_cache_kb(ri->cache_info.identity_digest,
-                                        &mbw_kb, NULL)) {
-      /* Got one! */
-      bw_kb = (uint32_t)mbw_kb;
-    } else {
-      /* If not, fall back to advertised */
-      bw_kb = router_get_advertised_bandwidth(ri) / 1000;
-    }
-  }
-
-  return bw_kb;
-}
-
-/** Look through the routerlist, and using the measured bandwidth cache count
- * how many measured bandwidths we know.  This is used to decide whether we
- * ever trust advertised bandwidths for purposes of assigning flags. */
-static void
-dirserv_count_measured_bws(const smartlist_t *routers)
-{
-  /* Initialize this first */
-  routers_with_measured_bw = 0;
-
-  /* Iterate over the routerlist and count measured bandwidths */
-  SMARTLIST_FOREACH_BEGIN(routers, const routerinfo_t *, ri) {
-    /* Check if we know a measured bandwidth for this one */
-    if (dirserv_has_measured_bw(ri->cache_info.identity_digest)) {
-      ++routers_with_measured_bw;
-    }
-  } SMARTLIST_FOREACH_END(ri);
+  if (mbw_cache) return digestmap_size(mbw_cache);
+  else return 0;
 }
 
 /** Return the bandwidth we believe for assigning flags; prefer measured
@@ -1884,26 +1829,6 @@ dirserv_get_flag_thresholds_line(void)
       enough_measured_bw ? 1 : 0);
 
   return result;
-}
-
-/** Given a platform string as in a routerinfo_t (possibly null), return a
- * newly allocated version string for a networkstatus document, or NULL if the
- * platform doesn't give a Tor version. */
-static char *
-version_from_platform(const char *platform)
-{
-  if (platform && !strcmpstart(platform, "Tor ")) {
-    const char *eos = find_whitespace(platform+4);
-    if (eos && !strcmpstart(eos, " (r")) {
-      /* XXXX Unify this logic with the other version extraction
-       * logic in routerparse.c. */
-      eos = find_whitespace(eos+1);
-    }
-    if (eos) {
-      return tor_strndup(platform, eos-platform);
-    }
-  }
-  return NULL;
 }
 
 /** Helper: write the router-status information in <b>rs</b> into a newly
@@ -2094,145 +2019,6 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
   return result;
 }
 
-/** Helper for sorting: compares two routerinfos first by address, and then by
- * descending order of "usefulness".  (An authority is more useful than a
- * non-authority; a running router is more useful than a non-running router;
- * and a router with more bandwidth is more useful than one with less.)
- **/
-static int
-compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
-{
-  routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
-  int first_is_auth, second_is_auth;
-  uint32_t bw_kb_first, bw_kb_second;
-  const node_t *node_first, *node_second;
-  int first_is_running, second_is_running;
-
-  /* we return -1 if first should appear before second... that is,
-   * if first is a better router. */
-  if (first->addr < second->addr)
-    return -1;
-  else if (first->addr > second->addr)
-    return 1;
-
-  /* Potentially, this next bit could cause k n lg n memeq calls.  But in
-   * reality, we will almost never get here, since addresses will usually be
-   * different. */
-
-  first_is_auth =
-    router_digest_is_trusted_dir(first->cache_info.identity_digest);
-  second_is_auth =
-    router_digest_is_trusted_dir(second->cache_info.identity_digest);
-
-  if (first_is_auth && !second_is_auth)
-    return -1;
-  else if (!first_is_auth && second_is_auth)
-    return 1;
-
-  node_first = node_get_by_id(first->cache_info.identity_digest);
-  node_second = node_get_by_id(second->cache_info.identity_digest);
-  first_is_running = node_first && node_first->is_running;
-  second_is_running = node_second && node_second->is_running;
-
-  if (first_is_running && !second_is_running)
-    return -1;
-  else if (!first_is_running && second_is_running)
-    return 1;
-
-  bw_kb_first = dirserv_get_bandwidth_for_router_kb(first);
-  bw_kb_second = dirserv_get_bandwidth_for_router_kb(second);
-
-  if (bw_kb_first > bw_kb_second)
-     return -1;
-  else if (bw_kb_first < bw_kb_second)
-    return 1;
-
-  /* They're equal! Compare by identity digest, so there's a
-   * deterministic order and we avoid flapping. */
-  return fast_memcmp(first->cache_info.identity_digest,
-                     second->cache_info.identity_digest,
-                     DIGEST_LEN);
-}
-
-/** Given a list of routerinfo_t in <b>routers</b>, return a new digestmap_t
- * whose keys are the identity digests of those routers that we're going to
- * exclude for Sybil-like appearance. */
-static digestmap_t *
-get_possible_sybil_list(const smartlist_t *routers)
-{
-  const or_options_t *options = get_options();
-  digestmap_t *omit_as_sybil;
-  smartlist_t *routers_by_ip = smartlist_new();
-  uint32_t last_addr;
-  int addr_count;
-  /* Allow at most this number of Tor servers on a single IP address, ... */
-  int max_with_same_addr = options->AuthDirMaxServersPerAddr;
-  if (max_with_same_addr <= 0)
-    max_with_same_addr = INT_MAX;
-
-  smartlist_add_all(routers_by_ip, routers);
-  smartlist_sort(routers_by_ip, compare_routerinfo_by_ip_and_bw_);
-  omit_as_sybil = digestmap_new();
-
-  last_addr = 0;
-  addr_count = 0;
-  SMARTLIST_FOREACH_BEGIN(routers_by_ip, routerinfo_t *, ri) {
-      if (last_addr != ri->addr) {
-        last_addr = ri->addr;
-        addr_count = 1;
-      } else if (++addr_count > max_with_same_addr) {
-        digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
-      }
-  } SMARTLIST_FOREACH_END(ri);
-
-  smartlist_free(routers_by_ip);
-  return omit_as_sybil;
-}
-
-/** If there are entries in <b>routers</b> with exactly the same ed25519 keys,
- * remove the older one.  If they are exactly the same age, remove the one
- * with the greater descriptor digest. May alter the order of the list. */
-static void
-routers_make_ed_keys_unique(smartlist_t *routers)
-{
-  routerinfo_t *ri2;
-  digest256map_t *by_ed_key = digest256map_new();
-
-  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
-    ri->omit_from_vote = 0;
-    if (ri->cache_info.signing_key_cert == NULL)
-      continue; /* No ed key */
-    const uint8_t *pk = ri->cache_info.signing_key_cert->signing_key.pubkey;
-    if ((ri2 = digest256map_get(by_ed_key, pk))) {
-      /* Duplicate; must omit one.  Set the omit_from_vote flag in whichever
-       * one has the earlier published_on. */
-      const time_t ri_pub = ri->cache_info.published_on;
-      const time_t ri2_pub = ri2->cache_info.published_on;
-      if (ri2_pub < ri_pub ||
-          (ri2_pub == ri_pub &&
-           fast_memcmp(ri->cache_info.signed_descriptor_digest,
-                     ri2->cache_info.signed_descriptor_digest,DIGEST_LEN)<0)) {
-        digest256map_set(by_ed_key, pk, ri);
-        ri2->omit_from_vote = 1;
-      } else {
-        ri->omit_from_vote = 1;
-      }
-    } else {
-      /* Add to map */
-      digest256map_set(by_ed_key, pk, ri);
-    }
-  } SMARTLIST_FOREACH_END(ri);
-
-  digest256map_free(by_ed_key, NULL);
-
-  /* Now remove every router where the omit_from_vote flag got set. */
-  SMARTLIST_FOREACH_BEGIN(routers, const routerinfo_t *, ri) {
-    if (ri->omit_from_vote) {
-      SMARTLIST_DEL_CURRENT(routers, ri);
-    }
-  } SMARTLIST_FOREACH_END(ri);
-}
-
 /** Extract status information from <b>ri</b> and from other authority
  * functions and store it in <b>rs</b>. <b>rs</b> is zeroed out before it is
  * set.
@@ -2343,25 +2129,6 @@ dirserv_set_routerstatus_testing(routerstatus_t *rs)
   } else if (options->TestingDirAuthVoteHSDirIsStrict) {
     rs->is_hs_dir = 0;
   }
-}
-
-/** Routerstatus <b>rs</b> is part of a group of routers that are on
- * too narrow an IP-space. Clear out its flags since we don't want it be used
- * because of its Sybil-like appearance.
- *
- * Leave its BadExit flag alone though, since if we think it's a bad exit,
- * we want to vote that way in case all the other authorities are voting
- * Running and Exit.
- */
-static void
-clear_status_flags_on_sybil(routerstatus_t *rs)
-{
-  rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
-    rs->is_flagged_running = rs->is_named = rs->is_valid =
-    rs->is_hs_dir = rs->is_v2_dir = rs->is_possible_guard = 0;
-  /* FFFF we might want some mechanism to check later on if we
-   * missed zeroing any flags: it's easy to add a new flag but
-   * forget to add it to this clause. */
 }
 
 /** The guardfraction of the guard with identity fingerprint <b>guard_id</b>
@@ -2855,286 +2622,6 @@ dirserv_read_measured_bandwidths(const char *from_file,
            "Bandwidth measurement file successfully read. "
            "Applied %d measurements.", applied_lines);
   return 0;
-}
-
-/** Return a new networkstatus_t* containing our current opinion. (For v3
- * authorities) */
-networkstatus_t *
-dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
-                                        authority_cert_t *cert)
-{
-  const or_options_t *options = get_options();
-  networkstatus_t *v3_out = NULL;
-  uint32_t addr;
-  char *hostname = NULL, *client_versions = NULL, *server_versions = NULL;
-  const char *contact;
-  smartlist_t *routers, *routerstatuses;
-  char identity_digest[DIGEST_LEN];
-  char signing_key_digest[DIGEST_LEN];
-  int listbadexits = options->AuthDirListBadExits;
-  routerlist_t *rl = router_get_routerlist();
-  time_t now = time(NULL);
-  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
-  networkstatus_voter_info_t *voter = NULL;
-  vote_timing_t timing;
-  digestmap_t *omit_as_sybil = NULL;
-  const int vote_on_reachability = running_long_enough_to_decide_unreachable();
-  smartlist_t *microdescriptors = NULL;
-
-  tor_assert(private_key);
-  tor_assert(cert);
-
-  if (crypto_pk_get_digest(private_key, signing_key_digest)<0) {
-    log_err(LD_BUG, "Error computing signing key digest");
-    return NULL;
-  }
-  if (crypto_pk_get_digest(cert->identity_key, identity_digest)<0) {
-    log_err(LD_BUG, "Error computing identity key digest");
-    return NULL;
-  }
-  if (resolve_my_address(LOG_WARN, options, &addr, NULL, &hostname)<0) {
-    log_warn(LD_NET, "Couldn't resolve my hostname");
-    return NULL;
-  }
-  if (!hostname || !strchr(hostname, '.')) {
-    tor_free(hostname);
-    hostname = tor_dup_ip(addr);
-  }
-
-  if (options->VersioningAuthoritativeDir) {
-    client_versions = format_versions_list(options->RecommendedClientVersions);
-    server_versions = format_versions_list(options->RecommendedServerVersions);
-  }
-
-  contact = get_options()->ContactInfo;
-  if (!contact)
-    contact = "(none)";
-
-  /*
-   * Do this so dirserv_compute_performance_thresholds() and
-   * set_routerstatus_from_routerinfo() see up-to-date bandwidth info.
-   */
-  if (options->V3BandwidthsFile) {
-    dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL);
-  } else {
-    /*
-     * No bandwidths file; clear the measured bandwidth cache in case we had
-     * one last time around.
-     */
-    if (dirserv_get_measured_bw_cache_size() > 0) {
-      dirserv_clear_measured_bw_cache();
-    }
-  }
-
-  /* precompute this part, since we need it to decide what "stable"
-   * means. */
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
-    dirserv_set_router_is_running(ri, now);
-  });
-
-  routers = smartlist_new();
-  smartlist_add_all(routers, rl->routers);
-  routers_make_ed_keys_unique(routers);
-  /* After this point, don't use rl->routers; use 'routers' instead. */
-  routers_sort_by_identity(routers);
-  omit_as_sybil = get_possible_sybil_list(routers);
-
-  DIGESTMAP_FOREACH(omit_as_sybil, sybil_id, void *, ignore) {
-    (void) ignore;
-    rep_hist_make_router_pessimal(sybil_id, now);
-  } DIGESTMAP_FOREACH_END;
-
-  /* Count how many have measured bandwidths so we know how to assign flags;
-   * this must come before dirserv_compute_performance_thresholds() */
-  dirserv_count_measured_bws(routers);
-
-  dirserv_compute_performance_thresholds(omit_as_sybil);
-
-  routerstatuses = smartlist_new();
-  microdescriptors = smartlist_new();
-
-  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
-    if (ri->cache_info.published_on >= cutoff) {
-      routerstatus_t *rs;
-      vote_routerstatus_t *vrs;
-      node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
-      if (!node)
-        continue;
-
-      vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
-      rs = &vrs->status;
-      set_routerstatus_from_routerinfo(rs, node, ri, now,
-                                       listbadexits);
-
-      if (ri->cache_info.signing_key_cert) {
-        memcpy(vrs->ed25519_id,
-               ri->cache_info.signing_key_cert->signing_key.pubkey,
-               ED25519_PUBKEY_LEN);
-      }
-
-      if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
-        clear_status_flags_on_sybil(rs);
-
-      if (!vote_on_reachability)
-        rs->is_flagged_running = 0;
-
-      vrs->version = version_from_platform(ri->platform);
-      if (ri->protocol_list) {
-        vrs->protocols = tor_strdup(ri->protocol_list);
-      } else {
-        vrs->protocols = tor_strdup(
-                              protover_compute_for_old_tor(vrs->version));
-      }
-      vrs->microdesc = dirvote_format_all_microdesc_vote_lines(ri, now,
-                                                        microdescriptors);
-
-      smartlist_add(routerstatuses, vrs);
-    }
-  } SMARTLIST_FOREACH_END(ri);
-
-  {
-    smartlist_t *added =
-      microdescs_add_list_to_cache(get_microdesc_cache(),
-                                   microdescriptors, SAVED_NOWHERE, 0);
-    smartlist_free(added);
-    smartlist_free(microdescriptors);
-  }
-
-  smartlist_free(routers);
-  digestmap_free(omit_as_sybil, NULL);
-
-  /* Apply guardfraction information to routerstatuses. */
-  if (options->GuardfractionFile) {
-    dirserv_read_guardfraction_file(options->GuardfractionFile,
-                                    routerstatuses);
-  }
-
-  /* This pass through applies the measured bw lines to the routerstatuses */
-  if (options->V3BandwidthsFile) {
-    dirserv_read_measured_bandwidths(options->V3BandwidthsFile,
-                                     routerstatuses);
-  } else {
-    /*
-     * No bandwidths file; clear the measured bandwidth cache in case we had
-     * one last time around.
-     */
-    if (dirserv_get_measured_bw_cache_size() > 0) {
-      dirserv_clear_measured_bw_cache();
-    }
-  }
-
-  v3_out = tor_malloc_zero(sizeof(networkstatus_t));
-
-  v3_out->type = NS_TYPE_VOTE;
-  dirvote_get_preferred_voting_intervals(&timing);
-  v3_out->published = now;
-  {
-    char tbuf[ISO_TIME_LEN+1];
-    networkstatus_t *current_consensus =
-      networkstatus_get_live_consensus(now);
-    long last_consensus_interval; /* only used to pick a valid_after */
-    if (current_consensus)
-      last_consensus_interval = current_consensus->fresh_until -
-        current_consensus->valid_after;
-    else
-      last_consensus_interval = options->TestingV3AuthInitialVotingInterval;
-    v3_out->valid_after =
-      dirvote_get_start_of_next_interval(now, (int)last_consensus_interval,
-                                      options->TestingV3AuthVotingStartOffset);
-    format_iso_time(tbuf, v3_out->valid_after);
-    log_notice(LD_DIR,"Choosing valid-after time in vote as %s: "
-               "consensus_set=%d, last_interval=%d",
-               tbuf, current_consensus?1:0, (int)last_consensus_interval);
-  }
-  v3_out->fresh_until = v3_out->valid_after + timing.vote_interval;
-  v3_out->valid_until = v3_out->valid_after +
-    (timing.vote_interval * timing.n_intervals_valid);
-  v3_out->vote_seconds = timing.vote_delay;
-  v3_out->dist_seconds = timing.dist_delay;
-  tor_assert(v3_out->vote_seconds > 0);
-  tor_assert(v3_out->dist_seconds > 0);
-  tor_assert(timing.n_intervals_valid > 0);
-
-  v3_out->client_versions = client_versions;
-  v3_out->server_versions = server_versions;
-
-  /* These are hardwired, to avoid disaster. */
-  v3_out->recommended_relay_protocols =
-    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
-  v3_out->recommended_client_protocols =
-    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
-  v3_out->required_client_protocols =
-    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
-  v3_out->required_relay_protocols =
-    tor_strdup("Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=3-4 LinkAuth=1 Microdesc=1 Relay=1-2");
-
-  /* We are not allowed to vote to require anything we don't have. */
-  tor_assert(protover_all_supported(v3_out->required_relay_protocols, NULL));
-  tor_assert(protover_all_supported(v3_out->required_client_protocols, NULL));
-
-  /* We should not recommend anything we don't have. */
-  tor_assert_nonfatal(protover_all_supported(
-                         v3_out->recommended_relay_protocols, NULL));
-  tor_assert_nonfatal(protover_all_supported(
-                         v3_out->recommended_client_protocols, NULL));
-
-  v3_out->package_lines = smartlist_new();
-  {
-    config_line_t *cl;
-    for (cl = get_options()->RecommendedPackages; cl; cl = cl->next) {
-      if (validate_recommended_package_line(cl->value))
-        smartlist_add_strdup(v3_out->package_lines, cl->value);
-    }
-  }
-
-  v3_out->known_flags = smartlist_new();
-  smartlist_split_string(v3_out->known_flags,
-                "Authority Exit Fast Guard Stable V2Dir Valid HSDir",
-                0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (vote_on_reachability)
-    smartlist_add_strdup(v3_out->known_flags, "Running");
-  if (listbadexits)
-    smartlist_add_strdup(v3_out->known_flags, "BadExit");
-  smartlist_sort_strings(v3_out->known_flags);
-
-  if (options->ConsensusParams) {
-    v3_out->net_params = smartlist_new();
-    smartlist_split_string(v3_out->net_params,
-                           options->ConsensusParams, NULL, 0, 0);
-    smartlist_sort_strings(v3_out->net_params);
-  }
-
-  voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
-  voter->nickname = tor_strdup(options->Nickname);
-  memcpy(voter->identity_digest, identity_digest, DIGEST_LEN);
-  voter->sigs = smartlist_new();
-  voter->address = hostname;
-  voter->addr = addr;
-  voter->dir_port = router_get_advertised_dir_port(options, 0);
-  voter->or_port = router_get_advertised_or_port(options);
-  voter->contact = tor_strdup(contact);
-  if (options->V3AuthUseLegacyKey) {
-    authority_cert_t *c = get_my_v3_legacy_cert();
-    if (c) {
-      if (crypto_pk_get_digest(c->identity_key, voter->legacy_id_digest)) {
-        log_warn(LD_BUG, "Unable to compute digest of legacy v3 identity key");
-        memset(voter->legacy_id_digest, 0, DIGEST_LEN);
-      }
-    }
-  }
-
-  v3_out->voters = smartlist_new();
-  smartlist_add(v3_out->voters, voter);
-  v3_out->cert = authority_cert_dup(cert);
-  v3_out->routerstatus_list = routerstatuses;
-  /* Note: networkstatus_digest is unset; it won't get set until we actually
-   * format the vote. */
-
-  return v3_out;
 }
 
 /** As dirserv_get_routerdescs(), but instead of getting signed_descriptor_t

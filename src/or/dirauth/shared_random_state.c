@@ -9,15 +9,19 @@
  **/
 
 #define SHARED_RANDOM_STATE_PRIVATE
+#define TOR_SHARED_RANDOM_COMMON_PRIVATE
 
 #include "or.h"
 #include "shared_random.h"
 #include "config.h"
 #include "confparse.h"
-#include "dirvote.h"
+#include "dirvote_common.h"
 #include "networkstatus.h"
 #include "router.h"
 #include "shared_random_state.h"
+#include "shared_random_common.h"
+
+#include "dirauth/dirvote.h"
 
 /* Default filename of the shared random state on disk. */
 static const char default_fname[] = "sr-state";
@@ -53,10 +57,6 @@ DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
   VAR(#member, conftype, member, initvalue)
 /* Our persistent state magic number. */
 #define SR_DISK_STATE_MAGIC 0x98AB1254
-/* Each protocol phase has 12 rounds  */
-#define SHARED_RANDOM_N_ROUNDS 12
-/* Number of phase we have in a protocol. */
-#define SHARED_RANDOM_N_PHASES 2
 
 static int
 disk_state_validate_cb(void *old_state, void *state, void *default_state,
@@ -115,81 +115,6 @@ get_phase_str(sr_phase_t phase)
 
   return the_string;
 }
-
-/* Return the voting interval of the tor vote subsystem. */
-static int
-get_voting_interval(void)
-{
-  int interval;
-  networkstatus_t *consensus = networkstatus_get_live_consensus(time(NULL));
-
-  if (consensus) {
-    interval = (int)(consensus->fresh_until - consensus->valid_after);
-  } else {
-    /* Same for both a testing and real network. We voluntarily ignore the
-     * InitialVotingInterval since it complexifies things and it doesn't
-     * affect the SR protocol. */
-    interval = get_options()->V3AuthVotingInterval;
-  }
-  tor_assert(interval > 0);
-  return interval;
-}
-
-/* Given the time <b>now</b>, return the start time of the current round of
- * the SR protocol. For example, if it's 23:47:08, the current round thus
- * started at 23:47:00 for a voting interval of 10 seconds. */
-STATIC time_t
-get_start_time_of_current_round(void)
-{
-  const or_options_t *options = get_options();
-  int voting_interval = get_voting_interval();
-  /* First, get the start time of the next round */
-  time_t next_start = dirvote_get_next_valid_after_time();
-  /* Now roll back next_start by a voting interval to find the start time of
-     the current round. */
-  time_t curr_start = dirvote_get_start_of_next_interval(
-                                     next_start - voting_interval - 1,
-                                     voting_interval,
-                                     options->TestingV3AuthVotingStartOffset);
-  return curr_start;
-}
-
-/** Return the start time of the current SR protocol run. For example, if the
- *  time is 23/06/2017 23:47:08 and a full SR protocol run is 24 hours, this
- *  function should return 23/06/2017 00:00:00. */
-time_t
-sr_state_get_start_time_of_current_protocol_run(time_t now)
-{
-  int total_rounds = SHARED_RANDOM_N_ROUNDS * SHARED_RANDOM_N_PHASES;
-  int voting_interval = get_voting_interval();
-  /* Find the time the current round started. */
-  time_t beginning_of_current_round = get_start_time_of_current_round();
-
-  /* Get current SR protocol round */
-  int current_round = (now / voting_interval) % total_rounds;
-
-  /* Get start time by subtracting the time elapsed from the beginning of the
-     protocol run */
-  time_t time_elapsed_since_start_of_run = current_round * voting_interval;
-  return beginning_of_current_round - time_elapsed_since_start_of_run;
-}
-
-/** Return the time (in seconds) it takes to complete a full SR protocol phase
- *  (e.g. the commit phase). */
-unsigned int
-sr_state_get_phase_duration(void)
-{
-  return SHARED_RANDOM_N_ROUNDS * get_voting_interval();
-}
-
-/** Return the time (in seconds) it takes to complete a full SR protocol run */
-unsigned int
-sr_state_get_protocol_run_duration(void)
-{
-  int total_protocol_rounds = SHARED_RANDOM_N_ROUNDS * SHARED_RANDOM_N_PHASES;
-  return total_protocol_rounds * get_voting_interval();
-}
-
 /* Return the time we should expire the state file created at <b>now</b>.
  * We expire the state file in the beginning of the next protocol run. */
 STATIC time_t

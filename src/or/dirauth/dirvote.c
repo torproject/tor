@@ -10,8 +10,11 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "dirvote_common.h"
 #include "microdesc.h"
 #include "networkstatus.h"
+#include "nodelist.h"
+#include "parsecommon.h"
 #include "policies.h"
 #include "protover.h"
 #include "rephist.h"
@@ -351,6 +354,53 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
  * Consensus generation
  * ===== */
 
+/** If <b>vrs</b> has a hash made for the consensus method <b>method</b> with
+ * the digest algorithm <b>alg</b>, decode it and copy it into
+ * <b>digest256_out</b> and return 0.  Otherwise return -1. */
+static int
+vote_routerstatus_find_microdesc_hash(char *digest256_out,
+                                      const vote_routerstatus_t *vrs,
+                                      int method,
+                                      digest_algorithm_t alg)
+{
+  /* XXXX only returns the sha256 method. */
+  const vote_microdesc_hash_t *h;
+  char mstr[64];
+  size_t mlen;
+  char dstr[64];
+
+  tor_snprintf(mstr, sizeof(mstr), "%d", method);
+  mlen = strlen(mstr);
+  tor_snprintf(dstr, sizeof(dstr), " %s=",
+               crypto_digest_algorithm_get_name(alg));
+
+  for (h = vrs->microdesc; h; h = h->next) {
+    const char *cp = h->microdesc_hash_line;
+    size_t num_len;
+    /* cp looks like \d+(,\d+)* (digesttype=val )+ .  Let's hunt for mstr in
+     * the first part. */
+    while (1) {
+      num_len = strspn(cp, "1234567890");
+      if (num_len == mlen && fast_memeq(mstr, cp, mlen)) {
+        /* This is the line. */
+        char buf[BASE64_DIGEST256_LEN+1];
+        /* XXXX ignores extraneous stuff if the digest is too long.  This
+         * seems harmless enough, right? */
+        cp = strstr(cp, dstr);
+        if (!cp)
+          return -1;
+        cp += strlen(dstr);
+        strlcpy(buf, cp, sizeof(buf));
+        return digest256_from_base64(digest256_out, buf);
+      }
+      if (num_len == 0 || cp[num_len] != ',')
+        break;
+      cp += num_len + 1;
+    }
+  }
+  return -1;
+}
+
 /** Given a vote <b>vote</b> (not a consensus!), return its associated
  * networkstatus_voter_info_t. */
 static networkstatus_voter_info_t *
@@ -361,20 +411,6 @@ get_voter(const networkstatus_t *vote)
   tor_assert(vote->voters);
   tor_assert(smartlist_len(vote->voters) == 1);
   return smartlist_get(vote->voters, 0);
-}
-
-/** Return the signature made by <b>voter</b> using the algorithm
- * <b>alg</b>, or NULL if none is found. */
-document_signature_t *
-voter_get_sig_by_algorithm(const networkstatus_voter_info_t *voter,
-                           digest_algorithm_t alg)
-{
-  if (!voter->sigs)
-    return NULL;
-  SMARTLIST_FOREACH(voter->sigs, document_signature_t *, sig,
-    if (sig->alg == alg)
-      return sig);
-  return NULL;
 }
 
 /** Temporary structure used in constructing a list of dir-source entries
@@ -1328,7 +1364,7 @@ compute_nth_protocol_set(int n, int n_voters, const smartlist_t *votes)
  * behavior, and make the new behavior conditional on a new-enough
  * consensus_method.
  **/
-char *
+STATIC char *
 networkstatus_compute_consensus(smartlist_t *votes,
                                 int total_authorities,
                                 crypto_pk_t *identity_key,
@@ -2372,7 +2408,7 @@ compute_consensus_package_lines(smartlist_t *votes)
  * new signature is verifiable.)  Return the number of signatures added or
  * changed, or -1 if the document signed by <b>sigs</b> isn't the same
  * document as <b>target</b>. */
-int
+STATIC int
 networkstatus_add_detached_signatures(networkstatus_t *target,
                                       ns_detached_signatures_t *sigs,
                                       const char *source,
@@ -2456,7 +2492,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
       continue;
     }
 
-    old_sig = voter_get_sig_by_algorithm(target_voter, sig->alg);
+    old_sig = dirvote_get_voter_sig_by_alg(target_voter, sig->alg);
 
     /* If the target already has a good signature from this voter, then skip
      * this one. */
@@ -2564,7 +2600,7 @@ networkstatus_format_signatures(networkstatus_t *consensus,
  * corresponding to the signatures on <b>consensuses</b>, which must contain
  * exactly one FLAV_NS consensus, and no more than one consensus for each
  * other flavor. */
-char *
+STATIC char *
 networkstatus_get_detached_signatures(smartlist_t *consensuses)
 {
   smartlist_t *elements;
@@ -2667,213 +2703,6 @@ get_detached_signatures_from_pending_consensuses(pending_consensus_t *pending,
   signatures = networkstatus_get_detached_signatures(c);
   smartlist_free(c);
   return signatures;
-}
-
-/** Release all storage held in <b>s</b>. */
-void
-ns_detached_signatures_free_(ns_detached_signatures_t *s)
-{
-  if (!s)
-    return;
-  if (s->signatures) {
-    STRMAP_FOREACH(s->signatures, flavor, smartlist_t *, sigs) {
-      SMARTLIST_FOREACH(sigs, document_signature_t *, sig,
-                        document_signature_free(sig));
-      smartlist_free(sigs);
-    } STRMAP_FOREACH_END;
-    strmap_free(s->signatures, NULL);
-    strmap_free(s->digests, tor_free_);
-  }
-
-  tor_free(s);
-}
-
-/* =====
- * Certificate functions
- * ===== */
-
-/** Allocate and return a new authority_cert_t with the same contents as
- * <b>cert</b>. */
-authority_cert_t *
-authority_cert_dup(authority_cert_t *cert)
-{
-  authority_cert_t *out = tor_malloc(sizeof(authority_cert_t));
-  tor_assert(cert);
-
-  memcpy(out, cert, sizeof(authority_cert_t));
-  /* Now copy pointed-to things. */
-  out->cache_info.signed_descriptor_body =
-    tor_strndup(cert->cache_info.signed_descriptor_body,
-                cert->cache_info.signed_descriptor_len);
-  out->cache_info.saved_location = SAVED_NOWHERE;
-  out->identity_key = crypto_pk_dup_key(cert->identity_key);
-  out->signing_key = crypto_pk_dup_key(cert->signing_key);
-
-  return out;
-}
-
-/* =====
- * Vote scheduling
- * ===== */
-
-/** Set *<b>timing_out</b> to the intervals at which we would like to vote.
- * Note that these aren't the intervals we'll use to vote; they're the ones
- * that we'll vote to use. */
-void
-dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out)
-{
-  const or_options_t *options = get_options();
-
-  tor_assert(timing_out);
-
-  timing_out->vote_interval = options->V3AuthVotingInterval;
-  timing_out->n_intervals_valid = options->V3AuthNIntervalsValid;
-  timing_out->vote_delay = options->V3AuthVoteDelay;
-  timing_out->dist_delay = options->V3AuthDistDelay;
-}
-
-/** Return the start of the next interval of size <b>interval</b> (in
- * seconds) after <b>now</b>, plus <b>offset</b>. Midnight always
- * starts a fresh interval, and if the last interval of a day would be
- * truncated to less than half its size, it is rolled into the
- * previous interval. */
-time_t
-dirvote_get_start_of_next_interval(time_t now, int interval, int offset)
-{
-  struct tm tm;
-  time_t midnight_today=0;
-  time_t midnight_tomorrow;
-  time_t next;
-
-  tor_gmtime_r(&now, &tm);
-  tm.tm_hour = 0;
-  tm.tm_min = 0;
-  tm.tm_sec = 0;
-
-  if (tor_timegm(&tm, &midnight_today) < 0) {
-    log_warn(LD_BUG, "Ran into an invalid time when trying to find midnight.");
-  }
-  midnight_tomorrow = midnight_today + (24*60*60);
-
-  next = midnight_today + ((now-midnight_today)/interval + 1)*interval;
-
-  /* Intervals never cross midnight. */
-  if (next > midnight_tomorrow)
-    next = midnight_tomorrow;
-
-  /* If the interval would only last half as long as it's supposed to, then
-   * skip over to the next day. */
-  if (next + interval/2 > midnight_tomorrow)
-    next = midnight_tomorrow;
-
-  next += offset;
-  if (next - interval > now)
-    next -= interval;
-
-  return next;
-}
-
-/* Populate and return a new voting_schedule_t that can be used to schedule
- * voting. The object is allocated on the heap and it's the responsibility of
- * the caller to free it. Can't fail. */
-static voting_schedule_t *
-get_voting_schedule(const or_options_t *options, time_t now, int severity)
-{
-  int interval, vote_delay, dist_delay;
-  time_t start;
-  time_t end;
-  networkstatus_t *consensus;
-  voting_schedule_t *new_voting_schedule;
-
-  new_voting_schedule = tor_malloc_zero(sizeof(voting_schedule_t));
-
-  consensus = networkstatus_get_live_consensus(now);
-
-  if (consensus) {
-    interval = (int)( consensus->fresh_until - consensus->valid_after );
-    vote_delay = consensus->vote_seconds;
-    dist_delay = consensus->dist_seconds;
-  } else {
-    interval = options->TestingV3AuthInitialVotingInterval;
-    vote_delay = options->TestingV3AuthInitialVoteDelay;
-    dist_delay = options->TestingV3AuthInitialDistDelay;
-  }
-
-  tor_assert(interval > 0);
-
-  if (vote_delay + dist_delay > interval/2)
-    vote_delay = dist_delay = interval / 4;
-
-  start = new_voting_schedule->interval_starts =
-    dirvote_get_start_of_next_interval(now,interval,
-                                      options->TestingV3AuthVotingStartOffset);
-  end = dirvote_get_start_of_next_interval(start+1, interval,
-                                      options->TestingV3AuthVotingStartOffset);
-
-  tor_assert(end > start);
-
-  new_voting_schedule->fetch_missing_signatures = start - (dist_delay/2);
-  new_voting_schedule->voting_ends = start - dist_delay;
-  new_voting_schedule->fetch_missing_votes =
-    start - dist_delay - (vote_delay/2);
-  new_voting_schedule->voting_starts = start - dist_delay - vote_delay;
-
-  {
-    char tbuf[ISO_TIME_LEN+1];
-    format_iso_time(tbuf, new_voting_schedule->interval_starts);
-    tor_log(severity, LD_DIR,"Choosing expected valid-after time as %s: "
-            "consensus_set=%d, interval=%d",
-            tbuf, consensus?1:0, interval);
-  }
-
-  return new_voting_schedule;
-}
-
-#define voting_schedule_free(s) \
-  FREE_AND_NULL(voting_schedule_t, voting_schedule_free_, (s))
-
-/** Frees a voting_schedule_t. This should be used instead of the generic
- * tor_free. */
-static void
-voting_schedule_free_(voting_schedule_t *voting_schedule_to_free)
-{
-  if (!voting_schedule_to_free)
-    return;
-  tor_free(voting_schedule_to_free);
-}
-
-static voting_schedule_t voting_schedule;
-
-/* Using the time <b>now</b>, return the next voting valid-after time. */
-time_t
-dirvote_get_next_valid_after_time(void)
-{
-  /* This is a safe guard in order to make sure that the voting schedule
-   * static object is at least initialized. Using this function with a zeroed
-   * voting schedule can lead to bugs. */
-  if (tor_mem_is_zero((const char *) &voting_schedule,
-                      sizeof(voting_schedule))) {
-    dirvote_recalculate_timing(get_options(), time(NULL));
-    voting_schedule.created_on_demand = 1;
-  }
-  return voting_schedule.interval_starts;
-}
-
-/** Set voting_schedule to hold the timing for the next vote we should be
- * doing. All type of tor do that because HS subsystem needs the timing as
- * well to function properly. */
-void
-dirvote_recalculate_timing(const or_options_t *options, time_t now)
-{
-  voting_schedule_t *new_voting_schedule;
-
-  /* get the new voting schedule */
-  new_voting_schedule = get_voting_schedule(options, now, LOG_INFO);
-  tor_assert(new_voting_schedule);
-
-  /* Fill in the global static struct now */
-  memcpy(&voting_schedule, new_voting_schedule, sizeof(voting_schedule));
-  voting_schedule_free(new_voting_schedule);
 }
 
 /** Entry point: Take whatever voting actions are pending as of <b>now</b>. */
@@ -3798,7 +3627,7 @@ dirvote_get_vote(const char *fp, int flags)
 /** Construct and return a new microdescriptor from a routerinfo <b>ri</b>
  * according to <b>consensus_method</b>.
  **/
-microdesc_t *
+STATIC microdesc_t *
 dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 {
   microdesc_t *result = NULL;
@@ -3893,7 +3722,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
  * in a consensus vote document.  Write it into the <b>out_len</b>-byte buffer
  * in <b>out</b>.  Return -1 on failure and the number of characters written
  * on success. */
-ssize_t
+static ssize_t
 dirvote_format_microdesc_vote_line(char *out_buf, size_t out_buf_len,
                                    const microdesc_t *md,
                                    int consensus_method_low,
@@ -4001,50 +3830,653 @@ dirvote_format_all_microdesc_vote_lines(const routerinfo_t *ri, time_t now,
   return result;
 }
 
-/** If <b>vrs</b> has a hash made for the consensus method <b>method</b> with
- * the digest algorithm <b>alg</b>, decode it and copy it into
- * <b>digest256_out</b> and return 0.  Otherwise return -1. */
-int
-vote_routerstatus_find_microdesc_hash(char *digest256_out,
-                                      const vote_routerstatus_t *vrs,
-                                      int method,
-                                      digest_algorithm_t alg)
+/** Parse and extract all SR commits from <b>tokens</b> and place them in
+ *  <b>ns</b>. */
+static void
+extract_shared_random_commits(networkstatus_t *ns, smartlist_t *tokens)
 {
-  /* XXXX only returns the sha256 method. */
-  const vote_microdesc_hash_t *h;
-  char mstr[64];
-  size_t mlen;
-  char dstr[64];
+  smartlist_t *chunks = NULL;
 
-  tor_snprintf(mstr, sizeof(mstr), "%d", method);
-  mlen = strlen(mstr);
-  tor_snprintf(dstr, sizeof(dstr), " %s=",
-               crypto_digest_algorithm_get_name(alg));
+  tor_assert(ns);
+  tor_assert(tokens);
+  /* Commits are only present in a vote. */
+  tor_assert(ns->type == NS_TYPE_VOTE);
 
-  for (h = vrs->microdesc; h; h = h->next) {
-    const char *cp = h->microdesc_hash_line;
-    size_t num_len;
-    /* cp looks like \d+(,\d+)* (digesttype=val )+ .  Let's hunt for mstr in
-     * the first part. */
-    while (1) {
-      num_len = strspn(cp, "1234567890");
-      if (num_len == mlen && fast_memeq(mstr, cp, mlen)) {
-        /* This is the line. */
-        char buf[BASE64_DIGEST256_LEN+1];
-        /* XXXX ignores extraneous stuff if the digest is too long.  This
-         * seems harmless enough, right? */
-        cp = strstr(cp, dstr);
-        if (!cp)
-          return -1;
-        cp += strlen(dstr);
-        strlcpy(buf, cp, sizeof(buf));
-        return digest256_from_base64(digest256_out, buf);
-      }
-      if (num_len == 0 || cp[num_len] != ',')
-        break;
-      cp += num_len + 1;
+  ns->sr_info.commits = smartlist_new();
+
+  smartlist_t *commits = find_all_by_keyword(tokens, K_COMMIT);
+  /* It's normal that a vote might contain no commits even if it participates
+   * in the SR protocol. Don't treat it as an error. */
+  if (commits == NULL) {
+    goto end;
+  }
+
+  /* Parse the commit. We do NO validation of number of arguments or ordering
+   * for forward compatibility, it's the parse commit job to inform us if it's
+   * supported or not. */
+  chunks = smartlist_new();
+  SMARTLIST_FOREACH_BEGIN(commits, directory_token_t *, tok) {
+    /* Extract all arguments and put them in the chunks list. */
+    for (int i = 0; i < tok->n_args; i++) {
+      smartlist_add(chunks, tok->args[i]);
+    }
+    sr_commit_t *commit = sr_parse_commit(chunks);
+    smartlist_clear(chunks);
+    if (commit == NULL) {
+      /* Get voter identity so we can warn that this dirauth vote contains
+       * commit we can't parse. */
+      networkstatus_voter_info_t *voter = smartlist_get(ns->voters, 0);
+      tor_assert(voter);
+      log_warn(LD_DIR, "SR: Unable to parse commit %s from vote of voter %s.",
+               escaped(tok->object_body),
+               hex_str(voter->identity_digest,
+                       sizeof(voter->identity_digest)));
+      /* Commitment couldn't be parsed. Continue onto the next commit because
+       * this one could be unsupported for instance. */
+      continue;
+    }
+    /* Add newly created commit object to the vote. */
+    smartlist_add(ns->sr_info.commits, commit);
+  } SMARTLIST_FOREACH_END(tok);
+
+ end:
+  smartlist_free(chunks);
+  smartlist_free(commits);
+}
+
+/* Using the given directory tokens in tokens, parse the shared random commits
+ * and put them in the given vote document ns.
+ *
+ * This also sets the SR participation flag if present in the vote. */
+void
+dirvote_parse_sr_commits(networkstatus_t *ns, smartlist_t *tokens)
+{
+  /* Does this authority participates in the SR protocol? */
+  directory_token_t *tok = find_opt_by_keyword(tokens, K_SR_FLAG);
+  if (tok) {
+    ns->sr_info.participate = 1;
+    /* Get the SR commitments and reveals from the vote. */
+    extract_shared_random_commits(ns, tokens);
+  }
+}
+
+/* For the given vote, free the shared random commits if any. */
+void
+dirvote_free_commits(networkstatus_t *ns)
+{
+  tor_assert(ns->type == NS_TYPE_VOTE);
+
+  if (ns->sr_info.commits) {
+    SMARTLIST_FOREACH(ns->sr_info.commits, sr_commit_t *, c,
+                      sr_commit_free(c));
+    smartlist_free(ns->sr_info.commits);
+  }
+}
+
+/* The given url is the /tor/status-gove GET directory request. Populates the
+ * items list with strings that we can compress on the fly and dir_items with
+ * cached_dir_t objects that have a precompressed deflated version. */
+void
+dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
+                               smartlist_t *dir_items)
+{
+  int current;
+
+  url += strlen("/tor/status-vote/");
+  current = !strcmpstart(url, "current/");
+  url = strchr(url, '/');
+  tor_assert(url);
+  ++url;
+  if (!strcmp(url, "consensus")) {
+    const char *item;
+    tor_assert(!current); /* we handle current consensus specially above,
+                           * since it wants to be spooled. */
+    if ((item = dirvote_get_pending_consensus(FLAV_NS)))
+      smartlist_add(items, (char*)item);
+  } else if (!current && !strcmp(url, "consensus-signatures")) {
+    /* XXXX the spec says that we should implement
+     * current/consensus-signatures too.  It doesn't seem to be needed,
+     * though. */
+    const char *item;
+    if ((item=dirvote_get_pending_detached_signatures()))
+      smartlist_add(items, (char*)item);
+  } else if (!strcmp(url, "authority")) {
+    const cached_dir_t *d;
+    int flags = DGV_BY_ID |
+      (current ? DGV_INCLUDE_PREVIOUS : DGV_INCLUDE_PENDING);
+    if ((d=dirvote_get_vote(NULL, flags)))
+      smartlist_add(dir_items, (cached_dir_t*)d);
+  } else {
+    const cached_dir_t *d;
+    smartlist_t *fps = smartlist_new();
+    int flags;
+    if (!strcmpstart(url, "d/")) {
+      url += 2;
+      flags = DGV_INCLUDE_PENDING | DGV_INCLUDE_PREVIOUS;
+    } else {
+      flags = DGV_BY_ID |
+        (current ? DGV_INCLUDE_PREVIOUS : DGV_INCLUDE_PENDING);
+    }
+    dir_split_resource_into_fingerprints(url, fps, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
+    SMARTLIST_FOREACH(fps, char *, fp, {
+                      if ((d = dirvote_get_vote(fp, flags)))
+                      smartlist_add(dir_items, (cached_dir_t*)d);
+                      tor_free(fp);
+                      });
+    smartlist_free(fps);
+  }
+}
+
+/** Get the best estimate of a router's bandwidth for dirauth purposes,
+ * preferring measured to advertised values if available. */
+static uint32_t
+dirserv_get_bandwidth_for_router_kb(const routerinfo_t *ri)
+{
+  uint32_t bw_kb = 0;
+  /*
+   * Yeah, measured bandwidths in measured_bw_line_t are (implicitly
+   * signed) longs and the ones router_get_advertised_bandwidth() returns
+   * are uint32_t.
+   */
+  long mbw_kb = 0;
+
+  if (ri) {
+    /*
+     * * First try to see if we have a measured bandwidth; don't bother with
+     * as_of_out here, on the theory that a stale measured bandwidth is still
+     * better to trust than an advertised one.
+     */
+    if (dirserv_query_measured_bw_cache_kb(ri->cache_info.identity_digest,
+                                           &mbw_kb, NULL)) {
+      /* Got one! */
+      bw_kb = (uint32_t)mbw_kb;
+    } else {
+      /* If not, fall back to advertised */
+      bw_kb = router_get_advertised_bandwidth(ri) / 1000;
     }
   }
-  return -1;
+
+  return bw_kb;
+}
+
+/** Helper for sorting: compares two routerinfos first by address, and then by
+ * descending order of "usefulness".  (An authority is more useful than a
+ * non-authority; a running router is more useful than a non-running router;
+ * and a router with more bandwidth is more useful than one with less.)
+ **/
+static int
+compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
+{
+  routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
+  int first_is_auth, second_is_auth;
+  uint32_t bw_kb_first, bw_kb_second;
+  const node_t *node_first, *node_second;
+  int first_is_running, second_is_running;
+
+  /* we return -1 if first should appear before second... that is,
+   * if first is a better router. */
+  if (first->addr < second->addr)
+    return -1;
+  else if (first->addr > second->addr)
+    return 1;
+
+  /* Potentially, this next bit could cause k n lg n memeq calls.  But in
+   * reality, we will almost never get here, since addresses will usually be
+   * different. */
+
+  first_is_auth =
+    router_digest_is_trusted_dir(first->cache_info.identity_digest);
+  second_is_auth =
+    router_digest_is_trusted_dir(second->cache_info.identity_digest);
+
+  if (first_is_auth && !second_is_auth)
+    return -1;
+  else if (!first_is_auth && second_is_auth)
+    return 1;
+
+  node_first = node_get_by_id(first->cache_info.identity_digest);
+  node_second = node_get_by_id(second->cache_info.identity_digest);
+  first_is_running = node_first && node_first->is_running;
+  second_is_running = node_second && node_second->is_running;
+
+  if (first_is_running && !second_is_running)
+    return -1;
+  else if (!first_is_running && second_is_running)
+    return 1;
+
+  bw_kb_first = dirserv_get_bandwidth_for_router_kb(first);
+  bw_kb_second = dirserv_get_bandwidth_for_router_kb(second);
+
+  if (bw_kb_first > bw_kb_second)
+    return -1;
+  else if (bw_kb_first < bw_kb_second)
+    return 1;
+
+  /* They're equal! Compare by identity digest, so there's a
+   * deterministic order and we avoid flapping. */
+  return fast_memcmp(first->cache_info.identity_digest,
+                     second->cache_info.identity_digest,
+                     DIGEST_LEN);
+}
+
+/** Given a list of routerinfo_t in <b>routers</b>, return a new digestmap_t
+ * whose keys are the identity digests of those routers that we're going to
+ * exclude for Sybil-like appearance. */
+static digestmap_t *
+get_possible_sybil_list(const smartlist_t *routers)
+{
+  const or_options_t *options = get_options();
+  digestmap_t *omit_as_sybil;
+  smartlist_t *routers_by_ip = smartlist_new();
+  uint32_t last_addr;
+  int addr_count;
+  /* Allow at most this number of Tor servers on a single IP address, ... */
+  int max_with_same_addr = options->AuthDirMaxServersPerAddr;
+  if (max_with_same_addr <= 0)
+    max_with_same_addr = INT_MAX;
+
+  smartlist_add_all(routers_by_ip, routers);
+  smartlist_sort(routers_by_ip, compare_routerinfo_by_ip_and_bw_);
+  omit_as_sybil = digestmap_new();
+
+  last_addr = 0;
+  addr_count = 0;
+  SMARTLIST_FOREACH_BEGIN(routers_by_ip, routerinfo_t *, ri) {
+    if (last_addr != ri->addr) {
+      last_addr = ri->addr;
+      addr_count = 1;
+    } else if (++addr_count > max_with_same_addr) {
+      digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+    }
+  } SMARTLIST_FOREACH_END(ri);
+
+  smartlist_free(routers_by_ip);
+  return omit_as_sybil;
+}
+
+/** Given a platform string as in a routerinfo_t (possibly null), return a
+ * newly allocated version string for a networkstatus document, or NULL if the
+ * platform doesn't give a Tor version. */
+static char *
+version_from_platform(const char *platform)
+{
+  if (platform && !strcmpstart(platform, "Tor ")) {
+    const char *eos = find_whitespace(platform+4);
+    if (eos && !strcmpstart(eos, " (r")) {
+      /* XXXX Unify this logic with the other version extraction
+       * logic in routerparse.c. */
+      eos = find_whitespace(eos+1);
+    }
+    if (eos) {
+      return tor_strndup(platform, eos-platform);
+    }
+  }
+  return NULL;
+}
+
+/** Given a (possibly empty) list of config_line_t, each line of which contains
+ * a list of comma-separated version numbers surrounded by optional space,
+ * allocate and return a new string containing the version numbers, in order,
+ * separated by commas.  Used to generate Recommended(Client|Server)?Versions
+ */
+static char *
+format_versions_list(config_line_t *ln)
+{
+  smartlist_t *versions;
+  char *result;
+  versions = smartlist_new();
+  for ( ; ln; ln = ln->next) {
+    smartlist_split_string(versions, ln->value, ",",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  }
+  sort_version_list(versions, 1);
+  result = smartlist_join_strings(versions,",",0,NULL);
+  SMARTLIST_FOREACH(versions,char *,s,tor_free(s));
+  smartlist_free(versions);
+  return result;
+}
+
+/** If there are entries in <b>routers</b> with exactly the same ed25519 keys,
+ * remove the older one.  If they are exactly the same age, remove the one
+ * with the greater descriptor digest. May alter the order of the list. */
+static void
+routers_make_ed_keys_unique(smartlist_t *routers)
+{
+  routerinfo_t *ri2;
+  digest256map_t *by_ed_key = digest256map_new();
+
+  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
+    ri->omit_from_vote = 0;
+    if (ri->cache_info.signing_key_cert == NULL)
+      continue; /* No ed key */
+    const uint8_t *pk = ri->cache_info.signing_key_cert->signing_key.pubkey;
+    if ((ri2 = digest256map_get(by_ed_key, pk))) {
+      /* Duplicate; must omit one.  Set the omit_from_vote flag in whichever
+       * one has the earlier published_on. */
+      const time_t ri_pub = ri->cache_info.published_on;
+      const time_t ri2_pub = ri2->cache_info.published_on;
+      if (ri2_pub < ri_pub ||
+          (ri2_pub == ri_pub &&
+           fast_memcmp(ri->cache_info.signed_descriptor_digest,
+                       ri2->cache_info.signed_descriptor_digest,DIGEST_LEN)<0)) {
+        digest256map_set(by_ed_key, pk, ri);
+        ri2->omit_from_vote = 1;
+      } else {
+        ri->omit_from_vote = 1;
+      }
+    } else {
+      /* Add to map */
+      digest256map_set(by_ed_key, pk, ri);
+    }
+  } SMARTLIST_FOREACH_END(ri);
+
+  digest256map_free(by_ed_key, NULL);
+
+  /* Now remove every router where the omit_from_vote flag got set. */
+  SMARTLIST_FOREACH_BEGIN(routers, const routerinfo_t *, ri) {
+    if (ri->omit_from_vote) {
+      SMARTLIST_DEL_CURRENT(routers, ri);
+    }
+  } SMARTLIST_FOREACH_END(ri);
+}
+
+/** Routerstatus <b>rs</b> is part of a group of routers that are on
+ * too narrow an IP-space. Clear out its flags since we don't want it be used
+ * because of its Sybil-like appearance.
+ *
+ * Leave its BadExit flag alone though, since if we think it's a bad exit,
+ * we want to vote that way in case all the other authorities are voting
+ * Running and Exit.
+ */
+static void
+clear_status_flags_on_sybil(routerstatus_t *rs)
+{
+  rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
+    rs->is_flagged_running = rs->is_named = rs->is_valid =
+    rs->is_hs_dir = rs->is_v2_dir = rs->is_possible_guard = 0;
+  /* FFFF we might want some mechanism to check later on if we
+   * missed zeroing any flags: it's easy to add a new flag but
+   * forget to add it to this clause. */
+}
+
+/** Return a new networkstatus_t* containing our current opinion. (For v3
+ * authorities) */
+networkstatus_t *
+dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
+                                        authority_cert_t *cert)
+{
+  const or_options_t *options = get_options();
+  networkstatus_t *v3_out = NULL;
+  uint32_t addr;
+  char *hostname = NULL, *client_versions = NULL, *server_versions = NULL;
+  const char *contact;
+  smartlist_t *routers, *routerstatuses;
+  char identity_digest[DIGEST_LEN];
+  char signing_key_digest[DIGEST_LEN];
+  int listbadexits = options->AuthDirListBadExits;
+  routerlist_t *rl = router_get_routerlist();
+  time_t now = time(NULL);
+  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
+  networkstatus_voter_info_t *voter = NULL;
+  vote_timing_t timing;
+  digestmap_t *omit_as_sybil = NULL;
+  const int vote_on_reachability = running_long_enough_to_decide_unreachable();
+  smartlist_t *microdescriptors = NULL;
+
+  tor_assert(private_key);
+  tor_assert(cert);
+
+  if (crypto_pk_get_digest(private_key, signing_key_digest)<0) {
+    log_err(LD_BUG, "Error computing signing key digest");
+    return NULL;
+  }
+  if (crypto_pk_get_digest(cert->identity_key, identity_digest)<0) {
+    log_err(LD_BUG, "Error computing identity key digest");
+    return NULL;
+  }
+  if (resolve_my_address(LOG_WARN, options, &addr, NULL, &hostname)<0) {
+    log_warn(LD_NET, "Couldn't resolve my hostname");
+    return NULL;
+  }
+  if (!hostname || !strchr(hostname, '.')) {
+    tor_free(hostname);
+    hostname = tor_dup_ip(addr);
+  }
+
+  if (options->VersioningAuthoritativeDir) {
+    client_versions = format_versions_list(options->RecommendedClientVersions);
+    server_versions = format_versions_list(options->RecommendedServerVersions);
+  }
+
+  contact = get_options()->ContactInfo;
+  if (!contact)
+    contact = "(none)";
+
+  /*
+   * Do this so dirserv_compute_performance_thresholds() and
+   * set_routerstatus_from_routerinfo() see up-to-date bandwidth info.
+   */
+  if (options->V3BandwidthsFile) {
+    dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL);
+  } else {
+    /*
+     * No bandwidths file; clear the measured bandwidth cache in case we had
+     * one last time around.
+     */
+    if (dirserv_get_measured_bw_cache_size() > 0) {
+      dirserv_clear_measured_bw_cache();
+    }
+  }
+
+  /* precompute this part, since we need it to decide what "stable"
+   * means. */
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
+                    dirserv_set_router_is_running(ri, now);
+                    });
+
+  routers = smartlist_new();
+  smartlist_add_all(routers, rl->routers);
+  routers_make_ed_keys_unique(routers);
+  /* After this point, don't use rl->routers; use 'routers' instead. */
+  routers_sort_by_identity(routers);
+  omit_as_sybil = get_possible_sybil_list(routers);
+
+  DIGESTMAP_FOREACH(omit_as_sybil, sybil_id, void *, ignore) {
+    (void) ignore;
+    rep_hist_make_router_pessimal(sybil_id, now);
+  } DIGESTMAP_FOREACH_END;
+
+  /* Count how many have measured bandwidths so we know how to assign flags;
+   * this must come before dirserv_compute_performance_thresholds() */
+  dirserv_count_measured_bws(routers);
+
+  dirserv_compute_performance_thresholds(omit_as_sybil);
+
+  routerstatuses = smartlist_new();
+  microdescriptors = smartlist_new();
+
+  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
+    if (ri->cache_info.published_on >= cutoff) {
+      routerstatus_t *rs;
+      vote_routerstatus_t *vrs;
+      node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
+      if (!node)
+        continue;
+
+      vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+      rs = &vrs->status;
+      set_routerstatus_from_routerinfo(rs, node, ri, now,
+                                       listbadexits);
+
+      if (ri->cache_info.signing_key_cert) {
+        memcpy(vrs->ed25519_id,
+               ri->cache_info.signing_key_cert->signing_key.pubkey,
+               ED25519_PUBKEY_LEN);
+      }
+
+      if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
+        clear_status_flags_on_sybil(rs);
+
+      if (!vote_on_reachability)
+        rs->is_flagged_running = 0;
+
+      vrs->version = version_from_platform(ri->platform);
+      if (ri->protocol_list) {
+        vrs->protocols = tor_strdup(ri->protocol_list);
+      } else {
+        vrs->protocols = tor_strdup(
+                                    protover_compute_for_old_tor(vrs->version));
+      }
+      vrs->microdesc = dirvote_format_all_microdesc_vote_lines(ri, now,
+                                                               microdescriptors);
+
+      smartlist_add(routerstatuses, vrs);
+    }
+  } SMARTLIST_FOREACH_END(ri);
+
+  {
+    smartlist_t *added =
+      microdescs_add_list_to_cache(get_microdesc_cache(),
+                                   microdescriptors, SAVED_NOWHERE, 0);
+    smartlist_free(added);
+    smartlist_free(microdescriptors);
+  }
+
+  smartlist_free(routers);
+  digestmap_free(omit_as_sybil, NULL);
+
+  /* Apply guardfraction information to routerstatuses. */
+  if (options->GuardfractionFile) {
+    dirserv_read_guardfraction_file(options->GuardfractionFile,
+                                    routerstatuses);
+  }
+
+  /* This pass through applies the measured bw lines to the routerstatuses */
+  if (options->V3BandwidthsFile) {
+    dirserv_read_measured_bandwidths(options->V3BandwidthsFile,
+                                     routerstatuses);
+  } else {
+    /*
+     * No bandwidths file; clear the measured bandwidth cache in case we had
+     * one last time around.
+     */
+    if (dirserv_get_measured_bw_cache_size() > 0) {
+      dirserv_clear_measured_bw_cache();
+    }
+  }
+
+  v3_out = tor_malloc_zero(sizeof(networkstatus_t));
+
+  v3_out->type = NS_TYPE_VOTE;
+  dirvote_get_preferred_voting_intervals(&timing);
+  v3_out->published = now;
+  {
+    char tbuf[ISO_TIME_LEN+1];
+    networkstatus_t *current_consensus =
+      networkstatus_get_live_consensus(now);
+    long last_consensus_interval; /* only used to pick a valid_after */
+    if (current_consensus)
+      last_consensus_interval = current_consensus->fresh_until -
+        current_consensus->valid_after;
+    else
+      last_consensus_interval = options->TestingV3AuthInitialVotingInterval;
+    v3_out->valid_after =
+      dirvote_get_start_of_next_interval(now, (int)last_consensus_interval,
+                                         options->TestingV3AuthVotingStartOffset);
+    format_iso_time(tbuf, v3_out->valid_after);
+    log_notice(LD_DIR,"Choosing valid-after time in vote as %s: "
+               "consensus_set=%d, last_interval=%d",
+               tbuf, current_consensus?1:0, (int)last_consensus_interval);
+  }
+  v3_out->fresh_until = v3_out->valid_after + timing.vote_interval;
+  v3_out->valid_until = v3_out->valid_after +
+    (timing.vote_interval * timing.n_intervals_valid);
+  v3_out->vote_seconds = timing.vote_delay;
+  v3_out->dist_seconds = timing.dist_delay;
+  tor_assert(v3_out->vote_seconds > 0);
+  tor_assert(v3_out->dist_seconds > 0);
+  tor_assert(timing.n_intervals_valid > 0);
+
+  v3_out->client_versions = client_versions;
+  v3_out->server_versions = server_versions;
+
+  /* These are hardwired, to avoid disaster. */
+  v3_out->recommended_relay_protocols =
+    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
+  v3_out->recommended_client_protocols =
+    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
+  v3_out->required_client_protocols =
+    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
+  v3_out->required_relay_protocols =
+    tor_strdup("Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+               "Link=3-4 LinkAuth=1 Microdesc=1 Relay=1-2");
+
+  /* We are not allowed to vote to require anything we don't have. */
+  tor_assert(protover_all_supported(v3_out->required_relay_protocols, NULL));
+  tor_assert(protover_all_supported(v3_out->required_client_protocols, NULL));
+
+  /* We should not recommend anything we don't have. */
+  tor_assert_nonfatal(protover_all_supported(
+                                             v3_out->recommended_relay_protocols, NULL));
+  tor_assert_nonfatal(protover_all_supported(
+                                             v3_out->recommended_client_protocols, NULL));
+
+  v3_out->package_lines = smartlist_new();
+  {
+    config_line_t *cl;
+    for (cl = get_options()->RecommendedPackages; cl; cl = cl->next) {
+      if (validate_recommended_package_line(cl->value))
+        smartlist_add_strdup(v3_out->package_lines, cl->value);
+    }
+  }
+
+  v3_out->known_flags = smartlist_new();
+  smartlist_split_string(v3_out->known_flags,
+                         "Authority Exit Fast Guard Stable V2Dir Valid HSDir",
+                         0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  if (vote_on_reachability)
+    smartlist_add_strdup(v3_out->known_flags, "Running");
+  if (listbadexits)
+    smartlist_add_strdup(v3_out->known_flags, "BadExit");
+  smartlist_sort_strings(v3_out->known_flags);
+
+  if (options->ConsensusParams) {
+    v3_out->net_params = smartlist_new();
+    smartlist_split_string(v3_out->net_params,
+                           options->ConsensusParams, NULL, 0, 0);
+    smartlist_sort_strings(v3_out->net_params);
+  }
+
+  voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
+  voter->nickname = tor_strdup(options->Nickname);
+  memcpy(voter->identity_digest, identity_digest, DIGEST_LEN);
+  voter->sigs = smartlist_new();
+  voter->address = hostname;
+  voter->addr = addr;
+  voter->dir_port = router_get_advertised_dir_port(options, 0);
+  voter->or_port = router_get_advertised_or_port(options);
+  voter->contact = tor_strdup(contact);
+  if (options->V3AuthUseLegacyKey) {
+    authority_cert_t *c = get_my_v3_legacy_cert();
+    if (c) {
+      if (crypto_pk_get_digest(c->identity_key, voter->legacy_id_digest)) {
+        log_warn(LD_BUG, "Unable to compute digest of legacy v3 identity key");
+        memset(voter->legacy_id_digest, 0, DIGEST_LEN);
+      }
+    }
+  }
+
+  v3_out->voters = smartlist_new();
+  smartlist_add(v3_out->voters, voter);
+  v3_out->cert = dirvote_authority_cert_dup(cert);
+  v3_out->routerstatus_list = routerstatuses;
+  /* Note: networkstatus_digest is unset; it won't get set until we actually
+   * format the vote. */
+
+  return v3_out;
 }
 
