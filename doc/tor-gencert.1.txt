@@ -73,8 +73,7 @@ OPTIONS
 
 **-a** __address__:__port__::
     If provided, advertise the address:port combination as this authority's
-    preferred directory port in its certificate. If the address is a hostname,
-    the hostname is resolved to an IP before it's published.
+    preferred directory port in its certificate.
 
 BUGS
 ----
