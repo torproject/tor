@@ -51,6 +51,9 @@ typedef struct hs_service_intro_point_t {
    * the base object legacy flag is set. */
   crypto_pk_t *legacy_key;
 
+  /* Legacy key SHA1 public key digest. */
+   uint8_t legacy_key_digest[DIGEST_LEN];
+
   /* Amount of INTRODUCE2 cell accepted from this intro point. */
   uint64_t introduce2_count;
 
