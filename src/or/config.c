@@ -1,3 +1,4 @@
+
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
@@ -2329,8 +2330,10 @@ options_act(const or_options_t *old_options)
 
   /* We may need to reschedule some directory stuff if our status changed. */
   if (old_options) {
-    if (authdir_mode_v3(options) && !authdir_mode_v3(old_options))
+    if (authdir_mode_v3(options) && !authdir_mode_v3(old_options)) {
       dirvote_recalculate_timing(options, time(NULL));
+      reschedule_dirvote(options);
+    }
     if (!bool_eq(directory_fetches_dir_info_early(options),
                  directory_fetches_dir_info_early(old_options)) ||
         !bool_eq(directory_fetches_dir_info_later(options),
