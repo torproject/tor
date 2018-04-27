@@ -2633,7 +2633,9 @@ choose_good_middle_server(uint8_t purpose,
   /** If a hidden service circuit wants a specific middle node, pin it. */
   if (middle_node_must_be_vanguard(options, purpose, cur_len)) {
     log_debug(LD_GENERAL, "Picking a sticky node (cur_len = %d)", cur_len);
-    return pick_vanguard_middle_node(options, flags, cur_len, excluded);
+    choice = pick_vanguard_middle_node(options, flags, cur_len, excluded);
+    smartlist_free(excluded);
+    return choice;
   }
 
   choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
