@@ -61,11 +61,15 @@ ENABLE_GCC_WARNING(redundant-decls)
     X509_get0_notBefore(cert)
 #define X509_get_notAfter_const(cert) \
     X509_get0_notAfter(cert)
+#ifndef X509_get_notBefore
 #define X509_get_notBefore(cert) \
     X509_getm_notBefore(cert)
+#endif
+#ifndef X509_get_notAfter
 #define X509_get_notAfter(cert) \
     X509_getm_notAfter(cert)
-#else
+#endif
+#else /* ! OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0) */
 #define X509_get_notBefore_const(cert) \
   ((const ASN1_TIME*) X509_get_notBefore((X509 *)cert))
 #define X509_get_notAfter_const(cert) \
