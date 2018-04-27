@@ -17,6 +17,7 @@ char *get_stored_bindaddr_for_server_transport(const char *transport);
 int or_state_load(void);
 int or_state_loaded(void);
 void or_state_free_all(void);
+void or_state_mark_dirty(or_state_t *state, time_t when);
 
 #ifdef STATEFILE_PRIVATE
 STATIC config_line_t *get_transport_in_state_by_name(const char *transport);

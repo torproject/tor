@@ -85,8 +85,8 @@
 #include "routerlist.h"
 #include "ht.h"
 #include "channelpadding.h"
-
 #include "connection_or.h"
+#include "statefile.h"
 
 static void bw_arrays_init(void);
 static void predicted_ports_alloc(void);

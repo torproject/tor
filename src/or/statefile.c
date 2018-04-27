@@ -472,7 +472,7 @@ or_state_save(time_t now)
 
   tor_assert(global_state);
 
-  if (global_state->next_write > now)
+  if (global_state->next_write >= now)
     return 0;
 
   /* Call everything else that might dirty the state even more, in order
@@ -678,6 +678,16 @@ save_transport_to_state(const char *transport,
 
  done:
   tor_free(transport_addrport);
+}
+
+/** Change the next_write time of <b>state</b> to <b>when</b>, unless the
+ * state is already scheduled to be written to disk earlier than <b>when</b>.
+ */
+void
+or_state_mark_dirty(or_state_t *state, time_t when)
+{
+  if (state->next_write > when)
+    state->next_write = when;
 }
 
 STATIC void
