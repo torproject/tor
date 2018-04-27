@@ -72,10 +72,7 @@ static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
 static int circuit_deliver_create_cell(circuit_t *circ,
                                        const create_cell_t *create_cell,
                                        int relayed);
-static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit,
-                                 int is_hs_v3_rp_circuit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
-static int onion_extend_cpath(origin_circuit_t *circ);
 STATIC int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
@@ -2285,7 +2282,7 @@ warn_if_last_router_excluded(origin_circuit_t *circ,
  * be used as an HS v3 rendezvous point.
  *
  * Return 0 if ok, -1 if circuit should be closed. */
-static int
+STATIC int
 onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
                       int is_hs_v3_rp_circuit)
 {
@@ -2719,7 +2716,7 @@ onion_next_hop_in_cpath(crypt_path_t *cpath)
  * Return 1 if the path is complete, 0 if we successfully added a hop,
  * and -1 on error.
  */
-static int
+STATIC int
 onion_extend_cpath(origin_circuit_t *circ)
 {
   uint8_t purpose = circ->base_.purpose;

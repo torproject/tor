@@ -4,6 +4,7 @@
 #include "orconfig.h"
 
 #define CIRCUITLIST_PRIVATE
+#define CIRCUITBUILD_PRIVATE
 #define STATEFILE_PRIVATE
 #define ENTRYNODES_PRIVATE
 #define ROUTERLIST_PRIVATE
@@ -14,6 +15,7 @@
 
 #include "bridges.h"
 #include "circuitlist.h"
+#include "circuitbuild.h"
 #include "config.h"
 #include "confparse.h"
 #include "directory.h"
@@ -74,6 +76,17 @@ bfn_mock_node_get_by_id(const char *id)
   return NULL;
 }
 
+/* Helper function to free a test node. */
+static void
+test_node_free(node_t *n)
+{
+  tor_free(n->rs);
+  tor_free(n->md->onion_curve25519_pkey);
+  short_policy_free(n->md->exit_policy);
+  tor_free(n->md);
+  tor_free(n);
+}
+
 /* Unittest cleanup function: Cleanup the fake network. */
 static int
 big_fake_network_cleanup(const struct testcase_t *testcase, void *ptr)
@@ -83,9 +96,7 @@ big_fake_network_cleanup(const struct testcase_t *testcase, void *ptr)
 
   if (big_fake_net_nodes) {
     SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n, {
-      tor_free(n->rs);
-      tor_free(n->md);
-      tor_free(n);
+      test_node_free(n);
     });
     smartlist_free(big_fake_net_nodes);
   }
@@ -113,8 +124,17 @@ big_fake_network_setup(const struct testcase_t *testcase)
 
   big_fake_net_nodes = smartlist_new();
   for (i = 0; i < N_NODES; ++i) {
+    curve25519_secret_key_t curve25519_secret_key;
+
     node_t *n = tor_malloc_zero(sizeof(node_t));
     n->md = tor_malloc_zero(sizeof(microdesc_t));
+
+    /* Generate curve25519 key for this node */
+    n->md->onion_curve25519_pkey =
+      tor_malloc_zero(sizeof(curve25519_public_key_t));
+    curve25519_secret_key_generate(&curve25519_secret_key, 0);
+    curve25519_public_key_generate(n->md->onion_curve25519_pkey,
+                                   &curve25519_secret_key);
 
     crypto_rand(n->identity, sizeof(n->identity));
     n->rs = tor_malloc_zero(sizeof(routerstatus_t));
@@ -135,8 +155,8 @@ big_fake_network_setup(const struct testcase_t *testcase)
     {
       char nickname_binary[8];
       crypto_rand(nickname_binary, sizeof(nickname_binary));
-      base64_encode(n->rs->nickname, sizeof(n->rs->nickname),
-                    nickname_binary, sizeof(nickname_binary), 0);
+      base32_encode(n->rs->nickname, sizeof(n->rs->nickname),
+                    nickname_binary, sizeof(nickname_binary));
     }
 
     /* Call half of the nodes a possible guard. */
@@ -144,6 +164,12 @@ big_fake_network_setup(const struct testcase_t *testcase)
       n->is_possible_guard = 1;
       n->rs->guardfraction_percentage = 100;
       n->rs->has_guardfraction = 1;
+      n->rs->is_possible_guard = 1;
+    }
+
+    /* Make some of these nodes a possible exit */
+    if (i % 7 == 0) {
+      n->md->exit_policy = parse_short_policy("accept 443");
     }
 
     smartlist_add(big_fake_net_nodes, n);
@@ -1075,9 +1101,7 @@ test_entry_guard_expand_sample_small_net(void *arg)
   /* Fun corner case: not enough guards to make up our whole sample size. */
   SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n, {
     if (n_sl_idx >= 15) {
-      tor_free(n->rs);
-      tor_free(n->md);
-      tor_free(n);
+      test_node_free(n);
       SMARTLIST_DEL_CURRENT(big_fake_net_nodes, n);
     } else {
       n->rs->addr = 0; // make the filter reject this.
@@ -1171,9 +1195,7 @@ test_entry_guard_update_from_consensus_status(void *arg)
     entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 5);
     node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
     smartlist_remove(big_fake_net_nodes, n);
-    tor_free(n->rs);
-    tor_free(n->md);
-    tor_free(n);
+    test_node_free(n);
   }
   update_approx_time(start + 300);
   sampled_guards_update_from_consensus(gs);
@@ -2787,6 +2809,161 @@ test_entry_guard_outdated_dirserver_exclusion(void *arg)
   }
 }
 
+/** Test helper to extend the <b>oc</b> circuit path <b>n</b> times and then
+ *  ensure that the circuit is now complete. */
+static void
+helper_extend_circuit_path_n_times(origin_circuit_t *oc, int n)
+{
+  int retval;
+  int i;
+
+  /* Extend path n times */
+  for (i = 0 ; i < n ; i++) {
+    retval = onion_extend_cpath(oc);
+    tt_int_op(retval, OP_EQ, 0);
+    tt_int_op(circuit_get_cpath_len(oc), OP_EQ, i+1);
+  }
+
+  /* Now do it one last time and see that circ is complete */
+  retval = onion_extend_cpath(oc);
+  tt_int_op(retval, OP_EQ, 1);
+
+ done:
+  ;
+}
+
+/** Test for basic Tor path selection. Makes sure we build 3-hop circuits. */
+static void
+test_entry_guard_basic_path_selection(void *arg)
+{
+  (void) arg;
+
+  int retval;
+
+  /* Enable entry guards */
+  or_options_t *options = get_options_mutable();
+  options->UseEntryGuards = 1;
+
+  /* disables /16 check since all nodes have the same addr... */
+  options->EnforceDistinctSubnets = 0;
+
+  /* Create our circuit */
+  circuit_t *circ = dummy_origin_circuit_new(30);
+  origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
+  oc->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
+
+  /* First pick the exit and pin it on the build_state */
+  retval = onion_pick_cpath_exit(oc, NULL, 0);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Extend path 3 times. First we pick guard, then middle, then exit. */
+  helper_extend_circuit_path_n_times(oc, 3);
+
+ done:
+  circuit_free_(circ);
+}
+
+/** Test helper to build an L2 and L3 vanguard list. The vanguard lists
+ *  produced should be completely disjoint. */
+static void
+helper_setup_vanguard_list(or_options_t *options)
+{
+  int i = 0;
+
+  /* Add some nodes to the vanguard L2 list */
+  options->HSLayer2Nodes = routerset_new();
+  for (i = 0; i < 10 ; i += 2) {
+    node_t *vanguard_node = smartlist_get(big_fake_net_nodes, i);
+    tt_assert(vanguard_node->is_possible_guard);
+    routerset_parse(options->HSLayer2Nodes, vanguard_node->rs->nickname, "l2");
+  }
+  /* also add some nodes to vanguard L3 list
+   * (L2 list and L3 list should be disjoint for this test to work) */
+  options->HSLayer3Nodes = routerset_new();
+  for (i = 10; i < 20 ; i += 2) {
+    node_t *vanguard_node = smartlist_get(big_fake_net_nodes, i);
+    tt_assert(vanguard_node->is_possible_guard);
+    routerset_parse(options->HSLayer3Nodes, vanguard_node->rs->nickname, "l3");
+  }
+
+ done:
+  ;
+}
+
+/** Test to ensure that vanguard path selection works properly.  Ensures that
+ *  default vanguard circuits are 4 hops, and that path selection works
+ *  correctly given the vanguard settings. */
+static void
+test_entry_guard_vanguard_path_selection(void *arg)
+{
+  (void) arg;
+
+  int retval;
+
+  /* Enable entry guards */
+  or_options_t *options = get_options_mutable();
+  options->UseEntryGuards = 1;
+
+  /* XXX disables /16 check */
+  options->EnforceDistinctSubnets = 0;
+
+  /* Setup our vanguard list */
+  helper_setup_vanguard_list(options);
+
+  /* Create our circuit */
+  circuit_t *circ = dummy_origin_circuit_new(30);
+  origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
+  oc->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
+  oc->build_state->is_internal = 1;
+
+  /* Switch circuit purpose to vanguards */
+  circ->purpose = CIRCUIT_PURPOSE_HS_VANGUARDS;
+
+  /* First pick the exit and pin it on the build_state */
+  tt_int_op(oc->build_state->desired_path_len, OP_EQ, 0);
+  retval = onion_pick_cpath_exit(oc, NULL, 0);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Ensure that vanguards make 4-hop circuits by default */
+  tt_int_op(oc->build_state->desired_path_len, OP_EQ, 4);
+
+  /* Extend path as many times as needed to have complete circ. */
+  helper_extend_circuit_path_n_times(oc, oc->build_state->desired_path_len);
+
+  /* Test that the cpath linked list is set correctly. */
+  crypt_path_t *l1_node = oc->cpath;
+  crypt_path_t *l2_node = l1_node->next;
+  crypt_path_t *l3_node = l2_node->next;
+  crypt_path_t *l4_node = l3_node->next;
+  crypt_path_t *l1_node_again = l4_node->next;
+  tt_ptr_op(l1_node, OP_EQ, l1_node_again);
+
+  /* Test that L2 is indeed HSLayer2Node */
+  retval = routerset_contains_extendinfo(options->HSLayer2Nodes,
+                                         l2_node->extend_info);
+  tt_int_op(retval, OP_EQ, 4);
+  /* test that L3 node is _not_ contained in HSLayer2Node */
+  retval = routerset_contains_extendinfo(options->HSLayer2Nodes,
+                                         l3_node->extend_info);
+  tt_int_op(retval, OP_LT, 4);
+
+  /* Test that L3 is indeed HSLayer3Node */
+  retval = routerset_contains_extendinfo(options->HSLayer3Nodes,
+                                         l3_node->extend_info);
+  tt_int_op(retval, OP_EQ, 4);
+  /* test that L2 node is _not_ contained in HSLayer3Node */
+  retval = routerset_contains_extendinfo(options->HSLayer3Nodes,
+                                         l2_node->extend_info);
+  tt_int_op(retval, OP_LT, 4);
+
+  /* TODO: Test that L1 can be the same as exit. To test this we need start
+     enforcing EnforceDistinctSubnets again, which means that we need to give
+     each test node a different address which currently breaks some tests. */
+
+ done:
+  circuit_free_(circ);
+}
+
 static const struct testcase_setup_t big_fake_network = {
   big_fake_network_setup, big_fake_network_cleanup
 };
@@ -2848,6 +3025,8 @@ struct testcase_t entrynodes_tests[] = {
   BFN_TEST(select_and_cancel),
   BFN_TEST(drop_guards),
   BFN_TEST(outdated_dirserver_exclusion),
+  BFN_TEST(basic_path_selection),
+  BFN_TEST(vanguard_path_selection),
 
   UPGRADE_TEST(upgrade_a_circuit, "c1-done c2-done"),
   UPGRADE_TEST(upgrade_blocked_by_live_primary_guards, "c1-done c2-done"),
