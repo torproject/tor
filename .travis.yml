@@ -118,6 +118,12 @@ matrix:
     - compiler: clang
       sudo: required
       env: RUST_OPTIONS=""
+    ## Build with modules disabled.
+    - compiler: gcc
+      env: MODULES_OPTIONS="--disable-module-dirauth"
+    - compiler: clang
+      sudo: required
+      env: MODULES_OPTIONS="--disable-module-dirauth"
 
 before_install:
   ## If we're on OSX, homebrew usually needs to updated first
@@ -150,7 +156,7 @@ install:
 
 script:
   - ./autogen.sh
-  - ./configure $RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening
+  - ./configure $RUST_OPTIONS $COVERAGE_OPTIONS $MODULES_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$DISTCHECK" == "" ]]; then make check; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening"; fi
