@@ -1436,6 +1436,7 @@ STATIC periodic_event_item_t periodic_events[] = {
  * can access them by name.  We also keep them inside periodic_events[]
  * so that we can implement "reset all timers" in a reasonable way. */
 static periodic_event_item_t *check_descriptor_event=NULL;
+static periodic_event_item_t *dirvote_event=NULL;
 static periodic_event_item_t *fetch_networkstatus_event=NULL;
 static periodic_event_item_t *launch_descriptor_fetches_event=NULL;
 static periodic_event_item_t *check_dns_honesty_event=NULL;
@@ -1535,6 +1536,7 @@ initialize_periodic_events(void)
   STMT_BEGIN name ## _event = find_periodic_event( #name ); STMT_END
 
   NAMED_CALLBACK(check_descriptor);
+  NAMED_CALLBACK(dirvote);
   NAMED_CALLBACK(fetch_networkstatus);
   NAMED_CALLBACK(launch_descriptor_fetches);
   NAMED_CALLBACK(check_dns_honesty);
@@ -1998,6 +2000,16 @@ dirvote_callback(time_t now, const or_options_t *options)
     return 1;
   } else {
     return next - now;
+  }
+}
+
+/** Reschedule the directory-authority voting event.  Run this whenever the
+ * schedule has changed. */
+void
+reschedule_dirvote(const or_options_t *options)
+{
+  if (periodic_events_initialized && authdir_mode_v3(options)) {
+    periodic_event_reschedule(dirvote_event);
   }
 }
 

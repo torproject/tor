@@ -2001,6 +2001,7 @@ networkstatus_set_current_consensus(const char *consensus,
      * object so we can use the timings in there needed by some subsystems
      * such as hidden service and shared random. */
     dirvote_recalculate_timing(options, now);
+    reschedule_dirvote(options);
 
     nodelist_set_consensus(c);
 
