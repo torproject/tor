@@ -253,6 +253,62 @@ test_pe_get_roles(void *arg)
   hs_free_all();
 }
 
+static void
+test_pe_hs_service(void *arg)
+{
+  hs_service_t service, *to_remove = NULL;
+
+  (void) arg;
+
+  hs_init();
+  /* We need to put tor in hibernation live state so the events requiring
+   * network gets enabled. */
+  consider_hibernation(time(NULL));
+  /* Initialize the events so we can enable them */
+  initialize_periodic_events();
+
+  /* Hack: We'll set a dumb fn() of each events so they don't get called when
+   * dispatching them. We just want to test the state of the callbacks, not
+   * the whole code path. */
+  for (int i = 0; periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &periodic_events[i];
+    item->fn = dumb_event_fn;
+  }
+
+  /* This should trigger a rescan of the list and enable the HS service
+   * events. */
+  register_dummy_hidden_service(&service);
+  /* Note down the reference because we need to remove this service from the
+   * global list before the hs_free_all() call so it doesn't try to free
+   * memory on the stack. Furthermore, we can't remove it now else it will
+   * trigger a rescan of the event disabling the HS service event. */
+  to_remove = &service;
+
+  for (int i = 0; periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &periodic_events[i];
+    if (item->roles & PERIODIC_EVENT_ROLE_HS_SERVICE) {
+      tt_int_op(periodic_event_is_enabled(item), OP_EQ, 1);
+    }
+  }
+  to_remove = NULL;
+
+  /* Remove the service from the global map, it should trigger a rescan and
+   * disable the HS service events. */
+  remove_service(get_hs_service_map(), &service);
+  for (int i = 0; periodic_events[i].name; ++i) {
+    periodic_event_item_t *item = &periodic_events[i];
+    if (item->roles & PERIODIC_EVENT_ROLE_HS_SERVICE) {
+      tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
+    }
+  }
+
+ done:
+  if (to_remove) {
+    remove_service(get_hs_service_map(), to_remove);
+  }
+  hs_free_all();
+}
+
 #define PE_TEST(name) \
   { #name, test_pe_## name , TT_FORK, NULL, NULL }
 
@@ -260,6 +316,7 @@ struct testcase_t periodic_event_tests[] = {
   PE_TEST(initialize),
   PE_TEST(launch),
   PE_TEST(get_roles),
+  PE_TEST(hs_service),
 
   END_OF_TESTCASES
 };
