@@ -1552,6 +1552,22 @@ test_dir_measured_bw_kb(void *arg)
  done:
   return;
 }
+static void
+test_dir_dirserv_read_measured_bandwidths(void *arg)
+{
+  (void)arg;
+  /* TODO: timestamp should be written to the file from current time
+  or the whole time should be generated with current time,
+  otherwise tests will fail considering time stale. */
+  const char v100[] = SRCDIR "/src/test/V3BandwidthsFilev100";
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(v100, NULL));
+  const char v110[] = SRCDIR "/src/test/V3BandwidthsFilev110";
+  tt_int_op(-1, OP_EQ, dirserv_read_measured_bandwidths(v110, NULL));
+  const char v110n[] = SRCDIR "/src/test/V3BandwidthsFilev110n";
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(v110n, NULL));
+ done:
+  return;
+}
 
 #define MBWC_INIT_TIME 1000
 
@@ -5849,6 +5865,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(clip_unmeasured_bw_kb_alt),
   DIR(fmt_control_ns, 0),
   DIR(dirserv_set_routerstatus_testing, 0),
+  DIR(dirserv_read_measured_bandwidths, 0),
   DIR(http_handling, 0),
   DIR(purpose_needs_anonymity_returns_true_for_bridges, 0),
   DIR(purpose_needs_anonymity_returns_false_for_own_bridge_desc, 0),
@@ -5885,4 +5902,3 @@ struct testcase_t dir_tests[] = {
   DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   END_OF_TESTCASES
 };
-
