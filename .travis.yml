@@ -106,6 +106,8 @@ matrix:
       env: DISTCHECK="yes" RUST_OPTIONS=""
     - compiler: gcc
       env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+    - compiler: gcc
+      env: MODULES_OPTIONS="--disable-module-dirauth"
     ## The "sudo: required" forces non-containerized builds, working
     ## around a Travis CI environment issue: clang LeakAnalyzer fails
     ## because it requires ptrace and the containerized environment no
@@ -118,6 +120,9 @@ matrix:
     - compiler: clang
       sudo: required
       env: RUST_OPTIONS=""
+    - compiler: clang
+      sudo: required
+      env: MODULES_OPTIONS="--disable-module-dirauth"
 
 before_install:
   ## If we're on OSX, homebrew usually needs to updated first
@@ -148,7 +153,7 @@ install:
 
 script:
   - ./autogen.sh
-  - ./configure $RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening
+  - ./configure $RUST_OPTIONS $COVERAGE_OPTIONS $MODULES_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$DISTCHECK" == "" ]]; then make check; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening"; fi
