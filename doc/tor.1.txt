@@ -1347,6 +1347,13 @@ The following options are useful only for clients (that is, if
     number from the guard-n-primary-guards-to-use consensus parameter, and
     default to 1 if the consensus parameter isn't set. (Default: 0)
 
+[[NumPrimaryGuards]] **NumPrimaryGuards** __NUM__::
+    If UseEntryGuards is set to 1, we will try to pick NUM routers for our
+    primary guard list, which is the set of routers we strongly prefer when
+    connecting to the Tor network. If NUM is 0, we try to learn the number from
+    the guard-n-primary-guards consensus parameter, and default to 3 if the
+    consensus parameter isn't set. (Default: 0)
+
 [[NumDirectoryGuards]] **NumDirectoryGuards** __NUM__::
     If UseEntryGuards is set to 1, we try to make sure we have at least NUM
     routers to use as directory guards. If this option is set to 0, use the

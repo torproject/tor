@@ -1,0 +1,3 @@
+  o Minor feature (entry guards):
+    - Introduce torrc option NumPrimaryGuards for controlling the number of
+      primary guards. Closes ticket 25843.

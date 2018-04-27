@@ -457,6 +457,7 @@ static config_var_t option_vars_[] = {
   V(NumCPUs,                     UINT,     "0"),
   V(NumDirectoryGuards,          UINT,     "0"),
   V(NumEntryGuards,              UINT,     "0"),
+  V(NumPrimaryGuards,            UINT,     "0"),
   V(OfflineMasterKey,            BOOL,     "0"),
   OBSOLETE("ORListenAddress"),
   VPORT(ORPort),
@@ -3773,6 +3774,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "hidden services on this Tor instance.  Your hidden services "
              "will be very easy to locate using a well-known attack -- see "
              "http://freehaven.net/anonbib/#hs-attack06 for details.");
+  }
+
+  if (options->NumPrimaryGuards && options->NumEntryGuards &&
+      options->NumEntryGuards > options->NumPrimaryGuards) {
+    REJECT("NumEntryGuards must not be greater than NumPrimaryGuards.");
   }
 
   if (options->EntryNodes &&
