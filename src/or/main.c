@@ -150,7 +150,6 @@ static int run_main_loop_until_done(void);
 static void process_signal(int sig);
 static void shutdown_did_not_work_callback(evutil_socket_t fd, short event,
                                            void *arg) ATTR_NORETURN;
-static void rescan_periodic_events(const or_options_t *options);
 
 /********* START VARIABLES **********/
 
@@ -1362,54 +1361,65 @@ CALLBACK(write_stats_file);
 #undef CALLBACK
 
 /* Now we declare an array of periodic_event_item_t for each periodic event */
-#define CALLBACK(name, r) PERIODIC_EVENT(name, r)
+#define CALLBACK(name, r, f) PERIODIC_EVENT(name, r, f)
 
 STATIC periodic_event_item_t periodic_events[] = {
   /* Everyone needs to run those. */
-  CALLBACK(add_entropy, PERIODIC_EVENT_ROLE_ALL),
-  CALLBACK(check_expired_networkstatus, PERIODIC_EVENT_ROLE_ALL),
-  CALLBACK(clean_caches, PERIODIC_EVENT_ROLE_ALL),
-  CALLBACK(fetch_networkstatus, PERIODIC_EVENT_ROLE_ALL),
-  CALLBACK(heartbeat, PERIODIC_EVENT_ROLE_ALL),
-  CALLBACK(launch_descriptor_fetches, PERIODIC_EVENT_ROLE_ALL),
-  CALLBACK(reset_padding_counts, PERIODIC_EVENT_ROLE_ALL),
-  CALLBACK(retry_listeners, PERIODIC_EVENT_ROLE_ALL),
-  CALLBACK(rotate_x509_certificate, PERIODIC_EVENT_ROLE_ALL),
-  CALLBACK(write_stats_file, PERIODIC_EVENT_ROLE_ALL),
+  CALLBACK(add_entropy, PERIODIC_EVENT_ROLE_ALL, 0),
+  CALLBACK(check_expired_networkstatus, PERIODIC_EVENT_ROLE_ALL, 0),
+  CALLBACK(clean_caches, PERIODIC_EVENT_ROLE_ALL, 0),
+  CALLBACK(fetch_networkstatus, PERIODIC_EVENT_ROLE_ALL,
+           PERIODIC_EVENT_FLAG_NEED_NET),
+  CALLBACK(heartbeat, PERIODIC_EVENT_ROLE_ALL, 0),
+  CALLBACK(launch_descriptor_fetches, PERIODIC_EVENT_ROLE_ALL,
+           PERIODIC_EVENT_FLAG_NEED_NET),
+  CALLBACK(reset_padding_counts, PERIODIC_EVENT_ROLE_ALL, 0),
+  CALLBACK(retry_listeners, PERIODIC_EVENT_ROLE_ALL,
+           PERIODIC_EVENT_FLAG_NEED_NET),
+  CALLBACK(rotate_x509_certificate, PERIODIC_EVENT_ROLE_ALL, 0),
+  CALLBACK(write_stats_file, PERIODIC_EVENT_ROLE_ALL, 0),
 
   /* Routers (bridge and relay) only. */
-  CALLBACK(check_descriptor, PERIODIC_EVENT_ROLE_ROUTER),
-  CALLBACK(check_ed_keys, PERIODIC_EVENT_ROLE_ROUTER),
-  CALLBACK(check_for_reachability_bw, PERIODIC_EVENT_ROLE_ROUTER),
-  CALLBACK(check_onion_keys_expiry_time, PERIODIC_EVENT_ROLE_ROUTER),
-  CALLBACK(clean_consdiffmgr, PERIODIC_EVENT_ROLE_ROUTER),
-  CALLBACK(expire_old_ciruits_serverside, PERIODIC_EVENT_ROLE_ROUTER),
-  CALLBACK(retry_dns, PERIODIC_EVENT_ROLE_ROUTER),
-  CALLBACK(rotate_onion_key, PERIODIC_EVENT_ROLE_ROUTER),
+  CALLBACK(check_descriptor, PERIODIC_EVENT_ROLE_ROUTER,
+           PERIODIC_EVENT_FLAG_NEED_NET),
+  CALLBACK(check_ed_keys, PERIODIC_EVENT_ROLE_ROUTER, 0),
+  CALLBACK(check_for_reachability_bw, PERIODIC_EVENT_ROLE_ROUTER,
+           PERIODIC_EVENT_FLAG_NEED_NET),
+  CALLBACK(check_onion_keys_expiry_time, PERIODIC_EVENT_ROLE_ROUTER, 0),
+  CALLBACK(clean_consdiffmgr, PERIODIC_EVENT_ROLE_ROUTER, 0),
+  CALLBACK(expire_old_ciruits_serverside, PERIODIC_EVENT_ROLE_ROUTER,
+           PERIODIC_EVENT_FLAG_NEED_NET),
+  CALLBACK(retry_dns, PERIODIC_EVENT_ROLE_ROUTER, 0),
+  CALLBACK(rotate_onion_key, PERIODIC_EVENT_ROLE_ROUTER, 0),
 
   /* Authorities (bridge and directory) only. */
-  CALLBACK(downrate_stability, PERIODIC_EVENT_ROLE_AUTHORITIES),
-  CALLBACK(launch_reachability_tests, PERIODIC_EVENT_ROLE_AUTHORITIES),
-  CALLBACK(save_stability, PERIODIC_EVENT_ROLE_AUTHORITIES),
+  CALLBACK(downrate_stability, PERIODIC_EVENT_ROLE_AUTHORITIES, 0),
+  CALLBACK(launch_reachability_tests, PERIODIC_EVENT_ROLE_AUTHORITIES,
+           PERIODIC_EVENT_FLAG_NEED_NET),
+  CALLBACK(save_stability, PERIODIC_EVENT_ROLE_AUTHORITIES, 0),
 
   /* Directory authority only. */
-  CALLBACK(check_authority_cert, PERIODIC_EVENT_ROLE_DIRAUTH),
+  CALLBACK(check_authority_cert, PERIODIC_EVENT_ROLE_DIRAUTH, 0),
 
   /* Relay only. */
-  CALLBACK(check_canonical_channels, PERIODIC_EVENT_ROLE_RELAY),
-  CALLBACK(check_dns_honesty, PERIODIC_EVENT_ROLE_RELAY),
+  CALLBACK(check_canonical_channels, PERIODIC_EVENT_ROLE_RELAY,
+           PERIODIC_EVENT_FLAG_NEED_NET),
+  CALLBACK(check_dns_honesty, PERIODIC_EVENT_ROLE_RELAY,
+           PERIODIC_EVENT_FLAG_NEED_NET),
 
   /* Hidden Service service only. */
-  CALLBACK(hs_service, PERIODIC_EVENT_ROLE_HS_SERVICE),
+  CALLBACK(hs_service, PERIODIC_EVENT_ROLE_HS_SERVICE,
+           PERIODIC_EVENT_FLAG_NEED_NET),
 
   /* Bridge only. */
-  CALLBACK(record_bridge_stats, PERIODIC_EVENT_ROLE_BRIDGE),
+  CALLBACK(record_bridge_stats, PERIODIC_EVENT_ROLE_BRIDGE, 0),
 
   /* Client only. */
-  CALLBACK(rend_cache_failure_clean, PERIODIC_EVENT_ROLE_CLIENT),
+  CALLBACK(rend_cache_failure_clean, PERIODIC_EVENT_ROLE_CLIENT, 0),
 
   /* Bridge Authority only. */
-  CALLBACK(write_bridge_ns, PERIODIC_EVENT_ROLE_BRIDGEAUTH),
+  CALLBACK(write_bridge_ns, PERIODIC_EVENT_ROLE_BRIDGEAUTH, 0),
+
   END_OF_PERIODIC_EVENTS
 };
 #undef CALLBACK
@@ -1538,7 +1548,7 @@ teardown_periodic_events(void)
 
 /** Do a pass at all our periodic events, disable those we don't need anymore
  * and enable those we need now using the given options. */
-static void
+void
 rescan_periodic_events(const or_options_t *options)
 {
   tor_assert(options);
@@ -1547,6 +1557,12 @@ rescan_periodic_events(const or_options_t *options)
 
   for (int i = 0; periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &periodic_events[i];
+
+    /* Handle the event flags. */
+    if (net_is_disabled() &&
+        (item->flags & PERIODIC_EVENT_FLAG_NEED_NET)) {
+      continue;
+    }
 
     /* Enable the event if needed. It is safe to enable an event that was
      * already enabled. Same goes for disabling it. */
