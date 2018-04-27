@@ -186,6 +186,8 @@ static uint64_t stats_n_main_loop_idle = 0;
 static time_t time_of_last_signewnym = 0;
 /** Is there a signewnym request we're currently waiting to handle? */
 static int signewnym_is_pending = 0;
+/** Mainloop event for the deferred signewnym call. */
+static mainloop_event_t *handle_deferred_signewnym_ev = NULL;
 /** How many times have we called newnym? */
 static unsigned newnym_epoch = 0;
 
@@ -1314,6 +1316,16 @@ signewnym_impl(time_t now)
   control_event_signal(SIGNEWNYM);
 }
 
+/** Callback: run a deferred signewnym. */
+static void
+handle_deferred_signewnym_cb(mainloop_event_t *event, void *arg)
+{
+  (void)event;
+  (void)arg;
+  log_info(LD_CONTROL, "Honoring delayed NEWNYM request");
+  signewnym_impl(time(NULL));
+}
+
 /** Return the number of times that signewnym has been called. */
 unsigned
 get_signewnym_epoch(void)
@@ -1676,14 +1688,6 @@ run_scheduled_events(time_t now)
    * should hibernate; or if it's time to wake up from hibernation.
    */
   consider_hibernation(now);
-
-  /* 0b. If we've deferred a signewnym, make sure it gets handled
-   * eventually. */
-  if (signewnym_is_pending &&
-      time_of_last_signewnym + MAX_SIGNEWNYM_RATE <= now) {
-    log_info(LD_CONTROL, "Honoring delayed NEWNYM request");
-    signewnym_impl(now);
-  }
 
   /* 0c. If we've deferred log messages for the controller, handle them now */
   flush_pending_log_callbacks();
@@ -2999,10 +3003,20 @@ process_signal(int sig)
     case SIGNEWNYM: {
       time_t now = time(NULL);
       if (time_of_last_signewnym + MAX_SIGNEWNYM_RATE > now) {
-        signewnym_is_pending = 1;
+        const time_t delay_sec =
+          time_of_last_signewnym + MAX_SIGNEWNYM_RATE - now;
+        if (! signewnym_is_pending) {
+          signewnym_is_pending = 1;
+          if (!handle_deferred_signewnym_ev) {
+            handle_deferred_signewnym_ev =
+              mainloop_event_postloop_new(handle_deferred_signewnym_cb, NULL);
+          }
+          const struct timeval delay_tv = { delay_sec, 0 };
+          mainloop_event_schedule(handle_deferred_signewnym_ev, &delay_tv);
+        }
         log_notice(LD_CONTROL,
-            "Rate limiting NEWNYM request: delaying by %d second(s)",
-            (int)(MAX_SIGNEWNYM_RATE+time_of_last_signewnym-now));
+                   "Rate limiting NEWNYM request: delaying by %d second(s)",
+                   (int)(delay_sec));
       } else {
         signewnym_impl(now);
       }
@@ -3540,6 +3554,7 @@ tor_free_all(int postfork)
   mainloop_event_free(directory_all_unreachable_cb_event);
   mainloop_event_free(schedule_active_linked_connections_event);
   mainloop_event_free(postloop_cleanup_ev);
+  mainloop_event_free(handle_deferred_signewnym_ev);
 
 #ifdef HAVE_SYSTEMD_209
   periodic_timer_free(systemd_watchdog_timer);
