@@ -40,6 +40,8 @@
 #include <inttypes.h>
 #endif
 
+#include <stdbool.h>
+
 #if (SIZEOF_INT8_T != 0)
 #define HAVE_INT8_T
 #endif
