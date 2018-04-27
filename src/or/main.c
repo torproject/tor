@@ -1340,6 +1340,7 @@ CALLBACK(check_for_reachability_bw);
 CALLBACK(check_onion_keys_expiry_time);
 CALLBACK(clean_caches);
 CALLBACK(clean_consdiffmgr);
+CALLBACK(dirvote);
 CALLBACK(downrate_stability);
 CALLBACK(expire_old_ciruits_serverside);
 CALLBACK(fetch_networkstatus);
@@ -1400,6 +1401,7 @@ STATIC periodic_event_item_t periodic_events[] = {
 
   /* Directory authority only. */
   CALLBACK(check_authority_cert, PERIODIC_EVENT_ROLE_DIRAUTH, 0),
+  CALLBACK(dirvote, PERIODIC_EVENT_ROLE_DIRAUTH, PERIODIC_EVENT_FLAG_NEED_NET),
 
   /* Relay only. */
   CALLBACK(check_canonical_channels, PERIODIC_EVENT_ROLE_RELAY,
@@ -1701,10 +1703,6 @@ run_scheduled_events(time_t now)
     accounting_run_housekeeping(now);
   }
 
-  if (authdir_mode_v3(options)) {
-    dirvote_act(options, now);
-  }
-
   /* 3a. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.
    *    We do this before step 4, so it can try building more if
@@ -1958,6 +1956,29 @@ check_authority_cert_callback(time_t now, const or_options_t *options)
   v3_authority_check_key_expiry();
 #define CHECK_V3_CERTIFICATE_INTERVAL (5*60)
   return CHECK_V3_CERTIFICATE_INTERVAL;
+}
+
+/**
+ * Scheduled callback: Run directory-authority voting functionality.
+ *
+ * The schedule is a bit complicated here, so dirvote_act() manages the
+ * schedule itself.
+ **/
+static int
+dirvote_callback(time_t now, const or_options_t *options)
+{
+  time_t next = TIME_MAX;
+  if (authdir_mode_v3(options)) {
+    next = dirvote_act(options, now);
+  }
+  if (BUG(next == TIME_MAX)) {
+    return 3600;
+  }
+  if (BUG(next <= now)) {
+    return 1;
+  } else {
+    return next - now;
+  }
 }
 
 /**
