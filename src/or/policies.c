@@ -825,9 +825,8 @@ fascist_firewall_choose_address(const tor_addr_port_t *a,
  * If pref_only, only choose preferred addresses. In either case, choose
  * a preferred address before an address that's not preferred.
  * If both addresses could be chosen (they are both preferred or both allowed)
- * choose IPv6 if pref_ipv6 is true, otherwise choose IPv4.
- * If neither address is chosen, return 0, else return 1. */
-static int
+ * choose IPv6 if pref_ipv6 is true, otherwise choose IPv4. */
+static void
 fascist_firewall_choose_address_base(const tor_addr_t *ipv4_addr,
                                      uint16_t ipv4_orport,
                                      uint16_t ipv4_dirport,
@@ -868,15 +867,12 @@ fascist_firewall_choose_address_base(const tor_addr_t *ipv4_addr,
   if (result) {
     tor_addr_copy(&ap->addr, &result->addr);
     ap->port = result->port;
-    return 1;
-  } else {
-    return 0;
   }
 }
 
 /** Like fascist_firewall_choose_address_base(), but takes a host-order IPv4
  * address as the first parameter. */
-static int
+static void
 fascist_firewall_choose_address_ipv4h(uint32_t ipv4h_addr,
                                       uint16_t ipv4_orport,
                                       uint16_t ipv4_dirport,
@@ -895,11 +891,11 @@ fascist_firewall_choose_address_ipv4h(uint32_t ipv4h_addr,
   tor_addr_make_null(&ap->addr, AF_UNSPEC);
   ap->port = 0;
 
-  return fascist_firewall_choose_address_base(&ipv4_addr, ipv4_orport,
-                                              ipv4_dirport, ipv6_addr,
-                                              ipv6_orport, ipv6_dirport,
-                                              fw_connection, pref_only,
-                                              pref_ipv6, ap);
+  fascist_firewall_choose_address_base(&ipv4_addr, ipv4_orport,
+                                       ipv4_dirport, ipv6_addr,
+                                       ipv6_orport, ipv6_dirport,
+                                       fw_connection, pref_only,
+                                       pref_ipv6, ap);
 }
 
 /* Some microdescriptor consensus methods have no IPv6 addresses in rs: they
@@ -950,26 +946,25 @@ node_awaiting_ipv6(const or_options_t* options, const node_t *node)
  * This should only happen when there's no valid consensus, and rs doesn't
  * correspond to a bridge client's bridge.
  */
-int
+void
 fascist_firewall_choose_address_rs(const routerstatus_t *rs,
                                    firewall_connection_t fw_connection,
                                    int pref_only, tor_addr_port_t* ap)
 {
-  if (!rs) {
-    return 0;
-  }
-
   tor_assert(ap);
 
   tor_addr_make_null(&ap->addr, AF_UNSPEC);
   ap->port = 0;
 
+  if (!rs) {
+    return;
+  }
+
   const or_options_t *options = get_options();
   const node_t *node = node_get_by_id(rs->identity_digest);
 
   if (node && !node_awaiting_ipv6(options, node)) {
-    return fascist_firewall_choose_address_node(node, fw_connection, pref_only,
-                                                ap);
+    fascist_firewall_choose_address_node(node, fw_connection, pref_only, ap);
   } else {
     /* There's no node-specific IPv6 preference, so use the generic IPv6
      * preference instead. */
@@ -979,37 +974,31 @@ fascist_firewall_choose_address_rs(const routerstatus_t *rs,
 
     /* Assume IPv4 and IPv6 DirPorts are the same.
      * Assume the IPv6 OR and Dir addresses are the same. */
-    return fascist_firewall_choose_address_ipv4h(rs->addr,
-                                                 rs->or_port,
-                                                 rs->dir_port,
-                                                 &rs->ipv6_addr,
-                                                 rs->ipv6_orport,
-                                                 rs->dir_port,
-                                                 fw_connection,
-                                                 pref_only,
-                                                 pref_ipv6,
-                                                 ap);
+    fascist_firewall_choose_address_ipv4h(rs->addr, rs->or_port, rs->dir_port,
+                                          &rs->ipv6_addr, rs->ipv6_orport,
+                                          rs->dir_port, fw_connection,
+                                          pref_only, pref_ipv6, ap);
   }
 }
 
 /** Like fascist_firewall_choose_address_base(), but takes <b>node</b>, and
  * looks up the node's IPv6 preference rather than taking an argument
  * for pref_ipv6. */
-int
+void
 fascist_firewall_choose_address_node(const node_t *node,
                                      firewall_connection_t fw_connection,
                                      int pref_only, tor_addr_port_t *ap)
 {
-  if (!node) {
-    return 0;
-  }
-
-  node_assert_ok(node);
   tor_assert(ap);
 
   tor_addr_make_null(&ap->addr, AF_UNSPEC);
   ap->port = 0;
 
+  if (!node) {
+    return;
+  }
+
+  node_assert_ok(node);
   /* Calling fascist_firewall_choose_address_node() when the node is missing
    * IPv6 information breaks IPv6-only clients.
    * If the node is a hard-coded fallback directory or authority, call
@@ -1019,7 +1008,7 @@ fascist_firewall_choose_address_node(const node_t *node,
    * descriptor (routerinfo), or is one of our configured bridges before
    * calling this function. */
   if (BUG(node_awaiting_ipv6(get_options(), node))) {
-    return 0;
+    return;
   }
 
   const int pref_ipv6_node = (fw_connection == FIREWALL_OR_CONNECTION
@@ -1037,41 +1026,36 @@ fascist_firewall_choose_address_node(const node_t *node,
   node_get_pref_ipv6_dirport(node, &ipv6_dir_ap);
 
   /* Assume the IPv6 OR and Dir addresses are the same. */
-  return fascist_firewall_choose_address_base(&ipv4_or_ap.addr,
-                                              ipv4_or_ap.port,
-                                              ipv4_dir_ap.port,
-                                              &ipv6_or_ap.addr,
-                                              ipv6_or_ap.port,
-                                              ipv6_dir_ap.port,
-                                              fw_connection,
-                                              pref_only,
-                                              pref_ipv6_node,
-                                              ap);
+  fascist_firewall_choose_address_base(&ipv4_or_ap.addr, ipv4_or_ap.port,
+                                       ipv4_dir_ap.port, &ipv6_or_ap.addr,
+                                       ipv6_or_ap.port, ipv6_dir_ap.port,
+                                       fw_connection, pref_only,
+                                       pref_ipv6_node, ap);
 }
 
 /** Like fascist_firewall_choose_address_rs(), but takes <b>ds</b>. */
-int
+void
 fascist_firewall_choose_address_dir_server(const dir_server_t *ds,
                                            firewall_connection_t fw_connection,
                                            int pref_only,
                                            tor_addr_port_t *ap)
 {
-  if (!ds) {
-    return 0;
-  }
-
   tor_assert(ap);
 
   tor_addr_make_null(&ap->addr, AF_UNSPEC);
   ap->port = 0;
+
+  if (!ds) {
+    return;
+  }
 
   /* A dir_server_t always has a fake_status. As long as it has the same
    * addresses/ports in both fake_status and dir_server_t, this works fine.
    * (See #17867.)
    * This function relies on fascist_firewall_choose_address_rs looking up the
    * node if it can, because that will get the latest info for the relay. */
-  return fascist_firewall_choose_address_rs(&ds->fake_status, fw_connection,
-                                            pref_only, ap);
+  fascist_firewall_choose_address_rs(&ds->fake_status, fw_connection,
+                                     pref_only, ap);
 }
 
 /** Return 1 if <b>addr</b> is permitted to connect to our dir port,
