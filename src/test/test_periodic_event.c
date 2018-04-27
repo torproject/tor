@@ -69,7 +69,7 @@ test_pe_initialize(void *arg)
 static void
 test_pe_launch(void *arg)
 {
-  hs_service_t service;
+  hs_service_t service, *to_remove = NULL;
   or_options_t *options;
 
   (void) arg;
@@ -152,8 +152,11 @@ test_pe_launch(void *arg)
   options->V3AuthoritativeDir = 1; options->BridgeAuthoritativeDir = 1;
   register_dummy_hidden_service(&service);
   periodic_events_on_new_options(options);
-  /* Remove it now so the hs_free_all() doesn't try to free stack memory. */
-  remove_service(get_hs_service_map(), &service);
+  /* Note down the reference because we need to remove this service from the
+   * global list before the hs_free_all() call so it doesn't try to free
+   * memory on the stack. Furthermore, we can't remove it now else it will
+   * trigger a rescan of the event disabling the HS service event. */
+  to_remove = &service;
 
   for (int i = 0; periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &periodic_events[i];
@@ -161,6 +164,9 @@ test_pe_launch(void *arg)
   }
 
  done:
+  if (to_remove) {
+    remove_service(get_hs_service_map(), to_remove);
+  }
   hs_free_all();
 }
 

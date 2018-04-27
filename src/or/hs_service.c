@@ -80,6 +80,7 @@ static smartlist_t *hs_service_staging_list;
  *  reupload if needed */
 static int consider_republishing_hs_descriptors = 0;
 
+/* Static declaration. */
 static void set_descriptor_revision_counter(hs_descriptor_t *hs_desc);
 static void move_descriptors(hs_service_t *src, hs_service_t *dst);
 
@@ -152,6 +153,12 @@ register_service(hs_service_ht *map, hs_service_t *service)
   }
   /* Taking ownership of the object at this point. */
   HT_INSERT(hs_service_ht, map, service);
+
+  /* If we just modified the global map, we notify. */
+  if (map == hs_service_map) {
+    hs_service_map_has_changed();
+  }
+
   return 0;
 }
 
@@ -177,6 +184,11 @@ remove_service(hs_service_ht *map, hs_service_t *service)
     log_warn(LD_BUG, "Could not find service in the global map "
                      "while removing service %s",
              escaped(service->config.directory_path));
+  }
+
+  /* If we just modified the global map, we notify. */
+  if (map == hs_service_map) {
+    hs_service_map_has_changed();
   }
 }
 
@@ -916,6 +928,11 @@ register_all_services(void)
   smartlist_clear(hs_service_staging_list);
   service_free_all();
   hs_service_map = new_service_map;
+  /* We've just register services into the new map and now we've replaced the
+   * global map with it so we have to notify that the change happened. When
+   * registering a service, the notify is only triggered if the destination
+   * map is the global map for which in here it was not. */
+  hs_service_map_has_changed();
 }
 
 /* Write the onion address of a given service to the given filename fname_ in
@@ -2935,6 +2952,17 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* This is called everytime the service map (v2 or v3) changes that is if an
+ * element is added or removed. */
+void
+hs_service_map_has_changed(void)
+{
+  /* If we now have services where previously we had not, we need to enable
+   * the HS service main loop event. If we changed to having no services, we
+   * need to disable the event. */
+  rescan_periodic_events(get_options());
+}
 
 /* Upload an encoded descriptor in encoded_desc of the given version. This
  * descriptor is for the service identity_pk and blinded_pk used to setup the

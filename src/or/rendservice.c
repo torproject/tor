@@ -348,6 +348,13 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
   /* The service passed all the checks */
   tor_assert(s_list);
   smartlist_add(s_list, service);
+
+  /* Notify that our global service list has changed only if this new service
+   * went into our global list. If not, when we move service from the staging
+   * list to the new list, a notify is triggered. */
+  if (s_list == rend_service_list) {
+    hs_service_map_has_changed();
+  }
   return 0;
 }
 
@@ -609,6 +616,8 @@ rend_service_prune_list_impl_(void)
     circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
   }
   smartlist_free(surviving_services);
+  /* Notify that our global service list has changed. */
+  hs_service_map_has_changed();
 }
 
 /* Try to prune our main service list using the temporary one that we just
@@ -958,6 +967,8 @@ rend_service_del_ephemeral(const char *service_id)
     }
   } SMARTLIST_FOREACH_END(circ);
   smartlist_remove(rend_service_list, s);
+  /* Notify that we just removed a service from our global list. */
+  hs_service_map_has_changed();
   rend_service_free(s);
 
   log_debug(LD_CONFIG, "Removed ephemeral Onion Service: %s", service_id);
