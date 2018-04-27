@@ -1553,6 +1553,13 @@ rescan_periodic_events(const or_options_t *options)
 {
   tor_assert(options);
 
+  /* Avoid scanning the event list if we haven't initialized it yet. This is
+   * particularly useful for unit tests in order to avoid initializing main
+   * loop events everytime. */
+  if (!periodic_events_initialized) {
+    return;
+  }
+
   int roles = get_my_roles(options);
 
   for (int i = 0; periodic_events[i].name; ++i) {
