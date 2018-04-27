@@ -106,6 +106,8 @@ matrix:
       env: DISTCHECK="yes" RUST_OPTIONS=""
     - compiler: gcc
       env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+    - compiler: gcc
+      env: MODULES_OPTIONS="--disable-module-dirauth"
     ## The "sudo: required" forces non-containerized builds, working
     ## around a Travis CI environment issue: clang LeakAnalyzer fails
     ## because it requires ptrace and the containerized environment no
@@ -118,9 +120,6 @@ matrix:
     - compiler: clang
       sudo: required
       env: RUST_OPTIONS=""
-    ## Build with modules disabled.
-    - compiler: gcc
-      env: MODULES_OPTIONS="--disable-module-dirauth"
     - compiler: clang
       sudo: required
       env: MODULES_OPTIONS="--disable-module-dirauth"
