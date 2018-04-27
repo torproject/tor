@@ -37,6 +37,7 @@
 #include "control.h"
 #include "entrynodes.h"
 #include "hibernate.h"
+#include "main.h"
 #include "rephist.h"
 #include "router.h"
 #include "sandbox.h"
@@ -472,7 +473,7 @@ or_state_save(time_t now)
 
   tor_assert(global_state);
 
-  if (global_state->next_write >= now)
+  if (global_state->next_write > now)
     return 0;
 
   /* Call everything else that might dirty the state even more, in order
@@ -686,8 +687,10 @@ save_transport_to_state(const char *transport,
 void
 or_state_mark_dirty(or_state_t *state, time_t when)
 {
-  if (state->next_write > when)
+  if (state->next_write > when) {
     state->next_write = when;
+    reschedule_or_state_save();
+  }
 }
 
 STATIC void
