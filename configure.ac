@@ -234,6 +234,9 @@ dnl ---
 dnl Tor modules options. These options are namespaced with --disable-module-XXX
 dnl ---
 
+dnl All our modules.
+m4_define(MODULES, dirauth)
+
 dnl Directory Authority module.
 AC_ARG_ENABLE([module-dirauth],
               AS_HELP_STRING([--disable-module-dirauth],
@@ -242,6 +245,15 @@ AC_ARG_ENABLE([module-dirauth],
               AC_DEFINE([HAVE_MODULE_DIRAUTH], [1],
                         [Compile with Directory Authority feature support]))
 AM_CONDITIONAL(BUILD_MODULE_DIRAUTH, [test "x$enable_module_dirauth" != "xno"])
+
+dnl Helper variables.
+TOR_MODULES_ALL_ENABLED=
+AC_DEFUN([ADD_MODULE], [
+    MODULE=m4_toupper($1)
+    TOR_MODULES_ALL_ENABLED="${TOR_MODULES_ALL_ENABLED} -DHAVE_MODULE_${MODULE}=1"
+])
+m4_foreach_w([module], MODULES, [ADD_MODULE([module])])
+AC_SUBST(TOR_MODULES_ALL_ENABLED)
 
 dnl check for the correct "ar" when cross-compiling.
 dnl   (AM_PROG_AR was new in automake 1.11.2, which we do not yet require,
