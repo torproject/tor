@@ -134,6 +134,7 @@ int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char **errmsg);
 int32_t networkstatus_get_bw_weight(networkstatus_t *ns, const char *weight,
                                     int32_t default_val);
+uint16_t networkstatus_get_create2v_maximum_data(networkstatus_t *ns);
 const char *networkstatus_get_flavor_name(consensus_flavor_t flav);
 int networkstatus_parse_flavor_name(const char *flavname);
 void document_signature_free_(document_signature_t *sig);

@@ -2444,6 +2444,33 @@ networkstatus_get_weight_scale_param(networkstatus_t *ns)
                                  BW_MAX_WEIGHT_SCALE);
 }
 
+#define NETWORKSTATUS_DEFAULT_CREATE2V_MAXIMUM_DATA 10240
+
+/**
+ * Retrieve the consensus parameter from a networkstatus document, <b>ns</b>,
+ * which dictates the allowable amount of data (in bytes) within a CREATE2V or
+ * CREATED2V cell body.
+ *
+ * If <b>ns</b> is NULL, we will attempt to retrieve the latest known
+ * networkstatus document.
+ */
+uint16_t
+networkstatus_get_create2v_maximum_data(networkstatus_t *ns)
+{
+  if (!ns)
+    ns = networkstatus_get_latest_consensus();
+
+  if (!ns) {
+    log_info(LD_DIR, "We appear to have no consensus and thus don't know "
+             "Create2VMaximumData! Defaulting to the recommended value of %d.",
+             NETWORKSTATUS_DEFAULT_CREATE2V_MAXIMUM_DATA);
+  }
+
+  return (uint16_t)networkstatus_get_param(ns, "Create2VMaximumData",
+                                 NETWORKSTATUS_DEFAULT_CREATE2V_MAXIMUM_DATA,
+                                 0, UINT16_MAX);
+}
+
 /** Return the value of a integer bw weight parameter from the networkstatus
  * <b>ns</b> whose name is <b>weight_name</b>.  If <b>ns</b> is NULL, try
  * loading the latest consensus ourselves. Return <b>default_val</b> if no
