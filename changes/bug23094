@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Make hsdir_index in node_t a hsdir_index_t rather than a pointer
+      as hsdir_index is always present. Also, we move hsdir_index_t into
+      or.h. Closes ticket 23094. Patch by Neel Chauhan.

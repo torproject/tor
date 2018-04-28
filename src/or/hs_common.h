@@ -156,19 +156,6 @@ typedef struct rend_service_port_config_t {
   char unix_addr[FLEXIBLE_ARRAY_MEMBER];
 } rend_service_port_config_t;
 
-/* Hidden service directory index used in a node_t which is set once we set
- * the consensus. */
-typedef struct hsdir_index_t {
-  /* HSDir index to use when fetching a descriptor. */
-  uint8_t fetch[DIGEST256_LEN];
-
-  /* HSDir index used by services to store their first and second
-   * descriptor. The first descriptor is chronologically older than the second
-   * one and uses older TP and SRV values. */
-  uint8_t store_first[DIGEST256_LEN];
-  uint8_t store_second[DIGEST256_LEN];
-} hsdir_index_t;
-
 void hs_init(void);
 void hs_free_all(void);
 
