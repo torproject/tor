@@ -4,6 +4,22 @@ Useful tools
 These aren't strictly necessary for hacking on Tor, but they can help track
 down bugs.
 
+Travis CI
+---------
+It's CI. Looks like this: https://travis-ci.org/torproject/tor.
+
+Runs automatically on Pull Requests sent to torproject/tor. You can set it up
+for your fork to build commits outside of PRs too:
+
+1. sign up for GitHub: https://github.com/join
+2. fork https://github.com/torproject/tor:
+   https://help.github.com/articles/fork-a-repo/
+3. follow https://docs.travis-ci.com/user/getting-started/#To-get-started-with-Travis-CI.
+   skip steps involving `.travis.yml` (we already have one).
+
+Builds should show up on the web at travis-ci.com and on IRC at #tor-ci on
+OFTC. If they don't, ask #tor-dev (also on OFTC).
+
 Jenkins
 -------
 
