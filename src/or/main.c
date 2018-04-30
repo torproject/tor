@@ -1970,7 +1970,7 @@ static int
 dirvote_callback(time_t now, const or_options_t *options)
 {
   if (!authdir_mode_v3(options)) {
-    tor_assert_unreached_nonfatal();
+    tor_assert_nonfatal_unreached();
     return 3600;
   }
 
