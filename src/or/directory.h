@@ -259,9 +259,7 @@ STATIC char* authdir_type_to_string(dirinfo_type_t auth);
 STATIC const char * dir_conn_purpose_to_string(int purpose);
 STATIC int should_use_directory_guards(const or_options_t *options);
 STATIC compression_level_t choose_compression_level(ssize_t n_bytes);
-STATIC const smartlist_t *find_dl_schedule(const download_status_t *dls,
-                                           const or_options_t *options);
-STATIC int find_dl_min_delay(download_status_t *dls,
+STATIC int find_dl_min_delay(const download_status_t *dls,
                              const or_options_t *options);
 
 STATIC int next_random_exponential_delay(int delay,

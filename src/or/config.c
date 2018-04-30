@@ -126,6 +126,11 @@ static const char unix_socket_prefix[] = "unix:";
  * configuration. */
 static const char unix_q_socket_prefix[] = "unix:\"";
 
+/** macro to help with the bulk rename of *DownloadSchedule to
+ * *DowloadInitialDelay . */
+#define DOWNLOAD_SCHEDULE(name) \
+  { #name "DownloadSchedule", #name "DownloadInitialDelay", 0, 1 }
+
 /** A list of abbreviations and aliases to map command-line options, obsolete
  * option names, or alternative option names, to their current values. */
 static config_abbrev_t option_abbrevs_[] = {
@@ -174,6 +179,16 @@ static config_abbrev_t option_abbrevs_[] = {
   { "SocksSocketsGroupWritable", "UnixSocksGroupWritable", 0, 1},
   { "_HSLayer2Nodes", "HSLayer2Nodes", 0, 1 },
   { "_HSLayer3Nodes", "HSLayer3Nodes", 0, 1 },
+
+  DOWNLOAD_SCHEDULE(ClientBootstrapConsensusAuthority),
+  DOWNLOAD_SCHEDULE(ClientBootstrapConsensusAuthorityOnly),
+  DOWNLOAD_SCHEDULE(ClientBootstrapConsensusFallback),
+  DOWNLOAD_SCHEDULE(TestingBridge),
+  DOWNLOAD_SCHEDULE(TestingBridgeBootstrap),
+  DOWNLOAD_SCHEDULE(TestingClient),
+  DOWNLOAD_SCHEDULE(TestingClientConsensus),
+  DOWNLOAD_SCHEDULE(TestingServer),
+  DOWNLOAD_SCHEDULE(TestingServerConsensus),
 
   { NULL, NULL, 0, 0},
 };
@@ -600,16 +615,10 @@ static config_var_t option_vars_[] = {
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
   VAR("__OwningControllerFD",INT,OwningControllerFD, "-1"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
-  V(TestingServerDownloadSchedule, CSV_INTERVAL, "0, 0, 0, 60, 60, 120, "
-                                 "300, 900, 2147483647"),
-  V(TestingClientDownloadSchedule, CSV_INTERVAL, "0, 0, 60, 300, 600, "
-                                 "2147483647"),
-  V(TestingServerConsensusDownloadSchedule, CSV_INTERVAL, "0, 0, 60, "
-                                 "300, 600, 1800, 1800, 1800, 1800, "
-                                 "1800, 3600, 7200"),
-  V(TestingClientConsensusDownloadSchedule, CSV_INTERVAL, "0, 0, 60, "
-                                 "300, 600, 1800, 3600, 3600, 3600, "
-                                 "10800, 21600, 43200"),
+  V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingServerConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingClientConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
   /* With the ClientBootstrapConsensus*Download* below:
    * Clients with only authorities will try:
    *  - at least 3 authorities over 10 seconds, then exponentially backoff,
@@ -625,13 +634,11 @@ static config_var_t option_vars_[] = {
    *
    * When clients have authorities and fallbacks available, they use these
    * schedules: (we stagger the times to avoid thundering herds) */
-  V(ClientBootstrapConsensusAuthorityDownloadSchedule, CSV_INTERVAL,
-    "6, 11, 3600, 10800, 25200, 54000, 111600, 262800" /* 3 days + 1 hour */),
-  V(ClientBootstrapConsensusFallbackDownloadSchedule, CSV_INTERVAL,
-    "0, 1, 4, 11, 3600, 10800, 25200, 54000, 111600, 262800"),
+  V(ClientBootstrapConsensusAuthorityDownloadInitialDelay, CSV_INTERVAL, "6"),
+  V(ClientBootstrapConsensusFallbackDownloadInitialDelay, CSV_INTERVAL, "0"),
   /* When clients only have authorities available, they use this schedule: */
-  V(ClientBootstrapConsensusAuthorityOnlyDownloadSchedule, CSV_INTERVAL,
-    "0, 3, 7, 3600, 10800, 25200, 54000, 111600, 262800"),
+  V(ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay, CSV_INTERVAL,
+    "0"),
   /* We don't want to overwhelm slow networks (or mirrors whose replies are
    * blocked), but we also don't want to fail if only some mirrors are
    * blackholed. Clients will try 3 directories simultaneously.
@@ -639,14 +646,12 @@ static config_var_t option_vars_[] = {
   V(ClientBootstrapConsensusMaxInProgressTries, UINT, "3"),
   /* When a client has any running bridges, check each bridge occasionally,
     * whether or not that bridge is actually up. */
-  V(TestingBridgeDownloadSchedule, CSV_INTERVAL,
-    "10800, 25200, 54000, 111600, 262800"),
+  V(TestingBridgeDownloadInitialDelay, CSV_INTERVAL,"10800"),
   /* When a client is just starting, or has no running bridges, check each
    * bridge a few times quickly, and then try again later. These schedules
    * are much longer than the other schedules, because we try each and every
    * configured bridge with this schedule. */
-  V(TestingBridgeBootstrapDownloadSchedule, CSV_INTERVAL,
-    "0, 30, 90, 600, 3600, 10800, 25200, 54000, 111600, 262800"),
+  V(TestingBridgeBootstrapDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "10 minutes"),
   V(TestingDirConnectionMaxStall, INTERVAL, "5 minutes"),
   OBSOLETE("TestingConsensusMaxDownloadTries"),
@@ -673,12 +678,10 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(EnforceDistinctSubnets,      BOOL,     "0"),
   V(AssumeReachable,             BOOL,     "1"),
   V(AuthDirMaxServersPerAddr,    UINT,     "0"),
-  V(ClientBootstrapConsensusAuthorityDownloadSchedule, CSV_INTERVAL,
-    "0, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
-  V(ClientBootstrapConsensusFallbackDownloadSchedule, CSV_INTERVAL,
-    "0, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
-  V(ClientBootstrapConsensusAuthorityOnlyDownloadSchedule, CSV_INTERVAL,
-    "0, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
+  V(ClientBootstrapConsensusAuthorityDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(ClientBootstrapConsensusFallbackDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay, CSV_INTERVAL,
+    "0"),
   V(ClientDNSRejectInternalAddresses, BOOL,"0"),
   V(ClientRejectInternalAddresses, BOOL,   "0"),
   V(CountPrivateBandwidth,       BOOL,     "1"),
@@ -693,17 +696,12 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
-  V(TestingServerDownloadSchedule, CSV_INTERVAL, "0, 0, 0, 5, 10, 15, "
-                                 "20, 30, 60"),
-  V(TestingClientDownloadSchedule, CSV_INTERVAL, "0, 0, 5, 10, 15, 20, "
-                                 "30, 60"),
-  V(TestingServerConsensusDownloadSchedule, CSV_INTERVAL, "0, 0, 5, 10, "
-                                 "15, 20, 30, 60"),
-  V(TestingClientConsensusDownloadSchedule, CSV_INTERVAL, "0, 0, 5, 10, "
-                                 "15, 20, 30, 60"),
-  V(TestingBridgeDownloadSchedule, CSV_INTERVAL, "10, 30, 60"),
-  V(TestingBridgeBootstrapDownloadSchedule, CSV_INTERVAL, "0, 0, 5, 10, "
-                                 "15, 20, 30, 60"),
+  V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingServerConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingClientConsensusDownloadInitialDelay, CSV_INTERVAL, "0"),
+  V(TestingBridgeDownloadInitialDelay, CSV_INTERVAL, "10"),
+  V(TestingBridgeBootstrapDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "5 seconds"),
   V(TestingDirConnectionMaxStall, INTERVAL, "30 seconds"),
   V(TestingEnableConnBwEvent,    BOOL,     "1"),
@@ -4379,12 +4377,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingV3AuthVotingStartOffset);
   CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
   CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
-  CHECK_DEFAULT(TestingServerDownloadSchedule);
-  CHECK_DEFAULT(TestingClientDownloadSchedule);
-  CHECK_DEFAULT(TestingServerConsensusDownloadSchedule);
-  CHECK_DEFAULT(TestingClientConsensusDownloadSchedule);
-  CHECK_DEFAULT(TestingBridgeDownloadSchedule);
-  CHECK_DEFAULT(TestingBridgeBootstrapDownloadSchedule);
+  CHECK_DEFAULT(TestingServerDownloadInitialDelay);
+  CHECK_DEFAULT(TestingClientDownloadInitialDelay);
+  CHECK_DEFAULT(TestingServerConsensusDownloadInitialDelay);
+  CHECK_DEFAULT(TestingClientConsensusDownloadInitialDelay);
+  CHECK_DEFAULT(TestingBridgeDownloadInitialDelay);
+  CHECK_DEFAULT(TestingBridgeBootstrapDownloadInitialDelay);
   CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
   CHECK_DEFAULT(TestingDirConnectionMaxStall);
   CHECK_DEFAULT(TestingAuthKeyLifetime);

@@ -4065,34 +4065,19 @@ test_dir_download_status_increment(void *arg)
     DL_WANT_ANY_DIRSERVER,
     DL_SCHED_INCREMENT_ATTEMPT,
     0, 0 };
-  int no_delay = 0;
-  int delay0 = -1;
-  int delay1 = -1;
-  int delay2 = -1;
-  smartlist_t *schedule = smartlist_new();
-  smartlist_t *schedule_no_initial_delay = smartlist_new();
   or_options_t test_options;
   time_t current_time = time(NULL);
 
-  /* Provide some values for the schedules */
-  delay0 = 10;
-  delay1 = 99;
-  delay2 = 20;
-
-  /* Make the schedules */
-  smartlist_add(schedule, (void *)&delay0);
-  smartlist_add(schedule, (void *)&delay1);
-  smartlist_add(schedule, (void *)&delay2);
-
-  smartlist_add(schedule_no_initial_delay, (void *)&no_delay);
-  smartlist_add(schedule_no_initial_delay, (void *)&delay1);
-  smartlist_add(schedule_no_initial_delay, (void *)&delay2);
+  const int delay0 = 10;
+  const int no_delay = 0;
+  const int schedule = 10;
+  const int schedule_no_initial_delay = 0;
 
   /* Put it in the options */
   mock_options = &test_options;
   reset_options(mock_options, &mock_get_options_calls);
-  mock_options->TestingBridgeBootstrapDownloadSchedule = schedule;
-  mock_options->TestingClientDownloadSchedule = schedule;
+  mock_options->TestingBridgeBootstrapDownloadInitialDelay = schedule;
+  mock_options->TestingClientDownloadInitialDelay = schedule;
 
   MOCK(get_options, mock_get_options);
 
@@ -4100,13 +4085,13 @@ test_dir_download_status_increment(void *arg)
    * whether or not it was reset before being used */
 
   /* regression test for 17750: no initial delay */
-  mock_options->TestingClientDownloadSchedule = schedule_no_initial_delay;
+  mock_options->TestingClientDownloadInitialDelay = schedule_no_initial_delay;
   mock_get_options_calls = 0;
   /* we really want to test that it's equal to time(NULL) + delay0, but that's
    * an unrealiable test, because time(NULL) might change. */
 
   /* regression test for 17750: exponential, no initial delay */
-  mock_options->TestingClientDownloadSchedule = schedule_no_initial_delay;
+  mock_options->TestingClientDownloadInitialDelay = schedule_no_initial_delay;
   mock_get_options_calls = 0;
   /* we really want to test that it's equal to time(NULL) + delay0, but that's
    * an unrealiable test, because time(NULL) might change. */
@@ -4119,7 +4104,7 @@ test_dir_download_status_increment(void *arg)
   tt_int_op(mock_get_options_calls, OP_GE, 1);
 
   /* regression test for 17750: exponential, initial delay */
-  mock_options->TestingClientDownloadSchedule = schedule;
+  mock_options->TestingClientDownloadInitialDelay = schedule;
   mock_get_options_calls = 0;
   /* we really want to test that it's equal to time(NULL) + delay0, but that's
    * an unrealiable test, because time(NULL) might change. */
@@ -4132,9 +4117,6 @@ test_dir_download_status_increment(void *arg)
   tt_int_op(mock_get_options_calls, OP_GE, 1);
 
  done:
-  /* the pointers in schedule are allocated on the stack */
-  smartlist_free(schedule);
-  smartlist_free(schedule_no_initial_delay);
   UNMOCK(get_options);
   mock_options = NULL;
   mock_get_options_calls = 0;
@@ -5452,7 +5434,7 @@ mock_num_bridges_usable(int use_maybe_reachable)
  * fallbacks.
  */
 static void
-test_dir_find_dl_schedule(void* data)
+test_dir_find_dl_min_delay(void* data)
 {
   const char *str = (const char *)data;
 
@@ -5485,44 +5467,45 @@ test_dir_find_dl_schedule(void* data)
        mock_num_bridges_usable);
 
   download_status_t dls;
-  smartlist_t server, client, server_cons, client_cons;
-  smartlist_t client_boot_auth_only_cons, client_boot_auth_cons;
-  smartlist_t client_boot_fallback_cons, bridge, bridge_bootstrap;
+
+  const int server=10, client=20, server_cons=30, client_cons=40;
+  const int client_boot_auth_only_cons=50, client_boot_auth_cons=60;
+  const int client_boot_fallback_cons=70, bridge=80, bridge_bootstrap=90;
 
   mock_options = tor_malloc(sizeof(or_options_t));
   reset_options(mock_options, &mock_get_options_calls);
   MOCK(get_options, mock_get_options);
 
-  mock_options->TestingServerDownloadSchedule = &server;
-  mock_options->TestingClientDownloadSchedule = &client;
-  mock_options->TestingServerConsensusDownloadSchedule = &server_cons;
-  mock_options->TestingClientConsensusDownloadSchedule = &client_cons;
-  mock_options->ClientBootstrapConsensusAuthorityOnlyDownloadSchedule =
-    &client_boot_auth_only_cons;
-  mock_options->ClientBootstrapConsensusAuthorityDownloadSchedule =
-    &client_boot_auth_cons;
-  mock_options->ClientBootstrapConsensusFallbackDownloadSchedule =
-    &client_boot_fallback_cons;
-  mock_options->TestingBridgeDownloadSchedule = &bridge;
-  mock_options->TestingBridgeBootstrapDownloadSchedule = &bridge_bootstrap;
+  mock_options->TestingServerDownloadInitialDelay = server;
+  mock_options->TestingClientDownloadInitialDelay = client;
+  mock_options->TestingServerConsensusDownloadInitialDelay = server_cons;
+  mock_options->TestingClientConsensusDownloadInitialDelay = client_cons;
+  mock_options->ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay =
+    client_boot_auth_only_cons;
+  mock_options->ClientBootstrapConsensusAuthorityDownloadInitialDelay =
+    client_boot_auth_cons;
+  mock_options->ClientBootstrapConsensusFallbackDownloadInitialDelay =
+    client_boot_fallback_cons;
+  mock_options->TestingBridgeDownloadInitialDelay = bridge;
+  mock_options->TestingBridgeBootstrapDownloadInitialDelay = bridge_bootstrap;
 
   dls.schedule = DL_SCHED_GENERIC;
   /* client */
   mock_options->ClientOnly = 1;
-  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &client);
+  tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, client);
   mock_options->ClientOnly = 0;
 
   /* dir mode */
   mock_options->DirPort_set = 1;
   mock_options->DirCache = 1;
-  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &server);
+  tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, server);
   mock_options->DirPort_set = 0;
   mock_options->DirCache = 0;
 
   dls.schedule = DL_SCHED_CONSENSUS;
   /* public server mode */
   mock_options->ORPort_set = 1;
-  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &server_cons);
+  tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, server_cons);
   mock_options->ORPort_set = 0;
 
   /* client and bridge modes */
@@ -5531,30 +5514,30 @@ test_dir_find_dl_schedule(void* data)
       dls.want_authority = 1;
       /* client */
       mock_options->ClientOnly = 1;
-      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
-                &client_boot_auth_cons);
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
+                client_boot_auth_cons);
       mock_options->ClientOnly = 0;
 
       /* bridge relay */
       mock_options->ORPort_set = 1;
       mock_options->BridgeRelay = 1;
-      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
-                &client_boot_auth_cons);
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
+                client_boot_auth_cons);
       mock_options->ORPort_set = 0;
       mock_options->BridgeRelay = 0;
 
       dls.want_authority = 0;
       /* client */
       mock_options->ClientOnly = 1;
-      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
-                &client_boot_fallback_cons);
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
+                client_boot_fallback_cons);
       mock_options->ClientOnly = 0;
 
       /* bridge relay */
       mock_options->ORPort_set = 1;
       mock_options->BridgeRelay = 1;
-      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
-                &client_boot_fallback_cons);
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
+                client_boot_fallback_cons);
       mock_options->ORPort_set = 0;
       mock_options->BridgeRelay = 0;
 
@@ -5562,30 +5545,30 @@ test_dir_find_dl_schedule(void* data)
       /* dls.want_authority is ignored */
       /* client */
       mock_options->ClientOnly = 1;
-      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
-                &client_boot_auth_only_cons);
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
+                client_boot_auth_only_cons);
       mock_options->ClientOnly = 0;
 
       /* bridge relay */
       mock_options->ORPort_set = 1;
       mock_options->BridgeRelay = 1;
-      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
-                &client_boot_auth_only_cons);
+      tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
+                client_boot_auth_only_cons);
       mock_options->ORPort_set = 0;
       mock_options->BridgeRelay = 0;
     }
   } else {
     /* client */
     mock_options->ClientOnly = 1;
-    tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
-              &client_cons);
+    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
+              client_cons);
     mock_options->ClientOnly = 0;
 
     /* bridge relay */
     mock_options->ORPort_set = 1;
     mock_options->BridgeRelay = 1;
-    tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
-              &client_cons);
+    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ,
+              client_cons);
     mock_options->ORPort_set = 0;
     mock_options->BridgeRelay = 0;
   }
@@ -5595,9 +5578,9 @@ test_dir_find_dl_schedule(void* data)
   mock_options->ClientOnly = 1;
   mock_options->UseBridges = 1;
   if (num_bridges_usable(0) > 0) {
-    tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge);
+    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, bridge);
   } else {
-    tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge_bootstrap);
+    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, bridge_bootstrap);
   }
 
  done:
@@ -5871,14 +5854,14 @@ struct testcase_t dir_tests[] = {
   DIR(dump_unparseable_descriptors, 0),
   DIR(populate_dump_desc_fifo, 0),
   DIR(populate_dump_desc_fifo_2, 0),
-  DIR_ARG(find_dl_schedule, TT_FORK, "bfd"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "bad"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "cfd"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "cad"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "bfr"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "bar"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "cfr"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "car"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "bfd"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "bad"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "cfd"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "cad"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "bfr"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "bar"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "cfr"),
+  DIR_ARG(find_dl_min_delay, TT_FORK, "car"),
   DIR(assumed_flags, 0),
   DIR(networkstatus_compute_bw_weights_v10, 0),
   DIR(platform_str, 0),

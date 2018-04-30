@@ -5300,84 +5300,71 @@ connection_dir_finished_connecting(dir_connection_t *conn)
 
 /** Decide which download schedule we want to use based on descriptor type
  * in <b>dls</b> and <b>options</b>.
- * Then return a list of int pointers defining download delays in seconds.
+ *
+ * Then, return the initial delay for that download schedule, in seconds.
+ *
  * Helper function for download_status_increment_failure(),
  * download_status_reset(), and download_status_increment_attempt(). */
-STATIC const smartlist_t *
-find_dl_schedule(const download_status_t *dls, const or_options_t *options)
+STATIC int
+find_dl_min_delay(const download_status_t *dls, const or_options_t *options)
 {
+  tor_assert(dls);
+  tor_assert(options);
+
   switch (dls->schedule) {
     case DL_SCHED_GENERIC:
       /* Any other directory document */
       if (dir_server_mode(options)) {
         /* A directory authority or directory mirror */
-        return options->TestingServerDownloadSchedule;
+        return options->TestingServerDownloadInitialDelay;
       } else {
-        return options->TestingClientDownloadSchedule;
+        return options->TestingClientDownloadInitialDelay;
       }
     case DL_SCHED_CONSENSUS:
       if (!networkstatus_consensus_can_use_multiple_directories(options)) {
         /* A public relay */
-        return options->TestingServerConsensusDownloadSchedule;
+        return options->TestingServerConsensusDownloadInitialDelay;
       } else {
         /* A client or bridge */
         if (networkstatus_consensus_is_bootstrapping(time(NULL))) {
           /* During bootstrapping */
           if (!networkstatus_consensus_can_use_extra_fallbacks(options)) {
             /* A bootstrapping client without extra fallback directories */
-            return
-             options->ClientBootstrapConsensusAuthorityOnlyDownloadSchedule;
+            return options->
+              ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay;
           } else if (dls->want_authority) {
             /* A bootstrapping client with extra fallback directories, but
              * connecting to an authority */
             return
-             options->ClientBootstrapConsensusAuthorityDownloadSchedule;
+             options->ClientBootstrapConsensusAuthorityDownloadInitialDelay;
           } else {
             /* A bootstrapping client connecting to extra fallback directories
              */
             return
-              options->ClientBootstrapConsensusFallbackDownloadSchedule;
+              options->ClientBootstrapConsensusFallbackDownloadInitialDelay;
           }
         } else {
           /* A client with a reasonably live consensus, with or without
            * certificates */
-          return options->TestingClientConsensusDownloadSchedule;
+          return options->TestingClientConsensusDownloadInitialDelay;
         }
       }
     case DL_SCHED_BRIDGE:
       if (options->UseBridges && num_bridges_usable(0) > 0) {
         /* A bridge client that is sure that one or more of its bridges are
          * running can afford to wait longer to update bridge descriptors. */
-        return options->TestingBridgeDownloadSchedule;
+        return options->TestingBridgeDownloadInitialDelay;
       } else {
         /* A bridge client which might have no running bridges, must try to
          * get bridge descriptors straight away. */
-        return options->TestingBridgeBootstrapDownloadSchedule;
+        return options->TestingBridgeBootstrapDownloadInitialDelay;
       }
     default:
       tor_assert(0);
   }
 
   /* Impossible, but gcc will fail with -Werror without a `return`. */
-  return NULL;
-}
-
-/** Decide which minimum delay step we want to use based on
- * descriptor type in <b>dls</b> and <b>options</b>.
- * Helper function for download_status_schedule_get_delay(). */
-STATIC int
-find_dl_min_delay(download_status_t *dls, const or_options_t *options)
-{
-  tor_assert(dls);
-  tor_assert(options);
-
-  /*
-   * For now, just use the existing schedule config stuff and pick the
-   * first/last entries off to get min/max delay for backoff purposes
-   */
-  const smartlist_t *schedule = find_dl_schedule(dls, options);
-  tor_assert(schedule != NULL && smartlist_len(schedule) >= 2);
-  return *(int *)(smartlist_get(schedule, 0));
+  return 0;
 }
 
 /** As next_random_exponential_delay() below, but does not compute a random
@@ -5634,10 +5621,9 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
 static time_t
 download_status_get_initial_delay_from_now(const download_status_t *dls)
 {
-  const smartlist_t *schedule = find_dl_schedule(dls, get_options());
   /* We use constant initial delays, even in exponential backoff
    * schedules. */
-  return time(NULL) + *(int *)smartlist_get(schedule, 0);
+  return time(NULL) + find_dl_min_delay(dls, get_options());
 }
 
 /** Reset <b>dls</b> so that it will be considered downloadable

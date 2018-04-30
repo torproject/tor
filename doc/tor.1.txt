@@ -1742,32 +1742,29 @@ The following options are useful only for clients (that is, if
     directory authorities do not choose a value, Tor will default to 0.6.
     (Default: -1)
 
-[[ClientBootstrapConsensusAuthorityDownloadSchedule]] **ClientBootstrapConsensusAuthorityDownloadSchedule** __N__,__N__,__...__::
-    Schedule for when clients should download consensuses from authorities
+[[ClientBootstrapConsensusAuthorityDownloadInitialDelay]] **ClientBootstrapConsensusAuthorityDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download consensuses from authorities
     if they are bootstrapping (that is, they don't have a usable, reasonably
     live consensus). Only used by clients fetching from a list of fallback
     directory mirrors. This schedule is advanced by (potentially concurrent)
     connection attempts, unlike other schedules, which are advanced by
-    connection failures. (Default: 6, 11, 3600, 10800, 25200, 54000, 111600,
-    262800)
+    connection failures. (Default: 6)
 
-[[ClientBootstrapConsensusFallbackDownloadSchedule]] **ClientBootstrapConsensusFallbackDownloadSchedule** __N__,__N__,__...__::
-    Schedule for when clients should download consensuses from fallback
+[[ClientBootstrapConsensusFallbackDownloadInitialDelay]] **ClientBootstrapConsensusFallbackDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download consensuses from fallback
     directory mirrors if they are bootstrapping (that is, they don't have a
     usable, reasonably live consensus). Only used by clients fetching from a
     list of fallback directory mirrors. This schedule is advanced by
     (potentially concurrent) connection attempts, unlike other schedules,
-    which are advanced by connection failures. (Default: 0, 1, 4, 11, 3600,
-    10800, 25200, 54000, 111600, 262800)
+    which are advanced by connection failures. (Default: 0)
 
-[[ClientBootstrapConsensusAuthorityOnlyDownloadSchedule]] **ClientBootstrapConsensusAuthorityOnlyDownloadSchedule** __N__,__N__,__...__::
-    Schedule for when clients should download consensuses from authorities
+[[ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay]] **ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download consensuses from authorities
     if they are bootstrapping (that is, they don't have a usable, reasonably
     live consensus). Only used by clients which don't have or won't fetch
     from a list of fallback directory mirrors. This schedule is advanced by
     (potentially concurrent) connection attempts, unlike other schedules,
-    which are advanced by connection failures. (Default: 0, 3, 7, 3600,
-    10800, 25200, 54000, 111600, 262800)
+    which are advanced by connection failures. (Default: 0)
 
 [[ClientBootstrapConsensusMaxInProgressTries]] **ClientBootstrapConsensusMaxInProgressTries** __NUM__::
     Try this many simultaneous connections to download a consensus before
@@ -2898,12 +2895,9 @@ The following options are used for running a testing Tor network.
        AssumeReachable 1
        AuthDirMaxServersPerAddr 0
        AuthDirMaxServersPerAuthAddr 0
-       ClientBootstrapConsensusAuthorityDownloadSchedule 0, 2,
-          4 (for 40 seconds), 8, 16, 32, 60
-       ClientBootstrapConsensusFallbackDownloadSchedule 0, 1,
-          4 (for 40 seconds), 8, 16, 32, 60
-       ClientBootstrapConsensusAuthorityOnlyDownloadSchedule 0, 1,
-          4 (for 40 seconds), 8, 16, 32, 60
+       ClientBootstrapConsensusAuthorityDownloadInitialDelay 0
+       ClientBootstrapConsensusFallbackDownloadInitialDelay 0
+       ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay 0
        ClientDNSRejectInternalAddresses 0
        ClientRejectInternalAddresses 0
        CountPrivateBandwidth 1
@@ -2918,12 +2912,12 @@ The following options are used for running a testing Tor network.
        TestingV3AuthInitialDistDelay 20 seconds
        TestingAuthDirTimeToLearnReachability 0 minutes
        TestingEstimatedDescriptorPropagationTime 0 minutes
-       TestingServerDownloadSchedule 0, 0, 0, 5, 10, 15, 20, 30, 60
-       TestingClientDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
-       TestingServerConsensusDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
-       TestingClientConsensusDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
-       TestingBridgeDownloadSchedule 10, 30, 60
-       TestingBridgeBootstrapDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
+       TestingServerDownloadInitialDelay 0
+       TestingClientDownloadInitialDelay 0
+       TestingServerConsensusDownloadInitialDelay 0
+       TestingClientConsensusDownloadInitialDelay 0
+       TestingBridgeDownloadInitialDelay 10
+       TestingBridgeBootstrapDownloadInitialDelay 0
        TestingClientMaxIntervalWithoutRequest 5 seconds
        TestingDirConnectionMaxStall 30 seconds
        TestingEnableConnBwEvent 1
@@ -2962,37 +2956,31 @@ The following options are used for running a testing Tor network.
     Minimum value for the Fast flag.  Overrides the ordinary minimum taken
     from the consensus when TestingTorNetwork is set. (Default: 0.)
 
-[[TestingServerDownloadSchedule]] **TestingServerDownloadSchedule** __N__,__N__,__...__::
-    Schedule for when servers should download things in general. Changing this
-    requires that **TestingTorNetwork** is set. (Default: 0, 0, 0, 60, 60, 120,
-    300, 900, 2147483647)
+[[TestingServerDownloadInitialDelay]] **TestingServerDownloadInitialDelay** __N__::
+    Initial delay in seconds for when servers should download things in general. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0)
 
-[[TestingClientDownloadSchedule]] **TestingClientDownloadSchedule** __N__,__N__,__...__::
-    Schedule for when clients should download things in general. Changing this
-    requires that **TestingTorNetwork** is set. (Default: 0, 0, 60, 300, 600,
-    2147483647)
+[[TestingClientDownloadInitialDelay]] **TestingClientDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download things in general. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0)
 
-[[TestingServerConsensusDownloadSchedule]] **TestingServerConsensusDownloadSchedule** __N__,__N__,__...__::
-    Schedule for when servers should download consensuses. Changing this
-    requires that **TestingTorNetwork** is set. (Default: 0, 0, 60, 300, 600,
-    1800, 1800, 1800, 1800, 1800, 3600, 7200)
+[[TestingServerConsensusDownloadInitialDelay]] **TestingServerConsensusDownloadInitialDelay** __N__::
+    Initial delay in seconds for when servers should download consensuses. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0)
 
-[[TestingClientConsensusDownloadSchedule]] **TestingClientConsensusDownloadSchedule** __N__,__N__,__...__::
-    Schedule for when clients should download consensuses. Changing this
-    requires that **TestingTorNetwork** is set. (Default: 0, 0, 60, 300, 600,
-    1800, 3600, 3600, 3600, 10800, 21600, 43200)
+[[TestingClientConsensusDownloadInitialDelay]] **TestingClientConsensusDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download consensuses. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0)
 
-[[TestingBridgeDownloadSchedule]] **TestingBridgeDownloadSchedule** __N__,__N__,__...__::
-    Schedule for when clients should download each bridge descriptor when they
+[[TestingBridgeDownloadInitialDelay]] **TestingBridgeDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download each bridge descriptor when they
     know that one or more of their configured bridges are running. Changing
-    this requires that **TestingTorNetwork** is set. (Default: 10800, 25200,
-    54000, 111600, 262800)
+    this requires that **TestingTorNetwork** is set. (Default: 10800)
 
-[[TestingBridgeBootstrapDownloadSchedule]] **TestingBridgeBootstrapDownloadSchedule** __N__,__N__,__...__::
-    Schedule for when clients should download each bridge descriptor when they
+[[TestingBridgeBootstrapDownloadInitialDelay]] **TestingBridgeBootstrapDownloadInitialDelay** __N__::
+    Initial delay in seconds for when clients should download each bridge descriptor when they
     have just started, or when they can not contact any of their bridges.
-    Changing this requires that **TestingTorNetwork** is set. (Default: 0, 30,
-    90, 600, 3600, 10800, 25200, 54000, 111600, 262800)
+    Changing this requires that **TestingTorNetwork** is set. (Default: 0)
 
 [[TestingClientMaxIntervalWithoutRequest]] **TestingClientMaxIntervalWithoutRequest** __N__ **seconds**|**minutes**::
     When directory clients have only a few descriptors to request, they batch
