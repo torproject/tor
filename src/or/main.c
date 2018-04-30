@@ -1386,7 +1386,6 @@ STATIC periodic_event_item_t periodic_events[] = {
   CALLBACK(check_for_reachability_bw, PERIODIC_EVENT_ROLE_ROUTER,
            PERIODIC_EVENT_FLAG_NEED_NET),
   CALLBACK(check_onion_keys_expiry_time, PERIODIC_EVENT_ROLE_ROUTER, 0),
-  CALLBACK(clean_consdiffmgr, PERIODIC_EVENT_ROLE_ROUTER, 0),
   CALLBACK(expire_old_ciruits_serverside, PERIODIC_EVENT_ROLE_ROUTER,
            PERIODIC_EVENT_FLAG_NEED_NET),
   CALLBACK(retry_dns, PERIODIC_EVENT_ROLE_ROUTER, 0),
@@ -1419,6 +1418,9 @@ STATIC periodic_event_item_t periodic_events[] = {
 
   /* Bridge Authority only. */
   CALLBACK(write_bridge_ns, PERIODIC_EVENT_ROLE_BRIDGEAUTH, 0),
+
+  /* Directory server only. */
+  CALLBACK(clean_consdiffmgr, PERIODIC_EVENT_ROLE_DIRSERVER, 0),
 
   END_OF_PERIODIC_EVENTS
 };
@@ -1476,6 +1478,7 @@ get_my_roles(const or_options_t *options)
   int is_bridgeauth = authdir_mode_bridge(options);
   int is_hidden_service = !!hs_service_get_num_services() ||
                           !!rend_num_services();
+  int is_dirserver = dir_server_mode(options);
 
   if (is_bridge) roles |= PERIODIC_EVENT_ROLE_BRIDGE;
   if (is_client) roles |= PERIODIC_EVENT_ROLE_CLIENT;
@@ -1483,6 +1486,7 @@ get_my_roles(const or_options_t *options)
   if (is_dirauth) roles |= PERIODIC_EVENT_ROLE_DIRAUTH;
   if (is_bridgeauth) roles |= PERIODIC_EVENT_ROLE_BRIDGEAUTH;
   if (is_hidden_service) roles |= PERIODIC_EVENT_ROLE_HS_SERVICE;
+  if (is_dirserver) roles |= PERIODIC_EVENT_ROLE_DIRSERVER;
 
   return roles;
 }
@@ -2341,7 +2345,7 @@ static int
 clean_consdiffmgr_callback(time_t now, const or_options_t *options)
 {
   (void)now;
-  if (server_mode(options)) {
+  if (dir_server_mode(options)) {
     consdiffmgr_cleanup();
   }
   return CDM_CLEAN_CALLBACK_INTERVAL;
