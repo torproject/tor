@@ -1,0 +1,5 @@
+  o Minor features (compatibility):
+    - Tor now detects versions of OpenSSL 1.1.0 and later compiled with the
+      no-deprecated option, and builds correctly with them. Closes
+      tickets 19429, 19981, and 25353.
+
