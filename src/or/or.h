@@ -4746,15 +4746,6 @@ typedef struct {
   time_t LastRotatedOnionKey;
 } or_state_t;
 
-/** Change the next_write time of <b>state</b> to <b>when</b>, unless the
- * state is already scheduled to be written to disk earlier than <b>when</b>.
- */
-static inline void or_state_mark_dirty(or_state_t *state, time_t when)
-{
-  if (state->next_write > when)
-    state->next_write = when;
-}
-
 #define MAX_SOCKS_REPLY_LEN 1024
 #define MAX_SOCKS_ADDR_LEN 256
 #define SOCKS_NO_AUTH 0x00

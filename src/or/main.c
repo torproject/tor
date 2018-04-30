@@ -1355,6 +1355,7 @@ CALLBACK(retry_listeners);
 CALLBACK(rotate_onion_key);
 CALLBACK(rotate_x509_certificate);
 CALLBACK(save_stability);
+CALLBACK(save_state);
 CALLBACK(write_bridge_ns);
 CALLBACK(write_stats_file);
 
@@ -1376,6 +1377,7 @@ STATIC periodic_event_item_t periodic_events[] = {
   CALLBACK(reset_padding_counts, PERIODIC_EVENT_ROLE_ALL, 0),
   CALLBACK(retry_listeners, PERIODIC_EVENT_ROLE_ALL,
            PERIODIC_EVENT_FLAG_NEED_NET),
+  CALLBACK(save_state, PERIODIC_EVENT_ROLE_ALL, 0),
   CALLBACK(rotate_x509_certificate, PERIODIC_EVENT_ROLE_ALL, 0),
   CALLBACK(write_stats_file, PERIODIC_EVENT_ROLE_ALL, 0),
 
@@ -1434,6 +1436,7 @@ static periodic_event_item_t *check_descriptor_event=NULL;
 static periodic_event_item_t *fetch_networkstatus_event=NULL;
 static periodic_event_item_t *launch_descriptor_fetches_event=NULL;
 static periodic_event_item_t *check_dns_honesty_event=NULL;
+static periodic_event_item_t *save_state_event=NULL;
 
 /** Reset all the periodic events so we'll do all our actions again as if we
  * just started up.
@@ -1532,6 +1535,7 @@ initialize_periodic_events(void)
   NAMED_CALLBACK(fetch_networkstatus);
   NAMED_CALLBACK(launch_descriptor_fetches);
   NAMED_CALLBACK(check_dns_honesty);
+  NAMED_CALLBACK(save_state);
 
   struct timeval one_second = { 1, 0 };
   initialize_periodic_events_event = tor_evtimer_new(
@@ -1609,8 +1613,9 @@ periodic_events_on_new_options(const or_options_t *options)
 void
 reschedule_descriptor_update_check(void)
 {
-  tor_assert(check_descriptor_event);
-  periodic_event_reschedule(check_descriptor_event);
+  if (check_descriptor_event) {
+    periodic_event_reschedule(check_descriptor_event);
+  }
 }
 
 /**
@@ -1755,10 +1760,6 @@ run_scheduled_events(time_t now)
   for (i=0;i<smartlist_len(connection_array);i++) {
     run_connection_housekeeping(i, now);
   }
-
-  /* 8b. And if anything in our state is ready to get flushed to disk, we
-   * flush it. */
-  or_state_save(now);
 
   /* 11b. check pending unconfigured managed proxies */
   if (!net_is_disabled() && pt_proxies_configuration_pending())
@@ -1991,6 +1992,37 @@ check_expired_networkstatus_callback(time_t now, const or_options_t *options)
   }
 #define CHECK_EXPIRED_NS_INTERVAL (2*60)
   return CHECK_EXPIRED_NS_INTERVAL;
+}
+
+/**
+ * Scheduled callback: Save the state file to disk if appropriate.
+ */
+static int
+save_state_callback(time_t now, const or_options_t *options)
+{
+  (void) options;
+  (void) or_state_save(now); // only saves if appropriate
+  const time_t next_write = get_or_state()->next_write;
+  if (next_write == TIME_MAX) {
+    return 86400;
+  } else if (BUG(next_write <= now)) {
+    /* This can't happen due to clock jumps, since the value of next_write
+     * is based on the same "now" that we passed to or_state_save().
+     */
+    return PERIODIC_EVENT_NO_UPDATE;
+  } else {
+    return next_write - now;
+  }
+}
+
+/** Reschedule the event for saving the state file.
+ *
+ * Run this when the state becomes dirty. */
+void
+reschedule_or_state_save(void)
+{
+  tor_assert(save_state_event);
+  periodic_event_reschedule(save_state_event);
 }
 
 /**
