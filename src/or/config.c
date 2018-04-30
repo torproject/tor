@@ -747,6 +747,8 @@ static int options_transition_affects_workers(
       const or_options_t *old_options, const or_options_t *new_options);
 static int options_transition_affects_descriptor(
       const or_options_t *old_options, const or_options_t *new_options);
+static int options_transition_affects_dirauth_timing(
+      const or_options_t *old_options, const or_options_t *new_options);
 static int normalize_nickname_list(config_line_t **normalized_out,
                                    const config_line_t *lst, const char *name,
                                    char **msg);
@@ -1746,6 +1748,32 @@ options_transition_affects_guards(const or_options_t *old_options,
   return 0;
 }
 
+/**
+ * Return true if changing the configuration from <b>old</b> to <b>new</b>
+ * affects the timing of the voting subsystem
+ */
+static int
+options_transition_affects_dirauth_timing(const or_options_t *old_options,
+                                          const or_options_t *new_options)
+{
+  tor_assert(old_options);
+  tor_assert(new_options);
+
+  if (authdir_mode_v3(old_options) != authdir_mode_v3(new_options))
+    return 1;
+  if (! authdir_mode_v3(new_options))
+    return 0;
+  YES_IF_CHANGED_INT(V3AuthVotingInterval);
+  YES_IF_CHANGED_INT(V3AuthVoteDelay);
+  YES_IF_CHANGED_INT(V3AuthDistDelay);
+  YES_IF_CHANGED_INT(TestingV3AuthInitialVotingInterval);
+  YES_IF_CHANGED_INT(TestingV3AuthInitialVoteDelay);
+  YES_IF_CHANGED_INT(TestingV3AuthInitialDistDelay);
+  YES_IF_CHANGED_INT(TestingV3AuthVotingStartOffset);
+
+  return 0;
+}
+
 /** Fetch the active option list, and take actions based on it. All of the
  * things we do should survive being done repeatedly.  If present,
  * <b>old_options</b> contains the previous value of the options.
@@ -2330,7 +2358,7 @@ options_act(const or_options_t *old_options)
 
   /* We may need to reschedule some directory stuff if our status changed. */
   if (old_options) {
-    if (authdir_mode_v3(options) && !authdir_mode_v3(old_options)) {
+    if (options_transition_affects_dirauth_timing(old_options, options)) {
       dirvote_recalculate_timing(options, time(NULL));
       reschedule_dirvote(options);
     }
