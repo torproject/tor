@@ -24,6 +24,9 @@ void routerstatus_free_(routerstatus_t *rs);
 void networkstatus_vote_free_(networkstatus_t *ns);
 #define networkstatus_vote_free(ns) \
   FREE_AND_NULL(networkstatus_t, networkstatus_vote_free_, (ns))
+void ns_detached_signatures_free_(ns_detached_signatures_t *s);
+#define ns_detached_signatures_free(s) \
+  FREE_AND_NULL(ns_detached_signatures_t, ns_detached_signatures_free_, (s))
 networkstatus_voter_info_t *networkstatus_get_voter_by_id(
                                        networkstatus_t *vote,
                                        const char *identity);

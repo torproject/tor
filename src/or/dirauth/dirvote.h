@@ -12,8 +12,6 @@
 #ifndef TOR_DIRVOTE_H
 #define TOR_DIRVOTE_H
 
-#include "testsupport.h"
-
 /*
  * Ideally, assuming synced clocks, we should only need 1 second for each of:
  *  - Vote
@@ -86,74 +84,27 @@
  * get confused with the above macros.) */
 #define DEFAULT_MAX_UNMEASURED_BW_KB 20
 
+/* Directory Get Vote (DGV) flags for dirvote_get_vote(). */
+#define DGV_BY_ID 1
+#define DGV_INCLUDE_PENDING 2
+#define DGV_INCLUDE_PREVIOUS 4
+
+/*
+ * Public API. Used outside of the dirauth subsystem.
+ *
+ * We need to nullify them if the module is disabled.
+ */
+#ifdef HAVE_MODULE_DIRAUTH
+
+void dirvote_act(const or_options_t *options, time_t now);
 void dirvote_free_all(void);
 
-/* vote manipulation */
-char *networkstatus_compute_consensus(smartlist_t *votes,
-                                      int total_authorities,
-                                      crypto_pk_t *identity_key,
-                                      crypto_pk_t *signing_key,
-                                      const char *legacy_identity_key_digest,
-                                      crypto_pk_t *legacy_signing_key,
-                                      consensus_flavor_t flavor);
-int networkstatus_add_detached_signatures(networkstatus_t *target,
-                                          ns_detached_signatures_t *sigs,
-                                          const char *source,
-                                          int severity,
-                                          const char **msg_out);
-char *networkstatus_get_detached_signatures(smartlist_t *consensuses);
-void ns_detached_signatures_free_(ns_detached_signatures_t *s);
-#define ns_detached_signatures_free(s) \
-  FREE_AND_NULL(ns_detached_signatures_t, ns_detached_signatures_free_, (s))
+void dirvote_parse_sr_commits(networkstatus_t *ns, smartlist_t *tokens);
+void dirvote_free_commits(networkstatus_t *ns);
+void dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
+                                    smartlist_t *dir_items);
 
-/* cert manipulation */
-authority_cert_t *authority_cert_dup(authority_cert_t *cert);
-
-/* vote scheduling */
-
-/** Scheduling information for a voting interval. */
-typedef struct {
-  /** When do we generate and distribute our vote for this interval? */
-  time_t voting_starts;
-  /** When do we send an HTTP request for any votes that we haven't
-   * been posted yet?*/
-  time_t fetch_missing_votes;
-  /** When do we give up on getting more votes and generate a consensus? */
-  time_t voting_ends;
-  /** When do we send an HTTP request for any signatures we're expecting to
-   * see on the consensus? */
-  time_t fetch_missing_signatures;
-  /** When do we publish the consensus? */
-  time_t interval_starts;
-
-  /* True iff we have generated and distributed our vote. */
-  int have_voted;
-  /* True iff we've requested missing votes. */
-  int have_fetched_missing_votes;
-  /* True iff we have built a consensus and sent the signatures around. */
-  int have_built_consensus;
-  /* True iff we've fetched missing signatures. */
-  int have_fetched_missing_signatures;
-  /* True iff we have published our consensus. */
-  int have_published_consensus;
-
-  /* True iff this voting schedule was set on demand meaning not through the
-   * normal vote operation of a dirauth or when a consensus is set. This only
-   * applies to a directory authority that needs to recalculate the voting
-   * timings only for the first vote even though this object was initilized
-   * prior to voting. */
-  int created_on_demand;
-} voting_schedule_t;
-
-void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
-time_t dirvote_get_start_of_next_interval(time_t now,
-                                          int interval,
-                                          int offset);
-void dirvote_recalculate_timing(const or_options_t *options, time_t now);
-void dirvote_act(const or_options_t *options, time_t now);
-time_t dirvote_get_next_valid_after_time(void);
-
-/* invoked on timers and by outside triggers. */
+/* Storing signatures and votes functions */
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
                                          const char **msg_out,
                                          int *status_out);
@@ -161,15 +112,78 @@ int dirvote_add_signatures(const char *detached_signatures_body,
                            const char *source,
                            const char **msg_out);
 
+#else /* HAVE_MODULE_DIRAUTH */
+
+static inline void
+dirvote_act(const or_options_t *options, time_t now)
+{
+  (void) options;
+  (void) now;
+}
+
+static inline void
+dirvote_free_all(void)
+{
+}
+
+static inline void
+dirvote_parse_sr_commits(networkstatus_t *ns, smartlist_t *tokens)
+{
+  (void) ns;
+  (void) tokens;
+}
+
+static inline void
+dirvote_free_commits(networkstatus_t *ns)
+{
+  (void) ns;
+}
+
+static inline void
+dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
+                               smartlist_t *dir_items)
+{
+  (void) url;
+  (void) items;
+  (void) dir_items;
+}
+
+static inline struct pending_vote_t *
+dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
+{
+  (void) vote_body;
+  (void) msg_out;
+  (void) status_out;
+  /* If the dirauth module is disabled, this should NEVER be called else we
+   * failed to safeguard the dirauth module. */
+  tor_assert(0);
+}
+
+static inline int
+dirvote_add_signatures(const char *detached_signatures_body, const char *source,
+                       const char **msg_out)
+{
+  (void) detached_signatures_body;
+  (void) source;
+  (void) msg_out;
+  /* If the dirauth module is disabled, this should NEVER be called else we
+   * failed to safeguard the dirauth module. */
+  tor_assert(0);
+}
+
+#endif /* HAVE_MODULE_DIRAUTH */
+
+void dirvote_recalculate_timing(const or_options_t *options, time_t now);
 /* Item access */
 MOCK_DECL(const char*, dirvote_get_pending_consensus,
           (consensus_flavor_t flav));
 MOCK_DECL(const char*, dirvote_get_pending_detached_signatures, (void));
-
-#define DGV_BY_ID 1
-#define DGV_INCLUDE_PENDING 2
-#define DGV_INCLUDE_PREVIOUS 4
 const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
+
+/*
+ * API used _only_ by the dirauth subsystem.
+ */
+
 void set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                       node_t *node,
                                       routerinfo_t *ri, time_t now,
@@ -178,26 +192,16 @@ networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                         authority_cert_t *cert);
 
-microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
-                                            int consensus_method);
-ssize_t dirvote_format_microdesc_vote_line(char *out, size_t out_len,
-                                           const microdesc_t *md,
-                                           int consensus_method_low,
-                                           int consensus_method_high);
 vote_microdesc_hash_t *dirvote_format_all_microdesc_vote_lines(
                                         const routerinfo_t *ri,
                                         time_t now,
                                         smartlist_t *microdescriptors_out);
 
-int vote_routerstatus_find_microdesc_hash(char *digest256_out,
-                                          const vote_routerstatus_t *vrs,
-                                          int method,
-                                          digest_algorithm_t alg);
-document_signature_t *voter_get_sig_by_algorithm(
-                           const networkstatus_voter_info_t *voter,
-                           digest_algorithm_t alg);
-
+/*
+ * Exposed functions for unit tests.
+ */
 #ifdef DIRVOTE_PRIVATE
+
 STATIC int32_t dirvote_get_intermediate_param_value(
                                    const smartlist_t *param_list,
                                    const char *keyword,
@@ -212,6 +216,25 @@ STATIC int
 networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
                                      int64_t M, int64_t E, int64_t D,
                                      int64_t T, int64_t weight_scale);
+STATIC
+char *networkstatus_compute_consensus(smartlist_t *votes,
+                                      int total_authorities,
+                                      crypto_pk_t *identity_key,
+                                      crypto_pk_t *signing_key,
+                                      const char *legacy_identity_key_digest,
+                                      crypto_pk_t *legacy_signing_key,
+                                      consensus_flavor_t flavor);
+STATIC
+int networkstatus_add_detached_signatures(networkstatus_t *target,
+                                          ns_detached_signatures_t *sigs,
+                                          const char *source,
+                                          int severity,
+                                          const char **msg_out);
+STATIC
+char *networkstatus_get_detached_signatures(smartlist_t *consensuses);
+STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
+                                                   int consensus_method);
+
 #endif /* defined(DIRVOTE_PRIVATE) */
 
 #endif /* !defined(TOR_DIRVOTE_H) */

@@ -28,8 +28,8 @@
 #include "rendservice.h"
 #include "routerset.h"
 #include "router.h"
-#include "shared_random.h"
-#include "shared_random_state.h"
+#include "shared_random_common.h"
+#include "dirauth/shared_random_state.h"
 
 /* Trunnel */
 #include "ed25519_cert.h"

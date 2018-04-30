@@ -30,7 +30,7 @@
 #include "proto_http.h"
 #include "geoip.h"
 #include "dirserv.h"
-#include "dirvote.h"
+#include "dirauth/dirvote.h"
 #include "log_test_helpers.h"
 
 #ifdef _WIN32

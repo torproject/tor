@@ -34,7 +34,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "crypto.h"
-#include "dirvote.h"
+#include "dirauth/dirvote.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "relay.h"
@@ -51,7 +51,7 @@
 #include "main.h"
 #include "rendservice.h"
 #include "statefile.h"
-#include "shared_random_state.h"
+#include "dirauth/shared_random_state.h"
 
 /* Trunnel */
 #include "hs/cell_establish_intro.h"
