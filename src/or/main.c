@@ -2011,7 +2011,7 @@ save_state_callback(time_t now, const or_options_t *options)
      */
     return PERIODIC_EVENT_NO_UPDATE;
   } else {
-    return next_write - now;
+    return (int)(next_write - now);
   }
 }
 
