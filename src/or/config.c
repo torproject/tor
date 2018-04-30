@@ -8105,7 +8105,10 @@ getinfo_helper_config(control_connection_t *conn,
         case CONFIG_TYPE_ISOTIME: type = "Time"; break;
         case CONFIG_TYPE_ROUTERSET: type = "RouterList"; break;
         case CONFIG_TYPE_CSV: type = "CommaList"; break;
-        case CONFIG_TYPE_CSV_INTERVAL: type = "TimeIntervalCommaList"; break;
+        /* This type accepts more inputs than TimeInterval, but it ignores
+         * everything after the first entry, so we may as well pretend
+         * it's a TimeInterval. */
+        case CONFIG_TYPE_CSV_INTERVAL: type = "TimeInterval"; break;
         case CONFIG_TYPE_LINELIST: type = "LineList"; break;
         case CONFIG_TYPE_LINELIST_S: type = "Dependent"; break;
         case CONFIG_TYPE_LINELIST_V: type = "Virtual"; break;
