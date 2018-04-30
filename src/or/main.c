@@ -1969,10 +1969,12 @@ check_authority_cert_callback(time_t now, const or_options_t *options)
 static int
 dirvote_callback(time_t now, const or_options_t *options)
 {
-  time_t next = TIME_MAX;
-  if (authdir_mode_v3(options)) {
-    next = dirvote_act(options, now);
+  if (!authdir_mode_v3(options)) {
+    tor_assert_unreached_nonfatal();
+    return 3600;
   }
+
+  time_t next = dirvote_act(options, now);
   if (BUG(next == TIME_MAX)) {
     return 3600;
   }
