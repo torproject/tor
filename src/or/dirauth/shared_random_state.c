@@ -1293,7 +1293,7 @@ sr_state_init(int save_to_disk, int read_from_disk)
   /* We have a state in memory, let's make sure it's updated for the current
    * and next voting round. */
   {
-    time_t valid_after = dirvote_get_next_valid_after_time();
+    time_t valid_after = voting_schedule_get_next_valid_after_time();
     sr_state_update(valid_after);
   }
   return 0;

@@ -11,9 +11,6 @@
 
 #include "or.h"
 
-/* Dirauth module. */
-#include "dirauth/dirvote.h"
-
 /** Scheduling information for a voting interval. */
 typedef struct {
   /** When do we generate and distribute our vote for this interval? */
@@ -52,10 +49,10 @@ typedef struct {
 
 extern voting_schedule_t voting_schedule;
 
-time_t dirvote_get_start_of_next_interval(time_t now,
-                                          int interval,
-                                          int offset);
-time_t dirvote_get_next_valid_after_time(void);
+time_t voting_schedule_get_start_of_next_interval(time_t now,
+                                                  int interval,
+                                                  int offset);
+time_t voting_schedule_get_next_valid_after_time(void);
 
 #endif /* TOR_VOTING_SCHEDULE_H */
 

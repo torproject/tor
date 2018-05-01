@@ -1252,7 +1252,7 @@ sr_act_post_consensus(const networkstatus_t *consensus)
   }
 
   /* Prepare our state so that it's ready for the next voting period. */
-  sr_state_update(dirvote_get_next_valid_after_time());
+  sr_state_update(voting_schedule_get_next_valid_after_time());
 }
 
 /* Initialize shared random subsystem. This MUST be called early in the boot

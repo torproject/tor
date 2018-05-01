@@ -15,6 +15,8 @@
 #include "config.h"
 #include "networkstatus.h"
 
+#include "dirauth/dirvote.h"
+
 /* =====
  * Vote scheduling
  * ===== */
@@ -25,7 +27,8 @@
  * truncated to less than half its size, it is rolled into the
  * previous interval. */
 time_t
-dirvote_get_start_of_next_interval(time_t now, int interval, int offset)
+voting_schedule_get_start_of_next_interval(time_t now, int interval,
+                                           int offset)
 {
   struct tm tm;
   time_t midnight_today=0;
@@ -92,9 +95,9 @@ get_voting_schedule(const or_options_t *options, time_t now, int severity)
     vote_delay = dist_delay = interval / 4;
 
   start = new_voting_schedule->interval_starts =
-    dirvote_get_start_of_next_interval(now,interval,
+    voting_schedule_get_start_of_next_interval(now,interval,
                                       options->TestingV3AuthVotingStartOffset);
-  end = dirvote_get_start_of_next_interval(start+1, interval,
+  end = voting_schedule_get_start_of_next_interval(start+1, interval,
                                       options->TestingV3AuthVotingStartOffset);
 
   tor_assert(end > start);
@@ -133,7 +136,7 @@ voting_schedule_t voting_schedule;
 
 /* Using the time <b>now</b>, return the next voting valid-after time. */
 time_t
-dirvote_get_next_valid_after_time(void)
+voting_schedule_get_next_valid_after_time(void)
 {
   /* This is a safe guard in order to make sure that the voting schedule
    * static object is at least initialized. Using this function with a zeroed
