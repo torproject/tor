@@ -103,13 +103,13 @@ def appveyor_vars():
     ])
 
     BUILD_FMT = u'{url}/project/{account_name}/{project_name}/build/{build_version}'
-    COMMIT_FMT = u'https://{repo_provider}.com/{repo_name}/commit/{repo_commit}'
 
-    print(vars)
+    if vars["repo_provider"] == 'github':
+        COMMIT_FMT = u'https://{repo_provider}.com/{repo_name}/commit/{repo_commit}'
+        vars.update(commit_url=COMMIT_FMT.format(**vars))
 
     vars.update(
         build_url=BUILD_FMT.format(**vars),
-        commit_url=COMMIT_FMT.format(**vars),
         short_commit=vars["repo_commit"][:7],
         color_white='\x030',
         color_blue='\x032',
@@ -136,9 +136,14 @@ def notify():
         messages.append(u"{repo_name} {color_white}{repo_branch}{color_reset} {short_commit} - {repo_commit_author}: {repo_commit_message}")
 
         if success:
-            messages.append(u"Build #{build_version} {color_green}passed{color_reset}. Details: {color_blue}{build_url}{color_reset} Commit: {color_blue}{commit_url}{color_reset}")
+            m = u"Build #{build_version} {color_green}passed{color_reset}. Details: {color_blue}{build_url}{color_reset}"
         if failure:
-            messages.append(u"Build #{build_version} {color_red}failed{color_reset}. Details: {color_blue}{build_url}{color_reset} Commit: {color_blue}{commit_url}{color_reset}")
+            m = u"Build #{build_version} {color_red}failed{color_reset}. Details: {color_blue}{build_url}{color_reset}"
+
+        if "commit_url" in apvy_vars:
+            m += " Commit: {color_blue}{commit_url}{color_reset}"
+     
+        messages.append(m)
     else:
         messages = sys.argv[3:]
         messages = ' '.join(messages)
