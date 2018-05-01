@@ -1349,6 +1349,7 @@ CALLBACK(heartbeat);
 CALLBACK(hs_service);
 CALLBACK(launch_descriptor_fetches);
 CALLBACK(launch_reachability_tests);
+CALLBACK(reachability_warnings);
 CALLBACK(record_bridge_stats);
 CALLBACK(rend_cache_failure_clean);
 CALLBACK(reset_padding_counts);
@@ -1391,6 +1392,8 @@ STATIC periodic_event_item_t periodic_events[] = {
            PERIODIC_EVENT_FLAG_NEED_NET),
   CALLBACK(check_onion_keys_expiry_time, PERIODIC_EVENT_ROLE_ROUTER, 0),
   CALLBACK(expire_old_ciruits_serverside, PERIODIC_EVENT_ROLE_ROUTER,
+           PERIODIC_EVENT_FLAG_NEED_NET),
+  CALLBACK(reachability_warnings, PERIODIC_EVENT_ROLE_ROUTER,
            PERIODIC_EVENT_FLAG_NEED_NET),
   CALLBACK(retry_dns, PERIODIC_EVENT_ROLE_ROUTER, 0),
   CALLBACK(rotate_onion_key, PERIODIC_EVENT_ROLE_ROUTER, 0),
@@ -2329,6 +2332,54 @@ expire_old_ciruits_serverside_callback(time_t now, const or_options_t *options)
   return 11;
 }
 
+/**
+ * Callback: Send warnings if Tor doesn't find its ports reachable.
+ */
+static int
+reachability_warnings_callback(time_t now, const or_options_t *options)
+{
+  (void) now;
+
+  if (get_uptime() < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
+    return (int)(TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT - get_uptime());
+  }
+
+  if (server_mode(options) &&
+      !net_is_disabled() &&
+      have_completed_a_circuit()) {
+    /* every 20 minutes, check and complain if necessary */
+    const routerinfo_t *me = router_get_my_routerinfo();
+    if (me && !check_whether_orport_reachable(options)) {
+      char *address = tor_dup_ip(me->addr);
+      log_warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
+               "its ORPort is reachable. Relays do not publish descriptors "
+               "until their ORPort and DirPort are reachable. Please check "
+               "your firewalls, ports, address, /etc/hosts file, etc.",
+               address, me->or_port);
+      control_event_server_status(LOG_WARN,
+                                  "REACHABILITY_FAILED ORADDRESS=%s:%d",
+                                  address, me->or_port);
+      tor_free(address);
+    }
+
+    if (me && !check_whether_dirport_reachable(options)) {
+      char *address = tor_dup_ip(me->addr);
+      log_warn(LD_CONFIG,
+               "Your server (%s:%d) has not managed to confirm that its "
+               "DirPort is reachable. Relays do not publish descriptors "
+               "until their ORPort and DirPort are reachable. Please check "
+               "your firewalls, ports, address, /etc/hosts file, etc.",
+               address, me->dir_port);
+      control_event_server_status(LOG_WARN,
+                                  "REACHABILITY_FAILED DIRADDRESS=%s:%d",
+                                  address, me->dir_port);
+      tor_free(address);
+    }
+  }
+
+  return TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT;
+}
+
 static int dns_honesty_first_time = 1;
 
 /**
@@ -2456,7 +2507,6 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   size_t bytes_written;
   size_t bytes_read;
   int seconds_elapsed;
-  const or_options_t *options = get_options();
   (void)timer;
   (void)arg;
 
@@ -2478,43 +2528,6 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   control_event_conn_bandwidth_used();
   control_event_circ_bandwidth_used();
   control_event_circuit_cell_stats();
-
-  if (server_mode(options) &&
-      !net_is_disabled() &&
-      seconds_elapsed > 0 &&
-      have_completed_a_circuit() &&
-      get_uptime() / TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT !=
-      (get_uptime()+seconds_elapsed) /
-        TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
-    /* every 20 minutes, check and complain if necessary */
-    const routerinfo_t *me = router_get_my_routerinfo();
-    if (me && !check_whether_orport_reachable(options)) {
-      char *address = tor_dup_ip(me->addr);
-      log_warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
-               "its ORPort is reachable. Relays do not publish descriptors "
-               "until their ORPort and DirPort are reachable. Please check "
-               "your firewalls, ports, address, /etc/hosts file, etc.",
-               address, me->or_port);
-      control_event_server_status(LOG_WARN,
-                                  "REACHABILITY_FAILED ORADDRESS=%s:%d",
-                                  address, me->or_port);
-      tor_free(address);
-    }
-
-    if (me && !check_whether_dirport_reachable(options)) {
-      char *address = tor_dup_ip(me->addr);
-      log_warn(LD_CONFIG,
-               "Your server (%s:%d) has not managed to confirm that its "
-               "DirPort is reachable. Relays do not publish descriptors "
-               "until their ORPort and DirPort are reachable. Please check "
-               "your firewalls, ports, address, /etc/hosts file, etc.",
-               address, me->dir_port);
-      control_event_server_status(LOG_WARN,
-                                  "REACHABILITY_FAILED DIRADDRESS=%s:%d",
-                                  address, me->dir_port);
-      tor_free(address);
-    }
-  }
 
 /** If more than this many seconds have elapsed, probably the clock
  * jumped: doesn't count. */
