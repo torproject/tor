@@ -1994,13 +1994,7 @@ dirvote_callback(time_t now, const or_options_t *options)
      * fix itself in an hour or so? */
     return 3600;
   }
-  if (BUG(next <= now)) {
-    /* This case shouldn't be possible, since "next" is computed by
-     * dirvote_act() based on the value of "now" we give it. */
-    return 1;
-  } else {
-    return next - now;
-  }
+  return safe_timer_diff(now, next);
 }
 
 /** Reschedule the directory-authority voting event.  Run this whenever the
@@ -2046,14 +2040,8 @@ save_state_callback(time_t now, const or_options_t *options)
   const time_t next_write = get_or_state()->next_write;
   if (next_write == TIME_MAX) {
     return 86400;
-  } else if (BUG(next_write <= now)) {
-    /* This can't happen due to clock jumps, since the value of next_write
-     * is based on the same "now" that we passed to or_state_save().
-     */
-    return PERIODIC_EVENT_NO_UPDATE;
-  } else {
-    return (int)(next_write - now);
   }
+  return safe_timer_diff(now, next_write);
 }
 
 /** Reschedule the event for saving the state file.
