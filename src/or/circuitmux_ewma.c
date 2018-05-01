@@ -250,7 +250,11 @@ static unsigned current_tick_num;
 static inline unsigned int
 cell_ewma_get_tick(void)
 {
-  return ((unsigned)approx_time() / EWMA_TICK_LEN);
+  monotime_coarse_t now;
+  monotime_coarse_get(&now);
+  int32_t msec_diff = monotime_coarse_diff_msec32(&start_of_current_tick,
+                                                  &now);
+  return current_tick_num + msec_diff / (1000*EWMA_TICK_LEN);
 }
 
 /**
