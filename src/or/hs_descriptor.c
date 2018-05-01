@@ -1983,7 +1983,10 @@ desc_decode_plaintext_v3(smartlist_t *tokens,
          sizeof(ed25519_public_key_t));
 
   /* Extract revision counter value. From tor version 0.3.4, it is ignored in
-   * favor of a replay cache on the directory side. Client also ignore it. */
+   * favor of a replay cache on the directory side. Client also ignore it. If
+   * not present, we set it to 0 which what will be used in the encryption key
+   * construction of the secret input. */
+  desc->revision_counter = 0;
   tok = find_by_keyword(tokens, R3_REVISION_COUNTER);
   if (tok != NULL) {
     tor_assert(tok->n_args == 1);
