@@ -8,6 +8,7 @@
 #include "or.h"
 #include "test.h"
 #include "addressmap.h"
+#include "log_test_helpers.h"
 
 /** Mocking replacement: only handles localhost. */
 static int
@@ -941,6 +942,156 @@ test_virtaddrmap(void *data)
   ;
 }
 
+static const char *canned_data = NULL;
+static size_t canned_data_len = 0;
+
+/* Mock replacement for crypto_rand() that returns canned data from
+ * canned_data above. */
+static void
+crypto_canned(char *ptr, size_t n)
+{
+  if (canned_data_len) {
+    size_t to_copy = MIN(n, canned_data_len);
+    memcpy(ptr, canned_data, to_copy);
+    canned_data += to_copy;
+    canned_data_len -= to_copy;
+    n -= to_copy;
+    ptr += to_copy;
+  }
+  if (n) {
+    crypto_rand_unmocked(ptr, n);
+  }
+}
+
+static void
+test_virtaddrmap_persist(void *data)
+{
+  (void)data;
+  const char *a, *b, *c;
+  tor_addr_t addr;
+  char *ones = NULL;
+
+  addressmap_init();
+
+  // Try a hostname.
+  a = addressmap_register_virtual_address(RESOLVED_TYPE_HOSTNAME,
+                                          tor_strdup("foobar.baz"));
+  tt_assert(a);
+  tt_assert(!strcmpend(a, ".virtual"));
+
+  // mock crypto_rand to repeat the same result twice; make sure we get
+  // different outcomes.  (Because even though it's only 2^40 for this
+  // to happen, 2^40 isn't all that low.)
+  canned_data = "1234567890" // the first call returns this.
+                "1234567890" // the second call returns this.
+                "abcdefghij"; // the third call returns this.
+  canned_data_len = 30;
+  MOCK(crypto_rand, crypto_canned);
+
+  a = addressmap_register_virtual_address(RESOLVED_TYPE_HOSTNAME,
+                                          tor_strdup("quuxit.baz"));
+  b = addressmap_register_virtual_address(RESOLVED_TYPE_HOSTNAME,
+                                          tor_strdup("nescio.baz"));
+  tt_assert(a);
+  tt_assert(b);
+  tt_str_op(a, OP_EQ, "gezdgnbvgy3tqojq.virtual");
+  tt_str_op(b, OP_EQ, "mfrggzdfmztwq2lk.virtual");
+
+  // Now try something to get us an ipv4 address
+  UNMOCK(crypto_rand);
+  tt_int_op(0,OP_EQ, parse_virtual_addr_network("192.168.0.0/16",
+                                                AF_INET, 0, NULL));
+  a = addressmap_register_virtual_address(RESOLVED_TYPE_IPV4,
+                                          tor_strdup("foobar.baz"));
+  tt_assert(a);
+  tt_assert(!strcmpstart(a, "192.168."));
+  tor_addr_parse(&addr, a);
+  tt_int_op(AF_INET, OP_EQ, tor_addr_family(&addr));
+
+  b = addressmap_register_virtual_address(RESOLVED_TYPE_IPV4,
+                                          tor_strdup("quuxit.baz"));
+  tt_str_op(b, OP_NE, a);
+  tt_assert(!strcmpstart(b, "192.168."));
+
+  // Try some canned entropy and verify all the we discard duplicates,
+  // addresses that end with 0, and addresses that end with 255.
+  MOCK(crypto_rand, crypto_canned);
+  canned_data = "\x01\x02\x03\x04" // okay
+                "\x01\x02\x03\x04" // duplicate
+                "\x03\x04\x00\x00" // bad ending 1
+                "\x05\x05\x00\xff" // bad ending 2
+                "\x05\x06\x07\xf0"; // okay
+  canned_data_len = 20;
+  a = addressmap_register_virtual_address(RESOLVED_TYPE_IPV4,
+                                          tor_strdup("wumble.onion"));
+  b = addressmap_register_virtual_address(RESOLVED_TYPE_IPV4,
+                                          tor_strdup("wumpus.onion"));
+  tt_str_op(a, OP_EQ, "192.168.3.4");
+  tt_str_op(b, OP_EQ, "192.168.7.240");
+
+  // Now try IPv6!
+  UNMOCK(crypto_rand);
+  tt_int_op(0,OP_EQ, parse_virtual_addr_network("1010:F000::/20",
+                                                AF_INET6, 0, NULL));
+  a = addressmap_register_virtual_address(RESOLVED_TYPE_IPV6,
+                                          tor_strdup("foobar.baz"));
+  tt_assert(a);
+  tt_assert(!strcmpstart(a, "[1010:f"));
+  tor_addr_parse(&addr, a);
+  tt_int_op(AF_INET6, OP_EQ, tor_addr_family(&addr));
+
+  b = addressmap_register_virtual_address(RESOLVED_TYPE_IPV6,
+                                          tor_strdup("quuxit.baz"));
+  tt_str_op(b, OP_NE, a);
+  tt_assert(!strcmpstart(b, "[1010:f"));
+
+  // Try IPv6 with canned entropy, to make sure we detect duplicates.
+  MOCK(crypto_rand, crypto_canned);
+  canned_data = "acanthopterygian" // okay
+                "cinematographist" // okay
+                "acanthopterygian" // duplicate
+                "acanthopterygian" // duplicate
+                "acanthopterygian" // duplicate
+                "cinematographist" // duplicate
+                "coadministration"; // okay
+  canned_data_len = 16 * 7;
+  a = addressmap_register_virtual_address(RESOLVED_TYPE_IPV6,
+                                          tor_strdup("wuffle.baz"));
+  b = addressmap_register_virtual_address(RESOLVED_TYPE_IPV6,
+                                          tor_strdup("gribble.baz"));
+  c = addressmap_register_virtual_address(RESOLVED_TYPE_IPV6,
+                                      tor_strdup("surprisingly-legible.baz"));
+  tt_str_op(a, OP_EQ, "[1010:f16e:7468:6f70:7465:7279:6769:616e]");
+  tt_str_op(b, OP_EQ, "[1010:fe65:6d61:746f:6772:6170:6869:7374]");
+  tt_str_op(c, OP_EQ, "[1010:f164:6d69:6e69:7374:7261:7469:6f6e]");
+
+  // Try address exhaustion: make sure we can actually fail if we
+  // get too many already-existing addresses.
+  canned_data_len = 128*1024;
+  canned_data = ones = tor_malloc(canned_data_len);
+  memset(ones, 1, canned_data_len);
+  // There is some chance this one will fail if a previous random
+  // allocation gave out the address already.
+  a = addressmap_register_virtual_address(RESOLVED_TYPE_IPV4,
+                                          tor_strdup("might-work.onion"));
+  if (a) {
+    tt_str_op(a, OP_EQ, "192.168.1.1");
+  }
+  setup_capture_of_logs(LOG_WARN);
+  // This one will definitely fail, since we've set up the RNG to hand
+  // out "1" forever.
+  b = addressmap_register_virtual_address(RESOLVED_TYPE_IPV4,
+                                          tor_strdup("wont-work.onion"));
+  tt_assert(b == NULL);
+  expect_single_log_msg_containing("Ran out of virtual addresses!");
+
+ done:
+  UNMOCK(crypto_rand);
+  tor_free(ones);
+  addressmap_free_all();
+  teardown_capture_of_logs();
+}
+
 static void
 test_addr_localname(void *arg)
 {
@@ -1095,6 +1246,7 @@ struct testcase_t addr_tests[] = {
   ADDR_LEGACY(ip6_helpers),
   ADDR_LEGACY(parse),
   { "virtaddr", test_virtaddrmap, 0, NULL, NULL },
+  { "virtaddr_persist", test_virtaddrmap_persist, TT_FORK, NULL, NULL },
   { "localname", test_addr_localname, 0, NULL, NULL },
   { "dup_ip", test_addr_dup_ip, 0, NULL, NULL },
   { "sockaddr_to_str", test_addr_sockaddr_to_str, 0, NULL, NULL },
