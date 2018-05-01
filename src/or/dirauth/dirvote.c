@@ -3892,7 +3892,7 @@ dirvote_format_all_microdesc_vote_lines(const routerinfo_t *ri, time_t now,
 /** Parse and extract all SR commits from <b>tokens</b> and place them in
  *  <b>ns</b>. */
 static void
-extract_shared_random_commits(networkstatus_t *ns, smartlist_t *tokens)
+extract_shared_random_commits(networkstatus_t *ns, const smartlist_t *tokens)
 {
   smartlist_t *chunks = NULL;
 
@@ -3948,7 +3948,7 @@ extract_shared_random_commits(networkstatus_t *ns, smartlist_t *tokens)
  *
  * This also sets the SR participation flag if present in the vote. */
 void
-dirvote_parse_sr_commits(networkstatus_t *ns, smartlist_t *tokens)
+dirvote_parse_sr_commits(networkstatus_t *ns, const smartlist_t *tokens)
 {
   /* Does this authority participates in the SR protocol? */
   directory_token_t *tok = find_opt_by_keyword(tokens, K_SR_FLAG);
