@@ -72,7 +72,6 @@
 #include "crypto_s2k.h"
 #include "directory.h"
 #include "dirserv.h"
-#include "dirvote.h"
 #include "dns.h"
 #include "dnsserv.h"
 #include "dos.h"
@@ -103,7 +102,7 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "scheduler.h"
-#include "shared_random.h"
+#include "dirauth/shared_random.h"
 #include "statefile.h"
 #include "status.h"
 #include "tor_api.h"
@@ -117,6 +116,8 @@
 #include "sandbox.h"
 
 #include <event2/event.h>
+
+#include "dirauth/dirvote.h"
 
 #ifdef HAVE_SYSTEMD
 #   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)

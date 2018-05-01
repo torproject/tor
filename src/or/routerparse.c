@@ -59,7 +59,6 @@
 #include "config.h"
 #include "circuitstats.h"
 #include "dirserv.h"
-#include "dirvote.h"
 #include "parsecommon.h"
 #include "policies.h"
 #include "protover.h"
@@ -75,10 +74,14 @@
 #include "entrynodes.h"
 #include "torcert.h"
 #include "sandbox.h"
-#include "shared_random.h"
+#include "shared_random_common.h"
+#include "dirvote_common.h"
+#include "dirauth/shared_random.h"
 
 #undef log
 #include <math.h>
+
+#include "dirauth/dirvote.h"
 
 /****************************************************************************/
 
@@ -3282,60 +3285,6 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
   return valid;
 }
 
-/** Parse and extract all SR commits from <b>tokens</b> and place them in
- *  <b>ns</b>. */
-static void
-extract_shared_random_commits(networkstatus_t *ns, smartlist_t *tokens)
-{
-  smartlist_t *chunks = NULL;
-
-  tor_assert(ns);
-  tor_assert(tokens);
-  /* Commits are only present in a vote. */
-  tor_assert(ns->type == NS_TYPE_VOTE);
-
-  ns->sr_info.commits = smartlist_new();
-
-  smartlist_t *commits = find_all_by_keyword(tokens, K_COMMIT);
-  /* It's normal that a vote might contain no commits even if it participates
-   * in the SR protocol. Don't treat it as an error. */
-  if (commits == NULL) {
-    goto end;
-  }
-
-  /* Parse the commit. We do NO validation of number of arguments or ordering
-   * for forward compatibility, it's the parse commit job to inform us if it's
-   * supported or not. */
-  chunks = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(commits, directory_token_t *, tok) {
-    /* Extract all arguments and put them in the chunks list. */
-    for (int i = 0; i < tok->n_args; i++) {
-      smartlist_add(chunks, tok->args[i]);
-    }
-    sr_commit_t *commit = sr_parse_commit(chunks);
-    smartlist_clear(chunks);
-    if (commit == NULL) {
-      /* Get voter identity so we can warn that this dirauth vote contains
-       * commit we can't parse. */
-      networkstatus_voter_info_t *voter = smartlist_get(ns->voters, 0);
-      tor_assert(voter);
-      log_warn(LD_DIR, "SR: Unable to parse commit %s from vote of voter %s.",
-               escaped(tok->object_body),
-               hex_str(voter->identity_digest,
-                       sizeof(voter->identity_digest)));
-      /* Commitment couldn't be parsed. Continue onto the next commit because
-       * this one could be unsupported for instance. */
-      continue;
-    }
-    /* Add newly created commit object to the vote. */
-    smartlist_add(ns->sr_info.commits, commit);
-  } SMARTLIST_FOREACH_END(tok);
-
- end:
-  smartlist_free(chunks);
-  smartlist_free(commits);
-}
-
 /** Check if a shared random value of type <b>srv_type</b> is in
  *  <b>tokens</b>. If there is, parse it and set it to <b>srv_out</b>. Return
  *  -1 on failure, 0 on success. The resulting srv is allocated on the heap and
@@ -3773,13 +3722,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   /* If this is a vote document, check if information about the shared
      randomness protocol is included, and extract it. */
   if (ns->type == NS_TYPE_VOTE) {
-    /* Does this authority participates in the SR protocol? */
-    tok = find_opt_by_keyword(tokens, K_SR_FLAG);
-    if (tok) {
-      ns->sr_info.participate = 1;
-      /* Get the SR commitments and reveals from the vote. */
-      extract_shared_random_commits(ns, tokens);
-    }
+    dirvote_parse_sr_commits(ns, tokens);
   }
   /* For both a vote and consensus, extract the shared random values. */
   if (ns->type == NS_TYPE_VOTE || ns->type == NS_TYPE_CONSENSUS) {
@@ -3969,7 +3912,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
     }
 
-    if (voter_get_sig_by_algorithm(v, sig->alg)) {
+    if (dirvote_get_voter_sig_by_alg(v, sig->alg)) {
       /* We already parsed a vote with this algorithm from this voter. Use the
          first one. */
       log_fn(LOG_PROTOCOL_WARN, LD_DIR, "We received a networkstatus "

@@ -5,7 +5,8 @@
 #include "or.h"
 
 #include "config.h"
-#include "dirvote.h"
+#define DIRVOTE_PRIVATE
+#include "dirauth/dirvote.h"
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "routerlist.h"
