@@ -111,7 +111,7 @@ static token_rule_t hs_desc_v3_token_table[] = {
   T1_START(str_hs_desc, R_HS_DESCRIPTOR, EQ(1), NO_OBJ),
   T1(str_lifetime, R3_DESC_LIFETIME, EQ(1), NO_OBJ),
   T1(str_desc_cert, R3_DESC_SIGNING_CERT, NO_ARGS, NEED_OBJ),
-  T1(str_rev_counter, R3_REVISION_COUNTER, EQ(1), NO_OBJ),
+  T01(str_rev_counter, R3_REVISION_COUNTER, EQ(1), NO_OBJ),
   T1(str_superencrypted, R3_SUPERENCRYPTED, NO_ARGS, NEED_OBJ),
   T1_END(str_signature, R3_SIGNATURE, EQ(1), NO_OBJ),
   END_OF_TABLE
@@ -1982,14 +1982,17 @@ desc_decode_plaintext_v3(smartlist_t *tokens,
   memcpy(&desc->blinded_pubkey, &desc->signing_key_cert->signing_key,
          sizeof(ed25519_public_key_t));
 
-  /* Extract revision counter value. */
+  /* Extract revision counter value. From tor version 0.3.4, it is ignored in
+   * favor of a replay cache on the directory side. Client also ignore it. */
   tok = find_by_keyword(tokens, R3_REVISION_COUNTER);
-  tor_assert(tok->n_args == 1);
-  desc->revision_counter = tor_parse_uint64(tok->args[0], 10, 0,
-                                            UINT64_MAX, &ok, NULL);
-  if (!ok) {
-    log_warn(LD_REND, "Service descriptor revision-counter is invalid");
-    goto err;
+  if (tok != NULL) {
+    tor_assert(tok->n_args == 1);
+    desc->revision_counter = tor_parse_uint64(tok->args[0], 10, 0,
+                                              UINT64_MAX, &ok, NULL);
+    if (!ok) {
+      log_warn(LD_REND, "Service descriptor revision-counter is invalid");
+      goto err;
+    }
   }
 
   /* Extract the encrypted data section. */

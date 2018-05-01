@@ -168,9 +168,13 @@ typedef struct hs_desc_plaintext_data_t {
    * identity key and generated for a specific replica number. */
   ed25519_public_key_t blinded_pubkey;
 
-  /* Revision counter is incremented at each upload, regardless of whether
-   * the descriptor has changed. This avoids leaking whether the descriptor
-   * has changed. Spec specifies this as a 8 bytes positive integer. */
+  /* Revision counter is incremented at each upload, regardless of whether the
+   * descriptor has changed. This avoids leaking whether the descriptor has
+   * changed. Spec specifies this as a 8 bytes positive integer.
+   *
+   * XXX: Not used by service in tor 0.3.4.x but we still keep it here so we
+   * can store it if client happen to access older services, we need it in the
+   * descriptor encryption key construction. */
   uint64_t revision_counter;
 
   /* Decoding only: The b64-decoded superencrypted blob from the descriptor */
