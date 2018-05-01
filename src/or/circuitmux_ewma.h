@@ -19,5 +19,12 @@ extern circuitmux_policy_t ewma_policy;
 void cmux_ewma_set_options(const or_options_t *options,
                            const networkstatus_t *consensus);
 
+void circuitmux_ewma_free_all(void);
+
+#ifdef CIRCUITMUX_EWMA_PRIVATE
+STATIC unsigned cell_ewma_get_current_tick_and_fraction(double *remainder_out);
+STATIC void cell_ewma_initialize_ticks(void);
+#endif
+
 #endif /* !defined(TOR_CIRCUITMUX_EWMA_H) */
 

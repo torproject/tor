@@ -544,6 +544,8 @@ test_channel_outbound_cell(void *arg)
 
   (void) arg;
 
+  cmux_ewma_set_options(NULL,NULL);
+
   /* The channel will be freed so we need to hijack this so the scheduler
    * doesn't get confused. */
   MOCK(scheduler_release_channel, scheduler_release_channel_mock);

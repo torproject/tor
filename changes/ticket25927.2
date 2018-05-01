@@ -1,0 +1,5 @@
+  o Code simplification and refactoring:
+    - Remove our previous logic for "cached gettimeofday()" -- our coarse
+      monotonic timers are fast enough for this purpose, and far less
+      error-prone. Implements part of ticket 25927.
+

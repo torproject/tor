@@ -59,6 +59,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
+#include "circuitmux_ewma.h"
 #include "command.h"
 #include "compress.h"
 #include "config.h"
@@ -3590,6 +3591,7 @@ tor_free_all(int postfork)
   consdiffmgr_free_all();
   hs_free_all();
   dos_free_all();
+  circuitmux_ewma_free_all();
   if (!postfork) {
     config_free_all();
     or_state_free_all();
