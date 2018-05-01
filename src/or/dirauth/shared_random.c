@@ -96,7 +96,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "shared_random_state.h"
-#include "shared_random_common.h"
+#include "shared_random_client.h"
 #include "util.h"
 #include "voting_schedule.h"
 

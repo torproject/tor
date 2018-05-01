@@ -24,7 +24,7 @@
 #include "router.h"
 #include "routerkeys.h"
 #include "routerlist.h"
-#include "shared_random_common.h"
+#include "shared_random_client.h"
 #include "statefile.h"
 
 #include "hs_circuit.h"

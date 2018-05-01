@@ -2,14 +2,14 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file shared_random_common.c
+ * \file shared_random_client.c
  * \brief This file contains functions that are from the shared random
  *        subsystem but used by many part of tor. The full feature is built
  *        as part of the dirauth module.
  **/
 
-#define SHARED_RANDOM_COMMON_PRIVATE
-#include "shared_random_common.h"
+#define SHARED_RANDOM_CLIENT_PRIVATE
+#include "shared_random_client.h"
 
 #include "config.h"
 #include "voting_schedule.h"

@@ -74,7 +74,7 @@
 #include "entrynodes.h"
 #include "torcert.h"
 #include "sandbox.h"
-#include "shared_random_common.h"
+#include "shared_random_client.h"
 #include "voting_schedule.h"
 #include "dirauth/shared_random.h"
 

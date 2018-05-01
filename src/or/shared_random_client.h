@@ -2,12 +2,12 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file shared_random_common.h
- * \brief Header file for shared_random_common.c.
+ * \file shared_random_client.h
+ * \brief Header file for shared_random_client.c.
  **/
 
-#ifndef TOR_SHARED_RANDOM_COMMON_H
-#define TOR_SHARED_RANDOM_COMMON_H
+#ifndef TOR_SHARED_RANDOM_CLIENT_H
+#define TOR_SHARED_RANDOM_CLIENT_H
 
 /* Dirauth module. */
 #include "dirauth/shared_random.h"
@@ -43,5 +43,5 @@ time_t get_start_time_of_current_round(void);
 
 #endif /* TOR_UNIT_TESTS */
 
-#endif /* TOR_SHARED_RANDOM_COMMON_H */
+#endif /* TOR_SHARED_RANDOM_CLIENT_H */
 
