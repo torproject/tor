@@ -426,7 +426,7 @@ find_by_keyword_(smartlist_t *s, directory_keyword keyword,
  * NULL if no such keyword is found.
  */
 directory_token_t *
-find_opt_by_keyword(smartlist_t *s, directory_keyword keyword)
+find_opt_by_keyword(const smartlist_t *s, directory_keyword keyword)
 {
   SMARTLIST_FOREACH(s, directory_token_t *, t, if (t->tp == keyword) return t);
   return NULL;
