@@ -76,9 +76,8 @@ mock_node_get_by_id(const char *digest)
 {
   static node_t node;
   memcpy(node.identity, digest, DIGEST_LEN);
-  node.hsdir_index = tor_malloc_zero(sizeof(hsdir_index_t));
-  memset(node.hsdir_index->fetch, 'C', DIGEST256_LEN);
-  memset(node.hsdir_index->store_first, 'D', DIGEST256_LEN);
+  memset(node.hsdir_index.fetch, 'C', DIGEST256_LEN);
+  memset(node.hsdir_index.store_first, 'D', DIGEST256_LEN);
   return &node;
 }
 

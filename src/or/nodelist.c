@@ -225,7 +225,6 @@ node_get_or_create(const char *identity_digest)
 
   smartlist_add(the_nodelist->nodes, node);
   node->nodelist_idx = smartlist_len(the_nodelist->nodes) - 1;
-  node->hsdir_index = tor_malloc_zero(sizeof(hsdir_index_t));
 
   node->country = -1;
 
@@ -350,26 +349,26 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
 
   /* Build the fetch index. */
   hs_build_hsdir_index(node_identity_pk, fetch_srv, fetch_tp,
-                       node->hsdir_index->fetch);
+                       node->hsdir_index.fetch);
 
   /* If we are in the time segment between SRV#N and TP#N, the fetch index is
      the same as the first store index */
   if (!hs_in_period_between_tp_and_srv(ns, now)) {
-    memcpy(node->hsdir_index->store_first, node->hsdir_index->fetch,
-           sizeof(node->hsdir_index->store_first));
+    memcpy(node->hsdir_index.store_first, node->hsdir_index.fetch,
+           sizeof(node->hsdir_index.store_first));
   } else {
     hs_build_hsdir_index(node_identity_pk, store_first_srv, store_first_tp,
-                         node->hsdir_index->store_first);
+                         node->hsdir_index.store_first);
   }
 
   /* If we are in the time segment between TP#N and SRV#N+1, the fetch index is
      the same as the second store index */
   if (hs_in_period_between_tp_and_srv(ns, now)) {
-    memcpy(node->hsdir_index->store_second, node->hsdir_index->fetch,
-           sizeof(node->hsdir_index->store_second));
+    memcpy(node->hsdir_index.store_second, node->hsdir_index.fetch,
+           sizeof(node->hsdir_index.store_second));
   } else {
     hs_build_hsdir_index(node_identity_pk, store_second_srv, store_second_tp,
-                         node->hsdir_index->store_second);
+                         node->hsdir_index.store_second);
   }
 
  done:
@@ -720,7 +719,6 @@ node_free_(node_t *node)
   if (node->md)
     node->md->held_by_nodes--;
   tor_assert(node->nodelist_idx == -1);
-  tor_free(node->hsdir_index);
   tor_free(node);
 }
 

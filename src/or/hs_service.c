@@ -2304,8 +2304,8 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
   /* Logging so we know where it was sent. */
   {
     int is_next_desc = (service->desc_next == desc);
-    const uint8_t *idx = (is_next_desc) ? hsdir->hsdir_index->store_second:
-                                          hsdir->hsdir_index->store_first;
+    const uint8_t *idx = (is_next_desc) ? hsdir->hsdir_index.store_second:
+                                          hsdir->hsdir_index.store_first;
     log_info(LD_REND, "Service %s %s descriptor of revision %" PRIu64
                       " initiated upload request to %s with index %s",
              safe_str_client(service->onion_address),

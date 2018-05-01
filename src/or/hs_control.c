@@ -39,9 +39,8 @@ hs_control_desc_event_requested(const ed25519_public_key_t *onion_pk,
    * can't pick a node without an hsdir_index. */
   hsdir_node = node_get_by_id(hsdir_rs->identity_digest);
   tor_assert(hsdir_node);
-  tor_assert(hsdir_node->hsdir_index);
   /* This is a fetch event. */
-  hsdir_index = hsdir_node->hsdir_index->fetch;
+  hsdir_index = hsdir_node->hsdir_index.fetch;
 
   /* Trigger the event. */
   control_event_hs_descriptor_requested(onion_address, REND_NO_AUTH,

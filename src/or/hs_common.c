@@ -103,7 +103,7 @@ compare_digest_to_fetch_hsdir_index(const void *_key, const void **_member)
 {
   const char *key = _key;
   const node_t *node = *_member;
-  return tor_memcmp(key, node->hsdir_index->fetch, DIGEST256_LEN);
+  return tor_memcmp(key, node->hsdir_index.fetch, DIGEST256_LEN);
 }
 
 /* Helper function: The key is a digest that we compare to a node_t object
@@ -114,7 +114,7 @@ compare_digest_to_store_first_hsdir_index(const void *_key,
 {
   const char *key = _key;
   const node_t *node = *_member;
-  return tor_memcmp(key, node->hsdir_index->store_first, DIGEST256_LEN);
+  return tor_memcmp(key, node->hsdir_index.store_first, DIGEST256_LEN);
 }
 
 /* Helper function: The key is a digest that we compare to a node_t object
@@ -125,7 +125,7 @@ compare_digest_to_store_second_hsdir_index(const void *_key,
 {
   const char *key = _key;
   const node_t *node = *_member;
-  return tor_memcmp(key, node->hsdir_index->store_second, DIGEST256_LEN);
+  return tor_memcmp(key, node->hsdir_index.store_second, DIGEST256_LEN);
 }
 
 /* Helper function: Compare two node_t objects current hsdir_index. */
@@ -134,8 +134,8 @@ compare_node_fetch_hsdir_index(const void **a, const void **b)
 {
   const node_t *node1= *a;
   const node_t *node2 = *b;
-  return tor_memcmp(node1->hsdir_index->fetch,
-                    node2->hsdir_index->fetch,
+  return tor_memcmp(node1->hsdir_index.fetch,
+                    node2->hsdir_index.fetch,
                     DIGEST256_LEN);
 }
 
@@ -145,8 +145,8 @@ compare_node_store_first_hsdir_index(const void **a, const void **b)
 {
   const node_t *node1= *a;
   const node_t *node2 = *b;
-  return tor_memcmp(node1->hsdir_index->store_first,
-                    node2->hsdir_index->store_first,
+  return tor_memcmp(node1->hsdir_index.store_first,
+                    node2->hsdir_index.store_first,
                     DIGEST256_LEN);
 }
 
@@ -156,8 +156,8 @@ compare_node_store_second_hsdir_index(const void **a, const void **b)
 {
   const node_t *node1= *a;
   const node_t *node2 = *b;
-  return tor_memcmp(node1->hsdir_index->store_second,
-                    node2->hsdir_index->store_second,
+  return tor_memcmp(node1->hsdir_index.store_second,
+                    node2->hsdir_index.store_second,
                     DIGEST256_LEN);
 }
 
@@ -1288,18 +1288,15 @@ node_has_hsdir_index(const node_t *node)
 
   /* At this point, since the node has a desc, this node must also have an
    * hsdir index. If not, something went wrong, so BUG out. */
-  if (BUG(node->hsdir_index == NULL)) {
-    return 0;
-  }
-  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index->fetch,
+  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index.fetch,
                           DIGEST256_LEN))) {
     return 0;
   }
-  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index->store_first,
+  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index.store_first,
                           DIGEST256_LEN))) {
     return 0;
   }
-  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index->store_second,
+  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index.store_second,
                           DIGEST256_LEN))) {
     return 0;
   }

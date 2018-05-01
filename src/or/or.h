@@ -894,8 +894,19 @@ rend_data_v2_t *TO_REND_DATA_V2(const rend_data_t *d)
 struct hs_ident_edge_conn_t;
 struct hs_ident_dir_conn_t;
 struct hs_ident_circuit_t;
-/* Stub because we can't include hs_common.h. */
-struct hsdir_index_t;
+
+/* Hidden service directory index used in a node_t which is set once we set
+ * the consensus. */
+typedef struct hsdir_index_t {
+  /* HSDir index to use when fetching a descriptor. */
+  uint8_t fetch[DIGEST256_LEN];
+
+  /* HSDir index used by services to store their first and second
+   * descriptor. The first descriptor is chronologically older than the second
+   * one and uses older TP and SRV values. */
+  uint8_t store_first[DIGEST256_LEN];
+  uint8_t store_second[DIGEST256_LEN];
+} hsdir_index_t;
 
 /** Time interval for tracking replays of DH public keys received in
  * INTRODUCE2 cells.  Used only to avoid launching multiple
@@ -2561,7 +2572,7 @@ typedef struct node_t {
   /* Hidden service directory index data. This is used by a service or client
    * in order to know what's the hs directory index for this node at the time
    * the consensus is set. */
-  struct hsdir_index_t *hsdir_index;
+  struct hsdir_index_t hsdir_index;
 } node_t;
 
 /** Linked list of microdesc hash lines for a single router in a directory
