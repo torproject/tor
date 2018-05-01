@@ -794,9 +794,9 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
      * Use the preferred address and port if they are reachable, otherwise,
      * use the alternate address and port (if any).
      */
-    have_or = fascist_firewall_choose_address_rs(status,
-                                                 FIREWALL_OR_CONNECTION, 0,
-                                                 use_or_ap);
+    fascist_firewall_choose_address_rs(status, FIREWALL_OR_CONNECTION, 0,
+                                       use_or_ap);
+    have_or = tor_addr_port_is_valid_ap(use_or_ap, 0);
   }
 
   /* DirPort connections
@@ -805,9 +805,9 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
       indirection == DIRIND_ANON_DIRPORT ||
       (indirection == DIRIND_ONEHOP
        && !directory_must_use_begindir(options))) {
-    have_dir = fascist_firewall_choose_address_rs(status,
-                                                  FIREWALL_DIR_CONNECTION, 0,
-                                                  use_dir_ap);
+    fascist_firewall_choose_address_rs(status, FIREWALL_DIR_CONNECTION, 0,
+                                       use_dir_ap);
+    have_dir = tor_addr_port_is_valid_ap(use_dir_ap, 0);
   }
 
   /* We rejected all addresses in the relay's status. This means we can't

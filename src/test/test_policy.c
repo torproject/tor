@@ -1923,11 +1923,8 @@ test_policies_fascist_firewall_allows_address(void *arg)
     tor_addr_port_t chosen_rs_ap; \
     tor_addr_make_null(&chosen_rs_ap.addr, AF_INET); \
     chosen_rs_ap.port = 0; \
-    tt_int_op(fascist_firewall_choose_address_rs(&(fake_rs), \
-                                                 (fw_connection), \
-                                                 (pref_only), \
-                                                 &chosen_rs_ap), \
-              OP_EQ, (expect_rv)); \
+    fascist_firewall_choose_address_rs(&(fake_rs), (fw_connection), \
+                                       (pref_only), &chosen_rs_ap); \
     tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_rs_ap.addr)); \
     tt_int_op((expect_ap).port, OP_EQ, chosen_rs_ap.port); \
   STMT_END
@@ -1940,11 +1937,8 @@ test_policies_fascist_firewall_allows_address(void *arg)
     tor_addr_port_t chosen_node_ap; \
     tor_addr_make_null(&chosen_node_ap.addr, AF_INET); \
     chosen_node_ap.port = 0; \
-    tt_int_op(fascist_firewall_choose_address_node(&(fake_node), \
-                                                   (fw_connection), \
-                                                   (pref_only), \
-                                                   &chosen_node_ap), \
-              OP_EQ, (expect_rv)); \
+    fascist_firewall_choose_address_node(&(fake_node),(fw_connection), \
+                                         (pref_only), &chosen_node_ap); \
     tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_node_ap.addr)); \
     tt_int_op((expect_ap).port, OP_EQ, chosen_node_ap.port); \
   STMT_END
