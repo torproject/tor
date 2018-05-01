@@ -52,7 +52,6 @@ typedef struct {
 
 extern voting_schedule_t voting_schedule;
 
-void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
 time_t dirvote_get_start_of_next_interval(time_t now,
                                           int interval,
                                           int offset);
