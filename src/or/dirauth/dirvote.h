@@ -152,11 +152,14 @@ static inline struct pending_vote_t *
 dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 {
   (void) vote_body;
-  (void) msg_out;
-  (void) status_out;
   /* If the dirauth module is disabled, this should NEVER be called else we
    * failed to safeguard the dirauth module. */
   tor_assert_nonfatal_unreached();
+
+  /* We need to send out an error code. */
+  *status_out = 400;
+  *msg_out = "No directory authority support";
+  return NULL;
 }
 
 static inline int
@@ -169,6 +172,7 @@ dirvote_add_signatures(const char *detached_signatures_body, const char *source,
   /* If the dirauth module is disabled, this should NEVER be called else we
    * failed to safeguard the dirauth module. */
   tor_assert_nonfatal_unreached();
+  return 0;
 }
 
 #endif /* HAVE_MODULE_DIRAUTH */
