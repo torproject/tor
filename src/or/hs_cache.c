@@ -669,7 +669,7 @@ cache_client_intro_state_is_empty(const hs_cache_client_intro_state_t *cache)
 
 /** Check whether <b>client_desc</b> is useful for us, and store it in the
  *  client-side HS cache if so. The client_desc is freed if we already have a
- *  fresher (higher revision counter count) in the cache. */
+ *  a descriptor in the cache for the same service. */
 static int
 cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
 {
@@ -684,13 +684,6 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
    * check if this descriptor is newer than the cached one */
   cache_entry = lookup_v3_desc_as_client(client_desc->key.pubkey);
   if (cache_entry != NULL) {
-    /* If we have an entry in our cache that has a revision counter greater
-     * than the one we just fetched, discard the one we fetched. */
-    if (cache_entry->desc->plaintext_data.revision_counter >
-        client_desc->desc->plaintext_data.revision_counter) {
-      cache_client_desc_free(client_desc);
-      goto done;
-    }
     /* Remove old entry. Make space for the new one! */
     remove_v3_desc_as_client(cache_entry);
     cache_client_desc_free(cache_entry);
@@ -699,7 +692,6 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
   /* Store descriptor in cache */
   store_v3_desc_as_client(client_desc);
 
- done:
   return 0;
 }
 
