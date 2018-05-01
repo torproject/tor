@@ -2603,3 +2603,36 @@ hs_desc_lspec_to_trunnel(const hs_desc_link_specifier_t *spec)
   return ls;
 }
 
+/* Using the given valid encoded descriptor, find the start and end of the
+ * descriptor body without the signature.
+ *
+ * This is used to extract the descriptor body for signature validation and
+ * for the directory replay cache entry.
+ *
+ * On success, both start and end points inside encoded_desc. Else, start and
+ * end are set to NULL. */
+void
+hs_desc_get_offset_without_sig(const char *encoded_desc, const char **start,
+                               const char **end)
+{
+  const char *start_of_sig;
+
+  tor_assert(encoded_desc);
+
+  /* Nullify both. We only set them if we are sure that we can get both else
+   * they stay NULL. */
+  *start = *end = NULL;
+
+  /* We do look at newline + signature string so we make sure the siganture
+   * starts right after the encrypted MESSAGE. */
+  start_of_sig = tor_memstr(encoded_desc, strlen(encoded_desc),
+                            "\n" str_signature);
+  if (start_of_sig != NULL) {
+    /* Skip newline. */
+    start_of_sig++;
+    /* We found the start of the signature, set both values. */
+    *start = encoded_desc;
+    *end = start_of_sig;
+  }
+}
+
