@@ -23,12 +23,12 @@
 #include "config.h"
 #include "networkstatus.h"
 #include "directory.h"
-#include "dirvote.h"
+#include "dirauth/dirvote.h"
 #include "nodelist.h"
 #include "routerlist.h"
 #include "statefile.h"
 #include "circuitlist.h"
-#include "shared_random.h"
+#include "dirauth/shared_random.h"
 #include "util.h"
 
 /** Test the validation of HS v3 addresses */

@@ -79,7 +79,6 @@
 #include "confparse.h"
 #include "cpuworker.h"
 #include "dirserv.h"
-#include "dirvote.h"
 #include "dns.h"
 #include "dos.h"
 #include "entrynodes.h"
@@ -109,6 +108,8 @@
 #endif
 
 #include "procmon.h"
+
+#include "dirauth/dirvote.h"
 
 #ifdef HAVE_SYSTEMD
 #   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)

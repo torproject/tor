@@ -50,7 +50,6 @@
 #include "control.h"
 #include "directory.h"
 #include "dirserv.h"
-#include "dirvote.h"
 #include "dos.h"
 #include "entrynodes.h"
 #include "hibernate.h"
@@ -64,10 +63,12 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "scheduler.h"
-#include "shared_random.h"
+#include "dirauth/shared_random.h"
 #include "transports.h"
 #include "torcert.h"
 #include "channelpadding.h"
+
+#include "dirauth/dirvote.h"
 
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
@@ -365,9 +366,7 @@ networkstatus_vote_free_(networkstatus_t *ns)
   digestmap_free(ns->desc_digest_map, NULL);
 
   if (ns->sr_info.commits) {
-    SMARTLIST_FOREACH(ns->sr_info.commits, sr_commit_t *, c,
-                      sr_commit_free(c));
-    smartlist_free(ns->sr_info.commits);
+    dirvote_clear_commits(ns);
   }
   tor_free(ns->sr_info.previous_srv);
   tor_free(ns->sr_info.current_srv);
@@ -2639,6 +2638,25 @@ networkstatus_check_required_protocols(const networkstatus_t *ns,
   tor_assert_nonfatal(missing == NULL);
 
   return 0;
+}
+
+/** Release all storage held in <b>s</b>. */
+void
+ns_detached_signatures_free_(ns_detached_signatures_t *s)
+{
+  if (!s)
+    return;
+  if (s->signatures) {
+    STRMAP_FOREACH(s->signatures, flavor, smartlist_t *, sigs) {
+      SMARTLIST_FOREACH(sigs, document_signature_t *, sig,
+                        document_signature_free(sig));
+      smartlist_free(sigs);
+    } STRMAP_FOREACH_END;
+    strmap_free(s->signatures, NULL);
+    strmap_free(s->digests, tor_free_);
+  }
+
+  tor_free(s);
 }
 
 /** Free all storage held locally in this module. */
