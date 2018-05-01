@@ -178,7 +178,6 @@ dirvote_add_signatures(const char *detached_signatures_body, const char *source,
 
 #endif /* HAVE_MODULE_DIRAUTH */
 
-void dirvote_recalculate_timing(const or_options_t *options, time_t now);
 /* Item access */
 MOCK_DECL(const char*, dirvote_get_pending_consensus,
           (consensus_flavor_t flav));

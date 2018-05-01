@@ -2768,7 +2768,7 @@ dirvote_act(const or_options_t *options, time_t now)
                "Mine is %s.",
                keys, hex_str(c->cache_info.identity_digest, DIGEST_LEN));
     tor_free(keys);
-    dirvote_recalculate_timing(options, now);
+    voting_schedule_recalculate_timing(options, now);
   }
 
 #define IF_TIME_FOR_NEXT_ACTION(when_field, done_field) \
@@ -2814,7 +2814,7 @@ dirvote_act(const or_options_t *options, time_t now)
                 networkstatus_get_latest_consensus_by_flavor(FLAV_NS));
     /* XXXX We will want to try again later if we haven't got enough
      * signatures yet.  Implement this if it turns out to ever happen. */
-    dirvote_recalculate_timing(options, now);
+    voting_schedule_recalculate_timing(options, now);
     return voting_schedule.voting_starts;
   } ENDIF
 

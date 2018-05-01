@@ -104,6 +104,7 @@
 #include "statefile.h"
 #include "transports.h"
 #include "ext_orport.h"
+#include "voting_schedule.h"
 #ifdef _WIN32
 #include <shlobj.h>
 #endif
@@ -2359,7 +2360,7 @@ options_act(const or_options_t *old_options)
   /* We may need to reschedule some directory stuff if our status changed. */
   if (old_options) {
     if (options_transition_affects_dirauth_timing(old_options, options)) {
-      dirvote_recalculate_timing(options, time(NULL));
+      voting_schedule_recalculate_timing(options, time(NULL));
       reschedule_dirvote(options);
     }
     if (!bool_eq(directory_fetches_dir_info_early(options),

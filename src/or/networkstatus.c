@@ -67,6 +67,7 @@
 #include "transports.h"
 #include "torcert.h"
 #include "channelpadding.h"
+#include "voting_schedule.h"
 
 #include "dirauth/dirvote.h"
 
@@ -2014,7 +2015,7 @@ networkstatus_set_current_consensus(const char *consensus,
      * the first thing we need to do is recalculate the voting schedule static
      * object so we can use the timings in there needed by some subsystems
      * such as hidden service and shared random. */
-    dirvote_recalculate_timing(options, now);
+    voting_schedule_recalculate_timing(options, now);
     reschedule_dirvote(options);
 
     nodelist_set_consensus(c);

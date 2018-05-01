@@ -52,6 +52,7 @@
 #include "rendservice.h"
 #include "statefile.h"
 #include "dirauth/shared_random_state.h"
+#include "voting_schedule.h"
 
 /* Trunnel */
 #include "hs/cell_establish_intro.h"
@@ -1057,7 +1058,7 @@ test_rotate_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  dirvote_recalculate_timing(get_options(), mock_ns.valid_after);
+  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
 
   /* Create a service with a default descriptor and state. It's added to the
    * global map. */
@@ -1095,7 +1096,7 @@ test_rotate_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 27 Oct 1985 02:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  dirvote_recalculate_timing(get_options(), mock_ns.valid_after);
+  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
 
   /* Note down what to expect for the next rotation time which is 01:00 + 23h
    * meaning 00:00:00. */
@@ -1157,7 +1158,7 @@ test_build_update_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 04:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  dirvote_recalculate_timing(get_options(), mock_ns.valid_after);
+  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
 
   /* Create a service without a current descriptor to trigger a build. */
   service = helper_create_service();

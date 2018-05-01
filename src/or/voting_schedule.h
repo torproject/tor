@@ -49,6 +49,9 @@ typedef struct {
 
 extern voting_schedule_t voting_schedule;
 
+void voting_schedule_recalculate_timing(const or_options_t *options,
+                                        time_t now);
+
 time_t voting_schedule_get_start_of_next_interval(time_t now,
                                                   int interval,
                                                   int offset);

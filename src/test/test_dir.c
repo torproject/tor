@@ -41,6 +41,7 @@
 #include "torcert.h"
 #include "relay.h"
 #include "log_test_helpers.h"
+#include "voting_schedule.h"
 
 #define NS_MODULE dir
 
@@ -2379,7 +2380,7 @@ test_a_networkstatus(
   sign_skey_2 = crypto_pk_new();
   sign_skey_3 = crypto_pk_new();
   sign_skey_leg1 = pk_generate(4);
-  dirvote_recalculate_timing(get_options(), now);
+  voting_schedule_recalculate_timing(get_options(), now);
   sr_state_init(0, 0);
 
   tt_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,

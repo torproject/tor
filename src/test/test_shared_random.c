@@ -19,6 +19,7 @@
 #include "shared_random_common.h"
 #include "networkstatus.h"
 #include "log_test_helpers.h"
+#include "voting_schedule.h"
 
 static authority_cert_t *mock_cert;
 
@@ -171,7 +172,7 @@ test_get_state_valid_until_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    dirvote_recalculate_timing(get_options(), current_time);
+    voting_schedule_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     /* Compare it with the correct result */
@@ -183,7 +184,7 @@ test_get_state_valid_until_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 19:22:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    dirvote_recalculate_timing(get_options(), current_time);
+    voting_schedule_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -194,7 +195,7 @@ test_get_state_valid_until_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:59:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    dirvote_recalculate_timing(get_options(), current_time);
+    voting_schedule_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -205,7 +206,7 @@ test_get_state_valid_until_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    dirvote_recalculate_timing(get_options(), current_time);
+    voting_schedule_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -243,7 +244,7 @@ test_get_start_time_of_current_run(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    dirvote_recalculate_timing(get_options(), current_time);
+    voting_schedule_recalculate_timing(get_options(), current_time);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -256,7 +257,7 @@ test_get_start_time_of_current_run(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:59:59 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    dirvote_recalculate_timing(get_options(), current_time);
+    voting_schedule_recalculate_timing(get_options(), current_time);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -269,7 +270,7 @@ test_get_start_time_of_current_run(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    dirvote_recalculate_timing(get_options(), current_time);
+    voting_schedule_recalculate_timing(get_options(), current_time);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -292,7 +293,7 @@ test_get_start_time_of_current_run(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:15:32 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    dirvote_recalculate_timing(get_options(), current_time);
+    voting_schedule_recalculate_timing(get_options(), current_time);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -325,7 +326,7 @@ test_get_start_time_functions(void *arg)
   tt_int_op(retval, OP_EQ, 0);
   time_t now = mock_consensus.valid_after;
 
-  dirvote_recalculate_timing(get_options(), now);
+  voting_schedule_recalculate_timing(get_options(), now);
   time_t start_time_of_protocol_run =
     sr_state_get_start_time_of_current_protocol_run(now);
   tt_assert(start_time_of_protocol_run);
