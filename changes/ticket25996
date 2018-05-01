@@ -1,0 +1,5 @@
+  o Minor bugfixes (testing):
+    - Repeat part of the test in test_client_pick_intro() a number of times,
+      to give it consistent coverage. Fixes bug 25996; bugfix on
+      0.3.2.1-alpha.
+

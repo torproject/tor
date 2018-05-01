@@ -397,21 +397,25 @@ test_client_pick_intro(void *arg)
     } SMARTLIST_FOREACH_END(ip);
 
     /* Try to get a random intro: Should return the chosen one! */
-    extend_info_t *ip = client_get_random_intro(&service_kp.pubkey);
-    tor_assert(ip);
-    tt_assert(!tor_mem_is_zero((char*)ip->identity_digest, DIGEST_LEN));
-    tt_mem_op(ip->identity_digest, OP_EQ, chosen_intro_ei->identity_digest,
-              DIGEST_LEN);
+    /* (We try several times, to make sure this behavior is consistent, and to
+     * cover the different cases of client_get_random_intro().) */
+    for (int i = 0; i < 64; ++i) {
+      extend_info_t *ip = client_get_random_intro(&service_kp.pubkey);
+      tor_assert(ip);
+      tt_assert(!tor_mem_is_zero((char*)ip->identity_digest, DIGEST_LEN));
+      tt_mem_op(ip->identity_digest, OP_EQ, chosen_intro_ei->identity_digest,
+                DIGEST_LEN);
+      extend_info_free(ip);
+    }
 
     extend_info_free(chosen_intro_ei);
-    extend_info_free(ip);
 
     /* Now also mark the chosen one as failed: See that we can't get any intro
        points anymore. */
     hs_cache_client_intro_state_note(&service_kp.pubkey,
                                 &chosen_intro_point->auth_key_cert->signed_key,
                                      INTRO_POINT_FAILURE_TIMEOUT);
-    ip = client_get_random_intro(&service_kp.pubkey);
+    extend_info_t *ip = client_get_random_intro(&service_kp.pubkey);
     tor_assert(!ip);
   }
 
