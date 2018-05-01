@@ -2447,8 +2447,10 @@ cpath_get_n_hops(crypt_path_t **head_ptr)
 /**
  * Build the exclude list for vanguard circuits.
  *
- * For vanguard circuits we exclude all the already chosen nodes (including
- * the exit) from being middle hops.
+ * For vanguard circuits we exclude all the already chosen nodes (including the
+ * exit) from being middle hops to prevent the creation of A - B - A subpaths.
+ * We also allow the 4th hop to be the same as the guard node so as to not leak
+ * guard information to RP/IP/HSDirs.
  *
  * For vanguard circuits, we don't apply any subnet or family restrictions.
  * This is to avoid impossible-to-build circuit paths, or just situations where
@@ -2481,6 +2483,19 @@ build_vanguard_middle_exclude_list(uint8_t purpose,
    * chosen first in circuit_establish_circuit()). */
   if ((r = build_state_get_exit_node(state))) {
     smartlist_add(excluded, (node_t*)r);
+  }
+
+  /* If we are picking the 4th hop, allow that node to be the guard too.
+   * This prevents us from avoiding the Guard for those hops, which
+   * gives the adversary information about our guard if they control
+   * the RP, IP, or HSDIR. We don't do this check based on purpose
+   * because we also want to allow HS_VANGUARDS pre-build circuits
+   * to use the guard for that last hop.
+   */
+  if (cur_len == DEFAULT_ROUTE_LEN+1) {
+    /* Skip the first hop for the exclude list below */
+    head = head->next;
+    cur_len--;
   }
 
   for (i = 0, cpath = head; cpath && i < cur_len; ++i, cpath=cpath->next) {
