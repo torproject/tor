@@ -2022,7 +2022,10 @@ save_state_callback(time_t now, const or_options_t *options)
 void
 reschedule_or_state_save(void)
 {
-  tor_assert(save_state_event);
+  if (save_state_event == NULL) {
+    /* This can happen early on during startup. */
+    return;
+  }
   periodic_event_reschedule(save_state_event);
 }
 
