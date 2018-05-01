@@ -2516,7 +2516,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
       continue;
     }
 
-    old_sig = dirvote_get_voter_sig_by_alg(target_voter, sig->alg);
+    old_sig = networkstatus_get_voter_sig_by_alg(target_voter, sig->alg);
 
     /* If the target already has a good signature from this voter, then skip
      * this one. */

@@ -30,6 +30,10 @@ void ns_detached_signatures_free_(ns_detached_signatures_t *s);
 networkstatus_voter_info_t *networkstatus_get_voter_by_id(
                                        networkstatus_t *vote,
                                        const char *identity);
+document_signature_t *networkstatus_get_voter_sig_by_alg(
+                                    const networkstatus_voter_info_t *voter,
+                                    digest_algorithm_t alg);
+
 int networkstatus_check_consensus_signature(networkstatus_t *consensus,
                                             int warn);
 int networkstatus_check_document_signature(const networkstatus_t *consensus,

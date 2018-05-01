@@ -390,6 +390,20 @@ networkstatus_get_voter_by_id(networkstatus_t *vote,
   return NULL;
 }
 
+/** Return the signature made by <b>voter</b> using the algorithm
+ * <b>alg</b>, or NULL if none is found. */
+document_signature_t *
+networkstatus_get_voter_sig_by_alg(const networkstatus_voter_info_t *voter,
+                                   digest_algorithm_t alg)
+{
+  if (!voter->sigs)
+    return NULL;
+  SMARTLIST_FOREACH(voter->sigs, document_signature_t *, sig,
+                    if (sig->alg == alg)
+                    return sig);
+  return NULL;
+}
+
 /** Check whether the signature <b>sig</b> is correctly signed with the
  * signing key in <b>cert</b>.  Return -1 if <b>cert</b> doesn't match the
  * signing key; otherwise set the good_signature or bad_signature flag on
