@@ -1,0 +1,5 @@
+  o Major feature (directory authority, modularization):
+    - The directory authority subsystem has been modularized. The code is now
+      located in src/or/dirauth/ which is compiled in by default. To disable the
+      module, the configure option --disable-module-dirauth has been added.
+      Closes ticket 25610;
