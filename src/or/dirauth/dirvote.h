@@ -100,7 +100,7 @@ void dirvote_act(const or_options_t *options, time_t now);
 void dirvote_free_all(void);
 
 void dirvote_parse_sr_commits(networkstatus_t *ns, smartlist_t *tokens);
-void dirvote_free_commits(networkstatus_t *ns);
+void dirvote_clear_commits(networkstatus_t *ns);
 void dirvote_dirreq_get_status_vote(const char *url, smartlist_t *items,
                                     smartlist_t *dir_items);
 
@@ -134,7 +134,7 @@ dirvote_parse_sr_commits(networkstatus_t *ns, smartlist_t *tokens)
 }
 
 static inline void
-dirvote_free_commits(networkstatus_t *ns)
+dirvote_clear_commits(networkstatus_t *ns)
 {
   (void) ns;
 }

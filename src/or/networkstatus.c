@@ -366,7 +366,7 @@ networkstatus_vote_free_(networkstatus_t *ns)
   digestmap_free(ns->desc_digest_map, NULL);
 
   if (ns->sr_info.commits) {
-    dirvote_free_commits(ns);
+    dirvote_clear_commits(ns);
   }
   tor_free(ns->sr_info.previous_srv);
   tor_free(ns->sr_info.current_srv);

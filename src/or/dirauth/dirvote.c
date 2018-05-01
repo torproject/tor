@@ -3926,7 +3926,7 @@ dirvote_parse_sr_commits(networkstatus_t *ns, smartlist_t *tokens)
 
 /* For the given vote, free the shared random commits if any. */
 void
-dirvote_free_commits(networkstatus_t *ns)
+dirvote_clear_commits(networkstatus_t *ns)
 {
   tor_assert(ns->type == NS_TYPE_VOTE);
 
