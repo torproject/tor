@@ -2,14 +2,14 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file dirvote_common.c
+ * \file voting_schedule.c
  * \brief This file contains functions that are from the directory authority
  *        subsystem related to voting specifically but used by many part of
  *        tor. The full feature is built as part of the dirauth module.
  **/
 
-#define DIRVOTE_COMMON_PRIVATE
-#include "dirvote_common.h"
+#define VOTING_SCHEDULE_PRIVATE
+#include "voting_schedule.h"
 
 #include "or.h"
 #include "config.h"

@@ -12,7 +12,7 @@
 #include "shared_random_common.h"
 
 #include "config.h"
-#include "dirvote_common.h"
+#include "voting_schedule.h"
 #include "networkstatus.h"
 #include "util.h"
 #include "util_format.h"

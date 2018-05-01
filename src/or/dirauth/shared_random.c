@@ -91,7 +91,6 @@
 #include "shared_random.h"
 #include "config.h"
 #include "confparse.h"
-#include "dirvote_common.h"
 #include "networkstatus.h"
 #include "routerkeys.h"
 #include "router.h"
@@ -99,6 +98,7 @@
 #include "shared_random_state.h"
 #include "shared_random_common.h"
 #include "util.h"
+#include "voting_schedule.h"
 
 #include "dirauth/dirvote.h"
 

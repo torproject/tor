@@ -2,12 +2,12 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file dirvote_common.h
- * \brief Header file for dirvote_common.c.
+ * \file voting_schedule.h
+ * \brief Header file for voting_schedule.c.
  **/
 
-#ifndef TOR_DIRVOTE_COMMON_H
-#define TOR_DIRVOTE_COMMON_H
+#ifndef TOR_VOTING_SCHEDULE_H
+#define TOR_VOTING_SCHEDULE_H
 
 #include "or.h"
 
@@ -57,5 +57,5 @@ time_t dirvote_get_start_of_next_interval(time_t now,
                                           int offset);
 time_t dirvote_get_next_valid_after_time(void);
 
-#endif /* TOR_DIRVOTE_COMMON_H */
+#endif /* TOR_VOTING_SCHEDULE_H */
 
