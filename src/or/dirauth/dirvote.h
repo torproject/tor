@@ -156,7 +156,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   (void) status_out;
   /* If the dirauth module is disabled, this should NEVER be called else we
    * failed to safeguard the dirauth module. */
-  tor_assert(0);
+  tor_assert_nonfatal_unreached();
 }
 
 static inline int
@@ -168,7 +168,7 @@ dirvote_add_signatures(const char *detached_signatures_body, const char *source,
   (void) msg_out;
   /* If the dirauth module is disabled, this should NEVER be called else we
    * failed to safeguard the dirauth module. */
-  tor_assert(0);
+  tor_assert_nonfatal_unreached();
 }
 
 #endif /* HAVE_MODULE_DIRAUTH */
