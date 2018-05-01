@@ -95,6 +95,30 @@ static int dirvote_compute_consensuses(void);
 static int dirvote_publish_consensus(void);
 
 /* =====
+ * Certificate functions
+ * ===== */
+
+/** Allocate and return a new authority_cert_t with the same contents as
+ * <b>cert</b>. */
+STATIC authority_cert_t *
+authority_cert_dup(authority_cert_t *cert)
+{
+  authority_cert_t *out = tor_malloc(sizeof(authority_cert_t));
+  tor_assert(cert);
+
+  memcpy(out, cert, sizeof(authority_cert_t));
+  /* Now copy pointed-to things. */
+  out->cache_info.signed_descriptor_body =
+    tor_strndup(cert->cache_info.signed_descriptor_body,
+                cert->cache_info.signed_descriptor_len);
+  out->cache_info.saved_location = SAVED_NOWHERE;
+  out->identity_key = crypto_pk_dup_key(cert->identity_key);
+  out->signing_key = crypto_pk_dup_key(cert->signing_key);
+
+  return out;
+}
+
+/* =====
  * Voting
  * =====*/
 
@@ -4472,7 +4496,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   v3_out->voters = smartlist_new();
   smartlist_add(v3_out->voters, voter);
-  v3_out->cert = dirvote_authority_cert_dup(cert);
+  v3_out->cert = authority_cert_dup(cert);
   v3_out->routerstatus_list = routerstatuses;
   /* Note: networkstatus_digest is unset; it won't get set until we actually
    * format the vote. */
