@@ -1547,6 +1547,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
       tor_malloc_zero(sizeof(log_severity_list_t));
     close_temp_logs();
     add_callback_log(severity, control_event_logmsg);
+    logs_set_pending_callback_callback(control_event_logmsg_pending);
     control_adjust_event_log_severity();
     tor_free(severity);
     tor_log_update_sigsafe_err_fds();
