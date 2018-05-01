@@ -860,6 +860,7 @@ struct testgroup_t testgroups[] = {
   { "keypin/", keypin_tests },
   { "link-handshake/", link_handshake_tests },
   { "nodelist/", nodelist_tests },
+  { "onion/", onion_tests },
   { "oom/", oom_tests },
   { "oos/", oos_tests },
   { "options/", options_tests },

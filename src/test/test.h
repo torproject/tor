@@ -236,6 +236,7 @@ extern struct testcase_t link_handshake_tests[];
 extern struct testcase_t logging_tests[];
 extern struct testcase_t microdesc_tests[];
 extern struct testcase_t nodelist_tests[];
+extern struct testcase_t onion_tests[];
 extern struct testcase_t oom_tests[];
 extern struct testcase_t oos_tests[];
 extern struct testcase_t options_tests[];
