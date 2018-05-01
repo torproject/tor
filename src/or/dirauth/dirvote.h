@@ -202,6 +202,8 @@ vote_microdesc_hash_t *dirvote_format_all_microdesc_vote_lines(
  */
 #ifdef DIRVOTE_PRIVATE
 
+/* Cert manipulation */
+STATIC authority_cert_t *authority_cert_dup(authority_cert_t *cert);
 STATIC int32_t dirvote_get_intermediate_param_value(
                                    const smartlist_t *param_list,
                                    const char *keyword,

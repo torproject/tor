@@ -307,7 +307,7 @@ dir_common_construct_vote_1(networkstatus_t **vote, authority_cert_t *cert,
    * Set up a vote; generate it; try to parse it.
    */
   smartlist_add((*vote)->voters, voter);
-  (*vote)->cert = dirvote_authority_cert_dup(cert);
+  (*vote)->cert = authority_cert_dup(cert);
   smartlist_split_string((*vote)->net_params, "circuitwindow=101 foo=990",
                          NULL, 0, 0);
   *n_vrs = 0;
@@ -356,7 +356,7 @@ dir_common_construct_vote_2(networkstatus_t **vote, authority_cert_t *cert,
    * Set up a vote; generate it; try to parse it.
    */
   smartlist_add((*vote)->voters, voter);
-  (*vote)->cert = dirvote_authority_cert_dup(cert);
+  (*vote)->cert = authority_cert_dup(cert);
   if (! (*vote)->net_params)
     (*vote)->net_params = smartlist_new();
   smartlist_split_string((*vote)->net_params,
@@ -407,7 +407,7 @@ dir_common_construct_vote_3(networkstatus_t **vote, authority_cert_t *cert,
    * Set up a vote; generate it; try to parse it.
    */
   smartlist_add((*vote)->voters, voter);
-  (*vote)->cert = dirvote_authority_cert_dup(cert);
+  (*vote)->cert = authority_cert_dup(cert);
   smartlist_split_string((*vote)->net_params, "circuitwindow=80 foo=660",
                          NULL, 0, 0);
   /* add routerstatuses */
