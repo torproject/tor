@@ -9,7 +9,6 @@
  **/
 
 #define SHARED_RANDOM_STATE_PRIVATE
-#define TOR_SHARED_RANDOM_COMMON_PRIVATE
 
 #include "or.h"
 #include "shared_random.h"
