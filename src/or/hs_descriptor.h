@@ -250,6 +250,8 @@ void hs_desc_intro_point_free_(hs_desc_intro_point_t *ip);
 link_specifier_t *hs_desc_lspec_to_trunnel(
                                    const hs_desc_link_specifier_t *spec);
 
+const char *hs_desc_get_start_of_sig(const char *encoded_desc);
+
 #ifdef HS_DESCRIPTOR_PRIVATE
 
 /* Encoding. */
