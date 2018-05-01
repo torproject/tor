@@ -96,7 +96,7 @@
  */
 #ifdef HAVE_MODULE_DIRAUTH
 
-void dirvote_act(const or_options_t *options, time_t now);
+time_t dirvote_act(const or_options_t *options, time_t now);
 void dirvote_free_all(void);
 
 void dirvote_parse_sr_commits(networkstatus_t *ns, smartlist_t *tokens);
@@ -114,11 +114,12 @@ int dirvote_add_signatures(const char *detached_signatures_body,
 
 #else /* HAVE_MODULE_DIRAUTH */
 
-static inline void
+static inline time_t
 dirvote_act(const or_options_t *options, time_t now)
 {
   (void) options;
   (void) now;
+  return TIME_MAX;
 }
 
 static inline void

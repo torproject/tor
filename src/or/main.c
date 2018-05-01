@@ -1341,6 +1341,7 @@ CALLBACK(check_for_reachability_bw);
 CALLBACK(check_onion_keys_expiry_time);
 CALLBACK(clean_caches);
 CALLBACK(clean_consdiffmgr);
+CALLBACK(dirvote);
 CALLBACK(downrate_stability);
 CALLBACK(expire_old_ciruits_serverside);
 CALLBACK(fetch_networkstatus);
@@ -1402,6 +1403,7 @@ STATIC periodic_event_item_t periodic_events[] = {
 
   /* Directory authority only. */
   CALLBACK(check_authority_cert, PERIODIC_EVENT_ROLE_DIRAUTH, 0),
+  CALLBACK(dirvote, PERIODIC_EVENT_ROLE_DIRAUTH, PERIODIC_EVENT_FLAG_NEED_NET),
 
   /* Relay only. */
   CALLBACK(check_canonical_channels, PERIODIC_EVENT_ROLE_RELAY,
@@ -1434,6 +1436,7 @@ STATIC periodic_event_item_t periodic_events[] = {
  * can access them by name.  We also keep them inside periodic_events[]
  * so that we can implement "reset all timers" in a reasonable way. */
 static periodic_event_item_t *check_descriptor_event=NULL;
+static periodic_event_item_t *dirvote_event=NULL;
 static periodic_event_item_t *fetch_networkstatus_event=NULL;
 static periodic_event_item_t *launch_descriptor_fetches_event=NULL;
 static periodic_event_item_t *check_dns_honesty_event=NULL;
@@ -1533,6 +1536,7 @@ initialize_periodic_events(void)
   STMT_BEGIN name ## _event = find_periodic_event( #name ); STMT_END
 
   NAMED_CALLBACK(check_descriptor);
+  NAMED_CALLBACK(dirvote);
   NAMED_CALLBACK(fetch_networkstatus);
   NAMED_CALLBACK(launch_descriptor_fetches);
   NAMED_CALLBACK(check_dns_honesty);
@@ -1716,10 +1720,6 @@ run_scheduled_events(time_t now)
 
   if (accounting_is_enabled(options)) {
     accounting_run_housekeeping(now);
-  }
-
-  if (authdir_mode_v3(options)) {
-    dirvote_act(options, now);
   }
 
   /* 3a. Every second, we examine pending circuits and prune the
@@ -1974,6 +1974,40 @@ check_authority_cert_callback(time_t now, const or_options_t *options)
 }
 
 /**
+ * Scheduled callback: Run directory-authority voting functionality.
+ *
+ * The schedule is a bit complicated here, so dirvote_act() manages the
+ * schedule itself.
+ **/
+static int
+dirvote_callback(time_t now, const or_options_t *options)
+{
+  if (!authdir_mode_v3(options)) {
+    tor_assert_nonfatal_unreached();
+    return 3600;
+  }
+
+  time_t next = dirvote_act(options, now);
+  if (BUG(next == TIME_MAX)) {
+    /* This shouldn't be returned unless we called dirvote_act() without
+     * being an authority.  If it happens, maybe our configuration will
+     * fix itself in an hour or so? */
+    return 3600;
+  }
+  return safe_timer_diff(now, next);
+}
+
+/** Reschedule the directory-authority voting event.  Run this whenever the
+ * schedule has changed. */
+void
+reschedule_dirvote(const or_options_t *options)
+{
+  if (periodic_events_initialized && authdir_mode_v3(options)) {
+    periodic_event_reschedule(dirvote_event);
+  }
+}
+
+/**
  * Periodic callback: If our consensus is too old, recalculate whether
  * we can actually use it.
  */
@@ -2006,14 +2040,8 @@ save_state_callback(time_t now, const or_options_t *options)
   const time_t next_write = get_or_state()->next_write;
   if (next_write == TIME_MAX) {
     return 86400;
-  } else if (BUG(next_write <= now)) {
-    /* This can't happen due to clock jumps, since the value of next_write
-     * is based on the same "now" that we passed to or_state_save().
-     */
-    return PERIODIC_EVENT_NO_UPDATE;
-  } else {
-    return (int)(next_write - now);
   }
+  return safe_timer_diff(now, next_write);
 }
 
 /** Reschedule the event for saving the state file.
