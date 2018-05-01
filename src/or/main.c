@@ -1976,9 +1976,14 @@ dirvote_callback(time_t now, const or_options_t *options)
 
   time_t next = dirvote_act(options, now);
   if (BUG(next == TIME_MAX)) {
+    /* This shouldn't be returned unless we called dirvote_act() without
+     * being an authority.  If it happens, maybe our configuration will
+     * fix itself in an hour or so? */
     return 3600;
   }
   if (BUG(next <= now)) {
+    /* This case shouldn't be possible, since "next" is computed by
+     * dirvote_act() based on the value of "now" we give it. */
     return 1;
   } else {
     return next - now;
