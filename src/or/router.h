@@ -55,7 +55,6 @@ void router_perform_bandwidth_test(int num_circs, time_t now);
 int net_is_disabled(void);
 
 int authdir_mode(const or_options_t *options);
-int authdir_mode_v3(const or_options_t *options);
 int authdir_mode_handles_descs(const or_options_t *options, int purpose);
 int authdir_mode_publishes_statuses(const or_options_t *options);
 int authdir_mode_tests_reachability(const or_options_t *options);

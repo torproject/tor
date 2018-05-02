@@ -101,6 +101,7 @@
 #include "voting_schedule.h"
 
 #include "dirauth/dirvote.h"
+#include "dirauth/mode.h"
 
 /* String prefix of shared random values in votes/consensuses. */
 static const char previous_srv_str[] = "shared-rand-previous-value";

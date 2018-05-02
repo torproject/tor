@@ -66,6 +66,8 @@
 
 #include <string.h>
 
+#include "dirauth/mode.h"
+
 static void nodelist_drop_node(node_t *node, int remove_from_ht);
 #define node_free(val) \
   FREE_AND_NULL(node_t, node_free_, (val))

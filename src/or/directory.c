@@ -40,7 +40,6 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "routerset.h"
-#include "dirauth/shared_random.h"
 
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #if !defined(OpenBSD)
@@ -49,6 +48,8 @@
 #endif
 
 #include "dirauth/dirvote.h"
+#include "dirauth/mode.h"
+#include "dirauth/shared_random.h"
 
 /**
  * \file directory.c
