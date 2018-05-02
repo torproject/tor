@@ -1,0 +1,5 @@
+  o Major bugfixes (directory authorities, security):
+    - When directory authorities read a zero-byte bandwidth file, they log
+      a warning with the contents of an uninitialised buffer. Log a warning
+      about the empty file instead.
+      Fixes bug 26007; bugfix on 0.2.2.1-alpha.
