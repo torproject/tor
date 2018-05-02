@@ -1506,6 +1506,8 @@ test_dir_measured_bw_kb(void *arg)
     "bw=1024\n",
     /* check whether a key_value can be after bw */
     "node_id=$557365204145532d32353620696e73746561642e bw=1024 foo=bar\n",
+    /* check whether node_id can be after bw, if it has something behind */
+    "bw=1024 node_id=$557365204145532d32353620696e73746561642e foo=bar\n",
     "end"
   };
   const char *lines_fail[] = {
