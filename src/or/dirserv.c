@@ -2569,14 +2569,23 @@ dirserv_read_measured_bandwidths(const char *from_file,
   time_t file_time, now;
   int ok;
 
+  /* Initialise line, so that we can't possibly run off the end. */
+  memset(line, 0, sizeof(line));
+
   if (fp == NULL) {
     log_warn(LD_CONFIG, "Can't open bandwidth file at configured location: %s",
              from_file);
     return -1;
   }
 
-  if (!fgets(line, sizeof(line), fp)
-          || !strlen(line) || line[strlen(line)-1] != '\n') {
+  /* If fgets fails, line is either unmodified, or indeterminate. */
+  if (!fgets(line, sizeof(line), fp)) {
+    log_warn(LD_DIRSERV, "Empty bandwidth file");
+    fclose(fp);
+    return -1;
+  }
+
+  if (!strlen(line) || line[strlen(line)-1] != '\n') {
     log_warn(LD_DIRSERV, "Long or truncated time in bandwidth file: %s",
              escaped(line));
     fclose(fp);
