@@ -3972,7 +3972,7 @@ dirvote_clear_commits(networkstatus_t *ns)
   }
 }
 
-/* The given url is the /tor/status-gove GET directory request. Populates the
+/* The given url is the /tor/status-vote GET directory request. Populates the
  * items list with strings that we can compress on the fly and dir_items with
  * cached_dir_t objects that have a precompressed deflated version. */
 void
