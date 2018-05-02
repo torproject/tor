@@ -52,7 +52,7 @@ export APPVEYOR_REPO_COMMIT_MESSAGE="some IRC test"
 export APPVEYOR_ACCOUNT_NAME=isislovecruft
 export APPVEYOR_PULL_REQUEST_NUMBER=pull_request_number
 export APPVEYOR_REPO_NAME=isislovecruft/tor
-python ./appveyor-irc-notify.py irc.oftc.net:6697 tor-ci '{repo_name} {color_white}{repo_branch}{color_reset} {short_commit} - {repo_commit_author}: {repo_commit_message}','Build #{build_version} {color_green}passed{color_reset}. Details: {color_blue}{build_url}{color_reset} |  Commit: {color_blue}{commit_url}{color_reset}'
+python ./appveyor-irc-notify.py irc.oftc.net:6697 tor-ci '{repo_name} {repo_branch} {short_commit} - {repo_commit_author}: {repo_commit_message}','Build #{build_version} passed. Details: {build_url} |  Commit: {commit_url}
 
 See also https://github.com/gridsync/gridsync/blob/master/appveyor.yml for examples
 in Appveyor's YAML:
@@ -111,11 +111,6 @@ def appveyor_vars():
     vars.update(
         build_url=BUILD_FMT.format(**vars),
         short_commit=vars["repo_commit"][:7],
-        color_white='\x030',
-        color_blue='\x032',
-        color_green='\x033',
-        color_red='\x034',
-        color_reset='\x0F',
     )
     return vars
 
@@ -133,15 +128,15 @@ def notify():
 
     if success or failure:
         messages = []
-        messages.append(u"{repo_name} {color_white}{repo_branch}{color_reset} {short_commit} - {repo_commit_author}: {repo_commit_message}")
+        messages.append(u"{repo_name} {repo_branch} {short_commit} - {repo_commit_author}: {repo_commit_message}")
 
         if success:
-            m = u"Build #{build_version} {color_green}passed{color_reset}. Details: {color_blue}{build_url}{color_reset}"
+            m = u"Build #{build_version} passed. Details: {build_url}"
         if failure:
-            m = u"Build #{build_version} {color_red}failed{color_reset}. Details: {color_blue}{build_url}{color_reset}"
+            m = u"Build #{build_version} failed. Details: {build_url}"
 
         if "commit_url" in apvy_vars:
-            m += " Commit: {color_blue}{commit_url}{color_reset}"
+            m += " Commit: {commit_url}"
      
         messages.append(m)
     else:
