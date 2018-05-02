@@ -360,11 +360,8 @@ mock_networkstatus_get_live_consensus(time_t now)
 static void
 test_responsible_hsdirs(void *arg)
 {
-  time_t now = approx_time();
   smartlist_t *responsible_dirs = smartlist_new();
   networkstatus_t *ns = NULL;
-  int retval;
-
   (void) arg;
 
   hs_init();
@@ -386,12 +383,12 @@ test_responsible_hsdirs(void *arg)
     helper_add_hsdir_to_networkstatus(ns, 3, "spyro", 0);
   }
 
-  ed25519_keypair_t kp;
-  retval = ed25519_keypair_generate(&kp, 0);
-  tt_int_op(retval, OP_EQ , 0);
+  /* Use a fixed time period and pub key so we always take the same path */
+  ed25519_public_key_t pubkey;
+  uint64_t time_period_num = 17653; // 2 May, 2018, 14:00.
+  memset(&pubkey, 42, sizeof(pubkey));
 
-  uint64_t time_period_num = hs_get_time_period_num(now);
-  hs_get_responsible_hsdirs(&kp.pubkey, time_period_num,
+  hs_get_responsible_hsdirs(&pubkey, time_period_num,
                             0, 0, responsible_dirs);
 
   /* Make sure that we only found 2 responsible HSDirs.
