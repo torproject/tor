@@ -207,3 +207,22 @@ replaycache_scrub_if_needed(replaycache_t *r)
   replaycache_scrub_if_needed_internal(time(NULL), r);
 }
 
+#ifdef TOR_UNIT_TESTS
+
+/* Remove an entry in the replaycache. Only used by unit tests. */
+void
+replaycache_remove_entry(replaycache_t *cache, const void *data, size_t len)
+{
+  time_t *access_time;
+  uint8_t digest[DIGEST256_LEN];
+
+  tor_assert(cache);
+  tor_assert(data);
+
+  crypto_digest256((char *)digest, (const char *)data, len, DIGEST_SHA256);
+  access_time = digest256map_remove(cache->digests_seen, digest);
+  tor_free(access_time);
+}
+
+#endif /* TOR_UNIT_TESTS */
+
