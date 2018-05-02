@@ -1871,7 +1871,7 @@ desc_sig_is_valid(const char *b64_sig,
 {
   int ret = 0;
   ed25519_signature_t sig;
-  const char *sig_start;
+  const char *start_of_sig;
 
   tor_assert(b64_sig);
   tor_assert(signing_pubkey);
@@ -1895,20 +1895,18 @@ desc_sig_is_valid(const char *b64_sig,
   }
 
   /* Find the start of signature. */
-  sig_start = tor_memstr(encoded_desc, encoded_len, "\n" str_signature);
+  start_of_sig = hs_desc_get_start_of_sig(encoded_desc);
   /* Getting here means the token parsing worked for the signature so if we
    * can't find the start of the signature, we have a code flow issue. */
-  if (!sig_start) {
+  if (!start_of_sig) {
     log_warn(LD_GENERAL, "Malformed signature line. Rejecting.");
     goto err;
   }
-  /* Skip newline, it has to go in the signature check. */
-  sig_start++;
 
   /* Validate signature with the full body of the descriptor. */
   if (ed25519_checksig_prefixed(&sig,
                                 (const uint8_t *) encoded_desc,
-                                sig_start - encoded_desc,
+                                start_of_sig - encoded_desc,
                                 str_desc_sig_prefix,
                                 signing_pubkey) != 0) {
     log_warn(LD_REND, "Invalid signature on service descriptor");
