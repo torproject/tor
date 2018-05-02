@@ -1636,9 +1636,8 @@ The following options are useful only for clients (that is, if
     in order to build its circuits.  Using microdescriptors makes Tor clients
     download less directory information, thus saving bandwidth.  Directory
     caches need to fetch regular descriptors and microdescriptors, so this
-    option doesn't save any bandwidth for them.  If this option is set to
-    "auto" (recommended) then it is on for all clients that do not set
-    FetchUselessDescriptors. (Default: auto)
+    option doesn't save any bandwidth for them.  For legacy reasons, auto is
+    accepted, but it has the same effect as 1. (Default: auto)
 
 [[PathBiasCircThreshold]] **PathBiasCircThreshold** __NUM__ +
 
