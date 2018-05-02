@@ -8,6 +8,8 @@
 #define TOR_COMPAT_OPENSSL_H
 
 #include <openssl/opensslv.h>
+// workaround for libressl; not needed in later Tor versions.
+#include <openssl/crypto.h>
 
 /**
  * \file compat_openssl.h
@@ -27,8 +29,11 @@
 #define OPENSSL_1_1_API
 #endif
 
-#ifndef OPENSSL_1_1_API
+#ifndef OPENSSL_VERSION
 #define OPENSSL_VERSION SSLEAY_VERSION
+#endif
+
+#ifndef OPENSSL_1_1_API
 #define OpenSSL_version(v) SSLeay_version(v)
 #define OpenSSL_version_num() SSLeay()
 #define RAND_OpenSSL() RAND_SSLeay()
