@@ -543,10 +543,13 @@ GENERAL OPTIONS
     If set to 1, Tor will fetch every consensus flavor, descriptor, and
     certificate that it hears about. Otherwise, it will avoid fetching useless
     descriptors: flavors that it is not using to build circuits, and authority
-    certificates it does not trust. This option is useful if you're using a
+    certificates it does not trust. Tor stops fetching descriptors if it
+    hasn't built any circuits lately: this option makes Tor keep fetching
+    descriptors, even when idle. This option is useful if you're using a
     tor client with an external parser that uses a full consensus.
     This option fetches all documents, **DirCache** fetches and serves
-    all documents. (Default: 0)
+    all documents, **UseMicrodescriptors 0** fetches full descriptors and uses
+    them to build circuits. (Default: 0)
 
 [[HTTPProxy]] **HTTPProxy** __host__[:__port__]::
     Tor will make all its directory requests through this host:port (or host:80
