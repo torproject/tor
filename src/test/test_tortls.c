@@ -841,8 +841,10 @@ test_tortls_classify_client_ciphers(void *ignored)
   sk_SSL_CIPHER_zero(ciphers);
 
   one = get_cipher_by_name("ECDHE-RSA-AES256-GCM-SHA384");
+  tt_assert(one);
   one->id = 0x00ff;
   two = get_cipher_by_name("ECDHE-RSA-AES128-GCM-SHA256");
+  tt_assert(two);
   two->id = 0x0000;
   sk_SSL_CIPHER_push(ciphers, one);
   tls->client_cipher_list_type = 0;
@@ -913,6 +915,7 @@ test_tortls_client_is_using_v2_ciphers(void *ignored)
 
   ciphers = sk_SSL_CIPHER_new_null();
   SSL_CIPHER *one = get_cipher_by_name("ECDHE-RSA-AES256-GCM-SHA384");
+  tt_assert(one);
   one->id = 0x00ff;
   sk_SSL_CIPHER_push(ciphers, one);
   sess->ciphers = ciphers;
