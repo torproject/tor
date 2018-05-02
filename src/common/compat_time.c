@@ -630,7 +630,7 @@ int32_t
 monotime_coarse_diff_msec32_(const monotime_coarse_t *start,
                              const monotime_coarse_t *end)
 {
-  return (int32_t)monotime_coarse_diff_msec(start, end)
+  return (int32_t)monotime_coarse_diff_msec(start, end);
 }
 
 int64_t
