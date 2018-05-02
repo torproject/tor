@@ -1024,3 +1024,20 @@ hs_cache_free_all(void)
   hs_cache_client_intro_state = NULL;
 }
 
+#ifdef TOR_UNIT_TESTS
+
+void
+hs_cache_remove_replaycache_entry(const char *desc)
+{
+  const char *start_of_desc, *end_of_desc;
+
+  hs_desc_get_offset_without_sig(desc, &start_of_desc, &end_of_desc);
+  if (!start_of_desc) {
+    return;
+  }
+  replaycache_remove_entry(desc_replay_cache_v3_dir, desc,
+                           end_of_desc - start_of_desc);
+}
+
+#endif /* TOR_UNIT_TESTS */
+

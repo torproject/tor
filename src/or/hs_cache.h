@@ -123,6 +123,12 @@ STATIC size_t cache_clean_v3_as_dir(time_t now, time_t global_cutoff);
 STATIC hs_cache_client_descriptor_t *
 lookup_v3_desc_as_client(const uint8_t *key);
 
+#ifdef TOR_UNIT_TESTS
+
+void hs_cache_remove_replaycache_entry(const char *desc);
+
+#endif /* TOR_UNIT_TESTS */
+
 #endif /* defined(HS_CACHE_PRIVATE) */
 
 #endif /* !defined(TOR_HS_CACHE_H) */
