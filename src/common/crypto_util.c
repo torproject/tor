@@ -13,14 +13,16 @@
 #ifndef CRYPTO_UTIL_PRIVATE
 #define CRYPTO_UTIL_PRIVATE
 
+#include "crypto_util.h"
+
 #include <string.h>
 
 #ifdef _WIN32
+#include <winsock2.h>
 #include <windows.h>
 #include <wincrypt.h>
 #endif /* defined(_WIN32) */
 
-#include "crypto_util.h"
 #include "util.h"
 
 DISABLE_GCC_WARNING(redundant-decls)

@@ -14,12 +14,12 @@
 #ifndef CRYPTO_RAND_PRIVATE
 #define CRYPTO_RAND_PRIVATE
 
+#include "crypto_rand.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #include <wincrypt.h>
 #endif /* defined(_WIN32) */
-
-#include "crypto_rand.h"
 
 #include "container.h"
 #include "compat.h"
