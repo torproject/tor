@@ -14,6 +14,9 @@ EXTRA_DIST +=\
 	src/rust/protover/lib.rs \
 	src/rust/protover/protover.rs \
 	src/rust/protover/tests/protover.rs \
+	src/rust/rand/Cargo.toml \
+	src/rust/rand/lib.toml \
+	src/rust/rand/rng.toml \
 	src/rust/smartlist/Cargo.toml \
 	src/rust/smartlist/lib.rs \
 	src/rust/smartlist/smartlist.rs \
