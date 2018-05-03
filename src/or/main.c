@@ -2576,8 +2576,12 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
 
   n_libevent_errors = 0;
 
-  /* log_notice(LD_GENERAL, "Tick."); */
   now = time(NULL);
+
+  /* We don't need to do this once-per-second any more: time-updating is
+   * only in this callback _because it is a callback_. It should be fine
+   * to disable this callback, and the time will still get updated.
+   */
   update_current_time(now);
 
   /* the second has rolled over. check more stuff. */
