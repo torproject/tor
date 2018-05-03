@@ -2498,6 +2498,8 @@ static int n_libevent_errors = 0;
 
 /** Last time that update_current_time was called. */
 static time_t current_second = 0;
+/** Last time that update_current_time updated current_second. */
+static monotime_coarse_t current_second_last_changed;
 
 /**
  * Set the current time to "now", which should be the value returned by
@@ -2515,13 +2517,42 @@ update_current_time(time_t now)
 
   const time_t seconds_elapsed = current_second ? (now - current_second) : 0;
 
-/** If more than this many seconds have elapsed, probably the clock
- * jumped: doesn't count. */
+  /* Check the wall clock against the monotonic clock, so we can
+   * better tell idleness from clock jumps and/or other shenanigans. */
+  monotime_coarse_t last_updated;
+  memcpy(&last_updated, &current_second_last_changed, sizeof(last_updated));
+  monotime_coarse_get(&current_second_last_changed);
+
+  /** How much clock jumping do we tolerate? */
 #define NUM_JUMPED_SECONDS_BEFORE_WARN 100
 
-  if (seconds_elapsed < -NUM_JUMPED_SECONDS_BEFORE_WARN ||
-      seconds_elapsed >= NUM_JUMPED_SECONDS_BEFORE_WARN) {
-    circuit_note_clock_jumped(seconds_elapsed);
+  /** How much idleness do we tolerate? */
+#define NUM_IDLE_SECONDS_BEFORE_WARN 3600
+
+  if (seconds_elapsed < -NUM_JUMPED_SECONDS_BEFORE_WARN) {
+    // moving back in time is always a bad sign.
+    circuit_note_clock_jumped(seconds_elapsed, false);
+  } else if (seconds_elapsed >= NUM_JUMPED_SECONDS_BEFORE_WARN) {
+    /* Compare the monotonic clock to the */
+    const int32_t monotime_msec_passed =
+      monotime_coarse_diff_msec32(&last_updated,
+                                  &current_second_last_changed);
+    const int monotime_sec_passed = monotime_msec_passed / 1000;
+    const int discrepency = monotime_sec_passed - seconds_elapsed;
+    /* If the monotonic clock deviates from time(NULL), we have a couple of
+     * possibilities.  On some systems, this means we have been suspended or
+     * sleeping.  Everywhere, it can mean that the wall-clock time has
+     * been changed -- for example, with settimeofday().
+     *
+     * On the other hand, if the monotonic time matches with the wall-clock
+     * time, we've probably just been idle for a while, with no events firing.
+     * we tolerate much more of that.
+     */
+    const bool clock_jumped = abs(discrepency) > 2;
+
+    if (clock_jumped || seconds_elapsed >= NUM_IDLE_SECONDS_BEFORE_WARN) {
+      circuit_note_clock_jumped(seconds_elapsed, ! clock_jumped);
+    }
   } else if (seconds_elapsed > 0) {
     stats_n_seconds_working += seconds_elapsed;
   }
@@ -3686,6 +3717,8 @@ tor_free_all(int postfork)
   heartbeat_callback_first_time = 1;
   n_libevent_errors = 0;
   current_second = 0;
+  memset(&current_second_last_changed, 0,
+         sizeof(current_second_last_changed));
 
   if (!postfork) {
     release_lockfile();
