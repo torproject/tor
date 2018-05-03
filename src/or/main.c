@@ -3047,6 +3047,7 @@ signal_callback(evutil_socket_t fd, short events, void *arg)
   (void)fd;
   (void)events;
 
+  update_current_time(time(NULL));
   process_signal(sig);
 }
 
