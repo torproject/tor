@@ -160,7 +160,9 @@ script:
 
 after_failure:
   ## `make check` will leave a log file with more details of test failures.
-  - cat test-suite.log
+  - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log; fi
+  ## `make distcheck` puts it somewhere different.
+  - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog; fi
 
 after_success:
   ## If this build was one that produced coverage, upload it.
