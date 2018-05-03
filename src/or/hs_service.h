@@ -50,9 +50,9 @@ typedef struct hs_service_intro_point_t {
   /* Legacy key if that intro point doesn't support v3. This should be used if
    * the base object legacy flag is set. */
   crypto_pk_t *legacy_key;
-
-  /* Legacy key SHA1 public key digest. */
-   uint8_t legacy_key_digest[DIGEST_LEN];
+  /* Legacy key SHA1 public key digest. This should be used only if the base
+   * object legacy flag is set. */
+  uint8_t legacy_key_digest[DIGEST_LEN];
 
   /* Amount of INTRODUCE2 cell accepted from this intro point. */
   uint64_t introduce2_count;
