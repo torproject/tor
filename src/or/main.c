@@ -2495,8 +2495,40 @@ hs_service_callback(time_t now, const or_options_t *options)
 static periodic_timer_t *second_timer = NULL;
 /** Number of libevent errors in the last second: we die if we get too many. */
 static int n_libevent_errors = 0;
-/** Last time that second_elapsed_callback was called. */
+
+/** Last time that update_current_time was called. */
 static time_t current_second = 0;
+
+/**
+ * Set the current time to "now", which should be the value returned by
+ * time().  Check for clock jumps and track the total number of seconds we
+ * have been running.
+ */
+void
+update_current_time(time_t now)
+{
+  if (PREDICT_LIKELY(now == current_second)) {
+    /* We call this function a lot.  Most frequently, the current second
+     * will not have changed, so we just return. */
+    return;
+  }
+
+  const time_t seconds_elapsed = current_second ? (now - current_second) : 0;
+
+/** If more than this many seconds have elapsed, probably the clock
+ * jumped: doesn't count. */
+#define NUM_JUMPED_SECONDS_BEFORE_WARN 100
+
+  if (seconds_elapsed < -NUM_JUMPED_SECONDS_BEFORE_WARN ||
+      seconds_elapsed >= NUM_JUMPED_SECONDS_BEFORE_WARN) {
+    circuit_note_clock_jumped(seconds_elapsed);
+  } else if (seconds_elapsed > 0) {
+    stats_n_seconds_working += seconds_elapsed;
+  }
+
+  update_approx_time(now);
+  current_second = now;
+}
 
 /** Libevent callback: invoked once every second. */
 static void
@@ -2508,7 +2540,6 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   time_t now;
   size_t bytes_written;
   size_t bytes_read;
-  int seconds_elapsed;
   (void)timer;
   (void)arg;
 
@@ -2516,10 +2547,10 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
 
   /* log_notice(LD_GENERAL, "Tick."); */
   now = time(NULL);
-  update_approx_time(now);
+  update_current_time(now);
 
   /* the second has rolled over. check more stuff. */
-  seconds_elapsed = current_second ? (int)(now - current_second) : 0;
+  // remove this once it's unneeded
   bytes_read = (size_t)(stats_n_bytes_read - stats_prev_n_read);
   bytes_written = (size_t)(stats_n_bytes_written - stats_prev_n_written);
   stats_prev_n_read = stats_n_bytes_read;
@@ -2531,18 +2562,7 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   control_event_circ_bandwidth_used();
   control_event_circuit_cell_stats();
 
-/** If more than this many seconds have elapsed, probably the clock
- * jumped: doesn't count. */
-#define NUM_JUMPED_SECONDS_BEFORE_WARN 100
-  if (seconds_elapsed < -NUM_JUMPED_SECONDS_BEFORE_WARN ||
-      seconds_elapsed >= NUM_JUMPED_SECONDS_BEFORE_WARN) {
-    circuit_note_clock_jumped(seconds_elapsed);
-  } else if (seconds_elapsed > 0)
-    stats_n_seconds_working += seconds_elapsed;
-
   run_scheduled_events(now);
-
-  current_second = now; /* remember which second it is, for next time */
 }
 
 #ifdef HAVE_SYSTEMD_209
