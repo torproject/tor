@@ -2493,8 +2493,6 @@ hs_service_callback(time_t now, const or_options_t *options)
 
 /** Timer: used to invoke second_elapsed_callback() once per second. */
 static periodic_timer_t *second_timer = NULL;
-/** Number of libevent errors in the last second: we die if we get too many. */
-static int n_libevent_errors = 0;
 /** Last time that second_elapsed_callback was called. */
 static time_t current_second = 0;
 
@@ -2511,8 +2509,6 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   int seconds_elapsed;
   (void)timer;
   (void)arg;
-
-  n_libevent_errors = 0;
 
   /* log_notice(LD_GENERAL, "Tick."); */
   now = time(NULL);
@@ -2557,21 +2553,6 @@ systemd_watchdog_callback(periodic_timer_t *timer, void *arg)
   sd_notify(0, "WATCHDOG=1");
 }
 #endif /* defined(HAVE_SYSTEMD_209) */
-
-#ifndef _WIN32
-/** Called when a possibly ignorable libevent error occurs; ensures that we
- * don't get into an infinite loop by ignoring too many errors from
- * libevent. */
-static int
-got_libevent_error(void)
-{
-  if (++n_libevent_errors > 8) {
-    log_err(LD_NET, "Too many libevent errors in one second; dying");
-    return -1;
-  }
-  return 0;
-}
-#endif /* !defined(_WIN32) */
 
 #define UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST (6*60*60)
 
@@ -2914,6 +2895,11 @@ do_main_loop(void)
   return run_main_loop_until_done();
 }
 
+#ifndef _WIN32
+/** Rate-limiter for EINVAL-type libevent warnings. */
+static ratelim_t libevent_error_ratelim = RATELIM_INIT(10);
+#endif
+
 /**
  * Run the main loop a single time. Return 0 for "exit"; -1 for "exit with
  * error", and 1 for "run this again."
@@ -2979,9 +2965,12 @@ run_main_loop_once(void)
       return -1;
 #ifndef _WIN32
     } else if (e == EINVAL) {
-      log_warn(LD_NET, "EINVAL from libevent: should you upgrade libevent?");
-      if (got_libevent_error())
+      log_fn_ratelim(&libevent_error_ratelim, LOG_WARN, LD_NET,
+                     "EINVAL from libevent: should you upgrade libevent?");
+      if (libevent_error_ratelim.n_calls_since_last_time > 8) {
+        log_err(LD_NET, "Too many libevent errors, too fast: dying");
         return -1;
+      }
 #endif /* !defined(_WIN32) */
     } else {
       tor_assert_nonfatal_once(! ERRNO_IS_EINPROGRESS(e));
@@ -3663,7 +3652,6 @@ tor_free_all(int postfork)
   should_init_bridge_stats = 1;
   dns_honesty_first_time = 1;
   heartbeat_callback_first_time = 1;
-  n_libevent_errors = 0;
   current_second = 0;
 
   if (!postfork) {

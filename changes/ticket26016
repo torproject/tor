@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Use our standard rate-limiting code to deal with excessive libevent
+      failures, rather than the hand-rolled logic we had before.
+      Closes ticket 26016.
