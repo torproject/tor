@@ -2538,7 +2538,7 @@ update_current_time(time_t now)
       monotime_coarse_diff_msec32(&last_updated,
                                   &current_second_last_changed);
     const int monotime_sec_passed = monotime_msec_passed / 1000;
-    const int discrepency = monotime_sec_passed - seconds_elapsed;
+    const int discrepency = monotime_sec_passed - (int)seconds_elapsed;
     /* If the monotonic clock deviates from time(NULL), we have a couple of
      * possibilities.  On some systems, this means we have been suspended or
      * sleeping.  Everywhere, it can mean that the wall-clock time has
