@@ -1,0 +1,5 @@
+  o Minor bugfixes (tests):
+    - While running the circuit_timeout test, fix the PRNG to a deterministic
+      AES stream, so that the test coverage from this test will itself be
+      deterministic.  Fixes bug 25995; bugfix on 0.2.2.2-alpha.
+
