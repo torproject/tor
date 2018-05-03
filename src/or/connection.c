@@ -76,6 +76,7 @@
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
+#include "crypto_util.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dns.h"

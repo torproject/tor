@@ -23,6 +23,7 @@
 #include "config.h"
 #include "control.h"
 #include "crypto_ed25519.h"
+#include "crypto_rand.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dirauth/dirvote.h"

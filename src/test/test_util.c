@@ -12,6 +12,7 @@
 #include "buffers.h"
 #include "config.h"
 #include "control.h"
+#include "crypto_rand.h"
 #include "test.h"
 #include "memarea.h"
 #include "util_process.h"

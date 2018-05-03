@@ -12,6 +12,7 @@
 #include "circuitmux_ewma.h"
 /* For var_cell_free */
 #include "connection_or.h"
+#include "crypto_rand.h"
 /* For packed_cell stuff */
 #define RELAY_PRIVATE
 #include "relay.h"

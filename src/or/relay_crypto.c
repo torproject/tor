@@ -6,9 +6,10 @@
 
 #include "or.h"
 #include "config.h"
+#include "crypto_util.h"
 #include "hs_ntor.h" // for HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN
-#include "relay_crypto.h"
 #include "relay.h"
+#include "relay_crypto.h"
 
 /** Update digest from the payload of cell. Assign integrity part to
  * cell.

@@ -2,6 +2,7 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
+#include "crypto_rand.h"
 #include "address_set.h"
 #include "microdesc.h"
 #include "networkstatus.h"

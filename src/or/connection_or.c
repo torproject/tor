@@ -39,6 +39,8 @@
 #include "connection.h"
 #include "connection_or.h"
 #include "control.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "dirserv.h"
 #include "entrynodes.h"
 #include "geoip.h"

@@ -16,6 +16,7 @@
 #include "networkstatus.h"
 #include "connection.h"
 #include "connection_or.h"
+#include "crypto_rand.h"
 #include "main.h"
 #include "rephist.h"
 #include "router.h"

@@ -59,6 +59,8 @@
 #include "ed25519_cert.h" /* Trunnel interface. */
 #include "hs_descriptor.h"
 #include "circuitbuild.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "parsecommon.h"
 #include "rendcache.h"
 #include "hs_cache.h"

@@ -43,7 +43,7 @@
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
-#include "crypto.h"
+#include "crypto_rand.h"
 #include "directory.h"
 #include "entrynodes.h"
 #include "hs_ntor.h"

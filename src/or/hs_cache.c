@@ -11,6 +11,7 @@
 
 #include "or.h"
 #include "config.h"
+#include "crypto_util.h"
 #include "hs_ident.h"
 #include "hs_common.h"
 #include "hs_client.h"

@@ -78,6 +78,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "crypto_rand.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "rephist.h"

@@ -5,9 +5,9 @@
 
 #include "orconfig.h"
 
-#define CRYPTO_PRIVATE
+#define CRYPTO_RAND_PRIVATE
 
-#include "crypto.h"
+#include "crypto_rand.h"
 #include "util.h"
 #include "util_format.h"
 #include "compat.h"

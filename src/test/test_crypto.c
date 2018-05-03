@@ -5,7 +5,7 @@
 
 #include "orconfig.h"
 #define CRYPTO_CURVE25519_PRIVATE
-#define CRYPTO_PRIVATE
+#define CRYPTO_RAND_PRIVATE
 #include "or.h"
 #include "test.h"
 #include "aes.h"
@@ -13,6 +13,7 @@
 #include "siphash.h"
 #include "crypto_curve25519.h"
 #include "crypto_ed25519.h"
+#include "crypto_rand.h"
 #include "ed25519_vectors.inc"
 
 /** Run unit tests for Diffie-Hellman functionality. */

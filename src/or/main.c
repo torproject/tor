@@ -71,6 +71,7 @@
 #include "control.h"
 #include "cpuworker.h"
 #include "crypto_s2k.h"
+#include "crypto_rand.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dns.h"

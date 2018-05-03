@@ -15,6 +15,8 @@
 #include "circuituse.h"
 #include "config.h"
 #include "connection.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "directory.h"
 #include "main.h"
 #include "networkstatus.h"

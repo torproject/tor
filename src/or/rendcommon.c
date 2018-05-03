@@ -14,18 +14,20 @@
 #include "circuitbuild.h"
 #include "config.h"
 #include "control.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
+#include "hs_client.h"
 #include "hs_common.h"
+#include "hs_intropoint.h"
+#include "networkstatus.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendmid.h"
-#include "hs_intropoint.h"
-#include "hs_client.h"
 #include "rendservice.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
-#include "networkstatus.h"
 
 /** Return 0 if one and two are the same service ids, else -1 or 1 */
 int

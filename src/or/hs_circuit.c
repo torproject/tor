@@ -13,6 +13,8 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "nodelist.h"
 #include "policies.h"
 #include "relay.h"

@@ -67,6 +67,7 @@
 #include "circuitlist.h"
 #include "config.h"
 #include "cpuworker.h"
+#include "crypto_util.h"
 #include "networkstatus.h"
 #include "onion.h"
 #include "onion_fast.h"

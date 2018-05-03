@@ -56,6 +56,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "control.h"
+#include "crypto_rand.h"
 #include "dns.h"
 #include "main.h"
 #include "policies.h"

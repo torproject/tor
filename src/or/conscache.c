@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "conscache.h"
+#include "crypto_util.h"
 #include "storagedir.h"
 
 #define CCE_MAGIC 0x17162253

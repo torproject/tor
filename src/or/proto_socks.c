@@ -9,6 +9,7 @@
 #include "buffers.h"
 #include "control.h"
 #include "config.h"
+#include "crypto_util.h"
 #include "ext_orport.h"
 #include "proto_socks.h"
 #include "reasons.h"

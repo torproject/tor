@@ -40,6 +40,8 @@
 #include "ed25519-randombytes.h"
 #include "ed25519-hash.h"
 
+#include "crypto_util.h"
+
 typedef unsigned char ed25519_signature[64];
 typedef unsigned char ed25519_public_key[32];
 typedef unsigned char ed25519_secret_key[32];

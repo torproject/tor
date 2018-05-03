@@ -27,7 +27,7 @@
 
 #include "or.h"
 #include "config.h"
-#include "crypto.h"
+#include "crypto_util.h"
 #include "torcert.h"
 #include "ed25519_cert.h"
 #include "torlog.h"

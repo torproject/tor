@@ -18,6 +18,8 @@
 #include "consdiffmgr.h"
 #include "control.h"
 #include "compat.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "entrynodes.h"

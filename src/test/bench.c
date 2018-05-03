@@ -23,6 +23,7 @@
 #include "crypto_curve25519.h"
 #include "onion_ntor.h"
 #include "crypto_ed25519.h"
+#include "crypto_rand.h"
 #include "consdiff.h"
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)

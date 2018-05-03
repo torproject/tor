@@ -27,7 +27,7 @@
 #include "compat.h"
 #include "compat_libevent.h"
 #include "compat_threads.h"
-#include "crypto.h"
+#include "crypto_rand.h"
 #include "util.h"
 #include "workqueue.h"
 #include "tor_queue.h"

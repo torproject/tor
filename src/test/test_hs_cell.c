@@ -14,6 +14,7 @@
 #include "log_test_helpers.h"
 
 #include "crypto_ed25519.h"
+#include "crypto_rand.h"
 #include "hs_cell.h"
 #include "hs_intropoint.h"
 #include "hs_service.h"

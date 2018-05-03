@@ -24,6 +24,8 @@
 #include "connection_or.h"
 #include "config.h"
 #include "cpuworker.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "main.h"
 #include "onion.h"
 #include "rephist.h"

@@ -21,7 +21,6 @@
 #ifndef TOR_HS_IDENT_H
 #define TOR_HS_IDENT_H
 
-#include "crypto.h"
 #include "crypto_ed25519.h"
 
 #include "hs_common.h"

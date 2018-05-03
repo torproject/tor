@@ -16,6 +16,8 @@
 #include "circuituse.h"
 #include "config.h"
 #include "control.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "directory.h"
 #include "hs_common.h"
 #include "hs_config.h"

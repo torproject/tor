@@ -26,6 +26,8 @@
 #endif
 
 #include "crypto.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "compat.h"
 
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in

@@ -9,6 +9,7 @@
  **/
 
 #include "orconfig.h"
+#include "crypto_rand.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H

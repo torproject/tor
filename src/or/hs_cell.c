@@ -8,6 +8,7 @@
 
 #include "or.h"
 #include "config.h"
+#include "crypto_util.h"
 #include "rendservice.h"
 #include "replaycache.h"
 #include "util.h"

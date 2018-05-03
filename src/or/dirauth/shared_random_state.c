@@ -11,16 +11,16 @@
 #define SHARED_RANDOM_STATE_PRIVATE
 
 #include "or.h"
-#include "shared_random.h"
 #include "config.h"
 #include "confparse.h"
-#include "voting_schedule.h"
+#include "crypto_util.h"
+#include "dirauth/dirvote.h"
 #include "networkstatus.h"
 #include "router.h"
-#include "shared_random_state.h"
+#include "shared_random.h"
 #include "shared_random_client.h"
-
-#include "dirauth/dirvote.h"
+#include "shared_random_state.h"
+#include "voting_schedule.h"
 
 /* Default filename of the shared random state on disk. */
 static const char default_fname[] = "sr-state";

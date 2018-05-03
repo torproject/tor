@@ -9,6 +9,7 @@
 #include "test.h"
 #include "crypto_s2k.h"
 #include "crypto_pwbox.h"
+#include "crypto_rand.h"
 
 #if defined(HAVE_LIBSCRYPT_H) && defined(HAVE_LIBSCRYPT_SCRYPT)
 #define HAVE_LIBSCRYPT
