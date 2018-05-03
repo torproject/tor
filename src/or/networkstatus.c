@@ -1858,17 +1858,9 @@ networkstatus_set_current_consensus(const char *consensus,
       current_valid_after = current_md_consensus->valid_after;
     }
   } else {
-    cached_dir_t *cur;
-    char buf[128];
-    tor_snprintf(buf, sizeof(buf), "cached-%s-consensus", flavor);
-    consensus_fname = get_cachedir_fname(buf);
-    tor_snprintf(buf, sizeof(buf), "unverified-%s-consensus", flavor);
-    unverified_fname = get_cachedir_fname(buf);
-    cur = dirserv_get_consensus(flavor);
-    if (cur) {
-      current_digests = &cur->digests;
-      current_valid_after = cur->published;
-    }
+    tor_assert_nonfatal_unreached();
+    result = -2;
+    goto done;
   }
 
   if (current_digests &&
