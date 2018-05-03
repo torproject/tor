@@ -216,3 +216,12 @@ mostlyclean-local:
 	rm -rf $(HTML_COVER_DIR)
 	rm -rf $(top_builddir)/doc/doxygen
 	rm -rf $(TEST_NETWORK_ALL_LOG_DIR)
+
+# This relies on some internal details of how automake implements
+# distcheck.  We check two directories because automake-1.15 changed
+# from $(distdir)/_build to $(distdir)/_build/sub.
+show-distdir-testlog:
+	@if test -d "$(distdir)/_build/sub"; then \
+	  cat $(distdir)/_build/sub/$(TEST_SUITE_LOG); \
+	else \
+	  cat $(distdir)/_build/$(TEST_SUITE_LOG); fi
