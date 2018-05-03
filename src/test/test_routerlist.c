@@ -37,7 +37,7 @@
 #include "test_dir_common.h"
 #include "log_test_helpers.h"
 
-void construct_consensus(char **consensus_text_md);
+void construct_consensus(char **consensus_text_md, time_t now);
 
 static authority_cert_t *mock_cert;
 
@@ -136,7 +136,7 @@ test_routerlist_launch_descriptor_downloads(void *arg)
 }
 
 void
-construct_consensus(char **consensus_text_md)
+construct_consensus(char **consensus_text_md, time_t now)
 {
   networkstatus_t *vote = NULL;
   networkstatus_t *v1 = NULL, *v2 = NULL, *v3 = NULL;
@@ -144,7 +144,6 @@ construct_consensus(char **consensus_text_md)
   authority_cert_t *cert1=NULL, *cert2=NULL, *cert3=NULL;
   crypto_pk_t *sign_skey_1=NULL, *sign_skey_2=NULL, *sign_skey_3=NULL;
   crypto_pk_t *sign_skey_leg=NULL;
-  time_t now = time(NULL);
   smartlist_t *votes = NULL;
   int n_vrs;
 
@@ -259,7 +258,7 @@ test_router_pick_directory_server_impl(void *arg)
   rs = router_pick_directory_server_impl(V3_DIRINFO, (const int) 0, NULL);
   tt_ptr_op(rs, OP_EQ, NULL);
 
-  construct_consensus(&consensus_text_md);
+  construct_consensus(&consensus_text_md, now);
   tt_assert(consensus_text_md);
   con_md = networkstatus_parse_vote_from_string(consensus_text_md, NULL,
                                                 NS_TYPE_CONSENSUS);
@@ -453,6 +452,7 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   int retval;
   char *consensus_text_md = NULL;
   or_options_t *options = get_options_mutable();
+  time_t now = time(NULL);
 
   (void) arg;
 
@@ -496,7 +496,7 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   conn->requested_resource = tor_strdup("ns");
 
   /* Construct a consensus */
-  construct_consensus(&consensus_text_md);
+  construct_consensus(&consensus_text_md, now);
   tt_assert(consensus_text_md);
 
   /* Place the consensus in the dirconn */
@@ -507,7 +507,7 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   args.body_len = strlen(consensus_text_md);
 
   /* Update approx time so that the consensus is considered live */
-  update_approx_time(time(NULL)+1010);
+  update_approx_time(now+1010);
 
   setup_capture_of_logs(LOG_DEBUG);
 
