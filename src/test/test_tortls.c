@@ -205,7 +205,7 @@ test_tortls_tor_tls_get_error(void *data)
 static void
 library_init(void)
 {
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+#ifdef OPENSSL_1_1_API
   OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
 #else
   SSL_library_init();
