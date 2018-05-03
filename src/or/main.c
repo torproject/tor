@@ -1711,9 +1711,6 @@ run_scheduled_events(time_t now)
    */
   consider_hibernation(now);
 
-  /* 0c. If we've deferred log messages for the controller, handle them now */
-  flush_pending_log_callbacks();
-
   /* Maybe enough time elapsed for us to reconsider a circuit. */
   circuit_upgrade_circuits_from_guard_wait();
 

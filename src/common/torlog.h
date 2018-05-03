@@ -154,6 +154,8 @@ int add_android_log(const log_severity_list_t *severity,
                     const char *android_identity_tag);
 #endif // HAVE_ANDROID_LOG_H.
 int add_callback_log(const log_severity_list_t *severity, log_callback cb);
+typedef void (*pending_callback_callback)(void);
+void logs_set_pending_callback_callback(pending_callback_callback cb);
 void logs_set_domain_logging(int enabled);
 int get_min_log_level(void);
 void switch_logs_debug(void);

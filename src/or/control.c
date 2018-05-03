@@ -803,6 +803,9 @@ queued_event_free_(queued_event_t *ev)
 static void
 queued_events_flush_all(int force)
 {
+  /* Make sure that we get all the pending log events, if there are any. */
+  flush_pending_log_callbacks();
+
   if (PREDICT_UNLIKELY(queued_control_events == NULL)) {
     return;
   }
@@ -6186,7 +6189,7 @@ control_event_logmsg(int severity, uint32_t domain, const char *msg)
   int event;
 
   /* Don't even think of trying to add stuff to a buffer from a cpuworker
-   * thread. */
+   * thread. (See #25987 for plan to fix.) */
   if (! in_main_thread())
     return;
 
@@ -6230,6 +6233,23 @@ control_event_logmsg(int severity, uint32_t domain, const char *msg)
     --disable_log_messages;
     tor_free(b);
   }
+}
+
+/**
+ * Logging callback: called when there is a queued pending log callback.
+ */
+void
+control_event_logmsg_pending(void)
+{
+  if (! in_main_thread()) {
+    /* We can't handle this case yet, since we're using a
+     * mainloop_event_t to invoke queued_events_flush_all.  We ought to
+     * use a different mechanism instead: see #25987.
+     **/
+    return;
+  }
+  tor_assert(flush_queued_events_event);
+  mainloop_event_activate(flush_queued_events_event);
 }
 
 /** Called whenever we receive new router descriptors: tell any
