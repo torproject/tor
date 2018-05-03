@@ -2999,11 +2999,13 @@ getinfo_helper_policies(control_connection_t *conn,
     smartlist_free(private_policy_strings);
   } else if (!strcmp(question, "exit-policy/reject-private/relay")) {
     const or_options_t *options = get_options();
-    const routerinfo_t *me = router_get_my_routerinfo();
+    const routerinfo_t *me = NULL;
+
+    int err = router_get_my_routerinfo_with_err((routerinfo_t **)&me);
 
     if (!me) {
-      *errmsg = "router_get_my_routerinfo returned NULL";
-      return -1;
+      *errmsg = routerinfo_errno_to_string(err);
+      return routerinfo_err_is_transient(err) ? -1 : 0;
     }
 
     if (!options->ExitPolicyRejectPrivate &&
@@ -3038,10 +3040,11 @@ getinfo_helper_policies(control_connection_t *conn,
     SMARTLIST_FOREACH(configured_addresses, tor_addr_t *, a, tor_free(a));
     smartlist_free(configured_addresses);
   } else if (!strcmpstart(question, "exit-policy/")) {
-    const routerinfo_t *me = router_get_my_routerinfo();
-
     int include_ipv4 = 0;
     int include_ipv6 = 0;
+
+    const routerinfo_t *me = NULL;
+    int err = router_get_my_routerinfo_with_err((routerinfo_t **)&me);
 
     if (!strcmp(question, "exit-policy/ipv4")) {
       include_ipv4 = 1;
@@ -3054,12 +3057,14 @@ getinfo_helper_policies(control_connection_t *conn,
     }
 
     if (!me) {
-      *errmsg = "router_get_my_routerinfo returned NULL";
-      return -1;
+      *errmsg = routerinfo_errno_to_string(err);
+      return routerinfo_err_is_transient(err) ? -1 : 0;
+    } else {
+      *answer = router_dump_exit_policy_to_string(me,include_ipv4,
+                                                  include_ipv6);
     }
-
-    *answer = router_dump_exit_policy_to_string(me,include_ipv4,include_ipv6);
   }
+
   return 0;
 }
 

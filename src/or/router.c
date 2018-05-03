@@ -114,6 +114,56 @@ const char *format_node_description(char *buf,
                                     const tor_addr_t *addr,
                                     uint32_t addr32h);
 
+/** Return a readonly string with human readable description
+ * of <b>err</b>.
+ */
+const char *
+routerinfo_errno_to_string(int err)
+{
+  switch (err) {
+    case TOR_ROUTERINFO_ERROR_NO_EXT_ADDR:
+      return "No known exit address yet";
+    case TOR_ROUTERINFO_ERROR_CANNOT_PARSE:
+      return "Cannot parse descriptor";
+    case TOR_ROUTERINFO_ERROR_NOT_A_SERVER:
+      return "Not running in server mode";
+    case TOR_ROUTERINFO_ERROR_DIGEST_FAILED:
+      return "Key digest failed";
+    case TOR_ROUTERINFO_ERROR_CANNOT_GENERATE:
+      return "Cannot generate descriptor";
+    case TOR_ROUTERINFO_ERROR_NOT_SO_FAST:
+      return "Too soon; not ready yet";
+  }
+
+  log_warn(LD_BUG, "unknown errno %d", err);
+
+  return "Unknown error";
+}
+
+/** Return true if we expect given error to be transient.
+ * Return false otherwise.
+ */
+int
+routerinfo_err_is_transient(int err)
+{
+  switch (err) {
+    case TOR_ROUTERINFO_ERROR_NO_EXT_ADDR:
+      return 1;
+    case TOR_ROUTERINFO_ERROR_CANNOT_PARSE:
+      return 1;
+    case TOR_ROUTERINFO_ERROR_NOT_A_SERVER:
+      return 0;
+    case TOR_ROUTERINFO_ERROR_DIGEST_FAILED:
+      return 0; // XXX: bug?
+    case TOR_ROUTERINFO_ERROR_CANNOT_GENERATE:
+      return 1;
+    case TOR_ROUTERINFO_ERROR_NOT_SO_FAST:
+      return 1;
+  }
+
+  return 0;
+}
+
 /** Replace the current onion key with <b>k</b>.  Does not affect
  * lastonionkey; to update lastonionkey correctly, call rotate_onion_key().
  */
@@ -2023,6 +2073,30 @@ router_get_my_routerinfo,(void))
   return desc_routerinfo;
 }
 
+/** Set <b>ri</b> to routerinfo of this OR. Rebuild it from
+ * scratch if needed. Return 0 on success or an appropriate
+ * TOR_ROUTERINFO_ERROR_* value on failure.
+ */
+MOCK_IMPL(int,
+router_get_my_routerinfo_with_err,(routerinfo_t **ri))
+{
+  if (!server_mode(get_options()))
+    return TOR_ROUTERINFO_ERROR_NOT_A_SERVER;
+
+  if (!desc_clean_since) {
+    int err = router_rebuild_descriptor(0);
+    if (err < 0)
+      return err;
+  }
+
+  if (!desc_routerinfo)
+    return TOR_ROUTERINFO_ERROR_NOT_SO_FAST;
+
+  if (ri)
+    *ri = desc_routerinfo;
+  return 0;
+}
+
 /** OR only: Return a signed server descriptor for this OR, rebuilding a fresh
  * one if necessary.  Return NULL on error.
  */
@@ -2196,7 +2270,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
 
   if (router_pick_published_address(options, &addr, 0) < 0) {
     log_warn(LD_CONFIG, "Don't know my address while generating descriptor");
-    return -1;
+    return TOR_ROUTERINFO_ERROR_NO_EXT_ADDR;
   }
 
   /* Log a message if the address in the descriptor doesn't match the ORPort
@@ -2252,7 +2326,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   if (crypto_pk_get_digest(ri->identity_pkey,
                            ri->cache_info.identity_digest)<0) {
     routerinfo_free(ri);
-    return -1;
+    return TOR_ROUTERINFO_ERROR_DIGEST_FAILED;
   }
   ri->cache_info.signing_key_cert =
     tor_cert_dup(get_master_signing_key_cert());
@@ -2385,7 +2459,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     log_warn(LD_BUG, "Couldn't generate router descriptor.");
     routerinfo_free(ri);
     extrainfo_free(ei);
-    return -1;
+    return TOR_ROUTERINFO_ERROR_CANNOT_GENERATE;
   }
   ri->cache_info.signed_descriptor_len =
     strlen(ri->cache_info.signed_descriptor_body);
@@ -2428,6 +2502,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
 int
 router_rebuild_descriptor(int force)
 {
+  int err = 0;
   routerinfo_t *ri;
   extrainfo_t *ei;
   uint32_t addr;
@@ -2442,13 +2517,14 @@ router_rebuild_descriptor(int force)
      * learn that it's time to try again when ip_address_changed()
      * marks it dirty. */
     desc_clean_since = time(NULL);
-    return -1;
+    return TOR_ROUTERINFO_ERROR_NOT_SO_FAST;
   }
 
   log_info(LD_OR, "Rebuilding relay descriptor%s", force ? " (forced)" : "");
 
-  if (router_build_fresh_descriptor(&ri, &ei) < 0) {
-    return -1;
+  err = router_build_fresh_descriptor(&ri, &ei);
+  if (err < 0) {
+    return err;
   }
 
   routerinfo_free(desc_routerinfo);

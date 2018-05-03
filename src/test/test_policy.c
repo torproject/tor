@@ -1496,10 +1496,18 @@ test_dump_exit_policy_to_string(void *arg)
 }
 
 static routerinfo_t *mock_desc_routerinfo = NULL;
-static const routerinfo_t *
-mock_router_get_my_routerinfo(void)
+static int routerinfo_err;
+
+static int
+mock_router_get_my_routerinfo_with_err(routerinfo_t **ri)
 {
-  return mock_desc_routerinfo;
+  if (routerinfo_err)
+    return routerinfo_err;
+
+  if (ri)
+    *ri = mock_desc_routerinfo;
+
+  return 0;
 }
 
 #define DEFAULT_POLICY_STRING "reject *:*"
@@ -1541,7 +1549,8 @@ test_policies_getinfo_helper_policies(void *arg)
   tor_free(answer);
 
   memset(&mock_my_routerinfo, 0, sizeof(routerinfo_t));
-  MOCK(router_get_my_routerinfo, mock_router_get_my_routerinfo);
+  MOCK(router_get_my_routerinfo_with_err,
+       mock_router_get_my_routerinfo_with_err);
   mock_my_routerinfo.exit_policy = smartlist_new();
   mock_desc_routerinfo = &mock_my_routerinfo;
 
@@ -1657,6 +1666,55 @@ test_policies_getinfo_helper_policies(void *arg)
   tt_assert(strlen(answer) > 0);
   tt_assert(strlen(answer) == ipv4_len + ipv6_len + 1);
   tor_free(answer);
+
+  routerinfo_err = TOR_ROUTERINFO_ERROR_NO_EXT_ADDR;
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
+                               &errmsg);
+  tt_int_op(rv, OP_EQ, -1);
+  tt_ptr_op(answer, OP_EQ, NULL);
+  tt_ptr_op(errmsg, OP_NE, NULL);
+  tt_str_op(errmsg, OP_EQ, "No known exit address yet");
+
+  routerinfo_err = TOR_ROUTERINFO_ERROR_CANNOT_PARSE;
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
+                               &errmsg);
+  tt_int_op(rv, OP_EQ, -1);
+  tt_ptr_op(answer, OP_EQ, NULL);
+  tt_ptr_op(errmsg, OP_NE, NULL);
+  tt_str_op(errmsg, OP_EQ, "Cannot parse descriptor");
+
+  routerinfo_err = TOR_ROUTERINFO_ERROR_NOT_A_SERVER;
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
+                               &errmsg);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_ptr_op(answer, OP_EQ, NULL);
+  tt_ptr_op(errmsg, OP_NE, NULL);
+  tt_str_op(errmsg, OP_EQ, "Not running in server mode");
+
+  routerinfo_err = TOR_ROUTERINFO_ERROR_DIGEST_FAILED;
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
+                               &errmsg);
+
+  tt_int_op(rv, OP_EQ, 0);
+  tt_ptr_op(answer, OP_EQ, NULL);
+  tt_ptr_op(errmsg, OP_NE, NULL);
+  tt_str_op(errmsg, OP_EQ, "Key digest failed");
+
+  routerinfo_err = TOR_ROUTERINFO_ERROR_CANNOT_GENERATE;
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
+                               &errmsg);
+  tt_int_op(rv, OP_EQ, -1);
+  tt_ptr_op(answer, OP_EQ, NULL);
+  tt_ptr_op(errmsg, OP_NE, NULL);
+  tt_str_op(errmsg, OP_EQ, "Cannot generate descriptor");
+
+  routerinfo_err = TOR_ROUTERINFO_ERROR_NOT_SO_FAST;
+  rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
+                               &errmsg);
+  tt_int_op(rv, OP_EQ, -1);
+  tt_ptr_op(answer, OP_EQ, NULL);
+  tt_ptr_op(errmsg, OP_NE, NULL);
+  tt_str_op(errmsg, OP_EQ, "Too soon; not ready yet");
 
  done:
   tor_free(answer);
