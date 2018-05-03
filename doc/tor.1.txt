@@ -543,13 +543,21 @@ GENERAL OPTIONS
     (Default: 1)
 
 [[FetchUselessDescriptors]] **FetchUselessDescriptors** **0**|**1**::
-    If set to 1, Tor will fetch every consensus flavor, descriptor, and
-    certificate that it hears about. Otherwise, it will avoid fetching useless
-    descriptors: flavors that it is not using to build circuits, and authority
-    certificates it does not trust. This option is useful if you're using a
+    If set to 1, Tor will fetch every consensus flavor, and all server
+    descriptors and authority certificates referenced by those consensuses,
+    except for extra info descriptors. When this option is 1, Tor will also
+    keep fetching descriptors, even when idle.
+    If set to 0, Tor will avoid fetching useless descriptors: flavors that it
+    is not using to build circuits, and authority certificates it does not
+    trust. When Tor hasn't built any application circuits, it will go idle,
+    and stop fetching descriptors. This option is useful if you're using a
     tor client with an external parser that uses a full consensus.
-    This option fetches all documents, **DirCache** fetches and serves
-    all documents. (Default: 0)
+    This option fetches all documents except extrainfo descriptors,
+    **DirCache** fetches and serves all documents except extrainfo
+    descriptors, **DownloadExtraInfo*** fetches extrainfo documents, and serves
+    them if **DirCache** is on, and **UseMicrodescriptors** changes the
+    flavour of consensues and descriptors that is fetched and used for
+    building circuits. (Default: 0)
 
 [[HTTPProxy]] **HTTPProxy** __host__[:__port__]::
     Tor will make all its directory requests through this host:port (or host:80
@@ -1642,9 +1650,8 @@ The following options are useful only for clients (that is, if
     in order to build its circuits.  Using microdescriptors makes Tor clients
     download less directory information, thus saving bandwidth.  Directory
     caches need to fetch regular descriptors and microdescriptors, so this
-    option doesn't save any bandwidth for them.  If this option is set to
-    "auto" (recommended) then it is on for all clients that do not set
-    FetchUselessDescriptors. (Default: auto)
+    option doesn't save any bandwidth for them.  For legacy reasons, auto is
+    accepted, but it has the same effect as 1. (Default: auto)
 
 [[PathBiasCircThreshold]] **PathBiasCircThreshold** __NUM__ +
 
@@ -2390,10 +2397,12 @@ details.)
     some entry in the policy is accepted.
 
 [[DirCache]] **DirCache** **0**|**1**::
-    When this option is set, Tor caches all current directory documents and
-    accepts client requests for them. Setting DirPort is not required for this,
-    because clients connect via the ORPort by default. Setting either DirPort
-    or BridgeRelay and setting DirCache to 0 is not supported.  (Default: 1)
+    When this option is set, Tor caches all current directory documents except
+    extra info documents, and accepts client requests for them. If
+    **DownloadExtraInfo** is set, cached extra info documents are also cached.
+    Setting **DirPort** is not required for **DirCache**, because clients
+    connect via the ORPort by default. Setting either DirPort or BridgeRelay
+    and setting DirCache to 0 is not supported.  (Default: 1)
 
 [[MaxConsensusAgeForDiffs]] **MaxConsensusAgeForDiffs**  __N__ **minutes**|**hours**|**days**|**weeks**::
     When this option is nonzero, Tor caches will not try to generate
