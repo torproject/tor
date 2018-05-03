@@ -247,3 +247,12 @@ mostlyclean-local:
 clean-local:
 	rm -rf $(top_builddir)/src/rust/target
 	rm -rf $(top_builddir)/src/rust/.cargo/registry
+
+# This relies on some internal details of how automake implements
+# distcheck.  We check two directories because automake-1.15 changed
+# from $(distdir)/_build to $(distdir)/_build/sub.
+show-distdir-testlog:
+	@if test -d "$(distdir)/_build/sub"; then \
+	  cat $(distdir)/_build/sub/$(TEST_SUITE_LOG); \
+	else \
+	  cat $(distdir)/_build/$(TEST_SUITE_LOG); fi
