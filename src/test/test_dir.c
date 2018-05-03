@@ -1314,6 +1314,9 @@ test_dir_measured_bw_kb(void *arg)
                 "bw=1024 junk=007\n",
     "misc=junk node_id=$557365204145532d32353620696e73746561642e  "
                 "bw=1024 junk=007\n",
+    /* check whether bw can be before node_id and node_id can be at the end */
+    "bw=1024 node_id=$557365204145532d32353620696e73746561642e\n",
+    "foo=bar bw=1024 node_id=$557365204145532d32353620696e73746561642e\n",
     "end"
   };
   const char *lines_fail[] = {
