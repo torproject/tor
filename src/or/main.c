@@ -103,7 +103,6 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "scheduler.h"
-#include "dirauth/shared_random.h"
 #include "statefile.h"
 #include "status.h"
 #include "tor_api.h"
@@ -119,6 +118,8 @@
 #include <event2/event.h>
 
 #include "dirauth/dirvote.h"
+#include "dirauth/mode.h"
+#include "dirauth/shared_random.h"
 
 #ifdef HAVE_SYSTEMD
 #   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)

@@ -279,6 +279,7 @@ ORHEADERS = \
 ORHEADERS += \
 	src/or/dirauth/dircollate.h				\
 	src/or/dirauth/dirvote.h				\
+	src/or/dirauth/mode.h					\
 	src/or/dirauth/shared_random.h				\
 	src/or/dirauth/shared_random_state.h
 

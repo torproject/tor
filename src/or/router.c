@@ -35,6 +35,8 @@
 #include "transports.h"
 #include "routerset.h"
 
+#include "dirauth/mode.h"
+
 /**
  * \file router.c
  * \brief Miscellaneous relay functionality, including RSA key maintenance,
@@ -1611,14 +1613,6 @@ int
 authdir_mode(const or_options_t *options)
 {
   return options->AuthoritativeDir != 0;
-}
-/** Return true iff we believe ourselves to be a v3 authoritative
- * directory server.
- */
-int
-authdir_mode_v3(const or_options_t *options)
-{
-  return authdir_mode(options) && options->V3AuthoritativeDir != 0;
 }
 /** Return true iff we are an authoritative directory server that is
  * authoritative about receiving and serving descriptors of type

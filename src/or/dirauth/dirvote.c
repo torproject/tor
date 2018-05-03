@@ -9,7 +9,6 @@
 #include "dircollate.h"
 #include "directory.h"
 #include "dirserv.h"
-#include "dirvote.h"
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -23,8 +22,11 @@
 #include "routerparse.h"
 #include "entrynodes.h" /* needed for guardfraction methods */
 #include "torcert.h"
-#include "shared_random_state.h"
 #include "voting_schedule.h"
+
+#include "dirauth/dirvote.h"
+#include "dirauth/mode.h"
+#include "dirauth/shared_random_state.h"
 
 /**
  * \file dirvote.c

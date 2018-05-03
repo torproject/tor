@@ -122,6 +122,7 @@
 #include "torcert.h"
 
 #include "dirauth/dirvote.h"
+#include "dirauth/mode.h"
 
 // #define DEBUG_ROUTERLIST
 

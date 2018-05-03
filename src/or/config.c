@@ -112,6 +112,7 @@
 #include "procmon.h"
 
 #include "dirauth/dirvote.h"
+#include "dirauth/mode.h"
 
 #ifdef HAVE_SYSTEMD
 #   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)

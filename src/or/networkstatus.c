@@ -63,13 +63,14 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "scheduler.h"
-#include "dirauth/shared_random.h"
 #include "transports.h"
 #include "torcert.h"
 #include "channelpadding.h"
 #include "voting_schedule.h"
 
 #include "dirauth/dirvote.h"
+#include "dirauth/mode.h"
+#include "dirauth/shared_random.h"
 
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
