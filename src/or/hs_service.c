@@ -441,6 +441,10 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
     if (crypto_pk_generate_key(ip->legacy_key) < 0) {
       goto err;
     }
+    if (crypto_pk_get_digest(ip->legacy_key,
+                             (char *) ip->legacy_key_digest) < 0) {
+      goto err;
+    }
   }
 
   if (ei == NULL) {

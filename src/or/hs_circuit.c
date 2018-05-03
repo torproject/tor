@@ -193,11 +193,8 @@ register_intro_circ(const hs_service_intro_point_t *ip,
   tor_assert(circ);
 
   if (ip->base.is_only_legacy) {
-    uint8_t digest[DIGEST_LEN];
-    if (BUG(crypto_pk_get_digest(ip->legacy_key, (char *) digest) < 0)) {
-      return;
-    }
-    hs_circuitmap_register_intro_circ_v2_service_side(circ, digest);
+    hs_circuitmap_register_intro_circ_v2_service_side(circ,
+                                                      ip->legacy_key_digest);
   } else {
     hs_circuitmap_register_intro_circ_v3_service_side(circ,
                                          &ip->auth_key_kp.pubkey);
@@ -675,22 +672,14 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
 origin_circuit_t *
 hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip)
 {
-  origin_circuit_t *circ = NULL;
-
   tor_assert(ip);
 
   if (ip->base.is_only_legacy) {
-    uint8_t digest[DIGEST_LEN];
-    if (BUG(crypto_pk_get_digest(ip->legacy_key, (char *) digest) < 0)) {
-      goto end;
-    }
-    circ = hs_circuitmap_get_intro_circ_v2_service_side(digest);
+    return hs_circuitmap_get_intro_circ_v2_service_side(ip->legacy_key_digest);
   } else {
-    circ = hs_circuitmap_get_intro_circ_v3_service_side(
+    return hs_circuitmap_get_intro_circ_v3_service_side(
                                         &ip->auth_key_kp.pubkey);
   }
- end:
-  return circ;
 }
 
 /* Called when we fail building a rendezvous circuit at some point other than
