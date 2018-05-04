@@ -5233,10 +5233,10 @@ connection_free_all(void)
  * that we had more faith in and therefore the warning level should have higher
  * severity.
  */
-void
-clock_skew_warning(const connection_t *conn, long apparent_skew, int trusted,
-                   log_domain_mask_t domain, const char *received,
-                   const char *source)
+MOCK_IMPL(void,
+clock_skew_warning, (const connection_t *conn, long apparent_skew, int trusted,
+                     log_domain_mask_t domain, const char *received,
+                     const char *source))
 {
   char dbuf[64];
   char *ext_source = NULL, *warn = NULL;
