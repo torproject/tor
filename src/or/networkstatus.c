@@ -1777,10 +1777,18 @@ warn_early_consensus(const networkstatus_t *c, const char *flavor,
   long delta = now - c->valid_after;
   char *flavormsg = NULL;
 
-/** If a consensus appears more than this many seconds before its declared
- * valid-after time, declare that our clock is skewed. */
+/** If a consensus appears more than this many seconds before it could
+ * possibly be a sufficiently-signed consensus, declare that our clock
+ * is skewed. */
 #define EARLY_CONSENSUS_NOTICE_SKEW 60
-  if (now >= c->valid_after - EARLY_CONSENSUS_NOTICE_SKEW)
+
+  /* We assume that if a majority of dirauths have accurate clocks,
+   * the earliest that a dirauth with a skewed clock could possibly
+   * publish a sufficiently-signed consensus is (valid_after -
+   * dist_seconds).  Before that time, the skewed dirauth would be
+   * unable to obtain enough authority signatures for the consensus to
+   * be valid. */
+  if (now >= c->valid_after - c->dist_seconds - EARLY_CONSENSUS_NOTICE_SKEW)
     return;
 
   format_iso_time(tbuf, c->valid_after);

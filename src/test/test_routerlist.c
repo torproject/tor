@@ -692,6 +692,62 @@ test_early_consensus(void *arg)
   UNMOCK(clock_skew_warning);
 }
 
+/** Test warn_early_consensus(), expecting no warning  */
+static void
+test_warn_early_consensus_no(const networkstatus_t *c, time_t now,
+                             long offset)
+{
+  mock_apparent_skew = 0;
+  setup_capture_of_logs(LOG_WARN);
+  warn_early_consensus(c, "microdesc", now + offset);
+  expect_no_log_msg_containing("behind the time published in the consensus");
+  tt_int_op(mock_apparent_skew, OP_EQ, 0);
+ done:
+  teardown_capture_of_logs();
+}
+
+/** Test warn_early_consensus(), expecting a warning */
+static void
+test_warn_early_consensus_yes(const networkstatus_t *c, time_t now,
+                              long offset)
+{
+  mock_apparent_skew = 0;
+  setup_capture_of_logs(LOG_WARN);
+  warn_early_consensus(c, "microdesc", now + offset);
+  /* Can't use expect_single_log_msg() because of unrecognized authorities */
+  expect_log_msg_containing("behind the time published in the consensus");
+  tt_int_op(mock_apparent_skew, OP_EQ, offset);
+ done:
+  teardown_capture_of_logs();
+}
+
+/**
+ * Test warn_early_consensus() directly, checking both the non-warning
+ * case (consensus is not early) and the warning case (consensus is
+ * early).  Depends on EARLY_CONSENSUS_NOTICE_SKEW=60.
+ */
+static void
+test_warn_early_consensus(void *arg)
+{
+  networkstatus_t *c = NULL;
+  time_t now = time(NULL);
+
+  (void)arg;
+  c = tor_malloc_zero(sizeof *c);
+  c->valid_after = now;
+  c->dist_seconds = 300;
+  mock_apparent_skew = 0;
+  MOCK(clock_skew_warning, mock_clock_skew_warning);
+  test_warn_early_consensus_no(c, now, 60);
+  test_warn_early_consensus_no(c, now, 0);
+  test_warn_early_consensus_no(c, now, -60);
+  test_warn_early_consensus_no(c, now, -360);
+  test_warn_early_consensus_yes(c, now, -361);
+  test_warn_early_consensus_yes(c, now, -600);
+  UNMOCK(clock_skew_warning);
+  tor_free(c);
+}
+
 #define NODE(name, flags) \
   { #name, test_routerlist_##name, (flags), NULL, NULL }
 #define ROUTER(name,flags) \
@@ -711,11 +767,13 @@ struct testcase_t routerlist_tests[] = {
   ROUTER(pick_directory_server_impl, TT_FORK),
   { "directory_guard_fetch_with_no_dirinfo",
     test_directory_guard_fetch_with_no_dirinfo, TT_FORK, NULL, NULL },
-  /* These depend on construct_consensus() setting valid_after=now+1000 */
+  /* These depend on construct_consensus() setting
+   * valid_after=now+1000 and dist_seconds=250 */
   TIMELY("timely_consensus1", "1010"),
   TIMELY("timely_consensus2", "1000"),
-  TIMELY("timely_consensus3", "940"),
-  EARLY("early_consensus1", "939"),
+  TIMELY("timely_consensus3", "690"),
+  EARLY("early_consensus1", "689"),
+  { "warn_early_consensus", test_warn_early_consensus, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 
