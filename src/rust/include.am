@@ -5,6 +5,7 @@ EXTRA_DIST +=\
 	src/rust/Cargo.lock \
 	src/rust/.cargo/config.in \
 	src/rust/external/Cargo.toml \
+	src/rust/external/crypto_rand.rs \
 	src/rust/external/external.rs \
 	src/rust/external/lib.rs \
 	src/rust/protover/Cargo.toml \
