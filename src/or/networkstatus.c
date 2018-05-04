@@ -1772,25 +1772,26 @@ STATIC void
 warn_early_consensus(const networkstatus_t *c, const char *flavor,
                      time_t now)
 {
+  char tbuf[ISO_TIME_LEN+1];
+  char dbuf[64];
+  long delta = now - c->valid_after;
+  char *flavormsg = NULL;
+
 /** If a consensus appears more than this many seconds before its declared
  * valid-after time, declare that our clock is skewed. */
 #define EARLY_CONSENSUS_NOTICE_SKEW 60
+  if (now >= c->valid_after - EARLY_CONSENSUS_NOTICE_SKEW)
+    return;
 
-  if (now < c->valid_after - EARLY_CONSENSUS_NOTICE_SKEW) {
-    char tbuf[ISO_TIME_LEN+1];
-    char dbuf[64];
-    long delta = now - c->valid_after;
-    char *flavormsg = NULL;
-    format_iso_time(tbuf, c->valid_after);
-    format_time_interval(dbuf, sizeof(dbuf), delta);
-    log_warn(LD_GENERAL, "Our clock is %s behind the time published in the "
-             "consensus network status document (%s UTC).  Tor needs an "
-             "accurate clock to work correctly. Please check your time and "
-             "date settings!", dbuf, tbuf);
-    tor_asprintf(&flavormsg, "%s flavor consensus", flavor);
-    clock_skew_warning(NULL, delta, 1, LD_GENERAL, flavormsg, "CONSENSUS");
-    tor_free(flavormsg);
-  }
+  format_iso_time(tbuf, c->valid_after);
+  format_time_interval(dbuf, sizeof(dbuf), delta);
+  log_warn(LD_GENERAL, "Our clock is %s behind the time published in the "
+           "consensus network status document (%s UTC).  Tor needs an "
+           "accurate clock to work correctly. Please check your time and "
+           "date settings!", dbuf, tbuf);
+  tor_asprintf(&flavormsg, "%s flavor consensus", flavor);
+  clock_skew_warning(NULL, delta, 1, LD_GENERAL, flavormsg, "CONSENSUS");
+  tor_free(flavormsg);
 }
 
 /** Try to replace the current cached v3 networkstatus with the one in
