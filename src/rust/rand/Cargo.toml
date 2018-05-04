@@ -19,7 +19,7 @@ tor_log = { path = "../tor_log" }
 tor_util = { path = "../tor_util" }
 
 [dev-dependencies]
-rand = { version = "=0.5.0-pre.0", default-features = false, path = "../../ext/rust/vendor/rand-8c5b0ac51d" }
+rand = { version = "=0.5.0-pre.1", default-features = false }
 
 [lib]
 name = "rand"
