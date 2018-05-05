@@ -2642,8 +2642,8 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
   char *strtok_state; /* lame sauce d'jour */
 
   /* Remove end of line character, so that is not part of the token */
-  if (line[strlen(line) - 1] == 10) {
-    line[strlen(line) - 1] = 0;
+  if (line[strlen(line) - 1] == '\n') {
+    line[strlen(line) - 1] = '\0';
   }
 
   cp = tor_strtok_r(cp, " \t", &strtok_state);
