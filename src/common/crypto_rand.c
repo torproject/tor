@@ -77,6 +77,10 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 /**
  * Largest strong entropy request permitted.
+ *
+ * This must be less than or equal to 256, because getentropy does not permit
+ * larger requests, and getrandom may be interrupted with larger requests
+ * (we don't implement retry).
  **/
 #define MAX_STRONGEST_RAND_SIZE 256
 
@@ -138,58 +142,69 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
 #elif defined(__linux__) && defined(SYS_getrandom)
   static int getrandom_works = 1; /* Be optimistic about our chances... */
 
-  /* getrandom() isn't as straightforward as getentropy(), and has
-   * no glibc wrapper.
-   *
-   * As far as I can tell from getrandom(2) and the source code, the
-   * requests we issue will always succeed (though it will block on the
-   * call if /dev/urandom isn't seeded yet), since we are NOT specifying
-   * GRND_NONBLOCK and the request is <= 256 bytes.
-   *
-   * The manpage is unclear on what happens if a signal interrupts the call
-   * while the request is blocked due to lack of entropy....
-   *
-   * We optimistically assume that getrandom() is available and functional
+  /* We optimistically assume that getrandom() is available and functional
    * because it is the way of the future, and 2 branch mispredicts pale in
    * comparison to the overheads involved with failing to open
    * /dev/srandom followed by opening and reading from /dev/urandom.
    */
   if (PREDICT_LIKELY(getrandom_works)) {
-    long ret;
-    /* A flag of '0' here means to read from '/dev/urandom', and to
-     * block if insufficient entropy is available to service the
-     * request.
+    /* There is a glibc wrapper for getrandom since 2.25, but for backwards
+     * compatibility, we use the syscall.
+     *
+     * A 'flags' of '0' here means to read from '/dev/urandom', and to block if
+     * insufficient entropy is available to service the request.
      */
-    const unsigned int flags = 0;
-    do {
-      ret = syscall(SYS_getrandom, out, out_len, flags);
-    } while (ret == -1 && ((errno == EINTR) ||(errno == EAGAIN)));
+    long ret = syscall(SYS_getrandom, out, out_len, 0);
 
+    /* LCOV_EXCL_START we can't actually make the syscall fail in testing. */
     if (PREDICT_UNLIKELY(ret == -1)) {
-      /* LCOV_EXCL_START we can't actually make the syscall fail in testing. */
-      tor_assert(errno != EAGAIN);
-      tor_assert(errno != EINTR);
-
-      /* Useful log message for errno. */
-      if (errno == ENOSYS) {
+      /* getrandom is only documented to return EAGAIN, EFAULT, EINTR, EINVAL,
+       * and ENOSYS.
+       *
+       * EAGAIN can only occur if GRND_NONBLOCK is set, which we do not.
+       * EFAULT and EINVAL indicate a bug in our code. We can probably continue
+       * safely if we don't use getrandom.
+       * ENOSYS is handled below.
+       * EINTR can only occur if:
+       * - buflen > 256, OR
+       * - the entropy buffer is not yet initialized AND the signal handler was
+       *   not registered with SA_RESTART
+       * We do not pass buflen > 256, libevent registers all signal handlers
+       * with SA_RESTART, and hopefully nowadays everybody has random seed
+       * persistence anyways. Theoretically, we should check what type of
+       * signal it was (http://250bpm.com/blog:12). However, this call path
+       * does not allow for EINTR checking. In all likelihood, if the random
+       * seed is not initialized, the signal was from the user to quit
+       * (probably for reboot), so returning means tor cleans up instead of
+       * retrying forever and eventually receiving SIGKILL.
+       *
+       * We don't know how to handle anything else, so raise BUG to be safe.
+       *
+       * The following construct is roughly equivalent to:
+       * if (errno == ENOSYS) ... else tor_assert_nonfatal(false)
+       * but avoids unreachable warnings (and prints a better message).
+       */
+      if (!BUG(errno != ENOSYS)) {
         log_notice(LD_CRYPTO, "Can't get entropy from getrandom()."
                    " You are running a version of Tor built to support"
                    " getrandom(), but the kernel doesn't implement this"
                    " function--probably because it is too old?"
                    " Trying fallback method instead.");
-      } else {
-        log_notice(LD_CRYPTO, "Can't get entropy from getrandom(): %s."
-                              " Trying fallback method instead.",
-                   strerror(errno));
       }
 
       getrandom_works = 0; /* Don't bother trying again. */
       return -1;
-      /* LCOV_EXCL_STOP */
+    } else if (BUG(ret != (long)out_len)) {
+      /* getrandom(2): In the case where GRND_RANDOM is not specified and
+       * buflen is less than or equal to 256, a return of fewer bytes than
+       * requested should never happen, but the careful programmer will check
+       * for this anyway!
+       */
+      return -1;
+    } else {
+      return 0;
     }
-
-    tor_assert(ret == (long)out_len);
-    return 0;
+    /* LCOV_EXCL_STOP */
   }
 
   return -1; /* getrandom() previously failed unexpectedly. */
