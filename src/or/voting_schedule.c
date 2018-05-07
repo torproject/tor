@@ -39,7 +39,9 @@ voting_schedule_get_start_of_next_interval(time_t now, int interval,
   tm.tm_sec = 0;
 
   if (tor_timegm(&tm, &midnight_today) < 0) {
+    // LCOV_EXCL_START
     log_warn(LD_BUG, "Ran into an invalid time when trying to find midnight.");
+    // LCOV_EXCL_STOP
   }
   midnight_tomorrow = midnight_today + (24*60*60);
 
