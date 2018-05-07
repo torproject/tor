@@ -1499,8 +1499,17 @@ test_dir_measured_bw_kb(void *arg)
     " node_id=$557365204145532d32353620696e73746561642e  bw=1024\n",
     "\tnoise\tnode_id=$557365204145532d32353620696e73746561642e  "
                 "bw=1024 junk=007\n",
+    /* check whether node_id must be the first */
     "misc=junk node_id=$557365204145532d32353620696e73746561642e  "
                 "bw=1024 junk=007\n",
+    /* check whether a key_value can be in the middle of node_id and bw */
+    "node_id=$557365204145532d32353620696e73746561642e foo=bar bw=1024\n",
+    "misc=junk node_id=$557365204145532d32353620696e73746561642e foo=bar "
+    "bw=1024\n",
+    /* check whether a key_value can be after bw */
+    "node_id=$557365204145532d32353620696e73746561642e bw=1024 foo=bar\n",
+    /* check whether node_id can be after bw, if it has something behind */
+    "bw=1024 node_id=$557365204145532d32353620696e73746561642e foo=bar\n",
     "end"
   };
   const char *lines_fail[] = {
@@ -1534,6 +1543,11 @@ test_dir_measured_bw_kb(void *arg)
     "node_id=$55736520414552d32353620696e73746561642e bw=1024\n",
     "node_id=557365204145532d32353620696e73746561642e bw=1024\n",
     "node_id= $557365204145532d32353620696e73746561642e bw=0.23\n",
+    /* check whether bw can be before node_id */
+    "bw=1024 node_id=$557365204145532d32353620696e73746561642e\n",
+    "foo=bar bw=1024 node_id=$557365204145532d32353620696e73746561642e\n",
+    "foo=bar bw=1024 foo=bar"
+    "node_id=$557365204145532d32353620696e73746561642e\n",
     "end"
   };
 
