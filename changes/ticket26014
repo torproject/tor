@@ -1,0 +1,4 @@
+  o Minor features (Testing):
+    - Add a unit test for voting_schedule_get_start_of_next_interval().
+      Closes ticket 26014, and helps make unit test coverage more
+      deterministic.
