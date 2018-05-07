@@ -1755,7 +1755,7 @@ get_interface_address6_via_udp_socket_hack,(int severity,
   memset(&target_addr, 0, sizeof(target_addr));
 
   /* Don't worry: no packets are sent. We just need to use a real address
-   * on the actual Internet. */
+   * on the actual Internet. 2002:: and 18.0.0.1 are chosen arbitrarily. */
   if (family == AF_INET6) {
     struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)&target_addr;
     /* Use the "discard" service port */
