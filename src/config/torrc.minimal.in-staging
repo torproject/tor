@@ -100,7 +100,7 @@
 ## A handle for your relay, so people don't have to refer to it by key.
 ## Nicknames must be between 1 and 19 characters inclusive, and must
 ## contain only the alphanumeric characters (a-z, A-Z, 0-9). No unicode,
-## no emoji.
+## no emoji. If not set, "Unnamed" will be used.
 #Nickname ididnteditheconfig
 
 ## Define these to limit how much relayed traffic you will allow. Your

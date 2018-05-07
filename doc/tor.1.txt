@@ -2065,6 +2065,8 @@ is non-zero):
 [[Nickname]] **Nickname** __name__::
     Set the server's nickname to \'name'. Nicknames must be between 1 and 19
     characters inclusive, and must contain only the characters [a-zA-Z0-9].
+    If not set, **Unnamed** will be used. Relays can always be uniquely identified
+    by their identity fingerprints.
 
 [[NumCPUs]] **NumCPUs** __num__::
     How many processes to use at once for decrypting onionskins and other
