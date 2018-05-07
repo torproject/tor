@@ -1476,7 +1476,8 @@ connection_listener_new_for_port(const port_cfg_t *port,
 
   defer = 0;
   if (port->server_cfg.no_listen) {
-    if (defer) *defer = 1;
+    if (defer)
+      *defer = 1;
     return NULL;
   }
 
@@ -1486,7 +1487,8 @@ connection_listener_new_for_port(const port_cfg_t *port,
   const or_options_t *options = get_options();
   if (port->is_unix_addr && !geteuid() && (options->User) &&
       strcmp(options->User, "root")) {
-    if (defer) *defer = 1;
+    if (defer)
+      *defer = 1;
     return NULL;
   }
 #endif /* !defined(_WIN32) */
