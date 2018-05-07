@@ -288,10 +288,13 @@ control_update_global_event_mask(void)
    * we want to hear...*/
   control_adjust_event_log_severity();
 
+  /* Macro: true if ev was false before and is true now. */
+#define NEWLY_ENABLED(ev) \
+  (! (old_mask & (ev)) && (new_mask & (ev)))
+
   /* ...then, if we've started logging stream or circ bw, clear the
    * appropriate fields. */
-  if (! (old_mask & EVENT_STREAM_BANDWIDTH_USED) &&
-      (new_mask & EVENT_STREAM_BANDWIDTH_USED)) {
+  if (NEWLY_ENABLED(EVENT_STREAM_BANDWIDTH_USED)) {
     SMARTLIST_FOREACH(conns, connection_t *, conn,
     {
       if (conn->type == CONN_TYPE_AP) {
@@ -300,10 +303,10 @@ control_update_global_event_mask(void)
       }
     });
   }
-  if (! (old_mask & EVENT_CIRC_BANDWIDTH_USED) &&
-      (new_mask & EVENT_CIRC_BANDWIDTH_USED)) {
+  if (NEWLY_ENABLED(EVENT_CIRC_BANDWIDTH_USED)) {
     clear_circ_bw_fields();
   }
+#undef NEWLY_ENABLED
 }
 
 /** Adjust the log severities that result in control_event_logmsg being called
