@@ -1592,31 +1592,38 @@ ifreq_to_smartlist(char *buf, size_t buflen, int loopback)
     /* Copy up to IFREQ_SIZE bytes into the struct ifreq, but don't overrun
      * buf. */
     memcpy(r, buf, end - buf < IFREQ_SIZE ? end - buf : IFREQ_SIZE);
-    int correct_loopbackness = loopback ?
-                               (r->ifr_flags & IFF_LOOPBACK) == IFF_LOOPBACK :
-                               (r->ifr_flags & IFF_LOOPBACK) == 0;
 
     buf += _SIZEOF_ADDR_IFREQ(*r);
 
-    if (correct_loopbackness) {
-      const struct sockaddr *sa = &r->ifr_addr;
-      tor_addr_t tmp;
-      int valid_sa_family = (sa->sa_family == AF_INET ||
-                             sa->sa_family == AF_INET6);
+    // HACK: for some reason the following doesn't work properly on Linux.
+    // As workaround, we are using tor_addr_is_loopback instead.
+#ifndef __linux__
+    int correct_loopbackness = loopback ?
+                               (r->ifr_flags & IFF_LOOPBACK) == IFF_LOOPBACK :
+                               (r->ifr_flags & IFF_LOOPBACK) == 0;
+    if (!correct_loopbackness) {
+      continue;
+    }
+#endif
 
-      int conversion_success = (tor_addr_from_sockaddr(&tmp, sa, NULL) == 0);
+    const struct sockaddr *sa = &r->ifr_addr;
+    tor_addr_t tmp;
+    int valid_sa_family = (sa->sa_family == AF_INET ||
+                           sa->sa_family == AF_INET6);
 
-      if (valid_sa_family && conversion_success) {
-        if (tor_addr_is_null(&tmp))
-          continue;
-        if (tor_addr_is_multicast(&tmp))
-          continue;
-        if (loopback && !tor_addr_is_loopback(&tmp))
-          continue;
-        if (!loopback && tor_addr_is_loopback(&tmp))
-          continue;
-        smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
-      }
+    int conversion_success = (tor_addr_from_sockaddr(&tmp, sa, NULL) == 0);
+    if (valid_sa_family && conversion_success) {
+      if (tor_addr_is_null(&tmp))
+        continue;
+      if (tor_addr_is_multicast(&tmp))
+        continue;
+#ifdef __linux__
+      if (loopback && !tor_addr_is_loopback(&tmp))
+        continue;
+      if (!loopback && tor_addr_is_loopback(&tmp))
+        continue;
+#endif
+      smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
     }
   }
 
