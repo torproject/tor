@@ -163,11 +163,6 @@ token_bucket_rw_t global_bucket;
 /* Token bucket for relayed traffic. */
 token_bucket_rw_t global_relayed_bucket;
 
-/* DOCDOC stats_prev_n_read */
-static uint64_t stats_prev_n_read = 0;
-/* DOCDOC stats_prev_n_written */
-static uint64_t stats_prev_n_written = 0;
-
 /* XXX we might want to keep stats about global_relayed_*_bucket too. Or not.*/
 /** How many bytes have we read since we started the process? */
 static uint64_t stats_n_bytes_read = 0;
@@ -2508,8 +2503,6 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
    * could use Libevent's timers for this rather than checking the current
    * time against a bunch of timeouts every second. */
   time_t now;
-  size_t bytes_written;
-  size_t bytes_read;
   int seconds_elapsed;
   (void)timer;
   (void)arg;
@@ -2522,16 +2515,9 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
 
   /* the second has rolled over. check more stuff. */
   seconds_elapsed = current_second ? (int)(now - current_second) : 0;
-  bytes_read = (size_t)(stats_n_bytes_read - stats_prev_n_read);
-  bytes_written = (size_t)(stats_n_bytes_written - stats_prev_n_written);
-  stats_prev_n_read = stats_n_bytes_read;
-  stats_prev_n_written = stats_n_bytes_written;
 
-  control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
-  control_event_stream_bandwidth_used();
-  control_event_conn_bandwidth_used();
-  control_event_circ_bandwidth_used();
-  control_event_circuit_cell_stats();
+  /* Maybe some controller events are ready to fire */
+  control_per_second_events();
 
 /** If more than this many seconds have elapsed, probably the clock
  * jumped: doesn't count. */
@@ -3651,7 +3637,6 @@ tor_free_all(int postfork)
 
   memset(&global_bucket, 0, sizeof(global_bucket));
   memset(&global_relayed_bucket, 0, sizeof(global_relayed_bucket));
-  stats_prev_n_read = stats_prev_n_written = 0;
   stats_n_bytes_read = stats_n_bytes_written = 0;
   time_of_process_start = 0;
   time_of_last_signewnym = 0;

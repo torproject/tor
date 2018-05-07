@@ -1,3 +1,4 @@
+
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
@@ -112,6 +113,10 @@ static int disable_log_messages = 0;
 #define EVENT_IS_INTERESTING(e) \
   (!! (global_event_mask & EVENT_MASK_(e)))
 
+/** Macro: true if any event from the bitfield 'e' is interesting. */
+#define ANY_EVENT_IS_INTERESTING(e) \
+  EVENT_IS_INTERESTING(e)
+
 /** If we're using cookie-type authentication, how long should our cookies be?
  */
 #define AUTHENTICATION_COOKIE_LEN 32
@@ -219,6 +224,7 @@ static void set_cached_network_liveness(int liveness);
 static void flush_queued_events_cb(mainloop_event_t *event, void *arg);
 
 static char * download_status_to_string(const download_status_t *dl);
+static void control_get_bytes_rw_last_sec(uint64_t *r, uint64_t *w);
 
 /** Given a control event code for a message event, return the corresponding
  * log severity. */
@@ -306,6 +312,10 @@ control_update_global_event_mask(void)
   if (NEWLY_ENABLED(EVENT_CIRC_BANDWIDTH_USED)) {
     clear_circ_bw_fields();
   }
+  if (NEWLY_ENABLED(EVENT_BANDWIDTH_USED)) {
+    uint64_t r, w;
+    control_get_bytes_rw_last_sec(&r, &w);
+  }
 #undef NEWLY_ENABLED
 }
 
@@ -353,6 +363,65 @@ int
 control_event_is_interesting(int event)
 {
   return EVENT_IS_INTERESTING(event);
+}
+
+/** Return true if any event that needs to fire once a second is enabled. */
+int
+control_any_per_second_event_enabled(void)
+{
+  return ANY_EVENT_IS_INTERESTING(
+      EVENT_BANDWIDTH_USED |
+      EVENT_CELL_STATS |
+      EVENT_CIRC_BANDWIDTH_USED |
+      EVENT_CONN_BW |
+      EVENT_STREAM_BANDWIDTH_USED
+  );
+}
+
+/* The value of 'get_bytes_read()' the previous time that
+ * control_get_bytes_rw_last_sec() as called. */
+static uint64_t stats_prev_n_read = 0;
+/* The value of 'get_bytes_written()' the previous time that
+ * control_get_bytes_rw_last_sec() as called. */
+static uint64_t stats_prev_n_written = 0;
+
+/**
+ * Set <b>n_read</b> and <b>n_written</b> to the total number of bytes read
+ * and written by Tor since the last call to this function.
+ *
+ * Call this only from the main thread.
+ */
+static void
+control_get_bytes_rw_last_sec(uint64_t *n_read,
+                              uint64_t *n_written)
+{
+  const uint64_t stats_n_bytes_read = get_bytes_read();
+  const uint64_t stats_n_bytes_written = get_bytes_written();
+
+  *n_read = stats_n_bytes_read - stats_prev_n_read;
+  *n_written = stats_n_bytes_written - stats_prev_n_written;
+  stats_prev_n_read = stats_n_bytes_read;
+  stats_prev_n_written = stats_n_bytes_written;
+}
+
+/**
+ * Run all the controller events (if any) that are scheduled to trigger once
+ * per second.
+ */
+void
+control_per_second_events(void)
+{
+  if (!control_any_per_second_event_enabled())
+    return;
+
+  uint64_t bytes_read, bytes_written;
+  control_get_bytes_rw_last_sec(&bytes_read, &bytes_written);
+  control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
+
+  control_event_stream_bandwidth_used();
+  control_event_conn_bandwidth_used();
+  control_event_circ_bandwidth_used();
+  control_event_circuit_cell_stats();
 }
 
 /** Append a NUL-terminated string <b>s</b> to the end of
@@ -7608,6 +7677,8 @@ void
 control_free_all(void)
 {
   smartlist_t *queued_events = NULL;
+
+  stats_prev_n_read = stats_prev_n_written = 0;
 
   if (authentication_cookie) /* Free the auth cookie */
     tor_free(authentication_cookie);
