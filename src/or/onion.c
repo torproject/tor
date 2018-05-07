@@ -1357,7 +1357,7 @@ create2v_cell_new(void)
 {
   create2v_cell_t *cell;
 
-  cell = tor_malloc(sizeof(create2v_cell_t));
+  cell = tor_calloc(1, sizeof(create2v_cell_t));
   cell->body = create2v_cell_body_new();
 
   return cell;
@@ -1504,14 +1504,15 @@ parse_create2v_payload(create2v_cell_t *cell_out,
                        const uint8_t *p,
                        const size_t p_len)
 {
-  create2v_cell_body_t *body;
-
   /* Check the length before even attempting to parse it. */
   if (!create2v_cell_check_encoded_length(p_len)) {
     return false;
   }
-  create2v_cell_body_parse(&body, p, p_len);
-  cell_out->body = body;
+  /* The create2v_cell_body_parse() function will allocate a new body,
+   * so if we already had one we should free it. */
+  if (cell_out->body)
+    create2v_cell_body_free(cell_out->body);
+  create2v_cell_body_parse(&cell_out->body, p, p_len);
 
   return create2v_cell_check(cell_out, true);
 }
@@ -1657,7 +1658,7 @@ created2v_cell_new(void)
 {
   created2v_cell_t *cell;
 
-  cell = tor_malloc(sizeof(created2v_cell_t));
+  cell = tor_calloc(1, sizeof(created2v_cell_t));
   cell->body = created2v_cell_body_new();
 
   return cell;
@@ -1713,8 +1714,7 @@ created2v_cell_free(created2v_cell_t *cell)
 bool
 created2v_cell_check(const created2v_cell_t *cell)
 {
-  const created2v_cell_body_t *body = cell->body;
-  const char *not_okay = created2v_cell_body_check(body);
+  const char *not_okay = created2v_cell_body_check(cell->body);
 
   if (not_okay != NULL) {
     log_warn(LD_BUG, "Unable to parse a CREATED2V cell: %s", not_okay);
@@ -1722,7 +1722,7 @@ created2v_cell_check(const created2v_cell_t *cell)
   }
 
   /* Do not allow empty responses. */
-  if (!created2v_cell_body_get_hlen(body))
+  if (!created2v_cell_body_get_hlen(cell->body))
     return false;
 
   return true;
@@ -1742,11 +1742,15 @@ parse_created2v_payload(created2v_cell_t *cell_out,
                         const uint8_t *p,
                         const size_t p_len)
 {
-  created2v_cell_body_t *body;
-
-  create2v_cell_check_encoded_length(p_len);
-  created2v_cell_body_parse(&body, p, p_len);
-  cell_out->body = body;
+  /* Check the length before even attempting to parse it. */
+  if (!create2v_cell_check_encoded_length(p_len)) {
+    return false;
+  }
+  /* The created2v_cell_body_parse() function will allocate a new body,
+   * so if we already had one we should free it. */
+  if (cell_out->body)
+    created2v_cell_body_free(cell_out->body);
+  created2v_cell_body_parse(&cell_out->body, p, p_len);
 
   if (created2v_cell_check(cell_out))
     return true;
