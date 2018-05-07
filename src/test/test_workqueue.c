@@ -224,7 +224,8 @@ add_n_work_items(threadpool_t *tp, int n)
   workqueue_entry_t **to_cancel;
   workqueue_entry_t *ent;
 
-  to_cancel = tor_malloc(sizeof(workqueue_entry_t*) * opt_n_cancel);
+  // We'll choose randomly which entries to cancel.
+  to_cancel = tor_calloc(opt_n_cancel, sizeof(workqueue_entry_t*));
 
   while (n_queued++ < n) {
     ent = add_work(tp);
@@ -233,9 +234,14 @@ add_n_work_items(threadpool_t *tp, int n)
       tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), NULL);
       return -1;
     }
-    if (n_try_cancel < opt_n_cancel &&
-        tor_weak_random_range(&weak_rng, n) < opt_n_cancel) {
+
+    if (n_try_cancel < opt_n_cancel) {
       to_cancel[n_try_cancel++] = ent;
+    } else {
+      int p = tor_weak_random_range(&weak_rng, n_queued);
+      if (p < n_try_cancel) {
+        to_cancel[p] = ent;
+      }
     }
   }
 
