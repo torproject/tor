@@ -1,0 +1,5 @@
+  o Minor bugfixes (Linux, network interface):
+    - On Linux systems, try to use an AF_NETLINK socket to determine the
+      external interface's IP address, before falling back to the various
+      older approaches (interface enumeration and then a UDP socket based
+      hack). Fixes bug 12377; bugfix on 0.2.3.11-alpha.

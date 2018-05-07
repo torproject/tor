@@ -1333,6 +1333,8 @@ AC_CHECK_HEADERS([assert.h \
                   inttypes.h \
                   limits.h \
                   linux/types.h \
+                  linux/netlink.h \
+                  linux/rtnetlink.h \
                   machine/limits.h \
                   malloc.h \
                   malloc/malloc.h \
@@ -1351,7 +1353,7 @@ AC_CHECK_HEADERS([assert.h \
                   sys/mman.h \
                   sys/param.h \
                   sys/prctl.h \
-		  sys/random.h \
+                  sys/random.h \
                   sys/resource.h \
                   sys/select.h \
                   sys/socket.h \

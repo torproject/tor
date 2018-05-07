@@ -90,6 +90,7 @@ LIBOR_A_SRC = \
   src/common/container.c				\
   src/common/log.c					\
   src/common/memarea.c					\
+  src/common/netlink.c					\
   src/common/pubsub.c					\
   src/common/util.c					\
   src/common/util_bug.c					\
@@ -182,6 +183,7 @@ COMMONHEADERS = \
   src/common/di_ops.h				\
   src/common/handles.h				\
   src/common/memarea.h				\
+  src/common/netlink.h				\
   src/common/linux_syscalls.inc			\
   src/common/procmon.h				\
   src/common/pubsub.h				\

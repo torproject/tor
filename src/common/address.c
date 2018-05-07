@@ -39,6 +39,7 @@
 #include "util.h"
 #include "util_format.h"
 #include "address.h"
+#include "netlink.h"
 #include "torlog.h"
 #include "container.h"
 #include "sandbox.h"
@@ -1778,6 +1779,10 @@ get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
   tor_assert(addr);
 
   memset(addr, 0, sizeof(tor_addr_t));
+
+  /* Try to do this the routing table aware smart way if possible. */
+  if (!get_interface_address_netlink(severity, family, addr))
+    return 0;
 
   /* Get a list of public or internal IPs in arbitrary order */
   addrs = get_interface_address6_list(severity, family, 1);

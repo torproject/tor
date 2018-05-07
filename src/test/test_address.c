@@ -25,6 +25,7 @@
 
 #include "or.h"
 #include "address.h"
+#include "netlink.h"
 #include "test.h"
 #include "log_test_helpers.h"
 
@@ -687,50 +688,31 @@ test_address_udp_socket_trick_blackbox(void *arg)
 
   (void)arg;
 
-#if 0
-  retval_reference = get_interface_address6(LOG_DEBUG,AF_INET,&addr4);
-  retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
-                                                      AF_INET,
-                                                      &addr4_to_check);
+  /* The only time get_interface_address6() is guaranteed to return
+   * correct results is if it has a routing table aware backend.
+   *
+   * Currently this is limited to Linux. See #12377.
+   */
+  retval_reference = get_interface_address_netlink(LOG_DEBUG, AF_INET, &addr4);
+  if (!retval_reference) {
+    retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
+                                                        AF_INET,
+                                                        &addr4_to_check);
+    tt_int_op(retval,==,retval_reference);
+    tt_assert( (retval == -1 && retval_reference == -1) ||
+               (tor_addr_compare(&addr4,&addr4_to_check,CMP_EXACT) == 0) );
 
-  tt_int_op(retval,OP_EQ,retval_reference);
-  tt_assert( (retval == -1 && retval_reference == -1) ||
-             (tor_addr_compare(&addr4,&addr4_to_check,CMP_EXACT) == 0) );
-
-  retval_reference = get_interface_address6(LOG_DEBUG,AF_INET6,&addr6);
-  retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
+    retval_reference = get_interface_address_netlink(LOG_DEBUG,
+                                                     AF_INET6,
+                                                     &addr6);
+    retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
                                                       AF_INET6,
                                                       &addr6_to_check);
 
-  tt_int_op(retval,OP_EQ,retval_reference);
-  tt_assert( (retval == -1 && retval_reference == -1) ||
-             (tor_addr_compare(&addr6,&addr6_to_check,CMP_EXACT) == 0) );
-
-#else /* !(0) */
-  /* Both of the blackbox test cases fail horribly if:
-   *  * The host has no external addreses.
-   *  * There are multiple interfaces with either AF_INET or AF_INET6.
-   *  * The last address isn't the one associated with the default route.
-   *
-   * The tests SHOULD be re-enabled when #12377 is fixed correctly, but till
-   * then this fails a lot, in situations we expect failures due to knowing
-   * about the code being broken.
-   */
-
-  (void)addr4_to_check;
-  (void)addr6_to_check;
-  (void)addr6;
-  (void) retval_reference;
-#endif /* 0 */
-
-  /* When family is neither AF_INET nor AF_INET6, we want _hack to
-   * fail and return -1.
-   */
-
-  retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
-                                                      AF_INET+AF_INET6,&addr4);
-
-  tt_int_op(retval, OP_EQ, -1);
+    tt_int_op(retval,==,retval_reference);
+    tt_assert( (retval == -1 && retval_reference == -1) ||
+               (tor_addr_compare(&addr6,&addr6_to_check,CMP_EXACT) == 0) );
+  }
 
   done:
   return;
@@ -909,6 +891,16 @@ mock_get_interface_address6_via_udp_socket_hack_fail(int severity,
   return -1;
 }
 
+static int
+mock_get_interface_address_netlink(int severity, sa_family_t family,
+                                   tor_addr_t *addr)
+{
+  (void) severity;
+  (void) family;
+  (void) addr;
+  return 1;
+}
+
 static void
 test_address_get_if_addrs_internal_fail(void *arg)
 {
@@ -925,6 +917,8 @@ test_address_get_if_addrs_internal_fail(void *arg)
        mock_get_interface_addresses_raw_fail);
   MOCK(get_interface_address6_via_udp_socket_hack,
        mock_get_interface_address6_via_udp_socket_hack_fail);
+  MOCK(get_interface_address_netlink,
+       mock_get_interface_address_netlink);
 
   results1 = get_interface_address6_list(LOG_ERR, AF_INET6, 1);
   tt_ptr_op(results1, OP_NE, NULL);
@@ -943,6 +937,7 @@ test_address_get_if_addrs_internal_fail(void *arg)
  done:
   UNMOCK(get_interface_addresses_raw);
   UNMOCK(get_interface_address6_via_udp_socket_hack);
+  UNMOCK(get_interface_address_netlink);
   interface_address6_list_free(results1);
   interface_address6_list_free(results2);
   return;
