@@ -472,7 +472,7 @@ test_address_ifreq_to_smartlist(void *arg)
   smartlist_free(results);
 
   results = ifreq_to_smartlist(ifc->ifc_buf,ifc->ifc_len,1);
-  tt_int_op(smartlist_len(results),OP_EQ,1); // !!!
+  tt_int_op(smartlist_len(results),OP_EQ,1);
 
   tor_addr = smartlist_get(results, 0);
   addr_len =
