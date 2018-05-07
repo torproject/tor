@@ -113,7 +113,7 @@ static token_rule_t hs_desc_v3_token_table[] = {
   T1_START(str_hs_desc, R_HS_DESCRIPTOR, EQ(1), NO_OBJ),
   T1(str_lifetime, R3_DESC_LIFETIME, EQ(1), NO_OBJ),
   T1(str_desc_cert, R3_DESC_SIGNING_CERT, NO_ARGS, NEED_OBJ),
-  T1(str_rev_counter, R3_REVISION_COUNTER, EQ(1), NO_OBJ),
+  T01(str_rev_counter, R3_REVISION_COUNTER, EQ(1), NO_OBJ),
   T1(str_superencrypted, R3_SUPERENCRYPTED, NO_ARGS, NEED_OBJ),
   T1_END(str_signature, R3_SIGNATURE, EQ(1), NO_OBJ),
   END_OF_TABLE
@@ -1873,7 +1873,7 @@ desc_sig_is_valid(const char *b64_sig,
 {
   int ret = 0;
   ed25519_signature_t sig;
-  const char *sig_start;
+  const char *start_of_desc, *end_of_desc;
 
   tor_assert(b64_sig);
   tor_assert(signing_pubkey);
@@ -1897,20 +1897,18 @@ desc_sig_is_valid(const char *b64_sig,
   }
 
   /* Find the start of signature. */
-  sig_start = tor_memstr(encoded_desc, encoded_len, "\n" str_signature);
+  hs_desc_get_offset_without_sig(encoded_desc, &start_of_desc, &end_of_desc);
   /* Getting here means the token parsing worked for the signature so if we
    * can't find the start of the signature, we have a code flow issue. */
-  if (!sig_start) {
+  if (!start_of_desc) {
     log_warn(LD_GENERAL, "Malformed signature line. Rejecting.");
     goto err;
   }
-  /* Skip newline, it has to go in the signature check. */
-  sig_start++;
 
   /* Validate signature with the full body of the descriptor. */
   if (ed25519_checksig_prefixed(&sig,
                                 (const uint8_t *) encoded_desc,
-                                sig_start - encoded_desc,
+                                end_of_desc - start_of_desc,
                                 str_desc_sig_prefix,
                                 signing_pubkey) != 0) {
     log_warn(LD_REND, "Invalid signature on service descriptor");
@@ -1984,14 +1982,20 @@ desc_decode_plaintext_v3(smartlist_t *tokens,
   memcpy(&desc->blinded_pubkey, &desc->signing_key_cert->signing_key,
          sizeof(ed25519_public_key_t));
 
-  /* Extract revision counter value. */
+  /* Extract revision counter value. From tor version 0.3.4, it is ignored in
+   * favor of a replay cache on the directory side. Client also ignore it. If
+   * not present, we set it to 0 which what will be used in the encryption key
+   * construction of the secret input. */
+  desc->revision_counter = 0;
   tok = find_by_keyword(tokens, R3_REVISION_COUNTER);
-  tor_assert(tok->n_args == 1);
-  desc->revision_counter = tor_parse_uint64(tok->args[0], 10, 0,
-                                            UINT64_MAX, &ok, NULL);
-  if (!ok) {
-    log_warn(LD_REND, "Service descriptor revision-counter is invalid");
-    goto err;
+  if (tok != NULL) {
+    tor_assert(tok->n_args == 1);
+    desc->revision_counter = tor_parse_uint64(tok->args[0], 10, 0,
+                                              UINT64_MAX, &ok, NULL);
+    if (!ok) {
+      log_warn(LD_REND, "Service descriptor revision-counter is invalid");
+      goto err;
+    }
   }
 
   /* Extract the encrypted data section. */
@@ -2603,5 +2607,38 @@ hs_desc_lspec_to_trunnel(const hs_desc_link_specifier_t *spec)
   }
 
   return ls;
+}
+
+/* Using the given valid encoded descriptor, find the start and end of the
+ * descriptor body without the signature.
+ *
+ * This is used to extract the descriptor body for signature validation and
+ * for the directory replay cache entry.
+ *
+ * On success, both start and end points inside encoded_desc. Else, start and
+ * end are set to NULL. */
+void
+hs_desc_get_offset_without_sig(const char *encoded_desc, const char **start,
+                               const char **end)
+{
+  const char *start_of_sig;
+
+  tor_assert(encoded_desc);
+
+  /* Nullify both. We only set them if we are sure that we can get both else
+   * they stay NULL. */
+  *start = *end = NULL;
+
+  /* We do look at newline + signature string so we make sure the siganture
+   * starts right after the encrypted MESSAGE. */
+  start_of_sig = tor_memstr(encoded_desc, strlen(encoded_desc),
+                            "\n" str_signature);
+  if (start_of_sig != NULL) {
+    /* Skip newline. */
+    start_of_sig++;
+    /* We found the start of the signature, set both values. */
+    *start = encoded_desc;
+    *end = start_of_sig;
+  }
 }
 

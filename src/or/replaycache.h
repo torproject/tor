@@ -64,5 +64,12 @@ int replaycache_add_test_and_elapsed(
     replaycache_t *r, const void *data, size_t len, time_t *elapsed);
 void replaycache_scrub_if_needed(replaycache_t *r);
 
+#ifdef TOR_UNIT_TESTS
+
+void replaycache_remove_entry(replaycache_t *cache, const void *data,
+                              size_t len);
+
+#endif /* TOR_UNIT_TESTS */
+
 #endif /* !defined(TOR_REPLAYCACHE_H) */
 

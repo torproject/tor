@@ -29,6 +29,16 @@ static int cached_client_descriptor_has_expired(time_t now,
 /* Directory descriptor cache. Map indexed by blinded key. */
 static digest256map_t *hs_cache_v3_dir;
 
+/* Expiry time of an entry in the descriptor replay cache. This is currently
+ * twice as big as the maximum lifetime of an HS descriptor (12h max, default
+ * 3h). Which means that the descriptor should get removed from the directory
+ * cache at most 12h before it gets removed from the replay cache. */
+#define DESC_REPLAY_EXPIRY_TIME (24 * 60 * 60)
+
+/* Descriptor replay cache. We keep a hash of the descriptor without the
+ * signature indexed by blinded key. */
+static replaycache_t *desc_replay_cache_v3_dir;
+
 /* Remove a given descriptor from our cache. */
 static void
 remove_v3_desc_as_dir(const hs_cache_dir_descriptor_t *desc)
@@ -114,6 +124,48 @@ cache_get_dir_entry_size(const hs_cache_dir_descriptor_t *entry)
           + strlen(entry->encoded_desc));
 }
 
+/* Check the directory replay cache for the given descriptor. This used the
+ * encoded descriptor without its signature since this part is possibly
+ * malleable.
+ *
+ * Return 1 if the descriptor is *not* in the replaycache and thus can be
+ * stored in the directory cache. Else, return 0 indicating the descriptor
+ * should be tossed away. */
+static int
+cache_check_replay_as_dir(const hs_cache_dir_descriptor_t *desc)
+{
+  int ret = 0;
+  time_t elapsed;
+  const char *start_of_desc, *end_of_desc;
+
+  tor_assert(desc);
+
+  hs_desc_get_offset_without_sig(desc->encoded_desc, &start_of_desc,
+                                 &end_of_desc);
+  if (BUG(start_of_desc == NULL)) {
+    /* We shouldn't get here because we previously parsed the descriptor in
+     * order to extract the plaintext data. */
+    goto end;
+  }
+
+  /* Query our global v3 directory replay cache for this descriptor body. */
+  if (replaycache_add_test_and_elapsed(desc_replay_cache_v3_dir,
+                                       start_of_desc,
+                                       end_of_desc - start_of_desc,
+                                       &elapsed)) {
+    log_warn(LD_REND, "Possible descriptor replay detected. The same "
+                      "descriptor was seen %ld seconds ago. Ignoring.",
+                      (long int) elapsed);
+    goto end;
+  }
+  /* We added this descriptor body to the replay cache which means we can
+   * store it safely since we've never seen that descriptor. */
+  ret = 1;
+
+ end:
+  return ret;
+}
+
 /* Try to store a valid version 3 descriptor in the directory cache. Return 0
  * on success else a negative value is returned indicating that we have a
  * newer version in our cache. On error, caller is responsible to free the
@@ -125,24 +177,22 @@ cache_store_v3_as_dir(hs_cache_dir_descriptor_t *desc)
 
   tor_assert(desc);
 
+  /* Do we have this descriptor in our replaycache? If we do it means we
+   * either have it already cached or this is a replay of an old descriptor.
+   * Either way, we stop now. */
+  if (!cache_check_replay_as_dir(desc)) {
+    goto err;
+  }
+
   /* Verify if we have an entry in the cache for that key and if yes, check
    * if we should replace it? */
   cache_entry = lookup_v3_desc_as_dir(desc->key);
   if (cache_entry != NULL) {
-    /* Only replace descriptor if revision-counter is greater than the one
-     * in our cache */
-    if (cache_entry->plaintext_data->revision_counter >=
-        desc->plaintext_data->revision_counter) {
-      log_info(LD_REND, "Descriptor revision counter in our cache is "
-               "greater or equal than the one we received (%d/%d). "
-               "Rejecting!",
-               (int)cache_entry->plaintext_data->revision_counter,
-               (int)desc->plaintext_data->revision_counter);
-      goto err;
-    }
-    /* We now know that the descriptor we just received is a new one so
-     * remove the entry we currently have from our cache so we can then
-     * store the new one. */
+    /* This is possible because we can have more than one descriptors for the
+     * same blinded key in the case where multiple services are trying to
+     * upload a descriptor for the same onion address. This is an accepted use
+     * case which helps with service scalability. In that case, we'll consider
+     * the one we just received newer. */
     remove_v3_desc_as_dir(cache_entry);
     rend_cache_decrement_allocation(cache_get_dir_entry_size(cache_entry));
     cache_dir_desc_free(cache_entry);
@@ -620,7 +670,7 @@ cache_client_intro_state_is_empty(const hs_cache_client_intro_state_t *cache)
 
 /** Check whether <b>client_desc</b> is useful for us, and store it in the
  *  client-side HS cache if so. The client_desc is freed if we already have a
- *  fresher (higher revision counter count) in the cache. */
+ *  a descriptor in the cache for the same service. */
 static int
 cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
 {
@@ -635,13 +685,6 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
    * check if this descriptor is newer than the cached one */
   cache_entry = lookup_v3_desc_as_client(client_desc->key.pubkey);
   if (cache_entry != NULL) {
-    /* If we have an entry in our cache that has a revision counter greater
-     * than the one we just fetched, discard the one we fetched. */
-    if (cache_entry->desc->plaintext_data.revision_counter >
-        client_desc->desc->plaintext_data.revision_counter) {
-      cache_client_desc_free(client_desc);
-      goto done;
-    }
     /* Remove old entry. Make space for the new one! */
     remove_v3_desc_as_client(cache_entry);
     cache_client_desc_free(cache_entry);
@@ -650,7 +693,6 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
   /* Store descriptor in cache */
   store_v3_desc_as_client(client_desc);
 
- done:
   return 0;
 }
 
@@ -953,6 +995,11 @@ hs_cache_init(void)
   tor_assert(!hs_cache_v3_dir);
   hs_cache_v3_dir = digest256map_new();
 
+  tor_assert(!desc_replay_cache_v3_dir);
+  /* The interval to which we clean is 0 meaning it will be done every time we
+   * try to add an entry. */
+  desc_replay_cache_v3_dir = replaycache_new(DESC_REPLAY_EXPIRY_TIME, 0);
+
   tor_assert(!hs_cache_v3_client);
   hs_cache_v3_client = digest256map_new();
 
@@ -967,6 +1014,9 @@ hs_cache_free_all(void)
   digest256map_free(hs_cache_v3_dir, cache_dir_desc_free_void);
   hs_cache_v3_dir = NULL;
 
+  replaycache_free_(desc_replay_cache_v3_dir);
+  desc_replay_cache_v3_dir = NULL;
+
   digest256map_free(hs_cache_v3_client, cache_client_desc_free_void);
   hs_cache_v3_client = NULL;
 
@@ -974,4 +1024,21 @@ hs_cache_free_all(void)
                     cache_client_intro_state_free_void);
   hs_cache_client_intro_state = NULL;
 }
+
+#ifdef TOR_UNIT_TESTS
+
+void
+hs_cache_remove_replaycache_entry(const char *desc)
+{
+  const char *start_of_desc, *end_of_desc;
+
+  hs_desc_get_offset_without_sig(desc, &start_of_desc, &end_of_desc);
+  if (!start_of_desc) {
+    return;
+  }
+  replaycache_remove_entry(desc_replay_cache_v3_dir, desc,
+                           end_of_desc - start_of_desc);
+}
+
+#endif /* TOR_UNIT_TESTS */
 
