@@ -15,6 +15,12 @@
 /* XXXX For buf_datalen in inline function */
 #include "buffers.h"
 
+typedef struct
+{
+  connection_t *old_conn; /* Old listener connection to be replaced */
+  const port_cfg_t *new_port; /* New port configuration */
+} listener_replacement_t;
+
 const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 int conn_listener_type_supports_af_unix(int type);
