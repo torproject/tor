@@ -1,0 +1,5 @@
+  o Minor bugfixes (circuit path selection):
+    - Don't count path selection failures as circuit build failures. This
+      should eliminate cases where Tor blames its guard or the network
+      for situations like insufficient microdescriptors and/or overly
+      restrictive torrc settings. Fixes bug 25705; bugfix on 0.3.3.1-alpha.
