@@ -277,6 +277,18 @@ parse_protocol_list(const char *s)
 }
 
 /**
+ * Return true if the unparsed protover in <b>s</b> would contain a protocol
+ * name longer than MAX_PROTOCOL_NAME_LENGTH, and false otherwise.
+ */
+bool
+protover_contains_long_protocol_names(const char *s)
+{
+  if (!parse_protocol_list(s))
+    return true;
+  return false;
+}
+
+/**
  * Given a protocol type and version number, return true iff we know
  * how to speak that protocol.
  */
