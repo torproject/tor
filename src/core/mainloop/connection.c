@@ -1213,7 +1213,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   tor_addr_t addr;
   int exhaustion = 0;
 
-  if (addr_in_use) *addr_in_use = 0;
+  if (addr_in_use)
+    *addr_in_use = 0;
 
   if (listensockaddr->sa_family == AF_INET ||
       listensockaddr->sa_family == AF_INET6) {
@@ -1295,7 +1296,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       int e = tor_socket_errno(s);
       if (ERRNO_IS_EADDRINUSE(e)) {
         helpfulhint = ". Is Tor already running?";
-        if (addr_in_use) *addr_in_use = 1;
+        if (addr_in_use)
+          *addr_in_use = 1;
       }
       log_warn(LD_NET, "Could not bind to %s:%u: %s%s", address, usePort,
                tor_socket_strerror(e), helpfulhint);
@@ -1523,7 +1525,8 @@ connection_listener_new_for_port(const port_cfg_t *port,
     *defer = 0;
 
   if (port->server_cfg.no_listen) {
-    if (defer) *defer = 1;
+    if (defer)
+      *defer = 1;
     return NULL;
   }
 
@@ -1533,7 +1536,8 @@ connection_listener_new_for_port(const port_cfg_t *port,
   const or_options_t *options = get_options();
   if (port->is_unix_addr && !geteuid() && (options->User) &&
       strcmp(options->User, "root")) {
-    if (defer) *defer = 1;
+    if (defer)
+      *defer = 1;
     return NULL;
   }
 #endif /* !defined(_WIN32) */
@@ -2674,12 +2678,6 @@ connection_read_proxy_handshake(connection_t *conn)
   return ret;
 }
 
-struct replacement_s
-{
-  connection_t *old_conn;
-  port_cfg_t *new_port;
-};
-
 /** Given a list of listener connections in <b>old_conns</b>, and list of
  * port_cfg_t entries in <b>ports</b>, open a new listener for every port in
  * <b>ports</b> that does not already have a listener in <b>old_conns</b>.
@@ -2687,8 +2685,8 @@ struct replacement_s
  * Remove from <b>old_conns</b> every connection that has a corresponding
  * entry in <b>ports</b>.  Add to <b>new_conns</b> new every connection we
  * launch. If we may need to perform socket rebind when creating new
- * listener that replaces old one, create a <b>replacement_s</b> struct
- * for affected pair  and add it to <b>replacements</b>. For more
+ * listener that replaces old one, create a <b>listener_replacement_t</b>
+ * struct for affected pair  and add it to <b>replacements</b>. For more
  * information, see ticket #17873.
  *
  * If <b>control_listeners_only</b> is true, then we only open control
@@ -2760,11 +2758,11 @@ retry_listener_ports(smartlist_t *old_conns,
           port_matches_exact && bool_neq(tor_addr_is_null(&wanted->addr),
                                          tor_addr_is_null(&conn->addr));
         if (replacements && may_need_rebind) {
-          struct replacement_s *replacement =
-            tor_malloc(sizeof(struct replacement_s));
+          listener_replacement_t *replacement =
+            tor_malloc(sizeof(listener_replacement_t));
 
           replacement->old_conn = conn;
-          replacement->new_port = (port_cfg_t *)wanted;
+          replacement->new_port = wanted;
           smartlist_add(replacements, replacement);
 
           SMARTLIST_DEL_CURRENT(launch, wanted);
@@ -2834,7 +2832,7 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
     retval = -1;
 
 #ifdef ENABLE_LISTENER_REBIND
-  SMARTLIST_FOREACH_BEGIN(replacements, struct replacement_s *, r) {
+  SMARTLIST_FOREACH_BEGIN(replacements, listener_replacement_t *, r) {
     int addr_in_use = 0;
     int skip = 0;
 
