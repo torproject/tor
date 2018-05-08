@@ -1237,7 +1237,7 @@ The following options are useful only for clients (that is, if
         flag is not supported.
     **CacheIPv4DNS**;;
         Tells the client to remember IPv4 DNS answers we receive from exit
-        nodes via this connection. (On by default.)
+        nodes via this connection.
     **CacheIPv6DNS**;;
         Tells the client to remember IPv6 DNS answers we receive from exit
         nodes via this connection.
