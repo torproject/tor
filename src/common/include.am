@@ -115,6 +115,7 @@ LIBOR_CRYPTO_A_SRC = \
   src/common/compress_zlib.c	\
   src/common/compress_zstd.c	\
   src/common/crypto.c		\
+  src/common/crypto_dh.c       \
   src/common/crypto_digest.c     \
   src/common/crypto_format.c	\
   src/common/crypto_openssl_mgt.c    \
@@ -169,6 +170,7 @@ COMMONHEADERS = \
   src/common/confline.h				\
   src/common/container.h			\
   src/common/crypto.h				\
+  src/common/crypto_dh.h            \
   src/common/crypto_digest.h            \
   src/common/crypto_curve25519.h		\
   src/common/crypto_ed25519.h			\

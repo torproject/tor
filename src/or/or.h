@@ -68,6 +68,7 @@
 
 #include "crypto.h"
 #include "crypto_format.h"
+#include "crypto_dh.h"
 #include "tortls.h"
 #include "torlog.h"
 #include "container.h"
