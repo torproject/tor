@@ -72,10 +72,7 @@ static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
 static int circuit_deliver_create_cell(circuit_t *circ,
                                        const create_cell_t *create_cell,
                                        int relayed);
-static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit,
-                                 int is_hs_v3_rp_circuit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
-static int onion_extend_cpath(origin_circuit_t *circ);
 STATIC int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
@@ -2283,7 +2280,7 @@ warn_if_last_router_excluded(origin_circuit_t *circ,
  * be used as an HS v3 rendezvous point.
  *
  * Return 0 if ok, -1 if circuit should be closed. */
-static int
+STATIC int
 onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
                       int is_hs_v3_rp_circuit)
 {
@@ -2454,12 +2451,71 @@ cpath_get_n_hops(crypt_path_t **head_ptr)
 #endif /* defined(TOR_UNIT_TESTS) */
 
 /**
+ * Build the exclude list for vanguard circuits.
+ *
+ * For vanguard circuits we exclude all the already chosen nodes (including the
+ * exit) from being middle hops to prevent the creation of A - B - A subpaths.
+ * We also allow the 4th hop to be the same as the guard node so as to not leak
+ * guard information to RP/IP/HSDirs.
+ *
+ * For vanguard circuits, we don't apply any subnet or family restrictions.
+ * This is to avoid impossible-to-build circuit paths, or just situations where
+ * our earlier guards prevent us from using most of our later ones.
+ *
+ * The alternative is building the circuit in reverse. Reverse calls to
+ * onion_extend_cpath() (ie: select outer hops first) would then have the
+ * property that you don't gain information about inner hops by observing
+ * outer ones. See https://trac.torproject.org/projects/tor/ticket/24487
+ * for this.
+ *
+ * (Note further that we still exclude the exit to prevent A - B - A
+ * at the end of the path. */
+static smartlist_t *
+build_vanguard_middle_exclude_list(uint8_t purpose,
+                                   cpath_build_state_t *state,
+                                   crypt_path_t *head,
+                                   int cur_len)
+{
+  smartlist_t *excluded;
+  const node_t *r;
+  crypt_path_t *cpath;
+  int i;
+
+  (void) purpose;
+
+  excluded = smartlist_new();
+
+  /* Add the exit to the exclude list (note that the exit/last hop is always
+   * chosen first in circuit_establish_circuit()). */
+  if ((r = build_state_get_exit_node(state))) {
+    smartlist_add(excluded, (node_t*)r);
+  }
+
+  /* If we are picking the 4th hop, allow that node to be the guard too.
+   * This prevents us from avoiding the Guard for those hops, which
+   * gives the adversary information about our guard if they control
+   * the RP, IP, or HSDIR. We don't do this check based on purpose
+   * because we also want to allow HS_VANGUARDS pre-build circuits
+   * to use the guard for that last hop.
+   */
+  if (cur_len == DEFAULT_ROUTE_LEN+1) {
+    /* Skip the first hop for the exclude list below */
+    head = head->next;
+    cur_len--;
+  }
+
+  for (i = 0, cpath = head; cpath && i < cur_len; ++i, cpath=cpath->next) {
+    if ((r = node_get_by_id(cpath->extend_info->identity_digest))) {
+      smartlist_add(excluded, (node_t*)r);
+    }
+  }
+
+  return excluded;
+}
+
+/**
  * Build a list of nodes to exclude from the choice of this middle
  * hop, based on already chosen nodes.
- *
- * XXX: At present, this function does not exclude any nodes from
- * the vanguard circuits. See
- * https://trac.torproject.org/projects/tor/ticket/24487
  */
 static smartlist_t *
 build_middle_exclude_list(uint8_t purpose,
@@ -2472,32 +2528,21 @@ build_middle_exclude_list(uint8_t purpose,
   crypt_path_t *cpath;
   int i;
 
+  /** Vanguard circuits have their own path selection rules */
+  if (circuit_should_use_vanguards(purpose)) {
+    return build_vanguard_middle_exclude_list(purpose, state, head, cur_len);
+  }
+
   excluded = smartlist_new();
 
-  /* Add the exit to the exclude list (note that the exit/last hop is always
-   * chosen first in circuit_establish_circuit()). */
+  /* For non-vanguard circuits, add the exit and its family to the exclude list
+   * (note that the exit/last hop is always chosen first in
+   * circuit_establish_circuit()). */
   if ((r = build_state_get_exit_node(state))) {
     nodelist_add_node_and_family(excluded, r);
   }
 
-  /* XXX: We don't apply any other previously selected node restrictions for
-   * vanguards, and allow nodes to be reused for those hop positions in the
-   * same circuit. This is because after many rotations, you get to learn
-   * inner guard nodes through the nodes that are not selected for outer
-   * hops.
-   *
-   * The alternative is building the circuit in reverse. Reverse calls to
-   * onion_extend_cpath() (ie: select outer hops first) would then have the
-   * property that you don't gain information about inner hops by observing
-   * outer ones. See https://trac.torproject.org/projects/tor/ticket/24487
-   * for this.
-   *
-   * (Note further that we can and do still exclude the exit in the block
-   * above, because it is chosen first in circuit_establish_circuit()..) */
-  if (circuit_should_use_vanguards(purpose)) {
-    return excluded;
-  }
-
+  /* also exclude all other already chosen nodes and their family */
   for (i = 0, cpath = head; cpath && i < cur_len; ++i, cpath=cpath->next) {
     if ((r = node_get_by_id(cpath->extend_info->identity_digest))) {
       nodelist_add_node_and_family(excluded, r);
@@ -2597,7 +2642,9 @@ choose_good_middle_server(uint8_t purpose,
   /** If a hidden service circuit wants a specific middle node, pin it. */
   if (middle_node_must_be_vanguard(options, purpose, cur_len)) {
     log_debug(LD_GENERAL, "Picking a sticky node (cur_len = %d)", cur_len);
-    return pick_vanguard_middle_node(options, flags, cur_len, excluded);
+    choice = pick_vanguard_middle_node(options, flags, cur_len, excluded);
+    smartlist_free(excluded);
+    return choice;
   }
 
   choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
@@ -2637,7 +2684,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
     /* This request is for an entry server to use for a regular circuit,
      * and we use entry guard nodes.  Just return one of the guard nodes.  */
     tor_assert(guard_state_out);
-    return guards_choose_guard(state, guard_state_out);
+    return guards_choose_guard(state, purpose, guard_state_out);
   }
 
   excluded = smartlist_new();
@@ -2680,7 +2727,7 @@ onion_next_hop_in_cpath(crypt_path_t *cpath)
  * Return 1 if the path is complete, 0 if we successfully added a hop,
  * and -1 on error.
  */
-static int
+STATIC int
 onion_extend_cpath(origin_circuit_t *circ)
 {
   uint8_t purpose = circ->base_.purpose;

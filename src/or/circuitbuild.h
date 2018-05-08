@@ -83,6 +83,13 @@ STATIC circid_t get_unique_circ_id_by_chan(channel_t *chan);
 STATIC int new_route_len(uint8_t purpose, extend_info_t *exit_ei,
                          smartlist_t *nodes);
 MOCK_DECL(STATIC int, count_acceptable_nodes, (smartlist_t *nodes));
+
+STATIC int onion_extend_cpath(origin_circuit_t *circ);
+
+STATIC int
+onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
+                      int is_hs_v3_rp_circuit);
+
 #if defined(ENABLE_TOR2WEB_MODE) || defined(TOR_UNIT_TESTS)
 STATIC const node_t *pick_tor2web_rendezvous_node(router_crn_flags_t flags,
                                                   const or_options_t *options);
