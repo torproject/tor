@@ -1574,6 +1574,14 @@ The following options are useful only for clients (that is, if
     which means that nodes specified in ExcludeNodes will not be
     picked.
  +
+    When either this option or HSLayer3Nodes are set, the /16 subnet
+    and node family restrictions are removed for hidden service
+    circuits. Additionally, we allow the guard node to be present
+    as the Rend, HSDir, and IP node, and as the hop before it. This
+    is done to prevent the adversary from inferring information
+    about our guard, layer2, and layer3 node choices at later points
+    in the path.
+ +
     This option is meant to be managed by a Tor controller such as
     https://github.com/mikeperry-tor/vanguards that selects and
     updates this set of nodes for you. Hence it does not do load
@@ -1619,6 +1627,14 @@ The following options are useful only for clients (that is, if
     ExcludeNodes have higher priority than HSLayer3Nodes,
     which means that nodes specified in ExcludeNodes will not be
     picked.
+ +
+    When either this option or HSLayer2Nodes are set, the /16 subnet
+    and node family restrictions are removed for hidden service
+    circuits. Additionally, we allow the guard node to be present
+    as the Rend, HSDir, and IP node, and as the hop before it. This
+    is done to prevent the adversary from inferring information
+    about our guard, layer2, and layer3 node choices at later points
+    in the path.
   +
     This option is meant to be managed by a Tor controller such as
     https://github.com/mikeperry-tor/vanguards that selects and
