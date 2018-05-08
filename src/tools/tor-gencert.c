@@ -78,29 +78,6 @@ show_help(void)
           "[--passphrase-fd <fd>]\n");
 }
 
-/* XXXX copied from crypto.c */
-static void
-crypto_log_errors(int severity, const char *doing)
-{
-  unsigned long err;
-  const char *msg, *lib, *func;
-  while ((err = ERR_get_error()) != 0) {
-    msg = (const char*)ERR_reason_error_string(err);
-    lib = (const char*)ERR_lib_error_string(err);
-    func = (const char*)ERR_func_error_string(err);
-    if (!msg) msg = "(null)";
-    if (!lib) lib = "(null)";
-    if (!func) func = "(null)";
-    if (doing) {
-      tor_log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)",
-              doing, msg, lib, func);
-    } else {
-      tor_log(severity, LD_CRYPTO, "crypto error: %s (in %s:%s)",
-              msg, lib, func);
-    }
-  }
-}
-
 /** Read the passphrase from the passphrase fd. */
 static int
 load_passphrase(void)

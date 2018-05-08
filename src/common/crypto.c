@@ -86,27 +86,6 @@ static int crypto_early_initialized_ = 0;
 /** Boolean: has OpenSSL's crypto been initialized? */
 static int crypto_global_initialized_ = 0;
 
-/** Log all pending crypto errors at level <b>severity</b>.  Use
- * <b>doing</b> to describe our current activities.
- */
-static void
-crypto_log_errors(int severity, const char *doing)
-{
-  unsigned long err;
-  const char *msg, *lib, *func;
-  while ((err = ERR_get_error()) != 0) {
-    msg = (const char*)ERR_reason_error_string(err);
-    lib = (const char*)ERR_lib_error_string(err);
-    func = (const char*)ERR_func_error_string(err);
-    if (!msg) msg = "(null)";
-    if (!lib) lib = "(null)";
-    if (!func) func = "(null)";
-    if (BUG(!doing)) doing = "(null)";
-    tor_log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)",
-              doing, msg, lib, func);
-  }
-}
-
 #ifndef DISABLE_ENGINES
 /** Log any OpenSSL engines we're using at NOTICE. */
 static void
