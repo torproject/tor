@@ -1,0 +1,6 @@
+  o Minor bugfixes (documentation):
+    - Stop saying in the manual that clients cache ipv4 dns answers
+      from exit relays. We haven't used them since 0.2.6.3-alpha, and
+      in ticket 24050 we stopped even caching them as of 0.3.2.6-alpha,
+      but we forgot to say so in the man page. Fixes bug 26052; bugfix
+      on 0.3.2.6-alpha.
