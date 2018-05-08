@@ -3,7 +3,7 @@
 
 /**
  * \file hs_stats.c
- * \brief Keeps stats about the activity of our hidden service.
+ * \brief Keeps stats about the activity of our onion service(s).
  **/
 
 #include "or.h"
@@ -42,14 +42,14 @@ hs_stats_get_n_introduce2_v2_cells(void)
   return n_introduce2_v2;
 }
 
-/** Note that we attempted to launch another circuit to a rendezvous point */
+/** Note that we attempted to launch another circuit to a rendezvous point. */
 void
 hs_stats_note_service_rendezvous_launch(void)
 {
   n_rendezvous_launches++;
 }
 
-/** Return the number of rendezvous circuits we have attempted to launch */
+/** Return the number of rendezvous circuits we have attempted to launch. */
 uint32_t
 hs_stats_get_n_rendezvous_launches(void)
 {

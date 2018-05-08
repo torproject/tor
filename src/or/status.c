@@ -87,19 +87,19 @@ bytes_to_usage(uint64_t bytes)
   return bw_string;
 }
 
-/** Log some usage info about our hidden service */
+/** Log some usage info about our onion service(s). */
 static void
 log_onion_service_stats(void)
 {
   unsigned int num_services = hs_service_get_num_services();
 
-  /* If there are no active hidden services, no need to print logs */
+  /* If there are no active onion services, no need to print logs */
   if (num_services == 0) {
     return;
   }
 
   log_notice(LD_HEARTBEAT,
-             "Our hidden service%s received %u v2 and %u v3 INTRODUCE2 cells "
+             "Our onion service%s received %u v2 and %u v3 INTRODUCE2 cells "
              "and attempted to launch %d rendezvous circuits.",
              num_services == 1 ? "" : "s",
              hs_stats_get_n_introduce2_v2_cells(),
