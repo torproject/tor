@@ -42,11 +42,11 @@ crypto_dh_get_dh_(crypto_dh_t *dh)
 #define DH_GENERATOR 2
 
 /** Shared P parameter for our circuit-crypto DH key exchanges. */
-BIGNUM *dh_param_p = NULL;
+static BIGNUM *dh_param_p = NULL;
 /** Shared P parameter for our TLS DH key exchanges. */
-BIGNUM *dh_param_p_tls = NULL;
+static BIGNUM *dh_param_p_tls = NULL;
 /** Shared G parameter for our DH key exchanges. */
-BIGNUM *dh_param_g = NULL;
+static BIGNUM *dh_param_g = NULL;
 
 /** Validate a given set of Diffie-Hellman parameters.  This is moderately
  * computationally expensive (milliseconds), so should only be called when
