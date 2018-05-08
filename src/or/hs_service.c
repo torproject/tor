@@ -859,11 +859,6 @@ register_all_services(void)
 
   tor_assert(hs_service_staging_list);
 
-  /* We'll save us some allocation and computing time. */
-  if (smartlist_len(hs_service_staging_list) == 0) {
-    return;
-  }
-
   /* Allocate a new map that will replace the current one. */
   new_service_map = tor_malloc_zero(sizeof(*new_service_map));
   HT_INIT(hs_service_ht, new_service_map);
