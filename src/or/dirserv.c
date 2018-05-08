@@ -2459,6 +2459,18 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
   int got_bw = 0;
   int got_node_id = 0;
   char *strtok_state; /* lame sauce d'jour */
+
+  if (strlen(line) == 0) {
+    log_warn(LD_DIRSERV, "Empty line in bandwidth file");
+    tor_free(line);
+    return -1;
+  }
+
+  /* Remove end of line character, so that is not part of the token */
+  if (line[strlen(line) - 1] == '\n') {
+    line[strlen(line) - 1] = '\0';
+  }
+
   cp = tor_strtok_r(cp, " \t", &strtok_state);
 
   if (!cp) {
