@@ -618,10 +618,11 @@ void
 rend_service_prune_list(void)
 {
   smartlist_t *old_service_list = rend_service_list;
-  /* Don't try to prune anything if we have no staging list. */
+
   if (!rend_service_staging_list) {
-    return;
+    rend_service_staging_list = smartlist_new();
   }
+
   rend_service_prune_list_impl_();
   if (old_service_list) {
     /* Every remaining service in the old list have been removed from the
