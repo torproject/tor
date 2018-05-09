@@ -107,6 +107,8 @@ static int consider_republishing_hs_descriptors = 0;
 static int load_client_keys(hs_service_t *service);
 static void set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc,
                                             time_t now, bool is_current);
+static int build_service_desc_superencrypted(const hs_service_t *service,
+                                             hs_service_descriptor_t *desc);
 static void move_descriptors(hs_service_t *src, hs_service_t *dst);
 static int service_encode_descriptor(const hs_service_t *service,
                                      const hs_service_descriptor_t *desc,
@@ -1321,8 +1323,113 @@ service_descriptor_new(void)
   return sdesc;
 }
 
-/* Move descriptor(s) from the src service to the dst service. We do this
- * during SIGHUP when we re-create our hidden services. */
+/* Allocate and return a deep copy of client. */
+static hs_service_authorized_client_t *
+service_authorized_client_dup(const hs_service_authorized_client_t *client)
+{
+  hs_service_authorized_client_t *client_dup = NULL;
+
+  tor_assert(client);
+
+  client_dup = tor_malloc_zero(sizeof(hs_service_authorized_client_t));
+  /* Currently, the public key is the only component of
+   * hs_service_authorized_client_t. */
+  memcpy(client_dup->client_pk.public_key,
+         client->client_pk.public_key,
+         CURVE25519_PUBKEY_LEN);
+
+  return client_dup;
+}
+
+/* If two authorized clients are equal, return 0. If the first one should come
+ * before the second, return less than zero. If the first should come after
+ * the second, return greater than zero. */
+static int
+service_authorized_client_cmp(const hs_service_authorized_client_t *client1,
+                              const hs_service_authorized_client_t *client2)
+{
+  tor_assert(client1);
+  tor_assert(client2);
+
+  /* Currently, the public key is the only component of
+   * hs_service_authorized_client_t. */
+  return tor_memcmp(client1->client_pk.public_key,
+                    client2->client_pk.public_key,
+                    CURVE25519_PUBKEY_LEN);
+}
+
+/* Helper for sorting authorized clients. */
+static int
+compare_service_authorzized_client_(const void **_a, const void **_b)
+{
+  const hs_service_authorized_client_t *a = *_a, *b = *_b;
+  return service_authorized_client_cmp(a, b);
+}
+
+/* If the list of hs_service_authorized_client_t's is different between
+ * src and dst, return 1. Otherwise, return 0. */
+static int
+service_authorized_client_config_equal(const hs_service_config_t *config1,
+                                       const hs_service_config_t *config2)
+{
+  int ret = 0;
+  int i;
+  smartlist_t *sl1 = smartlist_new();
+  smartlist_t *sl2 = smartlist_new();
+
+  tor_assert(config1);
+  tor_assert(config2);
+  tor_assert(config1->clients);
+  tor_assert(config2->clients);
+
+  /* If the number of clients is different, it is obvious that the list
+   * changes. */
+  if (smartlist_len(config1->clients) != smartlist_len(config2->clients)) {
+    goto done;
+  }
+
+  /* We do not want to mutate config1 and config2, so we will duplicate both
+   * entire client lists here. */
+  SMARTLIST_FOREACH(config1->clients,
+              hs_service_authorized_client_t *, client,
+              smartlist_add(sl1, service_authorized_client_dup(client)));
+
+  SMARTLIST_FOREACH(config2->clients,
+              hs_service_authorized_client_t *, client,
+              smartlist_add(sl2, service_authorized_client_dup(client)));
+
+  smartlist_sort(sl1, compare_service_authorzized_client_);
+  smartlist_sort(sl2, compare_service_authorzized_client_);
+
+  for (i = 0; i < smartlist_len(sl1); i++) {
+    /* If the clients at index i in both lists differ, the whole configs
+     * differ. */
+    if (service_authorized_client_cmp(smartlist_get(sl1, i),
+                                      smartlist_get(sl2, i))) {
+      goto done;
+    }
+  }
+
+  /* Success. */
+  ret = 1;
+
+ done:
+  if (sl1) {
+    SMARTLIST_FOREACH(sl1, hs_service_authorized_client_t *, p,
+                      service_authorized_client_free(p));
+    smartlist_free(sl1);
+  }
+  if (sl2) {
+    SMARTLIST_FOREACH(sl2, hs_service_authorized_client_t *, p,
+                      service_authorized_client_free(p));
+    smartlist_free(sl2);
+  }
+  return ret;
+}
+
+/* Move descriptor(s) from the src service to the dst service and modify their
+ * content if necessary. We do this during SIGHUP when we re-create our
+ * hidden services. */
 static void
 move_descriptors(hs_service_t *src, hs_service_t *dst)
 {
@@ -1346,6 +1453,37 @@ move_descriptors(hs_service_t *src, hs_service_t *dst)
     dst->desc_next = src->desc_next;
     src->desc_next = NULL;
   }
+
+  /* If the client authorization changes, we must rebuild the superencrypted
+   * section and republish the descriptors. */
+  int client_auth_changed =
+    !service_authorized_client_config_equal(&src->config, &dst->config);
+  if (client_auth_changed && dst->desc_current) {
+    /* We have to clear the superencrypted content first. */
+    hs_desc_superencrypted_data_free_contents(
+                                &dst->desc_current->desc->superencrypted_data);
+    if (build_service_desc_superencrypted(dst, dst->desc_current) < 0) {
+      goto err;
+    }
+    service_desc_schedule_upload(dst->desc_current, time(NULL), 1);
+  }
+  if (client_auth_changed && dst->desc_next) {
+    /* We have to clear the superencrypted content first. */
+    hs_desc_superencrypted_data_free_contents(
+                                &dst->desc_next->desc->superencrypted_data);
+    if (build_service_desc_superencrypted(dst, dst->desc_next) < 0) {
+      goto err;
+    }
+    service_desc_schedule_upload(dst->desc_next, time(NULL), 1);
+  }
+
+  return;
+
+ err:
+  /* If there is an error, free all descriptors to make it clean and generate
+   * them later. */
+  service_descriptor_free(dst->desc_current);
+  service_descriptor_free(dst->desc_next);
 }
 
 /* From the given service, remove all expired failing intro points for each
