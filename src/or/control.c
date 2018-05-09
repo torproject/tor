@@ -277,6 +277,7 @@ control_update_global_event_mask(void)
   smartlist_t *conns = get_connection_array();
   event_mask_t old_mask, new_mask;
   old_mask = global_event_mask;
+  int any_old_per_sec_events = control_any_per_second_event_enabled();
 
   global_event_mask = 0;
   SMARTLIST_FOREACH(conns, connection_t *, _conn,
@@ -316,6 +317,10 @@ control_update_global_event_mask(void)
     uint64_t r, w;
     control_get_bytes_rw_last_sec(&r, &w);
   }
+  if (any_old_per_sec_events != control_any_per_second_event_enabled()) {
+    reschedule_per_second_timer();
+  }
+
 #undef NEWLY_ENABLED
 }
 
