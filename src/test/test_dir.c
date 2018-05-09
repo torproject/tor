@@ -1387,17 +1387,21 @@ test_dir_measured_bw_kb_header_ended(void *arg)
   const char *complete = \
     "node_id=$557365204145532d32353620696e73746561642e bw=1024\n";
 
+  setup_capture_of_logs(LOG_WARN);
   /* Here it is assumed the 1st complete line has being parsed already,
    * therefore the following uncomplete lines fail with warning */
   tt_assert(measured_bw_line_parse(&mbwl, incomplete_no_bw, 1) == -1);
+  expect_log_msg_containing("Incomplete line in bandwidth file:");
   tt_assert(measured_bw_line_parse(&mbwl, incomplete_no_node_id, 1) == -1);
+  expect_log_msg_containing("Incomplete line in bandwidth file:");
   tt_assert(measured_bw_line_parse(
     &mbwl, incomplete_no_bw_no_node_id, 1) == -1);
+  expect_log_msg_containing("Incomplete line in bandwidth file:");
   /* Complete line after 1st complete line success. */
   tt_assert(measured_bw_line_parse(&mbwl, complete, 1) == 0);
 
  done:
-  return;
+  teardown_capture_of_logs();
 }
 
 static void
@@ -1413,16 +1417,20 @@ test_dir_measured_bw_kb_header_not_ended(void *arg)
   const char *complete = \
     "node_id=$557365204145532d32353620696e73746561642e bw=1024\n";
 
+  setup_capture_of_logs(LOG_DEBUG);
   /* here it is assumed the 1st complete line has not being parsed already,
    * therefore the following uncomplete lines fail, but do not give warning. */
   tt_assert(measured_bw_line_parse(&mbwl, incomplete_no_bw, 0) == -1);
+  expect_log_msg_containing("Missing bw or node_id in bandwidth file line:");
   tt_assert(measured_bw_line_parse(&mbwl, incomplete_no_node_id, 0) == -1);
+  expect_log_msg_containing("Missing bw or node_id in bandwidth file line:");
   tt_assert(measured_bw_line_parse(
     &mbwl, incomplete_no_bw_no_node_id, 0) == -1);
+  expect_log_msg_containing("Missing bw or node_id in bandwidth file line:");
   /* 1st complete line line success. */
   tt_assert(measured_bw_line_parse(&mbwl, complete, 1) == 0);
  done:
-  return;
+  teardown_capture_of_logs();
 }
 
 /* Test dirserv_read_measured_bandwidths */
@@ -1446,6 +1454,10 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
     "generator_started=2018-05-08T16:13:25\n"
     "earliest_bandwidth=2018-05-08T16:13:26\n"
     "====\n";
+  const char *sbws_relay_lines=
+    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 "
+    "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
+    "bw=760 nick=Test rtt=380 time=2018-05-08T16:13:26\n";
 
   fname = tor_strdup(get_fname("V3BandwidthsFile"));
   /* Test Torflow file only with timestamp*/
@@ -1483,6 +1495,13 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   log_debug(LD_DIRSERV, "Bandwidth list file with Torflow RelayLine, "
             "then additional headers, then Torflow RelayLine again.");
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+  /* Test sbws file */
+  tor_asprintf(&content, "%ld\n%s%s", timestamp, v110_header_lines,
+               sbws_relay_lines);
+  write_str_to_file(fname, content, 0);
+  log_debug(LD_DIRSERV, "Bandwidth list file with additional headers and "
+            "sbws RelayLine.");
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
 
  done:
