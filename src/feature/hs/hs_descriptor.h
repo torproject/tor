@@ -309,6 +309,10 @@ void hs_desc_build_authorized_client(const curve25519_public_key_t *client_pk,
                                      auth_ephemeral_sk,
                                      const uint8_t *descriptor_cookie,
                                      hs_desc_authorized_client_t *client_out);
+void hs_desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc);
+void hs_desc_superencrypted_data_free_contents(
+                                        hs_desc_superencrypted_data_t *desc);
+void hs_desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc);
 
 #ifdef HS_DESCRIPTOR_PRIVATE
 
@@ -328,7 +332,6 @@ STATIC int cert_is_valid(tor_cert_t *cert, uint8_t type,
 STATIC int desc_sig_is_valid(const char *b64_sig,
                              const ed25519_public_key_t *signing_pubkey,
                              const char *encoded_desc, size_t encoded_len);
-STATIC void desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc);
 
 MOCK_DECL(STATIC size_t, decrypt_desc_layer,(const hs_descriptor_t *desc,
                                              const uint8_t *encrypted_blob,
