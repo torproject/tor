@@ -114,7 +114,8 @@ STATIC void dirserv_set_routerstatus_testing(routerstatus_t *rs);
 /* Put the MAX_MEASUREMENT_AGE #define here so unit tests can see it */
 #define MAX_MEASUREMENT_AGE (3*24*60*60) /* 3 days */
 
-STATIC int measured_bw_line_parse(measured_bw_line_t *out, const char *line);
+STATIC int measured_bw_line_parse(measured_bw_line_t *out, const char *line,
+                                  int header_ended);
 
 STATIC int measured_bw_line_apply(measured_bw_line_t *parsed_line,
                            smartlist_t *routerstatuses);
