@@ -1692,6 +1692,18 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
 
+  /* Test sbws file */
+  const char *sbws_relay_lines=
+    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 "
+    "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
+    "bw=760 nick=Test rtt=380 time=2018-05-08T16:13:26\n";
+
+  tor_asprintf(&content, "%ld\n%s%s", timestamp, v110_header_lines,
+               sbws_relay_lines);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+
  done:
   tor_free(fname);
 }
