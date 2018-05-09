@@ -83,9 +83,6 @@ static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
                                             crypt_path_t *layer_hint);
 
-static int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
-                                              edge_connection_t *conn,
-                                              crypt_path_t *layer_hint);
 static void circuit_consider_sending_sendme(circuit_t *circ,
                                             crypt_path_t *layer_hint);
 static void circuit_resume_edge_reading(circuit_t *circ,
@@ -1412,7 +1409,7 @@ connection_edge_process_relay_cell_not_open(
  *
  * Return -reason if you want to warn and tear down the circuit, else 0.
  */
-static int
+STATIC int
 connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                    edge_connection_t *conn,
                                    crypt_path_t *layer_hint)
