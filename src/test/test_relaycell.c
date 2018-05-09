@@ -136,7 +136,7 @@ test_circbw_relay(void *arg)
 #define PACK_CELL(id, cmd, body_s) do {                                  \
     memset(&cell, 0, sizeof(cell));                                     \
     memset(&rh, 0, sizeof(rh));                                         \
-    memcpy(cell.payload+RELAY_HEADER_SIZE, (body_s), sizeof((body_s))-1);       \
+    memcpy(cell.payload+RELAY_HEADER_SIZE, (body_s), sizeof((body_s))-1); \
     rh.length = sizeof((body_s))-1;                                     \
     rh.command = (cmd);                                                 \
     rh.stream_id = (id);                                                \
@@ -148,11 +148,11 @@ test_circbw_relay(void *arg)
               overhead+RELAY_PAYLOAD_SIZE-rh.length);               \
     delivered = circ->n_delivered_read_circ_bw;                          \
     overhead = circ->n_overhead_read_circ_bw;                            \
- } while(0)
+ } while (0)
 #define ASSERT_UNCOUNTED_BW() do { \
     tt_int_op(circ->n_delivered_read_circ_bw, OP_EQ, delivered); \
     tt_int_op(circ->n_overhead_read_circ_bw, OP_EQ, overhead); \
- } while(0)
+ } while (0)
 
   MOCK(connection_mark_unattached_ap_, mock_connection_mark_unattached_ap_);
   MOCK(connection_start_reading, mock_start_reading);
@@ -290,7 +290,7 @@ test_circbw_relay(void *arg)
                                      circ->cpath);
   ASSERT_COUNTED_BW();
 
-done:
+ done:
   UNMOCK(connection_start_reading);
   UNMOCK(connection_mark_unattached_ap_);
   UNMOCK(connection_mark_for_close_internal_);
