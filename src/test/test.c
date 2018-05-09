@@ -880,6 +880,7 @@ struct testgroup_t testgroups[] = {
   { "introduce/", introduce_tests },
   { "keypin/", keypin_tests },
   { "link-handshake/", link_handshake_tests },
+  { "mainloop/", mainloop_tests },
   { "nodelist/", nodelist_tests },
   { "oom/", oom_tests },
   { "oos/", oos_tests },
