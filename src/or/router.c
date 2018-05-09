@@ -2268,6 +2268,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   /* and compute ri->bandwidthburst similarly */
   ri->bandwidthburst = get_effective_bwburst(options);
 
+  /* Report bandwidth, unless we're hibernating or shutting down */
   ri->bandwidthcapacity = hibernating ? 0 : rep_hist_bandwidth_assess();
 
   if (dns_seems_to_be_broken() || has_dns_init_failed()) {
@@ -2538,6 +2539,8 @@ check_descriptor_bandwidth_changed(time_t now)
     return;
 
   prev = router_get_my_routerinfo()->bandwidthcapacity;
+  /* Consider ourselves to have zero bandwidth if we're hibernating or
+   * shutting down. */
   cur = we_are_hibernating() ? 0 : rep_hist_bandwidth_assess();
   if ((prev != cur && (!prev || !cur)) ||
       cur > prev*2 ||

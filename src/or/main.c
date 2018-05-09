@@ -1253,7 +1253,8 @@ run_connection_housekeeping(int i, time_t now)
   } else if (we_are_hibernating() &&
              ! have_any_circuits &&
              !connection_get_outbuf_len(conn)) {
-    /* We're hibernating, there's no circuits, and nothing to flush.*/
+    /* We're hibernating or shutting down, there's no circuits, and nothing to
+     * flush.*/
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[Hibernating or exiting].",
              (int)conn->s,conn->address, conn->port);

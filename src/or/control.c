@@ -7107,6 +7107,8 @@ control_event_bootstrap_problem(const char *warn, const char *reason,
   if (bootstrap_problems >= BOOTSTRAP_PROBLEM_THRESHOLD)
     dowarn = 1;
 
+  /* Don't warn about our bootstrapping status if we are hibernating or
+   * shutting down. */
   if (we_are_hibernating())
     dowarn = 0;
 

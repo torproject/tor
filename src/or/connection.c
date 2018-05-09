@@ -1762,7 +1762,7 @@ connection_connect_sockaddr,(connection_t *conn,
   tor_assert(sa);
   tor_assert(socket_error);
 
-  if (get_options()->DisableNetwork) {
+  if (get_options()->DisableNetwork) { // XXXX change this -NM.
     /* We should never even try to connect anyplace if DisableNetwork is set.
      * Warn if we do, and refuse to make the connection.
      *

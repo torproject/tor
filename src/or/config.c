@@ -1449,9 +1449,9 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     consider_hibernation(time(NULL));
 
     /* Launch the listeners.  (We do this before we setuid, so we can bind to
-     * ports under 1024.)  We don't want to rebind if we're hibernating. If
-     * networking is disabled, this will close all but the control listeners,
-     * but disable those. */
+     * ports under 1024.)  We don't want to rebind if we're hibernating or
+     * shutting down. If networking is disabled, this will close all but the
+     * control listeners, but disable those. */
     if (!we_are_hibernating()) {
       if (retry_all_listeners(replaced_listeners, new_listeners,
                               options->DisableNetwork) < 0) {
