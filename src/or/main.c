@@ -2497,8 +2497,71 @@ hs_service_callback(time_t now, const or_options_t *options)
 static periodic_timer_t *second_timer = NULL;
 /** Number of libevent errors in the last second: we die if we get too many. */
 static int n_libevent_errors = 0;
-/** Last time that second_elapsed_callback was called. */
+
+/** Last time that update_current_time was called. */
 static time_t current_second = 0;
+/** Last time that update_current_time updated current_second. */
+static monotime_coarse_t current_second_last_changed;
+
+/**
+ * Set the current time to "now", which should be the value returned by
+ * time().  Check for clock jumps and track the total number of seconds we
+ * have been running.
+ */
+void
+update_current_time(time_t now)
+{
+  if (PREDICT_LIKELY(now == current_second)) {
+    /* We call this function a lot.  Most frequently, the current second
+     * will not have changed, so we just return. */
+    return;
+  }
+
+  const time_t seconds_elapsed = current_second ? (now - current_second) : 0;
+
+  /* Check the wall clock against the monotonic clock, so we can
+   * better tell idleness from clock jumps and/or other shenanigans. */
+  monotime_coarse_t last_updated;
+  memcpy(&last_updated, &current_second_last_changed, sizeof(last_updated));
+  monotime_coarse_get(&current_second_last_changed);
+
+  /** How much clock jumping do we tolerate? */
+#define NUM_JUMPED_SECONDS_BEFORE_WARN 100
+
+  /** How much idleness do we tolerate? */
+#define NUM_IDLE_SECONDS_BEFORE_WARN 3600
+
+  if (seconds_elapsed < -NUM_JUMPED_SECONDS_BEFORE_WARN) {
+    // moving back in time is always a bad sign.
+    circuit_note_clock_jumped(seconds_elapsed, false);
+  } else if (seconds_elapsed >= NUM_JUMPED_SECONDS_BEFORE_WARN) {
+    /* Compare the monotonic clock to the result of time(). */
+    const int32_t monotime_msec_passed =
+      monotime_coarse_diff_msec32(&last_updated,
+                                  &current_second_last_changed);
+    const int monotime_sec_passed = monotime_msec_passed / 1000;
+    const int discrepancy = monotime_sec_passed - (int)seconds_elapsed;
+    /* If the monotonic clock deviates from time(NULL), we have a couple of
+     * possibilities.  On some systems, this means we have been suspended or
+     * sleeping.  Everywhere, it can mean that the wall-clock time has
+     * been changed -- for example, with settimeofday().
+     *
+     * On the other hand, if the monotonic time matches with the wall-clock
+     * time, we've probably just been idle for a while, with no events firing.
+     * we tolerate much more of that.
+     */
+    const bool clock_jumped = abs(discrepancy) > 2;
+
+    if (clock_jumped || seconds_elapsed >= NUM_IDLE_SECONDS_BEFORE_WARN) {
+      circuit_note_clock_jumped(seconds_elapsed, ! clock_jumped);
+    }
+  } else if (seconds_elapsed > 0) {
+    stats_n_seconds_working += seconds_elapsed;
+  }
+
+  update_approx_time(now);
+  current_second = now;
+}
 
 /** Libevent callback: invoked once every second. */
 static void
@@ -2510,18 +2573,21 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   time_t now;
   size_t bytes_written;
   size_t bytes_read;
-  int seconds_elapsed;
   (void)timer;
   (void)arg;
 
   n_libevent_errors = 0;
 
-  /* log_notice(LD_GENERAL, "Tick."); */
   now = time(NULL);
-  update_approx_time(now);
+
+  /* We don't need to do this once-per-second any more: time-updating is
+   * only in this callback _because it is a callback_. It should be fine
+   * to disable this callback, and the time will still get updated.
+   */
+  update_current_time(now);
 
   /* the second has rolled over. check more stuff. */
-  seconds_elapsed = current_second ? (int)(now - current_second) : 0;
+  // remove this once it's unneeded
   bytes_read = (size_t)(stats_n_bytes_read - stats_prev_n_read);
   bytes_written = (size_t)(stats_n_bytes_written - stats_prev_n_written);
   stats_prev_n_read = stats_n_bytes_read;
@@ -2533,18 +2599,7 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   control_event_circ_bandwidth_used();
   control_event_circuit_cell_stats();
 
-/** If more than this many seconds have elapsed, probably the clock
- * jumped: doesn't count. */
-#define NUM_JUMPED_SECONDS_BEFORE_WARN 100
-  if (seconds_elapsed < -NUM_JUMPED_SECONDS_BEFORE_WARN ||
-      seconds_elapsed >= NUM_JUMPED_SECONDS_BEFORE_WARN) {
-    circuit_note_clock_jumped(seconds_elapsed);
-  } else if (seconds_elapsed > 0)
-    stats_n_seconds_working += seconds_elapsed;
-
   run_scheduled_events(now);
-
-  current_second = now; /* remember which second it is, for next time */
 }
 
 #ifdef HAVE_SYSTEMD_209
@@ -3029,6 +3084,7 @@ signal_callback(evutil_socket_t fd, short events, void *arg)
   (void)fd;
   (void)events;
 
+  update_current_time(time(NULL));
   process_signal(sig);
 }
 
@@ -3667,6 +3723,8 @@ tor_free_all(int postfork)
   heartbeat_callback_first_time = 1;
   n_libevent_errors = 0;
   current_second = 0;
+  memset(&current_second_last_changed, 0,
+         sizeof(current_second_last_changed));
 
   if (!postfork) {
     release_lockfile();

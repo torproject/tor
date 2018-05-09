@@ -3440,7 +3440,7 @@ int
 connection_handle_read(connection_t *conn)
 {
   int res;
-
+  update_current_time(time(NULL));
   res = connection_handle_read_impl(conn);
   return res;
 }
@@ -3983,6 +3983,7 @@ int
 connection_handle_write(connection_t *conn, int force)
 {
     int res;
+    update_current_time(time(NULL));
     conn->in_connection_handle_write = 1;
     res = connection_handle_write_impl(conn, force);
     conn->in_connection_handle_write = 0;

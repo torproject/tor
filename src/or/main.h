@@ -66,6 +66,8 @@ void reschedule_dirvote(const or_options_t *options);
 void mainloop_schedule_postloop_cleanup(void);
 void rescan_periodic_events(const or_options_t *options);
 
+void update_current_time(time_t now);
+
 MOCK_DECL(long,get_uptime,(void));
 MOCK_DECL(void,reset_uptime,(void));
 

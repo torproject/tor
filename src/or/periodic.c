@@ -14,6 +14,7 @@
 #include "or.h"
 #include "compat_libevent.h"
 #include "config.h"
+#include "main.h"
 #include "periodic.h"
 
 /** We disable any interval greater than this number of seconds, on the
@@ -48,6 +49,7 @@ periodic_event_dispatch(mainloop_event_t *ev, void *data)
   }
 
   time_t now = time(NULL);
+  update_current_time(now);
   const or_options_t *options = get_options();
 //  log_debug(LD_GENERAL, "Dispatching %s", event->name);
   int r = event->fn(now, options);

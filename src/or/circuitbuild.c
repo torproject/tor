@@ -1130,19 +1130,29 @@ circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
   return 0;
 }
 
-/** Our clock just jumped by <b>seconds_elapsed</b>. Assume
- * something has also gone wrong with our network: notify the user,
- * and abandon all not-yet-used circuits. */
+/** Our clock just jumped by <b>seconds_elapsed</b>. If <b>was_idle</b> is
+ * true, then the monotonic time matches; otherwise it doesn't. Assume
+ * something has also gone wrong with our network: notify the user, and
+ * abandon all not-yet-used circuits. */
 void
-circuit_note_clock_jumped(int seconds_elapsed)
+circuit_note_clock_jumped(int64_t seconds_elapsed, bool was_idle)
 {
   int severity = server_mode(get_options()) ? LOG_WARN : LOG_NOTICE;
-  tor_log(severity, LD_GENERAL, "Your system clock just jumped %d seconds %s; "
-      "assuming established circuits no longer work.",
-      seconds_elapsed >=0 ? seconds_elapsed : -seconds_elapsed,
-      seconds_elapsed >=0 ? "forward" : "backward");
-  control_event_general_status(LOG_WARN, "CLOCK_JUMPED TIME=%d",
-                               seconds_elapsed);
+  if (was_idle) {
+    tor_log(severity, LD_GENERAL, "Tor has been idle for "I64_FORMAT
+            " seconds; assuming established circuits no longer work.",
+            I64_PRINTF_ARG(seconds_elapsed));
+  } else {
+    tor_log(severity, LD_GENERAL,
+            "Your system clock just jumped "I64_FORMAT" seconds %s; "
+            "assuming established circuits no longer work.",
+            I64_PRINTF_ARG(
+                 seconds_elapsed >=0 ? seconds_elapsed : -seconds_elapsed),
+            seconds_elapsed >=0 ? "forward" : "backward");
+  }
+  control_event_general_status(LOG_WARN, "CLOCK_JUMPED TIME="I64_FORMAT
+                               " IDLE=%d",
+                               I64_PRINTF_ARG(seconds_elapsed), was_idle?1:0);
   /* so we log when it works again */
   note_that_we_maybe_cant_complete_circuits();
   control_event_client_status(severity, "CIRCUIT_NOT_ESTABLISHED REASON=%s",
