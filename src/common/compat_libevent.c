@@ -269,7 +269,7 @@ periodic_timer_launch(periodic_timer_t *timer, const struct timeval *tv)
   tor_assert(timer);
   if (event_pending(timer->ev, EV_TIMEOUT, NULL))
     return;
-  event_add(timer->ev, (struct timeval *)tv); /*drop const for old libevent*/
+  event_add(timer->ev, tv);
 }
 
 /**
