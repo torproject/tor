@@ -8,8 +8,10 @@ environment:
   matrix:
   - target: i686-w64-mingw32
     compiler_path: mingw32
+    openssl_path: /c/OpenSSL-Win32
   - target: x86_64-w64-mingw32
     compiler_path: mingw64
+    openssl_path: /c/OpenSSL-Win64
 
 install:
 - ps: >-
@@ -51,7 +53,7 @@ build_script:
             Execute-Bash 'autoreconf -i'
             mkdir "${env:build}"
             Set-Location "${env:build}"
-            Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target} --disable-asciidoc --enable-fatal-warnings --with-libevent-dir=${env:APPVEYOR_BUILD_FOLDER}/libevent"
+            Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target} --disable-asciidoc --enable-fatal-warnings --with-libevent-dir=${env:APPVEYOR_BUILD_FOLDER}/libevent --with-openssl-dir=${env:openssl_path}"
             Execute-Bash "V=1 make -j2"
             Execute-Bash "V=1 make -j2 install"
      }
