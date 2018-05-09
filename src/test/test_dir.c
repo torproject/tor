@@ -1538,12 +1538,18 @@ test_dir_measured_bw_kb(void *arg)
   (void)arg;
   for (i = 0; strcmp(lines_fail[i], "end"); i++) {
     //fprintf(stderr, "Testing: %s\n", lines_fail[i]);
-    tt_int_op(measured_bw_line_parse(&mbwl, lines_fail[i]), OP_EQ, -1);
+    /* Testing only with line_is_after_headers = 1. Tests with
+     * line_is_after_headers = 0 in
+     * test_dir_measured_bw_kb_line_is_after_headers */
+    tt_assert(measured_bw_line_parse(&mbwl, lines_fail[i], 1) == -1);
   }
 
   for (i = 0; strcmp(lines_pass[i], "end"); i++) {
     //fprintf(stderr, "Testing: %s %d\n", lines_pass[i], TOR_ISSPACE('\n'));
-    tt_int_op(measured_bw_line_parse(&mbwl, lines_pass[i]), OP_EQ, 0);
+    /* Testing only with line_is_after_headers = 1. Tests with
+     * line_is_after_headers = 0 in
+     * test_dir_measured_bw_kb_line_is_after_headers */
+    tt_assert(measured_bw_line_parse(&mbwl, lines_pass[i], 1) == 0);
     tt_assert(mbwl.bw_kb == 1024);
     tt_assert(strcmp(mbwl.node_hex,
                 "557365204145532d32353620696e73746561642e") == 0);
@@ -1551,6 +1557,49 @@ test_dir_measured_bw_kb(void *arg)
 
  done:
   return;
+}
+
+/* Unit tests for measured_bw_line_parse using line_is_after_headers flag.
+ * When the end of the header is detected (a first complete bw line is parsed),
+ * incomplete lines fail and give warnings, but do not give warnings if
+ * the header is not ended, allowing to ignore additional header lines. */
+static void
+test_dir_measured_bw_kb_line_is_after_headers(void *arg)
+{
+  (void)arg;
+  measured_bw_line_t mbwl;
+  const char *line_pass = \
+    "node_id=$557365204145532d32353620696e73746561642e bw=1024\n";
+  int i;
+  const char *lines_fail[] = {
+    "node_id=$557365204145532d32353620696e73746561642e \n",
+    "bw=1024\n",
+    "rtt=300\n",
+    "end"
+  };
+
+  setup_capture_of_logs(LOG_DEBUG);
+
+  /* Test bw lines when header has ended */
+  for (i = 0; strcmp(lines_fail[i], "end"); i++) {
+    tt_assert(measured_bw_line_parse(&mbwl, lines_fail[i], 1) == -1);
+    expect_log_msg_containing("Incomplete line in bandwidth file:");
+    mock_clean_saved_logs();
+  }
+
+  tt_assert(measured_bw_line_parse(&mbwl, line_pass, 1) == 0);
+
+  /* Test bw lines when header has not ended */
+  for (i = 0; strcmp(lines_fail[i], "end"); i++) {
+    tt_assert(measured_bw_line_parse(&mbwl, lines_fail[i], 0) == -1);
+    expect_log_msg_containing("Missing bw or node_id in bandwidth file line:");
+    mock_clean_saved_logs();
+  }
+
+  tt_assert(measured_bw_line_parse(&mbwl, line_pass, 0) == 0);
+
+ done:
+  teardown_capture_of_logs();
 }
 
 /* Test dirserv_read_measured_bandwidths with whole files. */
@@ -6265,6 +6314,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(fp_pairs),
   DIR(split_fps, 0),
   DIR_LEGACY(measured_bw_kb),
+  DIR_LEGACY(measured_bw_kb_line_is_after_headers),
   DIR_LEGACY(measured_bw_kb_cache),
   DIR_LEGACY(dirserv_read_measured_bandwidths),
   DIR_LEGACY(param_voting),
