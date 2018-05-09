@@ -169,7 +169,7 @@ crypto_early_init(void)
 
     crypto_early_initialized_ = 1;
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+#ifdef OPENSSL_1_1_API
     OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS |
                      OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
                      OPENSSL_INIT_ADD_ALL_CIPHERS |
@@ -1062,13 +1062,13 @@ crypto_dh_free_(crypto_dh_t *dh)
 int
 crypto_global_cleanup(void)
 {
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
+#ifndef OPENSSL_1_1_API
   EVP_cleanup();
 #endif
 #ifndef NEW_THREAD_API
   ERR_remove_thread_state(NULL);
 #endif
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
+#ifndef OPENSSL_1_1_API
   ERR_free_strings();
 #endif
 
@@ -1082,13 +1082,13 @@ crypto_global_cleanup(void)
   dh_param_p = dh_param_p_tls = dh_param_g = NULL;
 
 #ifndef DISABLE_ENGINES
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
+#ifndef OPENSSL_1_1_API
   ENGINE_cleanup();
 #endif
 #endif
 
   CONF_modules_unload(1);
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
+#ifndef OPENSSL_1_1_API
   CRYPTO_cleanup_all_ex_data();
 #endif
 
