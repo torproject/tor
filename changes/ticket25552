@@ -1,0 +1,17 @@
+  o Major feature (hidden service v3):
+    - Make HSDir stop using the descriptor revision counter. Instead, they now
+      use a replaycache to keep track of which descriptor has been seen. If the
+      descriptor is seen after the first upload, it is rejected. This is to
+      avoid a replay attack which the revision counter where for originally.
+      
+      By removing the revision counter, it allows multiple services with the
+      same onion address to be able to upload their descriptor and competing at
+      the directory level (scalability use case). Before that, the service with
+      the highest revision counter would always win meaning if one restarted
+      more than the others, that one would win. Closes ticket 25552; bugfix on
+      0.3.0.4-alpha.
+
+  o Major feature (hidden service v3, client):
+    - When decoding the v3 descriptor plaintext section, the revision counter is
+      no longer mandatory. If not present, it is set to 0. However, services
+      still put it in their descriptor for now.

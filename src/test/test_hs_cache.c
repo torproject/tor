@@ -19,6 +19,7 @@
 #include "proto_http.h"
 
 #include "hs_test_helpers.h"
+#include "log_test_helpers.h"
 #include "test_helpers.h"
 #include "test.h"
 
@@ -84,6 +85,8 @@ test_directory(void *arg)
     tt_int_op(oom_size, OP_GE, 1);
     ret = hs_cache_lookup_as_dir(3, helper_get_hsdir_query(desc1), NULL);
     tt_int_op(ret, OP_EQ, 0);
+    /* Note that from here, the desc is not longer in the cache but it is in
+     * the replaycache. */
   }
 
   /* Store two descriptors and remove the expiring one only. */
@@ -101,6 +104,15 @@ test_directory(void *arg)
                                     &desc_zero_lifetime_str);
     tt_int_op(ret, OP_EQ, 0);
 
+    /* We haven't removed this entry from the replay cache so the first store
+     * should fail with the replaycache warning. */
+    setup_full_capture_of_logs(LOG_INFO);
+    ret = hs_cache_store_as_dir(desc1_str);
+    tt_int_op(ret, OP_EQ, -1);
+    expect_log_msg_containing("Possible descriptor replay detected");
+    teardown_capture_of_logs();
+
+    hs_cache_remove_replaycache_entry(desc1_str);
     ret = hs_cache_store_as_dir(desc1_str);
     tt_int_op(ret, OP_EQ, 0);
     ret = hs_cache_store_as_dir(desc_zero_lifetime_str);
@@ -136,28 +148,6 @@ test_directory(void *arg)
     /* Decodable base64 query but wrong ed25519 size. */
     ret = hs_cache_lookup_as_dir(3, "dW5pY29ybg==", NULL);
     tt_int_op(ret, OP_EQ, -1);
-  }
-
-  /* Test descriptor replacement with revision counter. */
-  {
-    char *new_desc_str;
-
-    /* Add a descriptor. */
-    ret = hs_cache_store_as_dir(desc1_str);
-    tt_int_op(ret, OP_EQ, 0);
-    ret = hs_cache_lookup_as_dir(3, helper_get_hsdir_query(desc1), &desc_out);
-    tt_int_op(ret, OP_EQ, 1);
-    /* Bump revision counter. */
-    desc1->plaintext_data.revision_counter++;
-    ret = hs_desc_encode_descriptor(desc1, &signing_kp1, &new_desc_str);
-    tt_int_op(ret, OP_EQ, 0);
-    ret = hs_cache_store_as_dir(new_desc_str);
-    tt_int_op(ret, OP_EQ, 0);
-    /* Look it up, it should have been replaced. */
-    ret = hs_cache_lookup_as_dir(3, helper_get_hsdir_query(desc1), &desc_out);
-    tt_int_op(ret, OP_EQ, 1);
-    tt_str_op(desc_out, OP_EQ, new_desc_str);
-    tor_free(new_desc_str);
   }
 
  done:
