@@ -106,7 +106,7 @@ test_directory(void *arg)
 
     /* We haven't removed this entry from the replay cache so the first store
      * should fail with the replaycache warning. */
-    setup_full_capture_of_logs(LOG_WARN);
+    setup_full_capture_of_logs(LOG_INFO);
     ret = hs_cache_store_as_dir(desc1_str);
     tt_int_op(ret, OP_EQ, -1);
     expect_log_msg_containing("Possible descriptor replay detected");
