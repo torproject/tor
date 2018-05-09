@@ -9,6 +9,7 @@
 #include "main.h"
 #include "config.h"
 #include "connection.h"
+#include "crypto.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "connection_edge.h"
@@ -93,7 +94,6 @@ helper_create_origin_circuit(int purpose, int flags)
   return circ;
 }
 
-// XXX: Mock unattached connection...
 static void
 mock_connection_mark_unattached_ap_(entry_connection_t *conn, int endreason,
                                     int line, const char *file)
