@@ -2491,6 +2491,36 @@ hs_service_callback(time_t now, const or_options_t *options)
 
 /** Timer: used to invoke second_elapsed_callback() once per second. */
 static periodic_timer_t *second_timer = NULL;
+
+/**
+ * Enable or disable the per-second timer as appropriate, creating it if
+ * necessary.
+ */
+void
+reschedule_per_second_timer(void)
+{
+  struct timeval one_second;
+  one_second.tv_sec = 1;
+  one_second.tv_usec = 0;
+
+  if (! second_timer) {
+    second_timer = periodic_timer_new(tor_libevent_get_base(),
+                                      &one_second,
+                                      second_elapsed_callback,
+                                      NULL);
+    tor_assert(second_timer);
+  }
+
+  const bool run_per_second_events =
+    control_any_per_second_event_enabled() || ! net_is_completely_disabled();
+
+  if (run_per_second_events) {
+    periodic_timer_launch(second_timer, &one_second);
+  } else {
+    periodic_timer_disable(second_timer);
+  }
+}
+
 /** Number of libevent errors in the last second: we die if we get too many. */
 static int n_libevent_errors = 0;
 /** Last time that second_elapsed_callback was called. */
@@ -2824,17 +2854,7 @@ do_main_loop(void)
   }
 
   /* set up once-a-second callback. */
-  if (! second_timer) {
-    struct timeval one_second;
-    one_second.tv_sec = 1;
-    one_second.tv_usec = 0;
-
-    second_timer = periodic_timer_new(tor_libevent_get_base(),
-                                      &one_second,
-                                      second_elapsed_callback,
-                                      NULL);
-    tor_assert(second_timer);
-  }
+  reschedule_per_second_timer();
 
 #ifdef HAVE_SYSTEMD_209
   uint64_t watchdog_delay;
