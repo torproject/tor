@@ -253,8 +253,37 @@ periodic_timer_new(struct event_base *base,
   }
   timer->cb = cb;
   timer->data = data;
-  event_add(timer->ev, (struct timeval *)tv); /*drop const for old libevent*/
+  periodic_timer_launch(timer, tv);
   return timer;
+}
+
+/**
+ * Launch the timer <b>timer</b> to run at <b>tv</b> from now, and every
+ * <b>tv</b> thereafter.
+ *
+ * If the timer is already enabled, this function does nothing.
+ */
+void
+periodic_timer_launch(periodic_timer_t *timer, const struct timeval *tv)
+{
+  tor_assert(timer);
+  if (event_pending(timer->ev, EV_TIMEOUT, NULL))
+    return;
+  event_add(timer->ev, tv);
+}
+
+/**
+ * Disable the provided <b>timer</b>, but do not free it.
+ *
+ * You can reenable the same timer later with periodic_timer_launch.
+ *
+ * If the timer is already disabled, this function does nothing.
+ */
+void
+periodic_timer_disable(periodic_timer_t *timer)
+{
+  tor_assert(timer);
+  event_del(timer->ev);
 }
 
 /** Stop and free a periodic timer */

@@ -1762,13 +1762,13 @@ connection_connect_sockaddr,(connection_t *conn,
   tor_assert(sa);
   tor_assert(socket_error);
 
-  if (get_options()->DisableNetwork) {
-    /* We should never even try to connect anyplace if DisableNetwork is set.
-     * Warn if we do, and refuse to make the connection.
+  if (net_is_completely_disabled()) {
+    /* We should never even try to connect anyplace if the network is
+     * completely shut off.
      *
-     * We only check DisableNetwork here, not we_are_hibernating(), since
-     * we'll still try to fulfill client requests sometimes in the latter case
-     * (if it is soft hibernation) */
+     * (We don't check net_is_disabled() here, since we still sometimes
+     * want to open connections when we're in soft hibernation.)
+     */
     static ratelim_t disablenet_violated = RATELIM_INIT(30*60);
     *socket_error = SOCK_ERRNO(ENETUNREACH);
     log_fn_ratelim(&disablenet_violated, LOG_WARN, LD_BUG,

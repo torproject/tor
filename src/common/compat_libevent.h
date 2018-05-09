@@ -31,6 +31,8 @@ periodic_timer_t *periodic_timer_new(struct event_base *base,
              void (*cb)(periodic_timer_t *timer, void *data),
              void *data);
 void periodic_timer_free_(periodic_timer_t *);
+void periodic_timer_launch(periodic_timer_t *, const struct timeval *tv);
+void periodic_timer_disable(periodic_timer_t *);
 #define periodic_timer_free(t) \
   FREE_AND_NULL(periodic_timer_t, periodic_timer_free_, (t))
 

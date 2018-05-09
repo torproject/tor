@@ -1449,9 +1449,9 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     consider_hibernation(time(NULL));
 
     /* Launch the listeners.  (We do this before we setuid, so we can bind to
-     * ports under 1024.)  We don't want to rebind if we're hibernating. If
-     * networking is disabled, this will close all but the control listeners,
-     * but disable those. */
+     * ports under 1024.)  We don't want to rebind if we're hibernating or
+     * shutting down. If networking is disabled, this will close all but the
+     * control listeners, but disable those. */
     if (!we_are_hibernating()) {
       if (retry_all_listeners(replaced_listeners, new_listeners,
                               options->DisableNetwork) < 0) {
@@ -2000,6 +2000,9 @@ options_act(const or_options_t *old_options)
     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
     finish_daemon(options->DataDirectory);
   }
+
+  /* See whether we need to enable/disable our once-a-second timer. */
+  reschedule_per_second_timer();
 
   /* We want to reinit keys as needed before we do much of anything else:
      keys are important, and other things can depend on them. */

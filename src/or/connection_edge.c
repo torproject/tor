@@ -3537,6 +3537,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   n_stream->base_.state = EXIT_CONN_STATE_RESOLVEFAILED;
   /* default to failed, change in dns_resolve if it turns out not to fail */
 
+  /* If we're hibernating or shutting down, we refuse to open new streams. */
   if (we_are_hibernating()) {
     relay_send_end_cell_from_edge(rh.stream_id, circ,
                                   END_STREAM_REASON_HIBERNATING, NULL);

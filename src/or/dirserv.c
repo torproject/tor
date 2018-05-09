@@ -955,7 +955,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
   tor_assert(node);
 
   if (router_is_me(router)) {
-    /* We always know if we are down ourselves. */
+    /* We always know if we are shutting down or hibernating ourselves. */
     answer = ! we_are_hibernating();
   } else if (router->is_hibernating &&
              (router->cache_info.published_on +
