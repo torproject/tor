@@ -152,62 +152,6 @@ static token_rule_t hs_desc_intro_point_v3_token_table[] = {
   END_OF_TABLE
 };
 
-/* Free the content of the plaintext section of a descriptor. */
-STATIC void
-desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc)
-{
-  if (!desc) {
-    return;
-  }
-
-  if (desc->superencrypted_blob) {
-    tor_free(desc->superencrypted_blob);
-  }
-  tor_cert_free(desc->signing_key_cert);
-
-  memwipe(desc, 0, sizeof(*desc));
-}
-
-/* Free the content of the superencrypted section of a descriptor. */
-static void
-desc_superencrypted_data_free_contents(hs_desc_superencrypted_data_t *desc)
-{
-  if (!desc) {
-    return;
-  }
-
-  if (desc->encrypted_blob) {
-    tor_free(desc->encrypted_blob);
-  }
-  if (desc->clients) {
-    SMARTLIST_FOREACH(desc->clients, hs_desc_authorized_client_t *, client,
-                      hs_desc_authorized_client_free(client));
-    smartlist_free(desc->clients);
-  }
-
-  memwipe(desc, 0, sizeof(*desc));
-}
-
-/* Free the content of the encrypted section of a descriptor. */
-static void
-desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
-{
-  if (!desc) {
-    return;
-  }
-
-  if (desc->intro_auth_types) {
-    SMARTLIST_FOREACH(desc->intro_auth_types, char *, a, tor_free(a));
-    smartlist_free(desc->intro_auth_types);
-  }
-  if (desc->intro_points) {
-    SMARTLIST_FOREACH(desc->intro_points, hs_desc_intro_point_t *, ip,
-                      hs_desc_intro_point_free(ip));
-    smartlist_free(desc->intro_points);
-  }
-  memwipe(desc, 0, sizeof(*desc));
-}
-
 /* Using a key, salt and encrypted payload, build a MAC and put it in mac_out.
  * We use SHA3-256 for the MAC computation.
  * This function can't fail. */
@@ -2284,7 +2228,7 @@ desc_decode_superencrypted_v3(const hs_descriptor_t *desc,
 
  err:
   tor_assert(ret < 0);
-  desc_superencrypted_data_free_contents(desc_superencrypted_out);
+  hs_desc_superencrypted_data_free_contents(desc_superencrypted_out);
 
  done:
   if (tokens) {
@@ -2384,7 +2328,7 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
 
  err:
   tor_assert(ret < 0);
-  desc_encrypted_data_free_contents(desc_encrypted_out);
+  hs_desc_encrypted_data_free_contents(desc_encrypted_out);
 
  done:
   if (tokens) {
@@ -2719,11 +2663,67 @@ hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
   return ret;
 }
 
+/* Free the content of the plaintext section of a descriptor. */
+void
+hs_desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc)
+{
+  if (!desc) {
+    return;
+  }
+
+  if (desc->superencrypted_blob) {
+    tor_free(desc->superencrypted_blob);
+  }
+  tor_cert_free(desc->signing_key_cert);
+
+  memwipe(desc, 0, sizeof(*desc));
+}
+
+/* Free the content of the superencrypted section of a descriptor. */
+void
+hs_desc_superencrypted_data_free_contents(hs_desc_superencrypted_data_t *desc)
+{
+  if (!desc) {
+    return;
+  }
+
+  if (desc->encrypted_blob) {
+    tor_free(desc->encrypted_blob);
+  }
+  if (desc->clients) {
+    SMARTLIST_FOREACH(desc->clients, hs_desc_authorized_client_t *, client,
+                      hs_desc_authorized_client_free(client));
+    smartlist_free(desc->clients);
+  }
+
+  memwipe(desc, 0, sizeof(*desc));
+}
+
+/* Free the content of the encrypted section of a descriptor. */
+void
+hs_desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
+{
+  if (!desc) {
+    return;
+  }
+
+  if (desc->intro_auth_types) {
+    SMARTLIST_FOREACH(desc->intro_auth_types, char *, a, tor_free(a));
+    smartlist_free(desc->intro_auth_types);
+  }
+  if (desc->intro_points) {
+    SMARTLIST_FOREACH(desc->intro_points, hs_desc_intro_point_t *, ip,
+                      hs_desc_intro_point_free(ip));
+    smartlist_free(desc->intro_points);
+  }
+  memwipe(desc, 0, sizeof(*desc));
+}
+
 /* Free the descriptor plaintext data object. */
 void
 hs_desc_plaintext_data_free_(hs_desc_plaintext_data_t *desc)
 {
-  desc_plaintext_data_free_contents(desc);
+  hs_desc_plaintext_data_free_contents(desc);
   tor_free(desc);
 }
 
@@ -2731,7 +2731,7 @@ hs_desc_plaintext_data_free_(hs_desc_plaintext_data_t *desc)
 void
 hs_desc_superencrypted_data_free_(hs_desc_superencrypted_data_t *desc)
 {
-  desc_superencrypted_data_free_contents(desc);
+  hs_desc_superencrypted_data_free_contents(desc);
   tor_free(desc);
 }
 
@@ -2739,7 +2739,7 @@ hs_desc_superencrypted_data_free_(hs_desc_superencrypted_data_t *desc)
 void
 hs_desc_encrypted_data_free_(hs_desc_encrypted_data_t *desc)
 {
-  desc_encrypted_data_free_contents(desc);
+  hs_desc_encrypted_data_free_contents(desc);
   tor_free(desc);
 }
 
@@ -2751,9 +2751,9 @@ hs_descriptor_free_(hs_descriptor_t *desc)
     return;
   }
 
-  desc_plaintext_data_free_contents(&desc->plaintext_data);
-  desc_superencrypted_data_free_contents(&desc->superencrypted_data);
-  desc_encrypted_data_free_contents(&desc->encrypted_data);
+  hs_desc_plaintext_data_free_contents(&desc->plaintext_data);
+  hs_desc_superencrypted_data_free_contents(&desc->superencrypted_data);
+  hs_desc_encrypted_data_free_contents(&desc->encrypted_data);
   tor_free(desc);
 }
 
