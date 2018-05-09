@@ -1,0 +1,4 @@
+  o Minor feature (unit tests):
+    - Test complete bandwidth measurements files and test that incomplete lines
+      only give warnings when the end of the header has not been
+      detected. Fixes bug 25947; bugfix on 0.2.2.1-alpha
