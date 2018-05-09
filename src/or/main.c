@@ -2538,7 +2538,7 @@ update_current_time(time_t now)
       monotime_coarse_diff_msec32(&last_updated,
                                   &current_second_last_changed);
     const int monotime_sec_passed = monotime_msec_passed / 1000;
-    const int discrepency = monotime_sec_passed - (int)seconds_elapsed;
+    const int discrepancy = monotime_sec_passed - (int)seconds_elapsed;
     /* If the monotonic clock deviates from time(NULL), we have a couple of
      * possibilities.  On some systems, this means we have been suspended or
      * sleeping.  Everywhere, it can mean that the wall-clock time has
@@ -2548,7 +2548,7 @@ update_current_time(time_t now)
      * time, we've probably just been idle for a while, with no events firing.
      * we tolerate much more of that.
      */
-    const bool clock_jumped = abs(discrepency) > 2;
+    const bool clock_jumped = abs(discrepancy) > 2;
 
     if (clock_jumped || seconds_elapsed >= NUM_IDLE_SECONDS_BEFORE_WARN) {
       circuit_note_clock_jumped(seconds_elapsed, ! clock_jumped);
