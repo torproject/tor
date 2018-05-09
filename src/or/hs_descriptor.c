@@ -2625,7 +2625,7 @@ hs_desc_get_start_of_sig(const char *encoded_desc)
   /* We do look at newline + signature string so we make sure the siganture
    * starts right after the encrypted MESSAGE. */
   start_of_sig = tor_memstr(encoded_desc, strlen(encoded_desc),
-                            "\n" str_signature);
+                            "\n" str_signature " ");
   if (!start_of_sig) {
     return NULL;
   }
