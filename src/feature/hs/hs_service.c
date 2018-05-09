@@ -107,6 +107,8 @@ static int consider_republishing_hs_descriptors = 0;
 static int load_client_keys(hs_service_t *service);
 static void set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc,
                                             time_t now, bool is_current);
+static int build_service_desc_superencrypted(const hs_service_t *service,
+                                             hs_service_descriptor_t *desc);
 static void move_descriptors(hs_service_t *src, hs_service_t *dst);
 static int service_encode_descriptor(const hs_service_t *service,
                                      const hs_service_descriptor_t *desc,
@@ -1301,8 +1303,87 @@ service_descriptor_new(void)
   return sdesc;
 }
 
-/* Move descriptor(s) from the src service to the dst service. We do this
- * during SIGHUP when we re-create our hidden services. */
+/* If two authorized clients are equal, return 1. Otherwise, return 0. */
+static int
+service_authorized_client_equal(const hs_service_authorized_client_t *client1,
+                                const hs_service_authorized_client_t *client2)
+{
+  tor_assert(client1);
+  tor_assert(client2);
+
+  /* If the client public keys are not equal, the whole structs are
+   * not equal. */
+  if (!tor_memeq(&client1->client_pk,
+                 &client2->client_pk,
+                 sizeof(curve25519_public_key_t))) {
+    return 0;
+  }
+  return 1;
+}
+
+/* If the list of hs_service_authorized_client_t's is different between
+ * src and dst, return 1. Otherwise, return 0. */
+static int
+service_authorized_client_config_equal(const hs_service_config_t *config1,
+                                       const hs_service_config_t *config2)
+{
+  int ret = 0;
+  int *idx_matched = NULL;
+
+  tor_assert(config1);
+  tor_assert(config2);
+  tor_assert(config1->clients);
+  tor_assert(config2->clients);
+
+  /* If the number of clients is different, it is obvious that the list
+   * changes. */
+  if (smartlist_len(config1->clients) != smartlist_len(config2->clients)) {
+    goto done;
+  }
+
+  /* An array that has the same length as the list of clients in config2.
+   * If the client in config2 is matched with some client in config1, the
+   * value of this array at the corresponding index will be 1. Otherwise,
+   * it will be 0. */
+  idx_matched =
+    tor_malloc_zero(sizeof(*idx_matched) * smartlist_len(config2->clients));
+
+  SMARTLIST_FOREACH_BEGIN(config1->clients,
+                          const hs_service_authorized_client_t *,
+                          client1) {
+    int matched = 0;
+    SMARTLIST_FOREACH_BEGIN(config2->clients,
+                            const hs_service_authorized_client_t *,
+                            client2) {
+      /* If both clients are equal and client2 is not matched yet, it means
+       * that we can match client1 to client2. */
+      if (service_authorized_client_equal(client1, client2)
+          && !idx_matched[client2_sl_idx]) {
+        idx_matched[client2_sl_idx] = 1;
+        matched = 1;
+        break;
+      }
+    } SMARTLIST_FOREACH_END(client2);
+
+    /* If client1 is not in config2->clients, it means that client lists of
+     * config1 and config2 are not equal. */
+    if (!matched) {
+      ret = 0;
+      goto done;
+    }
+  } SMARTLIST_FOREACH_END(client1);
+
+  /* Success. */
+  ret = 1;
+
+ done:
+  tor_free(idx_matched);
+  return ret;
+}
+
+/* Move descriptor(s) from the src service to the dst service and modify their
+ * content if necessary. We do this during SIGHUP when we re-create our
+ * hidden services. */
 static void
 move_descriptors(hs_service_t *src, hs_service_t *dst)
 {
@@ -1326,6 +1407,37 @@ move_descriptors(hs_service_t *src, hs_service_t *dst)
     dst->desc_next = src->desc_next;
     src->desc_next = NULL;
   }
+
+  /* If the client authorization changes, we must rebuild the superencrypted
+   * section and republish the descriptors. */
+  int client_auth_changed =
+    !service_authorized_client_config_equal(&src->config, &dst->config);
+  if (client_auth_changed && dst->desc_current) {
+    /* We have to clear the superencrypted content first. */
+    hs_desc_superencrypted_data_free_contents(
+                                &dst->desc_current->desc->superencrypted_data);
+    if (build_service_desc_superencrypted(dst, dst->desc_current) < 0) {
+      goto err;
+    }
+    service_desc_schedule_upload(dst->desc_current, time(NULL), 1);
+  }
+  if (client_auth_changed && dst->desc_next) {
+    /* We have to clear the superencrypted content first. */
+    hs_desc_superencrypted_data_free_contents(
+                                &dst->desc_next->desc->superencrypted_data);
+    if (build_service_desc_superencrypted(dst, dst->desc_next) < 0) {
+      goto err;
+    }
+    service_desc_schedule_upload(dst->desc_next, time(NULL), 1);
+  }
+
+  return;
+
+ err:
+  /* If there is an error, free all descriptors to make it clean and generate
+   * them later. */
+  service_descriptor_free(dst->desc_current);
+  service_descriptor_free(dst->desc_next);
 }
 
 /* From the given service, remove all expired failing intro points for each
