@@ -86,8 +86,6 @@ helper_create_origin_circuit(int purpose, int flags)
   circ->cpath->package_window = circuit_initial_package_window();
   circ->cpath->deliver_window = CIRCWINDOW_START;
   circ->cpath->prev = circ->cpath;
-  /* Random nonce. */
-  crypto_rand(circ->cpath->prev->rend_circ_nonce, DIGEST_LEN);
   /* Create a default HS identifier. */
   circ->hs_ident = tor_malloc_zero(sizeof(hs_ident_circuit_t));
 
