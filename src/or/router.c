@@ -1599,13 +1599,22 @@ router_perform_bandwidth_test(int num_circs, time_t now)
   }
 }
 
-/** Return true iff our network is in some sense disabled: either we're
- * hibernating, entering hibernation, or the network is turned off with
- * DisableNetwork. */
+/** Return true iff our network is in some sense disabled or shutting down:
+ * either we're hibernating, entering hibernation, or the network is turned
+ * off with DisableNetwork. */
 int
 net_is_disabled(void)
 {
   return get_options()->DisableNetwork || we_are_hibernating();
+}
+
+/** Return true iff our network is in some sense "completely disabled" either
+ * we're fully hibernating or the network is turned off with
+ * DisableNetwork. */
+int
+net_is_completely_disabled(void)
+{
+  return get_options()->DisableNetwork || we_are_fully_hibernating();
 }
 
 /** Return true iff we believe ourselves to be an authoritative

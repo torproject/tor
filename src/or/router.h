@@ -53,6 +53,7 @@ void router_dirport_found_reachable(void);
 void router_perform_bandwidth_test(int num_circs, time_t now);
 
 int net_is_disabled(void);
+int net_is_completely_disabled(void);
 
 int authdir_mode(const or_options_t *options);
 int authdir_mode_handles_descs(const or_options_t *options, int purpose);
