@@ -2533,7 +2533,7 @@ update_current_time(time_t now)
     // moving back in time is always a bad sign.
     circuit_note_clock_jumped(seconds_elapsed, false);
   } else if (seconds_elapsed >= NUM_JUMPED_SECONDS_BEFORE_WARN) {
-    /* Compare the monotonic clock to the */
+    /* Compare the monotonic clock to the result of time(). */
     const int32_t monotime_msec_passed =
       monotime_coarse_diff_msec32(&last_updated,
                                   &current_second_last_changed);
