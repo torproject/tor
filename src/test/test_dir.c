@@ -1368,6 +1368,70 @@ test_dir_measured_bw_kb(void *arg)
   return;
 }
 
+/* Test dirserv_read_measured_bandwidths */
+static void
+test_dir_dirserv_read_measured_bandwidths(void *arg)
+{
+  (void)arg;
+  char *fname=NULL;
+  time_t timestamp=time(NULL);
+  char *content = NULL;
+  const char *torflow_relay_lines=
+    "node_id=$557365204145532d32353620696e73746561642e bw=1024 "
+    "nick=Test measured_at=1523911725 updated_at=1523911725 "
+    "pid_error=4.11374090719 pid_error_sum=4.11374090719 "
+    "pid_bw=57136645 pid_delta=2.12168374577 circ_fail=0.2 "
+    "scanner=/filepath\n";
+  const char *v110_header_lines=
+    "version=1.1.0\n"
+    "software=sbws\n"
+    "software_version=0.1.0\n"
+    "generator_started=2018-05-08T16:13:25\n"
+    "earliest_bandwidth=2018-05-08T16:13:26\n"
+    "====\n";
+
+  fname = tor_strdup(get_fname("V3BandwidthsFile"));
+  /* Test Torflow file only with timestamp*/
+  tor_asprintf(&content, "%ld", timestamp);
+  write_str_to_file(fname, content, 0);
+  log_debug(LD_DIRSERV, "Bandwidth list file only with timestamp without "
+            "newline.");
+  tt_int_op(-1, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+  /* Test Torflow file with timestamp followed by '\n' */
+  tor_asprintf(&content, "%ld\n", timestamp);
+  write_str_to_file(fname, content, 0);
+  log_debug(LD_DIRSERV, "Bandwidth list file only with timestamp.");
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+  /* Test Torflow */
+  tor_asprintf(&content, "%ld\n%s", timestamp, torflow_relay_lines);
+  write_str_to_file(fname, content, 0);
+  log_debug(LD_DIRSERV, "Bandwidth list file with timestamp and "
+            "Torflow RelayLine.");
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+  /* Test Torflow with additional headers */
+  tor_asprintf(&content, "%ld\n%s%s", timestamp, v110_header_lines, 
+               torflow_relay_lines);
+  write_str_to_file(fname, content, 0);
+  log_debug(LD_DIRSERV, "Bandwidth list file with additional headers and "
+            "Torflow RelayLine.");
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+  /* Test Torflow with additional headers afer RelayLine*/
+  tor_asprintf(&content, "%ld\n%s%s", timestamp, torflow_relay_lines,
+               v110_header_lines);
+  write_str_to_file(fname, content, 0);
+  /* Test Torflow with additional headers afer RelayLine and then again
+   * RelayLine */
+  tor_asprintf(&content, "%ld\n%s%s%s", timestamp, torflow_relay_lines,
+               v110_header_lines, torflow_relay_lines);
+  write_str_to_file(fname, content, 0);
+  log_debug(LD_DIRSERV, "Bandwidth list file with Torflow RelayLine, "
+            "then additional headers, then Torflow RelayLine again.");
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+
+ done:
+  tor_free(fname);
+}
+
 #define MBWC_INIT_TIME 1000
 
 /** Do the measured bandwidth cache unit test */
@@ -5460,6 +5524,7 @@ struct testcase_t dir_tests[] = {
   DIR(split_fps, 0),
   DIR_LEGACY(measured_bw_kb),
   DIR_LEGACY(measured_bw_kb_cache),
+  DIR_LEGACY(dirserv_read_measured_bandwidths),
   DIR_LEGACY(param_voting),
   DIR(param_voting_lookup, 0),
   DIR_LEGACY(v3_networkstatus),
