@@ -1,0 +1,20 @@
+* Test read Bandwidth List file v1.1.0
+  * sbws generated file with timestamp, additional header and RelayLine
+* Allow additional headers in bandwidth list files.
+* Also add tests parsing bandwidth lines, where:
+  * header_ended=0:
+   * an incomplete line missing node_id: fail without warning
+   * an incomplete line missing bw: fail without warning
+   * an incomplete line missing node_id and bw: fail without warning
+   * a complete line with node_id and bw: success
+  * header_ended=1:
+   * an incomplete line missing node_id: fail with warning
+   * an incomplete line missing bw: fail with warning
+   * an incomplete line missing node_id and bw: fail with warning
+   * a complete line with node_id and bw: success
+* Test read Bandwidth List file v1.0.0
+  * Torflow with only timestamp without newline
+  * Torflow with only timestamp with newline
+  * Torflow with timestamp and RelayLine
+  * Torflow with timestamp, additional headers and RelayLine
+  * Torflow with timestamp, additional headers, RelayLine and additional headers

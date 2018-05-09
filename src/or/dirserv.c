@@ -2633,7 +2633,8 @@ dirserv_read_guardfraction_file(const char *fname,
  * or 0 on success.
  */
 STATIC int
-measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
+measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line,
+                       int header_ended)
 {
   char *line = tor_strdup(orig_line);
   char *cp = line;
@@ -2701,6 +2702,14 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
   if (got_bw && got_node_id) {
     tor_free(line);
     return 0;
+  } else if (header_ended == 0) {
+    /* To allow additional header lines, do not warn if there was no valid
+     * bandwidth line. It still must return -1, because it was not a successful
+     * bandwith line */
+    log_debug(LD_DIRSERV, "Missing bw or node_id in bandwidth file line: %s",
+             escaped(orig_line));
+    tor_free(line);
+    return -1;
   } else {
     log_warn(LD_DIRSERV, "Incomplete line in bandwidth file: %s",
              escaped(orig_line));
@@ -2749,6 +2758,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
   int applied_lines = 0;
   time_t file_time, now;
   int ok;
+  int header_ended = 0;
 
   /* Initialise line, so that we can't possibly run off the end. */
   memset(line, 0, sizeof(line));
@@ -2796,7 +2806,10 @@ dirserv_read_measured_bandwidths(const char *from_file,
   while (!feof(fp)) {
     measured_bw_line_t parsed_line;
     if (fgets(line, sizeof(line), fp) && strlen(line)) {
-      if (measured_bw_line_parse(&parsed_line, line) != -1) {
+      if (measured_bw_line_parse(&parsed_line, line, header_ended) != -1) {
+        /* Only when there is a successful bandwidth line, the result will be
+         * different to -1 */
+        header_ended = 1;
         /* Also cache the line for dirserv_get_bandwidth_for_router() */
         dirserv_cache_measured_bw(&parsed_line, file_time);
         if (measured_bw_line_apply(&parsed_line, routerstatuses) > 0)
