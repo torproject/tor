@@ -1,0 +1,13 @@
+  o Minor feature (unit tests):
+    - Test a complete sbws file. Fixes 25947 and 25960
+  o Minor feature (unit tests):
+    - Test that incomplete lines only give warnings when the end of the header
+      has not been detected. Fixes 25960.
+  o Minor feature (additional headers bandwith measurement files):
+    - Stop warning about incomplete bw lines before the first complete bw line
+      has been found, so that additional header lines can be ignored. 
+      Fixes 25960; bugfix on 0.2.2.1-alpha
+  o Minor feature (unit tests):
+    - Test a whole Torflow file, until now only the lines containing the 
+      measurements where tested, but not the header. 
+      Fixes bug 25947; bugfix on 0.2.2.1-alpha
