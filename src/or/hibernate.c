@@ -52,6 +52,10 @@ static time_t hibernate_end_time = 0;
  * we aren't shutting down. */
 static time_t shutdown_time = 0;
 
+/** A timed event that we'll use when it's time to wake up from
+ * hibernation. */
+static mainloop_event_t *wakeup_event = NULL;
+
 /** Possible accounting periods. */
 typedef enum {
   UNIT_MONTH=1, UNIT_WEEK=2, UNIT_DAY=3,
@@ -131,6 +135,8 @@ static time_t start_of_accounting_period_after(time_t now);
 static time_t start_of_accounting_period_containing(time_t now);
 static void accounting_set_wakeup_time(void);
 static void on_hibernate_state_change(hibernate_state_t prev_state);
+static void hibernate_schedule_wakeup_event(time_t now, time_t end_time);
+static void wakeup_event_callback(mainloop_event_t *ev, void *data);
 
 /**
  * Return the human-readable name for the hibernation state <b>state</b>
@@ -936,6 +942,63 @@ hibernate_go_dormant(time_t now)
 
   or_state_mark_dirty(get_or_state(),
                       get_options()->AvoidDiskWrites ? now+600 : 0);
+
+  hibernate_schedule_wakeup_event(now, hibernate_end_time);
+}
+
+/**
+ * Schedule a mainloop event at <b>end_time</b> to wake up from a dormant
+ * state.  We can't rely on this happening from second_elapsed_callback,
+ * since second_elapsed_callback will be shut down when we're dormant.
+ *
+ * (Note that We might immediately go back to sleep after we set the next
+ * wakeup time.)
+ */
+static void
+hibernate_schedule_wakeup_event(time_t now, time_t end_time)
+{
+  struct timeval delay = { 0, 0 };
+
+  if (now >= end_time) {
+    // In these cases we always wait at least a second, to avoid running
+    // the callback in a tight loop.
+    delay.tv_sec = 1;
+  } else {
+    delay.tv_sec = (end_time - now);
+  }
+
+  if (!wakeup_event) {
+    wakeup_event = mainloop_event_postloop_new(wakeup_event_callback, NULL);
+  }
+
+  mainloop_event_schedule(wakeup_event, &delay);
+}
+
+/**
+ * Called at the end of the interval, or at the wakeup time of the current
+ * interval, to exit the dormant state.
+ **/
+static void
+wakeup_event_callback(mainloop_event_t *ev, void *data)
+{
+  (void) ev;
+  (void) data;
+
+  const time_t now = time(NULL);
+  accounting_run_housekeeping(now);
+  consider_hibernation(now);
+  if (hibernate_state != HIBERNATE_STATE_DORMANT) {
+    /* We woke up, so everything's great here */
+    return;
+  }
+
+  /* We're still dormant. */
+  if (now < interval_wakeup_time)
+    hibernate_end_time = interval_wakeup_time;
+  else
+    hibernate_end_time = interval_end_time;
+
+  hibernate_schedule_wakeup_event(now, hibernate_end_time);
 }
 
 /** Called when hibernate_end_time has arrived. */
@@ -1124,6 +1187,16 @@ on_hibernate_state_change(hibernate_state_t prev_state)
   if (prev_state != HIBERNATE_STATE_INITIAL) {
     rescan_periodic_events(get_options());
   }
+}
+
+/** Free all resources held by the accounting module */
+void
+accounting_free_all(void)
+{
+  mainloop_event_free(wakeup_event);
+  hibernate_state = HIBERNATE_STATE_INITIAL;
+  hibernate_end_time = 0;
+  shutdown_time = 0;
 }
 
 #ifdef TOR_UNIT_TESTS
