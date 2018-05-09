@@ -980,8 +980,10 @@ test_virtaddrmap_persist(void *data)
   tt_assert(!strcmpend(a, ".virtual"));
 
   // mock crypto_rand to repeat the same result twice; make sure we get
-  // different outcomes.  (Because even though it's only 2^40 for this
-  // to happen, 2^40 isn't all that low.)
+  // different outcomes.  (Because even though the odds for receiving the
+  // same 80-bit address twice is only 1/2^40, it could still happen for
+  // some user -- but running our test through 2^40 iterations isn't
+  // reasonable.)
   canned_data = "1234567890" // the first call returns this.
                 "1234567890" // the second call returns this.
                 "abcdefghij"; // the third call returns this.
