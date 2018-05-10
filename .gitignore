@@ -46,6 +46,8 @@ uptime-*.json
 /build-stamp
 /compile
 /configure
+/directories.h
+/directories.sh
 /Doxyfile
 /orconfig.h
 /orconfig.h.in
