@@ -613,6 +613,10 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
       tor_free(commands);
       smartlist_free(commands_list);
     }
+
+    /* Let's assume we're well-behaved: Anything that we decide to send is
+     * valid, delivered data. */
+    circuit_sent_valid_data(origin_circ, rh.length);
   }
 
   if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer,
@@ -741,6 +745,9 @@ connection_ap_process_end_not_open(
       pathbias_mark_use_success(circ);
     }
   }
+
+  /* This end cell is now valid. */
+  circuit_read_valid_data(circ, rh->length);
 
   if (rh->length == 0) {
     reason = END_STREAM_REASON_MISC;
@@ -1232,6 +1239,12 @@ connection_edge_process_resolved_cell(edge_connection_t *conn,
     }
   }
 
+  /* This is valid data at this point. Count it */
+  if (conn->on_circuit && CIRCUIT_IS_ORIGIN(conn->on_circuit)) {
+    circuit_read_valid_data(TO_ORIGIN_CIRCUIT(conn->on_circuit),
+                            rh->length);
+  }
+
   connection_ap_handshake_socks_got_resolved_cell(entry_conn,
                                                   errcode,
                                                   resolved_addresses);
@@ -1335,6 +1348,9 @@ connection_edge_process_relay_cell_not_open(
     if (!entry_conn->socks_request->has_finished) {
       connection_ap_handshake_socks_reply(entry_conn, NULL, 0, 0);
     }
+
+    /* This is valid data at this point. Count it */
+    circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
 
     /* Was it a linked dir conn? If so, a dir request just started to
      * fetch something; this could be a bootstrap status milestone. */
@@ -1498,7 +1514,6 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         circ->dirreq_id = ++next_id;
         TO_OR_CIRCUIT(circ)->p_chan->dirreq_id = circ->dirreq_id;
       }
-
       return connection_exit_begin_conn(cell, circ);
     case RELAY_COMMAND_DATA:
       ++stats_n_data_cells_received;
@@ -1533,6 +1548,10 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "(relay data) conn deliver_window below 0. Killing.");
         return -END_CIRC_REASON_TORPROTOCOL;
+      }
+      /* Total all valid application bytes delivered */
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
       }
 
       stats_n_data_bytes_received += rh.length;
@@ -1586,6 +1605,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         /* only mark it if not already marked. it's possible to
          * get the 'end' right around when the client hangs up on us. */
         connection_mark_and_flush(TO_CONN(conn));
+
+        /* Total all valid application bytes delivered */
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
+        }
       }
       return 0;
     case RELAY_COMMAND_EXTEND:
@@ -1650,6 +1674,10 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       if ((reason=circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ)))<0) {
         log_info(domain,"circuit_send_next_onion_skin() failed.");
         return reason;
+      }
+      /* Total all valid bytes delivered. */
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
       }
       return 0;
     case RELAY_COMMAND_TRUNCATE:
@@ -1716,6 +1744,16 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
           log_debug(LD_APP,"circ-level sendme at origin, packagewindow %d.",
                     layer_hint->package_window);
           circuit_resume_edge_reading(circ, layer_hint);
+
+          /* We count circuit-level sendme's as valid delivered data because
+           * they are rate limited. Note that we cannot count stream
+           * sendme's because the other end could send as many as they like.
+           */
+          if (CIRCUIT_IS_ORIGIN(circ)) {
+            circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ),
+                                    rh.length);
+          }
+
         } else {
           if (circ->package_window + CIRCWINDOW_INCREMENT >
                 CIRCWINDOW_START_MAX) {

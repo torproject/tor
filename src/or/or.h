@@ -3260,15 +3260,35 @@ typedef struct origin_circuit_t {
    * associated with this circuit. */
   edge_connection_t *p_streams;
 
-  /** Bytes read from any attached stream since last call to
+  /** Bytes read on this circuit since last call to
    * control_event_circ_bandwidth_used().  Only used if we're configured
    * to emit CIRC_BW events. */
   uint32_t n_read_circ_bw;
 
-  /** Bytes written to any attached stream since last call to
+  /** Bytes written to on this circuit since last call to
    * control_event_circ_bandwidth_used().  Only used if we're configured
    * to emit CIRC_BW events. */
   uint32_t n_written_circ_bw;
+
+  /** Total known-valid relay cell bytes since last call to
+   * control_event_circ_bandwidth_used().  Only used if we're configured
+   * to emit CIRC_BW events. */
+  uint32_t n_delivered_read_circ_bw;
+
+  /** Total written relay cell bytes since last call to
+   * control_event_circ_bandwidth_used().  Only used if we're configured
+   * to emit CIRC_BW events. */
+  uint32_t n_delivered_written_circ_bw;
+
+  /** Total overhead data in all known-valid relay data cells since last
+   * call to control_event_circ_bandwidth_used().  Only used if we're
+   * configured to emit CIRC_BW events. */
+  uint32_t n_overhead_read_circ_bw;
+
+  /** Total written overhead data in all relay data cells since last call to
+   * control_event_circ_bandwidth_used().  Only used if we're configured
+   * to emit CIRC_BW events. */
+  uint32_t n_overhead_written_circ_bw;
 
   /** Build state for this circuit. It includes the intended path
    * length, the chosen exit router, rendezvous information, etc.

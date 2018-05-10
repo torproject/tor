@@ -1,0 +1,6 @@
+  o Minor features (control port):
+    - Introduce new fields to the CIRC_BW event. There are two new fields in
+      each of the read and written directions. The DELIVERED fields report the
+      total valid data on the circuit, as measured by the payload sizes of
+      verified and error-checked relay command cells. The OVERHEAD fields
+      report the total unused bytes in each of these cells. Closes ticket 25903.

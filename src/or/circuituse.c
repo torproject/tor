@@ -3106,3 +3106,41 @@ mark_circuit_unusable_for_new_conns(origin_circuit_t *circ)
   circ->unusable_for_new_conns = 1;
 }
 
+/**
+ * Add relay_body_len and RELAY_PAYLOAD_SIZE-relay_body_len to
+ * the valid delivered written fields and the overhead field,
+ * respectively.
+ */
+void
+circuit_sent_valid_data(origin_circuit_t *circ, uint16_t relay_body_len)
+{
+  if (!circ) return;
+
+  tor_assert_nonfatal(relay_body_len <= RELAY_PAYLOAD_SIZE);
+
+  circ->n_delivered_written_circ_bw =
+      tor_add_u32_nowrap(circ->n_delivered_written_circ_bw, relay_body_len);
+  circ->n_overhead_written_circ_bw =
+      tor_add_u32_nowrap(circ->n_overhead_written_circ_bw,
+                         RELAY_PAYLOAD_SIZE-relay_body_len);
+}
+
+/**
+ * Add relay_body_len and RELAY_PAYLOAD_SIZE-relay_body_len to
+ * the valid delivered read field and the overhead field,
+ * respectively.
+ */
+void
+circuit_read_valid_data(origin_circuit_t *circ, uint16_t relay_body_len)
+{
+  if (!circ) return;
+
+  tor_assert_nonfatal(relay_body_len <= RELAY_PAYLOAD_SIZE);
+
+  circ->n_delivered_read_circ_bw =
+      tor_add_u32_nowrap(circ->n_delivered_read_circ_bw, relay_body_len);
+  circ->n_overhead_read_circ_bw =
+      tor_add_u32_nowrap(circ->n_overhead_read_circ_bw,
+                         RELAY_PAYLOAD_SIZE-relay_body_len);
+}
+

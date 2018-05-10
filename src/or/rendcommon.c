@@ -12,6 +12,7 @@
 
 #include "or.h"
 #include "circuitbuild.h"
+#include "circuituse.h"
 #include "config.h"
 #include "control.h"
 #include "crypto_rand.h"
@@ -807,6 +808,11 @@ rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
       break;
     default:
       tor_fragile_assert();
+  }
+
+  if (r == 0 && origin_circ) {
+    /* This was a valid cell. Count it as delivered + overhead. */
+    circuit_read_valid_data(origin_circ, length);
   }
 
   if (r == -2)
