@@ -92,7 +92,7 @@ void router_new_address_suggestion(const char *suggestion,
 int router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port);
 MOCK_DECL(int, router_my_exit_policy_is_reject_star,(void));
 MOCK_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
-MOCK_DECL(int, router_get_my_routerinfo_with_err,(routerinfo_t **ri));
+MOCK_DECL(const routerinfo_t *, router_get_my_routerinfo_with_err,(int *err));
 extrainfo_t *router_get_my_extrainfo(void);
 const char *router_get_my_descriptor(void);
 const char *router_get_descriptor_gen_reason(void);

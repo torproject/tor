@@ -2073,28 +2073,41 @@ router_get_my_routerinfo,(void))
   return desc_routerinfo;
 }
 
-/** Set <b>ri</b> to routerinfo of this OR. Rebuild it from
- * scratch if needed. Return 0 on success or an appropriate
- * TOR_ROUTERINFO_ERROR_* value on failure.
+/** Return routerinfo of this OR. Rebuild it from
+ * scratch if needed. Set <b>*err</b> to 0 on success or to
+ * appropriate TOR_ROUTERINFO_ERROR_* value on failure.
  */
-MOCK_IMPL(int,
-router_get_my_routerinfo_with_err,(routerinfo_t **ri))
+MOCK_IMPL(const routerinfo_t *,
+router_get_my_routerinfo_with_err,(int *err))
 {
-  if (!server_mode(get_options()))
-    return TOR_ROUTERINFO_ERROR_NOT_A_SERVER;
+  if (!server_mode(get_options())) {
+    if (err)
+      *err = TOR_ROUTERINFO_ERROR_NOT_A_SERVER;
 
-  if (!desc_clean_since) {
-    int err = router_rebuild_descriptor(0);
-    if (err < 0)
-      return err;
+    return NULL;
   }
 
-  if (!desc_routerinfo)
-    return TOR_ROUTERINFO_ERROR_NOT_SO_FAST;
+  if (!desc_clean_since) {
+    int rebuild_err = router_rebuild_descriptor(0);
+    if (rebuild_err < 0) {
+      if (err)
+        *err = rebuild_err;
 
-  if (ri)
-    *ri = desc_routerinfo;
-  return 0;
+      return NULL;
+    }
+  }
+
+  if (!desc_routerinfo) {
+    if (err)
+      *err = TOR_ROUTERINFO_ERROR_NOT_SO_FAST;
+
+    return NULL;
+  }
+
+  if (err)
+    *err = 0;
+
+  return desc_routerinfo;
 }
 
 /** OR only: Return a signed server descriptor for this OR, rebuilding a fresh

@@ -1498,16 +1498,20 @@ test_dump_exit_policy_to_string(void *arg)
 static routerinfo_t *mock_desc_routerinfo = NULL;
 static int routerinfo_err;
 
-static int
-mock_router_get_my_routerinfo_with_err(routerinfo_t **ri)
+static const routerinfo_t *
+mock_router_get_my_routerinfo_with_err(int *err)
 {
-  if (routerinfo_err)
-    return routerinfo_err;
+  if (routerinfo_err) {
+    if (err)
+      *err = routerinfo_err;
 
-  if (ri)
-    *ri = mock_desc_routerinfo;
+    return NULL;
+  }
 
-  return 0;
+  if (err)
+    *err = 0;
+
+  return mock_desc_routerinfo;
 }
 
 #define DEFAULT_POLICY_STRING "reject *:*"
