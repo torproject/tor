@@ -1654,7 +1654,6 @@ any_client_port_set(const or_options_t *options)
   return (options->SocksPort_set ||
           options->TransPort_set ||
           options->NATDPort_set ||
-          options->ControlPort_set ||
           options->DNSPort_set ||
           options->HTTPTunnelPort_set);
 }
