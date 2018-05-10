@@ -1497,7 +1497,7 @@ get_my_roles(const or_options_t *options)
 
   int roles = 0;
   int is_bridge = options->BridgeRelay;
-  int is_client = any_client_port_set(options);
+  int is_client = options_any_client_port_set(options);
   int is_relay = server_mode(options);
   int is_dirauth = authdir_mode_v3(options);
   int is_bridgeauth = authdir_mode_bridge(options);
