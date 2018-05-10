@@ -883,11 +883,24 @@ hibernate_begin_shutdown(void)
   hibernate_begin(HIBERNATE_STATE_EXITING, time(NULL));
 }
 
-/** Return true iff we are currently hibernating. */
+/**
+ * Return true iff we are currently hibernating -- that is, if we are in
+ * any non-live state.
+ */
 MOCK_IMPL(int,
 we_are_hibernating,(void))
 {
   return hibernate_state != HIBERNATE_STATE_LIVE;
+}
+
+/**
+ * Return true iff we are currently _fully_ hibernating -- that is, if we are
+ * in a state where we expect to handle no network activity at all.
+ */
+MOCK_IMPL(int,
+we_are_fully_hibernating,(void))
+{
+  return hibernate_state == HIBERNATE_STATE_DORMANT;
 }
 
 /** If we aren't currently dormant, close all connections and become
@@ -1187,6 +1200,8 @@ on_hibernate_state_change(hibernate_state_t prev_state)
   if (prev_state != HIBERNATE_STATE_INITIAL) {
     rescan_periodic_events(get_options());
   }
+
+  reschedule_per_second_timer();
 }
 
 /** Free all resources held by the accounting module */

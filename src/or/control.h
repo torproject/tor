@@ -40,6 +40,9 @@ int connection_control_process_inbuf(control_connection_t *conn);
 #define EVENT_NS 0x000F
 int control_event_is_interesting(int event);
 
+void control_per_second_events(void);
+int control_any_per_second_event_enabled(void);
+
 int control_event_circuit_status(origin_circuit_t *circ,
                                  circuit_status_event_t e, int reason);
 int control_event_circuit_purpose_changed(origin_circuit_t *circ,

@@ -163,11 +163,6 @@ token_bucket_rw_t global_bucket;
 /* Token bucket for relayed traffic. */
 token_bucket_rw_t global_relayed_bucket;
 
-/* DOCDOC stats_prev_n_read */
-static uint64_t stats_prev_n_read = 0;
-/* DOCDOC stats_prev_n_written */
-static uint64_t stats_prev_n_written = 0;
-
 /* XXX we might want to keep stats about global_relayed_*_bucket too. Or not.*/
 /** How many bytes have we read since we started the process? */
 static uint64_t stats_n_bytes_read = 0;
@@ -1258,7 +1253,8 @@ run_connection_housekeeping(int i, time_t now)
   } else if (we_are_hibernating() &&
              ! have_any_circuits &&
              !connection_get_outbuf_len(conn)) {
-    /* We're hibernating, there's no circuits, and nothing to flush.*/
+    /* We're hibernating or shutting down, there's no circuits, and nothing to
+     * flush.*/
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[Hibernating or exiting].",
              (int)conn->s,conn->address, conn->port);
@@ -2495,6 +2491,36 @@ hs_service_callback(time_t now, const or_options_t *options)
 
 /** Timer: used to invoke second_elapsed_callback() once per second. */
 static periodic_timer_t *second_timer = NULL;
+
+/**
+ * Enable or disable the per-second timer as appropriate, creating it if
+ * necessary.
+ */
+void
+reschedule_per_second_timer(void)
+{
+  struct timeval one_second;
+  one_second.tv_sec = 1;
+  one_second.tv_usec = 0;
+
+  if (! second_timer) {
+    second_timer = periodic_timer_new(tor_libevent_get_base(),
+                                      &one_second,
+                                      second_elapsed_callback,
+                                      NULL);
+    tor_assert(second_timer);
+  }
+
+  const bool run_per_second_events =
+    control_any_per_second_event_enabled() || ! net_is_completely_disabled();
+
+  if (run_per_second_events) {
+    periodic_timer_launch(second_timer, &one_second);
+  } else {
+    periodic_timer_disable(second_timer);
+  }
+}
+
 /** Last time that update_current_time was called. */
 static time_t current_second = 0;
 /** Last time that update_current_time updated current_second. */
@@ -2568,8 +2594,6 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
    * could use Libevent's timers for this rather than checking the current
    * time against a bunch of timeouts every second. */
   time_t now;
-  size_t bytes_written;
-  size_t bytes_read;
   (void)timer;
   (void)arg;
 
@@ -2581,18 +2605,8 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
    */
   update_current_time(now);
 
-  /* the second has rolled over. check more stuff. */
-  // remove this once it's unneeded
-  bytes_read = (size_t)(stats_n_bytes_read - stats_prev_n_read);
-  bytes_written = (size_t)(stats_n_bytes_written - stats_prev_n_written);
-  stats_prev_n_read = stats_n_bytes_read;
-  stats_prev_n_written = stats_n_bytes_written;
-
-  control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
-  control_event_stream_bandwidth_used();
-  control_event_conn_bandwidth_used();
-  control_event_circ_bandwidth_used();
-  control_event_circuit_cell_stats();
+  /* Maybe some controller events are ready to fire */
+  control_per_second_events();
 
   run_scheduled_events(now);
 }
@@ -2872,17 +2886,7 @@ do_main_loop(void)
   }
 
   /* set up once-a-second callback. */
-  if (! second_timer) {
-    struct timeval one_second;
-    one_second.tv_sec = 1;
-    one_second.tv_usec = 0;
-
-    second_timer = periodic_timer_new(tor_libevent_get_base(),
-                                      &one_second,
-                                      second_elapsed_callback,
-                                      NULL);
-    tor_assert(second_timer);
-  }
+  reschedule_per_second_timer();
 
 #ifdef HAVE_SYSTEMD_209
   uint64_t watchdog_delay;
@@ -3697,7 +3701,6 @@ tor_free_all(int postfork)
 
   memset(&global_bucket, 0, sizeof(global_bucket));
   memset(&global_relayed_bucket, 0, sizeof(global_relayed_bucket));
-  stats_prev_n_read = stats_prev_n_written = 0;
   stats_n_bytes_read = stats_n_bytes_written = 0;
   time_of_process_start = 0;
   time_of_last_signewnym = 0;
