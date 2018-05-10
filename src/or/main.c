@@ -3662,6 +3662,8 @@ tor_free_all(int postfork)
   hs_free_all();
   dos_free_all();
   circuitmux_ewma_free_all();
+  accounting_free_all();
+
   if (!postfork) {
     config_free_all();
     or_state_free_all();

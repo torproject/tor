@@ -30,6 +30,7 @@ int getinfo_helper_accounting(control_connection_t *conn,
                               const char *question, char **answer,
                               const char **errmsg);
 uint64_t get_accounting_max_total(void);
+void accounting_free_all(void);
 
 #ifdef HIBERNATE_PRIVATE
 /** Possible values of hibernate_state */
