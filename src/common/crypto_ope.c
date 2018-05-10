@@ -172,6 +172,8 @@ crypto_ope_encrypt(const crypto_ope_t *ope, int plaintext)
 
   v += sum_values_from_cipher(cipher, remaining_values);
 
+  crypto_cipher_free(cipher);
+
   return v;
 }
 
