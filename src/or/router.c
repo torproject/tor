@@ -118,7 +118,7 @@ const char *format_node_description(char *buf,
  * of <b>err</b>.
  */
 const char *
-routerinfo_errno_to_string(int err)
+routerinfo_err_to_string(int err)
 {
   switch (err) {
     case TOR_ROUTERINFO_ERROR_NO_EXT_ADDR:

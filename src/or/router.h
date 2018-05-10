@@ -135,7 +135,7 @@ const char *node_describe(const node_t *node);
 const char *routerstatus_describe(const routerstatus_t *ri);
 const char *extend_info_describe(const extend_info_t *ei);
 
-const char *routerinfo_errno_to_string(int err);
+const char *routerinfo_err_to_string(int err);
 int routerinfo_err_is_transient(int err);
 
 void router_get_verbose_nickname(char *buf, const routerinfo_t *router);

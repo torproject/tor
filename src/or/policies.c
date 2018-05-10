@@ -3003,7 +3003,7 @@ getinfo_helper_policies(control_connection_t *conn,
     const routerinfo_t *me = router_get_my_routerinfo_with_err(&err);
 
     if (!me) {
-      *errmsg = routerinfo_errno_to_string(err);
+      *errmsg = routerinfo_err_to_string(err);
       return routerinfo_err_is_transient(err) ? -1 : 0;
     }
 
@@ -3046,7 +3046,7 @@ getinfo_helper_policies(control_connection_t *conn,
     const routerinfo_t *me = router_get_my_routerinfo_with_err(&err);
 
     if (!me) {
-      *errmsg = routerinfo_errno_to_string(err);
+      *errmsg = routerinfo_err_to_string(err);
       return routerinfo_err_is_transient(err) ? -1 : 0;
     }
 
