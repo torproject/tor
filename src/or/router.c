@@ -131,11 +131,12 @@ routerinfo_err_to_string(int err)
       return "Key digest failed";
     case TOR_ROUTERINFO_ERROR_CANNOT_GENERATE:
       return "Cannot generate descriptor";
-    case TOR_ROUTERINFO_ERROR_NOT_SO_FAST:
-      return "Too soon; not ready yet";
+    case TOR_ROUTERINFO_ERROR_DESC_REBUILDING:
+      return "Descriptor still rebuilding - not ready yet";
   }
 
-  log_warn(LD_BUG, "unknown errno %d", err);
+  log_warn(LD_BUG, "unknown routerinfo error %d - shouldn't happen", err);
+  tor_assert_unreached();
 
   return "Unknown error";
 }
@@ -157,7 +158,7 @@ routerinfo_err_is_transient(int err)
       return 0; // XXX: bug?
     case TOR_ROUTERINFO_ERROR_CANNOT_GENERATE:
       return 1;
-    case TOR_ROUTERINFO_ERROR_NOT_SO_FAST:
+    case TOR_ROUTERINFO_ERROR_DESC_REBUILDING:
       return 1;
   }
 
@@ -2099,7 +2100,7 @@ router_get_my_routerinfo_with_err,(int *err))
 
   if (!desc_routerinfo) {
     if (err)
-      *err = TOR_ROUTERINFO_ERROR_NOT_SO_FAST;
+      *err = TOR_ROUTERINFO_ERROR_DESC_REBUILDING;
 
     return NULL;
   }
@@ -2530,7 +2531,7 @@ router_rebuild_descriptor(int force)
      * learn that it's time to try again when ip_address_changed()
      * marks it dirty. */
     desc_clean_since = time(NULL);
-    return TOR_ROUTERINFO_ERROR_NOT_SO_FAST;
+    return TOR_ROUTERINFO_ERROR_DESC_REBUILDING;
   }
 
   log_info(LD_OR, "Rebuilding relay descriptor%s", force ? " (forced)" : "");
