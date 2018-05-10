@@ -855,6 +855,7 @@ struct testgroup_t testgroups[] = {
   { "control/", controller_tests },
   { "control/event/", controller_event_tests },
   { "crypto/", crypto_tests },
+  { "crypto/ope/", crypto_ope_tests },
   { "crypto/openssl/", crypto_openssl_tests },
   { "dir/", dir_tests },
   { "dir_handle_get/", dir_handle_get_tests },
