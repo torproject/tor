@@ -1672,6 +1672,11 @@ static mainloop_event_t *postloop_cleanup_ev=NULL;
 void
 mainloop_schedule_postloop_cleanup(void)
 {
+  if (PREDICT_UNLIKELY(postloop_cleanup_ev == NULL)) {
+    // (It's possible that we can get here if we decide to close a connection
+    // in the earliest stages of our configuration, before we create events.)
+    return;
+  }
   mainloop_event_activate(postloop_cleanup_ev);
 }
 
