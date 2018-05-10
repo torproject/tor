@@ -1849,7 +1849,7 @@ desc_sig_is_valid(const char *b64_sig,
   }
 
   /* Find the start of signature. */
-  sig_start = tor_memstr(encoded_desc, encoded_len, "\n" str_signature);
+  sig_start = tor_memstr(encoded_desc, encoded_len, "\n" str_signature " ");
   /* Getting here means the token parsing worked for the signature so if we
    * can't find the start of the signature, we have a code flow issue. */
   if (!sig_start) {
