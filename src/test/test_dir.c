@@ -1552,6 +1552,25 @@ test_dir_measured_bw_kb(void *arg)
   return;
 }
 
+/* Test dirserv_read_measured_bandwidths */
+static void
+test_dir_dirserv_read_measured_bandwidths(void *arg)
+{
+  char *fname=NULL;
+  (void)arg;
+
+  fname = tor_strdup(get_fname("V3BandwidthsFile"));
+  /* Test an empty file */
+  write_str_to_file(fname, "", 0);
+  setup_capture_of_logs(LOG_WARN);
+  tt_int_op(-1, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+  expect_log_msg("Empty bandwidth file\n");
+
+ done:
+  tor_free(fname);
+  teardown_capture_of_logs();
+}
+
 #define MBWC_INIT_TIME 1000
 
 /** Do the measured bandwidth cache unit test */
@@ -6000,6 +6019,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(versions),
   DIR_LEGACY(fp_pairs),
   DIR(split_fps, 0),
+  DIR_LEGACY(dirserv_read_measured_bandwidths),
   DIR_LEGACY(measured_bw_kb),
   DIR_LEGACY(measured_bw_kb_cache),
   DIR_LEGACY(param_voting),
