@@ -1861,24 +1861,24 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   } else if (!strcmp(question, "process/pid")) {
     int myPid = -1;
 
-    #ifdef _WIN32
+#ifdef _WIN32
       myPid = _getpid();
-    #else
+#else
       myPid = getpid();
-    #endif
+#endif
 
     tor_asprintf(answer, "%d", myPid);
   } else if (!strcmp(question, "process/uid")) {
-    #ifdef _WIN32
+#ifdef _WIN32
       *answer = tor_strdup("-1");
-    #else
+#else
       int myUid = geteuid();
       tor_asprintf(answer, "%d", myUid);
 #endif /* defined(_WIN32) */
   } else if (!strcmp(question, "process/user")) {
-    #ifdef _WIN32
+#ifdef _WIN32
       *answer = tor_strdup("");
-    #else
+#else
       int myUid = geteuid();
       const struct passwd *myPwEntry = tor_getpwuid(myUid);
 
