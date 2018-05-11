@@ -545,6 +545,11 @@ test_channel_outbound_cell(void *arg)
 
   (void) arg;
 
+  /* Set the test time to be mocked, since this test assumes that no
+   * time will pass, ewma values will not need to be re-scaled, and so on */
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(U64_LITERAL(1000000000) * 12345);
+
   cmux_ewma_set_options(NULL,NULL);
 
   /* The channel will be freed so we need to hijack this so the scheduler
@@ -661,6 +666,7 @@ test_channel_outbound_cell(void *arg)
   tor_free(p_cell);
   channel_free_all();
   UNMOCK(scheduler_release_channel);
+  monotime_disable_test_mocking();
 }
 
 /* Test inbound cell. The callstack is:
