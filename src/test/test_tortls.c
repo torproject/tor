@@ -522,7 +522,7 @@ test_tortls_x509_cert_free(void *ignored)
   tor_x509_cert_free(cert);
 
   cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
-  cert->cert = tor_malloc_zero(sizeof(X509));
+  cert->cert = X509_new();
   cert->encoded = tor_malloc_zero(1);
   tor_x509_cert_free(cert);
 }
@@ -560,6 +560,15 @@ fixed_pub_cmp(const EVP_PKEY *a, const EVP_PKEY *b)
   return 1;
 }
 
+/*
+ * Use only for the matching fake_x509_free() call
+ */
+static X509 *
+fake_x509_malloc(void)
+{
+  return tor_malloc_zero(sizeof(X509));
+}
+
 static void
 fake_x509_free(X509 *cert)
 {
@@ -590,9 +599,9 @@ test_tortls_cert_matches_key(void *ignored)
 
   tls = tor_malloc_zero(sizeof(tor_tls_t));
   cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
-  one = tor_malloc_zero(sizeof(X509));
+  one = fake_x509_malloc();
   one->references = 1;
-  two = tor_malloc_zero(sizeof(X509));
+  two = fake_x509_malloc();
   two->references = 1;
 
   res = tor_tls_cert_matches_key(tls, cert);
@@ -648,7 +657,7 @@ test_tortls_cert_get_key(void *ignored)
   crypto_pk_t *res = NULL;
   cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
   X509 *key = NULL;
-  key = tor_malloc_zero(sizeof(X509));
+  key = fake_x509_malloc();
   key->references = 1;
 
   res = tor_tls_cert_get_key(cert);
@@ -2475,8 +2484,8 @@ test_tortls_context_new(void *ignored)
   fixed_crypto_pk_generate_key_with_bits_result[1] = 0;
   fixed_tor_tls_create_certificate_result_index = 0;
   fixed_tor_tls_create_certificate_result[0] = NULL;
-  fixed_tor_tls_create_certificate_result[1] = tor_malloc_zero(sizeof(X509));
-  fixed_tor_tls_create_certificate_result[2] = tor_malloc_zero(sizeof(X509));
+  fixed_tor_tls_create_certificate_result[1] = X509_new();
+  fixed_tor_tls_create_certificate_result[2] = X509_new();
   ret = tor_tls_context_new(NULL, 0, 0, 0);
   tt_assert(!ret);
 
@@ -2486,9 +2495,9 @@ test_tortls_context_new(void *ignored)
   fixed_crypto_pk_new_result[2] = NULL;
   fixed_crypto_pk_generate_key_with_bits_result_index = 0;
   fixed_tor_tls_create_certificate_result_index = 0;
-  fixed_tor_tls_create_certificate_result[0] = tor_malloc_zero(sizeof(X509));
+  fixed_tor_tls_create_certificate_result[0] = X509_new();
   fixed_tor_tls_create_certificate_result[1] = NULL;
-  fixed_tor_tls_create_certificate_result[2] = tor_malloc_zero(sizeof(X509));
+  fixed_tor_tls_create_certificate_result[2] = X509_new();
   ret = tor_tls_context_new(NULL, 0, 0, 0);
   tt_assert(!ret);
 
@@ -2498,8 +2507,8 @@ test_tortls_context_new(void *ignored)
   fixed_crypto_pk_new_result[2] = NULL;
   fixed_crypto_pk_generate_key_with_bits_result_index = 0;
   fixed_tor_tls_create_certificate_result_index = 0;
-  fixed_tor_tls_create_certificate_result[0] = tor_malloc_zero(sizeof(X509));
-  fixed_tor_tls_create_certificate_result[1] = tor_malloc_zero(sizeof(X509));
+  fixed_tor_tls_create_certificate_result[0] = X509_new();
+  fixed_tor_tls_create_certificate_result[1] = X509_new();
   fixed_tor_tls_create_certificate_result[2] = NULL;
   ret = tor_tls_context_new(NULL, 0, 0, 0);
   tt_assert(!ret);
@@ -2511,9 +2520,9 @@ test_tortls_context_new(void *ignored)
   fixed_crypto_pk_new_result[2] = NULL;
   fixed_crypto_pk_generate_key_with_bits_result_index = 0;
   fixed_tor_tls_create_certificate_result_index = 0;
-  fixed_tor_tls_create_certificate_result[0] = tor_malloc_zero(sizeof(X509));
-  fixed_tor_tls_create_certificate_result[1] = tor_malloc_zero(sizeof(X509));
-  fixed_tor_tls_create_certificate_result[2] = tor_malloc_zero(sizeof(X509));
+  fixed_tor_tls_create_certificate_result[0] = X509_new();
+  fixed_tor_tls_create_certificate_result[1] = X509_new();
+  fixed_tor_tls_create_certificate_result[2] = X509_new();
   fixed_tor_x509_cert_new_result_index = 0;
   fixed_tor_x509_cert_new_result[0] = NULL;
   fixed_tor_x509_cert_new_result[1] = NULL;
@@ -2527,9 +2536,9 @@ test_tortls_context_new(void *ignored)
   fixed_crypto_pk_new_result[2] = NULL;
   fixed_crypto_pk_generate_key_with_bits_result_index = 0;
   fixed_tor_tls_create_certificate_result_index = 0;
-  fixed_tor_tls_create_certificate_result[0] = tor_malloc_zero(sizeof(X509));
-  fixed_tor_tls_create_certificate_result[1] = tor_malloc_zero(sizeof(X509));
-  fixed_tor_tls_create_certificate_result[2] = tor_malloc_zero(sizeof(X509));
+  fixed_tor_tls_create_certificate_result[0] = X509_new();
+  fixed_tor_tls_create_certificate_result[1] = X509_new();
+  fixed_tor_tls_create_certificate_result[2] = X509_new();
   fixed_tor_x509_cert_new_result_index = 0;
   fixed_tor_x509_cert_new_result[0] = tor_malloc_zero(sizeof(tor_x509_cert_t));
   fixed_tor_x509_cert_new_result[1] = NULL;
@@ -2543,9 +2552,9 @@ test_tortls_context_new(void *ignored)
   fixed_crypto_pk_new_result[2] = NULL;
   fixed_crypto_pk_generate_key_with_bits_result_index = 0;
   fixed_tor_tls_create_certificate_result_index = 0;
-  fixed_tor_tls_create_certificate_result[0] = tor_malloc_zero(sizeof(X509));
-  fixed_tor_tls_create_certificate_result[1] = tor_malloc_zero(sizeof(X509));
-  fixed_tor_tls_create_certificate_result[2] = tor_malloc_zero(sizeof(X509));
+  fixed_tor_tls_create_certificate_result[0] = X509_new();
+  fixed_tor_tls_create_certificate_result[1] = X509_new();
+  fixed_tor_tls_create_certificate_result[2] = X509_new();
   fixed_tor_x509_cert_new_result_index = 0;
   fixed_tor_x509_cert_new_result[0] = tor_malloc_zero(sizeof(tor_x509_cert_t));
   fixed_tor_x509_cert_new_result[1] = tor_malloc_zero(sizeof(tor_x509_cert_t));
@@ -2559,9 +2568,9 @@ test_tortls_context_new(void *ignored)
   fixed_crypto_pk_new_result[2] = NULL;
   fixed_crypto_pk_generate_key_with_bits_result_index = 0;
   fixed_tor_tls_create_certificate_result_index = 0;
-  fixed_tor_tls_create_certificate_result[0] = tor_malloc_zero(sizeof(X509));
-  fixed_tor_tls_create_certificate_result[1] = tor_malloc_zero(sizeof(X509));
-  fixed_tor_tls_create_certificate_result[2] = tor_malloc_zero(sizeof(X509));
+  fixed_tor_tls_create_certificate_result[0] = X509_new();
+  fixed_tor_tls_create_certificate_result[1] = X509_new();
+  fixed_tor_tls_create_certificate_result[2] = X509_new();
   fixed_tor_x509_cert_new_result_index = 0;
   fixed_tor_x509_cert_new_result[0] = tor_malloc_zero(sizeof(tor_x509_cert_t));
   fixed_tor_x509_cert_new_result[1] = tor_malloc_zero(sizeof(tor_x509_cert_t));
