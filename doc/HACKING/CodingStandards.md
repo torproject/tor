@@ -42,6 +42,23 @@ If you have changed build system components:
    - For example, if you have changed Makefiles, autoconf files, or anything
      else that affects the build system.
 
+License issues
+==============
+
+Tor is distributed under the license terms in the LICENSE -- in
+brief, the "3-clause BSD license".  If you send us code to
+distribute with Tor, it needs to be code that we can distribute
+under those terms.  Please don't send us patches unless you agree
+to allow this.
+
+Some compatible licenses include:
+
+  - 3-clause BSD
+  - 2-clause BSD
+  - CC0 Public Domain Dedication
+
+
+
 How we use Git branches
 =======================
 
@@ -417,3 +434,4 @@ the functions that call your function rely on it doing something, then your
 function should mention that it does that something in the documentation.  If
 you rely on a function doing something beyond what is in its documentation,
 then you should watch out, or it might do something else later.
+

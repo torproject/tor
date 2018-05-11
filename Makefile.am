@@ -38,6 +38,7 @@ include contrib/include.am
 
 EXTRA_DIST+= \
 	ChangeLog					\
+	CONTRIBUTING					\
 	INSTALL						\
 	LICENSE						\
 	Makefile.nmake					\
