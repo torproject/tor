@@ -283,7 +283,7 @@ void
 periodic_timer_disable(periodic_timer_t *timer)
 {
   tor_assert(timer);
-  event_del(timer->ev);
+  (void) event_del(timer->ev);
 }
 
 /** Stop and free a periodic timer */
