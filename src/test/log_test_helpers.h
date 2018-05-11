@@ -85,6 +85,10 @@ void mock_dump_saved_logs(void);
   assert_log_predicate(!mock_saved_log_has_message(str), \
                 "expected log to not contain " # str);
 
+#define expect_no_log_msg_containing(str) \
+  assert_log_predicate(!mock_saved_log_has_message_containing(str), \
+                "expected log to not contain " # str);
+
 #define expect_log_severity(severity) \
   assert_log_predicate(mock_saved_log_has_severity(severity), \
                 "expected log to contain severity " # severity);

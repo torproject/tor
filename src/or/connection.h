@@ -254,9 +254,10 @@ void assert_connection_ok(connection_t *conn, time_t now);
 int connection_or_nonopen_was_started_here(or_connection_t *conn);
 void connection_dump_buffer_mem_stats(int severity);
 
-void clock_skew_warning(const connection_t *conn, long apparent_skew,
-                        int trusted, log_domain_mask_t domain,
-                        const char *received, const char *source);
+MOCK_DECL(void, clock_skew_warning,
+          (const connection_t *conn, long apparent_skew, int trusted,
+           log_domain_mask_t domain, const char *received,
+           const char *source));
 
 /** Check if a connection is on the way out so the OOS handler doesn't try
  * to kill more than it needs. */

@@ -37,7 +37,7 @@
 #include "test_dir_common.h"
 #include "log_test_helpers.h"
 
-void construct_consensus(char **consensus_text_md);
+void construct_consensus(char **consensus_text_md, time_t now);
 
 static authority_cert_t *mock_cert;
 
@@ -136,7 +136,7 @@ test_routerlist_launch_descriptor_downloads(void *arg)
 }
 
 void
-construct_consensus(char **consensus_text_md)
+construct_consensus(char **consensus_text_md, time_t now)
 {
   networkstatus_t *vote = NULL;
   networkstatus_t *v1 = NULL, *v2 = NULL, *v3 = NULL;
@@ -144,7 +144,6 @@ construct_consensus(char **consensus_text_md)
   authority_cert_t *cert1=NULL, *cert2=NULL, *cert3=NULL;
   crypto_pk_t *sign_skey_1=NULL, *sign_skey_2=NULL, *sign_skey_3=NULL;
   crypto_pk_t *sign_skey_leg=NULL;
-  time_t now = time(NULL);
   smartlist_t *votes = NULL;
   int n_vrs;
 
@@ -259,7 +258,7 @@ test_router_pick_directory_server_impl(void *arg)
   rs = router_pick_directory_server_impl(V3_DIRINFO, (const int) 0, NULL);
   tt_ptr_op(rs, OP_EQ, NULL);
 
-  construct_consensus(&consensus_text_md);
+  construct_consensus(&consensus_text_md, now);
   tt_assert(consensus_text_md);
   con_md = networkstatus_parse_vote_from_string(consensus_text_md, NULL,
                                                 NS_TYPE_CONSENSUS);
@@ -453,6 +452,7 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   int retval;
   char *consensus_text_md = NULL;
   or_options_t *options = get_options_mutable();
+  time_t now = time(NULL);
 
   (void) arg;
 
@@ -496,7 +496,7 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   conn->requested_resource = tor_strdup("ns");
 
   /* Construct a consensus */
-  construct_consensus(&consensus_text_md);
+  construct_consensus(&consensus_text_md, now);
   tt_assert(consensus_text_md);
 
   /* Place the consensus in the dirconn */
@@ -507,7 +507,7 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   args.body_len = strlen(consensus_text_md);
 
   /* Update approx time so that the consensus is considered live */
-  update_approx_time(time(NULL)+1010);
+  update_approx_time(now+1010);
 
   setup_capture_of_logs(LOG_DEBUG);
 
@@ -599,10 +599,166 @@ test_routerlist_router_is_already_dir_fetching(void *arg)
 #undef TEST_ADDR_STR
 #undef TEST_DIR_PORT
 
+static long mock_apparent_skew = 0;
+
+/** Store apparent_skew and assert that the other arguments are as
+ * expected. */
+static void
+mock_clock_skew_warning(const connection_t *conn, long apparent_skew,
+                        int trusted, log_domain_mask_t domain,
+                        const char *received, const char *source)
+{
+  (void)conn;
+  mock_apparent_skew = apparent_skew;
+  tt_int_op(trusted, OP_EQ, 1);
+  tt_int_op(domain, OP_EQ, LD_GENERAL);
+  tt_str_op(received, OP_EQ, "microdesc flavor consensus");
+  tt_str_op(source, OP_EQ, "CONSENSUS");
+ done:
+  ;
+}
+
+/** Do common setup for test_timely_consensus() and
+ * test_early_consensus().  Call networkstatus_set_current_consensus()
+ * on a constructed consensus and with an appropriately-modified
+ * approx_time.  Callers expect presence or absence of appropriate log
+ * messages and control events. */
+static int
+test_skew_common(void *arg, time_t now, unsigned long *offset)
+{
+  char *consensus = NULL;
+  int retval = 0;
+
+  *offset = strtoul(arg, NULL, 10);
+
+  /* Initialize the SRV subsystem */
+  MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  sr_init(0);
+  UNMOCK(get_my_v3_authority_cert);
+
+  construct_consensus(&consensus, now);
+  tt_assert(consensus);
+
+  update_approx_time(now + *offset);
+
+  mock_apparent_skew = 0;
+  /* Caller will call UNMOCK() */
+  MOCK(clock_skew_warning, mock_clock_skew_warning);
+  /* Caller will call teardown_capture_of_logs() */
+  setup_capture_of_logs(LOG_WARN);
+  retval = networkstatus_set_current_consensus(consensus, "microdesc", 0,
+                                               NULL);
+
+ done:
+  tor_free(consensus);
+  return retval;
+}
+
+/** Test non-early consensus */
+static void
+test_timely_consensus(void *arg)
+{
+  time_t now = time(NULL);
+  unsigned long offset = 0;
+  int retval = 0;
+
+  retval = test_skew_common(arg, now, &offset);
+  (void)offset;
+  expect_no_log_msg_containing("behind the time published in the consensus");
+  tt_int_op(retval, OP_EQ, 0);
+  tt_int_op(mock_apparent_skew, OP_EQ, 0);
+ done:
+  teardown_capture_of_logs();
+  UNMOCK(clock_skew_warning);
+}
+
+/** Test early consensus  */
+static void
+test_early_consensus(void *arg)
+{
+  time_t now = time(NULL);
+  unsigned long offset = 0;
+  int retval = 0;
+
+  retval = test_skew_common(arg, now, &offset);
+  /* Can't use expect_single_log_msg() because of unrecognized authorities */
+  expect_log_msg_containing("behind the time published in the consensus");
+  tt_int_op(retval, OP_EQ, 0);
+  /* This depends on construct_consensus() setting valid_after=now+1000 */
+  tt_int_op(mock_apparent_skew, OP_EQ, offset - 1000);
+ done:
+  teardown_capture_of_logs();
+  UNMOCK(clock_skew_warning);
+}
+
+/** Test warn_early_consensus(), expecting no warning  */
+static void
+test_warn_early_consensus_no(const networkstatus_t *c, time_t now,
+                             long offset)
+{
+  mock_apparent_skew = 0;
+  setup_capture_of_logs(LOG_WARN);
+  warn_early_consensus(c, "microdesc", now + offset);
+  expect_no_log_msg_containing("behind the time published in the consensus");
+  tt_int_op(mock_apparent_skew, OP_EQ, 0);
+ done:
+  teardown_capture_of_logs();
+}
+
+/** Test warn_early_consensus(), expecting a warning */
+static void
+test_warn_early_consensus_yes(const networkstatus_t *c, time_t now,
+                              long offset)
+{
+  mock_apparent_skew = 0;
+  setup_capture_of_logs(LOG_WARN);
+  warn_early_consensus(c, "microdesc", now + offset);
+  /* Can't use expect_single_log_msg() because of unrecognized authorities */
+  expect_log_msg_containing("behind the time published in the consensus");
+  tt_int_op(mock_apparent_skew, OP_EQ, offset);
+ done:
+  teardown_capture_of_logs();
+}
+
+/**
+ * Test warn_early_consensus() directly, checking both the non-warning
+ * case (consensus is not early) and the warning case (consensus is
+ * early).  Depends on EARLY_CONSENSUS_NOTICE_SKEW=60.
+ */
+static void
+test_warn_early_consensus(void *arg)
+{
+  networkstatus_t *c = NULL;
+  time_t now = time(NULL);
+
+  (void)arg;
+  c = tor_malloc_zero(sizeof *c);
+  c->valid_after = now;
+  c->dist_seconds = 300;
+  mock_apparent_skew = 0;
+  MOCK(clock_skew_warning, mock_clock_skew_warning);
+  test_warn_early_consensus_no(c, now, 60);
+  test_warn_early_consensus_no(c, now, 0);
+  test_warn_early_consensus_no(c, now, -60);
+  test_warn_early_consensus_no(c, now, -360);
+  test_warn_early_consensus_yes(c, now, -361);
+  test_warn_early_consensus_yes(c, now, -600);
+  UNMOCK(clock_skew_warning);
+  tor_free(c);
+}
+
 #define NODE(name, flags) \
   { #name, test_routerlist_##name, (flags), NULL, NULL }
 #define ROUTER(name,flags) \
   { #name, test_router_##name, (flags), NULL, NULL }
+
+#define TIMELY(name, arg)                                     \
+  { name, test_timely_consensus, TT_FORK, &passthrough_setup, \
+    (char *)(arg) }
+#define EARLY(name, arg) \
+  { name, test_early_consensus, TT_FORK, &passthrough_setup, \
+    (char *)(arg) }
 
 struct testcase_t routerlist_tests[] = {
   NODE(initiate_descriptor_downloads, 0),
@@ -611,6 +767,13 @@ struct testcase_t routerlist_tests[] = {
   ROUTER(pick_directory_server_impl, TT_FORK),
   { "directory_guard_fetch_with_no_dirinfo",
     test_directory_guard_fetch_with_no_dirinfo, TT_FORK, NULL, NULL },
+  /* These depend on construct_consensus() setting
+   * valid_after=now+1000 and dist_seconds=250 */
+  TIMELY("timely_consensus1", "1010"),
+  TIMELY("timely_consensus2", "1000"),
+  TIMELY("timely_consensus3", "690"),
+  EARLY("early_consensus1", "689"),
+  { "warn_early_consensus", test_warn_early_consensus, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 

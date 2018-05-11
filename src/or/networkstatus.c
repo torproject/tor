@@ -1733,6 +1733,57 @@ handle_missing_protocol_warning(const networkstatus_t *c,
     handle_missing_protocol_warning_impl(c, 1);
 }
 
+/**
+ * Check whether we received a consensus that appears to be coming
+ * from the future.  Because we implicitly trust the directory
+ * authorities' idea of the current time, we produce a warning if we
+ * get an early consensus.
+ *
+ * If we got a consensus that is time stamped far in the past, that
+ * could simply have come from a stale cache.  Possible ways to get a
+ * consensus from the future can include:
+ *
+ * - enough directory authorities have wrong clocks
+ * - directory authorities collude to produce misleading time stamps
+ * - our own clock is wrong (this is by far the most likely)
+ *
+ * We neglect highly improbable scenarios that involve actual time
+ * travel.
+ */
+STATIC void
+warn_early_consensus(const networkstatus_t *c, const char *flavor,
+                     time_t now)
+{
+  char tbuf[ISO_TIME_LEN+1];
+  char dbuf[64];
+  long delta = now - c->valid_after;
+  char *flavormsg = NULL;
+
+/** If a consensus appears more than this many seconds before it could
+ * possibly be a sufficiently-signed consensus, declare that our clock
+ * is skewed. */
+#define EARLY_CONSENSUS_NOTICE_SKEW 60
+
+  /* We assume that if a majority of dirauths have accurate clocks,
+   * the earliest that a dirauth with a skewed clock could possibly
+   * publish a sufficiently-signed consensus is (valid_after -
+   * dist_seconds).  Before that time, the skewed dirauth would be
+   * unable to obtain enough authority signatures for the consensus to
+   * be valid. */
+  if (now >= c->valid_after - c->dist_seconds - EARLY_CONSENSUS_NOTICE_SKEW)
+    return;
+
+  format_iso_time(tbuf, c->valid_after);
+  format_time_interval(dbuf, sizeof(dbuf), delta);
+  log_warn(LD_GENERAL, "Our clock is %s behind the time published in the "
+           "consensus network status document (%s UTC).  Tor needs an "
+           "accurate clock to work correctly. Please check your time and "
+           "date settings!", dbuf, tbuf);
+  tor_asprintf(&flavormsg, "%s flavor consensus", flavor);
+  clock_skew_warning(NULL, delta, 1, LD_GENERAL, flavormsg, "CONSENSUS");
+  tor_free(flavormsg);
+}
+
 /** Try to replace the current cached v3 networkstatus with the one in
  * <b>consensus</b>.  If we don't have enough certificates to validate it,
  * store it in consensus_waiting_for_certs and launch a certificate fetch.
@@ -2035,25 +2086,7 @@ networkstatus_set_current_consensus(const char *consensus,
     write_str_to_file(consensus_fname, consensus, 0);
   }
 
-/** If a consensus appears more than this many seconds before its declared
- * valid-after time, declare that our clock is skewed. */
-#define EARLY_CONSENSUS_NOTICE_SKEW 60
-
-  if (now < c->valid_after - EARLY_CONSENSUS_NOTICE_SKEW) {
-    char tbuf[ISO_TIME_LEN+1];
-    char dbuf[64];
-    long delta = now - c->valid_after;
-    char *flavormsg = NULL;
-    format_iso_time(tbuf, c->valid_after);
-    format_time_interval(dbuf, sizeof(dbuf), delta);
-    log_warn(LD_GENERAL, "Our clock is %s behind the time published in the "
-             "consensus network status document (%s UTC).  Tor needs an "
-             "accurate clock to work correctly. Please check your time and "
-             "date settings!", dbuf, tbuf);
-    tor_asprintf(&flavormsg, "%s flavor consensus", flavor);
-    clock_skew_warning(NULL, delta, 1, LD_GENERAL, flavormsg, "CONSENSUS");
-    tor_free(flavormsg);
-  }
+  warn_early_consensus(c, flavor, now);
 
   /* We got a new consesus. Reset our md fetch fail cache */
   microdesc_reset_outdated_dirservers_list();
