@@ -115,7 +115,7 @@ static int disable_log_messages = 0;
 
 /** Macro: true if any event from the bitfield 'e' is interesting. */
 #define ANY_EVENT_IS_INTERESTING(e) \
-  EVENT_IS_INTERESTING(e)
+  (!! (global_event_mask & (e)))
 
 /** If we're using cookie-type authentication, how long should our cookies be?
  */
@@ -375,11 +375,11 @@ int
 control_any_per_second_event_enabled(void)
 {
   return ANY_EVENT_IS_INTERESTING(
-      EVENT_BANDWIDTH_USED |
-      EVENT_CELL_STATS |
-      EVENT_CIRC_BANDWIDTH_USED |
-      EVENT_CONN_BW |
-      EVENT_STREAM_BANDWIDTH_USED
+      EVENT_MASK_(EVENT_BANDWIDTH_USED) |
+      EVENT_MASK_(EVENT_CELL_STATS) |
+      EVENT_MASK_(EVENT_CIRC_BANDWIDTH_USED) |
+      EVENT_MASK_(EVENT_CONN_BW) |
+      EVENT_MASK_(EVENT_STREAM_BANDWIDTH_USED)
   );
 }
 
