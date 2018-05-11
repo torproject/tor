@@ -69,7 +69,7 @@ test_script:
     }
 
 on_success:
-- cmd: C:\Python27\python.exe %APPVEYOR_BUILD_FOLDER%\test\appveyor-irc-notify.py irc.oftc.net:6697 tor-ci success
+- cmd: C:\Python27\python.exe %APPVEYOR_BUILD_FOLDER%\scripts\test\appveyor-irc-notify.py irc.oftc.net:6697 tor-ci success
 
 on_failure:
 - cmd: C:\Python27\python.exe %APPVEYOR_BUILD_FOLDER%\scripts\test\appveyor-irc-notify.py irc.oftc.net:6697 tor-ci failure
