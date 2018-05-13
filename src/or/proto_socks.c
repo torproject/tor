@@ -14,6 +14,7 @@
 #include "or/proto_socks.h"
 #include "or/reasons.h"
 
+#include "trunnel/socks5.h"
 #include "or/socks_request_st.h"
 
 static void socks_request_set_socks5_error(socks_request_t *req,
@@ -85,6 +86,147 @@ socks_request_free_(socks_request_t *req)
   tor_free(req);
 }
 
+static int
+parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
+                     size_t datalen, int *is_socks4a)
+{
+  // http://ss5.sourceforge.net/socks4.protocol.txt
+  // http://ss5.sourceforge.net/socks4A.protocol.txt
+  int res = 1;
+  tor_addr_t destaddr;
+
+  req->socks_version = 4;
+
+  socks4_client_request_t *trunnel_req;
+
+  ssize_t parsed =
+  socks4_client_request_parse(&trunnel_req, raw_data, datalen);
+
+  if (parsed == -1) {
+    log_warn(LD_APP, "socks4: parsing failed - invalid request.");
+    res = -1;
+    goto end;
+  } else if (parsed == -2) {
+    res = 0;
+    if (datalen > 1024) { // XXX
+      log_warn(LD_APP, "socks4: parsing failed - invalid request.");
+      res = -1;
+    }
+    goto end;
+  }
+
+  uint8_t command = socks4_client_request_get_command(trunnel_req);
+  req->command = command;
+
+  req->port = socks4_client_request_get_port(trunnel_req);
+  uint32_t dest_ip = socks4_client_request_get_addr(trunnel_req);
+
+  if ((!req->port && req->command != SOCKS_COMMAND_RESOLVE) ||
+      dest_ip == 0) {
+    log_warn(LD_APP, "socks4: Port or DestIP is zero. Rejecting.");
+    res = -1;
+    goto end;
+  }
+
+  *is_socks4a = (dest_ip >> 8) == 0;
+
+  const char *username = socks4_client_request_get_username(trunnel_req);
+  size_t usernamelen = username ? strlen(username) : 0;
+  if (username && usernamelen) {
+    if (usernamelen > MAX_SOCKS_MESSAGE_LEN) {
+      log_warn(LD_APP, "Socks4 user name too long; rejecting.");
+      res = -1;
+      goto end;
+    }
+
+    req->got_auth = 1;
+    req->username = tor_strdup(username);
+    req->usernamelen = usernamelen;
+  }
+
+  if (*is_socks4a) {
+    // We cannot rely on trunnel here, as we want to detect if
+    // we have abnormally long hostname field.
+    const char *hostname = (char *)raw_data + SOCKS4_NETWORK_LEN +
+     strlen(username) + 1;
+    size_t hostname_len = (char *)raw_data + datalen - hostname;
+
+    if (hostname_len <= sizeof(req->address)) {
+      const char *trunnel_hostname =
+      socks4_client_request_get_socks4a_addr_hostname(trunnel_req);
+
+      if (trunnel_hostname)
+        strlcpy(req->address, trunnel_hostname, sizeof(req->address));
+    } else {
+      log_warn(LD_APP, "socks4: Destaddr too long. Rejecting.");
+      res = -1;
+      goto end;
+    }
+  } else {
+    tor_addr_from_ipv4h(&destaddr, dest_ip);
+
+    if (!tor_addr_to_str(req->address, &destaddr,
+                         MAX_SOCKS_ADDR_LEN, 0)) {
+      res = -1;
+      goto end;
+    }
+  }
+
+  end:
+  socks4_client_request_free(trunnel_req);
+
+  return res;
+}
+
+/**
+ * Validate SOCKS4/4a related fields in <b>req</b>. Expect SOCKS4a
+ * if <b>is_socks4a</b> is true. If <b>log_sockstype</b> is true,
+ * log a notice about possible DNS leaks on local system. If
+ * <b>safe_socks</b> is true, reject insecure usage of SOCKS
+ * protocol.
+ *
+ * Return SOCKS_RESULT_DONE if validation passed or
+ * SOCKS_RESULT_INVALID if it failed.
+ */
+static socks_result_t
+process_socks4_request(const socks_request_t *req, int is_socks4a,
+                       int log_sockstype, int safe_socks)
+{
+  if (is_socks4a && !addressmap_have_mapping(req->address, 0)) {
+    log_unsafe_socks_warning(4, req->address, req->port, safe_socks);
+
+    if (safe_socks)
+      return -1;
+  }
+
+  if (req->command != SOCKS_COMMAND_CONNECT &&
+      req->command != SOCKS_COMMAND_RESOLVE) {
+    /* not a connect or resolve? we don't support it. (No resolve_ptr with
+     * socks4.) */
+    log_warn(LD_APP, "socks4: command %d not recognized. Rejecting.",
+             req->command);
+    return -1;
+  }
+
+  if (is_socks4a) {
+    if (log_sockstype)
+      log_notice(LD_APP,
+                 "Your application (using socks4a to port %d) instructed "
+                 "Tor to take care of the DNS resolution itself if "
+                 "necessary. This is good.", req->port);
+  }
+
+  if (!string_is_valid_dest(req->address)) {
+    log_warn(LD_PROTOCOL,
+             "Your application (using socks4 to port %d) gave Tor "
+             "a malformed hostname: %s. Rejecting the connection.",
+             req->port, escaped_safe_str_client(req->address));
+     return -1;
+  }
+
+  return 1;
+}
+
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
@@ -114,14 +256,56 @@ int
 fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                      int log_sockstype, int safe_socks)
 {
-  int res;
+  int res = 0;
+  size_t datalen = buf_datalen(buf);
+  uint8_t *raw_data;
+  uint8_t socks_version;
+
+  raw_data = tor_malloc(datalen);
+  memset(raw_data, 0, datalen);
+
+  buf_peek(buf, (char *)raw_data, datalen);
+
+  socks_version = (uint8_t)raw_data[0];
+
+  if (socks_version == 4) {
+    if (datalen < SOCKS4_NETWORK_LEN) {
+      res = 0;
+      goto end;
+    }
+
+    int is_socks4a = 0;
+    int parse_status =
+      parse_socks4_request((const uint8_t *)raw_data, req, datalen,
+                           &is_socks4a);
+
+    if (parse_status != 1) {
+      res = parse_status;
+      goto end;
+    }
+
+    int process_status = process_socks4_request(req, is_socks4a,
+                                                log_sockstype,
+                                                safe_socks);
+
+    if (process_status != 1) {
+      res = process_status;
+      goto end;
+    }
+
+    buf_clear(buf);
+    res = 1;
+    goto end;
+  }
+
   ssize_t n_drain;
   size_t want_length = 128;
   const char *head = NULL;
-  size_t datalen = 0;
 
-  if (buf_datalen(buf) < 2) /* version and another byte */
-    return 0;
+  if (buf_datalen(buf) < 2) { /* version and another byte */
+    res = 0;
+    goto end;
+  }
 
   do {
     n_drain = 0;
@@ -140,6 +324,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
   } while (res == 0 && head && want_length < buf_datalen(buf) &&
            buf_datalen(buf) >= 2);
 
+  end:
+  tor_free(raw_data);
   return res;
 }
 
@@ -710,4 +896,3 @@ parse_socks_client(const uint8_t *data, size_t datalen,
   return -1;
   /* LCOV_EXCL_STOP */
 }
-
