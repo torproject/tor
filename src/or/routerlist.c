@@ -1806,6 +1806,9 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
   const routerstatus_t *choice;
   int busy = 0;
 
+  if (smartlist_len(sourcelist) == 1)
+    flags |= PDS_ALLOW_SELF;
+
   choice = router_pick_trusteddirserver_impl(sourcelist, type, flags, &busy);
   if (choice || !(flags & PDS_RETRY_IF_NO_SERVERS))
     return choice;
