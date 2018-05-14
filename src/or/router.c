@@ -2076,11 +2076,7 @@ router_is_me(const routerinfo_t *router)
 MOCK_IMPL(const routerinfo_t *,
 router_get_my_routerinfo,(void))
 {
-  if (!server_mode(get_options()))
-    return NULL;
-  if (router_rebuild_descriptor(0))
-    return NULL;
-  return desc_routerinfo;
+  return router_get_my_routerinfo_with_err(NULL);
 }
 
 /** Return routerinfo of this OR. Rebuild it from
