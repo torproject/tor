@@ -114,6 +114,10 @@ STATIC packed_cell_t *packed_cell_new(void);
 STATIC packed_cell_t *cell_queue_pop(cell_queue_t *queue);
 STATIC destroy_cell_t *destroy_cell_queue_pop(destroy_cell_queue_t *queue);
 STATIC int cell_queues_check_size(void);
+STATIC int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
+                                   edge_connection_t *conn,
+                                   crypt_path_t *layer_hint);
+
 #endif /* defined(RELAY_PRIVATE) */
 
 #endif /* !defined(TOR_RELAY_H) */
