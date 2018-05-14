@@ -14,6 +14,13 @@
 
 #include "testsupport.h"
 
+#define TOR_ROUTERINFO_ERROR_NO_EXT_ADDR     (-1)
+#define TOR_ROUTERINFO_ERROR_CANNOT_PARSE    (-2)
+#define TOR_ROUTERINFO_ERROR_NOT_A_SERVER    (-3)
+#define TOR_ROUTERINFO_ERROR_DIGEST_FAILED   (-4)
+#define TOR_ROUTERINFO_ERROR_CANNOT_GENERATE (-5)
+#define TOR_ROUTERINFO_ERROR_DESC_REBUILDING (-6)
+
 crypto_pk_t *get_onion_key(void);
 time_t get_onion_key_set_at(void);
 void set_server_identity_key(crypto_pk_t *k);
@@ -86,6 +93,7 @@ void router_new_address_suggestion(const char *suggestion,
 int router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port);
 MOCK_DECL(int, router_my_exit_policy_is_reject_star,(void));
 MOCK_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
+MOCK_DECL(const routerinfo_t *, router_get_my_routerinfo_with_err,(int *err));
 extrainfo_t *router_get_my_extrainfo(void);
 const char *router_get_my_descriptor(void);
 const char *router_get_descriptor_gen_reason(void);
@@ -127,6 +135,9 @@ const char *router_describe(const routerinfo_t *ri);
 const char *node_describe(const node_t *node);
 const char *routerstatus_describe(const routerstatus_t *ri);
 const char *extend_info_describe(const extend_info_t *ei);
+
+const char *routerinfo_err_to_string(int err);
+int routerinfo_err_is_transient(int err);
 
 void router_get_verbose_nickname(char *buf, const routerinfo_t *router);
 void router_reset_warnings(void);
