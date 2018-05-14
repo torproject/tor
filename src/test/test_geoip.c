@@ -12,6 +12,7 @@
 #include "config.h"
 #include "geoip.h"
 #include "test.h"
+#include "directories.h"
 
   /* Record odd numbered fake-IPs using ipv6, even numbered fake-IPs
    * using ipv4.  Since our fake geoip database is the same between

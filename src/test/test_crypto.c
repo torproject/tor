@@ -152,6 +152,8 @@ test_crypto_openssl_version(void *arg)
   const char *h_version = crypto_openssl_get_header_version_str();
   tt_assert(version);
   tt_assert(h_version);
+  printf("openssl version = %s\n", version);
+  printf("openssl h_version = %s\n", h_version);
   tt_assert(!strcmpstart(version, h_version)); /* "-fips" suffix, etc */
   tt_assert(!strstr(version, "OpenSSL"));
   int a=-1,b=-1,c=-1;

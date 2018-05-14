@@ -10,10 +10,7 @@
 #include "crypto.h"
 #include "torlog.h"
 #include "test.h"
-
-#ifndef BUILDDIR
-#define BUILDDIR "."
-#endif
+#include "directories.h"
 
 #ifdef _WIN32
 #define notify_pending_waitpid_callbacks() STMT_NIL

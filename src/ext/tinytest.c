@@ -142,11 +142,11 @@ testcase_run_forked_(const struct testgroup_t *group,
 		       " called from within tinytest_main.\n");
 		abort();
 	}
-	if (opt_verbosity>0)
-		printf("[forking] ");
-
 	snprintf(buffer, sizeof(buffer), "%s --RUNNING-FORKED %s %s%s",
 		 commandname, verbosity_flag, group->prefix, testcase->name);
+
+	if (opt_verbosity>0)
+		printf("[forking: %s] ", buffer);
 
 	memset(&si, 0, sizeof(si));
 	memset(&info, 0, sizeof(info));
@@ -166,8 +166,10 @@ testcase_run_forked_(const struct testgroup_t *group,
 		return OK;
 	else if (exitcode == MAGIC_EXITCODE)
 		return SKIP;
-	else
+	else {
+		printf("Exit code: 0x%08lx\n", exitcode);
 		return FAIL;
+        }
 #else
 	int outcome_pipe[2];
 	pid_t pid;

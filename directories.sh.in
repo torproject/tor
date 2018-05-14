@@ -1,0 +1,3 @@
+BUILDDIR="@builddir@"
+SRCDIR="@srcdir@"
+export BUILDDIR SRCDIR
