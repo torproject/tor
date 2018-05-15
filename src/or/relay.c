@@ -1339,9 +1339,6 @@ connection_edge_process_relay_cell_not_open(
                                 entry_conn->chosen_exit_name, ttl);
 
       remap_event_helper(entry_conn, &addr);
-
-      /* This is valid data at this point. Count it */
-      circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
     }
     circuit_log_path(LOG_INFO,LD_APP,TO_ORIGIN_CIRCUIT(circ));
     /* don't send a socks reply to transparent conns */
@@ -1379,6 +1376,9 @@ connection_edge_process_relay_cell_not_open(
       buf_free(entry_conn->pending_optimistic_data);
       entry_conn->pending_optimistic_data = NULL;
     }
+
+    /* This is valid data at this point. Count it */
+    circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
 
     /* handle anything that might have queued */
     if (connection_edge_package_raw_inbuf(conn, 1, NULL) < 0) {
