@@ -227,6 +227,121 @@ process_socks4_request(const socks_request_t *req, int is_socks4a,
   return 1;
 }
 
+static int
+parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
+                             size_t datalen, int *have_user_pass,
+                             int *have_no_auth, size_t *drain_out)
+{
+  int res = 1;
+  socks5_client_version_t *trunnel_req;
+
+  ssize_t parsed = socks5_client_version_parse(&trunnel_req, raw_data,
+                                               datalen);
+
+  (void)req;
+
+  tor_assert(have_no_auth);
+  tor_assert(have_user_pass);
+  tor_assert(drain_out);
+
+  *drain_out = 0;
+
+  if (parsed == -1) {
+    log_warn(LD_APP, "socks5: parsing failed - invalid version "
+                     "id/method selection message.");
+    res = -1;
+    goto end;
+  } else if (parsed == -2) {
+    res = 0;
+    if (datalen > 1024) { // XXX
+      log_warn(LD_APP, "socks5: parsing failed - invalid version "
+                       "id/method selection message.");
+      res = -1;
+    }
+    goto end;
+  }
+
+  size_t n_methods = (size_t)socks5_client_version_get_n_methods(trunnel_req);
+  if (n_methods == 0) {
+    res = -1;
+    goto end;
+  }
+
+  *have_no_auth = 0;
+  *have_user_pass = 0;
+
+  for (size_t i = 0; i < n_methods; i++) {
+    uint8_t method = socks5_client_version_get_methods(trunnel_req,
+                                                       i);
+
+    if (method == SOCKS_USER_PASS) {
+      *have_user_pass = 1;
+    } else if (method == SOCKS_NO_AUTH) {
+      *have_no_auth = 1;
+    }
+  }
+  
+  end:
+  *drain_out = (size_t)parsed;
+  socks5_client_version_free(trunnel_req);
+
+  return res;
+}
+
+static int
+process_socks5_methods_request(socks_request_t *req, int have_user_pass,
+                               int have_no_auth)
+{
+  int res = 0;
+  socks5_server_method_t *trunnel_resp = socks5_server_method_new();
+
+  socks5_server_method_set_version(trunnel_resp, 5);
+
+  if (have_user_pass && !(have_no_auth && req->socks_prefer_no_auth)) {
+    req->auth_type = SOCKS_USER_PASS;
+    socks5_server_method_set_method(trunnel_resp, SOCKS_USER_PASS);
+
+    req->socks_version = 5; // FIXME: come up with better way to remember
+                            // that we negotiated auth
+
+    log_debug(LD_APP,"socks5: accepted method 2 (username/password)");
+  } else if (have_no_auth) {
+    req->auth_type = SOCKS_NO_AUTH;
+    socks5_server_method_set_method(trunnel_resp, SOCKS_NO_AUTH);
+
+    req->socks_version = 5;
+
+    log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
+  } else {
+    log_warn(LD_APP,
+             "socks5: offered methods don't include 'no auth' or "
+             "username/password. Rejecting.");
+    socks5_server_method_set_method(trunnel_resp, 0xFF); // reject all
+    res = -1;
+  }
+
+  const char *errmsg = socks5_server_method_check(trunnel_resp);
+  if (errmsg) {
+    log_warn(LD_APP, "socks5: method selection validation failed: %s",
+             errmsg);
+    res = -1;
+  } else {
+    ssize_t encoded = 
+    socks5_server_method_encode(req->reply, sizeof(req->reply),
+                                trunnel_resp);
+    
+    if (encoded < 0) {
+      log_warn(LD_APP, "socks5: method selection encoding failed");
+      res = -1;
+    } else {
+      req->replylen = (size_t)encoded;
+    }
+  }
+
+  socks5_server_method_free(trunnel_resp);
+  return res;
+}
+
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
@@ -259,12 +374,15 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
   int res = 0;
   size_t datalen = buf_datalen(buf);
   uint8_t *raw_data;
+  uint8_t *raw_ptr;
   uint8_t socks_version;
 
   raw_data = tor_malloc(datalen);
   memset(raw_data, 0, datalen);
 
   buf_peek(buf, (char *)raw_data, datalen);
+
+  raw_ptr = raw_data;
 
   socks_version = (uint8_t)raw_data[0];
 
@@ -296,6 +414,45 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     buf_clear(buf);
     res = 1;
     goto end;
+  } else if (socks_version == 5) {
+    if (datalen < 2) { /* version and another byte */
+      res = 0;
+      goto end;
+    }
+
+    if (!req->got_auth) {
+
+    }
+
+    if (req->socks_version != 5) {
+      int have_user_pass, have_no_auth;
+      int parse_status = parse_socks5_methods_request(raw_data,
+                                                      req,
+                                                      datalen,
+                                                      &have_user_pass,
+                                                      &have_no_auth,
+                                                      drain_out);
+
+      if (parse_status != 1) {
+        res = parse_status;
+        goto end;
+      }
+
+      int process_status = process_socks5_methods_request(req,
+                                                          have_user_pass,
+                                                          have_no_auth);
+
+      if (process_status == -1) {
+        res = process_status;
+        goto end;
+      }
+
+      buf_drain(buf, n_drain); // TODO: do it like this for SOCKS4/4a as well
+      raw_ptr += n_drain;
+      datalen -= n_drain;
+      res = 0;
+      goto end;
+    }
   }
 
   ssize_t n_drain;
