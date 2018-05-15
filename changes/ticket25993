@@ -1,4 +1,0 @@
-  o Minor features (testing):
-    - We now have improved testing for addressmap_get_virtual_address()
-      function.  This should improve our test coverage, and make our test
-      coverage more deterministic. Closes ticket 25993.

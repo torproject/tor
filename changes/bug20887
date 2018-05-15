@@ -1,4 +1,0 @@
-  o Minor bugfixes (freebsd):
-    - In have_enough_mem_for_dircache(), the variable DIRCACHE_MIN_MEM_MB
-      does not stringify on FreeBSD, so we switch to tor_asprintf(). Fixes
-      bug 20887; bugfix on 0.2.8.1-alpha. Patch by Neel Chauhan.

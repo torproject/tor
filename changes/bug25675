@@ -1,4 +1,0 @@
-  o Minor bugfixes (C correctness):
-    - Add a missing lock acquisition in the shutdown code of the
-      control subsystem. Fixes bug 25675; bugfix on 0.2.7.3-rc. Found
-      by Coverity; this is CID 1433643.

@@ -1,6 +1,0 @@
-  o Code simplification and refactoring:
-    - Rename two fields of connection_t struct.
-      timestamp_lastwritten is renamed to timestamp_last_write_allowed and
-      timestamp_lastread is renamed to timestamp_last_read_allowed.
-      Closes ticket 24714, patch by "valentecaio".
-

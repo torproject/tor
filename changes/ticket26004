@@ -1,5 +1,0 @@
-  o Minor features (directory authority, forward compatibility):
-    - Make the lines of the measured bandwidth file able to contain their
-      entries in any order. Previously, the node_id entry needed to come
-      first. Closes ticket 26004.
-

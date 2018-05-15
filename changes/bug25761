@@ -1,3 +1,0 @@
-  o Major bugfixes (onion service):
-    - Correctly detect when onion services get disabled after HUP.
-      Fixes bug 25761; bugfix on 0.3.2.1.

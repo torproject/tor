@@ -1,5 +1,0 @@
-  o Minor features (accounting):
-    - When we become dormant, use a scheduled event to wake up at the right
-      time.  Previously, we would use the per-second timer to check whether
-      to wake up, but we no longer have any per-second timers enabled when
-      the network is disabled. Closes ticket 26064.

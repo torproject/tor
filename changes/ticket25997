@@ -1,5 +1,0 @@
-  o Minor bugfixes (testing, coverage):
-    - Remove randomness from the hs_common/responsible_hsdirs test,
-      so that it always takes the same path through the function it tests.
-      Fixes bug 25997; bugfix on 0.3.2.1-alpha.
-

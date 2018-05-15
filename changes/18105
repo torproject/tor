@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Introduce a function to call getsockname() and return
-      tor_addr_t, to save a little complexity throughout the codebase.
-      Closes ticket 18105.

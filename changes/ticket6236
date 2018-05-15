@@ -1,4 +1,0 @@
-  o Minor bugfixes (Duplicate code):
-    - Remove duplicate code in parse_{c,s}method_line and bootstrap
-      their functionalities into a single function. Fixes
-      bug 6236; bugfix on 0.2.3.6-alpha.

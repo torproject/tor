@@ -1,5 +1,0 @@
-  o Minor bugfixes (portability):
-    - Do not align mmap length, as it is not required by POSIX, and the
-      getpagesize function is deprecated. Fixes bug 25399; bugfix on
-      0.1.1.23.
-

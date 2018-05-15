@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove extern declaration of stats_n_seconds_working variable from main,
-      protecting its accesses with get_uptime() and reset_uptime() functions.
-      Closes ticket 25081, patch by “valentecaio”.
-

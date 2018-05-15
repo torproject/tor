@@ -1,4 +1,0 @@
-  o Major bugfixes (directory authority):
-    - Avoid a crash when testing router reachability on a router that could
-      have an ed25519 ID, but which does not. Fixes bug 25415; bugfix on
-      0.3.3.2-alpha.

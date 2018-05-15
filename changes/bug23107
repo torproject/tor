@@ -1,6 +1,0 @@
-  o Code simplification and refactoring:
-    - Put a SHA1 public key digest in hs_service_intro_point_t, and use it in
-      register_intro_circ() and service_intro_point_new(). This prevents the
-      digest from being re-calculated each time. Closes ticket 23107. Patch by
-      Neel Chauhan.
-

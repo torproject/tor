@@ -1,6 +1,0 @@
-  o Code simplification and refactoring:
-    - We remove the return value of node_get_prim_orport() and
-      node_get_prim_dirport(), and introduce node_get_prim_orport()
-      in node_ipv6_or_preferred() and node_ipv6_dir_preferred() in
-      order to check for a null address. Closes ticket 23873. Patch
-      by Neel Chauhan.

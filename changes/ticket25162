@@ -1,6 +1,0 @@
-  o Minor features (compression, zstd):
-    - When running with zstd, Tor now considers using advanced functions that
-      the zstd maintainers have labeled as potentially unstable. To
-      prevent breakage, Tor will only use this functionality when
-      the runtime version of the zstd library matches the version
-      with which it were compiled.  Closes ticket 25162.

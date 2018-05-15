@@ -1,7 +1,0 @@
-  o Minor bugfixes (error reporting):
-    - Improve tolerance for directory authorities with skewed clocks.
-      Previously, an authority with a clock more than 60 seconds ahead
-      could cause a client with a correct clock to warn that the
-      client's clock was behind.  Now the clocks of a majority of
-      directory authorities have to be ahead of the client before this
-      warning will occur.  Fixes bug 25756; bugfix on 0.2.2.25-alpha.

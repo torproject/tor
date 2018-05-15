@@ -1,5 +1,0 @@
-  o Major features (CPU usage, mobile):
-    - When Tor is disabled (via DisableNetwork or via hibernation), it
-      no longer needs to run any per-second events.  This change should
-      make it easier for mobile applications to disable Tor while the
-      device is sleeping, or Tor is not running.  Closes ticket 26063.

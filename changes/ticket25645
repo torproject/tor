@@ -1,4 +1,0 @@
-  o Minor bugfixes (channel_get_for_extend()):
-    - Remove the unused variable n_possible from the function
-      Fixes bug 25645; bugfix on 0.2.4.4-alpha
-

@@ -1,3 +1,0 @@
-  o Minor bugfix (Multiple includes):
-    - Fixed multiple includes of trasports.h in src/or/connection.c
-      Fixes bug 25261; bugfix on 0.2.5.1-alpha.

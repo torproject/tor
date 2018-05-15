@@ -1,6 +1,0 @@
-  o Code simplification and refactoring:
-    - Our main loop has been simplified so that all important operations
-      happen inside events. Previously, some operations had to happen
-      outside the event loop, to prevent infinite sequences of event
-      activations. Closes ticket 25374.
-

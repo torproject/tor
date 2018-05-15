@@ -1,9 +1,0 @@
-  o Minor features (mainloop):
-    - Move responsibility for
-      warning relay operators about unreachable ports
-      from a once-per-second callback to a callback that is only scheduled as
-      needed.  Once enough items are removed from our once-per-second
-      callback, we can eliminate it entirely to conserve CPU when idle.
-      Closes ticket
-      25952.
-

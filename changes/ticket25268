@@ -1,7 +1,0 @@
-  o Removed features:
-    - The old "round-robin" circuit multiplexer (circuitmux)
-      implementation has been removed, along with a fairly large set of
-      code that existed to support it.  It has not been the default
-      circuitmux since we introduced the "EWMA" circuitmux in 0.2.4.x,
-      but it still required an unreasonable amount of memory and CPU.
-      Closes ticket 25268.

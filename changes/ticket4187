@@ -1,3 +1,0 @@
-  o Minor bugfixes (directory client):
-    - When unverified-consensus is verified, rename it to cached-consenus.
-      Fixes bug 4187; bugfix on 0.2.0.3-alpha.

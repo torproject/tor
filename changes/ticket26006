@@ -1,4 +1,0 @@
-  o Minor features (compilation, portability):
-    - Avoid some compilation warnings with recent versions
-      of LibreSSL. Closes ticket 26006.
-

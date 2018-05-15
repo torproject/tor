@@ -1,8 +1,0 @@
-  o Removed features:
-
-    - Directory authorities will no longer support voting according to any
-      consensus method before consensus method 25. This keeps authorities
-      compatible with all authorities running 0.2.9.8 and later, and does
-      not break any clients or relays. Implements ticket 24378 and
-      proposal 290.
-

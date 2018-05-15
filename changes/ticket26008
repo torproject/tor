@@ -1,7 +1,0 @@
-  o Minor bugfixes (test):
-    - When testing workqueue event-cancellation, make sure that we actually
-      cancel an event, and that cancel each event with equal probability.
-      (It was previously possible, though extremely unlikely, for our
-      event-canceling test not to cancel any events.) Fixes bug 26008;
-      bugfix on 0.2.6.3-alpha.  
-

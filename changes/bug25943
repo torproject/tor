@@ -1,7 +1,0 @@
-  o Minor bugfixes (tests):
-    - Use X509_new() to allocate certificates that will be freed later
-      with X509_free(). Previously, some parts of the unit tests had
-      used tor_malloc_zero(), which is incorrect, and which caused
-      test failures on Windows when they were built with extra hardening.
-      Fixes bugs 25943 and 25944; bugfix on 0.2.8.1-alpha.
-      Patch by Marcin Cieślak.

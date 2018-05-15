@@ -1,6 +1,0 @@
-  o Minor features (configuration):
-    - The "DownloadSchedule" options have been renamed to end with
-      "DownloadInitialDelay".  The old names are still allowed, but will
-      produce a warning. Comma-separated lists are still permitted for
-      these options, but all values after the first are ignored (as they have
-      been since 0.2.9). Closes ticket 23354.

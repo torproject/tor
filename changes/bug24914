@@ -1,3 +1,0 @@
-  o Minor features (performance):
-    - Avoid a needless call to malloc() when processing an incoming
-      relay cell.  Closes ticket 24914.

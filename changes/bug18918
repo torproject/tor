@@ -1,6 +1,0 @@
-  o Code simplification and refactoring:
-    - In order to make the OR and dir checking function in router.c less
-      confusing we renamed some functions and consider_testing_reachability()
-      has been splitted into router_should_check_reachability() and
-      router_do_reachability_checks(). Also we improved the documentation in
-      some functions. Closes ticket 18918.

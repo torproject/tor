@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-    - We switch to should_record_bridge_info() in geoip_note_client_seen() and
-      options_need_geoip_info() instead of accessing the configuration values
-      directly. Fixes bug 25290; bugfix on 0.2.1.6-alpha. Patch by Neel
-      Chauhan.

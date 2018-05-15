@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Since Tor requires C99, remove our old workaround code for libc
-      implementations where free(NULL) doesn't work. Closes ticket 24484.
-

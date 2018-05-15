@@ -1,6 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove the return value for fascist_firewall_choose_address_base(),
-      and sister functions such as fascist_firewall_choose_address_node()
-      and fascist_firewall_choose_address_rs(). Also, while we're here,
-      initialize the ap argument as leaving it uninitialized can pose a
-      security hazard. Closes ticket 24734. Patch by Neel Chauhan.

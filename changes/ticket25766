@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Refactor token-bucket implementations to use a common backend.
-      Closes ticket 25766.

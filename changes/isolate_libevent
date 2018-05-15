@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-    - Initial work to isolate Libevent usage to a handful of modules in our
-      codebase, to simplify our call structure, and so that we can more
-      easily change event loops in the future if needed. Closes ticket
-      23750.

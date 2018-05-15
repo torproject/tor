@@ -1,5 +1,0 @@
-  o Minor bugfixes (tests):
-    - Change the behavior of the "channel/outbound" test so that it never
-      causes a 10-second rollover for the EWMA circuitmux code. Previously,
-      this behavior would happen randomly, and result in fluctuating test
-      coverage. Fixes bug 25994; bugfix on 0.3.3.1-alpha.

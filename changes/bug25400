@@ -1,5 +1,0 @@
-  o Minor bugfix (controler):
-    - Make CIRC_BW event reflect the total of all data sent on a circuit,
-      including padding and dropped cells. Also fix a mis-counting bug
-      when STREAM_BW events were enabled. Fixes bug 25400; bugfix on
-      0.2.5.2-alpha.

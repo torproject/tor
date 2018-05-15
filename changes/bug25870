@@ -1,6 +1,0 @@
-  o Minor bugfixes (vanguards):
-    - Allow the last hop in a vanguard circuit to be the same as our first,
-      to prevent the adversary from influencing guard node choice by choice
-      of last hop. Also prevent the creation of A - B - A paths, or A - A
-      paths, which are forbidden by relays. Fixes bug 25870; bugfix on
-      0.3.3.1-alpha.

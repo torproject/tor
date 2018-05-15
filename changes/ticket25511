@@ -1,5 +1,0 @@
-  o Minor features (control port):
-    - Introduce GETINFO "current-time/{local,utc}" to return the local
-      and UTC times respectively in ISO format. This helps a controller
-      like Tor Browser detect a time-related error. Closes ticket 25511.
-      Patch by Neel Chauhan.

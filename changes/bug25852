@@ -1,5 +1,0 @@
-  o Minor bugfixes (control interface):
-    - Respond with more human readable error messages to GETINFO
-      exit-policy/* requests. Also, let controller know if error
-      is transient (response code 551) or not (response code 552).
-      Fixes bug 25852; bugfix on 0.2.8.1-alpha.

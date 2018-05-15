@@ -1,3 +1,0 @@
-  o Minor bugfixes (hidden service v3):
-    - Fix a memory leak when an hidden service v3 is configured and gets a
-      SIGHUP signal. Fixes bug 25901; bugfix on 0.3.2.1-alpha.

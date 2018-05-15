@@ -1,4 +1,0 @@
-  o Minor bugfixes (Assert crash):
-    - Avoid an assert in the circuit build timeout code if we fail to
-      allow any circuits to actually complete. Fixes bug 25733;
-      bugfix on 0.2.2.2-alpha.

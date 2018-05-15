@@ -1,4 +1,0 @@
-  o Minor features (performance, allocation):
-    - Avoid a needless malloc()/free() pair every time we handle an ntor
-      handshake. Closes ticket 25150.
-
