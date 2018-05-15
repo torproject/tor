@@ -1,126 +1,135 @@
 Changes in version 0.3.4.1-alpha - 2018-05-1?
   XXX BLURB
 
+  o New system requirements:
+    - Tor no longer tries to support systems without mmap() or some
+      local equivalent. Apparently, compilation on such systems has been
+      broken for some time, without anybody noticing or complaining.
+      Closes ticket 25398.
 
   o Major feature (directory authority, modularization):
-    - The directory authority subsystem has been modularized. The code is now
-      located in src/or/dirauth/ which is compiled in by default. To disable the
-      module, the configure option --disable-module-dirauth has been added.
-      Closes ticket 25610;
+    - The directory authority subsystem has been modularized. The code
+      is now located in src/or/dirauth/ which is compiled in by default.
+      To disable the module, the configure option
+      --disable-module-dirauth has been added. Closes ticket 25610;
 
   o Major feature (main loop, CPU usage):
-    - Previously, tor would enable at startup all possible main loop event
-      regardless if it needed them. For instance, directory authorities
-      callbacks were fired up even for client only. We have now refactored this
-      whole interface to only enable the appropriate callbacks depending on what
-      are tor roles (client only, relay, hidden service, etc.). Furthermore,
-      these events now depend on DisableNetwork or the hibernation state in
-      order to enable them. This is a big step towards reducing client CPU usage
-      by reducing the amount of wake ups the daemon does. Closes ticket 25376
+    - Previously, tor would enable at startup all possible main loop
+      event regardless if it needed them. For instance, directory
+      authorities callbacks were fired up even for client only. We have
+      now refactored this whole interface to only enable the appropriate
+      callbacks depending on what are tor roles (client only, relay,
+      hidden service, etc.). Furthermore, these events now depend on
+      DisableNetwork or the hibernation state in order to enable them.
+      This is a big step towards reducing client CPU usage by reducing
+      the amount of wake ups the daemon does. Closes ticket 25376
       and 25762.
 
   o Major features (CPU usage, mobile):
     - When Tor is disabled (via DisableNetwork or via hibernation), it
-      no longer needs to run any per-second events.  This change should
+      no longer needs to run any per-second events. This change should
       make it easier for mobile applications to disable Tor while the
-      device is sleeping, or Tor is not running.  Closes ticket 26063.
+      device is sleeping, or Tor is not running. Closes ticket 26063.
 
   o Major features (main loop, CPU wakeup):
     - The bandwidth-limitation logic has been refactored so that
-      bandwidth calculations are performed on-demand, rather than
-      every TokenBucketRefillInterval milliseconds.
-      This change should improve the granularity of our bandwidth
-      calculations, and limit the number of times that the Tor process needs
-      to wake up when it is idle. Closes ticket 25373.
+      bandwidth calculations are performed on-demand, rather than every
+      TokenBucketRefillInterval milliseconds. This change should improve
+      the granularity of our bandwidth calculations, and limit the
+      number of times that the Tor process needs to wake up when it is
+      idle. Closes ticket 25373.
 
   o Major bugfixes (directory authorities, security):
-    - When directory authorities read a zero-byte bandwidth file, they log
-      a warning with the contents of an uninitialised buffer. Log a warning
-      about the empty file instead.
-      Fixes bug 26007; bugfix on 0.2.2.1-alpha.
+    - When directory authorities read a zero-byte bandwidth file, they
+      log a warning with the contents of an uninitialised buffer. Log a
+      warning about the empty file instead. Fixes bug 26007; bugfix
+      on 0.2.2.1-alpha.
 
   o Major bugfixes (directory authority):
-    - Avoid a crash when testing router reachability on a router that could
-      have an ed25519 ID, but which does not. Fixes bug 25415; bugfix on
-      0.3.3.2-alpha.
+    - Avoid a crash when testing router reachability on a router that
+      could have an ed25519 ID, but which does not. Fixes bug 25415;
+      bugfix on 0.3.3.2-alpha.
 
   o Major bugfixes (onion service):
-    - Correctly detect when onion services get disabled after HUP.
-      Fixes bug 25761; bugfix on 0.3.2.1.
+    - Correctly detect when onion services get disabled after HUP. Fixes
+      bug 25761; bugfix on 0.3.2.1.
 
   o Major bugfixes (protover, voting):
-    - Revise Rust implementation of protover to use a more memory-efficient
-      voting algorithm and corresponding data structures, thus avoiding a
-      potential (but small impact) DoS attack where specially crafted protocol
-      strings would expand to several potential megabytes in memory.  In the
-      process, several portions of code were revised to be methods on new,
-      custom types, rather than functions taking interchangeable types, thus
-      increasing type safety of the module.  Custom error types and handling
-      were added as well, in order to facilitate better error dismissal/handling
-      in outside crates and avoid mistakenly passing an internal error string to
-      C over the FFI boundary.  Many tests were added, and some previous
+    - Revise Rust implementation of protover to use a more memory-
+      efficient voting algorithm and corresponding data structures, thus
+      avoiding a potential (but small impact) DoS attack where specially
+      crafted protocol strings would expand to several potential
+      megabytes in memory. In the process, several portions of code were
+      revised to be methods on new, custom types, rather than functions
+      taking interchangeable types, thus increasing type safety of the
+      module. Custom error types and handling were added as well, in
+      order to facilitate better error dismissal/handling in outside
+      crates and avoid mistakenly passing an internal error string to C
+      over the FFI boundary. Many tests were added, and some previous
       differences between the C and Rust implementations have been
       remedied. Fixes bug 24031; bugfix on 0.3.3.1-alpha.
 
   o Major bugfixes (relay, denial of service):
-    - Impose a limit on circuit cell queue size. The limit can be controlled by
-      a consensus parameter. Fixes bug 25226; bugfix on 0.2.4.14-alpha.
+    - Impose a limit on circuit cell queue size. The limit can be
+      controlled by a consensus parameter. Fixes bug 25226; bugfix
+      on 0.2.4.14-alpha.
 
   o Minor feature (entry guards):
-    - Introduce torrc option NumPrimaryGuards for controlling the number of
-      primary guards. Closes ticket 25843.
+    - Introduce torrc option NumPrimaryGuards for controlling the number
+      of primary guards. Closes ticket 25843.
 
   o Minor features (accounting):
-    - When we become dormant, use a scheduled event to wake up at the right
-      time.  Previously, we would use the per-second timer to check whether
-      to wake up, but we no longer have any per-second timers enabled when
-      the network is disabled. Closes ticket 26064.
+    - When we become dormant, use a scheduled event to wake up at the
+      right time. Previously, we would use the per-second timer to check
+      whether to wake up, but we no longer have any per-second timers
+      enabled when the network is disabled. Closes ticket 26064.
 
   o Minor features (code quality):
-    - Add optional spell-checking for the Tor codebase, using the "misspell"
-      program.  To use this feature, run "make check-typos".
+    - Add optional spell-checking for the Tor codebase, using the
+      "misspell" program. To use this feature, run "make check-typos".
       Closes ticket 25024.
 
   o Minor features (compatibility):
-    - Tor now detects versions of OpenSSL 1.1.0 and later compiled with the
-      no-deprecated option, and builds correctly with them. Closes
+    - Tor now detects versions of OpenSSL 1.1.0 and later compiled with
+      the no-deprecated option, and builds correctly with them. Closes
       tickets 19429, 19981, and 25353.
 
   o Minor features (compilation, portability):
-    - Avoid some compilation warnings with recent versions
-      of LibreSSL. Closes ticket 26006.
+    - Avoid some compilation warnings with recent versions of LibreSSL.
+      Closes ticket 26006.
 
   o Minor features (compression, zstd):
-    - When running with zstd, Tor now considers using advanced functions that
-      the zstd maintainers have labeled as potentially unstable. To
-      prevent breakage, Tor will only use this functionality when
-      the runtime version of the zstd library matches the version
-      with which it were compiled.  Closes ticket 25162.
+    - When running with zstd, Tor now considers using advanced functions
+      that the zstd maintainers have labeled as potentially unstable. To
+      prevent breakage, Tor will only use this functionality when the
+      runtime version of the zstd library matches the version with which
+      it were compiled. Closes ticket 25162.
 
   o Minor features (configuration):
     - The "DownloadSchedule" options have been renamed to end with
-      "DownloadInitialDelay".  The old names are still allowed, but will
+      "DownloadInitialDelay". The old names are still allowed, but will
       produce a warning. Comma-separated lists are still permitted for
-      these options, but all values after the first are ignored (as they have
-      been since 0.2.9). Closes ticket 23354.
+      these options, but all values after the first are ignored (as they
+      have been since 0.2.9). Closes ticket 23354.
 
   o Minor features (continuous integration):
-    - Our .travis.yml configuration now includes support for testing
-      the results of "make distcheck". (It's not uncommon for "make check" to
-      pass but "make distcheck" to fail.)  Closes ticket 25814.
-    - Our Travis CI configuration now integrates with the Coveralls coverage
-      analysis tool. Closes ticket 25818.
+    - Our .travis.yml configuration now includes support for testing the
+      results of "make distcheck". (It's not uncommon for "make check"
+      to pass but "make distcheck" to fail.) Closes ticket 25814.
+    - Our Travis CI configuration now integrates with the Coveralls
+      coverage analysis tool. Closes ticket 25818.
 
   o Minor features (control port):
     - Introduce GETINFO "current-time/{local,utc}" to return the local
       and UTC times respectively in ISO format. This helps a controller
       like Tor Browser detect a time-related error. Closes ticket 25511.
       Patch by Neel Chauhan.
-    - Introduce new fields to the CIRC_BW event. There are two new fields in
-      each of the read and written directions. The DELIVERED fields report the
-      total valid data on the circuit, as measured by the payload sizes of
-      verified and error-checked relay command cells. The OVERHEAD fields
-      report the total unused bytes in each of these cells. Closes ticket 25903.
+    - Introduce new fields to the CIRC_BW event. There are two new
+      fields in each of the read and written directions. The DELIVERED
+      fields report the total valid data on the circuit, as measured by
+      the payload sizes of verified and error-checked relay command
+      cells. The OVERHEAD fields report the total unused bytes in each
+      of these cells. Closes ticket 25903.
 
   o Minor features (directory authority):
     - Directory authorities now open their key-pinning files as O_SYNC,
@@ -128,79 +137,63 @@ Changes in version 0.3.4.1-alpha - 2018-05-1?
       Closes ticket 23909.
 
   o Minor features (directory authority, forward compatibility):
-    - Make the lines of the measured bandwidth file able to contain their
-      entries in any order. Previously, the node_id entry needed to come
-      first. Closes ticket 26004.
+    - Make the lines of the measured bandwidth file able to contain
+      their entries in any order. Previously, the node_id entry needed
+      to come first. Closes ticket 26004.
 
   o Minor features (geoip):
-    - Update geoip and geoip6 to the May 1 2018 Maxmind GeoLite2
-      Country database. Closes ticket 26104.
+    - Update geoip and geoip6 to the May 1 2018 Maxmind GeoLite2 Country
+      database. Closes ticket 26104.
 
   o Minor features (mainloop):
-    - Move responsibility for
-      closing connections, circuits, and channels
-      from a once-per-second callback to a callback that is only scheduled as
-      needed.  Once enough items are removed from our once-per-second
+    - Move responsibility for closing connections, circuits, and
+      channels from a once-per-second callback to a callback that is
+      only scheduled as needed. Once enough items are removed from our
+      once-per-second callback, we can eliminate it entirely to conserve
+      CPU when idle. Closes ticket 25932.
+    - Move responsibility for consensus voting from a once-per-second
+      callback to a callback that is only scheduled as needed. Once
+      enough items are removed from our once-per-second callback, we can
+      eliminate it entirely to conserve CPU when idle. Closes
+      ticket 25937.
+    - Move responsibility for flushing log callbacks from a once-per-
+      second callback to a callback that is only scheduled as needed.
+      Once enough items are removed from our once-per-second callback,
+      we can eliminate it entirely to conserve CPU when idle. Closes
+      ticket 25951.
+    - Move responsibility for honoring delayed SIGNEWNYM requests from a
+      once-per-second callback to a callback that is only scheduled as
+      needed. Once enough items are removed from our once-per-second
       callback, we can eliminate it entirely to conserve CPU when idle.
-      Closes ticket
-      25932.
-    - Move responsibility for
-      consensus voting
-      from a once-per-second callback to a callback that is only scheduled as
-      needed.  Once enough items are removed from our once-per-second
+      Closes ticket 25949.
+    - Move responsibility for rescanning the consensus cache from a
+      once-per-second callback to a callback that is only scheduled as
+      needed. Once enough items are removed from our once-per-second
       callback, we can eliminate it entirely to conserve CPU when idle.
-      Closes ticket
-      25937.
-    - Move responsibility for
-      flushing log callbacks
-      from a once-per-second callback to a callback that is only scheduled as
-      needed.  Once enough items are removed from our once-per-second
+      Closes ticket: 25931.
+    - Move responsibility for saving the state file to disk from a once-
+      per-second callback to a callback that is only scheduled as
+      needed. Once enough items are removed from our once-per-second
       callback, we can eliminate it entirely to conserve CPU when idle.
-      Closes ticket
-      25951.
-    - Move responsibility for
-      honoring delayed SIGNEWNYM requests
-      from a once-per-second callback to a callback that is only scheduled as
-      needed.  Once enough items are removed from our once-per-second
-      callback, we can eliminate it entirely to conserve CPU when idle.
-      Closes ticket
-      25949.
-    - Move responsibility for
-      rescanning the consensus cache
-      from a once-per-second callback to a callback that is only scheduled as
-      needed.  Once enough items are removed from our once-per-second
-      callback, we can eliminate it entirely to conserve CPU when idle.
-      Closes ticket:
-      25931.
-    - Move responsibility for
-      saving the state file to disk
-      from a once-per-second callback to a callback that is only scheduled as
-      needed.  Once enough items are removed from our once-per-second
-      callback, we can eliminate it entirely to conserve CPU when idle.
-      Closes ticket
-      25948.
-    - Move responsibility for
-      warning relay operators about unreachable ports
-      from a once-per-second callback to a callback that is only scheduled as
-      needed.  Once enough items are removed from our once-per-second
-      callback, we can eliminate it entirely to conserve CPU when idle.
-      Closes ticket
-      25952.
-   - Move responsibility for
-     keeping track of Tor's uptime
-      from a nce-per-second callback to a callback that is only scheduled as
-      needed.  Once enough items are removed from our once-per-second
-      callback, we can eliminate it entirely to conserve CPU when idle.
-      Closes ticket
-      26009.
+      Closes ticket 25948.
+    - Move responsibility for warning relay operators about unreachable
+      ports from a once-per-second callback to a callback that is only
+      scheduled as needed. Once enough items are removed from our once-
+      per-second callback, we can eliminate it entirely to conserve CPU
+      when idle. Closes ticket 25952. - Move responsibility for keeping
+      track of Tor's uptime from a nce-per-second callback to a callback
+      that is only scheduled as needed. Once enough items are removed
+      from our once-per-second callback, we can eliminate it entirely to
+      conserve CPU when idle. Closes ticket 26009.
 
   o Minor features (performance):
     - Avoid a needless call to malloc() when processing an incoming
-      relay cell.  Closes ticket 24914.
+      relay cell. Closes ticket 24914.
 
   o Minor features (performance, 32-bit):
-    - Make our timing-wheel code run a tiny bit faster on 32-bit platforms,
-      by preferring 32-bit math to 64-bit. Closes ticket 24688.
+    - Make our timing-wheel code run a tiny bit faster on 32-bit
+      platforms, by preferring 32-bit math to 64-bit. Closes
+      ticket 24688.
 
   o Minor features (performance, allocation):
     - Avoid a needless malloc()/free() pair every time we handle an ntor
@@ -208,26 +201,26 @@ Changes in version 0.3.4.1-alpha - 2018-05-1?
 
   o Minor features (Testing):
     - Add a unit test for voting_schedule_get_start_of_next_interval().
-      Closes ticket 26014, and helps make unit test coverage more
-      deterministic.
-    - A new unittests module specifically for testing the functions in the
-      (new-ish) bridges.c module has been created with new unittests, raising
-      the code coverage percentages.  Closes 25425.
+      Closes ticket 26014, and helps make unit test coverage
+      more deterministic.
+    - A new unittests module specifically for testing the functions in
+      the (new-ish) bridges.c module has been created with new
+      unittests, raising the code coverage percentages. Closes 25425.
     - We now have improved testing for addressmap_get_virtual_address()
-      function.  This should improve our test coverage, and make our test
+      function. This should improve our test coverage, and make our test
       coverage more deterministic. Closes ticket 25993.
 
   o Minor features (timekeeping, circuit scheduling):
     - When keeping track of how busy each circuit have been recently on
-      a given connection, use coarse-grained monotonic timers rather than
-      gettimeofday(). This change should marginally increase accuracy
-      and performance.  Implements part of ticket 25927.
+      a given connection, use coarse-grained monotonic timers rather
+      than gettimeofday(). This change should marginally increase
+      accuracy and performance. Implements part of ticket 25927.
 
   o Minor bugfix (controler):
-    - Make CIRC_BW event reflect the total of all data sent on a circuit,
-      including padding and dropped cells. Also fix a mis-counting bug
-      when STREAM_BW events were enabled. Fixes bug 25400; bugfix on
-      0.2.5.2-alpha.
+    - Make CIRC_BW event reflect the total of all data sent on a
+      circuit, including padding and dropped cells. Also fix a mis-
+      counting bug when STREAM_BW events were enabled. Fixes bug 25400;
+      bugfix on 0.2.5.2-alpha.
 
   o Minor bugfix (Multiple includes):
     - Fixed multiple includes of trasports.h in src/or/connection.c
@@ -235,107 +228,108 @@ Changes in version 0.3.4.1-alpha - 2018-05-1?
 
   o Minor bugfixes (Assert crash):
     - Avoid an assert in the circuit build timeout code if we fail to
-      allow any circuits to actually complete. Fixes bug 25733;
-      bugfix on 0.2.2.2-alpha.
+      allow any circuits to actually complete. Fixes bug 25733; bugfix
+      on 0.2.2.2-alpha.
 
   o Minor bugfixes (bandwidth management):
-    - Consider ourselves "low on write bandwidth" if we have exhausted our
-      write bandwidth some time in the last second. This was the
+    - Consider ourselves "low on write bandwidth" if we have exhausted
+      our write bandwidth some time in the last second. This was the
       documented behavior before, but the actual behavior was to change
-      this value every TokenBucketRefillInterval. Fixes bug 25828; bugfix on
-      0.2.3.5-alpha.
+      this value every TokenBucketRefillInterval. Fixes bug 25828;
+      bugfix on 0.2.3.5-alpha.
 
   o Minor bugfixes (C correctness):
-    - Add a missing lock acquisition in the shutdown code of the
-      control subsystem. Fixes bug 25675; bugfix on 0.2.7.3-rc. Found
-      by Coverity; this is CID 1433643.
+    - Add a missing lock acquisition in the shutdown code of the control
+      subsystem. Fixes bug 25675; bugfix on 0.2.7.3-rc. Found by
+      Coverity; this is CID 1433643.
 
   o Minor bugfixes (channel_get_for_extend()):
-    - Remove the unused variable n_possible from the function
-      Fixes bug 25645; bugfix on 0.2.4.4-alpha
+    - Remove the unused variable n_possible from the function Fixes bug
+      25645; bugfix on 0.2.4.4-alpha
 
   o Minor bugfixes (circuit path selection):
-    - Don't count path selection failures as circuit build failures. This
-      should eliminate cases where Tor blames its guard or the network
-      for situations like insufficient microdescriptors and/or overly
-      restrictive torrc settings. Fixes bug 25705; bugfix on 0.3.3.1-alpha.
+    - Don't count path selection failures as circuit build failures.
+      This should eliminate cases where Tor blames its guard or the
+      network for situations like insufficient microdescriptors and/or
+      overly restrictive torrc settings. Fixes bug 25705; bugfix
+      on 0.3.3.1-alpha.
 
   o Minor bugfixes (client):
-    - Don't consider Tor running as a client if the ControlPort is open. Fixes
-      bug 26062; bugfix on 0.2.9.4-alpha.
+    - Don't consider Tor running as a client if the ControlPort is open.
+      Fixes bug 26062; bugfix on 0.2.9.4-alpha.
 
   o Minor bugfixes (control interface):
-    - Respond with more human readable error messages to GETINFO
-      exit-policy/* requests. Also, let controller know if error
-      is transient (response code 551) or not (response code 552).
-      Fixes bug 25852; bugfix on 0.2.8.1-alpha.
+    - Respond with more human readable error messages to GETINFO exit-
+      policy/* requests. Also, let controller know if error is transient
+      (response code 551) or not (response code 552). Fixes bug 25852;
+      bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (directory client):
-    - When unverified-consensus is verified, rename it to cached-consenus.
-      Fixes bug 4187; bugfix on 0.2.0.3-alpha.
+    - When unverified-consensus is verified, rename it to cached-
+      consenus. Fixes bug 4187; bugfix on 0.2.0.3-alpha.
 
   o Minor bugfixes (directory server cert fetch):
     - Fixed launching a certificate fetch always during the scheduled
       periodic consensus fetch by fetching only in those cases when
-      consensus are waiting for certs.
-      Fixes bug 24740; bugfix on 0.2.9.1-alpha.
+      consensus are waiting for certs. Fixes bug 24740; bugfix
+      on 0.2.9.1-alpha.
 
   o Minor bugfixes (documentation):
-    - Stop saying in the manual that clients cache ipv4 dns answers
-      from exit relays. We haven't used them since 0.2.6.3-alpha, and
-      in ticket 24050 we stopped even caching them as of 0.3.2.6-alpha,
-      but we forgot to say so in the man page. Fixes bug 26052; bugfix
+    - Stop saying in the manual that clients cache ipv4 dns answers from
+      exit relays. We haven't used them since 0.2.6.3-alpha, and in
+      ticket 24050 we stopped even caching them as of 0.3.2.6-alpha, but
+      we forgot to say so in the man page. Fixes bug 26052; bugfix
       on 0.3.2.6-alpha.
 
   o Minor bugfixes (Duplicate code):
     - Remove duplicate code in parse_{c,s}method_line and bootstrap
-      their functionalities into a single function. Fixes
-      bug 6236; bugfix on 0.2.3.6-alpha.
+      their functionalities into a single function. Fixes bug 6236;
+      bugfix on 0.2.3.6-alpha.
 
   o Minor bugfixes (error reporting):
     - Improve tolerance for directory authorities with skewed clocks.
       Previously, an authority with a clock more than 60 seconds ahead
       could cause a client with a correct clock to warn that the
-      client's clock was behind.  Now the clocks of a majority of
+      client's clock was behind. Now the clocks of a majority of
       directory authorities have to be ahead of the client before this
-      warning will occur.  Fixes bug 25756; bugfix on 0.2.2.25-alpha.
+      warning will occur. Fixes bug 25756; bugfix on 0.2.2.25-alpha.
 
   o Minor bugfixes (freebsd):
     - In have_enough_mem_for_dircache(), the variable DIRCACHE_MIN_MEM_MB
-      does not stringify on FreeBSD, so we switch to tor_asprintf(). Fixes
-      bug 20887; bugfix on 0.2.8.1-alpha. Patch by Neel Chauhan.
+      does not stringify on FreeBSD, so we switch to tor_asprintf().
+      Fixes bug 20887; bugfix on 0.2.8.1-alpha. Patch by Neel Chauhan.
 
   o Minor bugfixes (hidden service v3):
-    - Fix a memory leak when an hidden service v3 is configured and gets a
-      SIGHUP signal. Fixes bug 25901; bugfix on 0.3.2.1-alpha.
-    - When parsing the descriptor signature, look for the token plus an extra
-      white-space at the end. This is more correct but also will allow us to
-      support new fields that might start with "signature". Fixes bug 26069;
-      bugfix on 0.3.0.1-alpha.
+    - Fix a memory leak when an hidden service v3 is configured and gets
+      a SIGHUP signal. Fixes bug 25901; bugfix on 0.3.2.1-alpha.
+    - When parsing the descriptor signature, look for the token plus an
+      extra white-space at the end. This is more correct but also will
+      allow us to support new fields that might start with "signature".
+      Fixes bug 26069; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (Linux seccomp2 sandbox):
     - Allow the nanosleep() system call, which glibc uses to implement
       sleep() and usleep(). Fixes bug 24969; bugfix on 0.2.5.1-alpha.
 
   o Minor bugfixes (path selection):
-    - Only select relays when they have the descriptors we prefer to
-      use for them. This change fixes a bug where we could select
-      a relay because it had _some_ descriptor, but reject it later with
-      a nonfatal assertion error because it didn't have the exact one we
+    - Only select relays when they have the descriptors we prefer to use
+      for them. This change fixes a bug where we could select a relay
+      because it had _some_ descriptor, but reject it later with a
+      nonfatal assertion error because it didn't have the exact one we
       wanted. Fixes bugs 25691 and 25692; bugfix on 0.3.3.4-alpha.
 
   o Minor bugfixes (portability):
     - Do not align mmap length, as it is not required by POSIX, and the
-      getpagesize function is deprecated. Fixes bug 25399; bugfix on
-      0.1.1.23.
+      getpagesize function is deprecated. Fixes bug 25399; bugfix
+      on 0.1.1.23.
 
   o Minor bugfixes (relay statistics):
     - When a relay is collecting internal statistics about how many
-      create cell requests it has seen of each type, accurately count the
-      requests from relays that temporarily fall out of the consensus. (To
-      be extra conservative, we were already ignoring requests from
-      clients in our counts, and we continue ignoring them here.) Fixes
-      bug 24910; bugfix on 0.2.4.17-rc.
+      create cell requests it has seen of each type, accurately count
+      the requests from relays that temporarily fall out of the
+      consensus. (To be extra conservative, we were already ignoring
+      requests from clients in our counts, and we continue ignoring them
+      here.) Fixes bug 24910; bugfix on 0.2.4.17-rc.
 
   o Minor bugfixes (relay, crash):
     - Avoid a crash when running with DirPort set but ORPort tuned off.
@@ -343,154 +337,154 @@ Changes in version 0.3.4.1-alpha - 2018-05-1?
 
   o Minor bugfixes (restart-in-process):
     - When shutting down, Tor now clears all the flags in the control.c
-      module. This should prevent a bug where authentication cookies
-      are not generated on restart. Fixes bug 25512; bugfix on 0.3.3.1-alpha.
+      module. This should prevent a bug where authentication cookies are
+      not generated on restart. Fixes bug 25512; bugfix on 0.3.3.1-alpha.
 
   o Minor bugfixes (test):
-    - When testing workqueue event-cancellation, make sure that we actually
-      cancel an event, and that cancel each event with equal probability.
-      (It was previously possible, though extremely unlikely, for our
-      event-canceling test not to cancel any events.) Fixes bug 26008;
-      bugfix on 0.2.6.3-alpha.
+    - When testing workqueue event-cancellation, make sure that we
+      actually cancel an event, and that cancel each event with equal
+      probability. (It was previously possible, though extremely
+      unlikely, for our event-canceling test not to cancel any events.)
+      Fixes bug 26008; bugfix on 0.2.6.3-alpha.
 
   o Minor bugfixes (testing):
-    - Repeat part of the test in test_client_pick_intro() a number of times,
-      to give it consistent coverage. Fixes bug 25996; bugfix on
-      0.3.2.1-alpha.
+    - Repeat part of the test in test_client_pick_intro() a number of
+      times, to give it consistent coverage. Fixes bug 25996; bugfix
+      on 0.3.2.1-alpha.
 
   o Minor bugfixes (testing, coverage):
-    - Remove randomness from the hs_common/responsible_hsdirs test,
-      so that it always takes the same path through the function it tests.
+    - Remove randomness from the hs_common/responsible_hsdirs test, so
+      that it always takes the same path through the function it tests.
       Fixes bug 25997; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (tests):
-    - Change the behavior of the "channel/outbound" test so that it never
-      causes a 10-second rollover for the EWMA circuitmux code. Previously,
-      this behavior would happen randomly, and result in fluctuating test
-      coverage. Fixes bug 25994; bugfix on 0.3.3.1-alpha.
+    - Change the behavior of the "channel/outbound" test so that it
+      never causes a 10-second rollover for the EWMA circuitmux code.
+      Previously, this behavior would happen randomly, and result in
+      fluctuating test coverage. Fixes bug 25994; bugfix
+      on 0.3.3.1-alpha.
     - Use X509_new() to allocate certificates that will be freed later
       with X509_free(). Previously, some parts of the unit tests had
-      used tor_malloc_zero(), which is incorrect, and which caused
-      test failures on Windows when they were built with extra hardening.
-      Fixes bugs 25943 and 25944; bugfix on 0.2.8.1-alpha.
-      Patch by Marcin Cieślak.
-    - While running the circuit_timeout test, fix the PRNG to a deterministic
-      AES stream, so that the test coverage from this test will itself be
-      deterministic.  Fixes bug 25995; bugfix on 0.2.2.2-alpha.
+      used tor_malloc_zero(), which is incorrect, and which caused test
+      failures on Windows when they were built with extra hardening.
+      Fixes bugs 25943 and 25944; bugfix on 0.2.8.1-alpha. Patch by
+      Marcin Cieślak.
+    - While running the circuit_timeout test, fix the PRNG to a
+      deterministic AES stream, so that the test coverage from this test
+      will itself be deterministic. Fixes bug 25995; bugfix
+      on 0.2.2.2-alpha.
 
   o Minor bugfixes (vanguards):
-    - Allow the last hop in a vanguard circuit to be the same as our first,
-      to prevent the adversary from influencing guard node choice by choice
-      of last hop. Also prevent the creation of A - B - A paths, or A - A
-      paths, which are forbidden by relays. Fixes bug 25870; bugfix on
-      0.3.3.1-alpha.
+    - Allow the last hop in a vanguard circuit to be the same as our
+      first, to prevent the adversary from influencing guard node choice
+      by choice of last hop. Also prevent the creation of A - B - A
+      paths, or A - A paths, which are forbidden by relays. Fixes bug
+      25870; bugfix on 0.3.3.1-alpha.
 
   o Code simplification and refactoring:
-      We remove the PortForwsrding and PortForwardingHelper options, related
-      functions, and the port_forwarding tests. These options were used by
-      the now-deprecated Vidalia to help ordinary users become Tor relays or
-      bridges. Closes ticket 25409. Patch by Neel Chauhan.
+    - We remove the PortForwsrding and PortForwardingHelper options,
+      related functions, and the port_forwarding tests. These options
+      were used by the now-deprecated Vidalia to help ordinary users
+      become Tor relays or bridges. Closes ticket 25409. Patch by
+      Neel Chauhan.
     - In order to make the OR and dir checking function in router.c less
-      confusing we renamed some functions and consider_testing_reachability()
-      has been splitted into router_should_check_reachability() and
-      router_do_reachability_checks(). Also we improved the documentation in
-      some functions. Closes ticket 18918.
-    - Initial work to isolate Libevent usage to a handful of modules in our
-      codebase, to simplify our call structure, and so that we can more
-      easily change event loops in the future if needed. Closes ticket
-      23750.
-    - Introduce a function to call getsockname() and return
-      tor_addr_t, to save a little complexity throughout the codebase.
-      Closes ticket 18105.
+      confusing we renamed some functions and
+      consider_testing_reachability() has been splitted into
+      router_should_check_reachability() and
+      router_do_reachability_checks(). Also we improved the documentation
+      in some functions. Closes ticket 18918.
+    - Initial work to isolate Libevent usage to a handful of modules in
+      our codebase, to simplify our call structure, and so that we can
+      more easily change event loops in the future if needed. Closes
+      ticket 23750.
+    - Introduce a function to call getsockname() and return tor_addr_t,
+      to save a little complexity throughout the codebase. Closes
+      ticket 18105.
     - Make hsdir_index in node_t a hsdir_index_t rather than a pointer
       as hsdir_index is always present. Also, we move hsdir_index_t into
       or.h. Closes ticket 23094. Patch by Neel Chauhan.
-    - Merge functions used for describing nodes and suppress the functions
-      that do not allocate memory for the output buffer string.
-      NODE_DESC_BUF_LEN constant and format_node_description() function
-      cannot be used externally from router.c module anymore.
+    - Merge functions used for describing nodes and suppress the
+      functions that do not allocate memory for the output buffer
+      string. NODE_DESC_BUF_LEN constant and format_node_description()
+      function cannot be used externally from router.c module anymore.
       Closes ticket 25432. Patch by valentecaio.
     - Our main loop has been simplified so that all important operations
       happen inside events. Previously, some operations had to happen
       outside the event loop, to prevent infinite sequences of event
       activations. Closes ticket 25374.
-    - Put a SHA1 public key digest in hs_service_intro_point_t, and use it in
-      register_intro_circ() and service_intro_point_new(). This prevents the
-      digest from being re-calculated each time. Closes ticket 23107. Patch by
-      Neel Chauhan.
+    - Put a SHA1 public key digest in hs_service_intro_point_t, and use
+      it in register_intro_circ() and service_intro_point_new(). This
+      prevents the digest from being re-calculated each time. Closes
+      ticket 23107. Patch by Neel Chauhan.
     - Refactor token-bucket implementations to use a common backend.
       Closes ticket 25766.
-    - Remove extern declaration of stats_n_seconds_working variable from main,
-      protecting its accesses with get_uptime() and reset_uptime() functions.
-      Closes ticket 25081, patch by “valentecaio”.
-    - Remove our previous logic for "cached gettimeofday()" -- our coarse
-      monotonic timers are fast enough for this purpose, and far less
-      error-prone. Implements part of ticket 25927.
+    - Remove extern declaration of stats_n_seconds_working variable from
+      main, protecting its accesses with get_uptime() and reset_uptime()
+      functions. Closes ticket 25081, patch by “valentecaio”.
+    - Remove our previous logic for "cached gettimeofday()" -- our
+      coarse monotonic timers are fast enough for this purpose, and far
+      less error-prone. Implements part of ticket 25927.
     - Remove the return value for fascist_firewall_choose_address_base(),
       and sister functions such as fascist_firewall_choose_address_node()
       and fascist_firewall_choose_address_rs(). Also, while we're here,
       initialize the ap argument as leaving it uninitialized can pose a
       security hazard. Closes ticket 24734. Patch by Neel Chauhan.
-    - Rename two fields of connection_t struct.
-      timestamp_lastwritten is renamed to timestamp_last_write_allowed and
-      timestamp_lastread is renamed to timestamp_last_read_allowed.
-      Closes ticket 24714, patch by "valentecaio".
+    - Rename two fields of connection_t struct. timestamp_lastwritten is
+      renamed to timestamp_last_write_allowed and timestamp_lastread is
+      renamed to timestamp_last_read_allowed. Closes ticket 24714, patch
+      by "valentecaio".
     - Since Tor requires C99, remove our old workaround code for libc
       implementations where free(NULL) doesn't work. Closes ticket 24484.
-    - Use our standard rate-limiting code to deal with excessive libevent
-      failures, rather than the hand-rolled logic we had before.
-      Closes ticket 26016.
+    - Use our standard rate-limiting code to deal with excessive
+      libevent failures, rather than the hand-rolled logic we had
+      before. Closes ticket 26016.
     - We remove the return value of node_get_prim_orport() and
-      node_get_prim_dirport(), and introduce node_get_prim_orport()
-      in node_ipv6_or_preferred() and node_ipv6_dir_preferred() in
-      order to check for a null address. Closes ticket 23873. Patch
-      by Neel Chauhan.
-    - We switch to should_record_bridge_info() in geoip_note_client_seen() and
-      options_need_geoip_info() instead of accessing the configuration values
-      directly. Fixes bug 25290; bugfix on 0.2.1.6-alpha. Patch by Neel
-      Chauhan.
+      node_get_prim_dirport(), and introduce node_get_prim_orport() in
+      node_ipv6_or_preferred() and node_ipv6_dir_preferred() in order to
+      check for a null address. Closes ticket 23873. Patch by
+      Neel Chauhan.
+    - We switch to should_record_bridge_info() in
+      geoip_note_client_seen() and options_need_geoip_info() instead of
+      accessing the configuration values directly. Fixes bug 25290;
+      bugfix on 0.2.1.6-alpha. Patch by Neel Chauhan.
 
   o Deprecated features:
-    - As we are not recommending 0.2.5 anymore we require relays that once had
-      an ed25519 key associated with their RSA key to always have that key
-      instead of allowing them to drop back to a version that didn't support
-      ed25519. This means they need to use a new RSA key if the want to
-      downgrade to an older version of tor without ed25519. Closes ticket 20522.
+    - As we are not recommending 0.2.5 anymore we require relays that
+      once had an ed25519 key associated with their RSA key to always
+      have that key instead of allowing them to drop back to a version
+      that didn't support ed25519. This means they need to use a new RSA
+      key if the want to downgrade to an older version of tor without
+      ed25519. Closes ticket 20522.
 
   o Documentation:
-    - Correct an IPv6 error in the documentation for ExitPolicy.
-      Closes ticket 25857.  Patch from "CTassisF".
-
-  o New system requirements:
-    - Tor no longer tries to support systems without mmap() or some local
-      equivalent. Apparently, compilation on such systems has been broken for
-      some time, without anybody noticing or complaining. Closes ticket
-      25398.
+    - Correct an IPv6 error in the documentation for ExitPolicy. Closes
+      ticket 25857. Patch from "CTassisF".
 
   o Removed features:
-    - Directory authorities will no longer support voting according to any
-      consensus method before consensus method 25. This keeps authorities
-      compatible with all authorities running 0.2.9.8 and later, and does
-      not break any clients or relays. Implements ticket 24378 and
-      proposal 290.
+    - Directory authorities will no longer support voting according to
+      any consensus method before consensus method 25. This keeps
+      authorities compatible with all authorities running 0.2.9.8 and
+      later, and does not break any clients or relays. Implements ticket
+      24378 and proposal 290.
     - The PortForwarding and PortForwardingHelper features have been
-      removed. The reasoning is, given that implementations of NAT traversal
-      protocols within common consumer grade routers are frequently buggy, and
-      that the target audience for a NAT punching feature is a perhaps
-      less-technically-inclined relay operator, when the helper fails to setup
-      traversal the problems are usually deep, ugly, and very router specific,
-      making them horrendously impossible for technical support to reliable
-      assist with, and thus resulting in frustration all around.  Unfortunately,
-      relay operators who would like to run relays behind NATs will need to
-      become more familiar with the port forwarding configurations on their
-      local router.  Closes 25409.
-    - The TestingEnableTbEmptyEvent option has been removed.  It was used
-      in testing simulations to measure how often connection buckets were
-      emptied, in order to improve our scheduling, but it has not
+      removed. The reasoning is, given that implementations of NAT
+      traversal protocols within common consumer grade routers are
+      frequently buggy, and that the target audience for a NAT punching
+      feature is a perhaps less-technically-inclined relay operator,
+      when the helper fails to setup traversal the problems are usually
+      deep, ugly, and very router specific, making them horrendously
+      impossible for technical support to reliable assist with, and thus
+      resulting in frustration all around. Unfortunately, relay
+      operators who would like to run relays behind NATs will need to
+      become more familiar with the port forwarding configurations on
+      their local router. Closes 25409.
+    - The TestingEnableTbEmptyEvent option has been removed. It was used
+      in testing simulations to measure how often connection buckets
+      were emptied, in order to improve our scheduling, but it has not
       been actively used in years. Closes ticket 25760.
     - The old "round-robin" circuit multiplexer (circuitmux)
       implementation has been removed, along with a fairly large set of
-      code that existed to support it.  It has not been the default
+      code that existed to support it. It has not been the default
       circuitmux since we introduced the "EWMA" circuitmux in 0.2.4.x,
       but it still required an unreasonable amount of memory and CPU.
       Closes ticket 25268.
