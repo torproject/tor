@@ -8,6 +8,8 @@ EXTRA_DIST +=\
 	src/rust/crypto/lib.rs \
 	src/rust/crypto/digests/mod.rs \
 	src/rust/crypto/digests/sha2.rs \
+	src/rust/crypto/rand/mod.rs \
+	src/rust/crypto/rand/rng.rs \
 	src/rust/external/Cargo.toml \
 	src/rust/external/crypto_digest.rs \
 	src/rust/external/crypto_rand.rs \
@@ -20,9 +22,6 @@ EXTRA_DIST +=\
 	src/rust/protover/lib.rs \
 	src/rust/protover/protover.rs \
 	src/rust/protover/tests/protover.rs \
-	src/rust/rand/Cargo.toml \
-	src/rust/rand/lib.rs \
-	src/rust/rand/rng.rs \
 	src/rust/smartlist/Cargo.toml \
 	src/rust/smartlist/lib.rs \
 	src/rust/smartlist/smartlist.rs \
