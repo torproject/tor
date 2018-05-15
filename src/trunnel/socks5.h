@@ -11,6 +11,7 @@
 #define CMD_CONNECT 1
 #define CMD_BIND 2
 #define CMD_UDP_ASSOCIATE 3
+#define CMD_RESOLVE 240
 #define CMD_RESOLVE_PTR 241
 #define ATYPE_IPV4 1
 #define ATYPE_IPV6 4
