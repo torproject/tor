@@ -15,4 +15,5 @@ pub mod crypto_digest;
 mod crypto_rand;
 mod external;
 
+pub use crypto_rand::*;
 pub use external::*;
