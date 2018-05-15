@@ -345,7 +345,7 @@ socks4_client_request_get_command(const socks4_client_request_t *inp)
 int
 socks4_client_request_set_command(socks4_client_request_t *inp, uint8_t val)
 {
-  if (! ((val == CMD_BIND || val == CMD_CONNECT || val == CMD_RESOLVE_PTR))) {
+  if (! ((val == CMD_BIND || val == CMD_CONNECT || val == CMD_RESOLVE || val == CMD_RESOLVE_PTR))) {
      TRUNNEL_SET_ERROR_CODE(inp);
      return -1;
   }
@@ -413,7 +413,7 @@ socks4_client_request_check(const socks4_client_request_t *obj)
     return "A set function failed on this object";
   if (! (obj->version == 4))
     return "Integer out of bounds";
-  if (! (obj->command == CMD_BIND || obj->command == CMD_CONNECT || obj->command == CMD_RESOLVE_PTR))
+  if (! (obj->command == CMD_BIND || obj->command == CMD_CONNECT || obj->command == CMD_RESOLVE || obj->command == CMD_RESOLVE_PTR))
     return "Integer out of bounds";
   if (NULL == obj->username)
     return "Missing username";
@@ -696,7 +696,7 @@ socks4_client_request_encoded_len(const socks4_client_request_t *obj)
   /* Length of u8 version IN [4] */
   result += 1;
 
-  /* Length of u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE_PTR] */
+  /* Length of u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE, CMD_RESOLVE_PTR] */
   result += 1;
 
   /* Length of u16 port */
@@ -1006,7 +1006,7 @@ socks4_client_request_encode(uint8_t *output, const size_t avail, const socks4_c
   trunnel_set_uint8(ptr, (obj->version));
   written += 1; ptr += 1;
 
-  /* Encode u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE_PTR] */
+  /* Encode u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE, CMD_RESOLVE_PTR] */
   trunnel_assert(written <= avail);
   if (avail - written < 1)
     goto truncated;
@@ -1354,11 +1354,11 @@ socks4_client_request_parse_into(socks4_client_request_t *obj, const uint8_t *in
   if (! (obj->version == 4))
     goto fail;
 
-  /* Parse u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE_PTR] */
+  /* Parse u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE, CMD_RESOLVE_PTR] */
   CHECK_REMAINING(1, truncated);
   obj->command = (trunnel_get_uint8(ptr));
   remaining -= 1; ptr += 1;
-  if (! (obj->command == CMD_BIND || obj->command == CMD_CONNECT || obj->command == CMD_RESOLVE_PTR))
+  if (! (obj->command == CMD_BIND || obj->command == CMD_CONNECT || obj->command == CMD_RESOLVE || obj->command == CMD_RESOLVE_PTR))
     goto fail;
 
   /* Parse u16 port */

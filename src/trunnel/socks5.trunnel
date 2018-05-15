@@ -16,6 +16,7 @@ const CMD_CONNECT = 1;
 const CMD_BIND = 2;
 const CMD_UDP_ASSOCIATE = 3;
 // This is a tor extension
+const CMD_RESOLVE = 0xF0;
 const CMD_RESOLVE_PTR = 0xF1;
 
 const ATYPE_IPV4 = 1;
@@ -72,7 +73,7 @@ struct socks5_server_userpath_auth {
 
 struct socks4_client_request {
    u8 version IN [4];
-   u8 command IN [CMD_CONNECT,CMD_BIND,CMD_RESOLVE_PTR];
+   u8 command IN [CMD_CONNECT,CMD_BIND,CMD_RESOLVE,CMD_RESOLVE_PTR];
    u16 port;
    u32 addr;
    nulterm username;
