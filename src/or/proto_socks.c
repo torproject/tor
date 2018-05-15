@@ -385,11 +385,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
   unsigned int len;
   char tmpbuf[TOR_ADDR_BUF_LEN+1];
   tor_addr_t destaddr;
-  uint32_t destip;
   uint8_t socksver;
-  char *next, *startaddr;
   unsigned char usernamelen, passlen;
-  struct in_addr in;
 
   if (datalen < 2) {
     /* We always need at least 2 bytes. */
@@ -606,123 +603,6 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       }
       tor_assert(0);
       break;
-    case 4: { /* socks4 */
-      enum {socks4, socks4a} socks4_prot = socks4a;
-      const char *authstart, *authend;
-      /* http://ss5.sourceforge.net/socks4.protocol.txt */
-      /* http://ss5.sourceforge.net/socks4A.protocol.txt */
-
-      req->socks_version = 4;
-      if (datalen < SOCKS4_NETWORK_LEN) {/* basic info available? */
-        *want_length_out = SOCKS4_NETWORK_LEN;
-        return 0; /* not yet */
-      }
-      // buf_pullup(buf, 1280);
-      req->command = (unsigned char) *(data+1);
-      if (req->command != SOCKS_COMMAND_CONNECT &&
-          req->command != SOCKS_COMMAND_RESOLVE) {
-        /* not a connect or resolve? we don't support it. (No resolve_ptr with
-         * socks4.) */
-        log_warn(LD_APP,"socks4: command %d not recognized. Rejecting.",
-                 req->command);
-        return -1;
-      }
-
-      req->port = ntohs(get_uint16(data+2));
-      destip = ntohl(get_uint32(data+4));
-      if ((!req->port && req->command!=SOCKS_COMMAND_RESOLVE) || !destip) {
-        log_warn(LD_APP,"socks4: Port or DestIP is zero. Rejecting.");
-        return -1;
-      }
-      if (destip >> 8) {
-        log_debug(LD_APP,"socks4: destip not in form 0.0.0.x.");
-        in.s_addr = htonl(destip);
-        tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-        if (BUG(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN)) {
-          /* LCOV_EXCL_START -- This branch is unreachable, given the
-           * size of tmpbuf and the actual value of MAX_SOCKS_ADDR_LEN */
-          log_debug(LD_APP,"socks4 addr (%d bytes) too long. Rejecting.",
-                    (int)strlen(tmpbuf));
-          return -1;
-          /* LCOV_EXCL_STOP */
-        }
-        log_debug(LD_APP,
-                  "socks4: successfully read destip (%s)",
-                  safe_str_client(tmpbuf));
-        socks4_prot = socks4;
-      }
-
-      authstart = data + SOCKS4_NETWORK_LEN;
-      next = memchr(authstart, 0,
-                    datalen-SOCKS4_NETWORK_LEN);
-      if (!next) {
-        if (datalen >= 1024) {
-          log_debug(LD_APP, "Socks4 user name too long; rejecting.");
-          return -1;
-        }
-        log_debug(LD_APP,"socks4: Username not here yet.");
-        *want_length_out = datalen+1024; /* More than we need, but safe */
-        return 0;
-      }
-      authend = next;
-      tor_assert(next < data+datalen);
-
-      startaddr = NULL;
-      if (socks4_prot != socks4a &&
-          !addressmap_have_mapping(tmpbuf,0)) {
-        log_unsafe_socks_warning(4, tmpbuf, req->port, safe_socks);
-
-        if (safe_socks)
-          return -1;
-      }
-      if (socks4_prot == socks4a) {
-        if (next+1 == data+datalen) {
-          log_debug(LD_APP,"socks4: No part of destaddr here yet.");
-          *want_length_out = datalen + 1024; /* More than we need, but safe */
-          return 0;
-        }
-        startaddr = next+1;
-        next = memchr(startaddr, 0, data + datalen - startaddr);
-        if (!next) {
-          if (datalen >= 1024) {
-            log_debug(LD_APP,"socks4: Destaddr too long.");
-            return -1;
-          }
-          log_debug(LD_APP,"socks4: Destaddr not all here yet.");
-          *want_length_out = datalen + 1024; /* More than we need, but safe */
-          return 0;
-        }
-        if (MAX_SOCKS_ADDR_LEN <= next-startaddr) {
-          log_warn(LD_APP,"socks4: Destaddr too long. Rejecting.");
-          return -1;
-        }
-        // tor_assert(next < buf->cur+buf_datalen(buf));
-
-        if (log_sockstype)
-          log_notice(LD_APP,
-                     "Your application (using socks4a to port %d) instructed "
-                     "Tor to take care of the DNS resolution itself if "
-                     "necessary. This is good.", req->port);
-      }
-      log_debug(LD_APP,"socks4: Everything is here. Success.");
-      strlcpy(req->address, startaddr ? startaddr : tmpbuf,
-              sizeof(req->address));
-      if (!string_is_valid_dest(req->address)) {
-        log_warn(LD_PROTOCOL,
-                 "Your application (using socks4 to port %d) gave Tor "
-                 "a malformed hostname: %s. Rejecting the connection.",
-                 req->port, escaped_safe_str_client(req->address));
-        return -1;
-      }
-      if (authend != authstart) {
-        req->got_auth = 1;
-        req->usernamelen = authend - authstart;
-        req->username = tor_memdup(authstart, authend - authstart);
-      }
-      /* next points to the final \0 on inbuf */
-      *drain_out = next - data + 1;
-      return 1;
-    }
     case 'G': /* get */
     case 'H': /* head */
     case 'P': /* put/post */
