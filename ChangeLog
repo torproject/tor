@@ -40,7 +40,7 @@ Changes in version 0.3.4.1-alpha - 2018-05-1?
       instead. Fixes bug 26007; bugfix on 0.2.2.1-alpha.
 
   o Major bugfixes (crash):
-    - Avoid an rare assertion failure in the circuit build timeout code
+    - Avoid a rare assertion failure in the circuit build timeout code
       if we fail to allow any circuits to actually complete. Fixes bug
       25733; bugfix on 0.2.2.2-alpha.
 
@@ -207,7 +207,7 @@ Changes in version 0.3.4.1-alpha - 2018-05-1?
       on 0.2.9.4-alpha.
 
   o Minor bugfixes (code style):
-    - Fixed multiple includes of trasports.h in src/or/connection.c
+    - Fixed multiple includes of transports.h in src/or/connection.c
       Fixes bug 25261; bugfix on 0.2.5.1-alpha.
     - Remove the unused variable n_possible from the function
       channel_get_for_extend(). Fixes bug 25645; bugfix on 0.2.4.4-alpha
@@ -339,7 +339,7 @@ Changes in version 0.3.4.1-alpha - 2018-05-1?
       Neel Chauhan.
     - In order to make the OR and dir checking function in router.c less
       confusing we renamed some functions and
-      consider_testing_reachability() has been splitted into
+      consider_testing_reachability() has been split into
       router_should_check_reachability() and
       router_do_reachability_checks(). Also we improved the documentation
       in some functions. Closes ticket 18918.
