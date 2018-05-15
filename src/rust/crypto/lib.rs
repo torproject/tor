@@ -33,4 +33,5 @@ extern crate libc;
 // Our local crates.
 extern crate external;
 
-mod digests;  // Unfortunately named "digests" plural to avoid name conflict with the digest crate
+pub mod digests;  // Unfortunately named "digests" plural to avoid name conflict with the digest crate
+
