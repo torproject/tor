@@ -13,7 +13,7 @@ crate_type = ["rlib", "staticlib"]
 [dependencies]
 libc = "=0.2.39"
 digest = "=0.7.2"
-rand_core = "=0.1.0"
+rand_core = "=0.2.0-pre.0"
 
 external = { path = "../external" }
 smartlist = { path = "../smartlist" }
