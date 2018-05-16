@@ -1,5 +1,10 @@
 Changes in version 0.3.4.1-alpha - 2018-05-1?
-  XXX BLURB
+  Tor 0.3.4.1-alpha is the first release in the 0.3.4.x series.  It
+  includes refactoring to begin reducing Tor's
+  binary size and idle CPU usage on mobile, along with prep work for new
+  bandwidth scanners, improvements
+  to the experimental "vanguards" feature, and numerous other small
+  features and bugfixes.
 
   o New system requirements:
     - Tor no longer tries to support old operating systems without
@@ -32,6 +37,18 @@ Changes in version 0.3.4.1-alpha - 2018-05-1?
       the granularity of our bandwidth calculations, and limit the
       number of times that the Tor process needs to wake up when it is
       idle. Closes ticket 25373.
+    - Move responsibility for many operations from a once-per-second
+      callback to a callback that is only scheduled as needed. Moving
+      this functionality has allowed us to disable the callback when
+      Tor's network is disabled. Once enough items are removed from our
+      once-per-second callback, we can eliminate it entirely to conserve
+      CPU when idle. The functionality removed includes: closing
+      connections, circuits, and channels (ticket 25932); consensus
+      voting (25937); flushing log callbacks (25951); honoring delayed
+      SIGNEWNYM requests (25949); rescanning the consensus cache
+      (25931); saving the state file to disk (25948); warning relay
+      operators about unreachable ports (25952); and keeping track of
+      Tor's uptime (26009).
 
   o Major bugfixes (directory authorities, security):
     - When directory authorities read a zero-byte bandwidth file, they
@@ -141,20 +158,6 @@ Changes in version 0.3.4.1-alpha - 2018-05-1?
   o Minor features (geoip):
     - Update geoip and geoip6 to the May 1 2018 Maxmind GeoLite2 Country
       database. Closes ticket 26104.
-
-  o Minor features (mainloop):
-    - Move responsibility for many operations from a once-per-second
-      callback to a callback that is only scheduled as needed. Moving
-      this functionality has allowed us to disable the callback when
-      Tor's network is disabled. Once enough items are removed from our
-      once-per-second callback, we can eliminate it entirely to conserve
-      CPU when idle. The functionality removed includes: closing
-      connections, circuits, and channels (ticket 25932); consensus
-      voting (25937); flushing log callbacks (25951); honoring delayed
-      SIGNEWNYM requests (25949); rescanning the consensus cache
-      (25931); saving the state file to disk (25948); warning relay
-      operators about unreachable ports (25952); and keeping track of
-      Tor's uptime (26009).
 
   o Minor features (performance):
     - Avoid a needless call to malloc() when processing an incoming
