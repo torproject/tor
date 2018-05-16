@@ -246,6 +246,22 @@ helper_create_authorized_client(void)
   return client;
 }
 
+/* Helper: Return a newly allocated authorized client object with the
+ * same client name and the same public key as the given client. */
+static hs_service_authorized_client_t *
+helper_clone_authorized_client(const hs_service_authorized_client_t *client)
+{
+  hs_service_authorized_client_t *client_out;
+
+  tor_assert(client);
+
+  client_out = tor_malloc_zero(sizeof(hs_service_authorized_client_t));
+  memcpy(client_out->client_pk.public_key,
+         client->client_pk.public_key, CURVE25519_PUBKEY_LEN);
+
+  return client_out;
+}
+
 /* Helper: Return a newly allocated service object with the identity keypair
  * sets and the current descriptor. Then register it to the global map.
  * Caller should us hs_free_all() to free this service or remove it from the
@@ -1869,6 +1885,126 @@ test_rendezvous1_parsing(void *arg)
   UNMOCK(relay_send_command_from_edge_);
 }
 
+static void
+test_authorized_client_config_equal(void *arg)
+{
+  int ret;
+  hs_service_config_t *config1, *config2;
+
+  (void) arg;
+
+  config1 = tor_malloc_zero(sizeof(*config1));
+  config2 = tor_malloc_zero(sizeof(*config2));
+
+  /* Both configs are empty. */
+  {
+    config1->clients = smartlist_new();
+    config2->clients = smartlist_new();
+
+    ret = service_authorized_client_config_equal(config1, config2);
+    tt_int_op(ret, OP_EQ, 1);
+
+    service_clear_config(config1);
+    service_clear_config(config2);
+  }
+
+  /* Both configs have exactly the same client config. */
+  {
+    config1->clients = smartlist_new();
+    config2->clients = smartlist_new();
+
+    hs_service_authorized_client_t *client1, *client2;
+    client1 = helper_create_authorized_client();
+    client2 = helper_create_authorized_client();
+
+    smartlist_add(config1->clients, client1);
+    smartlist_add(config1->clients, client2);
+
+    /* We should swap the order of clients here to test that the order
+     * does not matter. */
+    smartlist_add(config2->clients, helper_clone_authorized_client(client2));
+    smartlist_add(config2->clients, helper_clone_authorized_client(client1));
+
+    ret = service_authorized_client_config_equal(config1, config2);
+    tt_int_op(ret, OP_EQ, 1);
+
+    service_clear_config(config1);
+    service_clear_config(config2);
+  }
+
+  /* The numbers of clients in both configs are not equal. */
+  {
+    config1->clients = smartlist_new();
+    config2->clients = smartlist_new();
+
+    hs_service_authorized_client_t *client1, *client2;
+    client1 = helper_create_authorized_client();
+    client2 = helper_create_authorized_client();
+
+    smartlist_add(config1->clients, client1);
+    smartlist_add(config1->clients, client2);
+
+    smartlist_add(config2->clients, helper_clone_authorized_client(client1));
+
+    ret = service_authorized_client_config_equal(config1, config2);
+    tt_int_op(ret, OP_EQ, 0);
+
+    service_clear_config(config1);
+    service_clear_config(config2);
+  }
+
+  /* The first config has two distinct clients while the second config
+   * has two clients but they are duplicate. */
+  {
+    config1->clients = smartlist_new();
+    config2->clients = smartlist_new();
+
+    hs_service_authorized_client_t *client1, *client2;
+    client1 = helper_create_authorized_client();
+    client2 = helper_create_authorized_client();
+
+    smartlist_add(config1->clients, client1);
+    smartlist_add(config1->clients, client2);
+
+    smartlist_add(config2->clients, helper_clone_authorized_client(client1));
+    smartlist_add(config2->clients, helper_clone_authorized_client(client1));
+
+    ret = service_authorized_client_config_equal(config1, config2);
+    tt_int_op(ret, OP_EQ, 0);
+
+    service_clear_config(config1);
+    service_clear_config(config2);
+  }
+
+  /* Both configs have totally distinct clients. */
+  {
+    config1->clients = smartlist_new();
+    config2->clients = smartlist_new();
+
+    hs_service_authorized_client_t *client1, *client2, *client3, *client4;
+    client1 = helper_create_authorized_client();
+    client2 = helper_create_authorized_client();
+    client3 = helper_create_authorized_client();
+    client4 = helper_create_authorized_client();
+
+    smartlist_add(config1->clients, client1);
+    smartlist_add(config1->clients, client2);
+
+    smartlist_add(config2->clients, client3);
+    smartlist_add(config2->clients, client4);
+
+    ret = service_authorized_client_config_equal(config1, config2);
+    tt_int_op(ret, OP_EQ, 0);
+
+    service_clear_config(config1);
+    service_clear_config(config2);
+  }
+
+ done:
+  tor_free(config1);
+  tor_free(config2);
+}
+
 struct testcase_t hs_service_tests[] = {
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup, TT_FORK,
     NULL, NULL },
@@ -1908,6 +2044,8 @@ struct testcase_t hs_service_tests[] = {
     NULL, NULL },
   { "rendezvous1_parsing", test_rendezvous1_parsing, TT_FORK,
     NULL, NULL },
+  { "authorized_client_config_equal", test_authorized_client_config_equal,
+    TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
 };

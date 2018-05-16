@@ -243,7 +243,7 @@ set_service_default_config(hs_service_config_t *c,
 
 /* From a service configuration object config, clear everything from it
  * meaning free allocated pointers and reset the values. */
-static void
+STATIC void
 service_clear_config(hs_service_config_t *config)
 {
   if (config == NULL) {
@@ -1368,7 +1368,7 @@ compare_service_authorzized_client_(const void **_a, const void **_b)
 
 /* If the list of hs_service_authorized_client_t's is different between
  * src and dst, return 1. Otherwise, return 0. */
-static int
+STATIC int
 service_authorized_client_config_equal(const hs_service_config_t *config1,
                                        const hs_service_config_t *config2)
 {

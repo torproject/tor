@@ -399,6 +399,12 @@ STATIC void service_desc_schedule_upload(hs_service_descriptor_t *desc,
 STATIC int service_desc_hsdirs_changed(const hs_service_t *service,
                                 const hs_service_descriptor_t *desc);
 
+STATIC int service_authorized_client_config_equal(
+                                         const hs_service_config_t *config1,
+                                         const hs_service_config_t *config2);
+
+STATIC void service_clear_config(hs_service_config_t *config);
+
 #endif /* defined(HS_SERVICE_PRIVATE) */
 
 #endif /* !defined(TOR_HS_SERVICE_H) */
