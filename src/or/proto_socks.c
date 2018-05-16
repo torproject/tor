@@ -599,48 +599,6 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
 
   switch (socksver) { /* which version of socks? */
     case 5: /* socks5 */
-
-      if (req->socks_version != 5) { /* we need to negotiate a method */
-        unsigned char nummethods = (unsigned char)*(data+1);
-        int have_user_pass, have_no_auth;
-        int r=0;
-        tor_assert(!req->socks_version);
-        if (datalen < 2u+nummethods) {
-          *want_length_out = 2u+nummethods;
-          return 0;
-        }
-        if (!nummethods)
-          return -1;
-        req->replylen = 2; /* 2 bytes of response */
-        req->reply[0] = 5; /* socks5 reply */
-        have_user_pass = (memchr(data+2, SOCKS_USER_PASS, nummethods) !=NULL);
-        have_no_auth   = (memchr(data+2, SOCKS_NO_AUTH,   nummethods) !=NULL);
-        if (have_user_pass && !(have_no_auth && req->socks_prefer_no_auth)) {
-          req->auth_type = SOCKS_USER_PASS;
-          req->reply[1] = SOCKS_USER_PASS; /* tell client to use "user/pass"
-                                              auth method */
-          req->socks_version = 5; /* remember we've already negotiated auth */
-          log_debug(LD_APP,"socks5: accepted method 2 (username/password)");
-          r=0;
-        } else if (have_no_auth) {
-          req->reply[1] = SOCKS_NO_AUTH; /* tell client to use "none" auth
-                                            method */
-          req->socks_version = 5; /* remember we've already negotiated auth */
-          log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
-          r=0;
-        } else {
-          log_warn(LD_APP,
-                    "socks5: offered methods don't include 'no auth' or "
-                    "username/password. Rejecting.");
-          req->reply[1] = '\xFF'; /* reject all methods */
-          r=-1;
-        }
-        /* Remove packet from buf. Some SOCKS clients will have sent extra
-         * junk at this point; let's hope it's an authentication message. */
-        *drain_out = 2u + nummethods;
-
-        return r;
-      }
       if (req->auth_type != SOCKS_NO_AUTH && !req->got_auth) {
         log_warn(LD_APP,
                  "socks5: negotiated authentication, but none provided");
