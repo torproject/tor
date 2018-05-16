@@ -3305,11 +3305,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
    * but leave UseEntryGuards_option with the original value.
    * Always use the value of UseEntryGuards, not UseEntryGuards_option. */
   options->UseEntryGuards = options->UseEntryGuards_option;
-  if (server_mode(options) && options->SocksPort_set){
+  if (server_mode(options) && options->SocksPort_set) {
     log_warn(LD_CONFIG, "You are currently running as a server, and a client. "
-	     "If you do not actually want to run Tor as a client, "
-	     "you can add SocksPort 0 to your configuration, to turn off "
-	     "the default client behavior.");
+             "If you do not actually want to run Tor as a client, "
+             "you can add SocksPort 0 to your configuration, to turn off "
+             "the default client behavior.");
   }
   if (warn_about_relative_paths(options) && options->RunAsDaemon) {
     REJECT("You have specified at least one relative path (see above) "

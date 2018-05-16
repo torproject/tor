@@ -471,8 +471,8 @@ test_options_validate__uname_for_server(void *ignored)
   (void)ignored;
   char *msg;
   options_test_data_t *tdata = get_options_test_data(
-                                      "ORPort 127.0.0.1:5555\n"
-				      "SocksPort 0");
+    "ORPort 127.0.0.1:5555\n"
+    "SocksPort 0");
   setup_capture_of_logs(LOG_WARN);
 
   MOCK(get_uname, fixed_get_uname);
@@ -518,25 +518,21 @@ test_options_validate__client_and_server_warning(void *ignored)
   (void)ignored;
   char *msg;
   options_test_data_t *tdata = get_options_test_data(
-                                      "ORPort 127.0.0.1:5555\n"
-				      "SocksPort 5555");
+    "ORPort 127.0.0.1:5555\n"
+    "SocksPort 5555");
   setup_capture_of_logs(LOG_WARN);
-
   options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   expect_log_msg("You are currently running as a server, and a client. "
-		 "If you do not actually want to run Tor as a client, "
-		 "you can add SocksPort 0 to your configuration, to turn off "
-		 "the default client behavior.\n");
+                 "If you do not actually want to run Tor as a client, "
+                 "you can add SocksPort 0 to your configuration, to turn off "
+                 "the default client behavior.\n");
   tor_free(msg);
-
-
  done:
   UNMOCK(get_uname);
   free_options_test_data(tdata);
   tor_free(msg);
   teardown_capture_of_logs();
 }
-
 
 static void
 test_options_validate__outbound_addresses(void *ignored)
