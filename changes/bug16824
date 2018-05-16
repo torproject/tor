@@ -1,0 +1,4 @@
+  o Minor bugfix (Relay Client):
+    - Add warning message to users running in both Relay and Client mode.
+      Suggests adding SocksPort 0 to prevent Client mode. Fixes bug 16824;
+      bugfix on maint-0.3.3
