@@ -133,6 +133,22 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "core/or/socks_request_st.h"
 
+/**
+ * On Windows and Linux we cannot reliably bind() a socket to an
+ * address and port if: 1) There's already a socket bound to wildcard
+ * address (0.0.0.0 or ::) with the same port; 2) We try to bind()
+ * to wildcard address and there's another socket bound to a
+ * specific address and the same port.
+ *
+ * To address this problem on these two platforms we implement a
+ * routine that:
+ * 1) Checks if first attempt to bind() a new socket  failed with
+ * EADDRINUSE.
+ * 2) If so, it will close the appropriate old listener connection and
+ * 3) Attempts bind()'ing the new listener socket again.
+ *
+ * For further information, see ticket #17873.
+ */
 #if defined(__linux__) || defined(_WIN32)
 #define ENABLE_LISTENER_REBIND
 #endif
@@ -1191,6 +1207,9 @@ tor_listen(tor_socket_t fd)
  *
  * <b>address</b> is only used for logging purposes and to add the information
  * to the conn.
+ *
+ * Set <b>addr_in_use</b> to true in case socket binding fails with
+ * EADDRINUSE.
  */
 static connection_t *
 connection_listener_new(const struct sockaddr *listensockaddr,
