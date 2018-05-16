@@ -2838,10 +2838,10 @@ socks5_server_method_parse(socks5_server_method_t **output, const uint8_t *input
   }
   return result;
 }
-socks5_server_userpath_auth_t *
-socks5_server_userpath_auth_new(void)
+socks5_server_userpass_auth_t *
+socks5_server_userpass_auth_new(void)
 {
-  socks5_server_userpath_auth_t *val = trunnel_calloc(1, sizeof(socks5_server_userpath_auth_t));
+  socks5_server_userpass_auth_t *val = trunnel_calloc(1, sizeof(socks5_server_userpass_auth_t));
   if (NULL == val)
     return NULL;
   val->version = 1;
@@ -2851,28 +2851,28 @@ socks5_server_userpath_auth_new(void)
 /** Release all storage held inside 'obj', but do not free 'obj'.
  */
 static void
-socks5_server_userpath_auth_clear(socks5_server_userpath_auth_t *obj)
+socks5_server_userpass_auth_clear(socks5_server_userpass_auth_t *obj)
 {
   (void) obj;
 }
 
 void
-socks5_server_userpath_auth_free(socks5_server_userpath_auth_t *obj)
+socks5_server_userpass_auth_free(socks5_server_userpass_auth_t *obj)
 {
   if (obj == NULL)
     return;
-  socks5_server_userpath_auth_clear(obj);
-  trunnel_memwipe(obj, sizeof(socks5_server_userpath_auth_t));
+  socks5_server_userpass_auth_clear(obj);
+  trunnel_memwipe(obj, sizeof(socks5_server_userpass_auth_t));
   trunnel_free_(obj);
 }
 
 uint8_t
-socks5_server_userpath_auth_get_version(const socks5_server_userpath_auth_t *inp)
+socks5_server_userpass_auth_get_version(const socks5_server_userpass_auth_t *inp)
 {
   return inp->version;
 }
 int
-socks5_server_userpath_auth_set_version(socks5_server_userpath_auth_t *inp, uint8_t val)
+socks5_server_userpass_auth_set_version(socks5_server_userpass_auth_t *inp, uint8_t val)
 {
   if (! ((val == 1))) {
      TRUNNEL_SET_ERROR_CODE(inp);
@@ -2882,18 +2882,18 @@ socks5_server_userpath_auth_set_version(socks5_server_userpath_auth_t *inp, uint
   return 0;
 }
 uint8_t
-socks5_server_userpath_auth_get_status(const socks5_server_userpath_auth_t *inp)
+socks5_server_userpass_auth_get_status(const socks5_server_userpass_auth_t *inp)
 {
   return inp->status;
 }
 int
-socks5_server_userpath_auth_set_status(socks5_server_userpath_auth_t *inp, uint8_t val)
+socks5_server_userpass_auth_set_status(socks5_server_userpass_auth_t *inp, uint8_t val)
 {
   inp->status = val;
   return 0;
 }
 const char *
-socks5_server_userpath_auth_check(const socks5_server_userpath_auth_t *obj)
+socks5_server_userpass_auth_check(const socks5_server_userpass_auth_t *obj)
 {
   if (obj == NULL)
     return "Object was NULL";
@@ -2905,11 +2905,11 @@ socks5_server_userpath_auth_check(const socks5_server_userpath_auth_t *obj)
 }
 
 ssize_t
-socks5_server_userpath_auth_encoded_len(const socks5_server_userpath_auth_t *obj)
+socks5_server_userpass_auth_encoded_len(const socks5_server_userpass_auth_t *obj)
 {
   ssize_t result = 0;
 
-  if (NULL != socks5_server_userpath_auth_check(obj))
+  if (NULL != socks5_server_userpass_auth_check(obj))
      return -1;
 
 
@@ -2921,24 +2921,24 @@ socks5_server_userpath_auth_encoded_len(const socks5_server_userpath_auth_t *obj
   return result;
 }
 int
-socks5_server_userpath_auth_clear_errors(socks5_server_userpath_auth_t *obj)
+socks5_server_userpass_auth_clear_errors(socks5_server_userpass_auth_t *obj)
 {
   int r = obj->trunnel_error_code_;
   obj->trunnel_error_code_ = 0;
   return r;
 }
 ssize_t
-socks5_server_userpath_auth_encode(uint8_t *output, const size_t avail, const socks5_server_userpath_auth_t *obj)
+socks5_server_userpass_auth_encode(uint8_t *output, const size_t avail, const socks5_server_userpass_auth_t *obj)
 {
   ssize_t result = 0;
   size_t written = 0;
   uint8_t *ptr = output;
   const char *msg;
 #ifdef TRUNNEL_CHECK_ENCODED_LEN
-  const ssize_t encoded_len = socks5_server_userpath_auth_encoded_len(obj);
+  const ssize_t encoded_len = socks5_server_userpass_auth_encoded_len(obj);
 #endif
 
-  if (NULL != (msg = socks5_server_userpath_auth_check(obj)))
+  if (NULL != (msg = socks5_server_userpass_auth_check(obj)))
     goto check_failed;
 
 #ifdef TRUNNEL_CHECK_ENCODED_LEN
@@ -2983,11 +2983,11 @@ socks5_server_userpath_auth_encode(uint8_t *output, const size_t avail, const so
   return result;
 }
 
-/** As socks5_server_userpath_auth_parse(), but do not allocate the
+/** As socks5_server_userpass_auth_parse(), but do not allocate the
  * output object.
  */
 static ssize_t
-socks5_server_userpath_auth_parse_into(socks5_server_userpath_auth_t *obj, const uint8_t *input, const size_t len_in)
+socks5_server_userpass_auth_parse_into(socks5_server_userpass_auth_t *obj, const uint8_t *input, const size_t len_in)
 {
   const uint8_t *ptr = input;
   size_t remaining = len_in;
@@ -3016,15 +3016,15 @@ socks5_server_userpath_auth_parse_into(socks5_server_userpath_auth_t *obj, const
 }
 
 ssize_t
-socks5_server_userpath_auth_parse(socks5_server_userpath_auth_t **output, const uint8_t *input, const size_t len_in)
+socks5_server_userpass_auth_parse(socks5_server_userpass_auth_t **output, const uint8_t *input, const size_t len_in)
 {
   ssize_t result;
-  *output = socks5_server_userpath_auth_new();
+  *output = socks5_server_userpass_auth_new();
   if (NULL == *output)
     return -1;
-  result = socks5_server_userpath_auth_parse_into(*output, input, len_in);
+  result = socks5_server_userpass_auth_parse_into(*output, input, len_in);
   if (result < 0) {
-    socks5_server_userpath_auth_free(*output);
+    socks5_server_userpass_auth_free(*output);
     *output = NULL;
   }
   return result;

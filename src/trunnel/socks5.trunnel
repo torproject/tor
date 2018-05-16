@@ -64,7 +64,7 @@ struct socks5_client_userpass_auth {
    char passwd[passwd_len];
 }
 
-struct socks5_server_userpath_auth {
+struct socks5_server_userpass_auth {
    u8 version IN [1];
    u8 status;
 }

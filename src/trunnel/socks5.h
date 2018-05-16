@@ -74,14 +74,14 @@ struct socks5_server_method_st {
 };
 #endif
 typedef struct socks5_server_method_st socks5_server_method_t;
-#if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_SOCKS5_SERVER_USERPATH_AUTH)
-struct socks5_server_userpath_auth_st {
+#if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_SOCKS5_SERVER_USERPASS_AUTH)
+struct socks5_server_userpass_auth_st {
   uint8_t version;
   uint8_t status;
   uint8_t trunnel_error_code_;
 };
 #endif
-typedef struct socks5_server_userpath_auth_st socks5_server_userpath_auth_t;
+typedef struct socks5_server_userpass_auth_st socks5_server_userpass_auth_t;
 #if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_TOR_SOCKSAUTH_KEYVAL)
 struct tor_socksauth_keyval_st {
   uint16_t keylen;
@@ -697,62 +697,62 @@ uint8_t socks5_server_method_get_method(const socks5_server_method_t *inp);
  * code on 'inp' on failure.
  */
 int socks5_server_method_set_method(socks5_server_method_t *inp, uint8_t val);
-/** Return a newly allocated socks5_server_userpath_auth with all
+/** Return a newly allocated socks5_server_userpass_auth with all
  * elements set to zero.
  */
-socks5_server_userpath_auth_t *socks5_server_userpath_auth_new(void);
-/** Release all storage held by the socks5_server_userpath_auth in
+socks5_server_userpass_auth_t *socks5_server_userpass_auth_new(void);
+/** Release all storage held by the socks5_server_userpass_auth in
  * 'victim'. (Do nothing if 'victim' is NULL.)
  */
-void socks5_server_userpath_auth_free(socks5_server_userpath_auth_t *victim);
-/** Try to parse a socks5_server_userpath_auth from the buffer in
+void socks5_server_userpass_auth_free(socks5_server_userpass_auth_t *victim);
+/** Try to parse a socks5_server_userpass_auth from the buffer in
  * 'input', using up to 'len_in' bytes from the input buffer. On
  * success, return the number of bytes consumed and set *output to the
- * newly allocated socks5_server_userpath_auth_t. On failure, return
+ * newly allocated socks5_server_userpass_auth_t. On failure, return
  * -2 if the input appears truncated, and -1 if the input is otherwise
  * invalid.
  */
-ssize_t socks5_server_userpath_auth_parse(socks5_server_userpath_auth_t **output, const uint8_t *input, const size_t len_in);
+ssize_t socks5_server_userpass_auth_parse(socks5_server_userpass_auth_t **output, const uint8_t *input, const size_t len_in);
 /** Return the number of bytes we expect to need to encode the
- * socks5_server_userpath_auth in 'obj'. On failure, return a negative
+ * socks5_server_userpass_auth in 'obj'. On failure, return a negative
  * value. Note that this value may be an overestimate, and can even be
  * an underestimate for certain unencodeable objects.
  */
-ssize_t socks5_server_userpath_auth_encoded_len(const socks5_server_userpath_auth_t *obj);
-/** Try to encode the socks5_server_userpath_auth from 'input' into
+ssize_t socks5_server_userpass_auth_encoded_len(const socks5_server_userpass_auth_t *obj);
+/** Try to encode the socks5_server_userpass_auth from 'input' into
  * the buffer at 'output', using up to 'avail' bytes of the output
  * buffer. On success, return the number of bytes used. On failure,
  * return -2 if the buffer was not long enough, and -1 if the input
  * was invalid.
  */
-ssize_t socks5_server_userpath_auth_encode(uint8_t *output, size_t avail, const socks5_server_userpath_auth_t *input);
+ssize_t socks5_server_userpass_auth_encode(uint8_t *output, size_t avail, const socks5_server_userpass_auth_t *input);
 /** Check whether the internal state of the
- * socks5_server_userpath_auth in 'obj' is consistent. Return NULL if
+ * socks5_server_userpass_auth in 'obj' is consistent. Return NULL if
  * it is, and a short message if it is not.
  */
-const char *socks5_server_userpath_auth_check(const socks5_server_userpath_auth_t *obj);
+const char *socks5_server_userpass_auth_check(const socks5_server_userpass_auth_t *obj);
 /** Clear any errors that were set on the object 'obj' by its setter
  * functions. Return true iff errors were cleared.
  */
-int socks5_server_userpath_auth_clear_errors(socks5_server_userpath_auth_t *obj);
+int socks5_server_userpass_auth_clear_errors(socks5_server_userpass_auth_t *obj);
 /** Return the value of the version field of the
- * socks5_server_userpath_auth_t in 'inp'
+ * socks5_server_userpass_auth_t in 'inp'
  */
-uint8_t socks5_server_userpath_auth_get_version(const socks5_server_userpath_auth_t *inp);
+uint8_t socks5_server_userpass_auth_get_version(const socks5_server_userpass_auth_t *inp);
 /** Set the value of the version field of the
- * socks5_server_userpath_auth_t in 'inp' to 'val'. Return 0 on
+ * socks5_server_userpass_auth_t in 'inp' to 'val'. Return 0 on
  * success; return -1 and set the error code on 'inp' on failure.
  */
-int socks5_server_userpath_auth_set_version(socks5_server_userpath_auth_t *inp, uint8_t val);
+int socks5_server_userpass_auth_set_version(socks5_server_userpass_auth_t *inp, uint8_t val);
 /** Return the value of the status field of the
- * socks5_server_userpath_auth_t in 'inp'
+ * socks5_server_userpass_auth_t in 'inp'
  */
-uint8_t socks5_server_userpath_auth_get_status(const socks5_server_userpath_auth_t *inp);
+uint8_t socks5_server_userpass_auth_get_status(const socks5_server_userpass_auth_t *inp);
 /** Set the value of the status field of the
- * socks5_server_userpath_auth_t in 'inp' to 'val'. Return 0 on
+ * socks5_server_userpass_auth_t in 'inp' to 'val'. Return 0 on
  * success; return -1 and set the error code on 'inp' on failure.
  */
-int socks5_server_userpath_auth_set_status(socks5_server_userpath_auth_t *inp, uint8_t val);
+int socks5_server_userpass_auth_set_status(socks5_server_userpass_auth_t *inp, uint8_t val);
 /** Return a newly allocated tor_socksauth_keyval with all elements
  * set to zero.
  */
