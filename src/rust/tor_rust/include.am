@@ -4,7 +4,7 @@ EXTRA_DIST +=\
 
 EXTRA_CARGO_OPTIONS=
 
-src/rust/target/release/@TOR_RUST_STATIC_NAME@: FORCE
+@TOR_RUST_LIB_PATH@: FORCE
 	( cd "$(abs_top_builddir)/src/rust" ; \
 		CARGO_TARGET_DIR="$(abs_top_builddir)/src/rust/target" \
 		CARGO_HOME="$(abs_top_builddir)/src/rust" \
@@ -22,7 +22,7 @@ distclean-rust:
 	rm -rf "$(abs_top_builddir)/src/rust/registry"
 
 if USE_RUST
-build-rust: src/rust/target/release/@TOR_RUST_STATIC_NAME@
+build-rust: @TOR_RUST_LIB_PATH@
 else
 build-rust:
 endif
