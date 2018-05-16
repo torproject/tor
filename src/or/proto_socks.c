@@ -19,7 +19,7 @@ static void socks_request_set_socks5_error(socks_request_t *req,
                               socks5_reply_status_t reason);
 
 static int parse_socks(const char *data, size_t datalen, socks_request_t *req,
-                       int log_sockstype, int safe_socks, ssize_t *drain_out,
+                       int log_sockstype, int safe_socks, size_t *drain_out,
                        size_t *want_length_out);
 static int parse_socks_client(const uint8_t *data, size_t datalen,
                               int state, char **reason,
@@ -86,12 +86,15 @@ socks_request_free_(socks_request_t *req)
 
 static int
 parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
-                     size_t datalen, int *is_socks4a)
+                     size_t datalen, int *is_socks4a, size_t *drain_out)
 {
   // http://ss5.sourceforge.net/socks4.protocol.txt
   // http://ss5.sourceforge.net/socks4A.protocol.txt
   int res = 1;
   tor_addr_t destaddr;
+
+  tor_assert(is_socks4a);
+  tor_assert(drain_out);
 
   req->socks_version = 4;
 
@@ -113,6 +116,8 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
     }
     goto end;
   }
+
+  *drain_out = (size_t)parsed;
 
   uint8_t command = socks4_client_request_get_command(trunnel_req);
   req->command = command;
@@ -170,6 +175,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
       goto end;
     }
   }
+
 
   end:
   socks4_client_request_free(trunnel_req);
@@ -248,6 +254,8 @@ parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
     goto end;
   }
 
+  *drain_out = (size_t)parsed;
+
   size_t n_methods = (size_t)socks5_client_version_get_n_methods(trunnel_req);
   if (n_methods == 0) {
     res = -1;
@@ -269,7 +277,6 @@ parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
   }
   
   end:
-  *drain_out = (size_t)parsed;
   socks5_client_version_free(trunnel_req);
 
   return res;
@@ -329,49 +336,13 @@ process_socks5_methods_request(socks_request_t *req, int have_user_pass,
   return res;
 }
 
-/** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
- * of the forms
- *  - socks4: "socksheader username\\0"
- *  - socks4a: "socksheader username\\0 destaddr\\0"
- *  - socks5 phase one: "version #methods methods"
- *  - socks5 phase two: "version command 0 addresstype..."
- * If it's a complete and valid handshake, and destaddr fits in
- *   MAX_SOCKS_ADDR_LEN bytes, then pull the handshake off the buf,
- *   assign to <b>req</b>, and return 1.
- *
- * If it's invalid or too big, return -1.
- *
- * Else it's not all there yet, leave buf alone and return 0.
- *
- * If you want to specify the socks reply, write it into <b>req->reply</b>
- *   and set <b>req->replylen</b>, else leave <b>req->replylen</b> alone.
- *
- * If <b>log_sockstype</b> is non-zero, then do a notice-level log of whether
- * the connection is possibly leaking DNS requests locally or not.
- *
- * If <b>safe_socks</b> is true, then reject unsafe socks protocols.
- *
- * If returning 0 or -1, <b>req->address</b> and <b>req->port</b> are
- * undefined.
- */
-int
-fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
-                     int log_sockstype, int safe_socks)
+static int
+handle_socks_message(const uint8_t *raw_data, size_t datalen, socks_request_t *req,
+                     int log_sockstype, int safe_socks, size_t *drain_out)
 {
   int res = 0;
-  size_t datalen = buf_datalen(buf);
-  uint8_t *raw_data;
-  uint8_t *raw_ptr;
-  uint8_t socks_version;
 
-  raw_data = tor_malloc(datalen);
-  memset(raw_data, 0, datalen);
-
-  buf_peek(buf, (char *)raw_data, datalen);
-
-  raw_ptr = raw_data;
-
-  socks_version = (uint8_t)raw_data[0];
+  uint8_t socks_version = (uint8_t)raw_data[0];
 
   if (socks_version == 4) {
     if (datalen < SOCKS4_NETWORK_LEN) {
@@ -382,7 +353,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     int is_socks4a = 0;
     int parse_status =
       parse_socks4_request((const uint8_t *)raw_data, req, datalen,
-                           &is_socks4a);
+                           &is_socks4a, drain_out);
 
     if (parse_status != 1) {
       res = parse_status;
@@ -398,7 +369,6 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       goto end;
     }
 
-    buf_clear(buf);
     res = 1;
     goto end;
   } else if (socks_version == 5) {
@@ -434,15 +404,47 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
         goto end;
       }
 
-      buf_drain(buf, n_drain); // TODO: do it like this for SOCKS4/4a as well
-      raw_ptr += n_drain;
-      datalen -= n_drain;
       res = 0;
       goto end;
     }
   }
 
-  ssize_t n_drain;
+  end:
+  return res;
+}
+
+/** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
+ * of the forms
+ *  - socks4: "socksheader username\\0"
+ *  - socks4a: "socksheader username\\0 destaddr\\0"
+ *  - socks5 phase one: "version #methods methods"
+ *  - socks5 phase two: "version command 0 addresstype..."
+ * If it's a complete and valid handshake, and destaddr fits in
+ *   MAX_SOCKS_ADDR_LEN bytes, then pull the handshake off the buf,
+ *   assign to <b>req</b>, and return 1.
+ *
+ * If it's invalid or too big, return -1.
+ *
+ * Else it's not all there yet, leave buf alone and return 0.
+ *
+ * If you want to specify the socks reply, write it into <b>req->reply</b>
+ *   and set <b>req->replylen</b>, else leave <b>req->replylen</b> alone.
+ *
+ * If <b>log_sockstype</b> is non-zero, then do a notice-level log of whether
+ * the connection is possibly leaking DNS requests locally or not.
+ *
+ * If <b>safe_socks</b> is true, then reject unsafe socks protocols.
+ *
+ * If returning 0 or -1, <b>req->address</b> and <b>req->port</b> are
+ * undefined.
+ */
+int
+fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
+                     int log_sockstype, int safe_socks)
+{
+  int res = 0;
+  size_t datalen = buf_datalen(buf);
+  size_t n_drain;
   size_t want_length = 128;
   const char *head = NULL;
 
@@ -451,25 +453,27 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     goto end;
   }
 
+  buf_pullup(buf, datalen, &head, &datalen); // XXX
+
   do {
     n_drain = 0;
-    buf_pullup(buf, want_length, &head, &datalen);
+    //buf_pullup(buf, want_length, &head, &datalen);
     tor_assert(head && datalen >= 2);
     want_length = 0;
 
     res = parse_socks(head, datalen, req, log_sockstype,
                       safe_socks, &n_drain, &want_length);
 
-    if (n_drain < 0)
+    if (res == -1)
       buf_clear(buf);
     else if (n_drain > 0)
       buf_drain(buf, n_drain);
 
+    datalen = buf_datalen(buf);
   } while (res == 0 && head && want_length < buf_datalen(buf) &&
            buf_datalen(buf) >= 2);
 
   end:
-  tor_free(raw_data);
   return res;
 }
 
@@ -523,7 +527,7 @@ static const char SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG[] =
  * we'd like to see in the input buffer, if they're available. */
 static int
 parse_socks(const char *data, size_t datalen, socks_request_t *req,
-            int log_sockstype, int safe_socks, ssize_t *drain_out,
+            int log_sockstype, int safe_socks, size_t *drain_out,
             size_t *want_length_out)
 {
   unsigned int len;
@@ -536,6 +540,15 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
     /* We always need at least 2 bytes. */
     *want_length_out = 2;
     return 0;
+  }
+
+  socksver = *data;
+
+  if ((socksver == 5 && req->socks_version != 5) ||
+      socksver == 4) {
+    *want_length_out = 128; // TODO remove this arg later
+    return handle_socks_message((const uint8_t *)data, datalen, req,
+                                log_sockstype, safe_socks, drain_out);
   }
 
   if (req->socks_version == 5 && !req->got_auth) {
@@ -583,8 +596,6 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       return -1;
     }
   }
-
-  socksver = *data;
 
   switch (socksver) { /* which version of socks? */
     case 5: /* socks5 */
@@ -770,6 +781,9 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       }
       return -1;
   }
+
+  tor_assert_unreached();
+  return -1;
 }
 
 /** Inspect a reply from SOCKS server stored in <b>buf</b> according
