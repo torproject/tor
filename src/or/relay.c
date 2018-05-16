@@ -965,7 +965,12 @@ remap_event_helper(entry_connection_t *conn, const tor_addr_t *new_addr)
  * header has already been parsed into <b>rh</b>. On success, set
  * <b>addr_out</b> to the address we're connected to, and <b>ttl_out</b> to
  * the ttl of that address, in seconds, and return 0.  On failure, return
- * -1. */
+ * -1.
+ *
+ * Note that the resulting address can be UNSPEC if the connected cell had no
+ * address (as for a stream to an union service or a tunneled directory
+ * connection), and that the ttl can be absent (in which case <b>ttl_out</b>
+ * is set to -1). */
 STATIC int
 connected_cell_parse(const relay_header_t *rh, const cell_t *cell,
                      tor_addr_t *addr_out, int *ttl_out)
@@ -1311,6 +1316,9 @@ connection_edge_process_relay_cell_not_open(
       return 0;
     }
     if (tor_addr_family(&addr) != AF_UNSPEC) {
+      /* The family is not UNSPEC: so we were given an address in the
+       * connected cell. (This is normal, except for BEGINDIR and onion
+       * service streams.) */
       const sa_family_t family = tor_addr_family(&addr);
       if (tor_addr_is_null(&addr) ||
           (get_options()->ClientDNSRejectInternalAddresses &&
