@@ -1,0 +1,6 @@
+  o Minor bugfixes (controller):
+    - Improve accuracy of the BUILDTIMEOUT_SET control port event's
+      TIMEOUT_RATE and CLOSE_RATE fields. (We were previously miscounting
+      the total number of circuits for these field values.) Fixes bug
+      26121; bugfix on 0.3.3.1-alpha.
+
