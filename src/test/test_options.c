@@ -522,10 +522,14 @@ test_options_validate__client_and_server_warning(void *ignored)
     "SocksPort 5555");
   setup_capture_of_logs(LOG_WARN);
   options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  expect_log_msg("You are currently running as a server, and a client. "
-                 "If you do not actually want to run Tor as a client, "
-                 "you can add SocksPort 0 to your configuration, to turn off "
-                 "the default client behavior.\n");
+  expect_log_msg(
+    "You appear to be attempting to use Tor for both "
+    "relay and client functionality at the same time. "
+    "Unfortunately, a side channel issue (Bug #16585) means that "
+    "this fact will be visible in network traffic patterns. "
+    "If you do not actually want to run Tor as a client, "
+    "you can add SocksPort 0 to your configuration, to turn off "
+    "the default client behavior.\n");
   tor_free(msg);
  done:
   UNMOCK(get_uname);
