@@ -3,7 +3,6 @@ members = [
     "crypto",
     "external",
     "protover",
-    "rand",
     "smartlist",
     "tor_allocate",
     "tor_log",

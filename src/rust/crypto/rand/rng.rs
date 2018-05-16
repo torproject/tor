@@ -43,7 +43,7 @@ mod internal {
     impl TorRng {
         // C_RUST_COUPLED: `crypto_seed_rng()` /src/common/crypto_rand.c
         #[allow(dead_code)]
-        fn new() -> Self {
+        pub fn new() -> Self {
             if !c_tor_crypto_seed_rng() {
                 tor_log_msg!(LogSeverity::Warn, LogDomain::General,
                              "TorRng::from_seed()",
@@ -90,7 +90,7 @@ mod internal {
     impl TorStrongestRng {
         // C_RUST_COUPLED: `crypto_seed_rng()` /src/common/crypto_rand.c
         #[allow(dead_code)]
-        fn new() -> Self {
+        pub fn new() -> Self {
             if !c_tor_crypto_seed_rng() {
                 tor_log_msg!(LogSeverity::Warn, LogDomain::General,
                              "TorStrongestRng::from_seed()",
