@@ -293,7 +293,7 @@ parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
       *have_no_auth = 1;
     }
   }
-  
+
   end:
   socks5_client_version_free(trunnel_req);
 
@@ -338,10 +338,10 @@ process_socks5_methods_request(socks_request_t *req, int have_user_pass,
              errmsg);
     res = -1;
   } else {
-    ssize_t encoded = 
+    ssize_t encoded =
     socks5_server_method_encode(req->reply, sizeof(req->reply),
                                 trunnel_resp);
-    
+
     if (encoded < 0) {
       log_warn(LD_APP, "socks5: method selection encoding failed");
       res = -1;
@@ -355,12 +355,114 @@ process_socks5_methods_request(socks_request_t *req, int have_user_pass,
 }
 
 static int
+parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
+                           size_t datalen, size_t *drain_out)
+{
+  int res = 1;
+  socks5_client_userpass_auth_t *trunnel_req = NULL;
+  ssize_t parsed = socks5_client_userpass_auth_parse(&trunnel_req, raw_data,
+                                                     datalen);
+
+  tor_assert(drain_out);
+  *drain_out = 0;
+
+  if (parsed == -1) {
+    log_warn(LD_APP, "socks5: parsing failed - invalid user/pass "
+                     "authentication message.");
+    res = -1;
+    goto end;
+  } else if (parsed == -2) {
+    res = 0;
+    goto end;
+  }
+
+  tor_assert(parsed >= 0);
+  *drain_out = (size_t)parsed;
+
+  uint8_t usernamelen =
+   socks5_client_userpass_auth_get_username_len(trunnel_req);
+  uint8_t passwordlen =
+   socks5_client_userpass_auth_get_passwd_len(trunnel_req);
+  const char *username =
+   socks5_client_userpass_auth_getconstarray_username(trunnel_req);
+  const char *password =
+   socks5_client_userpass_auth_getconstarray_passwd(trunnel_req);
+
+  if (usernamelen && username) {
+    req->username = tor_memdup_nulterm(username, usernamelen);
+    req->usernamelen = usernamelen;
+
+    req->got_auth = 1;
+  }
+
+  if (passwordlen && password) {
+    req->password = tor_memdup_nulterm(password, passwordlen);
+    req->passwordlen = passwordlen;
+
+    req->got_auth = 1;
+  }
+
+  end:
+  socks5_client_userpass_auth_free(trunnel_req);
+  return res;
+}
+
+static int
+process_socks5_userpass_auth(socks_request_t *req)
+{
+  int res = 1;
+  socks5_server_userpass_auth_t *trunnel_resp =
+    socks5_server_userpass_auth_new();
+
+  if (req->socks_version != 5) {
+    res = -1;
+    goto end;
+  }
+
+  if (req->auth_type != SOCKS_USER_PASS &&
+      req->auth_type != SOCKS_NO_AUTH) {
+    res = -1;
+    goto end;
+  }
+
+  socks5_server_userpass_auth_set_version(trunnel_resp, 1);
+  socks5_server_userpass_auth_set_status(trunnel_resp, 0); // auth OK
+
+  const char *errmsg = socks5_server_userpass_auth_check(trunnel_resp);
+  if (errmsg) {
+    log_warn(LD_APP, "socks5: server userpass auth validation failed: %s",
+             errmsg);
+    res = -1;
+    goto end;
+  }
+
+  ssize_t encoded = socks5_server_userpass_auth_encode(req->reply,
+                                                       sizeof(req->reply),
+                                                       trunnel_resp);
+
+  if (encoded < 0) {
+    log_warn(LD_APP, "socks5: server userpass auth encoding failed");
+    res = -1;
+    goto end;
+  }
+
+  req->replylen = (size_t)encoded;
+
+  end:
+  socks5_server_userpass_auth_free(trunnel_resp);
+  return res;
+}
+
+static int
 handle_socks_message(const uint8_t *raw_data, size_t datalen, socks_request_t *req,
                      int log_sockstype, int safe_socks, size_t *drain_out)
 {
   int res = 0;
 
   uint8_t socks_version = raw_data[0];
+
+  if (socks_version == 1)
+    socks_version = 5; // SOCKS5 username/pass subnegotiation
 
   if (socks_version == 4) {
     if (datalen < SOCKS4_NETWORK_LEN) {
@@ -394,12 +496,26 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen, socks_request_t *r
       res = 0;
       goto end;
     }
+    /* RFC1929 SOCKS5 username/password subnegotiation. */
+    if ((!req->got_auth && raw_data[0] == 1) ||
+        req->auth_type == SOCKS_USER_PASS) {
+      int parse_status = parse_socks5_userpass_auth(raw_data, req, datalen,
+                                                    drain_out);
 
-    if (!req->got_auth) {
+      if (parse_status != 1) {
+        res = parse_status;
+        goto end;
+      }
 
-    }
+      int process_status = process_socks5_userpass_auth(req);
+      if (process_status != 1) {
+        res = process_status;
+        goto end;
+      }
 
-    if (req->socks_version != 5) {
+      res = 0;
+      goto end;
+    } else if (req->socks_version != 5) {
       int have_user_pass, have_no_auth;
       int parse_status = parse_socks5_methods_request(raw_data,
                                                       req,
@@ -425,6 +541,9 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen, socks_request_t *r
       res = 0;
       goto end;
     }
+  } else {
+    *drain_out = datalen;
+    res = -1;
   }
 
   end:
@@ -562,8 +681,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
 
   socksver = get_uint8(data);
 
-  if ((socksver == 5 && req->socks_version != 5) ||
-      socksver == 4) {
+  if (socksver == 5 || socksver == 4 ||
+      socksver == 1) { // XXX: RFC 1929
     *want_length_out = 128; // TODO remove this arg later
     return handle_socks_message((const uint8_t *)data, datalen, req,
                                 log_sockstype, safe_socks, drain_out);
