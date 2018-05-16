@@ -1308,6 +1308,7 @@ connection_edge_process_relay_cell_not_open(
              "Got a badly formatted connected cell. Closing.");
       connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL);
       connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_TORPROTOCOL);
+      return 0;
     }
     if (tor_addr_family(&addr) != AF_UNSPEC) {
       const sa_family_t family = tor_addr_family(&addr);
