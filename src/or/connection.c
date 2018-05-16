@@ -126,8 +126,6 @@
  * EADDRINUSE.
  * 2) If so, it will close the appropriate old listener connection and
  * 3) Attempts bind()'ing the new listener socket again.
- *
- * For further information, see ticket #17873.
  */
 #if defined(__linux__) || defined(_WIN32)
 #define ENABLE_LISTENER_REBIND
@@ -2659,8 +2657,7 @@ connection_read_proxy_handshake(connection_t *conn)
  * entry in <b>ports</b>.  Add to <b>new_conns</b> new every connection we
  * launch. If we may need to perform socket rebind when creating new
  * listener that replaces old one, create a <b>listener_replacement_t</b>
- * struct for affected pair  and add it to <b>replacements</b>. For more
- * information, see ticket #17873.
+ * struct for affected pair  and add it to <b>replacements</b>.
  *
  * If <b>control_listeners_only</b> is true, then we only open control
  * listeners, and we do not remove any noncontrol listeners from
