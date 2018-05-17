@@ -350,6 +350,8 @@ EXTRA_DIST += \
 	src/test/hs_indexes.py \
 	src/test/fuzz_static_testcases.sh \
 	src/test/slownacl_curve25519.py \
+	src/test/test_rebind.sh \
+	src/test/test_rebind.py \
 	src/test/zero_length_keys.sh \
 	src/test/test_keygen.sh \
 	src/test/test_key_expiration.sh \
