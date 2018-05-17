@@ -1,4 +1,4 @@
-Changes in version 0.3.4.1-alpha - 2018-05-16
+Changes in version 0.3.4.1-alpha - 2018-05-17
   Tor 0.3.4.1-alpha is the first release in the 0.3.4.x series. It
   includes refactoring to begin reducing Tor's binary size and idle CPU
   usage on mobile, along with prep work for new bandwidth scanners,
