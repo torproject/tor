@@ -10,6 +10,11 @@ Changes in version 0.3.3.6 - 2018-05-??
       uninitialised buffer. They now log a warning about the empty file
       instead. Fixes bug 26007; bugfix on 0.2.2.1-alpha.
 
+  o Major bugfixes (crash, backport from 0.3.4.1-alpha):
+    - Avoid a rare assertion failure in the circuit build timeout code
+      if we fail to allow any circuits to actually complete. Fixes bug
+      25733; bugfix on 0.2.2.2-alpha.
+
   o Major bugfixes (onion service, backport from 0.3.4.1-alpha):
     - Correctly detect when onion services get disabled after HUP.
       Fixes bug 25761; bugfix on 0.3.2.1.
@@ -33,11 +38,6 @@ Changes in version 0.3.3.6 - 2018-05-??
     - Update geoip and geoip6 to the May 1 2018 Maxmind GeoLite2
       Country database. Closes ticket 26104.
 
-  o Major bugfixes (crash, backport from 0.3.4.1-alpha):
-    - Avoid a rare assertion failure in the circuit build timeout code
-      if we fail to allow any circuits to actually complete. Fixes bug
-      25733; bugfix on 0.2.2.2-alpha.
-
   o Minor bugfixes (client, backport from 0.3.4.1-alpha):
     - Don't consider Tor running as a client if the ControlPort is open,
       but no actual client ports are open. Fixes bug 26062; bugfix
@@ -56,6 +56,10 @@ Changes in version 0.3.3.6 - 2018-05-??
       but we forgot to say so in the man page. Fixes bug 26052; bugfix
       on 0.3.2.6-alpha.
 
+  o Minor bugfixes (Linux seccomp2 sandbox, backport from 0.3.4.1-alpha):
+    - Allow the nanosleep() system call, which glibc uses to implement
+      sleep() and usleep(). Fixes bug 24969; bugfix on 0.2.5.1-alpha.
+
   o Minor bugfixes (onion service, backport from 0.3.4.1-alpha):
     - Fix a memory leak when a v3 onion service is configured and gets a
       SIGHUP signal. Fixes bug 25901; bugfix on 0.3.2.1-alpha.
@@ -63,10 +67,6 @@ Changes in version 0.3.3.6 - 2018-05-??
       extra white-space at the end. This is more correct but also will
       allow us to support new fields that might start with "signature".
       Fixes bug 26069; bugfix on 0.3.0.1-alpha.
-
-  o Minor bugfixes (Linux seccomp2 sandbox, backport from 0.3.4.1-alpha):
-    - Allow the nanosleep() system call, which glibc uses to implement
-      sleep() and usleep(). Fixes bug 24969; bugfix on 0.2.5.1-alpha.
 
   o Minor bugfixes (relay, crash, backport from 0.3.4.1-alpha):
     - Avoid a crash when running with DirPort set but ORPort tuned off.
