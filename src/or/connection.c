@@ -2709,7 +2709,8 @@ retry_listener_ports(smartlist_t *old_conns,
         }
       } else {
         int port_matches_exact = (wanted->port == conn->port);
-        int port_matches = wanted->port || port_matches_exact;
+        int port_matches = (wanted->port == CFG_AUTO_PORT ||
+                            port_matches_exact);
 
         if (port_matches && tor_addr_eq(&wanted->addr, &conn->addr)) {
           found_port = wanted;
