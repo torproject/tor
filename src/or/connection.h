@@ -15,6 +15,11 @@
 /* XXXX For buf_datalen in inline function */
 #include "buffers.h"
 
+/**
+ * This struct associates an old listener connection to be replaced
+ * by new connection described by port configuration. Only used when
+ * moving listeners to/from wildcard IP address.
+ */
 typedef struct
 {
   connection_t *old_conn; /* Old listener connection to be replaced */
