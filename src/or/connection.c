@@ -2710,7 +2710,7 @@ retry_listener_ports(smartlist_t *old_conns,
       } else {
         /* Numeric values of old and new port match exactly. */
         const int port_matches_exact = (wanted->port == conn->port);
-        /* Port match semantically - either their specific values
+        /* Ports match semantically - either their specific values
            match exactly, or new port is 'auto'.
          */
         const int port_matches = (wanted->port == CFG_AUTO_PORT ||
