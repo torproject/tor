@@ -226,6 +226,12 @@ Changes in version 0.3.4.1-alpha - 2018-05-17
       counting bug when STREAM_BW events were enabled. Fixes bug 25400;
       bugfix on 0.2.5.2-alpha.
 
+  o Minor bugfixes (correctness, client):
+    - Upon receiving a malformed connected cell, stop processing the cell
+      immediately.  Previously we would mark the connection for close, but
+      continue processing the cell as if the connection were open. Fixes bug
+      26072; bugfix on 0.2.4.7-alpha.
+
   o Minor bugfixes (directory client):
     - When unverified-consensus is verified, rename it to cached-
       consenus. Fixes bug 4187; bugfix on 0.2.0.3-alpha.

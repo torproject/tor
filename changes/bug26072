@@ -1,5 +1,0 @@
-  o Minor bugfixes (correctness, client):
-    - Upon receiving a malformed connected cell, stop processing the cell
-      immediately.  Previously we would mark the connection for close, but
-      continue processing the cell as if the connection were open. Fixes bug
-      26072; bugfix on 0.2.4.7-alpha.
