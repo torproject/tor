@@ -11,8 +11,6 @@ def try_connecting_to_socksport():
         print 'FAIL'
         sys.exit('Cannot connect to SOCKSPort')
     socks_socket.close()
-    if len(sys.argv) < 2:
-        sys.exit('Usage: %s <path-to-tor>' % sys.argv[0])
 
 if not os.path.exists(sys.argv[1]):
     sys.exit('ERROR: cannot find tor at %s' % sys.argv[1])
@@ -26,6 +24,9 @@ tor_process = subprocess.Popen([tor_path,
 
 if tor_process == None:
     sys.exit('ERROR: running tor failed')
+
+if len(sys.argv) < 2:
+     sys.exit('Usage: %s <path-to-tor>' % sys.argv[0])
 
 time.sleep(1) # TODO: Wait for 'Opening Control listener on'
 
