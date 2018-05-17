@@ -2708,16 +2708,20 @@ retry_listener_ports(smartlist_t *old_conns,
           break;
         }
       } else {
-        int port_matches_exact = (wanted->port == conn->port);
-        int port_matches = (wanted->port == CFG_AUTO_PORT ||
-                            port_matches_exact);
+        /* Numeric values of old and new port match exactly. */
+        const int port_matches_exact = (wanted->port == conn->port);
+        /* Port match semantically - either their specific values
+           match exactly, or new port is 'auto'.
+         */
+        const int port_matches = (wanted->port == CFG_AUTO_PORT ||
+                                  port_matches_exact);
 
         if (port_matches && tor_addr_eq(&wanted->addr, &conn->addr)) {
           found_port = wanted;
           break;
         }
 #ifdef ENABLE_LISTENER_REBIND
-        int may_need_rebind =
+        const int may_need_rebind =
           port_matches_exact & bool_neq(tor_addr_is_null(&wanted->addr),
                                         tor_addr_is_null(&conn->addr));
         if (replacements && may_need_rebind) {
