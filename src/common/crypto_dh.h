@@ -37,15 +37,6 @@ ssize_t crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
 void crypto_dh_free_(crypto_dh_t *dh);
 #define crypto_dh_free(dh) FREE_AND_NULL(crypto_dh_t, crypto_dh_free_, (dh))
 
-int crypto_expand_key_material_TAP(const uint8_t *key_in,
-                                   size_t key_in_len,
-                                   uint8_t *key_out, size_t key_out_len);
-int crypto_expand_key_material_rfc5869_sha256(
-                                    const uint8_t *key_in, size_t key_in_len,
-                                    const uint8_t *salt_in, size_t salt_in_len,
-                                    const uint8_t *info_in, size_t info_in_len,
-                                    uint8_t *key_out, size_t key_out_len);
-
 /* Crypto DH free */
 void crypto_dh_free_all(void);
 

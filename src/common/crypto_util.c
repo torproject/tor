@@ -106,6 +106,9 @@ memwipe(void *mem, uint8_t byte, size_t sz)
   memset(mem, byte, sz);
 }
 
+/** Log all pending crypto errors at level <b>severity</b>.  Use
+ * <b>doing</b> to describe our current activities.
+ */
 void
 crypto_log_errors(int severity, const char *doing)
 {
