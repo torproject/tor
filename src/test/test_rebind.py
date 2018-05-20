@@ -36,7 +36,7 @@ if tor_process == None:
 if len(sys.argv) < 2:
      sys.exit('Usage: %s <path-to-tor>' % sys.argv[0])
 
-wait_for_log('Opening Control listener on')
+wait_for_log('Opened Control listener on')
 
 try_connecting_to_socksport()
 
@@ -48,17 +48,17 @@ if control_socket.connect_ex(('127.0.0.1', 9053)):
 
 control_socket.sendall('AUTHENTICATE \r\n')
 control_socket.sendall('SETCONF SOCKSPort=0.0.0.0:9052\r\n')
-wait_for_log('Closing no-longer-configured Socks listener')
+wait_for_log('Opened Socks listener')
 
 try_connecting_to_socksport()
 
 control_socket.sendall('SETCONF SOCKSPort=127.0.0.1:9052\r\n')
-wait_for_log('Closing no-longer-configured Socks listener')
+wait_for_log('Opened Socks listener')
 
 try_connecting_to_socksport()
 
 control_socket.sendall('SIGNAL HALT\r\n')
-time.sleep(0.1)
 
+time.sleep(0.1)
 print 'OK'
 tor_process.terminate()
