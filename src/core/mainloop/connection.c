@@ -1486,6 +1486,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
    */
   connection_check_oos(get_n_open_sockets(), 0);
 
+  log_notice(LD_NET, "Opened %s on %s",
+             conn_type_to_string(type), fmt_addrport(&addr, usePort));
   return conn;
 
  err:
