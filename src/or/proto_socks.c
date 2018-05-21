@@ -651,7 +651,6 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
   char tmpbuf[TOR_ADDR_BUF_LEN+1];
   tor_addr_t destaddr;
   uint8_t socksver;
-  unsigned char usernamelen, passlen;
 
   if (datalen < 2) {
     /* We always need at least 2 bytes. */
@@ -666,52 +665,6 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
     *want_length_out = 128; // TODO remove this arg later
     return handle_socks_message((const uint8_t *)data, datalen, req,
                                 log_sockstype, safe_socks, drain_out);
-  }
-
-  if (req->socks_version == 5 && !req->got_auth) {
-    /* See if we have received authentication.  Strictly speaking, we should
-       also check whether we actually negotiated username/password
-       authentication.  But some broken clients will send us authentication
-       even if we negotiated SOCKS_NO_AUTH. */
-    if (*data == 1) { /* username/pass version 1 */
-      /* Format is: authversion [1 byte] == 1
-                    usernamelen [1 byte]
-                    username    [usernamelen bytes]
-                    passlen     [1 byte]
-                    password    [passlen bytes] */
-      usernamelen = (unsigned char)*(data + 1);
-      if (datalen < 2u + usernamelen + 1u) {
-        *want_length_out = 2u + usernamelen + 1u;
-        return 0;
-      }
-      passlen = (unsigned char)*(data + 2u + usernamelen);
-      if (datalen < 2u + usernamelen + 1u + passlen) {
-        *want_length_out = 2u + usernamelen + 1u + passlen;
-        return 0;
-      }
-      req->replylen = 2; /* 2 bytes of response */
-      req->reply[0] = 1; /* authversion == 1 */
-      req->reply[1] = 0; /* authentication successful */
-      log_debug(LD_APP,
-               "socks5: Accepted username/password without checking.");
-      if (usernamelen) {
-        req->username = tor_memdup(data+2u, usernamelen);
-        req->usernamelen = usernamelen;
-      }
-      if (passlen) {
-        req->password = tor_memdup(data+3u+usernamelen, passlen);
-        req->passwordlen = passlen;
-      }
-      *drain_out = 2u + usernamelen + 1u + passlen;
-      req->got_auth = 1;
-      *want_length_out = 7; /* Minimal socks5 command. */
-      return 0;
-    } else if (req->auth_type == SOCKS_USER_PASS) {
-      /* unknown version byte */
-      log_warn(LD_APP, "Socks5 username/password version %d not recognized; "
-               "rejecting.", (int)*data);
-      return -1;
-    }
   }
 
   switch (socksver) { /* which version of socks? */
