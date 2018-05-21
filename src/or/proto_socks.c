@@ -434,10 +434,133 @@ process_socks5_userpass_auth(socks_request_t *req)
 }
 
 static int
+parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
+                            size_t datalen, size_t *drain_out)
+{
+  int res = 1;
+  tor_addr_t destaddr;
+  socks5_client_request_t *trunnel_req = NULL;
+  ssize_t parsed = socks5_client_request_parse(&trunnel_req, raw_data, datalen);
+  if (parsed == -1) {
+    log_warn(LD_APP, "socks5: parsing failed - invalid client request");
+    res = -1;
+    goto end;
+  } else if (parsed == -2) {
+    res = 0;
+    goto end;
+  }
+
+  *drain_out = (size_t)parsed;
+
+  if (socks5_client_request_get_version(trunnel_req) != 5) {
+    res = -1;
+    goto end;
+  }
+
+  req->command = socks5_client_request_get_command(trunnel_req);
+
+  req->port = socks5_client_request_get_dest_port(trunnel_req);
+
+  uint8_t atype = socks5_client_request_get_atype(trunnel_req);
+  req->socks5_atyp = atype;
+
+  switch (atype) {
+    case 1: {
+      uint32_t ipv4 = socks5_client_request_get_dest_addr_ipv4(trunnel_req);
+      tor_addr_from_ipv4h(&destaddr, ipv4);
+
+      tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
+    } break;
+    case 3: {
+      const struct domainname_st *dns_name = 
+        socks5_client_request_getconst_dest_addr_domainname(trunnel_req);
+
+      const char *hostname = domainname_getconstarray_name(dns_name);
+
+      strlcpy(req->address, hostname, sizeof(req->address));
+    } break;
+    case 4: {
+      const char *ipv6 =
+        (const char *)socks5_client_request_getarray_dest_addr_ipv6(trunnel_req);
+      tor_addr_from_ipv6_bytes(&destaddr, ipv6);
+
+      tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
+    } break;
+    default: {
+      res = -1;
+    } break;
+  }
+
+  end:
+  socks5_client_request_free(trunnel_req);
+  return res;
+}
+
+static int
+process_socks5_client_request(socks_request_t *req,
+                              int log_sockstype,
+                              int safe_socks)
+{
+  int res = 1;
+
+  if (req->command != SOCKS_COMMAND_CONNECT &&
+      req->command != SOCKS_COMMAND_RESOLVE &&
+      req->command != SOCKS_COMMAND_RESOLVE_PTR) {
+    socks_request_set_socks5_error(req,SOCKS5_COMMAND_NOT_SUPPORTED);
+    res = -1;
+    goto end;
+  }
+
+  if (req->command == SOCKS_COMMAND_RESOLVE_PTR &&
+      !string_is_valid_ipv4_address(req->address) &&
+      !string_is_valid_ipv6_address(req->address)) {
+    socks_request_set_socks5_error(req, SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED);
+    log_warn(LD_APP, "socks5 received RESOLVE_PTR command with "
+                     "hostname type. Rejecting.");
+
+    res = -1;
+    goto end;
+  }
+
+  if (!string_is_valid_dest(req->address)) {
+    socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
+
+    log_warn(LD_PROTOCOL,
+             "Your application (using socks5 to port %d) gave Tor "
+             "a malformed hostname: %s. Rejecting the connection.",
+             req->port, escaped_safe_str_client(req->address));
+
+    res = -1;
+    goto end;;
+  }
+
+  if (req->socks5_atyp == 1 || req->socks5_atyp == 4) {
+    if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
+        !addressmap_have_mapping(req->address,0)) {
+      log_unsafe_socks_warning(5, req->address, req->port, safe_socks);
+      if (safe_socks) {
+        socks_request_set_socks5_error(req, SOCKS5_NOT_ALLOWED);
+        res = -1;
+        goto end;
+      }
+    }
+  }
+
+  if (log_sockstype)
+    log_notice(LD_APP,
+              "Your application (using socks5 to port %d) instructed "
+              "Tor to take care of the DNS resolution itself if "
+              "necessary. This is good.", req->port);
+
+  end:
+  return res;
+}
+
+static int
 handle_socks_message(const uint8_t *raw_data, size_t datalen, socks_request_t *req,
                      int log_sockstype, int safe_socks, size_t *drain_out)
 {
-  int res = 0;
+  int res = 1;
 
   uint8_t socks_version = (uint8_t)raw_data[0];
 
@@ -477,8 +600,8 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen, socks_request_t *r
       goto end;
     }
     /* RFC1929 SOCKS5 username/password subnegotiation. */
-    if ((!req->got_auth && raw_data[0] == 1) ||
-        req->auth_type == SOCKS_USER_PASS) {
+    if (!req->got_auth && (raw_data[0] == 1 ||
+        req->auth_type == SOCKS_USER_PASS)) {
       int parse_status = parse_socks5_userpass_auth(raw_data, req, datalen,
                                                     drain_out);
 
@@ -520,6 +643,23 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen, socks_request_t *r
 
       res = 0;
       goto end;
+    } else {
+      int parse_status = parse_socks5_client_request(raw_data, req,
+                                                     datalen, drain_out);
+      if (parse_status != 1) {
+        socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
+        res = parse_status;
+        goto end;
+      }
+
+      int process_status = process_socks5_client_request(req,
+                                                         log_sockstype,
+                                                         safe_socks);
+
+      if (process_status != 1) {
+        res = process_status;
+        goto end;
+      }
     }
   } else {
     *drain_out = datalen;
@@ -570,11 +710,10 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     goto end;
   }
 
-  buf_pullup(buf, datalen, &head, &datalen); // XXX
-
   do {
     n_drain = 0;
-    //buf_pullup(buf, want_length, &head, &datalen);
+    buf_pullup(buf, MAX(want_length, buf_datalen(buf)), 
+               &head, &datalen);
     tor_assert(head && datalen >= 2);
     want_length = 0;
 
@@ -585,10 +724,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       buf_clear(buf);
     else if (n_drain > 0)
       buf_drain(buf, n_drain);
-
-    datalen = buf_datalen(buf);
-  } while (res == 0 && head && want_length < buf_datalen(buf) &&
-           buf_datalen(buf) >= 2);
+  } while (res == 0 && head && buf_datalen(buf) >= 2);
 
   end:
   return res;
