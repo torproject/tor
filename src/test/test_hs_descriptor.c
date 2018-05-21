@@ -868,7 +868,7 @@ test_build_authorized_client(void *arg)
   uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
   curve25519_secret_key_t auth_ephemeral_sk;
   curve25519_secret_key_t client_auth_sk;
-  curve25519_public_key_t client_pk;
+  curve25519_public_key_t client_auth_pk;
   const char ephemeral_sk_b16[] =
     "d023b674d993a5c8446bd2ca97e9961149b3c0e88c7dc14e8777744dd3468d6a";
   const char descriptor_cookie_b16[] =
@@ -884,7 +884,7 @@ test_build_authorized_client(void *arg)
 
   ret = curve25519_secret_key_generate(&client_auth_sk, 0);
   tt_int_op(ret, OP_EQ, 0);
-  curve25519_public_key_generate(&client_pk, &client_auth_sk);
+  curve25519_public_key_generate(&client_auth_pk, &client_auth_sk);
 
   desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
 
@@ -898,15 +898,15 @@ test_build_authorized_client(void *arg)
                 descriptor_cookie_b16,
                 strlen(descriptor_cookie_b16));
 
-  base16_decode((char *) &client_pk,
-                sizeof(client_pk),
+  base16_decode((char *) &client_auth_pk,
+                sizeof(client_auth_pk),
                 client_pubkey_b16,
                 strlen(client_pubkey_b16));
 
   MOCK(crypto_strongest_rand, mock_crypto_strongest_rand);
 
-  hs_desc_build_authorized_client(&client_pk, &auth_ephemeral_sk,
-                               descriptor_cookie, desc_client);
+  hs_desc_build_authorized_client(&client_auth_pk, &auth_ephemeral_sk,
+                                  descriptor_cookie, desc_client);
 
   test_memeq_hex((char *) desc_client->client_id,
                  "b514ef67192cad5f");
