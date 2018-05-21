@@ -1408,7 +1408,7 @@ encrypted_data_length_is_valid(size_t len)
 static int
 decrypt_descriptor_cookie(const hs_descriptor_t *desc,
                           const hs_desc_authorized_client_t *client,
-                          const curve25519_secret_key_t *client_sk,
+                          const curve25519_secret_key_t *client_auth_sk,
                           uint8_t **descriptor_cookie_out)
 {
   int ret = -1;
@@ -1421,15 +1421,15 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
 
   tor_assert(desc);
   tor_assert(client);
-  tor_assert(client_sk);
+  tor_assert(client_auth_sk);
   tor_assert(!tor_mem_is_zero(
         (char *) &desc->superencrypted_data.auth_ephemeral_pubkey,
         sizeof(desc->superencrypted_data.auth_ephemeral_pubkey)));
-  tor_assert(!tor_mem_is_zero((char *) client_sk,
-                              sizeof(*client_sk)));
+  tor_assert(!tor_mem_is_zero((char *) client_auth_sk,
+                              sizeof(*client_auth_sk)));
 
   /* Calculate x25519(client_x, hs_Y) */
-  curve25519_handshake(secret_seed, client_sk,
+  curve25519_handshake(secret_seed, client_auth_sk,
                        &desc->superencrypted_data.auth_ephemeral_pubkey);
 
   /* Calculate KEYS = KDF(SECRET_SEED, 40) */
@@ -1440,7 +1440,7 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
 
   /* If the client id of auth client is not the same as the calculcated
    * client id, it means that this auth client is invaild according to the
-   * client secret key client_sk. */
+   * client secret key client_auth_sk. */
   if (tor_memneq(client->client_id, keystream, HS_DESC_CLIENT_ID_LEN)) {
     goto done;
   }
@@ -1630,7 +1630,7 @@ desc_decrypt_superencrypted(const hs_descriptor_t *desc, char **decrypted_out)
  * decrypted_out is set to NULL. */
 static size_t
 desc_decrypt_encrypted(const hs_descriptor_t *desc,
-                       const curve25519_secret_key_t *client_sk,
+                       const curve25519_secret_key_t *client_auth_sk,
                        char **decrypted_out)
 {
   size_t encrypted_len = 0;
@@ -1643,12 +1643,12 @@ desc_decrypt_encrypted(const hs_descriptor_t *desc,
 
   /* If the client secret key is provided, try to find a valid descriptor
    * cookie. Otherwise, leave it NULL. */
-  if (client_sk) {
+  if (client_auth_sk) {
     SMARTLIST_FOREACH_BEGIN(desc->superencrypted_data.clients,
                             hs_desc_authorized_client_t *, client) {
       /* If we can decrypt the descriptor cookie successfully, we will use that
        * descriptor cookie and break from the loop. */
-      if (!decrypt_descriptor_cookie(desc, client, client_sk,
+      if (!decrypt_descriptor_cookie(desc, client, client_auth_sk,
                                      &descriptor_cookie)) {
         break;
       }
@@ -2253,7 +2253,7 @@ desc_decode_superencrypted_v3(const hs_descriptor_t *desc,
  * success else -1. */
 static int
 desc_decode_encrypted_v3(const hs_descriptor_t *desc,
-                         const curve25519_secret_key_t *client_sk,
+                         const curve25519_secret_key_t *client_auth_sk,
                          hs_desc_encrypted_data_t *desc_encrypted_out)
 {
   int ret = -1;
@@ -2268,7 +2268,7 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
 
   /* Decrypt the encrypted data that is located in the superencrypted section
    * in the descriptor as a blob of bytes. */
-  message_len = desc_decrypt_encrypted(desc, client_sk, &message);
+  message_len = desc_decrypt_encrypted(desc, client_auth_sk, &message);
   if (!message_len) {
     log_warn(LD_REND, "Service descriptor decryption failed.");
     goto err;
@@ -2353,7 +2353,7 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
 static int
   (*decode_encrypted_handlers[])(
       const hs_descriptor_t *desc,
-      const curve25519_secret_key_t *client_sk,
+      const curve25519_secret_key_t *client_auth_sk,
       hs_desc_encrypted_data_t *desc_encrypted) =
 {
   /* v0 */ NULL, /* v1 */ NULL, /* v2 */ NULL,
@@ -2365,7 +2365,7 @@ static int
  * negative value on error. */
 int
 hs_desc_decode_encrypted(const hs_descriptor_t *desc,
-                         const curve25519_secret_key_t *client_sk,
+                         const curve25519_secret_key_t *client_auth_sk,
                          hs_desc_encrypted_data_t *desc_encrypted)
 {
   int ret;
@@ -2391,7 +2391,8 @@ hs_desc_decode_encrypted(const hs_descriptor_t *desc,
   tor_assert(decode_encrypted_handlers[version]);
 
   /* Run the version specific plaintext decoder. */
-  ret = decode_encrypted_handlers[version](desc, client_sk, desc_encrypted);
+  ret = decode_encrypted_handlers[version](desc, client_auth_sk,
+                                           desc_encrypted);
   if (ret < 0) {
     goto err;
   }
@@ -2547,7 +2548,7 @@ hs_desc_decode_plaintext(const char *encoded,
 int
 hs_desc_decode_descriptor(const char *encoded,
                           const uint8_t *subcredential,
-                          const curve25519_secret_key_t *client_sk,
+                          const curve25519_secret_key_t *client_auth_sk,
                           hs_descriptor_t **desc_out)
 {
   int ret = -1;
@@ -2575,7 +2576,7 @@ hs_desc_decode_descriptor(const char *encoded,
     goto err;
   }
 
-  ret = hs_desc_decode_encrypted(desc, client_sk, &desc->encrypted_data);
+  ret = hs_desc_decode_encrypted(desc, client_auth_sk, &desc->encrypted_data);
   if (ret < 0) {
     goto err;
   }

@@ -1233,7 +1233,7 @@ hs_client_decode_descriptor(const char *desc_str,
   uint8_t subcredential[DIGEST256_LEN];
   ed25519_public_key_t blinded_pubkey;
   hs_client_service_authorization_t *client_auth = NULL;
-  curve25519_secret_key_t *client_sk = NULL;
+  curve25519_secret_key_t *client_auht_sk = NULL;
 
   tor_assert(desc_str);
   tor_assert(service_identity_pk);
@@ -1242,7 +1242,7 @@ hs_client_decode_descriptor(const char *desc_str,
   /* Check if we have a client authorization for this service in the map. */
   client_auth = find_client_auth(service_identity_pk);
   if (client_auth) {
-    client_sk = &client_auth->enc_seckey;
+    client_auht_sk = &client_auth->enc_seckey;
   }
 
   /* Create subcredential for this HS so that we can decrypt */
@@ -1254,7 +1254,8 @@ hs_client_decode_descriptor(const char *desc_str,
   }
 
   /* Parse descriptor */
-  ret = hs_desc_decode_descriptor(desc_str, subcredential, client_sk, desc);
+  ret = hs_desc_decode_descriptor(desc_str, subcredential,
+                                  client_auht_sk, desc);
   memwipe(subcredential, 0, sizeof(subcredential));
   if (ret < 0) {
     log_warn(LD_GENERAL, "Could not parse received descriptor as client.");
