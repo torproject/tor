@@ -65,6 +65,12 @@ Changes in version 0.3.3.6 - 2018-05-??
       hop. These options are for use in conjunction with experiments
       with "vanguards" for preventing guard enumeration attacks. Closes
       ticket 13837.
+    - When v3 onion service clients send introduce cells, they now
+      include the IPv6 address of the rendezvous point, if it has one.
+      Current v3 onion services running 0.3.2 ignore IPv6 addresses, but
+      in future Tor versions, IPv6-only v3 single onion services will be
+      able to use IPv6 addresses to connect directly to the rendezvous
+      point. Closes ticket 23577. Patch by Neel Chauhan.
 
   o Major features (rust, portability, experimental):
     - Tor now ships with an optional implementation of one of its
@@ -80,14 +86,6 @@ Changes in version 0.3.3.6 - 2018-05-??
       the DataDirectory by using the CacheDirectory option. Similarly,
       the storage location for relay's keys can be overridden with the
       KeyDirectory option. Closes ticket 22703.
-
-  o Major features (v3 onion services, ipv6):
-    - When v3 onion service clients send introduce cells, they now
-      include the IPv6 address of the rendezvous point, if it has one.
-      Current v3 onion services running 0.3.2 ignore IPv6 addresses, but
-      in future Tor versions, IPv6-only v3 single onion services will be
-      able to use IPv6 addresses to connect directly to the rendezvous
-      point. Closes ticket 23577. Patch by Neel Chauhan.
 
   o Major bugfixes (directory authorities, security, backport from 0.3.4.1-alpha):
     - When directory authorities read a zero-byte bandwidth file, they
@@ -143,17 +141,11 @@ Changes in version 0.3.3.6 - 2018-05-??
     - Add Link protocol version 5 to the supported protocols list. Fixes
       bug 25070; bugfix on 0.3.1.1-alpha.
 
-  o Major bugfixes (relay, connection):
+  o Major bugfixes (relay):
     - If we have failed to connect to a relay and received a connection
       refused, timeout, or similar error (at the TCP level), do not try
       that same address/port again for 60 seconds after the failure has
       occurred. Fixes bug 24767; bugfix on 0.0.6.
-
-  o Major bugfixes (relay, denial of service, backport from 0.3.4.1-alpha):
-    - Impose a limit on circuit cell queue size. The limit can be controlled by
-      a consensus parameter. Fixes bug 25226; bugfix on 0.2.4.14-alpha.
-
-  o Major bugfixes (relays):
     - Fix a set of false positives where relays would consider
       connections to other relays as being client-only connections (and
       thus e.g. deserving different link padding schemes) if those
@@ -161,22 +153,14 @@ Changes in version 0.3.3.6 - 2018-05-??
       initial handshake and whether the connection authenticated as a
       relay. Fixes bug 24898; bugfix on 0.3.1.1-alpha.
 
+  o Major bugfixes (relay, denial of service, backport from 0.3.4.1-alpha):
+    - Impose a limit on circuit cell queue size. The limit can be controlled by
+      a consensus parameter. Fixes bug 25226; bugfix on 0.2.4.14-alpha.
+
   o Major bugfixes (scheduler, consensus):
     - The scheduler subsystem was failing to promptly notice changes in
       consensus parameters, making it harder to switch schedulers
       network-wide. Fixes bug 24975; bugfix on 0.3.2.1-alpha.
-
-  o Minor feature (continuous integration):
-    - Update the Travis CI configuration to use the stable Rust channel,
-      now that we have decided to require that. Closes ticket 25714.
-
-  o Minor feature (IPv6):
-    - Make IPv6-only clients wait for microdescs for relays, even if we
-      were previously using descriptors (or were using them as a bridge)
-      and have a cached descriptor for them. Implements 23827.
-    - When a consensus has IPv6 ORPorts, make IPv6-only clients use
-      them, rather than waiting to download microdescriptors.
-      Implements 23827.
 
   o Minor features (cleanup):
     - Tor now deletes the CookieAuthFile and ExtORPortCookieAuthFile
@@ -198,6 +182,10 @@ Changes in version 0.3.3.6 - 2018-05-??
       We now use 40% of the hardware RAM if the system has 8 GB RAM or
       more. Otherwise we use the former value of 75%. Closes
       ticket 24782.
+
+  o Minor features (continuous integration):
+    - Update the Travis CI configuration to use the stable Rust channel,
+      now that we have decided to require that. Closes ticket 25714.
 
   o Minor features (continuous integration, backport from 0.3.4.1-alpha):
     - Our .travis.yml configuration now includes support for testing
@@ -296,12 +284,6 @@ Changes in version 0.3.3.6 - 2018-05-??
   o Minor features (geoip):
     - Update geoip and geoip6 to the May 1 2018 Maxmind GeoLite2
       Country database. Closes ticket 26104.
-    - Update geoip and geoip6 to the April 3 2018 Maxmind GeoLite2
-      Country database. Closes ticket 25718.
-    - Update geoip and geoip6 to the March 8 2018 Maxmind GeoLite2
-      Country database. Closes ticket 25469.
-    - Update geoip and geoip6 to the February 7 2018 Maxmind GeoLite2
-      Country database.
 
   o Minor features (heartbeat):
     - Add onion service information to our heartbeat logs, displaying
@@ -313,6 +295,14 @@ Changes in version 0.3.3.6 - 2018-05-??
       instrumentation information from the main event loop via the
       heartbeat messages. We hope to use this to improve Tor's behavior
       when it's trying to sleep. Closes ticket 24605.
+
+  o Minor features (IPv6):
+    - Make IPv6-only clients wait for microdescs for relays, even if we
+      were previously using descriptors (or were using them as a bridge)
+      and have a cached descriptor for them. Implements 23827.
+    - When a consensus has IPv6 ORPorts, make IPv6-only clients use
+      them, rather than waiting to download microdescriptors.
+      Implements 23827.
 
   o Minor features (log messages):
     - Improve log message in the out-of-memory handler to include
@@ -326,12 +316,8 @@ Changes in version 0.3.3.6 - 2018-05-??
   o Minor features (logging):
     - Clarify the log messages produced when getrandom() or a related
       entropy-generation mechanism gives an error. Closes ticket 25120.
-
-  o Minor features (logging, android):
     - Added support for the Android logging subsystem. Closes
       ticket 24362.
-
-  o Minor features (logging, diagnostic):
     - When logging a failure to create an onion service's descriptor,
       also log what the problem with the descriptor was. Diagnostic for
       ticket 24972.
@@ -388,28 +374,6 @@ Changes in version 0.3.3.6 - 2018-05-??
       really meant for developers only. It will likely be removed in a
       future release. Implements ticket 24583.
 
-  o Minor bugfix (channel connection):
-    - Use the actual observed address of an incoming relay connection,
-      not the canonical address of the relay from its descriptor, when
-      making decisions about how to handle the incoming connection.
-      Fixes bug 24952; bugfix on 0.2.4.11-alpha. Patch by "ffmancera".
-
-  o Minor bugfix (directory authority):
-    - Directory authorities, when refusing a descriptor from a rejected
-      relay, now explicitly tell the relay (in its logs) to set a valid
-      ContactInfo address and contact the bad-relays@ mailing list.
-      Fixes bug 25170; bugfix on 0.2.9.1.
-
-  o Minor bugfix (network IPv6 test):
-    - Tor's test scripts now check if "ping -6 ::1" works when the user
-      runs "make test-network-all". Fixes bug 24677; bugfix on
-      0.2.9.3-alpha. Patch by "ffmancera".
-
-  o Minor bugfixes (all versions of Tor):
-    - Use the "misspell" tool to detect and fix typos throughout the
-      source code. Fixes bug 23650; bugfix on various versions of Tor.
-      Patch from Deepesh Pathak.
-
   o Minor bugfixes (build, rust):
     - Fix output of autoconf checks to display success messages for Rust
       dependencies and a suitable rustc compiler version. Fixes bug
@@ -428,6 +392,12 @@ Changes in version 0.3.3.6 - 2018-05-??
     - Fix a very unlikely (impossible, we believe) null pointer
       dereference. Fixes bug 25629; bugfix on 0.2.9.15. Found by
       Coverity; this is CID 1430932.
+
+  o Minor bugfixes (channel connection):
+    - Use the actual observed address of an incoming relay connection,
+      not the canonical address of the relay from its descriptor, when
+      making decisions about how to handle the incoming connection.
+      Fixes bug 24952; bugfix on 0.2.4.11-alpha. Patch by "ffmancera".
 
   o Minor bugfixes (channel, client):
     - Better identify client connection when reporting to the geoip
@@ -453,8 +423,6 @@ Changes in version 0.3.3.6 - 2018-05-??
     - Restore the correct operation of the RESOLVE command, which had
       been broken since we added the ability to enable/disable DNS on
       specific listener ports. Fixes bug 25617; bugfix on 0.2.9.3-alpha.
-
-  o Minor bugfixes (controller, reliability):
     - Avoid a (nonfatal) assertion failure when extending a one-hop
       circuit from the controller to become a multihop circuit. Fixes
       bug 24903; bugfix on 0.2.5.2-alpha.
@@ -483,6 +451,12 @@ Changes in version 0.3.3.6 - 2018-05-??
       set the IPv6 address to the unspecified IPv6 address, and
       explicitly initialize the port to zero. Fixes bug 24488; bugfix
       on 0.2.4.1-alpha.
+
+  o Minor bugfixes (directory authority):
+    - Directory authorities, when refusing a descriptor from a rejected
+      relay, now explicitly tell the relay (in its logs) to set a valid
+      ContactInfo address and contact the bad-relays@ mailing list.
+      Fixes bug 25170; bugfix on 0.2.9.1.
 
   o Minor bugfixes (documentation):
     - Document that the PerConnBW{Rate,Burst} options will fall back to
@@ -530,7 +504,7 @@ Changes in version 0.3.3.6 - 2018-05-??
       router descriptors when updating addresses for a bridge. Closes
       ticket 24572; bugfix on 0.2.4.5-alpha. Patch by "ffmancera".
 
-  o Minor bugfixes (linux seccomp2 sandbox):
+  o Minor bugfixes (Linux seccomp2 sandbox):
     - When running with the sandbox enabled, reload configuration files
       correctly even when %include was used. Previously we would crash.
       Fixes bug 22605; bugfix on 0.3.1. Patch from Daniel Pinto.
@@ -559,6 +533,11 @@ Changes in version 0.3.3.6 - 2018-05-??
       bugfix on 0.2.8.1-alpha.
     - Fix a harmless memory leak in tor-resolve. Fixes bug 24582; bugfix
       on 0.2.1.1-alpha.
+
+  o Minor bugfixes (network IPv6 test):
+    - Tor's test scripts now check if "ping -6 ::1" works when the user
+      runs "make test-network-all". Fixes bug 24677; bugfix on
+      0.2.9.3-alpha. Patch by "ffmancera".
 
   o Minor bugfixes (networking):
     - Tor will no longer reject IPv6 address strings from TorBrowser
@@ -650,6 +629,11 @@ Changes in version 0.3.3.6 - 2018-05-??
       0.2.9.4-alpha.
     - Forbid UINT32_MAX as a protocol version.  Fixes part of bug 25249;
       bugfix on 0.2.9.4-alpha.
+
+  o Minor bugfixes (spelling):
+    - Use the "misspell" tool to detect and fix typos throughout the
+      source code. Fixes bug 23650; bugfix on various versions of Tor.
+      Patch from Deepesh Pathak.
 
   o Minor bugfixes (testing):
     - Avoid intermittent test failures due to a test that had relied on
