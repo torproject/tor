@@ -1,5 +1,14 @@
 Changes in version 0.3.3.6 - 2018-05-??
-  BLURB
+  Tor 0.3.3.6 is the first stable release in the 0.3.3 series. It
+  backports several important fixes from the 0.3.4.1-alpha.
+
+  The Tor 0.3.3 series includes several important features, including
+  improved denial-of-service resistance, controller support and other
+  improvements for v3 onion services, and official support for embedding
+  Tor within other applications. It also include our first non-trivial
+  module written in the Rust programming language. (Rust is still not
+  enabled by default when building Tor.) And as usual, there are
+  numerous other smaller bugfixes, features, and improvements.
 
   Below are the changes since 0.3.3.5-rc. For a list of all changes
   since 0.3.2, see the ReleaseNotes file.
