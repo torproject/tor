@@ -152,8 +152,13 @@ test_crypto_openssl_version(void *arg)
   const char *h_version = crypto_openssl_get_header_version_str();
   tt_assert(version);
   tt_assert(h_version);
-  tt_assert(!strcmpstart(version, h_version)); /* "-fips" suffix, etc */
-  tt_assert(!strstr(version, "OpenSSL"));
+  if (strcmpstart(version, h_version)) { /* "-fips" suffix, etc */
+    TT_DIE(("OpenSSL library version %s did not begin with header version %s.",
+            version, h_version));
+  }
+  if (strstr(version, "OpenSSL")) {
+    TT_DIE(("assertion failed: !strstr(\"%s\", \"OpenSSL\")", version));
+  }
   int a=-1,b=-1,c=-1;
   if (!strcmpstart(version, "LibreSSL") || !strcmpstart(version, "BoringSSL"))
     return;
