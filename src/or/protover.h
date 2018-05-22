@@ -10,7 +10,7 @@
 #define TOR_PROTOVER_H
 
 #include "container.h"
-
+#include <stdbool.h>
 /** The first version of Tor that included "proto" entries in its
  * descriptors.  Authorities should use this to decide whether to
  * guess proto lines. */
