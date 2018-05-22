@@ -201,7 +201,7 @@ parse_single_entry(const char *s, const char *end_of_entry)
     goto error;
 
   /* The name must not be longer than MAX_PROTOCOL_NAME_LENGTH. */
-  if (equals - s > MAX_PROTOCOL_NAME_LENGTH) {
+  if (equals - s > (int)MAX_PROTOCOL_NAME_LENGTH) {
     log_warn(LD_NET, "When parsing a protocol entry, I got a very large "
              "protocol name. This is possibly an attack or a bug, unless "
              "the Tor network truly supports protocol names larger than "
