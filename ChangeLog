@@ -19,6 +19,11 @@ Changes in version 0.3.3.6 - 2018-05-??
       uninitialised buffer. They now log a warning about the empty file
       instead. Fixes bug 26007; bugfix on 0.2.2.1-alpha.
 
+  o Major bugfixes (directory authorities, backport from 0.3.4.1-alpha):
+    - Avoid a crash when testing router reachability on a router that
+      could have an ed25519 ID, but which does not. Fixes bug 25415;
+      bugfix on 0.3.3.2-alpha.
+
   o Major bugfixes (crash, backport from 0.3.4.1-alpha):
     - Avoid a rare assertion failure in the circuit build timeout code
       if we fail to allow any circuits to actually complete. Fixes bug
