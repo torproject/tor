@@ -82,7 +82,7 @@ Changes in version 0.3.3.6 - 2018-05-22
       experience with Rust, and plan future Rust integration work.
       Implementation by Chelsea Komlo. Closes ticket 22840.
 
-  o Major features (storage, configuration):
+  o Minor features (storage, configuration):
     - Users can store cached directory documents somewhere other than
       the DataDirectory by using the CacheDirectory option. Similarly,
       the storage location for relay's keys can be overridden with the
@@ -170,10 +170,6 @@ Changes in version 0.3.3.6 - 2018-05-22
   o Minor features (directory authority):
     - When directory authorities are unable to add signatures to a
       pending consensus, log the reason why. Closes ticket 24849.
-    - Make the "Exit" flag assignment only depend on whether the exit
-      policy allows connections to ports 80 and 443. Previously relays
-      would get the Exit flag if they allowed connections to one of
-      these ports and also port 6667. Resolves ticket 23637.
 
   o Minor features (embedding):
     - Tor can now start with a preauthenticated control connection
@@ -185,7 +181,7 @@ Changes in version 0.3.3.6 - 2018-05-22
     - On most errors that would cause Tor to exit, it now tries to
       return from the tor_main() function, rather than calling the
       system exit() function. Most users won't notice a difference here,
-      but it should make a significant for programs that run Tor inside
+      but it should be significant for programs that run Tor inside
       a separate thread: they should now be able to survive Tor's exit
       conditions rather than having Tor shut down the entire process.
       Closes ticket 23848.
@@ -256,10 +252,10 @@ Changes in version 0.3.3.6 - 2018-05-22
   o Minor features (IPv6):
     - Make IPv6-only clients wait for microdescs for relays, even if we
       were previously using descriptors (or were using them as a bridge)
-      and have a cached descriptor for them. Implements 23827.
+      and have a cached descriptor for them. Implements ticket 23827.
     - When a consensus has IPv6 ORPorts, make IPv6-only clients use
       them, rather than waiting to download microdescriptors.
-      Implements 23827.
+      Implements ticket 23827.
 
   o Minor features (log messages):
     - Improve log message in the out-of-memory handler to include
@@ -302,7 +298,7 @@ Changes in version 0.3.3.6 - 2018-05-22
       SIO_IDEAL_SEND_BACKLOG_QUERY. Closes ticket 22798. Patch
       from Vort.
 
-  o Minor features (relay):
+  o Major features (relay):
     - Implement an option, ReducedExitPolicy, to allow an Tor exit relay
       operator to use a more reasonable ("reduced") exit policy, rather
       than the default one. If you want to run an exit node without
@@ -402,7 +398,7 @@ Changes in version 0.3.3.6 - 2018-05-22
       but we forgot to say so in the man page. Fixes bug 26052; bugfix
       on 0.3.2.6-alpha.
 
-  o Minor bugfixes (exit node DNS retries):
+  o Minor bugfixes (exit relay DNS retries):
     - Re-attempt timed-out DNS queries 3 times before failure, since our
       timeout is 5 seconds for them, but clients wait 10-15. Also allow
       slightly more timeouts per resolver when an exit has multiple
@@ -467,15 +463,17 @@ Changes in version 0.3.3.6 - 2018-05-22
       runs "make test-network-all". Fixes bug 24677; bugfix on
       0.2.9.3-alpha. Patch by "ffmancera".
 
-  o Minor bugfixes (networking):
-    - Tor will no longer reject IPv6 address strings from TorBrowser
+  o Major bugfixes (networking):
+    - Tor will no longer reject IPv6 address strings from Tor Browser
       when they are passed as hostnames in SOCKS5 requests. Fixes bug
       25036, bugfix on Tor 0.3.1.2.
+
+  o Minor bugfixes (networking):
     - string_is_valid_hostname() will not consider IP strings to be
       valid hostnames. Fixes bug 25055; bugfix on Tor 0.2.5.5.
 
   o Minor bugfixes (onion service v3):
-    - Avoid an assertion failure when the next the next onion service
+    - Avoid an assertion failure when the next onion service
       descriptor rotation type is out of sync with the consensus's
       valid-after time. Instead, log a warning message with extra
       information, so we can better hunt down the cause of this
@@ -532,11 +530,6 @@ Changes in version 0.3.3.6 - 2018-05-22
       a CString to pass accross the FFI boundary. Consequently, the C
       code was not expecting to need to free() what it was given. Fixes
       bug 25127; bugfix on 0.3.2.1-alpha.
-
-  o Minor bugfixes (scheduler, KIST):
-    - Avoid adding the same channel twice in the KIST scheduler pending
-      list, which would waste CPU cycles. Fixes bug 24700; bugfix
-      on 0.3.2.1-alpha.
 
   o Minor bugfixes (spelling):
     - Use the "misspell" tool to detect and fix typos throughout the
@@ -619,7 +612,7 @@ Changes in version 0.3.3.6 - 2018-05-22
       adding very little except for unit test.
 
   o Code simplification and refactoring (circuit rendezvous):
-    - Split the client-size rendezvous circuit lookup into two
+    - Split the client-side rendezvous circuit lookup into two
       functions: one that returns only established circuits and another
       that returns all kinds of circuits. Closes ticket 23459.
 
