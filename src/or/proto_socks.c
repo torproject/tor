@@ -181,7 +181,6 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
     }
   }
 
-
   end:
   socks4_client_request_free(trunnel_req);
 
@@ -362,7 +361,6 @@ parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
   socks5_client_userpass_auth_t *trunnel_req = NULL;
   ssize_t parsed = socks5_client_userpass_auth_parse(&trunnel_req, raw_data,
                                                      datalen);
-
   tor_assert(drain_out);
   *drain_out = 0;
 
@@ -460,7 +458,8 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
   int res = 1;
   tor_addr_t destaddr;
   socks5_client_request_t *trunnel_req = NULL;
-  ssize_t parsed = socks5_client_request_parse(&trunnel_req, raw_data, datalen);
+  ssize_t parsed =
+   socks5_client_request_parse(&trunnel_req, raw_data, datalen);
   if (parsed == -1) {
     log_warn(LD_APP, "socks5: parsing failed - invalid client request");
     res = -1;
@@ -493,7 +492,7 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
       tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
     } break;
     case 3: {
-      const struct domainname_st *dns_name = 
+      const struct domainname_st *dns_name =
         socks5_client_request_getconst_dest_addr_domainname(trunnel_req);
 
       const char *hostname = domainname_getconstarray_name(dns_name);
@@ -502,7 +501,8 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
     } break;
     case 4: {
       const char *ipv6 =
-        (const char *)socks5_client_request_getarray_dest_addr_ipv6(trunnel_req);
+        (const char *)socks5_client_request_getarray_dest_addr_ipv6(
+          trunnel_req);
       tor_addr_from_ipv6_bytes(&destaddr, ipv6);
 
       tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
@@ -552,7 +552,7 @@ process_socks5_client_request(socks_request_t *req,
              req->port, escaped_safe_str_client(req->address));
 
     res = -1;
-    goto end;;
+    goto end;
   }
 
   if (req->socks5_atyp == 1 || req->socks5_atyp == 4) {
@@ -578,8 +578,9 @@ process_socks5_client_request(socks_request_t *req,
 }
 
 static int
-handle_socks_message(const uint8_t *raw_data, size_t datalen, socks_request_t *req,
-                     int log_sockstype, int safe_socks, size_t *drain_out)
+handle_socks_message(const uint8_t *raw_data, size_t datalen,
+                     socks_request_t *req, int log_sockstype,
+                     int safe_socks, size_t *drain_out)
 {
   int res = 1;
 
@@ -733,7 +734,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
 
   do {
     n_drain = 0;
-    buf_pullup(buf, MAX(want_length, buf_datalen(buf)), 
+    buf_pullup(buf, MAX(want_length, buf_datalen(buf)),
                &head, &datalen);
     tor_assert(head && datalen >= 2);
     want_length = 0;
