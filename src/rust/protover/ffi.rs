@@ -59,7 +59,8 @@ pub extern "C" fn protover_all_supported(
         Err(_) => return 1,
     };
 
-    let relay_proto_entry: UnvalidatedProtoEntry = match relay_version.parse() {
+    let relay_proto_entry: UnvalidatedProtoEntry =
+        match UnvalidatedProtoEntry::from_str_any_len(relay_version) {
         Ok(n)  => n,
         Err(_) => return 1,
     };
@@ -181,6 +182,7 @@ pub extern "C" fn protover_get_supported_protocols() -> *const c_char {
 pub extern "C" fn protover_compute_vote(
     list: *const Stringlist,
     threshold: c_int,
+    allow_long_proto_names: bool,
 ) -> *mut c_char {
 
     if list.is_null() {
@@ -195,9 +197,13 @@ pub extern "C" fn protover_compute_vote(
     let mut proto_entries: Vec<UnvalidatedProtoEntry> = Vec::new();
 
     for datum in data {
-        let entry: UnvalidatedProtoEntry = match datum.parse() {
-            Ok(x)  => x,
-            Err(_) => continue,
+        let entry: UnvalidatedProtoEntry = match allow_long_proto_names {
+            true => match UnvalidatedProtoEntry::from_str_any_len(datum.as_str()) {
+                Ok(n)  => n,
+                Err(_) => continue},
+            false => match datum.parse() {
+                Ok(n)  => n,
+                Err(_) => continue},
         };
         proto_entries.push(entry);
     }
