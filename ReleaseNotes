@@ -100,8 +100,8 @@ Changes in version 0.3.2.10 - 2018-03-03
       Country database.
 
   o Minor features (logging, diagnostic, backport from 0.3.3.2-alpha):
-    - When logging a failure to check a hidden service's certificate,
-      also log what the problem with the certificate was. Diagnostic
+    - When logging a failure to create an onion service's descriptor,
+      also log what the problem with the descriptor was. Diagnostic
       for ticket 24972.
 
   o Minor bugfix (channel connection, backport from 0.3.3.2-alpha):
