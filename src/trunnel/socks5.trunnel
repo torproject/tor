@@ -30,7 +30,7 @@ struct domainname {
 
 struct socks5_client_request {
    u8 version IN [5];
-   u8 command IN [CMD_CONNECT, CMD_BIND, CMD_UDP_ASSOCIATE, CMD_RESOLVE_PTR];
+   u8 command IN [CMD_CONNECT, CMD_BIND, CMD_UDP_ASSOCIATE, CMD_RESOLVE, CMD_RESOLVE_PTR];
    u8 reserved IN [0];
    u8 atype;
    union dest_addr[atype] {
