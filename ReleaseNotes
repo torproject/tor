@@ -1,17 +1,17 @@
-This document summarizes new features and bugfixes in each stable release
-of Tor. If you want to see more detailed descriptions of the changes in
-each development snapshot, see the ChangeLog file.
+This document summarizes new features and bugfixes in each stable
+release of Tor. If you want to see more detailed descriptions of the
+changes in each development snapshot, see the ChangeLog file.
 
 Changes in version 0.3.3.6 - 2018-05-22
   Tor 0.3.3.6 is the first stable release in the 0.3.3 series. It
   backports several important fixes from the 0.3.4.1-alpha.
 
-  The Tor 0.3.3 series includes controller support and other improvements
-  for v3 onion services, official support for embedding Tor within
-  other applications, and our first non-trivial module written in the
-  Rust programming language. (Rust is still not enabled by default when
-  building Tor.) And as usual, there are numerous other smaller bugfixes,
-  features, and improvements.
+  The Tor 0.3.3 series includes controller support and other
+  improvements for v3 onion services, official support for embedding Tor
+  within other applications, and our first non-trivial module written in
+  the Rust programming language. (Rust is still not enabled by default
+  when building Tor.) And as usual, there are numerous other smaller
+  bugfixes, features, and improvements.
 
   Below are the changes since 0.3.2.10. For a list of only the changes
   since 0.3.3.5-rc, see the ChangeLog file.
@@ -19,13 +19,6 @@ Changes in version 0.3.3.6 - 2018-05-22
   o New system requirements:
     - When built with Rust, Tor now depends on version 0.2.39 of the
       libc crate. Closes tickets 25310 and 25664.
-
-  o Major bugfixes (security, directory authority, denial-of-service):
-    - Fix a bug that could have allowed an attacker to force a
-      directory authority to use up all its RAM by passing it a
-      maliciously crafted protocol versions string. Fixes bug 25517;
-      bugfix on 0.2.9.4-alpha. This issue is also tracked as
-      TROVE-2018-005.
 
   o Major features (embedding):
     - There is now a documented stable API for programs that need to
@@ -41,12 +34,14 @@ Changes in version 0.3.3.6 - 2018-05-22
   o Major features (IPv6, directory documents):
     - Add consensus method 27, which adds IPv6 ORPorts to the microdesc
       consensus. This information makes it easier for IPv6 clients to
-      bootstrap and choose reachable entry guards. Implements ticket 23826.
+      bootstrap and choose reachable entry guards. Implements
+      ticket 23826.
     - Add consensus method 28, which removes IPv6 ORPorts from
-      microdescriptors. Now that the consensus contains IPv6 ORPorts, they
-      are redundant in microdescs. This change will be used by Tor clients
-      on 0.2.8.x and later. (That is to say, with all Tor clients that
-      have IPv6 bootstrap and guard support.) Implements ticket 23828.
+      microdescriptors. Now that the consensus contains IPv6 ORPorts,
+      they are redundant in microdescs. This change will be used by Tor
+      clients on 0.2.8.x and later. (That is to say, with all Tor
+      clients that have IPv6 bootstrap and guard support.) Implements
+      ticket 23828.
     - Expand the documentation for AuthDirHasIPv6Connectivity when it is
       set by different numbers of authorities. Fixes 23870
       on 0.2.4.1-alpha.
@@ -73,6 +68,13 @@ Changes in version 0.3.3.6 - 2018-05-22
       able to use IPv6 addresses to connect directly to the rendezvous
       point. Closes ticket 23577. Patch by Neel Chauhan.
 
+  o Major features (relay):
+    - Implement an option, ReducedExitPolicy, to allow an Tor exit relay
+      operator to use a more reasonable ("reduced") exit policy, rather
+      than the default one. If you want to run an exit node without
+      thinking too hard about which ports to allow, this one is for you.
+      Closes ticket 13605. Patch from Neel Chauhan.
+
   o Major features (rust, portability, experimental):
     - Tor now ships with an optional implementation of one of its
       smaller modules (protover.c) in the Rust programming language. To
@@ -82,17 +84,17 @@ Changes in version 0.3.3.6 - 2018-05-22
       experience with Rust, and plan future Rust integration work.
       Implementation by Chelsea Komlo. Closes ticket 22840.
 
-  o Minor features (storage, configuration):
-    - Users can store cached directory documents somewhere other than
-      the DataDirectory by using the CacheDirectory option. Similarly,
-      the storage location for relay's keys can be overridden with the
-      KeyDirectory option. Closes ticket 22703.
-
   o Major bugfixes (directory authorities, security, backport from 0.3.4.1-alpha):
     - When directory authorities read a zero-byte bandwidth file, they
       would previously log a warning with the contents of an
       uninitialised buffer. They now log a warning about the empty file
       instead. Fixes bug 26007; bugfix on 0.2.2.1-alpha.
+
+  o Major bugfixes (security, directory authority, denial-of-service):
+    - Fix a bug that could have allowed an attacker to force a directory
+      authority to use up all its RAM by passing it a maliciously
+      crafted protocol versions string. Fixes bug 25517; bugfix on
+      0.2.9.4-alpha. This issue is also tracked as TROVE-2018-005.
 
   o Major bugfixes (crash, backport from 0.3.4.1-alpha):
     - Avoid a rare assertion failure in the circuit build timeout code
@@ -108,9 +110,14 @@ Changes in version 0.3.3.6 - 2018-05-22
       messages like "Channel padding timeout scheduled 221453ms in the
       past." Fixes bug 22212; bugfix on 0.3.1.1-alpha.
 
+  o Major bugfixes (networking):
+    - Tor will no longer reject IPv6 address strings from Tor Browser
+      when they are passed as hostnames in SOCKS5 requests. Fixes bug
+      25036, bugfix on Tor 0.3.1.2.
+
   o Major bugfixes (onion service, backport from 0.3.4.1-alpha):
-    - Correctly detect when onion services get disabled after HUP.
-      Fixes bug 25761; bugfix on 0.3.2.1.
+    - Correctly detect when onion services get disabled after HUP. Fixes
+      bug 25761; bugfix on 0.3.2.1.
 
   o Major bugfixes (performance, load balancing):
     - Directory authorities no longer vote in favor of the Guard flag
@@ -128,16 +135,16 @@ Changes in version 0.3.3.6 - 2018-05-22
 
   o Major bugfixes (relay, denial of service, backport from 0.3.4.1-alpha):
     - Impose a limit on circuit cell queue size. The limit can be
-      controlled by a consensus parameter. Fixes bug 25226; bugfix on
-      0.2.4.14-alpha.
+      controlled by a consensus parameter. Fixes bug 25226; bugfix
+      on 0.2.4.14-alpha.
 
   o Minor features (cleanup):
     - Tor now deletes the CookieAuthFile and ExtORPortCookieAuthFile
       when it stops. Closes ticket 23271.
 
   o Minor features (compatibility, backport from 0.3.4.1-alpha):
-    - Avoid some compilation warnings with recent versions
-      of LibreSSL. Closes ticket 26006.
+    - Avoid some compilation warnings with recent versions of LibreSSL.
+      Closes ticket 26006.
 
   o Minor features (config options):
     - Change the way the default value for MaxMemInQueues is calculated.
@@ -150,11 +157,11 @@ Changes in version 0.3.3.6 - 2018-05-22
       now that we have decided to require that. Closes ticket 25714.
 
   o Minor features (continuous integration, backport from 0.3.4.1-alpha):
-    - Our .travis.yml configuration now includes support for testing
-      the results of "make distcheck". (It's not uncommon for "make check" to
-      pass but "make distcheck" to fail.) Closes ticket 25814.
-    - Our Travis CI configuration now integrates with the Coveralls coverage
-      analysis tool. Closes ticket 25818.
+    - Our .travis.yml configuration now includes support for testing the
+      results of "make distcheck". (It's not uncommon for "make check"
+      to pass but "make distcheck" to fail.) Closes ticket 25814.
+    - Our Travis CI configuration now integrates with the Coveralls
+      coverage analysis tool. Closes ticket 25818.
 
   o Minor features (defensive programming):
     - Most of the functions in Tor that free objects have been replaced
@@ -181,8 +188,8 @@ Changes in version 0.3.3.6 - 2018-05-22
     - On most errors that would cause Tor to exit, it now tries to
       return from the tor_main() function, rather than calling the
       system exit() function. Most users won't notice a difference here,
-      but it should be significant for programs that run Tor inside
-      a separate thread: they should now be able to survive Tor's exit
+      but it should be significant for programs that run Tor inside a
+      separate thread: they should now be able to survive Tor's exit
       conditions rather than having Tor shut down the entire process.
       Closes ticket 23848.
     - Applications that want to embed Tor can now tell Tor not to
@@ -235,8 +242,8 @@ Changes in version 0.3.3.6 - 2018-05-22
       authentication. Closes ticket 20895.
 
   o Minor features (geoip):
-    - Update geoip and geoip6 to the May 1 2018 Maxmind GeoLite2
-      Country database. Closes ticket 26104.
+    - Update geoip and geoip6 to the May 1 2018 Maxmind GeoLite2 Country
+      database. Closes ticket 26104.
 
   o Minor features (heartbeat):
     - Add onion service information to our heartbeat logs, displaying
@@ -254,8 +261,8 @@ Changes in version 0.3.3.6 - 2018-05-22
       were previously using descriptors (or were using them as a bridge)
       and have a cached descriptor for them. Implements ticket 23827.
     - When a consensus has IPv6 ORPorts, make IPv6-only clients use
-      them, rather than waiting to download microdescriptors.
-      Implements ticket 23827.
+      them, rather than waiting to download microdescriptors. Implements
+      ticket 23827.
 
   o Minor features (log messages):
     - Improve log message in the out-of-memory handler to include
@@ -298,17 +305,16 @@ Changes in version 0.3.3.6 - 2018-05-22
       SIO_IDEAL_SEND_BACKLOG_QUERY. Closes ticket 22798. Patch
       from Vort.
 
-  o Major features (relay):
-    - Implement an option, ReducedExitPolicy, to allow an Tor exit relay
-      operator to use a more reasonable ("reduced") exit policy, rather
-      than the default one. If you want to run an exit node without
-      thinking too hard about which ports to allow, this one is for you.
-      Closes ticket 13605. Patch from Neel Chauhan.
-
   o Minor features (sandbox):
     - Explicitly permit the poll() system call when the Linux
       seccomp2-based sandbox is enabled: apparently, some versions of
       libc use poll() when calling getpwnam(). Closes ticket 25313.
+
+  o Minor features (storage, configuration):
+    - Users can store cached directory documents somewhere other than
+      the DataDirectory by using the CacheDirectory option. Similarly,
+      the storage location for relay's keys can be overridden with the
+      KeyDirectory option. Closes ticket 22703.
 
   o Minor features (testing):
     - Add a "make test-rust" target to run the rust tests only. Closes
@@ -374,10 +380,10 @@ Changes in version 0.3.3.6 - 2018-05-22
       24927; bugfix on 0.2.4.4-alpha.
 
   o Minor bugfixes (correctness, client, backport from 0.3.4.1-alpha):
-    - Upon receiving a malformed connected cell, stop processing the cell
-      immediately. Previously we would mark the connection for close, but
-      continue processing the cell as if the connection were open. Fixes bug
-      26072; bugfix on 0.2.4.7-alpha.
+    - Upon receiving a malformed connected cell, stop processing the
+      cell immediately. Previously we would mark the connection for
+      close, but continue processing the cell as if the connection were
+      open. Fixes bug 26072; bugfix on 0.2.4.7-alpha.
 
   o Minor bugfixes (directory authorities, IPv6):
     - When creating a routerstatus (vote) from a routerinfo (descriptor),
@@ -392,10 +398,10 @@ Changes in version 0.3.3.6 - 2018-05-22
       be set in the consensus. Fixes bug 25296; bugfix on 0.2.2.7-alpha.
 
   o Minor bugfixes (documentation, backport from 0.3.4.1-alpha):
-    - Stop saying in the manual that clients cache ipv4 dns answers
-      from exit relays. We haven't used them since 0.2.6.3-alpha, and
-      in ticket 24050 we stopped even caching them as of 0.3.2.6-alpha,
-      but we forgot to say so in the man page. Fixes bug 26052; bugfix
+    - Stop saying in the manual that clients cache ipv4 dns answers from
+      exit relays. We haven't used them since 0.2.6.3-alpha, and in
+      ticket 24050 we stopped even caching them as of 0.3.2.6-alpha, but
+      we forgot to say so in the man page. Fixes bug 26052; bugfix
       on 0.3.2.6-alpha.
 
   o Minor bugfixes (exit relay DNS retries):
@@ -447,8 +453,9 @@ Changes in version 0.3.3.6 - 2018-05-22
 
   o Minor bugfixes (man page, SocksPort):
     - Remove dead code from the old "SocksSocket" option, and rename
-      SocksSocketsGroupWritable to UnixSocksGroupWritable. The old option
-      still works, but is deprecated. Fixes bug 24343; bugfix on 0.2.6.3.
+      SocksSocketsGroupWritable to UnixSocksGroupWritable. The old
+      option still works, but is deprecated. Fixes bug 24343; bugfix
+      on 0.2.6.3.
 
   o Minor bugfixes (memory leaks):
     - Avoid possible at-exit memory leaks related to use of Libevent's
@@ -463,21 +470,16 @@ Changes in version 0.3.3.6 - 2018-05-22
       runs "make test-network-all". Fixes bug 24677; bugfix on
       0.2.9.3-alpha. Patch by "ffmancera".
 
-  o Major bugfixes (networking):
-    - Tor will no longer reject IPv6 address strings from Tor Browser
-      when they are passed as hostnames in SOCKS5 requests. Fixes bug
-      25036, bugfix on Tor 0.3.1.2.
-
   o Minor bugfixes (networking):
     - string_is_valid_hostname() will not consider IP strings to be
       valid hostnames. Fixes bug 25055; bugfix on Tor 0.2.5.5.
 
   o Minor bugfixes (onion service v3):
-    - Avoid an assertion failure when the next onion service
-      descriptor rotation type is out of sync with the consensus's
-      valid-after time. Instead, log a warning message with extra
-      information, so we can better hunt down the cause of this
-      assertion. Fixes bug 25306; bugfix on 0.3.2.1-alpha.
+    - Avoid an assertion failure when the next onion service descriptor
+      rotation type is out of sync with the consensus's valid-after
+      time. Instead, log a warning message with extra information, so we
+      can better hunt down the cause of this assertion. Fixes bug 25306;
+      bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (onion service, backport from 0.3.4.1-alpha):
     - Fix a memory leak when a v3 onion service is configured and gets a
@@ -621,8 +623,8 @@ Changes in version 0.3.3.6 - 2018-05-22
       const. Implements ticket 24489.
 
   o Documentation (backport from 0.3.4.1-alpha):
-    - Correct an IPv6 error in the documentation for ExitPolicy.
-      Closes ticket 25857. Patch from "CTassisF".
+    - Correct an IPv6 error in the documentation for ExitPolicy. Closes
+      ticket 25857. Patch from "CTassisF".
 
   o Documentation (man page):
     - The HiddenServiceVersion torrc option accepts only one number:

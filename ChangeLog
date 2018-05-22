@@ -2,22 +2,15 @@ Changes in version 0.3.3.6 - 2018-05-22
   Tor 0.3.3.6 is the first stable release in the 0.3.3 series. It
   backports several important fixes from the 0.3.4.1-alpha.
 
-  The Tor 0.3.3 series includes controller support and other improvements
-  for v3 onion services, official support for embedding Tor within
-  other applications, and our first non-trivial module written in the
-  Rust programming language. (Rust is still not enabled by default when
-  building Tor.) And as usual, there are numerous other smaller bugfixes,
-  features, and improvements.
+  The Tor 0.3.3 series includes controller support and other
+  improvements for v3 onion services, official support for embedding Tor
+  within other applications, and our first non-trivial module written in
+  the Rust programming language. (Rust is still not enabled by default
+  when building Tor.) And as usual, there are numerous other smaller
+  bugfixes, features, and improvements.
 
   Below are the changes since 0.3.3.5-rc. For a list of all changes
   since 0.3.2.10, see the ReleaseNotes file.
-
-  o Major bugfixes (security, directory authority, denial-of-service):
-    - Fix a bug that could have allowed an attacker to force a
-      directory authority to use up all its RAM by passing it a
-      maliciously crafted protocol versions string. Fixes bug 25517;
-      bugfix on 0.2.9.4-alpha. This issue is also tracked as
-      TROVE-2018-005.
 
   o Major bugfixes (directory authorities, security, backport from 0.3.4.1-alpha):
     - When directory authorities read a zero-byte bandwidth file, they
@@ -25,39 +18,45 @@ Changes in version 0.3.3.6 - 2018-05-22
       uninitialised buffer. They now log a warning about the empty file
       instead. Fixes bug 26007; bugfix on 0.2.2.1-alpha.
 
-  o Major bugfixes (directory authorities, backport from 0.3.4.1-alpha):
-    - Avoid a crash when testing router reachability on a router that
-      could have an ed25519 ID, but which does not. Fixes bug 25415;
-      bugfix on 0.3.3.2-alpha.
+  o Major bugfixes (security, directory authority, denial-of-service):
+    - Fix a bug that could have allowed an attacker to force a directory
+      authority to use up all its RAM by passing it a maliciously
+      crafted protocol versions string. Fixes bug 25517; bugfix on
+      0.2.9.4-alpha. This issue is also tracked as TROVE-2018-005.
 
   o Major bugfixes (crash, backport from 0.3.4.1-alpha):
     - Avoid a rare assertion failure in the circuit build timeout code
       if we fail to allow any circuits to actually complete. Fixes bug
       25733; bugfix on 0.2.2.2-alpha.
 
+  o Major bugfixes (directory authorities, backport from 0.3.4.1-alpha):
+    - Avoid a crash when testing router reachability on a router that
+      could have an ed25519 ID, but which does not. Fixes bug 25415;
+      bugfix on 0.3.3.2-alpha.
+
   o Major bugfixes (onion service, backport from 0.3.4.1-alpha):
-    - Correctly detect when onion services get disabled after HUP.
-      Fixes bug 25761; bugfix on 0.3.2.1.
+    - Correctly detect when onion services get disabled after HUP. Fixes
+      bug 25761; bugfix on 0.3.2.1.
 
   o Major bugfixes (relay, denial of service, backport from 0.3.4.1-alpha):
     - Impose a limit on circuit cell queue size. The limit can be
-      controlled by a consensus parameter. Fixes bug 25226; bugfix on
-      0.2.4.14-alpha.
+      controlled by a consensus parameter. Fixes bug 25226; bugfix
+      on 0.2.4.14-alpha.
 
   o Minor features (compatibility, backport from 0.3.4.1-alpha):
-    - Avoid some compilation warnings with recent versions
-      of LibreSSL. Closes ticket 26006.
+    - Avoid some compilation warnings with recent versions of LibreSSL.
+      Closes ticket 26006.
 
   o Minor features (continuous integration, backport from 0.3.4.1-alpha):
-    - Our .travis.yml configuration now includes support for testing
-      the results of "make distcheck". (It's not uncommon for "make check" to
-      pass but "make distcheck" to fail.) Closes ticket 25814.
-    - Our Travis CI configuration now integrates with the Coveralls coverage
-      analysis tool. Closes ticket 25818.
+    - Our .travis.yml configuration now includes support for testing the
+      results of "make distcheck". (It's not uncommon for "make check"
+      to pass but "make distcheck" to fail.) Closes ticket 25814.
+    - Our Travis CI configuration now integrates with the Coveralls
+      coverage analysis tool. Closes ticket 25818.
 
   o Minor features (geoip):
-    - Update geoip and geoip6 to the May 1 2018 Maxmind GeoLite2
-      Country database. Closes ticket 26104.
+    - Update geoip and geoip6 to the May 1 2018 Maxmind GeoLite2 Country
+      database. Closes ticket 26104.
 
   o Minor bugfixes (client, backport from 0.3.4.1-alpha):
     - Don't consider Tor running as a client if the ControlPort is open,
@@ -65,16 +64,16 @@ Changes in version 0.3.3.6 - 2018-05-22
       on 0.2.9.4-alpha.
 
   o Minor bugfixes (correctness, client, backport from 0.3.4.1-alpha):
-    - Upon receiving a malformed connected cell, stop processing the cell
-      immediately. Previously we would mark the connection for close, but
-      continue processing the cell as if the connection were open. Fixes bug
-      26072; bugfix on 0.2.4.7-alpha.
+    - Upon receiving a malformed connected cell, stop processing the
+      cell immediately. Previously we would mark the connection for
+      close, but continue processing the cell as if the connection were
+      open. Fixes bug 26072; bugfix on 0.2.4.7-alpha.
 
   o Minor bugfixes (documentation, backport from 0.3.4.1-alpha):
-    - Stop saying in the manual that clients cache ipv4 dns answers
-      from exit relays. We haven't used them since 0.2.6.3-alpha, and
-      in ticket 24050 we stopped even caching them as of 0.3.2.6-alpha,
-      but we forgot to say so in the man page. Fixes bug 26052; bugfix
+    - Stop saying in the manual that clients cache ipv4 dns answers from
+      exit relays. We haven't used them since 0.2.6.3-alpha, and in
+      ticket 24050 we stopped even caching them as of 0.3.2.6-alpha, but
+      we forgot to say so in the man page. Fixes bug 26052; bugfix
       on 0.3.2.6-alpha.
 
   o Minor bugfixes (Linux seccomp2 sandbox, backport from 0.3.4.1-alpha):
@@ -94,8 +93,8 @@ Changes in version 0.3.3.6 - 2018-05-22
       Fixes a case of bug 23693; bugfix on 0.3.1.1-alpha.
 
   o Documentation (backport from 0.3.4.1-alpha):
-    - Correct an IPv6 error in the documentation for ExitPolicy.
-      Closes ticket 25857. Patch from "CTassisF".
+    - Correct an IPv6 error in the documentation for ExitPolicy. Closes
+      ticket 25857. Patch from "CTassisF".
 
 
 Changes in version 0.3.3.5-rc - 2018-04-15
