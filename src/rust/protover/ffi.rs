@@ -113,6 +113,32 @@ pub extern "C" fn protocol_list_supports_protocol(
     }
 }
 
+#[no_mangle]
+pub extern "C" fn protover_contains_long_protocol_names_(
+    c_protocol_list: *const c_char
+) -> c_int {
+    if c_protocol_list.is_null() {
+        return 1;
+    }
+
+    // Require an unsafe block to read the version from a C string. The pointer
+    // is checked above to ensure it is not null.
+    let c_str: &CStr = unsafe { CStr::from_ptr(c_protocol_list) };
+
+    let protocol_list = match c_str.to_str() {
+        Ok(n) => n,
+        Err(_) => return 1
+    };
+
+    let protocol_entry : Result<UnvalidatedProtoEntry,_> =
+        protocol_list.parse();
+
+    match protocol_entry {
+        Ok(_) => 0,
+        Err(_) => 1,
+    }
+}
+
 /// Provide an interface for C to translate arguments and return types for
 /// protover::list_supports_protocol_or_later
 #[no_mangle]
