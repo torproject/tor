@@ -56,7 +56,7 @@ static const struct {
 /* Maximum allowed length of any single subprotocol name. */
 // C_RUST_COUPLED: src/rust/protover/protover.rs
 //                 `MAX_PROTOCOL_NAME_LENGTH`
-static const uint MAX_PROTOCOL_NAME_LENGTH = 100;
+static const unsigned MAX_PROTOCOL_NAME_LENGTH = 100;
 
 /**
  * Given a protocol_type_t, return the corresponding string used in
