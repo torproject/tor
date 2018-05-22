@@ -804,9 +804,6 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
             int log_sockstype, int safe_socks, size_t *drain_out,
             size_t *want_length_out)
 {
-  unsigned int len;
-  char tmpbuf[TOR_ADDR_BUF_LEN+1];
-  tor_addr_t destaddr;
   uint8_t socksver;
 
   if (datalen < 2) {
@@ -825,124 +822,6 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
   }
 
   switch (socksver) { /* which version of socks? */
-    case 5: /* socks5 */
-      if (req->auth_type != SOCKS_NO_AUTH && !req->got_auth) {
-        log_warn(LD_APP,
-                 "socks5: negotiated authentication, but none provided");
-        return -1;
-      }
-      /* we know the method; read in the request */
-      log_debug(LD_APP,"socks5: checking request");
-      if (datalen < 7) {/* basic info plus >=1 for addr plus 2 for port */
-        *want_length_out = 7;
-        return 0; /* not yet */
-      }
-      req->command = (unsigned char) *(data+1);
-      if (req->command != SOCKS_COMMAND_CONNECT &&
-          req->command != SOCKS_COMMAND_RESOLVE &&
-          req->command != SOCKS_COMMAND_RESOLVE_PTR) {
-        /* not a connect or resolve or a resolve_ptr? we don't support it. */
-        socks_request_set_socks5_error(req,SOCKS5_COMMAND_NOT_SUPPORTED);
-
-        log_warn(LD_APP,"socks5: command %d not recognized. Rejecting.",
-                 req->command);
-        return -1;
-      }
-      switch (*(data+3)) { /* address type */
-        case 1: /* IPv4 address */
-        case 4: /* IPv6 address */ {
-          const int is_v6 = *(data+3) == 4;
-          const unsigned addrlen = is_v6 ? 16 : 4;
-          log_debug(LD_APP,"socks5: ipv4 address type");
-          if (datalen < 6+addrlen) {/* ip/port there? */
-            *want_length_out = 6+addrlen;
-            return 0; /* not yet */
-          }
-
-          if (is_v6)
-            tor_addr_from_ipv6_bytes(&destaddr, data+4);
-          else
-            tor_addr_from_ipv4n(&destaddr, get_uint32(data+4));
-
-          tor_addr_to_str(tmpbuf, &destaddr, sizeof(tmpbuf), 1);
-
-          if (BUG(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN)) {
-            /* LCOV_EXCL_START -- This branch is unreachable, given the
-             * size of tmpbuf and the actual value of MAX_SOCKS_ADDR_LEN */
-            socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
-            log_warn(LD_APP,
-                     "socks5 IP takes %d bytes, which doesn't fit in %d. "
-                     "Rejecting.",
-                     (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
-            return -1;
-            /* LCOV_EXCL_STOP */
-          }
-          strlcpy(req->address,tmpbuf,sizeof(req->address));
-          req->port = ntohs(get_uint16(data+4+addrlen));
-          *drain_out = 6+addrlen;
-          if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
-              !addressmap_have_mapping(req->address,0)) {
-            log_unsafe_socks_warning(5, req->address, req->port, safe_socks);
-            if (safe_socks) {
-              socks_request_set_socks5_error(req, SOCKS5_NOT_ALLOWED);
-              return -1;
-            }
-          }
-          return 1;
-        }
-        case 3: /* fqdn */
-          log_debug(LD_APP,"socks5: fqdn address type");
-          if (req->command == SOCKS_COMMAND_RESOLVE_PTR) {
-            socks_request_set_socks5_error(req,
-                                           SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED);
-            log_warn(LD_APP, "socks5 received RESOLVE_PTR command with "
-                     "hostname type. Rejecting.");
-            return -1;
-          }
-          len = (unsigned char)*(data+4);
-          if (datalen < 7+len) { /* addr/port there? */
-            *want_length_out = 7+len;
-            return 0; /* not yet */
-          }
-          if (BUG(len+1 > MAX_SOCKS_ADDR_LEN)) {
-            /* LCOV_EXCL_START -- unreachable, since len is at most 255,
-             * and MAX_SOCKS_ADDR_LEN is 256. */
-            socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
-            log_warn(LD_APP,
-                     "socks5 hostname is %d bytes, which doesn't fit in "
-                     "%d. Rejecting.", len+1,MAX_SOCKS_ADDR_LEN);
-            return -1;
-            /* LCOV_EXCL_STOP */
-          }
-          memcpy(req->address,data+5,len);
-          req->address[len] = 0;
-          req->port = ntohs(get_uint16(data+5+len));
-          *drain_out = 5+len+2;
-
-          if (!string_is_valid_dest(req->address)) {
-            socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
-
-            log_warn(LD_PROTOCOL,
-                     "Your application (using socks5 to port %d) gave Tor "
-                     "a malformed hostname: %s. Rejecting the connection.",
-                     req->port, escaped_safe_str_client(req->address));
-            return -1;
-          }
-          if (log_sockstype)
-            log_notice(LD_APP,
-                  "Your application (using socks5 to port %d) instructed "
-                  "Tor to take care of the DNS resolution itself if "
-                  "necessary. This is good.", req->port);
-          return 1;
-        default: /* unsupported */
-          socks_request_set_socks5_error(req,
-                                         SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED);
-          log_warn(LD_APP,"socks5: unsupported address type %d. Rejecting.",
-                   (int) *(data+3));
-          return -1;
-      }
-      tor_assert(0);
-      break;
     case 'G': /* get */
     case 'H': /* head */
     case 'P': /* put/post */
