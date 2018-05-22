@@ -2,7 +2,7 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
-Changes in version 0.3.3.6 - 2018-05-??
+Changes in version 0.3.3.6 - 2018-05-22
   Tor 0.3.3.6 is the first stable release in the 0.3.3 series. It
   backports several important fixes from the 0.3.4.1-alpha.
 
@@ -20,6 +20,13 @@ Changes in version 0.3.3.6 - 2018-05-??
   o New system requirements:
     - When built with Rust, Tor now depends on version 0.2.39 of the
       libc crate. Closes tickets 25310 and 25664.
+
+  o Major bugfixes (security, directory authority, denial-of-service):
+    - Fix a bug that could have allowed an attacker to force a
+      directory authority to use up all its RAM by passing it a
+      maliciously crafted protocol versions string. Fixes bug 25517;
+      bugfix on 0.2.9.4-alpha.  This issue is also tracked as
+      TROVE-2018-005.
 
   o Major features (denial-of-service mitigation):
     - Give relays some defenses against the recent network overload. We

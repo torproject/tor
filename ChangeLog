@@ -1,4 +1,4 @@
-Changes in version 0.3.3.6 - 2018-05-??
+Changes in version 0.3.3.6 - 2018-05-22
   Tor 0.3.3.6 is the first stable release in the 0.3.3 series. It
   backports several important fixes from the 0.3.4.1-alpha.
 
@@ -12,6 +12,13 @@ Changes in version 0.3.3.6 - 2018-05-??
 
   Below are the changes since 0.3.3.5-rc. For a list of all changes
   since 0.3.2, see the ReleaseNotes file.
+
+  o Major bugfixes (security, directory authority, denial-of-service):
+    - Fix a bug that could have allowed an attacker to force a
+      directory authority to use up all its RAM by passing it a
+      maliciously crafted protocol versions string. Fixes bug 25517;
+      bugfix on 0.2.9.4-alpha.  This issue is also tracked as
+      TROVE-2018-005.
 
   o Major bugfixes (directory authorities, security, backport from 0.3.4.1-alpha):
     - When directory authorities read a zero-byte bandwidth file, they
