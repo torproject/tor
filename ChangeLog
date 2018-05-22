@@ -633,91 +633,6 @@ Changes in version 0.3.3.4-alpha - 2018-03-29
       logging domains. Closes ticket 25378.
 
 
-Changes in version 0.3.3.3-alpha - 2018-03-03
-  Tor 0.3.3.3-alpha is the third alpha release for the 0.3.3.x series.
-  It includes an important security fix for a remote crash attack
-  against directory authorities tracked as TROVE-2018-001.
-
-  Additionally, with this release, we are upgrading the severity of a
-  bug fixed in 0.3.3.2-alpha.  Bug 24700, which was fixed in
-  0.3.3.2-alpha, can be remotely triggered in order to crash relays with
-  a use-after-free pattern. As such, we are now tracking that bug as
-  TROVE-2018-002 and CVE-2018-0491. This bug affected versions
-  0.3.2.1-alpha through 0.3.2.9, as well as 0.3.3.1-alpha.
-
-  This release also fixes several minor bugs and annoyances from
-  earlier releases.
-
-  Relays running 0.3.2.x should upgrade to one of the versions released
-  today, for the fix to TROVE-2018-002.  Directory authorities should
-  also upgrade. (Relays on earlier versions might want to update too for
-  the DoS mitigations.)
-
-  o Major bugfixes (denial-of-service, directory authority):
-    - Fix a protocol-list handling bug that could be used to remotely crash
-      directory authorities with a null-pointer exception. Fixes bug 25074;
-      bugfix on 0.2.9.4-alpha. Also tracked as TROVE-2018-001 and
-      CVE-2018-0490.
-
-  o Minor features (compatibility, OpenSSL):
-    - Tor will now support TLS1.3 once OpenSSL 1.1.1 is released.
-      Previous versions of Tor would not have worked with OpenSSL 1.1.1,
-      since they neither disabled TLS 1.3 nor enabled any of the
-      ciphersuites it requires. Now we enable the TLS 1.3 ciphersuites.
-      Closes ticket 24978.
-
-  o Minor features (logging):
-    - Clarify the log messages produced when getrandom() or a related
-      entropy-generation mechanism gives an error. Closes ticket 25120.
-
-  o Minor features (testing):
-    - Add a "make test-rust" target to run the rust tests only. Closes
-      ticket 25071.
-
-  o Minor bugfixes (denial-of-service):
-    - Fix a possible crash on malformed consensus. If a consensus had
-      contained an unparseable protocol line, it could have made clients
-      and relays crash with a null-pointer exception. To exploit this
-      issue, however, an attacker would need to be able to subvert the
-      directory authority system. Fixes bug 25251; bugfix on
-      0.2.9.4-alpha. Also tracked as TROVE-2018-004.
-
-  o Minor bugfixes (DoS mitigation):
-    - Add extra safety checks when refilling the circuit creation bucket
-      to ensure we never set a value above the allowed maximum burst.
-      Fixes bug 25202; bugfix on 0.3.3.2-alpha.
-    - When a new consensus arrives, don't update our DoS-mitigation
-      parameters if we aren't a public relay. Fixes bug 25223; bugfix
-      on 0.3.3.2-alpha.
-
-  o Minor bugfixes (man page, SocksPort):
-    - Remove dead code from the old "SocksSocket" option, and rename
-      SocksSocketsGroupWritable to UnixSocksGroupWritable. The old option
-      still works, but is deprecated. Fixes bug 24343; bugfix on 0.2.6.3.
-
-  o Minor bugfixes (performance):
-    - Reduce the number of circuits that will be opened at once during
-      the circuit build timeout phase. This is done by increasing the
-      idle timeout to 3 minutes, and lowering the maximum number of
-      concurrent learning circuits to 10. Fixes bug 24769; bugfix
-      on 0.3.1.1-alpha.
-
-  o Minor bugfixes (spec conformance):
-    - Forbid "-0" as a protocol version. Fixes part of bug 25249; bugfix on
-      0.2.9.4-alpha.
-    - Forbid UINT32_MAX as a protocol version.  Fixes part of bug 25249;
-      bugfix on 0.2.9.4-alpha.
-
-  o Minor bugfixes (spec conformance, rust):
-    - Resolve a denial-of-service issue caused by an infinite loop in
-      the rust protover code. Fixes bug 25250, bugfix on 0.3.3.1-alpha.
-      Also tracked as TROVE-2018-003.
-
-  o Code simplification and refactoring:
-    - Update the "rust dependencies" submodule to be a project-level
-      repository, rather than a user repository. Closes ticket 25323.
-
-
 Changes in version 0.3.2.10 - 2018-03-03
   Tor 0.3.2.10 is the second stable release in the 0.3.2 series. It
   backports a number of bugfixes, including important fixes for security
@@ -816,8 +731,8 @@ Changes in version 0.3.2.10 - 2018-03-03
       Country database.
 
   o Minor features (logging, diagnostic, backport from 0.3.3.2-alpha):
-    - When logging a failure to check a hidden service's certificate,
-      also log what the problem with the certificate was. Diagnostic
+    - When logging a failure to create an onion service's descriptor,
+      also log what the problem with the descriptor was. Diagnostic for
       for ticket 24972.
 
   o Minor bugfix (channel connection, backport from 0.3.3.2-alpha):
@@ -890,6 +805,91 @@ Changes in version 0.3.2.10 - 2018-03-03
     - Document that operators who run more than one relay or bridge are
       expected to set MyFamily and ContactInfo correctly. Closes
       ticket 24526.
+
+
+Changes in version 0.3.3.3-alpha - 2018-03-03
+  Tor 0.3.3.3-alpha is the third alpha release for the 0.3.3.x series.
+  It includes an important security fix for a remote crash attack
+  against directory authorities tracked as TROVE-2018-001.
+
+  Additionally, with this release, we are upgrading the severity of a
+  bug fixed in 0.3.3.2-alpha.  Bug 24700, which was fixed in
+  0.3.3.2-alpha, can be remotely triggered in order to crash relays with
+  a use-after-free pattern. As such, we are now tracking that bug as
+  TROVE-2018-002 and CVE-2018-0491. This bug affected versions
+  0.3.2.1-alpha through 0.3.2.9, as well as 0.3.3.1-alpha.
+
+  This release also fixes several minor bugs and annoyances from
+  earlier releases.
+
+  Relays running 0.3.2.x should upgrade to one of the versions released
+  today, for the fix to TROVE-2018-002.  Directory authorities should
+  also upgrade. (Relays on earlier versions might want to update too for
+  the DoS mitigations.)
+
+  o Major bugfixes (denial-of-service, directory authority):
+    - Fix a protocol-list handling bug that could be used to remotely crash
+      directory authorities with a null-pointer exception. Fixes bug 25074;
+      bugfix on 0.2.9.4-alpha. Also tracked as TROVE-2018-001 and
+      CVE-2018-0490.
+
+  o Minor features (compatibility, OpenSSL):
+    - Tor will now support TLS1.3 once OpenSSL 1.1.1 is released.
+      Previous versions of Tor would not have worked with OpenSSL 1.1.1,
+      since they neither disabled TLS 1.3 nor enabled any of the
+      ciphersuites it requires. Now we enable the TLS 1.3 ciphersuites.
+      Closes ticket 24978.
+
+  o Minor features (logging):
+    - Clarify the log messages produced when getrandom() or a related
+      entropy-generation mechanism gives an error. Closes ticket 25120.
+
+  o Minor features (testing):
+    - Add a "make test-rust" target to run the rust tests only. Closes
+      ticket 25071.
+
+  o Minor bugfixes (denial-of-service):
+    - Fix a possible crash on malformed consensus. If a consensus had
+      contained an unparseable protocol line, it could have made clients
+      and relays crash with a null-pointer exception. To exploit this
+      issue, however, an attacker would need to be able to subvert the
+      directory authority system. Fixes bug 25251; bugfix on
+      0.2.9.4-alpha. Also tracked as TROVE-2018-004.
+
+  o Minor bugfixes (DoS mitigation):
+    - Add extra safety checks when refilling the circuit creation bucket
+      to ensure we never set a value above the allowed maximum burst.
+      Fixes bug 25202; bugfix on 0.3.3.2-alpha.
+    - When a new consensus arrives, don't update our DoS-mitigation
+      parameters if we aren't a public relay. Fixes bug 25223; bugfix
+      on 0.3.3.2-alpha.
+
+  o Minor bugfixes (man page, SocksPort):
+    - Remove dead code from the old "SocksSocket" option, and rename
+      SocksSocketsGroupWritable to UnixSocksGroupWritable. The old option
+      still works, but is deprecated. Fixes bug 24343; bugfix on 0.2.6.3.
+
+  o Minor bugfixes (performance):
+    - Reduce the number of circuits that will be opened at once during
+      the circuit build timeout phase. This is done by increasing the
+      idle timeout to 3 minutes, and lowering the maximum number of
+      concurrent learning circuits to 10. Fixes bug 24769; bugfix
+      on 0.3.1.1-alpha.
+
+  o Minor bugfixes (spec conformance):
+    - Forbid "-0" as a protocol version. Fixes part of bug 25249; bugfix on
+      0.2.9.4-alpha.
+    - Forbid UINT32_MAX as a protocol version.  Fixes part of bug 25249;
+      bugfix on 0.2.9.4-alpha.
+
+  o Minor bugfixes (spec conformance, rust):
+    - Resolve a denial-of-service issue caused by an infinite loop in
+      the rust protover code. Fixes bug 25250, bugfix on 0.3.3.1-alpha.
+      Also tracked as TROVE-2018-003.
+
+  o Code simplification and refactoring:
+    - Update the "rust dependencies" submodule to be a project-level
+      repository, rather than a user repository. Closes ticket 25323.
 
 
 Changes in version 0.3.1.10 - 2018-03-03
