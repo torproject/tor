@@ -7,7 +7,7 @@ Changes in version 0.3.3.6 - 2018-05-22
   backports several important fixes from the 0.3.4.1-alpha.
 
   The Tor 0.3.3 series includes several important features, including
-  improved denial-of-service resistance, controller support and other
+  controller support and other
   improvements for v3 onion services, and official support for embedding
   Tor within other applications. It also include our first non-trivial
   module written in the Rust programming language. (Rust is still not
@@ -27,20 +27,6 @@ Changes in version 0.3.3.6 - 2018-05-22
       maliciously crafted protocol versions string. Fixes bug 25517;
       bugfix on 0.2.9.4-alpha.  This issue is also tracked as
       TROVE-2018-005.
-
-  o Major features (denial-of-service mitigation):
-    - Give relays some defenses against the recent network overload. We
-      start with three defenses (default parameters in parentheses).
-      First: if a single client address makes too many concurrent
-      connections (>100), hang up on further connections. Second: if a
-      single client address makes circuits too quickly (more than 3 per
-      second, with an allowed burst of 90) while also having too many
-      connections open (3), refuse new create cells for the next while
-      (1-2 hours). Third: if a client asks to establish a rendezvous
-      point to you directly, ignore the request. These defenses can be
-      manually controlled by new torrc options, but relays will also
-      take guidance from consensus parameters, so there's no need to
-      configure anything manually. Implements ticket 24902.
 
   o Major features (embedding):
     - There is now a documented stable API for programs that need to
@@ -114,12 +100,6 @@ Changes in version 0.3.3.6 - 2018-05-22
       if we fail to allow any circuits to actually complete. Fixes bug
       25733; bugfix on 0.2.2.2-alpha.
 
-  o Major bugfixes (denial-of-service, directory authority):
-    - Fix a protocol-list handling bug that could be used to remotely crash
-      directory authorities with a null-pointer exception. Fixes bug 25074;
-      bugfix on 0.2.9.4-alpha. Also tracked as TROVE-2018-001 and
-      CVE-2018-0490.
-
   o Major bugfixes (netflow padding):
     - Stop adding unneeded channel padding right after we finish
       flushing to a connection that has been trying to flush for many
@@ -133,18 +113,6 @@ Changes in version 0.3.3.6 - 2018-05-22
     - Correctly detect when onion services get disabled after HUP.
       Fixes bug 25761; bugfix on 0.3.2.1.
 
-  o Major bugfixes (onion services, retry behavior):
-    - Fix an "off by 2" error in counting rendezvous failures on the
-      onion service side. While we thought we would stop the rendezvous
-      attempt after one failed circuit, we were actually making three
-      circuit attempts before giving up. Now switch to a default of 2,
-      and allow the consensus parameter "hs_service_max_rdv_failures" to
-      override. Fixes bug 24895; bugfix on 0.0.6.
-    - New-style (v3) onion services now obey the "max rendezvous circuit
-      attempts" logic. Previously they would make as many rendezvous
-      circuit attempts as they could fit in the MAX_REND_TIMEOUT second
-      window before giving up. Fixes bug 24894; bugfix on 0.3.2.1-alpha.
-
   o Major bugfixes (performance, load balancing):
     - Directory authorities no longer vote in favor of the Guard flag
       for relays without directory support. Starting in Tor
@@ -153,30 +121,15 @@ Changes in version 0.3.3.6 - 2018-05-22
       the 5%-or-so of Guards that don't advertise directory support.
       Fixes bug 22310; bugfix on 0.3.0.6.
 
-  o Major bugfixes (protocol versions):
-    - Add Link protocol version 5 to the supported protocols list. Fixes
-      bug 25070; bugfix on 0.3.1.1-alpha.
-
   o Major bugfixes (relay):
     - If we have failed to connect to a relay and received a connection
       refused, timeout, or similar error (at the TCP level), do not try
       that same address/port again for 60 seconds after the failure has
       occurred. Fixes bug 24767; bugfix on 0.0.6.
-    - Fix a set of false positives where relays would consider
-      connections to other relays as being client-only connections (and
-      thus e.g. deserving different link padding schemes) if those
-      relays fell out of the consensus briefly. Now we look only at the
-      initial handshake and whether the connection authenticated as a
-      relay. Fixes bug 24898; bugfix on 0.3.1.1-alpha.
 
   o Major bugfixes (relay, denial of service, backport from 0.3.4.1-alpha):
     - Impose a limit on circuit cell queue size. The limit can be controlled by
       a consensus parameter. Fixes bug 25226; bugfix on 0.2.4.14-alpha.
-
-  o Major bugfixes (scheduler, consensus):
-    - The scheduler subsystem was failing to promptly notice changes in
-      consensus parameters, making it harder to switch schedulers
-      network-wide. Fixes bug 24975; bugfix on 0.3.2.1-alpha.
 
   o Minor features (cleanup):
     - Tor now deletes the CookieAuthFile and ExtORPortCookieAuthFile
@@ -185,13 +138,6 @@ Changes in version 0.3.3.6 - 2018-05-22
   o Minor features (compatibility, backport from 0.3.4.1-alpha):
     - Avoid some compilation warnings with recent versions
       of LibreSSL. Closes ticket 26006.
-
-  o Minor features (compatibility, OpenSSL):
-    - Tor will now support TLS1.3 once OpenSSL 1.1.1 is released.
-      Previous versions of Tor would not have worked with OpenSSL 1.1.1,
-      since they neither disabled TLS 1.3 nor enabled any of the
-      ciphersuites it requires. Now we enable the TLS 1.3 ciphersuites.
-      Closes ticket 24978.
 
   o Minor features (config options):
     - Change the way the default value for MaxMemInQueues is calculated.
@@ -220,11 +166,6 @@ Changes in version 0.3.3.6 - 2018-05-22
     - Check that microdesc ed25519 ids are non-zero in
       node_get_ed25519_id() before returning them. Implements 24001,
       patch by "aruna1234".
-
-  o Minor features (denial-of-service avoidance):
-    - Make our OOM handler aware of the geoip client history cache so it
-      doesn't fill up the memory. This check is important for IPv6 and
-      our DoS mitigation subsystem. Closes ticket 25122.
 
   o Minor features (directory authority):
     - When directory authorities are unable to add signatures to a
@@ -334,9 +275,6 @@ Changes in version 0.3.3.6 - 2018-05-22
       entropy-generation mechanism gives an error. Closes ticket 25120.
     - Added support for the Android logging subsystem. Closes
       ticket 24362.
-    - When logging a failure to create an onion service's descriptor,
-      also log what the problem with the descriptor was. Diagnostic for
-      ticket 24972.
 
   o Minor features (performance):
     - Support predictive circuit building for onion service circuits
@@ -394,9 +332,6 @@ Changes in version 0.3.3.6 - 2018-05-22
     - Fix output of autoconf checks to display success messages for Rust
       dependencies and a suitable rustc compiler version. Fixes bug
       24612; bugfix on 0.3.1.3-alpha.
-    - When building with Rust on OSX, link against libresolv, to work
-      around the issue at https://github.com/rust-lang/rust/issues/46797.
-      Fixes bug 24652; bugfix on 0.3.1.1-alpha.
     - Don't pass the --quiet option to cargo: it seems to suppress some
       errors, which is not what we want to do when building. Fixes bug
       24518; bugfix on 0.3.1.7.
@@ -408,12 +343,6 @@ Changes in version 0.3.3.6 - 2018-05-22
     - Fix a very unlikely (impossible, we believe) null pointer
       dereference. Fixes bug 25629; bugfix on 0.2.9.15. Found by
       Coverity; this is CID 1430932.
-
-  o Minor bugfixes (channel connection):
-    - Use the actual observed address of an incoming relay connection,
-      not the canonical address of the relay from its descriptor, when
-      making decisions about how to handle the incoming connection.
-      Fixes bug 24952; bugfix on 0.2.4.11-alpha. Patch by "ffmancera".
 
   o Minor bugfixes (channel, client):
     - Better identify client connection when reporting to the geoip
@@ -454,25 +383,11 @@ Changes in version 0.3.3.6 - 2018-05-22
       continue processing the cell as if the connection were open. Fixes bug
       26072; bugfix on 0.2.4.7-alpha.
 
-  o Minor bugfixes (denial-of-service):
-    - Fix a possible crash on malformed consensus. If a consensus had
-      contained an unparseable protocol line, it could have made clients
-      and relays crash with a null-pointer exception. To exploit this
-      issue, however, an attacker would need to be able to subvert the
-      directory authority system. Fixes bug 25251; bugfix on
-      0.2.9.4-alpha. Also tracked as TROVE-2018-004.
-
   o Minor bugfixes (directory authorities, IPv6):
     - When creating a routerstatus (vote) from a routerinfo (descriptor),
       set the IPv6 address to the unspecified IPv6 address, and
       explicitly initialize the port to zero. Fixes bug 24488; bugfix
       on 0.2.4.1-alpha.
-
-  o Minor bugfixes (directory authority):
-    - Directory authorities, when refusing a descriptor from a rejected
-      relay, now explicitly tell the relay (in its logs) to set a valid
-      ContactInfo address and contact the bad-relays@ mailing list.
-      Fixes bug 25170; bugfix on 0.2.9.1.
 
   o Minor bugfixes (documentation):
     - Document that the PerConnBW{Rate,Burst} options will fall back to
@@ -530,9 +445,6 @@ Changes in version 0.3.3.6 - 2018-05-22
       sleep() and usleep(). Fixes bug 24969; bugfix on 0.2.5.1-alpha.
 
   o Minor bugfixes (logging):
-    - Don't treat inability to store a cached consensus object as a bug:
-      it can happen normally when we are out of disk space. Fixes bug
-      24859; bugfix on 0.3.1.1-alpha.
     - Fix a (mostly harmless) race condition when invoking
       LOG_PROTOCOL_WARN message from a subthread while the torrc options
       are changing. Fixes bug 23954; bugfix on 0.1.1.9-alpha.
@@ -578,18 +490,9 @@ Changes in version 0.3.3.6 - 2018-05-22
       Fixes bug 26069; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (onion services):
-    - Remove a BUG() statement when a client fetches an onion descriptor
-      that has a lower revision counter than the one in its cache. This
-      can happen in normal circumstances due to HSDir desync. Fixes bug
-      24976; bugfix on 0.3.2.1-alpha.
     - If we are configured to offer a single onion service, don't log
       long-term established one hop rendezvous points in the heartbeat.
       Fixes bug 25116; bugfix on 0.2.9.6-rc.
-
-  o Minor bugfixes (OSX):
-    - Don't exit the Tor process if setrlimit() fails to change the file
-      limit (which can happen sometimes on some versions of OSX). Fixes
-      bug 21074; bugfix on 0.0.9pre5.
 
   o Minor bugfixes (performance):
     - Reduce the number of circuits that will be opened at once during
@@ -603,11 +506,6 @@ Changes in version 0.3.3.6 - 2018-05-22
       we do for routerstatus_t objects. This change simplifies our code
       a little, and saves a large amount of short-term memory allocation
       operations. Fixes bug 25008; bugfix on 0.2.9.4-alpha.
-
-  o Minor bugfixes (performance, fragile-hardening):
-    - Improve the performance of our consensus-diff application code
-      when Tor is built with the --enable-fragile-hardening option set.
-      Fixes bug 24826; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (performance, timeouts):
     - Consider circuits for timeout as soon as they complete a hop. This
@@ -640,12 +538,6 @@ Changes in version 0.3.3.6 - 2018-05-22
       list, which would waste CPU cycles. Fixes bug 24700; bugfix
       on 0.3.2.1-alpha.
 
-  o Minor bugfixes (spec conformance):
-    - Forbid "-0" as a protocol version. Fixes part of bug 25249; bugfix on
-      0.2.9.4-alpha.
-    - Forbid UINT32_MAX as a protocol version.  Fixes part of bug 25249;
-      bugfix on 0.2.9.4-alpha.
-
   o Minor bugfixes (spelling):
     - Use the "misspell" tool to detect and fix typos throughout the
       source code. Fixes bug 23650; bugfix on various versions of Tor.
@@ -658,8 +550,6 @@ Changes in version 0.3.3.6 - 2018-05-22
       on 0.3.1.3-alpha.
     - Give out Exit flags in bootstrapping networks. Fixes bug 24137;
       bugfix on 0.2.3.1-alpha.
-    - Fix a memory leak in the scheduler/loop_kist unit test. Fixes bug
-      25005; bugfix on 0.3.2.7-rc.
 
   o Minor bugfixes (unit test, monotonic time):
     - Increase a constant (1msec to 10msec) in the monotonic time test
@@ -668,20 +558,12 @@ Changes in version 0.3.3.6 - 2018-05-22
       when the clock_gettime() is not a VDSO on the running kernel.
       Fixes bug 25113; bugfix on 0.2.9.1.
 
-  o Minor bugfixes (v3 onion services):
-    - Look at the "HSRend" protocol version, not the "HSDir" protocol
-      version, when deciding whether a consensus entry can support the
-      v3 onion service protocol as a rendezvous point. Fixes bug 25105;
-      bugfix on 0.3.2.1-alpha.
-
   o Code simplification and refactoring:
     - Move the list of default directory authorities to its own file.
       Closes ticket 24854. Patch by "beastr0".
     - Remove the old (deterministic) directory retry logic entirely:
       We've used exponential backoff exclusively for some time. Closes
       ticket 23814.
-    - Update the "rust dependencies" submodule to be a project-level
-      repository, rather than a user repository. Closes ticket 25323.
     - Remove the unused nodelist_recompute_all_hsdir_indices(). Closes
       ticket 25108.
     - Remove a series of counters used to track circuit extend attempts
@@ -725,9 +607,6 @@ Changes in version 0.3.3.6 - 2018-05-22
       traffic. Closes ticket 24318.
     - Document that OutboundBindAddress doesn't apply to DNS requests.
       Closes ticket 22145. Patch from Aruna Maurya.
-    - Document that operators who run more than one relay or bridge are
-      expected to set MyFamily and ContactInfo correctly. Closes
-      ticket 24526.
 
   o Code simplification and refactoring (channels):
     - Remove the incoming and outgoing channel queues. These were never
