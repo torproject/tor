@@ -1,0 +1,6 @@
+  o Major bugfixes (security, directory authority, denial-of-service):
+    - Fix a bug that could have allowed an attacker to force a
+      directory authority to use up all its RAM by passing it a
+      maliciously crafted protocol versions string. Fixes bug 25517;
+      bugfix on 0.2.9.4-alpha.  This issue is also tracked as
+      TROVE-2018-005.
