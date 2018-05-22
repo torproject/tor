@@ -2,22 +2,21 @@ Changes in version 0.3.3.6 - 2018-05-22
   Tor 0.3.3.6 is the first stable release in the 0.3.3 series. It
   backports several important fixes from the 0.3.4.1-alpha.
 
-  The Tor 0.3.3 series includes several important features, including
-  improved denial-of-service resistance, controller support and other
-  improvements for v3 onion services, and official support for embedding
-  Tor within other applications. It also include our first non-trivial
-  module written in the Rust programming language. (Rust is still not
-  enabled by default when building Tor.) And as usual, there are
-  numerous other smaller bugfixes, features, and improvements.
+  The Tor 0.3.3 series includes controller support and other improvements
+  for v3 onion services, official support for embedding Tor within
+  other applications, and our first non-trivial module written in the
+  Rust programming language. (Rust is still not enabled by default when
+  building Tor.) And as usual, there are numerous other smaller bugfixes,
+  features, and improvements.
 
   Below are the changes since 0.3.3.5-rc. For a list of all changes
-  since 0.3.2, see the ReleaseNotes file.
+  since 0.3.2.10, see the ReleaseNotes file.
 
   o Major bugfixes (security, directory authority, denial-of-service):
     - Fix a bug that could have allowed an attacker to force a
       directory authority to use up all its RAM by passing it a
       maliciously crafted protocol versions string. Fixes bug 25517;
-      bugfix on 0.2.9.4-alpha.  This issue is also tracked as
+      bugfix on 0.2.9.4-alpha. This issue is also tracked as
       TROVE-2018-005.
 
   o Major bugfixes (directory authorities, security, backport from 0.3.4.1-alpha):
@@ -41,8 +40,9 @@ Changes in version 0.3.3.6 - 2018-05-22
       Fixes bug 25761; bugfix on 0.3.2.1.
 
   o Major bugfixes (relay, denial of service, backport from 0.3.4.1-alpha):
-    - Impose a limit on circuit cell queue size. The limit can be controlled by
-      a consensus parameter. Fixes bug 25226; bugfix on 0.2.4.14-alpha.
+    - Impose a limit on circuit cell queue size. The limit can be
+      controlled by a consensus parameter. Fixes bug 25226; bugfix on
+      0.2.4.14-alpha.
 
   o Minor features (compatibility, backport from 0.3.4.1-alpha):
     - Avoid some compilation warnings with recent versions
@@ -51,7 +51,7 @@ Changes in version 0.3.3.6 - 2018-05-22
   o Minor features (continuous integration, backport from 0.3.4.1-alpha):
     - Our .travis.yml configuration now includes support for testing
       the results of "make distcheck". (It's not uncommon for "make check" to
-      pass but "make distcheck" to fail.)  Closes ticket 25814.
+      pass but "make distcheck" to fail.) Closes ticket 25814.
     - Our Travis CI configuration now integrates with the Coveralls coverage
       analysis tool. Closes ticket 25818.
 
@@ -66,7 +66,7 @@ Changes in version 0.3.3.6 - 2018-05-22
 
   o Minor bugfixes (correctness, client, backport from 0.3.4.1-alpha):
     - Upon receiving a malformed connected cell, stop processing the cell
-      immediately.  Previously we would mark the connection for close, but
+      immediately. Previously we would mark the connection for close, but
       continue processing the cell as if the connection were open. Fixes bug
       26072; bugfix on 0.2.4.7-alpha.
 
@@ -95,7 +95,7 @@ Changes in version 0.3.3.6 - 2018-05-22
 
   o Documentation (backport from 0.3.4.1-alpha):
     - Correct an IPv6 error in the documentation for ExitPolicy.
-      Closes ticket 25857.  Patch from "CTassisF".
+      Closes ticket 25857. Patch from "CTassisF".
 
 
 Changes in version 0.3.3.5-rc - 2018-04-15
@@ -295,7 +295,7 @@ Changes in version 0.3.2.10 - 2018-03-03
   upgraded: Bug 24700, which was fixed in 0.3.3.2-alpha, can be remotely
   triggered in order to crash relays with a use-after-free pattern. As
   such, we are now tracking that bug as TROVE-2018-002 and
-  CVE-2018-0491, and backporting it to earlier releases.  This bug
+  CVE-2018-0491, and backporting it to earlier releases. This bug
   affected versions 0.3.2.1-alpha through 0.3.2.9, as well as version
   0.3.3.1-alpha.
 
@@ -306,7 +306,7 @@ Changes in version 0.3.2.10 - 2018-03-03
   earlier releases.
 
   Relays running 0.3.2.x SHOULD upgrade to one of the versions released
-  today, for the fix to TROVE-2018-002.  Directory authorities should
+  today, for the fix to TROVE-2018-002. Directory authorities should
   also upgrade. (Relays on earlier versions might want to update too for
   the DoS mitigations.)
 
@@ -434,7 +434,7 @@ Changes in version 0.3.2.10 - 2018-03-03
   o Minor bugfixes (spec conformance, backport from 0.3.3.3-alpha):
     - Forbid "-0" as a protocol version. Fixes part of bug 25249; bugfix on
       0.2.9.4-alpha.
-    - Forbid UINT32_MAX as a protocol version.  Fixes part of bug 25249;
+    - Forbid UINT32_MAX as a protocol version. Fixes part of bug 25249;
       bugfix on 0.2.9.4-alpha.
 
   o Minor bugfixes (testing, backport from 0.3.3.1-alpha):
@@ -463,7 +463,7 @@ Changes in version 0.3.3.3-alpha - 2018-03-03
   against directory authorities tracked as TROVE-2018-001.
 
   Additionally, with this release, we are upgrading the severity of a
-  bug fixed in 0.3.3.2-alpha.  Bug 24700, which was fixed in
+  bug fixed in 0.3.3.2-alpha. Bug 24700, which was fixed in
   0.3.3.2-alpha, can be remotely triggered in order to crash relays with
   a use-after-free pattern. As such, we are now tracking that bug as
   TROVE-2018-002 and CVE-2018-0491. This bug affected versions
@@ -473,7 +473,7 @@ Changes in version 0.3.3.3-alpha - 2018-03-03
   earlier releases.
 
   Relays running 0.3.2.x should upgrade to one of the versions released
-  today, for the fix to TROVE-2018-002.  Directory authorities should
+  today, for the fix to TROVE-2018-002. Directory authorities should
   also upgrade. (Relays on earlier versions might want to update too for
   the DoS mitigations.)
 
@@ -529,7 +529,7 @@ Changes in version 0.3.3.3-alpha - 2018-03-03
   o Minor bugfixes (spec conformance):
     - Forbid "-0" as a protocol version. Fixes part of bug 25249; bugfix on
       0.2.9.4-alpha.
-    - Forbid UINT32_MAX as a protocol version.  Fixes part of bug 25249;
+    - Forbid UINT32_MAX as a protocol version. Fixes part of bug 25249;
       bugfix on 0.2.9.4-alpha.
 
   o Minor bugfixes (spec conformance, rust):
@@ -715,12 +715,12 @@ Changes in version 0.3.3.1-alpha - 2018-01-25
   o Major features (IPv6, directory documents):
     - Add consensus method 27, which adds IPv6 ORPorts to the microdesc
       consensus. This information makes it easier for IPv6 clients to
-      bootstrap and choose reachable entry guards. Implements 23826.
+      bootstrap and choose reachable entry guards. Implements ticket 23826.
     - Add consensus method 28, which removes IPv6 ORPorts from
-      microdescriptors. Now that the consensus contains IPv6 ORPorts,
-      they are redundant in microdescs. This change will be used by Tor
-      clients on 0.2.8.x and later. (That is to say, with all Tor
-      clients having IPv6 bootstrap and guard support.) Implements 23828.
+      microdescriptors. Now that the consensus contains IPv6 ORPorts, they
+      are redundant in microdescs. This change will be used by Tor clients
+      on 0.2.8.x and later. (That is to say, with all Tor clients that
+      have IPv6 bootstrap and guard support.) Implements ticket 23828.
     - Expand the documentation for AuthDirHasIPv6Connectivity when it is
       set by different numbers of authorities. Fixes 23870
       on 0.2.4.1-alpha.
@@ -804,8 +804,8 @@ Changes in version 0.3.3.1-alpha - 2018-01-25
     - Where possible, the tor_free() macro now only evaluates its input
       once. Part of ticket 24337.
     - Check that microdesc ed25519 ids are non-zero in
-      node_get_ed25519_id() before returning them. Implements 24001,
-      patch by "aruna1234".
+      node_get_ed25519_id() before returning them. Implements ticket
+      24001, patch by "aruna1234".
 
   o Minor features (directory authority):
     - Make the "Exit" flag assignment only depend on whether the exit
