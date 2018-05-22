@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import sys
 import subprocess
 import socket
@@ -8,7 +10,7 @@ def try_connecting_to_socksport():
     socks_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if socks_socket.connect_ex(('127.0.0.1', 9052)):
         tor_process.terminate()
-        print 'FAIL'
+        print('FAIL')
         sys.exit('Cannot connect to SOCKSPort')
     socks_socket.close()
 
@@ -43,7 +45,7 @@ try_connecting_to_socksport()
 control_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 if control_socket.connect_ex(('127.0.0.1', 9053)):
     tor_process.terminate()
-    print 'FAIL'
+    print('FAIL')
     sys.exit('Cannot connect to ControlPort')
 
 control_socket.sendall('AUTHENTICATE \r\n')
@@ -60,5 +62,5 @@ try_connecting_to_socksport()
 control_socket.sendall('SIGNAL HALT\r\n')
 
 time.sleep(0.1)
-print 'OK'
+print('OK')
 tor_process.terminate()
