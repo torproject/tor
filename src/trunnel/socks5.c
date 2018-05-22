@@ -3477,7 +3477,7 @@ socks5_client_request_get_command(const socks5_client_request_t *inp)
 int
 socks5_client_request_set_command(socks5_client_request_t *inp, uint8_t val)
 {
-  if (! ((val == CMD_BIND || val == CMD_CONNECT || val == CMD_RESOLVE_PTR || val == CMD_UDP_ASSOCIATE))) {
+  if (! ((val == CMD_BIND || val == CMD_CONNECT || val == CMD_RESOLVE || val == CMD_RESOLVE_PTR || val == CMD_UDP_ASSOCIATE))) {
      TRUNNEL_SET_ERROR_CODE(inp);
      return -1;
   }
@@ -3600,7 +3600,7 @@ socks5_client_request_check(const socks5_client_request_t *obj)
     return "A set function failed on this object";
   if (! (obj->version == 5))
     return "Integer out of bounds";
-  if (! (obj->command == CMD_BIND || obj->command == CMD_CONNECT || obj->command == CMD_RESOLVE_PTR || obj->command == CMD_UDP_ASSOCIATE))
+  if (! (obj->command == CMD_BIND || obj->command == CMD_CONNECT || obj->command == CMD_RESOLVE || obj->command == CMD_RESOLVE_PTR || obj->command == CMD_UDP_ASSOCIATE))
     return "Integer out of bounds";
   if (! (obj->reserved == 0))
     return "Integer out of bounds";
@@ -3639,7 +3639,7 @@ socks5_client_request_encoded_len(const socks5_client_request_t *obj)
   /* Length of u8 version IN [5] */
   result += 1;
 
-  /* Length of u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE_PTR, CMD_UDP_ASSOCIATE] */
+  /* Length of u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE, CMD_RESOLVE_PTR, CMD_UDP_ASSOCIATE] */
   result += 1;
 
   /* Length of u8 reserved IN [0] */
@@ -3708,7 +3708,7 @@ socks5_client_request_encode(uint8_t *output, const size_t avail, const socks5_c
   trunnel_set_uint8(ptr, (obj->version));
   written += 1; ptr += 1;
 
-  /* Encode u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE_PTR, CMD_UDP_ASSOCIATE] */
+  /* Encode u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE, CMD_RESOLVE_PTR, CMD_UDP_ASSOCIATE] */
   trunnel_assert(written <= avail);
   if (avail - written < 1)
     goto truncated;
@@ -3817,11 +3817,11 @@ socks5_client_request_parse_into(socks5_client_request_t *obj, const uint8_t *in
   if (! (obj->version == 5))
     goto fail;
 
-  /* Parse u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE_PTR, CMD_UDP_ASSOCIATE] */
+  /* Parse u8 command IN [CMD_BIND, CMD_CONNECT, CMD_RESOLVE, CMD_RESOLVE_PTR, CMD_UDP_ASSOCIATE] */
   CHECK_REMAINING(1, truncated);
   obj->command = (trunnel_get_uint8(ptr));
   remaining -= 1; ptr += 1;
-  if (! (obj->command == CMD_BIND || obj->command == CMD_CONNECT || obj->command == CMD_RESOLVE_PTR || obj->command == CMD_UDP_ASSOCIATE))
+  if (! (obj->command == CMD_BIND || obj->command == CMD_CONNECT || obj->command == CMD_RESOLVE || obj->command == CMD_RESOLVE_PTR || obj->command == CMD_UDP_ASSOCIATE))
     goto fail;
 
   /* Parse u8 reserved IN [0] */
