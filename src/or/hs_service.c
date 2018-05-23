@@ -3062,6 +3062,12 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
     goto err;
   }
 
+  /* Build the onion address for logging purposes but also the control port
+   * uses it for the HS_DESC event. */
+  hs_build_address(&service->keys.identity_pk,
+                   (uint8_t) service->config.version,
+                   service->onion_address);
+
   /* The only way the registration can fail is if the service public key
    * already exists. */
   if (BUG(register_service(hs_service_map, service) < 0)) {
@@ -3071,14 +3077,10 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
     goto err;
   }
 
-  /* Last step is to build the onion address. */
-  hs_build_address(&service->keys.identity_pk,
-                   (uint8_t) service->config.version,
-                   service->onion_address);
-  *address_out = tor_strdup(service->onion_address);
-
   log_info(LD_CONFIG, "Added ephemeral v3 onion service: %s",
            safe_str_client(service->onion_address));
+
+  *address_out = tor_strdup(service->onion_address);
   ret = RSAE_OKAY;
   goto end;
 
