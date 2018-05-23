@@ -847,12 +847,31 @@ static void
 socks_request_set_socks5_error(socks_request_t *req,
                   socks5_reply_status_t reason)
 {
-   req->replylen = 10;
-   memset(req->reply,0,10);
+  socks5_server_reply_t *trunnel_resp = socks5_server_reply_new();
 
-   req->reply[0] = 0x05;   // VER field.
-   req->reply[1] = reason; // REP field.
-   req->reply[3] = 0x01;   // ATYP field.
+  socks5_server_reply_set_version(trunnel_resp, 0x05);
+  socks5_server_reply_set_reply(trunnel_resp, reason);
+  socks5_server_reply_set_atype(trunnel_resp, 0x01);
+
+  const char *errmsg = socks5_server_reply_check(trunnel_resp);
+  if (errmsg) {
+    log_warn(LD_APP, "socks5: reply validation failed: %s",
+             errmsg);
+    goto end;
+  }
+
+  ssize_t encoded = socks5_server_reply_encode(req->reply,
+                                               sizeof(req->reply),
+                                               trunnel_resp);
+  if (encoded < 0) {
+    log_warn(LD_APP, "socks5: reply encoding failed: %d",
+             (int)encoded);
+  } else {
+    req->replylen = (size_t)encoded;
+  }
+
+  end:
+  socks5_server_reply_free(trunnel_resp);
 }
 
 static const char SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG[] =
