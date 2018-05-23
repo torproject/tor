@@ -1,0 +1,62 @@
+version: 1.0.{build}
+
+clone_depth: 50
+
+environment:
+  compiler: mingw
+
+  matrix:
+  - target: i686-w64-mingw32
+    compiler_path: mingw32
+    openssl_path: /c/OpenSSL-Win32
+  - target: x86_64-w64-mingw32
+    compiler_path: mingw64
+    openssl_path: /c/OpenSSL-Win64
+
+install:
+- ps: >-
+    Function Execute-Command ($commandPath)
+    {
+        & $commandPath $args 2>&1
+        if ( $LastExitCode -ne 0 ) {
+            $host.SetShouldExit( $LastExitCode )
+        }
+    }
+    Function Execute-Bash ()
+    {
+        Execute-Command 'c:\msys64\usr\bin\bash' '-e' '-c' $args
+    }
+    Execute-Command "C:\msys64\usr\bin\pacman" -Sy --noconfirm openssl-devel openssl libevent-devel libevent mingw-w64-i686-libevent mingw-w64-x86_64-libevent mingw-w64-i686-openssl mingw-w64-x86_64-openssl mingw-w64-i686-zstd mingw-w64-x86_64-zstd
+
+build_script:
+- ps: >-
+    if ($env:compiler -eq "mingw") {
+            $oldpath = ${env:Path} -split ';'
+            $buildpath = @("C:\msys64\${env:compiler_path}\bin", "C:\msys64\usr\bin") + $oldpath
+            $env:Path = @($buildpath) -join ';'
+            $env:build = @("${env:APPVEYOR_BUILD_FOLDER}", $env:target) -join '\'
+            Set-Location "${env:APPVEYOR_BUILD_FOLDER}"
+            Execute-Bash 'autoreconf -i'
+            mkdir "${env:build}"
+            Set-Location "${env:build}"
+            Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target} --disable-asciidoc --enable-fatal-warnings --with-openssl-dir=${env:openssl_path}"
+            Execute-Bash "V=1 make -j2"
+            Execute-Bash "V=1 make -j2 install"
+     }
+
+test_script:
+- ps: >-
+    if ($env:compiler -eq "mingw") {
+            $oldpath = ${env:Path} -split ';'
+            $buildpath = @("C:\msys64\${env:compiler_path}\bin") + $oldpath
+            $env:Path = $buildpath -join ';'
+            Set-Location "${env:build}"
+            Execute-Bash "VERBOSE=1 make -j2 check"
+    }
+
+on_success:
+- cmd: C:\Python27\python.exe %APPVEYOR_BUILD_FOLDER%\scripts\test\appveyor-irc-notify.py irc.oftc.net:6697 tor-ci success
+
+on_failure:
+- cmd: C:\Python27\python.exe %APPVEYOR_BUILD_FOLDER%\scripts\test\appveyor-irc-notify.py irc.oftc.net:6697 tor-ci failure
+
