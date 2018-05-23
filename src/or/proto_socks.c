@@ -30,8 +30,7 @@ static socks_result_t parse_socks(const char *data,
                                   socks_request_t *req,
                                   int log_sockstype,
                                   int safe_socks,
-                                  size_t *drain_out,
-                                  size_t *want_length_out);
+                                  size_t *drain_out);
 static int parse_socks_client(const uint8_t *data, size_t datalen,
                               int state, char **reason,
                               ssize_t *drain_out);
@@ -121,7 +120,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
     goto end;
   } else if (parsed == -2) {
     res = SOCKS_RESULT_TRUNCATED;
-    if (datalen > 1024) { // XXX
+    if (datalen >= MAX_SOCKS_MESSAGE_LEN) {
       log_warn(LD_APP, "socks4: parsing failed - invalid request.");
       res = SOCKS_RESULT_INVALID;
     }
@@ -256,7 +255,7 @@ parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
     goto end;
   } else if (parsed == -2) {
     res = SOCKS_RESULT_TRUNCATED;
-    if (datalen > 1024) { // XXX
+    if (datalen > MAX_SOCKS_MESSAGE_LEN) {
       log_warn(LD_APP, "socks5: parsing failed - invalid version "
                        "id/method selection message.");
       res = SOCKS_RESULT_INVALID;
@@ -698,9 +697,9 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
   int res = 0;
   size_t datalen = buf_datalen(buf);
   size_t n_drain;
-  size_t want_length = 128;
   const char *head = NULL;
   socks_result_t socks_res;
+  size_t n_pullup;
 
   if (buf_datalen(buf) < 2) { /* version and another byte */
     res = 0;
@@ -709,13 +708,12 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
 
   do {
     n_drain = 0;
-    buf_pullup(buf, MAX(want_length, buf_datalen(buf)),
-               &head, &datalen);
+    n_pullup = MIN(MAX_SOCKS_MESSAGE_LEN, buf_datalen(buf));
+    buf_pullup(buf, n_pullup, &head, &datalen);
     tor_assert(head && datalen >= 2);
-    want_length = 0;
 
     socks_res = parse_socks(head, datalen, req, log_sockstype,
-                            safe_socks, &n_drain, &want_length);
+                            safe_socks, &n_drain);
 
     if (socks_res == SOCKS_RESULT_INVALID)
       buf_clear(buf);
@@ -730,6 +728,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
         res = 1;
         break;
       case SOCKS_RESULT_TRUNCATED:
+        if (datalen == n_pullup)
+          return 0;
       case SOCKS_RESULT_MORE_EXPECTED:
         res = 0;
         break;
@@ -790,14 +790,12 @@ static const char SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG[] =
  * we'd like to see in the input buffer, if they're available. */
 static int
 parse_socks(const char *data, size_t datalen, socks_request_t *req,
-            int log_sockstype, int safe_socks, size_t *drain_out,
-            size_t *want_length_out)
+            int log_sockstype, int safe_socks, size_t *drain_out)
 {
   uint8_t socksver;
 
   if (datalen < 2) {
     /* We always need at least 2 bytes. */
-    *want_length_out = 2;
     return 0;
   }
 
@@ -805,7 +803,6 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
 
   if (socksver == 5 || socksver == 4 ||
       socksver == 1) { // XXX: RFC 1929
-    *want_length_out = 128; // TODO remove this arg later
     return handle_socks_message((const uint8_t *)data, datalen, req,
                                 log_sockstype, safe_socks, drain_out);
   }

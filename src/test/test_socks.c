@@ -141,7 +141,7 @@ test_socks_4_bad_arguments(void *ptr)
                                  get_options()->SafeSocks),
             OP_EQ, -1);
   buf_clear(buf);
-  expect_log_msg_containing("Port or DestIP is zero."); // !!!
+  expect_log_msg_containing("Port or DestIP is zero.");
   mock_clean_saved_logs();
 
   /* Try with 0 port */
@@ -163,7 +163,7 @@ test_socks_4_bad_arguments(void *ptr)
   tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0),
             OP_EQ, -1);
   buf_clear(buf);
-  expect_log_msg_containing("user name too long; rejecting.");
+  expect_log_msg_containing("socks4: parsing failed - invalid request.");
   mock_clean_saved_logs();
 
   /* Try with 2000-byte hostname */
