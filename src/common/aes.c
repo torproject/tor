@@ -16,6 +16,7 @@
   #include <ws2tcpip.h>
 #endif
 
+#include "compat_openssl.h"
 #include <openssl/opensslv.h>
 #include "crypto_openssl_mgt.h"
 
