@@ -18,10 +18,10 @@
 #include "or/socks_request_st.h"
 
 typedef enum {
-  SOCKS_RESULT_INVALID       = -1,
-  SOCKS_RESULT_TRUNCATED     =  0,
-  SOCKS_RESULT_DONE          =  1,
-  SOCKS_RESULT_MORE_EXPECTED =  2,
+  SOCKS_RESULT_INVALID       = -1, /* Message invalid. */
+  SOCKS_RESULT_TRUNCATED     =  0, /* Message incomplete/truncated. */
+  SOCKS_RESULT_DONE          =  1, /* OK, we're done. */
+  SOCKS_RESULT_MORE_EXPECTED =  2, /* OK, more messages expected. */
 } socks_result_t;
 
 static void socks_request_set_socks5_error(socks_request_t *req,
@@ -96,6 +96,16 @@ socks_request_free_(socks_request_t *req)
   tor_free(req);
 }
 
+/**
+ * Parse a single SOCKS4 request from buffer <b>raw_data</b> of length
+ * <b>datalen</b> and update relevant fields of <b>req</b>. If SOCKS4a
+ * request is detected, set <b>*is_socks4a<b> to true. Set <b>*drain_out</b>
+ * to number of bytes we parsed so far.
+ *
+ * Return SOCKS_RESULT_DONE if parsing succeeded, SOCKS_RESULT_INVALID if
+ * parsing failed because of invalid input or SOCKS_RESULT_TRUNCATED if it
+ * failed due to incomplete (truncated) input.
+ */
 static socks_result_t
 parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
                      size_t datalen, int *is_socks4a, size_t *drain_out)
@@ -246,6 +256,17 @@ process_socks4_request(const socks_request_t *req, int is_socks4a,
   return SOCKS_RESULT_DONE;
 }
 
+/** Parse a single SOCKS5 version identifier/method selection message
+ * from buffer <b>raw_data</b> (of length <b>datalen</b>). Update
+ * relevant fields of <b>req</b> (if any). Set <b>*have_user_pass</b> to
+ * true if username/password method is found. Set <b>*have_no_auth</b>
+ * if no-auth method is found. Set <b>*drain_out</b> to number of bytes
+ * we parsed so far.
+ *
+ * Return SOCKS_RESULT_DONE if parsing succeeded, SOCKS_RESULT_INVALID if
+ * parsing failed because of invalid input or SOCKS_RESULT_TRUNCATED if it
+ * failed due to incomplete (truncated) input.
+ */
 static socks_result_t
 parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
                              size_t datalen, int *have_user_pass,
@@ -309,6 +330,16 @@ parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
   return res;
 }
 
+/**
+ * Validate and respond to version identifier/method selection message
+ * we parsed in parse_socks5_methods_request (corresponding to <b>req</b>
+ * and having user/pass method if <b>have_user_pass</b> is true, no-auth
+ * method if <b>have_no_auth</b> is true). Set <b>req->reply</b> to
+ * an appropriate response (in SOCKS5 wire format).
+ *
+ * On success, return SOCKS_RESULT_DONE. On failure, return
+ * SOCKS_RESULT_INVALID.
+ */
 static socks_result_t
 process_socks5_methods_request(socks_request_t *req, int have_user_pass,
                                int have_no_auth)
@@ -363,6 +394,16 @@ process_socks5_methods_request(socks_request_t *req, int have_user_pass,
   return res;
 }
 
+/**
+ * Parse SOCKS5/RFC1929 username/password request from buffer
+ * <b>raw_data</b> of length <b>datalen</b> and update relevant
+ * fields of <b>req</b>. Set <b>*drain_out</b> to number of bytes
+ * we parsed so far.
+ *
+ * Return SOCKS_RESULT_DONE if parsing succeeded, SOCKS_RESULT_INVALID if
+ * parsing failed because of invalid input or SOCKS_RESULT_TRUNCATED if it
+ * failed due to incomplete (truncated) input.
+ */
 static socks_result_t
 parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
                            size_t datalen, size_t *drain_out)
@@ -415,6 +456,12 @@ parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
   return res;
 }
 
+/**
+ * Validate and respond to SOCKS5 username/password request we
+ * parsed in parse_socks5_userpass_auth (corresponding to <b>req</b>.
+ * Set <b>req->reply</b> to appropriate responsed. Return
+ * SOCKS_RESULT_DONE on success or SOCKS_RESULT_INVALID on failure.
+ */
 static socks_result_t
 process_socks5_userpass_auth(socks_request_t *req)
 {
@@ -461,6 +508,15 @@ process_socks5_userpass_auth(socks_request_t *req)
   return res;
 }
 
+/**
+ * Parse a single SOCKS5 client request (RFC 1928 section 4) from buffer
+ * <b>raw_data</b> of length <b>datalen</b> and update relevant field of
+ * <b>req</b>. Set <b>*drain_out</b> to number of bytes we parsed so far.
+ *
+ * Return SOCKS_RESULT_DONE if parsing succeeded, SOCKS_RESULT_INVALID if
+ * parsing failed because of invalid input or SOCKS_RESULT_TRUNCATED if it
+ * failed due to incomplete (truncated) input.
+ */
 static socks_result_t
 parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
                             size_t datalen, size_t *drain_out)
@@ -527,6 +583,16 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
   return res;
 }
 
+/**
+ * Validate and respond to SOCKS5 request we parsed in
+ * parse_socks5_client_request (corresponding to <b>req</b>.
+ * Write appropriate response to <b>req->reply</b> (in
+ * SOCKS5 wire format). If <b>log_sockstype</b> is true, log a
+ * notice about possible DNS leaks on local system. If
+ * <b>safe_socks</b> is true, disallow insecure usage of SOCKS
+ * protocol. Return SOCKS_RESULT_DONE on success or
+ * SOCKS_RESULT_INVALID on failure.
+ */
 static socks_result_t
 process_socks5_client_request(socks_request_t *req,
                               int log_sockstype,
@@ -587,6 +653,28 @@ process_socks5_client_request(socks_request_t *req,
   return res;
 }
 
+/**
+ * Handle (parse, validate, process, respond) a single SOCKS
+ * message in buffer <b>raw_data</b> of length <b>datalen</b>.
+ * Update relevant fields of <b>req</b>. If <b>log_sockstype</b>
+ * is true, log a warning about possible DNS leaks on local
+ * system. If <b>safe_socks</b> is true, disallow insecure
+ * usage of SOCKS protocol. Set <b>*drain_out</b> to number
+ * of bytes in <b>raw_data</b> that we processed so far and
+ * that can be safely drained from buffer.
+ *
+ * Return:
+ *  - SOCKS_RESULT_DONE if succeeded and not expecting further
+ *    messages from client.
+ *  - SOCKS_RESULT_INVALID if any of the steps failed due to
+ *    request being invalid or unexpected given current state.
+ *  - SOCKS_RESULT_TRUNCATED if we do not found an expected
+ *    SOCKS message in its entirety (more stuff has to arrive
+ *    from client).
+ *  - SOCKS_RESULT_MORE_EXPECTED if we handled current message
+ *    successfully, but we expect more messages from the
+ *    client.
+ */
 static socks_result_t
 handle_socks_message(const uint8_t *raw_data, size_t datalen,
                      socks_request_t *req, int log_sockstype,
