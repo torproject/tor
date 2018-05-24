@@ -237,7 +237,7 @@ pem_no_password_cb(char *buf, int size, int rwflag, void *u)
   (void)size;
   (void)rwflag;
   (void)u;
-  return 0;
+  return -1;
 }
 
 /** Read a PEM-encoded private key from the <b>len</b>-byte string <b>s</b>
