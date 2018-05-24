@@ -653,7 +653,12 @@ pem_no_password_cb(char *buf, int size, int rwflag, void *u)
   (void)size;
   (void)rwflag;
   (void)u;
-  return 0;
+  /* The openssl documentation says that a callback "must" return 0 if an
+   * error occurred.  But during the 1.1.1 series (commit c82c3462267afdbbaa5
+   * they changed the interpretation so that 0 indicates an empty password and
+   * -1 indicates an error. We want to reject any encrypted PEM buffers, so we
+   * return -1.  This will work on older OpenSSL versions and LibreSSL too. */
+  return -1;
 }
 
 /** Read a PEM-encoded private key from the <b>len</b>-byte string <b>s</b>
