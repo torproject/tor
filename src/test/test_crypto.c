@@ -1362,6 +1362,46 @@ test_crypto_pk_base64(void *arg)
   tor_free(encoded);
 }
 
+static void
+test_crypto_pk_pem_encrypted(void *arg)
+{
+  crypto_pk_t *pk = NULL;
+  (void)arg;
+
+  pk = crypto_pk_new();
+  /* we need to make sure that we won't stall if somebody gives us a key
+     that's encrypted with a password. */
+  {
+    const char *s =
+      "-----BEGIN RSA PRIVATE KEY-----\n"
+      "Proc-Type: 4,ENCRYPTED\n"
+      "DEK-Info: AES-128-CBC,EFA86BB9D2AB11E80B4E3DCD97782B16\n"
+      "\n"
+      "Z2Je4m0cFepc6coQkVbGcvNCHxTf941N2XYEVE6kn0CqWqoUH4tlwV6for5D91np\n"
+      "5NiEFTkWj31EhrvrYcuiJtQ/iEbABxZULFWFeJ058rb+1izBz5rScqnEacIS/3Go\n"
+      "YntnROBDwiKmUnue6PJVYg==\n"
+      "-----END RSA PRIVATE KEY-----\n";
+    tt_int_op(-1, OP_EQ,
+              crypto_pk_read_private_key_from_string(pk, s, strlen(s)));
+  }
+  /* For fun, make sure we aren't hit by OpenSSL issue
+     https://github.com/openssl/openssl/issues/6347 , where we get in trouble
+     if a cipher doesn't use an IV.
+  */
+  {
+    const char *s =
+      "-----BEGIN RSA PUBLIC KEY-----\n"
+      "Proc-Type:4,ENCRYPTED\n"
+      "DEK-Info:des-ede -\n"
+      "\n"
+      "iRqK\n"
+      "-----END RSA PUBLIC KEY-----\n";
+    tt_int_op(-1, OP_EQ,
+              crypto_pk_read_public_key_from_string(pk, s, strlen(s)));
+  }
+ done:
+  crypto_pk_free(pk);
+}
 #ifdef HAVE_TRUNCATE
 #define do_truncate truncate
 #else
@@ -2990,6 +3030,7 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(pk),
   { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },
   { "pk_base64", test_crypto_pk_base64, TT_FORK, NULL, NULL },
+  { "pk_pem_encrypted", test_crypto_pk_pem_encrypted, TT_FORK, NULL, NULL },
   CRYPTO_LEGACY(digests),
   { "digest_names", test_crypto_digest_names, 0, NULL, NULL },
   { "sha3", test_crypto_sha3, TT_FORK, NULL, NULL},
