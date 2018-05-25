@@ -26,6 +26,7 @@ MOCK_DECL(const node_t *, node_get_by_ed25519_id,
 
 const node_t *node_get_by_hex_id(const char *identity_digest,
                                  unsigned flags);
+const smartlist_t *nodelist_get_all_nodes(void);
 node_t *nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out);
 node_t *nodelist_add_microdesc(microdesc_t *md);
 void nodelist_set_consensus(networkstatus_t *ns);

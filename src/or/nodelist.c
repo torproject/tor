@@ -891,6 +891,15 @@ node_get_by_hex_id(const char *hex_id, unsigned flags)
   return NULL;
 }
 
+const smartlist_t *
+nodelist_get_all_nodes(void)
+{
+  if (PREDICT_UNLIKELY(the_nodelist == NULL))
+    return NULL;
+
+  return (const smartlist_t *)the_nodelist->nodes;
+}
+
 /** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
  * the corresponding node_t, or NULL if none exists. Warn the user if they
  * have specified a router by nickname, unless the NNF_NO_WARN_UNNAMED bit is

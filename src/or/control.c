@@ -2207,6 +2207,25 @@ getinfo_helper_dir(control_connection_t *control_conn,
         return -1;
       }
     }
+  } else if (!strcmp(question, "md/all")) {
+    const smartlist_t *nodes = nodelist_get_all_nodes();
+    if (!nodes) {
+      *errmsg = "Internal error";
+      return -1;
+    }
+
+    smartlist_t *microdescs = smartlist_new();
+
+    SMARTLIST_FOREACH_BEGIN(nodes, node_t *, n) {
+      if (n->md && n->md->body) {
+        char *copy = tor_strndup(n->md->body, n->md->bodylen);
+        smartlist_add(microdescs, copy);
+      }
+    } SMARTLIST_FOREACH_END(n);
+
+    *answer = smartlist_join_strings(microdescs, "", 0, NULL);
+    SMARTLIST_FOREACH(microdescs, char *, md, tor_free(md));
+    smartlist_free(microdescs);
   } else if (!strcmpstart(question, "md/id/")) {
     const node_t *node = node_get_by_hex_id(question+strlen("md/id/"), 0);
     const microdesc_t *md = NULL;
@@ -3241,6 +3260,7 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("desc/download-enabled", dir,
        "Do we try to download router descriptors?"),
   ITEM("desc/all-recent-extrainfo-hack", dir, NULL), /* Hack. */
+  ITEM("md/all", dir, "All known microdescriptors."),
   PREFIX("md/id/", dir, "Microdescriptors by ID"),
   PREFIX("md/name/", dir, "Microdescriptors by name"),
   ITEM("md/download-enabled", dir,
@@ -3400,6 +3420,7 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
     const char *errmsg = NULL;
+
     if (handle_getinfo_helper(conn, q, &ans, &errmsg) < 0) {
       if (!errmsg)
         errmsg = "Internal error";
