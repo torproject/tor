@@ -361,6 +361,7 @@ test_pick_tor2web_rendezvous_node(void *arg)
 
   /* Parse Tor2webRendezvousPoints as a routerset. */
   options->Tor2webRendezvousPoints = routerset_new();
+  options->UseMicrodescriptors = 0;
   retval = routerset_parse(options->Tor2webRendezvousPoints,
                            tor2web_rendezvous_str,
                            "test_tor2web_rp");

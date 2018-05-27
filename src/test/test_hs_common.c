@@ -305,7 +305,8 @@ helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
   node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
   tt_assert(node);
   node->rs = rs;
-  /* We need this to exist for node_has_descriptor() to return true. */
+  /* We need this to exist for node_has_preferred_descriptor() to return
+   * true. */
   node->md = tor_malloc_zero(sizeof(microdesc_t));
   /* Do this now the nodelist_set_routerinfo() function needs a "rs" to set
    * the indexes which it doesn't have when it is called. */

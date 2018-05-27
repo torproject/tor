@@ -417,7 +417,7 @@ onion_populate_cpath(origin_circuit_t *circ)
                                     circ->cpath->extend_info->identity_digest);
     /* If we don't know the node and its descriptor, we must be bootstrapping.
      */
-    if (!node || !node_has_descriptor(node)) {
+    if (!node || !node_has_preferred_descriptor(node, 1)) {
       return 0;
     }
   }
@@ -1827,7 +1827,7 @@ ap_stream_wants_exit_attention(connection_t *conn)
  * Return NULL if we can't find any suitable routers.
  */
 static const node_t *
-choose_good_exit_server_general(int need_uptime, int need_capacity)
+choose_good_exit_server_general(router_crn_flags_t flags)
 {
   int *n_supported;
   int n_pending_connections = 0;
@@ -1837,6 +1837,9 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
   const or_options_t *options = get_options();
   const smartlist_t *the_nodes;
   const node_t *selected_node=NULL;
+  const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
+  const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
+  const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
 
   connections = get_connection_array();
 
@@ -1869,7 +1872,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
        */
       continue;
     }
-    if (!node_has_descriptor(node)) {
+    if (!node_has_preferred_descriptor(node, direct_conn)) {
       n_supported[i] = -1;
       continue;
     }
@@ -1982,7 +1985,8 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
                  need_capacity?", fast":"",
                  need_uptime?", stable":"");
         tor_free(n_supported);
-        return choose_good_exit_server_general(0, 0);
+        flags &= ~(CRN_NEED_UPTIME|CRN_NEED_CAPACITY);
+        return choose_good_exit_server_general(flags);
       }
       log_notice(LD_CIRC, "All routers are down or won't exit%s -- "
                  "choosing a doomed exit at random.",
@@ -2229,17 +2233,11 @@ pick_restricted_middle_node(router_crn_flags_t flags,
  * toward the preferences in 'options'.
  */
 static const node_t *
-choose_good_exit_server(origin_circuit_t *circ, int need_uptime,
-                        int need_capacity, int is_internal, int need_hs_v3)
+choose_good_exit_server(origin_circuit_t *circ,
+                        router_crn_flags_t flags, int is_internal)
 {
   const or_options_t *options = get_options();
-  router_crn_flags_t flags = CRN_NEED_DESC;
-  if (need_uptime)
-    flags |= CRN_NEED_UPTIME;
-  if (need_capacity)
-    flags |= CRN_NEED_CAPACITY;
-  if (need_hs_v3)
-    flags |= CRN_RENDEZVOUS_V3;
+  flags |= CRN_NEED_DESC;
 
   switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_HSDIR_GET:
@@ -2253,7 +2251,7 @@ choose_good_exit_server(origin_circuit_t *circ, int need_uptime,
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, options->ExcludeNodes, flags);
       else
-        return choose_good_exit_server_general(need_uptime,need_capacity);
+        return choose_good_exit_server_general(flags);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       {
         /* Pick a new RP */
@@ -2378,15 +2376,22 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
              extend_info_describe(exit_ei));
     exit_ei = extend_info_dup(exit_ei);
   } else { /* we have to decide one */
+    router_crn_flags_t flags = CRN_NEED_DESC;
+    if (state->need_uptime)
+      flags |= CRN_NEED_UPTIME;
+    if (state->need_capacity)
+      flags |= CRN_NEED_CAPACITY;
+    if (is_hs_v3_rp_circuit)
+      flags |= CRN_RENDEZVOUS_V3;
+    if (state->onehop_tunnel)
+      flags |= CRN_DIRECT_CONN;
     const node_t *node =
-      choose_good_exit_server(circ, state->need_uptime,
-                              state->need_capacity, state->is_internal,
-                              is_hs_v3_rp_circuit);
+      choose_good_exit_server(circ, flags, state->is_internal);
     if (!node) {
       log_warn(LD_CIRC,"Failed to choose an exit server");
       return -1;
     }
-    exit_ei = extend_info_from_node(node, 0);
+    exit_ei = extend_info_from_node(node, state->onehop_tunnel);
     if (BUG(exit_ei == NULL))
       return -1;
   }
@@ -2443,6 +2448,10 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
 
 /** Return the number of routers in <b>routers</b> that are currently up
  * and available for building circuits through.
+ *
+ * (Note that this function may overcount or undercount, if we have
+ * descriptors that are not the type we would prefer to use for some
+ * particular router. See bug #25885.)
  */
 MOCK_IMPL(STATIC int,
 count_acceptable_nodes, (smartlist_t *nodes))
@@ -2459,7 +2468,7 @@ count_acceptable_nodes, (smartlist_t *nodes))
     if (! node->is_valid)
 //      log_debug(LD_CIRC,"Nope, the directory says %d is not valid.",i);
       continue;
-    if (! node_has_descriptor(node))
+    if (! node_has_any_descriptor(node))
       continue;
     /* The node has a descriptor, so we can just check the ntor key directly */
     if (!node_has_curve25519_onion_key(node))
@@ -2847,9 +2856,10 @@ extend_info_new(const char *nickname,
  * of the node (i.e. its IPv4 address) unless
  * <b>for_direct_connect</b> is true, in which case the preferred
  * address is used instead. May return NULL if there is not enough
- * info about <b>node</b> to extend to it--for example, if there is no
- * routerinfo_t or microdesc_t, or if for_direct_connect is true and none of
- * the node's addresses are allowed by tor's firewall and IP version config.
+ * info about <b>node</b> to extend to it--for example, if the preferred
+ * routerinfo_t or microdesc_t is missing, or if for_direct_connect is
+ * true and none of the node's addresses is allowed by tor's firewall
+ * and IP version config.
  **/
 extend_info_t *
 extend_info_from_node(const node_t *node, int for_direct_connect)
@@ -2857,17 +2867,8 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
   tor_addr_port_t ap;
   int valid_addr = 0;
 
-  const int is_bridge = node_is_a_configured_bridge(node);
-  const int we_use_mds = we_use_microdescriptors_for_circuits(get_options());
-
-  if ((is_bridge && for_direct_connect) || !we_use_mds) {
-    /* We need an ri in this case. */
-    if (!node->ri)
-      return NULL;
-  } else {
-    /* Otherwise we need an md. */
-    if (node->rs == NULL || node->md == NULL)
-      return NULL;
+  if (!node_has_preferred_descriptor(node, for_direct_connect)) {
+    return NULL;
   }
 
   /* Choose a preferred address first, but fall back to an allowed address.
