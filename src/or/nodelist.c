@@ -43,6 +43,7 @@
 #include "or.h"
 #include "address.h"
 #include "address_set.h"
+#include "bridges.h"
 #include "config.h"
 #include "control.h"
 #include "dirserv.h"
@@ -1130,13 +1131,42 @@ node_is_dir(const node_t *node)
   }
 }
 
-/** Return true iff <b>node</b> has either kind of usable descriptor -- that
- * is, a routerdescriptor or a microdescriptor. */
+/** Return true iff <b>node</b> has either kind of descriptor -- that
+ * is, a routerdescriptor or a microdescriptor.
+ *
+ * You should probably use node_has_preferred_descriptor() instead.
+ **/
 int
-node_has_descriptor(const node_t *node)
+node_has_any_descriptor(const node_t *node)
 {
   return (node->ri ||
           (node->rs && node->md));
+}
+
+/** Return true iff <b>node</b> has the kind of descriptor we would prefer to
+ * use for it, given our configuration and how we intend to use the node.
+ *
+ * If <b>for_direct_connect</b> is true, we intend to connect to the node
+ * directly, as the first hop of a circuit; otherwise, we intend to connect to
+ * it indirectly, or use it as if we were connecting to it indirectly. */
+int
+node_has_preferred_descriptor(const node_t *node,
+                              int for_direct_connect)
+{
+  const int is_bridge = node_is_a_configured_bridge(node);
+  const int we_use_mds = we_use_microdescriptors_for_circuits(get_options());
+
+  if ((is_bridge && for_direct_connect) || !we_use_mds) {
+    /* We need an ri in this case. */
+    if (!node->ri)
+      return 0;
+  } else {
+    /* Otherwise we need an rs and an md. */
+    if (node->rs == NULL || node->md == NULL)
+      return 0;
+  }
+
+  return 1;
 }
 
 /** Return the router_purpose of <b>node</b>. */
@@ -2221,7 +2251,8 @@ compute_frac_paths_available(const networkstatus_t *consensus,
               nu);
 
     SMARTLIST_FOREACH_BEGIN(myexits_unflagged, const node_t *, node) {
-      if (node_has_descriptor(node) && node_exit_policy_rejects_all(node)) {
+      if (node_has_preferred_descriptor(node, 0) &&
+          node_exit_policy_rejects_all(node)) {
         SMARTLIST_DEL_CURRENT(myexits_unflagged, node);
         /* this node is not actually an exit */
         np--;

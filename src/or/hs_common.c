@@ -1280,8 +1280,10 @@ node_has_hsdir_index(const node_t *node)
   tor_assert(node_supports_v3_hsdir(node));
 
   /* A node can't have an HSDir index without a descriptor since we need desc
-   * to get its ed25519 key */
-  if (!node_has_descriptor(node)) {
+   * to get its ed25519 key.  for_direct_connect should be zero, since we
+   * always use the consensus-indexed node's keys to build the hash ring, even
+   * if some of the consensus-indexed nodes are also bridges. */
+  if (!node_has_preferred_descriptor(node, 0)) {
     return 0;
   }
 
@@ -1612,12 +1614,17 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str)
   hs_clean_last_hid_serv_requests(now);
 
   /* Only select those hidden service directories to which we did not send a
-   * request recently and for which we have a router descriptor here. */
+   * request recently and for which we have a router descriptor here.
+   *
+   * Use for_direct_connect==0 even if we will be connecting to the node
+   * directly, since we always use the key information in the
+   * consensus-indexed node descriptors for building the index.
+   **/
   SMARTLIST_FOREACH_BEGIN(responsible_dirs, routerstatus_t *, dir) {
     time_t last = hs_lookup_last_hid_serv_request(dir, req_key_str, 0, 0);
     const node_t *node = node_get_by_id(dir->identity_digest);
     if (last + hs_hsdir_requery_period(options) >= now ||
-        !node || !node_has_descriptor(node)) {
+        !node || !node_has_preferred_descriptor(node, 0)) {
       SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
       continue;
     }

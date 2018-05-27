@@ -3597,7 +3597,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
         /* Don't upload descriptor if we succeeded in doing so last time. */
         continue;
       node = node_get_by_id(hs_dir->identity_digest);
-      if (!node || !node_has_descriptor(node)) {
+      if (!node || !node_has_preferred_descriptor(node,0)) {
         log_info(LD_REND, "Not launching upload for for v2 descriptor to "
                           "hidden service directory %s; we don't have its "
                           "router descriptor. Queuing for later upload.",
