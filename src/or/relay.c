@@ -1752,8 +1752,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
           circuit_resume_edge_reading(circ, layer_hint);
 
           /* We count circuit-level sendme's as valid delivered data because
-           * they are rate limited. Note that we cannot count stream
-           * sendme's because the other end could send as many as they like.
+           * they are rate limited.
            */
           if (CIRCUIT_IS_ORIGIN(circ)) {
             circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ),
@@ -1783,6 +1782,21 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                  rh.stream_id);
         return 0;
       }
+      if (conn->package_window + STREAMWINDOW_INCREMENT >
+          STREAMWINDOW_START_MAX) {
+        static struct ratelim_t stream_warn_ratelim = RATELIM_INIT(600);
+        log_fn_ratelim(&stream_warn_ratelim,LOG_PROTOCOL_WARN, LD_PROTOCOL,
+               "Unexpected stream sendme cell. Closing circ (window %d).",
+               conn->package_window);
+        return -END_CIRC_REASON_TORPROTOCOL;
+      }
+
+      /* At this point, the stream sendme is valid */
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ),
+                                rh.length);
+      }
+
       conn->package_window += STREAMWINDOW_INCREMENT;
       log_debug(domain,"stream-level sendme, packagewindow now %d.",
                 conn->package_window);
