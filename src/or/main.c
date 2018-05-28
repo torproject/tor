@@ -2319,7 +2319,7 @@ retry_listeners_callback(time_t now, const or_options_t *options)
   (void)now;
   (void)options;
   if (!net_is_disabled()) {
-    retry_all_listeners(NULL, NULL, 0);
+    retry_all_listeners(NULL, 0);
     return 60;
   }
   return PERIODIC_EVENT_NO_UPDATE;

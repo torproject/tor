@@ -15,6 +15,17 @@
 /* XXXX For buf_datalen in inline function */
 #include "buffers.h"
 
+/**
+ * This struct associates an old listener connection to be replaced
+ * by new connection described by port configuration. Only used when
+ * moving listeners to/from wildcard IP address.
+ */
+typedef struct
+{
+  connection_t *old_conn; /* Old listener connection to be replaced */
+  const port_cfg_t *new_port; /* New port configuration */
+} listener_replacement_t;
+
 const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 int conn_listener_type_supports_af_unix(int type);
@@ -112,8 +123,7 @@ void log_failed_proxy_connection(connection_t *conn);
 int get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
                        const connection_t *conn);
 
-int retry_all_listeners(smartlist_t *replaced_conns,
-                        smartlist_t *new_conns,
+int retry_all_listeners(smartlist_t *new_conns,
                         int close_all_noncontrol);
 
 void connection_mark_all_noncontrol_listeners(void);

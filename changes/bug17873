@@ -1,0 +1,6 @@
+  o Minor bugfixes (OS compatibility):
+    - On Linux and Windows properly handle configuration change that
+      moves a listener to/from wildcard IP address. In case first
+      attempt to bind a socket fails, close the old listener and
+      try binding a socket again. Fixes bug 17873; bugfix on
+      0.0.8pre-1.
