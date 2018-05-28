@@ -215,7 +215,8 @@ dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,
 #endif /* defined(DIRSERV_PRIVATE) */
 
 int dirserv_read_measured_bandwidths(const char *from_file,
-                                     smartlist_t *routerstatuses);
+                                     smartlist_t *routerstatuses,
+                                     smartlist_t *bwlist_headers);
 
 int dirserv_read_guardfraction_file(const char *fname,
                                  smartlist_t *vote_routerstatuses);
