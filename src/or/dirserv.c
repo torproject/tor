@@ -2568,12 +2568,14 @@ measured_bw_line_apply(measured_bw_line_t *parsed_line,
 }
 
 /**
- * Read the measured bandwidth file and apply it to the list of
- * vote_routerstatus_t. Returns -1 on error, 0 otherwise.
+ * Read the measured bandwidth list file, apply it to the list of
+ * vote_routerstatus_t and store all the headers in <b>bwlist_headers</b>.
+ * Returns -1 on error, 0 otherwise.
  */
 int
 dirserv_read_measured_bandwidths(const char *from_file,
-                                 smartlist_t *routerstatuses)
+                                 smartlist_t *routerstatuses,
+                                 smartlist_t *bwlist_headers)
 {
   char line[512];
   FILE *fp = tor_fopen_cloexec(from_file, "r");
@@ -2621,6 +2623,8 @@ dirserv_read_measured_bandwidths(const char *from_file,
     return -1;
   }
 
+  smartlist_add_asprintf(bwlist_headers, "timestamp=%ld", file_time);
+
   if (routerstatuses)
     smartlist_sort(routerstatuses, compare_vote_routerstatus_entries);
 
@@ -2632,6 +2636,11 @@ dirserv_read_measured_bandwidths(const char *from_file,
         dirserv_cache_measured_bw(&parsed_line, file_time);
         if (measured_bw_line_apply(&parsed_line, routerstatuses) > 0)
           applied_lines++;
+      } else {
+        if (strcmp(line, "====\n") != 0) {
+          line[strlen(line)-1] = '\0';
+          smartlist_add_strdup(bwlist_headers, line);
+        };
       }
     }
   }

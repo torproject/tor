@@ -2762,6 +2762,10 @@ typedef struct networkstatus_t {
 
   /** Contains the shared random protocol data from a vote or consensus. */
   networkstatus_sr_info_t sr_info;
+
+  /** List of key=value strings from the headers of the bandwidth list file */
+  smartlist_t *bwlist_headers;
+
 } networkstatus_t;
 
 /** A set of signatures for a networkstatus consensus.  Unless otherwise
