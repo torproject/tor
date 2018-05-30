@@ -1470,7 +1470,7 @@ test_download_status_bridge(void *arg)
   return;
 }
 
-/** Set timeval to a mock date and time. This is neccessary
+/** Set timeval to a mock date and time. This is necessary
  * to make tor_gettimeofday() mockable. */
 static void
 mock_tor_gettimeofday(struct timeval *timeval)

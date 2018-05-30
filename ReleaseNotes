@@ -529,7 +529,7 @@ Changes in version 0.3.3.6 - 2018-05-22
       would call the Rust implementation of
       protover_get_supported_protocols(). This was due to the C version
       returning a static string, whereas the Rust version newly allocated
-      a CString to pass accross the FFI boundary. Consequently, the C
+      a CString to pass across the FFI boundary. Consequently, the C
       code was not expecting to need to free() what it was given. Fixes
       bug 25127; bugfix on 0.3.2.1-alpha.
 

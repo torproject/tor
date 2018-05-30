@@ -7,7 +7,7 @@
 /**
  * \file crypto_rand.h
  *
- * \brief Common functions for using (psuedo-)random number generators.
+ * \brief Common functions for using (pseudo-)random number generators.
  **/
 
 #ifndef TOR_CRYPTO_RAND_H
