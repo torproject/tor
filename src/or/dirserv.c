@@ -2637,7 +2637,10 @@ dirserv_read_measured_bandwidths(const char *from_file,
         if (measured_bw_line_apply(&parsed_line, routerstatuses) > 0)
           applied_lines++;
       } else {
-        if (strcmp(line, "====\n") != 0) {
+        /* If line does not contain the header separator and it is key_value,
+         * it is probably a KeyValue header.*/
+        if (strcmp(line, "====\n") != 0 &&
+            string_is_key_value(LOG_DEBUG, line)) {
           line[strlen(line)-1] = '\0';
           smartlist_add_strdup(bwlist_headers, line);
         };
