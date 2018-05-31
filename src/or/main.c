@@ -109,6 +109,7 @@
 #include "tor_api.h"
 #include "tor_api_internal.h"
 #include "util_process.h"
+#include "voting_schedule.h"
 #include "ext_orport.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
@@ -210,6 +211,12 @@ static int main_loop_should_exit = 0;
  * main_loop_should_exit is true.
  */
 static int main_loop_exit_value = 0;
+
+/** The system clock jumped forward and we might have gone from a non-live
+ *  consensus to a live one. In this case we want to recalculate some consensus
+ *  data to make sure that various consensus-related metadata were computed
+ *  with a live consensus. */
+static bool need_to_recalculate_consensus_data = false;
 
 /** We set this to 1 when we've opened a circuit, so we can print a log
  * entry to inform the user that Tor is working.  We set it to 0 when
@@ -1357,6 +1364,7 @@ CALLBACK(downrate_stability);
 CALLBACK(expire_old_ciruits_serverside);
 CALLBACK(fetch_networkstatus);
 CALLBACK(heartbeat);
+CALLBACK(recalculate_consensus_data);
 CALLBACK(hs_service);
 CALLBACK(launch_descriptor_fetches);
 CALLBACK(launch_reachability_tests);
@@ -1394,6 +1402,7 @@ STATIC periodic_event_item_t periodic_events[] = {
   CALLBACK(save_state, PERIODIC_EVENT_ROLE_ALL, 0),
   CALLBACK(rotate_x509_certificate, PERIODIC_EVENT_ROLE_ALL, 0),
   CALLBACK(write_stats_file, PERIODIC_EVENT_ROLE_ALL, 0),
+  CALLBACK(recalculate_consensus_data, PERIODIC_EVENT_ROLE_ALL, 0),
 
   /* Routers (bridge and relay) only. */
   CALLBACK(check_descriptor, PERIODIC_EVENT_ROLE_ROUTER,
@@ -2115,6 +2124,44 @@ write_stats_file_callback(time_t now, const or_options_t *options)
   return safe_timer_diff(now, next_time_to_write_stats_files);
 }
 
+/*
+ * Periodic callback: The system clock jumped forward and we might have gone
+ * from a non-live consensus to a live one. In this case we want to recalculate
+ * some consensus data to make sure that various consensus-related metadata
+ * were computed with a live consensus.
+ *
+ * We want to recalculate our voting schedule because we don't want to be stuck
+ * with a voting schedule computed with a bad clock. Also repopulate the
+ * nodelist based on the consensus and the current time because some of the
+ * nodelist data depend on having the right time (e.g. hsdir v3 indexes).
+ *
+ * This callback must be called before the hs_service callback, since the HS
+ * service functions depend on this recalculation.
+ */
+static int
+recalculate_consensus_data_callback(time_t now, const or_options_t *options)
+{
+  /* If there was no clock jump, then this function is a NOP */
+  if (!need_to_recalculate_consensus_data) {
+    return 1;
+  }
+
+  /* If we don't have a live consensus, this function is a NOP */
+  networkstatus_t *consensus = networkstatus_get_live_consensus(now);
+  if (!consensus) {
+    return 1;
+  }
+
+  log_info(LD_GENERAL, "Recalculating consensus data.");
+  voting_schedule_recalculate_timing(options, now);
+  nodelist_set_consensus(consensus);
+
+  /* Reset the flag */
+  need_to_recalculate_consensus_data = false;
+
+  return 1;
+}
+
 #define CHANNEL_CHECK_INTERVAL (60*60)
 static int
 check_canonical_channels_callback(time_t now, const or_options_t *options)
@@ -2582,6 +2629,14 @@ update_current_time(time_t now)
 
     if (clock_jumped || seconds_elapsed >= NUM_IDLE_SECONDS_BEFORE_WARN) {
       circuit_note_clock_jumped(seconds_elapsed, ! clock_jumped);
+    }
+
+    /* If the clock just jumped forward, we might be stuck with a consensus we
+     * fetched back when our clock was skewed. Schedule a recalculation of
+     * consensus metadata that might depend on the system time. */
+    if (clock_jumped) {
+      log_info(LD_GENERAL, "Clock jump forward: Recalculate consensus data.");
+      need_to_recalculate_consensus_data = true;
     }
   } else if (seconds_elapsed > 0) {
     stats_n_seconds_working += seconds_elapsed;
