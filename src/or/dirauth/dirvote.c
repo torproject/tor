@@ -252,8 +252,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     /* XXXX Abstraction violation: should be pulling a field out of v3_ns.*/
     char *flag_thresholds = dirserv_get_flag_thresholds_line();
     char *params;
-    char *bwlist_headers = smartlist_join_strings(v3_ns->bwlist_headers,
-                                                  " ", 0, NULL);
+    char *bwlist_headers;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
       make_consensus_method_list(MIN_SUPPORTED_CONSENSUS_METHOD,
@@ -268,6 +267,11 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     else
       params = tor_strdup("");
     tor_assert(cert);
+    if (v3_ns->bwlist_headers)
+      bwlist_headers = smartlist_join_strings(v3_ns->bwlist_headers, " ", 0,
+                                              NULL);
+    else
+      bwlist_headers = tor_strdup("");
     smartlist_add_asprintf(chunks,
                  "network-status-version 3\n"
                  "vote-status %s\n"
