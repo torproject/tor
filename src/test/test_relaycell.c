@@ -233,6 +233,13 @@ test_circbw_relay(void *arg)
                                      circ->cpath);
   ASSERT_COUNTED_BW();
 
+  /* Empty Data cell on open connection: not counted */
+  ENTRY_TO_CONN(entryconn)->marked_for_close = 0;
+  PACK_CELL(1, RELAY_COMMAND_DATA, "");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  ASSERT_UNCOUNTED_BW();
+
   /* Sendme on stream: not counted */
   ENTRY_TO_CONN(entryconn)->outbuf_flushlen = 0;
   PACK_CELL(1, RELAY_COMMAND_SENDME, "Data1234");
