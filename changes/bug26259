@@ -1,0 +1,4 @@
+  o Minor bugfixes (control port):
+    - Do not count 0-length RELAY_COMMAND_DATA cells as valid data in CIRC_BW
+      events. Previously, such cells were counted entirely in the OVERHEAD
+      field. Now they are not. Fixes bug 26259; bugfix on 0.3.4.1-alpha.
