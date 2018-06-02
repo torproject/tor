@@ -728,8 +728,8 @@ typedef enum {
 /** Catch-all "other" reason for closing origin circuits. */
 #define END_CIRC_AT_ORIGIN              -1
 
-/* Reasons why we (or a remote OR) might close a circuit. See tor-spec.txt for
- * documentation of these. */
+/* Reasons why we (or a remote OR) might close a circuit. See tor-spec.txt
+ * section 5.4 for documentation of these. */
 #define END_CIRC_REASON_MIN_            0
 #define END_CIRC_REASON_NONE            0
 #define END_CIRC_REASON_TORPROTOCOL     1
