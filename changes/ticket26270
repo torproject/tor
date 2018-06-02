@@ -1,0 +1,3 @@
+  o Code simplification and refactoring (directory authority, modularization):
+    - Move the directory authority module from src/or/dirauth to src/dirauth.
+      Closes ticket 26270.

@@ -71,7 +71,7 @@ src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \
         -DBINDIR="\"$(bindir)\""	       \
 	-I"$(top_srcdir)/src/or" -I"$(top_srcdir)/src/ext" \
-	-I"$(top_srcdir)/src/trunnel" \
+	-I"$(top_srcdir)/src/trunnel" -I"$(top_srcdir)/src" \
 	-I"$(top_srcdir)/src/ext/trunnel" \
 	-DTOR_UNIT_TESTS
 

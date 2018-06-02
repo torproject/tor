@@ -12,7 +12,7 @@ Currently, there is only one module:
 
   - Directory Authority subsystem (dirauth)
 
-It is located in its own directory in `src/or/dirauth/`. To disable it, one
+It is located in its own directory in `src/dirauth/`. To disable it, one
 need to pass `--disable-module-dirauth` at configure time. All modules are
 currently enabled by default.
 
@@ -97,7 +97,7 @@ There are couples of "rules" you want to follow:
   should never be done:
 
     - `src/or/shared_random.c`
-    - `src/or/dirauth/shared_random.c`
+    - `src/dirauth/shared_random.c`
 
 * When you include headers from the module, **always** use the full module
   path in your statement. Example:

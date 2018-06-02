@@ -121,10 +121,10 @@ LIBTOR_A_SOURCES = \
 
 # The Directory Authority module.
 MODULE_DIRAUTH_SOURCES = \
-	src/or/dirauth/dircollate.c				\
-	src/or/dirauth/dirvote.c				\
-	src/or/dirauth/shared_random.c				\
-	src/or/dirauth/shared_random_state.c
+	src/dirauth/dircollate.c				\
+	src/dirauth/dirvote.c					\
+	src/dirauth/shared_random.c				\
+	src/dirauth/shared_random_state.c
 if BUILD_MODULE_DIRAUTH
 LIBTOR_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
 endif
@@ -277,11 +277,11 @@ ORHEADERS = \
 
 # The Directory Authority module headers.
 ORHEADERS += \
-	src/or/dirauth/dircollate.h				\
-	src/or/dirauth/dirvote.h				\
-	src/or/dirauth/mode.h					\
-	src/or/dirauth/shared_random.h				\
-	src/or/dirauth/shared_random_state.h
+	src/dirauth/dircollate.h				\
+	src/dirauth/dirvote.h					\
+	src/dirauth/mode.h					\
+	src/dirauth/shared_random.h				\
+	src/dirauth/shared_random_state.h
 
 # This may someday want to be an installed file?
 noinst_HEADERS += src/or/tor_api.h
