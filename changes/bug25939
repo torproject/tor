@@ -1,0 +1,3 @@
+  o Minor bugfixes (onion services):
+    - Fix a bug that blocked the creation of ephemeral v3 onion services. Fixes
+      bug 25939; bugfix on 0.3.4.1-alpha.
