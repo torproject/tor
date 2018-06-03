@@ -140,7 +140,6 @@ test_bridges_clear_bridge_list(void *arg)
   const smartlist_t *bridgelist;
   const smartlist_t *bridgelist_after;
   const bridge_info_t *bridge;
-  const bridge_info_t *bridge_after;
 
   helper_add_bridges_to_bridgelist(arg);
   bridgelist = bridge_list_get();
@@ -152,10 +151,7 @@ test_bridges_clear_bridge_list(void *arg)
   clear_bridge_list();
   bridgelist_after = bridge_list_get();
   tt_ptr_op(bridgelist_after, OP_NE, NULL);
-
-  bridge_after = smartlist_get(bridgelist, 0);
-  // There now shouldn't be a first bridge
-  tt_ptr_op(bridge_after, OP_EQ, NULL);
+  tt_int_op(smartlist_len(bridgelist_after), OP_EQ, 0);
 
  done:
   return;
