@@ -2627,6 +2627,9 @@ mark_my_descriptor_dirty(const char *reason)
  * estimated bandwidth. */
 #define MAX_UPTIME_BANDWIDTH_CHANGE (24*60*60)
 
+/** By which factor bandwidth shifts have to change to be considered large. */
+#define BANDWIDTH_CHANGE_FACTOR 2
+
 /** Check whether bandwidth has changed a lot since the last time we announced
  * bandwidth while the uptime is smaller than MAX_UPTIME_BANDWIDTH_CHANGE.
  * If so, mark our descriptor dirty. */
@@ -2649,8 +2652,8 @@ check_descriptor_bandwidth_changed(time_t now)
    * shutting down. */
   cur = we_are_hibernating() ? 0 : rep_hist_bandwidth_assess();
   if ((prev != cur && (!prev || !cur)) ||
-      cur > prev*2 ||
-      cur < prev/2) {
+      cur > prev * BANDWIDTH_CHANGE_FACTOR ||
+      cur < prev / BANDWIDTH_CHANGE_FACTOR ) {
     if (last_changed+MAX_BANDWIDTH_CHANGE_FREQ < now || !prev) {
       log_info(LD_GENERAL,
                "Measured bandwidth has changed; rebuilding descriptor.");
