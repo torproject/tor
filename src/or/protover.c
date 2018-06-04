@@ -637,6 +637,9 @@ char *
 protover_compute_vote(const smartlist_t *list_of_proto_strings,
                       int threshold)
 {
+  if (smartlist_len(list_of_proto_strings) == 0)
+    return tor_strdup("");
+
   smartlist_t *all_entries = smartlist_new();
 
   // First, parse the inputs and break them into singleton entries.
@@ -668,7 +671,9 @@ protover_compute_vote(const smartlist_t *list_of_proto_strings,
 
   // Now find all the strings that appear at least 'threshold' times.
   smartlist_t *include_entries = smartlist_new();
-  const char *cur_entry = smartlist_get(all_entries, 0);
+  const char *cur_entry = smartlist_len(all_entries) > 0 ?
+                            smartlist_get(all_entries, 0) :
+                            NULL;
   int n_times = 0;
   SMARTLIST_FOREACH_BEGIN(all_entries, const char *, ent) {
     if (!strcmp(ent, cur_entry)) {
