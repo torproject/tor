@@ -4624,7 +4624,7 @@ handle_control_add_onion(control_connection_t *conn,
     static const char *max_s_prefix = "MaxStreams=";
     static const char *auth_prefix = "ClientAuth=";
 
-    const char *arg = smartlist_get(args, i);
+    const char *arg = smartlist_get(args, (int)i);
     if (!strcasecmpstart(arg, port_prefix)) {
       /* "Port=VIRTPORT[,TARGET]". */
       const char *port_str = arg + strlen(port_prefix);
