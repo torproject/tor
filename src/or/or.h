@@ -4840,6 +4840,8 @@ struct socks_request_t {
   /** The negotiated password value if any (for socks5). This value is NOT
    * nul-terminated; see passwordlen for its length. */
   char *password;
+
+  uint8_t socks5_atyp;
 };
 
 /********************************* circuitbuild.c **********************/

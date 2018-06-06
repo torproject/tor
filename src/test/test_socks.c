@@ -81,7 +81,7 @@ test_socks_4_supported_commands(void *ptr)
 
   tt_int_op(0,OP_EQ, buf_datalen(buf));
 
-  /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4370 */
+  /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.3:4370 */
   ADD_DATA(buf, "\x04\x01\x11\x12\x02\x02\x02\x03\x00");
   tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                  get_options()->SafeSocks),
@@ -97,7 +97,7 @@ test_socks_4_supported_commands(void *ptr)
   tt_int_op(0,OP_EQ, buf_datalen(buf));
   socks_request_clear(socks);
 
-  /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4369 with userid*/
+  /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.4:4369 with userid*/
   ADD_DATA(buf, "\x04\x01\x11\x12\x02\x02\x02\x04me\x00");
   tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0),
             OP_EQ, 1);
@@ -163,7 +163,7 @@ test_socks_4_bad_arguments(void *ptr)
   tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0),
             OP_EQ, -1);
   buf_clear(buf);
-  expect_log_msg_containing("user name too long; rejecting.");
+  expect_log_msg_containing("socks4: parsing failed - invalid request.");
   mock_clean_saved_logs();
 
   /* Try with 2000-byte hostname */
@@ -191,7 +191,7 @@ test_socks_4_bad_arguments(void *ptr)
   tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0),
             OP_EQ, -1);
   buf_clear(buf);
-  expect_log_msg_containing("Destaddr too long.");
+  expect_log_msg_containing("parsing failed - invalid request.");
   mock_clean_saved_logs();
 
   /* Socks4, bogus hostname */
@@ -645,7 +645,8 @@ test_socks_5_malformed_commands(void *ptr)
   tt_int_op(5,OP_EQ,socks->socks_version);
   tt_int_op(10,OP_EQ,socks->replylen);
   tt_int_op(5,OP_EQ,socks->reply[0]);
-  tt_int_op(SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED,OP_EQ,socks->reply[1]);
+  /* trunnel parsing will fail with -1 */
+  tt_int_op(SOCKS5_GENERAL_ERROR,OP_EQ,socks->reply[1]);
   tt_int_op(1,OP_EQ,socks->reply[3]);
 
  done:
