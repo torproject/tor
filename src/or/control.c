@@ -2208,10 +2208,12 @@ getinfo_helper_dir(control_connection_t *control_conn,
       }
     }
   } else if (!strcmp(question, "md/all")) {
-    const smartlist_t *nodes = nodelist_get_all_nodes();
-    if (!nodes) {
-      *errmsg = "Internal error";
-      return -1;
+    const smartlist_t *nodes = nodelist_get_list();
+    tor_assert(nodes);
+
+    if (smartlist_len(nodes) == 0) {
+      *answer = tor_strdup("");
+      return 0;
     }
 
     smartlist_t *microdescs = smartlist_new();
