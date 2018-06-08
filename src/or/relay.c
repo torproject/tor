@@ -1556,7 +1556,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return -END_CIRC_REASON_TORPROTOCOL;
       }
       /* Total all valid application bytes delivered */
-      if (CIRCUIT_IS_ORIGIN(circ)) {
+      if (CIRCUIT_IS_ORIGIN(circ) && rh.length > 0) {
         circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
       }
 
