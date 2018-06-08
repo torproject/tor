@@ -529,6 +529,10 @@ cmp_single_ent_by_version(const void **a_, const void **b_)
 static char *
 contract_protocol_list(const smartlist_t *proto_strings)
 {
+  if (smartlist_len(proto_strings) == 0) {
+    return tor_strdup("");
+  }
+
   // map from name to list of single-version entries
   strmap_t *entry_lists_by_name = strmap_new();
   // list of protocol names
@@ -637,6 +641,10 @@ char *
 protover_compute_vote(const smartlist_t *list_of_proto_strings,
                       int threshold)
 {
+  if (smartlist_len(list_of_proto_strings) == 0) {
+    return tor_strdup("");
+  }
+
   smartlist_t *all_entries = smartlist_new();
 
   // First, parse the inputs and break them into singleton entries.
@@ -662,6 +670,11 @@ protover_compute_vote(const smartlist_t *list_of_proto_strings,
     SMARTLIST_FOREACH(unexpanded, proto_entry_t *, e, proto_entry_free(e));
     smartlist_free(unexpanded);
   } SMARTLIST_FOREACH_END(vote);
+
+  if (smartlist_len(all_entries) == 0) {
+    smartlist_free(all_entries);
+    return tor_strdup("");
+  }
 
   // Now sort the singleton entries
   smartlist_sort_strings(all_entries);
