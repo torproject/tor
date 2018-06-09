@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2016, The Tor Project, Inc. */
+ * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -1427,8 +1427,8 @@ find_largest_max(bw_array_t *b)
  *
  * Return the smaller of these sums, divided by NUM_SECS_ROLLING_MEASURE.
  */
-int
-rep_hist_bandwidth_assess(void)
+MOCK_IMPL(int,
+rep_hist_bandwidth_assess,(void))
 {
   uint64_t w,r;
   r = find_largest_max(read_array);
