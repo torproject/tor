@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, The Tor Project, Inc. */
+/* Copyright (c) 2014-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "or.h"
@@ -24,6 +24,7 @@ void teardown_capture_of_logs(void);
 
 int mock_saved_log_has_message(const char *msg);
 int mock_saved_log_has_message_containing(const char *msg);
+int mock_saved_log_has_message_not_containing(const char *msg);
 int mock_saved_log_has_severity(int severity);
 int mock_saved_log_has_entry(void);
 int mock_saved_log_n_entries(void);
@@ -45,6 +46,10 @@ void mock_dump_saved_logs(void);
 #define expect_log_msg_containing(str) \
   assert_log_predicate(mock_saved_log_has_message_containing(str), \
                 "expected log to contain " # str);
+
+#define expect_log_msg_not_containing(str) \
+  assert_log_predicate(mock_saved_log_has_message_not_containing(str), \
+                "expected log to not contain " # str);
 
 #define expect_log_msg_containing_either(str1, str2)                    \
   assert_log_predicate(mock_saved_log_has_message_containing(str1) ||   \
