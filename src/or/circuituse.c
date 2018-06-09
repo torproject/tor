@@ -94,17 +94,19 @@ circuit_matches_with_rend_stream(const edge_connection_t *edge_conn,
  */
 static int
 circuit_is_acceptable(const origin_circuit_t *origin_circ,
-                      const entry_connection_t *conn,
+                      const entry_connection_t *entry_conn,
                       int must_be_open, uint8_t purpose,
                       int need_uptime, int need_internal,
                       time_t now)
 {
   const circuit_t *circ = TO_CIRCUIT(origin_circ);
   const node_t *exitnode;
+  const connection_t *conn = ENTRY_TO_CONN(entry_conn);
   cpath_build_state_t *build_state;
   tor_assert(circ);
+  tor_assert(entry_conn);
+  tor_assert(entry_conn->socks_request);
   tor_assert(conn);
-  tor_assert(conn->socks_request);
 
   if (must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_chan))
     return 0; /* ignore non-open circs */
@@ -164,21 +166,22 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
       purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
       purpose == CIRCUIT_PURPOSE_C_HSDIR_GET) {
     tor_addr_t addr;
-    const int family = tor_addr_parse(&addr, conn->socks_request->address);
+    const int family = tor_addr_parse(&addr,
+                                      entry_conn->socks_request->address);
     if (!exitnode && !build_state->onehop_tunnel) {
       log_debug(LD_CIRC,"Not considering circuit with unknown router.");
       return 0; /* this circuit is screwed and doesn't know it yet,
                  * or is a rendezvous circuit. */
     }
     if (build_state->onehop_tunnel) {
-      if (!conn->want_onehop) {
+      if (!entry_conn->want_onehop) {
         log_debug(LD_CIRC,"Skipping one-hop circuit.");
         return 0;
       }
-      tor_assert(conn->chosen_exit_name);
+      tor_assert(entry_conn->chosen_exit_name);
       if (build_state->chosen_exit) {
         char digest[DIGEST_LEN];
-        if (hexdigest_to_digest(conn->chosen_exit_name, digest) < 0)
+        if (hexdigest_to_digest(entry_conn->chosen_exit_name, digest) < 0)
           return 0; /* broken digest, we don't want it */
         if (tor_memneq(digest, build_state->chosen_exit->identity_digest,
                           DIGEST_LEN))
@@ -187,35 +190,47 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
           /* we don't know the digest; have to compare addr:port */
           if (family < 0 ||
               !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
-              build_state->chosen_exit->port != conn->socks_request->port)
+              build_state->chosen_exit->port !=
+              entry_conn->socks_request->port)
             return 0;
         }
       }
     } else {
-      if (conn->want_onehop) {
+      if (entry_conn->want_onehop) {
         /* don't use three-hop circuits -- that could hurt our anonymity. */
         return 0;
       }
     }
     if (origin_circ->prepend_policy && family != -1) {
       int r = compare_tor_addr_to_addr_policy(&addr,
-                                              conn->socks_request->port,
+                                              entry_conn->socks_request->port,
                                               origin_circ->prepend_policy);
       if (r == ADDR_POLICY_REJECTED)
         return 0;
     }
-    if (exitnode && !connection_ap_can_use_exit(conn, exitnode)) {
+    /* If we can't exit on IPv4, check if the node supports exiting on IPv6. */
+    if (!entry_conn->entry_cfg.ipv4_traffic &&
+        conn->purpose == CONN_TYPE_EXIT) {
+      tor_addr_t addr6;
+      tor_addr_make_null(&addr6, AF_INET6);
+      int r = compare_tor_addr_to_node_policy(&addr6,
+                                              entry_conn->socks_request->port,
+                                              exitnode);
+      if (r == ADDR_POLICY_REJECTED)
+        return 0;
+    }
+    if (exitnode && !connection_ap_can_use_exit(entry_conn, exitnode)) {
       /* can't exit from this router */
       return 0;
     }
   } else { /* not general: this might be a rend circuit */
-    const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
+    const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
     if (!circuit_matches_with_rend_stream(edge_conn, origin_circ)) {
       return 0;
     }
   }
 
-  if (!connection_edge_compatible_with_circuit(conn, origin_circ)) {
+  if (!connection_edge_compatible_with_circuit(entry_conn, origin_circ)) {
     /* conn needs to be isolated from other conns that have already used
      * origin_circ */
     return 0;

@@ -1,0 +1,4 @@
+  o Minor bugfix (ipv6):
+    - When "NoIPv4Traffic" is set as a SocksPort option flag, reject
+      circuits which don't allow exiting on IPv6. Fixes bug 21346;
+      bugfix on 0.3.4.2-alpha. Patch by Neel Chauhan.
