@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix compilation when building with OpenSSL 1.1.0 with the
-      "no-deprecated" flag enabled. Fixes bug 26156; bugfix on 0.3.4.1-alpha.

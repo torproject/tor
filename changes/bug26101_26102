@@ -1,5 +1,0 @@
-  o Minor bugfixes (test coverage tools):
-    - Update our "cov-diff" script to handle output from the latest
-      version of gcov, and to remove extraneous timestamp information
-      from its output. Fixes bugs 26101 and 26102; bugfix on
-      0.2.5.1-alpha.

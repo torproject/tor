@@ -1,4 +1,0 @@
-  o Minor features (continuous integration):
-    - Add the necessary configuration files for continuous integration
-      testing on Windows, via the Appveyor platform. Closes ticket 25549.
-      Patches from Marcin Cieślak and Isis Lovecruft.

@@ -1,4 +1,0 @@
-  o Documentation:
-    - In code comment, point the reader to the exact section
-      in Tor specification that specifies circuit close error
-      code values. Resolves ticket 25237.
