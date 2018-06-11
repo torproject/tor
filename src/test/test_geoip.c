@@ -383,6 +383,17 @@ test_geoip_with_pt(void *arg)
 #undef SET_TEST_IPV6
 #undef CHECK_COUNTRY
 
+const char GEOIP_CONTENT[] =
+  "134445936,134445939,MP\n"
+  "134445940,134447103,GU\n"
+  "134447104,134738943,US\n"
+  "134738944,134739199,CA\n"
+  "134739200,135192575,US\n"
+  "135192576,135200767,MX\n"
+  "135200768,135430143,US\n"
+  "135430144,135430399,CA\n"
+  "135430400,135432191,US\n";
+
 static void
 test_geoip_load_file(void *arg)
 {
@@ -403,16 +414,18 @@ test_geoip_load_file(void *arg)
   tt_str_op("0000000000000000000000000000000000000000", OP_EQ,
             geoip_db_digest(AF_INET));
 
-  const char FNAME[] = SRCDIR "/src/config/geoip";
-  int rv = geoip_load_file(AF_INET, FNAME);
+  const char *fname = get_fname("geoip");
+  tt_int_op(0, OP_EQ, write_str_to_file(fname, GEOIP_CONTENT, 0));
+
+  int rv = geoip_load_file(AF_INET, fname);
   if (rv != 0) {
-    TT_GRIPE(("Unable to load geoip from %s", escaped(FNAME)));
+    TT_GRIPE(("Unable to load geoip from %s", escaped(fname)));
   }
   tt_int_op(0, OP_EQ, rv);
 
   /* Check that we loaded some countries; this will fail if there are ever
-   * fewer than 50 countries in the world. */
-  tt_int_op(geoip_get_n_countries(), OP_GE, 50);
+   * fewer than 5 countries in our test above. */
+  tt_int_op(geoip_get_n_countries(), OP_GE, 5);
 
   /* Let's see where 8.8.8.8 is. */
   int country = geoip_get_country_by_ipv4(0x08080808);
@@ -425,7 +438,7 @@ test_geoip_load_file(void *arg)
             geoip_db_digest(AF_INET));
 
   /* And it should be set correctly */
-  contents = read_file_to_str(FNAME, RFTS_BIN, NULL);
+  contents = read_file_to_str(fname, RFTS_BIN, NULL);
   uint8_t d[DIGEST_LEN];
   crypto_digest((char*)d, contents, strlen(contents));
   dhex = tor_strdup(hex_str((char*)d, DIGEST_LEN));
@@ -461,12 +474,30 @@ test_geoip6_load_file(void *arg)
   tt_int_op(-1, OP_EQ, geoip_get_country_by_ipv6(&iaddr6));
 
   /* Load geiop6 file */
-  const char FNAME6[] = SRCDIR "/src/config/geoip6";
-  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET6, FNAME6));
+  const char *fname6 = get_fname("geoip6");
+  const char CONTENT[] =
+    "2001:4830:6010::,2001:4830:601f:ffff:ffff:ffff:ffff:ffff,GB\n"
+    "2001:4830:6020::,2001:4830:ffff:ffff:ffff:ffff:ffff:ffff,US\n"
+    "2001:4838::,2001:4838:ffff:ffff:ffff:ffff:ffff:ffff,US\n"
+    "2001:4840::,2001:4840:ffff:ffff:ffff:ffff:ffff:ffff,XY\n"
+    "2001:4848::,2001:4848:ffff:ffff:ffff:ffff:ffff:ffff,ZD\n"
+    "2001:4850::,2001:4850:ffff:ffff:ffff:ffff:ffff:ffff,RO\n"
+    "2001:4858::,2001:4858:ffff:ffff:ffff:ffff:ffff:ffff,TC\n"
+    "2001:4860::,2001:4860:ffff:ffff:ffff:ffff:ffff:ffff,US\n"
+    "2001:4868::,2001:4868:ffff:ffff:ffff:ffff:ffff:ffff,US\n"
+    "2001:4870::,2001:4871:ffff:ffff:ffff:ffff:ffff:ffff,NB\n"
+    "2001:4878::,2001:4878:128:ffff:ffff:ffff:ffff:ffff,US\n"
+    "2001:4878:129::,2001:4878:129:ffff:ffff:ffff:ffff:ffff,CR\n"
+    "2001:4878:12a::,2001:4878:203:ffff:ffff:ffff:ffff:ffff,US\n"
+    "2001:4878:204::,2001:4878:204:ffff:ffff:ffff:ffff:ffff,DE\n"
+    "2001:4878:205::,2001:4878:214:ffff:ffff:ffff:ffff:ffff,US\n";
+  tt_int_op(0, OP_EQ, write_str_to_file(fname6, CONTENT, 0));
+
+  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET6, fname6));
 
   /* Check that we loaded some countries; this will fail if there are ever
-   * fewer than 50 countries in the world. */
-  tt_int_op(geoip_get_n_countries(), OP_GE, 50);
+   * fewer than 5 countries in our test data above. */
+  tt_int_op(geoip_get_n_countries(), OP_GE, 5);
 
   /* Let's see where 2001:4860:4860::8888 (google dns) is. */
   const char *caddr6 = "2001:4860:4860::8888";
@@ -482,7 +513,7 @@ test_geoip6_load_file(void *arg)
             geoip_db_digest(AF_INET6));
 
   /* And it should be set correctly */
-  contents = read_file_to_str(FNAME6, RFTS_BIN, NULL);
+  contents = read_file_to_str(fname6, RFTS_BIN, NULL);
   uint8_t d[DIGEST_LEN];
   crypto_digest((char*)d, contents, strlen(contents));
   dhex = tor_strdup(hex_str((char*)d, DIGEST_LEN));
@@ -507,21 +538,27 @@ test_geoip_load_2nd_file(void *arg)
 {
   (void)arg;
 
+  char *fname_geoip = tor_strdup(get_fname("geoip_data"));
+  char *fname_empty = tor_strdup(get_fname("geoip_empty"));
+
+  tt_int_op(0, OP_EQ, write_str_to_file(fname_geoip, GEOIP_CONTENT, 0));
+  tt_int_op(0, OP_EQ, write_str_to_file(fname_empty, "\n", 0));
+
   /* Load 1st geoip file */
-  const char FNAME[] = SRCDIR "/src/config/geoip";
-  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME));
+  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, fname_geoip));
 
   /* Load 2nd geoip (empty) file */
   /* It has to be the same IP address family */
-  const char FNAME2[] = SRCDIR "/src/test/geoip_dummy";
-  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME2));
+  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, fname_empty));
 
   /* Check that there is no geoip information for 8.8.8.8, */
   /* since loading the empty 2nd file should have delete it. */
   int country = geoip_get_country_by_ipv4(0x08080808);
   tt_int_op(country, OP_EQ, 0);
 
-  done: ;
+ done:
+  tor_free(fname_geoip);
+  tor_free(fname_empty);
 }
 
 #define ENT(name)                                                       \
@@ -529,20 +566,12 @@ test_geoip_load_2nd_file(void *arg)
 #define FORK(name)                                                      \
   { #name, test_ ## name , TT_FORK, NULL, NULL }
 
-#ifdef _WIN32
-#define SKIP_ON_WINDOWS TT_SKIP
-#else
-#define SKIP_ON_WINDOWS 0
-#endif
-
 struct testcase_t geoip_tests[] = {
   { "geoip", test_geoip, TT_FORK, NULL, NULL },
   { "geoip_with_pt", test_geoip_with_pt, TT_FORK, NULL, NULL },
-  { "load_file", test_geoip_load_file, TT_FORK|SKIP_ON_WINDOWS, NULL, NULL },
-  { "load_file6", test_geoip6_load_file, TT_FORK | SKIP_ON_WINDOWS,
-    NULL, NULL },
-  { "load_2nd_file", test_geoip_load_2nd_file, TT_FORK | SKIP_ON_WINDOWS,
-    NULL, NULL },
+  { "load_file", test_geoip_load_file, TT_FORK, NULL, NULL },
+  { "load_file6", test_geoip6_load_file, TT_FORK, NULL, NULL },
+  { "load_2nd_file", test_geoip_load_2nd_file, TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
 };
