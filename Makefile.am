@@ -238,6 +238,20 @@ check-typos:
 		echo "You can install the latest version of misspell here: https://github.com/client9/misspell#install"; \
 	fi
 
+.PHONY: clippy
+clippy:
+if USE_RUST
+	@if test -x "`which cargo-clippy 2>&1;true`"; then \
+		echo "Running cargo clippy ..."; \
+		echo "Prepare yourself for the onslaught of suggestions ..."; \
+		(cd "$(top_srcdir)/src/rust" && cargo clippy); \
+	else \
+		echo "Tor can use clippy to lint Rust code."; \
+		echo "However, it seems that you don't have clippy installed."; \
+		echo "You can install the latest version of clippy by following the directions here: https://github.com/rust-lang-nursery/rust-clippy"; \
+	fi
+endif
+
 .PHONY: check-changes
 check-changes:
 if USEPYTHON
