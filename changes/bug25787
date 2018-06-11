@@ -1,0 +1,7 @@
+  o Minor bugfixes (testing):
+    - Instead of trying to  read the geoip configuration files from within the
+      unit tests, instead create our own ersatz files with just enough
+      geoip data in the format we expect. Trying to read from the source
+      directory created problems on Windows with mingw, where the
+      build system's paths are not the same as the platform's paths.
+      Fixes bug 25787; bugfix on 0.3.4.1-alpha.
