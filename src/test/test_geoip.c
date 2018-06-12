@@ -383,7 +383,7 @@ test_geoip_with_pt(void *arg)
 #undef SET_TEST_IPV6
 #undef CHECK_COUNTRY
 
-const char GEOIP_CONTENT[] =
+static const char GEOIP_CONTENT[] =
   "134445936,134445939,MP\n"
   "134445940,134447103,GU\n"
   "134447104,134738943,US\n"
