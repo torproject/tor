@@ -83,6 +83,10 @@ get_voting_schedule(const or_options_t *options, time_t now, int severity)
     interval = (int)( consensus->fresh_until - consensus->valid_after );
     vote_delay = consensus->vote_seconds;
     dist_delay = consensus->dist_seconds;
+
+    /* Note down the consensus valid after, so that we detect outdated voting
+     * schedules in case of skewed clocks etc. */
+    new_voting_schedule->live_consensus_valid_after = consensus->valid_after;
   } else {
     interval = options->TestingV3AuthInitialVotingInterval;
     vote_delay = options->TestingV3AuthInitialVoteDelay;
@@ -138,14 +142,34 @@ voting_schedule_t voting_schedule;
 time_t
 voting_schedule_get_next_valid_after_time(void)
 {
+  time_t now = approx_time();
+  bool need_to_recalculate_voting_schedule = false;
+
   /* This is a safe guard in order to make sure that the voting schedule
    * static object is at least initialized. Using this function with a zeroed
    * voting schedule can lead to bugs. */
   if (tor_mem_is_zero((const char *) &voting_schedule,
                       sizeof(voting_schedule))) {
-    voting_schedule_recalculate_timing(get_options(), time(NULL));
+    need_to_recalculate_voting_schedule = true;
+    goto done; /* no need for next check if we have to recalculate anyway */
+  }
+
+  /* Also make sure we are not using an outdated voting schedule. If we have a
+   * newer consensus, make sure we recalculate the voting schedule. */
+  const networkstatus_t *ns = networkstatus_get_live_consensus(now);
+  if (ns && ns->valid_after != voting_schedule.live_consensus_valid_after) {
+    log_info(LD_DIR, "Voting schedule is outdated: recalculating (%d/%d)",
+             (int) ns->valid_after,
+             (int) voting_schedule.live_consensus_valid_after);
+    need_to_recalculate_voting_schedule = true;
+  }
+
+ done:
+  if (need_to_recalculate_voting_schedule) {
+    voting_schedule_recalculate_timing(get_options(), now);
     voting_schedule.created_on_demand = 1;
   }
+
   return voting_schedule.interval_starts;
 }
 
