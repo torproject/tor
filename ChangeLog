@@ -1,74 +1,70 @@
 Changes in version 0.3.4.2-alpha - 2018-06-12
-  Tor 0.3.4.2-alpha fixes several minor bugs in the previous alpha release,
-  and forward-ports an authority-only security fix from 0.3.3.6.
+  Tor 0.3.4.2-alpha fixes several minor bugs in the previous alpha
+  release, and forward-ports an authority-only security fix from 0.3.3.6.
 
   o Major bugfixes (security, directory authority, denial-of-service, also in 0.3.3.6):
-    - Fix a bug that could have allowed an attacker to force a
-      directory authority to use up all its RAM by passing it a
-      maliciously crafted protocol versions string. Fixes bug 25517;
-      bugfix on 0.2.9.4-alpha.  This issue is also tracked as
-      TROVE-2018-005.
+    - Fix a bug that could have allowed an attacker to force a directory
+      authority to use up all its RAM by passing it a maliciously
+      crafted protocol versions string. Fixes bug 25517; bugfix on
+      0.2.9.4-alpha. This issue is also tracked as TROVE-2018-005.
 
   o Minor features (continuous integration):
     - Add the necessary configuration files for continuous integration
-      testing on Windows, via the Appveyor platform. Closes ticket 25549.
-      Patches from Marcin Cieślak and Isis Lovecruft.
-
-  o Minor bugfixes (compatibility, openssl):
-    - Work around a change in OpenSSL 1.1.1 where
-      return values that would previously indicate "no password" now
-      indicate an empty password. Without this workaround, Tor instances
-      running with OpenSSL 1.1.1 would accept descriptors that other Tor
-      instances would reject. Fixes bug 26116; bugfix on 0.2.5.16.
-
-  o Minor bugfixes (compilation):
-    - Silence unused-const-variable warnings in zstd.h on some gcc versions.
-      Fixes bug 26272; bugfix on 0.3.1.1-alpha.
-
-  o Minor bugfixes (C correctness):
-    - Avoid casting return value of smartlist_len() to double as
-      compiler does not like it when -Wbad-function-cast is on.
-      Fixes bug 26283; bugfix on 0.2.4.10-alpha.
+      testing on Windows, via the Appveyor platform. Closes ticket
+      25549. Patches from Marcin Cieślak and Isis Lovecruft.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the June 7 2018 Maxmind GeoLite2
       Country database. Closes ticket 26351.
 
+  o Minor bugfixes (C correctness):
+    - Avoid casting return value of smartlist_len() to double as
+      compiler does not like it when -Wbad-function-cast is on. Fixes
+      bug 26283; bugfix on 0.2.4.10-alpha.
+
+  o Minor bugfixes (compatibility, openssl):
+    - Work around a change in OpenSSL 1.1.1 where return values that
+      would previously indicate "no password" now indicate an empty
+      password. Without this workaround, Tor instances running with
+      OpenSSL 1.1.1 would accept descriptors that other Tor instances
+      would reject. Fixes bug 26116; bugfix on 0.2.5.16.
 
   o Minor bugfixes (compilation):
-    - Fix compilation when building with OpenSSL 1.1.0 with the
-      "no-deprecated" flag enabled. Fixes bug 26156; bugfix on 0.3.4.1-alpha.
+    - Silence unused-const-variable warnings in zstd.h on some gcc
+      versions. Fixes bug 26272; bugfix on 0.3.1.1-alpha.
+    - Fix compilation when building with OpenSSL 1.1.0 with the "no-
+      deprecated" flag enabled. Fixes bug 26156; bugfix on 0.3.4.1-alpha.
 
   o Minor bugfixes (control port):
-    - Do not count 0-length RELAY_COMMAND_DATA cells as valid data in CIRC_BW
-      events. Previously, such cells were counted entirely in the OVERHEAD
-      field. Now they are not. Fixes bug 26259; bugfix on 0.3.4.1-alpha.
+    - Do not count 0-length RELAY_COMMAND_DATA cells as valid data in
+      CIRC_BW events. Previously, such cells were counted entirely in
+      the OVERHEAD field. Now they are not. Fixes bug 26259; bugfix
+      on 0.3.4.1-alpha.
 
   o Minor bugfixes (controller):
     - Improve accuracy of the BUILDTIMEOUT_SET control port event's
-      TIMEOUT_RATE and CLOSE_RATE fields. (We were previously miscounting
-      the total number of circuits for these field values.) Fixes bug
-      26121; bugfix on 0.3.3.1-alpha.
+      TIMEOUT_RATE and CLOSE_RATE fields. (We were previously
+      miscounting the total number of circuits for these field values.)
+      Fixes bug 26121; bugfix on 0.3.3.1-alpha.
 
   o Minor bugfixes (hardening):
     - Prevent a possible out-of-bounds smartlist read in
-      protover_compute_vote(). Fixes bug 26196; bugfix on
-      0.2.9.4-alpha.
+      protover_compute_vote(). Fixes bug 26196; bugfix on 0.2.9.4-alpha.
 
   o Minor bugfixes (onion services):
-    - Fix a bug that blocked the creation of ephemeral v3 onion services. Fixes
-      bug 25939; bugfix on 0.3.4.1-alpha.
+    - Fix a bug that blocked the creation of ephemeral v3 onion
+      services. Fixes bug 25939; bugfix on 0.3.4.1-alpha.
 
   o Minor bugfixes (test coverage tools):
     - Update our "cov-diff" script to handle output from the latest
       version of gcov, and to remove extraneous timestamp information
-      from its output. Fixes bugs 26101 and 26102; bugfix on
-      0.2.5.1-alpha.
+      from its output. Fixes bugs 26101 and 26102; bugfix
+      on 0.2.5.1-alpha.
 
   o Documentation:
-    - In code comment, point the reader to the exact section
-      in Tor specification that specifies circuit close error
-      code values. Resolves ticket 25237.
+    - In code comment, point the reader to the exact section in Tor
+      specification that specifies circuit close error code values.
+      Resolves ticket 25237.
 
 
 Changes in version 0.3.3.6 - 2018-05-22
