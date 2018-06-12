@@ -1,0 +1,3 @@
+  o Minor features (directory authority):
+    - Add an IPv6 address for the "dannenberg" directory
+      authority. Closes ticket 26343.
