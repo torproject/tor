@@ -22,6 +22,20 @@ Changes in version 0.3.4.2-alpha - 2018-06-12
       instances would reject. Fixes bug 26116; bugfix on 0.2.5.16.
 
   o Minor bugfixes (compilation):
+    - Silence unused-const-variable warnings in zstd.h on some gcc versions.
+      Fixes bug 26272; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (C correctness):
+    - Avoid casting return value of smartlist_len() to double as
+      compiler does not like it when -Wbad-function-cast is on.
+      Fixes bug 26283; bugfix on 0.2.4.10-alpha.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the June 7 2018 Maxmind GeoLite2
+      Country database. Closes ticket 26351.
+
+
+  o Minor bugfixes (compilation):
     - Fix compilation when building with OpenSSL 1.1.0 with the
       "no-deprecated" flag enabled. Fixes bug 26156; bugfix on 0.3.4.1-alpha.
 
