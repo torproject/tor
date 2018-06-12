@@ -12,6 +12,13 @@
 #include "crypto_hkdf.h"
 #include "crypto_util.h"
 #include "crypto_digest.h"
+#include "crypto_openssl_mgt.h"
+#include <openssl/opensslv.h>
+
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+#define HAVE_OPENSSL_HKDF 1
+#include <openssl/kdf.h>
+#endif
 
 /** Given <b>key_in_len</b> bytes of negotiated randomness in <b>key_in</b>
  * ("K"), expand it into <b>key_out_len</b> bytes of negotiated key material in
@@ -51,15 +58,56 @@ crypto_expand_key_material_TAP(const uint8_t *key_in, size_t key_in_len,
   return r;
 }
 
-/** Expand some secret key material according to RFC5869, using SHA256 as the
- * underlying hash.  The <b>key_in_len</b> bytes at <b>key_in</b> are the
- * secret key material; the <b>salt_in_len</b> bytes at <b>salt_in</b> and the
- * <b>info_in_len</b> bytes in <b>info_in_len</b> are the algorithm's "salt"
- * and "info" parameters respectively.  On success, write <b>key_out_len</b>
- * bytes to <b>key_out</b> and return 0.  Assert on failure.
+#ifdef HAVE_OPENSSL_HKDF
+/**
+ * Perform RFC5869 HKDF computation using OpenSSL (only to be called from
+ * crypto_expand_key_material_rfc5869_sha256_openssl). Note that OpenSSL
+ * requires input key to be nonempty and salt length to be equal or less
+ * than 1024.
  */
-int
-crypto_expand_key_material_rfc5869_sha256(
+static int
+crypto_expand_key_material_rfc5869_sha256_openssl(
+                                    const uint8_t *key_in, size_t key_in_len,
+                                    const uint8_t *salt_in, size_t salt_in_len,
+                                    const uint8_t *info_in, size_t info_in_len,
+                                    uint8_t *key_out, size_t key_out_len)
+{
+  int r;
+  EVP_PKEY_CTX *evp_pkey_ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
+  tor_assert(evp_pkey_ctx);
+  tor_assert(key_in_len != 0);
+  tor_assert(salt_in_len <= 1024);
+
+  r = EVP_PKEY_derive_init(evp_pkey_ctx);
+  tor_assert(r == 1);
+
+  r = EVP_PKEY_CTX_set_hkdf_md(evp_pkey_ctx, EVP_sha256());
+  tor_assert(r == 1);
+
+  r = EVP_PKEY_CTX_set1_hkdf_salt(evp_pkey_ctx, salt_in, (int)salt_in_len);
+  tor_assert(r == 1);
+
+  r = EVP_PKEY_CTX_set1_hkdf_key(evp_pkey_ctx, key_in, (int)key_in_len);
+  tor_assert(r == 1);
+
+  r = EVP_PKEY_CTX_add1_hkdf_info(evp_pkey_ctx, info_in, (int)info_in_len);
+  tor_assert(r == 1);
+
+  r = EVP_PKEY_derive(evp_pkey_ctx, key_out, &key_out_len);
+  tor_assert(r == 1);
+
+  EVP_PKEY_CTX_free(evp_pkey_ctx);
+  return 0;
+}
+
+#else
+
+/**
+ * Perform RFC5869 HKDF computation using our own legacy implementation.
+ * Only to be called from crypto_expand_key_material_rfc5869_sha256_openssl.
+ */
+static int
+crypto_expand_key_material_rfc5869_sha256_legacy(
                                     const uint8_t *key_in, size_t key_in_len,
                                     const uint8_t *salt_in, size_t salt_in_len,
                                     const uint8_t *info_in, size_t info_in_len,
@@ -109,4 +157,36 @@ crypto_expand_key_material_rfc5869_sha256(
   memwipe(mac, 0, sizeof(mac));
   return 0;
 }
+#endif
 
+/** Expand some secret key material according to RFC5869, using SHA256 as the
+ * underlying hash.  The <b>key_in_len</b> bytes at <b>key_in</b> are the
+ * secret key material; the <b>salt_in_len</b> bytes at <b>salt_in</b> and the
+ * <b>info_in_len</b> bytes in <b>info_in_len</b> are the algorithm's "salt"
+ * and "info" parameters respectively.  On success, write <b>key_out_len</b>
+ * bytes to <b>key_out</b> and return 0.  Assert on failure.
+ */
+int
+crypto_expand_key_material_rfc5869_sha256(
+                                    const uint8_t *key_in, size_t key_in_len,
+                                    const uint8_t *salt_in, size_t salt_in_len,
+                                    const uint8_t *info_in, size_t info_in_len,
+                                    uint8_t *key_out, size_t key_out_len)
+{
+  tor_assert(key_in);
+  tor_assert(key_in_len > 0);
+
+#ifdef HAVE_OPENSSL_HKDF
+  return crypto_expand_key_material_rfc5869_sha256_openssl(key_in,
+                                             key_in_len, salt_in,
+                                             salt_in_len, info_in,
+                                             info_in_len,
+                                             key_out, key_out_len);
+#else
+  return crypto_expand_key_material_rfc5869_sha256_legacy(key_in,
+                                               key_in_len, salt_in,
+                                               salt_in_len, info_in,
+                                               info_in_len,
+                                               key_out, key_out_len);
+#endif
+}
