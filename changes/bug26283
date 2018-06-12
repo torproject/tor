@@ -1,0 +1,4 @@
+  o Minor bugfixes (C correctness):
+    - Avoid casting return value of smartlist_len() to double as
+      compiler does not like it when -Wbad-function-cast is on.
+      Fixes bug 26283; bugfix on 0.2.4.10-alpha.
