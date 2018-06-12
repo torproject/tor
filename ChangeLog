@@ -2,6 +2,10 @@ Changes in version 0.3.4.2-alpha - 2018-06-12
   Tor 0.3.4.2-alpha fixes several minor bugs in the previous alpha
   release, and forward-ports an authority-only security fix from 0.3.3.6.
 
+  o Directory authority changes:
+    - Add an IPv6 address for the "dannenberg" directory authority.
+      Closes ticket 26343.
+
   o Major bugfixes (security, directory authority, denial-of-service, also in 0.3.3.6):
     - Fix a bug that could have allowed an attacker to force a directory
       authority to use up all its RAM by passing it a maliciously
