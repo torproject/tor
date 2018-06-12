@@ -1,6 +1,0 @@
-  o Minor bugfixes (path selection):
-    - Only select relays when they have the descriptors we prefer to
-      use for them. This change fixes a bug where we could select
-      a relay because it had _some_ descriptor, but reject it later with
-      a nonfatal assertion error because it didn't have the exact one we
-      wanted. Fixes bugs 25691 and 25692; bugfix on 0.3.3.4-alpha.
