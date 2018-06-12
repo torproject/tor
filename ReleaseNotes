@@ -2,6 +2,47 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.3.3.7 - 2018-06-12
+  Tor 0.3.3.7 backports several changes from the 0.3.4.x series, including
+  fixes for bugs affecting compatibility and stability.
+
+  o Directory authority changes:
+    - Add an IPv6 address for the "dannenberg" directory authority.
+      Closes ticket 26343.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the June 7 2018 Maxmind GeoLite2
+      Country database. Closes ticket 26351.
+
+  o Minor bugfixes (compatibility, openssl, backport from 0.3.4.2-alpha):
+    - Work around a change in OpenSSL 1.1.1 where return values that
+      would previously indicate "no password" now indicate an empty
+      password. Without this workaround, Tor instances running with
+      OpenSSL 1.1.1 would accept descriptors that other Tor instances
+      would reject. Fixes bug 26116; bugfix on 0.2.5.16.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.2-alpha):
+    - Silence unused-const-variable warnings in zstd.h with some GCC
+      versions. Fixes bug 26272; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (controller, backport from 0.3.4.2-alpha):
+    - Improve accuracy of the BUILDTIMEOUT_SET control port event's
+      TIMEOUT_RATE and CLOSE_RATE fields. (We were previously
+      miscounting the total number of circuits for these field values.)
+      Fixes bug 26121; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (hardening, backport from 0.3.4.2-alpha):
+    - Prevent a possible out-of-bounds smartlist read in
+      protover_compute_vote(). Fixes bug 26196; bugfix on 0.2.9.4-alpha.
+
+  o Minor bugfixes (path selection, backport from 0.3.4.1-alpha):
+    - Only select relays when they have the descriptors we prefer to use
+      for them. This change fixes a bug where we could select a relay
+      because it had _some_ descriptor, but reject it later with a
+      nonfatal assertion error because it didn't have the exact one we
+      wanted. Fixes bugs 25691 and 25692; bugfix on 0.3.3.4-alpha.
+
+
 Changes in version 0.3.3.6 - 2018-05-22
   Tor 0.3.3.6 is the first stable release in the 0.3.3 series. It
   backports several important fixes from the 0.3.4.1-alpha.
