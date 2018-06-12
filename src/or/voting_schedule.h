@@ -43,6 +43,10 @@ typedef struct {
    * timings only for the first vote even though this object was initilized
    * prior to voting. */
   int created_on_demand;
+
+  /** The valid-after time of the last live consensus that filled this voting
+   *  schedule.  It's used to detect outdated voting schedules. */
+  time_t live_consensus_valid_after;
 } voting_schedule_t;
 
 /* Public API. */
