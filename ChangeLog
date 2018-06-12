@@ -2,6 +2,10 @@ Changes in version 0.3.3.7 - 2018-06-12
   Tor 0.3.3.7 backports several changes from the 0.3.4.x series, including
   fixes for bugs affecting compatibility and stability.
 
+  o Directory authority changes:
+    - Add an IPv6 address for the "dannenberg" directory authority.
+      Closes ticket 26343.
+
   o Minor features (geoip):
     - Update geoip and geoip6 to the June 7 2018 Maxmind GeoLite2
       Country database. Closes ticket 26351.
