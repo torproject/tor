@@ -41,7 +41,12 @@ TRUNNELHEADERS = \
 src_trunnel_libor_trunnel_a_SOURCES = $(TRUNNELSOURCES)
 src_trunnel_libor_trunnel_a_CPPFLAGS = -DTRUNNEL_LOCAL_H $(AM_CPPFLAGS)
 
+if UNITTESTS_ENABLED
 src_trunnel_libor_trunnel_testing_a_SOURCES = $(TRUNNELSOURCES)
+else
+src_trunnel_libor_trunnel_testing_a_SOURCES =
+endif
+
 src_trunnel_libor_trunnel_testing_a_CPPFLAGS = -DTRUNNEL_LOCAL_H $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
 src_trunnel_libor_trunnel_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
