@@ -221,7 +221,7 @@ test_circbw_relay(void *arg)
   ASSERT_UNCOUNTED_BW();
 
   /* Data cell on stream 0: not counted */
-  PACK_CELL(0, RELAY_COMMAND_DATA, "Data1234");
+  PACK_CELL(1, RELAY_COMMAND_DATA, "Data1234");
   connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
                                      circ->cpath);
   ASSERT_UNCOUNTED_BW();
