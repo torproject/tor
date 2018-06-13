@@ -1859,10 +1859,11 @@ router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port)
 MOCK_IMPL(int,
 router_my_exit_policy_is_reject_star,(void))
 {
-  if (!router_get_my_routerinfo()) /* make sure routerinfo exists */
+  const routerinfo_t *me = router_get_my_routerinfo();
+  if (!me) /* make sure routerinfo exists */
     return -1;
 
-  return router_get_my_routerinfo()->policy_is_reject_star;
+  return me->policy_is_reject_star;
 }
 
 /** Return true iff I'm a server and <b>digest</b> is equal to
@@ -2432,10 +2433,11 @@ check_descriptor_bandwidth_changed(time_t now)
 {
   static time_t last_changed = 0;
   uint64_t prev, cur;
-  if (!router_get_my_routerinfo())
+  const routerinfo_t *my_ri = router_get_my_routerinfo();
+  if (!my_ri) /* make sure routerinfo exists */
     return;
 
-  prev = router_get_my_routerinfo()->bandwidthcapacity;
+  prev = my_ri->bandwidthcapacity;
   cur = we_are_hibernating() ? 0 : rep_hist_bandwidth_assess();
   if ((prev != cur && (!prev || !cur)) ||
       cur > prev*2 ||
@@ -2486,14 +2488,15 @@ check_descriptor_ipaddress_changed(time_t now)
   const or_options_t *options = get_options();
   const char *method = NULL;
   char *hostname = NULL;
+  const routerinfo_t *my_ri = router_get_my_routerinfo();
 
   (void) now;
 
-  if (router_get_my_routerinfo() == NULL)
+  if (my_ri == NULL) /* make sure routerinfo exists */
     return;
 
   /* XXXX ipv6 */
-  prev = router_get_my_routerinfo()->addr;
+  prev = my_ri->addr;
   if (resolve_my_address(LOG_INFO, options, &cur, &method, &hostname) < 0) {
     log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return;
