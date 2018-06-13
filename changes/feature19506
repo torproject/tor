@@ -1,0 +1,3 @@
+  o Minor features (admin tools):
+    - Add new tool that prints expiration date of signing cert
+      in ed25519_signing_cert. Resolves issue 19506.
