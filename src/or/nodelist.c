@@ -113,6 +113,11 @@ typedef struct nodelist_t {
 
   /* Set of addresses that belong to nodes we believe in. */
   address_set_t *node_addrs;
+
+  /* The valid-after time of the last live consensus that initialized the
+   * nodelist.  We use this to detect outdated nodelists that need to be
+   * rebuilt using a newer consensus. */
+  time_t live_consensus_valid_after;
 } nodelist_t;
 
 static inline unsigned int
@@ -630,6 +635,12 @@ nodelist_set_consensus(networkstatus_t *ns)
       }
     } SMARTLIST_FOREACH_END(node);
   }
+
+  /* If the consensus is live, note down the consensus valid-after that formed
+   * the nodelist. */
+  if (networkstatus_is_live(ns, approx_time())) {
+    the_nodelist->live_consensus_valid_after = ns->valid_after;
+  }
 }
 
 /** Helper: return true iff a node has a usable amount of information*/
@@ -854,6 +865,25 @@ nodelist_assert_ok(void)
   digestmap_free(dm, NULL);
 }
 
+/** Ensure that the nodelist has been created with the most recent consensus.
+ *  If that's not the case, make it so.  */
+void
+nodelist_ensure_freshness(networkstatus_t *ns)
+{
+  tor_assert(ns);
+
+  /* We don't even have a nodelist: this is a NOP. */
+  if (!the_nodelist) {
+    return;
+  }
+
+  if (the_nodelist->live_consensus_valid_after != ns->valid_after) {
+    log_info(LD_GENERAL, "Nodelist was not fresh: rebuilding. (%d / %d)",
+             (int) the_nodelist->live_consensus_valid_after,
+             (int) ns->valid_after);
+    nodelist_set_consensus(ns);
+  }
+}
 /** Return a list of a node_t * for every node we know about.  The caller
  * MUST NOT modify the list. (You can set and clear flags in the nodes if
  * you must, but you must not add or remove nodes.) */
