@@ -1256,6 +1256,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend back to the previous hop "
            "(by Ed25519 ID).");
+    return -1;
   }
 
   n_chan = channel_get_for_extend((const char*)ec.node_id,
