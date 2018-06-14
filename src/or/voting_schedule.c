@@ -142,6 +142,7 @@ voting_schedule_t voting_schedule;
 time_t
 voting_schedule_get_next_valid_after_time(void)
 {
+  time_t now = approx_time();
   bool need_to_recalculate_voting_schedule = false;
 
   /* This is a safe guard in order to make sure that the voting schedule
@@ -154,17 +155,16 @@ voting_schedule_get_next_valid_after_time(void)
 
   /* Also make sure we are not using an outdated voting schedule. If we have a
    * newer consensus, make sure we recalculate the voting schedule. */
-  networkstatus_t *consensus = networkstatus_get_live_consensus(approx_time());
-  if (consensus &&
-      consensus->valid_after != voting_schedule.live_consensus_valid_after) {
+  const networkstatus_t *ns = networkstatus_get_live_consensus(now);
+  if (ns && ns->valid_after != voting_schedule.live_consensus_valid_after) {
     log_info(LD_DIR, "Voting schedule is outdated: recalculating (%d/%d)",
-             (int) consensus->valid_after,
+             (int) ns->valid_after,
              (int) voting_schedule.live_consensus_valid_after);
     need_to_recalculate_voting_schedule = true;
   }
 
   if (need_to_recalculate_voting_schedule) {
-    voting_schedule_recalculate_timing(get_options(), approx_time());
+    voting_schedule_recalculate_timing(get_options(), now);
     voting_schedule.created_on_demand = 1;
   }
 
