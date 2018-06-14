@@ -143,7 +143,7 @@ voting_schedule_get_next_valid_after_time(void)
    * voting schedule can lead to bugs. */
   if (tor_mem_is_zero((const char *) &voting_schedule,
                       sizeof(voting_schedule))) {
-    voting_schedule_recalculate_timing(get_options(), time(NULL));
+    voting_schedule_recalculate_timing(get_options(), approx_time());
     voting_schedule.created_on_demand = 1;
   }
   return voting_schedule.interval_starts;
