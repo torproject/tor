@@ -13,8 +13,16 @@
 /** Length of OPE key, in bytes. */
 #define OPE_KEY_LEN 32
 
-/** Largest value that can be passed to crypto_ope_encrypt() */
-#define OPE_INPUT_MAX 131072
+/** Largest value that can be passed to crypto_ope_encrypt().
+
+ *  The current max value (220k seconds) stands for about 61 hours. The
+ *  rationale here is as follows: The rev counter is the time of seconds since
+ *  the start of an SRV period. SRVs are useful for about 48 hours (that's how
+ *  long they stick around on the consensus). Let's also add 12 hours of drift
+ *  for clock skewed services that might be using an old consensus and we
+ *  arrive to 60 hours.
+ */
+#define OPE_INPUT_MAX 220000
 
 typedef struct crypto_ope_c crypto_ope_t;
 
