@@ -1035,7 +1035,7 @@ static void
 test_rotate_descriptors(void *arg)
 {
   int ret;
-  time_t next_rotation_time, now = time(NULL);
+  time_t next_rotation_time, now;
   hs_service_t *service;
   hs_service_descriptor_t *desc_next;
 
@@ -1058,6 +1058,9 @@ test_rotate_descriptors(void *arg)
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
   voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+
+  update_approx_time(mock_ns.valid_after+1);
+  now = mock_ns.valid_after+1;
 
   /* Create a service with a default descriptor and state. It's added to the
    * global map. */
@@ -1096,6 +1099,9 @@ test_rotate_descriptors(void *arg)
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
   voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+
+  update_approx_time(mock_ns.valid_after+1);
+  now = mock_ns.valid_after+1;
 
   /* Note down what to expect for the next rotation time which is 01:00 + 23h
    * meaning 00:00:00. */
@@ -1158,6 +1164,9 @@ test_build_update_descriptors(void *arg)
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
   voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+
+  update_approx_time(mock_ns.valid_after+1);
+  now = mock_ns.valid_after+1;
 
   /* Create a service without a current descriptor to trigger a build. */
   service = helper_create_service();
@@ -1300,6 +1309,9 @@ test_build_update_descriptors(void *arg)
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
 
+  update_approx_time(mock_ns.valid_after+1);
+  now = mock_ns.valid_after+1;
+
   /* Create a service without a current descriptor to trigger a build. */
   service = helper_create_service();
   tt_assert(service);
@@ -1354,7 +1366,7 @@ static void
 test_upload_descriptors(void *arg)
 {
   int ret;
-  time_t now = time(NULL);
+  time_t now;
   hs_service_t *service;
 
   (void) arg;
@@ -1373,6 +1385,10 @@ test_upload_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
+  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+
+  update_approx_time(mock_ns.valid_after+1);
+  now = mock_ns.valid_after+1;
 
   /* Create a service with no descriptor. It's added to the global map. */
   service = hs_service_new(get_options());
