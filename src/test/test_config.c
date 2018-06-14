@@ -43,6 +43,8 @@
 #include "statefile.h"
 
 #include "test_helpers.h"
+
+#include "dir_server_st.h"
 #include "port_cfg_st.h"
 
 static void

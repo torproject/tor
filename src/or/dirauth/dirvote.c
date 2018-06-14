@@ -28,6 +28,8 @@
 #include "dirauth/mode.h"
 #include "dirauth/shared_random_state.h"
 
+#include "dir_server_st.h"
+
 /**
  * \file dirvote.c
  * \brief Functions to compute directory consensus, and schedule voting.

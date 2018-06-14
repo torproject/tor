@@ -39,6 +39,7 @@
 
 #include "dirauth/mode.h"
 
+#include "dir_server_st.h"
 #include "port_cfg_st.h"
 
 /**

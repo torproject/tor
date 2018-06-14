@@ -53,6 +53,8 @@
 #include "dirauth/mode.h"
 #include "dirauth/shared_random.h"
 
+#include "dir_server_st.h"
+
 /**
  * \file directory.c
  * \brief Code to send and fetch information from directory authorities and

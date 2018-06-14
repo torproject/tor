@@ -34,6 +34,8 @@
 #include "log_test_helpers.h"
 #include "voting_schedule.h"
 
+#include "dir_server_st.h"
+
 #ifdef _WIN32
 /* For mkdir() */
 #include <direct.h>

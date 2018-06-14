@@ -30,6 +30,7 @@
 #include "geoip.h"
 #include "ht.h"
 
+#include "dir_server_st.h"
 #include "port_cfg_st.h"
 
 /** Policy that addresses for incoming SOCKS connections must match. */

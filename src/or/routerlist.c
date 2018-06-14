@@ -125,6 +125,8 @@
 #include "dirauth/dirvote.h"
 #include "dirauth/mode.h"
 
+#include "dir_server_st.h"
+
 // #define DEBUG_ROUTERLIST
 
 /****************************************************************************/
