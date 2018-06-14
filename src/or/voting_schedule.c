@@ -151,6 +151,7 @@ voting_schedule_get_next_valid_after_time(void)
   if (tor_mem_is_zero((const char *) &voting_schedule,
                       sizeof(voting_schedule))) {
     need_to_recalculate_voting_schedule = true;
+    goto done; /* no need for next check if we have to recalculate anyway */
   }
 
   /* Also make sure we are not using an outdated voting schedule. If we have a
@@ -163,6 +164,7 @@ voting_schedule_get_next_valid_after_time(void)
     need_to_recalculate_voting_schedule = true;
   }
 
+ done:
   if (need_to_recalculate_voting_schedule) {
     voting_schedule_recalculate_timing(get_options(), now);
     voting_schedule.created_on_demand = 1;
