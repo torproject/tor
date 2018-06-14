@@ -30,6 +30,8 @@
 #include "geoip.h"
 #include "ht.h"
 
+#include "port_cfg_st.h"
+
 /** Policy that addresses for incoming SOCKS connections must match. */
 static smartlist_t *socks_policy = NULL;
 /** Policy that addresses for incoming directory connections must match. */

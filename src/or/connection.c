@@ -113,6 +113,8 @@
 #include <sys/un.h>
 #endif
 
+#include "port_cfg_st.h"
+
 static connection_t *connection_listener_new(
                                const struct sockaddr *listensockaddr,
                                socklen_t listensocklen, int type,

@@ -39,6 +39,8 @@
 
 #include "dirauth/mode.h"
 
+#include "port_cfg_st.h"
+
 /**
  * \file router.c
  * \brief Miscellaneous relay functionality, including RSA key maintenance,

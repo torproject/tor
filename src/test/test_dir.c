@@ -44,6 +44,8 @@
 #include "log_test_helpers.h"
 #include "voting_schedule.h"
 
+#include "port_cfg_st.h"
+
 #define NS_MODULE dir
 
 static void

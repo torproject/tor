@@ -116,6 +116,8 @@
 #include "dirauth/dirvote.h"
 #include "dirauth/mode.h"
 
+#include "port_cfg_st.h"
+
 #ifdef HAVE_SYSTEMD
 #   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)
 /* Systemd's use of gcc's __INCLUDE_LEVEL__ extension macro appears to confuse

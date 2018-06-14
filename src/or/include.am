@@ -246,6 +246,7 @@ ORHEADERS = \
 	src/or/transports.h				\
 	src/or/parsecommon.h			\
 	src/or/periodic.h				\
+	src/or/port_cfg_st.h				\
 	src/or/policies.h				\
 	src/or/protover.h				\
 	src/or/proto_cell.h				\
@@ -270,6 +271,7 @@ ORHEADERS = \
 	src/or/routerset.h				\
 	src/or/routerparse.h				\
 	src/or/scheduler.h				\
+	src/or/server_port_cfg_st.h			\
 	src/or/shared_random_client.h			\
 	src/or/statefile.h				\
 	src/or/status.h					\

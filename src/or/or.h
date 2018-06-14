@@ -1248,15 +1248,7 @@ typedef struct {
 
 typedef struct socks_request_t socks_request_t;
 typedef struct entry_port_cfg_t entry_port_cfg_t;
-
-typedef struct server_port_cfg_t {
-  /* Server port types (or, dir) only: */
-  unsigned int no_advertise : 1;
-  unsigned int no_listen : 1;
-  unsigned int all_addrs : 1;
-  unsigned int bind_ipv4_only : 1;
-  unsigned int bind_ipv6_only : 1;
-} server_port_cfg_t;
+typedef struct server_port_cfg_t server_port_cfg_t;
 
 /* Values for connection_t.magic: used to make sure that downcasts (casts from
 * connection_t to foo_connection_t) are safe. */
@@ -3585,27 +3577,7 @@ static inline const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(
 /** First automatically allocated session group number */
 #define SESSION_GROUP_FIRST_AUTO -4
 
-/** Configuration for a single port that we're listening on. */
-typedef struct port_cfg_t {
-  tor_addr_t addr; /**< The actual IP to listen on, if !is_unix_addr. */
-  int port; /**< The configured port, or CFG_AUTO_PORT to tell Tor to pick its
-             * own port. */
-  uint8_t type; /**< One of CONN_TYPE_*_LISTENER */
-  unsigned is_unix_addr : 1; /**< True iff this is an AF_UNIX address. */
-
-  unsigned is_group_writable : 1;
-  unsigned is_world_writable : 1;
-  unsigned relax_dirmode_check : 1;
-
-  entry_port_cfg_t entry_cfg;
-
-  server_port_cfg_t server_cfg;
-
-  /* Unix sockets only: */
-  /** Path for an AF_UNIX address */
-  char unix_addr[FLEXIBLE_ARRAY_MEMBER];
-} port_cfg_t;
-
+typedef struct port_cfg_t port_cfg_t;
 typedef struct routerset_t routerset_t;
 
 /** A magic value for the (Socks|OR|...)Port options below, telling Tor
