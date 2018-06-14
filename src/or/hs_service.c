@@ -91,7 +91,8 @@ static smartlist_t *hs_service_staging_list;
 static int consider_republishing_hs_descriptors = 0;
 
 /* Static declaration. */
-static void set_descriptor_revision_counter(hs_descriptor_t *hs_desc);
+static void set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc,
+                                            time_t now, bool is_current);
 static void move_descriptors(hs_service_t *src, hs_service_t *dst);
 
 /* Helper: Function to compare two objects in the service map. Return 1 if the
@@ -1420,11 +1421,15 @@ build_service_desc_keys(const hs_service_t *service,
  * the update function. On success, desc_out will point to the newly allocated
  * descriptor object.
  *
+ * If <b>is_current</b> is true, this is the current service descriptor,
+ * otherwise it's the next one.
+ *
  * This can error if we are unable to create keys or certificate. */
 static void
 build_service_descriptor(hs_service_t *service, time_t now,
                          uint64_t time_period_num,
-                         hs_service_descriptor_t **desc_out)
+                         hs_service_descriptor_t **desc_out,
+                         bool is_current)
 {
   char *encoded_desc;
   hs_service_descriptor_t *desc;
@@ -1449,7 +1454,7 @@ build_service_descriptor(hs_service_t *service, time_t now,
   }
 
   /* Set the revision counter for this descriptor */
-  set_descriptor_revision_counter(desc->desc);
+  set_descriptor_revision_counter(desc, now, is_current);
 
   /* Let's make sure that we've created a descriptor that can actually be
    * encoded properly. This function also checks if the encoded output is
@@ -1515,9 +1520,9 @@ build_descriptors_for_new_service(hs_service_t *service, time_t now)
 
   /* Build descriptors. */
   build_service_descriptor(service, now, current_desc_tp,
-                           &service->desc_current);
+                           &service->desc_current, 1);
   build_service_descriptor(service, now, next_desc_tp,
-                           &service->desc_next);
+                           &service->desc_next, 0);
   log_info(LD_REND, "Hidden service %s has just started. Both descriptors "
                     "built. Now scheduled for upload.",
            safe_str_client(service->onion_address));
@@ -1548,7 +1553,7 @@ build_all_descriptors(time_t now)
 
     if (service->desc_next == NULL) {
       build_service_descriptor(service, now, hs_get_next_time_period_num(0),
-                               &service->desc_next);
+                               &service->desc_next, 0);
       log_info(LD_REND, "Hidden service %s next descriptor successfully "
                         "built. Now scheduled for upload.",
                safe_str_client(service->onion_address));
@@ -2514,16 +2519,94 @@ increment_descriptor_revision_counter(hs_descriptor_t *hs_desc)
   update_revision_counters_in_state();
 }
 
-/** Set the revision counter in <b>hs_desc</b>, using the state file to find
- *  the current counter value if it exists. */
+/** Set the revision counter in <b>hs_desc</b>. We do this by encrypting a
+ *  timestamp using an OPE scheme and using the ciphertext as our revision
+ *  counter.
+ *
+ *  If <b>is_current</b> is true, then this is the current HS descriptor,
+ *  otherwise it's the next one. */
 static void
-set_descriptor_revision_counter(hs_descriptor_t *hs_desc)
+set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc, time_t now,
+                                bool is_current)
 {
-  /* Find stored rev counter if it exists */
-  uint64_t rev_counter =
-    get_rev_counter_for_service(&hs_desc->plaintext_data.blinded_pubkey);
+  uint64_t rev_counter = 0;
 
-  hs_desc->plaintext_data.revision_counter = rev_counter;
+  /* Get current time */
+  time_t srv_start = 0;
+
+  /* As our revision counter plaintext value, we use the seconds since the
+   * start of the SR protocol run that is relevant to this descriptor. This is
+   * guaranteed to be a positive value since we need the SRV to start making a
+   * descriptor (so that we know where to upload it).
+   *
+   * Depending on whether we are building the current or the next descriptor,
+   * services use a different SRV value. See [SERVICEUPLOAD] in
+   * rend-spec-v3.txt:
+   *
+   * In particular, for the current descriptor (aka first descriptor), Tor
+   * always uses the previous SRV for uploading the descriptor, and hence we
+   * should use the start time of the previous protocol run here.
+   *
+   * Whereas for the next descriptor (aka second descriptor), Tor always uses
+   * the current SRV for uploading the descriptor.  and hence we use the start
+   * time of the current protocol run.
+   */
+  if (is_current) {
+    srv_start = sr_state_get_start_time_of_previous_protocol_run(now);
+  } else {
+    srv_start = sr_state_get_start_time_of_current_protocol_run(now);
+  }
+
+  log_info(LD_REND, "Setting rev counter for TP #%u: "
+           "SRV started at %d, now %d (%s)",
+           (unsigned) hs_desc->time_period_num, (int)srv_start,
+           (int)now, is_current ? "current" : "next");
+
+  tor_assert_nonfatal(now >= srv_start);
+
+  /* Compute seconds elapsed since the start of the time period. That's the
+   * number of seconds of how long this blinded key has been active. */
+  time_t seconds_since_start_of_srv = now - srv_start;
+
+  /* Increment by one so that we are definitely sure this is strictly
+   * positive and not zero. */
+  seconds_since_start_of_srv++;
+
+  /* Check for too big inputs. */
+  if (BUG(seconds_since_start_of_srv > OPE_INPUT_MAX)) {
+    seconds_since_start_of_srv = OPE_INPUT_MAX;
+  }
+
+  /* Now we compute the actual revision counter value by encrypting the
+     plaintext using an OPE construction: */
+
+  /* First, compute OPE key as: K = H("rev-counter-generation" | S) */
+  uint8_t key[DIGEST256_LEN];
+  {
+    crypto_digest_t *digest = crypto_digest256_new(DIGEST_SHA3_256);
+    const char ope_key_prefix[] = "rev-counter-generation";
+    ed25519_secret_key_t *eph_privkey = &hs_desc->blinded_kp.seckey;
+    crypto_digest_add_bytes(digest, ope_key_prefix, sizeof(ope_key_prefix));
+    crypto_digest_add_bytes(digest, (char*)eph_privkey->seckey,
+                            sizeof(eph_privkey->seckey));
+    crypto_digest_get_digest(digest, (char *)key, sizeof(key));
+    crypto_digest_free(digest);
+  }
+
+  { /* Now encrypt the revision counter! */
+    crypto_ope_t *ope = NULL;
+    ope = crypto_ope_new(key);
+    rev_counter = crypto_ope_encrypt(ope, (int) seconds_since_start_of_srv);
+    crypto_ope_free(ope);
+  }
+
+  /* The OPE module returns UINT64_MAX in case of errors. */
+  tor_assert_nonfatal(rev_counter < UINT64_MAX);
+
+  log_info(LD_REND, "Encrypted revision counter %d to %ld",
+           (int) seconds_since_start_of_srv, (long int) rev_counter);
+
+  hs_desc->desc->plaintext_data.revision_counter = rev_counter;
 }
 
 /* Encode and sign the service descriptor desc and upload it to the
