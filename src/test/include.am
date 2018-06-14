@@ -9,6 +9,7 @@ TESTS_ENVIRONMENT = \
 	export builddir="$(builddir)"; \
 	export TESTING_TOR_BINARY="$(TESTING_TOR_BINARY)"; \
 	export CARGO="$(CARGO)"; \
+	export EXTRA_CARGO_OPTIONS="$(EXTRA_CARGO_OPTIONS)"; \
 	export CARGO_ONLINE="$(CARGO_ONLINE)";
 
 TESTSCRIPTS = \

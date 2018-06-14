@@ -3,12 +3,18 @@
 
 set -e
 
-CARGO_TARGET_DIR="${abs_top_builddir:-../../..}/src/rust/target" \
-    CARGO_HOME="${abs_top_builddir:-../../..}/src/rust" \
-    find "${abs_top_srcdir:-../../..}/src/rust" \
-    -mindepth 2 -maxdepth 2 \
-    -type f -name 'Cargo.toml' \
-    -exec "${CARGO:-cargo}" test --all-features ${CARGO_ONLINE-"--frozen"} \
-    --manifest-path '{}' \;
 
-exit $?
+for cargo_toml_dir in "${abs_top_srcdir:-../../..}"/src/rust/*; do
+    if [ -e "${cargo_toml_dir}/Cargo.toml" ]; then
+	cd "${cargo_toml_dir}" && \
+	    CARGO_TARGET_DIR="${abs_top_builddir:-../../..}/src/rust/target" \
+	    CARGO_HOME="${abs_top_builddir:-../../..}/src/rust" \
+	    "${CARGO:-cargo}" test --all-features ${CARGO_ONLINE:-"--frozen"} \
+	    ${EXTRA_CARGO_OPTIONS} \
+	    --manifest-path "${cargo_toml_dir}/Cargo.toml" || exitcode=1
+    fi
+done
+
+exit $exitcode
+
+

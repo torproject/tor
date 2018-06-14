@@ -1,0 +1,4 @@
+  o Major bugfixes (rust, testing):
+    - Fix a bug where a failure in the rust unit tests would not actually
+      cause the build to fail. Fixes bug 26258; bugfix on 0.3.3.4-alpha.
+
