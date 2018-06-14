@@ -30,6 +30,7 @@ endif
 
 if USEPYTHON
 TESTSCRIPTS += src/test/test_ntor.sh src/test/test_hs_ntor.sh src/test/test_bt.sh
+TESTSCRIPTS += src/test/test_rebind.sh
 endif
 
 TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
@@ -360,6 +361,8 @@ EXTRA_DIST += \
 	src/test/hs_indexes.py \
 	src/test/fuzz_static_testcases.sh \
 	src/test/slownacl_curve25519.py \
+	src/test/test_rebind.sh \
+	src/test/test_rebind.py \
 	src/test/zero_length_keys.sh \
 	src/test/test_keygen.sh \
 	src/test/test_key_expiration.sh \

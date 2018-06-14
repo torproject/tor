@@ -113,11 +113,33 @@
 #include <sys/un.h>
 #endif
 
+/**
+ * On Windows and Linux we cannot reliably bind() a socket to an
+ * address and port if: 1) There's already a socket bound to wildcard
+ * address (0.0.0.0 or ::) with the same port; 2) We try to bind()
+ * to wildcard address and there's another socket bound to a
+ * specific address and the same port.
+ *
+ * To address this problem on these two platforms we implement a
+ * routine that:
+ * 1) Checks if first attempt to bind() a new socket  failed with
+ * EADDRINUSE.
+ * 2) If so, it will close the appropriate old listener connection and
+ * 3) Attempts bind()'ing the new listener socket again.
+ */
+#if defined(__linux__) || defined(_WIN32)
+#define ENABLE_LISTENER_REBIND
+#endif
+
 static connection_t *connection_listener_new(
                                const struct sockaddr *listensockaddr,
                                socklen_t listensocklen, int type,
                                const char *address,
-                               const port_cfg_t *portcfg);
+                               const port_cfg_t *portcfg,
+                               int *addr_in_use);
+static connection_t *connection_listener_new_for_port(
+                               const port_cfg_t *port,
+                               int *defer, int *addr_in_use);
 static void connection_init(time_t now, connection_t *conn, int type,
                             int socket_family);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
@@ -1142,12 +1164,16 @@ tor_listen(tor_socket_t fd)
  *
  * <b>address</b> is only used for logging purposes and to add the information
  * to the conn.
+ *
+ * Set <b>addr_in_use</b> to true in case socket binding fails with
+ * EADDRINUSE.
  */
 static connection_t *
 connection_listener_new(const struct sockaddr *listensockaddr,
                         socklen_t socklen,
                         int type, const char *address,
-                        const port_cfg_t *port_cfg)
+                        const port_cfg_t *port_cfg,
+                        int *addr_in_use)
 {
   listener_connection_t *lis_conn;
   connection_t *conn = NULL;
@@ -1162,6 +1188,9 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   static int global_next_session_group = SESSION_GROUP_FIRST_AUTO;
   tor_addr_t addr;
   int exhaustion = 0;
+
+  if (addr_in_use)
+    *addr_in_use = 0;
 
   if (listensockaddr->sa_family == AF_INET ||
       listensockaddr->sa_family == AF_INET6) {
@@ -1241,8 +1270,11 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     if (bind(s,listensockaddr,socklen) < 0) {
       const char *helpfulhint = "";
       int e = tor_socket_errno(s);
-      if (ERRNO_IS_EADDRINUSE(e))
+      if (ERRNO_IS_EADDRINUSE(e)) {
         helpfulhint = ". Is Tor already running?";
+        if (addr_in_use)
+          *addr_in_use = 1;
+      }
       log_warn(LD_NET, "Could not bind to %s:%u: %s%s", address, usePort,
                tor_socket_strerror(e), helpfulhint);
       goto err;
@@ -1429,6 +1461,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
    */
   connection_check_oos(get_n_open_sockets(), 0);
 
+  log_notice(LD_NET, "Opened %s on %s",
+             conn_type_to_string(type), fmt_addrport(&addr, usePort));
   return conn;
 
  err:
@@ -1441,6 +1475,68 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   connection_check_oos(get_n_open_sockets(), exhaustion);
 
   return NULL;
+}
+
+/**
+ * Create a new listener connection for a given <b>port</b>. In case we
+ * cannot create listener now, but will be able later, set <b>defer</b>
+ * to true. If we cannot bind listening socket because address is already
+ * in use, set <b>addr_in_use</b> to true.
+ */
+static connection_t *
+connection_listener_new_for_port(const port_cfg_t *port,
+                                 int *defer, int *addr_in_use)
+{
+  connection_t *conn;
+  struct sockaddr *listensockaddr;
+  socklen_t listensocklen = 0;
+  char *address=NULL;
+  int real_port = port->port == CFG_AUTO_PORT ? 0 : port->port;
+  tor_assert(real_port <= UINT16_MAX);
+
+  defer = 0;
+  if (port->server_cfg.no_listen) {
+    if (defer)
+      *defer = 1;
+    return NULL;
+  }
+
+#ifndef _WIN32
+  /* We don't need to be root to create a UNIX socket, so defer until after
+   * setuid. */
+  const or_options_t *options = get_options();
+  if (port->is_unix_addr && !geteuid() && (options->User) &&
+      strcmp(options->User, "root")) {
+    if (defer)
+      *defer = 1;
+    return NULL;
+  }
+#endif /* !defined(_WIN32) */
+
+  if (port->is_unix_addr) {
+    listensockaddr = (struct sockaddr *)
+      create_unix_sockaddr(port->unix_addr,
+                           &address, &listensocklen);
+  } else {
+    listensockaddr = tor_malloc(sizeof(struct sockaddr_storage));
+    listensocklen = tor_addr_to_sockaddr(&port->addr,
+                                         real_port,
+                                         listensockaddr,
+                                         sizeof(struct sockaddr_storage));
+    address = tor_addr_to_str_dup(&port->addr);
+  }
+
+  if (listensockaddr) {
+    conn = connection_listener_new(listensockaddr, listensocklen,
+                                   port->type, address, port,
+                                   addr_in_use);
+    tor_free(listensockaddr);
+    tor_free(address);
+  } else {
+    conn = NULL;
+  }
+
+  return conn;
 }
 
 /** Do basic sanity checking on a newly received socket. Return 0
@@ -2559,10 +2655,13 @@ connection_read_proxy_handshake(connection_t *conn)
  *
  * Remove from <b>old_conns</b> every connection that has a corresponding
  * entry in <b>ports</b>.  Add to <b>new_conns</b> new every connection we
- * launch.
+ * launch. If we may need to perform socket rebind when creating new
+ * listener that replaces old one, create a <b>listener_replacement_t</b>
+ * struct for affected pair  and add it to <b>replacements</b>.
  *
  * If <b>control_listeners_only</b> is true, then we only open control
- * listeners, and we do not remove any noncontrol listeners from old_conns.
+ * listeners, and we do not remove any noncontrol listeners from
+ * old_conns.
  *
  * Return 0 on success, -1 on failure.
  **/
@@ -2570,8 +2669,13 @@ static int
 retry_listener_ports(smartlist_t *old_conns,
                      const smartlist_t *ports,
                      smartlist_t *new_conns,
+                     smartlist_t *replacements,
                      int control_listeners_only)
 {
+#ifndef ENABLE_LISTENER_REBIND
+  (void)replacements;
+#endif
+
   smartlist_t *launch = smartlist_new();
   int r = 0;
 
@@ -2607,16 +2711,34 @@ retry_listener_ports(smartlist_t *old_conns,
           break;
         }
       } else {
-        int port_matches;
-        if (wanted->port == CFG_AUTO_PORT) {
-          port_matches = 1;
-        } else {
-          port_matches = (wanted->port == conn->port);
-        }
+        /* Numeric values of old and new port match exactly. */
+        const int port_matches_exact = (wanted->port == conn->port);
+        /* Ports match semantically - either their specific values
+           match exactly, or new port is 'auto'.
+         */
+        const int port_matches = (wanted->port == CFG_AUTO_PORT ||
+                                  port_matches_exact);
+
         if (port_matches && tor_addr_eq(&wanted->addr, &conn->addr)) {
           found_port = wanted;
           break;
         }
+#ifdef ENABLE_LISTENER_REBIND
+        const int may_need_rebind =
+          port_matches_exact & bool_neq(tor_addr_is_null(&wanted->addr),
+                                        tor_addr_is_null(&conn->addr));
+        if (replacements && may_need_rebind) {
+          listener_replacement_t *replacement =
+            tor_malloc(sizeof(listener_replacement_t));
+
+          replacement->old_conn = conn;
+          replacement->new_port = wanted;
+          smartlist_add(replacements, replacement);
+
+          SMARTLIST_DEL_CURRENT(launch, wanted);
+          SMARTLIST_DEL_CURRENT(old_conns, conn);
+        }
+#endif
       }
     } SMARTLIST_FOREACH_END(wanted);
 
@@ -2632,52 +2754,13 @@ retry_listener_ports(smartlist_t *old_conns,
 
   /* Now open all the listeners that are configured but not opened. */
   SMARTLIST_FOREACH_BEGIN(launch, const port_cfg_t *, port) {
-    struct sockaddr *listensockaddr;
-    socklen_t listensocklen = 0;
-    char *address=NULL;
-    connection_t *conn;
-    int real_port = port->port == CFG_AUTO_PORT ? 0 : port->port;
-    tor_assert(real_port <= UINT16_MAX);
-    if (port->server_cfg.no_listen)
-      continue;
+    int skip = 0;
+    connection_t *conn = connection_listener_new_for_port(port, &skip, NULL);
 
-#ifndef _WIN32
-    /* We don't need to be root to create a UNIX socket, so defer until after
-     * setuid. */
-    const or_options_t *options = get_options();
-    if (port->is_unix_addr && !geteuid() && (options->User) &&
-        strcmp(options->User, "root"))
-      continue;
-#endif /* !defined(_WIN32) */
-
-    if (port->is_unix_addr) {
-      listensockaddr = (struct sockaddr *)
-        create_unix_sockaddr(port->unix_addr,
-                             &address, &listensocklen);
-    } else {
-      listensockaddr = tor_malloc(sizeof(struct sockaddr_storage));
-      listensocklen = tor_addr_to_sockaddr(&port->addr,
-                                           real_port,
-                                           listensockaddr,
-                                           sizeof(struct sockaddr_storage));
-      address = tor_addr_to_str_dup(&port->addr);
-    }
-
-    if (listensockaddr) {
-      conn = connection_listener_new(listensockaddr, listensocklen,
-                                     port->type, address, port);
-      tor_free(listensockaddr);
-      tor_free(address);
-    } else {
-      conn = NULL;
-    }
-
-    if (!conn) {
+    if (conn && new_conns)
+      smartlist_add(new_conns, conn);
+    else if (!skip)
       r = -1;
-    } else {
-      if (new_conns)
-        smartlist_add(new_conns, conn);
-    }
   } SMARTLIST_FOREACH_END(port);
 
   smartlist_free(launch);
@@ -2689,17 +2772,16 @@ retry_listener_ports(smartlist_t *old_conns,
  * listeners who are not already open, and only close listeners we no longer
  * want.
  *
- * Add all old conns that should be closed to <b>replaced_conns</b>.
  * Add all new connections to <b>new_conns</b>.
  *
  * If <b>close_all_noncontrol</b> is true, then we only open control
  * listeners, and we close all other listeners.
  */
 int
-retry_all_listeners(smartlist_t *replaced_conns,
-                    smartlist_t *new_conns, int close_all_noncontrol)
+retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
 {
   smartlist_t *listeners = smartlist_new();
+  smartlist_t *replacements = smartlist_new();
   const or_options_t *options = get_options();
   int retval = 0;
   const uint16_t old_or_port = router_get_advertised_or_port(options);
@@ -2715,20 +2797,54 @@ retry_all_listeners(smartlist_t *replaced_conns,
   if (retry_listener_ports(listeners,
                            get_configured_ports(),
                            new_conns,
+                           replacements,
                            close_all_noncontrol) < 0)
     retval = -1;
+
+#ifdef ENABLE_LISTENER_REBIND
+  SMARTLIST_FOREACH_BEGIN(replacements, listener_replacement_t *, r) {
+    int addr_in_use = 0;
+    int skip = 0;
+
+    tor_assert(r->new_port);
+    tor_assert(r->old_conn);
+
+    connection_t *new_conn =
+     connection_listener_new_for_port(r->new_port, &skip, &addr_in_use);
+    connection_t *old_conn = r->old_conn;
+
+    if (skip)
+      continue;
+
+    connection_close_immediate(old_conn);
+    connection_mark_for_close(old_conn);
+
+    if (addr_in_use) {
+      new_conn = connection_listener_new_for_port(r->new_port,
+                                                  &skip, &addr_in_use);
+    }
+
+    tor_assert(new_conn);
+
+    smartlist_add(new_conns, new_conn);
+
+    log_notice(LD_NET, "Closed no-longer-configured %s on %s:%d "
+                       "(replaced by %s:%d)",
+               conn_type_to_string(old_conn->type), old_conn->address,
+               old_conn->port, new_conn->address, new_conn->port);
+
+    tor_free(r);
+    SMARTLIST_DEL_CURRENT(replacements, r);
+  } SMARTLIST_FOREACH_END(r);
+#endif
 
   /* Any members that were still in 'listeners' don't correspond to
    * any configured port.  Kill 'em. */
   SMARTLIST_FOREACH_BEGIN(listeners, connection_t *, conn) {
     log_notice(LD_NET, "Closing no-longer-configured %s on %s:%d",
                conn_type_to_string(conn->type), conn->address, conn->port);
-    if (replaced_conns) {
-      smartlist_add(replaced_conns, conn);
-    } else {
-      connection_close_immediate(conn);
-      connection_mark_for_close(conn);
-    }
+    connection_close_immediate(conn);
+    connection_mark_for_close(conn);
   } SMARTLIST_FOREACH_END(conn);
 
   smartlist_free(listeners);
