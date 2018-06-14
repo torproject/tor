@@ -83,6 +83,7 @@
 #include "token_bucket.h"
 #include "util_format.h"
 #include "hs_circuitmap.h"
+#include "crypto_ope.h"
 
 /* These signals are defined to help handle_control_signal work.
  */
