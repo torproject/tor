@@ -868,16 +868,12 @@ nodelist_assert_ok(void)
 /** Ensure that the nodelist has been created with the most recent consensus.
  *  If that's not the case, make it so.  */
 void
-ensure_nodelist_freshness(void)
+nodelist_ensure_freshness(networkstatus_t *ns)
 {
+  tor_assert(ns);
+
   /* We don't even have a nodelist: this is a NOP. */
   if (!the_nodelist) {
-    return;
-  }
-
-  /* We don't even have a recent consensus: this is a NOP */
-  networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
-  if (!ns) {
     return;
   }
 

@@ -1341,7 +1341,7 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
   }
 
   /* Ensure the nodelist is fresh, since it contains the HSDir indices. */
-  ensure_nodelist_freshness();
+  nodelist_ensure_freshness(c);
 
   /* Add every node_t that support HSDir v3 for which we do have a valid
    * hsdir_index already computed for them for this consensus. */
