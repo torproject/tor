@@ -126,6 +126,7 @@
 #include "networkstatus_st.h"
 #include "or_connection_st.h"
 #include "port_cfg_st.h"
+#include "routerinfo_st.h"
 #include "socks_request_st.h"
 
 #ifdef HAVE_SYSTEMD

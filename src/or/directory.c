@@ -61,6 +61,7 @@
 #include "networkstatus_st.h"
 #include "node_st.h"
 #include "rend_service_descriptor_st.h"
+#include "routerinfo_st.h"
 
 /**
  * \file directory.c

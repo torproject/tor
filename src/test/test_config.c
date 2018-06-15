@@ -46,6 +46,7 @@
 
 #include "dir_server_st.h"
 #include "port_cfg_st.h"
+#include "routerinfo_st.h"
 
 static void
 test_config_addressmap(void *arg)

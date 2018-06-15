@@ -87,6 +87,7 @@
 #include "entry_connection_st.h"
 #include "or_circuit_st.h"
 #include "origin_circuit_st.h"
+#include "routerinfo_st.h"
 #include "socks_request_st.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,

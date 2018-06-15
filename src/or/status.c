@@ -30,6 +30,8 @@
 #include "hs_service.h"
 #include "dos.h"
 
+#include "routerinfo_st.h"
+
 static void log_accounting(const time_t now, const or_options_t *options);
 #include "geoip.h"
 

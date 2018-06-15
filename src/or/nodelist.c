@@ -72,6 +72,7 @@
 #include "microdesc_st.h"
 #include "networkstatus_st.h"
 #include "node_st.h"
+#include "routerinfo_st.h"
 #include "routerlist_st.h"
 #include "routerstatus_st.h"
 

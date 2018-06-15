@@ -38,6 +38,7 @@
 #include "dir_server_st.h"
 #include "networkstatus_st.h"
 #include "rend_encoded_v2_service_descriptor_st.h"
+#include "routerinfo_st.h"
 #include "routerlist_st.h"
 
 #ifdef _WIN32

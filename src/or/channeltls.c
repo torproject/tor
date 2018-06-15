@@ -63,6 +63,7 @@
 #include "or_connection_st.h"
 #include "or_handshake_certs_st.h"
 #include "or_handshake_state_st.h"
+#include "routerinfo_st.h"
 
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;

@@ -25,6 +25,7 @@
 #include "node_st.h"
 #include "rend_encoded_v2_service_descriptor_st.h"
 #include "rend_intro_point_st.h"
+#include "routerinfo_st.h"
 
 #include "test_helpers.h"
 

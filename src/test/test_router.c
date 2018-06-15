@@ -14,6 +14,8 @@
 #include "router.h"
 #include "routerlist.h"
 
+#include "routerinfo_st.h"
+
 /* Test suite stuff */
 #include "test.h"
 

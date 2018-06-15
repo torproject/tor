@@ -47,6 +47,7 @@
 #include "node_st.h"
 #include "origin_circuit_st.h"
 #include "port_cfg_st.h"
+#include "routerinfo_st.h"
 
 /**
  * \file router.c

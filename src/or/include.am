@@ -296,6 +296,7 @@ ORHEADERS = \
 	src/or/rephist.h				\
 	src/or/replaycache.h				\
 	src/or/router.h					\
+	src/or/routerinfo_st.h				\
 	src/or/routerkeys.h				\
 	src/or/routerlist.h				\
 	src/or/routerlist_st.h				\

@@ -37,6 +37,7 @@
 #include "routerset.h"
 
 #include "node_st.h"
+#include "routerinfo_st.h"
 #include "routerstatus_st.h"
 
 /** Return a new empty routerset. */

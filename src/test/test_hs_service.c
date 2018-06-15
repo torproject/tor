@@ -58,6 +58,7 @@
 #include "networkstatus_st.h"
 #include "node_st.h"
 #include "origin_circuit_st.h"
+#include "routerinfo_st.h"
 
 /* Trunnel */
 #include "hs/cell_establish_intro.h"

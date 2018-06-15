@@ -40,6 +40,7 @@
 #include "extrainfo_st.h"
 #include "microdesc_st.h"
 #include "node_st.h"
+#include "routerinfo_st.h"
 #include "routerlist_st.h"
 #include "tor_version_st.h"
 #include "vote_routerstatus_st.h"

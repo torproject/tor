@@ -91,6 +91,7 @@
 #include "rend_authorized_client_st.h"
 #include "rend_intro_point_st.h"
 #include "rend_service_descriptor_st.h"
+#include "routerinfo_st.h"
 #include "routerlist_st.h"
 #include "tor_version_st.h"
 #include "vote_microdesc_hash_st.h"
