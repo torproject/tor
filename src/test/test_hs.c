@@ -21,6 +21,9 @@
 #include "rendservice.h"
 #include "routerset.h"
 #include "circuitbuild.h"
+
+#include "rend_intro_point_st.h"
+
 #include "test_helpers.h"
 
 /* mock ID digest and longname for node that's in nodelist */

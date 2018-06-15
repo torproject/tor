@@ -81,6 +81,7 @@
 
 #include "dirauth/dirvote.h"
 
+#include "rend_intro_point_st.h"
 #include "rend_service_descriptor_st.h"
 #include "tor_version_st.h"
 
