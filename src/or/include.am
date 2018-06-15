@@ -210,6 +210,7 @@ ORHEADERS = \
 	src/or/crypt_path_st.h				\
 	src/or/crypt_path_reference_st.h		\
 	src/or/cpuworker.h				\
+	src/or/desc_store_st.h				\
 	src/or/directory.h				\
 	src/or/dirserv.h				\
 	src/or/dir_connection_st.h			\
@@ -294,6 +295,7 @@ ORHEADERS = \
 	src/or/router.h					\
 	src/or/routerkeys.h				\
 	src/or/routerlist.h				\
+	src/or/routerlist_st.h				\
 	src/or/routerkeys.h				\
 	src/or/routerset.h				\
 	src/or/routerparse.h				\

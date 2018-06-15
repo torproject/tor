@@ -131,6 +131,7 @@
 #include "networkstatus_st.h"
 #include "networkstatus_voter_info_st.h"
 #include "node_st.h"
+#include "routerlist_st.h"
 #include "vote_routerstatus_st.h"
 
 // #define DEBUG_ROUTERLIST

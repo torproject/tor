@@ -38,6 +38,7 @@
 
 #include "dir_connection_st.h"
 #include "node_st.h"
+#include "routerlist_st.h"
 #include "tor_version_st.h"
 #include "vote_routerstatus_st.h"
 

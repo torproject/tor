@@ -1891,55 +1891,8 @@ typedef enum store_type_t {
   EXTRAINFO_STORE = 1
 } store_type_t;
 
-/** A 'store' is a set of descriptors saved on disk, with accompanying
- * journal, mmaped as needed, rebuilt as needed. */
-typedef struct desc_store_t {
-  /** Filename (within DataDir) for the store.  We append .tmp to this
-   * filename for a temporary file when rebuilding the store, and .new to this
-   * filename for the journal. */
-  const char *fname_base;
-  /** Human-readable description of what this store contains. */
-  const char *description;
-
-  tor_mmap_t *mmap; /**< A mmap for the main file in the store. */
-
-  store_type_t type; /**< What's stored in this store? */
-
-  /** The size of the router log, in bytes. */
-  size_t journal_len;
-  /** The size of the router store, in bytes. */
-  size_t store_len;
-  /** Total bytes dropped since last rebuild: this is space currently
-   * used in the cache and the journal that could be freed by a rebuild. */
-  size_t bytes_dropped;
-} desc_store_t;
-
-/** Contents of a directory of onion routers. */
-typedef struct {
-  /** Map from server identity digest to a member of routers. */
-  struct digest_ri_map_t *identity_map;
-  /** Map from server descriptor digest to a signed_descriptor_t from
-   * routers or old_routers. */
-  struct digest_sd_map_t *desc_digest_map;
-  /** Map from extra-info digest to an extrainfo_t.  Only exists for
-   * routers in routers or old_routers. */
-  struct digest_ei_map_t *extra_info_map;
-  /** Map from extra-info digests to a signed_descriptor_t for a router
-   * descriptor having that extra-info digest.  Only exists for
-   * routers in routers or old_routers. */
-  struct digest_sd_map_t *desc_by_eid_map;
-  /** List of routerinfo_t for all currently live routers we know. */
-  smartlist_t *routers;
-  /** List of signed_descriptor_t for older router descriptors we're
-   * caching. */
-  smartlist_t *old_routers;
-  /** Store holding server descriptors.  If present, any router whose
-   * cache_info.saved_location == SAVED_IN_CACHE is stored in this file
-   * starting at cache_info.saved_offset */
-  desc_store_t desc_store;
-  /** Store holding extra-info documents. */
-  desc_store_t extrainfo_store;
-} routerlist_t;
+typedef struct desc_store_t desc_store_t;
+typedef struct routerlist_t routerlist_t;
 
 /** Information on router used when extending a circuit. We don't need a
  * full routerinfo_t to extend: we only need addr:port:keyid to build an OR

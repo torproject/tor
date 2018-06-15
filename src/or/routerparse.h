@@ -43,6 +43,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s, const char *end,
                                              int allow_annotations,
                                              const char *prepend_annotations,
                                              int *can_dl_again_out);
+struct digest_ri_map_t;
 extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
                              int cache_copy, struct digest_ri_map_t *routermap,
                              int *can_dl_again_out);

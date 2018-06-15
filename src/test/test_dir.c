@@ -50,6 +50,7 @@
 #include "networkstatus_voter_info_st.h"
 #include "ns_detached_signatures_st.h"
 #include "port_cfg_st.h"
+#include "routerlist_st.h"
 #include "tor_version_st.h"
 #include "vote_microdesc_hash_st.h"
 #include "vote_routerstatus_st.h"

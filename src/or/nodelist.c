@@ -71,6 +71,7 @@
 #include "dir_server_st.h"
 #include "networkstatus_st.h"
 #include "node_st.h"
+#include "routerlist_st.h"
 
 static void nodelist_drop_node(node_t *node, int remove_from_ht);
 #define node_free(val) \
