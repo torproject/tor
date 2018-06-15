@@ -16,6 +16,8 @@
 #include "hs_cell.h"
 #include "hs_ntor.h"
 
+#include "origin_circuit_st.h"
+
 /* Trunnel. */
 #include "ed25519_cert.h"
 #include "hs/cell_common.h"

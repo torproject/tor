@@ -39,6 +39,7 @@
 
 #include "dir_connection_st.h"
 #include "entry_connection_st.h"
+#include "origin_circuit_st.h"
 
 static int
 mock_connection_ap_handshake_send_begin(entry_connection_t *ap_conn)

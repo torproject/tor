@@ -34,6 +34,7 @@
 
 #include "test_helpers.h"
 #include "log_test_helpers.h"
+#include "origin_circuit_st.h"
 
 /* TODO:
  * choose_random_entry() test with state set.

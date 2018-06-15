@@ -75,6 +75,8 @@
 #include "circuitmux.h"
 #include "relay.h"
 
+#include "or_circuit_st.h"
+
 /*
  * Private typedefs for circuitmux.c
  */

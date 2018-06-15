@@ -12,6 +12,7 @@
 
 #include "or.h"
 #include "circuitbuild.h"
+#include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
 #include "control.h"
@@ -29,6 +30,8 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+
+#include "origin_circuit_st.h"
 
 /** Return 0 if one and two are the same service ids, else -1 or 1 */
 int

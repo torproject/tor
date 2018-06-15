@@ -250,9 +250,11 @@ ORHEADERS = \
 	src/or/onion_ntor.h				\
 	src/or/onion_tap.h				\
 	src/or/or.h					\
+	src/or/or_circuit_st.h				\
 	src/or/or_connection_st.h			\
 	src/or/or_handshake_certs_st.h			\
 	src/or/or_handshake_state_st.h			\
+	src/or/origin_circuit_st.h			\
 	src/or/transports.h				\
 	src/or/parsecommon.h			\
 	src/or/periodic.h				\

@@ -61,6 +61,7 @@ void directory_request_set_dir_addr_port(directory_request_t *req,
                                          const tor_addr_port_t *p);
 void directory_request_set_directory_id_digest(directory_request_t *req,
                                                const char *digest);
+struct circuit_guard_state_t;
 void directory_request_set_guard_state(directory_request_t *req,
                                        struct circuit_guard_state_t *state);
 void directory_request_set_router_purpose(directory_request_t *req,

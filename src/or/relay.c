@@ -84,6 +84,8 @@
 
 #include "dir_connection_st.h"
 #include "entry_connection_st.h"
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,

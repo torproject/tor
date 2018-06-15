@@ -15,6 +15,15 @@
 #include "testsupport.h"
 #include "hs_ident.h"
 
+/** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Assert
+ * if the cast is impossible. */
+or_circuit_t *TO_OR_CIRCUIT(circuit_t *);
+const or_circuit_t *CONST_TO_OR_CIRCUIT(const circuit_t *);
+/** Convert a circuit_t* to a pointer to the enclosing origin_circuit_t.
+ * Assert if the cast is impossible. */
+origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *);
+const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(const circuit_t *);
+
 MOCK_DECL(smartlist_t *, circuit_get_global_list, (void));
 smartlist_t *circuit_get_global_origin_circuit_list(void);
 int circuit_any_opened_circuits(void);

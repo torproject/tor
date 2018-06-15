@@ -77,6 +77,8 @@
 #include "rephist.h"
 #include "router.h"
 
+#include "or_circuit_st.h"
+
 // trunnel
 #include "ed25519_cert.h"
 

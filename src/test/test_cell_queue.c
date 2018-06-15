@@ -8,6 +8,9 @@
 #include "relay.h"
 #include "test.h"
 
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
+
 static void
 test_cq_manip(void *arg)
 {

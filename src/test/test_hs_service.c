@@ -53,6 +53,8 @@
 #include "dirauth/shared_random_state.h"
 #include "voting_schedule.h"
 
+#include "origin_circuit_st.h"
+
 /* Trunnel */
 #include "hs/cell_establish_intro.h"
 

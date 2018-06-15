@@ -17,6 +17,7 @@
 #include "test.h"
 
 #include "entry_connection_st.h"
+#include "origin_circuit_st.h"
 
 static int srm_ncalls;
 static entry_connection_t *srm_conn;

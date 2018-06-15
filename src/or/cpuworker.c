@@ -32,6 +32,8 @@
 #include "router.h"
 #include "workqueue.h"
 
+#include "or_circuit_st.h"
+
 static void queue_pending_tasks(void);
 
 typedef struct worker_state_s {

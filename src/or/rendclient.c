@@ -35,6 +35,7 @@
 
 #include "dir_connection_st.h"
 #include "entry_connection_st.h"
+#include "origin_circuit_st.h"
 
 static extend_info_t *rend_client_get_random_intro_impl(
                           const rend_cache_entry_t *rend_query,

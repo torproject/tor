@@ -14,6 +14,8 @@
 #include "circuitbuild.h"
 #include "nodelist.h"
 
+#include "origin_circuit_st.h"
+
 static void
 test_circuit_is_available_for_use_ret_false_when_marked_for_close(void *arg)
 {

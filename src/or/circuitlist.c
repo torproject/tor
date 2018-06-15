@@ -94,6 +94,8 @@
 
 #include "dir_connection_st.h"
 #include "edge_connection_st.h"
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
 
 /********* START VARIABLES **********/
 
@@ -129,6 +131,31 @@ static void circuit_about_to_free(circuit_t *circ);
 static int any_opened_circs_cached_val = 0;
 
 /********* END VARIABLES ************/
+
+or_circuit_t *
+TO_OR_CIRCUIT(circuit_t *x)
+{
+  tor_assert(x->magic == OR_CIRCUIT_MAGIC);
+  return DOWNCAST(or_circuit_t, x);
+}
+const or_circuit_t *
+CONST_TO_OR_CIRCUIT(const circuit_t *x)
+{
+  tor_assert(x->magic == OR_CIRCUIT_MAGIC);
+  return DOWNCAST(or_circuit_t, x);
+}
+origin_circuit_t *
+TO_ORIGIN_CIRCUIT(circuit_t *x)
+{
+  tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
+  return DOWNCAST(origin_circuit_t, x);
+}
+const origin_circuit_t *
+CONST_TO_ORIGIN_CIRCUIT(const circuit_t *x)
+{
+  tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
+  return DOWNCAST(origin_circuit_t, x);
+}
 
 /** A map from channel and circuit ID to circuit.  (Lookup performance is
  * very important here, since we need to do it every time a cell arrives.) */

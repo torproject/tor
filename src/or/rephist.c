@@ -89,6 +89,8 @@
 #include "connection_or.h"
 #include "statefile.h"
 
+#include "or_circuit_st.h"
+
 static void bw_arrays_init(void);
 static void predicted_ports_alloc(void);
 

@@ -41,6 +41,7 @@
 
 #include "dir_connection_st.h"
 #include "dir_server_st.h"
+#include "origin_circuit_st.h"
 #include "port_cfg_st.h"
 
 /**

@@ -41,6 +41,8 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 
+#include "origin_circuit_st.h"
+
 #undef log
 #include <math.h>
 

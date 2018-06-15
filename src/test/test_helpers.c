@@ -25,6 +25,7 @@
 #include "routerlist.h"
 
 #include "connection_st.h"
+#include "origin_circuit_st.h"
 
 #include "test.h"
 #include "test_helpers.h"
