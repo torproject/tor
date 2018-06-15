@@ -41,6 +41,7 @@
 #include "crypt_path_st.h"
 #include "dir_connection_st.h"
 #include "entry_connection_st.h"
+#include "extend_info_st.h"
 #include "networkstatus_st.h"
 #include "origin_circuit_st.h"
 #include "socks_request_st.h"

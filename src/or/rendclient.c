@@ -37,6 +37,7 @@
 #include "crypt_path_st.h"
 #include "dir_connection_st.h"
 #include "entry_connection_st.h"
+#include "extend_info_st.h"
 #include "origin_circuit_st.h"
 #include "rend_intro_point_st.h"
 #include "rend_service_descriptor_st.h"

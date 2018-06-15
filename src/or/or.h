@@ -1502,24 +1502,7 @@ typedef enum store_type_t {
 
 typedef struct desc_store_t desc_store_t;
 typedef struct routerlist_t routerlist_t;
-
-/** Information on router used when extending a circuit. We don't need a
- * full routerinfo_t to extend: we only need addr:port:keyid to build an OR
- * connection, and onion_key to create the onionskin. Note that for onehop
- * general-purpose tunnels, the onion_key is NULL. */
-typedef struct extend_info_t {
-  char nickname[MAX_HEX_NICKNAME_LEN+1]; /**< This router's nickname for
-                                          * display. */
-  /** Hash of this router's RSA identity key. */
-  char identity_digest[DIGEST_LEN];
-  /** Ed25519 identity for this router, if any. */
-  ed25519_public_key_t ed_identity;
-  uint16_t port; /**< OR port. */
-  tor_addr_t addr; /**< IP address. */
-  crypto_pk_t *onion_key; /**< Current onionskin key. */
-  curve25519_public_key_t curve25519_onion_key;
-} extend_info_t;
-
+typedef struct extend_info_t extend_info_t;
 typedef struct authority_cert_t authority_cert_t;
 
 /** Bitfield enum type listing types of information that directory authorities

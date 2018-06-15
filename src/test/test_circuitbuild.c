@@ -12,6 +12,8 @@
 #include "config.h"
 #include "circuitbuild.h"
 
+#include "extend_info_st.h"
+
 /* Dummy nodes smartlist for testing */
 static smartlist_t dummy_nodes;
 /* Dummy exit extend_info for testing */

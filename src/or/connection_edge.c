@@ -101,6 +101,7 @@
 #include "cpath_build_state_st.h"
 #include "dir_connection_st.h"
 #include "entry_connection_st.h"
+#include "extend_info_st.h"
 #include "node_st.h"
 #include "or_circuit_st.h"
 #include "origin_circuit_st.h"

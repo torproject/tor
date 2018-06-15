@@ -62,6 +62,7 @@
 
 #include "cell_st.h"
 #include "cell_queue_st.h"
+#include "extend_info_st.h"
 #include "or_connection_st.h"
 #include "or_handshake_certs_st.h"
 #include "or_handshake_state_st.h"

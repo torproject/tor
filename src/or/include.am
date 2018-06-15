@@ -230,6 +230,7 @@ ORHEADERS = \
 	src/or/entry_connection_st.h			\
 	src/or/entry_port_cfg_st.h			\
 	src/or/ext_orport.h				\
+	src/or/extend_info_st.h				\
 	src/or/extrainfo_st.h				\
 	src/or/fallback_dirs.inc			\
 	src/or/fp_pair.h				\

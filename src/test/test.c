@@ -62,6 +62,7 @@ double fabs(double x);
 #include "statefile.h"
 #include "crypto_curve25519.h"
 
+#include "extend_info_st.h"
 #include "or_circuit_st.h"
 #include "rend_encoded_v2_service_descriptor_st.h"
 #include "rend_intro_point_st.h"

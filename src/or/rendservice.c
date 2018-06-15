@@ -40,6 +40,7 @@
 #include "crypt_path_st.h"
 #include "crypt_path_reference_st.h"
 #include "edge_connection_st.h"
+#include "extend_info_st.h"
 #include "networkstatus_st.h"
 #include "origin_circuit_st.h"
 #include "rend_authorized_client_st.h"

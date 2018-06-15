@@ -43,6 +43,7 @@
 #include "crypt_path_st.h"
 #include "dir_connection_st.h"
 #include "dir_server_st.h"
+#include "extend_info_st.h"
 #include "extrainfo_st.h"
 #include "node_st.h"
 #include "origin_circuit_st.h"
