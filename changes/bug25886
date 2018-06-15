@@ -1,0 +1,5 @@
+  o Minor bugfixes (relay):
+    - In frac_nodes_with_descriptors(), add for_direct_connect, and replace
+      node_has_any_descriptor() with node_has_preferred_descriptor(). Fixes
+      bug 25886; bugfix on 0.3.4.2-alpha. Patch by Neel Chauhan.
+
