@@ -17,6 +17,8 @@
 #include "scheduler.h"
 #include "tortls.h"
 
+#include "or_connection_st.h"
+
 /* Test suite stuff */
 #include "test.h"
 #include "fakechans.h"

@@ -14,6 +14,8 @@
 #define SCHEDULER_PRIVATE_
 #include "scheduler.h"
 
+#include "or_connection_st.h"
+
 #define TLS_PER_CELL_OVERHEAD 29
 
 #ifdef HAVE_KIST_SUPPORT

@@ -26,6 +26,7 @@
 
 #include "dir_connection_st.h"
 #include "entry_connection_st.h"
+#include "or_connection_st.h"
 
 static void * test_conn_get_basic_setup(const struct testcase_t *tc);
 static int test_conn_get_basic_teardown(const struct testcase_t *tc,

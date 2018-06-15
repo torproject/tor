@@ -13,6 +13,8 @@
 #define TOR_CHANNEL_INTERNAL_
 #include "channeltls.h"
 
+#include "or_connection_st.h"
+
 /**
  * \file scheduler.c
  * \brief Channel scheduling system: decides which channels should send and

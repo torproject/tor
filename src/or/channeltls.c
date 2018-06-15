@@ -60,6 +60,8 @@
 #include "channelpadding_negotiation.h"
 #include "channelpadding.h"
 
+#include "or_connection_st.h"
+
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;
 /** How many CELL_VERSIONS cells have we received, ever? */

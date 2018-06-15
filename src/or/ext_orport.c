@@ -29,6 +29,8 @@
 #include "proto_ext_or.h"
 #include "util.h"
 
+#include "or_connection_st.h"
+
 /** Allocate and return a structure capable of holding an Extended
  *  ORPort message of body length <b>len</b>. */
 ext_or_cmd_t *

@@ -12,6 +12,8 @@
 #ifndef TOR_CONNECTION_OR_H
 #define TOR_CONNECTION_OR_H
 
+or_connection_t *TO_OR_CONN(connection_t *);
+
 void connection_or_clear_identity(or_connection_t *conn);
 void connection_or_clear_identity_map(void);
 void clear_broken_connection_map(int disable);

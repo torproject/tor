@@ -23,6 +23,8 @@
 #include "compat_time.h"
 #include "rendservice.h"
 
+#include "or_connection_st.h"
+
 STATIC int32_t channelpadding_get_netflow_inactive_timeout_ms(
                                                            const channel_t *);
 STATIC int channelpadding_send_disable_command(channel_t *);

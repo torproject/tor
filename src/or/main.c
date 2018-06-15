@@ -123,6 +123,7 @@
 #include "dirauth/shared_random.h"
 
 #include "entry_connection_st.h"
+#include "or_connection_st.h"
 #include "port_cfg_st.h"
 
 #ifdef HAVE_SYSTEMD
