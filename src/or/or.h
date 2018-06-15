@@ -1640,61 +1640,9 @@ typedef struct or_connection_t {
 } or_connection_t;
 
 typedef struct control_connection_t control_connection_t;
+typedef struct dir_connection_t dir_connection_t;
 typedef struct edge_connection_t edge_connection_t;
 typedef struct entry_connection_t entry_connection_t;
-
-/** Subtype of connection_t for an "directory connection" -- that is, an HTTP
- * connection to retrieve or serve directory material. */
-typedef struct dir_connection_t {
-  connection_t base_;
-
- /** Which 'resource' did we ask the directory for? This is typically the part
-  * of the URL string that defines, relative to the directory conn purpose,
-  * what thing we want.  For example, in router descriptor downloads by
-  * descriptor digest, it contains "d/", then one or more +-separated
-  * fingerprints.
-  **/
-  char *requested_resource;
-  unsigned int dirconn_direct:1; /**< Is this dirconn direct, or via Tor? */
-
-  /** If we're fetching descriptors, what router purpose shall we assign
-   * to them? */
-  uint8_t router_purpose;
-
-  /** List of spooled_resource_t for objects that we're spooling. We use
-   * it from back to front. */
-  smartlist_t *spool;
-  /** The compression object doing on-the-fly compression for spooled data. */
-  tor_compress_state_t *compress_state;
-
-  /** What rendezvous service are we querying for? */
-  rend_data_t *rend_data;
-
-  /* Hidden service connection identifier for dir connections: Used by HS
-     client-side code to fetch HS descriptors, and by the service-side code to
-     upload descriptors. */
-  struct hs_ident_dir_conn_t *hs_ident;
-
-  /** If this is a one-hop connection, tracks the state of the directory guard
-   * for this connection (if any). */
-  struct circuit_guard_state_t *guard_state;
-
-  char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
-                                     * the directory server's signing key. */
-
-  /** Unique ID for directory requests; this used to be in connection_t, but
-   * that's going away and being used on channels instead.  The dirserver still
-   * needs this for the incoming side, so it's moved here. */
-  uint64_t dirreq_id;
-
-#ifdef MEASUREMENTS_21206
-  /** Number of RELAY_DATA cells received. */
-  uint32_t data_cells_received;
-
-  /** Number of RELAY_DATA cells sent. */
-  uint32_t data_cells_sent;
-#endif /* defined(MEASUREMENTS_21206) */
-} dir_connection_t;
 
 /** Cast a connection_t subtype pointer to a connection_t **/
 #define TO_CONN(c) (&(((c)->base_)))
@@ -1705,9 +1653,6 @@ typedef struct dir_connection_t {
 /** Convert a connection_t* to an or_connection_t*; assert if the cast is
  * invalid. */
 static or_connection_t *TO_OR_CONN(connection_t *);
-/** Convert a connection_t* to a dir_connection_t*; assert if the cast is
- * invalid. */
-static dir_connection_t *TO_DIR_CONN(connection_t *);
 /** Convert a connection_t* to an listener_connection_t*; assert if the cast is
  * invalid. */
 static listener_connection_t *TO_LISTENER_CONN(connection_t *);
@@ -1716,11 +1661,6 @@ static inline or_connection_t *TO_OR_CONN(connection_t *c)
 {
   tor_assert(c->magic == OR_CONNECTION_MAGIC);
   return DOWNCAST(or_connection_t, c);
-}
-static inline dir_connection_t *TO_DIR_CONN(connection_t *c)
-{
-  tor_assert(c->magic == DIR_CONNECTION_MAGIC);
-  return DOWNCAST(dir_connection_t, c);
 }
 static inline listener_connection_t *TO_LISTENER_CONN(connection_t *c)
 {

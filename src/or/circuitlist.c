@@ -67,6 +67,7 @@
 #include "control.h"
 #include "crypto_rand.h"
 #include "crypto_util.h"
+#include "directory.h"
 #include "entrynodes.h"
 #include "main.h"
 #include "hs_circuit.h"
@@ -91,6 +92,7 @@
 
 #include "ht.h"
 
+#include "dir_connection_st.h"
 #include "edge_connection_st.h"
 
 /********* START VARIABLES **********/

@@ -63,6 +63,7 @@
 #include "control.h"
 #include "crypto_rand.h"
 #include "crypto_util.h"
+#include "directory.h"
 #include "geoip.h"
 #include "hs_cache.h"
 #include "main.h"
@@ -81,6 +82,7 @@
 #include "scheduler.h"
 #include "rephist.h"
 
+#include "dir_connection_st.h"
 #include "entry_connection_st.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,

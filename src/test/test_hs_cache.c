@@ -18,6 +18,8 @@
 #include "connection.h"
 #include "proto_http.h"
 
+#include "dir_connection_st.h"
+
 #include "hs_test_helpers.h"
 #include "test_helpers.h"
 #include "test.h"

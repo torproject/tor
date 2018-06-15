@@ -30,6 +30,8 @@
 #include "statefile.h"
 #include "util.h"
 
+#include "dir_connection_st.h"
+
 #include "test_helpers.h"
 #include "log_test_helpers.h"
 

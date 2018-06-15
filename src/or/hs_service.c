@@ -39,6 +39,7 @@
 #include "hs_service.h"
 #include "hs_stats.h"
 
+#include "dir_connection_st.h"
 #include "edge_connection_st.h"
 
 /* Trunnel */

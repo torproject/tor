@@ -207,6 +207,7 @@ ORHEADERS = \
 	src/or/cpuworker.h				\
 	src/or/directory.h				\
 	src/or/dirserv.h				\
+	src/or/dir_connection_st.h			\
 	src/or/dir_server_st.h				\
 	src/or/dns.h					\
 	src/or/dns_structs.h				\

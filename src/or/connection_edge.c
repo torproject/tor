@@ -97,6 +97,7 @@
 #include "routerset.h"
 #include "circuitbuild.h"
 
+#include "dir_connection_st.h"
 #include "entry_connection_st.h"
 
 #ifdef HAVE_LINUX_TYPES_H

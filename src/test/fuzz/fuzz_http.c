@@ -14,6 +14,8 @@
 #include "directory.h"
 #include "torlog.h"
 
+#include "dir_connection_st.h"
+
 #include "fuzzing.h"
 
 static void

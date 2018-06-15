@@ -36,6 +36,8 @@
 
 #include "dirauth/dirvote.h"
 
+#include "dir_connection_st.h"
+
 /**
  * \file dirserv.c
  * \brief Directory server core implementation. Manages directory

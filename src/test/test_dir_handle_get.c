@@ -34,6 +34,7 @@
 #include "log_test_helpers.h"
 #include "voting_schedule.h"
 
+#include "dir_connection_st.h"
 #include "dir_server_st.h"
 
 #ifdef _WIN32

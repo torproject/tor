@@ -14,6 +14,7 @@
 
 #include "hs_ident.h"
 
+dir_connection_t *TO_DIR_CONN(connection_t *c);
 int directories_have_accepted_server_descriptor(void);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   dirinfo_type_t type, const char *payload,

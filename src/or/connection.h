@@ -150,20 +150,13 @@ MOCK_DECL(void, connection_write_to_buf_impl_,
 /* DOCDOC connection_write_to_buf */
 static void connection_buf_add(const char *string, size_t len,
                                     connection_t *conn);
-/* DOCDOC connection_write_to_buf_compress */
-static void connection_buf_add_compress(const char *string, size_t len,
-                                             dir_connection_t *conn, int done);
 static inline void
 connection_buf_add(const char *string, size_t len, connection_t *conn)
 {
   connection_write_to_buf_impl_(string, len, conn, 0);
 }
-static inline void
-connection_buf_add_compress(const char *string, size_t len,
-                                 dir_connection_t *conn, int done)
-{
-  connection_write_to_buf_impl_(string, len, TO_CONN(conn), done ? -1 : 1);
-}
+void connection_buf_add_compress(const char *string, size_t len,
+                                 dir_connection_t *conn, int done);
 void connection_buf_add_buf(connection_t *conn, buf_t *buf);
 
 /* DOCDOC connection_get_inbuf_len */

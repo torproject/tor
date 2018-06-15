@@ -53,6 +53,7 @@
 #include "dirauth/mode.h"
 #include "dirauth/shared_random.h"
 
+#include "dir_connection_st.h"
 #include "dir_server_st.h"
 #include "entry_connection_st.h"
 
@@ -153,6 +154,15 @@ static void connection_dir_close_consensus_fetches(
 #define MICRODESC_CACHE_LIFETIME (48*60*60)
 
 /********* END VARIABLES ************/
+
+/** Convert a connection_t* to a dir_connection_t*; assert if the cast is
+ * invalid. */
+dir_connection_t *
+TO_DIR_CONN(connection_t *c)
+{
+  tor_assert(c->magic == DIR_CONNECTION_MAGIC);
+  return DOWNCAST(dir_connection_t, c);
+}
 
 /** Return false if the directory purpose <b>dir_purpose</b>
  * does not require an anonymous (three-hop) connection.

@@ -12,6 +12,8 @@
 #include "main.h"
 #include "test.h"
 
+#include "dir_connection_st.h"
+
 static or_options_t mock_options;
 
 static void

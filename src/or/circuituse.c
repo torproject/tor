@@ -40,6 +40,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "control.h"
+#include "directory.h"
 #include "entrynodes.h"
 #include "hs_common.h"
 #include "hs_client.h"
@@ -56,6 +57,7 @@
 #include "router.h"
 #include "routerlist.h"
 
+#include "dir_connection_st.h"
 #include "entry_connection_st.h"
 
 static void circuit_expire_old_circuits_clientside(void);

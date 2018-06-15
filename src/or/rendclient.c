@@ -33,6 +33,7 @@
 #include "routerlist.h"
 #include "routerset.h"
 
+#include "dir_connection_st.h"
 #include "entry_connection_st.h"
 
 static extend_info_t *rend_client_get_random_intro_impl(

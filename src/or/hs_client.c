@@ -35,6 +35,7 @@
 #include "router.h"
 #include "routerset.h"
 
+#include "dir_connection_st.h"
 #include "entry_connection_st.h"
 
 /* Return a human-readable string for the client fetch status code. */
