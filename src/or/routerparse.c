@@ -79,12 +79,13 @@
 #include "torcert.h"
 #include "voting_schedule.h"
 
-#undef log
-#include <math.h>
-
 #include "dirauth/dirvote.h"
 
+#include "rend_service_descriptor_st.h"
 #include "tor_version_st.h"
+
+#undef log
+#include <math.h>
 
 /****************************************************************************/
 

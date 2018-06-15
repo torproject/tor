@@ -87,6 +87,7 @@
 #include "or_connection_st.h"
 #include "or_circuit_st.h"
 #include "origin_circuit_st.h"
+#include "rend_service_descriptor_st.h"
 
 #ifndef _WIN32
 #include <pwd.h>

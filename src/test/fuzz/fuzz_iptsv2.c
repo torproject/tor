@@ -4,6 +4,9 @@
 #include "or.h"
 #include "routerparse.h"
 #include "rendcommon.h"
+
+#include "rend_service_descriptor_st.h"
+
 #include "fuzzing.h"
 
 static void

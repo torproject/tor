@@ -11,6 +11,9 @@
 #include "routerlist.h"
 #include "config.h"
 #include "hs_common.h"
+
+#include "rend_service_descriptor_st.h"
+
 #include "rend_test_helpers.h"
 #include "log_test_helpers.h"
 
