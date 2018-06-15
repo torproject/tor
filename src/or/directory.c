@@ -54,6 +54,7 @@
 #include "dirauth/mode.h"
 #include "dirauth/shared_random.h"
 
+#include "authority_cert_st.h"
 #include "dir_connection_st.h"
 #include "dir_server_st.h"
 #include "entry_connection_st.h"

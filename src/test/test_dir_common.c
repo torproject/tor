@@ -14,6 +14,7 @@
 #include "test_dir_common.h"
 #include "voting_schedule.h"
 
+#include "authority_cert_st.h"
 #include "networkstatus_st.h"
 #include "networkstatus_voter_info_st.h"
 #include "vote_microdesc_hash_st.h"

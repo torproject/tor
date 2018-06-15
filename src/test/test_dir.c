@@ -45,6 +45,7 @@
 #include "log_test_helpers.h"
 #include "voting_schedule.h"
 
+#include "authority_cert_st.h"
 #include "document_signature_st.h"
 #include "networkstatus_st.h"
 #include "networkstatus_voter_info_st.h"

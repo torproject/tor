@@ -39,6 +39,7 @@
 
 #include "dirauth/mode.h"
 
+#include "authority_cert_st.h"
 #include "crypt_path_st.h"
 #include "dir_connection_st.h"
 #include "dir_server_st.h"

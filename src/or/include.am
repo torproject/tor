@@ -181,6 +181,7 @@ endif
 
 ORHEADERS = \
 	src/or/addressmap.h				\
+	src/or/authority_cert_st.h			\
 	src/or/auth_dirs.inc				\
 	src/or/bridges.h				\
 	src/or/channel.h				\

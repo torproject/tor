@@ -1911,24 +1911,7 @@ typedef struct extend_info_t {
   curve25519_public_key_t curve25519_onion_key;
 } extend_info_t;
 
-/** Certificate for v3 directory protocol: binds long-term authority identity
- * keys to medium-term authority signing keys. */
-typedef struct authority_cert_t {
-  /** Information relating to caching this cert on disk and looking it up. */
-  signed_descriptor_t cache_info;
-  /** This authority's long-term authority identity key. */
-  crypto_pk_t *identity_key;
-  /** This authority's medium-term signing key. */
-  crypto_pk_t *signing_key;
-  /** The digest of <b>signing_key</b> */
-  char signing_key_digest[DIGEST_LEN];
-  /** The listed expiration time of this certificate. */
-  time_t expires;
-  /** This authority's IPv4 address, in host order. */
-  uint32_t addr;
-  /** This authority's directory port. */
-  uint16_t dir_port;
-} authority_cert_t;
+typedef struct authority_cert_t authority_cert_t;
 
 /** Bitfield enum type listing types of information that directory authorities
  * can be authoritative about, and that directory caches may or may not cache.

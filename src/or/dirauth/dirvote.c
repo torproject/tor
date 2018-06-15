@@ -28,6 +28,7 @@
 #include "dirauth/mode.h"
 #include "dirauth/shared_random_state.h"
 
+#include "authority_cert_st.h"
 #include "dir_server_st.h"
 #include "document_signature_st.h"
 #include "networkstatus_st.h"

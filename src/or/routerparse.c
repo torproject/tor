@@ -81,6 +81,7 @@
 
 #include "dirauth/dirvote.h"
 
+#include "authority_cert_st.h"
 #include "document_signature_st.h"
 #include "networkstatus_st.h"
 #include "networkstatus_voter_info_st.h"
