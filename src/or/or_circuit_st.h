@@ -9,6 +9,8 @@
 
 #include "or.h"
 
+#include "circuit_st.h"
+
 struct onion_queue_t;
 
 /** An or_circuit_t holds information needed to implement a circuit at an

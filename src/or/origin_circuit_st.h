@@ -9,6 +9,8 @@
 
 #include "or.h"
 
+#include "circuit_st.h"
+
 struct onion_queue_t;
 
 /** An origin_circuit_t holds data necessary to build and use a circuit.
