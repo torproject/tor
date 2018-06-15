@@ -30,6 +30,7 @@
 #include "main.h"
 #include "policies.h"
 
+#include "control_connection_st.h"
 #include "entry_connection_st.h"
 
 #include <event2/dns.h>

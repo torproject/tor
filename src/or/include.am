@@ -202,6 +202,7 @@ ORHEADERS = \
 	src/or/conscache.h				\
 	src/or/consdiff.h				\
 	src/or/consdiffmgr.h				\
+	src/or/control_connection_st.h			\
 	src/or/control.h				\
 	src/or/cpuworker.h				\
 	src/or/directory.h				\

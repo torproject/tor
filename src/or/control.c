@@ -81,6 +81,7 @@
 #include "routerparse.h"
 #include "shared_random_client.h"
 
+#include "control_connection_st.h"
 #include "entry_connection_st.h"
 
 #ifndef _WIN32
@@ -227,6 +228,15 @@ static void flush_queued_events_cb(mainloop_event_t *event, void *arg);
 
 static char * download_status_to_string(const download_status_t *dl);
 static void control_get_bytes_rw_last_sec(uint64_t *r, uint64_t *w);
+
+/** Convert a connection_t* to an control_connection_t*; assert if the cast is
+ * invalid. */
+control_connection_t *
+TO_CONTROL_CONN(connection_t *c)
+{
+  tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
+  return DOWNCAST(control_connection_t, c);
+}
 
 /** Given a control event code for a message event, return the corresponding
  * log severity. */

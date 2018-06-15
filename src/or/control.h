@@ -12,6 +12,8 @@
 #ifndef TOR_CONTROL_H
 #define TOR_CONTROL_H
 
+control_connection_t *TO_CONTROL_CONN(connection_t *);
+
 void control_initialize_event_queue(void);
 
 void control_update_global_event_mask(void);

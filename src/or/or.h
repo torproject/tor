@@ -1639,6 +1639,7 @@ typedef struct or_connection_t {
   uint64_t bytes_xmitted, bytes_xmitted_by_tls;
 } or_connection_t;
 
+typedef struct control_connection_t control_connection_t;
 typedef struct edge_connection_t edge_connection_t;
 typedef struct entry_connection_t entry_connection_t;
 
@@ -1695,38 +1696,6 @@ typedef struct dir_connection_t {
 #endif /* defined(MEASUREMENTS_21206) */
 } dir_connection_t;
 
-/** Subtype of connection_t for an connection to a controller. */
-typedef struct control_connection_t {
-  connection_t base_;
-
-  uint64_t event_mask; /**< Bitfield: which events does this controller
-                        * care about?
-                        * EVENT_MAX_ is >31, so we need a 64 bit mask */
-
-  /** True if we have sent a protocolinfo reply on this connection. */
-  unsigned int have_sent_protocolinfo:1;
-  /** True if we have received a takeownership command on this
-   * connection. */
-  unsigned int is_owning_control_connection:1;
-
-  /** List of ephemeral onion services belonging to this connection. */
-  smartlist_t *ephemeral_onion_services;
-
-  /** If we have sent an AUTHCHALLENGE reply on this connection and
-   * have not received a successful AUTHENTICATE command, points to
-   * the value which the client must send to authenticate itself;
-   * otherwise, NULL. */
-  char *safecookie_client_hash;
-
-  /** Amount of space allocated in incoming_cmd. */
-  uint32_t incoming_cmd_len;
-  /** Number of bytes currently stored in incoming_cmd. */
-  uint32_t incoming_cmd_cur_len;
-  /** A control command that we're reading from the inbuf, but which has not
-   * yet arrived completely. */
-  char *incoming_cmd;
-} control_connection_t;
-
 /** Cast a connection_t subtype pointer to a connection_t **/
 #define TO_CONN(c) (&(((c)->base_)))
 
@@ -1739,9 +1708,6 @@ static or_connection_t *TO_OR_CONN(connection_t *);
 /** Convert a connection_t* to a dir_connection_t*; assert if the cast is
  * invalid. */
 static dir_connection_t *TO_DIR_CONN(connection_t *);
-/** Convert a connection_t* to an control_connection_t*; assert if the cast is
- * invalid. */
-static control_connection_t *TO_CONTROL_CONN(connection_t *);
 /** Convert a connection_t* to an listener_connection_t*; assert if the cast is
  * invalid. */
 static listener_connection_t *TO_LISTENER_CONN(connection_t *);
@@ -1755,11 +1721,6 @@ static inline dir_connection_t *TO_DIR_CONN(connection_t *c)
 {
   tor_assert(c->magic == DIR_CONNECTION_MAGIC);
   return DOWNCAST(dir_connection_t, c);
-}
-static inline control_connection_t *TO_CONTROL_CONN(connection_t *c)
-{
-  tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
-  return DOWNCAST(control_connection_t, c);
 }
 static inline listener_connection_t *TO_LISTENER_CONN(connection_t *c)
 {

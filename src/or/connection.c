@@ -113,6 +113,7 @@
 #include <sys/un.h>
 #endif
 
+#include "control_connection_st.h"
 #include "entry_connection_st.h"
 #include "port_cfg_st.h"
 
