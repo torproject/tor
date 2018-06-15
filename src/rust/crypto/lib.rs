@@ -34,4 +34,5 @@ extern crate libc;
 extern crate external;
 
 pub mod digests;  // Unfortunately named "digests" plural to avoid name conflict with the digest crate
+pub mod rand;
 
