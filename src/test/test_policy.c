@@ -12,6 +12,7 @@
 
 #include "node_st.h"
 #include "port_cfg_st.h"
+#include "routerstatus_st.h"
 
 /* Helper: assert that short_policy parses and writes back out as itself,
    or as <b>expected</b> if that's provided. */

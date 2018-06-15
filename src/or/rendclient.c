@@ -40,6 +40,7 @@
 #include "origin_circuit_st.h"
 #include "rend_intro_point_st.h"
 #include "rend_service_descriptor_st.h"
+#include "routerstatus_st.h"
 
 static extend_info_t *rend_client_get_random_intro_impl(
                           const rend_cache_entry_t *rend_query,

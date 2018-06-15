@@ -9,6 +9,7 @@
 
 #include "torint.h"
 #include "or.h"
+#include "routerstatus_st.h"
 
 /** Represents information about a single trusted or fallback directory
  * server. */

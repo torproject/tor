@@ -16,6 +16,7 @@
 #include "nodelist.h"
 
 #include "node_st.h"
+#include "routerstatus_st.h"
 
 /* Send on the control port the "HS_DESC REQUESTED [...]" event.
  *

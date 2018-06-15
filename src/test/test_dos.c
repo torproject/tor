@@ -18,6 +18,7 @@
 
 #include "networkstatus_st.h"
 #include "or_connection_st.h"
+#include "routerstatus_st.h"
 
 #include "test.h"
 #include "log_test_helpers.h"

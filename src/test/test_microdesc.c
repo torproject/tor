@@ -14,6 +14,7 @@
 #include "torcert.h"
 
 #include "networkstatus_st.h"
+#include "routerstatus_st.h"
 
 #include "test.h"
 

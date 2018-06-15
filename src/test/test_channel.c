@@ -22,6 +22,7 @@
 
 #include "networkstatus_st.h"
 #include "origin_circuit_st.h"
+#include "routerstatus_st.h"
 
 /* Test suite stuff */
 #include "log_test_helpers.h"

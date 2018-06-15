@@ -35,6 +35,7 @@
 
 #include "networkstatus_st.h"
 #include "node_st.h"
+#include "routerstatus_st.h"
 
 /** Test the validation of HS v3 addresses */
 static void

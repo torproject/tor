@@ -7,6 +7,8 @@
 #ifndef VOTE_ROUTERSTATUS_ST_H
 #define VOTE_ROUTERSTATUS_ST_H
 
+#include "routerstatus_st.h"
+
 /** The claim about a single router, made in a vote. */
 struct vote_routerstatus_t {
   routerstatus_t status; /**< Underlying 'status' object for this router.

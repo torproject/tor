@@ -22,6 +22,7 @@
 
 #include "networkstatus_st.h"
 #include "or_connection_st.h"
+#include "routerstatus_st.h"
 
 int channelpadding_get_netflow_inactive_timeout_ms(channel_t *chan);
 int64_t channelpadding_compute_time_until_pad_for_netflow(channel_t *chan);

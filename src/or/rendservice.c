@@ -46,6 +46,7 @@
 #include "rend_encoded_v2_service_descriptor_st.h"
 #include "rend_intro_point_st.h"
 #include "rend_service_descriptor_st.h"
+#include "routerstatus_st.h"
 
 struct rend_service_t;
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,

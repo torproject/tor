@@ -301,6 +301,7 @@ ORHEADERS = \
 	src/or/routerkeys.h				\
 	src/or/routerset.h				\
 	src/or/routerparse.h				\
+	src/or/routerstatus_st.h			\
 	src/or/scheduler.h				\
 	src/or/server_port_cfg_st.h			\
 	src/or/shared_random_client.h			\

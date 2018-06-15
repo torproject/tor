@@ -17,6 +17,7 @@
 #include "nodelist.h"
 
 #include "node_st.h"
+#include "routerstatus_st.h"
 
 #include "test_helpers.h"
 

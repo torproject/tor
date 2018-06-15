@@ -24,6 +24,7 @@
 
 #include "networkstatus_st.h"
 #include "node_st.h"
+#include "routerstatus_st.h"
 
 /** A data structure to hold a bunch of cached microdescriptors.  There are
  * two active files in the cache: a "cache file" that we mmap, and a "journal

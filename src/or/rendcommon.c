@@ -38,6 +38,7 @@
 #include "rend_encoded_v2_service_descriptor_st.h"
 #include "rend_intro_point_st.h"
 #include "rend_service_descriptor_st.h"
+#include "routerstatus_st.h"
 
 /** Return 0 if one and two are the same service ids, else -1 or 1 */
 int

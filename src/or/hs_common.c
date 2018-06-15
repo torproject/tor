@@ -37,6 +37,7 @@
 #include "networkstatus_st.h"
 #include "node_st.h"
 #include "origin_circuit_st.h"
+#include "routerstatus_st.h"
 
 /* Trunnel */
 #include "ed25519_cert.h"
