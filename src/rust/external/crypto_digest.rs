@@ -117,6 +117,9 @@ struct common_digests_t {
 /// A `smartlist_t` is just an alias for the `#[repr(C)]` type `Stringlist`, to
 /// make it more clear that we're working with a smartlist which is owned by C.
 #[allow(non_camel_case_types)]
+// BINDGEN_GENERATED: This type isn't actually bindgen generated, but the code
+// below it which uses it is.  As such, this comes up as "dead code" as well.
+#[allow(dead_code)]
 type smartlist_t = Stringlist;
 
 /// All of the external functions from `src/common/crypto_digest.h`.
