@@ -3894,15 +3894,6 @@ typedef enum {
   NS_V3_CONSENSUS_MICRODESC
 } routerstatus_format_type_t;
 
-#ifdef DIRSERV_PRIVATE
-typedef struct measured_bw_line_t {
-  char node_id[DIGEST_LEN];
-  char node_hex[MAX_HEX_NICKNAME_LEN+1];
-  long int bw_kb;
-} measured_bw_line_t;
-
-#endif /* defined(DIRSERV_PRIVATE) */
-
 /********************************* dirvote.c ************************/
 
 typedef struct vote_timing_t vote_timing_t;
