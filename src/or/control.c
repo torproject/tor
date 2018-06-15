@@ -90,6 +90,7 @@
 #include "rend_authorized_client_st.h"
 #include "rend_encoded_v2_service_descriptor_st.h"
 #include "rend_service_descriptor_st.h"
+#include "socks_request_st.h"
 
 #ifndef _WIN32
 #include <pwd.h>

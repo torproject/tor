@@ -294,6 +294,7 @@ ORHEADERS = \
 	src/or/scheduler.h				\
 	src/or/server_port_cfg_st.h			\
 	src/or/shared_random_client.h			\
+	src/or/socks_request_st.h			\
 	src/or/statefile.h				\
 	src/or/status.h					\
 	src/or/torcert.h				\

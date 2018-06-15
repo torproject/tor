@@ -62,6 +62,7 @@
 #include "entry_connection_st.h"
 #include "or_circuit_st.h"
 #include "origin_circuit_st.h"
+#include "socks_request_st.h"
 
 static void circuit_expire_old_circuits_clientside(void);
 static void circuit_increment_failure_count(void);

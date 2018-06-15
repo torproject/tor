@@ -14,6 +14,8 @@
 #include "proto_socks.h"
 #include "reasons.h"
 
+#include "socks_request_st.h"
+
 static void socks_request_set_socks5_error(socks_request_t *req,
                               socks5_reply_status_t reason);
 

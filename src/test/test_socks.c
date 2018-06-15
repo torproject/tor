@@ -9,6 +9,7 @@
 #include "proto_socks.h"
 #include "test.h"
 #include "log_test_helpers.h"
+#include "socks_request_st.h"
 
 typedef struct socks_test_data_t {
   socks_request_t *req;
