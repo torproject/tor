@@ -7,6 +7,8 @@
 #ifndef OR_CONNECTION_ST_H
 #define OR_CONNECTION_ST_H
 
+#include "connection_st.h"
+
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
  * cells over TLS. */
 struct or_connection_t {

@@ -116,6 +116,7 @@
 #include "dirauth/dirvote.h"
 #include "dirauth/mode.h"
 
+#include "connection_st.h"
 #include "port_cfg_st.h"
 
 #ifdef HAVE_SYSTEMD

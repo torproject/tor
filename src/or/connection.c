@@ -183,6 +183,18 @@ TO_LISTENER_CONN(connection_t *c)
   return DOWNCAST(listener_connection_t, c);
 }
 
+size_t
+connection_get_inbuf_len(connection_t *conn)
+{
+  return conn->inbuf ? buf_datalen(conn->inbuf) : 0;
+}
+
+size_t
+connection_get_outbuf_len(connection_t *conn)
+{
+    return conn->outbuf ? buf_datalen(conn->outbuf) : 0;
+}
+
 /**
  * Return the human-readable name for the connection type <b>type</b>
  */
@@ -4833,6 +4845,20 @@ kill_conn_list_for_oos, (smartlist_t *conns))
   log_notice(LD_NET,
              "OOS handler marked %d connections",
              smartlist_len(conns));
+}
+
+/** Check if a connection is on the way out so the OOS handler doesn't try
+ * to kill more than it needs. */
+int
+connection_is_moribund(connection_t *conn)
+{
+  if (conn != NULL &&
+      (conn->conn_array_index < 0 ||
+       conn->marked_for_close)) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 /** Out-of-Sockets handler; n_socks is the current number of open

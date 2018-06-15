@@ -7,6 +7,8 @@
 #ifndef DIR_CONNECTION_ST_H
 #define DIR_CONNECTION_ST_H
 
+#include "connection_st.h"
+
 /** Subtype of connection_t for an "directory connection" -- that is, an HTTP
  * connection to retrieve or serve directory material. */
 struct dir_connection_t {

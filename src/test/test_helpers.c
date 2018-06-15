@@ -24,6 +24,8 @@
 #include "relay.h"
 #include "routerlist.h"
 
+#include "connection_st.h"
+
 #include "test.h"
 #include "test_helpers.h"
 #include "test_connection.h"

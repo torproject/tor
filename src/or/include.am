@@ -197,6 +197,7 @@ ORHEADERS = \
 	src/or/config.h					\
 	src/or/confparse.h				\
 	src/or/connection.h				\
+	src/or/connection_st.h				\
 	src/or/connection_edge.h			\
 	src/or/connection_or.h				\
 	src/or/conscache.h				\

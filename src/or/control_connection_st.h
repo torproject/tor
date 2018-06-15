@@ -8,6 +8,7 @@
 #define CONTROL_CONNECTION_ST_H
 
 #include "or.h"
+#include "connection_st.h"
 
 /** Subtype of connection_t for an connection to a controller. */
 struct control_connection_t {

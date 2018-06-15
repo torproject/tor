@@ -9,6 +9,8 @@
 
 #include "or.h"
 
+#include "connection_st.h"
+
 /** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)
  * connection, or an exit. */
 struct edge_connection_t {

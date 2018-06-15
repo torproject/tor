@@ -161,23 +161,8 @@ void connection_buf_add_compress(const char *string, size_t len,
                                  dir_connection_t *conn, int done);
 void connection_buf_add_buf(connection_t *conn, buf_t *buf);
 
-/* DOCDOC connection_get_inbuf_len */
-static size_t connection_get_inbuf_len(connection_t *conn);
-/* DOCDOC connection_get_outbuf_len */
-static size_t connection_get_outbuf_len(connection_t *conn);
-
-static inline size_t
-connection_get_inbuf_len(connection_t *conn)
-{
-  return conn->inbuf ? buf_datalen(conn->inbuf) : 0;
-}
-
-static inline size_t
-connection_get_outbuf_len(connection_t *conn)
-{
-    return conn->outbuf ? buf_datalen(conn->outbuf) : 0;
-}
-
+size_t connection_get_inbuf_len(connection_t *conn);
+size_t connection_get_outbuf_len(connection_t *conn);
 connection_t *connection_get_by_global_id(uint64_t id);
 
 connection_t *connection_get_by_type(int type);
@@ -254,20 +239,7 @@ MOCK_DECL(void, clock_skew_warning,
            log_domain_mask_t domain, const char *received,
            const char *source));
 
-/** Check if a connection is on the way out so the OOS handler doesn't try
- * to kill more than it needs. */
-static inline int
-connection_is_moribund(connection_t *conn)
-{
-  if (conn != NULL &&
-      (conn->conn_array_index < 0 ||
-       conn->marked_for_close)) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
+int connection_is_moribund(connection_t *conn);
 void connection_check_oos(int n_socks, int failed);
 
 #ifdef CONNECTION_PRIVATE
