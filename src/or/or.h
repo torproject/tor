@@ -4038,18 +4038,9 @@ typedef enum {
 
 /********************************* rendcommon.c ***************************/
 
-/** Hidden-service side configuration of client authorization. */
-typedef struct rend_authorized_client_t {
-  char *client_name;
-  uint8_t descriptor_cookie[REND_DESC_COOKIE_LEN];
-  crypto_pk_t *client_key;
-} rend_authorized_client_t;
-
-/** ASCII-encoded v2 hidden service descriptor. */
-typedef struct rend_encoded_v2_service_descriptor_t {
-  char desc_id[DIGEST_LEN]; /**< Descriptor ID. */
-  char *desc_str; /**< Descriptor string. */
-} rend_encoded_v2_service_descriptor_t;
+typedef struct rend_authorized_client_t rend_authorized_client_t;
+typedef struct rend_encoded_v2_service_descriptor_t
+               rend_encoded_v2_service_descriptor_t;
 
 /** The maximum number of non-circuit-build-timeout failures a hidden
  * service client will tolerate while trying to build a circuit to an

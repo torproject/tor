@@ -279,6 +279,8 @@ ORHEADERS = \
 	src/or/rendcommon.h				\
 	src/or/rendmid.h				\
 	src/or/rendservice.h				\
+	src/or/rend_authorized_client_st.h		\
+	src/or/rend_encoded_v2_service_descriptor_st.h	\
 	src/or/rend_intro_point_st.h			\
 	src/or/rend_service_descriptor_st.h		\
 	src/or/rephist.h				\
