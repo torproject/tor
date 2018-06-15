@@ -35,6 +35,7 @@
 #include "statefile.h"
 
 #include "dir_connection_st.h"
+#include "networkstatus_st.h"
 #include "node_st.h"
 
 #include "test.h"

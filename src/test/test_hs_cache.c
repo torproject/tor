@@ -19,6 +19,7 @@
 #include "proto_http.h"
 
 #include "dir_connection_st.h"
+#include "networkstatus_st.h"
 
 #include "hs_test_helpers.h"
 #include "test_helpers.h"

@@ -33,6 +33,7 @@
 
 #include "cpath_build_state_st.h"
 #include "crypt_path_st.h"
+#include "networkstatus_st.h"
 #include "origin_circuit_st.h"
 #include "rend_encoded_v2_service_descriptor_st.h"
 #include "rend_intro_point_st.h"

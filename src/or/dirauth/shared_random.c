@@ -105,6 +105,8 @@
 #include "dirauth/dirvote.h"
 #include "dirauth/mode.h"
 
+#include "networkstatus_st.h"
+
 /* String prefix of shared random values in votes/consensuses. */
 static const char previous_srv_str[] = "shared-rand-previous-value";
 static const char current_srv_str[] = "shared-rand-current-value";

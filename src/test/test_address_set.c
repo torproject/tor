@@ -10,6 +10,8 @@
 #include "routerlist.h"
 #include "torcert.h"
 
+#include "networkstatus_st.h"
+
 #include "test.h"
 
 static networkstatus_t *dummy_ns = NULL;

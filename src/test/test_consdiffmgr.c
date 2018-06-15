@@ -14,6 +14,8 @@
 #include "routerparse.h"
 #include "workqueue.h"
 
+#include "networkstatus_st.h"
+
 #include "test.h"
 #include "log_test_helpers.h"
 

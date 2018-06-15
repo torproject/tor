@@ -25,6 +25,7 @@
 #include "dircollate.h"
 #include "dirvote.h"
 
+#include "networkstatus_st.h"
 #include "vote_routerstatus_st.h"
 
 static void dircollator_collate_by_ed25519(dircollator_t *dc);

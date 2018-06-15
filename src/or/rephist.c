@@ -89,6 +89,7 @@
 #include "connection_or.h"
 #include "statefile.h"
 
+#include "networkstatus_st.h"
 #include "or_circuit_st.h"
 
 static void bw_arrays_init(void);

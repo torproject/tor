@@ -36,6 +36,7 @@
 
 #include "dir_connection_st.h"
 #include "dir_server_st.h"
+#include "networkstatus_st.h"
 #include "rend_encoded_v2_service_descriptor_st.h"
 
 #ifdef _WIN32

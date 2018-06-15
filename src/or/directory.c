@@ -57,6 +57,7 @@
 #include "dir_connection_st.h"
 #include "dir_server_st.h"
 #include "entry_connection_st.h"
+#include "networkstatus_st.h"
 #include "node_st.h"
 #include "rend_service_descriptor_st.h"
 

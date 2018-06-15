@@ -82,6 +82,7 @@
 #include "dirauth/dirvote.h"
 
 #include "document_signature_st.h"
+#include "networkstatus_st.h"
 #include "networkstatus_voter_info_st.h"
 #include "rend_authorized_client_st.h"
 #include "rend_intro_point_st.h"

@@ -20,6 +20,7 @@
 #include "networkstatus.h"
 #include "log_test_helpers.h"
 
+#include "networkstatus_st.h"
 #include "or_connection_st.h"
 
 int channelpadding_get_netflow_inactive_timeout_ms(channel_t *chan);

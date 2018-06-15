@@ -13,6 +13,8 @@
 #include "routerparse.h"
 #include "torcert.h"
 
+#include "networkstatus_st.h"
+
 #include "test.h"
 
 #ifdef _WIN32

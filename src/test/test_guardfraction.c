@@ -15,6 +15,7 @@
 #include "routerparse.h"
 #include "networkstatus.h"
 
+#include "networkstatus_st.h"
 #include "vote_microdesc_hash_st.h"
 #include "vote_routerstatus_st.h"
 

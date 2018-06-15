@@ -22,6 +22,7 @@
 #include "routerlist.h"
 #include "routerparse.h"
 
+#include "networkstatus_st.h"
 #include "node_st.h"
 
 /** A data structure to hold a bunch of cached microdescriptors.  There are

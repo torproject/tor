@@ -23,6 +23,7 @@
 #include "voting_schedule.h"
 
 #include "dir_server_st.h"
+#include "networkstatus_st.h"
 
 static authority_cert_t *mock_cert;
 

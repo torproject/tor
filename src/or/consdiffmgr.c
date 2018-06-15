@@ -23,6 +23,7 @@
 #include "routerparse.h"
 #include "workqueue.h"
 
+#include "networkstatus_st.h"
 #include "networkstatus_voter_info_st.h"
 
 /**

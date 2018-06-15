@@ -12,6 +12,7 @@
 #include "nodelist.h"
 #include "torcert.h"
 
+#include "networkstatus_st.h"
 #include "node_st.h"
 
 #include "test.h"

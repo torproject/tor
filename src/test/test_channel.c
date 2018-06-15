@@ -20,6 +20,7 @@
 #include "scheduler.h"
 #include "networkstatus.h"
 
+#include "networkstatus_st.h"
 #include "origin_circuit_st.h"
 
 /* Test suite stuff */

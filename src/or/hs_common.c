@@ -34,6 +34,7 @@
 #include "dirauth/shared_random_state.h"
 
 #include "edge_connection_st.h"
+#include "networkstatus_st.h"
 #include "node_st.h"
 #include "origin_circuit_st.h"
 
