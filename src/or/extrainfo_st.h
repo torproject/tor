@@ -7,6 +7,8 @@
 #ifndef EXTRAINFO_ST_H
 #define EXTRAINFO_ST_H
 
+#include "signed_descriptor_st.h"
+
 /** Information needed to keep and cache a signed extra-info document. */
 struct extrainfo_t {
   signed_descriptor_t cache_info;

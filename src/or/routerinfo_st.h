@@ -7,6 +7,8 @@
 #ifndef ROUTERINFO_ST_H
 #define ROUTERINFO_ST_H
 
+#include "signed_descriptor_st.h"
+
 /** Information about another onion router in the network. */
 struct routerinfo_t {
   signed_descriptor_t cache_info;
