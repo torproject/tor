@@ -30,6 +30,7 @@
 #include "statefile.h"
 #include "util.h"
 
+#include "cpath_build_state_st.h"
 #include "crypt_path_st.h"
 #include "dir_connection_st.h"
 #include "origin_circuit_st.h"

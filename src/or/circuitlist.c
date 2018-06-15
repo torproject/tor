@@ -92,6 +92,7 @@
 
 #include "ht.h"
 
+#include "cpath_build_state_st.h"
 #include "crypt_path_reference_st.h"
 #include "dir_connection_st.h"
 #include "edge_connection_st.h"

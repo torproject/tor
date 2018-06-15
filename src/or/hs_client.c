@@ -35,6 +35,7 @@
 #include "router.h"
 #include "routerset.h"
 
+#include "cpath_build_state_st.h"
 #include "dir_connection_st.h"
 #include "entry_connection_st.h"
 #include "origin_circuit_st.h"

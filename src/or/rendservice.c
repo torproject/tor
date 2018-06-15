@@ -36,6 +36,7 @@
 #include "routerparse.h"
 #include "routerset.h"
 
+#include "cpath_build_state_st.h"
 #include "crypt_path_st.h"
 #include "crypt_path_reference_st.h"
 #include "edge_connection_st.h"

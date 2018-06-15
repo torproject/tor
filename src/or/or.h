@@ -2286,32 +2286,7 @@ typedef struct crypt_path_reference_t crypt_path_reference_t;
 
 #define DH_KEY_LEN DH_BYTES
 
-/** Information used to build a circuit. */
-typedef struct {
-  /** Intended length of the final circuit. */
-  int desired_path_len;
-  /** How to extend to the planned exit node. */
-  extend_info_t *chosen_exit;
-  /** Whether every node in the circ must have adequate uptime. */
-  unsigned int need_uptime : 1;
-  /** Whether every node in the circ must have adequate capacity. */
-  unsigned int need_capacity : 1;
-  /** Whether the last hop was picked with exiting in mind. */
-  unsigned int is_internal : 1;
-  /** Did we pick this as a one-hop tunnel (not safe for other streams)?
-   * These are for encrypted dir conns that exit to this router, not
-   * for arbitrary exits from the circuit. */
-  unsigned int onehop_tunnel : 1;
-  /** The crypt_path_t to append after rendezvous: used for rendezvous. */
-  crypt_path_t *pending_final_cpath;
-  /** A ref-counted reference to the crypt_path_t to append after
-   * rendezvous; used on the service side. */
-  crypt_path_reference_t *service_pending_final_cpath_ref;
-  /** How many times has building a circuit for this task failed? */
-  int failure_count;
-  /** At what time should we give up on this task? */
-  time_t expiry_time;
-} cpath_build_state_t;
+typedef struct cpath_build_state_t cpath_build_state_t;
 
 /** "magic" value for an origin_circuit_t */
 #define ORIGIN_CIRCUIT_MAGIC 0x35315243u

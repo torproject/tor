@@ -206,6 +206,7 @@ ORHEADERS = \
 	src/or/consdiffmgr.h				\
 	src/or/control_connection_st.h			\
 	src/or/control.h				\
+	src/or/cpath_build_state_st.h			\
 	src/or/crypt_path_st.h				\
 	src/or/crypt_path_reference_st.h		\
 	src/or/cpuworker.h				\
