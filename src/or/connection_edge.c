@@ -97,6 +97,8 @@
 #include "routerset.h"
 #include "circuitbuild.h"
 
+#include "entry_connection_st.h"
+
 #ifdef HAVE_LINUX_TYPES_H
 #include <linux/types.h>
 #endif
@@ -136,6 +138,30 @@ static int connection_ap_process_natd(entry_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int consider_plaintext_ports(entry_connection_t *conn, uint16_t port);
 static int connection_ap_supports_optimistic_data(const entry_connection_t *);
+
+/** Convert a connection_t* to an edge_connection_t*; assert if the cast is
+ * invalid. */
+edge_connection_t *
+TO_EDGE_CONN(connection_t *c)
+{
+  tor_assert(c->magic == EDGE_CONNECTION_MAGIC ||
+             c->magic == ENTRY_CONNECTION_MAGIC);
+  return DOWNCAST(edge_connection_t, c);
+}
+
+entry_connection_t *
+TO_ENTRY_CONN(connection_t *c)
+{
+  tor_assert(c->magic == ENTRY_CONNECTION_MAGIC);
+  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_.base_);
+}
+
+entry_connection_t *
+EDGE_TO_ENTRY_CONN(edge_connection_t *c)
+{
+  tor_assert(c->base_.magic == ENTRY_CONNECTION_MAGIC);
+  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_);
+}
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set

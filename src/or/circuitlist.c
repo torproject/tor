@@ -91,6 +91,8 @@
 
 #include "ht.h"
 
+#include "edge_connection_st.h"
+
 /********* START VARIABLES **********/
 
 /** A global list of all circuits at this hop. */

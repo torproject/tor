@@ -33,6 +33,8 @@
 #include "shared_random_client.h"
 #include "dirauth/shared_random_state.h"
 
+#include "edge_connection_st.h"
+
 /* Trunnel */
 #include "ed25519_cert.h"
 

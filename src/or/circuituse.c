@@ -56,6 +56,8 @@
 #include "router.h"
 #include "routerlist.h"
 
+#include "entry_connection_st.h"
+
 static void circuit_expire_old_circuits_clientside(void);
 static void circuit_increment_failure_count(void);
 

@@ -211,6 +211,8 @@ ORHEADERS = \
 	src/or/dns_structs.h				\
 	src/or/dnsserv.h				\
 	src/or/dos.h					\
+	src/or/edge_connection_st.h			\
+	src/or/entry_connection_st.h			\
 	src/or/entry_port_cfg_st.h			\
 	src/or/ext_orport.h				\
 	src/or/fallback_dirs.inc			\

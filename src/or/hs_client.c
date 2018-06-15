@@ -35,6 +35,8 @@
 #include "router.h"
 #include "routerset.h"
 
+#include "entry_connection_st.h"
+
 /* Return a human-readable string for the client fetch status code. */
 static const char *
 fetch_status_to_string(hs_client_fetch_status_t status)

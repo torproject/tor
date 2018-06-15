@@ -36,6 +36,8 @@
 #include "routerparse.h"
 #include "routerset.h"
 
+#include "edge_connection_st.h"
+
 struct rend_service_t;
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
                                             const char *pk_digest);

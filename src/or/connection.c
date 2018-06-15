@@ -113,6 +113,7 @@
 #include <sys/un.h>
 #endif
 
+#include "entry_connection_st.h"
 #include "port_cfg_st.h"
 
 static connection_t *connection_listener_new(

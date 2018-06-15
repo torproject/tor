@@ -14,7 +14,11 @@
 
 #include "testsupport.h"
 
-#define connection_mark_unattached_ap(conn, endreason) \
+edge_connection_t *TO_EDGE_CONN(connection_t *);
+entry_connection_t *TO_ENTRY_CONN(connection_t *);
+entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *);
+
+#define connection_mark_unattached_ap(conn, endreason)                  \
   connection_mark_unattached_ap_((conn), (endreason), __LINE__, SHORT_FILE__)
 
 MOCK_DECL(void,connection_mark_unattached_ap_,

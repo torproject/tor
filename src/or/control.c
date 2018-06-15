@@ -81,6 +81,8 @@
 #include "routerparse.h"
 #include "shared_random_client.h"
 
+#include "entry_connection_st.h"
+
 #ifndef _WIN32
 #include <pwd.h>
 #include <sys/resource.h>

@@ -54,6 +54,7 @@
 #include "dirauth/shared_random.h"
 
 #include "dir_server_st.h"
+#include "entry_connection_st.h"
 
 /**
  * \file directory.c

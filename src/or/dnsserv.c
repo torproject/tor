@@ -29,6 +29,9 @@
 #include "control.h"
 #include "main.h"
 #include "policies.h"
+
+#include "entry_connection_st.h"
+
 #include <event2/dns.h>
 #include <event2/dns_compat.h>
 /* XXXX this implies we want an improved evdns  */

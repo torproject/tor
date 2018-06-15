@@ -1639,151 +1639,8 @@ typedef struct or_connection_t {
   uint64_t bytes_xmitted, bytes_xmitted_by_tls;
 } or_connection_t;
 
-/** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)
- * connection, or an exit. */
-typedef struct edge_connection_t {
-  connection_t base_;
-
-  struct edge_connection_t *next_stream; /**< Points to the next stream at this
-                                          * edge, if any */
-  int package_window; /**< How many more relay cells can I send into the
-                       * circuit? */
-  int deliver_window; /**< How many more relay cells can end at me? */
-
-  struct circuit_t *on_circuit; /**< The circuit (if any) that this edge
-                                 * connection is using. */
-
-  /** A pointer to which node in the circ this conn exits at.  Set for AP
-   * connections and for hidden service exit connections. */
-  struct crypt_path_t *cpath_layer;
-  /** What rendezvous service are we querying for (if an AP) or providing (if
-   * an exit)? */
-  rend_data_t *rend_data;
-
-  /* Hidden service connection identifier for edge connections. Used by the HS
-   * client-side code to identify client SOCKS connections and by the
-   * service-side code to match HS circuits with their streams. */
-  struct hs_ident_edge_conn_t *hs_ident;
-
-  uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
-                         * connection.  Exit connections only. */
-  uint32_t begincell_flags; /** Flags sent or received in the BEGIN cell
-                             * for this connection */
-
-  streamid_t stream_id; /**< The stream ID used for this edge connection on its
-                         * circuit */
-
-  /** The reason why this connection is closing; passed to the controller. */
-  uint16_t end_reason;
-
-  /** Bytes read since last call to control_event_stream_bandwidth_used() */
-  uint32_t n_read;
-
-  /** Bytes written since last call to control_event_stream_bandwidth_used() */
-  uint32_t n_written;
-
-  /** True iff this connection is for a DNS request only. */
-  unsigned int is_dns_request:1;
-  /** True iff this connection is for a PTR DNS request. (exit only) */
-  unsigned int is_reverse_dns_lookup:1;
-
-  unsigned int edge_has_sent_end:1; /**< For debugging; only used on edge
-                         * connections.  Set once we've set the stream end,
-                         * and check in connection_about_to_close_connection().
-                         */
-  /** True iff we've blocked reading until the circuit has fewer queued
-   * cells. */
-  unsigned int edge_blocked_on_circ:1;
-
-  /** Unique ID for directory requests; this used to be in connection_t, but
-   * that's going away and being used on channels instead.  We still tag
-   * edge connections with dirreq_id from circuits, so it's copied here. */
-  uint64_t dirreq_id;
-} edge_connection_t;
-
-/** Subtype of edge_connection_t for an "entry connection" -- that is, a SOCKS
- * connection, a DNS request, a TransPort connection or a NATD connection */
-typedef struct entry_connection_t {
-  edge_connection_t edge_;
-
-  /** Nickname of planned exit node -- used with .exit support. */
-  /* XXX prop220: we need to make chosen_exit_name able to encode Ed IDs too.
-   * That's logically part of the UI parts for prop220 though. */
-  char *chosen_exit_name;
-
-  socks_request_t *socks_request; /**< SOCKS structure describing request (AP
-                                   * only.) */
-
-  /* === Isolation related, AP only. === */
-  entry_port_cfg_t entry_cfg;
-  /** AP only: The newnym epoch in which we created this connection. */
-  unsigned nym_epoch;
-
-  /** AP only: The original requested address before we rewrote it. */
-  char *original_dest_address;
-  /* Other fields to isolate on already exist.  The ClientAddr is addr.  The
-     ClientProtocol is a combination of type and socks_request->
-     socks_version.  SocksAuth is socks_request->username/password.
-     DestAddr is in socks_request->address. */
-
-  /** Number of times we've reassigned this application connection to
-   * a new circuit. We keep track because the timeout is longer if we've
-   * already retried several times. */
-  uint8_t num_socks_retries;
-
-  /** For AP connections only: buffer for data that we have sent
-   * optimistically, which we might need to re-send if we have to
-   * retry this connection. */
-  struct buf_t *pending_optimistic_data;
-  /* For AP connections only: buffer for data that we previously sent
-  * optimistically which we are currently re-sending as we retry this
-  * connection. */
-  struct buf_t *sending_optimistic_data;
-
-  /** If this is a DNSPort connection, this field holds the pending DNS
-   * request that we're going to try to answer.  */
-  struct evdns_server_request *dns_server_request;
-
-#define DEBUGGING_17659
-
-#ifdef DEBUGGING_17659
-  uint16_t marked_pending_circ_line;
-  const char *marked_pending_circ_file;
-#endif
-
-#define NUM_CIRCUITS_LAUNCHED_THRESHOLD 10
-  /** Number of times we've launched a circuit to handle this stream. If
-    * it gets too high, that could indicate an inconsistency between our
-    * "launch a circuit to handle this stream" logic and our "attach our
-    * stream to one of the available circuits" logic. */
-  unsigned int num_circuits_launched:4;
-
-  /** True iff this stream must attach to a one-hop circuit (e.g. for
-   * begin_dir). */
-  unsigned int want_onehop:1;
-  /** True iff this stream should use a BEGIN_DIR relay command to establish
-   * itself rather than BEGIN (either via onehop or via a whole circuit). */
-  unsigned int use_begindir:1;
-
-  /** For AP connections only. If 1, and we fail to reach the chosen exit,
-   * stop requiring it. */
-  unsigned int chosen_exit_optional:1;
-  /** For AP connections only. If non-zero, this exit node was picked as
-   * a result of the TrackHostExit, and the value decrements every time
-   * we fail to complete a circuit to our chosen exit -- if it reaches
-   * zero, abandon the associated mapaddress. */
-  unsigned int chosen_exit_retries:3;
-
-  /** True iff this is an AP connection that came from a transparent or
-   * NATd connection */
-  unsigned int is_transparent_ap:1;
-
-  /** For AP connections only: Set if this connection's target exit node
-   * allows optimistic data (that is, data sent on this stream before
-   * the exit has sent a CONNECTED cell) and we have chosen to use it.
-   */
-  unsigned int may_use_optimistic_data : 1;
-} entry_connection_t;
+typedef struct edge_connection_t edge_connection_t;
+typedef struct entry_connection_t entry_connection_t;
 
 /** Subtype of connection_t for an "directory connection" -- that is, an HTTP
  * connection to retrieve or serve directory material. */
@@ -1873,8 +1730,6 @@ typedef struct control_connection_t {
 /** Cast a connection_t subtype pointer to a connection_t **/
 #define TO_CONN(c) (&(((c)->base_)))
 
-/** Cast a entry_connection_t subtype pointer to a edge_connection_t **/
-#define ENTRY_TO_EDGE_CONN(c) (&(((c))->edge_))
 /** Cast a entry_connection_t subtype pointer to a connection_t **/
 #define ENTRY_TO_CONN(c) (TO_CONN(ENTRY_TO_EDGE_CONN(c)))
 
@@ -1884,15 +1739,6 @@ static or_connection_t *TO_OR_CONN(connection_t *);
 /** Convert a connection_t* to a dir_connection_t*; assert if the cast is
  * invalid. */
 static dir_connection_t *TO_DIR_CONN(connection_t *);
-/** Convert a connection_t* to an edge_connection_t*; assert if the cast is
- * invalid. */
-static edge_connection_t *TO_EDGE_CONN(connection_t *);
-/** Convert a connection_t* to an entry_connection_t*; assert if the cast is
- * invalid. */
-static entry_connection_t *TO_ENTRY_CONN(connection_t *);
-/** Convert a edge_connection_t* to an entry_connection_t*; assert if the cast
- * is invalid. */
-static entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *);
 /** Convert a connection_t* to an control_connection_t*; assert if the cast is
  * invalid. */
 static control_connection_t *TO_CONTROL_CONN(connection_t *);
@@ -1909,22 +1755,6 @@ static inline dir_connection_t *TO_DIR_CONN(connection_t *c)
 {
   tor_assert(c->magic == DIR_CONNECTION_MAGIC);
   return DOWNCAST(dir_connection_t, c);
-}
-static inline edge_connection_t *TO_EDGE_CONN(connection_t *c)
-{
-  tor_assert(c->magic == EDGE_CONNECTION_MAGIC ||
-             c->magic == ENTRY_CONNECTION_MAGIC);
-  return DOWNCAST(edge_connection_t, c);
-}
-static inline entry_connection_t *TO_ENTRY_CONN(connection_t *c)
-{
-  tor_assert(c->magic == ENTRY_CONNECTION_MAGIC);
-  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_.base_);
-}
-static inline entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *c)
-{
-  tor_assert(c->base_.magic == ENTRY_CONNECTION_MAGIC);
-  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_);
 }
 static inline control_connection_t *TO_CONTROL_CONN(connection_t *c)
 {

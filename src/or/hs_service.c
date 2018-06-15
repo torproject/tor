@@ -39,6 +39,8 @@
 #include "hs_service.h"
 #include "hs_stats.h"
 
+#include "edge_connection_st.h"
+
 /* Trunnel */
 #include "ed25519_cert.h"
 #include "hs/cell_common.h"
