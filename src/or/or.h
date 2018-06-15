@@ -3877,14 +3877,6 @@ typedef enum {
   BOOTSTRAP_STATUS_DONE=100
 } bootstrap_status_t;
 
-/********************************* directory.c ***************************/
-
-/** A pair of digests created by dir_split_resource_info_fingerprint_pairs() */
-typedef struct {
-  char first[DIGEST_LEN];
-  char second[DIGEST_LEN];
-} fp_pair_t;
-
 /********************************* dirserv.c ***************************/
 
 /** An enum to describe what format we're generating a routerstatus line in.

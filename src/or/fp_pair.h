@@ -9,6 +9,12 @@
 #ifndef _TOR_FP_PAIR_H
 #define _TOR_FP_PAIR_H
 
+/** A pair of digests created by dir_split_resource_info_fingerprint_pairs() */
+typedef struct {
+  char first[DIGEST_LEN];
+  char second[DIGEST_LEN];
+} fp_pair_t;
+
 /*
  * Declare fp_pair_map_t functions and structs
  */

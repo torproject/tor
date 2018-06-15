@@ -23,6 +23,7 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "entrynodes.h"
+#include "fp_pair.h"
 #include "geoip.h"
 #include "hs_cache.h"
 #include "hs_common.h"

@@ -28,6 +28,7 @@
 #include "dirserv.h"
 #include "dirauth/dirvote.h"
 #include "entrynodes.h"
+#include "fp_pair.h"
 #include "hibernate.h"
 #include "memarea.h"
 #include "networkstatus.h"
