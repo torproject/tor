@@ -12,6 +12,8 @@
 #ifndef TOR_CONNECTION_H
 #define TOR_CONNECTION_H
 
+listener_connection_t *TO_LISTENER_CONN(connection_t *);
+
 /* XXXX For buf_datalen in inline function */
 #include "buffers.h"
 

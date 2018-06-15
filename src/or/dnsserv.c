@@ -32,6 +32,7 @@
 
 #include "control_connection_st.h"
 #include "entry_connection_st.h"
+#include "listener_connection_st.h"
 
 #include <event2/dns.h>
 #include <event2/dns_compat.h>

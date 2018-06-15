@@ -116,6 +116,7 @@
 #include "dir_connection_st.h"
 #include "control_connection_st.h"
 #include "entry_connection_st.h"
+#include "listener_connection_st.h"
 #include "port_cfg_st.h"
 
 static connection_t *connection_listener_new(
@@ -171,6 +172,15 @@ static smartlist_t *outgoing_addrs = NULL;
     case CONN_TYPE_AP_HTTP_CONNECT_LISTENER
 
 /**************************************************************/
+
+/** Convert a connection_t* to an listener_connection_t*; assert if the cast
+ * is invalid. */
+listener_connection_t *
+TO_LISTENER_CONN(connection_t *c)
+{
+  tor_assert(c->magic == LISTENER_CONNECTION_MAGIC);
+  return DOWNCAST(listener_connection_t, c);
+}
 
 /**
  * Return the human-readable name for the connection type <b>type</b>

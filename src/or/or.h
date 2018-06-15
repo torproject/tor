@@ -1381,18 +1381,6 @@ typedef struct connection_t {
   uint32_t n_written_conn_bw;
 } connection_t;
 
-/** Subtype of connection_t; used for a listener socket. */
-typedef struct listener_connection_t {
-  connection_t base_;
-
-  /** If the connection is a CONN_TYPE_AP_DNS_LISTENER, this field points
-   * to the evdns_server_port it uses to listen to and answer connections. */
-  struct evdns_server_port *dns_server_port;
-
-  entry_port_cfg_t entry_cfg;
-
-} listener_connection_t;
-
 /** Minimum length of the random part of an AUTH_CHALLENGE cell. */
 #define OR_AUTH_CHALLENGE_LEN 32
 
@@ -1643,6 +1631,7 @@ typedef struct control_connection_t control_connection_t;
 typedef struct dir_connection_t dir_connection_t;
 typedef struct edge_connection_t edge_connection_t;
 typedef struct entry_connection_t entry_connection_t;
+typedef struct listener_connection_t listener_connection_t;
 
 /** Cast a connection_t subtype pointer to a connection_t **/
 #define TO_CONN(c) (&(((c)->base_)))
@@ -1653,19 +1642,11 @@ typedef struct entry_connection_t entry_connection_t;
 /** Convert a connection_t* to an or_connection_t*; assert if the cast is
  * invalid. */
 static or_connection_t *TO_OR_CONN(connection_t *);
-/** Convert a connection_t* to an listener_connection_t*; assert if the cast is
- * invalid. */
-static listener_connection_t *TO_LISTENER_CONN(connection_t *);
 
 static inline or_connection_t *TO_OR_CONN(connection_t *c)
 {
   tor_assert(c->magic == OR_CONNECTION_MAGIC);
   return DOWNCAST(or_connection_t, c);
-}
-static inline listener_connection_t *TO_LISTENER_CONN(connection_t *c)
-{
-  tor_assert(c->magic == LISTENER_CONNECTION_MAGIC);
-  return DOWNCAST(listener_connection_t, c);
 }
 
 /** What action type does an address policy indicate: accept or reject? */
