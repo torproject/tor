@@ -62,6 +62,8 @@
 #include "channelpadding.h"
 
 #include "or_connection_st.h"
+#include "or_handshake_certs_st.h"
+#include "or_handshake_state_st.h"
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_launch_v3_or_handshake(or_connection_t *conn);

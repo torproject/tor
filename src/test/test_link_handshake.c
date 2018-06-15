@@ -22,6 +22,8 @@
 #include "torcert.h"
 
 #include "or_connection_st.h"
+#include "or_handshake_certs_st.h"
+#include "or_handshake_state_st.h"
 
 #include "test.h"
 #include "log_test_helpers.h"
