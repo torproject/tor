@@ -26,6 +26,7 @@
 #include "crypto_rand.h"
 #include "consdiff.h"
 
+#include "cell_st.h"
 #include "or_circuit_st.h"
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)

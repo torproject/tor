@@ -10,6 +10,8 @@
 
 #include "connection_or.h"
 
+#include "var_cell_st.h"
+
 /** True iff the cell command <b>command</b> is one that implies a
  * variable-length cell in Tor link protocol <b>linkproto</b>. */
 static inline int

@@ -8,6 +8,8 @@
 #include "relay.h"
 #include "test.h"
 
+#include "cell_st.h"
+#include "cell_queue_st.h"
 #include "or_circuit_st.h"
 #include "origin_circuit_st.h"
 

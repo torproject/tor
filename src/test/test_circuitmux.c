@@ -13,6 +13,8 @@
 #include "scheduler.h"
 #include "test.h"
 
+#include "destroy_cell_queue_st.h"
+
 /* XXXX duplicated function from test_circuitlist.c */
 static channel_t *
 new_fake_channel(void)

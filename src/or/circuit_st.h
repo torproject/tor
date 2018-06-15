@@ -9,6 +9,8 @@
 
 #include "or.h"
 
+#include "cell_queue_st.h"
+
 /**
  * A circuit is a path over the onion routing
  * network. Applications can connect to one end of the circuit, and can

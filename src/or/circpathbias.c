@@ -35,6 +35,7 @@
 #include "networkstatus.h"
 #include "relay.h"
 
+#include "cell_st.h"
 #include "cpath_build_state_st.h"
 #include "crypt_path_st.h"
 #include "origin_circuit_st.h"

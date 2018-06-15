@@ -80,6 +80,8 @@
 #include "networkstatus.h"
 #include "rendservice.h"
 
+#include "cell_queue_st.h"
+
 /* Global lists of channels */
 
 /* All channel_t instances */

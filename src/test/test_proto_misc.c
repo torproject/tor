@@ -15,6 +15,8 @@
 #include "proto_control0.h"
 #include "proto_ext_or.h"
 
+#include "var_cell_st.h"
+
 static void
 test_proto_var_cell(void *arg)
 {

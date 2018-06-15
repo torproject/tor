@@ -77,6 +77,7 @@
 #include "rephist.h"
 #include "router.h"
 
+#include "cell_st.h"
 #include "or_circuit_st.h"
 
 // trunnel

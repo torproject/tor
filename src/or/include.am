@@ -184,6 +184,8 @@ ORHEADERS = \
 	src/or/authority_cert_st.h			\
 	src/or/auth_dirs.inc				\
 	src/or/bridges.h				\
+	src/or/cell_st.h				\
+	src/or/cell_queue_st.h				\
 	src/or/channel.h				\
 	src/or/channelpadding.h				\
 	src/or/channeltls.h				\
@@ -213,6 +215,7 @@ ORHEADERS = \
 	src/or/crypt_path_reference_st.h		\
 	src/or/cpuworker.h				\
 	src/or/desc_store_st.h				\
+	src/or/destroy_cell_queue_st.h			\
 	src/or/directory.h				\
 	src/or/dirserv.h				\
 	src/or/dir_connection_st.h			\
@@ -316,6 +319,7 @@ ORHEADERS = \
 	src/or/torcert.h				\
 	src/or/tor_api_internal.h			\
 	src/or/tor_version_st.h				\
+	src/or/var_cell_st.h				\
 	src/or/vote_microdesc_hash_st.h			\
 	src/or/vote_routerstatus_st.h			\
 	src/or/vote_timing_st.h				\

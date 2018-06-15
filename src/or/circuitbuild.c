@@ -65,6 +65,7 @@
 #include "routerset.h"
 #include "transports.h"
 
+#include "cell_st.h"
 #include "cpath_build_state_st.h"
 #include "entry_connection_st.h"
 #include "node_st.h"

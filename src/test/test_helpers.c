@@ -24,6 +24,7 @@
 #include "relay.h"
 #include "routerlist.h"
 
+#include "cell_st.h"
 #include "connection_st.h"
 #include "node_st.h"
 #include "origin_circuit_st.h"

@@ -122,6 +122,7 @@
 #include "dirauth/mode.h"
 #include "dirauth/shared_random.h"
 
+#include "cell_st.h"
 #include "entry_connection_st.h"
 #include "networkstatus_st.h"
 #include "or_connection_st.h"

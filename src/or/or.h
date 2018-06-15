@@ -1176,26 +1176,12 @@ typedef struct channel_tls_s channel_tls_t;
 
 typedef struct circuitmux_s circuitmux_t;
 
-/** Parsed onion routing cell.  All communication between nodes
- * is via cells. */
-typedef struct cell_t {
-  circid_t circ_id; /**< Circuit which received the cell. */
-  uint8_t command; /**< Type of the cell: one of CELL_PADDING, CELL_CREATE,
-                    * CELL_DESTROY, etc */
-  uint8_t payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
-} cell_t;
-
-/** Parsed variable-length onion routing cell. */
-typedef struct var_cell_t {
-  /** Type of the cell: CELL_VERSIONS, etc. */
-  uint8_t command;
-  /** Circuit thich received the cell */
-  circid_t circ_id;
-  /** Number of bytes actually stored in <b>payload</b> */
-  uint16_t payload_len;
-  /** Payload of this cell */
-  uint8_t payload[FLEXIBLE_ARRAY_MEMBER];
-} var_cell_t;
+typedef struct cell_t cell_t;
+typedef struct var_cell_t var_cell_t;
+typedef struct packed_cell_t packed_cell_t;
+typedef struct cell_queue_t cell_queue_t;
+typedef struct destroy_cell_t destroy_cell_t;
+typedef struct destroy_cell_queue_t destroy_cell_queue_t;
 
 /** A parsed Extended ORPort message. */
 typedef struct ext_or_cmd_t {
@@ -1203,39 +1189,6 @@ typedef struct ext_or_cmd_t {
   uint16_t len; /** Body length */
   char body[FLEXIBLE_ARRAY_MEMBER]; /** Message body */
 } ext_or_cmd_t;
-
-/** A cell as packed for writing to the network. */
-typedef struct packed_cell_t {
-  /** Next cell queued on this circuit. */
-  TOR_SIMPLEQ_ENTRY(packed_cell_t) next;
-  char body[CELL_MAX_NETWORK_SIZE]; /**< Cell as packed for network. */
-  uint32_t inserted_timestamp; /**< Time (in timestamp units) when this cell
-                                * was inserted */
-} packed_cell_t;
-
-/** A queue of cells on a circuit, waiting to be added to the
- * or_connection_t's outbuf. */
-typedef struct cell_queue_t {
-  /** Linked list of packed_cell_t*/
-  TOR_SIMPLEQ_HEAD(cell_simpleq, packed_cell_t) head;
-  int n; /**< The number of cells in the queue. */
-} cell_queue_t;
-
-/** A single queued destroy cell. */
-typedef struct destroy_cell_t {
-  TOR_SIMPLEQ_ENTRY(destroy_cell_t) next;
-  circid_t circid;
-  uint32_t inserted_timestamp; /**< Time (in timestamp units) when this cell
-                                * was inserted */
-  uint8_t reason;
-} destroy_cell_t;
-
-/** A queue of destroy cells on a channel. */
-typedef struct destroy_cell_queue_t {
-  /** Linked list of packed_cell_t */
-  TOR_SIMPLEQ_HEAD(dcell_simpleq, destroy_cell_t) head;
-  int n; /**< The number of cells in the queue. */
-} destroy_cell_queue_t;
 
 /** Beginning of a RELAY cell payload. */
 typedef struct {
