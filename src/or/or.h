@@ -3913,18 +3913,7 @@ typedef struct measured_bw_line_t {
 
 /********************************* dirvote.c ************************/
 
-/** Describes the schedule by which votes should be generated. */
-typedef struct vote_timing_t {
-  /** Length in seconds between one consensus becoming valid and the next
-   * becoming valid. */
-  int vote_interval;
-  /** For how many intervals is a consensus valid? */
-  int n_intervals_valid;
-  /** Time in seconds allowed to propagate votes */
-  int vote_delay;
-  /** Time in seconds allowed to propagate signatures */
-  int dist_delay;
-} vote_timing_t;
+typedef struct vote_timing_t vote_timing_t;
 
 /********************************* geoip.c **************************/
 

@@ -29,6 +29,7 @@
 #include "dirauth/shared_random_state.h"
 
 #include "dir_server_st.h"
+#include "vote_timing_st.h"
 
 /**
  * \file dirvote.c
