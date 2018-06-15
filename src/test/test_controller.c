@@ -14,6 +14,7 @@
 #include "test_helpers.h"
 
 #include "control_connection_st.h"
+#include "download_status_st.h"
 
 static void
 test_add_onion_helper_keyarg_v3(void *arg)

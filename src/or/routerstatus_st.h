@@ -7,6 +7,8 @@
 #ifndef ROUTERSTATUS_ST_H
 #define ROUTERSTATUS_ST_H
 
+#include "download_status_st.h"
+
 /** Contents of a single router entry in a network status object.
  */
 struct routerstatus_t {

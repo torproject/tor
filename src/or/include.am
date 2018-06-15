@@ -217,6 +217,7 @@ ORHEADERS = \
 	src/or/dir_connection_st.h			\
 	src/or/dir_server_st.h				\
 	src/or/document_signature_st.h			\
+	src/or/download_status_st.h			\
 	src/or/dns.h					\
 	src/or/dns_structs.h				\
 	src/or/dnsserv.h				\

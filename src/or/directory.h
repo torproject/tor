@@ -134,30 +134,9 @@ time_t download_status_increment_attempt(download_status_t *dls,
                                     time(NULL))
 
 void download_status_reset(download_status_t *dls);
-static int download_status_is_ready(download_status_t *dls, time_t now);
+int download_status_is_ready(download_status_t *dls, time_t now);
 time_t download_status_get_next_attempt_at(const download_status_t *dls);
-
-/** Return true iff, as of <b>now</b>, the resource tracked by <b>dls</b> is
- * ready to get its download reattempted. */
-static inline int
-download_status_is_ready(download_status_t *dls, time_t now)
-{
-  /* dls wasn't reset before it was used */
-  if (dls->next_attempt_at == 0) {
-    download_status_reset(dls);
-  }
-
-  return download_status_get_next_attempt_at(dls) <= now;
-}
-
-static void download_status_mark_impossible(download_status_t *dl);
-/** Mark <b>dl</b> as never downloadable. */
-static inline void
-download_status_mark_impossible(download_status_t *dl)
-{
-  dl->n_download_failures = IMPOSSIBLE_TO_DOWNLOAD;
-  dl->n_download_attempts = IMPOSSIBLE_TO_DOWNLOAD;
-}
+void download_status_mark_impossible(download_status_t *dl);
 
 int download_status_get_n_failures(const download_status_t *dls);
 int download_status_get_n_attempts(const download_status_t *dls);

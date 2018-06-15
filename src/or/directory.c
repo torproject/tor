@@ -5632,6 +5632,27 @@ download_status_reset(download_status_t *dls)
   /* Don't reset dls->want_authority or dls->increment_on */
 }
 
+/** Return true iff, as of <b>now</b>, the resource tracked by <b>dls</b> is
+ * ready to get its download reattempted. */
+int
+download_status_is_ready(download_status_t *dls, time_t now)
+{
+  /* dls wasn't reset before it was used */
+  if (dls->next_attempt_at == 0) {
+    download_status_reset(dls);
+  }
+
+  return download_status_get_next_attempt_at(dls) <= now;
+}
+
+/** Mark <b>dl</b> as never downloadable. */
+void
+download_status_mark_impossible(download_status_t *dl)
+{
+  dl->n_download_failures = IMPOSSIBLE_TO_DOWNLOAD;
+  dl->n_download_attempts = IMPOSSIBLE_TO_DOWNLOAD;
+}
+
 /** Return the number of failures on <b>dls</b> since the last success (if
  * any). */
 int

@@ -7,6 +7,8 @@
 #ifndef SIGNED_DESCRIPTOR_ST_H
 #define SIGNED_DESCRIPTOR_ST_H
 
+#include "download_status_st.h"
+
 /** Information need to cache an onion router's descriptor. */
 struct signed_descriptor_t {
   /** Pointer to the raw server descriptor, preceded by annotations.  Not
