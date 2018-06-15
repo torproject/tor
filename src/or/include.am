@@ -252,6 +252,7 @@ ORHEADERS = \
 	src/or/hs_ntor.h				\
 	src/or/hs_stats.h				\
 	src/or/hs_service.h				\
+	src/or/hsdir_index_st.h				\
 	src/or/keypin.h					\
 	src/or/listener_connection_st.h			\
 	src/or/main.h					\

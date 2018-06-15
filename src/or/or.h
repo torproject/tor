@@ -899,18 +899,7 @@ struct hs_ident_edge_conn_t;
 struct hs_ident_dir_conn_t;
 struct hs_ident_circuit_t;
 
-/* Hidden service directory index used in a node_t which is set once we set
- * the consensus. */
-typedef struct hsdir_index_t {
-  /* HSDir index to use when fetching a descriptor. */
-  uint8_t fetch[DIGEST256_LEN];
-
-  /* HSDir index used by services to store their first and second
-   * descriptor. The first descriptor is chronologically older than the second
-   * one and uses older TP and SRV values. */
-  uint8_t store_first[DIGEST256_LEN];
-  uint8_t store_second[DIGEST256_LEN];
-} hsdir_index_t;
+typedef struct hsdir_index_t hsdir_index_t;
 
 /** Time interval for tracking replays of DH public keys received in
  * INTRODUCE2 cells.  Used only to avoid launching multiple

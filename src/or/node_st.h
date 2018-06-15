@@ -7,6 +7,8 @@
 #ifndef NODE_ST_H
 #define NODE_ST_H
 
+#include "hsdir_index_st.h"
+
 /** A node_t represents a Tor router.
  *
  * Specifically, a node_t is a Tor router as we are using it: a router that
