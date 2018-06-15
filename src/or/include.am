@@ -253,6 +253,7 @@ ORHEADERS = \
 	src/or/networkstatus_voter_info_st.h		\
 	src/or/nodelist.h				\
 	src/or/node_st.h				\
+	src/or/ns_detached_signatures_st.h		\
 	src/or/ntmain.h					\
 	src/or/onion.h					\
 	src/or/onion_fast.h				\

@@ -1883,17 +1883,7 @@ typedef enum {
 #define N_CONSENSUS_FLAVORS ((int)(FLAV_MICRODESC)+1)
 
 typedef struct networkstatus_t networkstatus_t;
-
-/** A set of signatures for a networkstatus consensus.  Unless otherwise
- * noted, all fields are as for networkstatus_t. */
-typedef struct ns_detached_signatures_t {
-  time_t valid_after;
-  time_t fresh_until;
-  time_t valid_until;
-  strmap_t *digests; /**< Map from flavor name to digestset_t */
-  strmap_t *signatures; /**< Map from flavor name to list of
-                         * document_signature_t */
-} ns_detached_signatures_t;
+typedef struct ns_detached_signatures_t ns_detached_signatures_t;
 
 /** Allowable types of desc_store_t. */
 typedef enum store_type_t {

@@ -33,6 +33,7 @@
 #include "networkstatus_st.h"
 #include "networkstatus_voter_info_st.h"
 #include "node_st.h"
+#include "ns_detached_signatures_st.h"
 #include "vote_microdesc_hash_st.h"
 #include "vote_routerstatus_st.h"
 #include "vote_timing_st.h"
