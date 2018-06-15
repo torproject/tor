@@ -1860,24 +1860,7 @@ typedef struct microdesc_t {
 typedef struct node_t node_t;
 typedef struct vote_microdesc_hash_t vote_microdesc_hash_t;
 typedef struct vote_routerstatus_t vote_routerstatus_t;
-
-/** A signature of some document by an authority. */
-typedef struct document_signature_t {
-  /** Declared SHA-1 digest of this voter's identity key */
-  char identity_digest[DIGEST_LEN];
-  /** Declared SHA-1 digest of signing key used by this voter. */
-  char signing_key_digest[DIGEST_LEN];
-  /** Algorithm used to compute the digest of the document. */
-  digest_algorithm_t alg;
-  /** Signature of the signed thing. */
-  char *signature;
-  /** Length of <b>signature</b> */
-  int signature_len;
-  unsigned int bad_signature : 1; /**< Set to true if we've tried to verify
-                                   * the sig, and we know it's bad. */
-  unsigned int good_signature : 1; /**< Set to true if we've verified the sig
-                                     * as good. */
-} document_signature_t;
+typedef struct document_signature_t document_signature_t;
 
 /** Information about a single voter in a vote or a consensus. */
 typedef struct networkstatus_voter_info_t {

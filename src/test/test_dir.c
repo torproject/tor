@@ -45,6 +45,7 @@
 #include "log_test_helpers.h"
 #include "voting_schedule.h"
 
+#include "document_signature_st.h"
 #include "port_cfg_st.h"
 #include "tor_version_st.h"
 #include "vote_microdesc_hash_st.h"
