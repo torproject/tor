@@ -84,6 +84,8 @@
 
 #include "dirauth/dirvote.h"
 
+#include "tor_version_st.h"
+
 /****************************************************************************/
 
 /** List of tokens recognized in router descriptors */

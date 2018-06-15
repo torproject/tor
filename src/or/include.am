@@ -260,7 +260,7 @@ ORHEADERS = \
 	src/or/or_handshake_state_st.h			\
 	src/or/origin_circuit_st.h			\
 	src/or/transports.h				\
-	src/or/parsecommon.h			\
+	src/or/parsecommon.h				\
 	src/or/periodic.h				\
 	src/or/port_cfg_st.h				\
 	src/or/policies.h				\
@@ -294,6 +294,7 @@ ORHEADERS = \
 	src/or/status.h					\
 	src/or/torcert.h				\
 	src/or/tor_api_internal.h			\
+	src/or/tor_version_st.h				\
 	src/or/voting_schedule.h
 
 # We add the headers of the modules even though they are disabled so we can

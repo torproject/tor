@@ -45,6 +45,7 @@
 #include "voting_schedule.h"
 
 #include "port_cfg_st.h"
+#include "tor_version_st.h"
 
 #define NS_MODULE dir
 

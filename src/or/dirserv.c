@@ -37,6 +37,7 @@
 #include "dirauth/dirvote.h"
 
 #include "dir_connection_st.h"
+#include "tor_version_st.h"
 
 /**
  * \file dirserv.c

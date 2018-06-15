@@ -4261,28 +4261,7 @@ typedef enum was_router_added_t {
   ROUTER_CERTS_EXPIRED = -8
 } was_router_added_t;
 
-/********************************* routerparse.c ************************/
-
-#define MAX_STATUS_TAG_LEN 32
-/** Structure to hold parsed Tor versions.  This is a little messier
- * than we would like it to be, because we changed version schemes with 0.1.0.
- *
- * See version-spec.txt for the whole business.
- */
-typedef struct tor_version_t {
-  int major;
-  int minor;
-  int micro;
-  /** Release status.  For version in the post-0.1 format, this is always
-   * VER_RELEASE. */
-  enum { VER_PRE=0, VER_RC=1, VER_RELEASE=2, } status;
-  int patchlevel;
-  char status_tag[MAX_STATUS_TAG_LEN];
-  int svn_revision;
-
-  int git_tag_len;
-  char git_tag[DIGEST_LEN];
-} tor_version_t;
+typedef struct tor_version_t tor_version_t;
 
 #endif /* !defined(TOR_OR_H) */
 
