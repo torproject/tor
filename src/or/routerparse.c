@@ -84,6 +84,7 @@
 #include "authority_cert_st.h"
 #include "document_signature_st.h"
 #include "extrainfo_st.h"
+#include "microdesc_st.h"
 #include "networkstatus_st.h"
 #include "networkstatus_voter_info_st.h"
 #include "ns_detached_signatures_st.h"

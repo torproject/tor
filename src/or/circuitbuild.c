@@ -70,6 +70,7 @@
 #include "node_st.h"
 #include "or_circuit_st.h"
 #include "origin_circuit_st.h"
+#include "microdesc_st.h"
 #include "routerstatus_st.h"
 
 static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,

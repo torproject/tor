@@ -33,6 +33,7 @@
 #include "util.h"
 #include "voting_schedule.h"
 
+#include "microdesc_st.h"
 #include "networkstatus_st.h"
 #include "node_st.h"
 #include "routerstatus_st.h"

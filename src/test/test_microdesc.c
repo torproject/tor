@@ -13,6 +13,7 @@
 #include "routerparse.h"
 #include "torcert.h"
 
+#include "microdesc_st.h"
 #include "networkstatus_st.h"
 #include "routerstatus_st.h"
 

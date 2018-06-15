@@ -31,6 +31,7 @@
 #include "ht.h"
 
 #include "dir_server_st.h"
+#include "microdesc_st.h"
 #include "node_st.h"
 #include "port_cfg_st.h"
 #include "routerstatus_st.h"

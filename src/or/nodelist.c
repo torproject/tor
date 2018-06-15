@@ -69,6 +69,7 @@
 #include "dirauth/mode.h"
 
 #include "dir_server_st.h"
+#include "microdesc_st.h"
 #include "networkstatus_st.h"
 #include "node_st.h"
 #include "routerlist_st.h"

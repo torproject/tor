@@ -31,6 +31,7 @@
 #include "authority_cert_st.h"
 #include "dir_server_st.h"
 #include "document_signature_st.h"
+#include "microdesc_st.h"
 #include "networkstatus_st.h"
 #include "networkstatus_voter_info_st.h"
 #include "node_st.h"
