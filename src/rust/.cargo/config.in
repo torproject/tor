@@ -6,3 +6,6 @@
 
 @RUST_DL@ [source.vendored-sources]
 @RUST_DL@ directory = '@TOR_RUST_DEPENDENCIES@'
+
+@RUST_WARN@ [build]
+@RUST_WARN@ rustflags = [ "-D", "warnings" ]
