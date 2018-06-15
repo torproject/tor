@@ -66,13 +66,6 @@ const DIGEST_SHA512: digest_algorithm_t = 2;
 const DIGEST_SHA3_256: digest_algorithm_t = 3;
 const DIGEST_SHA3_512: digest_algorithm_t = 4;
 
-/// The total number of digest algorithms we currently support.
-///
-/// We can't access these from Rust, because their definitions in C require
-/// introspecting the `digest_algorithm_t` typedef, which is an enum, so we have
-/// to redefine them here.
-const N_DIGEST_ALGORITHMS: usize = DIGEST_SHA3_512 as usize + 1;
-
 /// The number of hash digests we produce for a `common_digests_t`.
 ///
 /// We can't access these from Rust, because their definitions in C require
