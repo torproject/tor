@@ -1861,26 +1861,7 @@ typedef struct node_t node_t;
 typedef struct vote_microdesc_hash_t vote_microdesc_hash_t;
 typedef struct vote_routerstatus_t vote_routerstatus_t;
 typedef struct document_signature_t document_signature_t;
-
-/** Information about a single voter in a vote or a consensus. */
-typedef struct networkstatus_voter_info_t {
-  /** Declared SHA-1 digest of this voter's identity key */
-  char identity_digest[DIGEST_LEN];
-  char *nickname; /**< Nickname of this voter */
-  /** Digest of this voter's "legacy" identity key, if any.  In vote only; for
-   * consensuses, we treat legacy keys as additional signers. */
-  char legacy_id_digest[DIGEST_LEN];
-  char *address; /**< Address of this voter, in string format. */
-  uint32_t addr; /**< Address of this voter, in IPv4, in host order. */
-  uint16_t dir_port; /**< Directory port of this voter */
-  uint16_t or_port; /**< OR port of this voter */
-  char *contact; /**< Contact information for this voter. */
-  char vote_digest[DIGEST_LEN]; /**< Digest of this voter's vote, as signed. */
-
-  /* Nothing from here on is signed. */
-  /** The signature of the document and the signature's status. */
-  smartlist_t *sigs;
-} networkstatus_voter_info_t;
+typedef struct networkstatus_voter_info_t networkstatus_voter_info_t;
 
 typedef struct networkstatus_sr_info_t {
   /* Indicate if the dirauth partitipates in the SR protocol with its vote.

@@ -248,6 +248,7 @@ ORHEADERS = \
 	src/or/main.h					\
 	src/or/microdesc.h				\
 	src/or/networkstatus.h				\
+	src/or/networkstatus_voter_info_st.h		\
 	src/or/nodelist.h				\
 	src/or/node_st.h				\
 	src/or/ntmain.h					\

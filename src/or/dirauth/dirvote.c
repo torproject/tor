@@ -30,6 +30,7 @@
 
 #include "dir_server_st.h"
 #include "document_signature_st.h"
+#include "networkstatus_voter_info_st.h"
 #include "node_st.h"
 #include "vote_microdesc_hash_st.h"
 #include "vote_routerstatus_st.h"
