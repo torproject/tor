@@ -638,7 +638,8 @@ nodelist_set_consensus(networkstatus_t *ns)
 /** Return 1 iff <b>node</b> has Exit flag and no BadExit flag.
  * Otherwise, return 0.
  */
-int node_is_good_exit(const node_t *node)
+int
+node_is_good_exit(const node_t *node)
 {
   return node->is_exit && ! node->is_bad_exit;
 }
