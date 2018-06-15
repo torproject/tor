@@ -14,6 +14,9 @@
 #include "test_dir_common.h"
 #include "voting_schedule.h"
 
+#include "vote_microdesc_hash_st.h"
+#include "vote_routerstatus_st.h"
+
 void dir_common_setup_vote(networkstatus_t **vote, time_t now);
 networkstatus_t * dir_common_add_rs_and_parse(networkstatus_t *vote,
                             networkstatus_t **vote_out,

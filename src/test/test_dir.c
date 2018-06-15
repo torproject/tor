@@ -47,6 +47,8 @@
 
 #include "port_cfg_st.h"
 #include "tor_version_st.h"
+#include "vote_microdesc_hash_st.h"
+#include "vote_routerstatus_st.h"
 
 #define NS_MODULE dir
 

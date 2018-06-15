@@ -301,6 +301,8 @@ ORHEADERS = \
 	src/or/torcert.h				\
 	src/or/tor_api_internal.h			\
 	src/or/tor_version_st.h				\
+	src/or/vote_microdesc_hash_st.h			\
+	src/or/vote_routerstatus_st.h			\
 	src/or/vote_timing_st.h				\
 	src/or/voting_schedule.h
 

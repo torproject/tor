@@ -128,6 +128,7 @@
 #include "dir_connection_st.h"
 #include "dir_server_st.h"
 #include "node_st.h"
+#include "vote_routerstatus_st.h"
 
 // #define DEBUG_ROUTERLIST
 

@@ -25,6 +25,8 @@
 #include "dircollate.h"
 #include "dirvote.h"
 
+#include "vote_routerstatus_st.h"
+
 static void dircollator_collate_by_ed25519(dircollator_t *dc);
 
 /** Hashtable entry mapping a pair of digests (actually an ed25519 key and an

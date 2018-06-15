@@ -77,6 +77,8 @@
 #include "dir_connection_st.h"
 #include "dir_server_st.h"
 #include "node_st.h"
+#include "vote_microdesc_hash_st.h"
+#include "vote_routerstatus_st.h"
 
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
