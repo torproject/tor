@@ -3733,21 +3733,6 @@ int32_t circuit_build_times_initial_timeout(void);
 #error "RECENT_CIRCUITS is set too low."
 #endif
 
-/** Information about the state of our local network connection */
-typedef struct {
-  /** The timestamp we last completed a TLS handshake or received a cell */
-  time_t network_last_live;
-  /** If the network is not live, how many timeouts has this caused? */
-  int nonlive_timeouts;
-  /** Circular array of circuits that have made it to the first hop. Slot is
-   * 1 if circuit timed out, 0 if circuit succeeded */
-  int8_t *timeouts_after_firsthop;
-  /** Number of elements allocated for the above array */
-  int num_recent_circs;
-  /** Index into circular array. */
-  int after_firsthop_idx;
-} network_liveness_t;
-
 typedef struct circuit_build_times_s circuit_build_times_t;
 
 /********************************* config.c ***************************/
