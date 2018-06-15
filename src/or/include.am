@@ -206,6 +206,7 @@ ORHEADERS = \
 	src/or/consdiffmgr.h				\
 	src/or/control_connection_st.h			\
 	src/or/control.h				\
+	src/or/crypt_path_st.h				\
 	src/or/cpuworker.h				\
 	src/or/directory.h				\
 	src/or/dirserv.h				\
@@ -270,6 +271,7 @@ ORHEADERS = \
 	src/or/reasons.h				\
 	src/or/relay.h					\
 	src/or/relay_crypto.h				\
+	src/or/relay_crypto_st.h			\
 	src/or/rendcache.h				\
 	src/or/rendclient.h				\
 	src/or/rendcommon.h				\

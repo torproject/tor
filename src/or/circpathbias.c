@@ -35,6 +35,7 @@
 #include "networkstatus.h"
 #include "relay.h"
 
+#include "crypt_path_st.h"
 #include "origin_circuit_st.h"
 
 static void pathbias_count_successful_close(origin_circuit_t *circ);

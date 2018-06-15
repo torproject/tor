@@ -31,6 +31,7 @@
 #include "routerlist.h"
 #include "routerparse.h"
 
+#include "crypt_path_st.h"
 #include "origin_circuit_st.h"
 
 /** Return 0 if one and two are the same service ids, else -1 or 1 */

@@ -30,11 +30,12 @@
 #include "statefile.h"
 #include "util.h"
 
+#include "crypt_path_st.h"
 #include "dir_connection_st.h"
+#include "origin_circuit_st.h"
 
 #include "test_helpers.h"
 #include "log_test_helpers.h"
-#include "origin_circuit_st.h"
 
 /* TODO:
  * choose_random_entry() test with state set.

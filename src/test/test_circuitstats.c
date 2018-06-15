@@ -17,6 +17,7 @@
 #include "circuituse.h"
 #include "channel.h"
 
+#include "crypt_path_st.h"
 #include "origin_circuit_st.h"
 
 void test_circuitstats_timeout(void *arg);

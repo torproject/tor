@@ -37,6 +37,7 @@
 #include "connection_edge.h"
 #include "networkstatus.h"
 
+#include "crypt_path_st.h"
 #include "dir_connection_st.h"
 #include "entry_connection_st.h"
 #include "origin_circuit_st.h"

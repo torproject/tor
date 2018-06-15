@@ -39,6 +39,7 @@
 
 #include "dirauth/mode.h"
 
+#include "crypt_path_st.h"
 #include "dir_connection_st.h"
 #include "dir_server_st.h"
 #include "origin_circuit_st.h"

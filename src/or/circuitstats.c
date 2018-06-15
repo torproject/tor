@@ -41,6 +41,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 
+#include "crypt_path_st.h"
 #include "origin_circuit_st.h"
 
 #undef log

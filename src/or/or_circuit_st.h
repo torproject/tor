@@ -10,6 +10,7 @@
 #include "or.h"
 
 #include "circuit_st.h"
+#include "crypt_path_st.h"
 
 struct onion_queue_t;
 
