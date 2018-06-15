@@ -248,6 +248,7 @@ ORHEADERS = \
 	src/or/microdesc.h				\
 	src/or/networkstatus.h				\
 	src/or/nodelist.h				\
+	src/or/node_st.h				\
 	src/or/ntmain.h					\
 	src/or/onion.h					\
 	src/or/onion_fast.h				\

@@ -22,6 +22,8 @@
 #include "routerlist.h"
 #include "routerparse.h"
 
+#include "node_st.h"
+
 /** A data structure to hold a bunch of cached microdescriptors.  There are
  * two active files in the cache: a "cache file" that we mmap, and a "journal
  * file" that we append to.  Periodically, we rebuild the cache file to hold

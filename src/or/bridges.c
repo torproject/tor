@@ -27,6 +27,8 @@
 #include "routerset.h"
 #include "transports.h"
 
+#include "node_st.h"
+
 /** Information about a configured bridge. Currently this just matches the
  * ones in the torrc file, but one day we may be able to learn about new
  * bridges on our own, and remember them in the state file. */

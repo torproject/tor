@@ -10,6 +10,7 @@
 #include "policies.h"
 #include "test.h"
 
+#include "node_st.h"
 #include "port_cfg_st.h"
 
 /* Helper: assert that short_policy parses and writes back out as itself,

@@ -33,6 +33,8 @@
 #include "util.h"
 #include "voting_schedule.h"
 
+#include "node_st.h"
+
 /** Test the validation of HS v3 addresses */
 static void
 test_validate_address(void *arg)

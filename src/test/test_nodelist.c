@@ -11,6 +11,9 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "torcert.h"
+
+#include "node_st.h"
+
 #include "test.h"
 
 /** Test the case when node_get_by_id() returns NULL,

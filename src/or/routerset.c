@@ -36,6 +36,8 @@
 #include "routerparse.h"
 #include "routerset.h"
 
+#include "node_st.h"
+
 /** Return a new empty routerset. */
 routerset_t *
 routerset_new(void)
