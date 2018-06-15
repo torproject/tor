@@ -2280,18 +2280,7 @@ typedef struct {
 
 typedef struct relay_crypto_t relay_crypto_t;
 typedef struct crypt_path_t crypt_path_t;
-
-/** A reference-counted pointer to a crypt_path_t, used only to share
- * the final rendezvous cpath to be used on a service-side rendezvous
- * circuit among multiple circuits built in parallel to the same
- * destination rendezvous point. */
-typedef struct {
-  /** The reference count. */
-  unsigned int refcount;
-  /** The pointer.  Set to NULL when the crypt_path_t is put into use
-   * on an opened rendezvous circuit. */
-  crypt_path_t *cpath;
-} crypt_path_reference_t;
+typedef struct crypt_path_reference_t crypt_path_reference_t;
 
 #define CPATH_KEY_MATERIAL_LEN (20*2+16*2)
 

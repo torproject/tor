@@ -207,6 +207,7 @@ ORHEADERS = \
 	src/or/control_connection_st.h			\
 	src/or/control.h				\
 	src/or/crypt_path_st.h				\
+	src/or/crypt_path_reference_st.h		\
 	src/or/cpuworker.h				\
 	src/or/directory.h				\
 	src/or/dirserv.h				\
