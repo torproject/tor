@@ -84,6 +84,7 @@
 #include "control_connection_st.h"
 #include "cpath_build_state_st.h"
 #include "entry_connection_st.h"
+#include "extrainfo_st.h"
 #include "networkstatus_st.h"
 #include "node_st.h"
 #include "or_connection_st.h"

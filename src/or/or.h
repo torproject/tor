@@ -1693,22 +1693,7 @@ typedef struct {
   uint8_t purpose;
 } routerinfo_t;
 
-/** Information needed to keep and cache a signed extra-info document. */
-typedef struct extrainfo_t {
-  signed_descriptor_t cache_info;
-  /** SHA256 digest of this document */
-  uint8_t digest256[DIGEST256_LEN];
-  /** The router's nickname. */
-  char nickname[MAX_NICKNAME_LEN+1];
-  /** True iff we found the right key for this extra-info, verified the
-   * signature, and found it to be bad. */
-  unsigned int bad_sig : 1;
-  /** If present, we didn't have the right key to verify this extra-info,
-   * so this is a copy of the signature in the document. */
-  char *pending_sig;
-  /** Length of pending_sig. */
-  size_t pending_sig_len;
-} extrainfo_t;
+typedef struct extrainfo_t extrainfo_t;
 
 /** Contents of a single router entry in a network status object.
  */
