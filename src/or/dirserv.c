@@ -36,6 +36,7 @@
 
 #include "dirauth/dirvote.h"
 
+#include "cached_dir_st.h"
 #include "dir_connection_st.h"
 #include "extrainfo_st.h"
 #include "microdesc_st.h"

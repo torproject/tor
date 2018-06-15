@@ -81,6 +81,7 @@
 #include "routerparse.h"
 #include "shared_random_client.h"
 
+#include "cached_dir_st.h"
 #include "control_connection_st.h"
 #include "cpath_build_state_st.h"
 #include "entry_connection_st.h"

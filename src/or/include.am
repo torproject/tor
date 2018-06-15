@@ -195,6 +195,7 @@ ORHEADERS = \
 	src/or/circuitstats.h				\
 	src/or/circuituse.h				\
 	src/or/circuit_st.h				\
+	src/or/cached_dir_st.h				\
 	src/or/command.h				\
 	src/or/config.h					\
 	src/or/confparse.h				\

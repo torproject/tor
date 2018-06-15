@@ -1384,19 +1384,7 @@ typedef struct addr_policy_t {
   uint16_t prt_max; /**< Highest port number to accept/reject. */
 } addr_policy_t;
 
-/** A cached_dir_t represents a cacheable directory object, along with its
- * compressed form. */
-typedef struct cached_dir_t {
-  char *dir; /**< Contents of this object, NUL-terminated. */
-  char *dir_compressed; /**< Compressed contents of this object. */
-  size_t dir_len; /**< Length of <b>dir</b> (not counting its NUL). */
-  size_t dir_compressed_len; /**< Length of <b>dir_compressed</b>. */
-  time_t published; /**< When was this object published. */
-  common_digests_t digests; /**< Digests of this object (networkstatus only) */
-  /** Sha3 digest (also ns only) */
-  uint8_t digest_sha3_as_signed[DIGEST256_LEN];
-  int refcnt; /**< Reference count for this cached_dir_t. */
-} cached_dir_t;
+typedef struct cached_dir_t cached_dir_t;
 
 /** Enum used to remember where a signed_descriptor_t is stored and how to
  * manage the memory for signed_descriptor_body.  */
