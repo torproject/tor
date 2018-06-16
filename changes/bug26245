@@ -1,0 +1,3 @@
+  o Minor features (compilation):
+    o The --enable-fatal-warnings flag now affects Rust code as well.
+      Closes ticket 26245.
