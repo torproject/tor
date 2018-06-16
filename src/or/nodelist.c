@@ -2213,9 +2213,14 @@ compute_frac_paths_available(const networkstatus_t *consensus,
      * browsing (as distinct from hidden service web browsing). */
   }
 
-  f_guard = frac_nodes_with_descriptors(guards, WEIGHT_FOR_GUARD);
-  f_mid   = frac_nodes_with_descriptors(mid,    WEIGHT_FOR_MID);
-  f_exit  = frac_nodes_with_descriptors(exits,  WEIGHT_FOR_EXIT);
+  f_guard = frac_nodes_with_descriptors(guards, WEIGHT_FOR_GUARD, 1);
+  f_mid   = frac_nodes_with_descriptors(mid,    WEIGHT_FOR_MID,   0);
+  f_exit  = frac_nodes_with_descriptors(exits,  WEIGHT_FOR_EXIT,  0);
+
+  /* If we are using bridges and have at least one bridge with a full
+   * descriptor, assume f_guard is 1.0. */
+  if (options->UseBridges && num_bridges_usable(0) > 0)
+    f_guard = 1.0;
 
   log_debug(LD_NET,
             "f_guard: %.2f, f_mid: %.2f, f_exit: %.2f",
@@ -2269,9 +2274,10 @@ compute_frac_paths_available(const networkstatus_t *consensus,
               np,
               nu);
 
-    f_myexit= frac_nodes_with_descriptors(myexits,WEIGHT_FOR_EXIT);
+    f_myexit= frac_nodes_with_descriptors(myexits, WEIGHT_FOR_EXIT, 0);
     f_myexit_unflagged=
-              frac_nodes_with_descriptors(myexits_unflagged,WEIGHT_FOR_EXIT);
+              frac_nodes_with_descriptors(myexits_unflagged,
+                                          WEIGHT_FOR_EXIT, 0);
 
     log_debug(LD_NET,
               "f_exit: %.2f, f_myexit: %.2f, f_myexit_unflagged: %.2f",
