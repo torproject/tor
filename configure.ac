@@ -462,6 +462,11 @@ if test "x$enable_rust" = "xyes"; then
   fi
 
   AC_DEFINE([HAVE_RUST], 1, [have Rust])
+  if test "x$enable_fatal_warnings" = "xyes"; then
+    RUST_WARN=
+  else
+    RUST_WARN=#
+  fi
   if test "x$enable_cargo_online_mode" = "xyes"; then
     CARGO_ONLINE=
     RUST_DL=#
@@ -515,6 +520,7 @@ if test "x$enable_rust" = "xyes"; then
 
   AC_SUBST(TOR_RUST_STATIC_NAME)
   AC_SUBST(CARGO_ONLINE)
+  AC_SUBST(RUST_WARN)
   AC_SUBST(RUST_DL)
 
   dnl Let's check the rustc version, too
