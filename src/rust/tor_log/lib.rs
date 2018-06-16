@@ -1,4 +1,4 @@
-//! Copyright (c) 2016-2017, The Tor Project, Inc. */
+//! Copyright (c) 2016-2018, The Tor Project, Inc. */
 //! See LICENSE for licensing information */
 
 //! Logging wrapper for Rust to utilize Tor's logger, found at

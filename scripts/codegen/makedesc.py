@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2014-2017, The Tor Project, Inc.
+# Copyright 2014-2018, The Tor Project, Inc.
 # See LICENSE for license information
 
 # This is a kludgey python script that uses ctypes and openssl to sign
