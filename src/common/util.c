@@ -4813,7 +4813,7 @@ process_environment_make(struct smartlist_t *env_vars)
 
   total_env_length = 1; /* terminating NUL of terminating empty string */
   for (i = 0; i < n_env_vars; ++i) {
-    const char *s = smartlist_get(env_vars, i);
+    const char *s = smartlist_get(env_vars, (int)i);
     size_t slen = strlen(s);
 
     tor_assert(slen + 1 != 0);
@@ -4843,7 +4843,7 @@ process_environment_make(struct smartlist_t *env_vars)
     const char *prev_env_var = NULL;
 
     for (i = 0; i < n_env_vars; ++i) {
-      const char *s = smartlist_get(env_vars_sorted, i);
+      const char *s = smartlist_get(env_vars_sorted, (int)i);
       size_t slen = strlen(s);
       size_t s_name_len = str_num_before(s, '=');
 
