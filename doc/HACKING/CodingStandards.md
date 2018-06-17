@@ -185,6 +185,9 @@ deviations from our C whitespace style.  Generally, we use:
      `puts (x)`.
    - Function declarations at the start of the line.
 
+If you use an editor that has plugins for editorconfig.org, the file
+`.editorconfig` will help you to conform this coding style.
+
 We try hard to build without warnings everywhere.  In particular, if
 you're using gcc, you should invoke the configure script with the
 option `--enable-fatal-warnings`.  This will tell the compiler
