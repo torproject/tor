@@ -1,0 +1,5 @@
+  o Major feature (onion services):
+    - Improve revision counter generation in next-gen onion services. Onion
+      services can now scale by hosting multiple instances on different hosts
+      without synchronization between them, which was previously impossible
+      because descriptors would get rejected by HSDirs. Addresses ticket 25552.
