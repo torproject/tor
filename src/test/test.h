@@ -11,6 +11,8 @@
  * \brief Macros and functions used by unit tests.
  */
 
+#define DEBUG_SMARTLIST 1
+
 #include "compat.h"
 #include "tinytest.h"
 #define TT_EXIT_TEST_FUNCTION STMT_BEGIN goto done; STMT_END
