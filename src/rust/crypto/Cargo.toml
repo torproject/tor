@@ -25,5 +25,4 @@ rand = { version = "=0.5.0-pre.2", default-features = false }
 rand_core = { version = "=0.2.0-pre.0", default-features = false }
 
 [features]
-testing = ["tor_log/testing"]
 

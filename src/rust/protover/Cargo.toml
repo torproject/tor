@@ -4,7 +4,6 @@ version = "0.0.1"
 name = "protover"
 
 [features]
-testing = ["tor_log/testing"]
 
 [dependencies]
 libc = "=0.2.39"
