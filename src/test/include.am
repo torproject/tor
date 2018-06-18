@@ -10,7 +10,10 @@ TESTS_ENVIRONMENT = \
 	export TESTING_TOR_BINARY="$(TESTING_TOR_BINARY)"; \
 	export CARGO="$(CARGO)"; \
 	export EXTRA_CARGO_OPTIONS="$(EXTRA_CARGO_OPTIONS)"; \
-	export CARGO_ONLINE="$(CARGO_ONLINE)";
+	export CARGO_ONLINE="$(CARGO_ONLINE)"; \
+        export CCLD="$(CCLD)"; \
+        chmod +x "$(abs_top_builddir)/link_rust.sh"; \
+        export RUSTFLAGS="-C linker=$(abs_top_builddir)/link_rust.sh";
 
 TESTSCRIPTS = \
 	src/test/fuzz_static_testcases.sh \
@@ -347,7 +350,7 @@ src_test_test_bt_cl_LDADD = src/common/libor-testing.a \
 	src/trace/libor-trace.a \
 	$(rust_ldadd) \
 	@TOR_LIB_MATH@ \
-	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ 
+	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@
 src_test_test_bt_cl_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 src_test_test_bt_cl_CPPFLAGS= $(src_test_AM_CPPFLAGS) $(TEST_CPPFLAGS)
 

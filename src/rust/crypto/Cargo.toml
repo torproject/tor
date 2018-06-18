@@ -4,6 +4,7 @@ authors = ["The Tor Project",
 name = "crypto"
 version = "0.0.1"
 publish = false
+build = "../build.rs"
 
 [lib]
 name = "crypto"
@@ -26,4 +27,3 @@ rand_core = { version = "=0.2.0-pre.0", default-features = false }
 
 [features]
 testing = ["tor_log/testing"]
-
