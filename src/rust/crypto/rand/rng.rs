@@ -130,8 +130,8 @@ mod internal {
 #[cfg(test)]
 mod internal {
     // It doesn't matter if we pretend ChaCha is a CSPRNG in tests.
-    pub use rand::ChaChaRng as TorRng;
-    pub use rand::ChaChaRng as TorStrongestRng;
+    pub use rand_crate::ChaChaRng as TorRng;
+    pub use rand_crate::ChaChaRng as TorStrongestRng;
 }
 
 // Finally, expose the public functionality of whichever appropriate internal
