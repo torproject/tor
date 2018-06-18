@@ -13,7 +13,7 @@
 
 /** Represents information about a single trusted or fallback directory
  * server. */
-typedef struct dir_server_t {
+struct dir_server_t {
   char *description;
   char *nickname;
   char *address; /**< Hostname. */
@@ -49,7 +49,6 @@ typedef struct dir_server_t {
                                * as a routerstatus_t.  Not updated by the
                                * router-status management code!
                                **/
-} dir_server_t;
+};
 
 #endif
-

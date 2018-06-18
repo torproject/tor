@@ -27,7 +27,7 @@ struct buf_t;
  * conn->outbuf.  Connections differ primarily in the functions called
  * to fill and drain these buffers.
  */
-typedef struct connection_t {
+struct connection_t {
   uint32_t magic; /**< For memory debugging: must equal one of
                    * *_CONNECTION_MAGIC. */
 
@@ -126,7 +126,6 @@ typedef struct connection_t {
   /** Bytes written since last call to control_event_conn_bandwidth_used().
    * Only used if we're configured to emit CONN_BW events. */
   uint32_t n_written_conn_bw;
-} connection_t;
+};
 
 #endif
-

@@ -8,7 +8,7 @@
 #define NETWORKSTATUS_VOTER_INFO_ST_H
 
 /** Information about a single voter in a vote or a consensus. */
-typedef struct networkstatus_voter_info_t {
+struct networkstatus_voter_info_t {
   /** Declared SHA-1 digest of this voter's identity key */
   char identity_digest[DIGEST_LEN];
   char *nickname; /**< Nickname of this voter */
@@ -25,7 +25,6 @@ typedef struct networkstatus_voter_info_t {
   /* Nothing from here on is signed. */
   /** The signature of the document and the signature's status. */
   smartlist_t *sigs;
-} networkstatus_voter_info_t;
+};
 
 #endif
-
