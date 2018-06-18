@@ -165,15 +165,19 @@ impl FixedOutput for Sha512 {
 
 #[cfg(test)]
 mod test {
+    #[cfg(feature = "test-c-from-rust")]
     use digest::Digest;
 
+    #[cfg(feature = "test-c-from-rust")]
     use super::*;
 
+    #[cfg(feature = "test-c-from-rust")]
     #[test]
     fn sha256_default() {
         let _: Sha256 = Sha256::default();
     }
 
+    #[cfg(feature = "test-c-from-rust")]
     #[test]
     fn sha256_digest() {
         let mut h: Sha256 = Sha256::new();
@@ -190,11 +194,13 @@ mod test {
         assert_eq!(&result[..], &b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"[..]);
     }
 
+    #[cfg(feature = "test-c-from-rust")]
     #[test]
     fn sha512_default() {
         let _: Sha512 = Sha512::default();
     }
 
+    #[cfg(feature = "test-c-from-rust")]
     #[test]
     fn sha512_digest() {
         let mut h: Sha512 = Sha512::new();

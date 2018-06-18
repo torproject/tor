@@ -26,4 +26,8 @@ rand_core = { version = "=0.2.0-pre.0", default-features = false }
 
 [features]
 testing = ["tor_log/testing"]
+# If this feature is enabled, test code which calls Tor C code from Rust will
+# execute with `cargo test`.  Due to numerous linker issues (#25386), this is
+# currently disabled by default.
+test-c-from-rust = []
 
