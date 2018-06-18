@@ -29,9 +29,17 @@
 // External crates from cargo or TOR_RUST_DEPENDENCIES.
 extern crate digest;
 extern crate libc;
+extern crate rand_core;
+
+// External dependencies for tests.
+#[cfg(test)]
+extern crate rand as rand_crate;
 
 // Our local crates.
 extern crate external;
+#[cfg(not(test))]
+#[macro_use]
+extern crate tor_log;
 
 pub mod digests;  // Unfortunately named "digests" plural to avoid name conflict with the digest crate
 pub mod rand;

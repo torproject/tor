@@ -2,15 +2,5 @@
 // Copyright (c) 2018, isis agora lovecruft
 // See LICENSE for licensing information
 
-// External dependencies
-#[cfg(test)]
-extern crate rand;
-extern crate rand_core;
-
 // Internal dependencies
-extern crate external;
-#[cfg(not(test))]
-#[macro_use]
-extern crate tor_log;
-
 pub mod rng;
