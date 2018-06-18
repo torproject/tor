@@ -27,6 +27,7 @@
 
 #include "crypto.h"
 #include "crypto_rand.h"
+#include "crypto_dh.h"
 #include "crypto_util.h"
 #include "compat.h"
 

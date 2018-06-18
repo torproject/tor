@@ -22,6 +22,7 @@
 
 #define ONION_NTOR_PRIVATE
 #include "crypto.h"
+#include "crypto_hkdf.h"
 #include "crypto_digest.h"
 #include "crypto_util.h"
 #include "onion_ntor.h"
