@@ -172,7 +172,6 @@ deviations from our C whitespace style.  Generally, we use:
    - Unix-style line endings
    - K&R-style indentation
    - No space before newlines
-   - A blank line at the end of each file
    - Never more than one blank line in a row
    - Always spaces, never tabs
    - No more than 79-columns per line.
@@ -437,4 +436,3 @@ the functions that call your function rely on it doing something, then your
 function should mention that it does that something in the documentation.  If
 you rely on a function doing something beyond what is in its documentation,
 then you should watch out, or it might do something else later.
-
