@@ -126,7 +126,7 @@ for my $fn (@ARGV) {
             ## Warn about double semi-colons at the end of a line.
             if (/;;$/) {
                 msg "       double semi-colons at the end of $. in $fn\n"
-            }            
+            }
             ## Warn about multiple internal spaces.
             #if (/[^\s,:]\s{2,}[^\s\\=]/) {
             #    msg "     X  X:$fn:$.\n";
@@ -191,11 +191,6 @@ for my $fn (@ARGV) {
                 }
             }
         }
-    }
-    ## Warn if the file doesn't end with a blank line.
-    #    (End each file with a single blank line.)
-    if (! $lastnil) {
-        msg "  EOL\@EOF:$fn:$.\n";
     }
     close(F);
 }
