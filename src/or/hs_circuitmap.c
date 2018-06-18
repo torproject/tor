@@ -18,6 +18,9 @@
 #include "circuitlist.h"
 #include "hs_circuitmap.h"
 
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
+
 /************************** HS circuitmap code *******************************/
 
 /* This is the hidden service circuitmap. It's a hash table that maps

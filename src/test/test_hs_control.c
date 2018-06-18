@@ -7,10 +7,6 @@
  **/
 
 #define CONTROL_PRIVATE
-#define CIRCUITBUILD_PRIVATE
-#define RENDCOMMON_PRIVATE
-#define RENDSERVICE_PRIVATE
-#define HS_SERVICE_PRIVATE
 
 #include "or.h"
 #include "test.h"
@@ -19,10 +15,10 @@
 #include "hs_common.h"
 #include "hs_control.h"
 #include "nodelist.h"
-//#include "rendcommon.h"
-//#include "rendservice.h"
-//#include "routerset.h"
-//#include "circuitbuild.h"
+
+#include "node_st.h"
+#include "routerstatus_st.h"
+
 #include "test_helpers.h"
 
 /* mock ID digest and longname for node that's in nodelist */

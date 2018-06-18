@@ -62,6 +62,12 @@ double fabs(double x);
 #include "statefile.h"
 #include "crypto_curve25519.h"
 
+#include "extend_info_st.h"
+#include "or_circuit_st.h"
+#include "rend_encoded_v2_service_descriptor_st.h"
+#include "rend_intro_point_st.h"
+#include "rend_service_descriptor_st.h"
+
 /** Run unit tests for the onion handshake code. */
 static void
 test_onion_handshake(void *arg)

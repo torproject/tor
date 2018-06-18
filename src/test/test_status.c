@@ -24,6 +24,10 @@
 #include "main.h"
 #include "nodelist.h"
 #include "statefile.h"
+
+#include "origin_circuit_st.h"
+#include "routerinfo_st.h"
+
 #include "test.h"
 
 #define NS_MODULE status

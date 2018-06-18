@@ -86,6 +86,10 @@
 #include "util_format.h"
 #include "hs_circuitmap.h"
 
+// These, more than other includes, are for keeping the other struct
+// definitions working. We should remove them when we minimize our includes.
+#include "entry_port_cfg_st.h"
+
 /* These signals are defined to help handle_control_signal work.
  */
 #ifndef SIGHUP
@@ -897,18 +901,7 @@ struct hs_ident_edge_conn_t;
 struct hs_ident_dir_conn_t;
 struct hs_ident_circuit_t;
 
-/* Hidden service directory index used in a node_t which is set once we set
- * the consensus. */
-typedef struct hsdir_index_t {
-  /* HSDir index to use when fetching a descriptor. */
-  uint8_t fetch[DIGEST256_LEN];
-
-  /* HSDir index used by services to store their first and second
-   * descriptor. The first descriptor is chronologically older than the second
-   * one and uses older TP and SRV values. */
-  uint8_t store_first[DIGEST256_LEN];
-  uint8_t store_second[DIGEST256_LEN];
-} hsdir_index_t;
+typedef struct hsdir_index_t hsdir_index_t;
 
 /** Time interval for tracking replays of DH public keys received in
  * INTRODUCE2 cells.  Used only to avoid launching multiple
@@ -1174,26 +1167,12 @@ typedef struct channel_tls_s channel_tls_t;
 
 typedef struct circuitmux_s circuitmux_t;
 
-/** Parsed onion routing cell.  All communication between nodes
- * is via cells. */
-typedef struct cell_t {
-  circid_t circ_id; /**< Circuit which received the cell. */
-  uint8_t command; /**< Type of the cell: one of CELL_PADDING, CELL_CREATE,
-                    * CELL_DESTROY, etc */
-  uint8_t payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
-} cell_t;
-
-/** Parsed variable-length onion routing cell. */
-typedef struct var_cell_t {
-  /** Type of the cell: CELL_VERSIONS, etc. */
-  uint8_t command;
-  /** Circuit thich received the cell */
-  circid_t circ_id;
-  /** Number of bytes actually stored in <b>payload</b> */
-  uint16_t payload_len;
-  /** Payload of this cell */
-  uint8_t payload[FLEXIBLE_ARRAY_MEMBER];
-} var_cell_t;
+typedef struct cell_t cell_t;
+typedef struct var_cell_t var_cell_t;
+typedef struct packed_cell_t packed_cell_t;
+typedef struct cell_queue_t cell_queue_t;
+typedef struct destroy_cell_t destroy_cell_t;
+typedef struct destroy_cell_queue_t destroy_cell_queue_t;
 
 /** A parsed Extended ORPort message. */
 typedef struct ext_or_cmd_t {
@@ -1201,39 +1180,6 @@ typedef struct ext_or_cmd_t {
   uint16_t len; /** Body length */
   char body[FLEXIBLE_ARRAY_MEMBER]; /** Message body */
 } ext_or_cmd_t;
-
-/** A cell as packed for writing to the network. */
-typedef struct packed_cell_t {
-  /** Next cell queued on this circuit. */
-  TOR_SIMPLEQ_ENTRY(packed_cell_t) next;
-  char body[CELL_MAX_NETWORK_SIZE]; /**< Cell as packed for network. */
-  uint32_t inserted_timestamp; /**< Time (in timestamp units) when this cell
-                                * was inserted */
-} packed_cell_t;
-
-/** A queue of cells on a circuit, waiting to be added to the
- * or_connection_t's outbuf. */
-typedef struct cell_queue_t {
-  /** Linked list of packed_cell_t*/
-  TOR_SIMPLEQ_HEAD(cell_simpleq, packed_cell_t) head;
-  int n; /**< The number of cells in the queue. */
-} cell_queue_t;
-
-/** A single queued destroy cell. */
-typedef struct destroy_cell_t {
-  TOR_SIMPLEQ_ENTRY(destroy_cell_t) next;
-  circid_t circid;
-  uint32_t inserted_timestamp; /**< Time (in timestamp units) when this cell
-                                * was inserted */
-  uint8_t reason;
-} destroy_cell_t;
-
-/** A queue of destroy cells on a channel. */
-typedef struct destroy_cell_queue_t {
-  /** Linked list of packed_cell_t */
-  TOR_SIMPLEQ_HEAD(dcell_simpleq, destroy_cell_t) head;
-  int n; /**< The number of cells in the queue. */
-} destroy_cell_queue_t;
 
 /** Beginning of a RELAY cell payload. */
 typedef struct {
@@ -1245,55 +1191,8 @@ typedef struct {
 } relay_header_t;
 
 typedef struct socks_request_t socks_request_t;
-
-typedef struct entry_port_cfg_t {
-  /* Client port types (socks, dns, trans, natd) only: */
-  uint8_t isolation_flags; /**< Zero or more isolation flags */
-  int session_group; /**< A session group, or -1 if this port is not in a
-                      * session group. */
-
-  /* Socks only: */
-  /** When both no-auth and user/pass are advertised by a SOCKS client, select
-   * no-auth. */
-  unsigned int socks_prefer_no_auth : 1;
-  /** When ISO_SOCKSAUTH is in use, Keep-Alive circuits indefinitely. */
-  unsigned int socks_iso_keep_alive : 1;
-
-  /* Client port types only: */
-  unsigned int ipv4_traffic : 1;
-  unsigned int ipv6_traffic : 1;
-  unsigned int prefer_ipv6 : 1;
-  unsigned int dns_request : 1;
-  unsigned int onion_traffic : 1;
-
-  /** For a socks listener: should we cache IPv4/IPv6 DNS information that
-   * exit nodes tell us?
-   *
-   * @{ */
-  unsigned int cache_ipv4_answers : 1;
-  unsigned int cache_ipv6_answers : 1;
-  /** @} */
-  /** For a socks listeners: if we find an answer in our client-side DNS cache,
-   * should we use it?
-   *
-   * @{ */
-  unsigned int use_cached_ipv4_answers : 1;
-  unsigned int use_cached_ipv6_answers : 1;
-  /** @} */
-  /** For socks listeners: When we can automap an address to IPv4 or IPv6,
-   * do we prefer IPv6? */
-  unsigned int prefer_ipv6_virtaddr : 1;
-
-} entry_port_cfg_t;
-
-typedef struct server_port_cfg_t {
-  /* Server port types (or, dir) only: */
-  unsigned int no_advertise : 1;
-  unsigned int no_listen : 1;
-  unsigned int all_addrs : 1;
-  unsigned int bind_ipv4_only : 1;
-  unsigned int bind_ipv6_only : 1;
-} server_port_cfg_t;
+typedef struct entry_port_cfg_t entry_port_cfg_t;
+typedef struct server_port_cfg_t server_port_cfg_t;
 
 /* Values for connection_t.magic: used to make sure that downcasts (casts from
 * connection_t to foo_connection_t) are safe. */
@@ -1304,139 +1203,6 @@ typedef struct server_port_cfg_t {
 #define DIR_CONNECTION_MAGIC 0x9988ffeeu
 #define CONTROL_CONNECTION_MAGIC 0x8abc765du
 #define LISTENER_CONNECTION_MAGIC 0x1a1ac741u
-
-struct buf_t;
-
-/** Description of a connection to another host or process, and associated
- * data.
- *
- * A connection is named based on what it's connected to -- an "OR
- * connection" has a Tor node on the other end, an "exit
- * connection" has a website or other server on the other end, and an
- * "AP connection" has an application proxy (and thus a user) on the
- * other end.
- *
- * Every connection has a type and a state.  Connections never change
- * their type, but can go through many state changes in their lifetime.
- *
- * Every connection has two associated input and output buffers.
- * Listeners don't use them.  For non-listener connections, incoming
- * data is appended to conn->inbuf, and outgoing data is taken from
- * conn->outbuf.  Connections differ primarily in the functions called
- * to fill and drain these buffers.
- */
-typedef struct connection_t {
-  uint32_t magic; /**< For memory debugging: must equal one of
-                   * *_CONNECTION_MAGIC. */
-
-  uint8_t state; /**< Current state of this connection. */
-  unsigned int type:5; /**< What kind of connection is this? */
-  unsigned int purpose:5; /**< Only used for DIR and EXIT types currently. */
-
-  /* The next fields are all one-bit booleans. Some are only applicable to
-   * connection subtypes, but we hold them here anyway, to save space.
-   */
-  unsigned int read_blocked_on_bw:1; /**< Boolean: should we start reading
-                            * again once the bandwidth throttler allows it? */
-  unsigned int write_blocked_on_bw:1; /**< Boolean: should we start writing
-                             * again once the bandwidth throttler allows
-                             * writes? */
-  unsigned int hold_open_until_flushed:1; /**< Despite this connection's being
-                                      * marked for close, do we flush it
-                                      * before closing it? */
-  unsigned int inbuf_reached_eof:1; /**< Boolean: did read() return 0 on this
-                                     * conn? */
-  /** Set to 1 when we're inside connection_flushed_some to keep us from
-   * calling connection_handle_write() recursively. */
-  unsigned int in_flushed_some:1;
-  /** True if connection_handle_write is currently running on this connection.
-   */
-  unsigned int in_connection_handle_write:1;
-
-  /* For linked connections:
-   */
-  unsigned int linked:1; /**< True if there is, or has been, a linked_conn. */
-  /** True iff we'd like to be notified about read events from the
-   * linked conn. */
-  unsigned int reading_from_linked_conn:1;
-  /** True iff we're willing to write to the linked conn. */
-  unsigned int writing_to_linked_conn:1;
-  /** True iff we're currently able to read on the linked conn, and our
-   * read_event should be made active with libevent. */
-  unsigned int active_on_link:1;
-  /** True iff we've called connection_close_immediate() on this linked
-   * connection. */
-  unsigned int linked_conn_is_closed:1;
-
-  /** CONNECT/SOCKS proxy client handshake state (for outgoing connections). */
-  unsigned int proxy_state:4;
-
-  /** Our socket; set to TOR_INVALID_SOCKET if this connection is closed,
-   * or has no socket. */
-  tor_socket_t s;
-  int conn_array_index; /**< Index into the global connection array. */
-
-  struct event *read_event; /**< Libevent event structure. */
-  struct event *write_event; /**< Libevent event structure. */
-  struct buf_t *inbuf; /**< Buffer holding data read over this connection. */
-  struct buf_t *outbuf; /**< Buffer holding data to write over this
-                         * connection. */
-  size_t outbuf_flushlen; /**< How much data should we try to flush from the
-                           * outbuf? */
-  time_t timestamp_last_read_allowed; /**< When was the last time libevent said
-                                       * we could read? */
-  time_t timestamp_last_write_allowed; /**< When was the last time libevent
-                                        * said we could write? */
-
-  time_t timestamp_created; /**< When was this connection_t created? */
-
-  int socket_family; /**< Address family of this connection's socket.  Usually
-                      * AF_INET, but it can also be AF_UNIX, or AF_INET6 */
-  tor_addr_t addr; /**< IP that socket "s" is directly connected to;
-                    * may be the IP address for a proxy or pluggable transport,
-                    * see "address" for the address of the final destination.
-                    */
-  uint16_t port; /**< If non-zero, port that socket "s" is directly connected
-                  * to; may be the port for a proxy or pluggable transport,
-                  * see "address" for the port at the final destination. */
-  uint16_t marked_for_close; /**< Should we close this conn on the next
-                              * iteration of the main loop? (If true, holds
-                              * the line number where this connection was
-                              * marked.) */
-  const char *marked_for_close_file; /**< For debugging: in which file were
-                                      * we marked for close? */
-  char *address; /**< FQDN (or IP) and port of the final destination for this
-                  * connection; this is always the remote address, it is
-                  * passed to a proxy or pluggable transport if one in use.
-                  * See "addr" and "port" for the address that socket "s" is
-                  * directly connected to.
-                  * strdup into this, because free_connection() frees it. */
-  /** Another connection that's connected to this one in lieu of a socket. */
-  struct connection_t *linked_conn;
-
-  /** Unique identifier for this connection on this Tor instance. */
-  uint64_t global_identifier;
-
-  /** Bytes read since last call to control_event_conn_bandwidth_used().
-   * Only used if we're configured to emit CONN_BW events. */
-  uint32_t n_read_conn_bw;
-
-  /** Bytes written since last call to control_event_conn_bandwidth_used().
-   * Only used if we're configured to emit CONN_BW events. */
-  uint32_t n_written_conn_bw;
-} connection_t;
-
-/** Subtype of connection_t; used for a listener socket. */
-typedef struct listener_connection_t {
-  connection_t base_;
-
-  /** If the connection is a CONN_TYPE_AP_DNS_LISTENER, this field points
-   * to the evdns_server_port it uses to listen to and answer connections. */
-  struct evdns_server_port *dns_server_port;
-
-  entry_port_cfg_t entry_cfg;
-
-} listener_connection_t;
 
 /** Minimum length of the random part of an AUTH_CHALLENGE cell. */
 #define OR_AUTH_CHALLENGE_LEN 32
@@ -1497,100 +1263,8 @@ typedef struct listener_connection_t {
  * signs. */
 #define V3_AUTH_BODY_LEN (V3_AUTH_FIXED_PART_LEN + 8 + 16)
 
-/** Structure to hold all the certificates we've received on an OR connection
- */
-typedef struct or_handshake_certs_t {
-  /** True iff we originated this connection. */
-  int started_here;
-  /** The cert for the 'auth' RSA key that's supposed to sign the AUTHENTICATE
-   * cell. Signed with the RSA identity key. */
-  tor_x509_cert_t *auth_cert;
-  /** The cert for the 'link' RSA key that was used to negotiate the TLS
-   *  connection.  Signed with the RSA identity key. */
-  tor_x509_cert_t *link_cert;
-  /** A self-signed identity certificate: the RSA identity key signed
-   * with itself.  */
-  tor_x509_cert_t *id_cert;
-  /** The Ed25519 signing key, signed with the Ed25519 identity key. */
-  struct tor_cert_st *ed_id_sign;
-  /** A digest of the X509 link certificate for the TLS connection, signed
-   * with the Ed25519 siging key. */
-  struct tor_cert_st *ed_sign_link;
-  /** The Ed25519 authentication key (that's supposed to sign an AUTHENTICATE
-   * cell) , signed with the Ed25519 siging key. */
-  struct tor_cert_st *ed_sign_auth;
-  /** The Ed25519 identity key, crosssigned with the RSA identity key. */
-  uint8_t *ed_rsa_crosscert;
-  /** The length of <b>ed_rsa_crosscert</b> in bytes */
-  size_t ed_rsa_crosscert_len;
-} or_handshake_certs_t;
-
-/** Stores flags and information related to the portion of a v2/v3 Tor OR
- * connection handshake that happens after the TLS handshake is finished.
- */
-typedef struct or_handshake_state_t {
-  /** When was the VERSIONS cell sent on this connection?  Used to get
-   * an estimate of the skew in the returning NETINFO reply. */
-  time_t sent_versions_at;
-  /** True iff we originated this connection */
-  unsigned int started_here : 1;
-  /** True iff we have received and processed a VERSIONS cell. */
-  unsigned int received_versions : 1;
-  /** True iff we have received and processed an AUTH_CHALLENGE cell */
-  unsigned int received_auth_challenge : 1;
-  /** True iff we have received and processed a CERTS cell. */
-  unsigned int received_certs_cell : 1;
-  /** True iff we have received and processed an AUTHENTICATE cell */
-  unsigned int received_authenticate : 1;
-
-  /* True iff we've received valid authentication to some identity. */
-  unsigned int authenticated : 1;
-  unsigned int authenticated_rsa : 1;
-  unsigned int authenticated_ed25519 : 1;
-
-  /* True iff we have sent a netinfo cell */
-  unsigned int sent_netinfo : 1;
-
-  /** The signing->ed25519 link certificate corresponding to the x509
-   * certificate we used on the TLS connection (if this is a server-side
-   * connection). We make a copy of this here to prevent a race condition
-   * caused by TLS context rotation. */
-  struct tor_cert_st *own_link_cert;
-
-  /** True iff we should feed outgoing cells into digest_sent and
-   * digest_received respectively.
-   *
-   * From the server's side of the v3 handshake, we want to capture everything
-   * from the VERSIONS cell through and including the AUTH_CHALLENGE cell.
-   * From the client's, we want to capture everything from the VERSIONS cell
-   * through but *not* including the AUTHENTICATE cell.
-   *
-   * @{ */
-  unsigned int digest_sent_data : 1;
-  unsigned int digest_received_data : 1;
-  /**@}*/
-
-  /** Identity RSA digest that we have received and authenticated for our peer
-   * on this connection. */
-  uint8_t authenticated_rsa_peer_id[DIGEST_LEN];
-  /** Identity Ed25519 public key that we have received and authenticated for
-   * our peer on this connection. */
-  ed25519_public_key_t authenticated_ed25519_peer_id;
-
-  /** Digests of the cells that we have sent or received as part of a V3
-   * handshake.  Used for making and checking AUTHENTICATE cells.
-   *
-   * @{
-   */
-  crypto_digest_t *digest_sent;
-  crypto_digest_t *digest_received;
-  /** @} */
-
-  /** Certificates that a connection initiator sent us in a CERTS cell; we're
-   * holding on to them until we get an AUTHENTICATE cell.
-   */
-  or_handshake_certs_t *certs;
-} or_handshake_state_t;
+typedef struct or_handshake_certs_t or_handshake_certs_t;
+typedef struct or_handshake_state_t or_handshake_state_t;
 
 /** Length of Extended ORPort connection identifier. */
 #define EXT_OR_CONN_ID_LEN DIGEST_LEN /* 20 */
@@ -1607,380 +1281,19 @@ typedef struct or_handshake_state_t {
  * drops below this size. */
 #define OR_CONN_LOWWATER (16*1024)
 
-/** Subtype of connection_t for an "OR connection" -- that is, one that speaks
- * cells over TLS. */
-typedef struct or_connection_t {
-  connection_t base_;
-
-  /** Hash of the public RSA key for the other side's identity key, or zeroes
-   * if the other side hasn't shown us a valid identity key. */
-  char identity_digest[DIGEST_LEN];
-
-  /** Extended ORPort connection identifier. */
-  char *ext_or_conn_id;
-  /** This is the ClientHash value we expect to receive from the
-   *  client during the Extended ORPort authentication protocol. We
-   *  compute it upon receiving the ClientNoce from the client, and we
-   *  compare it with the acual ClientHash value sent by the
-   *  client. */
-  char *ext_or_auth_correct_client_hash;
-  /** String carrying the name of the pluggable transport
-   *  (e.g. "obfs2") that is obfuscating this connection. If no
-   *  pluggable transports are used, it's NULL. */
-  char *ext_or_transport;
-
-  char *nickname; /**< Nickname of OR on other side (if any). */
-
-  tor_tls_t *tls; /**< TLS connection state. */
-  int tls_error; /**< Last tor_tls error code. */
-  /** When we last used this conn for any client traffic. If not
-   * recent, we can rate limit it further. */
-
-  /* Channel using this connection */
-  channel_tls_t *chan;
-
-  tor_addr_t real_addr; /**< The actual address that this connection came from
-                       * or went to.  The <b>addr</b> field is prone to
-                       * getting overridden by the address from the router
-                       * descriptor matching <b>identity_digest</b>. */
-
-  /** Should this connection be used for extending circuits to the server
-   * matching the <b>identity_digest</b> field?  Set to true if we're pretty
-   * sure we aren't getting MITMed, either because we're connected to an
-   * address listed in a server descriptor, or because an authenticated
-   * NETINFO cell listed the address we're connected to as recognized. */
-  unsigned int is_canonical:1;
-
-  /** True iff this is an outgoing connection. */
-  unsigned int is_outgoing:1;
-  unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
-  unsigned int wide_circ_ids:1;
-  /** True iff this connection has had its bootstrap failure logged with
-   * control_event_bootstrap_problem. */
-  unsigned int have_noted_bootstrap_problem:1;
-  /** True iff this is a client connection and its address has been put in the
-   * geoip cache and handled by the DoS mitigation subsystem. We use this to
-   * insure we have a coherent count of concurrent connection. */
-  unsigned int tracked_for_dos_mitigation : 1;
-
-  uint16_t link_proto; /**< What protocol version are we using? 0 for
-                        * "none negotiated yet." */
-  uint16_t idle_timeout; /**< How long can this connection sit with no
-                          * circuits on it before we close it? Based on
-                          * IDLE_CIRCUIT_TIMEOUT_{NON,}CANONICAL and
-                          * on is_canonical, randomized. */
-  or_handshake_state_t *handshake_state; /**< If we are setting this connection
-                                          * up, state information to do so. */
-
-  time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
-
-  token_bucket_rw_t bucket; /**< Used for rate limiting when the connection is
-                          * in state CONN_OPEN. */
-
-  /*
-   * Count the number of bytes flushed out on this orconn, and the number of
-   * bytes TLS actually sent - used for overhead estimation for scheduling.
-   */
-  uint64_t bytes_xmitted, bytes_xmitted_by_tls;
-} or_connection_t;
-
-/** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)
- * connection, or an exit. */
-typedef struct edge_connection_t {
-  connection_t base_;
-
-  struct edge_connection_t *next_stream; /**< Points to the next stream at this
-                                          * edge, if any */
-  int package_window; /**< How many more relay cells can I send into the
-                       * circuit? */
-  int deliver_window; /**< How many more relay cells can end at me? */
-
-  struct circuit_t *on_circuit; /**< The circuit (if any) that this edge
-                                 * connection is using. */
-
-  /** A pointer to which node in the circ this conn exits at.  Set for AP
-   * connections and for hidden service exit connections. */
-  struct crypt_path_t *cpath_layer;
-  /** What rendezvous service are we querying for (if an AP) or providing (if
-   * an exit)? */
-  rend_data_t *rend_data;
-
-  /* Hidden service connection identifier for edge connections. Used by the HS
-   * client-side code to identify client SOCKS connections and by the
-   * service-side code to match HS circuits with their streams. */
-  struct hs_ident_edge_conn_t *hs_ident;
-
-  uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
-                         * connection.  Exit connections only. */
-  uint32_t begincell_flags; /** Flags sent or received in the BEGIN cell
-                             * for this connection */
-
-  streamid_t stream_id; /**< The stream ID used for this edge connection on its
-                         * circuit */
-
-  /** The reason why this connection is closing; passed to the controller. */
-  uint16_t end_reason;
-
-  /** Bytes read since last call to control_event_stream_bandwidth_used() */
-  uint32_t n_read;
-
-  /** Bytes written since last call to control_event_stream_bandwidth_used() */
-  uint32_t n_written;
-
-  /** True iff this connection is for a DNS request only. */
-  unsigned int is_dns_request:1;
-  /** True iff this connection is for a PTR DNS request. (exit only) */
-  unsigned int is_reverse_dns_lookup:1;
-
-  unsigned int edge_has_sent_end:1; /**< For debugging; only used on edge
-                         * connections.  Set once we've set the stream end,
-                         * and check in connection_about_to_close_connection().
-                         */
-  /** True iff we've blocked reading until the circuit has fewer queued
-   * cells. */
-  unsigned int edge_blocked_on_circ:1;
-
-  /** Unique ID for directory requests; this used to be in connection_t, but
-   * that's going away and being used on channels instead.  We still tag
-   * edge connections with dirreq_id from circuits, so it's copied here. */
-  uint64_t dirreq_id;
-} edge_connection_t;
-
-/** Subtype of edge_connection_t for an "entry connection" -- that is, a SOCKS
- * connection, a DNS request, a TransPort connection or a NATD connection */
-typedef struct entry_connection_t {
-  edge_connection_t edge_;
-
-  /** Nickname of planned exit node -- used with .exit support. */
-  /* XXX prop220: we need to make chosen_exit_name able to encode Ed IDs too.
-   * That's logically part of the UI parts for prop220 though. */
-  char *chosen_exit_name;
-
-  socks_request_t *socks_request; /**< SOCKS structure describing request (AP
-                                   * only.) */
-
-  /* === Isolation related, AP only. === */
-  entry_port_cfg_t entry_cfg;
-  /** AP only: The newnym epoch in which we created this connection. */
-  unsigned nym_epoch;
-
-  /** AP only: The original requested address before we rewrote it. */
-  char *original_dest_address;
-  /* Other fields to isolate on already exist.  The ClientAddr is addr.  The
-     ClientProtocol is a combination of type and socks_request->
-     socks_version.  SocksAuth is socks_request->username/password.
-     DestAddr is in socks_request->address. */
-
-  /** Number of times we've reassigned this application connection to
-   * a new circuit. We keep track because the timeout is longer if we've
-   * already retried several times. */
-  uint8_t num_socks_retries;
-
-  /** For AP connections only: buffer for data that we have sent
-   * optimistically, which we might need to re-send if we have to
-   * retry this connection. */
-  struct buf_t *pending_optimistic_data;
-  /* For AP connections only: buffer for data that we previously sent
-  * optimistically which we are currently re-sending as we retry this
-  * connection. */
-  struct buf_t *sending_optimistic_data;
-
-  /** If this is a DNSPort connection, this field holds the pending DNS
-   * request that we're going to try to answer.  */
-  struct evdns_server_request *dns_server_request;
-
-#define DEBUGGING_17659
-
-#ifdef DEBUGGING_17659
-  uint16_t marked_pending_circ_line;
-  const char *marked_pending_circ_file;
-#endif
-
-#define NUM_CIRCUITS_LAUNCHED_THRESHOLD 10
-  /** Number of times we've launched a circuit to handle this stream. If
-    * it gets too high, that could indicate an inconsistency between our
-    * "launch a circuit to handle this stream" logic and our "attach our
-    * stream to one of the available circuits" logic. */
-  unsigned int num_circuits_launched:4;
-
-  /** True iff this stream must attach to a one-hop circuit (e.g. for
-   * begin_dir). */
-  unsigned int want_onehop:1;
-  /** True iff this stream should use a BEGIN_DIR relay command to establish
-   * itself rather than BEGIN (either via onehop or via a whole circuit). */
-  unsigned int use_begindir:1;
-
-  /** For AP connections only. If 1, and we fail to reach the chosen exit,
-   * stop requiring it. */
-  unsigned int chosen_exit_optional:1;
-  /** For AP connections only. If non-zero, this exit node was picked as
-   * a result of the TrackHostExit, and the value decrements every time
-   * we fail to complete a circuit to our chosen exit -- if it reaches
-   * zero, abandon the associated mapaddress. */
-  unsigned int chosen_exit_retries:3;
-
-  /** True iff this is an AP connection that came from a transparent or
-   * NATd connection */
-  unsigned int is_transparent_ap:1;
-
-  /** For AP connections only: Set if this connection's target exit node
-   * allows optimistic data (that is, data sent on this stream before
-   * the exit has sent a CONNECTED cell) and we have chosen to use it.
-   */
-  unsigned int may_use_optimistic_data : 1;
-} entry_connection_t;
-
-/** Subtype of connection_t for an "directory connection" -- that is, an HTTP
- * connection to retrieve or serve directory material. */
-typedef struct dir_connection_t {
-  connection_t base_;
-
- /** Which 'resource' did we ask the directory for? This is typically the part
-  * of the URL string that defines, relative to the directory conn purpose,
-  * what thing we want.  For example, in router descriptor downloads by
-  * descriptor digest, it contains "d/", then one or more +-separated
-  * fingerprints.
-  **/
-  char *requested_resource;
-  unsigned int dirconn_direct:1; /**< Is this dirconn direct, or via Tor? */
-
-  /** If we're fetching descriptors, what router purpose shall we assign
-   * to them? */
-  uint8_t router_purpose;
-
-  /** List of spooled_resource_t for objects that we're spooling. We use
-   * it from back to front. */
-  smartlist_t *spool;
-  /** The compression object doing on-the-fly compression for spooled data. */
-  tor_compress_state_t *compress_state;
-
-  /** What rendezvous service are we querying for? */
-  rend_data_t *rend_data;
-
-  /* Hidden service connection identifier for dir connections: Used by HS
-     client-side code to fetch HS descriptors, and by the service-side code to
-     upload descriptors. */
-  struct hs_ident_dir_conn_t *hs_ident;
-
-  /** If this is a one-hop connection, tracks the state of the directory guard
-   * for this connection (if any). */
-  struct circuit_guard_state_t *guard_state;
-
-  char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
-                                     * the directory server's signing key. */
-
-  /** Unique ID for directory requests; this used to be in connection_t, but
-   * that's going away and being used on channels instead.  The dirserver still
-   * needs this for the incoming side, so it's moved here. */
-  uint64_t dirreq_id;
-
-#ifdef MEASUREMENTS_21206
-  /** Number of RELAY_DATA cells received. */
-  uint32_t data_cells_received;
-
-  /** Number of RELAY_DATA cells sent. */
-  uint32_t data_cells_sent;
-#endif /* defined(MEASUREMENTS_21206) */
-} dir_connection_t;
-
-/** Subtype of connection_t for an connection to a controller. */
-typedef struct control_connection_t {
-  connection_t base_;
-
-  uint64_t event_mask; /**< Bitfield: which events does this controller
-                        * care about?
-                        * EVENT_MAX_ is >31, so we need a 64 bit mask */
-
-  /** True if we have sent a protocolinfo reply on this connection. */
-  unsigned int have_sent_protocolinfo:1;
-  /** True if we have received a takeownership command on this
-   * connection. */
-  unsigned int is_owning_control_connection:1;
-
-  /** List of ephemeral onion services belonging to this connection. */
-  smartlist_t *ephemeral_onion_services;
-
-  /** If we have sent an AUTHCHALLENGE reply on this connection and
-   * have not received a successful AUTHENTICATE command, points to
-   * the value which the client must send to authenticate itself;
-   * otherwise, NULL. */
-  char *safecookie_client_hash;
-
-  /** Amount of space allocated in incoming_cmd. */
-  uint32_t incoming_cmd_len;
-  /** Number of bytes currently stored in incoming_cmd. */
-  uint32_t incoming_cmd_cur_len;
-  /** A control command that we're reading from the inbuf, but which has not
-   * yet arrived completely. */
-  char *incoming_cmd;
-} control_connection_t;
+typedef struct connection_t connection_t;
+typedef struct control_connection_t control_connection_t;
+typedef struct dir_connection_t dir_connection_t;
+typedef struct edge_connection_t edge_connection_t;
+typedef struct entry_connection_t entry_connection_t;
+typedef struct listener_connection_t listener_connection_t;
+typedef struct or_connection_t or_connection_t;
 
 /** Cast a connection_t subtype pointer to a connection_t **/
 #define TO_CONN(c) (&(((c)->base_)))
 
-/** Cast a entry_connection_t subtype pointer to a edge_connection_t **/
-#define ENTRY_TO_EDGE_CONN(c) (&(((c))->edge_))
 /** Cast a entry_connection_t subtype pointer to a connection_t **/
 #define ENTRY_TO_CONN(c) (TO_CONN(ENTRY_TO_EDGE_CONN(c)))
-
-/** Convert a connection_t* to an or_connection_t*; assert if the cast is
- * invalid. */
-static or_connection_t *TO_OR_CONN(connection_t *);
-/** Convert a connection_t* to a dir_connection_t*; assert if the cast is
- * invalid. */
-static dir_connection_t *TO_DIR_CONN(connection_t *);
-/** Convert a connection_t* to an edge_connection_t*; assert if the cast is
- * invalid. */
-static edge_connection_t *TO_EDGE_CONN(connection_t *);
-/** Convert a connection_t* to an entry_connection_t*; assert if the cast is
- * invalid. */
-static entry_connection_t *TO_ENTRY_CONN(connection_t *);
-/** Convert a edge_connection_t* to an entry_connection_t*; assert if the cast
- * is invalid. */
-static entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *);
-/** Convert a connection_t* to an control_connection_t*; assert if the cast is
- * invalid. */
-static control_connection_t *TO_CONTROL_CONN(connection_t *);
-/** Convert a connection_t* to an listener_connection_t*; assert if the cast is
- * invalid. */
-static listener_connection_t *TO_LISTENER_CONN(connection_t *);
-
-static inline or_connection_t *TO_OR_CONN(connection_t *c)
-{
-  tor_assert(c->magic == OR_CONNECTION_MAGIC);
-  return DOWNCAST(or_connection_t, c);
-}
-static inline dir_connection_t *TO_DIR_CONN(connection_t *c)
-{
-  tor_assert(c->magic == DIR_CONNECTION_MAGIC);
-  return DOWNCAST(dir_connection_t, c);
-}
-static inline edge_connection_t *TO_EDGE_CONN(connection_t *c)
-{
-  tor_assert(c->magic == EDGE_CONNECTION_MAGIC ||
-             c->magic == ENTRY_CONNECTION_MAGIC);
-  return DOWNCAST(edge_connection_t, c);
-}
-static inline entry_connection_t *TO_ENTRY_CONN(connection_t *c)
-{
-  tor_assert(c->magic == ENTRY_CONNECTION_MAGIC);
-  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_.base_);
-}
-static inline entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *c)
-{
-  tor_assert(c->base_.magic == ENTRY_CONNECTION_MAGIC);
-  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_);
-}
-static inline control_connection_t *TO_CONTROL_CONN(connection_t *c)
-{
-  tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
-  return DOWNCAST(control_connection_t, c);
-}
-static inline listener_connection_t *TO_LISTENER_CONN(connection_t *c)
-{
-  tor_assert(c->magic == LISTENER_CONNECTION_MAGIC);
-  return DOWNCAST(listener_connection_t, c);
-}
 
 /** What action type does an address policy indicate: accept or reject? */
 typedef enum {
@@ -2015,19 +1328,7 @@ typedef struct addr_policy_t {
   uint16_t prt_max; /**< Highest port number to accept/reject. */
 } addr_policy_t;
 
-/** A cached_dir_t represents a cacheable directory object, along with its
- * compressed form. */
-typedef struct cached_dir_t {
-  char *dir; /**< Contents of this object, NUL-terminated. */
-  char *dir_compressed; /**< Compressed contents of this object. */
-  size_t dir_len; /**< Length of <b>dir</b> (not counting its NUL). */
-  size_t dir_compressed_len; /**< Length of <b>dir_compressed</b>. */
-  time_t published; /**< When was this object published. */
-  common_digests_t digests; /**< Digests of this object (networkstatus only) */
-  /** Sha3 digest (also ns only) */
-  uint8_t digest_sha3_as_signed[DIGEST256_LEN];
-  int refcnt; /**< Reference count for this cached_dir_t. */
-} cached_dir_t;
+typedef struct cached_dir_t cached_dir_t;
 
 /** Enum used to remember where a signed_descriptor_t is stored and how to
  * manage the memory for signed_descriptor_body.  */
@@ -2080,59 +1381,7 @@ typedef enum {
 #define download_schedule_increment_bitfield_t \
                                         ENUM_BF(download_schedule_increment_t)
 
-/** Information about our plans for retrying downloads for a downloadable
- * directory object.
- * Each type of downloadable directory object has a corresponding retry
- * <b>schedule</b>, which can be different depending on whether the object is
- * being downloaded from an authority or a mirror (<b>want_authority</b>).
- * <b>next_attempt_at</b> contains the next time we will attempt to download
- * the object.
- * For schedules that <b>increment_on</b> failure, <b>n_download_failures</b>
- * is used to determine the position in the schedule. (Each schedule is a
- * smartlist of integer delays, parsed from a CSV option.) Every time a
- * connection attempt fails, <b>n_download_failures</b> is incremented,
- * the new delay value is looked up from the schedule, and
- * <b>next_attempt_at</b> is set delay seconds from the time the previous
- * connection failed. Therefore, at most one failure-based connection can be
- * in progress for each download_status_t.
- * For schedules that <b>increment_on</b> attempt, <b>n_download_attempts</b>
- * is used to determine the position in the schedule. Every time a
- * connection attempt is made, <b>n_download_attempts</b> is incremented,
- * the new delay value is looked up from the schedule, and
- * <b>next_attempt_at</b> is set delay seconds from the time the previous
- * connection was attempted. Therefore, multiple concurrent attempted-based
- * connections can be in progress for each download_status_t.
- * After an object is successfully downloaded, any other concurrent connections
- * are terminated. A new schedule which starts at position 0 is used for
- * subsequent downloads of the same object.
- */
-typedef struct download_status_t {
-  time_t next_attempt_at; /**< When should we try downloading this object
-                           * again? */
-  uint8_t n_download_failures; /**< Number of failed downloads of the most
-                                * recent object, since the last success. */
-  uint8_t n_download_attempts; /**< Number of (potentially concurrent) attempts
-                                * to download the most recent object, since
-                                * the last success. */
-  download_schedule_bitfield_t schedule : 8; /**< What kind of object is being
-                                              * downloaded? This determines the
-                                              * schedule used for the download.
-                                              */
-  download_want_authority_bitfield_t want_authority : 1; /**< Is the download
-                                              * happening from an authority
-                                              * or a mirror? This determines
-                                              * the schedule used for the
-                                              * download. */
-  download_schedule_increment_bitfield_t increment_on : 1; /**< does this
-                                        * schedule increment on each attempt,
-                                        * or after each failure? */
-  uint8_t last_backoff_position; /**< number of attempts/failures, depending
-                                  * on increment_on, when we last recalculated
-                                  * the delay.  Only updated if backoff
-                                  * == 1. */
-  int last_delay_used; /**< last delay used for random exponential backoff;
-                        * only updated if backoff == 1 */
-} download_status_t;
+typedef struct download_status_t download_status_t;
 
 /** If n_download_failures is this high, the download can never happen. */
 #define IMPOSSIBLE_TO_DOWNLOAD 255
@@ -2142,53 +1391,7 @@ typedef struct download_status_t {
  * create any that are larger than this. */
 #define ROUTER_ANNOTATION_BUF_LEN 256
 
-/** Information need to cache an onion router's descriptor. */
-typedef struct signed_descriptor_t {
-  /** Pointer to the raw server descriptor, preceded by annotations.  Not
-   * necessarily NUL-terminated.  If saved_location is SAVED_IN_CACHE, this
-   * pointer is null. */
-  char *signed_descriptor_body;
-  /** Length of the annotations preceding the server descriptor. */
-  size_t annotations_len;
-  /** Length of the server descriptor. */
-  size_t signed_descriptor_len;
-  /** Digest of the server descriptor, computed as specified in
-   * dir-spec.txt. */
-  char signed_descriptor_digest[DIGEST_LEN];
-  /** Identity digest of the router. */
-  char identity_digest[DIGEST_LEN];
-  /** Declared publication time of the descriptor. */
-  time_t published_on;
-  /** For routerdescs only: digest of the corresponding extrainfo. */
-  char extra_info_digest[DIGEST_LEN];
-  /** For routerdescs only: A SHA256-digest of the extrainfo (if any) */
-  char extra_info_digest256[DIGEST256_LEN];
-  /** Certificate for ed25519 signing key. */
-  struct tor_cert_st *signing_key_cert;
-  /** For routerdescs only: Status of downloading the corresponding
-   * extrainfo. */
-  download_status_t ei_dl_status;
-  /** Where is the descriptor saved? */
-  saved_location_t saved_location;
-  /** If saved_location is SAVED_IN_CACHE or SAVED_IN_JOURNAL, the offset of
-   * this descriptor in the corresponding file. */
-  off_t saved_offset;
-  /** What position is this descriptor within routerlist->routers or
-   * routerlist->old_routers? -1 for none. */
-  int routerlist_index;
-  /** The valid-until time of the most recent consensus that listed this
-   * descriptor.  0 for "never listed in a consensus, so far as we know." */
-  time_t last_listed_as_valid_until;
-  /* If true, we do not ever try to save this object in the cache. */
-  unsigned int do_not_cache : 1;
-  /* If true, this item is meant to represent an extrainfo. */
-  unsigned int is_extrainfo : 1;
-  /* If true, we got an extrainfo for this item, and the digest was right,
-   * but it was incompatible. */
-  unsigned int extrainfo_is_bogus : 1;
-  /* If true, we are willing to transmit this item unencrypted. */
-  unsigned int send_unencrypted : 1;
-} signed_descriptor_t;
+typedef struct signed_descriptor_t signed_descriptor_t;
 
 /** A signed integer representing a country code. */
 typedef int16_t country_t;
@@ -2230,183 +1433,9 @@ typedef struct protover_summary_flags_t {
   unsigned int supports_v3_rendezvous_point: 1;
 } protover_summary_flags_t;
 
-/** Information about another onion router in the network. */
-typedef struct {
-  signed_descriptor_t cache_info;
-  char *nickname; /**< Human-readable OR name. */
-
-  uint32_t addr; /**< IPv4 address of OR, in host order. */
-  uint16_t or_port; /**< Port for TLS connections. */
-  uint16_t dir_port; /**< Port for HTTP directory connections. */
-
-  /** A router's IPv6 address, if it has one. */
-  /* XXXXX187 Actually these should probably be part of a list of addresses,
-   * not just a special case.  Use abstractions to access these; don't do it
-   * directly. */
-  tor_addr_t ipv6_addr;
-  uint16_t ipv6_orport;
-
-  crypto_pk_t *onion_pkey; /**< Public RSA key for onions. */
-  crypto_pk_t *identity_pkey;  /**< Public RSA key for signing. */
-  /** Public curve25519 key for onions */
-  curve25519_public_key_t *onion_curve25519_pkey;
-  /** What's the earliest expiration time on all the certs in this
-   * routerinfo? */
-  time_t cert_expiration_time;
-
-  char *platform; /**< What software/operating system is this OR using? */
-
-  char *protocol_list; /**< Encoded list of subprotocol versions supported
-                        * by this OR */
-
-  /* link info */
-  uint32_t bandwidthrate; /**< How many bytes does this OR add to its token
-                           * bucket per second? */
-  uint32_t bandwidthburst; /**< How large is this OR's token bucket? */
-  /** How many bytes/s is this router known to handle? */
-  uint32_t bandwidthcapacity;
-  smartlist_t *exit_policy; /**< What streams will this OR permit
-                             * to exit on IPv4?  NULL for 'reject *:*'. */
-  /** What streams will this OR permit to exit on IPv6?
-   * NULL for 'reject *:*' */
-  struct short_policy_t *ipv6_exit_policy;
-  long uptime; /**< How many seconds the router claims to have been up */
-  smartlist_t *declared_family; /**< Nicknames of router which this router
-                                 * claims are its family. */
-  char *contact_info; /**< Declared contact info for this router. */
-  unsigned int is_hibernating:1; /**< Whether the router claims to be
-                                  * hibernating */
-  unsigned int caches_extra_info:1; /**< Whether the router says it caches and
-                                     * serves extrainfo documents. */
-  unsigned int allow_single_hop_exits:1;  /**< Whether the router says
-                                           * it allows single hop exits. */
-
-  unsigned int wants_to_be_hs_dir:1; /**< True iff this router claims to be
-                                      * a hidden service directory. */
-  unsigned int policy_is_reject_star:1; /**< True iff the exit policy for this
-                                         * router rejects everything. */
-  /** True if, after we have added this router, we should re-launch
-   * tests for it. */
-  unsigned int needs_retest_if_added:1;
-
-  /** True iff this router included "tunnelled-dir-server" in its descriptor,
-   * implying it accepts tunnelled directory requests, or it advertised
-   * dir_port > 0. */
-  unsigned int supports_tunnelled_dir_requests:1;
-
-  /** Used during voting to indicate that we should not include an entry for
-   * this routerinfo. Used only during voting. */
-  unsigned int omit_from_vote:1;
-
-  /** Flags to summarize the protocol versions for this routerinfo_t. */
-  protover_summary_flags_t pv;
-
-/** Tor can use this router for general positions in circuits; we got it
- * from a directory server as usual, or we're an authority and a server
- * uploaded it. */
-#define ROUTER_PURPOSE_GENERAL 0
-/** Tor should avoid using this router for circuit-building: we got it
- * from a controller.  If the controller wants to use it, it'll have to
- * ask for it by identity. */
-#define ROUTER_PURPOSE_CONTROLLER 1
-/** Tor should use this router only for bridge positions in circuits: we got
- * it via a directory request from the bridge itself, or a bridge
- * authority. */
-#define ROUTER_PURPOSE_BRIDGE 2
-/** Tor should not use this router; it was marked in cached-descriptors with
- * a purpose we didn't recognize. */
-#define ROUTER_PURPOSE_UNKNOWN 255
-
-  /** In what way did we find out about this router?  One of ROUTER_PURPOSE_*.
-   * Routers of different purposes are kept segregated and used for different
-   * things; see notes on ROUTER_PURPOSE_* macros above.
-   */
-  uint8_t purpose;
-} routerinfo_t;
-
-/** Information needed to keep and cache a signed extra-info document. */
-typedef struct extrainfo_t {
-  signed_descriptor_t cache_info;
-  /** SHA256 digest of this document */
-  uint8_t digest256[DIGEST256_LEN];
-  /** The router's nickname. */
-  char nickname[MAX_NICKNAME_LEN+1];
-  /** True iff we found the right key for this extra-info, verified the
-   * signature, and found it to be bad. */
-  unsigned int bad_sig : 1;
-  /** If present, we didn't have the right key to verify this extra-info,
-   * so this is a copy of the signature in the document. */
-  char *pending_sig;
-  /** Length of pending_sig. */
-  size_t pending_sig_len;
-} extrainfo_t;
-
-/** Contents of a single router entry in a network status object.
- */
-typedef struct routerstatus_t {
-  time_t published_on; /**< When was this router published? */
-  char nickname[MAX_NICKNAME_LEN+1]; /**< The nickname this router says it
-                                      * has. */
-  char identity_digest[DIGEST_LEN]; /**< Digest of the router's identity
-                                     * key. */
-  /** Digest of the router's most recent descriptor or microdescriptor.
-   * If it's a descriptor, we only use the first DIGEST_LEN bytes. */
-  char descriptor_digest[DIGEST256_LEN];
-  uint32_t addr; /**< IPv4 address for this router, in host order. */
-  uint16_t or_port; /**< IPv4 OR port for this router. */
-  uint16_t dir_port; /**< Directory port for this router. */
-  tor_addr_t ipv6_addr; /**< IPv6 address for this router. */
-  uint16_t ipv6_orport; /**< IPv6 OR port for this router. */
-  unsigned int is_authority:1; /**< True iff this router is an authority. */
-  unsigned int is_exit:1; /**< True iff this router is a good exit. */
-  unsigned int is_stable:1; /**< True iff this router stays up a long time. */
-  unsigned int is_fast:1; /**< True iff this router has good bandwidth. */
-  /** True iff this router is called 'running' in the consensus. We give it
-   * this funny name so that we don't accidentally use this bit as a view of
-   * whether we think the router is *currently* running.  If that's what you
-   * want to know, look at is_running in node_t. */
-  unsigned int is_flagged_running:1;
-  unsigned int is_named:1; /**< True iff "nickname" belongs to this router. */
-  unsigned int is_unnamed:1; /**< True iff "nickname" belongs to another
-                              * router. */
-  unsigned int is_valid:1; /**< True iff this router isn't invalid. */
-  unsigned int is_possible_guard:1; /**< True iff this router would be a good
-                                     * choice as an entry guard. */
-  unsigned int is_bad_exit:1; /**< True iff this node is a bad choice for
-                               * an exit node. */
-  unsigned int is_hs_dir:1; /**< True iff this router is a v2-or-later hidden
-                             * service directory. */
-  unsigned int is_v2_dir:1; /** True iff this router publishes an open DirPort
-                             * or it claims to accept tunnelled dir requests.
-                             */
-
-  unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
-  unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
-  unsigned int bw_is_unmeasured:1; /**< This is a consensus entry, with
-                                    * the Unmeasured flag set. */
-
-  /** Flags to summarize the protocol versions for this routerstatus_t. */
-  protover_summary_flags_t pv;
-
-  uint32_t bandwidth_kb; /**< Bandwidth (capacity) of the router as reported in
-                       * the vote/consensus, in kilobytes/sec. */
-
-  /** The consensus has guardfraction information for this router. */
-  unsigned int has_guardfraction:1;
-  /** The guardfraction value of this router. */
-  uint32_t guardfraction_percentage;
-
-  char *exitsummary; /**< exit policy summary -
-                      * XXX weasel: this probably should not stay a string. */
-
-  /* ---- The fields below aren't derived from the networkstatus; they
-   * hold local information only. */
-
-  time_t last_dir_503_at; /**< When did this router last tell us that it
-                           * was too busy to serve directory info? */
-  download_status_t dl_status;
-
-} routerstatus_t;
+typedef struct routerinfo_t routerinfo_t;
+typedef struct extrainfo_t extrainfo_t;
+typedef struct routerstatus_t routerstatus_t;
 
 /** A single entry in a parsed policy summary, describing a range of ports. */
 typedef struct short_policy_entry_t {
@@ -2427,244 +1456,13 @@ typedef struct short_policy_t {
   short_policy_entry_t entries[FLEXIBLE_ARRAY_MEMBER];
 } short_policy_t;
 
-/** A microdescriptor is the smallest amount of information needed to build a
- * circuit through a router.  They are generated by the directory authorities,
- * using information from the uploaded routerinfo documents.  They are not
- * self-signed, but are rather authenticated by having their hash in a signed
- * networkstatus document. */
-typedef struct microdesc_t {
-  /** Hashtable node, used to look up the microdesc by its digest. */
-  HT_ENTRY(microdesc_t) node;
-
-  /* Cache information */
-
-  /**  When was this microdescriptor last listed in a consensus document?
-   * Once a microdesc has been unlisted long enough, we can drop it.
-   */
-  time_t last_listed;
-  /** Where is this microdescriptor currently stored? */
-  saved_location_bitfield_t saved_location : 3;
-  /** If true, do not attempt to cache this microdescriptor on disk. */
-  unsigned int no_save : 1;
-  /** If true, this microdesc has an entry in the microdesc_map */
-  unsigned int held_in_map : 1;
-  /** Reference count: how many node_ts have a reference to this microdesc? */
-  unsigned int held_by_nodes;
-
-  /** If saved_location == SAVED_IN_CACHE, this field holds the offset of the
-   * microdescriptor in the cache. */
-  off_t off;
-
-  /* The string containing the microdesc. */
-
-  /** A pointer to the encoded body of the microdescriptor.  If the
-   * saved_location is SAVED_IN_CACHE, then the body is a pointer into an
-   * mmap'd region.  Otherwise, it is a malloc'd string.  The string might not
-   * be NUL-terminated; take the length from <b>bodylen</b>. */
-  char *body;
-  /** The length of the microdescriptor in <b>body</b>. */
-  size_t bodylen;
-  /** A SHA256-digest of the microdescriptor. */
-  char digest[DIGEST256_LEN];
-
-  /* Fields in the microdescriptor. */
-
-  /** As routerinfo_t.onion_pkey */
-  crypto_pk_t *onion_pkey;
-  /** As routerinfo_t.onion_curve25519_pkey */
-  curve25519_public_key_t *onion_curve25519_pkey;
-  /** Ed25519 identity key, if included. */
-  ed25519_public_key_t *ed25519_identity_pkey;
-  /** As routerinfo_t.ipv6_addr */
-  tor_addr_t ipv6_addr;
-  /** As routerinfo_t.ipv6_orport */
-  uint16_t ipv6_orport;
-  /** As routerinfo_t.family */
-  smartlist_t *family;
-  /** IPv4 exit policy summary */
-  short_policy_t *exit_policy;
-  /** IPv6 exit policy summary */
-  short_policy_t *ipv6_exit_policy;
-
-} microdesc_t;
-
-/** A node_t represents a Tor router.
- *
- * Specifically, a node_t is a Tor router as we are using it: a router that
- * we are considering for circuits, connections, and so on.  A node_t is a
- * thin wrapper around the routerstatus, routerinfo, and microdesc for a
- * single router, and provides a consistent interface for all of them.
- *
- * Also, a node_t has mutable state.  While a routerinfo, a routerstatus,
- * and a microdesc have[*] only the information read from a router
- * descriptor, a consensus entry, and a microdescriptor (respectively)...
- * a node_t has flags based on *our own current opinion* of the node.
- *
- * [*] Actually, there is some leftover information in each that is mutable.
- *  We should try to excise that.
- */
-typedef struct node_t {
-  /* Indexing information */
-
-  /** Used to look up the node_t by its identity digest. */
-  HT_ENTRY(node_t) ht_ent;
-  /** Used to look up the node_t by its ed25519 identity digest. */
-  HT_ENTRY(node_t) ed_ht_ent;
-  /** Position of the node within the list of nodes */
-  int nodelist_idx;
-
-  /** The identity digest of this node_t.  No more than one node_t per
-   * identity may exist at a time. */
-  char identity[DIGEST_LEN];
-
-  /** The ed25519 identity of this node_t. This field is nonzero iff we
-   * currently have an ed25519 identity for this node in either md or ri,
-   * _and_ this node has been inserted to the ed25519-to-node map in the
-   * nodelist.
-   */
-  ed25519_public_key_t ed25519_id;
-
-  microdesc_t *md;
-  routerinfo_t *ri;
-  routerstatus_t *rs;
-
-  /* local info: copied from routerstatus, then possibly frobbed based
-   * on experience.  Authorities set this stuff directly.  Note that
-   * these reflect knowledge of the primary (IPv4) OR port only.  */
-
-  unsigned int is_running:1; /**< As far as we know, is this OR currently
-                              * running? */
-  unsigned int is_valid:1; /**< Has a trusted dirserver validated this OR?
-                            *  (For Authdir: Have we validated this OR?) */
-  unsigned int is_fast:1; /** Do we think this is a fast OR? */
-  unsigned int is_stable:1; /** Do we think this is a stable OR? */
-  unsigned int is_possible_guard:1; /**< Do we think this is an OK guard? */
-  unsigned int is_exit:1; /**< Do we think this is an OK exit? */
-  unsigned int is_bad_exit:1; /**< Do we think this exit is censored, borked,
-                               * or otherwise nasty? */
-  unsigned int is_hs_dir:1; /**< True iff this router is a hidden service
-                             * directory according to the authorities. */
-
-  /* Local info: warning state. */
-
-  unsigned int name_lookup_warned:1; /**< Have we warned the user for referring
-                                      * to this (unnamed) router by nickname?
-                                      */
-
-  /** Local info: we treat this node as if it rejects everything */
-  unsigned int rejects_all:1;
-
-  /* Local info: derived. */
-
-  /** True if the IPv6 OR port is preferred over the IPv4 OR port.
-   * XX/teor - can this become out of date if the torrc changes? */
-  unsigned int ipv6_preferred:1;
-
-  /** According to the geoip db what country is this router in? */
-  /* XXXprop186 what is this suppose to mean with multiple OR ports? */
-  country_t country;
-
-  /* The below items are used only by authdirservers for
-   * reachability testing. */
-
-  /** When was the last time we could reach this OR? */
-  time_t last_reachable;        /* IPv4. */
-  time_t last_reachable6;       /* IPv6. */
-
-  /* Hidden service directory index data. This is used by a service or client
-   * in order to know what's the hs directory index for this node at the time
-   * the consensus is set. */
-  struct hsdir_index_t hsdir_index;
-} node_t;
-
-/** Linked list of microdesc hash lines for a single router in a directory
- * vote.
- */
-typedef struct vote_microdesc_hash_t {
-  /** Next element in the list, or NULL. */
-  struct vote_microdesc_hash_t *next;
-  /** The raw contents of the microdesc hash line, from the "m" through the
-   * newline. */
-  char *microdesc_hash_line;
-} vote_microdesc_hash_t;
-
-/** The claim about a single router, made in a vote. */
-typedef struct vote_routerstatus_t {
-  routerstatus_t status; /**< Underlying 'status' object for this router.
-                          * Flags are redundant. */
-  /** How many known-flags are allowed in a vote? This is the width of
-   * the flags field of vote_routerstatus_t */
-#define MAX_KNOWN_FLAGS_IN_VOTE 64
-  uint64_t flags; /**< Bit-field for all recognized flags; index into
-                   * networkstatus_t.known_flags. */
-  char *version; /**< The version that the authority says this router is
-                  * running. */
-  char *protocols; /**< The protocols that this authority says this router
-                    * provides. */
-  unsigned int has_measured_bw:1; /**< The vote had a measured bw */
-  /** True iff the vote included an entry for ed25519 ID, or included
-   * "id ed25519 none" to indicate that there was no ed25519 ID. */
-  unsigned int has_ed25519_listing:1;
-  /** True if the Ed25519 listing here is the consensus-opinion for the
-   * Ed25519 listing; false if there was no consensus on Ed25519 key status,
-   * or if this VRS doesn't reflect it. */
-  unsigned int ed25519_reflects_consensus:1;
-  uint32_t measured_bw_kb; /**< Measured bandwidth (capacity) of the router */
-  /** The hash or hashes that the authority claims this microdesc has. */
-  vote_microdesc_hash_t *microdesc;
-  /** Ed25519 identity for this router, or zero if it has none. */
-  uint8_t ed25519_id[ED25519_PUBKEY_LEN];
-} vote_routerstatus_t;
-
-/** A signature of some document by an authority. */
-typedef struct document_signature_t {
-  /** Declared SHA-1 digest of this voter's identity key */
-  char identity_digest[DIGEST_LEN];
-  /** Declared SHA-1 digest of signing key used by this voter. */
-  char signing_key_digest[DIGEST_LEN];
-  /** Algorithm used to compute the digest of the document. */
-  digest_algorithm_t alg;
-  /** Signature of the signed thing. */
-  char *signature;
-  /** Length of <b>signature</b> */
-  int signature_len;
-  unsigned int bad_signature : 1; /**< Set to true if we've tried to verify
-                                   * the sig, and we know it's bad. */
-  unsigned int good_signature : 1; /**< Set to true if we've verified the sig
-                                     * as good. */
-} document_signature_t;
-
-/** Information about a single voter in a vote or a consensus. */
-typedef struct networkstatus_voter_info_t {
-  /** Declared SHA-1 digest of this voter's identity key */
-  char identity_digest[DIGEST_LEN];
-  char *nickname; /**< Nickname of this voter */
-  /** Digest of this voter's "legacy" identity key, if any.  In vote only; for
-   * consensuses, we treat legacy keys as additional signers. */
-  char legacy_id_digest[DIGEST_LEN];
-  char *address; /**< Address of this voter, in string format. */
-  uint32_t addr; /**< Address of this voter, in IPv4, in host order. */
-  uint16_t dir_port; /**< Directory port of this voter */
-  uint16_t or_port; /**< OR port of this voter */
-  char *contact; /**< Contact information for this voter. */
-  char vote_digest[DIGEST_LEN]; /**< Digest of this voter's vote, as signed. */
-
-  /* Nothing from here on is signed. */
-  /** The signature of the document and the signature's status. */
-  smartlist_t *sigs;
-} networkstatus_voter_info_t;
-
-typedef struct networkstatus_sr_info_t {
-  /* Indicate if the dirauth partitipates in the SR protocol with its vote.
-   * This is tied to the SR flag in the vote. */
-  unsigned int participate:1;
-  /* Both vote and consensus: Current and previous SRV. If list is empty,
-   * this means none were found in either the consensus or vote. */
-  struct sr_srv_t *previous_srv;
-  struct sr_srv_t *current_srv;
-  /* Vote only: List of commitments. */
-  smartlist_t *commits;
-} networkstatus_sr_info_t;
+typedef struct microdesc_t microdesc_t;
+typedef struct node_t node_t;
+typedef struct vote_microdesc_hash_t vote_microdesc_hash_t;
+typedef struct vote_routerstatus_t vote_routerstatus_t;
+typedef struct document_signature_t document_signature_t;
+typedef struct networkstatus_voter_info_t networkstatus_voter_info_t;
+typedef struct networkstatus_sr_info_t networkstatus_sr_info_t;
 
 /** Enumerates the possible seriousness values of a networkstatus document. */
 typedef enum {
@@ -2684,98 +1482,8 @@ typedef enum {
 /** How many different consensus flavors are there? */
 #define N_CONSENSUS_FLAVORS ((int)(FLAV_MICRODESC)+1)
 
-/** A common structure to hold a v3 network status vote, or a v3 network
- * status consensus. */
-typedef struct networkstatus_t {
-  networkstatus_type_t type; /**< Vote, consensus, or opinion? */
-  consensus_flavor_t flavor; /**< If a consensus, what kind? */
-  unsigned int has_measured_bws : 1;/**< True iff this networkstatus contains
-                                     * measured= bandwidth values. */
-
-  time_t published; /**< Vote only: Time when vote was written. */
-  time_t valid_after; /**< Time after which this vote or consensus applies. */
-  time_t fresh_until; /**< Time before which this is the most recent vote or
-                       * consensus. */
-  time_t valid_until; /**< Time after which this vote or consensus should not
-                       * be used. */
-
-  /** Consensus only: what method was used to produce this consensus? */
-  int consensus_method;
-  /** Vote only: what methods is this voter willing to use? */
-  smartlist_t *supported_methods;
-
-  /** List of 'package' lines describing hashes of downloadable packages */
-  smartlist_t *package_lines;
-
-  /** How long does this vote/consensus claim that authorities take to
-   * distribute their votes to one another? */
-  int vote_seconds;
-  /** How long does this vote/consensus claim that authorities take to
-   * distribute their consensus signatures to one another? */
-  int dist_seconds;
-
-  /** Comma-separated list of recommended client software, or NULL if this
-   * voter has no opinion. */
-  char *client_versions;
-  char *server_versions;
-
-  /** Lists of subprotocol versions which are _recommended_ for relays and
-   * clients, or which are _require_ for relays and clients. Tor shouldn't
-   * make any more network connections if a required protocol is missing.
-   */
-  char *recommended_relay_protocols;
-  char *recommended_client_protocols;
-  char *required_relay_protocols;
-  char *required_client_protocols;
-
-  /** List of flags that this vote/consensus applies to routers.  If a flag is
-   * not listed here, the voter has no opinion on what its value should be. */
-  smartlist_t *known_flags;
-
-  /** List of key=value strings for the parameters in this vote or
-   * consensus, sorted by key. */
-  smartlist_t *net_params;
-
-  /** List of key=value strings for the bw weight parameters in the
-   * consensus. */
-  smartlist_t *weight_params;
-
-  /** List of networkstatus_voter_info_t.  For a vote, only one element
-   * is included.  For a consensus, one element is included for every voter
-   * whose vote contributed to the consensus. */
-  smartlist_t *voters;
-
-  struct authority_cert_t *cert; /**< Vote only: the voter's certificate. */
-
-  /** Digests of this document, as signed. */
-  common_digests_t digests;
-  /** A SHA3-256 digest of the document, not including signatures: used for
-   * consensus diffs */
-  uint8_t digest_sha3_as_signed[DIGEST256_LEN];
-
-  /** List of router statuses, sorted by identity digest.  For a vote,
-   * the elements are vote_routerstatus_t; for a consensus, the elements
-   * are routerstatus_t. */
-  smartlist_t *routerstatus_list;
-
-  /** If present, a map from descriptor digest to elements of
-   * routerstatus_list. */
-  digestmap_t *desc_digest_map;
-
-  /** Contains the shared random protocol data from a vote or consensus. */
-  networkstatus_sr_info_t sr_info;
-} networkstatus_t;
-
-/** A set of signatures for a networkstatus consensus.  Unless otherwise
- * noted, all fields are as for networkstatus_t. */
-typedef struct ns_detached_signatures_t {
-  time_t valid_after;
-  time_t fresh_until;
-  time_t valid_until;
-  strmap_t *digests; /**< Map from flavor name to digestset_t */
-  strmap_t *signatures; /**< Map from flavor name to list of
-                         * document_signature_t */
-} ns_detached_signatures_t;
+typedef struct networkstatus_t networkstatus_t;
+typedef struct ns_detached_signatures_t ns_detached_signatures_t;
 
 /** Allowable types of desc_store_t. */
 typedef enum store_type_t {
@@ -2783,91 +1491,10 @@ typedef enum store_type_t {
   EXTRAINFO_STORE = 1
 } store_type_t;
 
-/** A 'store' is a set of descriptors saved on disk, with accompanying
- * journal, mmaped as needed, rebuilt as needed. */
-typedef struct desc_store_t {
-  /** Filename (within DataDir) for the store.  We append .tmp to this
-   * filename for a temporary file when rebuilding the store, and .new to this
-   * filename for the journal. */
-  const char *fname_base;
-  /** Human-readable description of what this store contains. */
-  const char *description;
-
-  tor_mmap_t *mmap; /**< A mmap for the main file in the store. */
-
-  store_type_t type; /**< What's stored in this store? */
-
-  /** The size of the router log, in bytes. */
-  size_t journal_len;
-  /** The size of the router store, in bytes. */
-  size_t store_len;
-  /** Total bytes dropped since last rebuild: this is space currently
-   * used in the cache and the journal that could be freed by a rebuild. */
-  size_t bytes_dropped;
-} desc_store_t;
-
-/** Contents of a directory of onion routers. */
-typedef struct {
-  /** Map from server identity digest to a member of routers. */
-  struct digest_ri_map_t *identity_map;
-  /** Map from server descriptor digest to a signed_descriptor_t from
-   * routers or old_routers. */
-  struct digest_sd_map_t *desc_digest_map;
-  /** Map from extra-info digest to an extrainfo_t.  Only exists for
-   * routers in routers or old_routers. */
-  struct digest_ei_map_t *extra_info_map;
-  /** Map from extra-info digests to a signed_descriptor_t for a router
-   * descriptor having that extra-info digest.  Only exists for
-   * routers in routers or old_routers. */
-  struct digest_sd_map_t *desc_by_eid_map;
-  /** List of routerinfo_t for all currently live routers we know. */
-  smartlist_t *routers;
-  /** List of signed_descriptor_t for older router descriptors we're
-   * caching. */
-  smartlist_t *old_routers;
-  /** Store holding server descriptors.  If present, any router whose
-   * cache_info.saved_location == SAVED_IN_CACHE is stored in this file
-   * starting at cache_info.saved_offset */
-  desc_store_t desc_store;
-  /** Store holding extra-info documents. */
-  desc_store_t extrainfo_store;
-} routerlist_t;
-
-/** Information on router used when extending a circuit. We don't need a
- * full routerinfo_t to extend: we only need addr:port:keyid to build an OR
- * connection, and onion_key to create the onionskin. Note that for onehop
- * general-purpose tunnels, the onion_key is NULL. */
-typedef struct extend_info_t {
-  char nickname[MAX_HEX_NICKNAME_LEN+1]; /**< This router's nickname for
-                                          * display. */
-  /** Hash of this router's RSA identity key. */
-  char identity_digest[DIGEST_LEN];
-  /** Ed25519 identity for this router, if any. */
-  ed25519_public_key_t ed_identity;
-  uint16_t port; /**< OR port. */
-  tor_addr_t addr; /**< IP address. */
-  crypto_pk_t *onion_key; /**< Current onionskin key. */
-  curve25519_public_key_t curve25519_onion_key;
-} extend_info_t;
-
-/** Certificate for v3 directory protocol: binds long-term authority identity
- * keys to medium-term authority signing keys. */
-typedef struct authority_cert_t {
-  /** Information relating to caching this cert on disk and looking it up. */
-  signed_descriptor_t cache_info;
-  /** This authority's long-term authority identity key. */
-  crypto_pk_t *identity_key;
-  /** This authority's medium-term signing key. */
-  crypto_pk_t *signing_key;
-  /** The digest of <b>signing_key</b> */
-  char signing_key_digest[DIGEST_LEN];
-  /** The listed expiration time of this certificate. */
-  time_t expires;
-  /** This authority's IPv4 address, in host order. */
-  uint32_t addr;
-  /** This authority's directory port. */
-  uint16_t dir_port;
-} authority_cert_t;
+typedef struct desc_store_t desc_store_t;
+typedef struct routerlist_t routerlist_t;
+typedef struct extend_info_t extend_info_t;
+typedef struct authority_cert_t authority_cert_t;
 
 /** Bitfield enum type listing types of information that directory authorities
  * can be authoritative about, and that directory caches may or may not cache.
@@ -2909,107 +1536,15 @@ typedef struct {
   } u;
 } onion_handshake_state_t;
 
-typedef struct relay_crypto_t {
-  /* crypto environments */
-  /** Encryption key and counter for cells heading towards the OR at this
-   * step. */
-  crypto_cipher_t *f_crypto;
-  /** Encryption key and counter for cells heading back from the OR at this
-   * step. */
-  crypto_cipher_t *b_crypto;
-
-  /** Digest state for cells heading towards the OR at this step. */
-  crypto_digest_t *f_digest; /* for integrity checking */
-  /** Digest state for cells heading away from the OR at this step. */
-  crypto_digest_t *b_digest;
-
-} relay_crypto_t;
-
-/** Holds accounting information for a single step in the layered encryption
- * performed by a circuit.  Used only at the client edge of a circuit. */
-typedef struct crypt_path_t {
-  uint32_t magic;
-
-  /** Cryptographic state used for encrypting and authenticating relay
-   * cells to and from this hop. */
-  relay_crypto_t crypto;
-
-  /** Current state of the handshake as performed with the OR at this
-   * step. */
-  onion_handshake_state_t handshake_state;
-  /** Diffie-hellman handshake state for performing an introduction
-   * operations */
-  crypto_dh_t *rend_dh_handshake_state;
-
-  /** Negotiated key material shared with the OR at this step. */
-  char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
-
-  /** Information to extend to the OR at this step. */
-  extend_info_t *extend_info;
-
-  /** Is the circuit built to this step?  Must be one of:
-   *    - CPATH_STATE_CLOSED (The circuit has not been extended to this step)
-   *    - CPATH_STATE_AWAITING_KEYS (We have sent an EXTEND/CREATE to this step
-   *      and not received an EXTENDED/CREATED)
-   *    - CPATH_STATE_OPEN (The circuit has been extended to this step) */
-  uint8_t state;
-#define CPATH_STATE_CLOSED 0
-#define CPATH_STATE_AWAITING_KEYS 1
-#define CPATH_STATE_OPEN 2
-  struct crypt_path_t *next; /**< Link to next crypt_path_t in the circuit.
-                              * (The list is circular, so the last node
-                              * links to the first.) */
-  struct crypt_path_t *prev; /**< Link to previous crypt_path_t in the
-                              * circuit. */
-
-  int package_window; /**< How many cells are we allowed to originate ending
-                       * at this step? */
-  int deliver_window; /**< How many cells are we willing to deliver originating
-                       * at this step? */
-} crypt_path_t;
-
-/** A reference-counted pointer to a crypt_path_t, used only to share
- * the final rendezvous cpath to be used on a service-side rendezvous
- * circuit among multiple circuits built in parallel to the same
- * destination rendezvous point. */
-typedef struct {
-  /** The reference count. */
-  unsigned int refcount;
-  /** The pointer.  Set to NULL when the crypt_path_t is put into use
-   * on an opened rendezvous circuit. */
-  crypt_path_t *cpath;
-} crypt_path_reference_t;
+typedef struct relay_crypto_t relay_crypto_t;
+typedef struct crypt_path_t crypt_path_t;
+typedef struct crypt_path_reference_t crypt_path_reference_t;
 
 #define CPATH_KEY_MATERIAL_LEN (20*2+16*2)
 
 #define DH_KEY_LEN DH_BYTES
 
-/** Information used to build a circuit. */
-typedef struct {
-  /** Intended length of the final circuit. */
-  int desired_path_len;
-  /** How to extend to the planned exit node. */
-  extend_info_t *chosen_exit;
-  /** Whether every node in the circ must have adequate uptime. */
-  unsigned int need_uptime : 1;
-  /** Whether every node in the circ must have adequate capacity. */
-  unsigned int need_capacity : 1;
-  /** Whether the last hop was picked with exiting in mind. */
-  unsigned int is_internal : 1;
-  /** Did we pick this as a one-hop tunnel (not safe for other streams)?
-   * These are for encrypted dir conns that exit to this router, not
-   * for arbitrary exits from the circuit. */
-  unsigned int onehop_tunnel : 1;
-  /** The crypt_path_t to append after rendezvous: used for rendezvous. */
-  crypt_path_t *pending_final_cpath;
-  /** A ref-counted reference to the crypt_path_t to append after
-   * rendezvous; used on the service side. */
-  crypt_path_reference_t *service_pending_final_cpath_ref;
-  /** How many times has building a circuit for this task failed? */
-  int failure_count;
-  /** At what time should we give up on this task? */
-  time_t expiry_time;
-} cpath_build_state_t;
+typedef struct cpath_build_state_t cpath_build_state_t;
 
 /** "magic" value for an origin_circuit_t */
 #define ORIGIN_CIRCUIT_MAGIC 0x35315243u
@@ -3035,162 +1570,9 @@ typedef struct testing_cell_stats_entry_t {
   unsigned int exitward:1; /**< 0 for app-ward, 1 for exit-ward. */
 } testing_cell_stats_entry_t;
 
-/**
- * A circuit is a path over the onion routing
- * network. Applications can connect to one end of the circuit, and can
- * create exit connections at the other end of the circuit. AP and exit
- * connections have only one circuit associated with them (and thus these
- * connection types are closed when the circuit is closed), whereas
- * OR connections multiplex many circuits at once, and stay standing even
- * when there are no circuits running over them.
- *
- * A circuit_t structure can fill one of two roles.  First, a or_circuit_t
- * links two connections together: either an edge connection and an OR
- * connection, or two OR connections.  (When joined to an OR connection, a
- * circuit_t affects only cells sent to a particular circID on that
- * connection.  When joined to an edge connection, a circuit_t affects all
- * data.)
-
- * Second, an origin_circuit_t holds the cipher keys and state for sending data
- * along a given circuit.  At the OP, it has a sequence of ciphers, each
- * of which is shared with a single OR along the circuit.  Separate
- * ciphers are used for data going "forward" (away from the OP) and
- * "backward" (towards the OP).  At the OR, a circuit has only two stream
- * ciphers: one for data going forward, and one for data going backward.
- */
-typedef struct circuit_t {
-  uint32_t magic; /**< For memory and type debugging: must equal
-                   * ORIGIN_CIRCUIT_MAGIC or OR_CIRCUIT_MAGIC. */
-
-  /** The channel that is next in this circuit. */
-  channel_t *n_chan;
-
-  /**
-   * The circuit_id used in the next (forward) hop of this circuit;
-   * this is unique to n_chan, but this ordered pair is globally
-   * unique:
-   *
-   * (n_chan->global_identifier, n_circ_id)
-   */
-  circid_t n_circ_id;
-
-  /**
-   * Circuit mux associated with n_chan to which this circuit is attached;
-   * NULL if we have no n_chan.
-   */
-  circuitmux_t *n_mux;
-
-  /** Queue of cells waiting to be transmitted on n_chan */
-  cell_queue_t n_chan_cells;
-
-  /**
-   * The hop to which we want to extend this circuit.  Should be NULL if
-   * the circuit has attached to a channel.
-   */
-  extend_info_t *n_hop;
-
-  /** True iff we are waiting for n_chan_cells to become less full before
-   * allowing p_streams to add any more cells. (Origin circuit only.) */
-  unsigned int streams_blocked_on_n_chan : 1;
-  /** True iff we are waiting for p_chan_cells to become less full before
-   * allowing n_streams to add any more cells. (OR circuit only.) */
-  unsigned int streams_blocked_on_p_chan : 1;
-
-  /** True iff we have queued a delete backwards on this circuit, but not put
-   * it on the output buffer. */
-  unsigned int p_delete_pending : 1;
-  /** True iff we have queued a delete forwards on this circuit, but not put
-   * it on the output buffer. */
-  unsigned int n_delete_pending : 1;
-
-  /** True iff this circuit has received a DESTROY cell in either direction */
-  unsigned int received_destroy : 1;
-
-  uint8_t state; /**< Current status of this circuit. */
-  uint8_t purpose; /**< Why are we creating this circuit? */
-
-  /** How many relay data cells can we package (read from edge streams)
-   * on this circuit before we receive a circuit-level sendme cell asking
-   * for more? */
-  int package_window;
-  /** How many relay data cells will we deliver (write to edge streams)
-   * on this circuit? When deliver_window gets low, we send some
-   * circuit-level sendme cells to indicate that we're willing to accept
-   * more. */
-  int deliver_window;
-
-  /** Temporary field used during circuits_handle_oom. */
-  uint32_t age_tmp;
-
-  /** For storage while n_chan is pending (state CIRCUIT_STATE_CHAN_WAIT). */
-  struct create_cell_t *n_chan_create_cell;
-
-  /** When did circuit construction actually begin (ie send the
-   * CREATE cell or begin cannibalization).
-   *
-   * Note: This timer will get reset if we decide to cannibalize
-   * a circuit. It may also get reset during certain phases of hidden
-   * service circuit use.
-   *
-   * We keep this timestamp with a higher resolution than most so that the
-   * circuit-build-time tracking code can get millisecond resolution.
-   */
-  struct timeval timestamp_began;
-
-  /** This timestamp marks when the init_circuit_base constructor ran. */
-  struct timeval timestamp_created;
-
-  /** When the circuit was first used, or 0 if the circuit is clean.
-   *
-   * XXXX Note that some code will artificially adjust this value backward
-   * in time in order to indicate that a circuit shouldn't be used for new
-   * streams, but that it can stay alive as long as it has streams on it.
-   * That's a kludge we should fix.
-   *
-   * XXX The CBT code uses this field to record when HS-related
-   * circuits entered certain states.  This usage probably won't
-   * interfere with this field's primary purpose, but we should
-   * document it more thoroughly to make sure of that.
-   *
-   * XXX The SocksPort option KeepaliveIsolateSOCKSAuth will artificially
-   * adjust this value forward each time a suitable stream is attached to an
-   * already constructed circuit, potentially keeping the circuit alive
-   * indefinitely.
-   */
-  time_t timestamp_dirty;
-
-  uint16_t marked_for_close; /**< Should we close this circuit at the end of
-                              * the main loop? (If true, holds the line number
-                              * where this circuit was marked.) */
-  const char *marked_for_close_file; /**< For debugging: in which file was this
-                                      * circuit marked for close? */
-  /** For what reason (See END_CIRC_REASON...) is this circuit being closed?
-   * This field is set in circuit_mark_for_close and used later in
-   * circuit_about_to_free. */
-  int marked_for_close_reason;
-  /** As marked_for_close_reason, but reflects the underlying reason for
-   * closing this circuit.
-   */
-  int marked_for_close_orig_reason;
-
-  /** Unique ID for measuring tunneled network status requests. */
-  uint64_t dirreq_id;
-
-  /** Index in smartlist of all circuits (global_circuitlist). */
-  int global_circuitlist_idx;
-
-  /** Various statistics about cells being added to or removed from this
-   * circuit's queues; used only if CELL_STATS events are enabled and
-   * cleared after being sent to control port. */
-  smartlist_t *testing_cell_stats;
-
-  /** If set, points to an HS token that this circuit might be carrying.
-   *  Used by the HS circuitmap.  */
-  hs_token_t *hs_token;
-  /** Hashtable node: used to look up the circuit by its HS token using the HS
-      circuitmap. */
-  HT_ENTRY(circuit_t) hs_circuitmap_node;
-} circuit_t;
+typedef struct circuit_t circuit_t;
+typedef struct origin_circuit_t origin_circuit_t;
+typedef struct or_circuit_t or_circuit_t;
 
 /** Largest number of relay_early cells that we can send on a given
  * circuit. */
@@ -3253,288 +1635,6 @@ typedef enum {
 } path_state_t;
 #define path_state_bitfield_t ENUM_BF(path_state_t)
 
-/** An origin_circuit_t holds data necessary to build and use a circuit.
- */
-typedef struct origin_circuit_t {
-  circuit_t base_;
-
-  /** Linked list of AP streams (or EXIT streams if hidden service)
-   * associated with this circuit. */
-  edge_connection_t *p_streams;
-
-  /** Bytes read on this circuit since last call to
-   * control_event_circ_bandwidth_used().  Only used if we're configured
-   * to emit CIRC_BW events. */
-  uint32_t n_read_circ_bw;
-
-  /** Bytes written to on this circuit since last call to
-   * control_event_circ_bandwidth_used().  Only used if we're configured
-   * to emit CIRC_BW events. */
-  uint32_t n_written_circ_bw;
-
-  /** Total known-valid relay cell bytes since last call to
-   * control_event_circ_bandwidth_used().  Only used if we're configured
-   * to emit CIRC_BW events. */
-  uint32_t n_delivered_read_circ_bw;
-
-  /** Total written relay cell bytes since last call to
-   * control_event_circ_bandwidth_used().  Only used if we're configured
-   * to emit CIRC_BW events. */
-  uint32_t n_delivered_written_circ_bw;
-
-  /** Total overhead data in all known-valid relay data cells since last
-   * call to control_event_circ_bandwidth_used().  Only used if we're
-   * configured to emit CIRC_BW events. */
-  uint32_t n_overhead_read_circ_bw;
-
-  /** Total written overhead data in all relay data cells since last call to
-   * control_event_circ_bandwidth_used().  Only used if we're configured
-   * to emit CIRC_BW events. */
-  uint32_t n_overhead_written_circ_bw;
-
-  /** Build state for this circuit. It includes the intended path
-   * length, the chosen exit router, rendezvous information, etc.
-   */
-  cpath_build_state_t *build_state;
-  /** The doubly-linked list of crypt_path_t entries, one per hop,
-   * for this circuit. This includes ciphers for each hop,
-   * integrity-checking digests for each hop, and package/delivery
-   * windows for each hop.
-   */
-  crypt_path_t *cpath;
-
-  /** Holds all rendezvous data on either client or service side. */
-  rend_data_t *rend_data;
-
-  /** Holds hidden service identifier on either client or service side. This
-   * is for both introduction and rendezvous circuit. */
-  struct hs_ident_circuit_t *hs_ident;
-
-  /** Holds the data that the entry guard system uses to track the
-   * status of the guard this circuit is using, and thereby to determine
-   * whether this circuit can be used. */
-  struct circuit_guard_state_t *guard_state;
-
-  /** Index into global_origin_circuit_list for this circuit. -1 if not
-   * present. */
-  int global_origin_circuit_list_idx;
-
-  /** How many more relay_early cells can we send on this circuit, according
-   * to the specification? */
-  unsigned int remaining_relay_early_cells : 4;
-
-  /** Set if this circuit is insanely old and we already informed the user */
-  unsigned int is_ancient : 1;
-
-  /** Set if this circuit has already been opened. Used to detect
-   * cannibalized circuits. */
-  unsigned int has_opened : 1;
-
-  /**
-   * Path bias state machine. Used to ensure integrity of our
-   * circuit building and usage accounting. See path_state_t
-   * for more details.
-   */
-  path_state_bitfield_t path_state : 3;
-
-  /* If this flag is set, we should not consider attaching any more
-   * connections to this circuit. */
-  unsigned int unusable_for_new_conns : 1;
-
-  /**
-   * Tristate variable to guard against pathbias miscounting
-   * due to circuit purpose transitions changing the decision
-   * of pathbias_should_count(). This variable is informational
-   * only. The current results of pathbias_should_count() are
-   * the official decision for pathbias accounting.
-   */
-  uint8_t pathbias_shouldcount;
-#define PATHBIAS_SHOULDCOUNT_UNDECIDED 0
-#define PATHBIAS_SHOULDCOUNT_IGNORED   1
-#define PATHBIAS_SHOULDCOUNT_COUNTED   2
-
-  /** For path probing. Store the temporary probe stream ID
-   * for response comparison */
-  streamid_t pathbias_probe_id;
-
-  /** For path probing. Store the temporary probe address nonce
-   * (in host byte order) for response comparison. */
-  uint32_t pathbias_probe_nonce;
-
-  /** Set iff this is a hidden-service circuit which has timed out
-   * according to our current circuit-build timeout, but which has
-   * been kept around because it might still succeed in connecting to
-   * its destination, and which is not a fully-connected rendezvous
-   * circuit.
-   *
-   * (We clear this flag for client-side rendezvous circuits when they
-   * are 'joined' to the other side's rendezvous circuit, so that
-   * connection_ap_handshake_attach_circuit can put client streams on
-   * the circuit.  We also clear this flag for service-side rendezvous
-   * circuits when they are 'joined' to a client's rend circ, but only
-   * for symmetry with the client case.  Client-side introduction
-   * circuits are closed when we get a joined rend circ, and
-   * service-side introduction circuits never have this flag set.) */
-  unsigned int hs_circ_has_timed_out : 1;
-
-  /** Set iff this circuit has been given a relaxed timeout because
-   * no circuits have opened. Used to prevent spamming logs. */
-  unsigned int relaxed_timeout : 1;
-
-  /** Set iff this is a service-side rendezvous circuit for which a
-   * new connection attempt has been launched.  We consider launching
-   * a new service-side rend circ to a client when the previous one
-   * fails; now that we don't necessarily close a service-side rend
-   * circ when we launch a new one to the same client, this flag keeps
-   * us from launching two retries for the same failed rend circ. */
-  unsigned int hs_service_side_rend_circ_has_been_relaunched : 1;
-
-  /** What commands were sent over this circuit that decremented the
-   * RELAY_EARLY counter? This is for debugging task 878. */
-  uint8_t relay_early_commands[MAX_RELAY_EARLY_CELLS_PER_CIRCUIT];
-
-  /** How many RELAY_EARLY cells have been sent over this circuit? This is
-   * for debugging task 878, too. */
-  int relay_early_cells_sent;
-
-  /** The next stream_id that will be tried when we're attempting to
-   * construct a new AP stream originating at this circuit. */
-  streamid_t next_stream_id;
-
-  /* The intro key replaces the hidden service's public key if purpose is
-   * S_ESTABLISH_INTRO or S_INTRO, provided that no unversioned rendezvous
-   * descriptor is used. */
-  crypto_pk_t *intro_key;
-
-  /** Quasi-global identifier for this circuit; used for control.c */
-  /* XXXX NM This can get re-used after 2**32 circuits. */
-  uint32_t global_identifier;
-
-  /** True if we have associated one stream to this circuit, thereby setting
-   * the isolation parameters for this circuit.  Note that this doesn't
-   * necessarily mean that we've <em>attached</em> any streams to the circuit:
-   * we may only have marked up this circuit during the launch process.
-   */
-  unsigned int isolation_values_set : 1;
-  /** True iff any stream has <em>ever</em> been attached to this circuit.
-   *
-   * In a better world we could use timestamp_dirty for this, but
-   * timestamp_dirty is far too overloaded at the moment.
-   */
-  unsigned int isolation_any_streams_attached : 1;
-
-  /** A bitfield of ISO_* flags for every isolation field such that this
-   * circuit has had streams with more than one value for that field
-   * attached to it. */
-  uint8_t isolation_flags_mixed;
-
-  /** @name Isolation parameters
-   *
-   * If any streams have been associated with this circ (isolation_values_set
-   * == 1), and all streams associated with the circuit have had the same
-   * value for some field ((isolation_flags_mixed & ISO_FOO) == 0), then these
-   * elements hold the value for that field.
-   *
-   * Note again that "associated" is not the same as "attached": we
-   * preliminarily associate streams with a circuit while the circuit is being
-   * launched, so that we can tell whether we need to launch more circuits.
-   *
-   * @{
-   */
-  uint8_t client_proto_type;
-  uint8_t client_proto_socksver;
-  uint16_t dest_port;
-  tor_addr_t client_addr;
-  char *dest_address;
-  int session_group;
-  unsigned nym_epoch;
-  size_t socks_username_len;
-  uint8_t socks_password_len;
-  /* Note that the next two values are NOT NUL-terminated; see
-     socks_username_len and socks_password_len for their lengths. */
-  char *socks_username;
-  char *socks_password;
-  /** Global identifier for the first stream attached here; used by
-   * ISO_STREAM. */
-  uint64_t associated_isolated_stream_global_id;
-  /**@}*/
-  /** A list of addr_policy_t for this circuit in particular. Used by
-   * adjust_exit_policy_from_exitpolicy_failure.
-   */
-  smartlist_t *prepend_policy;
-
-  /** How long do we wait before closing this circuit if it remains
-   * completely idle after it was built, in seconds? This value
-   * is randomized on a per-circuit basis from CircuitsAvailableTimoeut
-   * to 2*CircuitsAvailableTimoeut. */
-  int circuit_idle_timeout;
-
-} origin_circuit_t;
-
-struct onion_queue_t;
-
-/** An or_circuit_t holds information needed to implement a circuit at an
- * OR. */
-typedef struct or_circuit_t {
-  circuit_t base_;
-
-  /** Pointer to an entry on the onion queue, if this circuit is waiting for a
-   * chance to give an onionskin to a cpuworker. Used only in onion.c */
-  struct onion_queue_t *onionqueue_entry;
-  /** Pointer to a workqueue entry, if this circuit has given an onionskin to
-   * a cpuworker and is waiting for a response. Used to decide whether it is
-   * safe to free a circuit or if it is still in use by a cpuworker. */
-  struct workqueue_entry_s *workqueue_entry;
-
-  /** The circuit_id used in the previous (backward) hop of this circuit. */
-  circid_t p_circ_id;
-  /** Queue of cells waiting to be transmitted on p_conn. */
-  cell_queue_t p_chan_cells;
-  /** The channel that is previous in this circuit. */
-  channel_t *p_chan;
-  /**
-   * Circuit mux associated with p_chan to which this circuit is attached;
-   * NULL if we have no p_chan.
-   */
-  circuitmux_t *p_mux;
-  /** Linked list of Exit streams associated with this circuit. */
-  edge_connection_t *n_streams;
-  /** Linked list of Exit streams associated with this circuit that are
-   * still being resolved. */
-  edge_connection_t *resolving_streams;
-
-  /** Cryptographic state used for encrypting and authenticating relay
-   * cells to and from this hop. */
-  relay_crypto_t crypto;
-
-  /** Points to spliced circuit if purpose is REND_ESTABLISHED, and circuit
-   * is not marked for close. */
-  struct or_circuit_t *rend_splice;
-
-  /** Stores KH for the handshake. */
-  char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
-
-  /** How many more relay_early cells can we send on this circuit, according
-   * to the specification? */
-  unsigned int remaining_relay_early_cells : 4;
-
-  /* We have already received an INTRODUCE1 cell on this circuit. */
-  unsigned int already_received_introduce1 : 1;
-
-  /** If set, this circuit carries HS traffic. Consider it in any HS
-   *  statistics. */
-  unsigned int circuit_carries_hs_traffic_stats : 1;
-
-  /** Number of cells that were removed from circuit queue; reset every
-   * time when writing buffer stats to disk. */
-  uint32_t processed_cells;
-
-  /** Total time in milliseconds that cells spent in both app-ward and
-   * exit-ward queues of this circuit; reset every time when writing
-   * buffer stats to disk. */
-  uint64_t total_cell_waiting_time;
-} or_circuit_t;
-
 #if REND_COOKIE_LEN != DIGEST_LEN
 #error "The REND_TOKEN_LEN macro assumes REND_COOKIE_LEN == DIGEST_LEN"
 #endif
@@ -3542,45 +1642,6 @@ typedef struct or_circuit_t {
 
 /** Convert a circuit subtype to a circuit_t. */
 #define TO_CIRCUIT(x)  (&((x)->base_))
-
-/** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Assert
- * if the cast is impossible. */
-static or_circuit_t *TO_OR_CIRCUIT(circuit_t *);
-static const or_circuit_t *CONST_TO_OR_CIRCUIT(const circuit_t *);
-/** Convert a circuit_t* to a pointer to the enclosing origin_circuit_t.
- * Assert if the cast is impossible. */
-static origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *);
-static const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(const circuit_t *);
-
-/** Return 1 iff <b>node</b> has Exit flag and no BadExit flag.
- * Otherwise, return 0.
- */
-static inline int node_is_good_exit(const node_t *node)
-{
-  return node->is_exit && ! node->is_bad_exit;
-}
-
-static inline or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
-{
-  tor_assert(x->magic == OR_CIRCUIT_MAGIC);
-  return DOWNCAST(or_circuit_t, x);
-}
-static inline const or_circuit_t *CONST_TO_OR_CIRCUIT(const circuit_t *x)
-{
-  tor_assert(x->magic == OR_CIRCUIT_MAGIC);
-  return DOWNCAST(or_circuit_t, x);
-}
-static inline origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
-{
-  tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
-  return DOWNCAST(origin_circuit_t, x);
-}
-static inline const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(
-    const circuit_t *x)
-{
-  tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
-  return DOWNCAST(origin_circuit_t, x);
-}
 
 /* limits for TCP send and recv buffer size used for constrained sockets */
 #define MIN_CONSTRAINED_TCP_BUFFER 2048
@@ -3622,27 +1683,7 @@ static inline const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(
 /** First automatically allocated session group number */
 #define SESSION_GROUP_FIRST_AUTO -4
 
-/** Configuration for a single port that we're listening on. */
-typedef struct port_cfg_t {
-  tor_addr_t addr; /**< The actual IP to listen on, if !is_unix_addr. */
-  int port; /**< The configured port, or CFG_AUTO_PORT to tell Tor to pick its
-             * own port. */
-  uint8_t type; /**< One of CONN_TYPE_*_LISTENER */
-  unsigned is_unix_addr : 1; /**< True iff this is an AF_UNIX address. */
-
-  unsigned is_group_writable : 1;
-  unsigned is_world_writable : 1;
-  unsigned relax_dirmode_check : 1;
-
-  entry_port_cfg_t entry_cfg;
-
-  server_port_cfg_t server_cfg;
-
-  /* Unix sockets only: */
-  /** Path for an AF_UNIX address */
-  char unix_addr[FLEXIBLE_ARRAY_MEMBER];
-} port_cfg_t;
-
+typedef struct port_cfg_t port_cfg_t;
 typedef struct routerset_t routerset_t;
 
 /** A magic value for the (Socks|OR|...)Port options below, telling Tor
@@ -4796,54 +2837,6 @@ typedef struct {
 #define SOCKS_COMMAND_IS_RESOLVE(c) ((c)==SOCKS_COMMAND_RESOLVE || \
                                      (c)==SOCKS_COMMAND_RESOLVE_PTR)
 
-/** State of a SOCKS request from a user to an OP.  Also used to encode other
- * information for non-socks user request (such as those on TransPort and
- * DNSPort) */
-struct socks_request_t {
-  /** Which version of SOCKS did the client use? One of "0, 4, 5" -- where
-   * 0 means that no socks handshake ever took place, and this is just a
-   * stub connection (e.g. see connection_ap_make_link()). */
-  uint8_t socks_version;
-  /** If using socks5 authentication, which authentication type did we
-   * negotiate?  currently we support 0 (no authentication) and 2
-   * (username/password). */
-  uint8_t auth_type;
-  /** What is this stream's goal? One of the SOCKS_COMMAND_* values */
-  uint8_t command;
-  /** Which kind of listener created this stream? */
-  uint8_t listener_type;
-  size_t replylen; /**< Length of <b>reply</b>. */
-  uint8_t reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
-                                    * we want to specify our own socks reply,
-                                    * rather than using the default socks4 or
-                                    * socks5 socks reply. We use this for the
-                                    * two-stage socks5 handshake.
-                                    */
-  char address[MAX_SOCKS_ADDR_LEN]; /**< What address did the client ask to
-                                       connect to/resolve? */
-  uint16_t port; /**< What port did the client ask to connect to? */
-  unsigned int has_finished : 1; /**< Has the SOCKS handshake finished? Used to
-                              * make sure we send back a socks reply for
-                              * every connection. */
-  unsigned int got_auth : 1; /**< Have we received any authentication data? */
-  /** If this is set, we will choose "no authentication" instead of
-   * "username/password" authentication if both are offered. Used as input to
-   * parse_socks. */
-  unsigned int socks_prefer_no_auth : 1;
-
-  /** Number of bytes in username; 0 if username is NULL */
-  size_t usernamelen;
-  /** Number of bytes in password; 0 if password is NULL */
-  uint8_t passwordlen;
-  /** The negotiated username value if any (for socks5), or the entire
-   * authentication string (for socks4).  This value is NOT nul-terminated;
-   * see usernamelen for its length. */
-  char *username;
-  /** The negotiated password value if any (for socks5). This value is NOT
-   * nul-terminated; see passwordlen for its length. */
-  char *password;
-};
-
 /********************************* circuitbuild.c **********************/
 
 /** How many hops does a general-purpose circuit have by default? */
@@ -4941,21 +2934,6 @@ int32_t circuit_build_times_initial_timeout(void);
 #if CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT < CBT_MIN_MAX_RECENT_TIMEOUT_COUNT
 #error "RECENT_CIRCUITS is set too low."
 #endif
-
-/** Information about the state of our local network connection */
-typedef struct {
-  /** The timestamp we last completed a TLS handshake or received a cell */
-  time_t network_last_live;
-  /** If the network is not live, how many timeouts has this caused? */
-  int nonlive_timeouts;
-  /** Circular array of circuits that have made it to the first hop. Slot is
-   * 1 if circuit timed out, 0 if circuit succeeded */
-  int8_t *timeouts_after_firsthop;
-  /** Number of elements allocated for the above array */
-  int num_recent_circs;
-  /** Index into circular array. */
-  int after_firsthop_idx;
-} network_liveness_t;
 
 typedef struct circuit_build_times_s circuit_build_times_t;
 
@@ -5086,14 +3064,6 @@ typedef enum {
   BOOTSTRAP_STATUS_DONE=100
 } bootstrap_status_t;
 
-/********************************* directory.c ***************************/
-
-/** A pair of digests created by dir_split_resource_info_fingerprint_pairs() */
-typedef struct {
-  char first[DIGEST_LEN];
-  char second[DIGEST_LEN];
-} fp_pair_t;
-
 /********************************* dirserv.c ***************************/
 
 /** An enum to describe what format we're generating a routerstatus line in.
@@ -5111,29 +3081,9 @@ typedef enum {
   NS_V3_CONSENSUS_MICRODESC
 } routerstatus_format_type_t;
 
-#ifdef DIRSERV_PRIVATE
-typedef struct measured_bw_line_t {
-  char node_id[DIGEST_LEN];
-  char node_hex[MAX_HEX_NICKNAME_LEN+1];
-  long int bw_kb;
-} measured_bw_line_t;
-
-#endif /* defined(DIRSERV_PRIVATE) */
-
 /********************************* dirvote.c ************************/
 
-/** Describes the schedule by which votes should be generated. */
-typedef struct vote_timing_t {
-  /** Length in seconds between one consensus becoming valid and the next
-   * becoming valid. */
-  int vote_interval;
-  /** For how many intervals is a consensus valid? */
-  int n_intervals_valid;
-  /** Time in seconds allowed to propagate votes */
-  int vote_delay;
-  /** Time in seconds allowed to propagate signatures */
-  int dist_delay;
-} vote_timing_t;
+typedef struct vote_timing_t vote_timing_t;
 
 /********************************* geoip.c **************************/
 
@@ -5247,18 +3197,9 @@ typedef enum {
 
 /********************************* rendcommon.c ***************************/
 
-/** Hidden-service side configuration of client authorization. */
-typedef struct rend_authorized_client_t {
-  char *client_name;
-  uint8_t descriptor_cookie[REND_DESC_COOKIE_LEN];
-  crypto_pk_t *client_key;
-} rend_authorized_client_t;
-
-/** ASCII-encoded v2 hidden service descriptor. */
-typedef struct rend_encoded_v2_service_descriptor_t {
-  char desc_id[DIGEST_LEN]; /**< Descriptor ID. */
-  char *desc_str; /**< Descriptor string. */
-} rend_encoded_v2_service_descriptor_t;
+typedef struct rend_authorized_client_t rend_authorized_client_t;
+typedef struct rend_encoded_v2_service_descriptor_t
+               rend_encoded_v2_service_descriptor_t;
 
 /** The maximum number of non-circuit-build-timeout failures a hidden
  * service client will tolerate while trying to build a circuit to an
@@ -5291,133 +3232,12 @@ typedef struct rend_encoded_v2_service_descriptor_t {
  * lifetime so this is a hard limit on the amount of time we do that. */
 #define MAX_INTRO_POINT_CIRCUIT_RETRIES 3
 
-/** Introduction point information.  Used both in rend_service_t (on
- * the service side) and in rend_service_descriptor_t (on both the
- * client and service side). */
-typedef struct rend_intro_point_t {
-  extend_info_t *extend_info; /**< Extend info for connecting to this
-                               * introduction point via a multi-hop path. */
-  crypto_pk_t *intro_key; /**< Introduction key that replaces the service
-                               * key, if this descriptor is V2. */
-
-  /** (Client side only) Flag indicating that a timeout has occurred
-   * after sending an INTRODUCE cell to this intro point.  After a
-   * timeout, an intro point should not be tried again during the same
-   * hidden service connection attempt, but it may be tried again
-   * during a future connection attempt. */
-  unsigned int timed_out : 1;
-
-  /** (Client side only) The number of times we have failed to build a
-   * circuit to this intro point for some reason other than our
-   * circuit-build timeout.  See also MAX_INTRO_POINT_REACHABILITY_FAILURES. */
-  unsigned int unreachable_count : 3;
-
-  /** (Service side only) Flag indicating that this intro point was
-   * included in the last HS descriptor we generated. */
-  unsigned int listed_in_last_desc : 1;
-
-  /** (Service side only) A replay cache recording the RSA-encrypted parts
-   * of INTRODUCE2 cells this intro point's circuit has received.  This is
-   * used to prevent replay attacks. */
-  replaycache_t *accepted_intro_rsa_parts;
-
-  /** (Service side only) Count of INTRODUCE2 cells accepted from this
-   * intro point.
-   */
-  int accepted_introduce2_count;
-
-  /** (Service side only) Maximum number of INTRODUCE2 cells that this IP
-   * will accept. This is a random value between
-   * INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS and
-   * INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS. */
-  int max_introductions;
-
-  /** (Service side only) The time at which this intro point was first
-   * published, or -1 if this intro point has not yet been
-   * published. */
-  time_t time_published;
-
-  /** (Service side only) The time at which this intro point should
-   * (start to) expire, or -1 if we haven't decided when this intro
-   * point should expire. */
-  time_t time_to_expire;
-
-  /** (Service side only) The amount of circuit creation we've made to this
-   * intro point. This is incremented every time we do a circuit relaunch on
-   * this object which is triggered when the circuit dies but the node is
-   * still in the consensus. After MAX_INTRO_POINT_CIRCUIT_RETRIES, we give
-   * up on it. */
-  unsigned int circuit_retries;
-
-  /** (Service side only) Set if this intro point has an established circuit
-   * and unset if it doesn't. */
-  unsigned int circuit_established:1;
-} rend_intro_point_t;
-
-#define REND_PROTOCOL_VERSION_BITMASK_WIDTH 16
-
-/** Information used to connect to a hidden service.  Used on both the
- * service side and the client side. */
-typedef struct rend_service_descriptor_t {
-  crypto_pk_t *pk; /**< This service's public key. */
-  int version; /**< Version of the descriptor format: 0 or 2. */
-  time_t timestamp; /**< Time when the descriptor was generated. */
-  /** Bitmask: which introduce/rendezvous protocols are supported?
-   * (We allow bits '0', '1', '2' and '3' to be set.) */
-  unsigned protocols : REND_PROTOCOL_VERSION_BITMASK_WIDTH;
-  /** List of the service's introduction points.  Elements are removed if
-   * introduction attempts fail. */
-  smartlist_t *intro_nodes;
-  /** Has descriptor been uploaded to all hidden service directories? */
-  int all_uploads_performed;
-  /** List of hidden service directories to which an upload request for
-   * this descriptor could be sent. Smartlist exists only when at least one
-   * of the previous upload requests failed (otherwise it's not important
-   * to know which uploads succeeded and which not). */
-  smartlist_t *successful_uploads;
-} rend_service_descriptor_t;
+typedef struct rend_intro_point_t rend_intro_point_t;
+typedef struct rend_service_descriptor_t rend_service_descriptor_t;
 
 /********************************* routerlist.c ***************************/
 
-/** Represents information about a single trusted or fallback directory
- * server. */
-typedef struct dir_server_t {
-  char *description;
-  char *nickname;
-  char *address; /**< Hostname. */
-  /* XX/teor - why do we duplicate the address and port fields here and in
-   *           fake_status? Surely we could just use fake_status (#17867). */
-  tor_addr_t ipv6_addr; /**< IPv6 address if present; AF_UNSPEC if not */
-  uint32_t addr; /**< IPv4 address. */
-  uint16_t dir_port; /**< Directory port. */
-  uint16_t or_port; /**< OR port: Used for tunneling connections. */
-  uint16_t ipv6_orport; /**< OR port corresponding to ipv6_addr. */
-  double weight; /** Weight used when selecting this node at random */
-  char digest[DIGEST_LEN]; /**< Digest of identity key. */
-  char v3_identity_digest[DIGEST_LEN]; /**< Digest of v3 (authority only,
-                                        * high-security) identity key. */
-
-  unsigned int is_running:1; /**< True iff we think this server is running. */
-  unsigned int is_authority:1; /**< True iff this is a directory authority
-                                * of some kind. */
-
-  /** True iff this server has accepted the most recent server descriptor
-   * we tried to upload to it. */
-  unsigned int has_accepted_serverdesc:1;
-
-  /** What kind of authority is this? (Bitfield.) */
-  dirinfo_type_t type;
-
-  time_t addr_current_at; /**< When was the document that we derived the
-                           * address information from published? */
-
-  routerstatus_t fake_status; /**< Used when we need to pass this trusted
-                               * dir_server_t to
-                               * directory_request_set_routerstatus.
-                               * as a routerstatus_t.  Not updated by the
-                               * router-status management code!
-                               **/
-} dir_server_t;
+typedef struct dir_server_t dir_server_t;
 
 #define RELAY_REQUIRED_MIN_BANDWIDTH (75*1024)
 #define BRIDGE_REQUIRED_MIN_BANDWIDTH (50*1024)
@@ -5508,28 +3328,7 @@ typedef enum was_router_added_t {
   ROUTER_CERTS_EXPIRED = -8
 } was_router_added_t;
 
-/********************************* routerparse.c ************************/
-
-#define MAX_STATUS_TAG_LEN 32
-/** Structure to hold parsed Tor versions.  This is a little messier
- * than we would like it to be, because we changed version schemes with 0.1.0.
- *
- * See version-spec.txt for the whole business.
- */
-typedef struct tor_version_t {
-  int major;
-  int minor;
-  int micro;
-  /** Release status.  For version in the post-0.1 format, this is always
-   * VER_RELEASE. */
-  enum { VER_PRE=0, VER_RC=1, VER_RELEASE=2, } status;
-  int patchlevel;
-  char status_tag[MAX_STATUS_TAG_LEN];
-  int svn_revision;
-
-  int git_tag_len;
-  char git_tag[DIGEST_LEN];
-} tor_version_t;
+typedef struct tor_version_t tor_version_t;
 
 #endif /* !defined(TOR_OR_H) */
 

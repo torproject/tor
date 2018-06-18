@@ -65,6 +65,17 @@
 #include "routerset.h"
 #include "transports.h"
 
+#include "cell_st.h"
+#include "cpath_build_state_st.h"
+#include "entry_connection_st.h"
+#include "extend_info_st.h"
+#include "node_st.h"
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
+#include "microdesc_st.h"
+#include "routerinfo_st.h"
+#include "routerstatus_st.h"
+
 static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
                                             uint16_t port,
                                             const char *id_digest,

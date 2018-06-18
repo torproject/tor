@@ -81,6 +81,24 @@
 #include "routerparse.h"
 #include "shared_random_client.h"
 
+#include "cached_dir_st.h"
+#include "control_connection_st.h"
+#include "cpath_build_state_st.h"
+#include "entry_connection_st.h"
+#include "extrainfo_st.h"
+#include "networkstatus_st.h"
+#include "node_st.h"
+#include "or_connection_st.h"
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
+#include "microdesc_st.h"
+#include "rend_authorized_client_st.h"
+#include "rend_encoded_v2_service_descriptor_st.h"
+#include "rend_service_descriptor_st.h"
+#include "routerinfo_st.h"
+#include "routerlist_st.h"
+#include "socks_request_st.h"
+
 #ifndef _WIN32
 #include <pwd.h>
 #include <sys/resource.h>
@@ -225,6 +243,15 @@ static void flush_queued_events_cb(mainloop_event_t *event, void *arg);
 
 static char * download_status_to_string(const download_status_t *dl);
 static void control_get_bytes_rw_last_sec(uint64_t *r, uint64_t *w);
+
+/** Convert a connection_t* to an control_connection_t*; assert if the cast is
+ * invalid. */
+control_connection_t *
+TO_CONTROL_CONN(connection_t *c)
+{
+  tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
+  return DOWNCAST(control_connection_t, c);
+}
 
 /** Given a control event code for a message event, return the corresponding
  * log severity. */

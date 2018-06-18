@@ -18,6 +18,11 @@
 #include "onion_fast.h"
 #include "onion_ntor.h"
 #include "relay.h"
+
+#include "cell_st.h"
+#include "cell_queue_st.h"
+#include "var_cell_st.h"
+
 #include "test.h"
 
 #include <stdlib.h>

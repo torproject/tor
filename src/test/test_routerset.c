@@ -9,6 +9,12 @@
 #include "routerparse.h"
 #include "policies.h"
 #include "nodelist.h"
+
+#include "extend_info_st.h"
+#include "node_st.h"
+#include "routerinfo_st.h"
+#include "routerstatus_st.h"
+
 #include "test.h"
 
 #define NS_MODULE routerset

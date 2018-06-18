@@ -33,6 +33,11 @@
 #include "hs/cell_common.h"
 #include "hs/cell_establish_intro.h"
 
+#include "cpath_build_state_st.h"
+#include "crypt_path_st.h"
+#include "node_st.h"
+#include "origin_circuit_st.h"
+
 /* A circuit is about to become an e2e rendezvous circuit. Check
  * <b>circ_purpose</b> and ensure that it's properly set. Return true iff
  * circuit purpose is properly set, otherwise return false. */

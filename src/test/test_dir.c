@@ -28,6 +28,7 @@
 #include "dirserv.h"
 #include "dirauth/dirvote.h"
 #include "entrynodes.h"
+#include "fp_pair.h"
 #include "hibernate.h"
 #include "memarea.h"
 #include "networkstatus.h"
@@ -43,6 +44,19 @@
 #include "relay.h"
 #include "log_test_helpers.h"
 #include "voting_schedule.h"
+
+#include "authority_cert_st.h"
+#include "document_signature_st.h"
+#include "extrainfo_st.h"
+#include "networkstatus_st.h"
+#include "networkstatus_voter_info_st.h"
+#include "ns_detached_signatures_st.h"
+#include "port_cfg_st.h"
+#include "routerinfo_st.h"
+#include "routerlist_st.h"
+#include "tor_version_st.h"
+#include "vote_microdesc_hash_st.h"
+#include "vote_routerstatus_st.h"
 
 #define NS_MODULE dir
 

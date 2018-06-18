@@ -11,6 +11,13 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "torcert.h"
+
+#include "microdesc_st.h"
+#include "networkstatus_st.h"
+#include "node_st.h"
+#include "routerinfo_st.h"
+#include "routerstatus_st.h"
+
 #include "test.h"
 
 /** Test the case when node_get_by_id() returns NULL,

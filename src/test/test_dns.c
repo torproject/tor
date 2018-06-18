@@ -10,6 +10,9 @@
 #include "connection.h"
 #include "router.h"
 
+#include "edge_connection_st.h"
+#include "or_circuit_st.h"
+
 #define NS_MODULE dns
 
 #define NS_SUBMODULE clip_ttl

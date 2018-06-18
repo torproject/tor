@@ -40,6 +40,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "control.h"
+#include "directory.h"
 #include "entrynodes.h"
 #include "hs_common.h"
 #include "hs_client.h"
@@ -55,6 +56,14 @@
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
+
+#include "cpath_build_state_st.h"
+#include "dir_connection_st.h"
+#include "entry_connection_st.h"
+#include "extend_info_st.h"
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
+#include "socks_request_st.h"
 
 static void circuit_expire_old_circuits_clientside(void);
 static void circuit_increment_failure_count(void);

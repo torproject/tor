@@ -17,6 +17,11 @@
 #include "circuituse.h"
 #include "channel.h"
 
+#include "cpath_build_state_st.h"
+#include "crypt_path_st.h"
+#include "extend_info_st.h"
+#include "origin_circuit_st.h"
+
 void test_circuitstats_timeout(void *arg);
 void test_circuitstats_hoplen(void *arg);
 origin_circuit_t *subtest_fourhop_circuit(struct timeval, int);

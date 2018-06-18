@@ -5,11 +5,16 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
+#include "circuitlist.h"
 #include "config.h"
 #include "crypto_util.h"
 #include "hs_ntor.h" // for HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN
 #include "relay.h"
 #include "relay_crypto.h"
+
+#include "cell_st.h"
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
 
 /** Update digest from the payload of cell. Assign integrity part to
  * cell.

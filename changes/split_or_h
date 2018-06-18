@@ -1,0 +1,5 @@
+  o Code simplification and refactoring:
+    - Many structures have been removed from the centralized "or.h" header,
+      and moved into their own headers.  This will allow us to reduce
+      the number of places in the code that rely on each structure's
+      contents and layout. Closes ticket 26383.

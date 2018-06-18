@@ -28,6 +28,21 @@
 #include "dirauth/mode.h"
 #include "dirauth/shared_random_state.h"
 
+#include "authority_cert_st.h"
+#include "cached_dir_st.h"
+#include "dir_server_st.h"
+#include "document_signature_st.h"
+#include "microdesc_st.h"
+#include "networkstatus_st.h"
+#include "networkstatus_voter_info_st.h"
+#include "node_st.h"
+#include "ns_detached_signatures_st.h"
+#include "routerinfo_st.h"
+#include "routerlist_st.h"
+#include "vote_microdesc_hash_st.h"
+#include "vote_routerstatus_st.h"
+#include "vote_timing_st.h"
+
 /**
  * \file dirvote.c
  * \brief Functions to compute directory consensus, and schedule voting.

@@ -87,6 +87,14 @@ typedef struct spooled_resource_t {
   off_t cached_dir_offset;
 } spooled_resource_t;
 
+#ifdef DIRSERV_PRIVATE
+typedef struct measured_bw_line_t {
+  char node_id[DIGEST_LEN];
+  char node_hex[MAX_HEX_NICKNAME_LEN+1];
+  long int bw_kb;
+} measured_bw_line_t;
+#endif /* defined(DIRSERV_PRIVATE) */
+
 int connection_dirserv_flushed_some(dir_connection_t *conn);
 
 int dirserv_add_own_fingerprint(crypto_pk_t *pk);

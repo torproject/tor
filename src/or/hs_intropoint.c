@@ -27,6 +27,8 @@
 #include "hs_intropoint.h"
 #include "hs_common.h"
 
+#include "or_circuit_st.h"
+
 /** Extract the authentication key from an ESTABLISH_INTRO or INTRODUCE1 using
  * the given <b>cell_type</b> from <b>cell</b> and place it in
  * <b>auth_key_out</b>. */

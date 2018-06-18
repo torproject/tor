@@ -15,6 +15,9 @@
 #include "proto_socks.h"
 #include "torlog.h"
 
+#include "entry_connection_st.h"
+#include "socks_request_st.h"
+
 #include "fuzzing.h"
 
 static void

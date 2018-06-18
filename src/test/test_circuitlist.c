@@ -14,6 +14,9 @@
 #include "test.h"
 #include "log_test_helpers.h"
 
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
+
 static channel_t *
 new_fake_channel(void)
 {

@@ -13,6 +13,9 @@
 #include "crypto_rand.h"
 #include "ext_orport.h"
 #include "main.h"
+
+#include "or_connection_st.h"
+
 #include "test.h"
 
 /* Test connection_or_remove_from_ext_or_id_map and

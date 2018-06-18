@@ -30,6 +30,16 @@
 #include "statefile.h"
 #include "util.h"
 
+#include "cpath_build_state_st.h"
+#include "crypt_path_st.h"
+#include "dir_connection_st.h"
+#include "microdesc_st.h"
+#include "networkstatus_st.h"
+#include "node_st.h"
+#include "origin_circuit_st.h"
+#include "routerinfo_st.h"
+#include "routerstatus_st.h"
+
 #include "test_helpers.h"
 #include "log_test_helpers.h"
 

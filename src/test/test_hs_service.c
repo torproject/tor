@@ -53,6 +53,13 @@
 #include "dirauth/shared_random_state.h"
 #include "voting_schedule.h"
 
+#include "cpath_build_state_st.h"
+#include "crypt_path_st.h"
+#include "networkstatus_st.h"
+#include "node_st.h"
+#include "origin_circuit_st.h"
+#include "routerinfo_st.h"
+
 /* Trunnel */
 #include "hs/cell_establish_intro.h"
 

@@ -56,6 +56,11 @@
 #include "router.h"
 #include "routerlist.h"
 
+#include "cell_st.h"
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
+#include "var_cell_st.h"
+
 /** How many CELL_CREATE cells have we received, ever? */
 uint64_t stats_n_create_cells_processed = 0;
 /** How many CELL_CREATED cells have we received, ever? */

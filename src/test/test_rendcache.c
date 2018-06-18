@@ -11,6 +11,13 @@
 #include "routerlist.h"
 #include "config.h"
 #include "hs_common.h"
+
+#include "extend_info_st.h"
+#include "rend_encoded_v2_service_descriptor_st.h"
+#include "rend_intro_point_st.h"
+#include "rend_service_descriptor_st.h"
+#include "routerinfo_st.h"
+
 #include "rend_test_helpers.h"
 #include "log_test_helpers.h"
 

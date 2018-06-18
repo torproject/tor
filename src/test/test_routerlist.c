@@ -33,6 +33,13 @@
 #include "routerparse.h"
 #include "dirauth/shared_random.h"
 #include "statefile.h"
+
+#include "authority_cert_st.h"
+#include "dir_connection_st.h"
+#include "networkstatus_st.h"
+#include "node_st.h"
+#include "routerstatus_st.h"
+
 #include "test.h"
 #include "test_dir_common.h"
 #include "log_test_helpers.h"

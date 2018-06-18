@@ -67,6 +67,8 @@
 #include "hs_config.h"
 #include "torcert.h" /* tor_cert_encode_ed22519() */
 
+#include "extend_info_st.h"
+
 /* Constant string value used for the descriptor format. */
 #define str_hs_desc "hs-descriptor"
 #define str_desc_cert "descriptor-signing-key-cert"

@@ -11,6 +11,9 @@
 #include "control.h"
 #include "test.h"
 
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
+
 static void
 add_testing_cell_stats_entry(circuit_t *circ, uint8_t command,
                              unsigned int waiting_time,

@@ -77,6 +77,10 @@
 #include "rephist.h"
 #include "router.h"
 
+#include "cell_st.h"
+#include "extend_info_st.h"
+#include "or_circuit_st.h"
+
 // trunnel
 #include "ed25519_cert.h"
 

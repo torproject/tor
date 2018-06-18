@@ -9,6 +9,9 @@
 /* For init/free stuff */
 #include "scheduler.h"
 
+#include "cell_st.h"
+#include "or_circuit_st.h"
+
 /* Test suite stuff */
 #include "test.h"
 #include "fakechans.h"

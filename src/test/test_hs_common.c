@@ -33,6 +33,12 @@
 #include "util.h"
 #include "voting_schedule.h"
 
+#include "microdesc_st.h"
+#include "networkstatus_st.h"
+#include "node_st.h"
+#include "routerinfo_st.h"
+#include "routerstatus_st.h"
+
 /** Test the validation of HS v3 addresses */
 static void
 test_validate_address(void *arg)

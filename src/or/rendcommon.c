@@ -12,6 +12,7 @@
 
 #include "or.h"
 #include "circuitbuild.h"
+#include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
 #include "control.h"
@@ -29,6 +30,16 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+
+#include "cpath_build_state_st.h"
+#include "crypt_path_st.h"
+#include "extend_info_st.h"
+#include "networkstatus_st.h"
+#include "origin_circuit_st.h"
+#include "rend_encoded_v2_service_descriptor_st.h"
+#include "rend_intro_point_st.h"
+#include "rend_service_descriptor_st.h"
+#include "routerstatus_st.h"
 
 /** Return 0 if one and two are the same service ids, else -1 or 1 */
 int

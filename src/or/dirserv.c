@@ -36,6 +36,16 @@
 
 #include "dirauth/dirvote.h"
 
+#include "cached_dir_st.h"
+#include "dir_connection_st.h"
+#include "extrainfo_st.h"
+#include "microdesc_st.h"
+#include "node_st.h"
+#include "routerinfo_st.h"
+#include "routerlist_st.h"
+#include "tor_version_st.h"
+#include "vote_routerstatus_st.h"
+
 /**
  * \file dirserv.c
  * \brief Directory server core implementation. Manages directory

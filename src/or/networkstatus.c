@@ -74,6 +74,19 @@
 #include "dirauth/mode.h"
 #include "dirauth/shared_random.h"
 
+#include "authority_cert_st.h"
+#include "dir_connection_st.h"
+#include "dir_server_st.h"
+#include "document_signature_st.h"
+#include "networkstatus_st.h"
+#include "networkstatus_voter_info_st.h"
+#include "ns_detached_signatures_st.h"
+#include "node_st.h"
+#include "routerinfo_st.h"
+#include "routerlist_st.h"
+#include "vote_microdesc_hash_st.h"
+#include "vote_routerstatus_st.h"
+
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
 STATIC networkstatus_t *current_ns_consensus = NULL;

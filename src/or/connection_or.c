@@ -61,6 +61,14 @@
 #include "torcert.h"
 #include "channelpadding.h"
 
+#include "cell_st.h"
+#include "cell_queue_st.h"
+#include "or_connection_st.h"
+#include "or_handshake_certs_st.h"
+#include "or_handshake_state_st.h"
+#include "routerinfo_st.h"
+#include "var_cell_st.h"
+
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_launch_v3_or_handshake(or_connection_t *conn);
 static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
@@ -85,6 +93,15 @@ static void connection_or_check_canonicity(or_connection_t *conn,
                                            int started_here);
 
 /**************************************************************/
+
+/** Convert a connection_t* to an or_connection_t*; assert if the cast is
+ * invalid. */
+or_connection_t *
+TO_OR_CONN(connection_t *c)
+{
+  tor_assert(c->magic == OR_CONNECTION_MAGIC);
+  return DOWNCAST(or_connection_t, c);
+}
 
 /** Global map between Extended ORPort identifiers and OR
  *  connections. */

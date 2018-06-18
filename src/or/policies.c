@@ -30,6 +30,13 @@
 #include "geoip.h"
 #include "ht.h"
 
+#include "dir_server_st.h"
+#include "microdesc_st.h"
+#include "node_st.h"
+#include "port_cfg_st.h"
+#include "routerinfo_st.h"
+#include "routerstatus_st.h"
+
 /** Policy that addresses for incoming SOCKS connections must match. */
 static smartlist_t *socks_policy = NULL;
 /** Policy that addresses for incoming directory connections must match. */

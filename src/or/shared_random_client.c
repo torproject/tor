@@ -17,6 +17,8 @@
 #include "util.h"
 #include "util_format.h"
 
+#include "networkstatus_st.h"
+
 /* Convert a given srv object to a string for the control port. This doesn't
  * fail and the srv object MUST be valid. */
 static char *

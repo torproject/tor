@@ -15,6 +15,9 @@
 #include "hs_service.h"
 #include "nodelist.h"
 
+#include "node_st.h"
+#include "routerstatus_st.h"
+
 /* Send on the control port the "HS_DESC REQUESTED [...]" event.
  *
  * The onion_pk is the onion service public key, base64_blinded_pk is the

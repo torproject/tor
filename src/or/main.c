@@ -122,6 +122,14 @@
 #include "dirauth/mode.h"
 #include "dirauth/shared_random.h"
 
+#include "cell_st.h"
+#include "entry_connection_st.h"
+#include "networkstatus_st.h"
+#include "or_connection_st.h"
+#include "port_cfg_st.h"
+#include "routerinfo_st.h"
+#include "socks_request_st.h"
+
 #ifdef HAVE_SYSTEMD
 #   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)
 /* Systemd's use of gcc's __INCLUDE_LEVEL__ extension macro appears to confuse

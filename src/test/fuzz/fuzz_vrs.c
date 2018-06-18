@@ -7,6 +7,10 @@
 #include "memarea.h"
 #include "microdesc.h"
 #include "networkstatus.h"
+
+#include "networkstatus_st.h"
+#include "vote_routerstatus_st.h"
+
 #include "fuzzing.h"
 
 static void

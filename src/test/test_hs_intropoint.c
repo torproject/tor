@@ -28,6 +28,8 @@
 #include "hs_intropoint.h"
 #include "hs_service.h"
 
+#include "or_circuit_st.h"
+
 /* Trunnel. */
 #include "hs/cell_establish_intro.h"
 #include "hs/cell_introduce1.h"

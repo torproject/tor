@@ -68,6 +68,14 @@
 
 #include "dirauth/mode.h"
 
+#include "dir_server_st.h"
+#include "microdesc_st.h"
+#include "networkstatus_st.h"
+#include "node_st.h"
+#include "routerinfo_st.h"
+#include "routerlist_st.h"
+#include "routerstatus_st.h"
+
 static void nodelist_drop_node(node_t *node, int remove_from_ht);
 #define node_free(val) \
   FREE_AND_NULL(node_t, node_free_, (val))
@@ -630,6 +638,15 @@ nodelist_set_consensus(networkstatus_t *ns)
       }
     } SMARTLIST_FOREACH_END(node);
   }
+}
+
+/** Return 1 iff <b>node</b> has Exit flag and no BadExit flag.
+ * Otherwise, return 0.
+ */
+int
+node_is_good_exit(const node_t *node)
+{
+  return node->is_exit && ! node->is_bad_exit;
 }
 
 /** Helper: return true iff a node has a usable amount of information*/

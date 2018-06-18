@@ -125,6 +125,18 @@
 #include "dirauth/dirvote.h"
 #include "dirauth/mode.h"
 
+#include "authority_cert_st.h"
+#include "dir_connection_st.h"
+#include "dir_server_st.h"
+#include "document_signature_st.h"
+#include "extrainfo_st.h"
+#include "networkstatus_st.h"
+#include "networkstatus_voter_info_st.h"
+#include "node_st.h"
+#include "routerinfo_st.h"
+#include "routerlist_st.h"
+#include "vote_routerstatus_st.h"
+
 // #define DEBUG_ROUTERLIST
 
 /****************************************************************************/

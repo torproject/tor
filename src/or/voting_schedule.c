@@ -15,6 +15,8 @@
 #include "config.h"
 #include "networkstatus.h"
 
+#include "networkstatus_st.h"
+
 /* =====
  * Vote scheduling
  * ===== */

@@ -113,6 +113,15 @@
 #include <sys/un.h>
 #endif
 
+#include "dir_connection_st.h"
+#include "control_connection_st.h"
+#include "entry_connection_st.h"
+#include "listener_connection_st.h"
+#include "or_connection_st.h"
+#include "port_cfg_st.h"
+#include "routerinfo_st.h"
+#include "socks_request_st.h"
+
 static connection_t *connection_listener_new(
                                const struct sockaddr *listensockaddr,
                                socklen_t listensocklen, int type,
@@ -166,6 +175,27 @@ static smartlist_t *outgoing_addrs = NULL;
     case CONN_TYPE_AP_HTTP_CONNECT_LISTENER
 
 /**************************************************************/
+
+/** Convert a connection_t* to an listener_connection_t*; assert if the cast
+ * is invalid. */
+listener_connection_t *
+TO_LISTENER_CONN(connection_t *c)
+{
+  tor_assert(c->magic == LISTENER_CONNECTION_MAGIC);
+  return DOWNCAST(listener_connection_t, c);
+}
+
+size_t
+connection_get_inbuf_len(connection_t *conn)
+{
+  return conn->inbuf ? buf_datalen(conn->inbuf) : 0;
+}
+
+size_t
+connection_get_outbuf_len(connection_t *conn)
+{
+    return conn->outbuf ? buf_datalen(conn->outbuf) : 0;
+}
 
 /**
  * Return the human-readable name for the connection type <b>type</b>
@@ -4108,6 +4138,13 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
   connection_write_to_buf_commit(conn, written);
 }
 
+void
+connection_buf_add_compress(const char *string, size_t len,
+                            dir_connection_t *conn, int done)
+{
+  connection_write_to_buf_impl_(string, len, TO_CONN(conn), done ? -1 : 1);
+}
+
 /**
  * Add all bytes from <b>buf</b> to <b>conn</b>'s outbuf, draining them
  * from <b>buf</b>. (If the connection is marked and will soon be closed,
@@ -4810,6 +4847,20 @@ kill_conn_list_for_oos, (smartlist_t *conns))
   log_notice(LD_NET,
              "OOS handler marked %d connections",
              smartlist_len(conns));
+}
+
+/** Check if a connection is on the way out so the OOS handler doesn't try
+ * to kill more than it needs. */
+int
+connection_is_moribund(connection_t *conn)
+{
+  if (conn != NULL &&
+      (conn->conn_array_index < 0 ||
+       conn->marked_for_close)) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 /** Out-of-Sockets handler; n_socks is the current number of open

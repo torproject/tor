@@ -11,6 +11,7 @@
 #include "or.h"
 #include "channel.h"
 #include "config.h"
+#include "connection_or.h"
 #include "crypto_rand.h"
 #include "geoip.h"
 #include "main.h"
@@ -20,6 +21,8 @@
 #include "router.h"
 
 #include "dos.h"
+
+#include "or_connection_st.h"
 
 /*
  * Circuit creation denial of service mitigation.

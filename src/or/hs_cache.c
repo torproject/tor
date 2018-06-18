@@ -21,6 +21,8 @@
 
 #include "hs_cache.h"
 
+#include "networkstatus_st.h"
+
 static int cached_client_descriptor_has_expired(time_t now,
            const hs_cache_client_descriptor_t *cached_desc);
 

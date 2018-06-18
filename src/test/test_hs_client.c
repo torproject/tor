@@ -37,6 +37,15 @@
 #include "connection_edge.h"
 #include "networkstatus.h"
 
+#include "cpath_build_state_st.h"
+#include "crypt_path_st.h"
+#include "dir_connection_st.h"
+#include "entry_connection_st.h"
+#include "extend_info_st.h"
+#include "networkstatus_st.h"
+#include "origin_circuit_st.h"
+#include "socks_request_st.h"
+
 static int
 mock_connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
 {

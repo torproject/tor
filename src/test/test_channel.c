@@ -20,6 +20,12 @@
 #include "scheduler.h"
 #include "networkstatus.h"
 
+#include "cell_st.h"
+#include "networkstatus_st.h"
+#include "origin_circuit_st.h"
+#include "routerstatus_st.h"
+#include "var_cell_st.h"
+
 /* Test suite stuff */
 #include "log_test_helpers.h"
 #include "test.h"

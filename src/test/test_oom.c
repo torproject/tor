@@ -18,6 +18,11 @@
 #include "test.h"
 #include "test_helpers.h"
 
+#include "cell_st.h"
+#include "entry_connection_st.h"
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
+
 /* small replacement mock for circuit_mark_for_close_ to avoid doing all
  * the other bookkeeping that comes with marking circuits. */
 static void

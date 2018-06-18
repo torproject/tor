@@ -34,6 +34,13 @@
 #include "log_test_helpers.h"
 #include "voting_schedule.h"
 
+#include "dir_connection_st.h"
+#include "dir_server_st.h"
+#include "networkstatus_st.h"
+#include "rend_encoded_v2_service_descriptor_st.h"
+#include "routerinfo_st.h"
+#include "routerlist_st.h"
+
 #ifdef _WIN32
 /* For mkdir() */
 #include <direct.h>

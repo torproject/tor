@@ -42,6 +42,8 @@ hibernating, phase 2:
 #include "router.h"
 #include "statefile.h"
 
+#include "or_connection_st.h"
+
 /** Are we currently awake, asleep, running out of bandwidth, or shutting
  * down? */
 static hibernate_state_t hibernate_state = HIBERNATE_STATE_INITIAL;

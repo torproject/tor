@@ -36,6 +36,19 @@
 #include "routerparse.h"
 #include "routerset.h"
 
+#include "cpath_build_state_st.h"
+#include "crypt_path_st.h"
+#include "crypt_path_reference_st.h"
+#include "edge_connection_st.h"
+#include "extend_info_st.h"
+#include "networkstatus_st.h"
+#include "origin_circuit_st.h"
+#include "rend_authorized_client_st.h"
+#include "rend_encoded_v2_service_descriptor_st.h"
+#include "rend_intro_point_st.h"
+#include "rend_service_descriptor_st.h"
+#include "routerstatus_st.h"
+
 struct rend_service_t;
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
                                             const char *pk_digest);

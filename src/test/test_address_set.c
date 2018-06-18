@@ -10,6 +10,11 @@
 #include "routerlist.h"
 #include "torcert.h"
 
+#include "microdesc_st.h"
+#include "networkstatus_st.h"
+#include "routerinfo_st.h"
+#include "routerstatus_st.h"
+
 #include "test.h"
 
 static networkstatus_t *dummy_ns = NULL;

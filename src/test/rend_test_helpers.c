@@ -7,6 +7,10 @@
 #include "rendcommon.h"
 #include "rend_test_helpers.h"
 
+#include "extend_info_st.h"
+#include "rend_intro_point_st.h"
+#include "rend_service_descriptor_st.h"
+
 void
 generate_desc(int time_diff, rend_encoded_v2_service_descriptor_t **desc,
               char **service_id, int intro_points)

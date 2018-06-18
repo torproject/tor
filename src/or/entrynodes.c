@@ -139,6 +139,9 @@
 #include "transports.h"
 #include "statefile.h"
 
+#include "node_st.h"
+#include "origin_circuit_st.h"
+
 /** A list of existing guard selection contexts. */
 static smartlist_t *guard_contexts = NULL;
 /** The currently enabled guard selection context. */

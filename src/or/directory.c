@@ -23,6 +23,7 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "entrynodes.h"
+#include "fp_pair.h"
 #include "geoip.h"
 #include "hs_cache.h"
 #include "hs_common.h"
@@ -52,6 +53,16 @@
 #include "dirauth/dirvote.h"
 #include "dirauth/mode.h"
 #include "dirauth/shared_random.h"
+
+#include "authority_cert_st.h"
+#include "cached_dir_st.h"
+#include "dir_connection_st.h"
+#include "dir_server_st.h"
+#include "entry_connection_st.h"
+#include "networkstatus_st.h"
+#include "node_st.h"
+#include "rend_service_descriptor_st.h"
+#include "routerinfo_st.h"
 
 /**
  * \file directory.c
@@ -150,6 +161,15 @@ static void connection_dir_close_consensus_fetches(
 #define MICRODESC_CACHE_LIFETIME (48*60*60)
 
 /********* END VARIABLES ************/
+
+/** Convert a connection_t* to a dir_connection_t*; assert if the cast is
+ * invalid. */
+dir_connection_t *
+TO_DIR_CONN(connection_t *c)
+{
+  tor_assert(c->magic == DIR_CONNECTION_MAGIC);
+  return DOWNCAST(dir_connection_t, c);
+}
 
 /** Return false if the directory purpose <b>dir_purpose</b>
  * does not require an anonymous (three-hop) connection.
@@ -5611,6 +5631,27 @@ download_status_reset(download_status_t *dls)
   dls->last_backoff_position = 0;
   dls->last_delay_used = 0;
   /* Don't reset dls->want_authority or dls->increment_on */
+}
+
+/** Return true iff, as of <b>now</b>, the resource tracked by <b>dls</b> is
+ * ready to get its download reattempted. */
+int
+download_status_is_ready(download_status_t *dls, time_t now)
+{
+  /* dls wasn't reset before it was used */
+  if (dls->next_attempt_at == 0) {
+    download_status_reset(dls);
+  }
+
+  return download_status_get_next_attempt_at(dls) <= now;
+}
+
+/** Mark <b>dl</b> as never downloadable. */
+void
+download_status_mark_impossible(download_status_t *dl)
+{
+  dl->n_download_failures = IMPOSSIBLE_TO_DOWNLOAD;
+  dl->n_download_attempts = IMPOSSIBLE_TO_DOWNLOAD;
 }
 
 /** Return the number of failures on <b>dls</b> since the last success (if

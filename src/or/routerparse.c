@@ -79,10 +79,27 @@
 #include "torcert.h"
 #include "voting_schedule.h"
 
+#include "dirauth/dirvote.h"
+
+#include "authority_cert_st.h"
+#include "document_signature_st.h"
+#include "extend_info_st.h"
+#include "extrainfo_st.h"
+#include "microdesc_st.h"
+#include "networkstatus_st.h"
+#include "networkstatus_voter_info_st.h"
+#include "ns_detached_signatures_st.h"
+#include "rend_authorized_client_st.h"
+#include "rend_intro_point_st.h"
+#include "rend_service_descriptor_st.h"
+#include "routerinfo_st.h"
+#include "routerlist_st.h"
+#include "tor_version_st.h"
+#include "vote_microdesc_hash_st.h"
+#include "vote_routerstatus_st.h"
+
 #undef log
 #include <math.h>
-
-#include "dirauth/dirvote.h"
 
 /****************************************************************************/
 

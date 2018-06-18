@@ -26,6 +26,8 @@
 #include "nodelist.h"
 #include "routerset.h"
 
+#include "entry_connection_st.h"
+
 /** A client-side struct to remember requests to rewrite addresses
  * to new addresses. These structs are stored in the hash table
  * "addressmap" below.

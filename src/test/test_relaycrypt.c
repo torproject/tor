@@ -10,6 +10,11 @@
 #include "crypto_rand.h"
 #include "relay.h"
 #include "relay_crypto.h"
+
+#include "cell_st.h"
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
+
 #include "test.h"
 
 static const char KEY_MATERIAL[3][CPATH_KEY_MATERIAL_LEN] = {

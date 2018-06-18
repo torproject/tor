@@ -19,6 +19,9 @@
 #include "hs_cache.h"
 #include "rendcache.h"
 
+#include "entry_connection_st.h"
+#include "socks_request_st.h"
+
 static void *
 entryconn_rewrite_setup(const struct testcase_t *tc)
 {

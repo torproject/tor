@@ -63,6 +63,7 @@
 #include "control.h"
 #include "crypto_rand.h"
 #include "crypto_util.h"
+#include "directory.h"
 #include "geoip.h"
 #include "hs_cache.h"
 #include "main.h"
@@ -80,6 +81,18 @@
 #include "routerparse.h"
 #include "scheduler.h"
 #include "rephist.h"
+
+#include "cell_st.h"
+#include "cell_queue_st.h"
+#include "cpath_build_state_st.h"
+#include "dir_connection_st.h"
+#include "destroy_cell_queue_st.h"
+#include "entry_connection_st.h"
+#include "extend_info_st.h"
+#include "or_circuit_st.h"
+#include "origin_circuit_st.h"
+#include "routerinfo_st.h"
+#include "socks_request_st.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,

@@ -39,6 +39,17 @@
 
 #include "dirauth/mode.h"
 
+#include "authority_cert_st.h"
+#include "crypt_path_st.h"
+#include "dir_connection_st.h"
+#include "dir_server_st.h"
+#include "extend_info_st.h"
+#include "extrainfo_st.h"
+#include "node_st.h"
+#include "origin_circuit_st.h"
+#include "port_cfg_st.h"
+#include "routerinfo_st.h"
+
 /**
  * \file router.c
  * \brief Miscellaneous relay functionality, including RSA key maintenance,
