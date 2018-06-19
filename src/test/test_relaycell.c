@@ -240,10 +240,25 @@ test_circbw_relay(void *arg)
                                      circ->cpath);
   ASSERT_UNCOUNTED_BW();
 
-  /* Sendme on stream: not counted */
+  /* Sendme on valid stream: counted */
   ENTRY_TO_CONN(entryconn)->outbuf_flushlen = 0;
   PACK_CELL(1, RELAY_COMMAND_SENDME, "Data1234");
   connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  ASSERT_COUNTED_BW();
+
+  /* Sendme on valid stream with full window: not counted */
+  ENTRY_TO_CONN(entryconn)->outbuf_flushlen = 0;
+  PACK_CELL(1, RELAY_COMMAND_SENDME, "Data1234");
+  edgeconn->package_window = 500;
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  ASSERT_UNCOUNTED_BW();
+
+  /* Sendme on unknown stream: not counted */
+  ENTRY_TO_CONN(entryconn)->outbuf_flushlen = 0;
+  PACK_CELL(1, RELAY_COMMAND_SENDME, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
   ASSERT_UNCOUNTED_BW();
 
