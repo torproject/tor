@@ -1782,6 +1782,12 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                  rh.stream_id);
         return 0;
       }
+
+      /* Don't allow the other endpoint to request more than our maximim
+       * (ie initial) stream SENDME window worth of data. Well-behaved
+       * stock clients will not request more than this max (as per the check
+       * in the while loop of connection_edge_consider_sending_sendme()).
+       */
       if (conn->package_window + STREAMWINDOW_INCREMENT >
           STREAMWINDOW_START_MAX) {
         static struct ratelim_t stream_warn_ratelim = RATELIM_INIT(600);
