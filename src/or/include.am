@@ -116,8 +116,9 @@ LIBTOR_A_SOURCES = \
 # Modules are conditionnally compiled in tor starting here. We add the C files
 # only if the modules has been enabled at configure time. We always add the
 # source files of every module to libtor-testing.a so we can build the unit
-# tests for everything.
+# tests for everything. See the UNITTESTS_ENABLED branch below.
 #
+LIBTOR_TESTING_A_SOURCES = $(LIBTOR_A_SOURCES)
 
 # The Directory Authority module.
 MODULE_DIRAUTH_SOURCES = \
@@ -131,7 +132,11 @@ endif
 
 src_or_libtor_a_SOURCES = $(LIBTOR_A_SOURCES)
 if UNITTESTS_ENABLED
-src_or_libtor_testing_a_SOURCES = $(LIBTOR_A_SOURCES)
+
+# Add the sources of the modules that are needed for tests to work here.
+LIBTOR_TESTING_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
+
+src_or_libtor_testing_a_SOURCES = $(LIBTOR_TESTING_A_SOURCES)
 else
 src_or_libtor_testing_a_SOURCES =
 endif
