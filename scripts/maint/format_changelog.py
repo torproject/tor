@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright (c) 2014-2017, The Tor Project, Inc.
+# Copyright (c) 2014-2018, The Tor Project, Inc.
 # See LICENSE for licensing information
 #
 # This script reformats a section of the changelog to wrap everything to
