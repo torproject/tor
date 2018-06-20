@@ -50,8 +50,6 @@
 #define TRUNCATED_STR_LEN 14
 /** @} */
 
-#define raw_assert(x) assert(x) // assert OK
-
 /** Defining compile-time constants for Tor log levels (used by the Rust
  * log wrapper at src/rust/tor_log) */
 const int LOG_WARN_ = LOG_WARN;
@@ -89,9 +87,9 @@ sev_to_string(int severity)
     case LOG_NOTICE:  return "notice";
     case LOG_WARN:    return "warn";
     case LOG_ERR:     return "err";
-    default:          /* Call assert, not tor_assert, since tor_assert
-                       * calls log on failure. */
-                      raw_assert(0); return "UNKNOWN"; // LCOV_EXCL_LINE
+    default:     /* Call assert, not tor_assert, since tor_assert
+                  * calls log on failure. */
+                 raw_assert_unreached(); return "UNKNOWN"; // LCOV_EXCL_LINE
   }
 }
 
@@ -1536,4 +1534,3 @@ truncate_logs(void)
     }
   }
 }
-
