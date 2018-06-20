@@ -283,9 +283,12 @@ parse_protocol_list(const char *s)
 bool
 protover_contains_long_protocol_names(const char *s)
 {
-  if (!parse_protocol_list(s))
-    return true;
-  return false;
+  smartlist_t *list = parse_protocol_list(s);
+  if (!list)
+    return true; /* yes, has a dangerous name */
+  SMARTLIST_FOREACH(list, proto_entry_t *, ent, proto_entry_free(ent));
+  smartlist_free(list);
+  return false; /* no, looks fine */
 }
 
 /**
