@@ -9,8 +9,8 @@
 #ifndef TOR_HS_INTRO_H
 #define TOR_HS_INTRO_H
 
-#include "crypto_curve25519.h"
-#include "torcert.h"
+#include "common/crypto_curve25519.h"
+#include "or/torcert.h"
 
 /* Authentication key type in an ESTABLISH_INTRO cell. */
 typedef enum {
@@ -55,8 +55,8 @@ void hs_intropoint_clear(hs_intropoint_t *ip);
 
 #ifdef HS_INTROPOINT_PRIVATE
 
-#include "hs/cell_establish_intro.h"
-#include "hs/cell_introduce1.h"
+#include "trunnel/hs/cell_establish_intro.h"
+#include "trunnel/hs/cell_introduce1.h"
 
 STATIC int
 verify_establish_intro_cell(const trn_cell_establish_intro_t *out,

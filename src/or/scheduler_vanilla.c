@@ -1,12 +1,12 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or.h"
-#include "config.h"
+#include "or/or.h"
+#include "or/config.h"
 #define TOR_CHANNEL_INTERNAL_
-#include "channel.h"
+#include "or/channel.h"
 #define SCHEDULER_PRIVATE_
-#include "scheduler.h"
+#include "or/scheduler.h"
 
 /*****************************************************************************
  * Other internal data

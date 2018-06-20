@@ -11,16 +11,16 @@
 
 #include <stdbool.h>
 
-#include "or.h"
-#include "address.h"
-#include "bridges.h"
-#include "config.h"
-#include "container.h"
-#include "transports.h"
-#include "util.h"
+#include "or/or.h"
+#include "common/address.h"
+#include "or/bridges.h"
+#include "or/config.h"
+#include "common/container.h"
+#include "or/transports.h"
+#include "common/util.h"
 
 /* Test suite stuff */
-#include "test.h"
+#include "test/test.h"
 
 /**
  * A mocked transport_t, constructed via mock_transport_get_by_name().

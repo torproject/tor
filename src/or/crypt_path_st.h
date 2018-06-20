@@ -7,7 +7,7 @@
 #ifndef CRYPT_PATH_ST_H
 #define CRYPT_PATH_ST_H
 
-#include "relay_crypto_st.h"
+#include "or/relay_crypto_st.h"
 
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */

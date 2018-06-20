@@ -7,14 +7,14 @@
  */
 
 #include "orconfig.h"
-#include "compat.h"
+#include "common/compat.h"
 #define COMPAT_LIBEVENT_PRIVATE
-#include "compat_libevent.h"
+#include "common/compat_libevent.h"
 
-#include "crypto_rand.h"
+#include "common/crypto_rand.h"
 
-#include "util.h"
-#include "torlog.h"
+#include "common/util.h"
+#include "common/torlog.h"
 
 #include <event2/event.h>
 #include <event2/thread.h>

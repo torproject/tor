@@ -6,9 +6,9 @@
  * \brief Common code to parse and validate various type of descriptors.
  **/
 
-#include "parsecommon.h"
-#include "torlog.h"
-#include "util_format.h"
+#include "or/parsecommon.h"
+#include "common/torlog.h"
+#include "common/util_format.h"
 
 #define MIN_ANNOTATION A_PURPOSE
 #define MAX_ANNOTATION A_UNKNOWN_

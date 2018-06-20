@@ -4,14 +4,14 @@
 #define ROUTERPARSE_PRIVATE
 #define HS_DESCRIPTOR_PRIVATE
 
-#include "or.h"
-#include "ed25519_cert.h" /* Trunnel interface. */
-#include "crypto_ed25519.h"
-#include "hs_descriptor.h"
-#include "routerparse.h"
-#include "util.h"
+#include "or/or.h"
+#include "trunnel/ed25519_cert.h" /* Trunnel interface. */
+#include "common/crypto_ed25519.h"
+#include "or/hs_descriptor.h"
+#include "or/routerparse.h"
+#include "common/util.h"
 
-#include "fuzzing.h"
+#include "test/fuzz/fuzzing.h"
 
 static void
 mock_dump_desc__nodump(const char *desc, const char *type)

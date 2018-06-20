@@ -42,7 +42,7 @@
 #ifndef TOR_PUBSUB_H
 #define TOR_PUBSUB_H
 
-#include "torint.h"
+#include "common/torint.h"
 
 /**
  * Flag for T_subscribe: die with an assertion failure if the event

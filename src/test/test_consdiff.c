@@ -4,12 +4,12 @@
 
 #define CONSDIFF_PRIVATE
 
-#include "or.h"
-#include "test.h"
+#include "or/or.h"
+#include "test/test.h"
 
-#include "consdiff.h"
-#include "memarea.h"
-#include "log_test_helpers.h"
+#include "or/consdiff.h"
+#include "common/memarea.h"
+#include "test/log_test_helpers.h"
 
 #define tt_str_eq_line(a,b) \
   tt_assert(line_str_eq((b),(a)))

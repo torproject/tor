@@ -25,10 +25,10 @@
 
 #define HS_CONFIG_PRIVATE
 
-#include "hs_common.h"
-#include "hs_config.h"
-#include "hs_service.h"
-#include "rendservice.h"
+#include "or/hs_common.h"
+#include "or/hs_config.h"
+#include "or/hs_service.h"
+#include "or/rendservice.h"
 
 /* Using the given list of services, stage them into our global state. Every
  * service version are handled. This function can remove entries in the given

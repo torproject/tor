@@ -5,22 +5,22 @@
 
 #define RELAY_PRIVATE
 #define CIRCUITLIST_PRIVATE
-#include "or.h"
-#include "main.h"
-#include "config.h"
-#include "connection.h"
-#include "crypto.h"
-#include "circuitbuild.h"
-#include "circuitlist.h"
-#include "connection_edge.h"
-#include "relay.h"
-#include "test.h"
+#include "or/or.h"
+#include "or/main.h"
+#include "or/config.h"
+#include "or/connection.h"
+#include "common/crypto.h"
+#include "or/circuitbuild.h"
+#include "or/circuitlist.h"
+#include "or/connection_edge.h"
+#include "or/relay.h"
+#include "test/test.h"
 
-#include "cell_st.h"
-#include "crypt_path_st.h"
-#include "entry_connection_st.h"
-#include "origin_circuit_st.h"
-#include "socks_request_st.h"
+#include "or/cell_st.h"
+#include "or/crypt_path_st.h"
+#include "or/entry_connection_st.h"
+#include "or/origin_circuit_st.h"
+#include "or/socks_request_st.h"
 
 static int srm_ncalls;
 static entry_connection_t *srm_conn;

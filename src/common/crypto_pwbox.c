@@ -8,15 +8,15 @@
  * them to disk.
  */
 
-#include "crypto.h"
-#include "crypto_digest.h"
-#include "crypto_pwbox.h"
-#include "crypto_rand.h"
-#include "crypto_s2k.h"
-#include "crypto_util.h"
-#include "di_ops.h"
-#include "util.h"
-#include "pwbox.h"
+#include "common/crypto.h"
+#include "common/crypto_digest.h"
+#include "common/crypto_pwbox.h"
+#include "common/crypto_rand.h"
+#include "common/crypto_s2k.h"
+#include "common/crypto_util.h"
+#include "common/di_ops.h"
+#include "common/util.h"
+#include "trunnel/pwbox.h"
 
 /* 8 bytes "TORBOX00"
    1 byte: header len (H)

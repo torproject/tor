@@ -3,13 +3,13 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or.h"
-#include "compat_threads.h"
-#include "onion.h"
-#include "workqueue.h"
-#include "crypto_curve25519.h"
-#include "crypto_rand.h"
-#include "compat_libevent.h"
+#include "or/or.h"
+#include "common/compat_threads.h"
+#include "or/onion.h"
+#include "common/workqueue.h"
+#include "common/crypto_curve25519.h"
+#include "common/crypto_rand.h"
+#include "common/compat_libevent.h"
 
 #include <stdio.h>
 

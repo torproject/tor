@@ -9,9 +9,9 @@
  * \brief Block of functions related with HKDF utilities and operations.
  **/
 
-#include "crypto_hkdf.h"
-#include "crypto_util.h"
-#include "crypto_digest.h"
+#include "common/crypto_hkdf.h"
+#include "common/crypto_util.h"
+#include "common/crypto_digest.h"
 
 /** Given <b>key_in_len</b> bytes of negotiated randomness in <b>key_in</b>
  * ("K"), expand it into <b>key_out_len</b> bytes of negotiated key material in

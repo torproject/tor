@@ -22,9 +22,9 @@
  * specified, and a linked list of key-value pairs.
  */
 
-#include "or.h"
-#include "confparse.h"
-#include "routerset.h"
+#include "or/or.h"
+#include "or/confparse.h"
+#include "or/routerset.h"
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_msec_interval(const char *s, int *ok);

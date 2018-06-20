@@ -7,10 +7,10 @@
 
 /* To prevent 'assert' from going away. */
 #undef TOR_COVERAGE
-#include "or.h"
-#include "util.h"
-#include "backtrace.h"
-#include "torlog.h"
+#include "or/or.h"
+#include "common/util.h"
+#include "common/backtrace.h"
+#include "common/torlog.h"
 
 /* -1: no crash.
  *  0: crash with a segmentation fault.

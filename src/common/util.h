@@ -12,17 +12,17 @@
 #define TOR_UTIL_H
 
 #include "orconfig.h"
-#include "torint.h"
-#include "compat.h"
-#include "di_ops.h"
-#include "testsupport.h"
+#include "common/torint.h"
+#include "common/compat.h"
+#include "common/di_ops.h"
+#include "common/testsupport.h"
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef _WIN32
 /* for the correct alias to struct stat */
 #include <sys/stat.h>
 #endif
-#include "util_bug.h"
+#include "common/util_bug.h"
 
 #ifndef O_BINARY
 #define O_BINARY 0

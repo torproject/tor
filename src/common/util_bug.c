@@ -8,10 +8,10 @@
  **/
 
 #include "orconfig.h"
-#include "util_bug.h"
-#include "torlog.h"
-#include "backtrace.h"
-#include "container.h"
+#include "common/util_bug.h"
+#include "common/torlog.h"
+#include "common/backtrace.h"
+#include "common/container.h"
 
 #ifdef __COVERITY__
 int bug_macro_deadcode_dummy__ = 0;

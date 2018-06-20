@@ -8,15 +8,15 @@
 #define UTIL_PRIVATE
 #define STATEFILE_PRIVATE
 #define CONTROL_PRIVATE
-#include "or.h"
-#include "config.h"
-#include "confparse.h"
-#include "control.h"
-#include "transports.h"
-#include "circuitbuild.h"
-#include "util.h"
-#include "statefile.h"
-#include "test.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/confparse.h"
+#include "or/control.h"
+#include "or/transports.h"
+#include "or/circuitbuild.h"
+#include "common/util.h"
+#include "or/statefile.h"
+#include "test/test.h"
 
 static void
 reset_mp(managed_proxy_t *mp)

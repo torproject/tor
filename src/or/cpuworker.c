@@ -17,22 +17,22 @@
  *      <li>and for calculating diffs and compressing them in consdiffmgr.c.
  *  </ul>
  **/
-#include "or.h"
-#include "channel.h"
-#include "circuitbuild.h"
-#include "circuitlist.h"
-#include "connection_or.h"
-#include "config.h"
-#include "cpuworker.h"
-#include "crypto_rand.h"
-#include "crypto_util.h"
-#include "main.h"
-#include "onion.h"
-#include "rephist.h"
-#include "router.h"
-#include "workqueue.h"
+#include "or/or.h"
+#include "or/channel.h"
+#include "or/circuitbuild.h"
+#include "or/circuitlist.h"
+#include "or/connection_or.h"
+#include "or/config.h"
+#include "or/cpuworker.h"
+#include "common/crypto_rand.h"
+#include "common/crypto_util.h"
+#include "or/main.h"
+#include "or/onion.h"
+#include "or/rephist.h"
+#include "or/router.h"
+#include "common/workqueue.h"
 
-#include "or_circuit_st.h"
+#include "or/or_circuit_st.h"
 
 static void queue_pending_tasks(void);
 

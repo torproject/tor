@@ -3,11 +3,11 @@
 
 #include "orconfig.h"
 #define KEYPIN_PRIVATE
-#include "or.h"
-#include "keypin.h"
-#include "util.h"
+#include "or/or.h"
+#include "or/keypin.h"
+#include "common/util.h"
 
-#include "test.h"
+#include "test/test.h"
 
 static void
 test_keypin_parse_line(void *arg)

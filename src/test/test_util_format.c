@@ -2,13 +2,13 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "or.h"
+#include "or/or.h"
 
-#include "test.h"
+#include "test/test.h"
 
-#include "crypto_rand.h"
+#include "common/crypto_rand.h"
 #define UTIL_FORMAT_PRIVATE
-#include "util_format.h"
+#include "common/util_format.h"
 
 #define NS_MODULE util_format
 

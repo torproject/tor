@@ -74,23 +74,23 @@
  * (The "rephist" name originally stood for "reputation and history". )
  **/
 
-#include "or.h"
-#include "circuitlist.h"
-#include "circuituse.h"
-#include "config.h"
-#include "crypto_rand.h"
-#include "networkstatus.h"
-#include "nodelist.h"
-#include "rephist.h"
-#include "router.h"
-#include "routerlist.h"
+#include "or/or.h"
+#include "or/circuitlist.h"
+#include "or/circuituse.h"
+#include "or/config.h"
+#include "common/crypto_rand.h"
+#include "or/networkstatus.h"
+#include "or/nodelist.h"
+#include "or/rephist.h"
+#include "or/router.h"
+#include "or/routerlist.h"
 #include "ht.h"
-#include "channelpadding.h"
-#include "connection_or.h"
-#include "statefile.h"
+#include "or/channelpadding.h"
+#include "or/connection_or.h"
+#include "or/statefile.h"
 
-#include "networkstatus_st.h"
-#include "or_circuit_st.h"
+#include "or/networkstatus_st.h"
+#include "or/or_circuit_st.h"
 
 static void bw_arrays_init(void);
 static void predicted_ports_alloc(void);

@@ -2,10 +2,10 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "test.h"
+#include "test/test.h"
 
-#include "util.h"
-#include "handles.h"
+#include "common/util.h"
+#include "common/handles.h"
 
 typedef struct demo_t {
   HANDLE_ENTRY(demo, demo_t);

@@ -4,9 +4,9 @@
 #ifndef TOR_ONION_NTOR_H
 #define TOR_ONION_NTOR_H
 
-#include "torint.h"
-#include "crypto_curve25519.h"
-#include "di_ops.h"
+#include "common/torint.h"
+#include "common/crypto_curve25519.h"
+#include "common/di_ops.h"
 
 /** State to be maintained by a client between sending an ntor onionskin
  * and receiving a reply. */

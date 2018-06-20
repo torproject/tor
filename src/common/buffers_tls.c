@@ -7,14 +7,14 @@
 #define BUFFERS_PRIVATE
 #include "orconfig.h"
 #include <stddef.h>
-#include "buffers.h"
-#include "buffers_tls.h"
-#include "compat.h"
-#include "compress.h"
-#include "util.h"
-#include "torint.h"
-#include "torlog.h"
-#include "tortls.h"
+#include "common/buffers.h"
+#include "common/buffers_tls.h"
+#include "common/compat.h"
+#include "common/compress.h"
+#include "common/util.h"
+#include "common/torint.h"
+#include "common/torlog.h"
+#include "common/tortls.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

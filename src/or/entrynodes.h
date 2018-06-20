@@ -12,7 +12,7 @@
 #ifndef TOR_ENTRYNODES_H
 #define TOR_ENTRYNODES_H
 
-#include "handles.h"
+#include "common/handles.h"
 
 /* Forward declare for guard_selection_t; entrynodes.c has the real struct */
 typedef struct guard_selection_s guard_selection_t;

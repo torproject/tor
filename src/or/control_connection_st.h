@@ -7,8 +7,8 @@
 #ifndef CONTROL_CONNECTION_ST_H
 #define CONTROL_CONNECTION_ST_H
 
-#include "or.h"
-#include "connection_st.h"
+#include "or/or.h"
+#include "or/connection_st.h"
 
 /** Subtype of connection_t for an connection to a controller. */
 struct control_connection_t {

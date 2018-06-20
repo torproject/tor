@@ -7,7 +7,7 @@
 #ifndef ROUTERLIST_ST_H
 #define ROUTERLIST_ST_H
 
-#include "desc_store_st.h"
+#include "or/desc_store_st.h"
 
 /** Contents of a directory of onion routers. */
 struct routerlist_t {

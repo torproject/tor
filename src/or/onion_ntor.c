@@ -21,13 +21,13 @@
 #include "orconfig.h"
 
 #define ONION_NTOR_PRIVATE
-#include "crypto.h"
-#include "crypto_hkdf.h"
-#include "crypto_digest.h"
-#include "crypto_util.h"
-#include "onion_ntor.h"
-#include "torlog.h"
-#include "util.h"
+#include "common/crypto.h"
+#include "common/crypto_hkdf.h"
+#include "common/crypto_digest.h"
+#include "common/crypto_util.h"
+#include "or/onion_ntor.h"
+#include "common/torlog.h"
+#include "common/util.h"
 
 /** Free storage held in an ntor handshake state. */
 void

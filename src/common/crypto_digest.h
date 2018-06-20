@@ -15,8 +15,8 @@
 
 #include <stdio.h>
 
-#include "container.h"
-#include "torint.h"
+#include "common/container.h"
+#include "common/torint.h"
 
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20

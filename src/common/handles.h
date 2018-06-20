@@ -51,7 +51,7 @@
 
 #include "orconfig.h"
 #include "tor_queue.h"
-#include "util.h"
+#include "common/util.h"
 
 #define HANDLE_ENTRY(name, structname)         \
   struct name ## _handle_head_t *handle_head

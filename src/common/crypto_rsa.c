@@ -9,14 +9,14 @@
  * \brief Block of functions related with RSA utilities and operations.
  **/
 
-#include "crypto.h"
-#include "crypto_curve25519.h"
-#include "crypto_digest.h"
-#include "crypto_format.h"
-#include "compat_openssl.h"
-#include "crypto_rand.h"
-#include "crypto_rsa.h"
-#include "crypto_util.h"
+#include "common/crypto.h"
+#include "common/crypto_curve25519.h"
+#include "common/crypto_digest.h"
+#include "common/crypto_format.h"
+#include "common/compat_openssl.h"
+#include "common/crypto_rand.h"
+#include "common/crypto_rsa.h"
+#include "common/crypto_util.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
@@ -33,9 +33,9 @@ DISABLE_GCC_WARNING(redundant-decls)
 
 ENABLE_GCC_WARNING(redundant-decls)
 
-#include "torlog.h"
-#include "util.h"
-#include "util_format.h"
+#include "common/torlog.h"
+#include "common/util.h"
+#include "common/util_format.h"
 
 /** Declaration for crypto_pk_t structure. */
 struct crypto_pk_t

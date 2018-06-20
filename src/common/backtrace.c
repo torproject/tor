@@ -14,9 +14,9 @@
  */
 
 #include "orconfig.h"
-#include "compat.h"
-#include "util.h"
-#include "torlog.h"
+#include "common/compat.h"
+#include "common/util.h"
+#include "common/torlog.h"
 
 #ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
@@ -40,7 +40,7 @@
 #endif /* defined(HAVE_CYGWIN_SIGNAL_H) || ... */
 
 #define EXPOSE_CLEAN_BACKTRACE
-#include "backtrace.h"
+#include "common/backtrace.h"
 
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)

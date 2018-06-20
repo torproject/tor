@@ -9,11 +9,11 @@
 #include "orconfig.h"
 #include <stddef.h>
 #include <stdlib.h>
-#include "memarea.h"
-#include "util.h"
-#include "compat.h"
-#include "torlog.h"
-#include "container.h"
+#include "common/memarea.h"
+#include "common/util.h"
+#include "common/compat.h"
+#include "common/torlog.h"
+#include "common/container.h"
 
 #ifndef DISABLE_MEMORY_SENTINELS
 

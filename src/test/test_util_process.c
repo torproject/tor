@@ -3,13 +3,13 @@
 
 #define UTIL_PROCESS_PRIVATE
 #include "orconfig.h"
-#include "or.h"
+#include "or/or.h"
 
-#include "test.h"
+#include "test/test.h"
 
-#include "util_process.h"
+#include "common/util_process.h"
 
-#include "log_test_helpers.h"
+#include "test/log_test_helpers.h"
 
 #ifndef _WIN32
 #define NS_MODULE util_process

@@ -19,10 +19,10 @@
 #include <sys/wait.h>
 #endif
 
-#include "compat.h"
-#include "util.h"
-#include "torlog.h"
-#include "util_process.h"
+#include "common/compat.h"
+#include "common/util.h"
+#include "common/torlog.h"
+#include "common/util_process.h"
 #include "ht.h"
 
 /* ================================================== */

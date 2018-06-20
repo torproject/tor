@@ -38,10 +38,10 @@
 
 #define CONSDIFF_PRIVATE
 
-#include "or.h"
-#include "consdiff.h"
-#include "memarea.h"
-#include "routerparse.h"
+#include "or/or.h"
+#include "or/consdiff.h"
+#include "common/memarea.h"
+#include "or/routerparse.h"
 
 static const char* ns_diff_version = "network-status-diff-version 1";
 static const char* hash_token = "hash";

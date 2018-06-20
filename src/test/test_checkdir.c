@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "or.h"
+#include "or/or.h"
 
 #ifdef _WIN32
 #include <direct.h>
@@ -10,9 +10,9 @@
 #include <dirent.h>
 #endif
 
-#include "config.h"
-#include "test.h"
-#include "util.h"
+#include "or/config.h"
+#include "test/test.h"
+#include "common/util.h"
 
 #ifdef _WIN32
 #define mkdir(a,b) mkdir(a)

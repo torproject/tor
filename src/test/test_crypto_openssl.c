@@ -7,15 +7,15 @@
 
 #define CRYPTO_RAND_PRIVATE
 
-#include "crypto_rand.h"
-#include "util.h"
-#include "util_format.h"
-#include "compat.h"
-#include "test.h"
+#include "common/crypto_rand.h"
+#include "common/util.h"
+#include "common/util_format.h"
+#include "common/compat.h"
+#include "test/test.h"
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
-#include "compat_openssl.h"
+#include "common/compat_openssl.h"
 
 /* Test for rectifying openssl RAND engine. */
 static void

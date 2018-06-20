@@ -5,17 +5,17 @@
 #define CIRCUITBUILD_PRIVATE
 #define CIRCUITLIST_PRIVATE
 #define HS_CIRCUITMAP_PRIVATE
-#include "or.h"
-#include "channel.h"
-#include "circuitbuild.h"
-#include "circuitlist.h"
-#include "circuitmux_ewma.h"
-#include "hs_circuitmap.h"
-#include "test.h"
-#include "log_test_helpers.h"
+#include "or/or.h"
+#include "or/channel.h"
+#include "or/circuitbuild.h"
+#include "or/circuitlist.h"
+#include "or/circuitmux_ewma.h"
+#include "or/hs_circuitmap.h"
+#include "test/test.h"
+#include "test/log_test_helpers.h"
 
-#include "or_circuit_st.h"
-#include "origin_circuit_st.h"
+#include "or/or_circuit_st.h"
+#include "or/origin_circuit_st.h"
 
 static channel_t *
 new_fake_channel(void)

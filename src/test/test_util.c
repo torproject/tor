@@ -8,16 +8,16 @@
 #define COMPAT_TIME_PRIVATE
 #define CONTROL_PRIVATE
 #define UTIL_PRIVATE
-#include "or.h"
-#include "buffers.h"
-#include "config.h"
-#include "control.h"
-#include "crypto_rand.h"
-#include "test.h"
-#include "memarea.h"
-#include "util_process.h"
-#include "log_test_helpers.h"
-#include "compress_zstd.h"
+#include "or/or.h"
+#include "common/buffers.h"
+#include "or/config.h"
+#include "or/control.h"
+#include "common/crypto_rand.h"
+#include "test/test.h"
+#include "common/memarea.h"
+#include "common/util_process.h"
+#include "test/log_test_helpers.h"
+#include "common/compress_zstd.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>

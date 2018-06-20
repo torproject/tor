@@ -21,8 +21,8 @@
 
 #define REPLAYCACHE_PRIVATE
 
-#include "or.h"
-#include "replaycache.h"
+#include "or/or.h"
+#include "or/replaycache.h"
 
 /** Free the replaycache r and all of its entries.
  */

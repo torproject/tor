@@ -4,10 +4,10 @@
 #ifndef TOR_CRYPTO_ED25519_H
 #define TOR_CRYPTO_ED25519_H
 
-#include "testsupport.h"
-#include "torint.h"
-#include "crypto_curve25519.h"
-#include "util.h"
+#include "common/testsupport.h"
+#include "common/torint.h"
+#include "common/crypto_curve25519.h"
+#include "common/util.h"
 
 #define ED25519_PUBKEY_LEN 32
 #define ED25519_SECKEY_LEN 64

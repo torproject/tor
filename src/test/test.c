@@ -9,7 +9,7 @@
  **/
 
 #include "orconfig.h"
-#include "crypto_rand.h"
+#include "common/crypto_rand.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -39,34 +39,34 @@
 long int lround(double x);
 double fabs(double x);
 
-#include "or.h"
-#include "backtrace.h"
-#include "buffers.h"
-#include "circuitlist.h"
-#include "circuitstats.h"
-#include "compress.h"
-#include "config.h"
-#include "connection_edge.h"
-#include "rendcommon.h"
-#include "rendcache.h"
-#include "test.h"
-#include "main.h"
-#include "memarea.h"
-#include "onion.h"
-#include "onion_ntor.h"
-#include "onion_fast.h"
-#include "onion_tap.h"
-#include "policies.h"
-#include "rephist.h"
-#include "routerparse.h"
-#include "statefile.h"
-#include "crypto_curve25519.h"
+#include "or/or.h"
+#include "common/backtrace.h"
+#include "common/buffers.h"
+#include "or/circuitlist.h"
+#include "or/circuitstats.h"
+#include "common/compress.h"
+#include "or/config.h"
+#include "or/connection_edge.h"
+#include "or/rendcommon.h"
+#include "or/rendcache.h"
+#include "test/test.h"
+#include "or/main.h"
+#include "common/memarea.h"
+#include "or/onion.h"
+#include "or/onion_ntor.h"
+#include "or/onion_fast.h"
+#include "or/onion_tap.h"
+#include "or/policies.h"
+#include "or/rephist.h"
+#include "or/routerparse.h"
+#include "or/statefile.h"
+#include "common/crypto_curve25519.h"
 
-#include "extend_info_st.h"
-#include "or_circuit_st.h"
-#include "rend_encoded_v2_service_descriptor_st.h"
-#include "rend_intro_point_st.h"
-#include "rend_service_descriptor_st.h"
+#include "or/extend_info_st.h"
+#include "or/or_circuit_st.h"
+#include "or/rend_encoded_v2_service_descriptor_st.h"
+#include "or/rend_intro_point_st.h"
+#include "or/rend_service_descriptor_st.h"
 
 /** Run unit tests for the onion handshake code. */
 static void

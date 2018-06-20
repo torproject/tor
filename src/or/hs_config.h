@@ -9,7 +9,7 @@
 #ifndef TOR_HS_CONFIG_H
 #define TOR_HS_CONFIG_H
 
-#include "or.h"
+#include "or/or.h"
 
 /* Max value for HiddenServiceMaxStreams */
 #define HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT 65535

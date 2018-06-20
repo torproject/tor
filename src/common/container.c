@@ -11,11 +11,11 @@
  * a digest-to-void* map.
  **/
 
-#include "compat.h"
-#include "util.h"
-#include "torlog.h"
-#include "container.h"
-#include "crypto_digest.h"
+#include "common/compat.h"
+#include "common/util.h"
+#include "common/torlog.h"
+#include "common/container.h"
+#include "common/crypto_digest.h"
 
 #include <stdlib.h>
 #include <string.h>

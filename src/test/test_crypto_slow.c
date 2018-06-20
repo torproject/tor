@@ -5,11 +5,11 @@
 
 #include "orconfig.h"
 #define CRYPTO_S2K_PRIVATE
-#include "or.h"
-#include "test.h"
-#include "crypto_s2k.h"
-#include "crypto_pwbox.h"
-#include "crypto_rand.h"
+#include "or/or.h"
+#include "test/test.h"
+#include "common/crypto_s2k.h"
+#include "common/crypto_pwbox.h"
+#include "common/crypto_rand.h"
 
 #if defined(HAVE_LIBSCRYPT_H) && defined(HAVE_LIBSCRYPT_SCRYPT)
 #define HAVE_LIBSCRYPT

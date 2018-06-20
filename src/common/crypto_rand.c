@@ -14,22 +14,22 @@
 #ifndef CRYPTO_RAND_PRIVATE
 #define CRYPTO_RAND_PRIVATE
 
-#include "crypto_rand.h"
+#include "common/crypto_rand.h"
 
 #ifdef _WIN32
 #include <windows.h>
 #include <wincrypt.h>
 #endif /* defined(_WIN32) */
 
-#include "container.h"
-#include "compat.h"
-#include "compat_openssl.h"
-#include "crypto_util.h"
-#include "sandbox.h"
-#include "testsupport.h"
-#include "torlog.h"
-#include "util.h"
-#include "util_format.h"
+#include "common/container.h"
+#include "common/compat.h"
+#include "common/compat_openssl.h"
+#include "common/crypto_util.h"
+#include "common/sandbox.h"
+#include "common/testsupport.h"
+#include "common/torlog.h"
+#include "common/util.h"
+#include "common/util_format.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/rand.h>

@@ -35,13 +35,13 @@
 #include <iphlpapi.h>
 #endif /* defined(_WIN32) */
 
-#include "compat.h"
-#include "util.h"
-#include "util_format.h"
-#include "address.h"
-#include "torlog.h"
-#include "container.h"
-#include "sandbox.h"
+#include "common/compat.h"
+#include "common/util.h"
+#include "common/util_format.h"
+#include "common/address.h"
+#include "common/torlog.h"
+#include "common/container.h"
+#include "common/sandbox.h"
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>

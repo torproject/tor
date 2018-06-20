@@ -9,9 +9,9 @@
 #ifndef TOR_SCHEDULER_H
 #define TOR_SCHEDULER_H
 
-#include "or.h"
-#include "channel.h"
-#include "testsupport.h"
+#include "or/or.h"
+#include "or/channel.h"
+#include "common/testsupport.h"
 
 /** Scheduler type, we build an ordered list with those values from the
  * parsed strings in Schedulers. The reason to do such a thing is so we can

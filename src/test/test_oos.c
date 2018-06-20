@@ -5,15 +5,15 @@
 
 #define CONNECTION_PRIVATE
 
-#include "or.h"
-#include "config.h"
-#include "connection.h"
-#include "connection_or.h"
-#include "main.h"
-#include "test.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/connection.h"
+#include "or/connection_or.h"
+#include "or/main.h"
+#include "test/test.h"
 
-#include "dir_connection_st.h"
-#include "or_connection_st.h"
+#include "or/dir_connection_st.h"
+#include "or/or_connection_st.h"
 
 static or_options_t mock_options;
 

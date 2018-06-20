@@ -46,7 +46,7 @@ def fix_includes(inp, out, mapping):
 incs = get_include_map()
 
 for dirpath,dirnames,fnames in os.walk("src"):
-    exclude(["ext", "trunnel"], dirnames)
+    exclude(["trunnel"], dirnames)
 
     for fname in fnames:
         if fname.endswith(".c") or fname.endswith(".h"):

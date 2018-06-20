@@ -13,7 +13,7 @@
 #include <unistd.h>
 #endif
 
-#include "compat.h"
+#include "common/compat.h"
 
 /* Some versions of OpenSSL declare X509_STORE_CTX_set_verify_cb twice in
  * x509.h and x509_vfy.h. Suppress the GCC warning so we can build with
@@ -36,14 +36,14 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include <assert.h>
 #endif
 
-#include "util.h"
-#include "torlog.h"
-#include "crypto.h"
-#include "crypto_digest.h"
-#include "crypto_rand.h"
-#include "crypto_util.h"
-#include "address.h"
-#include "util_format.h"
+#include "common/util.h"
+#include "common/torlog.h"
+#include "common/crypto.h"
+#include "common/crypto_digest.h"
+#include "common/crypto_rand.h"
+#include "common/crypto_util.h"
+#include "common/address.h"
+#include "common/util_format.h"
 
 #define IDENTITY_KEY_BITS 3072
 #define SIGNING_KEY_BITS 2048

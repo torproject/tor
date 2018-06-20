@@ -12,8 +12,8 @@
 #ifndef TOR_DIRCOLLATE_H
 #define TOR_DIRCOLLATE_H
 
-#include "testsupport.h"
-#include "or.h"
+#include "common/testsupport.h"
+#include "or/or.h"
 
 typedef struct dircollator_s dircollator_t;
 

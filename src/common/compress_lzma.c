@@ -13,10 +13,10 @@
 
 #include "orconfig.h"
 
-#include "util.h"
-#include "torlog.h"
-#include "compress.h"
-#include "compress_lzma.h"
+#include "common/util.h"
+#include "common/torlog.h"
+#include "common/compress.h"
+#include "common/compress_lzma.h"
 
 #ifdef HAVE_LZMA
 #include <lzma.h>

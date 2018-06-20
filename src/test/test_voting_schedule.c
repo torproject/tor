@@ -3,10 +3,10 @@
 
 #include "orconfig.h"
 
-#include "or.h"
-#include "voting_schedule.h"
+#include "or/or.h"
+#include "or/voting_schedule.h"
 
-#include "test.h"
+#include "test/test.h"
 
 static void
 test_voting_schedule_interval_start(void *arg)

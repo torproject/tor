@@ -4,9 +4,9 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "or.h"
-#include "compat_threads.h"
-#include "test.h"
+#include "or/or.h"
+#include "common/compat_threads.h"
+#include "test/test.h"
 
 /** mutex for thread test to stop the threads hitting data at the same time. */
 static tor_mutex_t *thread_test_mutex_ = NULL;

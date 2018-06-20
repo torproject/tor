@@ -11,7 +11,7 @@
 #ifndef TOR_CHANNELPADDING_H
 #define TOR_CHANNELPADDING_H
 
-#include "channelpadding_negotiation.h"
+#include "trunnel/channelpadding_negotiation.h"
 
 #define CHANNELPADDING_TOR2WEB_PARAM  "nf_pad_tor2web"
 #define CHANNELPADDING_TOR2WEB_DEFAULT 1

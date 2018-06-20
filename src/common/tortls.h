@@ -11,10 +11,10 @@
  * \brief Headers for tortls.c
  **/
 
-#include "crypto_rsa.h"
-#include "compat_openssl.h"
-#include "compat.h"
-#include "testsupport.h"
+#include "common/crypto_rsa.h"
+#include "common/compat_openssl.h"
+#include "common/compat.h"
+#include "common/testsupport.h"
 
 /* Opaque structure to hold a TLS connection. */
 typedef struct tor_tls_t tor_tls_t;

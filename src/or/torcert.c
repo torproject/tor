@@ -25,17 +25,17 @@
  * that one is authority_cert_t, and it's mostly handled in routerlist.c.
  */
 
-#include "or.h"
-#include "config.h"
-#include "crypto_util.h"
-#include "torcert.h"
-#include "ed25519_cert.h"
-#include "torlog.h"
-#include "util.h"
-#include "compat.h"
-#include "link_handshake.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "common/crypto_util.h"
+#include "or/torcert.h"
+#include "trunnel/ed25519_cert.h"
+#include "common/torlog.h"
+#include "common/util.h"
+#include "common/compat.h"
+#include "trunnel/link_handshake.h"
 
-#include "or_handshake_certs_st.h"
+#include "or/or_handshake_certs_st.h"
 
 /** Helper for tor_cert_create(): signs any 32 bytes, not just an ed25519
  * key.

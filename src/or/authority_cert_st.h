@@ -7,7 +7,7 @@
 #ifndef AUTHORITY_CERT_ST_H
 #define AUTHORITY_CERT_ST_H
 
-#include "signed_descriptor_st.h"
+#include "or/signed_descriptor_st.h"
 
 /** Certificate for v3 directory protocol: binds long-term authority identity
  * keys to medium-term authority signing keys. */

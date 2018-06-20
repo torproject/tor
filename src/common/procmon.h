@@ -9,10 +9,10 @@
 #ifndef TOR_PROCMON_H
 #define TOR_PROCMON_H
 
-#include "compat.h"
-#include "compat_libevent.h"
+#include "common/compat.h"
+#include "common/compat_libevent.h"
 
-#include "torlog.h"
+#include "common/torlog.h"
 
 typedef struct tor_process_monitor_t tor_process_monitor_t;
 

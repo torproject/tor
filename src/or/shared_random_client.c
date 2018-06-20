@@ -9,15 +9,15 @@
  **/
 
 #define SHARED_RANDOM_CLIENT_PRIVATE
-#include "shared_random_client.h"
+#include "or/shared_random_client.h"
 
-#include "config.h"
-#include "voting_schedule.h"
-#include "networkstatus.h"
-#include "util.h"
-#include "util_format.h"
+#include "or/config.h"
+#include "or/voting_schedule.h"
+#include "or/networkstatus.h"
+#include "common/util.h"
+#include "common/util_format.h"
 
-#include "networkstatus_st.h"
+#include "or/networkstatus_st.h"
 
 /* Convert a given srv object to a string for the control port. This doesn't
  * fail and the srv object MUST be valid. */

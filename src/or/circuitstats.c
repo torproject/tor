@@ -25,24 +25,24 @@
 
 #define CIRCUITSTATS_PRIVATE
 
-#include "or.h"
-#include "circuitbuild.h"
-#include "circuitstats.h"
-#include "config.h"
-#include "confparse.h"
-#include "control.h"
-#include "crypto_rand.h"
-#include "main.h"
-#include "networkstatus.h"
-#include "rendclient.h"
-#include "rendservice.h"
-#include "router.h"
-#include "statefile.h"
-#include "circuitlist.h"
-#include "circuituse.h"
+#include "or/or.h"
+#include "or/circuitbuild.h"
+#include "or/circuitstats.h"
+#include "or/config.h"
+#include "or/confparse.h"
+#include "or/control.h"
+#include "common/crypto_rand.h"
+#include "or/main.h"
+#include "or/networkstatus.h"
+#include "or/rendclient.h"
+#include "or/rendservice.h"
+#include "or/router.h"
+#include "or/statefile.h"
+#include "or/circuitlist.h"
+#include "or/circuituse.h"
 
-#include "crypt_path_st.h"
-#include "origin_circuit_st.h"
+#include "or/crypt_path_st.h"
+#include "or/origin_circuit_st.h"
 
 #undef log
 #include <math.h>

@@ -6,11 +6,11 @@
  * \brief Test hidden service ntor functionality.
  */
 
-#include "test.h"
-#include "test_helpers.h"
-#include "log_test_helpers.h"
+#include "test/test.h"
+#include "test/test_helpers.h"
+#include "test/log_test_helpers.h"
 
-#include "hs_ntor.h"
+#include "or/hs_ntor.h"
 
 /* Test the HS ntor handshake. Simulate the sending of an encrypted INTRODUCE1
  * cell, and verify the proper derivation of decryption keys on the other end.

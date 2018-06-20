@@ -15,13 +15,13 @@
 
 #include "orconfig.h"
 
-#include "crypto_digest.h"
+#include "common/crypto_digest.h"
 #include <stdio.h>
-#include "torint.h"
-#include "testsupport.h"
-#include "compat.h"
-#include "util.h"
-#include "torlog.h"
+#include "common/torint.h"
+#include "common/testsupport.h"
+#include "common/compat.h"
+#include "common/util.h"
+#include "common/torlog.h"
 
 /** Length of our public keys. */
 #define PK_BYTES (1024/8)

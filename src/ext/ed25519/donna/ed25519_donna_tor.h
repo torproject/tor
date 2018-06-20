@@ -1,7 +1,7 @@
 /* Added for Tor. */
 #ifndef SRC_EXT_ED25519_DONNA_H_INCLUDED_
 #define SRC_EXT_ED25519_DONNA_H_INCLUDED_
-#include <torint.h>
+#include "common/torint.h"
 
 typedef unsigned char curved25519_key[32];
 

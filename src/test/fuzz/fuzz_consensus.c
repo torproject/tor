@@ -1,10 +1,10 @@
 /* Copyright (c) 2016-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 #define ROUTERPARSE_PRIVATE
-#include "or.h"
-#include "routerparse.h"
-#include "networkstatus.h"
-#include "fuzzing.h"
+#include "or/or.h"
+#include "or/routerparse.h"
+#include "or/networkstatus.h"
+#include "test/fuzz/fuzzing.h"
 
 static void
 mock_dump_desc__nodump(const char *desc, const char *type)

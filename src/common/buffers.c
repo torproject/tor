@@ -21,12 +21,12 @@
 #define BUFFERS_PRIVATE
 #include "orconfig.h"
 #include <stddef.h>
-#include "buffers.h"
-#include "compat.h"
-#include "compress.h"
-#include "util.h"
-#include "torint.h"
-#include "torlog.h"
+#include "common/buffers.h"
+#include "common/compat.h"
+#include "common/compress.h"
+#include "common/util.h"
+#include "common/torint.h"
+#include "common/torlog.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

@@ -10,7 +10,7 @@
  **/
 
 #define COMPAT_TIME_PRIVATE
-#include "compat.h"
+#include "common/compat.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -34,9 +34,9 @@
 #include <mach/mach_time.h>
 #endif
 
-#include "torlog.h"
-#include "util.h"
-#include "container.h"
+#include "common/torlog.h"
+#include "common/util.h"
+#include "common/container.h"
 
 #ifndef HAVE_GETTIMEOFDAY
 #ifdef HAVE_FTIME

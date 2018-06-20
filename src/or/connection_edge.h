@@ -12,7 +12,7 @@
 #ifndef TOR_CONNECTION_EDGE_H
 #define TOR_CONNECTION_EDGE_H
 
-#include "testsupport.h"
+#include "common/testsupport.h"
 
 edge_connection_t *TO_EDGE_CONN(connection_t *);
 entry_connection_t *TO_ENTRY_CONN(connection_t *);

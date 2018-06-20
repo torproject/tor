@@ -8,26 +8,26 @@
 
 #define HS_INTROPOINT_PRIVATE
 
-#include "or.h"
-#include "config.h"
-#include "circuitlist.h"
-#include "circuituse.h"
-#include "relay.h"
-#include "rendmid.h"
-#include "rephist.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/circuitlist.h"
+#include "or/circuituse.h"
+#include "or/relay.h"
+#include "or/rendmid.h"
+#include "or/rephist.h"
 
 /* Trunnel */
-#include "ed25519_cert.h"
-#include "hs/cell_common.h"
-#include "hs/cell_establish_intro.h"
-#include "hs/cell_introduce1.h"
+#include "trunnel/ed25519_cert.h"
+#include "trunnel/hs/cell_common.h"
+#include "trunnel/hs/cell_establish_intro.h"
+#include "trunnel/hs/cell_introduce1.h"
 
-#include "hs_circuitmap.h"
-#include "hs_descriptor.h"
-#include "hs_intropoint.h"
-#include "hs_common.h"
+#include "or/hs_circuitmap.h"
+#include "or/hs_descriptor.h"
+#include "or/hs_intropoint.h"
+#include "or/hs_common.h"
 
-#include "or_circuit_st.h"
+#include "or/or_circuit_st.h"
 
 /** Extract the authentication key from an ESTABLISH_INTRO or INTRODUCE1 using
  * the given <b>cell_type</b> from <b>cell</b> and place it in

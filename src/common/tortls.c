@@ -25,11 +25,11 @@
   #include <ws2tcpip.h>
 #endif
 
-#include "crypto.h"
-#include "crypto_rand.h"
-#include "crypto_dh.h"
-#include "crypto_util.h"
-#include "compat.h"
+#include "common/crypto.h"
+#include "common/crypto_rand.h"
+#include "common/crypto_dh.h"
+#include "common/crypto_util.h"
+#include "common/compat.h"
 
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
  * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
@@ -53,10 +53,10 @@ DISABLE_GCC_WARNING(redundant-decls)
 ENABLE_GCC_WARNING(redundant-decls)
 
 #define TORTLS_PRIVATE
-#include "tortls.h"
-#include "util.h"
-#include "torlog.h"
-#include "container.h"
+#include "common/tortls.h"
+#include "common/util.h"
+#include "common/torlog.h"
+#include "common/container.h"
 #include <string.h>
 
 #ifdef OPENSSL_1_1_API

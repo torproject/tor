@@ -6,7 +6,7 @@
 #ifndef TOR_CONTAINER_H
 #define TOR_CONTAINER_H
 
-#include "util.h"
+#include "common/util.h"
 #include "siphash.h"
 
 /** A resizeable list of pointers, with associated helpful functionality.

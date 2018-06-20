@@ -8,21 +8,21 @@
 
 #define DOS_PRIVATE
 
-#include "or.h"
-#include "channel.h"
-#include "config.h"
-#include "connection_or.h"
-#include "crypto_rand.h"
-#include "geoip.h"
-#include "main.h"
-#include "networkstatus.h"
-#include "nodelist.h"
-#include "relay.h"
-#include "router.h"
+#include "or/or.h"
+#include "or/channel.h"
+#include "or/config.h"
+#include "or/connection_or.h"
+#include "common/crypto_rand.h"
+#include "or/geoip.h"
+#include "or/main.h"
+#include "or/networkstatus.h"
+#include "or/nodelist.h"
+#include "or/relay.h"
+#include "or/router.h"
 
-#include "dos.h"
+#include "or/dos.h"
 
-#include "or_connection_st.h"
+#include "or/or_connection_st.h"
 
 /*
  * Circuit creation denial of service mitigation.

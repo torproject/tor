@@ -14,9 +14,9 @@
  * to another.
  **/
 
-#include "or.h"
-#include "config.h"
-#include "reasons.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/reasons.h"
 
 /***************************** Edge (stream) reasons **********************/
 

@@ -49,24 +49,24 @@
 
 #define DNS_PRIVATE
 
-#include "or.h"
-#include "circuitlist.h"
-#include "circuituse.h"
-#include "config.h"
-#include "connection.h"
-#include "connection_edge.h"
-#include "control.h"
-#include "crypto_rand.h"
-#include "dns.h"
-#include "main.h"
-#include "policies.h"
-#include "relay.h"
-#include "router.h"
+#include "or/or.h"
+#include "or/circuitlist.h"
+#include "or/circuituse.h"
+#include "or/config.h"
+#include "or/connection.h"
+#include "or/connection_edge.h"
+#include "or/control.h"
+#include "common/crypto_rand.h"
+#include "or/dns.h"
+#include "or/main.h"
+#include "or/policies.h"
+#include "or/relay.h"
+#include "or/router.h"
 #include "ht.h"
-#include "sandbox.h"
+#include "common/sandbox.h"
 
-#include "edge_connection_st.h"
-#include "or_circuit_st.h"
+#include "or/edge_connection_st.h"
+#include "or/or_circuit_st.h"
 
 #include <event2/event.h>
 #include <event2/dns.h>

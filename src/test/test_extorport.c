@@ -4,19 +4,19 @@
 #define CONNECTION_PRIVATE
 #define EXT_ORPORT_PRIVATE
 #define MAIN_PRIVATE
-#include "or.h"
-#include "buffers.h"
-#include "connection.h"
-#include "connection_or.h"
-#include "config.h"
-#include "control.h"
-#include "crypto_rand.h"
-#include "ext_orport.h"
-#include "main.h"
+#include "or/or.h"
+#include "common/buffers.h"
+#include "or/connection.h"
+#include "or/connection_or.h"
+#include "or/config.h"
+#include "or/control.h"
+#include "common/crypto_rand.h"
+#include "or/ext_orport.h"
+#include "or/main.h"
 
-#include "or_connection_st.h"
+#include "or/or_connection_st.h"
 
-#include "test.h"
+#include "test/test.h"
 
 /* Test connection_or_remove_from_ext_or_id_map and
  * connection_or_set_ext_or_identifier */

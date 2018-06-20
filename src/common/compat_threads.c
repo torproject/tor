@@ -13,11 +13,11 @@
 
 #include "orconfig.h"
 #include <stdlib.h>
-#include "compat.h"
-#include "compat_threads.h"
+#include "common/compat.h"
+#include "common/compat_threads.h"
 
-#include "util.h"
-#include "torlog.h"
+#include "common/util.h"
+#include "common/torlog.h"
 
 #ifdef HAVE_SYS_EVENTFD_H
 #include <sys/eventfd.h>

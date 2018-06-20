@@ -9,13 +9,13 @@
  **/
 
 #define VOTING_SCHEDULE_PRIVATE
-#include "voting_schedule.h"
+#include "or/voting_schedule.h"
 
-#include "or.h"
-#include "config.h"
-#include "networkstatus.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/networkstatus.h"
 
-#include "networkstatus_st.h"
+#include "or/networkstatus_st.h"
 
 /* =====
  * Vote scheduling

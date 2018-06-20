@@ -1,14 +1,14 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "container.h"
-#include "compat.h"
-#include "confline.h"
-#include "memarea.h"
-#include "sandbox.h"
-#include "storagedir.h"
-#include "torlog.h"
-#include "util.h"
+#include "common/container.h"
+#include "common/compat.h"
+#include "common/confline.h"
+#include "common/memarea.h"
+#include "common/sandbox.h"
+#include "common/storagedir.h"
+#include "common/torlog.h"
+#include "common/util.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>

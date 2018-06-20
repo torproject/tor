@@ -8,26 +8,26 @@
 #define TOR_CHANNEL_INTERNAL_
 #define TORTLS_PRIVATE
 
-#include "compat.h"
+#include "common/compat.h"
 
-#include "or.h"
-#include "config.h"
-#include "connection.h"
-#include "connection_or.h"
-#include "channeltls.h"
-#include "link_handshake.h"
-#include "router.h"
-#include "routerkeys.h"
-#include "scheduler.h"
-#include "torcert.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/connection.h"
+#include "or/connection_or.h"
+#include "or/channeltls.h"
+#include "trunnel/link_handshake.h"
+#include "or/router.h"
+#include "or/routerkeys.h"
+#include "or/scheduler.h"
+#include "or/torcert.h"
 
-#include "or_connection_st.h"
-#include "or_handshake_certs_st.h"
-#include "or_handshake_state_st.h"
-#include "var_cell_st.h"
+#include "or/or_connection_st.h"
+#include "or/or_handshake_certs_st.h"
+#include "or/or_handshake_state_st.h"
+#include "or/var_cell_st.h"
 
-#include "test.h"
-#include "log_test_helpers.h"
+#include "test/test.h"
+#include "test/log_test_helpers.h"
 
 static var_cell_t *mock_got_var_cell = NULL;
 

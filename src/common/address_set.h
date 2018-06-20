@@ -14,7 +14,7 @@
 #define TOR_ADDRESS_SET_H
 
 #include "orconfig.h"
-#include "torint.h"
+#include "common/torint.h"
 
 /**
  * An address_set_t represents a set of tor_addr_t values. The implementation

@@ -1,7 +1,7 @@
 /* Copyright (c) 2015-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or.h"
+#include "or/or.h"
 
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>

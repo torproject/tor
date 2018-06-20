@@ -7,9 +7,9 @@
 #ifndef DIR_SERVER_ST_H
 #define DIR_SERVER_ST_H
 
-#include "torint.h"
-#include "or.h"
-#include "routerstatus_st.h"
+#include "common/torint.h"
+#include "or/or.h"
+#include "or/routerstatus_st.h"
 
 /** Represents information about a single trusted or fallback directory
  * server. */

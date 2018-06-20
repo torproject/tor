@@ -12,7 +12,7 @@
 #ifndef TOR_DIRECTORY_H
 #define TOR_DIRECTORY_H
 
-#include "hs_ident.h"
+#include "or/hs_ident.h"
 
 dir_connection_t *TO_DIR_CONN(connection_t *c);
 int directories_have_accepted_server_descriptor(void);

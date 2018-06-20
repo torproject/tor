@@ -13,7 +13,7 @@
  **/
 
 #define COMPAT_PRIVATE
-#include "compat.h"
+#include "common/compat.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -125,11 +125,11 @@ SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 #include <sys/file.h>
 #endif
 
-#include "torlog.h"
-#include "util.h"
-#include "container.h"
-#include "address.h"
-#include "sandbox.h"
+#include "common/torlog.h"
+#include "common/util.h"
+#include "common/container.h"
+#include "common/address.h"
+#include "common/sandbox.h"
 
 /* Inline the strl functions if the platform doesn't have them. */
 #ifndef HAVE_STRLCPY

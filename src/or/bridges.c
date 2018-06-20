@@ -13,24 +13,24 @@
 
 #define TOR_BRIDGES_PRIVATE
 
-#include "or.h"
-#include "bridges.h"
-#include "circuitbuild.h"
-#include "config.h"
-#include "connection.h"
-#include "directory.h"
-#include "entrynodes.h"
-#include "nodelist.h"
-#include "policies.h"
-#include "router.h"
-#include "routerlist.h"
-#include "routerset.h"
-#include "transports.h"
+#include "or/or.h"
+#include "or/bridges.h"
+#include "or/circuitbuild.h"
+#include "or/config.h"
+#include "or/connection.h"
+#include "or/directory.h"
+#include "or/entrynodes.h"
+#include "or/nodelist.h"
+#include "or/policies.h"
+#include "or/router.h"
+#include "or/routerlist.h"
+#include "or/routerset.h"
+#include "or/transports.h"
 
-#include "extend_info_st.h"
-#include "node_st.h"
-#include "routerinfo_st.h"
-#include "routerstatus_st.h"
+#include "or/extend_info_st.h"
+#include "or/node_st.h"
+#include "or/routerinfo_st.h"
+#include "or/routerstatus_st.h"
 
 /** Information about a configured bridge. Currently this just matches the
  * ones in the torrc file, but one day we may be able to learn about new

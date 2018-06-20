@@ -11,13 +11,13 @@
 
 #include <stdint.h>
 
-#include "or.h"
-#include "address.h"
-#include "container.h"
-#include "crypto.h"
-#include "crypto_ed25519.h"
-#include "ed25519_cert.h" /* needed for trunnel */
-#include "torcert.h"
+#include "or/or.h"
+#include "common/address.h"
+#include "common/container.h"
+#include "common/crypto.h"
+#include "common/crypto_ed25519.h"
+#include "trunnel/ed25519_cert.h" /* needed for trunnel */
+#include "or/torcert.h"
 
 /* Trunnel */
 struct link_specifier_t;

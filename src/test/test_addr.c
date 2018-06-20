@@ -5,11 +5,11 @@
 
 #define ADDRESSMAP_PRIVATE
 #include "orconfig.h"
-#include "or.h"
-#include "crypto_rand.h"
-#include "test.h"
-#include "addressmap.h"
-#include "log_test_helpers.h"
+#include "or/or.h"
+#include "common/crypto_rand.h"
+#include "test/test.h"
+#include "or/addressmap.h"
+#include "test/log_test_helpers.h"
 
 /** Mocking replacement: only handles localhost. */
 static int

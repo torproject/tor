@@ -7,29 +7,29 @@
 #define MAIN_PRIVATE
 #define CONNECTION_OR_PRIVATE
 
-#include "or.h"
-#include "test.h"
+#include "or/or.h"
+#include "test/test.h"
 
-#include "connection.h"
-#include "connection_edge.h"
-#include "hs_common.h"
-#include "main.h"
-#include "microdesc.h"
-#include "nodelist.h"
-#include "networkstatus.h"
-#include "rendcache.h"
-#include "directory.h"
-#include "connection_or.h"
+#include "or/connection.h"
+#include "or/connection_edge.h"
+#include "or/hs_common.h"
+#include "or/main.h"
+#include "or/microdesc.h"
+#include "or/nodelist.h"
+#include "or/networkstatus.h"
+#include "or/rendcache.h"
+#include "or/directory.h"
+#include "or/connection_or.h"
 
-#include "test_connection.h"
-#include "test_helpers.h"
+#include "test/test_connection.h"
+#include "test/test_helpers.h"
 
-#include "dir_connection_st.h"
-#include "entry_connection_st.h"
-#include "node_st.h"
-#include "or_connection_st.h"
-#include "routerinfo_st.h"
-#include "socks_request_st.h"
+#include "or/dir_connection_st.h"
+#include "or/entry_connection_st.h"
+#include "or/node_st.h"
+#include "or/or_connection_st.h"
+#include "or/routerinfo_st.h"
+#include "or/socks_request_st.h"
 
 static void * test_conn_get_basic_setup(const struct testcase_t *tc);
 static int test_conn_get_basic_teardown(const struct testcase_t *tc,

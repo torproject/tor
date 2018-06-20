@@ -32,11 +32,11 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "sandbox.h"
-#include "container.h"
-#include "torlog.h"
-#include "torint.h"
-#include "util.h"
+#include "common/sandbox.h"
+#include "common/container.h"
+#include "common/torlog.h"
+#include "common/torint.h"
+#include "common/util.h"
 #include "tor_queue.h"
 
 #include "ht.h"
@@ -79,7 +79,7 @@
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
 #define USE_BACKTRACE
 #define EXPOSE_CLEAN_BACKTRACE
-#include "backtrace.h"
+#include "common/backtrace.h"
 #endif /* defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && ... */
 
 #ifdef USE_BACKTRACE

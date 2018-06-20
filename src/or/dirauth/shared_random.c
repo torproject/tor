@@ -87,26 +87,26 @@
 
 #define SHARED_RANDOM_PRIVATE
 
-#include "or.h"
-#include "shared_random.h"
-#include "config.h"
-#include "confparse.h"
-#include "crypto_rand.h"
-#include "crypto_util.h"
-#include "networkstatus.h"
-#include "router.h"
-#include "routerkeys.h"
-#include "routerlist.h"
-#include "shared_random_client.h"
-#include "shared_random_state.h"
-#include "util.h"
-#include "voting_schedule.h"
+#include "or/or.h"
+#include "or/dirauth/shared_random.h"
+#include "or/config.h"
+#include "or/confparse.h"
+#include "common/crypto_rand.h"
+#include "common/crypto_util.h"
+#include "or/networkstatus.h"
+#include "or/router.h"
+#include "or/routerkeys.h"
+#include "or/routerlist.h"
+#include "or/shared_random_client.h"
+#include "or/dirauth/shared_random_state.h"
+#include "common/util.h"
+#include "or/voting_schedule.h"
 
-#include "dirauth/dirvote.h"
-#include "dirauth/mode.h"
+#include "or/dirauth/dirvote.h"
+#include "or/dirauth/mode.h"
 
-#include "authority_cert_st.h"
-#include "networkstatus_st.h"
+#include "or/authority_cert_st.h"
+#include "or/networkstatus_st.h"
 
 /* String prefix of shared random values in votes/consensuses. */
 static const char previous_srv_str[] = "shared-rand-previous-value";

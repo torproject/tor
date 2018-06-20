@@ -11,12 +11,12 @@
  **/
 
 #include "orconfig.h"
-#include "address_set.h"
-#include "address.h"
-#include "compat.h"
-#include "container.h"
-#include "crypto_rand.h"
-#include "util.h"
+#include "common/address_set.h"
+#include "common/address.h"
+#include "common/compat.h"
+#include "common/container.h"
+#include "common/crypto_rand.h"
+#include "common/util.h"
 #include "siphash.h"
 
 /** How many 64-bit siphash values to extract per address */

@@ -5,21 +5,21 @@
 
 #include "orconfig.h"
 #define DIRVOTE_PRIVATE
-#include "test.h"
-#include "container.h"
-#include "or.h"
-#include "dirauth/dirvote.h"
-#include "nodelist.h"
-#include "routerlist.h"
-#include "test_dir_common.h"
-#include "voting_schedule.h"
+#include "test/test.h"
+#include "common/container.h"
+#include "or/or.h"
+#include "or/dirauth/dirvote.h"
+#include "or/nodelist.h"
+#include "or/routerlist.h"
+#include "test/test_dir_common.h"
+#include "or/voting_schedule.h"
 
-#include "authority_cert_st.h"
-#include "networkstatus_st.h"
-#include "networkstatus_voter_info_st.h"
-#include "routerinfo_st.h"
-#include "vote_microdesc_hash_st.h"
-#include "vote_routerstatus_st.h"
+#include "or/authority_cert_st.h"
+#include "or/networkstatus_st.h"
+#include "or/networkstatus_voter_info_st.h"
+#include "or/routerinfo_st.h"
+#include "or/vote_microdesc_hash_st.h"
+#include "or/vote_routerstatus_st.h"
 
 void dir_common_setup_vote(networkstatus_t **vote, time_t now);
 networkstatus_t * dir_common_add_rs_and_parse(networkstatus_t *vote,

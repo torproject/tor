@@ -14,16 +14,16 @@
 #include <fcntl.h>
 #endif
 #define UTIL_PRIVATE
-#include "util.h"
-#include "torlog.h"
-#include "crypto_digest.h"
-#include "torint.h"
-#include "container.h"
-#include "address.h"
-#include "sandbox.h"
-#include "backtrace.h"
-#include "util_process.h"
-#include "util_format.h"
+#include "common/util.h"
+#include "common/torlog.h"
+#include "common/crypto_digest.h"
+#include "common/torint.h"
+#include "common/container.h"
+#include "common/address.h"
+#include "common/sandbox.h"
+#include "common/backtrace.h"
+#include "common/util_process.h"
+#include "common/util_format.h"
 
 #ifdef _WIN32
 #include <io.h>

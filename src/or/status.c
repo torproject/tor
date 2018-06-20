@@ -14,26 +14,26 @@
 
 #define STATUS_PRIVATE
 
-#include "or.h"
-#include "circuituse.h"
-#include "config.h"
-#include "status.h"
-#include "nodelist.h"
-#include "relay.h"
-#include "router.h"
-#include "circuitlist.h"
-#include "main.h"
-#include "rephist.h"
-#include "hibernate.h"
-#include "statefile.h"
-#include "hs_stats.h"
-#include "hs_service.h"
-#include "dos.h"
+#include "or/or.h"
+#include "or/circuituse.h"
+#include "or/config.h"
+#include "or/status.h"
+#include "or/nodelist.h"
+#include "or/relay.h"
+#include "or/router.h"
+#include "or/circuitlist.h"
+#include "or/main.h"
+#include "or/rephist.h"
+#include "or/hibernate.h"
+#include "or/statefile.h"
+#include "or/hs_stats.h"
+#include "or/hs_service.h"
+#include "or/dos.h"
 
-#include "routerinfo_st.h"
+#include "or/routerinfo_st.h"
 
 static void log_accounting(const time_t now, const or_options_t *options);
-#include "geoip.h"
+#include "or/geoip.h"
 
 /** Return the total number of circuits. */
 STATIC int

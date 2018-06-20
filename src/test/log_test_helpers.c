@@ -1,8 +1,8 @@
 /* Copyright (c) 2015-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 #define LOG_PRIVATE
-#include "torlog.h"
-#include "log_test_helpers.h"
+#include "common/torlog.h"
+#include "test/log_test_helpers.h"
 
 /**
  * \file log_test_helpers.c

@@ -13,18 +13,18 @@
 
 #define CONSDIFFMGR_PRIVATE
 
-#include "or.h"
-#include "config.h"
-#include "conscache.h"
-#include "consdiff.h"
-#include "consdiffmgr.h"
-#include "cpuworker.h"
-#include "networkstatus.h"
-#include "routerparse.h"
-#include "workqueue.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/conscache.h"
+#include "or/consdiff.h"
+#include "or/consdiffmgr.h"
+#include "or/cpuworker.h"
+#include "or/networkstatus.h"
+#include "or/routerparse.h"
+#include "common/workqueue.h"
 
-#include "networkstatus_st.h"
-#include "networkstatus_voter_info_st.h"
+#include "or/networkstatus_st.h"
+#include "or/networkstatus_voter_info_st.h"
 
 /**
  * Labels to apply to items in the conscache object.

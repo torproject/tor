@@ -5,14 +5,14 @@
 
 #include "orconfig.h"
 #define ROUTER_PRIVATE
-#include "or.h"
-#include "config.h"
-#include "router.h"
-#include "routerkeys.h"
-#include "util.h"
-#include "crypto.h"
-#include "torcert.h"
-#include "test.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/router.h"
+#include "or/routerkeys.h"
+#include "common/util.h"
+#include "common/crypto.h"
+#include "or/torcert.h"
+#include "test/test.h"
 
 #ifdef _WIN32
 /* For mkdir() */

@@ -3,33 +3,33 @@
 
 #define TOR_CHANNEL_INTERNAL_
 #define CHANNEL_PRIVATE_
-#include "or.h"
-#include "channel.h"
+#include "or/or.h"
+#include "or/channel.h"
 /* For channel_note_destroy_not_pending */
 #define CIRCUITLIST_PRIVATE
-#include "circuitlist.h"
-#include "circuitmux.h"
-#include "circuitmux_ewma.h"
+#include "or/circuitlist.h"
+#include "or/circuitmux.h"
+#include "or/circuitmux_ewma.h"
 /* For var_cell_free */
-#include "connection_or.h"
-#include "crypto_rand.h"
+#include "or/connection_or.h"
+#include "common/crypto_rand.h"
 /* For packed_cell stuff */
 #define RELAY_PRIVATE
-#include "relay.h"
+#include "or/relay.h"
 /* For init/free stuff */
-#include "scheduler.h"
-#include "networkstatus.h"
+#include "or/scheduler.h"
+#include "or/networkstatus.h"
 
-#include "cell_st.h"
-#include "networkstatus_st.h"
-#include "origin_circuit_st.h"
-#include "routerstatus_st.h"
-#include "var_cell_st.h"
+#include "or/cell_st.h"
+#include "or/networkstatus_st.h"
+#include "or/origin_circuit_st.h"
+#include "or/routerstatus_st.h"
+#include "or/var_cell_st.h"
 
 /* Test suite stuff */
-#include "log_test_helpers.h"
-#include "test.h"
-#include "fakechans.h"
+#include "test/log_test_helpers.h"
+#include "test/test.h"
+#include "test/fakechans.h"
 
 static int test_chan_accept_cells = 0;
 static int test_chan_fixed_cells_recved = 0;

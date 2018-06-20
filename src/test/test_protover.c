@@ -4,12 +4,12 @@
 #define PROTOVER_PRIVATE
 
 #include "orconfig.h"
-#include "test.h"
+#include "test/test.h"
 
-#include "protover.h"
+#include "or/protover.h"
 
-#include "or.h"
-#include "connection_or.h"
+#include "or/or.h"
+#include "or/connection_or.h"
 
 static void
 test_protover_parse(void *arg)

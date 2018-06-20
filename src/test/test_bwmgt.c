@@ -8,10 +8,10 @@
 
 #define TOKEN_BUCKET_PRIVATE
 
-#include "or.h"
-#include "test.h"
+#include "or/or.h"
+#include "test/test.h"
 
-#include "token_bucket.h"
+#include "common/token_bucket.h"
 
 // an imaginary time, in timestamp units. Chosen so it will roll over.
 static const uint32_t START_TS = UINT32_MAX-10;

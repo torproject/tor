@@ -1,19 +1,19 @@
 /* Copyright (c) 2013-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or.h"
-#include "config.h"
+#include "or/or.h"
+#include "or/config.h"
 
-#include "compat_libevent.h"
+#include "common/compat_libevent.h"
 #define SCHEDULER_PRIVATE_
 #define SCHEDULER_KIST_PRIVATE
-#include "scheduler.h"
-#include "main.h"
-#include "buffers.h"
+#include "or/scheduler.h"
+#include "or/main.h"
+#include "common/buffers.h"
 #define TOR_CHANNEL_INTERNAL_
-#include "channeltls.h"
+#include "or/channeltls.h"
 
-#include "or_connection_st.h"
+#include "or/or_connection_st.h"
 
 /**
  * \file scheduler.c

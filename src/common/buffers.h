@@ -12,9 +12,9 @@
 #ifndef TOR_BUFFERS_H
 #define TOR_BUFFERS_H
 
-#include "compat.h"
-#include "torint.h"
-#include "testsupport.h"
+#include "common/compat.h"
+#include "common/torint.h"
+#include "common/testsupport.h"
 
 typedef struct buf_t buf_t;
 

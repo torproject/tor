@@ -7,8 +7,8 @@
 #ifndef PORT_CFG_ST_H
 #define PORT_CFG_ST_H
 
-#include "entry_port_cfg_st.h"
-#include "server_port_cfg_st.h"
+#include "or/entry_port_cfg_st.h"
+#include "or/server_port_cfg_st.h"
 
 /** Configuration for a single port that we're listening on. */
 struct port_cfg_t {

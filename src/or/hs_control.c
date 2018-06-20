@@ -6,17 +6,17 @@
  * \brief Contains control port event related code.
  **/
 
-#include "or.h"
-#include "control.h"
-#include "crypto_util.h"
-#include "hs_common.h"
-#include "hs_control.h"
-#include "hs_descriptor.h"
-#include "hs_service.h"
-#include "nodelist.h"
+#include "or/or.h"
+#include "or/control.h"
+#include "common/crypto_util.h"
+#include "or/hs_common.h"
+#include "or/hs_control.h"
+#include "or/hs_descriptor.h"
+#include "or/hs_service.h"
+#include "or/nodelist.h"
 
-#include "node_st.h"
-#include "routerstatus_st.h"
+#include "or/node_st.h"
+#include "or/routerstatus_st.h"
 
 /* Send on the control port the "HS_DESC REQUESTED [...]" event.
  *

@@ -14,8 +14,8 @@
 #define SIO_IDEAL_SEND_BACKLOG_QUERY 0x4004747b
 #endif
 #endif
-#include "torint.h"
-#include "testsupport.h"
+#include "common/torint.h"
+#include "common/testsupport.h"
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
@@ -45,7 +45,7 @@
 #include <netinet6/in6.h>
 #endif
 
-#include "compat_time.h"
+#include "common/compat_time.h"
 
 #if defined(__has_feature)
 #  if __has_feature(address_sanitizer)
@@ -751,7 +751,7 @@ STATIC int tor_ersatz_socketpair(int family, int type, int protocol,
 ssize_t tor_getpass(const char *prompt, char *output, size_t buflen);
 
 /* This needs some of the declarations above so we include it here. */
-#include "compat_threads.h"
+#include "common/compat_threads.h"
 
 #endif /* !defined(TOR_COMPAT_H) */
 

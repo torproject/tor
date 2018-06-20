@@ -26,7 +26,7 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
-#include "torint.h"
+#include "common/torint.h"
 #ifdef HAVE_SYS_FCNTL_H
 #include <sys/fcntl.h>
 #endif
@@ -66,29 +66,29 @@
 #include <windows.h>
 #endif /* defined(_WIN32) */
 
-#include "crypto.h"
-#include "crypto_format.h"
-#include "crypto_dh.h"
-#include "crypto_hkdf.h"
-#include "tortls.h"
-#include "torlog.h"
-#include "container.h"
-#include "compress.h"
-#include "address.h"
-#include "compat_libevent.h"
+#include "common/crypto.h"
+#include "common/crypto_format.h"
+#include "common/crypto_dh.h"
+#include "common/crypto_hkdf.h"
+#include "common/tortls.h"
+#include "common/torlog.h"
+#include "common/container.h"
+#include "common/compress.h"
+#include "common/address.h"
+#include "common/compat_libevent.h"
 #include "ht.h"
-#include "confline.h"
-#include "replaycache.h"
-#include "crypto_curve25519.h"
-#include "crypto_ed25519.h"
+#include "common/confline.h"
+#include "or/replaycache.h"
+#include "common/crypto_curve25519.h"
+#include "common/crypto_ed25519.h"
 #include "tor_queue.h"
-#include "token_bucket.h"
-#include "util_format.h"
-#include "hs_circuitmap.h"
+#include "common/token_bucket.h"
+#include "common/util_format.h"
+#include "or/hs_circuitmap.h"
 
 // These, more than other includes, are for keeping the other struct
 // definitions working. We should remove them when we minimize our includes.
-#include "entry_port_cfg_st.h"
+#include "or/entry_port_cfg_st.h"
 
 /* These signals are defined to help handle_control_signal work.
  */

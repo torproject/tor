@@ -4,10 +4,10 @@
 #define CONSDIFF_PRIVATE
 
 #include "orconfig.h"
-#include "or.h"
-#include "consdiff.h"
+#include "or/or.h"
+#include "or/consdiff.h"
 
-#include "fuzzing.h"
+#include "test/fuzz/fuzzing.h"
 
 static int
 mock_consensus_compute_digest_(const char *c, consensus_digest_t *d)

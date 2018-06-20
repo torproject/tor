@@ -4,10 +4,10 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "or.h"
-#include "crypto_rand.h"
-#include "fp_pair.h"
-#include "test.h"
+#include "or/or.h"
+#include "common/crypto_rand.h"
+#include "or/fp_pair.h"
+#include "test/test.h"
 
 /** Helper: return a tristate based on comparing the strings in *<b>a</b> and
  * *<b>b</b>. */

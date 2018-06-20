@@ -14,15 +14,15 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
-#include "container.h"
-#include "crypto_curve25519.h"
-#include "crypto_digest.h"
-#include "crypto_ed25519.h"
-#include "crypto_format.h"
-#include "crypto_util.h"
-#include "util.h"
-#include "util_format.h"
-#include "torlog.h"
+#include "common/container.h"
+#include "common/crypto_curve25519.h"
+#include "common/crypto_digest.h"
+#include "common/crypto_ed25519.h"
+#include "common/crypto_format.h"
+#include "common/crypto_util.h"
+#include "common/util.h"
+#include "common/util_format.h"
+#include "common/torlog.h"
 
 /** Write the <b>datalen</b> bytes from <b>data</b> to the file named
  * <b>fname</b> in the tagged-data format.  This format contains a

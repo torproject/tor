@@ -5,11 +5,11 @@
 
 #include "orconfig.h"
 #define UTIL_PRIVATE
-#include "util.h"
-#include "util_process.h"
-#include "crypto.h"
-#include "torlog.h"
-#include "test.h"
+#include "common/util.h"
+#include "common/util_process.h"
+#include "common/crypto.h"
+#include "common/torlog.h"
+#include "test/test.h"
 
 #ifndef BUILDDIR
 #define BUILDDIR "."

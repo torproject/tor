@@ -3,7 +3,7 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "test.h"
+#include "test/test.h"
 
 /* Our unit test expect that the AUTHORITY_CERT_* public keys will sort
  * in this order. */

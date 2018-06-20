@@ -16,9 +16,9 @@
   #include <ws2tcpip.h>
 #endif
 
-#include "compat_openssl.h"
+#include "common/compat_openssl.h"
 #include <openssl/opensslv.h>
-#include "crypto_openssl_mgt.h"
+#include "common/crypto_openssl_mgt.h"
 
 #if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
 #error "We require OpenSSL >= 1.0.0"
@@ -36,11 +36,11 @@ DISABLE_GCC_WARNING(redundant-decls)
 
 ENABLE_GCC_WARNING(redundant-decls)
 
-#include "compat.h"
-#include "aes.h"
-#include "util.h"
-#include "torlog.h"
-#include "di_ops.h"
+#include "common/compat.h"
+#include "common/aes.h"
+#include "common/util.h"
+#include "common/torlog.h"
+#include "common/di_ops.h"
 
 #ifdef ANDROID
 /* Android's OpenSSL seems to have removed all of its Engine support. */

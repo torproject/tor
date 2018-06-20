@@ -12,8 +12,8 @@
 #ifndef TOR_CIRCUITLIST_H
 #define TOR_CIRCUITLIST_H
 
-#include "testsupport.h"
-#include "hs_ident.h"
+#include "common/testsupport.h"
+#include "or/hs_ident.h"
 
 /** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Assert
  * if the cast is impossible. */

@@ -7,17 +7,17 @@
  * \brief Unittests for code in src/or/router.c
  **/
 
-#include "or.h"
-#include "config.h"
-#include "crypto_curve25519.h"
-#include "crypto_ed25519.h"
-#include "router.h"
-#include "routerlist.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "common/crypto_curve25519.h"
+#include "common/crypto_ed25519.h"
+#include "or/router.h"
+#include "or/routerlist.h"
 
-#include "routerinfo_st.h"
+#include "or/routerinfo_st.h"
 
 /* Test suite stuff */
-#include "test.h"
+#include "test/test.h"
 
 NS_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
 

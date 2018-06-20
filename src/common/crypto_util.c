@@ -13,7 +13,7 @@
 #ifndef CRYPTO_UTIL_PRIVATE
 #define CRYPTO_UTIL_PRIVATE
 
-#include "crypto_util.h"
+#include "common/crypto_util.h"
 
 #include <string.h>
 
@@ -23,7 +23,7 @@
 #include <wincrypt.h>
 #endif /* defined(_WIN32) */
 
-#include "util.h"
+#include "common/util.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
@@ -32,7 +32,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 
 ENABLE_GCC_WARNING(redundant-decls)
 
-#include "torlog.h"
+#include "common/torlog.h"
 
 /**
  * Destroy the <b>sz</b> bytes of data stored at <b>mem</b>, setting them to

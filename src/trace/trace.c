@@ -1,7 +1,7 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "trace.h"
+#include "trace/trace.h"
 
 /** Initialize the tracing library. */
 void

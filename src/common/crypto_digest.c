@@ -10,11 +10,11 @@
  * operations.
  **/
 
-#include "container.h"
-#include "crypto_digest.h"
-#include "crypto_openssl_mgt.h"
-#include "crypto_util.h"
-#include "torlog.h"
+#include "common/container.h"
+#include "common/crypto_digest.h"
+#include "common/crypto_openssl_mgt.h"
+#include "common/crypto_util.h"
+#include "common/torlog.h"
 
 #include "keccak-tiny/keccak-tiny.h"
 

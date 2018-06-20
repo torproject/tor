@@ -4,8 +4,8 @@
 #ifndef TOR_HS_TEST_HELPERS_H
 #define TOR_HS_TEST_HELPERS_H
 
-#include "ed25519_cert.h"
-#include "hs_descriptor.h"
+#include "trunnel/ed25519_cert.h"
+#include "or/hs_descriptor.h"
 
 /* Set of functions to help build and test descriptors. */
 hs_desc_intro_point_t *hs_helper_build_intro_point(

@@ -7,7 +7,7 @@
 #ifndef ENTRY_CONNECTION_ST_H
 #define ENTRY_CONNECTION_ST_H
 
-#include "edge_connection_st.h"
+#include "or/edge_connection_st.h"
 
 /** Subtype of edge_connection_t for an "entry connection" -- that is, a SOCKS
  * connection, a DNS request, a TransPort connection or a NATD connection */

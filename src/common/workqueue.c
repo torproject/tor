@@ -24,14 +24,14 @@
  */
 
 #include "orconfig.h"
-#include "compat.h"
-#include "compat_libevent.h"
-#include "compat_threads.h"
-#include "crypto_rand.h"
-#include "util.h"
-#include "workqueue.h"
+#include "common/compat.h"
+#include "common/compat_libevent.h"
+#include "common/compat_threads.h"
+#include "common/crypto_rand.h"
+#include "common/util.h"
+#include "common/workqueue.h"
 #include "tor_queue.h"
-#include "torlog.h"
+#include "common/torlog.h"
 
 #include <event2/event.h>
 

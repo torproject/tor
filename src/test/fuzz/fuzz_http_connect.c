@@ -6,19 +6,19 @@
 #define BUFFERS_PRIVATE
 #define CONNECTION_EDGE_PRIVATE
 
-#include "or.h"
-#include "backtrace.h"
-#include "buffers.h"
-#include "config.h"
-#include "connection.h"
-#include "connection_edge.h"
-#include "proto_socks.h"
-#include "torlog.h"
+#include "or/or.h"
+#include "common/backtrace.h"
+#include "common/buffers.h"
+#include "or/config.h"
+#include "or/connection.h"
+#include "or/connection_edge.h"
+#include "or/proto_socks.h"
+#include "common/torlog.h"
 
-#include "entry_connection_st.h"
-#include "socks_request_st.h"
+#include "or/entry_connection_st.h"
+#include "or/socks_request_st.h"
 
-#include "fuzzing.h"
+#include "test/fuzz/fuzzing.h"
 
 static void
 mock_connection_write_to_buf_impl_(const char *string, size_t len,

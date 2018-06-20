@@ -2,23 +2,23 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "or.h"
+#include "or/or.h"
 
-#include "config.h"
+#include "or/config.h"
 #define DIRVOTE_PRIVATE
-#include "dirauth/dirvote.h"
-#include "microdesc.h"
-#include "networkstatus.h"
-#include "routerlist.h"
-#include "routerparse.h"
-#include "torcert.h"
+#include "or/dirauth/dirvote.h"
+#include "or/microdesc.h"
+#include "or/networkstatus.h"
+#include "or/routerlist.h"
+#include "or/routerparse.h"
+#include "or/torcert.h"
 
-#include "microdesc_st.h"
-#include "networkstatus_st.h"
-#include "routerinfo_st.h"
-#include "routerstatus_st.h"
+#include "or/microdesc_st.h"
+#include "or/networkstatus_st.h"
+#include "or/routerinfo_st.h"
+#include "or/routerstatus_st.h"
 
-#include "test.h"
+#include "test/test.h"
 
 #ifdef _WIN32
 /* For mkdir() */

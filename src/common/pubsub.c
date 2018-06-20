@@ -8,8 +8,8 @@
  */
 
 #include "orconfig.h"
-#include "pubsub.h"
-#include "container.h"
+#include "common/pubsub.h"
+#include "common/container.h"
 
 /** Helper: insert <b>s</b> into <b>topic's</b> list of subscribers, keeping
  * them sorted in priority order. */

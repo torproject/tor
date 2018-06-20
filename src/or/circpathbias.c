@@ -21,25 +21,25 @@
  * each guard, and stored persistently in the state file.
  */
 
-#include "or.h"
-#include "channel.h"
-#include "circpathbias.h"
-#include "circuitbuild.h"
-#include "circuitlist.h"
-#include "circuituse.h"
-#include "circuitstats.h"
-#include "connection_edge.h"
-#include "config.h"
-#include "crypto_rand.h"
-#include "entrynodes.h"
-#include "networkstatus.h"
-#include "relay.h"
+#include "or/or.h"
+#include "or/channel.h"
+#include "or/circpathbias.h"
+#include "or/circuitbuild.h"
+#include "or/circuitlist.h"
+#include "or/circuituse.h"
+#include "or/circuitstats.h"
+#include "or/connection_edge.h"
+#include "or/config.h"
+#include "common/crypto_rand.h"
+#include "or/entrynodes.h"
+#include "or/networkstatus.h"
+#include "or/relay.h"
 
-#include "cell_st.h"
-#include "cpath_build_state_st.h"
-#include "crypt_path_st.h"
-#include "extend_info_st.h"
-#include "origin_circuit_st.h"
+#include "or/cell_st.h"
+#include "or/cpath_build_state_st.h"
+#include "or/crypt_path_st.h"
+#include "or/extend_info_st.h"
+#include "or/origin_circuit_st.h"
 
 static void pathbias_count_successful_close(origin_circuit_t *circ);
 static void pathbias_count_collapse(origin_circuit_t *circ);

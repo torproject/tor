@@ -8,8 +8,8 @@
  * \file tor_api.c
  **/
 
-#include "tor_api.h"
-#include "tor_api_internal.h"
+#include "or/tor_api.h"
+#include "or/tor_api_internal.h"
 
 // Include this after the above headers, to insure that they don't
 // depend on anything else.

@@ -30,11 +30,11 @@
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
-#include "compat.h"
-#include "util.h"
+#include "common/compat.h"
+#include "common/util.h"
 #define LOG_PRIVATE
-#include "torlog.h"
-#include "container.h"
+#include "common/torlog.h"
+#include "common/container.h"
 #ifdef HAVE_ANDROID_LOG_H
 #include <android/log.h>
 #endif // HAVE_ANDROID_LOG_H.

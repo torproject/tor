@@ -13,7 +13,7 @@
 #ifndef TOR_CRYPTO_HKDF_H
 #define TOR_CRYPTO_HKDF_H
 
-#include "util.h"
+#include "common/util.h"
 
 int crypto_expand_key_material_TAP(const uint8_t *key_in,
                                    size_t key_in_len,

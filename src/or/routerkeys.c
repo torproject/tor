@@ -14,13 +14,13 @@
  * (TODO: The keys in router.c should go here too.)
  */
 
-#include "or.h"
-#include "config.h"
-#include "crypto_util.h"
-#include "router.h"
-#include "crypto_pwbox.h"
-#include "routerkeys.h"
-#include "torcert.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "common/crypto_util.h"
+#include "or/router.h"
+#include "common/crypto_pwbox.h"
+#include "or/routerkeys.h"
+#include "or/torcert.h"
 
 #define ENC_KEY_HEADER "Boxed Ed25519 key"
 #define ENC_KEY_TAG "master"

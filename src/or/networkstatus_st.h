@@ -7,7 +7,7 @@
 #ifndef NETWORKSTATUS_ST_H
 #define NETWORKSTATUS_ST_H
 
-#include "networkstatus_sr_info_st.h"
+#include "or/networkstatus_sr_info_st.h"
 
 /** A common structure to hold a v3 network status vote, or a v3 network
  * status consensus. */

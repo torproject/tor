@@ -6,22 +6,22 @@
 #include <math.h>
 
 #define TOR_CHANNEL_INTERNAL_
-#include "or.h"
-#include "address.h"
-#include "buffers.h"
-#include "channel.h"
-#include "channeltls.h"
-#include "connection_or.h"
-#include "config.h"
+#include "or/or.h"
+#include "common/address.h"
+#include "common/buffers.h"
+#include "or/channel.h"
+#include "or/channeltls.h"
+#include "or/connection_or.h"
+#include "or/config.h"
 /* For init/free stuff */
-#include "scheduler.h"
-#include "tortls.h"
+#include "or/scheduler.h"
+#include "common/tortls.h"
 
-#include "or_connection_st.h"
+#include "or/or_connection_st.h"
 
 /* Test suite stuff */
-#include "test.h"
-#include "fakechans.h"
+#include "test/test.h"
+#include "test/fakechans.h"
 
 /* The channeltls unit tests */
 static void test_channeltls_create(void *arg);

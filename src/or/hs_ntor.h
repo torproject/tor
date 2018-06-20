@@ -4,7 +4,7 @@
 #ifndef TOR_HS_NTOR_H
 #define TOR_HS_NTOR_H
 
-#include "or.h"
+#include "or/or.h"
 
 /* Output length of KDF for key expansion */
 #define HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN \

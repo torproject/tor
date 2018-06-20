@@ -90,17 +90,17 @@
  **/
 
 #define PT_PRIVATE
-#include "or.h"
-#include "bridges.h"
-#include "config.h"
-#include "circuitbuild.h"
-#include "transports.h"
-#include "util.h"
-#include "router.h"
-#include "statefile.h"
-#include "connection_or.h"
-#include "ext_orport.h"
-#include "control.h"
+#include "or/or.h"
+#include "or/bridges.h"
+#include "or/config.h"
+#include "or/circuitbuild.h"
+#include "or/transports.h"
+#include "common/util.h"
+#include "or/router.h"
+#include "or/statefile.h"
+#include "or/connection_or.h"
+#include "or/ext_orport.h"
+#include "or/control.h"
 
 static process_environment_t *
 create_managed_proxy_environment(const managed_proxy_t *mp);

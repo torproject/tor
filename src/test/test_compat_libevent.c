@@ -3,15 +3,15 @@
 
 #define COMPAT_LIBEVENT_PRIVATE
 #include "orconfig.h"
-#include "or.h"
+#include "or/or.h"
 
-#include "test.h"
+#include "test/test.h"
 
-#include "compat_libevent.h"
+#include "common/compat_libevent.h"
 
 #include <event2/event.h>
 
-#include "log_test_helpers.h"
+#include "test/log_test_helpers.h"
 
 #define NS_MODULE compat_libevent
 

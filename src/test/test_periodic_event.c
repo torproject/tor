@@ -11,15 +11,15 @@
 #define HS_SERVICE_PRIVATE
 #define MAIN_PRIVATE
 
-#include "test.h"
-#include "test_helpers.h"
+#include "test/test.h"
+#include "test/test_helpers.h"
 
-#include "or.h"
-#include "config.h"
-#include "hibernate.h"
-#include "hs_service.h"
-#include "main.h"
-#include "periodic.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/hibernate.h"
+#include "or/hs_service.h"
+#include "or/main.h"
+#include "or/periodic.h"
 
 /** Helper function: This is replaced in some tests for the event callbacks so
  * we don't actually go into the code path of those callbacks. */

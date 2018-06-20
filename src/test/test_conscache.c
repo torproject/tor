@@ -1,10 +1,10 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or.h"
-#include "config.h"
-#include "conscache.h"
-#include "test.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/conscache.h"
+#include "test/test.h"
 
 #ifdef HAVE_UTIME_H
 #include <utime.h>

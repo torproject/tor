@@ -8,18 +8,18 @@
 
 #define CONTROL_PRIVATE
 
-#include "or.h"
-#include "test.h"
-#include "control.h"
-#include "config.h"
-#include "hs_common.h"
-#include "hs_control.h"
-#include "nodelist.h"
+#include "or/or.h"
+#include "test/test.h"
+#include "or/control.h"
+#include "or/config.h"
+#include "or/hs_common.h"
+#include "or/hs_control.h"
+#include "or/nodelist.h"
 
-#include "node_st.h"
-#include "routerstatus_st.h"
+#include "or/node_st.h"
+#include "or/routerstatus_st.h"
 
-#include "test_helpers.h"
+#include "test/test_helpers.h"
 
 /* mock ID digest and longname for node that's in nodelist */
 #define HSDIR_EXIST_ID \

@@ -13,10 +13,10 @@
 
 #include "orconfig.h"
 
-#include "util.h"
-#include "torlog.h"
-#include "compress.h"
-#include "compress_zlib.h"
+#include "common/util.h"
+#include "common/torlog.h"
+#include "common/compress.h"
+#include "common/compress_zlib.h"
 
 /* zlib 1.2.4 and 1.2.5 do some "clever" things with macros.  Instead of
    saying "(defined(FOO) ? FOO : 0)" they like to say "FOO-0", on the theory

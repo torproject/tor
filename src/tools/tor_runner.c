@@ -23,8 +23,8 @@
  * functions.  Don't add more dependencies!
  */
 
-#include "tor_api.h"
-#include "tor_api_internal.h"
+#include "or/tor_api.h"
+#include "or/tor_api_internal.h"
 
 #include "orconfig.h"
 #ifdef HAVE_UNISTD_H

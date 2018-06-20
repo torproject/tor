@@ -27,19 +27,19 @@
 
 #define ROUTERSET_PRIVATE
 
-#include "or.h"
-#include "bridges.h"
-#include "geoip.h"
-#include "nodelist.h"
-#include "policies.h"
-#include "router.h"
-#include "routerparse.h"
-#include "routerset.h"
+#include "or/or.h"
+#include "or/bridges.h"
+#include "or/geoip.h"
+#include "or/nodelist.h"
+#include "or/policies.h"
+#include "or/router.h"
+#include "or/routerparse.h"
+#include "or/routerset.h"
 
-#include "extend_info_st.h"
-#include "node_st.h"
-#include "routerinfo_st.h"
-#include "routerstatus_st.h"
+#include "or/extend_info_st.h"
+#include "or/node_st.h"
+#include "or/routerinfo_st.h"
+#include "or/routerstatus_st.h"
 
 /** Return a new empty routerset. */
 routerset_t *

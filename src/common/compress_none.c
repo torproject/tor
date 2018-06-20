@@ -16,10 +16,10 @@
 
 #include "orconfig.h"
 
-#include "util.h"
-#include "torlog.h"
-#include "compress.h"
-#include "compress_none.h"
+#include "common/util.h"
+#include "common/torlog.h"
+#include "common/compress.h"
+#include "common/compress_none.h"
 
 /** Transfer some bytes using the identity transformation.  Read up to
  * *<b>in_len</b> bytes from *<b>in</b>, and write up to *<b>out_len</b> bytes

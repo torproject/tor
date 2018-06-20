@@ -1,13 +1,13 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or.h"
-#include "crypto_ed25519.h"
-#include "test.h"
-#include "torcert.h"
+#include "or/or.h"
+#include "common/crypto_ed25519.h"
+#include "test/test.h"
+#include "or/torcert.h"
 
-#include "hs_common.h"
-#include "hs_test_helpers.h"
+#include "or/hs_common.h"
+#include "test/hs_test_helpers.h"
 
 hs_desc_intro_point_t *
 hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,

@@ -21,9 +21,9 @@
 #ifndef TOR_HS_IDENT_H
 #define TOR_HS_IDENT_H
 
-#include "crypto_ed25519.h"
+#include "common/crypto_ed25519.h"
 
-#include "hs_common.h"
+#include "or/hs_common.h"
 
 /* Length of the rendezvous cookie that is used to connect circuits at the
  * rendezvous point. */

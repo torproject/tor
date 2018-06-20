@@ -22,11 +22,11 @@
  */
 
 #define DIRCOLLATE_PRIVATE
-#include "dircollate.h"
-#include "dirvote.h"
+#include "or/dirauth/dircollate.h"
+#include "or/dirauth/dirvote.h"
 
-#include "networkstatus_st.h"
-#include "vote_routerstatus_st.h"
+#include "or/networkstatus_st.h"
+#include "or/vote_routerstatus_st.h"
 
 static void dircollator_collate_by_ed25519(dircollator_t *dc);
 

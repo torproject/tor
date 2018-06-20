@@ -6,9 +6,9 @@
  * \brief Process-termination monitor functions
  **/
 
-#include "procmon.h"
+#include "common/procmon.h"
 
-#include "util.h"
+#include "common/util.h"
 
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>

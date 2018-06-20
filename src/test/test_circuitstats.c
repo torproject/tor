@@ -6,21 +6,21 @@
 #define CIRCUITLIST_PRIVATE
 #define CHANNEL_PRIVATE_
 
-#include "or.h"
-#include "test.h"
-#include "test_helpers.h"
-#include "log_test_helpers.h"
-#include "config.h"
-#include "circuitlist.h"
-#include "circuitbuild.h"
-#include "circuitstats.h"
-#include "circuituse.h"
-#include "channel.h"
+#include "or/or.h"
+#include "test/test.h"
+#include "test/test_helpers.h"
+#include "test/log_test_helpers.h"
+#include "or/config.h"
+#include "or/circuitlist.h"
+#include "or/circuitbuild.h"
+#include "or/circuitstats.h"
+#include "or/circuituse.h"
+#include "or/channel.h"
 
-#include "cpath_build_state_st.h"
-#include "crypt_path_st.h"
-#include "extend_info_st.h"
-#include "origin_circuit_st.h"
+#include "or/cpath_build_state_st.h"
+#include "or/crypt_path_st.h"
+#include "or/extend_info_st.h"
+#include "or/origin_circuit_st.h"
 
 void test_circuitstats_timeout(void *arg);
 void test_circuitstats_hoplen(void *arg);

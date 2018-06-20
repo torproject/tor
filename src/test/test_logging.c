@@ -2,9 +2,9 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "or.h"
-#include "torlog.h"
-#include "test.h"
+#include "or/or.h"
+#include "common/torlog.h"
+#include "test/test.h"
 
 static void
 dummy_cb_fn(int severity, uint32_t domain, const char *msg)

@@ -11,7 +11,7 @@
 #ifndef TOR_ROUTERLIST_H
 #define TOR_ROUTERLIST_H
 
-#include "testsupport.h"
+#include "common/testsupport.h"
 
 int get_n_authorities(dirinfo_type_t type);
 int trusted_dirs_reload_certs(void);

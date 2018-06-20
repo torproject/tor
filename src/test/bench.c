@@ -10,24 +10,24 @@
 
 #include "orconfig.h"
 
-#include "or.h"
-#include "onion_tap.h"
-#include "relay_crypto.h"
+#include "or/or.h"
+#include "or/onion_tap.h"
+#include "or/relay_crypto.h"
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
 #include <openssl/ec.h>
 #include <openssl/ecdh.h>
 #include <openssl/obj_mac.h>
 
-#include "config.h"
-#include "crypto_curve25519.h"
-#include "onion_ntor.h"
-#include "crypto_ed25519.h"
-#include "crypto_rand.h"
-#include "consdiff.h"
+#include "or/config.h"
+#include "common/crypto_curve25519.h"
+#include "or/onion_ntor.h"
+#include "common/crypto_ed25519.h"
+#include "common/crypto_rand.h"
+#include "or/consdiff.h"
 
-#include "cell_st.h"
-#include "or_circuit_st.h"
+#include "or/cell_st.h"
+#include "or/or_circuit_st.h"
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)
 static uint64_t nanostart;

@@ -7,9 +7,9 @@
 #ifndef EDGE_CONNECTION_ST_H
 #define EDGE_CONNECTION_ST_H
 
-#include "or.h"
+#include "or/or.h"
 
-#include "connection_st.h"
+#include "or/connection_st.h"
 
 /** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)
  * connection, or an exit. */

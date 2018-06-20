@@ -57,30 +57,30 @@
 /* This one's for stuff only channel.c and the test suite should see */
 #define CHANNEL_PRIVATE_
 
-#include "or.h"
-#include "channel.h"
-#include "channeltls.h"
-#include "channelpadding.h"
-#include "circuitbuild.h"
-#include "circuitlist.h"
-#include "circuitstats.h"
-#include "config.h"
-#include "connection_or.h" /* For var_cell_free() */
-#include "circuitmux.h"
-#include "entrynodes.h"
-#include "geoip.h"
-#include "main.h"
-#include "nodelist.h"
-#include "relay.h"
-#include "rephist.h"
-#include "router.h"
-#include "routerlist.h"
-#include "scheduler.h"
-#include "compat_time.h"
-#include "networkstatus.h"
-#include "rendservice.h"
+#include "or/or.h"
+#include "or/channel.h"
+#include "or/channeltls.h"
+#include "or/channelpadding.h"
+#include "or/circuitbuild.h"
+#include "or/circuitlist.h"
+#include "or/circuitstats.h"
+#include "or/config.h"
+#include "or/connection_or.h" /* For var_cell_free() */
+#include "or/circuitmux.h"
+#include "or/entrynodes.h"
+#include "or/geoip.h"
+#include "or/main.h"
+#include "or/nodelist.h"
+#include "or/relay.h"
+#include "or/rephist.h"
+#include "or/router.h"
+#include "or/routerlist.h"
+#include "or/scheduler.h"
+#include "common/compat_time.h"
+#include "or/networkstatus.h"
+#include "or/rendservice.h"
 
-#include "cell_queue_st.h"
+#include "or/cell_queue_st.h"
 
 /* Global lists of channels */
 

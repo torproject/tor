@@ -23,16 +23,16 @@
 #endif /* defined(_WIN32) */
 
 #define CRYPTO_PRIVATE
-#include "compat_openssl.h"
-#include "crypto.h"
-#include "crypto_curve25519.h"
-#include "crypto_digest.h"
-#include "crypto_dh.h"
-#include "crypto_ed25519.h"
-#include "crypto_format.h"
-#include "crypto_rand.h"
-#include "crypto_rsa.h"
-#include "crypto_util.h"
+#include "common/compat_openssl.h"
+#include "common/crypto.h"
+#include "common/crypto_curve25519.h"
+#include "common/crypto_digest.h"
+#include "common/crypto_dh.h"
+#include "common/crypto_ed25519.h"
+#include "common/crypto_format.h"
+#include "common/crypto_rand.h"
+#include "common/crypto_rsa.h"
+#include "common/crypto_util.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
@@ -62,14 +62,14 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include <unistd.h>
 #endif
 
-#include "torlog.h"
-#include "torint.h"
-#include "aes.h"
-#include "util.h"
-#include "container.h"
-#include "compat.h"
-#include "sandbox.h"
-#include "util_format.h"
+#include "common/torlog.h"
+#include "common/torint.h"
+#include "common/aes.h"
+#include "common/util.h"
+#include "common/container.h"
+#include "common/compat.h"
+#include "common/sandbox.h"
+#include "common/util_format.h"
 
 #include "keccak-tiny/keccak-tiny.h"
 

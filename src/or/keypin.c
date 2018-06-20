@@ -11,17 +11,17 @@
 #define KEYPIN_PRIVATE
 
 #include "orconfig.h"
-#include "compat.h"
-#include "crypto_digest.h"
-#include "crypto_format.h"
-#include "di_ops.h"
+#include "common/compat.h"
+#include "common/crypto_digest.h"
+#include "common/crypto_format.h"
+#include "common/di_ops.h"
 #include "ht.h"
-#include "keypin.h"
+#include "or/keypin.h"
 #include "siphash.h"
-#include "torint.h"
-#include "torlog.h"
-#include "util.h"
-#include "util_format.h"
+#include "common/torint.h"
+#include "common/torlog.h"
+#include "common/util.h"
+#include "common/util_format.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

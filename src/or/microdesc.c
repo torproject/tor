@@ -8,24 +8,24 @@
  *  less-frequently-changing router information.
  */
 
-#include "or.h"
-#include "circuitbuild.h"
-#include "config.h"
-#include "directory.h"
-#include "dirserv.h"
-#include "entrynodes.h"
-#include "microdesc.h"
-#include "networkstatus.h"
-#include "nodelist.h"
-#include "policies.h"
-#include "router.h"
-#include "routerlist.h"
-#include "routerparse.h"
+#include "or/or.h"
+#include "or/circuitbuild.h"
+#include "or/config.h"
+#include "or/directory.h"
+#include "or/dirserv.h"
+#include "or/entrynodes.h"
+#include "or/microdesc.h"
+#include "or/networkstatus.h"
+#include "or/nodelist.h"
+#include "or/policies.h"
+#include "or/router.h"
+#include "or/routerlist.h"
+#include "or/routerparse.h"
 
-#include "microdesc_st.h"
-#include "networkstatus_st.h"
-#include "node_st.h"
-#include "routerstatus_st.h"
+#include "or/microdesc_st.h"
+#include "or/networkstatus_st.h"
+#include "or/node_st.h"
+#include "or/routerstatus_st.h"
 
 /** A data structure to hold a bunch of cached microdescriptors.  There are
  * two active files in the cache: a "cache file" that we mmap, and a "journal

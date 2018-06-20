@@ -9,7 +9,7 @@
 #ifndef TOR_VOTING_SCHEDULE_H
 #define TOR_VOTING_SCHEDULE_H
 
-#include "or.h"
+#include "or/or.h"
 
 /** Scheduling information for a voting interval. */
 typedef struct {

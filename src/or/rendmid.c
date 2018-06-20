@@ -7,20 +7,20 @@
  * \brief Implement introductions points and rendezvous points.
  **/
 
-#include "or.h"
-#include "channel.h"
-#include "circuitlist.h"
-#include "circuituse.h"
-#include "config.h"
-#include "crypto.h"
-#include "dos.h"
-#include "relay.h"
-#include "rendmid.h"
-#include "rephist.h"
-#include "hs_circuitmap.h"
-#include "hs_intropoint.h"
+#include "or/or.h"
+#include "or/channel.h"
+#include "or/circuitlist.h"
+#include "or/circuituse.h"
+#include "or/config.h"
+#include "common/crypto.h"
+#include "or/dos.h"
+#include "or/relay.h"
+#include "or/rendmid.h"
+#include "or/rephist.h"
+#include "or/hs_circuitmap.h"
+#include "or/hs_intropoint.h"
 
-#include "or_circuit_st.h"
+#include "or/or_circuit_st.h"
 
 /** Respond to an ESTABLISH_INTRO cell by checking the signed data and
  * setting the circuit's purpose and service pk digest.

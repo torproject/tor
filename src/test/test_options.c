@@ -4,21 +4,21 @@
 /* See LICENSE for licensing information */
 
 #define CONFIG_PRIVATE
-#include "or.h"
-#include "confparse.h"
-#include "config.h"
-#include "test.h"
-#include "geoip.h"
+#include "or/or.h"
+#include "or/confparse.h"
+#include "or/config.h"
+#include "test/test.h"
+#include "or/geoip.h"
 
 #define ROUTERSET_PRIVATE
-#include "routerset.h"
-#include "main.h"
-#include "log_test_helpers.h"
+#include "or/routerset.h"
+#include "or/main.h"
+#include "test/log_test_helpers.h"
 
-#include "sandbox.h"
-#include "memarea.h"
-#include "policies.h"
-#include "test_helpers.h"
+#include "common/sandbox.h"
+#include "common/memarea.h"
+#include "or/policies.h"
+#include "test/test_helpers.h"
 
 #define NS_MODULE test_options
 

@@ -7,9 +7,9 @@
 #ifndef ORIGIN_CIRCUIT_ST_H
 #define ORIGIN_CIRCUIT_ST_H
 
-#include "or.h"
+#include "or/or.h"
 
-#include "circuit_st.h"
+#include "or/circuit_st.h"
 
 struct onion_queue_t;
 

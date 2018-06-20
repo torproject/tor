@@ -15,9 +15,9 @@
 #include <signal.h>
 #include <time.h>
 
-#include "compat.h"
-#include "torlog.h"
-#include "util.h"
+#include "common/compat.h"
+#include "common/torlog.h"
+#include "common/util.h"
 
 /** Wraps a void (*)(void*) function and its argument so we can
  * invoke them in a way pthreads would expect.

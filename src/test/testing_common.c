@@ -10,15 +10,15 @@
 
 #define MAIN_PRIVATE
 #include "orconfig.h"
-#include "or.h"
-#include "control.h"
-#include "config.h"
-#include "crypto_rand.h"
-#include "rephist.h"
-#include "backtrace.h"
-#include "test.h"
-#include "channelpadding.h"
-#include "main.h"
+#include "or/or.h"
+#include "or/control.h"
+#include "or/config.h"
+#include "common/crypto_rand.h"
+#include "or/rephist.h"
+#include "common/backtrace.h"
+#include "test/test.h"
+#include "or/channelpadding.h"
+#include "or/main.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -34,7 +34,7 @@
 
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
-#include "main.h"
+#include "or/main.h"
 #endif
 
 /** Temporary directory (set up by setup_directory) under which we store all

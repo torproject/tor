@@ -11,24 +11,24 @@
 #include <float.h>
 #include <math.h>
 
-#include "or.h"
-#include "torlog.h"
+#include "or/or.h"
+#include "common/torlog.h"
 #include "tor_queue.h"
-#include "status.h"
-#include "circuitlist.h"
-#include "config.h"
-#include "hibernate.h"
-#include "rephist.h"
-#include "relay.h"
-#include "router.h"
-#include "main.h"
-#include "nodelist.h"
-#include "statefile.h"
+#include "or/status.h"
+#include "or/circuitlist.h"
+#include "or/config.h"
+#include "or/hibernate.h"
+#include "or/rephist.h"
+#include "or/relay.h"
+#include "or/router.h"
+#include "or/main.h"
+#include "or/nodelist.h"
+#include "or/statefile.h"
 
-#include "origin_circuit_st.h"
-#include "routerinfo_st.h"
+#include "or/origin_circuit_st.h"
+#include "or/routerinfo_st.h"
 
-#include "test.h"
+#include "test/test.h"
 
 #define NS_MODULE status
 

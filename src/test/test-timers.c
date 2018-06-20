@@ -7,11 +7,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "compat.h"
-#include "compat_libevent.h"
-#include "crypto_rand.h"
-#include "timers.h"
-#include "util.h"
+#include "common/compat.h"
+#include "common/compat_libevent.h"
+#include "common/crypto_rand.h"
+#include "common/timers.h"
+#include "common/util.h"
 
 #define N_TIMERS 1000
 #define MAX_DURATION 30

@@ -13,9 +13,9 @@
 
 //#include <sys/sockio.h>
 #include "orconfig.h"
-#include "torint.h"
-#include "compat.h"
-#include "container.h"
+#include "common/torint.h"
+#include "common/compat.h"
+#include "common/container.h"
 
 #ifdef ADDRESS_PRIVATE
 

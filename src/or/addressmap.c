@@ -15,18 +15,18 @@
 
 #define ADDRESSMAP_PRIVATE
 
-#include "or.h"
-#include "addressmap.h"
-#include "circuituse.h"
-#include "config.h"
-#include "connection_edge.h"
-#include "control.h"
-#include "crypto_rand.h"
-#include "dns.h"
-#include "nodelist.h"
-#include "routerset.h"
+#include "or/or.h"
+#include "or/addressmap.h"
+#include "or/circuituse.h"
+#include "or/config.h"
+#include "or/connection_edge.h"
+#include "or/control.h"
+#include "common/crypto_rand.h"
+#include "or/dns.h"
+#include "or/nodelist.h"
+#include "or/routerset.h"
 
-#include "entry_connection_st.h"
+#include "or/entry_connection_st.h"
 
 /** A client-side struct to remember requests to rewrite addresses
  * to new addresses. These structs are stored in the hash table

@@ -3,19 +3,19 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or.h"
-#include "circuitbuild.h"
+#include "or/or.h"
+#include "or/circuitbuild.h"
 #define CIRCUITLIST_PRIVATE
-#include "circuitlist.h"
-#include "crypto_rand.h"
-#include "relay.h"
-#include "relay_crypto.h"
+#include "or/circuitlist.h"
+#include "common/crypto_rand.h"
+#include "or/relay.h"
+#include "or/relay_crypto.h"
 
-#include "cell_st.h"
-#include "or_circuit_st.h"
-#include "origin_circuit_st.h"
+#include "or/cell_st.h"
+#include "or/or_circuit_st.h"
+#include "or/origin_circuit_st.h"
 
-#include "test.h"
+#include "test/test.h"
 
 static const char KEY_MATERIAL[3][CPATH_KEY_MATERIAL_LEN] = {
   "    'My public key is in this signed x509 object', said Tom assertively.",

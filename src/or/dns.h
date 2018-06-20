@@ -41,7 +41,7 @@ void dns_reset_correctness_checks(void);
 void dump_dns_mem_usage(int severity);
 
 #ifdef DNS_PRIVATE
-#include "dns_structs.h"
+#include "or/dns_structs.h"
 
 MOCK_DECL(STATIC int,dns_resolve_impl,(edge_connection_t *exitconn,
 int is_resolve,or_circuit_t *oncirc, char **hostname_out,

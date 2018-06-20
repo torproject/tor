@@ -16,10 +16,10 @@
 #include "orconfig.h"
 
 #include <stdio.h>
-#include "torint.h"
-#include "compat.h"
-#include "util.h"
-#include "crypto_rsa.h"
+#include "common/torint.h"
+#include "common/compat.h"
+#include "common/util.h"
+#include "common/crypto_rsa.h"
 
 /** Length of our symmetric cipher's keys of 128-bit. */
 #define CIPHER_KEY_LEN 16

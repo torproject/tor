@@ -31,11 +31,11 @@
 
 #define TOR_TIMERS_PRIVATE
 
-#include "compat.h"
-#include "compat_libevent.h"
-#include "timers.h"
-#include "torlog.h"
-#include "util.h"
+#include "common/compat.h"
+#include "common/compat_libevent.h"
+#include "common/timers.h"
+#include "common/torlog.h"
+#include "common/util.h"
 
 struct timeout_cb {
   timer_cb_fn_t cb;

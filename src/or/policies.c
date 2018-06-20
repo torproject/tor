@@ -17,25 +17,25 @@
 
 #define POLICIES_PRIVATE
 
-#include "or.h"
-#include "bridges.h"
-#include "config.h"
-#include "dirserv.h"
-#include "microdesc.h"
-#include "networkstatus.h"
-#include "nodelist.h"
-#include "policies.h"
-#include "router.h"
-#include "routerparse.h"
-#include "geoip.h"
+#include "or/or.h"
+#include "or/bridges.h"
+#include "or/config.h"
+#include "or/dirserv.h"
+#include "or/microdesc.h"
+#include "or/networkstatus.h"
+#include "or/nodelist.h"
+#include "or/policies.h"
+#include "or/router.h"
+#include "or/routerparse.h"
+#include "or/geoip.h"
 #include "ht.h"
 
-#include "dir_server_st.h"
-#include "microdesc_st.h"
-#include "node_st.h"
-#include "port_cfg_st.h"
-#include "routerinfo_st.h"
-#include "routerstatus_st.h"
+#include "or/dir_server_st.h"
+#include "or/microdesc_st.h"
+#include "or/node_st.h"
+#include "or/port_cfg_st.h"
+#include "or/routerinfo_st.h"
+#include "or/routerstatus_st.h"
 
 /** Policy that addresses for incoming SOCKS connections must match. */
 static smartlist_t *socks_policy = NULL;

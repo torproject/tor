@@ -3,15 +3,15 @@
 
 #define CIRCUITLIST_PRIVATE
 #define RELAY_PRIVATE
-#include "or.h"
-#include "circuitlist.h"
-#include "relay.h"
-#include "test.h"
+#include "or/or.h"
+#include "or/circuitlist.h"
+#include "or/relay.h"
+#include "test/test.h"
 
-#include "cell_st.h"
-#include "cell_queue_st.h"
-#include "or_circuit_st.h"
-#include "origin_circuit_st.h"
+#include "or/cell_st.h"
+#include "or/cell_queue_st.h"
+#include "or/or_circuit_st.h"
+#include "or/origin_circuit_st.h"
 
 static void
 test_cq_manip(void *arg)

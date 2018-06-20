@@ -3,12 +3,12 @@
 
 #define PROCMON_PRIVATE
 #include "orconfig.h"
-#include "or.h"
-#include "test.h"
+#include "or/or.h"
+#include "test/test.h"
 
-#include "procmon.h"
+#include "common/procmon.h"
 
-#include "log_test_helpers.h"
+#include "test/log_test_helpers.h"
 
 #define NS_MODULE procmon
 

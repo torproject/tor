@@ -12,10 +12,10 @@
  */
 
 #include "orconfig.h"
-#include "torlog.h"
-#include "util.h"
-#include "util_format.h"
-#include "torint.h"
+#include "common/torlog.h"
+#include "common/util.h"
+#include "common/util_format.h"
+#include "common/torint.h"
 
 #include <stddef.h>
 #include <string.h>

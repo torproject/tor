@@ -9,9 +9,9 @@
 #ifndef TOR_PARSECOMMON_H
 #define TOR_PARSECOMMON_H
 
-#include "container.h"
-#include "crypto.h"
-#include "memarea.h"
+#include "common/container.h"
+#include "common/crypto.h"
+#include "common/memarea.h"
 
 /** Enumeration of possible token types.  The ones starting with K_ correspond
 * to directory 'keywords'. A_ is for an annotation, R or C is related to

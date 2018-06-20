@@ -5,7 +5,7 @@
 #ifndef TOR_CONSDIFF_H
 #define TOR_CONSDIFF_H
 
-#include "or.h"
+#include "or/or.h"
 
 char *consensus_diff_generate(const char *cons1,
                               const char *cons2);

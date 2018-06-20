@@ -5,13 +5,13 @@
 
 #define BUFFERS_PRIVATE
 #define PROTO_HTTP_PRIVATE
-#include "or.h"
-#include "buffers.h"
-#include "buffers_tls.h"
-#include "crypto_rand.h"
-#include "proto_http.h"
-#include "proto_socks.h"
-#include "test.h"
+#include "or/or.h"
+#include "common/buffers.h"
+#include "common/buffers_tls.h"
+#include "common/crypto_rand.h"
+#include "or/proto_http.h"
+#include "or/proto_socks.h"
+#include "test/test.h"
 
 /** Run unit tests for buffers.c */
 static void

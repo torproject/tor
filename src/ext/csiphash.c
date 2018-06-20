@@ -29,10 +29,10 @@
     Jean-Philippe Aumasson (https://131002.net/siphash/siphash24.c)
 */
 
-#include "torint.h"
+#include "common/torint.h"
 #include "siphash.h"
 /* for tor_assert */
-#include "util.h"
+#include "common/util.h"
 /* for memcpy */
 #include <string.h>
 #include "byteorder.h"

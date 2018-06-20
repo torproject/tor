@@ -3,19 +3,19 @@
 
 #define ROUTERSET_PRIVATE
 
-#include "or.h"
-#include "geoip.h"
-#include "routerset.h"
-#include "routerparse.h"
-#include "policies.h"
-#include "nodelist.h"
+#include "or/or.h"
+#include "or/geoip.h"
+#include "or/routerset.h"
+#include "or/routerparse.h"
+#include "or/policies.h"
+#include "or/nodelist.h"
 
-#include "extend_info_st.h"
-#include "node_st.h"
-#include "routerinfo_st.h"
-#include "routerstatus_st.h"
+#include "or/extend_info_st.h"
+#include "or/node_st.h"
+#include "or/routerinfo_st.h"
+#include "or/routerstatus_st.h"
 
-#include "test.h"
+#include "test/test.h"
 
 #define NS_MODULE routerset
 

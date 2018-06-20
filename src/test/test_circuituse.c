@@ -5,17 +5,17 @@
 
 #define CIRCUITLIST_PRIVATE
 
-#include "or.h"
-#include "test.h"
-#include "test_helpers.h"
-#include "config.h"
-#include "circuitlist.h"
-#include "circuituse.h"
-#include "circuitbuild.h"
-#include "nodelist.h"
+#include "or/or.h"
+#include "test/test.h"
+#include "test/test_helpers.h"
+#include "or/config.h"
+#include "or/circuitlist.h"
+#include "or/circuituse.h"
+#include "or/circuitbuild.h"
+#include "or/nodelist.h"
 
-#include "cpath_build_state_st.h"
-#include "origin_circuit_st.h"
+#include "or/cpath_build_state_st.h"
+#include "or/origin_circuit_st.h"
 
 static void
 test_circuit_is_available_for_use_ret_false_when_marked_for_close(void *arg)

@@ -14,7 +14,7 @@
 #define TOR_CRYPTO_OPENSSL_H
 
 #include <stdio.h>
-#include "util.h"
+#include "common/util.h"
 
 #include <openssl/engine.h>
 

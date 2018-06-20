@@ -8,19 +8,19 @@
 #define SCHEDULER_KIST_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
 #define CHANNEL_PRIVATE_
-#include "or.h"
-#include "config.h"
-#include "compat_libevent.h"
-#include "channel.h"
-#include "channeltls.h"
-#include "connection.h"
-#include "networkstatus.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "common/compat_libevent.h"
+#include "or/channel.h"
+#include "or/channeltls.h"
+#include "or/connection.h"
+#include "or/networkstatus.h"
 #define SCHEDULER_PRIVATE_
-#include "scheduler.h"
+#include "or/scheduler.h"
 
 /* Test suite stuff */
-#include "test.h"
-#include "fakechans.h"
+#include "test/test.h"
+#include "test/fakechans.h"
 
 /* Shamelessly stolen from compat_libevent.c */
 #define V(major, minor, patch) \

@@ -9,10 +9,10 @@
 #ifndef TOR_CHANNEL_H
 #define TOR_CHANNEL_H
 
-#include "or.h"
-#include "circuitmux.h"
-#include "timers.h"
-#include "handles.h"
+#include "or/or.h"
+#include "or/circuitmux.h"
+#include "common/timers.h"
+#include "common/handles.h"
 
 /* Channel handler function pointer typedefs */
 typedef void (*channel_listener_fn_ptr)(channel_listener_t *, channel_t *);

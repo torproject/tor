@@ -12,7 +12,7 @@
 #ifndef TOR_CONFIG_H
 #define TOR_CONFIG_H
 
-#include "testsupport.h"
+#include "common/testsupport.h"
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(DARWIN)
 #define KERNEL_MAY_SUPPORT_IPFW

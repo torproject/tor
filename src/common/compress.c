@@ -14,19 +14,19 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
-#include "torint.h"
+#include "common/torint.h"
 
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
 
-#include "util.h"
-#include "torlog.h"
-#include "compress.h"
-#include "compress_lzma.h"
-#include "compress_none.h"
-#include "compress_zlib.h"
-#include "compress_zstd.h"
+#include "common/util.h"
+#include "common/torlog.h"
+#include "common/compress.h"
+#include "common/compress_lzma.h"
+#include "common/compress_none.h"
+#include "common/compress_zlib.h"
+#include "common/compress_zstd.h"
 
 /** Total number of bytes allocated for compression state overhead. */
 static atomic_counter_t total_compress_allocation;

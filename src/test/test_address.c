@@ -23,10 +23,10 @@
 #include <net/if.h>
 #endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
 
-#include "or.h"
-#include "address.h"
-#include "test.h"
-#include "log_test_helpers.h"
+#include "or/or.h"
+#include "common/address.h"
+#include "test/test.h"
+#include "test/log_test_helpers.h"
 
 /** Return 1 iff <b>sockaddr1</b> and <b>sockaddr2</b> represent
  * the same IP address and port combination. Otherwise, return 0.

@@ -4,11 +4,11 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "compat.h"
-#include "util.h"
-#include "address.h"
-#include "torlog.h"
-#include "sandbox.h"
+#include "common/compat.h"
+#include "common/util.h"
+#include "common/address.h"
+#include "common/torlog.h"
+#include "common/sandbox.h"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -28,15 +28,15 @@
  */
 
 #define GEOIP_PRIVATE
-#include "or.h"
+#include "or/or.h"
 #include "ht.h"
-#include "buffers.h"
-#include "config.h"
-#include "control.h"
-#include "dnsserv.h"
-#include "dos.h"
-#include "geoip.h"
-#include "routerlist.h"
+#include "common/buffers.h"
+#include "or/config.h"
+#include "or/control.h"
+#include "or/dnsserv.h"
+#include "or/dos.h"
+#include "or/geoip.h"
+#include "or/routerlist.h"
 
 static void init_geoip_countries(void);
 

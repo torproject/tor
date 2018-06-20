@@ -9,8 +9,8 @@
 #ifndef TOR_HS_CELL_H
 #define TOR_HS_CELL_H
 
-#include "or.h"
-#include "hs_service.h"
+#include "or/or.h"
+#include "or/hs_service.h"
 
 /* An INTRODUCE1 cell requires at least this amount of bytes (see section
  * 3.2.2 of the specification). Below this value, the cell must be padded. */

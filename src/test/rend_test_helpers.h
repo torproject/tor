@@ -1,7 +1,7 @@
 /* Copyright (c) 2014-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or.h"
+#include "or/or.h"
 
 #ifndef TOR_REND_TEST_HELPERS_H
 #define TOR_REND_TEST_HELPERS_H

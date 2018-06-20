@@ -7,9 +7,9 @@
 #ifndef CIRCUIT_ST_H
 #define CIRCUIT_ST_H
 
-#include "or.h"
+#include "or/or.h"
 
-#include "cell_queue_st.h"
+#include "or/cell_queue_st.h"
 
 /**
  * A circuit is a path over the onion routing

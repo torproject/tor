@@ -17,8 +17,8 @@
  * certificate for any (ID key, signing key) pair.
  **/
 
-#include "or.h"
-#include "fp_pair.h"
+#include "or/or.h"
+#include "or/fp_pair.h"
 
 /* Define fp_pair_map_t structures */
 

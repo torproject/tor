@@ -6,11 +6,11 @@
  * \brief Tests for functions closely related to the Tor main loop
  */
 
-#include "test.h"
-#include "log_test_helpers.h"
+#include "test/test.h"
+#include "test/log_test_helpers.h"
 
-#include "or.h"
-#include "main.h"
+#include "or/or.h"
+#include "or/main.h"
 
 static const uint64_t BILLION = 1000000000;
 

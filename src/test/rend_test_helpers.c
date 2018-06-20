@@ -1,15 +1,15 @@
 /* Copyright (c) 2014-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or.h"
-#include "crypto_rand.h"
-#include "test.h"
-#include "rendcommon.h"
-#include "rend_test_helpers.h"
+#include "or/or.h"
+#include "common/crypto_rand.h"
+#include "test/test.h"
+#include "or/rendcommon.h"
+#include "test/rend_test_helpers.h"
 
-#include "extend_info_st.h"
-#include "rend_intro_point_st.h"
-#include "rend_service_descriptor_st.h"
+#include "or/extend_info_st.h"
+#include "or/rend_intro_point_st.h"
+#include "or/rend_service_descriptor_st.h"
 
 void
 generate_desc(int time_diff, rend_encoded_v2_service_descriptor_t **desc,

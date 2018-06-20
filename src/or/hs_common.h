@@ -9,10 +9,10 @@
 #ifndef TOR_HS_COMMON_H
 #define TOR_HS_COMMON_H
 
-#include "or.h"
+#include "or/or.h"
 
 /* Trunnel */
-#include "ed25519_cert.h"
+#include "trunnel/ed25519_cert.h"
 
 /* Protocol version 2. Use this instead of hardcoding "2" in the code base,
  * this adds a clearer semantic to the value when used. */

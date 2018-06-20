@@ -6,22 +6,22 @@
 #define NETWORKSTATUS_PRIVATE
 
 #include "orconfig.h"
-#include "or.h"
-#include "config.h"
-#include "dirserv.h"
-#include "container.h"
-#include "entrynodes.h"
-#include "util.h"
-#include "routerparse.h"
-#include "networkstatus.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/dirserv.h"
+#include "common/container.h"
+#include "or/entrynodes.h"
+#include "common/util.h"
+#include "or/routerparse.h"
+#include "or/networkstatus.h"
 
-#include "networkstatus_st.h"
-#include "vote_microdesc_hash_st.h"
-#include "vote_routerstatus_st.h"
+#include "or/networkstatus_st.h"
+#include "or/vote_microdesc_hash_st.h"
+#include "or/vote_routerstatus_st.h"
 
-#include "test.h"
-#include "test_helpers.h"
-#include "log_test_helpers.h"
+#include "test/test.h"
+#include "test/test_helpers.h"
+#include "test/log_test_helpers.h"
 
 /** Generate a vote_routerstatus_t for a router with identity digest
  * <b>digest_in_hex</b>. */

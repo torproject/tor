@@ -10,20 +10,20 @@
 #define DIRECTORY_PRIVATE
 #define HS_CACHE_PRIVATE
 
-#include "ed25519_cert.h"
-#include "hs_cache.h"
-#include "rendcache.h"
-#include "directory.h"
-#include "networkstatus.h"
-#include "connection.h"
-#include "proto_http.h"
+#include "trunnel/ed25519_cert.h"
+#include "or/hs_cache.h"
+#include "or/rendcache.h"
+#include "or/directory.h"
+#include "or/networkstatus.h"
+#include "or/connection.h"
+#include "or/proto_http.h"
 
-#include "dir_connection_st.h"
-#include "networkstatus_st.h"
+#include "or/dir_connection_st.h"
+#include "or/networkstatus_st.h"
 
-#include "hs_test_helpers.h"
-#include "test_helpers.h"
-#include "test.h"
+#include "test/hs_test_helpers.h"
+#include "test/test_helpers.h"
+#include "test/test.h"
 
 /* Static variable used to encoded the HSDir query. */
 static char query_b64[256];

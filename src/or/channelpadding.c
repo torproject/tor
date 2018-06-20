@@ -8,23 +8,23 @@
  * channelpadding_channel_to_channelinfo() */
 #define TOR_CHANNEL_INTERNAL_
 
-#include "or.h"
-#include "channel.h"
-#include "channelpadding.h"
-#include "channeltls.h"
-#include "config.h"
-#include "networkstatus.h"
-#include "connection.h"
-#include "connection_or.h"
-#include "crypto_rand.h"
-#include "main.h"
-#include "rephist.h"
-#include "router.h"
-#include "compat_time.h"
-#include "rendservice.h"
+#include "or/or.h"
+#include "or/channel.h"
+#include "or/channelpadding.h"
+#include "or/channeltls.h"
+#include "or/config.h"
+#include "or/networkstatus.h"
+#include "or/connection.h"
+#include "or/connection_or.h"
+#include "common/crypto_rand.h"
+#include "or/main.h"
+#include "or/rephist.h"
+#include "or/router.h"
+#include "common/compat_time.h"
+#include "or/rendservice.h"
 
-#include "cell_st.h"
-#include "or_connection_st.h"
+#include "or/cell_st.h"
+#include "or/or_connection_st.h"
 
 STATIC int32_t channelpadding_get_netflow_inactive_timeout_ms(
                                                            const channel_t *);

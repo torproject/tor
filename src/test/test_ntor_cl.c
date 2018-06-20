@@ -6,12 +6,12 @@
 #include <stdlib.h>
 
 #define ONION_NTOR_PRIVATE
-#include "or.h"
-#include "util.h"
-#include "compat.h"
-#include "crypto.h"
-#include "crypto_curve25519.h"
-#include "onion_ntor.h"
+#include "or/or.h"
+#include "common/util.h"
+#include "common/compat.h"
+#include "common/crypto.h"
+#include "common/crypto_curve25519.h"
+#include "or/onion_ntor.h"
 
 #define N_ARGS(n) STMT_BEGIN {                                  \
     if (argc < (n)) {                                           \

@@ -1,12 +1,12 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or.h"
+#include "or/or.h"
 
-#include "config.h"
-#include "conscache.h"
-#include "crypto_util.h"
-#include "storagedir.h"
+#include "or/config.h"
+#include "or/conscache.h"
+#include "common/crypto_util.h"
+#include "common/storagedir.h"
 
 #define CCE_MAGIC 0x17162253
 

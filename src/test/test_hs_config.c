@@ -9,15 +9,15 @@
 #define CONFIG_PRIVATE
 #define HS_SERVICE_PRIVATE
 
-#include "test.h"
-#include "test_helpers.h"
-#include "log_test_helpers.h"
+#include "test/test.h"
+#include "test/test_helpers.h"
+#include "test/log_test_helpers.h"
 
-#include "config.h"
-#include "hs_common.h"
-#include "hs_config.h"
-#include "hs_service.h"
-#include "rendservice.h"
+#include "or/config.h"
+#include "or/hs_common.h"
+#include "or/hs_config.h"
+#include "or/hs_service.h"
+#include "or/rendservice.h"
 
 static int
 helper_config_service(const char *conf, int validate_only)

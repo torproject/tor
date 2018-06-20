@@ -2,12 +2,12 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "crypto.h"
-#include "or.h"
-#include "test.h"
+#include "common/crypto.h"
+#include "or/or.h"
+#include "test/test.h"
 
 #define RENDSERVICE_PRIVATE
-#include "rendservice.h"
+#include "or/rendservice.h"
 
 static uint8_t v0_test_plaintext[] =
     /* 20 bytes of rendezvous point nickname */

@@ -8,18 +8,18 @@
 
 #define HS_DESCRIPTOR_PRIVATE
 
-#include "crypto_ed25519.h"
-#include "crypto_digest.h"
-#include "crypto_rand.h"
-#include "ed25519_cert.h"
-#include "or.h"
-#include "hs_descriptor.h"
-#include "test.h"
-#include "torcert.h"
+#include "common/crypto_ed25519.h"
+#include "common/crypto_digest.h"
+#include "common/crypto_rand.h"
+#include "trunnel/ed25519_cert.h"
+#include "or/or.h"
+#include "or/hs_descriptor.h"
+#include "test/test.h"
+#include "or/torcert.h"
 
-#include "hs_test_helpers.h"
-#include "test_helpers.h"
-#include "log_test_helpers.h"
+#include "test/hs_test_helpers.h"
+#include "test/test_helpers.h"
+#include "test/log_test_helpers.h"
 
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 DISABLE_GCC_WARNING(overlength-strings)

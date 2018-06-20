@@ -6,19 +6,19 @@
  * \brief Unit tests for nodelist related functions.
  **/
 
-#include "or.h"
-#include "crypto_rand.h"
-#include "networkstatus.h"
-#include "nodelist.h"
-#include "torcert.h"
+#include "or/or.h"
+#include "common/crypto_rand.h"
+#include "or/networkstatus.h"
+#include "or/nodelist.h"
+#include "or/torcert.h"
 
-#include "microdesc_st.h"
-#include "networkstatus_st.h"
-#include "node_st.h"
-#include "routerinfo_st.h"
-#include "routerstatus_st.h"
+#include "or/microdesc_st.h"
+#include "or/networkstatus_st.h"
+#include "or/node_st.h"
+#include "or/routerinfo_st.h"
+#include "or/routerstatus_st.h"
 
-#include "test.h"
+#include "test/test.h"
 
 /** Test the case when node_get_by_id() returns NULL,
  * node_get_verbose_nickname_by_id should return the base 16 encoding

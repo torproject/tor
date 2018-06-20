@@ -13,8 +13,8 @@
 #ifndef TOR_CRYPTO_RAND_H
 #define TOR_CRYPTO_RAND_H
 
-#include "torint.h"
-#include "util.h"
+#include "common/torint.h"
+#include "common/util.h"
 
 /* random numbers */
 int crypto_seed_rng(void) ATTR_WUR;

@@ -6,16 +6,16 @@
  * \brief Test our smaller buffer-based protocol functions
  */
 
-#include "or.h"
-#include "test.h"
-#include "buffers.h"
-#include "connection_or.h"
-#include "ext_orport.h"
-#include "proto_cell.h"
-#include "proto_control0.h"
-#include "proto_ext_or.h"
+#include "or/or.h"
+#include "test/test.h"
+#include "common/buffers.h"
+#include "or/connection_or.h"
+#include "or/ext_orport.h"
+#include "or/proto_cell.h"
+#include "or/proto_control0.h"
+#include "or/proto_ext_or.h"
 
-#include "var_cell_st.h"
+#include "or/var_cell_st.h"
 
 static void
 test_proto_var_cell(void *arg)

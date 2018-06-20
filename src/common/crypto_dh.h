@@ -13,7 +13,7 @@
 #ifndef TOR_CRYPTO_DH_H
 #define TOR_CRYPTO_DH_H
 
-#include "util.h"
+#include "common/util.h"
 
 /** Length of our DH keys. */
 #define DH_BYTES (1024/8)

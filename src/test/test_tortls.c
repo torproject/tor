@@ -11,7 +11,7 @@
 #endif
 #include <math.h>
 
-#include "compat.h"
+#include "common/compat.h"
 
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
  * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
@@ -30,13 +30,13 @@ DISABLE_GCC_WARNING(redundant-decls)
 
 ENABLE_GCC_WARNING(redundant-decls)
 
-#include "or.h"
-#include "torlog.h"
-#include "config.h"
-#include "tortls.h"
+#include "or/or.h"
+#include "common/torlog.h"
+#include "or/config.h"
+#include "common/tortls.h"
 
-#include "test.h"
-#include "log_test_helpers.h"
+#include "test/test.h"
+#include "test/log_test_helpers.h"
 #define NS_MODULE tortls
 
 #ifndef HAVE_SSL_STATE

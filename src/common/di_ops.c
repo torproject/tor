@@ -7,9 +7,9 @@
  **/
 
 #include "orconfig.h"
-#include "di_ops.h"
-#include "torlog.h"
-#include "util.h"
+#include "common/di_ops.h"
+#include "common/torlog.h"
+#include "common/util.h"
 
 /**
  * Timing-safe version of memcmp.  As memcmp, compare the <b>sz</b> bytes at

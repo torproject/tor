@@ -24,9 +24,9 @@
  *  rendezvous key expansion to setup end-to-end rend circuit keys.
  */
 
-#include "or.h"
-#include "crypto_util.h"
-#include "hs_ntor.h"
+#include "or/or.h"
+#include "common/crypto_util.h"
+#include "or/hs_ntor.h"
 
 /* String constants used by the ntor HS protocol */
 #define PROTOID "tor-hs-ntor-curve25519-sha3-256-1"

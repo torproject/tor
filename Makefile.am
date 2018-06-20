@@ -18,7 +18,8 @@ bin_SCRIPTS=
 AM_CPPFLAGS=\
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/ext \
-	-I$(top_srcdir)/src/ext/trunnel
+	-I$(top_srcdir)/src/ext/trunnel \
+	-I$(top_srcdir)/src/trunnel
 
 AM_CFLAGS=@TOR_SYSTEMD_CFLAGS@ @CFLAGS_BUGTRAP@ @TOR_LZMA_CFLAGS@ @TOR_ZSTD_CFLAGS@
 SHELL=@SHELL@

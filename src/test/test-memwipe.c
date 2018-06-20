@@ -7,9 +7,9 @@
 #include <sys/types.h>
 #include <stdlib.h>
 
-#include "crypto_util.h"
-#include "compat.h"
-#include "util.h"
+#include "common/crypto_util.h"
+#include "common/compat.h"
+#include "common/util.h"
 
 static unsigned fill_a_buffer_memset(void) __attribute__((noinline));
 static unsigned fill_a_buffer_memwipe(void) __attribute__((noinline));

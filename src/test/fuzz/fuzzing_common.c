@@ -2,12 +2,12 @@
 /* See LICENSE for licensing information */
 #define CRYPTO_ED25519_PRIVATE
 #include "orconfig.h"
-#include "or.h"
-#include "backtrace.h"
-#include "config.h"
-#include "fuzzing.h"
-#include "crypto.h"
-#include "crypto_ed25519.h"
+#include "or/or.h"
+#include "common/backtrace.h"
+#include "or/config.h"
+#include "test/fuzz/fuzzing.h"
+#include "common/crypto.h"
+#include "common/crypto_ed25519.h"
 
 static or_options_t *mock_options = NULL;
 static const or_options_t *

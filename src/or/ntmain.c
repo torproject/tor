@@ -19,10 +19,10 @@
 
 #ifdef _WIN32
 
-#include "or.h"
-#include "config.h"
-#include "main.h"
-#include "ntmain.h"
+#include "or/or.h"
+#include "or/config.h"
+#include "or/main.h"
+#include "or/ntmain.h"
 
 #include <windows.h>
 #define GENSRV_SERVICENAME  "tor"

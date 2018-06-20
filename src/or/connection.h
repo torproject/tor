@@ -15,7 +15,7 @@
 listener_connection_t *TO_LISTENER_CONN(connection_t *);
 
 /* XXXX For buf_datalen in inline function */
-#include "buffers.h"
+#include "common/buffers.h"
 
 const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);

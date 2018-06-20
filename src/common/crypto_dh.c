@@ -9,11 +9,11 @@
  * \brief Block of functions related with DH utilities and operations.
  **/
 
-#include "compat_openssl.h"
-#include "crypto_dh.h"
-#include "crypto_digest.h"
-#include "crypto_hkdf.h"
-#include "crypto_util.h"
+#include "common/compat_openssl.h"
+#include "common/crypto_dh.h"
+#include "common/crypto_digest.h"
+#include "common/crypto_hkdf.h"
+#include "common/crypto_util.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
@@ -21,7 +21,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 
 ENABLE_GCC_WARNING(redundant-decls)
 
-#include "torlog.h"
+#include "common/torlog.h"
 
 /** A structure to hold the first half (x, g^x) of a Diffie-Hellman handshake
  * while we're waiting for the second.*/

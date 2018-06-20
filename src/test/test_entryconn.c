@@ -6,21 +6,21 @@
 #define CONNECTION_PRIVATE
 #define CONNECTION_EDGE_PRIVATE
 
-#include "or.h"
-#include "test.h"
+#include "or/or.h"
+#include "test/test.h"
 
-#include "addressmap.h"
-#include "config.h"
-#include "confparse.h"
-#include "connection.h"
-#include "connection_edge.h"
-#include "nodelist.h"
+#include "or/addressmap.h"
+#include "or/config.h"
+#include "or/confparse.h"
+#include "or/connection.h"
+#include "or/connection_edge.h"
+#include "or/nodelist.h"
 
-#include "hs_cache.h"
-#include "rendcache.h"
+#include "or/hs_cache.h"
+#include "or/rendcache.h"
 
-#include "entry_connection_st.h"
-#include "socks_request_st.h"
+#include "or/entry_connection_st.h"
+#include "or/socks_request_st.h"
 
 static void *
 entryconn_rewrite_setup(const struct testcase_t *tc)

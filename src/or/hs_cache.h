@@ -11,11 +11,11 @@
 
 #include <stdint.h>
 
-#include "crypto_ed25519.h"
-#include "hs_common.h"
-#include "hs_descriptor.h"
-#include "rendcommon.h"
-#include "torcert.h"
+#include "common/crypto_ed25519.h"
+#include "or/hs_common.h"
+#include "or/hs_descriptor.h"
+#include "or/rendcommon.h"
+#include "or/torcert.h"
 
 /* This is the maximum time an introduction point state object can stay in the
  * client cache in seconds (2 mins or 120 seconds). */

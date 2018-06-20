@@ -27,10 +27,10 @@
  * many RSA1024 keys.
  **/
 
-#include "or.h"
-#include "onion_fast.h"
-#include "crypto_rand.h"
-#include "crypto_util.h"
+#include "or/or.h"
+#include "or/onion_fast.h"
+#include "common/crypto_rand.h"
+#include "common/crypto_util.h"
 
 /** Release all state held in <b>victim</b>. */
 void

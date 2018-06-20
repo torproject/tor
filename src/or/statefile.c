@@ -29,19 +29,19 @@
  */
 
 #define STATEFILE_PRIVATE
-#include "or.h"
-#include "circuitstats.h"
-#include "config.h"
-#include "confparse.h"
-#include "connection.h"
-#include "control.h"
-#include "entrynodes.h"
-#include "hibernate.h"
-#include "main.h"
-#include "rephist.h"
-#include "router.h"
-#include "sandbox.h"
-#include "statefile.h"
+#include "or/or.h"
+#include "or/circuitstats.h"
+#include "or/config.h"
+#include "or/confparse.h"
+#include "or/connection.h"
+#include "or/control.h"
+#include "or/entrynodes.h"
+#include "or/hibernate.h"
+#include "or/main.h"
+#include "or/rephist.h"
+#include "or/router.h"
+#include "common/sandbox.h"
+#include "or/statefile.h"
 
 /** A list of state-file "abbreviations," for compatibility. */
 static config_abbrev_t state_abbrevs_[] = {

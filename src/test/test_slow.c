@@ -15,8 +15,8 @@
 #include <fcntl.h>
 #endif
 
-#include "or.h"
-#include "test.h"
+#include "or/or.h"
+#include "test/test.h"
 
 struct testgroup_t testgroups[] = {
   { "slow/crypto/", slow_crypto_tests },

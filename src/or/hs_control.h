@@ -9,7 +9,7 @@
 #ifndef TOR_HS_CONTROL_H
 #define TOR_HS_CONTROL_H
 
-#include "hs_ident.h"
+#include "or/hs_ident.h"
 
 /* Event "HS_DESC REQUESTED [...]" */
 void hs_control_desc_event_requested(const ed25519_public_key_t *onion_pk,

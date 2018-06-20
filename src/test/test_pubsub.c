@@ -6,9 +6,9 @@
  * \brief Unit tests for publish-subscribe abstraction.
  **/
 
-#include "or.h"
-#include "test.h"
-#include "pubsub.h"
+#include "or/or.h"
+#include "test/test.h"
+#include "common/pubsub.h"
 
 DECLARE_PUBSUB_STRUCT_TYPES(foobar)
 DECLARE_PUBSUB_TOPIC(foobar)

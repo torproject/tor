@@ -3,18 +3,18 @@
 
 #define SCHEDULER_KIST_PRIVATE
 
-#include "or.h"
-#include "buffers.h"
-#include "config.h"
-#include "connection.h"
-#include "networkstatus.h"
+#include "or/or.h"
+#include "common/buffers.h"
+#include "or/config.h"
+#include "or/connection.h"
+#include "or/networkstatus.h"
 #define TOR_CHANNEL_INTERNAL_
-#include "channel.h"
-#include "channeltls.h"
+#include "or/channel.h"
+#include "or/channeltls.h"
 #define SCHEDULER_PRIVATE_
-#include "scheduler.h"
+#include "or/scheduler.h"
 
-#include "or_connection_st.h"
+#include "or/or_connection_st.h"
 
 #define TLS_PER_CELL_OVERHEAD 29
 
