@@ -13,19 +13,21 @@
 #ifndef TOR_TORERR_H
 #define TOR_TORERR_H
 
+#include "common/compat_compiler.h"
+
 /* The raw_assert...() variants are for use within code that can't call
  * tor_assertion_failed_() because of call circularity issues. */
-#define raw_assert(expr) do {                                           \
+#define raw_assert(expr) STMT_BEGIN                                     \
     if (!(expr)) {                                                      \
       tor_raw_assertion_failed_msg_(__FILE__, __LINE__, #expr, NULL);   \
       abort();                                                          \
     }                                                                   \
-  } while (0)
+  STMT_END
 #define raw_assert_unreached(expr) raw_assert(0)
-#define raw_assert_unreached_msg(msg) do {                          \
+#define raw_assert_unreached_msg(msg) STMT_BEGIN                    \
     tor_raw_assertion_failed_msg_(__FILE__, __LINE__, "0", (msg));  \
     abort();                                                        \
-  } while (0)
+  STMT_END
 
 void tor_raw_assertion_failed_msg_(const char *file, int line,
                                    const char *expr,
