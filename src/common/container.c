@@ -73,7 +73,7 @@ smartlist_ensure_capacity(smartlist_t *sl, size_t size)
 #define MAX_CAPACITY (int)((SIZE_MAX / (sizeof(void*))))
 #endif
 
-  tor_assert(size <= MAX_CAPACITY);
+  raw_assert(size <= MAX_CAPACITY);
 
   if (size > (size_t) sl->capacity) {
     size_t higher = (size_t) sl->capacity;
@@ -1538,4 +1538,3 @@ digestset_free_(digestset_t *set)
   bitarray_free(set->ba);
   tor_free(set);
 }
-

@@ -112,7 +112,7 @@ tor_malloc_(size_t size)
 {
   void *result;
 
-  tor_assert(size < SIZE_T_CEILING);
+  raw_assert(size < SIZE_T_CEILING);
 
 #ifndef MALLOC_ZERO_WORKS
   /* Some libc mallocs don't work when size==0. Override them. */
@@ -125,11 +125,10 @@ tor_malloc_(size_t size)
 
   if (PREDICT_UNLIKELY(result == NULL)) {
     /* LCOV_EXCL_START */
-    log_err(LD_MM,"Out of memory on malloc(). Dying.");
     /* If these functions die within a worker process, they won't call
      * spawn_exit, but that's ok, since the parent will run out of memory soon
      * anyway. */
-    exit(1); // exit ok: alloc failed.
+    raw_assert_unreached_msg("Out of memory on malloc(). Dying.");
     /* LCOV_EXCL_STOP */
   }
   return result;
@@ -186,7 +185,7 @@ size_mul_check(const size_t x, const size_t y)
 void *
 tor_calloc_(size_t nmemb, size_t size)
 {
-  tor_assert(size_mul_check(nmemb, size));
+  raw_assert(size_mul_check(nmemb, size));
   return tor_malloc_zero_((nmemb * size));
 }
 
@@ -199,7 +198,7 @@ tor_realloc_(void *ptr, size_t size)
 {
   void *result;
 
-  tor_assert(size < SIZE_T_CEILING);
+  raw_assert(size < SIZE_T_CEILING);
 
 #ifndef MALLOC_ZERO_WORKS
   /* Some libc mallocs don't work when size==0. Override them. */
@@ -212,8 +211,7 @@ tor_realloc_(void *ptr, size_t size)
 
   if (PREDICT_UNLIKELY(result == NULL)) {
     /* LCOV_EXCL_START */
-    log_err(LD_MM,"Out of memory on realloc(). Dying.");
-    exit(1); // exit ok: alloc failed.
+    raw_assert_unreached_msg("Out of memory on realloc(). Dying.");
     /* LCOV_EXCL_STOP */
   }
   return result;
@@ -228,7 +226,7 @@ tor_reallocarray_(void *ptr, size_t sz1, size_t sz2)
 {
   /* XXXX we can make this return 0, but we would need to check all the
    * reallocarray users. */
-  tor_assert(size_mul_check(sz1, sz2));
+  raw_assert(size_mul_check(sz1, sz2));
 
   return tor_realloc(ptr, (sz1 * sz2));
 }
@@ -241,14 +239,13 @@ char *
 tor_strdup_(const char *s)
 {
   char *duplicate;
-  tor_assert(s);
+  raw_assert(s);
 
   duplicate = raw_strdup(s);
 
   if (PREDICT_UNLIKELY(duplicate == NULL)) {
     /* LCOV_EXCL_START */
-    log_err(LD_MM,"Out of memory on strdup(). Dying.");
-    exit(1); // exit ok: alloc failed.
+    raw_assert_unreached_msg("Out of memory on strdup(). Dying.");
     /* LCOV_EXCL_STOP */
   }
   return duplicate;
@@ -264,8 +261,8 @@ char *
 tor_strndup_(const char *s, size_t n)
 {
   char *duplicate;
-  tor_assert(s);
-  tor_assert(n < SIZE_T_CEILING);
+  raw_assert(s);
+  raw_assert(n < SIZE_T_CEILING);
   duplicate = tor_malloc_((n+1));
   /* Performance note: Ordinarily we prefer strlcpy to strncpy.  But
    * this function gets called a whole lot, and platform strncpy is
@@ -282,8 +279,8 @@ void *
 tor_memdup_(const void *mem, size_t len)
 {
   char *duplicate;
-  tor_assert(len < SIZE_T_CEILING);
-  tor_assert(mem);
+  raw_assert(len < SIZE_T_CEILING);
+  raw_assert(mem);
   duplicate = tor_malloc_(len);
   memcpy(duplicate, mem, len);
   return duplicate;
@@ -295,8 +292,8 @@ void *
 tor_memdup_nulterm_(const void *mem, size_t len)
 {
   char *duplicate;
-  tor_assert(len < SIZE_T_CEILING+1);
-  tor_assert(mem);
+  raw_assert(len < SIZE_T_CEILING+1);
+  raw_assert(mem);
   duplicate = tor_malloc_(len+1);
   memcpy(duplicate, mem, len);
   duplicate[len] = '\0';
