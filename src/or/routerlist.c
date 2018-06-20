@@ -2758,10 +2758,15 @@ compute_weighted_bandwidths(const smartlist_t *sl,
 
 /** For all nodes in <b>sl</b>, return the fraction of those nodes, weighted
  * by their weighted bandwidths with rule <b>rule</b>, for which we have
- * descriptors. */
+ * descriptors.
+ *
+ * If <b>for_direct_connect</b> is true, we intend to connect to the node
+ * directly, as the first hop of a circuit; otherwise, we intend to connect
+ * to it indirectly, or use it as if we were connecting to it indirectly. */
 double
 frac_nodes_with_descriptors(const smartlist_t *sl,
-                            bandwidth_weight_rule_t rule)
+                            bandwidth_weight_rule_t rule,
+                            int for_direct_conn)
 {
   double *bandwidths = NULL;
   double total, present;
@@ -2773,7 +2778,7 @@ frac_nodes_with_descriptors(const smartlist_t *sl,
       total <= 0.0) {
     int n_with_descs = 0;
     SMARTLIST_FOREACH(sl, const node_t *, node, {
-      if (node_has_any_descriptor(node))
+      if (node_has_preferred_descriptor(node, for_direct_conn))
         n_with_descs++;
     });
     return ((double)n_with_descs) / smartlist_len(sl);
@@ -2781,7 +2786,7 @@ frac_nodes_with_descriptors(const smartlist_t *sl,
 
   present = 0.0;
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
-    if (node_has_any_descriptor(node))
+    if (node_has_preferred_descriptor(node, for_direct_conn))
       present += bandwidths[node_sl_idx];
   } SMARTLIST_FOREACH_END(node);
 
