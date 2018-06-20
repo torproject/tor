@@ -9,7 +9,6 @@ path = "lib.rs"
 crate_type = ["rlib", "staticlib"]
 
 [features]
-testing = []
 
 [dependencies]
 libc = "0.2.39"

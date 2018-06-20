@@ -88,7 +88,7 @@ pub fn tor_log_msg_impl(
 
 /// This implementation is used when compiling for actual use, as opposed to
 /// testing.
-#[cfg(all(not(test), not(feature = "testing")))]
+#[cfg(not(test))]
 pub mod log {
     use libc::{c_char, c_int};
     use super::LogDomain;
@@ -142,7 +142,7 @@ pub mod log {
 
 /// This module exposes no-op functionality for testing other Rust modules
 /// without linking to C.
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 pub mod log {
     use libc::{c_char, c_int};
     use super::LogDomain;
