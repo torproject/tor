@@ -1,6 +1,7 @@
 include src/rust/tor_rust/include.am
 
 EXTRA_DIST +=\
+	src/rust/build.rs \
 	src/rust/Cargo.toml \
 	src/rust/Cargo.lock \
 	src/rust/.cargo/config.in \
