@@ -1561,12 +1561,18 @@ test_dir_measured_bw_kb(void *arg)
   (void)arg;
   for (i = 0; strcmp(lines_fail[i], "end"); i++) {
     //fprintf(stderr, "Testing: %s\n", lines_fail[i]);
-    tt_int_op(measured_bw_line_parse(&mbwl, lines_fail[i]), OP_EQ, -1);
+    /* Testing only with line_is_after_headers = 1. Tests with
+     * line_is_after_headers = 0 in
+     * test_dir_measured_bw_kb_line_is_after_headers */
+    tt_assert(measured_bw_line_parse(&mbwl, lines_fail[i], 1) == -1);
   }
 
   for (i = 0; strcmp(lines_pass[i], "end"); i++) {
     //fprintf(stderr, "Testing: %s %d\n", lines_pass[i], TOR_ISSPACE('\n'));
-    tt_int_op(measured_bw_line_parse(&mbwl, lines_pass[i]), OP_EQ, 0);
+    /* Testing only with line_is_after_headers = 1. Tests with
+     * line_is_after_headers = 0 in
+     * test_dir_measured_bw_kb_line_is_after_headers */
+    tt_assert(measured_bw_line_parse(&mbwl, lines_pass[i], 1) == 0);
     tt_assert(mbwl.bw_kb == 1024);
     tt_assert(strcmp(mbwl.node_hex,
                 "557365204145532d32353620696e73746561642e") == 0);
@@ -1578,7 +1584,7 @@ test_dir_measured_bw_kb(void *arg)
 
 /* Test dirserv_read_measured_bandwidths */
 static void
-test_dir_dirserv_read_measured_bandwidths(void *arg)
+test_dir_dirserv_read_measured_bandwidths_empty(void *arg)
 {
   char *fname=NULL;
   (void)arg;
@@ -1593,6 +1599,129 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
  done:
   tor_free(fname);
   teardown_capture_of_logs();
+}
+
+/* Unit tests for measured_bw_line_parse using line_is_after_headers flag.
+ * When the end of the header is detected (a first complete bw line is parsed),
+ * incomplete lines fail and give warnings, but do not give warnings if
+ * the header is not ended, allowing to ignore additional header lines. */
+static void
+test_dir_measured_bw_kb_line_is_after_headers(void *arg)
+{
+  (void)arg;
+  measured_bw_line_t mbwl;
+  const char *line_pass = \
+    "node_id=$557365204145532d32353620696e73746561642e bw=1024\n";
+  int i;
+  const char *lines_fail[] = {
+    "node_id=$557365204145532d32353620696e73746561642e \n",
+    "bw=1024\n",
+    "rtt=300\n",
+    "end"
+  };
+
+  setup_capture_of_logs(LOG_DEBUG);
+
+  /* Test bw lines when header has ended */
+  for (i = 0; strcmp(lines_fail[i], "end"); i++) {
+    tt_assert(measured_bw_line_parse(&mbwl, lines_fail[i], 1) == -1);
+    expect_log_msg_containing("Incomplete line in bandwidth file:");
+    mock_clean_saved_logs();
+  }
+
+  tt_assert(measured_bw_line_parse(&mbwl, line_pass, 1) == 0);
+
+  /* Test bw lines when header has not ended */
+  for (i = 0; strcmp(lines_fail[i], "end"); i++) {
+    tt_assert(measured_bw_line_parse(&mbwl, lines_fail[i], 0) == -1);
+    expect_log_msg_containing("Missing bw or node_id in bandwidth file line:");
+    mock_clean_saved_logs();
+  }
+
+  tt_assert(measured_bw_line_parse(&mbwl, line_pass, 0) == 0);
+
+ done:
+  teardown_capture_of_logs();
+}
+
+/* Test dirserv_read_measured_bandwidths with whole files. */
+static void
+test_dir_dirserv_read_measured_bandwidths(void *arg)
+{
+  (void)arg;
+  char *content = NULL;
+  time_t timestamp = time(NULL);
+  char *fname = tor_strdup(get_fname("V3BandwidthsFile"));
+
+  /* Test Torflow file only with timestamp*/
+  tor_asprintf(&content, "%ld", timestamp);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(-1, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+
+  /* Test Torflow file with timestamp followed by '\n' */
+  tor_asprintf(&content, "%ld\n", timestamp);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+
+  /* Test Torflow complete file*/
+  const char *torflow_relay_lines=
+    "node_id=$557365204145532d32353620696e73746561642e bw=1024 "
+    "nick=Test measured_at=1523911725 updated_at=1523911725 "
+    "pid_error=4.11374090719 pid_error_sum=4.11374090719 "
+    "pid_bw=57136645 pid_delta=2.12168374577 circ_fail=0.2 "
+    "scanner=/filepath\n";
+
+  tor_asprintf(&content, "%ld\n%s", timestamp, torflow_relay_lines);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+
+  /* Test Torflow complete file including v1.1.0 headers */
+  const char *v110_header_lines=
+    "version=1.1.0\n"
+    "software=sbws\n"
+    "software_version=0.1.0\n"
+    "generator_started=2018-05-08T16:13:25\n"
+    "earliest_bandwidth=2018-05-08T16:13:26\n"
+    "====\n";
+
+  tor_asprintf(&content, "%ld\n%s%s", timestamp, v110_header_lines,
+               torflow_relay_lines);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+
+  /* Test Torflow with additional headers afer a correct bw line */
+  tor_asprintf(&content, "%ld\n%s%s", timestamp, torflow_relay_lines,
+               v110_header_lines);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+
+  /* Test Torflow with additional headers afer a correct bw line and more
+   * bw lines after the headers. */
+  tor_asprintf(&content, "%ld\n%s%s%s", timestamp, torflow_relay_lines,
+               v110_header_lines, torflow_relay_lines);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+
+  /* Test sbws file */
+  const char *sbws_relay_lines=
+    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 "
+    "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
+    "bw=760 nick=Test rtt=380 time=2018-05-08T16:13:26\n";
+
+  tor_asprintf(&content, "%ld\n%s%s", timestamp, v110_header_lines,
+               sbws_relay_lines);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+
+ done:
+  tor_free(fname);
 }
 
 #define MBWC_INIT_TIME 1000
@@ -5863,9 +5992,11 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(versions),
   DIR_LEGACY(fp_pairs),
   DIR(split_fps, 0),
-  DIR_LEGACY(dirserv_read_measured_bandwidths),
+  DIR_LEGACY(dirserv_read_measured_bandwidths_empty),
   DIR_LEGACY(measured_bw_kb),
+  DIR_LEGACY(measured_bw_kb_line_is_after_headers),
   DIR_LEGACY(measured_bw_kb_cache),
+  DIR_LEGACY(dirserv_read_measured_bandwidths),
   DIR_LEGACY(param_voting),
   DIR(param_voting_lookup, 0),
   DIR_LEGACY(v3_networkstatus),
