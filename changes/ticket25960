@@ -1,0 +1,5 @@
+  o Minor feature (directory authorities):
+    - Stop warning about incomplete bw lines before the first complete bw line
+      has been found, so that additional header lines can be ignored.
+      Fixes bug 25960; bugfix on 0.2.2.1-alpha
+
