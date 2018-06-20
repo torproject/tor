@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017, The Tor Project, Inc
+# Copyright 2017-2018, The Tor Project, Inc
 # See LICENSE for licensing information
 
 """

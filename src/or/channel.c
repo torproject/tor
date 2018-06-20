@@ -1,5 +1,5 @@
 
-/* * Copyright (c) 2012-2017, The Tor Project, Inc. */
+/* * Copyright (c) 2012-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
