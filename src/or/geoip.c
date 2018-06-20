@@ -1884,4 +1884,3 @@ geoip_free_all(void)
   memset(geoip_digest, 0, sizeof(geoip_digest));
   memset(geoip6_digest, 0, sizeof(geoip6_digest));
 }
-

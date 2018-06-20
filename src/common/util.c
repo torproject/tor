@@ -4678,8 +4678,8 @@ process_environment_t *
 process_environment_make(struct smartlist_t *env_vars)
 {
   process_environment_t *env = tor_malloc_zero(sizeof(process_environment_t));
-  size_t n_env_vars = smartlist_len(env_vars);
-  size_t i;
+  int n_env_vars = smartlist_len(env_vars);
+  int i;
   size_t total_env_length;
   smartlist_t *env_vars_sorted;
 

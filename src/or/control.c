@@ -4647,7 +4647,7 @@ handle_control_add_onion(control_connection_t *conn,
                          const char *body)
 {
   smartlist_t *args;
-  size_t arg_len;
+  int arg_len;
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
   args = getargs_helper("ADD_ONION", conn, body, 2, -1);
   if (!args)
@@ -4668,7 +4668,7 @@ handle_control_add_onion(control_connection_t *conn,
   rend_auth_type_t auth_type = REND_NO_AUTH;
   /* Default to adding an anonymous hidden service if no flag is given */
   int non_anonymous = 0;
-  for (size_t i = 1; i < arg_len; i++) {
+  for (int i = 1; i < arg_len; i++) {
     static const char *port_prefix = "Port=";
     static const char *flags_prefix = "Flags=";
     static const char *max_s_prefix = "MaxStreams=";
@@ -7786,4 +7786,3 @@ control_testing_set_global_event_mask(uint64_t mask)
   global_event_mask = mask;
 }
 #endif /* defined(TOR_UNIT_TESTS) */
-
