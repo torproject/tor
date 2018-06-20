@@ -99,10 +99,9 @@ tor_gettimeofday, (struct timeval *timeval))
 #elif defined(HAVE_GETTIMEOFDAY)
   if (gettimeofday(timeval, NULL)) {
     /* LCOV_EXCL_START */
-    log_err(LD_GENERAL,"gettimeofday failed.");
     /* If gettimeofday dies, we have either given a bad timezone (we didn't),
        or segfaulted.*/
-    exit(1); // exit ok: gettimeofday failed.
+    raw_assert_unreached_msg("gettimeofday failed");
     /* LCOV_EXCL_STOP */
   }
 #elif defined(HAVE_FTIME)
@@ -900,4 +899,3 @@ monotime_msec_to_approx_coarse_stamp_units(uint64_t msec)
   return (msec * STAMP_TICKS_PER_SECOND) / 1000;
 }
 #endif
-
