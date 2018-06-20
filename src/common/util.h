@@ -22,6 +22,7 @@
 /* for the correct alias to struct stat */
 #include <sys/stat.h>
 #endif
+#include "common/torerr.h"
 #include "common/util_bug.h"
 
 #ifndef O_BINARY
@@ -521,9 +522,6 @@ int32_t tor_weak_random_range(tor_weak_rng_t *rng, int32_t top);
 /** Randomly return true according to <b>rng</b> with probability 1 in
  * <b>n</b> */
 #define tor_weak_random_one_in_n(rng, n) (0==tor_weak_random_range((rng),(n)))
-
-int format_hex_number_sigsafe(unsigned long x, char *buf, int max_len);
-int format_dec_number_sigsafe(unsigned long x, char *buf, int max_len);
 
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */

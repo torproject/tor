@@ -55,21 +55,6 @@
 #error "Sorry; we don't support building with NDEBUG."
 #endif /* defined(NDEBUG) */
 
-/* The raw_assert...() variants are for use within code that can't call
- * tor_assertion_failed_() because of call circularity issues. */
-#define raw_assert(expr) STMT_BEGIN                             \
-  if (!(expr)) {                                                \
-    fprintf(stderr, "RAW ASSERTION FAILURE AT %s:%d: %s\n",     \
-          __FILE__, __LINE__, #expr);                           \
-    abort();                                                    \
-  }                                                             \
-  STMT_END
-#define raw_assert_unreached(expr) raw_assert(0)
-#define raw_assert_unreached_msg(msg) STMT_BEGIN \
-  fprintf(stderr, "ERROR: %s\n", (msg));         \
-  raw_assert_unreached();                        \
-  STMT_END
-
 /* Sometimes we don't want to use assertions during branch coverage tests; it
  * leads to tons of unreached branches which in reality are only assertions we
  * didn't hit. */

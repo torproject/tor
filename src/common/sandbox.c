@@ -1,4 +1,4 @@
- /* Copyright (c) 2001 Matej Pfajfar.
+/* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
@@ -34,6 +34,7 @@
 
 #include "common/sandbox.h"
 #include "common/container.h"
+#include "common/torerr.h"
 #include "common/torlog.h"
 #include "common/torint.h"
 #include "common/util.h"
@@ -1974,4 +1975,3 @@ sandbox_disable_getaddrinfo_cache(void)
 {
 }
 #endif /* !defined(USE_LIBSECCOMP) */
-

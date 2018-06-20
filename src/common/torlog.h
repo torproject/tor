@@ -175,8 +175,6 @@ void truncate_logs(void);
 void tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
   CHECK_PRINTF(3,4);
 
-void tor_log_err_sigsafe(const char *m, ...);
-int tor_log_get_sigsafe_err_fds(const int **out);
 void tor_log_update_sigsafe_err_fds(void);
 
 struct smartlist_t;
@@ -272,4 +270,3 @@ MOCK_DECL(STATIC void, logv, (int severity, log_domain_mask_t domain,
 
 # define TOR_TORLOG_H
 #endif /* !defined(TOR_TORLOG_H) */
-

@@ -17,6 +17,7 @@
 #include "common/compat.h"
 #include "common/util.h"
 #include "common/torlog.h"
+#include "common/torerr.h"
 
 #ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
@@ -245,4 +246,3 @@ clean_up_backtrace_handler(void)
 
   tor_free(bt_version);
 }
-

@@ -3,6 +3,7 @@
 
 #include "orconfig.h"
 #include "or/or.h"
+#include "common/torerr.h"
 #include "common/torlog.h"
 #include "test/test.h"
 
@@ -170,4 +171,3 @@ struct testcase_t logging_tests[] = {
   { "ratelim", test_ratelim, 0, NULL, NULL },
   END_OF_TESTCASES
 };
-

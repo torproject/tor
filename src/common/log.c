@@ -34,6 +34,8 @@
 #define LOG_PRIVATE
 #include "common/torlog.h"
 #include "common/container.h"
+#include "common/torerr.h"
+
 #ifdef HAVE_ANDROID_LOG_H
 #include <android/log.h>
 #endif // HAVE_ANDROID_LOG_H.
@@ -265,6 +267,7 @@ void
 set_log_time_granularity(int granularity_msec)
 {
   log_time_granularity = granularity_msec;
+  tor_log_sigsafe_err_set_granularity(granularity_msec);
 }
 
 /** Helper: Write the standard prefix for log lines to a
@@ -631,71 +634,6 @@ tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
   va_end(ap);
 }
 
-/** Maximum number of fds that will get notifications if we crash */
-#define MAX_SIGSAFE_FDS 8
-/** Array of fds to log crash-style warnings to. */
-static int sigsafe_log_fds[MAX_SIGSAFE_FDS] = { STDERR_FILENO };
-/** The number of elements used in sigsafe_log_fds */
-static int n_sigsafe_log_fds = 1;
-
-/** Write <b>s</b> to each element of sigsafe_log_fds. Return 0 on success, -1
- * on failure. */
-static int
-tor_log_err_sigsafe_write(const char *s)
-{
-  int i;
-  ssize_t r;
-  size_t len = strlen(s);
-  int err = 0;
-  for (i=0; i < n_sigsafe_log_fds; ++i) {
-    r = write(sigsafe_log_fds[i], s, len);
-    err += (r != (ssize_t)len);
-  }
-  return err ? -1 : 0;
-}
-
-/** Given a list of string arguments ending with a NULL, writes them
- * to our logs and to stderr (if possible).  This function is safe to call
- * from within a signal handler. */
-void
-tor_log_err_sigsafe(const char *m, ...)
-{
-  va_list ap;
-  const char *x;
-  char timebuf[33];
-  time_t now = time(NULL);
-
-  if (!m)
-    return;
-  if (log_time_granularity >= 2000) {
-    int g = log_time_granularity / 1000;
-    now -= now % g;
-  }
-  timebuf[0] = now < 0 ? '-' : ' ';
-  if (now < 0) now = -now;
-  timebuf[1] = '\0';
-  format_dec_number_sigsafe(now, timebuf+1, sizeof(timebuf)-1);
-  tor_log_err_sigsafe_write("\n=========================================="
-                             "================== T=");
-  tor_log_err_sigsafe_write(timebuf);
-  tor_log_err_sigsafe_write("\n");
-  tor_log_err_sigsafe_write(m);
-  va_start(ap, m);
-  while ((x = va_arg(ap, const char*))) {
-    tor_log_err_sigsafe_write(x);
-  }
-  va_end(ap);
-}
-
-/** Set *<b>out</b> to a pointer to an array of the fds to log errors to from
- * inside a signal handler. Return the number of elements in the array. */
-int
-tor_log_get_sigsafe_err_fds(const int **out)
-{
-  *out = sigsafe_log_fds;
-  return n_sigsafe_log_fds;
-}
-
 /** Helper function; return true iff the <b>n</b>-element array <b>array</b>
  * contains <b>item</b>. */
 static int
@@ -717,11 +655,14 @@ tor_log_update_sigsafe_err_fds(void)
   const logfile_t *lf;
   int found_real_stderr = 0;
 
+  int fds[TOR_SIGSAFE_LOG_MAX_FDS];
+  int n_fds;
+
   LOCK_LOGS();
   /* Reserve the first one for stderr. This is safe because when we daemonize,
    * we dup2 /dev/null to stderr, */
-  sigsafe_log_fds[0] = STDERR_FILENO;
-  n_sigsafe_log_fds = 1;
+  fds[0] = STDERR_FILENO;
+  n_fds = 1;
 
   for (lf = logfiles; lf; lf = lf->next) {
      /* Don't try callback to the control port, or syslogs: We can't
@@ -735,22 +676,24 @@ tor_log_update_sigsafe_err_fds(void)
       if (lf->fd == STDERR_FILENO)
         found_real_stderr = 1;
       /* Avoid duplicates */
-      if (int_array_contains(sigsafe_log_fds, n_sigsafe_log_fds, lf->fd))
+      if (int_array_contains(fds, n_fds, lf->fd))
         continue;
-      sigsafe_log_fds[n_sigsafe_log_fds++] = lf->fd;
-      if (n_sigsafe_log_fds == MAX_SIGSAFE_FDS)
+      fds[n_fds++] = lf->fd;
+      if (n_fds == TOR_SIGSAFE_LOG_MAX_FDS)
         break;
     }
   }
 
   if (!found_real_stderr &&
-      int_array_contains(sigsafe_log_fds, n_sigsafe_log_fds, STDOUT_FILENO)) {
+      int_array_contains(fds, n_fds, STDOUT_FILENO)) {
     /* Don't use a virtual stderr when we're also logging to stdout. */
-    raw_assert(n_sigsafe_log_fds >= 2); /* Don't tor_assert inside log fns */
-    sigsafe_log_fds[0] = sigsafe_log_fds[--n_sigsafe_log_fds];
+    raw_assert(n_fds >= 2); /* Don't tor_assert inside log fns */
+    fds[0] = fds[--n_fds];
   }
 
   UNLOCK_LOGS();
+
+  tor_log_set_sigsafe_err_fds(fds, n_fds);
 }
 
 /** Add to <b>out</b> a copy of every currently configured log file name. Used

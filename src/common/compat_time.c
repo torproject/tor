@@ -34,6 +34,7 @@
 #include <mach/mach_time.h>
 #endif
 
+#include "common/torerr.h"
 #include "common/torlog.h"
 #include "common/util.h"
 #include "common/container.h"
