@@ -43,7 +43,7 @@ pub struct Sha256 {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,no_run
 /// use crypto::digests::sha2::{Sha256, Digest};
 ///
 /// let mut hasher: Sha256 = Sha256::default();
@@ -66,7 +66,7 @@ impl BlockInput for Sha256 {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,no_run
 /// use crypto::digests::sha2::{Sha256, Digest};
 ///
 /// let mut hasher: Sha256 = Sha256::default();
@@ -110,7 +110,7 @@ pub struct Sha512 {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,no_run
 /// use crypto::digests::sha2::{Sha512, Digest};
 ///
 /// let mut hasher: Sha512 = Sha512::default();
@@ -133,7 +133,7 @@ impl BlockInput for Sha512 {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,no_run
 /// use crypto::digests::sha2::{Sha512, Digest};
 ///
 /// let mut hasher: Sha512 = Sha512::default();
