@@ -29,6 +29,7 @@
 #endif
 
 #include "common/torerr.h"
+#include "common/backtrace.h"
 
 /** Array of fds to log crash-style warnings to. */
 static int sigsafe_log_fds[TOR_SIGSAFE_LOG_MAX_FDS] = { STDERR_FILENO };
@@ -140,6 +141,8 @@ tor_raw_assertion_failed_msg_(const char *file, int line, const char *expr,
     tor_log_err_sigsafe_write(msg);
     tor_log_err_sigsafe_write("\n");
   }
+
+  dump_stack_symbols_to_error_fds();
 }
 
 /* As format_{hex,dex}_number_sigsafe, but takes a <b>radix</b> argument

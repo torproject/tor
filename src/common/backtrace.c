@@ -167,6 +167,21 @@ crash_handler(int sig, siginfo_t *si, void *ctx_)
   abort();
 }
 
+/** Write a backtrace to all of the emergency-error fds. */
+void
+dump_stack_symbols_to_error_fds(void)
+{
+  int n_fds, i;
+  const int *fds = NULL;
+  size_t depth;
+
+  depth = backtrace(cb_buf, MAX_DEPTH);
+
+  n_fds = tor_log_get_sigsafe_err_fds(&fds);
+  for (i=0; i < n_fds; ++i)
+    backtrace_symbols_fd(cb_buf, (int)depth, fds[i]);
+}
+
 /** Install signal handlers as needed so that when we crash, we produce a
  * useful stack trace. Return 0 on success, -errno on failure. */
 static int
@@ -232,6 +247,11 @@ install_bt_handler(const char *software)
 
 static void
 remove_bt_handler(void)
+{
+}
+
+void
+dump_stack_symbols_to_error_fds(void)
 {
 }
 #endif /* defined(NO_BACKTRACE_IMPL) */
