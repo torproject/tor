@@ -44,9 +44,9 @@ pub struct Sha256 {
 /// # Examples
 ///
 /// ```
-/// use crypto::digest::Sha256;
+/// use crypto::digests::sha2::{Sha256, Digest};
 ///
-/// let hasher: Sha256 = Sha256::default();
+/// let mut hasher: Sha256 = Sha256::default();
 /// ```
 ///
 /// # Returns
@@ -67,12 +67,12 @@ impl BlockInput for Sha256 {
 /// # Examples
 ///
 /// ```
-/// use crypto::digest::Sha256;
+/// use crypto::digests::sha2::{Sha256, Digest};
 ///
-/// let hasher: Sha256 = Sha256::default();
+/// let mut hasher: Sha256 = Sha256::default();
 ///
-/// hasher.process(b"foo");
-/// hasher.process(b"bar");
+/// hasher.input(b"foo");
+/// hasher.input(b"bar");
 /// ```
 impl Input for Sha256 {
     fn process(&mut self, msg: &[u8]) {
@@ -111,9 +111,9 @@ pub struct Sha512 {
 /// # Examples
 ///
 /// ```
-/// use crypto::digest::Sha512;
+/// use crypto::digests::sha2::{Sha512, Digest};
 ///
-/// let hasher: Sha256 = Sha512::default();
+/// let mut hasher: Sha512 = Sha512::default();
 /// ```
 ///
 /// # Returns
@@ -134,12 +134,12 @@ impl BlockInput for Sha512 {
 /// # Examples
 ///
 /// ```
-/// use crypto::digest::Sha512;
+/// use crypto::digests::sha2::{Sha512, Digest};
 ///
-/// let hasher: Sha512 = Sha512::default();
+/// let mut hasher: Sha512 = Sha512::default();
 ///
-/// hasher.process(b"foo");
-/// hasher.process(b"bar");
+/// hasher.input(b"foo");
+/// hasher.input(b"bar");
 /// ```
 impl Input for Sha512 {
     fn process(&mut self, msg: &[u8]) {

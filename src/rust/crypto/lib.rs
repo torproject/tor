@@ -10,18 +10,18 @@
 //! and extendable output functions.
 //!
 //! ```
-//! use crypto::digests::sha256::Sha256;
+//! use crypto::digests::sha2::*;
 //!
-//! let hasher: Sha256 = Sha256::default();
+//! let mut hasher: Sha256 = Sha256::default();
 //! let mut result: [u8; 32] = [0u8; 32];
 //!
-//! hasher.input("foo");
-//! hasher.input("bar");
-//! hasher.input("baz");
+//! hasher.input(b"foo");
+//! hasher.input(b"bar");
+//! hasher.input(b"baz");
 //!
-//! result.copy_from_slice(hasher.result().as_bytes());
+//! result.copy_from_slice(hasher.result().as_slice());
 //!
-//! assert!(result == "XXX");
+//! assert!(result == [b'X'; DIGEST256_LEN]);
 //! ```
 
 #[deny(missing_docs)]
