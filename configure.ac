@@ -21,16 +21,6 @@ AC_CANONICAL_HOST
 
 PKG_PROG_PKG_CONFIG
 
-if test -f "/etc/redhat-release"; then
-  if test -f "/usr/kerberos/include"; then
-    CPPFLAGS="$CPPFLAGS -I/usr/kerberos/include"
-  fi
-fi
-
-# Not a no-op; we want to make sure that CPPFLAGS is set before we use
-# the += operator on it in src/or/Makefile.am
-CPPFLAGS="$CPPFLAGS -I\${top_srcdir}/src/common"
-
 AC_ARG_ENABLE(openbsd-malloc,
    AS_HELP_STRING(--enable-openbsd-malloc, [use malloc code from OpenBSD.  Linux only]))
 AC_ARG_ENABLE(static-openssl,

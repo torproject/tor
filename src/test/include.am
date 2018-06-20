@@ -71,10 +71,8 @@ endif
 src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \
         -DBINDIR="\"$(bindir)\""	       \
-	-I"$(top_srcdir)/src/or" -I"$(top_srcdir)/src/ext" \
-	-I"$(top_srcdir)/src/trunnel" \
-	-I"$(top_srcdir)/src/ext/trunnel" \
-	-DTOR_UNIT_TESTS
+	-DTOR_UNIT_TESTS                       \
+	$(AM_CPPFLAGS)
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
 # This seems to matter nowhere but on Windows, but I assure you that it
@@ -327,7 +325,7 @@ src_test_test_ntor_cl_LDADD = src/or/libtor.a src/common/libor.a \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ @TOR_LZMA_LIBS@
 src_test_test_ntor_cl_AM_CPPFLAGS =	       \
-	-I"$(top_srcdir)/src/or"
+	$(AM_CPPFLAGS)
 
 src_test_test_hs_ntor_cl_SOURCES  = src/test/test_hs_ntor_cl.c
 src_test_test_hs_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
@@ -337,7 +335,7 @@ src_test_test_hs_ntor_cl_LDADD = src/or/libtor.a src/common/libor.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 src_test_test_hs_ntor_cl_AM_CPPFLAGS =	       \
-	-I"$(top_srcdir)/src/or"
+	$(AM_CPPFLAGS)
 
 
 noinst_PROGRAMS += src/test/test-bt-cl
@@ -347,7 +345,7 @@ src_test_test_bt_cl_LDADD = src/common/libor-testing.a \
 	src/trace/libor-trace.a \
 	$(rust_ldadd) \
 	@TOR_LIB_MATH@ \
-	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ 
+	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@
 src_test_test_bt_cl_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 src_test_test_bt_cl_CPPFLAGS= $(src_test_AM_CPPFLAGS) $(TEST_CPPFLAGS)
 

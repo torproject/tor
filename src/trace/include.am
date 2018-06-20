@@ -1,6 +1,3 @@
-# Include the src/ so we can use the trace/events.h statement when including
-# any file in that directory.
-AM_CPPFLAGS += -I$(srcdir)/src
 
 noinst_LIBRARIES += \
 	src/trace/libor-trace.a

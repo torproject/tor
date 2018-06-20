@@ -15,7 +15,11 @@ TESTS=
 noinst_PROGRAMS=
 DISTCLEANFILES=
 bin_SCRIPTS=
-AM_CPPFLAGS=
+AM_CPPFLAGS=\
+	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/src/ext \
+	-I$(top_srcdir)/src/ext/trunnel
+
 AM_CFLAGS=@TOR_SYSTEMD_CFLAGS@ @CFLAGS_BUGTRAP@ @TOR_LZMA_CFLAGS@ @TOR_ZSTD_CFLAGS@
 SHELL=@SHELL@
 

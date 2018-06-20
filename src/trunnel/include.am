@@ -6,8 +6,6 @@ noinst_LIBRARIES += \
 	src/trunnel/libor-trunnel-testing.a
 endif
 
-AM_CPPFLAGS += -I$(srcdir)/src/ext/trunnel -I$(srcdir)/src/trunnel
-
 TRUNNELINPUTS = \
 	src/trunnel/ed25519_cert.trunnel \
 	src/trunnel/link_handshake.trunnel \
@@ -39,7 +37,8 @@ TRUNNELHEADERS = \
 	src/trunnel/channelpadding_negotiation.h
 
 src_trunnel_libor_trunnel_a_SOURCES = $(TRUNNELSOURCES)
-src_trunnel_libor_trunnel_a_CPPFLAGS = -DTRUNNEL_LOCAL_H $(AM_CPPFLAGS)
+src_trunnel_libor_trunnel_a_CPPFLAGS = \
+	-DTRUNNEL_LOCAL_H $(AM_CPPFLAGS) -I$(top_srcdir)/src/trunnel
 
 if UNITTESTS_ENABLED
 src_trunnel_libor_trunnel_testing_a_SOURCES = $(TRUNNELSOURCES)
@@ -54,4 +53,3 @@ noinst_HEADERS+= $(TRUNNELHEADERS)
 
 EXTRA_DIST += \
 	src/trunnel/README
-
