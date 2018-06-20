@@ -1128,11 +1128,20 @@ dnl What's more, we need to specify them in a linker script rather than
 dnl from build.rs: these options aren't allowed in the cargo:rustc-flags
 dnl variable.
 RUST_LINKER_OPTIONS=""
-if test "x$CFLAGS_ASAN" != "x"; then
-        RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -static-libasan"
-fi
-if test "x$CFLAGS_UBSAN" != "x"; then
-         RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -static-libubsan"
+if test "x$have_clang" = "xyes"; then
+	if test "x$CFLAGS_ASAN" != "x"; then
+		RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS $CFLAGS_ASAN"
+	fi
+	if test "x$CFLAGS_UBSAN" != "x"; then
+        	RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS $CFLAGS_UBSAN"
+	fi
+else
+	if test "x$CFLAGS_ASAN" != "x"; then
+		RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -lasan"
+	fi
+	if test "x$CFLAGS_UBSAN" != "x"; then
+        	RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -lubsan"
+	fi
 fi
 AC_SUBST(RUST_LINKER_OPTIONS)
 
