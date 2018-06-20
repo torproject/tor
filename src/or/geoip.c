@@ -150,7 +150,7 @@ geoip_add_entry(const tor_addr_t *low, const tor_addr_t *high,
     idx = ((uintptr_t)idxplus1_)-1;
   }
   {
-    geoip_country_t *c = smartlist_get(geoip_countries, idx);
+    geoip_country_t *c = smartlist_get(geoip_countries, (int)idx);
     tor_assert(!strcasecmp(c->countrycode, country));
   }
 
@@ -1884,4 +1884,3 @@ geoip_free_all(void)
   memset(geoip_digest, 0, sizeof(geoip_digest));
   memset(geoip6_digest, 0, sizeof(geoip6_digest));
 }
-
