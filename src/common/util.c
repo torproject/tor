@@ -2102,7 +2102,7 @@ write_all(tor_socket_t fd, const char *buf, size_t count, int isSocket)
 {
   size_t written = 0;
   ssize_t result;
-  tor_assert(count < SSIZE_MAX);
+  raw_assert(count < SSIZE_MAX);
 
   while (written != count) {
     if (isSocket)
