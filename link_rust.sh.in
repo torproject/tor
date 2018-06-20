@@ -7,4 +7,4 @@
 # We'd like to remove the need for this, but build.rs doesn't let us pass
 # -static-libasan and -static-libubsan to the linker.
 
-"$CCLD" @RUST_LINKER_OPTIONS@ "$@"
+$CCLD @RUST_LINKER_OPTIONS@ "$@"
