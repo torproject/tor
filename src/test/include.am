@@ -364,6 +364,7 @@ EXTRA_DIST += \
 	src/test/fuzz_static_testcases.sh \
 	src/test/slownacl_curve25519.py \
 	src/test/zero_length_keys.sh \
+        src/test/rust_supp.txt \
 	src/test/test_keygen.sh \
 	src/test/test_key_expiration.sh \
 	src/test/test_zero_length_keys.sh \
