@@ -1338,15 +1338,20 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
 
   sorted_nodes = smartlist_new();
 
+  /* Make sure we actually have a live consensus */
+  networkstatus_t *c = networkstatus_get_live_consensus(approx_time());
+  if (!c || smartlist_len(c->routerstatus_list) == 0) {
+      log_warn(LD_REND, "No live consensus so we can't get the responsible "
+               "hidden service directories.");
+      goto done;
+  }
+
+  /* Ensure the nodelist is fresh, since it contains the HSDir indices. */
+  nodelist_ensure_freshness(c);
+
   /* Add every node_t that support HSDir v3 for which we do have a valid
    * hsdir_index already computed for them for this consensus. */
   {
-    networkstatus_t *c = networkstatus_get_latest_consensus();
-    if (!c || smartlist_len(c->routerstatus_list) == 0) {
-      log_warn(LD_REND, "No valid consensus so we can't get the responsible "
-                        "hidden service directories.");
-      goto done;
-    }
     SMARTLIST_FOREACH_BEGIN(c->routerstatus_list, const routerstatus_t *, rs) {
       /* Even though this node_t object won't be modified and should be const,
        * we can't add const object in a smartlist_t. */

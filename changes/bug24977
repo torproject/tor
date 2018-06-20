@@ -1,0 +1,5 @@
+  o Minor bugfixes (onion services):
+    - Recompute some consensus information after clock skews or when we
+      transition from a non-live consensus to a live consensus. We do this to
+      avoid having an outdated state which could impact next-generation onion
+      services. Fixes bug 24977; bugfix on 0.3.2.1-alpha.
