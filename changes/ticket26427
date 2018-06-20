@@ -1,0 +1,6 @@
+  o Minor features (code layout):
+    - Make a new lowest-level error-handling API for use by code invoked
+      from within the logging module.  This interface it makes it so
+      the logging code is no longer at risk of calling into itself if
+      a failure occurs while trying to log something.
+      Closes ticket 26427.
