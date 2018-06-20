@@ -5,10 +5,18 @@
 #define TOR_BACKTRACE_H
 
 #include "orconfig.h"
+#include "common/compat_compiler.h"
 
-void log_backtrace(int severity, int domain, const char *msg);
+typedef void (*tor_log_fn)(int, unsigned, const char *fmt, ...)
+  CHECK_PRINTF(3,4);
+
+void log_backtrace_impl(int severity, int domain, const char *msg,
+                        tor_log_fn logger);
 int configure_backtrace_handler(const char *tor_version);
 void clean_up_backtrace_handler(void);
+
+#define log_backtrace(sev, dom, msg) \
+  log_backtrace_impl((sev), (dom), (msg), tor_log)
 
 #ifdef EXPOSE_CLEAN_BACKTRACE
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
@@ -18,4 +26,3 @@ void clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx);
 #endif /* defined(EXPOSE_CLEAN_BACKTRACE) */
 
 #endif /* !defined(TOR_BACKTRACE_H) */
-
