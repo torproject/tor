@@ -155,8 +155,9 @@ format_number_sigsafe(unsigned long x, char *buf, int buf_len,
   int len;
   char *cp;
 
-  /* NOT tor_assert. This needs to be safe to run from within a signal handler,
-   * and from within the 'tor_assert() has failed' code. */
+  /* NOT tor_assert. This needs to be safe to run from within a signal
+   * handler, and from within the 'tor_assert() has failed' code.  Not even
+   * raw_assert(), since raw_assert() calls this function on failure. */
   if (radix < 2 || radix > 16)
     return 0;
 
@@ -176,7 +177,10 @@ format_number_sigsafe(unsigned long x, char *buf, int buf_len,
   *cp = '\0';
   do {
     unsigned digit = (unsigned) (x % radix);
-    raw_assert(cp > buf);
+    if (cp <= buf) {
+      /* Not tor_assert(); see above. */
+      abort();
+    }
     --cp;
     *cp = "0123456789ABCDEF"[digit];
     x /= radix;
