@@ -176,6 +176,7 @@ AC_ARG_ENABLE(fragile-hardening,
     AS_HELP_STRING(--enable-fragile-hardening, [enable more fragile and expensive compiler hardening; makes Tor slower]))
 if test "x$enable_expensive_hardening" = "xyes" || test "x$enable_fragile_hardening" = "xyes"; then
   fragile_hardening="yes"
+  AC_DEFINE(DEBUG_SMARTLIST, 1, [Enable smartlist debugging])
 fi
 
 dnl Linker hardening options
