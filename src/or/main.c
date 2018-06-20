@@ -110,9 +110,6 @@
 #include "or/tor_api_internal.h"
 #include "common/util_process.h"
 #include "or/ext_orport.h"
-#ifdef USE_DMALLOC
-#include <dmalloc.h>
-#endif
 #include "common/memarea.h"
 #include "common/sandbox.h"
 
@@ -2695,11 +2692,6 @@ do_hup(void)
 {
   const or_options_t *options = get_options();
 
-#ifdef USE_DMALLOC
-  dmalloc_log_stats();
-  dmalloc_log_changed(0, 1, 0, 0);
-#endif
-
   log_notice(LD_GENERAL,"Received reload signal (hup). Reloading config and "
              "resetting internal state.");
   if (accounting_is_enabled(options))
@@ -3639,7 +3631,7 @@ release_lockfile(void)
  * only the parts of memory that we won't touch. If !<b>postfork</b>,
  * Tor is shutting down and we should free everything.
  *
- * Helps us find the real leaks with dmalloc and the like. Also valgrind
+ * Helps us find the real leaks with sanitizers and the like. Also valgrind
  * should then report 0 reachable in its leak report (in an ideal world --
  * in practice libevent, SSL, libc etc never quite free everything). */
 void
@@ -3795,18 +3787,11 @@ tor_cleanup(void)
 
   timers_shutdown();
 
-#ifdef USE_DMALLOC
-  dmalloc_log_stats();
-#endif
   tor_free_all(0); /* We could move tor_free_all back into the ifdef below
                       later, if it makes shutdown unacceptably slow.  But for
                       now, leave it here: it's helped us catch bugs in the
                       past. */
   crypto_global_cleanup();
-#ifdef USE_DMALLOC
-  dmalloc_log_unfreed();
-  dmalloc_shutdown();
-#endif
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */
@@ -4237,14 +4222,6 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   tor_compress_init();
   init_logging(0);
   monotime_init();
-#ifdef USE_DMALLOC
-  {
-    /* Instruct OpenSSL to use our internal wrappers for malloc,
-       realloc and free. */
-    int r = crypto_use_tor_alloc_functions();
-    tor_assert(r == 0);
-  }
-#endif /* defined(USE_DMALLOC) */
 #ifdef NT_SERVICE
   {
      int done = 0;
@@ -4313,4 +4290,3 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   tor_cleanup();
   return result;
 }
-

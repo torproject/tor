@@ -506,16 +506,3 @@ crypto_global_cleanup(void)
 }
 
 /** @} */
-
-#ifdef USE_DMALLOC
-/** Tell the crypto library to use Tor's allocation functions rather than
- * calling libc's allocation functions directly. Return 0 on success, -1
- * on failure. */
-int
-crypto_use_tor_alloc_functions(void)
-{
-  int r = CRYPTO_set_mem_ex_functions(tor_malloc_, tor_realloc_, tor_free_);
-  return r ? 0 : -1;
-}
-#endif /* defined(USE_DMALLOC) */
-

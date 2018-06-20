@@ -1726,26 +1726,6 @@ if test "$tor_cv_uint8_uchar" = "no"; then
   AC_MSG_ERROR([We assume that uint8_t is the same type as unsigned char, but your compiler disagrees.])
 fi
 
-# Whether we should use the dmalloc memory allocation debugging library.
-AC_MSG_CHECKING(whether to use dmalloc (debug memory allocation library))
-AC_ARG_WITH(dmalloc,
-AS_HELP_STRING(--with-dmalloc, [use debug memory allocation library]),
-[if [[ "$withval" = "yes" ]]; then
-  dmalloc=1
-  AC_MSG_RESULT(yes)
-else
-  dmalloc=1
-  AC_MSG_RESULT(no)
-fi], [ dmalloc=0; AC_MSG_RESULT(no) ]
-)
-
-if [[ $dmalloc -eq 1 ]]; then
-  AC_CHECK_HEADERS(dmalloc.h, , AC_MSG_ERROR(dmalloc header file not found. Do you have the development files for dmalloc installed?))
-  AC_SEARCH_LIBS(dmalloc_malloc, [dmallocth dmalloc], , AC_MSG_ERROR(Libdmalloc library not found. If you enable it you better have it installed.))
-  AC_DEFINE(USE_DMALLOC, 1, [Debug memory allocation library])
-  AC_CHECK_FUNCS(dmalloc_strdup dmalloc_strndup)
-fi
-
 AC_ARG_WITH(tcmalloc,
 AS_HELP_STRING(--with-tcmalloc, [use tcmalloc memory allocation library]),
 [ tcmalloc=yes ], [ tcmalloc=no ])

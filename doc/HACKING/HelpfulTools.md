@@ -25,16 +25,6 @@ Jenkins
 
     https://jenkins.torproject.org
 
-Dmalloc
--------
-
-The dmalloc library will keep track of memory allocation, so you can find out
-if we're leaking memory, doing any double-frees, or so on.
-
-    dmalloc -l -/dmalloc.log
-    (run the commands it tells you)
-    ./configure --with-dmalloc
-
 Valgrind
 --------
 

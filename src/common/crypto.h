@@ -40,9 +40,6 @@ int crypto_early_init(void) ATTR_WUR;
 int crypto_global_init(int hardwareAccel,
                        const char *accelName,
                        const char *accelPath) ATTR_WUR;
-#ifdef USE_DMALLOC
-int crypto_use_tor_alloc_functions(void);
-#endif
 
 void crypto_thread_cleanup(void);
 int crypto_global_cleanup(void);
@@ -77,4 +74,3 @@ int crypto_cipher_decrypt_with_iv(const char *key,
 void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
 
 #endif /* !defined(TOR_CRYPTO_H) */
-

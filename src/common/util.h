@@ -34,45 +34,22 @@
 #define O_NOFOLLOW 0
 #endif
 
-/* If we're building with dmalloc, we want all of our memory allocation
- * functions to take an extra file/line pair of arguments.  If not, not.
- * We define DMALLOC_PARAMS to the extra parameters to insert in the
- * function prototypes, and DMALLOC_ARGS to the extra arguments to add
- * to calls. */
-#ifdef USE_DMALLOC
-#define DMALLOC_PARAMS , const char *file, const int line
-#define DMALLOC_ARGS , SHORT_FILE__, __LINE__
-#else
-#define DMALLOC_PARAMS
-#define DMALLOC_ARGS
-#endif /* defined(USE_DMALLOC) */
-
 /* Memory management */
-void *tor_malloc_(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
-void *tor_malloc_zero_(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
-void *tor_calloc_(size_t nmemb, size_t size DMALLOC_PARAMS) ATTR_MALLOC;
-void *tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS);
-void *tor_reallocarray_(void *ptr, size_t size1, size_t size2 DMALLOC_PARAMS);
-char *tor_strdup_(const char *s DMALLOC_PARAMS) ATTR_MALLOC ATTR_NONNULL((1));
-char *tor_strndup_(const char *s, size_t n DMALLOC_PARAMS)
+void *tor_malloc_(size_t size) ATTR_MALLOC;
+void *tor_malloc_zero_(size_t size) ATTR_MALLOC;
+void *tor_calloc_(size_t nmemb, size_t size) ATTR_MALLOC;
+void *tor_realloc_(void *ptr, size_t size);
+void *tor_reallocarray_(void *ptr, size_t size1, size_t size2);
+char *tor_strdup_(const char *s) ATTR_MALLOC ATTR_NONNULL((1));
+char *tor_strndup_(const char *s, size_t n)
   ATTR_MALLOC ATTR_NONNULL((1));
-void *tor_memdup_(const void *mem, size_t len DMALLOC_PARAMS)
+void *tor_memdup_(const void *mem, size_t len)
   ATTR_MALLOC ATTR_NONNULL((1));
-void *tor_memdup_nulterm_(const void *mem, size_t len DMALLOC_PARAMS)
+void *tor_memdup_nulterm_(const void *mem, size_t len)
   ATTR_MALLOC ATTR_NONNULL((1));
 void tor_free_(void *mem);
 uint64_t tor_htonll(uint64_t a);
 uint64_t tor_ntohll(uint64_t a);
-#ifdef USE_DMALLOC
-extern int dmalloc_free(const char *file, const int line, void *pnt,
-                        const int func_id);
-#define tor_free(p) STMT_BEGIN \
-    if (PREDICT_LIKELY((p)!=NULL)) {                \
-      dmalloc_free(SHORT_FILE__, __LINE__, (p), 0); \
-      (p)=NULL;                                     \
-    }                                               \
-  STMT_END
-#else /* !(defined(USE_DMALLOC)) */
 /** Release memory allocated by tor_malloc, tor_realloc, tor_strdup,
  * etc.  Unlike the free() function, the tor_free() macro sets the
  * pointer value to NULL after freeing it.
@@ -97,18 +74,17 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
   (p)=NULL;                                                    \
   STMT_END
 #endif
-#endif /* defined(USE_DMALLOC) */
 
-#define tor_malloc(size)       tor_malloc_(size DMALLOC_ARGS)
-#define tor_malloc_zero(size)  tor_malloc_zero_(size DMALLOC_ARGS)
-#define tor_calloc(nmemb,size) tor_calloc_(nmemb, size DMALLOC_ARGS)
-#define tor_realloc(ptr, size) tor_realloc_(ptr, size DMALLOC_ARGS)
+#define tor_malloc(size)       tor_malloc_(size)
+#define tor_malloc_zero(size)  tor_malloc_zero_(size)
+#define tor_calloc(nmemb,size) tor_calloc_(nmemb, size)
+#define tor_realloc(ptr, size) tor_realloc_(ptr, size)
 #define tor_reallocarray(ptr, sz1, sz2) \
-  tor_reallocarray_((ptr), (sz1), (sz2) DMALLOC_ARGS)
-#define tor_strdup(s)          tor_strdup_(s DMALLOC_ARGS)
-#define tor_strndup(s, n)      tor_strndup_(s, n DMALLOC_ARGS)
-#define tor_memdup(s, n)       tor_memdup_(s, n DMALLOC_ARGS)
-#define tor_memdup_nulterm(s, n)       tor_memdup_nulterm_(s, n DMALLOC_ARGS)
+  tor_reallocarray_((ptr), (sz1), (sz2))
+#define tor_strdup(s)          tor_strdup_(s)
+#define tor_strndup(s, n)      tor_strndup_(s, n)
+#define tor_memdup(s, n)       tor_memdup_(s, n)
+#define tor_memdup_nulterm(s, n)       tor_memdup_nulterm_(s, n)
 
 /* Aliases for the underlying system malloc/realloc/free. Only use
  * them to indicate "I really want the underlying system function, I know
@@ -569,4 +545,3 @@ int size_mul_check(const size_t x, const size_t y);
 #define ARRAY_LENGTH(x) ((sizeof(x)) / sizeof(x[0]))
 
 #endif /* !defined(TOR_UTIL_H) */
-

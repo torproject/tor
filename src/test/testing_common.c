@@ -32,11 +32,6 @@
 #include <dirent.h>
 #endif /* defined(_WIN32) */
 
-#ifdef USE_DMALLOC
-#include <dmalloc.h>
-#include "or/main.h"
-#endif
-
 /** Temporary directory (set up by setup_directory) under which we store all
  * our files during testing. */
 static char temp_dir[256];
@@ -231,13 +226,6 @@ main(int c, const char **v)
   /* We must initialise logs before we call tor_assert() */
   init_logging(1);
 
-#ifdef USE_DMALLOC
-  {
-    int r = crypto_use_tor_alloc_functions();
-    tor_assert(r == 0);
-  }
-#endif /* defined(USE_DMALLOC) */
-
   update_approx_time(time(NULL));
   options = options_new();
   tor_threads_init();
@@ -319,10 +307,7 @@ main(int c, const char **v)
   int have_failed = (tinytest_main(c, v, testgroups) != 0);
 
   free_pregenerated_keys();
-#ifdef USE_DMALLOC
-  tor_free_all(0);
-  dmalloc_log_unfreed();
-#endif
+
   crypto_global_cleanup();
 
   if (have_failed)
@@ -330,4 +315,3 @@ main(int c, const char **v)
   else
     return 0;
 }
-

@@ -103,35 +103,13 @@
 /* =====
  * Memory management
  * ===== */
-#ifdef USE_DMALLOC
- #undef strndup
- #include <dmalloc.h>
- /* Macro to pass the extra dmalloc args to another function. */
- #define DMALLOC_FN_ARGS , file, line
-
- #if defined(HAVE_DMALLOC_STRDUP)
- /* the dmalloc_strdup should be fine as defined */
- #elif defined(HAVE_DMALLOC_STRNDUP)
- #define dmalloc_strdup(file, line, string, xalloc_b) \
-         dmalloc_strndup(file, line, (string), -1, xalloc_b)
- #else
- #error "No dmalloc_strdup or equivalent"
-#endif /* defined(HAVE_DMALLOC_STRDUP) || ... */
-
-#else /* !(defined(USE_DMALLOC)) */
-
- #define DMALLOC_FN_ARGS
-#endif /* defined(USE_DMALLOC) */
 
 /** Allocate a chunk of <b>size</b> bytes of memory, and return a pointer to
  * result.  On error, log and terminate the process.  (Same as malloc(size),
  * but never returns NULL.)
- *
- * <b>file</b> and <b>line</b> are used if dmalloc is enabled, and
- * ignored otherwise.
  */
 void *
-tor_malloc_(size_t size DMALLOC_PARAMS)
+tor_malloc_(size_t size)
 {
   void *result;
 
@@ -144,11 +122,7 @@ tor_malloc_(size_t size DMALLOC_PARAMS)
   }
 #endif /* !defined(MALLOC_ZERO_WORKS) */
 
-#ifdef USE_DMALLOC
-  result = dmalloc_malloc(file, line, size, DMALLOC_FUNC_MALLOC, 0, 0);
-#else
   result = raw_malloc(size);
-#endif
 
   if (PREDICT_UNLIKELY(result == NULL)) {
     /* LCOV_EXCL_START */
@@ -167,7 +141,7 @@ tor_malloc_(size_t size DMALLOC_PARAMS)
  * the process on error.  (Same as calloc(size,1), but never returns NULL.)
  */
 void *
-tor_malloc_zero_(size_t size DMALLOC_PARAMS)
+tor_malloc_zero_(size_t size)
 {
   /* You may ask yourself, "wouldn't it be smart to use calloc instead of
    * malloc+memset?  Perhaps libc's calloc knows some nifty optimization trick
@@ -175,7 +149,7 @@ tor_malloc_zero_(size_t size DMALLOC_PARAMS)
    * we're allocating something very big (it knows if it just got the memory
    * from the OS in a pre-zeroed state).  We don't want to use tor_malloc_zero
    * for big stuff, so we don't bother with calloc. */
-  void *result = tor_malloc_(size DMALLOC_FN_ARGS);
+  void *result = tor_malloc_(size);
   memset(result, 0, size);
   return result;
 }
@@ -211,10 +185,10 @@ size_mul_check(const size_t x, const size_t y)
  * and a compile-time constant.
  */
 void *
-tor_calloc_(size_t nmemb, size_t size DMALLOC_PARAMS)
+tor_calloc_(size_t nmemb, size_t size)
 {
   tor_assert(size_mul_check(nmemb, size));
-  return tor_malloc_zero_((nmemb * size) DMALLOC_FN_ARGS);
+  return tor_malloc_zero_((nmemb * size));
 }
 
 /** Change the size of the memory block pointed to by <b>ptr</b> to <b>size</b>
@@ -222,7 +196,7 @@ tor_calloc_(size_t nmemb, size_t size DMALLOC_PARAMS)
  * terminate. (Like realloc(ptr,size), but never returns NULL.)
  */
 void *
-tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS)
+tor_realloc_(void *ptr, size_t size)
 {
   void *result;
 
@@ -235,11 +209,7 @@ tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS)
   }
 #endif /* !defined(MALLOC_ZERO_WORKS) */
 
-#ifdef USE_DMALLOC
-  result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
-#else
   result = raw_realloc(ptr, size);
-#endif
 
   if (PREDICT_UNLIKELY(result == NULL)) {
     /* LCOV_EXCL_START */
@@ -255,13 +225,13 @@ tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS)
  * overflow. Unlike other allocation functions, return NULL on overflow.
  */
 void *
-tor_reallocarray_(void *ptr, size_t sz1, size_t sz2 DMALLOC_PARAMS)
+tor_reallocarray_(void *ptr, size_t sz1, size_t sz2)
 {
   /* XXXX we can make this return 0, but we would need to check all the
    * reallocarray users. */
   tor_assert(size_mul_check(sz1, sz2));
 
-  return tor_realloc(ptr, (sz1 * sz2) DMALLOC_FN_ARGS);
+  return tor_realloc(ptr, (sz1 * sz2));
 }
 
 /** Return a newly allocated copy of the NUL-terminated string s. On
@@ -269,16 +239,13 @@ tor_reallocarray_(void *ptr, size_t sz1, size_t sz2 DMALLOC_PARAMS)
  * NULL.)
  */
 char *
-tor_strdup_(const char *s DMALLOC_PARAMS)
+tor_strdup_(const char *s)
 {
   char *duplicate;
   tor_assert(s);
 
-#ifdef USE_DMALLOC
-  duplicate = dmalloc_strdup(file, line, s, 0);
-#else
   duplicate = raw_strdup(s);
-#endif
+
   if (PREDICT_UNLIKELY(duplicate == NULL)) {
     /* LCOV_EXCL_START */
     log_err(LD_MM,"Out of memory on strdup(). Dying.");
@@ -295,12 +262,12 @@ tor_strdup_(const char *s DMALLOC_PARAMS)
  * NULL.)
  */
 char *
-tor_strndup_(const char *s, size_t n DMALLOC_PARAMS)
+tor_strndup_(const char *s, size_t n)
 {
   char *duplicate;
   tor_assert(s);
   tor_assert(n < SIZE_T_CEILING);
-  duplicate = tor_malloc_((n+1) DMALLOC_FN_ARGS);
+  duplicate = tor_malloc_((n+1));
   /* Performance note: Ordinarily we prefer strlcpy to strncpy.  But
    * this function gets called a whole lot, and platform strncpy is
    * much faster than strlcpy when strlen(s) is much longer than n.
@@ -313,12 +280,12 @@ tor_strndup_(const char *s, size_t n DMALLOC_PARAMS)
 /** Allocate a chunk of <b>len</b> bytes, with the same contents as the
  * <b>len</b> bytes starting at <b>mem</b>. */
 void *
-tor_memdup_(const void *mem, size_t len DMALLOC_PARAMS)
+tor_memdup_(const void *mem, size_t len)
 {
   char *duplicate;
   tor_assert(len < SIZE_T_CEILING);
   tor_assert(mem);
-  duplicate = tor_malloc_(len DMALLOC_FN_ARGS);
+  duplicate = tor_malloc_(len);
   memcpy(duplicate, mem, len);
   return duplicate;
 }
@@ -326,12 +293,12 @@ tor_memdup_(const void *mem, size_t len DMALLOC_PARAMS)
 /** As tor_memdup(), but add an extra 0 byte at the end of the resulting
  * memory. */
 void *
-tor_memdup_nulterm_(const void *mem, size_t len DMALLOC_PARAMS)
+tor_memdup_nulterm_(const void *mem, size_t len)
 {
   char *duplicate;
   tor_assert(len < SIZE_T_CEILING+1);
   tor_assert(mem);
-  duplicate = tor_malloc_(len+1 DMALLOC_FN_ARGS);
+  duplicate = tor_malloc_(len+1);
   memcpy(duplicate, mem, len);
   duplicate[len] = '\0';
   return duplicate;
@@ -365,13 +332,6 @@ tor_log_mallinfo(int severity)
 #else /* !(defined(HAVE_MALLINFO)) */
   (void)severity;
 #endif /* defined(HAVE_MALLINFO) */
-#ifdef USE_DMALLOC
-  dmalloc_log_changed(0, /* Since the program started. */
-                      1, /* Log info about non-freed pointers. */
-                      0, /* Do not log info about freed pointers. */
-                      0  /* Do not log individual pointers. */
-                      );
-#endif /* defined(USE_DMALLOC) */
 }
 ENABLE_GCC_WARNING(aggregate-return)
 
@@ -5375,4 +5335,3 @@ tor_ntohll(uint64_t a)
 {
   return tor_htonll(a);
 }
-
