@@ -1,0 +1,7 @@
+  o Minor bugfixes (testing, compilation):
+    - Refrain from trying to get an item from empty smartlist in
+      test_bridges_clear_bridge_list. Set DEBUG_SMARTLIST in unit
+      tests to catch improper smartlist usage. Furthermore,
+      enable DEBUG_SMARTLIST globally when build is configured
+      with fragile hardening. Fixes bug 26196; bugfix on
+      0.3.4.1-alpha.
