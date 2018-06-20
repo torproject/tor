@@ -71,7 +71,7 @@ static char bt_version[128] = "";
 static void *cb_buf[MAX_DEPTH];
 /** Protects cb_buf from concurrent access. Pthreads, since this code
  * is Unix-only, and since this code needs to be lowest-level. */
-pthread_mutex_t cb_buf_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t cb_buf_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /** Change a stacktrace in <b>stack</b> of depth <b>depth</b> so that it will
  * log the correct function from which a signal was received with context
