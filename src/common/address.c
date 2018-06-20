@@ -83,7 +83,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 /* tor_addr_is_null() and maybe other functions rely on AF_UNSPEC being 0 to
  * work correctly. Bail out here if we've found a platform where AF_UNSPEC

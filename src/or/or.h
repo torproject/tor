@@ -51,9 +51,6 @@
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
-#ifdef HAVE_ASSERT_H
-#include <assert.h>
-#endif
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
@@ -3331,4 +3328,3 @@ typedef enum was_router_added_t {
 typedef struct tor_version_t tor_version_t;
 
 #endif /* !defined(TOR_OR_H) */
-

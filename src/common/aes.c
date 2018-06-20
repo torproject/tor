@@ -26,7 +26,6 @@
 
 DISABLE_GCC_WARNING(redundant-decls)
 
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/aes.h>

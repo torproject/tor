@@ -33,7 +33,6 @@ ENABLE_GCC_WARNING(redundant-decls)
 #if 0
 #include <stdlib.h>
 #include <stdarg.h>
-#include <assert.h>
 #endif
 
 #include "common/util.h"

@@ -19,7 +19,6 @@
 #define TORTLS_PRIVATE
 #define TORTLS_OPENSSL_PRIVATE
 
-#include <assert.h>
 #ifdef _WIN32 /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
   #include <winsock2.h>
   #include <ws2tcpip.h>

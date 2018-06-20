@@ -1312,8 +1312,7 @@ AC_SUBST(CURVE25519_LIBS)
 dnl Make sure to enable support for large off_t if available.
 AC_SYS_LARGEFILE
 
-AC_CHECK_HEADERS([assert.h \
-                  errno.h \
+AC_CHECK_HEADERS([errno.h \
                   fcntl.h \
                   signal.h \
                   string.h \

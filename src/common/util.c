@@ -45,7 +45,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
 #include <signal.h>
 
 #ifdef HAVE_NETINET_IN_H

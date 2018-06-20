@@ -111,7 +111,6 @@ SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 #endif
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
 #endif

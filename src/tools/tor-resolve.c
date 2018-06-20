@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <assert.h>
 
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
