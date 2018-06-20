@@ -14,6 +14,7 @@ void log_backtrace_impl(int severity, int domain, const char *msg,
                         tor_log_fn logger);
 int configure_backtrace_handler(const char *tor_version);
 void clean_up_backtrace_handler(void);
+void dump_stack_symbols_to_error_fds(void);
 
 #define log_backtrace(sev, dom, msg) \
   log_backtrace_impl((sev), (dom), (msg), tor_log)
