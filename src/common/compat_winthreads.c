@@ -74,7 +74,7 @@ tor_mutex_uninit(tor_mutex_t *m)
 void
 tor_mutex_acquire(tor_mutex_t *m)
 {
-  tor_assert(m);
+  raw_assert(m);
   EnterCriticalSection(&m->mutex);
 }
 void
@@ -248,4 +248,3 @@ tor_threads_init(void)
 }
 
 #endif /* defined(_WIN32) */
-

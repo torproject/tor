@@ -106,8 +106,7 @@ tor_mutex_init(tor_mutex_t *mutex)
   const int err = pthread_mutex_init(&mutex->mutex, &attr_recursive);
   if (PREDICT_UNLIKELY(err)) {
     // LCOV_EXCL_START
-    log_err(LD_GENERAL, "Error %d creating a mutex.", err);
-    tor_assert_unreached();
+    raw_assert_unreached_msg("Error creating a mutex.");
     // LCOV_EXCL_STOP
   }
 }
@@ -123,8 +122,7 @@ tor_mutex_init_nonrecursive(tor_mutex_t *mutex)
   err = pthread_mutex_init(&mutex->mutex, NULL);
   if (PREDICT_UNLIKELY(err)) {
     // LCOV_EXCL_START
-    log_err(LD_GENERAL, "Error %d creating a mutex.", err);
-    tor_assert_unreached();
+    raw_assert_unreached_msg("Error creating a mutex.");
     // LCOV_EXCL_STOP
   }
 }
@@ -134,12 +132,11 @@ void
 tor_mutex_acquire(tor_mutex_t *m)
 {
   int err;
-  tor_assert(m);
+  raw_assert(m);
   err = pthread_mutex_lock(&m->mutex);
   if (PREDICT_UNLIKELY(err)) {
     // LCOV_EXCL_START
-    log_err(LD_GENERAL, "Error %d locking a mutex.", err);
-    tor_assert_unreached();
+    raw_assert_unreached_msg("Error locking a mutex.");
     // LCOV_EXCL_STOP
   }
 }
@@ -148,12 +145,11 @@ void
 tor_mutex_release(tor_mutex_t *m)
 {
   int err;
-  tor_assert(m);
+  raw_assert(m);
   err = pthread_mutex_unlock(&m->mutex);
   if (PREDICT_UNLIKELY(err)) {
     // LCOV_EXCL_START
-    log_err(LD_GENERAL, "Error %d unlocking a mutex.", err);
-    tor_assert_unreached();
+    raw_assert_unreached_msg("Error unlocking a mutex.");
     // LCOV_EXCL_STOP
   }
 }
@@ -164,12 +160,11 @@ void
 tor_mutex_uninit(tor_mutex_t *m)
 {
   int err;
-  tor_assert(m);
+  raw_assert(m);
   err = pthread_mutex_destroy(&m->mutex);
   if (PREDICT_UNLIKELY(err)) {
     // LCOV_EXCL_START
-    log_err(LD_GENERAL, "Error %d destroying a mutex.", err);
-    tor_assert_unreached();
+    raw_assert_unreached_msg("Error destroying a mutex.");
     // LCOV_EXCL_STOP
   }
 }
@@ -347,4 +342,3 @@ tor_threads_init(void)
     set_main_thread();
   }
 }
-
