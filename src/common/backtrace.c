@@ -14,9 +14,6 @@
  */
 
 #include "orconfig.h"
-#include "common/compat.h"
-#include "common/util.h"
-#include "common/torlog.h"
 #include "common/torerr.h"
 
 #ifdef HAVE_EXECINFO_H
@@ -31,6 +28,9 @@
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
 #endif
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef HAVE_CYGWIN_SIGNAL_H
 #include <cygwin/signal.h>
@@ -40,8 +40,13 @@
 #include <ucontext.h>
 #endif /* defined(HAVE_CYGWIN_SIGNAL_H) || ... */
 
+#ifdef HAVE_PTHREAD_H
+#include <pthread.h>
+#endif
+
 #define EXPOSE_CLEAN_BACKTRACE
 #include "common/backtrace.h"
+#include "common/torerr.h"
 
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
@@ -52,17 +57,21 @@
 #define NO_BACKTRACE_IMPL
 #endif
 
-/** Version of Tor to report in backtrace messages. */
-static char *bt_version = NULL;
+// Redundant with util.h, but doing it here so we can avoid that dependency.
+#define raw_free free
 
 #ifdef USE_BACKTRACE
+/** Version of Tor to report in backtrace messages. */
+static char bt_version[128] = "";
+
 /** Largest stack depth to try to dump. */
 #define MAX_DEPTH 256
 /** Static allocation of stack to dump. This is static so we avoid stack
  * pressure. */
 static void *cb_buf[MAX_DEPTH];
-/** Protects cb_buf from concurrent access */
-static tor_mutex_t cb_buf_mutex;
+/** Protects cb_buf from concurrent access. Pthreads, since this code
+ * is Unix-only, and since this code needs to be lowest-level. */
+pthread_mutex_t cb_buf_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /** Change a stacktrace in <b>stack</b> of depth <b>depth</b> so that it will
  * log the correct function from which a signal was received with context
@@ -95,33 +104,35 @@ clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx)
 }
 
 /** Log a message <b>msg</b> at <b>severity</b> in <b>domain</b>, and follow
- * that with a backtrace log. */
+ * that with a backtrace log.  Send messages via the tor_log function at
+ * logger". */
 void
-log_backtrace(int severity, int domain, const char *msg)
+log_backtrace_impl(int severity, int domain, const char *msg,
+                   tor_log_fn logger)
 {
   size_t depth;
   char **symbols;
   size_t i;
 
-  tor_mutex_acquire(&cb_buf_mutex);
+  pthread_mutex_lock(&cb_buf_mutex);
 
   depth = backtrace(cb_buf, MAX_DEPTH);
   symbols = backtrace_symbols(cb_buf, (int)depth);
 
-  tor_log(severity, domain, "%s. Stack trace:", msg);
+  logger(severity, domain, "%s. Stack trace:", msg);
   if (!symbols) {
     /* LCOV_EXCL_START -- we can't provoke this. */
-    tor_log(severity, domain, "    Unable to generate backtrace.");
+    logger(severity, domain, "    Unable to generate backtrace.");
     goto done;
     /* LCOV_EXCL_STOP */
   }
   for (i=0; i < depth; ++i) {
-    tor_log(severity, domain, "    %s", symbols[i]);
+    logger(severity, domain, "    %s", symbols[i]);
   }
   raw_free(symbols);
 
  done:
-  tor_mutex_release(&cb_buf_mutex);
+  pthread_mutex_unlock(&cb_buf_mutex);
 }
 
 static void crash_handler(int sig, siginfo_t *si, void *ctx_)
@@ -157,17 +168,18 @@ crash_handler(int sig, siginfo_t *si, void *ctx_)
 }
 
 /** Install signal handlers as needed so that when we crash, we produce a
- * useful stack trace. Return 0 on success, -1 on failure. */
+ * useful stack trace. Return 0 on success, -errno on failure. */
 static int
-install_bt_handler(void)
+install_bt_handler(const char *software)
 {
   int trap_signals[] = { SIGSEGV, SIGILL, SIGFPE, SIGBUS, SIGSYS,
                          SIGIO, -1 };
   int i, rv=0;
 
-  struct sigaction sa;
+  strncpy(bt_version, software, sizeof(bt_version) - 1);
+  bt_version[sizeof(bt_version) - 1] = 0;
 
-  tor_mutex_init(&cb_buf_mutex);
+  struct sigaction sa;
 
   memset(&sa, 0, sizeof(sa));
   sa.sa_sigaction = crash_handler;
@@ -177,8 +189,7 @@ install_bt_handler(void)
   for (i = 0; trap_signals[i] >= 0; ++i) {
     if (sigaction(trap_signals[i], &sa, NULL) == -1) {
       /* LCOV_EXCL_START */
-      log_warn(LD_BUG, "Sigaction failed: %s", strerror(errno));
-      rv = -1;
+      rv = -errno;
       /* LCOV_EXCL_STOP */
     }
   }
@@ -201,20 +212,21 @@ install_bt_handler(void)
 static void
 remove_bt_handler(void)
 {
-  tor_mutex_uninit(&cb_buf_mutex);
 }
 #endif /* defined(USE_BACKTRACE) */
 
 #ifdef NO_BACKTRACE_IMPL
 void
-log_backtrace(int severity, int domain, const char *msg)
+log_backtrace_impl(int severity, int domain, const char *msg,
+                   tor_log_fn logger)
 {
-  tor_log(severity, domain, "%s. (Stack trace not available)", msg);
+  logger(severity, domain, "%s. (Stack trace not available)", msg);
 }
 
 static int
-install_bt_handler(void)
+install_bt_handler(const char *software)
 {
+  (void) software;
   return 0;
 }
 
@@ -228,13 +240,17 @@ remove_bt_handler(void)
 int
 configure_backtrace_handler(const char *tor_version)
 {
-  tor_free(bt_version);
-  if (tor_version)
-    tor_asprintf(&bt_version, "Tor %s", tor_version);
-  else
-    tor_asprintf(&bt_version, "Tor");
+  char version[128];
+  strncpy(version, "Tor", sizeof(version)-1);
 
-  return install_bt_handler();
+  if (tor_version) {
+    strncat(version, " ", sizeof(version)-1);
+    strncat(version, tor_version, sizeof(version)-1);
+  }
+
+  version[sizeof(version) - 1] = 0;
+
+  return install_bt_handler(version);
 }
 
 /** Perform end-of-process cleanup for code that generates error messages on
@@ -243,6 +259,4 @@ void
 clean_up_backtrace_handler(void)
 {
   remove_bt_handler();
-
-  tor_free(bt_version);
 }

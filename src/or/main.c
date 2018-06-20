@@ -4214,7 +4214,13 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   }
 #endif /* defined(_WIN32) */
 
-  configure_backtrace_handler(get_version());
+  {
+    int bt_err = configure_backtrace_handler(get_version());
+    if (bt_err < 0) {
+      log_warn(LD_BUG, "Unable to install backtrace handler: %s",
+               strerror(-bt_err));
+    }
+  }
   init_protocol_warning_severity_level();
 
   update_approx_time(time(NULL));
