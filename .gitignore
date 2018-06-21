@@ -167,6 +167,8 @@ uptime-*.json
 /src/ext/keccak-tiny/libkeccak-tiny.lib
 
 # /src/lib
+/src/lib/libtor-compress.a
+/src/lib/libtor-compress-testing.a
 /src/lib/libtor-ctime.a
 /src/lib/libtor-ctime-testing.a
 /src/lib/libtor-err.a

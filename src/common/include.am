@@ -87,11 +87,6 @@ src/common/src_common_libor_testing_a-log.$(OBJEXT) \
 LIBOR_CRYPTO_A_SRC = \
   src/common/aes.c		\
   src/common/buffers_tls.c	\
-  src/common/compress.c	\
-  src/common/compress_lzma.c	\
-  src/common/compress_none.c	\
-  src/common/compress_zlib.c	\
-  src/common/compress_zstd.c	\
   src/common/crypto.c		\
   src/common/crypto_dh.c       \
   src/common/crypto_digest.c     \
@@ -147,11 +142,6 @@ COMMONHEADERS = \
   src/common/compat_openssl.h			\
   src/common/compat_threads.h			\
   src/common/compat_time.h			\
-  src/common/compress.h				\
-  src/common/compress_lzma.h			\
-  src/common/compress_none.h			\
-  src/common/compress_zlib.h			\
-  src/common/compress_zstd.h			\
   src/common/confline.h				\
   src/common/container.h			\
   src/common/crypto.h				\

@@ -66,6 +66,7 @@ TOR_CRYPTO_TESTING_LIBS = \
 # All static libraries used to link tor.
 TOR_INTERNAL_LIBS = \
 	src/or/libtor-app.a \
+        src/lib/libtor-compress.a \
 	$(TOR_CRYPTO_LIBS) \
 	$(TOR_UTIL_LIBS) \
 	src/common/libor-event.a \
@@ -76,10 +77,9 @@ TOR_INTERNAL_LIBS = \
 # and tests)
 TOR_INTERNAL_TESTING_LIBS = \
 	src/or/libtor-app-testing.a \
+        src/lib/libtor-compress-testing.a \
 	$(TOR_CRYPTO_TESTING_LIBS) \
 	$(TOR_UTIL_TESTING_LIBS) \
-	$(LIBKECCAK_TINY) \
-	$(LIBDONNA) \
 	src/common/libor-event-testing.a \
 	src/trunnel/libor-trunnel-testing.a \
 	src/trace/libor-trace.a
