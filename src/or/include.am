@@ -1,9 +1,9 @@
 bin_PROGRAMS+= src/or/tor
 noinst_LIBRARIES += \
-	src/or/libtor.a
+	src/or/libtor-app.a
 if UNITTESTS_ENABLED
 noinst_LIBRARIES += \
-	src/or/libtor-testing.a
+	src/or/libtor-app-testing.a
 endif
 if COVERAGE_ENABLED
 noinst_PROGRAMS+= src/or/tor-cov
@@ -17,7 +17,7 @@ endif
 
 EXTRA_DIST+= src/or/ntmain.c src/or/Makefile.nmake
 
-LIBTOR_A_SOURCES = \
+LIBTOR_APP_A_SOURCES = \
 	src/or/addressmap.c				\
 	src/or/bridges.c				\
 	src/or/channel.c				\
@@ -118,7 +118,7 @@ LIBTOR_A_SOURCES = \
 # source files of every module to libtor-testing.a so we can build the unit
 # tests for everything. See the UNITTESTS_ENABLED branch below.
 #
-LIBTOR_TESTING_A_SOURCES = $(LIBTOR_A_SOURCES)
+LIBTOR_APP_TESTING_A_SOURCES = $(LIBTOR_APP_A_SOURCES)
 
 # The Directory Authority module.
 MODULE_DIRAUTH_SOURCES = \
@@ -127,18 +127,18 @@ MODULE_DIRAUTH_SOURCES = \
 	src/or/dirauth/shared_random.c				\
 	src/or/dirauth/shared_random_state.c
 if BUILD_MODULE_DIRAUTH
-LIBTOR_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
+LIBTOR_APP_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
 endif
 
-src_or_libtor_a_SOURCES = $(LIBTOR_A_SOURCES)
+src_or_libtor_app_a_SOURCES = $(LIBTOR_APP_A_SOURCES)
 if UNITTESTS_ENABLED
 
 # Add the sources of the modules that are needed for tests to work here.
-LIBTOR_TESTING_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
+LIBTOR_APP_TESTING_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
 
-src_or_libtor_testing_a_SOURCES = $(LIBTOR_TESTING_A_SOURCES)
+src_or_libtor_app_testing_a_SOURCES = $(LIBTOR_APP_TESTING_A_SOURCES)
 else
-src_or_libtor_testing_a_SOURCES =
+src_or_libtor_app_testing_a_SOURCES =
 endif
 
 src_or_tor_SOURCES = src/or/tor_main.c
@@ -150,8 +150,8 @@ AM_CPPFLAGS += -DSHARE_DATADIR="\"$(datadir)\""		\
 		-DLOCALSTATEDIR="\"$(localstatedir)\""	\
 		-DBINDIR="\"$(bindir)\""
 
-src_or_libtor_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
-src_or_libtor_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_or_libtor_app_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
+src_or_libtor_app_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
 # This seems to matter nowhere but on windows, but I assure you that it

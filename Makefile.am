@@ -65,7 +65,7 @@ TOR_CRYPTO_TESTING_LIBS = \
 
 # All static libraries used to link tor.
 TOR_INTERNAL_LIBS = \
-	src/or/libtor.a \
+	src/or/libtor-app.a \
 	$(TOR_CRYPTO_LIBS) \
 	$(TOR_UTIL_LIBS) \
 	src/common/libor-event.a \
@@ -75,7 +75,7 @@ TOR_INTERNAL_LIBS = \
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
 TOR_INTERNAL_TESTING_LIBS = \
-	src/or/libtor-testing.a \
+	src/or/libtor-app-testing.a \
 	$(TOR_CRYPTO_TESTING_LIBS) \
 	$(TOR_UTIL_TESTING_LIBS) \
 	$(LIBKECCAK_TINY) \
