@@ -144,8 +144,6 @@ uptime-*.json
 /src/common/libor-event.a
 /src/common/libor-event-testing.a
 /src/common/libor-event.lib
-/src/common/libcurve25519_donna.a
-/src/common/libcurve25519_donna.lib
 
 # /src/config/
 /src/config/Makefile
@@ -164,6 +162,7 @@ uptime-*.json
 /src/ext/keccak-tiny/libkeccak-tiny.lib
 
 # /src/lib
+/src/lib/libcurve25519_donna.a
 /src/lib/libtor-compress.a
 /src/lib/libtor-compress-testing.a
 /src/lib/libtor-crypt-ops.a
