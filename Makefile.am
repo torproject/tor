@@ -52,14 +52,16 @@ TOR_UTIL_TESTING_LIBS = \
 
 # Internal crypto libraries used in Tor
 TOR_CRYPTO_LIBS = \
-	src/common/libor-crypto.a \
+	src/lib/libtor-tls.a \
+	src/lib/libtor-crypt-ops.a \
 	$(LIBKECCAK_TINY) \
 	$(LIBDONNA)
 
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
 TOR_CRYPTO_TESTING_LIBS = \
-	src/common/libor-crypto-testing.a \
+	src/lib/libtor-tls-testing.a \
+	src/lib/libtor-crypt-ops-testing.a \
 	$(LIBKECCAK_TINY) \
 	$(LIBDONNA)
 

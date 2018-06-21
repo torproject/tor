@@ -149,7 +149,7 @@ pub fn main() {
             // will have dependencies on all the other rust packages that
             // tor uses.  We must be careful with factoring and dependencies
             // moving forward!
-            cfg.component("or-crypto-testing");
+            cfg.component("tor-crypt-ops-testing");
             cfg.component("or-testing");
             cfg.component("tor-err-testing");
             cfg.component("or-event-testing");
