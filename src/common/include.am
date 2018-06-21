@@ -203,7 +203,7 @@ COMMONHEADERS = \
   src/common/testsupport.h			\
   src/common/timers.h				\
   src/common/token_bucket.h			\
-  src/common/torerr.c				\
+  src/common/torerr.h				\
   src/common/torint.h				\
   src/common/torlog.h				\
   src/common/tortls.h				\
