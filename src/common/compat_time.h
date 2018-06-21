@@ -19,6 +19,8 @@
 #define TOR_COMPAT_TIME_H
 
 #include "orconfig.h"
+#include "lib/wallclock/tor_gettimeofday.h"
+
 #ifdef _WIN32
 #undef HAVE_CLOCK_GETTIME
 #endif
@@ -200,8 +202,6 @@ monotime_coarse_diff_msec32(const monotime_coarse_t *start,
 #endif
 }
 
-MOCK_DECL(void, tor_gettimeofday, (struct timeval *timeval));
-
 #ifdef TOR_UNIT_TESTS
 void tor_sleep_msec(int msec);
 
@@ -230,4 +230,3 @@ void monotime_reset_ratchets_for_testing(void);
 #endif /* defined(COMPAT_TIME_PRIVATE) */
 
 #endif /* !defined(TOR_COMPAT_TIME_H) */
-

@@ -35,6 +35,8 @@
 #include "common/torlog.h"
 #include "lib/container/smartlist.h"
 #include "lib/err/torerr.h"
+#include "lib/wallclock/tor_gettimeofday.h"
+#include "lib/wallclock/approx_time.h"
 
 #ifdef HAVE_ANDROID_LOG_H
 #include <android/log.h>

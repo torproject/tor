@@ -11,6 +11,7 @@ include src/lib/malloc/include.am
 include src/lib/testsupport/include.am
 include src/lib/tls/include.am
 include src/lib/trace/include.am
+include src/lib/wallclock/include.am
 include src/common/include.am
 include src/trunnel/include.am
 include src/or/include.am

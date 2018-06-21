@@ -24,6 +24,7 @@
 #endif
 #include "lib/err/torerr.h"
 #include "lib/malloc/util_malloc.h"
+#include "lib/wallclock/approx_time.h"
 #include "common/util_bug.h"
 
 #ifndef O_BINARY
@@ -177,15 +178,6 @@ int parse_iso_time(const char *buf, time_t *t);
 int parse_iso_time_nospace(const char *cp, time_t *t);
 int parse_http_time(const char *buf, struct tm *tm);
 int format_time_interval(char *out, size_t out_len, long interval);
-
-/* Cached time */
-#ifdef TIME_IS_FAST
-#define approx_time() time(NULL)
-#define update_approx_time(t) STMT_NIL
-#else
-time_t approx_time(void);
-void update_approx_time(time_t now);
-#endif /* defined(TIME_IS_FAST) */
 
 /* Rate-limiter */
 
