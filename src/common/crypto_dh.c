@@ -21,6 +21,8 @@ DISABLE_GCC_WARNING(redundant-decls)
 
 ENABLE_GCC_WARNING(redundant-decls)
 
+#include <openssl/bn.h>
+
 #include "common/torlog.h"
 
 /** A structure to hold the first half (x, g^x) of a Diffie-Hellman handshake
@@ -506,4 +508,3 @@ crypto_dh_free_all(void)
 
   dh_param_p = dh_param_p_tls = dh_param_g = NULL;
 }
-
