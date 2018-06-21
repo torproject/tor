@@ -10,7 +10,6 @@
 #include "common/buffers.h"
 #include "lib/tls/buffers_tls.h"
 #include "common/compat.h"
-#include "lib/compress/compress.h"
 #include "common/util.h"
 #include "lib/cc/torint.h"
 #include "common/torlog.h"
@@ -176,4 +175,3 @@ buf_flush_to_tls(buf_t *buf, tor_tls_t *tls, size_t flushlen,
   tor_assert(flushed < INT_MAX);
   return (int)flushed;
 }
-

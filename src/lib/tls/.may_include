@@ -1,0 +1,11 @@
+orconfig.h
+lib/cc/*.h
+lib/crypt_ops/*.h
+lib/err/*.h
+lib/testsupport/testsupport.h
+lib/tls/*.h
+
+ciphers.inc
+
+# XXX I'd like to remove this.
+common/*.h

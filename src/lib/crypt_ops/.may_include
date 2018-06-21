@@ -1,0 +1,14 @@
+orconfig.h
+lib/cc/*.h
+lib/crypt_ops/*.h
+lib/ctime/*.h
+lib/err/*.h
+lib/testsupport/testsupport.h
+
+trunnel/pwbox.h
+
+keccak-tiny/*.h
+ed25519/*.h
+
+# XXX I'd like to remove this.
+common/*.h

@@ -1,0 +1,6 @@
+orconfig.h
+lib/cc/*.h
+lib/compress/*.h
+
+# XXX I'd like to remove this.
+common/*.h

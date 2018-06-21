@@ -1,0 +1,14 @@
+orconfig.h
+common/*.h
+lib/*/*.h
+
+# XXXX These all belong somewhere else
+ht.h
+linux_syscalls.inc
+micro-revision.i
+siphash.h
+src/ext/timeouts/timeout.c
+strlcat.c
+strlcpy.c
+tor_queue.h
+tor_readpassphrase.h

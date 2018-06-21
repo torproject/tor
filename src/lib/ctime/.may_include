@@ -1,0 +1,6 @@
+orconfig.h
+lib/cc/*.h
+lib/ctime/*.h
+
+# XXXX I'd like to remove this
+common/util.h
