@@ -40,6 +40,7 @@ endif
 # "Common" libraries used to link tor's utility code.
 TOR_UTIL_LIBS = \
 	src/common/libor.a \
+	src/lib/libtor-malloc.a \
         src/lib/libtor-err.a \
 	src/lib/libtor-ctime.a
 
@@ -47,6 +48,7 @@ TOR_UTIL_LIBS = \
 # and tests)
 TOR_UTIL_TESTING_LIBS = \
 	src/common/libor-testing.a \
+	src/lib/libtor-malloc-testing.a \
         src/lib/libtor-err-testing.a \
         src/lib/libtor-ctime-testing.a
 

@@ -5,6 +5,7 @@ include src/lib/ctime/include.am
 include src/lib/compress/include.am
 include src/lib/crypt_ops/include.am
 include src/lib/include.libdonna.am
+include src/lib/malloc/include.am
 include src/lib/testsupport/include.am
 include src/lib/tls/include.am
 include src/lib/trace/include.am

@@ -8,6 +8,7 @@
 #define COMPAT_TIME_PRIVATE
 #define CONTROL_PRIVATE
 #define UTIL_PRIVATE
+#define UTIL_MALLOC_PRIVATE
 #include "or/or.h"
 #include "common/buffers.h"
 #include "or/config.h"
@@ -6316,4 +6317,3 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(get_unquoted_path, 0),
   END_OF_TESTCASES
 };
-
