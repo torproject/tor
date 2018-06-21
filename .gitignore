@@ -165,6 +165,8 @@ uptime-*.json
 /src/lib/libcurve25519_donna.a
 /src/lib/libtor-compress.a
 /src/lib/libtor-compress-testing.a
+/src/lib/libtor-container.a
+/src/lib/libtor-container-testing.a
 /src/lib/libtor-crypt-ops.a
 /src/lib/libtor-crypt-ops-testing.a
 /src/lib/libtor-ctime.a
