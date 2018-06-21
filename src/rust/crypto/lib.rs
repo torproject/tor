@@ -9,7 +9,7 @@
 //! The `digests` module contains submodules for specific hash digests
 //! and extendable output functions.
 //!
-//! ```
+//! ```rust,no_run
 //! use crypto::digests::sha2::*;
 //!
 //! let mut hasher: Sha256 = Sha256::default();
@@ -43,4 +43,3 @@ extern crate tor_log;
 
 pub mod digests;  // Unfortunately named "digests" plural to avoid name conflict with the digest crate
 pub mod rand;
-

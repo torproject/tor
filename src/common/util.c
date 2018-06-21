@@ -5375,3 +5375,4 @@ tor_ntohll(uint64_t a)
 {
   return tor_htonll(a);
 }
+

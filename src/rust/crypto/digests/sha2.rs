@@ -43,7 +43,7 @@ pub struct Sha256 {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,no_run
 /// use crypto::digests::sha2::{Sha256, Digest};
 ///
 /// let mut hasher: Sha256 = Sha256::default();
@@ -66,7 +66,7 @@ impl BlockInput for Sha256 {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,no_run
 /// use crypto::digests::sha2::{Sha256, Digest};
 ///
 /// let mut hasher: Sha256 = Sha256::default();
@@ -110,7 +110,7 @@ pub struct Sha512 {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,no_run
 /// use crypto::digests::sha2::{Sha512, Digest};
 ///
 /// let mut hasher: Sha512 = Sha512::default();
@@ -133,7 +133,7 @@ impl BlockInput for Sha512 {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,no_run
 /// use crypto::digests::sha2::{Sha512, Digest};
 ///
 /// let mut hasher: Sha512 = Sha512::default();
@@ -154,7 +154,7 @@ impl Input for Sha512 {
 // FIXME: Once const generics land in Rust, we should genericise calling
 // crypto_digest_get_digest in external::crypto_digest.
 impl FixedOutput for Sha512 {
-    type OutputSize = U32;
+    type OutputSize = U64;
 
     fn fixed_result(self) -> GenericArray<u8, Self::OutputSize> {
         let buffer: [u8; DIGEST512_LEN] = get_512_bit_digest(self.engine);
@@ -178,6 +178,9 @@ mod test {
     fn sha256_digest() {
         let mut h: Sha256 = Sha256::new();
         let mut result: [u8; DIGEST256_LEN] = [0u8; DIGEST256_LEN];
+        let expected = [151, 223, 53, 136, 181, 163, 242, 75, 171, 195,
+                        133, 27, 55, 47, 11, 167, 26, 157, 205, 222, 212,
+                        59, 20, 185, 208, 105, 97, 191, 193, 112, 125, 157];
 
         h.input(b"foo");
         h.input(b"bar");
@@ -187,7 +190,7 @@ mod test {
 
         println!("{:?}", &result[..]);
 
-        assert_eq!(&result[..], &b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"[..]);
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -200,6 +203,12 @@ mod test {
         let mut h: Sha512 = Sha512::new();
         let mut result: [u8; DIGEST512_LEN] = [0u8; DIGEST512_LEN];
 
+        let expected = [203, 55, 124, 16, 176, 245, 166, 44, 128, 54, 37, 167,
+                153, 217, 233, 8, 190, 69, 231, 103, 245, 209, 71, 212, 116,
+                73, 7, 203, 5, 89, 122, 164, 237, 211, 41, 160, 175, 20, 122,
+                221, 12, 244, 24, 30, 211, 40, 250, 30, 121, 148, 38, 88, 38,
+                179, 237, 61, 126, 246, 240, 103, 202, 153, 24, 90];
+
         h.input(b"foo");
         h.input(b"bar");
         h.input(b"baz");
@@ -208,6 +217,6 @@ mod test {
 
         println!("{:?}", &result[..]);
 
-        assert_eq!(&result[..], &b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"[..]);
+        assert_eq!(&result[..], &expected[..]);
     }
 }
