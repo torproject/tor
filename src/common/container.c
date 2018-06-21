@@ -11,9 +11,7 @@
  * a digest-to-void* map.
  **/
 
-#include "common/compat.h"
 #include "common/util.h"
-#include "common/torlog.h"
 #include "common/container.h"
 #include "lib/crypt_ops/crypto_digest.h"
 
@@ -111,6 +109,17 @@ smartlist_add_all(smartlist_t *s1, const smartlist_t *s2)
   memcpy(s1->list + s1->num_used, s2->list, s2->num_used*sizeof(void*));
   tor_assert(new_size <= INT_MAX); /* redundant. */
   s1->num_used = (int) new_size;
+}
+
+/** Append a copy of string to sl */
+void
+smartlist_add_strdup(struct smartlist_t *sl, const char *string)
+{
+  char *copy;
+
+  copy = tor_strdup(string);
+
+  smartlist_add(sl, copy);
 }
 
 /** Remove all elements E from sl such that E==element.  Preserve

@@ -16,6 +16,7 @@
 #include "lib/cc/torint.h"
 #include "common/compat.h"
 #include "common/container.h"
+#include "common/util_bug.h"
 
 #ifdef ADDRESS_PRIVATE
 
@@ -376,4 +377,3 @@ STATIC smartlist_t *get_interface_addresses_ioctl(int severity,
 #endif /* defined(ADDRESS_PRIVATE) */
 
 #endif /* !defined(TOR_ADDRESS_H) */
-

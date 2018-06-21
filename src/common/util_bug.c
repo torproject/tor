@@ -116,4 +116,3 @@ tor_bug_occurred_(const char *fname, unsigned int line,
   }
 #endif
 }
-

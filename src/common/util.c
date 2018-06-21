@@ -3279,17 +3279,6 @@ smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
   smartlist_add(sl, str);
 }
 
-/** Append a copy of string to sl */
-void
-smartlist_add_strdup(struct smartlist_t *sl, const char *string)
-{
-  char *copy;
-
-  copy = tor_strdup(string);
-
-  smartlist_add(sl, copy);
-}
-
 /** Return a new list containing the filenames in the directory <b>dirname</b>.
  * Return NULL on error or if <b>dirname</b> is not a directory.
  */

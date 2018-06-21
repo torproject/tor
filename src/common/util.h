@@ -167,7 +167,6 @@ void smartlist_add_asprintf(struct smartlist_t *sl, const char *pattern, ...)
 void smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
                              va_list args)
   CHECK_PRINTF(2, 0);
-void smartlist_add_strdup(struct smartlist_t *sl, const char *string);
 
 /* Time helpers */
 long tv_udiff(const struct timeval *start, const struct timeval *end);

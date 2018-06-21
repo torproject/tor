@@ -6,7 +6,15 @@
 #ifndef TOR_CONTAINER_H
 #define TOR_CONTAINER_H
 
-#include "common/util.h"
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "lib/cc/compat_compiler.h"
+#include "lib/cc/torint.h"
+#include "lib/testsupport/testsupport.h"
+#include "lib/malloc/util_malloc.h"
+#include "common/util_bug.h"
 #include "siphash.h"
 
 /** A resizeable list of pointers, with associated helpful functionality.
@@ -34,6 +42,7 @@ MOCK_DECL(void, smartlist_free_, (smartlist_t *sl));
 void smartlist_clear(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2);
+void smartlist_add_strdup(struct smartlist_t *sl, const char *string);
 void smartlist_remove(smartlist_t *sl, const void *element);
 void smartlist_remove_keeporder(smartlist_t *sl, const void *element);
 void *smartlist_pop_last(smartlist_t *sl);
@@ -739,4 +748,3 @@ third_quartile_uint32(uint32_t *array, int n_elements)
 }
 
 #endif /* !defined(TOR_CONTAINER_H) */
-
