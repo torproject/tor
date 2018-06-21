@@ -22,7 +22,7 @@
 /* for the correct alias to struct stat */
 #include <sys/stat.h>
 #endif
-#include "common/torerr.h"
+#include "lib/err/torerr.h"
 #include "common/util_bug.h"
 
 #ifndef O_BINARY

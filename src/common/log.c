@@ -34,7 +34,7 @@
 #define LOG_PRIVATE
 #include "common/torlog.h"
 #include "common/container.h"
-#include "common/torerr.h"
+#include "lib/err/torerr.h"
 
 #ifdef HAVE_ANDROID_LOG_H
 #include <android/log.h>

@@ -49,7 +49,7 @@
 #define MAIN_PRIVATE
 #include "or/or.h"
 #include "or/addressmap.h"
-#include "common/backtrace.h"
+#include "lib/err/backtrace.h"
 #include "or/bridges.h"
 #include "common/buffers.h"
 #include "common/buffers_tls.h"

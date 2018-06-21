@@ -6,7 +6,7 @@
 #define DIRECTORY_PRIVATE
 
 #include "or/or.h"
-#include "common/backtrace.h"
+#include "lib/err/backtrace.h"
 #include "or/bridges.h"
 #include "common/buffers.h"
 #include "or/circuitbuild.h"

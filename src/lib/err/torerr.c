@@ -28,8 +28,8 @@
 #include <sys/types.h>
 #endif
 
-#include "common/torerr.h"
-#include "common/backtrace.h"
+#include "lib/err/torerr.h"
+#include "lib/err/backtrace.h"
 
 /** Array of fds to log crash-style warnings to. */
 static int sigsafe_log_fds[TOR_SIGSAFE_LOG_MAX_FDS] = { STDERR_FILENO };

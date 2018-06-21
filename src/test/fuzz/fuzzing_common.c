@@ -3,7 +3,7 @@
 #define CRYPTO_ED25519_PRIVATE
 #include "orconfig.h"
 #include "or/or.h"
-#include "common/backtrace.h"
+#include "lib/err/backtrace.h"
 #include "or/config.h"
 #include "test/fuzz/fuzzing.h"
 #include "common/crypto.h"

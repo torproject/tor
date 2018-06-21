@@ -40,7 +40,7 @@ long int lround(double x);
 double fabs(double x);
 
 #include "or/or.h"
-#include "common/backtrace.h"
+#include "lib/err/backtrace.h"
 #include "common/buffers.h"
 #include "or/circuitlist.h"
 #include "or/circuitstats.h"

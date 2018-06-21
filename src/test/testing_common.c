@@ -15,7 +15,7 @@
 #include "or/config.h"
 #include "common/crypto_rand.h"
 #include "or/rephist.h"
-#include "common/backtrace.h"
+#include "lib/err/backtrace.h"
 #include "test/test.h"
 #include "or/channelpadding.h"
 #include "or/main.h"

@@ -21,7 +21,7 @@
 #include "common/container.h"
 #include "common/address.h"
 #include "common/sandbox.h"
-#include "common/backtrace.h"
+#include "lib/err/backtrace.h"
 #include "common/util_process.h"
 #include "common/util_format.h"
 

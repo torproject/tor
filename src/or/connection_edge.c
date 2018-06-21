@@ -57,7 +57,7 @@
 
 #include "or/or.h"
 
-#include "common/backtrace.h"
+#include "lib/err/backtrace.h"
 
 #include "or/addressmap.h"
 #include "common/buffers.h"

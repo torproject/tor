@@ -34,7 +34,7 @@
 
 #include "common/sandbox.h"
 #include "common/container.h"
-#include "common/torerr.h"
+#include "lib/err/torerr.h"
 #include "common/torlog.h"
 #include "common/torint.h"
 #include "common/util.h"
@@ -80,7 +80,7 @@
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
 #define USE_BACKTRACE
 #define EXPOSE_CLEAN_BACKTRACE
-#include "common/backtrace.h"
+#include "lib/err/backtrace.h"
 #endif /* defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && ... */
 
 #ifdef USE_BACKTRACE

@@ -9,7 +9,7 @@
 #undef TOR_COVERAGE
 #include "or/or.h"
 #include "common/util.h"
-#include "common/backtrace.h"
+#include "lib/err/backtrace.h"
 #include "common/torlog.h"
 
 /* -1: no crash.

@@ -3,7 +3,7 @@
 
 #include "orconfig.h"
 #include "or/or.h"
-#include "common/torerr.h"
+#include "lib/err/torerr.h"
 #include "common/torlog.h"
 #include "test/test.h"
 

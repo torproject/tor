@@ -10,7 +10,7 @@
 #include "orconfig.h"
 #include "common/util_bug.h"
 #include "common/torlog.h"
-#include "common/backtrace.h"
+#include "lib/err/backtrace.h"
 #include "common/container.h"
 
 #ifdef __COVERITY__

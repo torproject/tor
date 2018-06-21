@@ -65,7 +65,7 @@
  */
 #define TOR_CHANNEL_INTERNAL_
 #define CONNECTION_PRIVATE
-#include "common/backtrace.h"
+#include "lib/err/backtrace.h"
 #include "or/channel.h"
 #include "or/channeltls.h"
 #include "or/circuitbuild.h"
