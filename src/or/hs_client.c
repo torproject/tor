@@ -16,7 +16,6 @@
 #include "or/config.h"
 #include "or/connection.h"
 #include "or/connection_edge.h"
-#include "lib/container/container.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/directory.h"

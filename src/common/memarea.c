@@ -13,7 +13,6 @@
 #include "common/util.h"
 #include "common/compat.h"
 #include "common/torlog.h"
-#include "lib/container/container.h"
 
 #ifndef DISABLE_MEMORY_SENTINELS
 

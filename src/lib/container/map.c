@@ -158,7 +158,7 @@ digest256map_assign_key(digest256map_entry_t *ent, const uint8_t *key)
 
 /**
  * Macro: implement all the functions for a map that are declared in
- * container.h by the DECLARE_MAP_FNS() macro.  You must additionally define a
+ * map.h by the DECLARE_MAP_FNS() macro.  You must additionally define a
  * prefix_entry_free_() function to free entries (and their keys), a
  * prefix_assign_tmp_key() function to temporarily set a stack-allocated
  * entry to hold a key, and a prefix_assign_key() function to set a

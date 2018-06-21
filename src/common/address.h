@@ -15,7 +15,6 @@
 #include "orconfig.h"
 #include "lib/cc/torint.h"
 #include "common/compat.h"
-#include "lib/container/container.h"
 #include "common/util_bug.h"
 
 #ifdef ADDRESS_PRIVATE

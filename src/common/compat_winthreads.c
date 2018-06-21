@@ -16,7 +16,6 @@
 #include <windows.h>
 #include <process.h>
 #include "common/util.h"
-#include "lib/container/container.h"
 #include "common/torlog.h"
 
 /* This value is more or less total cargo-cult */

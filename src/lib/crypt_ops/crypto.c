@@ -66,7 +66,6 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "lib/cc/torint.h"
 #include "lib/crypt_ops/aes.h"
 #include "common/util.h"
-#include "lib/container/container.h"
 #include "common/compat.h"
 #include "common/sandbox.h"
 #include "common/util_format.h"

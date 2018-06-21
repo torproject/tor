@@ -9,7 +9,6 @@
 #include "or/or.h"
 #include "or/config.h"
 #include "or/dirserv.h"
-#include "lib/container/container.h"
 #include "or/entrynodes.h"
 #include "common/util.h"
 #include "or/routerparse.h"
