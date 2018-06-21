@@ -37,6 +37,53 @@ else
 rust_ldadd=
 endif
 
+# "Common" libraries used to link tor's utility code.
+TOR_UTIL_LIBS = \
+	src/common/libor.a \
+	src/common/libor-ctime.a
+
+# Variants of the above for linking the testing variant of tor (for coverage
+# and tests)
+TOR_UTIL_TESTING_LIBS = \
+	src/common/libor-testing.a \
+	src/common/libor-ctime-testing.a
+
+# Internal crypto libraries used in Tor
+TOR_CRYPTO_LIBS = \
+	src/common/libor-crypto.a \
+	$(LIBKECCAK_TINY) \
+	$(LIBDONNA)
+
+# Variants of the above for linking the testing variant of tor (for coverage
+# and tests)
+TOR_CRYPTO_TESTING_LIBS = \
+	src/common/libor-crypto-testing.a \
+	$(LIBKECCAK_TINY) \
+	$(LIBDONNA)
+
+# All static libraries used to link tor.
+TOR_INTERNAL_LIBS = \
+	src/or/libtor.a \
+	$(TOR_CRYPTO_LIBS) \
+	$(TOR_UTIL_LIBS) \
+	src/common/libor-event.a \
+	src/trunnel/libor-trunnel.a \
+	src/trace/libor-trace.a
+
+# Variants of the above for linking the testing variant of tor (for coverage
+# and tests)
+TOR_INTERNAL_TESTING_LIBS = \
+	src/or/libtor-testing.a \
+	$(TOR_CRYPTO_TESTING_LIBS) \
+	$(TOR_UTIL_TESTING_LIBS) \
+	$(LIBKECCAK_TINY) \
+	$(LIBDONNA) \
+	src/common/libor-event-testing.a \
+	src/trunnel/libor-trunnel-testing.a \
+	src/trace/libor-trace.a
+
+# All libraries used to link tor-cov
+
 include src/include.am
 include doc/include.am
 include contrib/include.am
