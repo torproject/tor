@@ -150,11 +150,10 @@ pub fn main() {
             // tor uses.  We must be careful with factoring and dependencies
             // moving forward!
             cfg.component("or-crypto-testing");
-            cfg.component("or-ctime-testing");
             cfg.component("or-testing");
             cfg.component("tor-err-testing");
             cfg.component("or-event-testing");
-            cfg.component("or-ctime-testing");
+            cfg.component("tor-ctime-testing");
             cfg.component("curve25519_donna");
             cfg.component("keccak-tiny");
             cfg.component("ed25519_ref10");

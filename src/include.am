@@ -1,5 +1,6 @@
 include src/ext/include.am
 include src/lib/err/include.am
+include src/lib/ctime/include.am
 include src/common/include.am
 include src/trunnel/include.am
 include src/or/include.am

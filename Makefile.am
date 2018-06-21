@@ -41,14 +41,14 @@ endif
 TOR_UTIL_LIBS = \
 	src/common/libor.a \
         src/lib/libtor-err.a \
-	src/common/libor-ctime.a
+	src/lib/libtor-ctime.a
 
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
 TOR_UTIL_TESTING_LIBS = \
 	src/common/libor-testing.a \
         src/lib/libtor-err-testing.a \
-	src/common/libor-ctime-testing.a
+        src/lib/libtor-ctime-testing.a
 
 # Internal crypto libraries used in Tor
 TOR_CRYPTO_LIBS = \
