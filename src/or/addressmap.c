@@ -21,7 +21,7 @@
 #include "or/config.h"
 #include "or/connection_edge.h"
 #include "or/control.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/dns.h"
 #include "or/nodelist.h"
 #include "or/routerset.h"

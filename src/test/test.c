@@ -9,7 +9,7 @@
  **/
 
 #include "orconfig.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -60,7 +60,7 @@ double fabs(double x);
 #include "or/rephist.h"
 #include "or/routerparse.h"
 #include "or/statefile.h"
-#include "common/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
 
 #include "or/extend_info_st.h"
 #include "or/or_circuit_st.h"

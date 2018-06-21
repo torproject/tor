@@ -6,7 +6,7 @@
 
 #include "or/or.h"
 #include "trunnel/ed25519_cert.h" /* Trunnel interface. */
-#include "common/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "or/hs_descriptor.h"
 #include "or/routerparse.h"
 #include "common/util.h"

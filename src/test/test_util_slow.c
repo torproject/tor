@@ -7,7 +7,7 @@
 #define UTIL_PRIVATE
 #include "common/util.h"
 #include "common/util_process.h"
-#include "common/crypto.h"
+#include "lib/crypt_ops/crypto.h"
 #include "common/torlog.h"
 #include "test/test.h"
 

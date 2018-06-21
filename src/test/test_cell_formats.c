@@ -12,7 +12,7 @@
 #include "or/connection_edge.h"
 #include "or/connection_or.h"
 #include "or/config.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/onion.h"
 #include "or/onion_tap.h"
 #include "or/onion_fast.h"

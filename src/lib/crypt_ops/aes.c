@@ -16,9 +16,9 @@
   #include <ws2tcpip.h>
 #endif
 
-#include "common/compat_openssl.h"
+#include "lib/crypt_ops/compat_openssl.h"
 #include <openssl/opensslv.h>
-#include "common/crypto_openssl_mgt.h"
+#include "lib/crypt_ops/crypto_openssl_mgt.h"
 
 #if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
 #error "We require OpenSSL >= 1.0.0"
@@ -36,7 +36,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 ENABLE_GCC_WARNING(redundant-decls)
 
 #include "common/compat.h"
-#include "common/aes.h"
+#include "lib/crypt_ops/aes.h"
 #include "common/util.h"
 #include "common/torlog.h"
 #include "lib/ctime/di_ops.h"

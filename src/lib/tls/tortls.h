@@ -11,8 +11,8 @@
  * \brief Headers for tortls.c
  **/
 
-#include "common/crypto_rsa.h"
-#include "common/compat_openssl.h"
+#include "lib/crypt_ops/crypto_rsa.h"
+#include "lib/crypt_ops/compat_openssl.h"
 #include "common/compat.h"
 #include "common/testsupport.h"
 

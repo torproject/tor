@@ -10,7 +10,7 @@
 #define TOR_PARSECOMMON_H
 
 #include "common/container.h"
-#include "common/crypto.h"
+#include "lib/crypt_ops/crypto.h"
 #include "common/memarea.h"
 
 /** Enumeration of possible token types.  The ones starting with K_ correspond

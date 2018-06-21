@@ -9,11 +9,11 @@
  * \brief Block of functions related with DH utilities and operations.
  **/
 
-#include "common/compat_openssl.h"
-#include "common/crypto_dh.h"
-#include "common/crypto_digest.h"
-#include "common/crypto_hkdf.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/compat_openssl.h"
+#include "lib/crypt_ops/crypto_dh.h"
+#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/crypt_ops/crypto_hkdf.h"
+#include "lib/crypt_ops/crypto_util.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 

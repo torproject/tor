@@ -15,7 +15,7 @@
 
 #include "orconfig.h"
 
-#include "common/crypto_digest.h"
+#include "lib/crypt_ops/crypto_digest.h"
 #include <stdio.h>
 #include "lib/cc/torint.h"
 #include "common/testsupport.h"

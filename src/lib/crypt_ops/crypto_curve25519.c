@@ -21,11 +21,11 @@
 #include <sys/stat.h>
 #endif
 #include "common/container.h"
-#include "common/crypto_curve25519.h"
-#include "common/crypto_digest.h"
-#include "common/crypto_format.h"
-#include "common/crypto_rand.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/crypt_ops/crypto_format.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "common/util.h"
 #include "common/torlog.h"
 

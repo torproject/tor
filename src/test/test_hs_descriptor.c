@@ -8,9 +8,9 @@
 
 #define HS_DESCRIPTOR_PRIVATE
 
-#include "common/crypto_ed25519.h"
-#include "common/crypto_digest.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "trunnel/ed25519_cert.h"
 #include "or/or.h"
 #include "or/hs_descriptor.h"

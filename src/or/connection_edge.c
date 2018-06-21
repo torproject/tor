@@ -70,7 +70,7 @@
 #include "or/connection_edge.h"
 #include "or/connection_or.h"
 #include "or/control.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/dns.h"
 #include "or/dnsserv.h"
 #include "or/directory.h"

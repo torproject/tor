@@ -9,11 +9,11 @@
  * \brief Block of functions related with HKDF utilities and operations.
  **/
 
-#include "common/crypto_hkdf.h"
-#include "common/crypto_util.h"
-#include "common/crypto_digest.h"
+#include "lib/crypt_ops/crypto_hkdf.h"
+#include "lib/crypt_ops/crypto_util.h"
+#include "lib/crypt_ops/crypto_digest.h"
 
-#include "common/crypto_openssl_mgt.h"
+#include "lib/crypt_ops/crypto_openssl_mgt.h"
 #include <openssl/opensslv.h>
 
 #if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)

@@ -124,7 +124,7 @@
 #include "or/confparse.h"
 #include "or/connection.h"
 #include "or/control.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/directory.h"
 #include "or/entrynodes.h"
 #include "or/main.h"

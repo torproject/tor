@@ -9,7 +9,7 @@
 
 #include "common/testsupport.h"
 #include "lib/cc/torint.h"
-#include "common/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 int crypto_write_tagged_contents_to_file(const char *fname,
                                          const char *typestring,

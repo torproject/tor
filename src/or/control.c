@@ -53,8 +53,8 @@
 #include "or/connection_edge.h"
 #include "or/connection_or.h"
 #include "or/control.h"
-#include "common/crypto_rand.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/directory.h"
 #include "or/dirserv.h"
 #include "or/dnsserv.h"
@@ -104,7 +104,7 @@
 #include <sys/resource.h>
 #endif
 
-#include "common/crypto_s2k.h"
+#include "lib/crypt_ops/crypto_s2k.h"
 #include "common/procmon.h"
 
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has

@@ -11,9 +11,9 @@
  **/
 
 #include "common/container.h"
-#include "common/crypto_digest.h"
-#include "common/crypto_openssl_mgt.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/crypt_ops/crypto_openssl_mgt.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "common/torlog.h"
 
 #include "keccak-tiny/keccak-tiny.h"

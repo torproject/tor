@@ -10,8 +10,8 @@
  * \brief Block of functions related to operations from OpenSSL.
  **/
 
-#include "common/compat_openssl.h"
-#include "common/crypto_openssl_mgt.h"
+#include "lib/crypt_ops/compat_openssl.h"
+#include "lib/crypt_ops/crypto_openssl_mgt.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 

@@ -24,10 +24,10 @@
   #include <ws2tcpip.h>
 #endif
 
-#include "common/crypto.h"
-#include "common/crypto_rand.h"
-#include "common/crypto_dh.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_dh.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "common/compat.h"
 
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
@@ -52,7 +52,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 ENABLE_GCC_WARNING(redundant-decls)
 
 #define TORTLS_PRIVATE
-#include "common/tortls.h"
+#include "lib/tls/tortls.h"
 #include "common/util.h"
 #include "common/torlog.h"
 #include "common/container.h"
@@ -2660,4 +2660,3 @@ evaluate_ecgroup_for_tls(const char *ecgroup)
 
   return ret;
 }
-

@@ -13,8 +13,8 @@
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
 
-#include "common/crypto_ed25519.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/hs_cell.h"
 #include "or/hs_intropoint.h"
 #include "or/hs_service.h"

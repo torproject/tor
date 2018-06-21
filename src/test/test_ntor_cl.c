@@ -9,8 +9,8 @@
 #include "or/or.h"
 #include "common/util.h"
 #include "common/compat.h"
-#include "common/crypto.h"
-#include "common/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
 #include "or/onion_ntor.h"
 
 #define N_ARGS(n) STMT_BEGIN {                                  \

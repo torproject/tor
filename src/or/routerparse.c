@@ -58,7 +58,7 @@
 #include "or/or.h"
 #include "or/circuitstats.h"
 #include "or/config.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/dirauth/shared_random.h"
 #include "or/dirserv.h"
 #include "or/entrynodes.h"

@@ -6,7 +6,7 @@
 
 #include "common/testsupport.h"
 #include "lib/cc/torint.h"
-#include "common/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
 #include "common/util.h"
 
 #define ED25519_PUBKEY_LEN 32

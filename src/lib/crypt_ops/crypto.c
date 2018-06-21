@@ -23,16 +23,16 @@
 #endif /* defined(_WIN32) */
 
 #define CRYPTO_PRIVATE
-#include "common/compat_openssl.h"
-#include "common/crypto.h"
-#include "common/crypto_curve25519.h"
-#include "common/crypto_digest.h"
-#include "common/crypto_dh.h"
-#include "common/crypto_ed25519.h"
-#include "common/crypto_format.h"
-#include "common/crypto_rand.h"
-#include "common/crypto_rsa.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/compat_openssl.h"
+#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/crypt_ops/crypto_dh.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_format.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rsa.h"
+#include "lib/crypt_ops/crypto_util.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
@@ -64,7 +64,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 #include "common/torlog.h"
 #include "lib/cc/torint.h"
-#include "common/aes.h"
+#include "lib/crypt_ops/aes.h"
 #include "common/util.h"
 #include "common/container.h"
 #include "common/compat.h"

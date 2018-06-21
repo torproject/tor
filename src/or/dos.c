@@ -12,7 +12,7 @@
 #include "or/channel.h"
 #include "or/config.h"
 #include "or/connection_or.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/geoip.h"
 #include "or/main.h"
 #include "or/networkstatus.h"

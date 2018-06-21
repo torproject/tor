@@ -8,7 +8,7 @@
 */
 
 /* Tor: Instead of calling OpenSSL's CSPRNG directly, call the wrapper. */
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 
 static void
 ED25519_FN(ed25519_randombytes_unsafe) (void *p, size_t len)

@@ -15,7 +15,7 @@
 #include "or/config.h"
 /* For init/free stuff */
 #include "or/scheduler.h"
-#include "common/tortls.h"
+#include "lib/tls/tortls.h"
 
 #include "or/or_connection_st.h"
 

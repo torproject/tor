@@ -8,13 +8,13 @@
 #include "orconfig.h"
 #include <stddef.h>
 #include "common/buffers.h"
-#include "common/buffers_tls.h"
+#include "lib/tls/buffers_tls.h"
 #include "common/compat.h"
 #include "lib/compress/compress.h"
 #include "common/util.h"
 #include "lib/cc/torint.h"
 #include "common/torlog.h"
-#include "common/tortls.h"
+#include "lib/tls/tortls.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

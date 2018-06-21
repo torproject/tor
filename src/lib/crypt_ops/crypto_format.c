@@ -15,11 +15,11 @@
 #include <sys/stat.h>
 #endif
 #include "common/container.h"
-#include "common/crypto_curve25519.h"
-#include "common/crypto_digest.h"
-#include "common/crypto_ed25519.h"
-#include "common/crypto_format.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_format.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "common/util.h"
 #include "common/util_format.h"
 #include "common/torlog.h"

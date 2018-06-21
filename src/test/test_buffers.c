@@ -7,8 +7,8 @@
 #define PROTO_HTTP_PRIVATE
 #include "or/or.h"
 #include "common/buffers.h"
-#include "common/buffers_tls.h"
-#include "common/crypto_rand.h"
+#include "lib/tls/buffers_tls.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/proto_http.h"
 #include "or/proto_socks.h"
 #include "test/test.h"

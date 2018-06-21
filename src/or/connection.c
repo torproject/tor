@@ -58,7 +58,7 @@
 #include "or/or.h"
 #include "or/bridges.h"
 #include "common/buffers.h"
-#include "common/buffers_tls.h"
+#include "lib/tls/buffers_tls.h"
 /*
  * Define this so we get channel internal functions, since we're implementing
  * part of a subclass (channel_tls_t).
@@ -76,7 +76,7 @@
 #include "or/connection_edge.h"
 #include "or/connection_or.h"
 #include "or/control.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/directory.h"
 #include "or/dirserv.h"
 #include "or/dns.h"

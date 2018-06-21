@@ -31,7 +31,7 @@
 #include "or/config.h"
 #include "or/confparse.h"
 #include "or/control.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/main.h"
 #include "or/networkstatus.h"
 #include "or/rendclient.h"

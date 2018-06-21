@@ -18,7 +18,7 @@
 #include "or/circuitbuild.h"
 #include "or/config.h"
 #include "or/confparse.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/directory.h"
 #include "or/entrynodes.h"
 #include "or/nodelist.h"

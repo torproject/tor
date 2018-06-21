@@ -13,7 +13,7 @@
 #ifndef CRYPTO_UTIL_PRIVATE
 #define CRYPTO_UTIL_PRIVATE
 
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 
 #include <string.h>
 

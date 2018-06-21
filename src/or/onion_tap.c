@@ -29,8 +29,8 @@
 
 #include "or/or.h"
 #include "or/config.h"
-#include "common/crypto_rand.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/onion_tap.h"
 #include "or/rephist.h"
 

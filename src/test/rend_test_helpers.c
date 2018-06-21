@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 #include "or/or.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "test/test.h"
 #include "or/rendcommon.h"
 #include "test/rend_test_helpers.h"

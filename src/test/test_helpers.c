@@ -18,7 +18,7 @@
 #include "or/config.h"
 #include "or/confparse.h"
 #include "or/connection.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/main.h"
 #include "or/nodelist.h"
 #include "or/relay.h"

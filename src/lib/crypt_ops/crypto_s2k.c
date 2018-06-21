@@ -13,12 +13,12 @@
 #define CRYPTO_S2K_PRIVATE
 
 #include "common/compat.h"
-#include "common/crypto.h"
-#include "common/crypto_digest.h"
-#include "common/crypto_hkdf.h"
-#include "common/crypto_rand.h"
-#include "common/crypto_s2k.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/crypt_ops/crypto_hkdf.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_s2k.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "common/util.h"
 
 #include <openssl/evp.h>

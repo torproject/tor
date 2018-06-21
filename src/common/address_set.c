@@ -15,7 +15,7 @@
 #include "common/address.h"
 #include "common/compat.h"
 #include "common/container.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "common/util.h"
 #include "siphash.h"
 

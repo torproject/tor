@@ -12,7 +12,7 @@
 #include "common/buffers.h"
 #include "or/config.h"
 #include "or/control.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "test/test.h"
 #include "common/memarea.h"
 #include "common/util_process.h"

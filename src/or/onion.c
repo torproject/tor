@@ -67,7 +67,7 @@
 #include "or/circuitlist.h"
 #include "or/config.h"
 #include "or/cpuworker.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/networkstatus.h"
 #include "or/onion.h"
 #include "or/onion_fast.h"

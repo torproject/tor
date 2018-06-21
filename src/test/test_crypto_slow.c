@@ -7,9 +7,9 @@
 #define CRYPTO_S2K_PRIVATE
 #include "or/or.h"
 #include "test/test.h"
-#include "common/crypto_s2k.h"
-#include "common/crypto_pwbox.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_s2k.h"
+#include "lib/crypt_ops/crypto_pwbox.h"
+#include "lib/crypt_ops/crypto_rand.h"
 
 #if defined(HAVE_LIBSCRYPT_H) && defined(HAVE_LIBSCRYPT_SCRYPT)
 #define HAVE_LIBSCRYPT

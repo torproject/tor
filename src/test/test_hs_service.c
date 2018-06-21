@@ -33,7 +33,7 @@
 #include "or/circuitbuild.h"
 #include "or/circuitlist.h"
 #include "or/circuituse.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/dirauth/dirvote.h"
 #include "or/networkstatus.h"
 #include "or/nodelist.h"

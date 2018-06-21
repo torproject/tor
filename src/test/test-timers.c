@@ -9,7 +9,7 @@
 
 #include "common/compat.h"
 #include "common/compat_libevent.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "common/timers.h"
 #include "common/util.h"
 

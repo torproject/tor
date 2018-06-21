@@ -16,9 +16,9 @@
 
 #include "or/or.h"
 #include "or/config.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/router.h"
-#include "common/crypto_pwbox.h"
+#include "lib/crypt_ops/crypto_pwbox.h"
 #include "or/routerkeys.h"
 #include "or/torcert.h"
 

@@ -20,10 +20,10 @@
 #include <openssl/obj_mac.h>
 
 #include "or/config.h"
-#include "common/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
 #include "or/onion_ntor.h"
-#include "common/crypto_ed25519.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/consdiff.h"
 
 #include "or/cell_st.h"

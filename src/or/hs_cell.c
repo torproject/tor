@@ -8,7 +8,7 @@
 
 #include "or/or.h"
 #include "or/config.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/rendservice.h"
 #include "or/replaycache.h"
 #include "common/util.h"

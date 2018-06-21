@@ -4,7 +4,7 @@
 #ifndef TOR_ROUTERKEYS_H
 #define TOR_ROUTERKEYS_H
 
-#include "common/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 #define INIT_ED_KEY_CREATE                      (1u<<0)
 #define INIT_ED_KEY_REPLACE                     (1u<<1)

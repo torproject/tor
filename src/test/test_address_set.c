@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 #include "or/or.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "common/address_set.h"
 #include "or/microdesc.h"
 #include "or/networkstatus.h"

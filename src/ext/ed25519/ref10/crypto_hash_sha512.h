@@ -1,5 +1,5 @@
 /* Added for Tor. */
-#include "common/crypto_digest.h"
+#include "lib/crypt_ops/crypto_digest.h"
 
 /* Set 'out' to the 512-bit SHA512 hash of the 'len'-byte string in 'inp' */
 #define crypto_hash_sha512(out, inp, len) \

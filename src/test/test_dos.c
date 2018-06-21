@@ -8,7 +8,7 @@
 #include "or/or.h"
 #include "or/dos.h"
 #include "or/circuitlist.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/geoip.h"
 #include "or/channel.h"
 #include "or/microdesc.h"

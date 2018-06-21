@@ -10,7 +10,7 @@
 #include "or/connection_or.h"
 #include "or/config.h"
 #include "or/control.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/ext_orport.h"
 #include "or/main.h"
 

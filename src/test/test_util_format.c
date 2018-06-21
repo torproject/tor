@@ -6,7 +6,7 @@
 
 #include "test/test.h"
 
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #define UTIL_FORMAT_PRIVATE
 #include "common/util_format.h"
 

@@ -14,7 +14,7 @@
 #ifndef CRYPTO_RAND_PRIVATE
 #define CRYPTO_RAND_PRIVATE
 
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -23,8 +23,8 @@
 
 #include "common/container.h"
 #include "common/compat.h"
-#include "common/compat_openssl.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/compat_openssl.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "common/sandbox.h"
 #include "common/testsupport.h"
 #include "common/torlog.h"

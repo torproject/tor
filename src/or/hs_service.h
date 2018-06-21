@@ -9,8 +9,8 @@
 #ifndef TOR_HS_SERVICE_H
 #define TOR_HS_SERVICE_H
 
-#include "common/crypto_curve25519.h"
-#include "common/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "or/replaycache.h"
 
 #include "or/hs_common.h"

@@ -5,7 +5,7 @@
 
 #include "or/config.h"
 #include "or/conscache.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "common/storagedir.h"
 
 #define CCE_MAGIC 0x17162253
