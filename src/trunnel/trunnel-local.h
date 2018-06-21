@@ -4,7 +4,7 @@
 
 #include "common/util.h"
 #include "common/compat.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 
 #define trunnel_malloc tor_malloc
 #define trunnel_calloc tor_calloc
