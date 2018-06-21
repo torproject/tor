@@ -87,8 +87,9 @@ matrix:
   ## branches and build history pages.  See
   ## https://github.com/travis-ci/travis-ci/issues/8716
   allow_failures:
-    # - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
-    # - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode
+    - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
+    - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+    - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
     # - compiler: clang
 
   ## Create explicit matrix entries to work around a Travis CI
