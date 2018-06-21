@@ -41,17 +41,6 @@ uint64_t tor_ntohll(uint64_t a);
 
 void tor_log_mallinfo(int severity);
 
-/** Macro: yield a pointer to the field at position <b>off</b> within the
- * structure <b>st</b>.  Example:
- * <pre>
- *   struct a { int foo; int bar; } x;
- *   off_t bar_offset = offsetof(struct a, bar);
- *   int *bar_p = STRUCT_VAR_P(&x, bar_offset);
- *   *bar_p = 3;
- * </pre>
- */
-#define STRUCT_VAR_P(st, off) ((void*) ( ((char*)(st)) + (off) ) )
-
 /** Macro: yield a pointer to an enclosing structure given a pointer to
  * a substructure at offset <b>off</b>. Example:
  * <pre>

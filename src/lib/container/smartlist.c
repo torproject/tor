@@ -13,7 +13,8 @@
 
 #include "lib/malloc/util_malloc.h"
 #include "lib/container/smartlist.h"
-#include "common/util.h"
+#include "lib/err/torerr.h"
+#include "common/util.h" // For strstrip.
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/ctime/di_ops.h"
 

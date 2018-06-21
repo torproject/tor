@@ -242,4 +242,15 @@
 #error Unknown: SIZEOF_INTPTR_T
 #endif /* (SIZEOF_INTPTR_T == SIZEOF_INT) || ... */
 
+/** Macro: yield a pointer to the field at position <b>off</b> within the
+ * structure <b>st</b>.  Example:
+ * <pre>
+ *   struct a { int foo; int bar; } x;
+ *   off_t bar_offset = offsetof(struct a, bar);
+ *   int *bar_p = STRUCT_VAR_P(&x, bar_offset);
+ *   *bar_p = 3;
+ * </pre>
+ */
+#define STRUCT_VAR_P(st, off) ((void*) ( ((char*)(st)) + (off) ) )
+
 #endif /* !defined(TOR_COMPAT_H) */
