@@ -2275,6 +2275,13 @@ AC_CONFIG_FILES([
         src/rust/.cargo/config
         scripts/maint/checkOptionDocs.pl
         scripts/maint/updateVersions.pl
+], [
+  chmod +x contrib/dist/suse/tor.sh
+  chmod +x link_rust.sh
+  chmod +x contrib/dist/tor.sh
+  chmod +x contrib/dist/torctl
+  chmod +x scripts/maint/checkOptionDocs.pl
+  chmod +x scripts/maint/updateVersions.pl
 ])
 
 if test "x$asciidoc" = "xtrue" && test "$ASCIIDOC" = "none"; then

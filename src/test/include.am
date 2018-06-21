@@ -12,7 +12,6 @@ TESTS_ENVIRONMENT = \
 	export EXTRA_CARGO_OPTIONS="$(EXTRA_CARGO_OPTIONS)"; \
 	export CARGO_ONLINE="$(CARGO_ONLINE)"; \
         export CCLD="$(CCLD)"; \
-        chmod +x "$(abs_top_builddir)/link_rust.sh"; \
         export RUSTFLAGS="-C linker=$(abs_top_builddir)/link_rust.sh";
 
 TESTSCRIPTS = \
