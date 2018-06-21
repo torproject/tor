@@ -37,7 +37,7 @@
 #include "lib/err/torerr.h"
 #include "common/torlog.h"
 #include "common/util.h"
-#include "common/container.h"
+#include "lib/container/container.h"
 
 #ifndef HAVE_GETTIMEOFDAY
 #ifdef HAVE_FTIME

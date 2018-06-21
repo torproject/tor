@@ -11,7 +11,7 @@
 #include "common/util_bug.h"
 #include "common/torlog.h"
 #include "lib/err/backtrace.h"
-#include "common/container.h"
+#include "lib/container/container.h"
 
 #ifdef __COVERITY__
 int bug_macro_deadcode_dummy__ = 0;

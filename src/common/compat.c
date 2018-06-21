@@ -126,7 +126,7 @@ SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 
 #include "common/torlog.h"
 #include "common/util.h"
-#include "common/container.h"
+#include "lib/container/container.h"
 #include "common/address.h"
 #include "common/sandbox.h"
 

@@ -12,7 +12,7 @@
  **/
 
 #include "common/util.h"
-#include "common/container.h"
+#include "lib/container/container.h"
 #include "lib/crypt_ops/crypto_digest.h"
 
 #include <stdlib.h>

@@ -21,7 +21,7 @@
 #include <wincrypt.h>
 #endif /* defined(_WIN32) */
 
-#include "common/container.h"
+#include "lib/container/container.h"
 #include "common/compat.h"
 #include "lib/crypt_ops/compat_openssl.h"
 #include "lib/crypt_ops/crypto_util.h"

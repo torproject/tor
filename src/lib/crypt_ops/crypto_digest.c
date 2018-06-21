@@ -10,7 +10,7 @@
  * operations.
  **/
 
-#include "common/container.h"
+#include "lib/container/container.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
 #include "lib/crypt_ops/crypto_util.h"

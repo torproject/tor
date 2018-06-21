@@ -8,7 +8,7 @@
 #include "common/confline.h"
 #include "common/torlog.h"
 #include "common/util.h"
-#include "common/container.h"
+#include "lib/container/container.h"
 
 static int config_get_lines_aux(const char *string, config_line_t **result,
                                 int extended, int allow_include,

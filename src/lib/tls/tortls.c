@@ -55,7 +55,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "lib/tls/tortls.h"
 #include "common/util.h"
 #include "common/torlog.h"
-#include "common/container.h"
+#include "lib/container/container.h"
 #include <string.h>
 
 #ifdef OPENSSL_1_1_API

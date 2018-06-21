@@ -40,7 +40,7 @@
 #include "common/util_format.h"
 #include "common/address.h"
 #include "common/torlog.h"
-#include "common/container.h"
+#include "lib/container/container.h"
 #include "common/sandbox.h"
 
 #ifdef HAVE_SYS_TIME_H

@@ -15,7 +15,7 @@
 #include "common/address.h"
 #include "or/bridges.h"
 #include "or/config.h"
-#include "common/container.h"
+#include "lib/container/container.h"
 #include "or/transports.h"
 #include "common/util.h"
 

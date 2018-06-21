@@ -1,7 +1,7 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "common/container.h"
+#include "lib/container/container.h"
 #include "common/compat.h"
 #include "common/confline.h"
 #include "common/memarea.h"

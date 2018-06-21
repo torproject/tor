@@ -33,7 +33,7 @@
 #include <stdlib.h>
 
 #include "common/sandbox.h"
-#include "common/container.h"
+#include "lib/container/container.h"
 #include "lib/err/torerr.h"
 #include "common/torlog.h"
 #include "lib/cc/torint.h"
