@@ -4235,7 +4235,7 @@ routers_make_ed_keys_unique(smartlist_t *routers)
       if (ri2_pub < ri_pub ||
           (ri2_pub == ri_pub &&
            fast_memcmp(ri->cache_info.signed_descriptor_digest,
-                       ri2->cache_info.signed_descriptor_digest,DIGEST_LEN)<0)) {
+                     ri2->cache_info.signed_descriptor_digest,DIGEST_LEN)<0)) {
         digest256map_set(by_ed_key, pk, ri);
         ri2->omit_from_vote = 1;
       } else {
@@ -4408,10 +4408,10 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
         vrs->protocols = tor_strdup(ri->protocol_list);
       } else {
         vrs->protocols = tor_strdup(
-                                    protover_compute_for_old_tor(vrs->version));
+                                protover_compute_for_old_tor(vrs->version));
       }
       vrs->microdesc = dirvote_format_all_microdesc_vote_lines(ri, now,
-                                                               microdescriptors);
+                                                            microdescriptors);
 
       smartlist_add(routerstatuses, vrs);
     }
@@ -4504,9 +4504,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   /* We should not recommend anything we don't have. */
   tor_assert_nonfatal(protover_all_supported(
-                                             v3_out->recommended_relay_protocols, NULL));
+                               v3_out->recommended_relay_protocols, NULL));
   tor_assert_nonfatal(protover_all_supported(
-                                             v3_out->recommended_client_protocols, NULL));
+                               v3_out->recommended_client_protocols, NULL));
 
   v3_out->package_lines = smartlist_new();
   {
@@ -4562,4 +4562,3 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   return v3_out;
 }
-

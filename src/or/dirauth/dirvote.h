@@ -164,7 +164,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 }
 
 static inline int
-dirvote_add_signatures(const char *detached_signatures_body, const char *source,
+dirvote_add_signatures(const char *detached_signatures_body,
+                       const char *source,
                        const char **msg_out)
 {
   (void) detached_signatures_body;
@@ -244,4 +245,3 @@ STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
 #endif /* defined(DIRVOTE_PRIVATE) */
 
 #endif /* !defined(TOR_DIRVOTE_H) */
-
