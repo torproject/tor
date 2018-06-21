@@ -141,14 +141,9 @@ uptime-*.json
 /src/common/libor-ctime.a
 /src/common/libor-ctime-testing.a
 /src/common/libor-ctime.lib
-/src/common/libor-crypto.a
-/src/common/libor-crypto-testing.a
-/src/common/libor-crypto.lib
 /src/common/libor-event.a
 /src/common/libor-event-testing.a
 /src/common/libor-event.lib
-/src/common/libcurve25519_donna.a
-/src/common/libcurve25519_donna.lib
 
 # /src/config/
 /src/config/Makefile
@@ -167,10 +162,18 @@ uptime-*.json
 /src/ext/keccak-tiny/libkeccak-tiny.lib
 
 # /src/lib
+/src/lib/libcurve25519_donna.a
+/src/lib/libtor-compress.a
+/src/lib/libtor-compress-testing.a
+/src/lib/libtor-crypt-ops.a
+/src/lib/libtor-crypt-ops-testing.a
 /src/lib/libtor-ctime.a
 /src/lib/libtor-ctime-testing.a
 /src/lib/libtor-err.a
 /src/lib/libtor-err-testing.a
+/src/lib/libtor-tls.a
+/src/lib/libtor-tls-testing.a
+/src/lib/libtor-trace.a
 
 # /src/or/
 /src/or/Makefile

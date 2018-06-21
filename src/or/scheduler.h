@@ -11,7 +11,7 @@
 
 #include "or/or.h"
 #include "or/channel.h"
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 
 /** Scheduler type, we build an ordered list with those values from the
  * parsed strings in Schedulers. The reason to do such a thing is so we can

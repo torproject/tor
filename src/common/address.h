@@ -13,7 +13,7 @@
 
 //#include <sys/sockio.h>
 #include "orconfig.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/compat.h"
 #include "common/container.h"
 

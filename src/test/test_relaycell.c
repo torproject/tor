@@ -9,7 +9,7 @@
 #include "or/main.h"
 #include "or/config.h"
 #include "or/connection.h"
-#include "common/crypto.h"
+#include "lib/crypt_ops/crypto.h"
 #include "or/circuitbuild.h"
 #include "or/circuitlist.h"
 #include "or/connection_edge.h"

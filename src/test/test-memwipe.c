@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "common/compat.h"
 #include "common/util.h"
 

@@ -9,7 +9,7 @@
  **/
 
 #include "orconfig.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -44,7 +44,7 @@ double fabs(double x);
 #include "common/buffers.h"
 #include "or/circuitlist.h"
 #include "or/circuitstats.h"
-#include "common/compress.h"
+#include "lib/compress/compress.h"
 #include "or/config.h"
 #include "or/connection_edge.h"
 #include "or/rendcommon.h"
@@ -60,7 +60,7 @@ double fabs(double x);
 #include "or/rephist.h"
 #include "or/routerparse.h"
 #include "or/statefile.h"
-#include "common/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
 
 #include "or/extend_info_st.h"
 #include "or/or_circuit_st.h"
@@ -917,10 +917,8 @@ struct testgroup_t testgroups[] = {
   { "util/format/", util_format_tests },
   { "util/logging/", logging_tests },
   { "util/process/", util_process_tests },
-  { "util/pubsub/", pubsub_tests },
   { "util/thread/", thread_tests },
   { "util/handle/", handle_tests },
   { "dns/", dns_tests },
   END_OF_GROUPS
 };
-

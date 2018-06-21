@@ -12,7 +12,7 @@
 #define TOR_DI_OPS_H
 
 #include "orconfig.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 
 int tor_memcmp(const void *a, const void *b, size_t sz);
 int tor_memeq(const void *a, const void *b, size_t sz);

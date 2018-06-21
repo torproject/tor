@@ -9,7 +9,7 @@
 #include "common/buffers.h"
 #include "or/control.h"
 #include "or/config.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/ext_orport.h"
 #include "or/proto_socks.h"
 #include "or/reasons.h"

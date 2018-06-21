@@ -5,7 +5,7 @@
 #define TOR_TIMERS_H
 
 #include "orconfig.h"
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 
 struct monotime_t;
 typedef struct timeout tor_timer_t;

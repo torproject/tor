@@ -7,7 +7,7 @@
 #include "or/circuitbuild.h"
 #define CIRCUITLIST_PRIVATE
 #include "or/circuitlist.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/relay.h"
 #include "or/relay_crypto.h"
 

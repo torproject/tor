@@ -9,7 +9,7 @@
 #ifndef TOR_HS_INTRO_H
 #define TOR_HS_INTRO_H
 
-#include "common/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
 #include "or/torcert.h"
 
 /* Authentication key type in an ESTABLISH_INTRO cell. */

@@ -6,7 +6,7 @@
 #define ADDRESSMAP_PRIVATE
 #include "orconfig.h"
 #include "or/or.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "test/test.h"
 #include "or/addressmap.h"
 #include "test/log_test_helpers.h"

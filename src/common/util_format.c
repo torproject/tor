@@ -15,7 +15,7 @@
 #include "common/torlog.h"
 #include "common/util.h"
 #include "common/util_format.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 
 #include <stddef.h>
 #include <string.h>

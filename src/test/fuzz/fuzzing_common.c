@@ -6,8 +6,8 @@
 #include "lib/err/backtrace.h"
 #include "or/config.h"
 #include "test/fuzz/fuzzing.h"
-#include "common/crypto.h"
-#include "common/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 static or_options_t *mock_options = NULL;
 static const or_options_t *

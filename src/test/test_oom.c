@@ -13,7 +13,7 @@
 #include "common/compat_libevent.h"
 #include "or/connection.h"
 #include "or/config.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/relay.h"
 #include "test/test.h"
 #include "test/test_helpers.h"

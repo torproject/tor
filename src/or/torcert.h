@@ -4,7 +4,7 @@
 #ifndef TORCERT_H_INCLUDED
 #define TORCERT_H_INCLUDED
 
-#include "common/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 #define SIGNED_KEY_TYPE_ED25519     0x01
 

@@ -15,8 +15,8 @@
 
 #include "or/config.h"
 #include "or/circuitbuild.h"
-#include "common/crypto_rand.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/networkstatus.h"
 #include "or/nodelist.h"
 #include "or/hs_cache.h"

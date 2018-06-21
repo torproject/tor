@@ -13,7 +13,7 @@
 
 #include "test/test.h"
 #include "test/log_test_helpers.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 
 #include "or/or.h"
 #include "or/circuitlist.h"

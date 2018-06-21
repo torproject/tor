@@ -26,7 +26,7 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #ifdef HAVE_SYS_FCNTL_H
 #include <sys/fcntl.h>
 #endif
@@ -63,21 +63,21 @@
 #include <windows.h>
 #endif /* defined(_WIN32) */
 
-#include "common/crypto.h"
-#include "common/crypto_format.h"
-#include "common/crypto_dh.h"
-#include "common/crypto_hkdf.h"
-#include "common/tortls.h"
+#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_format.h"
+#include "lib/crypt_ops/crypto_dh.h"
+#include "lib/crypt_ops/crypto_hkdf.h"
+#include "lib/tls/tortls.h"
 #include "common/torlog.h"
 #include "common/container.h"
-#include "common/compress.h"
+#include "lib/compress/compress.h"
 #include "common/address.h"
 #include "common/compat_libevent.h"
 #include "ht.h"
 #include "common/confline.h"
 #include "or/replaycache.h"
-#include "common/crypto_curve25519.h"
-#include "common/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "tor_queue.h"
 #include "common/token_bucket.h"
 #include "common/util_format.h"

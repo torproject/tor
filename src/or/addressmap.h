@@ -7,7 +7,7 @@
 #ifndef TOR_ADDRESSMAP_H
 #define TOR_ADDRESSMAP_H
 
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 
 void addressmap_init(void);
 void addressmap_clear_excluded_trackexithosts(const or_options_t *options);

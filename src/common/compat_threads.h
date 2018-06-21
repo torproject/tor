@@ -7,8 +7,8 @@
 #define TOR_COMPAT_THREADS_H
 
 #include "orconfig.h"
-#include "common/torint.h"
-#include "common/testsupport.h"
+#include "lib/cc/torint.h"
+#include "lib/testsupport/testsupport.h"
 
 #if defined(HAVE_PTHREAD_H) && !defined(_WIN32)
 #include <pthread.h>

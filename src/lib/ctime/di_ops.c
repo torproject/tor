@@ -8,7 +8,6 @@
 
 #include "orconfig.h"
 #include "lib/ctime/di_ops.h"
-#include "common/torlog.h"
 #include "common/util.h"
 
 /**
@@ -271,4 +270,3 @@ select_array_member_cumulative_timei(const uint64_t *entries, int n_entries,
 
   return i_chosen;
 }
-

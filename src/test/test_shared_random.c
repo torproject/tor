@@ -9,7 +9,7 @@
 #include "or/or.h"
 #include "test/test.h"
 #include "or/config.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/dirauth/dirvote.h"
 #include "or/dirauth/shared_random.h"
 #include "or/dirauth/shared_random_state.h"

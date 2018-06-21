@@ -37,7 +37,7 @@
 #include "or/or.h"
 #include "or/circuitmux.h"
 #include "or/circuitmux_ewma.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/networkstatus.h"
 
 /*** EWMA parameter #defines ***/

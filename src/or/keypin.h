@@ -4,7 +4,7 @@
 #ifndef TOR_KEYPIN_H
 #define TOR_KEYPIN_H
 
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 
 int keypin_check_and_add(const uint8_t *rsa_id_digest,
                          const uint8_t *ed25519_id_key,

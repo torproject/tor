@@ -30,7 +30,7 @@
 #include "or/circuitstats.h"
 #include "or/connection_edge.h"
 #include "or/config.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/entrynodes.h"
 #include "or/networkstatus.h"
 #include "or/relay.h"

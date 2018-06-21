@@ -13,7 +13,7 @@
 #include "or/or.h"
 #include "or/control.h"
 #include "or/config.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/rephist.h"
 #include "lib/err/backtrace.h"
 #include "test/test.h"

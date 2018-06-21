@@ -13,8 +13,8 @@
 #define TOR_BUFFERS_H
 
 #include "common/compat.h"
-#include "common/torint.h"
-#include "common/testsupport.h"
+#include "lib/cc/torint.h"
+#include "lib/testsupport/testsupport.h"
 
 typedef struct buf_t buf_t;
 

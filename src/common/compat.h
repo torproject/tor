@@ -14,8 +14,8 @@
 #define SIO_IDEAL_SEND_BACKLOG_QUERY 0x4004747b
 #endif
 #endif
-#include "common/torint.h"
-#include "common/testsupport.h"
+#include "lib/cc/torint.h"
+#include "lib/testsupport/testsupport.h"
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
@@ -45,7 +45,7 @@
 #include <netinet6/in6.h>
 #endif
 
-#include "common/compat_compiler.h"
+#include "lib/cc/compat_compiler.h"
 #include "common/compat_time.h"
 
 #include <stdio.h>
@@ -77,54 +77,6 @@ size_t strlcat(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #ifndef HAVE_STRLCPY
 size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #endif
-
-#ifdef _MSC_VER
-/** Casts the uint64_t value in <b>a</b> to the right type for an argument
- * to printf. */
-#define U64_PRINTF_ARG(a) (a)
-/** Casts the uint64_t* value in <b>a</b> to the right type for an argument
- * to scanf. */
-#define U64_SCANF_ARG(a) (a)
-/** Expands to a literal uint64_t-typed constant for the value <b>n</b>. */
-#define U64_LITERAL(n) (n ## ui64)
-#define I64_PRINTF_ARG(a) (a)
-#define I64_SCANF_ARG(a) (a)
-#define I64_LITERAL(n) (n ## i64)
-#else /* !(defined(_MSC_VER)) */
-#define U64_PRINTF_ARG(a) ((long long unsigned int)(a))
-#define U64_SCANF_ARG(a) ((long long unsigned int*)(a))
-#define U64_LITERAL(n) (n ## llu)
-#define I64_PRINTF_ARG(a) ((long long signed int)(a))
-#define I64_SCANF_ARG(a) ((long long signed int*)(a))
-#define I64_LITERAL(n) (n ## ll)
-#endif /* defined(_MSC_VER) */
-
-#if defined(__MINGW32__) || defined(__MINGW64__)
-#define MINGW_ANY
-#endif
-
-#if defined(_MSC_VER) || defined(MINGW_ANY)
-/** The formatting string used to put a uint64_t value in a printf() or
- * scanf() function.  See also U64_PRINTF_ARG and U64_SCANF_ARG. */
-#define U64_FORMAT "%I64u"
-#define I64_FORMAT "%I64d"
-#else /* !(defined(_MSC_VER) || defined(MINGW_ANY)) */
-#define U64_FORMAT "%llu"
-#define I64_FORMAT "%lld"
-#endif /* defined(_MSC_VER) || defined(MINGW_ANY) */
-
-#if (SIZEOF_INTPTR_T == SIZEOF_INT)
-#define INTPTR_T_FORMAT "%d"
-#define INTPTR_PRINTF_ARG(x) ((int)(x))
-#elif (SIZEOF_INTPTR_T == SIZEOF_LONG)
-#define INTPTR_T_FORMAT "%ld"
-#define INTPTR_PRINTF_ARG(x) ((long)(x))
-#elif (SIZEOF_INTPTR_T == 8)
-#define INTPTR_T_FORMAT I64_FORMAT
-#define INTPTR_PRINTF_ARG(x) I64_PRINTF_ARG(x)
-#else
-#error Unknown: SIZEOF_INTPTR_T
-#endif /* (SIZEOF_INTPTR_T == SIZEOF_INT) || ... */
 
 /** Represents an mmaped file. Allocated via tor_mmap_file; freed with
  * tor_munmap_file. */

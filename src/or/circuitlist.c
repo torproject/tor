@@ -51,7 +51,7 @@
  * logic, which was originally circuit-focused.
  **/
 #define CIRCUITLIST_PRIVATE
-#include "common/torint.h"  /* TOR_PRIuSZ */
+#include "lib/cc/torint.h"  /* TOR_PRIuSZ */
 
 #include "or/or.h"
 #include "or/channel.h"
@@ -65,8 +65,8 @@
 #include "or/connection_edge.h"
 #include "or/connection_or.h"
 #include "or/control.h"
-#include "common/crypto_rand.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/directory.h"
 #include "or/entrynodes.h"
 #include "or/main.h"
@@ -86,9 +86,9 @@
 #include "or/routerlist.h"
 #include "or/routerset.h"
 #include "or/channelpadding.h"
-#include "common/compress_lzma.h"
-#include "common/compress_zlib.h"
-#include "common/compress_zstd.h"
+#include "lib/compress/compress_lzma.h"
+#include "lib/compress/compress_zlib.h"
+#include "lib/compress/compress_zstd.h"
 
 #include "ht.h"
 

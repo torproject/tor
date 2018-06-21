@@ -18,7 +18,7 @@
 #include "or/connection.h"
 #include "common/container.h"
 #include "or/control.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/directory.h"
 #include "or/dirauth/dirvote.h"
 #include "or/entrynodes.h"

@@ -37,10 +37,10 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 #include "common/util.h"
 #include "common/torlog.h"
-#include "common/crypto.h"
-#include "common/crypto_digest.h"
-#include "common/crypto_rand.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "common/address.h"
 #include "common/util_format.h"
 

@@ -3,7 +3,7 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "orconfig.h"
 #include "or/or.h"
 #include "test/test.h"

@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-#include "common/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "or/hs_common.h"
 #include "or/hs_descriptor.h"
 #include "or/rendcommon.h"

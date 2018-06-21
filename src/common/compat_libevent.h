@@ -5,7 +5,7 @@
 #define TOR_COMPAT_LIBEVENT_H
 
 #include "orconfig.h"
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 
 void configure_libevent_logging(void);
 void suppress_libevent_log_msg(const char *msg);

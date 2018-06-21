@@ -7,7 +7,7 @@
  **/
 
 #include "or/or.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/networkstatus.h"
 #include "or/nodelist.h"
 #include "or/torcert.h"

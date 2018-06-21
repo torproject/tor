@@ -9,8 +9,8 @@
 
 #include "or/or.h"
 #include "or/config.h"
-#include "common/crypto_curve25519.h"
-#include "common/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "or/router.h"
 #include "or/routerlist.h"
 

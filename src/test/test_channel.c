@@ -12,7 +12,7 @@
 #include "or/circuitmux_ewma.h"
 /* For var_cell_free */
 #include "or/connection_or.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 /* For packed_cell stuff */
 #define RELAY_PRIVATE
 #include "or/relay.h"

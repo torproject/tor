@@ -10,7 +10,7 @@
 #include "or/router.h"
 #include "or/routerkeys.h"
 #include "common/util.h"
-#include "common/crypto.h"
+#include "lib/crypt_ops/crypto.h"
 #include "or/torcert.h"
 #include "test/test.h"
 

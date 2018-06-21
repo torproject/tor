@@ -10,7 +10,7 @@
 #define TOR_HS_CIRCUIT_H
 
 #include "or/or.h"
-#include "common/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 #include "or/hs_service.h"
 

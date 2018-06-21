@@ -17,7 +17,7 @@
 #include "test/hs_test_helpers.h"
 
 #include "or/connection_edge.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/hs_common.h"
 #include "or/hs_client.h"
 #include "or/hs_service.h"

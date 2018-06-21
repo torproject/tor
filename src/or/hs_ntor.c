@@ -25,7 +25,7 @@
  */
 
 #include "or/or.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/hs_ntor.h"
 
 /* String constants used by the ntor HS protocol */

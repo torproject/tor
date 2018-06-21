@@ -7,7 +7,7 @@
 #define TOR_TIMERS_PRIVATE
 #include "or/or.h"
 #include "test/test.h"
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 #include "or/connection.h"
 #include "or/connection_or.h"
 #include "or/channel.h"

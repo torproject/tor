@@ -21,7 +21,7 @@
 #include "test/hs_test_helpers.h"
 
 #include "or/config.h"
-#include "common/crypto.h"
+#include "lib/crypt_ops/crypto.h"
 #include "or/channeltls.h"
 #include "or/main.h"
 #include "or/nodelist.h"

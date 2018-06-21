@@ -56,7 +56,7 @@
 #include "or/connection.h"
 #include "or/connection_edge.h"
 #include "or/control.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/dns.h"
 #include "or/main.h"
 #include "or/policies.h"

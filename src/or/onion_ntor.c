@@ -21,10 +21,10 @@
 #include "orconfig.h"
 
 #define ONION_NTOR_PRIVATE
-#include "common/crypto.h"
-#include "common/crypto_hkdf.h"
-#include "common/crypto_digest.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_hkdf.h"
+#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/onion_ntor.h"
 #include "common/torlog.h"
 #include "common/util.h"

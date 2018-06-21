@@ -13,7 +13,7 @@
 #define SANDBOX_H_
 
 #include "orconfig.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 
 #ifndef SYS_SECCOMP
 

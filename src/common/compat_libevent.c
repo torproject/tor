@@ -11,7 +11,7 @@
 #define COMPAT_LIBEVENT_PRIVATE
 #include "common/compat_libevent.h"
 
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 
 #include "common/util.h"
 #include "common/torlog.h"

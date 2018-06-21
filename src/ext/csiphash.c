@@ -29,7 +29,7 @@
     Jean-Philippe Aumasson (https://131002.net/siphash/siphash24.c)
 */
 
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "siphash.h"
 /* for tor_assert */
 #include "common/util.h"

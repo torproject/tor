@@ -12,10 +12,10 @@
 #define TOR_UTIL_H
 
 #include "orconfig.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/compat.h"
 #include "lib/ctime/di_ops.h"
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef _WIN32

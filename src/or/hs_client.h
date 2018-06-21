@@ -9,7 +9,7 @@
 #ifndef TOR_HS_CLIENT_H
 #define TOR_HS_CLIENT_H
 
-#include "common/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "or/hs_descriptor.h"
 #include "or/hs_ident.h"
 

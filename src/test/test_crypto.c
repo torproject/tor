@@ -8,12 +8,12 @@
 #define CRYPTO_RAND_PRIVATE
 #include "or/or.h"
 #include "test/test.h"
-#include "common/aes.h"
+#include "lib/crypt_ops/aes.h"
 #include "common/util.h"
 #include "siphash.h"
-#include "common/crypto_curve25519.h"
-#include "common/crypto_ed25519.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "ed25519_vectors.inc"
 
 /** Run unit tests for Diffie-Hellman functionality. */

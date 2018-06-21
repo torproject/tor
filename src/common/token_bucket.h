@@ -9,8 +9,8 @@
 #ifndef TOR_TOKEN_BUCKET_H
 #define TOR_TOKEN_BUCKET_H
 
-#include "common/torint.h"
-#include "common/testsupport.h"
+#include "lib/cc/torint.h"
+#include "lib/testsupport/testsupport.h"
 
 /** Largest allowable burst value for a token buffer. */
 #define TOKEN_BUCKET_MAX_BURST INT32_MAX

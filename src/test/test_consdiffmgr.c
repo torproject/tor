@@ -9,7 +9,7 @@
 #include "or/consdiff.h"
 #include "or/consdiffmgr.h"
 #include "or/cpuworker.h"
-#include "common/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "or/networkstatus.h"
 #include "or/routerparse.h"
 #include "common/workqueue.h"

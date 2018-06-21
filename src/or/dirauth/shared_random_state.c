@@ -13,7 +13,7 @@
 #include "or/or.h"
 #include "or/config.h"
 #include "or/confparse.h"
-#include "common/crypto_util.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "or/dirauth/dirvote.h"
 #include "or/networkstatus.h"
 #include "or/router.h"

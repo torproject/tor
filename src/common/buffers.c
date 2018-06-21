@@ -23,9 +23,9 @@
 #include <stddef.h>
 #include "common/buffers.h"
 #include "common/compat.h"
-#include "common/compress.h"
+#include "lib/compress/compress.h"
 #include "common/util.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/torlog.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

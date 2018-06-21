@@ -1,0 +1,44 @@
+
+noinst_LIBRARIES += src/lib/libtor-crypt-ops.a
+
+if UNITTESTS_ENABLED
+noinst_LIBRARIES += src/lib/libtor-crypt-ops-testing.a
+endif
+
+src_lib_libtor_crypt_ops_a_SOURCES =			\
+	src/lib/crypt_ops/aes.c				\
+	src/lib/crypt_ops/crypto.c			\
+	src/lib/crypt_ops/crypto_curve25519.c		\
+	src/lib/crypt_ops/crypto_dh.c			\
+	src/lib/crypt_ops/crypto_digest.c		\
+	src/lib/crypt_ops/crypto_ed25519.c		\
+	src/lib/crypt_ops/crypto_format.c		\
+	src/lib/crypt_ops/crypto_hkdf.c			\
+	src/lib/crypt_ops/crypto_openssl_mgt.c		\
+	src/lib/crypt_ops/crypto_pwbox.c		\
+	src/lib/crypt_ops/crypto_rand.c			\
+	src/lib/crypt_ops/crypto_rsa.c			\
+	src/lib/crypt_ops/crypto_s2k.c			\
+	src/lib/crypt_ops/crypto_util.c
+
+src_lib_libtor_crypt_ops_testing_a_SOURCES = \
+	$(src_lib_libtor_crypt_ops_a_SOURCES)
+src_lib_libtor_crypt_ops_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
+src_lib_libtor_crypt_ops_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+
+noinst_HEADERS +=					\
+	src/lib/crypt_ops/aes.h				\
+	src/lib/crypt_ops/compat_openssl.h		\
+	src/lib/crypt_ops/crypto_curve25519.h		\
+	src/lib/crypt_ops/crypto_dh.h			\
+	src/lib/crypt_ops/crypto_digest.h		\
+	src/lib/crypt_ops/crypto_ed25519.h		\
+	src/lib/crypt_ops/crypto_format.h		\
+	src/lib/crypt_ops/crypto.h			\
+	src/lib/crypt_ops/crypto_hkdf.h			\
+	src/lib/crypt_ops/crypto_openssl_mgt.h		\
+	src/lib/crypt_ops/crypto_pwbox.h		\
+	src/lib/crypt_ops/crypto_rand.h			\
+	src/lib/crypt_ops/crypto_rsa.h			\
+	src/lib/crypt_ops/crypto_s2k.h			\
+	src/lib/crypt_ops/crypto_util.h
