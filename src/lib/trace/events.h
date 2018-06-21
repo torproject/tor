@@ -31,7 +31,7 @@
 /* Enable event tracing for the debug framework where all trace events are
  * mapped to a log_debug(). */
 #ifdef USE_EVENT_TRACING_DEBUG
-#include "trace/debug.h"
+#include "lib/trace/debug.h"
 #endif
 
 #else /* TOR_EVENT_TRACING_ENABLED */
