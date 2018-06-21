@@ -37,6 +37,7 @@
 #define TOR_UTIL_BUG_H
 
 #include "orconfig.h"
+#include <stdlib.h>
 #include "common/compat.h"
 #include "lib/testsupport/testsupport.h"
 

@@ -11,6 +11,8 @@
 #ifndef TOR_UTIL_MALLOC_H
 #define TOR_UTIL_MALLOC_H
 
+#include <stddef.h>
+#include <stdlib.h>
 #include "lib/cc/compat_compiler.h"
 
 /* Memory management */
