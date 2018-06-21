@@ -26,7 +26,7 @@
 #include "lib/crypt_ops/compat_openssl.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "common/sandbox.h"
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 #include "common/torlog.h"
 #include "common/util.h"
 #include "common/util_format.h"

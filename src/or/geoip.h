@@ -12,7 +12,7 @@
 #ifndef TOR_GEOIP_H
 #define TOR_GEOIP_H
 
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 #include "or/dos.h"
 
 #ifdef GEOIP_PRIVATE

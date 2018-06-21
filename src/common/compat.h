@@ -15,7 +15,7 @@
 #endif
 #endif
 #include "lib/cc/torint.h"
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif

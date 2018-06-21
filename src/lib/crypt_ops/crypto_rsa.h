@@ -18,7 +18,7 @@
 #include "lib/crypt_ops/crypto_digest.h"
 #include <stdio.h>
 #include "lib/cc/torint.h"
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 #include "common/compat.h"
 #include "common/util.h"
 #include "common/torlog.h"

@@ -4,7 +4,7 @@
 #ifndef TOR_CRYPTO_CURVE25519_H
 #define TOR_CRYPTO_CURVE25519_H
 
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 #include "lib/cc/torint.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_openssl_mgt.h"

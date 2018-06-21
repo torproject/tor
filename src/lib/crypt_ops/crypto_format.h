@@ -7,7 +7,7 @@
 #ifndef TOR_CRYPTO_FORMAT_H
 #define TOR_CRYPTO_FORMAT_H
 
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 #include "lib/cc/torint.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 

@@ -12,7 +12,7 @@
 #ifndef TOR_ROUTER_H
 #define TOR_ROUTER_H
 
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 
 #define TOR_ROUTERINFO_ERROR_NO_EXT_ADDR     (-1)
 #define TOR_ROUTERINFO_ERROR_CANNOT_PARSE    (-2)

@@ -12,7 +12,7 @@
 #ifndef TOR_CIRCUITLIST_H
 #define TOR_CIRCUITLIST_H
 
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 #include "or/hs_ident.h"
 
 /** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Assert

@@ -13,7 +13,7 @@
 #ifndef TOR_TORLOG_H
 
 #include "common/compat.h"
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 
 #ifdef HAVE_SYSLOG_H
 #include <syslog.h>

@@ -12,7 +12,7 @@
 #ifndef TOR_DIRSERV_H
 #define TOR_DIRSERV_H
 
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 
 /** What fraction (1 over this number) of the relay ID space do we
  * (as a directory authority) launch connections to at each reachability

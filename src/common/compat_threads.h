@@ -8,7 +8,7 @@
 
 #include "orconfig.h"
 #include "lib/cc/torint.h"
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 
 #if defined(HAVE_PTHREAD_H) && !defined(_WIN32)
 #include <pthread.h>

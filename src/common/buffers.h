@@ -14,7 +14,7 @@
 
 #include "common/compat.h"
 #include "lib/cc/torint.h"
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 
 typedef struct buf_t buf_t;
 

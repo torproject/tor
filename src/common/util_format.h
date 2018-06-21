@@ -7,7 +7,7 @@
 #ifndef TOR_UTIL_FORMAT_H
 #define TOR_UTIL_FORMAT_H
 
-#include "common/testsupport.h"
+#include "lib/testsupport/testsupport.h"
 #include "lib/cc/torint.h"
 
 /** @{ */
