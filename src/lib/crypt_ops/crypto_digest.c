@@ -580,4 +580,3 @@ crypto_xof_free_(crypto_xof_t *xof)
   memwipe(xof, 0, sizeof(crypto_xof_t));
   tor_free(xof);
 }
-

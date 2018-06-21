@@ -1,0 +1,3 @@
+
+noinst_HEADERS += \
+	digest_sizes.h

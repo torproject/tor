@@ -13,7 +13,7 @@
 
 #include "lib/container/map.h"
 #include "lib/ctime/di_ops.h"
-#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/defs/digest_sizes.h"
 
 #include "common/util_bug.h"
 #include "common/util.h" // For strlower

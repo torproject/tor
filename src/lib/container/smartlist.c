@@ -15,7 +15,7 @@
 #include "lib/container/smartlist.h"
 #include "lib/err/torerr.h"
 #include "common/util.h" // For strstrip.
-#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/defs/digest_sizes.h"
 #include "lib/ctime/di_ops.h"
 
 #include <stdlib.h>
