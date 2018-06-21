@@ -73,6 +73,8 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 #include "keccak-tiny/keccak-tiny.h"
 
+#include "siphash.h"
+
 /** Boolean: has OpenSSL's crypto been initialized? */
 static int crypto_early_initialized_ = 0;
 

@@ -11,5 +11,7 @@ trunnel/pwbox.h
 keccak-tiny/*.h
 ed25519/*.h
 
+siphash.h
+
 # XXX I'd like to remove this.
 common/*.h

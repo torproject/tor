@@ -42,6 +42,7 @@
 #include "common/torlog.h"
 #include "lib/container/container.h"
 #include "common/sandbox.h"
+#include "siphash.h"
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
@@ -2169,4 +2170,3 @@ tor_addr_port_eq(const tor_addr_port_t *a,
 {
   return tor_addr_eq(&a->addr, &b->addr) && a->port == b->port;
 }
-

@@ -7,6 +7,5 @@
 #define TOR_CONTAINER_H
 
 #include "lib/container/smartlist.h"
-#include "lib/container/map.h"
 
 #endif /* !defined(TOR_CONTAINER_H) */
