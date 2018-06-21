@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# Copyright 2018 The Tor Project, Inc.  See LICENSE file for licensing info.
 
 import fnmatch
 import os
@@ -68,3 +69,4 @@ if trouble:
     err(
 """To change which includes are allowed in a C file, edit the {} files in its
 enclosing directory.""".format(RULES_FNAME))
+    sys.exit(1)
