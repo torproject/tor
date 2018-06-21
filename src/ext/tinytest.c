@@ -145,7 +145,7 @@ testcase_run_forked_(const struct testgroup_t *group,
 	if (opt_verbosity>0)
 		printf("[forking] ");
 
-	snprintf(buffer, sizeof(buffer), "%s --RUNNING-FORKED %s %s%s",
+	snprintf(buffer, sizeof(buffer), "\"%s\" --RUNNING-FORKED %s %s%s",
 		 commandname, verbosity_flag, group->prefix, testcase->name);
 
 	memset(&si, 0, sizeof(si));
