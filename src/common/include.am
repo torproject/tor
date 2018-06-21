@@ -136,7 +136,6 @@ COMMONHEADERS = \
   src/common/aes.h				\
   src/common/ciphers.inc			\
   src/common/compat.h				\
-  src/common/compat_compiler.h			\
   src/common/compat_libevent.h			\
   src/common/compat_openssl.h			\
   src/common/compat_threads.h			\
@@ -165,7 +164,6 @@ COMMONHEADERS = \
   src/common/testsupport.h			\
   src/common/timers.h				\
   src/common/token_bucket.h			\
-  src/common/torint.h				\
   src/common/torlog.h				\
   src/common/tortls.h				\
   src/common/util.h				\
