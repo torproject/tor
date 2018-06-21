@@ -1822,15 +1822,6 @@ test_crypto_hkdf_sha256(void *arg)
     key_material, 100)
 
   /* Test vectors generated with ntor_ref.py */
-  memset(key_material, 0, sizeof(key_material));
-  EXPAND("");
-  tt_int_op(r, OP_EQ, 0);
-  test_memeq_hex(key_material,
-                 "d3490ed48b12a48f9547861583573fe3f19aafe3f81dc7fc75"
-                 "eeed96d741b3290f941576c1f9f0b2d463d1ec7ab2c6bf71cd"
-                 "d7f826c6298c00dbfe6711635d7005f0269493edf6046cc7e7"
-                 "dcf6abe0d20c77cf363e8ffe358927817a3d3e73712cee28d8");
-
   EXPAND("Tor");
   tt_int_op(r, OP_EQ, 0);
   test_memeq_hex(key_material,
