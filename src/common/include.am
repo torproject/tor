@@ -82,7 +82,6 @@ src_common_libor_ctime_testing_a_CFLAGS = @CFLAGS_CONSTTIME@ $(TEST_CFLAGS)
 LIBOR_A_SRC = \
   src/common/address.c					\
   src/common/address_set.c				\
-  src/common/backtrace.c				\
   src/common/buffers.c					\
   src/common/compat.c					\
   src/common/compat_threads.c				\
@@ -99,7 +98,6 @@ LIBOR_A_SRC = \
   src/common/sandbox.c					\
   src/common/storagedir.c				\
   src/common/token_bucket.c				\
-  src/common/torerr.c					\
   src/common/workqueue.c				\
   $(libor_extra_source)					\
   $(threads_impl_source)				\
@@ -161,7 +159,6 @@ src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 COMMONHEADERS = \
   src/common/address.h				\
   src/common/address_set.h			\
-  src/common/backtrace.h			\
   src/common/buffers.h				\
   src/common/buffers_tls.h			\
   src/common/aes.h				\
@@ -203,7 +200,6 @@ COMMONHEADERS = \
   src/common/testsupport.h			\
   src/common/timers.h				\
   src/common/token_bucket.h			\
-  src/common/torerr.h				\
   src/common/torint.h				\
   src/common/torlog.h				\
   src/common/tortls.h				\

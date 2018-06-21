@@ -138,8 +138,8 @@ pub fn main() {
             cfg.from_cflags("TOR_LDFLAGS_openssl");
             cfg.from_cflags("TOR_LDFLAGS_libevent");
 
+            cfg.link_relpath("src/lib");
             cfg.link_relpath("src/common");
-            cfg.link_relpath("src/ext/keccak-tiny");
             cfg.link_relpath("src/ext/keccak-tiny");
             cfg.link_relpath("src/ext/ed25519/ref10");
             cfg.link_relpath("src/ext/ed25519/donna");
@@ -152,6 +152,7 @@ pub fn main() {
             cfg.component("or-crypto-testing");
             cfg.component("or-ctime-testing");
             cfg.component("or-testing");
+            cfg.component("tor-err-testing");
             cfg.component("or-event-testing");
             cfg.component("or-ctime-testing");
             cfg.component("curve25519_donna");
