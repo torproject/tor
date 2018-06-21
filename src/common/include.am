@@ -94,7 +94,6 @@ COMMONHEADERS = \
   src/common/procmon.h				\
   src/common/sandbox.h				\
   src/common/storagedir.h			\
-  src/common/testsupport.h			\
   src/common/timers.h				\
   src/common/token_bucket.h			\
   src/common/torlog.h				\
