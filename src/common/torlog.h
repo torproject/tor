@@ -12,7 +12,9 @@
 
 #ifndef TOR_TORLOG_H
 
-#include "common/compat.h"
+#include <stdarg.h>
+#include "lib/cc/torint.h"
+#include "lib/cc/compat_compiler.h"
 #include "lib/testsupport/testsupport.h"
 
 #ifdef HAVE_SYSLOG_H

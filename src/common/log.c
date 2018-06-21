@@ -29,12 +29,12 @@
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
-#include "common/compat.h"
 #include "common/util.h"
 #define LOG_PRIVATE
 #include "common/torlog.h"
 #include "lib/container/smartlist.h"
 #include "lib/err/torerr.h"
+#include "lib/malloc/util_malloc.h"
 #include "lib/wallclock/tor_gettimeofday.h"
 #include "lib/wallclock/approx_time.h"
 

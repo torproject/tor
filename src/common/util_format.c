@@ -12,6 +12,7 @@
  */
 
 #include "orconfig.h"
+#include <stddef.h>
 #include "common/torlog.h"
 #include "common/util.h"
 #include "common/util_format.h"
@@ -532,4 +533,3 @@ base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 
   return (int) (dest-dest_orig);
 }
-
