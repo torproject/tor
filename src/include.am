@@ -1,5 +1,6 @@
 include src/ext/include.am
 include src/lib/err/include.am
+include src/lib/cc/include.am
 include src/lib/ctime/include.am
 include src/lib/compress/include.am
 include src/lib/trace/include.am
