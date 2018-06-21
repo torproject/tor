@@ -55,7 +55,7 @@
 #include "or/circuitbuild.h"
 #include "or/circuitlist.h"
 #include "or/circuituse.h"
-#include "common/compress.h"
+#include "lib/compress/compress.h"
 #include "or/config.h"
 #include "or/connection.h"
 #include "or/connection_edge.h"

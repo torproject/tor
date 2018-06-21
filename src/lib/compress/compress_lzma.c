@@ -15,8 +15,8 @@
 
 #include "common/util.h"
 #include "common/torlog.h"
-#include "common/compress.h"
-#include "common/compress_lzma.h"
+#include "lib/compress/compress.h"
+#include "lib/compress/compress_lzma.h"
 
 #ifdef HAVE_LZMA
 #include <lzma.h>

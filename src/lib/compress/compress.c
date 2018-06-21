@@ -21,11 +21,11 @@
 
 #include "common/util.h"
 #include "common/torlog.h"
-#include "common/compress.h"
-#include "common/compress_lzma.h"
-#include "common/compress_none.h"
-#include "common/compress_zlib.h"
-#include "common/compress_zstd.h"
+#include "lib/compress/compress.h"
+#include "lib/compress/compress_lzma.h"
+#include "lib/compress/compress_none.h"
+#include "lib/compress/compress_zlib.h"
+#include "lib/compress/compress_zstd.h"
 
 /** Total number of bytes allocated for compression state overhead. */
 static atomic_counter_t total_compress_allocation;

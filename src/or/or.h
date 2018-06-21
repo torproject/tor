@@ -70,7 +70,7 @@
 #include "common/tortls.h"
 #include "common/torlog.h"
 #include "common/container.h"
-#include "common/compress.h"
+#include "lib/compress/compress.h"
 #include "common/address.h"
 #include "common/compat_libevent.h"
 #include "ht.h"

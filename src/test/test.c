@@ -44,7 +44,7 @@ double fabs(double x);
 #include "common/buffers.h"
 #include "or/circuitlist.h"
 #include "or/circuitstats.h"
-#include "common/compress.h"
+#include "lib/compress/compress.h"
 #include "or/config.h"
 #include "or/connection_edge.h"
 #include "or/rendcommon.h"

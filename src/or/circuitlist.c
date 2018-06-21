@@ -86,9 +86,9 @@
 #include "or/routerlist.h"
 #include "or/routerset.h"
 #include "or/channelpadding.h"
-#include "common/compress_lzma.h"
-#include "common/compress_zlib.h"
-#include "common/compress_zstd.h"
+#include "lib/compress/compress_lzma.h"
+#include "lib/compress/compress_zlib.h"
+#include "lib/compress/compress_zstd.h"
 
 #include "ht.h"
 

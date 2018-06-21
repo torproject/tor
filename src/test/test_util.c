@@ -17,7 +17,7 @@
 #include "common/memarea.h"
 #include "common/util_process.h"
 #include "test/log_test_helpers.h"
-#include "common/compress_zstd.h"
+#include "lib/compress/compress_zstd.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>

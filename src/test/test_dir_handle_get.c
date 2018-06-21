@@ -15,7 +15,7 @@
 #include "or/consdiffmgr.h"
 #include "or/directory.h"
 #include "test/test.h"
-#include "common/compress.h"
+#include "lib/compress/compress.h"
 #include "or/rendcommon.h"
 #include "or/rendcache.h"
 #include "or/router.h"

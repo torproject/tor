@@ -15,8 +15,8 @@
 
 #include "common/util.h"
 #include "common/torlog.h"
-#include "common/compress.h"
-#include "common/compress_zstd.h"
+#include "lib/compress/compress.h"
+#include "lib/compress/compress_zstd.h"
 
 #ifdef ENABLE_ZSTD_ADVANCED_APIS
 /* This is a lie, but we make sure it doesn't get us in trouble by wrapping

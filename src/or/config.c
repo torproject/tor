@@ -70,7 +70,7 @@
 #include "or/circuitmux.h"
 #include "or/circuitmux_ewma.h"
 #include "or/circuitstats.h"
-#include "common/compress.h"
+#include "lib/compress/compress.h"
 #include "or/config.h"
 #include "or/connection.h"
 #include "or/connection_edge.h"

@@ -61,7 +61,7 @@
 #include "or/circuituse.h"
 #include "or/circuitmux_ewma.h"
 #include "or/command.h"
-#include "common/compress.h"
+#include "lib/compress/compress.h"
 #include "or/config.h"
 #include "or/confparse.h"
 #include "or/connection.h"
