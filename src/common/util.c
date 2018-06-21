@@ -18,7 +18,7 @@
 #include "common/torlog.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/cc/torint.h"
-#include "lib/container/container.h"
+#include "lib/container/smartlist.h"
 #include "common/address.h"
 #include "common/sandbox.h"
 #include "lib/err/backtrace.h"

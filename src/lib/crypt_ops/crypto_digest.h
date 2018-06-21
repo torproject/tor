@@ -13,7 +13,6 @@
 #ifndef TOR_CRYPTO_DIGEST_H
 #define TOR_CRYPTO_DIGEST_H
 
-#include "lib/container/container.h"
 #include "lib/cc/torint.h"
 #include "lib/defs/digest_sizes.h"
 #include "lib/malloc/util_malloc.h"
@@ -69,6 +68,8 @@ typedef struct {
 
 typedef struct crypto_digest_t crypto_digest_t;
 typedef struct crypto_xof_t crypto_xof_t;
+
+struct smartlist_t;
 
 /* SHA-1 and other digests */
 int crypto_digest(char *digest, const char *m, size_t len);

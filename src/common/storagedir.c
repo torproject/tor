@@ -1,7 +1,7 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "lib/container/container.h"
+#include "lib/container/smartlist.h"
 #include "common/compat.h"
 #include "common/confline.h"
 #include "common/memarea.h"
@@ -583,4 +583,3 @@ storage_dir_get_max_files(storage_dir_t *d)
 {
   return d->max_files;
 }
-

@@ -9,9 +9,10 @@
 #ifndef TOR_PARSECOMMON_H
 #define TOR_PARSECOMMON_H
 
-#include "lib/container/container.h"
 #include "lib/crypt_ops/crypto.h"
 #include "common/memarea.h"
+
+struct smartlist_t;
 
 /** Enumeration of possible token types.  The ones starting with K_ correspond
 * to directory 'keywords'. A_ is for an annotation, R or C is related to
@@ -299,7 +300,7 @@ void token_clear(directory_token_t *tok);
 
 int tokenize_string(memarea_t *area,
                     const char *start, const char *end,
-                    smartlist_t *out,
+                    struct smartlist_t *out,
                     token_rule_t *table,
                     int flags);
 directory_token_t *get_next_token(memarea_t *area,
@@ -307,16 +308,16 @@ directory_token_t *get_next_token(memarea_t *area,
                                   const char *eos,
                                   token_rule_t *table);
 
-directory_token_t *find_by_keyword_(smartlist_t *s,
+directory_token_t *find_by_keyword_(struct smartlist_t *s,
                                     directory_keyword keyword,
                                     const char *keyword_str);
 
 #define find_by_keyword(s, keyword) \
   find_by_keyword_((s), (keyword), #keyword)
 
-directory_token_t *find_opt_by_keyword(const smartlist_t *s,
+directory_token_t *find_opt_by_keyword(const struct smartlist_t *s,
                                        directory_keyword keyword);
-smartlist_t * find_all_by_keyword(const smartlist_t *s, directory_keyword k);
+struct smartlist_t * find_all_by_keyword(const struct smartlist_t *s,
+                                         directory_keyword k);
 
 #endif /* !defined(TOR_PARSECOMMON_H) */
-

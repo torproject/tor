@@ -6,6 +6,4 @@
 #ifndef TOR_CONTAINER_H
 #define TOR_CONTAINER_H
 
-#include "lib/container/smartlist.h"
-
 #endif /* !defined(TOR_CONTAINER_H) */

@@ -33,7 +33,7 @@
 #include "common/util.h"
 #define LOG_PRIVATE
 #include "common/torlog.h"
-#include "lib/container/container.h"
+#include "lib/container/smartlist.h"
 #include "lib/err/torerr.h"
 
 #ifdef HAVE_ANDROID_LOG_H

@@ -11,7 +11,9 @@
 #include "common/util_bug.h"
 #include "common/torlog.h"
 #include "lib/err/backtrace.h"
-#include "lib/container/container.h"
+#ifdef TOR_UNIT_TESTS
+#include "lib/container/smartlist.h"
+#endif
 #include "lib/malloc/util_malloc.h"
 
 #ifdef __COVERITY__

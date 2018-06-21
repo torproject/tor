@@ -126,7 +126,7 @@ SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 
 #include "common/torlog.h"
 #include "common/util.h"
-#include "lib/container/container.h"
+#include "lib/container/smartlist.h"
 #include "common/address.h"
 #include "common/sandbox.h"
 
@@ -3527,4 +3527,3 @@ tor_get_avail_disk_space(const char *path)
   return -1;
 #endif /* defined(HAVE_STATVFS) || ... */
 }
-

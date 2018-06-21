@@ -8,7 +8,7 @@
 #include "common/confline.h"
 #include "common/torlog.h"
 #include "common/util.h"
-#include "lib/container/container.h"
+#include "lib/container/smartlist.h"
 
 static int config_get_lines_aux(const char *string, config_line_t **result,
                                 int extended, int allow_include,
@@ -535,4 +535,3 @@ parse_config_line_from_str_verbose(const char *line, char **key_out,
 
   return line;
 }
-

@@ -21,7 +21,7 @@
 #include <wincrypt.h>
 #endif /* defined(_WIN32) */
 
-#include "lib/container/container.h"
+#include "lib/container/smartlist.h"
 #include "common/compat.h"
 #include "lib/crypt_ops/compat_openssl.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -612,4 +612,3 @@ crypto_force_rand_ssleay(void)
 }
 
 #endif /* !defined(CRYPTO_RAND_PRIVATE) */
-

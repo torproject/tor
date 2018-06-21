@@ -7,7 +7,7 @@
 #ifndef TOR_CONFLINE_H
 #define TOR_CONFLINE_H
 
-#include "lib/container/container.h"
+struct smartlist_t;
 
 /** Ordinary configuration line. */
 #define CONFIG_LINE_NORMAL 0
@@ -47,7 +47,7 @@ int config_count_key(const config_line_t *a, const char *key);
 int config_get_lines(const char *string, config_line_t **result, int extended);
 int config_get_lines_include(const char *string, config_line_t **result,
                              int extended, int *has_include,
-                             smartlist_t *opened_lst);
+                             struct smartlist_t *opened_lst);
 void config_free_lines_(config_line_t *front);
 #define config_free_lines(front) \
   do {                           \
@@ -58,4 +58,3 @@ const char *parse_config_line_from_str_verbose(const char *line,
                                        char **key_out, char **value_out,
                                        const char **err_out);
 #endif /* !defined(TOR_CONFLINE_H) */
-
