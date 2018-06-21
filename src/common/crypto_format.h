@@ -8,7 +8,7 @@
 #define TOR_CRYPTO_FORMAT_H
 
 #include "common/testsupport.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/crypto_ed25519.h"
 
 int crypto_write_tagged_contents_to_file(const char *fname,

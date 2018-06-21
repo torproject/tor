@@ -63,7 +63,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #endif
 
 #include "common/torlog.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/aes.h"
 #include "common/util.h"
 #include "common/container.h"

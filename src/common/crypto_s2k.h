@@ -8,7 +8,7 @@
 #define TOR_CRYPTO_S2K_H_INCLUDED
 
 #include <stdio.h>
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 
 /** Length of RFC2440-style S2K specifier: the first 8 bytes are a salt, the
  * 9th describes how much iteration to do. */

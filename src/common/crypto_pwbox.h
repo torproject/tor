@@ -4,7 +4,7 @@
 #ifndef CRYPTO_PWBOX_H_INCLUDED_
 #define CRYPTO_PWBOX_H_INCLUDED_
 
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 
 #define UNPWBOX_OKAY 0
 #define UNPWBOX_BAD_SECRET -1

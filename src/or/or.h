@@ -26,7 +26,7 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #ifdef HAVE_SYS_FCNTL_H
 #include <sys/fcntl.h>
 #endif

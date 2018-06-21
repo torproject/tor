@@ -7,7 +7,7 @@
 #ifndef DIR_SERVER_ST_H
 #define DIR_SERVER_ST_H
 
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "or/or.h"
 #include "or/routerstatus_st.h"
 

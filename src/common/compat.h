@@ -14,7 +14,7 @@
 #define SIO_IDEAL_SEND_BACKLOG_QUERY 0x4004747b
 #endif
 #endif
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/testsupport.h"
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
@@ -45,7 +45,7 @@
 #include <netinet6/in6.h>
 #endif
 
-#include "common/compat_compiler.h"
+#include "lib/cc/compat_compiler.h"
 #include "common/compat_time.h"
 
 #include <stdio.h>

@@ -8,7 +8,7 @@
 #define TOR_UTIL_FORMAT_H
 
 #include "common/testsupport.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 
 /** @{ */
 /** These macros don't check for overflow.  Use them only for constant inputs

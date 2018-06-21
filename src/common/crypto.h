@@ -16,7 +16,7 @@
 #include "orconfig.h"
 
 #include <stdio.h>
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/compat.h"
 #include "common/util.h"
 #include "common/crypto_rsa.h"

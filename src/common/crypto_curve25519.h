@@ -5,7 +5,7 @@
 #define TOR_CRYPTO_CURVE25519_H
 
 #include "common/testsupport.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/crypto_digest.h"
 #include "common/crypto_openssl_mgt.h"
 

@@ -5,7 +5,7 @@
 #define TOR_BACKTRACE_H
 
 #include "orconfig.h"
-#include "common/compat_compiler.h"
+#include "lib/cc/compat_compiler.h"
 
 typedef void (*tor_log_fn)(int, unsigned, const char *fmt, ...)
   CHECK_PRINTF(3,4);

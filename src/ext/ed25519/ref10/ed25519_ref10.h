@@ -1,7 +1,7 @@
 /* Added for Tor */
 #ifndef SRC_EXT_ED25519_REF10_H_INCLUDED_
 #define SRC_EXT_ED25519_REF10_H_INCLUDED_
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 
 int ed25519_ref10_seckey(unsigned char *sk);
 int ed25519_ref10_seckey_expand(unsigned char *sk, const unsigned char *sk_seed);

@@ -13,7 +13,7 @@
 #ifndef TOR_CRYPTO_UTIL_H
 #define TOR_CRYPTO_UTIL_H
 
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 
 /** OpenSSL-based utility functions. */
 void memwipe(void *mem, uint8_t byte, size_t sz);

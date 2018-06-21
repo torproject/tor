@@ -4,7 +4,7 @@
 #ifndef TOR_ONION_NTOR_H
 #define TOR_ONION_NTOR_H
 
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/crypto_curve25519.h"
 #include "lib/ctime/di_ops.h"
 

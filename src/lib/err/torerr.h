@@ -13,7 +13,7 @@
 #ifndef TOR_TORERR_H
 #define TOR_TORERR_H
 
-#include "common/compat_compiler.h"
+#include "lib/cc/compat_compiler.h"
 
 /* The raw_assert...() variants are for use within code that can't call
  * tor_assertion_failed_() because of call circularity issues. */

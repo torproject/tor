@@ -36,7 +36,7 @@
 #include "common/container.h"
 #include "lib/err/torerr.h"
 #include "common/torlog.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/util.h"
 #include "tor_queue.h"
 

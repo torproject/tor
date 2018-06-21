@@ -18,7 +18,7 @@
 #include "ht.h"
 #include "or/keypin.h"
 #include "siphash.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/torlog.h"
 #include "common/util.h"
 #include "common/util_format.h"

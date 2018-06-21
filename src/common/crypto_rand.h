@@ -13,7 +13,7 @@
 #ifndef TOR_CRYPTO_RAND_H
 #define TOR_CRYPTO_RAND_H
 
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/util.h"
 
 /* random numbers */

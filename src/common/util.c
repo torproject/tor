@@ -17,7 +17,7 @@
 #include "common/util.h"
 #include "common/torlog.h"
 #include "common/crypto_digest.h"
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 #include "common/container.h"
 #include "common/address.h"
 #include "common/sandbox.h"

@@ -51,7 +51,7 @@
  * logic, which was originally circuit-focused.
  **/
 #define CIRCUITLIST_PRIVATE
-#include "common/torint.h"  /* TOR_PRIuSZ */
+#include "lib/cc/torint.h"  /* TOR_PRIuSZ */
 
 #include "or/or.h"
 #include "or/channel.h"

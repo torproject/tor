@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "common/torint.h"
+#include "lib/cc/torint.h"
 
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
