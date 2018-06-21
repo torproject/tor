@@ -14,7 +14,7 @@
 #include "common/crypto_rand.h"
 #include "common/crypto_s2k.h"
 #include "common/crypto_util.h"
-#include "common/di_ops.h"
+#include "lib/ctime/di_ops.h"
 #include "common/util.h"
 #include "trunnel/pwbox.h"
 

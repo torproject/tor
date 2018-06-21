@@ -6,7 +6,7 @@
 
 #include "common/torint.h"
 #include "common/crypto_curve25519.h"
-#include "common/di_ops.h"
+#include "lib/ctime/di_ops.h"
 
 /** State to be maintained by a client between sending an ntor onionskin
  * and receiving a reply. */

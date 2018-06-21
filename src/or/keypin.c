@@ -14,7 +14,7 @@
 #include "common/compat.h"
 #include "common/crypto_digest.h"
 #include "common/crypto_format.h"
-#include "common/di_ops.h"
+#include "lib/ctime/di_ops.h"
 #include "ht.h"
 #include "or/keypin.h"
 #include "siphash.h"

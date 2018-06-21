@@ -14,7 +14,7 @@
 #include "orconfig.h"
 #include "common/torint.h"
 #include "common/compat.h"
-#include "common/di_ops.h"
+#include "lib/ctime/di_ops.h"
 #include "common/testsupport.h"
 #include <stdio.h>
 #include <stdlib.h>

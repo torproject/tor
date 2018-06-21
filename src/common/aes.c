@@ -39,7 +39,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "common/aes.h"
 #include "common/util.h"
 #include "common/torlog.h"
-#include "common/di_ops.h"
+#include "lib/ctime/di_ops.h"
 
 #ifdef ANDROID
 /* Android's OpenSSL seems to have removed all of its Engine support. */

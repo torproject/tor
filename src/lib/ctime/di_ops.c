@@ -7,7 +7,7 @@
  **/
 
 #include "orconfig.h"
-#include "common/di_ops.h"
+#include "lib/ctime/di_ops.h"
 #include "common/torlog.h"
 #include "common/util.h"
 
