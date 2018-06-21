@@ -1108,6 +1108,33 @@ if test "$fragile_hardening" = "yes"; then
 TOR_CHECK_CFLAGS([-fno-omit-frame-pointer])
 fi
 
+dnl Find the correct libraries to add in order to use the sanitizers.
+dnl
+dnl When building Rust, Cargo will run the linker with the -nodefaultlibs
+dnl option, which will prevent the compiler from linking the sanitizer
+dnl libraries it needs.  We need to specify them manually.
+dnl
+dnl What's more, we need to specify them in a linker script rather than
+dnl from build.rs: these options aren't allowed in the cargo:rustc-flags
+dnl variable.
+RUST_LINKER_OPTIONS=""
+if test "x$have_clang" = "xyes"; then
+	if test "x$CFLAGS_ASAN" != "x"; then
+		RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS $CFLAGS_ASAN"
+	fi
+	if test "x$CFLAGS_UBSAN" != "x"; then
+        	RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS $CFLAGS_UBSAN"
+	fi
+else
+	if test "x$CFLAGS_ASAN" != "x"; then
+		RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -lasan"
+	fi
+	if test "x$CFLAGS_UBSAN" != "x"; then
+        	RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -lubsan"
+	fi
+fi
+AC_SUBST(RUST_LINKER_OPTIONS)
+
 CFLAGS_BUGTRAP="$CFLAGS_FTRAPV $CFLAGS_ASAN $CFLAGS_UBSAN"
 CFLAGS_CONSTTIME="$CFLAGS_FWRAPV"
 
@@ -2236,6 +2263,8 @@ CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent $TOR_CPPFLAGS_openssl $TOR_CPPFLAGS_z
 AC_CONFIG_FILES([
         Doxyfile
         Makefile
+        config.rust
+        link_rust.sh
         contrib/dist/suse/tor.sh
         contrib/operator-tools/tor.logrotate
         contrib/dist/tor.sh

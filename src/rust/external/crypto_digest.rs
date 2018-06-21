@@ -140,7 +140,7 @@ extern "C" {
     fn crypto_digest_new() -> *mut crypto_digest_t;
     fn crypto_digest256_new(algorithm: digest_algorithm_t) -> *mut crypto_digest_t;
     fn crypto_digest512_new(algorithm: digest_algorithm_t) -> *mut crypto_digest_t;
-    fn crypto_digest_free(digest: *mut crypto_digest_t);
+    fn crypto_digest_free_(digest: *mut crypto_digest_t);
     fn crypto_digest_add_bytes(digest: *mut crypto_digest_t, data: *const c_char, len: size_t);
     fn crypto_digest_get_digest(digest: *mut crypto_digest_t, out: *mut c_char, out_len: size_t);
     fn crypto_digest_dup(digest: *const crypto_digest_t) -> *mut crypto_digest_t;
@@ -288,6 +288,14 @@ impl CryptoDigest {
             crypto_digest_add_bytes(self.0 as *mut crypto_digest_t,
                                     bytes.as_ptr() as *const c_char,
                                     bytes.len() as size_t)
+        }
+    }
+}
+
+impl Drop for CryptoDigest {
+    fn drop(&mut self) {
+        unsafe {
+            crypto_digest_free_(self.0 as *mut crypto_digest_t);
         }
     }
 }

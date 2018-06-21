@@ -3,6 +3,7 @@
 
 set -e
 
+export LSAN_OPTIONS=suppressions=${abs_top_srcdir}/src/test/rust_supp.txt
 
 for cargo_toml_dir in "${abs_top_srcdir:-../../..}"/src/rust/*; do
     if [ -e "${cargo_toml_dir}/Cargo.toml" ]; then
@@ -16,5 +17,3 @@ for cargo_toml_dir in "${abs_top_srcdir:-../../..}"/src/rust/*; do
 done
 
 exit $exitcode
-
-

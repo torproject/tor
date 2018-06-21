@@ -10,7 +10,10 @@ TESTS_ENVIRONMENT = \
 	export TESTING_TOR_BINARY="$(TESTING_TOR_BINARY)"; \
 	export CARGO="$(CARGO)"; \
 	export EXTRA_CARGO_OPTIONS="$(EXTRA_CARGO_OPTIONS)"; \
-	export CARGO_ONLINE="$(CARGO_ONLINE)";
+	export CARGO_ONLINE="$(CARGO_ONLINE)"; \
+        export CCLD="$(CCLD)"; \
+        chmod +x "$(abs_top_builddir)/link_rust.sh"; \
+        export RUSTFLAGS="-C linker=$(abs_top_builddir)/link_rust.sh";
 
 TESTSCRIPTS = \
 	src/test/fuzz_static_testcases.sh \
@@ -359,6 +362,7 @@ EXTRA_DIST += \
 	src/test/fuzz_static_testcases.sh \
 	src/test/slownacl_curve25519.py \
 	src/test/zero_length_keys.sh \
+        src/test/rust_supp.txt \
 	src/test/test_keygen.sh \
 	src/test/test_key_expiration.sh \
 	src/test/test_zero_length_keys.sh \
