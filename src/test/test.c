@@ -917,10 +917,8 @@ struct testgroup_t testgroups[] = {
   { "util/format/", util_format_tests },
   { "util/logging/", logging_tests },
   { "util/process/", util_process_tests },
-  { "util/pubsub/", pubsub_tests },
   { "util/thread/", thread_tests },
   { "util/handle/", handle_tests },
   { "dns/", dns_tests },
   END_OF_GROUPS
 };
-

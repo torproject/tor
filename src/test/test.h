@@ -248,7 +248,6 @@ extern struct testcase_t procmon_tests[];
 extern struct testcase_t proto_http_tests[];
 extern struct testcase_t proto_misc_tests[];
 extern struct testcase_t protover_tests[];
-extern struct testcase_t pubsub_tests[];
 extern struct testcase_t pt_tests[];
 extern struct testcase_t relay_tests[];
 extern struct testcase_t relaycell_tests[];
@@ -292,4 +291,3 @@ extern const char AUTHORITY_SIGNKEY_C_DIGEST[];
 extern const char AUTHORITY_SIGNKEY_C_DIGEST256[];
 
 #endif /* !defined(TOR_TEST_H) */
-

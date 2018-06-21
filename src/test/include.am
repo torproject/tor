@@ -157,7 +157,6 @@ src_test_test_SOURCES += \
 	src/test/test_proto_misc.c \
 	src/test/test_protover.c \
 	src/test/test_pt.c \
-	src/test/test_pubsub.c \
 	src/test/test_relay.c \
 	src/test/test_relaycell.c \
 	src/test/test_relaycrypt.c \
