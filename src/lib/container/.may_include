@@ -1,19 +1,15 @@
 orconfig.h
 lib/cc/*.h
 lib/container/*.h
-lib/crypt_ops/*.h
 lib/ctime/*.h
 lib/defs/*.h
 lib/malloc/*.h
 lib/err/*.h
 lib/testsupport/testsupport.h
 
-trunnel/pwbox.h
-
-keccak-tiny/*.h
-ed25519/*.h
-
+ht.h
 siphash.h
 
 # XXX I'd like to remove this.
-common/*.h
+common/util.h
+common/util_bug.h
