@@ -71,7 +71,7 @@ TOR_INTERNAL_LIBS = \
 	$(TOR_UTIL_LIBS) \
 	src/common/libor-event.a \
 	src/trunnel/libor-trunnel.a \
-	src/trace/libor-trace.a
+	src/lib/libtor-trace.a
 
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
@@ -82,7 +82,7 @@ TOR_INTERNAL_TESTING_LIBS = \
 	$(TOR_UTIL_TESTING_LIBS) \
 	src/common/libor-event-testing.a \
 	src/trunnel/libor-trunnel-testing.a \
-	src/trace/libor-trace.a
+	src/lib/libtor-trace.a
 
 # All libraries used to link tor-cov
 

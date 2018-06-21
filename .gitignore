@@ -173,6 +173,7 @@ uptime-*.json
 /src/lib/libtor-ctime-testing.a
 /src/lib/libtor-err.a
 /src/lib/libtor-err-testing.a
+/src/lib/libtor-trace.a
 
 # /src/or/
 /src/or/Makefile
