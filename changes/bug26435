@@ -1,4 +1,4 @@
-  o Major bugfixes:
+  o Major bugfixes (directory authority):
     - Fix a memory leak where directory authorities would leak a chunk
       of memory for every router descriptor every time they considered
       voting. This bug was taking down directory authorities due to
