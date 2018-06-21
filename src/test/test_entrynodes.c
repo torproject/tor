@@ -43,6 +43,8 @@
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
 
+#include "lib/container/bloomfilt.h"
+
 /* TODO:
  * choose_random_entry() test with state set.
  *
@@ -3074,4 +3076,3 @@ struct testcase_t entrynodes_tests[] = {
 
   END_OF_TESTCASES
 };
-

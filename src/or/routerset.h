@@ -45,6 +45,8 @@ void routerset_free_(routerset_t *routerset);
 int routerset_len(const routerset_t *set);
 
 #ifdef ROUTERSET_PRIVATE
+#include "lib/container/bitarray.h"
+
 STATIC char * routerset_get_countryname(const char *c);
 STATIC int routerset_contains(const routerset_t *set, const tor_addr_t *addr,
                    uint16_t orport,
@@ -85,4 +87,3 @@ struct routerset_t {
 };
 #endif /* defined(ROUTERSET_PRIVATE) */
 #endif /* !defined(TOR_ROUTERSET_H) */
-

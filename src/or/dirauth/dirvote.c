@@ -43,6 +43,8 @@
 #include "or/vote_routerstatus_st.h"
 #include "or/vote_timing_st.h"
 
+#include "lib/container/order.h"
+
 /**
  * \file dirvote.c
  * \brief Functions to compute directory consensus, and schedule voting.

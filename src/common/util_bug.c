@@ -12,6 +12,7 @@
 #include "common/torlog.h"
 #include "lib/err/backtrace.h"
 #include "lib/container/container.h"
+#include "lib/malloc/util_malloc.h"
 
 #ifdef __COVERITY__
 int bug_macro_deadcode_dummy__ = 0;

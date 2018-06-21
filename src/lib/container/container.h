@@ -8,8 +8,5 @@
 
 #include "lib/container/smartlist.h"
 #include "lib/container/map.h"
-#include "lib/container/bitarray.h"
-#include "lib/container/bloomfilt.h"
-#include "lib/container/order.h"
 
 #endif /* !defined(TOR_CONTAINER_H) */

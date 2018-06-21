@@ -14,7 +14,7 @@
 #include "common/address_set.h"
 #include "common/address.h"
 #include "common/compat.h"
-#include "lib/container/container.h"
+#include "lib/container/bitarray.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "common/util.h"
 #include "siphash.h"
@@ -126,4 +126,3 @@ address_set_probably_contains(address_set_t *set,
   }
   return matches == N_BITS_PER_ITEM;
 }
-

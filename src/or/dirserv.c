@@ -46,6 +46,8 @@
 #include "or/tor_version_st.h"
 #include "or/vote_routerstatus_st.h"
 
+#include "lib/container/order.h"
+
 /**
  * \file dirserv.c
  * \brief Directory server core implementation. Manages directory
@@ -3591,4 +3593,3 @@ dirserv_free_all(void)
 
   dirserv_clear_measured_bw_cache();
 }
-

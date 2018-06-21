@@ -1,4 +1,3 @@
-
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
@@ -25,6 +24,8 @@
 #include "or/or.h"
 #include "or/confparse.h"
 #include "or/routerset.h"
+
+#include "lib/container/bitarray.h"
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_msec_interval(const char *s, int *ok);
@@ -1186,4 +1187,3 @@ config_parse_interval(const char *s, int *ok)
   }
   return (int)r;
 }
-

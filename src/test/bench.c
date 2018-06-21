@@ -29,6 +29,8 @@
 #include "or/cell_st.h"
 #include "or/or_circuit_st.h"
 
+#include "lib/container/bloomfilt.h"
+
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)
 static uint64_t nanostart;
 static inline uint64_t
@@ -741,4 +743,3 @@ main(int argc, const char **argv)
 
   return 0;
 }
-

@@ -137,6 +137,8 @@
 #include "or/routerlist_st.h"
 #include "or/vote_routerstatus_st.h"
 
+#include "lib/container/bloomfilt.h"
+
 // #define DEBUG_ROUTERLIST
 
 /****************************************************************************/
@@ -5836,4 +5838,3 @@ refresh_all_country_info(void)
 
   nodelist_refresh_countries();
 }
-

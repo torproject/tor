@@ -98,6 +98,8 @@
 #include "or/vote_microdesc_hash_st.h"
 #include "or/vote_routerstatus_st.h"
 
+#include "lib/container/bloomfilt.h"
+
 #undef log
 #include <math.h>
 
@@ -5684,4 +5686,3 @@ routerparse_free_all(void)
 {
   dump_desc_fifo_cleanup();
 }
-

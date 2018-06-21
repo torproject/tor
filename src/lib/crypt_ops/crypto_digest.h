@@ -13,11 +13,10 @@
 #ifndef TOR_CRYPTO_DIGEST_H
 #define TOR_CRYPTO_DIGEST_H
 
-#include <stdio.h>
-
 #include "lib/container/container.h"
 #include "lib/cc/torint.h"
 #include "lib/defs/digest_sizes.h"
+#include "lib/malloc/util_malloc.h"
 
 /** Length of a sha1 message digest when encoded in base32 with trailing =
  * signs removed. */
