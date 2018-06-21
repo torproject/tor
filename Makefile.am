@@ -100,6 +100,7 @@ EXTRA_DIST+= \
 	Makefile.nmake					\
 	README						\
 	ReleaseNotes					\
+	scripts/maint/checkIncludes.py                  \
 	scripts/maint/checkSpace.pl
 
 ## This tells etags how to find mockable function definitions.
@@ -265,6 +266,11 @@ if USE_PERL
 		$(top_srcdir)/src/test/*.[ch] \
 		$(top_srcdir)/src/test/*/*.[ch] \
 		$(top_srcdir)/src/tools/*.[ch]
+endif
+
+check-includes:
+if USEPYTHON
+	$(top_srcdir)/scripts/maint/checkIncludes.py
 endif
 
 check-docs: all
