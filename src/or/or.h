@@ -921,6 +921,7 @@ typedef enum {
 /** Initial value on both sides of a stream transmission window when the
  * stream is initialized.  Measured in cells. */
 #define STREAMWINDOW_START 500
+#define STREAMWINDOW_START_MAX 500
 /** Amount to increment a stream window when we get a stream SENDME. */
 #define STREAMWINDOW_INCREMENT 50
 
