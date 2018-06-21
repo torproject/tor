@@ -356,7 +356,6 @@ src_test_test_bt_cl_CPPFLAGS= $(src_test_AM_CPPFLAGS) $(TEST_CPPFLAGS)
 
 EXTRA_DIST += \
 	src/test/bt_test.py \
-	src/test/geoip_dummy \
 	src/test/ntor_ref.py \
 	src/test/hs_ntor_ref.py \
 	src/test/hs_build_address.py \
