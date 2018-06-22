@@ -1867,28 +1867,24 @@ entry_guards_update_primary(guard_selection_t *gs)
     smartlist_add(new_primary_guards, guard);
   } SMARTLIST_FOREACH_END(guard);
 
-  /* Can we keep any older primary guards? First remove all the ones
-   * that we already kept. */
   SMARTLIST_FOREACH_BEGIN(old_primary_guards, entry_guard_t *, guard) {
+    /* Can we keep any older primary guards? First remove all the ones
+     * that we already kept. */
     if (smartlist_contains(new_primary_guards, guard)) {
       SMARTLIST_DEL_CURRENT_KEEPORDER(old_primary_guards, guard);
-    }
-  } SMARTLIST_FOREACH_END(guard);
-
-  /* Now add any that are still good. */
-  SMARTLIST_FOREACH_BEGIN(old_primary_guards, entry_guard_t *, guard) {
-    if (smartlist_len(new_primary_guards) >= N_PRIMARY_GUARDS)
-      break;
-    if (! guard->is_filtered_guard)
       continue;
-    guard->is_primary = 1;
-    smartlist_add(new_primary_guards, guard);
-    SMARTLIST_DEL_CURRENT_KEEPORDER(old_primary_guards, guard);
-  } SMARTLIST_FOREACH_END(guard);
+    }
 
-  /* Mark the remaining previous primary guards as non-primary */
-  SMARTLIST_FOREACH_BEGIN(old_primary_guards, entry_guard_t *, guard) {
-    guard->is_primary = 0;
+    /* Now add any that are still good. */
+    if (smartlist_len(new_primary_guards) < N_PRIMARY_GUARDS &&
+        guard->is_filtered_guard) {
+      guard->is_primary = 1;
+      smartlist_add(new_primary_guards, guard);
+      SMARTLIST_DEL_CURRENT_KEEPORDER(old_primary_guards, guard);
+    } else {
+      /* Mark the remaining previous primary guards as non-primary */
+      guard->is_primary = 0;
+    }
   } SMARTLIST_FOREACH_END(guard);
 
   /* Finally, fill out the list with sampled guards. */
@@ -1912,18 +1908,8 @@ entry_guards_update_primary(guard_selection_t *gs)
   });
 #endif /* 1 */
 
-  int any_change = 0;
-  if (smartlist_len(gs->primary_entry_guards) !=
-      smartlist_len(new_primary_guards)) {
-    any_change = 1;
-  } else {
-    SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, g) {
-      if (g != smartlist_get(new_primary_guards, g_sl_idx)) {
-        any_change = 1;
-      }
-    } SMARTLIST_FOREACH_END(g);
-  }
-
+  const int any_change = !smartlist_shallow_eq(gs->primary_entry_guards,
+                                               new_primary_guards);
   if (any_change) {
     log_info(LD_GUARD, "Primary entry guards have changed. "
              "New primary guard list is: ");
