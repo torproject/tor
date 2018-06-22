@@ -151,10 +151,13 @@ pub fn main() {
             // moving forward!
             cfg.component("tor-crypt-ops-testing");
             cfg.component("or-testing");
-            cfg.component("libtor-lock");
+            cfg.component("tor-log");
+            cfg.component("tor-lock");
+            cfg.component("tor-fdio");
             cfg.component("tor-container-testing");
             cfg.component("tor-string-testing");
             cfg.component("tor-malloc");
+            cfg.component("tor-wallclock");
             cfg.component("tor-err-testing");
             cfg.component("or-event-testing");
             cfg.component("tor-intmath-testing");
