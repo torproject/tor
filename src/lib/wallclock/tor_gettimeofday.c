@@ -12,6 +12,7 @@
 #include "orconfig.h"
 #include "lib/err/torerr.h"
 #include "lib/wallclock/tor_gettimeofday.h"
+#include "lib/cc/torint.h"
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -55,8 +56,7 @@ tor_gettimeofday, (struct timeval *timeval))
   GetSystemTimeAsFileTime(&ft.ft_ft);
   if (ft.ft_64 < EPOCH_BIAS) {
     /* LCOV_EXCL_START */
-    log_err(LD_GENERAL,"System time is before 1970; failing.");
-    exit(1); // exit ok: system clock is broken.
+    raw_assert_unreached_msg("System time is before 1970; failing.");
     /* LCOV_EXCL_STOP */
   }
   ft.ft_64 -= EPOCH_BIAS;
