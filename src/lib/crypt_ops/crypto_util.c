@@ -32,7 +32,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 
 ENABLE_GCC_WARNING(redundant-decls)
 
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 /**
  * Destroy the <b>sz</b> bytes of data stored at <b>mem</b>, setting them to

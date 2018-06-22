@@ -21,7 +21,7 @@
 #include "lib/testsupport/testsupport.h"
 #include "common/compat.h"
 #include "common/util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 /** Length of our public keys. */
 #define PK_BYTES (1024/8)

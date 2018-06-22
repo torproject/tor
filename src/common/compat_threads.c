@@ -17,7 +17,7 @@
 #include "common/compat_threads.h"
 
 #include "common/util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 #ifdef HAVE_SYS_EVENTFD_H
 #include <sys/eventfd.h>

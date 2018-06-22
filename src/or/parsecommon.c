@@ -7,7 +7,7 @@
  **/
 
 #include "or/parsecommon.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util_format.h"
 #include "lib/container/smartlist.h"
 

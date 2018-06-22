@@ -27,7 +27,7 @@
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
 #include "common/util_format.h"
 

@@ -26,7 +26,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "common/util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 #include "ed25519/donna/ed25519_donna_tor.h"
 

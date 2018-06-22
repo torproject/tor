@@ -31,7 +31,7 @@
 #include "common/util.h"
 #include "common/workqueue.h"
 #include "tor_queue.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 #include <event2/event.h>
 

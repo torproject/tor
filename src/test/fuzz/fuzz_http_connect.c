@@ -13,7 +13,7 @@
 #include "or/connection.h"
 #include "or/connection_edge.h"
 #include "or/proto_socks.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 #include "or/entry_connection_st.h"
 #include "or/socks_request_st.h"

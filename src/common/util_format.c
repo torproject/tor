@@ -13,7 +13,7 @@
 
 #include "orconfig.h"
 #include <stddef.h>
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
 #include "common/util_format.h"
 #include "lib/cc/torint.h"

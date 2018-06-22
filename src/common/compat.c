@@ -124,7 +124,7 @@ SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 #include <sys/file.h>
 #endif
 
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
 #include "lib/container/smartlist.h"
 #include "common/address.h"

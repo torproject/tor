@@ -14,7 +14,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 
 #include "common/util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 #include <event2/event.h>
 #include <event2/thread.h>

@@ -35,7 +35,7 @@
 #include "common/sandbox.h"
 #include "lib/container/map.h"
 #include "lib/err/torerr.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "lib/cc/torint.h"
 #include "common/util.h"
 #include "tor_queue.h"

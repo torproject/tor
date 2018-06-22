@@ -31,7 +31,7 @@
 #endif
 
 #define LOG_PRIVATE
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "lib/container/smartlist.h"
 #include "lib/err/torerr.h"
 #include "lib/intmath/bits.h"

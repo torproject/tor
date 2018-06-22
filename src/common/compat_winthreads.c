@@ -16,7 +16,7 @@
 #include <windows.h>
 #include <process.h>
 #include "common/util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 /* This value is more or less total cargo-cult */
 #define SPIN_COUNT 2000

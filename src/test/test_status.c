@@ -12,7 +12,7 @@
 #include <math.h>
 
 #include "or/or.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "tor_queue.h"
 #include "or/status.h"
 #include "or/circuitlist.h"

@@ -12,7 +12,7 @@
 #include "common/compat.h"
 #include "common/compat_libevent.h"
 
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 typedef struct tor_process_monitor_t tor_process_monitor_t;
 

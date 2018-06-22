@@ -27,7 +27,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "common/sandbox.h"
 #include "lib/testsupport/testsupport.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
 #include "common/util_format.h"
 

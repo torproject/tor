@@ -7,7 +7,7 @@
 #include "common/memarea.h"
 #include "common/sandbox.h"
 #include "common/storagedir.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
 
 #ifdef HAVE_SYS_TYPES_H

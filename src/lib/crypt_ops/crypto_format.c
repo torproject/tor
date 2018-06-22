@@ -23,7 +23,7 @@
 #include "lib/string/util_string.h"
 #include "common/util.h"
 #include "common/util_format.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 /** Write the <b>datalen</b> bytes from <b>data</b> to the file named
  * <b>fname</b> in the tagged-data format.  This format contains a

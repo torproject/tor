@@ -16,7 +16,7 @@
 #include <time.h>
 
 #include "common/compat.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
 
 /** Wraps a void (*)(void*) function and its argument so we can

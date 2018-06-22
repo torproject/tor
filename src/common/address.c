@@ -39,7 +39,7 @@
 #include "common/util.h"
 #include "common/util_format.h"
 #include "common/address.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "lib/container/smartlist.h"
 #include "common/sandbox.h"
 #include "siphash.h"

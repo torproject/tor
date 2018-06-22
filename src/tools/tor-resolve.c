@@ -7,7 +7,7 @@
 #include "common/compat.h"
 #include "common/util.h"
 #include "common/address.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/sandbox.h"
 
 #include <stdio.h>

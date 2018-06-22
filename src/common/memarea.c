@@ -12,7 +12,7 @@
 #include "common/memarea.h"
 #include "common/util.h"
 #include "common/compat.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 #ifndef DISABLE_MEMORY_SENTINELS
 

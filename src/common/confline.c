@@ -6,7 +6,7 @@
 
 #include "common/compat.h"
 #include "common/confline.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
 #include "lib/container/smartlist.h"
 

@@ -35,7 +35,7 @@
 #endif
 
 #include "lib/err/torerr.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
 
 #ifdef _WIN32
