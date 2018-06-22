@@ -6,6 +6,8 @@
 #ifndef TOR_RATELIM_H
 #define TOR_RATELIM_H
 
+#include <time.h>
+
 /* Rate-limiter */
 
 /** A ratelim_t remembers how often an event is occurring, and how often

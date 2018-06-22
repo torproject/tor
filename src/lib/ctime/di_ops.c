@@ -8,7 +8,10 @@
 
 #include "orconfig.h"
 #include "lib/ctime/di_ops.h"
-#include "common/util.h"
+#include "lib/err/torerr.h"
+#include "lib/malloc/util_malloc.h"
+
+#include <string.h>
 
 /**
  * Timing-safe version of memcmp.  As memcmp, compare the <b>sz</b> bytes at
@@ -170,8 +173,8 @@ dimap_add_entry(di_digest256_map_t **map,
   di_digest256_map_t *new_ent;
   {
     void *old_val = dimap_search(*map, key, NULL);
-    tor_assert(! old_val);
-    tor_assert(val);
+    raw_assert(! old_val);
+    raw_assert(val);
   }
   new_ent = tor_malloc_zero(sizeof(di_digest256_map_t));
   new_ent->next = *map;
@@ -263,10 +266,10 @@ select_array_member_cumulative_timei(const uint64_t *entries, int n_entries,
       rand_val = INT64_MAX;
     }
   }
-  tor_assert(total_so_far == total);
-  tor_assert(n_chosen == 1);
-  tor_assert(i_chosen >= 0);
-  tor_assert(i_chosen < n_entries);
+  raw_assert(total_so_far == total);
+  raw_assert(n_chosen == 1);
+  raw_assert(i_chosen >= 0);
+  raw_assert(i_chosen < n_entries);
 
   return i_chosen;
 }

@@ -5,6 +5,7 @@ lib/crypt_ops/*.h
 lib/err/*.h
 lib/testsupport/testsupport.h
 lib/tls/*.h
+lib/log/*.h
 
 ciphers.inc
 

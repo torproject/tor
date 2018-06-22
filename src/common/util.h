@@ -31,6 +31,7 @@
 #include "lib/intmath/addsub.h"
 #include "lib/intmath/muldiv.h"
 #include "lib/intmath/cmp.h"
+#include "lib/log/ratelim.h"
 #include "common/util_bug.h"
 
 #ifndef O_BINARY

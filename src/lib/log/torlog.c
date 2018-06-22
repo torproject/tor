@@ -11,7 +11,7 @@
 
 #include "orconfig.h"
 #include <stdarg.h>
-// #include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef HAVE_SYS_TIME_H
@@ -32,6 +32,8 @@
 
 #define LOG_PRIVATE
 #include "lib/log/torlog.h"
+#include "lib/log/ratelim.h"
+#include "lib/lock/compat_mutex.h"
 #include "lib/container/smartlist.h"
 #include "lib/err/torerr.h"
 #include "lib/intmath/bits.h"

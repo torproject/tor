@@ -7,8 +7,10 @@
 #define TOR_SMARTLIST_H
 
 #include <stddef.h>
+#include <stdarg.h>
+
 #include "lib/cc/compat_compiler.h"
-#include "common/util_bug.h"
+#include "lib/cc/torint.h"
 #include "lib/testsupport/testsupport.h"
 
 /** A resizeable list of pointers, with associated helpful functionality.
@@ -66,22 +68,22 @@ void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
  */
 static inline int smartlist_len(const smartlist_t *sl);
 static inline int smartlist_len(const smartlist_t *sl) {
-  tor_assert(sl);
+  raw_assert(sl);
   return (sl)->num_used;
 }
 /** Return the <b>idx</b>th element of sl.
  */
 static inline void *smartlist_get(const smartlist_t *sl, int idx);
 static inline void *smartlist_get(const smartlist_t *sl, int idx) {
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(sl->num_used > idx);
+  raw_assert(sl);
+  raw_assert(idx>=0);
+  raw_assert(sl->num_used > idx);
   return sl->list[idx];
 }
 static inline void smartlist_set(smartlist_t *sl, int idx, void *val) {
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(sl->num_used > idx);
+  raw_assert(sl);
+  raw_assert(idx>=0);
+  raw_assert(sl->num_used > idx);
   sl->list[idx] = val;
 }
 #else /* !(defined(DEBUG_SMARTLIST)) */
