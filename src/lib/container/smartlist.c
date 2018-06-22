@@ -18,6 +18,7 @@
 #include "lib/defs/digest_sizes.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/string/util_string.h"
+#include "lib/string/printf.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -122,6 +123,30 @@ smartlist_add_strdup(struct smartlist_t *sl, const char *string)
   copy = tor_strdup(string);
 
   smartlist_add(sl, copy);
+}
+
+/** Append the string produced by tor_asprintf(<b>pattern</b>, <b>...</b>)
+ * to <b>sl</b>. */
+void
+smartlist_add_asprintf(struct smartlist_t *sl, const char *pattern, ...)
+{
+  va_list ap;
+  va_start(ap, pattern);
+  smartlist_add_vasprintf(sl, pattern, ap);
+  va_end(ap);
+}
+
+/** va_list-based backend of smartlist_add_asprintf. */
+void
+smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
+                        va_list args)
+{
+  char *str = NULL;
+
+  tor_vasprintf(&str, pattern, args);
+  tor_assert(str != NULL);
+
+  smartlist_add(sl, str);
 }
 
 /** Remove all elements E from sl such that E==element.  Preserve

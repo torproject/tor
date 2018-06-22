@@ -37,6 +37,11 @@ void smartlist_clear(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2);
 void smartlist_add_strdup(struct smartlist_t *sl, const char *string);
+void smartlist_add_asprintf(struct smartlist_t *sl, const char *pattern, ...)
+  CHECK_PRINTF(2, 3);
+void smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
+                             va_list args)
+  CHECK_PRINTF(2, 0);
 void smartlist_remove(smartlist_t *sl, const void *element);
 void smartlist_remove_keeporder(smartlist_t *sl, const void *element);
 void *smartlist_pop_last(smartlist_t *sl);

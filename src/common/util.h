@@ -126,13 +126,6 @@ const char *escaped(const char *string);
 char *tor_escape_str_for_pt_args(const char *string,
                                  const char *chars_to_escape);
 
-struct smartlist_t;
-void smartlist_add_asprintf(struct smartlist_t *sl, const char *pattern, ...)
-  CHECK_PRINTF(2, 3);
-void smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
-                             va_list args)
-  CHECK_PRINTF(2, 0);
-
 /* Time helpers */
 long tv_udiff(const struct timeval *start, const struct timeval *end);
 long tv_mdiff(const struct timeval *start, const struct timeval *end);
@@ -250,6 +243,7 @@ typedef struct sized_chunk_t {
   const char *bytes;
   size_t len;
 } sized_chunk_t;
+struct smartlist_t;
 int write_chunks_to_file(const char *fname, const struct smartlist_t *chunks,
                          int bin, int no_tempfile);
 int append_bytes_to_file(const char *fname, const char *str, size_t len,

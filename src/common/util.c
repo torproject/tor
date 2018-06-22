@@ -2595,30 +2595,6 @@ expand_filename(const char *filename)
 #endif /* defined(_WIN32) */
 }
 
-/** Append the string produced by tor_asprintf(<b>pattern</b>, <b>...</b>)
- * to <b>sl</b>. */
-void
-smartlist_add_asprintf(struct smartlist_t *sl, const char *pattern, ...)
-{
-  va_list ap;
-  va_start(ap, pattern);
-  smartlist_add_vasprintf(sl, pattern, ap);
-  va_end(ap);
-}
-
-/** va_list-based backend of smartlist_add_asprintf. */
-void
-smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
-                        va_list args)
-{
-  char *str = NULL;
-
-  tor_vasprintf(&str, pattern, args);
-  tor_assert(str != NULL);
-
-  smartlist_add(sl, str);
-}
-
 /** Return a new list containing the filenames in the directory <b>dirname</b>.
  * Return NULL on error or if <b>dirname</b> is not a directory.
  */
