@@ -48,37 +48,13 @@
 #include "lib/cc/compat_compiler.h"
 #include "common/compat_time.h"
 #include "lib/string/compat_ctype.h"
+#include "lib/string/compat_string.h"
 #include "lib/string/printf.h"
 
 #include <stdio.h>
 #include <errno.h>
 
 /* ===== Compiler compatibility */
-
-/* ===== String compatibility */
-#ifdef _WIN32
-/* Windows names string functions differently from most other platforms. */
-#define strncasecmp _strnicmp
-#define strcasecmp _stricmp
-#endif
-
-#if defined __APPLE__
-/* On OSX 10.9 and later, the overlap-checking code for strlcat would
- * appear to have a severe bug that can sometimes cause aborts in Tor.
- * Instead, use the non-checking variants.  This is sad.
- *
- * See https://trac.torproject.org/projects/tor/ticket/15205
- */
-#undef strlcat
-#undef strlcpy
-#endif /* defined __APPLE__ */
-
-#ifndef HAVE_STRLCAT
-size_t strlcat(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
-#endif
-#ifndef HAVE_STRLCPY
-size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
-#endif
 
 /** Represents an mmaped file. Allocated via tor_mmap_file; freed with
  * tor_munmap_file. */

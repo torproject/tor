@@ -131,14 +131,6 @@ SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 #include "common/address.h"
 #include "common/sandbox.h"
 
-/* Inline the strl functions if the platform doesn't have them. */
-#ifndef HAVE_STRLCPY
-#include "strlcpy.c"
-#endif
-#ifndef HAVE_STRLCAT
-#include "strlcat.c"
-#endif
-
 /* When set_max_file_descriptors() is called, update this with the max file
  * descriptor value so we can use it to check the limit when opening a new
  * socket. Default value is what Debian sets as the default hard limit. */
