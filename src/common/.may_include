@@ -5,7 +5,6 @@ lib/*/*.h
 # XXXX These all belong somewhere else
 ht.h
 linux_syscalls.inc
-micro-revision.i
 siphash.h
 src/ext/timeouts/timeout.c
 tor_queue.h
