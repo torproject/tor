@@ -1,8 +1,11 @@
 /* Copyright (c) 2013-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define CONFIG_PRIVATE
+
 #include "orconfig.h"
 #include "or/or.h"
+#include "or/config.h"
 #include "lib/err/torerr.h"
 #include "lib/log/torlog.h"
 #include "test/test.h"
@@ -90,7 +93,7 @@ test_sigsafe_err(void *arg)
 
   init_logging(1);
   mark_logs_temp();
-  add_file_log(&include_bug, fn, 0);
+  open_and_add_file_log(&include_bug, fn, 0);
   tor_log_update_sigsafe_err_fds();
   close_temp_logs();
 

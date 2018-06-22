@@ -160,11 +160,6 @@ tor_lockfile_t *tor_lockfile_lock(const char *filename, int blocking,
                                   int *locked_out);
 void tor_lockfile_unlock(tor_lockfile_t *lockfile);
 
-off_t tor_fd_getpos(int fd);
-int tor_fd_setpos(int fd, off_t pos);
-int tor_fd_seekend(int fd);
-int tor_ftruncate(int fd);
-
 int64_t tor_get_avail_disk_space(const char *path);
 
 #ifdef _WIN32

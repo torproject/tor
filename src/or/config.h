@@ -271,8 +271,10 @@ STATIC int check_bridge_distribution_setting(const char *bd);
 
 STATIC uint64_t compute_real_max_mem_in_queues(const uint64_t val,
                                                int log_guess);
+STATIC int open_and_add_file_log(const log_severity_list_t *severity,
+                                 const char *fname,
+                                 int truncate_log);
 
 #endif /* defined(CONFIG_PRIVATE) */
 
 #endif /* !defined(TOR_CONFIG_H) */
-

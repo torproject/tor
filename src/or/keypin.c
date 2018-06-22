@@ -20,6 +20,7 @@
 #include "siphash.h"
 #include "lib/cc/torint.h"
 #include "lib/log/torlog.h"
+#include "lib/fdio/fdio.h"
 #include "common/util.h"
 #include "common/util_format.h"
 
@@ -498,4 +499,3 @@ keypin_clear(void)
              bad_entries);
   }
 }
-

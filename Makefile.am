@@ -42,6 +42,7 @@ TOR_UTIL_LIBS = \
 	src/common/libor.a \
         src/lib/libtor-log.a \
         src/lib/libtor-lock.a \
+        src/lib/libtor-fdio.a \
 	src/lib/libtor-container.a \
         src/lib/libtor-string.a \
 	src/lib/libtor-malloc.a \
@@ -56,6 +57,7 @@ TOR_UTIL_TESTING_LIBS = \
 	src/common/libor-testing.a \
         src/lib/libtor-log-testing.a \
         src/lib/libtor-lock-testing.a \
+        src/lib/libtor-fdio-testing.a \
 	src/lib/libtor-container-testing.a \
         src/lib/libtor-string-testing.a \
 	src/lib/libtor-malloc-testing.a \

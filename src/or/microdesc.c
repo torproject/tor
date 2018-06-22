@@ -9,6 +9,9 @@
  */
 
 #include "or/or.h"
+
+#include "lib/fdio/fdio.h"
+
 #include "or/circuitbuild.h"
 #include "or/config.h"
 #include "or/directory.h"
@@ -1047,4 +1050,3 @@ usable_consensus_flavor,(void))
     return FLAV_NS;
   }
 }
-

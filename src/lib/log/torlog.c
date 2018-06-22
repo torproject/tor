@@ -37,11 +37,14 @@
 #include "lib/container/smartlist.h"
 #include "lib/err/torerr.h"
 #include "lib/intmath/bits.h"
+#include "lib/string/compat_string.h"
+#include "lib/string/printf.h"
 #include "lib/malloc/util_malloc.h"
 #include "lib/string/util_string.h"
 #include "lib/wallclock/tor_gettimeofday.h"
 #include "lib/wallclock/approx_time.h"
 #include "lib/wallclock/tm_cvt.h"
+#include "lib/fdio/fdio.h"
 
 #ifdef HAVE_ANDROID_LOG_H
 #include <android/log.h>
@@ -201,12 +204,12 @@ static int pretty_fn_has_parens = 0;
 
 /** Lock the log_mutex to prevent others from changing the logfile_t list */
 #define LOCK_LOGS() STMT_BEGIN                                          \
-  tor_assert(log_mutex_initialized);                                    \
+  raw_assert(log_mutex_initialized);                                    \
   tor_mutex_acquire(&log_mutex);                                        \
   STMT_END
 /** Unlock the log_mutex */
 #define UNLOCK_LOGS() STMT_BEGIN                                        \
-  tor_assert(log_mutex_initialized);                                    \
+  raw_assert(log_mutex_initialized);                                    \
   tor_mutex_release(&log_mutex);                                        \
   STMT_END
 
@@ -308,22 +311,6 @@ log_prefix_(char *buf, size_t buf_len, int severity)
     return buf_len-1;
   else
     return n+r;
-}
-
-/** Minimal version of write_all, for use by logging. */
-static int
-write_all_to_fd(int fd, const char *buf, size_t count)
-{
-  size_t written = 0;
-  raw_assert(count < SSIZE_MAX);
-
-  while (written < count) {
-    ssize_t result = write(fd, buf+written, count-written);
-    if (result<0)
-      return -1;
-    written += result;
-  }
-  return 0;
 }
 
 /** If lf refers to an actual file that we have just opened, and the file
@@ -596,7 +583,7 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
   char *end_of_prefix=NULL;
   int callbacks_deferred = 0;
 
-  /* Call assert, not tor_assert, since tor_assert calls log on failure. */
+  /* Call assert, not raw_assert, since raw_assert calls log on failure. */
   raw_assert(format);
   /* check that severity is sane.  Overrunning the masks array leads to
    * interesting and hard to diagnose effects */
@@ -711,7 +698,7 @@ tor_log_update_sigsafe_err_fds(void)
   if (!found_real_stderr &&
       int_array_contains(fds, n_fds, STDOUT_FILENO)) {
     /* Don't use a virtual stderr when we're also logging to stdout. */
-    raw_assert(n_fds >= 2); /* Don't tor_assert inside log fns */
+    raw_assert(n_fds >= 2); /* Don't raw_assert inside log fns */
     fds[0] = fds[--n_fds];
   }
 
@@ -726,7 +713,7 @@ void
 tor_log_get_logfile_names(smartlist_t *out)
 {
   logfile_t *lf;
-  tor_assert(out);
+  raw_assert(out);
 
   LOCK_LOGS();
 
@@ -839,8 +826,8 @@ delete_log(logfile_t *victim)
     logfiles = victim->next;
   else {
     for (tmpl = logfiles; tmpl && tmpl->next != victim; tmpl=tmpl->next) ;
-//    tor_assert(tmpl);
-//    tor_assert(tmpl->next == victim);
+//    raw_assert(tmpl);
+//    raw_assert(tmpl->next == victim);
     if (!tmpl)
       return;
     tmpl->next = victim->next;
@@ -874,9 +861,9 @@ set_log_severity_config(int loglevelMin, int loglevelMax,
                         log_severity_list_t *severity_out)
 {
   int i;
-  tor_assert(loglevelMin >= loglevelMax);
-  tor_assert(loglevelMin >= LOG_ERR && loglevelMin <= LOG_DEBUG);
-  tor_assert(loglevelMax >= LOG_ERR && loglevelMax <= LOG_DEBUG);
+  raw_assert(loglevelMin >= loglevelMax);
+  raw_assert(loglevelMin >= LOG_ERR && loglevelMin <= LOG_DEBUG);
+  raw_assert(loglevelMax >= LOG_ERR && loglevelMax <= LOG_DEBUG);
   memset(severity_out, 0, sizeof(log_severity_list_t));
   for (i = loglevelMin; i >= loglevelMax; --i) {
     severity_out->masks[SEVERITY_MASK_IDX(i)] = ~0u;
@@ -1146,20 +1133,17 @@ mark_logs_temp(void)
 }
 
 /**
- * Add a log handler to send messages to <b>filename</b>. If opening the
- * logfile fails, -1 is returned and errno is set appropriately (by open(2)).
+ * Add a log handler to send messages to <b>filename</b> via <b>fd</b>. If
+ * opening the logfile failed, -1 is returned and errno is set appropriately
+ * (by open(2)).  Takes ownership of fd.
  */
 int
-add_file_log(const log_severity_list_t *severity, const char *filename,
-             const int truncate_log)
+add_file_log(const log_severity_list_t *severity,
+             const char *filename,
+             int fd)
 {
-  int fd;
   logfile_t *lf;
 
-  int open_flags = O_WRONLY|O_CREAT;
-  open_flags |= truncate_log ? O_TRUNC : O_APPEND;
-
-  fd = tor_open_cloexec(filename, open_flags, 0640);
   if (fd<0)
     return -1;
   if (tor_fd_seekend(fd)<0) {

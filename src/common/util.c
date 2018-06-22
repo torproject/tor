@@ -19,6 +19,7 @@
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/cc/torint.h"
 #include "lib/container/smartlist.h"
+#include "lib/fdio/fdio.h"
 #include "common/address.h"
 #include "common/sandbox.h"
 #include "lib/err/backtrace.h"

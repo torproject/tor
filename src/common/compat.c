@@ -733,80 +733,6 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
   tor_free(lockfile);
 }
 
-/** @{ */
-/** Some old versions of Unix didn't define constants for these values,
- * and instead expect you to say 0, 1, or 2. */
-#ifndef SEEK_SET
-#define SEEK_SET 0
-#endif
-#ifndef SEEK_CUR
-#define SEEK_CUR 1
-#endif
-#ifndef SEEK_END
-#define SEEK_END 2
-#endif
-/** @} */
-
-/** Return the position of <b>fd</b> with respect to the start of the file. */
-off_t
-tor_fd_getpos(int fd)
-{
-#ifdef _WIN32
-  return (off_t) _lseek(fd, 0, SEEK_CUR);
-#else
-  return (off_t) lseek(fd, 0, SEEK_CUR);
-#endif
-}
-
-/** Move <b>fd</b> to the end of the file. Return -1 on error, 0 on success.
- * If the file is a pipe, do nothing and succeed.
- **/
-int
-tor_fd_seekend(int fd)
-{
-#ifdef _WIN32
-  return _lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
-#else
-  off_t rc = lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
-#ifdef ESPIPE
-  /* If we get an error and ESPIPE, then it's a pipe or a socket of a fifo:
-   * no need to worry. */
-  if (rc < 0 && errno == ESPIPE)
-    rc = 0;
-#endif /* defined(ESPIPE) */
-  return (rc < 0) ? -1 : 0;
-#endif /* defined(_WIN32) */
-}
-
-/** Move <b>fd</b> to position <b>pos</b> in the file. Return -1 on error, 0
- * on success. */
-int
-tor_fd_setpos(int fd, off_t pos)
-{
-#ifdef _WIN32
-  return _lseek(fd, pos, SEEK_SET) < 0 ? -1 : 0;
-#else
-  return lseek(fd, pos, SEEK_SET) < 0 ? -1 : 0;
-#endif
-}
-
-/** Replacement for ftruncate(fd, 0): move to the front of the file and remove
- * all the rest of the file. Return -1 on error, 0 on success. */
-int
-tor_ftruncate(int fd)
-{
-  /* Rumor has it that some versions of ftruncate do not move the file pointer.
-   */
-  if (tor_fd_setpos(fd, 0) < 0)
-    return -1;
-
-#ifdef _WIN32
-  return _chsize(fd, 0);
-#else
-  return ftruncate(fd, 0);
-#endif
-}
-
 #undef DEBUG_SOCKET_COUNTING
 #ifdef DEBUG_SOCKET_COUNTING
 /** A bitarray of all fds that should be passed to tor_socket_close(). Only
@@ -2640,7 +2566,6 @@ compute_num_cpus(void)
   }
   return num_cpus;
 }
-
 
 /** As localtime_r, but defined for platforms that don't have it:
  *

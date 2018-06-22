@@ -6,6 +6,7 @@ include src/lib/compress/include.am
 include src/lib/container/include.am
 include src/lib/crypt_ops/include.am
 include src/lib/defs/include.am
+include src/lib/fdio/include.am
 include src/lib/include.libdonna.am
 include src/lib/intmath/include.am
 include src/lib/lock/include.am
