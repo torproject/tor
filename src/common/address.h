@@ -15,7 +15,7 @@
 #include "orconfig.h"
 #include "lib/cc/torint.h"
 #include "common/compat.h"
-#include "common/util_bug.h"
+#include "lib/log/util_bug.h"
 
 #ifdef ADDRESS_PRIVATE
 

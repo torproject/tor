@@ -13,4 +13,4 @@ ht.h
 siphash.h
 
 # XXX I'd like to remove this.
-common/util_bug.h
+lib/log/util_bug.h

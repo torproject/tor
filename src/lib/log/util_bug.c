@@ -8,7 +8,7 @@
  **/
 
 #include "orconfig.h"
-#include "common/util_bug.h"
+#include "lib/log/util_bug.h"
 #include "lib/log/torlog.h"
 #include "lib/err/backtrace.h"
 #ifdef TOR_UNIT_TESTS
@@ -41,7 +41,7 @@ tor_end_capture_bugs_(void)
     return;
   SMARTLIST_FOREACH(bug_messages, char *, cp, tor_free(cp));
   smartlist_free(bug_messages);
-nn  bug_messages = NULL;
+  bug_messages = NULL;
 }
 const smartlist_t *
 tor_get_captured_bug_log_(void)

@@ -32,7 +32,7 @@
 #include "lib/intmath/muldiv.h"
 #include "lib/intmath/cmp.h"
 #include "lib/log/ratelim.h"
-#include "common/util_bug.h"
+#include "lib/log/util_bug.h"
 
 #ifndef O_BINARY
 #define O_BINARY 0

@@ -17,7 +17,7 @@
 #include "lib/string/util_string.h"
 #include "lib/malloc/util_malloc.h"
 
-#include "common/util_bug.h"
+#include "lib/log/util_bug.h"
 
 #include <stdlib.h>
 #include <string.h>

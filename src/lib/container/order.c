@@ -14,7 +14,7 @@
 #include <stdlib.h>
 
 #include "lib/container/order.h"
-#include "common/util_bug.h"
+#include "lib/log/util_bug.h"
 
 /** Declare a function called <b>funcname</b> that acts as a find_nth_FOO
  * function for an array of type <b>elt_t</b>*.
