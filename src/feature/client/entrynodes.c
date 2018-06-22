@@ -406,6 +406,17 @@ get_remove_unlisted_guards_after_days(void)
                                  DFLT_REMOVE_UNLISTED_GUARDS_AFTER_DAYS,
                                  1, 365*10);
 }
+
+/**
+ * Return number of seconds that will make a guard no longer eligible
+ * for selection if unlisted for this long.
+ */
+static time_t
+get_remove_unlisted_guards_after_seconds(void)
+{
+  return get_remove_unlisted_guards_after_days() * 24 * 60 * 60;
+}
+
 /**
  * We remove unconfirmed guards from the sample after this many days,
  * regardless of whether they are listed or unlisted.
@@ -1237,30 +1248,28 @@ entry_guard_is_listed,(guard_selection_t *gs, const entry_guard_t *guard))
 }
 
 /**
- * Update the status of all sampled guards based on the arrival of a
- * new consensus networkstatus document.  This will include marking
- * some guards as listed or unlisted, and removing expired guards. */
-STATIC void
-sampled_guards_update_from_consensus(guard_selection_t *gs)
+ * Enumerate <b>sampled_entry_guards</b> smartlist in <b>gs</b>.
+ * For each <b>entry_guard_t</b> object in smartlist, do the following:
+ *  * Update <b>currently_listed</b> field to reflect if guard is listed
+ *    in guard selection <b>gs</b>.
+ *  * Set <b>unlisted_since_date</b> to approximate UNIX time of
+ *    unlisting if guard is unlisted (randomize within 20% of
+ *    get_remove_unlisted_guards_after_seconds()). Otherwise,
+ *    set it to 0.
+ *
+ * Require <b>gs</b> to be non-null pointer.
+ * Return a number of entries updated.
+ */
+static size_t
+sampled_guards_update_consensus_presence(guard_selection_t *gs)
 {
+  size_t n_changes = 0;
+
   tor_assert(gs);
-  const int REMOVE_UNLISTED_GUARDS_AFTER =
-    (get_remove_unlisted_guards_after_days() * 86400);
-  const int unlisted_since_slop = REMOVE_UNLISTED_GUARDS_AFTER / 5;
 
-  // It's important to use only a live consensus here; we don't want to
-  // make changes based on anything expired or old.
-  if (live_consensus_is_missing(gs)) {
-    log_info(LD_GUARD, "Not updating the sample guard set; we have "
-             "no live consensus.");
-    return;
-  }
-  log_info(LD_GUARD, "Updating sampled guard status based on received "
-           "consensus.");
+  const time_t unlisted_since_slop =
+    get_remove_unlisted_guards_after_seconds() /  5;
 
-  int n_changes = 0;
-
-  /* First: Update listed/unlisted. */
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     /* XXXX #20827 check ed ID too */
     const int is_listed = entry_guard_is_listed(gs, guard);
@@ -1304,14 +1313,33 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
     }
   } SMARTLIST_FOREACH_END(guard);
 
-  const time_t remove_if_unlisted_since =
-    approx_time() - REMOVE_UNLISTED_GUARDS_AFTER;
-  const time_t maybe_remove_if_sampled_before =
-    approx_time() - get_guard_lifetime();
-  const time_t remove_if_confirmed_before =
-    approx_time() - get_guard_confirmed_min_lifetime();
+  return n_changes;
+}
 
-  /* Then: remove the ones that have been junk for too long */
+/**
+ * Enumerate <b>sampled_entry_guards</b> smartlist in <b>gs</b>.
+ * For each <b>entry_guard_t</b> object in smartlist, do the following:
+ * * If <b>currently_listed</b> is false and <b>unlisted_since_date</b>
+ *   is earlier than <b>remove_if_unlisted_since</b> - remove it.
+ * * Otherwise, check if <b>sampled_on_date</b> is earlier than
+ *   <b>maybe_remove_if_sampled_before</b>.
+ *   * When above condition is correct, remove the guard if:
+ *     * It was never confirmed.
+ *     * It was confirmed before <b>remove_if_confirmed_before</b>.
+ *
+ * Require <b>gs</b> to be non-null pointer.
+ * Return number of entries deleted.
+ */
+static size_t
+sampled_guards_prune_obsolete_entries(guard_selection_t *gs,
+                                  const time_t remove_if_unlisted_since,
+                                  const time_t maybe_remove_if_sampled_before,
+                                  const time_t remove_if_confirmed_before)
+{
+  size_t n_changes = 0;
+
+  tor_assert(gs);
+
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     int rmv = 0;
 
@@ -1319,7 +1347,7 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
         guard->unlisted_since_date < remove_if_unlisted_since) {
       /*
         "We have a live consensus, and {IS_LISTED} is false, and
-         {FIRST_UNLISTED_AT} is over {REMOVE_UNLISTED_GUARDS_AFTER}
+         {FIRST_UNLISTED_AT} is over get_remove_unlisted_guards_after_days()
          days in the past."
       */
       log_info(LD_GUARD, "Removing sampled guard %s: it has been unlisted "
@@ -1354,6 +1382,45 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
       entry_guard_free(guard);
     }
   } SMARTLIST_FOREACH_END(guard);
+
+  return n_changes;
+}
+
+/**
+ * Update the status of all sampled guards based on the arrival of a
+ * new consensus networkstatus document.  This will include marking
+ * some guards as listed or unlisted, and removing expired guards. */
+STATIC void
+sampled_guards_update_from_consensus(guard_selection_t *gs)
+{
+  tor_assert(gs);
+
+  // It's important to use only a live consensus here; we don't want to
+  // make changes based on anything expired or old.
+  if (live_consensus_is_missing(gs)) {
+    log_info(LD_GUARD, "Not updating the sample guard set; we have "
+             "no live consensus.");
+    return;
+  }
+  log_info(LD_GUARD, "Updating sampled guard status based on received "
+           "consensus.");
+
+  /* First: Update listed/unlisted. */
+  size_t n_changes = sampled_guards_update_consensus_presence(gs);
+
+  const time_t remove_if_unlisted_since =
+    approx_time() - get_remove_unlisted_guards_after_seconds();
+  const time_t maybe_remove_if_sampled_before =
+    approx_time() - get_guard_lifetime();
+  const time_t remove_if_confirmed_before =
+    approx_time() - get_guard_confirmed_min_lifetime();
+
+  /* Then: remove the ones that have been junk for too long */
+  n_changes +=
+    sampled_guards_prune_obsolete_entries(gs,
+                                          remove_if_unlisted_since,
+                                          maybe_remove_if_sampled_before,
+                                          remove_if_confirmed_before);
 
   if (n_changes) {
     gs->primary_guards_up_to_date = 0;
