@@ -41,6 +41,7 @@
 #include "lib/string/util_string.h"
 #include "lib/wallclock/tor_gettimeofday.h"
 #include "lib/wallclock/approx_time.h"
+#include "lib/wallclock/tm_cvt.h"
 
 #ifdef HAVE_ANDROID_LOG_H
 #include <android/log.h>
@@ -298,7 +299,8 @@ log_prefix_(char *buf, size_t buf_len, int severity)
     ms -= ((int)now.tv_usec / 1000) % log_time_granularity;
   }
 
-  n = strftime(buf, buf_len, "%b %d %H:%M:%S", tor_localtime_r(&t, &tm));
+  n = strftime(buf, buf_len, "%b %d %H:%M:%S",
+               tor_localtime_r_msg(&t, &tm, NULL));
   r = tor_snprintf(buf+n, buf_len-n, ".%.3i [%s] ", ms,
                    sev_to_string(severity));
 
