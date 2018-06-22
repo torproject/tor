@@ -145,7 +145,7 @@ tor_localtime_r_msg(const time_t *timep, struct tm *result, char **err_out)
   r = localtime(timep);
   if (r)
     memcpy(result, r, sizeof(struct tm));
-  return correct_tm(1, timep, result, rm, err_out);
+  return correct_tm(1, timep, result, r, err_out);
 }
 #endif /* defined(HAVE_LOCALTIME_R) || ... */
 /** @} */
