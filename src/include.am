@@ -7,6 +7,7 @@ include src/lib/container/include.am
 include src/lib/crypt_ops/include.am
 include src/lib/defs/include.am
 include src/lib/include.libdonna.am
+include src/lib/intmath/include.am
 include src/lib/malloc/include.am
 include src/lib/string/include.am
 include src/lib/testsupport/include.am

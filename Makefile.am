@@ -45,6 +45,7 @@ TOR_UTIL_LIBS = \
 	src/lib/libtor-malloc.a \
         src/lib/libtor-wallclock.a \
         src/lib/libtor-err.a \
+        src/lib/libtor-intmath.a \
 	src/lib/libtor-ctime.a
 
 # Variants of the above for linking the testing variant of tor (for coverage
@@ -56,6 +57,7 @@ TOR_UTIL_TESTING_LIBS = \
 	src/lib/libtor-malloc-testing.a \
         src/lib/libtor-wallclock-testing.a \
         src/lib/libtor-err-testing.a \
+        src/lib/libtor-intmath.a \
         src/lib/libtor-ctime-testing.a
 
 # Internal crypto libraries used in Tor

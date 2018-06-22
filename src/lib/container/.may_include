@@ -7,10 +7,10 @@ lib/malloc/*.h
 lib/err/*.h
 lib/string/*.h
 lib/testsupport/testsupport.h
+lib/intmath/*.h
 
 ht.h
 siphash.h
 
 # XXX I'd like to remove this.
-common/util.h
 common/util_bug.h

@@ -27,6 +27,10 @@
 #include "lib/wallclock/approx_time.h"
 #include "lib/string/util_string.h"
 #include "lib/string/scanf.h"
+#include "lib/intmath/bits.h"
+#include "lib/intmath/addsub.h"
+#include "lib/intmath/muldiv.h"
+#include "lib/intmath/cmp.h"
 #include "common/util_bug.h"
 
 #ifndef O_BINARY
@@ -66,35 +70,10 @@ void tor_log_mallinfo(int severity);
 double tor_mathlog(double d) ATTR_CONST;
 long tor_lround(double d) ATTR_CONST;
 int64_t tor_llround(double d) ATTR_CONST;
-int tor_log2(uint64_t u64) ATTR_CONST;
-uint64_t round_to_power_of_2(uint64_t u64);
-unsigned round_to_next_multiple_of(unsigned number, unsigned divisor);
-uint32_t round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor);
-uint64_t round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor);
 int64_t sample_laplace_distribution(double mu, double b, double p);
 int64_t add_laplace_noise(int64_t signal, double random, double delta_f,
                           double epsilon);
-int n_bits_set_u8(uint8_t v);
 int64_t clamp_double_to_int64(double number);
-void simplify_fraction64(uint64_t *numer, uint64_t *denom);
-
-uint32_t tor_add_u32_nowrap(uint32_t a, uint32_t b);
-
-/* Compute the CEIL of <b>a</b> divided by <b>b</b>, for nonnegative <b>a</b>
- * and positive <b>b</b>.  Works on integer types only. Not defined if a+(b-1)
- * can overflow. */
-#define CEIL_DIV(a,b) (((a)+((b)-1))/(b))
-
-/* Return <b>v</b> if it's between <b>min</b> and <b>max</b>.  Otherwise
- * return <b>min</b> if <b>v</b> is smaller than <b>min</b>, or <b>max</b> if
- * <b>b</b> is larger than <b>max</b>.
- *
- * Requires that <b>min</b> is no more than <b>max</b>. May evaluate any of
- * its arguments more than once! */
-#define CLAMP(min,v,max)                        \
-  ( ((v) < (min)) ? (min) :                     \
-    ((v) > (max)) ? (max) :                     \
-    (v) )
 
 /* String manipulation */
 

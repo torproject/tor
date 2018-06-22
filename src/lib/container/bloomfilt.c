@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include "lib/malloc/util_malloc.h"
 #include "lib/container/bloomfilt.h"
-#include "common/util.h" // For tor_log2
+#include "lib/intmath/bits.h"
 
 /** Return a newly allocated digestset_t, optimized to hold a total of
  * <b>max_elements</b> digests with a reasonably low false positive weight. */

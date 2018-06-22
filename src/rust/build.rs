@@ -156,6 +156,7 @@ pub fn main() {
             cfg.component("tor-malloc");
             cfg.component("tor-err-testing");
             cfg.component("or-event-testing");
+            cfg.component("tor-intmath-testing");
             cfg.component("tor-ctime-testing");
             cfg.component("curve25519_donna");
             cfg.component("keccak-tiny");

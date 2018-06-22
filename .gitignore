@@ -173,6 +173,8 @@ uptime-*.json
 /src/lib/libtor-ctime-testing.a
 /src/lib/libtor-err.a
 /src/lib/libtor-err-testing.a
+/src/lib/libtor-intmath.a
+/src/lib/libtor-intmath-testing.a
 /src/lib/libtor-malloc.a
 /src/lib/libtor-malloc-testing.a
 /src/lib/libtor-string.a

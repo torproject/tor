@@ -6,6 +6,7 @@ lib/ctime/*.h
 lib/defs/*.h
 lib/malloc/*.h
 lib/err/*.h
+lib/intmath/*.h
 lib/string/*.h
 lib/testsupport/testsupport.h
 

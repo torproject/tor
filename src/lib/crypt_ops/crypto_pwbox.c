@@ -15,6 +15,7 @@
 #include "lib/crypt_ops/crypto_s2k.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/ctime/di_ops.h"
+#include "lib/intmath/muldiv.h"
 #include "common/util.h"
 #include "trunnel/pwbox.h"
 
@@ -212,4 +213,3 @@ crypto_unpwbox(uint8_t **out, size_t *outlen_out,
   memwipe(keys, 0, sizeof(keys));
   return rv;
 }
-
