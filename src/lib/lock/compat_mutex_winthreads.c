@@ -4,6 +4,7 @@
 /* See LICENSE for licensing information */
 
 #include "lib/lock/compat_mutex.h"
+#include "lib/err/torerr.h"
 
 void
 tor_locking_init(void)

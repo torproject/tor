@@ -64,6 +64,7 @@ void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
 
 /* smartlist_choose() is defined in crypto.[ch] */
 #ifdef DEBUG_SMARTLIST
+#include "lib/err/torerr.h"
 /** Return the number of items in sl.
  */
 static inline int smartlist_len(const smartlist_t *sl);
