@@ -143,8 +143,8 @@ endif
 
 src_or_tor_SOURCES = src/or/tor_main.c
 
-src/or/tor_main.$(OBJEXT) \
-  src/or/src_or_tor_cov-tor_main.$(OBJEXT): micro-revision.i
+src/or/git_revision.$(OBJEXT) \
+  src/or/src_or_libtor_app_testing_a-git_revision.$(OBJEXT): micro-revision.i
 
 AM_CPPFLAGS += -DSHARE_DATADIR="\"$(datadir)\""		\
 		-DLOCALSTATEDIR="\"$(localstatedir)\""	\

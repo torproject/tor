@@ -15,6 +15,9 @@ src_lib_libtor_log_testing_a_SOURCES = \
 src_lib_libtor_log_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
 src_lib_libtor_log_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
+src/lib/log/torlog.$(OBJEXT) \
+  src/lib/log/src_lib_libtor_log_testing_a-torlog.$(OBJEXT): micro-revision.i
+
 noinst_HEADERS +=					\
 	src/lib/log/ratelim.h				\
 	src/lib/log/torlog.h				\
