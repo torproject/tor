@@ -31,6 +31,8 @@ extern const uint8_t TOR_TOLOWER_TABLE[];
 #define TOR_TOLOWER(c) (TOR_TOLOWER_TABLE[(uint8_t)c])
 #define TOR_TOUPPER(c) (TOR_TOUPPER_TABLE[(uint8_t)c])
 
+inline int hex_decode_digit(char c);
+
 /** Helper: given a hex digit, return its value, or -1 if it isn't hex. */
 inline int
 hex_decode_digit(char c)

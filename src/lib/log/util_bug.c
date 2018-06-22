@@ -17,6 +17,8 @@
 #include "lib/malloc/util_malloc.h"
 #include "lib/string/printf.h"
 
+#include <string.h>
+
 #ifdef __COVERITY__
 int bug_macro_deadcode_dummy__ = 0;
 #endif
