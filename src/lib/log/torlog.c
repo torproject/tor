@@ -29,12 +29,14 @@
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
-#include "common/util.h"
+
 #define LOG_PRIVATE
 #include "common/torlog.h"
 #include "lib/container/smartlist.h"
 #include "lib/err/torerr.h"
+#include "lib/intmath/bits.h"
 #include "lib/malloc/util_malloc.h"
+#include "lib/string/util_string.h"
 #include "lib/wallclock/tor_gettimeofday.h"
 #include "lib/wallclock/approx_time.h"
 
@@ -304,6 +306,22 @@ log_prefix_(char *buf, size_t buf_len, int severity)
     return n+r;
 }
 
+/** Minimal version of write_all, for use by logging. */
+static int
+write_all_to_fd(int fd, const char *buf, size_t count)
+{
+  size_t written = 0;
+  raw_assert(count < SSIZE_MAX);
+
+  while (written < count) {
+    ssize_t result = write(fd, buf+written, count-written);
+    if (result<0)
+      return -1;
+    written += result;
+  }
+  return 0;
+}
+
 /** If lf refers to an actual file that we have just opened, and the file
  * contains no data, log an "opening new logfile" message at the top.
  *
@@ -337,7 +355,7 @@ log_tor_version(logfile_t *lf, int reset)
     tor_snprintf(buf+n, sizeof(buf)-n,
                  "Tor %s opening %slog file.\n", VERSION, is_new?"new ":"");
   }
-  if (write_all(lf->fd, buf, strlen(buf), 0) < 0) /* error */
+  if (write_all_to_fd(lf->fd, buf, strlen(buf)) < 0) /* error */
     return -1; /* failed */
   return 0;
 }
@@ -551,7 +569,7 @@ logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
       lf->callback(severity, domain, msg_after_prefix);
     }
   } else {
-    if (write_all(lf->fd, buf, msg_len, 0) < 0) { /* error */
+    if (write_all_to_fd(lf->fd, buf, msg_len) < 0) { /* error */
       /* don't log the error! mark this log entry to be blown away, and
        * continue. */
       lf->seems_dead = 1;

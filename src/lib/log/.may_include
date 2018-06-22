@@ -1,0 +1,3 @@
+
+lib/cc/*.h
+lib/malloc/*.h

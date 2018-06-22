@@ -126,43 +126,6 @@ int parse_iso_time_nospace(const char *cp, time_t *t);
 int parse_http_time(const char *buf, struct tm *tm);
 int format_time_interval(char *out, size_t out_len, long interval);
 
-/* Rate-limiter */
-
-/** A ratelim_t remembers how often an event is occurring, and how often
- * it's allowed to occur.  Typical usage is something like:
- *
-   <pre>
-    if (possibly_very_frequent_event()) {
-      const int INTERVAL = 300;
-      static ratelim_t warning_limit = RATELIM_INIT(INTERVAL);
-      char *m;
-      if ((m = rate_limit_log(&warning_limit, approx_time()))) {
-        log_warn(LD_GENERAL, "The event occurred!%s", m);
-        tor_free(m);
-      }
-    }
-   </pre>
-
-   As a convenience wrapper for logging, you can replace the above with:
-   <pre>
-   if (possibly_very_frequent_event()) {
-     static ratelim_t warning_limit = RATELIM_INIT(300);
-     log_fn_ratelim(&warning_limit, LOG_WARN, LD_GENERAL,
-                    "The event occurred!");
-   }
-   </pre>
- */
-typedef struct ratelim_t {
-  int rate;
-  time_t last_allowed;
-  int n_calls_since_last_time;
-} ratelim_t;
-
-#define RATELIM_INIT(r) { (r), 0, 0 }
-#define RATELIM_TOOMANY (16*1000*1000)
-
-char *rate_limit_log(ratelim_t *lim, time_t now);
-
 /* File helpers */
 ssize_t write_all(tor_socket_t fd, const char *buf, size_t count,int isSocket);
 ssize_t read_all(tor_socket_t fd, char *buf, size_t count, int isSocket);

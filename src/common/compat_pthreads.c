@@ -91,83 +91,6 @@ spawn_exit(void)
   pthread_exit(NULL);
 }
 
-/** A mutex attribute that we're going to use to tell pthreads that we want
- * "recursive" mutexes (i.e., once we can re-lock if we're already holding
- * them.) */
-static pthread_mutexattr_t attr_recursive;
-
-/** Initialize <b>mutex</b> so it can be locked.  Every mutex must be set
- * up with tor_mutex_init() or tor_mutex_new(); not both. */
-void
-tor_mutex_init(tor_mutex_t *mutex)
-{
-  if (PREDICT_UNLIKELY(!threads_initialized))
-    tor_threads_init(); // LCOV_EXCL_LINE
-  const int err = pthread_mutex_init(&mutex->mutex, &attr_recursive);
-  if (PREDICT_UNLIKELY(err)) {
-    // LCOV_EXCL_START
-    raw_assert_unreached_msg("Error creating a mutex.");
-    // LCOV_EXCL_STOP
-  }
-}
-
-/** As tor_mutex_init, but initialize a mutex suitable that may be
- * non-recursive, if the OS supports that. */
-void
-tor_mutex_init_nonrecursive(tor_mutex_t *mutex)
-{
-  int err;
-  if (!threads_initialized)
-    tor_threads_init(); // LCOV_EXCL_LINE
-  err = pthread_mutex_init(&mutex->mutex, NULL);
-  if (PREDICT_UNLIKELY(err)) {
-    // LCOV_EXCL_START
-    raw_assert_unreached_msg("Error creating a mutex.");
-    // LCOV_EXCL_STOP
-  }
-}
-
-/** Wait until <b>m</b> is free, then acquire it. */
-void
-tor_mutex_acquire(tor_mutex_t *m)
-{
-  int err;
-  raw_assert(m);
-  err = pthread_mutex_lock(&m->mutex);
-  if (PREDICT_UNLIKELY(err)) {
-    // LCOV_EXCL_START
-    raw_assert_unreached_msg("Error locking a mutex.");
-    // LCOV_EXCL_STOP
-  }
-}
-/** Release the lock <b>m</b> so another thread can have it. */
-void
-tor_mutex_release(tor_mutex_t *m)
-{
-  int err;
-  raw_assert(m);
-  err = pthread_mutex_unlock(&m->mutex);
-  if (PREDICT_UNLIKELY(err)) {
-    // LCOV_EXCL_START
-    raw_assert_unreached_msg("Error unlocking a mutex.");
-    // LCOV_EXCL_STOP
-  }
-}
-/** Clean up the mutex <b>m</b> so that it no longer uses any system
- * resources.  Does not free <b>m</b>.  This function must only be called on
- * mutexes from tor_mutex_init(). */
-void
-tor_mutex_uninit(tor_mutex_t *m)
-{
-  int err;
-  raw_assert(m);
-  err = pthread_mutex_destroy(&m->mutex);
-  if (PREDICT_UNLIKELY(err)) {
-    // LCOV_EXCL_START
-    raw_assert_unreached_msg("Error destroying a mutex.");
-    // LCOV_EXCL_STOP
-  }
-}
 /** Return an integer representing this thread. */
 unsigned long
 tor_get_thread_id(void)
@@ -328,8 +251,7 @@ void
 tor_threads_init(void)
 {
   if (!threads_initialized) {
-    pthread_mutexattr_init(&attr_recursive);
-    pthread_mutexattr_settype(&attr_recursive, PTHREAD_MUTEX_RECURSIVE);
+    tor_locking_init();
     const int ret1 = pthread_attr_init(&attr_detached);
     tor_assert(ret1 == 0);
 #ifndef PTHREAD_CREATE_DETACHED

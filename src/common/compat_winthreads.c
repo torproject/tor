@@ -54,33 +54,6 @@ spawn_exit(void)
   // LCOV_EXCL_STOP
 }
 
-void
-tor_mutex_init(tor_mutex_t *m)
-{
-  InitializeCriticalSection(&m->mutex);
-}
-void
-tor_mutex_init_nonrecursive(tor_mutex_t *m)
-{
-  InitializeCriticalSection(&m->mutex);
-}
-
-void
-tor_mutex_uninit(tor_mutex_t *m)
-{
-  DeleteCriticalSection(&m->mutex);
-}
-void
-tor_mutex_acquire(tor_mutex_t *m)
-{
-  raw_assert(m);
-  EnterCriticalSection(&m->mutex);
-}
-void
-tor_mutex_release(tor_mutex_t *m)
-{
-  LeaveCriticalSection(&m->mutex);
-}
 unsigned long
 tor_get_thread_id(void)
 {
