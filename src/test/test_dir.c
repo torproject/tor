@@ -1,4 +1,4 @@
-/* Copyright (c) 2001-2004, Roger Dingledine.
+                 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
@@ -1640,13 +1640,13 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   char *fname = tor_strdup(get_fname("V3BandwidthsFile"));
 
   /* Test Torflow file only with timestamp*/
-  tor_asprintf(&content, "%ld", timestamp);
+  tor_asprintf(&content, "%ld", (long)timestamp);
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(-1, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
 
   /* Test Torflow file with timestamp followed by '\n' */
-  tor_asprintf(&content, "%ld\n", timestamp);
+  tor_asprintf(&content, "%ld\n", (long)timestamp);
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
@@ -1659,7 +1659,7 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
     "pid_bw=57136645 pid_delta=2.12168374577 circ_fail=0.2 "
     "scanner=/filepath\n";
 
-  tor_asprintf(&content, "%ld\n%s", timestamp, torflow_relay_lines);
+  tor_asprintf(&content, "%ld\n%s", (long)timestamp, torflow_relay_lines);
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
@@ -1673,7 +1673,7 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
     "earliest_bandwidth=2018-05-08T16:13:26\n"
     "====\n";
 
-  tor_asprintf(&content, "%ld\n%s%s", timestamp, v110_header_lines,
+  tor_asprintf(&content, "%ld\n%s%s", (long)timestamp, v110_header_lines,
                torflow_relay_lines);
   write_str_to_file(fname, content, 0);
   tor_free(content);
@@ -1688,7 +1688,7 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
 
   /* Test Torflow with additional headers afer a correct bw line and more
    * bw lines after the headers. */
-  tor_asprintf(&content, "%ld\n%s%s%s", timestamp, torflow_relay_lines,
+  tor_asprintf(&content, "%ld\n%s%s%s", (long)timestamp, torflow_relay_lines,
                v110_header_lines, torflow_relay_lines);
   write_str_to_file(fname, content, 0);
   tor_free(content);
@@ -1700,7 +1700,7 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
     "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
     "bw=760 nick=Test rtt=380 time=2018-05-08T16:13:26\n";
 
-  tor_asprintf(&content, "%ld\n%s%s", timestamp, v110_header_lines,
+  tor_asprintf(&content, "%ld\n%s%s", (long)timestamp, v110_header_lines,
                sbws_relay_lines);
   write_str_to_file(fname, content, 0);
   tor_free(content);
@@ -6028,4 +6028,3 @@ struct testcase_t dir_tests[] = {
   DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   END_OF_TESTCASES
 };
-
