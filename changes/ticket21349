@@ -1,0 +1,6 @@
+  o Code simplification and refactoring:
+    - Split sampled_guards_update_from_consensus() and
+      select_entry_guard_for_circuit() into subfunctions.
+      In entry_guards_update_primary() unite
+      three smartlist enumerations into one and move smartlist
+      comparison code out of the function. Closes ticket 21349.
