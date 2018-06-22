@@ -93,6 +93,24 @@ static inline void smartlist_swap(smartlist_t *sl, int idx1, int idx2)
   }
 }
 
+/** Return true if there is shallow equality between smartlists -
+ * i.e. all indices correspond to exactly same object (pointer
+ * values are matching). Otherwise, return false.
+ */
+static inline int smartlist_shallow_eq(const smartlist_t *s1,
+                                       const smartlist_t *s2)
+{
+  if (smartlist_len(s1) != smartlist_len(s2))
+    return 0;
+
+  for (int i = 0; i < smartlist_len(s1); i++) {
+    if (smartlist_get(s1, i) != smartlist_get(s2, i))
+      return 0;
+  }
+
+  return 1;
+}
+
 void smartlist_del(smartlist_t *sl, int idx);
 void smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
