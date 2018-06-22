@@ -12,6 +12,7 @@
 
 #include "lib/crypt_ops/compat_openssl.h"
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
+#include "lib/string/util_string.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
@@ -158,4 +159,3 @@ crypto_openssl_free_all(void)
   }
 #endif /* !defined(NEW_THREAD_API) */
 }
-

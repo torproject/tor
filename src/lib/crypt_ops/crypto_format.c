@@ -20,6 +20,7 @@
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/string/util_string.h"
 #include "common/util.h"
 #include "common/util_format.h"
 #include "common/torlog.h"

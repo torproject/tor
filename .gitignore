@@ -175,6 +175,8 @@ uptime-*.json
 /src/lib/libtor-err-testing.a
 /src/lib/libtor-malloc.a
 /src/lib/libtor-malloc-testing.a
+/src/lib/libtor-string.a
+/src/lib/libtor-string-testing.a
 /src/lib/libtor-tls.a
 /src/lib/libtor-tls-testing.a
 /src/lib/libtor-trace.a

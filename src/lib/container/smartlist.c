@@ -14,9 +14,10 @@
 #include "lib/malloc/util_malloc.h"
 #include "lib/container/smartlist.h"
 #include "lib/err/torerr.h"
-#include "common/util.h" // For strstrip.
+#include "lib/malloc/util_malloc.h"
 #include "lib/defs/digest_sizes.h"
 #include "lib/ctime/di_ops.h"
+#include "lib/string/util_string.h"
 
 #include <stdlib.h>
 #include <string.h>

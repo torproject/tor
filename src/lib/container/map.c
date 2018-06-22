@@ -14,9 +14,10 @@
 #include "lib/container/map.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/defs/digest_sizes.h"
+#include "lib/string/util_string.h"
+#include "lib/malloc/util_malloc.h"
 
 #include "common/util_bug.h"
-#include "common/util.h" // For strlower
 
 #include <stdlib.h>
 #include <string.h>

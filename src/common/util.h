@@ -25,6 +25,8 @@
 #include "lib/err/torerr.h"
 #include "lib/malloc/util_malloc.h"
 #include "lib/wallclock/approx_time.h"
+#include "lib/string/util_string.h"
+#include "lib/string/scanf.h"
 #include "common/util_bug.h"
 
 #ifndef O_BINARY
@@ -96,22 +98,6 @@ uint32_t tor_add_u32_nowrap(uint32_t a, uint32_t b);
 
 /* String manipulation */
 
-/** Allowable characters in a hexadecimal string. */
-#define HEX_CHARACTERS "0123456789ABCDEFabcdef"
-void tor_strlower(char *s) ATTR_NONNULL((1));
-void tor_strupper(char *s) ATTR_NONNULL((1));
-int tor_strisprint(const char *s) ATTR_NONNULL((1));
-int tor_strisnonupper(const char *s) ATTR_NONNULL((1));
-int tor_strisspace(const char *s);
-int strcmp_opt(const char *s1, const char *s2);
-int strcmpstart(const char *s1, const char *s2) ATTR_NONNULL((1,2));
-int strcmp_len(const char *s1, const char *s2, size_t len) ATTR_NONNULL((1,2));
-int strcasecmpstart(const char *s1, const char *s2) ATTR_NONNULL((1,2));
-int strcmpend(const char *s1, const char *s2) ATTR_NONNULL((1,2));
-int strcasecmpend(const char *s1, const char *s2) ATTR_NONNULL((1,2));
-int fast_memcmpstart(const void *mem, size_t memlen, const char *prefix);
-
-void tor_strstrip(char *s, const char *strip) ATTR_NONNULL((1,2));
 long tor_parse_long(const char *s, int base, long min,
                     long max, int *ok, char **next);
 unsigned long tor_parse_ulong(const char *s, int base, unsigned long min,
@@ -120,16 +106,9 @@ double tor_parse_double(const char *s, double min, double max, int *ok,
                         char **next);
 uint64_t tor_parse_uint64(const char *s, int base, uint64_t min,
                          uint64_t max, int *ok, char **next);
+
 const char *hex_str(const char *from, size_t fromlen) ATTR_NONNULL((1));
-const char *eat_whitespace(const char *s);
-const char *eat_whitespace_eos(const char *s, const char *eos);
-const char *eat_whitespace_no_nl(const char *s);
-const char *eat_whitespace_eos_no_nl(const char *s, const char *eos);
-const char *find_whitespace(const char *s);
-const char *find_whitespace_eos(const char *s, const char *eos);
-const char *find_str_at_start_of_line(const char *haystack,
-                                      const char *needle);
-int string_is_C_identifier(const char *string);
+
 int string_is_key_value(int severity, const char *string);
 int string_is_valid_dest(const char *string);
 int string_is_valid_nonrfc_hostname(const char *string);
@@ -139,6 +118,7 @@ int string_is_valid_ipv6_address(const char *string);
 int tor_mem_is_zero(const char *mem, size_t len);
 int tor_digest_is_zero(const char *digest);
 int tor_digest256_is_zero(const char *digest);
+
 char *esc_for_log(const char *string) ATTR_MALLOC;
 char *esc_for_log_len(const char *chars, size_t n) ATTR_MALLOC;
 const char *escaped(const char *string);
@@ -147,11 +127,6 @@ char *tor_escape_str_for_pt_args(const char *string,
                                  const char *chars_to_escape);
 
 struct smartlist_t;
-int tor_vsscanf(const char *buf, const char *pattern, va_list ap) \
-  CHECK_SCANF(2, 0);
-int tor_sscanf(const char *buf, const char *pattern, ...)
-  CHECK_SCANF(2, 3);
-
 void smartlist_add_asprintf(struct smartlist_t *sl, const char *pattern, ...)
   CHECK_PRINTF(2, 3);
 void smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,

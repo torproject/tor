@@ -47,6 +47,8 @@
 
 #include "lib/cc/compat_compiler.h"
 #include "common/compat_time.h"
+#include "lib/string/compat_ctype.h"
+#include "lib/string/printf.h"
 
 #include <stdio.h>
 #include <errno.h>
@@ -97,16 +99,6 @@ typedef struct tor_mmap_t {
 tor_mmap_t *tor_mmap_file(const char *filename) ATTR_NONNULL((1));
 int tor_munmap_file(tor_mmap_t *handle) ATTR_NONNULL((1));
 
-int tor_snprintf(char *str, size_t size, const char *format, ...)
-  CHECK_PRINTF(3,4) ATTR_NONNULL((1,3));
-int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
-  CHECK_PRINTF(3,0) ATTR_NONNULL((1,3));
-
-int tor_asprintf(char **strp, const char *fmt, ...)
-  CHECK_PRINTF(2,3);
-int tor_vasprintf(char **strp, const char *fmt, va_list args)
-  CHECK_PRINTF(2,0);
-
 const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
                        size_t nlen) ATTR_NONNULL((1,3));
 static const void *tor_memstr(const void *haystack, size_t hlen,
@@ -116,28 +108,6 @@ tor_memstr(const void *haystack, size_t hlen, const char *needle)
 {
   return tor_memmem(haystack, hlen, needle, strlen(needle));
 }
-
-/* Much of the time when we're checking ctypes, we're doing spec compliance,
- * which all assumes we're doing ASCII. */
-#define DECLARE_CTYPE_FN(name)                                          \
-  static int TOR_##name(char c);                                        \
-  extern const uint32_t TOR_##name##_TABLE[];                           \
-  static inline int TOR_##name(char c) {                                \
-    uint8_t u = c;                                                      \
-    return !!(TOR_##name##_TABLE[(u >> 5) & 7] & (1u << (u & 31)));     \
-  }
-DECLARE_CTYPE_FN(ISALPHA)
-DECLARE_CTYPE_FN(ISALNUM)
-DECLARE_CTYPE_FN(ISSPACE)
-DECLARE_CTYPE_FN(ISDIGIT)
-DECLARE_CTYPE_FN(ISXDIGIT)
-DECLARE_CTYPE_FN(ISPRINT)
-DECLARE_CTYPE_FN(ISLOWER)
-DECLARE_CTYPE_FN(ISUPPER)
-extern const uint8_t TOR_TOUPPER_TABLE[];
-extern const uint8_t TOR_TOLOWER_TABLE[];
-#define TOR_TOLOWER(c) (TOR_TOLOWER_TABLE[(uint8_t)c])
-#define TOR_TOUPPER(c) (TOR_TOUPPER_TABLE[(uint8_t)c])
 
 char *tor_strtok_r_impl(char *str, const char *sep, char **lasts);
 #ifdef HAVE_STRTOK_R

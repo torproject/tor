@@ -41,6 +41,7 @@ endif
 TOR_UTIL_LIBS = \
 	src/common/libor.a \
 	src/lib/libtor-container.a \
+        src/lib/libtor-string.a \
 	src/lib/libtor-malloc.a \
         src/lib/libtor-wallclock.a \
         src/lib/libtor-err.a \
@@ -51,6 +52,7 @@ TOR_UTIL_LIBS = \
 TOR_UTIL_TESTING_LIBS = \
 	src/common/libor-testing.a \
 	src/lib/libtor-container-testing.a \
+        src/lib/libtor-string-testing.a \
 	src/lib/libtor-malloc-testing.a \
         src/lib/libtor-wallclock-testing.a \
         src/lib/libtor-err-testing.a \
