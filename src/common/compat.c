@@ -493,32 +493,6 @@ tor_strtok_r_impl(char *str, const char *sep, char **lasts)
   return start;
 }
 
-#ifdef _WIN32
-/** Take a filename and return a pointer to its final element.  This
- * function is called on __FILE__ to fix a MSVC nit where __FILE__
- * contains the full path to the file.  This is bad, because it
- * confuses users to find the home directory of the person who
- * compiled the binary in their warning messages.
- */
-const char *
-tor_fix_source_file(const char *fname)
-{
-  const char *cp1, *cp2, *r;
-  cp1 = strrchr(fname, '/');
-  cp2 = strrchr(fname, '\\');
-  if (cp1 && cp2) {
-    r = (cp1<cp2)?(cp2+1):(cp1+1);
-  } else if (cp1) {
-    r = cp1+1;
-  } else if (cp2) {
-    r = cp2+1;
-  } else {
-    r = fname;
-  }
-  return r;
-}
-#endif /* defined(_WIN32) */
-
 /**
  * Read a 16-bit value beginning at <b>cp</b>.  Equivalent to
  * *(uint16_t*)(cp), but will not cause segfaults on platforms that forbid

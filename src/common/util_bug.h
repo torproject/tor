@@ -37,8 +37,8 @@
 #define TOR_UTIL_BUG_H
 
 #include "orconfig.h"
-#include <stdlib.h>
-#include "common/compat.h"
+#include "lib/cc/compat_compiler.h"
+#include "lib/log/torlog.h"
 #include "lib/testsupport/testsupport.h"
 
 /* Replace assert() with a variant that sends failures to the log before
@@ -191,6 +191,14 @@ void tor_assertion_failed_(const char *fname, unsigned int line,
 void tor_bug_occurred_(const char *fname, unsigned int line,
                        const char *func, const char *expr,
                        int once);
+
+#ifdef _WIN32
+#define SHORT_FILE__ (tor_fix_source_file(__FILE__))
+const char *tor_fix_source_file(const char *fname);
+#else
+#define SHORT_FILE__ (__FILE__)
+#define tor_fix_source_file(s) (s)
+#endif /* defined(_WIN32) */
 
 #ifdef TOR_UNIT_TESTS
 void tor_capture_bugs_(int n);

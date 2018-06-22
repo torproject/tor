@@ -19,6 +19,7 @@
 #define TOKEN_BUCKET_PRIVATE
 
 #include "common/token_bucket.h"
+#include "common/compat.h"
 #include "common/util_bug.h"
 
 /**
@@ -252,4 +253,3 @@ token_bucket_rw_dec(token_bucket_rw_t *bucket,
     flags |= TB_WRITE;
   return flags;
 }
-

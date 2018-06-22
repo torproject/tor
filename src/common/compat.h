@@ -92,14 +92,6 @@ char *tor_strtok_r_impl(char *str, const char *sep, char **lasts);
 #define tor_strtok_r(str, sep, lasts) tor_strtok_r_impl(str, sep, lasts)
 #endif
 
-#ifdef _WIN32
-#define SHORT_FILE__ (tor_fix_source_file(__FILE__))
-const char *tor_fix_source_file(const char *fname);
-#else
-#define SHORT_FILE__ (__FILE__)
-#define tor_fix_source_file(s) (s)
-#endif /* defined(_WIN32) */
-
 /* ===== Time compatibility */
 
 struct tm *tor_localtime_r(const time_t *timep, struct tm *result);
