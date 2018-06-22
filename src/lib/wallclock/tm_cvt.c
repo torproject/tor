@@ -8,6 +8,7 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/wallclock/tm_cvt.h"
 #include "lib/string/printf.h"
+#include "lib/err/torerr.h"
 
 #include <errno.h>
 #include <time.h>
