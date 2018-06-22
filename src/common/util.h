@@ -451,6 +451,4 @@ STATIC int format_helper_exit_status(unsigned char child_state,
 
 #endif /* defined(UTIL_PRIVATE) */
 
-#define ARRAY_LENGTH(x) ((sizeof(x)) / sizeof(x[0]))
-
 #endif /* !defined(TOR_UTIL_H) */

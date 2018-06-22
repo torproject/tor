@@ -253,4 +253,7 @@
  */
 #define STRUCT_VAR_P(st, off) ((void*) ( ((char*)(st)) + (off) ) )
 
+/** Macro: Yields the number of elements in array x. */
+#define ARRAY_LENGTH(x) ((sizeof(x)) / sizeof(x[0]))
+
 #endif /* !defined(TOR_COMPAT_H) */
