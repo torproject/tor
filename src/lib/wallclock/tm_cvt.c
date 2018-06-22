@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <time.h>
 #include <string.h>
+#include <stdlib.h>
 
 #if !defined(_WIN32)
 /** Defined iff we need to add locks when defining fake versions of reentrant

@@ -58,12 +58,21 @@ def load_include_rules(fname):
             result.addPattern(line)
     return result
 
+MDD = "--mdd" in sys.argv[1:]
+
+if MDD:
+    print(
+
 for dirpath, dirnames, fnames in os.walk("src"):
     if ".may_include" in fnames:
         rules = load_include_rules(os.path.join(dirpath, RULES_FNAME))
-        for fname in fnames:
-            if fname_is_c(fname):
-                rules.applyToFile(os.path.join(dirpath,fname))
+        if MDD:
+            dp = dirpath.replace("src/","")
+            rules.dump_mdd(dp)
+        else:
+            for fname in fnames:
+                if fname_is_c(fname):
+                    rules.applyToFile(os.path.join(dirpath,fname))
 
 if trouble:
     err(
