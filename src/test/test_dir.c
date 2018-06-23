@@ -1,4 +1,4 @@
-                 /* Copyright (c) 2001-2004, Roger Dingledine.
+/* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
@@ -6028,3 +6028,4 @@ struct testcase_t dir_tests[] = {
   DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   END_OF_TESTCASES
 };
+
