@@ -2350,8 +2350,17 @@ set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc, time_t now,
    * descriptor (so that we know where to upload it).
    *
    * Depending on whether we are building the current or the next descriptor,
-   * services use a different SRV value. See [SERVICEUPLOAD] of
-   * rend-spec-v3.txt for more details. */
+   * services use a different SRV value. See [SERVICEUPLOAD] in
+   * rend-spec-v3.txt:
+   *
+   * In particular, for the current descriptor (aka first descriptor), Tor
+   * always uses the previous SRV for uploading the descriptor, and hence we
+   * should use the start time of the previous protocol run here.
+   *
+   * Whereas for the next descriptor (aka second descriptor), Tor always uses
+   * the current SRV for uploading the descriptor.  and hence we use the start
+   * time of the current protocol run.
+   */
   if (is_current) {
     srv_start = sr_state_get_start_time_of_previous_protocol_run(now);
   } else {
@@ -2400,6 +2409,9 @@ set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc, time_t now,
     rev_counter = crypto_ope_encrypt(ope, (int) seconds_since_start_of_srv);
     crypto_ope_free(ope);
   }
+
+  /* The OPE module returns UINT64_MAX in case of errors. */
+  tor_assert_nonfatal(rev_counter < UINT64_MAX);
 
   log_info(LD_REND, "Encrypted revision counter %d to %ld",
            (int) seconds_since_start_of_srv, (long int) rev_counter);
