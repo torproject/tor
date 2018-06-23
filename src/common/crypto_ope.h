@@ -19,9 +19,9 @@
  *  The current max value (220k seconds) stands for about 61 hours. The
  *  rationale here is as follows: The rev counter is the time of seconds since
  *  the start of an SRV period. SRVs are useful for about 48 hours (that's how
- *  long they stick on the consensus). Let's also add 12 hours of drift for
- *  clock skewed clients stuck with an old consensus, and we arrive to 60
- *  hours.
+ *  long they stick around on the consensus). Let's also add 12 hours of drift
+ *  for clock skewed services that might be using an old consensus and we
+ *  arrive to 60 hours.
  */
 #define OPE_INPUT_MAX 220000
 
