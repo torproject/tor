@@ -864,6 +864,7 @@ decode_link_specifiers(const char *encoded)
              sizeof(hs_spec->u.legacy_id));
       break;
     default:
+      tor_free(hs_spec);
       goto err;
     }
 
