@@ -3499,6 +3499,7 @@ client_likes_consensus(const struct consensus_cache_entry_t *ent,
   int have = 0;
 
   if (consensus_cache_entry_get_voter_id_digests(ent, voters) != 0) {
+    smartlist_free(voters);
     return 1; // We don't know the voters; assume the client won't mind. */
   }
 
