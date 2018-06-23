@@ -142,6 +142,9 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
 
   descp = desc;
  done:
+  if (descp == NULL)
+    tor_free(desc);
+
   return descp;
 }
 
