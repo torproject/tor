@@ -6028,3 +6028,4 @@ struct testcase_t dir_tests[] = {
   DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   END_OF_TESTCASES
 };
+
