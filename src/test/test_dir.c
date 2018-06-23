@@ -1680,7 +1680,7 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
 
   /* Test Torflow with additional headers afer a correct bw line */
-  tor_asprintf(&content, "%ld\n%s%s", timestamp, torflow_relay_lines,
+  tor_asprintf(&content, "%ld\n%s%s", (long)timestamp, torflow_relay_lines,
                v110_header_lines);
   write_str_to_file(fname, content, 0);
   tor_free(content);
@@ -6028,4 +6028,3 @@ struct testcase_t dir_tests[] = {
   DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   END_OF_TESTCASES
 };
-
