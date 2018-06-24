@@ -9,9 +9,9 @@ use libc::c_void;
 
 // Define a no-op implementation for testing Rust modules without linking to C
 #[cfg(feature = "testing")]
-pub fn allocate_and_copy_string(s: &String) -> *mut c_char {
+pub fn allocate_and_copy_string(s: &str) -> *mut c_char {
     use std::ffi::CString;
-    CString::new(s.as_str()).unwrap().into_raw()
+    CString::new(s).unwrap().into_raw()
 }
 
 // Defined only for tests, used for testing purposes, so that we don't need
@@ -39,7 +39,7 @@ extern "C" {
 /// A `*mut c_char` that should be freed by tor_free in C
 ///
 #[cfg(not(feature = "testing"))]
-pub fn allocate_and_copy_string(src: &String) -> *mut c_char {
+pub fn allocate_and_copy_string(src: &str) -> *mut c_char {
     let bytes: &[u8] = src.as_bytes();
 
     let size = mem::size_of_val::<[u8]>(bytes);
@@ -77,8 +77,7 @@ mod test {
 
         use tor_allocate::allocate_and_copy_string;
 
-        let empty = String::new();
-        let allocated_empty = allocate_and_copy_string(&empty);
+        let allocated_empty = allocate_and_copy_string("");
 
         let allocated_empty_rust =
             unsafe { CStr::from_ptr(allocated_empty).to_str().unwrap() };
@@ -95,8 +94,7 @@ mod test {
 
         use tor_allocate::allocate_and_copy_string;
 
-        let empty = String::from("foo bar biz");
-        let allocated_empty = allocate_and_copy_string(&empty);
+        let allocated_empty = allocate_and_copy_string("foo bar biz");
 
         let allocated_empty_rust =
             unsafe { CStr::from_ptr(allocated_empty).to_str().unwrap() };

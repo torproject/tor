@@ -198,8 +198,7 @@ pub extern "C" fn protover_compute_vote(
 ) -> *mut c_char {
 
     if list.is_null() {
-        let empty = String::new();
-        return allocate_and_copy_string(&empty);
+        return allocate_and_copy_string("");
     }
 
     // Dereference of raw pointer requires an unsafe block. The pointer is
