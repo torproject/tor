@@ -365,18 +365,6 @@ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
 
   if (v_family == AF_INET) {
     iph4 = tor_addr_to_ipv4h(addr);
-  } else if (v_family == AF_INET6) {
-    if (tor_addr_is_v4(addr)) { /* v4-mapped */
-      uint32_t *addr32 = NULL;
-      v_family = AF_INET;
-      // Work around an incorrect NULL pointer dereference warning in
-      // "clang --analyze" due to limited analysis depth
-      addr32 = tor_addr_to_in6_addr32(addr);
-      // To improve performance, wrap this assertion in:
-      // #if !defined(__clang_analyzer__) || PARANOIA
-      tor_assert(addr32);
-      iph4 = ntohl(addr32[3]);
-    }
   }
 
   if (v_family == AF_INET6) {
@@ -839,27 +827,13 @@ tor_addr_parse_mask_ports(const char *s,
   return -1;
 }
 
-/** Determine whether an address is IPv4, either native or IPv4-mapped IPv6.
- * Note that this is about representation only, as any decent stack will
- * reject IPv4-mapped addresses received on the wire (and won't use them
- * on the wire either).
- */
+/** Return true iff address <b>addr</b> is native IPv4. Else, return false. */
 int
 tor_addr_is_v4(const tor_addr_t *addr)
 {
   tor_assert(addr);
 
-  if (tor_addr_family(addr) == AF_INET)
-    return 1;
-
-  if (tor_addr_family(addr) == AF_INET6) {
-    /* First two don't need to be ordered */
-    uint32_t *a32 = tor_addr_to_in6_addr32(addr);
-    if (a32[0] == 0 && a32[1] == 0 && ntohl(a32[2]) == 0x0000ffffu)
-      return 1;
-  }
-
-  return 0; /* Not IPv4 - unknown family or a full-blood IPv6 address */
+  return tor_addr_family(addr) == AF_INET;
 }
 
 /** Determine whether an address <b>addr</b> is null, either all zeroes or

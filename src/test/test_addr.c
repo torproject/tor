@@ -414,50 +414,6 @@ test_addr_ip6_helpers(void *arg)
   test_external_ip("2001::", 0);
   test_external_ip("ffff::", 0);
 
-  test_external_ip("::ffff:0.0.0.0", 1);
-  test_internal_ip("::ffff:0.0.0.0", 0);
-  test_internal_ip("::ffff:0.255.255.255", 0);
-  test_external_ip("::ffff:1.0.0.0", 0);
-
-  test_external_ip("::ffff:9.255.255.255", 0);
-  test_internal_ip("::ffff:10.0.0.0", 0);
-  test_internal_ip("::ffff:10.255.255.255", 0);
-  test_external_ip("::ffff:11.0.0.0", 0);
-
-  test_external_ip("::ffff:126.255.255.255", 0);
-  test_internal_ip("::ffff:127.0.0.0", 0);
-  test_internal_ip("::ffff:127.255.255.255", 0);
-  test_external_ip("::ffff:128.0.0.0", 0);
-
-  test_external_ip("::ffff:172.15.255.255", 0);
-  test_internal_ip("::ffff:172.16.0.0", 0);
-  test_internal_ip("::ffff:172.31.255.255", 0);
-  test_external_ip("::ffff:172.32.0.0", 0);
-
-  test_external_ip("::ffff:192.167.255.255", 0);
-  test_internal_ip("::ffff:192.168.0.0", 0);
-  test_internal_ip("::ffff:192.168.255.255", 0);
-  test_external_ip("::ffff:192.169.0.0", 0);
-
-  test_external_ip("::ffff:169.253.255.255", 0);
-  test_internal_ip("::ffff:169.254.0.0", 0);
-  test_internal_ip("::ffff:169.254.255.255", 0);
-  test_external_ip("::ffff:169.255.0.0", 0);
-
-  /* tor_addr_compare(tor_addr_t x2) */
-  test_addr_compare("ffff::", OP_EQ, "ffff::0");
-  test_addr_compare("0::3:2:1", OP_LT, "0::ffff:0.3.2.1");
-  test_addr_compare("0::2:2:1", OP_LT, "0::ffff:0.3.2.1");
-  test_addr_compare("0::ffff:0.3.2.1", OP_GT, "0::0:0:0");
-  test_addr_compare("0::ffff:5.2.2.1", OP_LT,
-                    "::ffff:6.0.0.0"); /* XXXX wrong. */
-  tor_addr_parse_mask_ports("[::ffff:2.3.4.5]", 0, &t1, NULL, NULL, NULL);
-  tor_addr_parse_mask_ports("2.3.4.5", 0, &t2, NULL, NULL, NULL);
-  tt_int_op(tor_addr_compare(&t1, &t2, CMP_SEMANTIC), OP_EQ, 0);
-  tor_addr_parse_mask_ports("[::ffff:2.3.4.4]", 0, &t1, NULL, NULL, NULL);
-  tor_addr_parse_mask_ports("2.3.4.5", 0, &t2, NULL, NULL, NULL);
-  tt_int_op(tor_addr_compare(&t1, &t2, CMP_SEMANTIC), OP_LT, 0);
-
   /* test compare_masked */
   test_addr_compare_masked("ffff::", OP_EQ, "ffff::0", 128);
   test_addr_compare_masked("ffff::", OP_EQ, "ffff::0", 64);
