@@ -2883,10 +2883,10 @@ dirserv_orconn_tls_done(const tor_addr_t *addr,
                router_describe(ri),
                tor_addr_to_str(addrstr, addr, sizeof(addrstr), 1),
                ri->or_port);
-      if (tor_addr_family(addr) == AF_INET) {
+      if (tor_addr_is_v4(addr)) {
         rep_hist_note_router_reachable(digest_rcvd, addr, or_port, now);
         node->last_reachable = now;
-      } else if (tor_addr_family(addr) == AF_INET6) {
+      } else if (tor_addr_is_v4(addr)) {
         /* No rephist for IPv6.  */
         node->last_reachable6 = now;
       }

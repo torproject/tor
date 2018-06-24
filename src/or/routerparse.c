@@ -4322,7 +4322,7 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
    * Unlike descriptors, torrcs exit policy accept/reject can be followed by
    * either an IPv4 or IPv6 address. */
   if ((tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) &&
-       tor_addr_family(&r->addr) != AF_INET6) {
+       !tor_addr_is_v6(&r->addr)) {
     /* This is a non-fatal error, just ignore this one entry. */
     *malformed_list = 0;
     log_warn(LD_DIR, "IPv4 address '%s' with accept6/reject6 field type in "
@@ -4365,10 +4365,10 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
    * IPv6 addresses. Unlike torrcs, descriptor exit policies do not permit
    * accept/reject followed by IPv6. */
   if (((tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) &&
-       tor_addr_family(&newe->addr) == AF_INET)
+       tor_addr_is_v4(&newe->addr))
       ||
       ((tok->tp == K_ACCEPT || tok->tp == K_REJECT) &&
-       tor_addr_family(&newe->addr) == AF_INET6)) {
+       tor_addr_is_v6(&newe->addr))) {
     /* There's nothing the user can do about other relays' descriptors,
      * so we don't provide usage advice here. */
     log_warn(LD_DIR, "Mismatch between field type and address type in exit "
@@ -5508,7 +5508,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
       rend_intro_point_free(intro);
       goto err;
     }
-    if (tor_addr_family(&info->addr) != AF_INET) {
+    if (!tor_addr_is_v4(&info->addr)) {
       log_warn(LD_REND, "Introduction point address was not ipv4.");
       rend_intro_point_free(intro);
       goto err;

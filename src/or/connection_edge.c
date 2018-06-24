@@ -450,7 +450,7 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   if (reason == END_STREAM_REASON_EXITPOLICY &&
       !connection_edge_is_rendezvous_stream(conn)) {
     int addrlen;
-    if (tor_addr_family(&conn->base_.addr) == AF_INET) {
+    if (tor_addr_is_v4(&conn->base_.addr)) {
       set_uint32(payload+1, tor_addr_to_ipv4n(&conn->base_.addr));
       addrlen = 4;
     } else {
@@ -563,16 +563,15 @@ connected_cell_format_payload(uint8_t *payload_out,
                               const tor_addr_t *addr,
                               uint32_t ttl)
 {
-  const sa_family_t family = tor_addr_family(addr);
   int connected_payload_len;
 
   /* should be needless */
   memset(payload_out, 0, MAX_CONNECTED_CELL_PAYLOAD_LEN);
 
-  if (family == AF_INET) {
+  if (tor_addr_is_v4(addr)) {
     set_uint32(payload_out, tor_addr_to_ipv4n(addr));
     connected_payload_len = 4;
-  } else if (family == AF_INET6) {
+  } else if (tor_addr_is_v6(addr)) {
     set_uint32(payload_out, 0);
     set_uint8(payload_out + 4, 6);
     memcpy(payload_out + 5, tor_addr_to_in6_addr8(addr), 16);
@@ -1981,17 +1980,15 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
         /* XXX Duplicate call to tor_addr_parse. */
         if (tor_addr_parse(&addr, socks->address) >= 0) {
           /* If we reach this point, it's an IPv4 or an IPv6 address. */
-          sa_family_t family = tor_addr_family(&addr);
-
-          if ((family == AF_INET && ! conn->entry_cfg.ipv4_traffic) ||
-              (family == AF_INET6 && ! conn->entry_cfg.ipv6_traffic)) {
+          if ((tor_addr_is_v4(&addr) && ! conn->entry_cfg.ipv4_traffic) ||
+              (tor_addr_is_v6(&addr) && ! conn->entry_cfg.ipv6_traffic)) {
             /* You can't do an IPv4 address on a v6-only socks listener,
              * or vice versa. */
             log_warn(LD_NET, "Rejecting SOCKS request for an IP address "
                      "family that this listener does not support.");
             connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
             return -1;
-          } else if (family == AF_INET6 && socks->socks_version == 4) {
+          } else if (tor_addr_is_v6(&addr) && socks->socks_version == 4) {
             /* You can't make a socks4 request to an IPv6 address. Socks4
              * doesn't support that. */
             log_warn(LD_NET, "Rejecting SOCKS4 request for an IPv6 address.");
@@ -2006,11 +2003,11 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
                      "no IPv4 traffic supported.");
             connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
             return -1;
-          } else if (family == AF_INET6) {
+          } else if (tor_addr_is_v6(&addr)) {
             /* Tell the exit: we won't accept any ipv4 connection to an IPv6
              * address. */
             conn->entry_cfg.ipv4_traffic = 0;
-          } else if (family == AF_INET) {
+          } else if (tor_addr_is_v4(&addr)) {
             /* Tell the exit: we won't accept any ipv6 connection to an IPv4
              * address. */
             conn->entry_cfg.ipv6_traffic = 0;
@@ -3026,12 +3023,12 @@ connection_ap_handshake_socks_resolved_addr(entry_connection_t *conn,
                                             int ttl,
                                             time_t expires)
 {
-  if (tor_addr_family(answer) == AF_INET) {
+  if (tor_addr_is_v4(answer)) {
     uint32_t a = tor_addr_to_ipv4n(answer); /* network order */
     connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
                                            (uint8_t*)&a,
                                            ttl, expires);
-  } else if (tor_addr_family(answer) == AF_INET6) {
+  } else if (tor_addr_is_v6(answer)) {
     const uint8_t *a = tor_addr_to_in6_addr8(answer);
     connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV6,16,
                                            a,
@@ -3245,7 +3242,7 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
   } else if (conn->socks_request->socks_version == 5) {
     size_t buf_len;
     memset(buf,0,sizeof(buf));
-    if (tor_addr_family(&conn->edge_.base_.addr) == AF_INET) {
+    if (tor_addr_is_v4(&conn->edge_.base_.addr)) {
       buf[0] = 5; /* version 5 */
       buf[1] = (char)status;
       buf[2] = 0;
@@ -3680,7 +3677,7 @@ my_exit_policy_rejects(const tor_addr_t *addr,
   if (router_compare_to_my_exit_policy(addr, port)) {
     *why_rejected = "";
     return 1;
-  } else if (tor_addr_family(addr) == AF_INET6 && !get_options()->IPv6Exit) {
+  } else if (tor_addr_is_v6(addr) && !get_options()->IPv6Exit) {
     *why_rejected = " (IPv6 address without IPv6Exit configured)";
     return 1;
   }
@@ -3727,7 +3724,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
     addr = &conn->addr;
     port = conn->port;
 
-    if (tor_addr_family(addr) == AF_INET6)
+    if (tor_addr_is_v6(addr))
       conn->socket_family = AF_INET6;
 
     log_debug(LD_EXIT, "about to try connecting");

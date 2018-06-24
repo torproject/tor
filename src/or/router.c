@@ -2018,12 +2018,11 @@ router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port)
    * bit unusual, in that it contains IPv6 and IPv6 entries.  We don't want to
    * look at router_get_my_routerinfo()->ipv6_exit_policy, since that's a port
    * summary. */
-  if ((tor_addr_family(addr) == AF_INET ||
-       tor_addr_family(addr) == AF_INET6)) {
+  if (tor_addr_is_v4(addr) || tor_addr_is_v6(addr)) {
     return compare_tor_addr_to_addr_policy(addr, port,
                                me->exit_policy) != ADDR_POLICY_ACCEPTED;
 #if 0
-  } else if (tor_addr_family(addr) == AF_INET6) {
+  } else if (tor_addr_is_v6(addr)) {
     return get_options()->IPv6Exit &&
       desc_routerinfo->ipv6_exit_policy &&
       compare_tor_addr_to_short_policy(addr, port,
@@ -2329,7 +2328,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
       if (p->type == CONN_TYPE_OR_LISTENER &&
           ! p->server_cfg.no_advertise &&
           ! p->server_cfg.bind_ipv4_only &&
-          tor_addr_family(&p->addr) == AF_INET6) {
+          tor_addr_is_v6(&p->addr)) {
         /* Like IPv4, if the relay is configured using the default
          * authorities, disallow internal IPs. Otherwise, allow them. */
         const int default_auth = using_default_dir_authorities(options);
@@ -3015,8 +3014,7 @@ router_dump_router_to_string(routerinfo_t *router,
     }
   }
 
-  if (router->ipv6_orport &&
-      tor_addr_family(&router->ipv6_addr) == AF_INET6) {
+  if (router->ipv6_orport && tor_addr_is_v6(&router->ipv6_addr)) {
     char addr[TOR_ADDR_BUF_LEN];
     const char *a;
     a = tor_addr_to_str(addr, &router->ipv6_addr, sizeof(addr), 1);

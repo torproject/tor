@@ -1919,8 +1919,8 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
   }
 
   /* Check if we broke a mandatory address family restriction */
-  if ((must_ipv4 && tor_addr_family(&real_addr) == AF_INET6)
-      || (must_ipv6 && tor_addr_family(&real_addr) == AF_INET)) {
+  if ((must_ipv4 && tor_addr_is_v6(&real_addr))
+      || (must_ipv6 && tor_addr_is_v4(&real_addr))) {
     static int logged_backtrace = 0;
     log_info(LD_BUG, "Outgoing %s connection to %s violated ClientUseIPv%s 0.",
              conn->type == CONN_TYPE_OR ? "OR" : "Dir",
@@ -1940,8 +1940,8 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
   }
 
   /* Check if we couldn't satisfy an address family preference */
-  if ((!pref_ipv6 && tor_addr_family(&real_addr) == AF_INET6)
-      || (pref_ipv6 && tor_addr_family(&real_addr) == AF_INET)) {
+  if ((!pref_ipv6 && tor_addr_is_v6(&real_addr))
+      || (pref_ipv6 && tor_addr_is_v4(&real_addr))) {
     log_info(LD_NET, "Outgoing connection to %s doesn't satisfy "
              "ClientPreferIPv6%sPort %d, with ClientUseIPv4 %d, and "
              "fascist_firewall_use_ipv6 %d (ClientUseIPv6 %d and UseBridges "
@@ -2214,7 +2214,7 @@ connection_proxy_connect(connection_t *conn, int type)
 
       /* Send a SOCKS4 connect request */
 
-      if (tor_addr_family(&conn->addr) != AF_INET) {
+      if (!tor_addr_is_v4(&conn->addr)) {
         log_warn(LD_NET, "SOCKS4 client is incompatible with IPv6");
         return -1;
       }
@@ -2389,7 +2389,7 @@ connection_send_socks5_connect(connection_t *conn)
   buf[1] = SOCKS_COMMAND_CONNECT; /* command */
   buf[2] = 0; /* reserved */
 
-  if (tor_addr_family(&conn->addr) == AF_INET) {
+  if (tor_addr_is_v4(&conn->addr)) {
     uint32_t addr = tor_addr_to_ipv4n(&conn->addr);
 
     buf[3] = 1;
@@ -4474,9 +4474,9 @@ client_check_address_changed(tor_socket_t sock)
   }
   family = tor_addr_family(&out_addr);
 
-  if (family == AF_INET)
+  if (tor_addr_is_v4(&out_addr))
     last_interface_ip_ptr = &last_interface_ipv4;
-  else if (family == AF_INET6)
+  else if (tor_addr_is_v6(&out_addr))
     last_interface_ip_ptr = &last_interface_ipv6;
   else
     return;

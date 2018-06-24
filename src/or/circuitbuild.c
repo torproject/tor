@@ -1091,7 +1091,7 @@ circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
 
   log_debug(LD_CIRC,"starting to send subsequent skin.");
 
-  if (tor_addr_family(&hop->extend_info->addr) != AF_INET) {
+  if (!tor_addr_is_v4(&hop->extend_info->addr)) {
     log_warn(LD_BUG, "Trying to extend to a non-IPv4 address.");
     return - END_CIRC_REASON_INTERNAL;
   }

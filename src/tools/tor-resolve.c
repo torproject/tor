@@ -77,7 +77,7 @@ build_socks_resolve_request(char **out,
       log_err(LD_GENERAL, "Tried to do a reverse lookup on a non-IP!");
       return -1;
     }
-    ipv6 = reverse && tor_addr_family(&addr) == AF_INET6;
+    ipv6 = reverse && tor_addr_is_v6(&addr);
     addrlen = reverse ? (ipv6 ? 16 : 4) : 1 + strlen(hostname);
     if (addrlen > UINT8_MAX) {
       log_err(LD_GENERAL, "Hostname is too long!");

@@ -154,13 +154,13 @@ geoip_add_entry(const tor_addr_t *low, const tor_addr_t *high,
     tor_assert(!strcasecmp(c->countrycode, country));
   }
 
-  if (tor_addr_family(low) == AF_INET) {
+  if (tor_addr_is_v4(low)) {
     geoip_ipv4_entry_t *ent = tor_malloc_zero(sizeof(geoip_ipv4_entry_t));
     ent->ip_low = tor_addr_to_ipv4h(low);
     ent->ip_high = tor_addr_to_ipv4h(high);
     ent->country = idx;
     smartlist_add(geoip_ipv4_entries, ent);
-  } else if (tor_addr_family(low) == AF_INET6) {
+  } else if (tor_addr_is_v6(low)) {
     geoip_ipv6_entry_t *ent = tor_malloc_zero(sizeof(geoip_ipv6_entry_t));
     ent->ip_low = *tor_addr_to_in6_assert(low);
     ent->ip_high = *tor_addr_to_in6_assert(high);
@@ -450,9 +450,9 @@ geoip_get_country_by_ipv6(const struct in6_addr *addr)
 MOCK_IMPL(int,
 geoip_get_country_by_addr,(const tor_addr_t *addr))
 {
-  if (tor_addr_family(addr) == AF_INET) {
+  if (tor_addr_is_v4(addr)) {
     return geoip_get_country_by_ipv4(tor_addr_to_ipv4h(addr));
-  } else if (tor_addr_family(addr) == AF_INET6) {
+  } else if (tor_addr_is_v6(addr)) {
     return geoip_get_country_by_ipv6(tor_addr_to_in6(addr));
   } else {
     return -1;

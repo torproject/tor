@@ -4628,7 +4628,7 @@ dir_server_new(int is_authority,
   if (weight < 0)
     return NULL;
 
-  if (tor_addr_family(addr) == AF_INET)
+  if (tor_addr_is_v4(addr))
     a = tor_addr_to_ipv4h(addr);
   else
     return NULL;
@@ -4649,7 +4649,7 @@ dir_server_new(int is_authority,
   ent->type = type;
   ent->weight = weight;
   if (addrport_ipv6) {
-    if (tor_addr_family(&addrport_ipv6->addr) != AF_INET6) {
+    if (!tor_addr_is_v6(&addrport_ipv6->addr)) {
       log_warn(LD_BUG, "Hey, I got a non-ipv6 addr as addrport_ipv6.");
       tor_addr_make_unspec(&ent->ipv6_addr);
     } else {

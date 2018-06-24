@@ -337,7 +337,7 @@ cached_resolve_add_answer(cached_resolve_t *resolve,
       return;
 
     if (dns_result == DNS_ERR_NONE && answer_addr &&
-        tor_addr_family(answer_addr) == AF_INET) {
+        tor_addr_is_v4(answer_addr)) {
       resolve->result_ipv4.addr_ipv4 = tor_addr_to_ipv4h(answer_addr);
       resolve->res_status_ipv4 = RES_STATUS_DONE_OK;
     } else {
@@ -350,7 +350,7 @@ cached_resolve_add_answer(cached_resolve_t *resolve,
       return;
 
     if (dns_result == DNS_ERR_NONE && answer_addr &&
-        tor_addr_family(answer_addr) == AF_INET6) {
+        tor_addr_is_v6(answer_addr)) {
       memcpy(&resolve->result_ipv6.addr_ipv6,
              tor_addr_to_in6(answer_addr),
              sizeof(struct in6_addr));
@@ -723,8 +723,7 @@ dns_resolve_impl,(edge_connection_t *exitconn, int is_resolve,
   /* first check if exitconn->base_.address is an IP. If so, we already
    * know the answer. */
   if (tor_addr_parse(&addr, exitconn->base_.address) >= 0) {
-    if (tor_addr_family(&addr) == AF_INET ||
-        tor_addr_family(&addr) == AF_INET6) {
+    if (tor_addr_is_v4(&addr) || tor_addr_is_v6(&addr)) {
       tor_addr_copy(&exitconn->base_.addr, &addr);
       exitconn->address_ttl = DEFAULT_DNS_TTL;
       return 1;
@@ -1639,12 +1638,12 @@ launch_one_resolve(const char *address, uint8_t query_type,
     ++n_ipv6_requests_made;
     break;
   case DNS_PTR:
-    if (tor_addr_family(ptr_address) == AF_INET)
+    if (tor_addr_is_v4(ptr_address))
       req = evdns_base_resolve_reverse(the_evdns_base,
                                        tor_addr_to_in(ptr_address),
                                        DNS_QUERY_NO_SEARCH,
                                        evdns_callback, addr);
-    else if (tor_addr_family(ptr_address) == AF_INET6)
+    else if (tor_addr_is_v6(ptr_address))
       req = evdns_base_resolve_reverse_ipv6(the_evdns_base,
                                             tor_addr_to_in6(ptr_address),
                                             DNS_QUERY_NO_SEARCH,

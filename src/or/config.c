@@ -2938,7 +2938,7 @@ is_local_addr, (const tor_addr_t *addr))
   /* Check whether ip is on the same /24 as we are. */
   if (get_options()->EnforceDistinctSubnets == 0)
     return 0;
-  if (tor_addr_family(addr) == AF_INET) {
+  if (tor_addr_is_v4(addr)) {
     uint32_t ip = tor_addr_to_ipv4h(addr);
 
     /* It's possible that this next check will hit before the first time
@@ -6396,7 +6396,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
         if (tor_addr_port_parse(LOG_WARN, flag+strlen("ipv6="),
                                 &ipv6_addrport.addr, &ipv6_addrport.port,
                                 -1) < 0
-            || tor_addr_family(&ipv6_addrport.addr) != AF_INET6) {
+            || !tor_addr_is_v6(&ipv6_addrport.addr)) {
           log_warn(LD_CONFIG, "Bad ipv6 addr/port %s on DirAuthority line",
                    escaped(flag));
           goto err;
@@ -6510,7 +6510,7 @@ parse_dir_fallback_line(const char *line,
         if (tor_addr_port_parse(LOG_WARN, cp+strlen("ipv6="),
                                 &ipv6_addrport.addr, &ipv6_addrport.port,
                                 -1) < 0
-            || tor_addr_family(&ipv6_addrport.addr) != AF_INET6) {
+            || !tor_addr_is_v6(&ipv6_addrport.addr)) {
           log_warn(LD_CONFIG, "Bad ipv6 addr/port %s on FallbackDir line",
                    escaped(cp));
           goto end;
@@ -7024,12 +7024,12 @@ parse_port_config(smartlist_t *out,
                  portname, escaped(ports->value));
         goto err;
       }
-      if (bind_ipv4_only && tor_addr_family(&addr) == AF_INET6) {
+      if (bind_ipv4_only && tor_addr_is_v6(&addr)) {
         log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv6",
                  portname);
         goto err;
       }
-      if (bind_ipv6_only && tor_addr_family(&addr) == AF_INET) {
+      if (bind_ipv6_only && tor_addr_is_v4(&addr)) {
         log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv4",
                  portname);
         goto err;
@@ -7496,18 +7496,16 @@ parse_ports(or_options_t *options, int validate_only,
 static int
 port_binds_ipv4(const port_cfg_t *port)
 {
-  return tor_addr_family(&port->addr) == AF_INET ||
-         (tor_addr_family(&port->addr) == AF_UNSPEC
-          && !port->server_cfg.bind_ipv6_only);
+  return tor_addr_is_v4(&port->addr) || (tor_addr_is_unspec(&port->addr) &&
+                                         !port->server_cfg.bind_ipv6_only);
 }
 
 /* Does port bind to IPv6? */
 static int
 port_binds_ipv6(const port_cfg_t *port)
 {
-  return tor_addr_family(&port->addr) == AF_INET6 ||
-         (tor_addr_family(&port->addr) == AF_UNSPEC
-          && !port->server_cfg.bind_ipv4_only);
+  return tor_addr_is_v6(&port->addr) || (tor_addr_is_unspec(&port->addr) &&
+                                         !port->server_cfg.bind_ipv4_only);
 }
 
 /** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
@@ -7633,8 +7631,7 @@ get_first_listener_addrport_string(int listener_type)
     if (cfg->server_cfg.no_listen)
       continue;
 
-    if (cfg->type == listener_type &&
-        tor_addr_family(&cfg->addr) != AF_UNSPEC) {
+    if (cfg->type == listener_type && !tor_addr_is_unspec(&cfg->addr)) {
 
       /* We found the first listener of the type we are interested in! */
 
@@ -7738,8 +7735,7 @@ port_exists_by_type_addr_port(int listener_type, const tor_addr_t *addr,
         /* Wildcard matches IPv4 */
         const int cfg_v4 = port_binds_ipv4(cfg);
         const int cfg_any_v4 = tor_addr_is_null(&cfg->addr) && cfg_v4;
-        const int addr_v4 = tor_addr_family(addr) == AF_INET ||
-                            tor_addr_family(addr) == AF_UNSPEC;
+        const int addr_v4 = tor_addr_is_v4(addr) || tor_addr_is_unspec(addr);
         const int addr_any_v4 = tor_addr_is_null(&cfg->addr) && addr_v4;
         if ((cfg_any_v4 && addr_v4) || (cfg_v4 && addr_any_v4)) {
           return 1;
@@ -7747,8 +7743,7 @@ port_exists_by_type_addr_port(int listener_type, const tor_addr_t *addr,
         /* Wildcard matches IPv6 */
         const int cfg_v6 = port_binds_ipv6(cfg);
         const int cfg_any_v6 = tor_addr_is_null(&cfg->addr) && cfg_v6;
-        const int addr_v6 = tor_addr_family(addr) == AF_INET6 ||
-                            tor_addr_family(addr) == AF_UNSPEC;
+        const int addr_v6 = tor_addr_is_v6(addr) || tor_addr_is_unspec(addr);
         const int addr_any_v6 = tor_addr_is_null(&cfg->addr) && addr_v6;
         if ((cfg_any_v6 && addr_v6) || (cfg_v6 && addr_any_v6)) {
           return 1;

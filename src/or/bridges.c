@@ -730,14 +730,14 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
          bridge->port == ri->ipv6_orport)) {
       /* they match, so no need to do anything */
     } else {
-      if (tor_addr_family(&bridge->addr) == AF_INET) {
+      if (tor_addr_is_v4(&bridge->addr)) {
         ri->addr = tor_addr_to_ipv4h(&bridge->addr);
         ri->or_port = bridge->port;
         log_info(LD_DIR,
                  "Adjusted bridge routerinfo for '%s' to match configured "
                  "address %s:%d.",
                  ri->nickname, fmt_addr32(ri->addr), ri->or_port);
-      } else if (tor_addr_family(&bridge->addr) == AF_INET6) {
+      } else if (tor_addr_is_v6(&bridge->addr)) {
         tor_addr_copy(&ri->ipv6_addr, &bridge->addr);
         ri->ipv6_orport = bridge->port;
         log_info(LD_DIR,
@@ -753,7 +753,7 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
 
     if (options->ClientPreferIPv6ORPort == -1) {
       /* Mark which address to use based on which bridge_t we got. */
-      node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
+      node->ipv6_preferred = (tor_addr_is_v6(&bridge->addr) &&
                               !tor_addr_is_null(&node->ri->ipv6_addr));
     } else {
       /* Mark which address to use based on user preference */
@@ -787,7 +787,7 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
         bridge->port == rs->ipv6_orport)) {
       /* they match, so no need to do anything */
     } else {
-      if (tor_addr_family(&bridge->addr) == AF_INET) {
+      if (tor_addr_is_v4(&bridge->addr)) {
         rs->addr = tor_addr_to_ipv4h(&bridge->addr);
         rs->or_port = bridge->port;
         log_info(LD_DIR,
@@ -795,7 +795,7 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
                  "configured address %s.",
                  rs->nickname, fmt_addrport(&bridge->addr, rs->or_port));
       /* set IPv6 preferences even if there is no ri */
-      } else if (tor_addr_family(&bridge->addr) == AF_INET6) {
+      } else if (tor_addr_is_v6(&bridge->addr)) {
         tor_addr_copy(&rs->ipv6_addr, &bridge->addr);
         rs->ipv6_orport = bridge->port;
         log_info(LD_DIR,
@@ -811,7 +811,7 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
 
     if (options->ClientPreferIPv6ORPort == -1) {
       /* Mark which address to use based on which bridge_t we got. */
-      node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
+      node->ipv6_preferred = (tor_addr_is_v6(&bridge->addr) &&
                               !tor_addr_is_null(&node->rs->ipv6_addr));
     } else {
       /* Mark which address to use based on user preference */

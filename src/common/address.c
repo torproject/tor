@@ -107,8 +107,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
 {
   memset(sa_out, 0, len);
 
-  sa_family_t family = tor_addr_family(a);
-  if (family == AF_INET) {
+  if (tor_addr_is_v4(a)) {
     struct sockaddr_in *sin;
     if (len < (int)sizeof(struct sockaddr_in))
       return 0;
@@ -120,7 +119,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
     sin->sin_port = htons(port);
     sin->sin_addr.s_addr = tor_addr_to_ipv4n(a);
     return sizeof(struct sockaddr_in);
-  } else if (family == AF_INET6) {
+  } else if (tor_addr_is_v6(a)) {
     struct sockaddr_in6 *sin6;
     if (len < (int)sizeof(struct sockaddr_in6))
       return 0;
@@ -363,11 +362,11 @@ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
   tor_assert(addr);
   sa_family_t v_family = tor_addr_family(addr);
 
-  if (v_family == AF_INET) {
+  if (tor_addr_is_v4(addr)) {
     iph4 = tor_addr_to_ipv4h(addr);
   }
 
-  if (v_family == AF_INET6) {
+  if (tor_addr_is_v6(addr)) {
     const uint32_t *a32 = tor_addr_to_in6_addr32(addr);
     iph6[0] = ntohl(a32[0]);
     iph6[1] = ntohl(a32[1]);
@@ -386,7 +385,7 @@ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
       return 1;
 
     return 0;
-  } else if (v_family == AF_INET) {
+  } else if (tor_addr_is_v4(addr)) {
     if (for_listening && !iph4) /* special case for binding to 0.0.0.0 */
       return 0;
     if (((iph4 & 0xff000000) == 0x0a000000) || /*       10/8 */
@@ -783,9 +782,9 @@ tor_addr_parse_mask_ports(const char *s,
     } else { /* pick an appropriate mask, as none was given */
       if (any_flag)
         bits = 0;  /* This is okay whether it's V6 or V4 (FIX V4-mapped V6!) */
-      else if (tor_addr_family(addr_out) == AF_INET)
+      else if (tor_addr_is_v4(addr_out))
         bits = 32;
-      else if (tor_addr_family(addr_out) == AF_INET6)
+      else if (tor_addr_is_v6(addr_out))
         bits = 128;
     }
     *maskbits_out = (maskbits_t) bits;
@@ -1666,12 +1665,11 @@ get_interface_addresses_raw,(int severity, sa_family_t family))
 int
 tor_addr_is_multicast(const tor_addr_t *a)
 {
-  sa_family_t family = tor_addr_family(a);
-  if (family == AF_INET) {
+  if (tor_addr_is_v4(a)) {
     uint32_t ipv4h = tor_addr_to_ipv4h(a);
     if ((ipv4h >> 24) == 0xe0)
       return 1; /* Multicast */
-  } else if (family == AF_INET6) {
+  } else if (tor_addr_is_v6(a)) {
     const uint8_t *a32 = tor_addr_to_in6_addr8(a);
     if (a32[0] == 0xff)
       return 1;

@@ -735,10 +735,10 @@ client_dns_set_addressmap(entry_connection_t *for_conn,
   if (tor_addr_parse(&addr_tmp, address) >= 0)
     return; /* If address was an IP address already, don't add a mapping. */
 
-  if (tor_addr_family(val) == AF_INET) {
+  if (tor_addr_is_v4(val)) {
     if (! for_conn->entry_cfg.cache_ipv4_answers)
       return;
-  } else if (tor_addr_family(val) == AF_INET6) {
+  } else if (tor_addr_is_v6(val)) {
     if (! for_conn->entry_cfg.cache_ipv6_answers)
       return;
   }
@@ -859,7 +859,7 @@ address_is_in_virtual_range(const char *address)
   if (!strcasecmpend(address, ".virtual")) {
     return 1;
   } else if (tor_addr_parse(&addr, address) >= 0) {
-    const virtual_addr_conf_t *conf = (tor_addr_family(&addr) == AF_INET6) ?
+    const virtual_addr_conf_t *conf = tor_addr_is_v6(&addr) ?
       &virtaddr_conf_ipv6 : &virtaddr_conf_ipv4;
     if (tor_addr_compare_masked(&addr, &conf->addr, conf->bits, CMP_EXACT)==0)
       return 1;
@@ -876,7 +876,7 @@ get_random_virtual_addr(const virtual_addr_conf_t *conf, tor_addr_t *addr_out)
   uint8_t tmp[4];
   const uint8_t *addr_bytes;
   uint8_t bytes[16];
-  const int ipv6 = tor_addr_family(&conf->addr) == AF_INET6;
+  const int ipv6 = tor_addr_is_v6(&conf->addr);
   const int total_bytes = ipv6 ? 16 : 4;
 
   tor_assert(conf->bits <= total_bytes * 8);

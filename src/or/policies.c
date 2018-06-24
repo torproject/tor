@@ -144,9 +144,10 @@ policy_expand_unspec(smartlist_t **policy)
   tmp = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(*policy, addr_policy_t *, p) {
     sa_family_t family = tor_addr_family(&p->addr);
-    if (family == AF_INET6 || family == AF_INET || p->is_private) {
+    if (tor_addr_is_v6(&p->addr) || tor_addr_is_v4(&p->addr)
+                                 || p->is_private) {
       smartlist_add(tmp, p);
-    } else if (family == AF_UNSPEC) {
+    } else if (tor_addr_is_unspec(&p->addr)) {
       addr_policy_t newpolicy_ipv4;
       addr_policy_t newpolicy_ipv6;
       memcpy(&newpolicy_ipv4, p, sizeof(addr_policy_t));
@@ -417,15 +418,15 @@ fascist_firewall_allows_address(const tor_addr_t *addr,
   /* Clients stop using IPv4 if it's disabled. In most cases, clients also
    * stop using IPv4 if it's not preferred.
    * Servers must have IPv4 enabled and preferred. */
-  if (tor_addr_family(addr) == AF_INET && client_mode &&
+  if (tor_addr_is_v4(addr) && client_mode &&
       (!options->ClientUseIPv4 || (pref_only && pref_ipv6))) {
     return 0;
   }
 
   /* Clients and Servers won't use IPv6 unless it's enabled (and in most
    * cases, IPv6 must also be preferred before it will be used). */
-  if (tor_addr_family(addr) == AF_INET6 &&
-      (!fascist_firewall_use_ipv6(options) || (pref_only && !pref_ipv6))) {
+  if (tor_addr_is_v6(addr) && (!fascist_firewall_use_ipv6(options) ||
+                               (pref_only && !pref_ipv6))) {
     return 0;
   }
 
@@ -1605,7 +1606,7 @@ addr_policy_append_reject_addr(smartlist_t **dest, const tor_addr_t *addr)
   addr_policy_t p, *add;
   memset(&p, 0, sizeof(p));
   p.policy_type = ADDR_POLICY_REJECT;
-  p.maskbits = tor_addr_family(addr) == AF_INET6 ? 128 : 32;
+  p.maskbits = tor_addr_is_v6(addr) ? 128 : 32;
   tor_addr_copy(&p.addr, addr);
   p.prt_min = 1;
   p.prt_max = 65535;
@@ -1693,11 +1694,9 @@ exit_policy_remove_redundancies(smartlist_t *dest)
   {
     int kill_v4=0, kill_v6=0;
     for (i = 0; i < smartlist_len(dest); ++i) {
-      sa_family_t family;
       ap = smartlist_get(dest, i);
-      family = tor_addr_family(&ap->addr);
-      if ((family == AF_INET && kill_v4) ||
-          (family == AF_INET6 && kill_v6)) {
+      if ((tor_addr_is_v4(&ap->addr) && kill_v4) ||
+          (tor_addr_is_v6(&ap->addr) && kill_v6)) {
         smartlist_del_keeporder(dest, i--);
         addr_policy_free(ap);
         continue;
@@ -1705,9 +1704,9 @@ exit_policy_remove_redundancies(smartlist_t *dest)
 
       if (ap->maskbits == 0 && ap->prt_min <= 1 && ap->prt_max >= 65535) {
         /* This is a catch-all line -- later lines are unreachable. */
-        if (family == AF_INET) {
+        if (tor_addr_is_v4(&ap->addr)) {
           kill_v4 = 1;
-        } else if (family == AF_INET6) {
+        } else if (tor_addr_is_v6(&ap->addr)) {
           kill_v6 = 1;
         }
       }
@@ -1848,21 +1847,19 @@ policies_log_first_redundant_entry(const smartlist_t *policy)
   int first_redundant_entry = 0;
   tor_assert(policy);
   SMARTLIST_FOREACH_BEGIN(policy, const addr_policy_t *, p) {
-    sa_family_t family;
     int found_ipv4_wildcard = 0, found_ipv6_wildcard = 0;
     const int i = p_sl_idx;
 
     /* Look for accept/reject *[4|6|]:* entires */
     if (p->prt_min <= 1 && p->prt_max == 65535 && p->maskbits == 0) {
-      family = tor_addr_family(&p->addr);
       /* accept/reject *:* may have already been expanded into
        * accept/reject *4:*,accept/reject *6:*
        * But handle both forms.
        */
-      if (family == AF_INET || family == AF_UNSPEC) {
+      if (tor_addr_is_v4(&p->addr) || tor_addr_is_unspec(&p->addr)) {
         found_ipv4_wildcard = 1;
       }
-      if (family == AF_INET6 || family == AF_UNSPEC) {
+      if (tor_addr_is_v6(&p->addr) || tor_addr_is_unspec(&p->addr)) {
         found_ipv6_wildcard = 1;
       }
     }
@@ -2204,7 +2201,7 @@ exit_policy_is_general_exit_helper(smartlist_t *policy, int port)
 
   memset(subnet_status, 0, sizeof(subnet_status));
   SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, p) {
-    if (tor_addr_family(&p->addr) != AF_INET)
+    if (!tor_addr_is_v4(&p->addr))
       continue; /* IPv4 only for now */
     if (p->prt_min > port || p->prt_max < port)
       continue; /* Doesn't cover our port. */
@@ -2290,8 +2287,7 @@ policy_write_item(char *buf, size_t buflen, const addr_policy_t *policy,
   const char *addrpart;
   int result;
   const int is_accept = policy->policy_type == ADDR_POLICY_ACCEPT;
-  const sa_family_t family = tor_addr_family(&policy->addr);
-  const int is_ip6 = (family == AF_INET6);
+  const int is_ip6 = tor_addr_is_v6(&policy->addr);
 
   tor_addr_to_str(addrbuf, &policy->addr, sizeof(addrbuf), 1);
 
@@ -2301,9 +2297,9 @@ policy_write_item(char *buf, size_t buflen, const addr_policy_t *policy,
   } else if (policy->maskbits == 0) {
     if (format_for_desc)
       addrpart = "*";
-    else if (family == AF_INET6)
+    else if (tor_addr_is_v6(&policy->addr))
       addrpart = "*6";
-    else if (family == AF_INET)
+    else if (tor_addr_is_v4(&policy->addr))
       addrpart = "*4";
     else
       addrpart = "*";
@@ -2903,7 +2899,7 @@ compare_tor_addr_to_node_policy(const tor_addr_t *addr, uint16_t port,
   if (node->rejects_all)
     return ADDR_POLICY_REJECTED;
 
-  if (addr && tor_addr_family(addr) == AF_INET6) {
+  if (addr && tor_addr_is_v6(addr)) {
     const short_policy_t *p = NULL;
     if (node->ri)
       p = node->ri->ipv6_exit_policy;
@@ -2947,10 +2943,10 @@ policy_dump_to_string(const smartlist_t *policy_list,
   SMARTLIST_FOREACH_BEGIN(policy_list, addr_policy_t *, tmpe) {
     char *pbuf;
     int bytes_written_to_pbuf;
-    if ((tor_addr_family(&tmpe->addr) == AF_INET6) && (!include_ipv6)) {
+    if (tor_addr_is_v6(&tmpe->addr) && (!include_ipv6)) {
       continue; /* Don't include IPv6 parts of address policy */
     }
-    if ((tor_addr_family(&tmpe->addr) == AF_INET) && (!include_ipv4)) {
+    if (tor_addr_is_v4(&tmpe->addr) && (!include_ipv4)) {
       continue; /* Don't include IPv4 parts of address policy */
     }
 

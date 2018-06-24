@@ -2670,7 +2670,7 @@ tor_lookup_hostname,(const char *name, uint32_t *addr))
   if ((ret = tor_addr_lookup(name, AF_INET, &myaddr)))
     return ret;
 
-  if (tor_addr_family(&myaddr) == AF_INET) {
+  if (tor_addr_is_v4(&myaddr)) {
     *addr = tor_addr_to_ipv4h(&myaddr);
     return ret;
   }
