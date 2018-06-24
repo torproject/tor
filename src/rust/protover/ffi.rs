@@ -105,9 +105,10 @@ pub extern "C" fn protocol_list_supports_protocol(
         Ok(n) => n.into(),
         Err(_) => return 0,
     };
-    match proto_entry.supports_protocol(&protocol, &version) {
-        false => return 0,
-        true  => return 1,
+    if proto_entry.supports_protocol(&protocol, &version) {
+        1
+    } else {
+        0
     }
 }
 
@@ -206,13 +207,16 @@ pub extern "C" fn protover_compute_vote(
     let mut proto_entries: Vec<UnvalidatedProtoEntry> = Vec::new();
 
     for datum in data {
-        let entry: UnvalidatedProtoEntry = match allow_long_proto_names {
-            true => match UnvalidatedProtoEntry::from_str_any_len(datum.as_str()) {
+        let entry: UnvalidatedProtoEntry = if allow_long_proto_names {
+            match UnvalidatedProtoEntry::from_str_any_len(datum.as_str()) {
                 Ok(n)  => n,
-                Err(_) => continue},
-            false => match datum.parse() {
+                Err(_) => continue
+            }
+        } else {
+            match datum.parse() {
                 Ok(n)  => n,
-                Err(_) => continue},
+                Err(_) => continue
+            }
         };
         proto_entries.push(entry);
     }
