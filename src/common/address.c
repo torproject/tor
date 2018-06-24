@@ -836,6 +836,15 @@ tor_addr_is_v4(const tor_addr_t *addr)
   return tor_addr_family(addr) == AF_INET;
 }
 
+/** Return true iff address <b>addr</b> is native IPv6. Else, return false. */
+int
+tor_addr_is_v6(const tor_addr_t *addr)
+{
+  tor_assert(addr);
+
+  return tor_addr_family(addr) == AF_INET6;
+}
+
 /** Determine whether an address <b>addr</b> is null, either all zeroes or
  *  belonging to family AF_UNSPEC.
  */
