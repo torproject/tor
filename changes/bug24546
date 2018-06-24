@@ -1,0 +1,9 @@
+  o Minor bugfixes (networking):
+    - Whenever possible, use functions like tor_addr_is_v4() to check
+      the IP address family rather than comparing family directly. We
+      introduce  tor_addr_is_v6() and tor_addr_is_unspec() to do for
+      IPv6 and unspecified addresses what tor_addr_is_v4() does for
+      IPv4. Also, we reject IPv4-mapped IPv6 addresses in
+      tor_addr_is_v4(). Fixes bug 24546; bugfix on 0.3.5.1-alpha.
+      Patch by Neel Chauhan.
+
