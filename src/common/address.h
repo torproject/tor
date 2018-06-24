@@ -235,6 +235,7 @@ struct sipkey;
 uint64_t tor_addr_keyed_hash(const struct sipkey *key, const tor_addr_t *addr);
 int tor_addr_is_v4(const tor_addr_t *addr);
 int tor_addr_is_v6(const tor_addr_t *addr);
+int tor_addr_is_unspec(const tor_addr_t *addr);
 int tor_addr_is_internal_(const tor_addr_t *ip, int for_listening,
                           const char *filename, int lineno);
 #define tor_addr_is_internal(addr, for_listening) \

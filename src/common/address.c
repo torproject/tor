@@ -845,6 +845,16 @@ tor_addr_is_v6(const tor_addr_t *addr)
   return tor_addr_family(addr) == AF_INET6;
 }
 
+/** Return true iff address family of <b>addr</b> is AF_UNSPEC. Else, return
+ * false. */
+int
+tor_addr_is_unspec(const tor_addr_t *addr)
+{
+  tor_assert(addr);
+
+  return tor_addr_family(addr) == AF_UNSPEC;
+}
+
 /** Determine whether an address <b>addr</b> is null, either all zeroes or
  *  belonging to family AF_UNSPEC.
  */
