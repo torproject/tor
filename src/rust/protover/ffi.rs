@@ -61,10 +61,8 @@ pub extern "C" fn protover_all_supported(
         Ok(n)  => n,
         Err(_) => return 1,
     };
-    let maybe_unsupported: Option<UnvalidatedProtoEntry> = relay_proto_entry.all_supported();
 
-    if maybe_unsupported.is_some() {
-        let unsupported: UnvalidatedProtoEntry = maybe_unsupported.unwrap();
+    if let Some(unsupported) = relay_proto_entry.all_supported() {
         let c_unsupported: CString = match CString::new(unsupported.to_string()) {
             Ok(n) => n,
             Err(_) => return 1,
