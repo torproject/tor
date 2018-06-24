@@ -49,7 +49,7 @@
 /**
  * \file dirserv.c
  * \brief Directory server core implementation. Manages directory
- * contents and generates directories.
+ * contents and generates directory documents.
  *
  * This module implements most of directory cache functionality, and some of
  * the directory authority functionality.  The directory.c module delegates
