@@ -606,8 +606,11 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
       char *tmp = smartlist_join_strings(list_good, " ", 0, NULL);
       smartlist_add_asprintf(sl,
                    "A consensus needs %d good signatures from recognized "
-                   "authorities for us to accept it. This one has %d (%s).",
-                   n_required, n_good, tmp);
+                   "authorities for us to accept it. "
+                   "This %s one has %d (%s).",
+                   n_required,
+                   networkstatus_get_flavor_name(consensus->flavor),
+                   n_good, tmp);
       tor_free(tmp);
       if (n_no_signature) {
         tmp = smartlist_join_strings(list_no_signature, " ", 0, NULL);
