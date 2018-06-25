@@ -169,19 +169,11 @@ parse_commandline(int argc, char **argv)
     } else if (!strcmp(argv[i], "-v")) {
       verbose = 1;
     } else if (!strcmp(argv[i], "-a")) {
-      uint32_t addr;
-      uint16_t port;
-      char b[INET_NTOA_BUF_LEN];
-      struct in_addr in;
       if (i+1>=argc) {
         fprintf(stderr, "No argument to -a\n");
         return 1;
       }
-      if (addr_port_lookup(LOG_ERR, argv[++i], NULL, &addr, &port)<0)
-        return 1;
-      in.s_addr = htonl(addr);
-      tor_inet_ntoa(&in, b, sizeof(b));
-      tor_asprintf(&address, "%s:%d", b, (int)port);
+      address = argv[++i];
     } else if (!strcmp(argv[i], "--create-identity-key")) {
       make_new_id = 1;
     } else if (!strcmp(argv[i], "--passphrase-fd")) {
@@ -566,11 +558,9 @@ main(int argc, char **argv)
     EVP_PKEY_free(identity_key);
   if (signing_key)
     EVP_PKEY_free(signing_key);
-  tor_free(address);
   tor_free(identity_key_file);
   tor_free(signing_key_file);
   tor_free(certificate_file);
-  tor_free(address);
 
   crypto_global_cleanup();
   return r;

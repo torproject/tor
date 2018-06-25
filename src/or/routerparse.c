@@ -2384,18 +2384,16 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
 
   tok = find_opt_by_keyword(tokens, K_DIR_ADDRESS);
   if (tok) {
-    struct in_addr in;
     char *address = NULL;
     tor_assert(tok->n_args);
     /* XXX++ use some tor_addr parse function below instead. -RD */
     if (tor_addr_port_split(LOG_WARN, tok->args[0], &address,
                             &cert->dir_port) < 0 ||
-        tor_inet_aton(address, &in) == 0) {
+        tor_lookup_hostname(address, &cert->addr) != 0) {
       log_warn(LD_DIR, "Couldn't parse dir-address in certificate");
       tor_free(address);
       goto err;
     }
-    cert->addr = ntohl(in.s_addr);
     tor_free(address);
   }
 
