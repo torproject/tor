@@ -1,3 +1,5 @@
 [submodule "src/ext/rust"]
 	path = src/ext/rust
-	url = https://git.torproject.org/tor-rust-dependencies
+	url = https://github.com/isislovecruft/tor-rust-dependencies
+	branch = add/digest
+	
