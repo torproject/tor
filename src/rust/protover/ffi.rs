@@ -129,10 +129,7 @@ pub extern "C" fn protover_contains_long_protocol_names_(
         Err(_) => return 1
     };
 
-    let protocol_entry : Result<UnvalidatedProtoEntry,_> =
-        protocol_list.parse();
-
-    match protocol_entry {
+    match protocol_list.parse::<UnvalidatedProtoEntry>() {
         Ok(_) => 0,
         Err(_) => 1,
     }
