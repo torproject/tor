@@ -230,3 +230,6 @@
 
 # Email sent directly to teor
 212.51.156.193:995 orport=110 id=32E7AAF1F602814D699BEF6761AD03E387758D49 ipv6=[2a02:168:4a01::49]:110
+
+# Was moved from blacklist to whitelist by mistake (https://trac.torproject.org/projects/tor/ticket/24805#comment:6)
+85.230.184.93:9030 orport=443 id=855BC2DABE24C861CD887DB9B2E950424B49FC34
