@@ -415,7 +415,7 @@ test_geoip_load_file(void *arg)
             geoip_db_digest(AF_INET));
 
   const char *fname = get_fname("geoip");
-  tt_int_op(0, OP_EQ, write_str_to_file(fname, GEOIP_CONTENT, 0));
+  tt_int_op(0, OP_EQ, write_str_to_file(fname, GEOIP_CONTENT, 1));
 
   int rv = geoip_load_file(AF_INET, fname);
   if (rv != 0) {
@@ -491,7 +491,7 @@ test_geoip6_load_file(void *arg)
     "2001:4878:12a::,2001:4878:203:ffff:ffff:ffff:ffff:ffff,US\n"
     "2001:4878:204::,2001:4878:204:ffff:ffff:ffff:ffff:ffff,DE\n"
     "2001:4878:205::,2001:4878:214:ffff:ffff:ffff:ffff:ffff,US\n";
-  tt_int_op(0, OP_EQ, write_str_to_file(fname6, CONTENT, 0));
+  tt_int_op(0, OP_EQ, write_str_to_file(fname6, CONTENT, 1));
 
   tt_int_op(0, OP_EQ, geoip_load_file(AF_INET6, fname6));
 
@@ -541,8 +541,8 @@ test_geoip_load_2nd_file(void *arg)
   char *fname_geoip = tor_strdup(get_fname("geoip_data"));
   char *fname_empty = tor_strdup(get_fname("geoip_empty"));
 
-  tt_int_op(0, OP_EQ, write_str_to_file(fname_geoip, GEOIP_CONTENT, 0));
-  tt_int_op(0, OP_EQ, write_str_to_file(fname_empty, "\n", 0));
+  tt_int_op(0, OP_EQ, write_str_to_file(fname_geoip, GEOIP_CONTENT, 1));
+  tt_int_op(0, OP_EQ, write_str_to_file(fname_empty, "\n", 1));
 
   /* Load 1st geoip file */
   tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, fname_geoip));
