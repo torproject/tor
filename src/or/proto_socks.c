@@ -299,6 +299,7 @@ parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
     goto end;
   }
 
+  tor_assert(parsed >= 0);
   *drain_out = (size_t)parsed;
 
   size_t n_methods = (size_t)socks5_client_version_get_n_methods(trunnel_req);
