@@ -123,8 +123,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
   socks4_client_request_t *trunnel_req;
 
   ssize_t parsed =
-  socks4_client_request_parse(&trunnel_req, (const uint8_t *)raw_data,
-                              datalen);
+  socks4_client_request_parse(&trunnel_req, raw_data, datalen);
 
   if (parsed == -1) {
     log_warn(LD_APP, "socks4: parsing failed - invalid request.");
