@@ -413,6 +413,9 @@ parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
   ssize_t parsed = socks5_client_userpass_auth_parse(&trunnel_req, raw_data,
                                                      datalen);
 
+  tor_assert(drain_out);
+  *drain_out = 0;
+
   if (parsed == -1) {
     log_warn(LD_APP, "socks5: parsing failed - invalid user/pass "
                      "authentication message.");
