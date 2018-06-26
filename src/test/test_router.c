@@ -49,7 +49,6 @@ mock_we_are_hibernating(void)
 static void
 test_router_check_descriptor_bandwidth_changed(void *arg)
 {
-
   (void)arg;
   routerinfo_t routerinfo;
   memset(&routerinfo, 0, sizeof(routerinfo));
