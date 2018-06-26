@@ -190,7 +190,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
   } else {
     tor_addr_from_ipv4h(&destaddr, dest_ip);
 
-    if (!tor_addr_to_str(req->address, (const tor_addr_t *)&destaddr,
+    if (!tor_addr_to_str(req->address, &destaddr,
                          MAX_SOCKS_ADDR_LEN, 0)) {
       res = SOCKS_RESULT_INVALID;
       goto end;
