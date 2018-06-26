@@ -644,18 +644,18 @@ test_container_digestset(void *arg)
   }
   set = digestset_new(1000);
   SMARTLIST_FOREACH(included, const char *, cp,
-                    if (digestset_contains(set, cp))
+                    if (digestset_probably_contains(set, cp))
                       ok = 0);
   tt_assert(ok);
   SMARTLIST_FOREACH(included, const char *, cp,
                     digestset_add(set, cp));
   SMARTLIST_FOREACH(included, const char *, cp,
-                    if (!digestset_contains(set, cp))
+                    if (!digestset_probably_contains(set, cp))
                       ok = 0);
   tt_assert(ok);
   for (i = 0; i < 1000; ++i) {
     crypto_rand(d, DIGEST_LEN);
-    if (digestset_contains(set, d))
+    if (digestset_probably_contains(set, d))
       ++false_positives;
   }
   tt_int_op(50, OP_GT, false_positives); /* Should be far lower. */

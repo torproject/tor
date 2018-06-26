@@ -26,7 +26,4 @@ void digestset_add(digestset_t *set, const char *addr);
 int digestset_probably_contains(const digestset_t *set,
                                 const char *addr);
 
-// XXXX to remove.
-#define digestset_contains digestset_probably_contains
-
 #endif

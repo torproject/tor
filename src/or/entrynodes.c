@@ -1065,7 +1065,7 @@ get_eligible_guards(const or_options_t *options,
           continue;
       }
       ++n_guards;
-      if (digestset_contains(sampled_guard_ids, node->identity))
+      if (digestset_probably_contains(sampled_guard_ids, node->identity))
         continue;
       smartlist_add(eligible_guards, (node_t*)node);
     } SMARTLIST_FOREACH_END(node);

@@ -4116,7 +4116,8 @@ routerlist_remove_old_cached_routers_with_id(time_t now,
     signed_descriptor_t *r_next;
     lifespans[i-lo].idx = i;
     if (r->last_listed_as_valid_until >= now ||
-        (retain && digestset_contains(retain, r->signed_descriptor_digest))) {
+        (retain && digestset_probably_contains(retain,
+                                               r->signed_descriptor_digest))) {
       must_keep[i-lo] = 1;
     }
     if (i < hi) {
@@ -4211,7 +4212,7 @@ routerlist_remove_old_routers(void)
       router = smartlist_get(routerlist->routers, i);
       if (router->cache_info.published_on <= cutoff &&
           router->cache_info.last_listed_as_valid_until < now &&
-          !digestset_contains(retain,
+          !digestset_probably_contains(retain,
                           router->cache_info.signed_descriptor_digest)) {
         /* Too old: remove it.  (If we're a cache, just move it into
          * old_routers.) */
@@ -4232,7 +4233,7 @@ routerlist_remove_old_routers(void)
     sd = smartlist_get(routerlist->old_routers, i);
     if (sd->published_on <= cutoff &&
         sd->last_listed_as_valid_until < now &&
-        !digestset_contains(retain, sd->signed_descriptor_digest)) {
+        !digestset_probably_contains(retain, sd->signed_descriptor_digest)) {
       /* Too old.  Remove it. */
       routerlist_remove_old(routerlist, sd, i--);
     }
