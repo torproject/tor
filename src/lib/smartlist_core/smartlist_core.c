@@ -14,8 +14,6 @@
 #include "lib/malloc/util_malloc.h"
 #include "lib/smartlist_core/smartlist_core.h"
 
-#define tor_assert raw_assert
-
 #include <stdlib.h>
 #include <string.h>
 
@@ -103,10 +101,10 @@ void
 smartlist_add_all(smartlist_t *s1, const smartlist_t *s2)
 {
   size_t new_size = (size_t)s1->num_used + (size_t)s2->num_used;
-  tor_assert(new_size >= (size_t) s1->num_used); /* check for overflow. */
+  raw_assert(new_size >= (size_t) s1->num_used); /* check for overflow. */
   smartlist_ensure_capacity(s1, new_size);
   memcpy(s1->list + s1->num_used, s2->list, s2->num_used*sizeof(void*));
-  tor_assert(new_size <= INT_MAX); /* redundant. */
+  raw_assert(new_size <= INT_MAX); /* redundant. */
   s1->num_used = (int) new_size;
 }
 
@@ -162,7 +160,7 @@ smartlist_remove_keeporder(smartlist_t *sl, const void *element)
 void *
 smartlist_pop_last(smartlist_t *sl)
 {
-  tor_assert(sl);
+  raw_assert(sl);
   if (sl->num_used) {
     void *tmp = sl->list[--sl->num_used];
     sl->list[sl->num_used] = NULL;
@@ -190,9 +188,9 @@ smartlist_contains(const smartlist_t *sl, const void *element)
 void
 smartlist_del(smartlist_t *sl, int idx)
 {
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
+  raw_assert(sl);
+  raw_assert(idx>=0);
+  raw_assert(idx < sl->num_used);
   sl->list[idx] = sl->list[--sl->num_used];
   sl->list[sl->num_used] = NULL;
 }
@@ -204,9 +202,9 @@ smartlist_del(smartlist_t *sl, int idx)
 void
 smartlist_del_keeporder(smartlist_t *sl, int idx)
 {
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
+  raw_assert(sl);
+  raw_assert(idx>=0);
+  raw_assert(idx < sl->num_used);
   --sl->num_used;
   if (idx < sl->num_used)
     memmove(sl->list+idx, sl->list+idx+1, sizeof(void*)*(sl->num_used-idx));
@@ -220,9 +218,9 @@ smartlist_del_keeporder(smartlist_t *sl, int idx)
 void
 smartlist_insert(smartlist_t *sl, int idx, void *val)
 {
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx <= sl->num_used);
+  raw_assert(sl);
+  raw_assert(idx>=0);
+  raw_assert(idx <= sl->num_used);
   if (idx == sl->num_used) {
     smartlist_add(sl, val);
   } else {

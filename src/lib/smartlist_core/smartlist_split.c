@@ -13,8 +13,6 @@
 
 #include <string.h>
 
-#define tor_assert raw_assert
-
 /**
  * Split a string <b>str</b> along all occurrences of <b>sep</b>,
  * appending the (newly allocated) split strings, in order, to
@@ -37,8 +35,8 @@ smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
   const char *cp, *end, *next;
   int n = 0;
 
-  tor_assert(sl);
-  tor_assert(str);
+  raw_assert(sl);
+  raw_assert(str);
 
   cp = str;
   while (1) {
@@ -57,7 +55,7 @@ smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
         ;
     }
 
-    tor_assert(end);
+    raw_assert(end);
 
     if (!*end) {
       next = NULL;
