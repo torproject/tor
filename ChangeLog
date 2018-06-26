@@ -1,4 +1,4 @@
-Changes in version 0.3.4.3-alpha - 2018-06-2?
+Changes in version 0.3.4.3-alpha - 2018-06-26
   Tor 0.3.4.3-alpha fixes several bugs in earlier versions, including
   one that was causing stability issues on directory authorities.
 
@@ -28545,4 +28545,3 @@ Changes in version 0.0.2pre13 - 2003-10-19
     - If --DebugLogFile is specified, log to it at -l debug
     - If --LogFile is specified, use it instead of commandline
     - If --RunAsDaemon is set, tor forks and backgrounds on startup
-
