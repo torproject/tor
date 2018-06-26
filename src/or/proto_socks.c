@@ -284,6 +284,8 @@ parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
   tor_assert(have_user_pass);
   tor_assert(drain_out);
 
+  *drain_out = 0;
+
   if (parsed == -1) {
     log_warn(LD_APP, "socks5: parsing failed - invalid version "
                      "id/method selection message.");
