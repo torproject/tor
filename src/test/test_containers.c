@@ -10,8 +10,8 @@
 #include "test/test.h"
 
 #include "lib/container/bitarray.h"
-#include "lib/container/bloomfilt.h"
 #include "lib/container/order.h"
+#include "lib/crypt_ops/digestset.h"
 
 /** Helper: return a tristate based on comparing the strings in *<b>a</b> and
  * *<b>b</b>. */

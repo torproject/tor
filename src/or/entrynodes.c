@@ -142,7 +142,7 @@
 #include "or/node_st.h"
 #include "or/origin_circuit_st.h"
 
-#include "lib/container/bloomfilt.h"
+#include "lib/crypt_ops/digestset.h"
 
 /** A list of existing guard selection contexts. */
 static smartlist_t *guard_contexts = NULL;

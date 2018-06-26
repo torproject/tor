@@ -9,50 +9,27 @@
 #include "orconfig.h"
 #include "lib/cc/torint.h"
 #include "lib/container/bitarray.h"
-#include "siphash.h"
 
-/** A set of digests, implemented as a Bloom filter. */
-typedef struct {
-  int mask; /**< One less than the number of bits in <b>ba</b>; always one less
-             * than a power of two. */
-  bitarray_t *ba; /**< A bit array to implement the Bloom filter. */
-} digestset_t;
+/** A set of elements, implemented as a Bloom filter. */
+typedef struct bloomfilt_t bloomfilt_t;
 
-#define BIT(n) ((n) & set->mask)
-/** Add the digest <b>digest</b> to <b>set</b>. */
-static inline void
-digestset_add(digestset_t *set, const char *digest)
-{
-  const uint64_t x = siphash24g(digest, 20);
-  const uint32_t d1 = (uint32_t) x;
-  const uint32_t d2 = (uint32_t)( (x>>16) + x);
-  const uint32_t d3 = (uint32_t)( (x>>32) + x);
-  const uint32_t d4 = (uint32_t)( (x>>48) + x);
-  bitarray_set(set->ba, BIT(d1));
-  bitarray_set(set->ba, BIT(d2));
-  bitarray_set(set->ba, BIT(d3));
-  bitarray_set(set->ba, BIT(d4));
-}
+/** How many 64-bit siphash values to extract per item. */
+#define BLOOMFILT_N_HASHES 2
 
-/** If <b>digest</b> is in <b>set</b>, return nonzero.  Otherwise,
- * <em>probably</em> return zero. */
-static inline int
-digestset_contains(const digestset_t *set, const char *digest)
-{
-  const uint64_t x = siphash24g(digest, 20);
-  const uint32_t d1 = (uint32_t) x;
-  const uint32_t d2 = (uint32_t)( (x>>16) + x);
-  const uint32_t d3 = (uint32_t)( (x>>32) + x);
-  const uint32_t d4 = (uint32_t)( (x>>48) + x);
-  return bitarray_is_set(set->ba, BIT(d1)) &&
-         bitarray_is_set(set->ba, BIT(d2)) &&
-         bitarray_is_set(set->ba, BIT(d3)) &&
-         bitarray_is_set(set->ba, BIT(d4));
-}
-#undef BIT
+/** How much key material do we need to randomize hashes? */
+#define BLOOMFILT_KEY_LEN (BLOOMFILT_N_HASHES * 16)
 
-digestset_t *digestset_new(int max_elements);
-void digestset_free_(digestset_t* set);
-#define digestset_free(set) FREE_AND_NULL(digestset_t, digestset_free_, (set))
+struct sipkey;
+typedef uint64_t (*bloomfilt_hash_fn)(const struct sipkey *key,
+                                      const void *item);
 
-#endif /* !defined(TOR_CONTAINER_H) */
+void bloomfilt_add(bloomfilt_t *set, const void *item);
+int bloomfilt_probably_contains(const bloomfilt_t *set, const void *item);
+
+bloomfilt_t *bloomfilt_new(int max_elements,
+                           bloomfilt_hash_fn hashfn,
+                           const uint8_t *random_key);
+void bloomfilt_free_(bloomfilt_t* set);
+#define bloomfilt_free(set) FREE_AND_NULL(bloomfilt_t, bloomfilt_free_, (set))
+
+#endif /* !defined(TOR_BLOOMFILT_H) */

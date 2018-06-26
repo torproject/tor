@@ -29,7 +29,7 @@
 #include "or/cell_st.h"
 #include "or/or_circuit_st.h"
 
-#include "lib/container/bloomfilt.h"
+#include "lib/crypt_ops/digestset.h"
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)
 static uint64_t nanostart;
@@ -376,7 +376,7 @@ bench_dmap(void)
     crypto_rand(d, 20);
     smartlist_add(sl2, tor_memdup(d, 20));
   }
-  printf("nbits=%d\n", ds->mask+1);
+  //printf("nbits=%d\n", ds->mask+1);
 
   reset_perftime();
 

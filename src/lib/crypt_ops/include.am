@@ -19,7 +19,8 @@ src_lib_libtor_crypt_ops_a_SOURCES =			\
 	src/lib/crypt_ops/crypto_rand.c			\
 	src/lib/crypt_ops/crypto_rsa.c			\
 	src/lib/crypt_ops/crypto_s2k.c			\
-	src/lib/crypt_ops/crypto_util.c
+	src/lib/crypt_ops/crypto_util.c                 \
+	src/lib/crypt_ops/digestset.c
 
 src_lib_libtor_crypt_ops_testing_a_SOURCES = \
 	$(src_lib_libtor_crypt_ops_a_SOURCES)
@@ -41,4 +42,5 @@ noinst_HEADERS +=					\
 	src/lib/crypt_ops/crypto_rand.h			\
 	src/lib/crypt_ops/crypto_rsa.h			\
 	src/lib/crypt_ops/crypto_s2k.h			\
-	src/lib/crypt_ops/crypto_util.h
+	src/lib/crypt_ops/crypto_util.h                 \
+	src/lib/crypt_ops/digestset.h

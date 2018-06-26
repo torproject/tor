@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Unify our bloom filter logic. Previously we had two copies of this
+      code: one for routerlist filtering, and one for address set
+      calculations. Closes ticket 26510.

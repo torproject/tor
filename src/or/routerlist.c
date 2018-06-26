@@ -137,7 +137,7 @@
 #include "or/routerlist_st.h"
 #include "or/vote_routerstatus_st.h"
 
-#include "lib/container/bloomfilt.h"
+#include "lib/crypt_ops/digestset.h"
 
 // #define DEBUG_ROUTERLIST
 
