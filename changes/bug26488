@@ -1,0 +1,4 @@
+  o Major bugfixes (directory authority):
+    - Actually check that address we get from DirAuthority configuration
+      line is valid IPv4. Explicitly disallow DirAuthority adress to be
+      DNS hostname. Fixes bug 26488; bugfix on 0.1.2.10-rc.

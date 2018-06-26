@@ -6417,6 +6417,23 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   }
   addrport = smartlist_get(items, 0);
   smartlist_del_keeporder(items, 0);
+
+  const char *addrport_sep = strchr(addrport, ':');
+  if (!addrport_sep) {
+    log_warn(LD_CONFIG, "Error parsing DirAuthority address '%s' "
+                        "(':' not found)", addrport);
+    goto err;
+  }
+
+  address = tor_strndup(addrport, addrport_sep - addrport);
+  if (!string_is_valid_ipv4_address(address)) {
+    log_warn(LD_CONFIG, "Error parsing DirAuthority address '%s' "
+                        "(invalid IPv4 address", address);
+    goto err;
+  }
+
+  tor_free(address);
+
   if (addr_port_lookup(LOG_WARN, addrport, &address, NULL, &dir_port)<0) {
     log_warn(LD_CONFIG, "Error parsing DirAuthority address '%s'", addrport);
     goto err;
