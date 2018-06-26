@@ -4,11 +4,8 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file container.c
- * \brief Implements a smartlist (a resizable array) along
- * with helper functions to use smartlists.  Also includes
- * hash table implementations of a string-to-void* map, and of
- * a digest-to-void* map.
+ * \file bloomfilt.c
+ * \brief Uses bitarray_t to implement a bloom filter.
  **/
 
 #include <stdlib.h>
