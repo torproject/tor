@@ -17,6 +17,10 @@
 #include "trunnel/socks5.h"
 #include "or/socks_request_st.h"
 
+#define SOCKS_VER_5 0x05 /* First octet of non-auth SOCKS5 messages */
+#define SOCKS_VER_4 0x04 /*                SOCKS4 messages */
+#define SOCKS_AUTH  0x01 /*                SOCKS5 auth messages */
+
 typedef enum {
   SOCKS_RESULT_INVALID       = -1, /* Message invalid. */
   SOCKS_RESULT_TRUNCATED     =  0, /* Message incomplete/truncated. */
@@ -121,7 +125,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
   *is_socks4a = 0;
   *drain_out = 0;
 
-  req->socks_version = 4;
+  req->socks_version = SOCKS_VER_4;
 
   socks4_client_request_t *trunnel_req;
 
@@ -347,21 +351,22 @@ process_socks5_methods_request(socks_request_t *req, int have_user_pass,
   socks_result_t res = SOCKS_RESULT_DONE;
   socks5_server_method_t *trunnel_resp = socks5_server_method_new();
 
-  socks5_server_method_set_version(trunnel_resp, 5);
+  socks5_server_method_set_version(trunnel_resp, SOCKS_VER_5);
 
   if (have_user_pass && !(have_no_auth && req->socks_prefer_no_auth)) {
     req->auth_type = SOCKS_USER_PASS;
     socks5_server_method_set_method(trunnel_resp, SOCKS_USER_PASS);
 
-    req->socks_version = 5; // FIXME: come up with better way to remember
-                            // that we negotiated auth
+    req->socks_version = SOCKS_VER_5;
+    // FIXME: come up with better way to remember
+    // that we negotiated auth
 
     log_debug(LD_APP,"socks5: accepted method 2 (username/password)");
   } else if (have_no_auth) {
     req->auth_type = SOCKS_NO_AUTH;
     socks5_server_method_set_method(trunnel_resp, SOCKS_NO_AUTH);
 
-    req->socks_version = 5;
+    req->socks_version = SOCKS_VER_5;
 
     log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
   } else {
@@ -469,7 +474,7 @@ process_socks5_userpass_auth(socks_request_t *req)
   socks5_server_userpass_auth_t *trunnel_resp =
     socks5_server_userpass_auth_new();
 
-  if (req->socks_version != 5) {
+  if (req->socks_version != SOCKS_VER_5) {
     res = SOCKS_RESULT_INVALID;
     goto end;
   }
@@ -480,7 +485,7 @@ process_socks5_userpass_auth(socks_request_t *req)
     goto end;
   }
 
-  socks5_server_userpass_auth_set_version(trunnel_resp, 1);
+  socks5_server_userpass_auth_set_version(trunnel_resp, SOCKS_AUTH);
   socks5_server_userpass_auth_set_status(trunnel_resp, 0); // auth OK
 
   const char *errmsg = socks5_server_userpass_auth_check(trunnel_resp);
@@ -684,10 +689,10 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
 
   uint8_t socks_version = raw_data[0];
 
-  if (socks_version == 1)
-    socks_version = 5; // SOCKS5 username/pass subnegotiation
+  if (socks_version == SOCKS_AUTH)
+    socks_version = SOCKS_VER_5; // SOCKS5 username/pass subnegotiation
 
-  if (socks_version == 4) {
+  if (socks_version == SOCKS_VER_4) {
     if (datalen < SOCKS4_NETWORK_LEN) {
       res = 0;
       goto end;
@@ -709,7 +714,7 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
     }
 
     goto end;
-  } else if (socks_version == 5) {
+  } else if (socks_version == SOCKS_VER_5) {
     if (datalen < 2) { /* version and another byte */
       res = 0;
       goto end;
@@ -731,7 +736,7 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
 
       res = SOCKS_RESULT_MORE_EXPECTED;
       goto end;
-    } else if (req->socks_version != 5) {
+    } else if (req->socks_version != SOCKS_VER_5) {
       int have_user_pass, have_no_auth;
       res = parse_socks5_methods_request(raw_data, req, datalen,
                                          &have_user_pass,
@@ -860,7 +865,7 @@ socks_request_set_socks5_error(socks_request_t *req,
 {
   socks5_server_reply_t *trunnel_resp = socks5_server_reply_new();
 
-  socks5_server_reply_set_version(trunnel_resp, 0x05);
+  socks5_server_reply_set_version(trunnel_resp, SOCKS_VER_5);
   socks5_server_reply_set_reply(trunnel_resp, reason);
   socks5_server_reply_set_atype(trunnel_resp, 0x01);
 
@@ -922,22 +927,22 @@ static int
 parse_socks(const char *data, size_t datalen, socks_request_t *req,
             int log_sockstype, int safe_socks, size_t *drain_out)
 {
-  uint8_t socksver;
+  uint8_t first_octet;
 
   if (datalen < 2) {
     /* We always need at least 2 bytes. */
     return 0;
   }
 
-  socksver = get_uint8(data);
+  first_octet = get_uint8(data);
 
-  if (socksver == 5 || socksver == 4 ||
-      socksver == 1) { // XXX: RFC 1929
+  if (first_octet == SOCKS_VER_5 || first_octet == SOCKS_VER_4 ||
+      first_octet == SOCKS_AUTH) { // XXX: RFC 1929
     return handle_socks_message((const uint8_t *)data, datalen, req,
                                 log_sockstype, safe_socks, drain_out);
   }
 
-  switch (socksver) { /* which version of socks? */
+  switch (first_octet) { /* which version of socks? */
     case 'G': /* get */
     case 'H': /* head */
     case 'P': /* put/post */
