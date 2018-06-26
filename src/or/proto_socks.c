@@ -829,6 +829,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       case SOCKS_RESULT_TRUNCATED:
         if (datalen == n_pullup)
           return 0;
+        /* FALLTHRU */
       case SOCKS_RESULT_MORE_EXPECTED:
         res = 0;
         break;
