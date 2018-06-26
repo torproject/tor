@@ -2452,8 +2452,8 @@ check_descriptor_bandwidth_changed(time_t now)
   prev = router_get_my_routerinfo()->bandwidthcapacity;
   cur = we_are_hibernating() ? 0 : rep_hist_bandwidth_assess();
   if ((prev != cur && (!prev || !cur)) ||
-      cur > prev * BANDWIDTH_CHANGE_FACTOR ||
-      cur < prev / BANDWIDTH_CHANGE_FACTOR ) {
+      cur > (prev * BANDWIDTH_CHANGE_FACTOR) ||
+      cur < (prev / BANDWIDTH_CHANGE_FACTOR) ) {
     if (last_changed+MAX_BANDWIDTH_CHANGE_FREQ < now || !prev) {
       log_info(LD_GENERAL,
                "Measured bandwidth has changed; rebuilding descriptor.");
