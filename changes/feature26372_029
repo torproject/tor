@@ -1,0 +1,4 @@
+  o Minor features (compilation):
+
+    - When building Tor, prefer to use Python 3 over Python 2, and more
+      recent (contemplated) versions over older ones. Closes ticket 26372.
