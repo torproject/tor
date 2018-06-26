@@ -9,7 +9,6 @@
  * with helper functions to use smartlists.
  **/
 
-#include "lib/malloc/util_malloc.h"
 #include "lib/container/smartlist.h"
 #include "lib/err/torerr.h"
 #include "lib/malloc/util_malloc.h"
@@ -23,108 +22,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-
-/** All newly allocated smartlists have this capacity. */
-#define SMARTLIST_DEFAULT_CAPACITY 16
-
-/** Allocate and return an empty smartlist.
- */
-MOCK_IMPL(smartlist_t *,
-smartlist_new,(void))
-{
-  smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
-  sl->num_used = 0;
-  sl->capacity = SMARTLIST_DEFAULT_CAPACITY;
-  sl->list = tor_calloc(sizeof(void *), sl->capacity);
-  return sl;
-}
-
-/** Deallocate a smartlist.  Does not release storage associated with the
- * list's elements.
- */
-MOCK_IMPL(void,
-smartlist_free_,(smartlist_t *sl))
-{
-  if (!sl)
-    return;
-  tor_free(sl->list);
-  tor_free(sl);
-}
-
-/** Remove all elements from the list.
- */
-void
-smartlist_clear(smartlist_t *sl)
-{
-  memset(sl->list, 0, sizeof(void *) * sl->num_used);
-  sl->num_used = 0;
-}
-
-#if SIZE_MAX < INT_MAX
-#error "We don't support systems where size_t is smaller than int."
-#endif
-
-/** Make sure that <b>sl</b> can hold at least <b>size</b> entries. */
-static inline void
-smartlist_ensure_capacity(smartlist_t *sl, size_t size)
-{
-  /* Set MAX_CAPACITY to MIN(INT_MAX, SIZE_MAX / sizeof(void*)) */
-#if (SIZE_MAX/SIZEOF_VOID_P) > INT_MAX
-#define MAX_CAPACITY (INT_MAX)
-#else
-#define MAX_CAPACITY (int)((SIZE_MAX / (sizeof(void*))))
-#endif
-
-  raw_assert(size <= MAX_CAPACITY);
-
-  if (size > (size_t) sl->capacity) {
-    size_t higher = (size_t) sl->capacity;
-    if (PREDICT_UNLIKELY(size > MAX_CAPACITY/2)) {
-      higher = MAX_CAPACITY;
-    } else {
-      while (size > higher)
-        higher *= 2;
-    }
-    sl->list = tor_reallocarray(sl->list, sizeof(void *),
-                                ((size_t)higher));
-    memset(sl->list + sl->capacity, 0,
-           sizeof(void *) * (higher - sl->capacity));
-    sl->capacity = (int) higher;
-  }
-#undef ASSERT_CAPACITY
-#undef MAX_CAPACITY
-}
-
-/** Append element to the end of the list. */
-void
-smartlist_add(smartlist_t *sl, void *element)
-{
-  smartlist_ensure_capacity(sl, ((size_t) sl->num_used)+1);
-  sl->list[sl->num_used++] = element;
-}
-
-/** Append each element from S2 to the end of S1. */
-void
-smartlist_add_all(smartlist_t *s1, const smartlist_t *s2)
-{
-  size_t new_size = (size_t)s1->num_used + (size_t)s2->num_used;
-  tor_assert(new_size >= (size_t) s1->num_used); /* check for overflow. */
-  smartlist_ensure_capacity(s1, new_size);
-  memcpy(s1->list + s1->num_used, s2->list, s2->num_used*sizeof(void*));
-  tor_assert(new_size <= INT_MAX); /* redundant. */
-  s1->num_used = (int) new_size;
-}
-
-/** Append a copy of string to sl */
-void
-smartlist_add_strdup(struct smartlist_t *sl, const char *string)
-{
-  char *copy;
-
-  copy = tor_strdup(string);
-
-  smartlist_add(sl, copy);
-}
 
 /** Append the string produced by tor_asprintf(<b>pattern</b>, <b>...</b>)
  * to <b>sl</b>. */
@@ -148,56 +45,6 @@ smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
   tor_assert(str != NULL);
 
   smartlist_add(sl, str);
-}
-
-/** Remove all elements E from sl such that E==element.  Preserve
- * the order of any elements before E, but elements after E can be
- * rearranged.
- */
-void
-smartlist_remove(smartlist_t *sl, const void *element)
-{
-  int i;
-  if (element == NULL)
-    return;
-  for (i=0; i < sl->num_used; i++)
-    if (sl->list[i] == element) {
-      sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
-      i--; /* so we process the new i'th element */
-      sl->list[sl->num_used] = NULL;
-    }
-}
-
-/** As <b>smartlist_remove</b>, but do not change the order of
- * any elements not removed */
-void
-smartlist_remove_keeporder(smartlist_t *sl, const void *element)
-{
-  int i, j, num_used_orig = sl->num_used;
-  if (element == NULL)
-    return;
-
-  for (i=j=0; j < num_used_orig; ++j) {
-    if (sl->list[j] == element) {
-      --sl->num_used;
-    } else {
-      sl->list[i++] = sl->list[j];
-    }
-  }
-}
-
-/** If <b>sl</b> is nonempty, remove and return the final element.  Otherwise,
- * return NULL. */
-void *
-smartlist_pop_last(smartlist_t *sl)
-{
-  tor_assert(sl);
-  if (sl->num_used) {
-    void *tmp = sl->list[--sl->num_used];
-    sl->list[sl->num_used] = NULL;
-    return tmp;
-  } else
-    return NULL;
 }
 
 /** Reverse the order of the items in <b>sl</b>. */
@@ -230,18 +77,6 @@ smartlist_string_remove(smartlist_t *sl, const char *element)
       sl->list[sl->num_used] = NULL;
     }
   }
-}
-
-/** Return true iff some element E of sl has E==element.
- */
-int
-smartlist_contains(const smartlist_t *sl, const void *element)
-{
-  int i;
-  for (i=0; i < sl->num_used; i++)
-    if (sl->list[i] == element)
-      return 1;
-  return 0;
 }
 
 /** Return true iff <b>sl</b> has some element E such that
@@ -397,131 +232,6 @@ smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2)
   int i;
   for (i=0; i < sl2->num_used; i++)
     smartlist_remove(sl1, sl2->list[i]);
-}
-
-/** Remove the <b>idx</b>th element of sl; if idx is not the last
- * element, swap the last element of sl into the <b>idx</b>th space.
- */
-void
-smartlist_del(smartlist_t *sl, int idx)
-{
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
-  sl->list[idx] = sl->list[--sl->num_used];
-  sl->list[sl->num_used] = NULL;
-}
-
-/** Remove the <b>idx</b>th element of sl; if idx is not the last element,
- * moving all subsequent elements back one space. Return the old value
- * of the <b>idx</b>th element.
- */
-void
-smartlist_del_keeporder(smartlist_t *sl, int idx)
-{
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
-  --sl->num_used;
-  if (idx < sl->num_used)
-    memmove(sl->list+idx, sl->list+idx+1, sizeof(void*)*(sl->num_used-idx));
-  sl->list[sl->num_used] = NULL;
-}
-
-/** Insert the value <b>val</b> as the new <b>idx</b>th element of
- * <b>sl</b>, moving all items previously at <b>idx</b> or later
- * forward one space.
- */
-void
-smartlist_insert(smartlist_t *sl, int idx, void *val)
-{
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx <= sl->num_used);
-  if (idx == sl->num_used) {
-    smartlist_add(sl, val);
-  } else {
-    smartlist_ensure_capacity(sl, ((size_t) sl->num_used)+1);
-    /* Move other elements away */
-    if (idx < sl->num_used)
-      memmove(sl->list + idx + 1, sl->list + idx,
-              sizeof(void*)*(sl->num_used-idx));
-    sl->num_used++;
-    sl->list[idx] = val;
-  }
-}
-
-/**
- * Split a string <b>str</b> along all occurrences of <b>sep</b>,
- * appending the (newly allocated) split strings, in order, to
- * <b>sl</b>.  Return the number of strings added to <b>sl</b>.
- *
- * If <b>flags</b>&amp;SPLIT_SKIP_SPACE is true, remove initial and
- * trailing space from each entry.
- * If <b>flags</b>&amp;SPLIT_IGNORE_BLANK is true, remove any entries
- * of length 0.
- * If <b>flags</b>&amp;SPLIT_STRIP_SPACE is true, strip spaces from each
- * split string.
- *
- * If <b>max</b>\>0, divide the string into no more than <b>max</b> pieces. If
- * <b>sep</b> is NULL, split on any sequence of horizontal space.
- */
-int
-smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
-                       int flags, int max)
-{
-  const char *cp, *end, *next;
-  int n = 0;
-
-  tor_assert(sl);
-  tor_assert(str);
-
-  cp = str;
-  while (1) {
-    if (flags&SPLIT_SKIP_SPACE) {
-      while (TOR_ISSPACE(*cp)) ++cp;
-    }
-
-    if (max>0 && n == max-1) {
-      end = strchr(cp,'\0');
-    } else if (sep) {
-      end = strstr(cp,sep);
-      if (!end)
-        end = strchr(cp,'\0');
-    } else {
-      for (end = cp; *end && *end != '\t' && *end != ' '; ++end)
-        ;
-    }
-
-    tor_assert(end);
-
-    if (!*end) {
-      next = NULL;
-    } else if (sep) {
-      next = end+strlen(sep);
-    } else {
-      next = end+1;
-      while (*next == '\t' || *next == ' ')
-        ++next;
-    }
-
-    if (flags&SPLIT_SKIP_SPACE) {
-      while (end > cp && TOR_ISSPACE(*(end-1)))
-        --end;
-    }
-    if (end != cp || !(flags&SPLIT_IGNORE_BLANK)) {
-      char *string = tor_strndup(cp, end-cp);
-      if (flags&SPLIT_STRIP_SPACE)
-        tor_strstrip(string, " ");
-      smartlist_add(sl, string);
-      ++n;
-    }
-    if (!next)
-      break;
-    cp = next;
-  }
-
-  return n;
 }
 
 /** Allocate and return a new string containing the concatenation of
