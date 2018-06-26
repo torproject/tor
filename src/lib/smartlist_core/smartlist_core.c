@@ -169,7 +169,6 @@ smartlist_pop_last(smartlist_t *sl)
     return NULL;
 }
 
-
 /** Return true iff some element E of sl has E==element.
  */
 int
