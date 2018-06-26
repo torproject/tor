@@ -428,14 +428,14 @@ parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
    socks5_client_userpass_auth_getconstarray_passwd(trunnel_req);
 
   if (usernamelen && username) {
-    req->username = tor_strdup(username);
+    req->username = tor_memdup_nulterm(username, usernamelen);
     req->usernamelen = (unsigned char)usernamelen;
 
     req->got_auth = 1;
   }
 
   if (passwordlen && password) {
-    req->password = tor_strdup(password);
+    req->password = tor_memdup_nulterm(password, passwordlen);
     req->passwordlen = (unsigned char)passwordlen;
 
     req->got_auth = 1;
