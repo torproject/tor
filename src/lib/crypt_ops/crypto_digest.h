@@ -13,18 +13,9 @@
 #ifndef TOR_CRYPTO_DIGEST_H
 #define TOR_CRYPTO_DIGEST_H
 
-#include <stdio.h>
-
-#include "common/container.h"
 #include "lib/cc/torint.h"
-
-/** Length of the output of our message digest. */
-#define DIGEST_LEN 20
-/** Length of the output of our second (improved) message digests.  (For now
- * this is just sha256, but it could be any other 256-bit digest.) */
-#define DIGEST256_LEN 32
-/** Length of the output of our 64-bit optimized message digests (SHA512). */
-#define DIGEST512_LEN 64
+#include "lib/defs/digest_sizes.h"
+#include "lib/malloc/util_malloc.h"
 
 /** Length of a sha1 message digest when encoded in base32 with trailing =
  * signs removed. */
@@ -77,6 +68,8 @@ typedef struct {
 
 typedef struct crypto_digest_t crypto_digest_t;
 typedef struct crypto_xof_t crypto_xof_t;
+
+struct smartlist_t;
 
 /* SHA-1 and other digests */
 int crypto_digest(char *digest, const char *m, size_t len);
@@ -133,4 +126,3 @@ digest_algorithm_t crypto_digest_get_algorithm(crypto_digest_t *digest);
 #endif
 
 #endif /* !defined(TOR_CRYPTO_DIGEST_H) */
-

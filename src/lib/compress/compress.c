@@ -20,7 +20,7 @@
 #endif
 
 #include "common/util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_lzma.h"
 #include "lib/compress/compress_none.h"

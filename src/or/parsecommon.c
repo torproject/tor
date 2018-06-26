@@ -7,8 +7,9 @@
  **/
 
 #include "or/parsecommon.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util_format.h"
+#include "lib/container/smartlist.h"
 
 #define MIN_ANNOTATION A_PURPOSE
 #define MAX_ANNOTATION A_UNKNOWN_
@@ -448,4 +449,3 @@ find_all_by_keyword(const smartlist_t *s, directory_keyword k)
                     });
   return out;
 }
-

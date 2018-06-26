@@ -142,6 +142,8 @@
 #include "or/node_st.h"
 #include "or/origin_circuit_st.h"
 
+#include "lib/container/bloomfilt.h"
+
 /** A list of existing guard selection contexts. */
 static smartlist_t *guard_contexts = NULL;
 /** The currently enabled guard selection context. */
@@ -3687,4 +3689,3 @@ entry_guards_free_all(void)
   }
   circuit_build_times_free_timeouts(get_circuit_build_times_mutable());
 }
-

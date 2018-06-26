@@ -21,7 +21,7 @@
 
 #include "common/compat.h"
 #include "common/util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util_process.h"
 #include "ht.h"
 

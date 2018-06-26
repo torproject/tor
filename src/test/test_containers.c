@@ -9,6 +9,10 @@
 #include "or/fp_pair.h"
 #include "test/test.h"
 
+#include "lib/container/bitarray.h"
+#include "lib/container/bloomfilt.h"
+#include "lib/container/order.h"
+
 /** Helper: return a tristate based on comparing the strings in *<b>a</b> and
  * *<b>b</b>. */
 static int
@@ -1295,4 +1299,3 @@ struct testcase_t container_tests[] = {
   CONTAINER(smartlist_strings_eq, 0),
   END_OF_TESTCASES
 };
-

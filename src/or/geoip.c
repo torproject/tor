@@ -38,6 +38,8 @@
 #include "or/geoip.h"
 #include "or/routerlist.h"
 
+#include "lib/container/order.h"
+
 static void init_geoip_countries(void);
 
 /** An entry from the GeoIP IPv4 file: maps an IPv4 range to a country. */
@@ -1884,4 +1886,3 @@ geoip_free_all(void)
   memset(geoip_digest, 0, sizeof(geoip_digest));
   memset(geoip6_digest, 0, sizeof(geoip6_digest));
 }
-

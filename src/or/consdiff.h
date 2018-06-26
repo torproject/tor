@@ -15,6 +15,8 @@ char *consensus_diff_apply(const char *consensus,
 int looks_like_a_consensus_diff(const char *document, size_t len);
 
 #ifdef CONSDIFF_PRIVATE
+#include "lib/container/bitarray.h"
+
 struct memarea_t;
 
 /** Line type used for constructing consensus diffs.  Each of these lines
@@ -95,4 +97,3 @@ MOCK_DECL(STATIC int,
 #endif /* defined(CONSDIFF_PRIVATE) */
 
 #endif /* !defined(TOR_CONSDIFF_H) */
-

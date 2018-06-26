@@ -20,14 +20,13 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
-#include "common/container.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "common/util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 #include "ed25519/donna/ed25519_donna_tor.h"
 

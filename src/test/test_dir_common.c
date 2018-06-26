@@ -6,7 +6,6 @@
 #include "orconfig.h"
 #define DIRVOTE_PRIVATE
 #include "test/test.h"
-#include "common/container.h"
 #include "or/or.h"
 #include "or/dirauth/dirvote.h"
 #include "or/nodelist.h"

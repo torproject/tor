@@ -35,15 +35,8 @@
 #endif
 
 #include "lib/err/torerr.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
-#include "common/container.h"
-
-#ifndef HAVE_GETTIMEOFDAY
-#ifdef HAVE_FTIME
-#include <sys/timeb.h>
-#endif
-#endif
 
 #ifdef _WIN32
 #undef HAVE_CLOCK_GETTIME
@@ -68,53 +61,6 @@ tor_sleep_msec(int msec)
 #endif /* defined(_WIN32) || ... */
 }
 #endif /* defined(TOR_UNIT_TESTS) */
-
-/** Set *timeval to the current time of day.  On error, log and terminate.
- * (Same as gettimeofday(timeval,NULL), but never returns -1.)
- */
-MOCK_IMPL(void,
-tor_gettimeofday, (struct timeval *timeval))
-{
-#ifdef _WIN32
-  /* Epoch bias copied from perl: number of units between windows epoch and
-   * Unix epoch. */
-#define EPOCH_BIAS U64_LITERAL(116444736000000000)
-#define UNITS_PER_SEC U64_LITERAL(10000000)
-#define USEC_PER_SEC U64_LITERAL(1000000)
-#define UNITS_PER_USEC U64_LITERAL(10)
-  union {
-    uint64_t ft_64;
-    FILETIME ft_ft;
-  } ft;
-  /* number of 100-nsec units since Jan 1, 1601 */
-  GetSystemTimeAsFileTime(&ft.ft_ft);
-  if (ft.ft_64 < EPOCH_BIAS) {
-    /* LCOV_EXCL_START */
-    log_err(LD_GENERAL,"System time is before 1970; failing.");
-    exit(1); // exit ok: system clock is broken.
-    /* LCOV_EXCL_STOP */
-  }
-  ft.ft_64 -= EPOCH_BIAS;
-  timeval->tv_sec = (unsigned) (ft.ft_64 / UNITS_PER_SEC);
-  timeval->tv_usec = (unsigned) ((ft.ft_64 / UNITS_PER_USEC) % USEC_PER_SEC);
-#elif defined(HAVE_GETTIMEOFDAY)
-  if (gettimeofday(timeval, NULL)) {
-    /* LCOV_EXCL_START */
-    /* If gettimeofday dies, we have either given a bad timezone (we didn't),
-       or segfaulted.*/
-    raw_assert_unreached_msg("gettimeofday failed");
-    /* LCOV_EXCL_STOP */
-  }
-#elif defined(HAVE_FTIME)
-  struct timeb tb;
-  ftime(&tb);
-  timeval->tv_sec = tb.time;
-  timeval->tv_usec = tb.millitm * 1000;
-#else
-#error "No way to get time."
-#endif /* defined(_WIN32) || ... */
-  return;
-}
 
 #define ONE_MILLION ((int64_t) (1000 * 1000))
 #define ONE_BILLION ((int64_t) (1000 * 1000 * 1000))

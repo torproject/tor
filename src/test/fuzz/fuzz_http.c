@@ -12,7 +12,7 @@
 #include "or/config.h"
 #include "or/connection.h"
 #include "or/directory.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 #include "or/dir_connection_st.h"
 

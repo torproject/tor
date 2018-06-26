@@ -5638,6 +5638,23 @@ addressmap_register_auto(const char *from, const char *to,
 }
 
 /**
+ * As add_file_log, but open the file as appropriate.
+ */
+STATIC int
+open_and_add_file_log(const log_severity_list_t *severity,
+                      const char *filename, int truncate_log)
+{
+  int open_flags = O_WRONLY|O_CREAT;
+  open_flags |= truncate_log ? O_TRUNC : O_APPEND;
+
+  int fd = tor_open_cloexec(filename, open_flags, 0640);
+  if (fd < 0)
+    return -1;
+
+  return add_file_log(severity, filename, fd);
+}
+
+/**
  * Initialize the logs based on the configuration file.
  */
 static int
@@ -5762,7 +5779,7 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
               }
           }
         }
-        if (add_file_log(severity, fname, truncate_log) < 0) {
+        if (open_and_add_file_log(severity, fname, truncate_log) < 0) {
           log_warn(LD_CONFIG, "Couldn't open file for 'Log %s': %s",
                    opt->value, strerror(errno));
           ok = 0;
@@ -8452,4 +8469,3 @@ options_any_client_port_set(const or_options_t *options)
           options->DNSPort_set ||
           options->HTTPTunnelPort_set);
 }
-

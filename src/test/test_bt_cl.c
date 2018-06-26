@@ -10,7 +10,7 @@
 #include "or/or.h"
 #include "common/util.h"
 #include "lib/err/backtrace.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 /* -1: no crash.
  *  0: crash with a segmentation fault.

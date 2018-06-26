@@ -31,7 +31,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 ENABLE_GCC_WARNING(redundant-decls)
 
 #include "or/or.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "or/config.h"
 #include "lib/tls/tortls.h"
 

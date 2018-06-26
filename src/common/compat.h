@@ -47,36 +47,14 @@
 
 #include "lib/cc/compat_compiler.h"
 #include "common/compat_time.h"
+#include "lib/string/compat_ctype.h"
+#include "lib/string/compat_string.h"
+#include "lib/string/printf.h"
 
 #include <stdio.h>
 #include <errno.h>
 
 /* ===== Compiler compatibility */
-
-/* ===== String compatibility */
-#ifdef _WIN32
-/* Windows names string functions differently from most other platforms. */
-#define strncasecmp _strnicmp
-#define strcasecmp _stricmp
-#endif
-
-#if defined __APPLE__
-/* On OSX 10.9 and later, the overlap-checking code for strlcat would
- * appear to have a severe bug that can sometimes cause aborts in Tor.
- * Instead, use the non-checking variants.  This is sad.
- *
- * See https://trac.torproject.org/projects/tor/ticket/15205
- */
-#undef strlcat
-#undef strlcpy
-#endif /* defined __APPLE__ */
-
-#ifndef HAVE_STRLCAT
-size_t strlcat(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
-#endif
-#ifndef HAVE_STRLCPY
-size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
-#endif
 
 /** Represents an mmaped file. Allocated via tor_mmap_file; freed with
  * tor_munmap_file. */
@@ -97,16 +75,6 @@ typedef struct tor_mmap_t {
 tor_mmap_t *tor_mmap_file(const char *filename) ATTR_NONNULL((1));
 int tor_munmap_file(tor_mmap_t *handle) ATTR_NONNULL((1));
 
-int tor_snprintf(char *str, size_t size, const char *format, ...)
-  CHECK_PRINTF(3,4) ATTR_NONNULL((1,3));
-int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
-  CHECK_PRINTF(3,0) ATTR_NONNULL((1,3));
-
-int tor_asprintf(char **strp, const char *fmt, ...)
-  CHECK_PRINTF(2,3);
-int tor_vasprintf(char **strp, const char *fmt, va_list args)
-  CHECK_PRINTF(2,0);
-
 const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
                        size_t nlen) ATTR_NONNULL((1,3));
 static const void *tor_memstr(const void *haystack, size_t hlen,
@@ -117,42 +85,12 @@ tor_memstr(const void *haystack, size_t hlen, const char *needle)
   return tor_memmem(haystack, hlen, needle, strlen(needle));
 }
 
-/* Much of the time when we're checking ctypes, we're doing spec compliance,
- * which all assumes we're doing ASCII. */
-#define DECLARE_CTYPE_FN(name)                                          \
-  static int TOR_##name(char c);                                        \
-  extern const uint32_t TOR_##name##_TABLE[];                           \
-  static inline int TOR_##name(char c) {                                \
-    uint8_t u = c;                                                      \
-    return !!(TOR_##name##_TABLE[(u >> 5) & 7] & (1u << (u & 31)));     \
-  }
-DECLARE_CTYPE_FN(ISALPHA)
-DECLARE_CTYPE_FN(ISALNUM)
-DECLARE_CTYPE_FN(ISSPACE)
-DECLARE_CTYPE_FN(ISDIGIT)
-DECLARE_CTYPE_FN(ISXDIGIT)
-DECLARE_CTYPE_FN(ISPRINT)
-DECLARE_CTYPE_FN(ISLOWER)
-DECLARE_CTYPE_FN(ISUPPER)
-extern const uint8_t TOR_TOUPPER_TABLE[];
-extern const uint8_t TOR_TOLOWER_TABLE[];
-#define TOR_TOLOWER(c) (TOR_TOLOWER_TABLE[(uint8_t)c])
-#define TOR_TOUPPER(c) (TOR_TOUPPER_TABLE[(uint8_t)c])
-
 char *tor_strtok_r_impl(char *str, const char *sep, char **lasts);
 #ifdef HAVE_STRTOK_R
 #define tor_strtok_r(str, sep, lasts) strtok_r(str, sep, lasts)
 #else
 #define tor_strtok_r(str, sep, lasts) tor_strtok_r_impl(str, sep, lasts)
 #endif
-
-#ifdef _WIN32
-#define SHORT_FILE__ (tor_fix_source_file(__FILE__))
-const char *tor_fix_source_file(const char *fname);
-#else
-#define SHORT_FILE__ (__FILE__)
-#define tor_fix_source_file(s) (s)
-#endif /* defined(_WIN32) */
 
 /* ===== Time compatibility */
 
@@ -213,11 +151,6 @@ typedef struct tor_lockfile_t tor_lockfile_t;
 tor_lockfile_t *tor_lockfile_lock(const char *filename, int blocking,
                                   int *locked_out);
 void tor_lockfile_unlock(tor_lockfile_t *lockfile);
-
-off_t tor_fd_getpos(int fd);
-int tor_fd_setpos(int fd, off_t pos);
-int tor_fd_seekend(int fd);
-int tor_ftruncate(int fd);
 
 int64_t tor_get_avail_disk_space(const char *path);
 

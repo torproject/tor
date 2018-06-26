@@ -17,7 +17,7 @@
 #include "common/compat_threads.h"
 
 #include "common/util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 #ifdef HAVE_SYS_EVENTFD_H
 #include <sys/eventfd.h>
@@ -28,33 +28,6 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-
-/** Return a newly allocated, ready-for-use mutex. */
-tor_mutex_t *
-tor_mutex_new(void)
-{
-  tor_mutex_t *m = tor_malloc_zero(sizeof(tor_mutex_t));
-  tor_mutex_init(m);
-  return m;
-}
-/** Return a newly allocated, ready-for-use mutex.  This one might be
- * non-recursive, if that's faster. */
-tor_mutex_t *
-tor_mutex_new_nonrecursive(void)
-{
-  tor_mutex_t *m = tor_malloc_zero(sizeof(tor_mutex_t));
-  tor_mutex_init_nonrecursive(m);
-  return m;
-}
-/** Release all storage and system resources held by <b>m</b>. */
-void
-tor_mutex_free_(tor_mutex_t *m)
-{
-  if (!m)
-    return;
-  tor_mutex_uninit(m);
-  tor_free(m);
-}
 
 /** Allocate and return a new condition variable. */
 tor_cond_t *
@@ -404,4 +377,3 @@ atomic_counter_exchange(atomic_counter_t *counter, size_t newval)
   return oldval;
 }
 #endif /* !defined(HAVE_STDATOMIC_H) */
-

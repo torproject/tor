@@ -12,7 +12,7 @@
 #include "common/compat.h"
 #include "common/util.h"
 #include "lib/cc/torint.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "lib/tls/tortls.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

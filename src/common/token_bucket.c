@@ -19,7 +19,8 @@
 #define TOKEN_BUCKET_PRIVATE
 
 #include "common/token_bucket.h"
-#include "common/util_bug.h"
+#include "common/compat.h"
+#include "lib/log/util_bug.h"
 
 /**
  * Set the <b>rate</b> and <b>burst</b> value in a token_bucket_cfg.
@@ -252,4 +253,3 @@ token_bucket_rw_dec(token_bucket_rw_t *bucket,
     flags |= TB_WRITE;
   return flags;
 }
-

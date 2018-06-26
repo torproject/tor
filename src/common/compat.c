@@ -124,19 +124,12 @@ SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 #include <sys/file.h>
 #endif
 
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
-#include "common/container.h"
+#include "lib/container/smartlist.h"
+#include "lib/wallclock/tm_cvt.h"
 #include "common/address.h"
 #include "common/sandbox.h"
-
-/* Inline the strl functions if the platform doesn't have them. */
-#ifndef HAVE_STRLCPY
-#include "strlcpy.c"
-#endif
-#ifndef HAVE_STRLCAT
-#include "strlcat.c"
-#endif
 
 /* When set_max_file_descriptors() is called, update this with the max file
  * descriptor value so we can use it to check the limit when opening a new
@@ -404,147 +397,6 @@ tor_munmap_file(tor_mmap_t *handle)
 #error "cannot implement tor_mmap_file"
 #endif /* defined(HAVE_MMAP) || ... || ... */
 
-/** Replacement for snprintf.  Differs from platform snprintf in two
- * ways: First, always NUL-terminates its output.  Second, always
- * returns -1 if the result is truncated.  (Note that this return
- * behavior does <i>not</i> conform to C99; it just happens to be
- * easier to emulate "return -1" with conformant implementations than
- * it is to emulate "return number that would be written" with
- * non-conformant implementations.) */
-int
-tor_snprintf(char *str, size_t size, const char *format, ...)
-{
-  va_list ap;
-  int r;
-  va_start(ap,format);
-  r = tor_vsnprintf(str,size,format,ap);
-  va_end(ap);
-  return r;
-}
-
-/** Replacement for vsnprintf; behavior differs as tor_snprintf differs from
- * snprintf.
- */
-int
-tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
-{
-  int r;
-  if (size == 0)
-    return -1; /* no place for the NUL */
-  if (size > SIZE_T_CEILING)
-    return -1;
-#ifdef _WIN32
-  r = _vsnprintf(str, size, format, args);
-#else
-  r = vsnprintf(str, size, format, args);
-#endif
-  str[size-1] = '\0';
-  if (r < 0 || r >= (ssize_t)size)
-    return -1;
-  return r;
-}
-
-/**
- * Portable asprintf implementation.  Does a printf() into a newly malloc'd
- * string.  Sets *<b>strp</b> to this string, and returns its length (not
- * including the terminating NUL character).
- *
- * You can treat this function as if its implementation were something like
-   <pre>
-     char buf[_INFINITY_];
-     tor_snprintf(buf, sizeof(buf), fmt, args);
-     *strp = tor_strdup(buf);
-     return strlen(*strp):
-   </pre>
- * Where _INFINITY_ is an imaginary constant so big that any string can fit
- * into it.
- */
-int
-tor_asprintf(char **strp, const char *fmt, ...)
-{
-  int r;
-  va_list args;
-  va_start(args, fmt);
-  r = tor_vasprintf(strp, fmt, args);
-  va_end(args);
-  if (!*strp || r < 0) {
-    /* LCOV_EXCL_START */
-    log_err(LD_BUG, "Internal error in asprintf");
-    tor_assert(0);
-    /* LCOV_EXCL_STOP */
-  }
-  return r;
-}
-
-/**
- * Portable vasprintf implementation.  Does a printf() into a newly malloc'd
- * string.  Differs from regular vasprintf in the same ways that
- * tor_asprintf() differs from regular asprintf.
- */
-int
-tor_vasprintf(char **strp, const char *fmt, va_list args)
-{
-  /* use a temporary variable in case *strp is in args. */
-  char *strp_tmp=NULL;
-#ifdef HAVE_VASPRINTF
-  /* If the platform gives us one, use it. */
-  int r = vasprintf(&strp_tmp, fmt, args);
-  if (r < 0)
-    *strp = NULL;
-  else
-    *strp = strp_tmp;
-  return r;
-#elif defined(HAVE__VSCPRINTF)
-  /* On Windows, _vsnprintf won't tell us the length of the string if it
-   * overflows, so we need to use _vcsprintf to tell how much to allocate */
-  int len, r;
-  va_list tmp_args;
-  va_copy(tmp_args, args);
-  len = _vscprintf(fmt, tmp_args);
-  va_end(tmp_args);
-  if (len < 0) {
-    *strp = NULL;
-    return -1;
-  }
-  strp_tmp = tor_malloc(len + 1);
-  r = _vsnprintf(strp_tmp, len+1, fmt, args);
-  if (r != len) {
-    tor_free(strp_tmp);
-    *strp = NULL;
-    return -1;
-  }
-  *strp = strp_tmp;
-  return len;
-#else
-  /* Everywhere else, we have a decent vsnprintf that tells us how many
-   * characters we need.  We give it a try on a short buffer first, since
-   * it might be nice to avoid the second vsnprintf call.
-   */
-  char buf[128];
-  int len, r;
-  va_list tmp_args;
-  va_copy(tmp_args, args);
-  /* vsnprintf() was properly checked but tor_vsnprintf() available so
-   * why not use it? */
-  len = tor_vsnprintf(buf, sizeof(buf), fmt, tmp_args);
-  va_end(tmp_args);
-  if (len < (int)sizeof(buf)) {
-    *strp = tor_strdup(buf);
-    return len;
-  }
-  strp_tmp = tor_malloc(len+1);
-  /* use of tor_vsnprintf() will ensure string is null terminated */
-  r = tor_vsnprintf(strp_tmp, len+1, fmt, args);
-  if (r != len) {
-    tor_free(strp_tmp);
-    *strp = NULL;
-    return -1;
-  }
-  *strp = strp_tmp;
-  return len;
-#endif /* defined(HAVE_VASPRINTF) || ... */
-}
-
 /** Given <b>hlen</b> bytes at <b>haystack</b> and <b>nlen</b> bytes at
  * <b>needle</b>, return a pointer to the first occurrence of the needle
  * within the haystack, or NULL if there is no such occurrence.
@@ -590,67 +442,6 @@ tor_memmem(const void *_haystack, size_t hlen,
   return NULL;
 #endif /* defined(HAVE_MEMMEM) && (!defined(__GNUC__) || __GNUC__ >= 2) */
 }
-
-/**
- * Tables to implement ctypes-replacement TOR_IS*() functions.  Each table
- * has 256 bits to look up whether a character is in some set or not.  This
- * fails on non-ASCII platforms, but it is hard to find a platform whose
- * character set is not a superset of ASCII nowadays. */
-
-/**@{*/
-const uint32_t TOR_ISALPHA_TABLE[8] =
-  { 0, 0, 0x7fffffe, 0x7fffffe, 0, 0, 0, 0 };
-const uint32_t TOR_ISALNUM_TABLE[8] =
-  { 0, 0x3ff0000, 0x7fffffe, 0x7fffffe, 0, 0, 0, 0 };
-const uint32_t TOR_ISSPACE_TABLE[8] = { 0x3e00, 0x1, 0, 0, 0, 0, 0, 0 };
-const uint32_t TOR_ISXDIGIT_TABLE[8] =
-  { 0, 0x3ff0000, 0x7e, 0x7e, 0, 0, 0, 0 };
-const uint32_t TOR_ISDIGIT_TABLE[8] = { 0, 0x3ff0000, 0, 0, 0, 0, 0, 0 };
-const uint32_t TOR_ISPRINT_TABLE[8] =
-  { 0, 0xffffffff, 0xffffffff, 0x7fffffff, 0, 0, 0, 0x0 };
-const uint32_t TOR_ISUPPER_TABLE[8] = { 0, 0, 0x7fffffe, 0, 0, 0, 0, 0 };
-const uint32_t TOR_ISLOWER_TABLE[8] = { 0, 0, 0, 0x7fffffe, 0, 0, 0, 0 };
-
-/** Upper-casing and lowercasing tables to map characters to upper/lowercase
- * equivalents.  Used by tor_toupper() and tor_tolower(). */
-/**@{*/
-const uint8_t TOR_TOUPPER_TABLE[256] = {
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,
-  32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,
-  48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,
-  64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,
-  80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,
-  96,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,
-  80,81,82,83,84,85,86,87,88,89,90,123,124,125,126,127,
-  128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,
-  144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,
-  160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,
-  176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,
-  192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,
-  208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,
-  224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,
-  240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,
-};
-const uint8_t TOR_TOLOWER_TABLE[256] = {
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,
-  32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,
-  48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,
-  64,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,
-  112,113,114,115,116,117,118,119,120,121,122,91,92,93,94,95,
-  96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,
-  112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,
-  128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,
-  144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,
-  160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,
-  176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,
-  192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,
-  208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,
-  224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,
-  240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,
-};
-/**@}*/
 
 /** Helper for tor_strtok_r_impl: Advances cp past all characters in
  * <b>sep</b>, and returns its new value. */
@@ -701,32 +492,6 @@ tor_strtok_r_impl(char *str, const char *sep, char **lasts)
   }
   return start;
 }
-
-#ifdef _WIN32
-/** Take a filename and return a pointer to its final element.  This
- * function is called on __FILE__ to fix a MSVC nit where __FILE__
- * contains the full path to the file.  This is bad, because it
- * confuses users to find the home directory of the person who
- * compiled the binary in their warning messages.
- */
-const char *
-tor_fix_source_file(const char *fname)
-{
-  const char *cp1, *cp2, *r;
-  cp1 = strrchr(fname, '/');
-  cp2 = strrchr(fname, '\\');
-  if (cp1 && cp2) {
-    r = (cp1<cp2)?(cp2+1):(cp1+1);
-  } else if (cp1) {
-    r = cp1+1;
-  } else if (cp2) {
-    r = cp2+1;
-  } else {
-    r = fname;
-  }
-  return r;
-}
-#endif /* defined(_WIN32) */
 
 /**
  * Read a 16-bit value beginning at <b>cp</b>.  Equivalent to
@@ -940,80 +705,6 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
   lockfile->fd = -1;
   tor_free(lockfile->filename);
   tor_free(lockfile);
-}
-
-/** @{ */
-/** Some old versions of Unix didn't define constants for these values,
- * and instead expect you to say 0, 1, or 2. */
-#ifndef SEEK_SET
-#define SEEK_SET 0
-#endif
-#ifndef SEEK_CUR
-#define SEEK_CUR 1
-#endif
-#ifndef SEEK_END
-#define SEEK_END 2
-#endif
-/** @} */
-
-/** Return the position of <b>fd</b> with respect to the start of the file. */
-off_t
-tor_fd_getpos(int fd)
-{
-#ifdef _WIN32
-  return (off_t) _lseek(fd, 0, SEEK_CUR);
-#else
-  return (off_t) lseek(fd, 0, SEEK_CUR);
-#endif
-}
-
-/** Move <b>fd</b> to the end of the file. Return -1 on error, 0 on success.
- * If the file is a pipe, do nothing and succeed.
- **/
-int
-tor_fd_seekend(int fd)
-{
-#ifdef _WIN32
-  return _lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
-#else
-  off_t rc = lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
-#ifdef ESPIPE
-  /* If we get an error and ESPIPE, then it's a pipe or a socket of a fifo:
-   * no need to worry. */
-  if (rc < 0 && errno == ESPIPE)
-    rc = 0;
-#endif /* defined(ESPIPE) */
-  return (rc < 0) ? -1 : 0;
-#endif /* defined(_WIN32) */
-}
-
-/** Move <b>fd</b> to position <b>pos</b> in the file. Return -1 on error, 0
- * on success. */
-int
-tor_fd_setpos(int fd, off_t pos)
-{
-#ifdef _WIN32
-  return _lseek(fd, pos, SEEK_SET) < 0 ? -1 : 0;
-#else
-  return lseek(fd, pos, SEEK_SET) < 0 ? -1 : 0;
-#endif
-}
-
-/** Replacement for ftruncate(fd, 0): move to the front of the file and remove
- * all the rest of the file. Return -1 on error, 0 on success. */
-int
-tor_ftruncate(int fd)
-{
-  /* Rumor has it that some versions of ftruncate do not move the file pointer.
-   */
-  if (tor_fd_setpos(fd, 0) < 0)
-    return -1;
-
-#ifdef _WIN32
-  return _chsize(fd, 0);
-#else
-  return ftruncate(fd, 0);
-#endif
 }
 
 #undef DEBUG_SOCKET_COUNTING
@@ -2850,183 +2541,39 @@ compute_num_cpus(void)
   return num_cpus;
 }
 
-#if !defined(_WIN32)
-/** Defined iff we need to add locks when defining fake versions of reentrant
- * versions of time-related functions. */
-#define TIME_FNS_NEED_LOCKS
-#endif
-
-/** Helper: Deal with confused or out-of-bounds values from localtime_r and
- * friends.  (On some platforms, they can give out-of-bounds values or can
- * return NULL.)  If <b>islocal</b>, this is a localtime result; otherwise
- * it's from gmtime.  The function returns <b>r</b>, when given <b>timep</b>
- * as its input. If we need to store new results, store them in
- * <b>resultbuf</b>. */
-static struct tm *
-correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
-           struct tm *r)
-{
-  const char *outcome;
-
-  if (PREDICT_LIKELY(r)) {
-    /* We can't strftime dates after 9999 CE, and we want to avoid dates
-     * before 1 CE (avoiding the year 0 issue and negative years). */
-    if (r->tm_year > 8099) {
-      r->tm_year = 8099;
-      r->tm_mon = 11;
-      r->tm_mday = 31;
-      r->tm_yday = 364;
-      r->tm_wday = 6;
-      r->tm_hour = 23;
-      r->tm_min = 59;
-      r->tm_sec = 59;
-    } else if (r->tm_year < (1-1900)) {
-      r->tm_year = (1-1900);
-      r->tm_mon = 0;
-      r->tm_mday = 1;
-      r->tm_yday = 0;
-      r->tm_wday = 0;
-      r->tm_hour = 0;
-      r->tm_min = 0;
-      r->tm_sec = 0;
-    }
-    return r;
-  }
-
-  /* If we get here, gmtime or localtime returned NULL. It might have done
-   * this because of overrun or underrun, or it might have done it because of
-   * some other weird issue. */
-  if (timep) {
-    if (*timep < 0) {
-      r = resultbuf;
-      r->tm_year = 70; /* 1970 CE */
-      r->tm_mon = 0;
-      r->tm_mday = 1;
-      r->tm_yday = 0;
-      r->tm_wday = 0;
-      r->tm_hour = 0;
-      r->tm_min = 0 ;
-      r->tm_sec = 0;
-      outcome = "Rounding up to 1970";
-      goto done;
-    } else if (*timep >= INT32_MAX) {
-      /* Rounding down to INT32_MAX isn't so great, but keep in mind that we
-       * only do it if gmtime/localtime tells us NULL. */
-      r = resultbuf;
-      r->tm_year = 137; /* 2037 CE */
-      r->tm_mon = 11;
-      r->tm_mday = 31;
-      r->tm_yday = 364;
-      r->tm_wday = 6;
-      r->tm_hour = 23;
-      r->tm_min = 59;
-      r->tm_sec = 59;
-      outcome = "Rounding down to 2037";
-      goto done;
-    }
-  }
-
-  /* If we get here, then gmtime/localtime failed without getting an extreme
-   * value for *timep */
-  /* LCOV_EXCL_START */
-  tor_fragile_assert();
-  r = resultbuf;
-  memset(resultbuf, 0, sizeof(struct tm));
-  outcome="can't recover";
-  /* LCOV_EXCL_STOP */
- done:
-  log_warn(LD_BUG, "%s("I64_FORMAT") failed with error %s: %s",
-           islocal?"localtime":"gmtime",
-           timep?I64_PRINTF_ARG(*timep):0,
-           strerror(errno),
-           outcome);
-  return r;
-}
-
-/** @{ */
 /** As localtime_r, but defined for platforms that don't have it:
  *
  * Convert *<b>timep</b> to a struct tm in local time, and store the value in
  * *<b>result</b>.  Return the result on success, or NULL on failure.
  */
-#ifdef HAVE_LOCALTIME_R
 struct tm *
 tor_localtime_r(const time_t *timep, struct tm *result)
 {
-  struct tm *r;
-  r = localtime_r(timep, result);
-  return correct_tm(1, timep, result, r);
+  char *err = NULL;
+  struct tm *r = tor_localtime_r_msg(timep, result, &err);
+  if (err) {
+    log_warn(LD_BUG, "%s", err);
+    tor_free(err);
+  }
+  return r;
 }
-#elif defined(TIME_FNS_NEED_LOCKS)
-struct tm *
-tor_localtime_r(const time_t *timep, struct tm *result)
-{
-  struct tm *r;
-  static tor_mutex_t *m=NULL;
-  if (!m) { m=tor_mutex_new(); }
-  tor_assert(result);
-  tor_mutex_acquire(m);
-  r = localtime(timep);
-  if (r)
-    memcpy(result, r, sizeof(struct tm));
-  tor_mutex_release(m);
-  return correct_tm(1, timep, result, r);
-}
-#else
-struct tm *
-tor_localtime_r(const time_t *timep, struct tm *result)
-{
-  struct tm *r;
-  tor_assert(result);
-  r = localtime(timep);
-  if (r)
-    memcpy(result, r, sizeof(struct tm));
-  return correct_tm(1, timep, result, r);
-}
-#endif /* defined(HAVE_LOCALTIME_R) || ... */
-/** @} */
 
-/** @{ */
 /** As gmtime_r, but defined for platforms that don't have it:
  *
  * Convert *<b>timep</b> to a struct tm in UTC, and store the value in
  * *<b>result</b>.  Return the result on success, or NULL on failure.
  */
-#ifdef HAVE_GMTIME_R
 struct tm *
 tor_gmtime_r(const time_t *timep, struct tm *result)
 {
-  struct tm *r;
-  r = gmtime_r(timep, result);
-  return correct_tm(0, timep, result, r);
+  char *err = NULL;
+  struct tm *r = tor_gmtime_r_msg(timep, result, &err);
+  if (err) {
+    log_warn(LD_BUG, "%s", err);
+    tor_free(err);
+  }
+  return r;
 }
-#elif defined(TIME_FNS_NEED_LOCKS)
-struct tm *
-tor_gmtime_r(const time_t *timep, struct tm *result)
-{
-  struct tm *r;
-  static tor_mutex_t *m=NULL;
-  if (!m) { m=tor_mutex_new(); }
-  tor_assert(result);
-  tor_mutex_acquire(m);
-  r = gmtime(timep);
-  if (r)
-    memcpy(result, r, sizeof(struct tm));
-  tor_mutex_release(m);
-  return correct_tm(0, timep, result, r);
-}
-#else
-struct tm *
-tor_gmtime_r(const time_t *timep, struct tm *result)
-{
-  struct tm *r;
-  tor_assert(result);
-  r = gmtime(timep);
-  if (r)
-    memcpy(result, r, sizeof(struct tm));
-  return correct_tm(0, timep, result, r);
-}
-#endif /* defined(HAVE_GMTIME_R) || ... */
 
 #if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL && defined(RLIMIT_MEMLOCK)
 #define HAVE_UNIX_MLOCKALL
@@ -3527,4 +3074,3 @@ tor_get_avail_disk_space(const char *path)
   return -1;
 #endif /* defined(HAVE_STATVFS) || ... */
 }
-

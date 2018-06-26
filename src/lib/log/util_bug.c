@@ -8,10 +8,16 @@
  **/
 
 #include "orconfig.h"
-#include "common/util_bug.h"
-#include "common/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/log/torlog.h"
 #include "lib/err/backtrace.h"
-#include "common/container.h"
+#ifdef TOR_UNIT_TESTS
+#include "lib/container/smartlist.h"
+#endif
+#include "lib/malloc/util_malloc.h"
+#include "lib/string/printf.h"
+
+#include <string.h>
 
 #ifdef __COVERITY__
 int bug_macro_deadcode_dummy__ = 0;
@@ -117,3 +123,28 @@ tor_bug_occurred_(const char *fname, unsigned int line,
 #endif
 }
 
+#ifdef _WIN32
+/** Take a filename and return a pointer to its final element.  This
+ * function is called on __FILE__ to fix a MSVC nit where __FILE__
+ * contains the full path to the file.  This is bad, because it
+ * confuses users to find the home directory of the person who
+ * compiled the binary in their warning messages.
+ */
+const char *
+tor_fix_source_file(const char *fname)
+{
+  const char *cp1, *cp2, *r;
+  cp1 = strrchr(fname, '/');
+  cp2 = strrchr(fname, '\\');
+  if (cp1 && cp2) {
+    r = (cp1<cp2)?(cp2+1):(cp1+1);
+  } else if (cp1) {
+    r = cp1+1;
+  } else if (cp2) {
+    r = cp2+1;
+  } else {
+    r = fname;
+  }
+  return r;
+}
+#endif /* defined(_WIN32) */

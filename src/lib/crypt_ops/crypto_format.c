@@ -14,15 +14,16 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
-#include "common/container.h"
+#include "lib/container/smartlist.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/string/util_string.h"
 #include "common/util.h"
 #include "common/util_format.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 /** Write the <b>datalen</b> bytes from <b>data</b> to the file named
  * <b>fname</b> in the tagged-data format.  This format contains a
@@ -296,4 +297,3 @@ digest256_from_base64(char *digest, const char *d64)
   else
     return -1;
 }
-

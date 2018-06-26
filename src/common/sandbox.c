@@ -33,14 +33,16 @@
 #include <stdlib.h>
 
 #include "common/sandbox.h"
-#include "common/container.h"
+#include "lib/container/map.h"
 #include "lib/err/torerr.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "lib/cc/torint.h"
 #include "common/util.h"
 #include "tor_queue.h"
 
 #include "ht.h"
+
+#include "siphash.h"
 
 #define DEBUGGING_CLOSE
 

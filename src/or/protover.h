@@ -9,7 +9,7 @@
 #ifndef TOR_PROTOVER_H
 #define TOR_PROTOVER_H
 
-#include "common/container.h"
+struct smartlist_t;
 
 /** The first version of Tor that included "proto" entries in its
  * descriptors.  Authorities should use this to decide whether to
@@ -47,7 +47,7 @@ int protover_all_supported(const char *s, char **missing);
 int protover_is_supported_here(protocol_type_t pr, uint32_t ver);
 const char *protover_get_supported_protocols(void);
 
-char *protover_compute_vote(const smartlist_t *list_of_proto_strings,
+char *protover_compute_vote(const struct smartlist_t *list_of_proto_strings,
                             int threshold);
 const char *protover_compute_for_old_tor(const char *version);
 int protocol_list_supports_protocol(const char *list, protocol_type_t tp,
@@ -75,12 +75,12 @@ typedef struct proto_entry_t {
    */
   char *name;
   /** Smartlist of proto_range_t */
-  smartlist_t *ranges;
+  struct smartlist_t *ranges;
 } proto_entry_t;
 
 #if !defined(HAVE_RUST) && defined(TOR_UNIT_TESTS)
-STATIC smartlist_t *parse_protocol_list(const char *s);
-STATIC char *encode_protocol_list(const smartlist_t *sl);
+STATIC struct smartlist_t *parse_protocol_list(const char *s);
+STATIC char *encode_protocol_list(const struct smartlist_t *sl);
 STATIC const char *protocol_type_to_str(protocol_type_t pr);
 STATIC int str_to_protocol_type(const char *s, protocol_type_t *pr_out);
 STATIC void proto_entry_free_(proto_entry_t *entry);
@@ -92,4 +92,3 @@ STATIC void proto_entry_free_(proto_entry_t *entry);
 #endif /* defined(PROTOVER_PRIVATE) */
 
 #endif /* !defined(TOR_PROTOVER_H) */
-

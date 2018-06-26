@@ -44,9 +44,7 @@ void base32_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base32_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 size_t base32_encoded_size(size_t srclen);
 
-int hex_decode_digit(char c);
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 #endif /* !defined(TOR_UTIL_FORMAT_H) */
-

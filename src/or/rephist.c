@@ -92,6 +92,9 @@
 #include "or/networkstatus_st.h"
 #include "or/or_circuit_st.h"
 
+#include "lib/container/bloomfilt.h"
+#include "lib/container/order.h"
+
 static void bw_arrays_init(void);
 static void predicted_ports_alloc(void);
 
@@ -3208,4 +3211,3 @@ rep_hist_free_all(void)
   tor_assert_nonfatal(rephist_total_alloc == 0);
   tor_assert_nonfatal_once(rephist_total_num == 0);
 }
-

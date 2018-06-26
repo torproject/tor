@@ -62,16 +62,17 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include <unistd.h>
 #endif
 
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "lib/cc/torint.h"
 #include "lib/crypt_ops/aes.h"
 #include "common/util.h"
-#include "common/container.h"
 #include "common/compat.h"
 #include "common/sandbox.h"
 #include "common/util_format.h"
 
 #include "keccak-tiny/keccak-tiny.h"
+
+#include "siphash.h"
 
 /** Boolean: has OpenSSL's crypto been initialized? */
 static int crypto_early_initialized_ = 0;

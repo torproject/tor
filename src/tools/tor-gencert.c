@@ -36,7 +36,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #endif
 
 #include "common/util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_rand.h"

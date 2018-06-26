@@ -10,11 +10,11 @@
  * operations.
  **/
 
-#include "common/container.h"
+#include "lib/container/smartlist.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 
 #include "keccak-tiny/keccak-tiny.h"
 
@@ -580,4 +580,3 @@ crypto_xof_free_(crypto_xof_t *xof)
   memwipe(xof, 0, sizeof(crypto_xof_t));
   tor_free(xof);
 }
-

@@ -17,6 +17,8 @@
 #include "or/or_circuit_st.h"
 #include "or/origin_circuit_st.h"
 
+#include "lib/container/bitarray.h"
+
 static channel_t *
 new_fake_channel(void)
 {
@@ -470,4 +472,3 @@ struct testcase_t circuitlist_tests[] = {
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

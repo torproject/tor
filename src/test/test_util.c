@@ -8,6 +8,7 @@
 #define COMPAT_TIME_PRIVATE
 #define CONTROL_PRIVATE
 #define UTIL_PRIVATE
+#define UTIL_MALLOC_PRIVATE
 #include "or/or.h"
 #include "common/buffers.h"
 #include "or/config.h"
@@ -18,6 +19,7 @@
 #include "common/util_process.h"
 #include "test/log_test_helpers.h"
 #include "lib/compress/compress_zstd.h"
+#include "lib/fdio/fdio.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>
@@ -6316,4 +6318,3 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(get_unquoted_path, 0),
   END_OF_TESTCASES
 };
-

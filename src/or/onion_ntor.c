@@ -26,7 +26,7 @@
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/onion_ntor.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
 
 /** Free storage held in an ntor handshake state. */

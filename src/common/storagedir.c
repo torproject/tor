@@ -1,13 +1,13 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "common/container.h"
+#include "lib/container/smartlist.h"
 #include "common/compat.h"
 #include "common/confline.h"
 #include "common/memarea.h"
 #include "common/sandbox.h"
 #include "common/storagedir.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
 
 #ifdef HAVE_SYS_TYPES_H
@@ -583,4 +583,3 @@ storage_dir_get_max_files(storage_dir_t *d)
 {
   return d->max_files;
 }
-

@@ -21,13 +21,13 @@
 #include <wincrypt.h>
 #endif /* defined(_WIN32) */
 
-#include "common/container.h"
+#include "lib/container/smartlist.h"
 #include "common/compat.h"
 #include "lib/crypt_ops/compat_openssl.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "common/sandbox.h"
 #include "lib/testsupport/testsupport.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "common/util.h"
 #include "common/util_format.h"
 
@@ -612,4 +612,3 @@ crypto_force_rand_ssleay(void)
 }
 
 #endif /* !defined(CRYPTO_RAND_PRIVATE) */
-

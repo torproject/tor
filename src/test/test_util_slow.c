@@ -8,7 +8,7 @@
 #include "common/util.h"
 #include "common/util_process.h"
 #include "lib/crypt_ops/crypto.h"
-#include "common/torlog.h"
+#include "lib/log/torlog.h"
 #include "test/test.h"
 
 #ifndef BUILDDIR

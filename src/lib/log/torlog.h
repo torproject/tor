@@ -12,7 +12,9 @@
 
 #ifndef TOR_TORLOG_H
 
-#include "common/compat.h"
+#include <stdarg.h>
+#include "lib/cc/torint.h"
+#include "lib/cc/compat_compiler.h"
 #include "lib/testsupport/testsupport.h"
 
 #ifdef HAVE_SYSLOG_H
@@ -143,8 +145,10 @@ void set_log_severity_config(int minSeverity, int maxSeverity,
                              log_severity_list_t *severity_out);
 void add_stream_log(const log_severity_list_t *severity, const char *name,
                     int fd);
-int add_file_log(const log_severity_list_t *severity, const char *filename,
-                 const int truncate);
+int add_file_log(const log_severity_list_t *severity,
+                 const char *filename,
+                 int fd);
+
 #ifdef HAVE_SYSLOG_H
 int add_syslog_log(const log_severity_list_t *severity,
                    const char* syslog_identity_tag);
