@@ -930,7 +930,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
     return 0;
   }
 
-  socksver = *data;
+  socksver = get_uint8(data);
 
   if (socksver == 5 || socksver == 4 ||
       socksver == 1) { // XXX: RFC 1929
