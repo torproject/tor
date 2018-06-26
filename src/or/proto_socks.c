@@ -166,7 +166,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
   const char *username = socks4_client_request_get_username(trunnel_req);
   size_t usernamelen = username ? strlen(username) : 0;
   if (username && usernamelen) {
-    if (usernamelen > 1024) { // XXX: magic number
+    if (usernamelen > MAX_SOCKS_MESSAGE_LEN) {
       log_warn(LD_APP, "Socks4 user name too long; rejecting.");
       res = SOCKS_RESULT_INVALID;
       goto end;
