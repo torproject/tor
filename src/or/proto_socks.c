@@ -214,7 +214,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
  * SOCKS_RESULT_INVALID if it failed.
  */
 static socks_result_t
-process_socks4_request(socks_request_t *req, int is_socks4a,
+process_socks4_request(const socks_request_t *req, int is_socks4a,
                        int log_sockstype, int safe_socks)
 {
   if (is_socks4a && !addressmap_have_mapping(req->address, 0)) {
