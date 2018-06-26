@@ -290,7 +290,11 @@ AM_PROG_CC_C_O
 AC_PROG_CC_C99
 
 AC_ARG_VAR([PYTHON], [path to Python binary])
-AC_CHECK_PROGS(PYTHON, [python python2 python2.7 python3 python3.3])
+AC_CHECK_PROGS(PYTHON, [ \
+	python3 \
+	python3.8 python3.7 python3.6 python3.5 python3.4 \
+	python \
+	python2 python2.7])
 if test "x$PYTHON" = "x"; then
   AC_MSG_WARN([Python unavailable; some tests will not be run.])
 fi
