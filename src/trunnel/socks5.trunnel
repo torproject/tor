@@ -92,25 +92,3 @@ struct socks4_server_reply {
    u32 addr;
 }
 
-// And here's the extended stuff from proposal 229
-
-struct tor_socksauth_keyval {
-  u16 keylen;
-  char key[keylen];
-  u16 vallen;
-  char val[vallen];
-}
-
-struct tor_extended_socks_auth_request {
-  u8 version IN [1];
-  u16 npairs;
-  struct tor_socksauth_keyval pairs[npairs];
-}
-
-struct tor_extended_socks_auth_response {
-  u8 version IN [1];
-  u8 status;
-  u16 npairs;
-  struct tor_socksauth_keyval pairs[npairs];
-}
-
