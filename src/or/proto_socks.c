@@ -531,6 +531,7 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
     goto end;
   }
 
+  tor_assert(parsed >= 0);
   *drain_out = (size_t)parsed;
 
   if (socks5_client_request_get_version(trunnel_req) != 5) {
