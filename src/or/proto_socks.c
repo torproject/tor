@@ -172,7 +172,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
   if (*is_socks4a) {
     // We cannot rely on trunnel here, as we want to detect if
     // we have abnormally long hostname field.
-    char *hostname = (char *)raw_data + SOCKS4_NETWORK_LEN +
+    const char *hostname = (char *)raw_data + SOCKS4_NETWORK_LEN +
      strlen(username) + 1;
     size_t hostname_len = (char *)raw_data + datalen - hostname;
 
