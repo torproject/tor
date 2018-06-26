@@ -1,3 +1,72 @@
+Changes in version 0.3.4.3-alpha - 2018-06-26
+  Tor 0.3.4.3-alpha fixes several bugs in earlier versions, including
+  one that was causing stability issues on directory authorities.
+
+  o Major bugfixes (directory authority):
+    - Stop leaking memory on directory authorities when planning to
+      vote. This bug was crashing authorities by exhausting their
+      memory. Fixes bug 26435; bugfix on 0.3.3.6.
+
+  o Major bugfixes (rust, testing):
+    - Make sure that failing tests in Rust will actually cause the build
+      to fail: previously, they were ignored. Fixes bug 26258; bugfix
+      on 0.3.3.4-alpha.
+
+  o Minor feature (directory authorities):
+    - Stop warning about incomplete bw lines before the first complete
+      bw line has been found, so that additional header lines can be
+      ignored. Fixes bug 25960; bugfix on 0.2.2.1-alpha
+
+  o Minor features (relay, diagnostic):
+    - Add several checks to detect whether Tor relays are uploading
+      their descriptors without specifying why they regenerated them.
+      Diagnostic for ticket 25686.
+
+  o Minor features (unit tests):
+    - Test complete bandwidth measurements files, and test that
+      incomplete bandwidth lines only give warnings when the end of the
+      header has not been detected. Fixes bug 25947; bugfix
+      on 0.2.2.1-alpha
+
+  o Minor bugfixes (compilation):
+    - Refrain from compiling unit testing related object files when
+      --disable-unittests is set to configure script. Fixes bug 24891;
+      bugfix on 0.2.5.1-alpha.
+    - When linking the libtor_testing.a library, only include the
+      dirauth object files once. Previously, they were getting added
+      twice. Fixes bug 26402; bugfix on 0.3.4.1-alpha.
+    - The --enable-fatal-warnings flag now affects Rust code as well.
+      Closes ticket 26245.
+
+  o Minor bugfixes (onion services):
+    - Recompute some consensus information after detecting a clock jump,
+      or after transitioning from a non-live consensus to a live
+      consensus. We do this to avoid having an outdated state, and
+      miscalculating the index for next-generation onion services. Fixes
+      bug 24977; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (relay):
+    - Relays now correctly block attempts to re-extend to the previous
+      relay by Ed25519 identity. Previously they would warn in this
+      case, but not actually reject the attempt. Fixes bug 26158; bugfix
+      on 0.3.0.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Fix compilation of the doctests in the Rust crypto crate. Fixes
+      bug 26415; bugfix on 0.3.4.1-alpha.
+    - Instead of trying to read the geoip configuration files from
+      within the unit tests, instead create our own ersatz files with
+      just enough geoip data in the format we expect. Trying to read
+      from the source directory created problems on Windows with mingw,
+      where the build system's paths are not the same as the platform's
+      paths. Fixes bug 25787; bugfix on 0.3.4.1-alpha.
+    - Refrain from trying to get an item from an empty smartlist in
+      test_bridges_clear_bridge_list. Set DEBUG_SMARTLIST in unit tests
+      to catch improper smartlist usage. Furthermore, enable
+      DEBUG_SMARTLIST globally when build is configured with fragile
+      hardening. Fixes bug 26196; bugfix on 0.3.4.1-alpha.
+
+
 Changes in version 0.3.3.7 - 2018-06-12
   Tor 0.3.3.7 backports several changes from the 0.3.4.x series, including
   fixes for bugs affecting compatibility and stability.
@@ -28476,4 +28545,3 @@ Changes in version 0.0.2pre13 - 2003-10-19
     - If --DebugLogFile is specified, log to it at -l debug
     - If --LogFile is specified, use it instead of commandline
     - If --RunAsDaemon is set, tor forks and backgrounds on startup
-
