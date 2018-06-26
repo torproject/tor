@@ -5,7 +5,6 @@
 #define CRYPTO_OPE_H
 
 #include "orconfig.h"
-#include "torint.h"
 #include "crypto.h"
 #include "crypto_util.h"
 

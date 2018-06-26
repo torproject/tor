@@ -7,9 +7,9 @@
 
 #define CRYPTO_OPE_PRIVATE
 
-#include "crypto_ope.h"
-#include "util_format.h"
-#include "test.h"
+#include "lib/crypt_ops/crypto_ope.h"
+#include "common/util_format.h"
+#include "test/test.h"
 
 static void
 test_crypto_ope_consistency(void *arg)
