@@ -677,7 +677,7 @@ process_socks5_client_request(socks_request_t *req,
  *  - SOCKS_RESULT_TRUNCATED if we do not found an expected
  *    SOCKS message in its entirety (more stuff has to arrive
  *    from client).
- *  - SOCKS_RESULT_TRUNCATED if we handled current message
+ *  - SOCKS_RESULT_MORE_EXPECTED if we handled current message
  *    successfully, but we expect more messages from the
  *    client.
  */
