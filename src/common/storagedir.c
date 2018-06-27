@@ -3,7 +3,7 @@
 
 #include "lib/container/smartlist.h"
 #include "common/compat.h"
-#include "common/confline.h"
+#include "lib/encoding/confline.h"
 #include "common/memarea.h"
 #include "lib/sandbox/sandbox.h"
 #include "common/storagedir.h"

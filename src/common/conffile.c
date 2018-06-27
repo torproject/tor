@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 #include "common/compat.h"
-#include "common/confline.h"
+#include "lib/encoding/confline.h"
 #include "common/conffile.h"
 #include "lib/log/torlog.h"
 #include "common/util.h"

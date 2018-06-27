@@ -75,7 +75,7 @@
 #include "lib/net/address.h"
 #include "common/compat_libevent.h"
 #include "ht.h"
-#include "common/confline.h"
+#include "lib/encoding/confline.h"
 #include "or/replaycache.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
