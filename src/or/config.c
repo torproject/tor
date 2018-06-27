@@ -98,7 +98,7 @@
 #include "or/hs_config.h"
 #include "or/rephist.h"
 #include "or/router.h"
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 #include "common/util.h"
 #include "or/routerlist.h"
 #include "or/routerset.h"

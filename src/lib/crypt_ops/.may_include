@@ -7,6 +7,7 @@ lib/defs/*.h
 lib/malloc/*.h
 lib/err/*.h
 lib/intmath/*.h
+lib/sandbox/*.h
 lib/string/*.h
 lib/testsupport/testsupport.h
 lib/log/*.h

@@ -40,7 +40,7 @@
 #include "or/main.h"
 #include "or/rephist.h"
 #include "or/router.h"
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 #include "or/statefile.h"
 
 /** A list of state-file "abbreviations," for compatibility. */

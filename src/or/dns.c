@@ -63,7 +63,7 @@
 #include "or/relay.h"
 #include "or/router.h"
 #include "ht.h"
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 
 #include "or/edge_connection_st.h"
 #include "or/or_circuit_st.h"

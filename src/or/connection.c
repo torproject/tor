@@ -102,7 +102,7 @@
 #include "or/routerlist.h"
 #include "or/transports.h"
 #include "or/routerparse.h"
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>

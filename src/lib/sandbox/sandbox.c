@@ -31,18 +31,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 #include "lib/container/map.h"
 #include "lib/err/torerr.h"
 #include "lib/log/torlog.h"
 #include "lib/cc/torint.h"
 #include "lib/net/resolve.h"
-#include "common/util.h"
+#include "lib/malloc/util_malloc.h"
+#include "lib/string/scanf.h"
+
 #include "tor_queue.h"
-
 #include "ht.h"
-
 #include "siphash.h"
 
 #define DEBUGGING_CLOSE
@@ -1558,7 +1559,8 @@ install_syscall_filter(sandbox_cfg_t* cfg)
   return (rc < 0 ? -rc : rc);
 }
 
-#include "linux_syscalls.inc"
+#include "lib/sandbox/linux_syscalls.inc"
+
 static const char *
 get_syscall_name(int syscall_num)
 {

@@ -21,7 +21,7 @@
 #include "lib/container/smartlist.h"
 #include "lib/fdio/fdio.h"
 #include "lib/net/address.h"
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 #include "lib/err/backtrace.h"
 #include "common/util_process.h"
 #include "common/util_format.h"
