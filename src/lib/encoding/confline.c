@@ -4,11 +4,16 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "common/compat.h"
-#include "common/confline.h"
+#include "lib/encoding/confline.h"
+#include "lib/encoding/cstring.h"
 #include "lib/log/torlog.h"
-#include "common/util.h"
-#include "lib/container/smartlist.h"
+#include "lib/log/util_bug.h"
+#include "lib/malloc/util_malloc.h"
+#include "lib/string/compat_ctype.h"
+#include "lib/string/compat_string.h"
+#include "lib/string/util_string.h"
+
+#include <string.h>
 
 /** Helper: allocate a new configuration option mapping 'key' to 'val',
  * append it to *<b>lst</b>. */
@@ -74,7 +79,7 @@ config_line_find(const config_line_t *lines,
 int
 config_get_lines_aux(const char *string, config_line_t **result, int extended,
                      int allow_include, int *has_include,
-                     smartlist_t *opened_lst, int recursion_level,
+                     struct smartlist_t *opened_lst, int recursion_level,
                      config_line_t **last,
                      include_handler_fn handle_include)
 {

@@ -39,6 +39,7 @@
 #include "lib/fs/files.h"
 #include "lib/fs/path.h"
 #include "lib/encoding/time_fmt.h"
+#include "lib/encoding/cstring.h"
 
 void tor_log_mallinfo(int severity);
 
@@ -101,8 +102,6 @@ enum stream_status {
 const char *stream_status_to_string(enum stream_status stream_status);
 
 enum stream_status get_string_from_pipe(int fd, char *buf, size_t count);
-
-const char *unescape_string(const char *s, char **result, size_t *size_out);
 
 /* Process helpers */
 void start_daemon(void);
