@@ -1479,17 +1479,7 @@ ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses)
 STATIC smartlist_t *
 get_interface_addresses_win32(int severity, sa_family_t family)
 {
-  /*
-    XXXX We can assume that this function exists now; we can't
-    XXXX provide backward compatibility to pre-windows-XP.
-  */
-  /* Windows XP began to provide GetAdaptersAddresses. Windows 2000 had a
-     "GetAdaptersInfo", but that's deprecated; let's just try
-     GetAdaptersAddresses and fall back to connect+getsockname.
-  */
-  HANDLE lib = load_windows_system_library(TEXT("iphlpapi.dll"));
   smartlist_t *result = NULL;
-  GetAdaptersAddresses_fn_t fn;
   ULONG size, res;
   IP_ADAPTER_ADDRESSES *addresses = NULL;
 
@@ -1499,27 +1489,16 @@ get_interface_addresses_win32(int severity, sa_family_t family)
                GAA_FLAG_SKIP_MULTICAST | \
                GAA_FLAG_SKIP_DNS_SERVER)
 
-  if (!lib) {
-    log_fn(severity, LD_NET, "Unable to load iphlpapi.dll");
-    goto done;
-  }
-
-  if (!(fn = (GetAdaptersAddresses_fn_t)
-                  GetProcAddress(lib, "GetAdaptersAddresses"))) {
-    log_fn(severity, LD_NET, "Unable to obtain pointer to "
-           "GetAdaptersAddresses");
-    goto done;
-  }
-
   /* Guess how much space we need. */
   size = 15*1024;
   addresses = tor_malloc(size);
-  res = fn(family, FLAGS, NULL, addresses, &size);
+  /* Exists in windows XP and later. */
+  res = GetAdaptersAddresses(family, FLAGS, NULL, addresses, &size);
   if (res == ERROR_BUFFER_OVERFLOW) {
     /* we didn't guess that we needed enough space; try again */
     tor_free(addresses);
     addresses = tor_malloc(size);
-    res = fn(AF_UNSPEC, FLAGS, NULL, addresses, &size);
+    res = GetAdaptersAddresses(AF_UNSPEC, FLAGS, NULL, addresses, &size);
   }
   if (res != NO_ERROR) {
     log_fn(severity, LD_NET, "GetAdaptersAddresses failed (result: %lu)", res);
@@ -1529,8 +1508,6 @@ get_interface_addresses_win32(int severity, sa_family_t family)
   result = ip_adapter_addresses_to_smartlist(addresses);
 
  done:
-  if (lib)
-    FreeLibrary(lib);
   tor_free(addresses);
   return result;
 }
