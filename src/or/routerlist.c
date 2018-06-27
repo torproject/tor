@@ -119,7 +119,7 @@
 #include "or/routerlist.h"
 #include "or/routerparse.h"
 #include "or/routerset.h"
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 #include "or/torcert.h"
 
 #include "or/dirauth/dirvote.h"

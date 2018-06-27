@@ -8,7 +8,7 @@
 #include "common/util.h"
 #include "lib/net/address.h"
 #include "lib/log/torlog.h"
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 
 #include <stdio.h>
 #include <stdlib.h>

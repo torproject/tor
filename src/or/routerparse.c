@@ -74,7 +74,7 @@
 #include "or/routerkeys.h"
 #include "or/routerlist.h"
 #include "or/routerparse.h"
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 #include "or/shared_random_client.h"
 #include "or/torcert.h"
 #include "or/voting_schedule.h"

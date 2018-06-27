@@ -5,7 +5,7 @@
 #include "common/compat.h"
 #include "common/confline.h"
 #include "common/memarea.h"
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 #include "common/storagedir.h"
 #include "lib/log/torlog.h"
 #include "common/util.h"

@@ -111,7 +111,7 @@
 #include "common/util_process.h"
 #include "or/ext_orport.h"
 #include "common/memarea.h"
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 
 #include <event2/event.h>
 

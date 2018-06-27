@@ -32,7 +32,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "common/sandbox.h"
+#include "lib/sandbox/sandbox.h"
 #include "lib/container/map.h"
 #include "lib/err/torerr.h"
 #include "lib/log/torlog.h"
