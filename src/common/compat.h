@@ -46,6 +46,7 @@
 #endif
 
 #include "lib/cc/compat_compiler.h"
+#include "lib/arch/bytes.h"
 #include "common/compat_time.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/string/compat_string.h"
@@ -151,22 +152,6 @@ typedef enum {
 
 /* ===== OS compatibility */
 MOCK_DECL(const char *, get_uname, (void));
-
-uint16_t get_uint16(const void *cp) ATTR_NONNULL((1));
-uint32_t get_uint32(const void *cp) ATTR_NONNULL((1));
-uint64_t get_uint64(const void *cp) ATTR_NONNULL((1));
-void set_uint16(void *cp, uint16_t v) ATTR_NONNULL((1));
-void set_uint32(void *cp, uint32_t v) ATTR_NONNULL((1));
-void set_uint64(void *cp, uint64_t v) ATTR_NONNULL((1));
-
-/* These uint8 variants are defined to make the code more uniform. */
-#define get_uint8(cp) (*(const uint8_t*)(cp))
-static void set_uint8(void *cp, uint8_t v);
-static inline void
-set_uint8(void *cp, uint8_t v)
-{
-  *(uint8_t*)cp = v;
-}
 
 #if !defined(HAVE_RLIM_T)
 typedef unsigned long rlim_t;

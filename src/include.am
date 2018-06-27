@@ -1,4 +1,5 @@
 include src/ext/include.am
+include src/lib/arch/include.am
 include src/lib/err/include.am
 include src/lib/cc/include.am
 include src/lib/ctime/include.am

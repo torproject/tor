@@ -39,9 +39,6 @@
 #include "lib/fs/files.h"
 #include "lib/fs/path.h"
 
-uint64_t tor_htonll(uint64_t a);
-uint64_t tor_ntohll(uint64_t a);
-
 void tor_log_mallinfo(int severity);
 
 /** Macro: yield a pointer to an enclosing structure given a pointer to

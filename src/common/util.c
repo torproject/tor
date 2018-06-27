@@ -2848,24 +2848,3 @@ ENABLE_GCC_WARNING(double-promotion)
 ENABLE_GCC_WARNING(float-conversion)
 #endif
 }
-
-/** Return a uint64_t value from <b>a</b> in network byte order. */
-uint64_t
-tor_htonll(uint64_t a)
-{
-#ifdef WORDS_BIGENDIAN
-  /* Big endian. */
-  return a;
-#else /* WORDS_BIGENDIAN */
-  /* Little endian. The worst... */
-  return htonl((uint32_t)(a>>32)) |
-    (((uint64_t)htonl((uint32_t)a))<<32);
-#endif /* defined(WORDS_BIGENDIAN) */
-}
-
-/** Return a uint64_t value from <b>a</b> in host byte order. */
-uint64_t
-tor_ntohll(uint64_t a)
-{
-  return tor_htonll(a);
-}
