@@ -26,6 +26,7 @@
 #include "lib/malloc/util_malloc.h"
 #include "lib/wallclock/approx_time.h"
 #include "lib/string/util_string.h"
+#include "lib/string/parse_int.h"
 #include "lib/string/scanf.h"
 #include "lib/intmath/bits.h"
 #include "lib/intmath/addsub.h"
@@ -78,15 +79,6 @@ int64_t add_laplace_noise(int64_t signal, double random, double delta_f,
 int64_t clamp_double_to_int64(double number);
 
 /* String manipulation */
-
-long tor_parse_long(const char *s, int base, long min,
-                    long max, int *ok, char **next);
-unsigned long tor_parse_ulong(const char *s, int base, unsigned long min,
-                              unsigned long max, int *ok, char **next);
-double tor_parse_double(const char *s, double min, double max, int *ok,
-                        char **next);
-uint64_t tor_parse_uint64(const char *s, int base, uint64_t min,
-                         uint64_t max, int *ok, char **next);
 
 const char *hex_str(const char *from, size_t fromlen) ATTR_NONNULL((1));
 
