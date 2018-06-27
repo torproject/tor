@@ -965,40 +965,6 @@ compute_num_cpus(void)
   return num_cpus;
 }
 
-/** As localtime_r, but defined for platforms that don't have it:
- *
- * Convert *<b>timep</b> to a struct tm in local time, and store the value in
- * *<b>result</b>.  Return the result on success, or NULL on failure.
- */
-struct tm *
-tor_localtime_r(const time_t *timep, struct tm *result)
-{
-  char *err = NULL;
-  struct tm *r = tor_localtime_r_msg(timep, result, &err);
-  if (err) {
-    log_warn(LD_BUG, "%s", err);
-    tor_free(err);
-  }
-  return r;
-}
-
-/** As gmtime_r, but defined for platforms that don't have it:
- *
- * Convert *<b>timep</b> to a struct tm in UTC, and store the value in
- * *<b>result</b>.  Return the result on success, or NULL on failure.
- */
-struct tm *
-tor_gmtime_r(const time_t *timep, struct tm *result)
-{
-  char *err = NULL;
-  struct tm *r = tor_gmtime_r_msg(timep, result, &err);
-  if (err) {
-    log_warn(LD_BUG, "%s", err);
-    tor_free(err);
-  }
-  return r;
-}
-
 #if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL && defined(RLIMIT_MEMLOCK)
 #define HAVE_UNIX_MLOCKALL
 #endif

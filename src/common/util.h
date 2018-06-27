@@ -38,6 +38,7 @@
 #include "lib/fs/dir.h"
 #include "lib/fs/files.h"
 #include "lib/fs/path.h"
+#include "lib/encoding/time_fmt.h"
 
 void tor_log_mallinfo(int severity);
 
@@ -81,22 +82,6 @@ char *tor_escape_str_for_pt_args(const char *string,
 long tv_udiff(const struct timeval *start, const struct timeval *end);
 long tv_mdiff(const struct timeval *start, const struct timeval *end);
 int64_t tv_to_msec(const struct timeval *tv);
-int tor_timegm(const struct tm *tm, time_t *time_out);
-#define RFC1123_TIME_LEN 29
-void format_rfc1123_time(char *buf, time_t t);
-int parse_rfc1123_time(const char *buf, time_t *t);
-#define ISO_TIME_LEN 19
-#define ISO_TIME_USEC_LEN (ISO_TIME_LEN+7)
-void format_local_iso_time(char *buf, time_t t);
-void format_iso_time(char *buf, time_t t);
-void format_local_iso_time_nospace(char *buf, time_t t);
-void format_iso_time_nospace(char *buf, time_t t);
-void format_iso_time_nospace_usec(char *buf, const struct timeval *tv);
-int parse_iso_time_(const char *cp, time_t *t, int strict, int nospace);
-int parse_iso_time(const char *buf, time_t *t);
-int parse_iso_time_nospace(const char *cp, time_t *t);
-int parse_http_time(const char *buf, struct tm *tm);
-int format_time_interval(char *out, size_t out_len, long interval);
 
 /* File helpers */
 

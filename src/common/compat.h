@@ -65,9 +65,6 @@
 
 /* ===== Time compatibility */
 
-struct tm *tor_localtime_r(const time_t *timep, struct tm *result);
-struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
-
 #ifndef timeradd
 /** Replacement for timeradd on platforms that do not have it: sets tvout to
  * the sum of tv1 and tv2. */
