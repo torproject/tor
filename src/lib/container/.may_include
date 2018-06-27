@@ -5,6 +5,7 @@ lib/ctime/*.h
 lib/defs/*.h
 lib/malloc/*.h
 lib/err/*.h
+lib/smartlist_core/*.h
 lib/string/*.h
 lib/testsupport/testsupport.h
 lib/intmath/*.h

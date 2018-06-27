@@ -12,7 +12,8 @@
 #include "lib/log/torlog.h"
 #include "lib/err/backtrace.h"
 #ifdef TOR_UNIT_TESTS
-#include "lib/container/smartlist.h"
+#include "lib/smartlist_core/smartlist_core.h"
+#include "lib/smartlist_core/smartlist_foreach.h"
 #endif
 #include "lib/malloc/util_malloc.h"
 #include "lib/string/printf.h"

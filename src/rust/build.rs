@@ -155,6 +155,7 @@ pub fn main() {
             cfg.component("tor-lock");
             cfg.component("tor-fdio");
             cfg.component("tor-container-testing");
+            cfg.component("tor-smartlist-core-testing");
             cfg.component("tor-string-testing");
             cfg.component("tor-malloc");
             cfg.component("tor-wallclock");

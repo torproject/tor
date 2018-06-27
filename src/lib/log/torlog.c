@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file log.c
+ * \file torlog.c
  * \brief Functions to send messages to log files or the console.
  **/
 
@@ -34,7 +34,9 @@
 #include "lib/log/torlog.h"
 #include "lib/log/ratelim.h"
 #include "lib/lock/compat_mutex.h"
-#include "lib/container/smartlist.h"
+#include "lib/smartlist_core/smartlist_core.h"
+#include "lib/smartlist_core/smartlist_foreach.h"
+#include "lib/smartlist_core/smartlist_split.h"
 #include "lib/err/torerr.h"
 #include "lib/intmath/bits.h"
 #include "lib/string/compat_string.h"
