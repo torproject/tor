@@ -73,13 +73,6 @@ tor_memstr(const void *haystack, size_t hlen, const char *needle)
   return tor_memmem(haystack, hlen, needle, strlen(needle));
 }
 
-char *tor_strtok_r_impl(char *str, const char *sep, char **lasts);
-#ifdef HAVE_STRTOK_R
-#define tor_strtok_r(str, sep, lasts) strtok_r(str, sep, lasts)
-#else
-#define tor_strtok_r(str, sep, lasts) tor_strtok_r_impl(str, sep, lasts)
-#endif
-
 /* ===== Time compatibility */
 
 struct tm *tor_localtime_r(const time_t *timep, struct tm *result);

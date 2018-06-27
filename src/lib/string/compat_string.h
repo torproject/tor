@@ -36,4 +36,11 @@ size_t strlcat(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #endif
 
+char *tor_strtok_r_impl(char *str, const char *sep, char **lasts);
+#ifdef HAVE_STRTOK_R
+#define tor_strtok_r(str, sep, lasts) strtok_r(str, sep, lasts)
+#else
+#define tor_strtok_r(str, sep, lasts) tor_strtok_r_impl(str, sep, lasts)
+#endif
+
 #endif
