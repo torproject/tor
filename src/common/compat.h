@@ -50,6 +50,7 @@
 #include "lib/string/compat_ctype.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/printf.h"
+#include "lib/log/win32err.h"
 #include "lib/net/socket.h"
 #include "lib/net/ipv4.h"
 #include "lib/net/ipv6.h"
@@ -248,11 +249,6 @@ int tor_mlockall(void);
 #endif
 #ifndef MIN
 #define MIN(a,b) ( ((a)>(b)) ? (b) : (a) )
-#endif
-
-/* Platform-specific helpers. */
-#ifdef _WIN32
-char *format_win32_error(DWORD err);
 #endif
 
 /*for some reason my compiler doesn't have these version flags defined

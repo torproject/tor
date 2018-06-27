@@ -1934,51 +1934,6 @@ network_init(void)
   return 0;
 }
 
-#ifdef _WIN32
-/** Return a newly allocated string describing the windows system error code
- * <b>err</b>.  Note that error codes are different from errno.  Error codes
- * come from GetLastError() when a winapi call fails.  errno is set only when
- * ANSI functions fail.  Whee. */
-char *
-format_win32_error(DWORD err)
-{
-  TCHAR *str = NULL;
-  char *result;
-  DWORD n;
-
-  /* Somebody once decided that this interface was better than strerror(). */
-  n = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                 FORMAT_MESSAGE_FROM_SYSTEM |
-                 FORMAT_MESSAGE_IGNORE_INSERTS,
-                 NULL, err,
-                 MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
-                 (LPVOID)&str,
-                 0, NULL);
-
-  if (str && n) {
-#ifdef UNICODE
-    size_t len;
-    if (n > 128*1024)
-      len = (128 * 1024) * 2 + 1; /* This shouldn't be possible, but let's
-                                   * make sure. */
-    else
-      len = n * 2 + 1;
-    result = tor_malloc(len);
-    wcstombs(result,str,len);
-    result[len-1] = '\0';
-#else /* !(defined(UNICODE)) */
-    result = tor_strdup(str);
-#endif /* defined(UNICODE) */
-  } else {
-    result = tor_strdup("<unformattable error>");
-  }
-  if (str) {
-    LocalFree(str); /* LocalFree != free() */
-  }
-  return result;
-}
-#endif /* defined(_WIN32) */
-
 #if defined(HW_PHYSMEM64)
 /* This appears to be an OpenBSD thing */
 #define INT64_HW_MEM HW_PHYSMEM64
