@@ -9,8 +9,11 @@ src_lib_libtor_log_a_SOURCES =			\
 	src/lib/log/escape.c			\
 	src/lib/log/ratelim.c			\
 	src/lib/log/torlog.c			\
-	src/lib/log/util_bug.c			\
-	src/lib/log/win32err.c
+	src/lib/log/util_bug.c
+
+if WIN32
+src_lib_libtor_log_a_SOURCES += src/lib/log/win32err.c
+endif
 
 src_lib_libtor_log_testing_a_SOURCES = \
 	$(src_lib_libtor_log_a_SOURCES)
