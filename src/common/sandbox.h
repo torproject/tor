@@ -104,27 +104,6 @@ typedef struct {
 #endif /* defined(USE_LIBSECCOMP) */
 
 #ifdef USE_LIBSECCOMP
-/** Pre-calls getaddrinfo in order to pre-record result. */
-int sandbox_add_addrinfo(const char *addr);
-
-struct addrinfo;
-/** Replacement for getaddrinfo(), using pre-recorded results. */
-int sandbox_getaddrinfo(const char *name, const char *servname,
-                        const struct addrinfo *hints,
-                        struct addrinfo **res);
-void sandbox_freeaddrinfo(struct addrinfo *addrinfo);
-void sandbox_free_getaddrinfo_cache(void);
-#else /* !(defined(USE_LIBSECCOMP)) */
-#define sandbox_getaddrinfo(name, servname, hints, res)  \
-  getaddrinfo((name),(servname), (hints),(res))
-#define sandbox_add_addrinfo(name) \
-  ((void)(name))
-#define sandbox_freeaddrinfo(addrinfo) \
-  freeaddrinfo((addrinfo))
-#define sandbox_free_getaddrinfo_cache()
-#endif /* defined(USE_LIBSECCOMP) */
-
-#ifdef USE_LIBSECCOMP
 /** Returns a registered protected string used with the sandbox, given that
  * it matches the parameter.
  */
@@ -168,7 +147,4 @@ int sandbox_init(sandbox_cfg_t* cfg);
 /** Return true iff the sandbox is turned on. */
 int sandbox_is_active(void);
 
-void sandbox_disable_getaddrinfo_cache(void);
-
 #endif /* !defined(SANDBOX_H_) */
-

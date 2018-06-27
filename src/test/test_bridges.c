@@ -12,7 +12,7 @@
 #include <stdbool.h>
 
 #include "or/or.h"
-#include "common/address.h"
+#include "lib/net/address.h"
 #include "or/bridges.h"
 #include "or/config.h"
 #include "or/transports.h"

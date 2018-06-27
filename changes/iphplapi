@@ -1,0 +1,4 @@
+  o Removed features:
+   - Tor no longer attempts to run on Windows environments without the
+     GetAdaptersAddresses() function. This function has existed since
+     Windows XP, which is itself already older than we support.

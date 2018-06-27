@@ -9,7 +9,7 @@
 #define PT_PRIVATE
 #define ROUTERSET_PRIVATE
 #include "or/or.h"
-#include "common/address.h"
+#include "lib/net/address.h"
 #include "or/addressmap.h"
 #include "or/bridges.h"
 #include "or/circuitmux_ewma.h"

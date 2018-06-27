@@ -24,7 +24,7 @@
 #endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
 
 #include "or/or.h"
-#include "common/address.h"
+#include "lib/net/address.h"
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 

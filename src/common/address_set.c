@@ -12,7 +12,7 @@
 
 #include "orconfig.h"
 #include "common/address_set.h"
-#include "common/address.h"
+#include "lib/net/address.h"
 #include "common/compat.h"
 #include "lib/container/bloomfilt.h"
 #include "lib/crypt_ops/crypto_rand.h"

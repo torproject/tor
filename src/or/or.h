@@ -72,7 +72,7 @@
 #include "lib/container/smartlist.h"
 #include "lib/container/map.h"
 #include "lib/compress/compress.h"
-#include "common/address.h"
+#include "lib/net/address.h"
 #include "common/compat_libevent.h"
 #include "ht.h"
 #include "common/confline.h"

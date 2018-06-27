@@ -6,6 +6,7 @@ noinst_LIBRARIES += src/lib/libtor-log-testing.a
 endif
 
 src_lib_libtor_log_a_SOURCES =			\
+	src/lib/log/escape.c			\
 	src/lib/log/ratelim.c			\
 	src/lib/log/torlog.c			\
 	src/lib/log/util_bug.c
@@ -19,6 +20,7 @@ src/lib/log/torlog.$(OBJEXT) \
   src/lib/log/src_lib_libtor_log_testing_a-torlog.$(OBJEXT): micro-revision.i
 
 noinst_HEADERS +=					\
+	src/lib/log/escape.h				\
 	src/lib/log/ratelim.h				\
 	src/lib/log/torlog.h				\
 	src/lib/log/util_bug.h
