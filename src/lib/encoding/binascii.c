@@ -25,6 +25,21 @@
 #include <string.h>
 #include <stdlib.h>
 
+/** Return a pointer to a NUL-terminated hexadecimal string encoding
+ * the first <b>fromlen</b> bytes of <b>from</b>. (fromlen must be \<= 32.) The
+ * result does not need to be deallocated, but repeated calls to
+ * hex_str will trash old results.
+ */
+const char *
+hex_str(const char *from, size_t fromlen)
+{
+  static char buf[65];
+  if (fromlen>(sizeof(buf)-1)/2)
+    fromlen = (sizeof(buf)-1)/2;
+  base16_encode(buf,sizeof(buf),from,fromlen);
+  return buf;
+}
+
 /* Return the base32 encoded size in bytes using the source length srclen.
  *
  * (WATCH OUT: This API counts the terminating NUL byte, but

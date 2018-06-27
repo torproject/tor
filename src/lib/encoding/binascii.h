@@ -12,6 +12,8 @@
 #include "lib/testsupport/testsupport.h"
 #include "lib/cc/torint.h"
 
+const char *hex_str(const char *from, size_t fromlen);
+
 /** @{ */
 /** These macros don't check for overflow.  Use them only for constant inputs
  * (like array declarations).  The *_LEN macros are the raw encoding lengths
