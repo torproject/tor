@@ -6,7 +6,7 @@
 #include "orconfig.h"
 #include "common/compat.h"
 #include "common/util.h"
-#include "common/address.h"
+#include "lib/net/address.h"
 #include "lib/log/torlog.h"
 #include "common/sandbox.h"
 

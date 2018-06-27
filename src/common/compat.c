@@ -128,7 +128,7 @@ SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 #include "common/util.h"
 #include "lib/container/smartlist.h"
 #include "lib/wallclock/tm_cvt.h"
-#include "common/address.h"
+#include "lib/net/address.h"
 #include "common/sandbox.h"
 
 /** As open(path, flags, mode), but return an fd with the close-on-exec mode

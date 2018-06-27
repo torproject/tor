@@ -12,7 +12,7 @@
 #include <stdint.h>
 
 #include "or/or.h"
-#include "common/address.h"
+#include "lib/net/address.h"
 #include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "trunnel/ed25519_cert.h" /* needed for trunnel */

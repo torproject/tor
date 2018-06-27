@@ -41,7 +41,7 @@
 #define NODELIST_PRIVATE
 
 #include "or/or.h"
-#include "common/address.h"
+#include "lib/net/address.h"
 #include "common/address_set.h"
 #include "or/bridges.h"
 #include "or/config.h"

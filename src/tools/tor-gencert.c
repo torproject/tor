@@ -41,7 +41,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "common/address.h"
+#include "lib/net/address.h"
 #include "common/util_format.h"
 
 #define IDENTITY_KEY_BITS 3072

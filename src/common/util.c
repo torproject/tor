@@ -20,7 +20,7 @@
 #include "lib/cc/torint.h"
 #include "lib/container/smartlist.h"
 #include "lib/fdio/fdio.h"
-#include "common/address.h"
+#include "lib/net/address.h"
 #include "common/sandbox.h"
 #include "lib/err/backtrace.h"
 #include "common/util_process.h"
