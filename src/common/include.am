@@ -37,6 +37,7 @@ LIBOR_A_SRC = \
   src/common/compat_threads.c				\
   src/common/compat_time.c				\
   src/common/confline.c					\
+  src/common/conffile.c					\
   src/common/memarea.c					\
   src/common/util.c					\
   src/common/util_process.c				\
@@ -79,6 +80,7 @@ COMMONHEADERS = \
   src/common/compat_libevent.h			\
   src/common/compat_threads.h			\
   src/common/compat_time.h			\
+  src/common/conffile.h				\
   src/common/confline.h				\
   src/common/handles.h				\
   src/common/memarea.h				\

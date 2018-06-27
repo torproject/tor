@@ -111,6 +111,7 @@
 #include <shlobj.h>
 #endif
 
+#include "common/conffile.h"
 #include "common/procmon.h"
 
 #include "or/dirauth/dirvote.h"

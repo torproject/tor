@@ -48,6 +48,8 @@
 #include "or/port_cfg_st.h"
 #include "or/routerinfo_st.h"
 
+#include "common/conffile.h"
+
 static void
 test_config_addressmap(void *arg)
 {
@@ -5731,4 +5733,3 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(compute_max_mem_in_queues, 0),
   END_OF_TESTCASES
 };
-

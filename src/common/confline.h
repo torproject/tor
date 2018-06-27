@@ -44,10 +44,6 @@ const config_line_t *config_line_find(const config_line_t *lines,
                                       const char *key);
 int config_lines_eq(config_line_t *a, config_line_t *b);
 int config_count_key(const config_line_t *a, const char *key);
-int config_get_lines(const char *string, config_line_t **result, int extended);
-int config_get_lines_include(const char *string, config_line_t **result,
-                             int extended, int *has_include,
-                             struct smartlist_t *opened_lst);
 void config_free_lines_(config_line_t *front);
 #define config_free_lines(front) \
   do {                           \
@@ -57,4 +53,20 @@ void config_free_lines_(config_line_t *front);
 const char *parse_config_line_from_str_verbose(const char *line,
                                        char **key_out, char **value_out,
                                        const char **err_out);
+
+int config_get_lines(const char *string, struct config_line_t **result,
+                     int extended);
+
+typedef int (*include_handler_fn)(const char *, int, int,
+                                  struct config_line_t **,
+                                  struct config_line_t **,
+                                  struct smartlist_t *);
+
+int config_get_lines_aux(const char *string, struct config_line_t **result,
+                         int extended,
+                         int allow_include, int *has_include,
+                         struct smartlist_t *opened_lst, int recursion_level,
+                         config_line_t **last,
+                         include_handler_fn handle_include);
+
 #endif /* !defined(TOR_CONFLINE_H) */
