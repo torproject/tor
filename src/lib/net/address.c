@@ -35,13 +35,21 @@
 #include <iphlpapi.h>
 #endif /* defined(_WIN32) */
 
-#include "common/compat.h"
-#include "common/util.h"
-#include "common/util_format.h"
-#include "common/address.h"
-#include "lib/log/torlog.h"
+#include "lib/net/address.h"
+#include "lib/net/socket.h"
+#include "lib/net/resolve.h"
 #include "lib/container/smartlist.h"
-#include "common/sandbox.h"
+#include "lib/ctime/di_ops.h"
+#include "lib/log/torlog.h"
+#include "lib/log/escape.h"
+#include "lib/malloc/util_malloc.h"
+#include "lib/net/ipv4.h"
+#include "lib/string/compat_ctype.h"
+#include "lib/string/compat_string.h"
+#include "lib/string/parse_int.h"
+#include "lib/string/printf.h"
+#include "lib/string/util_string.h"
+
 #include "siphash.h"
 
 #ifdef HAVE_SYS_TIME_H
@@ -52,9 +60,6 @@
 #endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
 #endif
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
@@ -1474,7 +1479,10 @@ ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses)
 STATIC smartlist_t *
 get_interface_addresses_win32(int severity, sa_family_t family)
 {
-
+  /*
+    XXXX We can assume that this function exists now; we can't
+    XXXX provide backward compatibility to pre-windows-XP.
+  */
   /* Windows XP began to provide GetAdaptersAddresses. Windows 2000 had a
      "GetAdaptersInfo", but that's deprecated; let's just try
      GetAdaptersAddresses and fall back to connect+getsockname.
@@ -2085,22 +2093,6 @@ parse_port_range(const char *port, uint16_t *port_min_out,
   *port_max_out = (uint16_t) port_max;
 
   return 0;
-}
-
-/** Given an IPv4 in_addr struct *<b>in</b> (in network order, as usual),
- *  write it as a string into the <b>buf_len</b>-byte buffer in
- *  <b>buf</b>. Returns a non-negative integer on success.
- *  Returns -1 on failure.
- */
-int
-tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len)
-{
-  uint32_t a = ntohl(in->s_addr);
-  return tor_snprintf(buf, buf_len, "%d.%d.%d.%d",
-                      (int)(uint8_t)((a>>24)&0xff),
-                      (int)(uint8_t)((a>>16)&0xff),
-                      (int)(uint8_t)((a>>8 )&0xff),
-                      (int)(uint8_t)((a    )&0xff));
 }
 
 /** Given a host-order <b>addr</b>, call tor_inet_ntop() on it

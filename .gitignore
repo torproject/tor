@@ -183,6 +183,8 @@ uptime-*.json
 /src/lib/libtor-log-testing.a
 /src/lib/libtor-malloc.a
 /src/lib/libtor-malloc-testing.a
+/src/lib/libtor-net.a
+/src/lib/libtor-net-testing.a
 /src/lib/libtor-string.a
 /src/lib/libtor-string-testing.a
 /src/lib/libtor-tls.a

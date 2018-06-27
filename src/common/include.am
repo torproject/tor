@@ -31,7 +31,6 @@ readpassphrase_source=
 endif
 
 LIBOR_A_SRC = \
-  src/common/address.c					\
   src/common/address_set.c				\
   src/common/buffers.c					\
   src/common/compat.c					\
@@ -76,7 +75,6 @@ src_common_libor_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 COMMONHEADERS = \
-  src/common/address.h				\
   src/common/address_set.h			\
   src/common/buffers.h				\
   src/common/compat.h				\

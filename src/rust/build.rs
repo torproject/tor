@@ -151,6 +151,7 @@ pub fn main() {
             // moving forward!
             cfg.component("tor-crypt-ops-testing");
             cfg.component("or-testing");
+            cfg.component("tor-net");
             cfg.component("tor-log");
             cfg.component("tor-lock");
             cfg.component("tor-fdio");

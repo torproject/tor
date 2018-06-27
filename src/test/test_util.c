@@ -9,6 +9,7 @@
 #define CONTROL_PRIVATE
 #define UTIL_PRIVATE
 #define UTIL_MALLOC_PRIVATE
+#define SOCKET_PRIVATE
 #include "or/or.h"
 #include "common/buffers.h"
 #include "or/config.h"

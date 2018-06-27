@@ -11,11 +11,22 @@
 #ifndef TOR_ADDRESS_H
 #define TOR_ADDRESS_H
 
-//#include <sys/sockio.h>
 #include "orconfig.h"
 #include "lib/cc/torint.h"
-#include "common/compat.h"
 #include "lib/log/util_bug.h"
+#include "lib/net/ipv6.h"
+#include "lib/net/nettypes.h"
+
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef _WIN32
+#include <winsock2.h>
+#include <windows.h>
+#endif
+
+#include <stddef.h>
+#include <stdlib.h>
 
 #ifdef ADDRESS_PRIVATE
 
@@ -72,6 +83,9 @@ typedef struct tor_addr_port_t
 } tor_addr_port_t;
 
 #define TOR_ADDR_NULL {AF_UNSPEC, {0}}
+
+/* XXXX To do: extract all of the functions here that can possibly invoke
+ * XXXX resolver, and make sure they have distinctive names. */
 
 static inline const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
 static inline const struct in6_addr *tor_addr_to_in6_assert(
@@ -321,9 +335,6 @@ int addr_port_lookup(int severity, const char *addrport, char **address,
 int parse_port_range(const char *port, uint16_t *port_min_out,
                      uint16_t *port_max_out);
 int addr_mask_get_bits(uint32_t mask);
-/** Length of a buffer to allocate to hold the results of tor_inet_ntoa.*/
-#define INET_NTOA_BUF_LEN 16
-int tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len);
 char *tor_dup_ip(uint32_t addr) ATTR_MALLOC;
 MOCK_DECL(int,get_interface_address,(int severity, uint32_t *addr));
 #define interface_address_list_free(lst)\
