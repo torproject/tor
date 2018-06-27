@@ -1,3 +1,0 @@
-  o Minor features (build):
-    - When generating scripts from autoconf, also make them executable.
-      Closes ticket 26439.
