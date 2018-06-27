@@ -12,6 +12,6 @@ off_t tor_fd_getpos(int fd);
 int tor_fd_setpos(int fd, off_t pos);
 int tor_fd_seekend(int fd);
 int tor_ftruncate(int fd);
-int write_all_to_fd(int fd, const char *buf, size_t count);
+int write_all_to_fd_minimal(int fd, const char *buf, size_t count);
 
 #endif /* !defined(TOR_FDIO_H) */

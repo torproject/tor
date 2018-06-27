@@ -117,8 +117,17 @@ int parse_http_time(const char *buf, struct tm *tm);
 int format_time_interval(char *out, size_t out_len, long interval);
 
 /* File helpers */
-ssize_t write_all(tor_socket_t fd, const char *buf, size_t count,int isSocket);
-ssize_t read_all(tor_socket_t fd, char *buf, size_t count, int isSocket);
+ssize_t write_all_to_fd(int fd, const char *buf, size_t count);
+ssize_t write_all_to_socket(tor_socket_t fd, const char *buf, size_t count);
+ssize_t read_all_from_fd(int fd, char *buf, size_t count);
+ssize_t read_all_from_socket(tor_socket_t fd, char *buf, size_t count);
+
+#define write_all(fd, buf, count, isSock) \
+  ((isSock) ? write_all_to_socket((fd), (buf), (count)) \
+            : write_all_to_fd((int)(fd), (buf), (count)))
+#define read_all(fd, buf, count, isSock) \
+  ((isSock) ? read_all_from_socket((fd), (buf), (count)) \
+            : read_all_from_fd((int)(fd), (buf), (count)))
 
 /** Status of an I/O stream. */
 enum stream_status {

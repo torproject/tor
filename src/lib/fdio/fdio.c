@@ -94,7 +94,7 @@ tor_ftruncate(int fd)
 
 /** Minimal version of write_all, for use by logging. */
 int
-write_all_to_fd(int fd, const char *buf, size_t count)
+write_all_to_fd_minimal(int fd, const char *buf, size_t count)
 {
   size_t written = 0;
   raw_assert(count < SSIZE_MAX);
