@@ -7,9 +7,101 @@
 #include "lib/string/compat_ctype.h"
 #include "lib/err/torerr.h"
 #include "lib/ctime/di_ops.h"
+#include "lib/defs/digest_sizes.h"
 
 #include <string.h>
 #include <stdlib.h>
+
+/** Given <b>hlen</b> bytes at <b>haystack</b> and <b>nlen</b> bytes at
+ * <b>needle</b>, return a pointer to the first occurrence of the needle
+ * within the haystack, or NULL if there is no such occurrence.
+ *
+ * This function is <em>not</em> timing-safe.
+ *
+ * Requires that <b>nlen</b> be greater than zero.
+ */
+const void *
+tor_memmem(const void *_haystack, size_t hlen,
+           const void *_needle, size_t nlen)
+{
+#if defined(HAVE_MEMMEM) && (!defined(__GNUC__) || __GNUC__ >= 2)
+  raw_assert(nlen);
+  return memmem(_haystack, hlen, _needle, nlen);
+#else
+  /* This isn't as fast as the GLIBC implementation, but it doesn't need to
+   * be. */
+  const char *p, *last_possible_start;
+  const char *haystack = (const char*)_haystack;
+  const char *needle = (const char*)_needle;
+  char first;
+  raw_assert(nlen);
+
+  if (nlen > hlen)
+    return NULL;
+
+  p = haystack;
+  /* Last position at which the needle could start. */
+  last_possible_start = haystack + hlen - nlen;
+  first = *(const char*)needle;
+  while ((p = memchr(p, first, last_possible_start + 1 - p))) {
+    if (fast_memeq(p, needle, nlen))
+      return p;
+    if (++p > last_possible_start) {
+      /* This comparison shouldn't be necessary, since if p was previously
+       * equal to last_possible_start, the next memchr call would be
+       * "memchr(p, first, 0)", which will return NULL. But it clarifies the
+       * logic. */
+      return NULL;
+    }
+  }
+  return NULL;
+#endif /* defined(HAVE_MEMMEM) && (!defined(__GNUC__) || __GNUC__ >= 2) */
+}
+
+const void *
+tor_memstr(const void *haystack, size_t hlen, const char *needle)
+{
+  return tor_memmem(haystack, hlen, needle, strlen(needle));
+}
+
+/** Return true iff the 'len' bytes at 'mem' are all zero. */
+int
+tor_mem_is_zero(const char *mem, size_t len)
+{
+  static const char ZERO[] = {
+    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+  };
+  while (len >= sizeof(ZERO)) {
+    /* It's safe to use fast_memcmp here, since the very worst thing an
+     * attacker could learn is how many initial bytes of a secret were zero */
+    if (fast_memcmp(mem, ZERO, sizeof(ZERO)))
+      return 0;
+    len -= sizeof(ZERO);
+    mem += sizeof(ZERO);
+  }
+  /* Deal with leftover bytes. */
+  if (len)
+    return fast_memeq(mem, ZERO, len);
+
+  return 1;
+}
+
+/** Return true iff the DIGEST_LEN bytes in digest are all zero. */
+int
+tor_digest_is_zero(const char *digest)
+{
+  static const uint8_t ZERO_DIGEST[] = {
+    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
+  };
+  return tor_memeq(digest, ZERO_DIGEST, DIGEST_LEN);
+}
+
+/** Return true iff the DIGEST256_LEN bytes in digest are all zero. */
+int
+tor_digest256_is_zero(const char *digest)
+{
+  return tor_mem_is_zero(digest, DIGEST256_LEN);
+}
 
 /** Remove from the string <b>s</b> every character which appears in
  * <b>strip</b>. */
@@ -138,6 +230,22 @@ strcasecmpstart(const char *s1, const char *s2)
 {
   size_t n = strlen(s2);
   return strncasecmp(s1, s2, n);
+}
+
+/** Compare the value of the string <b>prefix</b> with the start of the
+ * <b>memlen</b>-byte memory chunk at <b>mem</b>.  Return as for strcmp.
+ *
+ * [As fast_memcmp(mem, prefix, strlen(prefix)) but returns -1 if memlen is
+ * less than strlen(prefix).]
+ */
+int
+fast_memcmpstart(const void *mem, size_t memlen,
+                const char *prefix)
+{
+  size_t plen = strlen(prefix);
+  if (memlen < plen)
+    return -1;
+  return fast_memcmp(mem, prefix, plen);
 }
 
 /** Compares the last strlen(s2) characters of s1 with s2.  Returns as for

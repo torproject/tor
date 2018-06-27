@@ -11,6 +11,14 @@
 
 #include <stddef.h>
 
+const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
+                       size_t nlen) ATTR_NONNULL((1,3));
+const void *tor_memstr(const void *haystack, size_t hlen,
+                       const char *needle) ATTR_NONNULL((1,3));
+int tor_mem_is_zero(const char *mem, size_t len);
+int tor_digest_is_zero(const char *digest);
+int tor_digest256_is_zero(const char *digest);
+
 /** Allowable characters in a hexadecimal string. */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
 void tor_strlower(char *s) ATTR_NONNULL((1));

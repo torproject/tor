@@ -63,16 +63,6 @@
 #include <stdio.h>
 #include <errno.h>
 
-const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
-                       size_t nlen) ATTR_NONNULL((1,3));
-static const void *tor_memstr(const void *haystack, size_t hlen,
-                           const char *needle) ATTR_NONNULL((1,3));
-static inline const void *
-tor_memstr(const void *haystack, size_t hlen, const char *needle)
-{
-  return tor_memmem(haystack, hlen, needle, strlen(needle));
-}
-
 /* ===== Time compatibility */
 
 struct tm *tor_localtime_r(const time_t *timep, struct tm *result);

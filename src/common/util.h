@@ -78,10 +78,6 @@ int string_is_valid_nonrfc_hostname(const char *string);
 int string_is_valid_ipv4_address(const char *string);
 int string_is_valid_ipv6_address(const char *string);
 
-int tor_mem_is_zero(const char *mem, size_t len);
-int tor_digest_is_zero(const char *digest);
-int tor_digest256_is_zero(const char *digest);
-
 char *tor_escape_str_for_pt_args(const char *string,
                                  const char *chars_to_escape);
 

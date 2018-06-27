@@ -240,54 +240,6 @@ hex_str(const char *from, size_t fromlen)
   return buf;
 }
 
-/** Compare the value of the string <b>prefix</b> with the start of the
- * <b>memlen</b>-byte memory chunk at <b>mem</b>.  Return as for strcmp.
- *
- * [As fast_memcmp(mem, prefix, strlen(prefix)) but returns -1 if memlen is
- * less than strlen(prefix).]
- */
-int
-fast_memcmpstart(const void *mem, size_t memlen,
-                const char *prefix)
-{
-  size_t plen = strlen(prefix);
-  if (memlen < plen)
-    return -1;
-  return fast_memcmp(mem, prefix, plen);
-}
-
-/** Return true iff the 'len' bytes at 'mem' are all zero. */
-int
-tor_mem_is_zero(const char *mem, size_t len)
-{
-  static const char ZERO[] = {
-    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-  };
-  while (len >= sizeof(ZERO)) {
-    /* It's safe to use fast_memcmp here, since the very worst thing an
-     * attacker could learn is how many initial bytes of a secret were zero */
-    if (fast_memcmp(mem, ZERO, sizeof(ZERO)))
-      return 0;
-    len -= sizeof(ZERO);
-    mem += sizeof(ZERO);
-  }
-  /* Deal with leftover bytes. */
-  if (len)
-    return fast_memeq(mem, ZERO, len);
-
-  return 1;
-}
-
-/** Return true iff the DIGEST_LEN bytes in digest are all zero. */
-int
-tor_digest_is_zero(const char *digest)
-{
-  static const uint8_t ZERO_DIGEST[] = {
-    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
-  };
-  return tor_memeq(digest, ZERO_DIGEST, DIGEST_LEN);
-}
-
 /** Return true if <b>string</b> is a valid 'key=[value]' string.
  *  "value" is optional, to indicate the empty string. Log at logging
  *  <b>severity</b> if something ugly happens. */
@@ -434,13 +386,6 @@ string_is_valid_nonrfc_hostname(const char *string)
   smartlist_free(components);
 
   return result;
-}
-
-/** Return true iff the DIGEST256_LEN bytes in digest are all zero. */
-int
-tor_digest256_is_zero(const char *digest)
-{
-  return tor_mem_is_zero(digest, DIGEST256_LEN);
 }
 
 /** Return a newly allocated string equal to <b>string</b>, except that every

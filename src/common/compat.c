@@ -131,52 +131,6 @@ SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 #include "lib/net/address.h"
 #include "lib/sandbox/sandbox.h"
 
-/** Given <b>hlen</b> bytes at <b>haystack</b> and <b>nlen</b> bytes at
- * <b>needle</b>, return a pointer to the first occurrence of the needle
- * within the haystack, or NULL if there is no such occurrence.
- *
- * This function is <em>not</em> timing-safe.
- *
- * Requires that <b>nlen</b> be greater than zero.
- */
-const void *
-tor_memmem(const void *_haystack, size_t hlen,
-           const void *_needle, size_t nlen)
-{
-#if defined(HAVE_MEMMEM) && (!defined(__GNUC__) || __GNUC__ >= 2)
-  tor_assert(nlen);
-  return memmem(_haystack, hlen, _needle, nlen);
-#else
-  /* This isn't as fast as the GLIBC implementation, but it doesn't need to
-   * be. */
-  const char *p, *last_possible_start;
-  const char *haystack = (const char*)_haystack;
-  const char *needle = (const char*)_needle;
-  char first;
-  tor_assert(nlen);
-
-  if (nlen > hlen)
-    return NULL;
-
-  p = haystack;
-  /* Last position at which the needle could start. */
-  last_possible_start = haystack + hlen - nlen;
-  first = *(const char*)needle;
-  while ((p = memchr(p, first, last_possible_start + 1 - p))) {
-    if (fast_memeq(p, needle, nlen))
-      return p;
-    if (++p > last_possible_start) {
-      /* This comparison shouldn't be necessary, since if p was previously
-       * equal to last_possible_start, the next memchr call would be
-       * "memchr(p, first, 0)", which will return NULL. But it clarifies the
-       * logic. */
-      return NULL;
-    }
-  }
-  return NULL;
-#endif /* defined(HAVE_MEMMEM) && (!defined(__GNUC__) || __GNUC__ >= 2) */
-}
-
 /** Represents a lockfile on which we hold the lock. */
 struct tor_lockfile_t {
   /** Name of the file */
