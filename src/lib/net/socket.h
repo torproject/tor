@@ -52,6 +52,9 @@ int network_init(void);
 int get_max_sockets(void);
 void set_max_sockets(int);
 
+ssize_t write_all_to_socket(tor_socket_t fd, const char *buf, size_t count);
+ssize_t read_all_from_socket(tor_socket_t fd, char *buf, size_t count);
+
 /* For stupid historical reasons, windows sockets have an independent
  * set of errnos, and an independent way to get them.  Also, you can't
  * always believe WSAEWOULDBLOCK.  Use the macros below to compare

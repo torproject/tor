@@ -1094,24 +1094,6 @@ write_all_to_fd(int fd, const char *buf, size_t count)
   return (ssize_t)count;
 }
 
-/** Write <b>count</b> bytes from <b>buf</b> to <b>sock</b>. Return the number
- * of bytes written, or -1 on error.  Only use if fd is a blocking fd.  */
-ssize_t
-write_all_to_socket(tor_socket_t fd, const char *buf, size_t count)
-{
-  size_t written = 0;
-  ssize_t result;
-  raw_assert(count < SSIZE_MAX);
-
-  while (written != count) {
-    result = tor_socket_send(fd, buf+written, count-written, 0);
-    if (result<0)
-      return -1;
-    written += result;
-  }
-  return (ssize_t)count;
-}
-
 /** Read from <b>fd</b> to <b>buf</b>, until we get <b>count</b> bytes or
  * reach the end of the file.  Return the number of bytes read, or -1 on
  * error. Only use if fd is a blocking fd. */
@@ -1128,31 +1110,6 @@ read_all_from_fd(int fd, char *buf, size_t count)
 
   while (numread < count) {
     result = read(fd, buf+numread, count-numread);
-    if (result<0)
-      return -1;
-    else if (result == 0)
-      break;
-    numread += result;
-  }
-  return (ssize_t)numread;
-}
-
-/** Read from <b>sock</b> to <b>buf</b>, until we get <b>count</b> bytes or
- * reach the end of the file.  Return the number of bytes read, or -1 on
- * error. Only use if fd is a blocking fd. */
-ssize_t
-read_all_from_socket(tor_socket_t sock, char *buf, size_t count)
-{
-  size_t numread = 0;
-  ssize_t result;
-
-  if (count > SIZE_T_CEILING || count > SSIZE_MAX) {
-    errno = EINVAL;
-    return -1;
-  }
-
-  while (numread < count) {
-    result = tor_socket_recv(sock, buf+numread, count-numread, 0);
     if (result<0)
       return -1;
     else if (result == 0)
