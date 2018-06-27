@@ -41,6 +41,7 @@ endif
 TOR_UTIL_LIBS = \
 	src/common/libor.a \
         src/lib/libtor-fs.a \
+        src/lib/libtor-encoding.a \
         src/lib/libtor-sandbox.a \
 	src/lib/libtor-container.a \
 	src/lib/libtor-net.a \
@@ -60,6 +61,7 @@ TOR_UTIL_LIBS = \
 TOR_UTIL_TESTING_LIBS = \
 	src/common/libor-testing.a \
         src/lib/libtor-fs-testing.a \
+        src/lib/libtor-encoding-testing.a \
         src/lib/libtor-sandbox-testing.a \
 	src/lib/libtor-container-testing.a \
 	src/lib/libtor-net-testing.a \

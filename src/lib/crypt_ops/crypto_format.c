@@ -22,7 +22,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/string/util_string.h"
 #include "common/util.h"
-#include "common/util_format.h"
+#include "lib/encoding/binascii.h"
 #include "lib/log/torlog.h"
 
 /** Write the <b>datalen</b> bytes from <b>data</b> to the file named

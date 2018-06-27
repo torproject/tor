@@ -81,7 +81,7 @@
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "tor_queue.h"
 #include "common/token_bucket.h"
-#include "common/util_format.h"
+#include "lib/encoding/binascii.h"
 #include "or/hs_circuitmap.h"
 
 // These, more than other includes, are for keeping the other struct

@@ -35,7 +35,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 #include "lib/log/torlog.h"
 #include "common/util.h"
-#include "common/util_format.h"
+#include "lib/encoding/binascii.h"
 
 /** Declaration for crypto_pk_t structure. */
 struct crypto_pk_t

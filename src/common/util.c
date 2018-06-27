@@ -24,7 +24,7 @@
 #include "lib/sandbox/sandbox.h"
 #include "lib/err/backtrace.h"
 #include "common/util_process.h"
-#include "common/util_format.h"
+#include "lib/encoding/binascii.h"
 
 #ifdef _WIN32
 #include <io.h>

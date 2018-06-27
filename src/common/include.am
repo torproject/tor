@@ -39,7 +39,6 @@ LIBOR_A_SRC = \
   src/common/confline.c					\
   src/common/memarea.c					\
   src/common/util.c					\
-  src/common/util_format.c				\
   src/common/util_process.c				\
   src/common/storagedir.c				\
   src/common/token_bucket.c				\
@@ -88,7 +87,6 @@ COMMONHEADERS = \
   src/common/timers.h				\
   src/common/token_bucket.h			\
   src/common/util.h				\
-  src/common/util_format.h			\
   src/common/util_process.h			\
   src/common/workqueue.h
 

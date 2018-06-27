@@ -8,7 +8,7 @@
 
 #include "or/parsecommon.h"
 #include "lib/log/torlog.h"
-#include "common/util_format.h"
+#include "lib/encoding/binascii.h"
 #include "lib/container/smartlist.h"
 
 #define MIN_ANNOTATION A_PURPOSE

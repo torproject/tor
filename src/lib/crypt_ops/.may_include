@@ -4,6 +4,7 @@ lib/container/*.h
 lib/crypt_ops/*.h
 lib/ctime/*.h
 lib/defs/*.h
+lib/encoding/*.h
 lib/malloc/*.h
 lib/err/*.h
 lib/intmath/*.h

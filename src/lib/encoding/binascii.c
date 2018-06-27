@@ -5,18 +5,21 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file util_format.c
+ * \file binascii.c
  *
  * \brief Miscellaneous functions for encoding and decoding various things
  *   in base{16,32,64}.
  */
 
 #include "orconfig.h"
-#include <stddef.h>
+
+#include "lib/encoding/binascii.h"
 #include "lib/log/torlog.h"
-#include "common/util.h"
-#include "common/util_format.h"
+#include "lib/log/util_bug.h"
 #include "lib/cc/torint.h"
+#include "lib/string/compat_ctype.h"
+#include "lib/intmath/muldiv.h"
+#include "lib/malloc/util_malloc.h"
 
 #include <stddef.h>
 #include <string.h>

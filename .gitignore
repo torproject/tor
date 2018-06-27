@@ -171,6 +171,8 @@ uptime-*.json
 /src/lib/libtor-crypt-ops-testing.a
 /src/lib/libtor-ctime.a
 /src/lib/libtor-ctime-testing.a
+/src/lib/libtor-encoding.a
+/src/lib/libtor-encoding-testing.a
 /src/lib/libtor-err.a
 /src/lib/libtor-err-testing.a
 /src/lib/libtor-fdio.a

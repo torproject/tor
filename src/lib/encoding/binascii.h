@@ -4,9 +4,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#ifndef TOR_UTIL_FORMAT_H
-#define TOR_UTIL_FORMAT_H
+#ifndef TOR_BINASCII_H
+#define TOR_BINASCII_H
 
+#include "orconfig.h"
+#include <stddef.h>
 #include "lib/testsupport/testsupport.h"
 #include "lib/cc/torint.h"
 

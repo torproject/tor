@@ -29,7 +29,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/log/torlog.h"
 #include "common/util.h"
-#include "common/util_format.h"
+#include "lib/encoding/binascii.h"
 
 #include "ed25519/ref10/ed25519_ref10.h"
 #include "ed25519/donna/ed25519_donna_tor.h"

@@ -42,7 +42,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/net/address.h"
-#include "common/util_format.h"
+#include "lib/encoding/binascii.h"
 
 #define IDENTITY_KEY_BITS 3072
 #define SIGNING_KEY_BITS 2048

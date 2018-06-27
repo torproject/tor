@@ -67,7 +67,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "lib/crypt_ops/aes.h"
 #include "common/util.h"
 #include "common/compat.h"
-#include "common/util_format.h"
+#include "lib/encoding/binascii.h"
 
 #include "keccak-tiny/keccak-tiny.h"
 

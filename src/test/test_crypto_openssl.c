@@ -9,7 +9,7 @@
 
 #include "lib/crypt_ops/crypto_rand.h"
 #include "common/util.h"
-#include "common/util_format.h"
+#include "lib/encoding/binascii.h"
 #include "common/compat.h"
 #include "test/test.h"
 

@@ -22,7 +22,7 @@
 #include "lib/log/torlog.h"
 #include "lib/fdio/fdio.h"
 #include "common/util.h"
-#include "common/util_format.h"
+#include "lib/encoding/binascii.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

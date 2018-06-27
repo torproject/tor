@@ -29,7 +29,7 @@
 #include "lib/testsupport/testsupport.h"
 #include "lib/log/torlog.h"
 #include "common/util.h"
-#include "common/util_format.h"
+#include "lib/encoding/binascii.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/rand.h>
