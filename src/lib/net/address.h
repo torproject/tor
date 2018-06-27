@@ -357,6 +357,11 @@ tor_addr_port_t *tor_addr_port_new(const tor_addr_t *addr, uint16_t port);
 int tor_addr_port_eq(const tor_addr_port_t *a,
                      const tor_addr_port_t *b);
 
+int string_is_valid_dest(const char *string);
+int string_is_valid_nonrfc_hostname(const char *string);
+int string_is_valid_ipv4_address(const char *string);
+int string_is_valid_ipv6_address(const char *string);
+
 #ifdef ADDRESS_PRIVATE
 MOCK_DECL(struct smartlist_t *,get_interface_addresses_raw,(int severity,
                                                      sa_family_t family));

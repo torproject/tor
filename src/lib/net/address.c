@@ -2139,3 +2139,118 @@ tor_addr_port_eq(const tor_addr_port_t *a,
 {
   return tor_addr_eq(&a->addr, &b->addr) && a->port == b->port;
 }
+
+/** Return true if <b>string</b> represents a valid IPv4 adddress in
+ * 'a.b.c.d' form.
+ */
+int
+string_is_valid_ipv4_address(const char *string)
+{
+  struct in_addr addr;
+
+  return (tor_inet_pton(AF_INET,string,&addr) == 1);
+}
+
+/** Return true if <b>string</b> represents a valid IPv6 address in
+ * a form that inet_pton() can parse.
+ */
+int
+string_is_valid_ipv6_address(const char *string)
+{
+  struct in6_addr addr;
+
+  return (tor_inet_pton(AF_INET6,string,&addr) == 1);
+}
+
+/** Return true iff <b>string</b> is a valid destination address,
+ * i.e. either a DNS hostname or IPv4/IPv6 address string.
+ */
+int
+string_is_valid_dest(const char *string)
+{
+  char *tmp = NULL;
+  int retval;
+  size_t len;
+
+  if (string == NULL)
+    return 0;
+
+  len = strlen(string);
+
+  if (len == 0)
+    return 0;
+
+  if (string[0] == '[' && string[len - 1] == ']')
+    string = tmp = tor_strndup(string + 1, len - 2);
+
+  retval = string_is_valid_ipv4_address(string) ||
+    string_is_valid_ipv6_address(string) ||
+    string_is_valid_nonrfc_hostname(string);
+
+  tor_free(tmp);
+
+  return retval;
+}
+
+/** Return true iff <b>string</b> matches a pattern of DNS names
+ * that we allow Tor clients to connect to.
+ *
+ * Note: This allows certain technically invalid characters ('_') to cope
+ * with misconfigured zones that have been encountered in the wild.
+ */
+int
+string_is_valid_nonrfc_hostname(const char *string)
+{
+  int result = 1;
+  int has_trailing_dot;
+  char *last_label;
+  smartlist_t *components;
+
+  if (!string || strlen(string) == 0)
+    return 0;
+
+  if (string_is_valid_ipv4_address(string))
+    return 0;
+
+  components = smartlist_new();
+
+  smartlist_split_string(components,string,".",0,0);
+
+  if (BUG(smartlist_len(components) == 0))
+    return 0; // LCOV_EXCL_LINE should be impossible given the earlier checks.
+
+  /* Allow a single terminating '.' used rarely to indicate domains
+   * are FQDNs rather than relative. */
+  last_label = (char *)smartlist_get(components,
+                                     smartlist_len(components) - 1);
+  has_trailing_dot = (last_label[0] == '\0');
+  if (has_trailing_dot) {
+    smartlist_pop_last(components);
+    tor_free(last_label);
+    last_label = NULL;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(components, char *, c) {
+    if ((c[0] == '-') || (*c == '_')) {
+      result = 0;
+      break;
+    }
+
+    do {
+      result = (TOR_ISALNUM(*c) || (*c == '-') || (*c == '_'));
+      c++;
+    } while (result && *c);
+
+    if (result == 0) {
+      break;
+    }
+  } SMARTLIST_FOREACH_END(c);
+
+  SMARTLIST_FOREACH_BEGIN(components, char *, c) {
+    tor_free(c);
+  } SMARTLIST_FOREACH_END(c);
+
+  smartlist_free(components);
+
+  return result;
+}

@@ -73,10 +73,6 @@ int64_t clamp_double_to_int64(double number);
 const char *hex_str(const char *from, size_t fromlen) ATTR_NONNULL((1));
 
 int string_is_key_value(int severity, const char *string);
-int string_is_valid_dest(const char *string);
-int string_is_valid_nonrfc_hostname(const char *string);
-int string_is_valid_ipv4_address(const char *string);
-int string_is_valid_ipv6_address(const char *string);
 
 char *tor_escape_str_for_pt_args(const char *string,
                                  const char *chars_to_escape);
