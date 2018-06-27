@@ -35,16 +35,9 @@
 #include "lib/log/ratelim.h"
 #include "lib/log/util_bug.h"
 #include "lib/log/escape.h"
-
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
-#ifndef O_TEXT
-#define O_TEXT 0
-#endif
-#ifndef O_NOFOLLOW
-#define O_NOFOLLOW 0
-#endif
+#include "lib/fs/dir.h"
+#include "lib/fs/files.h"
+#include "lib/fs/path.h"
 
 uint64_t tor_htonll(uint64_t a);
 uint64_t tor_ntohll(uint64_t a);
@@ -117,8 +110,13 @@ int parse_http_time(const char *buf, struct tm *tm);
 int format_time_interval(char *out, size_t out_len, long interval);
 
 /* File helpers */
-ssize_t write_all(tor_socket_t fd, const char *buf, size_t count,int isSocket);
-ssize_t read_all(tor_socket_t fd, char *buf, size_t count, int isSocket);
+
+#define write_all(fd, buf, count, isSock) \
+  ((isSock) ? write_all_to_socket((fd), (buf), (count)) \
+            : write_all_to_fd((int)(fd), (buf), (count)))
+#define read_all(fd, buf, count, isSock) \
+  ((isSock) ? read_all_from_socket((fd), (buf), (count)) \
+            : read_all_from_fd((int)(fd), (buf), (count)))
 
 /** Status of an I/O stream. */
 enum stream_status {
@@ -132,76 +130,7 @@ const char *stream_status_to_string(enum stream_status stream_status);
 
 enum stream_status get_string_from_pipe(int fd, char *buf, size_t count);
 
-MOCK_DECL(int,tor_unlink,(const char *pathname));
-
-/** Return values from file_status(); see that function's documentation
- * for details. */
-typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR, FN_EMPTY } file_status_t;
-file_status_t file_status(const char *filename);
-
-/** Possible behaviors for check_private_dir() on encountering a nonexistent
- * directory; see that function's documentation for details. */
-typedef unsigned int cpd_check_t;
-#define CPD_NONE                 0
-#define CPD_CREATE               (1u << 0)
-#define CPD_CHECK                (1u << 1)
-#define CPD_GROUP_OK             (1u << 2)
-#define CPD_GROUP_READ           (1u << 3)
-#define CPD_CHECK_MODE_ONLY      (1u << 4)
-#define CPD_RELAX_DIRMODE_CHECK  (1u << 5)
-MOCK_DECL(int, check_private_dir,
-    (const char *dirname, cpd_check_t check,
-     const char *effective_user));
-
-#define OPEN_FLAGS_REPLACE (O_WRONLY|O_CREAT|O_TRUNC)
-#define OPEN_FLAGS_APPEND (O_WRONLY|O_CREAT|O_APPEND)
-#define OPEN_FLAGS_DONT_REPLACE (O_CREAT|O_EXCL|O_APPEND|O_WRONLY)
-typedef struct open_file_t open_file_t;
-int start_writing_to_file(const char *fname, int open_flags, int mode,
-                          open_file_t **data_out);
-FILE *start_writing_to_stdio_file(const char *fname, int open_flags, int mode,
-                                  open_file_t **data_out);
-FILE *fdopen_file(open_file_t *file_data);
-int finish_writing_to_file(open_file_t *file_data);
-int abort_writing_to_file(open_file_t *file_data);
-MOCK_DECL(int,
-write_str_to_file,(const char *fname, const char *str, int bin));
-MOCK_DECL(int,
-write_bytes_to_file,(const char *fname, const char *str, size_t len,
-                     int bin));
-/** An ad-hoc type to hold a string of characters and a count; used by
- * write_chunks_to_file. */
-typedef struct sized_chunk_t {
-  const char *bytes;
-  size_t len;
-} sized_chunk_t;
-struct smartlist_t;
-int write_chunks_to_file(const char *fname, const struct smartlist_t *chunks,
-                         int bin, int no_tempfile);
-int append_bytes_to_file(const char *fname, const char *str, size_t len,
-                         int bin);
-int write_bytes_to_new_file(const char *fname, const char *str, size_t len,
-                            int bin);
-
-/** Flag for read_file_to_str: open the file in binary mode. */
-#define RFTS_BIN            1
-/** Flag for read_file_to_str: it's okay if the file doesn't exist. */
-#define RFTS_IGNORE_MISSING 2
-
-#ifndef _WIN32
-struct stat;
-#endif
-MOCK_DECL_ATTR(char *, read_file_to_str,
-               (const char *filename, int flags, struct stat *stat_out),
-               ATTR_MALLOC);
-char *read_file_to_str_until_eof(int fd, size_t max_bytes_to_read,
-                                 size_t *sz_out)
-  ATTR_MALLOC;
 const char *unescape_string(const char *s, char **result, size_t *size_out);
-char *get_unquoted_path(const char *path);
-char *expand_filename(const char *filename);
-MOCK_DECL(struct smartlist_t *, tor_listdir, (const char *dirname));
-int path_is_relative(const char *filename);
 
 /* Process helpers */
 void start_daemon(void);

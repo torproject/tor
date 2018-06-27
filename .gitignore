@@ -175,6 +175,8 @@ uptime-*.json
 /src/lib/libtor-err-testing.a
 /src/lib/libtor-fdio.a
 /src/lib/libtor-fdio-testing.a
+/src/lib/libtor-fs.a
+/src/lib/libtor-fs-testing.a
 /src/lib/libtor-intmath.a
 /src/lib/libtor-intmath-testing.a
 /src/lib/libtor-lock.a

@@ -422,7 +422,7 @@ AH_BOTTOM([
 #endif
 ])
 
-
+AM_CONDITIONAL(WIN32, test "x$bwin32" = "xtrue")
 AM_CONDITIONAL(BUILD_NT_SERVICES, test "x$bwin32" = "xtrue")
 AM_CONDITIONAL(BUILD_LIBTORRUNNER, test "x$bwin32" != "xtrue")
 

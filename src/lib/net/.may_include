@@ -5,6 +5,7 @@ ht.h
 lib/cc/*.h
 lib/container/*.h
 lib/ctime/*.h
+lib/err/*.h
 lib/lock/*.h
 lib/log/*.h
 lib/net/*.h

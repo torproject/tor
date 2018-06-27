@@ -50,34 +50,17 @@
 #include "lib/string/compat_ctype.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/printf.h"
+#include "lib/log/win32err.h"
 #include "lib/net/socket.h"
 #include "lib/net/ipv4.h"
 #include "lib/net/ipv6.h"
 #include "lib/net/resolve.h"
+#include "lib/fs/files.h"
+#include "lib/fs/mmap.h"
+#include "lib/fs/userdb.h"
 
 #include <stdio.h>
 #include <errno.h>
-
-/* ===== Compiler compatibility */
-
-/** Represents an mmaped file. Allocated via tor_mmap_file; freed with
- * tor_munmap_file. */
-typedef struct tor_mmap_t {
-  const char *data; /**< Mapping of the file's contents. */
-  size_t size; /**< Size of the file. */
-
-  /* None of the fields below should be accessed from outside compat.c */
-#ifdef HAVE_MMAP
-  size_t mapping_size; /**< Size of the actual mapping. (This is this file
-                        * size, rounded up to the nearest page.) */
-#elif defined _WIN32
-  HANDLE mmap_handle;
-#endif /* defined(HAVE_MMAP) || ... */
-
-} tor_mmap_t;
-
-tor_mmap_t *tor_mmap_file(const char *filename) ATTR_NONNULL((1));
-int tor_munmap_file(tor_mmap_t *handle) ATTR_NONNULL((1));
 
 const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
                        size_t nlen) ATTR_NONNULL((1,3));
@@ -144,25 +127,10 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
 #endif /* !defined(timercmp) */
 
 /* ===== File compatibility */
-int tor_open_cloexec(const char *path, int flags, unsigned mode);
-FILE *tor_fopen_cloexec(const char *path, const char *mode);
-int tor_rename(const char *path_old, const char *path_new);
-
-int replace_file(const char *from, const char *to);
-int touch_file(const char *fname);
-
 typedef struct tor_lockfile_t tor_lockfile_t;
 tor_lockfile_t *tor_lockfile_lock(const char *filename, int blocking,
                                   int *locked_out);
 void tor_lockfile_unlock(tor_lockfile_t *lockfile);
-
-int64_t tor_get_avail_disk_space(const char *path);
-
-#ifdef _WIN32
-#define PATH_SEPARATOR "\\"
-#else
-#define PATH_SEPARATOR "/"
-#endif
 
 /* ===== Net compatibility */
 
@@ -217,17 +185,6 @@ int have_capability_support(void);
 /** Flag for switch_id; see switch_id() for documentation */
 #define SWITCH_ID_WARN_IF_NO_CAPS (1<<1)
 int switch_id(const char *user, unsigned flags);
-#ifdef HAVE_PWD_H
-char *get_user_homedir(const char *username);
-#endif
-
-#ifndef _WIN32
-const struct passwd *tor_getpwnam(const char *username);
-const struct passwd *tor_getpwuid(uid_t uid);
-#endif
-
-int get_parent_directory(char *fname);
-char *make_path_absolute(char *fname);
 
 char **get_environment(void);
 
@@ -248,11 +205,6 @@ int tor_mlockall(void);
 #endif
 #ifndef MIN
 #define MIN(a,b) ( ((a)>(b)) ? (b) : (a) )
-#endif
-
-/* Platform-specific helpers. */
-#ifdef _WIN32
-char *format_win32_error(DWORD err);
 #endif
 
 /*for some reason my compiler doesn't have these version flags defined

@@ -348,7 +348,7 @@ log_tor_version(logfile_t *lf, int reset)
     tor_snprintf(buf+n, sizeof(buf)-n,
                  "Tor %s opening %slog file.\n", VERSION, is_new?"new ":"");
   }
-  if (write_all_to_fd(lf->fd, buf, strlen(buf)) < 0) /* error */
+  if (write_all_to_fd_minimal(lf->fd, buf, strlen(buf)) < 0) /* error */
     return -1; /* failed */
   return 0;
 }
@@ -562,7 +562,7 @@ logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
       lf->callback(severity, domain, msg_after_prefix);
     }
   } else {
-    if (write_all_to_fd(lf->fd, buf, msg_len) < 0) { /* error */
+    if (write_all_to_fd_minimal(lf->fd, buf, msg_len) < 0) { /* error */
       /* don't log the error! mark this log entry to be blown away, and
        * continue. */
       lf->seems_dead = 1;
