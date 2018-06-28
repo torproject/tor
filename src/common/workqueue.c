@@ -31,6 +31,7 @@
 #include "common/util.h"
 #include "common/workqueue.h"
 #include "tor_queue.h"
+#include "lib/net/alertsock.h"
 #include "lib/log/torlog.h"
 
 #include <event2/event.h>
@@ -675,4 +676,3 @@ replyqueue_process(replyqueue_t *queue)
 
   tor_mutex_release(&queue->lock);
 }
-

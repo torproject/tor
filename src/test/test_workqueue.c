@@ -9,6 +9,7 @@
 #include "common/workqueue.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/net/alertsock.h"
 #include "common/compat_libevent.h"
 
 #include <stdio.h>
@@ -450,4 +451,3 @@ main(int argc, char **argv)
     return 0;
   }
 }
-
