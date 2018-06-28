@@ -9,6 +9,11 @@
 #include "lib/container/buffers.h"
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
+#include "lib/net/nettypes.h"
+
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
 
 #include <stdlib.h>
 
