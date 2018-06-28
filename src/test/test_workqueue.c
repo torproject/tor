@@ -11,6 +11,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/net/alertsock.h"
 #include "common/compat_libevent.h"
+#include "lib/intmath/weakrng.h"
 
 #include <stdio.h>
 

@@ -8,7 +8,8 @@ endif
 src_lib_libtor_intmath_a_SOURCES =			\
 	src/lib/intmath/addsub.c			\
 	src/lib/intmath/bits.c				\
-	src/lib/intmath/muldiv.c
+	src/lib/intmath/muldiv.c			\
+	src/lib/intmath/weakrng.c
 
 src_lib_libtor_intmath_testing_a_SOURCES = \
 	$(src_lib_libtor_intmath_a_SOURCES)
@@ -19,4 +20,5 @@ noinst_HEADERS +=					\
 	src/lib/intmath/addsub.h			\
 	src/lib/intmath/cmp.h				\
 	src/lib/intmath/bits.h				\
-	src/lib/intmath/muldiv.h
+	src/lib/intmath/muldiv.h			\
+	src/lib/intmath/weakrng.h

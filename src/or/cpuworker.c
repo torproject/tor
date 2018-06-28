@@ -33,6 +33,7 @@
 #include "common/workqueue.h"
 
 #include "or/or_circuit_st.h"
+#include "lib/intmath/weakrng.h"
 
 static void queue_pending_tasks(void);
 
@@ -596,4 +597,3 @@ cpuworker_cancel_circ_handshake(or_circuit_t *circ)
     circ->workqueue_entry = NULL;
   }
 }
-

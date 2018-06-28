@@ -30,6 +30,7 @@
 #include "lib/log/torlog.h"
 #include "common/util.h"
 #include "lib/encoding/binascii.h"
+#include "lib/intmath/weakrng.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/rand.h>

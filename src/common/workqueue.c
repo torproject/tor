@@ -33,6 +33,7 @@
 #include "tor_queue.h"
 #include "lib/net/alertsock.h"
 #include "lib/log/torlog.h"
+#include "lib/intmath/weakrng.h"
 
 #include <event2/event.h>
 

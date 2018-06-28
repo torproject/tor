@@ -95,18 +95,4 @@ int64_t tv_to_msec(const struct timeval *tv);
 HANDLE load_windows_system_library(const TCHAR *library_name);
 #endif
 
-/* ===== Insecure rng */
-typedef struct tor_weak_rng_t {
-  uint32_t state;
-} tor_weak_rng_t;
-
-#define TOR_WEAK_RNG_INIT {383745623}
-#define TOR_WEAK_RANDOM_MAX (INT_MAX)
-void tor_init_weak_random(tor_weak_rng_t *weak_rng, unsigned seed);
-int32_t tor_weak_random(tor_weak_rng_t *weak_rng);
-int32_t tor_weak_random_range(tor_weak_rng_t *rng, int32_t top);
-/** Randomly return true according to <b>rng</b> with probability 1 in
- * <b>n</b> */
-#define tor_weak_random_one_in_n(rng, n) (0==tor_weak_random_range((rng),(n)))
-
 #endif /* !defined(TOR_UTIL_H) */
