@@ -72,7 +72,6 @@ int64_t clamp_double_to_int64(double number);
 
 /* String manipulation */
 
-
 /* Time helpers */
 long tv_udiff(const struct timeval *start, const struct timeval *end);
 long tv_mdiff(const struct timeval *start, const struct timeval *end);

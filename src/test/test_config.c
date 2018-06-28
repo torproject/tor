@@ -49,6 +49,7 @@
 #include "or/routerinfo_st.h"
 
 #include "lib/fs/conffile.h"
+#include "lib/net/gethostname.h"
 
 static void
 test_config_addressmap(void *arg)

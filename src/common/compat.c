@@ -257,17 +257,6 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   return 0;
 }
 
-/** Get name of current host and write it to <b>name</b> array, whose
- * length is specified by <b>namelen</b> argument. Return 0 upon
- * successful completion; otherwise return return -1. (Currently,
- * this function is merely a mockable wrapper for POSIX gethostname().)
- */
-MOCK_IMPL(int,
-tor_gethostname,(char *name, size_t namelen))
-{
-   return gethostname(name,namelen);
-}
-
 /** Hold the result of our call to <b>uname</b>. */
 static char uname_result[256];
 /** True iff uname_result is set. */

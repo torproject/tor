@@ -111,8 +111,6 @@
 
 /* ===== Net compatibility */
 
-MOCK_DECL(int,tor_gethostname,(char *name, size_t namelen));
-
 /** Specified SOCKS5 status codes. */
 typedef enum {
   SOCKS5_SUCCEEDED                  = 0x00,
