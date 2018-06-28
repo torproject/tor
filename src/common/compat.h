@@ -133,8 +133,6 @@ typedef unsigned long rlim_t;
 int set_max_file_descriptors(rlim_t limit, int *max);
 MOCK_DECL(int, get_total_system_memory, (size_t *mem_out));
 
-int compute_num_cpus(void);
-
 /** Macros for MIN/MAX.  Never use these when the arguments could have
  * side-effects.
  * {With GCC extensions we could probably define a safer MIN/MAX.  But

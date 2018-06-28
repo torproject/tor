@@ -117,6 +117,7 @@
 #include "lib/process/setuid.h"
 #include "lib/process/subprocess.h"
 #include "lib/net/gethostname.h"
+#include "lib/thread/numcpus.h"
 
 #include "lib/encoding/keyval.h"
 #include "lib/fs/conffile.h"

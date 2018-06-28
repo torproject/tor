@@ -28,6 +28,7 @@
 #include "lib/process/pidfile.h"
 #include "lib/process/subprocess.h"
 #include "lib/intmath/weakrng.h"
+#include "lib/thread/numcpus.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>
