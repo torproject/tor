@@ -19,13 +19,18 @@
 #include <netinet/in.h>
 #endif
 
-#include "common/util.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/arch/bytes.h"
+#include "lib/ctime/di_ops.h"
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_lzma.h"
 #include "lib/compress/compress_none.h"
 #include "lib/compress/compress_zlib.h"
 #include "lib/compress/compress_zstd.h"
+#include "lib/intmath/cmp.h"
+#include "lib/malloc/util_malloc.h"
+#include "lib/thread/threads.h"
 
 /** Total number of bytes allocated for compression state overhead. */
 static atomic_counter_t total_compress_allocation;
@@ -671,4 +676,3 @@ tor_compress_log_init_warnings(void)
 {
   tor_zstd_warn_if_version_mismatched();
 }
-

@@ -13,10 +13,12 @@
 
 #include "orconfig.h"
 
-#include "common/util.h"
-#include "lib/log/torlog.h"
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_lzma.h"
+#include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/malloc/util_malloc.h"
+#include "lib/thread/threads.h"
 
 #ifdef HAVE_LZMA
 #include <lzma.h>
@@ -358,4 +360,3 @@ tor_lzma_init(void)
 {
   atomic_counter_init(&total_lzma_allocation);
 }
-

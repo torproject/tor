@@ -16,10 +16,12 @@
 
 #include "orconfig.h"
 
-#include "common/util.h"
 #include "lib/log/torlog.h"
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_none.h"
+#include "lib/intmath/cmp.h"
+
+#include <string.h>
 
 /** Transfer some bytes using the identity transformation.  Read up to
  * *<b>in_len</b> bytes from *<b>in</b>, and write up to *<b>out_len</b> bytes
@@ -50,4 +52,3 @@ tor_cnone_compress_process(char **out, size_t *out_len,
     return TOR_COMPRESS_BUFFER_FULL;
   }
 }
-

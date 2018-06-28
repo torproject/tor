@@ -13,10 +13,11 @@
 
 #include "orconfig.h"
 
-#include "common/util.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_zlib.h"
+#include "lib/thread/threads.h"
 
 /* zlib 1.2.4 and 1.2.5 do some "clever" things with macros.  Instead of
    saying "(defined(FOO) ? FOO : 0)" they like to say "FOO-0", on the theory
@@ -301,4 +302,3 @@ tor_zlib_init(void)
 {
   atomic_counter_init(&total_zlib_allocation);
 }
-

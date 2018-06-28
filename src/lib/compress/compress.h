@@ -11,6 +11,9 @@
 #ifndef TOR_COMPRESS_H
 #define TOR_COMPRESS_H
 
+#include <stddef.h>
+#include "lib/testsupport/testsupport.h"
+
 /** Enumeration of what kind of compression to use.  Only ZLIB_METHOD and
  * GZIP_METHOD is guaranteed to be supported by the compress/uncompress
  * functions here. Call tor_compress_supports_method() to check if a given
@@ -90,4 +93,3 @@ void tor_compress_init(void);
 void tor_compress_log_init_warnings(void);
 
 #endif /* !defined(TOR_COMPRESS_H) */
-

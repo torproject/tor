@@ -13,10 +13,12 @@
 
 #include "orconfig.h"
 
-#include "common/util.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_zstd.h"
+#include "lib/string/printf.h"
+#include "lib/thread/threads.h"
 
 #ifdef ENABLE_ZSTD_ADVANCED_APIS
 /* This is a lie, but we make sure it doesn't get us in trouble by wrapping
@@ -533,4 +535,3 @@ tor_zstd_set_static_apis_disabled_for_testing(int disabled)
   static_apis_disable_for_testing = disabled;
 }
 #endif
-

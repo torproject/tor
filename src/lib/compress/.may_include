@@ -1,7 +1,11 @@
 orconfig.h
+lib/arch/*.h
 lib/cc/*.h
 lib/compress/*.h
+lib/ctime/*.h
+lib/intmath/*.h
 lib/log/*.h
-
-# XXX I'd like to remove this.
-common/*.h
+lib/malloc/*.h
+lib/string/*.h
+lib/testsupport/*.h
+lib/thread/*.h
