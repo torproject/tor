@@ -1,0 +1,3 @@
+  o Minor features (continuous integration):
+    - Install libcap-dev and libseccomp2-dev so these optional
+      dependencies get tested on Travis CI.  Closes ticket 26560.

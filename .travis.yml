@@ -42,11 +42,12 @@ addons:
     packages:
       ## Required dependencies
       - libevent-dev
-      - libseccomp2
       - zlib1g-dev
       ## Optional dependencies
+      - libcap-dev
       - liblzma-dev
       - libscrypt-dev
+      - libseccomp-dev
       ## zstd doesn't exist in Ubuntu Trusty
       #- libzstd
 
