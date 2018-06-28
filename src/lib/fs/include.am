@@ -15,6 +15,10 @@ src_lib_libtor_fs_a_SOURCES =			\
 	src/lib/fs/storagedir.c			\
 	src/lib/fs/userdb.c
 
+if WIN32
+src_lib_libtor_fs_a_SOURCES += src/lib/fs/winlib.c
+endif
+
 src_lib_libtor_fs_testing_a_SOURCES = \
 	$(src_lib_libtor_fs_a_SOURCES)
 src_lib_libtor_fs_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
@@ -28,4 +32,5 @@ noinst_HEADERS +=					\
 	src/lib/fs/mmap.h				\
 	src/lib/fs/path.h				\
 	src/lib/fs/storagedir.h				\
-	src/lib/fs/userdb.h
+	src/lib/fs/userdb.h				\
+	src/lib/fs/winlib.h

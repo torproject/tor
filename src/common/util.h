@@ -40,6 +40,7 @@
 #include "lib/fs/path.h"
 #include "lib/encoding/time_fmt.h"
 #include "lib/encoding/cstring.h"
+#include "lib/fs/winlib.h"
 
 void tor_log_mallinfo(int severity);
 
@@ -75,9 +76,5 @@ void tor_log_mallinfo(int severity);
 #define read_all(fd, buf, count, isSock) \
   ((isSock) ? read_all_from_socket((fd), (buf), (count)) \
             : read_all_from_fd((int)(fd), (buf), (count)))
-
-#ifdef _WIN32
-HANDLE load_windows_system_library(const TCHAR *library_name);
-#endif
 
 #endif /* !defined(TOR_UTIL_H) */
