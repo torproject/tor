@@ -87,6 +87,18 @@ set_uint64(void *cp, uint64_t v)
 }
 
 #ifdef WORDS_BIGENDIAN
+static inline uint16_t
+tor_htons(uint32_t a)
+{
+  return a;
+}
+
+static inline uint16_t
+tor_ntohs(uint64_t a)
+{
+  return a;
+}
+
 static inline uint32_t
 tor_htonl(uint32_t a)
 {
@@ -111,6 +123,21 @@ tor_ntohll(uint64_t a)
   return a;
 }
 #else
+static inline uint16_t
+tor_htons(uint16_t a)
+{
+  /* Our compilers will indeed recognize this as bswap. */
+  return
+    ((a & 0x00ff) << 8) |
+    ((a & 0xff00) >> 8);
+}
+
+static inline uint16_t
+tor_ntohs(uint16_t a)
+{
+  return tor_htons(a);
+}
+
 static inline uint32_t
 tor_htonl(uint32_t a)
 {
