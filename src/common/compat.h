@@ -105,21 +105,6 @@ MOCK_DECL(int, get_total_system_memory, (size_t *mem_out));
 #define MIN(a,b) ( ((a)>(b)) ? (b) : (a) )
 #endif
 
-/*for some reason my compiler doesn't have these version flags defined
-  a nice homework assignment for someone one day is to define the rest*/
-//these are the values as given on MSDN
-#ifdef _WIN32
-
-#ifndef VER_SUITE_EMBEDDEDNT
-#define VER_SUITE_EMBEDDEDNT 0x00000040
-#endif
-
-#ifndef VER_SUITE_SINGLEUSERTS
-#define VER_SUITE_SINGLEUSERTS 0x00000100
-#endif
-
-#endif /* defined(_WIN32) */
-
 ssize_t tor_getpass(const char *prompt, char *output, size_t buflen);
 
 /* This needs some of the declarations above so we include it here. */
