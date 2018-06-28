@@ -117,6 +117,7 @@
 #include "lib/process/setuid.h"
 #include "lib/process/subprocess.h"
 
+#include "lib/encoding/keyval.h"
 #include "lib/fs/conffile.h"
 #include "common/procmon.h"
 

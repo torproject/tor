@@ -21,6 +21,7 @@
 #include "lib/process/waitpid.h"
 #include "test/log_test_helpers.h"
 #include "lib/compress/compress_zstd.h"
+#include "lib/encoding/keyval.h"
 #include "lib/fdio/fdio.h"
 #include "lib/process/env.h"
 #include "lib/process/pidfile.h"

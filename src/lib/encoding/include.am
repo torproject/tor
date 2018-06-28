@@ -8,6 +8,7 @@ src_lib_libtor_encoding_a_SOURCES =			\
 	src/lib/encoding/binascii.c			\
         src/lib/encoding/confline.c			\
         src/lib/encoding/cstring.c			\
+        src/lib/encoding/keyval.c			\
 	src/lib/encoding/time_fmt.c
 
 src_lib_libtor_encoding_testing_a_SOURCES = \
@@ -19,4 +20,5 @@ noinst_HEADERS +=					\
 	src/lib/encoding/binascii.h			\
         src/lib/encoding/confline.h			\
         src/lib/encoding/cstring.h			\
+        src/lib/encoding/keyval.h			\
 	src/lib/encoding/time_fmt.h

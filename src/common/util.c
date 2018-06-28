@@ -225,39 +225,6 @@ add_laplace_noise(int64_t signal_, double random_, double delta_f,
  * String manipulation
  * ===== */
 
-/** Return true if <b>string</b> is a valid 'key=[value]' string.
- *  "value" is optional, to indicate the empty string. Log at logging
- *  <b>severity</b> if something ugly happens. */
-int
-string_is_key_value(int severity, const char *string)
-{
-  /* position of equal sign in string */
-  const char *equal_sign_pos = NULL;
-
-  tor_assert(string);
-
-  if (strlen(string) < 2) { /* "x=" is shortest args string */
-    tor_log(severity, LD_GENERAL, "'%s' is too short to be a k=v value.",
-            escaped(string));
-    return 0;
-  }
-
-  equal_sign_pos = strchr(string, '=');
-  if (!equal_sign_pos) {
-    tor_log(severity, LD_GENERAL, "'%s' is not a k=v value.", escaped(string));
-    return 0;
-  }
-
-  /* validate that the '=' is not in the beginning of the string. */
-  if (equal_sign_pos == string) {
-    tor_log(severity, LD_GENERAL, "'%s' is not a valid k=v value.",
-            escaped(string));
-    return 0;
-  }
-
-  return 1;
-}
-
 /** Return a newly allocated string equal to <b>string</b>, except that every
  * character in <b>chars_to_escape</b> is preceded by a backslash. */
 char *
