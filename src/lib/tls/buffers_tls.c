@@ -7,7 +7,7 @@
 #define BUFFERS_PRIVATE
 #include "orconfig.h"
 #include <stddef.h>
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "lib/tls/buffers_tls.h"
 #include "lib/cc/torint.h"
 #include "lib/log/torlog.h"

@@ -1,6 +1,6 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
- * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
+n * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
@@ -21,15 +21,21 @@
 #define BUFFERS_PRIVATE
 #include "orconfig.h"
 #include <stddef.h>
-#include "common/buffers.h"
-#include "common/compat.h"
-#include "lib/compress/compress.h"
-#include "common/util.h"
+#include "lib/container/buffers.h"
 #include "lib/cc/torint.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/ctime/di_ops.h"
+#include "lib/malloc/util_malloc.h"
+#include "lib/string/printf.h"
+#include "lib/time/compat_time.h"
+
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+
+#include <stdlib.h>
+#include <string.h>
 
 //#define PARANOIA
 
@@ -506,177 +512,6 @@ buf_get_total_allocation(void)
   return total_bytes_allocated_in_chunks;
 }
 
-/** Read up to <b>at_most</b> bytes from the socket <b>fd</b> into
- * <b>chunk</b> (which must be on <b>buf</b>). If we get an EOF, set
- * *<b>reached_eof</b> to 1.  Return -1 on error, 0 on eof or blocking,
- * and the number of bytes read otherwise. */
-static inline int
-read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
-              int *reached_eof, int *socket_error)
-{
-  ssize_t read_result;
-  if (at_most > CHUNK_REMAINING_CAPACITY(chunk))
-    at_most = CHUNK_REMAINING_CAPACITY(chunk);
-  read_result = tor_socket_recv(fd, CHUNK_WRITE_PTR(chunk), at_most, 0);
-
-  if (read_result < 0) {
-    int e = tor_socket_errno(fd);
-    if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
-#ifdef _WIN32
-      if (e == WSAENOBUFS)
-        log_warn(LD_NET,"recv() failed: WSAENOBUFS. Not enough ram?");
-#endif
-      *socket_error = e;
-      return -1;
-    }
-    return 0; /* would block. */
-  } else if (read_result == 0) {
-    log_debug(LD_NET,"Encountered eof on fd %d", (int)fd);
-    *reached_eof = 1;
-    return 0;
-  } else { /* actually got bytes. */
-    buf->datalen += read_result;
-    chunk->datalen += read_result;
-    log_debug(LD_NET,"Read %ld bytes. %d on inbuf.", (long)read_result,
-              (int)buf->datalen);
-    tor_assert(read_result < INT_MAX);
-    return (int)read_result;
-  }
-}
-
-/** Read from socket <b>s</b>, writing onto end of <b>buf</b>.  Read at most
- * <b>at_most</b> bytes, growing the buffer as necessary.  If recv() returns 0
- * (because of EOF), set *<b>reached_eof</b> to 1 and return 0. Return -1 on
- * error; else return the number of bytes read.
- */
-/* XXXX indicate "read blocked" somehow? */
-int
-buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
-                     int *reached_eof,
-                     int *socket_error)
-{
-  /* XXXX It's stupid to overload the return values for these functions:
-   * "error status" and "number of bytes read" are not mutually exclusive.
-   */
-  int r = 0;
-  size_t total_read = 0;
-
-  check();
-  tor_assert(reached_eof);
-  tor_assert(SOCKET_OK(s));
-
-  if (BUG(buf->datalen >= INT_MAX))
-    return -1;
-  if (BUG(buf->datalen >= INT_MAX - at_most))
-    return -1;
-
-  while (at_most > total_read) {
-    size_t readlen = at_most - total_read;
-    chunk_t *chunk;
-    if (!buf->tail || CHUNK_REMAINING_CAPACITY(buf->tail) < MIN_READ_LEN) {
-      chunk = buf_add_chunk_with_capacity(buf, at_most, 1);
-      if (readlen > chunk->memlen)
-        readlen = chunk->memlen;
-    } else {
-      size_t cap = CHUNK_REMAINING_CAPACITY(buf->tail);
-      chunk = buf->tail;
-      if (cap < readlen)
-        readlen = cap;
-    }
-
-    r = read_to_chunk(buf, chunk, s, readlen, reached_eof, socket_error);
-    check();
-    if (r < 0)
-      return r; /* Error */
-    tor_assert(total_read+r < INT_MAX);
-    total_read += r;
-    if ((size_t)r < readlen) { /* eof, block, or no more to read. */
-      break;
-    }
-  }
-  return (int)total_read;
-}
-
-/** Helper for buf_flush_to_socket(): try to write <b>sz</b> bytes from chunk
- * <b>chunk</b> of buffer <b>buf</b> onto socket <b>s</b>.  On success, deduct
- * the bytes written from *<b>buf_flushlen</b>.  Return the number of bytes
- * written on success, 0 on blocking, -1 on failure.
- */
-static inline int
-flush_chunk(tor_socket_t s, buf_t *buf, chunk_t *chunk, size_t sz,
-            size_t *buf_flushlen)
-{
-  ssize_t write_result;
-
-  if (sz > chunk->datalen)
-    sz = chunk->datalen;
-  write_result = tor_socket_send(s, chunk->data, sz, 0);
-
-  if (write_result < 0) {
-    int e = tor_socket_errno(s);
-    if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
-#ifdef _WIN32
-      if (e == WSAENOBUFS)
-        log_warn(LD_NET,"write() failed: WSAENOBUFS. Not enough ram?");
-#endif
-      return -1;
-    }
-    log_debug(LD_NET,"write() would block, returning.");
-    return 0;
-  } else {
-    *buf_flushlen -= write_result;
-    buf_drain(buf, write_result);
-    tor_assert(write_result < INT_MAX);
-    return (int)write_result;
-  }
-}
-
-/** Write data from <b>buf</b> to the socket <b>s</b>.  Write at most
- * <b>sz</b> bytes, decrement *<b>buf_flushlen</b> by
- * the number of bytes actually written, and remove the written bytes
- * from the buffer.  Return the number of bytes written on success,
- * -1 on failure.  Return 0 if write() would block.
- */
-int
-buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
-                    size_t *buf_flushlen)
-{
-  /* XXXX It's stupid to overload the return values for these functions:
-   * "error status" and "number of bytes flushed" are not mutually exclusive.
-   */
-  int r;
-  size_t flushed = 0;
-  tor_assert(buf_flushlen);
-  tor_assert(SOCKET_OK(s));
-  if (BUG(*buf_flushlen > buf->datalen)) {
-    *buf_flushlen = buf->datalen;
-  }
-  if (BUG(sz > *buf_flushlen)) {
-    sz = *buf_flushlen;
-  }
-
-  check();
-  while (sz) {
-    size_t flushlen0;
-    tor_assert(buf->head);
-    if (buf->head->datalen >= sz)
-      flushlen0 = sz;
-    else
-      flushlen0 = buf->head->datalen;
-
-    r = flush_chunk(s, buf, buf->head, flushlen0, buf_flushlen);
-    check();
-    if (r < 0)
-      return r;
-    flushed += r;
-    sz -= r;
-    if (r == 0 || (size_t)r < flushlen0) /* can't flush any more now. */
-      break;
-  }
-  tor_assert(flushed < INT_MAX);
-  return (int)flushed;
-}
-
 /** Append <b>string_len</b> bytes from <b>string</b> to the end of
  * <b>buf</b>.
  *
@@ -1037,65 +872,6 @@ buf_get_line(buf_t *buf, char *data_out, size_t *data_len)
   return 1;
 }
 
-/** Compress or uncompress the <b>data_len</b> bytes in <b>data</b> using the
- * compression state <b>state</b>, appending the result to <b>buf</b>.  If
- * <b>done</b> is true, flush the data in the state and finish the
- * compression/uncompression.  Return -1 on failure, 0 on success. */
-int
-buf_add_compress(buf_t *buf, tor_compress_state_t *state,
-                      const char *data, size_t data_len,
-                      const int done)
-{
-  char *next;
-  size_t old_avail, avail;
-  int over = 0;
-
-  do {
-    int need_new_chunk = 0;
-    if (!buf->tail || ! CHUNK_REMAINING_CAPACITY(buf->tail)) {
-      size_t cap = data_len / 4;
-      buf_add_chunk_with_capacity(buf, cap, 1);
-    }
-    next = CHUNK_WRITE_PTR(buf->tail);
-    avail = old_avail = CHUNK_REMAINING_CAPACITY(buf->tail);
-    switch (tor_compress_process(state, &next, &avail,
-                                 &data, &data_len, done)) {
-      case TOR_COMPRESS_DONE:
-        over = 1;
-        break;
-      case TOR_COMPRESS_ERROR:
-        return -1;
-      case TOR_COMPRESS_OK:
-        if (data_len == 0) {
-          tor_assert_nonfatal(!done);
-          over = 1;
-        }
-        break;
-      case TOR_COMPRESS_BUFFER_FULL:
-        if (avail) {
-          /* The compression module says we need more room
-           * (TOR_COMPRESS_BUFFER_FULL).  Start a new chunk automatically,
-           * whether were going to or not. */
-          need_new_chunk = 1;
-        }
-        if (data_len == 0 && !done) {
-          /* We've consumed all the input data, though, so there's no
-           * point in forging ahead right now. */
-          over = 1;
-        }
-        break;
-    }
-    buf->datalen += old_avail - avail;
-    buf->tail->datalen += old_avail - avail;
-    if (need_new_chunk) {
-      buf_add_chunk_with_capacity(buf, data_len/4, 1);
-    }
-
-  } while (!over);
-  check();
-  return 0;
-}
-
 /** Set *<b>output</b> to contain a copy of the data in *<b>input</b> */
 int
 buf_set_to_copy(buf_t **output,
@@ -1143,4 +919,3 @@ buf_assert_ok(buf_t *buf)
     tor_assert(buf->datalen == total);
   }
 }
-

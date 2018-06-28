@@ -113,6 +113,7 @@
 #include "lib/memarea/memarea.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/fs/lockfile.h"
+#include "lib/net/buffers_net.h"
 
 #include <event2/event.h>
 

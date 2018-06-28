@@ -103,6 +103,7 @@
 #include "or/transports.h"
 #include "or/routerparse.h"
 #include "lib/sandbox/sandbox.h"
+#include "lib/net/buffers_net.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>
@@ -5315,4 +5316,3 @@ clock_skew_warning, (const connection_t *conn, long apparent_skew, int trusted,
   tor_free(warn);
   tor_free(ext_source);
 }
-

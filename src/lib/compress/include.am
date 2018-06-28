@@ -5,8 +5,9 @@ if UNITTESTS_ENABLED
 noinst_LIBRARIES += src/lib/libtor-compress-testing.a
 endif
 
-src_lib_libtor_compress_a_SOURCES =			\
+src_lib_libtor_compress_a_SOURCES =		\
 	src/lib/compress/compress.c		\
+	src/lib/compress/compress_buf.c		\
 	src/lib/compress/compress_lzma.c	\
 	src/lib/compress/compress_none.c	\
 	src/lib/compress/compress_zlib.c	\

@@ -12,9 +12,11 @@
 #ifndef TOR_BUFFERS_H
 #define TOR_BUFFERS_H
 
-#include "common/compat.h"
+#include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
 #include "lib/testsupport/testsupport.h"
+
+#include <stdarg.h>
 
 typedef struct buf_t buf_t;
 
@@ -35,21 +37,12 @@ size_t buf_slack(const buf_t *buf);
 uint32_t buf_get_oldest_chunk_timestamp(const buf_t *buf, uint32_t now);
 size_t buf_get_total_allocation(void);
 
-int buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
-                         int *reached_eof,
-                         int *socket_error);
-
-int buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
-                        size_t *buf_flushlen);
-
 int buf_add(buf_t *buf, const char *string, size_t string_len);
 void buf_add_string(buf_t *buf, const char *string);
 void buf_add_printf(buf_t *buf, const char *format, ...)
   CHECK_PRINTF(2, 3);
 void buf_add_vprintf(buf_t *buf, const char *format, va_list args)
   CHECK_PRINTF(2, 0);
-int buf_add_compress(buf_t *buf, struct tor_compress_state_t *state,
-                          const char *data, size_t data_len, int done);
 int buf_move_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
 void buf_move_all(buf_t *buf_out, buf_t *buf_in);
 void buf_peek(const buf_t *buf, char *string, size_t string_len);
@@ -128,4 +121,3 @@ CHUNK_WRITE_PTR(chunk_t *chunk)
 #endif /* defined(BUFFERS_PRIVATE) */
 
 #endif /* !defined(TOR_BUFFERS_H) */
-
