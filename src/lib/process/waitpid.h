@@ -2,14 +2,18 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file util_process.h
- * \brief Headers for util_process.c
+ * \file waitpid.h
+ * \brief Headers for waitpid.c
  **/
 
-#ifndef TOR_UTIL_PROCESS_H
-#define TOR_UTIL_PROCESS_H
+#ifndef TOR_WAITPID_H
+#define TOR_WAITPID_H
 
 #ifndef _WIN32
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+
 /** A callback structure waiting for us to get a SIGCHLD informing us that a
  * PID has been closed. Created by set_waitpid_callback. Cancelled or cleaned-
  * up from clear_waitpid_callback().  Do not access outside of the main thread;
@@ -22,5 +26,4 @@ void clear_waitpid_callback(waitpid_callback_t *ent);
 void notify_pending_waitpid_callbacks(void);
 #endif /* !defined(_WIN32) */
 
-#endif /* !defined(TOR_UTIL_PROCESS_H) */
-
+#endif /* !defined(TOR_WAITPID_H) */

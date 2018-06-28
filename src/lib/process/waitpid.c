@@ -12,18 +12,19 @@
 
 #include "orconfig.h"
 
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
+#ifndef _WIN32
+
+#include "lib/process/waitpid.h"
+#include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/malloc/util_malloc.h"
+#include "ht.h"
+
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #endif
 
-#include "common/compat.h"
-#include "common/util.h"
-#include "lib/log/torlog.h"
-#include "common/util_process.h"
-#include "ht.h"
+#include <string.h>
 
 /* ================================================== */
 /* Convenience structures for handlers for waitpid().
@@ -31,8 +32,6 @@
  * The tor_process_monitor*() code above doesn't use them, since it is for
  * monitoring a non-child process.
  */
-
-#ifndef _WIN32
 
 /** Mapping from a PID to a userfn/userdata pair. */
 struct waitpid_callback_t {
@@ -155,4 +154,3 @@ notify_pending_waitpid_callbacks(void)
 }
 
 #endif /* !defined(_WIN32) */
-

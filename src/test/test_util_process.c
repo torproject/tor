@@ -7,7 +7,7 @@
 
 #include "test/test.h"
 
-#include "common/util_process.h"
+#include "lib/process/waitpid.h"
 
 #include "test/log_test_helpers.h"
 

@@ -78,6 +78,8 @@ enum pt_proto_state {
   PT_PROTO_FAILED_LAUNCH /* failed while launching */
 };
 
+struct process_handle_t;
+
 /** Structure containing information of a managed proxy. */
 typedef struct {
   enum pt_proto_state conf_state; /* the current configuration state */
@@ -90,7 +92,7 @@ typedef struct {
   int is_server; /* is it a server proxy? */
 
   /* A pointer to the process handle of this managed proxy. */
-  process_handle_t *process_handle;
+  struct process_handle_t *process_handle;
 
   int pid; /* The Process ID this managed proxy is using. */
 
@@ -140,4 +142,3 @@ STATIC void free_execve_args(char **arg);
 #endif /* defined(PT_PRIVATE) */
 
 #endif /* !defined(TOR_TRANSPORTS_H) */
-

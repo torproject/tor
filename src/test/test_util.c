@@ -10,6 +10,7 @@
 #define UTIL_PRIVATE
 #define UTIL_MALLOC_PRIVATE
 #define SOCKET_PRIVATE
+#define SUBPROCESS_PRIVATE
 #include "or/or.h"
 #include "common/buffers.h"
 #include "or/config.h"
@@ -17,10 +18,13 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "test/test.h"
 #include "lib/memarea/memarea.h"
-#include "common/util_process.h"
+#include "lib/process/waitpid.h"
 #include "test/log_test_helpers.h"
 #include "lib/compress/compress_zstd.h"
 #include "lib/fdio/fdio.h"
+#include "lib/process/env.h"
+#include "lib/process/pidfile.h"
+#include "lib/process/subprocess.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>

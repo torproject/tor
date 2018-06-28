@@ -9,6 +9,7 @@
 #include "lib/err/torerr.h"
 #include "lib/log/torlog.h"
 #include "test/test.h"
+#include "lib/process/subprocess.h"
 
 static void
 dummy_cb_fn(int severity, uint32_t domain, const char *msg)

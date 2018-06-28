@@ -5,10 +5,12 @@
 
 #include "orconfig.h"
 #define UTIL_PRIVATE
+#define SUBPROCESS_PRIVATE
 #include "common/util.h"
-#include "common/util_process.h"
+#include "lib/process/waitpid.h"
 #include "lib/crypt_ops/crypto.h"
 #include "lib/log/torlog.h"
+#include "lib/process/subprocess.h"
 #include "test/test.h"
 
 #ifndef BUILDDIR
@@ -388,4 +390,3 @@ struct testcase_t slow_util_tests[] = {
   UTIL_TEST(spawn_background_waitpid_notify, 0),
   END_OF_TESTCASES
 };
-

@@ -111,6 +111,12 @@
 #include <shlobj.h>
 #endif
 
+#include "lib/process/daemon.h"
+#include "lib/process/pidfile.h"
+#include "lib/process/restrict.h"
+#include "lib/process/setuid.h"
+#include "lib/process/subprocess.h"
+
 #include "lib/fs/conffile.h"
 #include "common/procmon.h"
 

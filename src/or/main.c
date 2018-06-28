@@ -108,7 +108,7 @@
 #include "or/status.h"
 #include "or/tor_api.h"
 #include "or/tor_api_internal.h"
-#include "common/util_process.h"
+#include "lib/process/waitpid.h"
 #include "or/ext_orport.h"
 #include "lib/memarea/memarea.h"
 #include "lib/sandbox/sandbox.h"

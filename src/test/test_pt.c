@@ -8,6 +8,7 @@
 #define UTIL_PRIVATE
 #define STATEFILE_PRIVATE
 #define CONTROL_PRIVATE
+#define SUBPROCESS_PRIVATE
 #include "or/or.h"
 #include "or/config.h"
 #include "or/confparse.h"
@@ -17,6 +18,7 @@
 #include "common/util.h"
 #include "or/statefile.h"
 #include "test/test.h"
+#include "lib/process/subprocess.h"
 
 static void
 reset_mp(managed_proxy_t *mp)
@@ -544,4 +546,3 @@ struct testcase_t pt_tests[] = {
     NULL, NULL },
   END_OF_TESTCASES
 };
-

@@ -29,7 +29,6 @@ LIBOR_A_SRC = \
   src/common/compat.c					\
   src/common/compat_time.c				\
   src/common/util.c					\
-  src/common/util_process.c				\
   src/common/token_bucket.c				\
   src/common/workqueue.c				\
   $(libor_extra_source)					\
@@ -71,7 +70,6 @@ COMMONHEADERS = \
   src/common/timers.h				\
   src/common/token_bucket.h			\
   src/common/util.h				\
-  src/common/util_process.h			\
   src/common/workqueue.h
 
 noinst_HEADERS+= $(COMMONHEADERS)

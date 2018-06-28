@@ -2,6 +2,7 @@
 /* See LICENSE for licensing information */
 
 #include "or/or.h"
+#include "lib/process/setuid.h"
 
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
@@ -189,4 +190,3 @@ main(int argc, char **argv)
   return (okay ? 0 : 1);
 #endif /* defined(_WIN32) */
 }
-

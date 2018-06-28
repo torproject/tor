@@ -17,6 +17,7 @@ include src/lib/log/include.am
 include src/lib/memarea/include.am
 include src/lib/malloc/include.am
 include src/lib/net/include.am
+include src/lib/process/include.am
 include src/lib/sandbox/include.am
 include src/lib/string/include.am
 include src/lib/smartlist_core/include.am

@@ -102,6 +102,9 @@
 #include "or/ext_orport.h"
 #include "or/control.h"
 
+#include "lib/process/env.h"
+#include "lib/process/subprocess.h"
+
 static process_environment_t *
 create_managed_proxy_environment(const managed_proxy_t *mp);
 
@@ -1696,4 +1699,3 @@ pt_free_all(void)
     managed_proxy_list=NULL;
   }
 }
-
