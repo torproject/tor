@@ -28,10 +28,8 @@ LIBOR_A_SRC = \
   src/common/buffers.c					\
   src/common/compat.c					\
   src/common/compat_time.c				\
-  src/common/conffile.c					\
   src/common/util.c					\
   src/common/util_process.c				\
-  src/common/storagedir.c				\
   src/common/token_bucket.c				\
   src/common/workqueue.c				\
   $(libor_extra_source)					\
@@ -68,10 +66,8 @@ COMMONHEADERS = \
   src/common/compat.h				\
   src/common/compat_libevent.h			\
   src/common/compat_time.h			\
-  src/common/conffile.h				\
   src/common/handles.h				\
   src/common/procmon.h				\
-  src/common/storagedir.h			\
   src/common/timers.h				\
   src/common/token_bucket.h			\
   src/common/util.h				\

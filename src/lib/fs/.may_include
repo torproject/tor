@@ -1,11 +1,13 @@
 orconfig.h
 lib/cc/*.h
 lib/container/*.h
+lib/encoding/*.h
 lib/err/*.h
 lib/fdio/*.h
-lib/malloc/*.h
 lib/fs/*.h
+lib/log/*.h
+lib/malloc/*.h
+lib/memarea/*.h
 lib/sandbox/*.h
 lib/string/*.h
 lib/testsupport/testsupport.h
-lib/log/*.h

@@ -4,9 +4,14 @@
 #ifndef TOR_STORAGEDIR_H
 #define TOR_STORAGEDIR_H
 
+#include "lib/cc/torint.h"
+#include <stddef.h>
+
 typedef struct storage_dir_t storage_dir_t;
 struct config_line_t;
 struct sandbox_cfg_elem;
+struct tor_mmap_t;
+struct smartlist_t;
 
 storage_dir_t * storage_dir_new(const char *dirname, int n_files);
 void storage_dir_free_(storage_dir_t *d);
@@ -15,9 +20,9 @@ void storage_dir_free_(storage_dir_t *d);
 
 int storage_dir_register_with_sandbox(storage_dir_t *d,
                                       struct sandbox_cfg_elem **cfg);
-const smartlist_t *storage_dir_list(storage_dir_t *d);
+const struct smartlist_t *storage_dir_list(storage_dir_t *d);
 uint64_t storage_dir_get_usage(storage_dir_t *d);
-tor_mmap_t *storage_dir_map(storage_dir_t *d, const char *fname);
+struct tor_mmap_t *storage_dir_map(storage_dir_t *d, const char *fname);
 uint8_t *storage_dir_read(storage_dir_t *d, const char *fname, int bin,
                           size_t *sz_out);
 int storage_dir_save_bytes_to_file(storage_dir_t *d,
@@ -34,7 +39,7 @@ int storage_dir_save_labeled_to_file(storage_dir_t *d,
                                       const uint8_t *data,
                                       size_t length,
                                       char **fname_out);
-tor_mmap_t *storage_dir_map_labeled(storage_dir_t *dir,
+struct tor_mmap_t *storage_dir_map_labeled(storage_dir_t *dir,
                                      const char *fname,
                                      struct config_line_t **labels_out,
                                      const uint8_t **data_out,
@@ -51,4 +56,3 @@ int storage_dir_remove_all(storage_dir_t *d);
 int storage_dir_get_max_files(storage_dir_t *d);
 
 #endif /* !defined(TOR_STORAGEDIR_H) */
-

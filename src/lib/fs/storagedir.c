@@ -1,14 +1,21 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#include "lib/fs/storagedir.h"
+
 #include "lib/container/smartlist.h"
-#include "common/compat.h"
 #include "lib/encoding/confline.h"
+#include "lib/fs/dir.h"
+#include "lib/fs/files.h"
+#include "lib/fs/mmap.h"
+#include "lib/log/escape.h"
+#include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/malloc/util_malloc.h"
 #include "lib/memarea/memarea.h"
 #include "lib/sandbox/sandbox.h"
-#include "common/storagedir.h"
-#include "lib/log/torlog.h"
-#include "common/util.h"
+#include "lib/string/printf.h"
+#include "lib/string/util_string.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -19,6 +26,9 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 
 #define FNAME_MIN_NUM 1000
 

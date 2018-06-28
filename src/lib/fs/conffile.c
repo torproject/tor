@@ -4,12 +4,16 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "common/compat.h"
-#include "lib/encoding/confline.h"
-#include "common/conffile.h"
-#include "lib/log/torlog.h"
-#include "common/util.h"
+#include "lib/fs/conffile.h"
+
 #include "lib/container/smartlist.h"
+#include "lib/encoding/confline.h"
+#include "lib/fs/dir.h"
+#include "lib/fs/files.h"
+#include "lib/fs/path.h"
+#include "lib/log/torlog.h"
+#include "lib/malloc/util_malloc.h"
+#include "lib/string/printf.h"
 
 static smartlist_t *config_get_file_list(const char *path,
                                          smartlist_t *opened_files);
