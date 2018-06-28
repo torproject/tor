@@ -25,6 +25,34 @@
 #include <stddef.h>
 #include <string.h>
 
+/** Called before we make any calls to network-related functions.
+ * (Some operating systems require their network libraries to be
+ * initialized.) */
+int
+network_init(void)
+{
+#ifdef _WIN32
+  /* This silly exercise is necessary before windows will allow
+   * gethostbyname to work. */
+  WSADATA WSAData;
+  int r;
+  r = WSAStartup(0x101,&WSAData);
+  if (r) {
+    log_warn(LD_NET,"Error initializing windows network layer: code was %d",r);
+    return -1;
+  }
+  if (sizeof(SOCKET) != sizeof(tor_socket_t)) {
+    log_warn(LD_BUG,"The tor_socket_t type does not match SOCKET in size; Tor "
+             "might not work. (Sizes are %d and %d respectively.)",
+             (int)sizeof(tor_socket_t), (int)sizeof(SOCKET));
+  }
+  /* WSAData.iMaxSockets might show the max sockets we're allowed to use.
+   * We might use it to complain if we're trying to be a server but have
+   * too few sockets available. */
+#endif /* defined(_WIN32) */
+  return 0;
+}
+
 /* When set_max_file_sockets() is called, update this with the max file
  * descriptor value so we can use it to check the limit when opening a new
  * socket. Default value is what Debian sets as the default hard limit. */
