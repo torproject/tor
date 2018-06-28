@@ -16,6 +16,8 @@
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
 #include "lib/intmath/muldiv.h"
+#include "lib/fs/winlib.h"
+#include "lib/wallclock/timeval.h"
 
 #ifdef _WIN32
 #include <winsock2.h>

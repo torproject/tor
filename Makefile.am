@@ -40,51 +40,51 @@ endif
 # "Common" libraries used to link tor's utility code.
 TOR_UTIL_LIBS = \
 	src/common/libor.a \
-        src/lib/libtor-process.a \
-        src/lib/libtor-fs.a \
-        src/lib/libtor-encoding.a \
-        src/lib/libtor-sandbox.a \
+	src/lib/libtor-process.a \
+	src/lib/libtor-time.a \
+	src/lib/libtor-fs.a \
+	src/lib/libtor-encoding.a \
+	src/lib/libtor-sandbox.a \
 	src/lib/libtor-container.a \
 	src/lib/libtor-net.a \
-        src/lib/libtor-thread.a \
-        src/lib/libtor-memarea.a \
+	src/lib/libtor-thread.a \
+	src/lib/libtor-memarea.a \
 	src/lib/libtor-math.a \
-	src/lib/libtor-time.a \
-        src/lib/libtor-log.a \
-        src/lib/libtor-lock.a \
-        src/lib/libtor-fdio.a \
-        src/lib/libtor-string.a \
-        src/lib/libtor-smartlist-core.a \
+	src/lib/libtor-log.a \
+	src/lib/libtor-lock.a \
+	src/lib/libtor-fdio.a \
+	src/lib/libtor-string.a \
+	src/lib/libtor-smartlist-core.a \
 	src/lib/libtor-malloc.a \
-        src/lib/libtor-wallclock.a \
-        src/lib/libtor-err.a \
-        src/lib/libtor-intmath.a \
+	src/lib/libtor-wallclock.a \
+	src/lib/libtor-err.a \
+	src/lib/libtor-intmath.a \
 	src/lib/libtor-ctime.a
 
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
 TOR_UTIL_TESTING_LIBS = \
 	src/common/libor-testing.a \
-        src/lib/libtor-process-testing.a \
-        src/lib/libtor-fs-testing.a \
-        src/lib/libtor-encoding-testing.a \
-        src/lib/libtor-sandbox-testing.a \
+	src/lib/libtor-process-testing.a \
+	src/lib/libtor-time-testing.a \
+	src/lib/libtor-fs-testing.a \
+	src/lib/libtor-encoding-testing.a \
+	src/lib/libtor-sandbox-testing.a \
 	src/lib/libtor-container-testing.a \
 	src/lib/libtor-net-testing.a \
-        src/lib/libtor-thread-testing.a \
-        src/lib/libtor-memarea-testing.a \
+	src/lib/libtor-thread-testing.a \
+	src/lib/libtor-memarea-testing.a \
 	src/lib/libtor-math-testing.a \
-	src/lib/libtor-time-testing.a \
-        src/lib/libtor-log-testing.a \
-        src/lib/libtor-lock-testing.a \
-        src/lib/libtor-fdio-testing.a \
-        src/lib/libtor-string-testing.a \
-        src/lib/libtor-smartlist-core-testing.a \
+	src/lib/libtor-log-testing.a \
+	src/lib/libtor-lock-testing.a \
+	src/lib/libtor-fdio-testing.a \
+	src/lib/libtor-string-testing.a \
+	src/lib/libtor-smartlist-core-testing.a \
 	src/lib/libtor-malloc-testing.a \
-        src/lib/libtor-wallclock-testing.a \
-        src/lib/libtor-err-testing.a \
-        src/lib/libtor-intmath.a \
-        src/lib/libtor-ctime-testing.a
+	src/lib/libtor-wallclock-testing.a \
+	src/lib/libtor-err-testing.a \
+	src/lib/libtor-intmath.a \
+	src/lib/libtor-ctime-testing.a
 
 # Internal crypto libraries used in Tor
 TOR_CRYPTO_LIBS = \
