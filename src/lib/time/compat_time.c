@@ -16,6 +16,7 @@
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
 #include "lib/intmath/muldiv.h"
+#include "lib/intmath/bits.h"
 #include "lib/fs/winlib.h"
 #include "lib/wallclock/timeval.h"
 

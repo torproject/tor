@@ -18,6 +18,10 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_CRT_EXTERNS_H
+/* For _NSGetEnviron on macOS */
+#include <crt_externs.h>
+#endif
 
 #ifndef HAVE__NSGETENVIRON
 #ifndef HAVE_EXTERN_ENVIRON_DECLARED

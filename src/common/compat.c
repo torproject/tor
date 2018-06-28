@@ -60,9 +60,6 @@
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
-#ifdef HAVE_CRT_EXTERNS_H
-#include <crt_externs.h>
-#endif
 #ifdef HAVE_SYS_STATVFS_H
 #include <sys/statvfs.h>
 #endif

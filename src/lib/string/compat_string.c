@@ -15,6 +15,7 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 
 /** Helper for tor_strtok_r_impl: Advances cp past all characters in
  * <b>sep</b>, and returns its new value. */
