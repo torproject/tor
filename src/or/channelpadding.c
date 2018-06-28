@@ -20,7 +20,7 @@
 #include "or/main.h"
 #include "or/rephist.h"
 #include "or/router.h"
-#include "common/compat_time.h"
+#include "lib/time/compat_time.h"
 #include "or/rendservice.h"
 
 #include "or/cell_st.h"

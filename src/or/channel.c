@@ -76,7 +76,7 @@
 #include "or/router.h"
 #include "or/routerlist.h"
 #include "or/scheduler.h"
-#include "common/compat_time.h"
+#include "lib/time/compat_time.h"
 #include "or/networkstatus.h"
 #include "or/rendservice.h"
 

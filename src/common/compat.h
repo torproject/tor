@@ -47,7 +47,7 @@
 
 #include "lib/cc/compat_compiler.h"
 #include "lib/arch/bytes.h"
-#include "common/compat_time.h"
+#include "lib/time/compat_time.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/printf.h"
