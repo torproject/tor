@@ -18,6 +18,8 @@
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
 
+#include <string.h>
+
 /** Allocate and return a new condition variable. */
 tor_cond_t *
 tor_cond_new(void)
