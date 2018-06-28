@@ -138,6 +138,7 @@
 #include "or/routerset.h"
 #include "or/transports.h"
 #include "or/statefile.h"
+#include "lib/math/fp.h"
 
 #include "or/node_st.h"
 #include "or/origin_circuit_st.h"

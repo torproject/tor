@@ -13,6 +13,7 @@
 #include "or/channeltls.h"
 #define SCHEDULER_PRIVATE_
 #include "or/scheduler.h"
+#include "lib/math/fp.h"
 
 #include "or/or_connection_st.h"
 
@@ -835,4 +836,3 @@ scheduler_can_use_kist(void)
 }
 
 #endif /* defined(HAVE_KIST_SUPPORT) */
-

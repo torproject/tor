@@ -40,6 +40,7 @@
 #include "or/statefile.h"
 #include "or/circuitlist.h"
 #include "or/circuituse.h"
+#include "lib/math/fp.h"
 
 #include "or/crypt_path_st.h"
 #include "or/origin_circuit_st.h"
@@ -1946,4 +1947,3 @@ cbt_control_event_buildtimeout_set(const circuit_build_times_t *cbt,
 
   tor_free(args);
 }
-

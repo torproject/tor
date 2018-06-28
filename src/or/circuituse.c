@@ -56,6 +56,7 @@
 #include "or/rephist.h"
 #include "or/router.h"
 #include "or/routerlist.h"
+#include "lib/math/fp.h"
 
 #include "or/cpath_build_state_st.h"
 #include "or/dir_connection_st.h"
@@ -3152,4 +3153,3 @@ circuit_read_valid_data(origin_circuit_t *circ, uint16_t relay_body_len)
       tor_add_u32_nowrap(circ->n_overhead_read_circ_bw,
                          RELAY_PAYLOAD_SIZE-relay_body_len);
 }
-

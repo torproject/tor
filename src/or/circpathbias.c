@@ -34,6 +34,8 @@
 #include "or/entrynodes.h"
 #include "or/networkstatus.h"
 #include "or/relay.h"
+#include "lib/math/fp.h"
+#include "lib/math/laplace.h"
 
 #include "or/cell_st.h"
 #include "or/cpath_build_state_st.h"
@@ -1574,4 +1576,3 @@ pathbias_scale_use_rates(entry_guard_t *guard)
     entry_guards_changed();
   }
 }
-

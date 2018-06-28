@@ -121,6 +121,7 @@
 #include "or/routerset.h"
 #include "lib/sandbox/sandbox.h"
 #include "or/torcert.h"
+#include "lib/math/fp.h"
 
 #include "or/dirauth/dirvote.h"
 #include "or/dirauth/mode.h"

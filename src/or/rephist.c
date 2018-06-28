@@ -94,6 +94,8 @@
 
 #include "lib/container/bloomfilt.h"
 #include "lib/container/order.h"
+#include "lib/math/fp.h"
+#include "lib/math/laplace.h"
 
 static void bw_arrays_init(void);
 static void predicted_ports_alloc(void);

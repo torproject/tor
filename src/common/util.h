@@ -62,13 +62,6 @@ void tor_log_mallinfo(int severity);
 #define bool_neq(a,b) (!(a)!=!(b))
 
 /* Math functions */
-double tor_mathlog(double d) ATTR_CONST;
-long tor_lround(double d) ATTR_CONST;
-int64_t tor_llround(double d) ATTR_CONST;
-int64_t sample_laplace_distribution(double mu, double b, double p);
-int64_t add_laplace_noise(int64_t signal, double random, double delta_f,
-                          double epsilon);
-int64_t clamp_double_to_int64(double number);
 
 /* String manipulation */
 

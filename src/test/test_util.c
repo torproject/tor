@@ -29,6 +29,8 @@
 #include "lib/process/subprocess.h"
 #include "lib/intmath/weakrng.h"
 #include "lib/thread/numcpus.h"
+#include "lib/math/fp.h"
+#include "lib/math/laplace.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>
