@@ -19,6 +19,8 @@
 #define TOR_COMPAT_TIME_H
 
 #include "orconfig.h"
+#include "lib/cc/torint.h"
+
 #include "lib/wallclock/tor_gettimeofday.h"
 
 #ifdef _WIN32

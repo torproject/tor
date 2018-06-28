@@ -39,6 +39,7 @@
 #include "or/routerlist.h"
 
 #include "lib/container/order.h"
+#include "lib/time/tvdiff.h"
 
 static void init_geoip_countries(void);
 

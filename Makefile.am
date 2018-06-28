@@ -49,6 +49,7 @@ TOR_UTIL_LIBS = \
         src/lib/libtor-thread.a \
         src/lib/libtor-memarea.a \
 	src/lib/libtor-math.a \
+	src/lib/libtor-time.a \
         src/lib/libtor-log.a \
         src/lib/libtor-lock.a \
         src/lib/libtor-fdio.a \
@@ -73,6 +74,7 @@ TOR_UTIL_TESTING_LIBS = \
         src/lib/libtor-thread-testing.a \
         src/lib/libtor-memarea-testing.a \
 	src/lib/libtor-math-testing.a \
+	src/lib/libtor-time-testing.a \
         src/lib/libtor-log-testing.a \
         src/lib/libtor-lock-testing.a \
         src/lib/libtor-fdio-testing.a \

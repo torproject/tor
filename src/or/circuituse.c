@@ -57,6 +57,7 @@
 #include "or/router.h"
 #include "or/routerlist.h"
 #include "lib/math/fp.h"
+#include "lib/time/tvdiff.h"
 
 #include "or/cpath_build_state_st.h"
 #include "or/dir_connection_st.h"

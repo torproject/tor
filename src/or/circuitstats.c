@@ -41,6 +41,7 @@
 #include "or/circuitlist.h"
 #include "or/circuituse.h"
 #include "lib/math/fp.h"
+#include "lib/time/tvdiff.h"
 
 #include "or/crypt_path_st.h"
 #include "or/origin_circuit_st.h"

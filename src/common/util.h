@@ -66,9 +66,6 @@ void tor_log_mallinfo(int severity);
 /* String manipulation */
 
 /* Time helpers */
-long tv_udiff(const struct timeval *start, const struct timeval *end);
-long tv_mdiff(const struct timeval *start, const struct timeval *end);
-int64_t tv_to_msec(const struct timeval *tv);
 
 /* File helpers */
 

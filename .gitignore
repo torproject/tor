@@ -203,6 +203,8 @@ uptime-*.json
 /src/lib/libtor-smartlist-core-testing.a
 /src/lib/libtor-thread.a
 /src/lib/libtor-thread-testing.a
+/src/lib/libtor-time.a
+/src/lib/libtor-time-testing.a
 /src/lib/libtor-tls.a
 /src/lib/libtor-tls-testing.a
 /src/lib/libtor-trace.a

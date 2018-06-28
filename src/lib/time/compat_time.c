@@ -10,7 +10,12 @@
  **/
 
 #define COMPAT_TIME_PRIVATE
-#include "common/compat.h"
+#include "lib/time/compat_time.h"
+
+#include "lib/err/torerr.h"
+#include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/intmath/muldiv.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -19,6 +24,9 @@
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
 #endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -34,9 +42,9 @@
 #include <mach/mach_time.h>
 #endif
 
-#include "lib/err/torerr.h"
-#include "lib/log/torlog.h"
-#include "common/util.h"
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef _WIN32
 #undef HAVE_CLOCK_GETTIME
