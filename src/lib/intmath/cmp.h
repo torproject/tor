@@ -6,6 +6,19 @@
 #ifndef TOR_INTMATH_CMP_H
 #define TOR_INTMATH_CMP_H
 
+/** Macros for MIN/MAX.  Never use these when the arguments could have
+ * side-effects.
+ * {With GCC extensions we could probably define a safer MIN/MAX.  But
+ * depending on that safety would be dangerous, since not every platform
+ * has it.}
+ **/
+#ifndef MAX
+#define MAX(a,b) ( ((a)<(b)) ? (b) : (a) )
+#endif
+#ifndef MIN
+#define MIN(a,b) ( ((a)>(b)) ? (b) : (a) )
+#endif
+
 /* Return <b>v</b> if it's between <b>min</b> and <b>max</b>.  Otherwise
  * return <b>min</b> if <b>v</b> is smaller than <b>min</b>, or <b>max</b> if
  * <b>b</b> is larger than <b>max</b>.

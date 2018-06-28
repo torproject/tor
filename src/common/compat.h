@@ -60,6 +60,7 @@
 #include "lib/fs/mmap.h"
 #include "lib/fs/userdb.h"
 #include "lib/wallclock/timeval.h"
+#include "lib/intmath/cmp.h"
 
 #include <stdio.h>
 #include <errno.h>
@@ -91,19 +92,6 @@ typedef unsigned long rlim_t;
 #endif
 int set_max_file_descriptors(rlim_t limit, int *max);
 MOCK_DECL(int, get_total_system_memory, (size_t *mem_out));
-
-/** Macros for MIN/MAX.  Never use these when the arguments could have
- * side-effects.
- * {With GCC extensions we could probably define a safer MIN/MAX.  But
- * depending on that safety would be dangerous, since not every platform
- * has it.}
- **/
-#ifndef MAX
-#define MAX(a,b) ( ((a)<(b)) ? (b) : (a) )
-#endif
-#ifndef MIN
-#define MIN(a,b) ( ((a)>(b)) ? (b) : (a) )
-#endif
 
 ssize_t tor_getpass(const char *prompt, char *output, size_t buflen);
 
