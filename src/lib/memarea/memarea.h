@@ -5,6 +5,8 @@
 #ifndef TOR_MEMAREA_H
 #define TOR_MEMAREA_H
 
+#include <stddef.h>
+
 typedef struct memarea_t memarea_t;
 
 memarea_t *memarea_new(void);
@@ -26,4 +28,3 @@ void memarea_get_stats(memarea_t *area,
 void memarea_assert_ok(memarea_t *area);
 
 #endif /* !defined(TOR_MEMAREA_H) */
-

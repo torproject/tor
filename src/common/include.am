@@ -29,7 +29,6 @@ LIBOR_A_SRC = \
   src/common/compat.c					\
   src/common/compat_time.c				\
   src/common/conffile.c					\
-  src/common/memarea.c					\
   src/common/util.c					\
   src/common/util_process.c				\
   src/common/storagedir.c				\
@@ -71,7 +70,6 @@ COMMONHEADERS = \
   src/common/compat_time.h			\
   src/common/conffile.h				\
   src/common/handles.h				\
-  src/common/memarea.h				\
   src/common/procmon.h				\
   src/common/storagedir.h			\
   src/common/timers.h				\

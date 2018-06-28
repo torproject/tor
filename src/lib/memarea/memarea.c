@@ -7,12 +7,16 @@
  */
 
 #include "orconfig.h"
-#include <stddef.h>
+#include "lib/memarea/memarea.h"
+
 #include <stdlib.h>
-#include "common/memarea.h"
-#include "common/util.h"
-#include "common/compat.h"
+#include <string.h>
+
+#include "lib/cc/torint.h"
+#include "lib/arch/bytes.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/malloc/util_malloc.h"
 
 #ifndef DISABLE_MEMORY_SENTINELS
 
@@ -394,4 +398,3 @@ memarea_assert_ok(memarea_t *area)
 }
 
 #endif /* !defined(DISABLE_MEMORY_SENTINELS) */
-
