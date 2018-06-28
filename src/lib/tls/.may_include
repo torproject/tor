@@ -1,13 +1,19 @@
 orconfig.h
+lib/arch/*.h
 lib/cc/*.h
+lib/ctime/*.h
 lib/container/*.h
 lib/crypt_ops/*.h
+lib/intmath/*.h
+lib/encoding/*.h
 lib/err/*.h
+lib/net/*.h
+lib/string/*.h
 lib/testsupport/testsupport.h
 lib/tls/*.h
 lib/log/*.h
 
 ciphers.inc
 
-# XXX I'd like to remove this.
-common/*.h
+# this shouldn't be in common
+common/buffers.h

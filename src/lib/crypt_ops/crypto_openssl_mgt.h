@@ -13,9 +13,7 @@
 #ifndef TOR_CRYPTO_OPENSSL_H
 #define TOR_CRYPTO_OPENSSL_H
 
-#include <stdio.h>
-#include "common/util.h"
-
+#include "orconfig.h"
 #include <openssl/engine.h>
 
 /*
@@ -82,4 +80,3 @@ int setup_openssl_threading(void);
 void crypto_openssl_free_all(void);
 
 #endif /* !defined(TOR_CRYPTO_OPENSSL_H) */
-

@@ -14,12 +14,17 @@
 #include "lib/crypt_ops/crypto_digest.h"
 
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
+#include "lib/intmath/cmp.h"
+#include "lib/log/util_bug.h"
+
 #include <openssl/opensslv.h>
 
 #if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
 #define HAVE_OPENSSL_HKDF 1
 #include <openssl/kdf.h>
 #endif
+
+#include <string.h>
 
 /** Given <b>key_in_len</b> bytes of negotiated randomness in <b>key_in</b>
  * ("K"), expand it into <b>key_out_len</b> bytes of negotiated key material in

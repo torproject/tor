@@ -13,7 +13,6 @@
 
 #include "lib/crypt_ops/crypto_rsa.h"
 #include "lib/crypt_ops/compat_openssl.h"
-#include "common/compat.h"
 #include "lib/testsupport/testsupport.h"
 
 /* Opaque structure to hold a TLS connection. */
@@ -292,4 +291,3 @@ const char *tor_tls_get_ciphersuite_name(tor_tls_t *tls);
 int evaluate_ecgroup_for_tls(const char *ecgroup);
 
 #endif /* !defined(TOR_TORTLS_H) */
-

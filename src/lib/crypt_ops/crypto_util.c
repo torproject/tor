@@ -14,6 +14,7 @@
 #define CRYPTO_UTIL_PRIVATE
 
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/cc/compat_compiler.h"
 
 #include <string.h>
 
@@ -23,8 +24,6 @@
 #include <wincrypt.h>
 #endif /* defined(_WIN32) */
 
-#include "common/util.h"
-
 DISABLE_GCC_WARNING(redundant-decls)
 
 #include <openssl/err.h>
@@ -33,6 +32,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 ENABLE_GCC_WARNING(redundant-decls)
 
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
 
 /**
  * Destroy the <b>sz</b> bytes of data stored at <b>mem</b>, setting them to
@@ -127,4 +127,3 @@ crypto_log_errors(int severity, const char *doing)
   }
 }
 #endif /* !defined(CRYPTO_UTIL_PRIVATE) */
-

@@ -22,15 +22,18 @@
 #endif /* defined(_WIN32) */
 
 #include "lib/container/smartlist.h"
-#include "common/compat.h"
 #include "lib/crypt_ops/compat_openssl.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "lib/sandbox/sandbox.h"
-#include "lib/testsupport/testsupport.h"
-#include "lib/log/torlog.h"
-#include "common/util.h"
 #include "lib/encoding/binascii.h"
 #include "lib/intmath/weakrng.h"
+#include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/malloc/util_malloc.h"
+#include "lib/sandbox/sandbox.h"
+#include "lib/string/compat_string.h"
+#include "lib/string/util_string.h"
+#include "lib/testsupport/testsupport.h"
+#include "lib/fs/files.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/rand.h>
@@ -62,6 +65,8 @@ ENABLE_GCC_WARNING(redundant-decls)
 #ifdef HAVE_SYS_RANDOM_H
 #include <sys/random.h>
 #endif
+
+#include <string.h>
 
 /**
  * How many bytes of entropy we add at once.
@@ -238,7 +243,7 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
     fd = open(sandbox_intern_string(filenames[i]), O_RDONLY, 0);
     if (fd<0) continue;
     log_info(LD_CRYPTO, "Reading entropy from \"%s\"", filenames[i]);
-    n = read_all(fd, (char*)out, out_len, 0);
+    n = read_all_from_fd(fd, (char*)out, out_len);
     close(fd);
     if (n != out_len) {
       /* LCOV_EXCL_START

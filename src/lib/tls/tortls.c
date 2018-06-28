@@ -28,7 +28,6 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "common/compat.h"
 
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
  * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
@@ -53,10 +52,20 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 #define TORTLS_PRIVATE
 #include "lib/tls/tortls.h"
-#include "common/util.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
 #include "lib/container/smartlist.h"
+#include "lib/string/compat_string.h"
+#include "lib/string/printf.h"
+#include "lib/net/socket.h"
+#include "lib/intmath/cmp.h"
+#include "lib/ctime/di_ops.h"
+#include "lib/encoding/time_fmt.h"
+
+#include <stdlib.h>
 #include <string.h>
+
+#include "lib/arch/bytes.h"
 
 #ifdef OPENSSL_1_1_API
 #define X509_get_notBefore_const(cert) \
@@ -1392,7 +1401,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
   {
     unsigned char cipherid[3];
     tor_assert(ssl);
-    set_uint16(cipherid, htons(cipher));
+    set_uint16(cipherid, tor_htons(cipher));
     cipherid[2] = 0; /* If ssl23_get_cipher_by_char finds no cipher starting
                       * with a two-byte 'cipherid', it may look for a v2
                       * cipher with the appropriate 3 bytes. */
@@ -1406,7 +1415,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
 # if defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR)
   if (m && m->get_cipher_by_char) {
     unsigned char cipherid[3];
-    set_uint16(cipherid, htons(cipher));
+    set_uint16(cipherid, tor_htons(cipher));
     cipherid[2] = 0; /* If ssl23_get_cipher_by_char finds no cipher starting
                       * with a two-byte 'cipherid', it may look for a v2
                       * cipher with the appropriate 3 bytes. */

@@ -8,6 +8,9 @@
  * them to disk.
  */
 
+#include <string.h>
+
+#include "lib/arch/bytes.h"
 #include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_pwbox.h"
@@ -16,8 +19,8 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/intmath/muldiv.h"
-#include "common/util.h"
 #include "trunnel/pwbox.h"
+#include "lib/log/util_bug.h"
 
 /* 8 bytes "TORBOX00"
    1 byte: header len (H)
@@ -75,7 +78,7 @@ crypto_pwbox(uint8_t **out, size_t *outlen_out,
   pwbox_encoded_setlen_data(enc, encrypted_len);
   encrypted_portion = pwbox_encoded_getarray_data(enc);
 
-  set_uint32(encrypted_portion, htonl((uint32_t)input_len));
+  set_uint32(encrypted_portion, tor_htonl((uint32_t)input_len));
   memcpy(encrypted_portion+4, input, input_len);
 
   /* Now that all the data is in position, derive some keys, encrypt, and
@@ -190,7 +193,7 @@ crypto_unpwbox(uint8_t **out, size_t *outlen_out,
 
   cipher = crypto_cipher_new_with_iv((char*)keys, (char*)enc->iv);
   crypto_cipher_decrypt(cipher, (char*)&result_len, (char*)encrypted, 4);
-  result_len = ntohl(result_len);
+  result_len = tor_ntohl(result_len);
   if (encrypted_len < result_len + 4)
     goto err;
 

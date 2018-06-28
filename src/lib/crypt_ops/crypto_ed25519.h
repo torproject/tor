@@ -7,7 +7,6 @@
 #include "lib/testsupport/testsupport.h"
 #include "lib/cc/torint.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
-#include "common/util.h"
 
 #define ED25519_PUBKEY_LEN 32
 #define ED25519_SECKEY_LEN 64
@@ -142,4 +141,3 @@ MOCK_DECL(STATIC int, ed25519_impl_spot_check, (void));
 #endif
 
 #endif /* !defined(TOR_CRYPTO_ED25519_H) */
-

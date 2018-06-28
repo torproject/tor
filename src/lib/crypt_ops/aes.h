@@ -13,6 +13,9 @@
  * \brief Headers for aes.c
  */
 
+#include "lib/cc/torint.h"
+#include "lib/malloc/util_malloc.h"
+
 typedef struct aes_cnt_cipher aes_cnt_cipher_t;
 
 aes_cnt_cipher_t* aes_new_cipher(const uint8_t *key, const uint8_t *iv,
@@ -26,4 +29,3 @@ int evaluate_evp_for_aes(int force_value);
 int evaluate_ctr_for_aes(void);
 
 #endif /* !defined(TOR_AES_H) */
-

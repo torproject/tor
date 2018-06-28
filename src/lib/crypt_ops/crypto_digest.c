@@ -15,8 +15,14 @@
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
 
 #include "keccak-tiny/keccak-tiny.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "lib/arch/bytes.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 

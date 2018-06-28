@@ -16,11 +16,8 @@
 #include "orconfig.h"
 
 #include "lib/crypt_ops/crypto_digest.h"
-#include <stdio.h>
 #include "lib/cc/torint.h"
 #include "lib/testsupport/testsupport.h"
-#include "common/compat.h"
-#include "common/util.h"
 #include "lib/log/torlog.h"
 
 /** Length of our public keys. */
@@ -116,4 +113,3 @@ void crypto_pk_assign_(crypto_pk_t *dest, const crypto_pk_t *src);
 #endif
 
 #endif
-

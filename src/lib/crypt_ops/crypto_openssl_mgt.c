@@ -13,6 +13,9 @@
 #include "lib/crypt_ops/compat_openssl.h"
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
 #include "lib/string/util_string.h"
+#include "lib/lock/compat_mutex.h"
+#include "lib/testsupport/testsupport.h"
+#include "lib/thread/threads.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
@@ -29,6 +32,8 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/crypto.h>
 
 ENABLE_GCC_WARNING(redundant-decls)
+
+#include <string.h>
 
 #ifndef NEW_THREAD_API
 /** A number of preallocated mutexes for use by OpenSSL. */

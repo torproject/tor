@@ -12,14 +12,14 @@
 
 #define CRYPTO_S2K_PRIVATE
 
-#include "common/compat.h"
 #include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_hkdf.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_s2k.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "common/util.h"
+#include "lib/ctime/di_ops.h"
+#include "lib/log/util_bug.h"
 
 #include <openssl/evp.h>
 
@@ -27,6 +27,8 @@
 #define HAVE_SCRYPT
 #include <libscrypt.h>
 #endif
+
+#include <string.h>
 
 /* Encoded secrets take the form:
 
@@ -473,4 +475,3 @@ secret_to_key_check(const uint8_t *spec_and_key, size_t spec_and_key_len,
   memwipe(buf, 0, sizeof(buf));
   return rv;
 }
-

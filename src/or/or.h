@@ -83,6 +83,7 @@
 #include "common/token_bucket.h"
 #include "lib/encoding/binascii.h"
 #include "or/hs_circuitmap.h"
+#include "common/util.h"
 
 // These, more than other includes, are for keeping the other struct
 // definitions working. We should remove them when we minimize our includes.

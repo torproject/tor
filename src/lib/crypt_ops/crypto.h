@@ -17,8 +17,6 @@
 
 #include <stdio.h>
 #include "lib/cc/torint.h"
-#include "common/compat.h"
-#include "common/util.h"
 #include "lib/crypt_ops/crypto_rsa.h"
 
 /** Length of our symmetric cipher's keys of 128-bit. */

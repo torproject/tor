@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #endif
 
+#include "lib/ctime/di_ops.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
@@ -28,11 +29,14 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/log/torlog.h"
-#include "common/util.h"
+#include "lib/log/util_bug.h"
 #include "lib/encoding/binascii.h"
+#include "lib/string/util_string.h"
 
 #include "ed25519/ref10/ed25519_ref10.h"
 #include "ed25519/donna/ed25519_donna_tor.h"
+
+#include <string.h>
 
 static void pick_ed25519_impl(void);
 
@@ -814,4 +818,3 @@ ed25519_validate_pubkey(const ed25519_public_key_t *pubkey)
 
   return 0;
 }
-

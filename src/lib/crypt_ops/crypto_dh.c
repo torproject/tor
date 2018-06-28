@@ -14,6 +14,8 @@
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_hkdf.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
@@ -22,8 +24,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 ENABLE_GCC_WARNING(redundant-decls)
 
 #include <openssl/bn.h>
-
-#include "lib/log/torlog.h"
+#include <string.h>
 
 /** A structure to hold the first half (x, g^x) of a Diffie-Hellman handshake
  * while we're waiting for the second.*/

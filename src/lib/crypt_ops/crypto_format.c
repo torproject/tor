@@ -20,10 +20,15 @@
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/string/compat_string.h"
 #include "lib/string/util_string.h"
-#include "common/util.h"
+#include "lib/string/printf.h"
 #include "lib/encoding/binascii.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/fs/files.h"
+
+#include <string.h>
 
 /** Write the <b>datalen</b> bytes from <b>data</b> to the file named
  * <b>fname</b> in the tagged-data format.  This format contains a

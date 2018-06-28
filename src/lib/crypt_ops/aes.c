@@ -10,6 +10,8 @@
  **/
 
 #include "orconfig.h"
+#include "lib/crypt_ops/aes.h"
+#include "lib/log/util_bug.h"
 
 #ifdef _WIN32 /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
   #include <winsock2.h>
@@ -35,9 +37,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 
 ENABLE_GCC_WARNING(redundant-decls)
 
-#include "common/compat.h"
 #include "lib/crypt_ops/aes.h"
-#include "common/util.h"
 #include "lib/log/torlog.h"
 #include "lib/ctime/di_ops.h"
 
@@ -406,4 +406,3 @@ aes_set_iv(aes_cnt_cipher_t *cipher, const uint8_t *iv)
 }
 
 #endif /* defined(USE_EVP_AES_CTR) */
-

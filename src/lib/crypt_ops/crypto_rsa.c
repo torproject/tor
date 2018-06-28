@@ -17,6 +17,9 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_rsa.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/ctime/di_ops.h"
+#include "lib/log/util_bug.h"
+#include "lib/fs/files.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
@@ -34,8 +37,9 @@ DISABLE_GCC_WARNING(redundant-decls)
 ENABLE_GCC_WARNING(redundant-decls)
 
 #include "lib/log/torlog.h"
-#include "common/util.h"
 #include "lib/encoding/binascii.h"
+
+#include <string.h>
 
 /** Declaration for crypto_pk_t structure. */
 struct crypto_pk_t
@@ -1159,4 +1163,3 @@ crypto_pk_base64_decode(const char *str, size_t len)
   tor_free(der);
   return pk;
 }
-

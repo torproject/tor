@@ -13,7 +13,7 @@
 #ifndef TOR_CRYPTO_HKDF_H
 #define TOR_CRYPTO_HKDF_H
 
-#include "common/util.h"
+#include "lib/cc/torint.h"
 
 int crypto_expand_key_material_TAP(const uint8_t *key_in,
                                    size_t key_in_len,
@@ -25,4 +25,3 @@ int crypto_expand_key_material_rfc5869_sha256(
                                     uint8_t *key_out, size_t key_out_len);
 
 #endif /* !defined(TOR_CRYPTO_HKDF_H) */
-

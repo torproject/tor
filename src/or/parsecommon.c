@@ -8,8 +8,13 @@
 
 #include "or/parsecommon.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
 #include "lib/encoding/binascii.h"
 #include "lib/container/smartlist.h"
+#include "lib/string/util_string.h"
+#include "lib/string/printf.h"
+
+#include <string.h>
 
 #define MIN_ANNOTATION A_PURPOSE
 #define MAX_ANNOTATION A_UNKNOWN_

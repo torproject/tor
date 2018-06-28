@@ -13,8 +13,9 @@
 #ifndef TOR_CRYPTO_RAND_H
 #define TOR_CRYPTO_RAND_H
 
+#include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
-#include "common/util.h"
+#include "lib/testsupport/testsupport.h"
 
 /* random numbers */
 int crypto_seed_rng(void) ATTR_WUR;
@@ -49,4 +50,3 @@ extern int break_strongest_rng_fallback;
 #endif /* defined(CRYPTO_RAND_PRIVATE) */
 
 #endif /* !defined(TOR_CRYPTO_RAND_H) */
-

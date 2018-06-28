@@ -11,6 +11,7 @@
 #define UTIL_MALLOC_PRIVATE
 #define SOCKET_PRIVATE
 #define SUBPROCESS_PRIVATE
+#include "lib/testsupport/testsupport.h"
 #include "or/or.h"
 #include "common/buffers.h"
 #include "or/config.h"
