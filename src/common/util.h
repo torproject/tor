@@ -72,8 +72,6 @@ int64_t clamp_double_to_int64(double number);
 
 /* String manipulation */
 
-char *tor_escape_str_for_pt_args(const char *string,
-                                 const char *chars_to_escape);
 
 /* Time helpers */
 long tv_udiff(const struct timeval *start, const struct timeval *end);

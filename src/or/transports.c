@@ -1699,3 +1699,40 @@ pt_free_all(void)
     managed_proxy_list=NULL;
   }
 }
+
+/** Return a newly allocated string equal to <b>string</b>, except that every
+ * character in <b>chars_to_escape</b> is preceded by a backslash. */
+char *
+tor_escape_str_for_pt_args(const char *string, const char *chars_to_escape)
+{
+  char *new_string = NULL;
+  char *new_cp = NULL;
+  size_t length, new_length;
+
+  tor_assert(string);
+
+  length = strlen(string);
+
+  if (!length) /* If we were given the empty string, return the same. */
+    return tor_strdup("");
+  /* (new_length > SIZE_MAX) => ((length * 2) + 1 > SIZE_MAX) =>
+     (length*2 > SIZE_MAX - 1) => (length > (SIZE_MAX - 1)/2) */
+  if (length > (SIZE_MAX - 1)/2) /* check for overflow */
+    return NULL;
+
+  /* this should be enough even if all characters must be escaped */
+  new_length = (length * 2) + 1;
+
+  new_string = new_cp = tor_malloc(new_length);
+
+  while (*string) {
+    if (strchr(chars_to_escape, *string))
+      *new_cp++ = '\\';
+
+    *new_cp++ = *string++;
+  }
+
+  *new_cp = '\0'; /* NUL-terminate the new string */
+
+  return new_string;
+}

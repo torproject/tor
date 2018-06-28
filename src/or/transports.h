@@ -66,6 +66,9 @@ char *pt_stringify_socks_args(const smartlist_t *socks_args);
 char *pt_get_socks_args_for_proxy_addrport(const tor_addr_t *addr,
                                             uint16_t port);
 
+char *tor_escape_str_for_pt_args(const char *string,
+                                 const char *chars_to_escape);
+
 #ifdef PT_PRIVATE
 /** State of the managed proxy configuration protocol. */
 enum pt_proto_state {
