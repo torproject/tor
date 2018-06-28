@@ -13,11 +13,10 @@
 
 #include "orconfig.h"
 #include <stdlib.h>
-#include "common/compat.h"
-#include "common/compat_threads.h"
+#include "lib/thread/threads.h"
 
-#include "common/util.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
 
 /** Allocate and return a new condition variable. */
 tor_cond_t *

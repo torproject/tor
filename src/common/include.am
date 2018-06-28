@@ -17,13 +17,6 @@ else
 libor_extra_source=
 endif
 
-if THREADS_PTHREADS
-threads_impl_source=src/common/compat_pthreads.c
-endif
-if THREADS_WIN32
-threads_impl_source=src/common/compat_winthreads.c
-endif
-
 if BUILD_READPASSPHRASE_C
 readpassphrase_source=src/ext/readpassphrase.c
 else
@@ -34,7 +27,6 @@ LIBOR_A_SRC = \
   src/common/address_set.c				\
   src/common/buffers.c					\
   src/common/compat.c					\
-  src/common/compat_threads.c				\
   src/common/compat_time.c				\
   src/common/conffile.c					\
   src/common/memarea.c					\
@@ -44,7 +36,6 @@ LIBOR_A_SRC = \
   src/common/token_bucket.c				\
   src/common/workqueue.c				\
   $(libor_extra_source)					\
-  $(threads_impl_source)				\
   $(readpassphrase_source)
 
 src/common/src_common_libor_testing_a-log.$(OBJEXT) \
@@ -77,7 +68,6 @@ COMMONHEADERS = \
   src/common/buffers.h				\
   src/common/compat.h				\
   src/common/compat_libevent.h			\
-  src/common/compat_threads.h			\
   src/common/compat_time.h			\
   src/common/conffile.h				\
   src/common/handles.h				\

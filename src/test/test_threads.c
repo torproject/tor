@@ -5,7 +5,7 @@
 
 #include "orconfig.h"
 #include "or/or.h"
-#include "common/compat_threads.h"
+#include "lib/thread/threads.h"
 #include "test/test.h"
 
 /** mutex for thread test to stop the threads hitting data at the same time. */

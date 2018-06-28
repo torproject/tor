@@ -12,11 +12,12 @@
 
 #ifdef _WIN32
 
-#include "common/compat.h"
 #include <windows.h>
 #include <process.h>
-#include "common/util.h"
+#include "lib/thread/threads.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/log/win32err.h"
 
 /* This value is more or less total cargo-cult */
 #define SPIN_COUNT 2000

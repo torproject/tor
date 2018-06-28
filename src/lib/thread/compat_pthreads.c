@@ -11,13 +11,16 @@
  */
 
 #include "orconfig.h"
+#include "lib/thread/threads.h"
+#include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+
+#include <sys/time.h>
 #include <pthread.h>
 #include <signal.h>
 #include <time.h>
-
-#include "common/compat.h"
-#include "lib/log/torlog.h"
-#include "common/util.h"
+#include <errno.h>
+#include <string.h>
 
 /** Wraps a void (*)(void*) function and its argument so we can
  * invoke them in a way pthreads would expect.

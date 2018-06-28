@@ -4,7 +4,7 @@
 /* See LICENSE for licensing information */
 
 #include "or/or.h"
-#include "common/compat_threads.h"
+#include "lib/thread/threads.h"
 #include "or/onion.h"
 #include "common/workqueue.h"
 #include "lib/crypt_ops/crypto_curve25519.h"

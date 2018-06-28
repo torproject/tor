@@ -15,6 +15,8 @@
 #include <stdatomic.h>
 #endif
 
+struct timeval;
+
 int spawn_func(void (*func)(void *), void *data);
 void spawn_exit(void) ATTR_NORETURN;
 

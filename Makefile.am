@@ -45,6 +45,7 @@ TOR_UTIL_LIBS = \
         src/lib/libtor-sandbox.a \
 	src/lib/libtor-container.a \
 	src/lib/libtor-net.a \
+        src/lib/libtor-thread.a \
         src/lib/libtor-log.a \
         src/lib/libtor-lock.a \
         src/lib/libtor-fdio.a \
@@ -65,6 +66,7 @@ TOR_UTIL_TESTING_LIBS = \
         src/lib/libtor-sandbox-testing.a \
 	src/lib/libtor-container-testing.a \
 	src/lib/libtor-net-testing.a \
+        src/lib/libtor-thread-testing.a \
         src/lib/libtor-log-testing.a \
         src/lib/libtor-lock-testing.a \
         src/lib/libtor-fdio-testing.a \

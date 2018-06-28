@@ -26,7 +26,7 @@
 #include "orconfig.h"
 #include "common/compat.h"
 #include "common/compat_libevent.h"
-#include "common/compat_threads.h"
+#include "lib/thread/threads.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "common/util.h"
 #include "common/workqueue.h"

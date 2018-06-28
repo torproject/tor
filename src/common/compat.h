@@ -190,6 +190,6 @@ int tor_mlockall(void);
 ssize_t tor_getpass(const char *prompt, char *output, size_t buflen);
 
 /* This needs some of the declarations above so we include it here. */
-#include "common/compat_threads.h"
+#include "lib/thread/threads.h"
 
 #endif /* !defined(TOR_COMPAT_H) */

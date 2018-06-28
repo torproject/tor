@@ -154,6 +154,7 @@ pub fn main() {
             cfg.component("tor-sandbox");
             cfg.component("tor-encoding-testing");
             cfg.component("tor-net");
+            cfg.component("tor-thread-testing");
             cfg.component("tor-log");
             cfg.component("tor-lock");
             cfg.component("tor-fdio");
