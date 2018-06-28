@@ -8,6 +8,10 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/log/torlog.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+
 #define TOR_USEC_PER_SEC 1000000
 
 /** Return the difference between start->tv_sec and end->tv_sec.
