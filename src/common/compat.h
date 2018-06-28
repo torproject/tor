@@ -108,10 +108,6 @@
 #endif /* !defined(timercmp) */
 
 /* ===== File compatibility */
-typedef struct tor_lockfile_t tor_lockfile_t;
-tor_lockfile_t *tor_lockfile_lock(const char *filename, int blocking,
-                                  int *locked_out);
-void tor_lockfile_unlock(tor_lockfile_t *lockfile);
 
 /* ===== Net compatibility */
 

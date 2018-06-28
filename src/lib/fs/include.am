@@ -9,6 +9,7 @@ src_lib_libtor_fs_a_SOURCES =			\
 	src/lib/fs/conffile.c			\
 	src/lib/fs/dir.c			\
 	src/lib/fs/files.c			\
+	src/lib/fs/lockfile.c			\
 	src/lib/fs/mmap.c			\
 	src/lib/fs/path.c			\
 	src/lib/fs/storagedir.c			\
@@ -23,6 +24,7 @@ noinst_HEADERS +=					\
 	src/lib/fs/conffile.h				\
 	src/lib/fs/dir.h				\
 	src/lib/fs/files.h				\
+	src/lib/fs/lockfile.h				\
 	src/lib/fs/mmap.h				\
 	src/lib/fs/path.h				\
 	src/lib/fs/storagedir.h				\
