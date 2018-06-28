@@ -48,7 +48,7 @@
 #include "or/port_cfg_st.h"
 #include "or/routerinfo_st.h"
 
-#include "common/conffile.h"
+#include "lib/fs/conffile.h"
 
 static void
 test_config_addressmap(void *arg)

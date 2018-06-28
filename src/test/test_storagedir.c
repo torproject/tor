@@ -3,7 +3,7 @@
 
 #include "or/or.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "common/storagedir.h"
+#include "lib/fs/storagedir.h"
 #include "test/test.h"
 
 #ifdef HAVE_UTIME_H
