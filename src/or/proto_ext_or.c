@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 #include "or/or.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/ext_orport.h"
 #include "or/proto_ext_or.h"
 

@@ -60,7 +60,7 @@
 #include "lib/err/backtrace.h"
 
 #include "or/addressmap.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/channel.h"
 #include "or/circpathbias.h"
 #include "or/circuitlist.h"

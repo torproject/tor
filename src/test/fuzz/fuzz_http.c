@@ -8,7 +8,7 @@
 
 #include "or/or.h"
 #include "lib/err/backtrace.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/config.h"
 #include "or/connection.h"
 #include "or/directory.h"

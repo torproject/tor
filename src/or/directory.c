@@ -8,7 +8,7 @@
 #include "or/or.h"
 #include "lib/err/backtrace.h"
 #include "or/bridges.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/circuitbuild.h"
 #include "or/config.h"
 #include "or/connection.h"

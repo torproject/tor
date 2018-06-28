@@ -4,7 +4,7 @@
 /* See LICENSE for licensing information */
 
 #include "or/or.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/config.h"
 #include "or/proto_socks.h"
 #include "test/test.h"

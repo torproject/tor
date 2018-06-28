@@ -9,7 +9,7 @@
 #define SCHEDULER_KIST_PRIVATE
 #include "or/scheduler.h"
 #include "or/main.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #define TOR_CHANNEL_INTERNAL_
 #include "or/channeltls.h"
 

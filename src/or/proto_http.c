@@ -6,7 +6,7 @@
 
 #define PROTO_HTTP_PRIVATE
 #include "or/or.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/proto_http.h"
 
 /** Return true if <b>cmd</b> looks like a HTTP (proxy) request. */

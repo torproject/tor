@@ -4,7 +4,7 @@
 #define SCHEDULER_KIST_PRIVATE
 
 #include "or/or.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/config.h"
 #include "or/connection.h"
 #include "or/networkstatus.h"

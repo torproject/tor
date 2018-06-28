@@ -6,7 +6,7 @@
 
 #include "or/or.h"
 #include "or/addressmap.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/control.h"
 #include "or/config.h"
 #include "lib/crypt_ops/crypto_util.h"

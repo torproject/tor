@@ -51,7 +51,7 @@
 #include "or/addressmap.h"
 #include "lib/err/backtrace.h"
 #include "or/bridges.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "lib/tls/buffers_tls.h"
 #include "or/channel.h"
 #include "or/channeltls.h"

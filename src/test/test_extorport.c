@@ -5,7 +5,7 @@
 #define EXT_ORPORT_PRIVATE
 #define MAIN_PRIVATE
 #include "or/or.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/connection.h"
 #include "or/connection_or.h"
 #include "or/config.h"

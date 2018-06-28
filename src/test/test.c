@@ -41,7 +41,7 @@ double fabs(double x);
 
 #include "or/or.h"
 #include "lib/err/backtrace.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/circuitlist.h"
 #include "or/circuitstats.h"
 #include "lib/compress/compress.h"

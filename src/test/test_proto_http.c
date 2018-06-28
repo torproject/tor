@@ -8,7 +8,7 @@
 
 #include "or/or.h"
 #include "test/test.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/proto_http.h"
 #include "test/log_test_helpers.h"
 

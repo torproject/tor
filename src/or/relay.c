@@ -49,7 +49,7 @@
 #include "or/or.h"
 #include "or/addressmap.h"
 #include "lib/err/backtrace.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/channel.h"
 #include "or/circpathbias.h"
 #include "or/circuitbuild.h"

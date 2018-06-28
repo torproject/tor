@@ -30,7 +30,7 @@
 #define GEOIP_PRIVATE
 #include "or/or.h"
 #include "ht.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/config.h"
 #include "or/control.h"
 #include "or/dnsserv.h"

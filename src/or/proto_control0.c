@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 #include "or/or.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/proto_control0.h"
 
 /** Return 1 iff buf looks more like it has an (obsolete) v0 controller

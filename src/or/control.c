@@ -38,7 +38,7 @@
 #include "or/or.h"
 #include "or/addressmap.h"
 #include "or/bridges.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/channel.h"
 #include "or/channeltls.h"
 #include "or/circuitbuild.h"

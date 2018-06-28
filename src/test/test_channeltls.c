@@ -8,7 +8,7 @@
 #define TOR_CHANNEL_INTERNAL_
 #include "or/or.h"
 #include "lib/net/address.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/channel.h"
 #include "or/channeltls.h"
 #include "or/connection_or.h"

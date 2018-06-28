@@ -5,7 +5,7 @@
 
 #define DIRSERV_PRIVATE
 #include "or/or.h"
-#include "common/buffers.h"
+#include "lib/container/buffers.h"
 #include "or/config.h"
 #include "or/confparse.h"
 #include "or/channel.h"
