@@ -16,7 +16,7 @@
 #include "test/log_test_helpers.h"
 
 #include "lib/sandbox/sandbox.h"
-#include "common/memarea.h"
+#include "lib/memarea/memarea.h"
 #include "or/policies.h"
 #include "test/test_helpers.h"
 

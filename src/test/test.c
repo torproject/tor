@@ -51,7 +51,7 @@ double fabs(double x);
 #include "or/rendcache.h"
 #include "test/test.h"
 #include "or/main.h"
-#include "common/memarea.h"
+#include "lib/memarea/memarea.h"
 #include "or/onion.h"
 #include "or/onion_ntor.h"
 #include "or/onion_fast.h"

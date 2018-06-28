@@ -4,7 +4,7 @@
 #include "lib/container/smartlist.h"
 #include "common/compat.h"
 #include "lib/encoding/confline.h"
-#include "common/memarea.h"
+#include "lib/memarea/memarea.h"
 #include "lib/sandbox/sandbox.h"
 #include "common/storagedir.h"
 #include "lib/log/torlog.h"

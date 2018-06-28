@@ -10,7 +10,7 @@
 #define TOR_PARSECOMMON_H
 
 #include "lib/crypt_ops/crypto.h"
-#include "common/memarea.h"
+#include "lib/memarea/memarea.h"
 
 struct smartlist_t;
 

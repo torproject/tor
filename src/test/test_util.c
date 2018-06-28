@@ -16,7 +16,7 @@
 #include "or/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "test/test.h"
-#include "common/memarea.h"
+#include "lib/memarea/memarea.h"
 #include "common/util_process.h"
 #include "test/log_test_helpers.h"
 #include "lib/compress/compress_zstd.h"

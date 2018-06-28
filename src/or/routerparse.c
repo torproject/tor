@@ -62,7 +62,7 @@
 #include "or/dirauth/shared_random.h"
 #include "or/dirserv.h"
 #include "or/entrynodes.h"
-#include "common/memarea.h"
+#include "lib/memarea/memarea.h"
 #include "or/microdesc.h"
 #include "or/networkstatus.h"
 #include "or/parsecommon.h"

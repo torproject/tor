@@ -8,7 +8,7 @@
 #include "test/test.h"
 
 #include "or/consdiff.h"
-#include "common/memarea.h"
+#include "lib/memarea/memarea.h"
 #include "test/log_test_helpers.h"
 
 #define tt_str_eq_line(a,b) \

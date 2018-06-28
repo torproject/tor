@@ -30,7 +30,7 @@
 #include "or/entrynodes.h"
 #include "or/fp_pair.h"
 #include "or/hibernate.h"
-#include "common/memarea.h"
+#include "lib/memarea/memarea.h"
 #include "or/networkstatus.h"
 #include "or/router.h"
 #include "or/routerkeys.h"
