@@ -17,20 +17,13 @@ else
 libor_extra_source=
 endif
 
-if BUILD_READPASSPHRASE_C
-readpassphrase_source=src/ext/readpassphrase.c
-else
-readpassphrase_source=
-endif
-
 LIBOR_A_SRC = \
   src/common/address_set.c				\
   src/common/compat.c					\
   src/common/util.c					\
   src/common/token_bucket.c				\
   src/common/workqueue.c				\
-  $(libor_extra_source)					\
-  $(readpassphrase_source)
+  $(libor_extra_source)
 
 src/common/src_common_libor_testing_a-log.$(OBJEXT) \
   src/common/log.$(OBJEXT): micro-revision.i

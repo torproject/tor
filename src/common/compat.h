@@ -86,8 +86,6 @@ typedef enum {
 
 /* ===== OS compatibility */
 
-ssize_t tor_getpass(const char *prompt, char *output, size_t buflen);
-
 /* This needs some of the declarations above so we include it here. */
 #include "lib/thread/threads.h"
 

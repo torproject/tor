@@ -21,6 +21,7 @@
 #include "lib/crypt_ops/crypto_pwbox.h"
 #include "or/routerkeys.h"
 #include "or/torcert.h"
+#include "lib/term/getpass.h"
 
 #define ENC_KEY_HEADER "Boxed Ed25519 key"
 #define ENC_KEY_TAG "master"
