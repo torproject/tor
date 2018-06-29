@@ -252,7 +252,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     /* XXXX Abstraction violation: should be pulling a field out of v3_ns.*/
     char *flag_thresholds = dirserv_get_flag_thresholds_line();
     char *params;
-    char *bwlist_headers;
+    char *bw_file_headers;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
       make_consensus_method_list(MIN_SUPPORTED_CONSENSUS_METHOD,
@@ -267,11 +267,11 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     else
       params = tor_strdup("");
     tor_assert(cert);
-    if (v3_ns->bwlist_headers)
-      bwlist_headers = smartlist_join_strings(v3_ns->bwlist_headers, " ", 0,
+    if (v3_ns->bw_file_headers)
+      bw_file_headers = smartlist_join_strings(v3_ns->bw_file_headers, " ", 0,
                                               NULL);
     else
-      bwlist_headers = tor_strdup("");
+      bw_file_headers = tor_strdup("");
     smartlist_add_asprintf(chunks,
                  "network-status-version 3\n"
                  "vote-status %s\n"
@@ -290,7 +290,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n"
                  "%s" /* shared randomness information */
-                 "bandwidth-file %s\n", /* bandwidth file headers */
+                 "bandwidth-file-headers %s\n", /* bandwidth file headers */
                  v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
                  methods,
                  published, va, fu, vu,
@@ -307,14 +307,14 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  voter->contact,
                  shared_random_vote_str ?
                            shared_random_vote_str : "",
-                 bwlist_headers);
+                 bw_file_headers);
 
     tor_free(params);
     tor_free(flags);
     tor_free(flag_thresholds);
     tor_free(methods);
     tor_free(shared_random_vote_str);
-    tor_free(bwlist_headers);
+    tor_free(bw_file_headers);
 
     if (!tor_digest_is_zero(voter->legacy_id_digest)) {
       char fpbuf[HEX_DIGEST_LEN+1];
@@ -4297,7 +4297,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   uint32_t addr;
   char *hostname = NULL, *client_versions = NULL, *server_versions = NULL;
   const char *contact;
-  smartlist_t *routers, *routerstatuses, *bwlist_headers;
+  smartlist_t *routers, *routerstatuses, *bw_file_headers;
   char identity_digest[DIGEST_LEN];
   char signing_key_digest[DIGEST_LEN];
   int listbadexits = options->AuthDirListBadExits;
@@ -4381,7 +4381,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   routerstatuses = smartlist_new();
   microdescriptors = smartlist_new();
-  bwlist_headers = smartlist_new();
+  bw_file_headers = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     /* If it has a protover list and contains a protocol name greater than
@@ -4448,7 +4448,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   /* This pass through applies the measured bw lines to the routerstatuses */
   if (options->V3BandwidthsFile) {
     dirserv_read_measured_bandwidths(options->V3BandwidthsFile,
-                                     routerstatuses, bwlist_headers);
+                                     routerstatuses, bw_file_headers);
   } else {
     /*
      * No bandwidths file; clear the measured bandwidth cache in case we had
@@ -4544,7 +4544,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                            options->ConsensusParams, NULL, 0, 0);
     smartlist_sort_strings(v3_out->net_params);
   }
-  v3_out->bwlist_headers = bwlist_headers;
+  v3_out->bw_file_headers = bw_file_headers;
 
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
   voter->nickname = tor_strdup(options->Nickname);
