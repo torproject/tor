@@ -769,6 +769,8 @@ test_channelpadding_consensus(void *arg)
   tt_i64_op(val, OP_LE, 24*60*60*2);
 
  done:
+  tor_free(relay);
+
   free_mock_consensus();
   free_fake_channeltls((channel_tls_t*)chan);
   smartlist_free(connection_array);
