@@ -31,11 +31,13 @@
 
 #define TOR_TIMERS_PRIVATE
 
-#include "common/compat.h"
 #include "common/compat_libevent.h"
 #include "common/timers.h"
+#include "lib/intmath/muldiv.h"
 #include "lib/log/torlog.h"
-#include "common/util.h"
+#include "lib/log/util_bug.h"
+#include "lib/malloc/util_malloc.h"
+#include "lib/time/compat_time.h"
 
 struct timeout_cb {
   timer_cb_fn_t cb;
@@ -315,4 +317,3 @@ timer_disable(tor_timer_t *t)
   /* We don't reschedule the libevent timer here, since it's okay if it fires
    * early. */
 }
-

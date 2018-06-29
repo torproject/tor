@@ -6,6 +6,7 @@
 
 #include "orconfig.h"
 #include "lib/testsupport/testsupport.h"
+#include "lib/malloc/util_malloc.h"
 
 void configure_libevent_logging(void);
 void suppress_libevent_log_msg(const char *msg);
@@ -19,6 +20,7 @@ void suppress_libevent_log_msg(const char *msg);
 
 struct event;
 struct event_base;
+struct timeval;
 
 void tor_event_free_(struct event *ev);
 #define tor_event_free(ev) \
@@ -95,4 +97,3 @@ libevent_logging_callback(int severity, const char *msg);
 #endif /* defined(COMPAT_LIBEVENT_PRIVATE) */
 
 #endif /* !defined(TOR_COMPAT_LIBEVENT_H) */
-

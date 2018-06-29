@@ -19,8 +19,11 @@
 #define TOKEN_BUCKET_PRIVATE
 
 #include "common/token_bucket.h"
-#include "common/compat.h"
 #include "lib/log/util_bug.h"
+#include "lib/intmath/cmp.h"
+#include "lib/time/compat_time.h"
+
+#include <string.h>
 
 /**
  * Set the <b>rate</b> and <b>burst</b> value in a token_bucket_cfg.

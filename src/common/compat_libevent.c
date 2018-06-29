@@ -7,17 +7,17 @@
  */
 
 #include "orconfig.h"
-#include "common/compat.h"
 #define COMPAT_LIBEVENT_PRIVATE
 #include "common/compat_libevent.h"
 
 #include "lib/crypt_ops/crypto_rand.h"
-
-#include "common/util.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/string/compat_string.h"
 
 #include <event2/event.h>
 #include <event2/thread.h>
+#include <string.h>
 
 /** A string which, if it appears in a libevent log, should be ignored. */
 static const char *suppress_msg = NULL;
@@ -533,4 +533,3 @@ tor_libevent_postfork(void)
   tor_assert(r == 0);
 }
 #endif /* defined(TOR_UNIT_TESTS) */
-

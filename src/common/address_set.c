@@ -13,10 +13,8 @@
 #include "orconfig.h"
 #include "common/address_set.h"
 #include "lib/net/address.h"
-#include "common/compat.h"
 #include "lib/container/bloomfilt.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "common/util.h"
 #include "siphash.h"
 
 /* Wrap our hash function to have the signature that the bloom filter

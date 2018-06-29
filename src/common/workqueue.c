@@ -24,17 +24,19 @@
  */
 
 #include "orconfig.h"
-#include "common/compat.h"
 #include "common/compat_libevent.h"
-#include "lib/thread/threads.h"
-#include "lib/crypt_ops/crypto_rand.h"
-#include "common/util.h"
 #include "common/workqueue.h"
-#include "tor_queue.h"
-#include "lib/net/alertsock.h"
-#include "lib/log/torlog.h"
-#include "lib/intmath/weakrng.h"
 
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/intmath/weakrng.h"
+#include "lib/log/ratelim.h"
+#include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/net/alertsock.h"
+#include "lib/net/socket.h"
+#include "lib/thread/threads.h"
+
+#include "tor_queue.h"
 #include <event2/event.h>
 #include <string.h>
 

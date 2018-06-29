@@ -50,8 +50,9 @@
 #define TOR_HANDLE_H
 
 #include "orconfig.h"
-#include "tor_queue.h"
-#include "common/util.h"
+
+#include "lib/log/util_bug.h"
+#include "lib/malloc/util_malloc.h"
 
 #define HANDLE_ENTRY(name, structname)         \
   struct name ## _handle_head_t *handle_head
@@ -150,4 +151,3 @@
   }
 
 #endif /* !defined(TOR_HANDLE_H) */
-

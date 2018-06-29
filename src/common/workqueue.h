@@ -4,7 +4,7 @@
 #ifndef TOR_WORKQUEUE_H
 #define TOR_WORKQUEUE_H
 
-#include "common/compat.h"
+#include "lib/cc/torint.h"
 
 /** A replyqueue is used to tell the main thread about the outcome of
  * work that we queued for the workers. */
@@ -63,4 +63,3 @@ int threadpool_register_reply_event(threadpool_t *tp,
                                     void (*cb)(threadpool_t *tp));
 
 #endif /* !defined(TOR_WORKQUEUE_H) */
-
