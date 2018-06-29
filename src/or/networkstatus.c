@@ -380,6 +380,11 @@ networkstatus_vote_free_(networkstatus_t *ns)
     smartlist_free(ns->routerstatus_list);
   }
 
+  if (ns->bw_file_headers) {
+    SMARTLIST_FOREACH(ns->bw_file_headers, char *, c, tor_free(c));
+    smartlist_free(ns->bw_file_headers);
+  }
+
   digestmap_free(ns->desc_digest_map, NULL);
 
   if (ns->sr_info.commits) {
