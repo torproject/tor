@@ -86,6 +86,9 @@ hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
 
   intro_point = ip;
  done:
+  if (intro_point == NULL)
+    tor_free(ip);
+
   return intro_point;
 }
 
@@ -143,6 +146,9 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
 
   descp = desc;
  done:
+  if (descp == NULL)
+    tor_free(desc);
+
   return descp;
 }
 
