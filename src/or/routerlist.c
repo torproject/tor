@@ -2761,6 +2761,8 @@ frac_nodes_with_descriptors(const smartlist_t *sl,
       if (node_has_any_descriptor(node))
         n_with_descs++;
     });
+
+    tor_free(bandwidths);
     return ((double)n_with_descs) / (double)smartlist_len(sl);
   }
 

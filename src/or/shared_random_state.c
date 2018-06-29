@@ -449,6 +449,7 @@ disk_state_parse_commits(sr_state_t *state,
     if (commit == NULL) {
       /* Ignore badly formed commit. It could also be a authority
        * fingerprint that we don't know about so it shouldn't be used. */
+      smartlist_free(args);
       continue;
     }
     /* We consider parseable commit from our disk state to be valid because
