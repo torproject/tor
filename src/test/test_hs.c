@@ -567,10 +567,10 @@ test_hs_auth_cookies(void *arg)
 #define TEST_COOKIE_ENCODED_STEALTH "YWJjZGVmZ2hpamtsbW5vcB"
 #define TEST_COOKIE_ENCODED_INVALID "YWJjZGVmZ2hpamtsbW5vcD"
 
-  char *encoded_cookie;
+  char *encoded_cookie = NULL;
   uint8_t raw_cookie[REND_DESC_COOKIE_LEN];
   rend_auth_type_t auth_type;
-  char *err_msg;
+  char *err_msg = NULL;
   int re;
 
   (void)arg;
@@ -616,6 +616,9 @@ test_hs_auth_cookies(void *arg)
   tor_free(err_msg);
 
  done:
+  tor_free(encoded_cookie);
+  tor_free(err_msg);
+
   return;
 }
 
