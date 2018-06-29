@@ -197,7 +197,7 @@ dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
     char annotation[ISO_TIME_LEN+32];
     format_iso_time(buf, md->last_listed);
     tor_snprintf(annotation, sizeof(annotation), "@last-listed %s\n", buf);
-    if (write_all(fd, annotation, strlen(annotation), 0) < 0) {
+    if (write_all_to_fd(fd, annotation, strlen(annotation)) < 0) {
       log_warn(LD_DIR,
                "Couldn't write microdescriptor annotation: %s",
                strerror(errno));
@@ -210,7 +210,7 @@ dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
   }
 
   md->off = tor_fd_getpos(fd);
-  written = write_all(fd, md->body, md->bodylen, 0);
+  written = write_all_to_fd(fd, md->body, md->bodylen);
   if (written != (ssize_t)md->bodylen) {
     written = written < 0 ? 0 : written;
     log_warn(LD_DIR,

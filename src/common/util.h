@@ -68,11 +68,4 @@
 
 /* File helpers */
 
-#define write_all(fd, buf, count, isSock) \
-  ((isSock) ? write_all_to_socket((fd), (buf), (count)) \
-            : write_all_to_fd((int)(fd), (buf), (count)))
-#define read_all(fd, buf, count, isSock) \
-  ((isSock) ? read_all_from_socket((fd), (buf), (count)) \
-            : read_all_from_fd((int)(fd), (buf), (count)))
-
 #endif /* !defined(TOR_UTIL_H) */

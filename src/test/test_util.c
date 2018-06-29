@@ -4099,7 +4099,8 @@ test_util_ftruncate(void *ptr)
   tt_int_op(fd, OP_GE, 0);
 
   /* Make the file be there. */
-  tt_int_op(strlen(message), OP_EQ, write_all(fd, message, strlen(message),0));
+  tt_int_op(strlen(message), OP_EQ,
+            write_all_to_fd(fd, message, strlen(message)));
   tt_int_op((int)tor_fd_getpos(fd), OP_EQ, strlen(message));
   tt_int_op(0, OP_EQ, fstat(fd, &st));
   tt_int_op((int)st.st_size, OP_EQ, strlen(message));
@@ -4112,7 +4113,7 @@ test_util_ftruncate(void *ptr)
 
   /* Replace, and see if it got replaced */
   tt_int_op(strlen(message2), OP_EQ,
-            write_all(fd, message2, strlen(message2), 0));
+            write_all_to_fd(fd, message2, strlen(message2)));
   tt_int_op((int)tor_fd_getpos(fd), OP_EQ, strlen(message2));
   tt_int_op(0, OP_EQ, fstat(fd, &st));
   tt_int_op((int)st.st_size, OP_EQ, strlen(message2));

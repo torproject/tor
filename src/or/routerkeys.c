@@ -44,7 +44,7 @@ do_getpass(const char *prompt, char *buf, size_t buflen,
   if (options->use_keygen_passphrase_fd) {
     twice = 0;
     fd = options->keygen_passphrase_fd;
-    length = read_all(fd, buf, buflen-1, 0);
+    length = read_all_from_fd(fd, buf, buflen-1);
     if (length >= 0)
       buf[length] = 0;
     goto done_reading;
@@ -1403,4 +1403,3 @@ routerkeys_free_all(void)
   rsa_ed_crosscert = NULL; // redundant
   rsa_ed_crosscert_len = 0;
 }
-

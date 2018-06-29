@@ -224,11 +224,11 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
 
   if (version == 5) {
     char method_buf[2];
-    if (write_all(s, "\x05\x01\x00", 3, 1) != 3) {
+    if (write_all_to_socket(s, "\x05\x01\x00", 3) != 3) {
       log_err(LD_NET, "Error sending SOCKS5 method list.");
       goto err;
     }
-    if (read_all(s, method_buf, 2, 1) != 2) {
+    if (read_all_from_socket(s, method_buf, 2) != 2) {
       log_err(LD_NET, "Error reading SOCKS5 methods.");
       goto err;
     }
@@ -250,7 +250,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
     tor_assert(!req);
     goto err;
   }
-  if (write_all(s, req, len, 1) != len) {
+  if (write_all_to_socket(s, req, len) != len) {
     log_sock_error("sending SOCKS request", s);
     tor_free(req);
     goto err;
@@ -259,7 +259,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
 
   if (version == 4) {
     char reply_buf[RESPONSE_LEN_4];
-    if (read_all(s, reply_buf, RESPONSE_LEN_4, 1) != RESPONSE_LEN_4) {
+    if (read_all_from_socket(s, reply_buf, RESPONSE_LEN_4) != RESPONSE_LEN_4) {
       log_err(LD_NET, "Error reading SOCKS4 response.");
       goto err;
     }
@@ -270,7 +270,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
     }
   } else {
     char reply_buf[16];
-    if (read_all(s, reply_buf, 4, 1) != 4) {
+    if (read_all_from_socket(s, reply_buf, 4) != 4) {
       log_err(LD_NET, "Error reading SOCKS5 response.");
       goto err;
     }
@@ -290,14 +290,14 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
     }
     if (reply_buf[3] == 1) {
       /* IPv4 address */
-      if (read_all(s, reply_buf, 4, 1) != 4) {
+      if (read_all_from_socket(s, reply_buf, 4) != 4) {
         log_err(LD_NET, "Error reading address in socks5 response.");
         goto err;
       }
       tor_addr_from_ipv4n(result_addr, get_uint32(reply_buf));
     } else if (reply_buf[3] == 4) {
       /* IPv6 address */
-      if (read_all(s, reply_buf, 16, 1) != 16) {
+      if (read_all_from_socket(s, reply_buf, 16) != 16) {
         log_err(LD_NET, "Error reading address in socks5 response.");
         goto err;
       }
@@ -305,13 +305,14 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
     } else if (reply_buf[3] == 3) {
       /* Domain name */
       size_t result_len;
-      if (read_all(s, reply_buf, 1, 1) != 1) {
+      if (read_all_from_socket(s, reply_buf, 1) != 1) {
         log_err(LD_NET, "Error reading address_length in socks5 response.");
         goto err;
       }
       result_len = *(uint8_t*)(reply_buf);
       *result_hostname = tor_malloc(result_len+1);
-      if (read_all(s, *result_hostname, result_len, 1) != (int) result_len) {
+      if (read_all_from_socket(s, *result_hostname, result_len)
+          != (int) result_len) {
         log_err(LD_NET, "Error reading hostname in socks5 response.");
         goto err;
       }
@@ -450,4 +451,3 @@ main(int argc, char **argv)
   }
   return 0;
 }
-

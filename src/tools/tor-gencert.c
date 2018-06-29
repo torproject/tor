@@ -84,7 +84,7 @@ load_passphrase(void)
   char *cp;
   char buf[1024]; /* "Ought to be enough for anybody." */
   memset(buf, 0, sizeof(buf)); /* should be needless */
-  ssize_t n = read_all(passphrase_fd, buf, sizeof(buf), 0);
+  ssize_t n = read_all_from_fd(passphrase_fd, buf, sizeof(buf));
   if (n < 0) {
     log_err(LD_GENERAL, "Couldn't read from passphrase fd: %s",
             strerror(errno));
@@ -575,4 +575,3 @@ main(int argc, char **argv)
   crypto_global_cleanup();
   return r;
 }
-
