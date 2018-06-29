@@ -39,6 +39,11 @@
 #include "lib/malloc/util_malloc.h"
 #include "lib/time/compat_time.h"
 
+#ifdef _WIN32
+// For struct timeval.
+#include <winsock2.h>
+#endif
+
 struct timeout_cb {
   timer_cb_fn_t cb;
   void *arg;
