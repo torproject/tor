@@ -680,6 +680,7 @@ test_channelpadding_consensus(void *arg)
   memcpy(relay->identity_digest,
           ((channel_tls_t *)chan)->conn->identity_digest, DIGEST_LEN);
   smartlist_add(current_md_consensus->routerstatus_list, relay);
+  relay = NULL; /* Prevent double-free */
 
   tried_to_write_cell = 0;
   decision = channelpadding_decide_to_pad_channel(chan);
