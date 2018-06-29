@@ -872,6 +872,7 @@ test_sr_setup_commits(void)
   /* Now during REVEAL phase save commit D by restoring its reveal. */
   set_sr_phase(SR_PHASE_REVEAL);
   save_commit_to_state(place_holder);
+  place_holder = NULL;
   tt_str_op(commit_d->encoded_reveal, OP_EQ,
             "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
   /* Go back to an empty encoded reveal value. */

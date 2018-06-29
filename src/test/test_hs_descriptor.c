@@ -208,6 +208,7 @@ test_link_specifier(void *arg)
     tt_int_op(link_specifier_get_un_ipv4_port(ls), OP_EQ, spec.u.ap.port);
 
     link_specifier_free(ls);
+    ls = NULL;
     tor_free(b64);
   }
 
@@ -238,6 +239,7 @@ test_link_specifier(void *arg)
     tt_int_op(link_specifier_get_un_ipv6_port(ls), OP_EQ, spec.u.ap.port);
 
     link_specifier_free(ls);
+    ls = NULL;
     tor_free(b64);
   }
 
@@ -265,6 +267,7 @@ test_link_specifier(void *arg)
     tt_mem_op(spec.u.legacy_id, OP_EQ, id, DIGEST_LEN);
 
     link_specifier_free(ls);
+    ls = NULL;
     tor_free(b64);
   }
 
