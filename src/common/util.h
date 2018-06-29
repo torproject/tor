@@ -30,6 +30,7 @@
 #include "lib/string/scanf.h"
 #include "lib/intmath/bits.h"
 #include "lib/intmath/addsub.h"
+#include "lib/intmath/logic.h"
 #include "lib/intmath/muldiv.h"
 #include "lib/intmath/cmp.h"
 #include "lib/log/ratelim.h"
@@ -53,12 +54,6 @@
  */
 #define SUBTYPE_P(p, subtype, basemember) \
   ((void*) ( ((char*)(p)) - offsetof(subtype, basemember) ))
-
-/* Logic */
-/** Macro: true if two values have the same boolean value. */
-#define bool_eq(a,b) (!(a)==!(b))
-/** Macro: true if two values have different boolean values. */
-#define bool_neq(a,b) (!(a)!=!(b))
 
 /* Math functions */
 

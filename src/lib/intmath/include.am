@@ -20,5 +20,6 @@ noinst_HEADERS +=					\
 	src/lib/intmath/addsub.h			\
 	src/lib/intmath/cmp.h				\
 	src/lib/intmath/bits.h				\
+	src/lib/intmath/logic.h				\
 	src/lib/intmath/muldiv.h			\
 	src/lib/intmath/weakrng.h
