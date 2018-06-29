@@ -1125,6 +1125,7 @@ decode_link_specifiers(const char *encoded)
              sizeof(hs_spec->u.ed25519_id));
       break;
     default:
+      tor_free(hs_spec);
       goto err;
     }
 
