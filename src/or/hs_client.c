@@ -370,13 +370,11 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
   int retval;
   char base64_blinded_pubkey[ED25519_BASE64_LEN + 1];
   uint64_t current_time_period = hs_get_time_period_num(0);
-  smartlist_t *responsible_hsdirs;
+  smartlist_t *responsible_hsdirs = NULL;
   ed25519_public_key_t blinded_pubkey;
   routerstatus_t *hsdir_rs = NULL;
 
   tor_assert(onion_identity_pk);
-
-  responsible_hsdirs = smartlist_new();
 
   /* Get blinded pubkey of hidden service */
   hs_build_blinded_pubkey(onion_identity_pk, NULL, 0,
@@ -388,6 +386,8 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
   }
 
   /* Get responsible hsdirs of service for this time period */
+  responsible_hsdirs = smartlist_new();
+
   hs_get_responsible_hsdirs(&blinded_pubkey, current_time_period,
                             0, 1, responsible_hsdirs);
 

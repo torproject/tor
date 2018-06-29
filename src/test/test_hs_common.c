@@ -284,6 +284,7 @@ helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
   routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
   uint8_t identity[DIGEST_LEN];
   tor_addr_t ipv4_addr;
+  node_t *node = NULL;
 
   memset(identity, identity_idx, sizeof(identity));
 
@@ -302,7 +303,8 @@ helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
   memset(&ri->cache_info.signing_key_cert->signing_key,
          identity_idx, ED25519_PUBKEY_LEN);
   tt_assert(nodelist_set_routerinfo(ri, NULL));
-  node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
+
+  node = node_get_mutable_by_id(ri->cache_info.identity_digest);
   tt_assert(node);
   node->rs = rs;
   /* We need this to exist for node_has_preferred_descriptor() to return
@@ -315,6 +317,9 @@ helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
   smartlist_add(ns->routerstatus_list, rs);
 
  done:
+  if (node == NULL)
+    routerstatus_free(rs);
+
   routerinfo_free(ri);
 }
 
