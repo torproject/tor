@@ -16,8 +16,6 @@
 #include "common/compat.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/testsupport/testsupport.h"
-#include <stdio.h>
-#include <stdlib.h>
 #include "lib/err/torerr.h"
 #include "lib/malloc/util_malloc.h"
 #include "lib/wallclock/approx_time.h"
@@ -37,13 +35,5 @@
 #include "lib/fs/path.h"
 #include "lib/encoding/time_fmt.h"
 #include "lib/encoding/cstring.h"
-
-/* Math functions */
-
-/* String manipulation */
-
-/* Time helpers */
-
-/* File helpers */
 
 #endif /* !defined(TOR_UTIL_H) */

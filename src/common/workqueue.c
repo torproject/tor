@@ -36,6 +36,7 @@
 #include "lib/intmath/weakrng.h"
 
 #include <event2/event.h>
+#include <string.h>
 
 #define WORKQUEUE_PRIORITY_FIRST WQ_PRI_HIGH
 #define WORKQUEUE_PRIORITY_LAST WQ_PRI_LOW

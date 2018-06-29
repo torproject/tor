@@ -6,7 +6,7 @@
 #ifndef TOR_BYTES_H
 #define TOR_BYTES_H
 
-#include <stdlib.h>
+#include <string.h>
 #include "lib/cc/torint.h"
 
 /* The uint8 variants are defined to make the code more uniform. */

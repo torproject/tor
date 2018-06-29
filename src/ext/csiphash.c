@@ -30,11 +30,11 @@
 */
 
 #include "lib/cc/torint.h"
+#include "lib/log/util_bug.h"
+
 #include "siphash.h"
-/* for tor_assert */
-#include "common/util.h"
-/* for memcpy */
 #include <string.h>
+#include <stdlib.h>
 #include "byteorder.h"
 
 #define ROTATE(x, b) (uint64_t)( ((x) << (b)) | ( (x) >> (64 - (b))) )
