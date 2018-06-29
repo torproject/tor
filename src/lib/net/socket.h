@@ -113,4 +113,8 @@ STATIC int tor_ersatz_socketpair(int family, int type, int protocol,
 #endif
 #endif /* defined(COMPAT_PRIVATE) */
 
+#if defined(_WIN32) && !defined(SIO_IDEAL_SEND_BACKLOG_QUERY)
+#define SIO_IDEAL_SEND_BACKLOG_QUERY 0x4004747b
+#endif
+
 #endif
