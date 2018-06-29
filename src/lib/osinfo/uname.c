@@ -15,6 +15,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#include <string.h>
 
 /** Hold the result of our call to <b>uname</b>. */
 static char uname_result[256];
