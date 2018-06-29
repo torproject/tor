@@ -50,6 +50,8 @@
 #include "or/port_cfg_st.h"
 #include "or/routerinfo_st.h"
 
+#include "lib/osinfo/uname.h"
+
 /**
  * \file router.c
  * \brief Miscellaneous relay functionality, including RSA key maintenance,
@@ -3824,4 +3826,3 @@ router_get_all_orports(const routerinfo_t *ri)
   fake_node.ri = (routerinfo_t *)ri;
   return node_get_all_orports(&fake_node);
 }
-

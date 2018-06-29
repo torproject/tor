@@ -112,6 +112,7 @@
 #endif
 
 #include "lib/meminfo/meminfo.h"
+#include "lib/osinfo/uname.h"
 #include "lib/process/daemon.h"
 #include "lib/process/pidfile.h"
 #include "lib/process/restrict.h"

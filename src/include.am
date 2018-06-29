@@ -19,6 +19,7 @@ include src/lib/memarea/include.am
 include src/lib/meminfo/include.am
 include src/lib/malloc/include.am
 include src/lib/net/include.am
+include src/lib/osinfo/include.am
 include src/lib/process/include.am
 include src/lib/sandbox/include.am
 include src/lib/string/include.am

@@ -195,6 +195,8 @@ uptime-*.json
 /src/lib/libtor-meminfo-testing.a
 /src/lib/libtor-net.a
 /src/lib/libtor-net-testing.a
+/src/lib/libtor-osinfo.a
+/src/lib/libtor-osinfo-testing.a
 /src/lib/libtor-process.a
 /src/lib/libtor-process-testing.a
 /src/lib/libtor-sandbox.a

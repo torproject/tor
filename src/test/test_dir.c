@@ -31,6 +31,7 @@
 #include "or/fp_pair.h"
 #include "or/hibernate.h"
 #include "lib/memarea/memarea.h"
+#include "lib/osinfo/uname.h"
 #include "or/networkstatus.h"
 #include "or/router.h"
 #include "or/routerkeys.h"
@@ -6042,4 +6043,3 @@ struct testcase_t dir_tests[] = {
   DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   END_OF_TESTCASES
 };
-

@@ -112,6 +112,7 @@
 #include "or/ext_orport.h"
 #include "lib/memarea/memarea.h"
 #include "lib/meminfo/meminfo.h"
+#include "lib/osinfo/uname.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/fs/lockfile.h"
 #include "lib/net/buffers_net.h"

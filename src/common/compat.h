@@ -85,7 +85,6 @@ typedef enum {
 } socks5_reply_status_t;
 
 /* ===== OS compatibility */
-MOCK_DECL(const char *, get_uname, (void));
 
 ssize_t tor_getpass(const char *prompt, char *output, size_t buflen);
 
