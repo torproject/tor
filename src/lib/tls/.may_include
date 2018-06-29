@@ -14,6 +14,3 @@ lib/tls/*.h
 lib/log/*.h
 
 ciphers.inc
-
-# this shouldn't be in common
-common/buffers.h
