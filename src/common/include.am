@@ -54,6 +54,7 @@ COMMONHEADERS = \
   src/common/compat_libevent.h			\
   src/common/handles.h				\
   src/common/procmon.h				\
+  src/common/socks5_status.h                    \
   src/common/timers.h				\
   src/common/token_bucket.h			\
   src/common/util.h				\

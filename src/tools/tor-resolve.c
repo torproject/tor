@@ -9,6 +9,7 @@
 #include "lib/net/address.h"
 #include "lib/log/torlog.h"
 #include "lib/sandbox/sandbox.h"
+#include "common/socks5_status.h"
 
 #include <stdio.h>
 #include <stdlib.h>

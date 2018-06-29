@@ -68,19 +68,6 @@
 
 /* ===== Net compatibility */
 
-/** Specified SOCKS5 status codes. */
-typedef enum {
-  SOCKS5_SUCCEEDED                  = 0x00,
-  SOCKS5_GENERAL_ERROR              = 0x01,
-  SOCKS5_NOT_ALLOWED                = 0x02,
-  SOCKS5_NET_UNREACHABLE            = 0x03,
-  SOCKS5_HOST_UNREACHABLE           = 0x04,
-  SOCKS5_CONNECTION_REFUSED         = 0x05,
-  SOCKS5_TTL_EXPIRED                = 0x06,
-  SOCKS5_COMMAND_NOT_SUPPORTED      = 0x07,
-  SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED = 0x08,
-} socks5_reply_status_t;
-
 /* ===== OS compatibility */
 
 /* This needs some of the declarations above so we include it here. */

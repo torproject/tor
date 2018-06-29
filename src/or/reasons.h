@@ -12,6 +12,8 @@
 #ifndef TOR_REASONS_H
 #define TOR_REASONS_H
 
+#include "common/socks5_status.h"
+
 const char *stream_end_reason_to_control_string(int reason);
 const char *stream_end_reason_to_string(int reason);
 socks5_reply_status_t stream_end_reason_to_socks5_response(int reason);
@@ -29,4 +31,3 @@ const char *bandwidth_weight_rule_to_string(enum bandwidth_weight_rule_t rule);
 const char *end_reason_to_http_connect_response_line(int endreason);
 
 #endif /* !defined(TOR_REASONS_H) */
-
