@@ -17,7 +17,6 @@
 #include "or/consdiff.h"
 #include "or/consdiffmgr.h"
 #include "or/control.h"
-#include "common/compat.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/directory.h"

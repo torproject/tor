@@ -13,7 +13,6 @@
 
 #define DEBUG_SMARTLIST 1
 
-#include "common/compat.h"
 #include "tinytest.h"
 #define TT_EXIT_TEST_FUNCTION STMT_BEGIN goto done; STMT_END
 #include "tinytest_macros.h"

@@ -8,7 +8,6 @@
 #include <stdlib.h>
 
 #include "lib/crypt_ops/crypto_util.h"
-#include "common/compat.h"
 #include "common/util.h"
 
 static unsigned fill_a_buffer_memset(void) __attribute__((noinline));

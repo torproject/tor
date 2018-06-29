@@ -62,7 +62,6 @@
 #define CONFIG_PRIVATE
 #include "or/or.h"
 #include "or/bridges.h"
-#include "common/compat.h"
 #include "or/addressmap.h"
 #include "or/channel.h"
 #include "or/circuitbuild.h"

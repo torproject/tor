@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "common/compat.h"
 #include "common/compat_libevent.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "common/timers.h"

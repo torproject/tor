@@ -8,8 +8,6 @@
 #define TOR_CHANNEL_INTERNAL_
 #define TORTLS_PRIVATE
 
-#include "common/compat.h"
-
 #include "or/or.h"
 #include "or/config.h"
 #include "or/connection.h"
@@ -1581,4 +1579,3 @@ struct testcase_t link_handshake_tests[] = {
 
   END_OF_TESTCASES
 };
-

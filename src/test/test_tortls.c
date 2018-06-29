@@ -11,7 +11,7 @@
 #endif
 #include <math.h>
 
-#include "common/compat.h"
+#include "lib/cc/compat_compiler.h"
 
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
  * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
@@ -2839,4 +2839,3 @@ struct testcase_t tortls_tests[] = {
   LOCAL_TEST_CASE(context_init_one, 0),
   END_OF_TESTCASES
 };
-

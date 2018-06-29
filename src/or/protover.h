@@ -9,6 +9,9 @@
 #ifndef TOR_PROTOVER_H
 #define TOR_PROTOVER_H
 
+#include <stdbool.h>
+#include "lib/cc/torint.h"
+#include "lib/testsupport/testsupport.h"
 struct smartlist_t;
 
 /** The first version of Tor that included "proto" entries in its

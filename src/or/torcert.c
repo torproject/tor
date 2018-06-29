@@ -32,7 +32,6 @@
 #include "trunnel/ed25519_cert.h"
 #include "lib/log/torlog.h"
 #include "common/util.h"
-#include "common/compat.h"
 #include "trunnel/link_handshake.h"
 
 #include "or/or_handshake_certs_st.h"
