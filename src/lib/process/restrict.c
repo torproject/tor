@@ -5,7 +5,17 @@
 
 #include "orconfig.h"
 #include "lib/process/restrict.h"
+#include "lib/intmath/cmp.h"
 #include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/net/socket.h"
+
+#ifdef HAVE_SYS_MMAN_H
+#include <sys/mman.h>
+#endif
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* We only use the linux prctl for now. There is no Win32 support; this may
  * also work on various BSD systems and Mac OS X - send testing feedback!
@@ -141,4 +151,130 @@ tor_mlockall(void)
   log_warn(LD_GENERAL, "Unable to lock memory pages. mlockall() unsupported?");
   return -1;
 #endif /* defined(HAVE_UNIX_MLOCKALL) */
+}
+
+/** Number of extra file descriptors to keep in reserve beyond those that we
+ * tell Tor it's allowed to use. */
+#define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond ConnLimit_ */
+
+/** Learn the maximum allowed number of file descriptors, and tell the
+ * system we want to use up to that number. (Some systems have a low soft
+ * limit, and let us set it higher.)  We compute this by finding the largest
+ * number that we can use.
+ *
+ * If the limit is below the reserved file descriptor value (ULIMIT_BUFFER),
+ * return -1 and <b>max_out</b> is untouched.
+ *
+ * If we can't find a number greater than or equal to <b>limit</b>, then we
+ * fail by returning -1 and <b>max_out</b> is untouched.
+ *
+ * If we are unable to set the limit value because of setrlimit() failing,
+ * return 0 and <b>max_out</b> is set to the current maximum value returned
+ * by getrlimit().
+ *
+ * Otherwise, return 0 and store the maximum we found inside <b>max_out</b>
+ * and set <b>max_sockets</b> with that value as well.*/
+int
+set_max_file_descriptors(rlim_t limit, int *max_out)
+{
+  if (limit < ULIMIT_BUFFER) {
+    log_warn(LD_CONFIG,
+             "ConnLimit must be at least %d. Failing.", ULIMIT_BUFFER);
+    return -1;
+  }
+
+  /* Define some maximum connections values for systems where we cannot
+   * automatically determine a limit. Re Cygwin, see
+   * http://archives.seul.org/or/talk/Aug-2006/msg00210.html
+   * For an iPhone, 9999 should work. For Windows and all other unknown
+   * systems we use 15000 as the default. */
+#ifndef HAVE_GETRLIMIT
+#if defined(CYGWIN) || defined(__CYGWIN__)
+  const char *platform = "Cygwin";
+  const unsigned long MAX_CONNECTIONS = 3200;
+#elif defined(_WIN32)
+  const char *platform = "Windows";
+  const unsigned long MAX_CONNECTIONS = 15000;
+#else
+  const char *platform = "unknown platforms with no getrlimit()";
+  const unsigned long MAX_CONNECTIONS = 15000;
+#endif /* defined(CYGWIN) || defined(__CYGWIN__) || ... */
+  log_fn(LOG_INFO, LD_NET,
+         "This platform is missing getrlimit(). Proceeding.");
+  if (limit > MAX_CONNECTIONS) {
+    log_warn(LD_CONFIG,
+             "We do not support more than %lu file descriptors "
+             "on %s. Tried to raise to %lu.",
+             (unsigned long)MAX_CONNECTIONS, platform, (unsigned long)limit);
+    return -1;
+  }
+  limit = MAX_CONNECTIONS;
+#else /* !(!defined(HAVE_GETRLIMIT)) */
+  struct rlimit rlim;
+
+  if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {
+    log_warn(LD_NET, "Could not get maximum number of file descriptors: %s",
+             strerror(errno));
+    return -1;
+  }
+  if (rlim.rlim_max < limit) {
+    log_warn(LD_CONFIG,"We need %lu file descriptors available, and we're "
+             "limited to %lu. Please change your ulimit -n.",
+             (unsigned long)limit, (unsigned long)rlim.rlim_max);
+    return -1;
+  }
+
+  if (rlim.rlim_max > rlim.rlim_cur) {
+    log_info(LD_NET,"Raising max file descriptors from %lu to %lu.",
+             (unsigned long)rlim.rlim_cur, (unsigned long)rlim.rlim_max);
+  }
+  /* Set the current limit value so if the attempt to set the limit to the
+   * max fails at least we'll have a valid value of maximum sockets. */
+  *max_out = (int)rlim.rlim_cur - ULIMIT_BUFFER;
+  set_max_sockets(*max_out);
+  rlim.rlim_cur = rlim.rlim_max;
+
+  if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
+    int couldnt_set = 1;
+    const int setrlimit_errno = errno;
+#ifdef OPEN_MAX
+    uint64_t try_limit = OPEN_MAX - ULIMIT_BUFFER;
+    if (errno == EINVAL && try_limit < (uint64_t) rlim.rlim_cur) {
+      /* On some platforms, OPEN_MAX is the real limit, and getrlimit() is
+       * full of nasty lies.  I'm looking at you, OSX 10.5.... */
+      rlim.rlim_cur = MIN((rlim_t) try_limit, rlim.rlim_cur);
+      if (setrlimit(RLIMIT_NOFILE, &rlim) == 0) {
+        if (rlim.rlim_cur < (rlim_t)limit) {
+          log_warn(LD_CONFIG, "We are limited to %lu file descriptors by "
+                   "OPEN_MAX (%lu), and ConnLimit is %lu.  Changing "
+                   "ConnLimit; sorry.",
+                   (unsigned long)try_limit, (unsigned long)OPEN_MAX,
+                   (unsigned long)limit);
+        } else {
+          log_info(LD_CONFIG, "Dropped connection limit to %lu based on "
+                   "OPEN_MAX (%lu); Apparently, %lu was too high and rlimit "
+                   "lied to us.",
+                   (unsigned long)try_limit, (unsigned long)OPEN_MAX,
+                   (unsigned long)rlim.rlim_max);
+        }
+        couldnt_set = 0;
+      }
+    }
+#endif /* defined(OPEN_MAX) */
+    if (couldnt_set) {
+      log_warn(LD_CONFIG,"Couldn't set maximum number of file descriptors: %s",
+               strerror(setrlimit_errno));
+    }
+  }
+  /* leave some overhead for logs, etc, */
+  limit = rlim.rlim_cur;
+#endif /* !defined(HAVE_GETRLIMIT) */
+
+  if (limit > INT_MAX)
+    limit = INT_MAX;
+  tor_assert(max_out);
+  *max_out = (int)limit - ULIMIT_BUFFER;
+  set_max_sockets(*max_out);
+
+  return 0;
 }

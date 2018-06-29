@@ -7,6 +7,7 @@ lib/err/*.h
 lib/fs/*.h
 lib/log/*.h
 lib/malloc/*.h
+lib/net/*.h
 lib/process/*.h
 lib/string/*.h
 lib/testsupport/*.h

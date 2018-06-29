@@ -191,6 +191,8 @@ uptime-*.json
 /src/lib/libtor-math-testing.a
 /src/lib/libtor-memarea.a
 /src/lib/libtor-memarea-testing.a
+/src/lib/libtor-meminfo.a
+/src/lib/libtor-meminfo-testing.a
 /src/lib/libtor-net.a
 /src/lib/libtor-net-testing.a
 /src/lib/libtor-process.a

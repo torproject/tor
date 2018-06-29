@@ -42,8 +42,6 @@
 #include "lib/encoding/cstring.h"
 #include "lib/fs/winlib.h"
 
-void tor_log_mallinfo(int severity);
-
 /** Macro: yield a pointer to an enclosing structure given a pointer to
  * a substructure at offset <b>off</b>. Example:
  * <pre>

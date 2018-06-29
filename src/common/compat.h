@@ -87,12 +87,6 @@ typedef enum {
 /* ===== OS compatibility */
 MOCK_DECL(const char *, get_uname, (void));
 
-#if !defined(HAVE_RLIM_T)
-typedef unsigned long rlim_t;
-#endif
-int set_max_file_descriptors(rlim_t limit, int *max);
-MOCK_DECL(int, get_total_system_memory, (size_t *mem_out));
-
 ssize_t tor_getpass(const char *prompt, char *output, size_t buflen);
 
 /* This needs some of the declarations above so we include it here. */

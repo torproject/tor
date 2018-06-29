@@ -16,6 +16,7 @@ include src/lib/lock/include.am
 include src/lib/log/include.am
 include src/lib/math/include.am
 include src/lib/memarea/include.am
+include src/lib/meminfo/include.am
 include src/lib/malloc/include.am
 include src/lib/net/include.am
 include src/lib/process/include.am

@@ -32,6 +32,7 @@
 #include "lib/thread/numcpus.h"
 #include "lib/math/fp.h"
 #include "lib/math/laplace.h"
+#include "lib/meminfo/meminfo.h"
 #include "lib/time/tvdiff.h"
 
 #ifdef HAVE_PWD_H

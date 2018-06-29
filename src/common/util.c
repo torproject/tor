@@ -99,30 +99,6 @@
 /* =====
  * Memory management
  * ===== */
-
-DISABLE_GCC_WARNING(aggregate-return)
-/** Call the platform malloc info function, and dump the results to the log at
- * level <b>severity</b>.  If no such function exists, do nothing. */
-void
-tor_log_mallinfo(int severity)
-{
-#ifdef HAVE_MALLINFO
-  struct mallinfo mi;
-  memset(&mi, 0, sizeof(mi));
-  mi = mallinfo();
-  tor_log(severity, LD_MM,
-      "mallinfo() said: arena=%d, ordblks=%d, smblks=%d, hblks=%d, "
-      "hblkhd=%d, usmblks=%d, fsmblks=%d, uordblks=%d, fordblks=%d, "
-      "keepcost=%d",
-      mi.arena, mi.ordblks, mi.smblks, mi.hblks,
-      mi.hblkhd, mi.usmblks, mi.fsmblks, mi.uordblks, mi.fordblks,
-      mi.keepcost);
-#else /* !(defined(HAVE_MALLINFO)) */
-  (void)severity;
-#endif /* defined(HAVE_MALLINFO) */
-}
-ENABLE_GCC_WARNING(aggregate-return)
-
 /* =====
  * Math
  * ===== */

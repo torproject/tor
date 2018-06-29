@@ -49,6 +49,7 @@
 #include "or/routerinfo_st.h"
 
 #include "lib/fs/conffile.h"
+#include "lib/meminfo/meminfo.h"
 #include "lib/net/gethostname.h"
 
 static void
