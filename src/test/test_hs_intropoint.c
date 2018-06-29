@@ -43,6 +43,10 @@ new_establish_intro_cell(const char *circ_nonce,
   trn_cell_establish_intro_t *cell = NULL;
   hs_service_intro_point_t *ip = NULL;
 
+  /* Ensure that *cell_out is NULL such that we can use to check if we need to
+   * free `cell` in case of an error. */
+  *cell_out = NULL;
+
   /* Auth key pair is generated in the constructor so we are all set for
    * using this IP object. */
   ip = service_intro_point_new(NULL, 0);
@@ -56,6 +60,9 @@ new_establish_intro_cell(const char *circ_nonce,
   *cell_out = cell;
 
  done:
+  if (*cell_out == NULL)
+    trn_cell_establish_intro_free(cell);
+
   service_intro_point_free(ip);
   return cell_len;
 }
