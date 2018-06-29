@@ -18,10 +18,6 @@
 #include "lib/testsupport/testsupport.h"
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef _WIN32
-/* for the correct alias to struct stat */
-#include <sys/stat.h>
-#endif
 #include "lib/err/torerr.h"
 #include "lib/malloc/util_malloc.h"
 #include "lib/wallclock/approx_time.h"
@@ -41,7 +37,6 @@
 #include "lib/fs/path.h"
 #include "lib/encoding/time_fmt.h"
 #include "lib/encoding/cstring.h"
-#include "lib/fs/winlib.h"
 
 /* Math functions */
 

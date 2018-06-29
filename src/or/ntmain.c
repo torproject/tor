@@ -23,6 +23,8 @@
 #include "or/config.h"
 #include "or/main.h"
 #include "or/ntmain.h"
+#include "lib/log/win32err.h"
+#include "lib/fs/winlib.h"
 
 #include <windows.h>
 #define GENSRV_SERVICENAME  "tor"
@@ -778,4 +780,3 @@ nt_service_parse_options(int argc, char **argv, int *should_exit)
 }
 
 #endif /* defined(_WIN32) */
-

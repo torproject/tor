@@ -8,7 +8,11 @@
 
 #include "common/procmon.h"
 
-#include "common/util.h"
+#include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/log/win32err.h"
+#include "lib/malloc/util_malloc.h"
+#include "lib/string/parse_int.h"
 
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
@@ -329,4 +333,3 @@ tor_process_monitor_free_(tor_process_monitor_t *procmon)
 
   tor_free(procmon);
 }
-

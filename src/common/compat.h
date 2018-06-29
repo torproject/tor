@@ -7,10 +7,6 @@
 #define TOR_COMPAT_H
 
 #include "orconfig.h"
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
 #include "lib/cc/torint.h"
 #include "lib/testsupport/testsupport.h"
 #ifdef HAVE_SYS_PARAM_H
@@ -48,7 +44,6 @@
 #include "lib/string/compat_ctype.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/printf.h"
-#include "lib/log/win32err.h"
 #include "lib/net/socket.h"
 #include "lib/net/ipv4.h"
 #include "lib/net/ipv6.h"

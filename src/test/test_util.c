@@ -25,6 +25,7 @@
 #include "lib/compress/compress_zstd.h"
 #include "lib/encoding/keyval.h"
 #include "lib/fdio/fdio.h"
+#include "lib/fs/winlib.h"
 #include "lib/process/env.h"
 #include "lib/process/pidfile.h"
 #include "lib/process/subprocess.h"
