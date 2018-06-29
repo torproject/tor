@@ -9,6 +9,7 @@ src_lib_libtor_fs_a_SOURCES =			\
 	src/lib/fs/conffile.c			\
 	src/lib/fs/dir.c			\
 	src/lib/fs/files.c			\
+	src/lib/fs/freespace.c			\
 	src/lib/fs/lockfile.c			\
 	src/lib/fs/mmap.c			\
 	src/lib/fs/path.c			\
