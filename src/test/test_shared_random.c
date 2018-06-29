@@ -883,6 +883,7 @@ test_sr_setup_commits(void)
   tt_assert(!commit_has_reveal_value(commit_d));
 
  done:
+  tor_free(place_holder);
   authority_cert_free(auth_cert);
 }
 
