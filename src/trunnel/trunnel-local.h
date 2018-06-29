@@ -2,9 +2,9 @@
 #ifndef TRUNNEL_LOCAL_H_INCLUDED
 #define TRUNNEL_LOCAL_H_INCLUDED
 
-#include "common/util.h"
-#include "common/compat.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/malloc/util_malloc.h"
+#include "lib/log/util_bug.h"
 
 #define trunnel_malloc tor_malloc
 #define trunnel_calloc tor_calloc
