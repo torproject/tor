@@ -173,6 +173,9 @@ test_link_specifier(void *arg)
   ssize_t ret;
   hs_desc_link_specifier_t spec;
   smartlist_t *link_specifiers = smartlist_new();
+  char buf[256];
+  char *b64 = NULL;
+  link_specifier_t *ls = NULL;
 
   (void) arg;
 
@@ -182,9 +185,7 @@ test_link_specifier(void *arg)
 
   /* Test IPv4 for starter. */
   {
-    char *b64, buf[256];
     uint32_t ipv4;
-    link_specifier_t *ls;
 
     spec.type = LS_IPV4;
     ret = tor_addr_parse(&spec.u.ap.addr, "1.2.3.4");
@@ -211,9 +212,7 @@ test_link_specifier(void *arg)
 
   /* Test IPv6. */
   {
-    char *b64, buf[256];
     uint8_t ipv6[16];
-    link_specifier_t *ls;
 
     spec.type = LS_IPV6;
     ret = tor_addr_parse(&spec.u.ap.addr, "[1:2:3:4::]");
@@ -242,9 +241,7 @@ test_link_specifier(void *arg)
 
   /* Test legacy. */
   {
-    char *b64, buf[256];
     uint8_t *id;
-    link_specifier_t *ls;
 
     spec.type = LS_LEGACY_ID;
     memset(spec.u.legacy_id, 'Y', sizeof(spec.u.legacy_id));
@@ -270,6 +267,8 @@ test_link_specifier(void *arg)
   }
 
  done:
+  link_specifier_free(ls);
+  tor_free(b64);
   smartlist_free(link_specifiers);
 }
 
