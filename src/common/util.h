@@ -43,18 +43,6 @@
 #include "lib/encoding/cstring.h"
 #include "lib/fs/winlib.h"
 
-/** Macro: yield a pointer to an enclosing structure given a pointer to
- * a substructure at offset <b>off</b>. Example:
- * <pre>
- *   struct base { ... };
- *   struct subtype { int x; struct base b; } x;
- *   struct base *bp = &x.base;
- *   struct *sp = SUBTYPE_P(bp, struct subtype, b);
- * </pre>
- */
-#define SUBTYPE_P(p, subtype, basemember) \
-  ((void*) ( ((char*)(p)) - offsetof(subtype, basemember) ))
-
 /* Math functions */
 
 /* String manipulation */

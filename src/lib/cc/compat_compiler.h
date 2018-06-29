@@ -253,6 +253,18 @@
  */
 #define STRUCT_VAR_P(st, off) ((void*) ( ((char*)(st)) + (off) ) )
 
+/** Macro: yield a pointer to an enclosing structure given a pointer to
+ * a substructure at offset <b>off</b>. Example:
+ * <pre>
+ *   struct base { ... };
+ *   struct subtype { int x; struct base b; } x;
+ *   struct base *bp = &x.base;
+ *   struct *sp = SUBTYPE_P(bp, struct subtype, b);
+ * </pre>
+ */
+#define SUBTYPE_P(p, subtype, basemember) \
+  ((void*) ( ((char*)(p)) - offsetof(subtype, basemember) ))
+
 /** Macro: Yields the number of elements in array x. */
 #define ARRAY_LENGTH(x) ((sizeof(x)) / sizeof(x[0]))
 
