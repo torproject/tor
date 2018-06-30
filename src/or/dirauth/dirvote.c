@@ -267,10 +267,13 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     else
       params = tor_strdup("");
     tor_assert(cert);
-    if (v3_ns->bw_file_headers)
+    if (v3_ns->bw_file_headers) {
       bw_file_headers = smartlist_join_strings(v3_ns->bw_file_headers, " ", 0,
-                                              NULL);
-    else
+                                               NULL);
+      if (smartlist_len(v3_ns->bw_file_headers) > MAX_BW_FILE_HEADERS_LEN)
+        /* FIXME */
+        smartlist_truncate(v3_ns->bw_file_headers, MAX_BW_FILE_HEADERS_LEN);
+    } else
       bw_file_headers = tor_strdup("");
     smartlist_add_asprintf(chunks,
                  "network-status-version 3\n"
