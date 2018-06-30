@@ -1641,12 +1641,12 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   char *bw_file_headers_str_v110 = NULL;
   char *bw_file_headers_str_bad = NULL;
   char *bw_file_headers_str_extra = NULL;
-  char bw_file_headers_str_long[MAX_BW_FILE_HEADERS_LEN * 8 + 1] = "";
+  char bw_file_headers_str_long[MAX_BW_FILE_HEADER_COUNT_IN_VOTE * 8 + 1] = "";
   /* string header lines in bw file */
   char *header_lines_v100 = NULL;
   char *header_lines_v110_no_terminator = NULL;
   char *header_lines_v110 = NULL;
-  char header_lines_long[MAX_BW_FILE_HEADERS_LEN * 8 + 1] = "";
+  char header_lines_long[MAX_BW_FILE_HEADER_COUNT_IN_VOTE * 8 + 1] = "";
   int i;
   const char *header_lines_v110_no_terminator_no_timestamp =
     "version=1.1.0\n"
@@ -1674,7 +1674,7 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
     "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
     "bw=760 nick=Test rtt=380 time=2018-05-08T16:13:26\n";
   const char *relay_lines_bad =
-    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 \n";
+    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A\n";
 
   tor_asprintf(&header_lines_v100, "%ld\n", (long)timestamp);
   tor_asprintf(&header_lines_v110_no_terminator, "%ld\n%s", (long)timestamp,
@@ -1686,15 +1686,15 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tor_asprintf(&bw_file_headers_str_v110, "timestamp=%ld %s",
                (long)timestamp, bw_file_headers_str_v110_no_timestamp);
   tor_asprintf(&bw_file_headers_str_bad, "%s "
-               "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 ",
+               "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A",
                bw_file_headers_str_v110);
 
-  for (i=0; i<MAX_BW_FILE_HEADERS_LEN; i++) {
+  for (i=0; i<MAX_BW_FILE_HEADER_COUNT_IN_VOTE; i++) {
     strlcat(header_lines_long, "foo=bar\n",
             sizeof(header_lines_long));
   }
   /* 8 is the number of v110 lines in header_lines_v110 */
-  for (i=0; i<MAX_BW_FILE_HEADERS_LEN - 8 - 1; i++) {
+  for (i=0; i<MAX_BW_FILE_HEADER_COUNT_IN_VOTE - 8 - 1; i++) {
     strlcat(bw_file_headers_str_long, "foo=bar ",
             sizeof(bw_file_headers_str_long));
   }
@@ -1874,6 +1874,64 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
                                                        bw_file_headers));
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
+  SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
+  smartlist_free(bw_file_headers);
+  tor_free(bw_file_headers_str);
+
+  /* Test v1.1.0 bandwidth headers without terminator, then bad relay lines,
+   * then relay lines. bw_file_headers will contain the v1.1.0 headers and
+   * the bad relay lines. */
+  bw_file_headers = smartlist_new();
+  tor_asprintf(&content, "%s%s%s",
+               header_lines_v110_no_terminator, relay_lines_bad,
+               relay_lines_v110);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
+                                                       bw_file_headers));
+  bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
+  tt_str_op(bw_file_headers_str_bad, OP_EQ, bw_file_headers_str);
+  SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
+  smartlist_free(bw_file_headers);
+  tor_free(bw_file_headers_str);
+
+  /* Test v1.1.0 bandwidth headers without terminator,
+   * then many bad relay lines, then relay lines.
+   * bw_file_headers will contain the v1.1.0 headers and the bad relay lines
+   * to a maximum of MAX_BW_FILE_HEADER_COUNT_IN_VOTE header lines. */
+  bw_file_headers = smartlist_new();
+  tor_asprintf(&content, "%s%s%s",
+               header_lines_v110_no_terminator, header_lines_long,
+               relay_lines_v110);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
+                                                       bw_file_headers));
+  tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_EQ, smartlist_len(bw_file_headers));
+  bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
+  tt_str_op(bw_file_headers_str_extra, OP_EQ, bw_file_headers_str);
+  SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
+  smartlist_free(bw_file_headers);
+  tor_free(bw_file_headers_str);
+
+  /* Test v1.1.0 bandwidth headers without terminator,
+   * then many bad relay lines, then relay lines.
+   * bw_file_headers will contain the v1.1.0 headers and the bad relay lines.
+   * Force bw_file_headers to have more than MAX_BW_FILE_HEADER_COUNT_IN_VOTE
+   * This test is needed while there is not dirvote test. */
+  bw_file_headers = smartlist_new();
+  tor_asprintf(&content, "%s%s%s",
+               header_lines_v110_no_terminator, header_lines_long,
+               relay_lines_v110);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
+                                                       bw_file_headers));
+  tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_EQ, smartlist_len(bw_file_headers));
+  /* force bw_file_headers to be bigger than MAX_BW_FILE_HEADER_COUNT_IN_VOTE */
+  char line[8] = "foo=bar\0";
+  smartlist_add_strdup(bw_file_headers, line);
+  tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_LT, smartlist_len(bw_file_headers));
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
   smartlist_free(bw_file_headers);
   tor_free(bw_file_headers_str);
