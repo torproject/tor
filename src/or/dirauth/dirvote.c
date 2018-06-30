@@ -44,6 +44,7 @@
 #include "or/vote_timing_st.h"
 
 #include "lib/container/order.h"
+#include "lib/log/util_bug.h"
 
 /**
  * \file dirvote.c
@@ -252,7 +253,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     /* XXXX Abstraction violation: should be pulling a field out of v3_ns.*/
     char *flag_thresholds = dirserv_get_flag_thresholds_line();
     char *params;
-    char *bw_file_headers;
+    char *bw_file_headers = NULL;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
       make_consensus_method_list(MIN_SUPPORTED_CONSENSUS_METHOD,
@@ -267,11 +268,20 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     else
       params = tor_strdup("");
     tor_assert(cert);
-    if (v3_ns->bw_file_headers)
-      bw_file_headers = smartlist_join_strings(v3_ns->bw_file_headers, " ", 0,
-                                              NULL);
-    else
-      bw_file_headers = tor_strdup("");
+
+    if (v3_ns->bw_file_headers) {
+      if (! BUG(smartlist_len(v3_ns->bw_file_headers)
+                > MAX_BW_FILE_HEADERS_LEN)) {
+        bw_file_headers = smartlist_join_strings(v3_ns->bw_file_headers, " ",
+                                                 0, NULL);
+        if (BUG(strlen(bw_file_headers) > MAX_VOTE_LINE_LEN)) {
+          /* Free and set to NULL, so the vote header line is empty */
+          tor_free(bw_file_headers);
+        }
+      }
+    }
+    bw_file_headers ? bw_file_headers : tor_strdup("");
+
     smartlist_add_asprintf(chunks,
                  "network-status-version 3\n"
                  "vote-status %s\n"

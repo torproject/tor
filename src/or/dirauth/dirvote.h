@@ -89,6 +89,9 @@
 #define DGV_INCLUDE_PENDING 2
 #define DGV_INCLUDE_PREVIOUS 4
 
+/** Maximum size of a line in a vote. */
+#define MAX_VOTE_LINE_LEN 1024
+
 /*
  * Public API. Used outside of the dirauth subsystem.
  *
