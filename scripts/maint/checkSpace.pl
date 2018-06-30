@@ -192,11 +192,6 @@ for my $fn (@ARGV) {
             }
         }
     }
-    ## Warn if the file doesn't end with a blank line.
-    #    (End each file with a single blank line.)
-    if (! $lastnil) {
-        msg "  EOL\@EOF:$fn:$.\n";
-    }
     close(F);
 }
 
