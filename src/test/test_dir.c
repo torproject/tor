@@ -1764,6 +1764,12 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   smartlist_free(bw_file_headers);
   tor_free(bw_file_headers_str);
 
+  /* Test v1.0.0 complete bandwidth file with NULL bw_file_headers. */
+  tor_asprintf(&content, "%s%s", header_lines_v100, relay_lines_v100);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL, NULL));
+
   /* Test bandwidth file including v1.1.0 bandwidth headers and
    * v1.0.0 relay lines. bw_file_headers will contain the v1.1.0 headers. */
   bw_file_headers = smartlist_new();
