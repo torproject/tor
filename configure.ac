@@ -453,6 +453,8 @@ fi
 
 AC_C_BIGENDIAN
 
+AC_ARG_VAR([TOR_RUST_TARGET], [Rust target, must be specified when cross-compiling (HOST != BUILD). example: i686-pc-windows-gnu])
+
 if test "x$enable_rust" = "xyes"; then
   AC_ARG_VAR([RUSTC], [path to the rustc binary])
   AC_CHECK_PROG([RUSTC], [rustc], [rustc],[no])
@@ -518,12 +520,29 @@ if test "x$enable_rust" = "xyes"; then
   dnl For now both MSVC and MinGW rust libraries will output static libs with
   dnl the MSVC naming convention.
   if test "$bwin32" = "true"; then
-    TOR_RUST_STATIC_NAME=tor_rust.lib
+    tor_rust_static_name=tor_rust.lib
   else
-    TOR_RUST_STATIC_NAME=libtor_rust.a
+    tor_rust_static_name=libtor_rust.a
   fi
 
-  AC_SUBST(TOR_RUST_STATIC_NAME)
+  AC_CANONICAL_BUILD
+
+  if test -n "$TOR_RUST_TARGET"; then
+    if test "$host" = "$build"; then
+      AC_MSG_ERROR([HOST = BUILD is invalid if TOR_RUST_TARGET is specified, see configure --help for more information.])
+    fi
+    RUST_TARGET_PROP="target = '$TOR_RUST_TARGET'"
+    TOR_RUST_LIB_PATH="src/rust/target/$TOR_RUST_TARGET/release/$tor_rust_static_name"
+  else
+    if test "$host" != "$build"; then
+      AC_MSG_ERROR([TOR_RUST_TARGET must be specified when cross-compiling with Rust enabled.])
+    fi
+    RUST_TARGET_PROP=
+    TOR_RUST_LIB_PATH="src/rust/target/release/$tor_rust_static_name"
+  fi
+
+  AC_SUBST(RUST_TARGET_PROP)
+  AC_SUBST(TOR_RUST_LIB_PATH)
   AC_SUBST(CARGO_ONLINE)
   AC_SUBST(RUST_WARN)
   AC_SUBST(RUST_DL)
