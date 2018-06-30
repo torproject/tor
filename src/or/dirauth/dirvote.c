@@ -45,6 +45,7 @@
 
 #include "lib/container/order.h"
 
+#include "common/util.h"
 /**
  * \file dirvote.c
  * \brief Functions to compute directory consensus, and schedule voting.
