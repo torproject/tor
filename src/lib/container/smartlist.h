@@ -72,6 +72,8 @@ void smartlist_pqueue_remove(smartlist_t *sl,
                              int (*compare)(const void *a, const void *b),
                              int idx_field_offset,
                              void *item);
+void smartlist_truncate(smartlist_t *sl,
+                        const size_t size);
 void smartlist_pqueue_assert_ok(smartlist_t *sl,
                                 int (*compare)(const void *a, const void *b),
                                 int idx_field_offset);

@@ -927,6 +927,33 @@ test_container_smartlist_remove(void *arg)
   smartlist_free(sl);
 }
 
+static void
+test_container_smartlist_truncate(void *arg)
+{
+  (void) arg;
+  int array[5];
+  smartlist_t *sl = smartlist_new();
+  int i;
+  const size_t size = 3;
+  const size_t size2 = 6;
+
+  for (i=0; i < 5; ++i)
+    smartlist_add(sl, &array[i]);
+
+  smartlist_truncate(sl, size);
+  tt_int_op(smartlist_len(sl), OP_EQ, 3);
+
+  smartlist_clear(sl);
+  for (i=0; i < 5; ++i)
+    smartlist_add(sl, &array[i]);
+
+  smartlist_truncate(sl, size2);
+  tt_int_op(smartlist_len(sl), OP_EQ, 5);
+
+ done:
+  smartlist_free(sl);
+}
+
 /** Run unit tests for getting the median of a list. */
 static void
 test_container_order_functions(void *arg)
@@ -1286,6 +1313,7 @@ struct testcase_t container_tests[] = {
   CONTAINER_LEGACY(smartlist_join),
   CONTAINER_LEGACY(smartlist_pos),
   CONTAINER(smartlist_remove, 0),
+  CONTAINER(smartlist_truncate, 0),
   CONTAINER(smartlist_ints_eq, 0),
   CONTAINER_LEGACY(bitarray),
   CONTAINER_LEGACY(digestset),
