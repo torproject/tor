@@ -2679,17 +2679,19 @@ dirserv_read_measured_bandwidths(const char *from_file,
           applied_lines++;
       /* if the terminator is found, it is the end of header lines, set the
        * flag but do not store anything */
-      } else if (strcmp(line, BW_FILE_TERMINATOR) == 0)
+      } else if (strcmp(line, BW_FILE_HEADERS_TERMINATOR) == 0) {
         line_is_after_headers = 1;
       /* if the line was not a correct relay line nor the terminator and
        * the end of the header lines has not been detected yet
        * and it is key_value and bw_file_headers did not reach the maximum
        * number of headers,
        * then assume this line is a header and add it to bw_file_headers */
-      else if (bw_file_headers &&
+      } else if (bw_file_headers &&
               (line_is_after_headers == 0) &&
               string_is_key_value(LOG_DEBUG, line) &&
-              (smartlist_len(bw_file_headers) < MAX_BW_FILE_HEADERS_LEN)) {
+              !strchr(line, ' ') &&
+              (smartlist_len(bw_file_headers)
+               < MAX_BW_FILE_HEADER_COUNT_IN_VOTE)) {
         line[strlen(line)-1] = '\0';
         smartlist_add_strdup(bw_file_headers, line);
       };
