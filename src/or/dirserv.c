@@ -2596,12 +2596,14 @@ measured_bw_line_apply(measured_bw_line_t *parsed_line,
 }
 
 /**
- * Read the measured bandwidth file and apply it to the list of
- * vote_routerstatus_t. Returns -1 on error, 0 otherwise.
+ * Read the measured bandwidth list file, apply it to the list of
+ * vote_routerstatus_t and store all the headers in <b>bw_file_headers</b>.
+ * Returns -1 on error, 0 otherwise.
  */
 int
 dirserv_read_measured_bandwidths(const char *from_file,
-                                 smartlist_t *routerstatuses)
+                                 smartlist_t *routerstatuses,
+                                 smartlist_t *bw_file_headers)
 {
   char line[512];
   FILE *fp = tor_fopen_cloexec(from_file, "r");
@@ -2654,6 +2656,11 @@ dirserv_read_measured_bandwidths(const char *from_file,
     return -1;
   }
 
+  /* If timestamp was correct and bw_file_headers is not NULL,
+   * add timestamp to bw_file_headers */
+  if (bw_file_headers)
+    smartlist_add_asprintf(bw_file_headers, "timestamp=%ld", file_time);
+
   if (routerstatuses)
     smartlist_sort(routerstatuses, compare_vote_routerstatus_entries);
 
@@ -2669,7 +2676,22 @@ dirserv_read_measured_bandwidths(const char *from_file,
         dirserv_cache_measured_bw(&parsed_line, file_time);
         if (measured_bw_line_apply(&parsed_line, routerstatuses) > 0)
           applied_lines++;
-      }
+      /* if the terminator is found, it is the end of header lines, set the
+       * flag but do not store anything */
+      } else if (strcmp(line, BW_FILE_TERMINATOR) == 0)
+        line_is_after_headers = 1;
+      /* if the line was not a correct relay line nor the terminator and
+       * the end of the header lines has not been detected yet
+       * and it is key_value and bw_file_headers did not reach the maximum
+       * number of headers,
+       * then assume this line is a header and add it to bw_file_headers */
+      else if (bw_file_headers &&
+              (line_is_after_headers == 0) &&
+              string_is_key_value(LOG_DEBUG, line) &&
+              (smartlist_len(bw_file_headers) < MAX_BW_FILE_HEADERS_LEN)) {
+        line[strlen(line)-1] = '\0';
+        smartlist_add_strdup(bw_file_headers, line);
+      };
     }
   }
 

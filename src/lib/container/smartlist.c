@@ -79,6 +79,25 @@ smartlist_string_remove(smartlist_t *sl, const char *element)
   }
 }
 
+/** Return <b>sl</b> of size <b>size</b>, removing and freing all the extra
+ * elements. Preserve order. */
+void
+smartlist_truncate(smartlist_t *sl, const size_t size)
+{
+  int i, diff;
+  /* Difference between the number of elements in sl and the maximum size */
+  diff = sl->num_used - size;
+  /* Remove elements at position size, difference times, the next element
+   * index will be always size. */
+  for (i=0; i < diff; i++) {
+    log_debug(LD_DIRSERV, "sl->list[size] %s\n", (char *)sl->list[size]);
+    log_debug(LD_DIRSERV, "sl len %d\n", smartlist_len(sl));
+    smartlist_del(sl, size);
+    // const char *element = sl->list[size];
+    // smartlist_remove(sl, element);
+  }
+}
+
 /** Return true iff <b>sl</b> has some element E such that
  * !strcmp(E,<b>element</b>)
  */
