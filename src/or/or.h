@@ -862,13 +862,6 @@ typedef enum {
 
 typedef struct networkstatus_t networkstatus_t;
 typedef struct ns_detached_signatures_t ns_detached_signatures_t;
-
-/** Allowable types of desc_store_t. */
-typedef enum store_type_t {
-  ROUTER_STORE = 0,
-  EXTRAINFO_STORE = 1
-} store_type_t;
-
 typedef struct desc_store_t desc_store_t;
 typedef struct routerlist_t routerlist_t;
 typedef struct extend_info_t extend_info_t;
@@ -897,24 +890,12 @@ typedef enum {
 
 #define ALL_DIRINFO ((dirinfo_type_t)((1<<7)-1))
 
-#define CRYPT_PATH_MAGIC 0x70127012u
-
-struct fast_handshake_state_t;
-struct ntor_handshake_state_t;
-struct crypto_dh_t;
 #define ONION_HANDSHAKE_TYPE_TAP  0x0000
 #define ONION_HANDSHAKE_TYPE_FAST 0x0001
 #define ONION_HANDSHAKE_TYPE_NTOR 0x0002
 #define MAX_ONION_HANDSHAKE_TYPE 0x0002
-typedef struct {
-  uint16_t tag;
-  union {
-    struct fast_handshake_state_t *fast;
-    struct crypto_dh_t *tap;
-    struct ntor_handshake_state_t *ntor;
-  } u;
-} onion_handshake_state_t;
 
+typedef struct onion_handshake_state_t onion_handshake_state_t;
 typedef struct relay_crypto_t relay_crypto_t;
 typedef struct crypt_path_t crypt_path_t;
 typedef struct crypt_path_reference_t crypt_path_reference_t;
@@ -946,61 +927,7 @@ typedef struct or_circuit_t or_circuit_t;
  * circuit. */
 #define MAX_RELAY_EARLY_CELLS_PER_CIRCUIT 8
 
-/**
- * Describes the circuit building process in simplified terms based
- * on the path bias accounting state for a circuit.
- *
- * NOTE: These state values are enumerated in the order for which we
- * expect circuits to transition through them. If you add states,
- * you need to preserve this overall ordering. The various pathbias
- * state transition and accounting functions (pathbias_mark_* and
- * pathbias_count_*) contain ordinal comparisons to enforce proper
- * state transitions for corrections.
- *
- * This state machine and the associated logic was created to prevent
- * miscounting due to unknown cases of circuit reuse. See also tickets
- * #6475 and #7802.
- */
-typedef enum {
-    /** This circuit is "new". It has not yet completed a first hop
-     * or been counted by the path bias code. */
-    PATH_STATE_NEW_CIRC = 0,
-    /** This circuit has completed one/two hops, and has been counted by
-     * the path bias logic. */
-    PATH_STATE_BUILD_ATTEMPTED = 1,
-    /** This circuit has been completely built */
-    PATH_STATE_BUILD_SUCCEEDED = 2,
-    /** Did we try to attach any SOCKS streams or hidserv introductions to
-      * this circuit?
-      *
-      * Note: If we ever implement end-to-end stream timing through test
-      * stream probes (#5707), we must *not* set this for those probes
-      * (or any other automatic streams) because the adversary could
-      * just tag at a later point.
-      */
-    PATH_STATE_USE_ATTEMPTED = 3,
-    /** Did any SOCKS streams or hidserv introductions actually succeed on
-      * this circuit?
-      *
-      * If any streams detatch/fail from this circuit, the code transitions
-      * the circuit back to PATH_STATE_USE_ATTEMPTED to ensure we probe. See
-      * pathbias_mark_use_rollback() for that.
-      */
-    PATH_STATE_USE_SUCCEEDED = 4,
-
-    /**
-     * This is a special state to indicate that we got a corrupted
-     * relay cell on a circuit and we don't intend to probe it.
-     */
-    PATH_STATE_USE_FAILED = 5,
-
-    /**
-     * This is a special state to indicate that we already counted
-     * the circuit. Used to guard against potential state machine
-     * violations.
-     */
-    PATH_STATE_ALREADY_COUNTED = 6,
-} path_state_t;
+typedef enum path_state_t path_state_t;
 #define path_state_bitfield_t ENUM_BF(path_state_t)
 
 #if REND_COOKIE_LEN != DIGEST_LEN

@@ -10,6 +10,20 @@
 #include "or/relay_crypto_st.h"
 struct crypto_dh_t;
 
+#define CRYPT_PATH_MAGIC 0x70127012u
+
+struct fast_handshake_state_t;
+struct ntor_handshake_state_t;
+struct crypto_dh_t;
+struct onion_handshake_state_t {
+  uint16_t tag;
+  union {
+    struct fast_handshake_state_t *fast;
+    struct crypto_dh_t *tap;
+    struct ntor_handshake_state_t *ntor;
+  } u;
+};
+
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */
 struct crypt_path_t {

@@ -13,6 +13,62 @@
 
 struct onion_queue_t;
 
+/**
+ * Describes the circuit building process in simplified terms based
+ * on the path bias accounting state for a circuit.
+ *
+ * NOTE: These state values are enumerated in the order for which we
+ * expect circuits to transition through them. If you add states,
+ * you need to preserve this overall ordering. The various pathbias
+ * state transition and accounting functions (pathbias_mark_* and
+ * pathbias_count_*) contain ordinal comparisons to enforce proper
+ * state transitions for corrections.
+ *
+ * This state machine and the associated logic was created to prevent
+ * miscounting due to unknown cases of circuit reuse. See also tickets
+ * #6475 and #7802.
+ */
+enum path_state_t {
+    /** This circuit is "new". It has not yet completed a first hop
+     * or been counted by the path bias code. */
+    PATH_STATE_NEW_CIRC = 0,
+    /** This circuit has completed one/two hops, and has been counted by
+     * the path bias logic. */
+    PATH_STATE_BUILD_ATTEMPTED = 1,
+    /** This circuit has been completely built */
+    PATH_STATE_BUILD_SUCCEEDED = 2,
+    /** Did we try to attach any SOCKS streams or hidserv introductions to
+      * this circuit?
+      *
+      * Note: If we ever implement end-to-end stream timing through test
+      * stream probes (#5707), we must *not* set this for those probes
+      * (or any other automatic streams) because the adversary could
+      * just tag at a later point.
+      */
+    PATH_STATE_USE_ATTEMPTED = 3,
+    /** Did any SOCKS streams or hidserv introductions actually succeed on
+      * this circuit?
+      *
+      * If any streams detatch/fail from this circuit, the code transitions
+      * the circuit back to PATH_STATE_USE_ATTEMPTED to ensure we probe. See
+      * pathbias_mark_use_rollback() for that.
+      */
+    PATH_STATE_USE_SUCCEEDED = 4,
+
+    /**
+     * This is a special state to indicate that we got a corrupted
+     * relay cell on a circuit and we don't intend to probe it.
+     */
+    PATH_STATE_USE_FAILED = 5,
+
+    /**
+     * This is a special state to indicate that we already counted
+     * the circuit. Used to guard against potential state machine
+     * violations.
+     */
+    PATH_STATE_ALREADY_COUNTED = 6,
+};
+
 /** An origin_circuit_t holds data necessary to build and use a circuit.
  */
 struct origin_circuit_t {
@@ -232,4 +288,3 @@ struct origin_circuit_t {
 };
 
 #endif
-
