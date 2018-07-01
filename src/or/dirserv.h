@@ -32,6 +32,13 @@
 /** Maximum allowable length of a version line in a networkstatus. */
 #define MAX_V_LINE_LEN 128
 
+/** Maximum allowable length of bandwidth headers in a bandwidth file */
+#define MAX_BW_FILE_HEADER_COUNT_IN_VOTE 50
+
+/** Terminatore that separates bandwidth file headers from bandwidth file
+ * relay lines */
+#define BW_FILE_HEADERS_TERMINATOR "=====\n"
+
 /** Ways to convert a spoolable_resource_t to a bunch of bytes. */
 typedef enum dir_spool_source_t {
     DIR_SPOOL_SERVER_BY_DIGEST=1, DIR_SPOOL_SERVER_BY_FP,
@@ -198,7 +205,8 @@ dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,
 #endif /* defined(DIRSERV_PRIVATE) */
 
 int dirserv_read_measured_bandwidths(const char *from_file,
-                                     smartlist_t *routerstatuses);
+                                     smartlist_t *routerstatuses,
+                                     smartlist_t *bw_file_headers);
 
 int dirserv_read_guardfraction_file(const char *fname,
                                  smartlist_t *vote_routerstatuses);
