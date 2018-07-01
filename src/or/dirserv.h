@@ -33,7 +33,7 @@
 #define MAX_V_LINE_LEN 128
 
 /** Maximum allowable length of bandwidth headers in a bandwidth file */
-#define MAX_BW_FILE_HEADERS_LEN 50
+#define MAX_BW_FILE_HEADER_COUNT_IN_VOTE 50
 
 /** Terminatore that separates bandwidth file headers from bandwidth file
  * relay lines */
