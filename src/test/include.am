@@ -11,9 +11,9 @@ TESTS_ENVIRONMENT = \
 	export CARGO="$(CARGO)"; \
 	export EXTRA_CARGO_OPTIONS="$(EXTRA_CARGO_OPTIONS)"; \
 	export CARGO_ONLINE="$(CARGO_ONLINE)"; \
-        export CCLD="$(CCLD)"; \
-        chmod +x "$(abs_top_builddir)/link_rust.sh"; \
-        export RUSTFLAGS="-C linker=$(abs_top_builddir)/link_rust.sh";
+	export CCLD="$(CCLD)"; \
+	chmod +x "$(abs_top_builddir)/link_rust.sh"; \
+	export RUSTFLAGS="-C linker=$(abs_top_builddir)/link_rust.sh";
 
 TESTSCRIPTS = \
 	src/test/fuzz_static_testcases.sh \
@@ -72,8 +72,8 @@ noinst_PROGRAMS+= \
 endif
 
 src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
-        -DLOCALSTATEDIR="\"$(localstatedir)\"" \
-        -DBINDIR="\"$(bindir)\""	       \
+	-DLOCALSTATEDIR="\"$(localstatedir)\"" \
+	-DBINDIR="\"$(bindir)\""	       \
 	-DTOR_UNIT_TESTS                       \
 	$(AM_CPPFLAGS)
 
@@ -226,9 +226,9 @@ src_test_test_switch_id_LDADD = \
 	@TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@
 
 src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
-        @TOR_LDFLAGS_libevent@
+	@TOR_LDFLAGS_libevent@
 src_test_test_LDADD = \
-        $(TOR_INTERNAL_TESTING_LIBS) \
+	$(TOR_INTERNAL_TESTING_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
@@ -249,9 +249,9 @@ src_test_test_memwipe_LDADD = $(src_test_test_LDADD)
 src_test_test_memwipe_LDFLAGS = $(src_test_test_LDFLAGS) @CFLAGS_BUGTRAP@
 
 src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
-        @TOR_LDFLAGS_libevent@
+	@TOR_LDFLAGS_libevent@
 src_test_bench_LDADD = \
-        $(TOR_INTERNAL_LIBS) \
+	$(TOR_INTERNAL_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
@@ -259,9 +259,9 @@ src_test_bench_LDADD = \
 	@TOR_SYSTEMD_LIBS@ @TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@
 
 src_test_test_workqueue_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
-        @TOR_LDFLAGS_libevent@
+	@TOR_LDFLAGS_libevent@
 src_test_test_workqueue_LDADD = \
-        $(TOR_INTERNAL_TESTING_LIBS) \
+	$(TOR_INTERNAL_TESTING_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
@@ -303,7 +303,7 @@ noinst_PROGRAMS+= src/test/test-hs-ntor-cl
 src_test_test_ntor_cl_SOURCES  = src/test/test_ntor_cl.c
 src_test_test_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
 src_test_test_ntor_cl_LDADD = \
-        $(TOR_INTERNAL_LIBS) \
+	$(TOR_INTERNAL_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
@@ -340,7 +340,7 @@ EXTRA_DIST += \
 	src/test/fuzz_static_testcases.sh \
 	src/test/slownacl_curve25519.py \
 	src/test/zero_length_keys.sh \
-        src/test/rust_supp.txt \
+	src/test/rust_supp.txt \
 	src/test/test_keygen.sh \
 	src/test/test_key_expiration.sh \
 	src/test/test_zero_length_keys.sh \

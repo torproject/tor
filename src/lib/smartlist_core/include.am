@@ -12,7 +12,7 @@ src_lib_libtor_smartlist_core_a_SOURCES =			\
 src_lib_libtor_smartlist_core_testing_a_SOURCES = \
 	$(src_lib_libtor_smartlist_core_a_SOURCES)
 src_lib_libtor_smartlist_core_testing_a_CPPFLAGS = \
-        $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
+	$(AM_CPPFLAGS) $(TEST_CPPFLAGS)
 src_lib_libtor_smartlist_core_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 noinst_HEADERS +=					\

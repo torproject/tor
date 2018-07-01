@@ -51,7 +51,7 @@ TOR_UTIL_LIBS = \
 	src/lib/libtor-thread.a \
 	src/lib/libtor-memarea.a \
 	src/lib/libtor-math.a \
-        src/lib/libtor-meminfo.a \
+	src/lib/libtor-meminfo.a \
 	src/lib/libtor-osinfo.a \
 	src/lib/libtor-log.a \
 	src/lib/libtor-lock.a \
@@ -79,7 +79,7 @@ TOR_UTIL_TESTING_LIBS = \
 	src/lib/libtor-thread-testing.a \
 	src/lib/libtor-memarea-testing.a \
 	src/lib/libtor-math-testing.a \
-        src/lib/libtor-meminfo-testing.a \
+	src/lib/libtor-meminfo-testing.a \
 	src/lib/libtor-osinfo-testing.a \
 	src/lib/libtor-term-testing.a \
 	src/lib/libtor-log-testing.a \
@@ -111,7 +111,7 @@ TOR_CRYPTO_TESTING_LIBS = \
 # All static libraries used to link tor.
 TOR_INTERNAL_LIBS = \
 	src/or/libtor-app.a \
-        src/lib/libtor-compress.a \
+	src/lib/libtor-compress.a \
 	$(TOR_CRYPTO_LIBS) \
 	$(TOR_UTIL_LIBS) \
 	src/common/libor-event.a \
@@ -122,7 +122,7 @@ TOR_INTERNAL_LIBS = \
 # and tests)
 TOR_INTERNAL_TESTING_LIBS = \
 	src/or/libtor-app-testing.a \
-        src/lib/libtor-compress-testing.a \
+	src/lib/libtor-compress-testing.a \
 	$(TOR_CRYPTO_TESTING_LIBS) \
 	$(TOR_UTIL_TESTING_LIBS) \
 	src/common/libor-event-testing.a \
