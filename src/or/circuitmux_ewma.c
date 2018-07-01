@@ -39,6 +39,7 @@
 #include "or/circuitmux_ewma.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "or/networkstatus.h"
+#include "or/or_options_st.h"
 
 /*** EWMA parameter #defines ***/
 
@@ -826,4 +827,3 @@ circuitmux_ewma_free_all(void)
 {
   ewma_ticks_initialized = 0;
 }
-

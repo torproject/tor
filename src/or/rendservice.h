@@ -16,6 +16,7 @@
 #include "or/hs_service.h"
 
 typedef struct rend_intro_cell_t rend_intro_cell_t;
+struct config_line_t;
 
 /* This can be used for both INTRODUCE1 and INTRODUCE2 */
 

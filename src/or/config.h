@@ -12,6 +12,7 @@
 #ifndef TOR_CONFIG_H
 #define TOR_CONFIG_H
 
+#include "or/or_options_st.h"
 #include "lib/testsupport/testsupport.h"
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(DARWIN)
