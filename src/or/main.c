@@ -131,6 +131,7 @@
 #include "or/entry_connection_st.h"
 #include "or/networkstatus_st.h"
 #include "or/or_connection_st.h"
+#include "or/or_state_st.h"
 #include "or/port_cfg_st.h"
 #include "or/routerinfo_st.h"
 #include "or/socks_request_st.h"

@@ -47,6 +47,7 @@
 #include "or/extrainfo_st.h"
 #include "or/node_st.h"
 #include "or/origin_circuit_st.h"
+#include "or/or_state_st.h"
 #include "or/port_cfg_st.h"
 #include "or/routerinfo_st.h"
 

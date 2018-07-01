@@ -30,6 +30,7 @@
 #include "or/hs_service.h"
 #include "or/dos.h"
 
+#include "or/or_state_st.h"
 #include "or/routerinfo_st.h"
 #include "lib/tls/tortls.h"
 

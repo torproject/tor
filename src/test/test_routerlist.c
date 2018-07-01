@@ -37,6 +37,7 @@
 #include "or/dir_connection_st.h"
 #include "or/networkstatus_st.h"
 #include "or/node_st.h"
+#include "or/or_state_st.h"
 #include "or/routerstatus_st.h"
 
 #include "lib/encoding/confline.h"

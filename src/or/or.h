@@ -2045,78 +2045,7 @@ typedef struct {
 
 #define LOG_PROTOCOL_WARN (get_protocol_warning_severity_level())
 
-/** Persistent state for an onion router, as saved to disk. */
-typedef struct {
-  uint32_t magic_;
-  /** The time at which we next plan to write the state to the disk.  Equal to
-   * TIME_MAX if there are no savable changes, 0 if there are changes that
-   * should be saved right away. */
-  time_t next_write;
-
-  /** When was the state last written to disk? */
-  time_t LastWritten;
-
-  /** Fields for accounting bandwidth use. */
-  time_t AccountingIntervalStart;
-  uint64_t AccountingBytesReadInInterval;
-  uint64_t AccountingBytesWrittenInInterval;
-  int AccountingSecondsActive;
-  int AccountingSecondsToReachSoftLimit;
-  time_t AccountingSoftLimitHitAt;
-  uint64_t AccountingBytesAtSoftLimit;
-  uint64_t AccountingExpectedUsage;
-
-  /** A list of Entry Guard-related configuration lines. (pre-prop271) */
-  struct config_line_t *EntryGuards;
-
-  /** A list of guard-related configuration lines. (post-prop271) */
-  struct config_line_t *Guard;
-
-  struct config_line_t *TransportProxies;
-
-  /** Cached revision counters for active hidden services on this host */
-  struct config_line_t *HidServRevCounter;
-
-  /** These fields hold information on the history of bandwidth usage for
-   * servers.  The "Ends" fields hold the time when we last updated the
-   * bandwidth usage. The "Interval" fields hold the granularity, in seconds,
-   * of the entries of Values.  The "Values" lists hold decimal string
-   * representations of the number of bytes read or written in each
-   * interval. The "Maxima" list holds decimal strings describing the highest
-   * rate achieved during the interval.
-   */
-  time_t      BWHistoryReadEnds;
-  int         BWHistoryReadInterval;
-  smartlist_t *BWHistoryReadValues;
-  smartlist_t *BWHistoryReadMaxima;
-  time_t      BWHistoryWriteEnds;
-  int         BWHistoryWriteInterval;
-  smartlist_t *BWHistoryWriteValues;
-  smartlist_t *BWHistoryWriteMaxima;
-  time_t      BWHistoryDirReadEnds;
-  int         BWHistoryDirReadInterval;
-  smartlist_t *BWHistoryDirReadValues;
-  smartlist_t *BWHistoryDirReadMaxima;
-  time_t      BWHistoryDirWriteEnds;
-  int         BWHistoryDirWriteInterval;
-  smartlist_t *BWHistoryDirWriteValues;
-  smartlist_t *BWHistoryDirWriteMaxima;
-
-  /** Build time histogram */
-  struct config_line_t * BuildtimeHistogram;
-  int TotalBuildTimes;
-  int CircuitBuildAbandonedCount;
-
-  /** What version of Tor wrote this state file? */
-  char *TorVersion;
-
-  /** Holds any unrecognized values we found in the state file, in the order
-   * in which we found them. */
-  struct config_line_t *ExtraLines;
-
-  /** When did we last rotate our onion key?  "0" for 'no idea'. */
-  time_t LastRotatedOnionKey;
-} or_state_t;
+typedef struct or_state_t or_state_t;
 
 #define MAX_SOCKS_ADDR_LEN 256
 

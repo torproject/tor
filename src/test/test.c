@@ -12,6 +12,8 @@
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 
+#include "or/or_state_st.h"
+
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>

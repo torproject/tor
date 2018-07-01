@@ -91,6 +91,7 @@
 
 #include "or/networkstatus_st.h"
 #include "or/or_circuit_st.h"
+#include "or/or_state_st.h"
 
 #include "lib/container/bloomfilt.h"
 #include "lib/container/order.h"

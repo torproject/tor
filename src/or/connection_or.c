@@ -66,6 +66,7 @@
 #include "or/or_connection_st.h"
 #include "or/or_handshake_certs_st.h"
 #include "or/or_handshake_state_st.h"
+#include "or/or_state_st.h"
 #include "or/routerinfo_st.h"
 #include "or/var_cell_st.h"
 #include "lib/crypt_ops/crypto_format.h"

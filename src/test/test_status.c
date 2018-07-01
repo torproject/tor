@@ -27,6 +27,7 @@
 #include "lib/tls/tortls.h"
 
 #include "or/origin_circuit_st.h"
+#include "or/or_state_st.h"
 #include "or/routerinfo_st.h"
 
 #include "test/test.h"

@@ -23,6 +23,8 @@
 #include "or/voting_schedule.h"
 #include "lib/encoding/confline.h"
 
+#include "or/or_state_st.h"
+
 /* Default filename of the shared random state on disk. */
 static const char default_fname[] = "sr-state";
 

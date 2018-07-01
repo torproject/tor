@@ -44,6 +44,7 @@ hibernating, phase 2:
 #include "common/compat_libevent.h"
 
 #include "or/or_connection_st.h"
+#include "or/or_state_st.h"
 
 /** Are we currently awake, asleep, running out of bandwidth, or shutting
  * down? */

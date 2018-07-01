@@ -46,6 +46,7 @@
 
 #include "or/crypt_path_st.h"
 #include "or/origin_circuit_st.h"
+#include "or/or_state_st.h"
 
 #undef log
 #include <math.h>
