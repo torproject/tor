@@ -24,6 +24,7 @@
 #include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "or/channeltls.h"
+#include "or/directory.h"
 #include "or/main.h"
 #include "or/nodelist.h"
 #include "or/routerset.h"

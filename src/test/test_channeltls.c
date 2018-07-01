@@ -11,6 +11,7 @@
 #include "lib/container/buffers.h"
 #include "or/channel.h"
 #include "or/channeltls.h"
+#include "or/connection.h"
 #include "or/connection_or.h"
 #include "or/config.h"
 /* For init/free stuff */
@@ -336,4 +337,3 @@ struct testcase_t channeltls_tests[] = {
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

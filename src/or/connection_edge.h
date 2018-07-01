@@ -18,6 +18,54 @@ edge_connection_t *TO_EDGE_CONN(connection_t *);
 entry_connection_t *TO_ENTRY_CONN(connection_t *);
 entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *);
 
+#define EXIT_CONN_STATE_MIN_ 1
+/** State for an exit connection: waiting for response from DNS farm. */
+#define EXIT_CONN_STATE_RESOLVING 1
+/** State for an exit connection: waiting for connect() to finish. */
+#define EXIT_CONN_STATE_CONNECTING 2
+/** State for an exit connection: open and ready to transmit data. */
+#define EXIT_CONN_STATE_OPEN 3
+/** State for an exit connection: waiting to be removed. */
+#define EXIT_CONN_STATE_RESOLVEFAILED 4
+#define EXIT_CONN_STATE_MAX_ 4
+
+/* The AP state values must be disjoint from the EXIT state values. */
+#define AP_CONN_STATE_MIN_ 5
+/** State for a SOCKS connection: waiting for SOCKS request. */
+#define AP_CONN_STATE_SOCKS_WAIT 5
+/** State for a SOCKS connection: got a y.onion URL; waiting to receive
+ * rendezvous descriptor. */
+#define AP_CONN_STATE_RENDDESC_WAIT 6
+/** The controller will attach this connection to a circuit; it isn't our
+ * job to do so. */
+#define AP_CONN_STATE_CONTROLLER_WAIT 7
+/** State for a SOCKS connection: waiting for a completed circuit. */
+#define AP_CONN_STATE_CIRCUIT_WAIT 8
+/** State for a SOCKS connection: sent BEGIN, waiting for CONNECTED. */
+#define AP_CONN_STATE_CONNECT_WAIT 9
+/** State for a SOCKS connection: sent RESOLVE, waiting for RESOLVED. */
+#define AP_CONN_STATE_RESOLVE_WAIT 10
+/** State for a SOCKS connection: ready to send and receive. */
+#define AP_CONN_STATE_OPEN 11
+/** State for a transparent natd connection: waiting for original
+ * destination. */
+#define AP_CONN_STATE_NATD_WAIT 12
+/** State for an HTTP tunnel: waiting for an HTTP CONNECT command. */
+#define AP_CONN_STATE_HTTP_CONNECT_WAIT 13
+#define AP_CONN_STATE_MAX_ 13
+
+#define EXIT_PURPOSE_MIN_ 1
+/** This exit stream wants to do an ordinary connect. */
+#define EXIT_PURPOSE_CONNECT 1
+/** This exit stream wants to do a resolve (either normal or reverse). */
+#define EXIT_PURPOSE_RESOLVE 2
+#define EXIT_PURPOSE_MAX_ 2
+
+/** True iff the AP_CONN_STATE_* value <b>s</b> means that the corresponding
+ * edge connection is not attached to any circuit. */
+#define AP_CONN_STATE_IS_UNATTACHED(s) \
+  ((s) <= AP_CONN_STATE_CIRCUIT_WAIT || (s) == AP_CONN_STATE_NATD_WAIT)
+
 #define connection_mark_unattached_ap(conn, endreason)                  \
   connection_mark_unattached_ap_((conn), (endreason), __LINE__, SHORT_FILE__)
 
@@ -198,4 +246,3 @@ STATIC int connection_ap_process_http_connect(entry_connection_t *conn);
 #endif /* defined(CONNECTION_EDGE_PRIVATE) */
 
 #endif /* !defined(TOR_CONNECTION_EDGE_H) */
-

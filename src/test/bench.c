@@ -19,6 +19,7 @@
 #include <openssl/ecdh.h>
 #include <openssl/obj_mac.h>
 
+#include "or/circuitlist.h"
 #include "or/config.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_dh.h"

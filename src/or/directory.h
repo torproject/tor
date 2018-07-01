@@ -16,6 +16,79 @@
 enum compress_method_t;
 
 dir_connection_t *TO_DIR_CONN(connection_t *c);
+
+#define DIR_CONN_STATE_MIN_ 1
+/** State for connection to directory server: waiting for connect(). */
+#define DIR_CONN_STATE_CONNECTING 1
+/** State for connection to directory server: sending HTTP request. */
+#define DIR_CONN_STATE_CLIENT_SENDING 2
+/** State for connection to directory server: reading HTTP response. */
+#define DIR_CONN_STATE_CLIENT_READING 3
+/** State for connection to directory server: happy and finished. */
+#define DIR_CONN_STATE_CLIENT_FINISHED 4
+/** State for connection at directory server: waiting for HTTP request. */
+#define DIR_CONN_STATE_SERVER_COMMAND_WAIT 5
+/** State for connection at directory server: sending HTTP response. */
+#define DIR_CONN_STATE_SERVER_WRITING 6
+#define DIR_CONN_STATE_MAX_ 6
+
+#define DIR_PURPOSE_MIN_ 4
+/** A connection to a directory server: set after a v2 rendezvous
+ * descriptor is downloaded. */
+#define DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2 4
+/** A connection to a directory server: download one or more server
+ * descriptors. */
+#define DIR_PURPOSE_FETCH_SERVERDESC 6
+/** A connection to a directory server: download one or more extra-info
+ * documents. */
+#define DIR_PURPOSE_FETCH_EXTRAINFO 7
+/** A connection to a directory server: upload a server descriptor. */
+#define DIR_PURPOSE_UPLOAD_DIR 8
+/** A connection to a directory server: upload a v3 networkstatus vote. */
+#define DIR_PURPOSE_UPLOAD_VOTE 10
+/** A connection to a directory server: upload a v3 consensus signature */
+#define DIR_PURPOSE_UPLOAD_SIGNATURES 11
+/** A connection to a directory server: download one or more v3 networkstatus
+ * votes. */
+#define DIR_PURPOSE_FETCH_STATUS_VOTE 12
+/** A connection to a directory server: download a v3 detached signatures
+ * object for a consensus. */
+#define DIR_PURPOSE_FETCH_DETACHED_SIGNATURES 13
+/** A connection to a directory server: download a v3 networkstatus
+ * consensus. */
+#define DIR_PURPOSE_FETCH_CONSENSUS 14
+/** A connection to a directory server: download one or more directory
+ * authority certificates. */
+#define DIR_PURPOSE_FETCH_CERTIFICATE 15
+
+/** Purpose for connection at a directory server. */
+#define DIR_PURPOSE_SERVER 16
+/** A connection to a hidden service directory server: upload a v2 rendezvous
+ * descriptor. */
+#define DIR_PURPOSE_UPLOAD_RENDDESC_V2 17
+/** A connection to a hidden service directory server: download a v2 rendezvous
+ * descriptor. */
+#define DIR_PURPOSE_FETCH_RENDDESC_V2 18
+/** A connection to a directory server: download a microdescriptor. */
+#define DIR_PURPOSE_FETCH_MICRODESC 19
+/** A connection to a hidden service directory: upload a v3 descriptor. */
+#define DIR_PURPOSE_UPLOAD_HSDESC 20
+/** A connection to a hidden service directory: fetch a v3 descriptor. */
+#define DIR_PURPOSE_FETCH_HSDESC 21
+/** A connection to a directory server: set after a hidden service descriptor
+ * is downloaded. */
+#define DIR_PURPOSE_HAS_FETCHED_HSDESC 22
+#define DIR_PURPOSE_MAX_ 22
+
+/** True iff <b>p</b> is a purpose corresponding to uploading
+ * data to a directory server. */
+#define DIR_PURPOSE_IS_UPLOAD(p)                \
+  ((p)==DIR_PURPOSE_UPLOAD_DIR ||               \
+   (p)==DIR_PURPOSE_UPLOAD_VOTE ||              \
+   (p)==DIR_PURPOSE_UPLOAD_SIGNATURES ||        \
+   (p)==DIR_PURPOSE_UPLOAD_RENDDESC_V2 ||       \
+   (p)==DIR_PURPOSE_UPLOAD_HSDESC)
+
 int directories_have_accepted_server_descriptor(void);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   dirinfo_type_t type, const char *payload,

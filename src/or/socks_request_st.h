@@ -7,6 +7,23 @@
 #ifndef SOCKS_REQUEST_ST_H
 #define SOCKS_REQUEST_ST_H
 
+#define MAX_SOCKS_REPLY_LEN 1024
+
+#define SOCKS_NO_AUTH 0x00
+#define SOCKS_USER_PASS 0x02
+
+/** Please open a TCP connection to this addr:port. */
+#define SOCKS_COMMAND_CONNECT       0x01
+/** Please turn this FQDN into an IP address, privately. */
+#define SOCKS_COMMAND_RESOLVE       0xF0
+/** Please turn this IP address into an FQDN, privately. */
+#define SOCKS_COMMAND_RESOLVE_PTR   0xF1
+
+/* || 0 is for -Wparentheses-equality (-Wall?) appeasement under clang */
+#define SOCKS_COMMAND_IS_CONNECT(c) (((c)==SOCKS_COMMAND_CONNECT) || 0)
+#define SOCKS_COMMAND_IS_RESOLVE(c) ((c)==SOCKS_COMMAND_RESOLVE || \
+                                     (c)==SOCKS_COMMAND_RESOLVE_PTR)
+
 /** State of a SOCKS request from a user to an OP.  Also used to encode other
  * information for non-socks user request (such as those on TransPort and
  * DNSPort) */
@@ -56,4 +73,3 @@ struct socks_request_t {
 };
 
 #endif
-

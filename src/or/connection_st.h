@@ -9,6 +9,16 @@
 
 struct buf_t;
 
+/* Values for connection_t.magic: used to make sure that downcasts (casts from
+* connection_t to foo_connection_t) are safe. */
+#define BASE_CONNECTION_MAGIC 0x7C3C304Eu
+#define OR_CONNECTION_MAGIC 0x7D31FF03u
+#define EDGE_CONNECTION_MAGIC 0xF0374013u
+#define ENTRY_CONNECTION_MAGIC 0xbb4a5703
+#define DIR_CONNECTION_MAGIC 0x9988ffeeu
+#define CONTROL_CONNECTION_MAGIC 0x8abc765du
+#define LISTENER_CONNECTION_MAGIC 0x1a1ac741u
+
 /** Description of a connection to another host or process, and associated
  * data.
  *
@@ -127,5 +137,13 @@ struct connection_t {
    * Only used if we're configured to emit CONN_BW events. */
   uint32_t n_written_conn_bw;
 };
+
+/** True iff <b>x</b> is an edge connection. */
+#define CONN_IS_EDGE(x) \
+  ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
+
+/** True iff the purpose of <b>conn</b> means that it's a server-side
+ * directory connection. */
+#define DIR_CONN_IS_SERVER(conn) ((conn)->purpose == DIR_PURPOSE_SERVER)
 
 #endif

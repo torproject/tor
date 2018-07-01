@@ -19,6 +19,7 @@
 
 #include "or/or.h"
 #include "or/bridges.h"
+#include "or/connection.h"
 #include "or/confparse.h"
 #include "or/config.h"
 #include "or/control.h"

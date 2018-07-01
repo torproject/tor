@@ -147,6 +147,10 @@ static const char unix_socket_prefix[] = "unix:";
  * configuration. */
 static const char unix_q_socket_prefix[] = "unix:\"";
 
+/* limits for TCP send and recv buffer size used for constrained sockets */
+#define MIN_CONSTRAINED_TCP_BUFFER 2048
+#define MAX_CONSTRAINED_TCP_BUFFER 262144  /* 256k */
+
 /** macro to help with the bulk rename of *DownloadSchedule to
  * *DowloadInitialDelay . */
 #define DOWNLOAD_SCHEDULE(name) \

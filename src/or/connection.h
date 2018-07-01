@@ -16,6 +16,71 @@ listener_connection_t *TO_LISTENER_CONN(connection_t *);
 
 struct buf_t;
 
+#define CONN_TYPE_MIN_ 3
+/** Type for sockets listening for OR connections. */
+#define CONN_TYPE_OR_LISTENER 3
+/** A bidirectional TLS connection transmitting a sequence of cells.
+ * May be from an OR to an OR, or from an OP to an OR. */
+#define CONN_TYPE_OR 4
+/** A TCP connection from an onion router to a stream's destination. */
+#define CONN_TYPE_EXIT 5
+/** Type for sockets listening for SOCKS connections. */
+#define CONN_TYPE_AP_LISTENER 6
+/** A SOCKS proxy connection from the user application to the onion
+ * proxy. */
+#define CONN_TYPE_AP 7
+/** Type for sockets listening for HTTP connections to the directory server. */
+#define CONN_TYPE_DIR_LISTENER 8
+/** Type for HTTP connections to the directory server. */
+#define CONN_TYPE_DIR 9
+/* Type 10 is unused. */
+/** Type for listening for connections from user interface process. */
+#define CONN_TYPE_CONTROL_LISTENER 11
+/** Type for connections from user interface process. */
+#define CONN_TYPE_CONTROL 12
+/** Type for sockets listening for transparent connections redirected by pf or
+ * netfilter. */
+#define CONN_TYPE_AP_TRANS_LISTENER 13
+/** Type for sockets listening for transparent connections redirected by
+ * natd. */
+#define CONN_TYPE_AP_NATD_LISTENER 14
+/** Type for sockets listening for DNS requests. */
+#define CONN_TYPE_AP_DNS_LISTENER 15
+
+/** Type for connections from the Extended ORPort. */
+#define CONN_TYPE_EXT_OR 16
+/** Type for sockets listening for Extended ORPort connections. */
+#define CONN_TYPE_EXT_OR_LISTENER 17
+/** Type for sockets listening for HTTP CONNECT tunnel connections. */
+#define CONN_TYPE_AP_HTTP_CONNECT_LISTENER 18
+
+#define CONN_TYPE_MAX_ 19
+/* !!!! If _CONN_TYPE_MAX is ever over 31, we must grow the type field in
+ * connection_t. */
+
+/* Proxy client handshake states */
+/* We use a proxy but we haven't even connected to it yet. */
+#define PROXY_INFANT 1
+/* We use an HTTP proxy and we've sent the CONNECT command. */
+#define PROXY_HTTPS_WANT_CONNECT_OK 2
+/* We use a SOCKS4 proxy and we've sent the CONNECT command. */
+#define PROXY_SOCKS4_WANT_CONNECT_OK 3
+/* We use a SOCKS5 proxy and we try to negotiate without
+   any authentication . */
+#define PROXY_SOCKS5_WANT_AUTH_METHOD_NONE 4
+/* We use a SOCKS5 proxy and we try to negotiate with
+   Username/Password authentication . */
+#define PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929 5
+/* We use a SOCKS5 proxy and we just sent our credentials. */
+#define PROXY_SOCKS5_WANT_AUTH_RFC1929_OK 6
+/* We use a SOCKS5 proxy and we just sent our CONNECT command. */
+#define PROXY_SOCKS5_WANT_CONNECT_OK 7
+/* We use a proxy and we CONNECTed successfully!. */
+#define PROXY_CONNECTED 8
+
+/** State for any listener connection. */
+#define LISTENER_STATE_READY 0
+
 const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 int conn_listener_type_supports_af_unix(int type);

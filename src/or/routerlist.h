@@ -68,6 +68,35 @@ typedef enum bandwidth_weight_rule_t {
   WEIGHT_FOR_DIR
 } bandwidth_weight_rule_t;
 
+/* Flags for pick_directory_server() and pick_trusteddirserver(). */
+/** Flag to indicate that we should not automatically be willing to use
+ * ourself to answer a directory request.
+ * Passed to router_pick_directory_server (et al).*/
+#define PDS_ALLOW_SELF                 (1<<0)
+/** Flag to indicate that if no servers seem to be up, we should mark all
+ * directory servers as up and try again.
+ * Passed to router_pick_directory_server (et al).*/
+#define PDS_RETRY_IF_NO_SERVERS        (1<<1)
+/** Flag to indicate that we should not exclude directory servers that
+ * our ReachableAddress settings would exclude.  This usually means that
+ * we're going to connect to the server over Tor, and so we don't need to
+ * worry about our firewall telling us we can't.
+ * Passed to router_pick_directory_server (et al).*/
+#define PDS_IGNORE_FASCISTFIREWALL     (1<<2)
+/** Flag to indicate that we should not use any directory authority to which
+ * we have an existing directory connection for downloading server descriptors
+ * or extrainfo documents.
+ *
+ * Passed to router_pick_directory_server (et al)
+ */
+#define PDS_NO_EXISTING_SERVERDESC_FETCH (1<<3)
+/** Flag to indicate that we should not use any directory authority to which
+ * we have an existing directory connection for downloading microdescs.
+ *
+ * Passed to router_pick_directory_server (et al)
+ */
+#define PDS_NO_EXISTING_MICRODESC_FETCH (1<<4)
+
 int get_n_authorities(dirinfo_type_t type);
 int trusted_dirs_reload_certs(void);
 

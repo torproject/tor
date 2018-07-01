@@ -11,6 +11,7 @@
 #include "or/or.h"
 #include "or/channel.h"
 #include "or/config.h"
+#include "or/connection.h"
 #include "or/connection_or.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "or/geoip.h"
@@ -798,4 +799,3 @@ dos_init(void)
   /* To initialize, we only need to get the parameters. */
   set_dos_parameters(NULL);
 }
-

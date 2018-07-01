@@ -13,6 +13,15 @@
 
 struct hs_token_t;
 
+/** "magic" value for an origin_circuit_t */
+#define ORIGIN_CIRCUIT_MAGIC 0x35315243u
+/** "magic" value for an or_circuit_t */
+#define OR_CIRCUIT_MAGIC 0x98ABC04Fu
+/** "magic" value for a circuit that would have been freed by circuit_free,
+ * but which we're keeping around until a cpuworker reply arrives.  See
+ * circuit_free() for more documentation. */
+#define DEAD_CIRCUIT_MAGIC 0xdeadc14c
+
 /**
  * A circuit is a path over the onion routing
  * network. Applications can connect to one end of the circuit, and can

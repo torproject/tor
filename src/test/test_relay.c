@@ -4,6 +4,7 @@
 #include "or/or.h"
 #define CIRCUITBUILD_PRIVATE
 #include "or/circuitbuild.h"
+#include "or/circuitlist.h"
 #define RELAY_PRIVATE
 #include "or/relay.h"
 /* For init/free stuff */
@@ -130,4 +131,3 @@ struct testcase_t relay_tests[] = {
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

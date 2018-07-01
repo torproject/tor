@@ -126,17 +126,9 @@ struct curve25519_public_key_t;
  * equal sign or tilde, nickname. */
 #define MAX_VERBOSE_NICKNAME_LEN (1+HEX_DIGEST_LEN+1+MAX_NICKNAME_LEN)
 
-/** Maximum size, in bytes, for resized buffers. */
-#define MAX_BUF_SIZE ((1<<24)-1) /* 16MB-1 */
-/** Maximum size, in bytes, for any directory object that we've downloaded. */
-#define MAX_DIR_DL_SIZE MAX_BUF_SIZE
-
 /** For HTTP parsing: Maximum number of bytes we'll accept in the headers
  * of an HTTP request or response. */
 #define MAX_HEADERS_SIZE 50000
-/** Maximum size, in bytes, for any directory object that we're accepting
- * as an upload. */
-#define MAX_DIR_UL_SIZE MAX_BUF_SIZE
 
 /** Maximum size, in bytes, of a single router descriptor uploaded to us
  * as a directory authority. Caches and clients fetch whatever descriptors
@@ -179,48 +171,6 @@ struct curve25519_public_key_t;
 /** How old do we let a saved descriptor get before force-removing it? */
 #define OLD_ROUTER_DESC_MAX_AGE (60*60*24*5)
 
-#define CONN_TYPE_MIN_ 3
-/** Type for sockets listening for OR connections. */
-#define CONN_TYPE_OR_LISTENER 3
-/** A bidirectional TLS connection transmitting a sequence of cells.
- * May be from an OR to an OR, or from an OP to an OR. */
-#define CONN_TYPE_OR 4
-/** A TCP connection from an onion router to a stream's destination. */
-#define CONN_TYPE_EXIT 5
-/** Type for sockets listening for SOCKS connections. */
-#define CONN_TYPE_AP_LISTENER 6
-/** A SOCKS proxy connection from the user application to the onion
- * proxy. */
-#define CONN_TYPE_AP 7
-/** Type for sockets listening for HTTP connections to the directory server. */
-#define CONN_TYPE_DIR_LISTENER 8
-/** Type for HTTP connections to the directory server. */
-#define CONN_TYPE_DIR 9
-/* Type 10 is unused. */
-/** Type for listening for connections from user interface process. */
-#define CONN_TYPE_CONTROL_LISTENER 11
-/** Type for connections from user interface process. */
-#define CONN_TYPE_CONTROL 12
-/** Type for sockets listening for transparent connections redirected by pf or
- * netfilter. */
-#define CONN_TYPE_AP_TRANS_LISTENER 13
-/** Type for sockets listening for transparent connections redirected by
- * natd. */
-#define CONN_TYPE_AP_NATD_LISTENER 14
-/** Type for sockets listening for DNS requests. */
-#define CONN_TYPE_AP_DNS_LISTENER 15
-
-/** Type for connections from the Extended ORPort. */
-#define CONN_TYPE_EXT_OR 16
-/** Type for sockets listening for Extended ORPort connections. */
-#define CONN_TYPE_EXT_OR_LISTENER 17
-/** Type for sockets listening for HTTP CONNECT tunnel connections. */
-#define CONN_TYPE_AP_HTTP_CONNECT_LISTENER 18
-
-#define CONN_TYPE_MAX_ 19
-/* !!!! If _CONN_TYPE_MAX is ever over 31, we must grow the type field in
- * connection_t. */
-
 /* Proxy client types */
 #define PROXY_NONE 0
 #define PROXY_CONNECT 1
@@ -232,355 +182,6 @@ struct curve25519_public_key_t;
 /* Pluggable transport proxy type. Don't use this in or_connection_t,
  * instead use the actual underlying proxy type (see above).  */
 #define PROXY_PLUGGABLE 4
-
-/* Proxy client handshake states */
-/* We use a proxy but we haven't even connected to it yet. */
-#define PROXY_INFANT 1
-/* We use an HTTP proxy and we've sent the CONNECT command. */
-#define PROXY_HTTPS_WANT_CONNECT_OK 2
-/* We use a SOCKS4 proxy and we've sent the CONNECT command. */
-#define PROXY_SOCKS4_WANT_CONNECT_OK 3
-/* We use a SOCKS5 proxy and we try to negotiate without
-   any authentication . */
-#define PROXY_SOCKS5_WANT_AUTH_METHOD_NONE 4
-/* We use a SOCKS5 proxy and we try to negotiate with
-   Username/Password authentication . */
-#define PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929 5
-/* We use a SOCKS5 proxy and we just sent our credentials. */
-#define PROXY_SOCKS5_WANT_AUTH_RFC1929_OK 6
-/* We use a SOCKS5 proxy and we just sent our CONNECT command. */
-#define PROXY_SOCKS5_WANT_CONNECT_OK 7
-/* We use a proxy and we CONNECTed successfully!. */
-#define PROXY_CONNECTED 8
-
-/** True iff <b>x</b> is an edge connection. */
-#define CONN_IS_EDGE(x) \
-  ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
-
-/** State for any listener connection. */
-#define LISTENER_STATE_READY 0
-
-#define OR_CONN_STATE_MIN_ 1
-/** State for a connection to an OR: waiting for connect() to finish. */
-#define OR_CONN_STATE_CONNECTING 1
-/** State for a connection to an OR: waiting for proxy handshake to complete */
-#define OR_CONN_STATE_PROXY_HANDSHAKING 2
-/** State for an OR connection client: SSL is handshaking, not done
- * yet. */
-#define OR_CONN_STATE_TLS_HANDSHAKING 3
-/** State for a connection to an OR: We're doing a second SSL handshake for
- * renegotiation purposes. (V2 handshake only.) */
-#define OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING 4
-/** State for a connection at an OR: We're waiting for the client to
- * renegotiate (to indicate a v2 handshake) or send a versions cell (to
- * indicate a v3 handshake) */
-#define OR_CONN_STATE_TLS_SERVER_RENEGOTIATING 5
-/** State for an OR connection: We're done with our SSL handshake, we've done
- * renegotiation, but we haven't yet negotiated link protocol versions and
- * sent a netinfo cell. */
-#define OR_CONN_STATE_OR_HANDSHAKING_V2 6
-/** State for an OR connection: We're done with our SSL handshake, but we
- * haven't yet negotiated link protocol versions, done a V3 handshake, and
- * sent a netinfo cell. */
-#define OR_CONN_STATE_OR_HANDSHAKING_V3 7
-/** State for an OR connection: Ready to send/receive cells. */
-#define OR_CONN_STATE_OPEN 8
-#define OR_CONN_STATE_MAX_ 8
-
-/** States of the Extended ORPort protocol. Be careful before changing
- *  the numbers: they matter. */
-#define EXT_OR_CONN_STATE_MIN_ 1
-/** Extended ORPort authentication is waiting for the authentication
- *  type selected by the client. */
-#define EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE 1
-/** Extended ORPort authentication is waiting for the client nonce. */
-#define EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE 2
-/** Extended ORPort authentication is waiting for the client hash. */
-#define EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH 3
-#define EXT_OR_CONN_STATE_AUTH_MAX 3
-/** Authentication finished and the Extended ORPort is now accepting
- *  traffic. */
-#define EXT_OR_CONN_STATE_OPEN 4
-/** Extended ORPort is flushing its last messages and preparing to
- *  start accepting OR connections. */
-#define EXT_OR_CONN_STATE_FLUSHING 5
-#define EXT_OR_CONN_STATE_MAX_ 5
-
-#define EXIT_CONN_STATE_MIN_ 1
-/** State for an exit connection: waiting for response from DNS farm. */
-#define EXIT_CONN_STATE_RESOLVING 1
-/** State for an exit connection: waiting for connect() to finish. */
-#define EXIT_CONN_STATE_CONNECTING 2
-/** State for an exit connection: open and ready to transmit data. */
-#define EXIT_CONN_STATE_OPEN 3
-/** State for an exit connection: waiting to be removed. */
-#define EXIT_CONN_STATE_RESOLVEFAILED 4
-#define EXIT_CONN_STATE_MAX_ 4
-
-/* The AP state values must be disjoint from the EXIT state values. */
-#define AP_CONN_STATE_MIN_ 5
-/** State for a SOCKS connection: waiting for SOCKS request. */
-#define AP_CONN_STATE_SOCKS_WAIT 5
-/** State for a SOCKS connection: got a y.onion URL; waiting to receive
- * rendezvous descriptor. */
-#define AP_CONN_STATE_RENDDESC_WAIT 6
-/** The controller will attach this connection to a circuit; it isn't our
- * job to do so. */
-#define AP_CONN_STATE_CONTROLLER_WAIT 7
-/** State for a SOCKS connection: waiting for a completed circuit. */
-#define AP_CONN_STATE_CIRCUIT_WAIT 8
-/** State for a SOCKS connection: sent BEGIN, waiting for CONNECTED. */
-#define AP_CONN_STATE_CONNECT_WAIT 9
-/** State for a SOCKS connection: sent RESOLVE, waiting for RESOLVED. */
-#define AP_CONN_STATE_RESOLVE_WAIT 10
-/** State for a SOCKS connection: ready to send and receive. */
-#define AP_CONN_STATE_OPEN 11
-/** State for a transparent natd connection: waiting for original
- * destination. */
-#define AP_CONN_STATE_NATD_WAIT 12
-/** State for an HTTP tunnel: waiting for an HTTP CONNECT command. */
-#define AP_CONN_STATE_HTTP_CONNECT_WAIT 13
-#define AP_CONN_STATE_MAX_ 13
-
-/** True iff the AP_CONN_STATE_* value <b>s</b> means that the corresponding
- * edge connection is not attached to any circuit. */
-#define AP_CONN_STATE_IS_UNATTACHED(s) \
-  ((s) <= AP_CONN_STATE_CIRCUIT_WAIT || (s) == AP_CONN_STATE_NATD_WAIT)
-
-#define DIR_CONN_STATE_MIN_ 1
-/** State for connection to directory server: waiting for connect(). */
-#define DIR_CONN_STATE_CONNECTING 1
-/** State for connection to directory server: sending HTTP request. */
-#define DIR_CONN_STATE_CLIENT_SENDING 2
-/** State for connection to directory server: reading HTTP response. */
-#define DIR_CONN_STATE_CLIENT_READING 3
-/** State for connection to directory server: happy and finished. */
-#define DIR_CONN_STATE_CLIENT_FINISHED 4
-/** State for connection at directory server: waiting for HTTP request. */
-#define DIR_CONN_STATE_SERVER_COMMAND_WAIT 5
-/** State for connection at directory server: sending HTTP response. */
-#define DIR_CONN_STATE_SERVER_WRITING 6
-#define DIR_CONN_STATE_MAX_ 6
-
-/** True iff the purpose of <b>conn</b> means that it's a server-side
- * directory connection. */
-#define DIR_CONN_IS_SERVER(conn) ((conn)->purpose == DIR_PURPOSE_SERVER)
-
-#define CONTROL_CONN_STATE_MIN_ 1
-/** State for a control connection: Authenticated and accepting v1 commands. */
-#define CONTROL_CONN_STATE_OPEN 1
-/** State for a control connection: Waiting for authentication; speaking
- * protocol v1. */
-#define CONTROL_CONN_STATE_NEEDAUTH 2
-#define CONTROL_CONN_STATE_MAX_ 2
-
-#define DIR_PURPOSE_MIN_ 4
-/** A connection to a directory server: set after a v2 rendezvous
- * descriptor is downloaded. */
-#define DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2 4
-/** A connection to a directory server: download one or more server
- * descriptors. */
-#define DIR_PURPOSE_FETCH_SERVERDESC 6
-/** A connection to a directory server: download one or more extra-info
- * documents. */
-#define DIR_PURPOSE_FETCH_EXTRAINFO 7
-/** A connection to a directory server: upload a server descriptor. */
-#define DIR_PURPOSE_UPLOAD_DIR 8
-/** A connection to a directory server: upload a v3 networkstatus vote. */
-#define DIR_PURPOSE_UPLOAD_VOTE 10
-/** A connection to a directory server: upload a v3 consensus signature */
-#define DIR_PURPOSE_UPLOAD_SIGNATURES 11
-/** A connection to a directory server: download one or more v3 networkstatus
- * votes. */
-#define DIR_PURPOSE_FETCH_STATUS_VOTE 12
-/** A connection to a directory server: download a v3 detached signatures
- * object for a consensus. */
-#define DIR_PURPOSE_FETCH_DETACHED_SIGNATURES 13
-/** A connection to a directory server: download a v3 networkstatus
- * consensus. */
-#define DIR_PURPOSE_FETCH_CONSENSUS 14
-/** A connection to a directory server: download one or more directory
- * authority certificates. */
-#define DIR_PURPOSE_FETCH_CERTIFICATE 15
-
-/** Purpose for connection at a directory server. */
-#define DIR_PURPOSE_SERVER 16
-/** A connection to a hidden service directory server: upload a v2 rendezvous
- * descriptor. */
-#define DIR_PURPOSE_UPLOAD_RENDDESC_V2 17
-/** A connection to a hidden service directory server: download a v2 rendezvous
- * descriptor. */
-#define DIR_PURPOSE_FETCH_RENDDESC_V2 18
-/** A connection to a directory server: download a microdescriptor. */
-#define DIR_PURPOSE_FETCH_MICRODESC 19
-/** A connection to a hidden service directory: upload a v3 descriptor. */
-#define DIR_PURPOSE_UPLOAD_HSDESC 20
-/** A connection to a hidden service directory: fetch a v3 descriptor. */
-#define DIR_PURPOSE_FETCH_HSDESC 21
-/** A connection to a directory server: set after a hidden service descriptor
- * is downloaded. */
-#define DIR_PURPOSE_HAS_FETCHED_HSDESC 22
-#define DIR_PURPOSE_MAX_ 22
-
-/** True iff <b>p</b> is a purpose corresponding to uploading
- * data to a directory server. */
-#define DIR_PURPOSE_IS_UPLOAD(p)                \
-  ((p)==DIR_PURPOSE_UPLOAD_DIR ||               \
-   (p)==DIR_PURPOSE_UPLOAD_VOTE ||              \
-   (p)==DIR_PURPOSE_UPLOAD_SIGNATURES ||        \
-   (p)==DIR_PURPOSE_UPLOAD_RENDDESC_V2 ||       \
-   (p)==DIR_PURPOSE_UPLOAD_HSDESC)
-
-#define EXIT_PURPOSE_MIN_ 1
-/** This exit stream wants to do an ordinary connect. */
-#define EXIT_PURPOSE_CONNECT 1
-/** This exit stream wants to do a resolve (either normal or reverse). */
-#define EXIT_PURPOSE_RESOLVE 2
-#define EXIT_PURPOSE_MAX_ 2
-
-/* !!!! If any connection purpose is ever over 31, we must grow the type
- * field in connection_t. */
-
-/** Circuit state: I'm the origin, still haven't done all my handshakes. */
-#define CIRCUIT_STATE_BUILDING 0
-/** Circuit state: Waiting to process the onionskin. */
-#define CIRCUIT_STATE_ONIONSKIN_PENDING 1
-/** Circuit state: I'd like to deliver a create, but my n_chan is still
- * connecting. */
-#define CIRCUIT_STATE_CHAN_WAIT 2
-/** Circuit state: the circuit is open but we don't want to actually use it
- * until we find out if a better guard will be available.
- */
-#define CIRCUIT_STATE_GUARD_WAIT 3
-/** Circuit state: onionskin(s) processed, ready to send/receive cells. */
-#define CIRCUIT_STATE_OPEN 4
-
-#define CIRCUIT_PURPOSE_MIN_ 1
-
-/* these circuits were initiated elsewhere */
-#define CIRCUIT_PURPOSE_OR_MIN_ 1
-/** OR-side circuit purpose: normal circuit, at OR. */
-#define CIRCUIT_PURPOSE_OR 1
-/** OR-side circuit purpose: At OR, from the service, waiting for intro from
- * clients. */
-#define CIRCUIT_PURPOSE_INTRO_POINT 2
-/** OR-side circuit purpose: At OR, from the client, waiting for the service.
- */
-#define CIRCUIT_PURPOSE_REND_POINT_WAITING 3
-/** OR-side circuit purpose: At OR, both circuits have this purpose. */
-#define CIRCUIT_PURPOSE_REND_ESTABLISHED 4
-#define CIRCUIT_PURPOSE_OR_MAX_ 4
-
-/* these circuits originate at this node */
-
-/* here's how circ client-side purposes work:
- *   normal circuits are C_GENERAL.
- *   circuits that are c_introducing are either on their way to
- *     becoming open, or they are open and waiting for a
- *     suitable rendcirc before they send the intro.
- *   circuits that are c_introduce_ack_wait have sent the intro,
- *     but haven't gotten a response yet.
- *   circuits that are c_establish_rend are either on their way
- *     to becoming open, or they are open and have sent the
- *     establish_rendezvous cell but haven't received an ack.
- *   circuits that are c_rend_ready are open and have received a
- *     rend ack, but haven't heard from the service yet. if they have a
- *     buildstate->pending_final_cpath then they're expecting a
- *     cell from the service, else they're not.
- *   circuits that are c_rend_ready_intro_acked are open, and
- *     some intro circ has sent its intro and received an ack.
- *   circuits that are c_rend_joined are open, have heard from
- *     the service, and are talking to it.
- */
-/** Client-side circuit purpose: Normal circuit, with cpath. */
-#define CIRCUIT_PURPOSE_C_GENERAL 5
-#define CIRCUIT_PURPOSE_C_HS_MIN_ 6
-/** Client-side circuit purpose: at the client, connecting to intro point. */
-#define CIRCUIT_PURPOSE_C_INTRODUCING 6
-/** Client-side circuit purpose: at the client, sent INTRODUCE1 to intro point,
- * waiting for ACK/NAK. */
-#define CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT 7
-/** Client-side circuit purpose: at the client, introduced and acked, closing.
- */
-#define CIRCUIT_PURPOSE_C_INTRODUCE_ACKED 8
-/** Client-side circuit purpose: at the client, waiting for ack. */
-#define CIRCUIT_PURPOSE_C_ESTABLISH_REND 9
-/** Client-side circuit purpose: at the client, waiting for the service. */
-#define CIRCUIT_PURPOSE_C_REND_READY 10
-/** Client-side circuit purpose: at the client, waiting for the service,
- * INTRODUCE has been acknowledged. */
-#define CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED 11
-/** Client-side circuit purpose: at the client, rendezvous established. */
-#define CIRCUIT_PURPOSE_C_REND_JOINED 12
-/** This circuit is used for getting hsdirs */
-#define CIRCUIT_PURPOSE_C_HSDIR_GET 13
-#define CIRCUIT_PURPOSE_C_HS_MAX_ 13
-/** This circuit is used for build time measurement only */
-#define CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT 14
-#define CIRCUIT_PURPOSE_C_MAX_ 14
-
-#define CIRCUIT_PURPOSE_S_HS_MIN_ 15
-/** Hidden-service-side circuit purpose: at the service, waiting for
- * introductions. */
-#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 15
-/** Hidden-service-side circuit purpose: at the service, successfully
- * established intro. */
-#define CIRCUIT_PURPOSE_S_INTRO 16
-/** Hidden-service-side circuit purpose: at the service, connecting to rend
- * point. */
-#define CIRCUIT_PURPOSE_S_CONNECT_REND 17
-/** Hidden-service-side circuit purpose: at the service, rendezvous
- * established. */
-#define CIRCUIT_PURPOSE_S_REND_JOINED 18
-/** This circuit is used for uploading hsdirs */
-#define CIRCUIT_PURPOSE_S_HSDIR_POST 19
-#define CIRCUIT_PURPOSE_S_HS_MAX_ 19
-
-/** A testing circuit; not meant to be used for actual traffic. */
-#define CIRCUIT_PURPOSE_TESTING 20
-/** A controller made this circuit and Tor should not use it. */
-#define CIRCUIT_PURPOSE_CONTROLLER 21
-/** This circuit is used for path bias probing only */
-#define CIRCUIT_PURPOSE_PATH_BIAS_TESTING 22
-
-/** This circuit is used for vanguards/restricted paths.
- *
- *  This type of circuit is *only* created preemptively and never
- *  on-demand. When an HS operation needs to take place (e.g. connect to an
- *  intro point), these circuits are then cannibalized and repurposed to the
- *  actual needed HS purpose. */
-#define CIRCUIT_PURPOSE_HS_VANGUARDS 23
-
-#define CIRCUIT_PURPOSE_MAX_ 23
-/** A catch-all for unrecognized purposes. Currently we don't expect
- * to make or see any circuits with this purpose. */
-#define CIRCUIT_PURPOSE_UNKNOWN 255
-
-/** True iff the circuit purpose <b>p</b> is for a circuit that
- * originated at this node. */
-#define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>CIRCUIT_PURPOSE_OR_MAX_)
-/** True iff the circuit purpose <b>p</b> is for a circuit that originated
- * here to serve as a client.  (Hidden services don't count here.) */
-#define CIRCUIT_PURPOSE_IS_CLIENT(p)  \
-  ((p)> CIRCUIT_PURPOSE_OR_MAX_ &&    \
-   (p)<=CIRCUIT_PURPOSE_C_MAX_)
-/** True iff the circuit_t <b>c</b> is actually an origin_circuit_t. */
-#define CIRCUIT_IS_ORIGIN(c) (CIRCUIT_PURPOSE_IS_ORIGIN((c)->purpose))
-/** True iff the circuit purpose <b>p</b> is for an established rendezvous
- * circuit. */
-#define CIRCUIT_PURPOSE_IS_ESTABLISHED_REND(p) \
-  ((p) == CIRCUIT_PURPOSE_C_REND_JOINED ||     \
-   (p) == CIRCUIT_PURPOSE_S_REND_JOINED)
-/** True iff the circuit_t c is actually an or_circuit_t */
-#define CIRCUIT_IS_ORCIRC(c) (((circuit_t *)(c))->magic == OR_CIRCUIT_MAGIC)
-
-/** True iff this circuit purpose should count towards the global
- * pending rate limit (set by MaxClientCircuitsPending). We count all
- * general purpose circuits, as well as the first step of client onion
- * service connections (HSDir gets). */
-#define CIRCUIT_PURPOSE_COUNTS_TOWARDS_MAXPENDING(p) \
-    ((p) == CIRCUIT_PURPOSE_C_GENERAL || \
-     (p) == CIRCUIT_PURPOSE_C_HSDIR_GET)
 
 /** How many circuits do we want simultaneously in-progress to handle
  * a given stream? */
@@ -685,13 +286,6 @@ struct curve25519_public_key_t;
  * a socks reply, and no further reply needs to be sent from
  * connection_mark_unattached_ap(). */
 #define END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED 2048
-
-/** Reason for remapping an AP connection's address: we have a cached
- * answer. */
-#define REMAP_STREAM_SOURCE_CACHE 1
-/** Reason for remapping an AP connection's address: the exit node told us an
- * answer. */
-#define REMAP_STREAM_SOURCE_EXIT 2
 
 /* 'type' values to use in RESOLVED cells.  Specified in tor-spec.txt. */
 #define RESOLVED_TYPE_HOSTNAME 0
@@ -1051,16 +645,6 @@ typedef struct socks_request_t socks_request_t;
 typedef struct entry_port_cfg_t entry_port_cfg_t;
 typedef struct server_port_cfg_t server_port_cfg_t;
 
-/* Values for connection_t.magic: used to make sure that downcasts (casts from
-* connection_t to foo_connection_t) are safe. */
-#define BASE_CONNECTION_MAGIC 0x7C3C304Eu
-#define OR_CONNECTION_MAGIC 0x7D31FF03u
-#define EDGE_CONNECTION_MAGIC 0xF0374013u
-#define ENTRY_CONNECTION_MAGIC 0xbb4a5703
-#define DIR_CONNECTION_MAGIC 0x9988ffeeu
-#define CONTROL_CONNECTION_MAGIC 0x8abc765du
-#define LISTENER_CONNECTION_MAGIC 0x1a1ac741u
-
 /** Minimum length of the random part of an AUTH_CHALLENGE cell. */
 #define OR_AUTH_CHALLENGE_LEN 32
 
@@ -1345,15 +929,6 @@ typedef struct crypt_path_reference_t crypt_path_reference_t;
 
 typedef struct cpath_build_state_t cpath_build_state_t;
 
-/** "magic" value for an origin_circuit_t */
-#define ORIGIN_CIRCUIT_MAGIC 0x35315243u
-/** "magic" value for an or_circuit_t */
-#define OR_CIRCUIT_MAGIC 0x98ABC04Fu
-/** "magic" value for a circuit that would have been freed by circuit_free,
- * but which we're keeping around until a cpuworker reply arrives.  See
- * circuit_free() for more documentation. */
-#define DEAD_CIRCUIT_MAGIC 0xdeadc14c
-
 struct create_cell_t;
 
 /** Entry in the cell stats list of a circuit; used only if CELL_STATS
@@ -1441,10 +1016,6 @@ typedef enum {
 
 /** Convert a circuit subtype to a circuit_t. */
 #define TO_CIRCUIT(x)  (&((x)->base_))
-
-/* limits for TCP send and recv buffer size used for constrained sockets */
-#define MIN_CONSTRAINED_TCP_BUFFER 2048
-#define MAX_CONSTRAINED_TCP_BUFFER 262144  /* 256k */
 
 /** @name Isolation flags
 
@@ -2626,22 +2197,7 @@ typedef struct {
   time_t LastRotatedOnionKey;
 } or_state_t;
 
-#define MAX_SOCKS_REPLY_LEN 1024
 #define MAX_SOCKS_ADDR_LEN 256
-#define SOCKS_NO_AUTH 0x00
-#define SOCKS_USER_PASS 0x02
-
-/** Please open a TCP connection to this addr:port. */
-#define SOCKS_COMMAND_CONNECT       0x01
-/** Please turn this FQDN into an IP address, privately. */
-#define SOCKS_COMMAND_RESOLVE       0xF0
-/** Please turn this IP address into an FQDN, privately. */
-#define SOCKS_COMMAND_RESOLVE_PTR   0xF1
-
-/* || 0 is for -Wparentheses-equality (-Wall?) appeasement under clang */
-#define SOCKS_COMMAND_IS_CONNECT(c) (((c)==SOCKS_COMMAND_CONNECT) || 0)
-#define SOCKS_COMMAND_IS_RESOLVE(c) ((c)==SOCKS_COMMAND_RESOLVE || \
-                                     (c)==SOCKS_COMMAND_RESOLVE_PTR)
 
 /********************************* circuitbuild.c **********************/
 
@@ -2654,92 +2210,6 @@ typedef struct {
 #define BW_WEIGHT_SCALE   10000
 #define BW_MIN_WEIGHT_SCALE 1
 #define BW_MAX_WEIGHT_SCALE INT32_MAX
-
-/** Total size of the circuit timeout history to accumulate.
- * 1000 is approx 2.5 days worth of continual-use circuits. */
-#define CBT_NCIRCUITS_TO_OBSERVE 1000
-
-/** Width of the histogram bins in milliseconds */
-#define CBT_BIN_WIDTH ((build_time_t)50)
-
-/** Number of modes to use in the weighted-avg computation of Xm */
-#define CBT_DEFAULT_NUM_XM_MODES 3
-#define CBT_MIN_NUM_XM_MODES 1
-#define CBT_MAX_NUM_XM_MODES 20
-
-/** A build_time_t is milliseconds */
-typedef uint32_t build_time_t;
-
-/**
- * CBT_BUILD_ABANDONED is our flag value to represent a force-closed
- * circuit (Aka a 'right-censored' pareto value).
- */
-#define CBT_BUILD_ABANDONED ((build_time_t)(INT32_MAX-1))
-#define CBT_BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
-
-/** Save state every 10 circuits */
-#define CBT_SAVE_STATE_EVERY 10
-
-/* Circuit build times consensus parameters */
-
-/**
- * How long to wait before actually closing circuits that take too long to
- * build in terms of CDF quantile.
- */
-#define CBT_DEFAULT_CLOSE_QUANTILE 95
-#define CBT_MIN_CLOSE_QUANTILE CBT_MIN_QUANTILE_CUTOFF
-#define CBT_MAX_CLOSE_QUANTILE CBT_MAX_QUANTILE_CUTOFF
-
-/**
- * How many circuits count as recent when considering if the
- * connection has gone gimpy or changed.
- */
-#define CBT_DEFAULT_RECENT_CIRCUITS 20
-#define CBT_MIN_RECENT_CIRCUITS 3
-#define CBT_MAX_RECENT_CIRCUITS 1000
-
-/**
- * Maximum count of timeouts that finish the first hop in the past
- * RECENT_CIRCUITS before calculating a new timeout.
- *
- * This tells us whether to abandon timeout history and set
- * the timeout back to whatever circuit_build_times_get_initial_timeout()
- * gives us.
- */
-#define CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT (CBT_DEFAULT_RECENT_CIRCUITS*9/10)
-#define CBT_MIN_MAX_RECENT_TIMEOUT_COUNT 3
-#define CBT_MAX_MAX_RECENT_TIMEOUT_COUNT 10000
-
-/** Minimum circuits before estimating a timeout */
-#define CBT_DEFAULT_MIN_CIRCUITS_TO_OBSERVE 100
-#define CBT_MIN_MIN_CIRCUITS_TO_OBSERVE 1
-#define CBT_MAX_MIN_CIRCUITS_TO_OBSERVE 10000
-
-/** Cutoff percentile on the CDF for our timeout estimation. */
-#define CBT_DEFAULT_QUANTILE_CUTOFF 80
-#define CBT_MIN_QUANTILE_CUTOFF 10
-#define CBT_MAX_QUANTILE_CUTOFF 99
-double circuit_build_times_quantile_cutoff(void);
-
-/** How often in seconds should we build a test circuit */
-#define CBT_DEFAULT_TEST_FREQUENCY 10
-#define CBT_MIN_TEST_FREQUENCY 1
-#define CBT_MAX_TEST_FREQUENCY INT32_MAX
-
-/** Lowest allowable value for CircuitBuildTimeout in milliseconds */
-#define CBT_DEFAULT_TIMEOUT_MIN_VALUE (1500)
-#define CBT_MIN_TIMEOUT_MIN_VALUE 500
-#define CBT_MAX_TIMEOUT_MIN_VALUE INT32_MAX
-
-/** Initial circuit build timeout in milliseconds */
-#define CBT_DEFAULT_TIMEOUT_INITIAL_VALUE (60*1000)
-#define CBT_MIN_TIMEOUT_INITIAL_VALUE CBT_MIN_TIMEOUT_MIN_VALUE
-#define CBT_MAX_TIMEOUT_INITIAL_VALUE INT32_MAX
-int32_t circuit_build_times_initial_timeout(void);
-
-#if CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT < CBT_MIN_MAX_RECENT_TIMEOUT_COUNT
-#error "RECENT_CIRCUITS is set too low."
-#endif
 
 typedef struct circuit_build_times_s circuit_build_times_t;
 
@@ -2829,35 +2299,6 @@ typedef struct dir_server_t dir_server_t;
 #define BRIDGE_REQUIRED_MIN_BANDWIDTH (50*1024)
 
 #define ROUTER_MAX_DECLARED_BANDWIDTH INT32_MAX
-
-/* Flags for pick_directory_server() and pick_trusteddirserver(). */
-/** Flag to indicate that we should not automatically be willing to use
- * ourself to answer a directory request.
- * Passed to router_pick_directory_server (et al).*/
-#define PDS_ALLOW_SELF                 (1<<0)
-/** Flag to indicate that if no servers seem to be up, we should mark all
- * directory servers as up and try again.
- * Passed to router_pick_directory_server (et al).*/
-#define PDS_RETRY_IF_NO_SERVERS        (1<<1)
-/** Flag to indicate that we should not exclude directory servers that
- * our ReachableAddress settings would exclude.  This usually means that
- * we're going to connect to the server over Tor, and so we don't need to
- * worry about our firewall telling us we can't.
- * Passed to router_pick_directory_server (et al).*/
-#define PDS_IGNORE_FASCISTFIREWALL     (1<<2)
-/** Flag to indicate that we should not use any directory authority to which
- * we have an existing directory connection for downloading server descriptors
- * or extrainfo documents.
- *
- * Passed to router_pick_directory_server (et al)
- */
-#define PDS_NO_EXISTING_SERVERDESC_FETCH (1<<3)
-/** Flag to indicate that we should not use any directory authority to which
- * we have an existing directory connection for downloading microdescs.
- *
- * Passed to router_pick_directory_server (et al)
- */
-#define PDS_NO_EXISTING_MICRODESC_FETCH (1<<4)
 
 typedef struct tor_version_t tor_version_t;
 

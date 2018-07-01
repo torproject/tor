@@ -45,6 +45,7 @@
 #include "or/circuitstats.h"
 #include "or/config.h"
 #include "or/connection.h"
+#include "or/connection_edge.h"
 #include "or/connection_or.h"
 #include "or/consdiffmgr.h"
 #include "or/control.h"
@@ -2719,4 +2720,3 @@ networkstatus_free_all(void)
     tor_free(waiting->body);
   }
 }
-

@@ -84,6 +84,21 @@ typedef enum {
 
 control_connection_t *TO_CONTROL_CONN(connection_t *);
 
+#define CONTROL_CONN_STATE_MIN_ 1
+/** State for a control connection: Authenticated and accepting v1 commands. */
+#define CONTROL_CONN_STATE_OPEN 1
+/** State for a control connection: Waiting for authentication; speaking
+ * protocol v1. */
+#define CONTROL_CONN_STATE_NEEDAUTH 2
+#define CONTROL_CONN_STATE_MAX_ 2
+
+/** Reason for remapping an AP connection's address: we have a cached
+ * answer. */
+#define REMAP_STREAM_SOURCE_CACHE 1
+/** Reason for remapping an AP connection's address: the exit node told us an
+ * answer. */
+#define REMAP_STREAM_SOURCE_EXIT 2
+
 void control_initialize_event_queue(void);
 
 void control_update_global_event_mask(void);

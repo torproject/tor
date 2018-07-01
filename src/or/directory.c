@@ -144,6 +144,15 @@ static void connection_dir_close_consensus_fetches(
 
 /********* START VARIABLES **********/
 
+/** Maximum size, in bytes, for resized buffers. */
+#define MAX_BUF_SIZE ((1<<24)-1) /* 16MB-1 */
+/** Maximum size, in bytes, for any directory object that we've downloaded. */
+#define MAX_DIR_DL_SIZE MAX_BUF_SIZE
+
+/** Maximum size, in bytes, for any directory object that we're accepting
+ * as an upload. */
+#define MAX_DIR_UL_SIZE MAX_BUF_SIZE
+
 /** How far in the future do we allow a directory server to tell us it is
  * before deciding that one of us has the wrong time? */
 #define ALLOW_DIRECTORY_TIME_SKEW (30*60)

@@ -21,6 +21,9 @@ int circuit_build_times_disabled(const or_options_t *options);
 int circuit_build_times_disabled_(const or_options_t *options,
                                   int ignore_consensus);
 
+/** A build_time_t is milliseconds */
+typedef uint32_t build_time_t;
+
 int circuit_build_times_enough_to_compute(const circuit_build_times_t *cbt);
 void circuit_build_times_update_state(const circuit_build_times_t *cbt,
                                       or_state_t *state);
@@ -46,6 +49,89 @@ double circuit_build_times_close_rate(const circuit_build_times_t *cbt);
 
 void circuit_build_times_update_last_circ(circuit_build_times_t *cbt);
 void circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ);
+
+/** Total size of the circuit timeout history to accumulate.
+ * 1000 is approx 2.5 days worth of continual-use circuits. */
+#define CBT_NCIRCUITS_TO_OBSERVE 1000
+
+/** Width of the histogram bins in milliseconds */
+#define CBT_BIN_WIDTH ((build_time_t)50)
+
+/** Number of modes to use in the weighted-avg computation of Xm */
+#define CBT_DEFAULT_NUM_XM_MODES 3
+#define CBT_MIN_NUM_XM_MODES 1
+#define CBT_MAX_NUM_XM_MODES 20
+
+/**
+ * CBT_BUILD_ABANDONED is our flag value to represent a force-closed
+ * circuit (Aka a 'right-censored' pareto value).
+ */
+#define CBT_BUILD_ABANDONED ((build_time_t)(INT32_MAX-1))
+#define CBT_BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
+
+/** Save state every 10 circuits */
+#define CBT_SAVE_STATE_EVERY 10
+
+/* Circuit build times consensus parameters */
+
+/**
+ * How long to wait before actually closing circuits that take too long to
+ * build in terms of CDF quantile.
+ */
+#define CBT_DEFAULT_CLOSE_QUANTILE 95
+#define CBT_MIN_CLOSE_QUANTILE CBT_MIN_QUANTILE_CUTOFF
+#define CBT_MAX_CLOSE_QUANTILE CBT_MAX_QUANTILE_CUTOFF
+
+/**
+ * How many circuits count as recent when considering if the
+ * connection has gone gimpy or changed.
+ */
+#define CBT_DEFAULT_RECENT_CIRCUITS 20
+#define CBT_MIN_RECENT_CIRCUITS 3
+#define CBT_MAX_RECENT_CIRCUITS 1000
+
+/**
+ * Maximum count of timeouts that finish the first hop in the past
+ * RECENT_CIRCUITS before calculating a new timeout.
+ *
+ * This tells us whether to abandon timeout history and set
+ * the timeout back to whatever circuit_build_times_get_initial_timeout()
+ * gives us.
+ */
+#define CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT (CBT_DEFAULT_RECENT_CIRCUITS*9/10)
+#define CBT_MIN_MAX_RECENT_TIMEOUT_COUNT 3
+#define CBT_MAX_MAX_RECENT_TIMEOUT_COUNT 10000
+
+/** Minimum circuits before estimating a timeout */
+#define CBT_DEFAULT_MIN_CIRCUITS_TO_OBSERVE 100
+#define CBT_MIN_MIN_CIRCUITS_TO_OBSERVE 1
+#define CBT_MAX_MIN_CIRCUITS_TO_OBSERVE 10000
+
+/** Cutoff percentile on the CDF for our timeout estimation. */
+#define CBT_DEFAULT_QUANTILE_CUTOFF 80
+#define CBT_MIN_QUANTILE_CUTOFF 10
+#define CBT_MAX_QUANTILE_CUTOFF 99
+double circuit_build_times_quantile_cutoff(void);
+
+/** How often in seconds should we build a test circuit */
+#define CBT_DEFAULT_TEST_FREQUENCY 10
+#define CBT_MIN_TEST_FREQUENCY 1
+#define CBT_MAX_TEST_FREQUENCY INT32_MAX
+
+/** Lowest allowable value for CircuitBuildTimeout in milliseconds */
+#define CBT_DEFAULT_TIMEOUT_MIN_VALUE (1500)
+#define CBT_MIN_TIMEOUT_MIN_VALUE 500
+#define CBT_MAX_TIMEOUT_MIN_VALUE INT32_MAX
+
+/** Initial circuit build timeout in milliseconds */
+#define CBT_DEFAULT_TIMEOUT_INITIAL_VALUE (60*1000)
+#define CBT_MIN_TIMEOUT_INITIAL_VALUE CBT_MIN_TIMEOUT_MIN_VALUE
+#define CBT_MAX_TIMEOUT_INITIAL_VALUE INT32_MAX
+int32_t circuit_build_times_initial_timeout(void);
+
+#if CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT < CBT_MIN_MAX_RECENT_TIMEOUT_COUNT
+#error "RECENT_CIRCUITS is set too low."
+#endif
 
 #ifdef CIRCUITSTATS_PRIVATE
 STATIC double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
@@ -125,4 +211,3 @@ struct circuit_build_times_s {
 #endif /* defined(CIRCUITSTATS_PRIVATE) */
 
 #endif /* !defined(TOR_CIRCUITSTATS_H) */
-
