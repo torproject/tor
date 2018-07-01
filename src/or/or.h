@@ -1542,8 +1542,6 @@ typedef struct crypt_path_reference_t crypt_path_reference_t;
 
 #define CPATH_KEY_MATERIAL_LEN (20*2+16*2)
 
-#define DH_KEY_LEN DH_BYTES
-
 typedef struct cpath_build_state_t cpath_build_state_t;
 
 /** "magic" value for an origin_circuit_t */

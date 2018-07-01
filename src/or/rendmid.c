@@ -157,7 +157,8 @@ rend_mid_introduce_legacy(or_circuit_t *circ, const uint8_t *request,
    * to revise this protocol anyway.
    */
   if (request_len < (DIGEST_LEN+(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+
-                     DH_KEY_LEN+CIPHER_KEY_LEN+PKCS1_OAEP_PADDING_OVERHEAD)) {
+                     DH1024_KEY_LEN+CIPHER_KEY_LEN+
+                     PKCS1_OAEP_PADDING_OVERHEAD)) {
     log_warn(LD_PROTOCOL, "Impossibly short INTRODUCE1 cell on circuit %u; "
              "responding with nack.",
              (unsigned)circ->p_circ_id);
@@ -367,4 +368,3 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
   circuit_mark_for_close(TO_CIRCUIT(circ), reason);
   return -1;
 }
-

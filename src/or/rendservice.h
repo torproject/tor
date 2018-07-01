@@ -58,7 +58,7 @@ struct rend_intro_cell_s {
   /* Rendezvous cookie */
   uint8_t rc[REND_COOKIE_LEN];
   /* Diffie-Hellman data */
-  uint8_t dh[DH_KEY_LEN];
+  uint8_t dh[DH1024_KEY_LEN];
 };
 
 #ifdef RENDSERVICE_PRIVATE

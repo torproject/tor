@@ -197,17 +197,17 @@ test_e2e_rend_circuit_setup_legacy(void *arg)
 
   /* Make a good RENDEZVOUS1 cell body because it needs to pass key exchange
    * digest verification... */
-  uint8_t rend_cell_body[DH_KEY_LEN+DIGEST_LEN] = {2};
+  uint8_t rend_cell_body[DH1024_KEY_LEN+DIGEST_LEN] = {2};
   {
     char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
     crypto_dh_t *dh_state =
       or_circ->build_state->pending_final_cpath->rend_dh_handshake_state;
     /* compute and overwrite digest of cell body with the right value */
     retval = crypto_dh_compute_secret(LOG_PROTOCOL_WARN, dh_state,
-                                      (char*)rend_cell_body, DH_KEY_LEN,
+                                      (char*)rend_cell_body, DH1024_KEY_LEN,
                                       keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN);
     tt_int_op(retval, OP_GT, 0);
-    memcpy(rend_cell_body+DH_KEY_LEN, keys, DIGEST_LEN);
+    memcpy(rend_cell_body+DH1024_KEY_LEN, keys, DIGEST_LEN);
   }
 
   /* Setup the circuit */

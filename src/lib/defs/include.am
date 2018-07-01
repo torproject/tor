@@ -1,3 +1,4 @@
 
-noinst_HEADERS += \
+noinst_HEADERS += 			\
+	src/lib/defs/dh_sizes.h 	\
 	src/lib/defs/digest_sizes.h

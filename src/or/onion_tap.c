@@ -53,7 +53,7 @@ onion_skin_TAP_create(crypto_pk_t *dest_router_key,
                   crypto_dh_t **handshake_state_out,
                   char *onion_skin_out) /* TAP_ONIONSKIN_CHALLENGE_LEN bytes */
 {
-  char challenge[DH_KEY_LEN];
+  char challenge[DH1024_KEY_LEN];
   crypto_dh_t *dh = NULL;
   int dhbytes, pkbytes;
 
@@ -77,7 +77,7 @@ onion_skin_TAP_create(crypto_pk_t *dest_router_key,
   /* set meeting point, meeting cookie, etc here. Leave zero for now. */
   if (crypto_pk_obsolete_public_hybrid_encrypt(dest_router_key, onion_skin_out,
                                       TAP_ONIONSKIN_CHALLENGE_LEN,
-                                      challenge, DH_KEY_LEN,
+                                      challenge, DH1024_KEY_LEN,
                                       PK_PKCS1_OAEP_PADDING, 1)<0)
     goto err;
 
@@ -136,7 +136,7 @@ onion_skin_TAP_server_handshake(
     log_info(LD_PROTOCOL,
              "Couldn't decrypt onionskin: client may be using old onion key");
     goto err;
-  } else if (len != DH_KEY_LEN) {
+  } else if (len != DH1024_KEY_LEN) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Unexpected onionskin length after decryption: %ld",
            (long)len);
@@ -152,7 +152,7 @@ onion_skin_TAP_server_handshake(
     goto err;
     /* LCOV_EXCL_STOP */
   }
-  if (crypto_dh_get_public(dh, handshake_reply_out, DH_KEY_LEN)) {
+  if (crypto_dh_get_public(dh, handshake_reply_out, DH1024_KEY_LEN)) {
     /* LCOV_EXCL_START
      * This can only fail if the length of the key we just allocated is too
      * big. That should be impossible. */
@@ -164,7 +164,7 @@ onion_skin_TAP_server_handshake(
   key_material_len = DIGEST_LEN+key_out_len;
   key_material = tor_malloc(key_material_len);
   len = crypto_dh_compute_secret(LOG_PROTOCOL_WARN, dh, challenge,
-                                 DH_KEY_LEN, key_material,
+                                 DH1024_KEY_LEN, key_material,
                                  key_material_len);
   if (len < 0) {
     log_info(LD_GENERAL, "crypto_dh_compute_secret failed.");
@@ -172,7 +172,7 @@ onion_skin_TAP_server_handshake(
   }
 
   /* send back H(K|0) as proof that we learned K. */
-  memcpy(handshake_reply_out+DH_KEY_LEN, key_material, DIGEST_LEN);
+  memcpy(handshake_reply_out+DH1024_KEY_LEN, key_material, DIGEST_LEN);
 
   /* use the rest of the key material for our shared keys, digests, etc */
   memcpy(key_out, key_material+DIGEST_LEN, key_out_len);
@@ -212,12 +212,12 @@ onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
   ssize_t len;
   char *key_material=NULL;
   size_t key_material_len;
-  tor_assert(crypto_dh_get_bytes(handshake_state) == DH_KEY_LEN);
+  tor_assert(crypto_dh_get_bytes(handshake_state) == DH1024_KEY_LEN);
 
   key_material_len = DIGEST_LEN + key_out_len;
   key_material = tor_malloc(key_material_len);
   len = crypto_dh_compute_secret(LOG_PROTOCOL_WARN, handshake_state,
-                                 handshake_reply, DH_KEY_LEN, key_material,
+                                 handshake_reply, DH1024_KEY_LEN, key_material,
                                  key_material_len);
   if (len < 0) {
     if (msg_out)
@@ -225,7 +225,7 @@ onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
     goto err;
   }
 
-  if (tor_memneq(key_material, handshake_reply+DH_KEY_LEN, DIGEST_LEN)) {
+  if (tor_memneq(key_material, handshake_reply+DH1024_KEY_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
     if (msg_out)
       *msg_out = "Digest DOES NOT MATCH on onion handshake. Bug or attack.";

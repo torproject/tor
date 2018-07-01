@@ -23,38 +23,39 @@ test_crypto_dh(void *arg)
   crypto_dh_t *dh1 = crypto_dh_new(DH_TYPE_CIRCUIT);
   crypto_dh_t *dh1_dup = NULL;
   crypto_dh_t *dh2 = crypto_dh_new(DH_TYPE_CIRCUIT);
-  char p1[DH_BYTES];
-  char p2[DH_BYTES];
-  char s1[DH_BYTES];
-  char s2[DH_BYTES];
+  char p1[DH1024_KEY_LEN];
+  char p2[DH1024_KEY_LEN];
+  char s1[DH1024_KEY_LEN];
+  char s2[DH1024_KEY_LEN];
   ssize_t s1len, s2len;
 
   (void)arg;
-  tt_int_op(crypto_dh_get_bytes(dh1),OP_EQ, DH_BYTES);
-  tt_int_op(crypto_dh_get_bytes(dh2),OP_EQ, DH_BYTES);
+  tt_int_op(crypto_dh_get_bytes(dh1),OP_EQ, DH1024_KEY_LEN);
+  tt_int_op(crypto_dh_get_bytes(dh2),OP_EQ, DH1024_KEY_LEN);
 
-  memset(p1, 0, DH_BYTES);
-  memset(p2, 0, DH_BYTES);
-  tt_mem_op(p1,OP_EQ, p2, DH_BYTES);
+  memset(p1, 0, DH1024_KEY_LEN);
+  memset(p2, 0, DH1024_KEY_LEN);
+  tt_mem_op(p1,OP_EQ, p2, DH1024_KEY_LEN);
 
   tt_int_op(-1, OP_EQ, crypto_dh_get_public(dh1, p1, 6)); /* too short */
 
-  tt_assert(! crypto_dh_get_public(dh1, p1, DH_BYTES));
-  tt_mem_op(p1,OP_NE, p2, DH_BYTES);
-  tt_assert(! crypto_dh_get_public(dh2, p2, DH_BYTES));
-  tt_mem_op(p1,OP_NE, p2, DH_BYTES);
+  tt_assert(! crypto_dh_get_public(dh1, p1, DH1024_KEY_LEN));
+  tt_mem_op(p1,OP_NE, p2, DH1024_KEY_LEN);
+  tt_assert(! crypto_dh_get_public(dh2, p2, DH1024_KEY_LEN));
+  tt_mem_op(p1,OP_NE, p2, DH1024_KEY_LEN);
 
-  memset(s1, 0, DH_BYTES);
-  memset(s2, 0xFF, DH_BYTES);
-  s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p2, DH_BYTES, s1, 50);
-  s2len = crypto_dh_compute_secret(LOG_WARN, dh2, p1, DH_BYTES, s2, 50);
+  memset(s1, 0, DH1024_KEY_LEN);
+  memset(s2, 0xFF, DH1024_KEY_LEN);
+  s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p2, DH1024_KEY_LEN, s1, 50);
+  s2len = crypto_dh_compute_secret(LOG_WARN, dh2, p1, DH1024_KEY_LEN, s2, 50);
   tt_assert(s1len > 0);
   tt_int_op(s1len,OP_EQ, s2len);
   tt_mem_op(s1,OP_EQ, s2, s1len);
 
   /* test dh_dup; make sure it works the same. */
   dh1_dup = crypto_dh_dup(dh1);
-  s1len = crypto_dh_compute_secret(LOG_WARN, dh1_dup, p2, DH_BYTES, s1, 50);
+  s1len = crypto_dh_compute_secret(LOG_WARN, dh1_dup, p2, DH1024_KEY_LEN,
+                                   s1, 50);
   tt_mem_op(s1,OP_EQ, s2, s1len);
 
   {
@@ -67,12 +68,14 @@ test_crypto_dh(void *arg)
     s1len = crypto_dh_compute_secret(LOG_WARN, dh1, "\x00", 1, s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
 
-    memset(p1, 0, DH_BYTES); /* 0 with padding. */
-    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    memset(p1, 0, DH1024_KEY_LEN); /* 0 with padding. */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH1024_KEY_LEN,
+                                     s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
 
-    p1[DH_BYTES-1] = 1; /* 1 with padding*/
-    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    p1[DH1024_KEY_LEN-1] = 1; /* 1 with padding*/
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH1024_KEY_LEN,
+                                     s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
 
     /* 2 is okay, though weird. */
@@ -89,15 +92,18 @@ test_crypto_dh(void *arg)
     /* p-1, p, and so on are not okay. */
     base16_decode(p1, sizeof(p1), P, strlen(P));
 
-    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH1024_KEY_LEN,
+                                     s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
 
-    p1[DH_BYTES-1] = 0xFE; /* p-1 */
-    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    p1[DH1024_KEY_LEN-1] = 0xFE; /* p-1 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH1024_KEY_LEN,
+                                     s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
 
-    p1[DH_BYTES-1] = 0xFD; /* p-2 works fine */
-    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    p1[DH1024_KEY_LEN-1] = 0xFD; /* p-2 works fine */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH1024_KEY_LEN,
+                                     s1, 50);
     tt_int_op(50, OP_EQ, s1len);
 
     const char P_plus_one[] =
@@ -109,31 +115,35 @@ test_crypto_dh(void *arg)
 
     base16_decode(p1, sizeof(p1), P_plus_one, strlen(P_plus_one));
 
-    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH1024_KEY_LEN,
+                                     s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
 
-    p1[DH_BYTES-1] = 0x01; /* p+2 */
-    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    p1[DH1024_KEY_LEN-1] = 0x01; /* p+2 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH1024_KEY_LEN,
+                                     s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
 
-    p1[DH_BYTES-1] = 0xff; /* p+256 */
-    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    p1[DH1024_KEY_LEN-1] = 0xff; /* p+256 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH1024_KEY_LEN,
+                                     s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
 
-    memset(p1, 0xff, DH_BYTES), /* 2^1024-1 */
-    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    memset(p1, 0xff, DH1024_KEY_LEN), /* 2^1024-1 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH1024_KEY_LEN,
+                                     s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
   }
 
   {
     /* provoke an error in the openssl DH_compute_key function; make sure we
      * survive. */
-    tt_assert(! crypto_dh_get_public(dh1, p1, DH_BYTES));
+    tt_assert(! crypto_dh_get_public(dh1, p1, DH1024_KEY_LEN));
 
     crypto_dh_free(dh2);
     dh2= crypto_dh_new(DH_TYPE_CIRCUIT); /* no private key set */
     s1len = crypto_dh_compute_secret(LOG_WARN, dh2,
-                                     p1, DH_BYTES,
+                                     p1, DH1024_KEY_LEN,
                                      s1, 50);
     tt_int_op(s1len, OP_EQ, -1);
   }
@@ -3063,4 +3073,3 @@ struct testcase_t crypto_tests[] = {
   { "failure_modes", test_crypto_failure_modes, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

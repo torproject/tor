@@ -2005,7 +2005,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
    * part 1. */
   replay = replaycache_add_test_and_elapsed(
       service->accepted_intro_dh_parts,
-      parsed_req->dh, DH_KEY_LEN,
+      parsed_req->dh, DH1024_KEY_LEN,
       &elapsed);
 
   if (replay) {
@@ -2055,7 +2055,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   }
   if (crypto_dh_compute_secret(LOG_PROTOCOL_WARN, dh,
                                (char *)(parsed_req->dh),
-                               DH_KEY_LEN, keys,
+                               DH1024_KEY_LEN, keys,
                                DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
     log_warn(LD_BUG, "Internal error: couldn't complete DH handshake");
     reason = END_CIRC_REASON_INTERNAL;
@@ -2336,7 +2336,7 @@ rend_service_begin_parse_intro(const uint8_t *request,
   /* min key length plus digest length plus nickname length */
   if (request_len <
         (DIGEST_LEN + REND_COOKIE_LEN + (MAX_NICKNAME_LEN + 1) +
-         DH_KEY_LEN + 42)) {
+         DH1024_KEY_LEN + 42)) {
     if (err_msg_out) {
       tor_asprintf(&err_msg,
                    "got a truncated INTRODUCE%d cell",
@@ -2872,14 +2872,14 @@ rend_service_parse_intro_plaintext(
    */
 
   ver_invariant_len = intro->plaintext_len - ver_specific_len;
-  if (ver_invariant_len < REND_COOKIE_LEN + DH_KEY_LEN) {
+  if (ver_invariant_len < REND_COOKIE_LEN + DH1024_KEY_LEN) {
     tor_asprintf(&err_msg,
         "decrypted plaintext of INTRODUCE%d cell was truncated (%ld bytes)",
         (int)(intro->type),
         (long)(intro->plaintext_len));
     status = -5;
     goto err;
-  } else if (ver_invariant_len > REND_COOKIE_LEN + DH_KEY_LEN) {
+  } else if (ver_invariant_len > REND_COOKIE_LEN + DH1024_KEY_LEN) {
     tor_asprintf(&err_msg,
         "decrypted plaintext of INTRODUCE%d cell was too long (%ld bytes)",
         (int)(intro->type),
@@ -2892,7 +2892,7 @@ rend_service_parse_intro_plaintext(
            REND_COOKIE_LEN);
     memcpy(intro->dh,
            intro->plaintext + ver_specific_len + REND_COOKIE_LEN,
-           DH_KEY_LEN);
+           DH1024_KEY_LEN);
   }
 
   /* Flag it as being fully parsed */
@@ -3449,12 +3449,12 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   /* All we need to do is send a RELAY_RENDEZVOUS1 cell... */
   memcpy(buf, rend_cookie, REND_COOKIE_LEN);
   if (crypto_dh_get_public(hop->rend_dh_handshake_state,
-                           buf+REND_COOKIE_LEN, DH_KEY_LEN)<0) {
+                           buf+REND_COOKIE_LEN, DH1024_KEY_LEN)<0) {
     log_warn(LD_GENERAL,"Couldn't get DH public key.");
     reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
-  memcpy(buf+REND_COOKIE_LEN+DH_KEY_LEN, hop->rend_circ_nonce,
+  memcpy(buf+REND_COOKIE_LEN+DH1024_KEY_LEN, hop->rend_circ_nonce,
          DIGEST_LEN);
 
   /* Send the cell */

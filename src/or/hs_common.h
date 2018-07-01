@@ -122,7 +122,7 @@
  * bigger than the 84 bytes needed for version 3 so we need to pad up to that
  * length so it is indistinguishable between versions. */
 #define HS_LEGACY_RENDEZVOUS_CELL_SIZE \
-  (REND_COOKIE_LEN + DH_KEY_LEN + DIGEST_LEN)
+  (REND_COOKIE_LEN + DH1024_KEY_LEN + DIGEST_LEN)
 
 /* Type of authentication key used by an introduction point. */
 typedef enum {

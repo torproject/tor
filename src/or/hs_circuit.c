@@ -102,7 +102,8 @@ create_rend_cpath(const uint8_t *ntor_key_seed, size_t seed_len,
 /* We are a v2 legacy HS client: Create and return a crypt path for the hidden
  * service on the other side of the rendezvous circuit <b>circ</b>. Initialize
  * the crypt path crypto using the body of the RENDEZVOUS1 cell at
- * <b>rend_cell_body</b> (which must be at least DH_KEY_LEN+DIGEST_LEN bytes).
+ * <b>rend_cell_body</b> (which must be at least DH1024_KEY_LEN+DIGEST_LEN
+ * bytes).
  */
 static crypt_path_t *
 create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
@@ -110,7 +111,7 @@ create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
   crypt_path_t *hop = NULL;
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
 
-  /* first DH_KEY_LEN bytes are g^y from the service. Finish the dh
+  /* first DH1024_KEY_LEN bytes are g^y from the service. Finish the dh
    * handshake...*/
   tor_assert(circ->build_state);
   tor_assert(circ->build_state->pending_final_cpath);
@@ -118,7 +119,7 @@ create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
 
   tor_assert(hop->rend_dh_handshake_state);
   if (crypto_dh_compute_secret(LOG_PROTOCOL_WARN, hop->rend_dh_handshake_state,
-                               (char*)rend_cell_body, DH_KEY_LEN,
+                               (char*)rend_cell_body, DH1024_KEY_LEN,
                                keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
     log_warn(LD_GENERAL, "Couldn't complete DH handshake.");
     goto err;
@@ -130,7 +131,7 @@ create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
     goto err;
 
   /* Check whether the digest is right... */
-  if (tor_memneq(keys, rend_cell_body+DH_KEY_LEN, DIGEST_LEN)) {
+  if (tor_memneq(keys, rend_cell_body+DH1024_KEY_LEN, DIGEST_LEN)) {
     log_warn(LD_PROTOCOL, "Incorrect digest of key material.");
     goto err;
   }
@@ -1244,4 +1245,3 @@ hs_circ_cleanup(circuit_t *circ)
     hs_circuitmap_remove_circuit(circ);
   }
 }
-

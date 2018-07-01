@@ -14,9 +14,7 @@
 #define TOR_CRYPTO_DH_H
 
 #include "orconfig.h"
-
-/** Length of our DH keys. */
-#define DH_BYTES (1024/8)
+#include "lib/defs/dh_sizes.h"
 
 typedef struct crypto_dh_t crypto_dh_t;
 

@@ -551,8 +551,8 @@ bench_dh(void)
   reset_perftime();
   start = perftime();
   for (i = 0; i < iters; ++i) {
-    char dh_pubkey_a[DH_BYTES], dh_pubkey_b[DH_BYTES];
-    char secret_a[DH_BYTES], secret_b[DH_BYTES];
+    char dh_pubkey_a[DH1024_KEY_LEN], dh_pubkey_b[DH1024_KEY_LEN];
+    char secret_a[DH1024_KEY_LEN], secret_b[DH1024_KEY_LEN];
     ssize_t slen_a, slen_b;
     crypto_dh_t *dh_a = crypto_dh_new(DH_TYPE_TLS);
     crypto_dh_t *dh_b = crypto_dh_new(DH_TYPE_TLS);
@@ -586,7 +586,7 @@ bench_ecdh_impl(int nid, const char *name)
   reset_perftime();
   start = perftime();
   for (i = 0; i < iters; ++i) {
-    char secret_a[DH_BYTES], secret_b[DH_BYTES];
+    char secret_a[DH1024_KEY_LEN], secret_b[DH1024_KEY_LEN];
     ssize_t slen_a, slen_b;
     EC_KEY *dh_a = EC_KEY_new_by_curve_name(nid);
     EC_KEY *dh_b = EC_KEY_new_by_curve_name(nid);
@@ -597,10 +597,10 @@ bench_ecdh_impl(int nid, const char *name)
 
     EC_KEY_generate_key(dh_a);
     EC_KEY_generate_key(dh_b);
-    slen_a = ECDH_compute_key(secret_a, DH_BYTES,
+    slen_a = ECDH_compute_key(secret_a, DH1024_KEY_LEN,
                               EC_KEY_get0_public_key(dh_b), dh_a,
                               NULL);
-    slen_b = ECDH_compute_key(secret_b, DH_BYTES,
+    slen_b = ECDH_compute_key(secret_b, DH1024_KEY_LEN,
                               EC_KEY_get0_public_key(dh_a), dh_b,
                               NULL);
 

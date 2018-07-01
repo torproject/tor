@@ -14,8 +14,8 @@
 
 #define TAP_ONIONSKIN_CHALLENGE_LEN (PKCS1_OAEP_PADDING_OVERHEAD+\
                                  CIPHER_KEY_LEN+\
-                                 DH_KEY_LEN)
-#define TAP_ONIONSKIN_REPLY_LEN (DH_KEY_LEN+DIGEST_LEN)
+                                 DH1024_KEY_LEN)
+#define TAP_ONIONSKIN_REPLY_LEN (DH1024_KEY_LEN+DIGEST_LEN)
 
 int onion_skin_TAP_create(crypto_pk_t *router_key,
                       crypto_dh_t **handshake_state_out,
