@@ -404,3 +404,9 @@ show-distdir-testlog:
 	  cat $(distdir)/_build/sub/$(TEST_SUITE_LOG); \
 	else \
 	  cat $(distdir)/_build/$(TEST_SUITE_LOG); fi
+
+show-libs:
+	@echo $(TOR_INTERNAL_LIBS)
+
+show-testing-libs:
+	@echo $(TOR_INTERNAL_TESTING_LIBS)
