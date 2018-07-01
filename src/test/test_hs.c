@@ -19,6 +19,7 @@
 #include "or/hs_common.h"
 #include "or/rendcommon.h"
 #include "or/rendservice.h"
+#include "or/routerlist.h"
 #include "or/routerset.h"
 #include "or/circuitbuild.h"
 
@@ -1061,4 +1062,3 @@ struct testcase_t hs_tests[] = {
 
   END_OF_TESTCASES
 };
-

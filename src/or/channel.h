@@ -35,6 +35,141 @@ typedef enum {
     CHANNEL_USED_FOR_USER_TRAFFIC,
 } channel_usage_info_t;
 
+/** Possible rules for generating circuit IDs on an OR connection. */
+typedef enum {
+  CIRC_ID_TYPE_LOWER=0, /**< Pick from 0..1<<15-1. */
+  CIRC_ID_TYPE_HIGHER=1, /**< Pick from 1<<15..1<<16-1. */
+  /** The other side of a connection is an OP: never create circuits to it,
+   * and let it use any circuit ID it wants. */
+  CIRC_ID_TYPE_NEITHER=2
+} circ_id_type_t;
+#define circ_id_type_bitfield_t ENUM_BF(circ_id_type_t)
+
+/* channel states for channel_t */
+
+typedef enum {
+  /*
+   * Closed state - channel is inactive
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSING
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_OPENING
+   */
+  CHANNEL_STATE_CLOSED = 0,
+  /*
+   * Opening state - channel is trying to connect
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSED
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_OPEN
+   */
+  CHANNEL_STATE_OPENING,
+  /*
+   * Open state - channel is active and ready for use
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPENING
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_MAINT
+   */
+  CHANNEL_STATE_OPEN,
+  /*
+   * Maintenance state - channel is temporarily offline for subclass specific
+   *   maintenance activities such as TLS renegotiation.
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_OPEN
+   */
+  CHANNEL_STATE_MAINT,
+  /*
+   * Closing state - channel is shutting down
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSED,
+   *   - CHANNEL_STATE_ERROR
+   */
+  CHANNEL_STATE_CLOSING,
+  /*
+   * Error state - channel has experienced a permanent error
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPENING
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - None
+   */
+  CHANNEL_STATE_ERROR,
+  /*
+   * Placeholder for maximum state value
+   */
+  CHANNEL_STATE_LAST
+} channel_state_t;
+
+/* channel listener states for channel_listener_t */
+
+typedef enum {
+  /*
+   * Closed state - channel listener is inactive
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_LISTENER_STATE_CLOSING
+   * Permitted transitions to:
+   *   - CHANNEL_LISTENER_STATE_LISTENING
+   */
+  CHANNEL_LISTENER_STATE_CLOSED = 0,
+  /*
+   * Listening state - channel listener is listening for incoming
+   * connections
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_LISTENER_STATE_CLOSED
+   * Permitted transitions to:
+   *   - CHANNEL_LISTENER_STATE_CLOSING
+   *   - CHANNEL_LISTENER_STATE_ERROR
+   */
+  CHANNEL_LISTENER_STATE_LISTENING,
+  /*
+   * Closing state - channel listener is shutting down
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_LISTENER_STATE_LISTENING
+   * Permitted transitions to:
+   *   - CHANNEL_LISTENER_STATE_CLOSED,
+   *   - CHANNEL_LISTENER_STATE_ERROR
+   */
+  CHANNEL_LISTENER_STATE_CLOSING,
+  /*
+   * Error state - channel listener has experienced a permanent error
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_LISTENING
+   * Permitted transitions to:
+   *   - None
+   */
+  CHANNEL_LISTENER_STATE_ERROR,
+  /*
+   * Placeholder for maximum state value
+   */
+  CHANNEL_LISTENER_STATE_LAST
+} channel_listener_state_t;
+
 /**
  * Channel struct; see the channel_t typedef in or.h.  A channel is an
  * abstract interface for the OR-to-OR connection, similar to connection_or_t,

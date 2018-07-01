@@ -13,6 +13,7 @@
 #define TOR_REASONS_H
 
 #include "common/socks5_status.h"
+enum bandwidth_weight_rule_t;
 
 const char *stream_end_reason_to_control_string(int reason);
 const char *stream_end_reason_to_string(int reason);

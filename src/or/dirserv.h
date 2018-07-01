@@ -16,6 +16,21 @@ struct ed25519_public_key_t;
 
 #include "lib/testsupport/testsupport.h"
 
+/** An enum to describe what format we're generating a routerstatus line in.
+ */
+typedef enum {
+  /** For use in a v2 opinion */
+  NS_V2,
+  /** For use in a consensus networkstatus document (ns flavor) */
+  NS_V3_CONSENSUS,
+  /** For use in a vote networkstatus document */
+  NS_V3_VOTE,
+  /** For passing to the controlport in response to a GETINFO request */
+  NS_CONTROL_PORT,
+  /** For use in a consensus networkstatus document (microdesc flavor) */
+  NS_V3_CONSENSUS_MICRODESC
+} routerstatus_format_type_t;
+
 /** What fraction (1 over this number) of the relay ID space do we
  * (as a directory authority) launch connections to at each reachability
  * test? */

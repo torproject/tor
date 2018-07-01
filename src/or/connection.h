@@ -241,6 +241,24 @@ MOCK_DECL(void, clock_skew_warning,
 int connection_is_moribund(connection_t *conn);
 void connection_check_oos(int n_socks, int failed);
 
+/** Execute the statement <b>stmt</b>, which may log events concerning the
+ * connection <b>conn</b>.  To prevent infinite loops, disable log messages
+ * being sent to controllers if <b>conn</b> is a control connection.
+ *
+ * Stmt must not contain any return or goto statements.
+ */
+#define CONN_LOG_PROTECT(conn, stmt)                                    \
+  STMT_BEGIN                                                            \
+    int _log_conn_is_control;                                           \
+    tor_assert(conn);                                                   \
+    _log_conn_is_control = (conn->type == CONN_TYPE_CONTROL);           \
+    if (_log_conn_is_control)                                           \
+      disable_control_logging();                                        \
+  STMT_BEGIN stmt; STMT_END;                                            \
+    if (_log_conn_is_control)                                           \
+      enable_control_logging();                                         \
+  STMT_END
+
 #ifdef CONNECTION_PRIVATE
 STATIC void connection_free_minimal(connection_t *conn);
 

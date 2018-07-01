@@ -5,6 +5,7 @@
 #include "or/routerparse.h"
 #include "or/networkstatus.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
+#include "or/networkstatus_st.h"
 #include "test/fuzz/fuzzing.h"
 
 static void

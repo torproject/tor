@@ -15,6 +15,64 @@
 #include "lib/testsupport/testsupport.h"
 #include "or/dos.h"
 
+/** Indicates an action that we might be noting geoip statistics on.
+ * Note that if we're noticing CONNECT, we're a bridge, and if we're noticing
+ * the others, we're not.
+ */
+typedef enum {
+  /** We've noticed a connection as a bridge relay or entry guard. */
+  GEOIP_CLIENT_CONNECT = 0,
+  /** We've served a networkstatus consensus as a directory server. */
+  GEOIP_CLIENT_NETWORKSTATUS = 1,
+} geoip_client_action_t;
+/** Indicates either a positive reply or a reason for rejectng a network
+ * status request that will be included in geoip statistics. */
+typedef enum {
+  /** Request is answered successfully. */
+  GEOIP_SUCCESS = 0,
+  /** V3 network status is not signed by a sufficient number of requested
+   * authorities. */
+  GEOIP_REJECT_NOT_ENOUGH_SIGS = 1,
+  /** Requested network status object is unavailable. */
+  GEOIP_REJECT_UNAVAILABLE = 2,
+  /** Requested network status not found. */
+  GEOIP_REJECT_NOT_FOUND = 3,
+  /** Network status has not been modified since If-Modified-Since time. */
+  GEOIP_REJECT_NOT_MODIFIED = 4,
+  /** Directory is busy. */
+  GEOIP_REJECT_BUSY = 5,
+} geoip_ns_response_t;
+#define GEOIP_NS_RESPONSE_NUM 6
+
+/** Directory requests that we are measuring can be either direct or
+ * tunneled. */
+typedef enum {
+  DIRREQ_DIRECT = 0,
+  DIRREQ_TUNNELED = 1,
+} dirreq_type_t;
+
+/** Possible states for either direct or tunneled directory requests that
+ * are relevant for determining network status download times. */
+typedef enum {
+  /** Found that the client requests a network status; applies to both
+   * direct and tunneled requests; initial state of a request that we are
+   * measuring. */
+  DIRREQ_IS_FOR_NETWORK_STATUS = 0,
+  /** Finished writing a network status to the directory connection;
+   * applies to both direct and tunneled requests; completes a direct
+   * request. */
+  DIRREQ_FLUSHING_DIR_CONN_FINISHED = 1,
+  /** END cell sent to circuit that initiated a tunneled request. */
+  DIRREQ_END_CELL_SENT = 2,
+  /** Flushed last cell from queue of the circuit that initiated a
+    * tunneled request to the outbuf of the OR connection. */
+  DIRREQ_CIRC_QUEUE_FLUSHED = 3,
+  /** Flushed last byte from buffer of the channel belonging to the
+    * circuit that initiated a tunneled request; completes a tunneled
+    * request. */
+  DIRREQ_CHANNEL_BUFFER_FLUSHED = 4
+} dirreq_state_t;
+
 #ifdef GEOIP_PRIVATE
 STATIC int geoip_parse_entry(const char *line, sa_family_t family);
 STATIC int geoip_get_country_by_ipv4(uint32_t ipaddr);
@@ -97,4 +155,3 @@ char *geoip_get_bridge_stats_controller(time_t);
 char *format_client_stats_heartbeat(time_t now);
 
 #endif /* !defined(TOR_GEOIP_H) */
-

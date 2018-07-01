@@ -9,6 +9,13 @@
 
 #include "or/networkstatus_sr_info_st.h"
 
+/** Enumerates the possible seriousness values of a networkstatus document. */
+typedef enum networkstatus_type_t {
+  NS_TYPE_VOTE,
+  NS_TYPE_CONSENSUS,
+  NS_TYPE_OPINION,
+} networkstatus_type_t;
+
 /** A common structure to hold a v3 network status vote, or a v3 network
  * status consensus. */
 struct networkstatus_t {
@@ -92,4 +99,3 @@ struct networkstatus_t {
 };
 
 #endif
-

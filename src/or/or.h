@@ -179,16 +179,6 @@ struct curve25519_public_key_t;
 /** How old do we let a saved descriptor get before force-removing it? */
 #define OLD_ROUTER_DESC_MAX_AGE (60*60*24*5)
 
-/** Possible rules for generating circuit IDs on an OR connection. */
-typedef enum {
-  CIRC_ID_TYPE_LOWER=0, /**< Pick from 0..1<<15-1. */
-  CIRC_ID_TYPE_HIGHER=1, /**< Pick from 1<<15..1<<16-1. */
-  /** The other side of a connection is an OP: never create circuits to it,
-   * and let it use any circuit ID it wants. */
-  CIRC_ID_TYPE_NEITHER=2
-} circ_id_type_t;
-#define circ_id_type_bitfield_t ENUM_BF(circ_id_type_t)
-
 #define CONN_TYPE_MIN_ 3
 /** Type for sockets listening for OR connections. */
 #define CONN_TYPE_OR_LISTENER 3
@@ -1026,131 +1016,6 @@ typedef struct channel_s channel_t;
 
 typedef struct channel_listener_s channel_listener_t;
 
-/* channel states for channel_t */
-
-typedef enum {
-  /*
-   * Closed state - channel is inactive
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_CLOSING
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_OPENING
-   */
-  CHANNEL_STATE_CLOSED = 0,
-  /*
-   * Opening state - channel is trying to connect
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_CLOSED
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_ERROR
-   *   - CHANNEL_STATE_OPEN
-   */
-  CHANNEL_STATE_OPENING,
-  /*
-   * Open state - channel is active and ready for use
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_MAINT
-   *   - CHANNEL_STATE_OPENING
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_ERROR
-   *   - CHANNEL_STATE_MAINT
-   */
-  CHANNEL_STATE_OPEN,
-  /*
-   * Maintenance state - channel is temporarily offline for subclass specific
-   *   maintenance activities such as TLS renegotiation.
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_OPEN
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_ERROR
-   *   - CHANNEL_STATE_OPEN
-   */
-  CHANNEL_STATE_MAINT,
-  /*
-   * Closing state - channel is shutting down
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_MAINT
-   *   - CHANNEL_STATE_OPEN
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_CLOSED,
-   *   - CHANNEL_STATE_ERROR
-   */
-  CHANNEL_STATE_CLOSING,
-  /*
-   * Error state - channel has experienced a permanent error
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_MAINT
-   *   - CHANNEL_STATE_OPENING
-   *   - CHANNEL_STATE_OPEN
-   * Permitted transitions to:
-   *   - None
-   */
-  CHANNEL_STATE_ERROR,
-  /*
-   * Placeholder for maximum state value
-   */
-  CHANNEL_STATE_LAST
-} channel_state_t;
-
-/* channel listener states for channel_listener_t */
-
-typedef enum {
-  /*
-   * Closed state - channel listener is inactive
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_LISTENER_STATE_CLOSING
-   * Permitted transitions to:
-   *   - CHANNEL_LISTENER_STATE_LISTENING
-   */
-  CHANNEL_LISTENER_STATE_CLOSED = 0,
-  /*
-   * Listening state - channel listener is listening for incoming
-   * connections
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_LISTENER_STATE_CLOSED
-   * Permitted transitions to:
-   *   - CHANNEL_LISTENER_STATE_CLOSING
-   *   - CHANNEL_LISTENER_STATE_ERROR
-   */
-  CHANNEL_LISTENER_STATE_LISTENING,
-  /*
-   * Closing state - channel listener is shutting down
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_LISTENER_STATE_LISTENING
-   * Permitted transitions to:
-   *   - CHANNEL_LISTENER_STATE_CLOSED,
-   *   - CHANNEL_LISTENER_STATE_ERROR
-   */
-  CHANNEL_LISTENER_STATE_CLOSING,
-  /*
-   * Error state - channel listener has experienced a permanent error
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_LISTENING
-   * Permitted transitions to:
-   *   - None
-   */
-  CHANNEL_LISTENER_STATE_ERROR,
-  /*
-   * Placeholder for maximum state value
-   */
-  CHANNEL_LISTENER_STATE_LAST
-} channel_listener_state_t;
-
 /* TLS channel stuff */
 
 typedef struct channel_tls_s channel_tls_t;
@@ -1429,25 +1294,6 @@ typedef struct routerinfo_t routerinfo_t;
 typedef struct extrainfo_t extrainfo_t;
 typedef struct routerstatus_t routerstatus_t;
 
-/** A single entry in a parsed policy summary, describing a range of ports. */
-typedef struct short_policy_entry_t {
-  uint16_t min_port, max_port;
-} short_policy_entry_t;
-
-/** A short_poliy_t is the parsed version of a policy summary. */
-typedef struct short_policy_t {
-  /** True if the members of 'entries' are port ranges to accept; false if
-   * they are port ranges to reject */
-  unsigned int is_accept : 1;
-  /** The actual number of values in 'entries'. */
-  unsigned int n_entries : 31;
-  /** An array of 0 or more short_policy_entry_t values, each describing a
-   * range of ports that this policy accepts or rejects (depending on the
-   * value of is_accept).
-   */
-  short_policy_entry_t entries[FLEXIBLE_ARRAY_MEMBER];
-} short_policy_t;
-
 typedef struct microdesc_t microdesc_t;
 typedef struct node_t node_t;
 typedef struct vote_microdesc_hash_t vote_microdesc_hash_t;
@@ -1455,13 +1301,6 @@ typedef struct vote_routerstatus_t vote_routerstatus_t;
 typedef struct document_signature_t document_signature_t;
 typedef struct networkstatus_voter_info_t networkstatus_voter_info_t;
 typedef struct networkstatus_sr_info_t networkstatus_sr_info_t;
-
-/** Enumerates the possible seriousness values of a networkstatus document. */
-typedef enum {
-  NS_TYPE_VOTE,
-  NS_TYPE_CONSENSUS,
-  NS_TYPE_OPINION,
-} networkstatus_type_t;
 
 /** Enumerates recognized flavors of a consensus networkstatus document.  All
  * flavors of a consensus are generated from the same set of votes, but they
@@ -2937,15 +2776,6 @@ typedef struct circuit_build_times_s circuit_build_times_t;
 
 /********************************* config.c ***************************/
 
-/** An error from options_trial_assign() or options_init_from_string(). */
-typedef enum setopt_err_t {
-  SETOPT_OK = 0,
-  SETOPT_ERR_MISC = -1,
-  SETOPT_ERR_PARSE = -2,
-  SETOPT_ERR_TRANSITION = -3,
-  SETOPT_ERR_SETTING = -4,
-} setopt_err_t;
-
 /********************************* connection_edge.c *************************/
 
 /** Enumerates possible origins of a client-side address mapping. */
@@ -2972,226 +2802,15 @@ typedef enum {
 } addressmap_entry_source_t;
 #define addressmap_entry_source_bitfield_t ENUM_BF(addressmap_entry_source_t)
 
-/********************************* control.c ***************************/
-
-/** Used to indicate the type of a circuit event passed to the controller.
- * The various types are defined in control-spec.txt */
-typedef enum circuit_status_event_t {
-  CIRC_EVENT_LAUNCHED = 0,
-  CIRC_EVENT_BUILT    = 1,
-  CIRC_EVENT_EXTENDED = 2,
-  CIRC_EVENT_FAILED   = 3,
-  CIRC_EVENT_CLOSED   = 4,
-} circuit_status_event_t;
-
-/** Used to indicate the type of a CIRC_MINOR event passed to the controller.
- * The various types are defined in control-spec.txt . */
-typedef enum circuit_status_minor_event_t {
-  CIRC_MINOR_EVENT_PURPOSE_CHANGED,
-  CIRC_MINOR_EVENT_CANNIBALIZED,
-} circuit_status_minor_event_t;
-
-/** Used to indicate the type of a stream event passed to the controller.
- * The various types are defined in control-spec.txt */
-typedef enum stream_status_event_t {
-  STREAM_EVENT_SENT_CONNECT = 0,
-  STREAM_EVENT_SENT_RESOLVE = 1,
-  STREAM_EVENT_SUCCEEDED    = 2,
-  STREAM_EVENT_FAILED       = 3,
-  STREAM_EVENT_CLOSED       = 4,
-  STREAM_EVENT_NEW          = 5,
-  STREAM_EVENT_NEW_RESOLVE  = 6,
-  STREAM_EVENT_FAILED_RETRIABLE = 7,
-  STREAM_EVENT_REMAP        = 8
-} stream_status_event_t;
-
-/** Used to indicate the type of an OR connection event passed to the
- * controller.  The various types are defined in control-spec.txt */
-typedef enum or_conn_status_event_t {
-  OR_CONN_EVENT_LAUNCHED     = 0,
-  OR_CONN_EVENT_CONNECTED    = 1,
-  OR_CONN_EVENT_FAILED       = 2,
-  OR_CONN_EVENT_CLOSED       = 3,
-  OR_CONN_EVENT_NEW          = 4,
-} or_conn_status_event_t;
-
-/** Used to indicate the type of a buildtime event */
-typedef enum buildtimeout_set_event_t {
-  BUILDTIMEOUT_SET_EVENT_COMPUTED  = 0,
-  BUILDTIMEOUT_SET_EVENT_RESET     = 1,
-  BUILDTIMEOUT_SET_EVENT_SUSPENDED = 2,
-  BUILDTIMEOUT_SET_EVENT_DISCARD = 3,
-  BUILDTIMEOUT_SET_EVENT_RESUME = 4
-} buildtimeout_set_event_t;
-
-/** Execute the statement <b>stmt</b>, which may log events concerning the
- * connection <b>conn</b>.  To prevent infinite loops, disable log messages
- * being sent to controllers if <b>conn</b> is a control connection.
- *
- * Stmt must not contain any return or goto statements.
- */
-#define CONN_LOG_PROTECT(conn, stmt)                                    \
-  STMT_BEGIN                                                            \
-    int _log_conn_is_control;                                           \
-    tor_assert(conn);                                                   \
-    _log_conn_is_control = (conn->type == CONN_TYPE_CONTROL);           \
-    if (_log_conn_is_control)                                           \
-      disable_control_logging();                                        \
-  STMT_BEGIN stmt; STMT_END;                                            \
-    if (_log_conn_is_control)                                           \
-      enable_control_logging();                                         \
-  STMT_END
-
-/** Enum describing various stages of bootstrapping, for use with controller
- * bootstrap status events. The values range from 0 to 100. */
-typedef enum {
-  BOOTSTRAP_STATUS_UNDEF=-1,
-  BOOTSTRAP_STATUS_STARTING=0,
-  BOOTSTRAP_STATUS_CONN_DIR=5,
-  BOOTSTRAP_STATUS_HANDSHAKE=-2,
-  BOOTSTRAP_STATUS_HANDSHAKE_DIR=10,
-  BOOTSTRAP_STATUS_ONEHOP_CREATE=15,
-  BOOTSTRAP_STATUS_REQUESTING_STATUS=20,
-  BOOTSTRAP_STATUS_LOADING_STATUS=25,
-  BOOTSTRAP_STATUS_LOADING_KEYS=40,
-  BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS=45,
-  BOOTSTRAP_STATUS_LOADING_DESCRIPTORS=50,
-  BOOTSTRAP_STATUS_CONN_OR=80,
-  BOOTSTRAP_STATUS_HANDSHAKE_OR=85,
-  BOOTSTRAP_STATUS_CIRCUIT_CREATE=90,
-  BOOTSTRAP_STATUS_DONE=100
-} bootstrap_status_t;
-
-/********************************* dirserv.c ***************************/
-
-/** An enum to describe what format we're generating a routerstatus line in.
- */
-typedef enum {
-  /** For use in a v2 opinion */
-  NS_V2,
-  /** For use in a consensus networkstatus document (ns flavor) */
-  NS_V3_CONSENSUS,
-  /** For use in a vote networkstatus document */
-  NS_V3_VOTE,
-  /** For passing to the controlport in response to a GETINFO request */
-  NS_CONTROL_PORT,
-  /** For use in a consensus networkstatus document (microdesc flavor) */
-  NS_V3_CONSENSUS_MICRODESC
-} routerstatus_format_type_t;
+#define WRITE_STATS_INTERVAL (24*60*60)
 
 /********************************* dirvote.c ************************/
 
 typedef struct vote_timing_t vote_timing_t;
 
-/********************************* geoip.c **************************/
-
-/** Indicates an action that we might be noting geoip statistics on.
- * Note that if we're noticing CONNECT, we're a bridge, and if we're noticing
- * the others, we're not.
- */
-typedef enum {
-  /** We've noticed a connection as a bridge relay or entry guard. */
-  GEOIP_CLIENT_CONNECT = 0,
-  /** We've served a networkstatus consensus as a directory server. */
-  GEOIP_CLIENT_NETWORKSTATUS = 1,
-} geoip_client_action_t;
-/** Indicates either a positive reply or a reason for rejectng a network
- * status request that will be included in geoip statistics. */
-typedef enum {
-  /** Request is answered successfully. */
-  GEOIP_SUCCESS = 0,
-  /** V3 network status is not signed by a sufficient number of requested
-   * authorities. */
-  GEOIP_REJECT_NOT_ENOUGH_SIGS = 1,
-  /** Requested network status object is unavailable. */
-  GEOIP_REJECT_UNAVAILABLE = 2,
-  /** Requested network status not found. */
-  GEOIP_REJECT_NOT_FOUND = 3,
-  /** Network status has not been modified since If-Modified-Since time. */
-  GEOIP_REJECT_NOT_MODIFIED = 4,
-  /** Directory is busy. */
-  GEOIP_REJECT_BUSY = 5,
-} geoip_ns_response_t;
-#define GEOIP_NS_RESPONSE_NUM 6
-
-/** Directory requests that we are measuring can be either direct or
- * tunneled. */
-typedef enum {
-  DIRREQ_DIRECT = 0,
-  DIRREQ_TUNNELED = 1,
-} dirreq_type_t;
-
-/** Possible states for either direct or tunneled directory requests that
- * are relevant for determining network status download times. */
-typedef enum {
-  /** Found that the client requests a network status; applies to both
-   * direct and tunneled requests; initial state of a request that we are
-   * measuring. */
-  DIRREQ_IS_FOR_NETWORK_STATUS = 0,
-  /** Finished writing a network status to the directory connection;
-   * applies to both direct and tunneled requests; completes a direct
-   * request. */
-  DIRREQ_FLUSHING_DIR_CONN_FINISHED = 1,
-  /** END cell sent to circuit that initiated a tunneled request. */
-  DIRREQ_END_CELL_SENT = 2,
-  /** Flushed last cell from queue of the circuit that initiated a
-    * tunneled request to the outbuf of the OR connection. */
-  DIRREQ_CIRC_QUEUE_FLUSHED = 3,
-  /** Flushed last byte from buffer of the channel belonging to the
-    * circuit that initiated a tunneled request; completes a tunneled
-    * request. */
-  DIRREQ_CHANNEL_BUFFER_FLUSHED = 4
-} dirreq_state_t;
-
-#define WRITE_STATS_INTERVAL (24*60*60)
-
 /********************************* microdesc.c *************************/
 
 typedef struct microdesc_cache_t microdesc_cache_t;
-
-/********************************* networkstatus.c *********************/
-
-/** Possible statuses of a version of Tor, given opinions from the directory
- * servers. */
-typedef enum version_status_t {
-  VS_RECOMMENDED=0, /**< This version is listed as recommended. */
-  VS_OLD=1, /**< This version is older than any recommended version. */
-  VS_NEW=2, /**< This version is newer than any recommended version. */
-  VS_NEW_IN_SERIES=3, /**< This version is newer than any recommended version
-                       * in its series, but later recommended versions exist.
-                       */
-  VS_UNRECOMMENDED=4, /**< This version is not recommended (general case). */
-  VS_EMPTY=5, /**< The version list was empty; no agreed-on versions. */
-  VS_UNKNOWN, /**< We have no idea. */
-} version_status_t;
-
-/********************************* policies.c ************************/
-
-/** Outcome of applying an address policy to an address. */
-typedef enum {
-  /** The address was accepted */
-  ADDR_POLICY_ACCEPTED=0,
-  /** The address was rejected */
-  ADDR_POLICY_REJECTED=-1,
-  /** Part of the address was unknown, but as far as we can tell, it was
-   * accepted. */
-  ADDR_POLICY_PROBABLY_ACCEPTED=1,
-  /** Part of the address was unknown, but as far as we can tell, it was
-   * rejected. */
-  ADDR_POLICY_PROBABLY_REJECTED=2,
-} addr_policy_result_t;
-
-/********************************* rephist.c ***************************/
-
-/** Possible public/private key operations in Tor: used to keep track of where
- * we're spending our time. */
-typedef enum {
-  SIGN_DIR, SIGN_RTR,
-  VERIFY_DIR, VERIFY_RTR,
-  ENC_ONIONSKIN, DEC_ONIONSKIN,
-  TLS_HANDSHAKE_C, TLS_HANDSHAKE_S,
-  REND_CLIENT, REND_MID, REND_SERVER,
-} pk_op_t;
 
 /********************************* rendcommon.c ***************************/
 
@@ -3270,61 +2889,6 @@ typedef struct dir_server_t dir_server_t;
  * Passed to router_pick_directory_server (et al)
  */
 #define PDS_NO_EXISTING_MICRODESC_FETCH (1<<4)
-
-/** Possible ways to weight routers when choosing one randomly.  See
- * routerlist_sl_choose_by_bandwidth() for more information.*/
-typedef enum bandwidth_weight_rule_t {
-  NO_WEIGHTING, WEIGHT_FOR_EXIT, WEIGHT_FOR_MID, WEIGHT_FOR_GUARD,
-  WEIGHT_FOR_DIR
-} bandwidth_weight_rule_t;
-
-/** Flags to be passed to control router_choose_random_node() to indicate what
- * kind of nodes to pick according to what algorithm. */
-typedef enum {
-  CRN_NEED_UPTIME = 1<<0,
-  CRN_NEED_CAPACITY = 1<<1,
-  CRN_NEED_GUARD = 1<<2,
-  /* XXXX not used, apparently. */
-  CRN_WEIGHT_AS_EXIT = 1<<5,
-  CRN_NEED_DESC = 1<<6,
-  /* On clients, only provide nodes that satisfy ClientPreferIPv6OR */
-  CRN_PREF_ADDR = 1<<7,
-  /* On clients, only provide nodes that we can connect to directly, based on
-   * our firewall rules */
-  CRN_DIRECT_CONN = 1<<8,
-  /* On clients, only provide nodes with HSRend >= 2 protocol version which
-   * is required for hidden service version >= 3. */
-  CRN_RENDEZVOUS_V3 = 1<<9,
-} router_crn_flags_t;
-
-/** Return value for router_add_to_routerlist() and dirserv_add_descriptor() */
-typedef enum was_router_added_t {
-  /* Router was added successfully. */
-  ROUTER_ADDED_SUCCESSFULLY = 1,
-  /* Extrainfo document was rejected because no corresponding router
-   * descriptor was found OR router descriptor was rejected because
-   * it was incompatible with its extrainfo document. */
-  ROUTER_BAD_EI = -1,
-  /* Router descriptor was rejected because it is already known. */
-  ROUTER_IS_ALREADY_KNOWN = -2,
-  /* General purpose router was rejected, because it was not listed
-   * in consensus. */
-  ROUTER_NOT_IN_CONSENSUS = -3,
-  /* Router was neither in directory consensus nor in any of
-   * networkstatus documents. Caching it to access later.
-   * (Applies to fetched descriptors only.) */
-  ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS = -4,
-  /* Router was rejected by directory authority. */
-  ROUTER_AUTHDIR_REJECTS = -5,
-  /* Bridge descriptor was rejected because such bridge was not one
-   * of the bridges we have listed in our configuration. */
-  ROUTER_WAS_NOT_WANTED = -6,
-  /* Router descriptor was rejected because it was older than
-   * OLD_ROUTER_DESC_MAX_AGE. */
-  ROUTER_WAS_TOO_OLD = -7, /* note contrast with 'NOT_NEW' */
-  /* DOCDOC */
-  ROUTER_CERTS_EXPIRED = -8
-} was_router_added_t;
 
 typedef struct tor_version_t tor_version_t;
 

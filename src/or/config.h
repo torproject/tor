@@ -42,6 +42,15 @@ void init_protocol_warning_severity_level(void);
 int get_protocol_warning_severity_level(void);
 const char *get_version(void);
 const char *get_short_version(void);
+
+/** An error from options_trial_assign() or options_init_from_string(). */
+typedef enum setopt_err_t {
+  SETOPT_OK = 0,
+  SETOPT_ERR_MISC = -1,
+  SETOPT_ERR_PARSE = -2,
+  SETOPT_ERR_TRANSITION = -3,
+  SETOPT_ERR_SETTING = -4,
+} setopt_err_t;
 setopt_err_t options_trial_assign(struct config_line_t *list, unsigned flags,
                                   char **msg);
 
