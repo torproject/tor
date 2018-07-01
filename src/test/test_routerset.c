@@ -10,6 +10,7 @@
 #include "or/policies.h"
 #include "or/nodelist.h"
 
+#include "or/addr_policy_st.h"
 #include "or/extend_info_st.h"
 #include "or/node_st.h"
 #include "or/routerinfo_st.h"
@@ -2227,4 +2228,3 @@ struct testcase_t routerset_tests[] = {
   TEST_CASE(routerset_free),
   END_OF_TESTCASES
 };
-

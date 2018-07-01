@@ -11,6 +11,7 @@
 #include "lib/encoding/confline.h"
 #include "test/test.h"
 
+#include "or/addr_policy_st.h"
 #include "or/node_st.h"
 #include "or/port_cfg_st.h"
 #include "or/routerinfo_st.h"

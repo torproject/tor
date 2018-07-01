@@ -36,6 +36,7 @@ n * Copyright (c) 2001-2004, Roger Dingledine.
 #include "or/routerparse.h"
 #include "or/routerset.h"
 
+#include "or/addr_policy_st.h"
 #include "or/extend_info_st.h"
 #include "or/node_st.h"
 #include "or/routerinfo_st.h"

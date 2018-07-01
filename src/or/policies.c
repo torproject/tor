@@ -31,6 +31,7 @@
 #include "ht.h"
 #include "lib/encoding/confline.h"
 
+#include "or/addr_policy_st.h"
 #include "or/dir_server_st.h"
 #include "or/microdesc_st.h"
 #include "or/node_st.h"

@@ -82,6 +82,7 @@
 
 #include "or/dirauth/dirvote.h"
 
+#include "or/addr_policy_st.h"
 #include "or/authority_cert_st.h"
 #include "or/document_signature_st.h"
 #include "or/extend_info_st.h"
