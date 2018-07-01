@@ -1680,7 +1680,7 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tor_asprintf(&header_lines_v110_no_terminator, "%ld\n%s", (long)timestamp,
                header_lines_v110_no_terminator_no_timestamp);
   tor_asprintf(&header_lines_v110, "%s%s",
-               header_lines_v110_no_terminator, BW_FILE_TERMINATOR);
+               header_lines_v110_no_terminator, BW_FILE_HEADERS_TERMINATOR);
 
   tor_asprintf(&bw_file_headers_str_v100, "timestamp=%ld",(long)timestamp);
   tor_asprintf(&bw_file_headers_str_v110, "timestamp=%ld %s",
@@ -1867,7 +1867,7 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
    * bw_file_headers will contain the v1.1.0 headers. */
   bw_file_headers = smartlist_new();
   tor_asprintf(&content, "%s%s%s%s", header_lines_v110, relay_lines_bad,
-               BW_FILE_TERMINATOR, relay_lines_bad);
+               BW_FILE_HEADERS_TERMINATOR, relay_lines_bad);
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
