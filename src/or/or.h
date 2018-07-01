@@ -624,13 +624,7 @@ typedef struct packed_cell_t packed_cell_t;
 typedef struct cell_queue_t cell_queue_t;
 typedef struct destroy_cell_t destroy_cell_t;
 typedef struct destroy_cell_queue_t destroy_cell_queue_t;
-
-/** A parsed Extended ORPort message. */
-typedef struct ext_or_cmd_t {
-  uint16_t cmd; /** Command type */
-  uint16_t len; /** Body length */
-  char body[FLEXIBLE_ARRAY_MEMBER]; /** Message body */
-} ext_or_cmd_t;
+typedef struct ext_or_cmd_t ext_or_cmd_t;
 
 /** Beginning of a RELAY cell payload. */
 typedef struct {
