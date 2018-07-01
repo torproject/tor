@@ -37,7 +37,7 @@
 
 /** Terminatore that separates bandwidth file headers from bandwidth file
  * relay lines */
-#define BW_FILE_TERMINATOR "=====\n"
+#define BW_FILE_HEADERS_TERMINATOR "=====\n"
 
 /** Ways to convert a spoolable_resource_t to a bunch of bytes. */
 typedef enum dir_spool_source_t {
