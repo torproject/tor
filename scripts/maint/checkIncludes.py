@@ -20,8 +20,10 @@ INCLUDE_PATTERN = re.compile(r'\s*#\s*include\s+"([^"]*)"')
 RULES_FNAME = ".may_include"
 
 class Rules(object):
-    def __init__(self):
+    def __init__(self, dirpath):
+        self.dirpath = dirpath
         self.patterns = []
+        self.usedPatterns = set()
 
     def addPattern(self, pattern):
         self.patterns.append(pattern)
@@ -29,6 +31,7 @@ class Rules(object):
     def includeOk(self, path):
         for pattern in self.patterns:
             if fnmatch.fnmatchcase(path, pattern):
+                self.usedPatterns.add(pattern)
                 return True
         return False
 
@@ -48,8 +51,13 @@ class Rules(object):
             #print(fname)
             self.applyToLines(iter(f), " of {}".format(fname))
 
+    def noteUnusedRules(self):
+        for p in self.patterns:
+            if p not in self.usedPatterns:
+                print("Pattern {} in {} was never used.".format(p, self.dirpath))
+
 def load_include_rules(fname):
-    result = Rules()
+    result = Rules(os.path.split(fname)[0])
     with open(fname, 'r') as f:
         for line in f:
             line = line.strip()
@@ -58,12 +66,16 @@ def load_include_rules(fname):
             result.addPattern(line)
     return result
 
+list_unused = False
+
 for dirpath, dirnames, fnames in os.walk("src"):
     if ".may_include" in fnames:
         rules = load_include_rules(os.path.join(dirpath, RULES_FNAME))
         for fname in fnames:
             if fname_is_c(fname):
                 rules.applyToFile(os.path.join(dirpath,fname))
+        if list_unused:
+            rules.noteUnusedRules()
 
 if trouble:
     err(

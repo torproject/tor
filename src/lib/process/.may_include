@@ -4,6 +4,7 @@ lib/cc/*.h
 lib/container/*.h
 lib/ctime/*.h
 lib/err/*.h
+lib/intmath/*.h
 lib/fs/*.h
 lib/log/*.h
 lib/malloc/*.h
