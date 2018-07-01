@@ -1907,7 +1907,8 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
                                                        bw_file_headers));
-  tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_EQ, smartlist_len(bw_file_headers));
+  tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_EQ,
+            smartlist_len(bw_file_headers));
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_extra, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1927,11 +1928,14 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
                                                        bw_file_headers));
-  tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_EQ, smartlist_len(bw_file_headers));
-  /* force bw_file_headers to be bigger than MAX_BW_FILE_HEADER_COUNT_IN_VOTE */
+  tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_EQ,
+            smartlist_len(bw_file_headers));
+  /* force bw_file_headers to be bigger than
+   * MAX_BW_FILE_HEADER_COUNT_IN_VOTE */
   char line[8] = "foo=bar\0";
   smartlist_add_strdup(bw_file_headers, line);
-  tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_LT, smartlist_len(bw_file_headers));
+  tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_LT,
+            smartlist_len(bw_file_headers));
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
   smartlist_free(bw_file_headers);
   tor_free(bw_file_headers_str);
