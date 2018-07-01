@@ -48,6 +48,7 @@
 
 #include "lib/container/order.h"
 
+#include "lib/encoding/keyval.h"
 /**
  * \file dirserv.c
  * \brief Directory server core implementation. Manages directory
