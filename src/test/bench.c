@@ -21,10 +21,12 @@
 
 #include "or/config.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "or/onion_ntor.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "or/consdiff.h"
+#include "lib/compress/compress.h"
 
 #include "or/cell_st.h"
 #include "or/or_circuit_st.h"

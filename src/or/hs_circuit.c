@@ -23,6 +23,7 @@
 #include "or/router.h"
 
 #include "or/hs_cell.h"
+#include "or/hs_circuitmap.h"
 #include "or/hs_ident.h"
 #include "or/hs_ntor.h"
 #include "or/hs_service.h"

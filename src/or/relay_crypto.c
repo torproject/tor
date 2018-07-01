@@ -7,6 +7,7 @@
 #include "or/or.h"
 #include "or/circuitlist.h"
 #include "or/config.h"
+#include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/hs_ntor.h" // for HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN
 #include "or/relay.h"
@@ -329,4 +330,3 @@ relay_crypto_assert_ok(const relay_crypto_t *crypto)
   tor_assert(crypto->f_digest);
   tor_assert(crypto->b_digest);
 }
-

@@ -47,6 +47,8 @@
 #include "or/origin_circuit_st.h"
 #include "or/routerstatus_st.h"
 
+#include "lib/encoding/confline.h"
+
 /* Trunnel */
 #include "trunnel/ed25519_cert.h"
 #include "trunnel/hs/cell_common.h"
@@ -3631,4 +3633,3 @@ get_first_service(void)
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
-

@@ -33,6 +33,7 @@
 #include "lib/log/torlog.h"
 #include "common/util.h"
 #include "trunnel/link_handshake.h"
+#include "lib/tls/tortls.h"
 
 #include "or/or_handshake_certs_st.h"
 
@@ -723,4 +724,3 @@ tor_cert_encode_ed22519(const tor_cert_t *cert, char **cert_str_out)
   tor_free(ed_cert_b64);
   return ret;
 }
-

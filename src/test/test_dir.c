@@ -45,6 +45,7 @@
 #include "or/relay.h"
 #include "test/log_test_helpers.h"
 #include "or/voting_schedule.h"
+#include "lib/compress/compress.h"
 
 #include "or/authority_cert_st.h"
 #include "or/document_signature_st.h"

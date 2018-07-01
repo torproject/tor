@@ -27,9 +27,9 @@ void consensus_cache_delete_pending(consensus_cache_t *cache,
                                     int force);
 int consensus_cache_get_n_filenames_available(consensus_cache_t *cache);
 consensus_cache_entry_t *consensus_cache_add(consensus_cache_t *cache,
-                                             const config_line_t *labels,
-                                             const uint8_t *data,
-                                             size_t datalen);
+                                           const struct config_line_t *labels,
+                                           const uint8_t *data,
+                                           size_t datalen);
 
 consensus_cache_entry_t *consensus_cache_find_first(
                                              consensus_cache_t *cache,
@@ -46,7 +46,7 @@ void consensus_cache_filter_list(smartlist_t *lst,
 
 const char *consensus_cache_entry_get_value(const consensus_cache_entry_t *ent,
                                             const char *key);
-const config_line_t *consensus_cache_entry_get_labels(
+const struct config_line_t *consensus_cache_entry_get_labels(
                                           const consensus_cache_entry_t *ent);
 
 void consensus_cache_entry_incref(consensus_cache_entry_t *ent);
@@ -64,4 +64,3 @@ int consensus_cache_entry_is_mapped(consensus_cache_entry_t *ent);
 #endif
 
 #endif /* !defined(TOR_CONSCACHE_H) */
-

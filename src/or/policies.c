@@ -29,6 +29,7 @@
 #include "or/routerparse.h"
 #include "or/geoip.h"
 #include "ht.h"
+#include "lib/encoding/confline.h"
 
 #include "or/dir_server_st.h"
 #include "or/microdesc_st.h"
@@ -3143,4 +3144,3 @@ policies_free_all(void)
   }
   HT_CLEAR(policy_map, &policy_root);
 }
-

@@ -45,6 +45,7 @@
 #include "or/hs_intropoint.h"
 #include "or/hs_ntor.h"
 #include "or/hs_circuit.h"
+#include "or/hs_circuitmap.h"
 #include "or/hs_service.h"
 #include "or/hs_client.h"
 #include "or/main.h"
@@ -1634,4 +1635,3 @@ struct testcase_t hs_service_tests[] = {
 
   END_OF_TESTCASES
 };
-

@@ -24,6 +24,8 @@
 #include "or/or_handshake_state_st.h"
 #include "or/var_cell_st.h"
 
+#include "lib/tls/tortls.h"
+
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 

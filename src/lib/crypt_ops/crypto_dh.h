@@ -14,6 +14,7 @@
 #define TOR_CRYPTO_DH_H
 
 #include "orconfig.h"
+#include "lib/cc/torint.h"
 #include "lib/defs/dh_sizes.h"
 
 typedef struct crypto_dh_t crypto_dh_t;

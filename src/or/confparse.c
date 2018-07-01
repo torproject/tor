@@ -26,6 +26,7 @@
 #include "or/routerset.h"
 
 #include "lib/container/bitarray.h"
+#include "lib/encoding/confline.h"
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_msec_interval(const char *s, int *ok);

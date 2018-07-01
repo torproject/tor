@@ -7,6 +7,8 @@
 #ifndef OR_HANDSHAKE_CERTS_ST
 #define OR_HANDSHAKE_CERTS_ST
 
+struct tor_x509_cert_t;
+
 /** Structure to hold all the certificates we've received on an OR connection
  */
 struct or_handshake_certs_t {
@@ -14,13 +16,13 @@ struct or_handshake_certs_t {
   int started_here;
   /** The cert for the 'auth' RSA key that's supposed to sign the AUTHENTICATE
    * cell. Signed with the RSA identity key. */
-  tor_x509_cert_t *auth_cert;
+  struct tor_x509_cert_t *auth_cert;
   /** The cert for the 'link' RSA key that was used to negotiate the TLS
    *  connection.  Signed with the RSA identity key. */
-  tor_x509_cert_t *link_cert;
+  struct tor_x509_cert_t *link_cert;
   /** A self-signed identity certificate: the RSA identity key signed
    * with itself.  */
-  tor_x509_cert_t *id_cert;
+  struct tor_x509_cert_t *id_cert;
   /** The Ed25519 signing key, signed with the Ed25519 identity key. */
   struct tor_cert_st *ed_id_sign;
   /** A digest of the X509 link certificate for the TLS connection, signed
@@ -36,4 +38,3 @@ struct or_handshake_certs_t {
 };
 
 #endif
-

@@ -63,27 +63,17 @@
 #include <windows.h>
 #endif /* defined(_WIN32) */
 
+#include "common/util.h"
+
+#include "lib/container/map.h"
+#include "lib/container/smartlist.h"
 #include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_format.h"
-#include "lib/crypt_ops/crypto_dh.h"
-#include "lib/crypt_ops/crypto_hkdf.h"
-#include "lib/tls/tortls.h"
-#include "lib/log/torlog.h"
-#include "lib/container/smartlist.h"
-#include "lib/container/map.h"
-#include "lib/compress/compress.h"
-#include "lib/net/address.h"
-#include "common/compat_libevent.h"
-#include "ht.h"
-#include "lib/encoding/confline.h"
-#include "or/replaycache.h"
-#include "lib/crypt_ops/crypto_curve25519.h"
-#include "lib/crypt_ops/crypto_ed25519.h"
-#include "tor_queue.h"
-#include "common/token_bucket.h"
+#include "lib/defs/dh_sizes.h"
 #include "lib/encoding/binascii.h"
-#include "or/hs_circuitmap.h"
-#include "common/util.h"
+#include "lib/net/address.h"
+
+#include "ht.h"
 
 // These, more than other includes, are for keeping the other struct
 // definitions working. We should remove them when we minimize our includes.
@@ -1523,6 +1513,7 @@ typedef enum {
 
 struct fast_handshake_state_t;
 struct ntor_handshake_state_t;
+struct crypto_dh_t;
 #define ONION_HANDSHAKE_TYPE_TAP  0x0000
 #define ONION_HANDSHAKE_TYPE_FAST 0x0001
 #define ONION_HANDSHAKE_TYPE_NTOR 0x0002
@@ -1531,7 +1522,7 @@ typedef struct {
   uint16_t tag;
   union {
     struct fast_handshake_state_t *fast;
-    crypto_dh_t *tap;
+    struct crypto_dh_t *tap;
     struct ntor_handshake_state_t *ntor;
   } u;
 } onion_handshake_state_t;
@@ -1694,6 +1685,8 @@ typedef enum {OUTBOUND_ADDR_EXIT, OUTBOUND_ADDR_OR,
               OUTBOUND_ADDR_EXIT_AND_OR,
               OUTBOUND_ADDR_MAX} outbound_addr_t;
 
+struct config_line_t;
+
 /** Configuration options for a Tor process. */
 typedef struct {
   uint32_t magic_;
@@ -1707,7 +1700,7 @@ typedef struct {
   } command;
   char *command_arg; /**< Argument for command-line option. */
 
-  config_line_t *Logs; /**< New-style list of configuration lines
+  struct config_line_t *Logs; /**< New-style list of configuration lines
                         * for logs */
   int LogTimeGranularity; /**< Log resolution in milliseconds. */
 
@@ -1761,7 +1754,7 @@ typedef struct {
   int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
                        * process for all current and future memory. */
 
-  config_line_t *ExitPolicy; /**< Lists of exit policy components. */
+  struct config_line_t *ExitPolicy; /**< Lists of exit policy components. */
   int ExitPolicyRejectPrivate; /**< Should we not exit to reserved private
                                 * addresses, and our own published addresses?
                                 */
@@ -1770,36 +1763,37 @@ typedef struct {
                                         * Includes OutboundBindAddresses and
                                         * configured ports. */
   int ReducedExitPolicy; /**<Should we use the Reduced Exit Policy? */
-  config_line_t *SocksPolicy; /**< Lists of socks policy components */
-  config_line_t *DirPolicy; /**< Lists of dir policy components */
+  struct config_line_t *SocksPolicy; /**< Lists of socks policy components */
+  struct config_line_t *DirPolicy; /**< Lists of dir policy components */
   /** Local address to bind outbound sockets */
-  config_line_t *OutboundBindAddress;
+  struct config_line_t *OutboundBindAddress;
   /** Local address to bind outbound relay sockets */
-  config_line_t *OutboundBindAddressOR;
+  struct config_line_t *OutboundBindAddressOR;
   /** Local address to bind outbound exit sockets */
-  config_line_t *OutboundBindAddressExit;
+  struct config_line_t *OutboundBindAddressExit;
   /** Addresses derived from the various OutboundBindAddress lines.
    * [][0] is IPv4, [][1] is IPv6
    */
   tor_addr_t OutboundBindAddresses[OUTBOUND_ADDR_MAX][2];
   /** Directory server only: which versions of
    * Tor should we tell users to run? */
-  config_line_t *RecommendedVersions;
-  config_line_t *RecommendedClientVersions;
-  config_line_t *RecommendedServerVersions;
-  config_line_t *RecommendedPackages;
+  struct config_line_t *RecommendedVersions;
+  struct config_line_t *RecommendedClientVersions;
+  struct config_line_t *RecommendedServerVersions;
+  struct config_line_t *RecommendedPackages;
   /** Whether dirservers allow router descriptors with private IPs. */
   int DirAllowPrivateAddresses;
   /** Whether routers accept EXTEND cells to routers with private IPs. */
   int ExtendAllowPrivateAddresses;
   char *User; /**< Name of user to run Tor as. */
-  config_line_t *ORPort_lines; /**< Ports to listen on for OR connections. */
+   /** Ports to listen on for OR connections. */
+  struct config_line_t *ORPort_lines;
   /** Ports to listen on for extended OR connections. */
-  config_line_t *ExtORPort_lines;
+  struct config_line_t *ExtORPort_lines;
   /** Ports to listen on for SOCKS connections. */
-  config_line_t *SocksPort_lines;
+  struct config_line_t *SocksPort_lines;
   /** Ports to listen on for transparent pf/netfilter connections. */
-  config_line_t *TransPort_lines;
+  struct config_line_t *TransPort_lines;
   char *TransProxyType; /**< What kind of transparent proxy
                          * implementation are we using? */
   /** Parsed value of TransProxyType. */
@@ -1809,20 +1803,21 @@ typedef struct {
     TPT_IPFW,
     TPT_TPROXY,
   } TransProxyType_parsed;
-  config_line_t *NATDPort_lines; /**< Ports to listen on for transparent natd
-                            * connections. */
+  /** Ports to listen on for transparent natd connections. */
+  struct config_line_t *NATDPort_lines;
   /** Ports to listen on for HTTP Tunnel connections. */
-  config_line_t *HTTPTunnelPort_lines;
-  config_line_t *ControlPort_lines; /**< Ports to listen on for control
+  struct config_line_t *HTTPTunnelPort_lines;
+  struct config_line_t *ControlPort_lines; /**< Ports to listen on for control
                                * connections. */
-  config_line_t *ControlSocket; /**< List of Unix Domain Sockets to listen on
-                                 * for control connections. */
+  /** List of Unix Domain Sockets to listen on for control connections. */
+  struct config_line_t *ControlSocket;
 
   int ControlSocketsGroupWritable; /**< Boolean: Are control sockets g+rw? */
   int UnixSocksGroupWritable; /**< Boolean: Are SOCKS Unix sockets g+rw? */
   /** Ports to listen on for directory connections. */
-  config_line_t *DirPort_lines;
-  config_line_t *DNSPort_lines; /**< Ports to listen on for DNS requests. */
+  struct config_line_t *DirPort_lines;
+  /** Ports to listen on for DNS requests. */
+  struct config_line_t *DNSPort_lines;
 
   /* MaxMemInQueues value as input by the user. We clean this up to be
    * MaxMemInQueues. */
@@ -1878,19 +1873,19 @@ typedef struct {
   char *BridgePassword_AuthDigest_;
 
   int UseBridges; /**< Boolean: should we start all circuits with a bridge? */
-  config_line_t *Bridges; /**< List of bootstrap bridge addresses. */
+  struct config_line_t *Bridges; /**< List of bootstrap bridge addresses. */
 
-  config_line_t *ClientTransportPlugin; /**< List of client
+  struct config_line_t *ClientTransportPlugin; /**< List of client
                                            transport plugins. */
 
-  config_line_t *ServerTransportPlugin; /**< List of client
+  struct config_line_t *ServerTransportPlugin; /**< List of client
                                            transport plugins. */
 
   /** List of TCP/IP addresses that transports should listen at. */
-  config_line_t *ServerTransportListenAddr;
+  struct config_line_t *ServerTransportListenAddr;
 
   /** List of options that must be passed to pluggable transports. */
-  config_line_t *ServerTransportOptions;
+  struct config_line_t *ServerTransportOptions;
 
   int BridgeRelay; /**< Boolean: are we acting as a bridge relay? We make
                     * this explicit so we can change how we behave in the
@@ -1975,9 +1970,10 @@ typedef struct {
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
   smartlist_t *FirewallPorts; /**< Which ports our firewall allows
                                * (strings). */
-  config_line_t *ReachableAddresses; /**< IP:ports our firewall allows. */
-  config_line_t *ReachableORAddresses; /**< IP:ports for OR conns. */
-  config_line_t *ReachableDirAddresses; /**< IP:ports for Dir conns. */
+   /** IP:ports our firewall allows. */
+  struct config_line_t *ReachableAddresses;
+  struct config_line_t *ReachableORAddresses; /**< IP:ports for OR conns. */
+  struct config_line_t *ReachableDirAddresses; /**< IP:ports for Dir conns. */
 
   int ConstrainedSockets; /**< Shrink xmit and recv socket buffers. */
   uint64_t ConstrainedSockSize; /**< Size of constrained buffers. */
@@ -2004,7 +2000,7 @@ typedef struct {
   smartlist_t *TrackHostExits;
   int TrackHostExitsExpire; /**< Number of seconds until we expire an
                              * addressmap */
-  config_line_t *AddressMap; /**< List of address map directives. */
+  struct config_line_t *AddressMap; /**< List of address map directives. */
   int AutomapHostsOnResolve; /**< If true, when we get a resolve request for a
                               * hostname ending with one of the suffixes in
                               * <b>AutomapHostsSuffixes</b>, map it to a
@@ -2049,10 +2045,11 @@ typedef struct {
   uint64_t PerConnBWRate; /**< Long-term bw on a single TLS conn, if set. */
   uint64_t PerConnBWBurst; /**< Allowed burst on a single TLS conn, if set. */
   int NumCPUs; /**< How many CPUs should we try to use? */
-  config_line_t *RendConfigLines; /**< List of configuration lines
+  struct config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
-  config_line_t *HidServAuth; /**< List of configuration lines for client-side
-                               * authorizations for hidden services */
+  struct config_line_t *HidServAuth; /**< List of configuration lines for
+                               * client-side authorizations for hidden
+                               * services */
   char *ContactInfo; /**< Contact info to be published in the directory. */
 
   int HeartbeatPeriod; /**< Log heartbeat messages after this many seconds
@@ -2083,10 +2080,10 @@ typedef struct {
   /** List of configuration lines for replacement directory authorities.
    * If you just want to replace one class of authority at a time,
    * use the "Alternate*Authority" options below instead. */
-  config_line_t *DirAuthorities;
+  struct config_line_t *DirAuthorities;
 
   /** List of fallback directory servers */
-  config_line_t *FallbackDir;
+  struct config_line_t *FallbackDir;
   /** Whether to use the default hard-coded FallbackDirs */
   int UseDefaultFallbackDirs;
 
@@ -2096,21 +2093,22 @@ typedef struct {
 
   /** If set, use these main (currently v3) directory authorities and
    * not the default ones. */
-  config_line_t *AlternateDirAuthority;
+  struct config_line_t *AlternateDirAuthority;
 
   /** If set, use these bridge authorities and not the default one. */
-  config_line_t *AlternateBridgeAuthority;
+  struct config_line_t *AlternateBridgeAuthority;
 
-  config_line_t *MyFamily_lines; /**< Declared family for this OR. */
-  config_line_t *MyFamily; /**< Declared family for this OR, normalized */
-  config_line_t *NodeFamilies; /**< List of config lines for
+  struct config_line_t *MyFamily_lines; /**< Declared family for this OR. */
+  struct config_line_t *MyFamily; /**< Declared family for this OR,
+                                     normalized */
+  struct config_line_t *NodeFamilies; /**< List of config lines for
                                 * node families */
   smartlist_t *NodeFamilySets; /**< List of parsed NodeFamilies values. */
-  config_line_t *AuthDirBadExit; /**< Address policy for descriptors to
+  struct config_line_t *AuthDirBadExit; /**< Address policy for descriptors to
                                   * mark as bad exits. */
-  config_line_t *AuthDirReject; /**< Address policy for descriptors to
+  struct config_line_t *AuthDirReject; /**< Address policy for descriptors to
                                  * reject. */
-  config_line_t *AuthDirInvalid; /**< Address policy for descriptors to
+  struct config_line_t *AuthDirInvalid; /**< Address policy for descriptors to
                                   * never mark as valid. */
   /** @name AuthDir...CC
    *
@@ -2153,9 +2151,9 @@ typedef struct {
   enum { ACCT_MAX, ACCT_SUM, ACCT_IN, ACCT_OUT } AccountingRule;
 
   /** Base64-encoded hash of accepted passwords for the control system. */
-  config_line_t *HashedControlPassword;
+  struct config_line_t *HashedControlPassword;
   /** As HashedControlPassword, but not saved. */
-  config_line_t *HashedControlSessionPassword;
+  struct config_line_t *HashedControlSessionPassword;
 
   int CookieAuthentication; /**< Boolean: do we enable cookie-based auth for
                              * the control system? */
@@ -2767,15 +2765,15 @@ typedef struct {
   uint64_t AccountingExpectedUsage;
 
   /** A list of Entry Guard-related configuration lines. (pre-prop271) */
-  config_line_t *EntryGuards;
+  struct config_line_t *EntryGuards;
 
   /** A list of guard-related configuration lines. (post-prop271) */
-  config_line_t *Guard;
+  struct config_line_t *Guard;
 
-  config_line_t *TransportProxies;
+  struct config_line_t *TransportProxies;
 
   /** Cached revision counters for active hidden services on this host */
-  config_line_t *HidServRevCounter;
+  struct config_line_t *HidServRevCounter;
 
   /** These fields hold information on the history of bandwidth usage for
    * servers.  The "Ends" fields hold the time when we last updated the
@@ -2803,7 +2801,7 @@ typedef struct {
   smartlist_t *BWHistoryDirWriteMaxima;
 
   /** Build time histogram */
-  config_line_t * BuildtimeHistogram;
+  struct config_line_t * BuildtimeHistogram;
   int TotalBuildTimes;
   int CircuitBuildAbandonedCount;
 
@@ -2812,7 +2810,7 @@ typedef struct {
 
   /** Holds any unrecognized values we found in the state file, in the order
    * in which we found them. */
-  config_line_t *ExtraLines;
+  struct config_line_t *ExtraLines;
 
   /** When did we last rotate our onion key?  "0" for 'no idea'. */
   time_t LastRotatedOnionKey;

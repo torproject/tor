@@ -46,7 +46,9 @@
 #include "or/tor_version_st.h"
 #include "or/vote_routerstatus_st.h"
 
+#include "lib/compress/compress.h"
 #include "lib/container/order.h"
+#include "lib/encoding/confline.h"
 
 /**
  * \file dirserv.c

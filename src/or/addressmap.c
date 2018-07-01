@@ -15,13 +15,14 @@
 
 #define ADDRESSMAP_PRIVATE
 
+#include "lib/crypt_ops/crypto_rand.h"
+
 #include "or/or.h"
 #include "or/addressmap.h"
 #include "or/circuituse.h"
 #include "or/config.h"
 #include "or/connection_edge.h"
 #include "or/control.h"
-#include "lib/crypt_ops/crypto_rand.h"
 #include "or/dns.h"
 #include "or/nodelist.h"
 #include "or/routerset.h"
@@ -1153,4 +1154,3 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
      iter = strmap_iter_next(addressmap,iter);
    }
 }
-

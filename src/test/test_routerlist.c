@@ -39,6 +39,8 @@
 #include "or/node_st.h"
 #include "or/routerstatus_st.h"
 
+#include "lib/encoding/confline.h"
+
 #include "test/test.h"
 #include "test/test_dir_common.h"
 #include "test/log_test_helpers.h"
@@ -782,4 +784,3 @@ struct testcase_t routerlist_tests[] = {
   { "warn_early_consensus", test_warn_early_consensus, 0, NULL, NULL },
   END_OF_TESTCASES
 };
-

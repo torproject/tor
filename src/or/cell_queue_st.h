@@ -7,6 +7,8 @@
 #ifndef PACKED_CELL_ST_H
 #define PACKED_CELL_ST_H
 
+#include "tor_queue.h"
+
 /** A cell as packed for writing to the network. */
 struct packed_cell_t {
   /** Next cell queued on this circuit. */
@@ -25,4 +27,3 @@ struct cell_queue_t {
 };
 
 #endif
-

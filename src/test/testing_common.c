@@ -13,12 +13,15 @@
 #include "or/or.h"
 #include "or/control.h"
 #include "or/config.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "or/rephist.h"
 #include "lib/err/backtrace.h"
 #include "test/test.h"
 #include "or/channelpadding.h"
 #include "or/main.h"
+#include "lib/compress/compress.h"
+#include "common/compat_libevent.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H

@@ -9,6 +9,7 @@
  **/
 
 #include "orconfig.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 
 #include <stdio.h>

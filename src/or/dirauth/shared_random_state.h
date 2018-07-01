@@ -85,11 +85,11 @@ typedef struct sr_disk_state_t {
   /* State valid until? */
   time_t ValidUntil;
   /* All commits seen that are valid. */
-  config_line_t *Commit;
+  struct config_line_t *Commit;
   /* Previous and current shared random value. */
-  config_line_t *SharedRandValues;
+  struct config_line_t *SharedRandValues;
   /* Extra Lines for configuration we might not know. */
-  config_line_t *ExtraLines;
+  struct config_line_t *ExtraLines;
 } sr_disk_state_t;
 
 /* API */
@@ -144,4 +144,3 @@ STATIC sr_state_t *get_sr_state(void);
 #endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* !defined(TOR_SHARED_RANDOM_STATE_H) */
-

@@ -42,7 +42,7 @@ void init_protocol_warning_severity_level(void);
 int get_protocol_warning_severity_level(void);
 const char *get_version(void);
 const char *get_short_version(void);
-setopt_err_t options_trial_assign(config_line_t *list, unsigned flags,
+setopt_err_t options_trial_assign(struct config_line_t *list, unsigned flags,
                                   char **msg);
 
 uint32_t get_last_resolved_addr(void);
@@ -62,7 +62,7 @@ setopt_err_t options_init_from_string(const char *cf_defaults, const char *cf,
                             int command, const char *command_arg, char **msg);
 int option_is_recognized(const char *key);
 const char *option_get_canonical_name(const char *key);
-config_line_t *option_get_assignment(const or_options_t *options,
+struct config_line_t *option_get_assignment(const or_options_t *options,
                                      const char *key);
 int options_save_current(void);
 const char *get_torrc_fname(int defaults_fname);
@@ -180,8 +180,8 @@ int init_cookie_authentication(const char *fname, const char *header,
 or_options_t *options_new(void);
 
 int config_parse_commandline(int argc, char **argv, int ignore_errors,
-                             config_line_t **result,
-                             config_line_t **cmdline_result);
+                             struct config_line_t **result,
+                             struct config_line_t **cmdline_result);
 
 void config_register_addressmaps(const or_options_t *options);
 /* XXXX move to connection_edge.h */
@@ -260,7 +260,7 @@ STATIC int parse_dir_fallback_line(const char *line, int validate_only);
 STATIC int have_enough_mem_for_dircache(const or_options_t *options,
                                         size_t total_mem, char **msg);
 STATIC int parse_port_config(smartlist_t *out,
-                  const config_line_t *ports,
+                  const struct config_line_t *ports,
                   const char *portname,
                   int listener_type,
                   const char *defaultaddr,

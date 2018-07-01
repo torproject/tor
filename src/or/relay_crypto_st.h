@@ -7,21 +7,25 @@
 #ifndef RELAY_CRYPTO_ST_H
 #define RELAY_CRYPTO_ST_H
 
+#define crypto_cipher_t aes_cnt_cipher
+struct crypto_cipher_t;
+struct crypto_digest_t;
+
 struct relay_crypto_t {
   /* crypto environments */
   /** Encryption key and counter for cells heading towards the OR at this
    * step. */
-  crypto_cipher_t *f_crypto;
+  struct crypto_cipher_t *f_crypto;
   /** Encryption key and counter for cells heading back from the OR at this
    * step. */
-  crypto_cipher_t *b_crypto;
+  struct crypto_cipher_t *b_crypto;
 
   /** Digest state for cells heading towards the OR at this step. */
-  crypto_digest_t *f_digest; /* for integrity checking */
+  struct crypto_digest_t *f_digest; /* for integrity checking */
   /** Digest state for cells heading away from the OR at this step. */
-  crypto_digest_t *b_digest;
+  struct crypto_digest_t *b_digest;
 
 };
+#undef crypto_cipher_t
 
 #endif
-

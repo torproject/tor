@@ -16,6 +16,7 @@
 #include "or/config.h"
 #include "or/main.h"
 #include "or/periodic.h"
+#include "common/compat_libevent.h"
 
 /** We disable any interval greater than this number of seconds, on the
  * grounds that it is probably an absolute time mistakenly passed in as a
@@ -169,4 +170,3 @@ periodic_event_disable(periodic_event_item_t *event)
   mainloop_event_cancel(event->ev);
   event->enabled = 0;
 }
-

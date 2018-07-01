@@ -106,6 +106,7 @@
 #include "or/or_circuit_st.h"
 #include "or/origin_circuit_st.h"
 #include "or/socks_request_st.h"
+#include "common/compat_libevent.h"
 
 #ifdef HAVE_LINUX_TYPES_H
 #include <linux/types.h>
@@ -4221,4 +4222,3 @@ connection_edge_free_all(void)
   pending_entry_connections = NULL;
   mainloop_event_free(attach_pending_entry_connections_ev);
 }
-

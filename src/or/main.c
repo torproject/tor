@@ -116,6 +116,9 @@
 #include "lib/sandbox/sandbox.h"
 #include "lib/fs/lockfile.h"
 #include "lib/net/buffers_net.h"
+#include "lib/tls/tortls.h"
+#include "common/compat_libevent.h"
+#include "lib/encoding/confline.h"
 
 #include <event2/event.h>
 

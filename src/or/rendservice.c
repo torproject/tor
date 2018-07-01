@@ -35,6 +35,7 @@
 #include "or/routerlist.h"
 #include "or/routerparse.h"
 #include "or/routerset.h"
+#include "lib/encoding/confline.h"
 
 #include "or/cpath_build_state_st.h"
 #include "or/crypt_path_st.h"
@@ -4437,4 +4438,3 @@ set_rend_rend_service_staging_list(smartlist_t *new_list)
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
-

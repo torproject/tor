@@ -16,6 +16,7 @@
 #include "or/connection.h"
 #include "or/connection_edge.h"
 #include "or/control.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/directory.h"
@@ -32,6 +33,7 @@
 #include "or/router.h"
 #include "or/routerlist.h"
 #include "or/routerset.h"
+#include "lib/encoding/confline.h"
 
 #include "or/cpath_build_state_st.h"
 #include "or/crypt_path_st.h"
@@ -1253,4 +1255,3 @@ rend_client_non_anonymous_mode_enabled(const or_options_t *options)
   return 0;
 #endif /* defined(NON_ANONYMOUS_MODE_ENABLED) */
 }
-

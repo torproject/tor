@@ -21,7 +21,10 @@
 #include "or/cpuworker.h"
 #include "or/networkstatus.h"
 #include "or/routerparse.h"
+#include "common/compat_libevent.h"
 #include "common/workqueue.h"
+#include "lib/compress/compress.h"
+#include "lib/encoding/confline.h"
 
 #include "or/networkstatus_st.h"
 #include "or/networkstatus_voter_info_st.h"
@@ -1940,4 +1943,3 @@ consensus_cache_entry_get_valid_after(const consensus_cache_entry_t *ent,
   else
     return 0;
 }
-

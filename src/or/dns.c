@@ -64,6 +64,7 @@
 #include "or/router.h"
 #include "ht.h"
 #include "lib/sandbox/sandbox.h"
+#include "common/compat_libevent.h"
 
 #include "or/edge_connection_st.h"
 #include "or/or_circuit_st.h"
@@ -2136,4 +2137,3 @@ dns_insert_cache_entry(cached_resolve_t *new_entry)
 {
   HT_INSERT(cache_map, &cache_root, new_entry);
 }
-

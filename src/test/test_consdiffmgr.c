@@ -13,6 +13,8 @@
 #include "or/networkstatus.h"
 #include "or/routerparse.h"
 #include "common/workqueue.h"
+#include "lib/compress/compress.h"
+#include "lib/encoding/confline.h"
 
 #include "or/networkstatus_st.h"
 
@@ -896,4 +898,3 @@ struct testcase_t consdiffmgr_tests[] = {
 
   END_OF_TESTCASES
 };
-

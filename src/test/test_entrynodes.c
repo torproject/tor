@@ -44,6 +44,7 @@
 #include "test/log_test_helpers.h"
 
 #include "lib/container/bloomfilt.h"
+#include "lib/encoding/confline.h"
 
 /* TODO:
  * choose_random_entry() test with state set.

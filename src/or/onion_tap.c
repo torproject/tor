@@ -29,6 +29,7 @@
 
 #include "or/or.h"
 #include "or/config.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/onion_tap.h"
@@ -243,4 +244,3 @@ onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
   tor_free(key_material);
   return -1;
 }
-

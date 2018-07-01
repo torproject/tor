@@ -17,6 +17,7 @@
 #include "or/consdiff.h"
 #include "or/consdiffmgr.h"
 #include "or/control.h"
+#include "lib/compress/compress.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/directory.h"
@@ -42,6 +43,7 @@
 #include "or/routerlist.h"
 #include "or/routerparse.h"
 #include "or/routerset.h"
+#include "lib/encoding/confline.h"
 
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #if !defined(OpenBSD)
@@ -5952,4 +5954,3 @@ dir_split_resource_into_spoolable(const char *resource,
   smartlist_free(fingerprints);
   return r;
 }
-

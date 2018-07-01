@@ -22,6 +22,8 @@
 #include "or/entry_connection_st.h"
 #include "or/socks_request_st.h"
 
+#include "lib/encoding/confline.h"
+
 static void *
 entryconn_rewrite_setup(const struct testcase_t *tc)
 {
@@ -833,4 +835,3 @@ struct testcase_t entryconn_tests[] = {
 
   END_OF_TESTCASES
 };
-

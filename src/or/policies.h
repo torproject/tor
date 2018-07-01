@@ -88,7 +88,7 @@ int policies_parse_exit_policy_from_options(
                                           uint32_t local_address,
                                           const tor_addr_t *ipv6_local_address,
                                           smartlist_t **result);
-int policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
+int policies_parse_exit_policy(struct config_line_t *cfg, smartlist_t **dest,
                                exit_policy_parser_cfg_t options,
                                const smartlist_t *configured_addresses);
 void policies_parse_exit_policy_reject_private(
@@ -151,4 +151,3 @@ STATIC const tor_addr_port_t * fascist_firewall_choose_address(
 #endif /* defined(POLICIES_PRIVATE) */
 
 #endif /* !defined(TOR_POLICIES_H) */
-

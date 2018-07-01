@@ -42,6 +42,7 @@
 #include "or/router.h"
 #include "lib/sandbox/sandbox.h"
 #include "or/statefile.h"
+#include "lib/encoding/confline.h"
 
 /** A list of state-file "abbreviations," for compatibility. */
 static config_abbrev_t state_abbrevs_[] = {
@@ -708,4 +709,3 @@ or_state_free_all(void)
   or_state_free(global_state);
   global_state = NULL;
 }
-

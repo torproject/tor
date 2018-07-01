@@ -68,6 +68,7 @@
 #include "or/config.h"
 #include "or/cpuworker.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "or/networkstatus.h"
 #include "or/onion.h"
 #include "or/onion_fast.h"
@@ -1343,4 +1344,3 @@ extended_cell_format(uint8_t *command_out, uint16_t *len_out,
 
   return 0;
 }
-

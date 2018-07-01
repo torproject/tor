@@ -12,6 +12,7 @@
 #include "lib/container/buffers.h"
 #define TOR_CHANNEL_INTERNAL_
 #include "or/channeltls.h"
+#include "common/compat_libevent.h"
 
 #include "or/or_connection_st.h"
 
@@ -765,4 +766,3 @@ scheduler_touch_channel(channel_t *chan)
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
-

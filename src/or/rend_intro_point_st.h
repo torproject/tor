@@ -7,14 +7,17 @@
 #ifndef REND_INTRO_POINT_ST_H
 #define REND_INTRO_POINT_ST_H
 
+struct replaycache_t;
+struct crypto_pk_t;
+
 /** Introduction point information.  Used both in rend_service_t (on
  * the service side) and in rend_service_descriptor_t (on both the
  * client and service side). */
 struct rend_intro_point_t {
   extend_info_t *extend_info; /**< Extend info for connecting to this
                                * introduction point via a multi-hop path. */
-  crypto_pk_t *intro_key; /**< Introduction key that replaces the service
-                               * key, if this descriptor is V2. */
+  struct crypto_pk_t *intro_key; /**< Introduction key that replaces the
+                                  * service key, if this descriptor is V2. */
 
   /** (Client side only) Flag indicating that a timeout has occurred
    * after sending an INTRODUCE cell to this intro point.  After a
@@ -35,7 +38,7 @@ struct rend_intro_point_t {
   /** (Service side only) A replay cache recording the RSA-encrypted parts
    * of INTRODUCE2 cells this intro point's circuit has received.  This is
    * used to prevent replay attacks. */
-  replaycache_t *accepted_intro_rsa_parts;
+  struct replaycache_t *accepted_intro_rsa_parts;
 
   /** (Service side only) Count of INTRODUCE2 cells accepted from this
    * intro point.
@@ -71,4 +74,3 @@ struct rend_intro_point_t {
 };
 
 #endif
-

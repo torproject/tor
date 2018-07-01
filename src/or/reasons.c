@@ -17,6 +17,7 @@
 #include "or/or.h"
 #include "or/config.h"
 #include "or/reasons.h"
+#include "lib/tls/tortls.h"
 
 /***************************** Edge (stream) reasons **********************/
 
@@ -493,4 +494,3 @@ end_reason_to_http_connect_response_line(int endreason)
       return "HTTP/1.0 500 Internal Server Error (weird end reason)\r\n\r\n";
   }
 }
-

@@ -51,6 +51,8 @@
 #include "or/routerinfo_st.h"
 
 #include "lib/osinfo/uname.h"
+#include "lib/tls/tortls.h"
+#include "lib/encoding/confline.h"
 
 /**
  * \file router.c

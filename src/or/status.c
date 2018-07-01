@@ -31,6 +31,7 @@
 #include "or/dos.h"
 
 #include "or/routerinfo_st.h"
+#include "lib/tls/tortls.h"
 
 static void log_accounting(const time_t now, const or_options_t *options);
 #include "or/geoip.h"
@@ -247,4 +248,3 @@ log_accounting(const time_t now, const or_options_t *options)
   tor_free(acc_max);
   tor_free(remaining);
 }
-

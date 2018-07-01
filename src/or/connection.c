@@ -104,6 +104,9 @@
 #include "or/routerparse.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/net/buffers_net.h"
+#include "lib/tls/tortls.h"
+#include "common/compat_libevent.h"
+#include "lib/compress/compress.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>

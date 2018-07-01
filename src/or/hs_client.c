@@ -22,6 +22,7 @@
 #include "or/hs_cache.h"
 #include "or/hs_cell.h"
 #include "or/hs_circuit.h"
+#include "or/hs_circuitmap.h"
 #include "or/hs_client.h"
 #include "or/hs_control.h"
 #include "or/hs_descriptor.h"
@@ -1619,4 +1620,3 @@ hs_client_dir_info_changed(void)
    * AP_CONN_STATE_RENDDESC_WAIT state in order to fetch the descriptor. */
   retry_all_socks_conn_waiting_for_desc();
 }
-

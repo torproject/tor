@@ -14,6 +14,8 @@
 #include "common/timers.h"
 #include "common/handles.h"
 
+#include "tor_queue.h"
+
 /* Channel handler function pointer typedefs */
 typedef void (*channel_listener_fn_ptr)(channel_listener_t *, channel_t *);
 typedef void (*channel_cell_handler_fn_ptr)(channel_t *, cell_t *);
@@ -637,4 +639,3 @@ HANDLE_DECL(channel, channel_s,)
   FREE_AND_NULL(channel_handle_t, channel_handle_free_, (h))
 
 #endif /* !defined(TOR_CHANNEL_H) */
-

@@ -99,7 +99,7 @@ int control_event_signal(uintptr_t signal);
 
 int init_control_cookie_authentication(int enabled);
 char *get_controller_cookie_file_name(void);
-smartlist_t *decode_hashed_passwords(config_line_t *passwords);
+smartlist_t *decode_hashed_passwords(struct config_line_t *passwords);
 void disable_control_logging(void);
 void enable_control_logging(void);
 
@@ -325,4 +325,3 @@ STATIC int getinfo_helper_current_time(
 #endif /* defined(CONTROL_PRIVATE) */
 
 #endif /* !defined(TOR_CONTROL_H) */
-

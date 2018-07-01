@@ -41,6 +41,7 @@ hibernating, phase 2:
 #include "or/main.h"
 #include "or/router.h"
 #include "or/statefile.h"
+#include "common/compat_libevent.h"
 
 #include "or/or_connection_st.h"
 
@@ -1227,4 +1228,3 @@ hibernate_set_state_for_testing_(hibernate_state_t newstate)
   hibernate_state = newstate;
 }
 #endif /* defined(TOR_UNIT_TESTS) */
-

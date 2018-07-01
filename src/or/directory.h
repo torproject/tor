@@ -13,6 +13,7 @@
 #define TOR_DIRECTORY_H
 
 #include "or/hs_ident.h"
+enum compress_method_t;
 
 dir_connection_t *TO_DIR_CONN(connection_t *c);
 int directories_have_accepted_server_descriptor(void);
@@ -90,7 +91,7 @@ void directory_request_add_header(directory_request_t *req,
 MOCK_DECL(void, directory_initiate_request, (directory_request_t *request));
 
 int parse_http_response(const char *headers, int *code, time_t *date,
-                        compress_method_t *compression, char **response);
+                        enum compress_method_t *compression, char **response);
 int parse_http_command(const char *headers,
                        char **command_out, char **url_out);
 char *http_get_header(const char *headers, const char *which);
@@ -189,7 +190,7 @@ struct directory_request_t {
   /** Hidden-service-specific information v2. */
   const rend_data_t *rend_query;
   /** Extra headers to append to the request */
-  config_line_t *additional_headers;
+  struct config_line_t *additional_headers;
   /** Hidden-service-specific information for v3+. */
   const hs_ident_dir_conn_t *hs_ident;
   /** Used internally to directory.c: gets informed when the attempt to
@@ -203,8 +204,10 @@ STATIC int handle_get_hs_descriptor_v3(dir_connection_t *conn,
                                        const struct get_handler_args_t *args);
 STATIC int directory_handle_command(dir_connection_t *conn);
 STATIC char *accept_encoding_header(void);
-STATIC int allowed_anonymous_connection_compression_method(compress_method_t);
-STATIC void warn_disallowed_anonymous_compression_method(compress_method_t);
+STATIC int allowed_anonymous_connection_compression_method(
+                                               enum compress_method_t);
+STATIC void warn_disallowed_anonymous_compression_method(
+                                               enum compress_method_t);
 
 STATIC int handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
                                           const response_handler_args_t *args);
@@ -239,7 +242,8 @@ STATIC int handle_post_hs_descriptor(const char *url, const char *body);
 STATIC char* authdir_type_to_string(dirinfo_type_t auth);
 STATIC const char * dir_conn_purpose_to_string(int purpose);
 STATIC int should_use_directory_guards(const or_options_t *options);
-STATIC compression_level_t choose_compression_level(ssize_t n_bytes);
+enum compression_level_t;
+STATIC enum compression_level_t choose_compression_level(ssize_t n_bytes);
 STATIC int find_dl_min_delay(const download_status_t *dls,
                              const or_options_t *options);
 
@@ -268,4 +272,3 @@ STATIC unsigned parse_accept_encoding_header(const char *h);
 #endif /* defined(TOR_UNIT_TESTS) || defined(DIRECTORY_PRIVATE) */
 
 #endif /* !defined(TOR_DIRECTORY_H) */
-

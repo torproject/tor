@@ -11,7 +11,7 @@
 
 typedef HT_HEAD(hs_circuitmap_ht, circuit_t) hs_circuitmap_ht;
 
-typedef struct hs_token_s hs_token_t;
+typedef struct hs_token_t hs_token_t;
 struct or_circuit_t;
 struct origin_circuit_t;
 
@@ -90,7 +90,7 @@ typedef enum {
 
 /** Represents a token used in the HS protocol. Each such token maps to a
  *  specific introduction or rendezvous circuit. */
-struct hs_token_s {
+struct hs_token_t {
   /* Type of HS token. */
   hs_token_type_t type;
 
@@ -110,4 +110,3 @@ hs_circuitmap_ht *get_hs_circuitmap(void);
 #endif /* TOR_UNIT_TESTS */
 
 #endif /* !defined(TOR_HS_CIRCUITMAP_H) */
-

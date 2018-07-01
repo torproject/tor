@@ -80,6 +80,7 @@
 #include "or/routerlist.h"
 #include "or/routerparse.h"
 #include "or/shared_random_client.h"
+#include "lib/encoding/confline.h"
 
 #include "or/cached_dir_st.h"
 #include "or/control_connection_st.h"
@@ -106,6 +107,7 @@
 
 #include "lib/crypt_ops/crypto_s2k.h"
 #include "common/procmon.h"
+#include "common/compat_libevent.h"
 
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
  * finished authentication and is accepting commands. */
@@ -7791,4 +7793,3 @@ control_testing_set_global_event_mask(uint64_t mask)
   global_event_mask = mask;
 }
 #endif /* defined(TOR_UNIT_TESTS) */
-

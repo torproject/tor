@@ -69,6 +69,8 @@
 #include "or/routerinfo_st.h"
 #include "or/var_cell_st.h"
 
+#include "lib/tls/tortls.h"
+
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_launch_v3_or_handshake(or_connection_t *conn);
 static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
@@ -2990,4 +2992,3 @@ connection_or_send_authenticate_cell,(or_connection_t *conn, int authtype))
 
   return 0;
 }
-

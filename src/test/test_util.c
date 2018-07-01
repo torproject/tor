@@ -22,6 +22,7 @@
 #include "lib/memarea/memarea.h"
 #include "lib/process/waitpid.h"
 #include "test/log_test_helpers.h"
+#include "lib/compress/compress.h"
 #include "lib/compress/compress_zstd.h"
 #include "lib/encoding/keyval.h"
 #include "lib/fdio/fdio.h"
@@ -35,6 +36,7 @@
 #include "lib/math/laplace.h"
 #include "lib/meminfo/meminfo.h"
 #include "lib/time/tvdiff.h"
+#include "lib/encoding/confline.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>

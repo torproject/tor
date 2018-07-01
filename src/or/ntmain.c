@@ -25,6 +25,7 @@
 #include "or/ntmain.h"
 #include "lib/log/win32err.h"
 #include "lib/fs/winlib.h"
+#include "common/compat_libevent.h"
 
 #include <windows.h>
 #define GENSRV_SERVICENAME  "tor"

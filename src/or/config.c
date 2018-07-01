@@ -71,6 +71,7 @@
 #include "or/circuitstats.h"
 #include "lib/compress/compress.h"
 #include "or/config.h"
+#include "lib/encoding/confline.h"
 #include "or/connection.h"
 #include "or/connection_edge.h"
 #include "or/connection_or.h"

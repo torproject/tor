@@ -14,6 +14,7 @@
 
 #include "or/or.h"
 #include "or/hs_service.h"
+#include "lib/crypt_ops/crypto_dh.h"
 
 typedef struct rend_intro_cell_s rend_intro_cell_t;
 
@@ -138,7 +139,7 @@ STATIC void rend_service_prune_list_impl_(void);
 #endif /* defined(RENDSERVICE_PRIVATE) */
 
 int rend_num_services(void);
-int rend_config_service(const config_line_t *line_,
+int rend_config_service(const struct config_line_t *line_,
                         const or_options_t *options,
                         hs_service_config_t *config);
 void rend_service_prune_list(void);
@@ -218,4 +219,3 @@ int rend_service_reveal_startup_time(const or_options_t *options);
 int rend_service_non_anonymous_mode_enabled(const or_options_t *options);
 
 #endif /* !defined(TOR_RENDSERVICE_H) */
-

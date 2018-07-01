@@ -7,6 +7,7 @@
 #include "or/conscache.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/fs/storagedir.h"
+#include "lib/encoding/confline.h"
 
 #define CCE_MAGIC 0x17162253
 
@@ -624,4 +625,3 @@ consensus_cache_entry_is_mapped(consensus_cache_entry_t *ent)
   }
 }
 #endif /* defined(TOR_UNIT_TESTS) */
-

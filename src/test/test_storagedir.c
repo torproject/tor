@@ -4,6 +4,7 @@
 #include "or/or.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/fs/storagedir.h"
+#include "lib/encoding/confline.h"
 #include "test/test.h"
 
 #ifdef HAVE_UTIME_H
@@ -373,4 +374,3 @@ struct testcase_t storagedir_tests[] = {
   ENT(read_labeled),
   END_OF_TESTCASES
 };
-

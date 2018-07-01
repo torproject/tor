@@ -19,6 +19,7 @@
 #include "or/statefile.h"
 #include "test/test.h"
 #include "lib/process/subprocess.h"
+#include "lib/encoding/confline.h"
 
 static void
 reset_mp(managed_proxy_t *mp)

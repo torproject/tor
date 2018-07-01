@@ -69,6 +69,8 @@
 #include "or/routerinfo_st.h"
 #include "or/var_cell_st.h"
 
+#include "lib/tls/tortls.h"
+
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;
 /** How many CELL_VERSIONS cells have we received, ever? */
@@ -2454,4 +2456,3 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
 
 #undef ERR
 }
-

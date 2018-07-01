@@ -22,12 +22,14 @@
 
 #include "or/config.h"
 #include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "or/channeltls.h"
 #include "or/main.h"
 #include "or/nodelist.h"
 #include "or/routerset.h"
 
 #include "or/hs_circuit.h"
+#include "or/hs_circuitmap.h"
 #include "or/hs_client.h"
 #include "or/hs_ident.h"
 #include "or/hs_cache.h"
@@ -609,4 +611,3 @@ struct testcase_t hs_client_tests[] = {
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

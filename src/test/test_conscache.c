@@ -4,6 +4,7 @@
 #include "or/or.h"
 #include "or/config.h"
 #include "or/conscache.h"
+#include "lib/encoding/confline.h"
 #include "test/test.h"
 
 #ifdef HAVE_UTIME_H
@@ -337,4 +338,3 @@ struct testcase_t conscache_tests[] = {
   ENT(filter),
   END_OF_TESTCASES
 };
-

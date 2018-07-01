@@ -67,6 +67,7 @@
 #include "or/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "or/directory.h"
 #include "or/entrynodes.h"
 #include "or/main.h"
@@ -86,6 +87,7 @@
 #include "or/routerlist.h"
 #include "or/routerset.h"
 #include "or/channelpadding.h"
+#include "lib/compress/compress.h"
 #include "lib/compress/compress_lzma.h"
 #include "lib/compress/compress_zlib.h"
 #include "lib/compress/compress_zstd.h"
@@ -2737,4 +2739,3 @@ assert_circuit_ok,(const circuit_t *c))
     tor_assert(!or_circ || !or_circ->rend_splice);
   }
 }
-

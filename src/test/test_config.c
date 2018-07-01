@@ -51,6 +51,7 @@
 #include "lib/fs/conffile.h"
 #include "lib/meminfo/meminfo.h"
 #include "lib/net/gethostname.h"
+#include "lib/encoding/confline.h"
 
 static void
 test_config_addressmap(void *arg)

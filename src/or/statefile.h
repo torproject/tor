@@ -20,11 +20,11 @@ void or_state_free_all(void);
 void or_state_mark_dirty(or_state_t *state, time_t when);
 
 #ifdef STATEFILE_PRIVATE
-STATIC config_line_t *get_transport_in_state_by_name(const char *transport);
+STATIC struct config_line_t *get_transport_in_state_by_name(
+                                                 const char *transport);
 STATIC void or_state_free_(or_state_t *state);
 #define or_state_free(st) FREE_AND_NULL(or_state_t, or_state_free_, (st))
 STATIC or_state_t *or_state_new(void);
 #endif
 
 #endif /* !defined(TOR_STATEFILE_H) */
-

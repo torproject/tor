@@ -11,6 +11,8 @@
 
 #include "or/cell_queue_st.h"
 
+struct hs_token_t;
+
 /**
  * A circuit is a path over the onion routing
  * network. Applications can connect to one end of the circuit, and can
@@ -162,11 +164,10 @@ struct circuit_t {
 
   /** If set, points to an HS token that this circuit might be carrying.
    *  Used by the HS circuitmap.  */
-  hs_token_t *hs_token;
+  struct hs_token_t *hs_token;
   /** Hashtable node: used to look up the circuit by its HS token using the HS
       circuitmap. */
   HT_ENTRY(circuit_t) hs_circuitmap_node;
 };
 
 #endif
-

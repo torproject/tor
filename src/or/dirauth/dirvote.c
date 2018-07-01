@@ -44,6 +44,7 @@
 #include "or/vote_timing_st.h"
 
 #include "lib/container/order.h"
+#include "lib/encoding/confline.h"
 
 /**
  * \file dirvote.c

@@ -34,6 +34,7 @@
 #include "or/entry_connection_st.h"
 #include "or/listener_connection_st.h"
 #include "or/socks_request_st.h"
+#include "common/compat_libevent.h"
 
 #include <event2/dns.h>
 #include <event2/dns_compat.h>
@@ -412,4 +413,3 @@ dnsserv_close_listener(connection_t *conn)
     listener_conn->dns_server_port = NULL;
   }
 }
-
