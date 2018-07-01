@@ -33,6 +33,9 @@
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 
 /** A data structure to hold a bunch of cached microdescriptors.  There are
  * two active files in the cache: a "cache file" that we mmap, and a "journal
