@@ -7,7 +7,7 @@
 
 dst=$1
 
-for fn in src/or/*.c src/common/*.c; do
+for fn in src/or/*.c src/or/*/*.c src/common/*.c src/lib/*/*.c; do
     BN=`basename $fn`
     DN=`dirname $fn`
     F=`echo $BN | sed -e 's/\.c$//;'`
