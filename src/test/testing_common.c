@@ -14,6 +14,7 @@
 #include "or/control.h"
 #include "or/config.h"
 #include "lib/crypt_ops/crypto_dh.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "or/rephist.h"
 #include "lib/err/backtrace.h"

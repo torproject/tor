@@ -11,6 +11,7 @@
 #include "or/routerkeys.h"
 #include "common/util.h"
 #include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "or/torcert.h"
 #include "test/test.h"
 
@@ -695,4 +696,3 @@ struct testcase_t routerkeys_tests[] = {
   TEST(rsa_ed_crosscert, 0),
   END_OF_TESTCASES
 };
-

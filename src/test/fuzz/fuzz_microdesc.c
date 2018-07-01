@@ -4,6 +4,8 @@
 #include "or/or.h"
 #include "or/routerparse.h"
 #include "or/microdesc.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
+
 #include "test/fuzz/fuzzing.h"
 
 static void
@@ -44,4 +46,3 @@ fuzz_main(const uint8_t *data, size_t sz)
   }
   return 0;
 }
-

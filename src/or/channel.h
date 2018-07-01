@@ -12,6 +12,7 @@
 #include "or/or.h"
 #include "or/circuitmux.h"
 #include "common/handles.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 #include "tor_queue.h"
 
@@ -255,7 +256,7 @@ struct channel_s {
    * necessarily its true identity.  Don't believe this identity unless
    * authentication has happened.
    */
-  ed25519_public_key_t ed25519_identity;
+  struct ed25519_public_key_t ed25519_identity;
 
   /**
    * Linked list of channels with the same RSA identity digest, for use with
@@ -474,8 +475,8 @@ void channel_mark_incoming(channel_t *chan);
 void channel_mark_outgoing(channel_t *chan);
 void channel_mark_remote(channel_t *chan);
 void channel_set_identity_digest(channel_t *chan,
-                                 const char *identity_digest,
-                                 const ed25519_public_key_t *ed_identity);
+                             const char *identity_digest,
+                             const struct ed25519_public_key_t *ed_identity);
 
 void channel_listener_change_state(channel_listener_t *chan_l,
                                    channel_listener_state_t to_state);
@@ -525,10 +526,10 @@ int channel_send_destroy(circid_t circ_id, channel_t *chan,
 
 channel_t * channel_connect(const tor_addr_t *addr, uint16_t port,
                             const char *rsa_id_digest,
-                            const ed25519_public_key_t *ed_id);
+                            const struct ed25519_public_key_t *ed_id);
 
 channel_t * channel_get_for_extend(const char *rsa_id_digest,
-                                   const ed25519_public_key_t *ed_id,
+                                   const struct ed25519_public_key_t *ed_id,
                                    const tor_addr_t *target_addr,
                                    const char **msg_out,
                                    int *launch_out);
@@ -541,7 +542,7 @@ int channel_is_better(channel_t *a, channel_t *b);
 
 channel_t * channel_find_by_global_id(uint64_t global_identifier);
 channel_t * channel_find_by_remote_identity(const char *rsa_id_digest,
-                                            const ed25519_public_key_t *ed_id);
+                                    const struct ed25519_public_key_t *ed_id);
 
 /** For things returned by channel_find_by_remote_digest(), walk the list.
  * The RSA key will match for all returned elements; the Ed25519 key might not.

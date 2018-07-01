@@ -18,6 +18,7 @@
 
 #include "or/node_st.h"
 #include "or/routerstatus_st.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 #include "test/test_helpers.h"
 
@@ -191,4 +192,3 @@ struct testcase_t hs_control_tests[] = {
 
   END_OF_TESTCASES
 };
-

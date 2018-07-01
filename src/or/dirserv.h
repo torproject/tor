@@ -12,6 +12,8 @@
 #ifndef TOR_DIRSERV_H
 #define TOR_DIRSERV_H
 
+struct ed25519_public_key_t;
+
 #include "lib/testsupport/testsupport.h"
 
 /** What fraction (1 over this number) of the relay ID space do we
@@ -138,7 +140,7 @@ int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
 void dirserv_orconn_tls_done(const tor_addr_t *addr,
                              uint16_t or_port,
                              const char *digest_rcvd,
-                             const ed25519_public_key_t *ed_id_rcvd);
+                             const struct ed25519_public_key_t *ed_id_rcvd);
 int dirserv_should_launch_reachability_test(const routerinfo_t *ri,
                                             const routerinfo_t *ri_old);
 void dirserv_single_reachability_test(time_t now, routerinfo_t *router);
@@ -220,4 +222,3 @@ void dirserv_spool_sort(dir_connection_t *conn);
 void dir_conn_clear_spool(dir_connection_t *conn);
 
 #endif /* !defined(TOR_DIRSERV_H) */
-

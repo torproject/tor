@@ -44,6 +44,7 @@
 #include "or/routerparse.h"
 #include "or/routerset.h"
 #include "lib/encoding/confline.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #if !defined(OpenBSD)

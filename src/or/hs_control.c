@@ -8,6 +8,7 @@
 
 #include "or/or.h"
 #include "or/control.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/hs_common.h"
 #include "or/hs_control.h"
@@ -258,4 +259,3 @@ hs_control_hspost_command(const char *body, const char *onion_address,
   smartlist_free(hsdirs);
   return ret;
 }
-

@@ -26,6 +26,8 @@
 
 #include "or/or.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "or/hs_ntor.h"
 
 /* String constants used by the ntor HS protocol */
@@ -616,4 +618,3 @@ hs_ntor_circuit_key_expansion(const uint8_t *ntor_key_seed, size_t seed_len,
 
   return 0;
 }
-

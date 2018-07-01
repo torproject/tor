@@ -7,24 +7,20 @@
 #include "lib/testsupport/testsupport.h"
 #include "lib/cc/torint.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
-
-#define ED25519_PUBKEY_LEN 32
-#define ED25519_SECKEY_LEN 64
-#define ED25519_SECKEY_SEED_LEN 32
-#define ED25519_SIG_LEN 64
+#include "lib/defs/x25519_sizes.h"
 
 /** An Ed25519 signature. */
-typedef struct {
+typedef struct ed25519_signature_t {
   uint8_t sig[ED25519_SIG_LEN];
 } ed25519_signature_t;
 
 /** An Ed25519 public key */
-typedef struct {
+typedef struct ed25519_public_key_t {
   uint8_t pubkey[ED25519_PUBKEY_LEN];
 } ed25519_public_key_t;
 
 /** An Ed25519 secret key */
-typedef struct {
+typedef struct ed25519_secret_key_t {
   /** Note that we store secret keys in an expanded format that doesn't match
    * the format from standard ed25519.  Ed25519 stores a 32-byte value k and
    * expands it into a 64-byte H(k), using the first 32 bytes for a multiplier
@@ -35,7 +31,7 @@ typedef struct {
 } ed25519_secret_key_t;
 
 /** An Ed25519 keypair. */
-typedef struct {
+typedef struct ed25519_keypair_t {
   ed25519_public_key_t pubkey;
   ed25519_secret_key_t seckey;
 } ed25519_keypair_t;

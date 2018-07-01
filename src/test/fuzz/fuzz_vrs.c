@@ -10,6 +10,7 @@
 
 #include "or/networkstatus_st.h"
 #include "or/vote_routerstatus_st.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 #include "test/fuzz/fuzzing.h"
 
@@ -83,4 +84,3 @@ fuzz_main(const uint8_t *data, size_t sz)
   tor_free(str);
   return 0;
 }
-

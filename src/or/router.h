@@ -14,6 +14,9 @@
 
 #include "lib/testsupport/testsupport.h"
 
+struct curve25519_keypair_t;
+struct ed25519_keypair_t;
+
 #define TOR_ROUTERINFO_ERROR_NO_EXT_ADDR     (-1)
 #define TOR_ROUTERINFO_ERROR_CANNOT_PARSE    (-2)
 #define TOR_ROUTERINFO_ERROR_NOT_A_SERVER    (-3)
@@ -107,10 +110,10 @@ MOCK_DECL(int,router_pick_published_address,(const or_options_t *options,
 int router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e);
 int router_rebuild_descriptor(int force);
 char *router_dump_router_to_string(routerinfo_t *router,
-                                   const crypto_pk_t *ident_key,
-                                   const crypto_pk_t *tap_key,
-                                   const curve25519_keypair_t *ntor_keypair,
-                                   const ed25519_keypair_t *signing_keypair);
+                             const crypto_pk_t *ident_key,
+                             const crypto_pk_t *tap_key,
+                             const struct curve25519_keypair_t *ntor_keypair,
+                             const struct ed25519_keypair_t *signing_keypair);
 char *router_dump_exit_policy_to_string(const routerinfo_t *router,
                                          int include_ipv4,
                                          int include_ipv6);
@@ -126,7 +129,7 @@ int router_has_orport(const routerinfo_t *router,
                       const tor_addr_port_t *orport);
 int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
                              crypto_pk_t *ident_key,
-                             const ed25519_keypair_t *signing_keypair);
+                             const struct ed25519_keypair_t *signing_keypair);
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);
 int is_legal_hexdigest(const char *s);
@@ -156,4 +159,3 @@ STATIC int router_write_fingerprint(int hashed);
 #endif
 
 #endif /* !defined(TOR_ROUTER_H) */
-

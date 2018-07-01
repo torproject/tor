@@ -48,6 +48,7 @@
 #include "or/routerstatus_st.h"
 
 #include "lib/encoding/confline.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 /* Trunnel */
 #include "trunnel/ed25519_cert.h"

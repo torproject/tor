@@ -45,6 +45,7 @@
 
 #include "lib/container/order.h"
 #include "lib/encoding/confline.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 /**
  * \file dirvote.c

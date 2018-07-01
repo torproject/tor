@@ -8,13 +8,7 @@
 #include "lib/cc/torint.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
-
-/** Length of a curve25519 public key when encoded. */
-#define CURVE25519_PUBKEY_LEN 32
-/** Length of a curve25519 secret key when encoded. */
-#define CURVE25519_SECKEY_LEN 32
-/** Length of the result of a curve25519 handshake. */
-#define CURVE25519_OUTPUT_LEN 32
+#include "lib/defs/x25519_sizes.h"
 
 /** Wrapper type for a curve25519 public key.
  *
@@ -75,8 +69,6 @@ STATIC int curve25519_impl(uint8_t *output, const uint8_t *secret,
 STATIC int curve25519_basepoint_impl(uint8_t *output, const uint8_t *secret);
 #endif /* defined(CRYPTO_CURVE25519_PRIVATE) */
 
-#define CURVE25519_BASE64_PADDED_LEN 44
-
 int curve25519_public_from_base64(curve25519_public_key_t *pkey,
                                   const char *input);
 int curve25519_public_to_base64(char *output,
@@ -86,4 +78,3 @@ void curve25519_set_impl_params(int use_ed);
 void curve25519_init(void);
 
 #endif /* !defined(TOR_CRYPTO_CURVE25519_H) */
-

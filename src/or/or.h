@@ -68,7 +68,6 @@
 #include "lib/container/map.h"
 #include "lib/container/smartlist.h"
 #include "lib/crypt_ops/crypto.h"
-#include "lib/crypt_ops/crypto_format.h"
 #include "lib/defs/dh_sizes.h"
 #include "lib/encoding/binascii.h"
 #include "lib/net/address.h"
@@ -78,6 +77,9 @@
 // These, more than other includes, are for keeping the other struct
 // definitions working. We should remove them when we minimize our includes.
 #include "or/entry_port_cfg_st.h"
+
+struct ed25519_public_key_t;
+struct curve25519_public_key_t;
 
 /* These signals are defined to help handle_control_signal work.
  */

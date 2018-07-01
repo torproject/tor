@@ -12,6 +12,9 @@
 #ifndef TOR_CIRCUITBUILD_H
 #define TOR_CIRCUITBUILD_H
 
+struct ed25519_public_key_t;
+struct curve25519_public_key_t;
+
 int route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei);
 char *circuit_list_path(origin_circuit_t *circ, int verbose);
 char *circuit_list_path_for_controller(origin_circuit_t *circ);
@@ -52,9 +55,9 @@ int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 extend_info_t *extend_info_new(const char *nickname,
                                const char *rsa_id_digest,
-                               const ed25519_public_key_t *ed_id,
+                               const struct ed25519_public_key_t *ed_id,
                                crypto_pk_t *onion_key,
-                               const curve25519_public_key_t *ntor_key,
+                               const struct curve25519_public_key_t *ntor_key,
                                const tor_addr_t *addr, uint16_t port);
 extend_info_t *extend_info_from_node(const node_t *r, int for_direct_connect);
 extend_info_t *extend_info_dup(extend_info_t *info);
@@ -100,4 +103,3 @@ unsigned int cpath_get_n_hops(crypt_path_t **head_ptr);
 #endif /* defined(CIRCUITBUILD_PRIVATE) */
 
 #endif /* !defined(TOR_CIRCUITBUILD_H) */
-

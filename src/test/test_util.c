@@ -17,6 +17,7 @@
 #include "or/config.h"
 #include "or/control.h"
 #include "or/transports.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "test/test.h"
 #include "lib/memarea/memarea.h"

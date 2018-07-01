@@ -24,6 +24,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/term/getpass.h"
 #include "lib/tls/tortls.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 #define ENC_KEY_HEADER "Boxed Ed25519 key"
 #define ENC_KEY_TAG "master"

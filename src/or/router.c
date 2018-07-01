@@ -53,6 +53,7 @@
 #include "lib/osinfo/uname.h"
 #include "lib/tls/tortls.h"
 #include "lib/encoding/confline.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 /**
  * \file router.c

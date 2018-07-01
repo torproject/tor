@@ -5,6 +5,9 @@
 #define TOR_HS_NTOR_H
 
 #include "or/or.h"
+struct ed25519_public_key_t;
+struct curve25519_public_key_t;
+struct curve25519_keypair_t;
 
 /* Output length of KDF for key expansion */
 #define HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN \
@@ -28,32 +31,32 @@ typedef struct {
 } hs_ntor_rend_cell_keys_t;
 
 int hs_ntor_client_get_introduce1_keys(
-                      const ed25519_public_key_t *intro_auth_pubkey,
-                      const curve25519_public_key_t *intro_enc_pubkey,
-                      const curve25519_keypair_t *client_ephemeral_enc_keypair,
-                      const uint8_t *subcredential,
-                      hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out);
+              const struct ed25519_public_key_t *intro_auth_pubkey,
+              const struct curve25519_public_key_t *intro_enc_pubkey,
+              const struct curve25519_keypair_t *client_ephemeral_enc_keypair,
+              const uint8_t *subcredential,
+              hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out);
 
 int hs_ntor_client_get_rendezvous1_keys(
-                  const ed25519_public_key_t *intro_auth_pubkey,
-                  const curve25519_keypair_t *client_ephemeral_enc_keypair,
-                  const curve25519_public_key_t *intro_enc_pubkey,
-                  const curve25519_public_key_t *service_ephemeral_rend_pubkey,
-                  hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys_out);
+          const struct ed25519_public_key_t *intro_auth_pubkey,
+          const struct curve25519_keypair_t *client_ephemeral_enc_keypair,
+          const struct curve25519_public_key_t *intro_enc_pubkey,
+          const struct curve25519_public_key_t *service_ephemeral_rend_pubkey,
+          hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys_out);
 
 int hs_ntor_service_get_introduce1_keys(
-                  const ed25519_public_key_t *intro_auth_pubkey,
-                  const curve25519_keypair_t *intro_enc_keypair,
-                  const curve25519_public_key_t *client_ephemeral_enc_pubkey,
-                  const uint8_t *subcredential,
-                  hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out);
+            const struct ed25519_public_key_t *intro_auth_pubkey,
+            const struct curve25519_keypair_t *intro_enc_keypair,
+            const struct curve25519_public_key_t *client_ephemeral_enc_pubkey,
+            const uint8_t *subcredential,
+            hs_ntor_intro_cell_keys_t *hs_ntor_intro_cell_keys_out);
 
 int hs_ntor_service_get_rendezvous1_keys(
-                  const ed25519_public_key_t *intro_auth_pubkey,
-                  const curve25519_keypair_t *intro_enc_keypair,
-                  const curve25519_keypair_t *service_ephemeral_rend_keypair,
-                  const curve25519_public_key_t *client_ephemeral_enc_pubkey,
-                  hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys_out);
+            const struct ed25519_public_key_t *intro_auth_pubkey,
+            const struct curve25519_keypair_t *intro_enc_keypair,
+            const struct curve25519_keypair_t *service_ephemeral_rend_keypair,
+            const struct curve25519_public_key_t *client_ephemeral_enc_pubkey,
+            hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys_out);
 
 int hs_ntor_circuit_key_expansion(const uint8_t *ntor_key_seed,
                                   size_t seed_len,
@@ -64,4 +67,3 @@ int hs_ntor_client_rendezvous2_mac_is_good(
                         const uint8_t *rcvd_mac);
 
 #endif /* !defined(TOR_HS_NTOR_H) */
-

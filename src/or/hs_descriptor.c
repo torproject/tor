@@ -67,6 +67,7 @@
 #include "or/hs_config.h"
 #include "or/torcert.h" /* tor_cert_encode_ed22519() */
 #include "lib/memarea/memarea.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 #include "or/extend_info_st.h"
 

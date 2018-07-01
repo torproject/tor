@@ -17,6 +17,8 @@
 #include "common/util.h"
 #include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "or/hs_ntor.h"
 #include "or/onion_ntor.h"
 
@@ -251,4 +253,3 @@ main(int argc, char **argv)
     return 1;
   }
 }
-

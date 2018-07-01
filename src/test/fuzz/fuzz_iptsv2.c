@@ -4,6 +4,7 @@
 #include "or/or.h"
 #include "or/routerparse.h"
 #include "or/rendcommon.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 #include "or/rend_service_descriptor_st.h"
 
@@ -46,4 +47,3 @@ fuzz_main(const uint8_t *data, size_t sz)
   rend_service_descriptor_free(desc);
   return 0;
 }
-

@@ -17,6 +17,7 @@
 #include "test/hs_test_helpers.h"
 
 #include "or/connection_edge.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "or/hs_common.h"
 #include "or/hs_client.h"
@@ -1832,4 +1833,3 @@ struct testcase_t hs_common_tests[] = {
 
   END_OF_TESTCASES
 };
-

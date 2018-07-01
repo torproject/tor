@@ -162,6 +162,8 @@ void control_event_hs_descriptor_content(const char *onion_address,
 void control_free_all(void);
 
 #ifdef CONTROL_PRIVATE
+#include "lib/crypt_ops/crypto_ed25519.h"
+
 /* Recognized asynchronous event types.  It's okay to expand this list
  * because it is used both as a list of v0 event types, and as indices
  * into the bitfield to determine which controllers want which events.

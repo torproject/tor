@@ -12,6 +12,9 @@
 #include "or/or.h"
 #include "or/channel.h"
 
+struct ed25519_public_key_t;
+struct curve25519_public_key_t;
+
 #define BASE_CHAN_TO_TLS(c) (channel_tls_from_base((c)))
 #define TLS_CHAN_TO_BASE(c) (channel_tls_to_base((c)))
 
@@ -30,7 +33,7 @@ struct channel_tls_s {
 
 channel_t * channel_tls_connect(const tor_addr_t *addr, uint16_t port,
                                 const char *id_digest,
-                                const ed25519_public_key_t *ed_id);
+                                const struct ed25519_public_key_t *ed_id);
 channel_listener_t * channel_tls_get_listener(void);
 channel_listener_t * channel_tls_start_listener(void);
 channel_t * channel_tls_handle_incoming(or_connection_t *orconn);
@@ -72,4 +75,3 @@ STATIC void channel_tls_process_authenticate_cell(var_cell_t *cell,
 #endif /* defined(CHANNELTLS_PRIVATE) */
 
 #endif /* !defined(TOR_CHANNELTLS_H) */
-

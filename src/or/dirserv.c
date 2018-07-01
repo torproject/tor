@@ -48,6 +48,7 @@
 
 #include "lib/compress/compress.h"
 #include "lib/container/order.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/encoding/confline.h"
 
 /**

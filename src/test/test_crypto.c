@@ -14,6 +14,7 @@
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_hkdf.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "ed25519_vectors.inc"

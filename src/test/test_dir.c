@@ -23,6 +23,7 @@
 #include "or/config.h"
 #include "or/control.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "or/directory.h"
 #include "or/dirserv.h"

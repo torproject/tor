@@ -95,6 +95,7 @@
 #include "lib/err/backtrace.h"
 #include "or/bridges.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "or/circuitstats.h"
 #include "or/config.h"
 #include "or/connection.h"
@@ -5841,4 +5842,3 @@ refresh_all_country_info(void)
 
   nodelist_refresh_countries();
 }
-
