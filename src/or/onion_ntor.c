@@ -27,6 +27,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/onion_ntor.h"
 #include "lib/log/torlog.h"
+#include "lib/ctime/di_ops.h"
 #include "common/util.h"
 
 /** Free storage held in an ntor handshake state. */
@@ -335,4 +336,3 @@ onion_skin_ntor_client_handshake(
 
   return bad ? -1 : 0;
 }
-

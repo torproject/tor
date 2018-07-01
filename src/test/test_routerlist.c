@@ -40,6 +40,7 @@
 #include "or/routerstatus_st.h"
 
 #include "lib/encoding/confline.h"
+#include "lib/container/buffers.h"
 
 #include "test/test.h"
 #include "test/test_dir_common.h"

@@ -9,10 +9,11 @@
 #ifndef TOR_PARSECOMMON_H
 #define TOR_PARSECOMMON_H
 
-#include "lib/crypt_ops/crypto.h"
-#include "lib/memarea/memarea.h"
+#include <stddef.h>
 
 struct smartlist_t;
+struct crypto_pk_t;
+struct memarea_t;
 
 /** Enumeration of possible token types.  The ones starting with K_ correspond
 * to directory 'keywords'. A_ is for an annotation, R or C is related to
@@ -206,7 +207,7 @@ typedef struct directory_token_t {
   size_t object_size;          /**< Bytes in object_body */
   char *object_body;           /**< Contents of object, base64-decoded. */
 
-  crypto_pk_t *key;        /**< For public keys only.  Heap-allocated. */
+  struct crypto_pk_t *key;     /**< For public keys only.  Heap-allocated. */
 
   char *error;                 /**< For ERR_ tokens only. */
 } directory_token_t;
@@ -298,12 +299,12 @@ typedef struct token_rule_t {
 
 void token_clear(directory_token_t *tok);
 
-int tokenize_string(memarea_t *area,
+int tokenize_string(struct memarea_t *area,
                     const char *start, const char *end,
                     struct smartlist_t *out,
                     token_rule_t *table,
                     int flags);
-directory_token_t *get_next_token(memarea_t *area,
+directory_token_t *get_next_token(struct memarea_t *area,
                                   const char **s,
                                   const char *eos,
                                   token_rule_t *table);

@@ -14,13 +14,12 @@
 
 #include "or/or.h"
 #include "or/hs_service.h"
-#include "lib/crypt_ops/crypto_dh.h"
 
-typedef struct rend_intro_cell_s rend_intro_cell_t;
+typedef struct rend_intro_cell_t rend_intro_cell_t;
 
 /* This can be used for both INTRODUCE1 and INTRODUCE2 */
 
-struct rend_intro_cell_s {
+struct rend_intro_cell_t {
   /* Is this an INTRODUCE1 or INTRODUCE2? (set to 1 or 2) */
   uint8_t type;
   /* Public key digest */

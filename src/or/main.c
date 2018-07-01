@@ -119,6 +119,7 @@
 #include "lib/tls/tortls.h"
 #include "common/compat_libevent.h"
 #include "lib/encoding/confline.h"
+#include "common/timers.h"
 
 #include <event2/event.h>
 

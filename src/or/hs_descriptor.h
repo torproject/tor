@@ -12,9 +12,6 @@
 #include <stdint.h>
 
 #include "or/or.h"
-#include "lib/net/address.h"
-#include "lib/crypt_ops/crypto.h"
-#include "lib/crypt_ops/crypto_ed25519.h"
 #include "trunnel/ed25519_cert.h" /* needed for trunnel */
 #include "or/torcert.h"
 
@@ -281,4 +278,3 @@ MOCK_DECL(STATIC size_t, decrypt_desc_layer,(const hs_descriptor_t *desc,
 #endif /* defined(HS_DESCRIPTOR_PRIVATE) */
 
 #endif /* !defined(TOR_HS_DESCRIPTOR_H) */
-

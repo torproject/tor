@@ -66,6 +66,7 @@
 #include "or/hs_cache.h"
 #include "or/hs_config.h"
 #include "or/torcert.h" /* tor_cert_encode_ed22519() */
+#include "lib/memarea/memarea.h"
 
 #include "or/extend_info_st.h"
 
@@ -2607,4 +2608,3 @@ hs_desc_lspec_to_trunnel(const hs_desc_link_specifier_t *spec)
 
   return ls;
 }
-

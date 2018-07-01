@@ -91,6 +91,7 @@
 #include "lib/compress/compress_lzma.h"
 #include "lib/compress/compress_zlib.h"
 #include "lib/compress/compress_zstd.h"
+#include "lib/container/buffers.h"
 
 #include "ht.h"
 

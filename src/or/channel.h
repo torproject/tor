@@ -11,10 +11,12 @@
 
 #include "or/or.h"
 #include "or/circuitmux.h"
-#include "common/timers.h"
 #include "common/handles.h"
 
 #include "tor_queue.h"
+
+#define tor_timer_t timeout
+struct tor_timer_t;
 
 /* Channel handler function pointer typedefs */
 typedef void (*channel_listener_fn_ptr)(channel_listener_t *, channel_t *);
@@ -94,7 +96,7 @@ struct channel_s {
   monotime_coarse_t next_padding_time;
 
   /** The callback pointer for the padding callbacks */
-  tor_timer_t *padding_timer;
+  struct tor_timer_t *padding_timer;
   /** The handle to this channel (to free on canceled timers) */
   struct channel_handle_t *timer_handle;
 
@@ -637,5 +639,6 @@ int packed_cell_is_destroy(channel_t *chan,
 HANDLE_DECL(channel, channel_s,)
 #define channel_handle_free(h)    \
   FREE_AND_NULL(channel_handle_t, channel_handle_free_, (h))
+#undef tor_timer_t
 
 #endif /* !defined(TOR_CHANNEL_H) */

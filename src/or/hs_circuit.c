@@ -13,6 +13,7 @@
 #include "or/circuitlist.h"
 #include "or/circuituse.h"
 #include "or/config.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/nodelist.h"

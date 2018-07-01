@@ -14,8 +14,7 @@
 
 listener_connection_t *TO_LISTENER_CONN(connection_t *);
 
-/* XXXX For buf_datalen in inline function */
-#include "lib/container/buffers.h"
+struct buf_t;
 
 const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
@@ -159,7 +158,7 @@ connection_buf_add(const char *string, size_t len, connection_t *conn)
 }
 void connection_buf_add_compress(const char *string, size_t len,
                                  dir_connection_t *conn, int done);
-void connection_buf_add_buf(connection_t *conn, buf_t *buf);
+void connection_buf_add_buf(connection_t *conn, struct buf_t *buf);
 
 size_t connection_get_inbuf_len(connection_t *conn);
 size_t connection_get_outbuf_len(connection_t *conn);
@@ -259,4 +258,3 @@ MOCK_DECL(STATIC smartlist_t *, pick_oos_victims, (int n));
 #endif /* defined(CONNECTION_PRIVATE) */
 
 #endif /* !defined(TOR_CONNECTION_H) */
-
