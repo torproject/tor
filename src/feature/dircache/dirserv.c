@@ -51,6 +51,7 @@
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/encoding/confline.h"
 
+#include "lib/encoding/keyval.h"
 /**
  * \file dirserv.c
  * \brief Directory server core implementation. Manages directory
