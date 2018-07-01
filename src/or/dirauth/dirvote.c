@@ -274,7 +274,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                 > MAX_BW_FILE_HEADERS_LEN)) {
         bw_file_headers = smartlist_join_strings(v3_ns->bw_file_headers, " ",
                                                  0, NULL);
-        if (BUG(strlen(bw_file_headers) > MAX_VOTE_LINE_LEN)) {
+        if (BUG(strlen(bw_file_headers) > MAX_BW_FILE_HEADERS_LINE_LEN)) {
           /* Free and set to NULL, so the vote header line is empty */
           tor_free(bw_file_headers);
         }
