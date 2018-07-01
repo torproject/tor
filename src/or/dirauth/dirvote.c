@@ -271,7 +271,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
 
     if (v3_ns->bw_file_headers) {
       if (! BUG(smartlist_len(v3_ns->bw_file_headers)
-                > MAX_BW_FILE_HEADERS_LEN)) {
+                > MAX_BW_FILE_HEADER_COUNT_IN_VOTE)) {
         bw_file_headers = smartlist_join_strings(v3_ns->bw_file_headers, " ",
                                                  0, NULL);
         if (BUG(strlen(bw_file_headers) > MAX_BW_FILE_HEADERS_LINE_LEN)) {
