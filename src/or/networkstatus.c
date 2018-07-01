@@ -88,6 +88,10 @@
 #include "or/vote_microdesc_hash_st.h"
 #include "or/vote_routerstatus_st.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
 STATIC networkstatus_t *current_ns_consensus = NULL;

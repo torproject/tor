@@ -53,6 +53,13 @@
 #include "lib/net/gethostname.h"
 #include "lib/encoding/confline.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 static void
 test_config_addressmap(void *arg)
 {

@@ -69,6 +69,10 @@
 #include "or/edge_connection_st.h"
 #include "or/or_circuit_st.h"
 
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 #include <event2/event.h>
 #include <event2/dns.h>
 

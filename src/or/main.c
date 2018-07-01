@@ -136,6 +136,10 @@
 #include "or/routerinfo_st.h"
 #include "or/socks_request_st.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #ifdef HAVE_SYSTEMD
 #   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)
 /* Systemd's use of gcc's __INCLUDE_LEVEL__ extension macro appears to confuse

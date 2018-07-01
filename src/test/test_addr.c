@@ -11,6 +11,10 @@
 #include "or/addressmap.h"
 #include "test/log_test_helpers.h"
 
+#ifdef HAVE_SYS_UN_H
+#include <sys/un.h>
+#endif
+
 /** Mocking replacement: only handles localhost. */
 static int
 mock_tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr_out)
@@ -1257,4 +1261,3 @@ struct testcase_t addr_tests[] = {
   { "make_null", test_addr_make_null, 0, NULL, NULL },
   END_OF_TESTCASES
 };
-

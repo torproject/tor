@@ -141,6 +141,10 @@
 
 #include "lib/crypt_ops/digestset.h"
 
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 // #define DEBUG_ROUTERLIST
 
 /****************************************************************************/

@@ -110,6 +110,15 @@
 #ifdef _WIN32
 #include <shlobj.h>
 #endif
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 #include "lib/meminfo/meminfo.h"
 #include "lib/osinfo/uname.h"

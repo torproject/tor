@@ -51,6 +51,16 @@
 #include "or/rend_service_descriptor_st.h"
 #include "or/routerstatus_st.h"
 
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 struct rend_service_t;
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
                                             const char *pk_digest);

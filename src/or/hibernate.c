@@ -46,6 +46,10 @@ hibernating, phase 2:
 #include "or/or_connection_st.h"
 #include "or/or_state_st.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 /** Are we currently awake, asleep, running out of bandwidth, or shutting
  * down? */
 static hibernate_state_t hibernate_state = HIBERNATE_STATE_INITIAL;

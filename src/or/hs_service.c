@@ -56,6 +56,13 @@
 #include "trunnel/hs/cell_common.h"
 #include "trunnel/hs/cell_establish_intro.h"
 
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 /* Helper macro. Iterate over every service in the global map. The var is the
  * name of the service pointer. */
 #define FOR_EACH_SERVICE_BEGIN(var)                          \

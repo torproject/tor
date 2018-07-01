@@ -18,6 +18,10 @@
 
 #include "test/test.h"
 
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 /* Test connection_or_remove_from_ext_or_id_map and
  * connection_or_set_ext_or_identifier */
 static void
@@ -610,4 +614,3 @@ struct testcase_t extorport_tests[] = {
   { "handshake", test_ext_or_handshake, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

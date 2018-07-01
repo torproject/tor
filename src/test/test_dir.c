@@ -63,6 +63,10 @@
 #include "or/vote_microdesc_hash_st.h"
 #include "or/vote_routerstatus_st.h"
 
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 #define NS_MODULE dir
 
 static void

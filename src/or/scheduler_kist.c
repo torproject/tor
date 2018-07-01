@@ -19,6 +19,10 @@
 
 #define TLS_PER_CELL_OVERHEAD 29
 
+#ifdef HAVE_SYS_IOCTL_H
+#include <sys/ioctl.h>
+#endif
+
 #ifdef HAVE_KIST_SUPPORT
 /* Kernel interface needed for KIST. */
 #include <netinet/tcp.h>

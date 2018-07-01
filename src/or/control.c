@@ -100,6 +100,13 @@
 #include "or/routerlist_st.h"
 #include "or/socks_request_st.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 #ifndef _WIN32
 #include <pwd.h>
 #include <sys/resource.h>

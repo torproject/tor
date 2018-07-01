@@ -30,6 +30,10 @@
 #include "or/node_st.h"
 #include "or/routerstatus_st.h"
 
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+
 /** A data structure to hold a bunch of cached microdescriptors.  There are
  * two active files in the cache: a "cache file" that we mmap, and a "journal
  * file" that we append to.  Periodically, we rebuild the cache file to hold

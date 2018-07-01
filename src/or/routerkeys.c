@@ -29,6 +29,10 @@
 #define ENC_KEY_HEADER "Boxed Ed25519 key"
 #define ENC_KEY_TAG "master"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 /* DOCDOC */
 static ssize_t
 do_getpass(const char *prompt, char *buf, size_t buflen,

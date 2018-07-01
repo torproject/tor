@@ -19,6 +19,13 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "ed25519_vectors.inc"
 
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 /** Run unit tests for Diffie-Hellman functionality. */
 static void
 test_crypto_dh(void *arg)

@@ -98,6 +98,10 @@
 #include "lib/math/fp.h"
 #include "lib/math/laplace.h"
 
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+
 static void bw_arrays_init(void);
 static void predicted_ports_alloc(void);
 

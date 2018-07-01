@@ -13,55 +13,14 @@
 #define TOR_OR_H
 
 #include "orconfig.h"
+#include "lib/cc/torint.h"
 
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
-#endif
-#ifdef HAVE_NETDB_H
-#include <netdb.h>
-#endif
-#ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h> /* FreeBSD needs this to know what version it is */
-#endif
-#include "lib/cc/torint.h"
-#ifdef HAVE_SYS_FCNTL_H
-#include <sys/fcntl.h>
-#endif
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
-#ifdef HAVE_SYS_IOCTL_H
-#include <sys/ioctl.h>
-#endif
-#ifdef HAVE_SYS_UN_H
-#include <sys/un.h>
-#endif
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef HAVE_ARPA_INET_H
-#include <arpa/inet.h>
-#endif
-#ifdef HAVE_ERRNO_H
-#include <errno.h>
 #endif
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
-
-#ifdef _WIN32
-#include <winsock2.h>
-#include <io.h>
-#include <process.h>
-#include <direct.h>
-#include <windows.h>
-#endif /* defined(_WIN32) */
 
 #include "common/util.h"
 

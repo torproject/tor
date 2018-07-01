@@ -26,6 +26,10 @@
 #include "or/networkstatus_st.h"
 #include "or/or_state_st.h"
 
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 static authority_cert_t *mock_cert;
 
 static authority_cert_t *

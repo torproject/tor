@@ -30,6 +30,10 @@
 
 #include "test/test_helpers.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 /* mock ID digest and longname for node that's in nodelist */
 #define HSDIR_EXIST_ID "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA" \
                        "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
