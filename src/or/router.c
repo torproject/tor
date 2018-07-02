@@ -2440,17 +2440,18 @@ check_descriptor_bandwidth_changed(time_t now)
 {
   static time_t last_changed = 0;
   uint64_t prev, cur;
+  int hibernating = we_are_hibernating();
 
   /* If the relay uptime is bigger than MAX_UPTIME_BANDWIDTH_CHANGE,
    * the next regularly scheduled descriptor update (18h) will be enough */
-  if (get_uptime() > MAX_UPTIME_BANDWIDTH_CHANGE)
+  if (get_uptime() > MAX_UPTIME_BANDWIDTH_CHANGE && !hibernating)
     return;
 
   if (!router_get_my_routerinfo())
     return;
 
   prev = router_get_my_routerinfo()->bandwidthcapacity;
-  cur = we_are_hibernating() ? 0 : rep_hist_bandwidth_assess();
+  cur = hibernating ? 0 : rep_hist_bandwidth_assess();
   if ((prev != cur && (!prev || !cur)) ||
       cur > (prev * BANDWIDTH_CHANGE_FACTOR) ||
       cur < (prev / BANDWIDTH_CHANGE_FACTOR) ) {
