@@ -142,9 +142,6 @@
 #include "or/node_st.h"
 #include "or/origin_circuit_st.h"
 
-#define REMOVE_UNLISTED_GUARDS_AFTER \
-  ((time_t)(get_remove_unlisted_guards_after_days() * 86400))
-
 /** A list of existing guard selection contexts. */
 static smartlist_t *guard_contexts = NULL;
 /** The currently enabled guard selection context. */
@@ -404,6 +401,13 @@ get_remove_unlisted_guards_after_days(void)
                                  DFLT_REMOVE_UNLISTED_GUARDS_AFTER_DAYS,
                                  1, 365*10);
 }
+
+static time_t
+get_remove_unlisted_guards_after_seconds(void)
+{
+  return get_remove_unlisted_guards_after_days() * 24 * 60 * 60;
+}
+
 /**
  * We remove unconfirmed guards from the sample after this many days,
  * regardless of whether they are listed or unlisted.
@@ -1240,7 +1244,8 @@ entry_guard_is_listed,(guard_selection_t *gs, const entry_guard_t *guard))
  *    in guard selection <b>gs</b>.
  *  * Set <b>unlisted_since_date</b> to approximate UNIX time of
  *    unlisting if guard is unlisted (randomize within 20% of
- *    REMOVE_UNLISTED_GUARDS_AFTER). Otherwise, set it to 0.
+ *    get_remove_unlisted_guards_after_seconds()). Otherwise,
+ *    set it to 0.
  *
  * Increment <b>n_changes</b> by a number of entries updated.
  * Require <b>gs</b> and <b>n_changes</b> to be non-null pointers.
@@ -1252,7 +1257,8 @@ sampled_guards_update_listedness(guard_selection_t *gs,
   tor_assert(gs);
   tor_assert(n_changes);
 
-  const time_t unlisted_since_slop = REMOVE_UNLISTED_GUARDS_AFTER / 5;
+  const time_t unlisted_since_slop =
+    get_remove_unlisted_guards_after_seconds() /  5;
 
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     /* XXXX #20827 check ed ID too */
@@ -1328,7 +1334,7 @@ sampled_guards_prune_obsolete_entries(guard_selection_t *gs,
         guard->unlisted_since_date < remove_if_unlisted_since) {
       /*
         "We have a live consensus, and {IS_LISTED} is false, and
-         {FIRST_UNLISTED_AT} is over {REMOVE_UNLISTED_GUARDS_AFTER}
+         {FIRST_UNLISTED_AT} is over get_remove_unlisted_guards_after_days()
          days in the past."
       */
       log_info(LD_GUARD, "Removing sampled guard %s: it has been unlisted "
@@ -1390,7 +1396,7 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
   sampled_guards_update_listedness(gs, &n_changes);
 
   const time_t remove_if_unlisted_since =
-    approx_time() - REMOVE_UNLISTED_GUARDS_AFTER;
+    approx_time() - get_remove_unlisted_guards_after_seconds();
   const time_t maybe_remove_if_sampled_before =
     approx_time() - get_guard_lifetime();
   const time_t remove_if_confirmed_before =
