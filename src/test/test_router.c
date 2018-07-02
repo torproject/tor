@@ -41,6 +41,12 @@ mock_rep_hist_bandwidth_assess(void)
 }
 
 static int
+mock_we_are_not_hibernating(void)
+{
+  return 0;
+}
+
+static int
 mock_we_are_hibernating(void)
 {
   return 0;
@@ -54,7 +60,7 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
   memset(&routerinfo, 0, sizeof(routerinfo));
   mock_router_get_my_routerinfo_result = NULL;
 
-  MOCK(we_are_hibernating, mock_we_are_hibernating);
+  MOCK(we_are_hibernating, mock_we_are_not_hibernating);
   MOCK(router_get_my_routerinfo, mock_router_get_my_routerinfo);
   mock_router_get_my_routerinfo_result = &routerinfo;
 
@@ -77,6 +83,21 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
   expect_log_msg_containing(
      "Measured bandwidth has changed; rebuilding descriptor.");
   teardown_capture_of_logs();
+
+  /* When uptime is less than 24h, previous bandwidth,
+   * last_changed more than 3h ago, and hibernating
+   * Uptime: 10800, last_changed: 0, Previous bw: 10000, Current bw: 0 */
+
+  UNMOCK(we_are_hibernating);
+  MOCK(we_are_hibernating, mock_we_are_hibernating);
+  routerinfo.bandwidthcapacity = 10000;
+  setup_full_capture_of_logs(LOG_INFO);
+  check_descriptor_bandwidth_changed(time(NULL));
+  expect_log_msg_not_containing(
+     "Measured bandwidth has changed; rebuilding descriptor.");
+  teardown_capture_of_logs();
+  UNMOCK(we_are_hibernating);
+  MOCK(we_are_hibernating, mock_we_are_not_hibernating);
 
   /* When uptime is less than 24h, last_changed is not more than 3h ago
    * Uptime: 10800, last_changed: x, Previous bw: 10000, Current bw: 0 */
@@ -103,11 +124,12 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
   check_descriptor_bandwidth_changed(time(NULL));
   expect_log_msg_not_containing(
      "Measured bandwidth has changed; rebuilding descriptor.");
-  UNMOCK(get_uptime);
   teardown_capture_of_logs();
 
  done:
+  UNMOCK(get_uptime);
   UNMOCK(router_get_my_routerinfo);
+  UNMOCK(we_are_hibernating);
 }
 
 #define ROUTER_TEST(name, flags)                          \
