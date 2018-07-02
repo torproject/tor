@@ -362,6 +362,30 @@ smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2)
     smartlist_remove(sl1, sl2->list[i]);
 }
 
+/** Return true if there is shallow equality between smartlists -
+ * i.e. all indices correspond to exactly same object (pointer
+ * values are matching). Otherwise, return false.
+ */
+int smartlist_shallow_eq(const smartlist_t *s1,
+                         const smartlist_t *s2)
+{
+  if (s1 == NULL || s2 == NULL)
+    return 0;
+
+  if (s1 == s2)
+    return 1;
+
+  if (smartlist_len(s1) != smartlist_len(s2))
+    return 0;
+
+  for (int i = 0; i < smartlist_len(s1); i++) {
+    if (smartlist_get(s1, i) != smartlist_get(s2, i))
+      return 0;
+  }
+
+  return 1;
+}
+
 /** Remove the <b>idx</b>th element of sl; if idx is not the last
  * element, swap the last element of sl into the <b>idx</b>th space.
  */
