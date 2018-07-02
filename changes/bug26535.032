@@ -1,0 +1,5 @@
+  o Minor bugfixes (testing, compatibility):
+    - When running the hs_ntor_ref.py test, make sure only to pass strings
+      (rather than "bytes" objects) to the Python subprocess module.
+      Python 3 on Windows seems to require this.  Fixes bug 26535; bugfix on
+      0.3.1.1-alpha.
