@@ -5,7 +5,7 @@
  * \file test_router.c
  * \brief Unittests for code in src/or/router.c
  **/
-// 
+
 #include "or.h"
 #include "hibernate.h"
 #include "log_test_helpers.h"
@@ -68,7 +68,7 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
      "Measured bandwidth has changed; rebuilding descriptor.");
   teardown_capture_of_logs();
 
-  /* When uptime is less than 24h, previous bandwidth, 
+  /* When uptime is less than 24h, previous bandwidth,
    * last_changed more than 3h ago
    * Uptime: 10800, last_changed: 0, Previous bw: 10000, Current bw: 0 */
   routerinfo.bandwidthcapacity = 10000;
@@ -86,7 +86,7 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
      "Measured bandwidth has changed; rebuilding descriptor.");
   teardown_capture_of_logs();
 
-  /* When uptime is less than 24h and bandwidthcapacity does not change 
+  /* When uptime is less than 24h and bandwidthcapacity does not change
    * Uptime: 10800, last_changed: x, Previous bw: 10000, Current bw: 20001 */
   MOCK(rep_hist_bandwidth_assess, mock_rep_hist_bandwidth_assess);
   setup_full_capture_of_logs(LOG_INFO);
