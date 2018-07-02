@@ -13,9 +13,20 @@
 
 /* ===== String compatibility */
 #ifdef _WIN32
-/* Windows names string functions differently from most other platforms. */
-#define strncasecmp _strnicmp
-#define strcasecmp _stricmp
+/* Windows doesn't have str(n)casecmp, but mingw defines it: only define it
+ * ourselves if it's missing. */
+#ifndef HAVE_STRNCASECMP
+static inline int strncasecmp(const char *a, const char *b, size_t n);
+static inline int strncasecmp(const char *a, const char *b, size_t n) {
+  return strncmpi(a,b);
+}
+#endif
+#ifndef HAVE_STRCASECMP
+static inline int strcasecmp(const char *a, const char *b, size_t n);
+static inline int strcasecmp(const char *a, const char *b, size_t n) {
+  return strcmpi(a,b);
+}
+#endif
 #endif
 
 #if defined __APPLE__
