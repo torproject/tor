@@ -60,6 +60,7 @@ env:
   global:
     ## The Travis CI environment allows us two cores, so let's use both.
     - MAKEFLAGS="-j 2"
+    - HARDENING_OPTIONS="--enable-fragile-hardening"
   matrix:
     ## Leave at least one entry here or Travis seems to generate a
     ## matrix entry with empty matrix environment variables.  Leaving
@@ -109,6 +110,10 @@ matrix:
       env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
     - compiler: gcc
       env: MODULES_OPTIONS="--disable-module-dirauth"
+    - compiler: gcc
+      env: HARDENING_OPTIONS="" RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
+    - compiler: gcc
+      env: DISTCHECK="yes" HARDENING_OPTIONS="" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
     ## The "sudo: required" forces non-containerized builds, working
     ## around a Travis CI environment issue: clang LeakAnalyzer fails
     ## because it requires ptrace and the containerized environment no
@@ -154,10 +159,10 @@ install:
 
 script:
   - ./autogen.sh
-  - ./configure $RUST_OPTIONS $COVERAGE_OPTIONS $MODULES_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening
+  - ./configure $RUST_OPTIONS $COVERAGE_OPTIONS $MODULES_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules $HARDENING_OPTIONS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$DISTCHECK" == "" ]]; then make check; fi
-  - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening"; fi
+  - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules $HARDENING_OPTIONS"; fi
 
 after_failure:
   ## `make check` will leave a log file with more details of test failures.
