@@ -366,8 +366,8 @@ smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2)
  * i.e. all indices correspond to exactly same object (pointer
  * values are matching). Otherwise, return false.
  */
-int smartlist_shallow_eq(const smartlist_t *s1,
-                         const smartlist_t *s2)
+int
+smartlist_shallow_eq(const smartlist_t *s1, const smartlist_t *s2)
 {
   if (s1 == NULL || s2 == NULL)
     return 0;
