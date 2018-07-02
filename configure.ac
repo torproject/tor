@@ -610,6 +610,8 @@ AC_CHECK_FUNCS(
         sigaction \
         socketpair \
 	statvfs \
+        strncasecmp \
+        strcasecmp \
         strlcat \
         strlcpy \
 	strnlen \
