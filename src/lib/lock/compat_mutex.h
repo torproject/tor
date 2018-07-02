@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_mutex.h
+ *
+ * \brief Header for compat_mutex.c
+ **/
+
 #ifndef TOR_COMPAT_MUTEX_H
 #define TOR_COMPAT_MUTEX_H
 

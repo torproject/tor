@@ -4,6 +4,17 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file confline.c
+ *
+ * \brief Functions to manipulate a linked list of key-value pairs, of the
+ *   type used in Tor's configuration files.
+ *
+ * Tor uses the config_line_t type and its associated serialized format for
+ * human-readable key-value pairs in many places, including its configuration,
+ * its state files, its consensus cache, and so on.
+ **/
+
 #include "lib/encoding/confline.h"
 #include "lib/encoding/cstring.h"
 #include "lib/log/torlog.h"

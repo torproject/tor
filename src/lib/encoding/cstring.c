@@ -4,6 +4,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file cstring.c
+ *
+ * \brief Decode data that has been written as a C literal.
+ **/
+
 #include "lib/encoding/cstring.h"
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"

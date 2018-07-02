@@ -3,6 +3,13 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file dir.c
+ *
+ * \brief Read directories, and create directories with restrictive
+ * permissions.
+ **/
+
 #include "lib/fs/dir.h"
 #include "lib/fs/path.h"
 #include "lib/fs/userdb.h"

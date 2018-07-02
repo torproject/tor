@@ -3,6 +3,13 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file lockfile.c
+ *
+ * \brief Implements lock files to prevent two Tor processes from using the
+ * same data directory at the same time.
+ **/
+
 #include "orconfig.h"
 #include "lib/fs/files.h"
 #include "lib/fs/lockfile.h"

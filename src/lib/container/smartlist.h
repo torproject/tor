@@ -6,6 +6,12 @@
 #ifndef TOR_SMARTLIST_H
 #define TOR_SMARTLIST_H
 
+/**
+ * \file smartlist.h
+ *
+ * \brief Header for smartlist.c
+ **/
+
 #include <stdarg.h>
 
 #include "lib/smartlist_core/smartlist_core.h"

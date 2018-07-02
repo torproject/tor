@@ -4,6 +4,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file binascii.h
+ *
+ * \brief Header for binascii.c
+ **/
+
 #ifndef TOR_BINASCII_H
 #define TOR_BINASCII_H
 

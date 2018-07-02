@@ -11,6 +11,12 @@
 #ifndef TOR_TORINT_H
 #define TOR_TORINT_H
 
+/**
+ * \file torint.h
+ *
+ * \brief Integer definitions used throughout Tor.
+ **/
+
 #include "orconfig.h"
 
 #ifdef HAVE_STDINT_H
@@ -376,4 +382,3 @@ typedef uint32_t uintptr_t;
 #define SIZE_T_CEILING  ((size_t)(SSIZE_MAX-16))
 
 #endif /* !defined(TOR_TORINT_H) */
-

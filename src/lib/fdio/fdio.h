@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file fdio.h
+ *
+ * \brief Header for fdio.c
+ **/
+
 #ifndef TOR_FDIO_H
 #define TOR_FDIO_H
 

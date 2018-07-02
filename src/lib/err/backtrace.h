@@ -4,6 +4,12 @@
 #ifndef TOR_BACKTRACE_H
 #define TOR_BACKTRACE_H
 
+/**
+ * \file backtrace.h
+ *
+ * \brief Header for backtrace.c
+ **/
+
 #include "orconfig.h"
 #include "lib/cc/compat_compiler.h"
 

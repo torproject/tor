@@ -1,6 +1,12 @@
 /* Copyright (c) 2014-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file crypto_pwbox.h
+ *
+ * \brief Header for crypto_pwbox.c
+ **/
+
 #ifndef CRYPTO_PWBOX_H_INCLUDED_
 #define CRYPTO_PWBOX_H_INCLUDED_
 
@@ -20,4 +26,3 @@ int crypto_unpwbox(uint8_t **out, size_t *outlen_out,
                    const char *secret, size_t secret_len);
 
 #endif /* !defined(CRYPTO_PWBOX_H_INCLUDED_) */
-

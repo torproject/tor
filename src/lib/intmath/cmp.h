@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file cmp.h
+ *
+ * \brief Macro definitions for MIN, MAX, and CLAMP.
+ **/
+
 #ifndef TOR_INTMATH_CMP_H
 #define TOR_INTMATH_CMP_H
 

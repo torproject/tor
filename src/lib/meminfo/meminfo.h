@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file meminfo.h
+ *
+ * \brief Header for meminfo.c
+ **/
+
 #ifndef TOR_MEMINFO_H
 #define TOR_MEMINFO_H
 

@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file path.h
+ *
+ * \brief Header for path.c
+ **/
+
 #ifndef TOR_PATH_H
 #define TOR_PATH_H
 

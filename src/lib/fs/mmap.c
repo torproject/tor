@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file mmap.c
+ *
+ * \brief Cross-platform support for mapping files into our address space.
+ **/
+
 #include "lib/fs/mmap.h"
 #include "lib/fs/files.h"
 #include "lib/log/torlog.h"

@@ -5,8 +5,9 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file buffers.h
- * \brief Header file for buffers.c.
+ * \file buffers_net.h
+ *
+ * \brief Header file for buffers_net.c.
  **/
 
 #ifndef TOR_BUFFERS_NET_H

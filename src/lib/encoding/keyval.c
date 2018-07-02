@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file keyval.c
+ *
+ * \brief Handle data encoded as a key=value pair.
+ **/
+
 #include "orconfig.h"
 #include "lib/encoding/keyval.h"
 #include "lib/log/escape.h"

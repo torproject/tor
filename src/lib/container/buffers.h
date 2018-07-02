@@ -6,6 +6,7 @@
 
 /**
  * \file buffers.h
+ *
  * \brief Header file for buffers.c.
  **/
 
@@ -19,8 +20,6 @@
 #include <stdarg.h>
 
 typedef struct buf_t buf_t;
-
-struct tor_compress_state_t;
 
 buf_t *buf_new(void);
 buf_t *buf_new_with_capacity(size_t size);

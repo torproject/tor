@@ -6,6 +6,13 @@
 #ifndef TOR_BYTES_H
 #define TOR_BYTES_H
 
+/**
+ * \file bytes.h
+ *
+ * \brief Inline functions for reading and writing multibyte values from
+ *  the middle of strings, and for manipulating byte order.
+ **/
+
 #include <string.h>
 #include "lib/cc/torint.h"
 

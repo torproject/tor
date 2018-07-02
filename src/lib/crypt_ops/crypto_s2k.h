@@ -4,6 +4,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file crypto_s2k.h
+ *
+ * \brief Header for crypto_s2k.c
+ **/
+
 #ifndef TOR_CRYPTO_S2K_H_INCLUDED
 #define TOR_CRYPTO_S2K_H_INCLUDED
 
@@ -70,4 +76,3 @@ STATIC int secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
 #endif /* defined(CRYPTO_S2K_PRIVATE) */
 
 #endif /* !defined(TOR_CRYPTO_S2K_H_INCLUDED) */
-

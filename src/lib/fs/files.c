@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file files.h
+ *
+ * \brief Wrappers for reading and writing data to files on disk.
+ **/
+
 #ifdef _WIN32
 #include <windows.h>
 #endif

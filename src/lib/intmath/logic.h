@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file logic.h
+ *
+ * \brief Macros for comparing the boolean value of integers.
+ **/
+
 #ifndef HAVE_TOR_LOGIC_H
 #define HAVE_TOR_LOGIC_H
 

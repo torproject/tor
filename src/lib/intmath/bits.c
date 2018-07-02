@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file bits.c
+ *
+ * \brief Count the bits in an integer, manipulate powers of 2, etc.
+ **/
+
 #include "lib/intmath/bits.h"
 
 /** Returns floor(log2(u64)).  If u64 is 0, (incorrectly) returns 0. */

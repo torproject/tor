@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file userdb.h
+ *
+ * \brief Header for userdb.c
+ **/
+
 #ifndef TOR_USERDB_H
 #define TOR_USERDB_H
 

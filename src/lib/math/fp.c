@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file fp.c
+ *
+ * \brief Basic floating-point compatibility and convenience code.
+ **/
+
 #include "orconfig.h"
 #include "lib/math/fp.h"
 

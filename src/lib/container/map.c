@@ -4,8 +4,9 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file container.c
- * \brief Hash table implementations of a string-to-void* map, and of
+ * \file map.c
+ *
+ * \brief Hash-table implementations of a string-to-void* map, and of
  * a digest-to-void* map.
  **/
 

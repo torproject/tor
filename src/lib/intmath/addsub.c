@@ -3,6 +3,14 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file addsub.c
+ *
+ * \brief Helpers for addition and subtraction.
+ *
+ * Currently limited to non-wrapping (saturating) addition.
+ **/
+
 #include "lib/intmath/addsub.h"
 #include "lib/cc/compat_compiler.h"
 

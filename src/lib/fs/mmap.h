@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file mmap.h
+ *
+ * \brief Header for mmap.c
+ **/
+
 #ifndef TOR_MMAP_H
 #define TOR_MMAP_H
 

@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file winlib.h
+ *
+ * \brief Header for winlib.c
+ **/
+
 #ifndef TOR_WINLIB_H
 #define TOR_WINLIB_H
 

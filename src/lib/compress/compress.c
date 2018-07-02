@@ -5,7 +5,10 @@
 
 /**
  * \file compress.c
- * \brief Common compression API.
+ * \brief Common compression API implementation.
+ *
+ * This file provides a unified interface to all the compression libraries Tor
+ * knows how to use.
  **/
 
 #include "orconfig.h"

@@ -1,6 +1,17 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file storagedir.c
+ *
+ * \brief An abstraction for a directory full of similar files.
+ *
+ * Storagedirs are used by our consensus cache code, and may someday also get
+ * used for unparseable objects. A large part of the need for this type is to
+ * work around the limitations in our sandbox code, where all filenames need
+ * to be registered in advance.
+ **/
+
 #include "lib/fs/storagedir.h"
 
 #include "lib/container/smartlist.h"

@@ -1,7 +1,9 @@
 /* Copyright (c) 2008-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-/** \file memarea.c
+/**
+ * \file memarea.c
+ *
  * \brief Implementation for memarea_t, an allocator for allocating lots of
  * small objects that will be freed all at once.
  */

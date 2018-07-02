@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file addsub.h
+ *
+ * \brief Header for addsub.c
+ **/
+
 #ifndef TOR_INTMATH_ADDSUB_H
 #define TOR_INTMATH_ADDSUB_H
 

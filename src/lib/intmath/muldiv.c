@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file muldiv.c
+ *
+ * \brief Integer math related to multiplication, division, and rounding.
+ **/
+
 #include "lib/intmath/muldiv.h"
 #include "lib/err/torerr.h"
 

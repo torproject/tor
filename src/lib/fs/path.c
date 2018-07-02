@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file path.c
+ *
+ * \brief Manipulate strings that contain filesystem paths.
+ **/
+
 #include "lib/fs/path.h"
 #include "lib/malloc/util_malloc.h"
 #include "lib/log/torlog.h"

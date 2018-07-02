@@ -6,6 +6,12 @@
 #ifndef TOR_DIR_H
 #define TOR_DIR_H
 
+/**
+ * \file dir.h
+ *
+ * \brief Header for dir.c
+ **/
+
 #include "lib/cc/compat_compiler.h"
 #include "lib/testsupport/testsupport.h"
 

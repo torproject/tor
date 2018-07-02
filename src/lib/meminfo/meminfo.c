@@ -3,6 +3,13 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file meminfo.c
+ *
+ * \brief Functions to query total memory, and access meta-information about
+ * the allocator.
+ **/
+
 #include "lib/meminfo/meminfo.h"
 
 #include "lib/cc/compat_compiler.h"

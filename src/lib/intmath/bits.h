@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file bits.h
+ *
+ * \brief Header for bits.c
+ **/
+
 #ifndef TOR_INTMATH_BITS_H
 #define TOR_INTMATH_BITS_H
 

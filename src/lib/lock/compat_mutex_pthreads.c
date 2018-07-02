@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_mutex_pthreads.c
+ *
+ * \brief Implement the tor_mutex API using pthread_mutex_t.
+ **/
+
 #include "lib/lock/compat_mutex.h"
 #include "lib/cc/compat_compiler.h"
 #include "lib/err/torerr.h"

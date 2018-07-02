@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file alertsock.h
+ *
+ * \brief Header for alertsock.c
+ **/
+
 #ifndef TOR_ALERTSOCK_H
 #define TOR_ALERTSOCK_H
 

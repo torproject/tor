@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file laplace.c
+ *
+ * \brief Implements a Laplace distribution, used for adding noise to things.
+ **/
+
 #include "orconfig.h"
 #include "lib/math/laplace.h"
 #include "lib/math/fp.h"

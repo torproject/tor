@@ -6,6 +6,12 @@
 #ifndef TOR_ORDER_H
 #define TOR_ORDER_H
 
+/**
+ * \file order.h
+ *
+ * \brief Header for order.c.
+ **/
+
 #include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
 

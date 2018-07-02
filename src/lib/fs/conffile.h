@@ -7,6 +7,12 @@
 #ifndef TOR_CONFFILE_H
 #define TOR_CONFFILE_H
 
+/**
+ * \file conffile.h
+ *
+ * \brief Header for conffile.c
+ **/
+
 struct smartlist_t;
 struct config_line_t;
 

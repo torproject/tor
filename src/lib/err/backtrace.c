@@ -11,6 +11,10 @@
  * family of functions, which are sometimes provided by libc and sometimes
  * provided by libexecinfo.  We tie into the sigaction() backend in order to
  * detect crashes.
+ *
+ * This is one of the lowest-level modules, since nearly everything needs to
+ * be able to log an error.  As such, it doesn't call the log module or any
+ * other higher-level modules directly.
  */
 
 #include "orconfig.h"

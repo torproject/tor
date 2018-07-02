@@ -1,6 +1,11 @@
 /* Copyright (c) 2008-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* Tor dependencies */
+
+/**
+ * \file memarea.h
+ *
+ * \brief Header for memarea.c
+ **/
 
 #ifndef TOR_MEMAREA_H
 #define TOR_MEMAREA_H

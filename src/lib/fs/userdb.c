@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file userdb.c
+ *
+ * \brief Access the POSIX user database.
+ **/
+
 #include "lib/fs/userdb.h"
 
 #ifndef _WIN32

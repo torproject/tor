@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_mutex_winthreads.c
+ *
+ * \brief Implement the tor_mutex API using CRITICAL_SECTION.
+ **/
+
 #include "lib/lock/compat_mutex.h"
 #include "lib/err/torerr.h"
 

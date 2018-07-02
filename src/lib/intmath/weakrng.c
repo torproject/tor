@@ -3,6 +3,15 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file weakrng.c
+ *
+ * \brief A weak but fast PRNG based on a linear congruential generator.
+ *
+ * We don't want to use the platform random(), since some of them are even
+ * worse than this.
+ **/
+
 #include "lib/intmath/weakrng.h"
 #include "lib/err/torerr.h"
 

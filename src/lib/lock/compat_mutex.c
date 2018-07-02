@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_mutex.c
+ *
+ * \brief Portable wrapper for platform mutex implementations.
+ **/
+
 #include "lib/lock/compat_mutex.h"
 #include "lib/malloc/util_malloc.h"
 

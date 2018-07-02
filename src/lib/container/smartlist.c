@@ -4,9 +4,15 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file container.c
- * \brief Implements a smartlist (a resizable array) along
- * with helper functions to use smartlists.
+ * \file smartlist.c
+ *
+ * \brief Higher-level functions for the "smartlist" resizeable array
+ * abstraction.
+ *
+ * The functions declared here use higher-level functionality than those in
+ * smartlist_core.c, and handle things like smartlists of different types,
+ * sorting, searching, heap-structured smartlists, and other convenience
+ * functions.
  **/
 
 #include "lib/container/smartlist.h"

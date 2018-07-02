@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file freespace.c
+ *
+ * \brief Find the available disk space on the current volume.
+ **/
+
 #include "lib/fs/files.h"
 #include "lib/cc/torint.h"
 

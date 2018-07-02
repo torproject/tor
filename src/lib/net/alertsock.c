@@ -3,6 +3,17 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file alertsock.c
+ *
+ * \brief Use a socket to alert the main thread from a worker thread.
+ *
+ * Because our main loop spends all of its time in select, epoll, kqueue, or
+ * etc, we need a way to wake up the main loop from another thread.  This code
+ * tries to provide the fastest reasonable way to do that, depending on our
+ * platform.
+ **/
+
 #include "orconfig.h"
 #include "lib/net/alertsock.h"
 #include "lib/net/socket.h"

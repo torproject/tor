@@ -4,6 +4,16 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file time_fmt.c
+ *
+ * \brief Encode and decode time in various formats.
+ *
+ * This module is higher-level than the conversion functions in "wallclock",
+ * and handles a larger variety of types.  It converts between different time
+ * formats, and encodes and decodes them from strings.
+ **/
+
 #include "lib/encoding/time_fmt.h"
 #include "lib/log/torlog.h"
 #include "lib/log/escape.h"

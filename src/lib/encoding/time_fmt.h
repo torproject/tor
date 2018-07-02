@@ -4,6 +4,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file time_fmt.h
+ *
+ * \brief Header for time_fmt.c
+ **/
+
 #ifndef TOR_TIME_FMT_H
 #define TOR_TIME_FMT_H
 

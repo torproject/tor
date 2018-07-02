@@ -6,6 +6,12 @@
 #ifndef TOR_BLOOMFILT_H
 #define TOR_BLOOMFILT_H
 
+/**
+ * \file bloomfilt.h
+ *
+ * \brief Header for bloomfilt.c
+ **/
+
 #include "orconfig.h"
 #include "lib/cc/torint.h"
 #include "lib/container/bitarray.h"

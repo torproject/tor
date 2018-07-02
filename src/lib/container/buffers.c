@@ -16,6 +16,10 @@
  * buffers: one for incoming data, and one for outcoming data.  These are fed
  * and drained from functions in connection.c, trigged by events that are
  * monitored in main.c.
+ *
+ * This module only handles the buffer implementation itself. To use a buffer
+ * with the network, a compressor, or a TLS connection, see the other buffer_*
+ * modules.
  **/
 
 #define BUFFERS_PRIVATE

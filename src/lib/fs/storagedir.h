@@ -1,6 +1,12 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file storagedir.h
+ *
+ * \brief Header for storagedir.c
+ **/
+
 #ifndef TOR_STORAGEDIR_H
 #define TOR_STORAGEDIR_H
 

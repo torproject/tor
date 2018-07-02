@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file muldiv.h
+ *
+ * \brief Header for muldiv.c
+ **/
+
 #ifndef TOR_INTMATH_MULDIV_H
 #define TOR_INTMATH_MULDIV_H
 

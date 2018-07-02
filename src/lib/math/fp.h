@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file fp.h
+ *
+ * \brief Header for fp.c
+ **/
+
 #ifndef TOR_FP_H
 #define TOR_FP_H
 

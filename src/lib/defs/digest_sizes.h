@@ -7,6 +7,15 @@
 #ifndef TOR_DIGEST_SIZES_H
 #define TOR_DIGEST_SIZES_H
 
+/**
+ * \file digest_sizes.h
+ *
+ * \brief Definitions for common sizes of cryptographic digests.
+ *
+ * Tor uses digests throughout its codebase, even in parts that don't actually
+ * calculate the digests.
+ **/
+
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20
 /** Length of the output of our second (improved) message digests.  (For now

@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file fdio.c
+ *
+ * \brief Low-level compatibility wrappers for fd-based IO.
+ **/
+
 #include "orconfig.h"
 
 #ifdef HAVE_UNISTD_H

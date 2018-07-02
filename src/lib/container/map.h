@@ -6,6 +6,12 @@
 #ifndef TOR_MAP_H
 #define TOR_MAP_H
 
+/**
+ * \file map.h
+ *
+ * \brief Headers for map.c.
+ **/
+
 #include "lib/testsupport/testsupport.h"
 #include "lib/cc/torint.h"
 

@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file weakrng.h
+ *
+ * \brief Header for weakrng.c
+ **/
+
 #ifndef TOR_WEAKRNG_H
 #define TOR_WEAKRNG_H
 

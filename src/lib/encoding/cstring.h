@@ -4,6 +4,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file cstring.h
+ *
+ * \brief Header for cstring.c
+ **/
+
 #ifndef TOR_CSTRING_H
 #define TOR_CSTRING_H
 

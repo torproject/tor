@@ -3,6 +3,15 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file winlib.c
+ *
+ * \brief Find and load windows system libraries.
+ *
+ * We use this function to dynamically load code at runtime that might not be
+ * available on all versions of Windows that we support.
+ **/
+
 #ifdef _WIN32
 #include "lib/fs/winlib.h"
 

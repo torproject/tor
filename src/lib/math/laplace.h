@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file laplace.h
+ *
+ * \brief Header for laplace.c
+ **/
+
 #ifndef TOR_LAPLACE_H
 #define TOR_LAPLACE_H
 

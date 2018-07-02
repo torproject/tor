@@ -6,6 +6,12 @@
 #ifndef TOR_BITARRAY_H
 #define TOR_BITARRAY_H
 
+/**
+ * \file bitarray.h
+ *
+ * \brief Implements a variable-sized (but non-resizeable) bit-array.
+ **/
+
 #include "orconfig.h"
 #include <string.h>
 #include "lib/cc/torint.h"

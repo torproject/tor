@@ -4,6 +4,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file conffile.h
+ *
+ * \brief Read configuration files from disk, with full `%include` support.
+ **/
+
 #include "lib/fs/conffile.h"
 
 #include "lib/container/smartlist.h"

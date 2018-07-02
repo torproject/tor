@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compress_buf.c
+ *
+ * \brief Working with compressed data in buffers.
+ **/
+
 #define BUFFERS_PRIVATE
 #include "lib/cc/compat_compiler.h"
 #include "lib/container/buffers.h"

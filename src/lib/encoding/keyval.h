@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file keyval.h
+ *
+ * \brief Header for keyval.c
+ **/
+
 #ifndef TOR_KEYVAL_H
 #define TOR_KEYVAL_H
 
