@@ -1196,7 +1196,8 @@ entry_guards_expand_sample(guard_selection_t *gs)
 
 /**
  * Helper: <b>guard</b> has just been removed from the sampled guards:
- * also remove it from primary and confirmed. */
+ * also remove it from primary and confirmed.
+ */
 static void
 remove_guard_from_confirmed_and_primary_lists(guard_selection_t *gs,
                                               entry_guard_t *guard)
@@ -1223,9 +1224,11 @@ remove_guard_from_confirmed_and_primary_lists(guard_selection_t *gs,
   }
 }
 
-/** Return true iff <b>guard</b> is currently "listed" -- that is, it
+/**
+ * Return true iff <b>guard</b> is currently "listed" -- that is, it
  * appears in the consensus, or as a configured bridge (as
- * appropriate) */
+ * appropriate)
+ */
 MOCK_IMPL(STATIC int,
 entry_guard_is_listed,(guard_selection_t *gs, const entry_guard_t *guard))
 {
@@ -1238,7 +1241,8 @@ entry_guard_is_listed,(guard_selection_t *gs, const entry_guard_t *guard))
   }
 }
 
-/** Enumerate <b>sampled_entry_guards</b> smartlist in <b>gs</b>.
+/**
+ * Enumerate <b>sampled_entry_guards</b> smartlist in <b>gs</b>.
  * For each <b>entry_guard_t</b> object in smartlist, do the following:
  *  * Update <b>currently_listed</b> field to reflect if guard is listed
  *    in guard selection <b>gs</b>.
@@ -1304,7 +1308,8 @@ sampled_guards_update_listedness(guard_selection_t *gs,
   } SMARTLIST_FOREACH_END(guard);
 }
 
-/** Enumerate <b>sampled_entry_guards</b> smartlist in <b>gs</b>.
+/**
+ * Enumerate <b>sampled_entry_guards</b> smartlist in <b>gs</b>.
  * For each <b>entry_guard_t</b> object in smartlist, do the following:
  * * If <b>currently_listed</b> is false and <b>unlisted_since_date</b>
  *   is earlier than <b>remove_if_unlisted_since</b> - remove it.
