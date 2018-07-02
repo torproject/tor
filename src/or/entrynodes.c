@@ -1255,8 +1255,8 @@ entry_guard_is_listed,(guard_selection_t *gs, const entry_guard_t *guard))
  * Require <b>gs</b> and <b>n_changes</b> to be non-null pointers.
  */
 static void
-sampled_guards_update_listedness(guard_selection_t *gs,
-                                 int *n_changes)
+sampled_guards_update_consensus_presence(guard_selection_t *gs,
+                                         int *n_changes)
 {
   tor_assert(gs);
   tor_assert(n_changes);
@@ -1398,7 +1398,7 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
   int n_changes = 0;
 
   /* First: Update listed/unlisted. */
-  sampled_guards_update_listedness(gs, &n_changes);
+  sampled_guards_update_consensus_presence(gs, &n_changes);
 
   const time_t remove_if_unlisted_since =
     approx_time() - get_remove_unlisted_guards_after_seconds();
