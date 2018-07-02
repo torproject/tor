@@ -1251,15 +1251,15 @@ entry_guard_is_listed,(guard_selection_t *gs, const entry_guard_t *guard))
  *    get_remove_unlisted_guards_after_seconds()). Otherwise,
  *    set it to 0.
  *
- * Increment <b>n_changes</b> by a number of entries updated.
- * Require <b>gs</b> and <b>n_changes</b> to be non-null pointers.
+ * Require <b>gs</b> to be non-null pointer.
+ * Return a number of entries updated.
  */
-static void
-sampled_guards_update_consensus_presence(guard_selection_t *gs,
-                                         int *n_changes)
+static size_t
+sampled_guards_update_consensus_presence(guard_selection_t *gs)
 {
+  size_t n_changes = 0;
+
   tor_assert(gs);
-  tor_assert(n_changes);
 
   const time_t unlisted_since_slop =
     get_remove_unlisted_guards_after_seconds() /  5;
@@ -1269,13 +1269,13 @@ sampled_guards_update_consensus_presence(guard_selection_t *gs,
     const int is_listed = entry_guard_is_listed(gs, guard);
 
     if (is_listed && ! guard->currently_listed) {
-      (*n_changes)++;
+      n_changes++;
       guard->currently_listed = 1;
       guard->unlisted_since_date = 0;
       log_info(LD_GUARD, "Sampled guard %s is now listed again.",
                entry_guard_describe(guard));
     } else if (!is_listed && guard->currently_listed) {
-      (*n_changes)++;
+      n_changes++;
       guard->currently_listed = 0;
       guard->unlisted_since_date = randomize_time(approx_time(),
                                                   unlisted_since_slop);
@@ -1292,13 +1292,13 @@ sampled_guards_update_consensus_presence(guard_selection_t *gs,
 
     /* Clean up unlisted_since_date, just in case. */
     if (guard->currently_listed && guard->unlisted_since_date) {
-      (*n_changes)++;
+      n_changes++;
       guard->unlisted_since_date = 0;
       log_warn(LD_BUG, "Sampled guard %s was listed, but with "
                "unlisted_since_date set. Fixing.",
                entry_guard_describe(guard));
     } else if (!guard->currently_listed && ! guard->unlisted_since_date) {
-      (*n_changes)++;
+      n_changes++;
       guard->unlisted_since_date = randomize_time(approx_time(),
                                                   unlisted_since_slop);
       log_warn(LD_BUG, "Sampled guard %s was unlisted, but with "
@@ -1306,6 +1306,8 @@ sampled_guards_update_consensus_presence(guard_selection_t *gs,
                entry_guard_describe(guard));
     }
   } SMARTLIST_FOREACH_END(guard);
+
+  return n_changes;
 }
 
 /**
@@ -1319,18 +1321,18 @@ sampled_guards_update_consensus_presence(guard_selection_t *gs,
  *     * It was never confirmed.
  *     * It was confirmed before <b>remove_if_confirmed_before</b>.
  *
- * Increment <b>n_changes</b> by a number of entries removed.
- * Require <b>gs</b> and <b>n_changes</b> to be non-null pointers.
+ * Require <b>gs</b> to be non-null pointer.
+ * Return number of entries deleted.
  */
-static void
+static size_t
 sampled_guards_prune_obsolete_entries(guard_selection_t *gs,
                                   const time_t remove_if_unlisted_since,
                                   const time_t maybe_remove_if_sampled_before,
-                                  const time_t remove_if_confirmed_before,
-                                  int *n_changes)
+                                  const time_t remove_if_confirmed_before)
 {
+  size_t n_changes = 0;
+
   tor_assert(gs);
-  tor_assert(n_changes);
 
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     int rmv = 0;
@@ -1368,12 +1370,14 @@ sampled_guards_prune_obsolete_entries(guard_selection_t *gs,
     }
 
     if (rmv) {
-      (*n_changes)++;
+      n_changes++;
       SMARTLIST_DEL_CURRENT(gs->sampled_entry_guards, guard);
       remove_guard_from_confirmed_and_primary_lists(gs, guard);
       entry_guard_free(guard);
     }
   } SMARTLIST_FOREACH_END(guard);
+
+  return n_changes;
 }
 
 /**
@@ -1395,10 +1399,8 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
   log_info(LD_GUARD, "Updating sampled guard status based on received "
            "consensus.");
 
-  int n_changes = 0;
-
   /* First: Update listed/unlisted. */
-  sampled_guards_update_consensus_presence(gs, &n_changes);
+  size_t n_changes = sampled_guards_update_consensus_presence(gs);
 
   const time_t remove_if_unlisted_since =
     approx_time() - get_remove_unlisted_guards_after_seconds();
@@ -1408,11 +1410,11 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
     approx_time() - get_guard_confirmed_min_lifetime();
 
   /* Then: remove the ones that have been junk for too long */
+  n_changes +=
   sampled_guards_prune_obsolete_entries(gs,
                                         remove_if_unlisted_since,
                                         maybe_remove_if_sampled_before,
-                                        remove_if_confirmed_before,
-                                        &n_changes);
+                                        remove_if_confirmed_before);
 
   if (n_changes) {
     gs->primary_guards_up_to_date = 0;
