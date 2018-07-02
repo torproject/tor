@@ -243,6 +243,19 @@ sr_state_get_start_time_of_current_protocol_run(time_t now)
   return beginning_of_current_round - time_elapsed_since_start_of_run;
 }
 
+/** Return the start time of the previous SR protocol run. See
+ *  sr_state_get_start_time_of_current_protocol_run() for more details.  */
+time_t
+sr_state_get_start_time_of_previous_protocol_run(time_t now)
+{
+  time_t start_time_of_current_run =
+    sr_state_get_start_time_of_current_protocol_run(now);
+
+  /* We get the start time of previous protocol run, by getting the start time
+   * of current run and the subtracting a full protocol run from that. */
+  return start_time_of_current_run - sr_state_get_protocol_run_duration();
+}
+
 /** Return the time (in seconds) it takes to complete a full SR protocol phase
  *  (e.g. the commit phase). */
 unsigned int

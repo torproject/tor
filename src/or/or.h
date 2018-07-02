@@ -79,6 +79,7 @@
 #include "or/replaycache.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_ope.h"
 #include "tor_queue.h"
 #include "common/token_bucket.h"
 #include "lib/encoding/binascii.h"

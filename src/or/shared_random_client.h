@@ -35,6 +35,7 @@ sr_srv_t *sr_parse_srv(const smartlist_t *args);
 #define SHARED_RANDOM_N_PHASES 2
 
 time_t sr_state_get_start_time_of_current_protocol_run(time_t now);
+time_t sr_state_get_start_time_of_previous_protocol_run(time_t now);
 unsigned int sr_state_get_phase_duration(void);
 unsigned int sr_state_get_protocol_run_duration(void);
 time_t get_start_time_of_current_round(void);

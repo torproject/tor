@@ -14,6 +14,7 @@ src_lib_libtor_crypt_ops_a_SOURCES =			\
 	src/lib/crypt_ops/crypto_ed25519.c		\
 	src/lib/crypt_ops/crypto_format.c		\
 	src/lib/crypt_ops/crypto_hkdf.c			\
+	src/lib/crypt_ops/crypto_ope.c          \
 	src/lib/crypt_ops/crypto_openssl_mgt.c		\
 	src/lib/crypt_ops/crypto_pwbox.c		\
 	src/lib/crypt_ops/crypto_rand.c			\
@@ -38,6 +39,7 @@ noinst_HEADERS +=					\
 	src/lib/crypt_ops/crypto.h			\
 	src/lib/crypt_ops/crypto_hkdf.h			\
 	src/lib/crypt_ops/crypto_openssl_mgt.h		\
+	src/lib/crypt_ops/crypto_ope.h          \
 	src/lib/crypt_ops/crypto_pwbox.h		\
 	src/lib/crypt_ops/crypto_rand.h			\
 	src/lib/crypt_ops/crypto_rsa.h			\

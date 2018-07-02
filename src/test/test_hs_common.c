@@ -1366,7 +1366,8 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
   mock_service_ns->sr_info.previous_srv = cfg->service_previous_srv;
 
   /* Initialize a service to get keys. */
-  service = helper_init_service(time(NULL));
+  update_approx_time(mock_service_ns->valid_after);
+  service = helper_init_service(mock_service_ns->valid_after+1);
 
   /*
    * === Client setup ===

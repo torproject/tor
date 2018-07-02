@@ -168,7 +168,7 @@ voting_schedule_get_next_valid_after_time(void)
 
  done:
   if (need_to_recalculate_voting_schedule) {
-    voting_schedule_recalculate_timing(get_options(), now);
+    voting_schedule_recalculate_timing(get_options(), approx_time());
     voting_schedule.created_on_demand = 1;
   }
 
