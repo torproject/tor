@@ -2125,12 +2125,10 @@ select_filtered_guard_for_circuit(guard_selection_t *gs,
                                                  SAMPLE_EXCLUDE_PRIMARY |
                                                  SAMPLE_EXCLUDE_PENDING |
                                                  flags);
-  if (chosen_guard == NULL) {
-    log_info(LD_GUARD, "Absolutely no sampled guards were available. "
-             "Marking all guards for retry and starting from top again.");
-    mark_all_guards_maybe_reachable(gs);
+  if (!chosen_guard) {
     return NULL;
   }
+
   chosen_guard->is_pending = 1;
   chosen_guard->last_tried_to_connect = approx_time();
   *state_out = GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD;
@@ -2178,7 +2176,16 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
 
   /* "Otherwise, if there is no such entry, select a member at
       random from {USABLE_FILTERED_GUARDS}." */
-  return select_filtered_guard_for_circuit(gs, usage, rst, state_out);
+  chosen_guard = select_filtered_guard_for_circuit(gs, usage, rst, state_out);
+
+  if (chosen_guard == NULL) {
+    log_info(LD_GUARD, "Absolutely no sampled guards were available. "
+             "Marking all guards for retry and starting from top again.");
+    mark_all_guards_maybe_reachable(gs);
+    return NULL;
+  }
+
+  return chosen_guard;
 }
 
 /**
