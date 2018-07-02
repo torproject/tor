@@ -6428,7 +6428,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   address = tor_strndup(addrport, addrport_sep - addrport);
   if (!string_is_valid_ipv4_address(address)) {
     log_warn(LD_CONFIG, "Error parsing DirAuthority address '%s' "
-                        "(invalid IPv4 address", address);
+                        "(invalid IPv4 address)", address);
     goto err;
   }
 
