@@ -1117,7 +1117,7 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
 
   if (!cp) {
     *ok = 1;
-    v = use_float ? DBL_TO_U64(d) :  v;
+    v = use_float ? ((uint64_t)d) :  v;
     goto done;
   }
 

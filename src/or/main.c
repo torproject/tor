@@ -3279,12 +3279,12 @@ dumpstats(int severity)
       (stats_n_destroy_cells_processed));
   if (stats_n_data_cells_packaged)
     tor_log(severity,LD_NET,"Average packaged cell fullness: %2.3f%%",
-        100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
-             U64_TO_DBL(stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
+        100*(((double)stats_n_data_bytes_packaged) /
+             ((double)stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
   if (stats_n_data_cells_received)
     tor_log(severity,LD_NET,"Average delivered cell fullness: %2.3f%%",
-        100*(U64_TO_DBL(stats_n_data_bytes_received) /
-             U64_TO_DBL(stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
+        100*(((double)stats_n_data_bytes_received) /
+             ((double)stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
   cpuworker_log_onionskin_overhead(severity, ONION_HANDSHAKE_TYPE_TAP, "TAP");
   cpuworker_log_onionskin_overhead(severity, ONION_HANDSHAKE_TYPE_NTOR,"ntor");

@@ -799,7 +799,7 @@ hibernate_soft_limit_reached(void)
    *   - We have used up 95% of our bytes.
    *   - We have less than 500MB of bytes left.
    */
-  uint64_t soft_limit = DBL_TO_U64(U64_TO_DBL(acct_max) * SOFT_LIM_PCT);
+  uint64_t soft_limit = (uint64_t) (acct_max * SOFT_LIM_PCT);
   if (acct_max > SOFT_LIM_BYTES && acct_max - SOFT_LIM_BYTES > soft_limit) {
     soft_limit = acct_max - SOFT_LIM_BYTES;
   }
@@ -1227,4 +1227,3 @@ hibernate_set_state_for_testing_(hibernate_state_t newstate)
   hibernate_state = newstate;
 }
 #endif /* defined(TOR_UNIT_TESTS) */
-

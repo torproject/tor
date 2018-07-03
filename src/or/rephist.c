@@ -1218,9 +1218,9 @@ rep_hist_bandwidth_assess(void)
   r = find_largest_max(read_array);
   w = find_largest_max(write_array);
   if (r>w)
-    return (int)(U64_TO_DBL(w)/NUM_SECS_ROLLING_MEASURE);
+    return (int)(((double)w)/NUM_SECS_ROLLING_MEASURE);
   else
-    return (int)(U64_TO_DBL(r)/NUM_SECS_ROLLING_MEASURE);
+    return (int)(((double)r)/NUM_SECS_ROLLING_MEASURE);
 }
 
 /** Print the bandwidth history of b (either [dir-]read_array or

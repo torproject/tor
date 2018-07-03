@@ -2442,8 +2442,8 @@ tls_get_write_overhead_ratio,(void))
   if (total_bytes_written_over_tls == 0)
     return 1.0;
 
-  return U64_TO_DBL(total_bytes_written_by_tls) /
-    U64_TO_DBL(total_bytes_written_over_tls);
+  return ((double)total_bytes_written_by_tls) /
+    ((double)total_bytes_written_over_tls);
 }
 
 /** Implement check_no_tls_errors: If there are any pending OpenSSL

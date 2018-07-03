@@ -106,9 +106,6 @@
 #endif /* !defined(HAVE_MACRO__func__) */
 #endif /* defined(_MSC_VER) */
 
-#define U64_TO_DBL(x) ((double) (x))
-#define DBL_TO_U64(x) ((uint64_t) (x))
-
 #ifdef ENUM_VALS_ARE_SIGNED
 #define ENUM_BF(t) unsigned
 #else

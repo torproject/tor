@@ -79,10 +79,10 @@ bytes_to_usage(uint64_t bytes)
   if (bytes < (1<<20)) { /* Less than a megabyte. */
     tor_asprintf(&bw_string, "%"PRIu64" kB", (bytes>>10));
   } else if (bytes < (1<<30)) { /* Megabytes. Let's add some precision. */
-    double bw = U64_TO_DBL(bytes);
+    double bw = ((double)bytes);
     tor_asprintf(&bw_string, "%.2f MB", bw/(1<<20));
   } else { /* Gigabytes. */
-    double bw = U64_TO_DBL(bytes);
+    double bw = ((double)bytes);
     tor_asprintf(&bw_string, "%.2f GB", bw/(1<<30));
   }
 
@@ -150,8 +150,8 @@ log_heartbeat(time_t now)
   double fullness_pct = 100;
   if (stats_n_data_cells_packaged && !hibernating) {
     fullness_pct =
-      100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
-           U64_TO_DBL(stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE));
+      100*(((double)stats_n_data_bytes_packaged) /
+           ((double)stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE));
   }
   const double overhead_pct = ( r - 1.0 ) * 100.0;
 
