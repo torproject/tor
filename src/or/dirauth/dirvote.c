@@ -1756,9 +1756,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
     /* Build the flag indexes. Note that no vote can have more than 64 members
      * for known_flags, so no value will be greater than 63, so it's safe to
-     * do U64_LITERAL(1) << index on these values.  But note also that
+     * do UINT64_C(1) << index on these values.  But note also that
      * named_flag and unnamed_flag are initialized to -1, so we need to check
-     * that they're actually set before doing U64_LITERAL(1) << index with
+     * that they're actually set before doing UINT64_C(1) << index with
      * them.*/
     SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
       flag_map[v_sl_idx] = tor_calloc(smartlist_len(v->known_flags),
@@ -1787,7 +1787,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         uint64_t nf;
         if (named_flag[v_sl_idx]<0)
           continue;
-        nf = U64_LITERAL(1) << named_flag[v_sl_idx];
+        nf = UINT64_C(1) << named_flag[v_sl_idx];
         SMARTLIST_FOREACH_BEGIN(v->routerstatus_list,
                                 vote_routerstatus_t *, rs) {
 
@@ -1812,7 +1812,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         uint64_t uf;
         if (unnamed_flag[v_sl_idx]<0)
           continue;
-        uf = U64_LITERAL(1) << unnamed_flag[v_sl_idx];
+        uf = UINT64_C(1) << unnamed_flag[v_sl_idx];
         SMARTLIST_FOREACH_BEGIN(v->routerstatus_list,
                                 vote_routerstatus_t *, rs) {
           if ((rs->flags & uf) != 0) {
@@ -1902,11 +1902,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
         /* Tally up all the flags. */
         for (int flag = 0; flag < n_voter_flags[voter_idx]; ++flag) {
-          if (rs->flags & (U64_LITERAL(1) << flag))
+          if (rs->flags & (UINT64_C(1) << flag))
             ++flag_counts[flag_map[voter_idx][flag]];
         }
         if (named_flag[voter_idx] >= 0 &&
-            (rs->flags & (U64_LITERAL(1) << named_flag[voter_idx]))) {
+            (rs->flags & (UINT64_C(1) << named_flag[voter_idx]))) {
           if (chosen_name && strcmp(chosen_name, rs->status.nickname)) {
             log_notice(LD_DIR, "Conflict on naming for router: %s vs %s",
                        chosen_name, rs->status.nickname);

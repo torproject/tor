@@ -4581,8 +4581,8 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
   uint64_t result;
 
   if (val == 0) {
-#define ONE_GIGABYTE (U64_LITERAL(1) << 30)
-#define ONE_MEGABYTE (U64_LITERAL(1) << 20)
+#define ONE_GIGABYTE (UINT64_C(1) << 30)
+#define ONE_MEGABYTE (UINT64_C(1) << 20)
     /* The user didn't pick a memory limit.  Choose a very large one
      * that is still smaller than the system memory */
     static int notice_sent = 0;

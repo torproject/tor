@@ -189,9 +189,7 @@
 #endif
 
 #define U64_PRINTF_ARG(a) ((uint64_t)a)
-#define U64_LITERAL(n) UINT64_C(n)
 #define I64_PRINTF_ARG(a) ((int64_t)a)
-#define I64_LITERAL(n) INT64_C(n)
 #define U64_FORMAT "%"PRIu64
 #define I64_FORMAT "%"PRId64
 

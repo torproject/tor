@@ -16,7 +16,7 @@
 // an imaginary time, in timestamp units. Chosen so it will roll over.
 static const uint32_t START_TS = UINT32_MAX-10;
 static const int32_t KB = 1024;
-static const uint32_t GB = (U64_LITERAL(1) << 30);
+static const uint32_t GB = (UINT64_C(1) << 30);
 
 static void
 test_bwmgt_token_buf_init(void *arg)

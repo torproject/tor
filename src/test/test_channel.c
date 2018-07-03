@@ -554,7 +554,7 @@ test_channel_outbound_cell(void *arg)
   /* Set the test time to be mocked, since this test assumes that no
    * time will pass, ewma values will not need to be re-scaled, and so on */
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(U64_LITERAL(1000000000) * 12345);
+  monotime_set_mock_time_nsec(UINT64_C(1000000000) * 12345);
 
   cmux_ewma_set_options(NULL,NULL);
 
