@@ -1,0 +1,6 @@
+  o Minor bugfixes (security):
+    - Refrain from potentially insecure usage of strncat() in
+      configure_backtrace_handler(). Use tor_snprintf() instead.
+      Fixes bug 26522; bugfix on
+      a969ce464dc23db39725a891d60537f3d3e51b50 (not in any tor
+      release).
