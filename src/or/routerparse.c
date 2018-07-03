@@ -874,8 +874,8 @@ dump_desc_populate_fifo_from_directory(const char *dirname)
     /* Log some stats */
     log_info(LD_DIR,
              "Reloaded unparseable descriptor dump FIFO with %d dump(s) "
-             "totaling " U64_FORMAT " bytes",
-             smartlist_len(descs_dumped), U64_PRINTF_ARG(len_descs_dumped));
+             "totaling %"PRIu64 " bytes",
+             smartlist_len(descs_dumped), (len_descs_dumped));
   }
 
   /* Free the original list */
@@ -2947,8 +2947,8 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
   // We use > 1 as the check for these because they are computed as integers.
   // Sometimes there are rounding errors.
   if (fabs(Wmm - weight_scale) > 1) {
-    log_warn(LD_BUG, "Wmm=%f != "I64_FORMAT,
-             Wmm, I64_PRINTF_ARG(weight_scale));
+    log_warn(LD_BUG, "Wmm=%f != %"PRId64,
+             Wmm, (weight_scale));
     valid = 0;
   }
 
@@ -2968,20 +2968,20 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
   }
 
   if (fabs(Wgg + Wmg - weight_scale) > 0.001*weight_scale) {
-    log_warn(LD_BUG, "Wgg=%f != "I64_FORMAT" - Wmg=%f", Wgg,
-             I64_PRINTF_ARG(weight_scale), Wmg);
+    log_warn(LD_BUG, "Wgg=%f != %"PRId64" - Wmg=%f", Wgg,
+             (weight_scale), Wmg);
     valid = 0;
   }
 
   if (fabs(Wee + Wme - weight_scale) > 0.001*weight_scale) {
-    log_warn(LD_BUG, "Wee=%f != "I64_FORMAT" - Wme=%f", Wee,
-             I64_PRINTF_ARG(weight_scale), Wme);
+    log_warn(LD_BUG, "Wee=%f != %"PRId64" - Wme=%f", Wee,
+             (weight_scale), Wme);
     valid = 0;
   }
 
   if (fabs(Wgd + Wmd + Wed - weight_scale) > 0.001*weight_scale) {
-    log_warn(LD_BUG, "Wgd=%f + Wmd=%f + Wed=%f != "I64_FORMAT,
-             Wgd, Wmd, Wed, I64_PRINTF_ARG(weight_scale));
+    log_warn(LD_BUG, "Wgd=%f + Wmd=%f + Wed=%f != %"PRId64,
+             Wgd, Wmd, Wed, (weight_scale));
     valid = 0;
   }
 
@@ -3039,36 +3039,36 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
     if (fabs(Etotal-Mtotal) > 0.01*MAX(Etotal,Mtotal)) {
       log_warn(LD_DIR,
                "Bw Weight Failure for %s: Etotal %f != Mtotal %f. "
-               "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-               " T="I64_FORMAT". "
+               "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+               " T=%"PRId64". "
                "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                casename, Etotal, Mtotal,
-               I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-               I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+               (G), (M), (E),
+               (D), (T),
                Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
       valid = 0;
     }
     if (fabs(Etotal-Gtotal) > 0.01*MAX(Etotal,Gtotal)) {
       log_warn(LD_DIR,
                "Bw Weight Failure for %s: Etotal %f != Gtotal %f. "
-               "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-               " T="I64_FORMAT". "
+               "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+               " T=%"PRId64". "
                "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                casename, Etotal, Gtotal,
-               I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-               I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+               (G), (M), (E),
+               (D), (T),
                Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
       valid = 0;
     }
     if (fabs(Gtotal-Mtotal) > 0.01*MAX(Gtotal,Mtotal)) {
       log_warn(LD_DIR,
                "Bw Weight Failure for %s: Mtotal %f != Gtotal %f. "
-               "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-               " T="I64_FORMAT". "
+               "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+               " T=%"PRId64". "
                "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                casename, Mtotal, Gtotal,
-               I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-               I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+               (G), (M), (E),
+               (D), (T),
                Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
       valid = 0;
     }
@@ -3095,12 +3095,12 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
       if (Rtotal > Stotal) {
         log_warn(LD_DIR,
                    "Bw Weight Failure for %s: Rtotal %f > Stotal %f. "
-                   "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-                   " T="I64_FORMAT". "
+                   "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+                   " T=%"PRId64". "
                    "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                    casename, Rtotal, Stotal,
-                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                   (G), (M), (E),
+                   (D), (T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -3108,12 +3108,12 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
       if (3*Rtotal > T) {
         log_warn(LD_DIR,
                    "Bw Weight Failure for %s: 3*Rtotal %f > T "
-                   I64_FORMAT". G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
-                   " D="I64_FORMAT" T="I64_FORMAT". "
+                   "%"PRId64". G=%"PRId64" M=%"PRId64" E=%"PRId64
+                   " D=%"PRId64" T=%"PRId64". "
                    "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
-                   casename, Rtotal*3, I64_PRINTF_ARG(T),
-                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                   casename, Rtotal*3, (T),
+                   (G), (M), (E),
+                   (D), (T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -3121,12 +3121,12 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
       if (3*Stotal > T) {
         log_warn(LD_DIR,
                    "Bw Weight Failure for %s: 3*Stotal %f > T "
-                   I64_FORMAT". G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
-                   " D="I64_FORMAT" T="I64_FORMAT". "
+                   "%"PRId64". G=%"PRId64" M=%"PRId64" E=%"PRId64
+                   " D=%"PRId64" T=%"PRId64". "
                    "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
-                   casename, Stotal*3, I64_PRINTF_ARG(T),
-                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                   casename, Stotal*3, (T),
+                   (G), (M), (E),
+                   (D), (T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -3134,13 +3134,13 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
       if (3*Mtotal < T) {
         log_warn(LD_DIR,
                    "Bw Weight Failure for %s: 3*Mtotal %f < T "
-                   I64_FORMAT". "
-                   "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-                   " T="I64_FORMAT". "
+                   "%"PRId64". "
+                   "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+                   " T=%"PRId64". "
                    "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
-                   casename, Mtotal*3, I64_PRINTF_ARG(T),
-                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                   casename, Mtotal*3, (T),
+                   (G), (M), (E),
+                   (D), (T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -3153,36 +3153,36 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
         if (fabs(Etotal-Mtotal) > 0.01*MAX(Etotal,Mtotal)) {
           log_warn(LD_DIR,
                    "Bw Weight Failure for %s: Etotal %f != Mtotal %f. "
-                   "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-                   " T="I64_FORMAT". "
+                   "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+                   " T=%"PRId64". "
                    "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                    casename, Etotal, Mtotal,
-                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                   (G), (M), (E),
+                   (D), (T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
         if (fabs(Etotal-Gtotal) > 0.01*MAX(Etotal,Gtotal)) {
           log_warn(LD_DIR,
                    "Bw Weight Failure for %s: Etotal %f != Gtotal %f. "
-                   "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-                   " T="I64_FORMAT". "
+                   "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+                   " T=%"PRId64". "
                    "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                    casename, Etotal, Gtotal,
-                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                   (G), (M), (E),
+                   (D), (T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
         if (fabs(Gtotal-Mtotal) > 0.01*MAX(Gtotal,Mtotal)) {
           log_warn(LD_DIR,
                    "Bw Weight Failure for %s: Mtotal %f != Gtotal %f. "
-                   "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-                   " T="I64_FORMAT". "
+                   "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+                   " T=%"PRId64". "
                    "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                    casename, Mtotal, Gtotal,
-                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                   (G), (M), (E),
+                   (D), (T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
@@ -3190,12 +3190,12 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
         if (fabs(Etotal-Gtotal) > 0.01*MAX(Etotal,Gtotal)) {
           log_warn(LD_DIR,
                    "Bw Weight Failure for %s: Etotal %f != Gtotal %f. "
-                   "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-                   " T="I64_FORMAT". "
+                   "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+                   " T=%"PRId64". "
                    "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                    casename, Etotal, Gtotal,
-                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                   (G), (M), (E),
+                   (D), (T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
@@ -3220,12 +3220,12 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
       if (3*Stotal > T) {
         log_warn(LD_DIR,
                    "Bw Weight Failure for %s: 3*Stotal %f > T "
-                   I64_FORMAT". G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
-                   " D="I64_FORMAT" T="I64_FORMAT". "
+                   "%"PRId64". G=%"PRId64" M=%"PRId64" E=%"PRId64
+                   " D=%"PRId64" T=%"PRId64". "
                    "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
-                   casename, Stotal*3, I64_PRINTF_ARG(T),
-                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                   casename, Stotal*3, (T),
+                   (G), (M), (E),
+                   (D), (T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -3233,12 +3233,12 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
         if (fabs(NStotal-Mtotal) > 0.01*MAX(NStotal,Mtotal)) {
           log_warn(LD_DIR,
                    "Bw Weight Failure for %s: NStotal %f != Mtotal %f. "
-                   "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-                   " T="I64_FORMAT". "
+                   "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+                   " T=%"PRId64". "
                    "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                    casename, NStotal, Mtotal,
-                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                   (G), (M), (E),
+                   (D), (T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
@@ -3247,12 +3247,12 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
         if (3*NStotal < T) {
           log_warn(LD_DIR,
                      "Bw Weight Failure for %s: 3*NStotal %f < T "
-                     I64_FORMAT". G="I64_FORMAT" M="I64_FORMAT
-                     " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT". "
+                     "%"PRId64". G=%"PRId64" M=%"PRId64
+                     " E=%"PRId64" D=%"PRId64" T=%"PRId64". "
                      "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
-                     casename, NStotal*3, I64_PRINTF_ARG(T),
-                     I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                     I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                     casename, NStotal*3, (T),
+                     (G), (M), (E),
+                     (D), (T),
                      Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
@@ -3262,36 +3262,36 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
       if (fabs(Etotal-Mtotal) > 0.01*MAX(Etotal,Mtotal)) {
         log_warn(LD_DIR,
                  "Bw Weight Failure for %s: Etotal %f != Mtotal %f. "
-                 "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-                 " T="I64_FORMAT". "
+                 "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+                 " T=%"PRId64". "
                  "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                  casename, Etotal, Mtotal,
-                 I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                 I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                 (G), (M), (E),
+                 (D), (T),
                  Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
       if (fabs(Etotal-Gtotal) > 0.01*MAX(Etotal,Gtotal)) {
         log_warn(LD_DIR,
                  "Bw Weight Failure for %s: Etotal %f != Gtotal %f. "
-                 "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-                 " T="I64_FORMAT". "
+                 "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+                 " T=%"PRId64". "
                  "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                  casename, Etotal, Gtotal,
-                 I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                 I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                 (G), (M), (E),
+                 (D), (T),
                  Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
       if (fabs(Gtotal-Mtotal) > 0.01*MAX(Gtotal,Mtotal)) {
         log_warn(LD_DIR,
                  "Bw Weight Failure for %s: Mtotal %f != Gtotal %f. "
-                 "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-                 " T="I64_FORMAT". "
+                 "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+                 " T=%"PRId64". "
                  "Wgg=%f Wgd=%f Wmg=%f Wme=%f Wmd=%f Wee=%f Wed=%f",
                  casename, Mtotal, Gtotal,
-                 I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-                 I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+                 (G), (M), (E),
+                 (D), (T),
                  Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }

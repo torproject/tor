@@ -1040,12 +1040,12 @@ geoip_get_transport_history(void)
     void *transport_count_ptr = strmap_get(transport_counts, transport_name);
     uintptr_t transport_count = (uintptr_t) transport_count_ptr;
 
-    log_debug(LD_GENERAL, "We got "U64_FORMAT" clients with transport '%s'.",
-              U64_PRINTF_ARG((uint64_t)transport_count), transport_name);
+    log_debug(LD_GENERAL, "We got %"PRIu64" clients with transport '%s'.",
+              ((uint64_t)transport_count), transport_name);
 
-    smartlist_add_asprintf(string_chunks, "%s="U64_FORMAT,
+    smartlist_add_asprintf(string_chunks, "%s=%"PRIu64,
                            transport_name,
-                           U64_PRINTF_ARG(round_uint64_to_next_multiple_of(
+                           (round_uint64_to_next_multiple_of(
                                                (uint64_t)transport_count,
                                                granularity)));
   } SMARTLIST_FOREACH_END(transport_name);

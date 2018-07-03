@@ -3047,8 +3047,8 @@ ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
     --*value;
   }
   if (*value > ROUTER_MAX_DECLARED_BANDWIDTH) {
-    tor_asprintf(msg, "%s ("U64_FORMAT") must be at most %d",
-                 desc, U64_PRINTF_ARG(*value),
+    tor_asprintf(msg, "%s (%"PRIu64") must be at most %d",
+                 desc, (*value),
                  ROUTER_MAX_DECLARED_BANDWIDTH);
     return -1;
   }
@@ -4636,10 +4636,10 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
       }
     }
     if (log_guess && ! notice_sent) {
-      log_notice(LD_CONFIG, "%sMaxMemInQueues is set to "U64_FORMAT" MB. "
+      log_notice(LD_CONFIG, "%sMaxMemInQueues is set to %"PRIu64" MB. "
                  "You can override this by setting MaxMemInQueues by hand.",
                  ram ? "Based on detected system memory, " : "",
-                 U64_PRINTF_ARG(result / ONE_MEGABYTE));
+                 (result / ONE_MEGABYTE));
       notice_sent = 1;
     }
     return result;

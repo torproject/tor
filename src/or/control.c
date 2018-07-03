@@ -1884,9 +1884,9 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     }
     *answer = tor_dup_ip(addr);
   } else if (!strcmp(question, "traffic/read")) {
-    tor_asprintf(answer, U64_FORMAT, U64_PRINTF_ARG(get_bytes_read()));
+    tor_asprintf(answer, "%"PRIu64, (get_bytes_read()));
   } else if (!strcmp(question, "traffic/written")) {
-    tor_asprintf(answer, U64_FORMAT, U64_PRINTF_ARG(get_bytes_written()));
+    tor_asprintf(answer, "%"PRIu64, (get_bytes_written()));
   } else if (!strcmp(question, "process/pid")) {
     int myPid = -1;
 
@@ -1921,8 +1921,8 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     int max_fds = get_max_sockets();
     tor_asprintf(answer, "%d", max_fds);
   } else if (!strcmp(question, "limits/max-mem-in-queues")) {
-    tor_asprintf(answer, U64_FORMAT,
-                 U64_PRINTF_ARG(get_options()->MaxMemInQueues));
+    tor_asprintf(answer, "%"PRIu64,
+                 (get_options()->MaxMemInQueues));
   } else if (!strcmp(question, "fingerprint")) {
     crypto_pk_t *server_key;
     if (!server_mode(get_options())) {
@@ -5882,8 +5882,8 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
   if (circ && CIRCUIT_IS_ORIGIN(circ))
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
   send_control_event(EVENT_STREAM_STATUS,
-                        "650 STREAM "U64_FORMAT" %s %lu %s%s%s%s\r\n",
-                     U64_PRINTF_ARG(ENTRY_TO_CONN(conn)->global_identifier),
+                        "650 STREAM %"PRIu64" %s %lu %s%s%s%s\r\n",
+                     (ENTRY_TO_CONN(conn)->global_identifier),
                      status,
                         origin_circ?
                            (unsigned long)origin_circ->global_identifier : 0ul,
@@ -5954,12 +5954,12 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
 
   orconn_target_get_name(name, sizeof(name), conn);
   send_control_event(EVENT_OR_CONN_STATUS,
-                              "650 ORCONN %s %s%s%s%s ID="U64_FORMAT"\r\n",
+                              "650 ORCONN %s %s%s%s%s ID=%"PRIu64"\r\n",
                               name, status,
                               reason ? " REASON=" : "",
                               orconn_end_reason_to_control_string(reason),
                               ncircs_buf,
-                              U64_PRINTF_ARG(conn->base_.global_identifier));
+                              (conn->base_.global_identifier));
 
   return 0;
 }
@@ -5979,8 +5979,8 @@ control_event_stream_bandwidth(edge_connection_t *edge_conn)
     tor_gettimeofday(&now);
     format_iso_time_nospace_usec(tbuf, &now);
     send_control_event(EVENT_STREAM_BANDWIDTH_USED,
-                       "650 STREAM_BW "U64_FORMAT" %lu %lu %s\r\n",
-                       U64_PRINTF_ARG(edge_conn->base_.global_identifier),
+                       "650 STREAM_BW %"PRIu64" %lu %lu %s\r\n",
+                       (edge_conn->base_.global_identifier),
                        (unsigned long)edge_conn->n_read,
                        (unsigned long)edge_conn->n_written,
                        tbuf);
@@ -6013,8 +6013,8 @@ control_event_stream_bandwidth_used(void)
         tor_gettimeofday(&now);
         format_iso_time_nospace_usec(tbuf, &now);
         send_control_event(EVENT_STREAM_BANDWIDTH_USED,
-                           "650 STREAM_BW "U64_FORMAT" %lu %lu %s\r\n",
-                           U64_PRINTF_ARG(edge_conn->base_.global_identifier),
+                           "650 STREAM_BW %"PRIu64" %lu %lu %s\r\n",
+                           (edge_conn->base_.global_identifier),
                            (unsigned long)edge_conn->n_read,
                            (unsigned long)edge_conn->n_written,
                            tbuf);
@@ -6092,9 +6092,9 @@ control_event_conn_bandwidth(connection_t *conn)
       return 0;
   }
   send_control_event(EVENT_CONN_BW,
-                     "650 CONN_BW ID="U64_FORMAT" TYPE=%s "
+                     "650 CONN_BW ID=%"PRIu64" TYPE=%s "
                      "READ=%lu WRITTEN=%lu\r\n",
-                     U64_PRINTF_ARG(conn->global_identifier),
+                     (conn->global_identifier),
                      conn_type_str,
                      (unsigned long)conn->n_read_conn_bw,
                      (unsigned long)conn->n_written_conn_bw);
@@ -6159,9 +6159,9 @@ append_cell_stats_by_command(smartlist_t *event_parts, const char *key,
   int i;
   for (i = 0; i <= CELL_COMMAND_MAX_; i++) {
     if (include_if_non_zero[i] > 0) {
-      smartlist_add_asprintf(key_value_strings, "%s:"U64_FORMAT,
+      smartlist_add_asprintf(key_value_strings, "%s:%"PRIu64,
                              cell_command_to_string(i),
-                             U64_PRINTF_ARG(number_to_include[i]));
+                             (number_to_include[i]));
     }
   }
   if (smartlist_len(key_value_strings) > 0) {
@@ -6188,8 +6188,8 @@ format_cell_stats(char **event_string, circuit_t *circ,
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
     smartlist_add_asprintf(event_parts, "InboundQueue=%lu",
                  (unsigned long)or_circ->p_circ_id);
-    smartlist_add_asprintf(event_parts, "InboundConn="U64_FORMAT,
-                 U64_PRINTF_ARG(or_circ->p_chan->global_identifier));
+    smartlist_add_asprintf(event_parts, "InboundConn=%"PRIu64,
+                 (or_circ->p_chan->global_identifier));
     append_cell_stats_by_command(event_parts, "InboundAdded",
                                  cell_stats->added_cells_appward,
                                  cell_stats->added_cells_appward);
@@ -6203,8 +6203,8 @@ format_cell_stats(char **event_string, circuit_t *circ,
   if (circ->n_chan) {
     smartlist_add_asprintf(event_parts, "OutboundQueue=%lu",
                      (unsigned long)circ->n_circ_id);
-    smartlist_add_asprintf(event_parts, "OutboundConn="U64_FORMAT,
-                 U64_PRINTF_ARG(circ->n_chan->global_identifier));
+    smartlist_add_asprintf(event_parts, "OutboundConn=%"PRIu64,
+                 (circ->n_chan->global_identifier));
     append_cell_stats_by_command(event_parts, "OutboundAdded",
                                  cell_stats->added_cells_exitward,
                                  cell_stats->added_cells_exitward);

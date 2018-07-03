@@ -761,13 +761,13 @@ read_bandwidth_usage(void)
        "Successfully read bandwidth accounting info from state written at %s "
        "for interval starting at %s.  We have been active for %lu seconds in "
        "this interval.  At the start of the interval, we expected to use "
-       "about %lu KB per second. ("U64_FORMAT" bytes read so far, "
-       U64_FORMAT" bytes written so far)",
+       "about %lu KB per second. (%"PRIu64" bytes read so far, "
+       "%"PRIu64" bytes written so far)",
        tbuf1, tbuf2,
        (unsigned long)n_seconds_active_in_interval,
        (unsigned long)(expected_bandwidth_usage*1024/60),
-       U64_PRINTF_ARG(n_bytes_read_in_interval),
-       U64_PRINTF_ARG(n_bytes_written_in_interval));
+       (n_bytes_read_in_interval),
+       (n_bytes_written_in_interval));
   }
 
   return 0;
@@ -1134,9 +1134,9 @@ getinfo_helper_accounting(control_connection_t *conn,
     *answer = tor_strdup(hibernate_state_to_string(hibernate_state));
     tor_strlower(*answer);
   } else if (!strcmp(question, "accounting/bytes")) {
-      tor_asprintf(answer, U64_FORMAT" "U64_FORMAT,
-                 U64_PRINTF_ARG(n_bytes_read_in_interval),
-                 U64_PRINTF_ARG(n_bytes_written_in_interval));
+      tor_asprintf(answer, "%"PRIu64" %"PRIu64,
+                 (n_bytes_read_in_interval),
+                 (n_bytes_written_in_interval));
   } else if (!strcmp(question, "accounting/bytes-left")) {
     uint64_t limit = get_options()->AccountingMax;
     if (get_options()->AccountingRule == ACCT_SUM) {
@@ -1144,28 +1144,28 @@ getinfo_helper_accounting(control_connection_t *conn,
       uint64_t total_bytes = get_accounting_bytes();
       if (total_bytes < limit)
         total_left = limit - total_bytes;
-      tor_asprintf(answer, U64_FORMAT" "U64_FORMAT,
-                   U64_PRINTF_ARG(total_left), U64_PRINTF_ARG(total_left));
+      tor_asprintf(answer, "%"PRIu64" %"PRIu64,
+                   (total_left), (total_left));
     } else if (get_options()->AccountingRule == ACCT_IN) {
       uint64_t read_left = 0;
       if (n_bytes_read_in_interval < limit)
         read_left = limit - n_bytes_read_in_interval;
-      tor_asprintf(answer, U64_FORMAT" "U64_FORMAT,
-                   U64_PRINTF_ARG(read_left), U64_PRINTF_ARG(limit));
+      tor_asprintf(answer, "%"PRIu64" %"PRIu64,
+                   (read_left), (limit));
     } else if (get_options()->AccountingRule == ACCT_OUT) {
       uint64_t write_left = 0;
       if (n_bytes_written_in_interval < limit)
         write_left = limit - n_bytes_written_in_interval;
-      tor_asprintf(answer, U64_FORMAT" "U64_FORMAT,
-                   U64_PRINTF_ARG(limit), U64_PRINTF_ARG(write_left));
+      tor_asprintf(answer, "%"PRIu64" %"PRIu64,
+                   (limit), (write_left));
     } else {
       uint64_t read_left = 0, write_left = 0;
       if (n_bytes_read_in_interval < limit)
         read_left = limit - n_bytes_read_in_interval;
       if (n_bytes_written_in_interval < limit)
         write_left = limit - n_bytes_written_in_interval;
-      tor_asprintf(answer, U64_FORMAT" "U64_FORMAT,
-                   U64_PRINTF_ARG(read_left), U64_PRINTF_ARG(write_left));
+      tor_asprintf(answer, "%"PRIu64" %"PRIu64,
+                   (read_left), (write_left));
     }
   } else if (!strcmp(question, "accounting/interval-start")) {
     *answer = tor_malloc(ISO_TIME_LEN+1);

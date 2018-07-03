@@ -714,9 +714,9 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
     off_real = tor_fd_getpos(fd);
     if (off_real != off) {
       log_warn(LD_BUG, "Discontinuity in position in microdescriptor cache."
-               "By my count, I'm at "I64_FORMAT
-               ", but I should be at "I64_FORMAT,
-               I64_PRINTF_ARG(off), I64_PRINTF_ARG(off_real));
+               "By my count, I'm at %"PRId64
+               ", but I should be at %"PRId64,
+               (off), (off_real));
       if (off_real >= 0)
         off = off_real;
     }

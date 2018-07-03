@@ -999,13 +999,13 @@ networkstatus_check_weights(int64_t Wgg, int64_t Wgd, int64_t Wmg,
  out:
   if (berr) {
     log_info(LD_DIR,
-             "Bw weight mismatch %d. G="I64_FORMAT" M="I64_FORMAT
-             " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT
+             "Bw weight mismatch %d. G=%"PRId64" M=%"PRId64
+             " E=%"PRId64" D=%"PRId64" T=%"PRId64
              " Wmd=%d Wme=%d Wmg=%d Wed=%d Wee=%d"
              " Wgd=%d Wgg=%d Wme=%d Wmg=%d",
              berr,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+             (G), (M), (E),
+             (D), (T),
              (int)Wmd, (int)Wme, (int)Wmg, (int)Wed, (int)Wee,
              (int)Wgd, (int)Wgg, (int)Wme, (int)Wmg);
   }
@@ -1031,10 +1031,10 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
 
   if (G <= 0 || M <= 0 || E <= 0 || D <= 0) {
     log_warn(LD_DIR, "Consensus with empty bandwidth: "
-                     "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
-                     " D="I64_FORMAT" T="I64_FORMAT,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
+                     "G=%"PRId64" M=%"PRId64" E=%"PRId64
+                     " D=%"PRId64" T=%"PRId64,
+             (G), (M), (E),
+             (D), (T));
     return 0;
   }
 
@@ -1065,13 +1065,13 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
 
     if (berr) {
       log_warn(LD_DIR,
-             "Bw Weights error %d for %s v10. G="I64_FORMAT" M="I64_FORMAT
-             " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT
+             "Bw Weights error %d for %s v10. G=%"PRId64" M=%"PRId64
+             " E=%"PRId64" D=%"PRId64" T=%"PRId64
              " Wmd=%d Wme=%d Wmg=%d Wed=%d Wee=%d"
              " Wgd=%d Wgg=%d Wme=%d Wmg=%d weight_scale=%d",
              berr, casename,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+             (G), (M), (E),
+             (D), (T),
              (int)Wmd, (int)Wme, (int)Wmg, (int)Wed, (int)Wee,
              (int)Wgd, (int)Wgg, (int)Wme, (int)Wmg, (int)weight_scale);
       return 0;
@@ -1136,13 +1136,13 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
       if (berr != BW_WEIGHTS_NO_ERROR &&
               berr != BW_WEIGHTS_BALANCE_MID_ERROR) {
         log_warn(LD_DIR,
-             "Bw Weights error %d for %s v10. G="I64_FORMAT" M="I64_FORMAT
-             " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT
+             "Bw Weights error %d for %s v10. G=%"PRId64" M=%"PRId64
+             " E=%"PRId64" D=%"PRId64" T=%"PRId64
              " Wmd=%d Wme=%d Wmg=%d Wed=%d Wee=%d"
              " Wgd=%d Wgg=%d Wme=%d Wmg=%d weight_scale=%d",
              berr, casename,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+             (G), (M), (E),
+             (D), (T),
              (int)Wmd, (int)Wme, (int)Wmg, (int)Wed, (int)Wee,
              (int)Wgd, (int)Wgg, (int)Wme, (int)Wmg, (int)weight_scale);
         return 0;
@@ -1153,10 +1153,10 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
     // Case 3: Exactly one of Guard or Exit is scarce
     if (!(3*E < T || 3*G < T) || !(3*G >= T || 3*E >= T)) {
       log_warn(LD_BUG,
-           "Bw-Weights Case 3 v10 but with G="I64_FORMAT" M="
-           I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT,
-               I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-               I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
+           "Bw-Weights Case 3 v10 but with G=%"PRId64" M="
+           "%"PRId64" E=%"PRId64" D=%"PRId64" T=%"PRId64,
+               (G), (M), (E),
+               (D), (T));
     }
 
     if (3*(S+D) < T) { // Subcase a: S+D < T/3
@@ -1208,13 +1208,13 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
       }
       if (berr) {
         log_warn(LD_DIR,
-             "Bw Weights error %d for %s v10. G="I64_FORMAT" M="I64_FORMAT
-             " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT
+             "Bw Weights error %d for %s v10. G=%"PRId64" M=%"PRId64
+             " E=%"PRId64" D=%"PRId64" T=%"PRId64
              " Wmd=%d Wme=%d Wmg=%d Wed=%d Wee=%d"
              " Wgd=%d Wgg=%d Wme=%d Wmg=%d weight_scale=%d",
              berr, casename,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+             (G), (M), (E),
+             (D), (T),
              (int)Wmd, (int)Wme, (int)Wmg, (int)Wed, (int)Wee,
              (int)Wgd, (int)Wgg, (int)Wme, (int)Wmg, (int)weight_scale);
         return 0;
@@ -1248,11 +1248,11 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
      (int)weight_scale, (int)Wmd, (int)Wme, (int)Wmg, (int)weight_scale);
 
   log_notice(LD_CIRC, "Computed bandwidth weights for %s with v10: "
-             "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-             " T="I64_FORMAT,
+             "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+             " T=%"PRId64,
              casename,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
+             (G), (M), (E),
+             (D), (T));
   return 1;
 }
 

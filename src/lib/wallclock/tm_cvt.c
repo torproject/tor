@@ -100,9 +100,9 @@ correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
   /* LCOV_EXCL_STOP */
  done:
   if (err_out) {
-    tor_asprintf(err_out, "%s("I64_FORMAT") failed with error %s: %s",
+    tor_asprintf(err_out, "%s(%"PRId64") failed with error %s: %s",
                  islocal?"localtime":"gmtime",
-                 timep?I64_PRINTF_ARG(*timep):0,
+                 timep?(*timep):0,
                  strerror(errno),
                  outcome);
   }

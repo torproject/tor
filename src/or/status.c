@@ -77,7 +77,7 @@ bytes_to_usage(uint64_t bytes)
   char *bw_string = NULL;
 
   if (bytes < (1<<20)) { /* Less than a megabyte. */
-    tor_asprintf(&bw_string, U64_FORMAT" kB", U64_PRINTF_ARG(bytes>>10));
+    tor_asprintf(&bw_string, "%"PRIu64" kB", (bytes>>10));
   } else if (bytes < (1<<30)) { /* Megabytes. Let's add some precision. */
     double bw = U64_TO_DBL(bytes);
     tor_asprintf(&bw_string, "%.2f MB", bw/(1<<20));
@@ -188,12 +188,12 @@ log_heartbeat(time_t now)
     const uint64_t main_loop_idle_count = get_main_loop_idle_count();
 
     log_fn(LOG_NOTICE, LD_HEARTBEAT, "Main event loop statistics: "
-         U64_FORMAT " successful returns, "
-         U64_FORMAT " erroneous returns, and "
-         U64_FORMAT " idle returns.",
-         U64_PRINTF_ARG(main_loop_success_count),
-         U64_PRINTF_ARG(main_loop_error_count),
-         U64_PRINTF_ARG(main_loop_idle_count));
+         "%"PRIu64 " successful returns, "
+         "%"PRIu64 " erroneous returns, and "
+         "%"PRIu64 " idle returns.",
+         (main_loop_success_count),
+         (main_loop_error_count),
+         (main_loop_idle_count));
   }
 
   /** Now, if we are an HS service, log some stats about our usage */

@@ -192,19 +192,19 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
 
   log_debug(LD_CHANNEL,
             "In channel_tls_connect() for channel %p "
-            "(global id " U64_FORMAT ")",
+            "(global id %"PRIu64 ")",
             tlschan,
-            U64_PRINTF_ARG(chan->global_identifier));
+            (chan->global_identifier));
 
   if (is_local_addr(addr)) {
     log_debug(LD_CHANNEL,
-              "Marking new outgoing channel " U64_FORMAT " at %p as local",
-              U64_PRINTF_ARG(chan->global_identifier), chan);
+              "Marking new outgoing channel %"PRIu64 " at %p as local",
+              (chan->global_identifier), chan);
     channel_mark_local(chan);
   } else {
     log_debug(LD_CHANNEL,
-              "Marking new outgoing channel " U64_FORMAT " at %p as remote",
-              U64_PRINTF_ARG(chan->global_identifier), chan);
+              "Marking new outgoing channel %"PRIu64 " at %p as remote",
+              (chan->global_identifier), chan);
     channel_mark_remote(chan);
   }
 
@@ -220,8 +220,8 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   }
 
   log_debug(LD_CHANNEL,
-            "Got orconn %p for channel with global id " U64_FORMAT,
-            tlschan->conn, U64_PRINTF_ARG(chan->global_identifier));
+            "Got orconn %p for channel with global id %"PRIu64,
+            tlschan->conn, (chan->global_identifier));
 
   goto done;
 
@@ -271,8 +271,8 @@ channel_tls_start_listener(void)
     channel_tls_listener = listener;
 
     log_debug(LD_CHANNEL,
-              "Starting TLS channel listener %p with global id " U64_FORMAT,
-              listener, U64_PRINTF_ARG(listener->global_identifier));
+              "Starting TLS channel listener %p with global id %"PRIu64,
+              listener, (listener->global_identifier));
 
     channel_listener_register(listener);
   } else listener = channel_tls_listener;
@@ -301,9 +301,9 @@ channel_tls_free_all(void)
      */
     old_listener = channel_tls_listener;
     log_debug(LD_CHANNEL,
-              "Closing channel_tls_listener with ID " U64_FORMAT
+              "Closing channel_tls_listener with ID %"PRIu64
               " at %p.",
-              U64_PRINTF_ARG(old_listener->global_identifier),
+              (old_listener->global_identifier),
               old_listener);
     channel_listener_unregister(old_listener);
     channel_listener_mark_for_close(old_listener);
@@ -335,13 +335,13 @@ channel_tls_handle_incoming(or_connection_t *orconn)
 
   if (is_local_addr(&(TO_CONN(orconn)->addr))) {
     log_debug(LD_CHANNEL,
-              "Marking new incoming channel " U64_FORMAT " at %p as local",
-              U64_PRINTF_ARG(chan->global_identifier), chan);
+              "Marking new incoming channel %"PRIu64 " at %p as local",
+              (chan->global_identifier), chan);
     channel_mark_local(chan);
   } else {
     log_debug(LD_CHANNEL,
-              "Marking new incoming channel " U64_FORMAT " at %p as remote",
-              U64_PRINTF_ARG(chan->global_identifier), chan);
+              "Marking new incoming channel %"PRIu64 " at %p as remote",
+              (chan->global_identifier), chan);
     channel_mark_remote(chan);
   }
 
@@ -431,8 +431,8 @@ channel_tls_describe_transport_method(channel_t *chan)
 
     if (buf) tor_free(buf);
     tor_asprintf(&buf,
-                 "TLS channel (connection " U64_FORMAT ")",
-                 U64_PRINTF_ARG(id));
+                 "TLS channel (connection %"PRIu64 ")",
+                 (id));
 
     rv = buf;
   } else {
@@ -493,8 +493,8 @@ channel_tls_get_overhead_estimate_method(channel_t *chan)
   }
 
   log_debug(LD_CHANNEL,
-            "Estimated overhead ratio for TLS chan " U64_FORMAT " is %f",
-            U64_PRINTF_ARG(chan->global_identifier), overhead);
+            "Estimated overhead ratio for TLS chan %"PRIu64 " is %f",
+            (chan->global_identifier), overhead);
 
   return overhead;
 }
@@ -625,8 +625,8 @@ channel_tls_has_queued_writes_method(channel_t *chan)
   if (!(tlschan->conn)) {
     log_info(LD_CHANNEL,
              "something called has_queued_writes on a tlschan "
-             "(%p with ID " U64_FORMAT " but no conn",
-             chan, U64_PRINTF_ARG(chan->global_identifier));
+             "(%p with ID %"PRIu64 " but no conn",
+             chan, (chan->global_identifier));
   }
 
   outbuf_len = (tlschan->conn != NULL) ?
@@ -693,8 +693,8 @@ channel_tls_matches_extend_info_method(channel_t *chan,
   if (!(tlschan->conn)) {
     log_info(LD_CHANNEL,
              "something called matches_extend_info on a tlschan "
-             "(%p with ID " U64_FORMAT " but no conn",
-             chan, U64_PRINTF_ARG(chan->global_identifier));
+             "(%p with ID %"PRIu64 " but no conn",
+             chan, (chan->global_identifier));
     return 0;
   }
 
@@ -723,8 +723,8 @@ channel_tls_matches_target_method(channel_t *chan,
   if (!(tlschan->conn)) {
     log_info(LD_CHANNEL,
              "something called matches_target on a tlschan "
-             "(%p with ID " U64_FORMAT " but no conn",
-             chan, U64_PRINTF_ARG(chan->global_identifier));
+             "(%p with ID %"PRIu64 " but no conn",
+             chan, (chan->global_identifier));
     return 0;
   }
 
@@ -806,8 +806,8 @@ channel_tls_write_cell_method(channel_t *chan, cell_t *cell)
   } else {
     log_info(LD_CHANNEL,
              "something called write_cell on a tlschan "
-             "(%p with ID " U64_FORMAT " but no conn",
-             chan, U64_PRINTF_ARG(chan->global_identifier));
+             "(%p with ID %"PRIu64 " but no conn",
+             chan, (chan->global_identifier));
   }
 
   return written;
@@ -839,8 +839,8 @@ channel_tls_write_packed_cell_method(channel_t *chan,
   } else {
     log_info(LD_CHANNEL,
              "something called write_packed_cell on a tlschan "
-             "(%p with ID " U64_FORMAT " but no conn",
-             chan, U64_PRINTF_ARG(chan->global_identifier));
+             "(%p with ID %"PRIu64 " but no conn",
+             chan, (chan->global_identifier));
     return -1;
   }
 
@@ -868,8 +868,8 @@ channel_tls_write_var_cell_method(channel_t *chan, var_cell_t *var_cell)
   } else {
     log_info(LD_CHANNEL,
              "something called write_var_cell on a tlschan "
-             "(%p with ID " U64_FORMAT " but no conn",
-             chan, U64_PRINTF_ARG(chan->global_identifier));
+             "(%p with ID %"PRIu64 " but no conn",
+             chan, (chan->global_identifier));
   }
 
   return written;
@@ -1341,15 +1341,15 @@ channel_tls_update_marks(or_connection_t *conn)
   if (is_local_addr(&(TO_CONN(conn)->addr))) {
     if (!channel_is_local(chan)) {
       log_debug(LD_CHANNEL,
-                "Marking channel " U64_FORMAT " at %p as local",
-                U64_PRINTF_ARG(chan->global_identifier), chan);
+                "Marking channel %"PRIu64 " at %p as local",
+                (chan->global_identifier), chan);
       channel_mark_local(chan);
     }
   } else {
     if (channel_is_local(chan)) {
       log_debug(LD_CHANNEL,
-                "Marking channel " U64_FORMAT " at %p as remote",
-                U64_PRINTF_ARG(chan->global_identifier), chan);
+                "Marking channel %"PRIu64 " at %p as remote",
+                (chan->global_identifier), chan);
       channel_mark_remote(chan);
     }
   }

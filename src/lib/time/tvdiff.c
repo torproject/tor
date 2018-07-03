@@ -51,15 +51,15 @@ tv_udiff(const struct timeval *start, const struct timeval *end)
   /* Sanity check tv_usec */
   if (start->tv_usec > TOR_USEC_PER_SEC || start->tv_usec < 0) {
     log_warn(LD_GENERAL, "comparing times on microsecond detail with bad "
-             "start tv_usec: " I64_FORMAT " microseconds",
-             I64_PRINTF_ARG(start->tv_usec));
+             "start tv_usec: %"PRId64 " microseconds",
+             (start->tv_usec));
     return LONG_MAX;
   }
 
   if (end->tv_usec > TOR_USEC_PER_SEC || end->tv_usec < 0) {
     log_warn(LD_GENERAL, "comparing times on microsecond detail with bad "
-             "end tv_usec: " I64_FORMAT " microseconds",
-             I64_PRINTF_ARG(end->tv_usec));
+             "end tv_usec: %"PRId64 " microseconds",
+             (end->tv_usec));
     return LONG_MAX;
   }
 
@@ -72,7 +72,7 @@ tv_udiff(const struct timeval *start, const struct timeval *end)
   if (secdiff > (int64_t)(LONG_MAX/1000000 - 1) ||
       secdiff < (int64_t)(LONG_MIN/1000000 + 1)) {
     log_warn(LD_GENERAL, "comparing times on microsecond detail too far "
-             "apart: " I64_FORMAT " seconds", I64_PRINTF_ARG(secdiff));
+             "apart: %"PRId64 " seconds", (secdiff));
     return LONG_MAX;
   }
 
@@ -100,15 +100,15 @@ tv_mdiff(const struct timeval *start, const struct timeval *end)
   /* Sanity check tv_usec */
   if (start->tv_usec > TOR_USEC_PER_SEC || start->tv_usec < 0) {
     log_warn(LD_GENERAL, "comparing times on millisecond detail with bad "
-             "start tv_usec: " I64_FORMAT " microseconds",
-             I64_PRINTF_ARG(start->tv_usec));
+             "start tv_usec: %"PRId64 " microseconds",
+             (start->tv_usec));
     return LONG_MAX;
   }
 
   if (end->tv_usec > TOR_USEC_PER_SEC || end->tv_usec < 0) {
     log_warn(LD_GENERAL, "comparing times on millisecond detail with bad "
-             "end tv_usec: " I64_FORMAT " microseconds",
-             I64_PRINTF_ARG(end->tv_usec));
+             "end tv_usec: %"PRId64 " microseconds",
+             (end->tv_usec));
     return LONG_MAX;
   }
 
@@ -124,7 +124,7 @@ tv_mdiff(const struct timeval *start, const struct timeval *end)
   if (secdiff > (int64_t)(LONG_MAX/1000 - 2) ||
       secdiff < (int64_t)(LONG_MIN/1000 + 1)) {
     log_warn(LD_GENERAL, "comparing times on millisecond detail too far "
-             "apart: " I64_FORMAT " seconds", I64_PRINTF_ARG(secdiff));
+             "apart: %"PRId64 " seconds", (secdiff));
     return LONG_MAX;
   }
 

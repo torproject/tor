@@ -202,11 +202,11 @@ get_unique_circ_id_by_chan(channel_t *chan)
                                                               chan->cmux);
 
       log_warn(LD_CIRC, "  Circuitmux on this channel has %u circuits, "
-               "of which %u are active. It says it has "I64_FORMAT
+               "of which %u are active. It says it has %"PRId64
                " destroy cells queued.",
                circuitmux_num_circuits(chan->cmux),
                circuitmux_num_active_circuits(chan->cmux),
-               I64_PRINTF_ARG(queued_destroys));
+               (queued_destroys));
 
       /* Change this into "if (1)" in order to get more information about
        * possible failure modes here.  You'll need to know how to use gdb with
@@ -1150,20 +1150,20 @@ circuit_note_clock_jumped(int64_t seconds_elapsed, bool was_idle)
 {
   int severity = server_mode(get_options()) ? LOG_WARN : LOG_NOTICE;
   if (was_idle) {
-    tor_log(severity, LD_GENERAL, "Tor has been idle for "I64_FORMAT
+    tor_log(severity, LD_GENERAL, "Tor has been idle for %"PRId64
             " seconds; assuming established circuits no longer work.",
-            I64_PRINTF_ARG(seconds_elapsed));
+            (seconds_elapsed));
   } else {
     tor_log(severity, LD_GENERAL,
-            "Your system clock just jumped "I64_FORMAT" seconds %s; "
+            "Your system clock just jumped %"PRId64" seconds %s; "
             "assuming established circuits no longer work.",
-            I64_PRINTF_ARG(
+            (
                  seconds_elapsed >=0 ? seconds_elapsed : -seconds_elapsed),
             seconds_elapsed >=0 ? "forward" : "backward");
   }
-  control_event_general_status(LOG_WARN, "CLOCK_JUMPED TIME="I64_FORMAT
+  control_event_general_status(LOG_WARN, "CLOCK_JUMPED TIME=%"PRId64
                                " IDLE=%d",
-                               I64_PRINTF_ARG(seconds_elapsed), was_idle?1:0);
+                               (seconds_elapsed), was_idle?1:0);
   /* so we log when it works again */
   note_that_we_maybe_cant_complete_circuits();
   control_event_client_status(severity, "CIRCUIT_NOT_ESTABLISHED REASON=%s",

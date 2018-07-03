@@ -1000,9 +1000,9 @@ origin_circuit_new(void)
     }
 
     log_info(LD_CIRC,
-              "Circuit " U64_FORMAT " chose an idle timeout of %d based on "
+              "Circuit %"PRIu32" chose an idle timeout of %d based on "
               "%d seconds of predictive building remaining.",
-              U64_PRINTF_ARG(circ->global_identifier),
+              (circ->global_identifier),
               circ->circuit_idle_timeout,
               prediction_time_remaining);
   }
@@ -1389,9 +1389,9 @@ circuit_get_by_circid_channel_impl(circid_t circ_id, channel_t *chan,
   if (found && found->circuit) {
     log_debug(LD_CIRC,
               "circuit_get_by_circid_channel_impl() returning circuit %p for"
-              " circ_id %u, channel ID " U64_FORMAT " (%p)",
+              " circ_id %u, channel ID %"PRIu64 " (%p)",
               found->circuit, (unsigned)circ_id,
-              U64_PRINTF_ARG(chan->global_identifier), chan);
+              (chan->global_identifier), chan);
     if (found_entry_out)
       *found_entry_out = 1;
     return found->circuit;
@@ -1399,10 +1399,10 @@ circuit_get_by_circid_channel_impl(circid_t circ_id, channel_t *chan,
 
   log_debug(LD_CIRC,
             "circuit_get_by_circid_channel_impl() found %s for"
-            " circ_id %u, channel ID " U64_FORMAT " (%p)",
+            " circ_id %u, channel ID %"PRIu64 " (%p)",
             found ? "placeholder" : "nothing",
             (unsigned)circ_id,
-            U64_PRINTF_ARG(chan->global_identifier), chan);
+            (chan->global_identifier), chan);
 
   if (found_entry_out)
     *found_entry_out = found ? 1 : 0;
@@ -2601,10 +2601,10 @@ circuits_handle_oom(size_t current_allocation)
 
  done_recovering_mem:
 
-  log_notice(LD_GENERAL, "Removed "U64_FORMAT" bytes by killing %d circuits; "
+  log_notice(LD_GENERAL, "Removed %"PRIu64" bytes by killing %d circuits; "
              "%d circuits remain alive. Also killed %d non-linked directory "
              "connections.",
-             U64_PRINTF_ARG(mem_recovered),
+             (mem_recovered),
              n_circuits_killed,
              smartlist_len(circlist) - n_circuits_killed,
              n_dirconns_killed);
@@ -2737,4 +2737,3 @@ assert_circuit_ok,(const circuit_t *c))
     tor_assert(!or_circ || !or_circ->rend_splice);
   }
 }
-

@@ -390,9 +390,9 @@ channel_register(channel_t *chan)
   if (chan->registered) return;
 
   log_debug(LD_CHANNEL,
-            "Registering channel %p (ID " U64_FORMAT ") "
+            "Registering channel %p (ID %"PRIu64 ") "
             "in state %s (%d) with digest %s",
-            chan, U64_PRINTF_ARG(chan->global_identifier),
+            chan, (chan->global_identifier),
             channel_state_to_string(chan->state), chan->state,
             hex_str(chan->identity_digest, DIGEST_LEN));
 
@@ -420,9 +420,9 @@ channel_register(channel_t *chan)
         channel_add_to_digest_map(chan);
       } else {
         log_info(LD_CHANNEL,
-                "Channel %p (global ID " U64_FORMAT ") "
+                "Channel %p (global ID %"PRIu64 ") "
                 "in state %s (%d) registered with no identity digest",
-                chan, U64_PRINTF_ARG(chan->global_identifier),
+                chan, (chan->global_identifier),
                 channel_state_to_string(chan->state), chan->state);
       }
     }
@@ -486,9 +486,9 @@ channel_listener_register(channel_listener_t *chan_l)
   if (chan_l->registered) return;
 
   log_debug(LD_CHANNEL,
-            "Registering channel listener %p (ID " U64_FORMAT ") "
+            "Registering channel listener %p (ID %"PRIu64 ") "
             "in state %s (%d)",
-            chan_l, U64_PRINTF_ARG(chan_l->global_identifier),
+            chan_l, (chan_l->global_identifier),
             channel_listener_state_to_string(chan_l->state),
             chan_l->state);
 
@@ -578,9 +578,9 @@ channel_add_to_digest_map(channel_t *chan)
   TOR_LIST_INSERT_HEAD(&ent->channel_list, chan, next_with_same_id);
 
   log_debug(LD_CHANNEL,
-            "Added channel %p (global ID " U64_FORMAT ") "
+            "Added channel %p (global ID %"PRIu64 ") "
             "to identity map in state %s (%d) with digest %s",
-            chan, U64_PRINTF_ARG(chan->global_identifier),
+            chan, (chan->global_identifier),
             channel_state_to_string(chan->state), chan->state,
             hex_str(chan->identity_digest, DIGEST_LEN));
 }
@@ -617,18 +617,18 @@ channel_remove_from_digest_map(channel_t *chan)
     }
 
     log_debug(LD_CHANNEL,
-              "Removed channel %p (global ID " U64_FORMAT ") from "
+              "Removed channel %p (global ID %"PRIu64 ") from "
               "identity map in state %s (%d) with digest %s",
-              chan, U64_PRINTF_ARG(chan->global_identifier),
+              chan, (chan->global_identifier),
               channel_state_to_string(chan->state), chan->state,
               hex_str(chan->identity_digest, DIGEST_LEN));
   } else {
     /* Shouldn't happen */
     log_warn(LD_BUG,
-             "Trying to remove channel %p (global ID " U64_FORMAT ") with "
+             "Trying to remove channel %p (global ID %"PRIu64 ") with "
              "digest %s from identity map, but couldn't find any with "
              "that digest",
-             chan, U64_PRINTF_ARG(chan->global_identifier),
+             chan, (chan->global_identifier),
              hex_str(chan->identity_digest, DIGEST_LEN));
   }
 }
@@ -882,8 +882,8 @@ channel_free_(channel_t *chan)
   tor_assert(!(chan->registered));
 
   log_debug(LD_CHANNEL,
-            "Freeing channel " U64_FORMAT " at %p",
-            U64_PRINTF_ARG(chan->global_identifier), chan);
+            "Freeing channel %"PRIu64 " at %p",
+            (chan->global_identifier), chan);
 
   /* Get this one out of the scheduler */
   scheduler_release_channel(chan);
@@ -928,8 +928,8 @@ channel_listener_free_(channel_listener_t *chan_l)
   if (!chan_l) return;
 
   log_debug(LD_CHANNEL,
-            "Freeing channel_listener_t " U64_FORMAT " at %p",
-            U64_PRINTF_ARG(chan_l->global_identifier),
+            "Freeing channel_listener_t %"PRIu64 " at %p",
+            (chan_l->global_identifier),
             chan_l);
 
   /* It must be closed or errored */
@@ -955,8 +955,8 @@ channel_force_xfree(channel_t *chan)
   tor_assert(chan);
 
   log_debug(LD_CHANNEL,
-            "Force-freeing channel " U64_FORMAT " at %p",
-            U64_PRINTF_ARG(chan->global_identifier), chan);
+            "Force-freeing channel %"PRIu64 " at %p",
+            (chan->global_identifier), chan);
 
   /* Get this one out of the scheduler */
   scheduler_release_channel(chan);
@@ -999,8 +999,8 @@ channel_listener_force_xfree(channel_listener_t *chan_l)
   tor_assert(chan_l);
 
   log_debug(LD_CHANNEL,
-            "Force-freeing channel_listener_t " U64_FORMAT " at %p",
-            U64_PRINTF_ARG(chan_l->global_identifier),
+            "Force-freeing channel_listener_t %"PRIu64 " at %p",
+            (chan_l->global_identifier),
             chan_l);
 
   /* Call a free method if there is one */
@@ -1039,8 +1039,8 @@ channel_listener_set_listener_fn(channel_listener_t *chan_l,
 
   log_debug(LD_CHANNEL,
            "Setting listener callback for channel listener %p "
-           "(global ID " U64_FORMAT ") to %p",
-           chan_l, U64_PRINTF_ARG(chan_l->global_identifier),
+           "(global ID %"PRIu64 ") to %p",
+           chan_l, (chan_l->global_identifier),
            listener);
 
   chan_l->listener = listener;
@@ -1139,9 +1139,9 @@ channel_mark_for_close(channel_t *chan)
     return;
 
   log_debug(LD_CHANNEL,
-            "Closing channel %p (global ID " U64_FORMAT ") "
+            "Closing channel %p (global ID %"PRIu64 ") "
             "by request",
-            chan, U64_PRINTF_ARG(chan->global_identifier));
+            chan, (chan->global_identifier));
 
   /* Note closing by request from above */
   chan->reason_for_closing = CHANNEL_CLOSE_REQUESTED;
@@ -1179,9 +1179,9 @@ channel_listener_mark_for_close(channel_listener_t *chan_l)
       chan_l->state == CHANNEL_LISTENER_STATE_ERROR) return;
 
   log_debug(LD_CHANNEL,
-            "Closing channel listener %p (global ID " U64_FORMAT ") "
+            "Closing channel listener %p (global ID %"PRIu64 ") "
             "by request",
-            chan_l, U64_PRINTF_ARG(chan_l->global_identifier));
+            chan_l, (chan_l->global_identifier));
 
   /* Note closing by request from above */
   chan_l->reason_for_closing = CHANNEL_LISTENER_CLOSE_REQUESTED;
@@ -1217,9 +1217,9 @@ channel_close_from_lower_layer(channel_t *chan)
     return;
 
   log_debug(LD_CHANNEL,
-            "Closing channel %p (global ID " U64_FORMAT ") "
+            "Closing channel %p (global ID %"PRIu64 ") "
             "due to lower-layer event",
-            chan, U64_PRINTF_ARG(chan->global_identifier));
+            chan, (chan->global_identifier));
 
   /* Note closing by event from below */
   chan->reason_for_closing = CHANNEL_CLOSE_FROM_BELOW;
@@ -1302,8 +1302,8 @@ channel_clear_identity_digest(channel_t *chan)
 
   log_debug(LD_CHANNEL,
             "Clearing remote endpoint digest on channel %p with "
-            "global ID " U64_FORMAT,
-            chan, U64_PRINTF_ARG(chan->global_identifier));
+            "global ID %"PRIu64,
+            chan, (chan->global_identifier));
 
   state_not_in_map = CHANNEL_CONDEMNED(chan);
 
@@ -1333,8 +1333,8 @@ channel_set_identity_digest(channel_t *chan,
 
   log_debug(LD_CHANNEL,
             "Setting remote endpoint digest on channel %p with "
-            "global ID " U64_FORMAT " to digest %s",
-            chan, U64_PRINTF_ARG(chan->global_identifier),
+            "global ID %"PRIu64 " to digest %s",
+            chan, (chan->global_identifier),
             identity_digest ?
               hex_str(identity_digest, DIGEST_LEN) : "(null)");
 
@@ -1390,8 +1390,8 @@ channel_clear_remote_end(channel_t *chan)
 
   log_debug(LD_CHANNEL,
             "Clearing remote endpoint identity on channel %p with "
-            "global ID " U64_FORMAT,
-            chan, U64_PRINTF_ARG(chan->global_identifier));
+            "global ID %"PRIu64,
+            chan, (chan->global_identifier));
 
   state_not_in_map = CHANNEL_CONDEMNED(chan);
 
@@ -1474,13 +1474,13 @@ channel_write_packed_cell(channel_t *chan, packed_cell_t *cell)
 
   if (CHANNEL_IS_CLOSING(chan)) {
     log_debug(LD_CHANNEL, "Discarding %p on closing channel %p with "
-              "global ID "U64_FORMAT, cell, chan,
-              U64_PRINTF_ARG(chan->global_identifier));
+              "global ID %"PRIu64, cell, chan,
+              (chan->global_identifier));
     goto end;
   }
   log_debug(LD_CHANNEL,
             "Writing %p to channel %p with global ID "
-            U64_FORMAT, cell, chan, U64_PRINTF_ARG(chan->global_identifier));
+            "%"PRIu64, cell, chan, (chan->global_identifier));
 
   ret = write_packed_cell(chan, cell);
 
@@ -1517,9 +1517,9 @@ channel_change_state_(channel_t *chan, channel_state_t to_state)
   if (from_state == to_state) {
     log_debug(LD_CHANNEL,
               "Got no-op transition from \"%s\" to itself on channel %p"
-              "(global ID " U64_FORMAT ")",
+              "(global ID %"PRIu64 ")",
               channel_state_to_string(to_state),
-              chan, U64_PRINTF_ARG(chan->global_identifier));
+              chan, (chan->global_identifier));
     return;
   }
 
@@ -1531,10 +1531,10 @@ channel_change_state_(channel_t *chan, channel_state_t to_state)
   }
 
   log_debug(LD_CHANNEL,
-            "Changing state of channel %p (global ID " U64_FORMAT
+            "Changing state of channel %p (global ID %"PRIu64
             ") from \"%s\" to \"%s\"",
             chan,
-            U64_PRINTF_ARG(chan->global_identifier),
+            (chan->global_identifier),
             channel_state_to_string(chan->state),
             channel_state_to_string(to_state));
 
@@ -1637,9 +1637,9 @@ channel_listener_change_state(channel_listener_t *chan_l,
   if (from_state == to_state) {
     log_debug(LD_CHANNEL,
               "Got no-op transition from \"%s\" to itself on channel "
-              "listener %p (global ID " U64_FORMAT ")",
+              "listener %p (global ID %"PRIu64 ")",
               channel_listener_state_to_string(to_state),
-              chan_l, U64_PRINTF_ARG(chan_l->global_identifier));
+              chan_l, (chan_l->global_identifier));
     return;
   }
 
@@ -1651,9 +1651,9 @@ channel_listener_change_state(channel_listener_t *chan_l,
   }
 
   log_debug(LD_CHANNEL,
-            "Changing state of channel listener %p (global ID " U64_FORMAT
+            "Changing state of channel listener %p (global ID %"PRIu64
             "from \"%s\" to \"%s\"",
-            chan_l, U64_PRINTF_ARG(chan_l->global_identifier),
+            chan_l, (chan_l->global_identifier),
             channel_listener_state_to_string(chan_l->state),
             channel_listener_state_to_string(to_state));
 
@@ -1802,8 +1802,8 @@ channel_listener_process_incoming(channel_listener_t *listener)
 
   log_debug(LD_CHANNEL,
             "Processing queue of incoming connections for channel "
-            "listener %p (global ID " U64_FORMAT ")",
-            listener, U64_PRINTF_ARG(listener->global_identifier));
+            "listener %p (global ID %"PRIu64 ")",
+            listener, (listener->global_identifier));
 
   if (!(listener->incoming_list)) return;
 
@@ -1812,12 +1812,12 @@ channel_listener_process_incoming(channel_listener_t *listener)
     tor_assert(chan);
 
     log_debug(LD_CHANNEL,
-              "Handling incoming channel %p (" U64_FORMAT ") "
-              "for listener %p (" U64_FORMAT ")",
+              "Handling incoming channel %p (%"PRIu64 ") "
+              "for listener %p (%"PRIu64 ")",
               chan,
-              U64_PRINTF_ARG(chan->global_identifier),
+              (chan->global_identifier),
               listener,
-              U64_PRINTF_ARG(listener->global_identifier));
+              (listener->global_identifier));
     /* Make sure this is set correctly */
     channel_mark_incoming(chan);
     listener->listener(listener, chan);
@@ -1923,10 +1923,10 @@ channel_listener_queue_incoming(channel_listener_t *listener,
   tor_assert(incoming);
 
   log_debug(LD_CHANNEL,
-            "Queueing incoming channel %p (global ID " U64_FORMAT ") on "
-            "channel listener %p (global ID " U64_FORMAT ")",
-            incoming, U64_PRINTF_ARG(incoming->global_identifier),
-            listener, U64_PRINTF_ARG(listener->global_identifier));
+            "Queueing incoming channel %p (global ID %"PRIu64 ") on "
+            "channel listener %p (global ID %"PRIu64 ")",
+            incoming, (incoming->global_identifier),
+            listener, (listener->global_identifier));
 
   /* Do we need to queue it, or can we just call the listener right away? */
   if (!(listener->listener)) need_to_queue = 1;
@@ -1983,8 +1983,8 @@ channel_process_cell(channel_t *chan, cell_t *cell)
 
   log_debug(LD_CHANNEL,
             "Processing incoming cell_t %p for channel %p (global ID "
-            U64_FORMAT ")", cell, chan,
-            U64_PRINTF_ARG(chan->global_identifier));
+            "%"PRIu64 ")", cell, chan,
+            (chan->global_identifier));
   chan->cell_handler(chan, cell);
 }
 
@@ -2024,8 +2024,8 @@ channel_send_destroy(circid_t circ_id, channel_t *chan, int reason)
   tor_assert(chan);
   if (circ_id == 0) {
     log_warn(LD_BUG, "Attempted to send a destroy cell for circID 0 "
-             "on a channel " U64_FORMAT " at %p in state %s (%d)",
-             U64_PRINTF_ARG(chan->global_identifier),
+             "on a channel %"PRIu64 " at %p in state %s (%d)",
+             (chan->global_identifier),
              chan, channel_state_to_string(chan->state),
              chan->state);
     return 0;
@@ -2037,14 +2037,14 @@ channel_send_destroy(circid_t circ_id, channel_t *chan, int reason)
     circuitmux_append_destroy_cell(chan, chan->cmux, circ_id, reason);
     log_debug(LD_OR,
               "Sending destroy (circID %u) on channel %p "
-              "(global ID " U64_FORMAT ")",
+              "(global ID %"PRIu64 ")",
               (unsigned)circ_id, chan,
-              U64_PRINTF_ARG(chan->global_identifier));
+              (chan->global_identifier));
   } else {
     log_warn(LD_BUG,
              "Someone called channel_send_destroy() for circID %u "
-             "on a channel " U64_FORMAT " at %p in state %s (%d)",
-             (unsigned)circ_id, U64_PRINTF_ARG(chan->global_identifier),
+             "on a channel %"PRIu64 " at %p in state %s (%d)",
+             (unsigned)circ_id, (chan->global_identifier),
              chan, channel_state_to_string(chan->state),
              chan->state);
   }
@@ -2178,9 +2178,9 @@ channel_free_list(smartlist_t *channels, int mark_for_close)
     /* Deregister and free it */
     tor_assert(curr);
     log_debug(LD_CHANNEL,
-              "Cleaning up channel %p (global ID " U64_FORMAT ") "
+              "Cleaning up channel %p (global ID %"PRIu64 ") "
               "in state %s (%d)",
-              curr, U64_PRINTF_ARG(curr->global_identifier),
+              curr, (curr->global_identifier),
               channel_state_to_string(curr->state), curr->state);
     /* Detach circuits early so they can find the channel */
     if (curr->cmux) {
@@ -2209,9 +2209,9 @@ channel_listener_free_list(smartlist_t *listeners, int mark_for_close)
     /* Deregister and free it */
     tor_assert(curr);
     log_debug(LD_CHANNEL,
-              "Cleaning up channel listener %p (global ID " U64_FORMAT ") "
+              "Cleaning up channel listener %p (global ID %"PRIu64 ") "
               "in state %s (%d)",
-              curr, U64_PRINTF_ARG(curr->global_identifier),
+              curr, (curr->global_identifier),
               channel_listener_state_to_string(curr->state), curr->state);
     channel_listener_unregister(curr);
     if (mark_for_close) {
@@ -2534,33 +2534,33 @@ channel_dump_statistics, (channel_t *chan, int severity))
   age = (double)(now - chan->timestamp_created);
 
   tor_log(severity, LD_GENERAL,
-      "Channel " U64_FORMAT " (at %p) with transport %s is in state "
+      "Channel %"PRIu64 " (at %p) with transport %s is in state "
       "%s (%d)",
-      U64_PRINTF_ARG(chan->global_identifier), chan,
+      (chan->global_identifier), chan,
       channel_describe_transport(chan),
       channel_state_to_string(chan->state), chan->state);
   tor_log(severity, LD_GENERAL,
-      " * Channel " U64_FORMAT " was created at " U64_FORMAT
-      " (" U64_FORMAT " seconds ago) "
-      "and last active at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
-      U64_PRINTF_ARG(chan->global_identifier),
-      U64_PRINTF_ARG(chan->timestamp_created),
-      U64_PRINTF_ARG(now - chan->timestamp_created),
-      U64_PRINTF_ARG(chan->timestamp_active),
-      U64_PRINTF_ARG(now - chan->timestamp_active));
+      " * Channel %"PRIu64 " was created at %"PRIu64
+      " (%"PRIu64 " seconds ago) "
+      "and last active at %"PRIu64 " (%"PRIu64 " seconds ago)",
+      (chan->global_identifier),
+      (chan->timestamp_created),
+      (now - chan->timestamp_created),
+      (chan->timestamp_active),
+      (now - chan->timestamp_active));
 
   /* Handle digest. */
   if (!tor_digest_is_zero(chan->identity_digest)) {
     tor_log(severity, LD_GENERAL,
-        " * Channel " U64_FORMAT " says it is connected "
+        " * Channel %"PRIu64 " says it is connected "
         "to an OR with digest %s",
-        U64_PRINTF_ARG(chan->global_identifier),
+        (chan->global_identifier),
         hex_str(chan->identity_digest, DIGEST_LEN));
   } else {
     tor_log(severity, LD_GENERAL,
-        " * Channel " U64_FORMAT " does not know the digest"
+        " * Channel %"PRIu64 " does not know the digest"
         " of the OR it is connected to",
-        U64_PRINTF_ARG(chan->global_identifier));
+        (chan->global_identifier));
   }
 
   /* Handle remote address and descriptions */
@@ -2569,10 +2569,10 @@ channel_dump_statistics, (channel_t *chan, int severity))
     char *actual = tor_strdup(channel_get_actual_remote_descr(chan));
     remote_addr_str = tor_addr_to_str_dup(&remote_addr);
     tor_log(severity, LD_GENERAL,
-        " * Channel " U64_FORMAT " says its remote address"
+        " * Channel %"PRIu64 " says its remote address"
         " is %s, and gives a canonical description of \"%s\" and an "
         "actual description of \"%s\"",
-        U64_PRINTF_ARG(chan->global_identifier),
+        (chan->global_identifier),
         safe_str(remote_addr_str),
         safe_str(channel_get_canonical_remote_descr(chan)),
         safe_str(actual));
@@ -2581,10 +2581,10 @@ channel_dump_statistics, (channel_t *chan, int severity))
   } else {
     char *actual = tor_strdup(channel_get_actual_remote_descr(chan));
     tor_log(severity, LD_GENERAL,
-        " * Channel " U64_FORMAT " does not know its remote "
+        " * Channel %"PRIu64 " does not know its remote "
         "address, but gives a canonical description of \"%s\" and an "
         "actual description of \"%s\"",
-        U64_PRINTF_ARG(chan->global_identifier),
+        (chan->global_identifier),
         channel_get_canonical_remote_descr(chan),
         actual);
     tor_free(actual);
@@ -2592,9 +2592,9 @@ channel_dump_statistics, (channel_t *chan, int severity))
 
   /* Handle marks */
   tor_log(severity, LD_GENERAL,
-      " * Channel " U64_FORMAT " has these marks: %s %s %s "
+      " * Channel %"PRIu64 " has these marks: %s %s %s "
       "%s %s %s",
-      U64_PRINTF_ARG(chan->global_identifier),
+      (chan->global_identifier),
       channel_is_bad_for_new_circs(chan) ?
         "bad_for_new_circs" : "!bad_for_new_circs",
       channel_is_canonical(chan) ?
@@ -2611,9 +2611,9 @@ channel_dump_statistics, (channel_t *chan, int severity))
 
   /* Describe circuits */
   tor_log(severity, LD_GENERAL,
-      " * Channel " U64_FORMAT " has %d active circuits out of"
+      " * Channel %"PRIu64 " has %d active circuits out of"
       " %d in total",
-      U64_PRINTF_ARG(chan->global_identifier),
+      (chan->global_identifier),
       (chan->cmux != NULL) ?
          circuitmux_num_active_circuits(chan->cmux) : 0,
       (chan->cmux != NULL) ?
@@ -2621,78 +2621,78 @@ channel_dump_statistics, (channel_t *chan, int severity))
 
   /* Describe timestamps */
   tor_log(severity, LD_GENERAL,
-      " * Channel " U64_FORMAT " was last used by a "
-      "client at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
-      U64_PRINTF_ARG(chan->global_identifier),
-      U64_PRINTF_ARG(chan->timestamp_client),
-      U64_PRINTF_ARG(now - chan->timestamp_client));
+      " * Channel %"PRIu64 " was last used by a "
+      "client at %"PRIu64 " (%"PRIu64 " seconds ago)",
+      (chan->global_identifier),
+      (chan->timestamp_client),
+      (now - chan->timestamp_client));
   tor_log(severity, LD_GENERAL,
-      " * Channel " U64_FORMAT " last received a cell "
-      "at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
-      U64_PRINTF_ARG(chan->global_identifier),
-      U64_PRINTF_ARG(chan->timestamp_recv),
-      U64_PRINTF_ARG(now - chan->timestamp_recv));
+      " * Channel %"PRIu64 " last received a cell "
+      "at %"PRIu64 " (%"PRIu64 " seconds ago)",
+      (chan->global_identifier),
+      (chan->timestamp_recv),
+      (now - chan->timestamp_recv));
   tor_log(severity, LD_GENERAL,
-      " * Channel " U64_FORMAT " last transmitted a cell "
-      "at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
-      U64_PRINTF_ARG(chan->global_identifier),
-      U64_PRINTF_ARG(chan->timestamp_xmit),
-      U64_PRINTF_ARG(now - chan->timestamp_xmit));
+      " * Channel %"PRIu64 " last transmitted a cell "
+      "at %"PRIu64 " (%"PRIu64 " seconds ago)",
+      (chan->global_identifier),
+      (chan->timestamp_xmit),
+      (now - chan->timestamp_xmit));
 
   /* Describe counters and rates */
   tor_log(severity, LD_GENERAL,
-      " * Channel " U64_FORMAT " has received "
-      U64_FORMAT " bytes in " U64_FORMAT " cells and transmitted "
-      U64_FORMAT " bytes in " U64_FORMAT " cells",
-      U64_PRINTF_ARG(chan->global_identifier),
-      U64_PRINTF_ARG(chan->n_bytes_recved),
-      U64_PRINTF_ARG(chan->n_cells_recved),
-      U64_PRINTF_ARG(chan->n_bytes_xmitted),
-      U64_PRINTF_ARG(chan->n_cells_xmitted));
+      " * Channel %"PRIu64 " has received "
+      "%"PRIu64 " bytes in %"PRIu64 " cells and transmitted "
+      "%"PRIu64 " bytes in %"PRIu64 " cells",
+      (chan->global_identifier),
+      (chan->n_bytes_recved),
+      (chan->n_cells_recved),
+      (chan->n_bytes_xmitted),
+      (chan->n_cells_xmitted));
   if (now > chan->timestamp_created &&
       chan->timestamp_created > 0) {
     if (chan->n_bytes_recved > 0) {
       avg = (double)(chan->n_bytes_recved) / age;
       tor_log(severity, LD_GENERAL,
-          " * Channel " U64_FORMAT " has averaged %f "
+          " * Channel %"PRIu64 " has averaged %f "
           "bytes received per second",
-          U64_PRINTF_ARG(chan->global_identifier), avg);
+          (chan->global_identifier), avg);
     }
     if (chan->n_cells_recved > 0) {
       avg = (double)(chan->n_cells_recved) / age;
       if (avg >= 1.0) {
         tor_log(severity, LD_GENERAL,
-            " * Channel " U64_FORMAT " has averaged %f "
+            " * Channel %"PRIu64 " has averaged %f "
             "cells received per second",
-            U64_PRINTF_ARG(chan->global_identifier), avg);
+            (chan->global_identifier), avg);
       } else if (avg >= 0.0) {
         interval = 1.0 / avg;
         tor_log(severity, LD_GENERAL,
-            " * Channel " U64_FORMAT " has averaged %f "
+            " * Channel %"PRIu64 " has averaged %f "
             "seconds between received cells",
-            U64_PRINTF_ARG(chan->global_identifier), interval);
+            (chan->global_identifier), interval);
       }
     }
     if (chan->n_bytes_xmitted > 0) {
       avg = (double)(chan->n_bytes_xmitted) / age;
       tor_log(severity, LD_GENERAL,
-          " * Channel " U64_FORMAT " has averaged %f "
+          " * Channel %"PRIu64 " has averaged %f "
           "bytes transmitted per second",
-          U64_PRINTF_ARG(chan->global_identifier), avg);
+          (chan->global_identifier), avg);
     }
     if (chan->n_cells_xmitted > 0) {
       avg = (double)(chan->n_cells_xmitted) / age;
       if (avg >= 1.0) {
         tor_log(severity, LD_GENERAL,
-            " * Channel " U64_FORMAT " has averaged %f "
+            " * Channel %"PRIu64 " has averaged %f "
             "cells transmitted per second",
-            U64_PRINTF_ARG(chan->global_identifier), avg);
+            (chan->global_identifier), avg);
       } else if (avg >= 0.0) {
         interval = 1.0 / avg;
         tor_log(severity, LD_GENERAL,
-            " * Channel " U64_FORMAT " has averaged %f "
+            " * Channel %"PRIu64 " has averaged %f "
             "seconds between transmitted cells",
-            U64_PRINTF_ARG(chan->global_identifier), interval);
+            (chan->global_identifier), interval);
       }
     }
   }
@@ -2717,29 +2717,29 @@ channel_listener_dump_statistics(channel_listener_t *chan_l, int severity)
   age = (double)(now - chan_l->timestamp_created);
 
   tor_log(severity, LD_GENERAL,
-      "Channel listener " U64_FORMAT " (at %p) with transport %s is in "
+      "Channel listener %"PRIu64 " (at %p) with transport %s is in "
       "state %s (%d)",
-      U64_PRINTF_ARG(chan_l->global_identifier), chan_l,
+      (chan_l->global_identifier), chan_l,
       channel_listener_describe_transport(chan_l),
       channel_listener_state_to_string(chan_l->state), chan_l->state);
   tor_log(severity, LD_GENERAL,
-      " * Channel listener " U64_FORMAT " was created at " U64_FORMAT
-      " (" U64_FORMAT " seconds ago) "
-      "and last active at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
-      U64_PRINTF_ARG(chan_l->global_identifier),
-      U64_PRINTF_ARG(chan_l->timestamp_created),
-      U64_PRINTF_ARG(now - chan_l->timestamp_created),
-      U64_PRINTF_ARG(chan_l->timestamp_active),
-      U64_PRINTF_ARG(now - chan_l->timestamp_active));
+      " * Channel listener %"PRIu64 " was created at %"PRIu64
+      " (%"PRIu64 " seconds ago) "
+      "and last active at %"PRIu64 " (%"PRIu64 " seconds ago)",
+      (chan_l->global_identifier),
+      (chan_l->timestamp_created),
+      (now - chan_l->timestamp_created),
+      (chan_l->timestamp_active),
+      (now - chan_l->timestamp_active));
 
   tor_log(severity, LD_GENERAL,
-      " * Channel listener " U64_FORMAT " last accepted an incoming "
-        "channel at " U64_FORMAT " (" U64_FORMAT " seconds ago) "
-        "and has accepted " U64_FORMAT " channels in total",
-        U64_PRINTF_ARG(chan_l->global_identifier),
-        U64_PRINTF_ARG(chan_l->timestamp_accepted),
-        U64_PRINTF_ARG(now - chan_l->timestamp_accepted),
-        U64_PRINTF_ARG(chan_l->n_accepted));
+      " * Channel listener %"PRIu64 " last accepted an incoming "
+        "channel at %"PRIu64 " (%"PRIu64 " seconds ago) "
+        "and has accepted %"PRIu64 " channels in total",
+        (chan_l->global_identifier),
+        (chan_l->timestamp_accepted),
+        (now - chan_l->timestamp_accepted),
+        (chan_l->n_accepted));
 
   /*
    * If it's sensible to do so, get the rate of incoming channels on this
@@ -2751,15 +2751,15 @@ channel_listener_dump_statistics(channel_listener_t *chan_l, int severity)
     avg = (double)(chan_l->n_accepted) / age;
     if (avg >= 1.0) {
       tor_log(severity, LD_GENERAL,
-          " * Channel listener " U64_FORMAT " has averaged %f incoming "
+          " * Channel listener %"PRIu64 " has averaged %f incoming "
           "channels per second",
-          U64_PRINTF_ARG(chan_l->global_identifier), avg);
+          (chan_l->global_identifier), avg);
     } else if (avg >= 0.0) {
       interval = 1.0 / avg;
       tor_log(severity, LD_GENERAL,
-          " * Channel listener " U64_FORMAT " has averaged %f seconds "
+          " * Channel listener %"PRIu64 " has averaged %f seconds "
           "between incoming channels",
-          U64_PRINTF_ARG(chan_l->global_identifier), interval);
+          (chan_l->global_identifier), interval);
     }
   }
 

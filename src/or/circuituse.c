@@ -719,9 +719,8 @@ circuit_expire_building(void)
           circuit_build_times_enough_to_compute(get_circuit_build_times())) {
 
         log_info(LD_CIRC,
-                   "Deciding to count the timeout for circuit "U64_FORMAT"\n",
-                   U64_PRINTF_ARG(
-                       TO_ORIGIN_CIRCUIT(victim)->global_identifier));
+                 "Deciding to count the timeout for circuit %"PRIu32"\n",
+                 TO_ORIGIN_CIRCUIT(victim)->global_identifier);
 
         /* Circuits are allowed to last longer for measurement.
          * Switch their purpose and wait. */
@@ -1510,10 +1509,10 @@ circuit_expire_old_circuits_clientside(void)
                 circ->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) ||
                 circ->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
           log_info(LD_CIRC,
-                    "Closing circuit "U64_FORMAT
+                    "Closing circuit %"PRIu32
                     " that has been unused for %ld msec.",
-                    U64_PRINTF_ARG(TO_ORIGIN_CIRCUIT(circ)->global_identifier),
-                    tv_mdiff(&circ->timestamp_began, &now));
+                   TO_ORIGIN_CIRCUIT(circ)->global_identifier,
+                   tv_mdiff(&circ->timestamp_began, &now));
           circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         } else if (!TO_ORIGIN_CIRCUIT(circ)->is_ancient) {
           /* Server-side rend joined circuits can end up really old, because

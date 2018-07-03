@@ -188,11 +188,6 @@
 #define MINGW_ANY
 #endif
 
-#define U64_PRINTF_ARG(a) ((uint64_t)a)
-#define I64_PRINTF_ARG(a) ((int64_t)a)
-#define U64_FORMAT "%"PRIu64
-#define I64_FORMAT "%"PRId64
-
 /** Macro: yield a pointer to the field at position <b>off</b> within the
  * structure <b>st</b>.  Example:
  * <pre>

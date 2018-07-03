@@ -574,8 +574,8 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
       escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_MEMUNIT:
-      tor_asprintf(&result->value, U64_FORMAT,
-                   U64_PRINTF_ARG(*(uint64_t*)value));
+      tor_asprintf(&result->value, "%"PRIu64,
+                   (*(uint64_t*)value));
       escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_DOUBLE:
