@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #ifdef HAVE_CYGWIN_SIGNAL_H
 #include <cygwin/signal.h>
@@ -264,15 +265,11 @@ dump_stack_symbols_to_error_fds(void)
 int
 configure_backtrace_handler(const char *tor_version)
 {
-  char version[128];
-  strncpy(version, "Tor", sizeof(version)-1);
+  char version[128] = "Tor\0";
 
   if (tor_version) {
-    strncat(version, " ", sizeof(version)-1);
-    strncat(version, tor_version, sizeof(version)-1);
+    snprintf(version, sizeof(version), "Tor %s", tor_version);
   }
-
-  version[sizeof(version) - 1] = 0;
 
   return install_bt_handler(version);
 }
