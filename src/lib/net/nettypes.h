@@ -23,7 +23,7 @@ typedef int socklen_t;
  * any inadvertent checks for the socket being <= 0 or > 0 will probably
  * still work. */
 #define tor_socket_t intptr_t
-#define TOR_SOCKET_T_FORMAT INTPTR_T_FORMAT
+#define TOR_SOCKET_T_FORMAT "%"PRIuPTR
 #define SOCKET_OK(s) ((SOCKET)(s) != INVALID_SOCKET)
 #define TOR_INVALID_SOCKET INVALID_SOCKET
 #else /* !(defined(_WIN32)) */

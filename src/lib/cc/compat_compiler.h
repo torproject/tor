@@ -189,14 +189,11 @@
 #endif
 
 #define U64_PRINTF_ARG(a) ((uint64_t)a)
-#define U64_SCANF_ARG(a) (a)
 #define U64_LITERAL(n) UINT64_C(n)
 #define I64_PRINTF_ARG(a) ((int64_t)a)
-#define I64_SCANF_ARG(a) (a)
 #define I64_LITERAL(n) INT64_C(n)
 #define U64_FORMAT "%"PRIu64
 #define I64_FORMAT "%"PRId64
-#define INTPTR_T_FORMAT "%"PRIuPTR
 
 /** Macro: yield a pointer to the field at position <b>off</b> within the
  * structure <b>st</b>.  Example:
