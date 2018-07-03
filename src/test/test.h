@@ -50,28 +50,20 @@
   tt_double_op((a), OP_LE, (b)); \
   STMT_END
 
-#ifdef _MSC_VER
-#define U64_PRINTF_TYPE uint64_t
-#define I64_PRINTF_TYPE int64_t
-#else
-#define U64_PRINTF_TYPE unsigned long long
-#define I64_PRINTF_TYPE long long
-#endif /* defined(_MSC_VER) */
-
 #define tt_size_op(a,op,b)                                              \
   tt_assert_test_fmt_type(a,b,#a" "#op" "#b,size_t,(val1_ op val2_),    \
-    U64_PRINTF_TYPE, U64_FORMAT,                                        \
-    {print_ = (U64_PRINTF_TYPE) value_;}, {}, TT_EXIT_TEST_FUNCTION)
+    size_t, "%"TOR_PRIuSZ,                                              \
+    {print_ = (size_t) value_;}, {}, TT_EXIT_TEST_FUNCTION)
 
 #define tt_u64_op(a,op,b)                                              \
   tt_assert_test_fmt_type(a,b,#a" "#op" "#b,uint64_t,(val1_ op val2_), \
-    U64_PRINTF_TYPE, U64_FORMAT,                                       \
-    {print_ = (U64_PRINTF_TYPE) value_;}, {}, TT_EXIT_TEST_FUNCTION)
+    uint64_t, "%"PRIu64,                                               \
+    {print_ = (uint64_t) value_;}, {}, TT_EXIT_TEST_FUNCTION)
 
 #define tt_i64_op(a,op,b)                                              \
-  tt_assert_test_fmt_type(a,b,#a" "#op" "#b,int64_t,(val1_ op val2_), \
-    I64_PRINTF_TYPE, I64_FORMAT,                                       \
-    {print_ = (I64_PRINTF_TYPE) value_;}, {}, TT_EXIT_TEST_FUNCTION)
+  tt_assert_test_fmt_type(a,b,#a" "#op" "#b,int64_t,(val1_ op val2_),  \
+    int64_t, "%"PRId64,                                                \
+    {print_ = (int64_t) value_;}, {}, TT_EXIT_TEST_FUNCTION)
 
 /**
  * Declare that the test is done, even though no tt___op() calls were made.

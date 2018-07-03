@@ -168,7 +168,7 @@ tor_cert_parse(const uint8_t *encoded, const size_t len)
 
   memcpy(cert->signed_key.pubkey, parsed->certified_key, 32);
   int64_t valid_until_64 = ((int64_t)parsed->exp_field) * 3600;
-#if SIZEOF_TIME_T < SIZEOF_INT64_T
+#if SIZEOF_TIME_T < 8
   if (valid_until_64 > TIME_MAX)
     valid_until_64 = TIME_MAX - 1;
 #endif
@@ -723,4 +723,3 @@ tor_cert_encode_ed22519(const tor_cert_t *cert, char **cert_str_out)
   tor_free(ed_cert_b64);
   return ret;
 }
-

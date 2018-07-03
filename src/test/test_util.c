@@ -5564,7 +5564,7 @@ test_util_max_mem(void *arg)
     tt_uint_op(memory1, OP_GT, (1<<20));
   } else {
     /* You do not have a petabyte. */
-#if SIZEOF_SIZE_T == SIZEOF_UINT64_T
+#if SIZEOF_SIZE_T >= 8
     tt_u64_op(memory1, OP_LT, (U64_LITERAL(1)<<50));
 #endif
   }

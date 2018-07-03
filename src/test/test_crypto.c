@@ -2862,12 +2862,12 @@ crypto_rand_check_failure_mode_identical(void)
 {
   /* just in case the buffer size isn't a multiple of sizeof(int64_t) */
 #define FAILURE_MODE_BUFFER_SIZE_I64 \
-  (FAILURE_MODE_BUFFER_SIZE/SIZEOF_INT64_T)
+  (FAILURE_MODE_BUFFER_SIZE/8)
 #define FAILURE_MODE_BUFFER_SIZE_I64_BYTES \
-  (FAILURE_MODE_BUFFER_SIZE_I64*SIZEOF_INT64_T)
+  (FAILURE_MODE_BUFFER_SIZE_I64*8)
 
 #if FAILURE_MODE_BUFFER_SIZE_I64 < 2
-#error FAILURE_MODE_BUFFER_SIZE needs to be at least 2*SIZEOF_INT64_T
+#error FAILURE_MODE_BUFFER_SIZE needs to be at least 2*8
 #endif
 
   int64_t buf[FAILURE_MODE_BUFFER_SIZE_I64];
@@ -3063,4 +3063,3 @@ struct testcase_t crypto_tests[] = {
   { "failure_modes", test_crypto_failure_modes, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-
