@@ -95,10 +95,6 @@ typedef int32_t ssize_t;
 #endif /* (SIZEOF_SIZE_T == 4) || ... */
 #endif /* !defined(SIZE_MAX) */
 
-#ifndef SHORT_MAX
-#define SHORT_MAX SHRT_MAX
-#endif
-
 #ifdef _WIN32
 #  ifdef _WIN64
 #    define TOR_PRIuSZ PRIu64

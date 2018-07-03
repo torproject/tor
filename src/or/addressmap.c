@@ -642,7 +642,7 @@ client_dns_incr_failures(const char *address)
     ent->expires = time(NULL) + MAX_DNS_ENTRY_AGE;
     strmap_set(addressmap,address,ent);
   }
-  if (ent->num_resolve_failures < SHORT_MAX)
+  if (ent->num_resolve_failures < SHRT_MAX)
     ++ent->num_resolve_failures; /* don't overflow */
   log_info(LD_APP, "Address %s now has %d resolve failures.",
            safe_str_client(address),
@@ -1153,4 +1153,3 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
      iter = strmap_iter_next(addressmap,iter);
    }
 }
-
