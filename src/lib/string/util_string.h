@@ -12,29 +12,29 @@
 #include <stddef.h>
 
 const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
-                       size_t nlen) ATTR_NONNULL((1,3));
+                       size_t nlen);
 const void *tor_memstr(const void *haystack, size_t hlen,
-                       const char *needle) ATTR_NONNULL((1,3));
+                       const char *needle);
 int tor_mem_is_zero(const char *mem, size_t len);
 int tor_digest_is_zero(const char *digest);
 int tor_digest256_is_zero(const char *digest);
 
 /** Allowable characters in a hexadecimal string. */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
-void tor_strlower(char *s) ATTR_NONNULL((1));
-void tor_strupper(char *s) ATTR_NONNULL((1));
-int tor_strisprint(const char *s) ATTR_NONNULL((1));
-int tor_strisnonupper(const char *s) ATTR_NONNULL((1));
+void tor_strlower(char *s);
+void tor_strupper(char *s);
+int tor_strisprint(const char *s);
+int tor_strisnonupper(const char *s);
 int tor_strisspace(const char *s);
 int strcmp_opt(const char *s1, const char *s2);
-int strcmpstart(const char *s1, const char *s2) ATTR_NONNULL((1,2));
-int strcmp_len(const char *s1, const char *s2, size_t len) ATTR_NONNULL((1,2));
-int strcasecmpstart(const char *s1, const char *s2) ATTR_NONNULL((1,2));
-int strcmpend(const char *s1, const char *s2) ATTR_NONNULL((1,2));
-int strcasecmpend(const char *s1, const char *s2) ATTR_NONNULL((1,2));
+int strcmpstart(const char *s1, const char *s2);
+int strcmp_len(const char *s1, const char *s2, size_t len);
+int strcasecmpstart(const char *s1, const char *s2);
+int strcmpend(const char *s1, const char *s2);
+int strcasecmpend(const char *s1, const char *s2);
 int fast_memcmpstart(const void *mem, size_t memlen, const char *prefix);
 
-void tor_strstrip(char *s, const char *strip) ATTR_NONNULL((1,2));
+void tor_strstrip(char *s, const char *strip);
 
 const char *eat_whitespace(const char *s);
 const char *eat_whitespace_eos(const char *s, const char *eos);

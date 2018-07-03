@@ -41,10 +41,10 @@ static inline int strcasecmp(const char *a, const char *b, size_t n) {
 #endif /* defined __APPLE__ */
 
 #ifndef HAVE_STRLCAT
-size_t strlcat(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
+size_t strlcat(char *dst, const char *src, size_t siz);
 #endif
 #ifndef HAVE_STRLCPY
-size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
+size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
 
 char *tor_strtok_r_impl(char *str, const char *sep, char **lasts);
