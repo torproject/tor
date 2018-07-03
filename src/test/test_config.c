@@ -1635,6 +1635,40 @@ test_config_parsing_trusted_dir_server(void *arg)
 #undef TEST_DIR_AUTH_LINE_END
 #undef TEST_DIR_AUTH_IPV6_FLAG
 
+#define TEST_DIR_AUTH_LINE_START                                        \
+                    "foobar orport=12345 "                              \
+                    "v3ident=14C131DFC5C6F93646BE72FA1401C02A8DF2E8B4 "
+#define TEST_DIR_AUTH_LINE_END_BAD_IP                                   \
+                    "0.256.3.4:54321 "                                  \
+                    "FDB2 FBD2 AAA5 25FA 2999 E617 5091 5A32 C777 3B17"
+#define TEST_DIR_AUTH_LINE_END_WITH_DNS_ADDR                            \
+                    "torproject.org:54321 "                             \
+                    "FDB2 FBD2 AAA5 25FA 2999 E617 5091 5A32 C777 3B17"
+
+static void
+test_config_parsing_invalid_dir_address(void *arg)
+{
+  (void)arg;
+  int rv;
+
+  rv = parse_dir_authority_line(TEST_DIR_AUTH_LINE_START
+                                TEST_DIR_AUTH_LINE_END_BAD_IP,
+                                V3_DIRINFO, 1);
+  tt_int_op(rv, OP_EQ, -1);
+
+  rv = parse_dir_authority_line(TEST_DIR_AUTH_LINE_START
+                                TEST_DIR_AUTH_LINE_END_WITH_DNS_ADDR,
+                                V3_DIRINFO, 1);
+  tt_int_op(rv, OP_EQ, -1);
+
+  done:
+  return;
+}
+
+#undef TEST_DIR_AUTH_LINE_START
+#undef TEST_DIR_AUTH_LINE_END_BAD_IP
+#undef TEST_DIR_AUTH_LINE_END_WITH_DNS_ADDR
+
 /* No secrets here:
  * id is `echo "syn-propanethial-S-oxide" | shasum | cut -d" " -f1`
  */
@@ -5699,6 +5733,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(adding_trusted_dir_server, TT_FORK),
   CONFIG_TEST(adding_fallback_dir_server, TT_FORK),
   CONFIG_TEST(parsing_trusted_dir_server, 0),
+  CONFIG_TEST(parsing_invalid_dir_address, 0),
   CONFIG_TEST(parsing_fallback_dir_server, 0),
   CONFIG_TEST(adding_default_trusted_dir_servers, TT_FORK),
   CONFIG_TEST(adding_dir_servers, TT_FORK),
