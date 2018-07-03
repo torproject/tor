@@ -102,7 +102,7 @@ correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
   if (err_out) {
     tor_asprintf(err_out, "%s(%"PRId64") failed with error %s: %s",
                  islocal?"localtime":"gmtime",
-                 timep?(*timep):0,
+                 timep?((int64_t)*timep):0,
                  strerror(errno),
                  outcome);
   }

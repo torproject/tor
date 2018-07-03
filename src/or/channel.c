@@ -2544,10 +2544,10 @@ channel_dump_statistics, (channel_t *chan, int severity))
       " (%"PRIu64 " seconds ago) "
       "and last active at %"PRIu64 " (%"PRIu64 " seconds ago)",
       (chan->global_identifier),
-      (chan->timestamp_created),
-      (now - chan->timestamp_created),
-      (chan->timestamp_active),
-      (now - chan->timestamp_active));
+      (uint64_t)(chan->timestamp_created),
+      (uint64_t)(now - chan->timestamp_created),
+      (uint64_t)(chan->timestamp_active),
+      (uint64_t)(now - chan->timestamp_active));
 
   /* Handle digest. */
   if (!tor_digest_is_zero(chan->identity_digest)) {
@@ -2624,20 +2624,20 @@ channel_dump_statistics, (channel_t *chan, int severity))
       " * Channel %"PRIu64 " was last used by a "
       "client at %"PRIu64 " (%"PRIu64 " seconds ago)",
       (chan->global_identifier),
-      (chan->timestamp_client),
-      (now - chan->timestamp_client));
+      (uint64_t)(chan->timestamp_client),
+      (uint64_t)(now - chan->timestamp_client));
   tor_log(severity, LD_GENERAL,
       " * Channel %"PRIu64 " last received a cell "
       "at %"PRIu64 " (%"PRIu64 " seconds ago)",
       (chan->global_identifier),
-      (chan->timestamp_recv),
-      (now - chan->timestamp_recv));
+      (uint64_t)(chan->timestamp_recv),
+      (uint64_t)(now - chan->timestamp_recv));
   tor_log(severity, LD_GENERAL,
       " * Channel %"PRIu64 " last transmitted a cell "
       "at %"PRIu64 " (%"PRIu64 " seconds ago)",
       (chan->global_identifier),
-      (chan->timestamp_xmit),
-      (now - chan->timestamp_xmit));
+      (uint64_t)(chan->timestamp_xmit),
+      (uint64_t)(now - chan->timestamp_xmit));
 
   /* Describe counters and rates */
   tor_log(severity, LD_GENERAL,
@@ -2727,19 +2727,19 @@ channel_listener_dump_statistics(channel_listener_t *chan_l, int severity)
       " (%"PRIu64 " seconds ago) "
       "and last active at %"PRIu64 " (%"PRIu64 " seconds ago)",
       (chan_l->global_identifier),
-      (chan_l->timestamp_created),
-      (now - chan_l->timestamp_created),
-      (chan_l->timestamp_active),
-      (now - chan_l->timestamp_active));
+      (uint64_t)(chan_l->timestamp_created),
+      (uint64_t)(now - chan_l->timestamp_created),
+      (uint64_t)(chan_l->timestamp_active),
+      (uint64_t)(now - chan_l->timestamp_active));
 
   tor_log(severity, LD_GENERAL,
       " * Channel listener %"PRIu64 " last accepted an incoming "
         "channel at %"PRIu64 " (%"PRIu64 " seconds ago) "
         "and has accepted %"PRIu64 " channels in total",
         (chan_l->global_identifier),
-        (chan_l->timestamp_accepted),
-        (now - chan_l->timestamp_accepted),
-        (chan_l->n_accepted));
+        (uint64_t)(chan_l->timestamp_accepted),
+        (uint64_t)(now - chan_l->timestamp_accepted),
+        (uint64_t)(chan_l->n_accepted));
 
   /*
    * If it's sensible to do so, get the rate of incoming channels on this
@@ -3477,4 +3477,3 @@ channel_update_bad_for_new_circs(const char *digest, int force)
     channel_rsa_id_group_set_badness(&(*iter)->channel_list, force);
   }
 }
-

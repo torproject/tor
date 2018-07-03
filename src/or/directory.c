@@ -1929,8 +1929,8 @@ directory_send_command(dir_connection_t *conn,
 
   log_debug(LD_DIR,
             "Sent request to directory server '%s:%d': "
-            "(purpose: %d, request size: %"PRIu64 ", "
-            "payload size: %"PRIu64 ")",
+            "(purpose: %d, request size: %"TOR_PRIuSZ", "
+            "payload size: %"TOR_PRIuSZ")",
             conn->base_.address, conn->base_.port,
             conn->base_.purpose,
             (total_request_len),
@@ -2420,7 +2420,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   tor_log(LOG_DEBUG, LD_DIR,
             "Received response from directory server '%s:%d': %d %s "
-            "(purpose: %d, response size: %"PRIu64
+            "(purpose: %d, response size: %"TOR_PRIuSZ
 #ifdef MEASUREMENTS_21206
             ", data cells received: %d, data cells sent: %d"
 #endif
@@ -5952,4 +5952,3 @@ dir_split_resource_into_spoolable(const char *resource,
   smartlist_free(fingerprints);
   return r;
 }
-

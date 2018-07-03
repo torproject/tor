@@ -2601,10 +2601,10 @@ circuits_handle_oom(size_t current_allocation)
 
  done_recovering_mem:
 
-  log_notice(LD_GENERAL, "Removed %"PRIu64" bytes by killing %d circuits; "
+  log_notice(LD_GENERAL, "Removed %"TOR_PRIuSZ" bytes by killing %d circuits; "
              "%d circuits remain alive. Also killed %d non-linked directory "
              "connections.",
-             (mem_recovered),
+             mem_recovered,
              n_circuits_killed,
              smartlist_len(circlist) - n_circuits_killed,
              n_dirconns_killed);
