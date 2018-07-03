@@ -125,16 +125,6 @@
 #define ATTR_MALLOC __attribute__((malloc))
 #define ATTR_NORETURN __attribute__((noreturn))
 #define ATTR_WUR __attribute__((warn_unused_result))
-/* Alas, nonnull is not at present a good idea for us.  We'd like to get
- * warnings when we pass NULL where we shouldn't (which nonnull does, albeit
- * spottily), but we don't want to tell the compiler to make optimizations
- * with the assumption that the argument can't be NULL (since this would make
- * many of our checks go away, and make our code less robust against
- * programming errors).  Unfortunately, nonnull currently does both of these
- * things, and there's no good way to split them up.
- *
- * #define ATTR_NONNULL(x) __attribute__((nonnull x)) */
-#define ATTR_NONNULL(x)
 #define ATTR_UNUSED __attribute__ ((unused))
 
 /** Macro: Evaluates to <b>exp</b> and hints the compiler that the value
@@ -158,7 +148,6 @@
 #define ATTR_CONST
 #define ATTR_MALLOC
 #define ATTR_NORETURN
-#define ATTR_NONNULL(x)
 #define ATTR_UNUSED
 #define ATTR_WUR
 #define PREDICT_LIKELY(exp) (exp)

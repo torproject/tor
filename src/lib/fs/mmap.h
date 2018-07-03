@@ -35,7 +35,7 @@ typedef struct tor_mmap_t {
 
 } tor_mmap_t;
 
-tor_mmap_t *tor_mmap_file(const char *filename) ATTR_NONNULL((1));
-int tor_munmap_file(tor_mmap_t *handle) ATTR_NONNULL((1));
+tor_mmap_t *tor_mmap_file(const char *filename);
+int tor_munmap_file(tor_mmap_t *handle);
 
 #endif
