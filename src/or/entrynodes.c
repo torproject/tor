@@ -1418,10 +1418,10 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
 
   /* Then: remove the ones that have been junk for too long */
   n_changes +=
-  sampled_guards_prune_obsolete_entries(gs,
-                                        remove_if_unlisted_since,
-                                        maybe_remove_if_sampled_before,
-                                        remove_if_confirmed_before);
+    sampled_guards_prune_obsolete_entries(gs,
+                                          remove_if_unlisted_since,
+                                          maybe_remove_if_sampled_before,
+                                          remove_if_confirmed_before);
 
   if (n_changes) {
     gs->primary_guards_up_to_date = 0;
