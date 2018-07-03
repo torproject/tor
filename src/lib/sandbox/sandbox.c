@@ -1552,7 +1552,7 @@ install_syscall_filter(sandbox_cfg_t* cfg)
 
   // marking the sandbox as active
   sandbox_active = 1;
-  sandbox_make_getaddrinfo_cache_active();
+  tor_make_getaddrinfo_cache_active();
 
  end:
   seccomp_release(ctx);

@@ -121,16 +121,16 @@ sandbox_disable_getaddrinfo_cache(void)
 }
 
 void
-sandbox_freeaddrinfo(struct addrinfo *ai)
+tor_freeaddrinfo(struct addrinfo *ai)
 {
   if (sandbox_getaddrinfo_cache_disabled)
     freeaddrinfo(ai);
 }
 
 int
-sandbox_getaddrinfo(const char *name, const char *servname,
-                    const struct addrinfo *hints,
-                    struct addrinfo **res)
+tor_getaddrinfo(const char *name, const char *servname,
+                const struct addrinfo *hints,
+                struct addrinfo **res)
 {
   int err;
   struct cached_getaddrinfo_item_t search, *item;
@@ -191,7 +191,7 @@ sandbox_getaddrinfo(const char *name, const char *servname,
 }
 
 int
-sandbox_add_addrinfo(const char *name)
+tor_add_addrinfo(const char *name)
 {
   struct addrinfo *res;
   struct addrinfo hints;
@@ -204,16 +204,16 @@ sandbox_add_addrinfo(const char *name)
     hints.ai_family = families[i];
 
     res = NULL;
-    (void) sandbox_getaddrinfo(name, NULL, &hints, &res);
+    (void) tor_getaddrinfo(name, NULL, &hints, &res);
     if (res)
-      sandbox_freeaddrinfo(res);
+      tor_freeaddrinfo(res);
   }
 
   return 0;
 }
 
 void
-sandbox_free_getaddrinfo_cache(void)
+tor_free_getaddrinfo_cache(void)
 {
   cached_getaddrinfo_item_t **next, **item, *this;
 
@@ -229,7 +229,7 @@ sandbox_free_getaddrinfo_cache(void)
 }
 
 void
-sandbox_make_getaddrinfo_cache_active(void)
+tor_make_getaddrinfo_cache_active(void)
 {
   sandbox_getaddrinfo_is_active = 1;
 }
