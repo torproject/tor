@@ -1301,12 +1301,15 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       gotPort = usePort;
     } else {
       tor_addr_t addr2;
-      if (tor_addr_from_getsockname(&addr2, s)<0) {
+      struct sockaddr_storage ss;
+      socklen_t ss_len=sizeof(ss);
+      if (getsockname(s, (struct sockaddr*)&ss, &ss_len)<0) {
         log_warn(LD_NET, "getsockname() couldn't learn address for %s: %s",
                  conn_type_to_string(type),
                  tor_socket_strerror(tor_socket_errno(s)));
         gotPort = 0;
       }
+      tor_addr_from_sockaddr(&addr2, (struct sockaddr*)&ss, &gotPort);
     }
 #ifdef HAVE_SYS_UN_H
   /*
