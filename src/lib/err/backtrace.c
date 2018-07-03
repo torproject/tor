@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #ifdef HAVE_CYGWIN_SIGNAL_H
 #include <cygwin/signal.h>
@@ -51,7 +52,6 @@
 #define EXPOSE_CLEAN_BACKTRACE
 #include "lib/err/backtrace.h"
 #include "lib/err/torerr.h"
-#include "lib/string/printf.h"
 
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
@@ -268,8 +268,7 @@ configure_backtrace_handler(const char *tor_version)
   char version[128] = "Tor\0";
 
   if (tor_version) {
-    tor_snprintf(version, sizeof(version),
-                 "Tor %s", tor_version);
+    snprintf(version, sizeof(version), "Tor %s", tor_version);
   }
 
   return install_bt_handler(version);
