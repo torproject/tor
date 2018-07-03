@@ -405,6 +405,10 @@ get_remove_unlisted_guards_after_days(void)
                                  1, 365*10);
 }
 
+/**
+ * If a guard has been unlisted for this many seconds continuously, we
+ * remove it.
+ */
 static time_t
 get_remove_unlisted_guards_after_seconds(void)
 {
