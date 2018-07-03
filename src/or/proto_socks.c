@@ -14,14 +14,29 @@
 #include "or/proto_socks.h"
 #include "or/reasons.h"
 
+#include "trunnel/socks5.h"
 #include "or/socks_request_st.h"
+
+#define SOCKS_VER_5 0x05 /* First octet of non-auth SOCKS5 messages */
+#define SOCKS_VER_4 0x04 /*                SOCKS4 messages */
+#define SOCKS_AUTH  0x01 /*                SOCKS5 auth messages */
+
+typedef enum {
+  SOCKS_RESULT_INVALID       = -1, /* Message invalid. */
+  SOCKS_RESULT_TRUNCATED     =  0, /* Message incomplete/truncated. */
+  SOCKS_RESULT_DONE          =  1, /* OK, we're done. */
+  SOCKS_RESULT_MORE_EXPECTED =  2, /* OK, more messages expected. */
+} socks_result_t;
 
 static void socks_request_set_socks5_error(socks_request_t *req,
                               socks5_reply_status_t reason);
 
-static int parse_socks(const char *data, size_t datalen, socks_request_t *req,
-                       int log_sockstype, int safe_socks, ssize_t *drain_out,
-                       size_t *want_length_out);
+static socks_result_t parse_socks(const char *data,
+                                  size_t datalen,
+                                  socks_request_t *req,
+                                  int log_sockstype,
+                                  int safe_socks,
+                                  size_t *drain_out);
 static int parse_socks_client(const uint8_t *data, size_t datalen,
                               int state, char **reason,
                               ssize_t *drain_out);
@@ -85,6 +100,687 @@ socks_request_free_(socks_request_t *req)
   tor_free(req);
 }
 
+/**
+ * Parse a single SOCKS4 request from buffer <b>raw_data</b> of length
+ * <b>datalen</b> and update relevant fields of <b>req</b>. If SOCKS4a
+ * request is detected, set <b>*is_socks4a<b> to true. Set <b>*drain_out</b>
+ * to number of bytes we parsed so far.
+ *
+ * Return SOCKS_RESULT_DONE if parsing succeeded, SOCKS_RESULT_INVALID if
+ * parsing failed because of invalid input or SOCKS_RESULT_TRUNCATED if it
+ * failed due to incomplete (truncated) input.
+ */
+static socks_result_t
+parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
+                     size_t datalen, int *is_socks4a, size_t *drain_out)
+{
+  // http://ss5.sourceforge.net/socks4.protocol.txt
+  // http://ss5.sourceforge.net/socks4A.protocol.txt
+  socks_result_t res = SOCKS_RESULT_DONE;
+  tor_addr_t destaddr;
+
+  tor_assert(is_socks4a);
+  tor_assert(drain_out);
+
+  *is_socks4a = 0;
+  *drain_out = 0;
+
+  req->socks_version = SOCKS_VER_4;
+
+  socks4_client_request_t *trunnel_req;
+
+  ssize_t parsed =
+  socks4_client_request_parse(&trunnel_req, raw_data, datalen);
+
+  if (parsed == -1) {
+    log_warn(LD_APP, "socks4: parsing failed - invalid request.");
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  } else if (parsed == -2) {
+    res = SOCKS_RESULT_TRUNCATED;
+    if (datalen >= MAX_SOCKS_MESSAGE_LEN) {
+      log_warn(LD_APP, "socks4: parsing failed - invalid request.");
+      res = SOCKS_RESULT_INVALID;
+    }
+    goto end;
+  }
+
+  tor_assert(parsed >= 0);
+  *drain_out = (size_t)parsed;
+
+  uint8_t command = socks4_client_request_get_command(trunnel_req);
+  req->command = command;
+
+  req->port = socks4_client_request_get_port(trunnel_req);
+  uint32_t dest_ip = socks4_client_request_get_addr(trunnel_req);
+
+  if ((!req->port && req->command != SOCKS_COMMAND_RESOLVE) ||
+      dest_ip == 0) {
+    log_warn(LD_APP, "socks4: Port or DestIP is zero. Rejecting.");
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  }
+
+  *is_socks4a = (dest_ip >> 8) == 0;
+
+  const char *username = socks4_client_request_get_username(trunnel_req);
+  size_t usernamelen = username ? strlen(username) : 0;
+  if (username && usernamelen) {
+    if (usernamelen > MAX_SOCKS_MESSAGE_LEN) {
+      log_warn(LD_APP, "Socks4 user name too long; rejecting.");
+      res = SOCKS_RESULT_INVALID;
+      goto end;
+    }
+
+    req->got_auth = 1;
+    req->username = tor_strdup(username);
+    req->usernamelen = usernamelen;
+  }
+
+  if (*is_socks4a) {
+    // We cannot rely on trunnel here, as we want to detect if
+    // we have abnormally long hostname field.
+    const char *hostname = (char *)raw_data + SOCKS4_NETWORK_LEN +
+     strlen(username) + 1;
+    size_t hostname_len = (char *)raw_data + datalen - hostname;
+
+    if (hostname_len <= sizeof(req->address)) {
+      const char *trunnel_hostname =
+      socks4_client_request_get_socks4a_addr_hostname(trunnel_req);
+
+      if (trunnel_hostname)
+        strlcpy(req->address, trunnel_hostname, sizeof(req->address));
+    } else {
+      log_warn(LD_APP, "socks4: Destaddr too long. Rejecting.");
+      res = SOCKS_RESULT_INVALID;
+      goto end;
+    }
+  } else {
+    tor_addr_from_ipv4h(&destaddr, dest_ip);
+
+    if (!tor_addr_to_str(req->address, &destaddr,
+                         MAX_SOCKS_ADDR_LEN, 0)) {
+      res = SOCKS_RESULT_INVALID;
+      goto end;
+    }
+  }
+
+  end:
+  socks4_client_request_free(trunnel_req);
+
+  return res;
+}
+
+/**
+ * Validate SOCKS4/4a related fields in <b>req</b>. Expect SOCKS4a
+ * if <b>is_socks4a</b> is true. If <b>log_sockstype</b> is true,
+ * log a notice about possible DNS leaks on local system. If
+ * <b>safe_socks</b> is true, reject insecure usage of SOCKS
+ * protocol.
+ *
+ * Return SOCKS_RESULT_DONE if validation passed or
+ * SOCKS_RESULT_INVALID if it failed.
+ */
+static socks_result_t
+process_socks4_request(const socks_request_t *req, int is_socks4a,
+                       int log_sockstype, int safe_socks)
+{
+  if (is_socks4a && !addressmap_have_mapping(req->address, 0)) {
+    log_unsafe_socks_warning(4, req->address, req->port, safe_socks);
+
+    if (safe_socks)
+      return SOCKS_RESULT_INVALID;
+  }
+
+  if (req->command != SOCKS_COMMAND_CONNECT &&
+      req->command != SOCKS_COMMAND_RESOLVE) {
+    /* not a connect or resolve? we don't support it. (No resolve_ptr with
+     * socks4.) */
+    log_warn(LD_APP, "socks4: command %d not recognized. Rejecting.",
+             req->command);
+    return SOCKS_RESULT_INVALID;
+  }
+
+  if (is_socks4a) {
+    if (log_sockstype)
+      log_notice(LD_APP,
+                 "Your application (using socks4a to port %d) instructed "
+                 "Tor to take care of the DNS resolution itself if "
+                 "necessary. This is good.", req->port);
+  }
+
+  if (!string_is_valid_dest(req->address)) {
+    log_warn(LD_PROTOCOL,
+             "Your application (using socks4 to port %d) gave Tor "
+             "a malformed hostname: %s. Rejecting the connection.",
+             req->port, escaped_safe_str_client(req->address));
+     return SOCKS_RESULT_INVALID;
+  }
+
+  return SOCKS_RESULT_DONE;
+}
+
+/** Parse a single SOCKS5 version identifier/method selection message
+ * from buffer <b>raw_data</b> (of length <b>datalen</b>). Update
+ * relevant fields of <b>req</b> (if any). Set <b>*have_user_pass</b> to
+ * true if username/password method is found. Set <b>*have_no_auth</b>
+ * if no-auth method is found. Set <b>*drain_out</b> to number of bytes
+ * we parsed so far.
+ *
+ * Return SOCKS_RESULT_DONE if parsing succeeded, SOCKS_RESULT_INVALID if
+ * parsing failed because of invalid input or SOCKS_RESULT_TRUNCATED if it
+ * failed due to incomplete (truncated) input.
+ */
+static socks_result_t
+parse_socks5_methods_request(const uint8_t *raw_data, socks_request_t *req,
+                             size_t datalen, int *have_user_pass,
+                             int *have_no_auth, size_t *drain_out)
+{
+  socks_result_t res = SOCKS_RESULT_DONE;
+  socks5_client_version_t *trunnel_req;
+
+  ssize_t parsed = socks5_client_version_parse(&trunnel_req, raw_data,
+                                               datalen);
+
+  (void)req;
+
+  tor_assert(have_no_auth);
+  tor_assert(have_user_pass);
+  tor_assert(drain_out);
+
+  *drain_out = 0;
+
+  if (parsed == -1) {
+    log_warn(LD_APP, "socks5: parsing failed - invalid version "
+                     "id/method selection message.");
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  } else if (parsed == -2) {
+    res = SOCKS_RESULT_TRUNCATED;
+    if (datalen > MAX_SOCKS_MESSAGE_LEN) {
+      log_warn(LD_APP, "socks5: parsing failed - invalid version "
+                       "id/method selection message.");
+      res = SOCKS_RESULT_INVALID;
+    }
+    goto end;
+  }
+
+  tor_assert(parsed >= 0);
+  *drain_out = (size_t)parsed;
+
+  size_t n_methods = (size_t)socks5_client_version_get_n_methods(trunnel_req);
+  if (n_methods == 0) {
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  }
+
+  *have_no_auth = 0;
+  *have_user_pass = 0;
+
+  for (size_t i = 0; i < n_methods; i++) {
+    uint8_t method = socks5_client_version_get_methods(trunnel_req,
+                                                       i);
+
+    if (method == SOCKS_USER_PASS) {
+      *have_user_pass = 1;
+    } else if (method == SOCKS_NO_AUTH) {
+      *have_no_auth = 1;
+    }
+  }
+
+  end:
+  socks5_client_version_free(trunnel_req);
+
+  return res;
+}
+
+/**
+ * Validate and respond to version identifier/method selection message
+ * we parsed in parse_socks5_methods_request (corresponding to <b>req</b>
+ * and having user/pass method if <b>have_user_pass</b> is true, no-auth
+ * method if <b>have_no_auth</b> is true). Set <b>req->reply</b> to
+ * an appropriate response (in SOCKS5 wire format).
+ *
+ * On success, return SOCKS_RESULT_DONE. On failure, return
+ * SOCKS_RESULT_INVALID.
+ */
+static socks_result_t
+process_socks5_methods_request(socks_request_t *req, int have_user_pass,
+                               int have_no_auth)
+{
+  socks_result_t res = SOCKS_RESULT_DONE;
+  socks5_server_method_t *trunnel_resp = socks5_server_method_new();
+
+  socks5_server_method_set_version(trunnel_resp, SOCKS_VER_5);
+
+  if (have_user_pass && !(have_no_auth && req->socks_prefer_no_auth)) {
+    req->auth_type = SOCKS_USER_PASS;
+    socks5_server_method_set_method(trunnel_resp, SOCKS_USER_PASS);
+
+    req->socks_version = SOCKS_VER_5;
+    // FIXME: come up with better way to remember
+    // that we negotiated auth
+
+    log_debug(LD_APP,"socks5: accepted method 2 (username/password)");
+  } else if (have_no_auth) {
+    req->auth_type = SOCKS_NO_AUTH;
+    socks5_server_method_set_method(trunnel_resp, SOCKS_NO_AUTH);
+
+    req->socks_version = SOCKS_VER_5;
+
+    log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
+  } else {
+    log_warn(LD_APP,
+             "socks5: offered methods don't include 'no auth' or "
+             "username/password. Rejecting.");
+    socks5_server_method_set_method(trunnel_resp, 0xFF); // reject all
+    res = SOCKS_RESULT_INVALID;
+  }
+
+  const char *errmsg = socks5_server_method_check(trunnel_resp);
+  if (errmsg) {
+    log_warn(LD_APP, "socks5: method selection validation failed: %s",
+             errmsg);
+    res = SOCKS_RESULT_INVALID;
+  } else {
+    ssize_t encoded =
+    socks5_server_method_encode(req->reply, sizeof(req->reply),
+                                trunnel_resp);
+
+    if (encoded < 0) {
+      log_warn(LD_APP, "socks5: method selection encoding failed");
+      res = SOCKS_RESULT_INVALID;
+    } else {
+      req->replylen = (size_t)encoded;
+    }
+  }
+
+  socks5_server_method_free(trunnel_resp);
+  return res;
+}
+
+/**
+ * Parse SOCKS5/RFC1929 username/password request from buffer
+ * <b>raw_data</b> of length <b>datalen</b> and update relevant
+ * fields of <b>req</b>. Set <b>*drain_out</b> to number of bytes
+ * we parsed so far.
+ *
+ * Return SOCKS_RESULT_DONE if parsing succeeded, SOCKS_RESULT_INVALID if
+ * parsing failed because of invalid input or SOCKS_RESULT_TRUNCATED if it
+ * failed due to incomplete (truncated) input.
+ */
+static socks_result_t
+parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
+                           size_t datalen, size_t *drain_out)
+{
+  socks_result_t res = SOCKS_RESULT_DONE;
+  socks5_client_userpass_auth_t *trunnel_req = NULL;
+  ssize_t parsed = socks5_client_userpass_auth_parse(&trunnel_req, raw_data,
+                                                     datalen);
+
+  tor_assert(drain_out);
+  *drain_out = 0;
+
+  if (parsed == -1) {
+    log_warn(LD_APP, "socks5: parsing failed - invalid user/pass "
+                     "authentication message.");
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  } else if (parsed == -2) {
+    res = SOCKS_RESULT_TRUNCATED;
+    goto end;
+  }
+
+  tor_assert(parsed >= 0);
+  *drain_out = (size_t)parsed;
+
+  uint8_t usernamelen =
+   socks5_client_userpass_auth_get_username_len(trunnel_req);
+  uint8_t passwordlen =
+   socks5_client_userpass_auth_get_passwd_len(trunnel_req);
+  const char *username =
+   socks5_client_userpass_auth_getconstarray_username(trunnel_req);
+  const char *password =
+   socks5_client_userpass_auth_getconstarray_passwd(trunnel_req);
+
+  if (usernamelen && username) {
+    req->username = tor_memdup_nulterm(username, usernamelen);
+    req->usernamelen = usernamelen;
+
+    req->got_auth = 1;
+  }
+
+  if (passwordlen && password) {
+    req->password = tor_memdup_nulterm(password, passwordlen);
+    req->passwordlen = passwordlen;
+
+    req->got_auth = 1;
+  }
+
+  end:
+  socks5_client_userpass_auth_free(trunnel_req);
+  return res;
+}
+
+/**
+ * Validate and respond to SOCKS5 username/password request we
+ * parsed in parse_socks5_userpass_auth (corresponding to <b>req</b>.
+ * Set <b>req->reply</b> to appropriate responsed. Return
+ * SOCKS_RESULT_DONE on success or SOCKS_RESULT_INVALID on failure.
+ */
+static socks_result_t
+process_socks5_userpass_auth(socks_request_t *req)
+{
+  socks_result_t res = SOCKS_RESULT_DONE;
+  socks5_server_userpass_auth_t *trunnel_resp =
+    socks5_server_userpass_auth_new();
+
+  if (req->socks_version != SOCKS_VER_5) {
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  }
+
+  if (req->auth_type != SOCKS_USER_PASS &&
+      req->auth_type != SOCKS_NO_AUTH) {
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  }
+
+  socks5_server_userpass_auth_set_version(trunnel_resp, SOCKS_AUTH);
+  socks5_server_userpass_auth_set_status(trunnel_resp, 0); // auth OK
+
+  const char *errmsg = socks5_server_userpass_auth_check(trunnel_resp);
+  if (errmsg) {
+    log_warn(LD_APP, "socks5: server userpass auth validation failed: %s",
+             errmsg);
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  }
+
+  ssize_t encoded = socks5_server_userpass_auth_encode(req->reply,
+                                                       sizeof(req->reply),
+                                                       trunnel_resp);
+
+  if (encoded < 0) {
+    log_warn(LD_APP, "socks5: server userpass auth encoding failed");
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  }
+
+  req->replylen = (size_t)encoded;
+
+  end:
+  socks5_server_userpass_auth_free(trunnel_resp);
+  return res;
+}
+
+/**
+ * Parse a single SOCKS5 client request (RFC 1928 section 4) from buffer
+ * <b>raw_data</b> of length <b>datalen</b> and update relevant field of
+ * <b>req</b>. Set <b>*drain_out</b> to number of bytes we parsed so far.
+ *
+ * Return SOCKS_RESULT_DONE if parsing succeeded, SOCKS_RESULT_INVALID if
+ * parsing failed because of invalid input or SOCKS_RESULT_TRUNCATED if it
+ * failed due to incomplete (truncated) input.
+ */
+static socks_result_t
+parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
+                            size_t datalen, size_t *drain_out)
+{
+  socks_result_t res = SOCKS_RESULT_DONE;
+  tor_addr_t destaddr;
+  socks5_client_request_t *trunnel_req = NULL;
+  ssize_t parsed =
+   socks5_client_request_parse(&trunnel_req, raw_data, datalen);
+  if (parsed == -1) {
+    log_warn(LD_APP, "socks5: parsing failed - invalid client request");
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  } else if (parsed == -2) {
+    res = SOCKS_RESULT_TRUNCATED;
+    goto end;
+  }
+
+  tor_assert(parsed >= 0);
+  *drain_out = (size_t)parsed;
+
+  if (socks5_client_request_get_version(trunnel_req) != 5) {
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  }
+
+  req->command = socks5_client_request_get_command(trunnel_req);
+
+  req->port = socks5_client_request_get_dest_port(trunnel_req);
+
+  uint8_t atype = socks5_client_request_get_atype(trunnel_req);
+  req->socks5_atyp = atype;
+
+  switch (atype) {
+    case 1: {
+      uint32_t ipv4 = socks5_client_request_get_dest_addr_ipv4(trunnel_req);
+      tor_addr_from_ipv4h(&destaddr, ipv4);
+
+      tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
+    } break;
+    case 3: {
+      const struct domainname_st *dns_name =
+        socks5_client_request_getconst_dest_addr_domainname(trunnel_req);
+
+      const char *hostname = domainname_getconstarray_name(dns_name);
+
+      strlcpy(req->address, hostname, sizeof(req->address));
+    } break;
+    case 4: {
+      const char *ipv6 =
+        (const char *)socks5_client_request_getarray_dest_addr_ipv6(
+          trunnel_req);
+      tor_addr_from_ipv6_bytes(&destaddr, ipv6);
+
+      tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
+    } break;
+    default: {
+      res = -1;
+    } break;
+  }
+
+  end:
+  socks5_client_request_free(trunnel_req);
+  return res;
+}
+
+/**
+ * Validate and respond to SOCKS5 request we parsed in
+ * parse_socks5_client_request (corresponding to <b>req</b>.
+ * Write appropriate response to <b>req->reply</b> (in
+ * SOCKS5 wire format). If <b>log_sockstype</b> is true, log a
+ * notice about possible DNS leaks on local system. If
+ * <b>safe_socks</b> is true, disallow insecure usage of SOCKS
+ * protocol. Return SOCKS_RESULT_DONE on success or
+ * SOCKS_RESULT_INVALID on failure.
+ */
+static socks_result_t
+process_socks5_client_request(socks_request_t *req,
+                              int log_sockstype,
+                              int safe_socks)
+{
+  socks_result_t res = SOCKS_RESULT_DONE;
+
+  if (req->command != SOCKS_COMMAND_CONNECT &&
+      req->command != SOCKS_COMMAND_RESOLVE &&
+      req->command != SOCKS_COMMAND_RESOLVE_PTR) {
+    socks_request_set_socks5_error(req,SOCKS5_COMMAND_NOT_SUPPORTED);
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  }
+
+  if (req->command == SOCKS_COMMAND_RESOLVE_PTR &&
+      !string_is_valid_ipv4_address(req->address) &&
+      !string_is_valid_ipv6_address(req->address)) {
+    socks_request_set_socks5_error(req, SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED);
+    log_warn(LD_APP, "socks5 received RESOLVE_PTR command with "
+                     "hostname type. Rejecting.");
+
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  }
+
+  if (!string_is_valid_dest(req->address)) {
+    socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
+
+    log_warn(LD_PROTOCOL,
+             "Your application (using socks5 to port %d) gave Tor "
+             "a malformed hostname: %s. Rejecting the connection.",
+             req->port, escaped_safe_str_client(req->address));
+
+    res = SOCKS_RESULT_INVALID;
+    goto end;
+  }
+
+  if (req->socks5_atyp == 1 || req->socks5_atyp == 4) {
+    if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
+        !addressmap_have_mapping(req->address,0)) {
+      log_unsafe_socks_warning(5, req->address, req->port, safe_socks);
+      if (safe_socks) {
+        socks_request_set_socks5_error(req, SOCKS5_NOT_ALLOWED);
+        res = SOCKS_RESULT_INVALID;
+        goto end;
+      }
+    }
+  }
+
+  if (log_sockstype)
+    log_notice(LD_APP,
+              "Your application (using socks5 to port %d) instructed "
+              "Tor to take care of the DNS resolution itself if "
+              "necessary. This is good.", req->port);
+
+  end:
+  return res;
+}
+
+/**
+ * Handle (parse, validate, process, respond) a single SOCKS
+ * message in buffer <b>raw_data</b> of length <b>datalen</b>.
+ * Update relevant fields of <b>req</b>. If <b>log_sockstype</b>
+ * is true, log a warning about possible DNS leaks on local
+ * system. If <b>safe_socks</b> is true, disallow insecure
+ * usage of SOCKS protocol. Set <b>*drain_out</b> to number
+ * of bytes in <b>raw_data</b> that we processed so far and
+ * that can be safely drained from buffer.
+ *
+ * Return:
+ *  - SOCKS_RESULT_DONE if succeeded and not expecting further
+ *    messages from client.
+ *  - SOCKS_RESULT_INVALID if any of the steps failed due to
+ *    request being invalid or unexpected given current state.
+ *  - SOCKS_RESULT_TRUNCATED if we do not found an expected
+ *    SOCKS message in its entirety (more stuff has to arrive
+ *    from client).
+ *  - SOCKS_RESULT_MORE_EXPECTED if we handled current message
+ *    successfully, but we expect more messages from the
+ *    client.
+ */
+static socks_result_t
+handle_socks_message(const uint8_t *raw_data, size_t datalen,
+                     socks_request_t *req, int log_sockstype,
+                     int safe_socks, size_t *drain_out)
+{
+  socks_result_t res = SOCKS_RESULT_DONE;
+
+  uint8_t socks_version = raw_data[0];
+
+  if (socks_version == SOCKS_AUTH)
+    socks_version = SOCKS_VER_5; // SOCKS5 username/pass subnegotiation
+
+  if (socks_version == SOCKS_VER_4) {
+    if (datalen < SOCKS4_NETWORK_LEN) {
+      res = 0;
+      goto end;
+    }
+
+    int is_socks4a = 0;
+    res = parse_socks4_request((const uint8_t *)raw_data, req, datalen,
+                               &is_socks4a, drain_out);
+
+    if (res != SOCKS_RESULT_DONE) {
+      goto end;
+    }
+
+    res = process_socks4_request(req, is_socks4a,log_sockstype,
+                                 safe_socks);
+
+    if (res != SOCKS_RESULT_DONE) {
+      goto end;
+    }
+
+    goto end;
+  } else if (socks_version == SOCKS_VER_5) {
+    if (datalen < 2) { /* version and another byte */
+      res = 0;
+      goto end;
+    }
+    /* RFC1929 SOCKS5 username/password subnegotiation. */
+    if (!req->got_auth && (raw_data[0] == 1 ||
+        req->auth_type == SOCKS_USER_PASS)) {
+      res = parse_socks5_userpass_auth(raw_data, req, datalen,
+                                       drain_out);
+
+      if (res != SOCKS_RESULT_DONE) {
+        goto end;
+      }
+
+      res = process_socks5_userpass_auth(req);
+      if (res != SOCKS_RESULT_DONE) {
+        goto end;
+      }
+
+      res = SOCKS_RESULT_MORE_EXPECTED;
+      goto end;
+    } else if (req->socks_version != SOCKS_VER_5) {
+      int have_user_pass, have_no_auth;
+      res = parse_socks5_methods_request(raw_data, req, datalen,
+                                         &have_user_pass,
+                                         &have_no_auth,
+                                         drain_out);
+
+      if (res != SOCKS_RESULT_DONE) {
+        goto end;
+      }
+
+      res = process_socks5_methods_request(req, have_user_pass,
+                                           have_no_auth);
+
+      if (res != SOCKS_RESULT_DONE) {
+        goto end;
+      }
+
+      res = SOCKS_RESULT_MORE_EXPECTED;
+      goto end;
+    } else {
+      res = parse_socks5_client_request(raw_data, req,
+                                        datalen, drain_out);
+      if (res != SOCKS_RESULT_DONE) {
+        socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
+        goto end;
+      }
+
+      res = process_socks5_client_request(req, log_sockstype,
+                                          safe_socks);
+
+      if (res != SOCKS_RESULT_DONE) {
+        goto end;
+      }
+    }
+  } else {
+    *drain_out = datalen;
+    res = SOCKS_RESULT_INVALID;
+  }
+
+  end:
+  return res;
+}
+
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
@@ -114,32 +810,50 @@ int
 fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                      int log_sockstype, int safe_socks)
 {
-  int res;
-  ssize_t n_drain;
-  size_t want_length = 128;
+  int res = 0;
+  size_t datalen = buf_datalen(buf);
+  size_t n_drain;
   const char *head = NULL;
-  size_t datalen = 0;
+  socks_result_t socks_res;
+  size_t n_pullup;
 
-  if (buf_datalen(buf) < 2) /* version and another byte */
-    return 0;
+  if (buf_datalen(buf) < 2) { /* version and another byte */
+    res = 0;
+    goto end;
+  }
 
   do {
     n_drain = 0;
-    buf_pullup(buf, want_length, &head, &datalen);
+    n_pullup = MIN(MAX_SOCKS_MESSAGE_LEN, buf_datalen(buf));
+    buf_pullup(buf, n_pullup, &head, &datalen);
     tor_assert(head && datalen >= 2);
-    want_length = 0;
 
-    res = parse_socks(head, datalen, req, log_sockstype,
-                      safe_socks, &n_drain, &want_length);
+    socks_res = parse_socks(head, datalen, req, log_sockstype,
+                            safe_socks, &n_drain);
 
-    if (n_drain < 0)
+    if (socks_res == SOCKS_RESULT_INVALID)
       buf_clear(buf);
-    else if (n_drain > 0)
+    else if (socks_res != SOCKS_RESULT_TRUNCATED && n_drain > 0)
       buf_drain(buf, n_drain);
 
-  } while (res == 0 && head && want_length < buf_datalen(buf) &&
-           buf_datalen(buf) >= 2);
+    switch (socks_res) {
+      case SOCKS_RESULT_INVALID:
+        res = -1;
+        break;
+      case SOCKS_RESULT_DONE:
+        res = 1;
+        break;
+      case SOCKS_RESULT_TRUNCATED:
+        if (datalen == n_pullup)
+          return 0;
+        /* FALLTHRU */
+      case SOCKS_RESULT_MORE_EXPECTED:
+        res = 0;
+        break;
+    }
+  } while (res == 0 && head && buf_datalen(buf) >= 2);
 
+  end:
   return res;
 }
 
@@ -150,12 +864,31 @@ static void
 socks_request_set_socks5_error(socks_request_t *req,
                   socks5_reply_status_t reason)
 {
-   req->replylen = 10;
-   memset(req->reply,0,10);
+  socks5_server_reply_t *trunnel_resp = socks5_server_reply_new();
 
-   req->reply[0] = 0x05;   // VER field.
-   req->reply[1] = reason; // REP field.
-   req->reply[3] = 0x01;   // ATYP field.
+  socks5_server_reply_set_version(trunnel_resp, SOCKS_VER_5);
+  socks5_server_reply_set_reply(trunnel_resp, reason);
+  socks5_server_reply_set_atype(trunnel_resp, 0x01);
+
+  const char *errmsg = socks5_server_reply_check(trunnel_resp);
+  if (errmsg) {
+    log_warn(LD_APP, "socks5: reply validation failed: %s",
+             errmsg);
+    goto end;
+  }
+
+  ssize_t encoded = socks5_server_reply_encode(req->reply,
+                                               sizeof(req->reply),
+                                               trunnel_resp);
+  if (encoded < 0) {
+    log_warn(LD_APP, "socks5: reply encoding failed: %d",
+             (int)encoded);
+  } else {
+    req->replylen = (size_t)encoded;
+  }
+
+  end:
+  socks5_server_reply_free(trunnel_resp);
 }
 
 static const char SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG[] =
@@ -193,350 +926,24 @@ static const char SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG[] =
  * we'd like to see in the input buffer, if they're available. */
 static int
 parse_socks(const char *data, size_t datalen, socks_request_t *req,
-            int log_sockstype, int safe_socks, ssize_t *drain_out,
-            size_t *want_length_out)
+            int log_sockstype, int safe_socks, size_t *drain_out)
 {
-  unsigned int len;
-  char tmpbuf[TOR_ADDR_BUF_LEN+1];
-  tor_addr_t destaddr;
-  uint32_t destip;
-  uint8_t socksver;
-  char *next, *startaddr;
-  unsigned char usernamelen, passlen;
-  struct in_addr in;
+  uint8_t first_octet;
 
   if (datalen < 2) {
     /* We always need at least 2 bytes. */
-    *want_length_out = 2;
     return 0;
   }
 
-  if (req->socks_version == 5 && !req->got_auth) {
-    /* See if we have received authentication.  Strictly speaking, we should
-       also check whether we actually negotiated username/password
-       authentication.  But some broken clients will send us authentication
-       even if we negotiated SOCKS_NO_AUTH. */
-    if (*data == 1) { /* username/pass version 1 */
-      /* Format is: authversion [1 byte] == 1
-                    usernamelen [1 byte]
-                    username    [usernamelen bytes]
-                    passlen     [1 byte]
-                    password    [passlen bytes] */
-      usernamelen = (unsigned char)*(data + 1);
-      if (datalen < 2u + usernamelen + 1u) {
-        *want_length_out = 2u + usernamelen + 1u;
-        return 0;
-      }
-      passlen = (unsigned char)*(data + 2u + usernamelen);
-      if (datalen < 2u + usernamelen + 1u + passlen) {
-        *want_length_out = 2u + usernamelen + 1u + passlen;
-        return 0;
-      }
-      req->replylen = 2; /* 2 bytes of response */
-      req->reply[0] = 1; /* authversion == 1 */
-      req->reply[1] = 0; /* authentication successful */
-      log_debug(LD_APP,
-               "socks5: Accepted username/password without checking.");
-      if (usernamelen) {
-        req->username = tor_memdup(data+2u, usernamelen);
-        req->usernamelen = usernamelen;
-      }
-      if (passlen) {
-        req->password = tor_memdup(data+3u+usernamelen, passlen);
-        req->passwordlen = passlen;
-      }
-      *drain_out = 2u + usernamelen + 1u + passlen;
-      req->got_auth = 1;
-      *want_length_out = 7; /* Minimal socks5 command. */
-      return 0;
-    } else if (req->auth_type == SOCKS_USER_PASS) {
-      /* unknown version byte */
-      log_warn(LD_APP, "Socks5 username/password version %d not recognized; "
-               "rejecting.", (int)*data);
-      return -1;
-    }
+  first_octet = get_uint8(data);
+
+  if (first_octet == SOCKS_VER_5 || first_octet == SOCKS_VER_4 ||
+      first_octet == SOCKS_AUTH) { // XXX: RFC 1929
+    return handle_socks_message((const uint8_t *)data, datalen, req,
+                                log_sockstype, safe_socks, drain_out);
   }
 
-  socksver = *data;
-
-  switch (socksver) { /* which version of socks? */
-    case 5: /* socks5 */
-
-      if (req->socks_version != 5) { /* we need to negotiate a method */
-        unsigned char nummethods = (unsigned char)*(data+1);
-        int have_user_pass, have_no_auth;
-        int r=0;
-        tor_assert(!req->socks_version);
-        if (datalen < 2u+nummethods) {
-          *want_length_out = 2u+nummethods;
-          return 0;
-        }
-        if (!nummethods)
-          return -1;
-        req->replylen = 2; /* 2 bytes of response */
-        req->reply[0] = 5; /* socks5 reply */
-        have_user_pass = (memchr(data+2, SOCKS_USER_PASS, nummethods) !=NULL);
-        have_no_auth   = (memchr(data+2, SOCKS_NO_AUTH,   nummethods) !=NULL);
-        if (have_user_pass && !(have_no_auth && req->socks_prefer_no_auth)) {
-          req->auth_type = SOCKS_USER_PASS;
-          req->reply[1] = SOCKS_USER_PASS; /* tell client to use "user/pass"
-                                              auth method */
-          req->socks_version = 5; /* remember we've already negotiated auth */
-          log_debug(LD_APP,"socks5: accepted method 2 (username/password)");
-          r=0;
-        } else if (have_no_auth) {
-          req->reply[1] = SOCKS_NO_AUTH; /* tell client to use "none" auth
-                                            method */
-          req->socks_version = 5; /* remember we've already negotiated auth */
-          log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
-          r=0;
-        } else {
-          log_warn(LD_APP,
-                    "socks5: offered methods don't include 'no auth' or "
-                    "username/password. Rejecting.");
-          req->reply[1] = '\xFF'; /* reject all methods */
-          r=-1;
-        }
-        /* Remove packet from buf. Some SOCKS clients will have sent extra
-         * junk at this point; let's hope it's an authentication message. */
-        *drain_out = 2u + nummethods;
-
-        return r;
-      }
-      if (req->auth_type != SOCKS_NO_AUTH && !req->got_auth) {
-        log_warn(LD_APP,
-                 "socks5: negotiated authentication, but none provided");
-        return -1;
-      }
-      /* we know the method; read in the request */
-      log_debug(LD_APP,"socks5: checking request");
-      if (datalen < 7) {/* basic info plus >=1 for addr plus 2 for port */
-        *want_length_out = 7;
-        return 0; /* not yet */
-      }
-      req->command = (unsigned char) *(data+1);
-      if (req->command != SOCKS_COMMAND_CONNECT &&
-          req->command != SOCKS_COMMAND_RESOLVE &&
-          req->command != SOCKS_COMMAND_RESOLVE_PTR) {
-        /* not a connect or resolve or a resolve_ptr? we don't support it. */
-        socks_request_set_socks5_error(req,SOCKS5_COMMAND_NOT_SUPPORTED);
-
-        log_warn(LD_APP,"socks5: command %d not recognized. Rejecting.",
-                 req->command);
-        return -1;
-      }
-      switch (*(data+3)) { /* address type */
-        case 1: /* IPv4 address */
-        case 4: /* IPv6 address */ {
-          const int is_v6 = *(data+3) == 4;
-          const unsigned addrlen = is_v6 ? 16 : 4;
-          log_debug(LD_APP,"socks5: ipv4 address type");
-          if (datalen < 6+addrlen) {/* ip/port there? */
-            *want_length_out = 6+addrlen;
-            return 0; /* not yet */
-          }
-
-          if (is_v6)
-            tor_addr_from_ipv6_bytes(&destaddr, data+4);
-          else
-            tor_addr_from_ipv4n(&destaddr, get_uint32(data+4));
-
-          tor_addr_to_str(tmpbuf, &destaddr, sizeof(tmpbuf), 1);
-
-          if (BUG(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN)) {
-            /* LCOV_EXCL_START -- This branch is unreachable, given the
-             * size of tmpbuf and the actual value of MAX_SOCKS_ADDR_LEN */
-            socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
-            log_warn(LD_APP,
-                     "socks5 IP takes %d bytes, which doesn't fit in %d. "
-                     "Rejecting.",
-                     (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
-            return -1;
-            /* LCOV_EXCL_STOP */
-          }
-          strlcpy(req->address,tmpbuf,sizeof(req->address));
-          req->port = ntohs(get_uint16(data+4+addrlen));
-          *drain_out = 6+addrlen;
-          if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
-              !addressmap_have_mapping(req->address,0)) {
-            log_unsafe_socks_warning(5, req->address, req->port, safe_socks);
-            if (safe_socks) {
-              socks_request_set_socks5_error(req, SOCKS5_NOT_ALLOWED);
-              return -1;
-            }
-          }
-          return 1;
-        }
-        case 3: /* fqdn */
-          log_debug(LD_APP,"socks5: fqdn address type");
-          if (req->command == SOCKS_COMMAND_RESOLVE_PTR) {
-            socks_request_set_socks5_error(req,
-                                           SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED);
-            log_warn(LD_APP, "socks5 received RESOLVE_PTR command with "
-                     "hostname type. Rejecting.");
-            return -1;
-          }
-          len = (unsigned char)*(data+4);
-          if (datalen < 7+len) { /* addr/port there? */
-            *want_length_out = 7+len;
-            return 0; /* not yet */
-          }
-          if (BUG(len+1 > MAX_SOCKS_ADDR_LEN)) {
-            /* LCOV_EXCL_START -- unreachable, since len is at most 255,
-             * and MAX_SOCKS_ADDR_LEN is 256. */
-            socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
-            log_warn(LD_APP,
-                     "socks5 hostname is %d bytes, which doesn't fit in "
-                     "%d. Rejecting.", len+1,MAX_SOCKS_ADDR_LEN);
-            return -1;
-            /* LCOV_EXCL_STOP */
-          }
-          memcpy(req->address,data+5,len);
-          req->address[len] = 0;
-          req->port = ntohs(get_uint16(data+5+len));
-          *drain_out = 5+len+2;
-
-          if (!string_is_valid_dest(req->address)) {
-            socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
-
-            log_warn(LD_PROTOCOL,
-                     "Your application (using socks5 to port %d) gave Tor "
-                     "a malformed hostname: %s. Rejecting the connection.",
-                     req->port, escaped_safe_str_client(req->address));
-            return -1;
-          }
-          if (log_sockstype)
-            log_notice(LD_APP,
-                  "Your application (using socks5 to port %d) instructed "
-                  "Tor to take care of the DNS resolution itself if "
-                  "necessary. This is good.", req->port);
-          return 1;
-        default: /* unsupported */
-          socks_request_set_socks5_error(req,
-                                         SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED);
-          log_warn(LD_APP,"socks5: unsupported address type %d. Rejecting.",
-                   (int) *(data+3));
-          return -1;
-      }
-      tor_assert(0);
-      break;
-    case 4: { /* socks4 */
-      enum {socks4, socks4a} socks4_prot = socks4a;
-      const char *authstart, *authend;
-      /* http://ss5.sourceforge.net/socks4.protocol.txt */
-      /* http://ss5.sourceforge.net/socks4A.protocol.txt */
-
-      req->socks_version = 4;
-      if (datalen < SOCKS4_NETWORK_LEN) {/* basic info available? */
-        *want_length_out = SOCKS4_NETWORK_LEN;
-        return 0; /* not yet */
-      }
-      // buf_pullup(buf, 1280);
-      req->command = (unsigned char) *(data+1);
-      if (req->command != SOCKS_COMMAND_CONNECT &&
-          req->command != SOCKS_COMMAND_RESOLVE) {
-        /* not a connect or resolve? we don't support it. (No resolve_ptr with
-         * socks4.) */
-        log_warn(LD_APP,"socks4: command %d not recognized. Rejecting.",
-                 req->command);
-        return -1;
-      }
-
-      req->port = ntohs(get_uint16(data+2));
-      destip = ntohl(get_uint32(data+4));
-      if ((!req->port && req->command!=SOCKS_COMMAND_RESOLVE) || !destip) {
-        log_warn(LD_APP,"socks4: Port or DestIP is zero. Rejecting.");
-        return -1;
-      }
-      if (destip >> 8) {
-        log_debug(LD_APP,"socks4: destip not in form 0.0.0.x.");
-        in.s_addr = htonl(destip);
-        tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-        if (BUG(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN)) {
-          /* LCOV_EXCL_START -- This branch is unreachable, given the
-           * size of tmpbuf and the actual value of MAX_SOCKS_ADDR_LEN */
-          log_debug(LD_APP,"socks4 addr (%d bytes) too long. Rejecting.",
-                    (int)strlen(tmpbuf));
-          return -1;
-          /* LCOV_EXCL_STOP */
-        }
-        log_debug(LD_APP,
-                  "socks4: successfully read destip (%s)",
-                  safe_str_client(tmpbuf));
-        socks4_prot = socks4;
-      }
-
-      authstart = data + SOCKS4_NETWORK_LEN;
-      next = memchr(authstart, 0,
-                    datalen-SOCKS4_NETWORK_LEN);
-      if (!next) {
-        if (datalen >= 1024) {
-          log_debug(LD_APP, "Socks4 user name too long; rejecting.");
-          return -1;
-        }
-        log_debug(LD_APP,"socks4: Username not here yet.");
-        *want_length_out = datalen+1024; /* More than we need, but safe */
-        return 0;
-      }
-      authend = next;
-      tor_assert(next < data+datalen);
-
-      startaddr = NULL;
-      if (socks4_prot != socks4a &&
-          !addressmap_have_mapping(tmpbuf,0)) {
-        log_unsafe_socks_warning(4, tmpbuf, req->port, safe_socks);
-
-        if (safe_socks)
-          return -1;
-      }
-      if (socks4_prot == socks4a) {
-        if (next+1 == data+datalen) {
-          log_debug(LD_APP,"socks4: No part of destaddr here yet.");
-          *want_length_out = datalen + 1024; /* More than we need, but safe */
-          return 0;
-        }
-        startaddr = next+1;
-        next = memchr(startaddr, 0, data + datalen - startaddr);
-        if (!next) {
-          if (datalen >= 1024) {
-            log_debug(LD_APP,"socks4: Destaddr too long.");
-            return -1;
-          }
-          log_debug(LD_APP,"socks4: Destaddr not all here yet.");
-          *want_length_out = datalen + 1024; /* More than we need, but safe */
-          return 0;
-        }
-        if (MAX_SOCKS_ADDR_LEN <= next-startaddr) {
-          log_warn(LD_APP,"socks4: Destaddr too long. Rejecting.");
-          return -1;
-        }
-        // tor_assert(next < buf->cur+buf_datalen(buf));
-
-        if (log_sockstype)
-          log_notice(LD_APP,
-                     "Your application (using socks4a to port %d) instructed "
-                     "Tor to take care of the DNS resolution itself if "
-                     "necessary. This is good.", req->port);
-      }
-      log_debug(LD_APP,"socks4: Everything is here. Success.");
-      strlcpy(req->address, startaddr ? startaddr : tmpbuf,
-              sizeof(req->address));
-      if (!string_is_valid_dest(req->address)) {
-        log_warn(LD_PROTOCOL,
-                 "Your application (using socks4 to port %d) gave Tor "
-                 "a malformed hostname: %s. Rejecting the connection.",
-                 req->port, escaped_safe_str_client(req->address));
-        return -1;
-      }
-      if (authend != authstart) {
-        req->got_auth = 1;
-        req->usernamelen = authend - authstart;
-        req->username = tor_memdup(authstart, authend - authstart);
-      }
-      /* next points to the final \0 on inbuf */
-      *drain_out = next - data + 1;
-      return 1;
-    }
+  switch (first_octet) { /* which version of socks? */
     case 'G': /* get */
     case 'H': /* head */
     case 'P': /* put/post */
@@ -560,6 +967,9 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       }
       return -1;
   }
+
+  tor_assert_unreached();
+  return -1;
 }
 
 /** Inspect a reply from SOCKS server stored in <b>buf</b> according
