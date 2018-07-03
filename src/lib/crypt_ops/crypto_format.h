@@ -9,7 +9,10 @@
 
 #include "lib/testsupport/testsupport.h"
 #include "lib/cc/torint.h"
-#include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/defs/x25519_sizes.h"
+
+struct ed25519_public_key_t;
+struct ed25519_signature_t;
 
 int crypto_write_tagged_contents_to_file(const char *fname,
                                          const char *typestring,
@@ -23,20 +26,16 @@ ssize_t crypto_read_tagged_contents_from_file(const char *fname,
                                               uint8_t *data_out,
                                               ssize_t data_out_len);
 
-#define ED25519_BASE64_LEN 43
-int ed25519_public_from_base64(ed25519_public_key_t *pkey,
+int ed25519_public_from_base64(struct ed25519_public_key_t *pkey,
                                const char *input);
 int ed25519_public_to_base64(char *output,
-                             const ed25519_public_key_t *pkey);
-const char *ed25519_fmt(const ed25519_public_key_t *pkey);
+                             const struct ed25519_public_key_t *pkey);
+const char *ed25519_fmt(const struct ed25519_public_key_t *pkey);
 
-/* XXXX move these to crypto_format.h */
-#define ED25519_SIG_BASE64_LEN 86
-
-int ed25519_signature_from_base64(ed25519_signature_t *sig,
+int ed25519_signature_from_base64(struct ed25519_signature_t *sig,
                                   const char *input);
 int ed25519_signature_to_base64(char *output,
-                                const ed25519_signature_t *sig);
+                                const struct ed25519_signature_t *sig);
 
 int digest_to_base64(char *d64, const char *digest);
 int digest_from_base64(char *digest, const char *d64);
@@ -44,4 +43,3 @@ int digest256_to_base64(char *d64, const char *digest);
 int digest256_from_base64(char *digest, const char *d64);
 
 #endif /* !defined(TOR_CRYPTO_FORMAT_H) */
-

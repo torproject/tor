@@ -71,6 +71,7 @@
 #include "or/circuitstats.h"
 #include "lib/compress/compress.h"
 #include "or/config.h"
+#include "lib/encoding/confline.h"
 #include "or/connection.h"
 #include "or/connection_edge.h"
 #include "or/connection_or.h"
@@ -109,6 +110,15 @@
 #ifdef _WIN32
 #include <shlobj.h>
 #endif
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 #include "lib/meminfo/meminfo.h"
 #include "lib/osinfo/uname.h"
@@ -145,6 +155,10 @@ static const char unix_socket_prefix[] = "unix:";
 /* Prefix used to indicate a Unix socket with spaces in it, in a FooPort
  * configuration. */
 static const char unix_q_socket_prefix[] = "unix:\"";
+
+/* limits for TCP send and recv buffer size used for constrained sockets */
+#define MIN_CONSTRAINED_TCP_BUFFER 2048
+#define MAX_CONSTRAINED_TCP_BUFFER 262144  /* 256k */
 
 /** macro to help with the bulk rename of *DownloadSchedule to
  * *DowloadInitialDelay . */

@@ -9,6 +9,8 @@
 
 #include "or/connection_st.h"
 
+struct tor_compress_state_t;
+
 /** Subtype of connection_t for an "directory connection" -- that is, an HTTP
  * connection to retrieve or serve directory material. */
 struct dir_connection_t {
@@ -31,7 +33,7 @@ struct dir_connection_t {
    * it from back to front. */
   smartlist_t *spool;
   /** The compression object doing on-the-fly compression for spooled data. */
-  tor_compress_state_t *compress_state;
+  struct tor_compress_state_t *compress_state;
 
   /** What rendezvous service are we querying for? */
   rend_data_t *rend_data;
@@ -63,4 +65,3 @@ struct dir_connection_t {
 };
 
 #endif
-

@@ -19,10 +19,12 @@
 
 #include "or/or.h"
 #include "or/bridges.h"
+#include "or/connection.h"
 #include "or/confparse.h"
 #include "or/config.h"
 #include "or/control.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "or/directory.h"
 #include "or/dirserv.h"
@@ -45,7 +47,9 @@
 #include "or/relay.h"
 #include "test/log_test_helpers.h"
 #include "or/voting_schedule.h"
+#include "lib/compress/compress.h"
 
+#include "or/addr_policy_st.h"
 #include "or/authority_cert_st.h"
 #include "or/document_signature_st.h"
 #include "or/extrainfo_st.h"
@@ -58,6 +62,10 @@
 #include "or/tor_version_st.h"
 #include "or/vote_microdesc_hash_st.h"
 #include "or/vote_routerstatus_st.h"
+
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 
 #define NS_MODULE dir
 

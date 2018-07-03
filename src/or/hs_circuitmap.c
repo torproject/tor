@@ -583,4 +583,3 @@ hs_circuitmap_free_all(void)
     tor_free(the_hs_circuitmap);
   }
 }
-

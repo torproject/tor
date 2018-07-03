@@ -11,6 +11,7 @@
 #include "test/log_test_helpers.h"
 #include "or/config.h"
 #include "or/circuitbuild.h"
+#include "or/circuitlist.h"
 
 #include "or/extend_info_st.h"
 
@@ -132,4 +133,3 @@ struct testcase_t circuitbuild_tests[] = {
   { "unhandled_exit", test_new_route_len_unhandled_exit, 0, NULL, NULL },
   END_OF_TESTCASES
 };
-

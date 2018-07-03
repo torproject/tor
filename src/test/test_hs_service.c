@@ -45,6 +45,7 @@
 #include "or/hs_intropoint.h"
 #include "or/hs_ntor.h"
 #include "or/hs_circuit.h"
+#include "or/hs_circuitmap.h"
 #include "or/hs_service.h"
 #include "or/hs_client.h"
 #include "or/main.h"
@@ -58,6 +59,7 @@
 #include "or/networkstatus_st.h"
 #include "or/node_st.h"
 #include "or/origin_circuit_st.h"
+#include "or/or_state_st.h"
 #include "or/routerinfo_st.h"
 
 /* Trunnel */
@@ -1634,4 +1636,3 @@ struct testcase_t hs_service_tests[] = {
 
   END_OF_TESTCASES
 };
-

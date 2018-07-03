@@ -4,6 +4,7 @@
 #include "or/or.h"
 #include "or/routerparse.h"
 #include "or/rendcommon.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "test/fuzz/fuzzing.h"
 
 static void
@@ -49,4 +50,3 @@ fuzz_main(const uint8_t *data, size_t sz)
   tor_free(str);
   return 0;
 }
-

@@ -6,6 +6,7 @@
 #include "lib/err/backtrace.h"
 #include "or/config.h"
 #include "test/fuzz/fuzzing.h"
+#include "lib/compress/compress.h"
 #include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
@@ -189,4 +190,3 @@ main(int argc, char **argv)
 }
 
 #endif
-

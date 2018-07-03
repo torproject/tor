@@ -34,6 +34,39 @@ typedef enum firewall_connection_t {
 
 typedef int exit_policy_parser_cfg_t;
 
+/** Outcome of applying an address policy to an address. */
+typedef enum {
+  /** The address was accepted */
+  ADDR_POLICY_ACCEPTED=0,
+  /** The address was rejected */
+  ADDR_POLICY_REJECTED=-1,
+  /** Part of the address was unknown, but as far as we can tell, it was
+   * accepted. */
+  ADDR_POLICY_PROBABLY_ACCEPTED=1,
+  /** Part of the address was unknown, but as far as we can tell, it was
+   * rejected. */
+  ADDR_POLICY_PROBABLY_REJECTED=2,
+} addr_policy_result_t;
+
+/** A single entry in a parsed policy summary, describing a range of ports. */
+typedef struct short_policy_entry_t {
+  uint16_t min_port, max_port;
+} short_policy_entry_t;
+
+/** A short_poliy_t is the parsed version of a policy summary. */
+typedef struct short_policy_t {
+  /** True if the members of 'entries' are port ranges to accept; false if
+   * they are port ranges to reject */
+  unsigned int is_accept : 1;
+  /** The actual number of values in 'entries'. */
+  unsigned int n_entries : 31;
+  /** An array of 0 or more short_policy_entry_t values, each describing a
+   * range of ports that this policy accepts or rejects (depending on the
+   * value of is_accept).
+   */
+  short_policy_entry_t entries[FLEXIBLE_ARRAY_MEMBER];
+} short_policy_t;
+
 int firewall_is_fascist_or(void);
 int firewall_is_fascist_dir(void);
 int fascist_firewall_use_ipv6(const or_options_t *options);
@@ -88,7 +121,8 @@ int policies_parse_exit_policy_from_options(
                                           uint32_t local_address,
                                           const tor_addr_t *ipv6_local_address,
                                           smartlist_t **result);
-int policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
+struct config_line_t;
+int policies_parse_exit_policy(struct config_line_t *cfg, smartlist_t **dest,
                                exit_policy_parser_cfg_t options,
                                const smartlist_t *configured_addresses);
 void policies_parse_exit_policy_reject_private(
@@ -151,4 +185,3 @@ STATIC const tor_addr_port_t * fascist_firewall_choose_address(
 #endif /* defined(POLICIES_PRIVATE) */
 
 #endif /* !defined(TOR_POLICIES_H) */
-

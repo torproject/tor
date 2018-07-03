@@ -23,6 +23,7 @@
 #include "or/nodelist.h"
 #include "or/relay.h"
 #include "or/routerlist.h"
+#include "lib/encoding/confline.h"
 
 #include "or/cell_st.h"
 #include "or/connection_st.h"
@@ -282,4 +283,3 @@ helper_parse_options(const char *conf)
   }
   return opt;
 }
-

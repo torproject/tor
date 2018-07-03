@@ -1302,4 +1302,3 @@ struct testcase_t cell_format_tests[] = {
   TEST(is_destroy, 0),
   END_OF_TESTCASES
 };
-

@@ -19,6 +19,7 @@
 #include "or/hs_common.h"
 #include "or/rendcommon.h"
 #include "or/rendservice.h"
+#include "or/routerlist.h"
 #include "or/routerset.h"
 #include "or/circuitbuild.h"
 
@@ -28,6 +29,10 @@
 #include "or/routerinfo_st.h"
 
 #include "test/test_helpers.h"
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 /* mock ID digest and longname for node that's in nodelist */
 #define HSDIR_EXIST_ID "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA" \
@@ -1061,4 +1066,3 @@ struct testcase_t hs_tests[] = {
 
   END_OF_TESTCASES
 };
-

@@ -8,6 +8,7 @@
 
 #include "or/dns.h"
 #include "or/connection.h"
+#include "or/connection_edge.h"
 #include "or/router.h"
 
 #include "or/edge_connection_st.h"
@@ -748,4 +749,3 @@ struct testcase_t dns_tests[] = {
 };
 
 #undef NS_MODULE
-

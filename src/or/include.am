@@ -75,7 +75,7 @@ LIBTOR_APP_A_SOURCES = \
 	src/or/onion_fast.c				\
 	src/or/onion_tap.c				\
 	src/or/transports.c				\
-	src/or/parsecommon.c			\
+	src/or/parsecommon.c				\
 	src/or/periodic.c				\
 	src/or/protover.c				\
 	src/or/protover_rust.c				\
@@ -180,6 +180,7 @@ endif
 
 ORHEADERS = \
 	src/or/addressmap.h				\
+	src/or/addr_policy_st.h				\
 	src/or/authority_cert_st.h			\
 	src/or/auth_dirs.inc				\
 	src/or/bridges.h				\
@@ -274,6 +275,8 @@ ORHEADERS = \
 	src/or/or_connection_st.h			\
 	src/or/or_handshake_certs_st.h			\
 	src/or/or_handshake_state_st.h			\
+	src/or/or_options_st.h				\
+	src/or/or_state_st.h				\
 	src/or/origin_circuit_st.h			\
 	src/or/transports.h				\
 	src/or/parsecommon.h				\

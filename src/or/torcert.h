@@ -49,6 +49,8 @@ typedef struct tor_cert_st {
   unsigned cert_valid : 1;
 } tor_cert_t;
 
+struct tor_tls_t;
+
 tor_cert_t *tor_cert_create(const ed25519_keypair_t *signing_key,
                             uint8_t cert_type,
                             const ed25519_public_key_t *signed_key,
@@ -90,15 +92,15 @@ void or_handshake_certs_free_(or_handshake_certs_t *certs);
   FREE_AND_NULL(or_handshake_certs_t, or_handshake_certs_free_, (certs))
 int or_handshake_certs_rsa_ok(int severity,
                               or_handshake_certs_t *certs,
-                              tor_tls_t *tls,
+                              struct tor_tls_t *tls,
                               time_t now);
 int or_handshake_certs_ed25519_ok(int severity,
                                   or_handshake_certs_t *certs,
-                                  tor_tls_t *tls,
+                                  struct tor_tls_t *tls,
                                   time_t now);
 void or_handshake_certs_check_both(int severity,
                               or_handshake_certs_t *certs,
-                              tor_tls_t *tls,
+                              struct tor_tls_t *tls,
                               time_t now,
                               const ed25519_public_key_t **ed_id_out,
                               const common_digests_t **rsa_id_out);
@@ -106,4 +108,3 @@ void or_handshake_certs_check_both(int severity,
 int tor_cert_encode_ed22519(const tor_cert_t *cert, char **cert_str_out);
 
 #endif /* !defined(TORCERT_H_INCLUDED) */
-

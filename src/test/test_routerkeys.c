@@ -11,12 +11,20 @@
 #include "or/routerkeys.h"
 #include "common/util.h"
 #include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "or/torcert.h"
 #include "test/test.h"
 
 #ifdef _WIN32
 /* For mkdir() */
 #include <direct.h>
+#endif
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
 #endif
 
 static void
@@ -695,4 +703,3 @@ struct testcase_t routerkeys_tests[] = {
   TEST(rsa_ed_crosscert, 0),
   END_OF_TESTCASES
 };
-

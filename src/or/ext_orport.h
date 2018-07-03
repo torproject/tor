@@ -7,6 +7,25 @@
 #ifndef EXT_ORPORT_H
 #define EXT_ORPORT_H
 
+/** States of the Extended ORPort protocol. Be careful before changing
+ *  the numbers: they matter. */
+#define EXT_OR_CONN_STATE_MIN_ 1
+/** Extended ORPort authentication is waiting for the authentication
+ *  type selected by the client. */
+#define EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE 1
+/** Extended ORPort authentication is waiting for the client nonce. */
+#define EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE 2
+/** Extended ORPort authentication is waiting for the client hash. */
+#define EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH 3
+#define EXT_OR_CONN_STATE_AUTH_MAX 3
+/** Authentication finished and the Extended ORPort is now accepting
+ *  traffic. */
+#define EXT_OR_CONN_STATE_OPEN 4
+/** Extended ORPort is flushing its last messages and preparing to
+ *  start accepting OR connections. */
+#define EXT_OR_CONN_STATE_FLUSHING 5
+#define EXT_OR_CONN_STATE_MAX_ 5
+
 int connection_ext_or_start_auth(or_connection_t *or_conn);
 
 ext_or_cmd_t *ext_or_cmd_new(uint16_t len);
@@ -43,4 +62,3 @@ extern int ext_or_auth_cookie_is_set;
 #endif /* defined(EXT_ORPORT_PRIVATE) */
 
 #endif /* !defined(EXT_ORPORT_H) */
-

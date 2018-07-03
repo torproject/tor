@@ -8,6 +8,8 @@
 #include "or/or.h"
 #include "lib/container/buffers.h"
 #include "lib/tls/buffers_tls.h"
+#include "lib/tls/tortls.h"
+#include "lib/compress/compress.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "or/proto_http.h"
 #include "or/proto_socks.h"
@@ -819,4 +821,3 @@ struct testcase_t buffer_tests[] = {
 
   END_OF_TESTCASES
 };
-

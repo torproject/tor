@@ -16,6 +16,7 @@
 #include "or/connection.h"
 #include "or/connection_edge.h"
 #include "or/control.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/directory.h"
@@ -32,6 +33,7 @@
 #include "or/router.h"
 #include "or/routerlist.h"
 #include "or/routerset.h"
+#include "lib/encoding/confline.h"
 
 #include "or/cpath_build_state_st.h"
 #include "or/crypt_path_st.h"
@@ -258,7 +260,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   }
 
   if (crypto_dh_get_public(cpath->rend_dh_handshake_state, tmp+dh_offset,
-                           DH_KEY_LEN)<0) {
+                           DH1024_KEY_LEN)<0) {
     log_warn(LD_BUG, "Internal error: couldn't extract g^x.");
     status = -2;
     goto perm_err;
@@ -269,7 +271,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   r = crypto_pk_obsolete_public_hybrid_encrypt(intro_key, payload+DIGEST_LEN,
                                       sizeof(payload)-DIGEST_LEN,
                                       tmp,
-                                      (int)(dh_offset+DH_KEY_LEN),
+                                      (int)(dh_offset+DH1024_KEY_LEN),
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
     log_warn(LD_BUG,"Internal error: hybrid pk encrypt failed.");
@@ -874,7 +876,7 @@ int
 rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
                                size_t request_len)
 {
-  if (request_len != DH_KEY_LEN+DIGEST_LEN) {
+  if (request_len != DH1024_KEY_LEN+DIGEST_LEN) {
     log_warn(LD_PROTOCOL,"Incorrect length (%d) on RENDEZVOUS2 cell.",
              (int)request_len);
     goto err;
@@ -1253,4 +1255,3 @@ rend_client_non_anonymous_mode_enabled(const or_options_t *options)
   return 0;
 #endif /* defined(NON_ANONYMOUS_MODE_ENABLED) */
 }
-

@@ -12,15 +12,19 @@
 #ifndef TOR_NODELIST_H
 #define TOR_NODELIST_H
 
+struct ed25519_public_key_t;
+struct curve25519_public_key_t;
+
 #define node_assert_ok(n) STMT_BEGIN {                          \
     tor_assert((n)->ri || (n)->rs);                             \
   } STMT_END
 
 MOCK_DECL(node_t *, node_get_mutable_by_id,(const char *identity_digest));
 MOCK_DECL(const node_t *, node_get_by_id, (const char *identity_digest));
-node_t *node_get_mutable_by_ed25519_id(const ed25519_public_key_t *ed_id);
+node_t *node_get_mutable_by_ed25519_id(
+                            const struct ed25519_public_key_t *ed_id);
 MOCK_DECL(const node_t *, node_get_by_ed25519_id,
-          (const ed25519_public_key_t *ed_id));
+          (const struct ed25519_public_key_t *ed_id));
 
 #define NNF_NO_WARN_UNNAMED (1u<<0)
 
@@ -65,9 +69,9 @@ uint32_t node_get_prim_addr_ipv4h(const node_t *node);
 void node_get_address_string(const node_t *node, char *cp, size_t len);
 long node_get_declared_uptime(const node_t *node);
 const smartlist_t *node_get_declared_family(const node_t *node);
-const ed25519_public_key_t *node_get_ed25519_id(const node_t *node);
+const struct ed25519_public_key_t *node_get_ed25519_id(const node_t *node);
 int node_ed25519_id_matches(const node_t *node,
-                            const ed25519_public_key_t *id);
+                            const struct ed25519_public_key_t *id);
 int node_supports_ed25519_link_authentication(const node_t *node,
                                               int compatible_with_us);
 int node_supports_v3_hsdir(const node_t *node);
@@ -89,7 +93,7 @@ void node_get_prim_dirport(const node_t *node, tor_addr_port_t *ap_out);
 void node_get_pref_dirport(const node_t *node, tor_addr_port_t *ap_out);
 void node_get_pref_ipv6_dirport(const node_t *node, tor_addr_port_t *ap_out);
 int node_has_curve25519_onion_key(const node_t *node);
-const curve25519_public_key_t *node_get_curve25519_onion_key(
+const struct curve25519_public_key_t *node_get_curve25519_onion_key(
                                   const node_t *node);
 
 MOCK_DECL(smartlist_t *, nodelist_get_list, (void));
@@ -162,4 +166,3 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns);
 MOCK_DECL(int, get_estimated_address_per_node, (void));
 
 #endif /* !defined(TOR_NODELIST_H) */
-

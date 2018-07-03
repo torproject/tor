@@ -18,7 +18,7 @@
  * GZIP_METHOD is guaranteed to be supported by the compress/uncompress
  * functions here. Call tor_compress_supports_method() to check if a given
  * compression schema is supported by Tor. */
-typedef enum {
+typedef enum compress_method_t {
   NO_METHOD=0, // This method must be first.
   GZIP_METHOD=1,
   ZLIB_METHOD=2,
@@ -32,7 +32,7 @@ typedef enum {
  * BEST_COMPRESSION saves the most bandwidth; LOW_COMPRESSION saves the most
  * memory.
  **/
-typedef enum {
+typedef enum compression_level_t {
   BEST_COMPRESSION, HIGH_COMPRESSION, MEDIUM_COMPRESSION, LOW_COMPRESSION
 } compression_level_t;
 

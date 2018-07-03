@@ -11,11 +11,12 @@
 
 #include <stdint.h>
 
-#include "lib/crypt_ops/crypto_ed25519.h"
 #include "or/hs_common.h"
 #include "or/hs_descriptor.h"
 #include "or/rendcommon.h"
 #include "or/torcert.h"
+
+struct ed25519_public_key_t;
 
 /* This is the maximum time an introduction point state object can stay in the
  * client cache in seconds (2 mins or 120 seconds). */
@@ -79,30 +80,32 @@ int hs_cache_lookup_as_dir(uint32_t version, const char *query,
                            const char **desc_out);
 
 const hs_descriptor_t *
-hs_cache_lookup_as_client(const ed25519_public_key_t *key);
+hs_cache_lookup_as_client(const struct ed25519_public_key_t *key);
 const char *
-hs_cache_lookup_encoded_as_client(const ed25519_public_key_t *key);
+hs_cache_lookup_encoded_as_client(const struct ed25519_public_key_t *key);
 int hs_cache_store_as_client(const char *desc_str,
-                             const ed25519_public_key_t *identity_pk);
+                             const struct ed25519_public_key_t *identity_pk);
 void hs_cache_clean_as_client(time_t now);
 void hs_cache_purge_as_client(void);
 
 /* Client failure cache. */
-void hs_cache_client_intro_state_note(const ed25519_public_key_t *service_pk,
-                                      const ed25519_public_key_t *auth_key,
-                                      rend_intro_point_failure_t failure);
+void hs_cache_client_intro_state_note(
+                              const struct ed25519_public_key_t *service_pk,
+                              const struct ed25519_public_key_t *auth_key,
+                              rend_intro_point_failure_t failure);
 const hs_cache_intro_state_t *hs_cache_client_intro_state_find(
-                                       const ed25519_public_key_t *service_pk,
-                                       const ed25519_public_key_t *auth_key);
+                              const struct ed25519_public_key_t *service_pk,
+                              const struct ed25519_public_key_t *auth_key);
 void hs_cache_client_intro_state_clean(time_t now);
 void hs_cache_client_intro_state_purge(void);
 
 #ifdef HS_CACHE_PRIVATE
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 /** Represents a locally cached HS descriptor on a hidden service client. */
 typedef struct hs_cache_client_descriptor_t {
   /* This object is indexed using the service identity public key */
-  ed25519_public_key_t key;
+  struct ed25519_public_key_t key;
 
   /* When will this entry expire? We expire cached client descriptors in the
    * start of the next time period, since that's when clients need to start
@@ -125,4 +128,3 @@ lookup_v3_desc_as_client(const uint8_t *key);
 #endif /* defined(HS_CACHE_PRIVATE) */
 
 #endif /* !defined(TOR_HS_CACHE_H) */
-

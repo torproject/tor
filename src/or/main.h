@@ -96,10 +96,12 @@ uint64_t get_main_loop_idle_count(void);
 void periodic_events_on_new_options(const or_options_t *options);
 void reschedule_per_second_timer(void);
 
+struct token_bucket_rw_t;
+
 extern time_t time_of_process_start;
 extern int quiet_level;
-extern token_bucket_rw_t global_bucket;
-extern token_bucket_rw_t global_relayed_bucket;
+extern struct token_bucket_rw_t global_bucket;
+extern struct token_bucket_rw_t global_relayed_bucket;
 
 #ifdef MAIN_PRIVATE
 STATIC void init_connection_lists(void);
@@ -118,4 +120,3 @@ extern periodic_event_item_t periodic_events[];
 #endif /* defined(MAIN_PRIVATE) */
 
 #endif /* !defined(TOR_MAIN_H) */
-

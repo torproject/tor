@@ -9,6 +9,7 @@
 #include "or/config.h"
 #include "or/connection.h"
 #include "or/connection_or.h"
+#include "or/directory.h"
 #include "or/main.h"
 #include "test/test.h"
 
@@ -456,4 +457,3 @@ struct testcase_t oos_tests[] = {
   { "pick_oos_victims", test_oos_pick_oos_victims, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

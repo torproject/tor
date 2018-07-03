@@ -12,7 +12,24 @@
 #ifndef TOR_DIRSERV_H
 #define TOR_DIRSERV_H
 
+struct ed25519_public_key_t;
+
 #include "lib/testsupport/testsupport.h"
+
+/** An enum to describe what format we're generating a routerstatus line in.
+ */
+typedef enum {
+  /** For use in a v2 opinion */
+  NS_V2,
+  /** For use in a consensus networkstatus document (ns flavor) */
+  NS_V3_CONSENSUS,
+  /** For use in a vote networkstatus document */
+  NS_V3_VOTE,
+  /** For passing to the controlport in response to a GETINFO request */
+  NS_CONTROL_PORT,
+  /** For use in a consensus networkstatus document (microdesc flavor) */
+  NS_V3_CONSENSUS_MICRODESC
+} routerstatus_format_type_t;
 
 /** What fraction (1 over this number) of the relay ID space do we
  * (as a directory authority) launch connections to at each reachability
@@ -138,7 +155,7 @@ int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
 void dirserv_orconn_tls_done(const tor_addr_t *addr,
                              uint16_t or_port,
                              const char *digest_rcvd,
-                             const ed25519_public_key_t *ed_id_rcvd);
+                             const struct ed25519_public_key_t *ed_id_rcvd);
 int dirserv_should_launch_reachability_test(const routerinfo_t *ri,
                                             const routerinfo_t *ri_old);
 void dirserv_single_reachability_test(time_t now, routerinfo_t *router);
@@ -220,4 +237,3 @@ void dirserv_spool_sort(dir_connection_t *conn);
 void dir_conn_clear_spool(dir_connection_t *conn);
 
 #endif /* !defined(TOR_DIRSERV_H) */
-

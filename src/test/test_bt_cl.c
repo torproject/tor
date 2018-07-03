@@ -12,6 +12,10 @@
 #include "lib/err/backtrace.h"
 #include "lib/log/torlog.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 /* -1: no crash.
  *  0: crash with a segmentation fault.
  *  1x: crash with an assertion failure. */
@@ -118,4 +122,3 @@ main(int argc, char **argv)
 
   return 0;
 }
-

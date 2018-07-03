@@ -9,6 +9,8 @@
 
 #include "or/signed_descriptor_st.h"
 
+struct curve25519_public_key_t;
+
 /** Information about another onion router in the network. */
 struct routerinfo_t {
   signed_descriptor_t cache_info;
@@ -28,7 +30,7 @@ struct routerinfo_t {
   crypto_pk_t *onion_pkey; /**< Public RSA key for onions. */
   crypto_pk_t *identity_pkey;  /**< Public RSA key for signing. */
   /** Public curve25519 key for onions */
-  curve25519_public_key_t *onion_curve25519_pkey;
+  struct curve25519_public_key_t *onion_curve25519_pkey;
   /** What's the earliest expiration time on all the certs in this
    * routerinfo? */
   time_t cert_expiration_time;
@@ -104,4 +106,3 @@ struct routerinfo_t {
 };
 
 #endif
-

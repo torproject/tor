@@ -11,6 +11,10 @@
 #include "test/test.h"
 #include "lib/process/subprocess.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 static void
 dummy_cb_fn(int severity, uint32_t domain, const char *msg)
 {

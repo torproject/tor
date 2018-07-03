@@ -68,6 +68,7 @@
 #include "or/config.h"
 #include "or/cpuworker.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "or/networkstatus.h"
 #include "or/onion.h"
 #include "or/onion_fast.h"
@@ -558,7 +559,7 @@ onion_skin_server_handshake(int type,
                                         (char*)keys_out, keys_out_len)<0)
       return -1;
     r = TAP_ONIONSKIN_REPLY_LEN;
-    memcpy(rend_nonce_out, reply_out+DH_KEY_LEN, DIGEST_LEN);
+    memcpy(rend_nonce_out, reply_out+DH1024_KEY_LEN, DIGEST_LEN);
     break;
   case ONION_HANDSHAKE_TYPE_FAST:
     if (onionskin_len != CREATE_FAST_LEN)
@@ -635,7 +636,7 @@ onion_skin_client_handshake(int type,
                                         msg_out) < 0)
       return -1;
 
-    memcpy(rend_authenticator_out, reply+DH_KEY_LEN, DIGEST_LEN);
+    memcpy(rend_authenticator_out, reply+DH1024_KEY_LEN, DIGEST_LEN);
 
     return 0;
   case ONION_HANDSHAKE_TYPE_FAST:
@@ -1343,4 +1344,3 @@ extended_cell_format(uint8_t *command_out, uint16_t *len_out,
 
   return 0;
 }
-

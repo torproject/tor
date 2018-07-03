@@ -8,6 +8,9 @@
 #define OR_CONNECTION_ST_H
 
 #include "or/connection_st.h"
+#include "common/token_bucket.h"
+
+struct tor_tls_t;
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
  * cells over TLS. */
@@ -33,7 +36,7 @@ struct or_connection_t {
 
   char *nickname; /**< Nickname of OR on other side (if any). */
 
-  tor_tls_t *tls; /**< TLS connection state. */
+  struct tor_tls_t *tls; /**< TLS connection state. */
   int tls_error; /**< Last tor_tls error code. */
   /** When we last used this conn for any client traffic. If not
    * recent, we can rate limit it further. */
@@ -87,4 +90,3 @@ struct or_connection_t {
 };
 
 #endif
-

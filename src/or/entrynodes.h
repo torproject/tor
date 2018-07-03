@@ -64,6 +64,8 @@ typedef struct guard_pathbias_t {
 } guard_pathbias_t;
 
 #if defined(ENTRYNODES_PRIVATE)
+#include "lib/crypt_ops/crypto_ed25519.h"
+
 /**
  * @name values for entry_guard_t.is_reachable.
  *
@@ -635,4 +637,3 @@ guard_get_guardfraction_bandwidth(guardfraction_bandwidth_t *guardfraction_bw,
                                   uint32_t guardfraction_percentage);
 
 #endif /* !defined(TOR_ENTRYNODES_H) */
-

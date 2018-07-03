@@ -4,6 +4,8 @@
 #ifndef TOR_CONSDIFFMGR_H
 #define TOR_CONSDIFFMGR_H
 
+enum compress_method_t;
+
 /**
  * Possible outcomes from trying to look up a given consensus diff.
  */
@@ -25,7 +27,7 @@ int consdiffmgr_add_consensus(const char *consensus,
 consdiff_status_t consdiffmgr_find_consensus(
                            struct consensus_cache_entry_t **entry_out,
                            consensus_flavor_t flavor,
-                           compress_method_t method);
+                           enum compress_method_t method);
 
 consdiff_status_t consdiffmgr_find_diff_from(
                            struct consensus_cache_entry_t **entry_out,
@@ -33,7 +35,7 @@ consdiff_status_t consdiffmgr_find_diff_from(
                            int digest_type,
                            const uint8_t *digest,
                            size_t digestlen,
-                           compress_method_t method);
+                           enum compress_method_t method);
 
 int consensus_cache_entry_get_voter_id_digests(
                                   const struct consensus_cache_entry_t *ent,
@@ -71,4 +73,3 @@ STATIC int uncompress_or_copy(char **out, size_t *outlen,
 #endif /* defined(CONSDIFFMGR_PRIVATE) */
 
 #endif /* !defined(TOR_CONSDIFFMGR_H) */
-

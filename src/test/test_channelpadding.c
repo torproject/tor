@@ -19,6 +19,9 @@
 #include "or/main.h"
 #include "or/networkstatus.h"
 #include "test/log_test_helpers.h"
+#include "lib/tls/tortls.h"
+#include "common/timers.h"
+#include "lib/container/buffers.h"
 
 #include "or/cell_st.h"
 #include "or/networkstatus_st.h"
@@ -1168,4 +1171,3 @@ struct testcase_t channelpadding_tests[] = {
   TEST_CHANNELPADDING(channelpadding_timers, TT_FORK),
   END_OF_TESTCASES
 };
-

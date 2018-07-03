@@ -5,8 +5,10 @@
 #define TOR_ONION_NTOR_H
 
 #include "lib/cc/torint.h"
-#include "lib/crypt_ops/crypto_curve25519.h"
-#include "lib/ctime/di_ops.h"
+
+struct di_digest256_map_t;
+struct curve25519_public_key_t;
+struct curve25519_keypair_t;
 
 /** State to be maintained by a client between sending an ntor onionskin
  * and receiving a reply. */
@@ -22,17 +24,17 @@ void ntor_handshake_state_free_(ntor_handshake_state_t *state);
   FREE_AND_NULL(ntor_handshake_state_t, ntor_handshake_state_free_, (state))
 
 int onion_skin_ntor_create(const uint8_t *router_id,
-                           const curve25519_public_key_t *router_key,
+                           const struct curve25519_public_key_t *router_key,
                            ntor_handshake_state_t **handshake_state_out,
                            uint8_t *onion_skin_out);
 
 int onion_skin_ntor_server_handshake(const uint8_t *onion_skin,
-                                 const di_digest256_map_t *private_keys,
-                                 const curve25519_keypair_t *junk_keypair,
-                                 const uint8_t *my_node_id,
-                                 uint8_t *handshake_reply_out,
-                                 uint8_t *key_out,
-                                 size_t key_out_len);
+                           const struct di_digest256_map_t *private_keys,
+                           const struct curve25519_keypair_t *junk_keypair,
+                           const uint8_t *my_node_id,
+                           uint8_t *handshake_reply_out,
+                           uint8_t *key_out,
+                           size_t key_out_len);
 
 int onion_skin_ntor_client_handshake(
                              const ntor_handshake_state_t *handshake_state,
@@ -42,6 +44,7 @@ int onion_skin_ntor_client_handshake(
                              const char **msg_out);
 
 #ifdef ONION_NTOR_PRIVATE
+#include "lib/crypt_ops/crypto_curve25519.h"
 
 /** Storage held by a client while waiting for an ntor reply from a server. */
 struct ntor_handshake_state_t {
@@ -60,4 +63,3 @@ struct ntor_handshake_state_t {
 #endif /* defined(ONION_NTOR_PRIVATE) */
 
 #endif /* !defined(TOR_ONION_NTOR_H) */
-

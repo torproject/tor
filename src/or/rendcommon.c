@@ -27,6 +27,7 @@
 #include "or/rendmid.h"
 #include "or/rendservice.h"
 #include "or/rephist.h"
+#include "or/replaycache.h"
 #include "or/router.h"
 #include "or/routerlist.h"
 #include "or/routerparse.h"
@@ -1053,4 +1054,3 @@ rend_circuit_pk_digest_eq(const origin_circuit_t *ocirc,
  match:
   return 1;
 }
-

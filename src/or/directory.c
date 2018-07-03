@@ -17,6 +17,7 @@
 #include "or/consdiff.h"
 #include "or/consdiffmgr.h"
 #include "or/control.h"
+#include "lib/compress/compress.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/directory.h"
@@ -42,6 +43,8 @@
 #include "or/routerlist.h"
 #include "or/routerparse.h"
 #include "or/routerset.h"
+#include "lib/encoding/confline.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #if !defined(OpenBSD)
@@ -140,6 +143,15 @@ static void connection_dir_close_consensus_fetches(
                    dir_connection_t *except_this_one, const char *resource);
 
 /********* START VARIABLES **********/
+
+/** Maximum size, in bytes, for resized buffers. */
+#define MAX_BUF_SIZE ((1<<24)-1) /* 16MB-1 */
+/** Maximum size, in bytes, for any directory object that we've downloaded. */
+#define MAX_DIR_DL_SIZE MAX_BUF_SIZE
+
+/** Maximum size, in bytes, for any directory object that we're accepting
+ * as an upload. */
+#define MAX_DIR_UL_SIZE MAX_BUF_SIZE
 
 /** How far in the future do we allow a directory server to tell us it is
  * before deciding that one of us has the wrong time? */
@@ -5952,4 +5964,3 @@ dir_split_resource_into_spoolable(const char *resource,
   smartlist_free(fingerprints);
   return r;
 }
-

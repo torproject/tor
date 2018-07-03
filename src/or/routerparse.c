@@ -58,6 +58,7 @@
 #include "or/or.h"
 #include "or/circuitstats.h"
 #include "or/config.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/dirauth/shared_random.h"
 #include "or/dirserv.h"
@@ -81,6 +82,7 @@
 
 #include "or/dirauth/dirvote.h"
 
+#include "or/addr_policy_st.h"
 #include "or/authority_cert_st.h"
 #include "or/document_signature_st.h"
 #include "or/extend_info_st.h"
@@ -102,6 +104,9 @@
 
 #undef log
 #include <math.h>
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 
 /****************************************************************************/
 

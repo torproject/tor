@@ -20,6 +20,10 @@
 
 #include "test/test.h"
 
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 #ifdef _WIN32
 /* For mkdir() */
 #include <direct.h>
@@ -815,4 +819,3 @@ struct testcase_t microdesc_tests[] = {
   { "corrupt_desc", test_md_corrupt_desc, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

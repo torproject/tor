@@ -17,11 +17,13 @@
 #include "or/config.h"
 #include "or/control.h"
 #include "or/transports.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "test/test.h"
 #include "lib/memarea/memarea.h"
 #include "lib/process/waitpid.h"
 #include "test/log_test_helpers.h"
+#include "lib/compress/compress.h"
 #include "lib/compress/compress_zstd.h"
 #include "lib/encoding/keyval.h"
 #include "lib/fdio/fdio.h"
@@ -35,6 +37,7 @@
 #include "lib/math/laplace.h"
 #include "lib/meminfo/meminfo.h"
 #include "lib/time/tvdiff.h"
+#include "lib/encoding/confline.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>
@@ -45,6 +48,16 @@
 #ifdef HAVE_UTIME_H
 #include <utime.h>
 #endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #ifdef _WIN32
 #include <tchar.h>
 #endif

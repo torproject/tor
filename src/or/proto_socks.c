@@ -7,6 +7,7 @@
 #include "or/or.h"
 #include "or/addressmap.h"
 #include "lib/container/buffers.h"
+#include "or/connection.h"
 #include "or/control.h"
 #include "or/config.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -710,4 +711,3 @@ parse_socks_client(const uint8_t *data, size_t datalen,
   return -1;
   /* LCOV_EXCL_STOP */
 }
-

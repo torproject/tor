@@ -18,6 +18,7 @@
 #include "lib/sandbox/sandbox.h"
 #include "lib/memarea/memarea.h"
 #include "lib/osinfo/uname.h"
+#include "lib/encoding/confline.h"
 #include "or/policies.h"
 #include "test/test_helpers.h"
 

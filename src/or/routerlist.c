@@ -95,6 +95,7 @@
 #include "lib/err/backtrace.h"
 #include "or/bridges.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "or/circuitstats.h"
 #include "or/config.h"
 #include "or/connection.h"
@@ -139,6 +140,10 @@
 #include "or/vote_routerstatus_st.h"
 
 #include "lib/crypt_ops/digestset.h"
+
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 
 // #define DEBUG_ROUTERLIST
 
@@ -5841,4 +5846,3 @@ refresh_all_country_info(void)
 
   nodelist_refresh_countries();
 }
-

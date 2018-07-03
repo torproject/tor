@@ -7,6 +7,9 @@
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
 #endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 #define TEST_BUILT_WITH_CAPS         0
 #define TEST_HAVE_CAPS               1

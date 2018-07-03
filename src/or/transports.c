@@ -93,6 +93,7 @@
 #include "or/or.h"
 #include "or/bridges.h"
 #include "or/config.h"
+#include "or/connection.h"
 #include "or/circuitbuild.h"
 #include "or/transports.h"
 #include "common/util.h"

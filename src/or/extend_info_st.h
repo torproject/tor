@@ -7,6 +7,9 @@
 #ifndef EXTEND_INFO_ST_H
 #define EXTEND_INFO_ST_H
 
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
+
 /** Information on router used when extending a circuit. We don't need a
  * full routerinfo_t to extend: we only need addr:port:keyid to build an OR
  * connection, and onion_key to create the onionskin. Note that for onehop
@@ -25,4 +28,3 @@ struct extend_info_t {
 };
 
 #endif
-

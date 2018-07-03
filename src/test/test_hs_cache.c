@@ -17,6 +17,7 @@
 #include "or/networkstatus.h"
 #include "or/connection.h"
 #include "or/proto_http.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 #include "or/dir_connection_st.h"
 #include "or/networkstatus_st.h"
@@ -561,4 +562,3 @@ struct testcase_t hs_cache[] = {
 
   END_OF_TESTCASES
 };
-

@@ -8,6 +8,7 @@
 #define VOTE_ROUTERSTATUS_ST_H
 
 #include "or/routerstatus_st.h"
+#include "lib/defs/x25519_sizes.h"
 
 /** The claim about a single router, made in a vote. */
 struct vote_routerstatus_t {
@@ -38,4 +39,3 @@ struct vote_routerstatus_t {
 };
 
 #endif
-

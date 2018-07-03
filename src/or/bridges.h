@@ -13,6 +13,7 @@
 #define TOR_BRIDGES_H
 
 struct bridge_line_t;
+struct ed25519_public_key_t;
 
 /* Opaque handle to a configured bridge */
 typedef struct bridge_info_t bridge_info_t;
@@ -38,7 +39,7 @@ int routerinfo_is_a_configured_bridge(const routerinfo_t *ri);
 int node_is_a_configured_bridge(const node_t *node);
 void learned_router_identity(const tor_addr_t *addr, uint16_t port,
                              const char *digest,
-                             const ed25519_public_key_t *ed_id);
+                             const struct ed25519_public_key_t *ed_id);
 
 void bridge_add_from_config(struct bridge_line_t *bridge_line);
 void retry_bridge_descriptor_fetch_directly(const char *digest);
@@ -77,4 +78,3 @@ STATIC void bridge_resolve_conflicts(const tor_addr_t *addr,
 #endif /* defined(TOR_BRIDGES_PRIVATE) */
 
 #endif /* !defined(TOR_BRIDGES_H) */
-

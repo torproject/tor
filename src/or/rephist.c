@@ -91,11 +91,16 @@
 
 #include "or/networkstatus_st.h"
 #include "or/or_circuit_st.h"
+#include "or/or_state_st.h"
 
 #include "lib/container/bloomfilt.h"
 #include "lib/container/order.h"
 #include "lib/math/fp.h"
 #include "lib/math/laplace.h"
+
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
 
 static void bw_arrays_init(void);
 static void predicted_ports_alloc(void);

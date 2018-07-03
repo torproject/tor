@@ -3,6 +3,7 @@
 
 #define CONTROL_PRIVATE
 #include "or/or.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "or/bridges.h"
 #include "or/control.h"
 #include "or/entrynodes.h"
@@ -1625,4 +1626,3 @@ struct testcase_t controller_tests[] = {
   { "getinfo_md_all", test_getinfo_md_all, 0, NULL, NULL },
   END_OF_TESTCASES
 };
-

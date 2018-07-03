@@ -37,7 +37,11 @@
 #include "or/dir_connection_st.h"
 #include "or/networkstatus_st.h"
 #include "or/node_st.h"
+#include "or/or_state_st.h"
 #include "or/routerstatus_st.h"
+
+#include "lib/encoding/confline.h"
+#include "lib/container/buffers.h"
 
 #include "test/test.h"
 #include "test/test_dir_common.h"
@@ -782,4 +786,3 @@ struct testcase_t routerlist_tests[] = {
   { "warn_early_consensus", test_warn_early_consensus, 0, NULL, NULL },
   END_OF_TESTCASES
 };
-

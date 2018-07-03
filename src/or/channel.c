@@ -79,6 +79,7 @@
 #include "lib/time/compat_time.h"
 #include "or/networkstatus.h"
 #include "or/rendservice.h"
+#include "common/timers.h"
 
 #include "or/cell_queue_st.h"
 
@@ -3477,4 +3478,3 @@ channel_update_bad_for_new_circs(const char *digest, int force)
     channel_rsa_id_group_set_badness(&(*iter)->channel_list, force);
   }
 }
-

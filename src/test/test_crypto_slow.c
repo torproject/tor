@@ -7,6 +7,8 @@
 #define CRYPTO_S2K_PRIVATE
 #include "or/or.h"
 #include "test/test.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_s2k.h"
 #include "lib/crypt_ops/crypto_pwbox.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -615,4 +617,3 @@ struct testcase_t slow_crypto_tests[] = {
   ED25519_TEST(fuzz_donna, TT_FORK),
   END_OF_TESTCASES
 };
-

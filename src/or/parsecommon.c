@@ -13,6 +13,8 @@
 #include "lib/container/smartlist.h"
 #include "lib/string/util_string.h"
 #include "lib/string/printf.h"
+#include "lib/memarea/memarea.h"
+#include "lib/crypt_ops/crypto.h"
 
 #include <string.h>
 

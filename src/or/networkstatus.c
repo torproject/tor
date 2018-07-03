@@ -45,6 +45,7 @@
 #include "or/circuitstats.h"
 #include "or/config.h"
 #include "or/connection.h"
+#include "or/connection_edge.h"
 #include "or/connection_or.h"
 #include "or/consdiffmgr.h"
 #include "or/control.h"
@@ -86,6 +87,10 @@
 #include "or/routerlist_st.h"
 #include "or/vote_microdesc_hash_st.h"
 #include "or/vote_routerstatus_st.h"
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
@@ -2719,4 +2724,3 @@ networkstatus_free_all(void)
     tor_free(waiting->body);
   }
 }
-

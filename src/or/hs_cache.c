@@ -11,6 +11,7 @@
 
 #include "or/or.h"
 #include "or/config.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/hs_ident.h"
 #include "or/hs_common.h"
@@ -976,4 +977,3 @@ hs_cache_free_all(void)
                     cache_client_intro_state_free_void);
   hs_cache_client_intro_state = NULL;
 }
-

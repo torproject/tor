@@ -9,7 +9,10 @@
  **/
 
 #include "orconfig.h"
+#include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
+
+#include "or/or_state_st.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -148,7 +151,8 @@ test_bad_onion_handshake(void *arg)
   memset(junk_buf, 0, sizeof(junk_buf));
   crypto_pk_obsolete_public_hybrid_encrypt(pk,
                                junk_buf2, TAP_ONIONSKIN_CHALLENGE_LEN,
-                               junk_buf, DH_KEY_LEN, PK_PKCS1_OAEP_PADDING, 1);
+                               junk_buf, DH1024_KEY_LEN,
+                               PK_PKCS1_OAEP_PADDING, 1);
   tt_int_op(-1, OP_EQ,
             onion_skin_TAP_server_handshake(junk_buf2, pk, NULL,
                                             s_buf, s_keys, 40));

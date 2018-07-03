@@ -15,11 +15,12 @@
 #include "or/or.h"
 #include "or/hs_service.h"
 
-typedef struct rend_intro_cell_s rend_intro_cell_t;
+typedef struct rend_intro_cell_t rend_intro_cell_t;
+struct config_line_t;
 
 /* This can be used for both INTRODUCE1 and INTRODUCE2 */
 
-struct rend_intro_cell_s {
+struct rend_intro_cell_t {
   /* Is this an INTRODUCE1 or INTRODUCE2? (set to 1 or 2) */
   uint8_t type;
   /* Public key digest */
@@ -58,7 +59,7 @@ struct rend_intro_cell_s {
   /* Rendezvous cookie */
   uint8_t rc[REND_COOKIE_LEN];
   /* Diffie-Hellman data */
-  uint8_t dh[DH_KEY_LEN];
+  uint8_t dh[DH1024_KEY_LEN];
 };
 
 #ifdef RENDSERVICE_PRIVATE
@@ -138,7 +139,7 @@ STATIC void rend_service_prune_list_impl_(void);
 #endif /* defined(RENDSERVICE_PRIVATE) */
 
 int rend_num_services(void);
-int rend_config_service(const config_line_t *line_,
+int rend_config_service(const struct config_line_t *line_,
                         const or_options_t *options,
                         hs_service_config_t *config);
 void rend_service_prune_list(void);
@@ -218,4 +219,3 @@ int rend_service_reveal_startup_time(const or_options_t *options);
 int rend_service_non_anonymous_mode_enabled(const or_options_t *options);
 
 #endif /* !defined(TOR_RENDSERVICE_H) */
-

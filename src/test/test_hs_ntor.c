@@ -9,6 +9,8 @@
 #include "test/test.h"
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 #include "or/hs_ntor.h"
 
@@ -111,4 +113,3 @@ struct testcase_t hs_ntor_tests[] = {
 
   END_OF_TESTCASES
 };
-

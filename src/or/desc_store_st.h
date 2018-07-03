@@ -7,6 +7,12 @@
 #ifndef DESC_STORE_ST_H
 #define DESC_STORE_ST_H
 
+/** Allowable types of desc_store_t. */
+typedef enum store_type_t {
+  ROUTER_STORE = 0,
+  EXTRAINFO_STORE = 1
+} store_type_t;
+
 /** A 'store' is a set of descriptors saved on disk, with accompanying
  * journal, mmaped as needed, rebuilt as needed. */
 struct desc_store_t {
@@ -31,4 +37,3 @@ struct desc_store_t {
 };
 
 #endif
-

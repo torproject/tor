@@ -24,6 +24,11 @@
 
 #include "or/dir_server_st.h"
 #include "or/networkstatus_st.h"
+#include "or/or_state_st.h"
+
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 
 static authority_cert_t *mock_cert;
 
@@ -1393,4 +1398,3 @@ struct testcase_t sr_tests[] = {
     NULL, NULL },
   END_OF_TESTCASES
 };
-

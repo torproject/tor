@@ -12,7 +12,37 @@
 #ifndef TOR_CONNECTION_OR_H
 #define TOR_CONNECTION_OR_H
 
+struct ed25519_public_key_t;
+struct ed25519_keypair_t;
+
 or_connection_t *TO_OR_CONN(connection_t *);
+
+#define OR_CONN_STATE_MIN_ 1
+/** State for a connection to an OR: waiting for connect() to finish. */
+#define OR_CONN_STATE_CONNECTING 1
+/** State for a connection to an OR: waiting for proxy handshake to complete */
+#define OR_CONN_STATE_PROXY_HANDSHAKING 2
+/** State for an OR connection client: SSL is handshaking, not done
+ * yet. */
+#define OR_CONN_STATE_TLS_HANDSHAKING 3
+/** State for a connection to an OR: We're doing a second SSL handshake for
+ * renegotiation purposes. (V2 handshake only.) */
+#define OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING 4
+/** State for a connection at an OR: We're waiting for the client to
+ * renegotiate (to indicate a v2 handshake) or send a versions cell (to
+ * indicate a v3 handshake) */
+#define OR_CONN_STATE_TLS_SERVER_RENEGOTIATING 5
+/** State for an OR connection: We're done with our SSL handshake, we've done
+ * renegotiation, but we haven't yet negotiated link protocol versions and
+ * sent a netinfo cell. */
+#define OR_CONN_STATE_OR_HANDSHAKING_V2 6
+/** State for an OR connection: We're done with our SSL handshake, but we
+ * haven't yet negotiated link protocol versions, done a V3 handshake, and
+ * sent a netinfo cell. */
+#define OR_CONN_STATE_OR_HANDSHAKING_V3 7
+/** State for an OR connection: Ready to send/receive cells. */
+#define OR_CONN_STATE_OPEN 8
+#define OR_CONN_STATE_MAX_ 8
 
 void connection_or_clear_identity(or_connection_t *conn);
 void connection_or_clear_identity_map(void);
@@ -42,7 +72,7 @@ MOCK_DECL(or_connection_t *,
           connection_or_connect,
           (const tor_addr_t *addr, uint16_t port,
            const char *id_digest,
-           const ed25519_public_key_t *ed_id,
+           const struct ed25519_public_key_t *ed_id,
            channel_tls_t *chan));
 
 void connection_or_close_normally(or_connection_t *orconn, int flush);
@@ -60,14 +90,14 @@ void connection_or_set_canonical(or_connection_t *or_conn,
 int connection_init_or_handshake_state(or_connection_t *conn,
                                        int started_here);
 void connection_or_init_conn_from_address(or_connection_t *conn,
-                                          const tor_addr_t *addr,
-                                          uint16_t port,
-                                          const char *rsa_id_digest,
-                                          const ed25519_public_key_t *ed_id,
-                                          int started_here);
+                                    const tor_addr_t *addr,
+                                    uint16_t port,
+                                    const char *rsa_id_digest,
+                                    const struct ed25519_public_key_t *ed_id,
+                                    int started_here);
 int connection_or_client_learned_peer_id(or_connection_t *conn,
                               const uint8_t *rsa_peer_id,
-                              const ed25519_public_key_t *ed_peer_id);
+                              const struct ed25519_public_key_t *ed_peer_id);
 time_t connection_or_client_used(or_connection_t *conn);
 MOCK_DECL(int, connection_or_get_num_circuits, (or_connection_t *conn));
 void or_handshake_state_free_(or_handshake_state_t *state);
@@ -94,11 +124,12 @@ int connection_or_send_auth_challenge_cell(or_connection_t *conn);
 int authchallenge_type_is_supported(uint16_t challenge_type);
 int authchallenge_type_is_better(uint16_t challenge_type_a,
                                  uint16_t challenge_type_b);
-var_cell_t *connection_or_compute_authenticate_cell_body(or_connection_t *conn,
-                                       const int authtype,
-                                       crypto_pk_t *signing_key,
-                                       const ed25519_keypair_t *ed_signing_key,
-                                       int server);
+var_cell_t *connection_or_compute_authenticate_cell_body(
+                              or_connection_t *conn,
+                              const int authtype,
+                              crypto_pk_t *signing_key,
+                              const struct ed25519_keypair_t *ed_signing_key,
+                              int server);
 MOCK_DECL(int,connection_or_send_authenticate_cell,
           (or_connection_t *conn, int type));
 
@@ -132,4 +163,3 @@ extern int certs_cell_ed25519_disabled_for_testing;
 #endif
 
 #endif /* !defined(TOR_CONNECTION_OR_H) */
-

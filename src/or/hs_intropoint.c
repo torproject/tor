@@ -15,6 +15,7 @@
 #include "or/relay.h"
 #include "or/rendmid.h"
 #include "or/rephist.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 /* Trunnel */
 #include "trunnel/ed25519_cert.h"
@@ -611,4 +612,3 @@ hs_intropoint_clear(hs_intropoint_t *ip)
   smartlist_free(ip->link_specifiers);
   memset(ip, 0, sizeof(hs_intropoint_t));
 }
-

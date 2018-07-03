@@ -9,6 +9,8 @@
 #define STATEFILE_PRIVATE
 #include "or/statefile.h"
 
+#include "or/or_state_st.h"
+
 #define NS_MODULE accounting
 
 #define NS_SUBMODULE limits
@@ -102,4 +104,3 @@ struct testcase_t accounting_tests[] = {
   { "bwlimits", test_accounting_limits, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

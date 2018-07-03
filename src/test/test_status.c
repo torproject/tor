@@ -24,8 +24,10 @@
 #include "or/main.h"
 #include "or/nodelist.h"
 #include "or/statefile.h"
+#include "lib/tls/tortls.h"
 
 #include "or/origin_circuit_st.h"
+#include "or/or_state_st.h"
 #include "or/routerinfo_st.h"
 
 #include "test/test.h"
@@ -1097,4 +1099,3 @@ struct testcase_t status_tests[] = {
   TEST_CASE_ASPECT(log_heartbeat, tls_write_overhead),
   END_OF_TESTCASES
 };
-

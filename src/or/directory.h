@@ -13,8 +13,82 @@
 #define TOR_DIRECTORY_H
 
 #include "or/hs_ident.h"
+enum compress_method_t;
 
 dir_connection_t *TO_DIR_CONN(connection_t *c);
+
+#define DIR_CONN_STATE_MIN_ 1
+/** State for connection to directory server: waiting for connect(). */
+#define DIR_CONN_STATE_CONNECTING 1
+/** State for connection to directory server: sending HTTP request. */
+#define DIR_CONN_STATE_CLIENT_SENDING 2
+/** State for connection to directory server: reading HTTP response. */
+#define DIR_CONN_STATE_CLIENT_READING 3
+/** State for connection to directory server: happy and finished. */
+#define DIR_CONN_STATE_CLIENT_FINISHED 4
+/** State for connection at directory server: waiting for HTTP request. */
+#define DIR_CONN_STATE_SERVER_COMMAND_WAIT 5
+/** State for connection at directory server: sending HTTP response. */
+#define DIR_CONN_STATE_SERVER_WRITING 6
+#define DIR_CONN_STATE_MAX_ 6
+
+#define DIR_PURPOSE_MIN_ 4
+/** A connection to a directory server: set after a v2 rendezvous
+ * descriptor is downloaded. */
+#define DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2 4
+/** A connection to a directory server: download one or more server
+ * descriptors. */
+#define DIR_PURPOSE_FETCH_SERVERDESC 6
+/** A connection to a directory server: download one or more extra-info
+ * documents. */
+#define DIR_PURPOSE_FETCH_EXTRAINFO 7
+/** A connection to a directory server: upload a server descriptor. */
+#define DIR_PURPOSE_UPLOAD_DIR 8
+/** A connection to a directory server: upload a v3 networkstatus vote. */
+#define DIR_PURPOSE_UPLOAD_VOTE 10
+/** A connection to a directory server: upload a v3 consensus signature */
+#define DIR_PURPOSE_UPLOAD_SIGNATURES 11
+/** A connection to a directory server: download one or more v3 networkstatus
+ * votes. */
+#define DIR_PURPOSE_FETCH_STATUS_VOTE 12
+/** A connection to a directory server: download a v3 detached signatures
+ * object for a consensus. */
+#define DIR_PURPOSE_FETCH_DETACHED_SIGNATURES 13
+/** A connection to a directory server: download a v3 networkstatus
+ * consensus. */
+#define DIR_PURPOSE_FETCH_CONSENSUS 14
+/** A connection to a directory server: download one or more directory
+ * authority certificates. */
+#define DIR_PURPOSE_FETCH_CERTIFICATE 15
+
+/** Purpose for connection at a directory server. */
+#define DIR_PURPOSE_SERVER 16
+/** A connection to a hidden service directory server: upload a v2 rendezvous
+ * descriptor. */
+#define DIR_PURPOSE_UPLOAD_RENDDESC_V2 17
+/** A connection to a hidden service directory server: download a v2 rendezvous
+ * descriptor. */
+#define DIR_PURPOSE_FETCH_RENDDESC_V2 18
+/** A connection to a directory server: download a microdescriptor. */
+#define DIR_PURPOSE_FETCH_MICRODESC 19
+/** A connection to a hidden service directory: upload a v3 descriptor. */
+#define DIR_PURPOSE_UPLOAD_HSDESC 20
+/** A connection to a hidden service directory: fetch a v3 descriptor. */
+#define DIR_PURPOSE_FETCH_HSDESC 21
+/** A connection to a directory server: set after a hidden service descriptor
+ * is downloaded. */
+#define DIR_PURPOSE_HAS_FETCHED_HSDESC 22
+#define DIR_PURPOSE_MAX_ 22
+
+/** True iff <b>p</b> is a purpose corresponding to uploading
+ * data to a directory server. */
+#define DIR_PURPOSE_IS_UPLOAD(p)                \
+  ((p)==DIR_PURPOSE_UPLOAD_DIR ||               \
+   (p)==DIR_PURPOSE_UPLOAD_VOTE ||              \
+   (p)==DIR_PURPOSE_UPLOAD_SIGNATURES ||        \
+   (p)==DIR_PURPOSE_UPLOAD_RENDDESC_V2 ||       \
+   (p)==DIR_PURPOSE_UPLOAD_HSDESC)
+
 int directories_have_accepted_server_descriptor(void);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   dirinfo_type_t type, const char *payload,
@@ -90,7 +164,7 @@ void directory_request_add_header(directory_request_t *req,
 MOCK_DECL(void, directory_initiate_request, (directory_request_t *request));
 
 int parse_http_response(const char *headers, int *code, time_t *date,
-                        compress_method_t *compression, char **response);
+                        enum compress_method_t *compression, char **response);
 int parse_http_command(const char *headers,
                        char **command_out, char **url_out);
 char *http_get_header(const char *headers, const char *which);
@@ -189,7 +263,7 @@ struct directory_request_t {
   /** Hidden-service-specific information v2. */
   const rend_data_t *rend_query;
   /** Extra headers to append to the request */
-  config_line_t *additional_headers;
+  struct config_line_t *additional_headers;
   /** Hidden-service-specific information for v3+. */
   const hs_ident_dir_conn_t *hs_ident;
   /** Used internally to directory.c: gets informed when the attempt to
@@ -203,8 +277,10 @@ STATIC int handle_get_hs_descriptor_v3(dir_connection_t *conn,
                                        const struct get_handler_args_t *args);
 STATIC int directory_handle_command(dir_connection_t *conn);
 STATIC char *accept_encoding_header(void);
-STATIC int allowed_anonymous_connection_compression_method(compress_method_t);
-STATIC void warn_disallowed_anonymous_compression_method(compress_method_t);
+STATIC int allowed_anonymous_connection_compression_method(
+                                               enum compress_method_t);
+STATIC void warn_disallowed_anonymous_compression_method(
+                                               enum compress_method_t);
 
 STATIC int handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
                                           const response_handler_args_t *args);
@@ -239,7 +315,8 @@ STATIC int handle_post_hs_descriptor(const char *url, const char *body);
 STATIC char* authdir_type_to_string(dirinfo_type_t auth);
 STATIC const char * dir_conn_purpose_to_string(int purpose);
 STATIC int should_use_directory_guards(const or_options_t *options);
-STATIC compression_level_t choose_compression_level(ssize_t n_bytes);
+enum compression_level_t;
+STATIC enum compression_level_t choose_compression_level(ssize_t n_bytes);
 STATIC int find_dl_min_delay(const download_status_t *dls,
                              const or_options_t *options);
 
@@ -268,4 +345,3 @@ STATIC unsigned parse_accept_encoding_header(const char *h);
 #endif /* defined(TOR_UNIT_TESTS) || defined(DIRECTORY_PRIVATE) */
 
 #endif /* !defined(TOR_DIRECTORY_H) */
-

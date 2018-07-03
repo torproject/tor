@@ -29,6 +29,7 @@
 
 #include "or/or.h"
 #include "or/onion_fast.h"
+#include "lib/crypt_ops/crypto_hkdf.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 
@@ -141,4 +142,3 @@ fast_client_handshake(const fast_handshake_state_t *handshake_state,
   tor_free(out);
   return r;
 }
-

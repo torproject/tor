@@ -8,6 +8,21 @@
 #define CRYPT_PATH_ST_H
 
 #include "or/relay_crypto_st.h"
+struct crypto_dh_t;
+
+#define CRYPT_PATH_MAGIC 0x70127012u
+
+struct fast_handshake_state_t;
+struct ntor_handshake_state_t;
+struct crypto_dh_t;
+struct onion_handshake_state_t {
+  uint16_t tag;
+  union {
+    struct fast_handshake_state_t *fast;
+    struct crypto_dh_t *tap;
+    struct ntor_handshake_state_t *ntor;
+  } u;
+};
 
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */
@@ -23,7 +38,7 @@ struct crypt_path_t {
   onion_handshake_state_t handshake_state;
   /** Diffie-hellman handshake state for performing an introduction
    * operations */
-  crypto_dh_t *rend_dh_handshake_state;
+  struct crypto_dh_t *rend_dh_handshake_state;
 
   /** Negotiated key material shared with the OR at this step. */
   char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
@@ -53,4 +68,3 @@ struct crypt_path_t {
 };
 
 #endif
-

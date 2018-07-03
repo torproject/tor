@@ -12,7 +12,92 @@
 #ifndef TOR_CONTROL_H
 #define TOR_CONTROL_H
 
+/** Used to indicate the type of a circuit event passed to the controller.
+ * The various types are defined in control-spec.txt */
+typedef enum circuit_status_event_t {
+  CIRC_EVENT_LAUNCHED = 0,
+  CIRC_EVENT_BUILT    = 1,
+  CIRC_EVENT_EXTENDED = 2,
+  CIRC_EVENT_FAILED   = 3,
+  CIRC_EVENT_CLOSED   = 4,
+} circuit_status_event_t;
+
+/** Used to indicate the type of a CIRC_MINOR event passed to the controller.
+ * The various types are defined in control-spec.txt . */
+typedef enum circuit_status_minor_event_t {
+  CIRC_MINOR_EVENT_PURPOSE_CHANGED,
+  CIRC_MINOR_EVENT_CANNIBALIZED,
+} circuit_status_minor_event_t;
+
+/** Used to indicate the type of a stream event passed to the controller.
+ * The various types are defined in control-spec.txt */
+typedef enum stream_status_event_t {
+  STREAM_EVENT_SENT_CONNECT = 0,
+  STREAM_EVENT_SENT_RESOLVE = 1,
+  STREAM_EVENT_SUCCEEDED    = 2,
+  STREAM_EVENT_FAILED       = 3,
+  STREAM_EVENT_CLOSED       = 4,
+  STREAM_EVENT_NEW          = 5,
+  STREAM_EVENT_NEW_RESOLVE  = 6,
+  STREAM_EVENT_FAILED_RETRIABLE = 7,
+  STREAM_EVENT_REMAP        = 8
+} stream_status_event_t;
+
+/** Used to indicate the type of an OR connection event passed to the
+ * controller.  The various types are defined in control-spec.txt */
+typedef enum or_conn_status_event_t {
+  OR_CONN_EVENT_LAUNCHED     = 0,
+  OR_CONN_EVENT_CONNECTED    = 1,
+  OR_CONN_EVENT_FAILED       = 2,
+  OR_CONN_EVENT_CLOSED       = 3,
+  OR_CONN_EVENT_NEW          = 4,
+} or_conn_status_event_t;
+
+/** Used to indicate the type of a buildtime event */
+typedef enum buildtimeout_set_event_t {
+  BUILDTIMEOUT_SET_EVENT_COMPUTED  = 0,
+  BUILDTIMEOUT_SET_EVENT_RESET     = 1,
+  BUILDTIMEOUT_SET_EVENT_SUSPENDED = 2,
+  BUILDTIMEOUT_SET_EVENT_DISCARD = 3,
+  BUILDTIMEOUT_SET_EVENT_RESUME = 4
+} buildtimeout_set_event_t;
+
+/** Enum describing various stages of bootstrapping, for use with controller
+ * bootstrap status events. The values range from 0 to 100. */
+typedef enum {
+  BOOTSTRAP_STATUS_UNDEF=-1,
+  BOOTSTRAP_STATUS_STARTING=0,
+  BOOTSTRAP_STATUS_CONN_DIR=5,
+  BOOTSTRAP_STATUS_HANDSHAKE=-2,
+  BOOTSTRAP_STATUS_HANDSHAKE_DIR=10,
+  BOOTSTRAP_STATUS_ONEHOP_CREATE=15,
+  BOOTSTRAP_STATUS_REQUESTING_STATUS=20,
+  BOOTSTRAP_STATUS_LOADING_STATUS=25,
+  BOOTSTRAP_STATUS_LOADING_KEYS=40,
+  BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS=45,
+  BOOTSTRAP_STATUS_LOADING_DESCRIPTORS=50,
+  BOOTSTRAP_STATUS_CONN_OR=80,
+  BOOTSTRAP_STATUS_HANDSHAKE_OR=85,
+  BOOTSTRAP_STATUS_CIRCUIT_CREATE=90,
+  BOOTSTRAP_STATUS_DONE=100
+} bootstrap_status_t;
+
 control_connection_t *TO_CONTROL_CONN(connection_t *);
+
+#define CONTROL_CONN_STATE_MIN_ 1
+/** State for a control connection: Authenticated and accepting v1 commands. */
+#define CONTROL_CONN_STATE_OPEN 1
+/** State for a control connection: Waiting for authentication; speaking
+ * protocol v1. */
+#define CONTROL_CONN_STATE_NEEDAUTH 2
+#define CONTROL_CONN_STATE_MAX_ 2
+
+/** Reason for remapping an AP connection's address: we have a cached
+ * answer. */
+#define REMAP_STREAM_SOURCE_CACHE 1
+/** Reason for remapping an AP connection's address: the exit node told us an
+ * answer. */
+#define REMAP_STREAM_SOURCE_EXIT 2
 
 void control_initialize_event_queue(void);
 
@@ -99,7 +184,8 @@ int control_event_signal(uintptr_t signal);
 
 int init_control_cookie_authentication(int enabled);
 char *get_controller_cookie_file_name(void);
-smartlist_t *decode_hashed_passwords(config_line_t *passwords);
+struct config_line_t;
+smartlist_t *decode_hashed_passwords(struct config_line_t *passwords);
 void disable_control_logging(void);
 void enable_control_logging(void);
 
@@ -162,6 +248,8 @@ void control_event_hs_descriptor_content(const char *onion_address,
 void control_free_all(void);
 
 #ifdef CONTROL_PRIVATE
+#include "lib/crypt_ops/crypto_ed25519.h"
+
 /* Recognized asynchronous event types.  It's okay to expand this list
  * because it is used both as a list of v0 event types, and as indices
  * into the bitfield to determine which controllers want which events.
@@ -325,4 +413,3 @@ STATIC int getinfo_helper_current_time(
 #endif /* defined(CONTROL_PRIVATE) */
 
 #endif /* !defined(TOR_CONTROL_H) */
-

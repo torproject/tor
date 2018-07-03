@@ -116,6 +116,10 @@
 #include "lib/sandbox/sandbox.h"
 #include "lib/fs/lockfile.h"
 #include "lib/net/buffers_net.h"
+#include "lib/tls/tortls.h"
+#include "common/compat_libevent.h"
+#include "lib/encoding/confline.h"
+#include "common/timers.h"
 
 #include <event2/event.h>
 
@@ -127,9 +131,14 @@
 #include "or/entry_connection_st.h"
 #include "or/networkstatus_st.h"
 #include "or/or_connection_st.h"
+#include "or/or_state_st.h"
 #include "or/port_cfg_st.h"
 #include "or/routerinfo_st.h"
 #include "or/socks_request_st.h"
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 #ifdef HAVE_SYSTEMD
 #   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)

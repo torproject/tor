@@ -13,6 +13,10 @@
 #define TOR_ONION_H
 
 struct create_cell_t;
+struct curve25519_keypair_t;
+struct curve25519_public_key_t;
+#include "lib/crypt_ops/crypto_ed25519.h"
+
 int onion_pending_add(or_circuit_t *circ, struct create_cell_t *onionskin);
 or_circuit_t *onion_next_task(struct create_cell_t **onionskin_out);
 int onion_num_pending(uint16_t handshake_type);
@@ -23,8 +27,8 @@ typedef struct server_onion_keys_t {
   uint8_t my_identity[DIGEST_LEN];
   crypto_pk_t *onion_key;
   crypto_pk_t *last_onion_key;
-  di_digest256_map_t *curve25519_key_map;
-  curve25519_keypair_t *junk_keypair;
+  struct di_digest256_map_t *curve25519_key_map;
+  struct curve25519_keypair_t *junk_keypair;
 } server_onion_keys_t;
 
 #define MAX_ONIONSKIN_CHALLENGE_LEN 255
@@ -88,7 +92,7 @@ typedef struct extend_cell_t {
   /** Identity fingerprint of the node we're conecting to.*/
   uint8_t node_id[DIGEST_LEN];
   /** Ed25519 public identity key. Zero if not set. */
-  ed25519_public_key_t ed_pubkey;
+  struct ed25519_public_key_t ed_pubkey;
   /** The "create cell" embedded in this extend cell. Note that unlike the
    * create cells we generate ourself, this once can have a handshake type we
    * don't recognize. */
@@ -122,4 +126,3 @@ int extended_cell_format(uint8_t *command_out, uint16_t *len_out,
                          uint8_t *payload_out, const extended_cell_t *cell_in);
 
 #endif /* !defined(TOR_ONION_H) */
-

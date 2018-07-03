@@ -9,11 +9,11 @@
 #ifndef TOR_REPLAYCACHE_H
 #define TOR_REPLAYCACHE_H
 
-typedef struct replaycache_s replaycache_t;
+typedef struct replaycache_t replaycache_t;
 
 #ifdef REPLAYCACHE_PRIVATE
 
-struct replaycache_s {
+struct replaycache_t {
   /* Scrub interval */
   time_t scrub_interval;
   /* Last scrubbed */
@@ -65,4 +65,3 @@ int replaycache_add_test_and_elapsed(
 void replaycache_scrub_if_needed(replaycache_t *r);
 
 #endif /* !defined(TOR_REPLAYCACHE_H) */
-

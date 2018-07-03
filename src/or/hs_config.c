@@ -29,6 +29,8 @@
 #include "or/hs_config.h"
 #include "or/hs_service.h"
 #include "or/rendservice.h"
+#include "lib/encoding/confline.h"
+#include "or/or_options_st.h"
 
 /* Using the given list of services, stage them into our global state. Every
  * service version are handled. This function can remove entries in the given
@@ -587,4 +589,3 @@ hs_config_service_all(const or_options_t *options, int validate_only)
   /* Tor main should call the free all function on error. */
   return ret;
 }
-

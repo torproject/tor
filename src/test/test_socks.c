@@ -6,6 +6,7 @@
 #include "or/or.h"
 #include "lib/container/buffers.h"
 #include "or/config.h"
+#include "or/connection.h"
 #include "or/proto_socks.h"
 #include "test/test.h"
 #include "test/log_test_helpers.h"

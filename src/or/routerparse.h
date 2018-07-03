@@ -12,6 +12,22 @@
 #ifndef TOR_ROUTERPARSE_H
 #define TOR_ROUTERPARSE_H
 
+/** Possible statuses of a version of Tor, given opinions from the directory
+ * servers. */
+typedef enum version_status_t {
+  VS_RECOMMENDED=0, /**< This version is listed as recommended. */
+  VS_OLD=1, /**< This version is older than any recommended version. */
+  VS_NEW=2, /**< This version is newer than any recommended version. */
+  VS_NEW_IN_SERIES=3, /**< This version is newer than any recommended version
+                       * in its series, but later recommended versions exist.
+                       */
+  VS_UNRECOMMENDED=4, /**< This version is not recommended (general case). */
+  VS_EMPTY=5, /**< The version list was empty; no agreed-on versions. */
+  VS_UNKNOWN, /**< We have no idea. */
+} version_status_t;
+
+enum networkstatus_type_t;
+
 int router_get_router_hash(const char *s, size_t s_len, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_networkstatus_v3_hashes(const char *s,
@@ -65,8 +81,8 @@ void dump_distinct_digest_count(int severity);
 int compare_vote_routerstatus_entries(const void **_a, const void **_b);
 int networkstatus_verify_bw_weights(networkstatus_t *ns, int);
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
-                                                 const char **eos_out,
-                                                 networkstatus_type_t ns_type);
+                                           const char **eos_out,
+                                           enum networkstatus_type_t ns_type);
 ns_detached_signatures_t *networkstatus_parse_detached_signatures(
                                           const char *s, const char *eos);
 
@@ -143,4 +159,3 @@ STATIC void summarize_protover_flags(protover_summary_flags_t *out,
 #define ED_DESC_SIGNATURE_PREFIX "Tor router descriptor signature v1"
 
 #endif /* !defined(TOR_ROUTERPARSE_H) */
-

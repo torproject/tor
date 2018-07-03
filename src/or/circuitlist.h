@@ -15,6 +15,147 @@
 #include "lib/testsupport/testsupport.h"
 #include "or/hs_ident.h"
 
+/** Circuit state: I'm the origin, still haven't done all my handshakes. */
+#define CIRCUIT_STATE_BUILDING 0
+/** Circuit state: Waiting to process the onionskin. */
+#define CIRCUIT_STATE_ONIONSKIN_PENDING 1
+/** Circuit state: I'd like to deliver a create, but my n_chan is still
+ * connecting. */
+#define CIRCUIT_STATE_CHAN_WAIT 2
+/** Circuit state: the circuit is open but we don't want to actually use it
+ * until we find out if a better guard will be available.
+ */
+#define CIRCUIT_STATE_GUARD_WAIT 3
+/** Circuit state: onionskin(s) processed, ready to send/receive cells. */
+#define CIRCUIT_STATE_OPEN 4
+
+#define CIRCUIT_PURPOSE_MIN_ 1
+
+/* these circuits were initiated elsewhere */
+#define CIRCUIT_PURPOSE_OR_MIN_ 1
+/** OR-side circuit purpose: normal circuit, at OR. */
+#define CIRCUIT_PURPOSE_OR 1
+/** OR-side circuit purpose: At OR, from the service, waiting for intro from
+ * clients. */
+#define CIRCUIT_PURPOSE_INTRO_POINT 2
+/** OR-side circuit purpose: At OR, from the client, waiting for the service.
+ */
+#define CIRCUIT_PURPOSE_REND_POINT_WAITING 3
+/** OR-side circuit purpose: At OR, both circuits have this purpose. */
+#define CIRCUIT_PURPOSE_REND_ESTABLISHED 4
+#define CIRCUIT_PURPOSE_OR_MAX_ 4
+
+/* these circuits originate at this node */
+
+/* here's how circ client-side purposes work:
+ *   normal circuits are C_GENERAL.
+ *   circuits that are c_introducing are either on their way to
+ *     becoming open, or they are open and waiting for a
+ *     suitable rendcirc before they send the intro.
+ *   circuits that are c_introduce_ack_wait have sent the intro,
+ *     but haven't gotten a response yet.
+ *   circuits that are c_establish_rend are either on their way
+ *     to becoming open, or they are open and have sent the
+ *     establish_rendezvous cell but haven't received an ack.
+ *   circuits that are c_rend_ready are open and have received a
+ *     rend ack, but haven't heard from the service yet. if they have a
+ *     buildstate->pending_final_cpath then they're expecting a
+ *     cell from the service, else they're not.
+ *   circuits that are c_rend_ready_intro_acked are open, and
+ *     some intro circ has sent its intro and received an ack.
+ *   circuits that are c_rend_joined are open, have heard from
+ *     the service, and are talking to it.
+ */
+/** Client-side circuit purpose: Normal circuit, with cpath. */
+#define CIRCUIT_PURPOSE_C_GENERAL 5
+#define CIRCUIT_PURPOSE_C_HS_MIN_ 6
+/** Client-side circuit purpose: at the client, connecting to intro point. */
+#define CIRCUIT_PURPOSE_C_INTRODUCING 6
+/** Client-side circuit purpose: at the client, sent INTRODUCE1 to intro point,
+ * waiting for ACK/NAK. */
+#define CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT 7
+/** Client-side circuit purpose: at the client, introduced and acked, closing.
+ */
+#define CIRCUIT_PURPOSE_C_INTRODUCE_ACKED 8
+/** Client-side circuit purpose: at the client, waiting for ack. */
+#define CIRCUIT_PURPOSE_C_ESTABLISH_REND 9
+/** Client-side circuit purpose: at the client, waiting for the service. */
+#define CIRCUIT_PURPOSE_C_REND_READY 10
+/** Client-side circuit purpose: at the client, waiting for the service,
+ * INTRODUCE has been acknowledged. */
+#define CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED 11
+/** Client-side circuit purpose: at the client, rendezvous established. */
+#define CIRCUIT_PURPOSE_C_REND_JOINED 12
+/** This circuit is used for getting hsdirs */
+#define CIRCUIT_PURPOSE_C_HSDIR_GET 13
+#define CIRCUIT_PURPOSE_C_HS_MAX_ 13
+/** This circuit is used for build time measurement only */
+#define CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT 14
+#define CIRCUIT_PURPOSE_C_MAX_ 14
+
+#define CIRCUIT_PURPOSE_S_HS_MIN_ 15
+/** Hidden-service-side circuit purpose: at the service, waiting for
+ * introductions. */
+#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 15
+/** Hidden-service-side circuit purpose: at the service, successfully
+ * established intro. */
+#define CIRCUIT_PURPOSE_S_INTRO 16
+/** Hidden-service-side circuit purpose: at the service, connecting to rend
+ * point. */
+#define CIRCUIT_PURPOSE_S_CONNECT_REND 17
+/** Hidden-service-side circuit purpose: at the service, rendezvous
+ * established. */
+#define CIRCUIT_PURPOSE_S_REND_JOINED 18
+/** This circuit is used for uploading hsdirs */
+#define CIRCUIT_PURPOSE_S_HSDIR_POST 19
+#define CIRCUIT_PURPOSE_S_HS_MAX_ 19
+
+/** A testing circuit; not meant to be used for actual traffic. */
+#define CIRCUIT_PURPOSE_TESTING 20
+/** A controller made this circuit and Tor should not use it. */
+#define CIRCUIT_PURPOSE_CONTROLLER 21
+/** This circuit is used for path bias probing only */
+#define CIRCUIT_PURPOSE_PATH_BIAS_TESTING 22
+
+/** This circuit is used for vanguards/restricted paths.
+ *
+ *  This type of circuit is *only* created preemptively and never
+ *  on-demand. When an HS operation needs to take place (e.g. connect to an
+ *  intro point), these circuits are then cannibalized and repurposed to the
+ *  actual needed HS purpose. */
+#define CIRCUIT_PURPOSE_HS_VANGUARDS 23
+
+#define CIRCUIT_PURPOSE_MAX_ 23
+/** A catch-all for unrecognized purposes. Currently we don't expect
+ * to make or see any circuits with this purpose. */
+#define CIRCUIT_PURPOSE_UNKNOWN 255
+
+/** True iff the circuit purpose <b>p</b> is for a circuit that
+ * originated at this node. */
+#define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>CIRCUIT_PURPOSE_OR_MAX_)
+/** True iff the circuit purpose <b>p</b> is for a circuit that originated
+ * here to serve as a client.  (Hidden services don't count here.) */
+#define CIRCUIT_PURPOSE_IS_CLIENT(p)  \
+  ((p)> CIRCUIT_PURPOSE_OR_MAX_ &&    \
+   (p)<=CIRCUIT_PURPOSE_C_MAX_)
+/** True iff the circuit_t <b>c</b> is actually an origin_circuit_t. */
+#define CIRCUIT_IS_ORIGIN(c) (CIRCUIT_PURPOSE_IS_ORIGIN((c)->purpose))
+/** True iff the circuit purpose <b>p</b> is for an established rendezvous
+ * circuit. */
+#define CIRCUIT_PURPOSE_IS_ESTABLISHED_REND(p) \
+  ((p) == CIRCUIT_PURPOSE_C_REND_JOINED ||     \
+   (p) == CIRCUIT_PURPOSE_S_REND_JOINED)
+/** True iff the circuit_t c is actually an or_circuit_t */
+#define CIRCUIT_IS_ORCIRC(c) (((circuit_t *)(c))->magic == OR_CIRCUIT_MAGIC)
+
+/** True iff this circuit purpose should count towards the global
+ * pending rate limit (set by MaxClientCircuitsPending). We count all
+ * general purpose circuits, as well as the first step of client onion
+ * service connections (HSDir gets). */
+#define CIRCUIT_PURPOSE_COUNTS_TOWARDS_MAXPENDING(p) \
+    ((p) == CIRCUIT_PURPOSE_C_GENERAL || \
+     (p) == CIRCUIT_PURPOSE_C_HSDIR_GET)
+
 /** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Assert
  * if the cast is impossible. */
 or_circuit_t *TO_OR_CIRCUIT(circuit_t *);
@@ -104,4 +245,3 @@ STATIC uint32_t circuit_max_queued_item_age(const circuit_t *c, uint32_t now);
 #endif /* defined(CIRCUITLIST_PRIVATE) */
 
 #endif /* !defined(TOR_CIRCUITLIST_H) */
-

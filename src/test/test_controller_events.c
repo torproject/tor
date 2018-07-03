@@ -7,6 +7,7 @@
 #include "or/or.h"
 #include "or/channel.h"
 #include "or/channeltls.h"
+#include "or/circuitlist.h"
 #include "or/connection.h"
 #include "or/control.h"
 #include "test/test.h"
@@ -331,4 +332,3 @@ struct testcase_t controller_event_tests[] = {
   TEST(event_mask, TT_FORK),
   END_OF_TESTCASES
 };
-

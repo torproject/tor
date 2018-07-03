@@ -21,6 +21,9 @@
 #include "or/shared_random_client.h"
 #include "or/dirauth/shared_random_state.h"
 #include "or/voting_schedule.h"
+#include "lib/encoding/confline.h"
+
+#include "or/or_state_st.h"
 
 /* Default filename of the shared random state on disk. */
 static const char default_fname[] = "sr-state";
@@ -1321,4 +1324,3 @@ get_sr_state(void)
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
-

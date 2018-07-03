@@ -42,9 +42,11 @@
 #include "or/circuituse.h"
 #include "lib/math/fp.h"
 #include "lib/time/tvdiff.h"
+#include "lib/encoding/confline.h"
 
 #include "or/crypt_path_st.h"
 #include "or/origin_circuit_st.h"
+#include "or/or_state_st.h"
 
 #undef log
 #include <math.h>

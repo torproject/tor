@@ -14,6 +14,10 @@
 #include "test/test.h"
 #include "common/util.h"
 
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 #ifdef _WIN32
 #define mkdir(a,b) mkdir(a)
 #define tt_int_op_nowin(a,op,b) do { (void)(a); (void)(b); } while (0)
@@ -146,4 +150,3 @@ struct testcase_t checkdir_tests[] = {
   CHECKDIR(perms, TT_FORK),
   END_OF_TESTCASES
 };
-

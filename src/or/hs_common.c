@@ -1823,4 +1823,3 @@ hs_inc_rdv_stream_counter(origin_circuit_t *circ)
     tor_assert_nonfatal_unreached();
   }
 }
-

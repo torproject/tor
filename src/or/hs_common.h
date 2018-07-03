@@ -10,6 +10,11 @@
 #define TOR_HS_COMMON_H
 
 #include "or/or.h"
+#include "lib/defs/x25519_sizes.h"
+
+struct curve25519_public_key_t;
+struct ed25519_public_key_t;
+struct ed25519_keypair_t;
 
 /* Trunnel */
 #include "trunnel/ed25519_cert.h"
@@ -122,7 +127,7 @@
  * bigger than the 84 bytes needed for version 3 so we need to pad up to that
  * length so it is indistinguishable between versions. */
 #define HS_LEGACY_RENDEZVOUS_CELL_SIZE \
-  (REND_COOKIE_LEN + DH_KEY_LEN + DIGEST_LEN)
+  (REND_COOKIE_LEN + DH1024_KEY_LEN + DIGEST_LEN)
 
 /* Type of authentication key used by an introduction point. */
 typedef enum {
@@ -167,20 +172,20 @@ int hs_check_service_private_dir(const char *username, const char *path,
 int hs_get_service_max_rend_failures(void);
 
 char *hs_path_from_filename(const char *directory, const char *filename);
-void hs_build_address(const ed25519_public_key_t *key, uint8_t version,
+void hs_build_address(const struct ed25519_public_key_t *key, uint8_t version,
                       char *addr_out);
 int hs_address_is_valid(const char *address);
-int hs_parse_address(const char *address, ed25519_public_key_t *key_out,
+int hs_parse_address(const char *address, struct ed25519_public_key_t *key_out,
                      uint8_t *checksum_out, uint8_t *version_out);
 
-void hs_build_blinded_pubkey(const ed25519_public_key_t *pubkey,
+void hs_build_blinded_pubkey(const struct ed25519_public_key_t *pubkey,
                              const uint8_t *secret, size_t secret_len,
                              uint64_t time_period_num,
-                             ed25519_public_key_t *pubkey_out);
-void hs_build_blinded_keypair(const ed25519_keypair_t *kp,
+                             struct ed25519_public_key_t *pubkey_out);
+void hs_build_blinded_keypair(const struct ed25519_keypair_t *kp,
                               const uint8_t *secret, size_t secret_len,
                               uint64_t time_period_num,
-                              ed25519_keypair_t *kp_out);
+                              struct ed25519_keypair_t *kp_out);
 int hs_service_requires_uptime_circ(const smartlist_t *ports);
 
 void rend_data_free_(rend_data_t *data);
@@ -203,8 +208,8 @@ const uint8_t *rend_data_get_pk_digest(const rend_data_t *rend_data,
 
 routerstatus_t *pick_hsdir(const char *desc_id, const char *desc_id_base32);
 
-void hs_get_subcredential(const ed25519_public_key_t *identity_pk,
-                          const ed25519_public_key_t *blinded_pk,
+void hs_get_subcredential(const struct ed25519_public_key_t *identity_pk,
+                          const struct ed25519_public_key_t *blinded_pk,
                           uint8_t *subcred_out);
 
 uint64_t hs_get_previous_time_period_num(time_t now);
@@ -222,18 +227,18 @@ uint8_t *hs_get_current_srv(uint64_t time_period_num,
 uint8_t *hs_get_previous_srv(uint64_t time_period_num,
                              const networkstatus_t *ns);
 
-void hs_build_hsdir_index(const ed25519_public_key_t *identity_pk,
+void hs_build_hsdir_index(const struct ed25519_public_key_t *identity_pk,
                           const uint8_t *srv, uint64_t period_num,
                           uint8_t *hsdir_index_out);
 void hs_build_hs_index(uint64_t replica,
-                       const ed25519_public_key_t *blinded_pk,
+                       const struct ed25519_public_key_t *blinded_pk,
                        uint64_t period_num, uint8_t *hs_index_out);
 
 int32_t hs_get_hsdir_n_replicas(void);
 int32_t hs_get_hsdir_spread_fetch(void);
 int32_t hs_get_hsdir_spread_store(void);
 
-void hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
+void hs_get_responsible_hsdirs(const struct ed25519_public_key_t *blinded_pk,
                               uint64_t time_period_num,
                               int use_second_hsdir_index,
                               int for_fetching, smartlist_t *responsible_dirs);
@@ -254,8 +259,8 @@ void hs_inc_rdv_stream_counter(origin_circuit_t *circ);
 void hs_dec_rdv_stream_counter(origin_circuit_t *circ);
 
 extend_info_t *hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
-                                  const curve25519_public_key_t *onion_key,
-                                  int direct_conn);
+                          const struct curve25519_public_key_t *onion_key,
+                          int direct_conn);
 
 #ifdef HS_COMMON_PRIVATE
 
@@ -281,4 +286,3 @@ STATIC uint8_t *get_second_cached_disaster_srv(void);
 #endif /* defined(HS_COMMON_PRIVATE) */
 
 #endif /* !defined(TOR_HS_COMMON_H) */
-

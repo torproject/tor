@@ -37,6 +37,7 @@
 #include "or/networkstatus_st.h"
 #include "or/node_st.h"
 #include "or/origin_circuit_st.h"
+#include "or/or_state_st.h"
 #include "or/routerinfo_st.h"
 #include "or/routerstatus_st.h"
 
@@ -44,6 +45,7 @@
 #include "test/log_test_helpers.h"
 
 #include "lib/container/bloomfilt.h"
+#include "lib/encoding/confline.h"
 
 /* TODO:
  * choose_random_entry() test with state set.

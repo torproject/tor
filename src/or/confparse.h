@@ -65,9 +65,9 @@ typedef union {
   time_t *ISOTIME;
   smartlist_t **CSV;
   int *CSV_INTERVAL;
-  config_line_t **LINELIST;
-  config_line_t **LINELIST_S;
-  config_line_t **LINELIST_V;
+  struct config_line_t **LINELIST;
+  struct config_line_t **LINELIST_S;
+  struct config_line_t **LINELIST_V;
   routerset_t **ROUTERSET;
 } confparse_dummy_values_t;
 #endif /* defined(TOR_UNIT_TESTS) */
@@ -185,7 +185,7 @@ void config_free_(const config_format_t *fmt, void *options);
     (options) = NULL;                                 \
   } while (0)
 
-config_line_t *config_get_assigned_option(const config_format_t *fmt,
+struct config_line_t *config_get_assigned_option(const config_format_t *fmt,
                                           const void *options, const char *key,
                                           int escape_val);
 int config_is_same(const config_format_t *fmt,
@@ -197,7 +197,7 @@ char *config_dump(const config_format_t *fmt, const void *default_options,
                   const void *options, int minimal,
                   int comment_defaults);
 int config_assign(const config_format_t *fmt, void *options,
-                  config_line_t *list,
+                  struct config_line_t *list,
                   unsigned flags, char **msg);
 config_var_t *config_find_option_mutable(config_format_t *fmt,
                                          const char *key);
@@ -219,4 +219,3 @@ void warn_deprecated_option(const char *what, const char *why);
 #define CFG_EQ_ROUTERSET(a,b,opt) routerset_equal((a)->opt, (b)->opt)
 
 #endif /* !defined(TOR_CONFPARSE_H) */
-

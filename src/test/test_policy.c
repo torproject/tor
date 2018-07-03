@@ -8,8 +8,10 @@
 #include "or/routerparse.h"
 #define POLICIES_PRIVATE
 #include "or/policies.h"
+#include "lib/encoding/confline.h"
 #include "test/test.h"
 
+#include "or/addr_policy_st.h"
 #include "or/node_st.h"
 #include "or/port_cfg_st.h"
 #include "or/routerinfo_st.h"
@@ -2450,4 +2452,3 @@ struct testcase_t policy_tests[] = {
     test_policies_fascist_firewall_choose_address, 0, NULL, NULL },
   END_OF_TESTCASES
 };
-

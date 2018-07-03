@@ -11,8 +11,13 @@
 
 #include "or/or.h"
 #include "or/circuitmux.h"
-#include "common/timers.h"
 #include "common/handles.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
+
+#include "tor_queue.h"
+
+#define tor_timer_t timeout
+struct tor_timer_t;
 
 /* Channel handler function pointer typedefs */
 typedef void (*channel_listener_fn_ptr)(channel_listener_t *, channel_t *);
@@ -29,6 +34,141 @@ typedef enum {
     CHANNEL_USED_FOR_FULL_CIRCS,
     CHANNEL_USED_FOR_USER_TRAFFIC,
 } channel_usage_info_t;
+
+/** Possible rules for generating circuit IDs on an OR connection. */
+typedef enum {
+  CIRC_ID_TYPE_LOWER=0, /**< Pick from 0..1<<15-1. */
+  CIRC_ID_TYPE_HIGHER=1, /**< Pick from 1<<15..1<<16-1. */
+  /** The other side of a connection is an OP: never create circuits to it,
+   * and let it use any circuit ID it wants. */
+  CIRC_ID_TYPE_NEITHER=2
+} circ_id_type_t;
+#define circ_id_type_bitfield_t ENUM_BF(circ_id_type_t)
+
+/* channel states for channel_t */
+
+typedef enum {
+  /*
+   * Closed state - channel is inactive
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSING
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_OPENING
+   */
+  CHANNEL_STATE_CLOSED = 0,
+  /*
+   * Opening state - channel is trying to connect
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSED
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_OPEN
+   */
+  CHANNEL_STATE_OPENING,
+  /*
+   * Open state - channel is active and ready for use
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPENING
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_MAINT
+   */
+  CHANNEL_STATE_OPEN,
+  /*
+   * Maintenance state - channel is temporarily offline for subclass specific
+   *   maintenance activities such as TLS renegotiation.
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_OPEN
+   */
+  CHANNEL_STATE_MAINT,
+  /*
+   * Closing state - channel is shutting down
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSED,
+   *   - CHANNEL_STATE_ERROR
+   */
+  CHANNEL_STATE_CLOSING,
+  /*
+   * Error state - channel has experienced a permanent error
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPENING
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - None
+   */
+  CHANNEL_STATE_ERROR,
+  /*
+   * Placeholder for maximum state value
+   */
+  CHANNEL_STATE_LAST
+} channel_state_t;
+
+/* channel listener states for channel_listener_t */
+
+typedef enum {
+  /*
+   * Closed state - channel listener is inactive
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_LISTENER_STATE_CLOSING
+   * Permitted transitions to:
+   *   - CHANNEL_LISTENER_STATE_LISTENING
+   */
+  CHANNEL_LISTENER_STATE_CLOSED = 0,
+  /*
+   * Listening state - channel listener is listening for incoming
+   * connections
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_LISTENER_STATE_CLOSED
+   * Permitted transitions to:
+   *   - CHANNEL_LISTENER_STATE_CLOSING
+   *   - CHANNEL_LISTENER_STATE_ERROR
+   */
+  CHANNEL_LISTENER_STATE_LISTENING,
+  /*
+   * Closing state - channel listener is shutting down
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_LISTENER_STATE_LISTENING
+   * Permitted transitions to:
+   *   - CHANNEL_LISTENER_STATE_CLOSED,
+   *   - CHANNEL_LISTENER_STATE_ERROR
+   */
+  CHANNEL_LISTENER_STATE_CLOSING,
+  /*
+   * Error state - channel listener has experienced a permanent error
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_LISTENING
+   * Permitted transitions to:
+   *   - None
+   */
+  CHANNEL_LISTENER_STATE_ERROR,
+  /*
+   * Placeholder for maximum state value
+   */
+  CHANNEL_LISTENER_STATE_LAST
+} channel_listener_state_t;
 
 /**
  * Channel struct; see the channel_t typedef in or.h.  A channel is an
@@ -92,7 +232,7 @@ struct channel_s {
   monotime_coarse_t next_padding_time;
 
   /** The callback pointer for the padding callbacks */
-  tor_timer_t *padding_timer;
+  struct tor_timer_t *padding_timer;
   /** The handle to this channel (to free on canceled timers) */
   struct channel_handle_t *timer_handle;
 
@@ -251,7 +391,7 @@ struct channel_s {
    * necessarily its true identity.  Don't believe this identity unless
    * authentication has happened.
    */
-  ed25519_public_key_t ed25519_identity;
+  struct ed25519_public_key_t ed25519_identity;
 
   /**
    * Linked list of channels with the same RSA identity digest, for use with
@@ -470,8 +610,8 @@ void channel_mark_incoming(channel_t *chan);
 void channel_mark_outgoing(channel_t *chan);
 void channel_mark_remote(channel_t *chan);
 void channel_set_identity_digest(channel_t *chan,
-                                 const char *identity_digest,
-                                 const ed25519_public_key_t *ed_identity);
+                             const char *identity_digest,
+                             const struct ed25519_public_key_t *ed_identity);
 
 void channel_listener_change_state(channel_listener_t *chan_l,
                                    channel_listener_state_t to_state);
@@ -521,10 +661,10 @@ int channel_send_destroy(circid_t circ_id, channel_t *chan,
 
 channel_t * channel_connect(const tor_addr_t *addr, uint16_t port,
                             const char *rsa_id_digest,
-                            const ed25519_public_key_t *ed_id);
+                            const struct ed25519_public_key_t *ed_id);
 
 channel_t * channel_get_for_extend(const char *rsa_id_digest,
-                                   const ed25519_public_key_t *ed_id,
+                                   const struct ed25519_public_key_t *ed_id,
                                    const tor_addr_t *target_addr,
                                    const char **msg_out,
                                    int *launch_out);
@@ -537,7 +677,7 @@ int channel_is_better(channel_t *a, channel_t *b);
 
 channel_t * channel_find_by_global_id(uint64_t global_identifier);
 channel_t * channel_find_by_remote_identity(const char *rsa_id_digest,
-                                            const ed25519_public_key_t *ed_id);
+                                    const struct ed25519_public_key_t *ed_id);
 
 /** For things returned by channel_find_by_remote_digest(), walk the list.
  * The RSA key will match for all returned elements; the Ed25519 key might not.
@@ -635,6 +775,6 @@ int packed_cell_is_destroy(channel_t *chan,
 HANDLE_DECL(channel, channel_s,)
 #define channel_handle_free(h)    \
   FREE_AND_NULL(channel_handle_t, channel_handle_free_, (h))
+#undef tor_timer_t
 
 #endif /* !defined(TOR_CHANNEL_H) */
-

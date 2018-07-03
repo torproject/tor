@@ -344,7 +344,7 @@ crypto_dh_generate_public(crypto_dh_t *dh)
 
 /** Generate g^x as necessary, and write the g^x for the key exchange
  * as a <b>pubkey_len</b>-byte value into <b>pubkey</b>. Return 0 on
- * success, -1 on failure.  <b>pubkey_len</b> must be \>= DH_BYTES.
+ * success, -1 on failure.  <b>pubkey_len</b> must be \>= DH1024_KEY_LEN.
  */
 int
 crypto_dh_get_public(crypto_dh_t *dh, char *pubkey, size_t pubkey_len)
@@ -378,7 +378,7 @@ crypto_dh_get_public(crypto_dh_t *dh, char *pubkey, size_t pubkey_len)
   tor_assert(bytes >= 0);
   if (pubkey_len < (size_t)bytes) {
     log_warn(LD_CRYPTO,
-             "Weird! pubkey_len (%d) was smaller than DH_BYTES (%d)",
+             "Weird! pubkey_len (%d) was smaller than DH1024_KEY_LEN (%d)",
              (int) pubkey_len, bytes);
     return -1;
   }

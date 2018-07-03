@@ -41,8 +41,14 @@ hibernating, phase 2:
 #include "or/main.h"
 #include "or/router.h"
 #include "or/statefile.h"
+#include "common/compat_libevent.h"
 
 #include "or/or_connection_st.h"
+#include "or/or_state_st.h"
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 /** Are we currently awake, asleep, running out of bandwidth, or shutting
  * down? */
@@ -1227,4 +1233,3 @@ hibernate_set_state_for_testing_(hibernate_state_t newstate)
   hibernate_state = newstate;
 }
 #endif /* defined(TOR_UNIT_TESTS) */
-
