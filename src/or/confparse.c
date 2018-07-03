@@ -575,8 +575,8 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
       escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_MEMUNIT:
-      tor_asprintf(&result->value, U64_FORMAT,
-                   U64_PRINTF_ARG(*(uint64_t*)value));
+      tor_asprintf(&result->value, "%"PRIu64,
+                   (*(uint64_t*)value));
       escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_DOUBLE:
@@ -1041,15 +1041,15 @@ static struct unit_table_t memory_units[] = {
   { "gigabit",   1<<27 },
   { "gbits",     1<<27 },
   { "gbit",      1<<27 },
-  { "tb",        U64_LITERAL(1)<<40 },
-  { "tbyte",     U64_LITERAL(1)<<40 },
-  { "tbytes",    U64_LITERAL(1)<<40 },
-  { "terabyte",  U64_LITERAL(1)<<40 },
-  { "terabytes", U64_LITERAL(1)<<40 },
-  { "terabits",  U64_LITERAL(1)<<37 },
-  { "terabit",   U64_LITERAL(1)<<37 },
-  { "tbits",     U64_LITERAL(1)<<37 },
-  { "tbit",      U64_LITERAL(1)<<37 },
+  { "tb",        UINT64_C(1)<<40 },
+  { "tbyte",     UINT64_C(1)<<40 },
+  { "tbytes",    UINT64_C(1)<<40 },
+  { "terabyte",  UINT64_C(1)<<40 },
+  { "terabytes", UINT64_C(1)<<40 },
+  { "terabits",  UINT64_C(1)<<37 },
+  { "terabit",   UINT64_C(1)<<37 },
+  { "tbits",     UINT64_C(1)<<37 },
+  { "tbit",      UINT64_C(1)<<37 },
   { NULL, 0 },
 };
 
@@ -1118,7 +1118,7 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
 
   if (!cp) {
     *ok = 1;
-    v = use_float ? DBL_TO_U64(d) :  v;
+    v = use_float ? ((uint64_t)d) :  v;
     goto done;
   }
 

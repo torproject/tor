@@ -575,4 +575,3 @@ struct testcase_t geoip_tests[] = {
 
   END_OF_TESTCASES
 };
-

@@ -72,9 +72,9 @@ vanilla_scheduler_run(void)
     n_cells = channel_num_cells_writeable(chan);
     if (n_cells > 0) {
       log_debug(LD_SCHED,
-                "Scheduler saw pending channel " U64_FORMAT " at %p with "
+                "Scheduler saw pending channel %"PRIu64 " at %p with "
                 "%d cells writeable",
-                U64_PRINTF_ARG(chan->global_identifier), chan, n_cells);
+                (chan->global_identifier), chan, n_cells);
 
       flushed = 0;
       while (flushed < n_cells) {
@@ -97,9 +97,9 @@ vanilla_scheduler_run(void)
             if (!to_readd) to_readd = smartlist_new();
             smartlist_add(to_readd, chan);
             log_debug(LD_SCHED,
-                      "Channel " U64_FORMAT " at %p "
+                      "Channel %"PRIu64 " at %p "
                       "is still pending",
-                      U64_PRINTF_ARG(chan->global_identifier),
+                      (chan->global_identifier),
                       chan);
           } else {
             /* It's waiting to be able to write more */
@@ -125,14 +125,14 @@ vanilla_scheduler_run(void)
 
       log_debug(LD_SCHED,
                 "Scheduler flushed %d cells onto pending channel "
-                U64_FORMAT " at %p",
-                (int)flushed, U64_PRINTF_ARG(chan->global_identifier),
+                "%"PRIu64 " at %p",
+                (int)flushed, (chan->global_identifier),
                 chan);
     } else {
       log_info(LD_SCHED,
-               "Scheduler saw pending channel " U64_FORMAT " at %p with "
+               "Scheduler saw pending channel %"PRIu64 " at %p with "
                "no cells writeable",
-               U64_PRINTF_ARG(chan->global_identifier), chan);
+               (chan->global_identifier), chan);
       /* Put it back to WAITING_TO_WRITE */
       scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
     }

@@ -21,7 +21,7 @@ test_mainloop_update_time_normal(void *arg)
 
   monotime_enable_test_mocking();
   /* This is arbitrary */
-  uint64_t mt_now = U64_LITERAL(7493289274986);
+  uint64_t mt_now = UINT64_C(7493289274986);
   /* This time is in the past as of when this test was written. */
   time_t now = 1525272090;
   monotime_coarse_set_mock_time_nsec(mt_now);
@@ -63,7 +63,7 @@ test_mainloop_update_time_jumps(void *arg)
 
   monotime_enable_test_mocking();
   /* This is arbitrary */
-  uint64_t mt_now = U64_LITERAL(7493289274986);
+  uint64_t mt_now = UINT64_C(7493289274986);
   /* This time is in the past as of when this test was written. */
   time_t now = 220897152;
   monotime_coarse_set_mock_time_nsec(mt_now);

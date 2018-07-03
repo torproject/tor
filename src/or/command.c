@@ -249,10 +249,10 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   tor_assert(chan);
 
   log_debug(LD_OR,
-            "Got a CREATE cell for circ_id %u on channel " U64_FORMAT
+            "Got a CREATE cell for circ_id %u on channel %"PRIu64
             " (%p)",
             (unsigned)cell->circ_id,
-            U64_PRINTF_ARG(chan->global_identifier), chan);
+            (chan->global_identifier), chan);
 
   /* First thing we do, even though the cell might be invalid, is inform the
    * DoS mitigation subsystem layer of this event. Validation is done by this

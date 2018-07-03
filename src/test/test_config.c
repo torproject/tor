@@ -5627,8 +5627,8 @@ test_config_include_opened_file_list(void *data)
 static void
 test_config_compute_max_mem_in_queues(void *data)
 {
-#define GIGABYTE(x) (U64_LITERAL(x) << 30)
-#define MEGABYTE(x) (U64_LITERAL(x) << 20)
+#define GIGABYTE(x) (UINT64_C(x) << 30)
+#define MEGABYTE(x) (UINT64_C(x) << 20)
   (void)data;
   MOCK(get_total_system_memory, get_total_system_memory_mock);
 

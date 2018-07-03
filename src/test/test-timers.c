@@ -104,8 +104,8 @@ main(int argc, char **argv)
     total_square_difference += diff*diff;
   }
   const int64_t mean_diff = total_difference / n_active_timers;
-  printf("mean difference: "I64_FORMAT" usec\n",
-         I64_PRINTF_ARG(mean_diff));
+  printf("mean difference: %"PRId64" usec\n",
+         (mean_diff));
 
   const double mean_sq = ((double)total_square_difference)/ n_active_timers;
   const double sq_mean = mean_diff * mean_diff;

@@ -3353,10 +3353,10 @@ dump_routerlist_mem_usage(int severity)
                     olddescs += sd->signed_descriptor_len);
 
   tor_log(severity, LD_DIR,
-      "In %d live descriptors: "U64_FORMAT" bytes.  "
-      "In %d old descriptors: "U64_FORMAT" bytes.",
-      smartlist_len(routerlist->routers), U64_PRINTF_ARG(livedescs),
-      smartlist_len(routerlist->old_routers), U64_PRINTF_ARG(olddescs));
+      "In %d live descriptors: %"PRIu64" bytes.  "
+      "In %d old descriptors: %"PRIu64" bytes.",
+      smartlist_len(routerlist->routers), (livedescs),
+      smartlist_len(routerlist->old_routers), (olddescs));
 }
 
 /** Debugging helper: If <b>idx</b> is nonnegative, assert that <b>ri</b> is

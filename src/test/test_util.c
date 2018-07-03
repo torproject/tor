@@ -1931,8 +1931,8 @@ test_util_strmisc(void *arg)
   tor_snprintf(buf, 10, "abcdef");
   tt_int_op(0,OP_EQ, buf[6]);
   /* uint64 */
-  tor_snprintf(buf, sizeof(buf), "x!"U64_FORMAT"!x",
-               U64_PRINTF_ARG(U64_LITERAL(12345678901)));
+  tor_snprintf(buf, sizeof(buf), "x!%"PRIu64"!x",
+               (UINT64_C(12345678901)));
   tt_str_op("x!12345678901!x",OP_EQ, buf);
 
   /* Test str{,case}cmpstart */
@@ -2179,17 +2179,17 @@ test_util_parse_integer(void *arg)
   tt_int_op(0,OP_EQ, i);
 
   /* Test parse_uint64 */
-  tt_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
+  tt_assert(UINT64_C(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
   tt_int_op(1,OP_EQ, i);
   tt_str_op(cp,OP_EQ, " x");
-  tt_assert(U64_LITERAL(12345678901) ==
+  tt_assert(UINT64_C(12345678901) ==
               tor_parse_uint64("12345678901",10,0,UINT64_MAX, &i, &cp));
   tt_int_op(1,OP_EQ, i);
   tt_str_op(cp,OP_EQ, "");
-  tt_assert(U64_LITERAL(0) ==
+  tt_assert(UINT64_C(0) ==
               tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
   tt_int_op(0,OP_EQ, i);
-  tt_assert(U64_LITERAL(0) ==
+  tt_assert(UINT64_C(0) ==
               tor_parse_uint64("123",-1,0,INT32_MAX, &i, &cp));
   tt_int_op(0,OP_EQ, i);
 
@@ -2197,10 +2197,10 @@ test_util_parse_integer(void *arg)
   /* Test parse_double */
   double d = tor_parse_double("10", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(1,OP_EQ, i);
-  tt_assert(DBL_TO_U64(d) == 10);
+  tt_assert(((uint64_t)d) == 10);
   d = tor_parse_double("0", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(1,OP_EQ, i);
-  tt_assert(DBL_TO_U64(d) == 0);
+  tt_assert(((uint64_t)d) == 0);
   d = tor_parse_double(" ", 0, (double)UINT64_MAX,&i,NULL);
   tt_double_op(fabs(d), OP_LT, 1e-10);
   tt_int_op(0,OP_EQ, i);
@@ -2212,7 +2212,7 @@ test_util_parse_integer(void *arg)
   tt_int_op(1,OP_EQ, i);
   d = tor_parse_double("-.0", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(1,OP_EQ, i);
-  tt_assert(DBL_TO_U64(d) == 0);
+  tt_assert(((uint64_t)d) == 0);
   d = tor_parse_double("-10", -100.0, 100.0,&i,NULL);
   tt_int_op(1,OP_EQ, i);
   tt_double_op(fabs(d - -10.0),OP_LT, 1E-12);
@@ -2230,7 +2230,7 @@ test_util_parse_integer(void *arg)
     tt_int_op(i,OP_EQ, 0);
     tt_int_op(0UL,OP_EQ, tor_parse_ulong(TOOBIG, 10, 0, ULONG_MAX, &i, NULL));
     tt_int_op(i,OP_EQ, 0);
-    tt_u64_op(U64_LITERAL(0), OP_EQ, tor_parse_uint64(TOOBIG, 10,
+    tt_u64_op(UINT64_C(0), OP_EQ, tor_parse_uint64(TOOBIG, 10,
                                              0, UINT64_MAX, &i, NULL));
     tt_int_op(i,OP_EQ, 0);
   }
@@ -2253,17 +2253,17 @@ test_util_pow2(void *arg)
   tt_int_op(tor_log2(3),OP_EQ, 1);
   tt_int_op(tor_log2(4),OP_EQ, 2);
   tt_int_op(tor_log2(5),OP_EQ, 2);
-  tt_int_op(tor_log2(U64_LITERAL(40000000000000000)),OP_EQ, 55);
+  tt_int_op(tor_log2(UINT64_C(40000000000000000)),OP_EQ, 55);
   tt_int_op(tor_log2(UINT64_MAX),OP_EQ, 63);
 
   /* Test round_to_power_of_2 */
   tt_u64_op(round_to_power_of_2(120), OP_EQ, 128);
   tt_u64_op(round_to_power_of_2(128), OP_EQ, 128);
   tt_u64_op(round_to_power_of_2(130), OP_EQ, 128);
-  tt_u64_op(round_to_power_of_2(U64_LITERAL(40000000000000000)), OP_EQ,
-            U64_LITERAL(1)<<55);
-  tt_u64_op(round_to_power_of_2(U64_LITERAL(0xffffffffffffffff)), OP_EQ,
-          U64_LITERAL(1)<<63);
+  tt_u64_op(round_to_power_of_2(UINT64_C(40000000000000000)), OP_EQ,
+            UINT64_C(1)<<55);
+  tt_u64_op(round_to_power_of_2(UINT64_C(0xffffffffffffffff)), OP_EQ,
+          UINT64_C(1)<<63);
   tt_u64_op(round_to_power_of_2(0), OP_EQ, 1);
   tt_u64_op(round_to_power_of_2(1), OP_EQ, 1);
   tt_u64_op(round_to_power_of_2(2), OP_EQ, 2);
@@ -5570,15 +5570,15 @@ test_util_max_mem(void *arg)
   tt_int_op(r, OP_EQ, r2);
   tt_uint_op(memory2, OP_EQ, memory1);
 
-  TT_BLATHER(("System memory: "U64_FORMAT, U64_PRINTF_ARG(memory1)));
+  TT_BLATHER(("System memory: %"TOR_PRIuSZ, (memory1)));
 
   if (r==0) {
     /* You have at least a megabyte. */
     tt_uint_op(memory1, OP_GT, (1<<20));
   } else {
     /* You do not have a petabyte. */
-#if SIZEOF_SIZE_T == SIZEOF_UINT64_T
-    tt_u64_op(memory1, OP_LT, (U64_LITERAL(1)<<50));
+#if SIZEOF_SIZE_T >= 8
+    tt_u64_op(memory1, OP_LT, (UINT64_C(1)<<50));
 #endif
   }
 

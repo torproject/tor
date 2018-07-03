@@ -320,10 +320,10 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux, smartlist_t *detached_out)
           } else {
             /* Complain and move on */
             log_warn(LD_CIRC,
-                     "Circuit %u/channel " U64_FORMAT " had direction == "
+                     "Circuit %u/channel %"PRIu64 " had direction == "
                      "CELL_DIRECTION_IN, but isn't an or_circuit_t",
                      (unsigned)to_remove->circ_id,
-                     U64_PRINTF_ARG(to_remove->chan_id));
+                     (to_remove->chan_id));
           }
 
           /* Free policy-specific data if we have it */
@@ -344,15 +344,15 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux, smartlist_t *detached_out)
         } else {
           /* Complain and move on */
           log_warn(LD_CIRC,
-                   "Couldn't find circuit %u (for channel " U64_FORMAT ")",
+                   "Couldn't find circuit %u (for channel %"PRIu64 ")",
                    (unsigned)to_remove->circ_id,
-                   U64_PRINTF_ARG(to_remove->chan_id));
+                   (to_remove->chan_id));
         }
       } else {
         /* Complain and move on */
         log_warn(LD_CIRC,
-                 "Couldn't find channel " U64_FORMAT " (for circuit id %u)",
-                 U64_PRINTF_ARG(to_remove->chan_id),
+                 "Couldn't find channel %"PRIu64 " (for circuit id %u)",
+                 (to_remove->chan_id),
                  (unsigned)to_remove->circ_id);
       }
 
@@ -428,17 +428,17 @@ circuitmux_free_(circuitmux_t *cmux)
     global_destroy_ctr -= cmux->destroy_cell_queue.n;
     log_debug(LD_CIRC,
               "Freeing cmux at %p with %u queued destroys; the last cmux "
-              "destroy balance was "I64_FORMAT", global is "I64_FORMAT,
+              "destroy balance was %"PRId64", global is %"PRId64,
               cmux, cmux->destroy_cell_queue.n,
-              I64_PRINTF_ARG(cmux->destroy_ctr),
-              I64_PRINTF_ARG(global_destroy_ctr));
+              (cmux->destroy_ctr),
+              (global_destroy_ctr));
   } else {
     log_debug(LD_CIRC,
               "Freeing cmux at %p with no queued destroys, the cmux destroy "
-              "balance was "I64_FORMAT", global is "I64_FORMAT,
+              "balance was %"PRId64", global is %"PRId64,
               cmux,
-              I64_PRINTF_ARG(cmux->destroy_ctr),
-              I64_PRINTF_ARG(global_destroy_ctr));
+              (cmux->destroy_ctr),
+              (global_destroy_ctr));
   }
 
   destroy_cell_queue_clear(&cmux->destroy_cell_queue);
@@ -835,9 +835,9 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
      * directions match and update the cell count and active circuit count.
      */
     log_info(LD_CIRC,
-             "Circuit %u on channel " U64_FORMAT " was already attached to "
+             "Circuit %u on channel %"PRIu64 " was already attached to "
              "cmux %p (trying to attach to %p)",
-             (unsigned)circ_id, U64_PRINTF_ARG(channel_id),
+             (unsigned)circ_id, (channel_id),
              ((direction == CELL_DIRECTION_OUT) ?
                 circ->n_mux : TO_OR_CIRCUIT(circ)->p_mux),
              cmux);
@@ -869,8 +869,8 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
      * counts.
      */
     log_debug(LD_CIRC,
-             "Attaching circuit %u on channel " U64_FORMAT " to cmux %p",
-              (unsigned)circ_id, U64_PRINTF_ARG(channel_id), cmux);
+             "Attaching circuit %u on channel %"PRIu64 " to cmux %p",
+              (unsigned)circ_id, (channel_id), cmux);
 
     /*
      * Assert that the circuit doesn't already have a mux for this
@@ -1241,11 +1241,11 @@ circuitmux_notify_xmit_destroy(circuitmux_t *cmux)
   --(cmux->destroy_ctr);
   --(global_destroy_ctr);
   log_debug(LD_CIRC,
-            "Cmux at %p sent a destroy, cmux counter is now "I64_FORMAT", "
-            "global counter is now "I64_FORMAT,
+            "Cmux at %p sent a destroy, cmux counter is now %"PRId64", "
+            "global counter is now %"PRId64,
             cmux,
-            I64_PRINTF_ARG(cmux->destroy_ctr),
-            I64_PRINTF_ARG(global_destroy_ctr));
+            (cmux->destroy_ctr),
+            (global_destroy_ctr));
 }
 
 /*DOCDOC */
@@ -1262,10 +1262,10 @@ circuitmux_append_destroy_cell(channel_t *chan,
   ++global_destroy_ctr;
   log_debug(LD_CIRC,
             "Cmux at %p queued a destroy for circ %u, cmux counter is now "
-            I64_FORMAT", global counter is now "I64_FORMAT,
+            "%"PRId64", global counter is now %"PRId64,
             cmux, circ_id,
-            I64_PRINTF_ARG(cmux->destroy_ctr),
-            I64_PRINTF_ARG(global_destroy_ctr));
+            (cmux->destroy_ctr),
+            (global_destroy_ctr));
 
   /* XXXX Duplicate code from append_cell_to_circuit_queue */
   if (!channel_has_queued_writes(chan)) {
@@ -1303,12 +1303,12 @@ circuitmux_count_queued_destroy_cells(const channel_t *chan,
       n_destroy_cells != manual_total ||
       n_destroy_cells != manual_total_in_map) {
     log_warn(LD_BUG, "  Discrepancy in counts for queued destroy cells on "
-             "circuitmux. n="I64_FORMAT". queue_size="I64_FORMAT". "
-             "manual_total="I64_FORMAT". manual_total_in_map="I64_FORMAT".",
-             I64_PRINTF_ARG(n_destroy_cells),
-             I64_PRINTF_ARG(destroy_queue_size),
-             I64_PRINTF_ARG(manual_total),
-             I64_PRINTF_ARG(manual_total_in_map));
+             "circuitmux. n=%"PRId64". queue_size=%"PRId64". "
+             "manual_total=%"PRId64". manual_total_in_map=%"PRId64".",
+             (n_destroy_cells),
+             (destroy_queue_size),
+             (manual_total),
+             (manual_total_in_map));
   }
 
   return n_destroy_cells;

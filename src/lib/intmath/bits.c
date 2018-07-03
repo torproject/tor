@@ -16,27 +16,27 @@ int
 tor_log2(uint64_t u64)
 {
   int r = 0;
-  if (u64 >= (U64_LITERAL(1)<<32)) {
+  if (u64 >= (UINT64_C(1)<<32)) {
     u64 >>= 32;
     r = 32;
   }
-  if (u64 >= (U64_LITERAL(1)<<16)) {
+  if (u64 >= (UINT64_C(1)<<16)) {
     u64 >>= 16;
     r += 16;
   }
-  if (u64 >= (U64_LITERAL(1)<<8)) {
+  if (u64 >= (UINT64_C(1)<<8)) {
     u64 >>= 8;
     r += 8;
   }
-  if (u64 >= (U64_LITERAL(1)<<4)) {
+  if (u64 >= (UINT64_C(1)<<4)) {
     u64 >>= 4;
     r += 4;
   }
-  if (u64 >= (U64_LITERAL(1)<<2)) {
+  if (u64 >= (UINT64_C(1)<<2)) {
     u64 >>= 2;
     r += 2;
   }
-  if (u64 >= (U64_LITERAL(1)<<1)) {
+  if (u64 >= (UINT64_C(1)<<1)) {
     // u64 >>= 1; // not using this any more.
     r += 1;
   }
@@ -55,12 +55,12 @@ round_to_power_of_2(uint64_t u64)
     return 1;
 
   lg2 = tor_log2(u64);
-  low = U64_LITERAL(1) << lg2;
+  low = UINT64_C(1) << lg2;
 
   if (lg2 == 63)
     return low;
 
-  high = U64_LITERAL(1) << (lg2+1);
+  high = UINT64_C(1) << (lg2+1);
   if (high - u64 < u64 - low)
     return high;
   else

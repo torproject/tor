@@ -1223,9 +1223,9 @@ rep_hist_bandwidth_assess(void)
   r = find_largest_max(read_array);
   w = find_largest_max(write_array);
   if (r>w)
-    return (int)(U64_TO_DBL(w)/NUM_SECS_ROLLING_MEASURE);
+    return (int)(((double)w)/NUM_SECS_ROLLING_MEASURE);
   else
-    return (int)(U64_TO_DBL(r)/NUM_SECS_ROLLING_MEASURE);
+    return (int)(((double)r)/NUM_SECS_ROLLING_MEASURE);
 }
 
 /** Print the bandwidth history of b (either [dir-]read_array or
@@ -1271,9 +1271,9 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
       total = cutoff;
 
     if (n==(b->num_maxes_set-1))
-      tor_snprintf(cp, len-(cp-buf), U64_FORMAT, U64_PRINTF_ARG(total));
+      tor_snprintf(cp, len-(cp-buf), "%"PRIu64, (total));
     else
-      tor_snprintf(cp, len-(cp-buf), U64_FORMAT",", U64_PRINTF_ARG(total));
+      tor_snprintf(cp, len-(cp-buf), "%"PRIu64",", (total));
     cp += strlen(cp);
   }
   return cp-buf;
@@ -1385,17 +1385,17 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
   for (j=0; j < b->num_maxes_set; ++j,++i) {
     if (i >= NUM_TOTALS)
       i = 0;
-    smartlist_add_asprintf(*s_values, U64_FORMAT,
-                           U64_PRINTF_ARG(b->totals[i] & ~0x3ff));
+    smartlist_add_asprintf(*s_values, "%"PRIu64,
+                           (b->totals[i] & ~0x3ff));
     maxval = b->maxima[i] / NUM_SECS_ROLLING_MEASURE;
-    smartlist_add_asprintf(*s_maxima, U64_FORMAT,
-                           U64_PRINTF_ARG(maxval & ~0x3ff));
+    smartlist_add_asprintf(*s_maxima, "%"PRIu64,
+                           (maxval & ~0x3ff));
   }
-  smartlist_add_asprintf(*s_values, U64_FORMAT,
-                         U64_PRINTF_ARG(b->total_in_period & ~0x3ff));
+  smartlist_add_asprintf(*s_values, "%"PRIu64,
+                         (b->total_in_period & ~0x3ff));
   maxval = b->max_total / NUM_SECS_ROLLING_MEASURE;
-  smartlist_add_asprintf(*s_maxima, U64_FORMAT,
-                         U64_PRINTF_ARG(maxval & ~0x3ff));
+  smartlist_add_asprintf(*s_maxima, "%"PRIu64,
+                         (maxval & ~0x3ff));
 }
 
 /** Update <b>state</b> with the newest bandwidth history. Done before
@@ -1969,8 +1969,8 @@ rep_hist_format_exit_stats(time_t now)
                      exit_bytes_written[cur_port],
                      EXIT_STATS_ROUND_UP_BYTES);
       num /= 1024;
-      smartlist_add_asprintf(written_strings, "%d="U64_FORMAT,
-                             cur_port, U64_PRINTF_ARG(num));
+      smartlist_add_asprintf(written_strings, "%d=%"PRIu64,
+                             cur_port, (num));
       other_written -= exit_bytes_written[cur_port];
     }
     if (exit_bytes_read[cur_port] > 0) {
@@ -1978,8 +1978,8 @@ rep_hist_format_exit_stats(time_t now)
                      exit_bytes_read[cur_port],
                      EXIT_STATS_ROUND_UP_BYTES);
       num /= 1024;
-      smartlist_add_asprintf(read_strings, "%d="U64_FORMAT,
-                             cur_port, U64_PRINTF_ARG(num));
+      smartlist_add_asprintf(read_strings, "%d=%"PRIu64,
+                             cur_port, (num));
       other_read -= exit_bytes_read[cur_port];
     }
     if (exit_streams[cur_port] > 0) {
@@ -1995,13 +1995,13 @@ rep_hist_format_exit_stats(time_t now)
   other_written = round_uint64_to_next_multiple_of(other_written,
                   EXIT_STATS_ROUND_UP_BYTES);
   other_written /= 1024;
-  smartlist_add_asprintf(written_strings, "other="U64_FORMAT,
-                         U64_PRINTF_ARG(other_written));
+  smartlist_add_asprintf(written_strings, "other=%"PRIu64,
+                         (other_written));
   other_read = round_uint64_to_next_multiple_of(other_read,
                EXIT_STATS_ROUND_UP_BYTES);
   other_read /= 1024;
-  smartlist_add_asprintf(read_strings, "other="U64_FORMAT,
-                         U64_PRINTF_ARG(other_read));
+  smartlist_add_asprintf(read_strings, "other=%"PRIu64,
+                         (other_read));
   other_streams = round_uint32_to_next_multiple_of(other_streams,
                   EXIT_STATS_ROUND_UP_STREAMS);
   smartlist_add_asprintf(streams_strings, "other=%u", other_streams);
@@ -2261,8 +2261,8 @@ rep_hist_format_buffer_stats(time_t now)
   time_in_queue_strings = smartlist_new();
   for (i = 0; i < SHARES; i++) {
     smartlist_add_asprintf(processed_cells_strings,
-                           U64_FORMAT, !circs_in_share[i] ? 0 :
-                           U64_PRINTF_ARG(processed_cells[i] /
+                           "%"PRIu64, !circs_in_share[i] ? 0 :
+                           (processed_cells[i] /
                            circs_in_share[i]));
   }
   for (i = 0; i < SHARES; i++) {
@@ -2929,14 +2929,14 @@ rep_hist_format_hs_stats(time_t now)
 
   format_iso_time(t, now);
   tor_asprintf(&hs_stats_string, "hidserv-stats-end %s (%d s)\n"
-               "hidserv-rend-relayed-cells "I64_FORMAT" delta_f=%d "
+               "hidserv-rend-relayed-cells %"PRId64" delta_f=%d "
                                            "epsilon=%.2f bin_size=%d\n"
-               "hidserv-dir-onions-seen "I64_FORMAT" delta_f=%d "
+               "hidserv-dir-onions-seen %"PRId64" delta_f=%d "
                                         "epsilon=%.2f bin_size=%d\n",
                t, (unsigned) (now - start_of_hs_stats_interval),
-               I64_PRINTF_ARG(obfuscated_cells_seen), REND_CELLS_DELTA_F,
+               (obfuscated_cells_seen), REND_CELLS_DELTA_F,
                REND_CELLS_EPSILON, REND_CELLS_BIN_SIZE,
-               I64_PRINTF_ARG(obfuscated_onions_seen),
+               (obfuscated_onions_seen),
                ONIONS_SEEN_DELTA_F,
                ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE);
 
@@ -3122,33 +3122,33 @@ rep_hist_get_padding_count_lines(void)
   }
 
   tor_asprintf(&result, "padding-counts %s (%d s)"
-                        " bin-size="U64_FORMAT
-                        " write-drop="U64_FORMAT
-                        " write-pad="U64_FORMAT
-                        " write-total="U64_FORMAT
-                        " read-drop="U64_FORMAT
-                        " read-pad="U64_FORMAT
-                        " read-total="U64_FORMAT
-                        " enabled-read-pad="U64_FORMAT
-                        " enabled-read-total="U64_FORMAT
-                        " enabled-write-pad="U64_FORMAT
-                        " enabled-write-total="U64_FORMAT
-                        " max-chanpad-timers="U64_FORMAT
+                        " bin-size=%"PRIu64
+                        " write-drop=%"PRIu64
+                        " write-pad=%"PRIu64
+                        " write-total=%"PRIu64
+                        " read-drop=%"PRIu64
+                        " read-pad=%"PRIu64
+                        " read-total=%"PRIu64
+                        " enabled-read-pad=%"PRIu64
+                        " enabled-read-total=%"PRIu64
+                        " enabled-write-pad=%"PRIu64
+                        " enabled-write-total=%"PRIu64
+                        " max-chanpad-timers=%"PRIu64
                         "\n",
                padding_published.first_published_at,
                REPHIST_CELL_PADDING_COUNTS_INTERVAL,
-               U64_PRINTF_ARG(ROUND_CELL_COUNTS_TO),
-               U64_PRINTF_ARG(padding_published.write_drop_cell_count),
-               U64_PRINTF_ARG(padding_published.write_pad_cell_count),
-               U64_PRINTF_ARG(padding_published.write_cell_count),
-               U64_PRINTF_ARG(padding_published.read_drop_cell_count),
-               U64_PRINTF_ARG(padding_published.read_pad_cell_count),
-               U64_PRINTF_ARG(padding_published.read_cell_count),
-               U64_PRINTF_ARG(padding_published.enabled_read_pad_cell_count),
-               U64_PRINTF_ARG(padding_published.enabled_read_cell_count),
-               U64_PRINTF_ARG(padding_published.enabled_write_pad_cell_count),
-               U64_PRINTF_ARG(padding_published.enabled_write_cell_count),
-               U64_PRINTF_ARG(padding_published.maximum_chanpad_timers)
+               (uint64_t)ROUND_CELL_COUNTS_TO,
+               (padding_published.write_drop_cell_count),
+               (padding_published.write_pad_cell_count),
+               (padding_published.write_cell_count),
+               (padding_published.read_drop_cell_count),
+               (padding_published.read_pad_cell_count),
+               (padding_published.read_cell_count),
+               (padding_published.enabled_read_pad_cell_count),
+               (padding_published.enabled_read_cell_count),
+               (padding_published.enabled_write_pad_cell_count),
+               (padding_published.enabled_write_cell_count),
+               (padding_published.maximum_chanpad_timers)
                );
 
   return result;
@@ -3162,22 +3162,22 @@ rep_hist_log_link_protocol_counts(void)
 {
   log_notice(LD_HEARTBEAT,
              "Since startup, we have initiated "
-             U64_FORMAT" v1 connections, "
-             U64_FORMAT" v2 connections, "
-             U64_FORMAT" v3 connections, and "
-             U64_FORMAT" v4 connections; and received "
-             U64_FORMAT" v1 connections, "
-             U64_FORMAT" v2 connections, "
-             U64_FORMAT" v3 connections, and "
-             U64_FORMAT" v4 connections.",
-             U64_PRINTF_ARG(link_proto_count[1][1]),
-             U64_PRINTF_ARG(link_proto_count[2][1]),
-             U64_PRINTF_ARG(link_proto_count[3][1]),
-             U64_PRINTF_ARG(link_proto_count[4][1]),
-             U64_PRINTF_ARG(link_proto_count[1][0]),
-             U64_PRINTF_ARG(link_proto_count[2][0]),
-             U64_PRINTF_ARG(link_proto_count[3][0]),
-             U64_PRINTF_ARG(link_proto_count[4][0]));
+             "%"PRIu64" v1 connections, "
+             "%"PRIu64" v2 connections, "
+             "%"PRIu64" v3 connections, and "
+             "%"PRIu64" v4 connections; and received "
+             "%"PRIu64" v1 connections, "
+             "%"PRIu64" v2 connections, "
+             "%"PRIu64" v3 connections, and "
+             "%"PRIu64" v4 connections.",
+             (link_proto_count[1][1]),
+             (link_proto_count[2][1]),
+             (link_proto_count[3][1]),
+             (link_proto_count[4][1]),
+             (link_proto_count[1][0]),
+             (link_proto_count[2][0]),
+             (link_proto_count[3][0]),
+             (link_proto_count[4][0]));
 }
 
 /** Free all storage held by the OR/link history caches, by the

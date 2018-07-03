@@ -2110,7 +2110,7 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
     tt_int_op(rs->or_port,OP_EQ, 443);
     tt_int_op(rs->dir_port,OP_EQ, 8000);
     /* no flags except "running" (16) and "v2dir" (64) and "valid" (128) */
-    tt_u64_op(vrs->flags, OP_EQ, U64_LITERAL(0xd0));
+    tt_u64_op(vrs->flags, OP_EQ, UINT64_C(0xd0));
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
                        "\x5\x5\x5\x5",
@@ -2136,10 +2136,10 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
     tt_int_op(rs->ipv6_orport,OP_EQ, 4711);
     if (voter == 1) {
       /* all except "authority" (1) */
-      tt_u64_op(vrs->flags, OP_EQ, U64_LITERAL(254));
+      tt_u64_op(vrs->flags, OP_EQ, UINT64_C(254));
     } else {
       /* 1023 - authority(1) - madeofcheese(16) - madeoftin(32) */
-      tt_u64_op(vrs->flags, OP_EQ, U64_LITERAL(974));
+      tt_u64_op(vrs->flags, OP_EQ, UINT64_C(974));
     }
   } else if (tor_memeq(rs->identity_digest,
                        "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
@@ -2949,8 +2949,8 @@ test_dir_scale_bw(void *testdata)
   for (i=0; i<8; ++i) {
     total += vals_u64[i];
   }
-  tt_assert(total >= (U64_LITERAL(1)<<60));
-  tt_assert(total <= (U64_LITERAL(1)<<62));
+  tt_assert(total >= (UINT64_C(1)<<60));
+  tt_assert(total <= (UINT64_C(1)<<62));
 
   for (i=0; i<8; ++i) {
     /* vals[2].u64 is the scaled value of 1.0 */

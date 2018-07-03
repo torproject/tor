@@ -1001,13 +1001,13 @@ networkstatus_check_weights(int64_t Wgg, int64_t Wgd, int64_t Wmg,
  out:
   if (berr) {
     log_info(LD_DIR,
-             "Bw weight mismatch %d. G="I64_FORMAT" M="I64_FORMAT
-             " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT
+             "Bw weight mismatch %d. G=%"PRId64" M=%"PRId64
+             " E=%"PRId64" D=%"PRId64" T=%"PRId64
              " Wmd=%d Wme=%d Wmg=%d Wed=%d Wee=%d"
              " Wgd=%d Wgg=%d Wme=%d Wmg=%d",
              berr,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+             (G), (M), (E),
+             (D), (T),
              (int)Wmd, (int)Wme, (int)Wmg, (int)Wed, (int)Wee,
              (int)Wgd, (int)Wgg, (int)Wme, (int)Wmg);
   }
@@ -1033,10 +1033,10 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
 
   if (G <= 0 || M <= 0 || E <= 0 || D <= 0) {
     log_warn(LD_DIR, "Consensus with empty bandwidth: "
-                     "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
-                     " D="I64_FORMAT" T="I64_FORMAT,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
+                     "G=%"PRId64" M=%"PRId64" E=%"PRId64
+                     " D=%"PRId64" T=%"PRId64,
+             (G), (M), (E),
+             (D), (T));
     return 0;
   }
 
@@ -1067,13 +1067,13 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
 
     if (berr) {
       log_warn(LD_DIR,
-             "Bw Weights error %d for %s v10. G="I64_FORMAT" M="I64_FORMAT
-             " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT
+             "Bw Weights error %d for %s v10. G=%"PRId64" M=%"PRId64
+             " E=%"PRId64" D=%"PRId64" T=%"PRId64
              " Wmd=%d Wme=%d Wmg=%d Wed=%d Wee=%d"
              " Wgd=%d Wgg=%d Wme=%d Wmg=%d weight_scale=%d",
              berr, casename,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+             (G), (M), (E),
+             (D), (T),
              (int)Wmd, (int)Wme, (int)Wmg, (int)Wed, (int)Wee,
              (int)Wgd, (int)Wgg, (int)Wme, (int)Wmg, (int)weight_scale);
       return 0;
@@ -1138,13 +1138,13 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
       if (berr != BW_WEIGHTS_NO_ERROR &&
               berr != BW_WEIGHTS_BALANCE_MID_ERROR) {
         log_warn(LD_DIR,
-             "Bw Weights error %d for %s v10. G="I64_FORMAT" M="I64_FORMAT
-             " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT
+             "Bw Weights error %d for %s v10. G=%"PRId64" M=%"PRId64
+             " E=%"PRId64" D=%"PRId64" T=%"PRId64
              " Wmd=%d Wme=%d Wmg=%d Wed=%d Wee=%d"
              " Wgd=%d Wgg=%d Wme=%d Wmg=%d weight_scale=%d",
              berr, casename,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+             (G), (M), (E),
+             (D), (T),
              (int)Wmd, (int)Wme, (int)Wmg, (int)Wed, (int)Wee,
              (int)Wgd, (int)Wgg, (int)Wme, (int)Wmg, (int)weight_scale);
         return 0;
@@ -1155,10 +1155,10 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
     // Case 3: Exactly one of Guard or Exit is scarce
     if (!(3*E < T || 3*G < T) || !(3*G >= T || 3*E >= T)) {
       log_warn(LD_BUG,
-           "Bw-Weights Case 3 v10 but with G="I64_FORMAT" M="
-           I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT,
-               I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-               I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
+           "Bw-Weights Case 3 v10 but with G=%"PRId64" M="
+           "%"PRId64" E=%"PRId64" D=%"PRId64" T=%"PRId64,
+               (G), (M), (E),
+               (D), (T));
     }
 
     if (3*(S+D) < T) { // Subcase a: S+D < T/3
@@ -1210,13 +1210,13 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
       }
       if (berr) {
         log_warn(LD_DIR,
-             "Bw Weights error %d for %s v10. G="I64_FORMAT" M="I64_FORMAT
-             " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT
+             "Bw Weights error %d for %s v10. G=%"PRId64" M=%"PRId64
+             " E=%"PRId64" D=%"PRId64" T=%"PRId64
              " Wmd=%d Wme=%d Wmg=%d Wed=%d Wee=%d"
              " Wgd=%d Wgg=%d Wme=%d Wmg=%d weight_scale=%d",
              berr, casename,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
+             (G), (M), (E),
+             (D), (T),
              (int)Wmd, (int)Wme, (int)Wmg, (int)Wed, (int)Wee,
              (int)Wgd, (int)Wgg, (int)Wme, (int)Wmg, (int)weight_scale);
         return 0;
@@ -1250,11 +1250,11 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
      (int)weight_scale, (int)Wmd, (int)Wme, (int)Wmg, (int)weight_scale);
 
   log_notice(LD_CIRC, "Computed bandwidth weights for %s with v10: "
-             "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
-             " T="I64_FORMAT,
+             "G=%"PRId64" M=%"PRId64" E=%"PRId64" D=%"PRId64
+             " T=%"PRId64,
              casename,
-             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
-             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
+             (G), (M), (E),
+             (D), (T));
   return 1;
 }
 
@@ -1758,9 +1758,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
     /* Build the flag indexes. Note that no vote can have more than 64 members
      * for known_flags, so no value will be greater than 63, so it's safe to
-     * do U64_LITERAL(1) << index on these values.  But note also that
+     * do UINT64_C(1) << index on these values.  But note also that
      * named_flag and unnamed_flag are initialized to -1, so we need to check
-     * that they're actually set before doing U64_LITERAL(1) << index with
+     * that they're actually set before doing UINT64_C(1) << index with
      * them.*/
     SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
       flag_map[v_sl_idx] = tor_calloc(smartlist_len(v->known_flags),
@@ -1789,7 +1789,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         uint64_t nf;
         if (named_flag[v_sl_idx]<0)
           continue;
-        nf = U64_LITERAL(1) << named_flag[v_sl_idx];
+        nf = UINT64_C(1) << named_flag[v_sl_idx];
         SMARTLIST_FOREACH_BEGIN(v->routerstatus_list,
                                 vote_routerstatus_t *, rs) {
 
@@ -1814,7 +1814,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         uint64_t uf;
         if (unnamed_flag[v_sl_idx]<0)
           continue;
-        uf = U64_LITERAL(1) << unnamed_flag[v_sl_idx];
+        uf = UINT64_C(1) << unnamed_flag[v_sl_idx];
         SMARTLIST_FOREACH_BEGIN(v->routerstatus_list,
                                 vote_routerstatus_t *, rs) {
           if ((rs->flags & uf) != 0) {
@@ -1904,11 +1904,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
         /* Tally up all the flags. */
         for (int flag = 0; flag < n_voter_flags[voter_idx]; ++flag) {
-          if (rs->flags & (U64_LITERAL(1) << flag))
+          if (rs->flags & (UINT64_C(1) << flag))
             ++flag_counts[flag_map[voter_idx][flag]];
         }
         if (named_flag[voter_idx] >= 0 &&
-            (rs->flags & (U64_LITERAL(1) << named_flag[voter_idx]))) {
+            (rs->flags & (UINT64_C(1) << named_flag[voter_idx]))) {
           if (chosen_name && strcmp(chosen_name, rs->status.nickname)) {
             log_notice(LD_DIR, "Conflict on naming for router: %s vs %s",
                        chosen_name, rs->status.nickname);

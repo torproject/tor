@@ -1359,10 +1359,10 @@ router_should_be_dirserver(const or_options_t *options, int dir_port)
       interval_length = 1;
     }
     log_info(LD_GENERAL, "Calculating whether to advertise %s: effective "
-                         "bwrate: %u, AccountingMax: "U64_FORMAT", "
+                         "bwrate: %u, AccountingMax: %"PRIu64", "
                          "accounting interval length %d",
                          dir_port ? "dirport" : "begindir",
-                         effective_bw, U64_PRINTF_ARG(options->AccountingMax),
+                         effective_bw, (options->AccountingMax),
                          interval_length);
 
     acc_bytes = options->AccountingMax;

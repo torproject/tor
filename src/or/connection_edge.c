@@ -3200,9 +3200,9 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
        !CIRCUIT_IS_ORIGIN(conn->edge_.on_circuit)) {
       if (endreason != END_STREAM_REASON_RESOLVEFAILED) {
         log_info(LD_BUG,
-                 "No origin circuit for successful SOCKS stream "U64_FORMAT
+                 "No origin circuit for successful SOCKS stream %"PRIu64
                  ". Reason: %d",
-                 U64_PRINTF_ARG(ENTRY_TO_CONN(conn)->global_identifier),
+                 (ENTRY_TO_CONN(conn)->global_identifier),
                  endreason);
       }
       /*

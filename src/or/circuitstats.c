@@ -713,8 +713,8 @@ circuit_build_times_handle_completed_hop(origin_circuit_t *circ)
      * Switch their purpose and wait. */
     if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
       log_info(LD_CIRC,
-               "Deciding to timeout circuit "U64_FORMAT"\n",
-               U64_PRINTF_ARG(circ->global_identifier));
+               "Deciding to timeout circuit %"PRIu32"\n",
+               (circ->global_identifier));
       circuit_build_times_mark_circ_as_measurement_only(circ);
     }
   }

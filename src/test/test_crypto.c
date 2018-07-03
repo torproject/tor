@@ -215,10 +215,10 @@ test_crypto_rng(void *arg)
     j = crypto_rand_int(100);
     if (j < 0 || j >= 100)
       allok = 0;
-    big = crypto_rand_uint64(U64_LITERAL(1)<<40);
-    if (big >= (U64_LITERAL(1)<<40))
+    big = crypto_rand_uint64(UINT64_C(1)<<40);
+    if (big >= (UINT64_C(1)<<40))
       allok = 0;
-    big = crypto_rand_uint64(U64_LITERAL(5));
+    big = crypto_rand_uint64(UINT64_C(5));
     if (big >= 5)
       allok = 0;
     d = crypto_rand_double();
@@ -2826,8 +2826,8 @@ test_crypto_siphash(void *arg)
       { 0x72, 0x45, 0x06, 0xeb, 0x4c, 0x32, 0x8a, 0x95, }
     };
 
-  const struct sipkey K = { U64_LITERAL(0x0706050403020100),
-                            U64_LITERAL(0x0f0e0d0c0b0a0908) };
+  const struct sipkey K = { UINT64_C(0x0706050403020100),
+                            UINT64_C(0x0f0e0d0c0b0a0908) };
   uint8_t input[64];
   int i, j;
 
@@ -2882,12 +2882,12 @@ crypto_rand_check_failure_mode_identical(void)
 {
   /* just in case the buffer size isn't a multiple of sizeof(int64_t) */
 #define FAILURE_MODE_BUFFER_SIZE_I64 \
-  (FAILURE_MODE_BUFFER_SIZE/SIZEOF_INT64_T)
+  (FAILURE_MODE_BUFFER_SIZE/8)
 #define FAILURE_MODE_BUFFER_SIZE_I64_BYTES \
-  (FAILURE_MODE_BUFFER_SIZE_I64*SIZEOF_INT64_T)
+  (FAILURE_MODE_BUFFER_SIZE_I64*8)
 
 #if FAILURE_MODE_BUFFER_SIZE_I64 < 2
-#error FAILURE_MODE_BUFFER_SIZE needs to be at least 2*SIZEOF_INT64_T
+#error FAILURE_MODE_BUFFER_SIZE needs to be at least 2*8
 #endif
 
   int64_t buf[FAILURE_MODE_BUFFER_SIZE_I64];

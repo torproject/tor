@@ -1393,7 +1393,6 @@ AC_CHECK_HEADERS([errno.h \
                   netinet/in6.h \
                   pwd.h \
                   readpassphrase.h \
-                  stdint.h \
                   stdatomic.h \
                   sys/eventfd.h \
                   sys/file.h \
@@ -1516,22 +1515,6 @@ AC_CHECK_MEMBERS([struct timeval.tv_sec], , ,
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif])
-
-dnl In case we aren't given a working stdint.h, we'll need to grow our own.
-dnl Watch out.
-
-AC_CHECK_SIZEOF(int8_t)
-AC_CHECK_SIZEOF(int16_t)
-AC_CHECK_SIZEOF(int32_t)
-AC_CHECK_SIZEOF(int64_t)
-AC_CHECK_SIZEOF(uint8_t)
-AC_CHECK_SIZEOF(uint16_t)
-AC_CHECK_SIZEOF(uint32_t)
-AC_CHECK_SIZEOF(uint64_t)
-AC_CHECK_SIZEOF(intptr_t)
-AC_CHECK_SIZEOF(uintptr_t)
-
-dnl AC_CHECK_TYPES([int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, intptr_t, uintptr_t])
 
 AC_CHECK_SIZEOF(char)
 AC_CHECK_SIZEOF(short)

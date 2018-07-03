@@ -624,9 +624,9 @@ connection_free_minimal(connection_t *conn)
       /* Owww, this shouldn't happen, but... */
       log_info(LD_CHANNEL,
                "Freeing orconn at %p, saw channel %p with ID "
-               U64_FORMAT " left un-NULLed",
+               "%"PRIu64 " left un-NULLed",
                or_conn, TLS_CHAN_TO_BASE(or_conn->chan),
-               U64_PRINTF_ARG(
+               (
                  TLS_CHAN_TO_BASE(or_conn->chan)->global_identifier));
       if (!CHANNEL_FINISHED(TLS_CHAN_TO_BASE(or_conn->chan))) {
         channel_close_for_error(TLS_CHAN_TO_BASE(or_conn->chan));
@@ -4996,16 +4996,16 @@ connection_dump_buffer_mem_stats(int severity)
   }
 
   tor_log(severity, LD_GENERAL,
-     "In buffers for %d connections: "U64_FORMAT" used/"U64_FORMAT" allocated",
+     "In buffers for %d connections: %"PRIu64" used/%"PRIu64" allocated",
       smartlist_len(conns),
-      U64_PRINTF_ARG(total_used), U64_PRINTF_ARG(total_alloc));
+      (total_used), (total_alloc));
   for (i=CONN_TYPE_MIN_; i <= CONN_TYPE_MAX_; ++i) {
     if (!n_conns_by_type[i])
       continue;
     tor_log(severity, LD_GENERAL,
-        "  For %d %s connections: "U64_FORMAT" used/"U64_FORMAT" allocated",
+        "  For %d %s connections: %"PRIu64" used/%"PRIu64" allocated",
         n_conns_by_type[i], conn_type_to_string(i),
-        U64_PRINTF_ARG(used_by_type[i]), U64_PRINTF_ARG(alloc_by_type[i]));
+        (used_by_type[i]), (alloc_by_type[i]));
   }
 }
 

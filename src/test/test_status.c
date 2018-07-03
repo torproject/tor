@@ -232,7 +232,7 @@ NS(test_main)(void *arg)
   tor_free(actual);
 
   expected = "10.00 GB";
-  actual = bytes_to_usage((U64_LITERAL(1) << 30) * 10L);
+  actual = bytes_to_usage((UINT64_C(1) << 30) * 10L);
   tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 

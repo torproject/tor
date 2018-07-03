@@ -855,9 +855,9 @@ connection_or_set_canonical(or_connection_t *or_conn,
           TLS_CHAN_TO_BASE(or_conn->chan), is_canonical);
 
   log_info(LD_CIRC,
-          "Channel " U64_FORMAT " chose an idle timeout of %d.",
+          "Channel %"PRIu64 " chose an idle timeout of %d.",
           or_conn->chan ?
-          U64_PRINTF_ARG(TLS_CHAN_TO_BASE(or_conn->chan)->global_identifier):0,
+          (TLS_CHAN_TO_BASE(or_conn->chan)->global_identifier):0,
           or_conn->idle_timeout);
 }
 

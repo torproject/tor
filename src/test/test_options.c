@@ -276,7 +276,7 @@ test_options_validate(void *arg)
   return;
 }
 
-#define MEGABYTEIFY(mb) (U64_LITERAL(mb) << 20)
+#define MEGABYTEIFY(mb) (UINT64_C(mb) << 20)
 static void
 test_have_enough_mem_for_dircache(void *arg)
 {

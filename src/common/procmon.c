@@ -35,8 +35,8 @@ typedef int pid_t;
 #define PID_T_FORMAT "%d"
 #elif (SIZEOF_PID_T == SIZEOF_LONG)
 #define PID_T_FORMAT "%ld"
-#elif (SIZEOF_PID_T == SIZEOF_INT64_T)
-#define PID_T_FORMAT I64_FORMAT
+#elif (SIZEOF_PID_T == 8)
+#define PID_T_FORMAT "%"PRId64
 #else
 #error Unknown: SIZEOF_PID_T
 #endif /* (0 == SIZEOF_PID_T) && defined(_WIN32) || ... */

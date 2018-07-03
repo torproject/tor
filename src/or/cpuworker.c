@@ -283,7 +283,7 @@ get_overhead_for_onionskins(uint32_t *usec_out, double *frac_out,
     onionskins_usec_internal[onionskin_type];
 
   *usec_out = (uint32_t)(overhead / onionskins_n_processed[onionskin_type]);
-  *frac_out = U64_TO_DBL(overhead) / onionskins_usec_internal[onionskin_type];
+  *frac_out = ((double)overhead) / onionskins_usec_internal[onionskin_type];
 
   return 0;
 }

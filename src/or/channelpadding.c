@@ -283,10 +283,10 @@ channelpadding_update_padding_for_channel(channel_t *chan,
                                       pad_vars->ito_high_ms);
 
   log_fn(LOG_INFO,LD_OR,
-         "Negotiated padding=%d, lo=%d, hi=%d on "U64_FORMAT,
+         "Negotiated padding=%d, lo=%d, hi=%d on %"PRIu64,
          chan->padding_enabled, chan->padding_timeout_low_ms,
          chan->padding_timeout_high_ms,
-         U64_PRINTF_ARG(chan->global_identifier));
+         (chan->global_identifier));
 
   return 1;
 }
@@ -394,13 +394,13 @@ channelpadding_send_padding_cell_for_callback(channel_t *chan)
     monotime_coarse_get(&now);
 
     log_fn(LOG_INFO,LD_OR,
-        "Sending netflow keepalive on "U64_FORMAT" to %s (%s) after "
-        I64_FORMAT" ms. Delta "I64_FORMAT"ms",
-        U64_PRINTF_ARG(chan->global_identifier),
+        "Sending netflow keepalive on %"PRIu64" to %s (%s) after "
+        "%"PRId64" ms. Delta %"PRId64"ms",
+        (chan->global_identifier),
         safe_str_client(chan->get_remote_descr(chan, 0)),
         safe_str_client(hex_str(chan->identity_digest, DIGEST_LEN)),
-        I64_PRINTF_ARG(monotime_coarse_diff_msec(&chan->timestamp_xfer,&now)),
-        I64_PRINTF_ARG(
+        (monotime_coarse_diff_msec(&chan->timestamp_xfer,&now)),
+        (
                    monotime_coarse_diff_msec(&chan->next_padding_time,&now)));
   }
 
@@ -540,9 +540,9 @@ channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
   if (ms_till_pad > DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX) {
     tor_fragile_assert();
     log_warn(LD_BUG,
-        "Channel padding timeout scheduled "I64_FORMAT"ms in the future. "
+        "Channel padding timeout scheduled %"PRId64"ms in the future. "
         "Did the monotonic clock just jump?",
-        I64_PRINTF_ARG(ms_till_pad));
+        (ms_till_pad));
     return 0; /* Clock jumped: Send padding now */
   }
 
@@ -566,8 +566,8 @@ channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
       int severity = (ms_till_pad < -NETFLOW_MISSED_WINDOW)
                       ? LOG_NOTICE : LOG_INFO;
       log_fn(severity, LD_OR,
-              "Channel padding timeout scheduled "I64_FORMAT"ms in the past. ",
-             I64_PRINTF_ARG(-ms_till_pad));
+              "Channel padding timeout scheduled %"PRId64"ms in the past. ",
+             (-ms_till_pad));
       return 0; /* Clock jumped: Send padding now */
     }
 
@@ -698,8 +698,8 @@ channelpadding_reduce_padding_on_channel(channel_t *chan)
   chan->padding_timeout_high_ms = consensus_nf_ito_high_reduced;
 
   log_fn(LOG_INFO,LD_OR,
-         "Reduced padding on channel "U64_FORMAT": lo=%d, hi=%d",
-         U64_PRINTF_ARG(chan->global_identifier),
+         "Reduced padding on channel %"PRIu64": lo=%d, hi=%d",
+         (chan->global_identifier),
          chan->padding_timeout_low_ms, chan->padding_timeout_high_ms);
 }
 

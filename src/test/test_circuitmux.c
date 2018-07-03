@@ -86,7 +86,7 @@ static void
 test_cmux_compute_ticks(void *arg)
 {
   const int64_t NS_PER_S = 1000 * 1000 * 1000;
-  const int64_t START_NS = U64_LITERAL(1217709000)*NS_PER_S;
+  const int64_t START_NS = UINT64_C(1217709000)*NS_PER_S;
   int64_t now;
   double rem;
   unsigned tick;

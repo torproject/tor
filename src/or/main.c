@@ -1280,9 +1280,9 @@ run_connection_housekeeping(int i, time_t now)
   } else if (!have_any_circuits &&
              now - or_conn->idle_timeout >=
                                          chan->timestamp_last_had_circuits) {
-    log_info(LD_OR,"Expiring non-used OR connection "U64_FORMAT" to fd %d "
+    log_info(LD_OR,"Expiring non-used OR connection %"PRIu64" to fd %d "
              "(%s:%d) [no circuits for %d; timeout %d; %scanonical].",
-             U64_PRINTF_ARG(chan->global_identifier),
+             (chan->global_identifier),
              (int)conn->s, conn->address, conn->port,
              (int)(now - chan->timestamp_last_had_circuits),
              or_conn->idle_timeout,
@@ -3208,8 +3208,8 @@ static void
 dumpmemusage(int severity)
 {
   connection_dump_buffer_mem_stats(severity);
-  tor_log(severity, LD_GENERAL, "In rephist: "U64_FORMAT" used by %d Tors.",
-      U64_PRINTF_ARG(rephist_total_alloc), rephist_total_num);
+  tor_log(severity, LD_GENERAL, "In rephist: %"PRIu64" used by %d Tors.",
+      (rephist_total_alloc), rephist_total_num);
   dump_routerlist_mem_usage(severity);
   dump_cell_pool_usage(severity);
   dump_dns_mem_usage(severity);
@@ -3272,28 +3272,28 @@ dumpstats(int severity)
   channel_listener_dumpstats(severity);
 
   tor_log(severity, LD_NET,
-      "Cells processed: "U64_FORMAT" padding\n"
-      "                 "U64_FORMAT" create\n"
-      "                 "U64_FORMAT" created\n"
-      "                 "U64_FORMAT" relay\n"
-      "                        ("U64_FORMAT" relayed)\n"
-      "                        ("U64_FORMAT" delivered)\n"
-      "                 "U64_FORMAT" destroy",
-      U64_PRINTF_ARG(stats_n_padding_cells_processed),
-      U64_PRINTF_ARG(stats_n_create_cells_processed),
-      U64_PRINTF_ARG(stats_n_created_cells_processed),
-      U64_PRINTF_ARG(stats_n_relay_cells_processed),
-      U64_PRINTF_ARG(stats_n_relay_cells_relayed),
-      U64_PRINTF_ARG(stats_n_relay_cells_delivered),
-      U64_PRINTF_ARG(stats_n_destroy_cells_processed));
+      "Cells processed: %"PRIu64" padding\n"
+      "                 %"PRIu64" create\n"
+      "                 %"PRIu64" created\n"
+      "                 %"PRIu64" relay\n"
+      "                        (%"PRIu64" relayed)\n"
+      "                        (%"PRIu64" delivered)\n"
+      "                 %"PRIu64" destroy",
+      (stats_n_padding_cells_processed),
+      (stats_n_create_cells_processed),
+      (stats_n_created_cells_processed),
+      (stats_n_relay_cells_processed),
+      (stats_n_relay_cells_relayed),
+      (stats_n_relay_cells_delivered),
+      (stats_n_destroy_cells_processed));
   if (stats_n_data_cells_packaged)
     tor_log(severity,LD_NET,"Average packaged cell fullness: %2.3f%%",
-        100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
-             U64_TO_DBL(stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
+        100*(((double)stats_n_data_bytes_packaged) /
+             ((double)stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
   if (stats_n_data_cells_received)
     tor_log(severity,LD_NET,"Average delivered cell fullness: %2.3f%%",
-        100*(U64_TO_DBL(stats_n_data_bytes_received) /
-             U64_TO_DBL(stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
+        100*(((double)stats_n_data_bytes_received) /
+             ((double)stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
   cpuworker_log_onionskin_overhead(severity, ONION_HANDSHAKE_TYPE_TAP, "TAP");
   cpuworker_log_onionskin_overhead(severity, ONION_HANDSHAKE_TYPE_NTOR,"ntor");
@@ -3305,13 +3305,13 @@ dumpstats(int severity)
 
   if (elapsed) {
     tor_log(severity, LD_NET,
-        "Average bandwidth: "U64_FORMAT"/%d = %d bytes/sec reading",
-        U64_PRINTF_ARG(stats_n_bytes_read),
+        "Average bandwidth: %"PRIu64"/%d = %d bytes/sec reading",
+        (stats_n_bytes_read),
         (int)elapsed,
         (int) (stats_n_bytes_read/elapsed));
     tor_log(severity, LD_NET,
-        "Average bandwidth: "U64_FORMAT"/%d = %d bytes/sec writing",
-        U64_PRINTF_ARG(stats_n_bytes_written),
+        "Average bandwidth: %"PRIu64"/%d = %d bytes/sec writing",
+        (stats_n_bytes_written),
         (int)elapsed,
         (int) (stats_n_bytes_written/elapsed));
   }

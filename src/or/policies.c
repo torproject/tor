@@ -2410,7 +2410,7 @@ policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
 #define REJECT_CUTOFF_SCALE_IPV4 (0)
 /* Ports are rejected in an IPv4 summary if they are rejected in more than two
  * IPv4 /8 address blocks */
-#define REJECT_CUTOFF_COUNT_IPV4 (U64_LITERAL(1) << \
+#define REJECT_CUTOFF_COUNT_IPV4 (UINT64_C(1) << \
                                   (IPV4_BITS - REJECT_CUTOFF_SCALE_IPV4 - 7))
 
 #define IPV6_BITS                (128)
@@ -2422,7 +2422,7 @@ policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
  * some scattered smaller blocks) have been allocated to the RIRs.
  * Network providers are typically allocated one or more IPv6 /32s.
  */
-#define REJECT_CUTOFF_COUNT_IPV6 (U64_LITERAL(1) << \
+#define REJECT_CUTOFF_COUNT_IPV6 (UINT64_C(1) << \
                                   (IPV6_BITS - REJECT_CUTOFF_SCALE_IPV6 - 16))
 
 /** Split an exit policy summary so that prt_min and prt_max
@@ -2517,7 +2517,7 @@ policy_summary_reject(smartlist_t *summary,
      * in the range. */
     count = UINT64_MAX;
   } else {
-    count = (U64_LITERAL(1) << (addrbits - scale - maskbits));
+    count = (UINT64_C(1) << (addrbits - scale - maskbits));
   }
   tor_assert_nonfatal_once(count > 0);
   while (i < smartlist_len(summary) &&
