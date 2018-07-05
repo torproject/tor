@@ -1,8 +1,0 @@
-orconfig.h
-common/*.h
-lib/*/*.h
-
-# XXXX These all belong somewhere else
-siphash.h
-src/ext/timeouts/timeout.c
-tor_queue.h

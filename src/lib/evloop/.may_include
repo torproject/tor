@@ -13,3 +13,4 @@ lib/thread/*.h
 lib/time/*.h
 
 src/ext/timeouts/timeout.c
+tor_queue.h
