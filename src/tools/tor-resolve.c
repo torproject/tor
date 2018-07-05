@@ -14,7 +14,7 @@
 #include "lib/sandbox/sandbox.h"
 #include "lib/string/util_string.h"
 
-#include "common/socks5_status.h"
+#include "lib/net/socks5_status.h"
 
 #include <stdio.h>
 #include <stdlib.h>
