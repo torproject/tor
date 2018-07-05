@@ -150,7 +150,6 @@ pub fn main() {
             // tor uses.  We must be careful with factoring and dependencies
             // moving forward!
             cfg.component("tor-crypt-ops-testing");
-            cfg.component("or-testing");
             cfg.component("tor-sandbox");
             cfg.component("tor-encoding-testing");
             cfg.component("tor-net");
@@ -165,7 +164,6 @@ pub fn main() {
             cfg.component("tor-malloc");
             cfg.component("tor-wallclock");
             cfg.component("tor-err-testing");
-            cfg.component("or-event-testing");
             cfg.component("tor-intmath-testing");
             cfg.component("tor-ctime-testing");
             cfg.component("curve25519_donna");
