@@ -139,7 +139,6 @@ pub fn main() {
             cfg.from_cflags("TOR_LDFLAGS_libevent");
 
             cfg.link_relpath("src/lib");
-            cfg.link_relpath("src/common");
             cfg.link_relpath("src/ext/keccak-tiny");
             cfg.link_relpath("src/ext/ed25519/ref10");
             cfg.link_relpath("src/ext/ed25519/donna");
