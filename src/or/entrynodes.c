@@ -406,6 +406,17 @@ get_remove_unlisted_guards_after_days(void)
                                  DFLT_REMOVE_UNLISTED_GUARDS_AFTER_DAYS,
                                  1, 365*10);
 }
+
+/**
+ * If a guard has been unlisted for this many seconds continuously, we
+ * remove it.
+ */
+static time_t
+get_remove_unlisted_guards_after_seconds(void)
+{
+  return get_remove_unlisted_guards_after_days() * 24 * 60 * 60;
+}
+
 /**
  * We remove unconfirmed guards from the sample after this many days,
  * regardless of whether they are listed or unlisted.
@@ -1237,42 +1248,40 @@ entry_guard_is_listed,(guard_selection_t *gs, const entry_guard_t *guard))
 }
 
 /**
- * Update the status of all sampled guards based on the arrival of a
- * new consensus networkstatus document.  This will include marking
- * some guards as listed or unlisted, and removing expired guards. */
-STATIC void
-sampled_guards_update_from_consensus(guard_selection_t *gs)
+ * Enumerate <b>sampled_entry_guards</b> smartlist in <b>gs</b>.
+ * For each <b>entry_guard_t</b> object in smartlist, do the following:
+ *  * Update <b>currently_listed</b> field to reflect if guard is listed
+ *    in guard selection <b>gs</b>.
+ *  * Set <b>unlisted_since_date</b> to approximate UNIX time of
+ *    unlisting if guard is unlisted (randomize within 20% of
+ *    get_remove_unlisted_guards_after_seconds()). Otherwise,
+ *    set it to 0.
+ *
+ * Require <b>gs</b> to be non-null pointer.
+ * Return a number of entries updated.
+ */
+static size_t
+sampled_guards_update_consensus_presence(guard_selection_t *gs)
 {
+  size_t n_changes = 0;
+
   tor_assert(gs);
-  const int REMOVE_UNLISTED_GUARDS_AFTER =
-    (get_remove_unlisted_guards_after_days() * 86400);
-  const int unlisted_since_slop = REMOVE_UNLISTED_GUARDS_AFTER / 5;
 
-  // It's important to use only a live consensus here; we don't want to
-  // make changes based on anything expired or old.
-  if (live_consensus_is_missing(gs)) {
-    log_info(LD_GUARD, "Not updating the sample guard set; we have "
-             "no live consensus.");
-    return;
-  }
-  log_info(LD_GUARD, "Updating sampled guard status based on received "
-           "consensus.");
+  const time_t unlisted_since_slop =
+    get_remove_unlisted_guards_after_seconds() /  5;
 
-  int n_changes = 0;
-
-  /* First: Update listed/unlisted. */
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     /* XXXX #20827 check ed ID too */
     const int is_listed = entry_guard_is_listed(gs, guard);
 
     if (is_listed && ! guard->currently_listed) {
-      ++n_changes;
+      n_changes++;
       guard->currently_listed = 1;
       guard->unlisted_since_date = 0;
       log_info(LD_GUARD, "Sampled guard %s is now listed again.",
                entry_guard_describe(guard));
     } else if (!is_listed && guard->currently_listed) {
-      ++n_changes;
+      n_changes++;
       guard->currently_listed = 0;
       guard->unlisted_since_date = randomize_time(approx_time(),
                                                   unlisted_since_slop);
@@ -1289,13 +1298,13 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
 
     /* Clean up unlisted_since_date, just in case. */
     if (guard->currently_listed && guard->unlisted_since_date) {
-      ++n_changes;
+      n_changes++;
       guard->unlisted_since_date = 0;
       log_warn(LD_BUG, "Sampled guard %s was listed, but with "
                "unlisted_since_date set. Fixing.",
                entry_guard_describe(guard));
     } else if (!guard->currently_listed && ! guard->unlisted_since_date) {
-      ++n_changes;
+      n_changes++;
       guard->unlisted_since_date = randomize_time(approx_time(),
                                                   unlisted_since_slop);
       log_warn(LD_BUG, "Sampled guard %s was unlisted, but with "
@@ -1304,14 +1313,33 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
     }
   } SMARTLIST_FOREACH_END(guard);
 
-  const time_t remove_if_unlisted_since =
-    approx_time() - REMOVE_UNLISTED_GUARDS_AFTER;
-  const time_t maybe_remove_if_sampled_before =
-    approx_time() - get_guard_lifetime();
-  const time_t remove_if_confirmed_before =
-    approx_time() - get_guard_confirmed_min_lifetime();
+  return n_changes;
+}
 
-  /* Then: remove the ones that have been junk for too long */
+/**
+ * Enumerate <b>sampled_entry_guards</b> smartlist in <b>gs</b>.
+ * For each <b>entry_guard_t</b> object in smartlist, do the following:
+ * * If <b>currently_listed</b> is false and <b>unlisted_since_date</b>
+ *   is earlier than <b>remove_if_unlisted_since</b> - remove it.
+ * * Otherwise, check if <b>sampled_on_date</b> is earlier than
+ *   <b>maybe_remove_if_sampled_before</b>.
+ *   * When above condition is correct, remove the guard if:
+ *     * It was never confirmed.
+ *     * It was confirmed before <b>remove_if_confirmed_before</b>.
+ *
+ * Require <b>gs</b> to be non-null pointer.
+ * Return number of entries deleted.
+ */
+static size_t
+sampled_guards_prune_obsolete_entries(guard_selection_t *gs,
+                                  const time_t remove_if_unlisted_since,
+                                  const time_t maybe_remove_if_sampled_before,
+                                  const time_t remove_if_confirmed_before)
+{
+  size_t n_changes = 0;
+
+  tor_assert(gs);
+
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     int rmv = 0;
 
@@ -1319,7 +1347,7 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
         guard->unlisted_since_date < remove_if_unlisted_since) {
       /*
         "We have a live consensus, and {IS_LISTED} is false, and
-         {FIRST_UNLISTED_AT} is over {REMOVE_UNLISTED_GUARDS_AFTER}
+         {FIRST_UNLISTED_AT} is over get_remove_unlisted_guards_after_days()
          days in the past."
       */
       log_info(LD_GUARD, "Removing sampled guard %s: it has been unlisted "
@@ -1348,12 +1376,51 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
     }
 
     if (rmv) {
-      ++n_changes;
+      n_changes++;
       SMARTLIST_DEL_CURRENT(gs->sampled_entry_guards, guard);
       remove_guard_from_confirmed_and_primary_lists(gs, guard);
       entry_guard_free(guard);
     }
   } SMARTLIST_FOREACH_END(guard);
+
+  return n_changes;
+}
+
+/**
+ * Update the status of all sampled guards based on the arrival of a
+ * new consensus networkstatus document.  This will include marking
+ * some guards as listed or unlisted, and removing expired guards. */
+STATIC void
+sampled_guards_update_from_consensus(guard_selection_t *gs)
+{
+  tor_assert(gs);
+
+  // It's important to use only a live consensus here; we don't want to
+  // make changes based on anything expired or old.
+  if (live_consensus_is_missing(gs)) {
+    log_info(LD_GUARD, "Not updating the sample guard set; we have "
+             "no live consensus.");
+    return;
+  }
+  log_info(LD_GUARD, "Updating sampled guard status based on received "
+           "consensus.");
+
+  /* First: Update listed/unlisted. */
+  size_t n_changes = sampled_guards_update_consensus_presence(gs);
+
+  const time_t remove_if_unlisted_since =
+    approx_time() - get_remove_unlisted_guards_after_seconds();
+  const time_t maybe_remove_if_sampled_before =
+    approx_time() - get_guard_lifetime();
+  const time_t remove_if_confirmed_before =
+    approx_time() - get_guard_confirmed_min_lifetime();
+
+  /* Then: remove the ones that have been junk for too long */
+  n_changes +=
+    sampled_guards_prune_obsolete_entries(gs,
+                                          remove_if_unlisted_since,
+                                          maybe_remove_if_sampled_before,
+                                          remove_if_confirmed_before);
 
   if (n_changes) {
     gs->primary_guards_up_to_date = 0;
@@ -1816,28 +1883,24 @@ entry_guards_update_primary(guard_selection_t *gs)
     smartlist_add(new_primary_guards, guard);
   } SMARTLIST_FOREACH_END(guard);
 
-  /* Can we keep any older primary guards? First remove all the ones
-   * that we already kept. */
   SMARTLIST_FOREACH_BEGIN(old_primary_guards, entry_guard_t *, guard) {
+    /* Can we keep any older primary guards? First remove all the ones
+     * that we already kept. */
     if (smartlist_contains(new_primary_guards, guard)) {
       SMARTLIST_DEL_CURRENT_KEEPORDER(old_primary_guards, guard);
-    }
-  } SMARTLIST_FOREACH_END(guard);
-
-  /* Now add any that are still good. */
-  SMARTLIST_FOREACH_BEGIN(old_primary_guards, entry_guard_t *, guard) {
-    if (smartlist_len(new_primary_guards) >= N_PRIMARY_GUARDS)
-      break;
-    if (! guard->is_filtered_guard)
       continue;
-    guard->is_primary = 1;
-    smartlist_add(new_primary_guards, guard);
-    SMARTLIST_DEL_CURRENT_KEEPORDER(old_primary_guards, guard);
-  } SMARTLIST_FOREACH_END(guard);
+    }
 
-  /* Mark the remaining previous primary guards as non-primary */
-  SMARTLIST_FOREACH_BEGIN(old_primary_guards, entry_guard_t *, guard) {
-    guard->is_primary = 0;
+    /* Now add any that are still good. */
+    if (smartlist_len(new_primary_guards) < N_PRIMARY_GUARDS &&
+        guard->is_filtered_guard) {
+      guard->is_primary = 1;
+      smartlist_add(new_primary_guards, guard);
+      SMARTLIST_DEL_CURRENT_KEEPORDER(old_primary_guards, guard);
+    } else {
+      /* Mark the remaining previous primary guards as non-primary */
+      guard->is_primary = 0;
+    }
   } SMARTLIST_FOREACH_END(guard);
 
   /* Finally, fill out the list with sampled guards. */
@@ -1861,18 +1924,8 @@ entry_guards_update_primary(guard_selection_t *gs)
   });
 #endif /* 1 */
 
-  int any_change = 0;
-  if (smartlist_len(gs->primary_entry_guards) !=
-      smartlist_len(new_primary_guards)) {
-    any_change = 1;
-  } else {
-    SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, g) {
-      if (g != smartlist_get(new_primary_guards, g_sl_idx)) {
-        any_change = 1;
-      }
-    } SMARTLIST_FOREACH_END(g);
-  }
-
+  const int any_change = !smartlist_shallow_eq(gs->primary_entry_guards,
+                                               new_primary_guards);
   if (any_change) {
     log_info(LD_GUARD, "Primary entry guards have changed. "
              "New primary guard list is: ");
@@ -1974,31 +2027,23 @@ entry_guards_note_internet_connectivity(guard_selection_t *gs)
 }
 
 /**
- * Get a guard for use with a circuit.  Prefer to pick a running primary
- * guard; then a non-pending running filtered confirmed guard; then a
- * non-pending runnable filtered guard.  Update the
+ * Pick a primary guard for use with a circuit, if available. Update the
  * <b>last_tried_to_connect</b> time and the <b>is_pending</b> fields of the
  * guard as appropriate.  Set <b>state_out</b> to the new guard-state
  * of the circuit.
  */
-STATIC entry_guard_t *
-select_entry_guard_for_circuit(guard_selection_t *gs,
-                               guard_usage_t usage,
-                               const entry_guard_restriction_t *rst,
-                               unsigned *state_out)
+static entry_guard_t *
+select_primary_guard_for_circuit(guard_selection_t *gs,
+                                 guard_usage_t usage,
+                                 const entry_guard_restriction_t *rst,
+                                 unsigned *state_out)
 {
   const int need_descriptor = (usage == GUARD_USAGE_TRAFFIC);
-  tor_assert(gs);
-  tor_assert(state_out);
-
-  if (!gs->primary_guards_up_to_date)
-    entry_guards_update_primary(gs);
+  entry_guard_t *chosen_guard = NULL;
 
   int num_entry_guards = get_n_primary_guards_to_use(usage);
   smartlist_t *usable_primary_guards = smartlist_new();
 
-  /* "If any entry in PRIMARY_GUARDS has {is_reachable} status of
-      <maybe> or <yes>, return the first such guard." */
   SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
     if (! entry_guard_obeys_restriction(guard, rst))
@@ -2016,18 +2061,30 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
   } SMARTLIST_FOREACH_END(guard);
 
   if (smartlist_len(usable_primary_guards)) {
-    entry_guard_t *guard = smartlist_choose(usable_primary_guards);
+    chosen_guard = smartlist_choose(usable_primary_guards);
     smartlist_free(usable_primary_guards);
     log_info(LD_GUARD, "Selected primary guard %s for circuit.",
-             entry_guard_describe(guard));
-    return guard;
+             entry_guard_describe(chosen_guard));
   }
-  smartlist_free(usable_primary_guards);
 
-  /* "Otherwise, if the ordered intersection of {CONFIRMED_GUARDS}
-      and {USABLE_FILTERED_GUARDS} is nonempty, return the first
-      entry in that intersection that has {is_pending} set to
-      false." */
+  smartlist_free(usable_primary_guards);
+  return chosen_guard;
+}
+
+/**
+ * For use with a circuit, pick a non-pending running filtered confirmed guard,
+ * if one is available. Update the <b>last_tried_to_connect</b> time and the
+ * <b>is_pending</b> fields of the guard as appropriate. Set <b>state_out</b>
+ * to the new guard-state of the circuit.
+ */
+static entry_guard_t *
+select_confirmed_guard_for_circuit(guard_selection_t *gs,
+                                  guard_usage_t usage,
+                                  const entry_guard_restriction_t *rst,
+                                  unsigned *state_out)
+{
+  const int need_descriptor = (usage == GUARD_USAGE_TRAFFIC);
+
   SMARTLIST_FOREACH_BEGIN(gs->confirmed_entry_guards, entry_guard_t *, guard) {
     if (guard->is_primary)
       continue; /* we already considered this one. */
@@ -2048,34 +2105,93 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
     }
   } SMARTLIST_FOREACH_END(guard);
 
+  return NULL;
+}
+
+/**
+ * For use with a circuit, pick a confirmed usable filtered guard
+ * at random. Update the <b>last_tried_to_connect</b> time and the
+ * <b>is_pending</b> fields of the guard as appropriate. Set <b>state_out</b>
+ * to the new guard-state of the circuit.
+ */
+static entry_guard_t *
+select_filtered_guard_for_circuit(guard_selection_t *gs,
+                                  guard_usage_t usage,
+                                  const entry_guard_restriction_t *rst,
+                                  unsigned *state_out)
+{
+  const int need_descriptor = (usage == GUARD_USAGE_TRAFFIC);
+  entry_guard_t *chosen_guard = NULL;
+  unsigned flags = 0;
+  if (need_descriptor)
+    flags |= SAMPLE_EXCLUDE_NO_DESCRIPTOR;
+  chosen_guard = sample_reachable_filtered_entry_guards(gs,
+                                                 rst,
+                                                 SAMPLE_EXCLUDE_CONFIRMED |
+                                                 SAMPLE_EXCLUDE_PRIMARY |
+                                                 SAMPLE_EXCLUDE_PENDING |
+                                                 flags);
+  if (!chosen_guard) {
+    return NULL;
+  }
+
+  chosen_guard->is_pending = 1;
+  chosen_guard->last_tried_to_connect = approx_time();
+  *state_out = GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD;
+  log_info(LD_GUARD, "No primary or confirmed guards available. Selected "
+           "random guard %s for circuit. Will try other guards before "
+           "using this circuit.",
+           entry_guard_describe(chosen_guard));
+  return chosen_guard;
+}
+
+/**
+ * Get a guard for use with a circuit.  Prefer to pick a running primary
+ * guard; then a non-pending running filtered confirmed guard; then a
+ * non-pending runnable filtered guard.  Update the
+ * <b>last_tried_to_connect</b> time and the <b>is_pending</b> fields of the
+ * guard as appropriate.  Set <b>state_out</b> to the new guard-state
+ * of the circuit.
+ */
+STATIC entry_guard_t *
+select_entry_guard_for_circuit(guard_selection_t *gs,
+                               guard_usage_t usage,
+                               const entry_guard_restriction_t *rst,
+                               unsigned *state_out)
+{
+  entry_guard_t *chosen_guard = NULL;
+  tor_assert(gs);
+  tor_assert(state_out);
+
+  if (!gs->primary_guards_up_to_date)
+    entry_guards_update_primary(gs);
+
+  /* "If any entry in PRIMARY_GUARDS has {is_reachable} status of
+      <maybe> or <yes>, return the first such guard." */
+  chosen_guard = select_primary_guard_for_circuit(gs, usage, rst, state_out);
+  if (chosen_guard)
+    return chosen_guard;
+
+  /* "Otherwise, if the ordered intersection of {CONFIRMED_GUARDS}
+      and {USABLE_FILTERED_GUARDS} is nonempty, return the first
+      entry in that intersection that has {is_pending} set to
+      false." */
+  chosen_guard = select_confirmed_guard_for_circuit(gs, usage, rst, state_out);
+  if (chosen_guard)
+    return chosen_guard;
+
   /* "Otherwise, if there is no such entry, select a member at
       random from {USABLE_FILTERED_GUARDS}." */
-  {
-    entry_guard_t *guard;
-    unsigned flags = 0;
-    if (need_descriptor)
-      flags |= SAMPLE_EXCLUDE_NO_DESCRIPTOR;
-    guard = sample_reachable_filtered_entry_guards(gs,
-                                                   rst,
-                                                   SAMPLE_EXCLUDE_CONFIRMED |
-                                                   SAMPLE_EXCLUDE_PRIMARY |
-                                                   SAMPLE_EXCLUDE_PENDING |
-                                                   flags);
-    if (guard == NULL) {
-      log_info(LD_GUARD, "Absolutely no sampled guards were available. "
-               "Marking all guards for retry and starting from top again.");
-      mark_all_guards_maybe_reachable(gs);
-      return NULL;
-    }
-    guard->is_pending = 1;
-    guard->last_tried_to_connect = approx_time();
-    *state_out = GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD;
-    log_info(LD_GUARD, "No primary or confirmed guards available. Selected "
-             "random guard %s for circuit. Will try other guards before "
-             "using this circuit.",
-             entry_guard_describe(guard));
-    return guard;
+  chosen_guard = select_filtered_guard_for_circuit(gs, usage, rst, state_out);
+
+  if (chosen_guard == NULL) {
+    log_info(LD_GUARD, "Absolutely no sampled guards were available. "
+             "Marking all guards for retry and starting from top again.");
+    mark_all_guards_maybe_reachable(gs);
+    return NULL;
   }
+
+  return chosen_guard;
 }
 
 /**
