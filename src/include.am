@@ -8,6 +8,7 @@ include src/lib/container/include.am
 include src/lib/crypt_ops/include.am
 include src/lib/defs/include.am
 include src/lib/encoding/include.am
+include src/lib/evloop/include.am
 include src/lib/fdio/include.am
 include src/lib/fs/include.am
 include src/lib/include.libdonna.am
@@ -31,7 +32,6 @@ include src/lib/time/include.am
 include src/lib/tls/include.am
 include src/lib/trace/include.am
 include src/lib/wallclock/include.am
-include src/common/include.am
 include src/trunnel/include.am
 include src/or/include.am
 include src/rust/include.am

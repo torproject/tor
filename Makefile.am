@@ -40,7 +40,6 @@ endif
 
 # "Common" libraries used to link tor's utility code.
 TOR_UTIL_LIBS = \
-	src/common/libor.a \
 	src/lib/libtor-process.a \
 	src/lib/libtor-time.a \
 	src/lib/libtor-fs.a \
@@ -68,7 +67,6 @@ TOR_UTIL_LIBS = \
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
 TOR_UTIL_TESTING_LIBS = \
-	src/common/libor-testing.a \
 	src/lib/libtor-process-testing.a \
 	src/lib/libtor-time-testing.a \
 	src/lib/libtor-fs-testing.a \
@@ -112,9 +110,9 @@ TOR_CRYPTO_TESTING_LIBS = \
 TOR_INTERNAL_LIBS = \
 	src/or/libtor-app.a \
 	src/lib/libtor-compress.a \
+	src/lib/libtor-evloop.a \
 	$(TOR_CRYPTO_LIBS) \
 	$(TOR_UTIL_LIBS) \
-	src/common/libor-event.a \
 	src/trunnel/libor-trunnel.a \
 	src/lib/libtor-trace.a
 
@@ -123,9 +121,9 @@ TOR_INTERNAL_LIBS = \
 TOR_INTERNAL_TESTING_LIBS = \
 	src/or/libtor-app-testing.a \
 	src/lib/libtor-compress-testing.a \
+	src/lib/libtor-evloop-testing.a \
 	$(TOR_CRYPTO_TESTING_LIBS) \
 	$(TOR_UTIL_TESTING_LIBS) \
-	src/common/libor-event-testing.a \
 	src/trunnel/libor-trunnel-testing.a \
 	src/lib/libtor-trace.a
 

@@ -132,19 +132,6 @@ uptime-*.json
 # /src/trace
 /src/trace/libor-trace.a
 
-# /src/common/
-/src/common/Makefile
-/src/common/Makefile.in
-/src/common/libor.a
-/src/common/libor-testing.a
-/src/common/libor.lib
-/src/common/libor-ctime.a
-/src/common/libor-ctime-testing.a
-/src/common/libor-ctime.lib
-/src/common/libor-event.a
-/src/common/libor-event-testing.a
-/src/common/libor-event.lib
-
 # /src/config/
 /src/config/Makefile
 /src/config/Makefile.in
@@ -173,6 +160,8 @@ uptime-*.json
 /src/lib/libtor-ctime-testing.a
 /src/lib/libtor-encoding.a
 /src/lib/libtor-encoding-testing.a
+/src/lib/libtor-evloop.a
+/src/lib/libtor-evloop-testing.a
 /src/lib/libtor-err.a
 /src/lib/libtor-err-testing.a
 /src/lib/libtor-fdio.a
