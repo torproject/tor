@@ -3739,7 +3739,7 @@ static void
 test_config_default_fallback_dirs(void *arg)
 {
   const char *fallback[] = {
-#include "../or/fallback_dirs.inc"
+#include "app/config/fallback_dirs.inc"
     NULL
   };
 

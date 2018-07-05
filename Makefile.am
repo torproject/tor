@@ -302,10 +302,10 @@ coverage-html-full: all
 check-spaces:
 if USE_PERL
 	$(PERL) $(top_srcdir)/scripts/maint/checkSpace.pl -C \
-		$(top_srcdir)/src/common/*.[ch] \
 		$(top_srcdir)/src/lib/*/*.[ch] \
-		$(top_srcdir)/src/or/*.[ch] \
-		$(top_srcdir)/src/or/*/*.[ch] \
+		$(top_srcdir)/src/core/*/*.[ch] \
+		$(top_srcdir)/src/feature/*/*.[ch] \
+		$(top_srcdir)/src/app/*/*.[ch] \
 		$(top_srcdir)/src/test/*.[ch] \
 		$(top_srcdir)/src/test/*/*.[ch] \
 		$(top_srcdir)/src/tools/*.[ch]
