@@ -11,12 +11,6 @@ endif
 
 EXTRA_DIST += src/common/Makefile.nmake
 
-if USE_OPENBSD_MALLOC
-libor_extra_source=src/ext/OpenBSD_malloc_Linux.c
-else
-libor_extra_source=
-endif
-
 LIBOR_A_SRC = \
   src/common/token_bucket.c				\
   src/common/workqueue.c				\
