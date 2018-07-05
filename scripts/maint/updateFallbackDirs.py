@@ -3,11 +3,11 @@
 # Usage:
 #
 # Regenerate the list:
-# scripts/maint/updateFallbackDirs.py > src/or/fallback_dirs.inc 2> fallback_dirs.log
+# scripts/maint/updateFallbackDirs.py > src/app/config/fallback_dirs.inc 2> fallback_dirs.log
 #
 # Check the existing list:
 # scripts/maint/updateFallbackDirs.py check_existing > fallback_dirs.inc.ok 2> fallback_dirs.log
-# mv fallback_dirs.inc.ok src/or/fallback_dirs.inc
+# mv fallback_dirs.inc.ok src/app/config/fallback_dirs.inc
 #
 # This script should be run from a stable, reliable network connection,
 # with no other network activity (and not over tor).
@@ -112,7 +112,7 @@ DOWNLOAD_MICRODESC_CONSENSUS = True
 # expired consensus. This makes them fail the download check.
 # We use a tolerance of 0, so that 0.2.x series relays also fail the download
 # check if they serve an expired consensus.
-CONSENSUS_EXPIRY_TOLERANCE = 0 
+CONSENSUS_EXPIRY_TOLERANCE = 0
 
 # Output fallback name, flags, bandwidth, and ContactInfo in a C comment?
 OUTPUT_COMMENTS = True if OUTPUT_CANDIDATES else False
@@ -161,7 +161,7 @@ BLACKLIST_EXCLUDES_WHITELIST_ENTRIES = True
 
 WHITELIST_FILE_NAME = 'scripts/maint/fallback.whitelist'
 BLACKLIST_FILE_NAME = 'scripts/maint/fallback.blacklist'
-FALLBACK_FILE_NAME  = 'src/or/fallback_dirs.inc'
+FALLBACK_FILE_NAME  = 'src/app/config/fallback_dirs.inc'
 
 # The number of bytes we'll read from a filter file before giving up
 MAX_LIST_FILE_SIZE = 1024 * 1024

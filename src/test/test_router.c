@@ -4,7 +4,7 @@
 
 /**
  * \file test_router.c
- * \brief Unittests for code in src/or/router.c
+ * \brief Unittests for code in router.c
  **/
 
 #include "core/or/or.h"
@@ -111,4 +111,3 @@ struct testcase_t router_tests[] = {
   ROUTER_TEST(dump_router_to_string_no_bridge_distribution_method, TT_FORK),
   END_OF_TESTCASES
 };
-

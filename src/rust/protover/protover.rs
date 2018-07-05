@@ -19,13 +19,13 @@ use protoset::ProtoSet;
 /// Authorities should use this to decide whether to guess proto lines.
 ///
 /// C_RUST_COUPLED:
-///     src/or/protover.h `FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS`
+///     protover.h `FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS`
 const FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS: &'static str = "0.2.9.3-alpha";
 
 /// The maximum number of subprotocol version numbers we will attempt to expand
 /// before concluding that someone is trying to DoS us
 ///
-/// C_RUST_COUPLED: src/or/protover.c `MAX_PROTOCOLS_TO_EXPAND`
+/// C_RUST_COUPLED: protover.c `MAX_PROTOCOLS_TO_EXPAND`
 const MAX_PROTOCOLS_TO_EXPAND: usize = (1<<16);
 
 /// The maximum size an `UnknownProtocol`'s name may be.
@@ -33,7 +33,7 @@ pub(crate) const MAX_PROTOCOL_NAME_LENGTH: usize = 100;
 
 /// Known subprotocols in Tor. Indicates which subprotocol a relay supports.
 ///
-/// C_RUST_COUPLED: src/or/protover.h `protocol_type_t`
+/// C_RUST_COUPLED: protover.h `protocol_type_t`
 #[derive(Clone, Hash, Eq, PartialEq, Debug)]
 pub enum Protocol {
     Cons,
@@ -57,7 +57,7 @@ impl fmt::Display for Protocol {
 /// Translates a string representation of a protocol into a Proto type.
 /// Error if the string is an unrecognized protocol name.
 ///
-/// C_RUST_COUPLED: src/or/protover.c `PROTOCOL_NAMES`
+/// C_RUST_COUPLED: protover.c `PROTOCOL_NAMES`
 impl FromStr for Protocol {
     type Err = ProtoverError;
 
@@ -130,7 +130,7 @@ impl From<Protocol> for UnknownProtocol {
 /// Rust code can use the `&'static CStr` as a normal `&'a str` by
 /// calling `protover::get_supported_protocols`.
 ///
-//  C_RUST_COUPLED: src/or/protover.c `protover_get_supported_protocols`
+//  C_RUST_COUPLED: protover.c `protover_get_supported_protocols`
 pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
     cstr!("Cons=1-2 \
            Desc=1-2 \
@@ -601,7 +601,7 @@ impl ProtoverVote {
     /// let vote = ProtoverVote::compute(protos, &2);
     /// assert_eq!("Link=3", vote.to_string());
     /// ```
-    // C_RUST_COUPLED: /src/or/protover.c protover_compute_vote
+    // C_RUST_COUPLED: protover.c protover_compute_vote
     pub fn compute(proto_entries: &[UnvalidatedProtoEntry], threshold: &usize) -> UnvalidatedProtoEntry {
         let mut all_count: ProtoverVote = ProtoverVote::default();
         let mut final_output: UnvalidatedProtoEntry = UnvalidatedProtoEntry::default();

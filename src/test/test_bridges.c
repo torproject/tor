@@ -3,7 +3,7 @@
 
 /**
  * \file test_bridges.c
- * \brief Unittests for code in src/or/bridges.c
+ * \brief Unittests for code in bridges.c
  **/
 
 #define TOR_BRIDGES_PRIVATE
@@ -609,4 +609,3 @@ struct testcase_t bridges_tests[] = {
   B_TEST(transport_is_needed, 0),
   END_OF_TESTCASES
 };
-

@@ -5,7 +5,7 @@ dnl See LICENSE for licensing information
 
 AC_PREREQ([2.63])
 AC_INIT([tor],[0.3.5.0-alpha-dev])
-AC_CONFIG_SRCDIR([src/or/main.c])
+AC_CONFIG_SRCDIR([src/app/main/tor_main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
 # "foreign" means we don't follow GNU package layout standards

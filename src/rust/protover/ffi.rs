@@ -3,7 +3,7 @@
 
 //! FFI functions, only to be called from C.
 //!
-//! Equivalent C versions of this api are in `src/or/protover.c`
+//! Equivalent C versions of this api are in `protover.c`
 
 use libc::{c_char, c_int, uint32_t};
 use std::ffi::CStr;
@@ -18,7 +18,7 @@ use protover::*;
 /// Translate C enums to Rust Proto enums, using the integer value of the C
 /// enum to map to its associated Rust enum.
 ///
-/// C_RUST_COUPLED: src/or/protover.h `protocol_type_t`
+/// C_RUST_COUPLED: protover.h `protocol_type_t`
 fn translate_to_rust(c_proto: uint32_t) -> Result<Protocol, ProtoverError> {
     match c_proto {
         0 => Ok(Protocol::Link),
