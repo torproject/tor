@@ -14,7 +14,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/parsecommon.h"
 #include "core/or/policies.h"
-#include "core/proto/protover.h"
+#include "core/or/protover.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"

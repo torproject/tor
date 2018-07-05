@@ -68,7 +68,7 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/parsecommon.h"
 #include "core/or/policies.h"
-#include "core/proto/protover.h"
+#include "core/or/protover.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"

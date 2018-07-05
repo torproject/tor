@@ -25,7 +25,7 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"
-#include "core/proto/protover.h"
+#include "core/or/protover.h"
 #include "core/or/relay.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"

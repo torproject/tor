@@ -12,7 +12,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/app/config/statefile.c		\
 	src/core/proto/proto_socks.c		\
 	src/core/proto/protover_rust.c		\
-	src/core/proto/protover.c		\
 	src/core/proto/proto_ext_or.c		\
 	src/core/proto/proto_cell.c		\
 	src/core/proto/proto_http.c		\
@@ -44,6 +43,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/or/scheduler_vanilla.c		\
 	src/core/or/connection_edge.c		\
 	src/core/or/dos.c			\
+	src/core/or/protover.c			\
 	src/core/or/address_set.c		\
 	src/core/or/command.c			\
 	src/core/or/channel.c			\
@@ -149,7 +149,6 @@ noinst_HEADERS +=					\
 	src/app/config/or_state_st.h			\
 	src/app/config/confparse.h			\
 	src/app/main/ntmain.h				\
-	src/core/proto/protover.h			\
 	src/core/proto/proto_ext_or.h			\
 	src/core/proto/proto_http.h			\
 	src/core/proto/proto_cell.h			\
@@ -190,6 +189,7 @@ noinst_HEADERS +=					\
 	src/core/or/or_handshake_certs_st.h		\
 	src/core/or/dos.h				\
 	src/core/or/or_connection_st.h			\
+	src/core/or/protover.h				\
 	src/core/or/channel.h				\
 	src/core/or/or_circuit_st.h			\
 	src/core/or/entry_port_cfg_st.h			\

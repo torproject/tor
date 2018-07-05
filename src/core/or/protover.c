@@ -24,7 +24,7 @@
 #define PROTOVER_PRIVATE
 
 #include "core/or/or.h"
-#include "core/proto/protover.h"
+#include "core/or/protover.h"
 #include "feature/nodelist/routerparse.h"
 
 #ifndef HAVE_RUST

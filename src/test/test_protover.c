@@ -6,7 +6,7 @@
 #include "orconfig.h"
 #include "test/test.h"
 
-#include "core/proto/protover.h"
+#include "core/or/protover.h"
 
 #include "core/or/or.h"
 #include "core/or/connection_or.h"

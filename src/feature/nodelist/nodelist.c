@@ -56,7 +56,7 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"
-#include "core/proto/protover.h"
+#include "core/or/protover.h"
 #include "feature/rend/rendservice.h"
 #include "feature/relay/router.h"
 #include "feature/nodelist/routerlist.h"

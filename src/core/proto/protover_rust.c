@@ -8,7 +8,7 @@
  */
 
 #include "core/or/or.h"
-#include "core/proto/protover.h"
+#include "core/or/protover.h"
 
 #ifdef HAVE_RUST
 

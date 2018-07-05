@@ -92,7 +92,7 @@
 #include "core/crypto/onion.h"
 #include "core/mainloop/periodic.h"
 #include "core/or/policies.h"
-#include "core/proto/protover.h"
+#include "core/or/protover.h"
 #include "feature/client/transports.h"
 #include "core/or/relay.h"
 #include "feature/rend/rendclient.h"
