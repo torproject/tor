@@ -18,7 +18,6 @@ libor_extra_source=
 endif
 
 LIBOR_A_SRC = \
-  src/common/address_set.c				\
   src/common/token_bucket.c				\
   src/common/workqueue.c				\
   $(libor_extra_source)
@@ -49,7 +48,6 @@ src_common_libor_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 COMMONHEADERS = \
-  src/common/address_set.h			\
   src/common/compat_libevent.h			\
   src/common/procmon.h				\
   src/common/timers.h				\

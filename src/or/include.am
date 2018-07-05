@@ -19,6 +19,7 @@ EXTRA_DIST+= src/or/ntmain.c src/or/Makefile.nmake
 
 LIBTOR_APP_A_SOURCES = \
 	src/or/addressmap.c				\
+	src/or/address_set.c				\
 	src/or/bridges.c				\
 	src/or/channel.c				\
 	src/or/channelpadding.c				\
@@ -180,6 +181,7 @@ endif
 
 ORHEADERS = \
 	src/or/addressmap.h				\
+	src/or/address_set.h				\
 	src/or/addr_policy_st.h				\
 	src/or/authority_cert_st.h			\
 	src/or/auth_dirs.inc				\
