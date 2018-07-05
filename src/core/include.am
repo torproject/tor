@@ -1,21 +1,10 @@
-bin_PROGRAMS+= src/or/tor
+
 noinst_LIBRARIES += \
-	src/or/libtor-app.a
+	src/core/libtor-app.a
 if UNITTESTS_ENABLED
 noinst_LIBRARIES += \
-	src/or/libtor-app-testing.a
+	src/core/libtor-app-testing.a
 endif
-if COVERAGE_ENABLED
-noinst_PROGRAMS+= src/or/tor-cov
-endif
-
-if BUILD_NT_SERVICES
-tor_platform_source=src/or/ntmain.c
-else
-tor_platform_source=
-endif
-
-EXTRA_DIST+= src/or/ntmain.c src/or/Makefile.nmake
 
 LIBTOR_APP_A_SOURCES = \
 	src/or/addressmap.c				\
@@ -110,8 +99,7 @@ LIBTOR_APP_A_SOURCES = \
 	src/or/torcert.c				\
 	src/or/tor_api.c				\
 	src/or/voting_schedule.c			\
-	src/or/onion_ntor.c				\
-	$(tor_platform_source)
+	src/or/onion_ntor.c
 
 #
 # Modules are conditionnally compiled in tor starting here. We add the C files
@@ -131,53 +119,26 @@ if BUILD_MODULE_DIRAUTH
 LIBTOR_APP_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
 endif
 
-src_or_libtor_app_a_SOURCES = $(LIBTOR_APP_A_SOURCES)
+src_core_libtor_app_a_SOURCES = $(LIBTOR_APP_A_SOURCES)
 if UNITTESTS_ENABLED
 
 # Add the sources of the modules that are needed for tests to work here.
 LIBTOR_APP_TESTING_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
 
-src_or_libtor_app_testing_a_SOURCES = $(LIBTOR_APP_TESTING_A_SOURCES)
+src_core_libtor_app_testing_a_SOURCES = $(LIBTOR_APP_TESTING_A_SOURCES)
 else
-src_or_libtor_app_testing_a_SOURCES =
+src_core_libtor_app_testing_a_SOURCES =
 endif
 
-src_or_tor_SOURCES = src/or/tor_main.c
-
 src/or/git_revision.$(OBJEXT) \
-  src/or/src_or_libtor_app_testing_a-git_revision.$(OBJEXT): micro-revision.i
+  src/or/src_core_libtor_app_testing_a-git_revision.$(OBJEXT): micro-revision.i
 
 AM_CPPFLAGS += -DSHARE_DATADIR="\"$(datadir)\""		\
 		-DLOCALSTATEDIR="\"$(localstatedir)\""	\
 		-DBINDIR="\"$(bindir)\""
 
-src_or_libtor_app_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
-src_or_libtor_app_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
-
-# -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
-# This seems to matter nowhere but on windows, but I assure you that it
-# matters a lot there, and is quite hard to debug if you forget to do it.
-
-
-src_or_tor_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
-src_or_tor_LDADD = $(TOR_INTERNAL_LIBS) \
-	$(rust_ldadd) \
-	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
-	@TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
-	@CURVE25519_LIBS@ @TOR_SYSTEMD_LIBS@ \
-	@TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@
-
-if COVERAGE_ENABLED
-src_or_tor_cov_SOURCES = src/or/tor_main.c
-src_or_tor_cov_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
-src_or_tor_cov_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
-src_or_tor_cov_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
-src_or_tor_cov_LDADD = $(TOR_INTERNAL_TESTING_LIBS) \
-	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
-	@TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ \
-	@CURVE25519_LIBS@ @TOR_SYSTEMD_LIBS@ \
-	@TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@
-endif
+src_core_libtor_app_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
+src_core_libtor_app_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 ORHEADERS = \
 	src/or/addressmap.h				\
@@ -267,7 +228,6 @@ ORHEADERS = \
 	src/or/nodelist.h				\
 	src/or/node_st.h				\
 	src/or/ns_detached_signatures_st.h		\
-	src/or/ntmain.h					\
 	src/or/onion.h					\
 	src/or/onion_fast.h				\
 	src/or/onion_ntor.h				\

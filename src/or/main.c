@@ -88,7 +88,7 @@
 #include "or/microdesc.h"
 #include "or/networkstatus.h"
 #include "or/nodelist.h"
-#include "or/ntmain.h"
+#include "app/ntmain.h"
 #include "or/onion.h"
 #include "or/periodic.h"
 #include "or/policies.h"

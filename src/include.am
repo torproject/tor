@@ -33,7 +33,10 @@ include src/lib/tls/include.am
 include src/lib/trace/include.am
 include src/lib/wallclock/include.am
 include src/trunnel/include.am
-include src/or/include.am
+
+include src/core/include.am
+include src/app/include.am
+
 include src/rust/include.am
 include src/test/include.am
 include src/tools/include.am

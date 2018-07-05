@@ -22,7 +22,7 @@
 #include "or/or.h"
 #include "or/config.h"
 #include "or/main.h"
-#include "or/ntmain.h"
+#include "app/ntmain.h"
 #include "lib/log/win32err.h"
 #include "lib/fs/winlib.h"
 #include "lib/evloop/compat_libevent.h"

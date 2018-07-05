@@ -28,7 +28,7 @@ Jenkins
 Valgrind
 --------
 
-    valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
+    valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/app/tor
 
 (Note that if you get a zillion openssl warnings, you will also need to
 pass `--undef-value-errors=no` to valgrind, or rebuild your openssl
@@ -232,10 +232,10 @@ Beforehand, install google-perftools.
 Now you can run Tor with profiling enabled, and use the pprof utility to look at
 performance! See the gperftools manual for more info, but basically:
 
-2. Run `env CPUPROFILE=/tmp/profile src/or/tor -f <path/torrc>`. The profile file
+2. Run `env CPUPROFILE=/tmp/profile src/app/tor -f <path/torrc>`. The profile file
    is not written to until Tor finishes execuction.
 
-3. Run `pprof src/or/tor /tm/profile` to start the REPL.
+3. Run `pprof src/app/tor /tm/profile` to start the REPL.
 
 Generating and analyzing a callgraph
 ------------------------------------
