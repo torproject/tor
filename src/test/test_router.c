@@ -4,17 +4,17 @@
 
 /**
  * \file test_router.c
- * \brief Unittests for code in src/or/router.c
+ * \brief Unittests for code in router.c
  **/
 
-#include "or/or.h"
-#include "or/config.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
-#include "or/router.h"
-#include "or/routerlist.h"
+#include "feature/relay/router.h"
+#include "feature/nodelist/routerlist.h"
 
-#include "or/routerinfo_st.h"
+#include "feature/nodelist/routerinfo_st.h"
 
 /* Test suite stuff */
 #include "test/test.h"
@@ -111,4 +111,3 @@ struct testcase_t router_tests[] = {
   ROUTER_TEST(dump_router_to_string_no_bridge_distribution_method, TT_FORK),
   END_OF_TESTCASES
 };
-

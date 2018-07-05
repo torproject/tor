@@ -7,29 +7,29 @@
 #define MAIN_PRIVATE
 #define CONNECTION_OR_PRIVATE
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 
-#include "or/connection.h"
-#include "or/connection_edge.h"
-#include "or/hs_common.h"
-#include "or/main.h"
-#include "or/microdesc.h"
-#include "or/nodelist.h"
-#include "or/networkstatus.h"
-#include "or/rendcache.h"
-#include "or/directory.h"
-#include "or/connection_or.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_edge.h"
+#include "feature/hs/hs_common.h"
+#include "core/mainloop/main.h"
+#include "feature/nodelist/microdesc.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/rend/rendcache.h"
+#include "feature/dircache/directory.h"
+#include "core/or/connection_or.h"
 
 #include "test/test_connection.h"
 #include "test/test_helpers.h"
 
-#include "or/dir_connection_st.h"
-#include "or/entry_connection_st.h"
-#include "or/node_st.h"
-#include "or/or_connection_st.h"
-#include "or/routerinfo_st.h"
-#include "or/socks_request_st.h"
+#include "feature/dircommon/dir_connection_st.h"
+#include "core/or/entry_connection_st.h"
+#include "feature/nodelist/node_st.h"
+#include "core/or/or_connection_st.h"
+#include "feature/nodelist/routerinfo_st.h"
+#include "core/or/socks_request_st.h"
 
 static void * test_conn_get_basic_setup(const struct testcase_t *tc);
 static int test_conn_get_basic_teardown(const struct testcase_t *tc,

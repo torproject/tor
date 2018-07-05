@@ -8,7 +8,7 @@
 
 #define TOKEN_BUCKET_PRIVATE
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 
 #include "lib/evloop/token_bucket.h"

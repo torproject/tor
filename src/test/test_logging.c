@@ -4,8 +4,8 @@
 #define CONFIG_PRIVATE
 
 #include "orconfig.h"
-#include "or/or.h"
-#include "or/config.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
 #include "lib/err/torerr.h"
 #include "lib/log/torlog.h"
 #include "test/test.h"

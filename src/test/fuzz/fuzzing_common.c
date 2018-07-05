@@ -2,9 +2,9 @@
 /* See LICENSE for licensing information */
 #define CRYPTO_ED25519_PRIVATE
 #include "orconfig.h"
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/err/backtrace.h"
-#include "or/config.h"
+#include "app/config/config.h"
 #include "test/fuzz/fuzzing.h"
 #include "lib/compress/compress.h"
 #include "lib/crypt_ops/crypto.h"

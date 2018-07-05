@@ -6,17 +6,17 @@
  * \brief Unit tests for nodelist related functions.
  **/
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/networkstatus.h"
-#include "or/nodelist.h"
-#include "or/torcert.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/torcert.h"
 
-#include "or/microdesc_st.h"
-#include "or/networkstatus_st.h"
-#include "or/node_st.h"
-#include "or/routerinfo_st.h"
-#include "or/routerstatus_st.h"
+#include "feature/nodelist/microdesc_st.h"
+#include "feature/nodelist/networkstatus_st.h"
+#include "feature/nodelist/node_st.h"
+#include "feature/nodelist/routerinfo_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 
 #include "test/test.h"
 

@@ -3,8 +3,8 @@
 
 #include "orconfig.h"
 #define KEYPIN_PRIVATE
-#include "or/or.h"
-#include "or/keypin.h"
+#include "core/or/or.h"
+#include "feature/dirauth/keypin.h"
 
 #include "test/test.h"
 

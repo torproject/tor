@@ -5,15 +5,15 @@
 #define CIRCUITMUX_PRIVATE
 #define CIRCUITMUX_EWMA_PRIVATE
 #define RELAY_PRIVATE
-#include "or/or.h"
-#include "or/channel.h"
-#include "or/circuitmux.h"
-#include "or/circuitmux_ewma.h"
-#include "or/relay.h"
-#include "or/scheduler.h"
+#include "core/or/or.h"
+#include "core/or/channel.h"
+#include "core/or/circuitmux.h"
+#include "core/or/circuitmux_ewma.h"
+#include "core/or/relay.h"
+#include "core/or/scheduler.h"
 #include "test/test.h"
 
-#include "or/destroy_cell_queue_st.h"
+#include "core/or/destroy_cell_queue_st.h"
 
 /* XXXX duplicated function from test_circuitlist.c */
 static channel_t *

@@ -6,19 +6,19 @@
 #include <math.h>
 
 #define TOR_CHANNEL_INTERNAL_
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/net/address.h"
 #include "lib/container/buffers.h"
-#include "or/channel.h"
-#include "or/channeltls.h"
-#include "or/connection.h"
-#include "or/connection_or.h"
-#include "or/config.h"
+#include "core/or/channel.h"
+#include "core/or/channeltls.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_or.h"
+#include "app/config/config.h"
 /* For init/free stuff */
-#include "or/scheduler.h"
+#include "core/or/scheduler.h"
 #include "lib/tls/tortls.h"
 
-#include "or/or_connection_st.h"
+#include "core/or/or_connection_st.h"
 
 /* Test suite stuff */
 #include "test/test.h"

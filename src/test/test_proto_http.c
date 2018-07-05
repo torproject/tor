@@ -6,10 +6,10 @@
  * \brief Tests for our HTTP protocol parser code
  */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 #include "lib/container/buffers.h"
-#include "or/proto_http.h"
+#include "core/proto/proto_http.h"
 #include "test/log_test_helpers.h"
 
 #define S(str) str, sizeof(str)-1

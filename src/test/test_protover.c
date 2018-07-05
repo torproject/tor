@@ -6,10 +6,10 @@
 #include "orconfig.h"
 #include "test/test.h"
 
-#include "or/protover.h"
+#include "core/or/protover.h"
 
-#include "or/or.h"
-#include "or/connection_or.h"
+#include "core/or/or.h"
+#include "core/or/connection_or.h"
 
 static void
 test_protover_parse(void *arg)

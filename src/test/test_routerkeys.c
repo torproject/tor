@@ -5,13 +5,13 @@
 
 #include "orconfig.h"
 #define ROUTER_PRIVATE
-#include "or/or.h"
-#include "or/config.h"
-#include "or/router.h"
-#include "or/routerkeys.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
+#include "feature/relay/router.h"
+#include "feature/relay/routerkeys.h"
 #include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_format.h"
-#include "or/torcert.h"
+#include "feature/nodelist/torcert.h"
 #include "test/test.h"
 
 #ifdef _WIN32

@@ -1,9 +1,9 @@
 /* Copyright (c) 2016-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 #define ROUTERPARSE_PRIVATE
-#include "or/or.h"
-#include "or/routerparse.h"
-#include "or/microdesc.h"
+#include "core/or/or.h"
+#include "feature/nodelist/routerparse.h"
+#include "feature/nodelist/microdesc.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
 #include "test/fuzz/fuzzing.h"

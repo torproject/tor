@@ -12,7 +12,7 @@
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
-#include "or/hs_ntor.h"
+#include "core/crypto/hs_ntor.h"
 
 /* Test the HS ntor handshake. Simulate the sending of an encrypted INTRODUCE1
  * cell, and verify the proper derivation of decryption keys on the other end.

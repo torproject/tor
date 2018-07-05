@@ -1,12 +1,12 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "test/test.h"
-#include "or/torcert.h"
+#include "feature/nodelist/torcert.h"
 
-#include "or/hs_common.h"
+#include "feature/hs/hs_common.h"
 #include "test/hs_test_helpers.h"
 
 hs_desc_intro_point_t *

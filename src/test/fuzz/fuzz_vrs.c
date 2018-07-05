@@ -2,14 +2,14 @@
 /* See LICENSE for licensing information */
 #define ROUTERPARSE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
-#include "or/or.h"
-#include "or/routerparse.h"
+#include "core/or/or.h"
+#include "feature/nodelist/routerparse.h"
 #include "lib/memarea/memarea.h"
-#include "or/microdesc.h"
-#include "or/networkstatus.h"
+#include "feature/nodelist/microdesc.h"
+#include "feature/nodelist/networkstatus.h"
 
-#include "or/networkstatus_st.h"
-#include "or/vote_routerstatus_st.h"
+#include "feature/nodelist/networkstatus_st.h"
+#include "feature/nodelist/vote_routerstatus_st.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
 #include "test/fuzz/fuzzing.h"

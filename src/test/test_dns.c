@@ -1,18 +1,18 @@
 /* Copyright (c) 2015-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 
 #define DNS_PRIVATE
 
-#include "or/dns.h"
-#include "or/connection.h"
-#include "or/connection_edge.h"
-#include "or/router.h"
+#include "feature/relay/dns.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_edge.h"
+#include "feature/relay/router.h"
 
-#include "or/edge_connection_st.h"
-#include "or/or_circuit_st.h"
+#include "core/or/edge_connection_st.h"
+#include "core/or/or_circuit_st.h"
 
 #define NS_MODULE dns
 

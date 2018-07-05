@@ -12,21 +12,21 @@
 #define RENDSERVICE_PRIVATE
 #define HS_SERVICE_PRIVATE
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
-#include "or/control.h"
-#include "or/config.h"
-#include "or/hs_common.h"
-#include "or/rendcommon.h"
-#include "or/rendservice.h"
-#include "or/routerlist.h"
-#include "or/routerset.h"
-#include "or/circuitbuild.h"
+#include "feature/control/control.h"
+#include "app/config/config.h"
+#include "feature/hs/hs_common.h"
+#include "feature/rend/rendcommon.h"
+#include "feature/rend/rendservice.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/routerset.h"
+#include "core/or/circuitbuild.h"
 
-#include "or/node_st.h"
-#include "or/rend_encoded_v2_service_descriptor_st.h"
-#include "or/rend_intro_point_st.h"
-#include "or/routerinfo_st.h"
+#include "feature/nodelist/node_st.h"
+#include "feature/rend/rend_encoded_v2_service_descriptor_st.h"
+#include "feature/rend/rend_intro_point_st.h"
+#include "feature/nodelist/routerinfo_st.h"
 
 #include "test/test_helpers.h"
 

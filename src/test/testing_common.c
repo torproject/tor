@@ -10,17 +10,17 @@
 
 #define MAIN_PRIVATE
 #include "orconfig.h"
-#include "or/or.h"
-#include "or/control.h"
-#include "or/config.h"
+#include "core/or/or.h"
+#include "feature/control/control.h"
+#include "app/config/config.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/rephist.h"
+#include "feature/stats/rephist.h"
 #include "lib/err/backtrace.h"
 #include "test/test.h"
-#include "or/channelpadding.h"
-#include "or/main.h"
+#include "core/or/channelpadding.h"
+#include "core/mainloop/main.h"
 #include "lib/compress/compress.h"
 #include "lib/evloop/compat_libevent.h"
 

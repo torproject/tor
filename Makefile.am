@@ -25,9 +25,9 @@ AM_CFLAGS=@TOR_SYSTEMD_CFLAGS@ @CFLAGS_BUGTRAP@ @TOR_LZMA_CFLAGS@ @TOR_ZSTD_CFLA
 SHELL=@SHELL@
 
 if COVERAGE_ENABLED
-TESTING_TOR_BINARY=$(top_builddir)/src/or/tor-cov$(EXEEXT)
+TESTING_TOR_BINARY=$(top_builddir)/src/app/tor-cov$(EXEEXT)
 else
-TESTING_TOR_BINARY=$(top_builddir)/src/or/tor$(EXEEXT)
+TESTING_TOR_BINARY=$(top_builddir)/src/app/tor$(EXEEXT)
 endif
 
 if USE_RUST
@@ -108,7 +108,7 @@ TOR_CRYPTO_TESTING_LIBS = \
 
 # All static libraries used to link tor.
 TOR_INTERNAL_LIBS = \
-	src/or/libtor-app.a \
+	src/core/libtor-app.a \
 	src/lib/libtor-compress.a \
 	src/lib/libtor-evloop.a \
 	$(TOR_CRYPTO_LIBS) \
@@ -119,7 +119,7 @@ TOR_INTERNAL_LIBS = \
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
 TOR_INTERNAL_TESTING_LIBS = \
-	src/or/libtor-app-testing.a \
+	src/core/libtor-app-testing.a \
 	src/lib/libtor-compress-testing.a \
 	src/lib/libtor-evloop-testing.a \
 	$(TOR_CRYPTO_TESTING_LIBS) \
@@ -302,10 +302,10 @@ coverage-html-full: all
 check-spaces:
 if USE_PERL
 	$(PERL) $(top_srcdir)/scripts/maint/checkSpace.pl -C \
-		$(top_srcdir)/src/common/*.[ch] \
 		$(top_srcdir)/src/lib/*/*.[ch] \
-		$(top_srcdir)/src/or/*.[ch] \
-		$(top_srcdir)/src/or/*/*.[ch] \
+		$(top_srcdir)/src/core/*/*.[ch] \
+		$(top_srcdir)/src/feature/*/*.[ch] \
+		$(top_srcdir)/src/app/*/*.[ch] \
 		$(top_srcdir)/src/test/*.[ch] \
 		$(top_srcdir)/src/test/*/*.[ch] \
 		$(top_srcdir)/src/tools/*.[ch]

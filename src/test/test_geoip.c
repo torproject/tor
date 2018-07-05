@@ -8,9 +8,9 @@
 /* These macros pull in declarations for some functions and structures that
  * are typically file-private. */
 #define GEOIP_PRIVATE
-#include "or/or.h"
-#include "or/config.h"
-#include "or/geoip.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
+#include "feature/stats/geoip.h"
 #include "test/test.h"
 
   /* Record odd numbered fake-IPs using ipv6, even numbered fake-IPs

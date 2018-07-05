@@ -3,28 +3,28 @@
 
 #define TOR_CHANNEL_INTERNAL_
 #define CHANNEL_PRIVATE_
-#include "or/or.h"
-#include "or/channel.h"
+#include "core/or/or.h"
+#include "core/or/channel.h"
 /* For channel_note_destroy_not_pending */
 #define CIRCUITLIST_PRIVATE
-#include "or/circuitlist.h"
-#include "or/circuitmux.h"
-#include "or/circuitmux_ewma.h"
+#include "core/or/circuitlist.h"
+#include "core/or/circuitmux.h"
+#include "core/or/circuitmux_ewma.h"
 /* For var_cell_free */
-#include "or/connection_or.h"
+#include "core/or/connection_or.h"
 #include "lib/crypt_ops/crypto_rand.h"
 /* For packed_cell stuff */
 #define RELAY_PRIVATE
-#include "or/relay.h"
+#include "core/or/relay.h"
 /* For init/free stuff */
-#include "or/scheduler.h"
-#include "or/networkstatus.h"
+#include "core/or/scheduler.h"
+#include "feature/nodelist/networkstatus.h"
 
-#include "or/cell_st.h"
-#include "or/networkstatus_st.h"
-#include "or/origin_circuit_st.h"
-#include "or/routerstatus_st.h"
-#include "or/var_cell_st.h"
+#include "core/or/cell_st.h"
+#include "feature/nodelist/networkstatus_st.h"
+#include "core/or/origin_circuit_st.h"
+#include "feature/nodelist/routerstatus_st.h"
+#include "core/or/var_cell_st.h"
 
 /* Test suite stuff */
 #include "test/log_test_helpers.h"

@@ -5,7 +5,7 @@
 
 #include "orconfig.h"
 #define CRYPTO_S2K_PRIVATE
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"

@@ -4,17 +4,17 @@
 #define CONNECTION_PRIVATE
 #define EXT_ORPORT_PRIVATE
 #define MAIN_PRIVATE
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/container/buffers.h"
-#include "or/connection.h"
-#include "or/connection_or.h"
-#include "or/config.h"
-#include "or/control.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_or.h"
+#include "app/config/config.h"
+#include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/ext_orport.h"
-#include "or/main.h"
+#include "feature/relay/ext_orport.h"
+#include "core/mainloop/main.h"
 
-#include "or/or_connection_st.h"
+#include "core/or/or_connection_st.h"
 
 #include "test/test.h"
 

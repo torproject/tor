@@ -5,16 +5,16 @@
 
 #define CONNECTION_PRIVATE
 
-#include "or/or.h"
-#include "or/config.h"
-#include "or/connection.h"
-#include "or/connection_or.h"
-#include "or/directory.h"
-#include "or/main.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_or.h"
+#include "feature/dircache/directory.h"
+#include "core/mainloop/main.h"
 #include "test/test.h"
 
-#include "or/dir_connection_st.h"
-#include "or/or_connection_st.h"
+#include "feature/dircommon/dir_connection_st.h"
+#include "core/or/or_connection_st.h"
 
 static or_options_t mock_options;
 

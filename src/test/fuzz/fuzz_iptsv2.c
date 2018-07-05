@@ -1,12 +1,12 @@
 /* Copyright (c) 2016-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 #define ROUTERPARSE_PRIVATE
-#include "or/or.h"
-#include "or/routerparse.h"
-#include "or/rendcommon.h"
+#include "core/or/or.h"
+#include "feature/nodelist/routerparse.h"
+#include "feature/rend/rendcommon.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
-#include "or/rend_service_descriptor_st.h"
+#include "feature/rend/rend_service_descriptor_st.h"
 
 #include "test/fuzz/fuzzing.h"
 

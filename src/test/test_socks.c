@@ -3,14 +3,14 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/container/buffers.h"
-#include "or/config.h"
-#include "or/connection.h"
-#include "or/proto_socks.h"
+#include "app/config/config.h"
+#include "core/mainloop/connection.h"
+#include "core/proto/proto_socks.h"
 #include "test/test.h"
 #include "test/log_test_helpers.h"
-#include "or/socks_request_st.h"
+#include "core/or/socks_request_st.h"
 #include "lib/net/socks5_status.h"
 
 typedef struct socks_test_data_t {

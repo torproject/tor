@@ -11,7 +11,7 @@ extern "C" {
     ) -> c_int;
 }
 
-/// Wrap calls to tor_version_as_new_as, defined in src/or/routerparse.c
+/// Wrap calls to tor_version_as_new_as, defined in routerparse.c
 pub fn c_tor_version_as_new_as(platform: &str, cutoff: &str) -> bool {
     // CHK: These functions should log a warning if an error occurs. This
     // can be added when integration with tor's logger is added to rust

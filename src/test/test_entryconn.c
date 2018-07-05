@@ -6,21 +6,21 @@
 #define CONNECTION_PRIVATE
 #define CONNECTION_EDGE_PRIVATE
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 
-#include "or/addressmap.h"
-#include "or/config.h"
-#include "or/confparse.h"
-#include "or/connection.h"
-#include "or/connection_edge.h"
-#include "or/nodelist.h"
+#include "feature/client/addressmap.h"
+#include "app/config/config.h"
+#include "app/config/confparse.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_edge.h"
+#include "feature/nodelist/nodelist.h"
 
-#include "or/hs_cache.h"
-#include "or/rendcache.h"
+#include "feature/hs/hs_cache.h"
+#include "feature/rend/rendcache.h"
 
-#include "or/entry_connection_st.h"
-#include "or/socks_request_st.h"
+#include "core/or/entry_connection_st.h"
+#include "core/or/socks_request_st.h"
 
 #include "lib/encoding/confline.h"
 

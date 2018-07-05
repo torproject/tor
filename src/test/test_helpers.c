@@ -12,24 +12,24 @@
 #define MAIN_PRIVATE
 
 #include "orconfig.h"
-#include "or/or.h"
+#include "core/or/or.h"
 
 #include "lib/container/buffers.h"
-#include "or/config.h"
-#include "or/confparse.h"
-#include "or/connection.h"
+#include "app/config/config.h"
+#include "app/config/confparse.h"
+#include "core/mainloop/connection.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/main.h"
-#include "or/nodelist.h"
-#include "or/relay.h"
-#include "or/routerlist.h"
+#include "core/mainloop/main.h"
+#include "feature/nodelist/nodelist.h"
+#include "core/or/relay.h"
+#include "feature/nodelist/routerlist.h"
 #include "lib/encoding/confline.h"
 
-#include "or/cell_st.h"
-#include "or/connection_st.h"
-#include "or/node_st.h"
-#include "or/origin_circuit_st.h"
-#include "or/routerlist_st.h"
+#include "core/or/cell_st.h"
+#include "core/or/connection_st.h"
+#include "feature/nodelist/node_st.h"
+#include "core/or/origin_circuit_st.h"
+#include "feature/nodelist/routerlist_st.h"
 
 #include "test/test.h"
 #include "test/test_helpers.h"
@@ -41,7 +41,7 @@ DISABLE_GCC_WARNING(overlength-strings)
  * at large. */
 #endif
 #include "test_descriptors.inc"
-#include "or/circuitlist.h"
+#include "core/or/circuitlist.h"
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 ENABLE_GCC_WARNING(overlength-strings)
 #endif

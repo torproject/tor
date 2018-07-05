@@ -69,7 +69,7 @@ configure option:
 ## Instrument Tor ##
 
 This is pretty easy. Let's say you want to add a trace event in
-`src/or/rendcache.c`, you only have to add this include statement:
+`src/feature/rend/rendcache.c`, you only have to add this include statement:
 
 	#include "trace/events.h"
 

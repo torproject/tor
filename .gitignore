@@ -206,16 +206,15 @@ uptime-*.json
 /src/lib/libtor-wallclock.a
 /src/lib/libtor-wallclock-testing.a
 
-# /src/or/
-/src/or/Makefile
-/src/or/Makefile.in
-/src/or/tor
-/src/or/tor.exe
-/src/or/tor-cov
-/src/or/tor-cov.exe
-/src/or/libtor-app.a
-/src/or/libtor-app-testing.a
-/src/or/libtor.lib
+# /src/tor
+/src/core/libtor-app.a
+/src/core/libtor-app-testing.a
+
+# /src/app
+/src/app/tor
+/src/app/tor.exe
+/src/app/tor-cov
+/src/app/tor-cov.exe
 
 # /src/rust
 /src/rust/.cargo/config

@@ -8,16 +8,16 @@
 
 #define CONTROL_PRIVATE
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
-#include "or/control.h"
-#include "or/config.h"
-#include "or/hs_common.h"
-#include "or/hs_control.h"
-#include "or/nodelist.h"
+#include "feature/control/control.h"
+#include "app/config/config.h"
+#include "feature/hs/hs_common.h"
+#include "feature/hs/hs_control.h"
+#include "feature/nodelist/nodelist.h"
 
-#include "or/node_st.h"
-#include "or/routerstatus_st.h"
+#include "feature/nodelist/node_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 #include "lib/crypt_ops/crypto_format.h"
 
 #include "test/test_helpers.h"

@@ -8,15 +8,15 @@
 #define SCHEDULER_KIST_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
 #define CHANNEL_PRIVATE_
-#include "or/or.h"
-#include "or/config.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
 #include "lib/evloop/compat_libevent.h"
-#include "or/channel.h"
-#include "or/channeltls.h"
-#include "or/connection.h"
-#include "or/networkstatus.h"
+#include "core/or/channel.h"
+#include "core/or/channeltls.h"
+#include "core/mainloop/connection.h"
+#include "feature/nodelist/networkstatus.h"
 #define SCHEDULER_PRIVATE_
-#include "or/scheduler.h"
+#include "core/or/scheduler.h"
 
 /* Test suite stuff */
 #include "test/test.h"

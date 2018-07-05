@@ -1,11 +1,11 @@
 /* Copyright (c) 2016-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 #define ROUTERPARSE_PRIVATE
-#include "or/or.h"
-#include "or/routerparse.h"
-#include "or/networkstatus.h"
+#include "core/or/or.h"
+#include "feature/nodelist/routerparse.h"
+#include "feature/nodelist/networkstatus.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
-#include "or/networkstatus_st.h"
+#include "feature/nodelist/networkstatus_st.h"
 #include "test/fuzz/fuzzing.h"
 
 static void

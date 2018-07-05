@@ -15,20 +15,20 @@
 #include "test/log_test_helpers.h"
 #include "lib/crypt_ops/crypto_rand.h"
 
-#include "or/or.h"
-#include "or/circuitlist.h"
-#include "or/circuituse.h"
+#include "core/or/or.h"
+#include "core/or/circuitlist.h"
+#include "core/or/circuituse.h"
 #include "ht.h"
-#include "or/relay.h"
-#include "or/rendservice.h"
+#include "core/or/relay.h"
+#include "feature/rend/rendservice.h"
 
-#include "or/hs_cell.h"
-#include "or/hs_circuitmap.h"
-#include "or/hs_common.h"
-#include "or/hs_intropoint.h"
-#include "or/hs_service.h"
+#include "feature/hs/hs_cell.h"
+#include "feature/hs/hs_circuitmap.h"
+#include "feature/hs/hs_common.h"
+#include "feature/hs/hs_intropoint.h"
+#include "feature/hs/hs_service.h"
 
-#include "or/or_circuit_st.h"
+#include "core/or/or_circuit_st.h"
 
 /* Trunnel. */
 #include "trunnel/hs/cell_establish_intro.h"

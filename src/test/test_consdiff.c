@@ -4,10 +4,10 @@
 
 #define CONSDIFF_PRIVATE
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 
-#include "or/consdiff.h"
+#include "feature/dircommon/consdiff.h"
 #include "lib/memarea/memarea.h"
 #include "test/log_test_helpers.h"
 

@@ -3,18 +3,18 @@
 
 #define ROUTERSET_PRIVATE
 
-#include "or/or.h"
-#include "or/geoip.h"
-#include "or/routerset.h"
-#include "or/routerparse.h"
-#include "or/policies.h"
-#include "or/nodelist.h"
+#include "core/or/or.h"
+#include "feature/stats/geoip.h"
+#include "feature/nodelist/routerset.h"
+#include "feature/nodelist/routerparse.h"
+#include "core/or/policies.h"
+#include "feature/nodelist/nodelist.h"
 
-#include "or/addr_policy_st.h"
-#include "or/extend_info_st.h"
-#include "or/node_st.h"
-#include "or/routerinfo_st.h"
-#include "or/routerstatus_st.h"
+#include "core/or/addr_policy_st.h"
+#include "core/or/extend_info_st.h"
+#include "feature/nodelist/node_st.h"
+#include "feature/nodelist/routerinfo_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 
 #include "test/test.h"
 

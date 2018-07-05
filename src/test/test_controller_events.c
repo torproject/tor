@@ -4,16 +4,16 @@
 #define CONNECTION_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
 #define CONTROL_PRIVATE
-#include "or/or.h"
-#include "or/channel.h"
-#include "or/channeltls.h"
-#include "or/circuitlist.h"
-#include "or/connection.h"
-#include "or/control.h"
+#include "core/or/or.h"
+#include "core/or/channel.h"
+#include "core/or/channeltls.h"
+#include "core/or/circuitlist.h"
+#include "core/mainloop/connection.h"
+#include "feature/control/control.h"
 #include "test/test.h"
 
-#include "or/or_circuit_st.h"
-#include "or/origin_circuit_st.h"
+#include "core/or/or_circuit_st.h"
+#include "core/or/origin_circuit_st.h"
 
 static void
 add_testing_cell_stats_entry(circuit_t *circ, uint8_t command,

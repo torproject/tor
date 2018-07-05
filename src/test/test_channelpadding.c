@@ -5,28 +5,28 @@
 #define MAIN_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define TOR_TIMERS_PRIVATE
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 #include "lib/testsupport/testsupport.h"
-#include "or/connection.h"
-#include "or/connection_or.h"
-#include "or/channel.h"
-#include "or/channeltls.h"
-#include "or/channelpadding.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_or.h"
+#include "core/or/channel.h"
+#include "core/or/channeltls.h"
+#include "core/or/channelpadding.h"
 #include "lib/evloop/compat_libevent.h"
-#include "or/config.h"
+#include "app/config/config.h"
 #include "lib/time/compat_time.h"
-#include "or/main.h"
-#include "or/networkstatus.h"
+#include "core/mainloop/main.h"
+#include "feature/nodelist/networkstatus.h"
 #include "test/log_test_helpers.h"
 #include "lib/tls/tortls.h"
 #include "lib/evloop/timers.h"
 #include "lib/container/buffers.h"
 
-#include "or/cell_st.h"
-#include "or/networkstatus_st.h"
-#include "or/or_connection_st.h"
-#include "or/routerstatus_st.h"
+#include "core/or/cell_st.h"
+#include "feature/nodelist/networkstatus_st.h"
+#include "core/or/or_connection_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 
 int channelpadding_get_netflow_inactive_timeout_ms(channel_t *chan);
 int64_t channelpadding_compute_time_until_pad_for_netflow(channel_t *chan);

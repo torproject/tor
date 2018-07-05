@@ -2,21 +2,21 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "or/or.h"
+#include "core/or/or.h"
 
-#include "or/config.h"
+#include "app/config/config.h"
 #define DIRVOTE_PRIVATE
-#include "or/dirauth/dirvote.h"
-#include "or/microdesc.h"
-#include "or/networkstatus.h"
-#include "or/routerlist.h"
-#include "or/routerparse.h"
-#include "or/torcert.h"
+#include "feature/dirauth/dirvote.h"
+#include "feature/nodelist/microdesc.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/routerparse.h"
+#include "feature/nodelist/torcert.h"
 
-#include "or/microdesc_st.h"
-#include "or/networkstatus_st.h"
-#include "or/routerinfo_st.h"
-#include "or/routerstatus_st.h"
+#include "feature/nodelist/microdesc_st.h"
+#include "feature/nodelist/networkstatus_st.h"
+#include "feature/nodelist/routerinfo_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 
 #include "test/test.h"
 

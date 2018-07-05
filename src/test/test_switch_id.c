@@ -1,7 +1,7 @@
 /* Copyright (c) 2015-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/process/setuid.h"
 
 #ifdef HAVE_SYS_CAPABILITY_H

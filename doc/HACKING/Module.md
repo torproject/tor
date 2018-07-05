@@ -12,9 +12,9 @@ Currently, there is only one module:
 
   - Directory Authority subsystem (dirauth)
 
-It is located in its own directory in `src/or/dirauth/`. To disable it, one
-need to pass `--disable-module-dirauth` at configure time. All modules are
-currently enabled by default.
+It is located in its own directory in `src/feature/dirauth/`. To disable it,
+one need to pass `--disable-module-dirauth` at configure time. All modules
+are currently enabled by default.
 
 ## Build System ##
 
@@ -32,10 +32,10 @@ The changes to the build system are pretty straightforward.
    the C code to conditionally compile things for your module. And the
    `BUILD_MODULE_<name>` is also defined for automake files (e.g: include.am).
 
-3. In the `src/or/include.am` file, locate the `MODULE_DIRAUTH_SOURCES` value.
-   You need to create your own `_SOURCES` variable for your module and then
-   conditionally add the it to `LIBTOR_A_SOURCES` if you should build the
-   module.
+3. In the `src/core/include.am` file, locate the `MODULE_DIRAUTH_SOURCES`
+   value.  You need to create your own `_SOURCES` variable for your module
+   and then conditionally add the it to `LIBTOR_A_SOURCES` if you should
+   build the module.
 
    It is then **very** important to add your SOURCES variable to
    `src_or_libtor_testing_a_SOURCES` so the tests can build it.
@@ -51,7 +51,7 @@ always build everything in order to tests everything.
 ## Coding ##
 
 As mentioned above, a module must be isolated in its own directory (name of
-the module) in `src/or/`.
+the module) in `src/feature/`.
 
 There are couples of "rules" you want to follow:
 
@@ -87,10 +87,10 @@ There are couples of "rules" you want to follow:
   making the code much more difficult to follow/understand.
 
 * It is possible that you end up with code that needs to be used by the rest
-  of the code base but is still part of your module. As a good example, if you
-  look at `src/or/shared_random_client.c`: it contains code needed by the hidden
-  service subsystem but mainly related to the shared random subsystem very
-  specific to the dirauth module.
+  of the code base but is still part of your module. As a good example, if
+  you look at `src/feature/shared_random_client.c`: it contains code needed
+  by the hidden service subsystem but mainly related to the shared random
+  subsystem very specific to the dirauth module.
 
   This is fine but try to keep it as lean as possible and never use the same
   filename as the one in the module. For example, this is a bad idea and
@@ -102,7 +102,7 @@ There are couples of "rules" you want to follow:
 * When you include headers from the module, **always** use the full module
   path in your statement. Example:
 
-  `#include "dirauth/dirvote.h"`
+  `#include "feature/dirauth/dirvote.h"`
 
   The main reason is that we do **not** add the module include path by default
   so it needs to be specified. But also, it helps our human brain understand

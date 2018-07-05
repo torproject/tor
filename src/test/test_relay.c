@@ -1,17 +1,17 @@
 /* Copyright (c) 2014-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #define CIRCUITBUILD_PRIVATE
-#include "or/circuitbuild.h"
-#include "or/circuitlist.h"
+#include "core/or/circuitbuild.h"
+#include "core/or/circuitlist.h"
 #define RELAY_PRIVATE
-#include "or/relay.h"
+#include "core/or/relay.h"
 /* For init/free stuff */
-#include "or/scheduler.h"
+#include "core/or/scheduler.h"
 
-#include "or/cell_st.h"
-#include "or/or_circuit_st.h"
+#include "core/or/cell_st.h"
+#include "core/or/or_circuit_st.h"
 
 /* Test suite stuff */
 #include "test/test.h"

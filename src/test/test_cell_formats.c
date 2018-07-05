@@ -7,21 +7,21 @@
 
 #define CONNECTION_EDGE_PRIVATE
 #define RELAY_PRIVATE
-#include "or/or.h"
-#include "or/channel.h"
-#include "or/connection_edge.h"
-#include "or/connection_or.h"
-#include "or/config.h"
+#include "core/or/or.h"
+#include "core/or/channel.h"
+#include "core/or/connection_edge.h"
+#include "core/or/connection_or.h"
+#include "app/config/config.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/onion.h"
-#include "or/onion_tap.h"
-#include "or/onion_fast.h"
-#include "or/onion_ntor.h"
-#include "or/relay.h"
+#include "core/crypto/onion.h"
+#include "core/crypto/onion_tap.h"
+#include "core/crypto/onion_fast.h"
+#include "core/crypto/onion_ntor.h"
+#include "core/or/relay.h"
 
-#include "or/cell_st.h"
-#include "or/cell_queue_st.h"
-#include "or/var_cell_st.h"
+#include "core/or/cell_st.h"
+#include "core/or/cell_queue_st.h"
+#include "core/or/var_cell_st.h"
 
 #include "test/test.h"
 

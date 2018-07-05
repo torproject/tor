@@ -3,9 +3,9 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/thread/threads.h"
-#include "or/onion.h"
+#include "core/crypto/onion.h"
 #include "lib/evloop/workqueue.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_rand.h"

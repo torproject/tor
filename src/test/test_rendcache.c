@@ -2,21 +2,21 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "or/or.h"
+#include "core/or/or.h"
 
 #include "test/test.h"
 #define RENDCACHE_PRIVATE
-#include "or/rendcache.h"
-#include "or/router.h"
-#include "or/routerlist.h"
-#include "or/config.h"
-#include "or/hs_common.h"
+#include "feature/rend/rendcache.h"
+#include "feature/relay/router.h"
+#include "feature/nodelist/routerlist.h"
+#include "app/config/config.h"
+#include "feature/hs/hs_common.h"
 
-#include "or/extend_info_st.h"
-#include "or/rend_encoded_v2_service_descriptor_st.h"
-#include "or/rend_intro_point_st.h"
-#include "or/rend_service_descriptor_st.h"
-#include "or/routerinfo_st.h"
+#include "core/or/extend_info_st.h"
+#include "feature/rend/rend_encoded_v2_service_descriptor_st.h"
+#include "feature/rend/rend_intro_point_st.h"
+#include "feature/rend/rend_service_descriptor_st.h"
+#include "feature/nodelist/routerinfo_st.h"
 
 #include "test/rend_test_helpers.h"
 #include "test/log_test_helpers.h"

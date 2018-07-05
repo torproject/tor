@@ -10,27 +10,27 @@
 
 #include "orconfig.h"
 
-#include "or/or.h"
-#include "or/onion_tap.h"
-#include "or/relay_crypto.h"
+#include "core/or/or.h"
+#include "core/crypto/onion_tap.h"
+#include "core/crypto/relay_crypto.h"
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
 #include <openssl/ec.h>
 #include <openssl/ecdh.h>
 #include <openssl/obj_mac.h>
 
-#include "or/circuitlist.h"
-#include "or/config.h"
+#include "core/or/circuitlist.h"
+#include "app/config/config.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_dh.h"
-#include "or/onion_ntor.h"
+#include "core/crypto/onion_ntor.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/consdiff.h"
+#include "feature/dircommon/consdiff.h"
 #include "lib/compress/compress.h"
 
-#include "or/cell_st.h"
-#include "or/or_circuit_st.h"
+#include "core/or/cell_st.h"
+#include "core/or/or_circuit_st.h"
 
 #include "lib/crypt_ops/digestset.h"
 

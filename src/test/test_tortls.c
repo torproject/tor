@@ -30,11 +30,11 @@ DISABLE_GCC_WARNING(redundant-decls)
 
 ENABLE_GCC_WARNING(redundant-decls)
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/log/torlog.h"
-#include "or/config.h"
+#include "app/config/config.h"
 #include "lib/tls/tortls.h"
-#include "or/or_state_st.h"
+#include "app/config/or_state_st.h"
 
 #include "test/test.h"
 #include "test/log_test_helpers.h"

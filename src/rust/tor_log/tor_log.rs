@@ -129,7 +129,7 @@ pub mod log {
     }
 
     /// The main entry point into Tor's logger. When in non-test mode, this
-    /// will link directly with `tor_log_string` in /src/or/log.c
+    /// will link directly with `tor_log_string` in torlog.c
     extern "C" {
         pub fn tor_log_string(
             severity: c_int,
