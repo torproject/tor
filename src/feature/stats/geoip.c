@@ -28,15 +28,15 @@
  */
 
 #define GEOIP_PRIVATE
-#include "or/or.h"
+#include "core/or/or.h"
 #include "ht.h"
 #include "lib/container/buffers.h"
-#include "or/config.h"
-#include "or/control.h"
-#include "or/dnsserv.h"
-#include "or/dos.h"
-#include "or/geoip.h"
-#include "or/routerlist.h"
+#include "app/config/config.h"
+#include "feature/control/control.h"
+#include "feature/client/dnsserv.h"
+#include "core/or/dos.h"
+#include "feature/stats/geoip.h"
+#include "feature/nodelist/routerlist.h"
 
 #include "lib/container/order.h"
 #include "lib/time/tvdiff.h"

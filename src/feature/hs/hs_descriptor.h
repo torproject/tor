@@ -11,9 +11,9 @@
 
 #include <stdint.h>
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "trunnel/ed25519_cert.h" /* needed for trunnel */
-#include "or/torcert.h"
+#include "feature/nodelist/torcert.h"
 
 /* Trunnel */
 struct link_specifier_t;

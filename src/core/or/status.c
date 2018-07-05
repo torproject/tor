@@ -14,28 +14,28 @@
 
 #define STATUS_PRIVATE
 
-#include "or/or.h"
-#include "or/circuituse.h"
-#include "or/config.h"
-#include "or/status.h"
-#include "or/nodelist.h"
-#include "or/relay.h"
-#include "or/router.h"
-#include "or/circuitlist.h"
-#include "or/main.h"
-#include "or/rephist.h"
-#include "or/hibernate.h"
-#include "or/statefile.h"
-#include "or/hs_stats.h"
-#include "or/hs_service.h"
-#include "or/dos.h"
+#include "core/or/or.h"
+#include "core/or/circuituse.h"
+#include "app/config/config.h"
+#include "core/or/status.h"
+#include "feature/nodelist/nodelist.h"
+#include "core/or/relay.h"
+#include "feature/relay/router.h"
+#include "core/or/circuitlist.h"
+#include "core/mainloop/main.h"
+#include "feature/stats/rephist.h"
+#include "feature/hibernate/hibernate.h"
+#include "app/config/statefile.h"
+#include "feature/hs/hs_stats.h"
+#include "feature/hs/hs_service.h"
+#include "core/or/dos.h"
 
-#include "or/or_state_st.h"
-#include "or/routerinfo_st.h"
+#include "app/config/or_state_st.h"
+#include "feature/nodelist/routerinfo_st.h"
 #include "lib/tls/tortls.h"
 
 static void log_accounting(const time_t now, const or_options_t *options);
-#include "or/geoip.h"
+#include "feature/stats/geoip.h"
 
 /** Return the total number of circuits. */
 STATIC int

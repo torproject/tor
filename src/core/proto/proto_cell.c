@@ -4,13 +4,13 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/container/buffers.h"
-#include "or/proto_cell.h"
+#include "core/proto/proto_cell.h"
 
-#include "or/connection_or.h"
+#include "core/or/connection_or.h"
 
-#include "or/var_cell_st.h"
+#include "core/or/var_cell_st.h"
 
 /** True iff the cell command <b>command</b> is one that implies a
  * variable-length cell in Tor link protocol <b>linkproto</b>. */

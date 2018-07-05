@@ -114,7 +114,7 @@ STATIC int get_my_roles(const or_options_t *options);
 extern smartlist_t *connection_array;
 
 /* We need the periodic_event_item_t definition. */
-#include "or/periodic.h"
+#include "core/mainloop/periodic.h"
 extern periodic_event_item_t periodic_events[];
 #endif
 #endif /* defined(MAIN_PRIVATE) */

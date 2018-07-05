@@ -14,11 +14,11 @@
  * (TODO: The keys in router.c should go here too.)
  */
 
-#include "or/or.h"
-#include "or/config.h"
-#include "or/router.h"
-#include "or/routerkeys.h"
-#include "or/torcert.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
+#include "feature/relay/router.h"
+#include "feature/relay/routerkeys.h"
+#include "feature/nodelist/torcert.h"
 
 #include "lib/crypt_ops/crypto_pwbox.h"
 #include "lib/crypt_ops/crypto_util.h"

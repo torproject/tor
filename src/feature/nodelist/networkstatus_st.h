@@ -7,7 +7,7 @@
 #ifndef NETWORKSTATUS_ST_H
 #define NETWORKSTATUS_ST_H
 
-#include "or/networkstatus_sr_info_st.h"
+#include "feature/nodelist/networkstatus_sr_info_st.h"
 
 /** Enumerates the possible seriousness values of a networkstatus document. */
 typedef enum networkstatus_type_t {

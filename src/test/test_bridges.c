@@ -11,11 +11,11 @@
 
 #include <stdbool.h>
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/net/address.h"
-#include "or/bridges.h"
-#include "or/config.h"
-#include "or/transports.h"
+#include "feature/client/bridges.h"
+#include "app/config/config.h"
+#include "feature/client/transports.h"
 
 /* Test suite stuff */
 #include "test/test.h"

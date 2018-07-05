@@ -3,8 +3,8 @@
 
 #include "orconfig.h"
 
-#include "or/or.h"
-#include "or/voting_schedule.h"
+#include "core/or/or.h"
+#include "feature/dircommon/voting_schedule.h"
 
 #include "test/test.h"
 

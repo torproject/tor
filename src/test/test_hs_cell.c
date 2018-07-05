@@ -15,9 +15,9 @@
 
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/hs_cell.h"
-#include "or/hs_intropoint.h"
-#include "or/hs_service.h"
+#include "feature/hs/hs_cell.h"
+#include "feature/hs/hs_intropoint.h"
+#include "feature/hs/hs_service.h"
 
 /* Trunnel. */
 #include "trunnel/hs/cell_establish_intro.h"

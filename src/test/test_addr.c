@@ -5,10 +5,10 @@
 
 #define ADDRESSMAP_PRIVATE
 #include "orconfig.h"
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "test/test.h"
-#include "or/addressmap.h"
+#include "feature/client/addressmap.h"
 #include "test/log_test_helpers.h"
 
 #ifdef HAVE_SYS_UN_H

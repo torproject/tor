@@ -3,17 +3,17 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
-#include "or/circuitbuild.h"
+#include "core/or/or.h"
+#include "core/or/circuitbuild.h"
 #define CIRCUITLIST_PRIVATE
-#include "or/circuitlist.h"
+#include "core/or/circuitlist.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/relay.h"
-#include "or/relay_crypto.h"
+#include "core/or/relay.h"
+#include "core/crypto/relay_crypto.h"
 
-#include "or/cell_st.h"
-#include "or/or_circuit_st.h"
-#include "or/origin_circuit_st.h"
+#include "core/or/cell_st.h"
+#include "core/or/or_circuit_st.h"
+#include "core/or/origin_circuit_st.h"
 
 #include "test/test.h"
 

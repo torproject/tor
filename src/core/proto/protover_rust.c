@@ -7,8 +7,8 @@
  * and safe translation/handling between the Rust/C boundary.
  */
 
-#include "or/or.h"
-#include "or/protover.h"
+#include "core/or/or.h"
+#include "core/proto/protover.h"
 
 #ifdef HAVE_RUST
 

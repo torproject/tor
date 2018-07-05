@@ -9,8 +9,8 @@
 #ifndef TOR_SCHEDULER_H
 #define TOR_SCHEDULER_H
 
-#include "or/or.h"
-#include "or/channel.h"
+#include "core/or/or.h"
+#include "core/or/channel.h"
 #include "lib/testsupport/testsupport.h"
 
 /** Scheduler type, we build an ordered list with those values from the

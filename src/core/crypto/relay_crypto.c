@@ -4,18 +4,18 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
-#include "or/circuitlist.h"
-#include "or/config.h"
+#include "core/or/or.h"
+#include "core/or/circuitlist.h"
+#include "app/config/config.h"
 #include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "or/hs_ntor.h" // for HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN
-#include "or/relay.h"
-#include "or/relay_crypto.h"
+#include "core/crypto/hs_ntor.h" // for HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN
+#include "core/or/relay.h"
+#include "core/crypto/relay_crypto.h"
 
-#include "or/cell_st.h"
-#include "or/or_circuit_st.h"
-#include "or/origin_circuit_st.h"
+#include "core/or/cell_st.h"
+#include "core/or/or_circuit_st.h"
+#include "core/or/origin_circuit_st.h"
 
 /** Update digest from the payload of cell. Assign integrity part to
  * cell.

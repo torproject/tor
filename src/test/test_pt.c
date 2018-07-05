@@ -9,18 +9,18 @@
 #define STATEFILE_PRIVATE
 #define CONTROL_PRIVATE
 #define SUBPROCESS_PRIVATE
-#include "or/or.h"
-#include "or/config.h"
-#include "or/confparse.h"
-#include "or/control.h"
-#include "or/transports.h"
-#include "or/circuitbuild.h"
-#include "or/statefile.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
+#include "app/config/confparse.h"
+#include "feature/control/control.h"
+#include "feature/client/transports.h"
+#include "core/or/circuitbuild.h"
+#include "app/config/statefile.h"
 #include "test/test.h"
 #include "lib/process/subprocess.h"
 #include "lib/encoding/confline.h"
 
-#include "or/or_state_st.h"
+#include "app/config/or_state_st.h"
 
 static void
 reset_mp(managed_proxy_t *mp)

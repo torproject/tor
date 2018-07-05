@@ -17,17 +17,17 @@
 
 #include "lib/crypt_ops/crypto_rand.h"
 
-#include "or/or.h"
-#include "or/addressmap.h"
-#include "or/circuituse.h"
-#include "or/config.h"
-#include "or/connection_edge.h"
-#include "or/control.h"
-#include "or/dns.h"
-#include "or/nodelist.h"
-#include "or/routerset.h"
+#include "core/or/or.h"
+#include "feature/client/addressmap.h"
+#include "core/or/circuituse.h"
+#include "app/config/config.h"
+#include "core/or/connection_edge.h"
+#include "feature/control/control.h"
+#include "feature/relay/dns.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerset.h"
 
-#include "or/entry_connection_st.h"
+#include "core/or/entry_connection_st.h"
 
 /** A client-side struct to remember requests to rewrite addresses
  * to new addresses. These structs are stored in the hash table

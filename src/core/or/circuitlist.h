@@ -13,7 +13,7 @@
 #define TOR_CIRCUITLIST_H
 
 #include "lib/testsupport/testsupport.h"
-#include "or/hs_ident.h"
+#include "feature/hs/hs_ident.h"
 
 /** Circuit state: I'm the origin, still haven't done all my handshakes. */
 #define CIRCUIT_STATE_BUILDING 0

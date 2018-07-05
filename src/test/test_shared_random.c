@@ -6,25 +6,25 @@
 #define CONFIG_PRIVATE
 #define DIRVOTE_PRIVATE
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
-#include "or/config.h"
+#include "app/config/config.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/dirauth/dirvote.h"
-#include "or/dirauth/shared_random.h"
-#include "or/dirauth/shared_random_state.h"
+#include "feature/dirauth/dirvote.h"
+#include "feature/dirauth/shared_random.h"
+#include "feature/dirauth/shared_random_state.h"
 #include "test/log_test_helpers.h"
-#include "or/networkstatus.h"
-#include "or/router.h"
-#include "or/routerkeys.h"
-#include "or/routerlist.h"
-#include "or/routerparse.h"
-#include "or/shared_random_client.h"
-#include "or/voting_schedule.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/relay/router.h"
+#include "feature/relay/routerkeys.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/routerparse.h"
+#include "feature/hs_common/shared_random_client.h"
+#include "feature/dircommon/voting_schedule.h"
 
-#include "or/dir_server_st.h"
-#include "or/networkstatus_st.h"
-#include "or/or_state_st.h"
+#include "feature/dirclient/dir_server_st.h"
+#include "feature/nodelist/networkstatus_st.h"
+#include "app/config/or_state_st.h"
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>

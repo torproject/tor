@@ -12,7 +12,7 @@
 #ifndef TOR_DIRECTORY_H
 #define TOR_DIRECTORY_H
 
-#include "or/hs_ident.h"
+#include "feature/hs/hs_ident.h"
 enum compress_method_t;
 
 dir_connection_t *TO_DIR_CONN(connection_t *c);

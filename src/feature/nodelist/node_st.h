@@ -7,7 +7,7 @@
 #ifndef NODE_ST_H
 #define NODE_ST_H
 
-#include "or/hsdir_index_st.h"
+#include "feature/hs/hsdir_index_st.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
 /** A node_t represents a Tor router.

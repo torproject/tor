@@ -7,7 +7,7 @@
 #ifndef ROUTERSTATUS_ST_H
 #define ROUTERSTATUS_ST_H
 
-#include "or/download_status_st.h"
+#include "feature/dirclient/download_status_st.h"
 
 /** Contents of a single router entry in a network status object.
  */

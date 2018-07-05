@@ -8,7 +8,7 @@
 #define ENTRY_PORT_CFG_ST_H
 
 #include "lib/cc/torint.h"
-#include "or/or.h"
+#include "core/or/or.h"
 
 struct entry_port_cfg_t {
   /* Client port types (socks, dns, trans, natd) only: */

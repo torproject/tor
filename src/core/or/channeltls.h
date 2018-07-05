@@ -9,8 +9,8 @@
 #ifndef TOR_CHANNELTLS_H
 #define TOR_CHANNELTLS_H
 
-#include "or/or.h"
-#include "or/channel.h"
+#include "core/or/or.h"
+#include "core/or/channel.h"
 
 struct ed25519_public_key_t;
 struct curve25519_public_key_t;

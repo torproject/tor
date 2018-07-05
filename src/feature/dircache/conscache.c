@@ -1,10 +1,10 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 
-#include "or/config.h"
-#include "or/conscache.h"
+#include "app/config/config.h"
+#include "feature/dircache/conscache.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/fs/storagedir.h"
 #include "lib/encoding/confline.h"

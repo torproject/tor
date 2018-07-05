@@ -1,21 +1,21 @@
 /* Copyright (c) 2013-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #define CONFIG_PRIVATE
-#include "or/config.h"
-#include "or/router.h"
-#include "or/routerparse.h"
+#include "app/config/config.h"
+#include "feature/relay/router.h"
+#include "feature/nodelist/routerparse.h"
 #define POLICIES_PRIVATE
-#include "or/policies.h"
+#include "core/or/policies.h"
 #include "lib/encoding/confline.h"
 #include "test/test.h"
 
-#include "or/addr_policy_st.h"
-#include "or/node_st.h"
-#include "or/port_cfg_st.h"
-#include "or/routerinfo_st.h"
-#include "or/routerstatus_st.h"
+#include "core/or/addr_policy_st.h"
+#include "feature/nodelist/node_st.h"
+#include "core/or/port_cfg_st.h"
+#include "feature/nodelist/routerinfo_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 
 /* Helper: assert that short_policy parses and writes back out as itself,
    or as <b>expected</b> if that's provided. */

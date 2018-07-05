@@ -12,11 +12,11 @@
 #define SOCKET_PRIVATE
 #define SUBPROCESS_PRIVATE
 #include "lib/testsupport/testsupport.h"
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/container/buffers.h"
-#include "or/config.h"
-#include "or/control.h"
-#include "or/transports.h"
+#include "app/config/config.h"
+#include "feature/control/control.h"
+#include "feature/client/transports.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "test/test.h"

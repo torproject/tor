@@ -9,7 +9,7 @@
 #ifndef TOR_CIRCUITMUX_H
 #define TOR_CIRCUITMUX_H
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/testsupport/testsupport.h"
 
 typedef struct circuitmux_policy_s circuitmux_policy_t;

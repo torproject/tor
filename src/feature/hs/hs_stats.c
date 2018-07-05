@@ -6,9 +6,9 @@
  * \brief Keeps stats about the activity of our onion service(s).
  **/
 
-#include "or/or.h"
-#include "or/hs_stats.h"
-#include "or/hs_service.h"
+#include "core/or/or.h"
+#include "feature/hs/hs_stats.h"
+#include "feature/hs/hs_service.h"
 
 /** Number of v3 INTRODUCE2 cells received */
 static uint32_t n_introduce2_v3 = 0;

@@ -6,16 +6,16 @@
  * \brief Hidden service API for cell creation and handling.
  **/
 
-#include "or/or.h"
-#include "or/config.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "or/rendservice.h"
-#include "or/replaycache.h"
+#include "feature/rend/rendservice.h"
+#include "feature/hs_common/replaycache.h"
 
-#include "or/hs_cell.h"
-#include "or/hs_ntor.h"
+#include "feature/hs/hs_cell.h"
+#include "core/crypto/hs_ntor.h"
 
-#include "or/origin_circuit_st.h"
+#include "core/or/origin_circuit_st.h"
 
 /* Trunnel. */
 #include "trunnel/ed25519_cert.h"

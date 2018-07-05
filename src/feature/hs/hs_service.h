@@ -11,12 +11,12 @@
 
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
-#include "or/replaycache.h"
+#include "feature/hs_common/replaycache.h"
 
-#include "or/hs_common.h"
-#include "or/hs_descriptor.h"
-#include "or/hs_ident.h"
-#include "or/hs_intropoint.h"
+#include "feature/hs/hs_common.h"
+#include "feature/hs/hs_descriptor.h"
+#include "feature/hs/hs_ident.h"
+#include "feature/hs/hs_intropoint.h"
 
 /* Trunnel */
 #include "trunnel/hs/cell_establish_intro.h"

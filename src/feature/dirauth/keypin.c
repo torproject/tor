@@ -30,7 +30,7 @@
 #include "lib/wallclock/approx_time.h"
 
 #include "ht.h"
-#include "or/keypin.h"
+#include "feature/dirauth/keypin.h"
 
 #include "siphash.h"
 

@@ -4,8 +4,8 @@
 #define CONSDIFF_PRIVATE
 
 #include "orconfig.h"
-#include "or/or.h"
-#include "or/consdiff.h"
+#include "core/or/or.h"
+#include "feature/dircommon/consdiff.h"
 
 #include "test/fuzz/fuzzing.h"
 

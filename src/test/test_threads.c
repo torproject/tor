@@ -4,7 +4,7 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/thread/threads.h"
 #include "test/test.h"
 

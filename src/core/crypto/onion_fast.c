@@ -27,8 +27,8 @@
  * many RSA1024 keys.
  **/
 
-#include "or/or.h"
-#include "or/onion_fast.h"
+#include "core/or/or.h"
+#include "core/crypto/onion_fast.h"
 #include "lib/crypt_ops/crypto_hkdf.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"

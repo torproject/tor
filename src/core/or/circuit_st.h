@@ -7,9 +7,9 @@
 #ifndef CIRCUIT_ST_H
 #define CIRCUIT_ST_H
 
-#include "or/or.h"
+#include "core/or/or.h"
 
-#include "or/cell_queue_st.h"
+#include "core/or/cell_queue_st.h"
 
 struct hs_token_t;
 

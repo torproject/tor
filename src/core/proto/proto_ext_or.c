@@ -4,10 +4,10 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/container/buffers.h"
-#include "or/ext_orport.h"
-#include "or/proto_ext_or.h"
+#include "feature/relay/ext_orport.h"
+#include "core/proto/proto_ext_or.h"
 
 /** The size of the header of an Extended ORPort message: 2 bytes for
  *  COMMAND, 2 bytes for BODYLEN */

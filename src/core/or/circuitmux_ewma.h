@@ -9,8 +9,8 @@
 #ifndef TOR_CIRCUITMUX_EWMA_H
 #define TOR_CIRCUITMUX_EWMA_H
 
-#include "or/or.h"
-#include "or/circuitmux.h"
+#include "core/or/or.h"
+#include "core/or/circuitmux.h"
 
 /* The public EWMA policy callbacks object. */
 extern circuitmux_policy_t ewma_policy;

@@ -3,9 +3,9 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
-#include "or/networkstatus.h"
-#include "or/routerparse.h"
+#include "core/or/or.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/routerparse.h"
 
 #define TEST_DIR_ROUTER_ID_1 3
 #define TEST_DIR_ROUTER_ID_2 5

@@ -7,7 +7,7 @@
 #ifndef VOTE_ROUTERSTATUS_ST_H
 #define VOTE_ROUTERSTATUS_ST_H
 
-#include "or/routerstatus_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 #include "lib/defs/x25519_sizes.h"
 
 /** The claim about a single router, made in a vote. */

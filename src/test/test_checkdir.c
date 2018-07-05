@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "or/or.h"
+#include "core/or/or.h"
 
 #ifdef _WIN32
 #include <direct.h>
@@ -10,7 +10,7 @@
 #include <dirent.h>
 #endif
 
-#include "or/config.h"
+#include "app/config/config.h"
 #include "test/test.h"
 
 #ifdef HAVE_SYS_STAT_H

@@ -7,7 +7,7 @@
 #ifndef LISTENER_CONNECTION_ST_H
 #define LISTENER_CONNECTION_ST_H
 
-#include "or/connection_st.h"
+#include "core/or/connection_st.h"
 
 /** Subtype of connection_t; used for a listener socket. */
 struct listener_connection_t {

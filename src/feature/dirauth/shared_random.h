@@ -10,7 +10,7 @@
  * with "sr_" which stands for shared random.
  */
 
-#include "or/or.h"
+#include "core/or/or.h"
 
 /* Protocol version */
 #define SR_PROTO_VERSION  1

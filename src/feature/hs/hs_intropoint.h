@@ -10,7 +10,7 @@
 #define TOR_HS_INTRO_H
 
 #include "lib/crypt_ops/crypto_curve25519.h"
-#include "or/torcert.h"
+#include "feature/nodelist/torcert.h"
 
 /* Authentication key type in an ESTABLISH_INTRO cell. */
 typedef enum {

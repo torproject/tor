@@ -5,15 +5,15 @@
 
 #define CIRCUITBUILD_PRIVATE
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
-#include "or/config.h"
-#include "or/circuitbuild.h"
-#include "or/circuitlist.h"
+#include "app/config/config.h"
+#include "core/or/circuitbuild.h"
+#include "core/or/circuitlist.h"
 
-#include "or/extend_info_st.h"
+#include "core/or/extend_info_st.h"
 
 /* Dummy nodes smartlist for testing */
 static smartlist_t dummy_nodes;

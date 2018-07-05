@@ -7,21 +7,21 @@
 #define BUFFERS_PRIVATE
 #define CIRCUITLIST_PRIVATE
 #define CONNECTION_PRIVATE
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/container/buffers.h"
-#include "or/circuitlist.h"
+#include "core/or/circuitlist.h"
 #include "lib/evloop/compat_libevent.h"
-#include "or/connection.h"
-#include "or/config.h"
+#include "core/mainloop/connection.h"
+#include "app/config/config.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/relay.h"
+#include "core/or/relay.h"
 #include "test/test.h"
 #include "test/test_helpers.h"
 
-#include "or/cell_st.h"
-#include "or/entry_connection_st.h"
-#include "or/or_circuit_st.h"
-#include "or/origin_circuit_st.h"
+#include "core/or/cell_st.h"
+#include "core/or/entry_connection_st.h"
+#include "core/or/or_circuit_st.h"
+#include "core/or/origin_circuit_st.h"
 
 /* small replacement mock for circuit_mark_for_close_ to avoid doing all
  * the other bookkeeping that comes with marking circuits. */

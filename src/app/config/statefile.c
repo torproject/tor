@@ -29,22 +29,22 @@
  */
 
 #define STATEFILE_PRIVATE
-#include "or/or.h"
-#include "or/circuitstats.h"
-#include "or/config.h"
-#include "or/confparse.h"
-#include "or/connection.h"
-#include "or/control.h"
-#include "or/entrynodes.h"
-#include "or/hibernate.h"
-#include "or/main.h"
-#include "or/rephist.h"
-#include "or/router.h"
+#include "core/or/or.h"
+#include "core/or/circuitstats.h"
+#include "app/config/config.h"
+#include "app/config/confparse.h"
+#include "core/mainloop/connection.h"
+#include "feature/control/control.h"
+#include "feature/client/entrynodes.h"
+#include "feature/hibernate/hibernate.h"
+#include "core/mainloop/main.h"
+#include "feature/stats/rephist.h"
+#include "feature/relay/router.h"
 #include "lib/sandbox/sandbox.h"
-#include "or/statefile.h"
+#include "app/config/statefile.h"
 #include "lib/encoding/confline.h"
 
-#include "or/or_state_st.h"
+#include "app/config/or_state_st.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

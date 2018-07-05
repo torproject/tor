@@ -11,7 +11,7 @@
  **/
 
 #include "orconfig.h"
-#include "or/address_set.h"
+#include "core/or/address_set.h"
 #include "lib/net/address.h"
 #include "lib/container/bloomfilt.h"
 #include "lib/crypt_ops/crypto_rand.h"

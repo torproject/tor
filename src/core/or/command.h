@@ -12,7 +12,7 @@
 #ifndef TOR_COMMAND_H
 #define TOR_COMMAND_H
 
-#include "or/channel.h"
+#include "core/or/channel.h"
 
 void command_process_cell(channel_t *chan, cell_t *cell);
 void command_process_var_cell(channel_t *chan, var_cell_t *cell);

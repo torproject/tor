@@ -55,21 +55,21 @@
 /* For unit tests.*/
 #define HS_DESCRIPTOR_PRIVATE
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "trunnel/ed25519_cert.h" /* Trunnel interface. */
-#include "or/hs_descriptor.h"
-#include "or/circuitbuild.h"
+#include "feature/hs/hs_descriptor.h"
+#include "core/or/circuitbuild.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "or/parsecommon.h"
-#include "or/rendcache.h"
-#include "or/hs_cache.h"
-#include "or/hs_config.h"
-#include "or/torcert.h" /* tor_cert_encode_ed22519() */
+#include "feature/nodelist/parsecommon.h"
+#include "feature/rend/rendcache.h"
+#include "feature/hs/hs_cache.h"
+#include "feature/hs/hs_config.h"
+#include "feature/nodelist/torcert.h" /* tor_cert_encode_ed22519() */
 #include "lib/memarea/memarea.h"
 #include "lib/crypt_ops/crypto_format.h"
 
-#include "or/extend_info_st.h"
+#include "core/or/extend_info_st.h"
 
 /* Constant string value used for the descriptor format. */
 #define str_hs_desc "hs-descriptor"

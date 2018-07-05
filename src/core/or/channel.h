@@ -9,8 +9,8 @@
 #ifndef TOR_CHANNEL_H
 #define TOR_CHANNEL_H
 
-#include "or/or.h"
-#include "or/circuitmux.h"
+#include "core/or/or.h"
+#include "core/or/circuitmux.h"
 #include "lib/container/handles.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 

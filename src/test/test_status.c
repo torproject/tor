@@ -11,24 +11,24 @@
 #include <float.h>
 #include <math.h>
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/log/torlog.h"
 #include "tor_queue.h"
-#include "or/status.h"
-#include "or/circuitlist.h"
-#include "or/config.h"
-#include "or/hibernate.h"
-#include "or/rephist.h"
-#include "or/relay.h"
-#include "or/router.h"
-#include "or/main.h"
-#include "or/nodelist.h"
-#include "or/statefile.h"
+#include "core/or/status.h"
+#include "core/or/circuitlist.h"
+#include "app/config/config.h"
+#include "feature/hibernate/hibernate.h"
+#include "feature/stats/rephist.h"
+#include "core/or/relay.h"
+#include "feature/relay/router.h"
+#include "core/mainloop/main.h"
+#include "feature/nodelist/nodelist.h"
+#include "app/config/statefile.h"
 #include "lib/tls/tortls.h"
 
-#include "or/origin_circuit_st.h"
-#include "or/or_state_st.h"
-#include "or/routerinfo_st.h"
+#include "core/or/origin_circuit_st.h"
+#include "app/config/or_state_st.h"
+#include "feature/nodelist/routerinfo_st.h"
 
 #include "test/test.h"
 

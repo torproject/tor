@@ -1,15 +1,15 @@
 /* Copyright (c) 2014-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 #define HIBERNATE_PRIVATE
-#include "or/hibernate.h"
-#include "or/config.h"
+#include "feature/hibernate/hibernate.h"
+#include "app/config/config.h"
 #define STATEFILE_PRIVATE
-#include "or/statefile.h"
+#include "app/config/statefile.h"
 
-#include "or/or_state_st.h"
+#include "app/config/or_state_st.h"
 
 #define NS_MODULE accounting
 

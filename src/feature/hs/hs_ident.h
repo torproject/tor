@@ -23,7 +23,7 @@
 
 #include "lib/crypt_ops/crypto_ed25519.h"
 
-#include "or/hs_common.h"
+#include "feature/hs/hs_common.h"
 
 /* Length of the rendezvous cookie that is used to connect circuits at the
  * rendezvous point. */

@@ -7,10 +7,10 @@
 #ifndef OR_CIRCUIT_ST_H
 #define OR_CIRCUIT_ST_H
 
-#include "or/or.h"
+#include "core/or/or.h"
 
-#include "or/circuit_st.h"
-#include "or/crypt_path_st.h"
+#include "core/or/circuit_st.h"
+#include "core/or/crypt_path_st.h"
 
 struct onion_queue_t;
 

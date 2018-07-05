@@ -7,7 +7,7 @@
 #ifndef OR_CONNECTION_ST_H
 #define OR_CONNECTION_ST_H
 
-#include "or/connection_st.h"
+#include "core/or/connection_st.h"
 #include "lib/evloop/token_bucket.h"
 
 struct tor_tls_t;

@@ -10,20 +10,20 @@
 
 #define SHARED_RANDOM_STATE_PRIVATE
 
-#include "or/or.h"
-#include "or/config.h"
-#include "or/confparse.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
+#include "app/config/confparse.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "or/dirauth/dirvote.h"
-#include "or/networkstatus.h"
-#include "or/router.h"
-#include "or/dirauth/shared_random.h"
-#include "or/shared_random_client.h"
-#include "or/dirauth/shared_random_state.h"
-#include "or/voting_schedule.h"
+#include "feature/dirauth/dirvote.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/relay/router.h"
+#include "feature/dirauth/shared_random.h"
+#include "feature/hs_common/shared_random_client.h"
+#include "feature/dirauth/shared_random_state.h"
+#include "feature/dircommon/voting_schedule.h"
 #include "lib/encoding/confline.h"
 
-#include "or/or_state_st.h"
+#include "app/config/or_state_st.h"
 
 /* Default filename of the shared random state on disk. */
 static const char default_fname[] = "sr-state";

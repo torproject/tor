@@ -4,9 +4,9 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/container/buffers.h"
-#include "or/proto_control0.h"
+#include "core/proto/proto_control0.h"
 
 /** Return 1 iff buf looks more like it has an (obsolete) v0 controller
  * command on it than any valid v1 controller command. */

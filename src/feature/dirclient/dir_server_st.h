@@ -8,8 +8,8 @@
 #define DIR_SERVER_ST_H
 
 #include "lib/cc/torint.h"
-#include "or/or.h"
-#include "or/routerstatus_st.h"
+#include "core/or/or.h"
+#include "feature/nodelist/routerstatus_st.h"
 
 /** Represents information about a single trusted or fallback directory
  * server. */

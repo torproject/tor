@@ -7,7 +7,7 @@
 #ifndef DIR_CONNECTION_ST_H
 #define DIR_CONNECTION_ST_H
 
-#include "or/connection_st.h"
+#include "core/or/connection_st.h"
 
 struct tor_compress_state_t;
 

@@ -8,21 +8,21 @@
 #define TOR_CHANNEL_INTERNAL_
 #define TORTLS_PRIVATE
 
-#include "or/or.h"
-#include "or/config.h"
-#include "or/connection.h"
-#include "or/connection_or.h"
-#include "or/channeltls.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_or.h"
+#include "core/or/channeltls.h"
 #include "trunnel/link_handshake.h"
-#include "or/router.h"
-#include "or/routerkeys.h"
-#include "or/scheduler.h"
-#include "or/torcert.h"
+#include "feature/relay/router.h"
+#include "feature/relay/routerkeys.h"
+#include "core/or/scheduler.h"
+#include "feature/nodelist/torcert.h"
 
-#include "or/or_connection_st.h"
-#include "or/or_handshake_certs_st.h"
-#include "or/or_handshake_state_st.h"
-#include "or/var_cell_st.h"
+#include "core/or/or_connection_st.h"
+#include "core/or/or_handshake_certs_st.h"
+#include "core/or/or_handshake_state_st.h"
+#include "core/or/var_cell_st.h"
 
 #include "lib/tls/tortls.h"
 

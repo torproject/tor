@@ -34,12 +34,12 @@
 
 #include <math.h>
 
-#include "or/or.h"
-#include "or/circuitmux.h"
-#include "or/circuitmux_ewma.h"
+#include "core/or/or.h"
+#include "core/or/circuitmux.h"
+#include "core/or/circuitmux_ewma.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/networkstatus.h"
-#include "or/or_options_st.h"
+#include "feature/nodelist/networkstatus.h"
+#include "app/config/or_options_st.h"
 
 /*** EWMA parameter #defines ***/
 

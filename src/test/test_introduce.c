@@ -3,11 +3,11 @@
 
 #include "orconfig.h"
 #include "lib/crypt_ops/crypto.h"
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 
 #define RENDSERVICE_PRIVATE
-#include "or/rendservice.h"
+#include "feature/rend/rendservice.h"
 
 static uint8_t v0_test_plaintext[] =
     /* 20 bytes of rendezvous point nickname */

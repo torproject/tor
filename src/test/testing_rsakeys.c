@@ -5,7 +5,7 @@
 
 #include "lib/crypt_ops/crypto_rand.h"
 #include "orconfig.h"
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 
 /** Define this if unit tests spend too much time generating public keys.

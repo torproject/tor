@@ -21,9 +21,9 @@
  * specified, and a linked list of key-value pairs.
  */
 
-#include "or/or.h"
-#include "or/confparse.h"
-#include "or/routerset.h"
+#include "core/or/or.h"
+#include "app/config/confparse.h"
+#include "feature/nodelist/routerset.h"
 
 #include "lib/container/bitarray.h"
 #include "lib/encoding/confline.h"

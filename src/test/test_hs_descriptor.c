@@ -13,10 +13,10 @@
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "trunnel/ed25519_cert.h"
-#include "or/or.h"
-#include "or/hs_descriptor.h"
+#include "core/or/or.h"
+#include "feature/hs/hs_descriptor.h"
 #include "test/test.h"
-#include "or/torcert.h"
+#include "feature/nodelist/torcert.h"
 
 #include "test/hs_test_helpers.h"
 #include "test/test_helpers.h"

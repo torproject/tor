@@ -7,7 +7,7 @@
 #ifndef CRYPT_PATH_ST_H
 #define CRYPT_PATH_ST_H
 
-#include "or/relay_crypto_st.h"
+#include "core/or/relay_crypto_st.h"
 struct crypto_dh_t;
 
 #define CRYPT_PATH_MAGIC 0x70127012u

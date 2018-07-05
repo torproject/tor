@@ -69,15 +69,15 @@
  *     made to attach all existing circuits to the new policy.
  **/
 
-#include "or/or.h"
-#include "or/channel.h"
-#include "or/circuitlist.h"
-#include "or/circuitmux.h"
-#include "or/relay.h"
+#include "core/or/or.h"
+#include "core/or/channel.h"
+#include "core/or/circuitlist.h"
+#include "core/or/circuitmux.h"
+#include "core/or/relay.h"
 
-#include "or/cell_queue_st.h"
-#include "or/destroy_cell_queue_st.h"
-#include "or/or_circuit_st.h"
+#include "core/or/cell_queue_st.h"
+#include "core/or/destroy_cell_queue_st.h"
+#include "core/or/or_circuit_st.h"
 
 /*
  * Private typedefs for circuitmux.c

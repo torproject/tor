@@ -27,13 +27,13 @@
  * invoked from onion.c.
  **/
 
-#include "or/or.h"
-#include "or/config.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "or/onion_tap.h"
-#include "or/rephist.h"
+#include "core/crypto/onion_tap.h"
+#include "feature/stats/rephist.h"
 
 /*----------------------------------------------------------------------*/
 

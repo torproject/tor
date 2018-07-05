@@ -8,27 +8,27 @@
  *  less-frequently-changing router information.
  */
 
-#include "or/or.h"
+#include "core/or/or.h"
 
 #include "lib/fdio/fdio.h"
 
-#include "or/circuitbuild.h"
-#include "or/config.h"
-#include "or/directory.h"
-#include "or/dirserv.h"
-#include "or/entrynodes.h"
-#include "or/microdesc.h"
-#include "or/networkstatus.h"
-#include "or/nodelist.h"
-#include "or/policies.h"
-#include "or/router.h"
-#include "or/routerlist.h"
-#include "or/routerparse.h"
+#include "core/or/circuitbuild.h"
+#include "app/config/config.h"
+#include "feature/dircache/directory.h"
+#include "feature/dircache/dirserv.h"
+#include "feature/client/entrynodes.h"
+#include "feature/nodelist/microdesc.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nodelist.h"
+#include "core/or/policies.h"
+#include "feature/relay/router.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/routerparse.h"
 
-#include "or/microdesc_st.h"
-#include "or/networkstatus_st.h"
-#include "or/node_st.h"
-#include "or/routerstatus_st.h"
+#include "feature/nodelist/microdesc_st.h"
+#include "feature/nodelist/networkstatus_st.h"
+#include "feature/nodelist/node_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>

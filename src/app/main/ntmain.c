@@ -19,10 +19,10 @@
 
 #ifdef _WIN32
 
-#include "or/or.h"
-#include "or/config.h"
-#include "or/main.h"
-#include "app/ntmain.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
+#include "core/mainloop/main.h"
+#include "app/main/ntmain.h"
 #include "lib/log/win32err.h"
 #include "lib/fs/winlib.h"
 #include "lib/evloop/compat_libevent.h"

@@ -11,7 +11,7 @@
 
 #ifdef HAVE_MODULE_DIRAUTH
 
-#include "or/router.h"
+#include "feature/relay/router.h"
 
 /* Return true iff we believe ourselves to be a v3 authoritative directory
  * server. */

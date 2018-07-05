@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #endif
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 
 struct testgroup_t testgroups[] = {

@@ -14,10 +14,10 @@
  * to another.
  **/
 
-#include "or/or.h"
-#include "or/config.h"
-#include "or/reasons.h"
-#include "or/routerlist.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
+#include "core/or/reasons.h"
+#include "feature/nodelist/routerlist.h"
 #include "lib/tls/tortls.h"
 
 /***************************** Edge (stream) reasons **********************/

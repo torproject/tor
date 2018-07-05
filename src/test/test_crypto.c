@@ -6,7 +6,7 @@
 #include "orconfig.h"
 #define CRYPTO_CURVE25519_PRIVATE
 #define CRYPTO_RAND_PRIVATE
-#include "or/or.h"
+#include "core/or/or.h"
 #include "test/test.h"
 #include "lib/crypt_ops/aes.h"
 #include "siphash.h"

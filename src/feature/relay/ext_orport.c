@@ -17,18 +17,18 @@
  */
 
 #define EXT_ORPORT_PRIVATE
-#include "or/or.h"
-#include "or/connection.h"
-#include "or/connection_or.h"
-#include "or/control.h"
-#include "or/config.h"
+#include "core/or/or.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_or.h"
+#include "feature/control/control.h"
+#include "app/config/config.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "or/ext_orport.h"
-#include "or/main.h"
-#include "or/proto_ext_or.h"
+#include "feature/relay/ext_orport.h"
+#include "core/mainloop/main.h"
+#include "core/proto/proto_ext_or.h"
 
-#include "or/or_connection_st.h"
+#include "core/or/or_connection_st.h"
 
 /** Allocate and return a structure capable of holding an Extended
  *  ORPort message of body length <b>len</b>. */

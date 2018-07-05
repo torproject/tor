@@ -9,7 +9,7 @@
 #ifndef TOR_HS_COMMON_H
 #define TOR_HS_COMMON_H
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/defs/x25519_sizes.h"
 
 struct curve25519_public_key_t;

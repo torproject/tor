@@ -6,16 +6,16 @@
 #define NETWORKSTATUS_PRIVATE
 
 #include "orconfig.h"
-#include "or/or.h"
-#include "or/config.h"
-#include "or/dirserv.h"
-#include "or/entrynodes.h"
-#include "or/routerparse.h"
-#include "or/networkstatus.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
+#include "feature/dircache/dirserv.h"
+#include "feature/client/entrynodes.h"
+#include "feature/nodelist/routerparse.h"
+#include "feature/nodelist/networkstatus.h"
 
-#include "or/networkstatus_st.h"
-#include "or/vote_microdesc_hash_st.h"
-#include "or/vote_routerstatus_st.h"
+#include "feature/nodelist/networkstatus_st.h"
+#include "feature/dirauth/vote_microdesc_hash_st.h"
+#include "feature/nodelist/vote_routerstatus_st.h"
 
 #include "test/test.h"
 #include "test/test_helpers.h"

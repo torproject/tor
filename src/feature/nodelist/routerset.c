@@ -27,20 +27,20 @@ n * Copyright (c) 2001-2004, Roger Dingledine.
 
 #define ROUTERSET_PRIVATE
 
-#include "or/or.h"
-#include "or/bridges.h"
-#include "or/geoip.h"
-#include "or/nodelist.h"
-#include "or/policies.h"
-#include "or/router.h"
-#include "or/routerparse.h"
-#include "or/routerset.h"
+#include "core/or/or.h"
+#include "feature/client/bridges.h"
+#include "feature/stats/geoip.h"
+#include "feature/nodelist/nodelist.h"
+#include "core/or/policies.h"
+#include "feature/relay/router.h"
+#include "feature/nodelist/routerparse.h"
+#include "feature/nodelist/routerset.h"
 
-#include "or/addr_policy_st.h"
-#include "or/extend_info_st.h"
-#include "or/node_st.h"
-#include "or/routerinfo_st.h"
-#include "or/routerstatus_st.h"
+#include "core/or/addr_policy_st.h"
+#include "core/or/extend_info_st.h"
+#include "feature/nodelist/node_st.h"
+#include "feature/nodelist/routerinfo_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 
 /** Return a new empty routerset. */
 routerset_t *

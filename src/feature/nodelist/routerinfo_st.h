@@ -7,7 +7,7 @@
 #ifndef ROUTERINFO_ST_H
 #define ROUTERINFO_ST_H
 
-#include "or/signed_descriptor_st.h"
+#include "feature/nodelist/signed_descriptor_st.h"
 
 struct curve25519_public_key_t;
 

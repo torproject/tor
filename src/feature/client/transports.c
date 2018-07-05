@@ -90,17 +90,17 @@
  **/
 
 #define PT_PRIVATE
-#include "or/or.h"
-#include "or/bridges.h"
-#include "or/config.h"
-#include "or/connection.h"
-#include "or/circuitbuild.h"
-#include "or/transports.h"
-#include "or/router.h"
-#include "or/statefile.h"
-#include "or/connection_or.h"
-#include "or/ext_orport.h"
-#include "or/control.h"
+#include "core/or/or.h"
+#include "feature/client/bridges.h"
+#include "app/config/config.h"
+#include "core/mainloop/connection.h"
+#include "core/or/circuitbuild.h"
+#include "feature/client/transports.h"
+#include "feature/relay/router.h"
+#include "app/config/statefile.h"
+#include "core/or/connection_or.h"
+#include "feature/relay/ext_orport.h"
+#include "feature/control/control.h"
 
 #include "lib/process/env.h"
 #include "lib/process/subprocess.h"

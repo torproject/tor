@@ -21,19 +21,19 @@
  * DNS client.
  **/
 
-#include "or/or.h"
-#include "or/dnsserv.h"
-#include "or/config.h"
-#include "or/connection.h"
-#include "or/connection_edge.h"
-#include "or/control.h"
-#include "or/main.h"
-#include "or/policies.h"
+#include "core/or/or.h"
+#include "feature/client/dnsserv.h"
+#include "app/config/config.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_edge.h"
+#include "feature/control/control.h"
+#include "core/mainloop/main.h"
+#include "core/or/policies.h"
 
-#include "or/control_connection_st.h"
-#include "or/entry_connection_st.h"
-#include "or/listener_connection_st.h"
-#include "or/socks_request_st.h"
+#include "feature/control/control_connection_st.h"
+#include "core/or/entry_connection_st.h"
+#include "core/or/listener_connection_st.h"
+#include "core/or/socks_request_st.h"
 #include "lib/evloop/compat_libevent.h"
 
 #include <event2/dns.h>

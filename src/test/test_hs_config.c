@@ -13,11 +13,11 @@
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
 
-#include "or/config.h"
-#include "or/hs_common.h"
-#include "or/hs_config.h"
-#include "or/hs_service.h"
-#include "or/rendservice.h"
+#include "app/config/config.h"
+#include "feature/hs/hs_common.h"
+#include "feature/hs/hs_config.h"
+#include "feature/hs/hs_service.h"
+#include "feature/rend/rendservice.h"
 
 static int
 helper_config_service(const char *conf, int validate_only)

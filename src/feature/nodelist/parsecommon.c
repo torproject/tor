@@ -6,7 +6,7 @@
  * \brief Common code to parse and validate various type of descriptors.
  **/
 
-#include "or/parsecommon.h"
+#include "feature/nodelist/parsecommon.h"
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
 #include "lib/encoding/binascii.h"

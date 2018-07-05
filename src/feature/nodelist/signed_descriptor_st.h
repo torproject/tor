@@ -7,7 +7,7 @@
 #ifndef SIGNED_DESCRIPTOR_ST_H
 #define SIGNED_DESCRIPTOR_ST_H
 
-#include "or/download_status_st.h"
+#include "feature/dirclient/download_status_st.h"
 
 /** Information need to cache an onion router's descriptor. */
 struct signed_descriptor_t {

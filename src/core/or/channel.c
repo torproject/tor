@@ -57,31 +57,31 @@
 /* This one's for stuff only channel.c and the test suite should see */
 #define CHANNEL_PRIVATE_
 
-#include "or/or.h"
-#include "or/channel.h"
-#include "or/channeltls.h"
-#include "or/channelpadding.h"
-#include "or/circuitbuild.h"
-#include "or/circuitlist.h"
-#include "or/circuitstats.h"
-#include "or/config.h"
-#include "or/connection_or.h" /* For var_cell_free() */
-#include "or/circuitmux.h"
-#include "or/entrynodes.h"
-#include "or/geoip.h"
-#include "or/main.h"
-#include "or/nodelist.h"
-#include "or/relay.h"
-#include "or/rephist.h"
-#include "or/router.h"
-#include "or/routerlist.h"
-#include "or/scheduler.h"
+#include "core/or/or.h"
+#include "core/or/channel.h"
+#include "core/or/channeltls.h"
+#include "core/or/channelpadding.h"
+#include "core/or/circuitbuild.h"
+#include "core/or/circuitlist.h"
+#include "core/or/circuitstats.h"
+#include "app/config/config.h"
+#include "core/or/connection_or.h" /* For var_cell_free() */
+#include "core/or/circuitmux.h"
+#include "feature/client/entrynodes.h"
+#include "feature/stats/geoip.h"
+#include "core/mainloop/main.h"
+#include "feature/nodelist/nodelist.h"
+#include "core/or/relay.h"
+#include "feature/stats/rephist.h"
+#include "feature/relay/router.h"
+#include "feature/nodelist/routerlist.h"
+#include "core/or/scheduler.h"
 #include "lib/time/compat_time.h"
-#include "or/networkstatus.h"
-#include "or/rendservice.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/rend/rendservice.h"
 #include "lib/evloop/timers.h"
 
-#include "or/cell_queue_st.h"
+#include "core/or/cell_queue_st.h"
 
 /* Global lists of channels */
 

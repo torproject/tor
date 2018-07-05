@@ -25,12 +25,12 @@
 
 #define HS_CONFIG_PRIVATE
 
-#include "or/hs_common.h"
-#include "or/hs_config.h"
-#include "or/hs_service.h"
-#include "or/rendservice.h"
+#include "feature/hs/hs_common.h"
+#include "feature/hs/hs_config.h"
+#include "feature/hs/hs_service.h"
+#include "feature/rend/rendservice.h"
 #include "lib/encoding/confline.h"
-#include "or/or_options_st.h"
+#include "app/config/or_options_st.h"
 
 /* Using the given list of services, stage them into our global state. Every
  * service version are handled. This function can remove entries in the given

@@ -29,7 +29,7 @@
 #include "lib/ctime/di_ops.h"
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
-#include "or/onion_ntor.h"
+#include "core/crypto/onion_ntor.h"
 
 #include <string.h>
 

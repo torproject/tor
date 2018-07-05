@@ -4,7 +4,7 @@
 #ifndef TOR_TEST_HELPERS_H
 #define TOR_TEST_HELPERS_H
 
-#include "or/or.h"
+#include "core/or/or.h"
 
 const char *get_yesterday_date_str(void);
 

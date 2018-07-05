@@ -4,7 +4,7 @@
 #ifndef TOR_SHARED_RANDOM_STATE_H
 #define TOR_SHARED_RANDOM_STATE_H
 
-#include "or/dirauth/shared_random.h"
+#include "feature/dirauth/shared_random.h"
 
 /* Action that can be performed on the state for any objects. */
 typedef enum {

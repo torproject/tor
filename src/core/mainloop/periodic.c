@@ -11,11 +11,11 @@
  * that they fire.  See periodic_events[] in main.c for examples.
  */
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/evloop/compat_libevent.h"
-#include "or/config.h"
-#include "or/main.h"
-#include "or/periodic.h"
+#include "app/config/config.h"
+#include "core/mainloop/main.h"
+#include "core/mainloop/periodic.h"
 #include "lib/evloop/compat_libevent.h"
 
 /** We disable any interval greater than this number of seconds, on the

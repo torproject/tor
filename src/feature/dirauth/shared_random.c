@@ -87,25 +87,25 @@
 
 #define SHARED_RANDOM_PRIVATE
 
-#include "or/or.h"
-#include "or/dirauth/shared_random.h"
-#include "or/config.h"
-#include "or/confparse.h"
+#include "core/or/or.h"
+#include "feature/dirauth/shared_random.h"
+#include "app/config/config.h"
+#include "app/config/confparse.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "or/networkstatus.h"
-#include "or/router.h"
-#include "or/routerkeys.h"
-#include "or/routerlist.h"
-#include "or/shared_random_client.h"
-#include "or/dirauth/shared_random_state.h"
-#include "or/voting_schedule.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/relay/router.h"
+#include "feature/relay/routerkeys.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/hs_common/shared_random_client.h"
+#include "feature/dirauth/shared_random_state.h"
+#include "feature/dircommon/voting_schedule.h"
 
-#include "or/dirauth/dirvote.h"
-#include "or/dirauth/mode.h"
+#include "feature/dirauth/dirvote.h"
+#include "feature/dirauth/mode.h"
 
-#include "or/authority_cert_st.h"
-#include "or/networkstatus_st.h"
+#include "feature/nodelist/authority_cert_st.h"
+#include "feature/nodelist/networkstatus_st.h"
 
 /* String prefix of shared random values in votes/consensuses. */
 static const char previous_srv_str[] = "shared-rand-previous-value";

@@ -7,7 +7,7 @@
 
 /* To prevent 'assert' from going away. */
 #undef TOR_COVERAGE
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/err/backtrace.h"
 #include "lib/log/torlog.h"
 

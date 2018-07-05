@@ -4,8 +4,8 @@
 #define REPLAYCACHE_PRIVATE
 
 #include "orconfig.h"
-#include "or/or.h"
-#include "or/replaycache.h"
+#include "core/or/or.h"
+#include "feature/hs_common/replaycache.h"
 #include "test/test.h"
 
 static const char *test_buffer =

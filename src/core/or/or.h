@@ -69,7 +69,7 @@
 
 // These, more than other includes, are for keeping the other struct
 // definitions working. We should remove them when we minimize our includes.
-#include "or/entry_port_cfg_st.h"
+#include "core/or/entry_port_cfg_st.h"
 
 struct ed25519_public_key_t;
 struct curve25519_public_key_t;

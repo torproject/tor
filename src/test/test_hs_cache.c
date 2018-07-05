@@ -11,16 +11,16 @@
 #define HS_CACHE_PRIVATE
 
 #include "trunnel/ed25519_cert.h"
-#include "or/hs_cache.h"
-#include "or/rendcache.h"
-#include "or/directory.h"
-#include "or/networkstatus.h"
-#include "or/connection.h"
-#include "or/proto_http.h"
+#include "feature/hs/hs_cache.h"
+#include "feature/rend/rendcache.h"
+#include "feature/dircache/directory.h"
+#include "feature/nodelist/networkstatus.h"
+#include "core/mainloop/connection.h"
+#include "core/proto/proto_http.h"
 #include "lib/crypt_ops/crypto_format.h"
 
-#include "or/dir_connection_st.h"
-#include "or/networkstatus_st.h"
+#include "feature/dircommon/dir_connection_st.h"
+#include "feature/nodelist/networkstatus_st.h"
 
 #include "test/hs_test_helpers.h"
 #include "test/test_helpers.h"

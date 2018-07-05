@@ -11,10 +11,10 @@
 
 #include <stdint.h>
 
-#include "or/hs_common.h"
-#include "or/hs_descriptor.h"
-#include "or/rendcommon.h"
-#include "or/torcert.h"
+#include "feature/hs/hs_common.h"
+#include "feature/hs/hs_descriptor.h"
+#include "feature/rend/rendcommon.h"
+#include "feature/nodelist/torcert.h"
 
 struct ed25519_public_key_t;
 

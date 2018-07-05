@@ -4,7 +4,7 @@
 #ifndef TOR_HS_NTOR_H
 #define TOR_HS_NTOR_H
 
-#include "or/or.h"
+#include "core/or/or.h"
 struct ed25519_public_key_t;
 struct curve25519_public_key_t;
 struct curve25519_keypair_t;

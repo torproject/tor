@@ -9,10 +9,10 @@
 #ifndef TOR_HS_CIRCUIT_H
 #define TOR_HS_CIRCUIT_H
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
-#include "or/hs_service.h"
+#include "feature/hs/hs_service.h"
 
 /* Cleanup function when the circuit is closed or/and freed. */
 void hs_circ_cleanup(circuit_t *circ);

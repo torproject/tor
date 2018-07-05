@@ -6,17 +6,17 @@
 #define BUFFERS_PRIVATE
 #define CONNECTION_EDGE_PRIVATE
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/err/backtrace.h"
 #include "lib/container/buffers.h"
-#include "or/config.h"
-#include "or/connection.h"
-#include "or/connection_edge.h"
-#include "or/proto_socks.h"
+#include "app/config/config.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_edge.h"
+#include "core/proto/proto_socks.h"
 #include "lib/log/torlog.h"
 
-#include "or/entry_connection_st.h"
-#include "or/socks_request_st.h"
+#include "core/or/entry_connection_st.h"
+#include "core/or/socks_request_st.h"
 
 #include "test/fuzz/fuzzing.h"
 

@@ -2,23 +2,23 @@
 /* See LICENSE for licensing information */
 
 #define CONTROL_PRIVATE
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
-#include "or/bridges.h"
-#include "or/control.h"
-#include "or/entrynodes.h"
-#include "or/hs_common.h"
-#include "or/networkstatus.h"
-#include "or/rendservice.h"
-#include "or/routerlist.h"
-#include "or/nodelist.h"
+#include "feature/client/bridges.h"
+#include "feature/control/control.h"
+#include "feature/client/entrynodes.h"
+#include "feature/hs/hs_common.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/rend/rendservice.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/nodelist.h"
 #include "test/test.h"
 #include "test/test_helpers.h"
 
-#include "or/control_connection_st.h"
-#include "or/download_status_st.h"
-#include "or/microdesc_st.h"
-#include "or/node_st.h"
+#include "feature/control/control_connection_st.h"
+#include "feature/dirclient/download_status_st.h"
+#include "feature/nodelist/microdesc_st.h"
+#include "feature/nodelist/node_st.h"
 
 static void
 test_add_onion_helper_keyarg_v3(void *arg)

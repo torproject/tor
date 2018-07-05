@@ -12,8 +12,8 @@
 #ifndef TOR_RENDSERVICE_H
 #define TOR_RENDSERVICE_H
 
-#include "or/or.h"
-#include "or/hs_service.h"
+#include "core/or/or.h"
+#include "feature/hs/hs_service.h"
 
 typedef struct rend_intro_cell_t rend_intro_cell_t;
 struct config_line_t;

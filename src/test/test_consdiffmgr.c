@@ -3,20 +3,20 @@
 
 #define CONSDIFFMGR_PRIVATE
 
-#include "or/or.h"
-#include "or/config.h"
-#include "or/conscache.h"
-#include "or/consdiff.h"
-#include "or/consdiffmgr.h"
-#include "or/cpuworker.h"
+#include "core/or/or.h"
+#include "app/config/config.h"
+#include "feature/dircache/conscache.h"
+#include "feature/dircommon/consdiff.h"
+#include "feature/dircache/consdiffmgr.h"
+#include "core/mainloop/cpuworker.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/networkstatus.h"
-#include "or/routerparse.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/routerparse.h"
 #include "lib/evloop/workqueue.h"
 #include "lib/compress/compress.h"
 #include "lib/encoding/confline.h"
 
-#include "or/networkstatus_st.h"
+#include "feature/nodelist/networkstatus_st.h"
 
 #include "test/test.h"
 #include "test/log_test_helpers.h"

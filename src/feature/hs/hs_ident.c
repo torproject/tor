@@ -8,7 +8,7 @@
  **/
 
 #include "lib/crypt_ops/crypto_util.h"
-#include "or/hs_ident.h"
+#include "feature/hs/hs_ident.h"
 
 /* Return a newly allocated circuit identifier. The given public key is copied
  * identity_pk into the identifier. */

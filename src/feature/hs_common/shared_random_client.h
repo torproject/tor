@@ -10,7 +10,7 @@
 #define TOR_SHARED_RANDOM_CLIENT_H
 
 /* Dirauth module. */
-#include "or/dirauth/shared_random.h"
+#include "feature/dirauth/shared_random.h"
 
 /* Helper functions. */
 void sr_srv_encode(char *dst, size_t dst_len, const sr_srv_t *srv);

@@ -5,9 +5,9 @@
 /* See LICENSE for licensing information */
 
 #define PROTO_HTTP_PRIVATE
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/container/buffers.h"
-#include "or/proto_http.h"
+#include "core/proto/proto_http.h"
 
 /** Return true if <b>cmd</b> looks like a HTTP (proxy) request. */
 int

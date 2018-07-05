@@ -28,23 +28,23 @@ hibernating, phase 2:
 */
 
 #define HIBERNATE_PRIVATE
-#include "or/or.h"
-#include "or/channel.h"
-#include "or/channeltls.h"
-#include "or/config.h"
-#include "or/connection.h"
-#include "or/connection_edge.h"
-#include "or/connection_or.h"
-#include "or/control.h"
+#include "core/or/or.h"
+#include "core/or/channel.h"
+#include "core/or/channeltls.h"
+#include "app/config/config.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_edge.h"
+#include "core/or/connection_or.h"
+#include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "or/hibernate.h"
-#include "or/main.h"
-#include "or/router.h"
-#include "or/statefile.h"
+#include "feature/hibernate/hibernate.h"
+#include "core/mainloop/main.h"
+#include "feature/relay/router.h"
+#include "app/config/statefile.h"
 #include "lib/evloop/compat_libevent.h"
 
-#include "or/or_connection_st.h"
-#include "or/or_state_st.h"
+#include "core/or/or_connection_st.h"
+#include "app/config/or_state_st.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

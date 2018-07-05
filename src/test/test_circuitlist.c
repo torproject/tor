@@ -5,17 +5,17 @@
 #define CIRCUITBUILD_PRIVATE
 #define CIRCUITLIST_PRIVATE
 #define HS_CIRCUITMAP_PRIVATE
-#include "or/or.h"
-#include "or/channel.h"
-#include "or/circuitbuild.h"
-#include "or/circuitlist.h"
-#include "or/circuitmux_ewma.h"
-#include "or/hs_circuitmap.h"
+#include "core/or/or.h"
+#include "core/or/channel.h"
+#include "core/or/circuitbuild.h"
+#include "core/or/circuitlist.h"
+#include "core/or/circuitmux_ewma.h"
+#include "feature/hs/hs_circuitmap.h"
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
-#include "or/or_circuit_st.h"
-#include "or/origin_circuit_st.h"
+#include "core/or/or_circuit_st.h"
+#include "core/or/origin_circuit_st.h"
 
 #include "lib/container/bitarray.h"
 

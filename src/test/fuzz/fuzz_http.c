@@ -6,15 +6,15 @@
 #define BUFFERS_PRIVATE
 #define DIRECTORY_PRIVATE
 
-#include "or/or.h"
+#include "core/or/or.h"
 #include "lib/err/backtrace.h"
 #include "lib/container/buffers.h"
-#include "or/config.h"
-#include "or/connection.h"
-#include "or/directory.h"
+#include "app/config/config.h"
+#include "core/mainloop/connection.h"
+#include "feature/dircache/directory.h"
 #include "lib/log/torlog.h"
 
-#include "or/dir_connection_st.h"
+#include "feature/dircommon/dir_connection_st.h"
 
 #include "test/fuzz/fuzzing.h"
 
