@@ -8,7 +8,7 @@
 #define OR_CONNECTION_ST_H
 
 #include "or/connection_st.h"
-#include "common/token_bucket.h"
+#include "lib/evloop/token_bucket.h"
 
 struct tor_tls_t;
 

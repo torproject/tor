@@ -22,7 +22,7 @@
 #include "or/channelpadding.h"
 #include "or/main.h"
 #include "lib/compress/compress.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H

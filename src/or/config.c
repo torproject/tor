@@ -131,7 +131,7 @@
 
 #include "lib/encoding/keyval.h"
 #include "lib/fs/conffile.h"
-#include "common/procmon.h"
+#include "lib/evloop/procmon.h"
 
 #include "or/dirauth/dirvote.h"
 #include "or/dirauth/mode.h"

@@ -79,7 +79,7 @@
 #include "lib/time/compat_time.h"
 #include "or/networkstatus.h"
 #include "or/rendservice.h"
-#include "common/timers.h"
+#include "lib/evloop/timers.h"
 
 #include "or/cell_queue_st.h"
 

@@ -34,7 +34,7 @@
 #include "or/entry_connection_st.h"
 #include "or/listener_connection_st.h"
 #include "or/socks_request_st.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 
 #include <event2/dns.h>
 #include <event2/dns_compat.h>

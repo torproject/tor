@@ -64,7 +64,7 @@
 #include "or/router.h"
 #include "ht.h"
 #include "lib/sandbox/sandbox.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 
 #include "or/edge_connection_st.h"
 #include "or/or_circuit_st.h"

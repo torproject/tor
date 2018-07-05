@@ -10,7 +10,7 @@
 #include "or/or.h"
 #include "lib/container/buffers.h"
 #include "or/circuitlist.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 #include "or/connection.h"
 #include "or/config.h"
 #include "lib/crypt_ops/crypto_rand.h"

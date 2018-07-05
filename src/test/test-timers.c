@@ -7,8 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "common/compat_libevent.h"
-#include "common/timers.h"
+#include "lib/evloop/compat_libevent.h"
+#include "lib/evloop/timers.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/log/util_bug.h"
 #include "lib/time/compat_time.h"

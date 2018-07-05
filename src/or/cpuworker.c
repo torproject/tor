@@ -30,7 +30,7 @@
 #include "or/onion.h"
 #include "or/rephist.h"
 #include "or/router.h"
-#include "common/workqueue.h"
+#include "lib/evloop/workqueue.h"
 
 #include "or/or_circuit_st.h"
 #include "lib/intmath/weakrng.h"

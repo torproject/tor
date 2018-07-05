@@ -46,7 +46,7 @@
 #include "or/circuitstats.h"
 #include "or/circuituse.h"
 #include "or/command.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 #include "or/config.h"
 #include "or/confparse.h"
 #include "or/connection.h"
@@ -113,8 +113,8 @@
 #endif
 
 #include "lib/crypt_ops/crypto_s2k.h"
-#include "common/procmon.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/procmon.h"
+#include "lib/evloop/compat_libevent.h"
 
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
  * finished authentication and is accepting commands. */
