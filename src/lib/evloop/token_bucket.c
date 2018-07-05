@@ -18,7 +18,7 @@
 
 #define TOKEN_BUCKET_PRIVATE
 
-#include "common/token_bucket.h"
+#include "lib/evloop/token_bucket.h"
 #include "lib/log/util_bug.h"
 #include "lib/intmath/cmp.h"
 #include "lib/time/compat_time.h"

@@ -7,7 +7,7 @@
 
 #include "test/test.h"
 
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 
 #include <event2/event.h>
 

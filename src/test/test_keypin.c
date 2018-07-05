@@ -5,7 +5,6 @@
 #define KEYPIN_PRIVATE
 #include "or/or.h"
 #include "or/keypin.h"
-#include "common/util.h"
 
 #include "test/test.h"
 

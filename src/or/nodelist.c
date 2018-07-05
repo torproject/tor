@@ -42,7 +42,7 @@
 
 #include "or/or.h"
 #include "lib/net/address.h"
-#include "common/address_set.h"
+#include "or/address_set.h"
 #include "or/bridges.h"
 #include "or/config.h"
 #include "or/control.h"

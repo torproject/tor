@@ -8,6 +8,10 @@ endif
 src_lib_libtor_malloc_a_SOURCES =			\
 	src/lib/malloc/util_malloc.c
 
+if USE_OPENBSD_MALLOC
+src_lib_libtor_malloc_a_SOURCES += src/ext/OpenBSD_malloc_Linux.c
+endif
+
 src_lib_libtor_malloc_testing_a_SOURCES = \
 	$(src_lib_libtor_malloc_a_SOURCES)
 src_lib_libtor_malloc_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)

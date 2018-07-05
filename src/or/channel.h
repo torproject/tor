@@ -11,7 +11,7 @@
 
 #include "or/or.h"
 #include "or/circuitmux.h"
-#include "common/handles.h"
+#include "lib/container/handles.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
 #include "tor_queue.h"

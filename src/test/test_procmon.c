@@ -6,7 +6,7 @@
 #include "or/or.h"
 #include "test/test.h"
 
-#include "common/procmon.h"
+#include "lib/evloop/procmon.h"
 
 #include "test/log_test_helpers.h"
 

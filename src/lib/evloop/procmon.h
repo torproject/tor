@@ -9,7 +9,7 @@
 #ifndef TOR_PROCMON_H
 #define TOR_PROCMON_H
 
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 
 #include "lib/log/torlog.h"
 

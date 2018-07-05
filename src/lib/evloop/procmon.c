@@ -6,7 +6,7 @@
  * \brief Process-termination monitor functions
  **/
 
-#include "common/procmon.h"
+#include "lib/evloop/procmon.h"
 
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"

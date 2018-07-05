@@ -6,12 +6,16 @@
 #include "orconfig.h"
 #define UTIL_PRIVATE
 #define SUBPROCESS_PRIVATE
-#include "common/util.h"
-#include "lib/process/waitpid.h"
 #include "lib/crypt_ops/crypto.h"
 #include "lib/log/torlog.h"
 #include "lib/process/subprocess.h"
+#include "lib/process/waitpid.h"
+#include "lib/string/printf.h"
+#include "lib/time/compat_time.h"
 #include "test/test.h"
+
+#include <errno.h>
+#include <string.h>
 
 #ifndef BUILDDIR
 #define BUILDDIR "."

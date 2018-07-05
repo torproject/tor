@@ -31,8 +31,8 @@
 
 #define TOR_TIMERS_PRIVATE
 
-#include "common/compat_libevent.h"
-#include "common/timers.h"
+#include "lib/evloop/compat_libevent.h"
+#include "lib/evloop/timers.h"
 #include "lib/intmath/muldiv.h"
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"

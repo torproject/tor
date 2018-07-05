@@ -12,11 +12,11 @@
  */
 
 #include "or/or.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 #include "or/config.h"
 #include "or/main.h"
 #include "or/periodic.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 
 /** We disable any interval greater than this number of seconds, on the
  * grounds that it is probably an absolute time mistakenly passed in as a

@@ -11,7 +11,7 @@
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 #include "or/socks_request_st.h"
-#include "common/socks5_status.h"
+#include "lib/net/socks5_status.h"
 
 typedef struct socks_test_data_t {
   socks_request_t *req;

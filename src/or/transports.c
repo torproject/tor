@@ -96,7 +96,6 @@
 #include "or/connection.h"
 #include "or/circuitbuild.h"
 #include "or/transports.h"
-#include "common/util.h"
 #include "or/router.h"
 #include "or/statefile.h"
 #include "or/connection_or.h"

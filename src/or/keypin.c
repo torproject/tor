@@ -11,17 +11,28 @@
 #define KEYPIN_PRIVATE
 
 #include "orconfig.h"
+
+#include "lib/cc/torint.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_format.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/ctime/di_ops.h"
+#include "lib/ctime/di_ops.h"
+#include "lib/encoding/binascii.h"
+#include "lib/encoding/time_fmt.h"
+#include "lib/fdio/fdio.h"
+#include "lib/fs/files.h"
+#include "lib/fs/mmap.h"
+#include "lib/log/torlog.h"
+#include "lib/log/util_bug.h"
+#include "lib/string/compat_ctype.h"
+#include "lib/string/printf.h"
+#include "lib/wallclock/approx_time.h"
+
 #include "ht.h"
 #include "or/keypin.h"
+
 #include "siphash.h"
-#include "lib/cc/torint.h"
-#include "lib/log/torlog.h"
-#include "lib/fdio/fdio.h"
-#include "common/util.h"
-#include "lib/encoding/binascii.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -33,6 +44,10 @@
 #ifdef _WIN32
 #include <io.h>
 #endif
+
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
 
 /**
  * @file keypin.c

@@ -16,7 +16,6 @@
 #include "or/bridges.h"
 #include "or/config.h"
 #include "or/transports.h"
-#include "common/util.h"
 
 /* Test suite stuff */
 #include "test/test.h"

@@ -12,7 +12,6 @@
 
 #include "or/config.h"
 #include "test/test.h"
-#include "common/util.h"
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>

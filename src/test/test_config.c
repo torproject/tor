@@ -19,7 +19,6 @@
 #include "or/connection.h"
 #include "or/connection_edge.h"
 #include "test/test.h"
-#include "common/util.h"
 #include "or/connection_or.h"
 #include "or/control.h"
 #include "or/cpuworker.h"

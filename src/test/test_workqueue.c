@@ -6,11 +6,11 @@
 #include "or/or.h"
 #include "lib/thread/threads.h"
 #include "or/onion.h"
-#include "common/workqueue.h"
+#include "lib/evloop/workqueue.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/net/alertsock.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 #include "lib/intmath/weakrng.h"
 
 #include <stdio.h>

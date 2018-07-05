@@ -12,7 +12,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "or/networkstatus.h"
 #include "or/routerparse.h"
-#include "common/workqueue.h"
+#include "lib/evloop/workqueue.h"
 #include "lib/compress/compress.h"
 #include "lib/encoding/confline.h"
 

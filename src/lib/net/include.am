@@ -29,4 +29,5 @@ noinst_HEADERS +=				\
 	src/lib/net/ipv6.h			\
 	src/lib/net/nettypes.h			\
 	src/lib/net/resolve.h			\
-	src/lib/net/socket.h
+	src/lib/net/socket.h			\
+	src/lib/net/socks5_status.h

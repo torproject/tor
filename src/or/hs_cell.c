@@ -11,7 +11,6 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "or/rendservice.h"
 #include "or/replaycache.h"
-#include "common/util.h"
 
 #include "or/hs_cell.h"
 #include "or/hs_ntor.h"

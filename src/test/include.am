@@ -271,7 +271,7 @@ src_test_test_workqueue_LDADD = \
 src_test_test_timers_CPPFLAGS = $(src_test_test_CPPFLAGS)
 src_test_test_timers_CFLAGS = $(src_test_test_CFLAGS)
 src_test_test_timers_LDADD = \
-	src/common/libor-event-testing.a \
+	src/lib/libtor-evloop-testing.a \
 	$(TOR_CRYPTO_TESTING_LIBS) \
 	$(TOR_UTIL_TESTING_LIBS) \
 	$(rust_ldadd) \

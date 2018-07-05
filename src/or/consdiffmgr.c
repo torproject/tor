@@ -21,8 +21,8 @@
 #include "or/cpuworker.h"
 #include "or/networkstatus.h"
 #include "or/routerparse.h"
-#include "common/compat_libevent.h"
-#include "common/workqueue.h"
+#include "lib/evloop/compat_libevent.h"
+#include "lib/evloop/workqueue.h"
 #include "lib/compress/compress.h"
 #include "lib/encoding/confline.h"
 

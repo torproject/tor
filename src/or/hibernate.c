@@ -41,7 +41,7 @@ hibernating, phase 2:
 #include "or/main.h"
 #include "or/router.h"
 #include "or/statefile.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 
 #include "or/or_connection_st.h"
 #include "or/or_state_st.h"

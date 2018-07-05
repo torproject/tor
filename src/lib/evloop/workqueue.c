@@ -24,8 +24,8 @@
  */
 
 #include "orconfig.h"
-#include "common/compat_libevent.h"
-#include "common/workqueue.h"
+#include "lib/evloop/compat_libevent.h"
+#include "lib/evloop/workqueue.h"
 
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/intmath/weakrng.h"

@@ -3,7 +3,7 @@
 
 #include "or/or.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "common/address_set.h"
+#include "or/address_set.h"
 #include "or/microdesc.h"
 #include "or/networkstatus.h"
 #include "or/nodelist.h"

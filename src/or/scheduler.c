@@ -4,7 +4,7 @@
 #include "or/or.h"
 #include "or/config.h"
 
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 #define SCHEDULER_PRIVATE_
 #define SCHEDULER_KIST_PRIVATE
 #include "or/scheduler.h"
@@ -12,7 +12,7 @@
 #include "lib/container/buffers.h"
 #define TOR_CHANNEL_INTERNAL_
 #include "or/channeltls.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 
 #include "or/or_connection_st.h"
 

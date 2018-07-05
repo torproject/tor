@@ -8,7 +8,7 @@
 
 #include "orconfig.h"
 #define COMPAT_LIBEVENT_PRIVATE
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/log/torlog.h"

@@ -99,7 +99,6 @@
 #include "or/rephist.h"
 #include "or/router.h"
 #include "lib/sandbox/sandbox.h"
-#include "common/util.h"
 #include "or/routerlist.h"
 #include "or/routerset.h"
 #include "or/scheduler.h"
@@ -132,7 +131,7 @@
 
 #include "lib/encoding/keyval.h"
 #include "lib/fs/conffile.h"
-#include "common/procmon.h"
+#include "lib/evloop/procmon.h"
 
 #include "or/dirauth/dirvote.h"
 #include "or/dirauth/mode.h"

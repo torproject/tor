@@ -10,7 +10,7 @@
 #define CHANNEL_PRIVATE_
 #include "or/or.h"
 #include "or/config.h"
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
 #include "or/channel.h"
 #include "or/channeltls.h"
 #include "or/connection.h"

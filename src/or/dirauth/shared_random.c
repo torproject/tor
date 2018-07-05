@@ -99,7 +99,6 @@
 #include "or/routerlist.h"
 #include "or/shared_random_client.h"
 #include "or/dirauth/shared_random_state.h"
-#include "common/util.h"
 #include "or/voting_schedule.h"
 
 #include "or/dirauth/dirvote.h"

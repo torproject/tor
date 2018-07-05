@@ -7,10 +7,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "common/compat_libevent.h"
+#include "lib/evloop/compat_libevent.h"
+#include "lib/evloop/timers.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "common/timers.h"
-#include "common/util.h"
+#include "lib/log/util_bug.h"
+#include "lib/time/compat_time.h"
+#include "lib/wallclock/timeval.h"
 
 #define N_TIMERS 1000
 #define MAX_DURATION 30
@@ -138,4 +140,3 @@ main(int argc, char **argv)
   timers_shutdown();
   return ret;
 }
-
