@@ -21,6 +21,7 @@ noinst_HEADERS +=					\
 	src/lib/container/bitarray.h			\
 	src/lib/container/bloomfilt.h			\
 	src/lib/container/buffers.h			\
+	src/lib/container/handles.h			\
 	src/lib/container/map.h				\
 	src/lib/container/order.h			\
 	src/lib/container/smartlist.h

@@ -51,7 +51,6 @@ src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 COMMONHEADERS = \
   src/common/address_set.h			\
   src/common/compat_libevent.h			\
-  src/common/handles.h				\
   src/common/procmon.h				\
   src/common/socks5_status.h                    \
   src/common/timers.h				\

@@ -4,7 +4,7 @@
 #ifndef TOR_CONSCACHE_H
 #define TOR_CONSCACHE_H
 
-#include "common/handles.h"
+#include "lib/container/handles.h"
 
 typedef struct consensus_cache_entry_t consensus_cache_entry_t;
 typedef struct consensus_cache_t consensus_cache_t;

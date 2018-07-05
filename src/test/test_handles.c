@@ -5,7 +5,7 @@
 #include "test/test.h"
 
 #include "common/util.h"
-#include "common/handles.h"
+#include "lib/container/handles.h"
 
 typedef struct demo_t {
   HANDLE_ENTRY(demo, demo_t);
