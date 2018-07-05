@@ -21,6 +21,7 @@
 #include "lib/defs/digest_sizes.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/string/compat_ctype.h"
+#include "lib/string/compat_string.h"
 #include "lib/string/util_string.h"
 #include "lib/string/printf.h"
 
