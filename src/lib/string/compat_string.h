@@ -18,13 +18,13 @@
 #ifndef HAVE_STRNCASECMP
 static inline int strncasecmp(const char *a, const char *b, size_t n);
 static inline int strncasecmp(const char *a, const char *b, size_t n) {
-  return strncmpi(a,b);
+  return _strnicmp(a,b,n);
 }
 #endif
 #ifndef HAVE_STRCASECMP
 static inline int strcasecmp(const char *a, const char *b, size_t n);
 static inline int strcasecmp(const char *a, const char *b, size_t n) {
-  return strcmpi(a,b);
+  return _stricmp(a,b);
 }
 #endif
 #endif
