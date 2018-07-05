@@ -10,6 +10,7 @@
 #include "lib/crypt_ops/compat_openssl.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/encoding/binascii.h"
+#include "lib/malloc/util_malloc.h"
 #include "test/test.h"
 
 #include <openssl/evp.h>
