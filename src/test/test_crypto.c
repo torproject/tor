@@ -9,7 +9,6 @@
 #include "or/or.h"
 #include "test/test.h"
 #include "lib/crypt_ops/aes.h"
-#include "common/util.h"
 #include "siphash.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_dh.h"

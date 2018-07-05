@@ -28,7 +28,6 @@
 #include "or/routerparse.h"
 #include "or/routerset.h"
 #include "or/statefile.h"
-#include "common/util.h"
 
 #include "or/cpath_build_state_st.h"
 #include "or/crypt_path_st.h"

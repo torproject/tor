@@ -15,7 +15,6 @@
 #include "or/control.h"
 #include "or/transports.h"
 #include "or/circuitbuild.h"
-#include "common/util.h"
 #include "or/statefile.h"
 #include "test/test.h"
 #include "lib/process/subprocess.h"

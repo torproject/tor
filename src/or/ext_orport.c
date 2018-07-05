@@ -27,7 +27,6 @@
 #include "or/ext_orport.h"
 #include "or/main.h"
 #include "or/proto_ext_or.h"
-#include "common/util.h"
 
 #include "or/or_connection_st.h"
 

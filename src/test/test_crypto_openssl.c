@@ -7,14 +7,14 @@
 
 #define CRYPTO_RAND_PRIVATE
 
+#include "lib/crypt_ops/compat_openssl.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "common/util.h"
 #include "lib/encoding/binascii.h"
 #include "test/test.h"
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
-#include "lib/crypt_ops/compat_openssl.h"
+#include <string.h>
 
 /* Test for rectifying openssl RAND engine. */
 static void
@@ -103,4 +103,3 @@ struct testcase_t crypto_openssl_tests[] = {
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

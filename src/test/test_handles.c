@@ -4,8 +4,10 @@
 #include "orconfig.h"
 #include "test/test.h"
 
-#include "common/util.h"
 #include "lib/container/handles.h"
+#include "lib/log/util_bug.h"
+
+#include <stdio.h>
 
 typedef struct demo_t {
   HANDLE_ENTRY(demo, demo_t);
@@ -94,4 +96,3 @@ struct testcase_t handle_tests[] = {
   HANDLE_TEST(basic, 0),
   END_OF_TESTCASES
 };
-

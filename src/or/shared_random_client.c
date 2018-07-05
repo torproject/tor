@@ -14,7 +14,6 @@
 #include "or/config.h"
 #include "or/voting_schedule.h"
 #include "or/networkstatus.h"
-#include "common/util.h"
 #include "lib/encoding/binascii.h"
 
 #include "or/networkstatus_st.h"

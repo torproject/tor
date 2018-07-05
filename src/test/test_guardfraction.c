@@ -10,7 +10,6 @@
 #include "or/config.h"
 #include "or/dirserv.h"
 #include "or/entrynodes.h"
-#include "common/util.h"
 #include "or/routerparse.h"
 #include "or/networkstatus.h"
 

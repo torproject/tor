@@ -31,7 +31,6 @@
 #include "or/statefile.h"
 #include "or/circuitlist.h"
 #include "or/dirauth/shared_random.h"
-#include "common/util.h"
 #include "or/voting_schedule.h"
 
 #include "or/microdesc_st.h"

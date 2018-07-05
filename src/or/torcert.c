@@ -31,7 +31,6 @@
 #include "or/torcert.h"
 #include "trunnel/ed25519_cert.h"
 #include "lib/log/torlog.h"
-#include "common/util.h"
 #include "trunnel/link_handshake.h"
 #include "lib/tls/tortls.h"
 

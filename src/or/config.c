@@ -99,7 +99,6 @@
 #include "or/rephist.h"
 #include "or/router.h"
 #include "lib/sandbox/sandbox.h"
-#include "common/util.h"
 #include "or/routerlist.h"
 #include "or/routerset.h"
 #include "or/scheduler.h"
