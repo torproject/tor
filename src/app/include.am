@@ -6,11 +6,11 @@ noinst_PROGRAMS+= src/app/tor-cov
 endif
 
 noinst_HEADERS += \
-	src/app/ntmain.h
+	src/app/main/ntmain.h
 
-src_app_tor_SOURCES = src/app/tor_main.c
+src_app_tor_SOURCES = src/app/main/tor_main.c
 if BUILD_NT_SERVICES
-src_app_tor_SOURCES += src/app/ntmain.c
+src_app_tor_SOURCES += src/app/main/ntmain.c
 endif
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
