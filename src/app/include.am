@@ -9,9 +9,6 @@ noinst_HEADERS += \
 	src/app/main/ntmain.h
 
 src_app_tor_SOURCES = src/app/main/tor_main.c
-if BUILD_NT_SERVICES
-src_app_tor_SOURCES += src/app/main/ntmain.c
-endif
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
 # This seems to matter nowhere but on windows, but I assure you that it
