@@ -145,9 +145,6 @@ LOCAL_FILES_ONLY = False
 # When True, they are included, when False, they are excluded
 INCLUDE_UNLISTED_ENTRIES = True if OUTPUT_CANDIDATES else False
 
-# If an entry is in both lists, what happens?
-# When True, it is excluded, when False, it is included
-
 WHITELIST_FILE_NAME = 'scripts/maint/fallback.whitelist'
 FALLBACK_FILE_NAME  = 'src/app/config/fallback_dirs.inc'
 
