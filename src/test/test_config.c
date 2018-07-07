@@ -4602,6 +4602,20 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tor_addr_parse(&addr, "127.0.0.46");
   tt_assert(tor_addr_eq(&port_cfg->addr, &addr))
 
+  // Test success with a port of auto in mixed case
+  config_free_lines(config_port_valid); config_port_valid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_valid = mock_config_line("DNSPort", "AuTo");
+  ret = parse_port_config(slout, config_port_valid, "DNS", 0,
+                          "127.0.0.46", 0, 0);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(smartlist_len(slout), OP_EQ, 1);
+  port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
+  tt_int_op(port_cfg->port, OP_EQ, CFG_AUTO_PORT);
+  tor_addr_parse(&addr, "127.0.0.46");
+  tt_assert(tor_addr_eq(&port_cfg->addr, &addr))
+
   // Test success with parsing both an address and an auto port
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));

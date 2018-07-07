@@ -267,7 +267,7 @@ config_assign_value(const config_format_t *fmt, void *options,
     break;
 
   case CONFIG_TYPE_AUTOBOOL:
-    if (!strcmp(c->value, "auto"))
+    if (!strcasecmp(c->value, "auto"))
       *(int *)lvalue = -1;
     else if (!strcmp(c->value, "0"))
       *(int *)lvalue = 0;
