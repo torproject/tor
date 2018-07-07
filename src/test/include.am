@@ -117,6 +117,7 @@ src_test_test_SOURCES = \
 	src/test/test_relaycell.c \
 	src/test/test_rendcache.c \
 	src/test/test_replay.c \
+	src/test/test_router.c \
 	src/test/test_routerkeys.c \
 	src/test/test_routerlist.c \
 	src/test/test_routerset.c \

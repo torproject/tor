@@ -1,0 +1,4 @@
+  o Minor bugfix (relay statistics):
+    - Update relay descriptor on bandwidth changes only when the uptime is
+      smaller than 24h in order to reduce the efficiency of guard discovery
+      attacks. Fixes bug 24104; bugfix on 0.1.1.6-alpha.
