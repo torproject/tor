@@ -6,6 +6,7 @@
 
 #include "ed25519_cert.h"
 #include "lib/crypt_ops/crypto_format.h"
+#include "common/util.h"
 
 int
 main(int argc, char **argv)
@@ -14,7 +15,7 @@ main(int argc, char **argv)
 
   if (argc != 2) {
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "%s <path to ed25519_signing_cert>\n", argv[0]);
+    fprintf(stderr, "%s <path to ed25519_signing_cert file>\n", argv[0]);
     return -1;
   }
 
@@ -28,7 +29,7 @@ main(int argc, char **argv)
 
   if (cert_body_len <= 0) {
     fprintf(stderr, "crypto_read_tagged_contents_from_file failed with "
-                    "return value %zd\n", cert_body_len);
+                    "error: %s\n", strerror(errno));
     return -2;
   }
 
@@ -41,6 +42,8 @@ main(int argc, char **argv)
     fprintf(stderr, "Wrong tag: %s\n", got_tag);
     return -4;
   }
+
+  tor_free(got_tag);
 
   ssize_t parsed = ed25519_cert_parse(&cert, certbuf, cert_body_len);
   if (parsed <= 0) {
