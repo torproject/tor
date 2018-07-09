@@ -1,0 +1,4 @@
+  o Minor bugfixes (code quality):
+     - Rename sandbox_getaddrinfo() and other functions to no longer
+       misleadingly suggest that they are sandbox-only. Fixes bug
+       26525; bugfix on 0.2.7.1-alpha.

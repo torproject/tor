@@ -3677,7 +3677,7 @@ tor_free_all(int postfork)
   routerparse_free_all();
   ext_orport_free_all();
   control_free_all();
-  sandbox_free_getaddrinfo_cache();
+  tor_free_getaddrinfo_cache();
   protover_free_all();
   bridges_free_all();
   consdiffmgr_free_all();
@@ -3899,7 +3899,7 @@ init_addrinfo(void)
 
   // host name to sandbox
   gethostname(hname, sizeof(hname));
-  sandbox_add_addrinfo(hname);
+  tor_add_addrinfo(hname);
 }
 
 static sandbox_cfg_t*
