@@ -723,7 +723,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
       log_warn(LD_BUG, "Discontinuity in position in microdescriptor cache."
                "By my count, I'm at %"PRId64
                ", but I should be at %"PRId64,
-               (off), (off_real));
+               (int64_t)(off), (int64_t)(off_real));
       if (off_real >= 0)
         off = off_real;
     }

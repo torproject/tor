@@ -30,6 +30,11 @@
 #include <sys/stat.h>
 #endif
 
+#ifdef _WIN32
+/* For mkdir */
+#include <direct.h>
+#endif
+
 static authority_cert_t *mock_cert;
 
 static authority_cert_t *

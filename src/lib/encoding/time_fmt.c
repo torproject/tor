@@ -26,6 +26,11 @@
 #include <string.h>
 #include <time.h>
 
+#ifdef _WIN32
+/* For struct timeval */
+#include <winsock2.h>
+#endif
+
 /** As localtime_r, but defined for platforms that don't have it:
  *
  * Convert *<b>timep</b> to a struct tm in local time, and store the value in
