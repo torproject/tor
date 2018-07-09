@@ -1,4 +1,4 @@
-Changes in version 0.3.4.4-rc - 2018-07-??
+Changes in version 0.3.4.4-rc - 2018-07-09
   Tor 0.3.4.4-rc fixes several small compilation, portability, and
   correctness issues in previous versions of Tor. This version is a
   release candidate: if no serious bugs are found, we expect that the
