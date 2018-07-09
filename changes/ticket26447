@@ -1,0 +1,5 @@
+  o Minor features (code correctness, testing):
+    - Tor's build process now includes a "check-includes" make target
+      to verify that no module of Tor relies on any headers from a
+      higher-level module. We hope to use this feature over time to
+      help refactor our codebase.  Closes ticket 26447.
