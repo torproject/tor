@@ -2001,12 +2001,11 @@ circuit_should_use_vanguards(uint8_t purpose)
 static int
 circuit_should_cannibalize_to_build(uint8_t purpose_to_build,
                                     int has_extend_info,
-                                    int onehop_tunnel,
-                                    int need_specific_rp)
+                                    int onehop_tunnel)
 {
 
   /* Do not try to cannibalize if this is a one hop circuit. */
-  if (onehop_tunnel || need_specific_rp) {
+  if (onehop_tunnel) {
     return 0;
   }
 
@@ -2055,7 +2054,6 @@ circuit_launch_by_extend_info(uint8_t purpose,
   origin_circuit_t *circ;
   int onehop_tunnel = (flags & CIRCLAUNCH_ONEHOP_TUNNEL) != 0;
   int have_path = have_enough_path_info(! (flags & CIRCLAUNCH_IS_INTERNAL) );
-  int need_specific_rp = 0;
 
   /* Keep some stats about our attempts to launch HS rendezvous circuits */
   if (purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
@@ -2075,8 +2073,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
    * then do so. */
   if (circuit_should_cannibalize_to_build(purpose,
                                           extend_info != NULL,
-                                          onehop_tunnel,
-                                          need_specific_rp)) {
+                                          onehop_tunnel)) {
     /* see if there are appropriate circs available to cannibalize. */
     /* XXX if we're planning to add a hop, perhaps we want to look for
      * internal circs rather than exit circs? -RD */
