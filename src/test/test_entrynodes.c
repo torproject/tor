@@ -1163,6 +1163,7 @@ test_entry_guard_update_from_consensus_status(void *arg)
   for (i = 0; i < 5; ++i) {
     entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
     node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    tt_assert(n);
     n->is_possible_guard = 0;
   }
 
@@ -1201,6 +1202,7 @@ test_entry_guard_update_from_consensus_status(void *arg)
   {
     entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 0);
     node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    tt_assert(n);
     n->is_possible_guard = 1;
   }
   {
@@ -1208,6 +1210,7 @@ test_entry_guard_update_from_consensus_status(void *arg)
      */
     entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 5);
     node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    tt_assert(n);
     smartlist_remove(big_fake_net_nodes, n);
     test_node_free(n);
   }
@@ -1264,6 +1267,7 @@ test_entry_guard_update_from_consensus_repair(void *arg)
     /* these will get a date. */
     entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
     node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    tt_assert(n);
     n->is_possible_guard = 0;
     g->currently_listed = 0;
   }
@@ -1329,6 +1333,7 @@ test_entry_guard_update_from_consensus_remove(void *arg)
   {
     entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 0);
     node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    tt_assert(n);
     n->is_possible_guard = 0;
     g->currently_listed = 0;
     g->unlisted_since_date = one_day_ago;
@@ -1338,6 +1343,7 @@ test_entry_guard_update_from_consensus_remove(void *arg)
   {
     entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 1);
     node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    tt_assert(n);
     n->is_possible_guard = 0;
     g->currently_listed = 0;
     g->unlisted_since_date = one_year_ago;
