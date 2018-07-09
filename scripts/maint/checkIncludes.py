@@ -1,6 +1,21 @@
 #!/usr/bin/python3
 # Copyright 2018 The Tor Project, Inc.  See LICENSE file for licensing info.
 
+"""This script looks through all the directories for files matching *.c or
+   *.h, and checks their #include directives to make sure that only "permitted"
+   headers are included.
+
+   Any #include directives with angle brackets (like #include <stdio.h>) are
+   ignored -- only directives with quotes (like #include "foo.h") are
+   considered.
+
+   To decide what includes are permitted, this script looks at a .may_include
+   file in each directory.  This file contains empty lines, #-prefixed
+   comments, filenames (like "lib/foo/bar.h") and file globs (like lib/*/*.h)
+   for files that are permitted.
+"""
+
+
 from __future__ import print_function
 
 import fnmatch
@@ -8,20 +23,26 @@ import os
 import re
 import sys
 
+# Global: Have there been any errors?
 trouble = False
 
 def err(msg):
+    """ Declare that an error has happened, and remember that there has
+        been an error. """
     global trouble
     trouble = True
     print(msg, file=sys.stderr)
 
 def fname_is_c(fname):
+    """ Return true iff 'fname' is the name of a file that we should
+        search for possibly disallowed #include directives. """
     return fname.endswith(".h") or fname.endswith(".c")
 
 INCLUDE_PATTERN = re.compile(r'\s*#\s*include\s+"([^"]*)"')
 RULES_FNAME = ".may_include"
 
 class Rules(object):
+    """ A 'Rules' object is the parsed version of a .may_include file. """
     def __init__(self, dirpath):
         self.dirpath = dirpath
         self.patterns = []
@@ -59,6 +80,7 @@ class Rules(object):
                 print("Pattern {} in {} was never used.".format(p, self.dirpath))
 
 def load_include_rules(fname):
+    """ Read a rules file from 'fname', and return it as a Rules object. """
     result = Rules(os.path.split(fname)[0])
     with open(fname, 'r') as f:
         for line in f:
