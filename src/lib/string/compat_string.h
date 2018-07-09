@@ -22,8 +22,8 @@ static inline int strncasecmp(const char *a, const char *b, size_t n) {
 }
 #endif
 #ifndef HAVE_STRCASECMP
-static inline int strcasecmp(const char *a, const char *b, size_t n);
-static inline int strcasecmp(const char *a, const char *b, size_t n) {
+static inline int strcasecmp(const char *a, const char *b);
+static inline int strcasecmp(const char *a, const char *b) {
   return _stricmp(a,b);
 }
 #endif
