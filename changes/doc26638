@@ -1,0 +1,4 @@
+  o Minor features (development):
+    - Copy paragraph and URL to Tor's code of conduct document
+      from CONTRIBUTING to new CODE_OF_CONDUCT file. Resolves
+      ticket 26638.

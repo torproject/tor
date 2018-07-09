@@ -136,6 +136,7 @@ include contrib/include.am
 EXTRA_DIST+= \
 	ChangeLog					\
 	CONTRIBUTING					\
+	CODE_OF_CONDUCT                                 \
 	INSTALL						\
 	LICENSE						\
 	Makefile.nmake					\
