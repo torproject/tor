@@ -1,5 +1,0 @@
-  o Minor bugfixes (restart-in-process):
-    - When shutting down, Tor now clears all the flags in the control.c
-      module. This should prevent a bug where authentication cookies
-      are not generated on restart. Fixes bug 25512; bugfix on 0.3.3.1-alpha.
-

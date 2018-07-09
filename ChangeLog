@@ -1,3 +1,75 @@
+Changes in version 0.3.3.8 - 2018-07-09
+  Tor 0.3.3.8 backports several changes from the 0.3.4.x series, including
+  fixes for a memory leak affecting directory authorities.
+
+  o Major bugfixes (directory authority, backport from 0.3.4.3-alpha):
+    - Stop leaking memory on directory authorities when planning to
+      vote. This bug was crashing authorities by exhausting their
+      memory. Fixes bug 26435; bugfix on 0.3.3.6.
+
+  o Major bugfixes (rust, testing, backport from 0.3.4.3-alpha):
+    - Make sure that failing tests in Rust will actually cause the build
+      to fail: previously, they were ignored. Fixes bug 26258; bugfix
+      on 0.3.3.4-alpha.
+
+  o Minor features (compilation, backport from 0.3.4.4-rc):
+    - When building Tor, prefer to use Python 3 over Python 2, and more
+      recent (contemplated) versions over older ones. Closes
+      ticket 26372.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the July 3 2018 Maxmind GeoLite2
+      Country database. Closes ticket 26674.
+
+  o Minor features (relay, diagnostic, backport from 0.3.4.3-alpha):
+    - Add several checks to detect whether Tor relays are uploading
+      their descriptors without specifying why they regenerated them.
+      Diagnostic for ticket 25686.
+
+  o Minor bugfixes (circuit path selection, backport from 0.3.4.1-alpha):
+    - Don't count path selection failures as circuit build failures.
+      This change should eliminate cases where Tor blames its guard or
+      the network for situations like insufficient microdescriptors
+      and/or overly restrictive torrc settings. Fixes bug 25705; bugfix
+      on 0.3.3.1-alpha.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.4-rc):
+    - Fix a compilation warning on some versions of GCC when building
+      code that calls routerinfo_get_my_routerinfo() twice, assuming
+      that the second call will succeed if the first one did. Fixes bug
+      26269; bugfix on 0.2.8.2-alpha.
+
+  o Minor bugfixes (control port, backport from 0.3.4.4-rc):
+    - Handle the HSADDRESS= argument to the HSPOST command properly.
+      (Previously, this argument was misparsed and thus ignored.) Fixes
+      bug 26523; bugfix on 0.3.3.1-alpha. Patch by "akwizgran".
+
+  o Minor bugfixes (memory, correctness, backport from 0.3.4.4-rc):
+    - Fix a number of small memory leaks identified by coverity. Fixes
+      bug 26467; bugfix on numerous Tor versions.
+
+  o Minor bugfixes (relay, backport from 0.3.4.3-alpha):
+    - Relays now correctly block attempts to re-extend to the previous
+      relay by Ed25519 identity. Previously they would warn in this
+      case, but not actually reject the attempt. Fixes bug 26158; bugfix
+      on 0.3.0.1-alpha.
+
+  o Minor bugfixes (restart-in-process, backport from 0.3.4.1-alpha):
+    - When shutting down, Tor now clears all the flags in the control.c
+      module. This should prevent a bug where authentication cookies are
+      not generated on restart. Fixes bug 25512; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (testing, compatibility, backport from 0.3.4.4-rc):
+    - When running the hs_ntor_ref.py test, make sure only to pass
+      strings (rather than "bytes" objects) to the Python subprocess
+      module. Python 3 on Windows seems to require this. Fixes bug
+      26535; bugfix on 0.3.1.1-alpha.
+    - When running the ntor_ref.py test, make sure only to pass strings
+      (rather than "bytes" objects) to the Python subprocess module.
+      Python 3 on Windows seems to require this. Fixes bug 26535; bugfix
+      on 0.2.5.5-alpha.
+
+
 Changes in version 0.3.3.7 - 2018-06-12
   Tor 0.3.3.7 backports several changes from the 0.3.4.x series, including
   fixes for bugs affecting compatibility and stability.
@@ -27960,4 +28032,3 @@ Changes in version 0.0.2pre13 - 2003-10-19
     - If --DebugLogFile is specified, log to it at -l debug
     - If --LogFile is specified, use it instead of commandline
     - If --RunAsDaemon is set, tor forks and backgrounds on startup
-
