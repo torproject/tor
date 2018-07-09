@@ -1,3 +1,0 @@
-  o Minor bugfixes (testing):
-    - Fix compilation of the doctests in the Rust crypto crate.  Fixes
-      bug 26415; bugfix on 0.3.4.1-alpha.

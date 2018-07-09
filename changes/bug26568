@@ -1,3 +1,0 @@
-  o Minor bugfixes (controller):
-    - Report the port correctly when a port is configured to bind to "auto".
-      Fixes bug 26568; bugfix on 0.3.4.1-alpha.

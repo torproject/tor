@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden service, control port):
-    - The HSPOST command wasn't parsing properly the HSADDRESS= parameter and
-      thus not using it. It now handles it correctly. Fixes bug 26523; bugfix on
-      0.3.3.1-alpha. Patch by "akwizgran".
-

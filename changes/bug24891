@@ -1,4 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Refrain from compiling unit testing related object files
-      when --disable-unittests is set to configure script.
-      Fixes bug 24891; bugfix on 0.2.5.1-alpha.

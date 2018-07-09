@@ -1,5 +1,0 @@
-  o Major bugfixes (directory authority):
-    - Fix a memory leak where directory authorities would leak a chunk
-      of memory for every router descriptor every time they considered
-      voting. This bug was taking down directory authorities due to
-      out-of-memory issues. Fixes bug 26435; bugfix on 0.3.3.6.
