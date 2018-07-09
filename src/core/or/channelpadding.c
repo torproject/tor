@@ -52,8 +52,6 @@ static int consensus_nf_conntimeout_clients;
 static int consensus_nf_pad_before_usage;
 /** Should we pad relay-to-relay connections? */
 static int consensus_nf_pad_relays;
-/** Should we pad tor2web connections? */
-static int consensus_nf_pad_tor2web;
 /** Should we pad rosos connections? */
 static int consensus_nf_pad_single_onion;
 
@@ -140,11 +138,6 @@ channelpadding_new_consensus_params(networkstatus_t *ns)
 
   consensus_nf_pad_relays =
     networkstatus_get_param(ns, "nf_pad_relays", 0, 0, 1);
-
-  consensus_nf_pad_tor2web =
-    networkstatus_get_param(ns,
-                            CHANNELPADDING_TOR2WEB_PARAM,
-                            CHANNELPADDING_TOR2WEB_DEFAULT, 0, 1);
 
   consensus_nf_pad_single_onion =
     networkstatus_get_param(ns,
@@ -737,15 +730,6 @@ channelpadding_decide_to_pad_channel(channel_t *chan)
    * explicitly set to 1.
    */
   if (!chan->padding_enabled && options->ConnectionPadding != 1) {
-    return CHANNELPADDING_WONTPAD;
-  }
-
-  if (options->Tor2webMode && !consensus_nf_pad_tor2web) {
-    /* If the consensus just changed values, this channel may still
-     * think padding is enabled. Negotiate it off. */
-    if (chan->padding_enabled)
-      channelpadding_disable_padding_on_channel(chan);
-
     return CHANNELPADDING_WONTPAD;
   }
 

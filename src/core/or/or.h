@@ -103,10 +103,6 @@ struct curve25519_public_key_t;
 #define cell_t tor_cell_t
 #endif
 
-#ifdef ENABLE_TOR2WEB_MODE
-#define NON_ANONYMOUS_MODE_ENABLED 1
-#endif
-
 /** Helper macro: Given a pointer to to.base_, of type from*, return &to. */
 #define DOWNCAST(to, ptr) ((to*)SUBTYPE_P(ptr, to, base_))
 

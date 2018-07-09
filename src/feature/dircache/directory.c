@@ -803,10 +803,8 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
    * allowed by the firewall.
    *
    * (When Tor uploads and downloads a hidden service descriptor, it uses
-   * DIRIND_ANONYMOUS, except for Tor2Web, which uses DIRIND_ONEHOP.
-   * So this code will only modify the address for Tor2Web's HS descriptor
-   * fetches. Even Single Onion Servers (NYI) use DIRIND_ANONYMOUS, to avoid
-   * HSDirs denying service by rejecting descriptors.)
+   * DIRIND_ANONYMOUS. Even Single Onion Servers (NYI) use DIRIND_ANONYMOUS,
+   * to avoid HSDirs denying service by rejecting descriptors.)
    */
 
   /* Initialise the OR / Dir addresses */

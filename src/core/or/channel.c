@@ -1882,13 +1882,6 @@ channel_do_open_actions(channel_t *chan)
     if (!get_options()->ConnectionPadding) {
       /* Disable if torrc disabled */
       channelpadding_disable_padding_on_channel(chan);
-    } else if (get_options()->Tor2webMode &&
-            !networkstatus_get_param(NULL,
-                                     CHANNELPADDING_TOR2WEB_PARAM,
-                                     CHANNELPADDING_TOR2WEB_DEFAULT, 0, 1)) {
-      /* Disable if we're using tor2web and the consensus disabled padding
-       * for tor2web */
-      channelpadding_disable_padding_on_channel(chan);
     } else if (rend_service_allow_non_anonymous_connection(get_options()) &&
                !networkstatus_get_param(NULL,
                                         CHANNELPADDING_SOS_PARAM,

@@ -113,8 +113,7 @@ get_circuit_build_timeout_ms(void)
  *  2. If the torrc option LearnCircuitBuildTimeout is false.
  *  3. If we are a directory authority
  *  4. If we fail to write circuit build time history to our state file.
- *  5. If we are compiled or configured in Tor2web mode
- *  6. If we are configured in Single Onion mode
+ *  5. If we are configured in Single Onion mode
  */
 int
 circuit_build_times_disabled(const or_options_t *options)
@@ -136,7 +135,7 @@ circuit_build_times_disabled_(const or_options_t *options,
     int config_disabled = !options->LearnCircuitBuildTimeout;
     int dirauth_disabled = authdir_mode(options);
     int state_disabled = did_last_state_file_write_fail() ? 1 : 0;
-    /* LearnCircuitBuildTimeout and Tor2web/Single Onion Services are
+    /* LearnCircuitBuildTimeout and Single Onion Services are
      * incompatible in two ways:
      *
      * - LearnCircuitBuildTimeout results in a low CBT, which
@@ -148,12 +147,11 @@ circuit_build_times_disabled_(const or_options_t *options,
      *
      * If we fix both of these issues someday, we should test
      * these modes with LearnCircuitBuildTimeout on again. */
-    int tor2web_disabled = rend_client_allow_non_anonymous_connection(options);
     int single_onion_disabled = rend_service_allow_non_anonymous_connection(
                                                                       options);
 
     if (consensus_disabled || config_disabled || dirauth_disabled ||
-        state_disabled || tor2web_disabled || single_onion_disabled) {
+        state_disabled || single_onion_disabled) {
 #if 0
       log_debug(LD_CIRC,
                "CircuitBuildTime learning is disabled. "

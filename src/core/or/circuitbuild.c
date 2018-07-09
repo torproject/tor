@@ -408,10 +408,10 @@ onion_populate_cpath(origin_circuit_t *circ)
    * edge cases. */
   tor_assert(circuit_get_cpath_len(circ));
   if (circuit_can_use_tap(circ)) {
-    /* Circuits from clients to intro points, and hidden services to
-     * rend points do not support ntor, because the hidden service protocol
-     * does not include ntor onion keys. This is also true for Tor2web clients
-     * and Single Onion Services. */
+    /* Circuits from clients to intro points, and hidden services to rend
+     * points do not support ntor, because the hidden service protocol does
+     * not include ntor onion keys. This is also true for Single Onion
+     * Services. */
     return 0;
   }
 
@@ -824,7 +824,6 @@ circuit_timeout_want_to_count_circ(const origin_circuit_t *circ)
  * accordingly.
  * Note that TAP handshakes in CREATE cells are only used for direct
  * connections:
- *  - from Tor2web to intro points not in the client's consensus, and
  *  - from Single Onions to rend points not in the service's consensus.
  * This is checked in onion_populate_cpath. */
 static void
@@ -1985,98 +1984,11 @@ choose_good_exit_server_general(router_crn_flags_t flags)
   return NULL;
 }
 
-#if defined(ENABLE_TOR2WEB_MODE) || defined(TOR_UNIT_TESTS)
-/* The config option Tor2webRendezvousPoints has been set and we need
- * to pick an RP out of that set. Make sure that the RP we choose is
- * alive, and return it. Return NULL if no usable RP could be found in
- * Tor2webRendezvousPoints. */
-STATIC const node_t *
-pick_tor2web_rendezvous_node(router_crn_flags_t flags,
-                             const or_options_t *options)
-{
-  const node_t *rp_node = NULL;
-  const int need_desc = (flags & CRN_NEED_DESC) != 0;
-  const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
-  const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
-
-  smartlist_t *whitelisted_live_rps = smartlist_new();
-  smartlist_t *all_live_nodes = smartlist_new();
-
-  tor_assert(options->Tor2webRendezvousPoints);
-
-  /* Add all running nodes to all_live_nodes */
-  router_add_running_nodes_to_smartlist(all_live_nodes,
-                                        0, 0, 0,
-                                        need_desc,
-                                        pref_addr,
-                                        direct_conn);
-
-  /* Filter all_live_nodes to only add live *and* whitelisted RPs to
-   * the list whitelisted_live_rps. */
-  SMARTLIST_FOREACH_BEGIN(all_live_nodes, node_t *, live_node) {
-    if (routerset_contains_node(options->Tor2webRendezvousPoints, live_node)) {
-      smartlist_add(whitelisted_live_rps, live_node);
-    }
-  } SMARTLIST_FOREACH_END(live_node);
-
-  /* Honor ExcludeNodes */
-  if (options->ExcludeNodes) {
-    routerset_subtract_nodes(whitelisted_live_rps, options->ExcludeNodes);
-  }
-
-  /* Now pick randomly amongst the whitelisted RPs. No need to waste time
-     doing bandwidth load balancing, for most use cases
-     'whitelisted_live_rps' contains a single OR anyway. */
-  rp_node = smartlist_choose(whitelisted_live_rps);
-
-  if (!rp_node) {
-    log_warn(LD_REND, "Could not find a Rendezvous Point that suits "
-             "the purposes of Tor2webRendezvousPoints. Choosing random one.");
-  }
-
-  smartlist_free(whitelisted_live_rps);
-  smartlist_free(all_live_nodes);
-
-  return rp_node;
-}
-#endif /* defined(ENABLE_TOR2WEB_MODE) || defined(TOR_UNIT_TESTS) */
-
 /* Pick a Rendezvous Point for our HS circuits according to <b>flags</b>. */
 static const node_t *
 pick_rendezvous_node(router_crn_flags_t flags)
 {
   const or_options_t *options = get_options();
-
-#ifdef ENABLE_TOR2WEB_MODE
-  /* We want to connect directly to the node if we can */
-  router_crn_flags_t direct_flags = flags;
-  direct_flags |= CRN_PREF_ADDR;
-  direct_flags |= CRN_DIRECT_CONN;
-
-  /* The user wants us to pick specific RPs. */
-  if (options->Tor2webRendezvousPoints) {
-    const node_t *tor2web_rp = pick_tor2web_rendezvous_node(direct_flags,
-                                                            options);
-    if (tor2web_rp) {
-      return tor2web_rp;
-    }
-  }
-
-  /* Else, if no direct, preferred tor2web RP was found, fall back to choosing
-   * a random direct node */
-  const node_t *node = router_choose_random_node(NULL, options->ExcludeNodes,
-                                                 direct_flags);
-  /* Return the direct node (if found), or log a message and fall back to an
-   * indirect connection. */
-  if (node) {
-    return node;
-  } else {
-    log_info(LD_REND,
-             "Unable to find a random rendezvous point that is reachable via "
-             "a direct connection, falling back to a 3-hop path.");
-  }
-#endif /* defined(ENABLE_TOR2WEB_MODE) */
-
   return router_choose_random_node(NULL, options->ExcludeNodes, flags);
 }
 

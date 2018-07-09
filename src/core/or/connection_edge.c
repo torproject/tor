@@ -1835,18 +1835,6 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       return -1;
     }
 
-#ifdef ENABLE_TOR2WEB_MODE
-    /* If we're running in Tor2webMode, we don't allow anything BUT .onion
-     * addresses. */
-    if (options->Tor2webMode) {
-      log_warn(LD_APP, "Refusing to connect to non-hidden-service hostname "
-               "or IP address %s because tor2web mode is enabled.",
-               safe_str_client(socks->address));
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
-      return -1;
-    }
-#endif /* defined(ENABLE_TOR2WEB_MODE) */
-
     /* socks->address is a non-onion hostname or IP address.
      * If we can't do any non-onion requests, refuse the connection.
      * If we have a hostname but can't do DNS, refuse the connection.

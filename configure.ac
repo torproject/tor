@@ -181,13 +181,6 @@ if test "$enable_local_appdata" = "yes"; then
             [Defined if we default to host local appdata paths on Windows])
 fi
 
-# Tor2web mode flag
-AC_ARG_ENABLE(tor2web-mode,
-     AS_HELP_STRING(--enable-tor2web-mode, [support tor2web non-anonymous mode]),
-[if test "x$enableval" = "xyes"; then
-    CFLAGS="$CFLAGS -D ENABLE_TOR2WEB_MODE=1"
-fi])
-
 AC_ARG_ENABLE(tool-name-check,
      AS_HELP_STRING(--disable-tool-name-check, [check for sanely named toolchain when cross-compiling]))
 
