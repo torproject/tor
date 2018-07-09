@@ -81,6 +81,6 @@ for dirpath, dirnames, fnames in os.walk("src"):
 
 if trouble:
     err(
-"""To change which includes are allowed in a C file, edit the {} files in its
-enclosing directory.""".format(RULES_FNAME))
+"""To change which includes are allowed in a C file, edit the {}
+files in its enclosing directory.""".format(RULES_FNAME))
     sys.exit(1)
