@@ -1,0 +1,4 @@
+  o Minor features (directory):
+    - Improved support for networks with only a single authority or a
+      single fallback directory. Patch from Gabriel Somlo. Closes
+      ticket 25928.
