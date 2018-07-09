@@ -173,7 +173,6 @@ static config_abbrev_t option_abbrevs_[] = {
   PLURAL(AuthDirRejectCC),
   PLURAL(EntryNode),
   PLURAL(ExcludeNode),
-  PLURAL(Tor2webRendezvousPoint),
   PLURAL(FirewallPort),
   PLURAL(LongLivedPort),
   PLURAL(HiddenServiceNode),
@@ -597,8 +596,8 @@ static config_var_t option_vars_[] = {
   OBSOLETE("Support022HiddenServices"),
   V(TestSocks,                   BOOL,     "0"),
   V(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
-  V(Tor2webMode,                 BOOL,     "0"),
-  V(Tor2webRendezvousPoints,      ROUTERSET, NULL),
+  OBSOLETE("Tor2webMode"),
+  OBSOLETE("Tor2webRendezvousPoints"),
   OBSOLETE("TLSECGroup"),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
@@ -1697,8 +1696,7 @@ options_need_geoip_info(const or_options_t *options, const char **reason_out)
     routerset_needs_geoip(options->ExcludeExitNodes) ||
     routerset_needs_geoip(options->ExcludeNodes) ||
     routerset_needs_geoip(options->HSLayer2Nodes) ||
-    routerset_needs_geoip(options->HSLayer3Nodes) ||
-    routerset_needs_geoip(options->Tor2webRendezvousPoints);
+    routerset_needs_geoip(options->HSLayer3Nodes);
 
   if (routerset_usage && reason_out) {
     *reason_out = "We've been configured to use (or avoid) nodes in certain "
@@ -1880,27 +1878,6 @@ options_act(const or_options_t *old_options)
     log_warn(LD_GENERAL, "This copy of Tor was compiled or configured to run "
              "in a non-anonymous mode. It will provide NO ANONYMITY.");
   }
-
-#ifdef ENABLE_TOR2WEB_MODE
-/* LCOV_EXCL_START */
-  // XXXX This should move into options_validate()
-  if (!options->Tor2webMode) {
-    log_err(LD_CONFIG, "This copy of Tor was compiled to run in "
-            "'tor2web mode'. It can only be run with the Tor2webMode torrc "
-            "option enabled.");
-    return -1;
-  }
-/* LCOV_EXCL_STOP */
-#else /* !(defined(ENABLE_TOR2WEB_MODE)) */
-  // XXXX This should move into options_validate()
-  if (options->Tor2webMode) {
-    log_err(LD_CONFIG, "This copy of Tor was not compiled to run in "
-            "'tor2web mode'. It cannot be run with the Tor2webMode torrc "
-            "option enabled. To enable Tor2webMode recompile with the "
-            "--enable-tor2web-mode option.");
-    return -1;
-  }
-#endif /* defined(ENABLE_TOR2WEB_MODE) */
 
   /* If we are a bridge with a pluggable transport proxy but no
      Extended ORPort, inform the user that they are missing out. */
@@ -2163,8 +2140,6 @@ options_act(const or_options_t *old_options)
                          options->HSLayer2Nodes) ||
         !routerset_equal(old_options->HSLayer3Nodes,
                          options->HSLayer3Nodes) ||
-        !routerset_equal(old_options->Tor2webRendezvousPoints,
-                         options->Tor2webRendezvousPoints) ||
         options->StrictNodes != old_options->StrictNodes) {
       log_info(LD_CIRC,
                "Changed to using entry guards or bridges, or changed "
@@ -3306,21 +3281,10 @@ options_validate_single_onion(or_options_t *options, char **msg)
                                options->NATDPort_set ||
                                options->DNSPort_set ||
                                options->HTTPTunnelPort_set);
-  if (rend_service_non_anonymous_mode_enabled(options) && client_port_set &&
-      !options->Tor2webMode) {
+  if (rend_service_non_anonymous_mode_enabled(options) && client_port_set) {
     REJECT("HiddenServiceNonAnonymousMode is incompatible with using Tor as "
            "an anonymous client. Please set Socks/Trans/NATD/DNSPort to 0, or "
            "revert HiddenServiceNonAnonymousMode to 0.");
-  }
-
-  /* If you run a hidden service in non-anonymous mode, the hidden service
-   * loses anonymity, even if SOCKSPort / Tor2web mode isn't used. */
-  if (!rend_service_non_anonymous_mode_enabled(options) &&
-      options->RendConfigLines && options->Tor2webMode) {
-    REJECT("Non-anonymous (Tor2web) mode is incompatible with using Tor as a "
-           "hidden service. Please remove all HiddenServiceDir lines, or use "
-           "a version of tor compiled without --enable-tor2web-mode, or use "
-           "HiddenServiceNonAnonymousMode.");
   }
 
   if (rend_service_allow_non_anonymous_connection(options)
@@ -3805,26 +3769,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     // so just make the user fix the value themselves rather than
     // silently keep a shadow value lower than what they asked for.
     REJECT("CircuitsAvailableTimeout is too large. Max is 24 hours.");
-  }
-
-#ifdef ENABLE_TOR2WEB_MODE
-  if (options->Tor2webMode && options->UseEntryGuards) {
-    /* tor2web mode clients do not (and should not) use entry guards
-     * in any meaningful way.  Further, tor2web mode causes the hidden
-     * service client code to do things which break the path bias
-     * detector, and it's far easier to turn off entry guards (and
-     * thus the path bias detector with it) than to figure out how to
-     * make a piece of code which cannot possibly help tor2web mode
-     * users compatible with tor2web mode.
-     */
-    log_notice(LD_CONFIG,
-               "Tor2WebMode is enabled; disabling UseEntryGuards.");
-    options->UseEntryGuards = 0;
-  }
-#endif /* defined(ENABLE_TOR2WEB_MODE) */
-
-  if (options->Tor2webRendezvousPoints && !options->Tor2webMode) {
-    REJECT("Tor2webRendezvousPoints cannot be set without Tor2webMode.");
   }
 
   if (options->EntryNodes && !options->UseEntryGuards) {

@@ -1335,7 +1335,7 @@ The following options are useful only for clients (that is, if
     to stick with them. This is desirable because constantly changing servers
     increases the odds that an adversary who owns some servers will observe a
     fraction of your paths. Entry Guards can not be used by Directory
-    Authorities, Single Onion Services, and Tor2web clients. In these cases,
+    Authorities, and Single Onion Services. In these cases,
     the this option is ignored. (Default: 1)
 
 [[GuardfractionFile]] **GuardfractionFile** __FILENAME__::
@@ -1524,32 +1524,6 @@ The following options are useful only for clients (that is, if
     where the client talks first.  If OptimisticData is set to **auto**,
     Tor will look at the UseOptimisticData parameter in the networkstatus.
     (Default: auto)
-
-[[Tor2webMode]] **Tor2webMode** **0**|**1**::
-    When this option is set, Tor connects to hidden services
-    **non-anonymously**.  This option also disables client connections to
-    non-hidden-service hostnames through Tor. It **must only** be used when
-    running a tor2web Hidden Service web proxy.
-    To enable this option the compile time flag --enable-tor2web-mode must be
-    specified. Since Tor2webMode is non-anonymous, you can not run an
-    anonymous Hidden Service on a tor version compiled with Tor2webMode.
-    (Default: 0)
-
-[[Tor2webRendezvousPoints]] **Tor2webRendezvousPoints** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes and
-    address patterns of nodes that are allowed to be used as RPs
-    in HS circuits; any other nodes will not be used as RPs.
-    (Example:
-    Tor2webRendezvousPoints Fastyfasty, ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
- +
-    This feature can only be used if Tor2webMode is also enabled. +
- +
-    ExcludeNodes have higher priority than Tor2webRendezvousPoints,
-    which means that nodes specified in ExcludeNodes will not be
-    picked as RPs. +
- +
-    If no nodes in Tor2webRendezvousPoints are currently available for
-    use, Tor will choose a random node when building HS circuits.
 
 [[HSLayer2Nodes]] **HSLayer2Nodes** __node__,__node__,__...__::
     A list of identity fingerprints, nicknames, country codes, and

@@ -256,14 +256,6 @@ struct or_options_t {
   int AllDirActionsPrivate; /**< Should every directory action be sent
                              * through a Tor circuit? */
 
-  /** Run in 'tor2web mode'? (I.e. only make client connections to hidden
-   * services, and use a single hop for all hidden-service-related
-   * circuits.) */
-  int Tor2webMode;
-
-  /** A routerset that should be used when picking RPs for HS circuits. */
-  routerset_t *Tor2webRendezvousPoints;
-
   /** A routerset that should be used when picking middle nodes for HS
    *  circuits. */
   routerset_t *HSLayer2Nodes;
@@ -537,9 +529,9 @@ struct or_options_t {
    * of fixed nodes? */
   int UseEntryGuards_option;
   /** Internal variable to remember whether we're actually acting on
-   * UseEntryGuards_option -- when we're a non-anonymous Tor2web client or
-   * Single Onion Service, it is always false, otherwise we use the value of
-   * UseEntryGuards_option. */
+   * UseEntryGuards_option -- when we're a non-anonymous Single Onion Service,
+   * it is always false, otherwise we use the value of UseEntryGuards_option.
+   * */
   int UseEntryGuards;
 
   int NumEntryGuards; /**< How many entry guards do we try to establish? */

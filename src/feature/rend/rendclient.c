@@ -449,12 +449,7 @@ directory_get_from_hs_dir(const char *desc_id,
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
   const rend_data_v2_t *rend_data;
-#ifdef ENABLE_TOR2WEB_MODE
-  const int tor2web_mode = get_options()->Tor2webMode;
-  const int how_to_fetch = tor2web_mode ? DIRIND_ONEHOP : DIRIND_ANONYMOUS;
-#else
   const int how_to_fetch = DIRIND_ANONYMOUS;
-#endif /* defined(ENABLE_TOR2WEB_MODE) */
 
   tor_assert(desc_id);
   tor_assert(rend_query);
@@ -1226,15 +1221,12 @@ rend_parse_service_authorization(const or_options_t *options,
 
 /* Can Tor client code make direct (non-anonymous) connections to introduction
  * or rendezvous points?
- * Returns true if tor was compiled with NON_ANONYMOUS_MODE_ENABLED, and is
- * configured in Tor2web mode. */
+ * Returns true if tor was compiled with NON_ANONYMOUS_MODE_ENABLED. */
 int
 rend_client_allow_non_anonymous_connection(const or_options_t *options)
 {
-  /* Tor2web support needs to be compiled in to a tor binary. */
 #ifdef NON_ANONYMOUS_MODE_ENABLED
-  /* Tor2web */
-  return options->Tor2webMode ? 1 : 0;
+  return 1;
 #else
   (void)options;
   return 0;
@@ -1247,9 +1239,7 @@ int
 rend_client_non_anonymous_mode_enabled(const or_options_t *options)
 {
   (void)options;
-  /* Tor2web support needs to be compiled in to a tor binary. */
 #ifdef NON_ANONYMOUS_MODE_ENABLED
-  /* Tor2web */
   return 1;
 #else
   return 0;

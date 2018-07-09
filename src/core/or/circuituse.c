@@ -863,8 +863,7 @@ static time_t last_expired_clientside_circuits = 0;
 /**
  * As a diagnostic for bug 8387, log information about how many one-hop
  * circuits we have around that have been there for at least <b>age</b>
- * seconds. Log a few of them.
- * Ignores Single Onion Service intro and Tor2web redezvous circuits, they are
+ * seconds. Log a few of them. Ignores Single Onion Service intro, it is
  * expected to be long-term one-hop circuits.
  */
 void
@@ -889,10 +888,8 @@ circuit_log_ancient_one_hop_circuits(int age)
         (circ->purpose == CIRCUIT_PURPOSE_S_INTRO ||
          circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED))
       continue;
-    /* Tor2web deliberately makes long term one-hop rend connections,
-     * particularly when Tor2webRendezvousPoints is used. We only ignore
-     * active rend point connections, if we take a long time to rendezvous,
-     * that's worth logging. */
+     /* We only ignore active rend point connections, if we take a long time
+      * to rendezvous, that's worth logging. */
     if (rend_client_allow_non_anonymous_connection(options) &&
         circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED)
       continue;
@@ -1999,7 +1996,7 @@ circuit_should_use_vanguards(uint8_t purpose)
  * Return true for the set of conditions for which it is OK to use
  * a cannibalized circuit.
  *
- * Don't cannibalize for onehops, or tor2web, or certain purposes.
+ * Don't cannibalize for onehops, or certain purposes.
  */
 static int
 circuit_should_cannibalize_to_build(uint8_t purpose_to_build,
@@ -2008,8 +2005,7 @@ circuit_should_cannibalize_to_build(uint8_t purpose_to_build,
                                     int need_specific_rp)
 {
 
-  /* Do not try to cannibalize if this is a one hop circuit, or
-   * is a tor2web/special rp. */
+  /* Do not try to cannibalize if this is a one hop circuit. */
   if (onehop_tunnel || need_specific_rp) {
     return 0;
   }
@@ -2073,14 +2069,6 @@ circuit_launch_by_extend_info(uint8_t purpose,
               "fetched enough directory info" :
               "received a consensus with exits");
     return NULL;
-  }
-
-  /* If Tor2webRendezvousPoints is enabled and we are dealing with an
-     RP circuit, we want a specific RP node so we shouldn't canibalize
-     an already existing circuit. */
-  if (get_options()->Tor2webRendezvousPoints &&
-      purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
-    need_specific_rp = 1;
   }
 
   /* If we can/should cannibalize another circuit to build this one,
@@ -2484,16 +2472,6 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       new_circ_purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
     else
       new_circ_purpose = desired_circuit_purpose;
-
-#ifdef ENABLE_TOR2WEB_MODE
-    /* If tor2Web is on, then hidden service requests should be one-hop.
-     */
-    if (options->Tor2webMode &&
-        (new_circ_purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
-         new_circ_purpose == CIRCUIT_PURPOSE_C_INTRODUCING)) {
-      want_onehop = 1;
-    }
-#endif /* defined(ENABLE_TOR2WEB_MODE) */
 
     /* Determine what kind of a circuit to launch, and actually launch it. */
     {

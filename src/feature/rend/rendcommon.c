@@ -983,7 +983,7 @@ rend_auth_decode_cookie(const char *cookie_in, uint8_t *cookie_out,
  * Onion services can be configured to start in this mode.
  * Prefer rend_client_allow_non_anonymous_connection() or
  * rend_service_allow_non_anonymous_connection() whenever possible, so that
- * checks are specific to Single Onion Services or Tor2web. */
+ * checks are specific to Single Onion Services. */
 int
 rend_allow_non_anonymous_connection(const or_options_t* options)
 {
@@ -996,7 +996,7 @@ rend_allow_non_anonymous_connection(const or_options_t* options)
  * Onion services can be configured to start in this mode.
  * Prefer rend_client_non_anonymous_mode_enabled() or
  * rend_service_non_anonymous_mode_enabled() whenever possible, so that checks
- * are specific to Single Onion Services or Tor2web. */
+ * are specific to Single Onion Services. */
 int
 rend_non_anonymous_mode_enabled(const or_options_t *options)
 {
@@ -1007,9 +1007,9 @@ rend_non_anonymous_mode_enabled(const or_options_t *options)
 /* Make sure that tor only builds one-hop circuits when they would not
  * compromise user anonymity.
  *
- * One-hop circuits are permitted in Tor2web or Single Onion modes.
+ * One-hop circuits are permitted in Single Onion modes.
  *
- * Tor2web or Single Onion modes are also allowed to make multi-hop circuits.
+ * Single Onion modes are also allowed to make multi-hop circuits.
  * For example, single onion HSDir circuits are 3-hop to prevent denial of
  * service.
  */
