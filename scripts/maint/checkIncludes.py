@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 # Copyright 2018 The Tor Project, Inc.  See LICENSE file for licensing info.
 
+from __future__ import print_function
+
 import fnmatch
 import os
 import re
