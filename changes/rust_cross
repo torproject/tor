@@ -1,2 +1,0 @@
-  o Minor feature (Rust, portability):
-    - Rust cross-compilation is now supported. Closes ticket 25895.

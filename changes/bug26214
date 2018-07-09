@@ -1,3 +1,0 @@
-  o Minor bugfixes (correctness, flow control):
-    - Upon receiving a stream-level SENDME cell, verify that our window has
-      not grown too large. Fixes bug 26214; bugfix on svn r54 (pre-0.0.1)

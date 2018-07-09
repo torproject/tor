@@ -1,3 +1,54 @@
+Changes in version 0.3.4.4-rc - 2018-07-??
+  Tor 0.3.4.4-rc fixes several small compilation, portability, and
+  correctness issues in previous versions of Tor.  This version is a
+  release candidate: if no serious bugs are found, we expect that the stable
+  0.3.4 release will be (almost) the same as this release.
+
+  o Minor feature (Rust, portability):
+    - Rust cross-compilation is now supported. Closes ticket 25895.
+
+  o Minor features (compilation):
+    - When building Tor, prefer to use Python 3 over Python 2, and more
+      recent (contemplated) versions over older ones. Closes ticket 26372.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the July 3 2018 Maxmind GeoLite2
+      Country database. Closes ticket 26674.
+
+  o Minor bugfixes (compilation):
+    - Fix a compilation warning on some versions of GCC when
+      building code that calls routerinfo_get_my_routerinfo() twice,
+      assuming that the second call will succeed if the first one did.
+      Fixes bug 26269; bugfix on 0.2.8.2-alpha.
+
+  o Minor bugfixes (controller):
+    - Report the port correctly when a port is configured to bind to "auto".
+      Fixes bug 26568; bugfix on 0.3.4.1-alpha.
+
+  o Minor bugfixes (correctness, flow control):
+    - Upon receiving a stream-level SENDME cell, verify that our window has
+      not grown too large. Fixes bug 26214; bugfix on svn r54 (pre-0.0.1)
+
+  o Minor bugfixes (hidden service, control port):
+    - The HSPOST command wasn't parsing properly the HSADDRESS= parameter and
+      thus not using it. It now handles it correctly. Fixes bug 26523; bugfix on
+      0.3.3.1-alpha. Patch by "akwizgran".
+
+  o Minor bugfixes (memory, correctness):
+    - Fix a number of small memory leaks identified by coverity. Fixes
+      bug 26467; bugfix on numerous Tor versions.
+
+  o Minor bugfixes (testing, compatibility):
+    - When running the hs_ntor_ref.py test, make sure only to pass strings
+      (rather than "bytes" objects) to the Python subprocess module.
+      Python 3 on Windows seems to require this.  Fixes bug 26535; bugfix on
+      0.3.1.1-alpha.
+    - When running the ntor_ref.py test, make sure only to pass strings
+      (rather than "bytes" objects) to the Python subprocess module.
+      Python 3 on Windows seems to require this.  Fixes bug 26535; bugfix on
+      0.2.5.5-alpha.
+
+
 Changes in version 0.3.4.3-alpha - 2018-06-26
   Tor 0.3.4.3-alpha fixes several bugs in earlier versions, including
   one that was causing stability issues on directory authorities.
