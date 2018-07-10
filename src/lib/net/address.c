@@ -6,6 +6,9 @@
 /**
  * \file address.c
  * \brief Functions to use and manipulate the tor_addr_t structure.
+ *
+ * This module doesn't have any support for the libc resolver: that is all in
+ * resolve.c.
  **/
 
 #define ADDRESS_PRIVATE
@@ -37,7 +40,6 @@
 
 #include "lib/net/address.h"
 #include "lib/net/socket.h"
-#include "lib/net/resolve.h"
 #include "lib/container/smartlist.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/log/torlog.h"
@@ -1748,7 +1750,7 @@ tor_addr_port_split(int severity, const char *addrport,
   tor_assert(addrport);
   tor_assert(address_out);
   tor_assert(port_out);
-  /* We need to check for IPv6 manually because addr_port_lookup() doesn't
+  /* We need to check for IPv6 manually because the logic below doesn't
    * do a good job on IPv6 addresses that lack a port. */
   if (tor_addr_parse(&a_tmp, addrport) == AF_INET6) {
     *port_out = 0;
@@ -1756,29 +1758,10 @@ tor_addr_port_split(int severity, const char *addrport,
     return 0;
   }
 
-  return addr_port_lookup(severity, addrport, address_out, NULL, port_out);
-}
-
-/** Parse a string of the form "host[:port]" from <b>addrport</b>.  If
- * <b>address</b> is provided, set *<b>address</b> to a copy of the
- * host portion of the string.  If <b>addr</b> is provided, try to
- * resolve the host portion of the string and store it into
- * *<b>addr</b> (in host byte order).  If <b>port_out</b> is provided,
- * store the port number into *<b>port_out</b>, or 0 if no port is given.
- * If <b>port_out</b> is NULL, then there must be no port number in
- * <b>addrport</b>.
- * Return 0 on success, -1 on failure.
- */
-int
-addr_port_lookup(int severity, const char *addrport, char **address,
-                uint32_t *addr, uint16_t *port_out)
-{
   const char *colon;
   char *address_ = NULL;
   int port_;
   int ok = 1;
-
-  tor_assert(addrport);
 
   colon = strrchr(addrport, ':');
   if (colon) {
@@ -1801,22 +1784,13 @@ addr_port_lookup(int severity, const char *addrport, char **address,
     port_ = 0;
   }
 
-  if (addr) {
-    /* There's an addr pointer, so we need to resolve the hostname. */
-    if (tor_lookup_hostname(address_,addr)) {
-      log_fn(severity, LD_NET, "Couldn't look up %s", escaped(address_));
-      ok = 0;
-      *addr = 0;
-    }
-  }
-
-  if (address && ok) {
-    *address = address_;
+  if (ok) {
+    *address_out = address_;
   } else {
-    if (address)
-      *address = NULL;
+    *address_out = NULL;
     tor_free(address_);
   }
+
   if (port_out)
     *port_out = ok ? ((uint16_t) port_) : 0;
 
