@@ -197,12 +197,14 @@ socks5_reason_to_string(char reason)
  * address (in host order) into *<b>result_addr</b>.
  */
 static int
-do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
+do_resolve(const char *hostname,
+           const tor_addr_t *sockshost, uint16_t socksport,
            int reverse, int version,
            tor_addr_t *result_addr, char **result_hostname)
 {
   int s = -1;
-  struct sockaddr_in socksaddr;
+  struct sockaddr_storage ss;
+  socklen_t socklen;
   char *req = NULL;
   ssize_t len = 0;
 
@@ -219,11 +221,10 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
     return -1;
   }
 
-  memset(&socksaddr, 0, sizeof(socksaddr));
-  socksaddr.sin_family = AF_INET;
-  socksaddr.sin_port = htons(socksport);
-  socksaddr.sin_addr.s_addr = htonl(sockshost);
-  if (connect(s, (struct sockaddr*)&socksaddr, sizeof(socksaddr))) {
+  socklen = tor_addr_to_sockaddr(sockshost, socksport,
+                                 (struct sockaddr *)&ss, sizeof(ss));
+
+  if (connect(s, (struct sockaddr*)&ss, sizeof(socklen))) {
     log_sock_error("connecting to SOCKS host", s);
     goto err;
   }
@@ -346,7 +347,7 @@ usage(void)
 int
 main(int argc, char **argv)
 {
-  uint32_t sockshost;
+  tor_addr_t sockshost;
   uint16_t socksport = 0, port_option = 0;
   int isSocks4 = 0, isVerbose = 0, isReverse = 0;
   char **arg;
@@ -414,7 +415,7 @@ main(int argc, char **argv)
 
   if (n_args == 1) {
     log_debug(LD_CONFIG, "defaulting to localhost");
-    sockshost = 0x7f000001u; /* localhost */
+    tor_addr_from_ipv4h(&sockshost, 0x7f000001u); /* localhost */
     if (port_option) {
       log_debug(LD_CONFIG, "Using port %d", (int)port_option);
       socksport = port_option;
@@ -423,7 +424,7 @@ main(int argc, char **argv)
       socksport = 9050; /* 9050 */
     }
   } else if (n_args == 2) {
-    if (addr_port_lookup(LOG_WARN, arg[1], NULL, &sockshost, &socksport)<0) {
+    if (tor_addr_port_lookup(arg[1], &sockshost, &socksport)<0) {
       fprintf(stderr, "Couldn't parse/resolve address %s", arg[1]);
       return 1;
     }
@@ -445,7 +446,7 @@ main(int argc, char **argv)
     return 1;
   }
 
-  if (do_resolve(arg[0], sockshost, socksport, isReverse,
+  if (do_resolve(arg[0], &sockshost, socksport, isReverse,
                  isSocks4 ? 4 : 5, &result,
                  &result_hostname))
     return 1;
