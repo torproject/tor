@@ -1,5 +1,0 @@
-  o Major bugfixes (compilation):
-    - Include additional headers in connection_edge.c and ipv6.h in order
-      to build correctly on FreeBSD post-refactor. Fixes bug 26715; bugfix
-      on 0.3.5.1-alpha. Patch by Neel Chauhan.
-
