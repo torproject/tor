@@ -4,14 +4,14 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file tm_cvt.c
- * \brief Convert to and from struct tm, portably.
+ * \file time_to_tm.c
+ * \brief Convert to struct tm, portably.
  **/
 
 #include "orconfig.h"
 #include "lib/cc/torint.h"
 #include "lib/cc/compat_compiler.h"
-#include "lib/wallclock/tm_cvt.h"
+#include "lib/wallclock/time_to_tm.h"
 #include "lib/string/printf.h"
 #include "lib/err/torerr.h"
 

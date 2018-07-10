@@ -21,7 +21,7 @@
 #include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 #include "lib/string/scanf.h"
-#include "lib/wallclock/tm_cvt.h"
+#include "lib/wallclock/time_to_tm.h"
 
 #include <string.h>
 #include <time.h>

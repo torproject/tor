@@ -4,12 +4,12 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file tm_cvt.h
- * \brief Header for tm_cvt.c
+ * \file time_to_tm.h
+ * \brief Header for time_to_tm.c
  **/
 
-#ifndef TOR_WALLCLOCK_TM_CVT_H
-#define TOR_WALLCLOCK_TM_CVT_H
+#ifndef TOR_WALLCLOCK_TIME_TO_TM_H
+#define TOR_WALLCLOCK_TIME_TO_TM_H
 
 #include <sys/types.h>
 

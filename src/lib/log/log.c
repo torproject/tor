@@ -45,7 +45,7 @@
 #include "lib/string/util_string.h"
 #include "lib/wallclock/tor_gettimeofday.h"
 #include "lib/wallclock/approx_time.h"
-#include "lib/wallclock/tm_cvt.h"
+#include "lib/wallclock/time_to_tm.h"
 #include "lib/fdio/fdio.h"
 
 #ifdef HAVE_ANDROID_LOG_H
