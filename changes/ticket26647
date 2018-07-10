@@ -1,0 +1,4 @@
+  o Minor features (controller):
+    - The control port now exposes the list of HTTPTunnelPorts and
+      ExtOrPorts via GETINFO net/listeners/httptunnel and net/listeners/extor
+      respectively.  Closes ticket 26647.
