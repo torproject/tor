@@ -149,7 +149,8 @@ crypto_ope_free_(crypto_ope_t *ope)
 
 /**
  * Return the encrypted value corresponding to <b>input</b>.  The input value
- * must be in range 1..OPE_INPUT_MAX.  Returns UINT64_MAX on an invalid input.
+ * must be in range 1..OPE_INPUT_MAX.  Returns CRYPTO_OPE_ERROR on an invalid
+ * input.
  *
  * NOTE: this function is not constant-time.
  */
@@ -157,7 +158,7 @@ uint64_t
 crypto_ope_encrypt(const crypto_ope_t *ope, int plaintext)
 {
   if (plaintext <= 0 || plaintext > OPE_INPUT_MAX)
-    return UINT64_MAX;
+    return CRYPTO_OPE_ERROR;
 
   const int sample_idx = (plaintext / SAMPLE_INTERVAL);
   const int starting_iv = sample_idx * SAMPLE_INTERVAL;
