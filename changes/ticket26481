@@ -1,0 +1,12 @@
+  o Major features (new code layout):
+   - Nearly all of Tor's source code has been moved around into more logical
+     places.  The "common" directory is now divided into a set of libraries
+     in "lib", and files in the "or" directory have been split into "core"
+     (logic absolutely needed for onion routing), "feature" (independent
+     modules in Tor), and "app" (to configure and invoke the rest of Tor).
+     See doc/HACKING/CodeStructure.md for more information. Closes ticket
+     26481.
+
+     This refactoring is not complete: although the libraries have been
+     refactored to be acyclic, the main body of Tor is still too
+     interconnected.  We will attempt to improve this in the future.
