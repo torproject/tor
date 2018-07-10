@@ -24,7 +24,7 @@
 #include "lib/string/util_string.h"
 #include "lib/string/printf.h"
 #include "lib/encoding/binascii.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/fs/files.h"
 

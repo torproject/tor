@@ -27,7 +27,7 @@
 #include "lib/crypt_ops/crypto_hkdf.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/ctime/di_ops.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "core/crypto/onion_ntor.h"
 

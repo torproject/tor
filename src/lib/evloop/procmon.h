@@ -11,7 +11,7 @@
 
 #include "lib/evloop/compat_libevent.h"
 
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 
 typedef struct tor_process_monitor_t tor_process_monitor_t;
 

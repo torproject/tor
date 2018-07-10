@@ -14,7 +14,7 @@
 #include "lib/err/torerr.h"
 #include "lib/string/util_string.h"
 #include "lib/string/compat_ctype.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #include <string.h>
 

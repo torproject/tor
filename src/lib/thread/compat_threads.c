@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include "lib/thread/threads.h"
 
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
 #include <string.h>

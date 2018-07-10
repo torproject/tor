@@ -7,7 +7,7 @@
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "lib/err/torerr.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "test/test.h"
 #include "lib/process/subprocess.h"
 

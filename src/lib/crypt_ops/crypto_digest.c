@@ -14,7 +14,7 @@
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
 #include "keccak-tiny/keccak-tiny.h"

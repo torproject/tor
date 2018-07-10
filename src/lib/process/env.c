@@ -11,12 +11,12 @@
 #include "orconfig.h"
 #include "lib/process/env.h"
 
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/container/smartlist.h"
 #include "lib/log/util_bug.h"
-#include "lib/log/torlog.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/log/log.h"
+#include "lib/malloc/malloc.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

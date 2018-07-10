@@ -30,7 +30,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/nodelist/torcert.h"
 #include "trunnel/ed25519_cert.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "trunnel/link_handshake.h"
 #include "lib/tls/tortls.h"
 

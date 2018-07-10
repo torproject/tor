@@ -23,7 +23,7 @@
 #include "lib/fdio/fdio.h"
 #include "lib/fs/files.h"
 #include "lib/fs/mmap.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/string/printf.h"

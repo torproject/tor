@@ -4,7 +4,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file util_malloc.c
+ * \file malloc.c
  * \brief Wrappers for C malloc code, and replacements for items that
  *   may be missing.
  **/
@@ -16,7 +16,7 @@
 
 #include "lib/testsupport/testsupport.h"
 #define UTIL_MALLOC_PRIVATE
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/cc/torint.h"
 #include "lib/err/torerr.h"
 

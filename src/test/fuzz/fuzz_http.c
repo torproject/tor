@@ -12,7 +12,7 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "feature/dircache/directory.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 
 #include "feature/dircommon/dir_connection_st.h"
 

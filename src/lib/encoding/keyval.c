@@ -12,7 +12,7 @@
 #include "orconfig.h"
 #include "lib/encoding/keyval.h"
 #include "lib/log/escape.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
 #include <stdlib.h>

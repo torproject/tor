@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file torlog.c
+ * \file log.c
  * \brief Functions to send messages to log files or the console.
  **/
 
@@ -31,7 +31,7 @@
 #endif
 
 #define LOG_PRIVATE
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/ratelim.h"
 #include "lib/lock/compat_mutex.h"
 #include "lib/smartlist_core/smartlist_core.h"
@@ -41,11 +41,11 @@
 #include "lib/intmath/bits.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/printf.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/util_string.h"
 #include "lib/wallclock/tor_gettimeofday.h"
 #include "lib/wallclock/approx_time.h"
-#include "lib/wallclock/tm_cvt.h"
+#include "lib/wallclock/time_to_tm.h"
 #include "lib/fdio/fdio.h"
 
 #ifdef HAVE_ANDROID_LOG_H

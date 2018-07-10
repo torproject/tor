@@ -11,7 +11,7 @@
 #include "orconfig.h"
 #include "lib/process/restrict.h"
 #include "lib/intmath/cmp.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/net/socket.h"
 

@@ -14,7 +14,7 @@
  */
 
 #include "lib/cc/torint.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 typedef struct aes_cnt_cipher aes_cnt_cipher_t;
 

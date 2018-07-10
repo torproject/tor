@@ -12,7 +12,7 @@
 #include "lib/log/util_bug.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/string/printf.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 /** Allocate and return a new string representing the contents of <b>s</b>,
  * surrounded by quotes and using standard C escapes.

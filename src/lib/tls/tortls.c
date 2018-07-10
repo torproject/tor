@@ -52,7 +52,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 #define TORTLS_PRIVATE
 #include "lib/tls/tortls.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/container/smartlist.h"
 #include "lib/string/compat_string.h"

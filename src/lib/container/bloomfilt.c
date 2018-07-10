@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/container/bloomfilt.h"
 #include "lib/intmath/bits.h"
 #include "lib/log/util_bug.h"

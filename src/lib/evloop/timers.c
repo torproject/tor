@@ -34,9 +34,9 @@
 #include "lib/evloop/compat_libevent.h"
 #include "lib/evloop/timers.h"
 #include "lib/intmath/muldiv.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/time/compat_time.h"
 
 #ifdef _WIN32

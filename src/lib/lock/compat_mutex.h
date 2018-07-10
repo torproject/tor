@@ -14,7 +14,7 @@
 
 #include "orconfig.h"
 #include "lib/cc/torint.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #if defined(HAVE_PTHREAD_H) && !defined(_WIN32)
 #include <pthread.h>

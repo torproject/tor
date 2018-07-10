@@ -13,7 +13,7 @@
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "core/proto/proto_socks.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 
 #include "core/or/entry_connection_st.h"
 #include "core/or/socks_request_st.h"

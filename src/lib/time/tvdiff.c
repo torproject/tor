@@ -11,7 +11,7 @@
 #include "lib/time/tvdiff.h"
 
 #include "lib/cc/compat_compiler.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 
 #ifdef _WIN32
 #include <winsock2.h>

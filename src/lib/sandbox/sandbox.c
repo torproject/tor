@@ -36,10 +36,10 @@
 #include "lib/sandbox/sandbox.h"
 #include "lib/container/map.h"
 #include "lib/err/torerr.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/cc/torint.h"
 #include "lib/net/resolve.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/scanf.h"
 
 #include "tor_queue.h"

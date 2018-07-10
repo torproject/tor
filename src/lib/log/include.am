@@ -8,7 +8,7 @@ endif
 src_lib_libtor_log_a_SOURCES =			\
 	src/lib/log/escape.c			\
 	src/lib/log/ratelim.c			\
-	src/lib/log/torlog.c			\
+	src/lib/log/log.c			\
 	src/lib/log/util_bug.c
 
 if WIN32
@@ -26,6 +26,6 @@ src/lib/log/torlog.$(OBJEXT) \
 noinst_HEADERS +=					\
 	src/lib/log/escape.h				\
 	src/lib/log/ratelim.h				\
-	src/lib/log/torlog.h				\
+	src/lib/log/log.h				\
 	src/lib/log/util_bug.h				\
 	src/lib/log/win32err.h

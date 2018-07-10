@@ -13,9 +13,9 @@
 #include "orconfig.h"
 #include "lib/fs/files.h"
 #include "lib/fs/lockfile.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #ifdef HAVE_SYS_FILE_H
 #include <sys/file.h>

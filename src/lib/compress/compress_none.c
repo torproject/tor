@@ -16,7 +16,7 @@
 
 #include "orconfig.h"
 
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_none.h"
 #include "lib/intmath/cmp.h"

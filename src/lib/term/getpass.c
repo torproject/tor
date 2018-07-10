@@ -11,7 +11,7 @@
 #include "lib/term/getpass.h"
 
 #include "lib/log/util_bug.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #ifdef _WIN32
 #include <windows.h>

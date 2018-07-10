@@ -22,7 +22,7 @@
 #include <netinet/in.h>
 #endif
 
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/arch/bytes.h"
 #include "lib/ctime/di_ops.h"
@@ -32,7 +32,7 @@
 #include "lib/compress/compress_zlib.h"
 #include "lib/compress/compress_zstd.h"
 #include "lib/intmath/cmp.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/thread/threads.h"
 
 /** Total number of bytes allocated for compression state overhead. */

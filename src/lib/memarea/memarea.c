@@ -17,9 +17,9 @@
 #include "lib/arch/bytes.h"
 #include "lib/cc/torint.h"
 #include "lib/container/smartlist.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #ifndef DISABLE_MEMORY_SENTINELS
 

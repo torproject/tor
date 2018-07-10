@@ -14,7 +14,7 @@
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_hkdf.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
 DISABLE_GCC_WARNING(redundant-decls)

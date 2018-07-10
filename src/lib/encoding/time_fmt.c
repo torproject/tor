@@ -15,13 +15,13 @@
  **/
 
 #include "lib/encoding/time_fmt.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/escape.h"
 #include "lib/log/util_bug.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 #include "lib/string/scanf.h"
-#include "lib/wallclock/tm_cvt.h"
+#include "lib/wallclock/time_to_tm.h"
 
 #include <string.h>
 #include <time.h>

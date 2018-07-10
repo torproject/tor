@@ -38,7 +38,7 @@
 
 #include "orconfig.h"
 #include "lib/cc/compat_compiler.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/testsupport/testsupport.h"
 
 /* Replace assert() with a variant that sends failures to the log before

@@ -62,7 +62,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include <unistd.h>
 #endif
 
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/cc/torint.h"
 #include "lib/crypt_ops/aes.h"

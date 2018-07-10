@@ -14,12 +14,12 @@
 #include "orconfig.h"
 
 #include "lib/encoding/binascii.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/cc/torint.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/intmath/muldiv.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #include <stddef.h>
 #include <string.h>

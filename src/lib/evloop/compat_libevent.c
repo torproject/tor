@@ -11,7 +11,7 @@
 #include "lib/evloop/compat_libevent.h"
 
 #include "lib/crypt_ops/crypto_rand.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/string/compat_string.h"
 

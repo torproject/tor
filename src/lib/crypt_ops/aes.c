@@ -38,7 +38,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 ENABLE_GCC_WARNING(redundant-decls)
 
 #include "lib/crypt_ops/aes.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/ctime/di_ops.h"
 
 #ifdef ANDROID

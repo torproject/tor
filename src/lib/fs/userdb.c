@@ -12,8 +12,8 @@
 #include "lib/fs/userdb.h"
 
 #ifndef _WIN32
-#include "lib/malloc/util_malloc.h"
-#include "lib/log/torlog.h"
+#include "lib/malloc/malloc.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
 #include <pwd.h>

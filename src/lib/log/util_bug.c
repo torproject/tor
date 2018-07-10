@@ -9,13 +9,13 @@
 
 #include "orconfig.h"
 #include "lib/log/util_bug.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/err/backtrace.h"
 #ifdef TOR_UNIT_TESTS
 #include "lib/smartlist_core/smartlist_core.h"
 #include "lib/smartlist_core/smartlist_foreach.h"
 #endif
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 
 #include <string.h>

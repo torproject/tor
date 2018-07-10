@@ -30,7 +30,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/intmath/weakrng.h"
 #include "lib/log/ratelim.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/net/alertsock.h"
 #include "lib/net/socket.h"
