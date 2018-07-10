@@ -204,8 +204,6 @@ tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u)
  */
 #define TOR_ADDR_BUF_LEN 48
 
-MOCK_DECL(int, tor_addr_lookup,(const char *name, uint16_t family,
-                                tor_addr_t *addr_out));
 char *tor_addr_to_str_dup(const tor_addr_t *addr) ATTR_MALLOC;
 
 /** Wrapper function of fmt_addr_impl(). It does not decorate IPv6
@@ -262,9 +260,6 @@ int tor_addr_to_PTR_name(char *out, size_t outlen,
                                     const tor_addr_t *addr);
 int tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
                                        int family, int accept_regular);
-
-int tor_addr_port_lookup(const char *s, tor_addr_t *addr_out,
-                        uint16_t *port_out);
 
 /* Does the address * yield an AF_UNSPEC wildcard address (1),
  * which expands to corresponding wildcard IPv4 and IPv6 rules, and do we

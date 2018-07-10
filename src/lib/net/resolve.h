@@ -22,7 +22,13 @@
 #define USE_SANDBOX_GETADDRINFO
 #endif
 
-MOCK_DECL(int,tor_lookup_hostname,(const char *name, uint32_t *addr));
+struct tor_addr_t;
+
+MOCK_DECL(int, tor_lookup_hostname,(const char *name, uint32_t *addr));
+MOCK_DECL(int, tor_addr_lookup,(const char *name, uint16_t family,
+                                struct tor_addr_t *addr_out));
+int tor_addr_port_lookup(const char *s, struct tor_addr_t *addr_out,
+                         uint16_t *port_out);
 
 struct addrinfo;
 #ifdef USE_SANDBOX_GETADDRINFO
