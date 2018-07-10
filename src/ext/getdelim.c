@@ -30,21 +30,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <nbcompat.h>
-#include <nbcompat/stdio.h>
-#include <nbcompat/stdlib.h>
-
-#if !HAVE_GETDELIM
+#ifndef BUFSIZ
+#define BUFSIZ 512
+#endif
 
 ssize_t
-getdelim(char **buf, size_t *bufsiz, int delimiter, FILE *fp)
+compat_getdelim_(char **buf, size_t *bufsiz, int delimiter, FILE *fp)
 {
 	char *ptr, *eptr;
 
 
 	if (*buf == NULL || *bufsiz == 0) {
 		*bufsiz = BUFSIZ;
-		if ((*buf = malloc(*bufsiz)) == NULL)
+		if ((*buf = raw_malloc(*bufsiz)) == NULL)
 			return -1;
 	}
 
@@ -69,7 +67,7 @@ getdelim(char **buf, size_t *bufsiz, int delimiter, FILE *fp)
 			char *nbuf;
 			size_t nbufsiz = *bufsiz * 2;
 			ssize_t d = ptr - *buf;
-			if ((nbuf = realloc(*buf, nbufsiz)) == NULL)
+			if ((nbuf = raw_realloc(*buf, nbufsiz)) == NULL)
 				return -1;
 			*buf = nbuf;
 			*bufsiz = nbufsiz;
@@ -78,5 +76,3 @@ getdelim(char **buf, size_t *bufsiz, int delimiter, FILE *fp)
 		}
 	}
 }
-
-#endif

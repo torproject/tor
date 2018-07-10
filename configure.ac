@@ -585,7 +585,9 @@ AC_CHECK_FUNCS(
         ftime \
         get_current_dir_name \
         getaddrinfo \
+	getdelim \
         getifaddrs \
+	getline \
         getpass \
         getrlimit \
         gettimeofday \

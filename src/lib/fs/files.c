@@ -715,3 +715,7 @@ read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
 
   return string;
 }
+
+#if !defined(HAVE_GETDELIM) || defined(TOR_UNIT_TESTS)
+#include "ext/getdelim.c"
+#endif
