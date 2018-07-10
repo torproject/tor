@@ -21,6 +21,7 @@
 #include "lib/encoding/confline.h"
 #include "core/or/policies.h"
 #include "test/test_helpers.h"
+#include "lib/net/resolve.h"
 
 #define NS_MODULE test_options
 

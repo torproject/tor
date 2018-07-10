@@ -19,6 +19,7 @@
 #include "test/test.h"
 #include "lib/process/subprocess.h"
 #include "lib/encoding/confline.h"
+#include "lib/net/resolve.h"
 
 #include "app/config/or_state_st.h"
 

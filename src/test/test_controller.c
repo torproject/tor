@@ -14,6 +14,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "test/test.h"
 #include "test/test_helpers.h"
+#include "lib/net/resolve.h"
 
 #include "feature/control/control_connection_st.h"
 #include "feature/dirclient/download_status_st.h"

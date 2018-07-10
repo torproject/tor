@@ -6,6 +6,9 @@
 /**
  * \file address.c
  * \brief Functions to use and manipulate the tor_addr_t structure.
+ *
+ * This module doesn't have any support for the libc resolver: that is all in
+ * resolve.c.
  **/
 
 #define ADDRESS_PRIVATE
@@ -37,13 +40,12 @@
 
 #include "lib/net/address.h"
 #include "lib/net/socket.h"
-#include "lib/net/resolve.h"
 #include "lib/container/smartlist.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/log/torlog.h"
 #include "lib/log/escape.h"
 #include "lib/malloc/util_malloc.h"
-#include "lib/net/ipv4.h"
+#include "lib/net/inaddr.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/parse_int.h"
@@ -232,127 +234,6 @@ tor_addr_make_null(tor_addr_t *a, sa_family_t family)
 {
   memset(a, 0, sizeof(*a));
   a->family = family;
-}
-
-/** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
- * *<b>addr</b> to the proper IP address and family. The <b>family</b>
- * argument (which must be AF_INET, AF_INET6, or AF_UNSPEC) declares a
- * <i>preferred</i> family, though another one may be returned if only one
- * family is implemented for this address.
- *
- * Return 0 on success, -1 on failure; 1 on transient failure.
- */
-MOCK_IMPL(int,
-tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
-{
-  /* Perhaps eventually this should be replaced by a tor_getaddrinfo or
-   * something.
-   */
-  struct in_addr iaddr;
-  struct in6_addr iaddr6;
-  tor_assert(name);
-  tor_assert(addr);
-  tor_assert(family == AF_INET || family == AF_INET6 || family == AF_UNSPEC);
-  if (!*name) {
-    /* Empty address is an error. */
-    return -1;
-  } else if (tor_inet_pton(AF_INET, name, &iaddr)) {
-    /* It's an IPv4 IP. */
-    if (family == AF_INET6)
-      return -1;
-    tor_addr_from_in(addr, &iaddr);
-    return 0;
-  } else if (tor_inet_pton(AF_INET6, name, &iaddr6)) {
-    if (family == AF_INET)
-      return -1;
-    tor_addr_from_in6(addr, &iaddr6);
-    return 0;
-  } else {
-#ifdef HAVE_GETADDRINFO
-    int err;
-    struct addrinfo *res=NULL, *res_p;
-    struct addrinfo *best=NULL;
-    struct addrinfo hints;
-    int result = -1;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = family;
-    hints.ai_socktype = SOCK_STREAM;
-    err = tor_getaddrinfo(name, NULL, &hints, &res);
-    /* The check for 'res' here shouldn't be necessary, but it makes static
-     * analysis tools happy. */
-    if (!err && res) {
-      best = NULL;
-      for (res_p = res; res_p; res_p = res_p->ai_next) {
-        if (family == AF_UNSPEC) {
-          if (res_p->ai_family == AF_INET) {
-            best = res_p;
-            break;
-          } else if (res_p->ai_family == AF_INET6 && !best) {
-            best = res_p;
-          }
-        } else if (family == res_p->ai_family) {
-          best = res_p;
-          break;
-        }
-      }
-      if (!best)
-        best = res;
-      if (best->ai_family == AF_INET) {
-        tor_addr_from_in(addr,
-                         &((struct sockaddr_in*)best->ai_addr)->sin_addr);
-        result = 0;
-      } else if (best->ai_family == AF_INET6) {
-        tor_addr_from_in6(addr,
-                          &((struct sockaddr_in6*)best->ai_addr)->sin6_addr);
-        result = 0;
-      }
-      tor_freeaddrinfo(res);
-      return result;
-    }
-    return (err == EAI_AGAIN) ? 1 : -1;
-#else /* !(defined(HAVE_GETADDRINFO)) */
-    struct hostent *ent;
-    int err;
-#ifdef HAVE_GETHOSTBYNAME_R_6_ARG
-    char buf[2048];
-    struct hostent hostent;
-    int r;
-    r = gethostbyname_r(name, &hostent, buf, sizeof(buf), &ent, &err);
-#elif defined(HAVE_GETHOSTBYNAME_R_5_ARG)
-    char buf[2048];
-    struct hostent hostent;
-    ent = gethostbyname_r(name, &hostent, buf, sizeof(buf), &err);
-#elif defined(HAVE_GETHOSTBYNAME_R_3_ARG)
-    struct hostent_data data;
-    struct hostent hent;
-    memset(&data, 0, sizeof(data));
-    err = gethostbyname_r(name, &hent, &data);
-    ent = err ? NULL : &hent;
-#else
-    ent = gethostbyname(name);
-#ifdef _WIN32
-    err = WSAGetLastError();
-#else
-    err = h_errno;
-#endif
-#endif /* defined(HAVE_GETHOSTBYNAME_R_6_ARG) || ... */
-    if (ent) {
-      if (ent->h_addrtype == AF_INET) {
-        tor_addr_from_in(addr, (struct in_addr*) ent->h_addr);
-      } else if (ent->h_addrtype == AF_INET6) {
-        tor_addr_from_in6(addr, (struct in6_addr*) ent->h_addr);
-      } else {
-        tor_assert(0); // LCOV_EXCL_LINE: gethostbyname() returned bizarre type
-      }
-      return 0;
-    }
-#ifdef _WIN32
-    return (err == WSATRY_AGAIN) ? 1 : -1;
-#else
-    return (err == TRY_AGAIN) ? 1 : -1;
-#endif
-#endif /* defined(HAVE_GETADDRINFO) */
-  }
 }
 
 /** Return true iff <b>ip</b> is an IP reserved to localhost or local networks
@@ -1324,64 +1205,6 @@ tor_addr_parse(tor_addr_t *addr, const char *src)
   return result;
 }
 
-/** Parse an address or address-port combination from <b>s</b>, resolve the
- * address as needed, and put the result in <b>addr_out</b> and (optionally)
- * <b>port_out</b>.  Return 0 on success, negative on failure. */
-int
-tor_addr_port_lookup(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
-{
-  const char *port;
-  tor_addr_t addr;
-  uint16_t portval;
-  char *tmp = NULL;
-
-  tor_assert(s);
-  tor_assert(addr_out);
-
-  s = eat_whitespace(s);
-
-  if (*s == '[') {
-    port = strstr(s, "]");
-    if (!port)
-      goto err;
-    tmp = tor_strndup(s+1, port-(s+1));
-    port = port+1;
-    if (*port == ':')
-      port++;
-    else
-      port = NULL;
-  } else {
-    port = strchr(s, ':');
-    if (port)
-      tmp = tor_strndup(s, port-s);
-    else
-      tmp = tor_strdup(s);
-    if (port)
-      ++port;
-  }
-
-  if (tor_addr_lookup(tmp, AF_UNSPEC, &addr) != 0)
-    goto err;
-  tor_free(tmp);
-
-  if (port) {
-    portval = (int) tor_parse_long(port, 10, 1, 65535, NULL, NULL);
-    if (!portval)
-      goto err;
-  } else {
-    portval = 0;
-  }
-
-  if (port_out)
-    *port_out = portval;
-  tor_addr_copy(addr_out, &addr);
-
-  return 0;
- err:
-  tor_free(tmp);
-  return -1;
-}
-
 #ifdef _WIN32
 typedef ULONG (WINAPI *GetAdaptersAddresses_fn_t)(
               ULONG, ULONG, PVOID, PIP_ADAPTER_ADDRESSES, PULONG);
@@ -1927,7 +1750,7 @@ tor_addr_port_split(int severity, const char *addrport,
   tor_assert(addrport);
   tor_assert(address_out);
   tor_assert(port_out);
-  /* We need to check for IPv6 manually because addr_port_lookup() doesn't
+  /* We need to check for IPv6 manually because the logic below doesn't
    * do a good job on IPv6 addresses that lack a port. */
   if (tor_addr_parse(&a_tmp, addrport) == AF_INET6) {
     *port_out = 0;
@@ -1935,29 +1758,10 @@ tor_addr_port_split(int severity, const char *addrport,
     return 0;
   }
 
-  return addr_port_lookup(severity, addrport, address_out, NULL, port_out);
-}
-
-/** Parse a string of the form "host[:port]" from <b>addrport</b>.  If
- * <b>address</b> is provided, set *<b>address</b> to a copy of the
- * host portion of the string.  If <b>addr</b> is provided, try to
- * resolve the host portion of the string and store it into
- * *<b>addr</b> (in host byte order).  If <b>port_out</b> is provided,
- * store the port number into *<b>port_out</b>, or 0 if no port is given.
- * If <b>port_out</b> is NULL, then there must be no port number in
- * <b>addrport</b>.
- * Return 0 on success, -1 on failure.
- */
-int
-addr_port_lookup(int severity, const char *addrport, char **address,
-                uint32_t *addr, uint16_t *port_out)
-{
   const char *colon;
   char *address_ = NULL;
   int port_;
   int ok = 1;
-
-  tor_assert(addrport);
 
   colon = strrchr(addrport, ':');
   if (colon) {
@@ -1980,22 +1784,13 @@ addr_port_lookup(int severity, const char *addrport, char **address,
     port_ = 0;
   }
 
-  if (addr) {
-    /* There's an addr pointer, so we need to resolve the hostname. */
-    if (tor_lookup_hostname(address_,addr)) {
-      log_fn(severity, LD_NET, "Couldn't look up %s", escaped(address_));
-      ok = 0;
-      *addr = 0;
-    }
-  }
-
-  if (address && ok) {
-    *address = address_;
+  if (ok) {
+    *address_out = address_;
   } else {
-    if (address)
-      *address = NULL;
+    *address_out = NULL;
     tor_free(address_);
   }
+
   if (port_out)
     *port_out = ok ? ((uint16_t) port_) : 0;
 

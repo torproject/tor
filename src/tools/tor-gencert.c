@@ -41,7 +41,8 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "lib/log/torlog.h"
 #include "lib/malloc/util_malloc.h"
 #include "lib/net/address.h"
-#include "lib/net/ipv4.h"
+#include "lib/net/inaddr.h"
+#include "lib/net/resolve.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/printf.h"
 
@@ -170,19 +171,22 @@ parse_commandline(int argc, char **argv)
     } else if (!strcmp(argv[i], "-v")) {
       verbose = 1;
     } else if (!strcmp(argv[i], "-a")) {
-      uint32_t addr;
+      tor_addr_t addr;
       uint16_t port;
-      char b[INET_NTOA_BUF_LEN];
-      struct in_addr in;
       if (i+1>=argc) {
         fprintf(stderr, "No argument to -a\n");
         return 1;
       }
-      if (addr_port_lookup(LOG_ERR, argv[++i], NULL, &addr, &port)<0)
+      const char *addr_arg = argv[++i];
+      if (tor_addr_port_lookup(addr_arg, &addr, &port)<0) {
+        fprintf(stderr, "Can't resolve address/port for %s", addr_arg);
         return 1;
-      in.s_addr = htonl(addr);
-      tor_inet_ntoa(&in, b, sizeof(b));
-      tor_asprintf(&address, "%s:%d", b, (int)port);
+      }
+      if (tor_addr_family(&addr) != AF_INET) {
+        fprintf(stderr, "%s must resolve to an IPv4 address", addr_arg);
+        return 1;
+      }
+      address = tor_strdup(fmt_addrport(&addr, port));
     } else if (!strcmp(argv[i], "--create-identity-key")) {
       make_new_id = 1;
     } else if (!strcmp(argv[i], "--passphrase-fd")) {

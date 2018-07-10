@@ -123,6 +123,7 @@
 #include "lib/sandbox/sandbox.h"
 #include "feature/nodelist/torcert.h"
 #include "lib/math/fp.h"
+#include "lib/net/resolve.h"
 
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/mode.h"

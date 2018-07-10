@@ -1,0 +1,3 @@
+  o Minor features (tor-resolve):
+    - The tor-resolve utility can now be used with IPv6 SOCKS proxies.
+      Side-effect of the refactoring for ticket 26526.

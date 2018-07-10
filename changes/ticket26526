@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Utility functions that can perform a DNS lookup are now wholly
+      separated from those that can't, in separate headers and C
+      modules. Closes ticket 26526.

@@ -37,6 +37,7 @@
 #include "feature/nodelist/routerparse.h"
 #include "feature/nodelist/routerset.h"
 #include "lib/encoding/confline.h"
+#include "lib/net/resolve.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/crypt_path_st.h"

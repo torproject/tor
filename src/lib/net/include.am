@@ -10,8 +10,7 @@ src_lib_libtor_net_a_SOURCES =			\
 	src/lib/net/alertsock.c                 \
 	src/lib/net/buffers_net.c		\
 	src/lib/net/gethostname.c		\
-	src/lib/net/ipv4.c			\
-	src/lib/net/ipv6.c			\
+	src/lib/net/inaddr.c			\
 	src/lib/net/resolve.c			\
 	src/lib/net/socket.c
 
@@ -25,8 +24,8 @@ noinst_HEADERS +=				\
 	src/lib/net/alertsock.h                 \
 	src/lib/net/buffers_net.h		\
 	src/lib/net/gethostname.h		\
-	src/lib/net/ipv4.h			\
-	src/lib/net/ipv6.h			\
+	src/lib/net/inaddr.h			\
+	src/lib/net/inaddr_st.h			\
 	src/lib/net/nettypes.h			\
 	src/lib/net/resolve.h			\
 	src/lib/net/socket.h			\

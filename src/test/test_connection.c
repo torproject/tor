@@ -20,6 +20,7 @@
 #include "feature/rend/rendcache.h"
 #include "feature/dircache/directory.h"
 #include "core/or/connection_or.h"
+#include "lib/net/resolve.h"
 
 #include "test/test_connection.h"
 #include "test/test_helpers.h"
@@ -899,4 +900,3 @@ struct testcase_t connection_tests[] = {
   { "failed_orconn_tracker", test_failed_orconn_tracker, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-
