@@ -4,24 +4,28 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file ipv6.h
- * \brief Header for ipv6.c
+ * \file inaddr_st.h
+ *
+ * \brief Define in6_addr, its members, and related types on platforms that
+ *    lack it.
  **/
 
-#ifndef TOR_IPV6_H
-#define TOR_IPV6_H
+#ifndef TOR_INADDR_ST_H
+#define TOR_INADDR_ST_H
 
-#include "orconfig.h"
-#include <stddef.h>
 #ifdef HAVE_NETINET_IN6_H
 #include <netinet/in6.h>
 #endif
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
 #endif
+
 #include "lib/cc/torint.h"
+
+struct in_addr;
 
 /** Implementation of struct in6_addr for platforms that do not have it.
  * Generally, these platforms are ones without IPv6 support, but we want to
@@ -85,7 +89,4 @@ struct sockaddr_in6 {
 };
 #endif /* !defined(HAVE_STRUCT_SOCKADDR_IN6) */
 
-const char *tor_inet_ntop(int af, const void *src, char *dst, size_t len);
-int tor_inet_pton(int af, const char *src, void *dst);
-
-#endif
+#endif /* TOR_INADDR_ST_H */

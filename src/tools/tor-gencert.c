@@ -41,7 +41,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "lib/log/torlog.h"
 #include "lib/malloc/util_malloc.h"
 #include "lib/net/address.h"
-#include "lib/net/ipv4.h"
+#include "lib/net/inaddr.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/printf.h"
 

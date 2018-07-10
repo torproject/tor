@@ -4,20 +4,20 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file ipv6.c
- * \brief Functions for encoding and decoding IPv6 addresses
- *
- * (Because these functions are generic, they can also handle IPv4 addresses).
+ * \file inaddr.c
+ * \brief Convert in_addr and in6_addr to and from strings.
  **/
 
-#include "lib/net/ipv6.h"
-#include "lib/net/ipv4.h"
-#include "lib/string/util_string.h"
-#include "lib/string/compat_string.h"
+#include "lib/net/inaddr.h"
+
+#include "lib/cc/torint.h"
+#include "lib/log/util_bug.h"
+#include "lib/net/inaddr_st.h"
 #include "lib/string/compat_ctype.h"
+#include "lib/string/compat_string.h"
 #include "lib/string/printf.h"
 #include "lib/string/scanf.h"
-#include "lib/log/util_bug.h"
+#include "lib/string/util_string.h"
 
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
@@ -25,6 +25,45 @@
 
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+
+/** Set *addr to the IP address (in dotted-quad notation) stored in *str.
+ * Return 1 on success, 0 if *str is badly formatted.
+ * (Like inet_aton(str,addr), but works on Windows and Solaris.)
+ */
+int
+tor_inet_aton(const char *str, struct in_addr* addr)
+{
+  unsigned a,b,c,d;
+  char more;
+  if (tor_sscanf(str, "%3u.%3u.%3u.%3u%c", &a,&b,&c,&d,&more) != 4)
+    return 0;
+  if (a > 255) return 0;
+  if (b > 255) return 0;
+  if (c > 255) return 0;
+  if (d > 255) return 0;
+  addr->s_addr = htonl((a<<24) | (b<<16) | (c<<8) | d);
+  return 1;
+}
+
+/** Given an IPv4 in_addr struct *<b>in</b> (in network order, as usual),
+ *  write it as a string into the <b>buf_len</b>-byte buffer in
+ *  <b>buf</b>. Returns a non-negative integer on success.
+ *  Returns -1 on failure.
+ */
+int
+tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len)
+{
+  uint32_t a = ntohl(in->s_addr);
+  return tor_snprintf(buf, buf_len, "%d.%d.%d.%d",
+                      (int)(uint8_t)((a>>24)&0xff),
+                      (int)(uint8_t)((a>>16)&0xff),
+                      (int)(uint8_t)((a>>8 )&0xff),
+                      (int)(uint8_t)((a    )&0xff));
+}
 
 /** Given <b>af</b>==AF_INET and <b>src</b> a struct in_addr, or
  * <b>af</b>==AF_INET6 and <b>src</b> a struct in6_addr, try to format the

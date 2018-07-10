@@ -43,7 +43,7 @@
 #include "lib/log/torlog.h"
 #include "lib/log/escape.h"
 #include "lib/malloc/util_malloc.h"
-#include "lib/net/ipv4.h"
+#include "lib/net/inaddr.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/parse_int.h"

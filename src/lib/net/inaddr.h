@@ -4,18 +4,24 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file ipv4.h
- * \brief Header for ipv4.c
+ * \file inaddr.h
+ * \brief Header for inaddr.c.
  **/
-#ifndef TOR_IPV4_H
-#define TOR_IPV4_H
 
+#ifndef TOR_INADDR_H
+#define TOR_INADDR_H
+
+#include "orconfig.h"
 #include <stddef.h>
 
 struct in_addr;
+
 int tor_inet_aton(const char *str, struct in_addr *addr);
 /** Length of a buffer to allocate to hold the results of tor_inet_ntoa.*/
 #define INET_NTOA_BUF_LEN 16
 int tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len);
+
+const char *tor_inet_ntop(int af, const void *src, char *dst, size_t len);
+int tor_inet_pton(int af, const char *src, void *dst);
 
 #endif

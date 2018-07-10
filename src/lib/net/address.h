@@ -14,7 +14,7 @@
 #include "orconfig.h"
 #include "lib/cc/torint.h"
 #include "lib/log/util_bug.h"
-#include "lib/net/ipv6.h"
+#include "lib/net/inaddr_st.h"
 #include "lib/net/nettypes.h"
 
 #ifdef HAVE_NETINET_IN_H
