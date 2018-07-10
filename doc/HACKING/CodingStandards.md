@@ -214,6 +214,24 @@ We don't call `memcmp()` directly.  Use `fast_memeq()`, `fast_memneq()`,
 Also see a longer list of functions to avoid in:
 https://people.torproject.org/~nickm/tor-auto/internal/this-not-that.html
 
+What code can use what other code?
+----------------------------------
+
+We're trying to simplify Tor's structure over time.  In the long run, we want
+Tor to be structured as a set of modules with *no circular dependencies*.
+
+This property is currently provided by the modules in src/lib, but not
+throughout the rest of Tor.  In general, higher-level libraries may use
+lower-level libraries, but never the reverse.
+
+To prevent new circular dependencies from landing, we have a tool that
+you can invoke with `make check-includes`, and which is run
+automatically as part of `make check`.  This tool will verify that, for
+every source directory with a `.may_include` file, no local headers are
+included except those specifically permitted by the `.may_include` file.
+When editing one of these files, please make sure that you are not
+introducing any cycles into Tor's dependency graph.
+
 Floating point math is hard
 ---------------------------
 
