@@ -200,8 +200,8 @@ We have some wrapper functions like `tor_malloc`, `tor_free`, `tor_strdup`, and
 always succeed or exit.)
 
 You can get a full list of the compatibility functions that Tor provides by
-looking through `src/common/util*.h` and `src/common/compat*.h`.  You can see the
-available containers in `src/common/containers*.h`.  You should probably
+looking through `src/lib/*/*.h`.  You can see the
+available containers in `src/lib/containers/*.h`.  You should probably
 familiarize yourself with these modules before you write too much code, or
 else you'll wind up reinventing the wheel.
 

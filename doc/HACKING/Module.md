@@ -96,8 +96,8 @@ There are couples of "rules" you want to follow:
   filename as the one in the module. For example, this is a bad idea and
   should never be done:
 
-    - `src/or/shared_random.c`
-    - `src/or/dirauth/shared_random.c`
+    - `src/feature/dirclient/shared_random.c`
+    - `src/feature/dirauth/shared_random.c`
 
 * When you include headers from the module, **always** use the full module
   path in your statement. Example:
