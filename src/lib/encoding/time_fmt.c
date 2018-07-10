@@ -15,7 +15,7 @@
  **/
 
 #include "lib/encoding/time_fmt.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/escape.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"

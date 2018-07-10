@@ -9,7 +9,7 @@
 #ifndef TOR_TRACE_LOG_DEBUG_H
 #define TOR_TRACE_LOG_DEBUG_H
 
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 
 /* Stringify pre-processor trick. */
 #define XSTR(d) STR(d)

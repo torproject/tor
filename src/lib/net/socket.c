@@ -15,7 +15,7 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/err/torerr.h"
 #include "lib/lock/compat_mutex.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
 #ifdef _WIN32

@@ -10,7 +10,7 @@
 
 #include "orconfig.h"
 #include "lib/thread/numcpus.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
 #ifdef HAVE_UNISTD_H

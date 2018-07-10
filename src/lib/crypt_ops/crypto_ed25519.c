@@ -28,7 +28,7 @@
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/encoding/binascii.h"
 #include "lib/string/util_string.h"

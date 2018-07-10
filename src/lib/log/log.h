@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file torlog.h
+ * \file log.h
  *
  * \brief Headers for log.c
  **/

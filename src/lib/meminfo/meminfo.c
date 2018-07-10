@@ -15,7 +15,7 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
 #include "lib/fs/files.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/malloc/malloc.h"
 
 #ifdef HAVE_SYS_SYSCTL_H

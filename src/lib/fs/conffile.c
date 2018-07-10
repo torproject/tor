@@ -17,7 +17,7 @@
 #include "lib/fs/dir.h"
 #include "lib/fs/files.h"
 #include "lib/fs/path.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 

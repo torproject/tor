@@ -17,7 +17,7 @@
 
 #include "lib/encoding/confline.h"
 #include "lib/encoding/cstring.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
 #include "lib/string/compat_ctype.h"

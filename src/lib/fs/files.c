@@ -16,7 +16,7 @@
 #include "lib/fs/files.h"
 #include "lib/fs/path.h"
 #include "lib/container/smartlist.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/log/escape.h"
 #include "lib/err/torerr.h"

@@ -8,7 +8,7 @@
 
 #include "lib/evloop/procmon.h"
 
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/log/win32err.h"
 #include "lib/malloc/malloc.h"

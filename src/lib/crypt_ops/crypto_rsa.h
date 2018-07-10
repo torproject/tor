@@ -18,7 +18,7 @@
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/cc/torint.h"
 #include "lib/testsupport/testsupport.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 
 /** Length of our public keys. */
 #define PK_BYTES (1024/8)

@@ -26,7 +26,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/binascii.h"
 #include "lib/intmath/weakrng.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
 #include "lib/sandbox/sandbox.h"

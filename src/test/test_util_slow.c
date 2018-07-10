@@ -7,7 +7,7 @@
 #define UTIL_PRIVATE
 #define SUBPROCESS_PRIVATE
 #include "lib/crypt_ops/crypto.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/process/subprocess.h"
 #include "lib/process/waitpid.h"
 #include "lib/string/printf.h"

@@ -15,7 +15,7 @@
 #include "lib/container/buffers.h"
 #include "lib/tls/buffers_tls.h"
 #include "lib/cc/torint.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/tls/tortls.h"
 

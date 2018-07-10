@@ -15,7 +15,7 @@
 
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_lzma.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
 #include "lib/thread/threads.h"

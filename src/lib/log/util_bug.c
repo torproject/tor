@@ -9,7 +9,7 @@
 
 #include "orconfig.h"
 #include "lib/log/util_bug.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/err/backtrace.h"
 #ifdef TOR_UNIT_TESTS
 #include "lib/smartlist_core/smartlist_core.h"

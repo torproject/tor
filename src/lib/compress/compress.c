@@ -22,7 +22,7 @@
 #include <netinet/in.h>
 #endif
 
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/arch/bytes.h"
 #include "lib/ctime/di_ops.h"

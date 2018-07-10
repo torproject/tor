@@ -9,7 +9,7 @@
 #undef TOR_COVERAGE
 #include "core/or/or.h"
 #include "lib/err/backtrace.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

@@ -42,7 +42,7 @@
 #include "lib/net/socket.h"
 #include "lib/container/smartlist.h"
 #include "lib/ctime/di_ops.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/escape.h"
 #include "lib/malloc/malloc.h"
 #include "lib/net/inaddr.h"

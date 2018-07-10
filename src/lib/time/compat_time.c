@@ -13,7 +13,7 @@
 #include "lib/time/compat_time.h"
 
 #include "lib/err/torerr.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/intmath/muldiv.h"
 #include "lib/intmath/bits.h"

@@ -11,7 +11,7 @@
 #include "orconfig.h"
 #include "lib/process/pidfile.h"
 
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>

@@ -38,7 +38,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "lib/encoding/binascii.h"
 #include "lib/encoding/time_fmt.h"
 #include "lib/fs/files.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/malloc/malloc.h"
 #include "lib/net/address.h"
 #include "lib/net/inaddr.h"

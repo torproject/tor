@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file torlog.c
+ * \file log.c
  * \brief Functions to send messages to log files or the console.
  **/
 
@@ -31,7 +31,7 @@
 #endif
 
 #define LOG_PRIVATE
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/ratelim.h"
 #include "lib/lock/compat_mutex.h"
 #include "lib/smartlist_core/smartlist_core.h"

@@ -13,7 +13,7 @@
 #include "orconfig.h"
 #include "lib/fs/files.h"
 #include "lib/fs/lockfile.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
 

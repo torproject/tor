@@ -13,7 +13,7 @@
 
 #include "orconfig.h"
 
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_zstd.h"

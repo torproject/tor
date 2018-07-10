@@ -13,7 +13,7 @@
 #ifndef _WIN32
 
 #include "lib/process/waitpid.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
 #include "ht.h"

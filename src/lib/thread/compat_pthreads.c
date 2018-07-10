@@ -12,7 +12,7 @@
 
 #include "orconfig.h"
 #include "lib/thread/threads.h"
-#include "lib/log/torlog.h"
+#include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
 #include <sys/time.h>
