@@ -10,6 +10,7 @@ EXTHEADERS = \
   src/ext/tor_readpassphrase.h \
   src/ext/strlcat.c	\
   src/ext/strlcpy.c	\
+  src/ext/getdelim.c    \
   src/ext/tinytest_macros.h \
   src/ext/tor_queue.h	\
   src/ext/siphash.h \
@@ -173,4 +174,3 @@ EXTRA_DIST += \
 	src/ext/timeouts/Makefile			\
 	src/ext/timeouts/Rules.shrc			\
 	src/ext/timeouts/test-timeout.c
-
