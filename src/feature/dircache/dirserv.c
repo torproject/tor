@@ -2606,7 +2606,6 @@ int
 dirserv_read_measured_bandwidths(const char *from_file,
                                  smartlist_t *routerstatuses)
 {
-  char line[512];
   FILE *fp = tor_fopen_cloexec(from_file, "r");
   int applied_lines = 0;
   time_t file_time, now;
@@ -2617,9 +2616,10 @@ dirserv_read_measured_bandwidths(const char *from_file,
    * version 1.1.0 */
   int line_is_after_headers = 0;
   int rv = -1;
+  char *line = NULL;
+  size_t n = 0;
 
   /* Initialise line, so that we can't possibly run off the end. */
-  memset(line, 0, sizeof(line));
 
   if (fp == NULL) {
     log_warn(LD_CONFIG, "Can't open bandwidth file at configured location: %s",
@@ -2628,7 +2628,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
   }
 
   /* If fgets fails, line is either unmodified, or indeterminate. */
-  if (!fgets(line, sizeof(line), fp)) {
+  if (tor_getline(&line,&n,fp) <= 0) {
     log_warn(LD_DIRSERV, "Empty bandwidth file");
     goto err;
   }
@@ -2659,7 +2659,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
 
   while (!feof(fp)) {
     measured_bw_line_t parsed_line;
-    if (fgets(line, sizeof(line), fp) && strlen(line)) {
+    if (tor_getline(&line, &n, fp) >= 0) {
       if (measured_bw_line_parse(&parsed_line, line,
                                  line_is_after_headers) != -1) {
         /* This condition will be true when the first complete valid bw line
@@ -2682,6 +2682,8 @@ dirserv_read_measured_bandwidths(const char *from_file,
   rv = 0;
 
  err:
+  if (line)
+    raw_free(line);
   if (fp)
     fclose(fp);
   return rv;
