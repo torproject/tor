@@ -13,8 +13,20 @@
 #ifndef TOR_INADDR_ST_H
 #define TOR_INADDR_ST_H
 
+#include "orconfig.h"
+#include <stddef.h>
+
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
 #ifdef HAVE_NETINET_IN6_H
 #include <netinet/in6.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
 #endif
 
 #ifdef _WIN32
