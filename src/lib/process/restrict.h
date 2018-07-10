@@ -4,8 +4,8 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file waitpid.h
- * \brief Headers for waitpid.c
+ * \file restrict.h
+ * \brief Header for restrict.c
  **/
 
 #ifndef TOR_RESTRICT_H

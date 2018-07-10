@@ -1,6 +1,11 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file debug.h
+ * \brief Macros for debugging our event-trace support.
+ **/
+
 #ifndef TOR_TRACE_LOG_DEBUG_H
 #define TOR_TRACE_LOG_DEBUG_H
 

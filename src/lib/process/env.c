@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file env.c
+ * \brief Inspect and manipulate the environment variables.
+ **/
+
 #include "orconfig.h"
 #include "lib/process/env.h"
 

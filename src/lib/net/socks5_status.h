@@ -3,6 +3,16 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file socks5_status.h
+ * \brief Status codes used by the SOCKS5 protocol.
+ **/
+
+/* NOTE: it probably isn't necessary to put this header in lib/net, but
+ * we need it in _some_ lower-level layer for now, since it is used by
+ * tools/tor-resolve.c.
+ */
+
 #ifndef TOR_SOCKS5_STATUS_H
 #define TOR_SOCKS5_STATUS_H
 

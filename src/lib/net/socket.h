@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file socket.h
+ * \brief Header for socket.c
+ **/
+
 #ifndef TOR_SOCKET_H
 #define TOR_SOCKET_H
 

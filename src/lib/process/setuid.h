@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file setuid.h
+ * \brief Header for setuid.c
+ **/
+
 #ifndef TOR_SETUID_H
 #define TOR_SETUID_H
 

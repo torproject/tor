@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file win32err.h
+ * \brief Header for win32err.c
+ **/
+
 #ifndef TOR_WIN32ERR_H
 #define TOR_WIN32ERR_H
 

@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file util_string.c
+ * \brief Non-standard string functions used throughout Tor.
+ **/
+
 #include "lib/string/util_string.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/err/torerr.h"

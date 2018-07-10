@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file scanf.h
+ * \brief Header for scanf.c
+ **/
+
 #ifndef TOR_UTIL_SCANF_H
 #define TOR_UTIL_SCANF_H
 

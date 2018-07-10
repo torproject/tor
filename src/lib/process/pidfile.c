@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file pidfile.c
+ * \brief Record this process's PID to disk.
+ **/
+
 #include "orconfig.h"
 #include "lib/process/pidfile.h"
 

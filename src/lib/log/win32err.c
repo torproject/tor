@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file win32err.c
+ * \brief Convert windows error codes to useful C strings.
+ **/
+
 #ifdef _WIN32
 #include "orconfig.h"
 #include "lib/log/win32err.h"

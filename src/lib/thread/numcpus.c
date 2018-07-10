@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file numcpus.c
+ * \brief Compute the number of CPUs configured on this system.
+ **/
+
 #include "orconfig.h"
 #include "lib/thread/numcpus.h"
 #include "lib/log/torlog.h"

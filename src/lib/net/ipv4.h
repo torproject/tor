@@ -3,6 +3,10 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file ipv4.h
+ * \brief Header for ipv4.c
+ **/
 #ifndef TOR_IPV4_H
 #define TOR_IPV4_H
 

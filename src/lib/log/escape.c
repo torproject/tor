@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file escape.c
+ * \brief Escape untrusted strings before sending them to the log.
+ **/
+
 #include "lib/log/escape.h"
 #include "lib/log/util_bug.h"
 #include "lib/string/compat_ctype.h"

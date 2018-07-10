@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file parse_int.c
+ * \brief Convert strings into the integers they encode, with bounds checking.
+ **/
+
 #include "lib/string/parse_int.h"
 
 #include <errno.h>

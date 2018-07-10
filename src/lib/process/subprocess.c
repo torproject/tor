@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file subprocess.c
+ * \brief Launch and monitor other processes.
+ **/
+
 #define SUBPROCESS_PRIVATE
 #include "lib/process/subprocess.h"
 

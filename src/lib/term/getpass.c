@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file getpass.c
+ * \brief Cross-platform wrapper to read passphrases from the terminal.
+ **/
+
 #include "lib/term/getpass.h"
 
 #include "lib/log/util_bug.h"

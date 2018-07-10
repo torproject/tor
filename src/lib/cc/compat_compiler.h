@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_compiler.h
+ * \brief Utility macros to handle different features and behavior in different
+ *    compilers.
+ **/
+
 #ifndef TOR_COMPAT_COMPILER_H
 #define TOR_COMPAT_COMPILER_H
 

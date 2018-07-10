@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file tor_gettimeofday.h
+ * \brief Header for tor_gettimeofday.c
+ **/
+
 #ifndef TOR_GETTIMEOFDAY_H
 #define TOR_GETTIMEOFDAY_H
 

@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file crypto_openssl.c
+ * \file crypto_openssl_mgt.c
  *
  * \brief Block of functions related to operations from OpenSSL.
  **/

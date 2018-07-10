@@ -1,6 +1,11 @@
 /* Copyright (c) 2013-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file workqueue.h
+ * \brief Header for workqueue.c
+ **/
+
 #ifndef TOR_WORKQUEUE_H
 #define TOR_WORKQUEUE_H
 

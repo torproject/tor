@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file crypto_format.h
+ * \brief Header for crypto_format.c
+ **/
+
 #ifndef TOR_CRYPTO_FORMAT_H
 #define TOR_CRYPTO_FORMAT_H
 

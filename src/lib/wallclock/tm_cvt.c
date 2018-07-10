@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file tm_cvt.c
+ * \brief Convert to and from struct tm, portably.
+ **/
+
 #include "orconfig.h"
 #include "lib/cc/torint.h"
 #include "lib/cc/compat_compiler.h"

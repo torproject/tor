@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file restrict.c
+ * \brief Drop privileges from the current process.
+ **/
+
 #include "orconfig.h"
 #include "lib/process/restrict.h"
 #include "lib/intmath/cmp.h"

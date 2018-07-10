@@ -1,6 +1,11 @@
 /* Copyright (c) 2012-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file crypto_curve25519.h
+ * \brief Header for crypto_curve25519.c
+ **/
+
 #ifndef TOR_CRYPTO_CURVE25519_H
 #define TOR_CRYPTO_CURVE25519_H
 

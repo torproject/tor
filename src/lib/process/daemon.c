@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file daemon.c
+ * \brief Run the tor process in the background (unix only)
+ **/
+
 #include "orconfig.h"
 #include "lib/process/daemon.h"
 

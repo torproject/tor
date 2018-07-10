@@ -3,6 +3,13 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file timeval.h
+ *
+ * \brief Declarations for timeval-related macros that some platforms
+ * are missing.
+ **/
+
 #ifndef TOR_TIMEVAL_H
 #define TOR_TIMEVAL_H
 

@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file printf.c
+ * \brief Compatibility wrappers around snprintf and its friends
+ **/
+
 #include "lib/string/printf.h"
 #include "lib/err/torerr.h"
 #include "lib/cc/torint.h"

@@ -4,9 +4,9 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file compat_time.c
- * \brief Portable wrappers for finding out the current time, running
- *   timers, etc.
+ * \file tor_gettimeofday.c
+ * \brief Implementat gettimeofday() for windows, and other platforms without
+ *   it.
  **/
 
 #include "orconfig.h"

@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file socket.c
+ * \brief Compatibility and utility functions for working with network
+ *    sockets.
+ **/
+
 #define SOCKET_PRIVATE
 #include "lib/net/socket.h"
 #include "lib/net/address.h"

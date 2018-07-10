@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file ipv6.h
+ * \brief Header for ipv6.c
+ **/
+
 #ifndef TOR_IPV6_H
 #define TOR_IPV6_H
 

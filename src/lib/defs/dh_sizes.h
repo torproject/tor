@@ -4,6 +4,15 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file dh_sizes.h
+
+ * \brief Definitions for sizes of Diffie-Hellman groups elements in Z_p.
+ *
+ * Tor uses these definitions throughout its codebase, even in parts that
+ * don't actually do any Diffie-Hellman calculations.
+ **/
+
 #ifndef TOR_DH_SIZES_H
 #define TOR_DH_SIZES_H
 

@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file approx_time.h
+ * \brief Header for approx_time.c
+ **/
+
 #ifndef TOR_APPROX_TIME_H
 #define TOR_APPROX_TIME_H
 

@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file smartlist_foreach.h
+ * \brief Macros for iterating over the elements of a smartlist_t.
+ **/
+
 #ifndef TOR_SMARTLIST_FOREACH_H
 #define TOR_SMARTLIST_FOREACH_H
 

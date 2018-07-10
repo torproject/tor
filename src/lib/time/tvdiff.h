@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file tvdiff.h
+ * \brief Header for tvdiff.c
+ **/
+
 #ifndef TOR_TVDIFF_H
 #define TOR_TVDIFF_H
 

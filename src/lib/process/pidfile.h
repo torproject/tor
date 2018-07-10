@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file pidfile.h
+ * \brief Header for pidfile.c
+ **/
+
 #ifndef TOR_PIDFILE_H
 #define TOR_PIDFILE_H
 

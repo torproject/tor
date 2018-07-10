@@ -2,8 +2,8 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file token_bucket_rw.h
- * \brief Headers for token_bucket_rw.c
+ * \file token_bucket.h
+ * \brief Headers for token_bucket.c
  **/
 
 #ifndef TOR_TOKEN_BUCKET_H
@@ -115,4 +115,3 @@ STATIC uint32_t rate_per_sec_to_rate_per_step(uint32_t rate);
 #endif
 
 #endif /* TOR_TOKEN_BUCKET_H */
-

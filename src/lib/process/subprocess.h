@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file subprocess.h
+ * \brief Header for subprocess.c
+ **/
+
 #ifndef TOR_SUBPROCESS_H
 #define TOR_SUBPROCESS_H
 

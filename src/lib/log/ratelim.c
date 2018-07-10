@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file ratelim.c
+ * \brief Summarize similar messages that would otherwise flood the logs.
+ **/
+
 #include "lib/log/ratelim.h"
 #include "lib/malloc/util_malloc.h"
 #include "lib/string/printf.h"

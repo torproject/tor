@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file env.h
+ * \brief Header for env.c
+ **/
+
 #ifndef TOR_ENV_H
 #define TOR_ENV_H
 

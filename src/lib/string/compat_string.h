@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_string.h
+ * \brief Header for compat_string.c
+ **/
+
 #ifndef TOR_COMPAT_STRING_H
 #define TOR_COMPAT_STRING_H
 

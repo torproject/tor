@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file ipv4.c
+ * \brief Functions for encoding and decoding IPv4 addresses into strings
+ **/
+
 #include "orconfig.h"
 #include "lib/cc/torint.h"
 #include "lib/net/ipv4.h"

@@ -1,6 +1,11 @@
 /* Copyright (c) 2016-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file timers.h
+ * \brief Header for timers.c
+ **/
+
 #ifndef TOR_TIMERS_H
 #define TOR_TIMERS_H
 
@@ -28,4 +33,3 @@ STATIC void timers_run_pending(void);
 #endif
 
 #endif /* !defined(TOR_TIMERS_H) */
-

@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file smartlist_split.h
+ * \brief Header for smartlist_split.c
+ **/
+
 #ifndef TOR_SMARTLIST_SPLIT_H
 #define TOR_SMARTLIST_SPLIT_H
 

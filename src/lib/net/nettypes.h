@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file nettypes.h
+ * \brief Declarations for types used throughout the Tor networking system
+ **/
+
 #ifndef TOR_NET_TYPES_H
 #define TOR_NET_TYPES_H
 

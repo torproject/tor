@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file gethostname.h
+ * \brief Header for gethostname.c
+ **/
+
 #ifndef TOR_GETHOSTNAME_H
 #define TOR_GETHOSTNAME_H
 

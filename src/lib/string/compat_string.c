@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_string.c
+ * \brief Useful string-processing functions that some platforms don't
+ * provide.
+ **/
+
 #include "lib/string/compat_string.h"
 #include "lib/err/torerr.h"
 

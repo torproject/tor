@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file approx_time.c
+ * \brief Cache the last result of time(), for performance and testing.
+ **/
+
 #include "orconfig.h"
 #include "lib/wallclock/approx_time.h"
 

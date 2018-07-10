@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file ratelim.h
+ * \brief Summarize similar messages that would otherwise flood the logs.
+ **/
+
 #ifndef TOR_RATELIM_H
 #define TOR_RATELIM_H
 

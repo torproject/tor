@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file numcpus.h
+ * \brief Header for numcpus.c
+ **/
+
 #ifndef TOR_NUMCPUS_H
 #define TOR_NUMCPUS_H
 

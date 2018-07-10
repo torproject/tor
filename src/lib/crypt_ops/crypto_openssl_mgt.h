@@ -5,9 +5,9 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file crypto_openssl.h
+ * \file crypto_openssl_mgt.h
  *
- * \brief Headers for crypto_openssl.c
+ * \brief Headers for crypto_openssl_mgt.c
  **/
 
 #ifndef TOR_CRYPTO_OPENSSL_H

@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file setuid.c
+ * \brief Change the user ID after Tor has started (Unix only)
+ **/
+
 #include "orconfig.h"
 #include "lib/process/setuid.h"
 

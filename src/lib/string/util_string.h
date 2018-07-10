@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file util_string.h
+ * \brief Header for util_string.c
+ **/
+
 #ifndef TOR_UTIL_STRING_H
 #define TOR_UTIL_STRING_H
 

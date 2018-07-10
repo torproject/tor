@@ -3,6 +3,13 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file ipv6.c
+ * \brief Functions for encoding and decoding IPv6 addresses
+ *
+ * (Because these functions are generic, they can also handle IPv4 addresses).
+ **/
+
 #include "lib/net/ipv6.h"
 #include "lib/net/ipv4.h"
 #include "lib/string/util_string.h"

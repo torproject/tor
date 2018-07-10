@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file buffers_net.c
+ * \brief Read and write data on a buf_t object.
+ **/
+
 #define BUFFERS_PRIVATE
 #include "lib/net/buffers_net.h"
 #include "lib/container/buffers.h"

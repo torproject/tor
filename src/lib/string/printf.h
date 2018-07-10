@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file printf.h
+ * \brief Header for printf.c
+ **/
+
 #ifndef TOR_UTIL_PRINTF_H
 #define TOR_UTIL_PRINTF_H
 

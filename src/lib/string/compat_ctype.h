@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_ctype.h
+ * \brief Locale-independent character-type inspection (header)
+ **/
+
 #ifndef TOR_COMPAT_CTYPE_H
 #define TOR_COMPAT_CTYPE_H
 

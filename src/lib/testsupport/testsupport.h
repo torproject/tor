@@ -1,10 +1,24 @@
 /* Copyright (c) 2013-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file testsupport.h
+ *
+ * \brief Macros to implement mocking and selective exposure for the test code.
+ *
+ * Each Tor source file is built twice: once with TOR_UNIT_TESTS defined, and
+ * once with it undefined.  The only difference between these configurations
+ * should be that when building for the tests, more functions are exposed as
+ * non-static, and a number of functions are declared as mockable.
+ **/
+
 #ifndef TOR_TESTSUPPORT_H
 #define TOR_TESTSUPPORT_H
 
 #ifdef TOR_UNIT_TESTS
+/** The "STATIC" macro marks a function or variable that is static when
+ * building Tor for production, but non-static when building the unit
+ * tests. */
 #define STATIC
 #define EXTERN(type, name) extern type name;
 #else
@@ -87,4 +101,3 @@
 /** @} */
 
 #endif /* !defined(TOR_TESTSUPPORT_H) */
-

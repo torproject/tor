@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file uname.c
+ * \brief Look up a description of the operating system.
+ **/
+
 #include "orconfig.h"
 #include "lib/osinfo/uname.h"
 

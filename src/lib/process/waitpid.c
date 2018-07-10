@@ -4,10 +4,8 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file util_process.c
- * \brief utility functions for launching processes and checking their
- *    status. These functions are kept separately from procmon so that they
- *    won't require linking against libevent.
+ * \file waitpid.c
+ * \brief Convenience structures for handlers for handling waitpid().
  **/
 
 #include "orconfig.h"

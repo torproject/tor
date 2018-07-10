@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file tvdiff.c
+ * \brief Compute the difference between timevals, in various units.
+ **/
+
 #include "lib/time/tvdiff.h"
 
 #include "lib/cc/compat_compiler.h"

@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file smartlist_core.h
+ * \brief Top-level declarations for the smartlist_t dynamic array type.
+ **/
+
 #ifndef TOR_SMARTLIST_CORE_H
 #define TOR_SMARTLIST_CORE_H
 

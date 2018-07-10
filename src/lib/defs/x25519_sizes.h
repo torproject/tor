@@ -4,6 +4,15 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file x25519_sizes.h
+
+ * \brief Definitions for sizes of x25519 keys and elements.
+ *
+ * Tor uses these definitions throughout its codebase, even in parts that
+ * don't actually do any x25519 calculations.
+ **/
+
 #ifndef TOR_X25519_SIZES_H
 #define TOR_X25519_SIZES_H
 

@@ -1,6 +1,11 @@
 /* Copyright (c) 2009-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_libevent.h
+ * \brief Header for compat_libevent.c
+ **/
+
 #ifndef TOR_COMPAT_LIBEVENT_H
 #define TOR_COMPAT_LIBEVENT_H
 

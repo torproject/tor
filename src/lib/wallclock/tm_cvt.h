@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file tm_cvt.h
+ * \brief Header for tm_cvt.c
+ **/
+
 #ifndef TOR_WALLCLOCK_TM_CVT_H
 #define TOR_WALLCLOCK_TM_CVT_H
 

@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file escape.h
+ * \brief Header for escape.c
+ **/
+
 #ifndef TOR_ESCAPE_H
 #define TOR_ESCAPE_H
 

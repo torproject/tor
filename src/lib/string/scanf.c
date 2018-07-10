@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file scanf.c
+ * \brief Locale-independent minimal implementation of sscanf().
+ **/
+
 #include "lib/string/scanf.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/cc/torint.h"

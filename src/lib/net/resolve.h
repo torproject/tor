@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file resolve.h
+ * \brief Header for resolve.c
+ **/
+
 #ifndef TOR_RESOLVE_H
 #define TOR_RESOLVE_H
 

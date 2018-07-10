@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file buffers_tls.c
+ * \brief Read and write data on a tor_tls_t connection from a buf_t object.
+ **/
+
 #define BUFFERS_PRIVATE
 #include "orconfig.h"
 #include <stddef.h>

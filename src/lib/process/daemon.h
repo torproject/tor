@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file daemon.h
+ * \brief Header for daemon.c
+ **/
+
 #ifndef TOR_DAEMON_H
 #define TOR_DAEMON_H
 

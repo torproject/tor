@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file getpass.h
+ * \brief Header for getpass.c
+ **/
+
 #ifndef TOR_GETPASS_H
 #define TOR_GETPASS_H
 

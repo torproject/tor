@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file resolve.c
+ * \brief Use the libc DNS resolver to convert hostnames into addresses.
+ **/
+
 #include "lib/net/resolve.h"
 #include "lib/net/address.h"
 #include "lib/malloc/util_malloc.h"

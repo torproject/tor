@@ -3,6 +3,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file parse_int.h
+ * \brief Header for parse_int.c
+ **/
+
 #ifndef TOR_PARSE_INT_H
 #define TOR_PARSE_INT_H
 
