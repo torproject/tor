@@ -28,7 +28,7 @@
 #include "lib/intmath/weakrng.h"
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/util_string.h"

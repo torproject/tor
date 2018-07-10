@@ -19,7 +19,7 @@
 #include "lib/fs/userdb.h"
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>

@@ -15,7 +15,7 @@
 #include "orconfig.h"
 #include <string.h>
 #include "lib/cc/torint.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #if SIZEOF_INT == 4
 #define BITARRAY_SHIFT 5

@@ -39,7 +39,7 @@
 #include "lib/log/torlog.h"
 #include "lib/cc/torint.h"
 #include "lib/net/resolve.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/scanf.h"
 
 #include "tor_queue.h"

@@ -17,7 +17,7 @@
 
 #include "lib/container/smartlist.h"
 #include "lib/err/torerr.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/defs/digest_sizes.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/string/compat_ctype.h"

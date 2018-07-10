@@ -16,7 +16,7 @@
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
 #include "lib/log/win32err.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/process/env.h"
 #include "lib/process/waitpid.h"
 #include "lib/string/compat_ctype.h"

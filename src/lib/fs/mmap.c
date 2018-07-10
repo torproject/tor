@@ -15,7 +15,7 @@
 #include "lib/log/util_bug.h"
 #include "lib/log/win32err.h"
 #include "lib/string/compat_string.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #ifdef HAVE_MMAP
 #include <sys/mman.h>

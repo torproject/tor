@@ -12,7 +12,7 @@
 
 #include "lib/net/address.h"
 #include "lib/net/inaddr.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/parse_int.h"
 #include "lib/string/util_string.h"
 

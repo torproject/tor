@@ -18,7 +18,7 @@
 #include "lib/fs/files.h"
 #include "lib/fs/path.h"
 #include "lib/log/torlog.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 
 static smartlist_t *config_get_file_list(const char *path,

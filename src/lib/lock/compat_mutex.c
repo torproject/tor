@@ -10,7 +10,7 @@
  **/
 
 #include "lib/lock/compat_mutex.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 /** Return a newly allocated, ready-for-use mutex. */
 tor_mutex_t *

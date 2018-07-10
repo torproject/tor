@@ -11,7 +11,7 @@
 
 #include "orconfig.h"
 #include "lib/testsupport/testsupport.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 void configure_libevent_logging(void);
 void suppress_libevent_log_msg(const char *msg);

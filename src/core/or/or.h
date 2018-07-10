@@ -47,7 +47,7 @@
 #include "lib/log/escape.h"
 #include "lib/log/ratelim.h"
 #include "lib/log/util_bug.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/net/address.h"
 #include "lib/net/inaddr.h"
 #include "lib/net/socket.h"

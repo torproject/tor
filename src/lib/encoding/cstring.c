@@ -13,7 +13,7 @@
 #include "lib/encoding/cstring.h"
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/compat_ctype.h"
 
 #include <string.h>

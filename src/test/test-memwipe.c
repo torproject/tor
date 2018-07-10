@@ -5,7 +5,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 
 #include "lib/intmath/cmp.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #include <string.h>
 #include <stdio.h>

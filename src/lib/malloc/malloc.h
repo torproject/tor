@@ -4,7 +4,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file util_malloc.h
+ * \file malloc.h
  * \brief Headers for util_malloc.c
  **/
 

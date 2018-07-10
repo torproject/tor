@@ -9,7 +9,7 @@
  **/
 
 #include "lib/log/ratelim.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 
 /** If the rate-limiter <b>lim</b> is ready at <b>now</b>, return the number

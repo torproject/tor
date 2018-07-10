@@ -19,7 +19,7 @@
 #include "lib/log/win32err.h"
 #include "lib/container/smartlist.h"
 #include "lib/sandbox/sandbox.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 #include "lib/string/compat_string.h"
 

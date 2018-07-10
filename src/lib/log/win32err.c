@@ -11,7 +11,7 @@
 #ifdef _WIN32
 #include "orconfig.h"
 #include "lib/log/win32err.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #include <tchar.h>
 #include <windows.h>

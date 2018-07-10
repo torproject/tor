@@ -3,7 +3,7 @@
 #define TRUNNEL_LOCAL_H_INCLUDED
 
 #include "lib/crypt_ops/crypto_util.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/log/util_bug.h"
 
 #define trunnel_malloc tor_malloc

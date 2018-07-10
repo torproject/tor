@@ -44,7 +44,7 @@
 #include "lib/ctime/di_ops.h"
 #include "lib/log/torlog.h"
 #include "lib/log/escape.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/net/inaddr.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/string/compat_string.h"

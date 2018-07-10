@@ -15,7 +15,7 @@
 
 #include "lib/cc/torint.h"
 #include "lib/defs/digest_sizes.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 /** Length of a sha1 message digest when encoded in base32 with trailing =
  * signs removed. */

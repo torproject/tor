@@ -41,7 +41,7 @@
 #include "lib/intmath/bits.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/printf.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/util_string.h"
 #include "lib/wallclock/tor_gettimeofday.h"
 #include "lib/wallclock/approx_time.h"

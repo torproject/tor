@@ -30,7 +30,7 @@
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
 #include "lib/ctime/di_ops.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 #include "lib/time/compat_time.h"
 

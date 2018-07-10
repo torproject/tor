@@ -22,7 +22,7 @@
 #include "lib/log/escape.h"
 #include "lib/log/torlog.h"
 #include "lib/log/util_bug.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/memarea/memarea.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/string/printf.h"

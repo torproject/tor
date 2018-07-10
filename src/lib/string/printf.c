@@ -11,7 +11,7 @@
 #include "lib/string/printf.h"
 #include "lib/err/torerr.h"
 #include "lib/cc/torint.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #include <stdlib.h>
 #include <stdio.h>

@@ -15,7 +15,7 @@
 #include "lib/smartlist_core/smartlist_core.h"
 #include "lib/smartlist_core/smartlist_foreach.h"
 #endif
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/string/printf.h"
 
 #include <string.h>

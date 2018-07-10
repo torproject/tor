@@ -32,7 +32,7 @@
 #include "lib/compress/compress_zlib.h"
 #include "lib/compress/compress_zstd.h"
 #include "lib/intmath/cmp.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 #include "lib/thread/threads.h"
 
 /** Total number of bytes allocated for compression state overhead. */

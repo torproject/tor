@@ -52,7 +52,7 @@
 #include "orconfig.h"
 
 #include "lib/log/util_bug.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 #define HANDLE_ENTRY(name, structname)         \
   struct name ## _handle_head_t *handle_head
