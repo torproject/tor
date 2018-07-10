@@ -4,6 +4,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file statefile.h
+ *
+ * \brief Header for statefile.c
+ */
+
 #ifndef TOR_STATEFILE_H
 #define TOR_STATEFILE_H
 

@@ -4,6 +4,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file or_state_t
+ *
+ * \brief The or_state_t structure, which represents Tor's state file.
+ */
+
 #ifndef TOR_OR_STATE_ST_H
 #define TOR_OR_STATE_ST_H
 

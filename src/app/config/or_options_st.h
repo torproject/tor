@@ -4,6 +4,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file or_options_st.h
+ *
+ * \brief The or_options_t structure, which represents Tor's configuration.
+ */
+
 #ifndef TOR_OR_OPTIONS_ST_H
 #define TOR_OR_OPTIONS_ST_H
 

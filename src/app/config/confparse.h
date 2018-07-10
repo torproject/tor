@@ -4,6 +4,12 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file confparse.h
+ *
+ * \brief Header for confparse.c.
+ */
+
 #ifndef TOR_CONFPARSE_H
 #define TOR_CONFPARSE_H
 
