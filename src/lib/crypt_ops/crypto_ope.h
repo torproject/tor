@@ -26,6 +26,8 @@
  */
 #define OPE_INPUT_MAX (1<<18)
 
+#define CRYPTO_OPE_ERROR UINT64_MAX
+
 typedef struct crypto_ope_c crypto_ope_t;
 
 crypto_ope_t *crypto_ope_new(const uint8_t *key);
