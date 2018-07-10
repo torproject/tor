@@ -129,6 +129,13 @@
 #endif
 #endif /* defined(HAVE_LINUX_NETFILTER_IPV6_IP6_TABLES_H) */
 
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+#ifdef HAVE_SYS_IOCTL_H
+#include <sys/ioctl.h>
+#endif
+
 #if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
 #include <net/if.h>
 #include <net/pfvar.h>
