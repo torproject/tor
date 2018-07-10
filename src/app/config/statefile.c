@@ -43,6 +43,7 @@
 #include "lib/sandbox/sandbox.h"
 #include "app/config/statefile.h"
 #include "lib/encoding/confline.h"
+#include "lib/net/resolve.h"
 
 #include "app/config/or_state_st.h"
 

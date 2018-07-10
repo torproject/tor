@@ -10,6 +10,7 @@
 #define ROUTERSET_PRIVATE
 #include "core/or/or.h"
 #include "lib/net/address.h"
+#include "lib/net/resolve.h"
 #include "feature/client/addressmap.h"
 #include "feature/client/bridges.h"
 #include "core/or/circuitmux_ewma.h"

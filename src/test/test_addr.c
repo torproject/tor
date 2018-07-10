@@ -10,6 +10,7 @@
 #include "test/test.h"
 #include "feature/client/addressmap.h"
 #include "test/log_test_helpers.h"
+#include "lib/net/resolve.h"
 
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>

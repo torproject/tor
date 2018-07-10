@@ -24,6 +24,7 @@
 #include "core/or/relay.h"
 #include "feature/nodelist/routerlist.h"
 #include "lib/encoding/confline.h"
+#include "lib/net/resolve.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/connection_st.h"

@@ -106,6 +106,7 @@
 #include "feature/client/transports.h"
 #include "feature/relay/ext_orport.h"
 #include "feature/dircommon/voting_schedule.h"
+#include "lib/net/resolve.h"
 #ifdef _WIN32
 #include <shlobj.h>
 #endif
