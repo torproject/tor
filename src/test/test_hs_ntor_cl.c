@@ -18,6 +18,7 @@
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_format.h"
+#include "lib/crypt_ops/crypto_init.h"
 #include "core/crypto/hs_ntor.h"
 #include "core/crypto/onion_ntor.h"
 
@@ -240,7 +241,11 @@ main(int argc, char **argv)
     return 1;
   }
 
+  init_logging(1);
   curve25519_init();
+  if (crypto_global_init(0, NULL, NULL) < 0)
+    return 1;
+
   if (!strcmp(argv[1], "client1")) {
     return client1(argc, argv);
   } else if (!strcmp(argv[1], "server1")) {
