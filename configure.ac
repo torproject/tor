@@ -902,6 +902,7 @@ AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
 ])
 
 AC_CHECK_FUNCS([ \
+		ERR_load_KDF_strings \
 		SSL_SESSION_get_master_key \
 		SSL_get_server_random \
                 SSL_get_client_ciphers \
