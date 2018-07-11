@@ -82,8 +82,6 @@ if test "$enable_memory_sentinels" = "no"; then
            [Defined if we're turning off memory safety code to look for bugs])
 fi
 
-AM_CONDITIONAL(USE_OPENBSD_MALLOC, test "x$enable_openbsd_malloc" = "xyes")
-
 AC_ARG_ENABLE(asciidoc,
      AS_HELP_STRING(--disable-asciidoc, [don't use asciidoc (disables building of manpages)]),
      [case "${enableval}" in
@@ -1766,19 +1764,70 @@ AC_ARG_WITH(tcmalloc,
 AS_HELP_STRING(--with-tcmalloc, [use tcmalloc memory allocation library]),
 [ tcmalloc=yes ], [ tcmalloc=no ])
 
-if test "x$tcmalloc" = "xyes"; then
-   LDFLAGS="-ltcmalloc $LDFLAGS"
+default_malloc=system
+
+if test "x$enable_openbsd_malloc" = "xyes" ; then
+  AC_MSG_NOTICE([The --enable-openbsd-malloc argument is deprecated; use --with-malloc=openbsd instead.])
+  default_malloc=openbsd
 fi
 
-using_custom_malloc=no
-if test "x$enable_openbsd_malloc" = "xyes"; then
-   using_custom_malloc=yes
-fi
 if test "x$tcmalloc" = "xyes"; then
-   using_custom_malloc=yes
+  AC_MSG_NOTICE([The --with-tcmalloc argument is deprecated; use --with-malloc=tcmalloc instead.])
+  default_malloc=tcmalloc
 fi
-if test "$using_custom_malloc" = "no"; then
-   AC_CHECK_FUNCS(mallinfo)
+
+AC_ARG_WITH(malloc,
+   AS_HELP_STRING([--with-malloc=[system,jemalloc,tcmalloc,openbsd]],
+                  [select special malloc implementation [system]]),
+   [ malloc="$with_malloc" ], [ malloc="$default_malloc" ])
+
+AS_CASE([$malloc],
+  [tcmalloc], [
+      PKG_CHECK_MODULES([TCMALLOC],
+			[libtcmalloc],
+			have_tcmalloc=yes,
+			have_tcmalloc=no)
+
+      if test "x$have_tcmalloc" = "xno" ; then
+          AC_MSG_ERROR([Unable to find tcmalloc requested by --with-malloc.])
+      fi
+
+      CFLAGS="$CFLAGS $TCMALLOC_CFLAGS"
+      LIBS="$TCMALLOC_LIBS $LIBS"
+  ],
+
+  [jemalloc], [
+      PKG_CHECK_MODULES([JEMALLOC],
+		        [jemalloc],
+			have_jemalloc=yes,
+			have_jemalloc=no)
+
+      if test "x$have_tcmalloc" = "xno" ; then
+          AC_MSG_ERROR([Unable to find jemalloc requested by --with-malloc.])
+      fi
+
+      CFLAGS="$CFLAGS $JEMALLOC_CFLAGS"
+      LIBS="$JEMALLOC_LIBS $LIBS"
+      using_custom_malloc=yes
+  ],
+
+  [openbsd], [
+    enable_openbsd_malloc=yes
+  ],
+
+  [system], [
+     # handle this later, including the jemalloc fallback
+    AC_CHECK_FUNCS(mallinfo)
+  ],
+
+  [AC_MSG_ERROR([--with-malloc=`$with_malloc' not supported, see --help])
+])
+
+AM_CONDITIONAL(USE_OPENBSD_MALLOC, test "x$enable_openbsd_malloc" = "xyes")
+
+if test "$malloc" != "system"; then
+  # Tell the C compiler not to use the system allocator functions.
+  TOR_CHECK_CFLAGS([-fno-builtin-malloc -fno-builtin-realloc -fno-builtin-calloc -fno-builtin-free])
 fi
 
 # By default, we're going to assume we don't have mlockall()
