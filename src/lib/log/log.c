@@ -32,6 +32,7 @@
 
 #define LOG_PRIVATE
 #include "lib/log/log.h"
+#include "lib/log/git_revision.h"
 #include "lib/log/ratelim.h"
 #include "lib/lock/compat_mutex.h"
 #include "lib/smartlist_core/smartlist_core.h"
@@ -353,13 +354,6 @@ log_tor_version(logfile_t *lf, int reset)
   return 0;
 }
 
-static const char bug_suffix[] = " (on Tor " VERSION
-#ifndef _MSC_VER
-  " "
-#include "micro-revision.i"
-#endif
-  ")";
-
 /** Helper: Format a log message into a fixed-sized buffer. (This is
  * factored out of <b>logv</b> so that we never format a message more
  * than once.)  Return a pointer to the first character of the message
@@ -442,9 +436,9 @@ format_msg(char *buf, size_t buf_len,
   }
 
   if (domain == LD_BUG &&
-      buf_len - n > strlen(bug_suffix)+1) {
-    memcpy(buf+n, bug_suffix, strlen(bug_suffix));
-    n += strlen(bug_suffix);
+      buf_len - n > strlen(tor_bug_suffix)+1) {
+    memcpy(buf+n, tor_bug_suffix, strlen(tor_bug_suffix));
+    n += strlen(tor_bug_suffix);
   }
 
   buf[n]='\n';

@@ -7,6 +7,6 @@
 #define TOR_GIT_REVISION_H
 
 extern const char tor_git_revision[];
+extern const char tor_bug_suffix[];
 
 #endif /* !defined(TOR_GIT_REVISION_H) */
-

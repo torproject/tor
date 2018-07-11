@@ -85,7 +85,7 @@
 #include "feature/relay/dns.h"
 #include "core/or/dos.h"
 #include "feature/client/entrynodes.h"
-#include "core/or/git_revision.h"
+#include "lib/log/git_revision.h"
 #include "feature/stats/geoip.h"
 #include "feature/hibernate/hibernate.h"
 #include "core/mainloop/main.h"
