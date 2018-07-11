@@ -3098,6 +3098,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
          !options->RecommendedServerVersions))
       REJECT("Versioning authoritative dir servers must set "
              "Recommended*Versions.");
+
+    char *t;
+    /* Call these functions to produce warnings only. */
+    t = format_recommended_version_list(options->RecommendedClientVersions, 1);
+    tor_free(t);
+    t = format_recommended_version_list(options->RecommendedServerVersions, 1);
+    tor_free(t);
+
     if (options->UseEntryGuards) {
       log_info(LD_CONFIG, "Authoritative directory servers can't set "
                "UseEntryGuards. Disabling.");
@@ -8003,4 +8011,3 @@ init_cookie_authentication(const char *fname, const char *header,
   tor_free(cookie_file_str);
   return retval;
 }
-
