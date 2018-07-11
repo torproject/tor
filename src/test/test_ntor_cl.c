@@ -9,6 +9,7 @@
 #include "core/or/or.h"
 #include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_init.h"
 #include "core/crypto/onion_ntor.h"
 
 #define N_ARGS(n) STMT_BEGIN {                                  \
@@ -153,7 +154,11 @@ main(int argc, char **argv)
     return 1;
   }
 
+  init_logging(1);
   curve25519_init();
+  if (crypto_global_init(0, NULL, NULL) < 0)
+    return 1;
+
   if (!strcmp(argv[1], "client1")) {
     return client1(argc, argv);
   } else if (!strcmp(argv[1], "server1")) {
@@ -165,4 +170,3 @@ main(int argc, char **argv)
     return 1;
   }
 }
-
