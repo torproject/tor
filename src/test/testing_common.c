@@ -223,6 +223,13 @@ an_assertion_failed(void)
   tinytest_set_test_failed_();
 }
 
+void tinytest_postfork(void);
+void
+tinytest_postfork(void)
+{
+  crypto_postfork();
+}
+
 /** Main entry point for unit test code: parse the command line, and run
  * some unit tests. */
 int

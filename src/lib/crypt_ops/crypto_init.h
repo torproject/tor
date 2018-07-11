@@ -24,5 +24,6 @@ int crypto_global_init(int hardwareAccel,
 
 void crypto_thread_cleanup(void);
 int crypto_global_cleanup(void);
+void crypto_postfork(void);
 
 #endif /* !defined(TOR_CRYPTO_H) */

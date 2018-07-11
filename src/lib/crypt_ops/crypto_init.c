@@ -127,3 +127,13 @@ crypto_global_cleanup(void)
 
   return 0;
 }
+
+/** Run operations that the crypto library requires to be happy again
+ * after forking. */
+void
+crypto_postfork(void)
+{
+#ifdef ENABLE_NSS
+  crypto_nss_postfork();
+#endif
+}

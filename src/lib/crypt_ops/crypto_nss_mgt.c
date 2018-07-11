@@ -93,3 +93,10 @@ crypto_nss_global_cleanup(void)
 {
   NSS_Shutdown();
 }
+
+void
+crypto_nss_postfork(void)
+{
+  crypto_nss_global_cleanup();
+  crypto_nss_early_init();
+}

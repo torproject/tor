@@ -26,6 +26,8 @@ void crypto_nss_early_init(void);
 int crypto_nss_late_init(void);
 
 void crypto_nss_global_cleanup(void);
+
+void crypto_nss_postfork(void);
 #endif
 
 #endif /* !defined(TOR_CRYPTO_NSS_H) */
