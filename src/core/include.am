@@ -34,7 +34,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/or/connection_edge.c		\
 	src/core/or/connection_or.c		\
 	src/core/or/dos.c			\
-	src/core/or/git_revision.c		\
 	src/core/or/policies.c			\
 	src/core/or/protover.c			\
 	src/core/or/reasons.c			\
@@ -135,10 +134,6 @@ else
 src_core_libtor_app_testing_a_SOURCES =
 endif
 
-src/core/or/git_revision.$(OBJEXT) \
-  src/core/or/src_core_libtor_app_testing_a-git_revision.$(OBJEXT): \
-	micro-revision.i
-
 AM_CPPFLAGS += -DSHARE_DATADIR="\"$(datadir)\""		\
 		-DLOCALSTATEDIR="\"$(localstatedir)\""	\
 		-DBINDIR="\"$(bindir)\""
@@ -190,7 +185,6 @@ noinst_HEADERS +=					\
 	src/core/or/entry_connection_st.h		\
 	src/core/or/entry_port_cfg_st.h			\
 	src/core/or/extend_info_st.h			\
-	src/core/or/git_revision.h			\
 	src/core/or/listener_connection_st.h		\
 	src/core/or/or.h				\
 	src/core/or/or_circuit_st.h			\
