@@ -17,6 +17,7 @@
 #include "lib/string/util_string.h"
 #include "lib/lock/compat_mutex.h"
 #include "lib/log/log.h"
+#include "lib/log/util_bug.h"
 #include "lib/testsupport/testsupport.h"
 #include "lib/thread/threads.h"
 
@@ -52,6 +53,27 @@ STATIC char * parse_openssl_version_str(const char *raw_version);
 STATIC void openssl_locking_cb_(int mode, int n, const char *file, int line);
 STATIC void tor_set_openssl_thread_id(CRYPTO_THREADID *threadid);
 #endif
+
+/** Log all pending crypto errors at level <b>severity</b>.  Use
+ * <b>doing</b> to describe our current activities.
+ */
+void
+crypto_openssl_log_errors(int severity, const char *doing)
+{
+  unsigned long err;
+  const char *msg, *lib, *func;
+  while ((err = ERR_get_error()) != 0) {
+    msg = (const char*)ERR_reason_error_string(err);
+    lib = (const char*)ERR_lib_error_string(err);
+    func = (const char*)ERR_func_error_string(err);
+    if (!msg) msg = "(null)";
+    if (!lib) lib = "(null)";
+    if (!func) func = "(null)";
+    if (BUG(!doing)) doing = "(null)";
+    tor_log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)",
+              doing, msg, lib, func);
+  }
+}
 
 /* Returns a trimmed and human-readable version of an openssl version string
 * <b>raw_version</b>. They are usually in the form of 'OpenSSL 1.0.0b 10

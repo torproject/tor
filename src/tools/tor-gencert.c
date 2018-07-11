@@ -15,6 +15,7 @@
 
 #include "lib/cc/compat_compiler.h"
 #include "lib/crypt_ops/crypto_init.h"
+#include "lib/crypt_ops/crypto_openssl_mgt.h"
 
 /* Some versions of OpenSSL declare X509_STORE_CTX_set_verify_cb twice in
  * x509.h and x509_vfy.h. Suppress the GCC warning so we can build with
@@ -267,7 +268,7 @@ load_identity_key(void)
                IDENTITY_KEY_BITS);
     if (!(key = generate_key(IDENTITY_KEY_BITS))) {
       log_err(LD_GENERAL, "Couldn't generate identity key.");
-      crypto_log_errors(LOG_ERR, "Generating identity key");
+      crypto_openssl_log_errors(LOG_ERR, "Generating identity key");
       return 1;
     }
     identity_key = EVP_PKEY_new();
@@ -289,7 +290,7 @@ load_identity_key(void)
                                        NULL, NULL)) {
       log_err(LD_GENERAL, "Couldn't write identity key to %s",
               identity_key_file);
-      crypto_log_errors(LOG_ERR, "Writing identity key");
+      crypto_openssl_log_errors(LOG_ERR, "Writing identity key");
       abort_writing_to_file(open_file);
       return 1;
     }
@@ -354,7 +355,7 @@ generate_signing_key(void)
              SIGNING_KEY_BITS);
   if (!(key = generate_key(SIGNING_KEY_BITS))) {
     log_err(LD_GENERAL, "Couldn't generate signing key.");
-    crypto_log_errors(LOG_ERR, "Generating signing key");
+    crypto_openssl_log_errors(LOG_ERR, "Generating signing key");
     return 1;
   }
   signing_key = EVP_PKEY_new();
@@ -370,7 +371,7 @@ generate_signing_key(void)
 
   /* Write signing key with no encryption. */
   if (!PEM_write_RSAPrivateKey(f, key, NULL, NULL, 0, NULL, NULL)) {
-    crypto_log_errors(LOG_WARN, "writing signing key");
+    crypto_openssl_log_errors(LOG_WARN, "writing signing key");
     abort_writing_to_file(open_file);
     return 1;
   }
@@ -394,7 +395,7 @@ key_to_string(EVP_PKEY *key)
 
   b = BIO_new(BIO_s_mem());
   if (!PEM_write_bio_RSAPublicKey(b, rsa)) {
-    crypto_log_errors(LOG_WARN, "writing public key to string");
+    crypto_openssl_log_errors(LOG_WARN, "writing public key to string");
     RSA_free(rsa);
     return NULL;
   }

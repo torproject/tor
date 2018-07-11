@@ -69,6 +69,8 @@
 #define NEW_THREAD_API
 #endif /* OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5) && ... */
 
+void crypto_openssl_log_errors(int severity, const char *doing);
+
 /* global openssl state */
 const char * crypto_openssl_get_version_str(void);
 const char * crypto_openssl_get_header_version_str(void);

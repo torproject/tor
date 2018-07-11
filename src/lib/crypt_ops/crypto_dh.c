@@ -269,7 +269,7 @@ crypto_dh_new(int dh_type)
   /* LCOV_EXCL_START
    * This error condition is only reached when an allocation fails */
  err:
-  crypto_log_errors(LOG_WARN, "creating DH object");
+  crypto_openssl_log_errors(LOG_WARN, "creating DH object");
   if (res->dh) DH_free(res->dh); /* frees p and g too */
   tor_free(res);
   return NULL;
@@ -309,7 +309,7 @@ crypto_dh_generate_public(crypto_dh_t *dh)
   if (!DH_generate_key(dh->dh)) {
     /* LCOV_EXCL_START
      * To test this we would need some way to tell openssl to break DH. */
-    crypto_log_errors(LOG_WARN, "generating DH key");
+    crypto_openssl_log_errors(LOG_WARN, "generating DH key");
     return -1;
     /* LCOV_EXCL_STOP */
   }
@@ -472,7 +472,7 @@ crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
  error:
   result = -1;
  done:
-  crypto_log_errors(LOG_WARN, "completing DH handshake");
+  crypto_openssl_log_errors(LOG_WARN, "completing DH handshake");
   if (pubkey_bn)
     BN_clear_free(pubkey_bn);
   if (secret_tmp) {
