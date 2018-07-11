@@ -14,7 +14,7 @@
 #include "lib/string/util_string.h"
 #include "lib/string/printf.h"
 #include "lib/memarea/memarea.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_rsa.h"
 
 #include <string.h>
 

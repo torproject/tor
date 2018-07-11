@@ -21,7 +21,7 @@
 #include "test/hs_test_helpers.h"
 
 #include "app/config/config.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "core/or/channeltls.h"
 #include "feature/dircache/directory.h"

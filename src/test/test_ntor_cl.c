@@ -7,7 +7,7 @@
 
 #define ONION_NTOR_PRIVATE
 #include "core/or/or.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "core/crypto/onion_ntor.h"
 

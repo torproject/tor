@@ -7,7 +7,7 @@ endif
 
 src_lib_libtor_crypt_ops_a_SOURCES =			\
 	src/lib/crypt_ops/aes.c				\
-	src/lib/crypt_ops/crypto.c			\
+	src/lib/crypt_ops/crypto_cipher.c		\
 	src/lib/crypt_ops/crypto_curve25519.c		\
 	src/lib/crypt_ops/crypto_dh.c			\
 	src/lib/crypt_ops/crypto_digest.c		\
@@ -39,7 +39,7 @@ noinst_HEADERS +=					\
 	src/lib/crypt_ops/crypto_digest.h		\
 	src/lib/crypt_ops/crypto_ed25519.h		\
 	src/lib/crypt_ops/crypto_format.h		\
-	src/lib/crypt_ops/crypto.h			\
+	src/lib/crypt_ops/crypto_cipher.h		\
 	src/lib/crypt_ops/crypto_hkdf.h			\
 	src/lib/crypt_ops/crypto_init.h			\
 	src/lib/crypt_ops/crypto_openssl_mgt.h		\

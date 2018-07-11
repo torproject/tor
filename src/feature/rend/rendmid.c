@@ -12,7 +12,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "app/config/config.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "core/or/dos.h"
 #include "core/or/relay.h"
 #include "feature/rend/rendmid.h"

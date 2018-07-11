@@ -7,7 +7,7 @@
 #include "app/config/config.h"
 #include "test/fuzz/fuzzing.h"
 #include "lib/compress/compress.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
 static or_options_t *mock_options = NULL;

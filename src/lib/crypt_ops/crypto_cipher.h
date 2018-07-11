@@ -5,19 +5,18 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file crypto.h
+ * \file crypto_cipher.h
  *
- * \brief Headers for crypto.c
+ * \brief Headers for crypto_cipher.c
  **/
 
-#ifndef TOR_CRYPTO_H
-#define TOR_CRYPTO_H
+#ifndef TOR_CRYPTO_CIPHER_H
+#define TOR_CRYPTO_CIPHER_H
 
 #include "orconfig.h"
 
 #include <stdio.h>
 #include "lib/cc/torint.h"
-#include "lib/crypt_ops/crypto_rsa.h"
 
 /** Length of our symmetric cipher's keys of 128-bit. */
 #define CIPHER_KEY_LEN 16
@@ -25,10 +24,6 @@
 #define CIPHER_IV_LEN 16
 /** Length of our symmetric cipher's keys of 256-bit. */
 #define CIPHER256_KEY_LEN 32
-
-/** Length of encoded public key fingerprints, including space; but not
- * including terminating NUL. */
-#define FINGERPRINT_LEN 49
 
 typedef struct aes_cnt_cipher crypto_cipher_t;
 

@@ -29,6 +29,10 @@
 /** Number of bytes added for PKCS1-OAEP padding. */
 #define PKCS1_OAEP_PADDING_OVERHEAD 42
 
+/** Length of encoded public key fingerprints, including space; but not
+ * including terminating NUL. */
+#define FINGERPRINT_LEN 49
+
 /** A public key, or a public/private key-pair. */
 typedef struct crypto_pk_t crypto_pk_t;
 

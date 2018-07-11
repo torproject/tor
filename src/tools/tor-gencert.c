@@ -33,9 +33,9 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 #include <errno.h>
 
-#include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rsa.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/binascii.h"
 #include "lib/encoding/time_fmt.h"

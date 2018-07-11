@@ -5,15 +5,13 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file crypto.c
- * \brief Wrapper functions to present a consistent interface to
- * public-key and symmetric cryptography operations from OpenSSL and
- * other places.
+ * \file crypto_cipher.c
+ * \brief Symmetric cryptography (low-level) with AES.
  **/
 
 #include "orconfig.h"
 
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 

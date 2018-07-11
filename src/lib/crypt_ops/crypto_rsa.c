@@ -9,7 +9,7 @@
  * \brief Block of functions related with RSA utilities and operations.
  **/
 
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_format.h"

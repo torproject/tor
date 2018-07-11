@@ -6,7 +6,7 @@
 #include "orconfig.h"
 #define UTIL_PRIVATE
 #define SUBPROCESS_PRIVATE
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/log/log.h"
 #include "lib/process/subprocess.h"
 #include "lib/process/waitpid.h"

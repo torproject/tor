@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "core/or/or.h"
 #include "test/test.h"
 
