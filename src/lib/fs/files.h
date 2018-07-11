@@ -104,6 +104,9 @@ char *read_file_to_str_until_eof(int fd, size_t max_bytes_to_read,
   ATTR_MALLOC;
 
 #if !defined(HAVE_GETDELIM) || defined(TOR_UNIT_TESTS)
+/** Internal back-end function to implement getdelim(): only exists when
+ * Tor is built for unit tests, or when Tor is built on an operating system
+ * without its own getdelim(). */
 ssize_t compat_getdelim_(char **lineptr, size_t *n, int delim, FILE *stream);
 #endif
 
@@ -111,6 +114,8 @@ ssize_t compat_getdelim_(char **lineptr, size_t *n, int delim, FILE *stream);
 /**
  * Cross-platform wrapper for getdelim(): behaves as the POSIX-standard
  * getdelim() function.
+ *
+ * See `getdelim(3)` for more information.
  *
  * Note that this function will use the libc memory allocator -- so any memory
  * passed to this function must come from raw_malloc(), and must be freed by
