@@ -1438,6 +1438,10 @@ fi
 if test "$using_custom_malloc" = "no"; then
    AC_CHECK_FUNCS(mallinfo)
 fi
+if test "$using_custom_malloc" = "yes"; then
+  # Tell the C compiler not to use the system allocator functions.
+  TOR_CHECK_CFLAGS([-fno-builtin-malloc -fno-builtin-realloc -fno-builtin-calloc -fno-builtin-free])
+fi
 
 # By default, we're going to assume we don't have mlockall()
 # bionic and other platforms have various broken mlockall subsystems.
