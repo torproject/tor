@@ -2682,8 +2682,10 @@ dirserv_read_measured_bandwidths(const char *from_file,
   rv = 0;
 
  err:
-  if (line)
+  if (line) {
+    // we need to raw_free this buffer because we got it from tor_getdelim()
     raw_free(line);
+  }
   if (fp)
     fclose(fp);
   return rv;
