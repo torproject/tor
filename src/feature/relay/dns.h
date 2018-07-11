@@ -40,6 +40,7 @@ int dns_seems_to_be_broken_for_ipv6(void);
 void dns_reset_correctness_checks(void);
 size_t dns_cache_total_allocation(void);
 void dump_dns_mem_usage(int severity);
+size_t dns_cache_handle_oom(time_t now, size_t min_remove_bytes);
 
 #ifdef DNS_PRIVATE
 #include "feature/relay/dns_structs.h"
