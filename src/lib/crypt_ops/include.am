@@ -15,13 +15,21 @@ src_lib_libtor_crypt_ops_a_SOURCES =			\
 	src/lib/crypt_ops/crypto_format.c		\
 	src/lib/crypt_ops/crypto_hkdf.c			\
 	src/lib/crypt_ops/crypto_init.c			\
-	src/lib/crypt_ops/crypto_openssl_mgt.c		\
 	src/lib/crypt_ops/crypto_pwbox.c		\
 	src/lib/crypt_ops/crypto_rand.c			\
 	src/lib/crypt_ops/crypto_rsa.c			\
 	src/lib/crypt_ops/crypto_s2k.c			\
 	src/lib/crypt_ops/crypto_util.c                 \
 	src/lib/crypt_ops/digestset.c
+
+if USE_NSS
+src_lib_libtor_crypt_ops_a_SOURCES +=			\
+	src/lib/crypt_ops/crypto_nss_mgt.c
+endif
+if USE_OPENSSL
+src_lib_libtor_crypt_ops_a_SOURCES +=			\
+	src/lib/crypt_ops/crypto_openssl_mgt.c
+endif
 
 src_lib_libtor_crypt_ops_a_CFLAGS = $(AM_CFLAGS) $(TOR_CFLAGS_CRYPTLIB)
 

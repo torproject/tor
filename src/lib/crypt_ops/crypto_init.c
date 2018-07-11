@@ -18,6 +18,7 @@
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
+#include "lib/crypt_ops/crypto_nss_mgt.h"
 #include "lib/crypt_ops/crypto_rand.h"
 
 #include "siphash.h"
@@ -56,6 +57,9 @@ crypto_early_init(void)
 #ifdef ENABLE_OPENSSL
     crypto_openssl_early_init();
 #endif
+#ifdef ENABLE_NSS
+    crypto_nss_early_init();
+#endif
 
     if (crypto_seed_rng() < 0)
       return -1;
@@ -80,7 +84,12 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
     crypto_global_initialized_ = 1;
 
 #ifdef ENABLE_OPENSSL
-    return crypto_openssl_late_init(useAccel, accelName, accelDir);
+    if (crypto_openssl_late_init(useAccel, accelName, accelDir) < 0)
+      return -1;
+#endif
+#ifdef ENABLE_NSS
+    if (crypto_nss_late_init() < 0)
+      return -1;
 #endif
   }
   return 0;
@@ -90,8 +99,8 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 void
 crypto_thread_cleanup(void)
 {
-#ifndef NEW_THREAD_API
-  ERR_remove_thread_state(NULL);
+#ifdef ENABLE_OPENSSL
+  crypto_openssl_thread_cleanup();
 #endif
 }
 
@@ -106,6 +115,9 @@ crypto_global_cleanup(void)
 
 #ifdef ENABLE_OPENSSL
   crypto_openssl_global_cleanup();
+#endif
+#ifdef ENABLE_NSS
+  crypto_nss_global_cleanup();
 #endif
 
   crypto_early_initialized_ = 0;

@@ -14,6 +14,8 @@
 #define TOR_CRYPTO_OPENSSL_H
 
 #include "orconfig.h"
+
+#ifdef ENABLE_OPENSSL
 #include <openssl/engine.h>
 
 /*
@@ -75,13 +77,13 @@ void crypto_openssl_log_errors(int severity, const char *doing);
 const char * crypto_openssl_get_version_str(void);
 const char * crypto_openssl_get_header_version_str(void);
 
-/* OpenSSL threading setup function */
-int setup_openssl_threading(void);
-
 void crypto_openssl_early_init(void);
 int crypto_openssl_late_init(int useAccel, const char *accelName,
                              const char *accelDir);
 
+void crypto_openssl_thread_cleanup(void);
 void crypto_openssl_global_cleanup(void);
+
+#endif /* ENABLE_OPENSSL */
 
 #endif /* !defined(TOR_CRYPTO_OPENSSL_H) */

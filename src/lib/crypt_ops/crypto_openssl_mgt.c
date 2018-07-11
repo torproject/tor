@@ -153,7 +153,7 @@ tor_set_openssl_thread_id(CRYPTO_THREADID *threadid)
 
 /** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
  * multithreaded. Returns 0. */
-int
+static int
 setup_openssl_threading(void)
 {
 #ifndef NEW_THREAD_API
@@ -350,6 +350,15 @@ crypto_openssl_late_init(int useAccel, const char *accelName,
   evaluate_ctr_for_aes();
 
   return 0;
+}
+
+/** Free crypto resources held by this thread. */
+void
+crypto_openssl_thread_cleanup(void)
+{
+#ifndef NEW_THREAD_API
+  ERR_remove_thread_state(NULL);
+#endif
 }
 
 /** Clean up global resources held by openssl. */
