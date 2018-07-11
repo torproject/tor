@@ -1,0 +1,5 @@
+  o Minor features (compilation):
+    - Tor's configure script now supports a --with-malloc= option to select
+      your malloc implementation. Supported options are "tcmalloc",
+      "jemalloc", "openbsd", and "system" (the default). Addresses part of
+      ticket 202424. Based on a patch from "Hello71".
