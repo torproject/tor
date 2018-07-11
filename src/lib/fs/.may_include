@@ -1,4 +1,7 @@
 orconfig.h
+
+ext/getdelim.c
+
 lib/cc/*.h
 lib/container/*.h
 lib/encoding/*.h

@@ -2606,7 +2606,6 @@ int
 dirserv_read_measured_bandwidths(const char *from_file,
                                  smartlist_t *routerstatuses)
 {
-  char line[512];
   FILE *fp = tor_fopen_cloexec(from_file, "r");
   int applied_lines = 0;
   time_t file_time, now;
@@ -2616,28 +2615,28 @@ dirserv_read_measured_bandwidths(const char *from_file,
    * if there are additional header lines, as introduced in Bandwidth List spec
    * version 1.1.0 */
   int line_is_after_headers = 0;
+  int rv = -1;
+  char *line = NULL;
+  size_t n = 0;
 
   /* Initialise line, so that we can't possibly run off the end. */
-  memset(line, 0, sizeof(line));
 
   if (fp == NULL) {
     log_warn(LD_CONFIG, "Can't open bandwidth file at configured location: %s",
              from_file);
-    return -1;
+    goto err;
   }
 
   /* If fgets fails, line is either unmodified, or indeterminate. */
-  if (!fgets(line, sizeof(line), fp)) {
+  if (tor_getline(&line,&n,fp) <= 0) {
     log_warn(LD_DIRSERV, "Empty bandwidth file");
-    fclose(fp);
-    return -1;
+    goto err;
   }
 
   if (!strlen(line) || line[strlen(line)-1] != '\n') {
     log_warn(LD_DIRSERV, "Long or truncated time in bandwidth file: %s",
              escaped(line));
-    fclose(fp);
-    return -1;
+    goto err;
   }
 
   line[strlen(line)-1] = '\0';
@@ -2645,16 +2644,14 @@ dirserv_read_measured_bandwidths(const char *from_file,
   if (!ok) {
     log_warn(LD_DIRSERV, "Non-integer time in bandwidth file: %s",
              escaped(line));
-    fclose(fp);
-    return -1;
+    goto err;
   }
 
   now = time(NULL);
   if ((now - file_time) > MAX_MEASUREMENT_AGE) {
     log_warn(LD_DIRSERV, "Bandwidth measurement file stale. Age: %u",
              (unsigned)(time(NULL) - file_time));
-    fclose(fp);
-    return -1;
+    goto err;
   }
 
   if (routerstatuses)
@@ -2662,7 +2659,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
 
   while (!feof(fp)) {
     measured_bw_line_t parsed_line;
-    if (fgets(line, sizeof(line), fp) && strlen(line)) {
+    if (tor_getline(&line, &n, fp) >= 0) {
       if (measured_bw_line_parse(&parsed_line, line,
                                  line_is_after_headers) != -1) {
         /* This condition will be true when the first complete valid bw line
@@ -2679,11 +2676,19 @@ dirserv_read_measured_bandwidths(const char *from_file,
   /* Now would be a nice time to clean the cache, too */
   dirserv_expire_measured_bw_cache(now);
 
-  fclose(fp);
   log_info(LD_DIRSERV,
            "Bandwidth measurement file successfully read. "
            "Applied %d measurements.", applied_lines);
-  return 0;
+  rv = 0;
+
+ err:
+  if (line) {
+    // we need to raw_free this buffer because we got it from tor_getdelim()
+    raw_free(line);
+  }
+  if (fp)
+    fclose(fp);
+  return rv;
 }
 
 /** As dirserv_get_routerdescs(), but instead of getting signed_descriptor_t
