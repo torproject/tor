@@ -976,6 +976,26 @@ crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out)
   return 0;
 }
 
+/** Copy <b>in</b> to the <b>outlen</b>-byte buffer <b>out</b>, adding spaces
+ * every four characters. */
+void
+crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in)
+{
+  int n = 0;
+  char *end = out+outlen;
+  tor_assert(outlen < SIZE_T_CEILING);
+
+  while (*in && out<end) {
+    *out++ = *in++;
+    if (++n == 4 && *in && out<end) {
+      n = 0;
+      *out++ = ' ';
+    }
+  }
+  tor_assert(out<end);
+  *out = '\0';
+}
+
 /** Check a siglen-byte long signature at <b>sig</b> against
  * <b>datalen</b> bytes of data at <b>data</b>, using the public key
  * in <b>env</b>. Return 0 if <b>sig</b> is a correct signature for

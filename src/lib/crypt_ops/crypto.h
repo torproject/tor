@@ -59,6 +59,4 @@ int crypto_cipher_decrypt_with_iv(const char *key,
                                   char *to, size_t tolen,
                                   const char *from, size_t fromlen);
 
-void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
-
 #endif /* !defined(TOR_CRYPTO_H) */
