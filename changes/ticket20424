@@ -1,0 +1,5 @@
+  o Removed features (openbsd malloc):
+    - Tor no longer ships with a copy of the OpenBSD malloc implementation
+      ported to Linux: the current glibc malloc implementations appear
+      to be much better than the old ones were.  Patch from "icanhasaccount";
+      closes ticket 20424.

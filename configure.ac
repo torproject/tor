@@ -21,8 +21,6 @@ AC_CANONICAL_HOST
 
 PKG_PROG_PKG_CONFIG
 
-AC_ARG_ENABLE(openbsd-malloc,
-   AS_HELP_STRING(--enable-openbsd-malloc, [use malloc code from OpenBSD.  Linux only]))
 AC_ARG_ENABLE(static-openssl,
    AS_HELP_STRING(--enable-static-openssl, [link against a static openssl library. Requires --with-openssl-dir]))
 AC_ARG_ENABLE(static-libevent,
@@ -81,8 +79,6 @@ if test "$enable_memory_sentinels" = "no"; then
   AC_DEFINE(DISABLE_MEMORY_SENTINELS, 1,
            [Defined if we're turning off memory safety code to look for bugs])
 fi
-
-AM_CONDITIONAL(USE_OPENBSD_MALLOC, test "x$enable_openbsd_malloc" = "xyes")
 
 AC_ARG_ENABLE(asciidoc,
      AS_HELP_STRING(--disable-asciidoc, [don't use asciidoc (disables building of manpages)]),
@@ -1771,9 +1767,6 @@ if test "x$tcmalloc" = "xyes"; then
 fi
 
 using_custom_malloc=no
-if test "x$enable_openbsd_malloc" = "xyes"; then
-   using_custom_malloc=yes
-fi
 if test "x$tcmalloc" = "xyes"; then
    using_custom_malloc=yes
 fi
