@@ -673,6 +673,14 @@ compute_consensus_versions_list(smartlist_t *lst, int n_versioning)
   int min = n_versioning / 2;
   smartlist_t *good = smartlist_new();
   char *result;
+  SMARTLIST_FOREACH_BEGIN(lst, const char *, v) {
+    if (strchr(v, ' ')) {
+      log_warn(LD_DIR, "At least one authority has voted for a version %s "
+               "that contains a space. This probably wasn't intentional, and "
+               "is likely to cause trouble. Please tell them to stop it.",
+               escaped(v));
+    }
+  } SMARTLIST_FOREACH_END(v);
   sort_version_list(lst, 0);
   get_frequent_members(good, lst, min);
   result = smartlist_join_strings(good, ",", 0, NULL);
@@ -4002,4 +4010,3 @@ vote_routerstatus_find_microdesc_hash(char *digest256_out,
   }
   return -1;
 }
-
