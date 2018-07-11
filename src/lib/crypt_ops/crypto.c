@@ -13,63 +13,14 @@
 
 #include "orconfig.h"
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <windows.h>
-#include <wincrypt.h>
-/* Windows defines this; so does OpenSSL 0.9.8h and later. We don't actually
- * use either definition. */
-#undef OCSP_RESPONSE
-#endif /* defined(_WIN32) */
-
-#define CRYPTO_PRIVATE
-#include "lib/crypt_ops/compat_openssl.h"
 #include "lib/crypt_ops/crypto.h"
-#include "lib/crypt_ops/crypto_curve25519.h"
-#include "lib/crypt_ops/crypto_digest.h"
-#include "lib/crypt_ops/crypto_dh.h"
-#include "lib/crypt_ops/crypto_ed25519.h"
-#include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "lib/crypt_ops/crypto_rsa.h"
 #include "lib/crypt_ops/crypto_util.h"
-
-DISABLE_GCC_WARNING(redundant-decls)
-
-#include <openssl/err.h>
-#include <openssl/evp.h>
-#include <openssl/bn.h>
-#include <openssl/dh.h>
-#include <openssl/conf.h>
-#include <openssl/hmac.h>
-#include <openssl/ssl.h>
-
-ENABLE_GCC_WARNING(redundant-decls)
-
-#if __GNUC__ && GCC_VERSION >= 402
-#if GCC_VERSION >= 406
-#pragma GCC diagnostic pop
-#else
-#pragma GCC diagnostic warning "-Wredundant-decls"
-#endif
-#endif /* __GNUC__ && GCC_VERSION >= 402 */
-
-#ifdef HAVE_CTYPE_H
-#include <ctype.h>
-#endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/cc/torint.h"
 #include "lib/crypt_ops/aes.h"
-#include "lib/encoding/binascii.h"
-
-#include "keccak-tiny/keccak-tiny.h"
-
-#include "siphash.h"
 
 #include <string.h>
 
