@@ -572,60 +572,60 @@ AM_CONDITIONAL(THREADS_WIN32, test "$bwin32" = "true")
 AM_CONDITIONAL(THREADS_PTHREADS, test "$bwin32" = "false")
 
 AC_CHECK_FUNCS(
-        _NSGetEnviron \
+	_NSGetEnviron \
 	RtlSecureZeroMemory \
 	SecureZeroMemory \
-        accept4 \
-        backtrace \
-        backtrace_symbols_fd \
+	accept4 \
+	backtrace \
+	backtrace_symbols_fd \
 	eventfd \
 	explicit_bzero \
 	timingsafe_memcmp \
-        flock \
-        ftime \
-        get_current_dir_name \
-        getaddrinfo \
+	flock \
+	ftime \
+	get_current_dir_name \
+	getaddrinfo \
 	getdelim \
-        getifaddrs \
+	getifaddrs \
 	getline \
-        getpass \
-        getrlimit \
-        gettimeofday \
-        gmtime_r \
+	getpass \
+	getrlimit \
+	gettimeofday \
+	gmtime_r \
 	gnu_get_libc_version \
 	htonll \
-        inet_aton \
-        ioctl \
-        issetugid \
-        llround \
-        localtime_r \
-        lround \
+	inet_aton \
+	ioctl \
+	issetugid \
+	llround \
+	localtime_r \
+	lround \
 	mach_approximate_time \
-        memmem \
-        memset_s \
-        mmap \
+	memmem \
+	memset_s \
+	mmap \
 	pipe \
 	pipe2 \
-        prctl \
+	prctl \
 	readpassphrase \
-        rint \
-        sigaction \
-        socketpair \
+	rint \
+	sigaction \
+	socketpair \
 	statvfs \
-        strncasecmp \
-        strcasecmp \
-        strlcat \
-        strlcpy \
+	strncasecmp \
+	strcasecmp \
+	strlcat \
+	strlcpy \
 	strnlen \
-        strptime \
-        strtok_r \
-        strtoull \
-        sysconf \
+	strptime \
+	strtok_r \
+	strtoull \
+	sysconf \
 	sysctl \
 	truncate \
-        uname \
+	uname \
 	usleep \
-        vasprintf \
+	vasprintf \
 	_vscprintf
 )
 
@@ -1367,57 +1367,57 @@ dnl Make sure to enable support for large off_t if available.
 AC_SYS_LARGEFILE
 
 AC_CHECK_HEADERS([errno.h \
-                  fcntl.h \
-                  signal.h \
-                  string.h \
-                  sys/capability.h \
-                  sys/fcntl.h \
-                  sys/stat.h \
-                  sys/time.h \
-                  sys/types.h \
-                  time.h \
-                  unistd.h \
-                  arpa/inet.h \
-                  crt_externs.h \
-                  execinfo.h \
-                  gnu/libc-version.h \
-                  grp.h \
-                  ifaddrs.h \
-                  inttypes.h \
-                  limits.h \
-                  linux/types.h \
-                  machine/limits.h \
-                  malloc.h \
-                  malloc/malloc.h \
-                  malloc_np.h \
-                  netdb.h \
-                  netinet/in.h \
-                  netinet/in6.h \
-                  pwd.h \
-                  readpassphrase.h \
-                  stdatomic.h \
-                  sys/eventfd.h \
-                  sys/file.h \
-                  sys/ioctl.h \
-                  sys/limits.h \
-                  sys/mman.h \
-                  sys/param.h \
-                  sys/prctl.h \
+		  fcntl.h \
+		  signal.h \
+		  string.h \
+		  sys/capability.h \
+		  sys/fcntl.h \
+		  sys/stat.h \
+		  sys/time.h \
+		  sys/types.h \
+		  time.h \
+		  unistd.h \
+		  arpa/inet.h \
+		  crt_externs.h \
+		  execinfo.h \
+		  gnu/libc-version.h \
+		  grp.h \
+		  ifaddrs.h \
+		  inttypes.h \
+		  limits.h \
+		  linux/types.h \
+		  machine/limits.h \
+		  malloc.h \
+		  malloc/malloc.h \
+		  malloc_np.h \
+		  netdb.h \
+		  netinet/in.h \
+		  netinet/in6.h \
+		  pwd.h \
+		  readpassphrase.h \
+		  stdatomic.h \
+		  sys/eventfd.h \
+		  sys/file.h \
+		  sys/ioctl.h \
+		  sys/limits.h \
+		  sys/mman.h \
+		  sys/param.h \
+		  sys/prctl.h \
 		  sys/random.h \
-                  sys/resource.h \
-                  sys/select.h \
-                  sys/socket.h \
-                  sys/statvfs.h \
-                  sys/syscall.h \
-                  sys/sysctl.h \
-                  sys/syslimits.h \
-                  sys/time.h \
-                  sys/types.h \
-                  sys/un.h \
-                  sys/utime.h \
-                  sys/wait.h \
-                  syslog.h \
-                  utime.h])
+		  sys/resource.h \
+		  sys/select.h \
+		  sys/socket.h \
+		  sys/statvfs.h \
+		  sys/syscall.h \
+		  sys/sysctl.h \
+		  sys/syslimits.h \
+		  sys/time.h \
+		  sys/types.h \
+		  sys/un.h \
+		  sys/utime.h \
+		  sys/wait.h \
+		  syslog.h \
+		  utime.h])
 
 AC_CHECK_HEADERS(sys/param.h)
 
@@ -2271,20 +2271,20 @@ fi
 CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent $TOR_CPPFLAGS_openssl $TOR_CPPFLAGS_zlib"
 
 AC_CONFIG_FILES([
-        Doxyfile
-        Makefile
-        config.rust
-        link_rust.sh
-        contrib/dist/suse/tor.sh
-        contrib/operator-tools/tor.logrotate
-        contrib/dist/tor.sh
-        contrib/dist/torctl
-        contrib/dist/tor.service
-        src/config/torrc.sample
-        src/config/torrc.minimal
-        src/rust/.cargo/config
-        scripts/maint/checkOptionDocs.pl
-        scripts/maint/updateVersions.pl
+	Doxyfile
+	Makefile
+	config.rust
+	link_rust.sh
+	contrib/dist/suse/tor.sh
+	contrib/operator-tools/tor.logrotate
+	contrib/dist/tor.sh
+	contrib/dist/torctl
+	contrib/dist/tor.service
+	src/config/torrc.sample
+	src/config/torrc.minimal
+	src/rust/.cargo/config
+	scripts/maint/checkOptionDocs.pl
+	scripts/maint/updateVersions.pl
 ])
 
 if test "x$asciidoc" = "xtrue" && test "$ASCIIDOC" = "none"; then
