@@ -33,6 +33,7 @@
 #include "core/or/or_circuit_st.h"
 
 #include "lib/crypt_ops/digestset.h"
+#include "lib/crypt_ops/crypto_init.h"
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)
 static uint64_t nanostart;

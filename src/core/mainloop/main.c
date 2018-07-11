@@ -121,6 +121,7 @@
 #include "lib/evloop/compat_libevent.h"
 #include "lib/encoding/confline.h"
 #include "lib/evloop/timers.h"
+#include "lib/crypt_ops/crypto_init.h"
 
 #include <event2/event.h>
 

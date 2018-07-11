@@ -76,7 +76,10 @@ const char * crypto_openssl_get_header_version_str(void);
 /* OpenSSL threading setup function */
 int setup_openssl_threading(void);
 
-/* Tor OpenSSL utility functions */
-void crypto_openssl_free_all(void);
+void crypto_openssl_early_init(void);
+int crypto_openssl_late_init(int useAccel, const char *accelName,
+                             const char *accelDir);
+
+void crypto_openssl_global_cleanup(void);
 
 #endif /* !defined(TOR_CRYPTO_OPENSSL_H) */

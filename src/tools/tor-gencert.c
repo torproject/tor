@@ -14,6 +14,7 @@
 #endif
 
 #include "lib/cc/compat_compiler.h"
+#include "lib/crypt_ops/crypto_init.h"
 
 /* Some versions of OpenSSL declare X509_STORE_CTX_set_verify_cb twice in
  * x509.h and x509_vfy.h. Suppress the GCC warning so we can build with
