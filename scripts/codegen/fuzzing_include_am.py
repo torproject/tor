@@ -12,6 +12,7 @@ FUZZERS = """
 	http-connect
 	iptsv2
 	microdesc
+	socks
 	vrs
 """
 

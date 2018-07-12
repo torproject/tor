@@ -17,7 +17,7 @@ FUZZING_LIBS = \
 	@TOR_ZSTD_LIBS@
 
 oss-fuzz-prereqs: \
-	$(TOR_INTERNAL_TESTING_LIBS)
+    $(TOR_INTERNAL_TESTING_LIBS)
 
 noinst_HEADERS += \
 	src/test/fuzz/fuzzing.h
@@ -120,6 +120,14 @@ src_test_fuzz_fuzz_microdesc_CFLAGS = $(FUZZING_CFLAGS)
 src_test_fuzz_fuzz_microdesc_LDFLAGS = $(FUZZING_LDFLAG)
 src_test_fuzz_fuzz_microdesc_LDADD = $(FUZZING_LIBS)
 
+src_test_fuzz_fuzz_socks_SOURCES = \
+	src/test/fuzz/fuzzing_common.c \
+	src/test/fuzz/fuzz_socks.c
+src_test_fuzz_fuzz_socks_CPPFLAGS = $(FUZZING_CPPFLAGS)
+src_test_fuzz_fuzz_socks_CFLAGS = $(FUZZING_CFLAGS)
+src_test_fuzz_fuzz_socks_LDFLAGS = $(FUZZING_LDFLAG)
+src_test_fuzz_fuzz_socks_LDADD = $(FUZZING_LIBS)
+
 src_test_fuzz_fuzz_vrs_SOURCES = \
 	src/test/fuzz/fuzzing_common.c \
 	src/test/fuzz/fuzz_vrs.c
@@ -140,6 +148,7 @@ FUZZERS = \
 	src/test/fuzz/fuzz-http-connect \
 	src/test/fuzz/fuzz-iptsv2 \
 	src/test/fuzz/fuzz-microdesc \
+	src/test/fuzz/fuzz-socks \
 	src/test/fuzz/fuzz-vrs
 
 # ===== libfuzzer
@@ -222,6 +231,13 @@ src_test_fuzz_lf_fuzz_microdesc_CFLAGS = $(LIBFUZZER_CFLAGS)
 src_test_fuzz_lf_fuzz_microdesc_LDFLAGS = $(LIBFUZZER_LDFLAG)
 src_test_fuzz_lf_fuzz_microdesc_LDADD = $(LIBFUZZER_LIBS)
 
+src_test_fuzz_lf_fuzz_socks_SOURCES = \
+	$(src_test_fuzz_fuzz_socks_SOURCES)
+src_test_fuzz_lf_fuzz_socks_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_socks_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_socks_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_socks_LDADD = $(LIBFUZZER_LIBS)
+
 src_test_fuzz_lf_fuzz_vrs_SOURCES = \
 	$(src_test_fuzz_fuzz_vrs_SOURCES)
 src_test_fuzz_lf_fuzz_vrs_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
@@ -241,6 +257,7 @@ LIBFUZZER_FUZZERS = \
 	src/test/fuzz/lf-fuzz-http-connect \
 	src/test/fuzz/lf-fuzz-iptsv2 \
 	src/test/fuzz/lf-fuzz-microdesc \
+	src/test/fuzz/lf-fuzz-socks \
 	src/test/fuzz/lf-fuzz-vrs
 
 else
@@ -305,6 +322,11 @@ src_test_fuzz_liboss_fuzz_microdesc_a_SOURCES = \
 src_test_fuzz_liboss_fuzz_microdesc_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
 src_test_fuzz_liboss_fuzz_microdesc_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
+src_test_fuzz_liboss_fuzz_socks_a_SOURCES = \
+	$(src_test_fuzz_fuzz_socks_SOURCES)
+src_test_fuzz_liboss_fuzz_socks_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_socks_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
+
 src_test_fuzz_liboss_fuzz_vrs_a_SOURCES = \
 	$(src_test_fuzz_fuzz_vrs_SOURCES)
 src_test_fuzz_liboss_fuzz_vrs_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
@@ -322,6 +344,7 @@ OSS_FUZZ_FUZZERS = \
 	src/test/fuzz/liboss-fuzz-http-connect.a \
 	src/test/fuzz/liboss-fuzz-iptsv2.a \
 	src/test/fuzz/liboss-fuzz-microdesc.a \
+	src/test/fuzz/liboss-fuzz-socks.a \
 	src/test/fuzz/liboss-fuzz-vrs.a
 
 else
