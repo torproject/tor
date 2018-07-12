@@ -1,3 +1,0 @@
-  o Minor bugfixes (memory, correctness):
-    - Fix a number of small memory leaks identified by coverity. Fixes
-      bug 26467; bugfix on numerous Tor versions.
