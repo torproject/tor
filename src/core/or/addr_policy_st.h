@@ -18,7 +18,7 @@ typedef enum {
 #define addr_policy_action_bitfield_t ENUM_BF(addr_policy_action_t)
 
 /** A reference-counted address policy rule. */
-typedef struct addr_policy_t {
+struct addr_policy_t {
   int refcnt; /**< Reference count */
   /** What to do when the policy matches.*/
   addr_policy_action_bitfield_t policy_type:2;
@@ -41,6 +41,6 @@ typedef struct addr_policy_t {
   tor_addr_t addr;
   uint16_t prt_min; /**< Lowest port number to accept/reject. */
   uint16_t prt_max; /**< Highest port number to accept/reject. */
-} addr_policy_t;
+};
 
 #endif
