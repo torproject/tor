@@ -7001,7 +7001,7 @@ parse_port_config(smartlist_t *out,
         port = 0;
       else
         port = 1;
-    } else if (!strcmp(addrport, "auto")) {
+    } else if (!strcasecmp(addrport, "auto")) {
       port = CFG_AUTO_PORT;
       int af = tor_addr_parse(&addr, defaultaddr);
       tor_assert(af >= 0);
