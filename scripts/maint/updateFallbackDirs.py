@@ -117,10 +117,9 @@ CONSENSUS_EXPIRY_TOLERANCE = 0
 # Output fallback name, flags, bandwidth, and ContactInfo in a C comment?
 OUTPUT_COMMENTS = True if OUTPUT_CANDIDATES else False
 
-# Output matching ContactInfo in fallbacks list or the blacklist?
+# Output matching ContactInfo in fallbacks list?
 # Useful if you're trying to contact operators
 CONTACT_COUNT = True if OUTPUT_CANDIDATES else False
-CONTACT_BLACKLIST_COUNT = True if OUTPUT_CANDIDATES else False
 
 # How the list should be sorted:
 # fingerprint: is useful for stable diffs of fallback lists
@@ -141,26 +140,12 @@ LOCAL_FILES_ONLY = False
 
 # The whitelist contains entries that are included if all attributes match
 # (IPv4, dirport, orport, id, and optionally IPv6 and IPv6 orport)
-# The blacklist contains (partial) entries that are excluded if any
-# sufficiently specific group of attributes matches:
-# IPv4 & DirPort
-# IPv4 & ORPort
-# ID
-# IPv6 & DirPort
-# IPv6 & IPv6 ORPort
-# If neither port is included in the blacklist, the entire IP address is
-# blacklisted.
 
-# What happens to entries in neither list?
+# What happens to entries not in whitelist?
 # When True, they are included, when False, they are excluded
 INCLUDE_UNLISTED_ENTRIES = True if OUTPUT_CANDIDATES else False
 
-# If an entry is in both lists, what happens?
-# When True, it is excluded, when False, it is included
-BLACKLIST_EXCLUDES_WHITELIST_ENTRIES = True
-
 WHITELIST_FILE_NAME = 'scripts/maint/fallback.whitelist'
-BLACKLIST_FILE_NAME = 'scripts/maint/fallback.blacklist'
 FALLBACK_FILE_NAME  = 'src/app/config/fallback_dirs.inc'
 
 # The number of bytes we'll read from a filter file before giving up
@@ -984,78 +969,6 @@ class Candidate(object):
       return True
     return False
 
-  def is_in_blacklist(self, relaylist):
-    """ A fallback matches a blacklist line if a sufficiently specific group
-        of attributes matches:
-          ipv4 & dirport
-          ipv4 & orport
-          id
-          ipv6 & dirport
-          ipv6 & ipv6 orport
-        If the fallback and the blacklist line both have an ipv6 key,
-        their values will be compared, otherwise, they will be ignored.
-        If there is no dirport and no orport, the entry matches all relays on
-        that ip. """
-    for entry in relaylist:
-      for key in entry:
-        value = entry[key]
-        if key == 'id' and value == self._fpr:
-          log_excluded('%s is in the blacklist: fingerprint matches',
-                       self._fpr)
-          return True
-        if key == 'ipv4' and value == self.dirip:
-          # if the dirport is present, check it too
-          if entry.has_key('dirport'):
-            if int(entry['dirport']) == self.dirport:
-              log_excluded('%s is in the blacklist: IPv4 (%s) and ' +
-                           'DirPort (%d) match', self._fpr, self.dirip,
-                           self.dirport)
-              return True
-          # if the orport is present, check it too
-          elif entry.has_key('orport'):
-            if int(entry['orport']) == self.orport:
-              log_excluded('%s is in the blacklist: IPv4 (%s) and ' +
-                           'ORPort (%d) match', self._fpr, self.dirip,
-                           self.orport)
-              return True
-          else:
-            log_excluded('%s is in the blacklist: IPv4 (%s) matches, and ' +
-                         'entry has no DirPort or ORPort', self._fpr,
-                         self.dirip)
-            return True
-        ipv6 = None
-        if self.has_ipv6():
-          ipv6 = '%s:%d'%(self.ipv6addr, self.ipv6orport)
-        if (key == 'ipv6' and self.has_ipv6()):
-        # if both entry and fallback have an ipv6 address, compare them,
-        # otherwise, disregard ipv6 addresses
-          if value == ipv6:
-            # if the dirport is present, check it too
-            if entry.has_key('dirport'):
-              if int(entry['dirport']) == self.dirport:
-                log_excluded('%s is in the blacklist: IPv6 (%s) and ' +
-                             'DirPort (%d) match', self._fpr, ipv6,
-                             self.dirport)
-                return True
-            # we've already checked the ORPort, it's part of entry['ipv6']
-            else:
-              log_excluded('%s is in the blacklist: IPv6 (%s) matches, and' +
-                           'entry has no DirPort', self._fpr, ipv6)
-              return True
-        elif (key == 'ipv6' or self.has_ipv6()):
-          # only log if the fingerprint matches but the IPv6 doesn't
-          if entry.has_key('id') and entry['id'] == self._fpr:
-            log_excluded('%s skipping IPv6 blacklist comparison: relay ' +
-                         'has%s IPv6%s, but entry has%s IPv6%s', self._fpr,
-                         '' if self.has_ipv6() else ' no',
-                         (' (' + ipv6 + ')') if self.has_ipv6() else  '',
-                         '' if key == 'ipv6' else ' no',
-                         (' (' + value + ')') if key == 'ipv6' else '')
-            logging.warning('Has %s %s IPv6 address %s?', self._fpr,
-                        'gained an' if self.has_ipv6() else 'lost its former',
-                        ipv6 if self.has_ipv6() else value)
-    return False
-
   def cw_to_bw_factor(self):
     # any relays with a missing or zero consensus weight are not candidates
     # any relays with a missing advertised bandwidth have it set to zero
@@ -1317,26 +1230,12 @@ class Candidate(object):
     s += '\n'
     if self._data['contact'] is not None:
       s += cleanse_c_multiline_comment(self._data['contact'])
-      if CONTACT_COUNT or CONTACT_BLACKLIST_COUNT:
+      if CONTACT_COUNT:
         fallback_count = len([f for f in fallbacks
                               if f._data['contact'] == self._data['contact']])
         if fallback_count > 1:
           s += '\n'
           s += '%d identical contacts listed' % (fallback_count)
-      if CONTACT_BLACKLIST_COUNT:
-        prefilter_count = len([f for f in prefilter_fallbacks
-                               if f._data['contact'] == self._data['contact']])
-        filter_count = prefilter_count - fallback_count
-        if filter_count > 0:
-          if fallback_count > 1:
-            s += ' '
-          else:
-            s += '\n'
-          s += '%d blacklisted' % (filter_count)
-      s += '\n'
-    s += '*/'
-    s += '\n'
-    return s
 
   # output the fallback info C string for this fallback
   # this is the text that would go after FallbackDir in a torrc
@@ -1544,48 +1443,32 @@ class CandidateList(dict):
       relaylist.append(relay_entry)
     return relaylist
 
-  # apply the fallback whitelist and blacklist
-  def apply_filter_lists(self, whitelist_obj, blacklist_obj):
+  # apply the fallback whitelist
+  def apply_filter_lists(self, whitelist_obj):
     excluded_count = 0
-    logging.debug('Applying whitelist and blacklist.')
-    # parse the whitelist and blacklist
+    logging.debug('Applying whitelist')
+    # parse the whitelist
     whitelist = self.load_relaylist(whitelist_obj)
-    blacklist = self.load_relaylist(blacklist_obj)
     filtered_fallbacks = []
     for f in self.fallbacks:
       in_whitelist = f.is_in_whitelist(whitelist)
-      in_blacklist = f.is_in_blacklist(blacklist)
-      if in_whitelist and in_blacklist:
-        if BLACKLIST_EXCLUDES_WHITELIST_ENTRIES:
-          # exclude
-          excluded_count += 1
-          logging.warning('Excluding %s: in both blacklist and whitelist.',
-                          f._fpr)
-        else:
-          # include
-          filtered_fallbacks.append(f)
-      elif in_whitelist:
+      if in_whitelist:
         # include
         filtered_fallbacks.append(f)
-      elif in_blacklist:
-        # exclude
-        excluded_count += 1
-        log_excluded('Excluding %s: in blacklist.', f._fpr)
-      else:
-        if INCLUDE_UNLISTED_ENTRIES:
+      elif INCLUDE_UNLISTED_ENTRIES:
           # include
           filtered_fallbacks.append(f)
-        else:
+      else:
           # exclude
           excluded_count += 1
-          log_excluded('Excluding %s: in neither blacklist nor whitelist.',
+          log_excluded('Excluding %s: not in whitelist.',
                        f._fpr)
     self.fallbacks = filtered_fallbacks
     return excluded_count
 
   @staticmethod
   def summarise_filters(initial_count, excluded_count):
-    return '/* Whitelist & blacklist excluded %d of %d candidates. */'%(
+    return '/* Whitelist excluded %d of %d candidates. */'%(
                                                 excluded_count, initial_count)
 
   # calculate each fallback's measured bandwidth based on the median
@@ -2181,18 +2064,14 @@ def process_existing():
   logging.getLogger('stem').setLevel(logging.INFO)
   whitelist = {'data': parse_fallback_file(FALLBACK_FILE_NAME),
                'name': FALLBACK_FILE_NAME}
-  blacklist = {'data': read_from_file(BLACKLIST_FILE_NAME, MAX_LIST_FILE_SIZE),
-               'name': BLACKLIST_FILE_NAME}
-  list_fallbacks(whitelist, blacklist)
+  list_fallbacks(whitelist)
 
 def process_default():
   logging.basicConfig(level=logging.WARNING)
   logging.getLogger('stem').setLevel(logging.WARNING)
   whitelist = {'data': read_from_file(WHITELIST_FILE_NAME, MAX_LIST_FILE_SIZE),
                'name': WHITELIST_FILE_NAME}
-  blacklist = {'data': read_from_file(BLACKLIST_FILE_NAME, MAX_LIST_FILE_SIZE),
-               'name': BLACKLIST_FILE_NAME}
-  list_fallbacks(whitelist, blacklist)
+  list_fallbacks(whitelist)
 
 ## Main Function
 def main():
@@ -2213,7 +2092,7 @@ def log_excluded(msg, *args):
   else:
     logging.info(msg, *args)
 
-def list_fallbacks(whitelist, blacklist):
+def list_fallbacks(whitelist):
   """ Fetches required onionoo documents and evaluates the
       fallback directory criteria for each of the relays """
 
@@ -2250,13 +2129,13 @@ def list_fallbacks(whitelist, blacklist):
   candidates.compute_fallbacks()
   prefilter_fallbacks = copy.copy(candidates.fallbacks)
 
-  # filter with the whitelist and blacklist
+  # filter with the whitelist
   # if a relay has changed IPv4 address or ports recently, it will be excluded
   # as ineligible before we call apply_filter_lists, and so there will be no
   # warning that the details have changed from those in the whitelist.
   # instead, there will be an info-level log during the eligibility check.
   initial_count = len(candidates.fallbacks)
-  excluded_count = candidates.apply_filter_lists(whitelist, blacklist)
+  excluded_count = candidates.apply_filter_lists(whitelist)
   print candidates.summarise_filters(initial_count, excluded_count)
   eligible_count = len(candidates.fallbacks)
 

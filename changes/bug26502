@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - 'updateFallbackDirs.py' now ignores the blacklist file as it's not longer needed
+      Fixes bug 26502; bugfix on 0.3.5.0-alpha.
