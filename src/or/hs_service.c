@@ -1446,15 +1446,11 @@ build_service_desc_keys(const hs_service_t *service,
  * the update function. On success, desc_out will point to the newly allocated
  * descriptor object.
  *
- * If <b>is_current</b> is true, this is the current service descriptor,
- * otherwise it's the next one.
- *
  * This can error if we are unable to create keys or certificate. */
 static void
 build_service_descriptor(hs_service_t *service, time_t now,
                          uint64_t time_period_num,
-                         hs_service_descriptor_t **desc_out,
-                         bool is_current)
+                         hs_service_descriptor_t **desc_out)
 {
   char *encoded_desc;
   hs_service_descriptor_t *desc;
@@ -1479,9 +1475,6 @@ build_service_descriptor(hs_service_t *service, time_t now,
   if (build_service_desc_encrypted(service, desc) < 0) {
     goto err;
   }
-
-  /* Set the revision counter for this descriptor */
-  set_descriptor_revision_counter(desc, now, is_current);
 
   /* Let's make sure that we've created a descriptor that can actually be
    * encoded properly. This function also checks if the encoded output is
@@ -1547,9 +1540,9 @@ build_descriptors_for_new_service(hs_service_t *service, time_t now)
 
   /* Build descriptors. */
   build_service_descriptor(service, now, current_desc_tp,
-                           &service->desc_current, 1);
+                           &service->desc_current);
   build_service_descriptor(service, now, next_desc_tp,
-                           &service->desc_next, 0);
+                           &service->desc_next);
   log_info(LD_REND, "Hidden service %s has just started. Both descriptors "
                     "built. Now scheduled for upload.",
            safe_str_client(service->onion_address));
@@ -1580,7 +1573,7 @@ build_all_descriptors(time_t now)
 
     if (service->desc_next == NULL) {
       build_service_descriptor(service, now, hs_get_next_time_period_num(0),
-                               &service->desc_next, 0);
+                               &service->desc_next);
       log_info(LD_REND, "Hidden service %s next descriptor successfully "
                         "built. Now scheduled for upload.",
                safe_str_client(service->onion_address));
@@ -2630,6 +2623,10 @@ run_upload_descriptor_event(time_t now)
        * the intro points descriptor section which we are now sure to be
        * accurate because all circuits have been established. */
       build_desc_intro_points(service, desc, now);
+
+      /* Set the desc revision counter right before uploading */
+      set_descriptor_revision_counter(desc, approx_time(),
+                                      service->desc_current == desc);
 
       upload_descriptor_to_all(service, desc);
     } FOR_EACH_DESCRIPTOR_END;
