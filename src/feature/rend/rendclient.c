@@ -1219,20 +1219,6 @@ rend_parse_service_authorization(const or_options_t *options,
   return res;
 }
 
-/* Can Tor client code make direct (non-anonymous) connections to introduction
- * or rendezvous points?
- * Returns true if tor was compiled with NON_ANONYMOUS_MODE_ENABLED. */
-int
-rend_client_allow_non_anonymous_connection(const or_options_t *options)
-{
-#ifdef NON_ANONYMOUS_MODE_ENABLED
-  return 1;
-#else
-  (void)options;
-  return 0;
-#endif /* defined(NON_ANONYMOUS_MODE_ENABLED) */
-}
-
 /* At compile-time, was non-anonymous mode enabled via
  * NON_ANONYMOUS_MODE_ENABLED ? */
 int

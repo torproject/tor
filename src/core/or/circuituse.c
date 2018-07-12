@@ -888,11 +888,6 @@ circuit_log_ancient_one_hop_circuits(int age)
         (circ->purpose == CIRCUIT_PURPOSE_S_INTRO ||
          circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED))
       continue;
-     /* We only ignore active rend point connections, if we take a long time
-      * to rendezvous, that's worth logging. */
-    if (rend_client_allow_non_anonymous_connection(options) &&
-        circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED)
-      continue;
     ocirc = CONST_TO_ORIGIN_CIRCUIT(circ);
 
     if (ocirc->build_state && ocirc->build_state->onehop_tunnel) {
