@@ -174,6 +174,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
       goto end;
     }
 
+    tor_free(req->username);
     req->got_auth = 1;
     req->username = tor_strdup(username);
     req->usernamelen = usernamelen;
@@ -445,6 +446,7 @@ parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
    socks5_client_userpass_auth_getconstarray_passwd(trunnel_req);
 
   if (usernamelen && username) {
+    tor_free(req->username);
     req->username = tor_memdup_nulterm(username, usernamelen);
     req->usernamelen = usernamelen;
 
@@ -452,6 +454,7 @@ parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
   }
 
   if (passwordlen && password) {
+    tor_free(req->password);
     req->password = tor_memdup_nulterm(password, passwordlen);
     req->passwordlen = passwordlen;
 
