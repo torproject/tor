@@ -987,16 +987,11 @@ rend_allow_non_anonymous_connection(const or_options_t* options)
 }
 
 /* Is this a rend client or server in non-anonymous mode?
- * Clients must be specifically compiled in this mode.
- * Onion services can be configured to start in this mode.
- * Prefer rend_client_non_anonymous_mode_enabled() or
- * rend_service_non_anonymous_mode_enabled() whenever possible, so that checks
- * are specific to Single Onion Services. */
+ * Onion services can be configured to start in this mode for single onion. */
 int
 rend_non_anonymous_mode_enabled(const or_options_t *options)
 {
-  return (rend_client_non_anonymous_mode_enabled(options)
-          || rend_service_non_anonymous_mode_enabled(options));
+  return rend_service_non_anonymous_mode_enabled(options);
 }
 
 /* Make sure that tor only builds one-hop circuits when they would not

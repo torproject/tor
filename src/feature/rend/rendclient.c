@@ -1218,16 +1218,3 @@ rend_parse_service_authorization(const or_options_t *options,
   }
   return res;
 }
-
-/* At compile-time, was non-anonymous mode enabled via
- * NON_ANONYMOUS_MODE_ENABLED ? */
-int
-rend_client_non_anonymous_mode_enabled(const or_options_t *options)
-{
-  (void)options;
-#ifdef NON_ANONYMOUS_MODE_ENABLED
-  return 1;
-#else
-  return 0;
-#endif /* defined(NON_ANONYMOUS_MODE_ENABLED) */
-}
