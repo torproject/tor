@@ -10,11 +10,11 @@
 struct buf_t;
 
 /** A parsed Extended ORPort message. */
-typedef struct ext_or_cmd_t {
+struct ext_or_cmd_t {
   uint16_t cmd; /** Command type */
   uint16_t len; /** Body length */
   char body[FLEXIBLE_ARRAY_MEMBER]; /** Message body */
-} ext_or_cmd_t;
+};
 
 int fetch_ext_or_command_from_buf(struct buf_t *buf,
                                   struct ext_or_cmd_t **out);
