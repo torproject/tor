@@ -7,7 +7,7 @@ new Tor release:
 
 === 0. Preliminaries
 
-1. Get at least three of weasel/arma/Sebastian/Sina to put the new
+1. Get at least two of weasel/arma/Sebastian to put the new
    version number in their approved versions list.  Give them a few
    days to do this if you can.
 
