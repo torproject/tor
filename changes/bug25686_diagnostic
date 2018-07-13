@@ -1,4 +1,0 @@
-  o Minor features (relay, diagnostic):
-    - Add several checks to detect whether Tor relays are uploading their
-      descriptors without specifying why they regenerated. Diagnostic for
-      ticket 25686.

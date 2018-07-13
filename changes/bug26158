@@ -1,5 +1,0 @@
-  o Minor bugfixes (relay):
-     - Relays now correctly block attempts to re-extend to the previous
-       relay by Ed25519 identity. Previously they would warn in this case,
-       but not actually reject the attempt. Fixes bug 26158; bugfix on
-       0.3.0.1-alpha.

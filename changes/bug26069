@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden service v3):
-    - When parsing the descriptor signature, look for the token plus an extra
-      white-space at the end. This is more correct but also will allow us to
-      support new fields that might start with "signature". Fixes bug 26069;
-      bugfix on 0.3.0.1-alpha.

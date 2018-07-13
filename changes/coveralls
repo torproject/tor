@@ -1,3 +1,0 @@
-  o Minor features (continuous integration):
-    - Our Travis CI configuration now integrates with the Coveralls coverage
-      analysis tool. Closes ticket 25818.

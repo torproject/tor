@@ -1,5 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix a c99 compliance issue in our configuration script that was
-      causing compilation issues when compiling Tor with certain
-      versions of xtools. Fixes bug 25474; bugfix on 0.3.2.5-alpha.
-
