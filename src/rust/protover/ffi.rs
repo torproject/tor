@@ -42,7 +42,6 @@ pub extern "C" fn protover_all_supported(
     c_relay_version: *const c_char,
     missing_out: *mut *mut c_char,
 ) -> c_int {
-
     if c_relay_version.is_null() {
         return 1;
     }
@@ -58,14 +57,13 @@ pub extern "C" fn protover_all_supported(
 
     let relay_proto_entry: UnvalidatedProtoEntry =
         match UnvalidatedProtoEntry::from_str_any_len(relay_version) {
-        Ok(n)  => n,
-        Err(_) => return 1,
-    };
-    let maybe_unsupported: Option<UnvalidatedProtoEntry> = relay_proto_entry.all_supported();
+            Ok(n) => n,
+            Err(_) => return 1,
+        };
 
-    if maybe_unsupported.is_some() {
-        let unsupported: UnvalidatedProtoEntry = maybe_unsupported.unwrap();
-        let c_unsupported: CString = match CString::new(unsupported.to_string()) {
+    if let Some(unsupported) = relay_proto_entry.all_supported() {
+        let c_unsupported: CString = match CString::new(unsupported.to_string())
+        {
             Ok(n) => n,
             Err(_) => return 1,
         };
@@ -100,22 +98,23 @@ pub extern "C" fn protocol_list_supports_protocol(
         Err(_) => return 1,
     };
     let proto_entry: UnvalidatedProtoEntry = match protocol_list.parse() {
-        Ok(n)  => n,
+        Ok(n) => n,
         Err(_) => return 0,
     };
     let protocol: UnknownProtocol = match translate_to_rust(c_protocol) {
         Ok(n) => n.into(),
         Err(_) => return 0,
     };
-    match proto_entry.supports_protocol(&protocol, &version) {
-        false => return 0,
-        true  => return 1,
+    if proto_entry.supports_protocol(&protocol, &version) {
+        1
+    } else {
+        0
     }
 }
 
 #[no_mangle]
 pub extern "C" fn protover_contains_long_protocol_names_(
-    c_protocol_list: *const c_char
+    c_protocol_list: *const c_char,
 ) -> c_int {
     if c_protocol_list.is_null() {
         return 1;
@@ -127,13 +126,10 @@ pub extern "C" fn protover_contains_long_protocol_names_(
 
     let protocol_list = match c_str.to_str() {
         Ok(n) => n,
-        Err(_) => return 1
+        Err(_) => return 1,
     };
 
-    let protocol_entry : Result<UnvalidatedProtoEntry,_> =
-        protocol_list.parse();
-
-    match protocol_entry {
+    match protocol_list.parse::<UnvalidatedProtoEntry>() {
         Ok(_) => 0,
         Err(_) => 1,
     }
@@ -166,7 +162,7 @@ pub extern "C" fn protocol_list_supports_protocol_or_later(
     };
 
     let proto_entry: UnvalidatedProtoEntry = match protocol_list.parse() {
-        Ok(n)  => n,
+        Ok(n) => n,
         Err(_) => return 1,
     };
 
@@ -196,10 +192,8 @@ pub extern "C" fn protover_compute_vote(
     threshold: c_int,
     allow_long_proto_names: bool,
 ) -> *mut c_char {
-
     if list.is_null() {
-        let empty = String::new();
-        return allocate_and_copy_string(&empty);
+        return allocate_and_copy_string("");
     }
 
     // Dereference of raw pointer requires an unsafe block. The pointer is
@@ -209,17 +203,21 @@ pub extern "C" fn protover_compute_vote(
     let mut proto_entries: Vec<UnvalidatedProtoEntry> = Vec::new();
 
     for datum in data {
-        let entry: UnvalidatedProtoEntry = match allow_long_proto_names {
-            true => match UnvalidatedProtoEntry::from_str_any_len(datum.as_str()) {
-                Ok(n)  => n,
-                Err(_) => continue},
-            false => match datum.parse() {
-                Ok(n)  => n,
-                Err(_) => continue},
+        let entry: UnvalidatedProtoEntry = if allow_long_proto_names {
+            match UnvalidatedProtoEntry::from_str_any_len(datum.as_str()) {
+                Ok(n) => n,
+                Err(_) => continue,
+            }
+        } else {
+            match datum.parse() {
+                Ok(n) => n,
+                Err(_) => continue,
+            }
         };
         proto_entries.push(entry);
     }
-    let vote: UnvalidatedProtoEntry = ProtoverVote::compute(&proto_entries, &hold);
+    let vote: UnvalidatedProtoEntry =
+        ProtoverVote::compute(&proto_entries, &hold);
 
     allocate_and_copy_string(&vote.to_string())
 }
@@ -244,7 +242,9 @@ pub extern "C" fn protover_is_supported_here(
 /// Provide an interface for C to translate arguments and return types for
 /// protover::compute_for_old_tor
 #[no_mangle]
-pub extern "C" fn protover_compute_for_old_tor(version: *const c_char) -> *const c_char {
+pub extern "C" fn protover_compute_for_old_tor(
+    version: *const c_char,
+) -> *const c_char {
     let supported: &'static CStr;
     let empty: &'static CStr;
 
