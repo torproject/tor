@@ -1,0 +1,4 @@
+  o Minor features (rust, code quality):
+    - Improve rust code quality in the Rust protover implementation by
+      making it more idiomatic.  Includes changing an internal API to
+      take &str instead of &String.  Closes ticket 26492.
