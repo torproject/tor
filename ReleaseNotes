@@ -2,6 +2,16 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.3.3.9 - 2018-07-13
+  Tor 0.3.3.9 moves to a new bridge authority, meaning people running
+  bridge relays should upgrade.
+
+  o Directory authority changes:
+    - The "Bifroest" bridge authority has been retired; the new bridge
+      authority is "Serge", and it is operated by George from the
+      TorBSD project. Closes ticket 26771.
+
+
 Changes in version 0.3.3.8 - 2018-07-09
   Tor 0.3.3.8 backports several changes from the 0.3.4.x series, including
   fixes for a memory leak affecting directory authorities.

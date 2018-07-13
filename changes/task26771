@@ -1,4 +1,0 @@
-  o Directory authority changes:
-    - The "Bifroest" bridge authority has been retired; the new bridge
-      authority is "Serge", and it is operated by George from the
-      TorBSD project. Closes ticket 26771.
