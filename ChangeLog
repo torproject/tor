@@ -1,3 +1,316 @@
+Changes in version 0.3.4.5-rc - 2018-07-13
+  Tor 0.3.4.5-rc moves to a new bridge authority, meaning people running
+  bridge relays should upgrade.
+
+  o Directory authority changes:
+    - The "Bifroest" bridge authority has been retired; the new bridge
+      authority is "Serge", and it is operated by George from the
+      TorBSD project. Closes ticket 26771.
+
+
+Changes in version 0.3.3.9 - 2018-07-13
+  Tor 0.3.3.9 moves to a new bridge authority, meaning people running
+  bridge relays should upgrade.
+
+  o Directory authority changes:
+    - The "Bifroest" bridge authority has been retired; the new bridge
+      authority is "Serge", and it is operated by George from the
+      TorBSD project. Closes ticket 26771.
+
+
+Changes in version 0.3.2.11 - 2018-07-13
+  Tor 0.3.2.11 moves to a new bridge authority, meaning people running
+  bridge relays should upgrade. We also take this opportunity to backport
+  other minor fixes.
+
+  o Directory authority changes:
+    - The "Bifroest" bridge authority has been retired; the new bridge
+      authority is "Serge", and it is operated by George from the
+      TorBSD project. Closes ticket 26771.
+
+  o Directory authority changes (backport from 0.3.3.7):
+    - Add an IPv6 address for the "dannenberg" directory authority.
+      Closes ticket 26343.
+
+  o Major bugfixes (directory authorities, backport from 0.3.4.1-alpha):
+    - When directory authorities read a zero-byte bandwidth file, they
+      would previously log a warning with the contents of an
+      uninitialised buffer. They now log a warning about the empty file
+      instead. Fixes bug 26007; bugfix on 0.2.2.1-alpha.
+
+  o Major bugfixes (onion service, backport from 0.3.4.1-alpha):
+    - Correctly detect when onion services get disabled after HUP. Fixes
+      bug 25761; bugfix on 0.3.2.1.
+
+  o Minor features (sandbox, backport from 0.3.3.4-alpha):
+    - Explicitly permit the poll() system call when the Linux
+      seccomp2-based sandbox is enabled: apparently, some versions of
+      libc use poll() when calling getpwnam(). Closes ticket 25313.
+
+  o Minor feature (continuous integration, backport from 0.3.3.5-rc):
+    - Update the Travis CI configuration to use the stable Rust channel,
+      now that we have decided to require that. Closes ticket 25714.
+
+  o Minor features (continuous integration, backport from 0.3.4.1-alpha):
+    - Our .travis.yml configuration now includes support for testing the
+      results of "make distcheck". (It's not uncommon for "make check"
+      to pass but "make distcheck" to fail.) Closes ticket 25814.
+    - Our Travis CI configuration now integrates with the Coveralls
+      coverage analysis tool. Closes ticket 25818.
+
+  o Minor features (relay, diagnostic, backport from 0.3.4.3-alpha):
+    - Add several checks to detect whether Tor relays are uploading
+      their descriptors without specifying why they regenerated them.
+      Diagnostic for ticket 25686.
+
+  o Minor features (compilation, backport from 0.3.4.4-rc):
+    - When building Tor, prefer to use Python 3 over Python 2, and more
+      recent (contemplated) versions over older ones. Closes
+      ticket 26372.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the July 3 2018 Maxmind GeoLite2
+      Country database. Closes ticket 26674.
+
+  o Minor bugfixes (correctness, client, backport from 0.3.4.1-alpha):
+    - Upon receiving a malformed connected cell, stop processing the
+      cell immediately. Previously we would mark the connection for
+      close, but continue processing the cell as if the connection were
+      open. Fixes bug 26072; bugfix on 0.2.4.7-alpha.
+
+  o Minor bugfixes (Linux seccomp2 sandbox, backport from 0.3.4.1-alpha):
+    - Allow the nanosleep() system call, which glibc uses to implement
+      sleep() and usleep(). Fixes bug 24969; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (testing, compatibility, backport from 0.3.4.4-rc):
+    - When running the hs_ntor_ref.py test, make sure only to pass
+      strings (rather than "bytes" objects) to the Python subprocess
+      module. Python 3 on Windows seems to require this. Fixes bug
+      26535; bugfix on 0.3.1.1-alpha.
+    - When running the ntor_ref.py test, make sure only to pass strings
+      (rather than "bytes" objects) to the Python subprocess module.
+      Python 3 on Windows seems to require this. Fixes bug 26535; bugfix
+      on 0.2.5.5-alpha.
+
+  o Minor bugfixes (compatibility, openssl, backport from 0.3.4.2-alpha):
+    - Work around a change in OpenSSL 1.1.1 where return values that
+      would previously indicate "no password" now indicate an empty
+      password. Without this workaround, Tor instances running with
+      OpenSSL 1.1.1 would accept descriptors that other Tor instances
+      would reject. Fixes bug 26116; bugfix on 0.2.5.16.
+
+  o Minor bugfixes (documentation, backport from 0.3.3.5-rc):
+    - Document that the PerConnBW{Rate,Burst} options will fall back to
+      their corresponding consensus parameters only if those parameters
+      are set. Previously we had claimed that these values would always
+      be set in the consensus. Fixes bug 25296; bugfix on 0.2.2.7-alpha.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.4-rc):
+    - Fix a compilation warning on some versions of GCC when building
+      code that calls routerinfo_get_my_routerinfo() twice, assuming
+      that the second call will succeed if the first one did. Fixes bug
+      26269; bugfix on 0.2.8.2-alpha.
+
+  o Minor bugfixes (client, backport from 0.3.4.1-alpha):
+    - Don't consider Tor running as a client if the ControlPort is open,
+      but no actual client ports are open. Fixes bug 26062; bugfix
+      on 0.2.9.4-alpha.
+
+  o Minor bugfixes (hardening, backport from 0.3.4.2-alpha):
+    - Prevent a possible out-of-bounds smartlist read in
+      protover_compute_vote(). Fixes bug 26196; bugfix on 0.2.9.4-alpha.
+
+  o Minor bugfixes (C correctness, backport from 0.3.3.4-alpha):
+    - Fix a very unlikely (impossible, we believe) null pointer
+      dereference. Fixes bug 25629; bugfix on 0.2.9.15. Found by
+      Coverity; this is CID 1430932.
+
+  o Minor bugfixes (onion service, backport from 0.3.4.1-alpha):
+    - Fix a memory leak when a v3 onion service is configured and gets a
+      SIGHUP signal. Fixes bug 25901; bugfix on 0.3.2.1-alpha.
+    - When parsing the descriptor signature, look for the token plus an
+      extra white-space at the end. This is more correct but also will
+      allow us to support new fields that might start with "signature".
+      Fixes bug 26069; bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (relay, backport from 0.3.4.3-alpha):
+    - Relays now correctly block attempts to re-extend to the previous
+      relay by Ed25519 identity. Previously they would warn in this
+      case, but not actually reject the attempt. Fixes bug 26158; bugfix
+      on 0.3.0.1-alpha.
+
+  o Minor bugfixes (relay, crash, backport from 0.3.4.1-alpha):
+    - Avoid a crash when running with DirPort set but ORPort turned off.
+      Fixes a case of bug 23693; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.2-alpha):
+    - Silence unused-const-variable warnings in zstd.h with some GCC
+      versions. Fixes bug 26272; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (testing, backport from 0.3.3.4-alpha):
+    - Avoid intermittent test failures due to a test that had relied on
+      onion service introduction point creation finishing within 5
+      seconds of real clock time. Fixes bug 25450; bugfix
+      on 0.3.1.3-alpha.
+
+  o Minor bugfixes (compilation, backport from 0.3.3.4-alpha):
+    - Fix a C99 compliance issue in our configuration script that caused
+      compilation issues when compiling Tor with certain versions of
+      xtools. Fixes bug 25474; bugfix on 0.3.2.5-alpha.
+
+  o Minor bugfixes (memory, correctness, backport from 0.3.4.4-rc):
+    - Fix a number of small memory leaks identified by coverity. Fixes
+      bug 26467; bugfix on numerous Tor versions.
+
+  o Code simplification and refactoring (backport from 0.3.3.5-rc):
+    - Move the list of default directory authorities to its own file.
+      Closes ticket 24854. Patch by "beastr0".
+
+
+Changes in version 0.2.9.16 - 2018-07-13
+  Tor 0.2.9.16 moves to a new bridge authority, meaning people running
+  bridge relays should upgrade. We also take this opportunity to backport
+  other minor fixes.
+
+  o Directory authority changes:
+    - The "Bifroest" bridge authority has been retired; the new bridge
+      authority is "Serge", and it is operated by George from the
+      TorBSD project. Closes ticket 26771.
+
+  o Directory authority changes (backport from 0.3.3.7):
+    - Add an IPv6 address for the "dannenberg" directory authority.
+      Closes ticket 26343.
+
+  o Major bugfixes (directory authorities, backport from 0.3.4.1-alpha):
+    - When directory authorities read a zero-byte bandwidth file, they
+      would previously log a warning with the contents of an
+      uninitialised buffer. They now log a warning about the empty file
+      instead. Fixes bug 26007; bugfix on 0.2.2.1-alpha.
+
+  o Minor features (sandbox, backport from 0.3.3.4-alpha):
+    - Explicitly permit the poll() system call when the Linux
+      seccomp2-based sandbox is enabled: apparently, some versions of
+      libc use poll() when calling getpwnam(). Closes ticket 25313.
+
+  o Minor features (continuous integration, backport from 0.3.4.1-alpha):
+    - Our .travis.yml configuration now includes support for testing the
+      results of "make distcheck". (It's not uncommon for "make check"
+      to pass but "make distcheck" to fail.) Closes ticket 25814.
+    - Our Travis CI configuration now integrates with the Coveralls
+      coverage analysis tool. Closes ticket 25818.
+
+  o Minor features (compilation, backport from 0.3.4.4-rc):
+    - When building Tor, prefer to use Python 3 over Python 2, and more
+      recent (contemplated) versions over older ones. Closes
+      ticket 26372.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the July 3 2018 Maxmind GeoLite2
+      Country database. Closes ticket 26674.
+
+  o Minor bugfixes (correctness, client, backport from 0.3.4.1-alpha):
+    - Upon receiving a malformed connected cell, stop processing the
+      cell immediately. Previously we would mark the connection for
+      close, but continue processing the cell as if the connection were
+      open. Fixes bug 26072; bugfix on 0.2.4.7-alpha.
+
+  o Minor bugfixes (Linux seccomp2 sandbox, backport from 0.3.4.1-alpha):
+    - Allow the nanosleep() system call, which glibc uses to implement
+      sleep() and usleep(). Fixes bug 24969; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (testing, compatibility, backport from 0.3.4.4-rc):
+    - When running the ntor_ref.py test, make sure only to pass strings
+      (rather than "bytes" objects) to the Python subprocess module.
+      Python 3 on Windows seems to require this. Fixes bug 26535; bugfix
+      on 0.2.5.5-alpha.
+
+  o Minor bugfixes (compatibility, openssl, backport from 0.3.4.2-alpha):
+    - Work around a change in OpenSSL 1.1.1 where return values that
+      would previously indicate "no password" now indicate an empty
+      password. Without this workaround, Tor instances running with
+      OpenSSL 1.1.1 would accept descriptors that other Tor instances
+      would reject. Fixes bug 26116; bugfix on 0.2.5.16.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.4-rc):
+    - Fix a compilation warning on some versions of GCC when building
+      code that calls routerinfo_get_my_routerinfo() twice, assuming
+      that the second call will succeed if the first one did. Fixes bug
+      26269; bugfix on 0.2.8.2-alpha.
+
+  o Minor bugfixes (client, backport from 0.3.4.1-alpha):
+    - Don't consider Tor running as a client if the ControlPort is open,
+      but no actual client ports are open. Fixes bug 26062; bugfix
+      on 0.2.9.4-alpha.
+
+  o Minor bugfixes (hardening, backport from 0.3.4.2-alpha):
+    - Prevent a possible out-of-bounds smartlist read in
+      protover_compute_vote(). Fixes bug 26196; bugfix on 0.2.9.4-alpha.
+
+  o Minor bugfixes (C correctness, backport from 0.3.3.4-alpha):
+    - Fix a very unlikely (impossible, we believe) null pointer
+      dereference. Fixes bug 25629; bugfix on 0.2.9.15. Found by
+      Coverity; this is CID 1430932.
+
+  o Minor bugfixes (memory, correctness, backport from 0.3.4.4-rc):
+    - Fix a number of small memory leaks identified by coverity. Fixes
+      bug 26467; bugfix on numerous Tor versions.
+
+  o Code simplification and refactoring (backport from 0.3.3.5-rc):
+    - Move the list of default directory authorities to its own file.
+      Closes ticket 24854. Patch by "beastr0".
+
+
+Changes in version 0.3.4.4-rc - 2018-07-09
+  Tor 0.3.4.4-rc fixes several small compilation, portability, and
+  correctness issues in previous versions of Tor. This version is a
+  release candidate: if no serious bugs are found, we expect that the
+  stable 0.3.4 release will be (almost) the same as this release.
+
+  o Minor features (compilation):
+    - When building Tor, prefer to use Python 3 over Python 2, and more
+      recent (contemplated) versions over older ones. Closes
+      ticket 26372.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the July 3 2018 Maxmind GeoLite2
+      Country database. Closes ticket 26674.
+
+  o Minor features (Rust, portability):
+    - Rust cross-compilation is now supported. Closes ticket 25895.
+
+  o Minor bugfixes (compilation):
+    - Fix a compilation warning on some versions of GCC when building
+      code that calls routerinfo_get_my_routerinfo() twice, assuming
+      that the second call will succeed if the first one did. Fixes bug
+      26269; bugfix on 0.2.8.2-alpha.
+
+  o Minor bugfixes (control port):
+    - Report the port correctly when a port is configured to bind to
+      "auto". Fixes bug 26568; bugfix on 0.3.4.1-alpha.
+    - Handle the HSADDRESS= argument to the HSPOST command properly.
+      (Previously, this argument was misparsed and thus ignored.) Fixes
+      bug 26523; bugfix on 0.3.3.1-alpha. Patch by "akwizgran".
+
+  o Minor bugfixes (correctness, flow control):
+    - Upon receiving a stream-level SENDME cell, verify that our window
+      has not grown too large. Fixes bug 26214; bugfix on svn
+      r54 (pre-0.0.1).
+
+  o Minor bugfixes (memory, correctness):
+    - Fix a number of small memory leaks identified by coverity. Fixes
+      bug 26467; bugfix on numerous Tor versions.
+
+  o Minor bugfixes (testing, compatibility):
+    - When running the hs_ntor_ref.py test, make sure only to pass
+      strings (rather than "bytes" objects) to the Python subprocess
+      module. Python 3 on Windows seems to require this. Fixes bug
+      26535; bugfix on 0.3.1.1-alpha.
+    - When running the ntor_ref.py test, make sure only to pass strings
+      (rather than "bytes" objects) to the Python subprocess module.
+      Python 3 on Windows seems to require this. Fixes bug 26535; bugfix
+      on 0.2.5.5-alpha.
+
+
 Changes in version 0.3.3.8 - 2018-07-09
   Tor 0.3.3.8 backports several changes from the 0.3.4.x series, including
   fixes for a memory leak affecting directory authorities.
@@ -60,57 +373,6 @@ Changes in version 0.3.3.8 - 2018-07-09
       not generated on restart. Fixes bug 25512; bugfix on 0.3.3.1-alpha.
 
   o Minor bugfixes (testing, compatibility, backport from 0.3.4.4-rc):
-    - When running the hs_ntor_ref.py test, make sure only to pass
-      strings (rather than "bytes" objects) to the Python subprocess
-      module. Python 3 on Windows seems to require this. Fixes bug
-      26535; bugfix on 0.3.1.1-alpha.
-    - When running the ntor_ref.py test, make sure only to pass strings
-      (rather than "bytes" objects) to the Python subprocess module.
-      Python 3 on Windows seems to require this. Fixes bug 26535; bugfix
-      on 0.2.5.5-alpha.
-
-
-Changes in version 0.3.4.4-rc - 2018-07-09
-  Tor 0.3.4.4-rc fixes several small compilation, portability, and
-  correctness issues in previous versions of Tor. This version is a
-  release candidate: if no serious bugs are found, we expect that the
-  stable 0.3.4 release will be (almost) the same as this release.
-
-  o Minor features (compilation):
-    - When building Tor, prefer to use Python 3 over Python 2, and more
-      recent (contemplated) versions over older ones. Closes
-      ticket 26372.
-
-  o Minor features (geoip):
-    - Update geoip and geoip6 to the July 3 2018 Maxmind GeoLite2
-      Country database. Closes ticket 26674.
-
-  o Minor features (Rust, portability):
-    - Rust cross-compilation is now supported. Closes ticket 25895.
-
-  o Minor bugfixes (compilation):
-    - Fix a compilation warning on some versions of GCC when building
-      code that calls routerinfo_get_my_routerinfo() twice, assuming
-      that the second call will succeed if the first one did. Fixes bug
-      26269; bugfix on 0.2.8.2-alpha.
-
-  o Minor bugfixes (control port):
-    - Report the port correctly when a port is configured to bind to
-      "auto". Fixes bug 26568; bugfix on 0.3.4.1-alpha.
-    - Handle the HSADDRESS= argument to the HSPOST command properly.
-      (Previously, this argument was misparsed and thus ignored.) Fixes
-      bug 26523; bugfix on 0.3.3.1-alpha. Patch by "akwizgran".
-
-  o Minor bugfixes (correctness, flow control):
-    - Upon receiving a stream-level SENDME cell, verify that our window
-      has not grown too large. Fixes bug 26214; bugfix on svn
-      r54 (pre-0.0.1).
-
-  o Minor bugfixes (memory, correctness):
-    - Fix a number of small memory leaks identified by coverity. Fixes
-      bug 26467; bugfix on numerous Tor versions.
-
-  o Minor bugfixes (testing, compatibility):
     - When running the hs_ntor_ref.py test, make sure only to pass
       strings (rather than "bytes" objects) to the Python subprocess
       module. Python 3 on Windows seems to require this. Fixes bug
@@ -388,7 +650,7 @@ Changes in version 0.3.3.6 - 2018-05-22
       Fixes bug 26069; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (relay, crash, backport from 0.3.4.1-alpha):
-    - Avoid a crash when running with DirPort set but ORPort tuned off.
+    - Avoid a crash when running with DirPort set but ORPort turned off.
       Fixes a case of bug 23693; bugfix on 0.3.1.1-alpha.
 
   o Documentation (backport from 0.3.4.1-alpha):
@@ -691,7 +953,7 @@ Changes in version 0.3.4.1-alpha - 2018-05-17
       here.) Fixes bug 24910; bugfix on 0.2.4.17-rc.
 
   o Minor bugfixes (relay, crash):
-    - Avoid a crash when running with DirPort set but ORPort tuned off.
+    - Avoid a crash when running with DirPort set but ORPort turned off.
       Fixes a case of bug 23693; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (restart-in-process):
