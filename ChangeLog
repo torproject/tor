@@ -1,3 +1,13 @@
+Changes in version 0.3.4.5-rc - 2018-07-13
+  Tor 0.3.4.5-rc moves to a new bridge authority, meaning people running
+  bridge relays should upgrade.
+
+  o Directory authority changes:
+    - The "Bifroest" bridge authority has been retired; the new bridge
+      authority is "Serge", and it is operated by George from the
+      TorBSD project. Closes ticket 26771.
+
+
 Changes in version 0.3.4.4-rc - 2018-07-09
   Tor 0.3.4.4-rc fixes several small compilation, portability, and
   correctness issues in previous versions of Tor. This version is a
