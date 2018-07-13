@@ -562,7 +562,7 @@ Changes in version 0.3.3.6 - 2018-05-22
       hop. Fixes bug 23100; bugfix on 0.2.2.2-alpha.
 
   o Minor bugfixes (relay, crash, backport from 0.3.4.1-alpha):
-    - Avoid a crash when running with DirPort set but ORPort tuned off.
+    - Avoid a crash when running with DirPort set but ORPort turned off.
       Fixes a case of bug 23693; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (Rust FFI):

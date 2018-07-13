@@ -326,7 +326,7 @@ Changes in version 0.3.3.6 - 2018-05-22
       Fixes bug 26069; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (relay, crash, backport from 0.3.4.1-alpha):
-    - Avoid a crash when running with DirPort set but ORPort tuned off.
+    - Avoid a crash when running with DirPort set but ORPort turned off.
       Fixes a case of bug 23693; bugfix on 0.3.1.1-alpha.
 
   o Documentation (backport from 0.3.4.1-alpha):
@@ -629,7 +629,7 @@ Changes in version 0.3.4.1-alpha - 2018-05-17
       here.) Fixes bug 24910; bugfix on 0.2.4.17-rc.
 
   o Minor bugfixes (relay, crash):
-    - Avoid a crash when running with DirPort set but ORPort tuned off.
+    - Avoid a crash when running with DirPort set but ORPort turned off.
       Fixes a case of bug 23693; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (restart-in-process):
