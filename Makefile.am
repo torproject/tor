@@ -66,6 +66,7 @@ TOR_UTIL_LIBS = \
 
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
+if UNITTESTS_ENABLED
 TOR_UTIL_TESTING_LIBS = \
 	src/lib/libtor-process-testing.a \
 	src/lib/libtor-time-testing.a \
@@ -90,6 +91,7 @@ TOR_UTIL_TESTING_LIBS = \
 	src/lib/libtor-err-testing.a \
 	src/lib/libtor-intmath.a \
 	src/lib/libtor-ctime-testing.a
+endif
 
 # Internal crypto libraries used in Tor
 TOR_CRYPTO_LIBS = \
@@ -100,11 +102,13 @@ TOR_CRYPTO_LIBS = \
 
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
+if UNITTESTS_ENABLED
 TOR_CRYPTO_TESTING_LIBS = \
 	src/lib/libtor-tls-testing.a \
 	src/lib/libtor-crypt-ops-testing.a \
 	$(LIBKECCAK_TINY) \
 	$(LIBDONNA)
+endif
 
 # All static libraries used to link tor.
 TOR_INTERNAL_LIBS = \
@@ -118,6 +122,7 @@ TOR_INTERNAL_LIBS = \
 
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
+if UNITTESTS_ENABLED
 TOR_INTERNAL_TESTING_LIBS = \
 	src/core/libtor-app-testing.a \
 	src/lib/libtor-compress-testing.a \
@@ -126,6 +131,7 @@ TOR_INTERNAL_TESTING_LIBS = \
 	$(TOR_UTIL_TESTING_LIBS) \
 	src/trunnel/libor-trunnel-testing.a \
 	src/lib/libtor-trace.a
+endif
 
 # All libraries used to link tor-cov
 
