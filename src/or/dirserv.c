@@ -2660,7 +2660,8 @@ dirserv_read_measured_bandwidths(const char *from_file,
   /* If timestamp was correct and bw_file_headers is not NULL,
    * add timestamp to bw_file_headers */
   if (bw_file_headers)
-    smartlist_add_asprintf(bw_file_headers, "timestamp=%ld", file_time);
+    smartlist_add_asprintf(bw_file_headers, "timestamp=%lu",
+                           (unsigned long)file_time);
 
   if (routerstatuses)
     smartlist_sort(routerstatuses, compare_vote_routerstatus_entries);
