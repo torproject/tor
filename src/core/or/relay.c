@@ -64,6 +64,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dircache/directory.h"
+#include "feature/relay/dns.h"
 #include "feature/stats/geoip.h"
 #include "feature/hs/hs_cache.h"
 #include "core/mainloop/main.h"
@@ -2536,6 +2537,7 @@ cell_queues_check_size(void)
   alloc += rend_cache_total;
   const size_t geoip_client_cache_total =
     geoip_client_cache_total_allocation();
+  const size_t dns_cache_total = dns_cache_total_allocation();
   alloc += geoip_client_cache_total;
   if (alloc >= get_options()->MaxMemInQueues_low_threshold) {
     last_time_under_memory_pressure = approx_time();
@@ -2553,6 +2555,11 @@ cell_queues_check_size(void)
           geoip_client_cache_total -
           (size_t)(get_options()->MaxMemInQueues / 10);
         alloc -= geoip_client_cache_handle_oom(now, bytes_to_remove);
+      }
+      if (dns_cache_total > get_options()->MaxMemInQueues / 5) {
+        const size_t bytes_to_remove =
+          dns_cache_total - (size_t)(get_options()->MaxMemInQueues / 10);
+        alloc -= dns_cache_handle_oom(now, bytes_to_remove);
       }
       circuits_handle_oom(alloc);
       return 1;
