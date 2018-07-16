@@ -38,6 +38,7 @@ void dns_launch_correctness_checks(void);
 int dns_seems_to_be_broken(void);
 int dns_seems_to_be_broken_for_ipv6(void);
 void dns_reset_correctness_checks(void);
+size_t dns_cache_total_allocation(void);
 void dump_dns_mem_usage(int severity);
 
 #ifdef DNS_PRIVATE
