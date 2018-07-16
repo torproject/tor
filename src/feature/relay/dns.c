@@ -2076,14 +2076,21 @@ dns_cache_entry_count(void)
    return HT_SIZE(&cache_root);
 }
 
+/* Return the total size in bytes of the DNS cache. */
+size_t
+dns_cache_total_allocation(void)
+{
+  return sizeof(struct cached_resolve_t) * dns_cache_entry_count() +
+         HT_MEM_USAGE(&cache_root);
+}
+
 /** Log memory information about our internal DNS cache at level 'severity'. */
 void
 dump_dns_mem_usage(int severity)
 {
   /* This should never be larger than INT_MAX. */
   int hash_count = dns_cache_entry_count();
-  size_t hash_mem = sizeof(struct cached_resolve_t) * hash_count;
-  hash_mem += HT_MEM_USAGE(&cache_root);
+  size_t hash_mem = dns_cache_total_allocation();
 
   /* Print out the count and estimated size of our &cache_root.  It undercounts
      hostnames in cached reverse resolves.
@@ -2091,6 +2098,36 @@ dump_dns_mem_usage(int severity)
   tor_log(severity, LD_MM, "Our DNS cache has %d entries.", hash_count);
   tor_log(severity, LD_MM, "Our DNS cache size is approximately %u bytes.",
       (unsigned)hash_mem);
+}
+
+/* Do a round of OOM cleanup on all DNS entries. Return the amount of removed
+ * bytes. It is possible that the returned value is lower than min_remove_bytes
+ * if the caches get emptied out so the caller should be aware of this. */
+size_t
+dns_cache_handle_oom(time_t now, size_t min_remove_bytes)
+{
+  time_t time_inc = 0;
+  size_t total_bytes_removed = 0;
+  size_t current_size = dns_cache_total_allocation();
+
+  do {
+    /* If no DNS entries left, break loop. */
+    if (!dns_cache_entry_count())
+      break;
+
+    /* Get cutoff interval and remove entries. */
+    time_t cutoff = now + time_inc;
+    purge_expired_resolves(cutoff);
+
+    /* Update amount of bytes removed and array size. */
+    size_t bytes_removed = current_size - dns_cache_total_allocation();
+    current_size -= bytes_removed;
+    total_bytes_removed += bytes_removed;
+
+    time_inc += 3600; /* Increase time_inc by 1 hour. */
+  } while (total_bytes_removed < min_remove_bytes);
+
+  return total_bytes_removed;
 }
 
 #ifdef DEBUG_DNS_CACHE
