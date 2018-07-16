@@ -44,7 +44,6 @@
 #include "or/vote_timing_st.h"
 
 #include "lib/container/order.h"
-#include "lib/log/util_bug.h"
 
 /**
  * \file dirvote.c
