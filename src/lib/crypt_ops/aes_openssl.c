@@ -5,8 +5,8 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file aes.c
- * \brief Implements a counter-mode stream cipher on top of AES.
+ * \file aes_openssl.c
+ * \brief Use OpenSSL to implement AES_CTR.
  **/
 
 #include "orconfig.h"
