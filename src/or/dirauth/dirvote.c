@@ -252,7 +252,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     /* XXXX Abstraction violation: should be pulling a field out of v3_ns.*/
     char *flag_thresholds = dirserv_get_flag_thresholds_line();
     char *params;
-    char *bw_file_headers = NULL;
+    char *bw_headers_line = NULL;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
       make_consensus_method_list(MIN_SUPPORTED_CONSENSUS_METHOD,
@@ -268,16 +268,28 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
       params = tor_strdup("");
     tor_assert(cert);
 
+    /* v3_ns->bw_file_headers is only set when V3BandwidthsFile is
+     * configured */
     if (v3_ns->bw_file_headers) {
+      char *bw_file_headers = NULL;
+      /* If there are too many headers, leave the header string NULL */
       if (! BUG(smartlist_len(v3_ns->bw_file_headers)
                 > MAX_BW_FILE_HEADER_COUNT_IN_VOTE)) {
         bw_file_headers = smartlist_join_strings(v3_ns->bw_file_headers, " ",
                                                  0, NULL);
         if (BUG(strlen(bw_file_headers) > MAX_BW_FILE_HEADERS_LINE_LEN)) {
-          /* Free and set to NULL, so the vote header line is empty */
+          /* Free and set to NULL, because the line was too long */
           tor_free(bw_file_headers);
         }
       }
+      if (!bw_file_headers) {
+          /* If parsing failed, add a bandwidth header line with no entries */
+          bw_file_headers = tor_strdup("");
+      }
+      /* At this point, the line will always be present */
+      bw_headers_line = format_line_if_present("bandwidth-file-headers",
+                                               bw_file_headers);
+      tor_free(bw_file_headers);
     }
 
     smartlist_add_asprintf(chunks,
@@ -298,7 +310,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n"
                  "%s" /* shared randomness information */
-                 "bandwidth-file-headers %s\n", /* bandwidth file headers */
+                 "%s" /* bandwidth file headers */
+                 ,
                  v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
                  methods,
                  published, va, fu, vu,
@@ -315,15 +328,15 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  voter->contact,
                  shared_random_vote_str ?
                            shared_random_vote_str : "",
-                 bw_file_headers ?
-                           bw_file_headers : "");
+                 bw_headers_line ?
+                           bw_headers_line : "");
 
     tor_free(params);
     tor_free(flags);
     tor_free(flag_thresholds);
     tor_free(methods);
     tor_free(shared_random_vote_str);
-    tor_free(bw_file_headers);
+    tor_free(bw_headers_line);
 
     if (!tor_digest_is_zero(voter->legacy_id_digest)) {
       char fpbuf[HEX_DIGEST_LEN+1];
@@ -4306,7 +4319,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   uint32_t addr;
   char *hostname = NULL, *client_versions = NULL, *server_versions = NULL;
   const char *contact;
-  smartlist_t *routers, *routerstatuses, *bw_file_headers;
+  smartlist_t *routers, *routerstatuses;
   char identity_digest[DIGEST_LEN];
   char signing_key_digest[DIGEST_LEN];
   int listbadexits = options->AuthDirListBadExits;
@@ -4318,6 +4331,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   digestmap_t *omit_as_sybil = NULL;
   const int vote_on_reachability = running_long_enough_to_decide_unreachable();
   smartlist_t *microdescriptors = NULL;
+  smartlist_t *bw_file_headers = NULL;
 
   tor_assert(private_key);
   tor_assert(cert);
@@ -4390,7 +4404,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   routerstatuses = smartlist_new();
   microdescriptors = smartlist_new();
-  bw_file_headers = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     /* If it has a protover list and contains a protocol name greater than
@@ -4456,6 +4469,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   /* This pass through applies the measured bw lines to the routerstatuses */
   if (options->V3BandwidthsFile) {
+    /* Only set bw_file_headers when V3BandwidthsFile is configured */
+    bw_file_headers = smartlist_new();
     dirserv_read_measured_bandwidths(options->V3BandwidthsFile,
                                      routerstatuses, bw_file_headers);
   } else {
