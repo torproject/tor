@@ -279,7 +279,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
         }
       }
     }
-    bw_file_headers ? bw_file_headers : tor_strdup("");
 
     smartlist_add_asprintf(chunks,
                  "network-status-version 3\n"
@@ -316,7 +315,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  voter->contact,
                  shared_random_vote_str ?
                            shared_random_vote_str : "",
-                 bw_file_headers);
+                 bw_file_headers ?
+                           bw_file_headers : "");
 
     tor_free(params);
     tor_free(flags);
