@@ -351,8 +351,8 @@ set_scheduler(void)
   /* Finally we notice log if we switched schedulers. We use the type in case
    * two schedulers share a scheduler object. */
   if (old_scheduler_type != the_scheduler->type) {
-    log_notice(LD_CONFIG, "Scheduler type %s has been enabled.",
-               get_scheduler_type_string(the_scheduler->type));
+    log_info(LD_CONFIG, "Scheduler type %s has been enabled.",
+             get_scheduler_type_string(the_scheduler->type));
   }
 }
 
