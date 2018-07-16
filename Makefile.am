@@ -127,6 +127,14 @@ TOR_INTERNAL_TESTING_LIBS = \
 	src/trunnel/libor-trunnel-testing.a \
 	src/lib/libtor-trace.a
 
+TOR_LDFLAGS_CRYPTLIB=@TOR_LDFLAGS_openssl@
+TOR_LIBS_CRYPTLIB=@TOR_OPENSSL_LIBS@
+TOR_CFLAGS_CRYPTLIB=
+if USE_NSS
+TOR_CFLAGS_CRYPTLIB+=@NSS_CFLAGS@
+TOR_LIBS_CRYPTLIB+=@NSS_LIBS@
+endif
+
 # All libraries used to link tor-cov
 
 include src/include.am

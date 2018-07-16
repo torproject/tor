@@ -12,7 +12,7 @@
 
 #define CRYPTO_S2K_PRIVATE
 
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_hkdf.h"
 #include "lib/crypt_ops/crypto_rand.h"

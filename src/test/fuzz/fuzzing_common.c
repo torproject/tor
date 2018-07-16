@@ -7,8 +7,8 @@
 #include "app/config/config.h"
 #include "test/fuzz/fuzzing.h"
 #include "lib/compress/compress.h"
-#include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_init.h"
 
 static or_options_t *mock_options = NULL;
 static const or_options_t *
@@ -96,14 +96,19 @@ global_init(void)
 {
   tor_threads_init();
   tor_compress_init();
-  {
-    struct sipkey sipkey = { 1337, 7331 };
-    siphash_set_global_key(&sipkey);
-  }
 
   /* Initialise logging first */
   init_logging(1);
   configure_backtrace_handler(get_version());
+
+  if (crypto_global_init(0, NULL, NULL) < 0)
+    abort();
+
+  {
+    struct sipkey sipkey = { 1337, 7331 };
+    siphash_unset_global_key();
+    siphash_set_global_key(&sipkey);
+  }
 
   /* set up the options. */
   mock_options = tor_malloc_zero(sizeof(or_options_t));

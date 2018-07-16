@@ -55,6 +55,7 @@
 #include "lib/tls/tortls.h"
 #include "lib/encoding/confline.h"
 #include "lib/crypt_ops/crypto_format.h"
+#include "lib/crypt_ops/crypto_init.h"
 
 /**
  * \file router.c

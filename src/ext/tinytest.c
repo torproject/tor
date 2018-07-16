@@ -25,6 +25,7 @@
 #ifdef TINYTEST_LOCAL
 #include "tinytest_local.h"
 #endif
+#define TINYTEST_POSTFORK
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -118,6 +119,12 @@ testcase_run_bare_(const struct testcase_t *testcase)
 
 #ifndef NO_FORKING
 
+#ifdef TINYTEST_POSTFORK
+void tinytest_postfork(void);
+#else
+static void tinytest_postfork(void) { }
+#endif
+
 static enum outcome
 testcase_run_forked_(const struct testgroup_t *group,
 		     const struct testcase_t *testcase)
@@ -187,6 +194,7 @@ testcase_run_forked_(const struct testgroup_t *group,
 		int test_r, write_r;
 		char b[1];
 		close(outcome_pipe[0]);
+		tinytest_postfork();
 		test_r = testcase_run_bare_(testcase);
 		assert(0<=(int)test_r && (int)test_r<=2);
 		b[0] = "NYS"[test_r];

@@ -9,6 +9,7 @@
 
 #include "lib/evloop/compat_libevent.h"
 #include "lib/evloop/timers.h"
+#include "lib/crypt_ops/crypto_init.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/log/util_bug.h"
 #include "lib/time/compat_time.h"
@@ -62,6 +63,10 @@ main(int argc, char **argv)
   memset(&cfg, 0, sizeof(cfg));
   tor_libevent_initialize(&cfg);
   timers_initialize();
+  init_logging(1);
+
+  if (crypto_global_init(0, NULL, NULL) < 0)
+    return 1;
 
   int i;
   int ret;

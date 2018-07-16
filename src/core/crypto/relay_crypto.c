@@ -7,7 +7,7 @@
 #include "core/or/or.h"
 #include "core/or/circuitlist.h"
 #include "app/config/config.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "core/crypto/hs_ntor.h" // for HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN
 #include "core/or/relay.h"

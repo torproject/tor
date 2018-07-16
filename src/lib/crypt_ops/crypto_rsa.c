@@ -9,7 +9,7 @@
  * \brief Block of functions related with RSA utilities and operations.
  **/
 
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_format.h"
@@ -207,7 +207,7 @@ crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits))
   }
 
   if (!env->key) {
-    crypto_log_errors(LOG_WARN, "generating RSA key");
+    crypto_openssl_log_errors(LOG_WARN, "generating RSA key");
     return -1;
   }
 
@@ -252,7 +252,7 @@ crypto_pk_read_private_key_from_string(crypto_pk_t *env,
   BIO_free(b);
 
   if (!env->key) {
-    crypto_log_errors(LOG_WARN, "Error parsing private key");
+    crypto_openssl_log_errors(LOG_WARN, "Error parsing private key");
     return -1;
   }
   return 0;
@@ -316,7 +316,7 @@ crypto_pk_write_key_to_string_impl(crypto_pk_t *env, char **dest,
     r = PEM_write_bio_RSAPrivateKey(b, env->key, NULL,NULL,0,NULL,NULL);
 
   if (!r) {
-    crypto_log_errors(LOG_WARN, "writing RSA key to string");
+    crypto_openssl_log_errors(LOG_WARN, "writing RSA key to string");
     BIO_free(b);
     return -1;
   }
@@ -382,7 +382,7 @@ crypto_pk_read_public_key_from_string(crypto_pk_t *env, const char *src,
   env->key = PEM_read_bio_RSAPublicKey(b, NULL, pem_no_password_cb, NULL);
   BIO_free(b);
   if (!env->key) {
-    crypto_log_errors(LOG_WARN, "reading public key from string");
+    crypto_openssl_log_errors(LOG_WARN, "reading public key from string");
     return -1;
   }
 
@@ -408,7 +408,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
     return -1;
   if (PEM_write_bio_RSAPrivateKey(bio, env->key, NULL,NULL,0,NULL,NULL)
       == 0) {
-    crypto_log_errors(LOG_WARN, "writing private key");
+    crypto_openssl_log_errors(LOG_WARN, "writing private key");
     BIO_free(bio);
     return -1;
   }
@@ -434,7 +434,7 @@ crypto_pk_check_key(crypto_pk_t *env)
 
   r = RSA_check_key(env->key);
   if (r <= 0)
-    crypto_log_errors(LOG_WARN,"checking RSA key");
+    crypto_openssl_log_errors(LOG_WARN,"checking RSA key");
   return r;
 }
 
@@ -601,7 +601,7 @@ crypto_pk_copy_full(crypto_pk_t *env)
      */
     log_err(LD_CRYPTO, "Unable to duplicate a %s key: openssl failed.",
             privatekey?"private":"public");
-    crypto_log_errors(LOG_ERR,
+    crypto_openssl_log_errors(LOG_ERR,
                       privatekey ? "Duplicating a private key" :
                       "Duplicating a public key");
     tor_fragile_assert();
@@ -777,7 +777,7 @@ crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
                          (unsigned char*)from, (unsigned char*)to,
                          env->key, crypto_get_rsa_padding(padding));
   if (r<0) {
-    crypto_log_errors(LOG_WARN, "performing RSA encryption");
+    crypto_openssl_log_errors(LOG_WARN, "performing RSA encryption");
     return -1;
   }
   return r;
@@ -813,7 +813,7 @@ crypto_pk_private_decrypt(crypto_pk_t *env, char *to,
                           env->key, crypto_get_rsa_padding(padding));
 
   if (r<0) {
-    crypto_log_errors(warnOnFailure?LOG_WARN:LOG_DEBUG,
+    crypto_openssl_log_errors(warnOnFailure?LOG_WARN:LOG_DEBUG,
                       "performing RSA decryption");
     return -1;
   }
@@ -844,7 +844,7 @@ crypto_pk_public_checksig,(const crypto_pk_t *env, char *to,
                          env->key, RSA_PKCS1_PADDING);
 
   if (r<0) {
-    crypto_log_errors(LOG_INFO, "checking RSA signature");
+    crypto_openssl_log_errors(LOG_INFO, "checking RSA signature");
     return -1;
   }
   return r;
@@ -876,7 +876,7 @@ crypto_pk_private_sign(const crypto_pk_t *env, char *to, size_t tolen,
                           (unsigned char*)from, (unsigned char*)to,
                           (RSA*)env->key, RSA_PKCS1_PADDING);
   if (r<0) {
-    crypto_log_errors(LOG_WARN, "generating RSA signature");
+    crypto_openssl_log_errors(LOG_WARN, "generating RSA signature");
     return -1;
   }
   return r;
@@ -921,7 +921,7 @@ crypto_pk_asn1_decode(const char *str, size_t len)
   rsa = d2i_RSAPublicKey(NULL, &cp, len);
   tor_free(buf);
   if (!rsa) {
-    crypto_log_errors(LOG_WARN,"decoding public key");
+    crypto_openssl_log_errors(LOG_WARN,"decoding public key");
     return NULL;
   }
   return crypto_new_pk_from_rsa_(rsa);
@@ -974,6 +974,26 @@ crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out)
   }
   base16_encode(fp_out, FINGERPRINT_LEN + 1, hashed_digest, DIGEST_LEN);
   return 0;
+}
+
+/** Copy <b>in</b> to the <b>outlen</b>-byte buffer <b>out</b>, adding spaces
+ * every four characters. */
+void
+crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in)
+{
+  int n = 0;
+  char *end = out+outlen;
+  tor_assert(outlen < SIZE_T_CEILING);
+
+  while (*in && out<end) {
+    *out++ = *in++;
+    if (++n == 4 && *in && out<end) {
+      n = 0;
+      *out++ = ' ';
+    }
+  }
+  tor_assert(out<end);
+  *out = '\0';
 }
 
 /** Check a siglen-byte long signature at <b>sig</b> against
@@ -1145,7 +1165,7 @@ crypto_pk_base64_decode(const char *str, size_t len)
   const unsigned char *dp = (unsigned char*)der; /* Shut the compiler up. */
   RSA *rsa = d2i_RSAPrivateKey(NULL, &dp, der_len);
   if (!rsa) {
-    crypto_log_errors(LOG_WARN, "decoding private key");
+    crypto_openssl_log_errors(LOG_WARN, "decoding private key");
     goto out;
   }
 

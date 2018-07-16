@@ -1,0 +1,11 @@
+  o Major features (experimental, library support):
+    - Tor now has _partial_ support for using the NSS cryptography library in
+      place of OpenSSL.  When Tor is configured with --enable-nss, it will
+      use NSS for several (but not yet all) of its cryptography.  (It still
+      relies on OpenSSL for the rest.)  Eventually, if all goes as planned,
+      "--enable-nss" will produce a version of Tor that does not depend on
+      OpenSSL.  Implements ticket 26816.
+
+      WARNING: This feature is experimental.  Don't use it for real security
+      yet, until the code has had much more review, and more bugs have been
+      shaken out.

@@ -12,7 +12,6 @@
 
 #include "lib/container/smartlist.h"
 #include "lib/crypt_ops/crypto_digest.h"
-#include "lib/crypt_ops/crypto_openssl_mgt.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
@@ -24,12 +23,91 @@
 
 #include "lib/arch/bytes.h"
 
+#ifdef ENABLE_NSS
+DISABLE_GCC_WARNING(strict-prototypes)
+#include <pk11pub.h>
+ENABLE_GCC_WARNING(strict-prototypes)
+#else
+
+#include "lib/crypt_ops/crypto_openssl_mgt.h"
+
 DISABLE_GCC_WARNING(redundant-decls)
 
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 
 ENABLE_GCC_WARNING(redundant-decls)
+#endif
+
+#ifdef ENABLE_NSS
+/**
+ * Convert a digest_algorithm_t (used by tor) to a HashType (used by NSS).
+ * On failure, return SEC_OID_UNKNOWN. */
+static SECOidTag
+digest_alg_to_nss_oid(digest_algorithm_t alg)
+{
+  switch (alg) {
+    case DIGEST_SHA1: return SEC_OID_SHA1;
+    case DIGEST_SHA256: return SEC_OID_SHA256;
+    case DIGEST_SHA512: return SEC_OID_SHA512;
+    case DIGEST_SHA3_256: /* Fall through */
+    case DIGEST_SHA3_512: /* Fall through */
+    default:
+      return SEC_OID_UNKNOWN;
+  }
+}
+
+/* Helper: get an unkeyed digest via pk11wrap */
+static int
+digest_nss_internal(SECOidTag alg,
+                    char *digest, unsigned len_out,
+                    const char *msg, size_t msg_len)
+{
+  if (alg == SEC_OID_UNKNOWN)
+    return -1;
+
+  int rv = -1;
+  SECStatus s;
+  PK11Context *ctx = PK11_CreateDigestContext(alg);
+  if (!ctx)
+    return -1;
+
+  s = PK11_DigestBegin(ctx);
+  if (s != SECSuccess)
+    goto done;
+
+  s = PK11_DigestOp(ctx, (const unsigned char *)msg, msg_len);
+  if (s != SECSuccess)
+    goto done;
+
+  unsigned int len = 0;
+  s = PK11_DigestFinal(ctx, (unsigned char *)digest, &len, len_out);
+  if (s != SECSuccess)
+    goto done;
+
+  rv = 0;
+ done:
+  PK11_DestroyContext(ctx, PR_TRUE);
+  return rv;
+}
+
+/** True iff alg is implemented in our crypto library, and we want to use that
+ * implementation */
+static bool
+library_supports_digest(digest_algorithm_t alg)
+{
+  switch (alg) {
+    case DIGEST_SHA1: /* Fall through */
+    case DIGEST_SHA256: /* Fall through */
+    case DIGEST_SHA512: /* Fall through */
+      return true;
+    case DIGEST_SHA3_256: /* Fall through */
+    case DIGEST_SHA3_512: /* Fall through */
+    default:
+      return false;
+  }
+}
+#endif
 
 /* Crypto digest functions */
 
@@ -42,8 +120,13 @@ crypto_digest(char *digest, const char *m, size_t len)
 {
   tor_assert(m);
   tor_assert(digest);
-  if (SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL)
+#ifdef ENABLE_NSS
+  return digest_nss_internal(SEC_OID_SHA1, digest, DIGEST_LEN, m, len);
+#else
+  if (SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL) {
     return -1;
+  }
+#endif
   return 0;
 }
 
@@ -59,11 +142,16 @@ crypto_digest256(char *digest, const char *m, size_t len,
   tor_assert(algorithm == DIGEST_SHA256 || algorithm == DIGEST_SHA3_256);
 
   int ret = 0;
-  if (algorithm == DIGEST_SHA256)
+  if (algorithm == DIGEST_SHA256) {
+#ifdef ENABLE_NSS
+    return digest_nss_internal(SEC_OID_SHA256, digest, DIGEST256_LEN, m, len);
+#else
     ret = (SHA256((const uint8_t*)m,len,(uint8_t*)digest) != NULL);
-  else
+#endif
+  } else {
     ret = (sha3_256((uint8_t *)digest, DIGEST256_LEN,(const uint8_t *)m, len)
            > -1);
+  }
 
   if (!ret)
     return -1;
@@ -82,12 +170,17 @@ crypto_digest512(char *digest, const char *m, size_t len,
   tor_assert(algorithm == DIGEST_SHA512 || algorithm == DIGEST_SHA3_512);
 
   int ret = 0;
-  if (algorithm == DIGEST_SHA512)
+  if (algorithm == DIGEST_SHA512) {
+#ifdef ENABLE_NSS
+    return digest_nss_internal(SEC_OID_SHA512, digest, DIGEST512_LEN, m, len);
+#else
     ret = (SHA512((const unsigned char*)m,len,(unsigned char*)digest)
            != NULL);
-  else
+#endif
+  } else {
     ret = (sha3_512((uint8_t*)digest, DIGEST512_LEN, (const uint8_t*)m, len)
            > -1);
+  }
 
   if (!ret)
     return -1;
@@ -181,9 +274,13 @@ struct crypto_digest_t {
     * that space for other members might not even be allocated!
     */
   union {
+#ifdef ENABLE_NSS
+    PK11Context *ctx;
+#else
     SHA_CTX sha1; /**< state for SHA1 */
     SHA256_CTX sha2; /**< state for SHA256 */
     SHA512_CTX sha512; /**< state for SHA512 */
+#endif
     keccak_state sha3; /**< state for SHA3-[256,512] */
   } d;
 };
@@ -214,12 +311,19 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
 #define END_OF_FIELD(f) (offsetof(crypto_digest_t, f) + \
                          STRUCT_FIELD_SIZE(crypto_digest_t, f))
   switch (alg) {
+#ifdef ENABLE_NSS
+    case DIGEST_SHA1: /* Fall through */
+    case DIGEST_SHA256: /* Fall through */
+    case DIGEST_SHA512:
+      return END_OF_FIELD(d.ctx);
+#else
     case DIGEST_SHA1:
       return END_OF_FIELD(d.sha1);
     case DIGEST_SHA256:
       return END_OF_FIELD(d.sha2);
     case DIGEST_SHA512:
       return END_OF_FIELD(d.sha512);
+#endif
     case DIGEST_SHA3_256:
     case DIGEST_SHA3_512:
       return END_OF_FIELD(d.sha3);
@@ -243,6 +347,21 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
 
   switch (algorithm)
     {
+#ifdef ENABLE_NSS
+    case DIGEST_SHA1: /* fall through */
+    case DIGEST_SHA256: /* fall through */
+    case DIGEST_SHA512:
+      r->d.ctx = PK11_CreateDigestContext(digest_alg_to_nss_oid(algorithm));
+      if (BUG(!r->d.ctx)) {
+        tor_free(r);
+        return NULL;
+      }
+      if (BUG(SECSuccess != PK11_DigestBegin(r->d.ctx))) {
+        crypto_digest_free(r);
+        return NULL;
+      }
+      break;
+#else
     case DIGEST_SHA1:
       SHA1_Init(&r->d.sha1);
       break;
@@ -252,6 +371,7 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
     case DIGEST_SHA512:
       SHA512_Init(&r->d.sha512);
       break;
+#endif
     case DIGEST_SHA3_256:
       keccak_digest_init(&r->d.sha3, 256);
       break;
@@ -302,6 +422,11 @@ crypto_digest_free_(crypto_digest_t *digest)
 {
   if (!digest)
     return;
+#ifdef ENABLE_NSS
+  if (library_supports_digest(digest->algorithm)) {
+    PK11_DestroyContext(digest->d.ctx, PR_TRUE);
+  }
+#endif
   size_t bytes = crypto_digest_alloc_bytes(digest->algorithm);
   memwipe(digest, 0, bytes);
   tor_free(digest);
@@ -324,6 +449,16 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
    * just doing it ourselves. Hashes are fast.
    */
   switch (digest->algorithm) {
+#ifdef ENABLE_NSS
+    case DIGEST_SHA1: /* fall through */
+    case DIGEST_SHA256: /* fall through */
+    case DIGEST_SHA512:
+      tor_assert(len <= UINT_MAX);
+      SECStatus s = PK11_DigestOp(digest->d.ctx,
+                                  (const unsigned char *)data, len);
+      tor_assert(s == SECSuccess);
+      break;
+#else
     case DIGEST_SHA1:
       SHA1_Update(&digest->d.sha1, (void*)data, len);
       break;
@@ -333,6 +468,7 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
     case DIGEST_SHA512:
       SHA512_Update(&digest->d.sha512, (void*)data, len);
       break;
+#endif
     case DIGEST_SHA3_256: /* FALLSTHROUGH */
     case DIGEST_SHA3_512:
       keccak_digest_update(&digest->d.sha3, (const uint8_t *)data, len);
@@ -357,7 +493,6 @@ crypto_digest_get_digest(crypto_digest_t *digest,
                          char *out, size_t out_len)
 {
   unsigned char r[DIGEST512_LEN];
-  crypto_digest_t tmpenv;
   tor_assert(digest);
   tor_assert(out);
   tor_assert(out_len <= crypto_digest_algorithm_get_length(digest->algorithm));
@@ -370,7 +505,26 @@ crypto_digest_get_digest(crypto_digest_t *digest,
     return;
   }
 
+#ifdef ENABLE_NSS
+  /* Copy into a temporary buffer since DigestFinal (alters) the context */
+  unsigned char buf[1024];
+  unsigned int saved_len = 0;
+  unsigned rlen;
+  unsigned char *saved = PK11_SaveContextAlloc(digest->d.ctx,
+                                               buf, sizeof(buf),
+                                               &saved_len);
+  tor_assert(saved);
+  SECStatus s = PK11_DigestFinal(digest->d.ctx, r, &rlen, sizeof(r));
+  tor_assert(s == SECSuccess);
+  tor_assert(rlen >= out_len);
+  s = PK11_RestoreContext(digest->d.ctx, saved, saved_len);
+  tor_assert(s == SECSuccess);
+  if (saved != buf) {
+    PORT_ZFree(saved, saved_len);
+  }
+#else
   const size_t alloc_bytes = crypto_digest_alloc_bytes(digest->algorithm);
+  crypto_digest_t tmpenv;
   /* memcpy into a temporary ctx, since SHA*_Final clears the context */
   memcpy(&tmpenv, digest, alloc_bytes);
   switch (digest->algorithm) {
@@ -393,6 +547,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
       break;
 //LCOV_EXCL_STOP
   }
+#endif
   memcpy(out, r, out_len);
   memwipe(r, 0, sizeof(r));
 }
@@ -408,7 +563,13 @@ crypto_digest_dup(const crypto_digest_t *digest)
 {
   tor_assert(digest);
   const size_t alloc_bytes = crypto_digest_alloc_bytes(digest->algorithm);
-  return tor_memdup(digest, alloc_bytes);
+  crypto_digest_t *result = tor_memdup(digest, alloc_bytes);
+#ifdef ENABLE_NSS
+  if (library_supports_digest(digest->algorithm)) {
+    result->d.ctx = PK11_CloneContext(digest->d.ctx);
+  }
+#endif
+  return result;
 }
 
 /** Temporarily save the state of <b>digest</b> in <b>checkpoint</b>.
@@ -420,6 +581,18 @@ crypto_digest_checkpoint(crypto_digest_checkpoint_t *checkpoint,
 {
   const size_t bytes = crypto_digest_alloc_bytes(digest->algorithm);
   tor_assert(bytes <= sizeof(checkpoint->mem));
+#ifdef ENABLE_NSS
+  if (library_supports_digest(digest->algorithm)) {
+    unsigned char *allocated;
+    allocated = PK11_SaveContextAlloc(digest->d.ctx,
+                                      (unsigned char *)checkpoint->mem,
+                                      sizeof(checkpoint->mem),
+                                      &checkpoint->bytes_used);
+    /* No allocation is allowed here. */
+    tor_assert(allocated == checkpoint->mem);
+    return;
+  }
+#endif
   memcpy(checkpoint->mem, digest, bytes);
 }
 
@@ -431,6 +604,15 @@ crypto_digest_restore(crypto_digest_t *digest,
                       const crypto_digest_checkpoint_t *checkpoint)
 {
   const size_t bytes = crypto_digest_alloc_bytes(digest->algorithm);
+#ifdef ENABLE_NSS
+  if (library_supports_digest(digest->algorithm)) {
+    SECStatus s = PK11_RestoreContext(digest->d.ctx,
+                                      (unsigned char *)checkpoint->mem,
+                                      checkpoint->bytes_used);
+    tor_assert(s == SECSuccess);
+    return;
+  }
+#endif
   memcpy(digest, checkpoint->mem, bytes);
 }
 
@@ -446,6 +628,13 @@ crypto_digest_assign(crypto_digest_t *into,
   tor_assert(from);
   tor_assert(into->algorithm == from->algorithm);
   const size_t alloc_bytes = crypto_digest_alloc_bytes(from->algorithm);
+#ifdef ENABLE_NSS
+  if (library_supports_digest(from->algorithm)) {
+    PK11_DestroyContext(into->d.ctx, PR_TRUE);
+    into->d.ctx = PK11_CloneContext(from->d.ctx);
+    return;
+  }
+#endif
   memcpy(into,from,alloc_bytes);
 }
 
@@ -496,14 +685,63 @@ crypto_hmac_sha256(char *hmac_out,
                    const char *key, size_t key_len,
                    const char *msg, size_t msg_len)
 {
-  unsigned char *rv = NULL;
   /* If we've got OpenSSL >=0.9.8 we can use its hmac implementation. */
   tor_assert(key_len < INT_MAX);
   tor_assert(msg_len < INT_MAX);
   tor_assert(hmac_out);
+#ifdef ENABLE_NSS
+  PK11SlotInfo *slot = NULL;
+  PK11SymKey *symKey = NULL;
+  PK11Context *hmac = NULL;
+
+  int ok = 0;
+  SECStatus s;
+  SECItem keyItem, paramItem;
+  keyItem.data = (unsigned char *)key;
+  keyItem.len = key_len;
+  paramItem.type = siBuffer;
+  paramItem.data = NULL;
+  paramItem.len = 0;
+
+  slot = PK11_GetBestSlot(CKM_SHA256_HMAC, NULL);
+  if (!slot)
+    goto done;
+  symKey = PK11_ImportSymKey(slot, CKM_SHA256_HMAC,
+                             PK11_OriginUnwrap, CKA_SIGN, &keyItem, NULL);
+  if (!symKey)
+    goto done;
+
+  hmac = PK11_CreateContextBySymKey(CKM_SHA256_HMAC, CKA_SIGN, symKey,
+                                    &paramItem);
+  if (!hmac)
+    goto done;
+  s = PK11_DigestBegin(hmac);
+  if (s != SECSuccess)
+    goto done;
+  s = PK11_DigestOp(hmac, (const unsigned char *)msg, msg_len);
+  if (s != SECSuccess)
+    goto done;
+  unsigned int len=0;
+  s = PK11_DigestFinal(hmac, (unsigned char *)hmac_out, &len, DIGEST256_LEN);
+  if (s != SECSuccess || len != DIGEST256_LEN)
+    goto done;
+  ok = 1;
+
+ done:
+  if (hmac)
+    PK11_DestroyContext(hmac, PR_TRUE);
+  if (symKey)
+    PK11_FreeSymKey(symKey);
+  if (slot)
+    PK11_FreeSlot(slot);
+
+  tor_assert(ok);
+#else
+  unsigned char *rv = NULL;
   rv = HMAC(EVP_sha256(), key, (int)key_len, (unsigned char*)msg, (int)msg_len,
             (unsigned char*)hmac_out, NULL);
   tor_assert(rv);
+#endif
 }
 
 /** Compute a MAC using SHA3-256 of <b>msg_len</b> bytes in <b>msg</b> using a

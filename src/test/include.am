@@ -225,13 +225,13 @@ src_test_test_switch_id_LDADD = \
 	@TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_USERENV@ \
 	@TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@
 
-src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
+src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB) \
 	@TOR_LDFLAGS_libevent@
 src_test_test_LDADD = \
 	$(TOR_INTERNAL_TESTING_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
-	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
 	@TOR_SYSTEMD_LIBS@ @TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@
 
@@ -248,23 +248,23 @@ src_test_test_memwipe_LDADD = $(src_test_test_LDADD)
 # successfully with the libraries built with them.
 src_test_test_memwipe_LDFLAGS = $(src_test_test_LDFLAGS) @CFLAGS_BUGTRAP@
 
-src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
+src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB) \
 	@TOR_LDFLAGS_libevent@
 src_test_bench_LDADD = \
 	$(TOR_INTERNAL_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
-	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
 	@TOR_SYSTEMD_LIBS@ @TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@
 
-src_test_test_workqueue_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
+src_test_test_workqueue_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB) \
 	@TOR_LDFLAGS_libevent@
 src_test_test_workqueue_LDADD = \
 	$(TOR_INTERNAL_TESTING_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
-	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
 	@TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@
 
@@ -276,7 +276,7 @@ src_test_test_timers_LDADD = \
 	$(TOR_UTIL_TESTING_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
-	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
 	@TOR_LZMA_LIBS@
 src_test_test_timers_LDFLAGS = $(src_test_test_LDFLAGS)
@@ -301,22 +301,22 @@ noinst_HEADERS+= \
 noinst_PROGRAMS+= src/test/test-ntor-cl
 noinst_PROGRAMS+= src/test/test-hs-ntor-cl
 src_test_test_ntor_cl_SOURCES  = src/test/test_ntor_cl.c
-src_test_test_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
+src_test_test_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB)
 src_test_test_ntor_cl_LDADD = \
 	$(TOR_INTERNAL_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
-	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ @TOR_LZMA_LIBS@
 src_test_test_ntor_cl_AM_CPPFLAGS =	       \
 	$(AM_CPPFLAGS)
 
 src_test_test_hs_ntor_cl_SOURCES  = src/test/test_hs_ntor_cl.c
-src_test_test_hs_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
+src_test_test_hs_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB)
 src_test_test_hs_ntor_cl_LDADD = \
 	$(TOR_INTERNAL_LIBS) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
-	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 src_test_test_hs_ntor_cl_AM_CPPFLAGS =	       \
 	$(AM_CPPFLAGS)
 

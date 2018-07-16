@@ -23,6 +23,7 @@
 #include "core/mainloop/main.h"
 #include "lib/compress/compress.h"
 #include "lib/evloop/compat_libevent.h"
+#include "lib/crypt_ops/crypto_init.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -220,6 +221,13 @@ static void
 an_assertion_failed(void)
 {
   tinytest_set_test_failed_();
+}
+
+void tinytest_postfork(void);
+void
+tinytest_postfork(void)
+{
+  crypto_postfork();
 }
 
 /** Main entry point for unit test code: parse the command line, and run

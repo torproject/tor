@@ -53,6 +53,8 @@ AC_ARG_ENABLE(restart-debugging,
    AS_HELP_STRING(--enable-restart-debugging, [Build Tor with support for debugging in-process restart. Developers only.]))
 AC_ARG_ENABLE(zstd-advanced-apis,
    AS_HELP_STRING(--disable-zstd-advanced-apis, [Build without support for zstd's "static-only" APIs.]))
+AC_ARG_ENABLE(nss,
+   AS_HELP_STRING(--enable-nss, [Use Mozilla's NSS TLS library. (EXPERIMENTAL)]))
 
 if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
@@ -64,6 +66,15 @@ AM_CONDITIONAL(DISABLE_ASSERTS_IN_UNIT_TESTS, test "x$enable_asserts_in_tests" =
 AM_CONDITIONAL(LIBFUZZER_ENABLED, test "x$enable_libfuzzer" = "xyes")
 AM_CONDITIONAL(OSS_FUZZ_ENABLED, test "x$enable_oss_fuzz" = "xyes")
 AM_CONDITIONAL(USE_RUST, test "x$enable_rust" = "xyes")
+AM_CONDITIONAL(USE_NSS, test "x$enable_nss" = "xyes")
+AM_CONDITIONAL(USE_OPENSSL, true)
+
+if test "x$enable_nss" = "xyes"; then
+  AC_DEFINE(ENABLE_NSS, 1,
+  	    [Defined if we're building with NSS in addition to OpenSSL.])
+fi
+AC_DEFINE(ENABLE_OPENSSL, 1,
+          [Defined if we're building with OpenSSL or LibreSSL])
 
 if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";
@@ -820,6 +831,17 @@ if test "$ac_cv_search_pow" != "none required"; then
 fi
 LIBS="$save_LIBS"
 AC_SUBST(TOR_LIB_MATH)
+
+dnl ------------------------------------------------------
+dnl Hello, NSS.  You're new around here.
+if test "x$enable_nss" = "xyes"; then
+  PKG_CHECK_MODULES(NSS,
+     [nss],
+     [have_nss=yes],
+     [have_nss=no; AC_MSG_ERROR([You asked for NSS but I can't find it.])])
+  AC_SUBST(NSS_CFLAGS)
+  AC_SUBST(NSS_LIBS)
+fi
 
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
