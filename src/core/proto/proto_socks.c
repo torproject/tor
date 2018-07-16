@@ -166,7 +166,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
   *is_socks4a = (dest_ip >> 8) == 0;
 
   const char *username = socks4_client_request_get_username(trunnel_req);
-  size_t usernamelen = username ? strlen(username) : 0;
+  const size_t usernamelen = username ? strlen(username) : 0;
   if (username && usernamelen) {
     if (usernamelen > MAX_SOCKS_MESSAGE_LEN) {
       log_warn(LD_APP, "Socks4 user name too long; rejecting.");
@@ -184,7 +184,7 @@ parse_socks4_request(const uint8_t *raw_data, socks_request_t *req,
     // We cannot rely on trunnel here, as we want to detect if
     // we have abnormally long hostname field.
     const char *hostname = (char *)raw_data + SOCKS4_NETWORK_LEN +
-     strlen(username) + 1;
+     usernamelen + 1;
     size_t hostname_len = (char *)raw_data + datalen - hostname;
 
     if (hostname_len <= sizeof(req->address)) {
