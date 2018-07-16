@@ -2332,13 +2332,17 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
     int is_next_desc = (service->desc_next == desc);
     const uint8_t *idx = (is_next_desc) ? hsdir->hsdir_index.store_second:
                                           hsdir->hsdir_index.store_first;
+    char *blinded_pubkey_log_str =
+      tor_strdup(hex_str((char*)&desc->blinded_kp.pubkey.pubkey, 32));
     log_info(LD_REND, "Service %s %s descriptor of revision %" PRIu64
-                      " initiated upload request to %s with index %s",
+                      " initiated upload request to %s with index %s (%s)",
              safe_str_client(service->onion_address),
              (is_next_desc) ? "next" : "current",
              desc->desc->plaintext_data.revision_counter,
              safe_str_client(node_describe(hsdir)),
-             safe_str_client(hex_str((const char *) idx, 32)));
+             safe_str_client(hex_str((const char *) idx, 32)),
+             safe_str_client(blinded_pubkey_log_str));
+    tor_free(blinded_pubkey_log_str);
 
     /* Fire a UPLOAD control port event. */
     hs_control_desc_event_upload(service->onion_address, hsdir->identity,
