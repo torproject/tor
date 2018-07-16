@@ -1,0 +1,5 @@
+  o Minor features (denial-of-service avoidance):
+    - Make our OOM handler aware of the DNS cache so that it doesn't fill up
+      the memory. This check is important for our DoS mitigation subsystem.
+      Closes ticket 18642. Patch by Neel Chauhan
+
