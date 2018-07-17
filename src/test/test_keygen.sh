@@ -13,6 +13,12 @@ if [ $# -eq 0 ] || [ ! -f ${1} ] || [ ! -x ${1} ]; then
   fi
 fi
 
+if test "`uname -s | cut -d_ -f1`" = 'CYGWIN' || \
+   test "`uname -s | cut -d_ -f1`" = 'MINGW'; then
+    echo "This test is unreliable on Windows. See trac #26076. Skipping." >&2
+    exit 77
+fi
+
 if [ $# -ge 1 ]; then
   TOR_BINARY="${1}"
   shift
