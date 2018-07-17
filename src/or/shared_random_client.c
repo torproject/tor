@@ -234,8 +234,10 @@ sr_state_get_start_time_of_current_protocol_run(time_t now)
   /* Find the time the current round started. */
   time_t beginning_of_current_round = get_start_time_of_current_round();
 
+  (void) now;
+
   /* Get current SR protocol round */
-  int current_round = (now / voting_interval) % total_rounds;
+  int current_round = (beginning_of_current_round / voting_interval) % total_rounds;
 
   /* Get start time by subtracting the time elapsed from the beginning of the
      protocol run */
