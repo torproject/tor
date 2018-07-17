@@ -19,6 +19,10 @@
 
 typedef struct crypto_dh_t crypto_dh_t;
 
+extern const unsigned DH_GENERATOR;
+extern const char TLS_DH_PRIME[];
+extern const char OAKLEY_PRIME_2[];
+
 /* Key negotiation */
 #define DH_TYPE_CIRCUIT 1
 #define DH_TYPE_REND 2
