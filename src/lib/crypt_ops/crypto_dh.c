@@ -42,3 +42,50 @@ const char OAKLEY_PRIME_2[] =
   "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
   "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
   "49286651ECE65381FFFFFFFFFFFFFFFF";
+
+/** Given a DH key exchange object, and our peer's value of g^y (as a
+ * <b>pubkey_len</b>-byte value in <b>pubkey</b>) generate
+ * <b>secret_bytes_out</b> bytes of shared key material and write them
+ * to <b>secret_out</b>.  Return the number of bytes generated on success,
+ * or -1 on failure.
+ *
+ * (We generate key material by computing
+ *         SHA1( g^xy || "\x00" ) || SHA1( g^xy || "\x01" ) || ...
+ * where || is concatenation.)
+ */
+ssize_t
+crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
+                         const char *pubkey, size_t pubkey_len,
+                         char *secret_out, size_t secret_bytes_out)
+{
+  tor_assert(secret_bytes_out/DIGEST_LEN <= 255);
+
+  unsigned char *secret_tmp = NULL;
+  size_t secret_len=0, secret_tmp_len=0;
+  secret_tmp_len = crypto_dh_get_bytes(dh);
+  secret_tmp = tor_malloc(secret_tmp_len);
+
+  ssize_t result = crypto_dh_handshake(severity, dh, pubkey, pubkey_len,
+                                   secret_tmp, secret_tmp_len);
+  if (result < 0)
+    goto error;
+
+  secret_len = result;
+  if (crypto_expand_key_material_TAP(secret_tmp, secret_len,
+                                     (uint8_t*)secret_out, secret_bytes_out)<0)
+    goto error;
+  secret_len = secret_bytes_out;
+
+  goto done;
+ error:
+  result = -1;
+ done:
+  if (secret_tmp) {
+    memwipe(secret_tmp, 0, secret_tmp_len);
+    tor_free(secret_tmp);
+  }
+  if (result < 0)
+    return result;
+  else
+    return secret_len;
+}

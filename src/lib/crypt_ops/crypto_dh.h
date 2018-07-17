@@ -40,12 +40,17 @@ ssize_t crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
 void crypto_dh_free_(crypto_dh_t *dh);
 #define crypto_dh_free(dh) FREE_AND_NULL(crypto_dh_t, crypto_dh_free_, (dh))
 
-/* Crypto DH free */
+ssize_t crypto_dh_handshake(int severity, crypto_dh_t *dh,
+                            const char *pubkey, size_t pubkey_len,
+                            unsigned char *secret_out,
+                            size_t secret_bytes_out);
+
 void crypto_dh_free_all(void);
 
 /* Prototypes for private functions only used by tortls.c, crypto.c, and the
  * unit tests. */
 struct dh_st;
 struct dh_st *crypto_dh_get_dh_(crypto_dh_t *dh);
+
 
 #endif /* !defined(TOR_CRYPTO_DH_H) */
