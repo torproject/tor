@@ -27,20 +27,13 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include <string.h>
 
 static int tor_check_dh_key(int severity, const BIGNUM *bn);
+static DH *new_openssl_dh_from_params(BIGNUM *p, BIGNUM *g);
 
 /** A structure to hold the first half (x, g^x) of a Diffie-Hellman handshake
  * while we're waiting for the second.*/
 struct crypto_dh_t {
   DH *dh; /**< The openssl DH object */
 };
-
-/** Used by tortls.c: Get the DH* from a crypto_dh_t.
- */
-DH *
-crypto_dh_get_dh_(crypto_dh_t *dh)
-{
-  return dh->dh;
-}
 
 /** Shared P parameter for our circuit-crypto DH key exchanges. */
 static BIGNUM *dh_param_p = NULL;
@@ -188,6 +181,14 @@ init_dh_param(void)
  */
 #define DH_PRIVATE_KEY_BITS 320
 
+/** Used by tortls.c: Get the DH* for use with TLS.
+ */
+DH *
+crypto_dh_new_openssl_tls(void)
+{
+  return new_openssl_dh_from_params(dh_param_p_tls, dh_param_g);
+}
+
 /** Allocate and return a new DH object for a key exchange. Returns NULL on
  * failure.
  */
@@ -202,55 +203,59 @@ crypto_dh_new(int dh_type)
   if (!dh_param_p)
     init_dh_param();
 
-  if (!(res->dh = DH_new()))
+  BIGNUM *dh_p = NULL;
+  if (dh_type == DH_TYPE_TLS) {
+    dh_p = dh_param_p_tls;
+  } else {
+    dh_p = dh_param_p;
+  }
+
+  res->dh = new_openssl_dh_from_params(dh_p, dh_param_g);
+  if (res->dh == NULL)
+    tor_free(res); // sets res to NULL.
+  return res;
+}
+
+/** Create and return a new openssl DH from a given prime and generator. */
+static DH *
+new_openssl_dh_from_params(BIGNUM *p, BIGNUM *g)
+{
+  DH *res_dh;
+  if (!(res_dh = DH_new()))
     goto err;
 
-#ifdef OPENSSL_1_1_API
   BIGNUM *dh_p = NULL, *dh_g = NULL;
-
-  if (dh_type == DH_TYPE_TLS) {
-    dh_p = BN_dup(dh_param_p_tls);
-  } else {
-    dh_p = BN_dup(dh_param_p);
-  }
+  dh_p = BN_dup(p);
   if (!dh_p)
     goto err;
 
-  dh_g = BN_dup(dh_param_g);
+  dh_g = BN_dup(g);
   if (!dh_g) {
     BN_free(dh_p);
     goto err;
   }
 
-  if (!DH_set0_pqg(res->dh, dh_p, NULL, dh_g)) {
+#ifdef OPENSSL_1_1_API
+
+  if (!DH_set0_pqg(res_dh, dh_p, NULL, dh_g)) {
     goto err;
   }
 
-  if (!DH_set_length(res->dh, DH_PRIVATE_KEY_BITS))
+  if (!DH_set_length(res_dh, DH_PRIVATE_KEY_BITS))
     goto err;
 #else /* !(defined(OPENSSL_1_1_API)) */
-  if (dh_type == DH_TYPE_TLS) {
-    if (!(res->dh->p = BN_dup(dh_param_p_tls)))
-      goto err;
-  } else {
-    if (!(res->dh->p = BN_dup(dh_param_p)))
-      goto err;
-  }
-
-  if (!(res->dh->g = BN_dup(dh_param_g)))
-    goto err;
-
-  res->dh->length = DH_PRIVATE_KEY_BITS;
+  res_dh->p = dh_p;
+  res_dh->g = dh_g;
+  res_dh->length = DH_PRIVATE_KEY_BITS;
 #endif /* defined(OPENSSL_1_1_API) */
 
-  return res;
+  return res_dh;
 
   /* LCOV_EXCL_START
    * This error condition is only reached when an allocation fails */
  err:
   crypto_openssl_log_errors(LOG_WARN, "creating DH object");
-  if (res->dh) DH_free(res->dh); /* frees p and g too */
-  tor_free(res);
+  if (res_dh) DH_free(res_dh); /* frees p and g too */
   return NULL;
   /* LCOV_EXCL_STOP */
 }

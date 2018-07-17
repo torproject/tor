@@ -1280,10 +1280,10 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
       goto error;
   }
   {
-    crypto_dh_t *dh = crypto_dh_new(DH_TYPE_TLS);
+    DH *dh = crypto_dh_new_openssl_tls();
     tor_assert(dh);
-    SSL_CTX_set_tmp_dh(result->ctx, crypto_dh_get_dh_(dh));
-    crypto_dh_free(dh);
+    SSL_CTX_set_tmp_dh(result->ctx, dh);
+    DH_free(dh);
   }
   if (! is_client) {
     int nid;
