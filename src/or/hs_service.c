@@ -1946,19 +1946,12 @@ cleanup_intro_points(hs_service_t *service, time_t now)
 /* Set the next rotation time of the descriptors for the given service for the
  * time now. */
 static void
-set_rotation_time(hs_service_t *service, time_t now)
+set_rotation_time(hs_service_t *service)
 {
-  time_t valid_after;
-  const networkstatus_t *ns = networkstatus_get_live_consensus(now);
-  if (ns) {
-    valid_after = ns->valid_after;
-  } else {
-    valid_after = now;
-  }
-
   tor_assert(service);
+
   service->state.next_rotation_time =
-    sr_state_get_start_time_of_current_protocol_run(valid_after) +
+    sr_state_get_start_time_of_current_protocol_run() +
     sr_state_get_protocol_run_duration();
 
   {
@@ -2025,7 +2018,7 @@ should_rotate_descriptors(hs_service_t *service, time_t now)
  * will be freed, the next one put in as the current and finally the next
  * descriptor pointer is NULLified. */
 static void
-rotate_service_descriptors(hs_service_t *service, time_t now)
+rotate_service_descriptors(hs_service_t *service)
 {
   if (service->desc_current) {
     /* Close all IP circuits for the descriptor. */
@@ -2040,7 +2033,7 @@ rotate_service_descriptors(hs_service_t *service, time_t now)
   service->desc_next = NULL;
 
   /* We've just rotated, set the next time for the rotation. */
-  set_rotation_time(service, now);
+  set_rotation_time(service);
 }
 
 /* Rotate descriptors for each service if needed. A non existing current
@@ -2068,7 +2061,7 @@ rotate_all_descriptors(time_t now)
              service->desc_current, service->desc_next,
              safe_str_client(service->onion_address));
 
-    rotate_service_descriptors(service, now);
+    rotate_service_descriptors(service);
   } FOR_EACH_SERVICE_END;
 }
 
@@ -2090,7 +2083,7 @@ run_housekeeping_event(time_t now)
       /* Set the next rotation time of the descriptors. If it's Oct 25th
        * 23:47:00, the next rotation time is when the next SRV is computed
        * which is at Oct 26th 00:00:00 that is in 13 minutes. */
-      set_rotation_time(service, now);
+      set_rotation_time(service);
     }
 
     /* Cleanup invalid intro points from the service descriptor. */
@@ -2390,9 +2383,9 @@ set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc, time_t now,
    * time of the current protocol run.
    */
   if (is_current) {
-    srv_start = sr_state_get_start_time_of_previous_protocol_run(now);
+    srv_start = sr_state_get_start_time_of_previous_protocol_run();
   } else {
-    srv_start = sr_state_get_start_time_of_current_protocol_run(now);
+    srv_start = sr_state_get_start_time_of_current_protocol_run();
   }
 
   log_info(LD_REND, "Setting rev counter for TP #%u: "

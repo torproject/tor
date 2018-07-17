@@ -249,8 +249,7 @@ test_get_start_time_of_current_run(void *arg)
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
     voting_schedule_recalculate_timing(get_options(), current_time);
-    run_start_time =
-      sr_state_get_start_time_of_current_protocol_run(current_time);
+    run_start_time = sr_state_get_start_time_of_current_protocol_run();
 
     /* Compare it with the correct result */
     format_iso_time(tbuf, run_start_time);
@@ -262,8 +261,7 @@ test_get_start_time_of_current_run(void *arg)
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
     voting_schedule_recalculate_timing(get_options(), current_time);
-    run_start_time =
-      sr_state_get_start_time_of_current_protocol_run(current_time);
+    run_start_time = sr_state_get_start_time_of_current_protocol_run();
 
     /* Compare it with the correct result */
     format_iso_time(tbuf, run_start_time);
@@ -275,8 +273,7 @@ test_get_start_time_of_current_run(void *arg)
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
     voting_schedule_recalculate_timing(get_options(), current_time);
-    run_start_time =
-      sr_state_get_start_time_of_current_protocol_run(current_time);
+    run_start_time = sr_state_get_start_time_of_current_protocol_run();
 
     /* Compare it with the correct result */
     format_iso_time(tbuf, run_start_time);
@@ -298,8 +295,7 @@ test_get_start_time_of_current_run(void *arg)
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
     voting_schedule_recalculate_timing(get_options(), current_time);
-    run_start_time =
-      sr_state_get_start_time_of_current_protocol_run(current_time);
+    run_start_time = sr_state_get_start_time_of_current_protocol_run();
 
     /* Compare it with the correct result */
     format_iso_time(tbuf, run_start_time);
@@ -332,7 +328,7 @@ test_get_start_time_functions(void *arg)
 
   voting_schedule_recalculate_timing(get_options(), now);
   time_t start_time_of_protocol_run =
-    sr_state_get_start_time_of_current_protocol_run(now);
+    sr_state_get_start_time_of_current_protocol_run();
   tt_assert(start_time_of_protocol_run);
 
   /* Check that the round start time of the beginning of the run, is itself */

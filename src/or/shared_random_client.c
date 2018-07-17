@@ -223,18 +223,17 @@ sr_parse_srv(const smartlist_t *args)
   return srv;
 }
 
-/** Return the start time of the current SR protocol run. For example, if the
- *  time is 23/06/2017 23:47:08 and a full SR protocol run is 24 hours, this
- *  function should return 23/06/2017 00:00:00. */
+/** Return the start time of the current SR protocol run using the times from
+ *  the current consensus. For example, if the latest consensus valid-after is
+ *  23/06/2017 23:00:00 and a full SR protocol run is 24 hours, this function
+ *  returns 23/06/2017 00:00:00. */
 time_t
-sr_state_get_start_time_of_current_protocol_run(time_t now)
+sr_state_get_start_time_of_current_protocol_run(void)
 {
   int total_rounds = SHARED_RANDOM_N_ROUNDS * SHARED_RANDOM_N_PHASES;
   int voting_interval = get_voting_interval();
   /* Find the time the current round started. */
   time_t beginning_of_current_round = get_start_time_of_current_round();
-
-  (void) now;
 
   /* Get current SR protocol round */
   int current_round = (beginning_of_current_round / voting_interval) % total_rounds;
@@ -248,10 +247,10 @@ sr_state_get_start_time_of_current_protocol_run(time_t now)
 /** Return the start time of the previous SR protocol run. See
  *  sr_state_get_start_time_of_current_protocol_run() for more details.  */
 time_t
-sr_state_get_start_time_of_previous_protocol_run(time_t now)
+sr_state_get_start_time_of_previous_protocol_run(void)
 {
   time_t start_time_of_current_run =
-    sr_state_get_start_time_of_current_protocol_run(now);
+    sr_state_get_start_time_of_current_protocol_run();
 
   /* We get the start time of previous protocol run, by getting the start time
    * of current run and the subtracting a full protocol run from that. */
