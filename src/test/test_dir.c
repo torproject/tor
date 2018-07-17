@@ -5456,6 +5456,57 @@ test_dir_assumed_flags(void *arg)
   routerstatus_free(rs);
 }
 
+static void
+test_dir_format_versions_list(void *arg)
+{
+  (void)arg;
+  char *s = NULL;
+  config_line_t *lines = NULL;
+
+  setup_capture_of_logs(LOG_WARN);
+  s = format_recommended_version_list(lines, 1);
+  tt_str_op(s, OP_EQ, "");
+
+  tor_free(s);
+  config_line_append(&lines, "ignored", "0.3.4.1, 0.2.9.111-alpha, 4.4.4-rc");
+  s = format_recommended_version_list(lines, 1);
+  tt_str_op(s, OP_EQ,  "0.2.9.111-alpha,0.3.4.1,4.4.4-rc");
+
+  tor_free(s);
+  config_line_append(&lines, "ignored", "0.1.2.3,0.2.9.10   ");
+  s = format_recommended_version_list(lines, 1);
+  tt_str_op(s, OP_EQ,  "0.1.2.3,0.2.9.10,0.2.9.111-alpha,0.3.4.1,4.4.4-rc");
+
+  /* There should be no warnings so far. */
+  expect_no_log_entry();
+
+  /* Now try a line with a space in it. */
+  tor_free(s);
+  config_line_append(&lines, "ignored", "1.3.3.8 1.3.3.7");
+  s = format_recommended_version_list(lines, 1);
+  tt_str_op(s, OP_EQ,  "0.1.2.3,0.2.9.10,0.2.9.111-alpha,0.3.4.1,"
+            "1.3.3.7,1.3.3.8,4.4.4-rc");
+
+  expect_single_log_msg_containing(
+          "Unexpected space in versions list member \"1.3.3.8 1.3.3.7\"." );
+
+  /* Start over, with a line containing a bogus version */
+  config_free_lines(lines);
+  lines = NULL;
+  tor_free(s);
+  mock_clean_saved_logs();
+  config_line_append(&lines, "ignored", "0.1.2.3, alpha-complex, 0.1.1.8-rc");
+  s = format_recommended_version_list(lines,1);
+  tt_str_op(s, OP_EQ, "0.1.1.8-rc,0.1.2.3,alpha-complex");
+  expect_single_log_msg_containing(
+        "Recommended version \"alpha-complex\" does not look valid.");
+
+ done:
+  tor_free(s);
+  config_free_lines(lines);
+  teardown_capture_of_logs();
+}
+
 #define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -5511,6 +5562,6 @@ struct testcase_t dir_tests[] = {
   DIR_ARG(find_dl_schedule, TT_FORK, "cf"),
   DIR_ARG(find_dl_schedule, TT_FORK, "ca"),
   DIR(assumed_flags, 0),
+  DIR(format_versions_list, TT_FORK),
   END_OF_TESTCASES
 };
-
