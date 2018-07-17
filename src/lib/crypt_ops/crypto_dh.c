@@ -43,6 +43,28 @@ const char OAKLEY_PRIME_2[] =
   "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
   "49286651ECE65381FFFFFFFFFFFFFFFF";
 
+void
+crypto_dh_init(void)
+{
+#ifdef ENABLE_OPENSSL
+  crypto_dh_init_openssl();
+#endif
+#ifdef ENABLE_NSS
+  crypto_dh_init_nss();
+#endif
+}
+
+void
+crypto_dh_free_all(void)
+{
+#ifdef ENABLE_OPENSSL
+  crypto_dh_free_all_openssl();
+#endif
+#ifdef ENABLE_NSS
+  crypto_dh_free_all_nss();
+#endif
+}
+
 /** Given a DH key exchange object, and our peer's value of g^y (as a
  * <b>pubkey_len</b>-byte value in <b>pubkey</b>) generate
  * <b>secret_bytes_out</b> bytes of shared key material and write them

@@ -83,6 +83,8 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 
     crypto_global_initialized_ = 1;
 
+    crypto_dh_init();
+
 #ifdef ENABLE_OPENSSL
     if (crypto_openssl_late_init(useAccel, accelName, accelDir) < 0)
       return -1;

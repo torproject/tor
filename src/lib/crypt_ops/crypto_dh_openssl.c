@@ -26,14 +26,17 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include <openssl/bn.h>
 #include <string.h>
 
+#ifndef ENABLE_NSS
 static int tor_check_dh_key(int severity, const BIGNUM *bn);
-static DH *new_openssl_dh_from_params(BIGNUM *p, BIGNUM *g);
 
 /** A structure to hold the first half (x, g^x) of a Diffie-Hellman handshake
  * while we're waiting for the second.*/
 struct crypto_dh_t {
   DH *dh; /**< The openssl DH object */
 };
+#endif
+
+static DH *new_openssl_dh_from_params(BIGNUM *p, BIGNUM *g);
 
 /** Shared P parameter for our circuit-crypto DH key exchanges. */
 static BIGNUM *dh_param_p = NULL;
@@ -96,6 +99,22 @@ crypto_validate_dh_params(const BIGNUM *p, const BIGNUM *g)
   return ret;
 }
 
+/**
+ * Helper: convert <b>hex<b> to a bignum, and return it.  Assert that the
+ * operation was successful.
+ */
+static BIGNUM *
+bignum_from_hex(const char *hex)
+{
+  BIGNUM *result = BN_new();
+  tor_assert(result);
+
+  int r = BN_hex2bn(&result, hex);
+  tor_assert(r);
+  tor_assert(result);
+  return result;
+}
+
 /** Set the global Diffie-Hellman generator, used for both TLS and internal
  * DH stuff.
  */
@@ -117,62 +136,23 @@ crypto_set_dh_generator(void)
   dh_param_g = generator;
 }
 
-/** Set the global TLS Diffie-Hellman modulus.  Use the Apache mod_ssl DH
- * modulus. */
+/** Initialize our DH parameters. Idempotent. */
 void
-crypto_set_tls_dh_prime(void)
+crypto_dh_init_openssl(void)
 {
-  BIGNUM *tls_prime = NULL;
-  int r;
+  if (dh_param_p && dh_param_g && dh_param_p_tls)
+    return;
 
-  /* If the space is occupied, free the previous TLS DH prime */
-  if (BUG(dh_param_p_tls)) {
-    /* LCOV_EXCL_START
-     *
-     * We shouldn't be calling this twice.
-     */
-    BN_clear_free(dh_param_p_tls);
-    dh_param_p_tls = NULL;
-    /* LCOV_EXCL_STOP */
-  }
+  tor_assert(dh_param_g == NULL);
+  tor_assert(dh_param_p == NULL);
+  tor_assert(dh_param_p_tls == NULL);
 
-  tls_prime = BN_new();
-  tor_assert(tls_prime);
-
-  r = BN_hex2bn(&tls_prime, TLS_DH_PRIME);
-  tor_assert(r);
-
-  tor_assert(tls_prime);
-
-  dh_param_p_tls = tls_prime;
   crypto_set_dh_generator();
-  tor_assert(0 == crypto_validate_dh_params(dh_param_p_tls, dh_param_g));
-}
+  dh_param_p = bignum_from_hex(OAKLEY_PRIME_2);
+  dh_param_p_tls = bignum_from_hex(TLS_DH_PRIME);
 
-/** Initialize dh_param_p and dh_param_g if they are not already
- * set. */
-static void
-init_dh_param(void)
-{
-  BIGNUM *circuit_dh_prime;
-  int r;
-  if (BUG(dh_param_p && dh_param_g))
-    return; // LCOV_EXCL_LINE This function isn't supposed to be called twice.
-
-  circuit_dh_prime = BN_new();
-  tor_assert(circuit_dh_prime);
-
-  r = BN_hex2bn(&circuit_dh_prime, OAKLEY_PRIME_2);
-  tor_assert(r);
-
-  /* Set the new values as the global DH parameters. */
-  dh_param_p = circuit_dh_prime;
-  crypto_set_dh_generator();
   tor_assert(0 == crypto_validate_dh_params(dh_param_p, dh_param_g));
-
-  if (!dh_param_p_tls) {
-    crypto_set_tls_dh_prime();
-  }
+  tor_assert(0 == crypto_validate_dh_params(dh_param_p_tls, dh_param_g));
 }
 
 /** Number of bits to use when choosing the x or y value in a Diffie-Hellman
@@ -189,6 +169,7 @@ crypto_dh_new_openssl_tls(void)
   return new_openssl_dh_from_params(dh_param_p_tls, dh_param_g);
 }
 
+#ifndef ENABLE_NSS
 /** Allocate and return a new DH object for a key exchange. Returns NULL on
  * failure.
  */
@@ -201,7 +182,7 @@ crypto_dh_new(int dh_type)
              dh_type == DH_TYPE_REND);
 
   if (!dh_param_p)
-    init_dh_param();
+    crypto_dh_init();
 
   BIGNUM *dh_p = NULL;
   if (dh_type == DH_TYPE_TLS) {
@@ -215,6 +196,7 @@ crypto_dh_new(int dh_type)
     tor_free(res); // sets res to NULL.
   return res;
 }
+#endif
 
 /** Create and return a new openssl DH from a given prime and generator. */
 static DH *
@@ -260,6 +242,7 @@ new_openssl_dh_from_params(BIGNUM *p, BIGNUM *g)
   /* LCOV_EXCL_STOP */
 }
 
+#ifndef ENABLE_NSS
 /** Return a copy of <b>dh</b>, sharing its internal state. */
 crypto_dh_t *
 crypto_dh_dup(const crypto_dh_t *dh)
@@ -386,7 +369,7 @@ tor_check_dh_key(int severity, const BIGNUM *bn)
   x = BN_new();
   tor_assert(x);
   if (BUG(!dh_param_p))
-    init_dh_param(); //LCOV_EXCL_LINE we already checked whether we did this.
+    crypto_dh_init(); //LCOV_EXCL_LINE we already checked whether we did this.
   BN_set_word(x, 1);
   if (BN_cmp(bn,x)<=0) {
     log_fn(severity, LD_CRYPTO, "DH key must be at least 2.");
@@ -472,9 +455,10 @@ crypto_dh_free_(crypto_dh_t *dh)
   DH_free(dh->dh);
   tor_free(dh);
 }
+#endif
 
 void
-crypto_dh_free_all(void)
+crypto_dh_free_all_openssl(void)
 {
   if (dh_param_p)
     BN_clear_free(dh_param_p);

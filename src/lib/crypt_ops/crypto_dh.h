@@ -27,7 +27,7 @@ extern const char OAKLEY_PRIME_2[];
 #define DH_TYPE_CIRCUIT 1
 #define DH_TYPE_REND 2
 #define DH_TYPE_TLS 3
-void crypto_set_tls_dh_prime(void);
+void crypto_dh_init(void);
 crypto_dh_t *crypto_dh_new(int dh_type);
 crypto_dh_t *crypto_dh_dup(const crypto_dh_t *dh);
 int crypto_dh_get_bytes(crypto_dh_t *dh);
@@ -51,5 +51,14 @@ void crypto_dh_free_all(void);
  * unit tests. */
 struct dh_st;
 struct dh_st *crypto_dh_new_openssl_tls(void);
+
+#ifdef ENABLE_OPENSSL
+void crypto_dh_init_openssl(void);
+void crypto_dh_free_all_openssl(void);
+#endif
+#ifdef ENABLE_OPENSSL
+void crypto_dh_init_nss(void);
+void crypto_dh_free_all_nss(void);
+#endif
 
 #endif /* !defined(TOR_CRYPTO_DH_H) */
