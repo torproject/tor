@@ -2725,8 +2725,8 @@ retry_listener_ports(smartlist_t *old_conns,
         }
 #ifdef ENABLE_LISTENER_REBIND
         const int may_need_rebind =
-          port_matches_exact & bool_neq(tor_addr_is_null(&wanted->addr),
-                                        tor_addr_is_null(&conn->addr));
+          port_matches_exact && bool_neq(tor_addr_is_null(&wanted->addr),
+                                         tor_addr_is_null(&conn->addr));
         if (replacements && may_need_rebind) {
           listener_replacement_t *replacement =
             tor_malloc(sizeof(listener_replacement_t));
