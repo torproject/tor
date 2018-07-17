@@ -131,6 +131,10 @@ typedef struct hs_service_descriptor_t {
    *  from this list, this means we received new dirinfo and we need to
    *  reupload our descriptor. */
   smartlist_t *previous_hsdirs;
+
+  /** The OPE cipher for encrypting revision counters for this descriptor.
+   *  Tied to the descriptor blinded key. */
+  crypto_ope_t *ope_cipher;
 } hs_service_descriptor_t;
 
 /* Service key material. */
