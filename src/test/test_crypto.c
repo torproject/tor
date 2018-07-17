@@ -26,6 +26,13 @@
 #include <unistd.h>
 #endif
 
+#if defined(ENABLE_OPENSSL)
+#include "lib/crypt_ops/compat_openssl.h"
+DISABLE_GCC_WARNING(redundant-decls)
+#include <openssl/dh.h>
+ENABLE_GCC_WARNING(redundant-decls)
+#endif
+
 /** Run unit tests for Diffie-Hellman functionality. */
 static void
 test_crypto_dh(void *arg)
@@ -38,6 +45,11 @@ test_crypto_dh(void *arg)
   char s1[DH1024_KEY_LEN];
   char s2[DH1024_KEY_LEN];
   ssize_t s1len, s2len;
+#ifdef ENABLE_OPENSSL
+  crypto_dh_t *dh3 = NULL;
+  DH *dh4 = NULL;
+  BIGNUM *pubkey_tmp = NULL;
+#endif
 
   (void)arg;
   tt_int_op(crypto_dh_get_bytes(dh1),OP_EQ, DH1024_KEY_LEN);
@@ -89,6 +101,10 @@ test_crypto_dh(void *arg)
     tt_int_op(-1, OP_EQ, s1len);
 
     /* 2 is okay, though weird. */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, "\x02", 1, s1, 50);
+    tt_int_op(50, OP_EQ, s1len);
+
+    /* 2 a second time is still okay, though weird. */
     s1len = crypto_dh_compute_secret(LOG_WARN, dh1, "\x02", 1, s1, 50);
     tt_int_op(50, OP_EQ, s1len);
 
@@ -158,10 +174,50 @@ test_crypto_dh(void *arg)
     tt_int_op(s1len, OP_EQ, -1);
   }
 
+#if defined(ENABLE_OPENSSL)
+  {
+    /* Make sure that our crypto library can handshake with openssl. */
+    dh3 = crypto_dh_new(DH_TYPE_TLS);
+    tt_assert(!crypto_dh_get_public(dh3, p1, DH1024_KEY_LEN));
+
+    dh4 = crypto_dh_new_openssl_tls();
+    tt_assert(DH_generate_key(dh4));
+    const BIGNUM *pk=NULL;
+#ifdef OPENSSL_1_1_API
+    const BIGNUM *sk=NULL;
+    DH_get0_key(dh4, &pk, &sk);
+#else
+    pk = dh4->pub_key;
+#endif
+    tt_assert(pk);
+    tt_int_op(BN_num_bytes(pk), OP_LE, DH1024_KEY_LEN);
+    tt_int_op(BN_num_bytes(pk), OP_GT, 0);
+    memset(p2, 0, sizeof(p2));
+    /* right-pad. */
+    BN_bn2bin(pk, (unsigned char *)(p2+DH1024_KEY_LEN-BN_num_bytes(pk)));
+
+    s1len = crypto_dh_handshake(LOG_WARN, dh3, p2, DH1024_KEY_LEN,
+                                (unsigned char *)s1, sizeof(s1));
+    pubkey_tmp = BN_bin2bn((unsigned char *)p1, DH1024_KEY_LEN, NULL);
+    s2len = DH_compute_key((unsigned char *)s2, pubkey_tmp, dh4);
+
+    tt_int_op(s1len, OP_EQ, s2len);
+    tt_int_op(s1len, OP_GT, 0);
+    tt_mem_op(s1, OP_EQ, s2, s1len);
+  }
+#endif
+
  done:
   crypto_dh_free(dh1);
   crypto_dh_free(dh2);
   crypto_dh_free(dh1_dup);
+#ifdef ENABLE_OPENSSL
+  crypto_dh_free(dh3);
+  if (dh4)
+    DH_free(dh4);
+  if (pubkey_tmp)
+    BN_free(pubkey_tmp);
+#endif
 }
 
 static void
