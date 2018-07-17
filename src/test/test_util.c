@@ -3163,6 +3163,21 @@ test_util_sscanf(void *arg)
   test_feq(d3, -900123123.2000787);
   test_feq(d4, 3.2);
 
+  /* missing float */
+  r = tor_sscanf("3 ", "%d %lf", &int1, &d1);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(int1, OP_EQ, 3);
+
+  /* not a float */
+  r = tor_sscanf("999 notafloat", "%d %lf", &int1, &d1);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(int1, OP_EQ, 999);
+
+  /* %s but no buffer. */
+  char *nullbuf = NULL;
+  r = tor_sscanf("hello", "%3s", nullbuf);
+  tt_int_op(r, OP_EQ, 0);
+
  done:
   tor_free(huge);
 }
