@@ -1338,6 +1338,10 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
                       &mock_service_ns->fresh_until);
   voting_schedule_recalculate_timing(get_options(),
                                      mock_service_ns->valid_after);
+  /* Check that service is in the right time period point */
+  tt_int_op(hs_in_period_between_tp_and_srv(mock_service_ns, 0), OP_EQ,
+            cfg->service_in_new_tp);
+
   /* Set client consensus time. */
   set_consensus_times(cfg->client_valid_after,
                       &mock_client_ns->valid_after);
@@ -1347,10 +1351,7 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
                       &mock_client_ns->fresh_until);
   voting_schedule_recalculate_timing(get_options(),
                                      mock_client_ns->valid_after);
-
-  /* New time period checks for this scenario. */
-  tt_int_op(hs_in_period_between_tp_and_srv(mock_service_ns, 0), OP_EQ,
-            cfg->service_in_new_tp);
+  /* Check that client is in the right time period point */
   tt_int_op(hs_in_period_between_tp_and_srv(mock_client_ns, 0), OP_EQ,
             cfg->client_in_new_tp);
 
