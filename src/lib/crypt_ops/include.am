@@ -9,6 +9,7 @@ src_lib_libtor_crypt_ops_a_SOURCES =			\
 	src/lib/crypt_ops/crypto_cipher.c		\
 	src/lib/crypt_ops/crypto_curve25519.c		\
 	src/lib/crypt_ops/crypto_dh.c			\
+	src/lib/crypt_ops/crypto_dh_openssl.c		\
 	src/lib/crypt_ops/crypto_digest.c		\
 	src/lib/crypt_ops/crypto_ed25519.c		\
 	src/lib/crypt_ops/crypto_format.c		\
