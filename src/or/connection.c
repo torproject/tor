@@ -1495,7 +1495,9 @@ connection_listener_new_for_port(const port_cfg_t *port,
   int real_port = port->port == CFG_AUTO_PORT ? 0 : port->port;
   tor_assert(real_port <= UINT16_MAX);
 
-  defer = 0;
+  if (defer)
+    *defer = 0;
+
   if (port->server_cfg.no_listen) {
     if (defer)
       *defer = 1;
