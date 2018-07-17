@@ -1102,8 +1102,7 @@ hs_in_period_between_tp_and_srv,(const networkstatus_t *consensus, time_t now))
   /* Get start time of next TP and of current SRV protocol run, and check if we
    * are between them. */
   valid_after = consensus->valid_after;
-  srv_start_time =
-    sr_state_get_start_time_of_current_protocol_run(valid_after);
+  srv_start_time = sr_state_get_start_time_of_current_protocol_run();
   tp_start_time = hs_get_start_time_of_next_time_period(srv_start_time);
 
   if (valid_after >= srv_start_time && valid_after < tp_start_time) {
