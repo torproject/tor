@@ -1896,6 +1896,9 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     tor_asprintf(answer, "%"PRIu64, (get_bytes_read()));
   } else if (!strcmp(question, "traffic/written")) {
     tor_asprintf(answer, "%"PRIu64, (get_bytes_written()));
+  } else if (!strcmp(question, "uptime")) {
+    long uptime_secs = get_uptime();
+    tor_asprintf(answer, "%ld", uptime_secs);
   } else if (!strcmp(question, "process/pid")) {
     int myPid = -1;
 
@@ -3356,6 +3359,7 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("traffic/read", misc,"Bytes read since the process was started."),
   ITEM("traffic/written", misc,
        "Bytes written since the process was started."),
+  ITEM("uptime", misc, "Uptime of the Tor daemon in seconds."),
   ITEM("process/pid", misc, "Process id belonging to the main tor process."),
   ITEM("process/uid", misc, "User id running the tor process."),
   ITEM("process/user", misc,
