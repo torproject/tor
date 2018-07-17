@@ -1480,7 +1480,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
 
 /**
  * Create a new listener connection for a given <b>port</b>. In case we
- * cannot create listener now, but will be able later, set <b>defer</b>
+ * for a reason that is not an error condition, set <b>defer</b>
  * to true. If we cannot bind listening socket because address is already
  * in use, set <b>addr_in_use</b> to true.
  */
