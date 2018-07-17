@@ -126,10 +126,11 @@
  * EADDRINUSE.
  * 2) If so, it will close the appropriate old listener connection and
  * 3) Attempts bind()'ing the new listener socket again.
+ *
+ * Just to be safe, we are enabling listener rebind code on all platforms,
+ * to account for unexpected cases where it may be needed.
  */
-#if defined(__linux__) || defined(_WIN32)
 #define ENABLE_LISTENER_REBIND
-#endif
 
 static connection_t *connection_listener_new(
                                const struct sockaddr *listensockaddr,
