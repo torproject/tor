@@ -405,26 +405,28 @@ tor_check_dh_key(int severity, const BIGNUM *bn)
 
 /** Given a DH key exchange object, and our peer's value of g^y (as a
  * <b>pubkey_len</b>-byte value in <b>pubkey</b>) generate
- * <b>secret_bytes_out</b> bytes of shared key material and write them
- * to <b>secret_out</b>.  Return the number of bytes generated on success,
+ * g^xy as a big-endian integer in <b>secret_out</b>.
+ * Return the number of bytes generated on success,
  * or -1 on failure.
  *
- * (We generate key material by computing
- *         SHA1( g^xy || "\x00" ) || SHA1( g^xy || "\x01" ) || ...
- * where || is concatenation.)
+ * This function MUST validate that g^y is actually in the group.
  */
 ssize_t
-crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
-                         const char *pubkey, size_t pubkey_len,
-                         char *secret_out, size_t secret_bytes_out)
+crypto_dh_handshake(int severity, crypto_dh_t *dh,
+                    const char *pubkey, size_t pubkey_len,
+                    unsigned char *secret_out, size_t secret_bytes_out)
 {
-  char *secret_tmp = NULL;
   BIGNUM *pubkey_bn = NULL;
-  size_t secret_len=0, secret_tmp_len=0;
+  size_t secret_len=0;
   int result=0;
+
   tor_assert(dh);
   tor_assert(secret_bytes_out/DIGEST_LEN <= 255);
   tor_assert(pubkey_len < INT_MAX);
+
+  if (BUG(crypto_dh_get_bytes(dh) > (int)secret_bytes_out)) {
+    goto error;
+  }
 
   if (!(pubkey_bn = BN_bin2bn((const unsigned char*)pubkey,
                               (int)pubkey_len, NULL)))
@@ -434,18 +436,12 @@ crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
     log_fn(severity, LD_CRYPTO,"Rejected invalid g^x");
     goto error;
   }
-  secret_tmp_len = crypto_dh_get_bytes(dh);
-  secret_tmp = tor_malloc(secret_tmp_len);
-  result = DH_compute_key((unsigned char*)secret_tmp, pubkey_bn, dh->dh);
+  result = DH_compute_key(secret_out, pubkey_bn, dh->dh);
   if (result < 0) {
     log_warn(LD_CRYPTO,"DH_compute_key() failed.");
     goto error;
   }
   secret_len = result;
-  if (crypto_expand_key_material_TAP((uint8_t*)secret_tmp, secret_len,
-                                     (uint8_t*)secret_out, secret_bytes_out)<0)
-    goto error;
-  secret_len = secret_bytes_out;
 
   goto done;
  error:
@@ -454,10 +450,6 @@ crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
   crypto_openssl_log_errors(LOG_WARN, "completing DH handshake");
   if (pubkey_bn)
     BN_clear_free(pubkey_bn);
-  if (secret_tmp) {
-    memwipe(secret_tmp, 0, secret_tmp_len);
-    tor_free(secret_tmp);
-  }
   if (result < 0)
     return result;
   else
