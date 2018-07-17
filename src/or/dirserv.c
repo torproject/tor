@@ -1043,7 +1043,7 @@ format_recommended_version_list(const config_line_t *ln, int warn)
   }
 
   /* Handle the case where a dirauth operator has accidentally made some
-   * versions comma-separated instead of space-separated. */
+   * versions space-separated instead of comma-separated. */
   smartlist_t *more_versions = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(versions, char *, v) {
     if (strchr(v, ' ')) {
