@@ -1,0 +1,3 @@
+  o Minor bugfixes (continuous integration):
+    - Skip an unreliable key generation test on Windows, until the underlying
+      issue in bug 26076 is resolved. Fixes bug 26830; bugfix on 0.2.7.3-rc.
