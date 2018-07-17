@@ -50,7 +50,6 @@ void crypto_dh_free_all(void);
 /* Prototypes for private functions only used by tortls.c, crypto.c, and the
  * unit tests. */
 struct dh_st;
-struct dh_st *crypto_dh_get_dh_(crypto_dh_t *dh);
-
+struct dh_st *crypto_dh_new_openssl_tls(void);
 
 #endif /* !defined(TOR_CRYPTO_DH_H) */
