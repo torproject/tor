@@ -141,8 +141,6 @@ chanid_circid_entries_eq(chanid_circid_muxinfo_t *a,
                          chanid_circid_muxinfo_t *b);
 static inline unsigned int
 chanid_circid_entry_hash(chanid_circid_muxinfo_t *a);
-static chanid_circid_muxinfo_t *
-circuitmux_find_map_entry(circuitmux_t *cmux, circuit_t *circ);
 static void
 circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ);
 static void
@@ -585,7 +583,7 @@ circuitmux_attached_circuit_direction(circuitmux_t *cmux, circuit_t *circ)
  * is none.
  */
 
-static chanid_circid_muxinfo_t *
+chanid_circid_muxinfo_t *
 circuitmux_find_map_entry(circuitmux_t *cmux, circuit_t *circ)
 {
   chanid_circid_muxinfo_t search, *hashent = NULL;

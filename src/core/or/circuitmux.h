@@ -194,6 +194,10 @@ void circuitmux_append_destroy_cell(channel_t *chan,
 void circuitmux_mark_destroyed_circids_usable(circuitmux_t *cmux,
                                               channel_t *chan);
 
+/* Lookup interface */
+chanid_circid_muxinfo_t * circuitmux_find_map_entry(circuitmux_t *cmux,
+                                                    circuit_t *circ);
+
 /* Optional interchannel comparisons for scheduling */
 MOCK_DECL(int, circuitmux_compare_muxes,
           (circuitmux_t *cmux_1, circuitmux_t *cmux_2));
