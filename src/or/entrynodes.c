@@ -1273,13 +1273,13 @@ sampled_guards_update_consensus_presence(guard_selection_t *gs)
     const int is_listed = entry_guard_is_listed(gs, guard);
 
     if (is_listed && ! guard->currently_listed) {
-      n_changes++;
+      ++n_changes;
       guard->currently_listed = 1;
       guard->unlisted_since_date = 0;
       log_info(LD_GUARD, "Sampled guard %s is now listed again.",
                entry_guard_describe(guard));
     } else if (!is_listed && guard->currently_listed) {
-      n_changes++;
+      ++n_changes;
       guard->currently_listed = 0;
       guard->unlisted_since_date = randomize_time(approx_time(),
                                                   unlisted_since_slop);
@@ -1296,13 +1296,13 @@ sampled_guards_update_consensus_presence(guard_selection_t *gs)
 
     /* Clean up unlisted_since_date, just in case. */
     if (guard->currently_listed && guard->unlisted_since_date) {
-      n_changes++;
+      ++n_changes;
       guard->unlisted_since_date = 0;
       log_warn(LD_BUG, "Sampled guard %s was listed, but with "
                "unlisted_since_date set. Fixing.",
                entry_guard_describe(guard));
     } else if (!guard->currently_listed && ! guard->unlisted_since_date) {
-      n_changes++;
+      ++n_changes;
       guard->unlisted_since_date = randomize_time(approx_time(),
                                                   unlisted_since_slop);
       log_warn(LD_BUG, "Sampled guard %s was unlisted, but with "
@@ -1374,7 +1374,7 @@ sampled_guards_prune_obsolete_entries(guard_selection_t *gs,
     }
 
     if (rmv) {
-      n_changes++;
+      ++n_changes;
       SMARTLIST_DEL_CURRENT(gs->sampled_entry_guards, guard);
       remove_guard_from_confirmed_and_primary_lists(gs, guard);
       entry_guard_free(guard);
