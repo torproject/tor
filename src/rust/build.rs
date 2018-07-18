@@ -149,14 +149,14 @@ pub fn main() {
             // tor uses.  We must be careful with factoring and dependencies
             // moving forward!
             cfg.component("tor-crypt-ops-testing");
-            cfg.component("tor-sandbox");
+            cfg.component("tor-sandbox-testing");
             cfg.component("tor-encoding-testing");
-            cfg.component("tor-net");
+            cfg.component("tor-net-testing");
             cfg.component("tor-thread-testing");
             cfg.component("tor-memarea-testing");
-            cfg.component("tor-log");
-            cfg.component("tor-lock");
-            cfg.component("tor-fdio");
+            cfg.component("tor-log-testing");
+            cfg.component("tor-lock-testing");
+            cfg.component("tor-fdio-testing");
             cfg.component("tor-container-testing");
             cfg.component("tor-smartlist-core-testing");
             cfg.component("tor-string-testing");
