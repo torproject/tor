@@ -154,7 +154,7 @@ char *routerstatus_format_entry(
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 cached_dir_t *new_cached_dir(char *s, time_t published);
-
+char *format_recommended_version_list(const config_line_t *line, int warn);
 int validate_recommended_package_line(const char *line);
 
 #ifdef DIRSERV_PRIVATE
@@ -205,4 +205,3 @@ void dirserv_spool_sort(dir_connection_t *conn);
 void dir_conn_clear_spool(dir_connection_t *conn);
 
 #endif /* !defined(TOR_DIRSERV_H) */
-
