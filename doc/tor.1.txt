@@ -2747,7 +2747,9 @@ on the public Tor network.
 [[V3BandwidthsFile]] **V3BandwidthsFile** __FILENAME__::
     V3 authoritative directories only. Configures the location of the
     bandwidth-authority generated file storing information on relays' measured
-    bandwidth capacities. (Default: unset)
+    bandwidth capacities. To avoid inconsistent reads, bandwidth data should
+    be written to temporary file, then renamed to the configured filename.
+    (Default: unset)
 
 [[V3AuthUseLegacyKey]] **V3AuthUseLegacyKey** **0**|**1**::
     If set, the directory authority will sign consensuses not only with its
