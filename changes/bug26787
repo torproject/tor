@@ -1,0 +1,3 @@
+  o Minor bugfixes (testing):
+    - Disable core dumps in test_bt.sh, to avoid failures in "make
+      distcheck". Fixes bug 26787; bugfix on 0.2.5.2-alpha.
