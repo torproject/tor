@@ -797,6 +797,14 @@ compute_consensus_versions_list(smartlist_t *lst, int n_versioning)
   int min = n_versioning / 2;
   smartlist_t *good = smartlist_new();
   char *result;
+  SMARTLIST_FOREACH_BEGIN(lst, const char *, v) {
+    if (strchr(v, ' ')) {
+      log_warn(LD_DIR, "At least one authority has voted for a version %s "
+               "that contains a space. This probably wasn't intentional, and "
+               "is likely to cause trouble. Please tell them to stop it.",
+               escaped(v));
+    }
+  } SMARTLIST_FOREACH_END(v);
   sort_version_list(lst, 0);
   get_frequent_members(good, lst, min);
   result = smartlist_join_strings(good, ",", 0, NULL);
@@ -4200,8 +4208,8 @@ version_from_platform(const char *platform)
  * allocate and return a new string containing the version numbers, in order,
  * separated by commas.  Used to generate Recommended(Client|Server)?Versions
  */
-static char *
-format_versions_list(config_line_t *ln)
+char *
+format_recommended_version_list(const config_line_t *ln, int warn)
 {
   smartlist_t *versions;
   char *result;
@@ -4210,6 +4218,37 @@ format_versions_list(config_line_t *ln)
     smartlist_split_string(versions, ln->value, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   }
+
+  /* Handle the case where a dirauth operator has accidentally made some
+   * versions space-separated instead of comma-separated. */
+  smartlist_t *more_versions = smartlist_new();
+  SMARTLIST_FOREACH_BEGIN(versions, char *, v) {
+    if (strchr(v, ' ')) {
+      if (warn)
+        log_warn(LD_DIRSERV, "Unexpected space in versions list member %s. "
+                 "(These are supposed to be comma-separated; I'll pretend you "
+                 "used commas instead.)", escaped(v));
+      SMARTLIST_DEL_CURRENT(versions, v);
+      smartlist_split_string(more_versions, v, NULL,
+                             SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+      tor_free(v);
+    }
+  } SMARTLIST_FOREACH_END(v);
+  smartlist_add_all(versions, more_versions);
+  smartlist_free(more_versions);
+
+  /* Check to make sure everything looks like a version. */
+  if (warn) {
+    SMARTLIST_FOREACH_BEGIN(versions, const char *, v) {
+      tor_version_t ver;
+      if (tor_version_parse(v, &ver) < 0) {
+        log_warn(LD_DIRSERV, "Recommended version %s does not look valid. "
+                 " (I'll include it anyway, since you told me to.)",
+                 escaped(v));
+      }
+    } SMARTLIST_FOREACH_END(v);
+  }
+
   sort_version_list(versions, 1);
   result = smartlist_join_strings(versions,",",0,NULL);
   SMARTLIST_FOREACH(versions,char *,s,tor_free(s));
@@ -4325,8 +4364,10 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   }
 
   if (options->VersioningAuthoritativeDir) {
-    client_versions = format_versions_list(options->RecommendedClientVersions);
-    server_versions = format_versions_list(options->RecommendedServerVersions);
+    client_versions =
+      format_recommended_version_list(options->RecommendedClientVersions, 0);
+    server_versions =
+      format_recommended_version_list(options->RecommendedServerVersions, 0);
   }
 
   contact = get_options()->ContactInfo;
