@@ -1922,8 +1922,8 @@ entry_guards_update_primary(guard_selection_t *gs)
   });
 #endif /* 1 */
 
-  const int any_change = !smartlist_shallow_eq(gs->primary_entry_guards,
-                                               new_primary_guards);
+  const int any_change = !smartlist_ptrs_eq(gs->primary_entry_guards,
+                                            new_primary_guards);
   if (any_change) {
     log_info(LD_GUARD, "Primary entry guards have changed. "
              "New primary guard list is: ");

@@ -194,7 +194,7 @@ smartlist_ints_eq(const smartlist_t *sl1, const smartlist_t *sl2)
  * values are matching). Otherwise, return false.
  */
 int
-smartlist_shallow_eq(const smartlist_t *s1, const smartlist_t *s2)
+smartlist_ptrs_eq(const smartlist_t *s1, const smartlist_t *s2)
 {
   if (s1 == NULL || s2 == NULL)
     return 0;

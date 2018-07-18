@@ -37,8 +37,8 @@ int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
 
-int smartlist_shallow_eq(const smartlist_t *s1,
-                         const smartlist_t *s2);
+int smartlist_ptrs_eq(const smartlist_t *s1,
+                      const smartlist_t *s2);
 
 void smartlist_sort(smartlist_t *sl,
                     int (*compare)(const void **a, const void **b));
