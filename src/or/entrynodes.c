@@ -406,8 +406,8 @@ get_remove_unlisted_guards_after_days(void)
 }
 
 /**
- * If a guard has been unlisted for this many seconds continuously, we
- * remove it.
+ * Return number of seconds that will make a guard no longer eligible
+ * for selection if unlisted for this long.
  */
 static time_t
 get_remove_unlisted_guards_after_seconds(void)
