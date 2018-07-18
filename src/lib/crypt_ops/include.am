@@ -29,8 +29,7 @@ src_lib_libtor_crypt_ops_a_SOURCES +=			\
 	src/lib/crypt_ops/crypto_nss_mgt.c
 else
 src_lib_libtor_crypt_ops_a_SOURCES +=			\
-	src/lib/crypt_ops/aes_openssl.c			\
-	src/lib/crypt_ops/crypto_dh_openssl.c
+	src/lib/crypt_ops/aes_openssl.c
 endif
 
 if USE_OPENSSL
