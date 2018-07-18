@@ -15,6 +15,7 @@
 #include "feature/nodelist/parsecommon.h"
 #include "core/or/policies.h"
 #include "core/or/protover.h"
+#include "core/or/tor_version_st.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"

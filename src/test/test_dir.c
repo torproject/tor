@@ -23,6 +23,7 @@
 #include "app/config/confparse.h"
 #include "app/config/config.h"
 #include "feature/control/control.h"
+#include "lib/encoding/confline.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
