@@ -196,11 +196,13 @@ smartlist_ints_eq(const smartlist_t *sl1, const smartlist_t *sl2)
 int
 smartlist_ptrs_eq(const smartlist_t *s1, const smartlist_t *s2)
 {
-  if (s1 == NULL || s2 == NULL)
-    return 0;
-
   if (s1 == s2)
     return 1;
+
+  // Note: pointers cannot both be NULL at this point, because
+  // above check.
+  if (s1 == NULL || s2 == NULL)
+    return 0;
 
   if (smartlist_len(s1) != smartlist_len(s2))
     return 0;
