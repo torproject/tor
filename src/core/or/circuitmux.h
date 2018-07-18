@@ -16,6 +16,18 @@ typedef struct circuitmux_policy_s circuitmux_policy_t;
 typedef struct circuitmux_policy_data_s circuitmux_policy_data_t;
 typedef struct circuitmux_policy_circ_data_s circuitmux_policy_circ_data_t;
 
+/*
+ * Hash table entry (yeah, calling it chanid_circid_muxinfo_s seems to
+ * break the hash table code).
+ */
+typedef struct chanid_circid_muxinfo_t chanid_circid_muxinfo_t;
+
+/*
+ * Anything the mux wants to store per-circuit in the map; right now just
+ * a count of queued cells.
+ */
+typedef struct circuit_muxinfo_s circuit_muxinfo_t;
+
 struct circuitmux_policy_s {
   /* Allocate cmux-wide policy-specific data */
   circuitmux_policy_data_t * (*alloc_cmux_data)(circuitmux_t *cmux);
@@ -78,6 +90,34 @@ struct circuitmux_policy_data_s {
 
 struct circuitmux_policy_circ_data_s {
   uint32_t magic;
+};
+
+/*
+ * This struct holds whatever we want to store per attached circuit on a
+ * circuitmux_t; right now, just the count of queued cells and the direction.
+ */
+
+struct circuit_muxinfo_s {
+  /* Count of cells on this circuit at last update */
+  unsigned int cell_count;
+  /* Direction of flow */
+  cell_direction_t direction;
+  /* Policy-specific data */
+  circuitmux_policy_circ_data_t *policy_data;
+  /* Mark bit for consistency checker */
+  unsigned int mark:1;
+};
+
+/*
+ * A map from channel ID and circuit ID to a circuit_muxinfo_t for that
+ * circuit.
+ */
+
+struct chanid_circid_muxinfo_t {
+  HT_ENTRY(chanid_circid_muxinfo_t) node;
+  uint64_t chan_id;
+  circid_t circ_id;
+  circuit_muxinfo_t muxinfo;
 };
 
 /*
