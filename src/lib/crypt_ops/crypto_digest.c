@@ -65,6 +65,7 @@ digest_nss_internal(SECOidTag alg,
 {
   if (alg == SEC_OID_UNKNOWN)
     return -1;
+  tor_assert(msg_len <= UINT_MAX);
 
   int rv = -1;
   SECStatus s;
@@ -76,7 +77,7 @@ digest_nss_internal(SECOidTag alg,
   if (s != SECSuccess)
     goto done;
 
-  s = PK11_DigestOp(ctx, (const unsigned char *)msg, msg_len);
+  s = PK11_DigestOp(ctx, (const unsigned char *)msg, (unsigned int)msg_len);
   if (s != SECSuccess)
     goto done;
 
@@ -455,7 +456,8 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
     case DIGEST_SHA512:
       tor_assert(len <= UINT_MAX);
       SECStatus s = PK11_DigestOp(digest->d.ctx,
-                                  (const unsigned char *)data, len);
+                                  (const unsigned char *)data,
+                                  (unsigned int)len);
       tor_assert(s == SECSuccess);
       break;
 #else
@@ -698,7 +700,7 @@ crypto_hmac_sha256(char *hmac_out,
   SECStatus s;
   SECItem keyItem, paramItem;
   keyItem.data = (unsigned char *)key;
-  keyItem.len = key_len;
+  keyItem.len = (unsigned)key_len;
   paramItem.type = siBuffer;
   paramItem.data = NULL;
   paramItem.len = 0;
@@ -718,7 +720,7 @@ crypto_hmac_sha256(char *hmac_out,
   s = PK11_DigestBegin(hmac);
   if (s != SECSuccess)
     goto done;
-  s = PK11_DigestOp(hmac, (const unsigned char *)msg, msg_len);
+  s = PK11_DigestOp(hmac, (const unsigned char *)msg, (unsigned int)msg_len);
   if (s != SECSuccess)
     goto done;
   unsigned int len=0;
