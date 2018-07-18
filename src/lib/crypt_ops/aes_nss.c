@@ -74,7 +74,7 @@ aes_cipher_free_(aes_cnt_cipher_t *cipher)
   if (!cipher)
     return;
   PK11_DestroyContext((PK11Context*) cipher, PR_TRUE);
-};
+}
 
 void
 aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data_, size_t len_)
