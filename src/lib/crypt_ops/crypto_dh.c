@@ -87,7 +87,7 @@ crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
   secret_tmp_len = crypto_dh_get_bytes(dh);
   secret_tmp = tor_malloc(secret_tmp_len);
 
-  int result = crypto_dh_handshake(severity, dh, pubkey, pubkey_len,
+  ssize_t result = crypto_dh_handshake(severity, dh, pubkey, pubkey_len,
                                    secret_tmp, secret_tmp_len);
   if (result < 0)
     goto error;
