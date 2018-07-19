@@ -110,14 +110,6 @@ int crypto_pk_get_common_digests(crypto_pk_t *pk,
 int crypto_pk_base64_encode_private(const crypto_pk_t *pk, char **priv_out);
 crypto_pk_t *crypto_pk_base64_decode_private(const char *str, size_t len);
 
-#ifdef TOR_UNIT_TESTS
-#ifdef ENABLE_NSS
-struct SECItemStr;
-STATIC int secitem_uint_cmp(const struct SECItemStr *a,
-                            const struct SECItemStr *b);
-#endif
-#endif
-
 #ifdef ENABLE_OPENSSL
 /* Prototypes for private functions only used by tortls.c, crypto.c, and the
  * unit tests. */
@@ -131,5 +123,13 @@ MOCK_DECL(struct evp_pkey_st *, crypto_pk_get_openssl_evp_pkey_,(
 
 void crypto_pk_assign_public(crypto_pk_t *dest, const crypto_pk_t *src);
 void crypto_pk_assign_private(crypto_pk_t *dest, const crypto_pk_t *src);
+
+#ifdef TOR_UNIT_TESTS
+#ifdef ENABLE_NSS
+struct SECItemStr;
+STATIC int secitem_uint_cmp(const struct SECItemStr *a,
+                            const struct SECItemStr *b);
+#endif
+#endif
 
 #endif

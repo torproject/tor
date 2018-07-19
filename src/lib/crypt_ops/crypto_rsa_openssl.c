@@ -76,7 +76,7 @@ crypto_new_pk_from_openssl_rsa_(RSA *rsa)
 RSA *
 crypto_pk_get_openssl_rsa_(crypto_pk_t *env)
 {
-  return RSA_PrivateKeyDup(env->key);
+  return RSAPrivateKey_dup(env->key);
 }
 
 /** used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_t.  Iff
