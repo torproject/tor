@@ -142,9 +142,11 @@ chanid_circid_entries_eq(chanid_circid_muxinfo_t *a,
 static inline unsigned int
 chanid_circid_entry_hash(chanid_circid_muxinfo_t *a);
 static void
-circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ);
+circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ,
+                               chanid_circid_muxinfo_t *hashent);
 static void
-circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ);
+circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ,
+                                 chanid_circid_muxinfo_t *hashent);
 
 /* Static global variables */
 
@@ -248,7 +250,7 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux, smartlist_t *detached_out)
              */
 
             if (to_remove->muxinfo.cell_count > 0) {
-              circuitmux_make_circuit_inactive(cmux, circ);
+              circuitmux_make_circuit_inactive(cmux, circ, *i);
             }
 
             /* Clear n_mux */
@@ -263,7 +265,7 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux, smartlist_t *detached_out)
              */
 
             if (to_remove->muxinfo.cell_count > 0) {
-              circuitmux_make_circuit_inactive(cmux, circ);
+              circuitmux_make_circuit_inactive(cmux, circ, *i);
             }
 
             /*
@@ -801,10 +803,10 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
      */
     if (hashent->muxinfo.cell_count > 0 && cell_count == 0) {
       --(cmux->n_active_circuits);
-      circuitmux_make_circuit_inactive(cmux, circ);
+      circuitmux_make_circuit_inactive(cmux, circ, hashent);
     } else if (hashent->muxinfo.cell_count == 0 && cell_count > 0) {
       ++(cmux->n_active_circuits);
-      circuitmux_make_circuit_active(cmux, circ);
+      circuitmux_make_circuit_active(cmux, circ, hashent);
     }
     cmux->n_cells -= hashent->muxinfo.cell_count;
     cmux->n_cells += cell_count;
@@ -856,7 +858,7 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
     ++(cmux->n_circuits);
     if (cell_count > 0) {
       ++(cmux->n_active_circuits);
-      circuitmux_make_circuit_active(cmux, circ);
+      circuitmux_make_circuit_active(cmux, circ, hashent);
     }
     cmux->n_cells += cell_count;
   }
@@ -920,7 +922,7 @@ circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
     if (hashent->muxinfo.cell_count > 0) {
       --(cmux->n_active_circuits);
       /* This does policy notifies, so comes before freeing policy data */
-      circuitmux_make_circuit_inactive(cmux, circ);
+      circuitmux_make_circuit_inactive(cmux, circ, hashent);
     }
     cmux->n_cells -= hashent->muxinfo.cell_count;
 
@@ -957,7 +959,8 @@ circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
  */
 
 static void
-circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ)
+circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ,
+                               chanid_circid_muxinfo_t *hashent)
 {
   tor_assert(cmux);
   tor_assert(cmux->policy);
@@ -965,10 +968,6 @@ circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ)
 
   /* Policy-specific notification */
   if (cmux->policy->notify_circ_active) {
-    /* Okay, we need to check the circuit for policy data now */
-    chanid_circid_muxinfo_t *hashent = circuitmux_find_map_entry(cmux, circ);
-    /* We should have found something */
-    tor_assert(hashent);
     /* Notify */
     cmux->policy->notify_circ_active(cmux, cmux->policy_data,
                                      circ, hashent->muxinfo.policy_data);
@@ -981,7 +980,8 @@ circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ)
  */
 
 static void
-circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ)
+circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ,
+                                 chanid_circid_muxinfo_t *hashent)
 {
   tor_assert(cmux);
   tor_assert(cmux->policy);
@@ -989,10 +989,6 @@ circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ)
 
   /* Policy-specific notification */
   if (cmux->policy->notify_circ_inactive) {
-    /* Okay, we need to check the circuit for policy data now */
-    chanid_circid_muxinfo_t *hashent = circuitmux_find_map_entry(cmux, circ);
-    /* We should have found something */
-    tor_assert(hashent);
     /* Notify */
     cmux->policy->notify_circ_inactive(cmux, cmux->policy_data,
                                        circ, hashent->muxinfo.policy_data);
@@ -1043,12 +1039,12 @@ circuitmux_set_num_cells_hashent(circuitmux_t *cmux, circuit_t *circ,
   if (hashent->muxinfo.cell_count > 0 && n_cells == 0) {
     --(cmux->n_active_circuits);
     hashent->muxinfo.cell_count = n_cells;
-    circuitmux_make_circuit_inactive(cmux, circ);
+    circuitmux_make_circuit_inactive(cmux, circ, hashent);
   /* Is the old cell count == 0 and the new cell count > 0 ? */
   } else if (hashent->muxinfo.cell_count == 0 && n_cells > 0) {
     ++(cmux->n_active_circuits);
     hashent->muxinfo.cell_count = n_cells;
-    circuitmux_make_circuit_active(cmux, circ);
+    circuitmux_make_circuit_active(cmux, circ, hashent);
   } else {
     hashent->muxinfo.cell_count = n_cells;
   }
@@ -1182,7 +1178,7 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
    */
   if (becomes_inactive) {
     --(cmux->n_active_circuits);
-    circuitmux_make_circuit_inactive(cmux, circ);
+    circuitmux_make_circuit_inactive(cmux, circ, hashent);
   }
 }
 
