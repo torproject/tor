@@ -19,9 +19,9 @@
 
 #include <openssl/opensslv.h>
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
-#define HAVE_OPENSSL_HKDF 1
+#if defined(HAVE_ERR_LOAD_KDF_STRINGS)
 #include <openssl/kdf.h>
+#define HAVE_OPENSSL_HKDF 1
 #endif
 
 #include <string.h>
