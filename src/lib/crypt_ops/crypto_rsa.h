@@ -104,14 +104,16 @@ int crypto_pk_get_common_digests(crypto_pk_t *pk,
 int crypto_pk_base64_encode_private(const crypto_pk_t *pk, char **priv_out);
 crypto_pk_t *crypto_pk_base64_decode_private(const char *str, size_t len);
 
+#ifdef ENABLE_OPENSSL
 /* Prototypes for private functions only used by tortls.c, crypto.c, and the
  * unit tests. */
 struct rsa_st;
-struct rsa_st *crypto_pk_get_rsa_(crypto_pk_t *env);
-crypto_pk_t *crypto_new_pk_from_rsa_(struct rsa_st *rsa);
-MOCK_DECL(struct evp_pkey_st *, crypto_pk_get_evp_pkey_,(crypto_pk_t *env,
-                                                         int private));
 struct evp_pkey_st;
+struct rsa_st *crypto_pk_get_openssl_rsa_(crypto_pk_t *env);
+crypto_pk_t *crypto_new_pk_from_openssl_rsa_(struct rsa_st *rsa);
+MOCK_DECL(struct evp_pkey_st *, crypto_pk_get_openssl_evp_pkey_,(
+                                 crypto_pk_t *env,int private));
+#endif
 
 #ifdef TOR_UNIT_TESTS
 void crypto_pk_assign_(crypto_pk_t *dest, const crypto_pk_t *src);

@@ -690,7 +690,7 @@ test_tortls_get_my_client_auth_key(void *ignored)
   RSA *k = RSA_new();
 
   ctx = tor_malloc_zero(sizeof(tor_tls_context_t));
-  expected = crypto_new_pk_from_rsa_(k);
+  expected = crypto_new_pk_from_openssl_rsa_(k);
   ctx->auth_key = expected;
 
   client_tls_context = NULL;
@@ -2609,7 +2609,7 @@ test_tortls_create_certificate(void *ignored)
   pk1 = crypto_pk_new();
   pk2 = crypto_pk_new();
 
-  MOCK(crypto_pk_get_evp_pkey_, fixed_crypto_pk_get_evp_pkey_);
+  MOCK(crypto_pk_get_openssl_evp_pkey_, fixed_crypto_pk_get_evp_pkey_);
   fixed_crypto_pk_get_evp_pkey_result_index = 0;
   fixed_crypto_pk_get_evp_pkey_result[0] = NULL;
   ret = tor_tls_create_certificate(pk1, pk2, "hello", "hello2", 1);
@@ -2628,7 +2628,7 @@ test_tortls_create_certificate(void *ignored)
   tt_assert(!ret);
 
  done:
-  UNMOCK(crypto_pk_get_evp_pkey_);
+  UNMOCK(crypto_pk_get_openssl_evp_pkey_);
   crypto_pk_free(pk1);
   crypto_pk_free(pk2);
 }

@@ -539,9 +539,9 @@ tor_tls_create_certificate,(crypto_pk_t *rsa,
   tor_assert(cname);
   tor_assert(rsa_sign);
   tor_assert(cname_sign);
-  if (!(sign_pkey = crypto_pk_get_evp_pkey_(rsa_sign,1)))
+  if (!(sign_pkey = crypto_pk_get_openssl_evp_pkey_(rsa_sign,1)))
     goto error;
-  if (!(pkey = crypto_pk_get_evp_pkey_(rsa,0)))
+  if (!(pkey = crypto_pk_get_openssl_evp_pkey_(rsa,0)))
     goto error;
   if (!(x509 = X509_new()))
     goto error;
@@ -746,7 +746,7 @@ tor_x509_cert_new,(X509 *x509_cert))
 
   if ((pkey = X509_get_pubkey(x509_cert)) &&
       (rsa = EVP_PKEY_get1_RSA(pkey))) {
-    crypto_pk_t *pk = crypto_new_pk_from_rsa_(rsa);
+    crypto_pk_t *pk = crypto_new_pk_from_openssl_rsa_(rsa);
     if (crypto_pk_get_common_digests(pk, &cert->pkey_digests) < 0) {
       crypto_pk_free(pk);
       EVP_PKEY_free(pkey);
@@ -915,7 +915,7 @@ tor_tls_cert_get_key(tor_x509_cert_t *cert)
     EVP_PKEY_free(pkey);
     return NULL;
   }
-  result = crypto_new_pk_from_rsa_(rsa);
+  result = crypto_new_pk_from_openssl_rsa_(rsa);
   EVP_PKEY_free(pkey);
   return result;
 }
@@ -1270,7 +1270,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
   if (!is_client) {
     tor_assert(rsa);
-    if (!(pkey = crypto_pk_get_evp_pkey_(rsa,1)))
+    if (!(pkey = crypto_pk_get_openssl_evp_pkey_(rsa,1)))
       goto error;
     if (!SSL_CTX_use_PrivateKey(result->ctx, pkey))
       goto error;
@@ -2277,7 +2277,7 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity_key)
   rsa = EVP_PKEY_get1_RSA(id_pkey);
   if (!rsa)
     goto done;
-  *identity_key = crypto_new_pk_from_rsa_(rsa);
+  *identity_key = crypto_new_pk_from_openssl_rsa_(rsa);
 
   r = 0;
 
@@ -2362,7 +2362,7 @@ tor_x509_cert_replace_expiration(const tor_x509_cert_t *inp,
 {
   X509 *newc = X509_dup(inp->cert);
   X509_time_adj(X509_get_notAfter(newc), 0, &new_expiration_time);
-  EVP_PKEY *pk = crypto_pk_get_evp_pkey_(signing_key, 1);
+  EVP_PKEY *pk = crypto_pk_get_openssl_evp_pkey_(signing_key, 1);
   tor_assert(X509_sign(newc, pk, EVP_sha256()));
   EVP_PKEY_free(pk);
   return tor_x509_cert_new(newc);

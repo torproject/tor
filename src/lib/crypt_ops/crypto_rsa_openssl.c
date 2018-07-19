@@ -58,9 +58,10 @@ crypto_pk_key_is_private(const crypto_pk_t *k)
 #endif /* defined(OPENSSL_1_1_API) */
 }
 
-/** used by tortls.c: wrap an RSA* in a crypto_pk_t. */
+/** used by tortls.c: wrap an RSA* in a crypto_pk_t. Takes ownership of
+ * its argument. */
 crypto_pk_t *
-crypto_new_pk_from_rsa_(RSA *rsa)
+crypto_new_pk_from_openssl_rsa_(RSA *rsa)
 {
   crypto_pk_t *env;
   tor_assert(rsa);
@@ -70,19 +71,19 @@ crypto_new_pk_from_rsa_(RSA *rsa)
   return env;
 }
 
-/** Helper, used by tor-gencert.c.  Return the RSA from a
+/** Helper, used by tor-gencert.c.  Return a copy of the private RSA from a
  * crypto_pk_t. */
 RSA *
-crypto_pk_get_rsa_(crypto_pk_t *env)
+crypto_pk_get_openssl_rsa_(crypto_pk_t *env)
 {
-  return env->key;
+  return RSA_PrivateKeyDup(env->key);
 }
 
 /** used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_t.  Iff
  * private is set, include the private-key portion of the key. Return a valid
  * pointer on success, and NULL on failure. */
 MOCK_IMPL(EVP_PKEY *,
-crypto_pk_get_evp_pkey_,(crypto_pk_t *env, int private))
+crypto_pk_get_openssl_evp_pkey_,(crypto_pk_t *env, int private))
 {
   RSA *key = NULL;
   EVP_PKEY *pkey = NULL;
@@ -117,7 +118,7 @@ crypto_pk_new,(void))
 
   rsa = RSA_new();
   tor_assert(rsa);
-  return crypto_new_pk_from_rsa_(rsa);
+  return crypto_new_pk_from_openssl_rsa_(rsa);
 }
 
 /** Release a reference to an asymmetric key; when all the references
@@ -556,7 +557,7 @@ crypto_pk_copy_full(crypto_pk_t *env)
     /* LCOV_EXCL_STOP */
   }
 
-  return crypto_new_pk_from_rsa_(new_key);
+  return crypto_new_pk_from_openssl_rsa_(new_key);
 }
 
 /** Encrypt <b>fromlen</b> bytes from <b>from</b> with the public key
@@ -729,7 +730,7 @@ crypto_pk_asn1_decode(const char *str, size_t len)
     crypto_openssl_log_errors(LOG_WARN,"decoding public key");
     return NULL;
   }
-  return crypto_new_pk_from_rsa_(rsa);
+  return crypto_new_pk_from_openssl_rsa_(rsa);
 }
 
 /** Given a crypto_pk_t <b>pk</b>, allocate a new buffer containing the
@@ -789,7 +790,7 @@ crypto_pk_base64_decode_private(const char *str, size_t len)
     goto out;
   }
 
-  pk = crypto_new_pk_from_rsa_(rsa);
+  pk = crypto_new_pk_from_openssl_rsa_(rsa);
 
   /* Make sure it's valid. */
   if (crypto_pk_check_key(pk) <= 0) {
