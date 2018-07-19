@@ -1,0 +1,8 @@
+  o Major bugfixes (performance):
+    - Avoid unnecessary calls to circuitmux_find_map_entry() by caching
+      chanid_circid_muxinfo_t entries as much as possible. This is done
+      by passing in chanid_circid_muxinfo_t into functions in circuitmux.c
+      such as circuitmux_make_circuit_active() where a hashmap entry stays
+      the same across multiple subsequent function calls. Fixes bug 25152;
+      bugfix on 0.3.5.1-alpha. Patch by Neel Chauhan.
+
