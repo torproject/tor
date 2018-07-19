@@ -158,7 +158,7 @@ crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits))
     RSA *r = NULL;
     if (!e)
       goto done;
-    if (! BN_set_word(e, 65537))
+    if (! BN_set_word(e, TOR_RSA_EXPONENT))
       goto done;
     r = RSA_new();
     if (!r)
@@ -408,7 +408,7 @@ crypto_pk_check_key(crypto_pk_t *env)
 }
 
 /** Return true iff <b>env</b> contains a public key whose public exponent
- * equals 65537.
+ * equals TOR_RSA_EXPONENT.
  */
 int
 crypto_pk_public_exponent_ok(crypto_pk_t *env)
@@ -424,7 +424,7 @@ crypto_pk_public_exponent_ok(crypto_pk_t *env)
 #else
   e = env->key->e;
 #endif /* defined(OPENSSL_1_1_API) */
-  return BN_is_word(e, 65537);
+  return BN_is_word(e, TOR_RSA_EXPONENT);
 }
 
 /** Compare the public-key components of a and b.  Return less than 0

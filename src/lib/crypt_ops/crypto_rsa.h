@@ -33,6 +33,9 @@
  * including terminating NUL. */
 #define FINGERPRINT_LEN 49
 
+/** Value of 'e' to use in our public keys */
+#define TOR_RSA_EXPONENT 65537
+
 /** A public key, or a public/private key-pair. */
 typedef struct crypto_pk_t crypto_pk_t;
 
