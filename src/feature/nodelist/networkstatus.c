@@ -2417,6 +2417,8 @@ get_net_param_from_list(smartlist_t *net_params, const char *param_name,
     res = max_val;
   }
 
+  tor_assert(res >= min_val);
+  tor_assert(res <= max_val);
   return res;
 }
 
