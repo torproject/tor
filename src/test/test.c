@@ -867,6 +867,7 @@ struct testgroup_t testgroups[] = {
   { "crypto/", crypto_tests },
   { "crypto/ope/", crypto_ope_tests },
   { "crypto/openssl/", crypto_openssl_tests },
+  { "crypto/pem/", pem_tests },
   { "dir/", dir_tests },
   { "dir_handle_get/", dir_handle_get_tests },
   { "dir/md/", microdesc_tests },
