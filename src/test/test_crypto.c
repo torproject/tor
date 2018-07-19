@@ -1420,22 +1420,22 @@ test_crypto_pk_base64(void *arg)
   /* Test Base64 encoding a key. */
   pk1 = pk_generate(0);
   tt_assert(pk1);
-  tt_int_op(0, OP_EQ, crypto_pk_base64_encode(pk1, &encoded));
+  tt_int_op(0, OP_EQ, crypto_pk_base64_encode_private(pk1, &encoded));
   tt_assert(encoded);
 
   /* Test decoding a valid key. */
-  pk2 = crypto_pk_base64_decode(encoded, strlen(encoded));
+  pk2 = crypto_pk_base64_decode_private(encoded, strlen(encoded));
   tt_assert(pk2);
   tt_int_op(crypto_pk_cmp_keys(pk1, pk2), OP_EQ, 0);
   crypto_pk_free(pk2);
 
   /* Test decoding a invalid key (not Base64). */
   static const char *invalid_b64 = "The key is in another castle!";
-  pk2 = crypto_pk_base64_decode(invalid_b64, strlen(invalid_b64));
+  pk2 = crypto_pk_base64_decode_private(invalid_b64, strlen(invalid_b64));
   tt_ptr_op(pk2, OP_EQ, NULL);
 
   /* Test decoding a truncated Base64 blob. */
-  pk2 = crypto_pk_base64_decode(encoded, strlen(encoded)/2);
+  pk2 = crypto_pk_base64_decode_private(encoded, strlen(encoded)/2);
   tt_ptr_op(pk2, OP_EQ, NULL);
 
  done:

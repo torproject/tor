@@ -101,8 +101,8 @@ int crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
 int crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out);
 int crypto_pk_get_common_digests(crypto_pk_t *pk,
                                  common_digests_t *digests_out);
-int crypto_pk_base64_encode(const crypto_pk_t *pk, char **priv_out);
-crypto_pk_t *crypto_pk_base64_decode(const char *str, size_t len);
+int crypto_pk_base64_encode_private(const crypto_pk_t *pk, char **priv_out);
+crypto_pk_t *crypto_pk_base64_decode_private(const char *str, size_t len);
 
 /* Prototypes for private functions only used by tortls.c, crypto.c, and the
  * unit tests. */

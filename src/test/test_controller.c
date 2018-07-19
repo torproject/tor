@@ -161,7 +161,7 @@ test_add_onion_helper_keyarg_v2(void *arg)
   /* Test loading a RSA1024 key. */
   tor_free(err_msg);
   pk1 = pk_generate(0);
-  tt_int_op(0, OP_EQ, crypto_pk_base64_encode(pk1, &encoded));
+  tt_int_op(0, OP_EQ, crypto_pk_base64_encode_private(pk1, &encoded));
   tor_asprintf(&arg_str, "RSA1024:%s", encoded);
   ret = add_onion_helper_keyarg(arg_str, 0, &key_new_alg, &key_new_blob,
                                 &pk, &hs_version, &err_msg);

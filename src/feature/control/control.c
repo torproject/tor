@@ -4994,7 +4994,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
 
   if (!strcasecmp(key_type_rsa1024, key_type)) {
     /* "RSA:<Base64 Blob>" - Loading a pre-existing RSA1024 key. */
-    pk = crypto_pk_base64_decode(key_blob, strlen(key_blob));
+    pk = crypto_pk_base64_decode_private(key_blob, strlen(key_blob));
     if (!pk) {
       err_msg = tor_strdup("512 Failed to decode RSA key\r\n");
       goto err;
@@ -5029,7 +5029,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
         goto err;
       }
       if (!discard_pk) {
-        if (crypto_pk_base64_encode(pk, &key_new_blob)) {
+        if (crypto_pk_base64_encode_private(pk, &key_new_blob)) {
           crypto_pk_free(pk);
           tor_asprintf(&err_msg, "551 Failed to encode %s key\r\n",
                        key_type_rsa1024);

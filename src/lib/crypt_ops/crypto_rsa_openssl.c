@@ -750,7 +750,7 @@ crypto_pk_asn1_decode(const char *str, size_t len)
  * It is the caller's responsibility to sanitize and free the resulting buffer.
  */
 int
-crypto_pk_base64_encode(const crypto_pk_t *pk, char **priv_out)
+crypto_pk_base64_encode_private(const crypto_pk_t *pk, char **priv_out)
 {
   unsigned char *der = NULL;
   int der_len;
@@ -781,7 +781,7 @@ crypto_pk_base64_encode(const crypto_pk_t *pk, char **priv_out)
  * on failure.
  */
 crypto_pk_t *
-crypto_pk_base64_decode(const char *str, size_t len)
+crypto_pk_base64_decode_private(const char *str, size_t len)
 {
   crypto_pk_t *pk = NULL;
 
