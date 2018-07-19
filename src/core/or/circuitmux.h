@@ -157,8 +157,7 @@ void circuitmux_set_policy(circuitmux_t *cmux,
 
 /* Status inquiries */
 cell_direction_t circuitmux_attached_circuit_direction(
-    circuitmux_t *cmux,
-    circuit_t *circ);
+    chanid_circid_muxinfo_t *hashent);
 int circuitmux_is_circuit_attached(circuitmux_t *cmux, circuit_t *circ);
 int circuitmux_is_circuit_active(circuitmux_t *cmux, circuit_t *circ);
 unsigned int circuitmux_num_cells_for_circuit(circuitmux_t *cmux,

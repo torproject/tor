@@ -561,19 +561,8 @@ circuitmux_set_policy(circuitmux_t *cmux,
  */
 
 cell_direction_t
-circuitmux_attached_circuit_direction(circuitmux_t *cmux, circuit_t *circ)
+circuitmux_attached_circuit_direction(chanid_circid_muxinfo_t *hashent)
 {
-  chanid_circid_muxinfo_t *hashent = NULL;
-
-  /* Try to find a map entry */
-  hashent = circuitmux_find_map_entry(cmux, circ);
-
-  /*
-   * This function should only be called on attached circuits; assert that
-   * we had a map entry.
-   */
-  tor_assert(hashent);
-
   /* Return the direction from the map entry */
   return hashent->muxinfo.direction;
 }

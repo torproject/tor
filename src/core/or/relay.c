@@ -2610,7 +2610,7 @@ update_circuit_on_cmux_(circuit_t *circ, cell_direction_t direction,
              file, lineno);
     return;
   }
-  tor_assert(circuitmux_attached_circuit_direction(cmux, circ) == direction);
+  tor_assert(circuitmux_attached_circuit_direction(hashent) == direction);
 
   /* Update the number of cells we have for the circuit mux */
   if (direction == CELL_DIRECTION_OUT) {
