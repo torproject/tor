@@ -1519,7 +1519,8 @@ test_crypto_digests(void *arg)
   (void)arg;
   k = crypto_pk_new();
   tt_assert(k);
-  r = crypto_pk_read_private_key_from_string(k, AUTHORITY_SIGNKEY_3, -1);
+  r = crypto_pk_read_private_key_from_string(k, AUTHORITY_SIGNKEY_3,
+                                             strlen(AUTHORITY_SIGNKEY_3));
   tt_assert(!r);
 
   r = crypto_pk_get_digest(k, digest);

@@ -183,216 +183,6 @@ crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits))
   return 0;
 }
 
-/** A PEM callback that always reports a failure to get a password */
-static int
-pem_no_password_cb(char *buf, int size, int rwflag, void *u)
-{
-  (void)buf;
-  (void)size;
-  (void)rwflag;
-  (void)u;
-  return -1;
-}
-
-/** Read a PEM-encoded private key from the <b>len</b>-byte string <b>s</b>
- * into <b>env</b>.  Return 0 on success, -1 on failure.  If len is -1,
- * the string is nul-terminated.
- */
-int
-crypto_pk_read_private_key_from_string(crypto_pk_t *env,
-                                       const char *s, ssize_t len)
-{
-  BIO *b;
-
-  tor_assert(env);
-  tor_assert(s);
-  tor_assert(len < INT_MAX && len < SSIZE_T_CEILING);
-
-  /* Create a read-only memory BIO, backed by the string 's' */
-  b = BIO_new_mem_buf((char*)s, (int)len);
-  if (!b)
-    return -1;
-
-  if (env->key)
-    RSA_free(env->key);
-
-  env->key = PEM_read_bio_RSAPrivateKey(b,NULL,pem_no_password_cb,NULL);
-
-  BIO_free(b);
-
-  if (!env->key) {
-    crypto_openssl_log_errors(LOG_WARN, "Error parsing private key");
-    return -1;
-  }
-  return 0;
-}
-
-/** Read a PEM-encoded private key from the file named by
- * <b>keyfile</b> into <b>env</b>.  Return 0 on success, -1 on failure.
- */
-int
-crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
-                                         const char *keyfile)
-{
-  char *contents;
-  int r;
-
-  /* Read the file into a string. */
-  contents = read_file_to_str(keyfile, 0, NULL);
-  if (!contents) {
-    log_warn(LD_CRYPTO, "Error reading private key from \"%s\"", keyfile);
-    return -1;
-  }
-
-  /* Try to parse it. */
-  r = crypto_pk_read_private_key_from_string(env, contents, -1);
-  memwipe(contents, 0, strlen(contents));
-  tor_free(contents);
-  if (r)
-    return -1; /* read_private_key_from_string already warned, so we don't.*/
-
-  /* Make sure it's valid. */
-  if (crypto_pk_check_key(env) <= 0)
-    return -1;
-
-  return 0;
-}
-
-/** Helper function to implement crypto_pk_write_*_key_to_string. Return 0 on
- * success, -1 on failure. */
-static int
-crypto_pk_write_key_to_string_impl(crypto_pk_t *env, char **dest,
-                                   size_t *len, int is_public)
-{
-  BUF_MEM *buf;
-  BIO *b;
-  int r;
-
-  tor_assert(env);
-  tor_assert(env->key);
-  tor_assert(dest);
-
-  b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
-  if (!b)
-    return -1;
-
-  /* Now you can treat b as if it were a file.  Just use the
-   * PEM_*_bio_* functions instead of the non-bio variants.
-   */
-  if (is_public)
-    r = PEM_write_bio_RSAPublicKey(b, env->key);
-  else
-    r = PEM_write_bio_RSAPrivateKey(b, env->key, NULL,NULL,0,NULL,NULL);
-
-  if (!r) {
-    crypto_openssl_log_errors(LOG_WARN, "writing RSA key to string");
-    BIO_free(b);
-    return -1;
-  }
-
-  BIO_get_mem_ptr(b, &buf);
-
-  *dest = tor_malloc(buf->length+1);
-  memcpy(*dest, buf->data, buf->length);
-  (*dest)[buf->length] = 0; /* nul terminate it */
-  *len = buf->length;
-
-  BIO_free(b);
-
-  return 0;
-}
-
-/** PEM-encode the public key portion of <b>env</b> and write it to a
- * newly allocated string.  On success, set *<b>dest</b> to the new
- * string, *<b>len</b> to the string's length, and return 0.  On
- * failure, return -1.
- */
-int
-crypto_pk_write_public_key_to_string(crypto_pk_t *env, char **dest,
-                                     size_t *len)
-{
-  return crypto_pk_write_key_to_string_impl(env, dest, len, 1);
-}
-
-/** PEM-encode the private key portion of <b>env</b> and write it to a
- * newly allocated string.  On success, set *<b>dest</b> to the new
- * string, *<b>len</b> to the string's length, and return 0.  On
- * failure, return -1.
- */
-int
-crypto_pk_write_private_key_to_string(crypto_pk_t *env, char **dest,
-                                     size_t *len)
-{
-  return crypto_pk_write_key_to_string_impl(env, dest, len, 0);
-}
-
-/** Read a PEM-encoded public key from the first <b>len</b> characters of
- * <b>src</b>, and store the result in <b>env</b>.  Return 0 on success, -1 on
- * failure.
- */
-int
-crypto_pk_read_public_key_from_string(crypto_pk_t *env, const char *src,
-                                      size_t len)
-{
-  BIO *b;
-
-  tor_assert(env);
-  tor_assert(src);
-  tor_assert(len<INT_MAX);
-
-  b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
-  if (!b)
-    return -1;
-
-  BIO_write(b, src, (int)len);
-
-  if (env->key)
-    RSA_free(env->key);
-  env->key = PEM_read_bio_RSAPublicKey(b, NULL, pem_no_password_cb, NULL);
-  BIO_free(b);
-  if (!env->key) {
-    crypto_openssl_log_errors(LOG_WARN, "reading public key from string");
-    return -1;
-  }
-
-  return 0;
-}
-
-/** Write the private key from <b>env</b> into the file named by <b>fname</b>,
- * PEM-encoded.  Return 0 on success, -1 on failure.
- */
-int
-crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
-                                        const char *fname)
-{
-  BIO *bio;
-  char *cp;
-  long len;
-  char *s;
-  int r;
-
-  tor_assert(crypto_pk_key_is_private(env));
-
-  if (!(bio = BIO_new(BIO_s_mem())))
-    return -1;
-  if (PEM_write_bio_RSAPrivateKey(bio, env->key, NULL,NULL,0,NULL,NULL)
-      == 0) {
-    crypto_openssl_log_errors(LOG_WARN, "writing private key");
-    BIO_free(bio);
-    return -1;
-  }
-  len = BIO_get_mem_data(bio, &cp);
-  tor_assert(len >= 0);
-  s = tor_malloc(len+1);
-  memcpy(s, cp, len);
-  s[len]='\0';
-  r = write_str_to_file(fname, s, 0);
-  BIO_free(bio);
-  memwipe(s, 0, strlen(s));
-  tor_free(s);
-  return r;
-}
-
 /** Return true iff <b>env</b> has a valid key.
  */
 int
@@ -512,11 +302,11 @@ crypto_pk_dup_key(crypto_pk_t *env)
   return env;
 }
 
-#ifdef TOR_UNIT_TESTS
-/** For testing: replace dest with src.  (Dest must have a refcount
- * of 1) */
+/** Replace dest with src (private key only).  (Dest must have a refcount
+ * of 1)
+ */
 void
-crypto_pk_assign_(crypto_pk_t *dest, const crypto_pk_t *src)
+crypto_pk_assign_private(crypto_pk_t *dest, const crypto_pk_t *src)
 {
   tor_assert(dest);
   tor_assert(dest->refs == 1);
@@ -524,7 +314,19 @@ crypto_pk_assign_(crypto_pk_t *dest, const crypto_pk_t *src)
   RSA_free(dest->key);
   dest->key = RSAPrivateKey_dup(src->key);
 }
-#endif /* defined(TOR_UNIT_TESTS) */
+
+/** Replace dest with src (public key only).  (Dest must have a refcount
+ * of 1)
+ */
+void
+crypto_pk_assign_public(crypto_pk_t *dest, const crypto_pk_t *src)
+{
+  tor_assert(dest);
+  tor_assert(dest->refs == 1);
+  tor_assert(src);
+  RSA_free(dest->key);
+  dest->key = RSAPublicKey_dup(src->key);
+}
 
 /** Make a real honest-to-goodness copy of <b>env</b>, and return it.
  * Returns NULL on failure. */
@@ -733,74 +535,48 @@ crypto_pk_asn1_decode(const char *str, size_t len)
   return crypto_new_pk_from_openssl_rsa_(rsa);
 }
 
-/** Given a crypto_pk_t <b>pk</b>, allocate a new buffer containing the
- * Base64 encoding of the DER representation of the private key as a NUL
- * terminated string, and return it via <b>priv_out</b>.  Return 0 on
- * success, -1 on failure.
- *
- * It is the caller's responsibility to sanitize and free the resulting buffer.
+/** ASN.1-encode the private portion of <b>pk</b> into <b>dest</b>.
+ * Return -1 on error, or the number of characters used on success.
  */
 int
-crypto_pk_base64_encode_private(const crypto_pk_t *pk, char **priv_out)
+crypto_pk_asn1_encode_private(const crypto_pk_t *pk, char *dest,
+                              size_t dest_len)
 {
-  unsigned char *der = NULL;
-  int der_len;
-  int ret = -1;
+  int len;
+  unsigned char *buf = NULL;
 
-  *priv_out = NULL;
+  len = i2d_RSAPrivateKey(pk->key, &buf);
+  if (len < 0 || buf == NULL)
+    return -1;
 
-  der_len = i2d_RSAPrivateKey(pk->key, &der);
-  if (der_len < 0 || der == NULL)
-    return ret;
-
-  size_t priv_len = base64_encode_size(der_len, 0) + 1;
-  char *priv = tor_malloc_zero(priv_len);
-  if (base64_encode(priv, priv_len, (char *)der, der_len, 0) >= 0) {
-    *priv_out = priv;
-    ret = 0;
-  } else {
-    tor_free(priv);
+  if ((size_t)len > dest_len || dest_len > SIZE_T_CEILING) {
+    OPENSSL_free(buf);
+    return -1;
   }
-
-  memwipe(der, 0, der_len);
-  OPENSSL_free(der);
-  return ret;
+  /* We don't encode directly into 'dest', because that would be illegal
+   * type-punning.  (C99 is smarter than me, C99 is smarter than me...)
+   */
+  memcpy(dest,buf,len);
+  OPENSSL_free(buf);
+  return len;
 }
 
-/** Given a string containing the Base64 encoded DER representation of the
- * private key <b>str</b>, decode and return the result on success, or NULL
- * on failure.
+/** Decode an ASN.1-encoded private key from <b>str</b>; return the result on
+ * success and NULL on failure.
  */
 crypto_pk_t *
-crypto_pk_base64_decode_private(const char *str, size_t len)
+crypto_pk_asn1_decode_private(const char *str, size_t len)
 {
-  crypto_pk_t *pk = NULL;
-
-  char *der = tor_malloc_zero(len + 1);
-  int der_len = base64_decode(der, len, str, len);
-  if (der_len <= 0) {
-    log_warn(LD_CRYPTO, "Stored RSA private key seems corrupted (base64).");
-    goto out;
-  }
-
-  const unsigned char *dp = (unsigned char*)der; /* Shut the compiler up. */
-  RSA *rsa = d2i_RSAPrivateKey(NULL, &dp, der_len);
+  RSA *rsa;
+  unsigned char *buf;
+  const unsigned char *cp;
+  cp = buf = tor_malloc(len);
+  memcpy(buf,str,len);
+  rsa = d2i_RSAPrivateKey(NULL, &cp, len);
+  tor_free(buf);
   if (!rsa) {
-    crypto_openssl_log_errors(LOG_WARN, "decoding private key");
-    goto out;
+    crypto_openssl_log_errors(LOG_WARN,"decoding public key");
+    return NULL;
   }
-
-  pk = crypto_new_pk_from_openssl_rsa_(rsa);
-
-  /* Make sure it's valid. */
-  if (crypto_pk_check_key(pk) <= 0) {
-    crypto_pk_free(pk);
-    pk = NULL;
-    goto out;
-  }
-
- out:
-  memwipe(der, 0, len + 1);
-  tor_free(der);
-  return pk;
+  return crypto_new_pk_from_openssl_rsa_(rsa);
 }

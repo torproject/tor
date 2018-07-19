@@ -23,8 +23,12 @@
 
 #include "lib/log/log.h"
 #include "lib/encoding/binascii.h"
+#include "lib/encoding/pem.h"
 
 #include <string.h>
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 
 /** Return the number of bytes added by padding method <b>padding</b>.
  */
@@ -387,4 +391,253 @@ crypto_pk_get_common_digests(crypto_pk_t *pk, common_digests_t *digests_out)
  done:
   tor_free(buf);
   return rv;
+}
+
+static const char RSA_PUBLIC_TAG[] = "RSA PUBLIC KEY";
+static const char RSA_PRIVATE_TAG[] = "RSA PRIVATE KEY";
+
+/** PEM-encode the public key portion of <b>env</b> and write it to a
+ * newly allocated string.  On success, set *<b>dest</b> to the new
+ * string, *<b>len</b> to the string's length, and return 0.  On
+ * failure, return -1.
+ */
+int
+crypto_pk_write_public_key_to_string(crypto_pk_t *env,
+                                     char **dest, size_t *len)
+{
+  size_t buflen = crypto_pk_keysize(env) * 3;
+  char *buf = tor_malloc(buflen);
+  char *result = NULL;
+  size_t resultlen = 0;
+  int rv = -1;
+
+  int n = crypto_pk_asn1_encode(env, buf, buflen);
+  if (n < 0)
+    goto done;
+
+  resultlen = pem_encoded_size(n, RSA_PUBLIC_TAG);
+  result = tor_malloc(resultlen);
+  if (pem_encode(result, resultlen,
+                 (const unsigned char *)buf, n, RSA_PUBLIC_TAG) < 0) {
+    goto done;
+  }
+
+  *dest = result;
+  *len = resultlen;
+  rv = 0;
+
+ done:
+  if (rv < 0 && result) {
+    memwipe(result, 0, resultlen);
+    tor_free(result);
+  }
+  memwipe(buf, 0, buflen);
+  tor_free(buf);
+  return rv;
+}
+
+/** PEM-encode the private key portion of <b>env</b> and write it to a
+ * newly allocated string.  On success, set *<b>dest</b> to the new
+ * string, *<b>len</b> to the string's length, and return 0.  On
+ * failure, return -1.
+ */
+int
+crypto_pk_write_private_key_to_string(crypto_pk_t *env,
+                                          char **dest, size_t *len)
+{
+  size_t buflen = crypto_pk_keysize(env) * 16;
+  char *buf = tor_malloc(buflen);
+  char *result = NULL;
+  size_t resultlen = 0;
+  int rv = -1;
+
+  int n = crypto_pk_asn1_encode_private(env, buf, buflen);
+  if (n < 0)
+    goto done;
+
+  resultlen = pem_encoded_size(n, RSA_PRIVATE_TAG);
+  result = tor_malloc(resultlen);
+  if (pem_encode(result, resultlen,
+                 (const unsigned char *)buf, n, RSA_PRIVATE_TAG) < 0)
+    goto done;
+
+  *dest = result;
+  *len = resultlen;
+  rv = 0;
+ done:
+  if (rv < 0 && result) {
+    memwipe(result, 0, resultlen);
+    tor_free(result);
+  }
+  memwipe(buf, 0, buflen);
+  tor_free(buf);
+  return rv;
+}
+
+/** Read a PEM-encoded public key from the first <b>len</b> characters of
+ * <b>src</b>, and store the result in <b>env</b>.  Return 0 on success, -1 on
+ * failure.
+ */
+int
+crypto_pk_read_public_key_from_string(crypto_pk_t *env,
+                                      const char *src, size_t len)
+{
+  if (len == (size_t)-1)
+    len = strlen(src);
+
+  size_t buflen = len;
+  uint8_t *buf = tor_malloc(buflen);
+  int rv = -1;
+
+  int n = pem_decode(buf, buflen, src, len, RSA_PUBLIC_TAG);
+  if (n < 0)
+    goto done;
+
+  crypto_pk_t *pk = crypto_pk_asn1_decode((const char*)buf, n);
+  if (! pk)
+    goto done;
+
+  crypto_pk_assign_public(env, pk);
+  crypto_pk_free(pk);
+  rv = 0;
+
+ done:
+  memwipe(buf, 0, buflen);
+  tor_free(buf);
+  return rv;
+}
+
+/** Read a PEM-encoded private key from the <b>len</b>-byte string <b>s</b>
+ * into <b>env</b>.  Return 0 on success, -1 on failure.  If len is -1,
+ * the string is nul-terminated.
+ */
+int
+crypto_pk_read_private_key_from_string(crypto_pk_t *env,
+                                       const char *s, ssize_t len)
+{
+  if (len == -1)
+    len = strlen(s);
+
+  size_t buflen = len;
+  uint8_t *buf = tor_malloc(buflen);
+  int rv = -1;
+
+  int n = pem_decode(buf, buflen, s, len, RSA_PRIVATE_TAG);
+  if (n < 0) {
+    goto done;
+  }
+
+  crypto_pk_t *pk = crypto_pk_asn1_decode_private((const char *)buf, n);
+  if (! pk)
+    goto done;
+
+  crypto_pk_assign_private(env, pk);
+  crypto_pk_free(pk);
+  rv = 0;
+
+ done:
+  memwipe(buf, 0, buflen);
+  tor_free(buf);
+  return rv;
+}
+
+/** Read a PEM-encoded private key from the file named by
+ * <b>keyfile</b> into <b>env</b>.  Return 0 on success, -1 on failure.
+ */
+int
+crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
+                                         const char *keyfile)
+{
+  struct stat st;
+  char *buf = read_file_to_str(keyfile, 0, &st);
+  if (!buf)
+    return -1;
+
+  int rv = crypto_pk_read_private_key_from_string(env, buf, st.st_size);
+  memwipe(buf, 0, st.st_size);
+  tor_free(buf);
+  return rv;
+}
+
+/** Write the private key from <b>env</b> into the file named by <b>fname</b>,
+ * PEM-encoded.  Return 0 on success, -1 on failure.
+ */
+int
+crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
+                                        const char *fname)
+{
+  char *s = NULL;
+  size_t n = 0;
+
+  if (crypto_pk_write_private_key_to_string(env, &s, &n) < 0)
+    return -1;
+
+  int rv = write_bytes_to_file(fname, s, n, 0);
+  memwipe(s, 0, n);
+  tor_free(s);
+  return rv;
+}
+
+/** Given a crypto_pk_t <b>pk</b>, allocate a new buffer containing the
+ * Base64 encoding of the DER representation of the private key as a NUL
+ * terminated string, and return it via <b>priv_out</b>.  Return 0 on
+ * success, -1 on failure.
+ *
+ * It is the caller's responsibility to sanitize and free the resulting buffer.
+ */
+int
+crypto_pk_base64_encode_private(const crypto_pk_t *pk, char **priv_out)
+{
+  size_t buflen = crypto_pk_keysize(pk)*16;
+  char *buf = tor_malloc(buflen);
+  char *result = NULL;
+  size_t reslen = 0;
+  bool ok = false;
+
+  int n = crypto_pk_asn1_encode_private(pk, buf, buflen);
+
+  if (n < 0)
+    goto done;
+
+  reslen = base64_encode_size(n, 0)+1;
+  result = tor_malloc(reslen);
+  if (base64_encode(result, reslen, buf, n, 0) < 0)
+    goto done;
+
+  ok = true;
+
+ done:
+  memwipe(buf, 0, buflen);
+  tor_free(buf);
+  if (result && ! ok) {
+    memwipe(result, 0, reslen);
+    tor_free(result);
+  }
+  *priv_out = result;
+  return ok ? 0 : -1;
+}
+
+/** Given a string containing the Base64 encoded DER representation of the
+ * private key <b>str</b>, decode and return the result on success, or NULL
+ * on failure.
+ */
+crypto_pk_t *
+crypto_pk_base64_decode_private(const char *str, size_t len)
+{
+  crypto_pk_t *pk = NULL;
+
+  char *der = tor_malloc_zero(len + 1);
+  int der_len = base64_decode(der, len, str, len);
+  if (der_len <= 0) {
+    log_warn(LD_CRYPTO, "Stored RSA private key seems corrupted (base64).");
+    goto out;
+  }
+
+  pk = crypto_pk_asn1_decode_private(der, der_len);
+
+ out:
+  memwipe(der, 0, len+1);
+  tor_free(der);
+
+  return pk;
 }
