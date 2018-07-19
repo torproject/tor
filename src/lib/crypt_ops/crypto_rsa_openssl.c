@@ -41,11 +41,10 @@ struct crypto_pk_t
   RSA *key; /**< The key itself */
 };
 
-/** used internally: quicly validate a crypto_pk_t object as a private key.
- * Return 1 iff the public key is valid, 0 if obviously invalid.
- */
-static int
-crypto_pk_private_ok(const crypto_pk_t *k)
+/** Return true iff <b>key</b> contains the private-key portion of the RSA
+ * key. */
+int
+crypto_pk_key_is_private(const crypto_pk_t *k)
 {
 #ifdef OPENSSL_1_1_API
   if (!k || !k->key)
@@ -371,7 +370,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
   char *s;
   int r;
 
-  tor_assert(crypto_pk_private_ok(env));
+  tor_assert(crypto_pk_key_is_private(env));
 
   if (!(bio = BIO_new(BIO_s_mem())))
     return -1;
@@ -405,15 +404,6 @@ crypto_pk_check_key(crypto_pk_t *env)
   if (r <= 0)
     crypto_openssl_log_errors(LOG_WARN,"checking RSA key");
   return r;
-}
-
-/** Return true iff <b>key</b> contains the private-key portion of the RSA
- * key. */
-int
-crypto_pk_key_is_private(const crypto_pk_t *key)
-{
-  tor_assert(key);
-  return crypto_pk_private_ok(key);
 }
 
 /** Return true iff <b>env</b> contains a public key whose public exponent
@@ -545,7 +535,7 @@ crypto_pk_copy_full(crypto_pk_t *env)
   tor_assert(env);
   tor_assert(env->key);
 
-  if (crypto_pk_private_ok(env)) {
+  if (crypto_pk_key_is_private(env)) {
     new_key = RSAPrivateKey_dup(env->key);
     privatekey = 1;
   } else {
