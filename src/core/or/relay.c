@@ -2102,14 +2102,15 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   if (!bytes_to_process)
     return 0;
 
-  if (!package_partial && bytes_to_process < RELAY_PAYLOAD_SIZE)
-    return 0;
+  length = RELAY_PAYLOAD_SIZE;
 
-  if (bytes_to_process > RELAY_PAYLOAD_SIZE) {
-    length = RELAY_PAYLOAD_SIZE;
-  } else {
-    length = bytes_to_process;
+  if (bytes_to_process < length) { /* not a full payload available */
+    if (package_partial)
+      length = bytes_to_process; /* just take whatever's available now */
+    else
+      return 0; /* nothing to do until we have a full payload */
   }
+
   stats_n_data_bytes_packaged += length;
   stats_n_data_cells_packaged += 1;
 
