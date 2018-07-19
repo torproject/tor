@@ -184,6 +184,9 @@ MOCK_DECL(void, circuitmux_attach_circuit, (circuitmux_t *cmux,
 MOCK_DECL(void, circuitmux_detach_circuit,
           (circuitmux_t *cmux, circuit_t *circ));
 void circuitmux_clear_num_cells(circuitmux_t *cmux, circuit_t *circ);
+void circuitmux_set_num_cells_hashent(circuitmux_t *cmux, circuit_t *circ,
+                                      chanid_circid_muxinfo_t *hashent,
+                                      unsigned int n_cells);
 void circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
                               unsigned int n_cells);
 

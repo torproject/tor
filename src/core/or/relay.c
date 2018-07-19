@@ -2614,9 +2614,11 @@ update_circuit_on_cmux_(circuit_t *circ, cell_direction_t direction,
 
   /* Update the number of cells we have for the circuit mux */
   if (direction == CELL_DIRECTION_OUT) {
-    circuitmux_set_num_cells(cmux, circ, circ->n_chan_cells.n);
+    circuitmux_set_num_cells_hashent(cmux, circ, hashent,
+                                     circ->n_chan_cells.n);
   } else {
-    circuitmux_set_num_cells(cmux, circ, or_circ->p_chan_cells.n);
+    circuitmux_set_num_cells_hashent(cmux, circ, hashent,
+                                     or_circ->p_chan_cells.n);
   }
 }
 

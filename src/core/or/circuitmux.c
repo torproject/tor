@@ -1011,22 +1011,16 @@ circuitmux_clear_num_cells(circuitmux_t *cmux, circuit_t *circ)
 }
 
 /**
- * Set the cell counter for a circuit on a circuitmux
+ * Set the cell counter for a circuit on a circuitmux with a given hashmap
  */
 
 void
-circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
-                         unsigned int n_cells)
+circuitmux_set_num_cells_hashent(circuitmux_t *cmux, circuit_t *circ,
+                                 chanid_circid_muxinfo_t *hashent,
+                                 unsigned int n_cells)
 {
-  chanid_circid_muxinfo_t *hashent = NULL;
-
   tor_assert(cmux);
   tor_assert(circ);
-
-  /* Search for this circuit's entry */
-  hashent = circuitmux_find_map_entry(cmux, circ);
-  /* Assert that we found one */
-  tor_assert(hashent);
 
   /* Update cmux cell counter */
   cmux->n_cells -= hashent->muxinfo.cell_count;
@@ -1060,6 +1054,24 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
   }
 }
 
+/**
+ * Set the cell counter for a circuit on a circuitmux
+ */
+
+void
+circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
+                         unsigned int n_cells)
+{
+  chanid_circid_muxinfo_t *hashent = NULL;
+
+  /* Search for this circuit's entry */
+  hashent = circuitmux_find_map_entry(cmux, circ);
+  /* Assert that we found one */
+  tor_assert(hashent);
+
+  /* Finish setting the cell counter with circuitmux_set_num_cells_hashent() */
+  circuitmux_set_num_cells_hashent(cmux, circ, hashent, n_cells);
+}
 /*
  * Functions for channel code to call to get a circuit to transmit from or
  * notify that cells have been transmitted.
