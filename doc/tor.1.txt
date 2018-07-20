@@ -754,7 +754,9 @@ GENERAL OPTIONS
     If this option is set to 0, Tor will not perform any scrubbing, if it is
     set to 1, all potentially sensitive strings are replaced. If it is set to
     relay, all log messages generated when acting as a relay are sanitized, but
-    all messages generated when acting as a client are not. (Default: 1)
+    all messages generated when acting as a client are not.
+    Note: Tor may not heed this option when logging at log levels below Notice.
+    (Default: 1)
 
 [[User]] **User** __Username__::
     On startup, setuid to this user and setgid to their primary group.
