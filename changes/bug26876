@@ -1,0 +1,4 @@
+  o Minor bugfixes (portability):
+    - Work around two different bugs in the OS X 10.10 and later SDKs that
+      would prevent us from successfully targeting earlier versions of OS X.
+      Fixes bug 26876; bugfix on 0.3.3.1-alpha.
