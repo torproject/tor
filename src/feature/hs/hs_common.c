@@ -254,8 +254,8 @@ get_time_period_length(void)
                                              HS_TIME_PERIOD_LENGTH_MIN,
                                              HS_TIME_PERIOD_LENGTH_MAX);
   /* Make sure it's a positive value. */
-  tor_assert(time_period_length >= 0);
-  /* uint64_t will always be able to contain a int32_t */
+  tor_assert(time_period_length > 0);
+  /* uint64_t will always be able to contain a positive int32_t */
   return (uint64_t) time_period_length;
 }
 
