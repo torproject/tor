@@ -1975,6 +1975,8 @@ getinfo_helper_listeners(control_connection_t *control_conn,
 
   if (!strcmp(question, "net/listeners/or"))
     type = CONN_TYPE_OR_LISTENER;
+  else if (!strcmp(question, "net/listeners/extor"))
+    type = CONN_TYPE_EXT_OR_LISTENER;
   else if (!strcmp(question, "net/listeners/dir"))
     type = CONN_TYPE_DIR_LISTENER;
   else if (!strcmp(question, "net/listeners/socks"))
@@ -1983,6 +1985,8 @@ getinfo_helper_listeners(control_connection_t *control_conn,
     type = CONN_TYPE_AP_TRANS_LISTENER;
   else if (!strcmp(question, "net/listeners/natd"))
     type = CONN_TYPE_AP_NATD_LISTENER;
+  else if (!strcmp(question, "net/listeners/httptunnel"))
+    type = CONN_TYPE_AP_HTTP_CONNECT_LISTENER;
   else if (!strcmp(question, "net/listeners/dns"))
     type = CONN_TYPE_AP_DNS_LISTENER;
   else if (!strcmp(question, "net/listeners/control"))
