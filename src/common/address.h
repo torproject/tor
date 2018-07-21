@@ -219,8 +219,7 @@ MOCK_DECL(smartlist_t *,get_interface_address6_list,(int severity,
                                                      int include_internal));
 
 MOCK_DECL(smartlist_t *,get_loopback_address6_list,(int severity,
-                                                    sa_family_t family,
-                                                    int include_internal));
+                                                    sa_family_t family));
 
 /** Flag to specify how to do a comparison between addresses.  In an "exact"
  * comparison, addresses are equivalent only if they are in the same family
