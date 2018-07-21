@@ -3359,7 +3359,6 @@ STATIC int
 options_validate(or_options_t *old_options, or_options_t *options,
                  or_options_t *default_options, int from_setconf, char **msg)
 {
-  int i;
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
@@ -3676,30 +3675,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
         options->ReachableORAddresses = new_line;
         log_notice(LD_CONFIG, "Converting FascistFirewall config option "
             "to new format: \"ReachableORAddresses *:443\"");
-      }
-    }
-  }
-
-  /* Terminate Reachable*Addresses with reject *
-   */
-  for (i=0; i<3; i++) {
-    config_line_t **linep =
-      (i==0) ? &options->ReachableAddresses :
-        (i==1) ? &options->ReachableORAddresses :
-                 &options->ReachableDirAddresses;
-    if (!*linep)
-      continue;
-    /* We need to end with a reject *:*, not an implicit accept *:* */
-    for (;;) {
-      linep = &((*linep)->next);
-      if (!*linep) {
-        *linep = tor_malloc_zero(sizeof(config_line_t));
-        (*linep)->key = tor_strdup(
-          (i==0) ?  "ReachableAddresses" :
-            (i==1) ? "ReachableORAddresses" :
-                     "ReachableDirAddresses");
-        (*linep)->value = tor_strdup("reject *:*");
-        break;
       }
     }
   }
