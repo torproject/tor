@@ -1413,10 +1413,6 @@ ifaddrs_to_smartlist(const struct ifaddrs *ifa, sa_family_t family,
       continue;
     if (tor_addr_from_sockaddr(&tmp, i->ifa_addr, NULL) < 0)
       continue;
-    if (tor_addr_is_null(&tmp))
-      continue;
-    if (tor_addr_is_multicast(&tmp))
-      continue;
     smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
   }
 
@@ -1476,9 +1472,7 @@ ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses,
         continue;
       if (loopback && !tor_addr_is_loopback(&tmp))
         continue;
-      if (tor_addr_is_null(&tmp))
-        continue;
-      if (tor_addr_is_multicast(&tmp))
+      if (!loopback && tor_addr_is_loopback(&tmp))
         continue;
       smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
     }
@@ -1613,10 +1607,6 @@ ifreq_to_smartlist(char *buf, size_t buflen, int loopback)
 
     int conversion_success = (tor_addr_from_sockaddr(&tmp, sa, NULL) == 0);
     if (valid_sa_family && conversion_success) {
-      if (tor_addr_is_null(&tmp))
-        continue;
-      if (tor_addr_is_multicast(&tmp))
-        continue;
 #ifdef __linux__
       if (loopback && !tor_addr_is_loopback(&tmp))
         continue;
@@ -1852,7 +1842,7 @@ get_interface_address6_list_impl(int severity, sa_family_t family,
     SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a)
     {
       if ((!loopback && tor_addr_is_loopback(a)) ||
-          tor_addr_is_multicast(a)) {
+          tor_addr_is_multicast(a) || tor_addr_is_null(a)) {
         SMARTLIST_DEL_CURRENT_KEEPORDER(addrs, a);
         tor_free(a);
         continue;
