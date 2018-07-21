@@ -1989,10 +1989,9 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
 }
 
 MOCK_IMPL(smartlist_t *,get_loopback_address6_list,(int severity,
-                                                     sa_family_t family,
-                                                     int include_internal))
+                                                     sa_family_t family))
 {
-  return get_interface_address6_list_impl(severity, family, include_internal,
+  return get_interface_address6_list_impl(severity, family, 1,
                                           1);
 }
 
