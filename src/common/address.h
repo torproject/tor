@@ -210,7 +210,6 @@ MOCK_DECL(int,get_loopback_address6,(int severity, sa_family_t family,
 tor_addr_t *addr));
 void interface_address6_list_free_(smartlist_t * addrs);// XXXX
 
-void free_interface_address6_list(smartlist_t * addrs);
 #define interface_address6_list_free(addrs) \
   FREE_AND_NULL(smartlist_t, interface_address6_list_free_, (addrs))
 
@@ -335,13 +334,6 @@ char *tor_dup_ip(uint32_t addr) ATTR_MALLOC;
 MOCK_DECL(int,get_interface_address,(int severity, uint32_t *addr));
 #define interface_address_list_free(lst)\
   interface_address6_list_free(lst)
-/** Free a smartlist of IP addresses returned by get_interface_address_list.
- */
-static inline void
-free_interface_address_list(smartlist_t *addrs)
-{
-  free_interface_address6_list(addrs);
-}
 
 /** Return a smartlist of the IPv4 addresses of all interfaces on the server.
  * Excludes loopback and multicast addresses.
