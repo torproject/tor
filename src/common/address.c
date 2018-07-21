@@ -1843,6 +1843,10 @@ get_interface_address6_list_impl(int severity, sa_family_t family,
   smartlist_t *addrs;
   tor_addr_t addr;
 
+  if (BUG(loopback && !include_internal)) {
+    return NULL;
+  }
+
   /* Try to do this the smart way if possible. */
   if ((addrs = get_interface_addresses_raw(severity, family, loopback))) {
     SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a)
