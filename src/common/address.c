@@ -1464,15 +1464,17 @@ ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses,
     const IP_ADAPTER_UNICAST_ADDRESS *a;
     for (a = address->FirstUnicastAddress; a; a = a->Next) {
       /* Yes, it's a linked list inside a linked list */
+
+      if (loopback && a->IfType != IF_TYPE_SOFTWARE_LOOPBACK)
+        continue;
+      if (!loopback && a->IfType == IP_TYPE_SOFTWARE_LOOPBACK)
+        continue;
+
       const struct sockaddr *sa = a->Address.lpSockaddr;
       tor_addr_t tmp;
       if (sa->sa_family != AF_INET && sa->sa_family != AF_INET6)
         continue;
       if (tor_addr_from_sockaddr(&tmp, sa, NULL) < 0)
-        continue;
-      if (loopback && !tor_addr_is_loopback(&tmp))
-        continue;
-      if (!loopback && tor_addr_is_loopback(&tmp))
         continue;
       smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
     }
