@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging):
+    - Don't log our current and previous IP addreses in
+      log_addr_has_changed() if SafeLogging is enabled.
+      Fixes bug 26892; bugfix on 0.1.1.9-alpha.
