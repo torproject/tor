@@ -2695,11 +2695,11 @@ log_addr_has_changed(int severity,
     log_fn(severity, LD_GENERAL,
            "Our IP Address has changed from %s to %s; "
            "rebuilding descriptor (source: %s).",
-           addrbuf_prev, addrbuf_cur, source);
+           safe_str(addrbuf_prev), safe_str(addrbuf_cur), source);
   else
     log_notice(LD_GENERAL,
              "Guessed our IP address as %s (source: %s).",
-             addrbuf_cur, source);
+             safe_str(addrbuf_cur), source);
 }
 
 /** Check whether our own address as defined by the Address configuration
