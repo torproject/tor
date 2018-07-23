@@ -198,8 +198,8 @@ test_address_ifaddrs_to_smartlist(void *arg)
    ifa_ipv6 = tor_malloc(sizeof(struct ifaddrs));
 
    ifa->ifa_next = ifa_ipv4;
-   ifa->ifa_name = tor_strdup("eth0");
-   ifa->ifa_flags = IFF_UP | IFF_RUNNING;
+   ifa->ifa_name = tor_strdup("lo");
+   ifa->ifa_flags = IFF_UP | IFF_RUNNING | IFF_LOOPBACK;
    ifa->ifa_addr = (struct sockaddr *)ipv4_sockaddr_local;
    ifa->ifa_netmask = (struct sockaddr *)netmask_slash8;
    ifa->ifa_dstaddr = NULL;
@@ -224,7 +224,7 @@ test_address_ifaddrs_to_smartlist(void *arg)
    smartlist = ifaddrs_to_smartlist(ifa, AF_UNSPEC, 0);
 
    tt_assert(smartlist);
-   tt_int_op(smartlist_len(smartlist), OP_EQ, 3);
+   tt_int_op(smartlist_len(smartlist), OP_EQ, 2);
 
    sockaddr_to_check = tor_malloc(sizeof(struct sockaddr_in6));
 
@@ -235,18 +235,9 @@ test_address_ifaddrs_to_smartlist(void *arg)
 
    tt_int_op(addr_len,OP_EQ,sizeof(struct sockaddr_in));
    tt_assert(sockaddr_in_are_equal((struct sockaddr_in *)sockaddr_to_check,
-                                   ipv4_sockaddr_local));
-
-   tor_addr = smartlist_get(smartlist,1);
-   addr_len =
-   tor_addr_to_sockaddr(tor_addr,0,sockaddr_to_check,
-                        sizeof(struct sockaddr_in));
-
-   tt_int_op(addr_len,OP_EQ,sizeof(struct sockaddr_in));
-   tt_assert(sockaddr_in_are_equal((struct sockaddr_in *)sockaddr_to_check,
                                    ipv4_sockaddr_remote));
 
-   tor_addr = smartlist_get(smartlist,2);
+   tor_addr = smartlist_get(smartlist,1);
    addr_len =
    tor_addr_to_sockaddr(tor_addr,0,sockaddr_to_check,
                         sizeof(struct sockaddr_in6));
@@ -254,6 +245,22 @@ test_address_ifaddrs_to_smartlist(void *arg)
    tt_int_op(addr_len,OP_EQ,sizeof(struct sockaddr_in6));
    tt_assert(sockaddr_in6_are_equal((struct sockaddr_in6*)sockaddr_to_check,
                                     ipv6_sockaddr));
+
+   if (smartlist) {
+     SMARTLIST_FOREACH(smartlist, tor_addr_t *, t, tor_free(t));
+     smartlist_free(smartlist);
+   }
+
+   smartlist = ifaddrs_to_smartlist(ifa, AF_UNSPEC, 1);
+
+   tor_addr = smartlist_get(smartlist,0);
+   addr_len =
+   tor_addr_to_sockaddr(tor_addr,0,sockaddr_to_check,
+                        sizeof(struct sockaddr_in));
+
+   tt_int_op(addr_len,OP_EQ,sizeof(struct sockaddr_in));
+   tt_assert(sockaddr_in_are_equal((struct sockaddr_in *)sockaddr_to_check,
+                                   ipv4_sockaddr_local));
 
    done:
    tor_free(netmask_slash8);
@@ -322,12 +329,19 @@ test_address_get_if_addrs_win32(void *arg)
   tt_int_op(smartlist_len(results),OP_GE,1);
   tt_assert(!smartlist_contains_localhost_tor_addr(results));
   tt_assert(!smartlist_contains_null_tor_addr(results));
+  tt_assert(!smartlist_contains_multicast_tor_addr(results));
 
   /* If there are addresses, they must be IPv4 or IPv6 */
   if (smartlist_len(results) > 0) {
     tt_assert(smartlist_contains_ipv4_tor_addr(results)
               || smartlist_contains_ipv6_tor_addr(results));
   }
+
+  results = get_interface_addresses_win32(LOG_ERR, AF_UNSPEC, 1);
+  tt_int_op(smartlist_len(results),OP_GE,1);
+  tt_assert(smartlist_contains_localhost_tor_addr(results));
+  tt_assert(!smartlist_contains_null_tor_addr(results));
+  tt_assert(!smartlist_contains_multicast_tor_addr(results));
 
   done:
   SMARTLIST_FOREACH(results, tor_addr_t *, t, tor_free(t));
@@ -535,6 +549,7 @@ test_address_get_if_addrs_ioctl(void *arg)
    * all. */
   if (result) {
     tt_assert(!smartlist_contains_null_tor_addr(result));
+    tt_assert(!smartlist_contains_multicast_tor_addr(result));
 
     /* If there are addresses, they must be IPv4 or IPv6.
      * (AIX supports IPv6 from SIOCGIFCONF.) */
@@ -664,6 +679,18 @@ test_address_udp_socket_trick_whitebox(void *arg)
 
   tt_assert(sockaddr_in6_are_equal(mock_addr6,ipv6_to_check));
 
+  tor_free(mock_addr);
+
+  mock_addr = tor_malloc_zero(sizeof(struct sockaddr_storage));
+  sockaddr_in_from_string("127.0.0.1", (struct sockaddr_in *)mock_addr);
+
+  hack_retval =
+  get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
+                                             AF_INET, addr_from_hack, 1);
+
+  tt_int_op(hack_retval,OP_EQ,0);
+  tt_assert(tor_addr_eq_ipv4h(addr_from_hack, 0x7f000001));
+
  done:
   UNMOCK(tor_open_socket);
   UNMOCK(tor_connect_socket);
@@ -739,6 +766,12 @@ test_address_udp_socket_trick_blackbox(void *arg)
   retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
                                                       AF_INET+AF_INET6,
                                                       &addr4, 0);
+
+  tt_int_op(retval, OP_EQ, -1);
+
+  retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
+                                                      AF_INET+AF_INET6,
+                                                      &addr4, 1);
 
   tt_int_op(retval, OP_EQ, -1);
 
