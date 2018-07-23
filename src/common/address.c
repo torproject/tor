@@ -1999,6 +1999,12 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
                                           0);
 }
 
+/**
+ * Return a smartlist of loopback addresses (of given <b>family</b>) on
+ * current system. On failure, return NULL.
+ *
+ * Use interface_address6_list_free to free the returned list.
+ */
 MOCK_IMPL(smartlist_t *,get_loopback_address6_list,(int severity,
                                                      sa_family_t family))
 {
