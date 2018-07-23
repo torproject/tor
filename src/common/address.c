@@ -1385,8 +1385,10 @@ typedef ULONG (WINAPI *GetAdaptersAddresses_fn_t)(
 #ifdef HAVE_IFADDRS_TO_SMARTLIST
 /*
  * Convert a linked list consisting of <b>ifaddrs</b> structures
- * into smartlist of <b>tor_addr_t</b> structures. Skip non-loopback
- * addresses if <b>loopback</b> is true.
+ * into smartlist of <b>tor_addr_t</b> structures.
+ *
+ * Skip non-loopback addresses if <b>loopback</b> is true.
+ * Otherwise, only include loopback addresses.
  */
 STATIC smartlist_t *
 ifaddrs_to_smartlist(const struct ifaddrs *ifa, sa_family_t family,
@@ -1421,8 +1423,10 @@ ifaddrs_to_smartlist(const struct ifaddrs *ifa, sa_family_t family,
 
 /** Use getiffaddrs() function to get list of current machine
  * network interface addresses. Represent the result by smartlist of
- * <b>tor_addr_t</b> structures. Skip non-loopback addresses if
- * <b>loopback</b> is true.
+ * <b>tor_addr_t</b> structures.
+ *
+ * Skip non-loopback addresses if <b>loopback</b> is true.
+ * Otherwise, only include loopback addresses.
  */
 STATIC smartlist_t *
 get_interface_addresses_ifaddrs(int severity, sa_family_t family,
@@ -1450,8 +1454,10 @@ get_interface_addresses_ifaddrs(int severity, sa_family_t family,
 #ifdef HAVE_IP_ADAPTER_TO_SMARTLIST
 
 /** Convert a Windows-specific <b>addresses</b> linked list into smartlist
- * of <b>tor_addr_t</b> structures. Skip non-loopback addresses if
- * <b>loopback</b> is true.
+ * of <b>tor_addr_t</b> structures.
+ *
+ * Skip non-loopback addresses if <b>loopback</b> is true.
+ * Otherwise, only include loopback addresses.
  */
 STATIC smartlist_t *
 ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses,
@@ -1486,6 +1492,9 @@ ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses,
 /** Windows only: use GetAdaptersInfo() function to retrieve network interface
  * addresses of current machine and return them to caller as smartlist of
  * <b>tor_addr_t</b>  structures.
+ *
+ * Skip non-loopback addresses if <b>loopback</b> is true.
+ * Otherwise, only include loopback addresses.
  */
 STATIC smartlist_t *
 get_interface_addresses_win32(int severity, sa_family_t family,
@@ -1571,8 +1580,10 @@ ifconf_free_ifc_buf(struct ifconf *ifc)
 }
 
 /** Convert <b>*buf</b>, an ifreq structure array of size <b>buflen</b>,
- * into smartlist of <b>tor_addr_t</b> structures. Skip non-loopback
- * addresses if <b>loopback</b> is true.
+ * into smartlist of <b>tor_addr_t</b> structures.
+ *
+ * Skip non-loopback addresses if <b>loopback</b> is true.
+ * Otherwise, only include loopback addresses.
  */
 STATIC smartlist_t *
 ifreq_to_smartlist(char *buf, size_t buflen, int loopback)
@@ -1625,8 +1636,10 @@ ifreq_to_smartlist(char *buf, size_t buflen, int loopback)
 
 /** Use ioctl(.,SIOCGIFCONF,.) to get a list of current machine
  * network interface addresses. Represent the result by smartlist of
- * <b>tor_addr_t</b> structures. Skip non-loopback addresses if
- * <b>loopback</b> is true.
+ * <b>tor_addr_t</b> structures.
+ *
+ * Skip non-loopback addresses if <b>loopback</b> is true.
+ * Otherwise, only include loopback addresses.
  */
 STATIC smartlist_t *
 get_interface_addresses_ioctl(int severity, sa_family_t family,
@@ -1687,7 +1700,7 @@ get_interface_addresses_ioctl(int severity, sa_family_t family,
  * addresses.)  Log failure messages at <b>severity</b>. Only return the
  * interface addresses of requested <b>family</b> and ignore the addresses
  * of other address families. If <b>loopback</b> is true, retrieve
- * only loopback interface addresses. */
+ * only loopback interface addresses. Skip them otherwise. */
 MOCK_IMPL(smartlist_t *,
 get_interface_addresses_raw,(int severity, sa_family_t family,
                              int loopback))
