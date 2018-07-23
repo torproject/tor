@@ -1458,6 +1458,8 @@ get_interface_addresses_ifaddrs(int severity, sa_family_t family,
  *
  * Skip non-loopback addresses if <b>loopback</b> is true.
  * Otherwise, only include loopback addresses.
+ *
+ * Only include unicast addresses in the resulting smartlist.
  */
 STATIC smartlist_t *
 ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses,
