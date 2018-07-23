@@ -1836,6 +1836,7 @@ get_interface_address6_via_udp_socket_hack,(int severity,
  * addresses that we find on the system. If <b>include_internal</b>
  * is true, include non public addresses (e.g. for Tor instances
  * running behind NAT). Otherwise, only include public addresses.
+ * Skip null and multicast addresses.
  *
  * If <b>loopback</b> is true, only return loopback addresses. Otherwise,
  * only return non-loopback addresses.
@@ -1907,6 +1908,7 @@ get_interface_address6_list_impl(int severity, sa_family_t family,
  * If <b>loopback</b> is false, fetch a non-loopback network interface
  * address (of given <b>family</b>) and put it into <b>addr</b>.
  * Otherwise, do so with loopback network interface.
+ * Skip null and multicast addresses.
  *
  * Return 0 on success.
  */
