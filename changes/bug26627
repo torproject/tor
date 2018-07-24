@@ -1,0 +1,7 @@
+  o Minor bugfixes (v3 onion services):
+    - Stop sending ed25519 link specifiers in v3 onion service introduce
+      cells, when the rendezvous point doesn't support ed25519 link
+      authentication. Fixes bug 26627; bugfix on 0.3.2.4-alpha.
+    - Stop putting ed25519 link specifiers in v3 onion service descriptors,
+      when the intro point doesn't support ed25519 link authentication.
+      Fixes bug 26627; bugfix on 0.3.2.4-alpha.
