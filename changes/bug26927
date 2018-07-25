@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging):
+    - Improve the log message when connection initiators fail to authenticate
+      direct connections to relays.
+      Fixes bug 26927; bugfix on 0.3.0.1-alpha.
