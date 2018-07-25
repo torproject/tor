@@ -47,6 +47,7 @@
 #include "nodelist.h"
 #include "reasons.h"
 #include "relay.h"
+#include "rendcommon.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
@@ -1628,10 +1629,13 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                                                    conn->identity_digest);
     const int is_authority_fingerprint = router_digest_is_trusted_dir(
                                                    conn->identity_digest);
+    const int non_anonymous_mode = rend_non_anonymous_mode_enabled(options);
     int severity;
     const char *extra_log = "";
 
-    if (server_mode(options)) {
+    /* Relays, Single Onion Services, and Tor2web make direct connections using
+     * untrusted authentication keys. */
+    if (server_mode(options) || non_anonymous_mode) {
       severity = LOG_PROTOCOL_WARN;
     } else {
       if (using_hardcoded_fingerprints) {
