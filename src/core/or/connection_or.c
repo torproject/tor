@@ -1943,7 +1943,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     int severity;
     const char *extra_log = "";
 
-    /* Relays, Single Onion Services, and Tor2web make direct connections using
+    /* Relays and Single Onion Services make direct connections using
      * untrusted authentication keys. */
     if (server_mode(options) || non_anonymous_mode) {
       severity = LOG_PROTOCOL_WARN;
