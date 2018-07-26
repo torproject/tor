@@ -2686,6 +2686,9 @@ log_addr_has_changed(int severity,
   char addrbuf_prev[TOR_ADDR_BUF_LEN];
   char addrbuf_cur[TOR_ADDR_BUF_LEN];
 
+  if (BUG(!server_mode(get_options())))
+    return;
+
   if (tor_addr_to_str(addrbuf_prev, prev, sizeof(addrbuf_prev), 1) == NULL)
     strlcpy(addrbuf_prev, "???", TOR_ADDR_BUF_LEN);
   if (tor_addr_to_str(addrbuf_cur, cur, sizeof(addrbuf_cur), 1) == NULL)
