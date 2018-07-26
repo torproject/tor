@@ -2143,6 +2143,9 @@ dnl     -Wthread-safety-precise
   if test "$tor_cv_cflags__Woverlength_strings" = "yes"; then
     AC_DEFINE([HAVE_CFLAG_WOVERLENGTH_STRINGS], 1, [True if we have -Woverlength-strings])
   fi
+  if test "$tor_cv_cflags__warn_unused_const_variable_2" = "yes"; then
+    AC_DEFINE([HAVE_CFLAG_WUNUSED_CONST_VARIABLE], 1, [True if we have -Wunused-const-variable])
+  fi
 
   if test "x$enable_fatal_warnings" = "xyes"; then
     # I'd like to use TOR_CHECK_CFLAGS here, but I can't, since the
