@@ -8,7 +8,7 @@
 
 #include "ed25519_cert.h"
 #include "lib/crypt_ops/crypto_format.h"
-#include "lib/malloc/util_malloc.h"
+#include "lib/malloc/malloc.h"
 
 int
 main(int argc, char **argv)
@@ -62,4 +62,3 @@ main(int argc, char **argv)
 
   return 0;
 }
-
