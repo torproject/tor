@@ -307,8 +307,9 @@ STATIC void remove_service(hs_service_ht *map, hs_service_t *service);
 STATIC int register_service(hs_service_ht *map, hs_service_t *service);
 /* Service introduction point functions. */
 STATIC hs_service_intro_point_t *service_intro_point_new(
-                                         const extend_info_t *ei,
-                                         unsigned int is_legacy);
+                            const extend_info_t *ei,
+                            unsigned int is_legacy,
+                            unsigned int supports_ed25519_link_handshake_any);
 STATIC void service_intro_point_free_(hs_service_intro_point_t *ip);
 #define service_intro_point_free(ip)                            \
   FREE_AND_NULL(hs_service_intro_point_t,             \
