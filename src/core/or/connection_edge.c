@@ -617,6 +617,29 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   rep_hist_note_exit_stream_opened(conn->port);
 
   conn->state = EXIT_CONN_STATE_OPEN;
+
+  /* Include Proxy Protocol header. */
+  char buf[512];
+  char dst_ipv6[39] = "::1";
+  /* See RFC4193 regarding fc00::/7 */
+  char src_ipv6_prefix[34] = "fc00:dead:beef:4dad:";
+  /* TODO: retain virtual port and use as destination port */
+  uint16_t dst_port = 443;
+  uint16_t src_port = 0;
+  uint32_t gid = 0;
+
+  if (edge_conn->on_circuit != NULL) {
+    gid = TO_ORIGIN_CIRCUIT(edge_conn->on_circuit)->global_identifier;
+    src_port = gid & 0x0000ffff;
+  }
+
+  gid = (gid == 0) ? 1 : gid;
+  src_port = (src_port == 0) ? 1 : src_port;
+
+  tor_snprintf(buf, sizeof(buf), "PROXY TCP6 %s:%x %s %d %d\r\n",
+	       src_ipv6_prefix, gid, dst_ipv6, src_port, dst_port);
+  connection_buf_add(buf, strlen(buf), conn);
+
   connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
   if (connection_get_outbuf_len(conn)) /* in case there are any queued relay
                                         * cells */
