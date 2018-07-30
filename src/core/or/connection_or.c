@@ -52,6 +52,7 @@
 #include "core/proto/proto_cell.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
+#include "feature/rend/rendcommon.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
@@ -1938,10 +1939,13 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                                                    conn->identity_digest);
     const int is_authority_fingerprint = router_digest_is_trusted_dir(
                                                    conn->identity_digest);
+    const int non_anonymous_mode = rend_non_anonymous_mode_enabled(options);
     int severity;
     const char *extra_log = "";
 
-    if (server_mode(options)) {
+    /* Relays and Single Onion Services make direct connections using
+     * untrusted authentication keys. */
+    if (server_mode(options) || non_anonymous_mode) {
       severity = LOG_PROTOCOL_WARN;
     } else {
       if (using_hardcoded_fingerprints) {
@@ -1965,8 +1969,8 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     }
 
     log_fn(severity, LD_HANDSHAKE,
-           "Tried connecting to router at %s:%d, but RSA identity key was not "
-           "as expected: wanted %s + %s but got %s + %s.%s",
+           "Tried connecting to router at %s:%d, but RSA + ed25519 identity "
+           "keys were not as expected: wanted %s + %s but got %s + %s.%s",
            conn->base_.address, conn->base_.port,
            expected_rsa, expected_ed, seen_rsa, seen_ed, extra_log);
 
@@ -1983,8 +1987,8 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
   }
 
   if (!expected_ed_key && ed_peer_id) {
-    log_info(LD_HANDSHAKE, "(we had no Ed25519 ID in mind when we made this "
-             "connection.");
+    log_info(LD_HANDSHAKE, "(We had no Ed25519 ID in mind when we made this "
+             "connection.)");
     connection_or_set_identity_digest(conn,
                                       (const char*)rsa_peer_id, ed_peer_id);
     changed_identity = 1;
