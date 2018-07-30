@@ -1,0 +1,4 @@
+  o Minor bugfixes (single onion services, Tor2web):
+    - Log a protocol warning when single onion services or Tor2web clients
+      fail to authenticate direct connections to relays.
+      Fixes bug 26924; bugfix on 0.2.9.1-alpha.
