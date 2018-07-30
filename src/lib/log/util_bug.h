@@ -89,8 +89,6 @@
 #undef BUG
 // Coverity defines this in global headers; let's override it.  This is a
 // magic coverity-only preprocessor thing.
-// We use this "deadcode_dummy__" trick to prevent coverity from
-// complaining about unreachable bug cases.
 #nodef BUG(x) (x)
 #endif /* defined(__COVERITY__) */
 
