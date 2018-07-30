@@ -116,6 +116,11 @@ uptime-*.json
 /doc/torify.html
 /doc/torify.html.in
 /doc/torify.1.xml
+/doc/tor-print-ed-signing-cert.1
+/doc/tor-print-ed-signing-cert.1.in
+/doc/tor-print-ed-signing-cert.html
+/doc/tor-print-ed-signing-cert.html.in
+/doc/tor-print-ed-signing-cert.1.xml
 
 # /doc/spec/
 /doc/spec/Makefile
@@ -258,6 +263,8 @@ uptime-*.json
 /src/tools/tor-resolve
 /src/tools/tor-cov-resolve
 /src/tools/tor-gencert
+/src/tools/tor-print-ed-signing-cert
+/src/tools/tor-print-ed-signing-cert.exe
 /src/tools/tor-cov-gencert
 /src/tools/tor-checkkey.exe
 /src/tools/tor-resolve.exe
