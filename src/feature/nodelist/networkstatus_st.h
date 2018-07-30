@@ -96,6 +96,9 @@ struct networkstatus_t {
 
   /** Contains the shared random protocol data from a vote or consensus. */
   networkstatus_sr_info_t sr_info;
+
+  /** List of key=value strings from the headers of the bandwidth list file */
+  smartlist_t *bw_file_headers;
 };
 
 #endif
