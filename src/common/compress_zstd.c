@@ -19,9 +19,13 @@
 #include "compress_zstd.h"
 
 #ifdef HAVE_ZSTD
+#ifdef HAVE_CFLAG_WUNUSED_CONST_VARIABLE
 DISABLE_GCC_WARNING(unused-const-variable)
+#endif
 #include <zstd.h>
+#ifdef HAVE_CFLAG_WUNUSED_CONST_VARIABLE
 ENABLE_GCC_WARNING(unused-const-variable)
+#endif
 #endif
 
 /** Total number of bytes allocated for Zstandard state. */
