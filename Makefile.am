@@ -203,7 +203,7 @@ doxygen:
 test: all
 	$(top_builddir)/src/test/test
 
-check-local: check-spaces check-changes
+check-local: check-spaces check-changes check-includes
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
@@ -320,7 +320,7 @@ endif
 
 check-includes:
 if USEPYTHON
-	$(top_srcdir)/scripts/maint/checkIncludes.py
+	$(PYTHON) $(top_srcdir)/scripts/maint/checkIncludes.py
 endif
 
 check-docs: all
