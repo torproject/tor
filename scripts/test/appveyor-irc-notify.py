@@ -22,6 +22,9 @@
 #  - Accept UTF-8
 #  - only guess github URLs
 #  - stop using ANSI colors
+#
+# Modified by teor in 2018:
+#  - fix github provider detection ('gitHub' or 'gitHubEnterprise', apparently)
 
 # This program is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software Foundation;
@@ -110,7 +113,7 @@ def appveyor_vars():
 
     BUILD_FMT = u'{url}/project/{account_name}/{project_name}/build/{build_version}'
 
-    if vars["repo_provider"] == 'github':
+    if vars["repo_provider"].lower().startswith('github'):
         COMMIT_FMT = u'https://{repo_provider}.com/{repo_name}/commit/{repo_commit}'
         vars.update(commit_url=COMMIT_FMT.format(**vars))
 
