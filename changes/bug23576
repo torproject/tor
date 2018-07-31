@@ -1,0 +1,7 @@
+  o Minor features (IPv6, v3 onion services):
+    - Onion services put IPv6 addresses in service descriptors.
+      Implements 26992.
+  o Minor refactoring (v3 onion services):
+    - Simplify v3 onion service introduction point creation code.
+      Fixes bug 23576; bugfix on 0.3.2.1-alpha.
+
