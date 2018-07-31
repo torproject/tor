@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include "ed25519_cert.h"
+#include "lib/cc/torint.h"  /* TOR_PRIdSZ */
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/malloc/malloc.h"
 
@@ -49,8 +50,8 @@ main(int argc, char **argv)
 
   ssize_t parsed = ed25519_cert_parse(&cert, certbuf, cert_body_len);
   if (parsed <= 0) {
-    fprintf(stderr, "ed25519_cert_parse failed with return value %zd\n",
-            parsed);
+    fprintf(stderr, "ed25519_cert_parse failed with return value %" TOR_PRIdSZ
+                    "\n", parsed);
     return -5;
   }
 
