@@ -118,10 +118,6 @@ def appveyor_vars():
             ]
     ])
 
-    vars.update(
-        short_commit=vars["repo_commit"][:10],
-    )
-
     BUILD_FMT = u'{url}/project/{account_name}/{project_name}/build/{build_version}'
 
     if vars["repo_tag_name"]:
@@ -129,14 +125,19 @@ def appveyor_vars():
     else:
         BRANCH_FMT = u'{repo_name} {repo_branch} {short_commit}'
 
+    vars.update(head_commit=vars["repo_commit"])
+
     if vars["repo_provider"].lower().startswith('github'):
         COMMIT_FMT = u'https://github.com/{repo_name}/commit/{repo_commit}'
         if vars["pull_request_number"]:
+            vars.update(head_commit=vars["pull_request_head_commit"])
             BRANCH_FMT = u'{repo_name} {repo_branch} pull {pull_request_head_repo_name} {pull_request_head_repo_branch} {short_commit}'
             COMMIT_FMT = u'https://github.com/{pull_request_head_repo_name}/commit/{pull_request_head_commit}'
             PULL_FMT = u'https://github.com/{repo_name}/pull/{pull_request_number}'
             vars.update(pull_url=PULL_FMT.format(**vars))
         vars.update(commit_url=COMMIT_FMT.format(**vars))
+
+    vars.update(short_commit=vars["head_commit"][:10])
 
     vars.update(
         build_url=BUILD_FMT.format(**vars),
