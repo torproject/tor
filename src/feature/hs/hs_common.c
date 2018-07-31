@@ -1697,6 +1697,12 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
 
   tor_assert(lspecs);
 
+  if (smartlist_len(lspecs) == 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_REND, "Empty link specifier list.");
+    /* Return NULL. */
+    goto done;
+  }
+
   SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
     switch (link_specifier_get_ls_type(ls)) {
     case LS_IPV4:
@@ -1730,6 +1736,12 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
 
   /* Legacy ID is mandatory, and we require IPv4. */
   if (!have_v4 || !have_legacy_id) {
+    bool both = !have_v4 && !have_legacy_id;
+    log_fn(LOG_PROTOCOL_WARN, LD_REND, "Missing %s%s%s link specifier%s.",
+           !have_v4 ? "IPv4" : "",
+           both ? " and " : "",
+           !have_legacy_id ? "legacy ID" : "",
+           both ? "s" : "");
     goto done;
   }
 
@@ -1748,6 +1760,10 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
      * release. */
   } else {
     /* If we can't reach IPv4, return NULL. */
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Received an IPv4 link specifier, "
+           "but the address is not reachable: %s:%u",
+           fmt_addr(&addr_v4), port_v4);
     goto done;
   }
 
@@ -1755,7 +1771,7 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
 
  validate:
   /* We'll validate now that the address we've picked isn't a private one. If
-   * it is, are we allowing to extend to private address? */
+   * it is, are we allowed to extend to private addresses? */
   if (!extend_info_addr_is_allowed(&addr_v4)) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Requested address is private and we are not allowed to extend to "
