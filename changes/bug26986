@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Use Windows-compatible format strings in tor-print-ed-signing-cert.c.
+      Fixes bug 26986; bugfix on master.
