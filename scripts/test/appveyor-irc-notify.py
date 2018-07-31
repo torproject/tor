@@ -26,7 +26,7 @@
 # Modified by teor in 2018:
 #  - fix github provider detection ('gitHub' or 'gitHubEnterprise', apparently)
 #  - make short commits 10 hexdigits long (that's what git does for tor)
-#  - generate correct branches and URLs for pull requests
+#  - generate correct branches and URLs for pull requests and tags
 #  - switch to one URL per line
 
 # This program is free software; you can redistribute it and/or modify it under the
@@ -113,7 +113,8 @@ def appveyor_vars():
                 'APPVEYOR_REPO_COMMIT_MESSAGE',
                 'APPVEYOR_ACCOUNT_NAME',
                 'APPVEYOR_PULL_REQUEST_NUMBER',
-                'APPVEYOR_REPO_NAME'
+                'APPVEYOR_REPO_NAME',
+                'APPVEYOR_REPO_TAG_NAME',
             ]
     ])
 
@@ -122,7 +123,11 @@ def appveyor_vars():
     )
 
     BUILD_FMT = u'{url}/project/{account_name}/{project_name}/build/{build_version}'
-    BRANCH_FMT = u'{repo_name} {repo_branch} {short_commit}'
+
+    if vars["repo_tag_name"]:
+        BRANCH_FMT = u'{repo_name} {repo_tag_name} {short_commit}'
+    else:
+        BRANCH_FMT = u'{repo_name} {repo_branch} {short_commit}'
 
     if vars["repo_provider"].lower().startswith('github'):
         COMMIT_FMT = u'https://github.com/{repo_name}/commit/{repo_commit}'
