@@ -29,6 +29,10 @@
 /** Number of bytes added for PKCS1-OAEP padding. */
 #define PKCS1_OAEP_PADDING_OVERHEAD 42
 
+/** Length of encoded public key fingerprints, including space; but not
+ * including terminating NUL. */
+#define FINGERPRINT_LEN 49
+
 /** A public key, or a public/private key-pair. */
 typedef struct crypto_pk_t crypto_pk_t;
 
@@ -88,6 +92,7 @@ int crypto_pk_asn1_encode(const crypto_pk_t *pk, char *dest, size_t dest_len);
 crypto_pk_t *crypto_pk_asn1_decode(const char *str, size_t len);
 int crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out,int add_space);
 int crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out);
+void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
 
 MOCK_DECL(int, crypto_pk_public_checksig_digest,(crypto_pk_t *env,
           const char *data, size_t datalen, const char *sig, size_t siglen));

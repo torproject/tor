@@ -9,10 +9,13 @@ src_lib_libtor_tls_a_SOURCES =			\
 	src/lib/tls/buffers_tls.c		\
 	src/lib/tls/tortls.c
 
+src_lib_libtor_tls_a_CFLAGS = $(AM_CFLAGS) $(TOR_CFLAGS_CRYPTLIB)
+
 src_lib_libtor_tls_testing_a_SOURCES = \
 	$(src_lib_libtor_tls_a_SOURCES)
 src_lib_libtor_tls_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
-src_lib_libtor_tls_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_lib_libtor_tls_testing_a_CFLAGS = \
+	$(AM_CFLAGS) $(TOR_CFLAGS_CRYPTLIB) $(TEST_CFLAGS)
 
 noinst_HEADERS +=				\
 	src/lib/tls/ciphers.inc			\

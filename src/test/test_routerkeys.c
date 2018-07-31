@@ -9,7 +9,7 @@
 #include "app/config/config.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "feature/nodelist/torcert.h"
 #include "test/test.h"

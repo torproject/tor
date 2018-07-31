@@ -1,0 +1,3 @@
+  o Major features (experimental, library support):
+    - When built with --enable-nss, Tor now uses the NSS library for digests,
+      AES, and pseudorandom numbers. Closes ticket 26815.

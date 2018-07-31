@@ -11,7 +11,7 @@
 #include <string.h>
 
 #include "lib/arch/bytes.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_pwbox.h"
 #include "lib/crypt_ops/crypto_rand.h"

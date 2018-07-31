@@ -9,7 +9,7 @@
 #include "core/mainloop/main.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/connection_edge.h"
