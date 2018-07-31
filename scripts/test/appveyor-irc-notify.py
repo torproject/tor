@@ -27,6 +27,7 @@
 #  - fix github provider detection ('gitHub' or 'gitHubEnterprise', apparently)
 #  - make short commits 10 hexdigits long (that's what git does for tor)
 #  - generate correct branches and URLs for pull requests
+#  - switch to one URL per line
 
 # This program is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software Foundation;
@@ -155,17 +156,16 @@ def notify():
         messages.append(u"{branch_detail} - {repo_commit_author}: {repo_commit_message}")
 
         if success:
-            m = u"Build #{build_version} passed. Details: {build_url}"
+            messages.append(u"Build #{build_version} passed. Details: {build_url}")
         if failure:
-            m = u"Build #{build_version} failed. Details: {build_url}"
+            messages.append(u"Build #{build_version} failed. Details: {build_url}")
 
         if "commit_url" in apvy_vars:
-            m += " Commit: {commit_url}"
+            messages.append(u"Commit: {commit_url}")
 
         if "pull_url" in apvy_vars:
-            m += " Pull: {pull_url}"
+            messages.append(u"Pull: {pull_url}")
 
-        messages.append(m)
     else:
         messages = sys.argv[3:]
         messages = ' '.join(messages)
