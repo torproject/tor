@@ -600,7 +600,6 @@ AC_CHECK_FUNCS(
 	llround \
 	localtime_r \
 	lround \
-	mach_approximate_time \
 	memmem \
 	memset_s \
 	mmap \
@@ -629,9 +628,36 @@ AC_CHECK_FUNCS(
 	_vscprintf
 )
 
-# Apple messed up when they added two functions functions in Sierra: they
+# Apple messed up when they added some functions: they
 # forgot to decorate them with appropriate AVAILABLE_MAC_OS_VERSION
-# checks. So we should only probe for those functions if we are sure that we
+# checks.
+
+# We should only probe for these functions if we are sure that we
+# are not targeting OS X 10.9 or earlier.
+AC_MSG_CHECKING([for a pre-Yosemite OS X build target])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#ifdef __APPLE__
+#  include <AvailabilityMacros.h>
+#  ifndef MAC_OS_X_VERSION_10_10
+#    define MAC_OS_X_VERSION_10_10 101000
+#  endif
+#  if defined(MAC_OS_X_VERSION_MIN_REQUIRED)
+#    if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_10
+#      error "Running on Mac OS X 10.9 or earlier"
+#    endif
+#  endif
+#endif
+]], [[]])],
+   [on_macos_pre_10_10=no ; AC_MSG_RESULT([no])],
+   [on_macos_pre_10_10=yes; AC_MSG_RESULT([yes])])
+
+if test "$on_macos_pre_10_10" = "no"; then
+  AC_CHECK_FUNCS(
+        mach_approximate_time \
+  )
+fi
+
+# We should only probe for these functions if we are sure that we
 # are not targeting OSX 10.11 or earlier.
 AC_MSG_CHECKING([for a pre-Sierra OSX build target])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
