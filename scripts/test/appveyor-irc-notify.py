@@ -55,7 +55,7 @@ export APPVEYOR_URL=https://ci.appveyor.com
 export APPVEYOR_PROJECT_NAME=tor
 export APPVEYOR_REPO_COMMIT_AUTHOR=isislovecruft
 export APPVEYOR_REPO_COMMIT_TIMESTAMP=2018-04-23
-export APPVEYOR_REPO_PROVIDER=gihub
+export APPVEYOR_REPO_PROVIDER=github
 export APPVEYOR_REPO_BRANCH=repo_branch
 export APPVEYOR_PULL_REQUEST_TITLE=pull_request_title
 export APPVEYOR_BUILD_VERSION=1
@@ -88,7 +88,7 @@ import time
 
 def appveyor_vars():
     """
-    Return a dict of key value carfted from appveyor environment variables.
+    Return a dict of key value crafted from appveyor environment variables.
     """
 
     vars = dict([
