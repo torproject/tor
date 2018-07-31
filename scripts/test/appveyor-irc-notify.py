@@ -26,6 +26,7 @@
 # Modified by teor in 2018:
 #  - fix github provider detection ('gitHub' or 'gitHubEnterprise', apparently)
 #  - make short commits 10 hexdigits long (that's what git does for tor)
+#  - generate correct branches and URLs for pull requests
 
 # This program is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software Foundation;
@@ -102,6 +103,9 @@ def appveyor_vars():
                 'APPVEYOR_REPO_COMMIT_TIMESTAMP',
                 'APPVEYOR_REPO_PROVIDER',
                 'APPVEYOR_PROJECT_NAME',
+                'APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME',
+                'APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH',
+                'APPVEYOR_PULL_REQUEST_HEAD_COMMIT',
                 'APPVEYOR_PULL_REQUEST_TITLE',
                 'APPVEYOR_BUILD_VERSION',
                 'APPVEYOR_REPO_COMMIT',
@@ -112,15 +116,25 @@ def appveyor_vars():
             ]
     ])
 
+    vars.update(
+        short_commit=vars["repo_commit"][:10],
+    )
+
     BUILD_FMT = u'{url}/project/{account_name}/{project_name}/build/{build_version}'
+    BRANCH_FMT = u'{repo_name} {repo_branch} {short_commit}'
 
     if vars["repo_provider"].lower().startswith('github'):
-        COMMIT_FMT = u'https://{repo_provider}.com/{repo_name}/commit/{repo_commit}'
+        COMMIT_FMT = u'https://github.com/{repo_name}/commit/{repo_commit}'
+        if vars["pull_request_number"]:
+            BRANCH_FMT = u'{repo_name} {repo_branch} pull {pull_request_head_repo_name} {pull_request_head_repo_branch} {short_commit}'
+            COMMIT_FMT = u'https://github.com/{pull_request_head_repo_name}/commit/{pull_request_head_commit}'
+            PULL_FMT = u'https://github.com/{repo_name}/pull/{pull_request_number}'
+            vars.update(pull_url=PULL_FMT.format(**vars))
         vars.update(commit_url=COMMIT_FMT.format(**vars))
 
     vars.update(
         build_url=BUILD_FMT.format(**vars),
-        short_commit=vars["repo_commit"][:10],
+        branch_detail=BRANCH_FMT.format(**vars),
     )
     return vars
 
@@ -138,7 +152,7 @@ def notify():
 
     if success or failure:
         messages = []
-        messages.append(u"{repo_name} {repo_branch} {short_commit} - {repo_commit_author}: {repo_commit_message}")
+        messages.append(u"{branch_detail} - {repo_commit_author}: {repo_commit_message}")
 
         if success:
             m = u"Build #{build_version} passed. Details: {build_url}"
@@ -147,7 +161,10 @@ def notify():
 
         if "commit_url" in apvy_vars:
             m += " Commit: {commit_url}"
-     
+
+        if "pull_url" in apvy_vars:
+            m += " Pull: {pull_url}"
+
         messages.append(m)
     else:
         messages = sys.argv[3:]
