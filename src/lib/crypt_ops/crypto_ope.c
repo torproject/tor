@@ -18,8 +18,8 @@
 
 #define CRYPTO_OPE_PRIVATE
 #include "lib/crypt_ops/crypto_ope.h"
-#include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
 #include "lib/arch/bytes.h"
