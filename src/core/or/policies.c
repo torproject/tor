@@ -1017,16 +1017,25 @@ fascist_firewall_choose_address_rs(const routerstatus_t *rs,
 }
 
 /** Like fascist_firewall_choose_address_base(), but takes in a smartlist
- * <b>lspecs</b> consisting of one or more link specifiers.
+ * <b>lspecs</b> consisting of one or more link specifiers. We assume
+ * fw_connection is FIREWALL_OR_CONNECTION as link specifiers cannot
+ * contain DirPorts.
  */
 void
 fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
-                                   int pref_only, tor_addr_port_t* ap,
-                                   int direct_conn)
+                                   int pref_only, tor_addr_port_t* ap)
 {
   int have_v4 = 0, have_v6 = 0;
   uint16_t port_v4 = 0, port_v6 = 0;
   tor_addr_t addr_v4, addr_v6;
+
+  tor_assert(ap);
+
+  tor_addr_make_null(&ap->addr, AF_UNSPEC);
+  ap->port = 0;
+
+  tor_addr_make_null(&addr_v4, AF_INET);
+  tor_addr_make_null(&addr_v6, AF_INET6);
 
   SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
     switch (link_specifier_get_ls_type(ls)) {
@@ -1041,7 +1050,7 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
     case LS_IPV6:
       /* Skip if we already seen a v6, or deliberately skip it if we're not a
        * direct connection. */
-      if (have_v6 || !direct_conn) continue;
+      if (have_v6) continue;
       tor_addr_from_ipv6_bytes(&addr_v6,
           (const char *) link_specifier_getconstarray_un_ipv6_addr(ls));
       port_v6 = link_specifier_get_un_ipv6_port(ls);
@@ -1052,11 +1061,6 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
       break;
     }
   } SMARTLIST_FOREACH_END(ls);
-
-  tor_assert(ap);
-
-  tor_addr_make_null(&ap->addr, AF_UNSPEC);
-  ap->port = 0;
 
   /* Here, don't check for DirPorts as link specifiers are only used for
    * ORPorts. */
