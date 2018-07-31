@@ -844,7 +844,7 @@ hs_get_subcredential(const ed25519_public_key_t *identity_pk,
   memwipe(credential, 0, sizeof(credential));
 }
 
-/* From the given list of hidden service ports, find the ones that much the
+/* From the given list of hidden service ports, find the ones that match the
  * given edge connection conn, pick one at random and use it to set the
  * connection address. Return 0 on success or -1 if none. */
 int
