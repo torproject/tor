@@ -25,6 +25,7 @@
 #
 # Modified by teor in 2018:
 #  - fix github provider detection ('gitHub' or 'gitHubEnterprise', apparently)
+#  - make short commits 10 hexdigits long (that's what git does for tor)
 
 # This program is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software Foundation;
@@ -119,7 +120,7 @@ def appveyor_vars():
 
     vars.update(
         build_url=BUILD_FMT.format(**vars),
-        short_commit=vars["repo_commit"][:7],
+        short_commit=vars["repo_commit"][:10],
     )
     return vars
 
