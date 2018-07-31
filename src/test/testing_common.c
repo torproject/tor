@@ -227,7 +227,9 @@ void tinytest_postfork(void);
 void
 tinytest_postfork(void)
 {
+  free_pregenerated_keys();
   crypto_postfork();
+  init_pregenerated_keys();
 }
 
 /** Main entry point for unit test code: parse the command line, and run
