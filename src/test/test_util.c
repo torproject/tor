@@ -38,6 +38,7 @@
 #include "lib/meminfo/meminfo.h"
 #include "lib/time/tvdiff.h"
 #include "lib/encoding/confline.h"
+#include "lib/net/socketpair.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>
