@@ -8,12 +8,19 @@
  * \file tor_api.c
  **/
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <windows.h>
+#endif
+
 #include "feature/api/tor_api.h"
-#include "feature/api/tor_api_internal.h"
 
 // Include this after the above headers, to insure that they don't
 // depend on anything else.
 #include "orconfig.h"
+#include "feature/api/tor_api_internal.h"
+#include "lib/cc/torint.h"
+#include "lib/cc/compat_compiler.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +34,20 @@
 #define raw_free free
 #define raw_realloc realloc
 #define raw_strdup strdup
+
+#ifdef _WIN32
+#include "lib/net/socketpair.h"
+#define raw_socketpair tor_ersatz_socketpair
+#define raw_closesocket closesocket
+#define snprintf _snprintf
+#else
+#define raw_socketpair socketpair
+#define raw_closesocket close
+#endif
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 /**
  * Helper: Add a copy of <b>arg</b> to the owned arguments of <b>cfg</b>.
@@ -61,6 +82,8 @@ tor_main_configuration_new(void)
   cfg->argc = 1;
   cfg->argv = (char **) fake_argv;
 
+  cfg->owning_controller_socket = TOR_INVALID_SOCKET;
+
   return cfg;
 }
 
@@ -75,18 +98,40 @@ tor_main_configuration_set_command_line(tor_main_configuration_t *cfg,
   return 0;
 }
 
+tor_control_socket_t
+tor_main_configuration_setup_control_socket(tor_main_configuration_t *cfg)
+{
+  if (SOCKET_OK(cfg->owning_controller_socket))
+    return INVALID_TOR_CONTROL_SOCKET;
+
+  tor_socket_t fds[2];
+  if (raw_socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
+    return INVALID_TOR_CONTROL_SOCKET;
+  }
+  char buf[32];
+  snprintf(buf, sizeof(buf), "%"PRIu64, (uint64_t)fds[1]);
+
+  cfg_add_owned_arg(cfg, "__OwningControllerFD");
+  cfg_add_owned_arg(cfg, buf);
+
+  cfg->owning_controller_socket = fds[1];
+  return fds[0];
+}
+
 void
 tor_main_configuration_free(tor_main_configuration_t *cfg)
 {
   if (cfg == NULL)
     return;
-  cfg_add_owned_arg(cfg, "bye");//XXXX
   if (cfg->argv_owned) {
     int i;
     for (i = 0; i < cfg->argc_owned; ++i) {
       raw_free(cfg->argv_owned[i]);
     }
     raw_free(cfg->argv_owned);
+  }
+  if (SOCKET_OK(cfg->owning_controller_socket)) {
+    raw_closesocket(cfg->owning_controller_socket);
   }
   raw_free(cfg);
 }

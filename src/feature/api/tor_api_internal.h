@@ -21,6 +21,9 @@ struct tor_main_configuration_t {
   int argc_owned;
   /** As argv, but is owned by the tor_main_configuration_t object. */
   char **argv_owned;
+
+  /** Socket that Tor will use as an owning control socket. Owned. */
+  tor_socket_t owning_controller_socket;
 };
 
 #endif /* !defined(TOR_API_INTERNAL_H) */
