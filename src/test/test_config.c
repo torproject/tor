@@ -5540,6 +5540,12 @@ test_config_include_opened_file_list(void *data)
 
   config_line_t *result = NULL;
   smartlist_t *opened_files = smartlist_new();
+  char *torrcd = NULL;
+  char *subfolder = NULL;
+  char *path = NULL;
+  char *empty = NULL;
+  char *file = NULL;
+  char *dot = NULL;
   char *dir = tor_strdup(get_fname("test_include_opened_file_list"));
   tt_ptr_op(dir, OP_NE, NULL);
 
@@ -5549,8 +5555,7 @@ test_config_include_opened_file_list(void *data)
   tt_int_op(mkdir(dir, 0700), OP_EQ, 0);
 #endif
 
-  char torrcd[PATH_MAX+1];
-  tor_snprintf(torrcd, sizeof(torrcd), "%s"PATH_SEPARATOR"%s", dir, "torrc.d");
+  tor_asprintf(&torrcd, "%s"PATH_SEPARATOR"%s", dir, "torrc.d");
 
 #ifdef _WIN32
   tt_int_op(mkdir(torrcd), OP_EQ, 0);
@@ -5558,9 +5563,7 @@ test_config_include_opened_file_list(void *data)
   tt_int_op(mkdir(torrcd, 0700), OP_EQ, 0);
 #endif
 
-  char subfolder[PATH_MAX+1];
-  tor_snprintf(subfolder, sizeof(subfolder), "%s"PATH_SEPARATOR"%s", torrcd,
-               "subfolder");
+  tor_asprintf(&subfolder, "%s"PATH_SEPARATOR"%s", torrcd, "subfolder");
 
 #ifdef _WIN32
   tt_int_op(mkdir(subfolder), OP_EQ, 0);
@@ -5568,21 +5571,17 @@ test_config_include_opened_file_list(void *data)
   tt_int_op(mkdir(subfolder, 0700), OP_EQ, 0);
 #endif
 
-  char path[PATH_MAX+1];
-  tor_snprintf(path, sizeof(path), "%s"PATH_SEPARATOR"%s", subfolder,
+  tor_asprintf(&path, "%s"PATH_SEPARATOR"%s", subfolder,
                "01_file_in_subfolder");
   tt_int_op(write_str_to_file(path, "Test 1\n", 0), OP_EQ, 0);
 
-  char empty[PATH_MAX+1];
-  tor_snprintf(empty, sizeof(empty), "%s"PATH_SEPARATOR"%s", torrcd, "empty");
+  tor_asprintf(&empty, "%s"PATH_SEPARATOR"%s", torrcd, "empty");
   tt_int_op(write_str_to_file(empty, "", 0), OP_EQ, 0);
 
-  char file[PATH_MAX+1];
-  tor_snprintf(file, sizeof(file), "%s"PATH_SEPARATOR"%s", torrcd, "file");
+  tor_asprintf(&file, "%s"PATH_SEPARATOR"%s", torrcd, "file");
   tt_int_op(write_str_to_file(file, "Test 2\n", 0), OP_EQ, 0);
 
-  char dot[PATH_MAX+1];
-  tor_snprintf(dot, sizeof(dot), "%s"PATH_SEPARATOR"%s", torrcd, ".dot");
+  tor_asprintf(&dot, "%s"PATH_SEPARATOR"%s", torrcd, ".dot");
   tt_int_op(write_str_to_file(dot, "Test 3\n", 0), OP_EQ, 0);
 
   char torrc_contents[1000];
@@ -5609,6 +5608,12 @@ test_config_include_opened_file_list(void *data)
   SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
   smartlist_free(opened_files);
   config_free_lines(result);
+  tor_free(torrcd);
+  tor_free(subfolder);
+  tor_free(path);
+  tor_free(empty);
+  tor_free(file);
+  tor_free(dot);
   tor_free(dir);
 }
 
