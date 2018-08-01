@@ -32,6 +32,11 @@
 // Avoid warning about call to memcmp.
 #define raw_memcmp memcmp
 
+/**
+ * Return a new socket that is bound and listening on the loopback interface
+ * of family <b>family</b> for a socket of type <b>type</b>. On failure return
+ * TOR_INVALID_SOCKET.
+ */
 static tor_socket_t
 get_local_listener(int family, int type)
 {
@@ -72,6 +77,9 @@ get_local_listener(int family, int type)
   return TOR_INVALID_SOCKET;
 }
 
+/**
+ * Return true iff sa1 and sa2 are equivalent AF_INET or AF_INET6 addresses.
+ */
 static int
 sockaddr_eq(struct sockaddr *sa1, struct sockaddr *sa2)
 {
