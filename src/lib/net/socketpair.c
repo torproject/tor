@@ -4,23 +4,82 @@
 
 #include "lib/net/socketpair.h"
 #include "lib/net/socket.h"
-#include "lib/net/address.h"
+#include "lib/arch/bytes.h"
 
 #include <errno.h>
 #include <string.h>
 
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef _WIN32
+#include <winsock2.h>
+#include <windows.h>
+#endif
+
 #ifdef NEED_ERSATZ_SOCKETPAIR
 
-static inline socklen_t
-SIZEOF_SOCKADDR(int domain)
+// Avoid warning about call to memcmp.
+#define raw_memcmp memcmp
+
+static tor_socket_t
+get_local_listener(int family, int type)
 {
-  switch (domain) {
-    case AF_INET:
-      return sizeof(struct sockaddr_in);
-    case AF_INET6:
-      return sizeof(struct sockaddr_in6);
-    default:
-      return 0;
+  struct sockaddr_in sin;
+  struct sockaddr_in6 sin6;
+  struct sockaddr *sa;
+  int len;
+
+  memset(&sin, 0, sizeof(sin));
+  memset(&sin6, 0, sizeof(sin6));
+
+  tor_socket_t sock = TOR_INVALID_SOCKET;
+  sock = tor_open_socket(family, type, 0);
+  if (!SOCKET_OK(sock)) {
+    return TOR_INVALID_SOCKET;
+  }
+
+  if (family == AF_INET) {
+    sa = (struct sockaddr *) &sin;
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = tor_htonl(0x7f000001);
+    len = sizeof(sin);
+  } else {
+    sa = (struct sockaddr *) &sin6;
+    sin6.sin6_family = AF_INET;
+    sin6.sin6_addr.s6_addr[15] = 1;
+    len = sizeof(sin6);
+  }
+
+  if (bind(sock, sa, len) == -1)
+    goto err;
+  if (listen(sock, 1) == -1)
+    goto err;
+
+  return sock;
+ err:
+  tor_close_socket(sock);
+  return TOR_INVALID_SOCKET;
+}
+
+static int
+sockaddr_eq(struct sockaddr *sa1, struct sockaddr *sa2)
+{
+  if (sa1->sa_family != sa2->sa_family)
+    return 0;
+
+  if (sa1->sa_family == AF_INET6) {
+    struct sockaddr_in6 *sin6_1 = (struct sockaddr_in6 *) sa1;
+    struct sockaddr_in6 *sin6_2 = (struct sockaddr_in6 *) sa2;
+    return sin6_1->sin6_port == sin6_2->sin6_port &&
+      0==raw_memcmp(sin6_1->sin6_addr.s6_addr, sin6_2->sin6_addr.s6_addr, 16);
+  } else if (sa1->sa_family == AF_INET) {
+    struct sockaddr_in *sin_1 = (struct sockaddr_in *) sa1;
+    struct sockaddr_in *sin_2 = (struct sockaddr_in *) sa2;
+    return sin_1->sin_port == sin_2->sin_port &&
+      sin_1->sin_addr.s_addr == sin_2->sin_addr.s_addr;
+  } else {
+    return 0;
   }
 }
 
@@ -39,21 +98,17 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     tor_socket_t listener = TOR_INVALID_SOCKET;
     tor_socket_t connector = TOR_INVALID_SOCKET;
     tor_socket_t acceptor = TOR_INVALID_SOCKET;
-    tor_addr_t listen_tor_addr;
-    struct sockaddr_storage connect_addr_ss, listen_addr_ss;
-    struct sockaddr *listen_addr = (struct sockaddr *) &listen_addr_ss;
-    uint16_t listen_port = 0;
-    tor_addr_t connect_tor_addr;
-    uint16_t connect_port = 0;
+    struct sockaddr_storage accepted_addr_ss;
+    struct sockaddr_storage connect_addr_ss;
     struct sockaddr *connect_addr = (struct sockaddr *) &connect_addr_ss;
+    struct sockaddr *accepted_addr = (struct sockaddr *) &accepted_addr_ss;
     socklen_t size;
     int saved_errno = -1;
     int ersatz_domain = AF_INET;
+    socklen_t addrlen = sizeof(struct sockaddr_in);
 
-    memset(&connect_tor_addr, 0, sizeof(connect_tor_addr));
+    memset(&accepted_addr_ss, 0, sizeof(accepted_addr_ss));
     memset(&connect_addr_ss, 0, sizeof(connect_addr_ss));
-    memset(&listen_tor_addr, 0, sizeof(listen_tor_addr));
-    memset(&listen_addr_ss, 0, sizeof(listen_addr_ss));
 
     if (protocol
 #ifdef AF_UNIX
@@ -70,42 +125,24 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
       return -EINVAL;
     }
 
-    listener = tor_open_socket(ersatz_domain, type, 0);
+    listener = get_local_listener(ersatz_domain, type);
     if (!SOCKET_OK(listener)) {
       int first_errno = tor_socket_errno(-1);
-      if (first_errno == SOCK_ERRNO(EPROTONOSUPPORT)
-          && ersatz_domain == AF_INET) {
+      if (first_errno == SOCK_ERRNO(EPROTONOSUPPORT)) {
         /* Assume we're on an IPv6-only system */
         ersatz_domain = AF_INET6;
-        listener = tor_open_socket(ersatz_domain, type, 0);
-        if (!SOCKET_OK(listener)) {
-          /* Keep the previous behaviour, which was to return the IPv4 error.
-           * (This may be less informative on IPv6-only systems.)
-           * XX/teor - is there a better way to decide which errno to return?
-           * (I doubt we care much either way, once there is an error.)
-           */
-          return -first_errno;
-        }
+        addrlen = sizeof(struct sockaddr_in6);
+        listener = get_local_listener(ersatz_domain, type);
+      }
+      if (!SOCKET_OK(listener)) {
+        /* Keep the previous behaviour, which was to return the IPv4 error.
+         * (This may be less informative on IPv6-only systems.)
+         * XX/teor - is there a better way to decide which errno to return?
+         * (I doubt we care much either way, once there is an error.)
+         */
+        return -first_errno;
       }
     }
-    /* If there is no 127.0.0.1 or ::1, this will and must fail. Otherwise, we
-     * risk exposing a socketpair on a routable IP address. (Some BSD jails
-     * use a routable address for localhost. Fortunately, they have the real
-     * AF_UNIX socketpair.) */
-    if (ersatz_domain == AF_INET) {
-      tor_addr_from_ipv4h(&listen_tor_addr, INADDR_LOOPBACK);
-    } else {
-      tor_addr_parse(&listen_tor_addr, "[::1]");
-    }
-    tor_assert(tor_addr_is_loopback(&listen_tor_addr));
-    size = tor_addr_to_sockaddr(&listen_tor_addr,
-                         0 /* kernel chooses port.  */,
-                         listen_addr,
-                         sizeof(listen_addr_ss));
-    if (bind(listener, listen_addr, size) == -1)
-      goto tidy_up_and_fail;
-    if (listen(listener, 1) == -1)
-      goto tidy_up_and_fail;
 
     connector = tor_open_socket(ersatz_domain, type, 0);
     if (!SOCKET_OK(connector))
@@ -114,33 +151,27 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     size = sizeof(connect_addr_ss);
     if (getsockname(listener, connect_addr, &size) == -1)
       goto tidy_up_and_fail;
-    if (size != SIZEOF_SOCKADDR (connect_addr->sa_family))
+    if (size != addrlen)
       goto abort_tidy_up_and_fail;
     if (connect(connector, connect_addr, size) == -1)
       goto tidy_up_and_fail;
 
-    size = sizeof(listen_addr_ss);
-    acceptor = tor_accept_socket(listener, listen_addr, &size);
+    size = sizeof(accepted_addr_ss);
+    acceptor = tor_accept_socket(listener, accepted_addr, &size);
     if (!SOCKET_OK(acceptor))
       goto tidy_up_and_fail;
-    if (size != SIZEOF_SOCKADDR(listen_addr->sa_family))
+    if (size != addrlen)
       goto abort_tidy_up_and_fail;
     /* Now check we are talking to ourself by matching port and host on the
        two sockets.  */
     if (getsockname(connector, connect_addr, &size) == -1)
       goto tidy_up_and_fail;
     /* Set *_tor_addr and *_port to the address and port that was used */
-    tor_addr_from_sockaddr(&listen_tor_addr, listen_addr, &listen_port);
-    tor_addr_from_sockaddr(&connect_tor_addr, connect_addr, &connect_port);
-    if (size != SIZEOF_SOCKADDR (connect_addr->sa_family)
-        || tor_addr_compare(&listen_tor_addr, &connect_tor_addr, CMP_SEMANTIC)
-        || listen_port != connect_port) {
+    if (!sockaddr_eq(accepted_addr, connect_addr))
       goto abort_tidy_up_and_fail;
-    }
     tor_close_socket(listener);
     fd[0] = connector;
     fd[1] = acceptor;
-
     return 0;
 
   abort_tidy_up_and_fail:
