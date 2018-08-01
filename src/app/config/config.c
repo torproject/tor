@@ -260,6 +260,9 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
   VAR(#member, LINELIST_S, member ## _lines, NULL),             \
   VAR("__" #member, LINELIST_S, member ## _lines, NULL)
 
+/** UINT64_MAX as a decimal string */
+#define UINT64_MAX_STRING "18446744073709551615"
+
 /** Array of configuration options.  Until we disallow nonstandard
  * abbreviations, order is significant, since the first matching option will
  * be chosen first.
@@ -647,7 +650,7 @@ static config_var_t option_vars_[] = {
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
-  VAR("__OwningControllerFD",INT,OwningControllerFD, "-1"),
+  VAR("__OwningControllerFD", UINT64, OwningControllerFD, UINT64_MAX_STRING),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
   V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
@@ -1948,12 +1951,8 @@ options_act(const or_options_t *old_options)
     // LCOV_EXCL_STOP
   }
 
-  if (running_tor && !old_options && options->OwningControllerFD != -1) {
-#ifdef _WIN32
-    log_warn(LD_CONFIG, "OwningControllerFD is not supported on Windows. "
-             "If you need it, tell the Tor developers.");
-    return -1;
-#else
+  if (running_tor && !old_options &&
+      options->OwningControllerFD != UINT64_MAX) {
     const unsigned ctrl_flags =
       CC_LOCAL_FD_IS_OWNER |
       CC_LOCAL_FD_IS_AUTHENTICATED;
@@ -1963,7 +1962,6 @@ options_act(const or_options_t *old_options)
                "given FD.");
       return -1;
     }
-#endif /* defined(_WIN32) */
   }
 
   /* Load state */
@@ -8197,6 +8195,7 @@ getinfo_helper_config(control_connection_t *conn,
         case CONFIG_TYPE_STRING: type = "String"; break;
         case CONFIG_TYPE_FILENAME: type = "Filename"; break;
         case CONFIG_TYPE_UINT: type = "Integer"; break;
+        case CONFIG_TYPE_UINT64: type = "Integer"; break;
         case CONFIG_TYPE_INT: type = "SignedInteger"; break;
         case CONFIG_TYPE_PORT: type = "Port"; break;
         case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break;
