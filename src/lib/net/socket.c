@@ -420,9 +420,9 @@ get_n_open_sockets(void)
 int
 tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 {
+  int r;
 //don't use win32 socketpairs (they are always bad)
 #if defined(HAVE_SOCKETPAIR) && !defined(_WIN32)
-  int r;
 
 #ifdef SOCK_CLOEXEC
   r = socketpair(family, type|SOCK_CLOEXEC, protocol, fd);
@@ -438,6 +438,11 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
   r = socketpair(family, type, protocol, fd);
   if (r < 0)
     return -errno;
+#else
+  r = tor_ersatz_socketpair(family, type, protocol, fd);
+  if (r < 0)
+    return -r;
+#endif
 
 #if defined(FD_CLOEXEC)
   if (SOCKET_OK(fd[0])) {
@@ -472,9 +477,6 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
   socket_accounting_unlock();
 
   return 0;
-#else /* !(defined(HAVE_SOCKETPAIR) && !defined(_WIN32)) */
-  return tor_ersatz_socketpair(family, type, protocol, fd);
-#endif /* defined(HAVE_SOCKETPAIR) && !defined(_WIN32) */
 }
 
 /** Mockable wrapper for getsockname(). */

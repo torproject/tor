@@ -12,8 +12,8 @@
 
 #if !defined(HAVE_SOCKETPAIR) || defined(_WIN32) || defined(TOR_UNIT_TESTS)
 #define NEED_ERSATZ_SOCKETPAIR
-STATIC int tor_ersatz_socketpair(int family, int type, int protocol,
-                                 tor_socket_t fd[2]);
+int tor_ersatz_socketpair(int family, int type, int protocol,
+                          tor_socket_t fd[2]);
 #endif
 
 #endif

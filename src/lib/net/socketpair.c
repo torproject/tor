@@ -3,18 +3,28 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 
 #include "lib/net/socketpair.h"
-#include "lib/net/socket.h"
+#include "lib/net/inaddr_st.h"
 #include "lib/arch/bytes.h"
 
 #include <errno.h>
 #include <string.h>
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
+#define socket_errno() (WSAGetLastError())
+#define SOCKET_EPROTONOSUPPORT WSAEPROTONOSUPPORT
+#else
+#define closesocket(x) close(x)
+#define socket_errno() (errno)
+#define SOCKET_EPROTONOSUPPORT EPROTONOSUPPORT
 #endif
 
 #ifdef NEED_ERSATZ_SOCKETPAIR
@@ -34,7 +44,7 @@ get_local_listener(int family, int type)
   memset(&sin6, 0, sizeof(sin6));
 
   tor_socket_t sock = TOR_INVALID_SOCKET;
-  sock = tor_open_socket(family, type, 0);
+  sock = socket(family, type, 0);
   if (!SOCKET_OK(sock)) {
     return TOR_INVALID_SOCKET;
   }
@@ -58,7 +68,7 @@ get_local_listener(int family, int type)
 
   return sock;
  err:
-  tor_close_socket(sock);
+  closesocket(sock);
   return TOR_INVALID_SOCKET;
 }
 
@@ -87,7 +97,7 @@ sockaddr_eq(struct sockaddr *sa1, struct sockaddr *sa2)
  * Helper used to implement socketpair on systems that lack it, by
  * making a direct connection to localhost.
  */
-STATIC int
+int
 tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 {
     /* This socketpair does not work when localhost is down. So
@@ -127,8 +137,8 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 
     listener = get_local_listener(ersatz_domain, type);
     if (!SOCKET_OK(listener)) {
-      int first_errno = tor_socket_errno(-1);
-      if (first_errno == SOCK_ERRNO(EPROTONOSUPPORT)) {
+      int first_errno = socket_errno();
+      if (first_errno == SOCKET_EPROTONOSUPPORT) {
         /* Assume we're on an IPv6-only system */
         ersatz_domain = AF_INET6;
         addrlen = sizeof(struct sockaddr_in6);
@@ -144,7 +154,7 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
       }
     }
 
-    connector = tor_open_socket(ersatz_domain, type, 0);
+    connector = socket(ersatz_domain, type, 0);
     if (!SOCKET_OK(connector))
       goto tidy_up_and_fail;
     /* We want to find out the port number to connect to.  */
@@ -157,7 +167,7 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
       goto tidy_up_and_fail;
 
     size = sizeof(accepted_addr_ss);
-    acceptor = tor_accept_socket(listener, accepted_addr, &size);
+    acceptor = accept(listener, accepted_addr, &size);
     if (!SOCKET_OK(acceptor))
       goto tidy_up_and_fail;
     if (size != addrlen)
@@ -169,7 +179,7 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     /* Set *_tor_addr and *_port to the address and port that was used */
     if (!sockaddr_eq(accepted_addr, connect_addr))
       goto abort_tidy_up_and_fail;
-    tor_close_socket(listener);
+    closesocket(listener);
     fd[0] = connector;
     fd[1] = acceptor;
     return 0;
@@ -184,11 +194,11 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     if (saved_errno < 0)
       saved_errno = errno;
     if (SOCKET_OK(listener))
-      tor_close_socket(listener);
+      closesocket(listener);
     if (SOCKET_OK(connector))
-      tor_close_socket(connector);
+      closesocket(connector);
     if (SOCKET_OK(acceptor))
-      tor_close_socket(acceptor);
+      closesocket(acceptor);
     return -saved_errno;
 }
 

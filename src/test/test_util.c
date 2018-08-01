@@ -5540,10 +5540,13 @@ test_util_socketpair(void *arg)
 
   tt_assert(SOCKET_OK(fds[0]));
   tt_assert(SOCKET_OK(fds[1]));
-  tt_int_op(get_n_open_sockets(), OP_EQ, n + 2);
+  if (ersatz)
+    tt_int_op(get_n_open_sockets(), OP_EQ, n);
+  else
+    tt_int_op(get_n_open_sockets(), OP_EQ, n + 2);
 #ifdef CAN_CHECK_CLOEXEC
-  tt_int_op(fd_is_cloexec(fds[0]), OP_EQ, 1);
-  tt_int_op(fd_is_cloexec(fds[1]), OP_EQ, 1);
+  tt_int_op(fd_is_cloexec(fds[0]), OP_EQ, !ersatz);
+  tt_int_op(fd_is_cloexec(fds[1]), OP_EQ, !ersatz);
 #endif
 #ifdef CAN_CHECK_NONBLOCK
   tt_int_op(fd_is_nonblocking(fds[0]), OP_EQ, 0);
@@ -5551,10 +5554,17 @@ test_util_socketpair(void *arg)
 #endif
 
  done:
-  if (SOCKET_OK(fds[0]))
-    tor_close_socket(fds[0]);
-  if (SOCKET_OK(fds[1]))
-    tor_close_socket(fds[1]);
+  if (ersatz) {
+    if (SOCKET_OK(fds[0]))
+      tor_close_socket_simple(fds[0]);
+    if (SOCKET_OK(fds[1]))
+      tor_close_socket_simple(fds[1]);
+  } else {
+    if (SOCKET_OK(fds[0]))
+      tor_close_socket(fds[0]);
+    if (SOCKET_OK(fds[1]))
+      tor_close_socket(fds[1]);
+  }
 }
 
 #undef SOCKET_EPROTO
