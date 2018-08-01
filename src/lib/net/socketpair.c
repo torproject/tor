@@ -100,106 +100,106 @@ sockaddr_eq(struct sockaddr *sa1, struct sockaddr *sa2)
 int
 tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 {
-    /* This socketpair does not work when localhost is down. So
-     * it's really not the same thing at all. But it's close enough
-     * for now, and really, when localhost is down sometimes, we
-     * have other problems too.
-     */
-    tor_socket_t listener = TOR_INVALID_SOCKET;
-    tor_socket_t connector = TOR_INVALID_SOCKET;
-    tor_socket_t acceptor = TOR_INVALID_SOCKET;
-    struct sockaddr_storage accepted_addr_ss;
-    struct sockaddr_storage connect_addr_ss;
-    struct sockaddr *connect_addr = (struct sockaddr *) &connect_addr_ss;
-    struct sockaddr *accepted_addr = (struct sockaddr *) &accepted_addr_ss;
-    socklen_t size;
-    int saved_errno = -1;
-    int ersatz_domain = AF_INET;
-    socklen_t addrlen = sizeof(struct sockaddr_in);
+  /* This socketpair does not work when localhost is down. So
+   * it's really not the same thing at all. But it's close enough
+   * for now, and really, when localhost is down sometimes, we
+   * have other problems too.
+   */
+  tor_socket_t listener = TOR_INVALID_SOCKET;
+  tor_socket_t connector = TOR_INVALID_SOCKET;
+  tor_socket_t acceptor = TOR_INVALID_SOCKET;
+  struct sockaddr_storage accepted_addr_ss;
+  struct sockaddr_storage connect_addr_ss;
+  struct sockaddr *connect_addr = (struct sockaddr *) &connect_addr_ss;
+  struct sockaddr *accepted_addr = (struct sockaddr *) &accepted_addr_ss;
+  socklen_t size;
+  int saved_errno = -1;
+  int ersatz_domain = AF_INET;
+  socklen_t addrlen = sizeof(struct sockaddr_in);
 
-    memset(&accepted_addr_ss, 0, sizeof(accepted_addr_ss));
-    memset(&connect_addr_ss, 0, sizeof(connect_addr_ss));
+  memset(&accepted_addr_ss, 0, sizeof(accepted_addr_ss));
+  memset(&connect_addr_ss, 0, sizeof(connect_addr_ss));
 
-    if (protocol
+  if (protocol
 #ifdef AF_UNIX
-        || family != AF_UNIX
+      || family != AF_UNIX
 #endif
-        ) {
+      ) {
 #ifdef _WIN32
-      return -WSAEAFNOSUPPORT;
+    return -WSAEAFNOSUPPORT;
 #else
-      return -EAFNOSUPPORT;
+    return -EAFNOSUPPORT;
 #endif
-    }
-    if (!fd) {
-      return -EINVAL;
-    }
+  }
+  if (!fd) {
+    return -EINVAL;
+  }
 
-    listener = get_local_listener(ersatz_domain, type);
+  listener = get_local_listener(ersatz_domain, type);
+  if (!SOCKET_OK(listener)) {
+    int first_errno = socket_errno();
+    if (first_errno == SOCKET_EPROTONOSUPPORT) {
+      /* Assume we're on an IPv6-only system */
+      ersatz_domain = AF_INET6;
+      addrlen = sizeof(struct sockaddr_in6);
+      listener = get_local_listener(ersatz_domain, type);
+    }
     if (!SOCKET_OK(listener)) {
-      int first_errno = socket_errno();
-      if (first_errno == SOCKET_EPROTONOSUPPORT) {
-        /* Assume we're on an IPv6-only system */
-        ersatz_domain = AF_INET6;
-        addrlen = sizeof(struct sockaddr_in6);
-        listener = get_local_listener(ersatz_domain, type);
-      }
-      if (!SOCKET_OK(listener)) {
-        /* Keep the previous behaviour, which was to return the IPv4 error.
-         * (This may be less informative on IPv6-only systems.)
-         * XX/teor - is there a better way to decide which errno to return?
-         * (I doubt we care much either way, once there is an error.)
-         */
-        return -first_errno;
-      }
+      /* Keep the previous behaviour, which was to return the IPv4 error.
+       * (This may be less informative on IPv6-only systems.)
+       * XX/teor - is there a better way to decide which errno to return?
+       * (I doubt we care much either way, once there is an error.)
+       */
+      return -first_errno;
     }
+  }
 
-    connector = socket(ersatz_domain, type, 0);
-    if (!SOCKET_OK(connector))
-      goto tidy_up_and_fail;
-    /* We want to find out the port number to connect to.  */
-    size = sizeof(connect_addr_ss);
-    if (getsockname(listener, connect_addr, &size) == -1)
-      goto tidy_up_and_fail;
-    if (size != addrlen)
-      goto abort_tidy_up_and_fail;
-    if (connect(connector, connect_addr, size) == -1)
-      goto tidy_up_and_fail;
+  connector = socket(ersatz_domain, type, 0);
+  if (!SOCKET_OK(connector))
+    goto tidy_up_and_fail;
+  /* We want to find out the port number to connect to.  */
+  size = sizeof(connect_addr_ss);
+  if (getsockname(listener, connect_addr, &size) == -1)
+    goto tidy_up_and_fail;
+  if (size != addrlen)
+    goto abort_tidy_up_and_fail;
+  if (connect(connector, connect_addr, size) == -1)
+    goto tidy_up_and_fail;
 
-    size = sizeof(accepted_addr_ss);
-    acceptor = accept(listener, accepted_addr, &size);
-    if (!SOCKET_OK(acceptor))
-      goto tidy_up_and_fail;
-    if (size != addrlen)
-      goto abort_tidy_up_and_fail;
-    /* Now check we are talking to ourself by matching port and host on the
-       two sockets.  */
-    if (getsockname(connector, connect_addr, &size) == -1)
-      goto tidy_up_and_fail;
-    /* Set *_tor_addr and *_port to the address and port that was used */
-    if (!sockaddr_eq(accepted_addr, connect_addr))
-      goto abort_tidy_up_and_fail;
-    closesocket(listener);
-    fd[0] = connector;
-    fd[1] = acceptor;
-    return 0;
+  size = sizeof(accepted_addr_ss);
+  acceptor = accept(listener, accepted_addr, &size);
+  if (!SOCKET_OK(acceptor))
+    goto tidy_up_and_fail;
+  if (size != addrlen)
+    goto abort_tidy_up_and_fail;
+  /* Now check we are talking to ourself by matching port and host on the
+     two sockets.  */
+  if (getsockname(connector, connect_addr, &size) == -1)
+    goto tidy_up_and_fail;
+  /* Set *_tor_addr and *_port to the address and port that was used */
+  if (!sockaddr_eq(accepted_addr, connect_addr))
+    goto abort_tidy_up_and_fail;
+  closesocket(listener);
+  fd[0] = connector;
+  fd[1] = acceptor;
+  return 0;
 
-  abort_tidy_up_and_fail:
+ abort_tidy_up_and_fail:
 #ifdef _WIN32
-    saved_errno = WSAECONNABORTED;
+  saved_errno = WSAECONNABORTED;
 #else
-    saved_errno = ECONNABORTED; /* I hope this is portable and appropriate.  */
+  saved_errno = ECONNABORTED; /* I hope this is portable and appropriate.  */
 #endif
-  tidy_up_and_fail:
-    if (saved_errno < 0)
-      saved_errno = errno;
-    if (SOCKET_OK(listener))
-      closesocket(listener);
-    if (SOCKET_OK(connector))
-      closesocket(connector);
-    if (SOCKET_OK(acceptor))
-      closesocket(acceptor);
-    return -saved_errno;
+ tidy_up_and_fail:
+  if (saved_errno < 0)
+    saved_errno = errno;
+  if (SOCKET_OK(listener))
+    closesocket(listener);
+  if (SOCKET_OK(connector))
+    closesocket(connector);
+  if (SOCKET_OK(acceptor))
+    closesocket(acceptor);
+  return -saved_errno;
 }
 
 #endif /* defined(NEED_ERSATZ_SOCKETPAIR) */
