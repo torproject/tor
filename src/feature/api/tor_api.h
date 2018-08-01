@@ -98,4 +98,3 @@ int tor_run_main(const tor_main_configuration_t *);
 int tor_main(int argc, char **argv);
 
 #endif /* !defined(TOR_API_H) */
-

@@ -25,6 +25,28 @@
 
 #define raw_malloc malloc
 #define raw_free free
+#define raw_realloc realloc
+#define raw_strdup strdup
+
+/**
+ * Helper: Add a copy of <b>arg</b> to the owned arguments of <b>cfg</b>.
+ * Return 0 on success, -1 on failure.
+ */
+static int
+cfg_add_owned_arg(tor_main_configuration_t *cfg, const char *arg)
+{
+  /* We aren't using amortized realloc here, because libc should do it for us,
+   * and because this function is not critical-path. */
+  char **new_argv = raw_realloc(cfg->argv_owned,
+                                sizeof(char*) * (cfg->argc_owned+1));
+  if (new_argv == NULL)
+    return -1;
+  cfg->argv_owned = new_argv;
+  if (NULL == (cfg->argv_owned[cfg->argc_owned] = raw_strdup(arg)))
+    return -1;
+  ++cfg->argc_owned;
+  return 0;
+}
 
 tor_main_configuration_t *
 tor_main_configuration_new(void)
@@ -58,6 +80,14 @@ tor_main_configuration_free(tor_main_configuration_t *cfg)
 {
   if (cfg == NULL)
     return;
+  cfg_add_owned_arg(cfg, "bye");//XXXX
+  if (cfg->argv_owned) {
+    int i;
+    for (i = 0; i < cfg->argc_owned; ++i) {
+      raw_free(cfg->argv_owned[i]);
+    }
+    raw_free(cfg->argv_owned);
+  }
   raw_free(cfg);
 }
 
@@ -85,4 +115,3 @@ tor_main(int argc, char *argv[])
   tor_main_configuration_free(cfg);
   return rv;
 }
-

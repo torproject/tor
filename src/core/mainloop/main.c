@@ -4204,9 +4204,6 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 {
   int result = 0;
 
-  int argc = tor_cfg->argc;
-  char **argv = tor_cfg->argv;
-
 #ifdef _WIN32
 #ifndef HeapEnableTerminationOnCorruption
 #define HeapEnableTerminationOnCorruption 1
@@ -4242,25 +4239,39 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   tor_compress_init();
   init_logging(0);
   monotime_init();
+
+  int argc = tor_cfg->argc + tor_cfg->argc_owned;
+  char **argv = tor_calloc(argc, sizeof(char*));
+  memcpy(argv, tor_cfg->argv, tor_cfg->argc*sizeof(char*));
+  if (tor_cfg->argc_owned)
+    memcpy(argv + tor_cfg->argc, tor_cfg->argv_owned,
+           tor_cfg->argc_owned*sizeof(char*));
+
 #ifdef NT_SERVICE
   {
      int done = 0;
      result = nt_service_parse_options(argc, argv, &done);
-     if (done) return result;
+     if (done) {
+       goto done;
+     }
   }
 #endif /* defined(NT_SERVICE) */
   {
     int init_rv = tor_init(argc, argv);
-    if (init_rv < 0)
-      return -1;
-    else if (init_rv > 0)
-      return 0;
+    if (init_rv < 0) {
+      result = -1;
+      goto done;
+    } else if (init_rv > 0) {
+      result = 0;
+      goto done;
+    }
   }
 
   if (get_options()->Sandbox && get_options()->command == CMD_RUN_TOR) {
     sandbox_cfg_t* cfg = sandbox_init_filter();
 
     if (sandbox_init(cfg)) {
+      tor_free(argv);
       log_err(LD_BUG,"Failed to create syscall sandbox filter");
       return -1;
     }
@@ -4308,5 +4319,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
     result = -1;
   }
   tor_cleanup();
+ done:
+  tor_free(argv);
   return result;
 }
