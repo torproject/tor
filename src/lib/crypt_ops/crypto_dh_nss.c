@@ -174,7 +174,7 @@ crypto_dh_handshake(int severity, crypto_dh_t *dh,
   peer_key.u.dh.base.data = dh_generator_data;
   peer_key.u.dh.base.len = 1;
   peer_key.u.dh.publicValue.data = (unsigned char *)pubkey;
-  peer_key.u.dh.publicValue.len = pubkey_len;
+  peer_key.u.dh.publicValue.len = (int) pubkey_len;
 
   PK11SymKey *sym = PK11_PubDerive(dh->seckey, &peer_key,
                        PR_FALSE, NULL, NULL, CKM_DH_PKCS_DERIVE,
