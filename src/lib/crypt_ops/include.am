@@ -16,7 +16,6 @@ src_lib_libtor_crypt_ops_a_SOURCES =			\
 	src/lib/crypt_ops/crypto_hkdf.c			\
 	src/lib/crypt_ops/crypto_init.c			\
 	src/lib/crypt_ops/crypto_ope.c          	\
-	src/lib/crypt_ops/crypto_openssl_mgt.c		\
 	src/lib/crypt_ops/crypto_pwbox.c		\
 	src/lib/crypt_ops/crypto_rand.c			\
 	src/lib/crypt_ops/crypto_rsa.c			\
