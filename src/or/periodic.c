@@ -140,8 +140,8 @@ periodic_event_destroy(periodic_event_item_t *event)
   event->last_action_time = 0;
 }
 
-/** Enable the given event which means the event is launched and then the
- * event's enabled flag is set. This can be called for an event that is
+/** Enable the given event by setting its "enabled" flag and scheduling it to
+ * run immediately in the event loop. This can be called for an event that is
  * already enabled. */
 void
 periodic_event_enable(periodic_event_item_t *event)
@@ -152,7 +152,9 @@ periodic_event_enable(periodic_event_item_t *event)
     return;
   }
 
-  periodic_event_launch(event);
+  tor_assert(event->ev);
+  event->enabled = 1;
+  mainloop_event_activate(event->ev);
 }
 
 /** Disable the given event which means the event is destroyed and then the
@@ -169,4 +171,3 @@ periodic_event_disable(periodic_event_item_t *event)
   mainloop_event_cancel(event->ev);
   event->enabled = 0;
 }
-
