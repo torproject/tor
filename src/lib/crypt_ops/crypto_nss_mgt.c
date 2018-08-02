@@ -15,6 +15,7 @@
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 
+DISABLE_GCC_WARNING(strict-prototypes)
 #include <nss.h>
 #include <pk11func.h>
 #include <ssl.h>
@@ -22,6 +23,7 @@
 #include <prerror.h>
 #include <prtypes.h>
 #include <prinit.h>
+ENABLE_GCC_WARNING(strict-prototypes)
 
 const char *
 crypto_nss_get_version_str(void)
