@@ -2,7 +2,7 @@
 // Copyright (c) 2018, isis agora lovecruft
 // See LICENSE for licensing information
 
-//! Bindings to external (P)RNG interfaces and utilities in 
+//! Bindings to external (P)RNG interfaces and utilities in
 //! src/common/crypto_rand.[ch].
 //!
 //! We wrap our C implementations in src/common/crypto_rand.[ch] here in order
@@ -80,8 +80,5 @@ pub fn c_tor_crypto_rand_time_range(min: &Duration, max: &Duration) -> Duration 
 
 /// Return a pseudorandom 64-bit float, chosen uniformly from the range [0.0, 1.0).
 pub fn c_tor_crypto_rand_double() -> f64 {
-    unsafe {
-        crypto_rand_double()
-    }
+    unsafe { crypto_rand_double() }
 }
-
