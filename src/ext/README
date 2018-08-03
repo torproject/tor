@@ -1,9 +1,4 @@
 
-OpenBSD_malloc_Linux.c:
-
-    The OpenBSD malloc implementation, ported to Linux.  Used only when
-    --enable-openbsd-malloc is passed to the configure script.
-
 strlcat.c
 strlcpy.c
 

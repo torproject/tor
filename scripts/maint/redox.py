@@ -32,13 +32,8 @@
 # Which files should we ignore warning from?  Mostly, these are external
 # files that we've snarfed in from somebody else, whose C we do no intend
 # to document for them.
-SKIP_FILES = [ "OpenBSD_malloc_Linux.c",
-               "strlcat.c",
-               "strlcpy.c",
-               "sha256.c",
-               "sha256.h",
-               "aes.c",
-               "aes.h" ]
+SKIP_FILES = [
+             ]
 
 # What names of things never need javadoc
 SKIP_NAME_PATTERNS = [ r'^.*_c_id$',
