@@ -5,7 +5,7 @@
 //! called from C.
 //!
 
-use tor_log::{LogSeverity, LogDomain};
+use tor_log::{LogDomain, LogSeverity};
 
 /// Returns a short string to announce Rust support during startup.
 ///
@@ -22,6 +22,6 @@ pub extern "C" fn rust_log_welcome_string() {
         LogDomain::General,
         "rust_log_welcome_string",
         "Tor is running with Rust integration. Please report \
-        any bugs you encounter."
+         any bugs you encounter."
     );
 }

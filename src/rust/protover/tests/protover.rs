@@ -3,10 +3,10 @@
 
 extern crate protover;
 
+use protover::errors::ProtoverError;
 use protover::ProtoEntry;
 use protover::ProtoverVote;
 use protover::UnvalidatedProtoEntry;
-use protover::errors::ProtoverError;
 
 #[test]
 fn parse_protocol_with_single_proto_and_single_version() {
@@ -179,14 +179,16 @@ fn protover_compute_vote_returns_two_protocols_for_two_matching() {
 
 #[test]
 fn protover_compute_vote_returns_one_protocol_when_one_out_of_two_matches() {
-    let protocols: &[UnvalidatedProtoEntry] = &["Cons=1 Link=2".parse().unwrap(), "Cons=1".parse().unwrap()];
+    let protocols: &[UnvalidatedProtoEntry] =
+        &["Cons=1 Link=2".parse().unwrap(), "Cons=1".parse().unwrap()];
     let listed = ProtoverVote::compute(protocols, &2);
     assert_eq!("Cons=1", listed.to_string());
 }
 
 #[test]
 fn protover_compute_vote_returns_protocols_that_it_doesnt_currently_support() {
-    let protocols: &[UnvalidatedProtoEntry] = &["Foo=1 Cons=2".parse().unwrap(), "Bar=1".parse().unwrap()];
+    let protocols: &[UnvalidatedProtoEntry] =
+        &["Foo=1 Cons=2".parse().unwrap(), "Bar=1".parse().unwrap()];
     let listed = ProtoverVote::compute(protocols, &1);
     assert_eq!("Bar=1 Cons=2 Foo=1", listed.to_string());
 }
@@ -222,10 +224,12 @@ fn protover_compute_vote_returns_matching_for_longer_mix_with_threshold_two() {
 
 #[test]
 fn protover_compute_vote_handles_duplicated_versions() {
-    let protocols: &[UnvalidatedProtoEntry] = &["Cons=1".parse().unwrap(), "Cons=1".parse().unwrap()];
+    let protocols: &[UnvalidatedProtoEntry] =
+        &["Cons=1".parse().unwrap(), "Cons=1".parse().unwrap()];
     assert_eq!("Cons=1", ProtoverVote::compute(protocols, &2).to_string());
 
-    let protocols: &[UnvalidatedProtoEntry] = &["Cons=1-2".parse().unwrap(), "Cons=1-2".parse().unwrap()];
+    let protocols: &[UnvalidatedProtoEntry] =
+        &["Cons=1-2".parse().unwrap(), "Cons=1-2".parse().unwrap()];
     assert_eq!("Cons=1-2", ProtoverVote::compute(protocols, &2).to_string());
 }
 
@@ -246,12 +250,18 @@ fn parse_protocol_with_single_protocol_and_two_nonsequential_versions() {
 
 #[test]
 fn protover_is_supported_here_returns_true_for_supported_protocol() {
-    assert_eq!(true, protover::is_supported_here(&protover::Protocol::Cons, &1));
+    assert_eq!(
+        true,
+        protover::is_supported_here(&protover::Protocol::Cons, &1)
+    );
 }
 
 #[test]
 fn protover_is_supported_here_returns_false_for_unsupported_protocol() {
-    assert_eq!(false, protover::is_supported_here(&protover::Protocol::Cons, &5));
+    assert_eq!(
+        false,
+        protover::is_supported_here(&protover::Protocol::Cons, &5)
+    );
 }
 
 #[test]
