@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - When compiling with --enable-openbsd-malloc or --enable-tcmalloc, tell
+      the compiler not to include the system malloc implementation. Fixes bug
+      20424; bugfix on 0.2.0.20-rc.
