@@ -22,7 +22,7 @@ AC_CANONICAL_HOST
 PKG_PROG_PKG_CONFIG
 
 AC_ARG_ENABLE(openbsd-malloc,
-   AS_HELP_STRING(--enable-openbsd-malloc, [use malloc code from OpenBSD.  Linux only]))
+   AS_HELP_STRING(--enable-openbsd-malloc, [use malloc code from OpenBSD.  Linux only. Deprecated: see --with-malloc]))
 AC_ARG_ENABLE(static-openssl,
    AS_HELP_STRING(--enable-static-openssl, [link against a static openssl library. Requires --with-openssl-dir]))
 AC_ARG_ENABLE(static-libevent,
@@ -1788,7 +1788,7 @@ if test "$tor_cv_uint8_uchar" = "no"; then
 fi
 
 AC_ARG_WITH(tcmalloc,
-AS_HELP_STRING(--with-tcmalloc, [use tcmalloc memory allocation library]),
+AS_HELP_STRING(--with-tcmalloc, [use tcmalloc memory allocation library. Deprecated; see --with-malloc]),
 [ tcmalloc=yes ], [ tcmalloc=no ])
 
 default_malloc=system
@@ -1839,6 +1839,7 @@ AS_CASE([$malloc],
   ],
 
   [openbsd], [
+    AC_WARN([The openbsd malloc port is deprecated in Tor 0.3.5 and will be removed in a future version.])
     enable_openbsd_malloc=yes
   ],
 
