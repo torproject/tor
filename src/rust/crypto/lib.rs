@@ -42,5 +42,5 @@ extern crate external;
 #[macro_use]
 extern crate tor_log;
 
-pub mod digests;  // Unfortunately named "digests" plural to avoid name conflict with the digest crate
+pub mod digests; // Unfortunately named "digests" plural to avoid name conflict with the digest crate
 pub mod rand;

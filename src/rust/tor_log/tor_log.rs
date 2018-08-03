@@ -48,12 +48,7 @@ macro_rules! tor_log_msg {
 }
 
 #[inline]
-pub fn tor_log_msg_impl(
-    severity: LogSeverity,
-    domain: LogDomain,
-    function: &str,
-    message: String,
-) {
+pub fn tor_log_msg_impl(severity: LogSeverity, domain: LogDomain, function: &str, message: String) {
     use std::ffi::CString;
 
     /// Default function name to log in case of errors when converting
@@ -63,7 +58,7 @@ pub fn tor_log_msg_impl(
     /// Default message to log in case of errors when converting a log
     /// message to a CString
     const ERR_LOG_MSG: &str = "Unable to log message from Rust \
-            module due to error when converting to CString";
+                               module due to error when converting to CString";
 
     let func = match CString::new(function) {
         Ok(n) => n,
@@ -90,9 +85,9 @@ pub fn tor_log_msg_impl(
 /// testing.
 #[cfg(not(test))]
 pub mod log {
-    use libc::{c_char, c_int};
     use super::LogDomain;
     use super::LogSeverity;
+    use libc::{c_char, c_int};
 
     /// Severity log types. These mirror definitions in /src/common/torlog.h
     /// C_RUST_COUPLED: src/common/log.c, log domain types
@@ -144,9 +139,9 @@ pub mod log {
 /// without linking to C.
 #[cfg(test)]
 pub mod log {
-    use libc::{c_char, c_int};
     use super::LogDomain;
     use super::LogSeverity;
+    use libc::{c_char, c_int};
 
     pub static mut LAST_LOGGED_FUNCTION: *mut String = 0 as *mut String;
     pub static mut LAST_LOGGED_MESSAGE: *mut String = 0 as *mut String;
@@ -185,8 +180,8 @@ pub mod log {
 
 #[cfg(test)]
 mod test {
-    use tor_log::*;
     use tor_log::log::{LAST_LOGGED_FUNCTION, LAST_LOGGED_MESSAGE};
+    use tor_log::*;
 
     #[test]
     fn test_get_log_message() {
@@ -198,7 +193,7 @@ mod test {
                     "test_macro",
                     "test log message {}",
                     "a",
-                    );
+                );
             }
 
             test_macro();
@@ -244,21 +239,21 @@ mod test {
                     "test_macro",
                     "{}",
                     "All the world's a stage, and all the men and women \
-                    merely players: they have their exits and their \
-                    entrances; and one man in his time plays many parts, his \
-                    acts being seven ages."
+                     merely players: they have their exits and their \
+                     entrances; and one man in his time plays many parts, his \
+                     acts being seven ages."
                 );
             }
 
             test_macro();
 
             let expected_string = "All the world's a \
-                stage, and all the men \
-                and women merely players: \
-                they have their exits and \
-                their entrances; and one man \
-                in his time plays many parts, \
-                his acts being seven ages.";
+                                   stage, and all the men \
+                                   and women merely players: \
+                                   they have their exits and \
+                                   their entrances; and one man \
+                                   in his time plays many parts, \
+                                   his acts being seven ages.";
 
             let function = unsafe { Box::from_raw(LAST_LOGGED_FUNCTION) };
             assert_eq!("test_macro", *function);
