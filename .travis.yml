@@ -157,6 +157,8 @@ install:
   - if [[ "$RUST_OPTIONS" != "" ]]; then cargo --version; fi
   ## If we're testing rust builds in offline-mode, then set up our vendored dependencies
   - if [[ "$TOR_RUST_DEPENDENCIES" == "true" ]]; then export TOR_RUST_DEPENDENCIES=$PWD/src/ext/rust/crates; fi
+  ## Install rustfmt
+  - if [[ "$RUST_OPTIONS" != "" ]]; then rustup component add rustfmt-preview; fi
 
 script:
   - ./autogen.sh

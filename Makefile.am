@@ -203,7 +203,7 @@ doxygen:
 test: all
 	$(top_builddir)/src/test/test
 
-check-local: check-spaces check-changes check-includes
+check-local: check-changes check-includes check-rustfmt check-spaces
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
