@@ -22,7 +22,8 @@
 //! protocols to develop independently, without having to claim compatibility
 //! with specific versions of Tor.
 
-#[deny(missing_docs)]
+// XXX: add missing docs
+//#![deny(missing_docs)]
 
 extern crate libc;
 extern crate smartlist;
