@@ -136,6 +136,8 @@ static int connection_ap_process_natd(entry_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int consider_plaintext_ports(entry_connection_t *conn, uint16_t port);
 static int connection_ap_supports_optimistic_data(const entry_connection_t *);
+static void connection_half_edge_add(edge_connection_t *conn,
+                                     origin_circuit_t *circ);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -430,6 +432,12 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   if (circ && !circ->marked_for_close) {
     log_debug(LD_EDGE,"Sending end on conn (fd "TOR_SOCKET_T_FORMAT").",
               conn->base_.s);
+
+    if (CIRCUIT_IS_ORIGIN(circ)) {
+      origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+      connection_half_edge_add(conn, origin_circ);
+    }
+
     connection_edge_send_command(conn, RELAY_COMMAND_END,
                                  payload, payload_len);
     /* We'll log warn if the connection was an hidden service and couldn't be
@@ -443,6 +451,122 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
 
   conn->edge_has_sent_end = 1;
   conn->end_reason = control_reason;
+  return 0;
+}
+
+/**
+ * Add a half-closed connection to the list, to watch for activity.
+ *
+ * These connections are removed from the list upon receiving an end
+ * cell.
+ */
+static void
+connection_half_edge_add(edge_connection_t *conn,
+                         origin_circuit_t *circ)
+{
+  half_edge_t *half_conn = tor_malloc_zero(sizeof(half_edge_t));
+
+  if (!circ->half_streams) {
+    circ->half_streams = smartlist_new();
+  }
+
+  half_conn->stream_id = conn->stream_id;
+
+  // How many sendme's should I expect?
+  half_conn->sendmes_pending =
+   (STREAMWINDOW_START-conn->package_window)/STREAMWINDOW_INCREMENT;
+
+  // How many more data cells can arrive on this id?
+  half_conn->data_pending = conn->deliver_window;
+
+  smartlist_add(circ->half_streams, half_conn);
+}
+
+/**
+ * Check if this stream_id is in a half-closed state. If so,
+ * check if it still has data cells pending, and decrement that
+ * window if so.
+ *
+ * Return 1 if the data window was not empty.
+ * Return 0 otherwise.
+ */
+int
+connection_half_edge_is_valid_data(smartlist_t *half_conns,
+                                   streamid_t stream_id)
+{
+  if (!half_conns)
+    return 0;
+
+  SMARTLIST_FOREACH_BEGIN(half_conns, half_edge_t *, half_conn) {
+    if (half_conn->stream_id == stream_id) {
+      if (half_conn->data_pending > 0) {
+        half_conn->data_pending--;
+        return 1;
+      } else {
+        return 0;
+      }
+    }
+  } SMARTLIST_FOREACH_END(half_conn);
+
+  return 0;
+}
+
+/**
+ * Check if this stream_id is in a half-closed state. If so, remove
+ * it from the list. No other data should come after the END cell.
+ *
+ * Return 1 if stream_id was in half-closed state.
+ * Return 0 otherwise.
+ */
+int
+connection_half_edge_is_valid_end(smartlist_t *half_conns,
+                                  streamid_t stream_id)
+{
+  half_edge_t *found_half = NULL;
+  if (!half_conns)
+    return 0;
+
+  SMARTLIST_FOREACH_BEGIN(half_conns, half_edge_t *, half_conn) {
+    if (half_conn->stream_id == stream_id) {
+      found_half = half_conn;
+    }
+  } SMARTLIST_FOREACH_END(half_conn);
+
+  if (found_half) {
+    smartlist_remove(half_conns, found_half);
+    tor_free(found_half);
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
+ * Check if this stream_id is in a half-closed state. If so,
+ * check if it still has sendme cells pending, and decrement that
+ * window if so.
+ *
+ * Return 1 if the sendme window was not empty.
+ * Return 0 otherwise.
+ */
+int
+connection_half_edge_is_valid_sendme(smartlist_t *half_conns,
+                                     streamid_t stream_id)
+{
+  if (!half_conns)
+    return 0;
+
+  SMARTLIST_FOREACH_BEGIN(half_conns, half_edge_t *, half_conn) {
+    if (half_conn->stream_id == stream_id) {
+      if (half_conn->sendmes_pending > 0) {
+        half_conn->sendmes_pending--;
+        return 1;
+      } else {
+        return 0;
+      }
+    }
+  } SMARTLIST_FOREACH_END(half_conn);
+
   return 0;
 }
 
