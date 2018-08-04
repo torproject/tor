@@ -1041,6 +1041,14 @@ circuit_free_(circuit_t *circ)
 
     circuit_remove_from_origin_circuit_list(ocirc);
 
+    if (ocirc->half_streams) {
+      SMARTLIST_FOREACH_BEGIN(ocirc->half_streams, half_edge_t*,
+                              half_conn) {
+          tor_free(half_conn);
+      } SMARTLIST_FOREACH_END(half_conn);
+      smartlist_free(ocirc->half_streams);
+    }
+
     if (ocirc->build_state) {
         extend_info_free(ocirc->build_state->chosen_exit);
         circuit_free_cpath_node(ocirc->build_state->pending_final_cpath);

@@ -1545,6 +1545,15 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "stream_id. Dropping.");
         return 0;
       } else if (!conn) {
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+          if (connection_half_edge_is_valid_data(ocirc->half_streams,
+                                                 rh.stream_id)) {
+            circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
+            log_info(domain,"data cell valid on half-closed stream.");
+          }
+        }
+
         log_info(domain,"data cell dropped, unknown stream (streamid %d).",
                  rh.stream_id);
         return 0;
@@ -1586,6 +1595,18 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       reason = rh.length > 0 ?
         get_uint8(cell->payload+RELAY_HEADER_SIZE) : END_STREAM_REASON_MISC;
       if (!conn) {
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+          if (connection_half_edge_is_valid_end(ocirc->half_streams,
+                                                rh.stream_id)) {
+
+            circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
+            log_info(domain,"end cell (%s) valid on half-closed stream.",
+                     stream_end_reason_to_string(reason));
+
+            return 0;
+          }
+        }
         log_info(domain,"end cell (%s) dropped, unknown stream.",
                  stream_end_reason_to_string(reason));
         return 0;
@@ -1730,6 +1751,17 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "'connected' unsupported while open. Closing circ.");
         return -END_CIRC_REASON_TORPROTOCOL;
       }
+
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+        if (connection_half_edge_is_valid_connected(ocirc->half_streams,
+                                                    rh.stream_id)) {
+          circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
+          log_info(domain,"connected cell valid on half-closed stream.");
+          return 0;
+        }
+      }
+
       log_info(domain,
                "'connected' received on circid %u for streamid %d, "
                "no conn attached anymore. Ignoring.",
@@ -1778,6 +1810,15 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
       if (!conn) {
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+          if (connection_half_edge_is_valid_sendme(ocirc->half_streams,
+                                                   rh.stream_id)) {
+            circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
+            log_info(domain,"sendme cell valid on half-closed stream.");
+          }
+        }
+
         log_info(domain,"sendme cell dropped, unknown stream (streamid %d).",
                  rh.stream_id);
         return 0;
@@ -1841,6 +1882,17 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "'resolved' unsupported while open. Closing circ.");
         return -END_CIRC_REASON_TORPROTOCOL;
       }
+
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+        if (connection_half_edge_is_valid_resolved(ocirc->half_streams,
+                                                    rh.stream_id)) {
+          circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
+          log_info(domain,"resolved cell valid on half-closed stream.");
+          return 0;
+        }
+      }
+
       log_info(domain,
                "'resolved' received, no conn attached anymore. Ignoring.");
       return 0;
