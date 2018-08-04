@@ -1839,7 +1839,7 @@ AS_CASE([$malloc],
   ],
 
   [openbsd], [
-    AC_WARN([The openbsd malloc port is deprecated in Tor 0.3.5 and will be removed in a future version.])
+    AC_MSG_WARN([The openbsd malloc port is deprecated in Tor 0.3.5 and will be removed in a future version.])
     enable_openbsd_malloc=yes
   ],
 
