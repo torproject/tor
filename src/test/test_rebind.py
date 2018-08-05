@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from __future__ import print_function
 
 import sys
@@ -18,14 +20,14 @@ def try_connecting_to_socksport():
 def wait_for_log(s):
     while True:
         l = tor_process.stdout.readline()
-        if s in l:
+        if s in l.decode('utf8'):
             return
 
 def pick_random_port():
     port = 0
     random.seed()
 
-    for i in xrange(8):
+    for i in range(8):
         port = random.randint(10000, 60000)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if s.connect_ex(('127.0.0.1', port)) == 0:
@@ -69,18 +71,18 @@ if control_socket.connect_ex(('127.0.0.1', control_port)):
     print('FAIL')
     sys.exit('Cannot connect to ControlPort')
 
-control_socket.sendall('AUTHENTICATE \r\n')
-control_socket.sendall('SETCONF SOCKSPort=0.0.0.0:{}\r\n'.format(socks_port))
+control_socket.sendall('AUTHENTICATE \r\n'.encode('utf8'))
+control_socket.sendall('SETCONF SOCKSPort=0.0.0.0:{}\r\n'.format(socks_port).encode('utf8'))
 wait_for_log('Opened Socks listener')
 
 try_connecting_to_socksport()
 
-control_socket.sendall('SETCONF SOCKSPort=127.0.0.1:{}\r\n'.format(socks_port))
+control_socket.sendall('SETCONF SOCKSPort=127.0.0.1:{}\r\n'.format(socks_port).encode('utf8'))
 wait_for_log('Opened Socks listener')
 
 try_connecting_to_socksport()
 
-control_socket.sendall('SIGNAL HALT\r\n')
+control_socket.sendall('SIGNAL HALT\r\n'.encode('utf8'))
 
 time.sleep(0.1)
 print('OK')
