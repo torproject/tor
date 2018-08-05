@@ -119,6 +119,24 @@ mock_start_reading(connection_t *conn)
   return;
 }
 
+static entry_connection_t *
+fake_entry_conn(origin_circuit_t *oncirc, streamid_t id)
+{
+  edge_connection_t *edgeconn;
+  entry_connection_t *entryconn;
+
+  entryconn = entry_connection_new(CONN_TYPE_AP, AF_INET);
+  edgeconn = ENTRY_TO_EDGE_CONN(entryconn);
+  edgeconn->base_.state = AP_CONN_STATE_CONNECT_WAIT;
+  edgeconn->deliver_window = STREAMWINDOW_START;
+  edgeconn->package_window = STREAMWINDOW_START;
+
+  edgeconn->stream_id = id;
+  edgeconn->cpath_layer = oncirc->cpath;
+
+  return entryconn;
+}
+
 static void
 test_circbw_relay(void *arg)
 {
@@ -126,7 +144,9 @@ test_circbw_relay(void *arg)
   relay_header_t rh;
   tor_addr_t addr;
   edge_connection_t *edgeconn;
-  entry_connection_t *entryconn;
+  entry_connection_t *entryconn1=NULL;
+  entry_connection_t *entryconn2=NULL;
+  entry_connection_t *entryconn3=NULL;
   origin_circuit_t *circ;
   int delivered = 0;
   int overhead = 0;
@@ -158,14 +178,12 @@ test_circbw_relay(void *arg)
   MOCK(connection_start_reading, mock_start_reading);
   MOCK(connection_mark_for_close_internal_, mock_mark_for_close);
 
-  entryconn = entry_connection_new(CONN_TYPE_AP, AF_INET);
-  edgeconn = ENTRY_TO_EDGE_CONN(entryconn);
-  edgeconn->base_.state = AP_CONN_STATE_CONNECT_WAIT;
-  edgeconn->deliver_window = 1000;
   circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_C_GENERAL, 0);
-  edgeconn->cpath_layer = circ->cpath;
   circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
-  circ->cpath->deliver_window = 1000;
+  circ->cpath->deliver_window = CIRCWINDOW_START;
+
+  entryconn1 = fake_entry_conn(circ, 1);
+  edgeconn = ENTRY_TO_EDGE_CONN(entryconn1);
 
   /* Stream id 0: Not counted */
   PACK_CELL(0, RELAY_COMMAND_END, "Data1234");
@@ -191,7 +209,7 @@ test_circbw_relay(void *arg)
 
   /* Properly formatted resolved cell in correct state: counted */
   edgeconn->base_.state = AP_CONN_STATE_RESOLVE_WAIT;
-  entryconn->socks_request->command = SOCKS_COMMAND_RESOLVE;
+  entryconn1->socks_request->command = SOCKS_COMMAND_RESOLVE;
   edgeconn->on_circuit = TO_CIRCUIT(circ);
   PACK_CELL(1, RELAY_COMMAND_RESOLVED,
             "\x04\x04\x12\x00\x00\x01\x00\x00\x02\x00");
@@ -200,7 +218,7 @@ test_circbw_relay(void *arg)
   ASSERT_COUNTED_BW();
 
   edgeconn->base_.state = AP_CONN_STATE_OPEN;
-  entryconn->socks_request->has_finished = 1;
+  entryconn1->socks_request->has_finished = 1;
 
   /* Connected cell after open: not counted */
   PACK_CELL(1, RELAY_COMMAND_CONNECTED, "Data1234");
@@ -227,36 +245,37 @@ test_circbw_relay(void *arg)
   ASSERT_UNCOUNTED_BW();
 
   /* Data cell on open connection: counted */
-  ENTRY_TO_CONN(entryconn)->marked_for_close = 0;
+  ENTRY_TO_CONN(entryconn1)->marked_for_close = 0;
   PACK_CELL(1, RELAY_COMMAND_DATA, "Data1234");
   connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
                                      circ->cpath);
   ASSERT_COUNTED_BW();
 
   /* Empty Data cell on open connection: not counted */
-  ENTRY_TO_CONN(entryconn)->marked_for_close = 0;
+  ENTRY_TO_CONN(entryconn1)->marked_for_close = 0;
   PACK_CELL(1, RELAY_COMMAND_DATA, "");
   connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
                                      circ->cpath);
   ASSERT_UNCOUNTED_BW();
 
   /* Sendme on valid stream: counted */
-  ENTRY_TO_CONN(entryconn)->outbuf_flushlen = 0;
+  edgeconn->package_window -= STREAMWINDOW_INCREMENT;
+  ENTRY_TO_CONN(entryconn1)->outbuf_flushlen = 0;
   PACK_CELL(1, RELAY_COMMAND_SENDME, "Data1234");
   connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
                                      circ->cpath);
   ASSERT_COUNTED_BW();
 
   /* Sendme on valid stream with full window: not counted */
-  ENTRY_TO_CONN(entryconn)->outbuf_flushlen = 0;
+  ENTRY_TO_CONN(entryconn1)->outbuf_flushlen = 0;
   PACK_CELL(1, RELAY_COMMAND_SENDME, "Data1234");
-  edgeconn->package_window = 500;
+  edgeconn->package_window = STREAMWINDOW_START;
   connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
                                      circ->cpath);
   ASSERT_UNCOUNTED_BW();
 
   /* Sendme on unknown stream: not counted */
-  ENTRY_TO_CONN(entryconn)->outbuf_flushlen = 0;
+  ENTRY_TO_CONN(entryconn1)->outbuf_flushlen = 0;
   PACK_CELL(1, RELAY_COMMAND_SENDME, "Data1234");
   connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -274,18 +293,6 @@ test_circbw_relay(void *arg)
   connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
                                      circ->cpath);
   ASSERT_COUNTED_BW();
-
-  /* End cell on non-closed connection: counted */
-  PACK_CELL(1, RELAY_COMMAND_END, "Data1234");
-  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
-                                     circ->cpath);
-  ASSERT_COUNTED_BW();
-
-  /* End cell on connection that already got one: not counted */
-  PACK_CELL(1, RELAY_COMMAND_END, "Data1234");
-  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
-                                     circ->cpath);
-  ASSERT_UNCOUNTED_BW();
 
   /* Invalid extended cell: not counted */
   PACK_CELL(1, RELAY_COMMAND_EXTENDED2, "Data1234");
@@ -312,12 +319,115 @@ test_circbw_relay(void *arg)
                                      circ->cpath);
   ASSERT_COUNTED_BW();
 
+  /* End cell on non-closed connection: counted */
+  PACK_CELL(1, RELAY_COMMAND_END, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  ASSERT_COUNTED_BW();
+
+  /* End cell on connection that already got one: not counted */
+  PACK_CELL(1, RELAY_COMMAND_END, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
+                                     circ->cpath);
+  ASSERT_UNCOUNTED_BW();
+
+  /* Simulate closed stream on entryconn, then test: */
+
+  /* Make two new entryconns */
+  entryconn2 = fake_entry_conn(circ, 2);
+  entryconn2->socks_request->has_finished = 1;
+  entryconn3 = fake_entry_conn(circ, 3);
+  entryconn3->socks_request->has_finished = 1;
+  edgeconn = ENTRY_TO_EDGE_CONN(entryconn2);
+  edgeconn->package_window = 23;
+  edgeconn->base_.state = AP_CONN_STATE_OPEN;
+
+  int data_cells = edgeconn->deliver_window;
+  int sendme_cells = (STREAMWINDOW_START-edgeconn->package_window)
+                             /STREAMWINDOW_INCREMENT;
+  connection_edge_end(edgeconn, 0);
+
+  /* DATA cells up to limit */
+  while (data_cells > 0) {
+    ENTRY_TO_CONN(entryconn2)->marked_for_close = 0;
+    ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
+    PACK_CELL(2, RELAY_COMMAND_DATA, "Data1234");
+    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                       circ->cpath);
+    ASSERT_COUNTED_BW();
+    data_cells--;
+  }
+  ENTRY_TO_CONN(entryconn2)->marked_for_close = 0;
+  ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
+  PACK_CELL(2, RELAY_COMMAND_DATA, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  ASSERT_UNCOUNTED_BW();
+
+  /* SENDME cells up to limit */
+  while (sendme_cells > 0) {
+    ENTRY_TO_CONN(entryconn2)->marked_for_close = 0;
+    ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
+    PACK_CELL(2, RELAY_COMMAND_SENDME, "Data1234");
+    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                       circ->cpath);
+    ASSERT_COUNTED_BW();
+    sendme_cells--;
+  }
+  ENTRY_TO_CONN(entryconn2)->marked_for_close = 0;
+  ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
+  PACK_CELL(2, RELAY_COMMAND_SENDME, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  ASSERT_UNCOUNTED_BW();
+
+  /* Only one END cell */
+  PACK_CELL(1, RELAY_COMMAND_END, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  ASSERT_COUNTED_BW();
+
+  PACK_CELL(1, RELAY_COMMAND_END, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  ASSERT_COUNTED_BW();
+
+  edgeconn = ENTRY_TO_EDGE_CONN(entryconn3);
+  edgeconn->base_.state = AP_CONN_STATE_OPEN;
+  /* sendme cell on open entryconn with full window */
+  PACK_CELL(3, RELAY_COMMAND_SENDME, "Data1234");
+  int ret =
+    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  tt_int_op(ret, OP_EQ, -END_CIRC_REASON_TORPROTOCOL);
+  ASSERT_UNCOUNTED_BW();
+
+  /* DATA and SENDME after END cell */
+  PACK_CELL(1, RELAY_COMMAND_END, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  ASSERT_COUNTED_BW();
+
+  PACK_CELL(3, RELAY_COMMAND_SENDME, "Data1234");
+  ret =
+    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  tt_int_op(ret, OP_NE, -END_CIRC_REASON_TORPROTOCOL);
+  ASSERT_UNCOUNTED_BW();
+
+  PACK_CELL(3, RELAY_COMMAND_DATA, "Data1234");
+    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+                                     circ->cpath);
+  ASSERT_UNCOUNTED_BW();
+
  done:
   UNMOCK(connection_start_reading);
   UNMOCK(connection_mark_unattached_ap_);
   UNMOCK(connection_mark_for_close_internal_);
   circuit_free_(TO_CIRCUIT(circ));
-  connection_free_minimal(ENTRY_TO_CONN(entryconn));
+  connection_free_minimal(ENTRY_TO_CONN(entryconn1));
+  connection_free_minimal(ENTRY_TO_CONN(entryconn2));
+  connection_free_minimal(ENTRY_TO_CONN(entryconn3));
 }
 
 /* Tests for connection_edge_process_resolved_cell().
