@@ -893,6 +893,7 @@ pathbias_check_probe_response(circuit_t *circ, const cell_t *cell)
     /* Check nonce */
     if (ipv4_host == ocirc->pathbias_probe_nonce) {
       pathbias_mark_use_success(ocirc);
+      circuit_read_valid_data(ocirc, rh.length);
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
       log_info(LD_CIRC,
                "Got valid path bias probe back for circ %d, stream %d.",
