@@ -132,6 +132,7 @@ fake_entry_conn(origin_circuit_t *oncirc, streamid_t id)
   edgeconn->package_window = STREAMWINDOW_START;
 
   edgeconn->stream_id = id;
+  edgeconn->on_circuit = TO_CIRCUIT(oncirc);
   edgeconn->cpath_layer = oncirc->cpath;
 
   return entryconn;
@@ -239,7 +240,7 @@ test_circbw_relay(void *arg)
   ASSERT_UNCOUNTED_BW();
 
   /* Data cell on stream 0: not counted */
-  PACK_CELL(1, RELAY_COMMAND_DATA, "Data1234");
+  PACK_CELL(0, RELAY_COMMAND_DATA, "Data1234");
   connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
                                      circ->cpath);
   ASSERT_UNCOUNTED_BW();
@@ -345,14 +346,30 @@ test_circbw_relay(void *arg)
   int data_cells = edgeconn->deliver_window;
   int sendme_cells = (STREAMWINDOW_START-edgeconn->package_window)
                              /STREAMWINDOW_INCREMENT;
-  connection_edge_end(edgeconn, 0);
+  connection_edge_reached_eof(edgeconn);
+
+  /* Data cell not in the half-opened list */
+  ENTRY_TO_CONN(entryconn2)->marked_for_close = 0;
+  ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
+  PACK_CELL(4, RELAY_COMMAND_DATA, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
+                                     circ->cpath);
+  ASSERT_UNCOUNTED_BW();
+
+  /* Sendme cell not in the half-opened list */
+  ENTRY_TO_CONN(entryconn2)->marked_for_close = 0;
+  ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
+  PACK_CELL(4, RELAY_COMMAND_SENDME, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
+                                     circ->cpath);
+  ASSERT_UNCOUNTED_BW();
 
   /* DATA cells up to limit */
   while (data_cells > 0) {
     ENTRY_TO_CONN(entryconn2)->marked_for_close = 0;
     ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
     PACK_CELL(2, RELAY_COMMAND_DATA, "Data1234");
-    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                        circ->cpath);
     ASSERT_COUNTED_BW();
     data_cells--;
@@ -360,7 +377,7 @@ test_circbw_relay(void *arg)
   ENTRY_TO_CONN(entryconn2)->marked_for_close = 0;
   ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
   PACK_CELL(2, RELAY_COMMAND_DATA, "Data1234");
-  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
   ASSERT_UNCOUNTED_BW();
 
@@ -369,7 +386,7 @@ test_circbw_relay(void *arg)
     ENTRY_TO_CONN(entryconn2)->marked_for_close = 0;
     ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
     PACK_CELL(2, RELAY_COMMAND_SENDME, "Data1234");
-    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                        circ->cpath);
     ASSERT_COUNTED_BW();
     sendme_cells--;
@@ -377,20 +394,20 @@ test_circbw_relay(void *arg)
   ENTRY_TO_CONN(entryconn2)->marked_for_close = 0;
   ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
   PACK_CELL(2, RELAY_COMMAND_SENDME, "Data1234");
-  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
   ASSERT_UNCOUNTED_BW();
 
   /* Only one END cell */
-  PACK_CELL(1, RELAY_COMMAND_END, "Data1234");
-  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+  PACK_CELL(2, RELAY_COMMAND_END, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
   ASSERT_COUNTED_BW();
 
-  PACK_CELL(1, RELAY_COMMAND_END, "Data1234");
-  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+  PACK_CELL(2, RELAY_COMMAND_END, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
-  ASSERT_COUNTED_BW();
+  ASSERT_UNCOUNTED_BW();
 
   edgeconn = ENTRY_TO_EDGE_CONN(entryconn3);
   edgeconn->base_.state = AP_CONN_STATE_OPEN;
@@ -403,20 +420,21 @@ test_circbw_relay(void *arg)
   ASSERT_UNCOUNTED_BW();
 
   /* DATA and SENDME after END cell */
-  PACK_CELL(1, RELAY_COMMAND_END, "Data1234");
-  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+  connection_edge_reached_eof(edgeconn);
+  PACK_CELL(3, RELAY_COMMAND_END, "Data1234");
+  connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ),  NULL,
                                      circ->cpath);
   ASSERT_COUNTED_BW();
 
   PACK_CELL(3, RELAY_COMMAND_SENDME, "Data1234");
   ret =
-    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
   tt_int_op(ret, OP_NE, -END_CIRC_REASON_TORPROTOCOL);
   ASSERT_UNCOUNTED_BW();
 
   PACK_CELL(3, RELAY_COMMAND_DATA, "Data1234");
-    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
+    connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
   ASSERT_UNCOUNTED_BW();
 
