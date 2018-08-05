@@ -239,7 +239,9 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
     edge_connection_t *conn = NULL;
 
     if (circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING) {
-      pathbias_check_probe_response(circ, cell);
+      if (pathbias_check_probe_response(circ, cell) == -1) {
+        pathbias_count_valid_cells(circ, cell);
+      }
 
       /* We need to drop this cell no matter what to avoid code that expects
        * a certain purpose (such as the hidserv code). */
