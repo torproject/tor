@@ -2767,6 +2767,15 @@ get_unique_stream_id_by_circ(origin_circuit_t *circ)
   for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
     if (tmpconn->stream_id == test_stream_id)
       goto again;
+
+  if (circ->half_streams) {
+    SMARTLIST_FOREACH_BEGIN(circ->half_streams, half_edge_t *, half_conn) {
+      if (half_conn->stream_id == test_stream_id) {
+        goto again;
+      }
+    } SMARTLIST_FOREACH_END(half_conn);
+  }
+
   return test_stream_id;
 }
 
