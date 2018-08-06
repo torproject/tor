@@ -5745,6 +5745,72 @@ test_config_compute_max_mem_in_queues(void *data)
 #undef MEGABYTE
 }
 
+static void
+test_config_extended_fmt(void *arg)
+{
+  (void)arg;
+  config_line_t *lines = NULL, *lp;
+  const char string1[] =
+    "thing1 is here\n"
+    "+thing2 is over here\n"
+    "/thing3\n"
+    "/thing4 is back here\n";
+
+  /* Try with the "extended" flag disabled. */
+  int r = config_get_lines(string1, &lines, 0);
+  tt_int_op(r, OP_EQ, 0);
+  lp = lines;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "thing1");
+  tt_str_op(lp->value, OP_EQ, "is here");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_NORMAL);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "+thing2");
+  tt_str_op(lp->value, OP_EQ, "is over here");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_NORMAL);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "/thing3");
+  tt_str_op(lp->value, OP_EQ, "");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_NORMAL);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "/thing4");
+  tt_str_op(lp->value, OP_EQ, "is back here");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_NORMAL);
+  lp = lp->next;
+  config_free_lines(lines);
+
+  /* Try with the "extended" flag enabled. */
+  r = config_get_lines(string1, &lines, 1);
+  tt_int_op(r, OP_EQ, 0);
+  lp = lines;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "thing1");
+  tt_str_op(lp->value, OP_EQ, "is here");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_NORMAL);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "thing2");
+  tt_str_op(lp->value, OP_EQ, "is over here");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_APPEND);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "thing3");
+  tt_str_op(lp->value, OP_EQ, "");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_CLEAR);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "thing4");
+  tt_str_op(lp->value, OP_EQ, "");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_CLEAR);
+  lp = lp->next;
+
+ done:
+  config_free_lines(lines);
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -5795,5 +5861,6 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(check_bridge_distribution_setting_unrecognised, 0),
   CONFIG_TEST(include_opened_file_list, 0),
   CONFIG_TEST(compute_max_mem_in_queues, 0),
+  CONFIG_TEST(extended_fmt, 0),
   END_OF_TESTCASES
 };
