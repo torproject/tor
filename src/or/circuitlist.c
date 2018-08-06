@@ -625,7 +625,7 @@ circuit_any_opened_circuits(void)
         TO_CIRCUIT(next_circ)->state == CIRCUIT_STATE_OPEN &&
         TO_CIRCUIT(next_circ)->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT &&
         next_circ->build_state &&
-        next_circ->build_state->desired_path_len == DEFAULT_ROUTE_LEN) {
+        next_circ->build_state->desired_path_len >= DEFAULT_ROUTE_LEN) {
       circuit_cache_opened_circuit_state(1);
       return 1;
     }
