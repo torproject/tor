@@ -922,6 +922,32 @@ test_util_time(void *arg)
       teardown_capture_of_logs();
     }
   }
+  {
+    /* As above, but with localtime. */
+    t_res = -9223372036854775LL;
+    tor_localtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (1970-1900) ||
+              b_time.tm_year == (1-1900));
+
+    /* while unlikely, the system's gmtime(_r) could return
+     * a "correct" retrospective gregorian negative year value,
+     * which I'm pretty sure is:
+     * -1*(2^63)/60/60/24*2000/730485 + 1970 = -292277022657
+     * 730485 is the number of days in two millennia, including leap days
+     * (int64_t)b_time.tm_year == (-292277022657LL-1900LL) without clamping */
+    t_res = INT64_MIN;
+    CAPTURE();
+    tor_localtime_r(&t_res, &b_time);
+    if (! (b_time.tm_year == (1970-1900) ||
+           b_time.tm_year == (1-1900))) {
+      tt_int_op(b_time.tm_year, OP_EQ, 1970-1900);
+    }
+    if (b_time.tm_year != 1970-1900) {
+      CHECK_TIMEGM_WARNING("Rounding up to ");
+    } else {
+      teardown_capture_of_logs();
+    }
+  }
 #endif /* SIZEOF_TIME_T == 8 */
 
   /* time_t >= INT_MAX yields a year clamped to 2037 or 9999,
@@ -935,6 +961,17 @@ test_util_time(void *arg)
 
     t_res = INT32_MAX;
     tor_gmtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (2038-1900));
+  }
+  {
+    /* as above but with localtime. */
+    t_res = 3*(1 << 29);
+    tor_localtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2021-1900));
+
+    t_res = INT32_MAX;
+    tor_localtime_r(&t_res, &b_time);
     tt_assert(b_time.tm_year == (2037-1900) ||
               b_time.tm_year == (2038-1900));
   }
@@ -958,6 +995,27 @@ test_util_time(void *arg)
     t_res = INT64_MAX;
     CAPTURE();
     tor_gmtime_r(&t_res, &b_time);
+    CHECK_TIMEGM_WARNING("Rounding down to ");
+
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (9999-1900));
+  }
+  {
+    /* As above but with localtime. */
+    t_res = 9223372036854775LL;
+    tor_localtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (9999-1900));
+
+    /* while unlikely, the system's gmtime(_r) could return
+     * a "correct" proleptic gregorian year value,
+     * which I'm pretty sure is:
+     * (2^63-1)/60/60/24*2000/730485 + 1970 = 292277026596
+     * 730485 is the number of days in two millennia, including leap days
+     * (int64_t)b_time.tm_year == (292277026596L-1900L) without clamping */
+    t_res = INT64_MAX;
+    CAPTURE();
+    tor_localtime_r(&t_res, &b_time);
     CHECK_TIMEGM_WARNING("Rounding down to ");
 
     tt_assert(b_time.tm_year == (2037-1900) ||
