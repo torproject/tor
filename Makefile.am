@@ -350,6 +350,37 @@ check-typos:
 		echo "You can install the latest version of misspell here: https://github.com/client9/misspell#install"; \
 	fi
 
+.PHONY: rustfmt
+rustfmt:
+if USE_RUST
+	@if test -x "`which cargo-fmt 2>&1;true`"; then \
+		echo "Formatting Rust code ..."; \
+		(cd "$(top_srcdir)/src/rust" && cargo fmt --all --); \
+	else \
+		echo "Tor uses rustfmt (via cargo-fmt) to format Rust code."; \
+		echo "However, it seems that you don't have rustfmt installed."; \
+		printf "You can install rustfmt by following the directions here:"; \
+		echo " https://github.com/rust-lang-nursery/rustfmt"; \
+	fi
+endif
+
+.PHONY: check-rustfmt
+check-rustfmt:
+if USE_RUST
+	@if test -x "`which cargo-fmt 2>&1;true`"; then \
+		printf "Running rustfmt..."; \
+		(cd "$(top_srcdir)/src/rust" && cargo fmt --all -- --check && echo "done.") || \
+		(echo "**************** check-rustfmt failed. ****************"; \
+		 echo "   Run \`make rustfmt\` to apply the above changes."; \
+		 exit 1); \
+	else \
+		echo "Tor uses rustfmt (via cargo-fmt) to format Rust code."; \
+		echo "However, it seems that you don't have rustfmt installed."; \
+		printf "You can install rustfmt by following the directions here:"; \
+		echo " https://github.com/rust-lang-nursery/rustfmt"; \
+	fi
+endif
+
 .PHONY: clippy
 clippy:
 if USE_RUST
