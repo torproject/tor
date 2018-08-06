@@ -124,46 +124,52 @@ test_bwmgt_token_buf_refill(void *arg)
 {
   (void)arg;
   token_bucket_rw_t b;
-  const uint32_t SEC =
+  const uint32_t BW_SEC =
     (uint32_t)monotime_msec_to_approx_coarse_stamp_units(1000);
   token_bucket_rw_init(&b, 16*KB, 64*KB, START_TS);
 
   /* Make the buffer much emptier, then let one second elapse. */
   token_bucket_rw_dec_read(&b, 48*KB);
   tt_int_op(b.read_bucket.bucket, OP_EQ, 16*KB);
-  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC));
+  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + BW_SEC));
   tt_int_op(b.read_bucket.bucket, OP_GT, 32*KB - 300);
   tt_int_op(b.read_bucket.bucket, OP_LT, 32*KB + 300);
 
   /* Another half second. */
-  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*3/2));
+  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + BW_SEC*3/2));
   tt_int_op(b.read_bucket.bucket, OP_GT, 40*KB - 400);
   tt_int_op(b.read_bucket.bucket, OP_LT, 40*KB + 400);
-  tt_uint_op(b.last_refilled_at_timestamp, OP_EQ, START_TS + SEC*3/2);
+  tt_uint_op(b.last_refilled_at_timestamp, OP_EQ, START_TS + BW_SEC*3/2);
 
   /* No time: nothing happens. */
   {
     const uint32_t bucket_orig = b.read_bucket.bucket;
-    tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*3/2));
+    tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + BW_SEC*3/2));
     tt_int_op(b.read_bucket.bucket, OP_EQ, bucket_orig);
   }
 
   /* Another 30 seconds: fill the bucket. */
-  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*3/2 + SEC*30));
+  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b,
+                                     START_TS + BW_SEC*3/2 + BW_SEC*30));
   tt_int_op(b.read_bucket.bucket, OP_EQ, b.cfg.burst);
-  tt_uint_op(b.last_refilled_at_timestamp, OP_EQ, START_TS + SEC*3/2 + SEC*30);
+  tt_uint_op(b.last_refilled_at_timestamp, OP_EQ,
+             START_TS + BW_SEC*3/2 + BW_SEC*30);
 
   /* Another 30 seconds: nothing happens. */
-  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*3/2 + SEC*60));
+  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b,
+                                     START_TS + BW_SEC*3/2 + BW_SEC*60));
   tt_int_op(b.read_bucket.bucket, OP_EQ, b.cfg.burst);
-  tt_uint_op(b.last_refilled_at_timestamp, OP_EQ, START_TS + SEC*3/2 + SEC*60);
+  tt_uint_op(b.last_refilled_at_timestamp, OP_EQ,
+             START_TS + BW_SEC*3/2 + BW_SEC*60);
 
   /* Empty the bucket, let two seconds pass, and make sure that a refill is
    * noticed. */
   tt_int_op(1, OP_EQ, token_bucket_rw_dec_read(&b, b.cfg.burst));
   tt_int_op(0, OP_EQ, b.read_bucket.bucket);
-  tt_int_op(1, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*3/2 + SEC*61));
-  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*3/2 + SEC*62));
+  tt_int_op(1, OP_EQ, token_bucket_rw_refill(&b,
+                                     START_TS + BW_SEC*3/2 + BW_SEC*61));
+  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b,
+                                     START_TS + BW_SEC*3/2 + BW_SEC*62));
   tt_int_op(b.read_bucket.bucket, OP_GT, 32*KB-400);
   tt_int_op(b.read_bucket.bucket, OP_LT, 32*KB+400);
 
@@ -172,16 +178,16 @@ test_bwmgt_token_buf_refill(void *arg)
             token_bucket_rw_dec_read(&b, b.read_bucket.bucket+16*KB));
   tt_int_op(-16*KB, OP_EQ, b.read_bucket.bucket);
   // half a second passes...
-  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*64));
+  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + BW_SEC*64));
   tt_int_op(b.read_bucket.bucket, OP_GT, -8*KB-300);
   tt_int_op(b.read_bucket.bucket, OP_LT, -8*KB+300);
   // a second passes
-  tt_int_op(1, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*65));
+  tt_int_op(1, OP_EQ, token_bucket_rw_refill(&b, START_TS + BW_SEC*65));
   tt_int_op(b.read_bucket.bucket, OP_GT, 8*KB-400);
   tt_int_op(b.read_bucket.bucket, OP_LT, 8*KB+400);
 
   // We step a second backwards, and nothing happens.
-  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*64));
+  tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + BW_SEC*64));
   tt_int_op(b.read_bucket.bucket, OP_GT, 8*KB-400);
   tt_int_op(b.read_bucket.bucket, OP_LT, 8*KB+400);
 
@@ -225,4 +231,3 @@ struct testcase_t bwmgt_tests[] = {
   BWMGT(token_buf_helpers),
   END_OF_TESTCASES
 };
-
