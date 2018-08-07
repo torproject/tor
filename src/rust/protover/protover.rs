@@ -493,11 +493,9 @@ impl FromStr for UnvalidatedProtoEntry {
     ///
     /// # Returns
     ///
-    /// A `Result` whose `Ok` value is a `ProtoSet` holding all of the
-    /// unique version numbers.
+    /// A `Result` whose `Ok` value is an `UnvalidatedProtoEntry`.
     ///
-    /// The returned `Result`'s `Err` value is an `ProtoverError` whose `Display`
-    /// impl has a description of the error.
+    /// The returned `Result`'s `Err` value is an `ProtoverError`.
     ///
     /// # Errors
     ///
