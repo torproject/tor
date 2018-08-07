@@ -1718,7 +1718,7 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
    * Skip IPv6 if we're not direct as relays only extend via IPv4. */
   fascist_firewall_choose_address_ls(lspecs, 0, &ap, direct_conn);
 
-  /* Legacy ID is mandatory, and we require IPv4. */
+  /* Legacy ID is mandatory, and we require an IP address. */
   if (!tor_addr_port_is_valid_ap(&ap, 0) || !have_legacy_id) {
     goto done;
   }
@@ -1727,6 +1727,8 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
   if (!direct_conn) {
     /* All clients can extend to any IPv4 via a 3-hop path. */
     goto validate;
+    /* We will add support for falling back to a 3-hop path in a later
+     * release. */
   } else {
     /* If we can't reach IPv4, return NULL. */
     goto done;

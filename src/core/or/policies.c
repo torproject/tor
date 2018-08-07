@@ -992,7 +992,12 @@ fascist_firewall_choose_address_rs(const routerstatus_t *rs,
 }
 
 /** Like fascist_firewall_choose_address_base(), but takes in a smartlist
- * <b>lspecs</b> consisting of one or more link specifiers.
+ * <b>lspecs</b> consisting of one or more link specifiers. We assume
+ * fw_connection is FIREWALL_OR_CONNECTION as link specifiers cannot
+ * contain DirPorts.
+ * We take in direct_conn to determine whether we are connecting directly
+ * or not. This helps us determine whether to allow IPv6 as we can connect
+ * directly with IPv6, but can extend only with IPv4.
  */
 void
 fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
