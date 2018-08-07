@@ -6297,7 +6297,12 @@ test_util_log_mallinfo(void *arg)
   tt_assert(ok2);
   tt_assert(next1);
   tt_assert(next2);
-  tt_u64_op(mem1, OP_LT, mem2);
+  if (mem2 == 0) {
+    /* This is a fake mallinfo that doesn't actually fill in its outputs. */
+    tt_int_op(mem1, OP_EQ, 0);
+  } else {
+    tt_u64_op(mem1, OP_LT, mem2);
+  }
 #else
   tt_skip();
 #endif
