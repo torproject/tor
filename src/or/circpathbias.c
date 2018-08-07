@@ -929,6 +929,16 @@ pathbias_count_valid_cells(circuit_t *circ, const cell_t *cell)
   /* Check to see if this is a cell from a previous connection,
    * or is a request to close the circuit. */
   switch (rh.command) {
+    case RELAY_COMMAND_TRUNCATED:
+      /* Truncated cells can arrive on path bias circs. When they do,
+       * just process them. This closes the circ, but it was junk anyway.
+       * No reason to wait for the probe. */
+      circuit_read_valid_data(ocirc, rh.length);
+      circuit_truncated(TO_ORIGIN_CIRCUIT(circ),
+                        get_uint8(cell->payload + RELAY_HEADER_SIZE));
+
+      break;
+
     case RELAY_COMMAND_END:
       if (connection_half_edge_is_valid_end(ocirc->half_streams,
                                              rh.stream_id)) {
