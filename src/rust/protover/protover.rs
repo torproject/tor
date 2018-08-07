@@ -206,9 +206,7 @@ impl FromStr for ProtoEntry {
     ///
     /// # Returns
     ///
-    /// A `Result` whose `Ok` value is a `ProtoEntry`, where the
-    /// first element is the subprotocol type (see `protover::Protocol`) and the last
-    /// element is an ordered set of `(low, high)` unique version numbers which are supported.
+    /// A `Result` whose `Ok` value is a `ProtoEntry`.
     /// Otherwise, the `Err` value of this `Result` is a `ProtoverError`.
     fn from_str(protocol_entry: &str) -> Result<ProtoEntry, ProtoverError> {
         let mut proto_entry: ProtoEntry = ProtoEntry::default();
