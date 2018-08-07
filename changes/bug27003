@@ -1,0 +1,6 @@
+  o Major bugfixes (event scheduler):
+    - When we enable a periodic event, schedule it in the event loop
+      rather than running it immediately. Previously, we would re-run
+      periodic events immediately in the middle of (for example)
+      changing our options, with unpredictable effects.  Fixes bug
+      27003; bugfix on 0.3.4.1-alpha.
