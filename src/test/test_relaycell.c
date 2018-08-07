@@ -116,6 +116,16 @@ mock_connection_mark_unattached_ap_(entry_connection_t *conn, int endreason,
 }
 
 static void
+mock_mark_circ_for_close(circuit_t *circ, int reason, int line,
+                          const char *file)
+{
+  (void)reason; (void)line; (void)file;
+
+  circ->marked_for_close = 1;
+  return;
+}
+
+static void
 mock_mark_for_close(connection_t *conn,
                         int line, const char *file)
 {
@@ -694,6 +704,7 @@ test_circbw_relay(void *arg)
   MOCK(connection_start_reading, mock_start_reading);
   MOCK(connection_mark_for_close_internal_, mock_mark_for_close);
   MOCK(relay_send_command_from_edge_, mock_send_command);
+  MOCK(circuit_mark_for_close_, mock_mark_circ_for_close);
 
   circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_C_GENERAL, 0);
   circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
@@ -856,11 +867,18 @@ test_circbw_relay(void *arg)
   if (!subtest_circbw_halfclosed(circ, 6))
     goto done;
 
+  /* Path bias: truncated */
+  tt_int_op(circ->base_.marked_for_close, OP_EQ, 0);
+  PACK_CELL(0, RELAY_COMMAND_TRUNCATED, "Data1234");
+  pathbias_count_valid_cells(circ, &cell);
+  tt_int_op(circ->base_.marked_for_close, OP_EQ, 1);
+
  done:
   UNMOCK(connection_start_reading);
   UNMOCK(connection_mark_unattached_ap_);
   UNMOCK(connection_mark_for_close_internal_);
   UNMOCK(relay_send_command_from_edge_);
+  UNMOCK(circuit_mark_for_close_);
   circuit_free_(TO_CIRCUIT(circ));
   connection_free_minimal(ENTRY_TO_CONN(entryconn1));
 }
