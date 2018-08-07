@@ -452,8 +452,9 @@ impl UnvalidatedProtoEntry {
     /// following are true:
     ///
     /// * If a protocol name is an empty string, e.g. `"Cons=1,3 =3-5"`.
-    /// * If a protocol name cannot be parsed as utf-8.
-    /// * If the version numbers are an empty string, e.g. `"Cons="`.
+    /// * If an entry has no equals sign, e.g. `"Cons=1,3 Desc"`.
+    /// * If there is leading or trailing whitespace, e.g. `" Cons=1,3 Link=3"`.
+    /// * If there is any other extra whitespice, e.g. `"Cons=1,3  Link=3"`.
     fn parse_protocol_and_version_str<'a>(
         protocol_string: &'a str,
     ) -> Result<Vec<(&'a str, &'a str)>, ProtoverError> {
