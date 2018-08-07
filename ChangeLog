@@ -4,6 +4,13 @@ Changes in version 0.3.4.6-rc - 2018-08-06
   release candidate: if no serious bugs are found, we expect that the
   stable 0.3.4 release will be (almost) the same as this release.
 
+  o Major bugfixes (event scheduler):
+    - When we enable a periodic event, schedule it in the event loop
+      rather than running it immediately. Previously, we would re-run
+      periodic events immediately in the middle of (for example)
+      changing our options, with unpredictable effects. Fixes bug 27003;
+      bugfix on 0.3.4.1-alpha.
+
   o Minor features (compilation):
     - When building Tor, prefer to use Python 3 over Python 2, and more
       recent (contemplated) versions over older ones. Closes
@@ -37,6 +44,10 @@ Changes in version 0.3.4.6-rc - 2018-08-06
   o Minor bugfixes (memory, correctness):
     - Fix a number of small memory leaks identified by coverity. Fixes
       bug 26467; bugfix on numerous Tor versions.
+
+  o Minor bugfixes (portability):
+    - Avoid a compilation error in test_bwmgt.c on Solaris 10. Fixes bug
+      26994; bugfix on 0.3.4.1-alpha.
 
   o Minor bugfixes (testing, compatibility):
     - When running the ntor_ref.py and hs_ntor_ref.py tests, make sure
