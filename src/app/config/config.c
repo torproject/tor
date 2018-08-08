@@ -1411,7 +1411,8 @@ options_act_reversible(const or_options_t *old_options, char **msg)
    * processes. */
   if (running_tor && options->RunAsDaemon) {
     /* No need to roll back, since you can't change the value. */
-    start_daemon();
+    if (start_daemon())
+      crypto_postfork();
   }
 
 #ifdef HAVE_SYSTEMD
@@ -2027,9 +2028,7 @@ options_act(const or_options_t *old_options)
   /* Finish backgrounding the process */
   if (options->RunAsDaemon) {
     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
-    int forked = finish_daemon(options->DataDirectory);
-    if (forked)
-      crypto_postfork();
+    finish_daemon(options->DataDirectory);
   }
 
   /* See whether we need to enable/disable our once-a-second timer. */
