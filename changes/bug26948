@@ -1,0 +1,4 @@
+  o Minor bugfixes (in-process restart):
+    - Always call tor_free_all() when leaving tor_run_main(). When we
+      did not, restarting tor in-process would cause an assertion failure.
+      Fixes bug 26948; bugfix on 0.3.3.1-alpha.
