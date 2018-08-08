@@ -58,6 +58,17 @@ int tor_main_configuration_set_command_line(tor_main_configuration_t *cfg,
 void tor_main_configuration_free(tor_main_configuration_t *cfg);
 
 /**
+ * Return the name and version of the software implementing the tor_api
+ * functionality.  Current implementors are "tor" and "libtorrunner".
+ *
+ * Note that if you're using libtorrunner, you'll see the version of
+ * libtorrunner, not the version of Tor that it's invoking for you.
+ *
+ * Added in Tor 0.3.5.1-alpha.
+ **/
+const char *tor_api_get_provider_version(void);
+
+/**
  * Run the tor process, as if from the command line.
  *
  * The command line arguments from tor_main_configuration_set_command_line()
@@ -98,4 +109,3 @@ int tor_run_main(const tor_main_configuration_t *);
 int tor_main(int argc, char **argv);
 
 #endif /* !defined(TOR_API_H) */
-
