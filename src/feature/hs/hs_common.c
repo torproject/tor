@@ -1727,11 +1727,11 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
   if (!direct_conn) {
     /* All clients can extend to any IPv4 via a 3-hop path. */
     goto validate;
+  } else {
+    /* Direct connection and we can reach it so go for it. */
+    goto validate;
     /* We will add support for falling back to a 3-hop path in a later
      * release. */
-  } else {
-    /* If we can't reach IPv4, return NULL. */
-    goto done;
   }
 
  validate:
