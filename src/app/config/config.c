@@ -81,6 +81,7 @@
 #include "core/mainloop/cpuworker.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/crypt_ops/crypto_init.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/relay/dns.h"
 #include "core/or/dos.h"
@@ -2026,7 +2027,9 @@ options_act(const or_options_t *old_options)
   /* Finish backgrounding the process */
   if (options->RunAsDaemon) {
     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
-    finish_daemon(options->DataDirectory);
+    int forked = finish_daemon(options->DataDirectory);
+    if (forked)
+      crypto_postfork();
   }
 
   /* See whether we need to enable/disable our once-a-second timer. */
