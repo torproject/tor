@@ -2350,8 +2350,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   }
 
   ri->identity_pkey = crypto_pk_dup_key(get_server_identity_key());
-  if (crypto_pk_get_digest(ri->identity_pkey,
-                           ri->cache_info.identity_digest)<0) {
+  if (BUG(crypto_pk_get_digest(ri->identity_pkey,
+                           ri->cache_info.identity_digest) < 0)) {
     routerinfo_free(ri);
     return TOR_ROUTERINFO_ERROR_DIGEST_FAILED;
   }
