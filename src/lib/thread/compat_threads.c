@@ -57,7 +57,7 @@ in_main_thread(void)
   return main_thread_id == tor_get_thread_id();
 }
 
-#ifndef HAVE_STDATOMIC_H
+#ifndef HAVE_WORKING_STDATOMIC
 /** Initialize a new atomic counter with the value 0 */
 void
 atomic_counter_init(atomic_counter_t *counter)
@@ -108,4 +108,4 @@ atomic_counter_exchange(atomic_counter_t *counter, size_t newval)
   tor_mutex_release(&counter->mutex);
   return oldval;
 }
-#endif /* !defined(HAVE_STDATOMIC_H) */
+#endif /* !defined(HAVE_WORKING_STDATOMIC) */
