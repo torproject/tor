@@ -1008,6 +1008,11 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
   uint16_t port_v4 = 0, port_v6 = 0;
   tor_addr_t addr_v4, addr_v6;
 
+  tor_assert(ap);
+
+  tor_addr_make_null(&addr_v4, AF_INET);
+  tor_addr_make_null(&addr_v6, AF_INET6);
+
   SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
     switch (link_specifier_get_ls_type(ls)) {
     case LS_IPV4:
@@ -1032,11 +1037,6 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
       break;
     }
   } SMARTLIST_FOREACH_END(ls);
-
-  tor_assert(ap);
-
-  tor_addr_make_null(&ap->addr, AF_UNSPEC);
-  ap->port = 0;
 
   /* Here, don't check for DirPorts as link specifiers are only used for
    * ORPorts. */

@@ -1689,6 +1689,9 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
   extend_info_t *info = NULL;
   tor_addr_port_t ap;
 
+  tor_addr_make_null(&ap.addr, AF_UNSPEC);
+  ap.port = 0;
+
   tor_assert(lspecs);
 
   SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
