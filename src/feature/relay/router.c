@@ -164,22 +164,12 @@ routerinfo_err_to_string(int err)
 int
 routerinfo_err_is_transient(int err)
 {
-  switch (err) {
-    case TOR_ROUTERINFO_ERROR_NO_EXT_ADDR:
-      return 1;
-    case TOR_ROUTERINFO_ERROR_CANNOT_PARSE:
-      return 1;
-    case TOR_ROUTERINFO_ERROR_NOT_A_SERVER:
-      return 0;
-    case TOR_ROUTERINFO_ERROR_DIGEST_FAILED:
-      return 0; // XXX: bug?
-    case TOR_ROUTERINFO_ERROR_CANNOT_GENERATE:
-      return 1;
-    case TOR_ROUTERINFO_ERROR_DESC_REBUILDING:
-      return 1;
-  }
-
-  return 0;
+  /**
+   * For simplicity, we consider all errors other than
+   * "not a server" transient - see discussion on
+   * https://trac.torproject.org/projects/tor/ticket/27034
+   */
+  return err != TOR_ROUTERINFO_ERROR_NOT_A_SERVER;
 }
 
 /** Replace the current onion key with <b>k</b>.  Does not affect
