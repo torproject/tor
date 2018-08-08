@@ -1669,14 +1669,16 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str)
   return hs_dir;
 }
 
-/* From a list of link specifier, an onion key and if we are requesting a
- * direct connection (ex: single onion service), return a newly allocated
- * extend_info_t object. This function always returns an extend info with
- * an IPv4 address, or NULL.
+/* Given a list of link specifiers lspecs, a curve 25519 onion_key, and
+ * a direct connection boolean direct_conn (true for single onion services),
+ * return a newly allocated extend_info_t object.
+ *
+ * This function always returns an extend info with a valid IP address and
+ * ORPort, or NULL. If direct_conn is false, the IP address is always IPv4.
  *
  * It performs the following checks:
- *  if either IPv4 or legacy ID is missing, return NULL.
- *  if direct_conn, and we can't reach the IPv4 address, return NULL.
+ *  if there is no usable IP address, or legacy ID is missing, return NULL.
+ *  if direct_conn, and we can't reach any IP address, return NULL.
  */
 extend_info_t *
 hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
@@ -1723,6 +1725,7 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
 
   /* Legacy ID is mandatory, and we require an IP address. */
   if (!tor_addr_port_is_valid_ap(&ap, 0) || !have_legacy_id) {
+    /* If we're missing the legacy ID or the IP address, return NULL. */
     goto done;
   }
 
