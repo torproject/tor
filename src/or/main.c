@@ -4246,10 +4246,10 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 #endif /* defined(NT_SERVICE) */
   {
     int init_rv = tor_init(argc, argv);
-    if (init_rv < 0)
-      return -1;
-    else if (init_rv > 0)
-      return 0;
+    if (init_rv) {
+      tor_free_all(0);
+      return (init_rv < 0) ? -1 : 0;
+    }
   }
 
   if (get_options()->Sandbox && get_options()->command == CMD_RUN_TOR) {
@@ -4257,6 +4257,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 
     if (sandbox_init(cfg)) {
       log_err(LD_BUG,"Failed to create syscall sandbox filter");
+      tor_free_all(0);
       return -1;
     }
 
