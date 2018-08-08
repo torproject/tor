@@ -1,0 +1,5 @@
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Fix a bug in out sandboxing rules for the openat() syscall.
+      Previously, no openat() call would be permitted, which would break
+      filesystem operations on recent glibc versions. Fixes bug 25440;
+      bugfix on 0.2.9.15. Diagnosis and patch from Daniel Pinto.
