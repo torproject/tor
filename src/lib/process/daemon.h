@@ -12,6 +12,6 @@
 #define TOR_DAEMON_H
 
 void start_daemon(void);
-void finish_daemon(const char *desired_cwd);
+int finish_daemon(const char *desired_cwd);
 
 #endif

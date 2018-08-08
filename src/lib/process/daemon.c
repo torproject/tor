@@ -102,15 +102,16 @@ start_daemon(void)
 /** Finish putting the process into daemon mode: drop standard fds, and tell
  * the parent process to exit.  (Note: it's safe to call this more than once:
  * calls after the first are ignored.  Calls start_daemon first if it hasn't
- * been called already.)
+ * been called already.) Return true if we actually did a fork; false if we
+ * didn't.
  */
-void
+int
 finish_daemon(const char *desired_cwd)
 {
   int nullfd;
   char c = '.';
   if (finish_daemon_called)
-    return;
+    return 0;
   if (!start_daemon_called)
     start_daemon();
   finish_daemon_called = 1;
@@ -149,6 +150,8 @@ finish_daemon(const char *desired_cwd)
     log_err(LD_GENERAL,"write failed. Exiting.");
   }
   close(daemon_filedes[1]);
+
+  return 0;
 }
 #else /* !(!defined(_WIN32)) */
 /* defined(_WIN32) */
