@@ -5780,6 +5780,7 @@ test_config_extended_fmt(void *arg)
   tt_str_op(lp->value, OP_EQ, "is back here");
   tt_int_op(lp->command, OP_EQ, CONFIG_LINE_NORMAL);
   lp = lp->next;
+  config_free_lines(lines);
 
   /* Try with the "extended" flag enabled. */
   r = config_get_lines(string1, &lines, 1);
