@@ -122,6 +122,13 @@ void connection_ap_warn_and_unmark_if_pending_circ(
                                              entry_connection_t *entry_conn,
                                              const char *where);
 
+int connection_half_edge_is_valid_data(smartlist_t *half_conns,
+                                       streamid_t stream_id);
+int connection_half_edge_is_valid_end(smartlist_t *half_conns,
+                                      streamid_t stream_id);
+int connection_half_edge_is_valid_sendme(smartlist_t *half_conns,
+                                         streamid_t stream_id);
+
 /** @name Begin-cell flags
  *
  * These flags are used in RELAY_BEGIN cells to change the default behavior
