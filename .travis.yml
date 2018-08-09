@@ -1,10 +1,110 @@
 language: c
 
-## Comment out the compiler list for now to allow an explicit build
-## matrix.
-# compiler:
-#   - gcc
-#   - clang
+compiler:
+  - gcc
+  - clang
+
+os:
+  - linux
+
+## The build matrix in the following stanza expands into builds for each
+## OS and compiler.
+env:
+  global:
+    ## The Travis CI environment allows us two cores, so let's use both.
+    - MAKEFLAGS="-j 2"
+    ## We turn on hardening by default
+    ## Also known as --enable-fragile-hardening in 0.3.0.3-alpha and later
+    - HARDENING_OPTIONS="--enable-expensive-hardening"
+  matrix:
+    ## We want to use each build option at least once
+    ##
+    ## We don't list default variable values, because we set the defaults
+    ## in global (or the default is unset)
+    -
+
+matrix:
+  ## include creates builds with gcc, linux, sudo: false
+  include:
+    ## We include a single coverage build with the best options for coverage
+    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
+    ## We only want to check these build option combinations once
+    ## (they shouldn't vary by compiler or OS)
+    - env: DISTCHECK="yes"
+    - env: HARDENING_OPTIONS=""
+
+  ## Uncomment to allow the build to report success (with non-required
+  ## sub-builds continuing to run) if all required sub-builds have
+  ## succeeded.  This is somewhat buggy currently: it can cause
+  ## duplicate notifications and prematurely report success if a
+  ## single sub-build has succeeded.  See
+  ## https://github.com/travis-ci/travis-ci/issues/1696
+  # fast_finish: true
+
+  ## Careful! We use global envs, which makes it hard to exclude or
+  ## allow failures by env:
+  ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
+  exclude:
+    ## Clang doesn't work in containerized builds, see below.
+    - compiler: clang
+      sudo: false
+    ## We also exclude non-containerized gcc, because they're slow and redundant.
+    - compiler: gcc
+      sudo: required
+
+## We don't need sudo. (The "apt:" stanza after this allows us to not need
+## sudo; otherwise, we would need it for getting dependencies.)
+##
+## But we use "sudo: required" to force non-containerized builds, working
+## around a Travis CI environment issue: clang LeakAnalyzer fails
+## because it requires ptrace and the containerized environment no
+## longer allows ptrace.
+## https://github.com/travis-ci/travis-ci/issues/9033
+##
+## In the matrix above, we exclude redundant combinations.
+sudo:
+  - false
+  - required
+
+## (Linux only) Use the latest Linux image (Ubuntu Trusty)
+dist: trusty
+
+## (Linux only) Download our dependencies
+addons:
+  apt:
+    packages:
+      ## Required dependencies
+      - libevent-dev
+      - zlib1g-dev
+      ## Optional dependencies
+      - libcap-dev
+      - libscrypt-dev
+      - libseccomp-dev
+
+install:
+  ## Install conditional features
+  ## Install coveralls
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
+
+script:
+  - ./autogen.sh
+  - ./configure $COVERAGE_OPTIONS  $HARDENING_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules
+  ## We run `make check` because that's what https://jenkins.torproject.org does.
+  - if [[ "$DISTCHECK" == "" ]]; then make check; fi
+  - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$HARDENING_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules"; fi
+
+after_failure:
+  ## configure will leave a log file with more details of config failures.
+  ## But the log is too long for travis' rendered view, so tail it.
+  - tail -1000 config.log
+  ## `make check` will leave a log file with more details of test failures.
+  - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log; fi
+  ## `make distcheck` puts it somewhere different.
+  - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog; fi
+
+after_success:
+  ## If this build was one that produced coverage, upload it.
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p'; fi
 
 notifications:
   irc:
@@ -18,118 +118,3 @@ notifications:
   email:
     on_success: never
     on_failure: change
-
-os:
-  - linux
-  ## Uncomment the following line to also run the entire build matrix on OSX.
-  ## This will make your CI builds take roughly ten times longer to finish.
-  # - osx
-
-## Use the Ubuntu Trusty images.
-dist: trusty
-
-## We don't need sudo. (The "apt:" stanza after this allows us to not need sudo;
-## otherwise, we would need it for getting dependencies.)
-##
-## We override this in the explicit build matrix to work around a
-## Travis CI environment regression
-## https://github.com/travis-ci/travis-ci/issues/9033
-sudo: false
-
-## (Linux only) Download our dependencies
-addons:
-  apt:
-    packages:
-      ## Required dependencies
-      - libevent-dev
-      - zlib1g-dev
-      ## Optional dependencies
-      - libcap-dev
-      - liblzma-dev
-      - libscrypt-dev
-      - libseccomp-dev
-      ## zstd doesn't exist in Ubuntu Trusty
-      #- libzstd
-
-## The build matrix in the following two stanzas expands into four builds (per OS):
-##
-##  * with GCC, with Rust
-##  * with GCC, without Rust
-##  * with Clang, with Rust
-##  * with Clang, without Rust
-env:
-  global:
-    ## The Travis CI environment allows us two cores, so let's use both.
-    - MAKEFLAGS="-j 2"
-
-matrix:
-  ## Uncomment to allow the build to report success (with non-required
-  ## sub-builds continuing to run) if all required sub-builds have
-  ## succeeded.  This is somewhat buggy currently: it can cause
-  ## duplicate notifications and prematurely report success if a
-  ## single sub-build has succeeded.  See
-  ## https://github.com/travis-ci/travis-ci/issues/1696
-  # fast_finish: true
-
-  ## Uncomment the appropriate lines below to allow the build to
-  ## report success even if some less-critical sub-builds fail and it
-  ## seems likely to take a while for someone to fix it.  Currently
-  ## Travis CI doesn't distinguish "all builds succeeded" from "some
-  ## non-required sub-builds failed" except on the individual build's
-  ## page, which makes it somewhat annoying to detect from the
-  ## branches and build history pages.  See
-  ## https://github.com/travis-ci/travis-ci/issues/8716
-  allow_failures:
-    # - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
-    # - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode
-    # - compiler: clang
-
-  ## Create explicit matrix entries to work around a Travis CI
-  ## environment issue.  Missing keys inherit from the first list
-  ## entry under that key outside the "include" clause.
-  include:
-    - compiler: gcc
-    - compiler: gcc
-      env: COVERAGE_OPTIONS="--enable-coverage"
-    - compiler: gcc
-      env: DISTCHECK="yes"
-    ## The "sudo: required" forces non-containerized builds, working
-    ## around a Travis CI environment issue: clang LeakAnalyzer fails
-    ## because it requires ptrace and the containerized environment no
-    ## longer allows ptrace.
-    - compiler: clang
-      sudo: required
-
-before_install:
-  ## If we're on OSX, homebrew usually needs to updated first
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
-  ## Download rustup
-  - curl -Ssf -o rustup.sh https://sh.rustup.rs
-  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
-
-install:
-  ## If we're on OSX use brew to install required dependencies (for Linux, see the "apt:" section above)
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated openssl    || brew upgrade openssl;    }; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated libevent   || brew upgrade libevent;   }; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated pkg-config || brew upgrade pkg-config; }; fi
-  ## If we're on OSX also install the optional dependencies
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated xz         || brew upgrade xz;         }; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated libscrypt  || brew upgrade libscrypt;  }; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated zstd       || brew upgrade zstd;       }; fi
-
-script:
-  - ./autogen.sh
-  - ./configure $RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening
-  ## We run `make check` because that's what https://jenkins.torproject.org does.
-  - if [[ "$DISTCHECK" == "" ]]; then make check; fi
-  - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening"; fi
-
-after_failure:
-  ## `make check` will leave a log file with more details of test failures.
-  - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log; fi
-  ## `make distcheck` puts it somewhere different.
-  - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog; fi
-
-after_success:
-  ## If this build was one that produced coverage, upload it.
-  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p'; fi
