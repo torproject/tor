@@ -85,8 +85,11 @@ addons:
       - zlib1g-dev
       ## Optional dependencies
       - libcap-dev
+      - liblzma-dev
       - libscrypt-dev
       - libseccomp-dev
+      ## zstd doesn't exist in Ubuntu Trusty
+      #- libzstd
       ## Conditional dependencies
       ## Always installed, so we don't need sudo
       - asciidoc
@@ -117,6 +120,8 @@ install:
   # - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install zlib; fi
   ## If we're on OSX also install the optional dependencies
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libscrypt; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install xz; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install zstd; fi
   ## If we're on OSX, OpenSSL is keg-only, so tor 0.2.9 and later need to be configured --with-openssl-dir= to build
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then OPENSSL_OPTIONS=--with-openssl-dir=`brew --prefix openssl`; fi
   ## Install conditional features
