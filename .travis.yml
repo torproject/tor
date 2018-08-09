@@ -108,10 +108,12 @@ install:
 
 script:
   - ./autogen.sh
-  - ./configure $COVERAGE_OPTIONS  $HARDENING_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules
+  - CONFIGURE_FLAGS="$COVERAGE_OPTIONS  $HARDENING_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules"
+  - echo $CONFIGURE_FLAGS
+  - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$DISTCHECK" == "" ]]; then make check; fi
-  - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$HARDENING_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules"; fi
+  - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
 
 after_failure:
   ## configure will leave a log file with more details of config failures.
