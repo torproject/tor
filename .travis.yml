@@ -28,6 +28,11 @@ env:
     ## We don't list default variable values, because we set the defaults
     ## in global (or the default is unset)
     -
+    ## We turn off hardening for Rust builds, because they are incompatible,
+    ## and it's going to take a while for them to be fixed. See:
+    ##   https:/trac.torproject.org/projects/tor/ticket/25386
+    ##   https:/trac.torproject.org/projects/tor/ticket/26398
+    - RUST_OPTIONS="--enable-rust --enable-cargo-online-mode" HARDENING_OPTIONS=""
 
 matrix:
   ## include creates builds with gcc, linux, sudo: false
@@ -36,7 +41,8 @@ matrix:
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
     ## We only want to check these build option combinations once
     ## (they shouldn't vary by compiler or OS)
-    - env: HARDENING_OPTIONS=""
+    ## We run rust and coverage with hardening off, which seems like enough
+    # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
     - env: ASCIIDOC_OPTIONS="" DISTCHECK="yes"
 
@@ -129,14 +135,26 @@ install:
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
   ## If we're on OSX, and using asciidoc, install asciidoc
   - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install asciidoc; fi
+  ## If we're using Rust, download rustup
+  - if [[ "$RUST_OPTIONS" != "" ]]; then curl -Ssf -o rustup.sh https://sh.rustup.rs; fi
+  ## Install the stable channels of rustc and cargo and setup our toolchain environment
+  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain stable; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then source $HOME/.cargo/env; fi
   ##
   ## Finally, list installed package versions
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then dpkg-query --show; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew list --versions; fi
+  ## Get some info about rustup, rustc and cargo
+  - if [[ "$RUST_OPTIONS" != "" ]]; then which rustup; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then which rustc; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then which cargo; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then rustup --version; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then rustc --version; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then cargo --version; fi
 
 script:
   - ./autogen.sh
-  - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $OPENSSL_OPTIONS --enable-fatal-warnings --disable-silent-rules"
+  - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
   - echo $CONFIGURE_FLAGS
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
