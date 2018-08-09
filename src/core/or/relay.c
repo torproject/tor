@@ -2539,6 +2539,7 @@ cell_queues_check_size(void)
     geoip_client_cache_total_allocation();
   alloc += geoip_client_cache_total;
   const size_t dns_cache_total = dns_cache_total_allocation();
+  alloc += dns_cache_total;
   if (alloc >= get_options()->MaxMemInQueues_low_threshold) {
     last_time_under_memory_pressure = approx_time();
     if (alloc >= get_options()->MaxMemInQueues) {
