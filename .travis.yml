@@ -20,6 +20,8 @@ env:
     ## We turn on hardening by default
     ## Also known as --enable-fragile-hardening in 0.3.0.3-alpha and later
     - HARDENING_OPTIONS="--enable-expensive-hardening"
+    ## We turn off asciidoc by default, because it's slow
+    - ASCIIDOC_OPTIONS="--disable-asciidoc"
   matrix:
     ## We want to use each build option at least once
     ##
@@ -34,8 +36,9 @@ matrix:
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
     ## We only want to check these build option combinations once
     ## (they shouldn't vary by compiler or OS)
-    - env: DISTCHECK="yes"
     - env: HARDENING_OPTIONS=""
+    ## We check asciidoc with distcheck, to make sure we remove doc products
+    - env: ASCIIDOC_OPTIONS="" DISTCHECK="yes"
 
   ## Uncomment to allow the build to report success (with non-required
   ## sub-builds continuing to run) if all required sub-builds have
@@ -84,6 +87,12 @@ addons:
       - libcap-dev
       - libscrypt-dev
       - libseccomp-dev
+      ## Conditional dependencies
+      ## Always installed, so we don't need sudo
+      - asciidoc
+      - docbook-xsl
+      - docbook-xml
+      - xmlto
 
 ## (OSX only) Use the default OSX image
 ## See https://docs.travis-ci.com/user/reference/osx#os-x-version
@@ -113,10 +122,12 @@ install:
   ## Install conditional features
   ## Install coveralls
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
+  ## If we're on OSX, and using asciidoc, install asciidoc
+  - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install asciidoc; fi
 
 script:
   - ./autogen.sh
-  - CONFIGURE_FLAGS="$COVERAGE_OPTIONS $HARDENING_OPTIONS $OPENSSL_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules"
+  - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $OPENSSL_OPTIONS --enable-fatal-warnings --disable-silent-rules"
   - echo $CONFIGURE_FLAGS
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
