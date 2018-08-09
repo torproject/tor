@@ -1,5 +1,8 @@
 language: c
 
+cache:
+  ccache: true
+
 compiler:
   - gcc
   - clang
@@ -94,6 +97,9 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade; fi
 
 install:
+  ## If we're on OSX use brew to install ccache (ccache is automatically installed on Linux)
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install ccache; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH="/usr/local/opt/ccache/libexec:$PATH"; fi
   ## If we're on OSX use brew to install required dependencies (for Linux, see the "apt:" section above)
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libevent; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install openssl; fi
