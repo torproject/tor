@@ -2,6 +2,11 @@ language: c
 
 cache:
   ccache: true
+  ## cargo: true
+  directories:
+    - $HOME/.cargo
+    ## where we point CARGO_TARGET_DIR in all our cargo invocations
+    - $TRAVIS_BUILD_DIR/src/rust/target
 
 compiler:
   - gcc
@@ -116,6 +121,8 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
   ## We might be upgrading some useless packages, but that's better than missing an upgrade
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade; fi
+  ## Create empty rust directories for non-Rust builds, so caching succeeds
+  - if [[ "$RUST_OPTIONS" == "" ]]; then mkdir -p $HOME/.cargo $TRAVIS_BUILD_DIR/src/rust/target; fi
 
 install:
   ## If we're on OSX use brew to install ccache (ccache is automatically installed on Linux)
