@@ -102,13 +102,15 @@ install:
   # - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install zlib; fi
   ## If we're on OSX also install the optional dependencies
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libscrypt; fi
+  ## If we're on OSX, OpenSSL is keg-only, so tor 0.2.9 and later need to be configured --with-openssl-dir= to build
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then OPENSSL_OPTIONS=--with-openssl-dir=`brew --prefix openssl`; fi
   ## Install conditional features
   ## Install coveralls
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
 
 script:
   - ./autogen.sh
-  - CONFIGURE_FLAGS="$COVERAGE_OPTIONS  $HARDENING_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules"
+  - CONFIGURE_FLAGS="$COVERAGE_OPTIONS $HARDENING_OPTIONS $OPENSSL_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules"
   - echo $CONFIGURE_FLAGS
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
