@@ -50,7 +50,8 @@ matrix:
     # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
     - env: ASCIIDOC_OPTIONS="" DISTCHECK="yes"
-    ## Check rust offline without distcheck (see above)
+    ## Check rust offline without hardening (see above), or distcheck
+    ## Distcheck doesn't work with rust in 0.3.2
     ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
     - env: RUST_OPTIONS="--enable-rust" RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
 
