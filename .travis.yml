@@ -125,6 +125,7 @@ install:
   ## If we're on OSX, and using asciidoc, install asciidoc
   - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install asciidoc; fi
   - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install xmlto; fi
+  - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export XML_CATALOG_FILES="/usr/local/etc/xml/catalog"; fi
   ##
   ## Finally, list installed package versions
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then dpkg-query --show; fi
