@@ -38,7 +38,7 @@ matrix:
     ## (they shouldn't vary by compiler or OS)
     - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
-    - env: ASCIIDOC_OPTIONS="" DISTCHECK="yes"
+    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS=""
 
   ## Uncomment to allow the build to report success (with non-required
   ## sub-builds continuing to run) if all required sub-builds have
