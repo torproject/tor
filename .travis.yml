@@ -49,7 +49,7 @@ matrix:
     ## We run rust and coverage with hardening off, which seems like enough
     # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
-    - env: ASCIIDOC_OPTIONS="" DISTCHECK="yes"
+    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS=""
     ## Check rust offline with distcheck, to make sure we remove rust products
     ## But without hardening (see above)
     - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
@@ -145,6 +145,7 @@ install:
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
   ## If we're on OSX, and using asciidoc, install asciidoc
   - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install asciidoc; fi
+  - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install xmlto; fi
   ## If we're using Rust, download rustup
   - if [[ "$RUST_OPTIONS" != "" ]]; then curl -Ssf -o rustup.sh https://sh.rustup.rs; fi
   ## Install the stable channels of rustc and cargo and setup our toolchain environment
