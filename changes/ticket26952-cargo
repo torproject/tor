@@ -1,0 +1,3 @@
+  o Minor features (continuous integration, rust):
+    - Use cargo cache in our Travis CI configuration.
+      Closes ticket 26952.
