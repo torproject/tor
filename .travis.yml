@@ -148,6 +148,7 @@ install:
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
   ## If we're on OSX, and using asciidoc, install asciidoc
   - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install asciidoc; fi
+  - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install xmlto; fi
   ## If we're using Rust, download rustup
   - if [[ "$RUST_OPTIONS" != "" ]]; then curl -Ssf -o rustup.sh https://sh.rustup.rs; fi
   ## Install the stable channels of rustc and cargo and setup our toolchain environment
