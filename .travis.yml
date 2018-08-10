@@ -50,8 +50,9 @@ matrix:
     # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
     - env: ASCIIDOC_OPTIONS="" DISTCHECK="yes"
-    ## Check rust offline without distcheck (see above)
-    - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
+    ## Check rust offline with distcheck, to make sure we remove rust products
+    ## But without hardening (see above)
+    - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
 
   ## Uncomment to allow the build to report success (with non-required
   ## sub-builds continuing to run) if all required sub-builds have
