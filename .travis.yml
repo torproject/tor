@@ -51,8 +51,7 @@ matrix:
     ## We check asciidoc with distcheck, to make sure we remove doc products
     - env: ASCIIDOC_OPTIONS="" DISTCHECK="yes"
     ## Check rust offline without distcheck (see above)
-    ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
-    - env: RUST_OPTIONS="--enable-rust" RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
+    - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
 
   ## Uncomment to allow the build to report success (with non-required
   ## sub-builds continuing to run) if all required sub-builds have
@@ -151,7 +150,7 @@ install:
   - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain stable; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then source $HOME/.cargo/env; fi
   ## If we're testing rust builds in offline-mode, then set up our vendored dependencies
-  - if [[ "$RUST_DEPENDENCIES" == "true" ]]; then export RUST_DEPENDENCIES=$PWD/src/ext/rust/crates; fi
+  - if [[ "$TOR_RUST_DEPENDENCIES" == "true" ]]; then export TOR_RUST_DEPENDENCIES=$PWD/src/ext/rust/crates; fi
   ##
   ## Finally, list installed package versions
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then dpkg-query --show; fi
