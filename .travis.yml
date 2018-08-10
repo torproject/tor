@@ -49,7 +49,7 @@ matrix:
     ## We run rust and coverage with hardening off, which seems like enough
     # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
-    - env: ASCIIDOC_OPTIONS="" DISTCHECK="yes"
+    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS=""
     ## Check rust offline without distcheck (see above)
     ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
     - env: RUST_OPTIONS="--enable-rust" RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
