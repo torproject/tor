@@ -1706,7 +1706,7 @@ test_policies_getinfo_helper_policies(void *arg)
   rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
                                &errmsg);
 
-  tt_int_op(rv, OP_EQ, 0);
+  tt_int_op(rv, OP_EQ, -1);
   tt_ptr_op(answer, OP_EQ, NULL);
   tt_ptr_op(errmsg, OP_NE, NULL);
   tt_str_op(errmsg, OP_EQ, "Key digest failed");
