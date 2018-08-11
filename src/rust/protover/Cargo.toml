@@ -6,7 +6,7 @@ name = "protover"
 [features]
 
 [dependencies]
-libc = "=0.2.39"
+libc = "0.2.39"
 
 [dependencies.smartlist]
 path = "../smartlist"

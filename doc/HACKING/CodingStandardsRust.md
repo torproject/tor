@@ -84,8 +84,8 @@ to ensure backward compatibility with stable distributions that ship it.
  Updating/Adding Dependencies
 ------------------------------
 
-To add/remove/update dependencies, first add your dependencies,
-exactly specifying their versions, into the appropriate *crate-level*
+To add/remove/update dependencies, first add your dependencies
+into the appropriate *crate-level*
 `Cargo.toml` in `src/rust/` (i.e. *not* `/src/rust/Cargo.toml`, but
 instead the one for your crate).  Also, investigate whether your
 dependency has any optional dependencies which are unnecessary but are
