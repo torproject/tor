@@ -1856,8 +1856,9 @@ tor_tls_check_lifetime(int severity, tor_tls_t *tls,
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
     goto done;
 
-  if (check_cert_lifetime_internal(severity, cert, now,
-                                   past_tolerance, future_tolerance) < 0)
+  if (tor_x509_check_cert_lifetime_internal(severity, cert, now,
+                                            past_tolerance,
+                                            future_tolerance) < 0)
     goto done;
 
   r = 0;

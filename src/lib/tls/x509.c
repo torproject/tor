@@ -85,6 +85,42 @@ tor_x509_name_new(const char *cname)
   /* LCOV_EXCL_STOP */
 }
 
+/** Choose the start and end times for a certificate */
+void
+tor_tls_pick_certificate_lifetime(time_t now,
+                                  unsigned int cert_lifetime,
+                                  time_t *start_time_out,
+                                  time_t *end_time_out)
+{
+  time_t start_time, end_time;
+  /* Make sure we're part-way through the certificate lifetime, rather
+   * than having it start right now. Don't choose quite uniformly, since
+   * then we might pick a time where we're about to expire. Lastly, be
+   * sure to start on a day boundary. */
+  /* Our certificate lifetime will be cert_lifetime no matter what, but if we
+   * start cert_lifetime in the past, we'll have 0 real lifetime.  instead we
+   * start up to (cert_lifetime - min_real_lifetime - start_granularity) in
+   * the past. */
+  const time_t min_real_lifetime = 24*3600;
+  const time_t start_granularity = 24*3600;
+  time_t earliest_start_time;
+  /* Don't actually start in the future! */
+  if (cert_lifetime <= min_real_lifetime + start_granularity) {
+    earliest_start_time = now - 1;
+  } else {
+    earliest_start_time = now + min_real_lifetime + start_granularity
+      - cert_lifetime;
+  }
+  start_time = crypto_rand_time_range(earliest_start_time, now);
+  /* Round the start time back to the start of a day. */
+  start_time -= start_time % start_granularity;
+
+  end_time = start_time + cert_lifetime;
+
+  *start_time_out = start_time;
+  *end_time_out = end_time;
+}
+
 /** Generate and sign an X509 certificate with the public key <b>rsa</b>,
  * signed by the private key <b>rsa_sign</b>.  The commonName of the
  * certificate will be <b>cname</b>; the commonName of the issuer will be
@@ -113,30 +149,10 @@ tor_tls_create_certificate,(crypto_pk_t *rsa,
 
   tor_tls_init();
 
-  /* Make sure we're part-way through the certificate lifetime, rather
-   * than having it start right now. Don't choose quite uniformly, since
-   * then we might pick a time where we're about to expire. Lastly, be
-   * sure to start on a day boundary. */
   time_t now = time(NULL);
-  /* Our certificate lifetime will be cert_lifetime no matter what, but if we
-   * start cert_lifetime in the past, we'll have 0 real lifetime.  instead we
-   * start up to (cert_lifetime - min_real_lifetime - start_granularity) in
-   * the past. */
-  const time_t min_real_lifetime = 24*3600;
-  const time_t start_granularity = 24*3600;
-  time_t earliest_start_time;
-  /* Don't actually start in the future! */
-  if (cert_lifetime <= min_real_lifetime + start_granularity) {
-    earliest_start_time = now - 1;
-  } else {
-    earliest_start_time = now + min_real_lifetime + start_granularity
-      - cert_lifetime;
-  }
-  start_time = crypto_rand_time_range(earliest_start_time, now);
-  /* Round the start time back to the start of a day. */
-  start_time -= start_time % start_granularity;
 
-  end_time = start_time + cert_lifetime;
+  tor_tls_pick_certificate_lifetime(now, cert_lifetime,
+                                    &start_time, &end_time);
 
   tor_assert(rsa);
   tor_assert(cname);
@@ -410,7 +426,7 @@ tor_tls_cert_is_valid(int severity,
 
   /* okay, the signature checked out right.  Now let's check the check the
    * lifetime. */
-  if (check_cert_lifetime_internal(severity, cert->cert, now,
+  if (tor_x509_check_cert_lifetime_internal(severity, cert->cert, now,
                                    48*60*60, 30*24*60*60) < 0)
     goto bad;
 
@@ -509,9 +525,9 @@ log_cert_lifetime(int severity, const X509 *cert, const char *problem,
  * <b>now</b>.)  If it is live, return 0.  If it is not live, log a message
  * and return -1. */
 int
-check_cert_lifetime_internal(int severity, const X509 *cert,
-                             time_t now,
-                             int past_tolerance, int future_tolerance)
+tor_x509_check_cert_lifetime_internal(int severity, const X509 *cert,
+                                      time_t now,
+                                      int past_tolerance, int future_tolerance)
 {
   time_t t;
 

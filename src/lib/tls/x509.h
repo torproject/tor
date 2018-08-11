@@ -33,6 +33,11 @@ struct tor_x509_cert_t {
 };
 #endif
 
+void tor_tls_pick_certificate_lifetime(time_t now,
+                                       unsigned cert_lifetime,
+                                       time_t *start_time_out,
+                                       time_t *end_time_out);
+
 MOCK_DECL(tor_x509_cert_impl_t *, tor_tls_create_certificate,
                                                    (crypto_pk_t *rsa,
                                                     crypto_pk_t *rsa_sign,
@@ -74,9 +79,10 @@ int tor_tls_cert_is_valid(int severity,
                           time_t now,
                           int check_rsa_1024);
 
-int check_cert_lifetime_internal(int severity,
-                                 const tor_x509_cert_impl_t *cert,
-                                 time_t now,
-                                 int past_tolerance, int future_tolerance);
+int tor_x509_check_cert_lifetime_internal(int severity,
+                                          const tor_x509_cert_impl_t *cert,
+                                          time_t now,
+                                          int past_tolerance,
+                                          int future_tolerance);
 
 #endif
