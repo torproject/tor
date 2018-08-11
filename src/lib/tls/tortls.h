@@ -12,7 +12,6 @@
  **/
 
 #include "lib/crypt_ops/crypto_rsa.h"
-#include "lib/crypt_ops/compat_openssl.h"
 #include "lib/testsupport/testsupport.h"
 
 /* Opaque structure to hold a TLS connection. */
@@ -52,14 +51,6 @@ struct tor_x509_cert_t;
 #define TOR_TLS_IS_ERROR(rv) ((rv) < TOR_TLS_CLOSE)
 
 #ifdef TORTLS_PRIVATE
-#define TOR_TLS_MAGIC 0x71571571
-
-typedef enum {
-    TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
-    TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED, TOR_TLS_ST_RENEGOTIATE,
-    TOR_TLS_ST_BUFFEREVENT
-} tor_tls_state_t;
-#define tor_tls_state_bitfield_t ENUM_BF(tor_tls_state_t)
 
 #ifdef ENABLE_OPENSSL
 struct ssl_st;
@@ -70,54 +61,7 @@ struct ssl_session_st;
 /** Holds a SSL_CTX object and related state used to configure TLS
  * connections.
  */
-typedef struct tor_tls_context_t {
-  int refcnt;
-  struct ssl_ctx_st *ctx;
-  struct tor_x509_cert_t *my_link_cert;
-  struct tor_x509_cert_t *my_id_cert;
-  struct tor_x509_cert_t *my_auth_cert;
-  crypto_pk_t *link_key;
-  crypto_pk_t *auth_key;
-} tor_tls_context_t;
-
-/** Holds a SSL object and its associated data.  Members are only
- * accessed from within tortls.c.
- */
-struct tor_tls_t {
-  uint32_t magic;
-  tor_tls_context_t *context; /** A link to the context object for this tls. */
-  struct ssl_st *ssl; /**< An OpenSSL SSL object. */
-  int socket; /**< The underlying file descriptor for this TLS connection. */
-  char *address; /**< An address to log when describing this connection. */
-  tor_tls_state_bitfield_t state : 3; /**< The current SSL state,
-                                       * depending on which operations
-                                       * have completed successfully. */
-  unsigned int isServer:1; /**< True iff this is a server-side connection */
-  unsigned int wasV2Handshake:1; /**< True iff the original handshake for
-                                  * this connection used the updated version
-                                  * of the connection protocol (client sends
-                                  * different cipher list, server sends only
-                                  * one certificate). */
-  /** True iff we should call negotiated_callback when we're done reading. */
-  unsigned int got_renegotiate:1;
-  /** Return value from tor_tls_classify_client_ciphers, or 0 if we haven't
-   * called that function yet. */
-  int8_t client_cipher_list_type;
-  /** Incremented every time we start the server side of a handshake. */
-  uint8_t server_handshake_count;
-  size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
-                       * time. */
-  /** Last values retrieved from BIO_number_read()/write(); see
-   * tor_tls_get_n_raw_bytes() for usage.
-   */
-  unsigned long last_write_count;
-  unsigned long last_read_count;
-  /** If set, a callback to invoke whenever the client tries to renegotiate
-   * the handshake. */
-  void (*negotiated_callback)(tor_tls_t *tls, void *arg);
-  /** Argument to pass to negotiated_callback. */
-  void *callback_arg;
-};
+typedef struct tor_tls_context_t tor_tls_context_t;
 
 STATIC int tor_errno_to_tls_error(int e);
 STATIC int tor_tls_get_error(tor_tls_t *tls, int r, int extra,

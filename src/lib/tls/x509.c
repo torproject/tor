@@ -9,11 +9,12 @@
  * X.509 functions from OpenSSL.
  **/
 
+#define TOR_X509_PRIVATE
 #include "lib/tls/x509.h"
 #include "lib/tls/tortls.h"
-//#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/crypt_ops/compat_openssl.h"
 
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
  * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
@@ -330,6 +331,14 @@ tor_x509_cert_get_der(const tor_x509_cert_t *cert,
   tor_assert(size_out);
   *encoded_out = cert->encoded;
   *size_out = cert->encoded_len;
+}
+
+/** Return the underlying implementation for <b>cert</b> */
+const tor_x509_cert_impl_t *
+tor_x509_cert_get_impl(const tor_x509_cert_t *cert)
+{
+  tor_assert(cert);
+  return cert->cert;
 }
 
 /** Return a set of digests for the public key in <b>cert</b>, or NULL if this

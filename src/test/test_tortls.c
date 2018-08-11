@@ -3,6 +3,7 @@
 
 #define TORTLS_PRIVATE
 #define TORTLS_OPENSSL_PRIVATE
+#define TOR_X509_PRIVATE
 #define LOG_PRIVATE
 #include "orconfig.h"
 
@@ -33,7 +34,9 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "core/or/or.h"
 #include "lib/log/log.h"
 #include "app/config/config.h"
+#include "lib/crypt_ops/compat_openssl.h"
 #include "lib/tls/tortls.h"
+#include "lib/tls/tortls_st.h"
 #include "lib/tls/x509.h"
 #include "app/config/or_state_st.h"
 

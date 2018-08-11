@@ -24,6 +24,7 @@
 #include "core/or/or_handshake_state_st.h"
 #include "core/or/var_cell_st.h"
 
+#define TOR_X509_PRIVATE
 #include "lib/tls/tortls.h"
 #include "lib/tls/x509.h"
 

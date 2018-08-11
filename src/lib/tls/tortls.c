@@ -28,6 +28,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/crypt_ops/compat_openssl.h"
 #include "lib/tls/x509.h"
 
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
@@ -51,8 +52,8 @@ DISABLE_GCC_WARNING(redundant-decls)
 
 ENABLE_GCC_WARNING(redundant-decls)
 
-#define TORTLS_PRIVATE
 #include "lib/tls/tortls.h"
+#include "lib/tls/tortls_st.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/container/smartlist.h"
@@ -599,7 +600,7 @@ tor_tls_cert_matches_key,(const tor_tls_t *tls, const tor_x509_cert_t *cert))
   if (!peercert)
     return 0;
   link_key = X509_get_pubkey(peercert);
-  cert_key = X509_get_pubkey(cert->cert);
+  cert_key = X509_get_pubkey((X509 *)tor_x509_cert_get_impl(cert));
 
   result = link_key && cert_key && EVP_PKEY_cmp(cert_key, link_key) == 1;
 
