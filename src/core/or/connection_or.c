@@ -73,6 +73,7 @@
 #include "lib/crypt_ops/crypto_format.h"
 
 #include "lib/tls/tortls.h"
+#include "lib/tls/x509.h"
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_launch_v3_or_handshake(or_connection_t *conn);

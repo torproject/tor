@@ -33,6 +33,7 @@
 #include "lib/log/log.h"
 #include "trunnel/link_handshake.h"
 #include "lib/tls/tortls.h"
+#include "lib/tls/x509.h"
 
 #include "core/or/or_handshake_certs_st.h"
 

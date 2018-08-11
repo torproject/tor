@@ -25,6 +25,7 @@
 #include "core/or/var_cell_st.h"
 
 #include "lib/tls/tortls.h"
+#include "lib/tls/x509.h"
 
 #include "test/test.h"
 #include "test/log_test_helpers.h"

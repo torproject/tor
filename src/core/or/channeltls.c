@@ -70,6 +70,7 @@
 #include "core/or/var_cell_st.h"
 
 #include "lib/tls/tortls.h"
+#include "lib/tls/x509.h"
 
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;

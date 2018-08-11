@@ -34,6 +34,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "lib/log/log.h"
 #include "app/config/config.h"
 #include "lib/tls/tortls.h"
+#include "lib/tls/x509.h"
 #include "app/config/or_state_st.h"
 
 #include "test/test.h"
