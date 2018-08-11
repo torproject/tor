@@ -1837,7 +1837,8 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
              (int)(chan->conn->link_proto),
              hex_str(identity_digest, DIGEST_LEN),
              tor_addr_is_null(&my_apparent_addr) ?
-             "<none>" : fmt_and_decorate_addr(&my_apparent_addr));
+               "<none>" :
+               safe_str_client(fmt_and_decorate_addr(&my_apparent_addr)));
   }
   assert_connection_ok(TO_CONN(chan->conn),time(NULL));
 }
