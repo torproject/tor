@@ -28,18 +28,23 @@ CARGO=`which cargo`
 
 if ! test -f "$TOML"  ; then
     printf "Error: Couldn't find workspace Cargo.toml in expected location: %s\n" "$TOML"
+    exit 1
 fi
 
 if ! test -d "$VENDORED" ; then
     printf "Error: Couldn't find directory for Rust dependencies! Expected location: %s\n" "$VENDORED"
+    printf "Try running \`git submodule init && git submodule update\` first.\n"
+    exit 1
 fi
 
 if test -z "$CARGO" ; then
     printf "Error: cargo must be installed and in your \$PATH\n"
+    exit 1
 fi
 
 if test -z `cargo --list | grep vendor` ; then
     printf "Error: cargo-vendor not installed\n"
+    exit 1
 fi
 
 $CARGO vendor -v --locked --explicit-version --no-delete --sync $TOML $VENDORED
