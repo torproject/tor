@@ -20,9 +20,13 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/log/util_bug.h"
+#include "lib/intmath/cmp.h"
 
 #ifdef ENABLE_OPENSSL
 #include <openssl/evp.h>
+#endif
+#ifdef ENABLE_NSS
+#include <pk11pub.h>
 #endif
 
 #if defined(HAVE_LIBSCRYPT_H) && defined(HAVE_LIBSCRYPT_SCRYPT)
@@ -267,13 +271,13 @@ secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
       return (int)key_out_len;
 
     case S2K_TYPE_PBKDF2: {
-#ifdef ENABLE_OPENSSL
       uint8_t log_iters;
       if (spec_len < 1 || secret_len > INT_MAX || spec_len > INT_MAX)
         return S2K_BAD_LEN;
       log_iters = spec[spec_len-1];
       if (log_iters > 31)
         return S2K_BAD_PARAMS;
+#ifdef ENABLE_OPENSSL
       rv = PKCS5_PBKDF2_HMAC_SHA1(secret, (int)secret_len,
                                   spec, (int)spec_len-1,
                                   (1<<log_iters),
@@ -282,8 +286,45 @@ secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
         return S2K_FAILED;
       return (int)key_out_len;
 #else
-      // XXXXXXXXXXXXXXXXXXXXXXXX implement me.
-      return S2K_NO_SCRYPT_SUPPORT;
+      SECItem passItem = { .type = siBuffer,
+                           .data = (unsigned char *) secret,
+                           .len = (int)secret_len };
+      SECItem saltItem = { .type = siBuffer,
+                           .data = (unsigned char *) spec,
+                           .len = (int)spec_len - 1 };
+      SECAlgorithmID *alg = NULL;
+      PK11SymKey *key = NULL;
+
+      rv = S2K_FAILED;
+      alg = PK11_CreatePBEV2AlgorithmID(
+                  SEC_OID_PKCS5_PBKDF2, SEC_OID_HMAC_SHA1, SEC_OID_HMAC_SHA1,
+                  (int)key_out_len, (1<<log_iters), &saltItem);
+      if (alg == NULL)
+        return S2K_FAILED;
+
+      key = PK11_PBEKeyGen(NULL /* slot */,
+                           alg,
+                           &passItem,
+                           false,
+                           NULL);
+
+      SECStatus st = PK11_ExtractKeyValue(key);
+      if (st != SECSuccess)
+        goto nss_pbkdf_err;
+
+      const SECItem *iptr = PK11_GetKeyData(key);
+      if (iptr == NULL)
+        goto nss_pbkdf_err;
+
+      rv = MIN((int)iptr->len, (int)key_out_len);
+      memcpy(key_out, iptr->data, rv);
+
+    nss_pbkdf_err:
+      if (key)
+        PK11_FreeSymKey(key);
+      if (alg)
+        SECOID_DestroyAlgorithmID(alg, PR_TRUE);
+      return rv;
 #endif
     }
 
