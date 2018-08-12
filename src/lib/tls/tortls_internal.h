@@ -29,6 +29,13 @@ int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
                              int is_client);
 
 #ifdef ENABLE_OPENSSL
+void tor_tls_context_impl_free(struct ssl_ctx_st *);
+#else
+struct ssl_ctx_st; // XXXX replace
+void tor_tls_context_impl_free(struct ssl_ctx_st *);
+#endif
+
+#ifdef ENABLE_OPENSSL
 tor_tls_t *tor_tls_get_by_ssl(const struct ssl_st *ssl);
 int tor_tls_client_is_using_v2_ciphers(const struct ssl_st *ssl);
 void tor_tls_debug_state_callback(const struct ssl_st *ssl,

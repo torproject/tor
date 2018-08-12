@@ -30,6 +30,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/crypt_ops/compat_openssl.h"
 #include "lib/tls/x509.h"
+#include "lib/tls/x509_internal.h"
 
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
  * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
@@ -488,25 +489,6 @@ static const char CLIENT_CIPHER_LIST[] =
 #undef CIPHER
 #undef XCIPHER
 
-/** Remove a reference to <b>ctx</b>, and free it if it has no more
- * references. */
-void
-tor_tls_context_decref(tor_tls_context_t *ctx)
-{
-  tor_assert(ctx);
-  if (--ctx->refcnt == 0) {
-    SSL_CTX_free(ctx->ctx);
-    tor_x509_cert_free(ctx->my_link_cert);
-    tor_x509_cert_free(ctx->my_id_cert);
-    tor_x509_cert_free(ctx->my_auth_cert);
-    crypto_pk_free(ctx->link_key);
-    crypto_pk_free(ctx->auth_key);
-    /* LCOV_EXCL_BR_START since ctx will never be NULL here */
-    tor_free(ctx);
-    /* LCOV_EXCL_BR_STOP */
-  }
-}
-
 /** Set *<b>link_cert_out</b> and *<b>id_cert_out</b> to the link certificate
  * and ID certificate that we're currently using for our V3 in-protocol
  * handshake's certificate chain.  If <b>server</b> is true, provide the certs
@@ -597,6 +579,14 @@ tor_tls_context_init_one(tor_tls_context_t **ppcontext,
   }
 
   return ((new_ctx != NULL) ? 0 : -1);
+}
+
+void
+tor_tls_context_impl_free(struct ssl_ctx_st *ctx)
+{
+  if (!ctx)
+    return;
+  SSL_CTX_free(ctx);
 }
 
 /** The group we should use for ecdhe when none was selected. */

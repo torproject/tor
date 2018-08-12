@@ -85,6 +85,13 @@ tor_tls_context_init_one(tor_tls_context_t **ppcontext,
   // XXXX
   return -1;
 }
+void
+tor_tls_context_impl_free(struct ssl_ctx_st *ctx)
+{
+  (void)ctx;
+  // XXXX
+  // XXXX openssl type.
+}
 
 void
 tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz)
