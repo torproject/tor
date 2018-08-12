@@ -25,4 +25,11 @@ MOCK_DECL(tor_x509_cert_t *, tor_x509_cert_new,
 const tor_x509_cert_impl_t *tor_x509_cert_get_impl(
                                            const tor_x509_cert_t *cert);
 
+void tor_x509_cert_impl_free_(tor_x509_cert_impl_t *cert);
+#ifdef ENABLE_OPENSSL
+int tor_x509_cert_set_cached_der_encoding(tor_x509_cert_t *cert);
+#else
+#define tor_x509_cert_set_cached_der_encoding(cert) (0)
+#endif
+
 #endif

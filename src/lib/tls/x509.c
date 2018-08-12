@@ -14,6 +14,7 @@
 #include "lib/tls/x509_internal.h"
 #include "lib/log/util_bug.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 
 /** Choose the start and end times for a certificate */
 void
@@ -51,19 +52,6 @@ tor_tls_pick_certificate_lifetime(time_t now,
   *end_time_out = end_time;
 }
 
-/** Set *<b>encoded_out</b> and *<b>size_out</b> to <b>cert</b>'s encoded DER
- * representation and length, respectively. */
-void
-tor_x509_cert_get_der(const tor_x509_cert_t *cert,
-                 const uint8_t **encoded_out, size_t *size_out)
-{
-  tor_assert(cert);
-  tor_assert(encoded_out);
-  tor_assert(size_out);
-  *encoded_out = cert->encoded;
-  *size_out = cert->encoded_len;
-}
-
 /** Return the underlying implementation for <b>cert</b> */
 const tor_x509_cert_impl_t *
 tor_x509_cert_get_impl(const tor_x509_cert_t *cert)
@@ -90,3 +78,68 @@ tor_x509_cert_get_cert_digests(const tor_x509_cert_t *cert)
   return &cert->cert_digests;
 }
 
+/** Free all storage held in <b>cert</b> */
+void
+tor_x509_cert_free_(tor_x509_cert_t *cert)
+{
+  if (! cert)
+    return;
+  if (cert->cert)
+    tor_x509_cert_impl_free_(cert->cert);
+#ifdef ENABLE_OPENSSL
+  tor_free(cert->encoded);
+#endif
+  memwipe(cert, 0x03, sizeof(*cert));
+  /* LCOV_EXCL_BR_START since cert will never be NULL here */
+  tor_free(cert);
+  /* LCOV_EXCL_BR_STOP */
+}
+
+/**
+ * Allocate a new tor_x509_cert_t to hold the certificate "x509_cert".
+ *
+ * Steals a reference to x509_cert.
+ */
+MOCK_IMPL(tor_x509_cert_t *,
+tor_x509_cert_new,(tor_x509_cert_impl_t *x509_cert))
+{
+  tor_x509_cert_t *cert;
+
+  if (!x509_cert)
+    return NULL;
+
+  cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
+  cert->cert = x509_cert;
+
+  if (tor_x509_cert_set_cached_der_encoding(cert) < 0)
+    goto err;
+
+  {
+    const uint8_t *encoded=NULL;
+    size_t encoded_len=0;
+    tor_x509_cert_get_der(cert, &encoded, &encoded_len);
+    tor_assert(encoded);
+    crypto_common_digests(&cert->cert_digests, (char *)encoded, encoded_len);
+  }
+
+  {
+    crypto_pk_t *pk = tor_tls_cert_get_key(cert);
+    if (pk) {
+      if (crypto_pk_get_common_digests(pk, &cert->pkey_digests) < 0) {
+        crypto_pk_free(pk);
+        goto err;
+      }
+    }
+    cert->pkey_digests_set = 1;
+    crypto_pk_free(pk);
+  }
+
+  return cert;
+ err:
+  /* LCOV_EXCL_START for the same reason as the exclusion above */
+  tor_free(cert);
+  log_err(LD_CRYPTO, "Couldn't wrap encoded X509 certificate.");
+  tor_x509_cert_impl_free_(x509_cert);
+  return NULL;
+  /* LCOV_EXCL_STOP */
+}

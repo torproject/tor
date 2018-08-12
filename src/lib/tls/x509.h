@@ -27,8 +27,10 @@ typedef struct x509_st tor_x509_cert_impl_t;
 /** Structure that we use for a single certificate. */
 struct tor_x509_cert_t {
   tor_x509_cert_impl_t *cert;
+#ifdef ENABLE_OPENSSL
   uint8_t *encoded;
   size_t encoded_len;
+#endif
   unsigned pkey_digests_set : 1;
   common_digests_t cert_digests;
   common_digests_t pkey_digests;

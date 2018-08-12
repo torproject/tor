@@ -17,6 +17,9 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/log/util_bug.h"
 
+#include <pk11pub.h>
+#include <cert.h>
+
 MOCK_IMPL(tor_x509_cert_impl_t *,
 tor_tls_create_certificate,(crypto_pk_t *rsa,
                             crypto_pk_t *rsa_sign,
@@ -33,12 +36,27 @@ tor_tls_create_certificate,(crypto_pk_t *rsa,
   return NULL;
 }
 
-MOCK_IMPL(tor_x509_cert_t *,
-tor_x509_cert_new,(tor_x509_cert_impl_t *x509_cert))
+/** Set *<b>encoded_out</b> and *<b>size_out</b> to <b>cert</b>'s encoded DER
+ * representation and length, respectively. */
+void
+tor_x509_cert_get_der(const tor_x509_cert_t *cert,
+                 const uint8_t **encoded_out, size_t *size_out)
 {
-  tor_assert(x509_cert);
-  // XXXX
-  return NULL;
+  tor_assert(cert);
+  tor_assert(cert->cert);
+  tor_assert(encoded_out);
+  tor_assert(size_out);
+
+  const SECItem *item = &cert->cert->derCert;
+  *encoded_out = item->data;
+  *size_out = (size_t)item->len;
+}
+
+void
+tor_x509_cert_impl_free_(tor_x509_cert_impl_t *cert)
+{
+  if (cert)
+    CERT_DestroyCertificate(cert);
 }
 
 tor_x509_cert_t *
@@ -47,13 +65,6 @@ tor_x509_cert_dup(const tor_x509_cert_t *cert)
   tor_assert(cert);
   // XXXX
   return NULL;
-}
-
-void
-tor_x509_cert_free_(tor_x509_cert_t *cert)
-{
-  (void)cert;
-  // XXXX
 }
 
 tor_x509_cert_t *

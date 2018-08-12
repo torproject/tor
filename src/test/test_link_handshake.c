@@ -811,9 +811,11 @@ CERTS_FAIL(expired_rsa_id, /* both */
     tor_x509_cert_t *newc;
     time_t new_end = time(NULL) - 86400 * 10;
     newc = tor_x509_cert_replace_expiration(idc, new_end, d->key2);
-    certs_cell_cert_setlen_body(cert, newc->encoded_len);
-    memcpy(certs_cell_cert_getarray_body(cert),
-           newc->encoded, newc->encoded_len);
+    const uint8_t *encoded;
+    size_t encoded_len;
+    tor_x509_cert_get_der(newc, &encoded, &encoded_len);
+    certs_cell_cert_setlen_body(cert, encoded_len);
+    memcpy(certs_cell_cert_getarray_body(cert), encoded, encoded_len);
     REENCODE();
     tor_x509_cert_free(newc);
   })

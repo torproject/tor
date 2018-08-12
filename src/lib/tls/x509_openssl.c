@@ -182,75 +182,41 @@ tor_tls_create_certificate,(crypto_pk_t *rsa,
 #undef SERIAL_NUMBER_SIZE
 }
 
-/** Free all storage held in <b>cert</b> */
-void
-tor_x509_cert_free_(tor_x509_cert_t *cert)
+/** Set the 'encoded' and 'encoded_len' fields of "cert" from cert->cert. */
+int
+tor_x509_cert_set_cached_der_encoding(tor_x509_cert_t *cert)
 {
-  if (! cert)
-    return;
-  if (cert->cert)
-    X509_free(cert->cert);
-  tor_free(cert->encoded);
-  memwipe(cert, 0x03, sizeof(*cert));
-  /* LCOV_EXCL_BR_START since cert will never be NULL here */
-  tor_free(cert);
-  /* LCOV_EXCL_BR_STOP */
-}
-
-/**
- * Allocate a new tor_x509_cert_t to hold the certificate "x509_cert".
- *
- * Steals a reference to x509_cert.
- */
-MOCK_IMPL(tor_x509_cert_t *,
-tor_x509_cert_new,(X509 *x509_cert))
-{
-  tor_x509_cert_t *cert;
-  EVP_PKEY *pkey;
-  RSA *rsa;
-  int length;
   unsigned char *buf = NULL;
+  int length = i2d_X509(cert->cert, &buf);
 
-  if (!x509_cert)
-    return NULL;
-
-  length = i2d_X509(x509_cert, &buf);
-  cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
   if (length <= 0 || buf == NULL) {
-    goto err;
+    return -1;
   }
   cert->encoded_len = (size_t) length;
   cert->encoded = tor_malloc(length);
   memcpy(cert->encoded, buf, length);
   OPENSSL_free(buf);
+  return 0;
+}
 
-  cert->cert = x509_cert;
+void
+tor_x509_cert_impl_free_(tor_x509_cert_impl_t *cert)
+{
+  if (cert)
+    X509_free(cert);
+}
 
-  crypto_common_digests(&cert->cert_digests,
-                    (char*)cert->encoded, cert->encoded_len);
-
-  if ((pkey = X509_get_pubkey(x509_cert)) &&
-      (rsa = EVP_PKEY_get1_RSA(pkey))) {
-    crypto_pk_t *pk = crypto_new_pk_from_openssl_rsa_(rsa);
-    if (crypto_pk_get_common_digests(pk, &cert->pkey_digests) < 0) {
-      crypto_pk_free(pk);
-      EVP_PKEY_free(pkey);
-      goto err;
-    }
-
-    cert->pkey_digests_set = 1;
-    crypto_pk_free(pk);
-    EVP_PKEY_free(pkey);
-  }
-
-  return cert;
- err:
-  /* LCOV_EXCL_START for the same reason as the exclusion above */
-  tor_free(cert);
-  log_err(LD_CRYPTO, "Couldn't wrap encoded X509 certificate.");
-  X509_free(x509_cert);
-  return NULL;
-  /* LCOV_EXCL_STOP */
+/** Set *<b>encoded_out</b> and *<b>size_out</b> to <b>cert</b>'s encoded DER
+ * representation and length, respectively. */
+void
+tor_x509_cert_get_der(const tor_x509_cert_t *cert,
+                 const uint8_t **encoded_out, size_t *size_out)
+{
+  tor_assert(cert);
+  tor_assert(encoded_out);
+  tor_assert(size_out);
+  *encoded_out = cert->encoded;
+  *size_out = cert->encoded_len;
 }
 
 /** Return a new copy of <b>cert</b>. */
