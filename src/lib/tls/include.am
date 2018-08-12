@@ -10,6 +10,16 @@ src_lib_libtor_tls_a_SOURCES =			\
 	src/lib/tls/tortls.c			\
 	src/lib/tls/x509.c
 
+if USE_NSS
+src_lib_libtor_tls_a_SOURCES +=			\
+	src/lib/tls/tortls_nss.c		\
+	src/lib/tls/x509_nss.c
+else
+src_lib_libtor_tls_a_SOURCES +=			\
+	src/lib/tls/tortls_openssl.c		\
+	src/lib/tls/x509_openssl.c
+endif
+
 src_lib_libtor_tls_a_CFLAGS = $(AM_CFLAGS) $(TOR_CFLAGS_CRYPTLIB)
 
 src_lib_libtor_tls_testing_a_SOURCES = \
@@ -22,4 +32,6 @@ noinst_HEADERS +=				\
 	src/lib/tls/ciphers.inc			\
 	src/lib/tls/buffers_tls.h		\
 	src/lib/tls/tortls.h			\
+	src/lib/tls/tortls_internal.h		\
+	src/lib/tls/tortls_st.h			\
 	src/lib/tls/x509.h

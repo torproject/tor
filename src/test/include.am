@@ -184,6 +184,14 @@ src_test_test_SOURCES += \
 	src/test/testing_common.c \
 	src/test/testing_rsakeys.c \
 	src/ext/tinytest.c
+
+if USE_NSS
+# ...
+else
+src_test_test_SOURCES += \
+	src/test/test_tortls_openssl.c
+endif
+
 endif
 
 src_test_test_slow_SOURCES =

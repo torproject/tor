@@ -50,74 +50,13 @@ struct tor_x509_cert_t;
 
 #define TOR_TLS_IS_ERROR(rv) ((rv) < TOR_TLS_CLOSE)
 
-#ifdef TORTLS_PRIVATE
-
-#ifdef ENABLE_OPENSSL
-struct ssl_st;
-struct ssl_ctx_st;
-struct ssl_session_st;
-#endif
-
 /** Holds a SSL_CTX object and related state used to configure TLS
  * connections.
  */
 typedef struct tor_tls_context_t tor_tls_context_t;
 
-STATIC int tor_errno_to_tls_error(int e);
-STATIC int tor_tls_get_error(tor_tls_t *tls, int r, int extra,
-                  const char *doing, int severity, int domain);
-STATIC tor_tls_t *tor_tls_get_by_ssl(const struct ssl_st *ssl);
-STATIC void tor_tls_allocate_tor_tls_object_ex_data_index(void);
-MOCK_DECL(STATIC void, try_to_extract_certs_from_tls,
-          (int severity, tor_tls_t *tls, struct x509_st **cert_out,
-           struct x509_st **id_cert_out));
-#ifdef TORTLS_OPENSSL_PRIVATE
-STATIC int always_accept_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx);
-STATIC int tor_tls_classify_client_ciphers(const struct ssl_st *ssl,
-                                           STACK_OF(SSL_CIPHER) *peer_ciphers);
-#endif
-STATIC int tor_tls_client_is_using_v2_ciphers(const struct ssl_st *ssl);
-#ifndef HAVE_SSL_SESSION_GET_MASTER_KEY
-STATIC size_t SSL_SESSION_get_master_key(struct ssl_session_st *s,
-                                         uint8_t *out,
-                                         size_t len);
-#endif
-STATIC void tor_tls_debug_state_callback(const struct ssl_st *ssl,
-                                         int type, int val);
-STATIC void tor_tls_server_info_callback(const struct ssl_st *ssl,
-                                         int type, int val);
-#ifdef TORTLS_OPENSSL_PRIVATE
-STATIC int tor_tls_session_secret_cb(struct ssl_st *ssl, void *secret,
-                            int *secret_len,
-                            STACK_OF(SSL_CIPHER) *peer_ciphers,
-                            CONST_IF_OPENSSL_1_1_API SSL_CIPHER **cipher,
-                            void *arg);
-STATIC int find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m,
-                             uint16_t cipher);
-#endif /* defined(TORTLS_OPENSSL_PRIVATE) */
-STATIC tor_tls_context_t *tor_tls_context_new(crypto_pk_t *identity,
-                   unsigned int key_lifetime, unsigned flags, int is_client);
-STATIC int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
-                                    crypto_pk_t *identity,
-                                    unsigned int key_lifetime,
-                                    unsigned int flags,
-                                    int is_client);
-
-#ifdef TOR_UNIT_TESTS
-extern int tor_tls_object_ex_data_index;
-extern tor_tls_context_t *server_tls_context;
-extern tor_tls_context_t *client_tls_context;
-extern uint16_t v2_cipher_list[];
-extern uint64_t total_bytes_written_over_tls;
-extern uint64_t total_bytes_written_by_tls;
-
-#endif /* defined(TOR_UNIT_TESTS) */
-
-#endif /* defined(TORTLS_PRIVATE) */
-
 const char *tor_tls_err_to_string(int err);
 void tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz);
-
 void tor_tls_free_all(void);
 
 #define TOR_TLS_CTX_IS_PUBLIC_SERVER (1u<<0)
@@ -131,6 +70,9 @@ int tor_tls_context_init(unsigned flags,
                          crypto_pk_t *client_identity,
                          crypto_pk_t *server_identity,
                          unsigned int key_lifetime);
+void tor_tls_context_incref(tor_tls_context_t *ctx);
+void tor_tls_context_decref(tor_tls_context_t *ctx);
+tor_tls_context_t *tor_tls_context_get(int is_server);
 tor_tls_t *tor_tls_new(int sock, int is_server);
 void tor_tls_set_logged_address(tor_tls_t *tls, const char *address);
 void tor_tls_set_renegotiate_callback(tor_tls_t *tls,

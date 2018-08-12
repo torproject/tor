@@ -17,7 +17,9 @@
 /* Opaque structure to hold an X509 certificate. */
 typedef struct tor_x509_cert_t tor_x509_cert_t;
 
-#ifdef ENABLE_OPENSSL
+#ifdef ENABLE_NSS
+typedef struct CERTCertificateStr tor_x509_cert_impl_t;
+#elif defined(ENABLE_OPENSSL)
 typedef struct x509_st tor_x509_cert_impl_t;
 #endif
 
