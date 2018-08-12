@@ -473,6 +473,11 @@ test_options_validate__uname_for_server(void *ignored)
 {
   (void)ignored;
   char *msg;
+
+  int unset_home_env = 0;
+  if (setenv("HOME", "/home/john", 0) == 0)
+    unset_home_env = 1;
+
   options_test_data_t *tdata = get_options_test_data(
                                       "ORPort 127.0.0.1:5555");
   setup_capture_of_logs(LOG_WARN);
@@ -512,6 +517,8 @@ test_options_validate__uname_for_server(void *ignored)
   free_options_test_data(tdata);
   tor_free(msg);
   teardown_capture_of_logs();
+  if (unset_home_env)
+    unsetenv("HOME");
 }
 
 static void
@@ -1413,6 +1420,11 @@ test_options_validate__paths_needed(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
+
+  int unset_home_env = 0;
+  if (setenv("HOME", "/home/john", 0) == 0)
+    unset_home_env = 1;
+
   setup_capture_of_logs(LOG_WARN);
   options_test_data_t *tdata = get_options_test_data(
                                       "PathsNeededToBuildCircuits 0.1\n"
@@ -1455,6 +1467,8 @@ test_options_validate__paths_needed(void *ignored)
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
+  if (unset_home_env)
+    unsetenv("HOME");
 }
 
 static void
