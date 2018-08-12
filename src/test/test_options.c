@@ -474,9 +474,11 @@ test_options_validate__uname_for_server(void *ignored)
   (void)ignored;
   char *msg;
 
+#ifndef _WIN32
   int unset_home_env = 0;
   if (setenv("HOME", "/home/john", 0) == 0)
     unset_home_env = 1;
+#endif
 
   options_test_data_t *tdata = get_options_test_data(
                                       "ORPort 127.0.0.1:5555");
@@ -517,8 +519,10 @@ test_options_validate__uname_for_server(void *ignored)
   free_options_test_data(tdata);
   tor_free(msg);
   teardown_capture_of_logs();
+#ifndef _WIN32
   if (unset_home_env)
     unsetenv("HOME");
+#endif
 }
 
 static void
@@ -1421,9 +1425,11 @@ test_options_validate__paths_needed(void *ignored)
   int ret;
   char *msg;
 
+#ifndef _WIN32
   int unset_home_env = 0;
   if (setenv("HOME", "/home/john", 0) == 0)
     unset_home_env = 1;
+#endif
 
   setup_capture_of_logs(LOG_WARN);
   options_test_data_t *tdata = get_options_test_data(
@@ -1467,8 +1473,10 @@ test_options_validate__paths_needed(void *ignored)
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
+#ifndef _WIN32
   if (unset_home_env)
     unsetenv("HOME");
+#endif
 }
 
 static void
