@@ -11,6 +11,7 @@
 
 #define TOR_X509_PRIVATE
 #include "lib/tls/x509.h"
+#include "lib/tls/x509_internal.h"
 #include "lib/tls/tortls.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"

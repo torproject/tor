@@ -36,6 +36,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "app/config/config.h"
 #include "lib/crypt_ops/compat_openssl.h"
 #include "lib/tls/x509.h"
+#include "lib/tls/x509_internal.h"
 #include "lib/tls/tortls.h"
 #include "lib/tls/tortls_st.h"
 #include "lib/tls/tortls_internal.h"

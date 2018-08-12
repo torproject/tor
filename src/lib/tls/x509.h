@@ -40,15 +40,6 @@ void tor_tls_pick_certificate_lifetime(time_t now,
                                        time_t *start_time_out,
                                        time_t *end_time_out);
 
-MOCK_DECL(tor_x509_cert_impl_t *, tor_tls_create_certificate,
-                                                   (crypto_pk_t *rsa,
-                                                    crypto_pk_t *rsa_sign,
-                                                    const char *cname,
-                                                    const char *cname_sign,
-                                                  unsigned int cert_lifetime));
-MOCK_DECL(tor_x509_cert_t *, tor_x509_cert_new,
-          (tor_x509_cert_impl_t *x509_cert));
-
 #ifdef TOR_UNIT_TESTS
 tor_x509_cert_t *tor_x509_cert_replace_expiration(
                                                const tor_x509_cert_t *inp,
@@ -63,8 +54,6 @@ void tor_x509_cert_free_(tor_x509_cert_t *cert);
   FREE_AND_NULL(tor_x509_cert_t, tor_x509_cert_free_, (c))
 tor_x509_cert_t *tor_x509_cert_decode(const uint8_t *certificate,
                             size_t certificate_len);
-const tor_x509_cert_impl_t *tor_x509_cert_get_impl(
-                                           const tor_x509_cert_t *cert);
 void tor_x509_cert_get_der(const tor_x509_cert_t *cert,
                       const uint8_t **encoded_out, size_t *size_out);
 
