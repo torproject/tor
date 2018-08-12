@@ -1,7 +1,7 @@
-bin_PROGRAMS+= src/tools/tor-resolve src/tools/tor-gencert src/tools/tor-print-ed-signing-cert
+bin_PROGRAMS+= src/tools/tor-resolve src/tools/tor-print-ed-signing-cert
 
 if COVERAGE_ENABLED
-noinst_PROGRAMS+= src/tools/tor-cov-resolve src/tools/tor-cov-gencert
+noinst_PROGRAMS+= src/tools/tor-cov-resolve
 endif
 
 src_tools_tor_resolve_SOURCES = src/tools/tor-resolve.c
@@ -20,6 +20,10 @@ src_tools_tor_cov_resolve_LDADD = \
 	@TOR_LIB_MATH@ @TOR_LIB_WS32@
 endif
 
+if USE_NSS
+# ...
+else
+bin_PROGRAMS += src/tools/tor-gencert
 src_tools_tor_gencert_SOURCES = src/tools/tor-gencert.c
 src_tools_tor_gencert_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB)
 src_tools_tor_gencert_LDADD = \
@@ -28,6 +32,7 @@ src_tools_tor_gencert_LDADD = \
 	$(rust_ldadd) \
 	@TOR_LIB_MATH@ @TOR_ZLIB_LIBS@ $(TOR_LIBS_CRYPTLIB) \
 	@TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ @CURVE25519_LIBS@
+endif
 
 src_tools_tor_print_ed_signing_cert_SOURCES = src/tools/tor-print-ed-signing-cert.c
 src_tools_tor_print_ed_signing_cert_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
@@ -38,7 +43,11 @@ src_tools_tor_print_ed_signing_cert_LDADD = \
 	@TOR_LIB_MATH@ $(TOR_LIBS_CRYPTLIB) \
 	@TOR_LIB_WS32@ @TOR_LIB_USERENV@
 
+if USE_NSS
+# ...
+else
 if COVERAGE_ENABLED
+noinst_PROGRAMS += src/tools/tor-cov-gencert
 src_tools_tor_cov_gencert_SOURCES = src/tools/tor-gencert.c
 src_tools_tor_cov_gencert_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
 src_tools_tor_cov_gencert_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
@@ -48,6 +57,7 @@ src_tools_tor_cov_gencert_LDADD = \
     $(TOR_UTIL_TESTING_LIBS) \
     @TOR_LIB_MATH@ @TOR_ZLIB_LIBS@ $(TOR_LIBS_CRYPTLIB) \
     @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
+endif
 endif
 
 if BUILD_LIBTORRUNNER

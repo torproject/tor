@@ -23,12 +23,14 @@
 #include <wincrypt.h>
 #endif /* defined(_WIN32) */
 
-DISABLE_GCC_WARNING(redundant-decls)
+#include <stdlib.h>
 
+#ifdef ENABLE_OPENSSL
+DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/err.h>
 #include <openssl/crypto.h>
-
 ENABLE_GCC_WARNING(redundant-decls)
+#endif
 
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"

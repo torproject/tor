@@ -35,9 +35,11 @@
 #include "lib/testsupport/testsupport.h"
 #include "lib/fs/files.h"
 
+#include "lib/defs/digest_sizes.h"
+#include "lib/crypt_ops/crypto_digest.h"
+
 #ifdef ENABLE_NSS
 #include "lib/crypt_ops/crypto_nss_mgt.h"
-#include "lib/crypt_ops/crypto_digest.h"
 #endif
 
 #ifdef ENABLE_OPENSSL
@@ -80,6 +82,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #endif
 
 #include <string.h>
+#include <errno.h>
 
 /**
  * How many bytes of entropy we add at once.
@@ -335,7 +338,8 @@ crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
 void
 crypto_strongest_rand(uint8_t *out, size_t out_len)
 {
-#define DLEN SHA512_DIGEST_LENGTH
+#define DLEN DIGEST512_LEN
+
   /* We're going to hash DLEN bytes from the system RNG together with some
    * bytes from the PRNGs from our crypto librar(y/ies), in order to yield
    * DLEN bytes.
@@ -360,11 +364,11 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
       // LCOV_EXCL_STOP
     }
     if (out_len >= DLEN) {
-      SHA512(inp, sizeof(inp), out);
+      crypto_digest512((char*)out, (char*)inp, sizeof(inp), DIGEST_SHA512);
       out += DLEN;
       out_len -= DLEN;
     } else {
-      SHA512(inp, sizeof(inp), tmp);
+      crypto_digest512((char*)tmp, (char*)inp, sizeof(inp), DIGEST_SHA512);
       memcpy(out, tmp, out_len);
       break;
     }
@@ -699,6 +703,7 @@ smartlist_shuffle(smartlist_t *sl)
 int
 crypto_force_rand_ssleay(void)
 {
+#ifdef ENABLE_OPENSSL
   RAND_METHOD *default_method;
   default_method = RAND_OpenSSL();
   if (RAND_get_rand_method() != default_method) {
@@ -708,6 +713,7 @@ crypto_force_rand_ssleay(void)
     RAND_set_rand_method(default_method);
     return 1;
   }
+#endif
   return 0;
 }
 

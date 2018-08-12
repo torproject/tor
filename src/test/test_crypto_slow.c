@@ -18,7 +18,9 @@
 #include <libscrypt.h>
 #endif
 
+#ifdef ENABLE_OPENSSL
 #include <openssl/evp.h>
+#endif
 
 /** Run unit tests for our secret-to-key passphrase hashing functionality. */
 static void

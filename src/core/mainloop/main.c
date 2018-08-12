@@ -3504,10 +3504,11 @@ tor_init(int argc, char *argv[])
     const char *version = get_version();
 
     log_notice(LD_GENERAL, "Tor %s running on %s with Libevent %s, "
-               "OpenSSL %s, Zlib %s, Liblzma %s, and Libzstd %s.", version,
+               "%s %s, Zlib %s, Liblzma %s, and Libzstd %s.", version,
                get_uname(),
                tor_libevent_get_version_str(),
-               crypto_openssl_get_version_str(),
+               crypto_get_library_name(),
+               crypto_get_library_version_string(),
                tor_compress_supports_method(ZLIB_METHOD) ?
                  tor_compress_version_str(ZLIB_METHOD) : "N/A",
                tor_compress_supports_method(LZMA_METHOD) ?

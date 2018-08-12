@@ -866,7 +866,9 @@ struct testgroup_t testgroups[] = {
   { "control/event/", controller_event_tests },
   { "crypto/", crypto_tests },
   { "crypto/ope/", crypto_ope_tests },
+#ifdef ENABLE_OPENSSL
   { "crypto/openssl/", crypto_openssl_tests },
+#endif
   { "crypto/pem/", pem_tests },
   { "dir/", dir_tests },
   { "dir_handle_get/", dir_handle_get_tests },

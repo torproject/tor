@@ -56,7 +56,7 @@ struct dh_st *crypto_dh_new_openssl_tls(void);
 void crypto_dh_init_openssl(void);
 void crypto_dh_free_all_openssl(void);
 #endif
-#ifdef ENABLE_OPENSSL
+#ifdef ENABLE_NSS
 void crypto_dh_init_nss(void);
 void crypto_dh_free_all_nss(void);
 #endif

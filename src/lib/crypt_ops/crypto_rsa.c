@@ -37,11 +37,12 @@ crypto_get_rsa_padding_overhead(int padding)
 {
   switch (padding)
     {
-    case RSA_PKCS1_OAEP_PADDING: return PKCS1_OAEP_PADDING_OVERHEAD;
+    case PK_PKCS1_OAEP_PADDING: return PKCS1_OAEP_PADDING_OVERHEAD;
     default: tor_assert(0); return -1; // LCOV_EXCL_LINE
     }
 }
 
+#ifdef ENABLE_OPENSSL
 /** Given a padding method <b>padding</b>, return the correct OpenSSL constant.
  */
 int
@@ -53,6 +54,7 @@ crypto_get_rsa_padding(int padding)
     default: tor_assert(0); return -1; // LCOV_EXCL_LINE
     }
 }
+#endif
 
 /** Compare the public-key components of a and b.  Return non-zero iff
  * a==b.  A NULL key is considered to be distinct from all non-NULL
@@ -100,7 +102,7 @@ crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env,
   tor_assert(to);
   tor_assert(fromlen < SIZE_T_CEILING);
 
-  overhead = crypto_get_rsa_padding_overhead(crypto_get_rsa_padding(padding));
+  overhead = crypto_get_rsa_padding_overhead(padding);
   pkeylen = crypto_pk_keysize(env);
 
   if (!force && fromlen+overhead <= pkeylen) {

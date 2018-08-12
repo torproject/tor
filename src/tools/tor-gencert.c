@@ -17,6 +17,7 @@
 #include "lib/crypt_ops/crypto_init.h"
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
 
+#ifdef ENABLE_OPENSSL
 /* Some versions of OpenSSL declare X509_STORE_CTX_set_verify_cb twice in
  * x509.h and x509_vfy.h. Suppress the GCC warning so we can build with
  * -Wredundant-decl. */
@@ -30,6 +31,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/err.h>
 
 ENABLE_GCC_WARNING(redundant-decls)
+#endif
 
 #include <errno.h>
 

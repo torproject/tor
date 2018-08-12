@@ -67,14 +67,15 @@ AM_CONDITIONAL(LIBFUZZER_ENABLED, test "x$enable_libfuzzer" = "xyes")
 AM_CONDITIONAL(OSS_FUZZ_ENABLED, test "x$enable_oss_fuzz" = "xyes")
 AM_CONDITIONAL(USE_RUST, test "x$enable_rust" = "xyes")
 AM_CONDITIONAL(USE_NSS, test "x$enable_nss" = "xyes")
-AM_CONDITIONAL(USE_OPENSSL, true)
+AM_CONDITIONAL(USE_OPENSSL, test "x$enable_nss" != "xyes")
 
 if test "x$enable_nss" = "xyes"; then
   AC_DEFINE(ENABLE_NSS, 1,
   	    [Defined if we're building with NSS in addition to OpenSSL.])
+else
+  AC_DEFINE(ENABLE_OPENSSL, 1,
+            [Defined if we're building with OpenSSL or LibreSSL])
 fi
-AC_DEFINE(ENABLE_OPENSSL, 1,
-          [Defined if we're building with OpenSSL or LibreSSL])
 
 if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";
@@ -872,6 +873,8 @@ fi
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
 
+if test "x$enable_nss" != "xyes"; then
+
 tor_openssl_pkg_redhat="openssl"
 tor_openssl_pkg_debian="libssl-dev"
 tor_openssl_devpkg_redhat="openssl-devel"
@@ -970,6 +973,11 @@ AC_CHECK_MEMBERS([SSL.state], , ,
 AC_CHECK_SIZEOF(SHA_CTX, , [AC_INCLUDES_DEFAULT()
 #include <openssl/sha.h>
 ])
+
+fi # enable_nss
+
+dnl ======================================================================
+dnl Can we use KIST?
 
 dnl Define the set of checks for KIST scheduler support.
 AC_DEFUN([CHECK_KIST_SUPPORT],[

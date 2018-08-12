@@ -118,7 +118,6 @@ src_test_test_SOURCES += \
 	src/test/test_controller_events.c \
 	src/test/test_crypto.c \
 	src/test/test_crypto_ope.c \
-	src/test/test_crypto_openssl.c \
 	src/test/test_data.c \
 	src/test/test_dir.c \
 	src/test/test_dir_common.c \
@@ -189,6 +188,7 @@ if USE_NSS
 # ...
 else
 src_test_test_SOURCES += \
+	src/test/test_crypto_openssl.c \
 	src/test/test_tortls_openssl.c
 endif
 

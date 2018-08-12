@@ -47,19 +47,6 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
   // XXXX
   return -1;
 }
-tor_tls_t *
-tor_tls_get_by_ssl(const struct ssl_st *ssl)
-{
-  (void) ssl;
-  // XXXX
-  // XXXX refers to ssl_st.
-  return NULL;
-}
-void
-tor_tls_allocate_tor_tls_object_ex_data_index(void)
-{
-  // XXXX openssl only.
-}
 MOCK_IMPL(void,
 try_to_extract_certs_from_tls,(int severity, tor_tls_t *tls,
                                tor_x509_cert_impl_t **cert_out,
@@ -71,36 +58,7 @@ try_to_extract_certs_from_tls,(int severity, tor_tls_t *tls,
   (void)severity;
   // XXXX
 }
-int
-tor_tls_client_is_using_v2_ciphers(const struct ssl_st *ssl)
-{
-  (void) ssl;
-  // XXXX
-  // XXXX refers to ssl_st.
-  return 0;
-}
 
-void
-tor_tls_debug_state_callback(const struct ssl_st *ssl,
-                             int type, int val)
-{
-  (void) ssl;
-  (void)type;
-  (void)val;
-  // XXXX
-  // XXXX refers to ssl_st.
-}
-
-void
-tor_tls_server_info_callback(const struct ssl_st *ssl,
-                             int type, int val)
-{
-  (void)ssl;
-  (void)type;
-  (void)val;
-  // XXXX
-  // XXXX refers to ssl_st.
-}
 tor_tls_context_t *
 tor_tls_context_new(crypto_pk_t *identity,
                     unsigned int key_lifetime, unsigned flags, int is_client)

@@ -82,6 +82,11 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/crypt_ops/crypto_init.h"
+#ifdef ENABLE_NSS
+#include "lib/crypt_ops/crypto_nss_mgt.h"
+#else
+#include "lib/crypt_ops/crypto_openssl_mgt.h"
+#endif
 #include "feature/dircache/dirserv.h"
 #include "feature/relay/dns.h"
 #include "core/or/dos.h"
@@ -5238,9 +5243,16 @@ options_init_from_torrc(int argc, char **argv)
     printf("Libevent\t\t%-15s\t\t%s\n",
                       tor_libevent_get_header_version_str(),
                       tor_libevent_get_version_str());
+#ifdef ENABLE_OPENSSL
     printf("OpenSSL \t\t%-15s\t\t%s\n",
                       crypto_openssl_get_header_version_str(),
                       crypto_openssl_get_version_str());
+#endif
+#ifdef ENABLE_NSS
+    printf("NSS \t\t%-15s\t\t%s\n",
+           crypto_nss_get_header_version_str(),
+           crypto_nss_get_version_str());
+#endif
     if (tor_compress_supports_method(ZLIB_METHOD)) {
       printf("Zlib    \t\t%-15s\t\t%s\n",
                         tor_compress_version_str(ZLIB_METHOD),

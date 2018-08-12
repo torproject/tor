@@ -224,6 +224,9 @@ static void
 test_crypto_openssl_version(void *arg)
 {
   (void)arg;
+#ifdef ENABLE_NSS
+  tt_skip();
+#else
   const char *version = crypto_openssl_get_version_str();
   const char *h_version = crypto_openssl_get_header_version_str();
   tt_assert(version);
@@ -243,6 +246,7 @@ test_crypto_openssl_version(void *arg)
   tt_int_op(a, OP_GE, 0);
   tt_int_op(b, OP_GE, 0);
   tt_int_op(c, OP_GE, 0);
+#endif
 
  done:
   ;

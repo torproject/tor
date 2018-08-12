@@ -21,7 +21,9 @@
 #include "lib/ctime/di_ops.h"
 #include "lib/log/util_bug.h"
 
+#ifdef ENABLE_OPENSSL
 #include <openssl/evp.h>
+#endif
 
 #if defined(HAVE_LIBSCRYPT_H) && defined(HAVE_LIBSCRYPT_SCRYPT)
 #define HAVE_SCRYPT
@@ -265,6 +267,7 @@ secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
       return (int)key_out_len;
 
     case S2K_TYPE_PBKDF2: {
+#ifdef ENABLE_OPENSSL
       uint8_t log_iters;
       if (spec_len < 1 || secret_len > INT_MAX || spec_len > INT_MAX)
         return S2K_BAD_LEN;
@@ -278,6 +281,10 @@ secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
       if (rv < 0)
         return S2K_FAILED;
       return (int)key_out_len;
+#else
+      // XXXXXXXXXXXXXXXXXXXXXXXX implement me.
+      return S2K_NO_SCRYPT_SUPPORT;
+#endif
     }
 
     case S2K_TYPE_SCRYPT: {

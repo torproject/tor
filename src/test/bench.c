@@ -13,11 +13,14 @@
 #include "core/or/or.h"
 #include "core/crypto/onion_tap.h"
 #include "core/crypto/relay_crypto.h"
+
+#ifdef ENABLE_OPENSSL
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
 #include <openssl/ec.h>
 #include <openssl/ecdh.h>
 #include <openssl/obj_mac.h>
+#endif
 
 #include "core/or/circuitlist.h"
 #include "app/config/config.h"
@@ -580,6 +583,7 @@ bench_dh(void)
          "      %f millisec each.\n", NANOCOUNT(start, end, iters)/1e6);
 }
 
+#ifdef ENABLE_OPENSSL
 static void
 bench_ecdh_impl(int nid, const char *name)
 {
@@ -629,6 +633,7 @@ bench_ecdh_p224(void)
 {
   bench_ecdh_impl(NID_secp224r1, "P-224");
 }
+#endif
 
 typedef void (*bench_fn)(void);
 
@@ -652,8 +657,11 @@ static struct benchmark_t benchmarks[] = {
   ENT(cell_aes),
   ENT(cell_ops),
   ENT(dh),
+
+#ifdef ENABLE_OPENSSL
   ENT(ecdh_p256),
   ENT(ecdh_p224),
+#endif
   {NULL,NULL,0}
 };
 

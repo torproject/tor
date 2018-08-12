@@ -26,4 +26,8 @@ void crypto_thread_cleanup(void);
 int crypto_global_cleanup(void);
 void crypto_postfork(void);
 
+const char *crypto_get_library_name(void);
+const char *crypto_get_library_version_string(void);
+const char *crypto_get_header_version_string(void);
+
 #endif /* !defined(TOR_CRYPTO_H) */

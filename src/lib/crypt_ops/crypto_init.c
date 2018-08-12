@@ -88,6 +88,10 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 #ifdef ENABLE_OPENSSL
     if (crypto_openssl_late_init(useAccel, accelName, accelDir) < 0)
       return -1;
+#else
+    (void)useAccel;
+    (void)accelName;
+    (void)accelDir;
 #endif
 #ifdef ENABLE_NSS
     if (crypto_nss_late_init() < 0)
@@ -137,5 +141,43 @@ crypto_postfork(void)
 {
 #ifdef ENABLE_NSS
   crypto_nss_postfork();
+#endif
+}
+
+/** Return the name of the crypto library we're using. */
+const char *
+crypto_get_library_name(void)
+{
+#ifdef ENABLE_OPENSSL
+  return "OpenSSL";
+#endif
+#ifdef ENABLE_NSS
+  return "NSS";
+#endif
+}
+
+/** Return the version of the crypto library we are using, as given in the
+ * library. */
+const char *
+crypto_get_library_version_string(void)
+{
+#ifdef ENABLE_OPENSSL
+  return crypto_openssl_get_version_str();
+#endif
+#ifdef ENABLE_NSS
+  return crypto_nss_get_version_str();
+#endif
+}
+
+/** Return the version of the crypto library we're using, as given in the
+ * headers. */
+const char *
+crypto_get_header_version_string(void)
+{
+#ifdef ENABLE_OPENSSL
+  return crypto_openssl_get_header_version_str();
+#endif
+#ifdef ENABLE_NSS
+  return crypto_nss_get_header_version_str();
 #endif
 }
