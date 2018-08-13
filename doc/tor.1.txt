@@ -2211,7 +2211,8 @@ is non-zero):
     __filename__. The file format is the same as the standard Unix
     "**resolv.conf**" file (7). This option, like all other ServerDNS options,
     only affects name lookups that your server does on behalf of clients.
-    (Defaults to use the system DNS configuration.)
+    (Defaults to use the system DNS configuration or a localhost DNS service
+    in case no nameservers are found in a given configuration.)
 
 [[ServerDNSAllowBrokenConfig]] **ServerDNSAllowBrokenConfig** **0**|**1**::
     If this option is false, Tor exits immediately if there are problems
