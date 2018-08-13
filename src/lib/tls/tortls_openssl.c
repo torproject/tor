@@ -18,6 +18,7 @@
 
 #define TORTLS_PRIVATE
 #define TORTLS_OPENSSL_PRIVATE
+#define TOR_X509_PRIVATE
 
 #ifdef _WIN32 /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
   #include <winsock2.h>
@@ -74,9 +75,6 @@ ENABLE_GCC_WARNING(redundant-decls)
 /* Copied from or.h */
 #define LEGAL_NICKNAME_CHARACTERS \
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-/** How long do identity certificates live? (sec) */
-#define IDENTITY_CERT_LIFETIME  (365*24*60*60)
 
 #define ADDR(tls) (((tls) && (tls)->address) ? tls->address : "peer")
 
@@ -489,39 +487,6 @@ static const char CLIENT_CIPHER_LIST[] =
 #undef CIPHER
 #undef XCIPHER
 
-/** Set *<b>link_cert_out</b> and *<b>id_cert_out</b> to the link certificate
- * and ID certificate that we're currently using for our V3 in-protocol
- * handshake's certificate chain.  If <b>server</b> is true, provide the certs
- * that we use in server mode (auth, ID); otherwise, provide the certs that we
- * use in client mode. (link, ID) */
-int
-tor_tls_get_my_certs(int server,
-                     const tor_x509_cert_t **link_cert_out,
-                     const tor_x509_cert_t **id_cert_out)
-{
-  tor_tls_context_t *ctx = tor_tls_context_get(server);
-  if (! ctx)
-    return -1;
-  if (link_cert_out)
-    *link_cert_out = server ? ctx->my_link_cert : ctx->my_auth_cert;
-  if (id_cert_out)
-    *id_cert_out = ctx->my_id_cert;
-  return 0;
-}
-
-/**
- * Return the authentication key that we use to authenticate ourselves as a
- * client in the V3 in-protocol handshake.
- */
-crypto_pk_t *
-tor_tls_get_my_client_auth_key(void)
-{
-  tor_tls_context_t *context = tor_tls_context_get(0);
-  if (! context)
-    return NULL;
-  return context->auth_key;
-}
-
 /** Return true iff the other side of <b>tls</b> has authenticated to us, and
  * the key certified in <b>cert</b> is the same as the key they used to do it.
  */
@@ -548,39 +513,6 @@ tor_tls_cert_matches_key,(const tor_tls_t *tls, const tor_x509_cert_t *cert))
   return result;
 }
 
-/** Create a new global TLS context.
- *
- * You can call this function multiple times.  Each time you call it,
- * it generates new certificates; all new connections will use
- * the new SSL context.
- */
-int
-tor_tls_context_init_one(tor_tls_context_t **ppcontext,
-                         crypto_pk_t *identity,
-                         unsigned int key_lifetime,
-                         unsigned int flags,
-                         int is_client)
-{
-  tor_tls_context_t *new_ctx = tor_tls_context_new(identity,
-                                                   key_lifetime,
-                                                   flags,
-                                                   is_client);
-  tor_tls_context_t *old_ctx = *ppcontext;
-
-  if (new_ctx != NULL) {
-    *ppcontext = new_ctx;
-
-    /* Free the old context if one existed. */
-    if (old_ctx != NULL) {
-      /* This is safe even if there are open connections: we reference-
-       * count tor_tls_context_t objects. */
-      tor_tls_context_decref(old_ctx);
-    }
-  }
-
-  return ((new_ctx != NULL) ? 0 : -1);
-}
-
 void
 tor_tls_context_impl_free(struct ssl_ctx_st *ctx)
 {
@@ -592,8 +524,6 @@ tor_tls_context_impl_free(struct ssl_ctx_st *ctx)
 /** The group we should use for ecdhe when none was selected. */
 #define  NID_tor_default_ecdhe_group NID_X9_62_prime256v1
 
-#define RSA_LINK_KEY_BITS 2048
-
 /** Create a new TLS context for use with Tor TLS handshakes.
  * <b>identity</b> should be set to the identity key used to sign the
  * certificate.
@@ -602,57 +532,19 @@ tor_tls_context_t *
 tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
                     unsigned flags, int is_client)
 {
-  crypto_pk_t *rsa = NULL, *rsa_auth = NULL;
   EVP_PKEY *pkey = NULL;
   tor_tls_context_t *result = NULL;
-  X509 *cert = NULL, *idcert = NULL, *authcert = NULL;
-  char *nickname = NULL, *nn2 = NULL;
 
   tor_tls_init();
-  nickname = crypto_random_hostname(8, 20, "www.", ".net");
-#ifdef DISABLE_V3_LINKPROTO_SERVERSIDE
-  nn2 = crypto_random_hostname(8, 20, "www.", ".net");
-#else
-  nn2 = crypto_random_hostname(8, 20, "www.", ".com");
-#endif
-
-  /* Generate short-term RSA key for use with TLS. */
-  if (!(rsa = crypto_pk_new()))
-    goto error;
-  if (crypto_pk_generate_key_with_bits(rsa, RSA_LINK_KEY_BITS)<0)
-    goto error;
-  if (!is_client) {
-    /* Generate short-term RSA key for use in the in-protocol ("v3")
-     * authentication handshake. */
-    if (!(rsa_auth = crypto_pk_new()))
-      goto error;
-    if (crypto_pk_generate_key(rsa_auth)<0)
-      goto error;
-    /* Create a link certificate signed by identity key. */
-    cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
-                                      key_lifetime);
-    /* Create self-signed certificate for identity key. */
-    idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
-                                        IDENTITY_CERT_LIFETIME);
-    /* Create an authentication certificate signed by identity key. */
-    authcert = tor_tls_create_certificate(rsa_auth, identity, nickname, nn2,
-                                          key_lifetime);
-    if (!cert || !idcert || !authcert) {
-      log_warn(LD_CRYPTO, "Error creating certificate");
-      goto error;
-    }
-  }
 
   result = tor_malloc_zero(sizeof(tor_tls_context_t));
   result->refcnt = 1;
-  if (!is_client) {
-    result->my_link_cert = tor_x509_cert_new(X509_dup(cert));
-    result->my_id_cert = tor_x509_cert_new(X509_dup(idcert));
-    result->my_auth_cert = tor_x509_cert_new(X509_dup(authcert));
-    if (!result->my_link_cert || !result->my_id_cert || !result->my_auth_cert)
+
+  if (! is_client) {
+    if (tor_tls_context_init_certificates(result, identity, key_lifetime,
+                                          flags) < 0) {
       goto error;
-    result->link_key = crypto_pk_dup_key(rsa);
-    result->auth_key = crypto_pk_dup_key(rsa_auth);
+    }
   }
 
 #if 0
@@ -727,22 +619,21 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   SSL_CTX_set_mode(result->ctx, SSL_MODE_RELEASE_BUFFERS);
 #endif
   if (! is_client) {
-    if (cert && !SSL_CTX_use_certificate(result->ctx,cert))
+    if (result->my_link_cert &&
+        !SSL_CTX_use_certificate(result->ctx,
+                                 result->my_link_cert->cert)) {
       goto error;
-    X509_free(cert); /* We just added a reference to cert. */
-    cert=NULL;
-    if (idcert) {
+    }
+    if (result->my_id_cert) {
       X509_STORE *s = SSL_CTX_get_cert_store(result->ctx);
       tor_assert(s);
-      X509_STORE_add_cert(s, idcert);
-      X509_free(idcert); /* The context now owns the reference to idcert */
-      idcert = NULL;
+      X509_STORE_add_cert(s, X509_dup(result->my_id_cert->cert));
     }
   }
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
   if (!is_client) {
-    tor_assert(rsa);
-    if (!(pkey = crypto_pk_get_openssl_evp_pkey_(rsa,1)))
+    tor_assert(result->link_key);
+    if (!(pkey = crypto_pk_get_openssl_evp_pkey_(result->link_key,1)))
       goto error;
     if (!SSL_CTX_use_PrivateKey(result->ctx, pkey))
       goto error;
@@ -751,6 +642,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     if (!SSL_CTX_check_private_key(result->ctx))
       goto error;
   }
+
   {
     DH *dh = crypto_dh_new_openssl_tls();
     tor_assert(dh);
@@ -777,33 +669,14 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   /* let us realloc bufs that we're writing from */
   SSL_CTX_set_mode(result->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
-  if (rsa)
-    crypto_pk_free(rsa);
-  if (rsa_auth)
-    crypto_pk_free(rsa_auth);
-  X509_free(authcert);
-  tor_free(nickname);
-  tor_free(nn2);
   return result;
 
  error:
   tls_log_errors(NULL, LOG_WARN, LD_NET, "creating TLS context");
-  tor_free(nickname);
-  tor_free(nn2);
   if (pkey)
     EVP_PKEY_free(pkey);
-  if (rsa)
-    crypto_pk_free(rsa);
-  if (rsa_auth)
-    crypto_pk_free(rsa_auth);
   if (result)
     tor_tls_context_decref(result);
-  if (cert)
-    X509_free(cert);
-  if (idcert)
-    X509_free(idcert);
-  if (authcert)
-    X509_free(authcert);
   return NULL;
 }
 

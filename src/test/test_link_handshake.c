@@ -795,11 +795,26 @@ CERTS_FAIL(bad_rsa_id_cert, /*ed25519*/
   {
     require_failure_message = "legacy RSA ID certificate was not valid";
     certs_cell_cert_t *cert = certs_cell_get_certs(d->ccell, 1);
-    uint8_t *body = certs_cell_cert_getarray_body(cert);
-    ssize_t body_len = certs_cell_cert_getlen_body(cert);
-    /* Frob a byte in the signature */
-    body[body_len - 13] ^= 7;
+    uint8_t *body;
+    /* Frob a byte in the signature, after making a new cert. (NSS won't let
+     * us just frob the old cert, since it will see that the issuer & serial
+     * number are the same, which will make it fail at an earlier stage than
+     * signature verification.) */
+    const tor_x509_cert_t *idc;
+    tor_x509_cert_t *newc;
+    tor_tls_get_my_certs(1, NULL, &idc);
+    time_t new_end = time(NULL) + 86400 * 10;
+    newc = tor_x509_cert_replace_expiration(idc, new_end, d->key2);
+    const uint8_t *encoded;
+    size_t encoded_len;
+    tor_x509_cert_get_der(newc, &encoded, &encoded_len);
+    certs_cell_cert_setlen_body(cert, encoded_len);
+    certs_cell_cert_set_cert_len(cert, encoded_len);
+    body = certs_cell_cert_getarray_body(cert);
+    memcpy(body, encoded, encoded_len);
+    body[encoded_len - 13] ^= 7;
     REENCODE();
+    tor_x509_cert_free(newc);
   })
 CERTS_FAIL(expired_rsa_id, /* both */
   {
@@ -815,6 +830,7 @@ CERTS_FAIL(expired_rsa_id, /* both */
     size_t encoded_len;
     tor_x509_cert_get_der(newc, &encoded, &encoded_len);
     certs_cell_cert_setlen_body(cert, encoded_len);
+    certs_cell_cert_set_cert_len(cert, encoded_len);
     memcpy(certs_cell_cert_getarray_body(cert), encoded, encoded_len);
     REENCODE();
     tor_x509_cert_free(newc);

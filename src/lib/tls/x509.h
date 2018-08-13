@@ -72,10 +72,4 @@ int tor_tls_cert_is_valid(int severity,
                           time_t now,
                           int check_rsa_1024);
 
-int tor_x509_check_cert_lifetime_internal(int severity,
-                                          const tor_x509_cert_impl_t *cert,
-                                          time_t now,
-                                          int past_tolerance,
-                                          int future_tolerance);
-
 #endif

@@ -319,7 +319,8 @@ tor_tls_cert_is_valid(int severity,
   /* okay, the signature checked out right.  Now let's check the check the
    * lifetime. */
   if (tor_x509_check_cert_lifetime_internal(severity, cert->cert, now,
-                                   48*60*60, 30*24*60*60) < 0)
+                                            TOR_X509_PAST_SLOP,
+                                            TOR_X509_FUTURE_SLOP) < 0)
     goto bad;
 
   cert_key = X509_get_pubkey(cert->cert);

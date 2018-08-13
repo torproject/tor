@@ -47,6 +47,33 @@ crypto_pk_key_is_private(const crypto_pk_t *key)
   return key && key->seckey;
 }
 
+/** used by tortls.c: wrap a SecKEYPublicKey in a crypto_pk_t. Take ownership
+ * of the RSA object. */
+crypto_pk_t *
+crypto_pk_new_from_nss_pubkey(struct SECKEYPublicKeyStr *pub)
+{
+  crypto_pk_t *result = tor_malloc_zero(sizeof(crypto_pk_t));
+  result->pubkey = pub;
+  return result;
+}
+
+/** Return the SECKEYPublicKey for the provided crypto_pk_t. */
+const SECKEYPublicKey *
+crypto_pk_get_nss_pubkey(const crypto_pk_t *key)
+{
+  tor_assert(key);
+  return key->pubkey;
+}
+
+/** Return the SECKEYPrivateKey for the provided crypto_pk_t, or NULL if it
+ * does not exist. */
+const SECKEYPrivateKey *
+crypto_pk_get_nss_privkey(const crypto_pk_t *key)
+{
+  tor_assert(key);
+  return key->seckey;
+}
+
 #ifdef ENABLE_OPENSSL
 /** used by tortls.c: wrap an RSA* in a crypto_pk_t. Take ownership of the
  * RSA object. */

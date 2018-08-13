@@ -121,6 +121,16 @@ MOCK_DECL(struct evp_pkey_st *, crypto_pk_get_openssl_evp_pkey_,(
                                  crypto_pk_t *env,int private));
 #endif
 
+#ifdef ENABLE_NSS
+struct SECKEYPublicKeyStr;
+struct SECKEYPrivateKeyStr;
+crypto_pk_t *crypto_pk_new_from_nss_pubkey(struct SECKEYPublicKeyStr *pub);
+const struct SECKEYPublicKeyStr *crypto_pk_get_nss_pubkey(
+                                           const crypto_pk_t *key);
+const struct SECKEYPrivateKeyStr *crypto_pk_get_nss_privkey(
+                                           const crypto_pk_t *key);
+#endif
+
 void crypto_pk_assign_public(crypto_pk_t *dest, const crypto_pk_t *src);
 void crypto_pk_assign_private(crypto_pk_t *dest, const crypto_pk_t *src);
 

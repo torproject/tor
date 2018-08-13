@@ -69,6 +69,15 @@ crypto_nss_early_init(void)
     crypto_nss_log_errors(LOG_ERR, "setting cipher policy");
     tor_assert_unreached();
   }
+
+  /* We need to override the default here, or NSS will reject all the
+   * legacy Tor certificates. */
+  SECStatus rv = NSS_OptionSet(NSS_RSA_MIN_KEY_SIZE, 1024);
+  if (rv != SECSuccess) {
+    log_err(LD_CRYPTO, "Unable to set NSS min RSA key size");
+    crypto_nss_log_errors(LOG_ERR, "setting cipher option.");
+    tor_assert_unreached();
+  }
 }
 
 void

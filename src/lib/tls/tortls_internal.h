@@ -27,6 +27,10 @@ int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
                              unsigned int key_lifetime,
                              unsigned int flags,
                              int is_client);
+int tor_tls_context_init_certificates(tor_tls_context_t *result,
+                                      crypto_pk_t *identity,
+                                      unsigned key_lifetime,
+                                      unsigned flags);
 
 #ifdef ENABLE_OPENSSL
 void tor_tls_context_impl_free(struct ssl_ctx_st *);

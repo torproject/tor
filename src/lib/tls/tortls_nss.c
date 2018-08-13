@@ -23,7 +23,9 @@
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/tls/x509.h"
+#include "lib/tls/x509_internal.h"
 #include "lib/tls/tortls.h"
+#include "lib/tls/tortls_st.h"
 #include "lib/tls/tortls_internal.h"
 #include "lib/log/util_bug.h"
 
@@ -64,27 +66,27 @@ tor_tls_context_new(crypto_pk_t *identity,
                     unsigned int key_lifetime, unsigned flags, int is_client)
 {
   tor_assert(identity);
-  tor_assert(key_lifetime);
-  (void)flags;
-  (void)is_client;
-  // XXXX
-  return NULL;
+
+  tor_tls_context_t *ctx = tor_malloc_zero(sizeof(tor_tls_context_t));
+  ctx->refcnt = 1;
+
+  if (! is_client) {
+    if (tor_tls_context_init_certificates(ctx, identity,
+                                          key_lifetime, flags) < 0) {
+      goto err;
+    }
+  }
+
+  // XXXX write the main body.
+
+  goto done;
+ err:
+  tor_tls_context_decref(ctx);
+  ctx = NULL;
+ done:
+  return ctx;
 }
-int
-tor_tls_context_init_one(tor_tls_context_t **ppcontext,
-                         crypto_pk_t *identity,
-                         unsigned int key_lifetime,
-                         unsigned int flags,
-                         int is_client)
-{
-  tor_assert(ppcontext);
-  tor_assert(identity);
-  tor_assert(key_lifetime);
-  (void)flags;
-  (void)is_client;
-  // XXXX
-  return -1;
-}
+
 void
 tor_tls_context_impl_free(struct ssl_ctx_st *ctx)
 {
@@ -359,25 +361,6 @@ tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
   (void)domain;
   (void)doing;
   // XXXX
-}
-
-int
-tor_tls_get_my_certs(int server,
-                     const struct tor_x509_cert_t **link_cert_out,
-                     const struct tor_x509_cert_t **id_cert_out)
-{
-  tor_assert(link_cert_out);
-  tor_assert(id_cert_out);
-  (void)server;
-  // XXXX
-  return -1;
-}
-
-crypto_pk_t *
-tor_tls_get_my_client_auth_key(void)
-{
-  // XXXX
-  return NULL;
 }
 
 const char *
