@@ -1385,16 +1385,23 @@ configure_nameservers(int force)
   evdns_set_log_fn(evdns_log_cb);
   if (conf_fname) {
     log_debug(LD_FS, "stat()ing %s", conf_fname);
-    if (stat(sandbox_intern_string(conf_fname), &st)) {
-      log_warn(LD_EXIT, "Unable to stat resolver configuration in '%s': %s",
+    int missing_resolv_conf = 0;
+    int stat_res = stat(sandbox_intern_string(conf_fname), &st);
+
+    if (stat_res) {
+      log_warn(LD_EXIT, "unable to stat resolver configuration in '%s': %s",
                conf_fname, strerror(errno));
-      goto err;
-    }
-    if (!force && resolv_conf_fname && !strcmp(conf_fname,resolv_conf_fname)
+      missing_resolv_conf = 1;
+    } else if (!force && resolv_conf_fname &&
+               !strcmp(conf_fname,resolv_conf_fname)
         && st.st_mtime == resolv_conf_mtime) {
-      log_info(LD_EXIT, "No change to '%s'", conf_fname);
+      log_info(LD_EXIT, "no change to '%s'", conf_fname);
       return 0;
     }
+
+    if (st.st_size == 0)
+      missing_resolv_conf = 1;
+
     if (nameservers_configured) {
       evdns_base_search_clear(the_evdns_base);
       evdns_base_clear_nameservers_and_suspend(the_evdns_base);
@@ -1402,25 +1409,39 @@ configure_nameservers(int force)
 #if defined(DNS_OPTION_HOSTSFILE) && defined(USE_LIBSECCOMP)
     if (flags & DNS_OPTION_HOSTSFILE) {
       flags ^= DNS_OPTION_HOSTSFILE;
-      log_debug(LD_FS, "Loading /etc/hosts");
+      log_debug(LD_FS, "loading /etc/hosts");
       evdns_base_load_hosts(the_evdns_base,
           sandbox_intern_string("/etc/hosts"));
     }
-#endif /* defined(DNS_OPTION_HOSTSFILE) && defined(USE_LIBSECCOMP) */
-    log_info(LD_EXIT, "Parsing resolver configuration in '%s'", conf_fname);
-    if ((r = evdns_base_resolv_conf_parse(the_evdns_base, flags,
-        sandbox_intern_string(conf_fname)))) {
-      log_warn(LD_EXIT, "Unable to parse '%s', or no nameservers in '%s' (%d)",
-               conf_fname, conf_fname, r);
-      goto err;
+#endif /* defined(dns_option_hostsfile) && defined(use_libseccomp) */
+
+    if (!missing_resolv_conf) {
+      log_info(LD_EXIT, "parsing resolver configuration in '%s'", conf_fname);
+      if ((r = evdns_base_resolv_conf_parse(the_evdns_base, flags,
+          sandbox_intern_string(conf_fname)))) {
+        log_warn(LD_EXIT, "unable to parse '%s', or no nameservers "
+                          "in '%s' (%d)", conf_fname, conf_fname, r);
+
+        if (r != 6) // "r = 6" means "no DNS servers were in resolv.conf" -
+          goto err; // in which case we expect libevent to add 127.0.0.1 as
+                    // fallback.
+      }
+      if (evdns_base_count_nameservers(the_evdns_base) == 0) {
+        log_warn(LD_EXIT, "unable to find any nameservers in '%s'.",
+                 conf_fname);
+      }
+      resolv_conf_fname = tor_strdup(conf_fname);
+      resolv_conf_mtime = st.st_mtime;
+    } else {
+      log_warn(LD_EXIT, "Could not read your resolv.conf - "
+                        "please investigate your DNS configuration. "
+                        "This is possibly a problem. Meanwhile, falling"
+                        " back to local DNS at 127.0.0.1.");
+      evdns_base_nameserver_ip_add(the_evdns_base, "127.0.0.1");
     }
-    if (evdns_base_count_nameservers(the_evdns_base) == 0) {
-      log_warn(LD_EXIT, "Unable to find any nameservers in '%s'.", conf_fname);
-      goto err;
-    }
+
     tor_free(resolv_conf_fname);
-    resolv_conf_fname = tor_strdup(conf_fname);
-    resolv_conf_mtime = st.st_mtime;
+
     if (nameservers_configured)
       evdns_base_resume(the_evdns_base);
   }
@@ -1431,12 +1452,12 @@ configure_nameservers(int force)
       evdns_base_clear_nameservers_and_suspend(the_evdns_base);
     }
     if (evdns_base_config_windows_nameservers(the_evdns_base))  {
-      log_warn(LD_EXIT,"Could not config nameservers.");
+      log_warn(LD_EXIT,"could not config nameservers.");
       goto err;
     }
     if (evdns_base_count_nameservers(the_evdns_base) == 0) {
-      log_warn(LD_EXIT, "Unable to find any platform nameservers in "
-               "your Windows configuration.");
+      log_warn(LD_EXIT, "unable to find any platform nameservers in "
+               "your windows configuration.");
       goto err;
     }
     if (nameservers_configured)
