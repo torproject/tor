@@ -15,8 +15,11 @@
 # src/rust/ (i.e. *not* /src/rust/Cargo.toml, but instead the one for
 # your crate).
 #
-# Next, run this script.  Then, go into src/ext/rust and commit the
-# changes to the tor-rust-dependencies repo.
+# Next, run this script. Review the changes to src/rust/Cargo.lock
+# before proceeding. Then, go into src/ext/rust and commit the
+# changes with `git add --all; git commit`. Push the commit to the
+# tor-rust-dependencies repo. After the commit is merged upstream, run:
+# `git submodule update --remote && git add src/ext/rust/ src/rust/Cargo.lock && git commit`.
 
 set -e
 
@@ -47,4 +50,4 @@ if test -z `cargo --list | grep vendor` ; then
     exit 1
 fi
 
-$CARGO vendor -v --locked --explicit-version --no-delete --sync $TOML $VENDORED
+$CARGO vendor -v --explicit-version --no-delete --sync $TOML $VENDORED

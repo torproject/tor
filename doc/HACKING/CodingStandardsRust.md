@@ -97,9 +97,12 @@ them via some feature, e.g.:
 foo = { version = "1.0.0", default-features = false }
 ```
 
-Next, run `/scripts/maint/updateRustDependencies.sh`.  Then, go into
-`src/ext/rust` and commit the changes to the `tor-rust-dependencies`
-repo.
+Next, run `scripts/maint/updateRustDependencies.sh`. Review the changes
+to src/rust/Cargo.lock before proceeding. Then, go into src/ext/rust
+and commit the changes with `git add --all; git commit`. Push the commit
+to the tor-rust-dependencies repo. After the commit is merged upstream,
+run: `git submodule update --remote`, then
+`git add src/ext/rust/ src/rust/Cargo.lock && git commit`.
 
  Documentation
 ---------------
