@@ -1,0 +1,4 @@
+  o Minor bugfixes (DNS):
+    - Gracefully handle empty or absent resolve.conf file by falling
+      back to using localhost DNS service and hoping it works. Fixes
+      bug 21900; bugfix on 0.2.1.10-alpha.
