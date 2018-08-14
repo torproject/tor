@@ -157,13 +157,15 @@ finish_daemon(const char *desired_cwd)
 }
 #else /* !(!defined(_WIN32)) */
 /* defined(_WIN32) */
-void
+int
 start_daemon(void)
 {
+  return 0;
 }
-void
+int
 finish_daemon(const char *cp)
 {
   (void)cp;
+  return 0;
 }
 #endif /* !defined(_WIN32) */
