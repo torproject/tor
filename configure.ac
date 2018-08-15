@@ -487,8 +487,10 @@ if test "$LIBS" != "$saved_LIBS"; then
    have_rt=yes
 fi
 
-AC_SEARCH_LIBS(pthread_create, [pthread])
-AC_SEARCH_LIBS(pthread_detach, [pthread])
+if test "$bwin32" = "false"; then
+  AC_SEARCH_LIBS(pthread_create, [pthread])
+  AC_SEARCH_LIBS(pthread_detach, [pthread])
+fi
 
 AM_CONDITIONAL(THREADS_WIN32, test "$bwin32" = "true")
 AM_CONDITIONAL(THREADS_PTHREADS, test "$bwin32" = "false")
