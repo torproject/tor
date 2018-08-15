@@ -1683,6 +1683,26 @@ AC_CHECK_SIZEOF(socklen_t, , [AC_INCLUDES_DEFAULT()
 
 AC_CHECK_SIZEOF(cell_t)
 
+# Let's see if stdatomic works. (There are some debian clangs that screw it
+# up; see Tor bug #26779 and debian bug 903709.)
+AC_CACHE_CHECK([whether C11 stdatomic.h actually works],
+               tor_cv_stdatomic_works,
+[AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+#include <stdatomic.h>
+struct x { atomic_size_t y; };
+void try_atomic_init(struct x *xx)
+{
+  atomic_init(&xx->y, 99);
+  atomic_fetch_add(&xx->y, 1);
+}
+]])], [tor_cv_stdatomic_works=yes], [tor_cv_stdatomic_works=no])])
+
+if test "$tor_cv_stdatomic_works" = "yes"; then
+   AC_DEFINE(STDATOMIC_WORKS, 1, [Set to 1 if we can compile a simple stdatomic example.])
+elif test "$ac_cv_header_stdatomic_h" = "yes"; then
+   AC_MSG_WARN([Your compiler provides the stdatomic.h header, but it doesn't seem to work.  I'll pretend it isn't there. If you are using Clang on Debian, maybe this is because of https://bugs.debian.org/903709 ])
+fi
+
 # Now make sure that NULL can be represented as zero bytes.
 AC_CACHE_CHECK([whether memset(0) sets pointers to NULL], tor_cv_null_is_zero,
 [AC_RUN_IFELSE([AC_LANG_SOURCE(
