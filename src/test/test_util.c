@@ -4316,8 +4316,7 @@ test_util_glob(void *ptr)
   tt_int_op(smartlist_len(results), OP_EQ, 0);
   smartlist_free(results);
 
-#ifndef _WIN32
-  // test wildcards on directory and file (not supported by Windows)
+  // test wildcards on directory and file
   tor_asprintf(&file_and_dir, "%s"PATH_SEPARATOR"%s", dirname,
                "*"PATH_SEPARATOR"*");
   results = tor_glob(file_and_dir);
@@ -4337,6 +4336,7 @@ test_util_glob(void *ptr)
   SMARTLIST_FOREACH(results, char *, f, tor_free(f));
   smartlist_free(results);
 
+#ifndef _WIN32
   // test wildcard escaping
   tor_asprintf(&escape, "%s"PATH_SEPARATOR"\\*", dirname);
   results = tor_glob(escape);

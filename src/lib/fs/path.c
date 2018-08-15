@@ -312,37 +312,11 @@ make_path_absolute(char *fname)
 #endif /* defined(_WIN32) */
 }
 
-#ifndef _WIN32
-/** Same as opendir but calls sandbox_intern_string before */
-static DIR *
-prot_opendir(const char *name)
-{
-  return opendir(sandbox_intern_string(name));
-}
-
-/** Same as stat but calls sandbox_intern_string before */
-static int
-prot_stat(const char *pathname, struct stat *buf)
-{
-  return stat(sandbox_intern_string(pathname), buf);
-}
-
-/** Same as lstat but calls sandbox_intern_string before */
-static int
-prot_lstat(const char *pathname, struct stat *buf)
-{
-  return lstat(sandbox_intern_string(pathname), buf);
-}
-#endif /* !(defined(_WIN32)) */
-
-/** Return a new list containing the paths that match the pattern
- * <b>pattern</b>. Return NULL on error.
- */
-struct smartlist_t *
-tor_glob(const char *pattern)
+#ifdef _WIN32
+static struct smartlist_t *
+unglob_file_name(const char *pattern)
 {
   smartlist_t *result;
-#ifdef _WIN32
   TCHAR tpattern[MAX_PATH] = {0};
   char name[MAX_PATH*2+1] = {0};
   HANDLE handle;
@@ -394,6 +368,107 @@ tor_glob(const char *pattern)
     }
   }
   FindClose(handle);
+  return result;
+}
+#endif /* defined(_WIN32) */
+
+#ifndef _WIN32
+/** Same as opendir but calls sandbox_intern_string before */
+static DIR *
+prot_opendir(const char *name)
+{
+  return opendir(sandbox_intern_string(name));
+}
+
+/** Same as stat but calls sandbox_intern_string before */
+static int
+prot_stat(const char *pathname, struct stat *buf)
+{
+  return stat(sandbox_intern_string(pathname), buf);
+}
+
+/** Same as lstat but calls sandbox_intern_string before */
+static int
+prot_lstat(const char *pathname, struct stat *buf)
+{
+  return lstat(sandbox_intern_string(pathname), buf);
+}
+#endif /* !(defined(_WIN32)) */
+
+/** Return a new list containing the paths that match the pattern
+ * <b>pattern</b>. Return NULL on error.
+ */
+struct smartlist_t *
+tor_glob(const char *pattern)
+{
+  smartlist_t *result;
+#ifdef _WIN32
+  result = smartlist_new();
+  int i, curr_sep = -1;
+  int glob_found = 0, error_found = 0;
+
+  // search for first path fragment with globs
+  for (i = 0; pattern[i]; i++) {
+    if (IS_GLOB_CHAR(pattern, i)) {
+      glob_found = 1;
+    }
+
+    int last_char = !pattern[i+1];
+    int separator = pattern[i] == *PATH_SEPARATOR;
+    if (separator || last_char) {
+      curr_sep = i;
+
+      if (glob_found) {
+        // unglob current fragment
+        int glob_size = last_char && !separator ? curr_sep + 1 : curr_sep;
+        char *glob_path = tor_strndup(pattern, glob_size);
+        smartlist_t *unglobbed_paths = unglob_file_name(glob_path);
+        tor_free(glob_path);
+        if (!unglobbed_paths) {
+          error_found = 1;
+          break;
+        }
+
+        // for each path for current fragment, add the rest of the pattern
+        // and call recursively to get all opened paths
+        SMARTLIST_FOREACH_BEGIN(unglobbed_paths, char *, current_path) {
+          char *next_path;
+          file_status_t file_type = file_status(current_path);
+          if (file_type == FN_DIR && pattern[curr_sep+1]) {
+            tor_asprintf(&next_path, "%s"PATH_SEPARATOR"%s", current_path,
+                         &pattern[curr_sep+1]);
+          } else if (!pattern[curr_sep+1]) {
+            smartlist_add_strdup(result, current_path);
+            continue;
+          } else {
+            continue;
+          }
+
+          smartlist_t *opened_next = tor_glob(next_path);
+          tor_free(next_path);
+          if (!opened_next) {
+            error_found = 1;
+            break;
+          }
+          smartlist_add_all(result, opened_next);
+          smartlist_free(opened_next);
+        } SMARTLIST_FOREACH_END(current_path);
+        SMARTLIST_FOREACH(unglobbed_paths, char *, p, tor_free(p));
+        smartlist_free(unglobbed_paths);
+        break;
+      } else if (last_char) {
+        char *s = tor_strdup(pattern);
+        clean_fname_for_stat(s);
+        smartlist_add_strdup(result, s);
+      }
+    }
+  }
+
+  if (error_found) {
+    SMARTLIST_FOREACH(result, char *, p, tor_free(p));
+    smartlist_free(result);
+    result = NULL;
+  }
 #else /* !(defined(_WIN32)) */
   glob_t matches;
   int flags = GLOB_ERR | GLOB_NOSORT;
@@ -463,7 +538,8 @@ get_glob_opened_files(const char *pattern)
     }
 
     int last_char = !pattern[i+1];
-    if (pattern[i] == *PATH_SEPARATOR || last_char) {
+    int separator = pattern[i] == *PATH_SEPARATOR;
+    if (separator || last_char) {
       prev_sep = curr_sep;
       curr_sep = i;
 
@@ -479,7 +555,8 @@ get_glob_opened_files(const char *pattern)
         }
 
         // unglob current fragment
-        char *glob_path = tor_strndup(pattern, curr_sep);
+        int glob_size = last_char && !separator ? curr_sep + 1 : curr_sep;
+        char *glob_path = tor_strndup(pattern, glob_size);
         smartlist_t *unglobbed_paths = tor_glob(glob_path);
         tor_free(glob_path);
         if (!unglobbed_paths) {
