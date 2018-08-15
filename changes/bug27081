@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation, windows):
+    - Don't link or search for pthreads when building for Windows, even if we
+      are using build environment (like mingw) that provides a pthreads
+      library. Fixes bug 27081; bugfix on 0.1.0.1-rc.
