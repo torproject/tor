@@ -1792,7 +1792,15 @@ int
 addrs_in_same_network_family(const tor_addr_t *a1,
                              const tor_addr_t *a2)
 {
-  return 0 == tor_addr_compare_masked(a1, a2, 16, CMP_SEMANTIC);
+  switch (tor_addr_family(a1)) {
+    case AF_INET:
+      return 0 == tor_addr_compare_masked(a1, a2, 16, CMP_SEMANTIC);
+    case AF_INET6:
+      return 0 == tor_addr_compare_masked(a1, a2, 32, CMP_SEMANTIC);
+    default:
+      /* If not IPv4 or IPv6, return 0. */
+      return 0;
+  }
 }
 
 /** Return true if <b>node</b>'s nickname matches <b>nickname</b>
