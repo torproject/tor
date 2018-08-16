@@ -1,9 +1,9 @@
 // Copyright (c) 2016-2018, The Tor Project, Inc. */
 // See LICENSE for licensing information */
 
-use std::slice;
 use libc::{c_char, c_int};
 use std::ffi::CStr;
+use std::slice;
 
 /// Smartlists are a type used in C code in tor to define a collection of a
 /// generic type, which has a capacity and a number used. Each Smartlist
@@ -65,8 +65,8 @@ mod test {
     fn test_get_list_of_strings() {
         extern crate libc;
 
-        use std::ffi::CString;
         use libc::c_char;
+        use std::ffi::CString;
 
         use super::Smartlist;
         use super::Stringlist;
@@ -89,13 +89,13 @@ mod test {
             let args = vec![String::from("a"), String::from("b")];
 
             // for each string, transform  it into a CString
-            let c_strings: Vec<_> = args.iter()
+            let c_strings: Vec<_> = args
+                .iter()
                 .map(|arg| CString::new(arg.as_str()).unwrap())
                 .collect();
 
             // then, collect a pointer for each CString
-            let p_args: Vec<_> =
-                c_strings.iter().map(|arg| arg.as_ptr()).collect();
+            let p_args: Vec<_> = c_strings.iter().map(|arg| arg.as_ptr()).collect();
 
             let p: *const *const c_char = p_args.as_ptr();
 

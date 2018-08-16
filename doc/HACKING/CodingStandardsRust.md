@@ -104,7 +104,7 @@ repo.
  Documentation
 ---------------
 
-You MUST include `#[deny(missing_docs)]` in your crate.
+You MUST include `#![deny(missing_docs)]` in your crate.
 
 For function/method comments, you SHOULD include a one-sentence, "first person"
 description of function behaviour (see requirements for documentation as
