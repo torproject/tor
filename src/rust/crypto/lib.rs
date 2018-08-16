@@ -24,7 +24,8 @@
 //! assert!(result == [b'X'; DIGEST256_LEN]);
 //! ```
 
-#[deny(missing_docs)]
+// XXX: add missing docs
+//#![deny(missing_docs)]
 
 // External crates from cargo or TOR_RUST_DEPENDENCIES.
 extern crate digest;
@@ -41,5 +42,5 @@ extern crate external;
 #[macro_use]
 extern crate tor_log;
 
-pub mod digests;  // Unfortunately named "digests" plural to avoid name conflict with the digest crate
+pub mod digests; // Unfortunately named "digests" plural to avoid name conflict with the digest crate
 pub mod rand;
