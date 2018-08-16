@@ -845,6 +845,7 @@ move_hs_state(hs_service_t *src_service, hs_service_t *dst_service)
     replaycache_free(dst->replay_cache_rend_cookie);
   }
   dst->replay_cache_rend_cookie = src->replay_cache_rend_cookie;
+  dst->next_rotation_time = src->next_rotation_time;
 
   src->replay_cache_rend_cookie = NULL; /* steal pointer reference */
 }
