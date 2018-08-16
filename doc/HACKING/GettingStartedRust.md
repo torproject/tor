@@ -122,9 +122,10 @@ the module calls.  Modules which call fewer other modules are better targets.
 
 Strive to change the C API as little as possible.
 
-We are currently targeting Rust nightly, *for now*. We expect this to
-change moving forward, as we understand more about which nightly
-features we need. It is on our TODO list to try to cultivate good
+We are currently targetting Rust stable. (See CodingStandardsRust.md for more
+details.)
+
+It is on our TODO list to try to cultivate good
 standing with various distro maintainers of `rustc` and `cargo`, in
 order to ensure that whatever version we solidify on is readily
 available.
@@ -138,6 +139,7 @@ comment structured as follows:
 Where <name_of_c_object> can be an enum, struct, constant, etc.  Then,
 do the same in the C code, to note that rust will need to be changed
 when the C does.
+
 
  Adding your Rust module to Tor's build system
 -----------------------------------------------
