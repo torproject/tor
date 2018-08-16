@@ -985,7 +985,7 @@ origin_circuit_new(void)
     // depending on how much circuit prediction time is remaining) so that
     // we don't close a bunch of unused circuits all at the same time.
     int prediction_time_remaining =
-      predicted_ports_prediction_time_remaining(time(NULL));
+      (int)predicted_ports_prediction_time_remaining(time(NULL));
     circ->circuit_idle_timeout = prediction_time_remaining+1+
         crypto_rand_int(1+prediction_time_remaining/20);
 

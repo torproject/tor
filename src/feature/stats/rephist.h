@@ -53,7 +53,7 @@ int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
 
 int any_predicted_circuits(time_t now);
 int rep_hist_circbuilding_dormant(time_t now);
-int predicted_ports_prediction_time_remaining(time_t now);
+time_t predicted_ports_prediction_time_remaining(time_t now);
 
 void rep_hist_exit_stats_init(time_t now);
 void rep_hist_reset_exit_stats(time_t now);
