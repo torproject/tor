@@ -575,6 +575,10 @@ test_protover_vote_roundtrip(void *args)
     { "Faux=-1", NULL },
     { "Faux=-1-3", NULL },
     { "Faux=1--1", NULL },
+    { "Link=1-2-", NULL },
+    { "Link=1-2-3", NULL },
+    { "Faux=1-2-", NULL },
+    { "Faux=1-2-3", NULL },
     /* Large integers */
     { "Link=4294967296", NULL },
     /* Large range */
