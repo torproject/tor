@@ -247,7 +247,9 @@ parse_protocol_list(const char *s)
     smartlist_add(entries, entry);
 
     s = end_of_entry;
-    while (*s == ' ')
+    /* If this isn't the end of the string, or right before the end of the
+       string, advance to the next entry. */
+    if (s[0] && s[1])
       ++s;
   }
 
