@@ -299,6 +299,10 @@ test_protover_vote_roundtrip(void *args)
     { " Foo=1,3 Bar=3", NULL },
     { "Foo=1,3 Bar=3 ", NULL },
     { "Foo=1,3  Bar=3", NULL },
+    { "Foo=,", NULL },
+    { "Foo=,1", NULL },
+    { "Foo=1,,3", NULL },
+    { "Foo=1,3,", NULL },
     /* junk. */
     { "!!3@*", NULL },
     /* Missing equals sign */
