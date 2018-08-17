@@ -349,7 +349,7 @@ impl FromStr for ProtoSet {
             if p.is_empty() {
                 continue;
             } else if p.contains('-') {
-                let mut pair = p.split('-');
+                let mut pair = p.splitn(2, '-');
 
                 let low = pair.next().ok_or(ProtoverError::Unparseable)?;
                 let high = pair.next().ok_or(ProtoverError::Unparseable)?;
@@ -537,6 +537,18 @@ mod test {
     #[test]
     fn test_versions_from_str_negative_1() {
         assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("-1"));
+    }
+
+    #[test]
+    fn test_versions_from_str_hyphens() {
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("--1"));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("-1-2"));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1--2"));
+    }
+
+    #[test]
+    fn test_versions_from_str_triple() {
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1-2-3"));
     }
 
     #[test]
