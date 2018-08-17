@@ -572,6 +572,10 @@ test_protover_vote_roundtrip(void *args)
     { "N-1=1,2", "N-1=1-2" },
     { "-1=4294967295", NULL },
     { "-1=3", "-1=3" },
+    { "Foo=,", NULL },
+    { "Foo=,1", NULL },
+    { "Foo=1,,3", NULL },
+    { "Foo=1,3,", NULL },
     /* junk. */
     { "!!3@*", NULL },
     /* Missing equals sign */
