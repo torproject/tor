@@ -1,0 +1,4 @@
+  o Minor bugfixes (rust):
+    - Protover parsing was accepting the presence of whitespace in version
+      strings, which the C implementation would choke on, e.g. "Desc=1\t,2".
+      Fixes bug 27177; bugfix on 0.3.3.5-rc.
