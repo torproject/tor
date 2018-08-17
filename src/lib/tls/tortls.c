@@ -4,6 +4,7 @@
 /* See LICENSE for licensing information */
 
 #define TORTLS_PRIVATE
+#define TOR_X509_PRIVATE
 #include "lib/tls/x509.h"
 #include "lib/tls/x509_internal.h"
 #include "lib/tls/tortls.h"
@@ -13,6 +14,8 @@
 #include "lib/intmath/cmp.h"
 #include "lib/crypt_ops/crypto_rsa.h"
 #include "lib/crypt_ops/crypto_rand.h"
+
+#include <time.h>
 
 /** Global TLS contexts. We keep them here because nobody else needs
  * to touch them.
@@ -29,6 +32,26 @@ tor_tls_context_t *
 tor_tls_context_get(int is_server)
 {
   return is_server ? server_tls_context : client_tls_context;
+}
+
+/** Convert an errno (or a WSAerrno on windows) into a TOR_TLS_* error
+ * code. */
+int
+tor_errno_to_tls_error(int e)
+{
+  switch (e) {
+    case SOCK_ERRNO(ECONNRESET): // most common
+      return TOR_TLS_ERROR_CONNRESET;
+    case SOCK_ERRNO(ETIMEDOUT):
+      return TOR_TLS_ERROR_TIMEOUT;
+    case SOCK_ERRNO(EHOSTUNREACH):
+    case SOCK_ERRNO(ENETUNREACH):
+      return TOR_TLS_ERROR_NO_ROUTE;
+    case SOCK_ERRNO(ECONNREFUSED):
+      return TOR_TLS_ERROR_CONNREFUSED; // least common
+    default:
+      return TOR_TLS_ERROR_MISC;
+  }
 }
 
 /** Set *<b>link_cert_out</b> and *<b>id_cert_out</b> to the link certificate
@@ -333,4 +356,103 @@ tor_tls_is_server(tor_tls_t *tls)
 {
   tor_assert(tls);
   return tls->isServer;
+}
+
+/** Release resources associated with a TLS object.  Does not close the
+ * underlying file descriptor.
+ */
+void
+tor_tls_free_(tor_tls_t *tls)
+{
+  if (!tls)
+    return;
+  tor_assert(tls->ssl);
+  {
+    size_t r,w;
+    tor_tls_get_n_raw_bytes(tls,&r,&w); /* ensure written_by_tls is updated */
+  }
+  tor_tls_impl_free_(tls->ssl);
+  tls->ssl = NULL;
+#ifdef ENABLE_OPENSSL
+  tls->negotiated_callback = NULL;
+#endif
+  if (tls->context)
+    tor_tls_context_decref(tls->context);
+  tor_free(tls->address);
+  tls->magic = 0x99999999;
+  tor_free(tls);
+}
+
+/** If the provided tls connection is authenticated and has a
+ * certificate chain that is currently valid and signed, then set
+ * *<b>identity_key</b> to the identity certificate's key and return
+ * 0.  Else, return -1 and log complaints with log-level <b>severity</b>.
+ */
+int
+tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity)
+{
+  tor_x509_cert_impl_t *cert = NULL, *id_cert = NULL;
+  tor_x509_cert_t *peer_x509 = NULL, *id_x509 = NULL;
+  tor_assert(tls);
+  tor_assert(identity);
+  int rv = -1;
+
+  try_to_extract_certs_from_tls(severity, tls, &cert, &id_cert);
+  if (!cert)
+    goto done;
+  if (!id_cert) {
+    log_fn(severity,LD_PROTOCOL,"No distinct identity certificate found");
+    goto done;
+  }
+  peer_x509 = tor_x509_cert_new(cert);
+  id_x509 = tor_x509_cert_new(id_cert);
+  cert = id_cert = NULL; /* Prevent double-free */
+
+  if (! tor_tls_cert_is_valid(severity, peer_x509, id_x509, time(NULL), 0)) {
+    goto done;
+  }
+
+  *identity = tor_tls_cert_get_key(id_x509);
+  rv = 0;
+
+ done:
+  if (cert)
+    tor_x509_cert_impl_free_(cert);
+  if (id_cert)
+    tor_x509_cert_impl_free_(id_cert);
+  tor_x509_cert_free(peer_x509);
+  tor_x509_cert_free(id_x509);
+
+  return rv;
+}
+
+/** Check whether the certificate set on the connection <b>tls</b> is expired
+ * give or take <b>past_tolerance</b> seconds, or not-yet-valid give or take
+ * <b>future_tolerance</b> seconds. Return 0 for valid, -1 for failure.
+ *
+ * NOTE: you should call tor_tls_verify before tor_tls_check_lifetime.
+ */
+int
+tor_tls_check_lifetime(int severity, tor_tls_t *tls,
+                       time_t now,
+                       int past_tolerance, int future_tolerance)
+{
+  tor_x509_cert_t *cert;
+  int r = -1;
+
+  if (!(cert = tor_tls_get_peer_cert(tls)))
+    goto done;
+
+  if (tor_x509_check_cert_lifetime_internal(severity, cert->cert, now,
+                                            past_tolerance,
+                                            future_tolerance) < 0)
+    goto done;
+
+  r = 0;
+ done:
+  tor_x509_cert_free(cert);
+  /* Not expected to get invoked */
+  tls_log_errors(tls, LOG_WARN, LD_NET, "checking certificate lifetime");
+
+  return r;
 }

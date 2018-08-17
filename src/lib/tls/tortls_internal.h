@@ -6,15 +6,11 @@
 #ifndef TORTLS_INTERNAL_H
 #define TORTLS_INTERNAL_H
 
-#ifdef ENABLE_OPENSSL
-struct ssl_st;
-struct ssl_ctx_st;
-struct ssl_session_st;
-#endif
-
 int tor_errno_to_tls_error(int e);
+#ifdef ENABLE_OPENSSL
 int tor_tls_get_error(tor_tls_t *tls, int r, int extra,
                   const char *doing, int severity, int domain);
+#endif
 MOCK_DECL(void, try_to_extract_certs_from_tls,
           (int severity, tor_tls_t *tls,
            tor_x509_cert_impl_t **cert_out,
@@ -31,13 +27,9 @@ int tor_tls_context_init_certificates(tor_tls_context_t *result,
                                       crypto_pk_t *identity,
                                       unsigned key_lifetime,
                                       unsigned flags);
+void tor_tls_impl_free_(tor_tls_impl_t *ssl);
 
-#ifdef ENABLE_OPENSSL
-void tor_tls_context_impl_free(struct ssl_ctx_st *);
-#else
-struct ssl_ctx_st; // XXXX replace
-void tor_tls_context_impl_free(struct ssl_ctx_st *);
-#endif
+void tor_tls_context_impl_free(tor_tls_context_impl_t *);
 
 #ifdef ENABLE_OPENSSL
 tor_tls_t *tor_tls_get_by_ssl(const struct ssl_st *ssl);

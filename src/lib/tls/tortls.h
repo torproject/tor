@@ -13,9 +13,24 @@
 
 #include "lib/crypt_ops/crypto_rsa.h"
 #include "lib/testsupport/testsupport.h"
+#include "lib/net/nettypes.h"
 
 /* Opaque structure to hold a TLS connection. */
 typedef struct tor_tls_t tor_tls_t;
+
+#ifdef TORTLS_PRIVATE
+#ifdef ENABLE_OPENSSL
+struct ssl_st;
+struct ssl_ctx_st;
+struct ssl_session_st;
+typedef struct ssl_ctx_st tor_tls_context_impl_t;
+typedef struct ssl_st tor_tls_impl_t;
+#else
+struct PRFileDesc;
+typedef struct PRFileDesc tor_tls_context_impl_t;
+typedef struct PRFileDesc tor_tls_impl_t;
+#endif
+#endif
 
 struct tor_x509_cert_t;
 
@@ -73,7 +88,7 @@ int tor_tls_context_init(unsigned flags,
 void tor_tls_context_incref(tor_tls_context_t *ctx);
 void tor_tls_context_decref(tor_tls_context_t *ctx);
 tor_tls_context_t *tor_tls_context_get(int is_server);
-tor_tls_t *tor_tls_new(int sock, int is_server);
+tor_tls_t *tor_tls_new(tor_socket_t sock, int is_server);
 void tor_tls_set_logged_address(tor_tls_t *tls, const char *address);
 void tor_tls_set_renegotiate_callback(tor_tls_t *tls,
                                       void (*cb)(tor_tls_t *, void *arg),
@@ -121,13 +136,17 @@ MOCK_DECL(int,tor_tls_export_key_material,(
                      size_t context_len,
                      const char *label));
 
+#ifdef ENABLE_OPENSSL
 /* Log and abort if there are unhandled TLS errors in OpenSSL's error stack.
  */
 #define check_no_tls_errors() check_no_tls_errors_(__FILE__,__LINE__)
-
 void check_no_tls_errors_(const char *fname, int line);
+
 void tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
                            int severity, int domain, const char *doing);
+#else
+#define check_no_tls_errors() STMT_NIL
+#endif
 
 int tor_tls_get_my_certs(int server,
                          const struct tor_x509_cert_t **link_cert_out,

@@ -72,6 +72,7 @@ test_tortls_err_to_string(void *data)
   (void)1;
 }
 
+#ifdef ENABLE_OPENSSL
 static int
 mock_tls_cert_matches_key(const tor_tls_t *tls, const tor_x509_cert_t *cert)
 {
@@ -105,6 +106,7 @@ test_tortls_tor_tls_get_error(void *data)
   crypto_pk_free(key2);
   tor_tls_free(tls);
 }
+#endif
 
 static void
 test_tortls_x509_cert_get_id_digests(void *ignored)
@@ -165,6 +167,7 @@ test_tortls_get_my_certs(void *ignored)
   (void)1;
 }
 
+#ifdef ENABLE_OPENSSL
 static void
 test_tortls_get_forced_write_size(void *ignored)
 {
@@ -204,23 +207,6 @@ test_tortls_used_v1_handshake(void *ignored)
 }
 
 static void
-test_tortls_get_num_server_handshakes(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  tor_tls_t *tls;
-
-  tls = tor_malloc_zero(sizeof(tor_tls_t));
-
-  tls->server_handshake_count = 3;
-  ret = tor_tls_get_num_server_handshakes(tls);
-  tt_int_op(ret, OP_EQ, 3);
-
- done:
-  tor_free(tls);
-}
-
-static void
 test_tortls_server_got_renegotiate(void *ignored)
 {
   (void)ignored;
@@ -236,6 +222,7 @@ test_tortls_server_got_renegotiate(void *ignored)
  done:
   tor_free(tls);
 }
+#endif
 
 static void
 test_tortls_evaluate_ecgroup_for_tls(void *ignored)
@@ -266,13 +253,14 @@ test_tortls_evaluate_ecgroup_for_tls(void *ignored)
 struct testcase_t tortls_tests[] = {
   LOCAL_TEST_CASE(errno_to_tls_error, 0),
   LOCAL_TEST_CASE(err_to_string, 0),
-  LOCAL_TEST_CASE(tor_tls_get_error, 0),
   LOCAL_TEST_CASE(x509_cert_get_id_digests, 0),
   LOCAL_TEST_CASE(get_my_certs, TT_FORK),
+#ifdef ENABLE_OPENSSL
+  LOCAL_TEST_CASE(tor_tls_get_error, 0),
   LOCAL_TEST_CASE(get_forced_write_size, 0),
   LOCAL_TEST_CASE(used_v1_handshake, TT_FORK),
-  LOCAL_TEST_CASE(get_num_server_handshakes, 0),
   LOCAL_TEST_CASE(server_got_renegotiate, 0),
+#endif
   LOCAL_TEST_CASE(evaluate_ecgroup_for_tls, 0),
   END_OF_TESTCASES
 };
