@@ -303,8 +303,15 @@ GENERAL OPTIONS
     descriptors as the OS will allow (you can find this by "ulimit -H -n").
     If this number is less than ConnLimit, then Tor will refuse to start. +
  +
-    You probably don't need to adjust this. It has no effect on Windows
-    since that platform lacks getrlimit(). (Default: 1000)
+    Tor relays need thousands of sockets, to connect to every other relay.
+    If you are running a private bridge, you can reduce the number of sockets
+    that Tor uses. For example, to limit Tor to 500 sockets, run
+    "ulimit -n 500" in a shell. Then start tor in the same shell, with
+    **ConnLimit 500**. You may also need to set **DisableOOSCheck 0**. +
+ +
+    Unless you have severely limited sockets, you probably don't need to
+    adjust **ConnLimit** itself. It has no effect on Windows, since that
+    platform lacks getrlimit(). (Default: 1000)
 
 [[DisableNetwork]] **DisableNetwork** **0**|**1**::
     When this option is set, we don't listen for or accept any connections
