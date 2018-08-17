@@ -244,26 +244,6 @@ tls_log_errors(tor_tls_t *tls, int severity, int domain, const char *doing)
   }
 }
 
-/** Convert an errno (or a WSAerrno on windows) into a TOR_TLS_* error
- * code. */
-int
-tor_errno_to_tls_error(int e)
-{
-  switch (e) {
-    case SOCK_ERRNO(ECONNRESET): // most common
-      return TOR_TLS_ERROR_CONNRESET;
-    case SOCK_ERRNO(ETIMEDOUT):
-      return TOR_TLS_ERROR_TIMEOUT;
-    case SOCK_ERRNO(EHOSTUNREACH):
-    case SOCK_ERRNO(ENETUNREACH):
-      return TOR_TLS_ERROR_NO_ROUTE;
-    case SOCK_ERRNO(ECONNREFUSED):
-      return TOR_TLS_ERROR_CONNREFUSED; // least common
-    default:
-      return TOR_TLS_ERROR_MISC;
-  }
-}
-
 #define CATCH_SYSCALL 1
 #define CATCH_ZERO    2
 
@@ -952,8 +932,6 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
     /* Check whether we're watching for renegotiates.  If so, this is one! */
     if (tls->negotiated_callback)
       tls->got_renegotiate = 1;
-    if (tls->server_handshake_count < 127) /*avoid any overflow possibility*/
-      ++tls->server_handshake_count;
   } else {
     log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!");
     return;
@@ -1167,30 +1145,13 @@ tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls)
 #endif /* defined(SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION) && ... */
 }
 
-/** Release resources associated with a TLS object.  Does not close the
- * underlying file descriptor.
- */
 void
-tor_tls_free_(tor_tls_t *tls)
+tor_tls_impl_free_(tor_tls_impl_t *ssl)
 {
-  if (!tls)
-    return;
-  tor_assert(tls->ssl);
-  {
-    size_t r,w;
-    tor_tls_get_n_raw_bytes(tls,&r,&w); /* ensure written_by_tls is updated */
-  }
 #ifdef SSL_set_tlsext_host_name
-  SSL_set_tlsext_host_name(tls->ssl, NULL);
+  SSL_set_tlsext_host_name(ssl, NULL);
 #endif
-  SSL_free(tls->ssl);
-  tls->ssl = NULL;
-  tls->negotiated_callback = NULL;
-  if (tls->context)
-    tor_tls_context_decref(tls->context);
-  tor_free(tls->address);
-  tls->magic = 0x99999999;
-  tor_free(tls);
+  SSL_free(ssl);
 }
 
 /** Underlying function for TLS reading.  Reads up to <b>len</b>
@@ -1509,90 +1470,6 @@ try_to_extract_certs_from_tls,(int severity, tor_tls_t *tls,
   *id_cert_out = id_cert;
 }
 
-/** If the provided tls connection is authenticated and has a
- * certificate chain that is currently valid and signed, then set
- * *<b>identity_key</b> to the identity certificate's key and return
- * 0.  Else, return -1 and log complaints with log-level <b>severity</b>.
- */
-int
-tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity_key)
-{
-  X509 *cert = NULL, *id_cert = NULL;
-  EVP_PKEY *id_pkey = NULL;
-  RSA *rsa;
-  int r = -1;
-
-  check_no_tls_errors();
-  *identity_key = NULL;
-
-  try_to_extract_certs_from_tls(severity, tls, &cert, &id_cert);
-  if (!cert)
-    goto done;
-  if (!id_cert) {
-    log_fn(severity,LD_PROTOCOL,"No distinct identity certificate found");
-    goto done;
-  }
-  tls_log_errors(tls, severity, LD_HANDSHAKE, "before verifying certificate");
-
-  if (!(id_pkey = X509_get_pubkey(id_cert)) ||
-      X509_verify(cert, id_pkey) <= 0) {
-    log_fn(severity,LD_PROTOCOL,"X509_verify on cert and pkey returned <= 0");
-    tls_log_errors(tls, severity, LD_HANDSHAKE, "verifying certificate");
-    goto done;
-  }
-
-  rsa = EVP_PKEY_get1_RSA(id_pkey);
-  if (!rsa)
-    goto done;
-  *identity_key = crypto_new_pk_from_openssl_rsa_(rsa);
-
-  r = 0;
-
- done:
-  if (cert)
-    X509_free(cert);
-  if (id_pkey)
-    EVP_PKEY_free(id_pkey);
-
-  /* This should never get invoked, but let's make sure in case OpenSSL
-   * acts unexpectedly. */
-  tls_log_errors(tls, LOG_WARN, LD_HANDSHAKE, "finishing tor_tls_verify");
-
-  return r;
-}
-
-/** Check whether the certificate set on the connection <b>tls</b> is expired
- * give or take <b>past_tolerance</b> seconds, or not-yet-valid give or take
- * <b>future_tolerance</b> seconds. Return 0 for valid, -1 for failure.
- *
- * NOTE: you should call tor_tls_verify before tor_tls_check_lifetime.
- */
-int
-tor_tls_check_lifetime(int severity, tor_tls_t *tls,
-                       time_t now,
-                       int past_tolerance, int future_tolerance)
-{
-  X509 *cert;
-  int r = -1;
-
-  if (!(cert = SSL_get_peer_certificate(tls->ssl)))
-    goto done;
-
-  if (tor_x509_check_cert_lifetime_internal(severity, cert, now,
-                                            past_tolerance,
-                                            future_tolerance) < 0)
-    goto done;
-
-  r = 0;
- done:
-  if (cert)
-    X509_free(cert);
-  /* Not expected to get invoked */
-  tls_log_errors(tls, LOG_WARN, LD_NET, "checking certificate lifetime");
-
-  return r;
-}
-
 /** Return the number of bytes available for reading from <b>tls</b>.
  */
 int
@@ -1688,14 +1565,6 @@ int
 tor_tls_used_v1_handshake(tor_tls_t *tls)
 {
   return ! tls->wasV2Handshake;
-}
-
-/** Return the number of server handshakes that we've noticed doing on
- * <b>tls</b>. */
-int
-tor_tls_get_num_server_handshakes(tor_tls_t *tls)
-{
-  return tls->server_handshake_count;
 }
 
 /** Return true iff the server TLS connection <b>tls</b> got the renegotiation

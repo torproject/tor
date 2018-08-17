@@ -6,6 +6,8 @@
 #ifndef TOR_TORTLS_ST_H
 #define TOR_TORTLS_ST_H
 
+#include "lib/net/socket.h"
+
 #define TOR_TLS_MAGIC 0x71571571
 
 typedef enum {
@@ -17,7 +19,7 @@ typedef enum {
 
 struct tor_tls_context_t {
   int refcnt;
-  struct ssl_ctx_st *ctx;
+  tor_tls_context_impl_t *ctx;
   struct tor_x509_cert_t *my_link_cert;
   struct tor_x509_cert_t *my_id_cert;
   struct tor_x509_cert_t *my_auth_cert;
@@ -31,8 +33,9 @@ struct tor_tls_context_t {
 struct tor_tls_t {
   uint32_t magic;
   tor_tls_context_t *context; /** A link to the context object for this tls. */
-  struct ssl_st *ssl; /**< An OpenSSL SSL object. */
-  int socket; /**< The underlying file descriptor for this TLS connection. */
+  tor_tls_impl_t *ssl; /**< An OpenSSL SSL object or NSS PRFileDesc. */
+  tor_socket_t socket; /**< The underlying file descriptor for this TLS
+                        * connection. */
   char *address; /**< An address to log when describing this connection. */
   tor_tls_state_bitfield_t state : 3; /**< The current SSL state,
                                        * depending on which operations
@@ -45,11 +48,10 @@ struct tor_tls_t {
                                   * one certificate). */
   /** True iff we should call negotiated_callback when we're done reading. */
   unsigned int got_renegotiate:1;
+#ifdef ENABLE_OPENSSL
   /** Return value from tor_tls_classify_client_ciphers, or 0 if we haven't
    * called that function yet. */
   int8_t client_cipher_list_type;
-  /** Incremented every time we start the server side of a handshake. */
-  uint8_t server_handshake_count;
   size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
                        * time. */
   /** Last values retrieved from BIO_number_read()/write(); see
@@ -62,6 +64,11 @@ struct tor_tls_t {
   void (*negotiated_callback)(tor_tls_t *tls, void *arg);
   /** Argument to pass to negotiated_callback. */
   void *callback_arg;
+#endif
+#ifdef ENABLE_NSS
+  size_t n_read_since_last_check;
+  size_t n_written_since_last_check;
+#endif
 };
 
 #endif
