@@ -206,9 +206,7 @@ impl FromStr for ProtoEntry {
     ///
     /// # Returns
     ///
-    /// A `Result` whose `Ok` value is a `ProtoEntry`, where the
-    /// first element is the subprotocol type (see `protover::Protocol`) and the last
-    /// element is an ordered set of `(low, high)` unique version numbers which are supported.
+    /// A `Result` whose `Ok` value is a `ProtoEntry`.
     /// Otherwise, the `Err` value of this `Result` is a `ProtoverError`.
     fn from_str(protocol_entry: &str) -> Result<ProtoEntry, ProtoverError> {
         let mut proto_entry: ProtoEntry = ProtoEntry::default();
@@ -454,8 +452,9 @@ impl UnvalidatedProtoEntry {
     /// following are true:
     ///
     /// * If a protocol name is an empty string, e.g. `"Cons=1,3 =3-5"`.
-    /// * If a protocol name cannot be parsed as utf-8.
-    /// * If the version numbers are an empty string, e.g. `"Cons="`.
+    /// * If an entry has no equals sign, e.g. `"Cons=1,3 Desc"`.
+    /// * If there is leading or trailing whitespace, e.g. `" Cons=1,3 Link=3"`.
+    /// * If there is any other extra whitespice, e.g. `"Cons=1,3  Link=3"`.
     fn parse_protocol_and_version_str<'a>(
         protocol_string: &'a str,
     ) -> Result<Vec<(&'a str, &'a str)>, ProtoverError> {
@@ -494,11 +493,9 @@ impl FromStr for UnvalidatedProtoEntry {
     ///
     /// # Returns
     ///
-    /// A `Result` whose `Ok` value is a `ProtoSet` holding all of the
-    /// unique version numbers.
+    /// A `Result` whose `Ok` value is an `UnvalidatedProtoEntry`.
     ///
-    /// The returned `Result`'s `Err` value is an `ProtoverError` whose `Display`
-    /// impl has a description of the error.
+    /// The returned `Result`'s `Err` value is an `ProtoverError`.
     ///
     /// # Errors
     ///
