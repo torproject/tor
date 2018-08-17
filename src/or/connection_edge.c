@@ -480,7 +480,7 @@ connection_half_edge_add(edge_connection_t *conn,
   half_conn->connected_pending = conn->base_.state ==
       AP_CONN_STATE_CONNECT_WAIT;
 
-  /* Data should only arrive if we're not waiting on a resolved.
+  /* Data should only arrive if we're not waiting on a resolved cell.
    * It can arrive after waiting on connected, because of optimistic
    * data. */
   if (conn->base_.state != AP_CONN_STATE_RESOLVE_WAIT) {
