@@ -349,6 +349,9 @@ STATIC hs_service_descriptor_t *service_desc_find_by_intro(
                                          const hs_service_t *service,
                                          const hs_service_intro_point_t *ip);
 /* Helper functions. */
+STATIC int client_filename_is_valid(const char *filename);
+STATIC hs_service_authorized_client_t *
+parse_authorized_client(const char *client_key_str);
 STATIC void get_objects_from_ident(const hs_ident_circuit_t *ident,
                                    hs_service_t **service,
                                    hs_service_intro_point_t **ip,
