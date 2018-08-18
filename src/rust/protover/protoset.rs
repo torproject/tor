@@ -356,16 +356,10 @@ impl FromStr for ProtoSet {
                 let lo: Version =  low.parse().or(Err(ProtoverError::Unparseable))?;
                 let hi: Version = high.parse().or(Err(ProtoverError::Unparseable))?;
 
-                if lo == u32::MAX || hi == u32::MAX {
-                    return Err(ProtoverError::ExceedsMax);
-                }
                 pairs.push((lo, hi));
             } else {
                 let v: u32 = p.parse().or(Err(ProtoverError::Unparseable))?;
 
-                if v == u32::MAX {
-                    return Err(ProtoverError::ExceedsMax);
-                }
                 pairs.push((v, v));
             }
         }
