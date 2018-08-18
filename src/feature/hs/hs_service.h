@@ -148,6 +148,12 @@ typedef struct hs_service_keys_t {
   unsigned int is_identify_key_offline : 1;
 } hs_service_keys_t;
 
+/** Service side configuration of client authorization. */
+typedef struct hs_service_authorized_client_t {
+  /* The client auth public key used to encrypt the descriptor cookie. */
+  curve25519_public_key_t client_pk;
+} hs_service_authorized_client_t;
+
 /* Service configuration. The following are set from the torrc options either
  * set by the configuration file or by the control port. Nothing else should
  * change those values. */
@@ -175,6 +181,13 @@ typedef struct hs_service_config_t {
   /* How many introduction points this service has. Specified by
    * HiddenServiceNumIntroductionPoints option. */
   unsigned int num_intro_points;
+
+  /* True iff the client auth is enabled. */
+  unsigned int is_client_auth_enabled : 1;
+
+  /* List of hs_service_authorized_client_t's of clients that may access this
+   * service. Specified by HiddenServiceAuthorizeClient option. */
+  smartlist_t *clients;
 
   /* True iff we allow request made on unknown ports. Specified by
    * HiddenServiceAllowUnknownPorts option. */
@@ -356,6 +369,13 @@ STATIC void service_descriptor_free_(hs_service_descriptor_t *desc);
 #define service_descriptor_free(d) \
   FREE_AND_NULL(hs_service_descriptor_t, \
                            service_descriptor_free_, (d))
+
+STATIC void
+service_authorized_client_free_(hs_service_authorized_client_t *client);
+#define service_authorized_client_free(c) \
+  FREE_AND_NULL(hs_service_authorized_client_t, \
+                           service_authorized_client_free_, (c))
+
 STATIC int
 write_address_to_file(const hs_service_t *service, const char *fname_);
 
