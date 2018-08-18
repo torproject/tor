@@ -14,6 +14,7 @@ pub enum ProtoverError {
     Overlap,
     LowGreaterThanHigh,
     Unparseable,
+    VersionZero,
     ExceedsMax,
     ExceedsExpansionLimit,
     UnknownProtocol,
@@ -31,6 +32,8 @@ impl Display for ProtoverError {
                 => write!(f, "The low in a (low, high) protover range was greater than high."),
             ProtoverError::Unparseable
                 => write!(f, "The protover string was unparseable."),
+            ProtoverError::VersionZero
+                => write!(f, "A version may not be zero (0) or contain a leading zero (099)."),
             ProtoverError::ExceedsMax
                 => write!(f, "The high in a (low, high) protover range exceeds u32::MAX."),
             ProtoverError::ExceedsExpansionLimit

@@ -171,6 +171,9 @@ impl ProtoSet {
         let mut last_high: Version = 0;
 
         for &(low, high) in self.iter() {
+            if low == 0 || high == 0 {
+                return Err(ProtoverError::VersionZero);
+            }
             if low == u32::MAX || high == u32::MAX {
                 return Err(ProtoverError::ExceedsMax);
             }
@@ -356,10 +359,16 @@ impl FromStr for ProtoSet {
                 let lo: Version =  low.parse().or(Err(ProtoverError::Unparseable))?;
                 let hi: Version = high.parse().or(Err(ProtoverError::Unparseable))?;
 
+                if low.starts_with("0") || high.starts_with("0") {
+                    return Err(ProtoverError::VersionZero);
+                }
                 pairs.push((lo, hi));
             } else {
                 let v: u32 = p.parse().or(Err(ProtoverError::Unparseable))?;
 
+                if p.starts_with("0") {
+                    return Err(ProtoverError::VersionZero);
+                }
                 pairs.push((v, v));
             }
         }
@@ -571,6 +580,16 @@ mod test {
     #[test]
     fn test_versions_from_slice_overlap() {
         assert_eq!(Err(ProtoverError::Overlap), ProtoSet::from_slice(&[(1, 3), (2, 4)]));
+    }
+
+    #[test]
+    fn test_versions_from_str_zero() {
+        assert_eq!(Err(ProtoverError::VersionZero), ProtoSet::from_str("0"));
+        assert_eq!(Err(ProtoverError::VersionZero), ProtoSet::from_str("0-0"));
+        assert_eq!(Err(ProtoverError::VersionZero), ProtoSet::from_str("0-1"));
+        assert_eq!(Err(ProtoverError::VersionZero), ProtoSet::from_str("01"));
+        assert_eq!(Err(ProtoverError::VersionZero), ProtoSet::from_str("01-1"));
+        assert_eq!(Err(ProtoverError::VersionZero), ProtoSet::from_str("1-01"));
     }
 
     #[test]
