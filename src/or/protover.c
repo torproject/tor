@@ -126,8 +126,8 @@ parse_version_range(const char *s, const char *end_of_range,
   if (BUG(!end_of_range))
     end_of_range = s + strlen(s); // LCOV_EXCL_LINE
 
-  /* A range must start with a digit. */
-  if (!TOR_ISDIGIT(*s)) {
+  /* A range must start with a nonzero digit. */
+  if (!TOR_ISDIGIT(*s) || *s == '0') {
     goto error;
   }
 
@@ -148,7 +148,7 @@ parse_version_range(const char *s, const char *end_of_range,
   s = next+1;
 
   /* ibid */
-  if (!TOR_ISDIGIT(*s)) {
+  if (!TOR_ISDIGIT(*s) || *s == '0') {
     goto error;
   }
   high = (uint32_t) tor_parse_ulong(s, 10, 0,
@@ -402,6 +402,7 @@ expand_protocol_list(const smartlist_t *protos)
     const char *name = ent->name;
     SMARTLIST_FOREACH_BEGIN(ent->ranges, const proto_range_t *, range) {
       uint32_t u;
+      tor_assert(range->low != 0 && range->low <= range->high);
       for (u = range->low; u <= range->high; ++u) {
         smartlist_add_asprintf(expanded, "%s=%lu", name, (unsigned long)u);
         if (smartlist_len(expanded) > MAX_PROTOCOLS_TO_EXPAND)

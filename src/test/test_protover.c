@@ -287,6 +287,13 @@ test_protover_vote_roundtrip(void *args)
     { "Zn=4294967295", NULL },
     { "Zn=4294967295-1", NULL },
     { "Zn=4294967293-4294967295", NULL },
+    /* Version 0 is illegal. Leading zeroes are illegal. */
+    { "Foo=0", NULL },
+    { "Foo=0-0", NULL },
+    { "Foo=0-2", NULL },
+    { "Foo=01", NULL },
+    { "Foo=01-2", NULL },
+    { "Foo=1-02", NULL },
     /* Will fail because of 4294967295. */
     { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=1,4294967295",
        NULL },

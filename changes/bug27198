@@ -1,0 +1,3 @@
+  o Minor bugfixes (protover):
+    - Reject zero and leading zeros in protocol versions. Fix unit tests that
+      used 0. Fixes bug 27198; bugfix on 0.2.9.4-alpha.
