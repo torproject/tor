@@ -1091,7 +1091,7 @@ load_service_keys(hs_service_t *service)
 
 /* Check if the client file name is valid or not. Return 1 if valid,
  * otherwise return 0. */
-static int
+STATIC int
 client_filename_is_valid(const char *filename)
 {
   int ret = 1;
@@ -1120,7 +1120,7 @@ client_filename_is_valid(const char *filename)
  * The <key-type> can only be "x25519".
  *
  * Return the key on success, return NULL, otherwise. */
-static hs_service_authorized_client_t *
+STATIC hs_service_authorized_client_t *
 parse_authorized_client(const char *client_key_str)
 {
   char *auth_type = NULL;

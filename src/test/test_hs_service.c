@@ -34,6 +34,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/fs/dir.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
@@ -64,6 +65,13 @@
 
 /* Trunnel */
 #include "trunnel/hs/cell_establish_intro.h"
+
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 static networkstatus_t mock_ns;
 
@@ -303,6 +311,8 @@ test_load_keys(void *arg)
   /* It's in staging? */
   tt_int_op(get_hs_service_staging_list_size(), OP_EQ, 1);
 
+#undef conf_fmt
+
   /* Load the keys for these. After that, the v3 service should be registered
    * in the global map. */
   hs_service_load_all_keys();
@@ -322,10 +332,191 @@ test_load_keys(void *arg)
   tt_int_op(hs_address_is_valid(addr), OP_EQ, 1);
   tt_str_op(addr, OP_EQ, s->onion_address);
 
+  /* Check that the is_client_auth_enabled is not set. */
+  tt_assert(!s->config.is_client_auth_enabled);
+
  done:
   tor_free(hsdir_v2);
   tor_free(hsdir_v3);
   hs_free_all();
+}
+
+static void
+test_client_filename_is_valid(void *arg)
+{
+  (void) arg;
+
+  /* Valid file name. */
+  tt_assert(client_filename_is_valid("a.auth"));
+  /* Valid file name with special character. */
+  tt_assert(client_filename_is_valid("a-.auth"));
+  /* Invalid extension. */
+  tt_assert(!client_filename_is_valid("a.ath"));
+  /* Nothing before the extension. */
+  tt_assert(!client_filename_is_valid(".auth"));
+
+ done:
+  ;
+}
+
+static void
+test_parse_authorized_client(void *arg)
+{
+  hs_service_authorized_client_t *client = NULL;
+
+  (void) arg;
+
+  /* Valid authorized client. */
+  client = parse_authorized_client(
+    "descriptor:x25519:dz4q5xqlb4ldnbs72iarrml4ephk3du4i7o2cgiva5lwr6wkquja");
+  tt_assert(client);
+
+  /* Wrong number of fields. */
+  tt_assert(!parse_authorized_client("a:b:c:d:e"));
+  /* Wrong auth type. */
+  tt_assert(!parse_authorized_client(
+    "x:x25519:dz4q5xqlb4ldnbs72iarrml4ephk3du4i7o2cgiva5lwr6wkquja"));
+  /* Wrong key type. */
+  tt_assert(!parse_authorized_client(
+    "descriptor:x:dz4q5xqlb4ldnbs72iarrml4ephk3du4i7o2cgiva5lwr6wkquja"));
+  /* Some malformed string. */
+  tt_assert(!parse_authorized_client("descriptor:x25519:aa=="));
+  tt_assert(!parse_authorized_client("descriptor:"));
+  tt_assert(!parse_authorized_client("descriptor:x25519"));
+  tt_assert(!parse_authorized_client("descriptor:x25519:"));
+  tt_assert(!parse_authorized_client(""));
+
+ done:
+  service_authorized_client_free(client);
+}
+
+static char *
+mock_read_file_to_str(const char *filename, int flags, struct stat *stat_out)
+{
+  char *ret = NULL;
+
+  (void) flags;
+  (void) stat_out;
+
+  if (!strcmp(filename, get_fname("hs3" PATH_SEPARATOR
+                                  "authorized_clients" PATH_SEPARATOR
+                                  "client1.auth"))) {
+    ret = tor_strdup("descriptor:x25519:"
+                  "dz4q5xqlb4ldnbs72iarrml4ephk3du4i7o2cgiva5lwr6wkquja");
+    goto done;
+  }
+
+  if (!strcmp(filename, get_fname("hs3" PATH_SEPARATOR
+                                  "authorized_clients" PATH_SEPARATOR
+                                  "dummy.xxx"))) {
+    ret = tor_strdup("descriptor:x25519:"
+                  "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    goto done;
+  }
+
+  if (!strcmp(filename, get_fname("hs3" PATH_SEPARATOR
+                                  "authorized_clients" PATH_SEPARATOR
+                                  "client2.auth"))) {
+    ret = tor_strdup("descriptor:x25519:"
+                  "okoi2gml3wd6x7jganlk5d66xxyjgg24sxw4y7javx4giqr66zta");
+    goto done;
+  }
+
+ done:
+  return ret;
+}
+
+static smartlist_t *
+mock_tor_listdir(const char *dirname)
+{
+  smartlist_t *file_list = smartlist_new();
+
+  (void) dirname;
+
+  smartlist_add(file_list, tor_strdup("client1.auth"));
+  smartlist_add(file_list, tor_strdup("dummy.xxx"));
+  smartlist_add(file_list, tor_strdup("client2.auth"));
+
+  return file_list;
+}
+
+static void
+test_load_keys_with_client_auth(void *arg)
+{
+  int ret;
+  char *conf = NULL;
+  smartlist_t *pubkey_b32_list = smartlist_new();
+  char *hsdir_v3 = tor_strdup(get_fname("hs3"));
+  hs_service_t *service;
+
+  (void) arg;
+
+  hs_init();
+  smartlist_add(pubkey_b32_list, tor_strdup(
+                "dz4q5xqlb4ldnbs72iarrml4ephk3du4i7o2cgiva5lwr6wkquja"));
+  smartlist_add(pubkey_b32_list, tor_strdup(
+                "okoi2gml3wd6x7jganlk5d66xxyjgg24sxw4y7javx4giqr66zta"));
+
+#define conf_fmt \
+  "HiddenServiceDir %s\n" \
+  "HiddenServiceVersion %d\n" \
+  "HiddenServicePort 65534\n"
+
+  tor_asprintf(&conf, conf_fmt, hsdir_v3, HS_VERSION_THREE);
+  ret = helper_config_service(conf);
+  tor_free(conf);
+  tt_int_op(ret, OP_EQ, 0);
+  /* It's in staging? */
+  tt_int_op(get_hs_service_staging_list_size(), OP_EQ, 1);
+
+#undef conf_fmt
+
+  MOCK(read_file_to_str, mock_read_file_to_str);
+  MOCK(tor_listdir, mock_tor_listdir);
+
+  /* Load the keys for these. After that, the v3 service should be registered
+   * in the global map. */
+  hs_service_load_all_keys();
+  tt_int_op(get_hs_service_map_size(), OP_EQ, 1);
+
+  service = get_first_service();
+  tt_assert(service->config.clients);
+  tt_int_op(smartlist_len(service->config.clients), OP_EQ,
+            smartlist_len(pubkey_b32_list));
+
+  /* Test that the is_client_auth_enabled flag is set. */
+  tt_assert(service->config.is_client_auth_enabled);
+
+  /* Test that the keys in clients are correct. */
+  SMARTLIST_FOREACH_BEGIN(pubkey_b32_list, char *, pubkey_b32) {
+
+    curve25519_public_key_t pubkey;
+    /* This flag will be set if the key is found in clients. */
+    int is_found = 0;
+    base32_decode((char *) pubkey.public_key, sizeof(pubkey.public_key),
+                  pubkey_b32, strlen(pubkey_b32));
+
+    SMARTLIST_FOREACH_BEGIN(service->config.clients,
+                            hs_service_authorized_client_t *, client) {
+      if (tor_memeq(&pubkey, &client->client_pk, sizeof(pubkey))) {
+        is_found = 1;
+        break;
+      }
+    } SMARTLIST_FOREACH_END(client);
+
+    tt_assert(is_found);
+
+  } SMARTLIST_FOREACH_END(pubkey_b32);
+
+ done:
+  if (pubkey_b32_list) {
+    SMARTLIST_FOREACH(pubkey_b32_list, char *, s, tor_free(s));
+  }
+  smartlist_free(pubkey_b32_list);
+  tor_free(hsdir_v3);
+  hs_free_all();
+  UNMOCK(read_file_to_str);
+  UNMOCK(tor_listdir);
 }
 
 static void
@@ -1560,6 +1751,12 @@ struct testcase_t hs_service_tests[] = {
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup, TT_FORK,
     NULL, NULL },
   { "load_keys", test_load_keys, TT_FORK,
+    NULL, NULL },
+  { "client_filename_is_valid", test_client_filename_is_valid, TT_FORK,
+    NULL, NULL },
+  { "parse_authorized_client", test_parse_authorized_client, TT_FORK,
+    NULL, NULL },
+  { "load_keys_with_client_auth", test_load_keys_with_client_auth, TT_FORK,
     NULL, NULL },
   { "access_service", test_access_service, TT_FORK,
     NULL, NULL },
