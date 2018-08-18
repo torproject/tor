@@ -88,6 +88,7 @@
 
 /* Onion service directory file names. */
 static const char fname_keyfile_prefix[] = "hs_ed25519";
+static const char dname_client_pubkeys[] = "authorized_clients";
 static const char fname_hostname[] = "hostname";
 static const char address_tld[] = "onion";
 
@@ -103,6 +104,7 @@ static smartlist_t *hs_service_staging_list;
 static int consider_republishing_hs_descriptors = 0;
 
 /* Static declaration. */
+static int load_client_keys(hs_service_t *service);
 static void set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc,
                                             time_t now, bool is_current);
 static void move_descriptors(hs_service_t *src, hs_service_t *dst);
@@ -246,6 +248,11 @@ service_clear_config(hs_service_config_t *config)
     SMARTLIST_FOREACH(config->ports, rend_service_port_config_t *, p,
                       rend_service_port_config_free(p););
     smartlist_free(config->ports);
+  }
+  if (config->clients) {
+    SMARTLIST_FOREACH(config->clients, hs_service_authorized_client_t *, p,
+                      service_authorized_client_free(p));
+    smartlist_free(config->clients);
   }
   memset(config, 0, sizeof(*config));
 }
@@ -1070,11 +1077,210 @@ load_service_keys(hs_service_t *service)
     goto end;
   }
 
+  /* Load all client authorization keys in the service. */
+  if (load_client_keys(service) < 0) {
+    goto end;
+  }
+
   /* Succes. */
   ret = 0;
  end:
   tor_free(fname);
   return ret;
+}
+
+/* Check if the client file name is valid or not. Return 1 if valid,
+ * otherwise return 0. */
+static int
+client_filename_is_valid(const char *filename)
+{
+  int ret = 1;
+  const char *valid_extension = ".auth";
+
+  tor_assert(filename);
+
+  /* The file extension must match and the total filename length can't be the
+   * length of the extension else we do not have a filename. */
+  if (!strcmpend(filename, valid_extension) &&
+      strlen(filename) != strlen(valid_extension)) {
+    ret = 1;
+  } else {
+    ret = 0;
+  }
+
+  return ret;
+}
+
+/* Parse an authorized client from a string. The format of a client string
+ * looks like (see rend-spec-v3.txt):
+ *
+ *  <auth-type>:<key-type>:<base32-encoded-public-key>
+ *
+ * The <auth-type> can only be "descriptor".
+ * The <key-type> can only be "x25519".
+ *
+ * Return the key on success, return NULL, otherwise. */
+static hs_service_authorized_client_t *
+parse_authorized_client(const char *client_key_str)
+{
+  char *auth_type = NULL;
+  char *key_type = NULL;
+  char *pubkey_b32 = NULL;
+  hs_service_authorized_client_t *client = NULL;
+  smartlist_t *fields = smartlist_new();
+
+  tor_assert(client_key_str);
+
+  smartlist_split_string(fields, client_key_str, ":",
+                         SPLIT_SKIP_SPACE, 0);
+  /* Wrong number of fields. */
+  if (smartlist_len(fields) != 3) {
+    goto err;
+  }
+
+  auth_type = smartlist_get(fields, 0);
+  key_type = smartlist_get(fields, 1);
+  pubkey_b32 = smartlist_get(fields, 2);
+
+  /* Currently, the only supported auth type is "descriptor" and the only
+   * supported key type is "x25519". */
+  if (strcmp(auth_type, "descriptor") || strcmp(key_type, "x25519")) {
+    goto err;
+  }
+
+  /* We expect a specific length of the base32 encoded key so make sure we
+   * have that so we don't successfully decode a value with a different length
+   * and end up in trouble when copying the decoded key into a fixed length
+   * buffer. */
+  if (strlen(pubkey_b32) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
+    log_warn(LD_REND, "Client authorization encoded base32 public key "
+                      "length is invalid: %s", pubkey_b32);
+    goto err;
+  }
+
+  client = tor_malloc_zero(sizeof(hs_service_authorized_client_t));
+  if (base32_decode((char *) client->client_pk.public_key,
+                    sizeof(client->client_pk.public_key),
+                    pubkey_b32, strlen(pubkey_b32)) < 0) {
+    goto err;
+  }
+
+  /* Success. */
+  goto done;
+
+ err:
+  service_authorized_client_free(client);
+ done:
+  /* It is also a good idea to wipe the public key. */
+  if (pubkey_b32) {
+    memwipe(pubkey_b32, 0, strlen(pubkey_b32));
+  }
+  if (fields) {
+    SMARTLIST_FOREACH(fields, char *, s, tor_free(s));
+    smartlist_free(fields);
+  }
+  return client;
+}
+
+/* Load all the client public keys for the given service. Return 0 on
+ * success else -1 on failure. */
+static int
+load_client_keys(hs_service_t *service)
+{
+  int ret = -1;
+  char *client_key_str = NULL;
+  char *client_key_file_path = NULL;
+  char *client_keys_dir_path = NULL;
+  hs_service_config_t *config;
+  smartlist_t *file_list = NULL;
+
+  tor_assert(service);
+
+  config = &service->config;
+
+  /* Before calling this function, we already call load_service_keys to make
+   * sure that the directory exists with the right permission. So, if we
+   * cannot create a client pubkey key directory, we consider it as a bug. */
+  client_keys_dir_path = hs_path_from_filename(config->directory_path,
+                                               dname_client_pubkeys);
+  if (BUG(hs_check_service_private_dir(get_options()->User,
+                                       client_keys_dir_path,
+                                       config->dir_group_readable, 1) < 0)) {
+    goto end;
+  }
+
+  /* If the list of clients already exists, we must clear it first. */
+  if (config->clients) {
+    SMARTLIST_FOREACH(config->clients, hs_service_authorized_client_t *, p,
+                      service_authorized_client_free(p));
+    smartlist_free(config->clients);
+  }
+
+  config->clients = smartlist_new();
+
+  file_list = tor_listdir(client_keys_dir_path);
+  if (file_list == NULL) {
+    log_warn(LD_REND, "Client authorization directory %s can't be listed.",
+             client_keys_dir_path);
+    goto end;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(file_list, const char *, filename) {
+    hs_service_authorized_client_t *client = NULL;
+
+    if (client_filename_is_valid(filename)) {
+      /* Create a full path for a file. */
+      client_key_file_path = hs_path_from_filename(client_keys_dir_path,
+                                                   filename);
+      client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
+      /* Free immediately after using it. */
+      tor_free(client_key_file_path);
+
+      /* If we cannot read the file, continue with the next file. */
+      if (!client_key_str)  {
+        continue;
+      }
+
+      client = parse_authorized_client(client_key_str);
+      /* Free immediately after using it. */
+      tor_free(client_key_str);
+
+      if (client) {
+        smartlist_add(config->clients, client);
+      }
+    }
+
+  } SMARTLIST_FOREACH_END(filename);
+
+  /* If the number of clients is greater than zero, set the flag to be true. */
+  if (smartlist_len(config->clients) > 0) {
+    config->is_client_auth_enabled = 1;
+  }
+
+  /* Success. */
+  ret = 0;
+ end:
+  if (client_key_str) {
+    memwipe(client_key_str, 0, strlen(client_key_str));
+  }
+  if (file_list) {
+    SMARTLIST_FOREACH(file_list, char *, s, tor_free(s));
+    smartlist_free(file_list);
+  }
+  tor_free(client_key_str);
+  tor_free(client_key_file_path);
+  tor_free(client_keys_dir_path);
+  return ret;
+}
+
+STATIC void
+service_authorized_client_free_(hs_service_authorized_client_t *client)
+{
+  if (!client) {
+    return;
+  }
+  memwipe(&client->client_pk, 0, sizeof(client->client_pk));
+  tor_free(client);
 }
 
 /* Free a given service descriptor object and all key material is wiped. */
@@ -3281,6 +3487,7 @@ hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
     }
     service_add_fnames_to_list(service, file_list);
     smartlist_add_strdup(dir_list, service->config.directory_path);
+    smartlist_add_strdup(dir_list, dname_client_pubkeys);
   } FOR_EACH_DESCRIPTOR_END;
 }
 
@@ -3451,7 +3658,6 @@ hs_service_load_all_keys(void)
     if (load_service_keys(service) < 0) {
       goto err;
     }
-    /* XXX: Load/Generate client authorization keys. (#20700) */
   } SMARTLIST_FOREACH_END(service);
 
   /* Final step, the staging list contains service in a quiescent state that
