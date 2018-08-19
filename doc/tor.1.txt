@@ -1733,9 +1733,10 @@ The following options are useful only for clients (that is, if
 
 [[ClientUseIPv6]] **ClientUseIPv6** **0**|**1**::
     If this option is set to 1, Tor might connect to directory servers or
-    entry nodes over IPv6. Note that clients configured with an IPv6 address
-    in a **Bridge**, proxy, or pluggable transport line will try connecting
-    over IPv6 even if **ClientUseIPv6** is set to 0. (Default: 0)
+    entry nodes over IPv6. For IPv6 only hosts, you need to also set
+    **ClientUseIPv4** to 0 to disable IPv4. Note that clients configured with
+    an IPv6 address in a **Bridge**, proxy, or pluggable transportline will
+    try connecting over IPv6 even if **ClientUseIPv6** is set to 0. (Default: 0)
 
 [[ClientPreferIPv6DirPort]] **ClientPreferIPv6DirPort** **0**|**1**|**auto**::
     If this option is set to 1, Tor prefers a directory port with an IPv6
