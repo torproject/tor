@@ -672,6 +672,7 @@ protover_all_supported(const char *s, char **missing_out)
 
     SMARTLIST_FOREACH_BEGIN(ent->ranges, const proto_range_t *, range) {
       uint32_t i;
+      tor_assert(range->low != 0 && range->low <= range->high);
       for (i = range->low; i <= range->high; ++i) {
         if (!protover_is_supported_here(tp, i)) {
           goto unsupported;
