@@ -1141,6 +1141,7 @@ parse_authorized_client(const char *client_key_str)
                          SPLIT_SKIP_SPACE, 0);
   /* Wrong number of fields. */
   if (smartlist_len(fields) != 3) {
+    log_warn(LD_REND, "The file is in a wrong format.");
     goto err;
   }
 
@@ -1148,9 +1149,15 @@ parse_authorized_client(const char *client_key_str)
   key_type = smartlist_get(fields, 1);
   pubkey_b32 = smartlist_get(fields, 2);
 
-  /* Currently, the only supported auth type is "descriptor" and the only
-   * supported key type is "x25519". */
-  if (strcmp(auth_type, "descriptor") || strcmp(key_type, "x25519")) {
+  /* Currently, the only supported auth type is "descriptor". */
+  if (strcmp(auth_type, "descriptor")) {
+    log_warn(LD_REND, "The auth type '%s' is not supported.", auth_type);
+    goto err;
+  }
+
+  /* Currently, the only supported key type is "x25519". */
+  if (strcmp(key_type, "x25519")) {
+    log_warn(LD_REND, "The key type '%s' is not supported.", key_type);
     goto err;
   }
 
@@ -1168,6 +1175,7 @@ parse_authorized_client(const char *client_key_str)
   if (base32_decode((char *) client->client_pk.public_key,
                     sizeof(client->client_pk.public_key),
                     pubkey_b32, strlen(pubkey_b32)) < 0) {
+    log_warn(LD_REND, "The public key cannot be decoded.");
     goto err;
   }
 
@@ -1233,27 +1241,36 @@ load_client_keys(hs_service_t *service)
 
   SMARTLIST_FOREACH_BEGIN(file_list, const char *, filename) {
     hs_service_authorized_client_t *client = NULL;
+    log_info(LD_REND, "Loading a client authorization key file %s...",
+             filename);
 
-    if (client_filename_is_valid(filename)) {
-      /* Create a full path for a file. */
-      client_key_file_path = hs_path_from_filename(client_keys_dir_path,
-                                                   filename);
-      client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
-      /* Free immediately after using it. */
-      tor_free(client_key_file_path);
+    if (!client_filename_is_valid(filename)) {
+      log_warn(LD_REND, "The filename is invalid.");
+      continue;
+    }
 
-      /* If we cannot read the file, continue with the next file. */
-      if (!client_key_str)  {
-        continue;
-      }
+    /* Create a full path for a file. */
+    client_key_file_path = hs_path_from_filename(client_keys_dir_path,
+                                                 filename);
+    client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
+    /* Free immediately after using it. */
+    tor_free(client_key_file_path);
 
-      client = parse_authorized_client(client_key_str);
-      /* Free immediately after using it. */
-      tor_free(client_key_str);
+    /* If we cannot read the file, continue with the next file. */
+    if (!client_key_str)  {
+      log_warn(LD_REND, "The file cannot be read.");
+      continue;
+    }
 
-      if (client) {
-        smartlist_add(config->clients, client);
-      }
+    client = parse_authorized_client(client_key_str);
+    /* Wipe and free immediately after using it. */
+    memwipe(client_key_str, 0, strlen(client_key_str));
+    tor_free(client_key_str);
+
+    if (client) {
+      smartlist_add(config->clients, client);
+      log_info(LD_REND, "Loaded a client authorization key file %s.",
+               filename);
     }
 
   } SMARTLIST_FOREACH_END(filename);
