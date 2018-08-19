@@ -27,7 +27,9 @@
 
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_config.h"
+#include "feature/hs/hs_client.h"
 #include "feature/hs/hs_service.h"
+#include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
 #include "lib/encoding/confline.h"
 #include "app/config/or_options_st.h"
@@ -611,5 +613,30 @@ hs_config_service_all(const or_options_t *options, int validate_only)
  end:
   smartlist_free(new_service_list);
   /* Tor main should call the free all function on error. */
+  return ret;
+}
+
+/* From a set of <b>options</b>, setup every client authorization found.
+ * Return 0 on success or -1 on failure. If <b>validate_only</b> is set,
+ * parse, warn and return as normal, but don't actually change the
+ * configured state. */
+int
+hs_config_client_auth_all(const or_options_t *options, int validate_only)
+{
+  int ret = -1;
+
+  /* Configure v2 authorization. */
+  if (rend_parse_service_authorization(options, validate_only) < 0) {
+    goto done;
+  }
+
+  /* Configure v3 authorization. */
+  if (hs_config_client_authorization(options, validate_only) < 0) {
+    goto done;
+  }
+
+  /* Success. */
+  ret = 0;
+ done:
   return ret;
 }

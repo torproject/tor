@@ -450,6 +450,7 @@ static config_var_t option_vars_[] = {
   VAR("HiddenServiceNumIntroductionPoints", LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceStatistics", BOOL, HiddenServiceStatistics_option, "1"),
   V(HidServAuth,                 LINELIST, NULL),
+  V(ClientOnionAuthDir,          FILENAME, NULL),
   OBSOLETE("CloseHSClientCircuitsImmediatelyOnTimeout"),
   OBSOLETE("CloseHSServiceRendCircuitsImmediatelyOnTimeout"),
   V(HiddenServiceSingleHopMode,  BOOL,     "0"),
@@ -1917,7 +1918,7 @@ options_act(const or_options_t *old_options)
     // LCOV_EXCL_STOP
   }
 
-  if (running_tor && rend_parse_service_authorization(options, 0) < 0) {
+  if (running_tor && hs_config_client_auth_all(options, 0) < 0) {
     // LCOV_EXCL_START
     log_warn(LD_BUG, "Previously validated client authorization for "
                      "hidden services could not be added!");
@@ -3188,6 +3189,8 @@ warn_about_relative_paths(or_options_t *options)
   n += warn_if_option_path_is_relative("AccelDir",options->AccelDir);
   n += warn_if_option_path_is_relative("DataDirectory",options->DataDirectory);
   n += warn_if_option_path_is_relative("PidFile",options->PidFile);
+  n += warn_if_option_path_is_relative("ClientOnionAuthDir",
+                                        options->ClientOnionAuthDir);
 
   for (config_line_t *hs_line = options->RendConfigLines; hs_line;
        hs_line = hs_line->next) {
@@ -4339,7 +4342,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Failed to configure rendezvous options. See logs for details.");
 
   /* Parse client-side authorization for hidden services. */
-  if (rend_parse_service_authorization(options, 1) < 0)
+  if (hs_config_client_auth_all(options, 1) < 0)
     REJECT("Failed to configure client authorization for hidden services. "
            "See logs for details.");
 
