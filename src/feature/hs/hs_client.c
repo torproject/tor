@@ -1428,7 +1428,7 @@ client_service_authorization_free_all(void)
 
 /* Check if the auth key file name is valid or not. Return 1 if valid,
  * otherwise return 0. */
-static int
+STATIC int
 auth_key_filename_is_valid(const char *filename)
 {
   int ret = 1;
@@ -1448,7 +1448,7 @@ auth_key_filename_is_valid(const char *filename)
   return ret;
 }
 
-static hs_client_service_authorization_t *
+STATIC hs_client_service_authorization_t *
 parse_auth_file_content(const char *client_key_str)
 {
   char *onion_address = NULL;
@@ -1836,3 +1836,13 @@ hs_client_dir_info_changed(void)
    * AP_CONN_STATE_RENDDESC_WAIT state in order to fetch the descriptor. */
   retry_all_socks_conn_waiting_for_desc();
 }
+
+#ifdef TOR_UNIT_TESTS
+
+STATIC digest256map_t *
+get_hs_client_auths_map(void)
+{
+  return client_auths;
+}
+
+#endif /* defined(TOR_UNIT_TESTS) */

@@ -84,6 +84,11 @@ void hs_client_free_all(void);
 
 #ifdef HS_CLIENT_PRIVATE
 
+STATIC int auth_key_filename_is_valid(const char *filename);
+
+STATIC hs_client_service_authorization_t *
+parse_auth_file_content(const char *client_key_str);
+
 STATIC routerstatus_t *
 pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk);
 
@@ -98,6 +103,12 @@ STATIC int handle_rendezvous2(origin_circuit_t *circ, const uint8_t *payload,
 
 MOCK_DECL(STATIC hs_client_fetch_status_t,
           fetch_v3_desc, (const ed25519_public_key_t *onion_identity_pk));
+
+#ifdef TOR_UNIT_TESTS
+
+STATIC digest256map_t *get_hs_client_auths_map(void);
+
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(HS_CLIENT_PRIVATE) */
 
