@@ -2,12 +2,14 @@
 
 set -x
 
-UNAME_OS=`uname -s | cut -d_ -f1`
+UNAME_OS=$(uname -s | cut -d_ -f1)
 if test "$UNAME_OS" = 'CYGWIN' || \
    test "$UNAME_OS" = 'MSYS' || \
    test "$UNAME_OS" = 'MINGW'; then
-  echo "This test is disabled on Windows CI, as it requires firewall examptions. Skipping." >&2
-  exit 77
+  if test "$APPVEYOR" = 'True'; then
+    echo "This test is disabled on Windows CI, as it requires firewall examptions. Skipping." >&2
+    exit 77
+  fi
 fi
 
 exitcode=0
