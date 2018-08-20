@@ -516,7 +516,7 @@ connection_half_edge_find_stream_id(const smartlist_t *half_conns,
  * Return 0 otherwise.
  */
 int
-connection_half_edge_is_valid_data(smartlist_t *half_conns,
+connection_half_edge_is_valid_data(const smartlist_t *half_conns,
                                    streamid_t stream_id)
 {
   half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
@@ -542,7 +542,7 @@ connection_half_edge_is_valid_data(smartlist_t *half_conns,
  * Return 0 otherwise.
  */
 int
-connection_half_edge_is_valid_connected(smartlist_t *half_conns,
+connection_half_edge_is_valid_connected(const smartlist_t *half_conns,
                                         streamid_t stream_id)
 {
   half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
@@ -568,7 +568,7 @@ connection_half_edge_is_valid_connected(smartlist_t *half_conns,
  * Return 0 otherwise.
  */
 int
-connection_half_edge_is_valid_sendme(smartlist_t *half_conns,
+connection_half_edge_is_valid_sendme(const smartlist_t *half_conns,
                                      streamid_t stream_id)
 {
   half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
