@@ -136,7 +136,7 @@ static int connection_ap_process_natd(entry_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int consider_plaintext_ports(entry_connection_t *conn, uint16_t port);
 static int connection_ap_supports_optimistic_data(const entry_connection_t *);
-static void connection_half_edge_add(edge_connection_t *conn,
+static void connection_half_edge_add(const edge_connection_t *conn,
                                      origin_circuit_t *circ);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
@@ -461,7 +461,7 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
  * cell.
  */
 static void
-connection_half_edge_add(edge_connection_t *conn,
+connection_half_edge_add(const edge_connection_t *conn,
                          origin_circuit_t *circ)
 {
   half_edge_t *half_conn = tor_malloc_zero(sizeof(half_edge_t));
@@ -491,6 +491,22 @@ connection_half_edge_add(edge_connection_t *conn,
   smartlist_add(circ->half_streams, half_conn);
 }
 
+static half_edge_t *
+connection_half_edge_find_stream_id(smartlist_t *half_conns,
+                                    streamid_t stream_id)
+{
+  if (!half_conns)
+    return NULL;
+
+  SMARTLIST_FOREACH_BEGIN(half_conns, half_edge_t *, half_conn) {
+    if (half_conn->stream_id == stream_id) {
+      return half_conn;
+    }
+  } SMARTLIST_FOREACH_END(half_conn);
+
+  return NULL;
+}
+
 /**
  * Check if this stream_id is in a half-closed state. If so,
  * check if it still has data cells pending, and decrement that
@@ -503,19 +519,16 @@ int
 connection_half_edge_is_valid_data(smartlist_t *half_conns,
                                    streamid_t stream_id)
 {
-  if (!half_conns)
+  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
+                                                          stream_id);
+
+  if (!half)
     return 0;
 
-  SMARTLIST_FOREACH_BEGIN(half_conns, half_edge_t *, half_conn) {
-    if (half_conn->stream_id == stream_id) {
-      if (half_conn->data_pending > 0) {
-        half_conn->data_pending--;
-        return 1;
-      } else {
-        return 0;
-      }
-    }
-  } SMARTLIST_FOREACH_END(half_conn);
+  if (half->data_pending > 0) {
+    half->data_pending--;
+    return 1;
+  }
 
   return 0;
 }
@@ -532,19 +545,16 @@ int
 connection_half_edge_is_valid_connected(smartlist_t *half_conns,
                                         streamid_t stream_id)
 {
-  if (!half_conns)
+  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
+                                                          stream_id);
+
+  if (!half)
     return 0;
 
-  SMARTLIST_FOREACH_BEGIN(half_conns, half_edge_t *, half_conn) {
-    if (half_conn->stream_id == stream_id) {
-      if (half_conn->connected_pending > 0) {
-        half_conn->connected_pending--;
-        return 1;
-      } else {
-        return 0;
-      }
-    }
-  } SMARTLIST_FOREACH_END(half_conn);
+  if (half->connected_pending > 0) {
+    half->connected_pending--;
+    return 1;
+  }
 
   return 0;
 }
@@ -572,23 +582,15 @@ int
 connection_half_edge_is_valid_end(smartlist_t *half_conns,
                                   streamid_t stream_id)
 {
-  half_edge_t *found_half = NULL;
-  if (!half_conns)
+  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
+                                                          stream_id);
+
+  if (!half)
     return 0;
 
-  SMARTLIST_FOREACH_BEGIN(half_conns, half_edge_t *, half_conn) {
-    if (half_conn->stream_id == stream_id) {
-      found_half = half_conn;
-    }
-  } SMARTLIST_FOREACH_END(half_conn);
-
-  if (found_half) {
-    smartlist_remove(half_conns, found_half);
-    tor_free(found_half);
-    return 1;
-  }
-
-  return 0;
+  smartlist_remove(half_conns, half);
+  tor_free(half);
+  return 1;
 }
 
 /**
@@ -603,19 +605,16 @@ int
 connection_half_edge_is_valid_sendme(smartlist_t *half_conns,
                                      streamid_t stream_id)
 {
-  if (!half_conns)
+  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
+                                                          stream_id);
+
+  if (!half)
     return 0;
 
-  SMARTLIST_FOREACH_BEGIN(half_conns, half_edge_t *, half_conn) {
-    if (half_conn->stream_id == stream_id) {
-      if (half_conn->sendmes_pending > 0) {
-        half_conn->sendmes_pending--;
-        return 1;
-      } else {
-        return 0;
-      }
-    }
-  } SMARTLIST_FOREACH_END(half_conn);
+  if (half->sendmes_pending > 0) {
+    half->sendmes_pending--;
+    return 1;
+  }
 
   return 0;
 }
