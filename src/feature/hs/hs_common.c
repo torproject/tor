@@ -1685,7 +1685,7 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
                                const curve25519_public_key_t *onion_key,
                                int direct_conn)
 {
-  int have_legacy_id = 0, have_ed25519_id = 0;
+  int have_v4 = 0, have_legacy_id = 0, have_ed25519_id = 0;
   char legacy_id[DIGEST_LEN] = {0};
   ed25519_public_key_t ed25519_pk;
   extend_info_t *info = NULL;
@@ -1698,6 +1698,14 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
 
   SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
     switch (link_specifier_get_ls_type(ls)) {
+    case LS_IPV4:
+      /* Skip if we already seen a v4. */
+      if (have_v4 || direct_conn) continue;
+      tor_addr_from_ipv4h(&ap.addr,
+                          link_specifier_get_un_ipv4_addr(ls));
+      ap.port = link_specifier_get_un_ipv4_port(ls);
+      have_v4 = 1;
+      break;
     case LS_LEGACY_ID:
       /* Make sure we do have enough bytes for the legacy ID. */
       if (link_specifier_getlen_un_legacy_id(ls) < sizeof(legacy_id)) {
@@ -1719,9 +1727,9 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
     }
   } SMARTLIST_FOREACH_END(ls);
 
-  /* Choose a preferred address first, but fall back to an allowed address.
-   * Skip IPv6 if we're not direct as relays only extend via IPv4. */
-  fascist_firewall_choose_address_ls(lspecs, 0, &ap, direct_conn);
+  /* Choose a preferred address first, but fall back to an allowed address. */
+  if (direct_conn)
+    fascist_firewall_choose_address_ls(lspecs, 0, &ap);
 
   /* Legacy ID is mandatory, and we require an IP address. */
   if (!tor_addr_port_is_valid_ap(&ap, 0) || !have_legacy_id) {
@@ -1729,18 +1737,9 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
     goto done;
   }
 
-  /* We know we have an IP address, because we just checked. */
-  if (!direct_conn) {
-    /* All clients can extend to any IPv4 via a 3-hop path. */
-    goto validate;
-  } else {
-    /* Direct connection and we can reach it so go for it. */
-    goto validate;
-    /* We will add support for falling back to a 3-hop path in a later
-     * release. */
-  }
+  /* We will add support for falling back to a 3-hop path in a later
+   * release. */
 
- validate:
   /* We'll validate now that the address we've picked isn't a private one. If
    * it is, are we allowing to extend to private address? */
   if (!extend_info_addr_is_allowed(&ap.addr)) {
