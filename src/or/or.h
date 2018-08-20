@@ -1747,8 +1747,8 @@ typedef struct edge_connection_t {
 
 /**
  * Struct to track a connection that we closed that the other end
- * still thinks is open. Exists in origin_circuit_t::half_streams until
- * we get an end for this stream id.
+ * still thinks is open. Exists in origin_circuit_t.half_streams until
+ * we get an end cell or a resolved cell for this stream id.
  */
 typedef struct half_edge_t {
   /** stream_id for the half-closed connection */
@@ -1763,7 +1763,7 @@ typedef struct half_edge_t {
   int data_pending;
 
   /** Is there a connected cell pending? */
-  int connected_pending;
+  int connected_pending : 1;
 } half_edge_t;
 
 /** Subtype of edge_connection_t for an "entry connection" -- that is, a SOCKS
@@ -3282,7 +3282,7 @@ typedef struct origin_circuit_t {
    * associated with this circuit. */
   edge_connection_t *p_streams;
 
-  /** Smartlist of half-closed streams (half_connection_t*) that still
+  /** Smartlist of half-closed streams (half_edge_t*) that still
    * have pending activity */
   smartlist_t *half_streams;
 

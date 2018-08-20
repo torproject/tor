@@ -551,8 +551,8 @@ connection_half_edge_is_valid_connected(smartlist_t *half_conns,
   if (!half)
     return 0;
 
-  if (half->connected_pending > 0) {
-    half->connected_pending--;
+  if (half->connected_pending) {
+    half->connected_pending = 0;
     return 1;
   }
 
