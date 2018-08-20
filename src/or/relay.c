@@ -1551,8 +1551,10 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
           origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
           if (connection_half_edge_is_valid_data(ocirc->half_streams,
                                                  rh.stream_id)) {
-            circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
-            log_info(domain,"data cell valid on half-closed stream.");
+            circuit_read_valid_data(ocirc, rh.length);
+            log_info(domain,
+                     "data cell on circ %u valid on half-closed "
+                     "stream id %d", ocirc->global_identifier, rh.stream_id);
           }
         }
 
@@ -1602,10 +1604,12 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
           if (connection_half_edge_is_valid_end(ocirc->half_streams,
                                                 rh.stream_id)) {
 
-            circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
-            log_info(domain,"end cell (%s) valid on half-closed stream.",
-                     stream_end_reason_to_string(reason));
-
+            circuit_read_valid_data(ocirc, rh.length);
+            log_info(domain,
+                     "end cell (%s) on circ %u valid on half-closed "
+                     "stream id %d",
+                     stream_end_reason_to_string(reason),
+                     ocirc->global_identifier, rh.stream_id);
             return 0;
           }
         }
@@ -1765,8 +1769,10 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
         if (connection_half_edge_is_valid_connected(ocirc->half_streams,
                                                     rh.stream_id)) {
-          circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
-          log_info(domain,"connected cell valid on half-closed stream.");
+          circuit_read_valid_data(ocirc, rh.length);
+          log_info(domain,
+                   "connected cell on circ %u valid on half-closed "
+                   "stream id %d", ocirc->global_identifier, rh.stream_id);
           return 0;
         }
       }
@@ -1823,8 +1829,10 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
           origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
           if (connection_half_edge_is_valid_sendme(ocirc->half_streams,
                                                    rh.stream_id)) {
-            circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
-            log_info(domain,"sendme cell valid on half-closed stream.");
+            circuit_read_valid_data(ocirc, rh.length);
+            log_info(domain,
+                    "sendme cell on circ %u valid on half-closed "
+                    "stream id %d", ocirc->global_identifier, rh.stream_id);
           }
         }
 
@@ -1896,8 +1904,10 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
         if (connection_half_edge_is_valid_resolved(ocirc->half_streams,
                                                     rh.stream_id)) {
-          circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
-          log_info(domain,"resolved cell valid on half-closed stream.");
+          circuit_read_valid_data(ocirc, rh.length);
+          log_info(domain,
+                   "resolved cell on circ %u valid on half-closed "
+                   "stream id %d", ocirc->global_identifier, rh.stream_id);
           return 0;
         }
       }
