@@ -857,18 +857,20 @@ tor_tls_cert_get_key(tor_x509_cert_t *cert)
 MOCK_IMPL(int,
 tor_tls_cert_matches_key,(const tor_tls_t *tls, const tor_x509_cert_t *cert))
 {
-  X509 *peercert = SSL_get_peer_certificate(tls->ssl);
+  tor_x509_cert_t *peer = tor_tls_get_peer_cert((tor_tls_t *)tls);
+  if (!peer)
+    return 0;
+
+  X509 *peercert = peer->cert;
   EVP_PKEY *link_key = NULL, *cert_key = NULL;
   int result;
 
-  if (!peercert)
-    return 0;
   link_key = X509_get_pubkey(peercert);
   cert_key = X509_get_pubkey(cert->cert);
 
   result = link_key && cert_key && EVP_PKEY_cmp(cert_key, link_key) == 1;
 
-  X509_free(peercert);
+  tor_x509_cert_free(peer);
   if (link_key)
     EVP_PKEY_free(link_key);
   if (cert_key)
