@@ -560,15 +560,29 @@ connection_half_edge_is_valid_connected(smartlist_t *half_conns,
 }
 
 /**
- * Streams that were used to send a RESOLVE cell are closed
- * when they get the RESOLVED, without an end. So treat
- * a RESOLVED just like an end, and remove from the list.
+ * Check if this stream_id is in a half-closed state. If so,
+ * check if it still has sendme cells pending, and decrement that
+ * window if so.
+ *
+ * Return 1 if the sendme window was not empty.
+ * Return 0 otherwise.
  */
 int
-connection_half_edge_is_valid_resolved(smartlist_t *half_conns,
-                                       streamid_t stream_id)
+connection_half_edge_is_valid_sendme(smartlist_t *half_conns,
+                                     streamid_t stream_id)
 {
-  return connection_half_edge_is_valid_end(half_conns, stream_id);
+  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
+                                                          stream_id);
+
+  if (!half)
+    return 0;
+
+  if (half->sendmes_pending > 0) {
+    half->sendmes_pending--;
+    return 1;
+  }
+
+  return 0;
 }
 
 /**
@@ -594,29 +608,15 @@ connection_half_edge_is_valid_end(smartlist_t *half_conns,
 }
 
 /**
- * Check if this stream_id is in a half-closed state. If so,
- * check if it still has sendme cells pending, and decrement that
- * window if so.
- *
- * Return 1 if the sendme window was not empty.
- * Return 0 otherwise.
+ * Streams that were used to send a RESOLVE cell are closed
+ * when they get the RESOLVED, without an end. So treat
+ * a RESOLVED just like an end, and remove from the list.
  */
 int
-connection_half_edge_is_valid_sendme(smartlist_t *half_conns,
-                                     streamid_t stream_id)
+connection_half_edge_is_valid_resolved(smartlist_t *half_conns,
+                                       streamid_t stream_id)
 {
-  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
-                                                          stream_id);
-
-  if (!half)
-    return 0;
-
-  if (half->sendmes_pending > 0) {
-    half->sendmes_pending--;
-    return 1;
-  }
-
-  return 0;
+  return connection_half_edge_is_valid_end(half_conns, stream_id);
 }
 
 /** An error has just occurred on an operation on an edge connection
