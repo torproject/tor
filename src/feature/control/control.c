@@ -2056,7 +2056,7 @@ getinfo_helper_listeners(control_connection_t *control_conn,
 }
 
 /** Implementation helper for GETINFO: answers requests for information about
- * the current time in both local and UTF forms. */
+ * the current time in both local and UTC forms. */
 STATIC int
 getinfo_helper_current_time(control_connection_t *control_conn,
                          const char *question,
