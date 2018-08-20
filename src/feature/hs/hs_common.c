@@ -1699,7 +1699,10 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
   SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
     switch (link_specifier_get_ls_type(ls)) {
     case LS_IPV4:
-      /* Skip if we already seen a v4. */
+      /* Skip if we already seen a v4. If direct_conn is true, we skip this
+       * block because fascist_firewall_choose_address_ls() will set ap. If
+       * direct_conn is false, set ap to the first IPv4 address and port in
+       * the link specifiers.*/
       if (have_v4 || direct_conn) continue;
       tor_addr_from_ipv4h(&ap.addr,
                           link_specifier_get_un_ipv4_addr(ls));
