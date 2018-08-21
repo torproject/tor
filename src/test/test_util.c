@@ -922,6 +922,32 @@ test_util_time(void *arg)
       teardown_capture_of_logs();
     }
   }
+  {
+    /* As above, but with localtime. */
+    t_res = -9223372036854775LL;
+    tor_localtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (1970-1900) ||
+              b_time.tm_year == (1-1900));
+
+    /* while unlikely, the system's gmtime(_r) could return
+     * a "correct" retrospective gregorian negative year value,
+     * which I'm pretty sure is:
+     * -1*(2^63)/60/60/24*2000/730485 + 1970 = -292277022657
+     * 730485 is the number of days in two millennia, including leap days
+     * (int64_t)b_time.tm_year == (-292277022657LL-1900LL) without clamping */
+    t_res = INT64_MIN;
+    CAPTURE();
+    tor_localtime_r(&t_res, &b_time);
+    if (! (b_time.tm_year == (1970-1900) ||
+           b_time.tm_year == (1-1900))) {
+      tt_int_op(b_time.tm_year, OP_EQ, 1970-1900);
+    }
+    if (b_time.tm_year != 1970-1900) {
+      CHECK_TIMEGM_WARNING("Rounding up to ");
+    } else {
+      teardown_capture_of_logs();
+    }
+  }
 #endif /* SIZEOF_TIME_T == 8 */
 
   /* time_t >= INT_MAX yields a year clamped to 2037 or 9999,
@@ -935,6 +961,17 @@ test_util_time(void *arg)
 
     t_res = INT32_MAX;
     tor_gmtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (2038-1900));
+  }
+  {
+    /* as above but with localtime. */
+    t_res = 3*(1 << 29);
+    tor_localtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2021-1900));
+
+    t_res = INT32_MAX;
+    tor_localtime_r(&t_res, &b_time);
     tt_assert(b_time.tm_year == (2037-1900) ||
               b_time.tm_year == (2038-1900));
   }
@@ -958,6 +995,27 @@ test_util_time(void *arg)
     t_res = INT64_MAX;
     CAPTURE();
     tor_gmtime_r(&t_res, &b_time);
+    CHECK_TIMEGM_WARNING("Rounding down to ");
+
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (9999-1900));
+  }
+  {
+    /* As above but with localtime. */
+    t_res = 9223372036854775LL;
+    tor_localtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (9999-1900));
+
+    /* while unlikely, the system's gmtime(_r) could return
+     * a "correct" proleptic gregorian year value,
+     * which I'm pretty sure is:
+     * (2^63-1)/60/60/24*2000/730485 + 1970 = 292277026596
+     * 730485 is the number of days in two millennia, including leap days
+     * (int64_t)b_time.tm_year == (292277026596L-1900L) without clamping */
+    t_res = INT64_MAX;
+    CAPTURE();
+    tor_localtime_r(&t_res, &b_time);
     CHECK_TIMEGM_WARNING("Rounding down to ");
 
     tt_assert(b_time.tm_year == (2037-1900) ||
@@ -6204,6 +6262,57 @@ test_util_get_unquoted_path(void *arg)
   tor_free(r);
 }
 
+static void
+test_util_log_mallinfo(void *arg)
+{
+  (void)arg;
+  char *log1 = NULL, *log2 = NULL, *mem = NULL;
+#ifdef HAVE_MALLINFO
+  setup_capture_of_logs(LOG_INFO);
+  tor_log_mallinfo(LOG_INFO);
+  expect_single_log_msg_containing("mallinfo() said: ");
+  mock_saved_log_entry_t *lg = smartlist_get(mock_saved_logs(), 0);
+  log1 = tor_strdup(lg->generated_msg);
+
+  mock_clean_saved_logs();
+  mem = tor_malloc(8192);
+  tor_log_mallinfo(LOG_INFO);
+  expect_single_log_msg_containing("mallinfo() said: ");
+  lg = smartlist_get(mock_saved_logs(), 0);
+  log2 = tor_strdup(lg->generated_msg);
+
+  /* Make sure that the amount of used memory increased. */
+  const char *used1 = strstr(log1, "uordblks=");
+  const char *used2 = strstr(log2, "uordblks=");
+  tt_assert(used1);
+  tt_assert(used2);
+  used1 += strlen("uordblks=");
+  used2 += strlen("uordblks=");
+
+  int ok1, ok2;
+  char *next1 = NULL, *next2 = NULL;
+  uint64_t mem1 = tor_parse_uint64(used1, 10, 0, UINT64_MAX, &ok1, &next1);
+  uint64_t mem2 = tor_parse_uint64(used2, 10, 0, UINT64_MAX, &ok2, &next2);
+  tt_assert(ok1);
+  tt_assert(ok2);
+  tt_assert(next1);
+  tt_assert(next2);
+  if (mem2 == 0) {
+    /* This is a fake mallinfo that doesn't actually fill in its outputs. */
+    tt_int_op(mem1, OP_EQ, 0);
+  } else {
+    tt_u64_op(mem1, OP_LT, mem2);
+  }
+#else
+  tt_skip();
+#endif
+ done:
+  teardown_capture_of_logs();
+  tor_free(log1);
+  tor_free(log2);
+  tor_free(mem);
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, test_util_ ## name , 0, NULL, NULL }
 
@@ -6341,5 +6450,6 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(monotonic_time_add_msec, 0),
   UTIL_TEST(htonll, 0),
   UTIL_TEST(get_unquoted_path, 0),
+  UTIL_TEST(log_mallinfo, 0),
   END_OF_TESTCASES
 };
