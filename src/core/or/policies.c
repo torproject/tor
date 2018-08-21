@@ -1155,33 +1155,6 @@ validate_addr_policies(const or_options_t *options, char **msg)
     REJECT("Error in ExitPolicy entry.");
   }
 
-  static int warned_about_exitrelay = 0;
-
-  const int exitrelay_setting_is_auto = options->ExitRelay == -1;
-  const int policy_accepts_something =
-    ! (policy_is_reject_star(addr_policy, AF_INET, 1) &&
-       policy_is_reject_star(addr_policy, AF_INET6, 1));
-
-  if (server_mode(options) &&
-      ! warned_about_exitrelay &&
-      exitrelay_setting_is_auto &&
-      policy_accepts_something) {
-      /* Policy accepts something */
-    warned_about_exitrelay = 1;
-    log_warn(LD_CONFIG,
-             "Tor is running as an exit relay%s. If you did not want this "
-             "behavior, please set the ExitRelay option to 0. If you do "
-             "want to run an exit Relay, please set the ExitRelay option "
-             "to 1 to disable this warning, and for forward compatibility.",
-             options->ExitPolicy == NULL ?
-                 " with the default exit policy" : "");
-    if (options->ExitPolicy == NULL && options->ReducedExitPolicy == 0) {
-      log_warn(LD_CONFIG,
-               "In a future version of Tor, ExitRelay 0 may become the "
-               "default when no ExitPolicy is given.");
-    }
-  }
-
   /* The rest of these calls *append* to addr_policy. So don't actually
    * use the results for anything other than checking if they parse! */
   if (parse_addr_policy(options->DirPolicy, &addr_policy, -1))
@@ -2117,8 +2090,8 @@ policies_copy_outbound_addresses_to_smartlist(smartlist_t *addr_list,
  * If <b>or_options->BridgeRelay</b> is false, append entries of default
  * Tor exit policy into <b>result</b> smartlist.
  *
- * If or_options->ExitRelay is false, then make our exit policy into
- * "reject *:*" regardless.
+ * If or_options->ExitRelay is false, or is auto without specifying an exit
+ * policy, then make our exit policy into "reject *:*" regardless.
  */
 int
 policies_parse_exit_policy_from_options(const or_options_t *or_options,
@@ -2130,8 +2103,10 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
   smartlist_t *configured_addresses = NULL;
   int rv = 0;
 
-  /* Short-circuit for non-exit relays */
-  if (or_options->ExitRelay == 0) {
+  /* Short-circuit for non-exit relays, or for relays where we didn't specify
+   * ExitPolicy or ReducedExitPolicy and ExitRelay is auto. */
+  if (or_options->ExitRelay == 0 || (or_options->ExitPolicy == NULL &&
+      or_options->ExitRelay == -1 && or_options->ReducedExitPolicy == 0)) {
     append_exit_policy_string(result, "reject *4:*");
     append_exit_policy_string(result, "reject *6:*");
     return 0;
