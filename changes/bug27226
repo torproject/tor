@@ -1,0 +1,5 @@
+  o Minor bugfixes (testing, openssl compatibility):
+    - Our "tortls/cert_matches_key" unit test no longer relies on OpenSSL
+      internals.  Previously, it relied on unsupported OpenSSL behavior in
+      a way that caused it to crash with OpenSSL 1.0.2p. Fixes bug 27226;
+      bugfix on 0.2.5.1-alpha.
