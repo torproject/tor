@@ -1,0 +1,5 @@
+  o Minor features (directory client):
+    - When we close a directory connection for not having given us data
+      for a long time, try to use the partial response if we were fetching
+      microdescriptors or extrainfo documents. Previously we only did
+      this for server descriptors. Closes ticket 27241.

@@ -236,6 +236,23 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose,
   }
 }
 
+/**
+ * Return true if the directory connection purpose provided is one where
+ * we accept and recognize a partial (truncated) response.
+ */
+int
+dir_conn_purpose_allows_partial_response(int purpose)
+{
+  switch (purpose) {
+    case DIR_PURPOSE_FETCH_SERVERDESC:
+    case DIR_PURPOSE_FETCH_EXTRAINFO:
+    case DIR_PURPOSE_FETCH_MICRODESC:
+      return 1;
+    default:
+      return 0;
+  }
+}
+
 /** Return a newly allocated string describing <b>auth</b>. Only describes
  * authority features. */
 STATIC char *
@@ -2263,10 +2280,8 @@ dir_client_decompress_response_body(char **bodyp, size_t *bodylenp,
   int rv = 0;
   const char *body = *bodyp;
   size_t body_len = *bodylenp;
-  int allow_partial = (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
-                       conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
-                       conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
-
+  int allow_partial =
+    dir_conn_purpose_allows_partial_response(conn->base_.purpose);
   int plausible = body_is_plausible(body, body_len, conn->base_.purpose);
 
   if (plausible && compression == NO_METHOD) {
@@ -2393,9 +2408,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   compress_method_t compression;
   int skewed = 0;
   int rv;
-  int allow_partial = (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
-                       conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
-                       conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
+  int allow_partial =
+    dir_conn_purpose_allows_partial_response(conn->base_.purpose);
   size_t received_bytes;
   const int anonymized_connection =
     purpose_needs_anonymity(conn->base_.purpose,

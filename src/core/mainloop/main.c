@@ -1219,11 +1219,10 @@ run_connection_housekeeping(int i, time_t now)
     log_info(LD_DIR,"Expiring wedged directory conn (fd %d, purpose %d)",
              (int)conn->s, conn->purpose);
     /* This check is temporary; it's to let us know whether we should consider
-     * parsing partial serverdesc responses. */
-    if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
+     * parsing partial responses. */
+    if (dir_conn_purpose_allows_partial_response(conn->purpose) &&
         connection_get_inbuf_len(conn) >= 1024) {
-      log_info(LD_DIR,"Trying to extract information from wedged server desc "
-               "download.");
+      log_info(LD_DIR,"Trying to extract information from wedged download.");
       connection_dir_reached_eof(TO_DIR_CONN(conn));
     } else {
       connection_mark_for_close(conn);

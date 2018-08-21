@@ -217,6 +217,7 @@ int download_status_get_n_attempts(const download_status_t *dls);
 
 int purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose,
                             const char *resource);
+int dir_conn_purpose_allows_partial_response(int purpose);
 
 #ifdef DIRECTORY_PRIVATE
 
