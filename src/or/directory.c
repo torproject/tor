@@ -5179,7 +5179,7 @@ connection_dir_finished_flushing(dir_connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->base_.type == CONN_TYPE_DIR);
 
-  if (conn->marked_for_close)
+  if (conn->base_.marked_for_close)
     return 0;
 
   /* Note that we have finished writing the directory response. For direct
