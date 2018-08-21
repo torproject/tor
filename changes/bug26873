@@ -1,0 +1,4 @@
+  o Minor bugfixes (portability):
+    - Fix compilation of the unit tests on GNU/Hurd, which does not
+      define PATH_MAX. Fixes bug 26873; bugfix on 0.3.3.1-alpha.
+      Patch from "paulusASol".
