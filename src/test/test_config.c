@@ -5615,12 +5615,7 @@ test_config_include_wildcards(void *data)
     tt_str_op(next->value, OP_EQ, expected);
     len++;
   }
-#ifdef _WIN32
-  // the path separator at the end is ignored on Windows, so foo matches
-  tt_int_op(len, OP_EQ, 3);
-#else
   tt_int_op(len, OP_EQ, 2);
-#endif
 
  done:
   config_free_lines(result);
