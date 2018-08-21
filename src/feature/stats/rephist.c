@@ -1548,14 +1548,14 @@ typedef struct predicted_port_t {
 /** A list of port numbers that have been used recently. */
 static smartlist_t *predicted_ports_list=NULL;
 /** How long do we keep predicting circuits? */
-static int prediction_timeout=0;
+static time_t prediction_timeout=0;
 /** When was the last time we added a prediction entry (HS or port) */
 static time_t last_prediction_add_time=0;
 
 /**
  * How much time left until we stop predicting circuits?
  */
-int
+time_t
 predicted_ports_prediction_time_remaining(time_t now)
 {
   time_t idle_delta;
@@ -1577,11 +1577,11 @@ predicted_ports_prediction_time_remaining(time_t now)
   if (idle_delta > prediction_timeout)
     return 0;
 
-  if (BUG((prediction_timeout - idle_delta) > INT_MAX)) {
-    return INT_MAX;
+  if (BUG((prediction_timeout - idle_delta) > TIME_MAX)) {
+    return TIME_MAX;
   }
 
-  return (int)(prediction_timeout - idle_delta);
+  return prediction_timeout - idle_delta;
 }
 
 /** We just got an application request for a connection with
@@ -1602,7 +1602,7 @@ add_predicted_port(time_t now, uint16_t port)
 
   log_info(LD_CIRC,
           "New port prediction added. Will continue predictive circ building "
-          "for %d more seconds.",
+          "for %ld more seconds.",
           predicted_ports_prediction_time_remaining(now));
 
   pp->port = port;
@@ -1660,7 +1660,7 @@ rep_hist_note_used_port(time_t now, uint16_t port)
       last_prediction_add_time = now;
       log_info(LD_CIRC,
                "New port prediction added. Will continue predictive circ "
-               "building for %d more seconds.",
+               "building for %ld more seconds.",
                predicted_ports_prediction_time_remaining(now));
       return;
     }
@@ -1679,7 +1679,7 @@ rep_hist_get_predicted_ports(time_t now)
   smartlist_t *out = smartlist_new();
   tor_assert(predicted_ports_list);
 
-  predicted_circs_relevance_time = prediction_timeout;
+  predicted_circs_relevance_time = (int)prediction_timeout;
 
   /* clean out obsolete entries */
   SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
@@ -1748,7 +1748,7 @@ rep_hist_note_used_internal(time_t now, int need_uptime, int need_capacity)
 
   log_info(LD_CIRC,
           "New port prediction added. Will continue predictive circ building "
-          "for %d more seconds.",
+          "for %ld more seconds.",
           predicted_ports_prediction_time_remaining(now));
 
   predicted_internal_time = now;
@@ -1765,7 +1765,7 @@ rep_hist_get_predicted_internal(time_t now, int *need_uptime,
 {
   int predicted_circs_relevance_time;
 
-  predicted_circs_relevance_time = prediction_timeout;
+  predicted_circs_relevance_time = (int)prediction_timeout;
 
   if (!predicted_internal_time) { /* initialize it */
     predicted_internal_time = now;
@@ -1787,7 +1787,7 @@ int
 any_predicted_circuits(time_t now)
 {
   int predicted_circs_relevance_time;
-  predicted_circs_relevance_time = prediction_timeout;
+  predicted_circs_relevance_time = (int)prediction_timeout;
 
   return smartlist_len(predicted_ports_list) ||
          predicted_internal_time + predicted_circs_relevance_time >= now;
