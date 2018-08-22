@@ -4187,4 +4187,3 @@ connection_edge_free_all(void)
   pending_entry_connections = NULL;
   mainloop_event_free(attach_pending_entry_connections_ev);
 }
-
