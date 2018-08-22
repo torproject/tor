@@ -1,0 +1,4 @@
+  o Minor bugfixes (rust):
+    - cd to ${abs_top_builddir}/src/rust before running cargo in
+      src/test/test_rust.sh. This makes the working directory consistent
+      between builds and tests. Fixes bug 26497; bugfix on 0.3.3.2-alpha.

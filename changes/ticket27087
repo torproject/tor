@@ -1,0 +1,3 @@
+  o Minor features (continuous integration):
+    - Run asciidoc during Travis CI.
+      Implements ticket 27087.
