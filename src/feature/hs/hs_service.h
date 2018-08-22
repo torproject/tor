@@ -24,7 +24,7 @@
 /* When loading and configuring a service, this is the default version it will
  * be configured for as it is possible that no HiddenServiceVersion is
  * present. */
-#define HS_SERVICE_DEFAULT_VERSION HS_VERSION_TWO
+#define HS_SERVICE_DEFAULT_VERSION HS_VERSION_THREE
 
 /* As described in the specification, service publishes their next descriptor
  * at a random time between those two values (in seconds). */
