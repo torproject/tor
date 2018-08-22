@@ -2779,7 +2779,7 @@ struct testcase_t tortls_tests[] = {
   LOCAL_TEST_CASE(always_accept_verify_cb, 0),
   INTRUSIVE_TEST_CASE(x509_cert_free, 0),
   LOCAL_TEST_CASE(x509_cert_get_id_digests, 0),
-  INTRUSIVE_TEST_CASE(cert_matches_key, 0),
+  LOCAL_TEST_CASE(cert_matches_key, 0),
   INTRUSIVE_TEST_CASE(cert_get_key, 0),
   LOCAL_TEST_CASE(get_my_client_auth_key, TT_FORK),
   LOCAL_TEST_CASE(get_my_certs, TT_FORK),
@@ -2823,4 +2823,3 @@ struct testcase_t tortls_tests[] = {
   LOCAL_TEST_CASE(context_init_one, 0),
   END_OF_TESTCASES
 };
-
