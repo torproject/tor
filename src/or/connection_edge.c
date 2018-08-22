@@ -3823,4 +3823,3 @@ connection_edge_free_all(void)
   smartlist_free(pending_entry_connections);
   pending_entry_connections = NULL;
 }
-
