@@ -1037,7 +1037,7 @@ load_service_keys(hs_service_t *service)
   /* Don't ask for key creation, we want to know if we were able to load it or
    * we had to generate it. Better logging! */
   kp = ed_key_init_from_file(fname, INIT_ED_KEY_SPLIT, LOG_INFO, NULL, 0, 0,
-                             0, NULL);
+                             0, NULL, NULL);
   if (!kp) {
     log_info(LD_REND, "Unable to load keys from %s. Generating it...", fname);
     /* We'll now try to generate the keys and for it we want the strongest
@@ -1045,7 +1045,7 @@ load_service_keys(hs_service_t *service)
     uint32_t key_flags = INIT_ED_KEY_CREATE | INIT_ED_KEY_EXTRA_STRONG |
                          INIT_ED_KEY_SPLIT;
     kp = ed_key_init_from_file(fname, key_flags, LOG_WARN, NULL, 0, 0, 0,
-                               NULL);
+                               NULL, NULL);
     if (!kp) {
       log_warn(LD_REND, "Unable to generate keys and save in %s.", fname);
       goto end;

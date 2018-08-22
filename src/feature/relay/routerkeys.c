@@ -248,6 +248,9 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
  * <b>fname</b>, with certificate type <b>cert_type</b>.  On failure, return
  * NULL; on success return the keypair.
  *
+ * The <b>options</b> is used to look at the change_key_passphrase value when
+ * writing to disk a secret key. It is safe to be NULL even in that case.
+ *
  * If INIT_ED_KEY_CREATE is set in <b>flags</b>, then create the key (and
  * certificate if requested) if it doesn't exist, and save it to disk.
  *
@@ -276,9 +279,6 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
  * secret key unless no public key is found.  Do not return a secret key. (but
  * create and save one if needed).
  *
- * If INIT_ED_KEY_NO_LOAD_SECRET is set in <b>flags</b>, don't try to load
- * a secret key, no matter what.
- *
  * If INIT_ED_KEY_TRY_ENCRYPTED is set, we look for an encrypted secret key
  * and consider encrypting any new secret key.
  *
@@ -291,6 +291,9 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
  *
  * If INIT_ED_KEY_EXPLICIT_FNAME is set, use the provided file name for the
  * secret key file, encrypted or not.
+ *
+ * If INIT_ED_KEY_OFFLINE_SECRET is set, we won't try to load the master
+ * secret key and we log a message at <b>severity</b> that we've done so.
  */
 ed25519_keypair_t *
 ed_key_init_from_file(const char *fname, uint32_t flags,
@@ -299,7 +302,8 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
                       time_t now,
                       time_t lifetime,
                       uint8_t cert_type,
-                      struct tor_cert_st **cert_out)
+                      struct tor_cert_st **cert_out,
+                      const or_options_t *options)
 {
   char *secret_fname = NULL;
   char *encrypted_secret_fname = NULL;
@@ -503,7 +507,8 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
 
   /* Write it to disk if we're supposed to do with a new passphrase, or if
    * we just created it. */
-  if (created_sk || (have_secret && get_options()->change_key_passphrase)) {
+  if (created_sk || (have_secret && options != NULL &&
+                     options->change_key_passphrase)) {
     if (write_secret_key(&keypair->seckey,
                          encrypt_key,
                          secret_fname, tag, encrypted_secret_fname) < 0
@@ -734,7 +739,7 @@ load_ed_keys(const or_options_t *options, time_t now)
                INIT_ED_KEY_NEEDCERT|
                INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT,
                LOG_INFO,
-               NULL, 0, 0, CERT_TYPE_ID_SIGNING, &sign_cert);
+               NULL, 0, 0, CERT_TYPE_ID_SIGNING, &sign_cert, options);
     tor_free(fname);
     check_signing_cert = sign_cert;
     use_signing = sign;
@@ -836,7 +841,7 @@ load_ed_keys(const or_options_t *options, time_t now)
     id = ed_key_init_from_file(
              fname,
              flags,
-             LOG_WARN, NULL, 0, 0, 0, NULL);
+             LOG_WARN, NULL, 0, 0, 0, NULL, options);
     tor_free(fname);
     if (!id) {
       if (need_new_signing_key) {
@@ -904,7 +909,7 @@ load_ed_keys(const or_options_t *options, time_t now)
                                  flags, LOG_WARN,
                                  sign_signing_key_with_id, now,
                                  options->SigningKeyLifetime,
-                                 CERT_TYPE_ID_SIGNING, &sign_cert);
+                                 CERT_TYPE_ID_SIGNING, &sign_cert, options);
     tor_free(fname);
     if (!sign)
       FAIL("Missing signing key");

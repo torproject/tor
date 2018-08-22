@@ -262,13 +262,14 @@ test_routerkeys_ed_key_init_basic(void *arg)
   unlink(fname2);
 
   /* Fail to load a key that isn't there. */
-  kp1 = ed_key_init_from_file(fname1, 0, LOG_INFO, NULL, now, 0, 7, &cert);
+  kp1 = ed_key_init_from_file(fname1, 0, LOG_INFO, NULL, now, 0, 7, &cert,
+                              NULL);
   tt_assert(kp1 == NULL);
   tt_assert(cert == NULL);
 
   /* Create the key if requested to do so. */
   kp1 = ed_key_init_from_file(fname1, INIT_ED_KEY_CREATE, LOG_INFO,
-                              NULL, now, 0, 7, &cert);
+                              NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp1 != NULL);
   tt_assert(cert == NULL);
   tt_int_op(stat(get_fname("test_ed_key_1_cert"), &st), OP_LT, 0);
@@ -276,24 +277,24 @@ test_routerkeys_ed_key_init_basic(void *arg)
 
   /* Fail to load if we say we need a cert */
   kp2 = ed_key_init_from_file(fname1, INIT_ED_KEY_NEEDCERT, LOG_INFO,
-                              NULL, now, 0, 7, &cert);
+                              NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp2 == NULL);
 
   /* Fail to load if we say the wrong key type */
   kp2 = ed_key_init_from_file(fname1, 0, LOG_INFO,
-                              NULL, now, 0, 6, &cert);
+                              NULL, now, 0, 6, &cert, NULL);
   tt_assert(kp2 == NULL);
 
   /* Load successfully if we're not picky, whether we say "create" or not. */
   kp2 = ed_key_init_from_file(fname1, INIT_ED_KEY_CREATE, LOG_INFO,
-                              NULL, now, 0, 7, &cert);
+                              NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(kp1, OP_EQ, kp2, sizeof(*kp1));
   ed25519_keypair_free(kp2); kp2 = NULL;
 
   kp2 = ed_key_init_from_file(fname1, 0, LOG_INFO,
-                              NULL, now, 0, 7, &cert);
+                              NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(kp1, OP_EQ, kp2, sizeof(*kp1));
@@ -302,7 +303,7 @@ test_routerkeys_ed_key_init_basic(void *arg)
   /* Now create a key with a cert. */
   kp2 = ed_key_init_from_file(fname2, (INIT_ED_KEY_CREATE|
                                        INIT_ED_KEY_NEEDCERT),
-                              LOG_INFO, kp1, now, 7200, 7, &cert);
+                              LOG_INFO, kp1, now, 7200, 7, &cert, NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert != NULL);
   tt_mem_op(kp1, OP_NE, kp2, sizeof(*kp1));
@@ -315,7 +316,7 @@ test_routerkeys_ed_key_init_basic(void *arg)
   /* Now verify we can load the cert... */
   kp3 = ed_key_init_from_file(fname2, (INIT_ED_KEY_CREATE|
                                        INIT_ED_KEY_NEEDCERT),
-                              LOG_INFO, kp1, now, 7200, 7, &cert2);
+                              LOG_INFO, kp1, now, 7200, 7, &cert2, NULL);
   tt_mem_op(kp2, OP_EQ, kp3, sizeof(*kp2));
   tt_mem_op(cert2->encoded, OP_EQ, cert->encoded, cert->encoded_len);
   ed25519_keypair_free(kp3); kp3 = NULL;
@@ -323,7 +324,7 @@ test_routerkeys_ed_key_init_basic(void *arg)
 
   /* ... even without create... */
   kp3 = ed_key_init_from_file(fname2, INIT_ED_KEY_NEEDCERT,
-                              LOG_INFO, kp1, now, 7200, 7, &cert2);
+                              LOG_INFO, kp1, now, 7200, 7, &cert2, NULL);
   tt_mem_op(kp2, OP_EQ, kp3, sizeof(*kp2));
   tt_mem_op(cert2->encoded, OP_EQ, cert->encoded, cert->encoded_len);
   ed25519_keypair_free(kp3); kp3 = NULL;
@@ -331,13 +332,13 @@ test_routerkeys_ed_key_init_basic(void *arg)
 
   /* ... but that we don't crash or anything if we say we don't want it. */
   kp3 = ed_key_init_from_file(fname2, INIT_ED_KEY_NEEDCERT,
-                              LOG_INFO, kp1, now, 7200, 7, NULL);
+                              LOG_INFO, kp1, now, 7200, 7, NULL, NULL);
   tt_mem_op(kp2, OP_EQ, kp3, sizeof(*kp2));
   ed25519_keypair_free(kp3); kp3 = NULL;
 
   /* Fail if we're told the wrong signing key */
   kp3 = ed_key_init_from_file(fname2, INIT_ED_KEY_NEEDCERT,
-                              LOG_INFO, kp2, now, 7200, 7, &cert2);
+                              LOG_INFO, kp2, now, 7200, 7, &cert2, NULL);
   tt_assert(kp3 == NULL);
   tt_assert(cert2 == NULL);
 
@@ -368,13 +369,14 @@ test_routerkeys_ed_key_init_split(void *arg)
   unlink(fname2);
 
   /* Can't load key that isn't there. */
-  kp1 = ed_key_init_from_file(fname1, flags, LOG_INFO, NULL, now, 0, 7, &cert);
+  kp1 = ed_key_init_from_file(fname1, flags, LOG_INFO, NULL, now, 0, 7, &cert,
+                              NULL);
   tt_assert(kp1 == NULL);
   tt_assert(cert == NULL);
 
   /* Create a split key */
   kp1 = ed_key_init_from_file(fname1, flags|INIT_ED_KEY_CREATE,
-                              LOG_INFO, NULL, now, 0, 7, &cert);
+                              LOG_INFO, NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp1 != NULL);
   tt_assert(cert == NULL);
   tt_int_op(stat(get_fname("test_ed_key_3_cert"), &st), OP_LT, 0);
@@ -383,7 +385,7 @@ test_routerkeys_ed_key_init_split(void *arg)
 
   /* Load it. */
   kp2 = ed_key_init_from_file(fname1, flags|INIT_ED_KEY_CREATE,
-                              LOG_INFO, NULL, now, 0, 7, &cert);
+                              LOG_INFO, NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(kp1, OP_EQ, kp2, sizeof(*kp2));
@@ -392,7 +394,7 @@ test_routerkeys_ed_key_init_split(void *arg)
   /* Okay, try killing the secret key and loading it. */
   unlink(get_fname("test_ed_key_3_secret_key"));
   kp2 = ed_key_init_from_file(fname1, flags,
-                              LOG_INFO, NULL, now, 0, 7, &cert);
+                              LOG_INFO, NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(&kp1->pubkey, OP_EQ, &kp2->pubkey, sizeof(kp2->pubkey));
@@ -402,7 +404,7 @@ test_routerkeys_ed_key_init_split(void *arg)
 
   /* Even when we're told to "create", don't create if there's a public key */
   kp2 = ed_key_init_from_file(fname1, flags|INIT_ED_KEY_CREATE,
-                              LOG_INFO, NULL, now, 0, 7, &cert);
+                              LOG_INFO, NULL, now, 0, 7, &cert, NULL);
   tt_assert(kp2 != NULL);
   tt_assert(cert == NULL);
   tt_mem_op(&kp1->pubkey, OP_EQ, &kp2->pubkey, sizeof(kp2->pubkey));
@@ -412,7 +414,7 @@ test_routerkeys_ed_key_init_split(void *arg)
 
   /* Make sure we fail on a tag mismatch, though */
   kp2 = ed_key_init_from_file(fname1, flags,
-                              LOG_INFO, NULL, now, 0, 99, &cert);
+                              LOG_INFO, NULL, now, 0, 99, &cert, NULL);
   tt_assert(kp2 == NULL);
 
  done:
