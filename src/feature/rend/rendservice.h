@@ -145,6 +145,7 @@ int rend_config_service(const struct config_line_t *line_,
 void rend_service_prune_list(void);
 void rend_service_free_staging_list(void);
 int rend_service_load_all_keys(const smartlist_t *service_list);
+int rend_service_key_on_disk(const char *directory_path);
 void rend_services_add_filenames_to_lists(smartlist_t *open_lst,
                                           smartlist_t *stat_lst);
 void rend_consider_services_intro_points(time_t now);

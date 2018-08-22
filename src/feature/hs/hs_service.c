@@ -2884,6 +2884,29 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
   smartlist_add(list, hs_path_from_filename(s_dir, fname));
 }
 
+/* Return true iff the given service identity key is present on disk. */
+static int
+service_key_on_disk(const char *directory_path)
+{
+  int ret = 0;
+  char *fname;
+  ed25519_keypair_t *kp = NULL;
+
+  tor_assert(directory_path);
+
+  /* Build the v3 key path name and then try to load it. */
+  fname = hs_path_from_filename(directory_path, fname_keyfile_prefix);
+  kp = ed_key_init_from_file(fname, INIT_ED_KEY_SPLIT,
+                             LOG_DEBUG, NULL, 0, 0, 0, NULL, NULL);
+  if (kp) {
+    ret = 1;
+  }
+
+  ed25519_keypair_free(kp);
+  tor_free(fname);
+  return ret;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -3373,6 +3396,36 @@ hs_service_circuit_has_opened(origin_circuit_t *circ)
   default:
     tor_assert(0);
   }
+}
+
+/* Return the service version by looking at the key in the service directory.
+ * If the key is not found or unrecognized, -1 is returned. Else, the service
+ * version is returned. */
+int
+hs_service_get_version_from_key(const hs_service_t *service)
+{
+  int version = -1; /* Unknown version. */
+  const char *directory_path;
+
+  tor_assert(service);
+
+  /* We'll try to load the key for version 3. If not found, we'll try version
+   * 2 and if not found, we'll send back an unknown version (0). */
+  directory_path = service->config.directory_path;
+
+  /* Version 3 check. */
+  if (service_key_on_disk(directory_path)) {
+    version = HS_VERSION_THREE;
+    goto end;
+  }
+  /* Version 2 check. */
+  if (rend_service_key_on_disk(directory_path)) {
+    version = HS_VERSION_TWO;
+    goto end;
+  }
+
+ end:
+  return version;
 }
 
 /* Load and/or generate keys for all onion services including the client

@@ -143,6 +143,24 @@ helper_parse_uint64(const char *opt, const char *value, uint64_t min,
   return ret;
 }
 
+/* Return the service version by trying to learn it from the key on disk if
+ * any. If nothing is found, the current service configured version is
+ * returned. */
+static int
+config_learn_service_version(hs_service_t *service)
+{
+  int version;
+
+  tor_assert(service);
+
+  version = hs_service_get_version_from_key(service);
+  if (version < 0) {
+    version = service->config.version;
+  }
+
+  return version;
+}
+
 /* Return true iff the given options starting at line_ for a hidden service
  * contains at least one invalid option. Each hidden service option don't
  * apply to all versions so this function can find out. The line_ MUST start
@@ -490,6 +508,12 @@ config_service(const config_line_t *line, const or_options_t *options,
                                    0) < 0) {
     goto err;
   }
+  /* We'll try to learn the service version here by loading the key(s) if
+   * present. Depending on the key format, we can figure out the service
+   * version. If we can't find a key, the configuration version will be used
+   * which has been set previously. */
+  service->config.version = config_learn_service_version(service);
+
   /* Different functions are in charge of specific options for a version. We
    * start just after the service directory line so once we hit another
    * directory line, the function knows that it has to stop parsing. */
