@@ -14,6 +14,7 @@
 
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
+#include "lib/string/printf.h"
 
 DISABLE_GCC_WARNING(strict-prototypes)
 #include <nss.h>
@@ -74,11 +75,20 @@ void
 crypto_nss_log_errors(int severity, const char *doing)
 {
   PRErrorCode code = PR_GetError();
-  /* XXXX how do I convert errors to strings? */
+  const char *string = PORT_ErrorToString(code);
+  const char *name = PORT_ErrorToName(code);
+  char buf[16];
+  if (!string)
+    string = "<unrecognized>";
+  if (!name) {
+    tor_snprintf(buf, sizeof(buf), "%d", code);
+    name = buf;
+  }
   if (doing) {
-    tor_log(severity, LD_CRYPTO, "NSS error %u while %s", code, doing);
+    tor_log(severity, LD_CRYPTO, "NSS error %s while %s: %s",
+            name, doing, string);
   } else {
-    tor_log(severity, LD_CRYPTO, "NSS error %u", code);
+    tor_log(severity, LD_CRYPTO, "NSS error %s: %s", name, string);
   }
 }
 
