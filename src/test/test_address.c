@@ -26,7 +26,6 @@
 #include "core/or/or.h"
 #include "feature/nodelist/nodelist.h"
 #include "lib/net/address.h"
-#include "lib/net/address.h"
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
