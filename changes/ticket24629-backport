@@ -1,0 +1,3 @@
+  o Minor features (continuous integration):
+    - Backport Travis rust distcheck to 0.3.3.
+      Closes ticket 24629.
