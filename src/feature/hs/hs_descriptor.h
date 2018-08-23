@@ -219,8 +219,6 @@ void hs_desc_link_specifier_free_(hs_desc_link_specifier_t *ls);
 #define hs_desc_link_specifier_free(ls) \
   FREE_AND_NULL(hs_desc_link_specifier_t, hs_desc_link_specifier_free_, (ls))
 
-hs_desc_link_specifier_t *hs_desc_link_specifier_new(
-                                  const extend_info_t *info, uint8_t type);
 void hs_descriptor_clear_intro_points(hs_descriptor_t *desc);
 
 MOCK_DECL(int,

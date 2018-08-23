@@ -2485,59 +2485,6 @@ hs_desc_link_specifier_free_(hs_desc_link_specifier_t *ls)
   tor_free(ls);
 }
 
-/* Return a newly allocated descriptor link specifier using the given extend
- * info and requested type. Return NULL on error. */
-hs_desc_link_specifier_t *
-hs_desc_link_specifier_new(const extend_info_t *info, uint8_t type)
-{
-  hs_desc_link_specifier_t *ls = NULL;
-
-  tor_assert(info);
-
-  ls = tor_malloc_zero(sizeof(*ls));
-  ls->type = type;
-  switch (ls->type) {
-  case LS_IPV4:
-    if (info->addr.family != AF_INET) {
-      goto err;
-    }
-    tor_addr_copy(&ls->u.ap.addr, &info->addr);
-    ls->u.ap.port = info->port;
-    break;
-  case LS_IPV6:
-    if (info->addr.family != AF_INET6) {
-      goto err;
-    }
-    tor_addr_copy(&ls->u.ap.addr, &info->addr);
-    ls->u.ap.port = info->port;
-    break;
-  case LS_LEGACY_ID:
-    /* Bug out if the identity digest is not set */
-    if (BUG(tor_mem_is_zero(info->identity_digest,
-                            sizeof(info->identity_digest)))) {
-      goto err;
-    }
-    memcpy(ls->u.legacy_id, info->identity_digest, sizeof(ls->u.legacy_id));
-    break;
-  case LS_ED25519_ID:
-    /* ed25519 keys are optional for intro points */
-    if (ed25519_public_key_is_zero(&info->ed_identity)) {
-      goto err;
-    }
-    memcpy(ls->u.ed25519_id, info->ed_identity.pubkey,
-           sizeof(ls->u.ed25519_id));
-    break;
-  default:
-    /* Unknown type is code flow error. */
-    tor_assert(0);
-  }
-
-  return ls;
- err:
-  tor_free(ls);
-  return NULL;
-}
-
 /* From the given descriptor, remove and free every introduction point. */
 void
 hs_descriptor_clear_intro_points(hs_descriptor_t *desc)
