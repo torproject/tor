@@ -76,10 +76,17 @@ static void node_free_(node_t *node);
 /** count_usable_descriptors counts descriptors with these flag(s)
  */
 typedef enum {
-  /* All descriptors regardless of flags */
-  USABLE_DESCRIPTOR_ALL = 0,
-  /* Only descriptors with the Exit flag */
-  USABLE_DESCRIPTOR_EXIT_ONLY = 1
+  /* All descriptors regardless of flags or exit policies */
+  USABLE_DESCRIPTOR_ALL         = 0U,
+  /* Only count descriptors with an exit policy that allows at least one port
+   */
+  USABLE_DESCRIPTOR_EXIT_POLICY = 1U << 0,
+  /* Only count descriptors for relays that have the exit flag in the
+   * consensus */
+  USABLE_DESCRIPTOR_EXIT_FLAG   = 1U << 1,
+  /* Only count descriptors for relays that have the policy and the flag */
+  USABLE_DESCRIPTOR_EXIT_POLICY_AND_FLAG = (USABLE_DESCRIPTOR_EXIT_POLICY |
+                                            USABLE_DESCRIPTOR_EXIT_FLAG)
 } usable_descriptor_t;
 static void count_usable_descriptors(int *num_present,
                                      int *num_usable,
@@ -2110,8 +2117,11 @@ get_dir_info_status_string(void)
  * *<b>num_present</b>).
  *
  * If <b>in_set</b> is non-NULL, only consider those routers in <b>in_set</b>.
- * If <b>exit_only</b> is USABLE_DESCRIPTOR_EXIT_ONLY, only consider nodes
- * with the Exit flag.
+ * If <b>exit_only</b> & USABLE_DESCRIPTOR_EXIT_POLICY, only consider nodes
+ * with an exit policy that accepts at least one port.
+ * If <b>exit_only</b> & USABLE_DESCRIPTOR_EXIT_FLAG, only consider nodes
+ * with the exit flag in the consensus.
+ *
  * If *<b>descs_out</b> is present, add a node_t for each usable descriptor
  * to it.
  */
@@ -2132,11 +2142,17 @@ count_usable_descriptors(int *num_present, int *num_usable,
        if (!node)
          continue; /* This would be a bug: every entry in the consensus is
                     * supposed to have a node. */
-       if (exit_only == USABLE_DESCRIPTOR_EXIT_ONLY && ! rs->is_exit)
+       if ((exit_only & USABLE_DESCRIPTOR_EXIT_FLAG) && ! rs->is_exit)
          continue;
        if (in_set && ! routerset_contains_routerstatus(in_set, rs, -1))
          continue;
        if (client_would_use_router(rs, now)) {
+         /* Do the policy check last, because it's potentially expensive */
+         if ((exit_only & USABLE_DESCRIPTOR_EXIT_POLICY) &&
+             node_has_preferred_descriptor(node, 0) &&
+             node_exit_policy_rejects_all(node)) {
+           continue;
+         }
          const char * const digest = rs->descriptor_digest;
          int present;
          ++*num_usable; /* the consensus says we want it. */
@@ -2154,10 +2170,17 @@ count_usable_descriptors(int *num_present, int *num_usable,
      }
   SMARTLIST_FOREACH_END(rs);
 
-  log_debug(LD_DIR, "%d usable, %d present (%s%s).",
+  log_debug(LD_DIR, "%d usable, %d present (%s%s%s%s%s).",
             *num_usable, *num_present,
             md ? "microdesc" : "desc",
-            exit_only == USABLE_DESCRIPTOR_EXIT_ONLY ? " exits" : "s");
+            (exit_only & USABLE_DESCRIPTOR_EXIT_POLICY_AND_FLAG) ?
+              " exit"     : "s",
+            (exit_only & USABLE_DESCRIPTOR_EXIT_POLICY) ?
+              " policies" : "" ,
+            (exit_only == USABLE_DESCRIPTOR_EXIT_POLICY_AND_FLAG) ?
+              " and" : "" ,
+            (exit_only & USABLE_DESCRIPTOR_EXIT_FLAG) ?
+              " flags"    : "" );
 }
 
 /** Return an estimate of which fraction of usable paths through the Tor
@@ -2207,15 +2230,9 @@ compute_frac_paths_available(const networkstatus_t *consensus,
     });
   }
 
-  /* All nodes with exit flag
-   * If we're in a network with TestingDirAuthVoteExit set,
-   * this can cause false positives on have_consensus_path,
-   * incorrectly setting it to CONSENSUS_PATH_EXIT. This is
-   * an unavoidable feature of forcing authorities to declare
-   * certain nodes as exits.
-   */
+  /* All nodes with exit policy and flag */
   count_usable_descriptors(&np, &nu, exits, consensus, now,
-                           NULL, USABLE_DESCRIPTOR_EXIT_ONLY);
+                           NULL, USABLE_DESCRIPTOR_EXIT_POLICY_AND_FLAG);
   log_debug(LD_NET,
             "%s: %d present, %d usable",
             "exits",
@@ -2262,40 +2279,25 @@ compute_frac_paths_available(const networkstatus_t *consensus,
     smartlist_t *myexits= smartlist_new();
     smartlist_t *myexits_unflagged = smartlist_new();
 
-    /* All nodes with exit flag in ExitNodes option */
+    /* All nodes with exit policy and flag in ExitNodes option */
     count_usable_descriptors(&np, &nu, myexits, consensus, now,
-                             options->ExitNodes, USABLE_DESCRIPTOR_EXIT_ONLY);
+                             options->ExitNodes,
+                             USABLE_DESCRIPTOR_EXIT_POLICY_AND_FLAG);
     log_debug(LD_NET,
               "%s: %d present, %d usable",
               "myexits",
               np,
               nu);
 
-    /* Now compute the nodes in the ExitNodes option where which we don't know
-     * what their exit policy is, or we know it permits something. */
+    /* Now compute the nodes in the ExitNodes option where we know their exit
+     * policy permits something. */
     count_usable_descriptors(&np, &nu, myexits_unflagged,
                              consensus, now,
-                             options->ExitNodes, USABLE_DESCRIPTOR_ALL);
+                             options->ExitNodes,
+                             USABLE_DESCRIPTOR_EXIT_POLICY);
     log_debug(LD_NET,
               "%s: %d present, %d usable",
               "myexits_unflagged (initial)",
-              np,
-              nu);
-
-    SMARTLIST_FOREACH_BEGIN(myexits_unflagged, const node_t *, node) {
-      if (node_has_preferred_descriptor(node, 0) &&
-          node_exit_policy_rejects_all(node)) {
-        SMARTLIST_DEL_CURRENT(myexits_unflagged, node);
-        /* this node is not actually an exit */
-        np--;
-        /* this node is unusable as an exit */
-        nu--;
-      }
-    } SMARTLIST_FOREACH_END(node);
-
-    log_debug(LD_NET,
-              "%s: %d present, %d usable",
-              "myexits_unflagged (final)",
               np,
               nu);
 
