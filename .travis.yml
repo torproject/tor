@@ -62,6 +62,11 @@ matrix:
     ## gcc on OSX is less useful, because the default compiler is clang.
     - compiler: gcc
       os: osx
+    ## gcc on Linux with no env is redundant, because all the custom builds use
+    ## gcc on Linux
+    - compiler: gcc
+      os: linux
+      env:
 
 ## We don't need sudo. (The "apt:" stanza after this allows us to not need
 ## sudo; otherwise, we would need it for getting dependencies.)
