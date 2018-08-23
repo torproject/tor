@@ -52,14 +52,6 @@ tor_tls_pick_certificate_lifetime(time_t now,
   *end_time_out = end_time;
 }
 
-/** Return the underlying implementation for <b>cert</b> */
-const tor_x509_cert_impl_t *
-tor_x509_cert_get_impl(const tor_x509_cert_t *cert)
-{
-  tor_assert(cert);
-  return cert->cert;
-}
-
 /** Return a set of digests for the public key in <b>cert</b>, or NULL if this
  * cert's public key is not one we know how to take the digest of. */
 const common_digests_t *
