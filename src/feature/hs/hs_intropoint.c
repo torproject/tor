@@ -601,8 +601,8 @@ hs_intropoint_clear(hs_intropoint_t *ip)
     return;
   }
   tor_cert_free(ip->auth_key_cert);
-  SMARTLIST_FOREACH(ip->link_specifiers, hs_desc_link_specifier_t *, ls,
-                    hs_desc_link_specifier_free(ls));
+  SMARTLIST_FOREACH(ip->link_specifiers, link_specifier_t *, ls,
+                    link_specifier_free(ls));
   smartlist_free(ip->link_specifiers);
   memset(ip, 0, sizeof(hs_intropoint_t));
 }

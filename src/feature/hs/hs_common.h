@@ -262,6 +262,8 @@ extend_info_t *hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
                           const struct curve25519_public_key_t *onion_key,
                           int direct_conn);
 
+link_specifier_t *link_specifier_dup(const link_specifier_t *src);
+
 #ifdef HS_COMMON_PRIVATE
 
 STATIC void get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out);
