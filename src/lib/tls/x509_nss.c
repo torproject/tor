@@ -62,9 +62,11 @@ tor_tls_create_certificate_internal(crypto_pk_t *rsa,
 
   validity = CERT_CreateValidity(((PRTime)start_time) * PRTIME_PER_SEC,
                                  ((PRTime)end_time) * PRTIME_PER_SEC);
-  if (! validity) {
+  if (BUG(! validity)) {
+    /* LCOV_EXCL_START */
     crypto_nss_log_errors(LOG_WARN, "creating a validity object");
     goto err;
+    /* LCOV_EXCL_STOP */
   }
 
   unsigned long serial_number;

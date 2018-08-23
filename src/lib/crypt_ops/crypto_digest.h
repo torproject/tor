@@ -16,6 +16,7 @@
 #include "lib/cc/torint.h"
 #include "lib/defs/digest_sizes.h"
 #include "lib/malloc/malloc.h"
+#include "lib/testsupport/testsupport.h"
 
 /** Length of a sha1 message digest when encoded in base32 with trailing =
  * signs removed. */
@@ -75,7 +76,7 @@ typedef struct crypto_xof_t crypto_xof_t;
 struct smartlist_t;
 
 /* SHA-1 and other digests */
-int crypto_digest(char *digest, const char *m, size_t len);
+MOCK_DECL(int, crypto_digest,(char *digest, const char *m, size_t len));
 int crypto_digest256(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
 int crypto_digest512(char *digest, const char *m, size_t len,

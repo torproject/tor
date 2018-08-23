@@ -327,11 +327,15 @@ tor_tls_cert_is_valid(int severity,
   if (check_rsa_1024 && cert_key) {
     RSA *rsa = EVP_PKEY_get1_RSA(cert_key);
 #ifdef OPENSSL_1_1_API
-    if (rsa && RSA_bits(rsa) == 1024)
+    if (rsa && RSA_bits(rsa) == 1024) {
 #else
-    if (rsa && BN_num_bits(rsa->n) == 1024)
+    if (rsa && BN_num_bits(rsa->n) == 1024) {
 #endif
       key_ok = 1;
+    } else {
+      log_fn(severity, LD_CRYPTO, "Invalid certificate: Key is not RSA1024.");
+    }
+
     if (rsa)
       RSA_free(rsa);
   } else if (cert_key) {
