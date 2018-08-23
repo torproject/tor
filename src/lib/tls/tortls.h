@@ -126,6 +126,10 @@ int tor_tls_server_got_renegotiate(tor_tls_t *tls);
 MOCK_DECL(int,tor_tls_cert_matches_key,(const tor_tls_t *tls,
                                         const struct tor_x509_cert_t *cert));
 MOCK_DECL(int,tor_tls_get_tlssecrets,(tor_tls_t *tls, uint8_t *secrets_out));
+#ifdef ENABLE_OPENSSL
+/* OpenSSL lets us see these master secrets; NSS sensibly does not. */
+#define HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
+#endif
 MOCK_DECL(int,tor_tls_export_key_material,(
                      tor_tls_t *tls, uint8_t *secrets_out,
                      const uint8_t *context,

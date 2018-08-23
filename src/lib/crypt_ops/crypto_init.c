@@ -191,3 +191,14 @@ crypto_get_header_version_string(void)
   return crypto_nss_get_header_version_str();
 #endif
 }
+
+/** Return true iff Tor is using the NSS library. */
+int
+tor_is_using_nss(void)
+{
+#ifdef ENABLE_NSS
+  return 1;
+#else
+  return 0;
+#endif
+}

@@ -10,6 +10,7 @@ use std::str::FromStr;
 use std::string::String;
 
 use external::c_tor_version_as_new_as;
+use external::c_tor_is_using_nss;
 
 use errors::ProtoverError;
 use protoset::ProtoSet;
@@ -141,18 +142,31 @@ impl From<Protocol> for UnknownProtocol {
 ///
 //  C_RUST_COUPLED: protover.c `protover_get_supported_protocols`
 pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
-    cstr!(
-        "Cons=1-2 \
-         Desc=1-2 \
-         DirCache=1-2 \
-         HSDir=1-2 \
-         HSIntro=3-4 \
-         HSRend=1-2 \
-         Link=1-5 \
-         LinkAuth=1,3 \
-         Microdesc=1-2 \
-         Relay=1-2"
-    )
+    if c_tor_is_using_nss() {
+        cstr!("Cons=1-2 \
+               Desc=1-2 \
+               DirCache=1-2 \
+               HSDir=1-2 \
+               HSIntro=3-4 \
+               HSRend=1-2 \
+               Link=1-5 \
+               LinkAuth=3 \
+               Microdesc=1-2 \
+               Relay=1-2"
+        )
+    } else {
+        cstr!("Cons=1-2 \
+               Desc=1-2 \
+               DirCache=1-2 \
+               HSDir=1-2 \
+               HSIntro=3-4 \
+               HSRend=1-2 \
+               Link=1-5 \
+               LinkAuth=1,3 \
+               Microdesc=1-2 \
+               Relay=1-2"
+        )
+    }
 }
 
 /// A map of protocol names to the versions of them which are supported.

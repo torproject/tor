@@ -374,7 +374,11 @@ protover_get_supported_protocols(void)
     "HSIntro=3-4 "
     "HSRend=1-2 "
     "Link=1-5 "
+#ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
     "LinkAuth=1,3 "
+#else
+    "LinkAuth=3 "
+#endif
     "Microdesc=1-2 "
     "Relay=1-2";
 }
@@ -920,4 +924,3 @@ protover_free_all(void)
 }
 
 #endif /* !defined(HAVE_RUST) */
-

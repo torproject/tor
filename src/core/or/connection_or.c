@@ -2641,6 +2641,12 @@ connection_or_send_certs_cell(or_connection_t *conn)
   return 0;
 }
 
+#ifdef TOR_UNIT_TESTS
+int testing__connection_or_pretend_TLSSECRET_is_supported = 0;
+#else
+#define testing__connection_or_pretend_TLSSECRET_is_supported 0
+#endif
+
 /** Return true iff <b>challenge_type</b> is an AUTHCHALLENGE type that
  * we can send and receive. */
 int
@@ -2648,6 +2654,11 @@ authchallenge_type_is_supported(uint16_t challenge_type)
 {
   switch (challenge_type) {
      case AUTHTYPE_RSA_SHA256_TLSSECRET:
+#ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
+       return 1;
+#else
+       return testing__connection_or_pretend_TLSSECRET_is_supported;
+#endif
      case AUTHTYPE_ED25519_SHA256_RFC5705:
        return 1;
      case AUTHTYPE_RSA_SHA256_RFC5705:
@@ -2690,11 +2701,13 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
   tor_assert(sizeof(ac->challenge) == 32);
   crypto_rand((char*)ac->challenge, sizeof(ac->challenge));
 
-  auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_TLSSECRET);
+  if (authchallenge_type_is_supported(AUTHTYPE_RSA_SHA256_TLSSECRET))
+    auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_TLSSECRET);
   /* Disabled, because everything that supports this method also supports
    * the much-superior ED25519_SHA256_RFC5705 */
   /* auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_RFC5705); */
-  auth_challenge_cell_add_methods(ac, AUTHTYPE_ED25519_SHA256_RFC5705);
+  if (authchallenge_type_is_supported(AUTHTYPE_ED25519_SHA256_RFC5705))
+    auth_challenge_cell_add_methods(ac, AUTHTYPE_ED25519_SHA256_RFC5705);
   auth_challenge_cell_set_n_methods(ac,
                                     auth_challenge_cell_getlen_methods(ac));
 
@@ -2855,7 +2868,11 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
   /* HMAC of clientrandom and serverrandom using master key : 32 octets */
   if (old_tlssecrets_algorithm) {
-    tor_tls_get_tlssecrets(conn->tls, auth->tlssecrets);
+    if (tor_tls_get_tlssecrets(conn->tls, auth->tlssecrets) < 0) {
+      log_fn(LOG_PROTOCOL_WARN, LD_OR, "Somebody asked us for an older TLS "
+         "authentication method (AUTHTYPE_RSA_SHA256_TLSSECRET) "
+         "which we don't support.");
+    }
   } else {
     char label[128];
     tor_snprintf(label, sizeof(label),

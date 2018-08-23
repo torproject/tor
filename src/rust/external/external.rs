@@ -26,3 +26,13 @@ pub fn c_tor_version_as_new_as(platform: &str, cutoff: &str) -> bool {
 
     result == 1
 }
+
+extern "C" {
+    fn tor_is_using_nss() -> c_int;
+}
+
+/// Return true if Tor was built to use NSS.
+pub fn c_tor_is_using_nss() -> bool
+{
+    0 != unsafe { tor_is_using_nss() }
+}

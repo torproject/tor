@@ -31,4 +31,6 @@ const char *crypto_get_library_name(void);
 const char *crypto_get_library_version_string(void);
 const char *crypto_get_header_version_string(void);
 
+int tor_is_using_nss(void);
+
 #endif /* !defined(TOR_CRYPTO_H) */
