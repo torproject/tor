@@ -355,11 +355,11 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
  *  - Encrypt it to the right layer
  *  - Append it to the appropriate cell_queue on <b>circ</b>.
  */
-static int
-circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
+MOCK_IMPL(int,
+circuit_package_relay_cell, (cell_t *cell, circuit_t *circ,
                            cell_direction_t cell_direction,
                            crypt_path_t *layer_hint, streamid_t on_stream,
-                           const char *filename, int lineno)
+                           const char *filename, int lineno))
 {
   channel_t *chan; /* where to send the cell */
 
