@@ -1323,69 +1323,6 @@ tor_tls_finish_handshake(tor_tls_t *tls)
   return r;
 }
 
-/** Shut down an open tls connection <b>tls</b>.  When finished, returns
- * TOR_TLS_DONE.  On failure, returns TOR_TLS_ERROR, TOR_TLS_WANTREAD,
- * or TOR_TLS_WANTWRITE.
- */
-int
-tor_tls_shutdown(tor_tls_t *tls)
-{
-  int r, err;
-  char buf[128];
-  tor_assert(tls);
-  tor_assert(tls->ssl);
-  check_no_tls_errors();
-
-  while (1) {
-    if (tls->state == TOR_TLS_ST_SENTCLOSE) {
-      /* If we've already called shutdown once to send a close message,
-       * we read until the other side has closed too.
-       */
-      do {
-        r = SSL_read(tls->ssl, buf, 128);
-      } while (r>0);
-      err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading to shut down",
-                              LOG_INFO, LD_NET);
-      if (err == TOR_TLS_ZERORETURN_) {
-        tls->state = TOR_TLS_ST_GOTCLOSE;
-        /* fall through... */
-      } else {
-        return err;
-      }
-    }
-
-    r = SSL_shutdown(tls->ssl);
-    if (r == 1) {
-      /* If shutdown returns 1, the connection is entirely closed. */
-      tls->state = TOR_TLS_ST_CLOSED;
-      return TOR_TLS_DONE;
-    }
-    err = tor_tls_get_error(tls, r, CATCH_SYSCALL|CATCH_ZERO, "shutting down",
-                            LOG_INFO, LD_NET);
-    if (err == TOR_TLS_SYSCALL_) {
-      /* The underlying TCP connection closed while we were shutting down. */
-      tls->state = TOR_TLS_ST_CLOSED;
-      return TOR_TLS_DONE;
-    } else if (err == TOR_TLS_ZERORETURN_) {
-      /* The TLS connection says that it sent a shutdown record, but
-       * isn't done shutting down yet.  Make sure that this hasn't
-       * happened before, then go back to the start of the function
-       * and try to read.
-       */
-      if (tls->state == TOR_TLS_ST_GOTCLOSE ||
-         tls->state == TOR_TLS_ST_SENTCLOSE) {
-        log_warn(LD_NET,
-            "TLS returned \"half-closed\" value while already half-closed");
-        return TOR_TLS_ERROR_MISC;
-      }
-      tls->state = TOR_TLS_ST_SENTCLOSE;
-      /* fall through ... */
-    } else {
-      return err;
-    }
-  } /* end loop */
-}
-
 /** Return true iff this TLS connection is authenticated.
  */
 int
