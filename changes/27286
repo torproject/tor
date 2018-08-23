@@ -1,0 +1,4 @@
+  o Minor features (directory authorities):
+    - Authorities no longer vote to make the subprotocol version "LinkAuth=1"
+      a requirement: it is unsupportable with NSS, and hasn't been needed
+      since Tor 0.3.0.1-alpha. Closes ticket 27286.
