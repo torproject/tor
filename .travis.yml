@@ -58,6 +58,9 @@ matrix:
     ## We also exclude non-containerized gcc, because they're slow and redundant.
     - compiler: gcc
       sudo: required
+    ## And skip gcc on OSX, because the default compiler is clang
+    - compiler: gcc
+      os: osx
 
 ## We don't need sudo. (The "apt:" stanza after this allows us to not need
 ## sudo; otherwise, we would need it for getting dependencies.)
