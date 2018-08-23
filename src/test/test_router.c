@@ -49,7 +49,8 @@ NS(router_get_my_routerinfo)(void)
     mock_routerinfo->platform = tor_strdup("unittest");
     mock_routerinfo->cache_info.published_on = now;
     mock_routerinfo->identity_pkey = crypto_pk_dup_key(ident_key);
-    mock_routerinfo->onion_pkey = crypto_pk_dup_key(tap_key);
+    router_set_rsa_onion_pkey(tap_key, &mock_routerinfo->onion_pkey,
+                              &mock_routerinfo->onion_pkey_len);
     mock_routerinfo->bandwidthrate = 9001;
     mock_routerinfo->bandwidthburst = 9002;
   }
@@ -89,11 +90,14 @@ test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
 
   /* Generate our server descriptor and ensure that the substring
    * "bridge-distribution-request any" occurs somewhere within it. */
+  crypto_pk_t *onion_pkey = router_get_rsa_onion_pkey(router->onion_pkey,
+                                                      router->onion_pkey_len);
   desc = router_dump_router_to_string(router,
                                       router->identity_pkey,
-                                      router->onion_pkey,
+                                      onion_pkey,
                                       &ntor_keypair,
                                       &signing_keypair);
+  crypto_pk_free(onion_pkey);
   tt_ptr_op(desc, !=, NULL);
   found = strstr(desc, needle);
   tt_ptr_op(found, !=, NULL);
