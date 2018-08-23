@@ -3217,7 +3217,7 @@ routerinfo_free_(routerinfo_t *router)
   tor_free(router->protocol_list);
   tor_free(router->contact_info);
   if (router->onion_pkey)
-    crypto_pk_free(router->onion_pkey);
+    tor_free(router->onion_pkey);
   tor_free(router->onion_curve25519_pkey);
   if (router->identity_pkey)
     crypto_pk_free(router->identity_pkey);
@@ -5498,7 +5498,7 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
       r1->ipv6_orport != r2->ipv6_orport ||
       r1->dir_port != r2->dir_port ||
       r1->purpose != r2->purpose ||
-      !crypto_pk_eq_keys(r1->onion_pkey, r2->onion_pkey) ||
+      !tor_memeq(r1->onion_pkey, r2->onion_pkey, r1->onion_pkey_len) ||
       !crypto_pk_eq_keys(r1->identity_pkey, r2->identity_pkey) ||
       strcasecmp(r1->platform, r2->platform) ||
       (r1->contact_info && !r2->contact_info) || /* contact_info is optional */
@@ -5852,4 +5852,42 @@ refresh_all_country_info(void)
     routerset_refresh_countries(options->ExcludeExitNodesUnion_);
 
   nodelist_refresh_countries();
+}
+
+/* Return a newly allocated RSA key object from the ASN-1 encoded RSA onion
+ * public key from ri. It is the caller responsability to free the returned
+ * object.
+ *
+ * Return NULL if ri or the ri's onion pkey is NULL or if the key is
+ * malformed. */
+crypto_pk_t *
+routerinfo_get_rsa_onion_pkey(const routerinfo_t *ri)
+{
+  if (!ri || !ri->onion_pkey || ri->onion_pkey_len == 0) {
+    return NULL;
+  }
+  return crypto_pk_asn1_decode(ri->onion_pkey, ri->onion_pkey_len);
+}
+
+/* Set the given RSA onion public key and encode it in the given ri. */
+void
+routerinfo_set_onion_pkey(routerinfo_t *ri, const crypto_pk_t *pk)
+{
+  char buf[1024];
+  int len;
+
+  tor_assert(ri);
+  tor_assert(pk);
+
+  len = crypto_pk_asn1_encode(pk, buf, sizeof(buf));
+  if (BUG(len < 0)) {
+    goto done;
+  }
+
+  ri->onion_pkey = tor_malloc_zero(len);
+  memcpy(ri->onion_pkey, buf, len);
+  ri->onion_pkey_len = len;
+
+ done:
+  return;
 }

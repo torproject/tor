@@ -3754,8 +3754,9 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
   size_t keylen;
   smartlist_t *chunks = smartlist_new();
   char *output = NULL;
+  crypto_pk_t *rsa_pubkey = routerinfo_get_rsa_onion_pkey(ri);
 
-  if (crypto_pk_write_public_key_to_string(ri->onion_pkey, &key, &keylen)<0)
+  if (crypto_pk_write_public_key_to_string(rsa_pubkey, &key, &keylen)<0)
     goto done;
   summary = policy_summarize(ri->exit_policy, AF_INET);
   if (ri->declared_family)
@@ -3826,6 +3827,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
   }
 
  done:
+  crypto_pk_free(rsa_pubkey);
   tor_free(output);
   tor_free(key);
   tor_free(summary);

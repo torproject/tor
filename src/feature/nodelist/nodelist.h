@@ -95,6 +95,7 @@ void node_get_pref_ipv6_dirport(const node_t *node, tor_addr_port_t *ap_out);
 int node_has_curve25519_onion_key(const node_t *node);
 const struct curve25519_public_key_t *node_get_curve25519_onion_key(
                                   const node_t *node);
+crypto_pk_t *node_get_rsa_onion_key(const node_t *node);
 
 MOCK_DECL(smartlist_t *, nodelist_get_list, (void));
 

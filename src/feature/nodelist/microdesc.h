@@ -56,5 +56,8 @@ void microdesc_note_outdated_dirserver(const char *relay_digest);
 int microdesc_relay_is_outdated_dirserver(const char *relay_digest);
 void microdesc_reset_outdated_dirservers_list(void);
 
+crypto_pk_t *microdesc_get_rsa_onion_pkey(const microdesc_t *md);
+void microdesc_set_rsa_onion_pkey(microdesc_t *md, const crypto_pk_t *pk);
+
 #endif /* !defined(TOR_MICRODESC_H) */
 

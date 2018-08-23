@@ -874,7 +874,7 @@ microdesc_free_(microdesc_t *md, const char *fname, int lineno)
   //tor_assert(md->held_by_nodes == 0);
 
   if (md->onion_pkey)
-    crypto_pk_free(md->onion_pkey);
+    tor_free(md->onion_pkey);
   tor_free(md->onion_curve25519_pkey);
   tor_free(md->ed25519_identity_pkey);
   if (md->body && md->saved_location != SAVED_IN_CACHE)
@@ -1056,4 +1056,41 @@ usable_consensus_flavor,(void))
   } else {
     return FLAV_NS;
   }
+}
+
+/* Return a newly allocated RSA key object from the ASN-1 encoded RSA onion
+ * public key in the microdescriptor. It is the caller responsability to free
+ * the returned object.
+ *
+ * Return NULL if md or the md's onion pkey is NULL or malformed. */
+crypto_pk_t *
+microdesc_get_rsa_onion_pkey(const microdesc_t *md)
+{
+  if (!md || !md->onion_pkey || md->onion_pkey_len == 0) {
+    return NULL;
+  }
+  return crypto_pk_asn1_decode(md->onion_pkey, md->onion_pkey_len);
+}
+
+/* Set the given RSA onion public key and encode it in the given md. */
+void
+microdesc_set_rsa_onion_pkey(microdesc_t *md, const crypto_pk_t *pk)
+{
+  char buf[1024];
+  int len;
+
+  tor_assert(md);
+  tor_assert(pk);
+
+  len = crypto_pk_asn1_encode(pk, buf, sizeof(buf));
+  if (BUG(len < 0)) {
+    goto done;
+  }
+
+  md->onion_pkey = tor_malloc_zero(len);
+  memcpy(md->onion_pkey, buf, len);
+  md->onion_pkey_len = len;
+
+ done:
+  return;
 }
