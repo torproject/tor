@@ -1039,7 +1039,7 @@ tor_tls_new(int sock, int isServer)
     goto err;
   }
   result->socket = sock;
-  bio = BIO_new_socket(sock, BIO_NOCLOSE);
+  bio = BIO_new_socket(sock, 0);
   if (! bio) {
     tls_log_errors(NULL, LOG_WARN, LD_NET, "opening BIO");
 #ifdef SSL_set_tlsext_host_name

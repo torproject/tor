@@ -449,6 +449,20 @@ connection_new(int type, int socket_family)
   }
 }
 
+static void
+connection_close_and_invalidate_socket(connection_t *conn)
+{
+  if (connection_speaks_cells(conn)) {
+    or_connection_t *or_conn = TO_OR_CONN(conn);
+    tor_tls_free(or_conn->tls);
+    or_conn->tls = NULL;
+    or_conn->base_.s = TOR_INVALID_SOCKET;
+  } else {
+    tor_close_socket(conn->s);
+    conn->s = TOR_INVALID_SOCKET;
+  }
+}
+
 /** Initializes conn. (you must call connection_add() to link it into the main
  * array).
  *
@@ -614,9 +628,8 @@ connection_free_minimal(connection_t *conn)
   tor_free(conn->address);
 
   if (connection_speaks_cells(conn)) {
+    connection_close_and_invalidate_socket(conn);
     or_connection_t *or_conn = TO_OR_CONN(conn);
-    tor_tls_free(or_conn->tls);
-    or_conn->tls = NULL;
     or_handshake_state_free(or_conn->handshake_state);
     or_conn->handshake_state = NULL;
     tor_free(or_conn->nickname);
@@ -692,9 +705,7 @@ connection_free_minimal(connection_t *conn)
   }
 
   if (SOCKET_OK(conn->s)) {
-    log_debug(LD_NET,"closing fd %d.",(int)conn->s);
-    tor_close_socket(conn->s);
-    conn->s = TOR_INVALID_SOCKET;
+    connection_close_and_invalidate_socket(conn);
   }
 
   if (conn->type == CONN_TYPE_OR &&
@@ -820,9 +831,7 @@ connection_close_immediate(connection_t *conn)
   conn->read_blocked_on_bw = 0;
   conn->write_blocked_on_bw = 0;
 
-  if (SOCKET_OK(conn->s))
-    tor_close_socket(conn->s);
-  conn->s = TOR_INVALID_SOCKET;
+  connection_close_and_invalidate_socket(conn);
   if (conn->linked)
     conn->linked_conn_is_closed = 1;
   if (conn->outbuf)
