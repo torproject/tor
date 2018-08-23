@@ -480,7 +480,7 @@ tor_tls_cert_matches_key,(const tor_tls_t *tls, const tor_x509_cert_t *cert))
   if (!peercert)
     return 0;
   link_key = X509_get_pubkey(peercert);
-  cert_key = X509_get_pubkey((X509 *)tor_x509_cert_get_impl(cert));
+  cert_key = X509_get_pubkey(cert->cert);
 
   result = link_key && cert_key && EVP_PKEY_cmp(cert_key, link_key) == 1;
 

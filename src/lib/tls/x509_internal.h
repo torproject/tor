@@ -33,8 +33,6 @@ MOCK_DECL(tor_x509_cert_impl_t *, tor_tls_create_certificate,
                                                   unsigned int cert_lifetime));
 MOCK_DECL(tor_x509_cert_t *, tor_x509_cert_new,
           (tor_x509_cert_impl_t *x509_cert));
-const tor_x509_cert_impl_t *tor_x509_cert_get_impl(
-                                           const tor_x509_cert_t *cert);
 
 int tor_x509_check_cert_lifetime_internal(int severity,
                                           const tor_x509_cert_impl_t *cert,
