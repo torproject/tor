@@ -81,6 +81,12 @@ matrix:
     - compiler: gcc
       os: linux
       env:
+    ## offline rust builds for gcc on Linux are redundant, because we do an
+    ## online rust build for gcc on Linux
+    - compiler: gcc
+      os: linux
+      ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
+      env: RUST_OPTIONS="--enable-rust" RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
 
 ## We don't need sudo. (The "apt:" stanza after this allows us to not need
 ## sudo; otherwise, we would need it for getting dependencies.)
