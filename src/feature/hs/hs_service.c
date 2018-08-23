@@ -280,9 +280,10 @@ describe_intro_point(const hs_service_intro_point_t *ip)
   const char *legacy_id = NULL;
 
   SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
-                          const hs_desc_link_specifier_t *, lspec) {
-    if (lspec->type == LS_LEGACY_ID) {
-      legacy_id = (const char *) lspec->u.legacy_id;
+                          const link_specifier_t *, lspec) {
+    if (link_specifier_get_ls_type(lspec) == LS_LEGACY_ID) {
+      legacy_id = (const char *)
+        link_specifier_getconstarray_un_legacy_id(lspec);
       break;
     }
   } SMARTLIST_FOREACH_END(lspec);
@@ -623,16 +624,16 @@ get_objects_from_ident(const hs_ident_circuit_t *ident,
  * encountered in the link specifier list. Return NULL if it can't be found.
  *
  * The caller does NOT have ownership of the object, the intro point does. */
-static hs_desc_link_specifier_t *
+static link_specifier_t *
 get_link_spec_by_type(const hs_service_intro_point_t *ip, uint8_t type)
 {
-  hs_desc_link_specifier_t *lnk_spec = NULL;
+  link_specifier_t *lnk_spec = NULL;
 
   tor_assert(ip);
 
   SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
-                          hs_desc_link_specifier_t *, ls) {
-    if (ls->type == type) {
+                          link_specifier_t *, ls) {
+    if (link_specifier_get_ls_type(ls) == type) {
       lnk_spec = ls;
       goto end;
     }
@@ -648,7 +649,7 @@ get_link_spec_by_type(const hs_service_intro_point_t *ip, uint8_t type)
 STATIC const node_t *
 get_node_from_intro_point(const hs_service_intro_point_t *ip)
 {
-  const hs_desc_link_specifier_t *ls;
+  const link_specifier_t *ls;
 
   tor_assert(ip);
 
@@ -657,7 +658,8 @@ get_node_from_intro_point(const hs_service_intro_point_t *ip)
     return NULL;
   }
   /* XXX In the future, we want to only use the ed25519 ID (#22173). */
-  return node_get_by_id((const char *) ls->u.legacy_id);
+  return node_get_by_id(
+    (const char *) link_specifier_getconstarray_un_legacy_id(ls));
 }
 
 /* Given a service intro point, return the extend_info_t for it. This can
@@ -1523,7 +1525,7 @@ remember_failing_intro_point(const hs_service_intro_point_t *ip,
                              hs_service_descriptor_t *desc, time_t now)
 {
   time_t *time_of_failure, *prev_ptr;
-  const hs_desc_link_specifier_t *legacy_ls;
+  const link_specifier_t *legacy_ls;
 
   tor_assert(ip);
   tor_assert(desc);
@@ -1532,20 +1534,11 @@ remember_failing_intro_point(const hs_service_intro_point_t *ip,
   *time_of_failure = now;
   legacy_ls = get_link_spec_by_type(ip, LS_LEGACY_ID);
   tor_assert(legacy_ls);
-  prev_ptr = digestmap_set(desc->intro_points.failed_id,
-                           (const char *) legacy_ls->u.legacy_id,
-                           time_of_failure);
+  prev_ptr = digestmap_set(
+    desc->intro_points.failed_id,
+    (const char *) link_specifier_getconstarray_un_legacy_id(legacy_ls),
+    time_of_failure);
   tor_free(prev_ptr);
-}
-
-/* Copy the descriptor link specifier object from src to dst. */
-static void
-link_specifier_copy(hs_desc_link_specifier_t *dst,
-                    const hs_desc_link_specifier_t *src)
-{
-  tor_assert(dst);
-  tor_assert(src);
-  memcpy(dst, src, sizeof(hs_desc_link_specifier_t));
 }
 
 /* Using a given descriptor signing keypair signing_kp, a service intro point
@@ -1582,9 +1575,14 @@ setup_desc_intro_point(const ed25519_keypair_t *signing_kp,
 
   /* Copy link specifier(s). */
   SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
-                          const hs_desc_link_specifier_t *, ls) {
-    hs_desc_link_specifier_t *copy = tor_malloc_zero(sizeof(*copy));
-    link_specifier_copy(copy, ls);
+                          const link_specifier_t *, ls) {
+    if (BUG(!ls)) {
+      goto done;
+    }
+    link_specifier_t *copy = link_specifier_dup(ls);
+    if (BUG(!copy)) {
+      goto done;
+    }
     smartlist_add(desc_ip->link_specifiers, copy);
   } SMARTLIST_FOREACH_END(ls);
 

@@ -179,115 +179,6 @@ test_descriptor_padding(void *arg)
 }
 
 static void
-test_link_specifier(void *arg)
-{
-  ssize_t ret;
-  hs_desc_link_specifier_t spec;
-  smartlist_t *link_specifiers = smartlist_new();
-  char buf[256];
-  char *b64 = NULL;
-  link_specifier_t *ls = NULL;
-
-  (void) arg;
-
-  /* Always this port. */
-  spec.u.ap.port = 42;
-  smartlist_add(link_specifiers, &spec);
-
-  /* Test IPv4 for starter. */
-  {
-    uint32_t ipv4;
-
-    spec.type = LS_IPV4;
-    ret = tor_addr_parse(&spec.u.ap.addr, "1.2.3.4");
-    tt_int_op(ret, OP_EQ, AF_INET);
-    b64 = encode_link_specifiers(link_specifiers);
-    tt_assert(b64);
-
-    /* Decode it and validate the format. */
-    ret = base64_decode(buf, sizeof(buf), b64, strlen(b64));
-    tt_int_op(ret, OP_GT, 0);
-    /* First byte is the number of link specifier. */
-    tt_int_op(get_uint8(buf), OP_EQ, 1);
-    ret = link_specifier_parse(&ls, (uint8_t *) buf + 1, ret - 1);
-    tt_int_op(ret, OP_EQ, 8);
-    /* Should be 2 bytes for port and 4 bytes for IPv4. */
-    tt_int_op(link_specifier_get_ls_len(ls), OP_EQ, 6);
-    ipv4 = link_specifier_get_un_ipv4_addr(ls);
-    tt_int_op(tor_addr_to_ipv4h(&spec.u.ap.addr), OP_EQ, ipv4);
-    tt_int_op(link_specifier_get_un_ipv4_port(ls), OP_EQ, spec.u.ap.port);
-
-    link_specifier_free(ls);
-    ls = NULL;
-    tor_free(b64);
-  }
-
-  /* Test IPv6. */
-  {
-    uint8_t ipv6[16];
-
-    spec.type = LS_IPV6;
-    ret = tor_addr_parse(&spec.u.ap.addr, "[1:2:3:4::]");
-    tt_int_op(ret, OP_EQ, AF_INET6);
-    b64 = encode_link_specifiers(link_specifiers);
-    tt_assert(b64);
-
-    /* Decode it and validate the format. */
-    ret = base64_decode(buf, sizeof(buf), b64, strlen(b64));
-    tt_int_op(ret, OP_GT, 0);
-    /* First byte is the number of link specifier. */
-    tt_int_op(get_uint8(buf), OP_EQ, 1);
-    ret = link_specifier_parse(&ls, (uint8_t *) buf + 1, ret - 1);
-    tt_int_op(ret, OP_EQ, 20);
-    /* Should be 2 bytes for port and 16 bytes for IPv6. */
-    tt_int_op(link_specifier_get_ls_len(ls), OP_EQ, 18);
-    for (unsigned int i = 0; i < sizeof(ipv6); i++) {
-      ipv6[i] = link_specifier_get_un_ipv6_addr(ls, i);
-    }
-    tt_mem_op(tor_addr_to_in6_addr8(&spec.u.ap.addr), OP_EQ, ipv6,
-              sizeof(ipv6));
-    tt_int_op(link_specifier_get_un_ipv6_port(ls), OP_EQ, spec.u.ap.port);
-
-    link_specifier_free(ls);
-    ls = NULL;
-    tor_free(b64);
-  }
-
-  /* Test legacy. */
-  {
-    uint8_t *id;
-
-    spec.type = LS_LEGACY_ID;
-    memset(spec.u.legacy_id, 'Y', sizeof(spec.u.legacy_id));
-    b64 = encode_link_specifiers(link_specifiers);
-    tt_assert(b64);
-
-    /* Decode it and validate the format. */
-    ret = base64_decode(buf, sizeof(buf), b64, strlen(b64));
-    tt_int_op(ret, OP_GT, 0);
-    /* First byte is the number of link specifier. */
-    tt_int_op(get_uint8(buf), OP_EQ, 1);
-    ret = link_specifier_parse(&ls, (uint8_t *) buf + 1, ret - 1);
-    /* 20 bytes digest + 1 byte type + 1 byte len. */
-    tt_int_op(ret, OP_EQ, 22);
-    tt_int_op(link_specifier_getlen_un_legacy_id(ls), OP_EQ, DIGEST_LEN);
-    /* Digest length is 20 bytes. */
-    tt_int_op(link_specifier_get_ls_len(ls), OP_EQ, DIGEST_LEN);
-    id = link_specifier_getarray_un_legacy_id(ls);
-    tt_mem_op(spec.u.legacy_id, OP_EQ, id, DIGEST_LEN);
-
-    link_specifier_free(ls);
-    ls = NULL;
-    tor_free(b64);
-  }
-
- done:
-  link_specifier_free(ls);
-  tor_free(b64);
-  smartlist_free(link_specifiers);
-}
-
-static void
 test_encode_descriptor(void *arg)
 {
   int ret;
@@ -931,8 +822,6 @@ test_build_authorized_client(void *arg)
 struct testcase_t hs_descriptor[] = {
   /* Encoding tests. */
   { "cert_encoding", test_cert_encoding, TT_FORK,
-    NULL, NULL },
-  { "link_specifier", test_link_specifier, TT_FORK,
     NULL, NULL },
   { "encode_descriptor", test_encode_descriptor, TT_FORK,
     NULL, NULL },

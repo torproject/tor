@@ -1843,3 +1843,42 @@ hs_inc_rdv_stream_counter(origin_circuit_t *circ)
     tor_assert_nonfatal_unreached();
   }
 }
+
+/* Return a newly allocated link specifier object that is a copy of dst. */
+link_specifier_t *
+link_specifier_dup(const link_specifier_t *src)
+{
+  link_specifier_t *dup = NULL;
+  uint8_t *buf = NULL;
+
+  if (BUG(!src)) {
+    goto err;
+  }
+
+  ssize_t encoded_len_alloc = link_specifier_encoded_len(src);
+  if (BUG(encoded_len_alloc < 0)) {
+    goto err;
+  }
+
+  buf = tor_malloc_zero(encoded_len_alloc);
+  ssize_t encoded_len_data = link_specifier_encode(buf,
+                                                   encoded_len_alloc,
+                                                   src);
+  if (BUG(encoded_len_data < 0)) {
+    goto err;
+  }
+
+  ssize_t parsed_len = link_specifier_parse(&dup, buf, encoded_len_alloc);
+  if (BUG(parsed_len < 0)) {
+    goto err;
+  }
+
+  goto done;
+
+ err:
+  dup = NULL;
+
+ done:
+  tor_free(buf);
+  return dup;
+}

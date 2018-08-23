@@ -403,6 +403,9 @@ test_client_pick_intro(void *arg)
   /* 2) Mark all intro points except _the chosen one_ as failed. Then query the
    *   desc and get a random intro: check that we got _the chosen one_. */
   {
+    /* Tell hs_get_extend_info_from_lspecs() to skip the private address check.
+     */
+    get_options_mutable()->ExtendAllowPrivateAddresses = 1;
     /* Pick the chosen intro point and get its ei */
     hs_desc_intro_point_t *chosen_intro_point =
       smartlist_get(desc->encrypted_data.intro_points, 0);
@@ -476,6 +479,7 @@ test_client_pick_intro(void *arg)
     SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
                             hs_desc_intro_point_t *, ip) {
       extend_info_t *intro_ei = desc_intro_point_to_extend_info(ip);
+      tt_assert(intro_ei);
       if (intro_ei) {
         const char *ptr;
         char ip_addr[TOR_ADDR_BUF_LEN];
