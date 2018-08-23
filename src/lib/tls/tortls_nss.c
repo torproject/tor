@@ -331,6 +331,7 @@ tls_log_errors(tor_tls_t *tls, int severity, int domain,
   (void)tls;
   PRErrorCode code = PORT_GetError();
 
+  const char *addr = tls ? tls->address : NULL;
   const char *string = PORT_ErrorToString(code);
   const char *name = PORT_ErrorToName(code);
   char buf[16];
@@ -341,10 +342,14 @@ tls_log_errors(tor_tls_t *tls, int severity, int domain,
     name = buf;
   }
 
+  const char *with = addr ? " with " : "";
+  addr = addr ? addr : "";
   if (doing) {
-    log_fn(severity, domain, "TLS error %s while %s: %s", name, doing, string);
+    log_fn(severity, domain, "TLS error %s while %s%s%s: %s",
+           name, doing, with, addr, string);
   } else {
-    log_fn(severity, domain, "TLS error %s: %s", name, string);
+    log_fn(severity, domain, "TLS error %s%s%s: %s", name, string,
+           with, addr);
   }
 }
 
@@ -381,7 +386,7 @@ tor_tls_new(tor_socket_t sock, int is_server)
   }
   SECStatus s = SSL_ResetHandshake(ssl, is_server ? PR_TRUE : PR_FALSE);
   if (s != SECSuccess) {
-    crypto_nss_log_errors(LOG_WARN, "resetting handshake state");
+    tls_log_errors(tls, LOG_WARN, LD_CRYPTO, "resetting handshake state");
   }
 
   return tls;
@@ -457,7 +462,7 @@ tor_tls_read, (tor_tls_t *tls, char *cp, size_t len))
   if (err == PR_WOULD_BLOCK_ERROR) {
     return TOR_TLS_WANTREAD; // XXXX ????
   } else {
-    crypto_nss_log_errors(LOG_NOTICE, "reading"); // XXXX
+    tls_log_errors(tls, LOG_NOTICE, LD_CRYPTO, "reading"); // XXXX
     return TOR_TLS_ERROR_MISC; // ????
   }
 }
@@ -482,7 +487,7 @@ tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
   if (err == PR_WOULD_BLOCK_ERROR) {
     return TOR_TLS_WANTWRITE; // XXXX ????
   } else {
-    crypto_nss_log_errors(LOG_NOTICE, "writing"); // XXXX
+    tls_log_errors(tls, LOG_NOTICE, LD_CRYPTO, "writing"); // XXXX
     return TOR_TLS_ERROR_MISC; // ????
   }
 }
@@ -541,7 +546,7 @@ tor_tls_get_pending_bytes(tor_tls_t *tls)
   tor_assert(tls);
   int n = SSL_DataPending(tls->ssl);
   if (n < 0) {
-    crypto_nss_log_errors(LOG_WARN, "Looking up pending bytes");
+    tls_log_errors(tls, LOG_WARN, LD_CRYPTO, "looking up pending bytes");
     return 0;
   }
   return (int)n;
