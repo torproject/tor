@@ -323,8 +323,10 @@ void
 tls_log_errors(tor_tls_t *tls, int severity, int domain,
                const char *doing)
 {
-  /* XXXX This implementation isn't right for NSS -- it logs the last error
-     whether anything actually failed or not. */
+  /* This implementation is a little different for NSS than it is for OpenSSL
+     -- it logs the last error whether anything actually failed or not. So we
+     have to only call it when something has gone wrong and we have a real
+     error to report. */
 
   (void)tls;
   PRErrorCode code = PORT_GetError();

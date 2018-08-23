@@ -189,6 +189,9 @@ tor_tls_context_init(unsigned flags,
       if (old_ctx != NULL) {
         tor_tls_context_decref(old_ctx);
       }
+    } else {
+      tls_log_errors(NULL, LOG_WARN, LD_CRYPTO,
+                     "constructing a TLS context");
     }
   } else {
     if (server_identity != NULL) {
@@ -197,6 +200,9 @@ tor_tls_context_init(unsigned flags,
                                      key_lifetime,
                                      flags,
                                      0);
+      if (rv1 < 0)
+        tls_log_errors(NULL, LOG_WARN, LD_CRYPTO,
+                       "constructing a server TLS context");
     } else {
       tor_tls_context_t *old_ctx = server_tls_context;
       server_tls_context = NULL;
@@ -211,9 +217,11 @@ tor_tls_context_init(unsigned flags,
                                    key_lifetime,
                                    flags,
                                    1);
+    if (rv2 < 0)
+        tls_log_errors(NULL, LOG_WARN, LD_CRYPTO,
+                       "constructing a client TLS context");
   }
 
-  tls_log_errors(NULL, LOG_WARN, LD_CRYPTO, "constructing a TLS context");
   return MIN(rv1, rv2);
 }
 
@@ -451,8 +459,9 @@ tor_tls_check_lifetime(int severity, tor_tls_t *tls,
   r = 0;
  done:
   tor_x509_cert_free(cert);
-  /* Not expected to get invoked */
+#ifdef ENABLE_OPENSSL
   tls_log_errors(tls, LOG_WARN, LD_NET, "checking certificate lifetime");
+#endif
 
   return r;
 }
