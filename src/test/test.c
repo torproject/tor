@@ -924,6 +924,7 @@ struct testgroup_t testgroups[] = {
 #ifndef ENABLE_NSS
   { "tortls/openssl/", tortls_openssl_tests },
 #endif
+  { "tortls/x509/", x509_tests },
   { "util/", util_tests },
   { "util/format/", util_format_tests },
   { "util/logging/", logging_tests },

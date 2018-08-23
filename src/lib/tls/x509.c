@@ -118,6 +118,7 @@ tor_x509_cert_new,(tor_x509_cert_impl_t *x509_cert))
     crypto_pk_t *pk = tor_tls_cert_get_key(cert);
     if (pk) {
       if (crypto_pk_get_common_digests(pk, &cert->pkey_digests) < 0) {
+        log_warn(LD_CRYPTO, "unable to compute digests of certificate key");
         crypto_pk_free(pk);
         goto err;
       }
@@ -128,10 +129,8 @@ tor_x509_cert_new,(tor_x509_cert_impl_t *x509_cert))
 
   return cert;
  err:
-  /* LCOV_EXCL_START for the same reason as the exclusion above */
   tor_free(cert);
   log_err(LD_CRYPTO, "Couldn't wrap encoded X509 certificate.");
   tor_x509_cert_impl_free_(x509_cert);
   return NULL;
-  /* LCOV_EXCL_STOP */
 }

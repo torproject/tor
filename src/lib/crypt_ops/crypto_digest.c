@@ -116,8 +116,8 @@ library_supports_digest(digest_algorithm_t alg)
  * <b>m</b>.  Write the DIGEST_LEN byte result into <b>digest</b>.
  * Return 0 on success, -1 on failure.
  */
-int
-crypto_digest(char *digest, const char *m, size_t len)
+MOCK_IMPL(int,
+crypto_digest,(char *digest, const char *m, size_t len))
 {
   tor_assert(m);
   tor_assert(digest);
