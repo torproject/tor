@@ -534,15 +534,6 @@ tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls)
 }
 
 int
-tor_tls_shutdown(tor_tls_t *tls)
-{
-  tor_assert(tls);
-  /* XXXX This is not actually used, so I'm not implementing it.  We can
-   * XXXX remove this function entirely someday. */
-  return -1;
-}
-
-int
 tor_tls_get_pending_bytes(tor_tls_t *tls)
 {
   tor_assert(tls);
