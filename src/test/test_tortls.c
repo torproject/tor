@@ -247,6 +247,85 @@ test_tortls_evaluate_ecgroup_for_tls(void *ignored)
   (void)0;
 }
 
+static void
+test_tortls_double_init(void *arg)
+{
+  (void) arg;
+  /* If we call tor_tls_context_init() a second time, nothing should go
+   * wrong.
+   */
+  crypto_pk_t *pk1 = NULL, *pk2 = NULL;
+  pk1 = pk_generate(2);
+  pk2 = pk_generate(0);
+
+  int r = tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
+                               pk1, pk2, 86400);
+  tt_int_op(r, OP_EQ, 0);
+
+  r = tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
+                               pk2, pk1, 86400);
+  tt_int_op(r, OP_EQ, 0);
+
+ done:
+  crypto_pk_free(pk1);
+  crypto_pk_free(pk2);
+}
+
+static void
+test_tortls_address(void *arg)
+{
+  (void)arg;
+  tor_tls_t *tls = NULL;
+  crypto_pk_t *pk1=NULL, *pk2=NULL;
+  pk1 = pk_generate(2);
+  pk2 = pk_generate(0);
+
+  int r = tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
+                               pk1, pk2, 86400);
+  tt_int_op(r, OP_EQ, 0);
+
+  tls = tor_tls_new(-1, 0);
+  tls->state = TOR_TLS_ST_OPEN;
+  tor_tls_set_logged_address(tls, "zombo.com");
+
+  /* This write should fail, since the fd is -1. */
+  setup_capture_of_logs(LOG_INFO);
+  int n = tor_tls_write(tls, "welcome", 7);
+  tt_int_op(n, OP_LT, 0);
+  expect_log_msg_containing("with zombo.com");
+
+ done:
+  teardown_capture_of_logs();
+  tor_tls_free(tls);
+  crypto_pk_free(pk1);
+  crypto_pk_free(pk2);
+}
+
+static void
+test_tortls_is_server(void *arg)
+{
+  (void)arg;
+  crypto_pk_t *pk1=NULL, *pk2=NULL;
+  tor_tls_t *tls1=NULL, *tls2=NULL;
+  pk1 = pk_generate(2);
+  pk2 = pk_generate(0);
+
+  int r = tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
+                               pk1, pk2, 86400);
+  tt_int_op(r, OP_EQ, 0);
+  tls1 = tor_tls_new(-1, 0);
+  tls2 = tor_tls_new(-1, 1);
+
+  tt_assert(! tor_tls_is_server(tls1));
+  tt_assert(tor_tls_is_server(tls2));
+
+ done:
+  tor_tls_free(tls1);
+  tor_tls_free(tls2);
+  crypto_pk_free(pk1);
+  crypto_pk_free(pk2);
+}
+
 #define LOCAL_TEST_CASE(name, flags)                            \
   { #name, test_tortls_##name, (flags|TT_FORK), NULL, NULL }
 
@@ -262,5 +341,8 @@ struct testcase_t tortls_tests[] = {
   LOCAL_TEST_CASE(server_got_renegotiate, 0),
 #endif
   LOCAL_TEST_CASE(evaluate_ecgroup_for_tls, 0),
+  LOCAL_TEST_CASE(double_init, TT_FORK),
+  LOCAL_TEST_CASE(address, TT_FORK),
+  LOCAL_TEST_CASE(is_server, 0),
   END_OF_TESTCASES
 };
