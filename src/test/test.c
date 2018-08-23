@@ -22,6 +22,8 @@
 #include <dirent.h>
 #endif /* defined(_WIN32) */
 
+#include <math.h>
+
 /* These macros pull in declarations for some functions and structures that
  * are typically file-private. */
 #define GEOIP_PRIVATE
@@ -30,14 +32,6 @@
 #define CIRCUITLIST_PRIVATE
 #define MAIN_PRIVATE
 #define STATEFILE_PRIVATE
-
-/*
- * Linux doesn't provide lround in math.h by default, but mac os does...
- * It's best just to leave math.h out of the picture entirely.
- */
-//#include <math.h>
-long int lround(double x);
-double fabs(double x);
 
 #include "or.h"
 #include "backtrace.h"
