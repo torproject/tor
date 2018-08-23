@@ -78,6 +78,11 @@ void destroy_cell_queue_append(destroy_cell_queue_t *queue,
 void channel_unlink_all_circuits(channel_t *chan, smartlist_t *detached_out);
 MOCK_DECL(int, channel_flush_from_first_active_circuit,
           (channel_t *chan, int max));
+MOCK_DECL(int, circuit_package_relay_cell, (cell_t *cell, circuit_t *circ,
+                           cell_direction_t cell_direction,
+                           crypt_path_t *layer_hint, streamid_t on_stream,
+                           const char *filename, int lineno));
+
 void update_circuit_on_cmux_(circuit_t *circ, cell_direction_t direction,
                              const char *file, int lineno);
 #define update_circuit_on_cmux(circ, direction) \
