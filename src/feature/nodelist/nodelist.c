@@ -2241,9 +2241,20 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   count_usable_descriptors(num_present_out, num_usable_out,
                            mid, consensus, now, NULL,
                            USABLE_DESCRIPTOR_ALL);
+  log_debug(LD_NET,
+            "%s: %d present, %d usable",
+            "mid",
+            np,
+            nu);
+
   if (options->EntryNodes) {
     count_usable_descriptors(&np, &nu, guards, consensus, now,
                              options->EntryNodes, USABLE_DESCRIPTOR_ALL);
+    log_debug(LD_NET,
+              "%s: %d present, %d usable",
+              "guard",
+              np,
+              nu);
   } else {
     SMARTLIST_FOREACH(mid, const node_t *, node, {
       if (authdir) {
@@ -2254,6 +2265,10 @@ compute_frac_paths_available(const networkstatus_t *consensus,
           smartlist_add(guards, (node_t*)node);
       }
     });
+    log_debug(LD_NET,
+              "%s: %d possible",
+              "guard",
+              smartlist_len(guards));
   }
 
   /* All nodes with exit policy and flag */
@@ -2265,25 +2280,30 @@ compute_frac_paths_available(const networkstatus_t *consensus,
             np,
             nu);
 
-  /* We need at least 1 exit usable in the consensus to consider
+  /* We need at least 1 exit (flag and policy) in the consensus to consider
    * building exit paths */
   /* Update our understanding of whether the consensus has exits */
   consensus_path_type_t old_have_consensus_path = have_consensus_path;
-  have_consensus_path = ((nu > 0) ?
+  have_consensus_path = ((np > 0) ?
                          CONSENSUS_PATH_EXIT :
                          CONSENSUS_PATH_INTERNAL);
 
-  if (have_consensus_path == CONSENSUS_PATH_INTERNAL
-      && old_have_consensus_path != have_consensus_path) {
-    log_notice(LD_NET,
-               "The current consensus has no exit nodes. "
-               "Tor can only build internal paths, "
-               "such as paths to hidden services.");
+  if (old_have_consensus_path != have_consensus_path) {
+    if (have_consensus_path == CONSENSUS_PATH_INTERNAL) {
+      log_notice(LD_NET,
+                 "The current consensus has no exit nodes. "
+                 "Tor can only build internal paths, "
+                 "such as paths to onion services.");
 
-    /* However, exit nodes can reachability self-test using this consensus,
-     * join the network, and appear in a later consensus. This will allow
-     * the network to build exit paths, such as paths for world wide web
-     * browsing (as distinct from hidden service web browsing). */
+      /* However, exit nodes can reachability self-test using this consensus,
+       * join the network, and appear in a later consensus. This will allow
+       * the network to build exit paths, such as paths for world wide web
+       * browsing (as distinct from hidden service web browsing). */
+    } else if (old_have_consensus_path == CONSENSUS_PATH_INTERNAL) {
+      log_notice(LD_NET,
+                 "The current consensus contains exit nodes. "
+                 "Tor can build exit and internal paths.");
+    }
   }
 
   f_guard = frac_nodes_with_descriptors(guards, WEIGHT_FOR_GUARD, 1);
@@ -2373,14 +2393,14 @@ compute_frac_paths_available(const networkstatus_t *consensus,
     tor_asprintf(status_out,
                  "%d%% of guards bw, "
                  "%d%% of midpoint bw, and "
-                 "%d%% of exit bw%s = "
+                 "%d%% of %s = "
                  "%d%% of path bw",
                  (int)(f_guard*100),
                  (int)(f_mid*100),
                  (int)(f_exit*100),
                  (router_have_consensus_path() == CONSENSUS_PATH_EXIT ?
-                  "" :
-                  " (no exits in consensus)"),
+                  "exit bw" :
+                  "end bw (no exits in consensus)"),
                  (int)(f_path*100));
 
   return f_path;
