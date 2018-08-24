@@ -1,0 +1,4 @@
+  o Minor bugfixes (appveyor ci):
+    - Improve Appveyor CI IRC logging. Generate correct branches and URLs for
+      pull requests and tags. Use unambiguous short commits.
+      Fixes bug 26979; bugfix on master.
