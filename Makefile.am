@@ -106,6 +106,7 @@ test-network: need-chutney-path $(TESTING_TOR_BINARY) src/tools/tor-gencert
 # Try both the BSD and the Linux ping6 syntax, because they're incompatible
 test-network-all: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/tor-gencert
 	mkdir -p $(TEST_NETWORK_ALL_LOG_DIR)
+	rm -f $(TEST_NETWORK_ALL_LOG_DIR)/*.log $(TEST_NETWORK_ALL_LOG_DIR)/*.trs
 	@flavors="$(TEST_CHUTNEY_FLAVORS)"; \
 	if ping6 -q -c 1 -o ::1 >/dev/null 2>&1 || ping6 -q -c 1 -W 1 ::1 >/dev/null 2>&1; then \
 		echo "ping6 ::1 succeeded, running IPv6 flavors: $(TEST_CHUTNEY_FLAVORS_IPV6)."; \
