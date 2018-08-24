@@ -24,6 +24,11 @@ Changes in version 0.3.4.7-rc - 2018-08-2?
     - Use cargo cache in our Travis CI configuration. Closes
       ticket 26952.
 
+  o Minor features (directory authorities):
+    - Authorities no longer vote to make the subprotocol version
+      "LinkAuth=1" a requirement: it is unsupportable with NSS, and
+      hasn't been needed since Tor 0.3.0.1-alpha. Closes ticket 27286.
+
   o Minor features (geoip):
     - Update geoip and geoip6 to the August 7 2018 Maxmind GeoLite2
       Country database. Closes ticket 27089.
