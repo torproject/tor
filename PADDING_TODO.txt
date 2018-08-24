@@ -1,0 +1,34 @@
+TODO sketch for this branch, in rough priority order:
+
+- Update proposal
+-- Switch from sending state machines to requesting a "menu option" of state
+   machine.
+
+- Clean up/fix XXX's and FIXMEs
+  - Add tests for dists, length and iat sampling
+  - Add tests for detecting padding from wrong hop
+  - Add tests for machine replacement
+  - Better test coverage in general
+
+- Rephist timer stats
+  - Is this a privacy risk? The adversary could create lots of circuits
+    to find a layer2 vanguard.. Otherwise they will be spread across middles.
+
+- Determine good hardcoded/example histograms
+
+- Specify target circuit lifetime?
+
+- Specify ports for machine??
+
+- Support torrc load+serialization of state machines
+  - ??
+
+- Support consensus load+serialization of state machines
+  - ??
+
+======== 0.3.6 ========
+
+- Come up with some good histograms for eg circuit setup fingerprinting,
+  website fingerprinting, and vanguards usage.
+- Experiment with run-length histograms and other histogram/distribution
+  encoding methods.
