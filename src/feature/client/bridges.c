@@ -31,6 +31,7 @@
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
+#include "feature/nodelist/microdesc_st.h"
 
 /** Information about a configured bridge. Currently this just matches the
  * ones in the torrc file, but one day we may be able to learn about new
@@ -283,17 +284,63 @@ routerinfo_is_a_configured_bridge(const routerinfo_t *ri)
   return get_configured_bridge_by_routerinfo(ri) ? 1 : 0;
 }
 
+static int
+bridge_exists_with_ipv4h_addr_and_port(const uint32_t ipv4_addr,
+                                       const uint16_t port)
+{
+  tor_addr_t node_ipv4 = {};
+
+  if (tor_addr_port_is_valid_ipv4h(ipv4_addr, port, 0)) {
+    tor_addr_from_ipv4h(&node_ipv4, ipv4_addr);
+
+    return addr_is_a_configured_bridge(&node_ipv4, port, NULL);
+  }
+
+  return 0;
+}
+
+static int
+bridge_exists_with_ipv6_addr_and_port(const tor_addr_t *ipv6_addr,
+                                      const uint16_t port)
+{
+  if (!tor_addr_port_is_valid(ipv6_addr, port, 0))
+    return 0;
+
+  return addr_is_a_configured_bridge(ipv6_addr, port, NULL);
+}
+
 /** Return 1 if <b>node</b> is one of our configured bridges, else 0. */
 int
 node_is_a_configured_bridge(const node_t *node)
 {
-  int retval = 0;
-  smartlist_t *orports = node_get_all_orports(node);
-  retval = get_configured_bridge_by_orports_digest(node->identity,
-                                                   orports) != NULL;
-  SMARTLIST_FOREACH(orports, tor_addr_port_t *, p, tor_free(p));
-  smartlist_free(orports);
-  return retval;
+  /* First, let's try searching for a bridge with matching identity. */
+  if (!tor_digest_is_zero(node->identity)) {
+    return find_bridge_by_digest(node->identity) != NULL;
+  }
+
+  if (node->ri) {
+    if (bridge_exists_with_ipv4h_addr_and_port(node->ri->addr,
+                                               node->ri->or_port))
+      return 1;
+
+    if (bridge_exists_with_ipv6_addr_and_port(&node->ri->ipv6_addr,
+                                              node->ri->ipv6_orport))
+      return 1;
+  } else if (node->rs) {
+    if (bridge_exists_with_ipv4h_addr_and_port(node->rs->addr,
+                                               node->rs->or_port))
+      return 1;
+
+    if (bridge_exists_with_ipv6_addr_and_port(&node->rs->ipv6_addr,
+                                              node->rs->ipv6_orport))
+      return 1;
+  }  else if (node->md) {
+    if (bridge_exists_with_ipv6_addr_and_port(&node->md->ipv6_addr,
+                                              node->md->ipv6_orport))
+      return 1;
+  }
+
+  return 0;
 }
 
 /** We made a connection to a router at <b>addr</b>:<b>port</b>
