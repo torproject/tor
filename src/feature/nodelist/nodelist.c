@@ -2143,9 +2143,9 @@ get_dir_info_status_string(void)
  *
  * If <b>in_set</b> is non-NULL, only consider those routers in <b>in_set</b>.
  * If <b>exit_only</b> & USABLE_DESCRIPTOR_EXIT_POLICY, only consider nodes
- * with an exit policy that accepts at least one port.
+ * present if they have an exit policy that accepts at least one port.
  * If <b>exit_only</b> & USABLE_DESCRIPTOR_EXIT_FLAG, only consider nodes
- * with the exit flag in the consensus.
+ * usable if they have the exit flag in the consensus.
  *
  * If *<b>descs_out</b> is present, add a node_t for each usable descriptor
  * to it.
@@ -2172,12 +2172,6 @@ count_usable_descriptors(int *num_present, int *num_usable,
        if (in_set && ! routerset_contains_routerstatus(in_set, rs, -1))
          continue;
        if (client_would_use_router(rs, now)) {
-         /* Do the policy check last, because it's potentially expensive */
-         if ((exit_only & USABLE_DESCRIPTOR_EXIT_POLICY) &&
-             node_has_preferred_descriptor(node, 0) &&
-             node_exit_policy_rejects_all(node)) {
-           continue;
-         }
          const char * const digest = rs->descriptor_digest;
          int present;
          ++*num_usable; /* the consensus says we want it. */
@@ -2186,7 +2180,14 @@ count_usable_descriptors(int *num_present, int *num_usable,
          else
            present = NULL != router_get_by_descriptor_digest(digest);
          if (present) {
-           /* we have the descriptor listed in the consensus. */
+           /* Do the policy check last, because it requires a descriptor,
+            * and is potentially expensive */
+           if ((exit_only & USABLE_DESCRIPTOR_EXIT_POLICY) &&
+               node_exit_policy_rejects_all(node)) {
+               continue;
+           }
+           /* we have the descriptor listed in the consensus, and it
+            * satisfies our exit constraints (if any) */
            ++*num_present;
          }
          if (descs_out)
@@ -2264,7 +2265,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
             np,
             nu);
 
-  /* We need at least 1 exit present in the consensus to consider
+  /* We need at least 1 exit usable in the consensus to consider
    * building exit paths */
   /* Update our understanding of whether the consensus has exits */
   consensus_path_type_t old_have_consensus_path = have_consensus_path;
