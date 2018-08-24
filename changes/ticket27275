@@ -1,3 +1,0 @@
-  o Minor features (continuous integration):
-    - Only post Appveyor IRC notifications when the build fails.
-      Implements ticket 27275.
