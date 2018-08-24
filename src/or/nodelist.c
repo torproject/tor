@@ -2240,11 +2240,11 @@ compute_frac_paths_available(const networkstatus_t *consensus,
             np,
             nu);
 
-  /* We need at least 1 exit usable in the consensus to consider
+  /* We need at least 1 exit (flag and policy) in the consensus to consider
    * building exit paths */
   /* Update our understanding of whether the consensus has exits */
   consensus_path_type_t old_have_consensus_path = have_consensus_path;
-  have_consensus_path = ((nu > 0) ?
+  have_consensus_path = ((np > 0) ?
                          CONSENSUS_PATH_EXIT :
                          CONSENSUS_PATH_INTERNAL);
 
@@ -2342,14 +2342,14 @@ compute_frac_paths_available(const networkstatus_t *consensus,
     tor_asprintf(status_out,
                  "%d%% of guards bw, "
                  "%d%% of midpoint bw, and "
-                 "%d%% of exit bw%s = "
+                 "%d%% of %s = "
                  "%d%% of path bw",
                  (int)(f_guard*100),
                  (int)(f_mid*100),
                  (int)(f_exit*100),
                  (router_have_consensus_path() == CONSENSUS_PATH_EXIT ?
-                  "" :
-                  " (no exits in consensus)"),
+                  "exit bw" :
+                  "end bw (no exits in consensus)"),
                  (int)(f_path*100));
 
   return f_path;
