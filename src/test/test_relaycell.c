@@ -13,6 +13,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "connection_edge.h"
+#include "log_test_helpers.h"
 #include "relay.h"
 #include "test.h"
 
@@ -31,6 +32,11 @@ int connected_cell_format_payload(uint8_t *payload_out,
                               uint32_t ttl);
 int pathbias_count_valid_cells(origin_circuit_t *circ,
                               cell_t *cell);
+half_edge_t *connection_half_edge_find_stream_id(
+                                    const smartlist_t *half_conns,
+                                    streamid_t stream_id);
+void connection_half_edge_add(const edge_connection_t *conn,
+                         origin_circuit_t *circ);
 
 int mock_send_command(streamid_t stream_id, circuit_t *circ,
                                uint8_t relay_command, const char *payload,
@@ -458,6 +464,123 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   connection_free_minimal(ENTRY_TO_CONN(entryconn4));
   return 0;
 }
+
+static void
+subtest_halfstream_insertremove(int num, int seed)
+{
+  origin_circuit_t *circ =
+      helper_create_origin_circuit(CIRCUIT_PURPOSE_C_GENERAL, 0);
+  edge_connection_t *edgeconn;
+  entry_connection_t *entryconn;
+  streamid_t *streams = tor_malloc_zero(num*sizeof(streamid_t));
+  int inserted = 0;
+  int i = 0;
+
+  circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
+  circ->cpath->deliver_window = CIRCWINDOW_START;
+
+  entryconn = fake_entry_conn(circ, 23);
+  edgeconn = ENTRY_TO_EDGE_CONN(entryconn);
+
+  /* Secure the randoms. */
+  srand(seed);
+
+  /* Insert a duplicate element; ensure removing it once works */
+  edgeconn->stream_id = 23;
+  connection_half_edge_add(edgeconn, circ);
+  connection_half_edge_add(edgeconn, circ);
+  connection_half_edge_add(edgeconn, circ);
+  tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
+            23), OP_EQ, 1);
+  tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
+            23), OP_EQ, 0);
+
+  /* Insert num random elements */
+  for (inserted = 0; inserted < num; ) {
+    streamid_t id;
+
+    if (seed)
+      id = (streamid_t)rand(); // Meh truncate those high bits.
+    else
+      id = inserted;
+
+    edgeconn->stream_id = id;
+
+    /* Ensure it isn't there */
+    if (connection_half_edge_find_stream_id(circ->half_streams, id)) {
+      continue;
+    }
+
+    connection_half_edge_add(edgeconn, circ);
+    streams[inserted] = id;
+    inserted++;
+  }
+
+  /* Remove half of them */
+  for (i = 0; i < num/2; i++) {
+    tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
+                                                streams[i]),
+              OP_EQ, 1);
+  }
+
+  /* Verify first half of list is gone */
+  for (i = 0; i < num/2; i++) {
+    tt_ptr_op(connection_half_edge_find_stream_id(circ->half_streams,
+                                                  streams[i]),
+              OP_EQ, NULL);
+  }
+
+  /* Verify second half of list is present */
+  for (; i < num; i++) {
+    tt_ptr_op(connection_half_edge_find_stream_id(circ->half_streams,
+                                                  streams[i]),
+              OP_NE, NULL);
+  }
+
+  /* Remove other half. Verify list is empty. */
+  for (i = num/2; i < num; i++) {
+    tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
+                                                streams[i]),
+              OP_EQ, 1);
+  }
+  tt_int_op(smartlist_len(circ->half_streams), OP_EQ, 0);
+
+  /* For valgrind, leave some around then free the circ */
+  for (inserted = 0; inserted < 10; ) {
+    streamid_t id = (streamid_t)rand(); // Meh truncate those high bits.
+
+    edgeconn->stream_id = id;
+
+    /* Ensure it isn't there */
+    if (connection_half_edge_find_stream_id(circ->half_streams, id)) {
+      continue;
+    }
+
+    connection_half_edge_add(edgeconn, circ);
+    inserted++;
+  }
+
+ done:
+  tor_free(streams);
+  circuit_free_(TO_CIRCUIT(circ));
+  connection_free_minimal(ENTRY_TO_CONN(entryconn));
+}
+
+static void
+test_halfstream_insertremove(void *arg)
+{
+  (void)arg;
+
+  /* Suppress the WARN message we generate in this test */
+  setup_full_capture_of_logs(LOG_WARN);
+
+  /* Test insertion and removal with a few different sizes and
+   * magic seeds */
+  subtest_halfstream_insertremove(10, 5);
+  subtest_halfstream_insertremove(100, 23);
+  subtest_halfstream_insertremove(1000, 42);
+}
+
 static void
 test_circbw_relay(void *arg)
 {
@@ -840,6 +963,7 @@ test_relaycell_resolved(void *arg)
 struct testcase_t relaycell_tests[] = {
   { "resolved", test_relaycell_resolved, TT_FORK, NULL, NULL },
   { "circbw", test_circbw_relay, TT_FORK, NULL, NULL },
+  { "halfstream", test_halfstream_insertremove, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 

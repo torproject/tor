@@ -136,8 +136,11 @@ static int connection_ap_process_natd(entry_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int consider_plaintext_ports(entry_connection_t *conn, uint16_t port);
 static int connection_ap_supports_optimistic_data(const entry_connection_t *);
-static void connection_half_edge_add(const edge_connection_t *conn,
+STATIC void connection_half_edge_add(const edge_connection_t *conn,
                                      origin_circuit_t *circ);
+STATIC half_edge_t *connection_half_edge_find_stream_id(
+                                    const smartlist_t *half_conns,
+                                    streamid_t stream_id);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -455,16 +458,78 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
 }
 
 /**
+ * Helper function for sorting.
+ *
+ * As per smartlist_sort, return < 0 if p1 preceeds p2,
+ * > 0 if p2 preceeds p1, and 0 if they are equal.
+ *
+ * This is equivalent to subtraction of the values of p1 - p2
+ * (why does no one ever say that explicitly?).
+ */
+static int
+connection_half_edge_compare_sort(const void **p1, const void **p2)
+{
+  const half_edge_t *e1;
+  const half_edge_t *e2;
+  tor_assert(p1);
+  tor_assert(p2);
+
+  e1 = *(const half_edge_t **)p1;
+  e2 = *(const half_edge_t **)p2;
+  tor_assert(e1);
+  tor_assert(e2);
+
+  return e1->stream_id - e2->stream_id;
+}
+
+/**
+ * Helper function for bsearch.
+ *
+ * As per smartlist_bsearch, return < 0 if key preceeds member,
+ * > 0 if member preceeds key, and 0 if they are equal.
+ *
+ * This is equivalent to subtraction of the values of key - member
+ * (why does no one ever say that explicitly?).
+ */
+static int
+connection_half_edge_compare_bsearch(const void *key, const void **member)
+{
+  const half_edge_t *e2;
+  tor_assert(key);
+  tor_assert(member && *(half_edge_t**)member);
+  e2 = *(const half_edge_t **)member;
+
+  return *(const streamid_t*)key - e2->stream_id;
+}
+
+/**
  * Add a half-closed connection to the list, to watch for activity.
  *
  * These connections are removed from the list upon receiving an end
  * cell.
+ *
+ * This function takes O(n*lg(n)), but half connections should be
+ * rare, and add is the least frequent operation on them. Even when
+ * this list is full (65k streams in half-closed state), adding a
+ * new one takes less than 10ms on a circa-2015 laptop CPU, which is
+ * fine for the stream EOF codepath - there is no user impact there.
  */
-static void
+STATIC void
 connection_half_edge_add(const edge_connection_t *conn,
                          origin_circuit_t *circ)
 {
-  half_edge_t *half_conn = tor_malloc_zero(sizeof(half_edge_t));
+  half_edge_t *half_conn = NULL;
+
+  /* Double-check for re-insertion. This should not happen,
+   * but this check is cheap compared to the sort anyway */
+  if (connection_half_edge_find_stream_id(circ->half_streams,
+                                          conn->stream_id)) {
+    log_warn(LD_BUG, "Duplicate stream close for stream %d on circuit %d",
+             conn->stream_id, circ->global_identifier);
+    return;
+  }
+
+  half_conn = tor_malloc_zero(sizeof(half_edge_t));
 
   if (!circ->half_streams) {
     circ->half_streams = smartlist_new();
@@ -489,22 +554,24 @@ connection_half_edge_add(const edge_connection_t *conn,
   }
 
   smartlist_add(circ->half_streams, half_conn);
+  smartlist_sort(circ->half_streams, connection_half_edge_compare_sort);
 }
 
-static half_edge_t *
+/**
+ * Find a stream_id_t in the list in O(lg(n)).
+ *
+ * Returns NULL if the list is empty or element is not found.
+ * Returns a pointer to the element if found.
+ */
+STATIC half_edge_t *
 connection_half_edge_find_stream_id(const smartlist_t *half_conns,
                                     streamid_t stream_id)
 {
   if (!half_conns)
     return NULL;
 
-  SMARTLIST_FOREACH_BEGIN(half_conns, half_edge_t *, half_conn) {
-    if (half_conn->stream_id == stream_id) {
-      return half_conn;
-    }
-  } SMARTLIST_FOREACH_END(half_conn);
-
-  return NULL;
+  return smartlist_bsearch(half_conns, &stream_id,
+                           connection_half_edge_compare_bsearch);
 }
 
 /**
@@ -602,7 +669,7 @@ connection_half_edge_is_valid_end(smartlist_t *half_conns,
   if (!half)
     return 0;
 
-  smartlist_remove(half_conns, half);
+  smartlist_remove_keeporder(half_conns, half);
   tor_free(half);
   return 1;
 }
