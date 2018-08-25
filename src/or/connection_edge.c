@@ -458,31 +458,6 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
 }
 
 /**
- * Helper function for sorting.
- *
- * As per smartlist_sort, return < 0 if p1 preceeds p2,
- * > 0 if p2 preceeds p1, and 0 if they are equal.
- *
- * This is equivalent to subtraction of the values of p1 - p2
- * (why does no one ever say that explicitly?).
- */
-static int
-connection_half_edge_compare_sort(const void **p1, const void **p2)
-{
-  const half_edge_t *e1;
-  const half_edge_t *e2;
-  tor_assert(p1);
-  tor_assert(p2);
-
-  e1 = *(const half_edge_t **)p1;
-  e2 = *(const half_edge_t **)p2;
-  tor_assert(e1);
-  tor_assert(e2);
-
-  return e1->stream_id - e2->stream_id;
-}
-
-/**
  * Helper function for bsearch.
  *
  * As per smartlist_bsearch, return < 0 if key preceeds member,
@@ -507,18 +482,14 @@ connection_half_edge_compare_bsearch(const void *key, const void **member)
  *
  * These connections are removed from the list upon receiving an end
  * cell.
- *
- * This function takes O(n*lg(n)), but half connections should be
- * rare, and add is the least frequent operation on them. Even when
- * this list is full (65k streams in half-closed state), adding a
- * new one takes less than 10ms on a circa-2015 laptop CPU, which is
- * fine for the stream EOF codepath - there is no user impact there.
  */
 STATIC void
 connection_half_edge_add(const edge_connection_t *conn,
                          origin_circuit_t *circ)
 {
   half_edge_t *half_conn = NULL;
+  int insert_at = 0;
+  int ignored;
 
   /* Double-check for re-insertion. This should not happen,
    * but this check is cheap compared to the sort anyway */
@@ -553,8 +524,10 @@ connection_half_edge_add(const edge_connection_t *conn,
     half_conn->data_pending = conn->deliver_window;
   }
 
-  smartlist_add(circ->half_streams, half_conn);
-  smartlist_sort(circ->half_streams, connection_half_edge_compare_sort);
+  insert_at = smartlist_bsearch_idx(circ->half_streams, &half_conn->stream_id,
+                                    connection_half_edge_compare_bsearch,
+                                    &ignored);
+  smartlist_insert(circ->half_streams, insert_at, half_conn);
 }
 
 /**
@@ -663,13 +636,17 @@ int
 connection_half_edge_is_valid_end(smartlist_t *half_conns,
                                   streamid_t stream_id)
 {
-  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
-                                                          stream_id);
+  half_edge_t *half;
+  int found, remove_idx;
 
-  if (!half)
+  remove_idx = smartlist_bsearch_idx(half_conns, &stream_id,
+                                    connection_half_edge_compare_bsearch,
+                                    &found);
+  if (!found)
     return 0;
 
-  smartlist_remove_keeporder(half_conns, half);
+  half = smartlist_get(half_conns, remove_idx);
+  smartlist_del_keeporder(half_conns, remove_idx);
   tor_free(half);
   return 1;
 }
