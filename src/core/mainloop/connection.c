@@ -3571,7 +3571,8 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
            * waiting for a TLS renegotiation, the renegotiation started, and
            * SSL_read returned WANTWRITE.  But now SSL_read is saying WANTREAD
            * again.  Stop waiting for write events now, or else we'll
-           * busy-loop until data arrives for us to read. */
+           * busy-loop until data arrives for us to read.
+           * XXX: remove this when v2 handshakes support is dropped. */
           connection_stop_writing(conn);
           if (!connection_is_reading(conn))
             connection_start_reading(conn);
@@ -4028,6 +4029,9 @@ connection_handle_write(connection_t *conn, int force)
 {
     int res;
     update_current_time(time(NULL));
+    /* connection_handle_write_impl() might call connection_handle_read()
+     * if we're in the middle of a v2 handshake, in which case it needs this
+     * flag set. */
     conn->in_connection_handle_write = 1;
     res = connection_handle_write_impl(conn, force);
     conn->in_connection_handle_write = 0;
