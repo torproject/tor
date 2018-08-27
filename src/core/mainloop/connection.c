@@ -3762,9 +3762,9 @@ update_send_buffer_size(tor_socket_t sock)
 
 /** Try to flush more bytes onto <b>conn</b>-\>s.
  *
- * This function gets called either from conn_write_callback() in main.c
- * when libevent tells us that conn wants to write, or below
- * from connection_buf_add() when an entire TLS record is ready.
+ * This function is called in connection_handle_write(), which gets
+ * called from conn_write_callback() in main.c when libevent tells us
+ * that <b>conn</b> wants to write.
  *
  * Update <b>conn</b>-\>timestamp_last_write_allowed to now, and call flush_buf
  * or flush_buf_tls appropriately. If it succeeds and there are no more
