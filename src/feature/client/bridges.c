@@ -284,6 +284,11 @@ routerinfo_is_a_configured_bridge(const routerinfo_t *ri)
   return get_configured_bridge_by_routerinfo(ri) ? 1 : 0;
 }
 
+/**
+ * Return 1 iff <b>bridge_list</b> contains entry matching
+ * given; IPv4 address in host byte order (<b>ipv4_addr</b>
+ * and <b>port</b>. Otherwise, return 0.
+ */
 static int
 bridge_exists_with_ipv4h_addr_and_port(const uint32_t ipv4_addr,
                                        const uint16_t port)
@@ -299,6 +304,10 @@ bridge_exists_with_ipv4h_addr_and_port(const uint32_t ipv4_addr,
   return 0;
 }
 
+/**
+ * Return 1 iff <b>bridge_list</b> contains entry matching given
+ * <b>ipv6_addr</b> and <b>port</b>. Otherwise, return 0.
+ */
 static int
 bridge_exists_with_ipv6_addr_and_port(const tor_addr_t *ipv6_addr,
                                       const uint16_t port)
