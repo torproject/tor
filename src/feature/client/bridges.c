@@ -293,7 +293,7 @@ static int
 bridge_exists_with_ipv4h_addr_and_port(const uint32_t ipv4_addr,
                                        const uint16_t port)
 {
-  tor_addr_t node_ipv4 = {};
+  tor_addr_t node_ipv4;
 
   if (tor_addr_port_is_valid_ipv4h(ipv4_addr, port, 0)) {
     tor_addr_from_ipv4h(&node_ipv4, ipv4_addr);
