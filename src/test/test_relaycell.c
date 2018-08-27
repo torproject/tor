@@ -485,11 +485,50 @@ subtest_halfstream_insertremove(int num, int seed)
   /* Secure the randoms. */
   srand(seed);
 
-  /* Insert a duplicate element; ensure removing it once works */
+  /* Explicity test all operations on an absent stream list */
+  tt_int_op(connection_half_edge_is_valid_data(circ->half_streams,
+            23), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_connected(circ->half_streams,
+            23), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_sendme(circ->half_streams,
+            23), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_resolved(circ->half_streams,
+            23), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
+            23), OP_EQ, 0);
+
+  /* Insert a duplicate element; verify that other elements absent;
+   * ensure removing it once works */
   edgeconn->stream_id = 23;
   connection_half_edge_add(edgeconn, circ);
   connection_half_edge_add(edgeconn, circ);
   connection_half_edge_add(edgeconn, circ);
+
+  /* Verify that other elements absent */
+  tt_int_op(connection_half_edge_is_valid_data(circ->half_streams,
+            22), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_connected(circ->half_streams,
+            22), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_sendme(circ->half_streams,
+            22), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_resolved(circ->half_streams,
+            22), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
+            22), OP_EQ, 0);
+
+  tt_int_op(connection_half_edge_is_valid_data(circ->half_streams,
+            24), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_connected(circ->half_streams,
+            24), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_sendme(circ->half_streams,
+            24), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_resolved(circ->half_streams,
+            24), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
+            24), OP_EQ, 0);
+
+
+  /* Verify we only remove it once */
   tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
             23), OP_EQ, 1);
   tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
@@ -544,6 +583,18 @@ subtest_halfstream_insertremove(int num, int seed)
               OP_EQ, 1);
   }
   tt_int_op(smartlist_len(circ->half_streams), OP_EQ, 0);
+
+  /* Explicity test all operations on an empty stream list */
+  tt_int_op(connection_half_edge_is_valid_data(circ->half_streams,
+            23), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_connected(circ->half_streams,
+            23), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_sendme(circ->half_streams,
+            23), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_resolved(circ->half_streams,
+            23), OP_EQ, 0);
+  tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
+            23), OP_EQ, 0);
 
   /* For valgrind, leave some around then free the circ */
   for (inserted = 0; inserted < 10; ) {
