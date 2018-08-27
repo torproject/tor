@@ -611,10 +611,10 @@ test_bridges_node_is_a_configured_bridge(void *arg)
 
   helper_add_bridges_to_bridgelist(arg);
 
-  node_t null_node = {};
+  node_t null_node = { 0 };
   tt_assert(!node_is_a_configured_bridge(&null_node));
 
-  node_t node_with_digest = {};
+  node_t node_with_digest = { 0 };
 
   const char fingerprint[HEX_DIGEST_LEN] =
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
