@@ -527,7 +527,6 @@ subtest_halfstream_insertremove(int num, int seed)
   tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
             24), OP_EQ, 0);
 
-
   /* Verify we only remove it once */
   tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
             23), OP_EQ, 1);
