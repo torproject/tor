@@ -7095,6 +7095,29 @@ static int bootstrap_problems = 0;
  */
 #define BOOTSTRAP_PCT_INCREMENT 5
 
+/** Do the actual logging and notifications for
+ * control_event_bootstrap().  Doesn't change any state beyond that.
+ */
+static void
+control_event_bootstrap_core(int loglevel, bootstrap_status_t status,
+                             int progress)
+{
+  char buf[BOOTSTRAP_MSG_LEN];
+  const char *tag, *summary;
+
+  bootstrap_status_to_string(status, &tag, &summary);
+
+  tor_log(loglevel, LD_CONTROL,
+          "Bootstrapped %d%%: %s", progress ? progress : status, summary);
+  tor_snprintf(buf, sizeof(buf),
+               "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
+               progress ? progress : status, tag, summary);
+  tor_snprintf(last_sent_bootstrap_message,
+               sizeof(last_sent_bootstrap_message),
+               "NOTICE %s", buf);
+  control_event_client_status(LOG_NOTICE, "%s", buf);
+}
+
 /** Called when Tor has made progress at bootstrapping its directory
  * information and initial circuits.
  *
@@ -7105,8 +7128,6 @@ static int bootstrap_problems = 0;
 void
 control_event_bootstrap(bootstrap_status_t status, int progress)
 {
-  const char *tag, *summary;
-  char buf[BOOTSTRAP_MSG_LEN];
   int loglevel = LOG_NOTICE;
 
   if (bootstrap_percent == BOOTSTRAP_STATUS_DONE)
@@ -7131,15 +7152,8 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
       loglevel = LOG_INFO;
   }
 
-  tor_log(loglevel, LD_CONTROL,
-          "Bootstrapped %d%%: %s", progress ? progress : status, summary);
-  tor_snprintf(buf, sizeof(buf),
-               "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
-               progress ? progress : status, tag, summary);
-  tor_snprintf(last_sent_bootstrap_message,
-               sizeof(last_sent_bootstrap_message),
-               "NOTICE %s", buf);
-  control_event_client_status(LOG_NOTICE, "%s", buf);
+  control_event_bootstrap_core(loglevel, status, progress);
+
   if (status > bootstrap_percent) {
     bootstrap_percent = status; /* new milestone reached */
   }
