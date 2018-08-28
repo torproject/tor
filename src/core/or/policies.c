@@ -317,6 +317,14 @@ parse_reachable_addresses(void)
     }
   }
 
+  /* Prepend a reject *.* to reachable_(or|dir)_addr_policy */
+  if (!ret && (options->ReachableDirAddresses ||
+               options->ReachableORAddresses ||
+               options->ReachableAddresses)) {
+    append_exit_policy_string(&reachable_or_addr_policy, "reject *:*");
+    append_exit_policy_string(&reachable_dir_addr_policy, "reject *:*");
+  }
+
   return ret;
 }
 

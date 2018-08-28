@@ -1656,6 +1656,18 @@ test_options_validate__reachable_addresses(void *ignored)
   tt_str_op(tdata->opt->ReachableAddresses->value, OP_EQ, "*:82");
   tor_free(msg);
 
+  free_options_test_data(tdata);
+  mock_clean_saved_logs();
+  tdata = get_options_test_data("FascistFirewall 1\n"
+                                "ReachableAddresses *:82\n"
+                                "MaxClientCircuitsPending 1\n"
+                                "ConnLimit 1\n");
+
+  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_ptr_op(tdata->opt->ReachableAddresses->next, OP_EQ, NULL);
+  tor_free(msg);
+
 #define SERVERS_REACHABLE_MSG "Servers must be able to freely connect to" \
   " the rest of the Internet, so they must not set Reachable*Addresses or" \
   " FascistFirewall or FirewallPorts or ClientUseIPv4 0."
