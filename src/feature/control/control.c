@@ -7107,6 +7107,7 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
 {
   const char *tag, *summary;
   char buf[BOOTSTRAP_MSG_LEN];
+  int loglevel = LOG_NOTICE;
 
   if (bootstrap_percent == BOOTSTRAP_STATUS_DONE)
     return; /* already bootstrapped; nothing to be done here. */
@@ -7121,41 +7122,36 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
     }
   }
 
-  if (status > bootstrap_percent ||
-      (progress && progress > bootstrap_percent)) {
-    int loglevel = LOG_NOTICE;
-    bootstrap_status_to_string(status, &tag, &summary);
-
-    if (status <= bootstrap_percent &&
-        (progress < notice_bootstrap_percent + BOOTSTRAP_PCT_INCREMENT)) {
-      /* We log the message at info if the status hasn't advanced, and if less
-       * than BOOTSTRAP_PCT_INCREMENT progress has been made.
-       */
+  if (status <= bootstrap_percent) {
+    /* If there's no new progress, return early. */
+    if (!progress || progress <= bootstrap_percent)
+      return;
+    /* Log at INFO if not enough progress happened. */
+    if (progress < notice_bootstrap_percent + BOOTSTRAP_PCT_INCREMENT)
       loglevel = LOG_INFO;
-    }
+  }
 
-    tor_log(loglevel, LD_CONTROL,
-            "Bootstrapped %d%%: %s", progress ? progress : status, summary);
-    tor_snprintf(buf, sizeof(buf),
-        "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
-        progress ? progress : status, tag, summary);
-    tor_snprintf(last_sent_bootstrap_message,
-                 sizeof(last_sent_bootstrap_message),
-                 "NOTICE %s", buf);
-    control_event_client_status(LOG_NOTICE, "%s", buf);
-    if (status > bootstrap_percent) {
-      bootstrap_percent = status; /* new milestone reached */
-    }
-    if (progress > bootstrap_percent) {
-      /* incremental progress within a milestone */
-      bootstrap_percent = progress;
-      bootstrap_problems = 0; /* Progress! Reset our problem counter. */
-    }
-    if (loglevel == LOG_NOTICE &&
-        bootstrap_percent > notice_bootstrap_percent) {
-      /* Remember that we gave a notice at this level. */
-      notice_bootstrap_percent = bootstrap_percent;
-    }
+  tor_log(loglevel, LD_CONTROL,
+          "Bootstrapped %d%%: %s", progress ? progress : status, summary);
+  tor_snprintf(buf, sizeof(buf),
+               "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
+               progress ? progress : status, tag, summary);
+  tor_snprintf(last_sent_bootstrap_message,
+               sizeof(last_sent_bootstrap_message),
+               "NOTICE %s", buf);
+  control_event_client_status(LOG_NOTICE, "%s", buf);
+  if (status > bootstrap_percent) {
+    bootstrap_percent = status; /* new milestone reached */
+  }
+  if (progress > bootstrap_percent) {
+    /* incremental progress within a milestone */
+    bootstrap_percent = progress;
+    bootstrap_problems = 0; /* Progress! Reset our problem counter. */
+  }
+  if (loglevel == LOG_NOTICE &&
+      bootstrap_percent > notice_bootstrap_percent) {
+    /* Remember that we gave a notice at this level. */
+    notice_bootstrap_percent = bootstrap_percent;
   }
 }
 
