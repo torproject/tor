@@ -24,7 +24,7 @@
 /* When loading and configuring a service, this is the default version it will
  * be configured for as it is possible that no HiddenServiceVersion is
  * present. */
-#define HS_SERVICE_DEFAULT_VERSION HS_VERSION_TWO
+#define HS_SERVICE_DEFAULT_VERSION HS_VERSION_THREE
 
 /* As described in the specification, service publishes their next descriptor
  * at a random time between those two values (in seconds). */
@@ -262,6 +262,7 @@ void hs_service_free_(hs_service_t *service);
 unsigned int hs_service_get_num_services(void);
 void hs_service_stage_services(const smartlist_t *service_list);
 int hs_service_load_all_keys(void);
+int hs_service_get_version_from_key(const hs_service_t *service);
 void hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
                                          smartlist_t *dir_list);
 int hs_service_set_conn_addr_port(const origin_circuit_t *circ,

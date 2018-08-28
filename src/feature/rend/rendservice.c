@@ -1341,6 +1341,29 @@ rend_service_poison_new_single_onion_dir(const rend_service_t *s,
   return 0;
 }
 
+/* Return true iff the given service identity key is present on disk. This is
+ * used to try to learn the service version during configuration time. */
+int
+rend_service_key_on_disk(const char *directory_path)
+{
+  int ret = 0;
+  char *fname;
+  crypto_pk_t *pk = NULL;
+
+  tor_assert(directory_path);
+
+  /* Load key */
+  fname = hs_path_from_filename(directory_path, private_key_fname);
+  pk = init_key_from_file(fname, 0, LOG_DEBUG, 0);
+  if (pk) {
+    ret = 1;
+  }
+
+  crypto_pk_free(pk);
+  tor_free(fname);
+  return ret;
+}
+
 /** Load and/or generate private keys for all hidden services, possibly
  * including keys for client authorization.
  * If a <b>service_list</b> is provided, treat it as the list of hidden
