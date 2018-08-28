@@ -2814,13 +2814,9 @@ get_unique_stream_id_by_circ(origin_circuit_t *circ)
     if (tmpconn->stream_id == test_stream_id)
       goto again;
 
-  if (circ->half_streams) {
-    SMARTLIST_FOREACH_BEGIN(circ->half_streams, half_edge_t *, half_conn) {
-      if (half_conn->stream_id == test_stream_id) {
-        goto again;
-      }
-    } SMARTLIST_FOREACH_END(half_conn);
-  }
+  if (connection_half_edge_find_stream_id(circ->half_streams,
+                                           test_stream_id))
+    goto again;
 
   return test_stream_id;
 }
