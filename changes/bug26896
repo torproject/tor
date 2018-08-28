@@ -1,0 +1,3 @@
+  o Minor bugfixes (directory connection shutdown):
+    - Avoid a double-close when shutting down a stalled directory connection.
+      Fixes bug 26896; bugfix on 0.3.4.1-alpha.
