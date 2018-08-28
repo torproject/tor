@@ -139,6 +139,20 @@ test_invalid_service(void *arg)
     teardown_capture_of_logs();
   }
 
+  /* Bad target addr:port separation. */
+  {
+    const char *conf =
+      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+      "HiddenServiceVersion 2\n"
+      "HiddenServicePort 80 127.0.0.1 8000\n";
+    setup_full_capture_of_logs(LOG_WARN);
+    ret = helper_config_service(conf, 1);
+    tt_int_op(ret, OP_EQ, -1);
+    expect_log_msg_containing("HiddenServicePort parse error: "
+                              "invalid port mapping");
+    teardown_capture_of_logs();
+  }
+
   /* Out of order directives. */
   {
     const char *conf =
