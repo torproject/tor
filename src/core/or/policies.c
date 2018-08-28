@@ -317,7 +317,7 @@ parse_reachable_addresses(void)
     }
   }
 
-  /* Prepend a reject *.* to reachable_(or|dir)_addr_policy */
+  /* Append a reject *:* to reachable_(or|dir)_addr_policy */
   if (!ret && (options->ReachableDirAddresses ||
                options->ReachableORAddresses ||
                options->ReachableAddresses)) {
