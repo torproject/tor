@@ -26,6 +26,13 @@ import sys
 # Global: Have there been any errors?
 trouble = False
 
+if sys.version_info[0] <= 2:
+    def open_file(fname):
+        return open(fname, 'r')
+else:
+    def open_file(fname):
+        return open(fname, 'r', encoding='utf-8')
+
 def err(msg):
     """ Declare that an error has happened, and remember that there has
         been an error. """
@@ -70,7 +77,7 @@ class Rules(object):
                         include, lineno, context))
 
     def applyToFile(self, fname):
-        with open(fname, 'r') as f:
+        with open_file(fname) as f:
             #print(fname)
             self.applyToLines(iter(f), " of {}".format(fname))
 
@@ -82,7 +89,7 @@ class Rules(object):
 def load_include_rules(fname):
     """ Read a rules file from 'fname', and return it as a Rules object. """
     result = Rules(os.path.split(fname)[0])
-    with open(fname, 'r') as f:
+    with open_file(fname) as f:
         for line in f:
             line = line.strip()
             if line.startswith("#") or not line:
