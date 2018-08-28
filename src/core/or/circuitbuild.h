@@ -93,14 +93,10 @@ STATIC int
 onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
                       int is_hs_v3_rp_circuit);
 
-#if defined(ENABLE_TOR2WEB_MODE) || defined(TOR_UNIT_TESTS)
-enum router_crn_flags_t;
-STATIC const node_t *pick_tor2web_rendezvous_node(
-                                     enum router_crn_flags_t flags,
-                                     const or_options_t *options);
+#if defined(TOR_UNIT_TESTS)
 unsigned int cpath_get_n_hops(crypt_path_t **head_ptr);
 
-#endif /* defined(ENABLE_TOR2WEB_MODE) || defined(TOR_UNIT_TESTS) */
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(CIRCUITBUILD_PRIVATE) */
 
