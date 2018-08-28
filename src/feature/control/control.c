@@ -7106,12 +7106,15 @@ control_event_bootstrap_core(int loglevel, bootstrap_status_t status,
   const char *tag, *summary;
 
   bootstrap_status_to_string(status, &tag, &summary);
+  /* Locally reset status if there's incremental progress */
+  if (progress)
+    status = progress;
 
   tor_log(loglevel, LD_CONTROL,
-          "Bootstrapped %d%%: %s", progress ? progress : status, summary);
+          "Bootstrapped %d%%: %s", status, summary);
   tor_snprintf(buf, sizeof(buf),
                "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
-               progress ? progress : status, tag, summary);
+               status, tag, summary);
   tor_snprintf(last_sent_bootstrap_message,
                sizeof(last_sent_bootstrap_message),
                "NOTICE %s", buf);
