@@ -448,8 +448,9 @@ tor_tls_read, (tor_tls_t *tls, char *cp, size_t len))
 {
   tor_assert(tls);
   tor_assert(cp);
+  tor_assert(len < INT_MAX);
 
-  PRInt32 rv = PR_Read(tls->ssl, cp, len);
+  PRInt32 rv = PR_Read(tls->ssl, cp, (int)len);
   // log_debug(LD_NET, "PR_Read(%zu) returned %d", n, (int)rv);
   if (rv > 0) {
     tls->n_read_since_last_check += rv;
@@ -471,8 +472,9 @@ tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
 {
   tor_assert(tls);
   tor_assert(cp || n == 0);
+  tor_assert(n < INT_MAX);
 
-  PRInt32 rv = PR_Write(tls->ssl, cp, n);
+  PRInt32 rv = PR_Write(tls->ssl, cp, (int)n);
   // log_debug(LD_NET, "PR_Write(%zu) returned %d", n, (int)rv);
   if (rv > 0) {
     tls->n_written_since_last_check += rv;
@@ -658,11 +660,13 @@ tor_tls_export_key_material,(tor_tls_t *tls, uint8_t *secrets_out,
   tor_assert(secrets_out);
   tor_assert(context);
   tor_assert(label);
+  tor_assert(strlen(label) <= UINT_MAX);
+  tor_assert(context_len <= UINT_MAX);
 
   SECStatus s;
   s = SSL_ExportKeyingMaterial(tls->ssl,
-                               label, strlen(label),
-                               PR_TRUE, context, context_len,
+                               label, (unsigned)strlen(label),
+                               PR_TRUE, context, (unsigned)context_len,
                                secrets_out, DIGEST256_LEN);
 
   return (s == SECSuccess) ? 0 : -1;
