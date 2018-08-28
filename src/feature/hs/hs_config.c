@@ -539,6 +539,23 @@ hs_config_service_all(const or_options_t *options, int validate_only)
   new_service_list = smartlist_new();
 
   for (line = options->RendConfigLines; line; line = line->next) {
+    /* Check for HiddenServicePort validity. */
+    if (strcasecmp(line->key, "HiddenServicePort") == 0) {
+      smartlist_t *val_parts = smartlist_new();
+
+      int n_parts =
+       smartlist_split_string(val_parts, line->value, " ", 0, 4);
+
+      SMARTLIST_FOREACH(val_parts, char *, part, tor_free(part));
+      smartlist_free(val_parts);
+
+      if (n_parts > 2) {
+        log_warn(LD_CONFIG, "HiddenServicePort parse error:"
+                            " port mapping invalid");
+        goto err;
+      }
+    }
+
     /* Ignore all directives that aren't the start of a service. */
     if (strcasecmp(line->key, "HiddenServiceDir")) {
       if (!dir_option_seen) {
@@ -548,6 +565,7 @@ hs_config_service_all(const or_options_t *options, int validate_only)
       }
       continue;
     }
+
     /* Flag that we've seen a directory directive and we'll use it to make
      * sure that the torrc options ordering is actually valid. */
     dir_option_seen = 1;

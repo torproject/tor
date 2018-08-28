@@ -2816,7 +2816,7 @@ The following options are used to configure a hidden service.
     paths may be quoted, and may use standard C escapes.)
     You may also have multiple lines with  the same VIRTPORT: when a user
     connects to that VIRTPORT, one of the TARGETs from those lines will be
-    chosen at random.
+    chosen at random. Note that address-port pairs have to be comma-separated.
 
 [[PublishHidServDescriptors]] **PublishHidServDescriptors** **0**|**1**::
     If set to 0, Tor will run any hidden services you configure, but it won't
