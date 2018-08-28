@@ -37,8 +37,7 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath,
 struct created_cell_t;
 int circuit_finish_handshake(origin_circuit_t *circ,
                              const struct created_cell_t *created_cell);
-int circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer,
-                      int reason);
+int circuit_truncated(origin_circuit_t *circ, int reason);
 int onionskin_answer(or_circuit_t *circ,
                      const struct created_cell_t *created_cell,
                      const char *keys, size_t keys_len,
