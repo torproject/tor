@@ -7101,17 +7101,15 @@ static int bootstrap_problems = 0;
  * <b>status</b> is the new status, that is, what task we will be doing
  * next. <b>progress</b> is zero if we just started this task, else it
  * represents progress on the task.
- *
- * Return true if we logged a message at level NOTICE, and false otherwise.
  */
-int
+void
 control_event_bootstrap(bootstrap_status_t status, int progress)
 {
   const char *tag, *summary;
   char buf[BOOTSTRAP_MSG_LEN];
 
   if (bootstrap_percent == BOOTSTRAP_STATUS_DONE)
-    return 0; /* already bootstrapped; nothing to be done here. */
+    return; /* already bootstrapped; nothing to be done here. */
 
   /* special case for handshaking status, since our TLS handshaking code
    * can't distinguish what the connection is going to be for. */
@@ -7158,10 +7156,7 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
       /* Remember that we gave a notice at this level. */
       notice_bootstrap_percent = bootstrap_percent;
     }
-    return loglevel == LOG_NOTICE;
   }
-
-  return 0;
 }
 
 /** Called when Tor has failed to make bootstrapping progress in a way

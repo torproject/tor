@@ -1051,14 +1051,10 @@ circuit_build_no_more_hops(origin_circuit_t *circ)
     const or_options_t *options = get_options();
     note_that_we_completed_a_circuit();
     /* FFFF Log a count of known routers here */
-    log_notice(LD_GENERAL,
-               "Tor has successfully opened a circuit. "
-               "Looks like client functionality is working.");
-    if (control_event_bootstrap(BOOTSTRAP_STATUS_DONE, 0) == 0) {
-      log_notice(LD_GENERAL,
-                 "Tor has successfully opened a circuit. "
-                 "Looks like client functionality is working.");
-    }
+    log_info(LD_GENERAL,
+             "Tor has successfully opened a circuit. "
+             "Looks like client functionality is working.");
+    control_event_bootstrap(BOOTSTRAP_STATUS_DONE, 0);
     control_event_client_status(LOG_NOTICE, "CIRCUIT_ESTABLISHED");
     clear_broken_connection_map(1);
     if (server_mode(options) && !check_whether_orport_reachable(options)) {
