@@ -3571,7 +3571,8 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
            * waiting for a TLS renegotiation, the renegotiation started, and
            * SSL_read returned WANTWRITE.  But now SSL_read is saying WANTREAD
            * again.  Stop waiting for write events now, or else we'll
-           * busy-loop until data arrives for us to read. */
+           * busy-loop until data arrives for us to read.
+           * XXX: remove this when v2 handshakes support is dropped. */
           connection_stop_writing(conn);
           if (!connection_is_reading(conn))
             connection_start_reading(conn);
@@ -3762,9 +3763,9 @@ update_send_buffer_size(tor_socket_t sock)
 
 /** Try to flush more bytes onto <b>conn</b>-\>s.
  *
- * This function gets called either from conn_write_callback() in main.c
- * when libevent tells us that conn wants to write, or below
- * from connection_buf_add() when an entire TLS record is ready.
+ * This function is called in connection_handle_write(), which gets
+ * called from conn_write_callback() in main.c when libevent tells us
+ * that <b>conn</b> wants to write.
  *
  * Update <b>conn</b>-\>timestamp_last_write_allowed to now, and call flush_buf
  * or flush_buf_tls appropriately. If it succeeds and there are no more
@@ -4028,6 +4029,9 @@ connection_handle_write(connection_t *conn, int force)
 {
     int res;
     update_current_time(time(NULL));
+    /* connection_handle_write_impl() might call connection_handle_read()
+     * if we're in the middle of a v2 handshake, in which case it needs this
+     * flag set. */
     conn->in_connection_handle_write = 1;
     res = connection_handle_write_impl(conn, force);
     conn->in_connection_handle_write = 0;
