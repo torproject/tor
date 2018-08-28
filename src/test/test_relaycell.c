@@ -465,6 +465,40 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   return 0;
 }
 
+static int
+halfstream_insert(origin_circuit_t *circ, edge_connection_t *edgeconn,
+                  streamid_t *streams, int num, int seed)
+{
+  int inserted = 0;
+
+  /* Secure the randoms. */
+  srand(seed);
+
+  /* Insert num random elements */
+  while (inserted < num) {
+    streamid_t id;
+
+    if (seed)
+      id = (streamid_t)rand(); // Meh truncate those high bits.
+    else
+      id = get_unique_stream_id_by_circ(circ);
+
+    edgeconn->stream_id = id;
+
+    /* Ensure it isn't there */
+    if (connection_half_edge_find_stream_id(circ->half_streams, id)) {
+      continue;
+    }
+
+    connection_half_edge_add(edgeconn, circ);
+    if (streams)
+      streams[inserted] = id;
+    inserted++;
+  }
+
+  return inserted;
+}
+
 static void
 subtest_halfstream_insertremove(int num, int seed)
 {
@@ -473,7 +507,6 @@ subtest_halfstream_insertremove(int num, int seed)
   edge_connection_t *edgeconn;
   entry_connection_t *entryconn;
   streamid_t *streams = tor_malloc_zero(num*sizeof(streamid_t));
-  int inserted = 0;
   int i = 0;
 
   circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
@@ -481,9 +514,6 @@ subtest_halfstream_insertremove(int num, int seed)
 
   entryconn = fake_entry_conn(circ, 23);
   edgeconn = ENTRY_TO_EDGE_CONN(entryconn);
-
-  /* Secure the randoms. */
-  srand(seed);
 
   /* Explicity test all operations on an absent stream list */
   tt_int_op(connection_half_edge_is_valid_data(circ->half_streams,
@@ -533,26 +563,7 @@ subtest_halfstream_insertremove(int num, int seed)
   tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
             23), OP_EQ, 0);
 
-  /* Insert num random elements */
-  for (inserted = 0; inserted < num; ) {
-    streamid_t id;
-
-    if (seed)
-      id = (streamid_t)rand(); // Meh truncate those high bits.
-    else
-      id = inserted;
-
-    edgeconn->stream_id = id;
-
-    /* Ensure it isn't there */
-    if (connection_half_edge_find_stream_id(circ->half_streams, id)) {
-      continue;
-    }
-
-    connection_half_edge_add(edgeconn, circ);
-    streams[inserted] = id;
-    inserted++;
-  }
+  halfstream_insert(circ, edgeconn, streams, num, seed);
 
   /* Remove half of them */
   for (i = 0; i < num/2; i++) {
@@ -596,19 +607,7 @@ subtest_halfstream_insertremove(int num, int seed)
             23), OP_EQ, 0);
 
   /* For valgrind, leave some around then free the circ */
-  for (inserted = 0; inserted < 10; ) {
-    streamid_t id = (streamid_t)rand(); // Meh truncate those high bits.
-
-    edgeconn->stream_id = id;
-
-    /* Ensure it isn't there */
-    if (connection_half_edge_find_stream_id(circ->half_streams, id)) {
-      continue;
-    }
-
-    connection_half_edge_add(edgeconn, circ);
-    inserted++;
-  }
+  halfstream_insert(circ, edgeconn, NULL, 10, 0);
 
  done:
   tor_free(streams);
@@ -629,6 +628,65 @@ test_halfstream_insertremove(void *arg)
   subtest_halfstream_insertremove(10, 5);
   subtest_halfstream_insertremove(100, 23);
   subtest_halfstream_insertremove(1000, 42);
+}
+
+static void
+test_halfstream_wrap(void *arg)
+{
+  origin_circuit_t *circ =
+      helper_create_origin_circuit(CIRCUIT_PURPOSE_C_GENERAL, 0);
+  edge_connection_t *edgeconn;
+  entry_connection_t *entryconn;
+
+  circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
+  circ->cpath->deliver_window = CIRCWINDOW_START;
+
+  entryconn = fake_entry_conn(circ, 23);
+  edgeconn = ENTRY_TO_EDGE_CONN(entryconn);
+
+  (void)arg;
+
+  /* Suppress the WARN message we generate in this test */
+  setup_full_capture_of_logs(LOG_WARN);
+  MOCK(connection_mark_for_close_internal_, mock_mark_for_close);
+
+  /* Verify that get_unique_stream_id_by_circ() can wrap uint16_t */
+  circ->next_stream_id = 65530;
+  halfstream_insert(circ, edgeconn, NULL, 7, 0);
+  tt_int_op(circ->next_stream_id, OP_EQ, 2);
+  tt_int_op(smartlist_len(circ->half_streams), OP_EQ, 7);
+
+  /* Insert full-1 */
+  halfstream_insert(circ, edgeconn, NULL,
+                    65534-smartlist_len(circ->half_streams), 0);
+  tt_int_op(smartlist_len(circ->half_streams), OP_EQ, 65534);
+
+  /* Verify that we can get_unique_stream_id_by_circ() successfully */
+  edgeconn->stream_id = get_unique_stream_id_by_circ(circ);
+  tt_int_op(edgeconn->stream_id, OP_NE, 0); /* 0 is failure */
+
+  /* Insert an opened stream on the circ with that id */
+  ENTRY_TO_CONN(entryconn)->marked_for_close = 0;
+  ENTRY_TO_CONN(entryconn)->outbuf_flushlen = 0;
+  edgeconn->base_.state = AP_CONN_STATE_CONNECT_WAIT;
+  circ->p_streams = edgeconn;
+
+  /* Verify that get_unique_stream_id_by_circ() fails */
+  tt_int_op(get_unique_stream_id_by_circ(circ), OP_EQ, 0); /* 0 is failure */
+
+  /* eof the one opened stream. Verify it is now in half-closed */
+  tt_int_op(smartlist_len(circ->half_streams), OP_EQ, 65534);
+  connection_edge_reached_eof(edgeconn);
+  tt_int_op(smartlist_len(circ->half_streams), OP_EQ, 65535);
+
+  /* Verify get_unique_stream_id_by_circ() fails due to full half-closed */
+  circ->p_streams = NULL;
+  tt_int_op(get_unique_stream_id_by_circ(circ), OP_EQ, 0); /* 0 is failure */
+
+ done:
+  circuit_free_(TO_CIRCUIT(circ));
+  connection_free_minimal(ENTRY_TO_CONN(entryconn));
+  UNMOCK(connection_mark_for_close_internal_);
 }
 
 static void
@@ -1014,6 +1072,7 @@ struct testcase_t relaycell_tests[] = {
   { "resolved", test_relaycell_resolved, TT_FORK, NULL, NULL },
   { "circbw", test_circbw_relay, TT_FORK, NULL, NULL },
   { "halfstream", test_halfstream_insertremove, TT_FORK, NULL, NULL },
+  { "streamwrap", test_halfstream_wrap, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 
