@@ -1060,3 +1060,7 @@
 
 # https://lists.torproject.org/pipermail/tor-relays/2018-August/015869.html
 5.45.111.149:80 orport=443 id=D405FCCF06ADEDF898DF2F29C9348DCB623031BA ipv6=[2a03:4000:6:2388:df98:15f9:b34d:443]:443
+
+# https://trac.torproject.org/projects/tor/ticket/27297
+37.252.185.182:9030 orport=8080 id=113143469021882C3A4B82F084F8125B08EE471E ipv6=[2a00:63c1:a:182::2]:8080
+
