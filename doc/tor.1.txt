@@ -1344,8 +1344,8 @@ The following options are useful only for clients (that is, if
     to stick with them. This is desirable because constantly changing servers
     increases the odds that an adversary who owns some servers will observe a
     fraction of your paths. Entry Guards can not be used by Directory
-    Authorities, and Single Onion Services. In these cases,
-    the this option is ignored. (Default: 1)
+    Authorities or Single Onion Services. In these cases,
+    this option is ignored. (Default: 1)
 
 [[GuardfractionFile]] **GuardfractionFile** __FILENAME__::
     V3 authoritative directories only. Configures the location of the
@@ -1353,7 +1353,7 @@ The following options are useful only for clients (that is, if
     have been guards. (Default: unset)
 
 [[UseGuardFraction]] **UseGuardFraction** **0**|**1**|**auto**::
-    This torrc option specifies whether clients should use the
+    This option specifies whether clients should use the
     guardfraction information found in the consensus during path
     selection. If it's set to 'auto', clients will do what the
     UseGuardFraction consensus parameter tells them to do. (Default: auto)
