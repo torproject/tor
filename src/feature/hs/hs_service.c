@@ -3410,7 +3410,7 @@ hs_service_get_version_from_key(const hs_service_t *service)
   tor_assert(service);
 
   /* We'll try to load the key for version 3. If not found, we'll try version
-   * 2 and if not found, we'll send back an unknown version (0). */
+   * 2 and if not found, we'll send back an unknown version (-1). */
   directory_path = service->config.directory_path;
 
   /* Version 3 check. */
