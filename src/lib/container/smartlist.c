@@ -408,7 +408,7 @@ smartlist_uniq(smartlist_t *sl,
  * less than member, and greater than 0 if key is greater then member.
  */
 void *
-smartlist_bsearch(smartlist_t *sl, const void *key,
+smartlist_bsearch(const smartlist_t *sl, const void *key,
                   int (*compare)(const void *key, const void **member))
 {
   int found, idx;
