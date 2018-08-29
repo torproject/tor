@@ -618,6 +618,65 @@ test_halfstream_insertremove(void *arg)
 }
 
 static void
+test_halfstream_wrap(void *arg)
+{
+  origin_circuit_t *circ =
+      helper_create_origin_circuit(CIRCUIT_PURPOSE_C_GENERAL, 0);
+  edge_connection_t *edgeconn;
+  entry_connection_t *entryconn;
+
+  circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
+  circ->cpath->deliver_window = CIRCWINDOW_START;
+
+  entryconn = fake_entry_conn(circ, 23);
+  edgeconn = ENTRY_TO_EDGE_CONN(entryconn);
+
+  (void)arg;
+
+  /* Suppress the WARN message we generate in this test */
+  setup_full_capture_of_logs(LOG_WARN);
+  MOCK(connection_mark_for_close_internal_, mock_mark_for_close);
+
+  /* Verify that get_unique_stream_id_by_circ() can wrap uint16_t */
+  circ->next_stream_id = 65530;
+  halfstream_insert(circ, edgeconn, NULL, 7, 0);
+  tt_int_op(circ->next_stream_id, OP_EQ, 2);
+  tt_int_op(smartlist_len(circ->half_streams), OP_EQ, 7);
+
+  /* Insert full-1 */
+  halfstream_insert(circ, edgeconn, NULL,
+                    65534-smartlist_len(circ->half_streams), 0);
+  tt_int_op(smartlist_len(circ->half_streams), OP_EQ, 65534);
+
+  /* Verify that we can get_unique_stream_id_by_circ() successfully */
+  edgeconn->stream_id = get_unique_stream_id_by_circ(circ);
+  tt_int_op(edgeconn->stream_id, OP_NE, 0); /* 0 is failure */
+
+  /* Insert an opened stream on the circ with that id */
+  ENTRY_TO_CONN(entryconn)->marked_for_close = 0;
+  ENTRY_TO_CONN(entryconn)->outbuf_flushlen = 0;
+  edgeconn->base_.state = AP_CONN_STATE_CONNECT_WAIT;
+  circ->p_streams = edgeconn;
+
+  /* Verify that get_unique_stream_id_by_circ() fails */
+  tt_int_op(get_unique_stream_id_by_circ(circ), OP_EQ, 0); /* 0 is failure */
+
+  /* eof the one opened stream. Verify it is now in half-closed */
+  tt_int_op(smartlist_len(circ->half_streams), OP_EQ, 65534);
+  connection_edge_reached_eof(edgeconn);
+  tt_int_op(smartlist_len(circ->half_streams), OP_EQ, 65535);
+
+  /* Verify get_unique_stream_id_by_circ() fails due to full half-closed */
+  circ->p_streams = NULL;
+  tt_int_op(get_unique_stream_id_by_circ(circ), OP_EQ, 0); /* 0 is failure */
+
+ done:
+  circuit_free_(TO_CIRCUIT(circ));
+  connection_free_minimal(ENTRY_TO_CONN(entryconn));
+  UNMOCK(connection_mark_for_close_internal_);
+}
+
+static void
 test_circbw_relay(void *arg)
 {
   cell_t cell;
@@ -992,6 +1051,7 @@ struct testcase_t relaycell_tests[] = {
   { "resolved", test_relaycell_resolved, TT_FORK, NULL, NULL },
   { "circbw", test_circbw_relay, TT_FORK, NULL, NULL },
   { "halfstream", test_halfstream_insertremove, TT_FORK, NULL, NULL },
+  { "streamwrap", test_halfstream_wrap, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 

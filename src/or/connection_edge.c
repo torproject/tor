@@ -2813,6 +2813,11 @@ get_unique_stream_id_by_circ(origin_circuit_t *circ)
   for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
     if (tmpconn->stream_id == test_stream_id)
       goto again;
+
+  if (connection_half_edge_find_stream_id(circ->half_streams,
+                                           test_stream_id))
+    goto again;
+
   return test_stream_id;
 }
 
