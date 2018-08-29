@@ -20,6 +20,7 @@ void pathbias_count_build_success(origin_circuit_t *circ);
 int pathbias_count_build_attempt(origin_circuit_t *circ);
 int pathbias_check_close(origin_circuit_t *circ, int reason);
 int pathbias_check_probe_response(circuit_t *circ, const cell_t *cell);
+void pathbias_count_valid_cells(circuit_t *circ, const cell_t *cell);
 void pathbias_count_use_attempt(origin_circuit_t *circ);
 void pathbias_mark_use_success(origin_circuit_t *circ);
 void pathbias_mark_use_rollback(origin_circuit_t *circ);
