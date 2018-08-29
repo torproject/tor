@@ -182,6 +182,7 @@ noinst_HEADERS +=					\
 	src/core/or/destroy_cell_queue_st.h		\
 	src/core/or/dos.h				\
 	src/core/or/edge_connection_st.h		\
+	src/core/or/half_edge_st.h		\
 	src/core/or/entry_connection_st.h		\
 	src/core/or/entry_port_cfg_st.h			\
 	src/core/or/extend_info_st.h			\
