@@ -27,8 +27,12 @@ struct routerinfo_t {
   tor_addr_t ipv6_addr;
   uint16_t ipv6_orport;
 
-  /* Public RSA key for onions in ASN.1 encoded. */
+  /**
+   * Public RSA TAP key for onions, ASN.1 encoded.  We store this
+   * in its encoded format since storing it as a crypto_pk_t uses
+   * significantly more memory. */
   char *onion_pkey;
+  /** Length of onion_pkey, in bytes. */
   size_t onion_pkey_len;
 
   crypto_pk_t *identity_pkey;  /**< Public RSA key for signing. */
