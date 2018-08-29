@@ -98,6 +98,12 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
   char *k, *v;
   const char *parse_err;
   int include_used = 0;
+  size_t stringlen = strlen(string);
+
+  if (!string_is_utf8(string, stringlen)) {
+    log_warn(LD_CONFIG, "Error while parsing configuration: not valid UTF-8.");
+    return -1;
+  }
 
   if (recursion_level > MAX_INCLUDE_RECURSION_LEVEL) {
     log_warn(LD_CONFIG, "Error while parsing configuration: more than %d "

@@ -5813,6 +5813,28 @@ test_config_extended_fmt(void *arg)
   config_free_lines(lines);
 }
 
+static void
+test_config_unicode(void *arg)
+{
+  (void)arg;
+  config_line_t *lines = NULL;
+  const char utf8[] =
+    "ContactInfo Risqu\u00e9\n";
+  const char notutf8[] =
+    "ContactInfo \x80\n";
+  int r;
+
+  r = config_get_lines(utf8, &lines, 0);
+  tt_int_op(r, OP_EQ, 0);
+  config_free_lines(lines);
+
+  r = config_get_lines(notutf8, &lines, 0);
+  tt_int_op(r, OP_EQ, -1);
+
+ done:
+  config_free_lines(lines);
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -5864,5 +5886,6 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(include_opened_file_list, 0),
   CONFIG_TEST(compute_max_mem_in_queues, 0),
   CONFIG_TEST(extended_fmt, 0),
+  CONFIG_TEST(unicode, 0),
   END_OF_TESTCASES
 };

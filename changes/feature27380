@@ -1,0 +1,3 @@
+  o Minor feature (torrc):
+    - Tor now validates that the configuration file is valid UTF-8 before
+      parsing. Closes ticket 27380.
