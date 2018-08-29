@@ -611,15 +611,14 @@ test_bridges_node_is_a_configured_bridge(void *arg)
 
   helper_add_bridges_to_bridgelist(arg);
 
-  node_t null_node;
-  memset(&null_node, 0, sizeof(null_node));
-  tt_assert(!node_is_a_configured_bridge(&null_node));
-
   node_t node_with_digest;
   memset(&node_with_digest, 0, sizeof(node_with_digest));
 
   const char fingerprint[HEX_DIGEST_LEN] =
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+  const char fingerprint2[HEX_DIGEST_LEN] =
+    "ffffffffffffffffffffffffffffffffffffffff";
 
   base16_decode(node_with_digest.identity, DIGEST_LEN,
                 fingerprint, HEX_DIGEST_LEN);
@@ -627,24 +626,33 @@ test_bridges_node_is_a_configured_bridge(void *arg)
   tt_assert(node_is_a_configured_bridge(&node_with_digest));
 
   node_t node_ri_ipv4 = { .ri = &ri_ipv4 };
+  base16_decode(node_ri_ipv4.identity, DIGEST_LEN,
+                fingerprint2, HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_ri_ipv4));
 
   node_t node_rs_ipv4 = { .rs = &rs_ipv4 };
+  base16_decode(node_rs_ipv4.identity, DIGEST_LEN,
+                fingerprint2, HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_rs_ipv4));
 
   node_t node_ri_ipv6 = { .ri = &ri_ipv6 };
+  base16_decode(node_ri_ipv6.identity, DIGEST_LEN,
+                fingerprint2, HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_ri_ipv6));
 
   node_t node_rs_ipv6 = { .rs = &rs_ipv6 };
+  base16_decode(node_rs_ipv6.identity, DIGEST_LEN,
+                fingerprint2, HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_rs_ipv6));
 
   node_t node_md_ipv6 = { .md = &md_ipv6 };
+  base16_decode(node_md_ipv6.identity, DIGEST_LEN,
+                fingerprint2, HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_md_ipv6));
 
   mark_bridge_list();
   sweep_bridge_list();
 
-  tt_assert(!node_is_a_configured_bridge(&null_node));
   tt_assert(!node_is_a_configured_bridge(&node_with_digest));
   tt_assert(!node_is_a_configured_bridge(&node_ri_ipv4));
   tt_assert(!node_is_a_configured_bridge(&node_ri_ipv6));
