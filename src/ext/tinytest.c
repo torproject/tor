@@ -120,8 +120,10 @@ testcase_run_bare_(const struct testcase_t *testcase)
 #ifndef NO_FORKING
 
 #ifdef TINYTEST_POSTFORK
+void tinytest_prefork(void);
 void tinytest_postfork(void);
 #else
+static void tinytest_prefork(void) { }
 static void tinytest_postfork(void) { }
 #endif
 
@@ -185,16 +187,17 @@ testcase_run_forked_(const struct testgroup_t *group,
 
 	if (opt_verbosity>0)
 		printf("[forking] ");
+	tinytest_prefork();
 	pid = fork();
 #ifdef FORK_BREAKS_GCOV
 	vproc_transaction_begin(0);
 #endif
+	tinytest_postfork();
 	if (!pid) {
 		/* child. */
 		int test_r, write_r;
 		char b[1];
 		close(outcome_pipe[0]);
-		tinytest_postfork();
 		test_r = testcase_run_bare_(testcase);
 		assert(0<=(int)test_r && (int)test_r<=2);
 		b[0] = "NYS"[test_r];

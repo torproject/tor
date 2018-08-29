@@ -58,7 +58,7 @@ crypto_early_init(void)
     crypto_openssl_early_init();
 #endif
 #ifdef ENABLE_NSS
-    crypto_nss_early_init();
+    crypto_nss_early_init(0);
 #endif
 
     if (crypto_seed_rng() < 0)
@@ -132,6 +132,16 @@ crypto_global_cleanup(void)
   siphash_unset_global_key();
 
   return 0;
+}
+
+/** Run operations that the crypto library requires to be happy again
+ * after forking. */
+void
+crypto_prefork(void)
+{
+#ifdef ENABLE_NSS
+  crypto_nss_prefork();
+#endif
 }
 
 /** Run operations that the crypto library requires to be happy again

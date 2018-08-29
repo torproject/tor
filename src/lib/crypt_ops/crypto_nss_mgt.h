@@ -22,11 +22,12 @@ const char *crypto_nss_get_header_version_str(void);
 
 void crypto_nss_log_errors(int severity, const char *doing);
 
-void crypto_nss_early_init(void);
+void crypto_nss_early_init(int nss_only);
 int crypto_nss_late_init(void);
 
 void crypto_nss_global_cleanup(void);
 
+void crypto_nss_prefork(void);
 void crypto_nss_postfork(void);
 #endif
 

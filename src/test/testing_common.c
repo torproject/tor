@@ -223,11 +223,17 @@ an_assertion_failed(void)
   tinytest_set_test_failed_();
 }
 
+void tinytest_prefork(void);
 void tinytest_postfork(void);
+void
+tinytest_prefork(void)
+{
+  free_pregenerated_keys();
+  crypto_prefork();
+}
 void
 tinytest_postfork(void)
 {
-  free_pregenerated_keys();
   crypto_postfork();
   init_pregenerated_keys();
 }

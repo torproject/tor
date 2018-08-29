@@ -50,10 +50,12 @@ nss_password_func_always_fail(PK11SlotInfo *slot,
 }
 
 void
-crypto_nss_early_init(void)
+crypto_nss_early_init(int nss_only)
 {
-  PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
-  PK11_SetPasswordFunc(nss_password_func_always_fail);
+  if (! nss_only) {
+    PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
+    PK11_SetPasswordFunc(nss_password_func_always_fail);
+  }
 
   /* Eventually we should use NSS_Init() instead -- but that wants a
      directory. The documentation says that we can't use this if we want
@@ -113,11 +115,18 @@ void
 crypto_nss_global_cleanup(void)
 {
   NSS_Shutdown();
+  PL_ArenaFinish();
+  PR_Cleanup();
+}
+
+void
+crypto_nss_prefork(void)
+{
+  NSS_Shutdown();
 }
 
 void
 crypto_nss_postfork(void)
 {
-  crypto_nss_global_cleanup();
-  crypto_nss_early_init();
+  crypto_nss_early_init(1);
 }

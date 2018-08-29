@@ -24,6 +24,7 @@ int crypto_global_init(int hardwareAccel,
 
 void crypto_thread_cleanup(void);
 int crypto_global_cleanup(void);
+void crypto_prefork(void);
 void crypto_postfork(void);
 
 const char *crypto_get_library_name(void);
