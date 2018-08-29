@@ -2102,6 +2102,7 @@ test_dir_handle_get_status_vote_d(void* data)
 
     clear_dir_servers();
     dirvote_free_all();
+    routerlist_free_all();
 }
 
 static void
@@ -2638,4 +2639,3 @@ struct testcase_t dir_handle_get_tests[] = {
   DIR_HANDLE_CMD(parse_accept_encoding, 0),
   END_OF_TESTCASES
 };
-
