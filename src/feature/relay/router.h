@@ -45,6 +45,10 @@ void v3_authority_check_key_expiry(void);
 int get_onion_key_lifetime(void);
 int get_onion_key_grace_period(void);
 
+crypto_pk_t *router_get_rsa_onion_pkey(const char *pkey, size_t pkey_len);
+void router_set_rsa_onion_pkey(const crypto_pk_t *pk, char **onion_pkey_out,
+                               size_t *onion_pkey_len);
+
 di_digest256_map_t *construct_ntor_key_map(void);
 void ntor_key_map_free_(di_digest256_map_t *map);
 #define ntor_key_map_free(map) \

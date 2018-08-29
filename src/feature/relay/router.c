@@ -1464,6 +1464,8 @@ router_should_advertise_begindir(const or_options_t *options,
 static extend_info_t *
 extend_info_from_router(const routerinfo_t *r)
 {
+  crypto_pk_t *rsa_pubkey;
+  extend_info_t *info;
   tor_addr_port_t ap;
   tor_assert(r);
 
@@ -1477,10 +1479,13 @@ extend_info_from_router(const routerinfo_t *r)
     ed_id_key = NULL;
 
   router_get_prim_orport(r, &ap);
-  return extend_info_new(r->nickname, r->cache_info.identity_digest,
+  rsa_pubkey = router_get_rsa_onion_pkey(r->onion_pkey, r->onion_pkey_len);
+  info = extend_info_new(r->nickname, r->cache_info.identity_digest,
                          ed_id_key,
-                         r->onion_pkey, r->onion_curve25519_pkey,
+                         rsa_pubkey, r->onion_curve25519_pkey,
                          &ap.addr, ap.port);
+  crypto_pk_free(rsa_pubkey);
+  return info;
 }
 
 /**See if we currently believe our ORPort or DirPort to be
@@ -2313,8 +2318,10 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   ri->supports_tunnelled_dir_requests =
     directory_permits_begindir_requests(options);
   ri->cache_info.published_on = time(NULL);
-  ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from
-                                                        * main thread */
+  /* get_onion_key() must invoke from main thread */
+  router_set_rsa_onion_pkey(get_onion_key(), &ri->onion_pkey,
+                            &ri->onion_pkey_len);
+
   ri->onion_curve25519_pkey =
     tor_memdup(&get_current_curve25519_keypair()->pubkey,
                sizeof(curve25519_public_key_t));
@@ -2849,6 +2856,7 @@ router_dump_router_to_string(routerinfo_t *router,
 {
   char *address = NULL;
   char *onion_pkey = NULL; /* Onion key, PEM-encoded. */
+  crypto_pk_t *rsa_pubkey = NULL;
   char *identity_pkey = NULL; /* Identity key, PEM-encoded. */
   char digest[DIGEST256_LEN];
   char published[ISO_TIME_LEN+1];
@@ -2915,7 +2923,9 @@ router_dump_router_to_string(routerinfo_t *router,
   }
 
   /* PEM-encode the onion key */
-  if (crypto_pk_write_public_key_to_string(router->onion_pkey,
+  rsa_pubkey = router_get_rsa_onion_pkey(router->onion_pkey,
+                                         router->onion_pkey_len);
+  if (crypto_pk_write_public_key_to_string(rsa_pubkey,
                                            &onion_pkey,&onion_pkeylen)<0) {
     log_warn(LD_BUG,"write onion_pkey to string failed!");
     goto err;
@@ -3200,6 +3210,7 @@ router_dump_router_to_string(routerinfo_t *router,
     SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
     smartlist_free(chunks);
   }
+  crypto_pk_free(rsa_pubkey);
   tor_free(address);
   tor_free(family_line);
   tor_free(onion_pkey);
@@ -3826,4 +3837,43 @@ router_get_all_orports(const routerinfo_t *ri)
    */
   fake_node.ri = (routerinfo_t *)ri;
   return node_get_all_orports(&fake_node);
+}
+
+/* From the given RSA key object, convert it to ASN-1 encoded format and set
+ * the newly allocated object in onion_pkey_out. The length of the key is set
+ * in onion_pkey_len_out. */
+void
+router_set_rsa_onion_pkey(const crypto_pk_t *pk, char **onion_pkey_out,
+                          size_t *onion_pkey_len_out)
+{
+  int len;
+  char buf[1024];
+
+  tor_assert(pk);
+  tor_assert(onion_pkey_out);
+  tor_assert(onion_pkey_len_out);
+
+  len = crypto_pk_asn1_encode(pk, buf, sizeof(buf));
+  if (BUG(len < 0)) {
+    goto done;
+  }
+
+  *onion_pkey_out = tor_memdup(buf, len);
+  *onion_pkey_len_out = len;
+
+ done:
+  return;
+}
+
+/* From an ASN-1 encoded onion pkey, return a newly allocated RSA key object.
+ * It is the caller responsability to free the returned object.
+ *
+ * Return NULL if the pkey is NULL, malformed or if the length is 0. */
+crypto_pk_t *
+router_get_rsa_onion_pkey(const char *pkey, size_t pkey_len)
+{
+  if (!pkey || pkey_len == 0) {
+    return NULL;
+  }
+  return crypto_pk_asn1_decode(pkey, pkey_len);
 }

@@ -53,8 +53,10 @@ struct microdesc_t {
 
   /* Fields in the microdescriptor. */
 
-  /** As routerinfo_t.onion_pkey */
-  crypto_pk_t *onion_pkey;
+  /* Public RSA key for onions in ASN.1 encoded. */
+  char *onion_pkey;
+  size_t onion_pkey_len;
+
   /** As routerinfo_t.onion_curve25519_pkey */
   struct curve25519_public_key_t *onion_curve25519_pkey;
   /** Ed25519 identity key, if included. */
