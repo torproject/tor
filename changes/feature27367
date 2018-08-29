@@ -1,0 +1,4 @@
+  o Minor features (parsing):
+    - Directory authorities now validate that router descriptors and ExtraInfo
+      documents are in a valid subset of UTF-8, and reject them if not.
+      Closes ticket 27367.

@@ -1608,8 +1608,8 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
     const char *msg = "[None]";
     uint8_t purpose = authdir_mode_bridge(options) ?
                       ROUTER_PURPOSE_BRIDGE : ROUTER_PURPOSE_GENERAL;
-    was_router_added_t r = dirserv_add_multiple_descriptors(body, purpose,
-                                             conn->base_.address, &msg);
+    was_router_added_t r = dirserv_add_multiple_descriptors(body, body_len,
+                                           purpose, conn->base_.address, &msg);
     tor_assert(msg);
 
     if (r == ROUTER_ADDED_SUCCESSFULLY) {
