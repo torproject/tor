@@ -1718,7 +1718,8 @@ router_parse_entry_from_string(const char *s, const char *end,
              "Relay's onion key had invalid exponent.");
     goto err;
   }
-  routerinfo_set_onion_pkey(router, tok->key);
+  router_set_rsa_onion_pkey(tok->key, &router->onion_pkey,
+                            &router->onion_pkey_len);
   crypto_pk_free(tok->key);
 
   if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {
@@ -1891,7 +1892,8 @@ router_parse_entry_from_string(const char *s, const char *end,
         goto err;
       }
 
-      rsa_pubkey = routerinfo_get_rsa_onion_pkey(router);
+      rsa_pubkey = router_get_rsa_onion_pkey(router->onion_pkey,
+                                             router->onion_pkey_len);
       if (check_tap_onion_key_crosscert(
                       (const uint8_t*)cc_tap_tok->object_body,
                       (int)cc_tap_tok->object_size,
@@ -4755,7 +4757,8 @@ microdescs_parse_from_string(const char *s, const char *eos,
                "Relay's onion key had invalid exponent.");
       goto next;
     }
-    microdesc_set_rsa_onion_pkey(md, tok->key);
+    router_set_rsa_onion_pkey(tok->key, &md->onion_pkey,
+                              &md->onion_pkey_len);
     crypto_pk_free(tok->key);
 
     if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {

@@ -1769,19 +1769,24 @@ crypto_pk_t *
 node_get_rsa_onion_key(const node_t *node)
 {
   crypto_pk_t *pk = NULL;
+  const char *onion_pkey;
+  size_t onion_pkey_len;
 
   if (!node) {
     goto end;
   }
 
   if (node->ri) {
-    pk = routerinfo_get_rsa_onion_pkey(node->ri);
+    onion_pkey = node->ri->onion_pkey;
+    onion_pkey_len = node->ri->onion_pkey_len;
   } else if (node->rs && node->md) {
-    pk = microdesc_get_rsa_onion_pkey(node->md);
+    onion_pkey = node->md->onion_pkey;
+    onion_pkey_len = node->md->onion_pkey_len;
   } else {
     /* No descriptor or microdescriptor. */
     goto end;
   }
+  pk = router_get_rsa_onion_pkey(onion_pkey, onion_pkey_len);
 
  end:
   return pk;

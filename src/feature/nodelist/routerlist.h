@@ -297,8 +297,6 @@ int routerinfo_incompatible_with_extrainfo(const crypto_pk_t *ri,
                                            signed_descriptor_t *sd,
                                            const char **msg);
 int routerinfo_has_curve25519_onion_key(const routerinfo_t *ri);
-crypto_pk_t *routerinfo_get_rsa_onion_pkey(const routerinfo_t *ri);
-void routerinfo_set_onion_pkey(routerinfo_t *ri, const crypto_pk_t *pk);
 int routerstatus_version_supports_extend2_cells(const routerstatus_t *rs,
                                                 int allow_unknown_versions);
 
