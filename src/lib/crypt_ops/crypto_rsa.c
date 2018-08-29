@@ -398,29 +398,43 @@ crypto_pk_get_common_digests(crypto_pk_t *pk, common_digests_t *digests_out)
 static const char RSA_PUBLIC_TAG[] = "RSA PUBLIC KEY";
 static const char RSA_PRIVATE_TAG[] = "RSA PRIVATE KEY";
 
-/** PEM-encode the public key portion of <b>env</b> and write it to a
- * newly allocated string.  On success, set *<b>dest</b> to the new
- * string, *<b>len</b> to the string's length, and return 0.  On
- * failure, return -1.
+/* These are overestimates for how many extra bytes we might need to encode
+ * a key in DER */
+#define PRIVATE_ASN_MAX_OVERHEAD_FACTOR 16
+#define PUBLIC_ASN_MAX_OVERHEAD_FACTOR 3
+
+/** Helper: PEM-encode <b>env</b> and write it to a newly allocated string.
+ * If <b>private_key</b>, write the private part of <b>env</b>; otherwise
+ * write only the public portion. On success, set *<b>dest</b> to the new
+ * string, *<b>len</b> to the string's length, and return 0.  On failure,
+ * return -1.
  */
-int
-crypto_pk_write_public_key_to_string(crypto_pk_t *env,
-                                     char **dest, size_t *len)
+static int
+crypto_pk_write_to_string_generic(crypto_pk_t *env,
+                                  char **dest, size_t *len,
+                                  bool private_key)
 {
-  size_t buflen = crypto_pk_keysize(env) * 3;
+  const int factor =
+    private_key ? PRIVATE_ASN_MAX_OVERHEAD_FACTOR
+                : PUBLIC_ASN_MAX_OVERHEAD_FACTOR;
+  size_t buflen = crypto_pk_keysize(env) * factor;
+  const char *tag =
+    private_key ? RSA_PRIVATE_TAG : RSA_PUBLIC_TAG;
   char *buf = tor_malloc(buflen);
   char *result = NULL;
   size_t resultlen = 0;
   int rv = -1;
 
-  int n = crypto_pk_asn1_encode(env, buf, buflen);
+  int n = private_key
+    ? crypto_pk_asn1_encode_private(env, buf, buflen)
+    : crypto_pk_asn1_encode(env, buf, buflen);
   if (n < 0)
     goto done;
 
-  resultlen = pem_encoded_size(n, RSA_PUBLIC_TAG);
+  resultlen = pem_encoded_size(n, tag);
   result = tor_malloc(resultlen);
   if (pem_encode(result, resultlen,
-                 (const unsigned char *)buf, n, RSA_PUBLIC_TAG) < 0) {
+                 (const unsigned char *)buf, n, tag) < 0) {
     goto done;
   }
 
@@ -436,6 +450,18 @@ crypto_pk_write_public_key_to_string(crypto_pk_t *env,
   memwipe(buf, 0, buflen);
   tor_free(buf);
   return rv;
+}
+
+/** PEM-encode the public key portion of <b>env</b> and write it to a
+ * newly allocated string.  On success, set *<b>dest</b> to the new
+ * string, *<b>len</b> to the string's length, and return 0.  On
+ * failure, return -1.
+ */
+int
+crypto_pk_write_public_key_to_string(crypto_pk_t *env,
+                                     char **dest, size_t *len)
+{
+  return crypto_pk_write_to_string_generic(env, dest, len, false);
 }
 
 /** PEM-encode the private key portion of <b>env</b> and write it to a
@@ -447,30 +473,46 @@ int
 crypto_pk_write_private_key_to_string(crypto_pk_t *env,
                                           char **dest, size_t *len)
 {
-  size_t buflen = crypto_pk_keysize(env) * 16;
-  char *buf = tor_malloc(buflen);
-  char *result = NULL;
-  size_t resultlen = 0;
+  return crypto_pk_write_to_string_generic(env, dest, len, true);
+}
+
+/**
+ * Helper. Read a PEM-encoded RSA from the first <b>len</b> characters of
+ * <b>src</b>, and store the result in <b>env</b>.  If <b>private_key</b>,
+ * expect a private key; otherwise expect a public key. Return 0 on success,
+ * -1 on failure.  If len is -1, the string is nul-terminated.
+ */
+static int
+crypto_pk_read_from_string_generic(crypto_pk_t *env, const char *src,
+                                   size_t len, bool private_key)
+{
+  if (len == (size_t)-1) // "-1" indicates "use the length of the string."
+    len = strlen(src);
+
+  const char *tag =
+    private_key ? RSA_PRIVATE_TAG : RSA_PUBLIC_TAG;
+  size_t buflen = len;
+  uint8_t *buf = tor_malloc(buflen);
   int rv = -1;
 
-  int n = crypto_pk_asn1_encode_private(env, buf, buflen);
+  int n = pem_decode(buf, buflen, src, len, tag);
   if (n < 0)
     goto done;
 
-  resultlen = pem_encoded_size(n, RSA_PRIVATE_TAG);
-  result = tor_malloc(resultlen);
-  if (pem_encode(result, resultlen,
-                 (const unsigned char *)buf, n, RSA_PRIVATE_TAG) < 0)
+  crypto_pk_t *pk = private_key
+    ? crypto_pk_asn1_decode_private((const char*)buf, n)
+    : crypto_pk_asn1_decode((const char*)buf, n);
+  if (! pk)
     goto done;
 
-  *dest = result;
-  *len = resultlen;
+  if (private_key)
+    crypto_pk_assign_private(env, pk);
+  else
+    crypto_pk_assign_public(env, pk);
+  crypto_pk_free(pk);
   rv = 0;
+
  done:
-  if (rv < 0 && result) {
-    memwipe(result, 0, resultlen);
-    tor_free(result);
-  }
   memwipe(buf, 0, buflen);
   tor_free(buf);
   return rv;
@@ -478,69 +520,24 @@ crypto_pk_write_private_key_to_string(crypto_pk_t *env,
 
 /** Read a PEM-encoded public key from the first <b>len</b> characters of
  * <b>src</b>, and store the result in <b>env</b>.  Return 0 on success, -1 on
- * failure.
+ * failure.  If len is -1, the string is nul-terminated.
  */
 int
 crypto_pk_read_public_key_from_string(crypto_pk_t *env,
                                       const char *src, size_t len)
 {
-  if (len == (size_t)-1)
-    len = strlen(src);
-
-  size_t buflen = len;
-  uint8_t *buf = tor_malloc(buflen);
-  int rv = -1;
-
-  int n = pem_decode(buf, buflen, src, len, RSA_PUBLIC_TAG);
-  if (n < 0)
-    goto done;
-
-  crypto_pk_t *pk = crypto_pk_asn1_decode((const char*)buf, n);
-  if (! pk)
-    goto done;
-
-  crypto_pk_assign_public(env, pk);
-  crypto_pk_free(pk);
-  rv = 0;
-
- done:
-  memwipe(buf, 0, buflen);
-  tor_free(buf);
-  return rv;
+  return crypto_pk_read_from_string_generic(env, src, len, false);
 }
 
-/** Read a PEM-encoded private key from the <b>len</b>-byte string <b>s</b>
+/** Read a PEM-encoded private key from the <b>len</b>-byte string <b>src</b>
  * into <b>env</b>.  Return 0 on success, -1 on failure.  If len is -1,
  * the string is nul-terminated.
  */
 int
 crypto_pk_read_private_key_from_string(crypto_pk_t *env,
-                                       const char *s, ssize_t len)
+                                       const char *src, ssize_t len)
 {
-  if (len == -1)
-    len = strlen(s);
-
-  size_t buflen = len;
-  uint8_t *buf = tor_malloc(buflen);
-  int rv = -1;
-
-  int n = pem_decode(buf, buflen, s, len, RSA_PRIVATE_TAG);
-  if (n < 0) {
-    goto done;
-  }
-
-  crypto_pk_t *pk = crypto_pk_asn1_decode_private((const char *)buf, n);
-  if (! pk)
-    goto done;
-
-  crypto_pk_assign_private(env, pk);
-  crypto_pk_free(pk);
-  rv = 0;
-
- done:
-  memwipe(buf, 0, buflen);
-  tor_free(buf);
-  return rv;
+  return crypto_pk_read_from_string_generic(env, src, len, true);
 }
 
 /** Read a PEM-encoded private key from the file named by
