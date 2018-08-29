@@ -2776,6 +2776,8 @@ extend_info_new(const char *nickname,
 extend_info_t *
 extend_info_from_node(const node_t *node, int for_direct_connect)
 {
+  crypto_pk_t *rsa_pubkey = NULL;
+  extend_info_t *info = NULL;
   tor_addr_port_t ap;
   int valid_addr = 0;
 
@@ -2823,25 +2825,28 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
   /* Retrieve the curve25519 pubkey. */
   const curve25519_public_key_t *curve_pubkey =
     node_get_curve25519_onion_key(node);
+  rsa_pubkey = node_get_rsa_onion_key(node);
 
-  if (valid_addr && node->ri)
-    return extend_info_new(node->ri->nickname,
+  if (valid_addr && node->ri) {
+    info = extend_info_new(node->ri->nickname,
                            node->identity,
                            ed_pubkey,
-                           node->ri->onion_pkey,
+                           rsa_pubkey,
                            curve_pubkey,
                            &ap.addr,
                            ap.port);
-  else if (valid_addr && node->rs && node->md)
-    return extend_info_new(node->rs->nickname,
+  } else if (valid_addr && node->rs && node->md) {
+    info = extend_info_new(node->rs->nickname,
                            node->identity,
                            ed_pubkey,
-                           node->md->onion_pkey,
+                           rsa_pubkey,
                            curve_pubkey,
                            &ap.addr,
                            ap.port);
-  else
-    return NULL;
+  }
+
+  crypto_pk_free(rsa_pubkey);
+  return info;
 }
 
 /** Release storage held by an extend_info_t struct. */

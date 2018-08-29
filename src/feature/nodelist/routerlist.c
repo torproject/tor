@@ -3217,7 +3217,7 @@ routerinfo_free_(routerinfo_t *router)
   tor_free(router->protocol_list);
   tor_free(router->contact_info);
   if (router->onion_pkey)
-    crypto_pk_free(router->onion_pkey);
+    tor_free(router->onion_pkey);
   tor_free(router->onion_curve25519_pkey);
   if (router->identity_pkey)
     crypto_pk_free(router->identity_pkey);
@@ -5498,7 +5498,8 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
       r1->ipv6_orport != r2->ipv6_orport ||
       r1->dir_port != r2->dir_port ||
       r1->purpose != r2->purpose ||
-      !crypto_pk_eq_keys(r1->onion_pkey, r2->onion_pkey) ||
+      r1->onion_pkey_len != r2->onion_pkey_len ||
+      !tor_memeq(r1->onion_pkey, r2->onion_pkey, r1->onion_pkey_len) ||
       !crypto_pk_eq_keys(r1->identity_pkey, r2->identity_pkey) ||
       strcasecmp(r1->platform, r2->platform) ||
       (r1->contact_info && !r2->contact_info) || /* contact_info is optional */

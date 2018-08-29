@@ -1535,6 +1535,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   /* Do not set this to '1' until we have parsed everything that we intend to
    * parse that's covered by the hash. */
   int can_dl_again = 0;
+  crypto_pk_t *rsa_pubkey = NULL;
 
   tor_assert(!allow_annotations || !prepend_annotations);
 
@@ -1717,8 +1718,9 @@ router_parse_entry_from_string(const char *s, const char *end,
              "Relay's onion key had invalid exponent.");
     goto err;
   }
-  router->onion_pkey = tok->key;
-  tok->key = NULL; /* Prevent free */
+  router_set_rsa_onion_pkey(tok->key, &router->onion_pkey,
+                            &router->onion_pkey_len);
+  crypto_pk_free(tok->key);
 
   if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {
     curve25519_public_key_t k;
@@ -1890,10 +1892,12 @@ router_parse_entry_from_string(const char *s, const char *end,
         goto err;
       }
 
+      rsa_pubkey = router_get_rsa_onion_pkey(router->onion_pkey,
+                                             router->onion_pkey_len);
       if (check_tap_onion_key_crosscert(
                       (const uint8_t*)cc_tap_tok->object_body,
                       (int)cc_tap_tok->object_size,
-                      router->onion_pkey,
+                      rsa_pubkey,
                       &cert->signing_key,
                       (const uint8_t*)router->cache_info.identity_digest)<0) {
         log_warn(LD_DIR, "Incorrect TAP cross-verification");
@@ -2058,6 +2062,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   routerinfo_free(router);
   router = NULL;
  done:
+  crypto_pk_free(rsa_pubkey);
   tor_cert_free(ntor_cc_cert);
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
@@ -4752,8 +4757,9 @@ microdescs_parse_from_string(const char *s, const char *eos,
                "Relay's onion key had invalid exponent.");
       goto next;
     }
-    md->onion_pkey = tok->key;
-    tok->key = NULL;
+    router_set_rsa_onion_pkey(tok->key, &md->onion_pkey,
+                              &md->onion_pkey_len);
+    crypto_pk_free(tok->key);
 
     if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {
       curve25519_public_key_t k;
