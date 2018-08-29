@@ -683,6 +683,9 @@ crypto_pk_asn1_decode_private(const char *str, size_t len)
 {
   tor_assert(str);
   tor_assert(len < INT_MAX);
+  PK11SlotInfo *slot = PK11_GetBestSlot(CKM_RSA_PKCS, NULL);
+  if (!slot)
+    return NULL;
 
   SECKEYPrivateKeyInfo info = {
              .algorithm = {
@@ -699,7 +702,6 @@ crypto_pk_asn1_decode_private(const char *str, size_t len)
                             }
   };
 
-  PK11SlotInfo *slot = PK11_GetBestSlot(CKM_RSA_PKCS, NULL);
   SECStatus s;
   SECKEYPrivateKey *seckey = NULL;
 
@@ -721,6 +723,9 @@ crypto_pk_asn1_decode_private(const char *str, size_t len)
   } else {
     crypto_nss_log_errors(LOG_WARN, "decoding an RSA private key");
   }
+
+  if (slot)
+    PK11_FreeSlot(slot);
 
   return output;
 }
