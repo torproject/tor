@@ -10,6 +10,7 @@
 #include "config.h"
 #include "connection.h"
 #include "crypto.h"
+#include "crypto_rand.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "connection_edge.h"
@@ -467,19 +468,16 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
 
 static int
 halfstream_insert(origin_circuit_t *circ, edge_connection_t *edgeconn,
-                  streamid_t *streams, int num, int seed)
+                  streamid_t *streams, int num, int random)
 {
   int inserted = 0;
-
-  /* Secure the randoms. */
-  srand(seed);
 
   /* Insert num random elements */
   while (inserted < num) {
     streamid_t id;
 
-    if (seed)
-      id = (streamid_t)rand(); // Meh truncate those high bits.
+    if (random)
+      id = (streamid_t)crypto_rand_int(65535)+1;
     else
       id = get_unique_stream_id_by_circ(circ);
 
@@ -500,7 +498,7 @@ halfstream_insert(origin_circuit_t *circ, edge_connection_t *edgeconn,
 }
 
 static void
-subtest_halfstream_insertremove(int num, int seed)
+subtest_halfstream_insertremove(int num)
 {
   origin_circuit_t *circ =
       helper_create_origin_circuit(CIRCUIT_PURPOSE_C_GENERAL, 0);
@@ -563,7 +561,7 @@ subtest_halfstream_insertremove(int num, int seed)
   tt_int_op(connection_half_edge_is_valid_end(circ->half_streams,
             23), OP_EQ, 0);
 
-  halfstream_insert(circ, edgeconn, streams, num, seed);
+  halfstream_insert(circ, edgeconn, streams, num, 1);
 
   /* Remove half of them */
   for (i = 0; i < num/2; i++) {
@@ -623,11 +621,10 @@ test_halfstream_insertremove(void *arg)
   /* Suppress the WARN message we generate in this test */
   setup_full_capture_of_logs(LOG_WARN);
 
-  /* Test insertion and removal with a few different sizes and
-   * magic seeds */
-  subtest_halfstream_insertremove(10, 5);
-  subtest_halfstream_insertremove(100, 23);
-  subtest_halfstream_insertremove(1000, 42);
+  /* Test insertion and removal with a few different sizes */
+  subtest_halfstream_insertremove(10);
+  subtest_halfstream_insertremove(100);
+  subtest_halfstream_insertremove(1000);
 }
 
 static void
