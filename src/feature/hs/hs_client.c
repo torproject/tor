@@ -1567,7 +1567,9 @@ hs_config_client_authorization(const or_options_t *options,
              filename);
 
     if (!auth_key_filename_is_valid(filename)) {
-      log_warn(LD_REND, "The filename is invalid.");
+      log_notice(LD_REND, "Client authorization unrecognized filename %s. "
+                          "File must end in .auth_private. Ignoring.",
+                 filename);
       continue;
     }
 
@@ -1579,7 +1581,7 @@ hs_config_client_authorization(const or_options_t *options,
 
     /* If we cannot read the file, continue with the next file. */
     if (!client_key_str) {
-      log_warn(LD_REND, "The file cannot be read.");
+      log_warn(LD_REND, "The file %s cannot be read.", filename);
       continue;
     }
 
@@ -1593,15 +1595,16 @@ hs_config_client_authorization(const or_options_t *options,
       if (hs_parse_address(auth->onion_address, &identity_pk,
                            NULL, NULL) < 0) {
         client_service_authorization_free(auth);
-        log_warn(LD_REND, "The onion address is invalid.");
+        log_warn(LD_REND, "The onion address \"%s\" is invalid in "
+                          "file %s", filename, auth->onion_address);
         continue;
       }
 
       if (digest256map_get(auths, identity_pk.pubkey)) {
         client_service_authorization_free(auth);
-
         log_warn(LD_REND, "Duplicate authorization for the same hidden "
-                          "service.");
+                          "service address %s.",
+                 safe_str_client(auth->onion_address));
         goto end;
       }
 
@@ -1609,7 +1612,6 @@ hs_config_client_authorization(const or_options_t *options,
       log_info(LD_REND, "Loaded a client authorization key file %s.",
                filename);
     }
-
   } SMARTLIST_FOREACH_END(filename);
 
   /* Success. */
