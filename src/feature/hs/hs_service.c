@@ -1141,7 +1141,7 @@ parse_authorized_client(const char *client_key_str)
                          SPLIT_SKIP_SPACE, 0);
   /* Wrong number of fields. */
   if (smartlist_len(fields) != 3) {
-    log_warn(LD_REND, "The file is in a wrong format.");
+    log_warn(LD_REND, "Unknown format of client authorization file.");
     goto err;
   }
 
@@ -1151,13 +1151,15 @@ parse_authorized_client(const char *client_key_str)
 
   /* Currently, the only supported auth type is "descriptor". */
   if (strcmp(auth_type, "descriptor")) {
-    log_warn(LD_REND, "The auth type '%s' is not supported.", auth_type);
+    log_warn(LD_REND, "Client authorization auth type '%s' not supported.",
+             auth_type);
     goto err;
   }
 
   /* Currently, the only supported key type is "x25519". */
   if (strcmp(key_type, "x25519")) {
-    log_warn(LD_REND, "The key type '%s' is not supported.", key_type);
+    log_warn(LD_REND, "Client authorization key type '%s' not supported.",
+             key_type);
     goto err;
   }
 
@@ -1175,7 +1177,8 @@ parse_authorized_client(const char *client_key_str)
   if (base32_decode((char *) client->client_pk.public_key,
                     sizeof(client->client_pk.public_key),
                     pubkey_b32, strlen(pubkey_b32)) < 0) {
-    log_warn(LD_REND, "The public key cannot be decoded.");
+    log_warn(LD_REND, "Client authorization public key cannot be decoded: %s",
+             pubkey_b32);
     goto err;
   }
 
@@ -1245,7 +1248,8 @@ load_client_keys(hs_service_t *service)
              filename);
 
     if (!client_filename_is_valid(filename)) {
-      log_warn(LD_REND, "The filename is invalid.");
+      log_warn(LD_REND, "Client authorization unrecognized filename %s. "
+                        "File must end in .auth. Ignoring.", filename);
       continue;
     }
 
@@ -1258,7 +1262,9 @@ load_client_keys(hs_service_t *service)
 
     /* If we cannot read the file, continue with the next file. */
     if (!client_key_str)  {
-      log_warn(LD_REND, "The file cannot be read.");
+      log_warn(LD_REND, "Client authorization file %s can't be read. "
+                        "Corrupted or verify permission? Ignoring.",
+               client_key_file_path);
       continue;
     }
 
