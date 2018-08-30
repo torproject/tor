@@ -1333,10 +1333,10 @@ find_start_of_next_router_or_extrainfo(const char **s_ptr,
 }
 
 /** Given a string *<b>s</b> containing a concatenated sequence of router
- * descriptors (or extra-info documents if <b>is_extrainfo</b> is set), parses
- * them and stores the result in <b>dest</b>.  All routers are marked running
- * and valid.  Advances *s to a point immediately following the last router
- * entry.  Ignore any trailing router entries that are not complete.
+ * descriptors (or extra-info documents if <b>want_extrainfo</b> is set),
+ * parses them and stores the result in <b>dest</b>. All routers are marked
+ * running and valid. Advances *s to a point immediately following the last
+ * router entry. Ignore any trailing router entries that are not complete.
  *
  * If <b>saved_location</b> isn't SAVED_IN_CACHE, make a local copy of each
  * descriptor in the signed_descriptor_body field of each routerinfo_t.  If it
