@@ -2857,7 +2857,7 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
     tor_assert(r->old_conn);
 
     connection_t *new_conn =
-     connection_listener_new_for_port(r->new_port, &skip, &addr_in_use);
+      connection_listener_new_for_port(r->new_port, &skip, &addr_in_use);
     connection_t *old_conn = r->old_conn;
 
     if (skip)
