@@ -2226,8 +2226,8 @@ load_downloaded_routers(const char *body, smartlist_t *which,
   added = router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
                                   descriptor_digests, buf);
   if (added && general)
-    control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
-                            count_loading_descriptors_progress());
+    control_event_boot_dir(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
+                           count_loading_descriptors_progress());
   return added;
 }
 
@@ -2949,8 +2949,8 @@ handle_response_fetch_microdesc(dir_connection_t *conn,
       dir_microdesc_download_failed(which, status_code, conn->identity_digest);
     }
     if (mds && smartlist_len(mds)) {
-      control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
-                              count_loading_descriptors_progress());
+      control_event_boot_dir(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
+                             count_loading_descriptors_progress());
       directory_info_has_arrived(now, 0, 1);
     }
     SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));

@@ -7178,6 +7178,45 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
   }
 }
 
+/** Flag whether we've opened an OR_CONN yet  */
+static int bootstrap_first_orconn = 0;
+
+/** Like bootstrap_phase, but for (possibly deferred) directory progress */
+static int bootstrap_dir_phase = BOOTSTRAP_STATUS_UNDEF;
+
+/** Like bootstrap_problems, but for (possibly deferred) directory progress  */
+static int bootstrap_dir_progress = BOOTSTRAP_STATUS_UNDEF;
+
+/** Defer directory info bootstrap events until we have successfully
+ * completed our first connection to a router.  */
+void
+control_event_boot_dir(bootstrap_status_t status, int progress)
+{
+  if (status > bootstrap_dir_progress) {
+    bootstrap_dir_progress = status;
+    bootstrap_dir_phase = status;
+  }
+  if (progress && progress >= bootstrap_dir_progress) {
+    bootstrap_dir_progress = progress;
+  }
+
+  /* Don't report unless we have successfully opened at least one OR_CONN */
+  if (!bootstrap_first_orconn)
+    return;
+
+  control_event_bootstrap(status, progress);
+}
+
+/** Set a flag to allow reporting of directory bootstrap progress.
+ * (Code that reports completion of an OR_CONN calls this.)  Also,
+ * report directory progress so far. */
+void
+control_event_boot_first_orconn(void)
+{
+  bootstrap_first_orconn = 1;
+  control_event_bootstrap(bootstrap_dir_phase, bootstrap_dir_progress);
+}
+
 /** Called when Tor has failed to make bootstrapping progress in a way
  * that indicates a problem. <b>warn</b> gives a human-readable hint
  * as to why, and <b>reason</b> provides a controller-facing short
