@@ -3489,6 +3489,15 @@ connection_handle_read(connection_t *conn)
   return res;
 }
 
+/** Flush bytes from <b>conn_send</b>'s outbuf to <b>conn_recv</b>'s inbuf. */
+static int
+flush_from_linked_conn(connection_t *conn_recv, connection_t *conn_send)
+{
+  int ret = buf_move_to_buf(conn_recv->inbuf, conn_send->outbuf,
+                            &conn_send->outbuf_flushlen);
+  return ret;
+}
+
 /** Pull in new bytes from conn-\>s or conn-\>linked_conn onto conn-\>inbuf,
  * either directly or via TLS. Reduce the token buckets by the number of bytes
  * read.
@@ -3601,8 +3610,7 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
               result, (long)n_read, (long)n_written);
   } else if (conn->linked) {
     if (conn->linked_conn) {
-      result = buf_move_to_buf(conn->inbuf, conn->linked_conn->outbuf,
-                               &conn->linked_conn->outbuf_flushlen);
+      result = flush_from_linked_conn(conn, conn->linked_conn);
     } else {
       result = 0;
     }
@@ -4081,8 +4089,7 @@ connection_flush_before_close(connection_t *conn)
   int retval;
 
   if (conn->linked_conn) {
-    retval = buf_move_to_buf(conn->linked_conn->inbuf, conn->outbuf,
-                             &conn->outbuf_flushlen);
+    retval = flush_from_linked_conn(conn->linked_conn, conn);
     log_debug(LD_GENERAL, "Flushed last %d bytes from a linked conn; "
              "%d left; flushlen %d; wants-to-flush==%d", retval,
               (int)connection_get_outbuf_len(conn),
