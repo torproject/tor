@@ -1002,8 +1002,6 @@ conn_close_if_marked(int i)
 
   if ((SOCKET_OK(conn->s) || conn->linked_conn) &&
       connection_wants_to_flush(conn)) {
-    /* s == -1 means it's an incomplete edge connection, or that the socket
-     * has already been closed as unflushable. */
     ssize_t sz = connection_bucket_write_limit(conn, now);
     if (!conn->hold_open_until_flushed)
       log_info(LD_NET,
