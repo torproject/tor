@@ -1,0 +1,6 @@
+  o Minor bugfixes (onion services):
+    - Make onion services upload descriptors at a random time between 2-3
+      hours. This helps reduce the load on our network when compare to the
+      previous range of 1-2 hours. Fixes bug 26769; bugfix on 0.3.5.1-alpha.
+      Patch by Neel Chauhan.
+

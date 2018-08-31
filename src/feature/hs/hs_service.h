@@ -28,8 +28,8 @@
 
 /* As described in the specification, service publishes their next descriptor
  * at a random time between those two values (in seconds). */
-#define HS_SERVICE_NEXT_UPLOAD_TIME_MIN (60 * 60)
-#define HS_SERVICE_NEXT_UPLOAD_TIME_MAX (120 * 60)
+#define HS_SERVICE_NEXT_UPLOAD_TIME_MIN (120 * 60)
+#define HS_SERVICE_NEXT_UPLOAD_TIME_MAX (180 * 60)
 
 /* Service side introduction point. */
 typedef struct hs_service_intro_point_t {
