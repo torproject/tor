@@ -7073,6 +7073,11 @@ bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
  * Tor initializes. */
 static int bootstrap_percent = BOOTSTRAP_STATUS_UNDEF;
 
+/** Like bootstrap_percent, but only takes on the enumerated values in
+ * bootstrap_status_t.
+ */
+static int bootstrap_phase = BOOTSTRAP_STATUS_UNDEF;
+
 /** As bootstrap_percent, but holds the bootstrapping level at which we last
  * logged a NOTICE-level message. We use this, plus BOOTSTRAP_PCT_INCREMENT,
  * to avoid flooding the log with a new message every time we get a few more
@@ -7158,7 +7163,8 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
   control_event_bootstrap_core(loglevel, status, progress);
 
   if (status > bootstrap_percent) {
-    bootstrap_percent = status; /* new milestone reached */
+    bootstrap_phase = status; /* new milestone reached */
+    bootstrap_percent = status;
   }
   if (progress > bootstrap_percent) {
     /* incremental progress within a milestone */
@@ -7206,9 +7212,7 @@ control_event_bootstrap_problem(const char *warn, const char *reason,
   if (we_are_hibernating())
     dowarn = 0;
 
-  while (status>=0 && bootstrap_status_to_string(status, &tag, &summary) < 0)
-    status--; /* find a recognized status string based on current progress */
-  status = bootstrap_percent; /* set status back to the actual number */
+  tor_assert(bootstrap_status_to_string(bootstrap_phase, &tag, &summary) == 0);
 
   severity = dowarn ? LOG_WARN : LOG_INFO;
 
