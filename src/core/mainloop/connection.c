@@ -4053,6 +4053,95 @@ connection_flush(connection_t *conn)
   return connection_handle_write(conn, 1);
 }
 
+/**
+ * Try to flush data from a connection <b>conn</b> that's marked for close.
+ * Return the number of bytes written, or -1 on failure.
+ */
+int
+connection_flush_before_close(connection_t *conn)
+{
+  if (BUG(!conn->marked_for_close))
+    return 0;
+  if (!connection_wants_to_flush(conn))
+    return 0;
+
+  if (!conn->hold_open_until_flushed)
+    log_info(LD_NET,
+             "Conn (addr %s, fd %d, type %s, state %d) marked, but wants "
+             "to flush %d bytes. (Marked at %s:%d)",
+             escaped_safe_str_client(conn->address),
+             (int)conn->s, conn_type_to_string(conn->type), conn->state,
+             (int)conn->outbuf_flushlen,
+              conn->marked_for_close_file, conn->marked_for_close);
+
+  time_t now = time(NULL);
+  assert_connection_ok(conn, now);
+
+  ssize_t sz = connection_bucket_write_limit(conn, now);
+  int retval;
+
+  if (conn->linked_conn) {
+    retval = buf_move_to_buf(conn->linked_conn->inbuf, conn->outbuf,
+                             &conn->outbuf_flushlen);
+    log_debug(LD_GENERAL, "Flushed last %d bytes from a linked conn; "
+             "%d left; flushlen %d; wants-to-flush==%d", retval,
+              (int)connection_get_outbuf_len(conn),
+              (int)conn->outbuf_flushlen,
+              connection_wants_to_flush(conn));
+  } else if (connection_speaks_cells(conn)) {
+    if (conn->state == OR_CONN_STATE_OPEN) {
+      retval = buf_flush_to_tls(conn->outbuf, TO_OR_CONN(conn)->tls, sz,
+                             &conn->outbuf_flushlen);
+    } else
+      retval = -1; /* never flush non-open broken tls connections */
+  } else {
+    retval = buf_flush_to_socket(conn->outbuf, conn->s, sz,
+                                 &conn->outbuf_flushlen);
+  }
+
+  if (retval < 0)
+    return retval;
+
+  if (conn->hold_open_until_flushed && connection_wants_to_flush(conn)) {
+    if (retval > 0) {
+      LOG_FN_CONN(conn, (LOG_INFO,LD_NET,
+                         "Holding conn (fd %d) open for more flushing.",
+                         (int)conn->s));
+      conn->timestamp_last_write_allowed = now; /* reset so we can flush
+                                                 * more */
+    } else if (sz == 0) {
+      /* Also, retval==0.  If we get here, we didn't want to write anything
+       * (because of rate-limiting) and we didn't. */
+
+      /* Connection must flush before closing, but it's being rate-limited.
+       * Let's remove from Libevent, and mark it as blocked on bandwidth
+       * so it will be re-added on next token bucket refill. Prevents
+       * busy Libevent loops where we keep ending up here and returning
+       * 0 until we are no longer blocked on bandwidth.
+       */
+      connection_consider_empty_read_buckets(conn);
+      connection_consider_empty_write_buckets(conn);
+
+      /* Make sure that consider_empty_buckets really disabled the
+       * connection: */
+      if (BUG(connection_is_writing(conn))) {
+        connection_write_bw_exhausted(conn, true);
+      }
+      if (BUG(connection_is_reading(conn))) {
+        /* XXXX+ We should make this code unreachable; if a connection is
+         * marked for close and flushing, there is no point in reading to it
+         * at all. Further, checking at this point is a bit of a hack: it
+         * would make much more sense to react in
+         * connection_handle_read_impl, or to just stop reading in
+         * mark_and_flush */
+        connection_read_bw_exhausted(conn, true/* kludge. */);
+      }
+    }
+  }
+
+  return retval;
+}
+
 /** Helper for connection_write_to_buf_impl and connection_write_buf_to_buf:
  *
  * Return true iff it is okay to queue bytes on <b>conn</b>'s outbuf for
