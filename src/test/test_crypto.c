@@ -18,6 +18,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_init.h"
 #include "ed25519_vectors.inc"
+#include "test/log_test_helpers.h"
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -1488,6 +1489,58 @@ test_crypto_pk_pem_encrypted(void *arg)
  done:
   crypto_pk_free(pk);
 }
+
+static void
+test_crypto_pk_invalid_private_key(void *arg)
+{
+  (void)arg;
+  /* Here is a simple invalid private key: it was produced by making
+   * a regular private key, and then adding 2 to the modulus. */
+  const char pem[] =
+    "-----BEGIN RSA PRIVATE KEY-----\n"
+    "MIIEpQIBAAKCAQEAskRyZrs+YAukvBmZlgo6/rCxyKF2xyUk073ap+2CgRUnSfGG\n"
+    "mflHlzqVq7tpH50DafpS+fFAbaEaNV/ac20QG0rUZi38HTB4qURWOu6n0Bws6E4l\n"
+    "UX/AkvDlWnuYH0pHHi2c3DGNFjwoJpjKuUTk+cRffVR8X3Kjr62SUDUaBNW0Kecz\n"
+    "3SYLbmgmZI16dFZ+g9sNM3znXZbhvb33WwPqpZSSPs37cPgF7eS6mAw/gUMx6zfE\n"
+    "HRmUnOQSzUdS05rvc/hsiCLhiIZ8hgfkD07XnTT1Ds8DwE55k7BUWY2wvwWCNLsH\n"
+    "qtqAxTr615XdkMxVkYgImpqPybarpfNYhFqkOwIDAQABAoIBACPC3VxEdbfYvhxJ\n"
+    "2mih9sG++nswAN7kUaX0cRe86rAwaShJPmJHApiQ1ROVTfpciiHJaLnhLraPWe2Z\n"
+    "I/6Bw3hmI4O399p3Lc1u+wlpdNqnvE6B1rSptx0DHE9xecvVH70rE0uM2Su7t6Y+\n"
+    "gnR2IKUGQs2mlCilm7aTUEWs0WJkkl4CG1dyxItuOSdNBjOEzXimJyiB10jEBFsp\n"
+    "SZeCF2FZ7AJbck5CVC42+oTsiDbZrHTHOn7v26rFGdONeHD1wOI1v7JwHFpCB923\n"
+    "aEHBzsPbMeq7DWG1rjzCYpcXHhTDBDBWSia4SEhyr2Nl7m7qxWWWwR+x4dqAj3rD\n"
+    "HeTmos0CgYEA6uf1CLpjPpOs5IaW1DQI8dJA/xFEAC/6GVgq4nFOGHZrm8G3L5o+\n"
+    "qvtQNMpDs2naWuZpqROFqv24o01DykHygR72GlPIY6uvmmf5tvJLoGnbFUay33L4\n"
+    "7b9dkNhuEIBNPzVDie0pgS77WgaPbYkVv5fnDwgPuVnkqfakEt7Pz2MCgYEAwkZ5\n"
+    "R1wLuTQEA2Poo6Gf4L8Bg6yNYI46LHDqDIs818iYLjtcnEEvbPfaoKNpOn7s7s4O\n"
+    "Pc+4HnT1aIQs0IKVLRTp+5a/9wfOkPZnobWOUHZk9UzBL3Hc1uy/qhp93iE3tSzx\n"
+    "v0O1pvR+hr3guTCZx8wZnDvaMgG3hlyPnVlHdrMCgYEAzQQxGbMC1ySv6quEjCP2\n"
+    "AogMbhE1lixJTUFj/EoDbNo9xKznIkauly/Lqqc1OysRhfA/G2+MY9YZBX1zwtyX\n"
+    "uBW7mPKynDrFgi9pBECnvJNmwET57Ic9ttIj6Tzbos83nAjyrzgr1zGX8dRz7ZeN\n"
+    "QbBj2vygLJbGOYinXkjUeh0CgYEAhN5aF9n2EqZmkEMGWtMxWy6HRJ0A3Cap1rcq\n"
+    "+4VHCXWhzwy+XAeg/e/N0MuyLlWcif7XcqLcE8h+BwtO8xQ8HmcNWApUJAls12wO\n"
+    "mGRpftJaXgIupdpD5aJpu1b++qrRRNIGTH9sf1D8L/8w8LcylZkbcuTkaAsQj45C\n"
+    "kqT64U0CgYEAq47IKS6xc3CDc17BqExR6t+1yRe+4ml+z1zcVbfUKony4pGvl1yo\n"
+    "rk0IYDN5Vd8h5xtXrkPdX9h+ywmohnelDKsayEuE+opyqEpSU4/96Bb22RZUoucb\n"
+    "LWkV5gZx5hFnDFtEd4vadMIiY4jVv/3JqiZDKwMVBJKlHRXJEEmIEBk=\n"
+    "-----END RSA PRIVATE KEY-----\n";
+
+  crypto_pk_t *pk = NULL;
+
+  pk = crypto_pk_new();
+  setup_capture_of_logs(LOG_WARN);
+  tt_int_op(-1, OP_EQ,
+            crypto_pk_read_private_key_from_string(pk, pem, strlen(pem)));
+#ifdef ENABLE_NSS
+  expect_single_log_msg_containing("received bad data");
+#else
+  expect_single_log_msg_containing("while checking RSA key");
+#endif
+ done:
+  teardown_capture_of_logs();
+  crypto_pk_free(pk);
+}
+
 #ifdef HAVE_TRUNCATE
 #define do_truncate truncate
 #else
@@ -3109,6 +3162,8 @@ struct testcase_t crypto_tests[] = {
   { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },
   { "pk_base64", test_crypto_pk_base64, TT_FORK, NULL, NULL },
   { "pk_pem_encrypted", test_crypto_pk_pem_encrypted, TT_FORK, NULL, NULL },
+  { "pk_invalid_private_key", test_crypto_pk_invalid_private_key, 0,
+    NULL, NULL },
   CRYPTO_LEGACY(digests),
   { "digest_names", test_crypto_digest_names, 0, NULL, NULL },
   { "sha3", test_crypto_sha3, TT_FORK, NULL, NULL},

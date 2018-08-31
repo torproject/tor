@@ -1629,7 +1629,7 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
         crypto_pk_free(prkey);
         goto err;
       }
-      if (crypto_pk_check_key(prkey) <= 0) {
+      if (! crypto_pk_is_valid_private_key(prkey)) {
         log_warn(LD_BUG,"Generated client key seems invalid");
         crypto_pk_free(prkey);
         goto err;

@@ -64,7 +64,7 @@ int crypto_pk_read_private_key_from_string(crypto_pk_t *env,
 int crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
                                             const char *fname);
 
-int crypto_pk_check_key(crypto_pk_t *env);
+int crypto_pk_is_valid_private_key(crypto_pk_t *env);
 int crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b);
 int crypto_pk_eq_keys(const crypto_pk_t *a, const crypto_pk_t *b);
 size_t crypto_pk_keysize(const crypto_pk_t *env);

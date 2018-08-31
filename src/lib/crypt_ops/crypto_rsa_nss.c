@@ -244,12 +244,14 @@ crypto_pk_generate_key_with_bits,(crypto_pk_t *key, int bits))
   return result;
 }
 
-/** Return true iff <b>env</b> has a valid key.
+/** Return true iff <b>env</b> is a valid private key.
  */
 int
-crypto_pk_check_key(crypto_pk_t *key)
+crypto_pk_is_valid_private_key(crypto_pk_t *key)
 {
-  return key && key->pubkey;
+  /* We don't need to do validation here, since unlike OpenSSL, NSS won't let
+   * us load private keys without validating them. */
+  return key && key->seckey;
 }
 
 /** Return true iff <b>env</b> contains a public key whose public exponent
@@ -435,7 +437,7 @@ crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
   tor_assert(tolen < INT_MAX);
   tor_assert(fromlen < INT_MAX);
 
-  if (BUG(!crypto_pk_check_key(env)))
+  if (BUG(! env->pubkey))
     return -1;
 
   unsigned int result_len = 0;
@@ -722,6 +724,11 @@ crypto_pk_asn1_decode_private(const char *str, size_t len)
     tor_assert(output->pubkey);
   } else {
     crypto_nss_log_errors(LOG_WARN, "decoding an RSA private key");
+  }
+
+  if (! crypto_pk_is_valid_private_key(output)) {
+    crypto_pk_free(output);
+    output = NULL;
   }
 
   if (slot)

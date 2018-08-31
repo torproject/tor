@@ -183,18 +183,21 @@ crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits))
   return 0;
 }
 
-/** Return true iff <b>env</b> has a valid key.
+/** Return true if <b>env</b> has a valid key; false otherwise.
  */
 int
-crypto_pk_check_key(crypto_pk_t *env)
+crypto_pk_is_valid_private_key(crypto_pk_t *env)
 {
   int r;
   tor_assert(env);
 
   r = RSA_check_key(env->key);
-  if (r <= 0)
+  if (r <= 0) {
     crypto_openssl_log_errors(LOG_WARN,"checking RSA key");
-  return r;
+    return 0;
+  } else {
+    return 1;
+  }
 }
 
 /** Return true iff <b>env</b> contains a public key whose public exponent
@@ -578,5 +581,10 @@ crypto_pk_asn1_decode_private(const char *str, size_t len)
     crypto_openssl_log_errors(LOG_WARN,"decoding public key");
     return NULL;
   }
-  return crypto_new_pk_from_openssl_rsa_(rsa);
+  crypto_pk_t *result = crypto_new_pk_from_openssl_rsa_(rsa);
+  if (! crypto_pk_is_valid_private_key(result)) {
+    crypto_pk_free(result);
+    return NULL;
+  }
+  return result;
 }

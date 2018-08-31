@@ -590,7 +590,7 @@ init_key_from_file(const char *fname, int generate, int severity,
           tor_log(severity, LD_GENERAL,"Error generating onion key");
           goto error;
         }
-        if (crypto_pk_check_key(prkey) <= 0) {
+        if (! crypto_pk_is_valid_private_key(prkey)) {
           tor_log(severity, LD_GENERAL,"Generated key seems invalid");
           goto error;
         }
