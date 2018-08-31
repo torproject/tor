@@ -1189,13 +1189,19 @@ tor_addr_parse(tor_addr_t *addr, const char *src)
   struct in6_addr in6_tmp;
   int brackets_detected = 0;
 
+  size_t len = strlen(src);
+
   tor_assert(addr && src);
-  if (src[0] == '[' && src[1] && src[strlen(src)-1] == ']') {
+  if (src[0] == '[' && src[1] && src[len - 1] == ']') {
     brackets_detected = 1;
     src = tmp = tor_strndup(src+1, strlen(src)-2);
+    len -= 2;
   }
 
-  if (tor_inet_pton(AF_INET6, src, &in6_tmp) > 0) {
+  /* Reject if src has needless trailing ':'. */
+  if (len > 2 && src[len - 1] == ':' && src[len - 2] != ':') {
+    result = -1;
+  } else if (tor_inet_pton(AF_INET6, src, &in6_tmp) > 0) {
     result = AF_INET6;
     tor_addr_from_in6(addr, &in6_tmp);
   } else if (!brackets_detected &&
