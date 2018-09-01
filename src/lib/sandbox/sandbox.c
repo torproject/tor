@@ -195,6 +195,8 @@ static int filter_nopar_gen[] = {
 #ifdef __NR__llseek
     SCMP_SYS(_llseek),
 #endif
+    // glob uses this..
+    SCMP_SYS(lstat),
     SCMP_SYS(mkdir),
     SCMP_SYS(mlockall),
 #ifdef __NR_mmap
