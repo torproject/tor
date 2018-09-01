@@ -5750,6 +5750,18 @@ test_util_ipv4_validation(void *arg)
 }
 
 static void
+test_util_ipv6_validation(void *arg)
+{
+  (void)arg;
+
+  tt_assert(string_is_valid_ipv6_address("2a00:1450:401b:800::200e"));
+  tt_assert(!string_is_valid_ipv6_address("11:22::33:44:"));
+
+  done:
+  return;
+}
+
+static void
 test_util_writepid(void *arg)
 {
   (void) arg;
@@ -6439,6 +6451,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(hostname_validation, 0),
   UTIL_TEST(dest_validation_edgecase, 0),
   UTIL_TEST(ipv4_validation, 0),
+  UTIL_TEST(ipv6_validation, 0),
   UTIL_TEST(writepid, 0),
   UTIL_TEST(get_avail_disk_space, 0),
   UTIL_TEST(touch_file, 0),
