@@ -168,6 +168,13 @@ tor_inet_pton(int af, const char *src, void *dst)
   if (af == AF_INET) {
     return tor_inet_aton(src, dst);
   } else if (af == AF_INET6) {
+    size_t len = strlen(src);
+
+    /* Reject if src has needless trailing ':'. */
+    if (len > 2 && src[len - 1] == ':' && src[len - 2] != ':') {
+      return 0;
+    }
+
     struct in6_addr *out = dst;
     uint16_t words[8];
     int gapPos = -1, i, setWords=0;
