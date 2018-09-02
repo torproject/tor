@@ -448,19 +448,25 @@ mock_read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   (void) flags;
   (void) stat_out;
 
-  if (!strcmp(filename, get_fname("hs3/authorized_clients/client1.auth"))) {
+  if (!strcmp(filename, get_fname("hs3" PATH_SEPARATOR
+                                  "authorized_clients" PATH_SEPARATOR
+                                  "client1.auth"))) {
     ret = tor_strdup("descriptor:x25519:"
                   "dz4q5xqlb4ldnbs72iarrml4ephk3du4i7o2cgiva5lwr6wkquja");
     goto done;
   }
 
-  if (!strcmp(filename, get_fname("hs3/authorized_clients/dummy.xxx"))) {
+  if (!strcmp(filename, get_fname("hs3" PATH_SEPARATOR
+                                  "authorized_clients" PATH_SEPARATOR
+                                  "dummy.xxx"))) {
     ret = tor_strdup("descriptor:x25519:"
                   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     goto done;
   }
 
-  if (!strcmp(filename, get_fname("hs3/authorized_clients/client2.auth"))) {
+  if (!strcmp(filename, get_fname("hs3" PATH_SEPARATOR
+                                  "authorized_clients" PATH_SEPARATOR
+                                  "client2.auth"))) {
     ret = tor_strdup("descriptor:x25519:"
                   "okoi2gml3wd6x7jganlk5d66xxyjgg24sxw4y7javx4giqr66zta");
     goto done;
