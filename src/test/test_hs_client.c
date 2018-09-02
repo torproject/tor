@@ -673,21 +673,23 @@ mock_read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   (void) flags;
   (void) stat_out;
 
-  if (!strcmp(filename, get_fname("auth_keys/client1.auth_private"))) {
+  if (!strcmp(filename, get_fname("auth_keys" PATH_SEPARATOR
+                                              "client1.auth_private"))) {
     ret = tor_strdup(
         "4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad:descriptor:"
         "x25519:zdsyvn2jq534ugyiuzgjy4267jbtzcjbsgedhshzx5mforyxtryq");
     goto done;
   }
 
-  if (!strcmp(filename, get_fname("auth_keys/dummy.xxx"))) {
+  if (!strcmp(filename, get_fname("auth_keys" PATH_SEPARATOR "dummy.xxx"))) {
     ret = tor_strdup(
         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:descriptor:"
         "x25519:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     goto done;
   }
 
-  if (!strcmp(filename, get_fname("auth_keys/client2.auth_private"))) {
+  if (!strcmp(filename, get_fname("auth_keys" PATH_SEPARATOR
+                                              "client2.auth_private"))) {
     ret = tor_strdup(
         "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid:descriptor:"
         "x25519:fdreqzjqso7d2ac7qscrxfl5qfpamdvgy5d6cxejcgzc3hvhurmq");
