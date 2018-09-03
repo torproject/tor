@@ -1409,7 +1409,7 @@ configure_nameservers(int force)
 #if defined(DNS_OPTION_HOSTSFILE) && defined(USE_LIBSECCOMP)
     if (flags & DNS_OPTION_HOSTSFILE) {
       flags ^= DNS_OPTION_HOSTSFILE;
-      log_debug(LD_FS, "loading /etc/hosts");
+      log_debug(LD_FS, "Loading /etc/hosts");
       evdns_base_load_hosts(the_evdns_base,
           sandbox_intern_string("/etc/hosts"));
     }
