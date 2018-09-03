@@ -512,6 +512,7 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
   char key[REND_SERVICE_ID_LEN_BASE32 + 2]; /* <version><query>\0 */
   rend_cache_entry_t *entry = NULL;
   static const int default_version = 2;
+  time_t cutoff = time(NULL) - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
 
   tor_assert(rend_cache);
   tor_assert(query);
@@ -537,6 +538,15 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
     goto end;
   }
   tor_assert(entry->parsed && entry->parsed->intro_nodes);
+
+  /* If the entry has expired, clear it and return that we have no entry. */
+  if (entry->parsed->timestamp < cutoff) {
+    entry = strmap_get_lc(rend_cache, key);
+    rend_cache_entry_free(entry);
+
+    ret = -ENOENT;
+    goto end;
+  }
 
   if (e) {
     *e = entry;
