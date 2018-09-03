@@ -1389,13 +1389,13 @@ configure_nameservers(int force)
     int stat_res = stat(sandbox_intern_string(conf_fname), &st);
 
     if (stat_res) {
-      log_warn(LD_EXIT, "unable to stat resolver configuration in '%s': %s",
+      log_warn(LD_EXIT, "Unable to stat resolver configuration in '%s': %s",
                conf_fname, strerror(errno));
       missing_resolv_conf = 1;
     } else if (!force && resolv_conf_fname &&
                !strcmp(conf_fname,resolv_conf_fname)
         && st.st_mtime == resolv_conf_mtime) {
-      log_info(LD_EXIT, "no change to '%s'", conf_fname);
+      log_info(LD_EXIT, "No change to '%s'", conf_fname);
       return 0;
     }
 
@@ -1413,7 +1413,7 @@ configure_nameservers(int force)
       evdns_base_load_hosts(the_evdns_base,
           sandbox_intern_string("/etc/hosts"));
     }
-#endif /* defined(dns_option_hostsfile) && defined(use_libseccomp) */
+#endif /* defined(DNS_OPTION_HOSTSFILE) && defined(USE_LIBSECCOMP) */
 
     if (!missing_resolv_conf) {
       log_info(LD_EXIT, "parsing resolver configuration in '%s'", conf_fname);
@@ -1452,12 +1452,12 @@ configure_nameservers(int force)
       evdns_base_clear_nameservers_and_suspend(the_evdns_base);
     }
     if (evdns_base_config_windows_nameservers(the_evdns_base))  {
-      log_warn(LD_EXIT,"could not config nameservers.");
+      log_warn(LD_EXIT,"Could not config nameservers.");
       goto err;
     }
     if (evdns_base_count_nameservers(the_evdns_base) == 0) {
-      log_warn(LD_EXIT, "unable to find any platform nameservers in "
-               "your windows configuration.");
+      log_warn(LD_EXIT, "Unable to find any platform nameservers in "
+               "your Windows configuration.");
       goto err;
     }
     if (nameservers_configured)
