@@ -1,0 +1,7 @@
+  o Minor features (onion services):
+    - Increase the rendezvous cache failure cleanup timer to two minutes
+      from 30 seconds. This is to reduce the CPU usage as the cache could
+      grow to the number of every introduction point. Also, when looking
+      up a rendezvous cache entry, if an entry expired, remove it and
+      return that "we do not have an entry". Closes ticket 17520. Patch
+      by Neel Chauhan.
