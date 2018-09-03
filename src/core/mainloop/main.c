@@ -2210,12 +2210,12 @@ static int
 rend_cache_failure_clean_callback(time_t now, const or_options_t *options)
 {
   (void)options;
-  /* We don't keep entries that are more than five minutes old so we try to
-   * clean it as soon as we can since we want to make sure the client waits
-   * as little as possible for reachability reasons. */
+  /* We try to clean up entries every two minutes as v3 failure entries'
+   * expiry time is two minutes (v2 is five minutes), and we don't hammer
+   * the CPU excessive cleanups. */
   rend_cache_failure_clean(now);
   hs_cache_client_intro_state_clean(now);
-  return 30;
+  return 120;
 }
 
 /**
