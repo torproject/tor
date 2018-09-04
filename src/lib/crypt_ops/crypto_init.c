@@ -23,10 +23,10 @@
 
 #include "siphash.h"
 
-/** Boolean: has OpenSSL's crypto been initialized? */
+/** Boolean: has our crypto library been initialized? (early phase) */
 static int crypto_early_initialized_ = 0;
 
-/** Boolean: has OpenSSL's crypto been initialized? */
+/** Boolean: has our crypto library been initialized? (late phase) */
 static int crypto_global_initialized_ = 0;
 
 static int have_seeded_siphash = 0;
