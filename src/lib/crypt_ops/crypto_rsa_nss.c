@@ -247,7 +247,7 @@ crypto_pk_generate_key_with_bits,(crypto_pk_t *key, int bits))
 /** Return true iff <b>env</b> is a valid private key.
  */
 int
-crypto_pk_is_valid_private_key(crypto_pk_t *key)
+crypto_pk_is_valid_private_key(const crypto_pk_t *key)
 {
   /* We don't need to do validation here, since unlike OpenSSL, NSS won't let
    * us load private keys without validating them. */
@@ -258,7 +258,7 @@ crypto_pk_is_valid_private_key(crypto_pk_t *key)
  * equals 65537.
  */
 int
-crypto_pk_public_exponent_ok(crypto_pk_t *key)
+crypto_pk_public_exponent_ok(const crypto_pk_t *key)
 {
   return key &&
     key->pubkey &&

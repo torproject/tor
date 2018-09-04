@@ -186,7 +186,7 @@ crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits))
 /** Return true if <b>env</b> has a valid key; false otherwise.
  */
 int
-crypto_pk_is_valid_private_key(crypto_pk_t *env)
+crypto_pk_is_valid_private_key(const crypto_pk_t *env)
 {
   int r;
   tor_assert(env);
@@ -204,7 +204,7 @@ crypto_pk_is_valid_private_key(crypto_pk_t *env)
  * equals TOR_RSA_EXPONENT.
  */
 int
-crypto_pk_public_exponent_ok(crypto_pk_t *env)
+crypto_pk_public_exponent_ok(const crypto_pk_t *env)
 {
   tor_assert(env);
   tor_assert(env->key);
