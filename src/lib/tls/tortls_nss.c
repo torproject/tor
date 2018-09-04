@@ -14,7 +14,7 @@
 #define TORTLS_PRIVATE
 #define TOR_X509_PRIVATE
 
-#ifdef _WIN32 /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
+#ifdef _WIN32
   #include <winsock2.h>
   #include <ws2tcpip.h>
 #endif

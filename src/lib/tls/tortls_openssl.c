@@ -20,7 +20,9 @@
 #define TORTLS_OPENSSL_PRIVATE
 #define TOR_X509_PRIVATE
 
-#ifdef _WIN32 /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
+#ifdef _WIN32
+  /* We need to include these here, or else the dtls1.h header will include
+   * <winsock.h> and mess things up, in at least some openssl versions. */
   #include <winsock2.h>
   #include <ws2tcpip.h>
 #endif
