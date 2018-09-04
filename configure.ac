@@ -71,7 +71,7 @@ AM_CONDITIONAL(USE_OPENSSL, test "x$enable_nss" != "xyes")
 
 if test "x$enable_nss" = "xyes"; then
   AC_DEFINE(ENABLE_NSS, 1,
-  	    [Defined if we're building with NSS in addition to OpenSSL.])
+  	    [Defined if we're building with NSS.])
 else
   AC_DEFINE(ENABLE_OPENSSL, 1,
             [Defined if we're building with OpenSSL or LibreSSL])
