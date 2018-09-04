@@ -265,7 +265,29 @@ test_tortls_double_init(void *arg)
   r = tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
                                pk2, pk1, 86400);
   tt_int_op(r, OP_EQ, 0);
+  /* For a public server context, these are the same */
+  tt_ptr_op(tor_tls_context_get(0), OP_EQ, tor_tls_context_get(1));
 
+ done:
+  crypto_pk_free(pk1);
+  crypto_pk_free(pk2);
+}
+
+static void
+test_tortls_bridge_init(void *arg)
+{
+  (void)arg;
+  crypto_pk_t *pk1 = NULL, *pk2 = NULL;
+  pk1 = pk_generate(2);
+  pk2 = pk_generate(0);
+
+  /* If we pass in a server identity key but not the
+     TOR_TLS_CTX_IS_PUBLIC_SERVER flag, we should get a bridge-style
+     configuration, with two distinct contexts. */
+  int r = tor_tls_context_init(0 /* flags */, pk1, pk2, 86400);
+
+  tt_int_op(r, OP_EQ, 0);
+  tt_ptr_op(tor_tls_context_get(0), OP_NE, tor_tls_context_get(1));
  done:
   crypto_pk_free(pk1);
   crypto_pk_free(pk2);
@@ -344,5 +366,6 @@ struct testcase_t tortls_tests[] = {
   LOCAL_TEST_CASE(double_init, TT_FORK),
   LOCAL_TEST_CASE(address, TT_FORK),
   LOCAL_TEST_CASE(is_server, 0),
+  LOCAL_TEST_CASE(bridge_init, TT_FORK),
   END_OF_TESTCASES
 };
