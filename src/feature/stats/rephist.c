@@ -1216,8 +1216,8 @@ find_largest_max(bw_array_t *b)
  *
  * Return the smaller of these sums, divided by NUM_SECS_ROLLING_MEASURE.
  */
-int
-rep_hist_bandwidth_assess(void)
+MOCK_IMPL(int,
+rep_hist_bandwidth_assess,(void))
 {
   uint64_t w,r;
   r = find_largest_max(read_array);
