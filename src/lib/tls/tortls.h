@@ -100,10 +100,6 @@ int tor_tls_peer_has_cert(tor_tls_t *tls);
 MOCK_DECL(struct tor_x509_cert_t *,tor_tls_get_peer_cert,(tor_tls_t *tls));
 MOCK_DECL(struct tor_x509_cert_t *,tor_tls_get_own_cert,(tor_tls_t *tls));
 int tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity);
-int tor_tls_check_lifetime(int severity,
-                           tor_tls_t *tls, time_t now,
-                           int past_tolerance,
-                           int future_tolerance);
 MOCK_DECL(int, tor_tls_read, (tor_tls_t *tls, char *cp, size_t len));
 int tor_tls_write(tor_tls_t *tls, const char *cp, size_t n);
 int tor_tls_handshake(tor_tls_t *tls);

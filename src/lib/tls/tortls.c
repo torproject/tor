@@ -433,35 +433,3 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity)
 
   return rv;
 }
-
-/** Check whether the certificate set on the connection <b>tls</b> is expired
- * give or take <b>past_tolerance</b> seconds, or not-yet-valid give or take
- * <b>future_tolerance</b> seconds. Return 0 for valid, -1 for failure.
- *
- * NOTE: you should call tor_tls_verify before tor_tls_check_lifetime.
- */
-int
-tor_tls_check_lifetime(int severity, tor_tls_t *tls,
-                       time_t now,
-                       int past_tolerance, int future_tolerance)
-{
-  tor_x509_cert_t *cert;
-  int r = -1;
-
-  if (!(cert = tor_tls_get_peer_cert(tls)))
-    goto done;
-
-  if (tor_x509_check_cert_lifetime_internal(severity, cert->cert, now,
-                                            past_tolerance,
-                                            future_tolerance) < 0)
-    goto done;
-
-  r = 0;
- done:
-  tor_x509_cert_free(cert);
-#ifdef ENABLE_OPENSSL
-  tls_log_errors(tls, LOG_WARN, LD_NET, "checking certificate lifetime");
-#endif
-
-  return r;
-}

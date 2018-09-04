@@ -961,45 +961,6 @@ test_tortls_verify(void *ignored)
 #endif /* !defined(OPENSSL_OPAQUE) */
 
 #ifndef OPENSSL_OPAQUE
-static void
-test_tortls_check_lifetime(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  tor_tls_t *tls;
-  X509 *validCert = read_cert_from(validCertString);
-  time_t now = time(NULL);
-
-  tls = tor_malloc_zero(sizeof(tor_tls_t));
-  ret = tor_tls_check_lifetime(LOG_WARN, tls, time(NULL), 0, 0);
-  tt_int_op(ret, OP_EQ, -1);
-
-  tls->ssl = tor_malloc_zero(sizeof(SSL));
-  tls->ssl->session = tor_malloc_zero(sizeof(SSL_SESSION));
-  tls->ssl->session->peer = validCert;
-  ret = tor_tls_check_lifetime(LOG_WARN, tls, time(NULL), 0, 0);
-  tt_int_op(ret, OP_EQ, 0);
-
-  ASN1_STRING_free(validCert->cert_info->validity->notBefore);
-  validCert->cert_info->validity->notBefore = ASN1_TIME_set(NULL, now-10);
-  ASN1_STRING_free(validCert->cert_info->validity->notAfter);
-  validCert->cert_info->validity->notAfter = ASN1_TIME_set(NULL, now+60);
-
-  ret = tor_tls_check_lifetime(LOG_WARN, tls, time(NULL), 0, -1000);
-  tt_int_op(ret, OP_EQ, -1);
-
-  ret = tor_tls_check_lifetime(LOG_WARN, tls, time(NULL), -1000, 0);
-  tt_int_op(ret, OP_EQ, -1);
-
- done:
-  tor_free(tls->ssl->session);
-  tor_free(tls->ssl);
-  tor_free(tls);
-  X509_free(validCert);
-}
-#endif /* !defined(OPENSSL_OPAQUE) */
-
-#ifndef OPENSSL_OPAQUE
 static int fixed_ssl_pending_result = 0;
 
 static int
@@ -2469,7 +2430,6 @@ struct testcase_t tortls_openssl_tests[] = {
   INTRUSIVE_TEST_CASE(classify_client_ciphers, 0),
   LOCAL_TEST_CASE(client_is_using_v2_ciphers, 0),
   INTRUSIVE_TEST_CASE(verify, 0),
-  INTRUSIVE_TEST_CASE(check_lifetime, 0),
   INTRUSIVE_TEST_CASE(get_pending_bytes, 0),
   INTRUSIVE_TEST_CASE(SSL_SESSION_get_master_key, 0),
   INTRUSIVE_TEST_CASE(get_tlssecrets, 0),
