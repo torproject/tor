@@ -52,6 +52,8 @@ NS(router_get_my_routerinfo)(void)
     mock_routerinfo->onion_pkey = crypto_pk_dup_key(tap_key);
     mock_routerinfo->bandwidthrate = 9001;
     mock_routerinfo->bandwidthburst = 9002;
+    crypto_pk_free(ident_key);
+    crypto_pk_free(tap_key);
   }
 
   return mock_routerinfo;

@@ -361,7 +361,13 @@ tor_tls_new(tor_socket_t sock, int is_server)
   (void)sock;
   tor_tls_context_t *ctx = tor_tls_context_get(is_server);
 
-  PRFileDesc *tcp = PR_ImportTCPSocket(sock);
+  PRFileDesc *tcp = NULL;
+  if (SOCKET_OK(sock)) {
+    tcp = PR_ImportTCPSocket(sock);
+  } else {
+    tcp = PR_NewTCPSocket();
+  }
+
   if (!tcp)
     return NULL;
 
