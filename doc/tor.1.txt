@@ -1803,7 +1803,10 @@ is non-zero):
     Sets the relay to act as a "bridge" with respect to relaying connections
     from bridge users to the Tor network. It mainly causes Tor to publish a
     server descriptor to the bridge database, rather than
-    to the public directory authorities.
+    to the public directory authorities. +
+ +
+    Note: make sure that no MyFamily lines are present in your torrc when
+    relay is configured in bridge mode.
 
 [[BridgeDistribution]] **BridgeDistribution** __string__::
     If set along with BridgeRelay, Tor will include a new line in its
@@ -2060,7 +2063,10 @@ is non-zero):
     nickname: fingerprints are more reliable. +
  +
     If you run more than one relay, the MyFamily option on each relay
-    **must** list all other relays, as described above.
+    **must** list all other relays, as described above. +
+ +
+    Note: do not use MyFamily when configuring your Tor instance as a
+    brigde.
 
 [[Nickname]] **Nickname** __name__::
     Set the server's nickname to \'name'. Nicknames must be between 1 and 19
