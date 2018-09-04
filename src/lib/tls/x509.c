@@ -128,9 +128,8 @@ tor_x509_cert_new,(tor_x509_cert_impl_t *x509_cert))
 
   return cert;
  err:
-  tor_free(cert);
   log_err(LD_CRYPTO, "Couldn't wrap encoded X509 certificate.");
-  tor_x509_cert_impl_free(x509_cert);
+  tor_x509_cert_free(cert);
   return NULL;
 }
 

@@ -609,7 +609,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     if (result->my_id_cert) {
       X509_STORE *s = SSL_CTX_get_cert_store(result->ctx);
       tor_assert(s);
-      X509_STORE_add_cert(s, X509_dup(result->my_id_cert->cert));
+      X509_STORE_add_cert(s, result->my_id_cert->cert);
     }
   }
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);

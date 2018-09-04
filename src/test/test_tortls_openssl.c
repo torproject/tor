@@ -600,7 +600,7 @@ test_tortls_get_my_client_auth_key(void *ignored)
   tt_assert(ret == expected);
 
  done:
-  tor_free(expected);
+  crypto_pk_free(expected);
   tor_free(ctx);
 }
 
