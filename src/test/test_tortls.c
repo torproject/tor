@@ -496,10 +496,8 @@ test_tortls_verify(void *ignored)
 
  done:
   UNMOCK(try_to_extract_certs_from_tls);
-  if (cert1)
-    tor_x509_cert_impl_free_(cert1);
-  if (cert2)
-    tor_x509_cert_impl_free_(cert2);
+  tor_x509_cert_impl_free(cert1);
+  tor_x509_cert_impl_free(cert2);
   tor_free(tls);
   crypto_pk_free(k);
 }

@@ -28,8 +28,12 @@ int tor_tls_context_init_certificates(tor_tls_context_t *result,
                                       unsigned key_lifetime,
                                       unsigned flags);
 void tor_tls_impl_free_(tor_tls_impl_t *ssl);
+#define tor_tls_impl_free(tls) \
+  FREE_AND_NULL(tor_tls_impl_t, tor_tls_impl_free_, (tls))
 
-void tor_tls_context_impl_free(tor_tls_context_impl_t *);
+void tor_tls_context_impl_free_(tor_tls_context_impl_t *);
+#define tor_tls_context_impl_free(ctx) \
+  FREE_AND_NULL(tor_tls_context_impl_t, tor_tls_context_impl_free_, (ctx))
 
 #ifdef ENABLE_OPENSSL
 tor_tls_t *tor_tls_get_by_ssl(const struct ssl_st *ssl);

@@ -335,12 +335,9 @@ tor_tls_context_init_certificates(tor_tls_context_t *result,
   tor_free(nickname);
   tor_free(nn2);
 
-  if (cert)
-    tor_x509_cert_impl_free_(cert);
-  if (idcert)
-    tor_x509_cert_impl_free_(idcert);
-  if (authcert)
-    tor_x509_cert_impl_free_(authcert);
+  tor_x509_cert_impl_free(cert);
+  tor_x509_cert_impl_free(idcert);
+  tor_x509_cert_impl_free(authcert);
   crypto_pk_free(rsa);
   crypto_pk_free(rsa_auth);
 
@@ -379,7 +376,7 @@ tor_tls_free_(tor_tls_t *tls)
     size_t r,w;
     tor_tls_get_n_raw_bytes(tls,&r,&w); /* ensure written_by_tls is updated */
   }
-  tor_tls_impl_free_(tls->ssl);
+  tor_tls_impl_free(tls->ssl);
   tls->ssl = NULL;
 #ifdef ENABLE_OPENSSL
   tls->negotiated_callback = NULL;
@@ -424,10 +421,8 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity)
   rv = 0;
 
  done:
-  if (cert)
-    tor_x509_cert_impl_free_(cert);
-  if (id_cert)
-    tor_x509_cert_impl_free_(id_cert);
+  tor_x509_cert_impl_free(cert);
+  tor_x509_cert_impl_free(id_cert);
   tor_x509_cert_free(peer_x509);
   tor_x509_cert_free(id_x509);
 

@@ -76,8 +76,7 @@ tor_x509_cert_free_(tor_x509_cert_t *cert)
 {
   if (! cert)
     return;
-  if (cert->cert)
-    tor_x509_cert_impl_free_(cert->cert);
+  tor_x509_cert_impl_free(cert->cert);
 #ifdef ENABLE_OPENSSL
   tor_free(cert->encoded);
 #endif
@@ -131,7 +130,7 @@ tor_x509_cert_new,(tor_x509_cert_impl_t *x509_cert))
  err:
   tor_free(cert);
   log_err(LD_CRYPTO, "Couldn't wrap encoded X509 certificate.");
-  tor_x509_cert_impl_free_(x509_cert);
+  tor_x509_cert_impl_free(x509_cert);
   return NULL;
 }
 

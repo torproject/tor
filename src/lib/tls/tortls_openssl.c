@@ -496,7 +496,7 @@ tor_tls_cert_matches_key,(const tor_tls_t *tls, const tor_x509_cert_t *cert))
 }
 
 void
-tor_tls_context_impl_free(struct ssl_ctx_st *ctx)
+tor_tls_context_impl_free_(struct ssl_ctx_st *ctx)
 {
   if (!ctx)
     return;
@@ -1150,6 +1150,9 @@ tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls)
 void
 tor_tls_impl_free_(tor_tls_impl_t *ssl)
 {
+  if (!ssl)
+    return;
+
 #ifdef SSL_set_tlsext_host_name
   SSL_set_tlsext_host_name(ssl, NULL);
 #endif

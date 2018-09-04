@@ -298,8 +298,10 @@ tor_tls_context_new(crypto_pk_t *identity,
 }
 
 void
-tor_tls_context_impl_free(tor_tls_context_impl_t *ctx)
+tor_tls_context_impl_free_(tor_tls_context_impl_t *ctx)
 {
+  if (!ctx)
+    return;
   PR_Close(ctx);
 }
 
@@ -409,6 +411,8 @@ tor_tls_impl_free_(tor_tls_impl_t *tls)
 {
   // XXXX This will close the underlying fd, which our OpenSSL version does
   // not do!
+  if (!tls)
+    return;
 
   PR_Close(tls);
 }
