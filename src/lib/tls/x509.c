@@ -134,3 +134,12 @@ tor_x509_cert_new,(tor_x509_cert_impl_t *x509_cert))
   tor_x509_cert_impl_free_(x509_cert);
   return NULL;
 }
+
+/** Return a new copy of <b>cert</b>. */
+tor_x509_cert_t *
+tor_x509_cert_dup(const tor_x509_cert_t *cert)
+{
+  tor_assert(cert);
+  tor_assert(cert->cert);
+  return tor_x509_cert_new(tor_x509_cert_impl_dup_(cert->cert));
+}

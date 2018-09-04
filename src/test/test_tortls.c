@@ -23,12 +23,119 @@
 #include "lib/tls/tortls.h"
 #include "lib/tls/tortls_st.h"
 #include "lib/tls/tortls_internal.h"
+#include "lib/encoding/pem.h"
 #include "app/config/or_state_st.h"
 
 #include "test/test.h"
 #include "test/log_test_helpers.h"
+#include "test/test_tortls.h"
 
 #include "tinytest.h"
+
+const char* notCompletelyValidCertString =
+  "-----BEGIN CERTIFICATE-----\n"
+  "MIICVjCCAb8CAg37MA0GCSqGSIb3DQEBBQUAMIGbMQswCQYDVQQGEwJKUDEOMAwG\n"
+  "A1UECBMFVG9reW8xEDAOBgNVBAcTB0NodW8ta3UxETAPBgNVBAoTCEZyYW5rNERE\n"
+  "MRgwFgYDVQQLEw9XZWJDZXJ0IFN1cHBvcnQxGDAWBgNVBAMTD0ZyYW5rNEREIFdl\n"
+  "YiBDQTEjMCEGCSqGSIb3DQEJARYUc3VwcG9ydEBmcmFuazRkZC5jb20wHhcNMTIw\n"
+  "ODIyMDUyNzIzWhcNMTcwODIxMDUyNzIzWjBKMQswCQYDVQQGEwJKUDEOMAwGA1UE\n"
+  "CAwFVG9reW8xETAPBgNVBAoMCEZyYW5rNEREMRgwFgYDVQQDDA93d3cuZXhhbXBs\n"
+  "ZS5jb20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMYBBrx5PlP0WNI/ZdzD\n"
+  "+6Pktmurn+F2kQYbtc7XQh8/LTBvCo+P6iZoLEmUA9e7EXLRxgU1CVqeAi7QcAn9\n"
+  "MwBlc8ksFJHB0rtf9pmf8Oza9E0Bynlq/4/Kb1x+d+AyhL7oK9tQwB24uHOueHi1\n"
+  "C/iVv8CSWKiYe6hzN1txYe8rAgMBAAEwDQYJKoZIhvcNAQEFBQADgYEAASPdjigJ\n"
+  "kXCqKWpnZ/Oc75EUcMi6HztaW8abUMlYXPIgkV2F7YanHOB7K4f7OOLjiz8DTPFf\n"
+  "jC9UeuErhaA/zzWi8ewMTFZW/WshOrm3fNvcMrMLKtH534JKvcdMg6qIdjTFINIr\n"
+  "evnAhf0cwULaebn+lMs8Pdl7y37+sfluVok=\n"
+  "-----END CERTIFICATE-----\n";
+
+const char* validCertString = "-----BEGIN CERTIFICATE-----\n"
+  "MIIDpTCCAY0CAg3+MA0GCSqGSIb3DQEBBQUAMF4xCzAJBgNVBAYTAlVTMREwDwYD\n"
+  "VQQIDAhJbGxpbm9pczEQMA4GA1UEBwwHQ2hpY2FnbzEUMBIGA1UECgwLVG9yIFRl\n"
+  "c3RpbmcxFDASBgNVBAMMC1RvciBUZXN0aW5nMB4XDTE1MDkwNjEzMzk1OVoXDTQz\n"
+  "MDEyMjEzMzk1OVowVjELMAkGA1UEBhMCVVMxEDAOBgNVBAcMB0NoaWNhZ28xFDAS\n"
+  "BgNVBAoMC1RvciBUZXN0aW5nMR8wHQYDVQQDDBZ0ZXN0aW5nLnRvcnByb2plY3Qu\n"
+  "b3JnMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDoT6uyVVhWyOF3wkHjjYbd\n"
+  "nKaykyRv4JVtKQdZ4OpEErmX1zw4MmyzpQNV6iR4bQnWiyLfzyVJMZDIC/WILBfX\n"
+  "w2Pza/yuLgUvDc3twMuhOACzOQVO8PrEF/aVv2+hbCCy2udXvKhnYn+CCXl3ozc8\n"
+  "XcKYvujTXDyvGWY3xwAjlQIDAQABMA0GCSqGSIb3DQEBBQUAA4ICAQCUvnhzQWuQ\n"
+  "MrN+pERkE+zcTI/9dGS90rUMMLgu8VDNqTa0TUQh8uO0EQ6uDvI8Js6e8tgwS0BR\n"
+  "UBahqb7ZHv+rejGCBr5OudqD+x4STiiuPNJVs86JTLN8SpM9CHjIBH5WCCN2KOy3\n"
+  "mevNoRcRRyYJzSFULCunIK6FGulszigMYGscrO4oiTkZiHPh9KvWT40IMiHfL+Lw\n"
+  "EtEWiLex6064LcA2YQ1AMuSZyCexks63lcfaFmQbkYOKqXa1oLkIRuDsOaSVjTfe\n"
+  "vec+X6jvf12cFTKS5WIeqkKF2Irt+dJoiHEGTe5RscUMN/f+gqHPzfFz5dR23sxo\n"
+  "g+HC6MZHlFkLAOx3wW6epPS8A/m1mw3zMPoTnb2U2YYt8T0dJMMlUn/7Y1sEAa+a\n"
+  "dSTMaeUf6VnJ//11m454EZl1to9Z7oJOgqmFffSrdD4BGIWe8f7hhW6L1Enmqe/J\n"
+  "BKL3wbzZh80O1W0bndAwhnEEhlzneFY84cbBo9pmVxpODHkUcStpr5Z7pBDrcL21\n"
+  "Ss/aB/1YrsVXhdvJdOGxl3Mnl9dUY57CympLGlT8f0pPS6GAKOelECOhFMHmJd8L\n"
+  "dj3XQSmKtYHevZ6IvuMXSlB/fJvSjSlkCuLo5+kJoaqPuRu+i/S1qxeRy3CBwmnE\n"
+  "LdSNdcX4N79GQJ996PA8+mUCQG7YRtK+WA==\n"
+  "-----END CERTIFICATE-----\n";
+
+const char* caCertString = "-----BEGIN CERTIFICATE-----\n"
+  "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\n"
+  "-----END CERTIFICATE-----\n";
+
+tor_x509_cert_impl_t *
+read_cert_from(const char *str)
+{
+  size_t len = strlen(str);
+  uint8_t *raw_cert = tor_malloc(len);
+  size_t true_len = pem_decode(raw_cert, len, str, len, "CERTIFICATE");
+  tor_x509_cert_t *cert = tor_x509_cert_decode(raw_cert, true_len);
+  tor_free(raw_cert);
+  if (! cert) {
+    return NULL;
+  }
+  tor_x509_cert_impl_t *res = tor_x509_cert_impl_dup_(cert->cert);
+  tor_x509_cert_free(cert);
+  return res;
+}
+
+static tor_x509_cert_impl_t *
+  fixed_try_to_extract_certs_from_tls_cert_out_result = NULL;
+static tor_x509_cert_impl_t *
+  fixed_try_to_extract_certs_from_tls_id_cert_out_result = NULL;
+
+static void
+fixed_try_to_extract_certs_from_tls(int severity, tor_tls_t *tls,
+                                    tor_x509_cert_impl_t **cert_out,
+                                    tor_x509_cert_impl_t **id_cert_out)
+{
+  (void) severity;
+  (void) tls;
+  *cert_out = fixed_try_to_extract_certs_from_tls_cert_out_result;
+  *id_cert_out = fixed_try_to_extract_certs_from_tls_id_cert_out_result;
+}
 
 static void
 test_tortls_errno_to_tls_error(void *data)
@@ -348,6 +455,55 @@ test_tortls_is_server(void *arg)
   crypto_pk_free(pk2);
 }
 
+static void
+test_tortls_verify(void *ignored)
+{
+  (void)ignored;
+  int ret;
+  tor_tls_t *tls;
+  crypto_pk_t *k = NULL;
+  tor_x509_cert_impl_t *cert1 = NULL, *cert2 = NULL, *invalidCert = NULL,
+    *validCert = NULL, *caCert = NULL;
+
+  validCert = read_cert_from(validCertString);
+  caCert = read_cert_from(caCertString);
+  invalidCert = read_cert_from(notCompletelyValidCertString);
+
+  tls = tor_malloc_zero(sizeof(tor_tls_t));
+
+  MOCK(try_to_extract_certs_from_tls, fixed_try_to_extract_certs_from_tls);
+
+  fixed_try_to_extract_certs_from_tls_cert_out_result = cert1;
+  ret = tor_tls_verify(LOG_WARN, tls, &k);
+  tt_int_op(ret, OP_EQ, -1);
+
+  fixed_try_to_extract_certs_from_tls_id_cert_out_result = cert2;
+  ret = tor_tls_verify(LOG_WARN, tls, &k);
+  tt_int_op(ret, OP_EQ, -1);
+
+  fixed_try_to_extract_certs_from_tls_cert_out_result = invalidCert;
+  fixed_try_to_extract_certs_from_tls_id_cert_out_result = invalidCert;
+
+  ret = tor_tls_verify(LOG_WARN, tls, &k);
+  tt_int_op(ret, OP_EQ, -1);
+
+  fixed_try_to_extract_certs_from_tls_cert_out_result = validCert;
+  fixed_try_to_extract_certs_from_tls_id_cert_out_result = caCert;
+
+  ret = tor_tls_verify(LOG_WARN, tls, &k);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_assert(k);
+
+ done:
+  UNMOCK(try_to_extract_certs_from_tls);
+  if (cert1)
+    tor_x509_cert_impl_free_(cert1);
+  if (cert2)
+    tor_x509_cert_impl_free_(cert2);
+  tor_free(tls);
+  crypto_pk_free(k);
+}
+
 #define LOCAL_TEST_CASE(name, flags)                            \
   { #name, test_tortls_##name, (flags|TT_FORK), NULL, NULL }
 
@@ -367,5 +523,6 @@ struct testcase_t tortls_tests[] = {
   LOCAL_TEST_CASE(address, TT_FORK),
   LOCAL_TEST_CASE(is_server, 0),
   LOCAL_TEST_CASE(bridge_init, TT_FORK),
+  LOCAL_TEST_CASE(verify, TT_FORK),
   END_OF_TESTCASES
 };

@@ -206,6 +206,15 @@ tor_x509_cert_impl_free_(tor_x509_cert_impl_t *cert)
     X509_free(cert);
 }
 
+tor_x509_cert_impl_t *
+tor_x509_cert_impl_dup_(tor_x509_cert_impl_t *cert)
+{
+  if (cert)
+    return X509_dup(cert);
+  else
+    return NULL;
+}
+
 /** Set *<b>encoded_out</b> and *<b>size_out</b> to <b>cert</b>'s encoded DER
  * representation and length, respectively. */
 void
@@ -217,15 +226,6 @@ tor_x509_cert_get_der(const tor_x509_cert_t *cert,
   tor_assert(size_out);
   *encoded_out = cert->encoded;
   *size_out = cert->encoded_len;
-}
-
-/** Return a new copy of <b>cert</b>. */
-tor_x509_cert_t *
-tor_x509_cert_dup(const tor_x509_cert_t *cert)
-{
-  tor_assert(cert);
-  X509 *x509 = cert->cert;
-  return tor_x509_cert_new(X509_dup(x509));
 }
 
 /** Read a DER-encoded X509 cert, of length exactly <b>certificate_len</b>,

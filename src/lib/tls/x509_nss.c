@@ -225,11 +225,13 @@ tor_x509_cert_impl_free_(tor_x509_cert_impl_t *cert)
     CERT_DestroyCertificate(cert);
 }
 
-tor_x509_cert_t *
-tor_x509_cert_dup(const tor_x509_cert_t *cert)
+tor_x509_cert_impl_t *
+tor_x509_cert_impl_dup_(tor_x509_cert_impl_t *cert)
 {
-  tor_assert(cert);
-  return tor_x509_cert_new(CERT_DupCertificate(cert->cert));
+  if (cert)
+    return CERT_DupCertificate(cert);
+  else
+    return NULL;
 }
 
 /**

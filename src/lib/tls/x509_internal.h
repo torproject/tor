@@ -41,6 +41,7 @@ int tor_x509_check_cert_lifetime_internal(int severity,
                                           int future_tolerance);
 
 void tor_x509_cert_impl_free_(tor_x509_cert_impl_t *cert);
+tor_x509_cert_impl_t *tor_x509_cert_impl_dup_(tor_x509_cert_impl_t *cert);
 #ifdef ENABLE_OPENSSL
 int tor_x509_cert_set_cached_der_encoding(tor_x509_cert_t *cert);
 #else
