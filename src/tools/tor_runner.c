@@ -92,9 +92,13 @@ child(const tor_main_configuration_t *cfg)
 {
   /* XXXX Close unused file descriptors. */
 
-  char **args = real_calloc(cfg->argc+1, sizeof(char *));
+  char **args = real_calloc(cfg->argc + cfg->argc_owned+1, sizeof(char *));
   memcpy(args, cfg->argv, cfg->argc * sizeof(char *));
-  args[cfg->argc] = NULL;
+  if (cfg->argc_owned)
+    memcpy(args + cfg->argc, cfg->argv_owned,
+           cfg->argc_owned * sizeof(char *));
+
+  args[cfg->argc + cfg->argc_owned] = NULL;
 
   int rv = execv(BINDIR "/tor", args);
 

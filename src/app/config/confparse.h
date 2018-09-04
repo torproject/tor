@@ -19,6 +19,7 @@ typedef enum config_type_t {
   CONFIG_TYPE_FILENAME,     /**< A filename: some prefixes get expanded. */
   CONFIG_TYPE_UINT,         /**< A non-negative integer less than MAX_INT */
   CONFIG_TYPE_INT,          /**< Any integer. */
+  CONFIG_TYPE_UINT64,       /**< A value in range 0..UINT64_MAX */
   CONFIG_TYPE_PORT,         /**< A port from 1...65535, 0 for "not set", or
                              * "auto".  */
   CONFIG_TYPE_INTERVAL,     /**< A number of seconds, with optional units*/
@@ -60,6 +61,7 @@ typedef union {
               * "UINT", it still uses the C int type -- it just enforces that
               * the values are in range [0,INT_MAX].
               */
+  uint64_t *UINT64;
   int *INT;
   int *PORT;
   int *INTERVAL;
