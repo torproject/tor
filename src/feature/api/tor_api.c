@@ -124,8 +124,7 @@ tor_main_configuration_free(tor_main_configuration_t *cfg)
   if (cfg == NULL)
     return;
   if (cfg->argv_owned) {
-    int i;
-    for (i = 0; i < cfg->argc_owned; ++i) {
+    for (int i = 0; i < cfg->argc_owned; ++i) {
       raw_free(cfg->argv_owned[i]);
     }
     raw_free(cfg->argv_owned);
