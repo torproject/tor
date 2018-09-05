@@ -1455,15 +1455,13 @@ auth_key_filename_is_valid(const char *filename)
 {
   int ret = 1;
   const char *valid_extension = ".auth_private";
-  const char *valid_extension_position = filename + strlen(filename)
-                                                - strlen(valid_extension);
 
   tor_assert(filename);
 
   /* The length of the filename must be greater than the length of the
    * extension and the valid extension must be at the end of filename. */
-  if (strlen(filename) > strlen(valid_extension) &&
-      strstr(filename, valid_extension) == valid_extension_position) {
+  if (!strcmpend(filename, valid_extension) &&
+      strlen(filename) != strlen(valid_extension)) {
     ret = 1;
   } else {
     ret = 0;
