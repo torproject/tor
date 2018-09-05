@@ -95,7 +95,7 @@ memwipe(void *mem, uint8_t byte, size_t sz)
   OPENSSL_cleanse(mem, sz);
 #else
   memset(mem, 0, sz);
-  asm volatile ("" ::: "memory");
+  asm volatile("" ::: "memory");
 #endif /* defined(SecureZeroMemory) || defined(HAVE_SECUREZEROMEMORY) || ... */
 
   /* Just in case some caller of memwipe() is relying on getting a buffer
@@ -108,5 +108,4 @@ memwipe(void *mem, uint8_t byte, size_t sz)
    * if somebody accidentally calls memwipe() instead of memset().
    **/
   memset(mem, byte, sz);
-
 }
