@@ -1007,7 +1007,7 @@ tor_tls_setup_session_secret_cb(tor_tls_t *tls)
  * determine whether it is functioning as a server.
  */
 tor_tls_t *
-tor_tls_new(int sock, int isServer)
+tor_tls_new(tor_socket_t sock, int isServer)
 {
   BIO *bio = NULL;
   tor_tls_t *result = tor_malloc_zero(sizeof(tor_tls_t));
