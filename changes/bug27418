@@ -1,0 +1,3 @@
+  o Minor bugfixes (continuous integration):
+    - When we use echo in Travis, don't pass a --flag as the first argument.
+      Fixes bug 27418; bugfix on 0.3.4.7-rc.
