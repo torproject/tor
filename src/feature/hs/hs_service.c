@@ -1236,6 +1236,11 @@ load_client_keys(hs_service_t *service)
   config->clients = smartlist_new();
 
   file_list = tor_listdir(client_keys_dir_path);
+  if (file_list == NULL) {
+    log_warn(LD_REND, "Client authorization directory %s can't be listed.",
+             client_keys_dir_path);
+    goto end;
+  }
 
   SMARTLIST_FOREACH_BEGIN(file_list, const char *, filename) {
     hs_service_authorized_client_t *client = NULL;
