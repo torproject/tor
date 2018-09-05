@@ -1444,7 +1444,7 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
   /* If the client id of auth client is not the same as the calculcated
    * client id, it means that this auth client is invaild according to the
    * client secret key client_auth_sk. */
-  if (!tor_memeq(client->client_id, keystream, HS_DESC_CLIENT_ID_LEN)) {
+  if (tor_memneq(client->client_id, keystream, HS_DESC_CLIENT_ID_LEN)) {
     goto done;
   }
   cookie_key = keystream + HS_DESC_CLIENT_ID_LEN;
