@@ -412,8 +412,7 @@ test_decode_descriptor(void *arg)
 
     /* We need to add fake auth clients here. */
     for (i=0; i < 15; ++i) {
-      fake_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
-      hs_desc_build_fake_authorized_client(fake_client);
+      fake_client = hs_desc_build_fake_authorized_client();
       smartlist_add(clients, fake_client);
     }
     desc->superencrypted_data.clients = clients;

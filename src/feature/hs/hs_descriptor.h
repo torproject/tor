@@ -302,8 +302,7 @@ void hs_desc_authorized_client_free_(hs_desc_authorized_client_t *client);
 link_specifier_t *hs_desc_lspec_to_trunnel(
                                    const hs_desc_link_specifier_t *spec);
 
-void
-hs_desc_build_fake_authorized_client(hs_desc_authorized_client_t *client_out);
+hs_desc_authorized_client_t *hs_desc_build_fake_authorized_client(void);
 void hs_desc_build_authorized_client(const curve25519_public_key_t *
                                      client_auth_pk,
                                      const curve25519_secret_key_t *
