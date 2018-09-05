@@ -1102,15 +1102,13 @@ client_filename_is_valid(const char *filename)
 {
   int ret = 1;
   const char *valid_extension = ".auth";
-  const char *valid_extension_position = filename + strlen(filename)
-                                                - strlen(valid_extension);
 
   tor_assert(filename);
 
-  /* The length of the filename must be greater than the length of the
-   * extension and the valid extension must be at the end of filename. */
-  if (strlen(filename) > strlen(valid_extension) &&
-      strstr(filename, valid_extension) == valid_extension_position) {
+  /* The file extension must match and the total filename length can't be the
+   * length of the extension else we do not have a filename. */
+  if (!strcmpend(filename, valid_extension) &&
+      strlen(filename) != strlen(valid_extension)) {
     ret = 1;
   } else {
     ret = 0;
