@@ -435,6 +435,10 @@ test_parse_authorized_client(void *arg)
     "descriptor:x:dz4q5xqlb4ldnbs72iarrml4ephk3du4i7o2cgiva5lwr6wkquja"));
   /* Some malformed string. */
   tt_assert(!parse_authorized_client("descriptor:x25519:aa=="));
+  tt_assert(!parse_authorized_client("descriptor:"));
+  tt_assert(!parse_authorized_client("descriptor:x25519"));
+  tt_assert(!parse_authorized_client("descriptor:x25519:"));
+  tt_assert(!parse_authorized_client(""));
 
  done:
   service_authorized_client_free(client);
