@@ -14,7 +14,11 @@
 #include <pthread.h>
 #endif
 
-#ifdef HAVE_STDATOMIC_H
+#if defined(HAVE_STDATOMIC_H) && defined(STDATOMIC_WORKS)
+#define HAVE_WORKING_STDATOMIC
+#endif
+
+#ifdef HAVE_WORKING_STDATOMIC
 #include <stdatomic.h>
 #endif
 
@@ -156,18 +160,18 @@ void tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value);
 /**
  * Atomic counter type; holds a size_t value.
  */
-#ifdef HAVE_STDATOMIC_H
+#ifdef HAVE_WORKING_STDATOMIC
 typedef struct atomic_counter_t {
   atomic_size_t val;
 } atomic_counter_t;
 #define ATOMIC_LINKAGE static
-#else /* !(defined(HAVE_STDATOMIC_H)) */
+#else /* !(defined(HAVE_WORKING_STDATOMIC)) */
 typedef struct atomic_counter_t {
   tor_mutex_t mutex;
   size_t val;
 } atomic_counter_t;
 #define ATOMIC_LINKAGE
-#endif /* defined(HAVE_STDATOMIC_H) */
+#endif /* defined(HAVE_WORKING_STDATOMIC) */
 
 ATOMIC_LINKAGE void atomic_counter_init(atomic_counter_t *counter);
 ATOMIC_LINKAGE void atomic_counter_destroy(atomic_counter_t *counter);
@@ -178,7 +182,7 @@ ATOMIC_LINKAGE size_t atomic_counter_exchange(atomic_counter_t *counter,
                                               size_t newval);
 #undef ATOMIC_LINKAGE
 
-#ifdef HAVE_STDATOMIC_H
+#ifdef HAVE_WORKING_STDATOMIC
 /** Initialize a new atomic counter with the value 0 */
 static inline void
 atomic_counter_init(atomic_counter_t *counter)
@@ -216,8 +220,7 @@ atomic_counter_exchange(atomic_counter_t *counter, size_t newval)
   return atomic_exchange(&counter->val, newval);
 }
 
-#else /* !(defined(HAVE_STDATOMIC_H)) */
-#endif /* defined(HAVE_STDATOMIC_H) */
+#else /* !(defined(HAVE_WORKING_STDATOMIC)) */
+#endif /* defined(HAVE_WORKING_STDATOMIC) */
 
 #endif /* !defined(TOR_COMPAT_THREADS_H) */
-

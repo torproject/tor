@@ -340,15 +340,13 @@ impl FromStr for ProtoSet {
     /// ```
     fn from_str(version_string: &str) -> Result<Self, Self::Err> {
         let mut pairs: Vec<(Version, Version)> = Vec::new();
-        let pieces: ::std::str::Split<char> = version_string.trim().split(',');
+        let pieces: ::std::str::Split<char> = version_string.split(',');
 
-        for piece in pieces {
-            let p: &str = piece.trim();
-
+        for p in pieces {
             if p.is_empty() {
                 continue;
             } else if p.contains('-') {
-                let mut pair = p.split('-');
+                let mut pair = p.splitn(2, '-');
 
                 let low  = pair.next().ok_or(ProtoverError::Unparseable)?;
                 let high = pair.next().ok_or(ProtoverError::Unparseable)?;
@@ -369,7 +367,7 @@ impl FromStr for ProtoSet {
                 pairs.push((v, v));
             }
         }
-        // If we were passed in an empty string, or a bunch of whitespace, or
+        // If we were passed in an empty string, or
         // simply a comma, or a pile of commas, then return an empty ProtoSet.
         if pairs.len() == 0 {
             return Ok(ProtoSet::default());
@@ -539,6 +537,18 @@ mod test {
     }
 
     #[test]
+    fn test_versions_from_str_hyphens() {
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("--1"));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("-1-2"));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1--2"));
+    }
+
+    #[test]
+    fn test_versions_from_str_triple() {
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1-2-3"));
+    }
+
+    #[test]
     fn test_versions_from_str_1exclam() {
         assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1,!"));
     }
@@ -546,6 +556,13 @@ mod test {
     #[test]
     fn test_versions_from_str_percent_equal() {
         assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("%="));
+    }
+
+    #[test]
+    fn test_versions_from_str_whitespace() {
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1,2\n"));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1\r,2"));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1,\t2"));
     }
 
     #[test]

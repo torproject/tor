@@ -1,0 +1,4 @@
+  o Minor features (bug workaround):
+    - Compile correctly on systems that provide the C11 stdatomic.h header,
+      but where C11 atomic functions don't actually compile.
+      Closes ticket 26779; workaround for Debian issue 903709.

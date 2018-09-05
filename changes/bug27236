@@ -1,0 +1,5 @@
+  o Minor bugfixes (testing, bootstrap):
+    - When calculating bootstrap progress, check exit policies and the exit
+      flag. Previously, Tor would only check the exit flag, which caused
+      race conditions in small and fast networks like chutney.
+      Fixes bug 27236; bugfix on 0.2.6.3-alpha.

@@ -106,11 +106,11 @@ test_pe_launch(void *arg)
     periodic_event_item_t *item = &periodic_events[i];
     if (item->roles & PERIODIC_EVENT_ROLE_CLIENT) {
       tt_int_op(periodic_event_is_enabled(item), OP_EQ, 1);
-      tt_u64_op(item->last_action_time, OP_NE, 0);
     } else {
       tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
-      tt_u64_op(item->last_action_time, OP_EQ, 0);
     }
+    // enabled or not, the event has not yet been run.
+    tt_u64_op(item->last_action_time, OP_EQ, 0);
   }
 
   /* Remove Client but become a Relay. */
@@ -127,12 +127,9 @@ test_pe_launch(void *arg)
     /* Only Client role should be disabled. */
     if (item->roles == PERIODIC_EVENT_ROLE_CLIENT) {
       tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
-      /* Was previously enabled so they should never be to 0. */
-      tt_u64_op(item->last_action_time, OP_NE, 0);
     }
     if (item->roles & PERIODIC_EVENT_ROLE_RELAY) {
       tt_int_op(periodic_event_is_enabled(item), OP_EQ, 1);
-      tt_u64_op(item->last_action_time, OP_NE, 0);
     }
     /* Non Relay role should be disabled, except for Dirserver. */
     if (!(item->roles & roles)) {
@@ -330,4 +327,3 @@ struct testcase_t periodic_event_tests[] = {
 
   END_OF_TESTCASES
 };
-

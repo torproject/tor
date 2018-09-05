@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+     - Update build system so that tor builds again with
+       --disable-unittests after recent refactoring efforts.
+       Fixes bug 26789; bugfix on 0.3.4.3-alpha.

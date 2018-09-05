@@ -98,6 +98,7 @@ def get_id_name(s):
 for fuzzer in FUZZERS:
     idname = get_id_name(fuzzer)
     print("""\
+if UNITTESTS_ENABLED
 src_test_fuzz_fuzz_{name}_SOURCES = \\
 	src/test/fuzz/fuzzing_common.c \\
 	src/test/fuzz/fuzz_{name}.c
@@ -105,11 +106,14 @@ src_test_fuzz_fuzz_{name}_CPPFLAGS = $(FUZZING_CPPFLAGS)
 src_test_fuzz_fuzz_{name}_CFLAGS = $(FUZZING_CFLAGS)
 src_test_fuzz_fuzz_{name}_LDFLAGS = $(FUZZING_LDFLAG)
 src_test_fuzz_fuzz_{name}_LDADD = $(FUZZING_LIBS)
+endif
 """.format(name=idname))
 
+print("if UNITTESTS_ENABLED")
 print("FUZZERS = \\")
 print(" \\\n".join("\tsrc/test/fuzz/fuzz-{name}".format(name=fuzzer)
                    for fuzzer in FUZZERS))
+print("endif")
 
 print("\n# ===== libfuzzer")
 print("\nif LIBFUZZER_ENABLED")
@@ -117,12 +121,14 @@ print("\nif LIBFUZZER_ENABLED")
 for fuzzer in FUZZERS:
     idname = get_id_name(fuzzer)
     print("""\
+if UNITTESTS_ENABLED
 src_test_fuzz_lf_fuzz_{name}_SOURCES = \\
 	$(src_test_fuzz_fuzz_{name}_SOURCES)
 src_test_fuzz_lf_fuzz_{name}_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
 src_test_fuzz_lf_fuzz_{name}_CFLAGS = $(LIBFUZZER_CFLAGS)
 src_test_fuzz_lf_fuzz_{name}_LDFLAGS = $(LIBFUZZER_LDFLAG)
 src_test_fuzz_lf_fuzz_{name}_LDADD = $(LIBFUZZER_LIBS)
+endif
 """.format(name=idname))
 
 print("LIBFUZZER_FUZZERS = \\")
@@ -140,10 +146,12 @@ print("if OSS_FUZZ_ENABLED")
 for fuzzer in FUZZERS:
     idname = get_id_name(fuzzer)
     print("""\
+if UNITTESTS_ENABLED
 src_test_fuzz_liboss_fuzz_{name}_a_SOURCES = \\
 	$(src_test_fuzz_fuzz_{name}_SOURCES)
 src_test_fuzz_liboss_fuzz_{name}_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
 src_test_fuzz_liboss_fuzz_{name}_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
+endif
 """.format(name=idname))
 
 print("OSS_FUZZ_FUZZERS = \\")

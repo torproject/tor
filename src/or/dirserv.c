@@ -3581,4 +3581,3 @@ dirserv_free_all(void)
 
   dirserv_clear_measured_bw_cache();
 }
-

@@ -1,0 +1,5 @@
+  o Minor bugfixes (testing):
+    - When running make test-network-all, use the mixed+hs-v2 network.
+      (A previous fix to chutney removed v3 onion services from the
+      mixed+hs-v23 network, so seeing "mixed+hs-v23" in tests is
+      confusing.) Fixes bug 27345; bugfix on 0.3.2.1-alpha.

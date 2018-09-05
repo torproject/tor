@@ -1,0 +1,3 @@
+  o Minor features (continuous integration):
+    - Use ccache in our Travis CI configuration.
+      Closes ticket 26952.
