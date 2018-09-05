@@ -1237,8 +1237,7 @@ load_client_keys(hs_service_t *service)
 
   file_list = tor_listdir(client_keys_dir_path);
 
-  SMARTLIST_FOREACH_BEGIN(file_list, char *, filename) {
-
+  SMARTLIST_FOREACH_BEGIN(file_list, const char *, filename) {
     hs_service_authorized_client_t *client = NULL;
     log_info(LD_REND, "Loading a client authorization key file %s...",
              filename);
