@@ -380,6 +380,8 @@ struct or_options_t {
   struct config_line_t *HidServAuth; /**< List of configuration lines for
                                * client-side authorizations for hidden
                                * services */
+  char *ClientOnionAuthDir; /**< Directory to keep client
+                             * onion service authorization secret keys */
   char *ContactInfo; /**< Contact info to be published in the directory. */
 
   int HeartbeatPeriod; /**< Log heartbeat messages after this many seconds

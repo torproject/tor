@@ -31,6 +31,16 @@ typedef enum {
   HS_CLIENT_FETCH_PENDING      = 5,
 } hs_client_fetch_status_t;
 
+/** Client-side configuration of authorization for a service. */
+typedef struct hs_client_service_authorization_t {
+  /* An curve25519 secret key used to compute decryption keys that
+   * allow the client to decrypt the hidden service descriptor. */
+  curve25519_secret_key_t enc_seckey;
+
+  /* An onion address that is used to connect to the onion service. */
+  char onion_address[HS_SERVICE_ADDR_LEN_BASE32+1];
+} hs_client_service_authorization_t;
+
 void hs_client_note_connection_attempt_succeeded(
                                        const edge_connection_t *conn);
 
@@ -63,6 +73,9 @@ void hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident);
 extend_info_t *hs_client_get_random_intro_from_edge(
                                           const edge_connection_t *edge_conn);
 
+int hs_config_client_authorization(const or_options_t *options,
+                                   int validate_only);
+
 int hs_client_reextend_intro_circuit(origin_circuit_t *circ);
 
 void hs_client_purge_state(void);
@@ -70,6 +83,11 @@ void hs_client_purge_state(void);
 void hs_client_free_all(void);
 
 #ifdef HS_CLIENT_PRIVATE
+
+STATIC int auth_key_filename_is_valid(const char *filename);
+
+STATIC hs_client_service_authorization_t *
+parse_auth_file_content(const char *client_key_str);
 
 STATIC routerstatus_t *
 pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk);
@@ -85,6 +103,12 @@ STATIC int handle_rendezvous2(origin_circuit_t *circ, const uint8_t *payload,
 
 MOCK_DECL(STATIC hs_client_fetch_status_t,
           fetch_v3_desc, (const ed25519_public_key_t *onion_identity_pk));
+
+#ifdef TOR_UNIT_TESTS
+
+STATIC digest256map_t *get_hs_client_auths_map(void);
+
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(HS_CLIENT_PRIVATE) */
 

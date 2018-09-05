@@ -113,8 +113,8 @@ get_fname_suffix(const char *name, const char *suffix)
   setup_directory();
   if (!name)
     return temp_dir;
-  tor_snprintf(buf,sizeof(buf),"%s/%s%s%s",temp_dir,name,suffix ? "_" : "",
-               suffix ? suffix : "");
+  tor_snprintf(buf,sizeof(buf),"%s%s%s%s%s", temp_dir, PATH_SEPARATOR, name,
+               suffix ? "_" : "", suffix ? suffix : "");
   return buf;
 }
 
