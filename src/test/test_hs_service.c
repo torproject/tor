@@ -552,7 +552,7 @@ test_load_keys_with_client_auth(void *arg)
 
     SMARTLIST_FOREACH_BEGIN(service->config.clients,
                             hs_service_authorized_client_t *, client) {
-      if (!tor_memcmp(&pubkey, &client->client_pk, sizeof(pubkey))) {
+      if (tor_memeq(&pubkey, &client->client_pk, sizeof(pubkey))) {
         is_found = 1;
         break;
       }
