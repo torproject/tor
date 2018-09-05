@@ -172,7 +172,7 @@ install:
 script:
   - ./autogen.sh
   - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
-  - echo $CONFIGURE_FLAGS
+  - echo "Configure flags are $CONFIGURE_FLAGS"
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$DISTCHECK" == "" ]]; then make check; fi
