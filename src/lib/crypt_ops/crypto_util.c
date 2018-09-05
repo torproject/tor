@@ -80,7 +80,7 @@ memwipe(void *mem, uint8_t byte, size_t sz)
 #elif defined(HAVE_MEMSET_S)
   /* This is in the C99 standard. */
   memset_s(mem, sz, 0, sz);
-#else
+#elif defined(ENABLE_OPENSSL)
   /* This is a slow and ugly function from OpenSSL that fills 'mem' with junk
    * based on the pointer value, then uses that junk to update a global
    * variable.  It's an elaborate ruse to trick the compiler into not
@@ -93,6 +93,9 @@ memwipe(void *mem, uint8_t byte, size_t sz)
    **/
 
   OPENSSL_cleanse(mem, sz);
+#else
+  memset(mem, 0, sz);
+  asm volatile ("" ::: "memory");
 #endif /* defined(SecureZeroMemory) || defined(HAVE_SECUREZEROMEMORY) || ... */
 
   /* Just in case some caller of memwipe() is relying on getting a buffer
@@ -105,4 +108,5 @@ memwipe(void *mem, uint8_t byte, size_t sz)
    * if somebody accidentally calls memwipe() instead of memset().
    **/
   memset(mem, byte, sz);
+
 }
