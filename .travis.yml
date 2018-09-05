@@ -179,11 +179,11 @@ script:
 after_failure:
   ## configure will leave a log file with more details of config failures.
   ## But the log is too long for travis' rendered view, so tail it.
-  - tail -1000 config.log
+  - tail -1000 config.log || echo "tail failed"
   ## `make check` will leave a log file with more details of test failures.
-  - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log; fi
+  - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
   ## `make distcheck` puts it somewhere different.
-  - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog; fi
+  - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
 
 after_success:
   ## If this build was one that produced coverage, upload it.
