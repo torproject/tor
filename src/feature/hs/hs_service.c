@@ -1264,7 +1264,8 @@ load_client_keys(hs_service_t *service)
     }
 
     client = parse_authorized_client(client_key_str);
-    /* Free immediately after using it. */
+    /* Wipe and free immediately after using it. */
+    memwipe(client_key_str, 0, strlen(client_key_str));
     tor_free(client_key_str);
 
     if (client) {
