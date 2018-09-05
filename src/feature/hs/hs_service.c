@@ -1786,10 +1786,8 @@ build_service_desc_superencrypted(const hs_service_t *service,
   }
 
   for (i = 0; i < num_clients_to_add; i++) {
-    hs_desc_authorized_client_t *desc_client;
-    desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
-
-    hs_desc_build_fake_authorized_client(desc_client);
+    hs_desc_authorized_client_t *desc_client =
+      hs_desc_build_fake_authorized_client();
     smartlist_add(superencrypted->clients, desc_client);
   }
 

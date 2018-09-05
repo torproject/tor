@@ -138,10 +138,8 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
 
   desc->superencrypted_data.clients = smartlist_new();
   for (i = 0; i < HS_DESC_AUTH_CLIENT_MULTIPLE; i++) {
-    hs_desc_authorized_client_t *desc_client;
-    desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
-
-    hs_desc_build_fake_authorized_client(desc_client);
+    hs_desc_authorized_client_t *desc_client =
+      hs_desc_build_fake_authorized_client();
     smartlist_add(desc->superencrypted_data.clients, desc_client);
   }
 

@@ -2833,18 +2833,22 @@ hs_desc_intro_point_free_(hs_desc_intro_point_t *ip)
   tor_free(ip);
 }
 
-/* Build a fake client info for the descriptor */
-void
-hs_desc_build_fake_authorized_client(hs_desc_authorized_client_t *client_out)
+/* Allocate and build a new fake client info for the descriptor. Return a
+ * newly allocated object. This can't fail. */
+hs_desc_authorized_client_t *
+hs_desc_build_fake_authorized_client(void)
 {
-  tor_assert(client_out);
+  hs_desc_authorized_client_t *client_auth =
+    tor_malloc_zero(sizeof(*client_auth));
 
-  crypto_rand((char *) client_out->client_id,
-              sizeof(client_out->client_id));
-  crypto_rand((char *) client_out->iv,
-              sizeof(client_out->iv));
-  crypto_rand((char *) client_out->encrypted_cookie,
-              sizeof(client_out->encrypted_cookie));
+  crypto_rand((char *) client_auth->client_id,
+              sizeof(client_auth->client_id));
+  crypto_rand((char *) client_auth->iv,
+              sizeof(client_auth->iv));
+  crypto_rand((char *) client_auth->encrypted_cookie,
+              sizeof(client_auth->encrypted_cookie));
+
+  return client_auth;
 }
 
 /* Using the client public key, auth ephemeral secret key, and descriptor
