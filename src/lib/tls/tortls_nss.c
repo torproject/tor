@@ -33,6 +33,7 @@
 #include "lib/tls/tortls_internal.h"
 #include "lib/log/util_bug.h"
 
+DISABLE_GCC_WARNING(strict-prototypes)
 #include <prio.h>
 // For access to raw sockets.
 #include <private/pprio.h>
@@ -40,6 +41,7 @@
 #include <sslt.h>
 #include <sslproto.h>
 #include <certt.h>
+ENABLE_GCC_WARNING(strict-prototypes)
 
 static SECStatus always_accept_cert_cb(void *, PRFileDesc *, PRBool, PRBool);
 
