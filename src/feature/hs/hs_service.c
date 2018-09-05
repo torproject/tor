@@ -1163,6 +1163,16 @@ parse_authorized_client(const char *client_key_str)
     goto err;
   }
 
+  /* We expect a specific length of the base32 encoded key so make sure we
+   * have that so we don't successfully decode a value with a different length
+   * and end up in trouble when copying the decoded key into a fixed length
+   * buffer. */
+  if (strlen(pubkey_b32) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
+    log_warn(LD_REND, "Client authorization encoded base32 public key "
+                      "length is invalid: %s", pubkey_b32);
+    goto err;
+  }
+
   client = tor_malloc_zero(sizeof(hs_service_authorized_client_t));
   if (base32_decode((char *) client->client_pk.public_key,
                     sizeof(client->client_pk.public_key),
