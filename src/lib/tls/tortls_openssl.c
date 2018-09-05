@@ -659,8 +659,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   tls_log_errors(NULL, LOG_WARN, LD_NET, "creating TLS context");
   if (pkey)
     EVP_PKEY_free(pkey);
-  if (result)
-    tor_tls_context_decref(result);
+  tor_tls_context_decref(result);
   return NULL;
 }
 
