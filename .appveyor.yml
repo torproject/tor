@@ -57,5 +57,16 @@ test_script:
     }
 
 on_failure:
+- ps: >-
+    if ($env:compiler -eq "mingw") {
+            $oldpath = ${env:Path} -split ';'
+            $buildpath = @("C:\msys64\usr\bin") + $oldpath
+            $env:Path = @($buildpath) -join ';'
+            Set-Location "${env:build}"
+            Execute-Bash "7z a logs.zip config.log || true"
+            Execute-Bash "7z a logs.zip test-suite.log || true"
+            Execute-Bash "appveyor PushArtifact logs.zip || true"
+            Execute-Bash "tail -1000 config.log || true"
+            Execute-Bash "cat test-suite.log || true"
+    }
 - cmd: C:\Python27\python.exe %APPVEYOR_BUILD_FOLDER%\scripts\test\appveyor-irc-notify.py irc.oftc.net:6697 tor-ci failure
-
