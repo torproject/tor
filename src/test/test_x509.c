@@ -57,7 +57,6 @@ test_x509_cert_new_failing_digest(void *arg)
  done:
   crypto_pk_free(pk1);
   crypto_pk_free(pk2);
-  tor_x509_cert_impl_free(impl);
   UNMOCK(crypto_digest);
   teardown_capture_of_logs();
 }
