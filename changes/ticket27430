@@ -1,0 +1,4 @@
+  o Minor features (continuous integration):
+    - Show config.log and test-suite.log after failed Appveyor builds.
+      Also upload the zipped full logs as a build artifact.
+      Implements ticket 27430.
