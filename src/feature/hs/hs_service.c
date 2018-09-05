@@ -1117,8 +1117,15 @@ client_filename_is_valid(const char *filename)
   return ret;
 }
 
-/* Parse an authorized client from a string. Return the key on success, return
- * NULL, otherwise. */
+/* Parse an authorized client from a string. The format of a client string
+ * looks like (see rend-spec-v3.txt):
+ *
+ *  <auth-type>:<key-type>:<base32-encoded-public-key>
+ *
+ * The <auth-type> can only be "descriptor".
+ * The <key-type> can only be "x25519".
+ *
+ * Return the key on success, return NULL, otherwise. */
 STATIC hs_service_authorized_client_t *
 parse_authorized_client(const char *client_key_str)
 {
