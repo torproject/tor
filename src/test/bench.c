@@ -473,18 +473,19 @@ bench_digest(void)
     for (int i = 0; lens[i] > 0; ++i) {
       reset_perftime();
       start = perftime();
+      int failures = 0;
       for (int j = 0; j < N; ++j) {
         switch (alg) {
           case DIGEST_SHA1:
-            crypto_digest(out, buf, lens[i]);
+            failures += crypto_digest(out, buf, lens[i]) < 0;
             break;
           case DIGEST_SHA256:
           case DIGEST_SHA3_256:
-            crypto_digest256(out, buf, lens[i], alg);
+            failures += crypto_digest256(out, buf, lens[i], alg) < 0;
             break;
           case DIGEST_SHA512:
           case DIGEST_SHA3_512:
-            crypto_digest512(out, buf, lens[i], alg);
+            failures += crypto_digest512(out, buf, lens[i], alg) < 0;
             break;
           default:
             tor_assert(0);
@@ -494,6 +495,8 @@ bench_digest(void)
       printf("%s(%d): %.2f ns per call\n",
              crypto_digest_algorithm_get_name(alg),
              lens[i], NANOCOUNT(start,end,N));
+      if (failures)
+        printf("ERROR: crypto_digest failed %d times.\n", failures);
     }
   }
 }

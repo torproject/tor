@@ -110,7 +110,11 @@ read_cert_from(const char *str)
 {
   size_t len = strlen(str);
   uint8_t *raw_cert = tor_malloc(len);
-  size_t true_len = pem_decode(raw_cert, len, str, len, "CERTIFICATE");
+  ssize_t true_len = pem_decode(raw_cert, len, str, len, "CERTIFICATE");
+  if (true_len < 0) {
+    tor_free(raw_cert);
+    return NULL;
+  }
   tor_x509_cert_t *cert = tor_x509_cert_decode(raw_cert, true_len);
   tor_free(raw_cert);
   if (! cert) {

@@ -91,9 +91,11 @@ test_x509_consume_ec_cert(void *arg)
     "+FSPvQIhAM7kY9Tlt0ELmyMnORPp1VJieXn/qhL5VoxGxSedTbny\n";
   const time_t now = 1535045321; /* when I'm writing this test. */
   tor_x509_cert_t *cert = cert_from_der64(certificate);
+  crypto_pk_t *key = NULL;
   tt_assert(cert);
 
-  tt_ptr_op(NULL, OP_EQ, tor_tls_cert_get_key(cert));
+  key = tor_tls_cert_get_key(cert);
+  tt_ptr_op(NULL, OP_EQ, key); // Can't get an RSA key out of an EC cert.
 
   /* It's a self-signed cert -- make sure it signed itself. */
   tt_assert(tor_tls_cert_is_valid(LOG_ERR, cert, cert, now, 0));
@@ -105,6 +107,7 @@ test_x509_consume_ec_cert(void *arg)
 
  done:
   tor_x509_cert_free(cert);
+  crypto_pk_free(key);
   teardown_capture_of_logs();
 }
 

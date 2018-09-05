@@ -79,6 +79,7 @@ test_crypto_dh(void *arg)
   dh1_dup = crypto_dh_dup(dh1);
   s1len = crypto_dh_compute_secret(LOG_WARN, dh1_dup, p2, DH1024_KEY_LEN,
                                    s1, 50);
+  tt_i64_op(s1len, OP_GE, 0);
   tt_mem_op(s1,OP_EQ, s2, s1len);
 
   {
