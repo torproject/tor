@@ -133,8 +133,10 @@ fixed_try_to_extract_certs_from_tls(int severity, tor_tls_t *tls,
 {
   (void) severity;
   (void) tls;
-  *cert_out = fixed_try_to_extract_certs_from_tls_cert_out_result;
-  *id_cert_out = fixed_try_to_extract_certs_from_tls_id_cert_out_result;
+  *cert_out = tor_x509_cert_impl_dup_(
+                      fixed_try_to_extract_certs_from_tls_cert_out_result);
+  *id_cert_out =  tor_x509_cert_impl_dup_(
+                      fixed_try_to_extract_certs_from_tls_id_cert_out_result);
 }
 
 static void
@@ -498,6 +500,10 @@ test_tortls_verify(void *ignored)
   UNMOCK(try_to_extract_certs_from_tls);
   tor_x509_cert_impl_free(cert1);
   tor_x509_cert_impl_free(cert2);
+  tor_x509_cert_impl_free(validCert);
+  tor_x509_cert_impl_free(invalidCert);
+  tor_x509_cert_impl_free(caCert);
+
   tor_free(tls);
   crypto_pk_free(k);
 }

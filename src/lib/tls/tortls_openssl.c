@@ -1380,8 +1380,7 @@ tor_tls_get_own_cert,(tor_tls_t *tls))
  * *<b>id_cert_out</b> respectively.  Log all messages at level
  * <b>severity</b>.
  *
- * Note that a reference is added to cert_out, so it needs to be
- * freed. id_cert_out doesn't. */
+ * Note that a reference is added both of the returned certificates. */
 MOCK_IMPL(void,
 try_to_extract_certs_from_tls,(int severity, tor_tls_t *tls,
                                X509 **cert_out, X509 **id_cert_out))
@@ -1411,7 +1410,7 @@ try_to_extract_certs_from_tls,(int severity, tor_tls_t *tls,
     if (X509_cmp(id_cert, cert) != 0)
       break;
   }
-  *id_cert_out = id_cert;
+  *id_cert_out = id_cert ? X509_dup(id_cert) : NULL;
 }
 
 /** Return the number of bytes available for reading from <b>tls</b>.
