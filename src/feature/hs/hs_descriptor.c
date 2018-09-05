@@ -2202,7 +2202,8 @@ desc_decode_superencrypted_v3(const hs_descriptor_t *desc,
         tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
 
       if (decode_auth_client(token, client) < 0) {
-        log_warn(LD_REND, "Auth client is not valid");
+        log_warn(LD_REND, "Descriptor client authorization section can't "
+                          "be decoded.");
         tor_free(client);
         goto err;
       }
