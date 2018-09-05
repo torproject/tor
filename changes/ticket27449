@@ -1,0 +1,3 @@
+  o Minor features (continuous integration):
+    - Log the compiler path and version during Appveyor builds.
+      Implements ticket 27449.
