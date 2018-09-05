@@ -14,7 +14,10 @@
 #endif
 
 #include "lib/cc/compat_compiler.h"
+#include "lib/crypt_ops/crypto_init.h"
+#include "lib/crypt_ops/crypto_openssl_mgt.h"
 
+#ifdef ENABLE_OPENSSL
 /* Some versions of OpenSSL declare X509_STORE_CTX_set_verify_cb twice in
  * x509.h and x509_vfy.h. Suppress the GCC warning so we can build with
  * -Wredundant-decl. */
@@ -28,12 +31,13 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/err.h>
 
 ENABLE_GCC_WARNING(redundant-decls)
+#endif
 
 #include <errno.h>
 
-#include "lib/crypt_ops/crypto.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_rsa.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/binascii.h"
 #include "lib/encoding/time_fmt.h"
@@ -237,8 +241,7 @@ generate_key(int bits)
   crypto_pk_t *env = crypto_pk_new();
   if (crypto_pk_generate_key_with_bits(env,bits)<0)
     goto done;
-  rsa = crypto_pk_get_rsa_(env);
-  rsa = RSAPrivateKey_dup(rsa);
+  rsa = crypto_pk_get_openssl_rsa_(env);
  done:
   crypto_pk_free(env);
   return rsa;
@@ -266,7 +269,7 @@ load_identity_key(void)
                IDENTITY_KEY_BITS);
     if (!(key = generate_key(IDENTITY_KEY_BITS))) {
       log_err(LD_GENERAL, "Couldn't generate identity key.");
-      crypto_log_errors(LOG_ERR, "Generating identity key");
+      crypto_openssl_log_errors(LOG_ERR, "Generating identity key");
       return 1;
     }
     identity_key = EVP_PKEY_new();
@@ -288,7 +291,7 @@ load_identity_key(void)
                                        NULL, NULL)) {
       log_err(LD_GENERAL, "Couldn't write identity key to %s",
               identity_key_file);
-      crypto_log_errors(LOG_ERR, "Writing identity key");
+      crypto_openssl_log_errors(LOG_ERR, "Writing identity key");
       abort_writing_to_file(open_file);
       return 1;
     }
@@ -353,7 +356,7 @@ generate_signing_key(void)
              SIGNING_KEY_BITS);
   if (!(key = generate_key(SIGNING_KEY_BITS))) {
     log_err(LD_GENERAL, "Couldn't generate signing key.");
-    crypto_log_errors(LOG_ERR, "Generating signing key");
+    crypto_openssl_log_errors(LOG_ERR, "Generating signing key");
     return 1;
   }
   signing_key = EVP_PKEY_new();
@@ -369,7 +372,7 @@ generate_signing_key(void)
 
   /* Write signing key with no encryption. */
   if (!PEM_write_RSAPrivateKey(f, key, NULL, NULL, 0, NULL, NULL)) {
-    crypto_log_errors(LOG_WARN, "writing signing key");
+    crypto_openssl_log_errors(LOG_WARN, "writing signing key");
     abort_writing_to_file(open_file);
     return 1;
   }
@@ -393,7 +396,7 @@ key_to_string(EVP_PKEY *key)
 
   b = BIO_new(BIO_s_mem());
   if (!PEM_write_bio_RSAPublicKey(b, rsa)) {
-    crypto_log_errors(LOG_WARN, "writing public key to string");
+    crypto_openssl_log_errors(LOG_WARN, "writing public key to string");
     RSA_free(rsa);
     return NULL;
   }
@@ -414,7 +417,7 @@ static int
 get_fingerprint(EVP_PKEY *pkey, char *out)
 {
   int r = -1;
-  crypto_pk_t *pk = crypto_new_pk_from_rsa_(EVP_PKEY_get1_RSA(pkey));
+  crypto_pk_t *pk = crypto_new_pk_from_openssl_rsa_(EVP_PKEY_get1_RSA(pkey));
   if (pk) {
     r = crypto_pk_get_fingerprint(pk, out, 0);
     crypto_pk_free(pk);
@@ -427,7 +430,7 @@ static int
 get_digest(EVP_PKEY *pkey, char *out)
 {
   int r = -1;
-  crypto_pk_t *pk = crypto_new_pk_from_rsa_(EVP_PKEY_get1_RSA(pkey));
+  crypto_pk_t *pk = crypto_new_pk_from_openssl_rsa_(EVP_PKEY_get1_RSA(pkey));
   if (pk) {
     r = crypto_pk_get_digest(pk, out);
     crypto_pk_free(pk);

@@ -16,13 +16,22 @@
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_hkdf.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_init.h"
 #include "ed25519_vectors.inc"
+#include "test/log_test_helpers.h"
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+
+#if defined(ENABLE_OPENSSL)
+#include "lib/crypt_ops/compat_openssl.h"
+DISABLE_GCC_WARNING(redundant-decls)
+#include <openssl/dh.h>
+ENABLE_GCC_WARNING(redundant-decls)
 #endif
 
 /** Run unit tests for Diffie-Hellman functionality. */
@@ -37,6 +46,11 @@ test_crypto_dh(void *arg)
   char s1[DH1024_KEY_LEN];
   char s2[DH1024_KEY_LEN];
   ssize_t s1len, s2len;
+#ifdef ENABLE_OPENSSL
+  crypto_dh_t *dh3 = NULL;
+  DH *dh4 = NULL;
+  BIGNUM *pubkey_tmp = NULL;
+#endif
 
   (void)arg;
   tt_int_op(crypto_dh_get_bytes(dh1),OP_EQ, DH1024_KEY_LEN);
@@ -88,6 +102,10 @@ test_crypto_dh(void *arg)
     tt_int_op(-1, OP_EQ, s1len);
 
     /* 2 is okay, though weird. */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, "\x02", 1, s1, 50);
+    tt_int_op(50, OP_EQ, s1len);
+
+    /* 2 a second time is still okay, though weird. */
     s1len = crypto_dh_compute_secret(LOG_WARN, dh1, "\x02", 1, s1, 50);
     tt_int_op(50, OP_EQ, s1len);
 
@@ -157,16 +175,59 @@ test_crypto_dh(void *arg)
     tt_int_op(s1len, OP_EQ, -1);
   }
 
+#if defined(ENABLE_OPENSSL)
+  {
+    /* Make sure that our crypto library can handshake with openssl. */
+    dh3 = crypto_dh_new(DH_TYPE_TLS);
+    tt_assert(!crypto_dh_get_public(dh3, p1, DH1024_KEY_LEN));
+
+    dh4 = crypto_dh_new_openssl_tls();
+    tt_assert(DH_generate_key(dh4));
+    const BIGNUM *pk=NULL;
+#ifdef OPENSSL_1_1_API
+    const BIGNUM *sk=NULL;
+    DH_get0_key(dh4, &pk, &sk);
+#else
+    pk = dh4->pub_key;
+#endif
+    tt_assert(pk);
+    tt_int_op(BN_num_bytes(pk), OP_LE, DH1024_KEY_LEN);
+    tt_int_op(BN_num_bytes(pk), OP_GT, 0);
+    memset(p2, 0, sizeof(p2));
+    /* right-pad. */
+    BN_bn2bin(pk, (unsigned char *)(p2+DH1024_KEY_LEN-BN_num_bytes(pk)));
+
+    s1len = crypto_dh_handshake(LOG_WARN, dh3, p2, DH1024_KEY_LEN,
+                                (unsigned char *)s1, sizeof(s1));
+    pubkey_tmp = BN_bin2bn((unsigned char *)p1, DH1024_KEY_LEN, NULL);
+    s2len = DH_compute_key((unsigned char *)s2, pubkey_tmp, dh4);
+
+    tt_int_op(s1len, OP_EQ, s2len);
+    tt_int_op(s1len, OP_GT, 0);
+    tt_mem_op(s1, OP_EQ, s2, s1len);
+  }
+#endif
+
  done:
   crypto_dh_free(dh1);
   crypto_dh_free(dh2);
   crypto_dh_free(dh1_dup);
+#ifdef ENABLE_OPENSSL
+  crypto_dh_free(dh3);
+  if (dh4)
+    DH_free(dh4);
+  if (pubkey_tmp)
+    BN_free(pubkey_tmp);
+#endif
 }
 
 static void
 test_crypto_openssl_version(void *arg)
 {
   (void)arg;
+#ifdef ENABLE_NSS
+  tt_skip();
+#else
   const char *version = crypto_openssl_get_version_str();
   const char *h_version = crypto_openssl_get_header_version_str();
   tt_assert(version);
@@ -186,6 +247,7 @@ test_crypto_openssl_version(void *arg)
   tt_int_op(a, OP_GE, 0);
   tt_int_op(b, OP_GE, 0);
   tt_int_op(c, OP_GE, 0);
+#endif
 
  done:
   ;
@@ -1363,22 +1425,22 @@ test_crypto_pk_base64(void *arg)
   /* Test Base64 encoding a key. */
   pk1 = pk_generate(0);
   tt_assert(pk1);
-  tt_int_op(0, OP_EQ, crypto_pk_base64_encode(pk1, &encoded));
+  tt_int_op(0, OP_EQ, crypto_pk_base64_encode_private(pk1, &encoded));
   tt_assert(encoded);
 
   /* Test decoding a valid key. */
-  pk2 = crypto_pk_base64_decode(encoded, strlen(encoded));
+  pk2 = crypto_pk_base64_decode_private(encoded, strlen(encoded));
   tt_assert(pk2);
   tt_int_op(crypto_pk_cmp_keys(pk1, pk2), OP_EQ, 0);
   crypto_pk_free(pk2);
 
   /* Test decoding a invalid key (not Base64). */
   static const char *invalid_b64 = "The key is in another castle!";
-  pk2 = crypto_pk_base64_decode(invalid_b64, strlen(invalid_b64));
+  pk2 = crypto_pk_base64_decode_private(invalid_b64, strlen(invalid_b64));
   tt_ptr_op(pk2, OP_EQ, NULL);
 
   /* Test decoding a truncated Base64 blob. */
-  pk2 = crypto_pk_base64_decode(encoded, strlen(encoded)/2);
+  pk2 = crypto_pk_base64_decode_private(encoded, strlen(encoded)/2);
   tt_ptr_op(pk2, OP_EQ, NULL);
 
  done:
@@ -1427,6 +1489,58 @@ test_crypto_pk_pem_encrypted(void *arg)
  done:
   crypto_pk_free(pk);
 }
+
+static void
+test_crypto_pk_invalid_private_key(void *arg)
+{
+  (void)arg;
+  /* Here is a simple invalid private key: it was produced by making
+   * a regular private key, and then adding 2 to the modulus. */
+  const char pem[] =
+    "-----BEGIN RSA PRIVATE KEY-----\n"
+    "MIIEpQIBAAKCAQEAskRyZrs+YAukvBmZlgo6/rCxyKF2xyUk073ap+2CgRUnSfGG\n"
+    "mflHlzqVq7tpH50DafpS+fFAbaEaNV/ac20QG0rUZi38HTB4qURWOu6n0Bws6E4l\n"
+    "UX/AkvDlWnuYH0pHHi2c3DGNFjwoJpjKuUTk+cRffVR8X3Kjr62SUDUaBNW0Kecz\n"
+    "3SYLbmgmZI16dFZ+g9sNM3znXZbhvb33WwPqpZSSPs37cPgF7eS6mAw/gUMx6zfE\n"
+    "HRmUnOQSzUdS05rvc/hsiCLhiIZ8hgfkD07XnTT1Ds8DwE55k7BUWY2wvwWCNLsH\n"
+    "qtqAxTr615XdkMxVkYgImpqPybarpfNYhFqkOwIDAQABAoIBACPC3VxEdbfYvhxJ\n"
+    "2mih9sG++nswAN7kUaX0cRe86rAwaShJPmJHApiQ1ROVTfpciiHJaLnhLraPWe2Z\n"
+    "I/6Bw3hmI4O399p3Lc1u+wlpdNqnvE6B1rSptx0DHE9xecvVH70rE0uM2Su7t6Y+\n"
+    "gnR2IKUGQs2mlCilm7aTUEWs0WJkkl4CG1dyxItuOSdNBjOEzXimJyiB10jEBFsp\n"
+    "SZeCF2FZ7AJbck5CVC42+oTsiDbZrHTHOn7v26rFGdONeHD1wOI1v7JwHFpCB923\n"
+    "aEHBzsPbMeq7DWG1rjzCYpcXHhTDBDBWSia4SEhyr2Nl7m7qxWWWwR+x4dqAj3rD\n"
+    "HeTmos0CgYEA6uf1CLpjPpOs5IaW1DQI8dJA/xFEAC/6GVgq4nFOGHZrm8G3L5o+\n"
+    "qvtQNMpDs2naWuZpqROFqv24o01DykHygR72GlPIY6uvmmf5tvJLoGnbFUay33L4\n"
+    "7b9dkNhuEIBNPzVDie0pgS77WgaPbYkVv5fnDwgPuVnkqfakEt7Pz2MCgYEAwkZ5\n"
+    "R1wLuTQEA2Poo6Gf4L8Bg6yNYI46LHDqDIs818iYLjtcnEEvbPfaoKNpOn7s7s4O\n"
+    "Pc+4HnT1aIQs0IKVLRTp+5a/9wfOkPZnobWOUHZk9UzBL3Hc1uy/qhp93iE3tSzx\n"
+    "v0O1pvR+hr3guTCZx8wZnDvaMgG3hlyPnVlHdrMCgYEAzQQxGbMC1ySv6quEjCP2\n"
+    "AogMbhE1lixJTUFj/EoDbNo9xKznIkauly/Lqqc1OysRhfA/G2+MY9YZBX1zwtyX\n"
+    "uBW7mPKynDrFgi9pBECnvJNmwET57Ic9ttIj6Tzbos83nAjyrzgr1zGX8dRz7ZeN\n"
+    "QbBj2vygLJbGOYinXkjUeh0CgYEAhN5aF9n2EqZmkEMGWtMxWy6HRJ0A3Cap1rcq\n"
+    "+4VHCXWhzwy+XAeg/e/N0MuyLlWcif7XcqLcE8h+BwtO8xQ8HmcNWApUJAls12wO\n"
+    "mGRpftJaXgIupdpD5aJpu1b++qrRRNIGTH9sf1D8L/8w8LcylZkbcuTkaAsQj45C\n"
+    "kqT64U0CgYEAq47IKS6xc3CDc17BqExR6t+1yRe+4ml+z1zcVbfUKony4pGvl1yo\n"
+    "rk0IYDN5Vd8h5xtXrkPdX9h+ywmohnelDKsayEuE+opyqEpSU4/96Bb22RZUoucb\n"
+    "LWkV5gZx5hFnDFtEd4vadMIiY4jVv/3JqiZDKwMVBJKlHRXJEEmIEBk=\n"
+    "-----END RSA PRIVATE KEY-----\n";
+
+  crypto_pk_t *pk = NULL;
+
+  pk = crypto_pk_new();
+  setup_capture_of_logs(LOG_WARN);
+  tt_int_op(-1, OP_EQ,
+            crypto_pk_read_private_key_from_string(pk, pem, strlen(pem)));
+#ifdef ENABLE_NSS
+  expect_single_log_msg_containing("received bad data");
+#else
+  expect_single_log_msg_containing("while checking RSA key");
+#endif
+ done:
+  teardown_capture_of_logs();
+  crypto_pk_free(pk);
+}
+
 #ifdef HAVE_TRUNCATE
 #define do_truncate truncate
 #else
@@ -1462,7 +1576,8 @@ test_crypto_digests(void *arg)
   (void)arg;
   k = crypto_pk_new();
   tt_assert(k);
-  r = crypto_pk_read_private_key_from_string(k, AUTHORITY_SIGNKEY_3, -1);
+  r = crypto_pk_read_private_key_from_string(k, AUTHORITY_SIGNKEY_3,
+                                             strlen(AUTHORITY_SIGNKEY_3));
   tt_assert(!r);
 
   r = crypto_pk_get_digest(k, digest);
@@ -3047,6 +3162,8 @@ struct testcase_t crypto_tests[] = {
   { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },
   { "pk_base64", test_crypto_pk_base64, TT_FORK, NULL, NULL },
   { "pk_pem_encrypted", test_crypto_pk_pem_encrypted, TT_FORK, NULL, NULL },
+  { "pk_invalid_private_key", test_crypto_pk_invalid_private_key, 0,
+    NULL, NULL },
   CRYPTO_LEGACY(digests),
   { "digest_names", test_crypto_digest_names, 0, NULL, NULL },
   { "sha3", test_crypto_sha3, TT_FORK, NULL, NULL},

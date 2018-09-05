@@ -1318,7 +1318,7 @@ test_keep_commit(void *arg)
     expect_log_msg_containing("doesn't match the commit value.");
     expect_log_msg_containing("has an invalid reveal value.");
     assert_log_predicate(mock_saved_log_n_entries() == 2,
-                         "expected 2 log entries");
+                         ("expected 2 log entries"));
     teardown_capture_of_logs();
     memcpy(commit->hashed_reveal, place_holder.hashed_reveal,
            sizeof(commit->hashed_reveal));

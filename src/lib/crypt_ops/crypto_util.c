@@ -10,7 +10,6 @@
  * \brief Common cryptographic utilities.
  **/
 
-#ifndef CRYPTO_UTIL_PRIVATE
 #define CRYPTO_UTIL_PRIVATE
 
 #include "lib/crypt_ops/crypto_util.h"
@@ -24,12 +23,14 @@
 #include <wincrypt.h>
 #endif /* defined(_WIN32) */
 
-DISABLE_GCC_WARNING(redundant-decls)
+#include <stdlib.h>
 
+#ifdef ENABLE_OPENSSL
+DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/err.h>
 #include <openssl/crypto.h>
-
 ENABLE_GCC_WARNING(redundant-decls)
+#endif
 
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
@@ -105,25 +106,3 @@ memwipe(void *mem, uint8_t byte, size_t sz)
    **/
   memset(mem, byte, sz);
 }
-
-/** Log all pending crypto errors at level <b>severity</b>.  Use
- * <b>doing</b> to describe our current activities.
- */
-void
-crypto_log_errors(int severity, const char *doing)
-{
-  unsigned long err;
-  const char *msg, *lib, *func;
-  while ((err = ERR_get_error()) != 0) {
-    msg = (const char*)ERR_reason_error_string(err);
-    lib = (const char*)ERR_lib_error_string(err);
-    func = (const char*)ERR_func_error_string(err);
-    if (!msg) msg = "(null)";
-    if (!lib) lib = "(null)";
-    if (!func) func = "(null)";
-    if (BUG(!doing)) doing = "(null)";
-    tor_log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)",
-              doing, msg, lib, func);
-  }
-}
-#endif /* !defined(CRYPTO_UTIL_PRIVATE) */

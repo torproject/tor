@@ -5,19 +5,18 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file crypto.h
+ * \file crypto_cipher.h
  *
- * \brief Headers for crypto.c
+ * \brief Headers for crypto_cipher.c
  **/
 
-#ifndef TOR_CRYPTO_H
-#define TOR_CRYPTO_H
+#ifndef TOR_CRYPTO_CIPHER_H
+#define TOR_CRYPTO_CIPHER_H
 
 #include "orconfig.h"
 
 #include <stdio.h>
 #include "lib/cc/torint.h"
-#include "lib/crypt_ops/crypto_rsa.h"
 
 /** Length of our symmetric cipher's keys of 128-bit. */
 #define CIPHER_KEY_LEN 16
@@ -26,21 +25,7 @@
 /** Length of our symmetric cipher's keys of 256-bit. */
 #define CIPHER256_KEY_LEN 32
 
-/** Length of encoded public key fingerprints, including space; but not
- * including terminating NUL. */
-#define FINGERPRINT_LEN 49
-
 typedef struct aes_cnt_cipher crypto_cipher_t;
-
-/* global state */
-int crypto_init_siphash_key(void);
-int crypto_early_init(void) ATTR_WUR;
-int crypto_global_init(int hardwareAccel,
-                       const char *accelName,
-                       const char *accelPath) ATTR_WUR;
-
-void crypto_thread_cleanup(void);
-int crypto_global_cleanup(void);
 
 /* environment setup */
 crypto_cipher_t *crypto_cipher_new(const char *key);
@@ -68,7 +53,5 @@ int crypto_cipher_encrypt_with_iv(const char *key,
 int crypto_cipher_decrypt_with_iv(const char *key,
                                   char *to, size_t tolen,
                                   const char *from, size_t fromlen);
-
-void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
 
 #endif /* !defined(TOR_CRYPTO_H) */

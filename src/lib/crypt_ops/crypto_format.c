@@ -29,6 +29,7 @@
 #include "lib/fs/files.h"
 
 #include <string.h>
+#include <errno.h>
 
 /** Write the <b>datalen</b> bytes from <b>data</b> to the file named
  * <b>fname</b> in the tagged-data format.  This format contains a

@@ -35,9 +35,24 @@
 #include "lib/testsupport/testsupport.h"
 #include "lib/fs/files.h"
 
+#include "lib/defs/digest_sizes.h"
+#include "lib/crypt_ops/crypto_digest.h"
+
+#ifdef ENABLE_NSS
+#include "lib/crypt_ops/crypto_nss_mgt.h"
+#endif
+
+#ifdef ENABLE_OPENSSL
 DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/rand.h>
 ENABLE_GCC_WARNING(redundant-decls)
+#endif
+
+#ifdef ENABLE_NSS
+#include <pk11pub.h>
+#include <secerr.h>
+#include <prerror.h>
+#endif
 
 #if __GNUC__ && GCC_VERSION >= 402
 #if GCC_VERSION >= 406
@@ -67,6 +82,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #endif
 
 #include <string.h>
+#include <errno.h>
 
 /**
  * How many bytes of entropy we add at once.
@@ -322,16 +338,24 @@ crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
 void
 crypto_strongest_rand(uint8_t *out, size_t out_len)
 {
-#define DLEN SHA512_DIGEST_LENGTH
+#define DLEN DIGEST512_LEN
+
   /* We're going to hash DLEN bytes from the system RNG together with some
-   * bytes from the openssl PRNG, in order to yield DLEN bytes.
+   * bytes from the PRNGs from our crypto librar(y/ies), in order to yield
+   * DLEN bytes.
    */
-  uint8_t inp[DLEN*2];
+  uint8_t inp[DLEN*3];
   uint8_t tmp[DLEN];
   tor_assert(out);
   while (out_len) {
-    crypto_rand((char*) inp, DLEN);
-    if (crypto_strongest_rand_raw(inp+DLEN, DLEN) < 0) {
+    memset(inp, 0, sizeof(inp));
+#ifdef ENABLE_OPENSSL
+    RAND_bytes(inp, DLEN);
+#endif
+#ifdef ENABLE_NSS
+    PK11_GenerateRandom(inp+DLEN, DLEN);
+#endif
+    if (crypto_strongest_rand_raw(inp+DLEN*2, DLEN) < 0) {
       // LCOV_EXCL_START
       log_err(LD_CRYPTO, "Failed to load strong entropy when generating an "
               "important key. Exiting.");
@@ -340,11 +364,11 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
       // LCOV_EXCL_STOP
     }
     if (out_len >= DLEN) {
-      SHA512(inp, sizeof(inp), out);
+      crypto_digest512((char*)out, (char*)inp, sizeof(inp), DIGEST_SHA512);
       out += DLEN;
       out_len -= DLEN;
     } else {
-      SHA512(inp, sizeof(inp), tmp);
+      crypto_digest512((char*)tmp, (char*)inp, sizeof(inp), DIGEST_SHA512);
       memcpy(out, tmp, out_len);
       break;
     }
@@ -354,12 +378,13 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
 #undef DLEN
 }
 
+#ifdef ENABLE_OPENSSL
 /**
  * Seed OpenSSL's random number generator with bytes from the operating
  * system.  Return 0 on success, -1 on failure.
  **/
-int
-crypto_seed_rng(void)
+static int
+crypto_seed_openssl_rng(void)
 {
   int rand_poll_ok = 0, load_entropy_ok = 0;
   uint8_t buf[ADD_ENTROPY];
@@ -382,6 +407,52 @@ crypto_seed_rng(void)
     return 0;
   else
     return -1;
+}
+#endif
+
+#ifdef ENABLE_NSS
+/**
+ * Seed OpenSSL's random number generator with bytes from the operating
+ * system.  Return 0 on success, -1 on failure.
+ **/
+static int
+crypto_seed_nss_rng(void)
+{
+  uint8_t buf[ADD_ENTROPY];
+
+  int load_entropy_ok = !crypto_strongest_rand_raw(buf, sizeof(buf));
+  if (load_entropy_ok) {
+    if (PK11_RandomUpdate(buf, sizeof(buf)) != SECSuccess) {
+      load_entropy_ok = 0;
+    }
+  }
+
+  memwipe(buf, 0, sizeof(buf));
+
+  return load_entropy_ok ? 0 : -1;
+}
+#endif
+
+/**
+ * Seed the RNG for any and all crypto libraries that we're using with bytes
+ * from the operating system.  Return 0 on success, -1 on failure.
+ */
+int
+crypto_seed_rng(void)
+{
+  int seeded = 0;
+#ifdef ENABLE_NSS
+  if (crypto_seed_nss_rng() < 0)
+    return -1;
+  ++seeded;
+#endif
+#ifdef ENABLE_OPENSSL
+  if (crypto_seed_openssl_rng() < 0)
+    return -1;
+  ++seeded;
+#endif
+  tor_assert(seeded);
+  return 0;
 }
 
 /**
@@ -407,17 +478,44 @@ crypto_rand, (char *to, size_t n))
 void
 crypto_rand_unmocked(char *to, size_t n)
 {
-  int r;
   if (n == 0)
     return;
 
   tor_assert(n < INT_MAX);
   tor_assert(to);
-  r = RAND_bytes((unsigned char*)to, (int)n);
+
+#ifdef ENABLE_NSS
+  SECStatus s = PK11_GenerateRandom((unsigned char*)to, (int)n);
+  if (s != SECSuccess) {
+    /* NSS rather sensibly might refuse to generate huge amounts of random
+     * data at once.  Unfortunately, our unit test do this in a couple of
+     * places.  To solve this issue, we use our XOF to stretch a shorter
+     * output when a longer one is needed.
+     *
+     * Yes, this is secure. */
+
+    /* This is longer than it needs to be; 1600 bits == 200 bytes is the
+     * state-size of SHA3. */
+#define BUFLEN 512
+    tor_assert(PR_GetError() == SEC_ERROR_INVALID_ARGS && n > BUFLEN);
+    unsigned char buf[BUFLEN];
+    s = PK11_GenerateRandom(buf, BUFLEN);
+    tor_assert(s == SECSuccess);
+    crypto_xof_t *xof = crypto_xof_new();
+    crypto_xof_add_bytes(xof, buf, BUFLEN);
+    crypto_xof_squeeze_bytes(xof, (unsigned char *)to, n);
+    crypto_xof_free(xof);
+    memwipe(buf, 0, BUFLEN);
+
+#undef BUFLEN
+  }
+#else
+  int r = RAND_bytes((unsigned char*)to, (int)n);
   /* We consider a PRNG failure non-survivable. Let's assert so that we get a
    * stack trace about where it happened.
    */
   tor_assert(r >= 0);
+#endif
 }
 
 /**
@@ -605,6 +703,7 @@ smartlist_shuffle(smartlist_t *sl)
 int
 crypto_force_rand_ssleay(void)
 {
+#ifdef ENABLE_OPENSSL
   RAND_METHOD *default_method;
   default_method = RAND_OpenSSL();
   if (RAND_get_rand_method() != default_method) {
@@ -614,6 +713,7 @@ crypto_force_rand_ssleay(void)
     RAND_set_rand_method(default_method);
     return 1;
   }
+#endif
   return 0;
 }
 

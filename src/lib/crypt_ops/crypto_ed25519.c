@@ -37,6 +37,7 @@
 #include "ed25519/donna/ed25519_donna_tor.h"
 
 #include <string.h>
+#include <errno.h>
 
 static void pick_ed25519_impl(void);
 

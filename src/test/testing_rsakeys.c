@@ -490,7 +490,7 @@ crypto_pk_generate_key_with_bits__get_cached(crypto_pk_t *env, int bits)
 {
   if (bits == 1024 || bits == 2048)  {
     crypto_pk_t *newkey = pk_generate_internal(bits);
-    crypto_pk_assign_(env, newkey);
+    crypto_pk_assign_private(env, newkey);
     crypto_pk_free(newkey);
   } else {
     return crypto_pk_generate_key_with_bits__real(env, bits);
@@ -544,4 +544,3 @@ init_pregenerated_keys(void)
        crypto_pk_generate_key_with_bits__get_cached);
 #endif /* defined(USE_PREGENERATED_RSA_KEYS) */
 }
-

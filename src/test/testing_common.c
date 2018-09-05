@@ -23,6 +23,7 @@
 #include "core/mainloop/main.h"
 #include "lib/compress/compress.h"
 #include "lib/evloop/compat_libevent.h"
+#include "lib/crypt_ops/crypto_init.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -222,6 +223,21 @@ an_assertion_failed(void)
   tinytest_set_test_failed_();
 }
 
+void tinytest_prefork(void);
+void tinytest_postfork(void);
+void
+tinytest_prefork(void)
+{
+  free_pregenerated_keys();
+  crypto_prefork();
+}
+void
+tinytest_postfork(void)
+{
+  crypto_postfork();
+  init_pregenerated_keys();
+}
+
 /** Main entry point for unit test code: parse the command line, and run
  * some unit tests. */
 int
@@ -284,7 +300,6 @@ main(int c, const char **v)
     printf("Can't initialize crypto subsystem; exiting.\n");
     return 1;
   }
-  crypto_set_tls_dh_prime();
   if (crypto_seed_rng() < 0) {
     printf("Couldn't seed RNG; exiting.\n");
     return 1;

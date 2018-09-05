@@ -172,6 +172,7 @@ pub fn main() {
 
             cfg.from_cflags("TOR_ZLIB_LIBS");
             cfg.from_cflags("TOR_LIB_MATH");
+            cfg.from_cflags("NSS_LIBS");
             cfg.from_cflags("TOR_OPENSSL_LIBS");
             cfg.from_cflags("TOR_LIBEVENT_LIBS");
             cfg.from_cflags("TOR_LIB_WS32");

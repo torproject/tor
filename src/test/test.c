@@ -860,7 +860,10 @@ struct testgroup_t testgroups[] = {
   { "control/event/", controller_event_tests },
   { "crypto/", crypto_tests },
   { "crypto/ope/", crypto_ope_tests },
+#ifdef ENABLE_OPENSSL
   { "crypto/openssl/", crypto_openssl_tests },
+#endif
+  { "crypto/pem/", pem_tests },
   { "dir/", dir_tests },
   { "dir_handle_get/", dir_handle_get_tests },
   { "dir/md/", microdesc_tests },
@@ -912,6 +915,10 @@ struct testgroup_t testgroups[] = {
   { "status/" , status_tests },
   { "storagedir/", storagedir_tests },
   { "tortls/", tortls_tests },
+#ifndef ENABLE_NSS
+  { "tortls/openssl/", tortls_openssl_tests },
+#endif
+  { "tortls/x509/", x509_tests },
   { "util/", util_tests },
   { "util/format/", util_format_tests },
   { "util/logging/", logging_tests },

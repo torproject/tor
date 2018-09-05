@@ -41,15 +41,16 @@ static int daemon_filedes[2];
 /** Start putting the process into daemon mode: fork and drop all resources
  * except standard fds.  The parent process never returns, but stays around
  * until finish_daemon is called.  (Note: it's safe to call this more
- * than once: calls after the first are ignored.)
+ * than once: calls after the first are ignored.)  Return true if we actually
+ * forked and this is the child; false otherwise.
  */
-void
+int
 start_daemon(void)
 {
   pid_t pid;
 
   if (start_daemon_called)
-    return;
+    return 0;
   start_daemon_called = 1;
 
   if (pipe(daemon_filedes)) {
@@ -80,6 +81,7 @@ start_daemon(void)
       exit(0); // exit ok: during daemonize, daemonizing.
     else
       exit(1); /* child reported error. exit ok: daemonize failed. */
+    return 0; // LCOV_EXCL_LINE unreachable
   } else { /* Child */
     close(daemon_filedes[0]); /* we only write */
 
@@ -95,22 +97,23 @@ start_daemon(void)
     }
     set_main_thread(); /* We are now the main thread. */
 
-    return;
+    return 1;
   }
 }
 
 /** Finish putting the process into daemon mode: drop standard fds, and tell
  * the parent process to exit.  (Note: it's safe to call this more than once:
  * calls after the first are ignored.  Calls start_daemon first if it hasn't
- * been called already.)
+ * been called already.) Return true if we actually did a fork; false if we
+ * didn't.
  */
-void
+int
 finish_daemon(const char *desired_cwd)
 {
   int nullfd;
   char c = '.';
   if (finish_daemon_called)
-    return;
+    return 0;
   if (!start_daemon_called)
     start_daemon();
   finish_daemon_called = 1;
@@ -149,16 +152,20 @@ finish_daemon(const char *desired_cwd)
     log_err(LD_GENERAL,"write failed. Exiting.");
   }
   close(daemon_filedes[1]);
+
+  return 0;
 }
 #else /* !(!defined(_WIN32)) */
 /* defined(_WIN32) */
-void
+int
 start_daemon(void)
 {
+  return 0;
 }
-void
+int
 finish_daemon(const char *cp)
 {
   (void)cp;
+  return 0;
 }
 #endif /* !defined(_WIN32) */

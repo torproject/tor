@@ -13,11 +13,14 @@
 #include "core/or/or.h"
 #include "core/crypto/onion_tap.h"
 #include "core/crypto/relay_crypto.h"
+
+#ifdef ENABLE_OPENSSL
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
 #include <openssl/ec.h>
 #include <openssl/ecdh.h>
 #include <openssl/obj_mac.h>
+#endif
 
 #include "core/or/circuitlist.h"
 #include "app/config/config.h"
@@ -33,6 +36,7 @@
 #include "core/or/or_circuit_st.h"
 
 #include "lib/crypt_ops/digestset.h"
+#include "lib/crypt_ops/crypto_init.h"
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)
 static uint64_t nanostart;
@@ -579,6 +583,7 @@ bench_dh(void)
          "      %f millisec each.\n", NANOCOUNT(start, end, iters)/1e6);
 }
 
+#ifdef ENABLE_OPENSSL
 static void
 bench_ecdh_impl(int nid, const char *name)
 {
@@ -628,6 +633,7 @@ bench_ecdh_p224(void)
 {
   bench_ecdh_impl(NID_secp224r1, "P-224");
 }
+#endif
 
 typedef void (*bench_fn)(void);
 
@@ -651,8 +657,11 @@ static struct benchmark_t benchmarks[] = {
   ENT(cell_aes),
   ENT(cell_ops),
   ENT(dh),
+
+#ifdef ENABLE_OPENSSL
   ENT(ecdh_p256),
   ENT(ecdh_p224),
+#endif
   {NULL,NULL,0}
 };
 
@@ -680,9 +689,9 @@ main(int argc, const char **argv)
 
   tor_threads_init();
   tor_compress_init();
+  init_logging(1);
 
   if (argc == 4 && !strcmp(argv[1], "diff")) {
-    init_logging(1);
     const int N = 200;
     char *f1 = read_file_to_str(argv[2], RFTS_BIN, NULL);
     char *f2 = read_file_to_str(argv[3], RFTS_BIN, NULL);
@@ -718,13 +727,12 @@ main(int argc, const char **argv)
 
   reset_perftime();
 
-  if (crypto_seed_rng() < 0) {
+  if (crypto_global_init(0, NULL, NULL) < 0) {
     printf("Couldn't seed RNG; exiting.\n");
     return 1;
   }
 
   init_protocol_warning_severity_level();
-  crypto_init_siphash_key();
   options = options_new();
   init_logging(1);
   options->command = CMD_RUN_UNITTESTS;

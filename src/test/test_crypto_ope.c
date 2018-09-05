@@ -7,9 +7,11 @@
 
 #define CRYPTO_OPE_PRIVATE
 
+#include "lib/cc/compat_compiler.h"
 #include "lib/crypt_ops/crypto_ope.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/encoding/binascii.h"
+#include "lib/malloc/malloc.h"
 #include "test/test.h"
 #include "tinytest.h"
 
