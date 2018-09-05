@@ -1557,6 +1557,12 @@ hs_config_client_authorization(const or_options_t *options,
   }
 
   file_list = tor_listdir(key_dir);
+  if (file_list == NULL) {
+    log_warn(LD_REND, "Client authorization key directory %s can't be listed.",
+             key_dir);
+    goto end;
+  }
+
   SMARTLIST_FOREACH_BEGIN(file_list, char *, filename) {
 
     hs_client_service_authorization_t *auth = NULL;
