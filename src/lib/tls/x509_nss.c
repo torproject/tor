@@ -114,11 +114,19 @@ tor_tls_create_certificate_internal(crypto_pk_t *rsa,
   if (!tmp)
     goto err;
 
+#if 0
   s = SEC_DerSignDataWithAlgorithmID(cert->arena,
                                      &signed_der,
                                      der.data, der.len,
                                      (SECKEYPrivateKey *)signing_key,//const
                                      &cert->signature);
+#else
+  s = SEC_DerSignData(cert->arena,
+                      &signed_der,
+                      der.data, der.len,
+                      (SECKEYPrivateKey *)signing_key,//const
+                      SEC_OID_PKCS1_SHA256_WITH_RSA_ENCRYPTION);
+#endif
 
   if (s != SECSuccess)
     goto err;
