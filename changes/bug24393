@@ -1,0 +1,6 @@
+  o Minor features (ipv6):
+    - When using addrs_in_same_network_family(), check IPv6 subnets as well as
+      IPv4 ones where possible when a client chooses circuit paths. Previously,
+      we used this function only for IPv4 subnets. Closes ticket 24393. Patch
+      by Neel Chauhan.
+
