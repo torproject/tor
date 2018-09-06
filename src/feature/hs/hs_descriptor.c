@@ -1138,16 +1138,19 @@ decode_auth_client(const directory_token_t *tok,
   tor_assert(client);
 
   if (base64_decode((char *) client->client_id, sizeof(client->client_id),
-                    tok->args[0], strlen(tok->args[0])) < 0) {
+                    tok->args[0], strlen(tok->args[0])) !=
+      sizeof(client->client_id)) {
     goto done;
   }
   if (base64_decode((char *) client->iv, sizeof(client->iv),
-                    tok->args[1], strlen(tok->args[1])) < 0) {
+                    tok->args[1], strlen(tok->args[1])) !=
+      sizeof(client->iv)) {
     goto done;
   }
   if (base64_decode((char *) client->encrypted_cookie,
                     sizeof(client->encrypted_cookie),
-                    tok->args[2], strlen(tok->args[2])) < 0) {
+                    tok->args[2], strlen(tok->args[2])) !=
+      sizeof(client->encrypted_cookie)) {
     goto done;
   }
 
