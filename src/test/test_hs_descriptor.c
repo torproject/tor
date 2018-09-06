@@ -400,12 +400,16 @@ test_decode_descriptor(void *arg)
     memcpy(&desc->superencrypted_data.auth_ephemeral_pubkey,
            &auth_ephemeral_kp.pubkey, CURVE25519_PUBKEY_LEN);
 
+    hs_helper_get_subcred_from_identity_keypair(&signing_kp,
+                                                subcredential);
+
     /* Build and add the auth client to the descriptor. */
     clients = desc->superencrypted_data.clients;
     if (!clients) {
       clients = smartlist_new();
     }
-    hs_desc_build_authorized_client(&client_kp.pubkey,
+    hs_desc_build_authorized_client(subcredential,
+                                    &client_kp.pubkey,
                                     &auth_ephemeral_kp.seckey,
                                     descriptor_cookie, client);
     smartlist_add(clients, client);
@@ -418,8 +422,6 @@ test_decode_descriptor(void *arg)
     desc->superencrypted_data.clients = clients;
 
     /* Test the encoding/decoding in the following lines. */
-    hs_helper_get_subcred_from_identity_keypair(&signing_kp,
-                                                subcredential);
     tor_free(encoded);
     ret = hs_desc_encode_descriptor(desc, &signing_kp,
                                     descriptor_cookie, &encoded);
@@ -874,6 +876,7 @@ test_build_authorized_client(void *arg)
     "07d087f1d8c68393721f6e70316d3b29";
   const char client_pubkey_b16[] =
     "8c1298fa6050e372f8598f6deca32e27b0ad457741422c2629ebb132cf7fae37";
+  uint8_t subcredential[DIGEST256_LEN];
   char *mem_op_hex_tmp=NULL;
 
   (void) arg;
@@ -884,6 +887,8 @@ test_build_authorized_client(void *arg)
   ret = curve25519_secret_key_generate(&client_auth_sk, 0);
   tt_int_op(ret, OP_EQ, 0);
   curve25519_public_key_generate(&client_auth_pk, &client_auth_sk);
+
+  memset(subcredential, 42, sizeof(subcredential));
 
   desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
 
@@ -904,15 +909,16 @@ test_build_authorized_client(void *arg)
 
   MOCK(crypto_strongest_rand, mock_crypto_strongest_rand);
 
-  hs_desc_build_authorized_client(&client_auth_pk, &auth_ephemeral_sk,
+  hs_desc_build_authorized_client(subcredential,
+                                  &client_auth_pk, &auth_ephemeral_sk,
                                   descriptor_cookie, desc_client);
 
   test_memeq_hex((char *) desc_client->client_id,
-                 "b514ef67192cad5f");
+                 "EC19B7FF4D2DDA13");
   test_memeq_hex((char *) desc_client->iv,
                 "01010101010101010101010101010101");
   test_memeq_hex((char *) desc_client->encrypted_cookie,
-                "46860a9df37b9f6d708E0D7E730C10C1");
+                "B21222BE13F385F355BD07B2381F9F29");
 
  done:
   tor_free(desc_client);
