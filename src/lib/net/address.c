@@ -1205,11 +1205,6 @@ tor_addr_parse(tor_addr_t *addr, const char *src)
   return result;
 }
 
-#ifdef _WIN32
-typedef ULONG (WINAPI *GetAdaptersAddresses_fn_t)(
-              ULONG, ULONG, PVOID, PIP_ADAPTER_ADDRESSES, PULONG);
-#endif
-
 #ifdef HAVE_IFADDRS_TO_SMARTLIST
 /*
  * Convert a linked list consisting of <b>ifaddrs</b> structures
