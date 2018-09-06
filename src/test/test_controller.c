@@ -346,6 +346,13 @@ test_rend_service_parse_port_config(void *arg)
             "in hidden service port configuration.");
   tor_free(err_msg);
 
+  /* Wrong target address and port separation */
+  cfg = rend_service_parse_port_config("80,127.0.0.1 1234", sep,
+                                       &err_msg);
+  tt_ptr_op(cfg, OP_EQ, NULL);
+  tt_assert(err_msg);
+  tor_free(err_msg);
+
  done:
   rend_service_port_config_free(cfg);
   tor_free(err_msg);

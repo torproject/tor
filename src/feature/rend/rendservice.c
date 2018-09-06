@@ -451,11 +451,19 @@ rend_service_parse_port_config(const char *string, const char *sep,
     int is_unix;
     ret = port_cfg_line_extract_addrport(addrport_element, &addrport,
                                          &is_unix, &rest);
+
     if (ret < 0) {
       tor_asprintf(&err_msg, "Couldn't process address <%s> from hidden "
                    "service configuration", addrport_element);
       goto err;
     }
+
+    if (rest && strlen(rest)) {
+      err_msg = tor_strdup("HiddenServicePort parse error: invalid port "
+                           "mapping");
+      goto err;
+    }
+
     if (is_unix) {
       socket_path = addrport;
       is_unix_addr = 1;
