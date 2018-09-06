@@ -1133,28 +1133,21 @@ decode_auth_client(const directory_token_t *tok,
                    hs_desc_authorized_client_t *client)
 {
   int ret = -1;
-  size_t tok0_len, tok1_len, tok2_len;
-
   tor_assert(tok);
   tor_assert(tok->n_args >= 3);
   tor_assert(client);
 
-  /* Get the length once and only once. */
-  tok0_len = strlen(tok->args[0]);
-  tok1_len = strlen(tok->args[1]);
-  tok2_len = strlen(tok->args[2]);
-
   if (base64_decode((char *) client->client_id, sizeof(client->client_id),
-                    tok->args[0], tok0_len) != (int) tok0_len) {
+                    tok->args[0], strlen(tok->args[0])) < 0) {
     goto done;
   }
   if (base64_decode((char *) client->iv, sizeof(client->iv),
-                    tok->args[1], tok1_len) != (int) tok1_len) {
+                    tok->args[1], strlen(tok->args[1])) < 0) {
     goto done;
   }
   if (base64_decode((char *) client->encrypted_cookie,
                     sizeof(client->encrypted_cookie),
-                    tok->args[2], tok2_len) != (int) tok2_len) {
+                    tok->args[2], strlen(tok->args[2])) < 0) {
     goto done;
   }
 
