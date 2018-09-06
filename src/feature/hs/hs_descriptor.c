@@ -1427,13 +1427,15 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
         sizeof(desc->superencrypted_data.auth_ephemeral_pubkey)));
   tor_assert(!tor_mem_is_zero((char *) client_auth_sk,
                               sizeof(*client_auth_sk)));
+  tor_assert(!tor_mem_is_zero((char *) desc->subcredential, DIGEST256_LEN));
 
   /* Calculate x25519(client_x, hs_Y) */
   curve25519_handshake(secret_seed, client_auth_sk,
                        &desc->superencrypted_data.auth_ephemeral_pubkey);
 
-  /* Calculate KEYS = KDF(SECRET_SEED, 40) */
+  /* Calculate KEYS = KDF(subcredential | SECRET_SEED, 40) */
   xof = crypto_xof_new();
+  crypto_xof_add_bytes(xof, desc->subcredential, DIGEST256_LEN);
   crypto_xof_add_bytes(xof, secret_seed, sizeof(secret_seed));
   crypto_xof_squeeze_bytes(xof, keystream, sizeof(keystream));
   crypto_xof_free(xof);
@@ -2539,9 +2541,8 @@ hs_desc_decode_plaintext(const char *encoded,
 }
 
 /* Fully decode an encoded descriptor and set a newly allocated descriptor
- * object in desc_out. Subcredentials are used if not NULL else it's ignored.
- * Client secret key is used to decrypt the "encrypted" section if not NULL
- * else it's ignored.
+ * object in desc_out.  Client secret key is used to decrypt the "encrypted"
+ * section if not NULL else it's ignored.
  *
  * Return 0 on success. A negative value is returned on error and desc_out is
  * set to NULL. */
@@ -2558,8 +2559,9 @@ hs_desc_decode_descriptor(const char *encoded,
 
   desc = tor_malloc_zero(sizeof(hs_descriptor_t));
 
-  /* Subcredentials are optional. */
-  if (BUG(!subcredential)) {
+  /* Subcredentials are not optional. */
+  if (BUG(!subcredential ||
+          tor_mem_is_zero((char*)subcredential, DIGEST256_LEN))) {
     log_warn(LD_GENERAL, "Tried to decrypt without subcred. Impossible!");
     goto err;
   }
