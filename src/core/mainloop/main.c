@@ -4237,6 +4237,8 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   event_set_mem_functions(tor_malloc_, tor_realloc_, tor_free_);
 #endif
 
+  CRYPTO_set_mem_functions(tor_malloc_, tor_realloc_, tor_free_);
+
   init_protocol_warning_severity_level();
 
   update_approx_time(time(NULL));

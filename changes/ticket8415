@@ -1,4 +1,5 @@
   o Minor features (memory management):
     - Get libevent code to use the same memory allocator that
       Tor code is using by calling event_set_mem_functions()
-      during initialization. Resolves ticket 8415.
+      during initialization. Do the same for OpenSSL with
+      CRYPTO_set_mem_functions().  Resolves ticket 8415.
