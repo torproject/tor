@@ -1744,9 +1744,17 @@ build_service_desc_superencrypted(const hs_service_t *service,
 
   /* The ephemeral key pair is already generated, so this should not give
    * an error. */
+  if (BUG(!curve25519_public_key_is_ok(&desc->auth_ephemeral_kp.pubkey))) {
+    return -1;
+  }
   memcpy(&superencrypted->auth_ephemeral_pubkey,
          &desc->auth_ephemeral_kp.pubkey,
          sizeof(curve25519_public_key_t));
+
+  /* Test that subcred is not zero because we might use it below */
+  if (BUG(tor_mem_is_zero((char*)desc->desc->subcredential, DIGEST256_LEN))) {
+    return -1;
+  }
 
   /* Create a smartlist to store clients */
   superencrypted->clients = smartlist_new();
@@ -1761,7 +1769,8 @@ build_service_desc_superencrypted(const hs_service_t *service,
 
       /* Prepare the client for descriptor and then add to the list in the
        * superencrypted part of the descriptor */
-      hs_desc_build_authorized_client(&client->client_pk,
+      hs_desc_build_authorized_client(desc->desc->subcredential,
+                                      &client->client_pk,
                                       &desc->auth_ephemeral_kp.seckey,
                                       desc->descriptor_cookie, desc_client);
       smartlist_add(superencrypted->clients, desc_client);

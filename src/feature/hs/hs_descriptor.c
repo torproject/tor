@@ -2851,11 +2851,12 @@ hs_desc_build_fake_authorized_client(void)
   return client_auth;
 }
 
-/* Using the client public key, auth ephemeral secret key, and descriptor
- * cookie, build the auth client so we can then encode the descriptor for
- * publication. client_out must be already allocated. */
+/* Using the service's subcredential, client public key, auth ephemeral secret
+ * key, and descriptor cookie, build the auth client so we can then encode the
+ * descriptor for publication. client_out must be already allocated. */
 void
-hs_desc_build_authorized_client(const curve25519_public_key_t *client_auth_pk,
+hs_desc_build_authorized_client(const uint8_t *subcredential,
+                                const curve25519_public_key_t *client_auth_pk,
                                 const curve25519_secret_key_t *
                                 auth_ephemeral_sk,
                                 const uint8_t *descriptor_cookie,
@@ -2871,20 +2872,24 @@ hs_desc_build_authorized_client(const curve25519_public_key_t *client_auth_pk,
   tor_assert(auth_ephemeral_sk);
   tor_assert(descriptor_cookie);
   tor_assert(client_out);
+  tor_assert(subcredential);
   tor_assert(!tor_mem_is_zero((char *) auth_ephemeral_sk,
                               sizeof(*auth_ephemeral_sk)));
   tor_assert(!tor_mem_is_zero((char *) client_auth_pk,
                               sizeof(*client_auth_pk)));
   tor_assert(!tor_mem_is_zero((char *) descriptor_cookie,
                               HS_DESC_DESCRIPTOR_COOKIE_LEN));
+  tor_assert(!tor_mem_is_zero((char *) subcredential,
+                              DIGEST256_LEN));
 
   /* Calculate x25519(hs_y, client_X) */
   curve25519_handshake(secret_seed,
                        auth_ephemeral_sk,
                        client_auth_pk);
 
-  /* Calculate KEYS = KDF(SECRET_SEED, 40) */
+  /* Calculate KEYS = KDF(subcredential | SECRET_SEED, 40) */
   xof = crypto_xof_new();
+  crypto_xof_add_bytes(xof, subcredential, DIGEST256_LEN);
   crypto_xof_add_bytes(xof, secret_seed, sizeof(secret_seed));
   crypto_xof_squeeze_bytes(xof, keystream, sizeof(keystream));
   crypto_xof_free(xof);
