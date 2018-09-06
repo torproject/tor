@@ -829,6 +829,7 @@ hs_cache_client_intro_state_note(const ed25519_public_key_t *service_pk,
   tor_assert(service_pk);
   tor_assert(auth_key);
 
+  hs_cache_client_intro_state_clean(time(NULL));
   found = cache_client_intro_state_lookup(service_pk, auth_key, &entry);
   if (!found) {
     /* Create a new entry and add it to the cache. */
@@ -845,6 +846,7 @@ hs_cache_client_intro_state_find(const ed25519_public_key_t *service_pk,
                                  const ed25519_public_key_t *auth_key)
 {
   hs_cache_intro_state_t *state = NULL;
+  hs_cache_client_intro_state_clean(time(NULL));
   cache_client_intro_state_lookup(service_pk, auth_key, &state);
   return state;
 }

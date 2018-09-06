@@ -421,14 +421,6 @@ test_client_pick_intro(void *arg)
     }
 
     extend_info_free(chosen_intro_ei);
-
-    /* Now also mark the chosen one as failed: See that we can't get any intro
-       points anymore. */
-    hs_cache_client_intro_state_note(&service_kp.pubkey,
-                                &chosen_intro_point->auth_key_cert->signed_key,
-                                     INTRO_POINT_FAILURE_TIMEOUT);
-    extend_info_t *ip = client_get_random_intro(&service_kp.pubkey);
-    tor_assert(!ip);
   }
 
   /* 3) Clean the intro state cache and get an intro point */
