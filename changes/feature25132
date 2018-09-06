@@ -1,0 +1,3 @@
+  o Minor features (controller):
+    - The GETINFO command now support an "uptime" argument, to return
+      Tor's uptime in seconds. Closes ticket 25132.
