@@ -1290,9 +1290,9 @@ ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses)
   return result;
 }
 
-/** Windows only: use GetAdaptersInfo() function to retrieve network interface
- * addresses of current machine and return them to caller as smartlist of
- * <b>tor_addr_t</b>  structures.
+/** Windows only: use GetAdaptersAddresses() to retrieve the network interface
+ * addresses of the current machine.
+ * Returns a smartlist of <b>tor_addr_t</b>  structures.
  */
 STATIC smartlist_t *
 get_interface_addresses_win32(int severity, sa_family_t family)
