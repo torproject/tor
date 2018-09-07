@@ -1,0 +1,5 @@
+  o Minor bugfixes (compilation):
+    - Stop calling SetProcessDEPPolicy() on 64-bit Windows. It is not
+      supported, and always fails. Some compilers warn about the function
+      pointer cast on 64-bit Windows.
+      Fixes bug 27461; bugfix on 0.2.2.23-alpha.
