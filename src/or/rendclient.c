@@ -238,6 +238,15 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     dh_offset = v3_shift+7+DIGEST_LEN+2+klen+REND_COOKIE_LEN;
   } else {
     /* Version 0. */
+
+    /* Some compilers are smart enough to work out that nickname can be more
+     * than 19 characters, when it's a hexdigest. They warn that strncpy()
+     * will truncate hexdigests without NUL-terminating them. But we only put
+     * hexdigests in HSDir and general circuit exits. */
+    if (BUG(strlen(rendcirc->build_state->chosen_exit->nickname)
+            > MAX_NICKNAME_LEN)) {
+      goto perm_err;
+    }
     strncpy(tmp, rendcirc->build_state->chosen_exit->nickname,
             (MAX_NICKNAME_LEN+1)); /* nul pads */
     memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_data->rend_cookie,
