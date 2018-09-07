@@ -660,7 +660,9 @@ test_parse_auth_file_content(void *arg)
       "x:zdsyvn2jq534ugyiuzgjy4267jbtzcjbsgedhshzx5mforyxtryq"));
   /* Some malformed string. */
   tt_assert(!parse_auth_file_content("xx:descriptor:x25519:aa=="));
-
+  /* Bigger key than it should be */
+  tt_assert(!parse_auth_file_content("xx:descriptor:x25519:"
+                     "vjqea4jbhwwc4hto7ekyvqfbeodghbaq6nxi45hz4wr3qvhqv3yqa"));
  done:
   tor_free(auth);
 }
