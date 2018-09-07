@@ -801,6 +801,7 @@ AC_CHECK_FUNCS([ \
                 SSL_get_client_ciphers \
                 SSL_get_client_random \
 		SSL_CIPHER_find \
+                SSL_CTX_set_security_level \
 		TLS_method
 	       ])
 
