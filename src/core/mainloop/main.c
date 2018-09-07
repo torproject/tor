@@ -4197,12 +4197,18 @@ sandbox_init_filter(void)
   return cfg;
 }
 
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+typedef size_t crypto_size_t;
+#else
+typedef int crypto_size_t;
+#endif
+
 /**
  * Compatibility wrapper for attaching tor_malloc() to OpenSSL
  * via CRYPTO_set_mem_functions().
  */
 static void *
-tor_CRYPTO_malloc(size_t num, const char *file, int line)
+tor_CRYPTO_malloc(crypto_size_t num, const char *file, int line)
 {
   (void)file;
   (void)line;
@@ -4215,7 +4221,8 @@ tor_CRYPTO_malloc(size_t num, const char *file, int line)
  * via CRYPTO_set_mem_functions().
  */
 static void *
-tor_CRYPTO_realloc(void *addr, size_t num, const char *file, int line)
+tor_CRYPTO_realloc(void *addr, crypto_size_t num,
+                   const char *file, int line)
 {
   (void)file;
   (void)line;
