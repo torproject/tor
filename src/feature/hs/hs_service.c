@@ -1346,22 +1346,47 @@ service_descriptor_new(void)
   return sdesc;
 }
 
-/* If two authorized clients are equal, return 1. Otherwise, return 0. */
+/* Allocate and return a deep copy of client. */
+static hs_service_authorized_client_t *
+service_authorized_client_dup(const hs_service_authorized_client_t *client)
+{
+  hs_service_authorized_client_t *client_dup = NULL;
+
+  tor_assert(client);
+
+  client_dup = tor_malloc_zero(sizeof(hs_service_authorized_client_t));
+  /* Currently, the public key is the only component of
+   * hs_service_authorized_client_t. */
+  memcpy(client_dup->client_pk.public_key,
+         client->client_pk.public_key,
+         CURVE25519_PUBKEY_LEN);
+
+  return client_dup;
+}
+
+/* If two authorized clients are equal, return 0. If the first one should come
+ * before the second, return less than zero. If the first should come after
+ * the second, return greater than zero. */
 static int
-service_authorized_client_equal(const hs_service_authorized_client_t *client1,
-                                const hs_service_authorized_client_t *client2)
+service_authorized_client_cmp(const hs_service_authorized_client_t *client1,
+                              const hs_service_authorized_client_t *client2)
 {
   tor_assert(client1);
   tor_assert(client2);
 
-  /* If the client public keys are not equal, the whole structs are
-   * not equal. */
-  if (!tor_memeq(&client1->client_pk,
-                 &client2->client_pk,
-                 sizeof(curve25519_public_key_t))) {
-    return 0;
-  }
-  return 1;
+  /* Currently, the public key is the only component of
+   * hs_service_authorized_client_t. */
+  return tor_memcmp(client1->client_pk.public_key,
+                    client2->client_pk.public_key,
+                    CURVE25519_PUBKEY_LEN);
+}
+
+/* Helper for sorting authorized clients. */
+static int
+compare_service_authorzized_client_(const void **_a, const void **_b)
+{
+  const hs_service_authorized_client_t *a = *_a, *b = *_b;
+  return service_authorized_client_cmp(a, b);
 }
 
 /* If the list of hs_service_authorized_client_t's is different between
@@ -1371,7 +1396,9 @@ service_authorized_client_config_equal(const hs_service_config_t *config1,
                                        const hs_service_config_t *config2)
 {
   int ret = 0;
-  int *idx_matched = NULL;
+  int i;
+  smartlist_t *sl1 = smartlist_new();
+  smartlist_t *sl2 = smartlist_new();
 
   tor_assert(config1);
   tor_assert(config2);
@@ -1384,43 +1411,42 @@ service_authorized_client_config_equal(const hs_service_config_t *config1,
     goto done;
   }
 
-  /* An array that has the same length as the list of clients in config2.
-   * If the client in config2 is matched with some client in config1, the
-   * value of this array at the corresponding index will be 1. Otherwise,
-   * it will be 0. */
-  idx_matched =
-    tor_malloc_zero(sizeof(*idx_matched) * smartlist_len(config2->clients));
+  /* We do not want to mutate config1 and config2, so we will duplicate both
+   * entire client lists here. */
+  SMARTLIST_FOREACH(config1->clients,
+              hs_service_authorized_client_t *, client,
+              smartlist_add(sl1, service_authorized_client_dup(client)));
 
-  SMARTLIST_FOREACH_BEGIN(config1->clients,
-                          const hs_service_authorized_client_t *,
-                          client1) {
-    int matched = 0;
-    SMARTLIST_FOREACH_BEGIN(config2->clients,
-                            const hs_service_authorized_client_t *,
-                            client2) {
-      /* If both clients are equal and client2 is not matched yet, it means
-       * that we can match client1 to client2. */
-      if (service_authorized_client_equal(client1, client2)
-          && !idx_matched[client2_sl_idx]) {
-        idx_matched[client2_sl_idx] = 1;
-        matched = 1;
-        break;
-      }
-    } SMARTLIST_FOREACH_END(client2);
+  SMARTLIST_FOREACH(config2->clients,
+              hs_service_authorized_client_t *, client,
+              smartlist_add(sl2, service_authorized_client_dup(client)));
 
-    /* If client1 is not in config2->clients, it means that client lists of
-     * config1 and config2 are not equal. */
-    if (!matched) {
-      ret = 0;
+  smartlist_sort(sl1, compare_service_authorzized_client_);
+  smartlist_sort(sl2, compare_service_authorzized_client_);
+
+  for (i = 0; i < smartlist_len(sl1); i++) {
+    /* If the clients at index i in both lists differ, the whole configs
+     * differ. */
+    if (service_authorized_client_cmp(smartlist_get(sl1, i),
+                                      smartlist_get(sl2, i))) {
       goto done;
     }
-  } SMARTLIST_FOREACH_END(client1);
+  }
 
   /* Success. */
   ret = 1;
 
  done:
-  tor_free(idx_matched);
+  if (sl1) {
+    SMARTLIST_FOREACH(sl1, hs_service_authorized_client_t *, p,
+                      service_authorized_client_free(p));
+    smartlist_free(sl1);
+  }
+  if (sl2) {
+    SMARTLIST_FOREACH(sl2, hs_service_authorized_client_t *, p,
+                      service_authorized_client_free(p));
+    smartlist_free(sl2);
+  }
   return ret;
 }
 
