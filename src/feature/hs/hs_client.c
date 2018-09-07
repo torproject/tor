@@ -42,6 +42,10 @@
 #include "core/or/extend_info_st.h"
 #include "core/or/origin_circuit_st.h"
 
+/* Client-side authorizations for hidden services; map of service identity
+ * public key to hs_client_service_authorization_t *. */
+static digest256map_t *client_auths = NULL;
+
 /* Return a human-readable string for the client fetch status code. */
 static const char *
 fetch_status_to_string(hs_client_fetch_status_t status)
@@ -1177,6 +1181,19 @@ can_client_refetch_desc(const ed25519_public_key_t *identity_pk,
   return 0;
 }
 
+/* Return the client auth in the map using the service identity public key.
+ * Return NULL if it does not exist in the map. */
+static hs_client_service_authorization_t *
+find_client_auth(const ed25519_public_key_t *service_identity_pk)
+{
+  /* If the map is not allocated, we can assume that we do not have any client
+   * auth information. */
+  if (!client_auths) {
+    return NULL;
+  }
+  return digest256map_get(client_auths, service_identity_pk->pubkey);
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -1215,10 +1232,18 @@ hs_client_decode_descriptor(const char *desc_str,
   int ret;
   uint8_t subcredential[DIGEST256_LEN];
   ed25519_public_key_t blinded_pubkey;
+  hs_client_service_authorization_t *client_auth = NULL;
+  curve25519_secret_key_t *client_auht_sk = NULL;
 
   tor_assert(desc_str);
   tor_assert(service_identity_pk);
   tor_assert(desc);
+
+  /* Check if we have a client authorization for this service in the map. */
+  client_auth = find_client_auth(service_identity_pk);
+  if (client_auth) {
+    client_auht_sk = &client_auth->enc_seckey;
+  }
 
   /* Create subcredential for this HS so that we can decrypt */
   {
@@ -1229,7 +1254,8 @@ hs_client_decode_descriptor(const char *desc_str,
   }
 
   /* Parse descriptor */
-  ret = hs_desc_decode_descriptor(desc_str, subcredential, desc);
+  ret = hs_desc_decode_descriptor(desc_str, subcredential,
+                                  client_auht_sk, desc);
   memwipe(subcredential, 0, sizeof(subcredential));
   if (ret < 0) {
     log_warn(LD_GENERAL, "Could not parse received descriptor as client.");
@@ -1391,6 +1417,233 @@ hs_client_receive_rendezvous_acked(origin_circuit_t *circ,
  err:
   circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
   return -1;
+}
+
+#define client_service_authorization_free(auth)                      \
+  FREE_AND_NULL(hs_client_service_authorization_t,                   \
+                client_service_authorization_free_, (auth))
+
+static void
+client_service_authorization_free_(hs_client_service_authorization_t *auth)
+{
+  if (auth) {
+    memwipe(auth, 0, sizeof(*auth));
+  }
+  tor_free(auth);
+}
+
+/** Helper for digest256map_free. */
+static void
+client_service_authorization_free_void(void *auth)
+{
+  client_service_authorization_free_(auth);
+}
+
+static void
+client_service_authorization_free_all(void)
+{
+  if (!client_auths) {
+    return;
+  }
+  digest256map_free(client_auths, client_service_authorization_free_void);
+}
+
+/* Check if the auth key file name is valid or not. Return 1 if valid,
+ * otherwise return 0. */
+STATIC int
+auth_key_filename_is_valid(const char *filename)
+{
+  int ret = 1;
+  const char *valid_extension = ".auth_private";
+
+  tor_assert(filename);
+
+  /* The length of the filename must be greater than the length of the
+   * extension and the valid extension must be at the end of filename. */
+  if (!strcmpend(filename, valid_extension) &&
+      strlen(filename) != strlen(valid_extension)) {
+    ret = 1;
+  } else {
+    ret = 0;
+  }
+
+  return ret;
+}
+
+STATIC hs_client_service_authorization_t *
+parse_auth_file_content(const char *client_key_str)
+{
+  char *onion_address = NULL;
+  char *auth_type = NULL;
+  char *key_type = NULL;
+  char *seckey_b32 = NULL;
+  hs_client_service_authorization_t *auth = NULL;
+  smartlist_t *fields = smartlist_new();
+
+  tor_assert(client_key_str);
+
+  smartlist_split_string(fields, client_key_str, ":",
+                         SPLIT_SKIP_SPACE, 0);
+  /* Wrong number of fields. */
+  if (smartlist_len(fields) != 4) {
+    goto err;
+  }
+
+  onion_address = smartlist_get(fields, 0);
+  auth_type = smartlist_get(fields, 1);
+  key_type = smartlist_get(fields, 2);
+  seckey_b32 = smartlist_get(fields, 3);
+
+  /* Currently, the only supported auth type is "descriptor" and the only
+   * supported key type is "x25519". */
+  if (strcmp(auth_type, "descriptor") || strcmp(key_type, "x25519")) {
+    goto err;
+  }
+
+  if (strlen(seckey_b32) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
+    log_warn(LD_REND, "Client authorization encoded base32 private key "
+                      "length is invalid: %s", seckey_b32);
+    goto err;
+  }
+
+  auth = tor_malloc_zero(sizeof(hs_client_service_authorization_t));
+  if (base32_decode((char *) auth->enc_seckey.secret_key,
+                    sizeof(auth->enc_seckey.secret_key),
+                    seckey_b32, strlen(seckey_b32)) < 0) {
+    goto err;
+  }
+  strncpy(auth->onion_address, onion_address, HS_SERVICE_ADDR_LEN_BASE32);
+
+  /* Success. */
+  goto done;
+
+ err:
+  client_service_authorization_free(auth);
+ done:
+  /* It is also a good idea to wipe the private key. */
+  if (seckey_b32) {
+    memwipe(seckey_b32, 0, strlen(seckey_b32));
+  }
+  if (fields) {
+    SMARTLIST_FOREACH(fields, char *, s, tor_free(s));
+    smartlist_free(fields);
+  }
+  return auth;
+}
+
+/* From a set of <b>options</b>, setup every client authorization detail
+ * found. Return 0 on success or -1 on failure. If <b>validate_only</b>
+ * is set, parse, warn and return as normal, but don't actually change
+ * the configuration. */
+int
+hs_config_client_authorization(const or_options_t *options,
+                               int validate_only)
+{
+  int ret = -1;
+  digest256map_t *auths = digest256map_new();
+  char *key_dir = NULL;
+  smartlist_t *file_list = NULL;
+  char *client_key_str = NULL;
+  char *client_key_file_path = NULL;
+
+  tor_assert(options);
+
+  /* There is no client auth configured. We can just silently ignore this
+   * function. */
+  if (!options->ClientOnionAuthDir) {
+    ret = 0;
+    goto end;
+  }
+
+  key_dir = tor_strdup(options->ClientOnionAuthDir);
+
+  /* Make sure the directory exists and is private enough. */
+  if (check_private_dir(key_dir, 0, options->User) < 0) {
+    goto end;
+  }
+
+  file_list = tor_listdir(key_dir);
+  if (file_list == NULL) {
+    log_warn(LD_REND, "Client authorization key directory %s can't be listed.",
+             key_dir);
+    goto end;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(file_list, char *, filename) {
+
+    hs_client_service_authorization_t *auth = NULL;
+    ed25519_public_key_t identity_pk;
+    log_info(LD_REND, "Loading a client authorization key file %s...",
+             filename);
+
+    if (!auth_key_filename_is_valid(filename)) {
+      log_notice(LD_REND, "Client authorization unrecognized filename %s. "
+                          "File must end in .auth_private. Ignoring.",
+                 filename);
+      continue;
+    }
+
+    /* Create a full path for a file. */
+    client_key_file_path = hs_path_from_filename(key_dir, filename);
+    client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
+    /* Free the file path immediately after using it. */
+    tor_free(client_key_file_path);
+
+    /* If we cannot read the file, continue with the next file. */
+    if (!client_key_str) {
+      log_warn(LD_REND, "The file %s cannot be read.", filename);
+      continue;
+    }
+
+    auth = parse_auth_file_content(client_key_str);
+    /* Free immediately after using it. */
+    tor_free(client_key_str);
+
+    if (auth) {
+      /* Parse the onion address to get an identity public key and use it
+       * as a key of global map in the future. */
+      if (hs_parse_address(auth->onion_address, &identity_pk,
+                           NULL, NULL) < 0) {
+        client_service_authorization_free(auth);
+        log_warn(LD_REND, "The onion address \"%s\" is invalid in "
+                          "file %s", filename, auth->onion_address);
+        continue;
+      }
+
+      if (digest256map_get(auths, identity_pk.pubkey)) {
+        client_service_authorization_free(auth);
+        log_warn(LD_REND, "Duplicate authorization for the same hidden "
+                          "service address %s.",
+                 safe_str_client(auth->onion_address));
+        goto end;
+      }
+
+      digest256map_set(auths, identity_pk.pubkey, auth);
+      log_info(LD_REND, "Loaded a client authorization key file %s.",
+               filename);
+    }
+  } SMARTLIST_FOREACH_END(filename);
+
+  /* Success. */
+  ret = 0;
+
+ end:
+  tor_free(key_dir);
+  tor_free(client_key_str);
+  tor_free(client_key_file_path);
+  if (file_list) {
+    SMARTLIST_FOREACH(file_list, char *, s, tor_free(s));
+    smartlist_free(file_list);
+  }
+
+  if (!validate_only && ret == 0) {
+    client_service_authorization_free_all();
+    client_auths = auths;
+  } else {
+    digest256map_free(auths, client_service_authorization_free_void);
+  }
+
+  return ret;
 }
 
 /* This is called when a descriptor has arrived following a fetch request and
@@ -1589,6 +1842,7 @@ hs_client_free_all(void)
 {
   /* Purge the hidden service request cache. */
   hs_purge_last_hid_serv_requests();
+  client_service_authorization_free_all();
 }
 
 /* Purge all potentially remotely-detectable state held in the hidden
@@ -1621,3 +1875,13 @@ hs_client_dir_info_changed(void)
    * AP_CONN_STATE_RENDDESC_WAIT state in order to fetch the descriptor. */
   retry_all_socks_conn_waiting_for_desc();
 }
+
+#ifdef TOR_UNIT_TESTS
+
+STATIC digest256map_t *
+get_hs_client_auths_map(void)
+{
+  return client_auths;
+}
+
+#endif /* defined(TOR_UNIT_TESTS) */

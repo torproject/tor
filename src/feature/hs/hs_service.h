@@ -105,6 +105,13 @@ typedef struct hs_service_descriptor_t {
    * publishes the descriptor. */
   hs_descriptor_t *desc;
 
+  /* Client authorization ephemeral keypair. */
+  curve25519_keypair_t auth_ephemeral_kp;
+
+  /* Descriptor cookie used to encrypt the descriptor, when the client
+   * authorization is enabled */
+  uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+
   /* Descriptor signing keypair. */
   ed25519_keypair_t signing_kp;
 
@@ -148,6 +155,12 @@ typedef struct hs_service_keys_t {
   unsigned int is_identify_key_offline : 1;
 } hs_service_keys_t;
 
+/** Service side configuration of client authorization. */
+typedef struct hs_service_authorized_client_t {
+  /* The client auth public key used to encrypt the descriptor cookie. */
+  curve25519_public_key_t client_pk;
+} hs_service_authorized_client_t;
+
 /* Service configuration. The following are set from the torrc options either
  * set by the configuration file or by the control port. Nothing else should
  * change those values. */
@@ -175,6 +188,13 @@ typedef struct hs_service_config_t {
   /* How many introduction points this service has. Specified by
    * HiddenServiceNumIntroductionPoints option. */
   unsigned int num_intro_points;
+
+  /* True iff the client auth is enabled. */
+  unsigned int is_client_auth_enabled : 1;
+
+  /* List of hs_service_authorized_client_t's of clients that may access this
+   * service. Specified by HiddenServiceAuthorizeClient option. */
+  smartlist_t *clients;
 
   /* True iff we allow request made on unknown ports. Specified by
    * HiddenServiceAllowUnknownPorts option. */
@@ -336,6 +356,9 @@ STATIC hs_service_descriptor_t *service_desc_find_by_intro(
                                          const hs_service_t *service,
                                          const hs_service_intro_point_t *ip);
 /* Helper functions. */
+STATIC int client_filename_is_valid(const char *filename);
+STATIC hs_service_authorized_client_t *
+parse_authorized_client(const char *client_key_str);
 STATIC void get_objects_from_ident(const hs_ident_circuit_t *ident,
                                    hs_service_t **service,
                                    hs_service_intro_point_t **ip,
@@ -356,6 +379,13 @@ STATIC void service_descriptor_free_(hs_service_descriptor_t *desc);
 #define service_descriptor_free(d) \
   FREE_AND_NULL(hs_service_descriptor_t, \
                            service_descriptor_free_, (d))
+
+STATIC void
+service_authorized_client_free_(hs_service_authorized_client_t *client);
+#define service_authorized_client_free(c) \
+  FREE_AND_NULL(hs_service_authorized_client_t, \
+                           service_authorized_client_free_, (c))
+
 STATIC int
 write_address_to_file(const hs_service_t *service, const char *fname_);
 
@@ -368,6 +398,12 @@ STATIC void service_desc_schedule_upload(hs_service_descriptor_t *desc,
 
 STATIC int service_desc_hsdirs_changed(const hs_service_t *service,
                                 const hs_service_descriptor_t *desc);
+
+STATIC int service_authorized_client_config_equal(
+                                         const hs_service_config_t *config1,
+                                         const hs_service_config_t *config2);
+
+STATIC void service_clear_config(hs_service_config_t *config);
 
 #endif /* defined(HS_SERVICE_PRIVATE) */
 
