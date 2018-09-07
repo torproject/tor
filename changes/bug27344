@@ -1,0 +1,4 @@
+  o Minor features (compatibility):
+    - Tell OpenSSL to maintain backward compatibility with previous
+      RSA1024/DH1024 users in Tor. With OpenSSL 1.1.1-pre6, these ciphers
+      are disabled by default. Closes ticket 27344.
