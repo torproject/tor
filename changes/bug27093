@@ -1,3 +1,0 @@
-  o Minor bugfixes (rust):
-    - Consistently use ../../.. as a fallback for $abs_top_srcdir in
-      test_rust.sh. Fixes bug 27093; bugfix on 0.3.4.3-alpha.

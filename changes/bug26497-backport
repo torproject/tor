@@ -1,3 +1,0 @@
-  o Minor bugfixes (rust):
-    - Backport test_rust.sh from master.
-      Fixes bug 26497; bugfix on 0.3.1.5-alpha.

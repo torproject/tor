@@ -1,3 +1,0 @@
-  o Minor bugfixes (continuous integration):
-    - Skip an unreliable key expiration test on Windows, until the underlying
-      issue in bug 26076 is resolved. Fixes bug 26853; bugfix on 0.3.2.1-alpha.
