@@ -119,6 +119,27 @@ Changes in version 0.3.4.6-rc - 2018-08-06
     - When building Tor, prefer to use Python 3 over Python 2, and more
       recent (contemplated) versions over older ones. Closes
       ticket 26372.
+    - When compiling with --enable-openbsd-malloc or --enable-tcmalloc,
+      tell the compiler not to include the system malloc implementation.
+      Fixes bug 20424; bugfix on 0.2.0.20-rc.
+    - Don't try to use a pragma to temporarily disable the
+      -Wunused-const-variable warning if the compiler doesn't support
+      it. Fixes bug 26785; bugfix on 0.3.2.11.
+
+  o Minor bugfixes (continuous integration):
+    - Skip a pair of unreliable key generation tests on Windows, until
+      the underlying issue in bug 26076 is resolved. Fixes bug 26830 and
+      bug 26853; bugfix on 0.2.7.3-rc and 0.3.2.1-alpha respectively.
+
+  o Minor features (controller):
+    - The control port now exposes the list of HTTPTunnelPorts and
+      ExtOrPorts via GETINFO net/listeners/httptunnel and
+      net/listeners/extor respectively. Closes ticket 26647.
+
+  o Minor bugfixes (directory authority):
+    - When voting for recommended versions, make sure that all of the
+      versions are well-formed and parsable. Fixes bug 26485; bugfix
+      on 0.1.1.6-alpha.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the July 3 2018 Maxmind GeoLite2
@@ -128,6 +149,8 @@ Changes in version 0.3.4.6-rc - 2018-08-06
     - Rust cross-compilation is now supported. Closes ticket 25895.
 
   o Minor bugfixes (compilation):
+    - Update build system so that tor builds again with --disable-unittests
+      after recent refactoring. Fixes bug 26789; bugfix on 0.3.4.3-alpha.
     - Fix a compilation warning on some versions of GCC when building
       code that calls routerinfo_get_my_routerinfo() twice, assuming
       that the second call will succeed if the first one did. Fixes bug
@@ -149,9 +172,26 @@ Changes in version 0.3.4.6-rc - 2018-08-06
     - Fix a number of small memory leaks identified by coverity. Fixes
       bug 26467; bugfix on numerous Tor versions.
 
+  o Minor bugfixes (logging):
+    - Improve the log message when connection initiators fail to
+      authenticate direct connections to relays. Fixes bug 26927; bugfix
+      on 0.3.0.1-alpha.
+
   o Minor bugfixes (portability):
     - Avoid a compilation error in test_bwmgt.c on Solaris 10. Fixes bug
       26994; bugfix on 0.3.4.1-alpha.
+    - Work around two different bugs in the OS X 10.10 and later SDKs
+      that would prevent us from successfully targeting earlier versions
+      of OS X. Fixes bug 26876; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (single onion services, Tor2web):
+    - Log a protocol warning when single onion services or Tor2web
+      clients fail to authenticate direct connections to relays. Fixes
+      bug 26924; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Disable core dumps in test_bt.sh, to avoid failures in "make
+      distcheck". Fixes bug 26787; bugfix on 0.2.5.2-alpha.
 
   o Minor bugfixes (testing, compatibility):
     - When running the ntor_ref.py and hs_ntor_ref.py tests, make sure
@@ -159,6 +199,12 @@ Changes in version 0.3.4.6-rc - 2018-08-06
       subprocess module. Python 3 on Windows seems to require this.
       Fixes bug 26535; bugfix on 0.2.5.5-alpha (for ntor_ref.py) and
       0.3.1.1-alpha (for hs_ntor_ref.py).
+
+  o Minor bugfixes (v3 onion services):
+    - Stop sending ed25519 link specifiers in v3 onion service introduce
+      cells and descriptors, when the rendezvous or introduction point
+      doesn't support ed25519 link authentication. Fixes bug 26627;
+      bugfix on 0.3.2.4-alpha.
 
 
 Changes in version 0.3.4.5-rc - 2018-07-13
