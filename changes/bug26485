@@ -1,4 +1,0 @@
-  o Minor bugfixes (directory authority):
-    - When voting for recommended versions, make sure that all of the
-      versions are well-formed and parsable. Fixes bug 26485; bugfix on
-      0.1.1.6-alpha.

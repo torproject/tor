@@ -1,3 +1,100 @@
+Changes in version 0.2.9.17 - 2018-09-10
+  Tor 0.2.9.17 backports numerous bugfixes from later versions of Tor.
+
+  o Minor features (compatibility, backport from 0.3.4.8):
+    - Tell OpenSSL to maintain backward compatibility with previous
+      RSA1024/DH1024 users in Tor. With OpenSSL 1.1.1-pre6, these
+      ciphers are disabled by default. Closes ticket 27344.
+
+  o Minor features (continuous integration, backport from 0.3.4.7-rc):
+    - Enable macOS builds in our Travis CI configuration. Closes
+      ticket 24629.
+    - Install libcap-dev and libseccomp2-dev so these optional
+      dependencies get tested on Travis CI. Closes ticket 26560.
+    - Run asciidoc during Travis CI. Implements ticket 27087.
+    - Use ccache in our Travis CI configuration. Closes ticket 26952.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the August 7 2018 Maxmind GeoLite2
+      Country database. Closes ticket 27089.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.6-rc):
+    - When compiling with --enable-openbsd-malloc or --enable-tcmalloc,
+      tell the compiler not to include the system malloc implementation.
+      Fixes bug 20424; bugfix on 0.2.0.20-rc.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.7-rc):
+    - Silence a spurious compiler warning on the GetAdaptersAddresses
+      function pointer cast. This issue is already fixed by 26481 in
+      0.3.5 and later, by removing the lookup and cast. Fixes bug 27465;
+      bugfix on 0.2.3.11-alpha.
+    - Stop calling SetProcessDEPPolicy() on 64-bit Windows. It is not
+      supported, and always fails. Some compilers warn about the
+      function pointer cast on 64-bit Windows. Fixes bug 27461; bugfix
+      on 0.2.2.23-alpha.
+
+  o Minor bugfixes (compilation, windows, backport from 0.3.4.7-rc):
+    - Don't link or search for pthreads when building for Windows, even
+      if we are using build environment (like mingw) that provides a
+      pthreads library. Fixes bug 27081; bugfix on 0.1.0.1-rc.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.6-rc):
+    - Skip a pair of unreliable key generation tests on Windows, until
+      the underlying issue in bug 26076 is resolved. Fixes bug 26830 and
+      bug 26853; bugfix on 0.2.7.3-rc and 0.3.2.1-alpha respectively.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.7-rc):
+    - Pass the module flags to distcheck configure, and log the flags
+      before running configure. (Backported to 0.2.9 and later as a
+      precaution.) Fixes bug 27088; bugfix on 0.3.4.1-alpha.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.8):
+    - When a Travis build fails, and showing a log fails, keep trying to
+      show the other logs. Fixes bug 27453; bugfix on 0.3.4.7-rc.
+    - When we use echo in Travis, don't pass a --flag as the first
+      argument. Fixes bug 27418; bugfix on 0.3.4.7-rc.
+
+  o Minor bugfixes (directory authority, backport from 0.3.4.6-rc):
+    - When voting for recommended versions, make sure that all of the
+      versions are well-formed and parsable. Fixes bug 26485; bugfix
+      on 0.1.1.6-alpha.
+
+  o Minor bugfixes (linux seccomp2 sandbox, backport from 0.3.4.7-rc):
+    - Fix a bug in out sandboxing rules for the openat() syscall.
+      Previously, no openat() call would be permitted, which would break
+      filesystem operations on recent glibc versions. Fixes bug 25440;
+      bugfix on 0.2.9.15. Diagnosis and patch from Daniel Pinto.
+
+  o Minor bugfixes (onion services, backport from 0.3.4.8):
+    - Silence a spurious compiler warning in
+      rend_client_send_introduction(). Fixes bug 27463; bugfix
+      on 0.1.1.2-alpha.
+
+  o Minor bugfixes (single onion services, Tor2web, backport from 0.3.4.6-rc):
+    - Log a protocol warning when single onion services or Tor2web clients
+      fail to authenticate direct connections to relays.
+      Fixes bug 26924; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (testing, backport from 0.3.4.6-rc):
+    - Disable core dumps in test_bt.sh, to avoid failures in "make
+      distcheck". Fixes bug 26787; bugfix on 0.2.5.2-alpha.
+
+  o Minor bugfixes (testing, chutney, backport from 0.3.4.8):
+    - Before running make test-network-all, delete old logs and test
+      result files, to avoid spurious failures. Fixes bug 27295; bugfix
+      on 0.2.7.3-rc.
+
+  o Minor bugfixes (testing, openssl compatibility, backport from 0.3.4.7-rc):
+    - Our "tortls/cert_matches_key" unit test no longer relies on
+      OpenSSL internals. Previously, it relied on unsupported OpenSSL
+      behavior in a way that caused it to crash with OpenSSL 1.0.2p.
+      Fixes bug 27226; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (Windows, compilation, backport from 0.3.4.7-rc):
+    - Silence a compilation warning on MSVC 2017 and clang-cl. Fixes bug
+      27185; bugfix on 0.2.2.2-alpha.
+
+
 Changes in version 0.2.9.16 - 2018-07-13
   Tor 0.2.9.16 moves to a new bridge authority, meaning people running
   bridge relays should upgrade. We also take this opportunity to backport
@@ -22506,4 +22603,3 @@ Changes in version 0.0.2pre13 - 2003-10-19
     - If --DebugLogFile is specified, log to it at -l debug
     - If --LogFile is specified, use it instead of commandline
     - If --RunAsDaemon is set, tor forks and backgrounds on startup
-
