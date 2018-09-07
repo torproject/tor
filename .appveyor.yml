@@ -9,9 +9,11 @@ environment:
   - target: i686-w64-mingw32
     compiler_path: mingw32
     openssl_path: /c/OpenSSL-Win32
+    hardening:
   - target: x86_64-w64-mingw32
     compiler_path: mingw64
     openssl_path: /c/OpenSSL-Win64
+    hardening: --disable-gcc-hardening
 
 install:
 - ps: >-
@@ -41,7 +43,7 @@ build_script:
             Set-Location "${env:build}"
             Execute-Bash "which ${env:target}-gcc"
             Execute-Bash "${env:target}-gcc --version"
-            Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target} --disable-asciidoc --enable-fatal-warnings --with-openssl-dir=${env:openssl_path}"
+            Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target} --disable-asciidoc --enable-fatal-warnings --with-openssl-dir=${env:openssl_path} ${env:hardening}"
             Execute-Bash "V=1 make -j2"
             Execute-Bash "V=1 make -j2 install"
      }
