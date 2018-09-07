@@ -1,0 +1,6 @@
+  o Minor bugfixes (continuous integration):
+    - Disable gcc hardening in Appveyor Windows 64-bit builds. As of
+      August 29, 2018, Appveyor images come with gcc 8.2.0 by default.
+      64-bit Windows executables compiled with gcc 8.2.0 and
+      tor's --enable-gcc-hardening crash.
+      Fixes bug 27460; bugfix on 0.3.4.1-alpha.
