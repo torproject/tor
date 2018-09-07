@@ -1,3 +1,0 @@
-  o Minor features (continuous integration):
-    - Enable macOS builds in our Travis CI configuration.
-      Closes ticket 24629.
