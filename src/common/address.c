@@ -1496,7 +1496,10 @@ get_interface_addresses_win32(int severity, sa_family_t family)
     goto done;
   }
 
-  if (!(fn = (GetAdaptersAddresses_fn_t)
+  /* Cast through a void function pointer, to silence a spurious compiler
+   * warning on 64-bit Windows. This cast is safe, because we are casting to
+   * the correct type for GetAdaptersAddresses(). */
+  if (!(fn = (GetAdaptersAddresses_fn_t)(void(*)(void))
                   GetProcAddress(lib, "GetAdaptersAddresses"))) {
     log_fn(severity, LD_NET, "Unable to obtain pointer to "
            "GetAdaptersAddresses");
