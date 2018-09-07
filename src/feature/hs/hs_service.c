@@ -18,6 +18,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/crypt_ops/crypto_ope.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "feature/dircache/directory.h"
 #include "core/mainloop/main.h"
 #include "feature/nodelist/networkstatus.h"
@@ -1799,6 +1800,10 @@ build_service_desc_superencrypted(const hs_service_t *service,
       hs_desc_build_fake_authorized_client();
     smartlist_add(superencrypted->clients, desc_client);
   }
+
+  /* Shuffle the list to prevent the client know the position in the
+   * config. */
+  smartlist_shuffle(superencrypted->clients);
 
   return 0;
 }
