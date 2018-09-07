@@ -548,6 +548,12 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   if (!(result->ctx = SSL_CTX_new(SSLv23_method())))
     goto error;
 #endif /* defined(HAVE_TLS_METHOD) */
+
+#ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
+  /* Level 1 re-enables RSA1024 and DH1024 for compatibility with old tors */
+  SSL_CTX_set_security_level(result->ctx, 1);
+#endif
+
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv3);
 
