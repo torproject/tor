@@ -4227,6 +4227,7 @@ tor_CRYPTO_realloc(void *addr, size_t num, const char *file, int line)
  * Compatibility wrapper for attaching tor_free() to OpenSSL
  * via CRYPTO_set_mem_functions().
  */
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
 static void
 tor_CRYPTO_free(void *ptr, const char *file, int line)
 {
@@ -4235,6 +4236,13 @@ tor_CRYPTO_free(void *ptr, const char *file, int line)
 
   tor_free(ptr);
 }
+#else
+static void
+tor_CRYPTO_free(void *ptr)
+{
+  tor_free(ptr);
+}
+#endif
 
 /* Main entry point for the Tor process.  Called from tor_main(), and by
  * anybody embedding Tor. */
