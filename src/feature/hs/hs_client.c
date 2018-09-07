@@ -1500,6 +1500,12 @@ parse_auth_file_content(const char *client_key_str)
     goto err;
   }
 
+  if (strlen(seckey_b32) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
+    log_warn(LD_REND, "Client authorization encoded base32 private key "
+                      "length is invalid: %s", seckey_b32);
+    goto err;
+  }
+
   auth = tor_malloc_zero(sizeof(hs_client_service_authorization_t));
   if (base32_decode((char *) auth->enc_seckey.secret_key,
                     sizeof(auth->enc_seckey.secret_key),
