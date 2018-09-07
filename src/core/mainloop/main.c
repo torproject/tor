@@ -4207,6 +4207,13 @@ typedef int crypto_size_t;
  * Compatibility wrapper for attaching tor_malloc() to OpenSSL
  * via CRYPTO_set_mem_functions().
  */
+#if defined(HAVE_OPENSSL_ACCEPT_RAW_MALLOC)
+static void *
+tor_CRYPTO_malloc(size_t num)
+{
+  return tor_malloc(num);
+}
+#else
 static void *
 tor_CRYPTO_malloc(crypto_size_t num, const char *file, int line)
 {
@@ -4215,11 +4222,19 @@ tor_CRYPTO_malloc(crypto_size_t num, const char *file, int line)
 
   return tor_malloc(num);
 }
+#endif
 
 /**
  * Compatibility wrapper for attaching tor_realloc() to OpenSSL
  * via CRYPTO_set_mem_functions().
  */
+#if defined(HAVE_OPENSSL_ACCEPT_RAW_REALLOC)
+static void *
+tor_CRYPTO_realloc(void *addr, size_t num)
+{
+  return tor_realloc(addr, num);
+}
+#else
 static void *
 tor_CRYPTO_realloc(void *addr, crypto_size_t num,
                    const char *file, int line)
@@ -4229,12 +4244,13 @@ tor_CRYPTO_realloc(void *addr, crypto_size_t num,
 
   return tor_realloc(addr, num);
 }
+#endif
 
 /**
  * Compatibility wrapper for attaching tor_free() to OpenSSL
  * via CRYPTO_set_mem_functions().
  */
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,0)
+#if defined(HAVE_CRYPTO_FREE_WITH_DEBUG_ARGS)
 static void
 tor_CRYPTO_free(void *ptr, const char *file, int line)
 {
@@ -4243,7 +4259,7 @@ tor_CRYPTO_free(void *ptr, const char *file, int line)
 
   tor_free(ptr);
 }
-#else
+#elif defined(HAVE_CRYPTO_FREE_WITHOUT_DEBUG_ARGS)
 static void
 tor_CRYPTO_free(void *ptr)
 {
