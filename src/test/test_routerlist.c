@@ -659,7 +659,8 @@ test_skew_common(void *arg, time_t now, unsigned long *offset)
   MOCK(clock_skew_warning, mock_clock_skew_warning);
   /* Caller will call teardown_capture_of_logs() */
   setup_capture_of_logs(LOG_WARN);
-  retval = networkstatus_set_current_consensus(consensus, "microdesc", 0,
+  retval = networkstatus_set_current_consensus(consensus, strlen(consensus),
+                                               "microdesc", 0,
                                                NULL);
 
  done:

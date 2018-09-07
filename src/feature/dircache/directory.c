@@ -2606,17 +2606,17 @@ handle_response_fetch_consensus(dir_connection_t *conn,
   if (looks_like_a_consensus_diff(body, body_len)) {
     /* First find our previous consensus. Maybe it's in ram, maybe not. */
     cached_dir_t *cd = dirserv_get_consensus(flavname);
-    const char *consensus_body;
+    const char *consensus_body = NULL;
     size_t consensus_body_len;
-    char *owned_consensus = NULL;
+    tor_mmap_t *mapped_consensus = NULL;
     if (cd) {
       consensus_body = cd->dir;
       consensus_body_len = cd->dir_len;
     } else {
-      owned_consensus = networkstatus_read_cached_consensus(flavname);
-      if (owned_consensus) {
-        consensus_body = owned_consensus;
-        consensus_body_len = strlen(consensus_body);
+      mapped_consensus = networkstatus_map_cached_consensus(flavname);
+      if (mapped_consensus) {
+        consensus_body = mapped_consensus->data;
+        consensus_body_len = mapped_consensus->size;
       }
     }
     if (!consensus_body) {
@@ -2629,7 +2629,7 @@ handle_response_fetch_consensus(dir_connection_t *conn,
 
     new_consensus = consensus_diff_apply(consensus_body, consensus_body_len,
                                          body, body_len);
-    tor_free(owned_consensus);
+    tor_munmap_file(mapped_consensus);
     if (new_consensus == NULL) {
       log_warn(LD_DIR, "Could not apply consensus diff received from server "
                "'%s:%d'", conn->base_.address, conn->base_.port);
@@ -2651,7 +2651,9 @@ handle_response_fetch_consensus(dir_connection_t *conn,
     sourcename = "downloaded";
   }
 
-  if ((r=networkstatus_set_current_consensus(consensus, flavname, 0,
+  if ((r=networkstatus_set_current_consensus(consensus,
+                                             strlen(consensus),
+                                             flavname, 0,
                                              conn->identity_digest))<0) {
     log_fn(r<-1?LOG_WARN:LOG_INFO, LD_DIR,
            "Unable to load %s consensus directory %s from "

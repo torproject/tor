@@ -3648,7 +3648,9 @@ dirvote_publish_consensus(void)
       continue;
     }
 
-    if (networkstatus_set_current_consensus(pending->body, name, 0, NULL))
+    if (networkstatus_set_current_consensus(pending->body,
+                                            strlen(pending->body),
+                                            name, 0, NULL))
       log_warn(LD_DIR, "Error publishing %s consensus", name);
     else
       log_notice(LD_DIR, "Published %s consensus", name);

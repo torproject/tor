@@ -16,7 +16,7 @@
 
 void networkstatus_reset_warnings(void);
 void networkstatus_reset_download_failures(void);
-char *networkstatus_read_cached_consensus(const char *flavorname);
+tor_mmap_t *networkstatus_map_cached_consensus(const char *flavorname);
 int router_reload_consensus_networkstatus(void);
 void routerstatus_free_(routerstatus_t *rs);
 #define routerstatus_free(rs) \
@@ -108,6 +108,7 @@ int networkstatus_consensus_has_ipv6(const or_options_t* options);
 #define NSSET_ACCEPT_OBSOLETE 8
 #define NSSET_REQUIRE_FLAVOR 16
 int networkstatus_set_current_consensus(const char *consensus,
+                                        size_t consensus_len,
                                         const char *flavor,
                                         unsigned flags,
                                         const char *source_dir);
@@ -159,4 +160,3 @@ extern networkstatus_t *current_md_consensus;
 #endif /* defined(NETWORKSTATUS_PRIVATE) */
 
 #endif /* !defined(TOR_NETWORKSTATUS_H) */
-
