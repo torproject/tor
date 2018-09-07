@@ -3,7 +3,20 @@ release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
 Changes in version 0.3.4.8  - 2018-09-10
-  This is the first stable release of its series. BLURB BLURB BLURB.
+  Tor 0.3.4.8 is the first stable release in its series; it includes
+  several compilation and portability fixes.
+
+  The Tor 0.3.4 series includes several improvements for running Tor in
+  low-power and embedded environments, which should help performance in
+  general. We've begun work on better modularity, and included preliminary
+  changes on the directory authority side to accommodate a new bandwidth
+  measurement system.  We've also integrated more continuous-integration
+  systems into our development process, and made corresponding changes to
+  Tor's testing infrastructure.  Finally, we've continued to refine
+  our anti-denial-of-service code.
+
+  Below are the changes since 0.3.3.5-rc.  For a list of only the changes
+  since 0.3.4.7-rc, see the ChangeLog
 
   o Directory authority changes:
     - The "Bifroest" bridge authority has been retired; the new bridge

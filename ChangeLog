@@ -8,7 +8,8 @@ Changes in version 0.3.4.8 - 2018-09-10
   changes on the directory authority side to accommodate a new bandwidth
   measurement system.  We've also integrated more continuous-integration
   systems into our development process, and made corresponding changes to
-  Tor's testing infrastructure.
+  Tor's testing infrastructure.  Finally, we've continued to refine
+  our anti-denial-of-service code.
 
   Below are the changes since 0.3.4.7-rc.  For a complete list of changes
   since 0.3.3.6, see the ReleaseNotes file.
