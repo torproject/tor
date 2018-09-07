@@ -98,8 +98,11 @@ static hs_descriptor_t *
 hs_helper_build_hs_desc_impl(unsigned int no_ip,
                              const ed25519_keypair_t *signing_kp)
 {
+  int ret;
+  int i;
   time_t now = approx_time();
   ed25519_keypair_t blinded_kp;
+  curve25519_keypair_t auth_ephemeral_kp;
   hs_descriptor_t *descp = NULL, *desc = tor_malloc_zero(sizeof(*desc));
 
   desc->plaintext_data.version = HS_DESC_SUPPORTED_FORMAT_VERSION_MAX;
@@ -125,6 +128,20 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
 
   hs_get_subcredential(&signing_kp->pubkey, &blinded_kp.pubkey,
                     desc->subcredential);
+
+  /* Setup superencrypted data section. */
+  ret = curve25519_keypair_generate(&auth_ephemeral_kp, 0);
+  tt_int_op(ret, ==, 0);
+  memcpy(&desc->superencrypted_data.auth_ephemeral_pubkey,
+         &auth_ephemeral_kp.pubkey,
+         sizeof(curve25519_public_key_t));
+
+  desc->superencrypted_data.clients = smartlist_new();
+  for (i = 0; i < HS_DESC_AUTH_CLIENT_MULTIPLE; i++) {
+    hs_desc_authorized_client_t *desc_client =
+      hs_desc_build_fake_authorized_client();
+    smartlist_add(desc->superencrypted_data.clients, desc_client);
+  }
 
   /* Setup encrypted data section. */
   desc->encrypted_data.create2_ntor = 1;
@@ -206,6 +223,32 @@ hs_helper_desc_equal(const hs_descriptor_t *desc1,
    * descriptor, the object is immutable thus we don't update it with the
    * encrypted blob. As contrast to the decoding process where we populate a
    * descriptor object. */
+
+  /* Superencrypted data section. */
+  tt_mem_op(desc1->superencrypted_data.auth_ephemeral_pubkey.public_key, OP_EQ,
+            desc2->superencrypted_data.auth_ephemeral_pubkey.public_key,
+            CURVE25519_PUBKEY_LEN);
+
+  /* Auth clients. */
+  {
+    tt_assert(desc1->superencrypted_data.clients);
+    tt_assert(desc2->superencrypted_data.clients);
+    tt_int_op(smartlist_len(desc1->superencrypted_data.clients), ==,
+              smartlist_len(desc2->superencrypted_data.clients));
+    for (int i=0;
+         i < smartlist_len(desc1->superencrypted_data.clients);
+         i++) {
+      hs_desc_authorized_client_t
+        *client1 = smartlist_get(desc1->superencrypted_data.clients, i),
+        *client2 = smartlist_get(desc2->superencrypted_data.clients, i);
+      tor_memeq(client1->client_id, client2->client_id,
+                sizeof(client1->client_id));
+      tor_memeq(client1->iv, client2->iv,
+                sizeof(client1->iv));
+      tor_memeq(client1->encrypted_cookie, client2->encrypted_cookie,
+                sizeof(client1->encrypted_cookie));
+    }
+  }
 
   /* Encrypted data section. */
   tt_uint_op(desc1->encrypted_data.create2_ntor, ==,

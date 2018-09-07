@@ -428,11 +428,13 @@ mock_directory_initiate_request(directory_request_t *req)
 
 static int
 mock_hs_desc_encode_descriptor(const hs_descriptor_t *desc,
-                           const ed25519_keypair_t *signing_kp,
-                           char **encoded_out)
+                               const ed25519_keypair_t *signing_kp,
+                               const uint8_t *descriptor_cookie,
+                               char **encoded_out)
 {
   (void)desc;
   (void)signing_kp;
+  (void)descriptor_cookie;
 
   tor_asprintf(encoded_out, "lulu");
   return 0;

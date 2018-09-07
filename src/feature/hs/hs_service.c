@@ -88,6 +88,7 @@
 
 /* Onion service directory file names. */
 static const char fname_keyfile_prefix[] = "hs_ed25519";
+static const char dname_client_pubkeys[] = "authorized_clients";
 static const char fname_hostname[] = "hostname";
 static const char address_tld[] = "onion";
 
@@ -103,9 +104,16 @@ static smartlist_t *hs_service_staging_list;
 static int consider_republishing_hs_descriptors = 0;
 
 /* Static declaration. */
+static int load_client_keys(hs_service_t *service);
 static void set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc,
                                             time_t now, bool is_current);
+static int build_service_desc_superencrypted(const hs_service_t *service,
+                                             hs_service_descriptor_t *desc);
 static void move_descriptors(hs_service_t *src, hs_service_t *dst);
+static int service_encode_descriptor(const hs_service_t *service,
+                                     const hs_service_descriptor_t *desc,
+                                     const ed25519_keypair_t *signing_kp,
+                                     char **encoded_out);
 
 /* Helper: Function to compare two objects in the service map. Return 1 if the
  * two service have the same master public identity key. */
@@ -235,7 +243,7 @@ set_service_default_config(hs_service_config_t *c,
 
 /* From a service configuration object config, clear everything from it
  * meaning free allocated pointers and reset the values. */
-static void
+STATIC void
 service_clear_config(hs_service_config_t *config)
 {
   if (config == NULL) {
@@ -246,6 +254,11 @@ service_clear_config(hs_service_config_t *config)
     SMARTLIST_FOREACH(config->ports, rend_service_port_config_t *, p,
                       rend_service_port_config_free(p););
     smartlist_free(config->ports);
+  }
+  if (config->clients) {
+    SMARTLIST_FOREACH(config->clients, hs_service_authorized_client_t *, p,
+                      service_authorized_client_free(p));
+    smartlist_free(config->clients);
   }
   memset(config, 0, sizeof(*config));
 }
@@ -1070,11 +1083,233 @@ load_service_keys(hs_service_t *service)
     goto end;
   }
 
+  /* Load all client authorization keys in the service. */
+  if (load_client_keys(service) < 0) {
+    goto end;
+  }
+
   /* Succes. */
   ret = 0;
  end:
   tor_free(fname);
   return ret;
+}
+
+/* Check if the client file name is valid or not. Return 1 if valid,
+ * otherwise return 0. */
+STATIC int
+client_filename_is_valid(const char *filename)
+{
+  int ret = 1;
+  const char *valid_extension = ".auth";
+
+  tor_assert(filename);
+
+  /* The file extension must match and the total filename length can't be the
+   * length of the extension else we do not have a filename. */
+  if (!strcmpend(filename, valid_extension) &&
+      strlen(filename) != strlen(valid_extension)) {
+    ret = 1;
+  } else {
+    ret = 0;
+  }
+
+  return ret;
+}
+
+/* Parse an authorized client from a string. The format of a client string
+ * looks like (see rend-spec-v3.txt):
+ *
+ *  <auth-type>:<key-type>:<base32-encoded-public-key>
+ *
+ * The <auth-type> can only be "descriptor".
+ * The <key-type> can only be "x25519".
+ *
+ * Return the key on success, return NULL, otherwise. */
+STATIC hs_service_authorized_client_t *
+parse_authorized_client(const char *client_key_str)
+{
+  char *auth_type = NULL;
+  char *key_type = NULL;
+  char *pubkey_b32 = NULL;
+  hs_service_authorized_client_t *client = NULL;
+  smartlist_t *fields = smartlist_new();
+
+  tor_assert(client_key_str);
+
+  smartlist_split_string(fields, client_key_str, ":",
+                         SPLIT_SKIP_SPACE, 0);
+  /* Wrong number of fields. */
+  if (smartlist_len(fields) != 3) {
+    log_warn(LD_REND, "Unknown format of client authorization file.");
+    goto err;
+  }
+
+  auth_type = smartlist_get(fields, 0);
+  key_type = smartlist_get(fields, 1);
+  pubkey_b32 = smartlist_get(fields, 2);
+
+  /* Currently, the only supported auth type is "descriptor". */
+  if (strcmp(auth_type, "descriptor")) {
+    log_warn(LD_REND, "Client authorization auth type '%s' not supported.",
+             auth_type);
+    goto err;
+  }
+
+  /* Currently, the only supported key type is "x25519". */
+  if (strcmp(key_type, "x25519")) {
+    log_warn(LD_REND, "Client authorization key type '%s' not supported.",
+             key_type);
+    goto err;
+  }
+
+  /* We expect a specific length of the base32 encoded key so make sure we
+   * have that so we don't successfully decode a value with a different length
+   * and end up in trouble when copying the decoded key into a fixed length
+   * buffer. */
+  if (strlen(pubkey_b32) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
+    log_warn(LD_REND, "Client authorization encoded base32 public key "
+                      "length is invalid: %s", pubkey_b32);
+    goto err;
+  }
+
+  client = tor_malloc_zero(sizeof(hs_service_authorized_client_t));
+  if (base32_decode((char *) client->client_pk.public_key,
+                    sizeof(client->client_pk.public_key),
+                    pubkey_b32, strlen(pubkey_b32)) < 0) {
+    log_warn(LD_REND, "Client authorization public key cannot be decoded: %s",
+             pubkey_b32);
+    goto err;
+  }
+
+  /* Success. */
+  goto done;
+
+ err:
+  service_authorized_client_free(client);
+ done:
+  /* It is also a good idea to wipe the public key. */
+  if (pubkey_b32) {
+    memwipe(pubkey_b32, 0, strlen(pubkey_b32));
+  }
+  if (fields) {
+    SMARTLIST_FOREACH(fields, char *, s, tor_free(s));
+    smartlist_free(fields);
+  }
+  return client;
+}
+
+/* Load all the client public keys for the given service. Return 0 on
+ * success else -1 on failure. */
+static int
+load_client_keys(hs_service_t *service)
+{
+  int ret = -1;
+  char *client_key_str = NULL;
+  char *client_key_file_path = NULL;
+  char *client_keys_dir_path = NULL;
+  hs_service_config_t *config;
+  smartlist_t *file_list = NULL;
+
+  tor_assert(service);
+
+  config = &service->config;
+
+  /* Before calling this function, we already call load_service_keys to make
+   * sure that the directory exists with the right permission. So, if we
+   * cannot create a client pubkey key directory, we consider it as a bug. */
+  client_keys_dir_path = hs_path_from_filename(config->directory_path,
+                                               dname_client_pubkeys);
+  if (BUG(hs_check_service_private_dir(get_options()->User,
+                                       client_keys_dir_path,
+                                       config->dir_group_readable, 1) < 0)) {
+    goto end;
+  }
+
+  /* If the list of clients already exists, we must clear it first. */
+  if (config->clients) {
+    SMARTLIST_FOREACH(config->clients, hs_service_authorized_client_t *, p,
+                      service_authorized_client_free(p));
+    smartlist_free(config->clients);
+  }
+
+  config->clients = smartlist_new();
+
+  file_list = tor_listdir(client_keys_dir_path);
+  if (file_list == NULL) {
+    log_warn(LD_REND, "Client authorization directory %s can't be listed.",
+             client_keys_dir_path);
+    goto end;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(file_list, const char *, filename) {
+    hs_service_authorized_client_t *client = NULL;
+    log_info(LD_REND, "Loading a client authorization key file %s...",
+             filename);
+
+    if (!client_filename_is_valid(filename)) {
+      log_warn(LD_REND, "Client authorization unrecognized filename %s. "
+                        "File must end in .auth. Ignoring.", filename);
+      continue;
+    }
+
+    /* Create a full path for a file. */
+    client_key_file_path = hs_path_from_filename(client_keys_dir_path,
+                                                 filename);
+    client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
+    /* Free immediately after using it. */
+    tor_free(client_key_file_path);
+
+    /* If we cannot read the file, continue with the next file. */
+    if (!client_key_str)  {
+      log_warn(LD_REND, "Client authorization file %s can't be read. "
+                        "Corrupted or verify permission? Ignoring.",
+               client_key_file_path);
+      continue;
+    }
+
+    client = parse_authorized_client(client_key_str);
+    /* Wipe and free immediately after using it. */
+    memwipe(client_key_str, 0, strlen(client_key_str));
+    tor_free(client_key_str);
+
+    if (client) {
+      smartlist_add(config->clients, client);
+      log_info(LD_REND, "Loaded a client authorization key file %s.",
+               filename);
+    }
+
+  } SMARTLIST_FOREACH_END(filename);
+
+  /* If the number of clients is greater than zero, set the flag to be true. */
+  if (smartlist_len(config->clients) > 0) {
+    config->is_client_auth_enabled = 1;
+  }
+
+  /* Success. */
+  ret = 0;
+ end:
+  if (client_key_str) {
+    memwipe(client_key_str, 0, strlen(client_key_str));
+  }
+  if (file_list) {
+    SMARTLIST_FOREACH(file_list, char *, s, tor_free(s));
+    smartlist_free(file_list);
+  }
+  tor_free(client_key_str);
+  tor_free(client_key_file_path);
+  tor_free(client_keys_dir_path);
+  return ret;
+}
+
+STATIC void
+service_authorized_client_free_(hs_service_authorized_client_t *client)
+{
+  if (!client) {
+    return;
+  }
+  memwipe(&client->client_pk, 0, sizeof(client->client_pk));
+  tor_free(client);
 }
 
 /* Free a given service descriptor object and all key material is wiped. */
@@ -1111,8 +1346,113 @@ service_descriptor_new(void)
   return sdesc;
 }
 
-/* Move descriptor(s) from the src service to the dst service. We do this
- * during SIGHUP when we re-create our hidden services. */
+/* Allocate and return a deep copy of client. */
+static hs_service_authorized_client_t *
+service_authorized_client_dup(const hs_service_authorized_client_t *client)
+{
+  hs_service_authorized_client_t *client_dup = NULL;
+
+  tor_assert(client);
+
+  client_dup = tor_malloc_zero(sizeof(hs_service_authorized_client_t));
+  /* Currently, the public key is the only component of
+   * hs_service_authorized_client_t. */
+  memcpy(client_dup->client_pk.public_key,
+         client->client_pk.public_key,
+         CURVE25519_PUBKEY_LEN);
+
+  return client_dup;
+}
+
+/* If two authorized clients are equal, return 0. If the first one should come
+ * before the second, return less than zero. If the first should come after
+ * the second, return greater than zero. */
+static int
+service_authorized_client_cmp(const hs_service_authorized_client_t *client1,
+                              const hs_service_authorized_client_t *client2)
+{
+  tor_assert(client1);
+  tor_assert(client2);
+
+  /* Currently, the public key is the only component of
+   * hs_service_authorized_client_t. */
+  return tor_memcmp(client1->client_pk.public_key,
+                    client2->client_pk.public_key,
+                    CURVE25519_PUBKEY_LEN);
+}
+
+/* Helper for sorting authorized clients. */
+static int
+compare_service_authorzized_client_(const void **_a, const void **_b)
+{
+  const hs_service_authorized_client_t *a = *_a, *b = *_b;
+  return service_authorized_client_cmp(a, b);
+}
+
+/* If the list of hs_service_authorized_client_t's is different between
+ * src and dst, return 1. Otherwise, return 0. */
+STATIC int
+service_authorized_client_config_equal(const hs_service_config_t *config1,
+                                       const hs_service_config_t *config2)
+{
+  int ret = 0;
+  int i;
+  smartlist_t *sl1 = smartlist_new();
+  smartlist_t *sl2 = smartlist_new();
+
+  tor_assert(config1);
+  tor_assert(config2);
+  tor_assert(config1->clients);
+  tor_assert(config2->clients);
+
+  /* If the number of clients is different, it is obvious that the list
+   * changes. */
+  if (smartlist_len(config1->clients) != smartlist_len(config2->clients)) {
+    goto done;
+  }
+
+  /* We do not want to mutate config1 and config2, so we will duplicate both
+   * entire client lists here. */
+  SMARTLIST_FOREACH(config1->clients,
+              hs_service_authorized_client_t *, client,
+              smartlist_add(sl1, service_authorized_client_dup(client)));
+
+  SMARTLIST_FOREACH(config2->clients,
+              hs_service_authorized_client_t *, client,
+              smartlist_add(sl2, service_authorized_client_dup(client)));
+
+  smartlist_sort(sl1, compare_service_authorzized_client_);
+  smartlist_sort(sl2, compare_service_authorzized_client_);
+
+  for (i = 0; i < smartlist_len(sl1); i++) {
+    /* If the clients at index i in both lists differ, the whole configs
+     * differ. */
+    if (service_authorized_client_cmp(smartlist_get(sl1, i),
+                                      smartlist_get(sl2, i))) {
+      goto done;
+    }
+  }
+
+  /* Success. */
+  ret = 1;
+
+ done:
+  if (sl1) {
+    SMARTLIST_FOREACH(sl1, hs_service_authorized_client_t *, p,
+                      service_authorized_client_free(p));
+    smartlist_free(sl1);
+  }
+  if (sl2) {
+    SMARTLIST_FOREACH(sl2, hs_service_authorized_client_t *, p,
+                      service_authorized_client_free(p));
+    smartlist_free(sl2);
+  }
+  return ret;
+}
+
+/* Move descriptor(s) from the src service to the dst service and modify their
+ * content if necessary. We do this during SIGHUP when we re-create our
+ * hidden services. */
 static void
 move_descriptors(hs_service_t *src, hs_service_t *dst)
 {
@@ -1136,6 +1476,37 @@ move_descriptors(hs_service_t *src, hs_service_t *dst)
     dst->desc_next = src->desc_next;
     src->desc_next = NULL;
   }
+
+  /* If the client authorization changes, we must rebuild the superencrypted
+   * section and republish the descriptors. */
+  int client_auth_changed =
+    !service_authorized_client_config_equal(&src->config, &dst->config);
+  if (client_auth_changed && dst->desc_current) {
+    /* We have to clear the superencrypted content first. */
+    hs_desc_superencrypted_data_free_contents(
+                                &dst->desc_current->desc->superencrypted_data);
+    if (build_service_desc_superencrypted(dst, dst->desc_current) < 0) {
+      goto err;
+    }
+    service_desc_schedule_upload(dst->desc_current, time(NULL), 1);
+  }
+  if (client_auth_changed && dst->desc_next) {
+    /* We have to clear the superencrypted content first. */
+    hs_desc_superencrypted_data_free_contents(
+                                &dst->desc_next->desc->superencrypted_data);
+    if (build_service_desc_superencrypted(dst, dst->desc_next) < 0) {
+      goto err;
+    }
+    service_desc_schedule_upload(dst->desc_next, time(NULL), 1);
+  }
+
+  return;
+
+ err:
+  /* If there is an error, free all descriptors to make it clean and generate
+   * them later. */
+  service_descriptor_free(dst->desc_current);
+  service_descriptor_free(dst->desc_next);
 }
 
 /* From the given service, remove all expired failing intro points for each
@@ -1353,6 +1724,85 @@ build_service_desc_encrypted(const hs_service_t *service,
   return 0;
 }
 
+/* Populate the descriptor superencrypted section from the given service
+ * object. This will generate a valid list of hs_desc_authorized_client_t
+ * of clients that are authorized to use the service. Return 0 on success
+ * else -1 on error. */
+static int
+build_service_desc_superencrypted(const hs_service_t *service,
+                                  hs_service_descriptor_t *desc)
+{
+  const hs_service_config_t *config;
+  int i;
+  hs_desc_superencrypted_data_t *superencrypted;
+
+  tor_assert(service);
+  tor_assert(desc);
+
+  superencrypted = &desc->desc->superencrypted_data;
+  config = &service->config;
+
+  /* The ephemeral key pair is already generated, so this should not give
+   * an error. */
+  if (BUG(!curve25519_public_key_is_ok(&desc->auth_ephemeral_kp.pubkey))) {
+    return -1;
+  }
+  memcpy(&superencrypted->auth_ephemeral_pubkey,
+         &desc->auth_ephemeral_kp.pubkey,
+         sizeof(curve25519_public_key_t));
+
+  /* Test that subcred is not zero because we might use it below */
+  if (BUG(tor_mem_is_zero((char*)desc->desc->subcredential, DIGEST256_LEN))) {
+    return -1;
+  }
+
+  /* Create a smartlist to store clients */
+  superencrypted->clients = smartlist_new();
+
+  /* We do not need to build the desc authorized client if the client
+   * authorization is disabled */
+  if (config->is_client_auth_enabled) {
+    SMARTLIST_FOREACH_BEGIN(config->clients,
+                            hs_service_authorized_client_t *, client) {
+      hs_desc_authorized_client_t *desc_client;
+      desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
+
+      /* Prepare the client for descriptor and then add to the list in the
+       * superencrypted part of the descriptor */
+      hs_desc_build_authorized_client(desc->desc->subcredential,
+                                      &client->client_pk,
+                                      &desc->auth_ephemeral_kp.seckey,
+                                      desc->descriptor_cookie, desc_client);
+      smartlist_add(superencrypted->clients, desc_client);
+
+    } SMARTLIST_FOREACH_END(client);
+  }
+
+  /* We cannot let the number of auth-clients to be zero, so we need to
+   * make it be 16. If it is already a multiple of 16, we do not need to
+   * do anything. Otherwise, add the additional ones to make it a
+   * multiple of 16. */
+  int num_clients = smartlist_len(superencrypted->clients);
+  int num_clients_to_add;
+  if (num_clients == 0) {
+    num_clients_to_add = HS_DESC_AUTH_CLIENT_MULTIPLE;
+  } else if (num_clients % HS_DESC_AUTH_CLIENT_MULTIPLE == 0) {
+    num_clients_to_add = 0;
+  } else {
+    num_clients_to_add =
+      HS_DESC_AUTH_CLIENT_MULTIPLE
+      - (num_clients % HS_DESC_AUTH_CLIENT_MULTIPLE);
+  }
+
+  for (i = 0; i < num_clients_to_add; i++) {
+    hs_desc_authorized_client_t *desc_client =
+      hs_desc_build_fake_authorized_client();
+    smartlist_add(superencrypted->clients, desc_client);
+  }
+
+  return 0;
+}
+
 /* Populate the descriptor plaintext section from the given service object.
  * The caller must make sure that the keys in the descriptors are valid that
  * is are non-zero. Return 0 on success else -1 on error. */
@@ -1418,13 +1868,14 @@ generate_ope_cipher_for_desc(const hs_service_descriptor_t *hs_desc)
 }
 
 /* For the given service and descriptor object, create the key material which
- * is the blinded keypair and the descriptor signing keypair. Return 0 on
- * success else -1 on error where the generated keys MUST be ignored. */
+ * is the blinded keypair, the descriptor signing keypair, the ephemeral
+ * keypair, and the descriptor cookie. Return 0 on success else -1 on error
+ * where the generated keys MUST be ignored. */
 static int
 build_service_desc_keys(const hs_service_t *service,
                         hs_service_descriptor_t *desc)
 {
-  int ret = 0;
+  int ret = -1;
   ed25519_keypair_t kp;
 
   tor_assert(desc);
@@ -1455,9 +1906,28 @@ build_service_desc_keys(const hs_service_t *service,
     log_warn(LD_REND, "Can't generate descriptor signing keypair for "
                       "service %s",
              safe_str_client(service->onion_address));
-    ret = -1;
+    goto end;
   }
 
+  /* No need for extra strong, this is a temporary key only for this
+   * descriptor. Nothing long term. */
+  if (curve25519_keypair_generate(&desc->auth_ephemeral_kp, 0) < 0) {
+    log_warn(LD_REND, "Can't generate auth ephemeral keypair for "
+                      "service %s",
+             safe_str_client(service->onion_address));
+    goto end;
+  }
+
+  /* Random a descriptor cookie to be used as a part of a key to encrypt the
+   * descriptor, if the client auth is enabled. */
+  if (service->config.is_client_auth_enabled) {
+    crypto_strongest_rand(desc->descriptor_cookie,
+                          sizeof(desc->descriptor_cookie));
+  }
+
+  /* Success. */
+  ret = 0;
+ end:
   return ret;
 }
 
@@ -1491,6 +1961,10 @@ build_service_descriptor(hs_service_t *service, time_t now,
   if (build_service_desc_plaintext(service, desc, now) < 0) {
     goto err;
   }
+  /* Setup superencrypted descriptor content. */
+  if (build_service_desc_superencrypted(service, desc) < 0) {
+    goto err;
+  }
   /* Setup encrypted descriptor content. */
   if (build_service_desc_encrypted(service, desc) < 0) {
     goto err;
@@ -1499,7 +1973,7 @@ build_service_descriptor(hs_service_t *service, time_t now,
   /* Let's make sure that we've created a descriptor that can actually be
    * encoded properly. This function also checks if the encoded output is
    * decodable after. */
-  if (BUG(hs_desc_encode_descriptor(desc->desc, &desc->signing_kp,
+  if (BUG(service_encode_descriptor(service, desc, &desc->signing_kp,
                                     &encoded_desc) < 0)) {
     goto err;
   }
@@ -2338,7 +2812,7 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
 
   /* First of all, we'll encode the descriptor. This should NEVER fail but
    * just in case, let's make sure we have an actual usable descriptor. */
-  if (BUG(hs_desc_encode_descriptor(desc->desc, &desc->signing_kp,
+  if (BUG(service_encode_descriptor(service, desc, &desc->signing_kp,
                                     &encoded_desc) < 0)) {
     goto end;
   }
@@ -2904,6 +3378,34 @@ service_key_on_disk(const char *directory_path)
 
   ed25519_keypair_free(kp);
   tor_free(fname);
+
+  return ret;
+}
+
+/* This is a proxy function before actually calling hs_desc_encode_descriptor
+ * because we need some preprocessing here */
+static int
+service_encode_descriptor(const hs_service_t *service,
+                          const hs_service_descriptor_t *desc,
+                          const ed25519_keypair_t *signing_kp,
+                          char **encoded_out)
+{
+  int ret;
+  const uint8_t *descriptor_cookie = NULL;
+
+  tor_assert(service);
+  tor_assert(desc);
+  tor_assert(encoded_out);
+
+  /* If the client authorization is enabled, send the descriptor cookie to
+   * hs_desc_encode_descriptor. Otherwise, send NULL */
+  if (service->config.is_client_auth_enabled) {
+    descriptor_cookie = desc->descriptor_cookie;
+  }
+
+  ret = hs_desc_encode_descriptor(desc->desc, signing_kp,
+                                  descriptor_cookie, encoded_out);
+
   return ret;
 }
 
@@ -3114,7 +3616,8 @@ hs_service_lookup_current_desc(const ed25519_public_key_t *pk)
     /* No matter what is the result (which should never be a failure), return
      * the encoded variable, if success it will contain the right thing else
      * it will be NULL. */
-    hs_desc_encode_descriptor(service->desc_current->desc,
+    service_encode_descriptor(service,
+                              service->desc_current,
                               &service->desc_current->signing_kp,
                               &encoded_desc);
     return encoded_desc;
@@ -3281,6 +3784,7 @@ hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
     }
     service_add_fnames_to_list(service, file_list);
     smartlist_add_strdup(dir_list, service->config.directory_path);
+    smartlist_add_strdup(dir_list, dname_client_pubkeys);
   } FOR_EACH_DESCRIPTOR_END;
 }
 
@@ -3451,7 +3955,6 @@ hs_service_load_all_keys(void)
     if (load_service_keys(service) < 0) {
       goto err;
     }
-    /* XXX: Load/Generate client authorization keys. (#20700) */
   } SMARTLIST_FOREACH_END(service);
 
   /* Final step, the staging list contains service in a quiescent state that

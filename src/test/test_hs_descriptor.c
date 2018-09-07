@@ -30,6 +30,13 @@ DISABLE_GCC_WARNING(overlength-strings)
 #include "test_hs_descriptor.inc"
 ENABLE_GCC_WARNING(overlength-strings)
 
+/* Mock function to fill all bytes with 1 */
+static void
+mock_crypto_strongest_rand(uint8_t *out, size_t out_len)
+{
+  memset(out, 1, out_len);
+}
+
 /* Test certificate encoding put in a descriptor. */
 static void
 test_cert_encoding(void *arg)
@@ -284,7 +291,6 @@ static void
 test_encode_descriptor(void *arg)
 {
   int ret;
-  char *encoded = NULL;
   ed25519_keypair_t signing_kp;
   hs_descriptor_t *desc = NULL;
 
@@ -293,19 +299,38 @@ test_encode_descriptor(void *arg)
   ret = ed25519_keypair_generate(&signing_kp, 0);
   tt_int_op(ret, OP_EQ, 0);
   desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
-  ret = hs_desc_encode_descriptor(desc, &signing_kp, &encoded);
-  tt_int_op(ret, OP_EQ, 0);
-  tt_assert(encoded);
 
+  {
+    char *encoded = NULL;
+    ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    tor_free(encoded);
+  }
+
+  {
+    char *encoded = NULL;
+    uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+
+    crypto_strongest_rand(descriptor_cookie, sizeof(descriptor_cookie));
+
+    ret = hs_desc_encode_descriptor(desc, &signing_kp,
+                                   descriptor_cookie, &encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    tor_free(encoded);
+  }
  done:
   hs_descriptor_free(desc);
-  tor_free(encoded);
 }
 
 static void
 test_decode_descriptor(void *arg)
 {
   int ret;
+  int i;
   char *encoded = NULL;
   ed25519_keypair_t signing_kp;
   hs_descriptor_t *desc = NULL;
@@ -323,14 +348,15 @@ test_decode_descriptor(void *arg)
                                               subcredential);
 
   /* Give some bad stuff to the decoding function. */
-  ret = hs_desc_decode_descriptor("hladfjlkjadf", subcredential, &decoded);
+  ret = hs_desc_decode_descriptor("hladfjlkjadf", subcredential,
+                                  NULL, &decoded);
   tt_int_op(ret, OP_EQ, -1);
 
-  ret = hs_desc_encode_descriptor(desc, &signing_kp, &encoded);
+  ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
   tt_int_op(ret, OP_EQ, 0);
   tt_assert(encoded);
 
-  ret = hs_desc_decode_descriptor(encoded, subcredential, &decoded);
+  ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
   tt_int_op(ret, OP_EQ, 0);
   tt_assert(decoded);
 
@@ -346,13 +372,84 @@ test_decode_descriptor(void *arg)
     desc_no_ip = hs_helper_build_hs_desc_no_ip(&signing_kp_no_ip);
     tt_assert(desc_no_ip);
     tor_free(encoded);
-    ret = hs_desc_encode_descriptor(desc_no_ip, &signing_kp_no_ip, &encoded);
+    ret = hs_desc_encode_descriptor(desc_no_ip, &signing_kp_no_ip,
+                                    NULL, &encoded);
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(encoded);
     hs_descriptor_free(decoded);
-    ret = hs_desc_decode_descriptor(encoded, subcredential, &decoded);
+    ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(decoded);
+  }
+
+  /* Decode a descriptor with auth clients. */
+  {
+    uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+    curve25519_keypair_t auth_ephemeral_kp;
+    curve25519_keypair_t client_kp, invalid_client_kp;
+    smartlist_t *clients;
+    hs_desc_authorized_client_t *client, *fake_client;
+    client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
+
+    /* Prepare all the keys needed to build the auth client. */
+    curve25519_keypair_generate(&auth_ephemeral_kp, 0);
+    curve25519_keypair_generate(&client_kp, 0);
+    curve25519_keypair_generate(&invalid_client_kp, 0);
+    crypto_strongest_rand(descriptor_cookie, HS_DESC_DESCRIPTOR_COOKIE_LEN);
+
+    memcpy(&desc->superencrypted_data.auth_ephemeral_pubkey,
+           &auth_ephemeral_kp.pubkey, CURVE25519_PUBKEY_LEN);
+
+    hs_helper_get_subcred_from_identity_keypair(&signing_kp,
+                                                subcredential);
+
+    /* Build and add the auth client to the descriptor. */
+    clients = desc->superencrypted_data.clients;
+    if (!clients) {
+      clients = smartlist_new();
+    }
+    hs_desc_build_authorized_client(subcredential,
+                                    &client_kp.pubkey,
+                                    &auth_ephemeral_kp.seckey,
+                                    descriptor_cookie, client);
+    smartlist_add(clients, client);
+
+    /* We need to add fake auth clients here. */
+    for (i=0; i < 15; ++i) {
+      fake_client = hs_desc_build_fake_authorized_client();
+      smartlist_add(clients, fake_client);
+    }
+    desc->superencrypted_data.clients = clients;
+
+    /* Test the encoding/decoding in the following lines. */
+    tor_free(encoded);
+    ret = hs_desc_encode_descriptor(desc, &signing_kp,
+                                    descriptor_cookie, &encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    /* If we do not have the client secret key, the decoding must fail. */
+    hs_descriptor_free(decoded);
+    ret = hs_desc_decode_descriptor(encoded, subcredential,
+                                    NULL, &decoded);
+    tt_int_op(ret, OP_LT, 0);
+    tt_assert(!decoded);
+
+    /* If we have an invalid client secret key, the decoding must fail. */
+    hs_descriptor_free(decoded);
+    ret = hs_desc_decode_descriptor(encoded, subcredential,
+                                    &invalid_client_kp.seckey, &decoded);
+    tt_int_op(ret, OP_LT, 0);
+    tt_assert(!decoded);
+
+    /* If we have the client secret key, the decoding must succeed and the
+     * decoded descriptor must be correct. */
+    ret = hs_desc_decode_descriptor(encoded, subcredential,
+                                    &client_kp.seckey, &decoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(decoded);
+
+    hs_helper_desc_equal(desc, decoded);
   }
 
  done:
@@ -588,7 +685,7 @@ test_decode_bad_signature(void *arg)
   teardown_capture_of_logs();
 
  done:
-  desc_plaintext_data_free_contents(&desc_plaintext);
+  hs_desc_plaintext_data_free_contents(&desc_plaintext);
 }
 
 static void
@@ -764,101 +861,69 @@ test_desc_signature(void *arg)
   tor_free(data);
 }
 
-/* bad desc auth type */
-static const char bad_superencrypted_text1[] = "desc-auth-type scoobysnack\n"
-  "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
-  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
-  "encrypted\n"
-  "-----BEGIN MESSAGE-----\n"
-  "YmVpbmcgb24gbW91bnRhaW5zLCB0aGlua2luZyBhYm91dCBjb21wdXRlcnMsIGlzIG5vdC"
-  "BiYWQgYXQgYWxs\n"
-  "-----END MESSAGE-----\n";
-
-/* bad ephemeral key */
-static const char bad_superencrypted_text2[] = "desc-auth-type x25519\n"
-  "desc-auth-ephemeral-key differentalphabet\n"
-  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
-  "encrypted\n"
-  "-----BEGIN MESSAGE-----\n"
-  "YmVpbmcgb24gbW91bnRhaW5zLCB0aGlua2luZyBhYm91dCBjb21wdXRlcnMsIGlzIG5vdC"
-  "BiYWQgYXQgYWxs\n"
-  "-----END MESSAGE-----\n";
-
-/* bad encrypted msg */
-static const char bad_superencrypted_text3[] = "desc-auth-type x25519\n"
-  "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
-  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
-  "encrypted\n"
-  "-----BEGIN MESSAGE-----\n"
-  "SO SMALL NOT GOOD\n"
-  "-----END MESSAGE-----\n";
-
-static const char correct_superencrypted_text[] = "desc-auth-type x25519\n"
-  "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
-  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
-  "auth-client Od09Qu636Qo /PKLzqewAdS/+0+vZC+MvQ dpw4NFo13zDnuPz45rxrOg\n"
-  "auth-client JRr840iGYN0 8s8cxYqF7Lx23+NducC4Qg zAafl4wPLURkuEjJreZq1g\n"
-  "encrypted\n"
-  "-----BEGIN MESSAGE-----\n"
-  "YmVpbmcgb24gbW91bnRhaW5zLCB0aGlua2luZyBhYm91dCBjb21wdXRlcnMsIGlzIG5vdC"
-  "BiYWQgYXQgYWxs\n"
-  "-----END MESSAGE-----\n";
-
-static const char correct_encrypted_plaintext[] = "being on mountains, "
-  "thinking about computers, is not bad at all";
-
 static void
-test_parse_hs_desc_superencrypted(void *arg)
+test_build_authorized_client(void *arg)
 {
+  int ret;
+  hs_desc_authorized_client_t *desc_client = NULL;
+  uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+  curve25519_secret_key_t auth_ephemeral_sk;
+  curve25519_secret_key_t client_auth_sk;
+  curve25519_public_key_t client_auth_pk;
+  const char ephemeral_sk_b16[] =
+    "d023b674d993a5c8446bd2ca97e9961149b3c0e88c7dc14e8777744dd3468d6a";
+  const char descriptor_cookie_b16[] =
+    "07d087f1d8c68393721f6e70316d3b29";
+  const char client_pubkey_b16[] =
+    "8c1298fa6050e372f8598f6deca32e27b0ad457741422c2629ebb132cf7fae37";
+  uint8_t subcredential[DIGEST256_LEN];
+  char *mem_op_hex_tmp=NULL;
+
   (void) arg;
-  size_t retval;
-  uint8_t *encrypted_out = NULL;
 
-  {
-    setup_full_capture_of_logs(LOG_WARN);
-    retval = decode_superencrypted(bad_superencrypted_text1,
-                                   strlen(bad_superencrypted_text1),
-                                   &encrypted_out);
-    tt_u64_op(retval, OP_EQ, 0);
-    tt_ptr_op(encrypted_out, OP_EQ, NULL);
-    expect_log_msg_containing("Unrecognized desc auth type");
-    teardown_capture_of_logs();
-  }
+  ret = curve25519_secret_key_generate(&auth_ephemeral_sk, 0);
+  tt_int_op(ret, OP_EQ, 0);
 
-  {
-    setup_full_capture_of_logs(LOG_WARN);
-    retval = decode_superencrypted(bad_superencrypted_text2,
-                                   strlen(bad_superencrypted_text2),
-                                   &encrypted_out);
-    tt_u64_op(retval, OP_EQ, 0);
-    tt_ptr_op(encrypted_out, OP_EQ, NULL);
-    expect_log_msg_containing("Bogus desc auth key in HS desc");
-    teardown_capture_of_logs();
-  }
+  ret = curve25519_secret_key_generate(&client_auth_sk, 0);
+  tt_int_op(ret, OP_EQ, 0);
+  curve25519_public_key_generate(&client_auth_pk, &client_auth_sk);
 
-  {
-    setup_full_capture_of_logs(LOG_WARN);
-    retval = decode_superencrypted(bad_superencrypted_text3,
-                                   strlen(bad_superencrypted_text3),
-                                   &encrypted_out);
-    tt_u64_op(retval, OP_EQ, 0);
-    tt_ptr_op(encrypted_out, OP_EQ, NULL);
-    expect_log_msg_containing("Length of descriptor\'s encrypted data "
-                              "is too small.");
-    teardown_capture_of_logs();
-  }
+  memset(subcredential, 42, sizeof(subcredential));
 
-  /* Now finally the good one */
-  retval = decode_superencrypted(correct_superencrypted_text,
-                                 strlen(correct_superencrypted_text),
-                                 &encrypted_out);
+  desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
 
-  tt_u64_op(retval, OP_EQ, strlen(correct_encrypted_plaintext));
-  tt_mem_op(encrypted_out, OP_EQ, correct_encrypted_plaintext,
-            strlen(correct_encrypted_plaintext));
+  base16_decode((char *) &auth_ephemeral_sk,
+                sizeof(auth_ephemeral_sk),
+                ephemeral_sk_b16,
+                strlen(ephemeral_sk_b16));
+
+  base16_decode((char *) descriptor_cookie,
+                sizeof(descriptor_cookie),
+                descriptor_cookie_b16,
+                strlen(descriptor_cookie_b16));
+
+  base16_decode((char *) &client_auth_pk,
+                sizeof(client_auth_pk),
+                client_pubkey_b16,
+                strlen(client_pubkey_b16));
+
+  MOCK(crypto_strongest_rand, mock_crypto_strongest_rand);
+
+  hs_desc_build_authorized_client(subcredential,
+                                  &client_auth_pk, &auth_ephemeral_sk,
+                                  descriptor_cookie, desc_client);
+
+  test_memeq_hex((char *) desc_client->client_id,
+                 "EC19B7FF4D2DDA13");
+  test_memeq_hex((char *) desc_client->iv,
+                "01010101010101010101010101010101");
+  test_memeq_hex((char *) desc_client->encrypted_cookie,
+                "B21222BE13F385F355BD07B2381F9F29");
 
  done:
-  tor_free(encrypted_out);
+  tor_free(desc_client);
+  tor_free(mem_op_hex_tmp);
+  UNMOCK(crypto_strongest_rand);
 }
 
 struct testcase_t hs_descriptor[] = {
@@ -891,9 +956,8 @@ struct testcase_t hs_descriptor[] = {
     NULL, NULL },
   { "desc_signature", test_desc_signature, TT_FORK,
     NULL, NULL },
-
-  { "parse_hs_desc_superencrypted", test_parse_hs_desc_superencrypted,
-    TT_FORK, NULL, NULL },
+  { "build_authorized_client", test_build_authorized_client, TT_FORK,
+    NULL, NULL },
 
   END_OF_TESTCASES
 };

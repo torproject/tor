@@ -6,6 +6,7 @@
  * \brief Test prop224 HS client functionality.
  */
 
+#define CONFIG_PRIVATE
 #define CRYPTO_PRIVATE
 #define MAIN_PRIVATE
 #define HS_CLIENT_PRIVATE
@@ -32,6 +33,7 @@
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"
+#include "feature/hs/hs_config.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_cache.h"
 #include "core/or/circuitlist.h"
@@ -71,6 +73,20 @@ mock_networkstatus_get_live_consensus(time_t now)
 {
   (void) now;
   return &mock_ns;
+}
+
+static int
+helper_config_client(const char *conf, int validate_only)
+{
+  int ret = 0;
+  or_options_t *options = NULL;
+  tt_assert(conf);
+  options = helper_parse_options(conf);
+  tt_assert(options);
+  ret = hs_config_client_auth_all(options, validate_only);
+ done:
+  or_options_free(options);
+  return ret;
 }
 
 /* Test helper function: Setup a circuit and a stream with the same hidden
@@ -366,7 +382,7 @@ test_client_pick_intro(void *arg)
   {
     char *encoded = NULL;
     desc = hs_helper_build_hs_desc_with_ip(&service_kp);
-    ret = hs_desc_encode_descriptor(desc, &service_kp, &encoded);
+    ret = hs_desc_encode_descriptor(desc, &service_kp, NULL, &encoded);
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(encoded);
 
@@ -601,6 +617,160 @@ test_descriptor_fetch(void *arg)
   hs_free_all();
 }
 
+static void
+test_auth_key_filename_is_valid(void *arg)
+{
+  (void) arg;
+
+  /* Valid file name. */
+  tt_assert(auth_key_filename_is_valid("a.auth_private"));
+  /* Valid file name with special character. */
+  tt_assert(auth_key_filename_is_valid("a-.auth_private"));
+  /* Invalid extension. */
+  tt_assert(!auth_key_filename_is_valid("a.ath_private"));
+  /* Nothing before the extension. */
+  tt_assert(!auth_key_filename_is_valid(".auth_private"));
+
+ done:
+  ;
+}
+
+static void
+test_parse_auth_file_content(void *arg)
+{
+  hs_client_service_authorization_t *auth = NULL;
+
+  (void) arg;
+
+  /* Valid authorized client. */
+  auth = parse_auth_file_content(
+      "4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad:descriptor:"
+      "x25519:zdsyvn2jq534ugyiuzgjy4267jbtzcjbsgedhshzx5mforyxtryq");
+  tt_assert(auth);
+
+  /* Wrong number of fields. */
+  tt_assert(!parse_auth_file_content("a:b"));
+  /* Wrong auth type. */
+  tt_assert(!parse_auth_file_content(
+      "4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad:x:"
+      "x25519:zdsyvn2jq534ugyiuzgjy4267jbtzcjbsgedhshzx5mforyxtryq"));
+  /* Wrong key type. */
+  tt_assert(!parse_auth_file_content(
+      "4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad:descriptor:"
+      "x:zdsyvn2jq534ugyiuzgjy4267jbtzcjbsgedhshzx5mforyxtryq"));
+  /* Some malformed string. */
+  tt_assert(!parse_auth_file_content("xx:descriptor:x25519:aa=="));
+  /* Bigger key than it should be */
+  tt_assert(!parse_auth_file_content("xx:descriptor:x25519:"
+                     "vjqea4jbhwwc4hto7ekyvqfbeodghbaq6nxi45hz4wr3qvhqv3yqa"));
+ done:
+  tor_free(auth);
+}
+
+static char *
+mock_read_file_to_str(const char *filename, int flags, struct stat *stat_out)
+{
+  char *ret = NULL;
+
+  (void) flags;
+  (void) stat_out;
+
+  if (!strcmp(filename, get_fname("auth_keys" PATH_SEPARATOR
+                                              "client1.auth_private"))) {
+    ret = tor_strdup(
+        "4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad:descriptor:"
+        "x25519:zdsyvn2jq534ugyiuzgjy4267jbtzcjbsgedhshzx5mforyxtryq");
+    goto done;
+  }
+
+  if (!strcmp(filename, get_fname("auth_keys" PATH_SEPARATOR "dummy.xxx"))) {
+    ret = tor_strdup(
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:descriptor:"
+        "x25519:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    goto done;
+  }
+
+  if (!strcmp(filename, get_fname("auth_keys" PATH_SEPARATOR
+                                              "client2.auth_private"))) {
+    ret = tor_strdup(
+        "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid:descriptor:"
+        "x25519:fdreqzjqso7d2ac7qscrxfl5qfpamdvgy5d6cxejcgzc3hvhurmq");
+    goto done;
+  }
+
+ done:
+  return ret;
+}
+
+static int
+mock_check_private_dir(const char *dirname, cpd_check_t check,
+                       const char *effective_user)
+{
+  (void) dirname;
+  (void) check;
+  (void) effective_user;
+
+  return 0;
+}
+
+static smartlist_t *
+mock_tor_listdir(const char *dirname)
+{
+  smartlist_t *file_list = smartlist_new();
+
+  (void) dirname;
+
+  smartlist_add(file_list, tor_strdup("client1.auth_private"));
+  smartlist_add(file_list, tor_strdup("dummy.xxx"));
+  smartlist_add(file_list, tor_strdup("client2.auth_private"));
+
+  return file_list;
+}
+
+static void
+test_config_client_authorization(void *arg)
+{
+  int ret;
+  char *conf = NULL;
+  ed25519_public_key_t pk1, pk2;
+  digest256map_t *global_map = NULL;
+  char *key_dir = tor_strdup(get_fname("auth_keys"));
+
+  (void) arg;
+
+  MOCK(read_file_to_str, mock_read_file_to_str);
+  MOCK(tor_listdir, mock_tor_listdir);
+  MOCK(check_private_dir, mock_check_private_dir);
+
+#define conf_fmt \
+  "ClientOnionAuthDir %s\n"
+
+  tor_asprintf(&conf, conf_fmt, key_dir);
+  ret = helper_config_client(conf, 0);
+  tor_free(conf);
+  tt_int_op(ret, OP_EQ, 0);
+
+#undef conf_fmt
+
+  global_map = get_hs_client_auths_map();
+  tt_int_op(digest256map_size(global_map), OP_EQ, 2);
+
+  hs_parse_address("4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad",
+                   &pk1, NULL, NULL);
+  hs_parse_address("25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid",
+                   &pk2, NULL, NULL);
+
+  tt_assert(digest256map_get(global_map, pk1.pubkey));
+  tt_assert(digest256map_get(global_map, pk2.pubkey));
+
+ done:
+  tor_free(key_dir);
+  hs_free_all();
+  UNMOCK(read_file_to_str);
+  UNMOCK(tor_listdir);
+  UNMOCK(check_private_dir);
+}
+
 struct testcase_t hs_client_tests[] = {
   { "e2e_rend_circuit_setup_legacy", test_e2e_rend_circuit_setup_legacy,
     TT_FORK, NULL, NULL },
@@ -609,6 +779,12 @@ struct testcase_t hs_client_tests[] = {
   { "client_pick_intro", test_client_pick_intro,
     TT_FORK, NULL, NULL },
   { "descriptor_fetch", test_descriptor_fetch,
+    TT_FORK, NULL, NULL },
+  { "auth_key_filename_is_valid", test_auth_key_filename_is_valid, TT_FORK,
+    NULL, NULL },
+  { "parse_auth_file_content", test_parse_auth_file_content, TT_FORK,
+    NULL, NULL },
+  { "config_client_authorization", test_config_client_authorization,
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };

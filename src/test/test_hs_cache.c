@@ -64,7 +64,7 @@ test_directory(void *arg)
   tt_int_op(ret, OP_EQ, 0);
   desc1 = hs_helper_build_hs_desc_with_ip(&signing_kp1);
   tt_assert(desc1);
-  ret = hs_desc_encode_descriptor(desc1, &signing_kp1, &desc1_str);
+  ret = hs_desc_encode_descriptor(desc1, &signing_kp1, NULL, &desc1_str);
   tt_int_op(ret, OP_EQ, 0);
 
   /* Very first basic test, should be able to be stored, survive a
@@ -102,7 +102,7 @@ test_directory(void *arg)
     desc_zero_lifetime->plaintext_data.lifetime_sec = 0;
     char *desc_zero_lifetime_str;
     ret = hs_desc_encode_descriptor(desc_zero_lifetime, &signing_kp_zero,
-                                    &desc_zero_lifetime_str);
+                                    NULL, &desc_zero_lifetime_str);
     tt_int_op(ret, OP_EQ, 0);
 
     ret = hs_cache_store_as_dir(desc1_str);
@@ -153,7 +153,7 @@ test_directory(void *arg)
     tt_int_op(ret, OP_EQ, 1);
     /* Bump revision counter. */
     desc1->plaintext_data.revision_counter++;
-    ret = hs_desc_encode_descriptor(desc1, &signing_kp1, &new_desc_str);
+    ret = hs_desc_encode_descriptor(desc1, &signing_kp1, NULL, &new_desc_str);
     tt_int_op(ret, OP_EQ, 0);
     ret = hs_cache_store_as_dir(new_desc_str);
     tt_int_op(ret, OP_EQ, 0);
@@ -187,7 +187,7 @@ test_clean_as_dir(void *arg)
   tt_int_op(ret, OP_EQ, 0);
   desc1 = hs_helper_build_hs_desc_with_ip(&signing_kp1);
   tt_assert(desc1);
-  ret = hs_desc_encode_descriptor(desc1, &signing_kp1, &desc1_str);
+  ret = hs_desc_encode_descriptor(desc1, &signing_kp1, NULL, &desc1_str);
   tt_int_op(ret, OP_EQ, 0);
   ret = hs_cache_store_as_dir(desc1_str);
   tt_int_op(ret, OP_EQ, 0);
@@ -301,7 +301,7 @@ test_upload_and_download_hs_desc(void *arg)
     published_desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
     tt_assert(published_desc);
     retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
-                                       &published_desc_str);
+                                       NULL, &published_desc_str);
     tt_int_op(retval, OP_EQ, 0);
   }
 
@@ -365,7 +365,7 @@ test_hsdir_revision_counter_check(void *arg)
     published_desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
     tt_assert(published_desc);
     retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
-                                       &published_desc_str);
+                                       NULL, &published_desc_str);
     tt_int_op(retval, OP_EQ, 0);
   }
 
@@ -390,7 +390,7 @@ test_hsdir_revision_counter_check(void *arg)
     received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
 
     retval = hs_desc_decode_descriptor(received_desc_str,
-                                       subcredential, &received_desc);
+                                       subcredential, NULL, &received_desc);
     tt_int_op(retval, OP_EQ, 0);
     tt_assert(received_desc);
 
@@ -407,7 +407,7 @@ test_hsdir_revision_counter_check(void *arg)
     published_desc->plaintext_data.revision_counter = 1313;
     tor_free(published_desc_str);
     retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
-                                       &published_desc_str);
+                                       NULL, &published_desc_str);
     tt_int_op(retval, OP_EQ, 0);
 
     retval = handle_post_hs_descriptor("/tor/hs/3/publish",published_desc_str);
@@ -423,7 +423,7 @@ test_hsdir_revision_counter_check(void *arg)
     received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
 
     retval = hs_desc_decode_descriptor(received_desc_str,
-                                       subcredential, &received_desc);
+                                       subcredential, NULL, &received_desc);
     tt_int_op(retval, OP_EQ, 0);
     tt_assert(received_desc);
 
@@ -482,7 +482,7 @@ test_client_cache(void *arg)
     published_desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
     tt_assert(published_desc);
     retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
-                                       &published_desc_str);
+                                       NULL, &published_desc_str);
     tt_int_op(retval, OP_EQ, 0);
     memcpy(wanted_subcredential, published_desc->subcredential, DIGEST256_LEN);
     tt_assert(!tor_mem_is_zero((char*)wanted_subcredential, DIGEST256_LEN));
