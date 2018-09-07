@@ -4197,6 +4197,45 @@ sandbox_init_filter(void)
   return cfg;
 }
 
+/**
+ * Compatibility wrapper for attaching tor_malloc() to OpenSSL
+ * via CRYPTO_set_mem_functions().
+ */
+static void *
+tor_CRYPTO_malloc(size_t num, const char *file, int line)
+{
+  (void)file;
+  (void)line;
+
+  return tor_malloc(num);
+}
+
+/**
+ * Compatibility wrapper for attaching tor_realloc() to OpenSSL
+ * via CRYPTO_set_mem_functions().
+ */
+static void *
+tor_CRYPTO_realloc(void *addr, size_t num, const char *file, int line)
+{
+  (void)file;
+  (void)line;
+
+  return tor_realloc(addr, num);
+}
+
+/**
+ * Compatibility wrapper for attaching tor_free() to OpenSSL
+ * via CRYPTO_set_mem_functions().
+ */
+static void
+tor_CRYPTO_free(void *ptr, const char *file, int line)
+{
+  (void)file;
+  (void)line;
+
+  tor_free(ptr);
+}
+
 /* Main entry point for the Tor process.  Called from tor_main(), and by
  * anybody embedding Tor. */
 int
@@ -4237,7 +4276,9 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   event_set_mem_functions(tor_malloc_, tor_realloc_, tor_free_);
 #endif
 
-  CRYPTO_set_mem_functions(tor_malloc_, tor_realloc_, tor_free_);
+  CRYPTO_set_mem_functions(tor_CRYPTO_malloc,
+                           tor_CRYPTO_realloc,
+                           tor_CRYPTO_free);
 
   init_protocol_warning_severity_level();
 
