@@ -1,7 +1,17 @@
 Changes in version 0.3.4.8 - 2018-09-10
-  Tor 0.3.4.8 is the first stable release in its series.
+  Tor 0.3.4.8 is the first stable release in its series; it includes
+  several compilation and portability fixes.
 
-  BLURB BLURB
+  The Tor 0.3.4 series includes several improvements for running Tor in
+  low-power and embedded environments, which should help performance in
+  general. We've begun work on better modularity, and included preliminary
+  changes on the directory authority side to accommodate a new bandwidth
+  measurement system.  We've also integrated more continuous-integration
+  systems into our development process, and made corresponding changes to
+  Tor's testing infrastructure.
+
+  Below are the changes since 0.3.4.7-rc.  For a complete list of changes
+  since 0.3.3.6, see the ReleaseNotes file.
 
   o Minor features (compatibility):
     - Tell OpenSSL to maintain backward compatibility with previous

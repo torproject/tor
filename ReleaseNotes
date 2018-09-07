@@ -110,11 +110,6 @@ Changes in version 0.3.4.8  - 2018-09-10
       to fail: previously, they were ignored. Fixes bug 26258; bugfix
       on 0.3.3.4-alpha.
 
-  o Minor feature (directory authorities):
-    - Stop warning about incomplete bw lines before the first complete
-      bw line has been found, so that additional header lines can be
-      ignored. Fixes bug 25960; bugfix on 0.2.2.1-alpha
-
   o Minor features (accounting):
     - When Tor becomes dormant, it now uses a scheduled event to wake up
       at the right time. Previously, we would use the per-second timer
@@ -215,6 +210,9 @@ Changes in version 0.3.4.8  - 2018-09-10
       net/listeners/extor respectively. Closes ticket 26647.
 
   o Minor features (directory authorities):
+    - Stop warning about incomplete bw lines before the first complete
+      bw line has been found, so that additional header lines can be
+      ignored. Fixes bug 25960; bugfix on 0.2.2.1-alpha
     - Authorities no longer vote to make the subprotocol version
       "LinkAuth=1" a requirement: it is unsupportable with NSS, and
       hasn't been needed since Tor 0.3.0.1-alpha. Closes ticket 27286.
