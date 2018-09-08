@@ -1,8 +1,8 @@
 Changes in version 0.3.4.8 - 2018-09-10
   Tor 0.3.4.8 is the first stable release in its series; it includes
-  several compilation and portability fixes.
+  compilation and portability fixes.
 
-  The Tor 0.3.4 series includes several improvements for running Tor in
+  The Tor 0.3.4 series includes improvements for running Tor in
   low-power and embedded environments, which should help performance in
   general. We've begun work on better modularity, and included preliminary
   changes on the directory authority side to accommodate a new bandwidth
@@ -12,7 +12,7 @@ Changes in version 0.3.4.8 - 2018-09-10
   our anti-denial-of-service code.
 
   Below are the changes since 0.3.4.7-rc.  For a complete list of changes
-  since 0.3.3.6, see the ReleaseNotes file.
+  since 0.3.3.9, see the ReleaseNotes file.
 
   o Minor features (compatibility):
     - Tell OpenSSL to maintain backward compatibility with previous
@@ -38,8 +38,8 @@ Changes in version 0.3.4.8 - 2018-09-10
 
   o Minor bugfixes (continuous integration):
     - Disable gcc hardening in Appveyor Windows 64-bit builds. As of
-      August 29, 2018, Appveyor images come with gcc 8.2.0 by default.
-      Executables compiled for 64-bit windows with this version of gcc
+      August 29 2018, Appveyor images come with gcc 8.2.0 by default.
+      Executables compiled for 64-bit Windows with this version of gcc
       crash when Tor's --enable-gcc-hardening flag is set. Fixes bug
       27460; bugfix on 0.3.4.1-alpha.
     - When a Travis build fails, and showing a log fails, keep trying to
@@ -117,7 +117,7 @@ Changes in version 0.3.4.7-rc - 2018-08-24
       failure. Fixes bug 26948; bugfix on 0.3.3.1-alpha.
 
   o Minor bugfixes (linux seccomp2 sandbox):
-    - Fix a bug in out sandboxing rules for the openat() syscall.
+    - Fix a bug in our sandboxing rules for the openat() syscall.
       Previously, no openat() call would be permitted, which would break
       filesystem operations on recent glibc versions. Fixes bug 25440;
       bugfix on 0.2.9.15. Diagnosis and patch from Daniel Pinto.
