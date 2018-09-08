@@ -4,9 +4,9 @@ changes in each development snapshot, see the ChangeLog file.
 
 Changes in version 0.3.4.8  - 2018-09-10
   Tor 0.3.4.8 is the first stable release in its series; it includes
-  several compilation and portability fixes.
+  compilation and portability fixes.
 
-  The Tor 0.3.4 series includes several improvements for running Tor in
+  The Tor 0.3.4 series includes improvements for running Tor in
   low-power and embedded environments, which should help performance in
   general. We've begun work on better modularity, and included preliminary
   changes on the directory authority side to accommodate a new bandwidth
@@ -15,15 +15,8 @@ Changes in version 0.3.4.8  - 2018-09-10
   Tor's testing infrastructure.  Finally, we've continued to refine
   our anti-denial-of-service code.
 
-  Below are the changes since 0.3.3.5-rc.  For a list of only the changes
-  since 0.3.4.7-rc, see the ChangeLog
-
-  o Directory authority changes:
-    - The "Bifroest" bridge authority has been retired; the new bridge
-      authority is "Serge", and it is operated by George from the
-      TorBSD project. Closes ticket 26771.
-    - Add an IPv6 address for the "dannenberg" directory authority.
-      Closes ticket 26343.
+  Below are the changes since 0.3.3.9. For a list of only the changes
+  since 0.3.4.7-rc, see the ChangeLog file.
 
   o New system requirements:
     - Tor no longer tries to support old operating systems without
@@ -75,21 +68,12 @@ Changes in version 0.3.4.8  - 2018-09-10
       uninitialised buffer. They now log a warning about the empty file
       instead. Fixes bug 26007; bugfix on 0.2.2.1-alpha.
 
-  o Major bugfixes (security, directory authority, denial-of-service, also in 0.3.3.6):
-    - Fix a bug that could have allowed an attacker to force a directory
-      authority to use up all its RAM by passing it a maliciously
-      crafted protocol versions string. Fixes bug 25517; bugfix on
-      0.2.9.4-alpha. This issue is also tracked as TROVE-2018-005.
-
   o Major bugfixes (crash):
     - Avoid a rare assertion failure in the circuit build timeout code
       if we fail to allow any circuits to actually complete. Fixes bug
       25733; bugfix on 0.2.2.2-alpha.
 
   o Major bugfixes (directory authority):
-    - Stop leaking memory on directory authorities when planning to
-      vote. This bug was crashing authorities by exhausting their
-      memory. Fixes bug 26435; bugfix on 0.3.3.6.
     - Avoid a crash when testing router reachability on a router that
       could have an ed25519 ID, but which does not. Fixes bug 25415;
       bugfix on 0.3.3.2-alpha.
@@ -118,11 +102,6 @@ Changes in version 0.3.4.8  - 2018-09-10
       controlled by a consensus parameter. Fixes bug 25226; bugfix
       on 0.2.4.14-alpha.
 
-  o Major bugfixes (rust, testing):
-    - Make sure that failing tests in Rust will actually cause the build
-      to fail: previously, they were ignored. Fixes bug 26258; bugfix
-      on 0.3.3.4-alpha.
-
   o Minor features (accounting):
     - When Tor becomes dormant, it now uses a scheduled event to wake up
       at the right time. Previously, we would use the per-second timer
@@ -150,9 +129,6 @@ Changes in version 0.3.4.8  - 2018-09-10
       Closes ticket 26006.
 
   o Minor features (compilation):
-    - When building Tor, prefer to use Python 3 over Python 2, and more
-      recent (contemplated) versions over older ones. Closes
-      ticket 26372.
     - When compiling with --enable-openbsd-malloc or --enable-tcmalloc,
       tell the compiler not to include the system malloc implementation.
       Fixes bug 20424; bugfix on 0.2.0.20-rc.
@@ -257,11 +233,6 @@ Changes in version 0.3.4.8  - 2018-09-10
     - Avoid a needless malloc()/free() pair every time we handle an ntor
       handshake. Closes ticket 25150.
 
-  o Minor features (relay, diagnostic):
-    - Add several checks to detect whether Tor relays are uploading
-      their descriptors without specifying why they regenerated them.
-      Diagnostic for ticket 25686.
-
   o Minor features (Rust, portability):
     - Rust cross-compilation is now supported. Closes ticket 25895.
 
@@ -300,13 +271,6 @@ Changes in version 0.3.4.8  - 2018-09-10
       subsystem. Fixes bug 25675; bugfix on 0.2.7.3-rc. Found by
       Coverity; this is CID 1433643.
 
-  o Minor bugfixes (circuit path selection):
-    - Don't count path selection failures as circuit build failures.
-      This change should eliminate cases where Tor blames its guard or
-      the network for situations like insufficient microdescriptors
-      and/or overly restrictive torrc settings. Fixes bug 25705; bugfix
-      on 0.3.3.1-alpha.
-
   o Minor bugfixes (client):
     - Don't consider Tor running as a client if the ControlPort is open,
       but no actual client ports are open. Fixes bug 26062; bugfix
@@ -317,13 +281,6 @@ Changes in version 0.3.4.8  - 2018-09-10
       Fixes bug 25261; bugfix on 0.2.5.1-alpha.
     - Remove the unused variable n_possible from the function
       channel_get_for_extend(). Fixes bug 25645; bugfix on 0.2.4.4-alpha
-
-  o Minor bugfixes (compatibility, openssl):
-    - Work around a change in OpenSSL 1.1.1 where return values that
-      would previously indicate "no password" now indicate an empty
-      password. Without this workaround, Tor instances running with
-      OpenSSL 1.1.1 would accept descriptors that other Tor instances
-      would reject. Fixes bug 26116; bugfix on 0.2.5.16.
 
   o Minor bugfixes (compilation):
     - Silence a spurious compiler warning on the GetAdaptersAddresses
@@ -338,17 +295,11 @@ Changes in version 0.3.4.8  - 2018-09-10
       code that calls routerinfo_get_my_routerinfo() twice, assuming
       that the second call will succeed if the first one did. Fixes bug
       26269; bugfix on 0.2.8.2-alpha.
-    - Fix a compilation warning on some versions of GCC when building
-      code that calls routerinfo_get_my_routerinfo() twice, assuming
-      that the second call will succeed if the first one did. Fixes bug
-      26269; bugfix on 0.2.8.2-alpha.
     - Refrain from compiling unit testing related object files when
       --disable-unittests is set to configure script. Fixes bug 24891;
       bugfix on 0.2.5.1-alpha.
     - The --enable-fatal-warnings flag now affects Rust code as well.
       Closes ticket 26245.
-    - Silence unused-const-variable warnings in zstd.h with some GCC
-      versions. Fixes bug 26272; bugfix on 0.3.1.1-alpha.
     - Avoid a compiler warning when casting the return value of
       smartlist_len() to double with DEBUG_SMARTLIST enabled. Fixes bug
       26283; bugfix on 0.2.4.10-alpha.
@@ -369,16 +320,9 @@ Changes in version 0.3.4.8  - 2018-09-10
       policy/* requests. Also, let controller know if an error is
       transient (response code 551) or not (response code 552). Fixes
       bug 25852; bugfix on 0.2.8.1-alpha.
-    - Handle the HSADDRESS= argument to the HSPOST command properly.
-      (Previously, this argument was misparsed and thus ignored.) Fixes
-      bug 26523; bugfix on 0.3.3.1-alpha. Patch by "akwizgran".
     - Parse the "HSADDRESS=" parameter in HSPOST commands properly.
       Previously, it was misparsed and ignored. Fixes bug 26523; bugfix
       on 0.3.3.1-alpha. Patch by "akwizgran".
-    - Improve accuracy of the BUILDTIMEOUT_SET control port event's
-      TIMEOUT_RATE and CLOSE_RATE fields. (We were previously
-      miscounting the total number of circuits for these field values.)
-      Fixes bug 26121; bugfix on 0.3.3.1-alpha.
     - Make CIRC_BW event reflect the total of all data sent on a
       circuit, including padding and dropped cells. Also fix a mis-
       counting bug when STREAM_BW events were enabled. Fixes bug 25400;
@@ -423,17 +367,10 @@ Changes in version 0.3.4.8  - 2018-09-10
       directory authorities have to be ahead of the client before this
       warning will occur. Fixes bug 25756; bugfix on 0.2.2.25-alpha.
 
-  o Minor bugfixes (hardening):
-    - Prevent a possible out-of-bounds smartlist read in
-      protover_compute_vote(). Fixes bug 26196; bugfix on 0.2.9.4-alpha.
-
   o Minor bugfixes (in-process restart):
     - Always call tor_free_all() when leaving tor_run_main(). When we
       did not, restarting tor in-process would cause an assertion
       failure. Fixes bug 26948; bugfix on 0.3.3.1-alpha.
-    - When shutting down, Tor now clears all the flags in the control.c
-      module. This should prevent a bug where authentication cookies are
-      not generated on restart. Fixes bug 25512; bugfix on 0.3.3.1-alpha.
 
   o Minor bugfixes (Linux seccomp2 sandbox):
     - Allow the nanosleep() system call, which glibc uses to implement
@@ -447,10 +384,6 @@ Changes in version 0.3.4.8  - 2018-09-10
     - Improve the log message when connection initiators fail to
       authenticate direct connections to relays. Fixes bug 26927; bugfix
       on 0.3.0.1-alpha.
-
-  o Minor bugfixes (memory, correctness):
-    - Fix a number of small memory leaks identified by coverity. Fixes
-      bug 26467; bugfix on numerous Tor versions.
 
   o Minor bugfixes (onion service):
     - Fix a memory leak when a v3 onion service is configured and gets a
@@ -472,13 +405,6 @@ Changes in version 0.3.4.8  - 2018-09-10
       consensus. We do this to avoid having an outdated state, and
       miscalculating the index for next-generation onion services. Fixes
       bug 24977; bugfix on 0.3.2.1-alpha.
-
-  o Minor bugfixes (path selection):
-    - Only select relays when they have the descriptors we prefer to use
-      for them. This change fixes a bug where we could select a relay
-      because it had _some_ descriptor, but reject it later with a
-      nonfatal assertion error because it didn't have the exact one we
-      wanted. Fixes bugs 25691 and 25692; bugfix on 0.3.3.4-alpha.
 
   o Minor bugfixes (portability):
     - Fix compilation of the unit tests on GNU/Hurd, which does not
@@ -505,10 +431,6 @@ Changes in version 0.3.4.8  - 2018-09-10
       here.) Fixes bug 24910; bugfix on 0.2.4.17-rc.
 
   o Minor bugfixes (relay):
-    - Relays now correctly block attempts to re-extend to the previous
-      relay by Ed25519 identity. Previously they would warn in this
-      case, but not actually reject the attempt. Fixes bug 26158; bugfix
-      on 0.3.0.1-alpha.
     - Avoid a crash when running with DirPort set but ORPort turned off.
       Fixes a case of bug 23693; bugfix on 0.3.1.1-alpha.
 
@@ -582,21 +504,6 @@ Changes in version 0.3.4.8  - 2018-09-10
     - Before running make test-network-all, delete old logs and test
       result files, to avoid spurious failures. Fixes bug 27295; bugfix
       on 0.2.7.3-rc.
-
-  o Minor bugfixes (testing, compatibility):
-    - When running the ntor_ref.py and hs_ntor_ref.py tests, make sure
-      only to pass strings (rather than "bytes" objects) to the Python
-      subprocess module. Python 3 on Windows seems to require this.
-      Fixes bug 26535; bugfix on 0.2.5.5-alpha (for ntor_ref.py) and
-      0.3.1.1-alpha (for hs_ntor_ref.py).
-    - When running the hs_ntor_ref.py test, make sure only to pass
-      strings (rather than "bytes" objects) to the Python subprocess
-      module. Python 3 on Windows seems to require this. Fixes bug
-      26535; bugfix on 0.3.1.1-alpha.
-    - When running the ntor_ref.py test, make sure only to pass strings
-      (rather than "bytes" objects) to the Python subprocess module.
-      Python 3 on Windows seems to require this. Fixes bug 26535; bugfix
-      on 0.2.5.5-alpha.
 
   o Minor bugfixes (testing, openssl compatibility):
     - Our "tortls/cert_matches_key" unit test no longer relies on
@@ -731,7 +638,6 @@ Changes in version 0.3.4.8  - 2018-09-10
       circuitmux since we introduced the "EWMA" circuitmux in 0.2.4.x,
       but it still required an unreasonable amount of memory and CPU.
       Closes ticket 25268.
-
 
 
 Changes in version 0.3.3.9 - 2018-07-13
