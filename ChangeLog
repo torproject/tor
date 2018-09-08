@@ -959,9 +959,9 @@ Changes in version 0.3.4.1-alpha - 2018-05-17
     - Tor no longer enables all of its periodic events by default.
       Previously, Tor would enable all possible main loop events,
       regardless of whether it needed them. Furthermore, many of these
-      events are now disabled with Tor is hibernating or DisableNetwork
+      events are now disabled when Tor is hibernating or DisableNetwork
       is set. This is a big step towards reducing client CPU usage by
-      reducing the amount of wake-ups the daemon does. Closes ticket
+      reducing the amount of wake-ups the daemon does. Closes tickets
       25376 and 25762.
     - The bandwidth-limitation logic has been refactored so that
       bandwidth calculations are performed on-demand, rather than every
