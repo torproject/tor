@@ -7565,8 +7565,8 @@ check_server_ports(const smartlist_t *ports,
   }
   if (n_orport_advertised && !n_orport_advertised_ipv4 &&
       !options->BridgeRelay) {
-    log_warn(LD_CONFIG, "Configured non-bridge only to listen on an IPv6 "
-             "address.");
+    log_warn(LD_CONFIG, "Configured public relay to listen only on an IPv6 "
+             "address. Tor needs to listen on an IPv4 address too.");
     r = -1;
   }
 
