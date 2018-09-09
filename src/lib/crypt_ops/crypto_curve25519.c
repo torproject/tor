@@ -291,11 +291,17 @@ curve25519_basepoint_spot_check(void)
   };
   const int loop_max=200;
   int save_use_ed = curve25519_use_ed;
-  unsigned char e1[32] = { 5 };
-  unsigned char e2[32] = { 5 };
+  unsigned char e1[32], e2[32];
   unsigned char x[32],y[32];
   int i;
   int r=0;
+
+  memset(x, 0, sizeof(x));
+  memset(y, 0, sizeof(y));
+  memset(e1, 0, sizeof(e1));
+  memset(e2, 0, sizeof(e2));
+  e1[0]=5;
+  e2[0]=5;
 
   /* Check the most basic possible sanity via the test secret/public key pair
    * used in "Cryptography in NaCl - 2. Secret keys and public keys".  This
