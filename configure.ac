@@ -931,31 +931,34 @@ AC_CHECK_FUNCS([ \
 	       ])
 
 dnl Check the function signature of CRYPTO_free()
-AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]], [
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]], [
                                  [CRYPTO_free(NULL);]
                                  ])],
-               [AC_DEFINE(HAVE_CRYPTO_FREE_WITHOUT_DEBUG_ARGS, 1,
-                Define 1 if CRYPTO_free is present without file and linenum arguments)],[])
+                  [AC_DEFINE(HAVE_CRYPTO_FREE_WITHOUT_DEBUG_ARGS, 1,
+                   Define 1 if CRYPTO_free is present without file and linenum arguments)],[])
             
-AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]],
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]],
                                 [[CRYPTO_free(NULL, "test.c", 12);]
                                 ])],
-               [AC_DEFINE(HAVE_CRYPTO_FREE_WITH_DEBUG_ARGS, 1,
-                Define 1 if CRYPTO_free is present with file and linenum arguments)],[])
+                  [AC_DEFINE(HAVE_CRYPTO_FREE_WITH_DEBUG_ARGS, 1,
+                   Define 1 if CRYPTO_free is present with file and linenum arguments)],[])
 
 dnl Check if CRYPTO_set_mem_functions takes raw malloc()
-AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]], [
-                                 [(void)CRYPTO_set_mem_functions(malloc, NULL, NULL);]
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]], [
+                                 [ void * (*m) (size_t, const char *, int);
+                                  (void)CRYPTO_set_mem_functions(m, NULL, NULL);
+                                 ]
                                  ])],
-               [AC_DEFINE(HAVE_OPENSSL_ACCEPT_RAW_MALLOC, 1,
-                Define 1 if CRYPTO_set_mem_functions takes malloc() without debug arguments)],[])
+                 [AC_DEFINE(HAVE_OPENSSL_ACCEPT_DEBUG_MALLOC, 1,
+                  Define 1 if CRYPTO_set_mem_functions takes malloc() without debug arguments)],[])
 
 dnl Check if CRYPTO_set_mem_functions takes raw realloc()
-AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]], [
-                                 [(void)CRYPTO_set_mem_functions(NULL, realloc, NULL);]
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]], [
+                                 [ void * (*r) (void *, size_t, const char *, int);
+                                  (void)CRYPTO_set_mem_functions(NULL, r, NULL);]
                                  ])],
-               [AC_DEFINE(HAVE_OPENSSL_ACCEPT_RAW_REALLOC, 1,
-                Define 1 if CRYPTO_set_mem_functions takes realloc() without debug arguments)],[])
+                 [AC_DEFINE(HAVE_OPENSSL_ACCEPT_DEBUG_REALLOC, 1,
+                  Define 1 if CRYPTO_set_mem_functions takes realloc() without debug arguments)],[])
 
 dnl Check if OpenSSL has scrypt implementation.
 AC_CHECK_FUNCS([ EVP_PBE_scrypt ])

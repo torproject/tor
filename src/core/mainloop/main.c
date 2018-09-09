@@ -4197,6 +4197,7 @@ sandbox_init_filter(void)
   return cfg;
 }
 
+/* Some older OpenSSL version used int for number of bytes. */
 #if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
 typedef size_t crypto_size_t;
 #else
@@ -4207,13 +4208,7 @@ typedef int crypto_size_t;
  * Compatibility wrapper for attaching tor_malloc() to OpenSSL
  * via CRYPTO_set_mem_functions().
  */
-#if defined(HAVE_OPENSSL_ACCEPT_RAW_MALLOC)
-static void *
-tor_CRYPTO_malloc(size_t num)
-{
-  return tor_malloc(num);
-}
-#else
+#if defined(HAVE_OPENSSL_ACCEPT_DEBUG_MALLOC)
 static void *
 tor_CRYPTO_malloc(crypto_size_t num, const char *file, int line)
 {
@@ -4222,19 +4217,19 @@ tor_CRYPTO_malloc(crypto_size_t num, const char *file, int line)
 
   return tor_malloc(num);
 }
+#else
+static void *
+tor_CRYPTO_malloc(size_t num)
+{
+  return tor_malloc(num);
+}
 #endif
 
 /**
  * Compatibility wrapper for attaching tor_realloc() to OpenSSL
  * via CRYPTO_set_mem_functions().
  */
-#if defined(HAVE_OPENSSL_ACCEPT_RAW_REALLOC)
-static void *
-tor_CRYPTO_realloc(void *addr, size_t num)
-{
-  return tor_realloc(addr, num);
-}
-#else
+#if defined(HAVE_OPENSSL_ACCEPT_DEBUG_REALLOC)
 static void *
 tor_CRYPTO_realloc(void *addr, crypto_size_t num,
                    const char *file, int line)
@@ -4242,6 +4237,12 @@ tor_CRYPTO_realloc(void *addr, crypto_size_t num,
   (void)file;
   (void)line;
 
+  return tor_realloc(addr, num);
+}
+#else
+static void *
+tor_CRYPTO_realloc(void *addr, size_t num)
+{
   return tor_realloc(addr, num);
 }
 #endif
