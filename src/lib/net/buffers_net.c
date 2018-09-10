@@ -166,15 +166,15 @@ flush_chunk(tor_socket_t fd, buf_t *buf, chunk_t *chunk, size_t sz,
   }
 }
 
-/** Write data from <b>buf</b> to the socket <b>s</b>.  Write at most
+/** Write data from <b>buf</b> to the file descriptor <b>fd</b>.  Write at most
  * <b>sz</b> bytes, decrement *<b>buf_flushlen</b> by
  * the number of bytes actually written, and remove the written bytes
  * from the buffer.  Return the number of bytes written on success,
  * -1 on failure.  Return 0 if write() would block.
  */
-int
-buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
-                    size_t *buf_flushlen)
+static int
+buf_flush_to_fd(buf_t *buf, int fd, size_t sz,
+                size_t *buf_flushlen, bool is_socket)
 {
   /* XXXX It's stupid to overload the return values for these functions:
    * "error status" and "number of bytes flushed" are not mutually exclusive.
@@ -182,7 +182,7 @@ buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
   int r;
   size_t flushed = 0;
   tor_assert(buf_flushlen);
-  tor_assert(SOCKET_OK(s));
+  tor_assert(SOCKET_OK(fd));
   if (BUG(*buf_flushlen > buf->datalen)) {
     *buf_flushlen = buf->datalen;
   }
@@ -199,7 +199,7 @@ buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
     else
       flushlen0 = buf->head->datalen;
 
-    r = flush_chunk(s, buf, buf->head, flushlen0, buf_flushlen, true);
+    r = flush_chunk(fd, buf, buf->head, flushlen0, buf_flushlen, is_socket);
     check();
     if (r < 0)
       return r;
@@ -210,4 +210,17 @@ buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
   }
   tor_assert(flushed < INT_MAX);
   return (int)flushed;
+}
+
+/** Write data from <b>buf</b> to the socket <b>s</b>.  Write at most
+ * <b>sz</b> bytes, decrement *<b>buf_flushlen</b> by
+ * the number of bytes actually written, and remove the written bytes
+ * from the buffer.  Return the number of bytes written on success,
+ * -1 on failure.  Return 0 if write() would block.
+ */
+int
+buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
+                    size_t *buf_flushlen)
+{
+  return buf_flush_to_fd(buf, s, sz, buf_flushlen, true);
 }
