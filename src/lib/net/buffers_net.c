@@ -239,3 +239,29 @@ buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
 {
   return buf_read_from_fd(buf, s, at_most, reached_eof, socket_error, true);
 }
+
+/** Write data from <b>buf</b> to the pipe <b>fd</b>.  Write at most
+ * <b>sz</b> bytes, decrement *<b>buf_flushlen</b> by
+ * the number of bytes actually written, and remove the written bytes
+ * from the buffer.  Return the number of bytes written on success,
+ * -1 on failure.  Return 0 if write() would block.
+ */
+int
+buf_flush_to_pipe(buf_t *buf, int fd, size_t sz,
+                  size_t *buf_flushlen)
+{
+  return buf_flush_to_fd(buf, fd, sz, buf_flushlen, false);
+}
+
+/** Read from pipe <b>fd</b>, writing onto end of <b>buf</b>.  Read at most
+ * <b>at_most</b> bytes, growing the buffer as necessary.  If read() returns 0
+ * (because of EOF), set *<b>reached_eof</b> to 1 and return 0. Return -1 on
+ * error; else return the number of bytes read.
+ */
+int
+buf_read_from_pipe(buf_t *buf, int fd, size_t at_most,
+                   int *reached_eof,
+                   int *socket_error)
+{
+  return buf_read_from_fd(buf, fd, at_most, reached_eof, socket_error, false);
+}
