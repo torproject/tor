@@ -563,9 +563,7 @@ test_load_keys_with_client_auth(void *arg)
   } SMARTLIST_FOREACH_END(pubkey_b32);
 
  done:
-  if (pubkey_b32_list) {
-    SMARTLIST_FOREACH(pubkey_b32_list, char *, s, tor_free(s));
-  }
+  SMARTLIST_FOREACH(pubkey_b32_list, char *, s, tor_free(s));
   smartlist_free(pubkey_b32_list);
   tor_free(hsdir_v3);
   hs_free_all();
