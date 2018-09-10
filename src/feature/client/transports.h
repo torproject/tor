@@ -97,8 +97,6 @@ typedef struct {
   /* A pointer to the process handle of this managed proxy. */
   struct process_handle_t *process_handle;
 
-  int pid; /* The Process ID this managed proxy is using. */
-
   /** Boolean: We are re-parsing our config, and we are going to
    * remove this managed proxy if we don't find it any transport
    * plugins that use it. */
