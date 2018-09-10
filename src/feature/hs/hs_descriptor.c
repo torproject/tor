@@ -1389,7 +1389,7 @@ encrypted_data_length_is_valid(size_t len)
   /* Make sure there is enough data for the salt and the mac. The equality is
      there to ensure that there is at least one byte of encrypted data. */
   if (len <= HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN) {
-    log_warn(LD_REND, "Length of descriptor's encrypted data is too small. "
+    log_info(LD_REND, "Length of descriptor's encrypted data is too small. "
                       "Got %lu but minimum value is %d",
              (unsigned long)len, HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN);
     goto err;
@@ -1540,7 +1540,7 @@ decrypt_desc_layer,(const hs_descriptor_t *desc,
    * This is a critical check that is making sure the computed MAC matches the
    * one in the descriptor. */
   if (!tor_memeq(our_mac, desc_mac, sizeof(our_mac))) {
-    log_warn(LD_REND, "Encrypted service descriptor MAC check failed");
+    log_info(LD_REND, "Encrypted service descriptor MAC check failed");
     goto err;
   }
 
@@ -1662,7 +1662,6 @@ desc_decrypt_encrypted(const hs_descriptor_t *desc,
                                  desc->superencrypted_data.encrypted_blob_size,
                                  descriptor_cookie, 0, &encrypted_plaintext);
   if (!encrypted_len) {
-    log_warn(LD_REND, "Decrypting encrypted desc failed.");
     goto err;
   }
   tor_assert(encrypted_plaintext);
@@ -2272,7 +2271,22 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
    * in the descriptor as a blob of bytes. */
   message_len = desc_decrypt_encrypted(desc, client_auth_sk, &message);
   if (!message_len) {
-    log_warn(LD_REND, "Service descriptor decryption failed.");
+    /* Two possible situation here. Either we have a client authorization
+     * configured that didn't work or we do not have any configured for this
+     * onion address so likely the descriptor is for authorized client only,
+     * we are not. */
+    if (client_auth_sk) {
+      /* At warning level so the client can notice that its client
+       * authorization is failing. */
+      log_warn(LD_REND, "Client authorization for requested onion address "
+                        "is invalid. Can't decrypt the descriptor.");
+    } else {
+      /* Inform at notice level that the onion address requested can't be
+       * reached without client authorization most likely. */
+      log_notice(LD_REND, "Fail to decrypt descriptor for requested onion "
+                        "address. It is likely requiring client "
+                        "authorization.");
+    }
     goto err;
   }
   tor_assert(message);

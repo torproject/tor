@@ -3124,7 +3124,7 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
   case 200:
     /* We got something: Try storing it in the cache. */
     if (hs_cache_store_as_client(body, &conn->hs_ident->identity_pk) < 0) {
-      log_warn(LD_REND, "Failed to store hidden service descriptor");
+      log_info(LD_REND, "Failed to store hidden service descriptor");
       /* Fire control port FAILED event. */
       hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
                                    "BAD_DESC");
