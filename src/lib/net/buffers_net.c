@@ -129,22 +129,26 @@ buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
 }
 
 /** Helper for buf_flush_to_socket(): try to write <b>sz</b> bytes from chunk
- * <b>chunk</b> of buffer <b>buf</b> onto socket <b>s</b>.  On success, deduct
- * the bytes written from *<b>buf_flushlen</b>.  Return the number of bytes
- * written on success, 0 on blocking, -1 on failure.
+ * <b>chunk</b> of buffer <b>buf</b> onto file descriptor <b>fd</b>.  On
+ * success, deduct the bytes written from *<b>buf_flushlen</b>.  Return the
+ * number of bytes written on success, 0 on blocking, -1 on failure.
  */
 static inline int
-flush_chunk(tor_socket_t s, buf_t *buf, chunk_t *chunk, size_t sz,
-            size_t *buf_flushlen)
+flush_chunk(tor_socket_t fd, buf_t *buf, chunk_t *chunk, size_t sz,
+            size_t *buf_flushlen, bool is_socket)
 {
   ssize_t write_result;
 
   if (sz > chunk->datalen)
     sz = chunk->datalen;
-  write_result = tor_socket_send(s, chunk->data, sz, 0);
+
+  if (is_socket)
+    write_result = tor_socket_send(fd, chunk->data, sz, 0);
+  else
+    write_result = write(fd, chunk->data, sz);
 
   if (write_result < 0) {
-    int e = tor_socket_errno(s);
+    int e = tor_socket_errno(fd);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
 #ifdef _WIN32
       if (e == WSAENOBUFS)
@@ -195,7 +199,7 @@ buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
     else
       flushlen0 = buf->head->datalen;
 
-    r = flush_chunk(s, buf, buf->head, flushlen0, buf_flushlen);
+    r = flush_chunk(s, buf, buf->head, flushlen0, buf_flushlen, true);
     check();
     if (r < 0)
       return r;
