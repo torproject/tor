@@ -21,6 +21,7 @@
 #endif
 
 #include <stdlib.h>
+#include <unistd.h>
 
 #ifdef PARANOIA
 /** Helper: If PARANOIA is defined, assert that the buffer in local variable
@@ -30,27 +31,33 @@
 #define check() STMT_NIL
 #endif /* defined(PARANOIA) */
 
-/** Read up to <b>at_most</b> bytes from the socket <b>fd</b> into
+/** Read up to <b>at_most</b> bytes from the file descriptor <b>fd</b> into
  * <b>chunk</b> (which must be on <b>buf</b>). If we get an EOF, set
  * *<b>reached_eof</b> to 1.  Return -1 on error, 0 on eof or blocking,
  * and the number of bytes read otherwise. */
 static inline int
 read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
-              int *reached_eof, int *socket_error)
+              int *reached_eof, int *error, bool is_socket)
 {
   ssize_t read_result;
   if (at_most > CHUNK_REMAINING_CAPACITY(chunk))
     at_most = CHUNK_REMAINING_CAPACITY(chunk);
-  read_result = tor_socket_recv(fd, CHUNK_WRITE_PTR(chunk), at_most, 0);
+
+  if (is_socket)
+    read_result = tor_socket_recv(fd, CHUNK_WRITE_PTR(chunk), at_most, 0);
+  else
+    read_result = read(fd, CHUNK_WRITE_PTR(chunk), at_most);
 
   if (read_result < 0) {
     int e = tor_socket_errno(fd);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
 #ifdef _WIN32
       if (e == WSAENOBUFS)
-        log_warn(LD_NET,"recv() failed: WSAENOBUFS. Not enough ram?");
+        log_warn(LD_NET, "%s() failed: WSAENOBUFS. Not enough ram?",
+                 is_socket ? "recv" : "read");
 #endif
-      *socket_error = e;
+      if (error)
+        *error = e;
       return -1;
     }
     return 0; /* would block. */
@@ -108,7 +115,7 @@ buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
         readlen = cap;
     }
 
-    r = read_to_chunk(buf, chunk, s, readlen, reached_eof, socket_error);
+    r = read_to_chunk(buf, chunk, s, readlen, reached_eof, socket_error, true);
     check();
     if (r < 0)
       return r; /* Error */
