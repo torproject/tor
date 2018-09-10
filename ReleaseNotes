@@ -2,6 +2,974 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.9.17 - 2018-09-10
+  Tor 0.2.9.17 backports numerous bugfixes from later versions of Tor.
+
+  o Minor features (compatibility, backport from 0.3.4.8):
+    - Tell OpenSSL to maintain backward compatibility with previous
+      RSA1024/DH1024 users in Tor. With OpenSSL 1.1.1-pre6, these
+      ciphers are disabled by default. Closes ticket 27344.
+
+  o Minor features (continuous integration, backport from 0.3.4.7-rc):
+    - Enable macOS builds in our Travis CI configuration. Closes
+      ticket 24629.
+    - Install libcap-dev and libseccomp2-dev so these optional
+      dependencies get tested on Travis CI. Closes ticket 26560.
+    - Run asciidoc during Travis CI. Implements ticket 27087.
+    - Use ccache in our Travis CI configuration. Closes ticket 26952.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the August 7 2018 Maxmind GeoLite2
+      Country database. Closes ticket 27089.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.6-rc):
+    - When compiling with --enable-openbsd-malloc or --enable-tcmalloc,
+      tell the compiler not to include the system malloc implementation.
+      Fixes bug 20424; bugfix on 0.2.0.20-rc.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.7-rc):
+    - Silence a spurious compiler warning on the GetAdaptersAddresses
+      function pointer cast. This issue is already fixed by 26481 in
+      0.3.5 and later, by removing the lookup and cast. Fixes bug 27465;
+      bugfix on 0.2.3.11-alpha.
+    - Stop calling SetProcessDEPPolicy() on 64-bit Windows. It is not
+      supported, and always fails. Some compilers warn about the
+      function pointer cast on 64-bit Windows. Fixes bug 27461; bugfix
+      on 0.2.2.23-alpha.
+
+  o Minor bugfixes (compilation, windows, backport from 0.3.4.7-rc):
+    - Don't link or search for pthreads when building for Windows, even
+      if we are using build environment (like mingw) that provides a
+      pthreads library. Fixes bug 27081; bugfix on 0.1.0.1-rc.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.6-rc):
+    - Skip a pair of unreliable key generation tests on Windows, until
+      the underlying issue in bug 26076 is resolved. Fixes bug 26830 and
+      bug 26853; bugfix on 0.2.7.3-rc and 0.3.2.1-alpha respectively.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.7-rc):
+    - Pass the module flags to distcheck configure, and log the flags
+      before running configure. (Backported to 0.2.9 and later as a
+      precaution.) Fixes bug 27088; bugfix on 0.3.4.1-alpha.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.8):
+    - When a Travis build fails, and showing a log fails, keep trying to
+      show the other logs. Fixes bug 27453; bugfix on 0.3.4.7-rc.
+    - When we use echo in Travis, don't pass a --flag as the first
+      argument. Fixes bug 27418; bugfix on 0.3.4.7-rc.
+
+  o Minor bugfixes (directory authority, backport from 0.3.4.6-rc):
+    - When voting for recommended versions, make sure that all of the
+      versions are well-formed and parsable. Fixes bug 26485; bugfix
+      on 0.1.1.6-alpha.
+
+  o Minor bugfixes (linux seccomp2 sandbox, backport from 0.3.4.7-rc):
+    - Fix a bug in out sandboxing rules for the openat() syscall.
+      Previously, no openat() call would be permitted, which would break
+      filesystem operations on recent glibc versions. Fixes bug 25440;
+      bugfix on 0.2.9.15. Diagnosis and patch from Daniel Pinto.
+
+  o Minor bugfixes (onion services, backport from 0.3.4.8):
+    - Silence a spurious compiler warning in
+      rend_client_send_introduction(). Fixes bug 27463; bugfix
+      on 0.1.1.2-alpha.
+
+  o Minor bugfixes (single onion services, Tor2web, backport from 0.3.4.6-rc):
+    - Log a protocol warning when single onion services or Tor2web clients
+      fail to authenticate direct connections to relays.
+      Fixes bug 26924; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (testing, backport from 0.3.4.6-rc):
+    - Disable core dumps in test_bt.sh, to avoid failures in "make
+      distcheck". Fixes bug 26787; bugfix on 0.2.5.2-alpha.
+
+  o Minor bugfixes (testing, chutney, backport from 0.3.4.8):
+    - Before running make test-network-all, delete old logs and test
+      result files, to avoid spurious failures. Fixes bug 27295; bugfix
+      on 0.2.7.3-rc.
+
+  o Minor bugfixes (testing, openssl compatibility, backport from 0.3.4.7-rc):
+    - Our "tortls/cert_matches_key" unit test no longer relies on
+      OpenSSL internals. Previously, it relied on unsupported OpenSSL
+      behavior in a way that caused it to crash with OpenSSL 1.0.2p.
+      Fixes bug 27226; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (Windows, compilation, backport from 0.3.4.7-rc):
+    - Silence a compilation warning on MSVC 2017 and clang-cl. Fixes bug
+      27185; bugfix on 0.2.2.2-alpha.
+
+
+Changes in version 0.3.2.12 - 2018-09-10
+  Tor 0.3.2.12 backport numerous fixes from later versions of Tor.
+
+  o Minor features (compatibility, backport from 0.3.4.8):
+    - Tell OpenSSL to maintain backward compatibility with previous
+      RSA1024/DH1024 users in Tor. With OpenSSL 1.1.1-pre6, these
+      ciphers are disabled by default. Closes ticket 27344.
+
+  o Minor features (continuous integration, backport from 0.3.4.7-rc):
+    - Enable macOS builds in our Travis CI configuration. Closes
+      ticket 24629.
+    - Install libcap-dev and libseccomp2-dev so these optional
+      dependencies get tested on Travis CI. Closes ticket 26560.
+    - Run asciidoc during Travis CI. Implements ticket 27087.
+    - Use ccache in our Travis CI configuration. Closes ticket 26952.
+
+  o Minor features (continuous integration, rust, backport from 0.3.4.7-rc):
+    - Use cargo cache in our Travis CI configuration. Closes
+      ticket 26952.
+
+  o Minor features (controller, backport from 0.3.4.6-rc):
+    - The control port now exposes the list of HTTPTunnelPorts and
+      ExtOrPorts via GETINFO net/listeners/httptunnel and
+      net/listeners/extor respectively. Closes ticket 26647.
+
+  o Minor features (directory authorities, backport from 0.3.4.7-rc):
+    - Authorities no longer vote to make the subprotocol version
+      "LinkAuth=1" a requirement: it is unsupportable with NSS, and
+      hasn't been needed since Tor 0.3.0.1-alpha. Closes ticket 27286.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the August 7 2018 Maxmind GeoLite2
+      Country database. Closes ticket 27089.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.6-rc):
+    - When compiling with --enable-openbsd-malloc or --enable-tcmalloc,
+      tell the compiler not to include the system malloc implementation.
+      Fixes bug 20424; bugfix on 0.2.0.20-rc.
+    - Don't try to use a pragma to temporarily disable the
+      -Wunused-const-variable warning if the compiler doesn't support
+      it. Fixes bug 26785; bugfix on 0.3.2.11.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.7-rc):
+    - Silence a spurious compiler warning on the GetAdaptersAddresses
+      function pointer cast. This issue is already fixed by 26481 in
+      0.3.5 and later, by removing the lookup and cast. Fixes bug 27465;
+      bugfix on 0.2.3.11-alpha.
+    - Stop calling SetProcessDEPPolicy() on 64-bit Windows. It is not
+      supported, and always fails. Some compilers warn about the
+      function pointer cast on 64-bit Windows. Fixes bug 27461; bugfix
+      on 0.2.2.23-alpha.
+
+  o Minor bugfixes (compilation, windows, backport from 0.3.4.7-rc):
+    - Don't link or search for pthreads when building for Windows, even
+      if we are using build environment (like mingw) that provides a
+      pthreads library. Fixes bug 27081; bugfix on 0.1.0.1-rc.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.6-rc):
+    - Skip a pair of unreliable key generation tests on Windows, until
+      the underlying issue in bug 26076 is resolved. Fixes bug 26830 and
+      bug 26853; bugfix on 0.2.7.3-rc and 0.3.2.1-alpha respectively.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.7-rc):
+    - Build with zstd on macOS. Fixes bug 27090; bugfix on 0.3.1.5-alpha.
+    - Pass the module flags to distcheck configure, and log the flags
+      before running configure. (Backported to 0.2.9 and later as a
+      precaution.) Fixes bug 27088; bugfix on 0.3.4.1-alpha.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.8):
+    - When a Travis build fails, and showing a log fails, keep trying to
+      show the other logs. Fixes bug 27453; bugfix on 0.3.4.7-rc.
+    - When we use echo in Travis, don't pass a --flag as the first
+      argument. Fixes bug 27418; bugfix on 0.3.4.7-rc.
+
+  o Minor bugfixes (directory authority, backport from 0.3.4.6-rc):
+    - When voting for recommended versions, make sure that all of the
+      versions are well-formed and parsable. Fixes bug 26485; bugfix
+      on 0.1.1.6-alpha.
+
+  o Minor bugfixes (linux seccomp2 sandbox, backport from 0.3.4.7-rc):
+    - Fix a bug in out sandboxing rules for the openat() syscall.
+      Previously, no openat() call would be permitted, which would break
+      filesystem operations on recent glibc versions. Fixes bug 25440;
+      bugfix on 0.2.9.15. Diagnosis and patch from Daniel Pinto.
+
+  o Minor bugfixes (logging, backport from 0.3.4.6-rc):
+    - Improve the log message when connection initiators fail to
+      authenticate direct connections to relays. Fixes bug 26927; bugfix
+      on 0.3.0.1-alpha.
+
+  o Minor bugfixes (onion services, backport from 0.3.4.7-rc):
+    - Fix bug that causes services to not ever rotate their descriptors
+      if they were getting SIGHUPed often. Fixes bug 26932; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion services, backport from 0.3.4.8):
+    - Silence a spurious compiler warning in
+      rend_client_send_introduction(). Fixes bug 27463; bugfix
+      on 0.1.1.2-alpha.
+
+  o Minor bugfixes (rust, backport from 0.3.4.7-rc):
+    - Backport test_rust.sh from master. Fixes bug 26497; bugfix
+      on 0.3.1.5-alpha.
+    - Consistently use ../../.. as a fallback for $abs_top_srcdir in
+      test_rust.sh. Fixes bug 27093; bugfix on 0.3.4.3-alpha.
+    - Stop setting $CARGO_HOME. cargo will use the user's $CARGO_HOME, or
+      $HOME/.cargo by default. Fixes bug 26497; bugfix on 0.3.1.5-alpha.
+
+  o Minor bugfixes (single onion services, Tor2web, backport from 0.3.4.6-rc):
+    - Log a protocol warning when single onion services or Tor2web clients
+      fail to authenticate direct connections to relays.
+      Fixes bug 26924; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (testing, backport from 0.3.4.6-rc):
+    - Disable core dumps in test_bt.sh, to avoid failures in "make
+      distcheck". Fixes bug 26787; bugfix on 0.2.5.2-alpha.
+
+  o Minor bugfixes (testing, chutney, backport from 0.3.4.8):
+    - When running make test-network-all, use the mixed+hs-v2 network.
+      (A previous fix to chutney removed v3 onion services from the
+      mixed+hs-v23 network, so seeing "mixed+hs-v23" in tests is
+      confusing.) Fixes bug 27345; bugfix on 0.3.2.1-alpha.
+    - Before running make test-network-all, delete old logs and test
+      result files, to avoid spurious failures. Fixes bug 27295; bugfix
+      on 0.2.7.3-rc.
+
+  o Minor bugfixes (testing, openssl compatibility):
+    - Our "tortls/cert_matches_key" unit test no longer relies on OpenSSL
+      internals.  Previously, it relied on unsupported OpenSSL behavior in
+      a way that caused it to crash with OpenSSL 1.0.2p. Fixes bug 27226;
+      bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (testing, openssl compatibility, backport from 0.3.4.7-rc):
+    - Our "tortls/cert_matches_key" unit test no longer relies on
+      OpenSSL internals. Previously, it relied on unsupported OpenSSL
+      behavior in a way that caused it to crash with OpenSSL 1.0.2p.
+      Fixes bug 27226; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (Windows, compilation, backport from 0.3.4.7-rc):
+    - Silence a compilation warning on MSVC 2017 and clang-cl. Fixes bug
+      27185; bugfix on 0.2.2.2-alpha.
+
+
+Changes in version 0.3.3.10 - 2018-09-10
+  Tor 0.3.3.10 backports numerous fixes from later versions of Tor.
+
+  o Minor features (bug workaround, backport from 0.3.4.7-rc):
+    - Compile correctly on systems that provide the C11 stdatomic.h
+      header, but where C11 atomic functions don't actually compile.
+      Closes ticket 26779; workaround for Debian issue 903709.
+
+  o Minor features (compatibility, backport from 0.3.4.8):
+    - Tell OpenSSL to maintain backward compatibility with previous
+      RSA1024/DH1024 users in Tor. With OpenSSL 1.1.1-pre6, these
+      ciphers are disabled by default. Closes ticket 27344.
+
+  o Minor features (continuous integration, backport from 0.3.4.7-rc):
+    - Backport Travis rust distcheck to 0.3.3. Closes ticket 24629.
+    - Enable macOS builds in our Travis CI configuration. Closes
+      ticket 24629.
+    - Install libcap-dev and libseccomp2-dev so these optional
+      dependencies get tested on Travis CI. Closes ticket 26560.
+    - Run asciidoc during Travis CI. Implements ticket 27087.
+    - Use ccache in our Travis CI configuration. Closes ticket 26952.
+
+  o Minor features (continuous integration, rust, backport from 0.3.4.7-rc):
+    - Use cargo cache in our Travis CI configuration. Closes
+      ticket 26952.
+
+  o Minor features (controller, backport from 0.3.4.6-rc):
+    - The control port now exposes the list of HTTPTunnelPorts and
+      ExtOrPorts via GETINFO net/listeners/httptunnel and
+      net/listeners/extor respectively. Closes ticket 26647.
+
+  o Minor features (directory authorities, backport from 0.3.4.7-rc):
+    - Authorities no longer vote to make the subprotocol version
+      "LinkAuth=1" a requirement: it is unsupportable with NSS, and
+      hasn't been needed since Tor 0.3.0.1-alpha. Closes ticket 27286.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the August 7 2018 Maxmind GeoLite2
+      Country database. Closes ticket 27089.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.6-rc):
+    - When compiling with --enable-openbsd-malloc or --enable-tcmalloc,
+      tell the compiler not to include the system malloc implementation.
+      Fixes bug 20424; bugfix on 0.2.0.20-rc.
+    - Don't try to use a pragma to temporarily disable the
+      -Wunused-const-variable warning if the compiler doesn't support
+      it. Fixes bug 26785; bugfix on 0.3.2.11.
+
+  o Minor bugfixes (compilation, backport from 0.3.4.7-rc):
+    - Silence a spurious compiler warning on the GetAdaptersAddresses
+      function pointer cast. This issue is already fixed by 26481 in
+      0.3.5 and later, by removing the lookup and cast. Fixes bug 27465;
+      bugfix on 0.2.3.11-alpha.
+    - Stop calling SetProcessDEPPolicy() on 64-bit Windows. It is not
+      supported, and always fails. Some compilers warn about the
+      function pointer cast on 64-bit Windows. Fixes bug 27461; bugfix
+      on 0.2.2.23-alpha.
+
+  o Minor bugfixes (compilation, windows, backport from 0.3.4.7-rc):
+    - Don't link or search for pthreads when building for Windows, even
+      if we are using build environment (like mingw) that provides a
+      pthreads library. Fixes bug 27081; bugfix on 0.1.0.1-rc.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.6-rc):
+    - Skip a pair of unreliable key generation tests on Windows, until
+      the underlying issue in bug 26076 is resolved. Fixes bug 26830 and
+      bug 26853; bugfix on 0.2.7.3-rc and 0.3.2.1-alpha respectively.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.7-rc):
+    - Build with zstd on macOS. Fixes bug 27090; bugfix on 0.3.1.5-alpha.
+    - Pass the module flags to distcheck configure, and log the flags
+      before running configure. (Backported to 0.2.9 and later as a
+      precaution.) Fixes bug 27088; bugfix on 0.3.4.1-alpha.
+
+  o Minor bugfixes (continuous integration, backport from 0.3.4.8):
+    - When a Travis build fails, and showing a log fails, keep trying to
+      show the other logs. Fixes bug 27453; bugfix on 0.3.4.7-rc.
+    - When we use echo in Travis, don't pass a --flag as the first
+      argument. Fixes bug 27418; bugfix on 0.3.4.7-rc.
+
+  o Minor bugfixes (directory authority, backport from 0.3.4.6-rc):
+    - When voting for recommended versions, make sure that all of the
+      versions are well-formed and parsable. Fixes bug 26485; bugfix
+      on 0.1.1.6-alpha.
+
+  o Minor bugfixes (in-process restart, backport from 0.3.4.7-rc):
+    - Always call tor_free_all() when leaving tor_run_main(). When we
+      did not, restarting tor in-process would cause an assertion
+      failure. Fixes bug 26948; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (linux seccomp2 sandbox, backport from 0.3.4.7-rc):
+    - Fix a bug in our sandboxing rules for the openat() syscall.
+      Previously, no openat() call would be permitted, which would break
+      filesystem operations on recent glibc versions. Fixes bug 25440;
+      bugfix on 0.2.9.15. Diagnosis and patch from Daniel Pinto.
+
+  o Minor bugfixes (logging, backport from 0.3.4.6-rc):
+    - Improve the log message when connection initiators fail to
+      authenticate direct connections to relays. Fixes bug 26927; bugfix
+      on 0.3.0.1-alpha.
+
+  o Minor bugfixes (onion services, backport from 0.3.4.7-rc):
+    - Fix bug that causes services to not ever rotate their descriptors
+      if they were getting SIGHUPed often. Fixes bug 26932; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion services, backport from 0.3.4.8):
+    - Silence a spurious compiler warning in
+      rend_client_send_introduction(). Fixes bug 27463; bugfix
+      on 0.1.1.2-alpha.
+
+  o Minor bugfixes (portability, backport from 0.3.4.6-rc):
+    - Work around two different bugs in the OS X 10.10 and later SDKs
+      that would prevent us from successfully targeting earlier versions
+      of OS X. Fixes bug 26876; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (portability, backport from 0.3.4.7-rc):
+    - Fix compilation of the unit tests on GNU/Hurd, which does not
+      define PATH_MAX. Fixes bug 26873; bugfix on 0.3.3.1-alpha. Patch
+      from "paulusASol".
+
+  o Minor bugfixes (rust, backport from 0.3.4.7-rc):
+    - Backport test_rust.sh from master. Fixes bug 26497; bugfix
+      on 0.3.1.5-alpha.
+    - Consistently use ../../.. as a fallback for $abs_top_srcdir in
+      test_rust.sh. Fixes bug 27093; bugfix on 0.3.4.3-alpha.
+    - Protover parsing was accepting the presence of whitespace in
+      version strings, which the C implementation would choke on, e.g.
+      "Desc=1\t,2". Fixes bug 27177; bugfix on 0.3.3.5-rc.
+    - Protover parsing was ignoring a 2nd hyphen and everything after
+      it, accepting entries like "Link=1-5-foo". Fixes bug 27164; bugfix
+      on 0.3.3.1-alpha.
+    - Stop setting $CARGO_HOME. cargo will use the user's $CARGO_HOME, or
+      $HOME/.cargo by default. Fixes bug 26497; bugfix on 0.3.1.5-alpha.
+    - cd to ${abs_top_builddir}/src/rust before running cargo in
+      src/test/test_rust.sh. This makes the working directory consistent
+      between builds and tests. Fixes bug 26497; bugfix on 0.3.3.2-alpha.
+
+  o Minor bugfixes (single onion services, Tor2web, backport from 0.3.4.6-rc):
+    - Log a protocol warning when single onion services or Tor2web clients
+      fail to authenticate direct connections to relays.
+      Fixes bug 26924; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (testing, backport from 0.3.4.6-rc):
+    - Disable core dumps in test_bt.sh, to avoid failures in "make
+      distcheck". Fixes bug 26787; bugfix on 0.2.5.2-alpha.
+
+  o Minor bugfixes (testing, chutney, backport from 0.3.4.8):
+    - When running make test-network-all, use the mixed+hs-v2 network.
+      (A previous fix to chutney removed v3 onion services from the
+      mixed+hs-v23 network, so seeing "mixed+hs-v23" in tests is
+      confusing.) Fixes bug 27345; bugfix on 0.3.2.1-alpha.
+    - Before running make test-network-all, delete old logs and test
+      result files, to avoid spurious failures. Fixes bug 27295; bugfix
+      on 0.2.7.3-rc.
+
+  o Minor bugfixes (testing, openssl compatibility, backport from 0.3.4.7-rc):
+    - Our "tortls/cert_matches_key" unit test no longer relies on
+      OpenSSL internals. Previously, it relied on unsupported OpenSSL
+      behavior in a way that caused it to crash with OpenSSL 1.0.2p.
+      Fixes bug 27226; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (v3 onion services, backport from 0.3.4.6-rc):
+    - Stop sending ed25519 link specifiers in v3 onion service introduce
+      cells and descriptors, when the rendezvous or introduction point
+      doesn't support ed25519 link authentication. Fixes bug 26627;
+      bugfix on 0.3.2.4-alpha.
+
+  o Minor bugfixes (Windows, compilation, backport from 0.3.4.7-rc):
+    - Silence a compilation warning on MSVC 2017 and clang-cl. Fixes bug
+      27185; bugfix on 0.2.2.2-alpha.
+
+
+Changes in version 0.3.4.8 - 2018-09-10
+  Tor 0.3.4.8 is the first stable release in its series; it includes
+  compilation and portability fixes.
+
+  The Tor 0.3.4 series includes improvements for running Tor in
+  low-power and embedded environments, which should help performance in
+  general. We've begun work on better modularity, and included preliminary
+  changes on the directory authority side to accommodate a new bandwidth
+  measurement system.  We've also integrated more continuous-integration
+  systems into our development process, and made corresponding changes to
+  Tor's testing infrastructure.  Finally, we've continued to refine
+  our anti-denial-of-service code.
+
+  Below are the changes since 0.3.3.9. For a list of only the changes
+  since 0.3.4.7-rc, see the ChangeLog file.
+
+  o New system requirements:
+    - Tor no longer tries to support old operating systems without
+      mmap() or some local equivalent. Apparently, compilation on such
+      systems has been broken for some time, without anybody noticing or
+      complaining. Closes ticket 25398.
+
+  o Major features (directory authority, modularization):
+    - The directory authority subsystem has been modularized. The code
+      is now located in src/or/dirauth/, and is compiled in by default.
+      To disable the module, the configure option
+      --disable-module-dirauth has been added. This module may be
+      disabled by default in some future release. Closes ticket 25610.
+
+  o Major features (main loop, CPU usage):
+    - When Tor is disabled (via DisableNetwork or via hibernation), it
+      no longer needs to run any per-second events. This change should
+      make it easier for mobile applications to disable Tor while the
+      device is sleeping, or Tor is not running. Closes ticket 26063.
+    - Tor no longer enables all of its periodic events by default.
+      Previously, Tor would enable all possible main loop events,
+      regardless of whether it needed them. Furthermore, many of these
+      events are now disabled when Tor is hibernating or DisableNetwork
+      is set. This is a big step towards reducing client CPU usage by
+      reducing the amount of wake-ups the daemon does. Closes tickets
+      25376 and 25762.
+    - The bandwidth-limitation logic has been refactored so that
+      bandwidth calculations are performed on-demand, rather than every
+      TokenBucketRefillInterval milliseconds. This change should improve
+      the granularity of our bandwidth calculations, and limit the
+      number of times that the Tor process needs to wake up when it is
+      idle. Closes ticket 25373.
+    - Move responsibility for many operations from a once-per-second
+      callback to a callback that is only scheduled as needed. Moving
+      this functionality has allowed us to disable the callback when
+      Tor's network is disabled. Once enough items are removed from our
+      once-per-second callback, we can eliminate it entirely to conserve
+      CPU when idle. The functionality removed includes: closing
+      connections, circuits, and channels (ticket 25932); consensus
+      voting (25937); flushing log callbacks (25951); honoring delayed
+      SIGNEWNYM requests (25949); rescanning the consensus cache
+      (25931); saving the state file to disk (25948); warning relay
+      operators about unreachable ports (25952); and keeping track of
+      Tor's uptime (26009).
+
+  o Minor features (accounting):
+    - When Tor becomes dormant, it now uses a scheduled event to wake up
+      at the right time. Previously, we would use the per-second timer
+      to check whether to wake up, but we no longer have any per-second
+      timers enabled when the network is disabled. Closes ticket 26064.
+
+  o Minor features (bug workaround):
+    - Compile correctly on systems that provide the C11 stdatomic.h
+      header, but where C11 atomic functions don't actually compile.
+      Closes ticket 26779; workaround for Debian issue 903709.
+
+  o Minor features (code quality):
+    - Add optional spell-checking for the Tor codebase, using the
+      "misspell" program. To use this feature, run "make check-typos".
+      Closes ticket 25024.
+
+  o Minor features (compatibility):
+    - Tell OpenSSL to maintain backward compatibility with previous
+      RSA1024/DH1024 users in Tor. With OpenSSL 1.1.1-pre6, these
+      ciphers are disabled by default. Closes ticket 27344.
+    - Tor now detects versions of OpenSSL 1.1.0 and later compiled with
+      the no-deprecated option, and builds correctly with them. Closes
+      tickets 19429, 19981, and 25353.
+
+  o Minor features (compilation):
+    - When compiling with --enable-openbsd-malloc or --enable-tcmalloc,
+      tell the compiler not to include the system malloc implementation.
+      Fixes bug 20424; bugfix on 0.2.0.20-rc.
+    - Don't try to use a pragma to temporarily disable the
+      -Wunused-const-variable warning if the compiler doesn't support
+      it. Fixes bug 26785; bugfix on 0.3.2.11.
+    - When building Tor, prefer to use Python 3 over Python 2, and more
+      recent (contemplated) versions over older ones. Closes
+      ticket 26372.
+
+  o Minor features (compression, zstd):
+    - When running with zstd, Tor now considers using advanced functions
+      that the zstd maintainers have labeled as potentially unstable. To
+      prevent breakage, Tor will only use this functionality when the
+      runtime version of the zstd library matches the version with which
+      Tor was compiled. Closes ticket 25162.
+
+  o Minor features (configuration):
+    - The "DownloadSchedule" options have been renamed to end with
+      "DownloadInitialDelay". The old names are still allowed, but will
+      produce a warning. Comma-separated lists are still permitted for
+      these options, but all values after the first are ignored (as they
+      have been since 0.2.9). Closes ticket 23354.
+
+  o Minor features (continuous integration):
+    - Log the compiler path and version during Appveyor builds.
+      Implements ticket 27449.
+    - Show config.log and test-suite.log after failed Appveyor builds.
+      Also upload the zipped full logs as a build artifact. Implements
+      ticket 27430.
+    - Backport Travis rust distcheck to 0.3.3. Closes ticket 24629.
+    - Enable macOS builds in our Travis CI configuration. Closes
+      ticket 24629.
+    - Install libcap-dev and libseccomp2-dev so these optional
+      dependencies get tested on Travis CI. Closes ticket 26560.
+    - Only post Appveyor IRC notifications when the build fails.
+      Implements ticket 27275.
+    - Run asciidoc during Travis CI. Implements ticket 27087.
+    - Use ccache in our Travis CI configuration. Closes ticket 26952.
+    - Add the necessary configuration files for continuous integration
+      testing on Windows, via the Appveyor platform. Closes ticket
+      25549. Patches from Marcin Cieślak and Isis Lovecruft.
+
+  o Minor features (continuous integration, rust):
+    - Use cargo cache in our Travis CI configuration. Closes
+      ticket 26952.
+
+  o Minor features (control port):
+    - Introduce GETINFO "current-time/{local,utc}" to return the local
+      and UTC times respectively in ISO format. This helps a controller
+      like Tor Browser detect a time-related error. Closes ticket 25511.
+      Patch by Neel Chauhan.
+    - Introduce new fields to the CIRC_BW event. There are two new
+      fields in each of the read and written directions. The DELIVERED
+      fields report the total valid data on the circuit, as measured by
+      the payload sizes of verified and error-checked relay command
+      cells. The OVERHEAD fields report the total unused bytes in each
+      of these cells. Closes ticket 25903.
+
+  o Minor features (controller):
+    - The control port now exposes the list of HTTPTunnelPorts and
+      ExtOrPorts via GETINFO net/listeners/httptunnel and
+      net/listeners/extor respectively. Closes ticket 26647.
+
+  o Minor features (directory authorities):
+    - Stop warning about incomplete bw lines before the first complete
+      bw line has been found, so that additional header lines can be
+      ignored. Fixes bug 25960; bugfix on 0.2.2.1-alpha
+    - Authorities no longer vote to make the subprotocol version
+      "LinkAuth=1" a requirement: it is unsupportable with NSS, and
+      hasn't been needed since Tor 0.3.0.1-alpha. Closes ticket 27286.
+
+  o Minor features (directory authority):
+    - Directory authorities now open their key-pinning files as O_SYNC,
+      to limit their chances of accidentally writing partial lines.
+      Closes ticket 23909.
+
+  o Minor features (directory authority, forward compatibility):
+    - Make the lines of the measured bandwidth file able to contain
+      their entries in any order. Previously, the node_id entry needed
+      to come first. Closes ticket 26004.
+
+  o Minor features (entry guards):
+    - Introduce a new torrc option NumPrimaryGuards for controlling the
+      number of primary guards. Closes ticket 25843.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the August 7 2018 Maxmind GeoLite2
+      Country database. Closes ticket 27089.
+
+  o Minor features (performance):
+    - Avoid a needless call to malloc() when processing an incoming
+      relay cell. Closes ticket 24914.
+    - Make our timing-wheel code run a tiny bit faster on 32-bit
+      platforms, by preferring 32-bit math to 64-bit. Closes
+      ticket 24688.
+    - Avoid a needless malloc()/free() pair every time we handle an ntor
+      handshake. Closes ticket 25150.
+
+  o Minor features (Rust, portability):
+    - Rust cross-compilation is now supported. Closes ticket 25895.
+
+  o Minor features (testing):
+    - Add a unit test for voting_schedule_get_start_of_next_interval().
+      Closes ticket 26014, and helps make unit test coverage
+      more deterministic.
+    - A new unittests module specifically for testing the functions in
+      the (new-ish) bridges.c module has been created with new
+      unittests, raising the code coverage percentages. Closes 25425.
+    - We now have improved testing for addressmap_get_virtual_address()
+      function. This should improve our test coverage, and make our test
+      coverage more deterministic. Closes ticket 25993.
+
+  o Minor features (timekeeping, circuit scheduling):
+    - When keeping track of how busy each circuit have been recently on
+      a given connection, use coarse-grained monotonic timers rather
+      than gettimeofday(). This change should marginally increase
+      accuracy and performance. Implements part of ticket 25927.
+
+  o Minor features (unit tests):
+    - Test complete bandwidth measurements files, and test that
+      incomplete bandwidth lines only give warnings when the end of the
+      header has not been detected. Fixes bug 25947; bugfix
+      on 0.2.2.1-alpha
+
+  o Minor bugfixes (bandwidth management):
+    - Consider ourselves "low on write bandwidth" if we have exhausted
+      our write bandwidth some time in the last second. This was the
+      documented behavior before, but the actual behavior was to change
+      this value every TokenBucketRefillInterval. Fixes bug 25828;
+      bugfix on 0.2.3.5-alpha.
+
+  o Minor bugfixes (C correctness):
+    - Add a missing lock acquisition in the shutdown code of the control
+      subsystem. Fixes bug 25675; bugfix on 0.2.7.3-rc. Found by
+      Coverity; this is CID 1433643.
+
+  o Minor bugfixes (code style):
+    - Fixed multiple includes of transports.h in src/or/connection.c
+      Fixes bug 25261; bugfix on 0.2.5.1-alpha.
+    - Remove the unused variable n_possible from the function
+      channel_get_for_extend(). Fixes bug 25645; bugfix on 0.2.4.4-alpha
+
+  o Minor bugfixes (compilation):
+    - Silence a spurious compiler warning on the GetAdaptersAddresses
+      function pointer cast. This issue is already fixed by 26481 in
+      0.3.5 and later, by removing the lookup and cast. Fixes bug 27465;
+      bugfix on 0.2.3.11-alpha.
+    - Stop calling SetProcessDEPPolicy() on 64-bit Windows. It is not
+      supported, and always fails. Some compilers warn about the
+      function pointer cast on 64-bit Windows. Fixes bug 27461; bugfix
+      on 0.2.2.23-alpha.
+    - Fix a compilation warning on some versions of GCC when building
+      code that calls routerinfo_get_my_routerinfo() twice, assuming
+      that the second call will succeed if the first one did. Fixes bug
+      26269; bugfix on 0.2.8.2-alpha.
+    - Refrain from compiling unit testing related object files when
+      --disable-unittests is set to configure script. Fixes bug 24891;
+      bugfix on 0.2.5.1-alpha.
+    - The --enable-fatal-warnings flag now affects Rust code as well.
+      Closes ticket 26245.
+    - Avoid a compiler warning when casting the return value of
+      smartlist_len() to double with DEBUG_SMARTLIST enabled. Fixes bug
+      26283; bugfix on 0.2.4.10-alpha.
+
+  o Minor bugfixes (compilation, windows):
+    - Don't link or search for pthreads when building for Windows, even
+      if we are using build environment (like mingw) that provides a
+      pthreads library. Fixes bug 27081; bugfix on 0.1.0.1-rc.
+
+  o Minor bugfixes (continuous integration):
+    - Build with zstd on macOS. Fixes bug 27090; bugfix on 0.3.1.5-alpha.
+    - Skip a pair of unreliable key generation tests on Windows, until
+      the underlying issue in bug 26076 is resolved. Fixes bug 26830 and
+      bug 26853; bugfix on 0.2.7.3-rc and 0.3.2.1-alpha respectively.
+
+  o Minor bugfixes (control port):
+    - Respond with more human-readable error messages to GETINFO exit-
+      policy/* requests. Also, let controller know if an error is
+      transient (response code 551) or not (response code 552). Fixes
+      bug 25852; bugfix on 0.2.8.1-alpha.
+    - Parse the "HSADDRESS=" parameter in HSPOST commands properly.
+      Previously, it was misparsed and ignored. Fixes bug 26523; bugfix
+      on 0.3.3.1-alpha. Patch by "akwizgran".
+    - Make CIRC_BW event reflect the total of all data sent on a
+      circuit, including padding and dropped cells. Also fix a mis-
+      counting bug when STREAM_BW events were enabled. Fixes bug 25400;
+      bugfix on 0.2.5.2-alpha.
+
+  o Minor bugfixes (correctness, flow control):
+    - Upon receiving a stream-level SENDME cell, verify that our window
+      has not grown too large. Fixes bug 26214; bugfix on svn
+      r54 (pre-0.0.1)
+
+  o Minor bugfixes (directory authority):
+    - When voting for recommended versions, make sure that all of the
+      versions are well-formed and parsable. Fixes bug 26485; bugfix
+      on 0.1.1.6-alpha.
+
+  o Minor bugfixes (directory client):
+    - When unverified-consensus is verified, rename it to cached-
+      consenus. Fixes bug 4187; bugfix on 0.2.0.3-alpha.
+    - Fixed launching a certificate fetch always during the scheduled
+      periodic consensus fetch by fetching only in those cases when
+      consensus are waiting for certs. Fixes bug 24740; bugfix
+      on 0.2.9.1-alpha.
+
+  o Minor bugfixes (error reporting):
+    - Improve tolerance for directory authorities with skewed clocks.
+      Previously, an authority with a clock more than 60 seconds ahead
+      could cause a client with a correct clock to warn that the
+      client's clock was behind. Now the clocks of a majority of
+      directory authorities have to be ahead of the client before this
+      warning will occur. Fixes bug 25756; bugfix on 0.2.2.25-alpha.
+
+  o Minor bugfixes (in-process restart):
+    - Always call tor_free_all() when leaving tor_run_main(). When we
+      did not, restarting tor in-process would cause an assertion
+      failure. Fixes bug 26948; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - Fix a bug in our sandboxing rules for the openat() syscall.
+      Previously, no openat() call would be permitted, which would break
+      filesystem operations on recent glibc versions. Fixes bug 25440;
+      bugfix on 0.2.9.15. Diagnosis and patch from Daniel Pinto.
+
+  o Minor bugfixes (logging):
+    - Improve the log message when connection initiators fail to
+      authenticate direct connections to relays. Fixes bug 26927; bugfix
+      on 0.3.0.1-alpha.
+
+  o Minor bugfixes (onion services):
+    - Silence a spurious compiler warning in
+      rend_client_send_introduction(). Fixes bug 27463; bugfix
+      on 0.1.1.2-alpha.
+    - Fix bug that causes services to not ever rotate their descriptors
+      if they were getting SIGHUPed often. Fixes bug 26932; bugfix
+      on 0.3.2.1-alpha.
+    - Recompute some consensus information after detecting a clock jump,
+      or after transitioning from a non-live consensus to a live
+      consensus. We do this to avoid having an outdated state, and
+      miscalculating the index for next-generation onion services. Fixes
+      bug 24977; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (portability):
+    - Fix compilation of the unit tests on GNU/Hurd, which does not
+      define PATH_MAX. Fixes bug 26873; bugfix on 0.3.3.1-alpha. Patch
+      from "paulusASol".
+    - Work around two different bugs in the OS X 10.10 and later SDKs
+      that would prevent us from successfully targeting earlier versions
+      of OS X. Fixes bug 26876; bugfix on 0.3.3.1-alpha.
+    - Do not align mmap length, as it is not required by POSIX, and the
+      getpagesize function is deprecated. Fixes bug 25399; bugfix
+      on 0.1.1.23.
+
+  o Minor bugfixes (portability, FreeBSD):
+    - In have_enough_mem_for_dircache(), the variable DIRCACHE_MIN_MEM_MB
+      does not stringify on FreeBSD, so we switch to tor_asprintf().
+      Fixes bug 20887; bugfix on 0.2.8.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (relay statistics):
+    - When a relay is collecting internal statistics about how many
+      create cell requests it has seen of each type, accurately count
+      the requests from relays that temporarily fall out of the
+      consensus. (To be extra conservative, we were already ignoring
+      requests from clients in our counts, and we continue ignoring them
+      here.) Fixes bug 24910; bugfix on 0.2.4.17-rc.
+
+  o Minor bugfixes (rust):
+    - Backport test_rust.sh from master. Fixes bug 26497; bugfix
+      on 0.3.1.5-alpha.
+    - Protover parsing was accepting the presence of whitespace in
+      version strings, which the C implementation would choke on, e.g.
+      "Desc=1\t,2". Fixes bug 27177; bugfix on 0.3.3.5-rc.
+    - Protover parsing was ignoring a 2nd hyphen and everything after
+      it, accepting entries like "Link=1-5-foo". Fixes bug 27164; bugfix
+      on 0.3.3.1-alpha.
+    - Stop setting $CARGO_HOME. cargo will use the user's $CARGO_HOME, or
+      $HOME/.cargo by default. Fixes bug 26497; bugfix on 0.3.1.5-alpha.
+    - cd to ${abs_top_builddir}/src/rust before running cargo in
+      src/test/test_rust.sh. This makes the working directory consistent
+      between builds and tests. Fixes bug 26497; bugfix on 0.3.3.2-alpha.
+
+  o Minor bugfixes (single onion services, Tor2web):
+    - Log a protocol warning when single onion services or Tor2web
+      clients fail to authenticate direct connections to relays. Fixes
+      bug 26924; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (test coverage tools):
+    - Update our "cov-diff" script to handle output from the latest
+      version of gcov, and to remove extraneous timestamp information
+      from its output. Fixes bugs 26101 and 26102; bugfix
+      on 0.2.5.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Disable core dumps in test_bt.sh, to avoid failures in "make
+      distcheck". Fixes bug 26787; bugfix on 0.2.5.2-alpha.
+    - When testing workqueue event-cancellation, make sure that we
+      actually cancel an event, and that cancel each event with equal
+      probability. (It was previously possible, though extremely
+      unlikely, for our event-canceling test not to cancel any events.)
+      Fixes bug 26008; bugfix on 0.2.6.3-alpha.
+    - Repeat part of the test in test_client_pick_intro() a number of
+      times, to give it consistent coverage. Fixes bug 25996; bugfix
+      on 0.3.2.1-alpha.
+    - Remove randomness from the hs_common/responsible_hsdirs test, so
+      that it always takes the same path through the function it tests.
+      Fixes bug 25997; bugfix on 0.3.2.1-alpha.
+    - Change the behavior of the "channel/outbound" test so that it
+      never causes a 10-second rollover for the EWMA circuitmux code.
+      Previously, this behavior would happen randomly, and result in
+      fluctuating test coverage. Fixes bug 25994; bugfix
+      on 0.3.3.1-alpha.
+    - Use X509_new() to allocate certificates that will be freed later
+      with X509_free(). Previously, some parts of the unit tests had
+      used tor_malloc_zero(), which is incorrect, and which caused test
+      failures on Windows when they were built with extra hardening.
+      Fixes bugs 25943 and 25944; bugfix on 0.2.8.1-alpha. Patch by
+      Marcin Cieślak.
+    - While running the circuit_timeout test, fix the PRNG to a
+      deterministic AES stream, so that the test coverage from this test
+      will itself be deterministic. Fixes bug 25995; bugfix
+      on 0.2.2.2-alpha.
+
+  o Minor bugfixes (testing, bootstrap):
+    - When calculating bootstrap progress, check exit policies and the
+      exit flag. Previously, Tor would only check the exit flag, which
+      caused race conditions in small and fast networks like chutney.
+      Fixes bug 27236; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (testing, chutney):
+    - When running make test-network-all, use the mixed+hs-v2 network.
+      (A previous fix to chutney removed v3 onion services from the
+      mixed+hs-v23 network, so seeing "mixed+hs-v23" in tests is
+      confusing.) Fixes bug 27345; bugfix on 0.3.2.1-alpha.
+    - Before running make test-network-all, delete old logs and test
+      result files, to avoid spurious failures. Fixes bug 27295; bugfix
+      on 0.2.7.3-rc.
+
+  o Minor bugfixes (testing, openssl compatibility):
+    - Our "tortls/cert_matches_key" unit test no longer relies on
+      OpenSSL internals. Previously, it relied on unsupported OpenSSL
+      behavior in a way that caused it to crash with OpenSSL 1.0.2p.
+      Fixes bug 27226; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (v3 onion services):
+    - Stop sending ed25519 link specifiers in v3 onion service introduce
+      cells and descriptors, when the rendezvous or introduction point
+      doesn't support ed25519 link authentication. Fixes bug 26627;
+      bugfix on 0.3.2.4-alpha.
+
+  o Minor bugfixes (vanguards):
+    - Allow the last hop in a vanguard circuit to be the same as our
+      first, to prevent the adversary from influencing guard node choice
+      by choice of last hop. Also prevent the creation of A - B - A
+      paths, or A - A paths, which are forbidden by relays. Fixes bug
+      25870; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (Windows, compilation):
+    - Silence a compilation warning on MSVC 2017 and clang-cl. Fixes bug
+      27185; bugfix on 0.2.2.2-alpha.
+
+  o Code simplification and refactoring:
+    - Remove duplicate code in parse_{c,s}method_line and bootstrap
+      their functionalities into a single function. Fixes bug 6236;
+      bugfix on 0.2.3.6-alpha.
+    - We remove the PortForwsrding and PortForwardingHelper options,
+      related functions, and the port_forwarding tests. These options
+      were used by the now-deprecated Vidalia to help ordinary users
+      become Tor relays or bridges. Closes ticket 25409. Patch by
+      Neel Chauhan.
+    - In order to make the OR and dir checking function in router.c less
+      confusing we renamed some functions and
+      consider_testing_reachability() has been split into
+      router_should_check_reachability() and
+      router_do_reachability_checks(). Also we improved the documentation
+      in some functions. Closes ticket 18918.
+    - Initial work to isolate Libevent usage to a handful of modules in
+      our codebase, to simplify our call structure, and so that we can
+      more easily change event loops in the future if needed. Closes
+      ticket 23750.
+    - Introduce a function to call getsockname() and return tor_addr_t,
+      to save a little complexity throughout the codebase. Closes
+      ticket 18105.
+    - Make hsdir_index in node_t a hsdir_index_t rather than a pointer
+      as hsdir_index is always present. Also, we move hsdir_index_t into
+      or.h. Closes ticket 23094. Patch by Neel Chauhan.
+    - Merge functions used for describing nodes and suppress the
+      functions that do not allocate memory for the output buffer
+      string. NODE_DESC_BUF_LEN constant and format_node_description()
+      function cannot be used externally from router.c module anymore.
+      Closes ticket 25432. Patch by valentecaio.
+    - Our main loop has been simplified so that all important operations
+      happen inside events. Previously, some operations had to happen
+      outside the event loop, to prevent infinite sequences of event
+      activations. Closes ticket 25374.
+    - Put a SHA1 public key digest in hs_service_intro_point_t, and use
+      it in register_intro_circ() and service_intro_point_new(). This
+      prevents the digest from being re-calculated each time. Closes
+      ticket 23107. Patch by Neel Chauhan.
+    - Refactor token-bucket implementations to use a common backend.
+      Closes ticket 25766.
+    - Remove extern declaration of stats_n_seconds_working variable from
+      main, protecting its accesses with get_uptime() and reset_uptime()
+      functions. Closes ticket 25081, patch by “valentecaio”.
+    - Remove our previous logic for "cached gettimeofday()" -- our
+      coarse monotonic timers are fast enough for this purpose, and far
+      less error-prone. Implements part of ticket 25927.
+    - Remove the return value for fascist_firewall_choose_address_base(),
+      and sister functions such as fascist_firewall_choose_address_node()
+      and fascist_firewall_choose_address_rs(). Also, while we're here,
+      initialize the ap argument as leaving it uninitialized can pose a
+      security hazard. Closes ticket 24734. Patch by Neel Chauhan.
+    - Rename two fields of connection_t struct. timestamp_lastwritten is
+      renamed to timestamp_last_write_allowed and timestamp_lastread is
+      renamed to timestamp_last_read_allowed. Closes ticket 24714, patch
+      by "valentecaio".
+    - Since Tor requires C99, remove our old workaround code for libc
+      implementations where free(NULL) doesn't work. Closes ticket 24484.
+    - Use our standard rate-limiting code to deal with excessive
+      libevent failures, rather than the hand-rolled logic we had
+      before. Closes ticket 26016.
+    - We remove the return value of node_get_prim_orport() and
+      node_get_prim_dirport(), and introduce node_get_prim_orport() in
+      node_ipv6_or_preferred() and node_ipv6_dir_preferred() in order to
+      check for a null address. Closes ticket 23873. Patch by
+      Neel Chauhan.
+    - We switch to should_record_bridge_info() in
+      geoip_note_client_seen() and options_need_geoip_info() instead of
+      accessing the configuration values directly. Fixes bug 25290;
+      bugfix on 0.2.1.6-alpha. Patch by Neel Chauhan.
+
+  o Deprecated features:
+    - As we are not recommending 0.2.5 anymore, we require relays that
+      once had an ed25519 key associated with their RSA key to always
+      have that key, instead of allowing them to drop back to a version
+      that didn't support ed25519. This means they need to use a new RSA
+      key if the want to downgrade to an older version of tor without
+      ed25519. Closes ticket 20522.
+
+  o Removed features:
+    - Directory authorities will no longer support voting according to
+      any consensus method before consensus method 25. This keeps
+      authorities compatible with all authorities running 0.2.9.8 and
+      later, and does not break any clients or relays. Implements ticket
+      24378 and proposal 290.
+    - The PortForwarding and PortForwardingHelper features have been
+      removed. The reasoning is, given that implementations of NAT
+      traversal protocols within common consumer grade routers are
+      frequently buggy, and that the target audience for a NAT punching
+      feature is a perhaps less-technically-inclined relay operator,
+      when the helper fails to setup traversal the problems are usually
+      deep, ugly, and very router specific, making them horrendously
+      impossible for technical support to reliable assist with, and thus
+      resulting in frustration all around. Unfortunately, relay
+      operators who would like to run relays behind NATs will need to
+      become more familiar with the port forwarding configurations on
+      their local router. Closes 25409.
+    - The TestingEnableTbEmptyEvent option has been removed. It was used
+      in testing simulations to measure how often connection buckets
+      were emptied, in order to improve our scheduling, but it has not
+      been actively used in years. Closes ticket 25760.
+    - The old "round-robin" circuit multiplexer (circuitmux)
+      implementation has been removed, along with a fairly large set of
+      code that existed to support it. It has not been the default
+      circuitmux since we introduced the "EWMA" circuitmux in 0.2.4.x,
+      but it still required an unreasonable amount of memory and CPU.
+      Closes ticket 25268.
+
+
 Changes in version 0.3.3.9 - 2018-07-13
   Tor 0.3.3.9 moves to a new bridge authority, meaning people running
   bridge relays should upgrade.
