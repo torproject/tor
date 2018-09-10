@@ -1524,10 +1524,9 @@ parse_auth_file_content(const char *client_key_str)
   if (seckey_b32) {
     memwipe(seckey_b32, 0, strlen(seckey_b32));
   }
-  if (fields) {
-    SMARTLIST_FOREACH(fields, char *, s, tor_free(s));
-    smartlist_free(fields);
-  }
+  tor_assert(fields);
+  SMARTLIST_FOREACH(fields, char *, s, tor_free(s));
+  smartlist_free(fields);
   return auth;
 }
 
