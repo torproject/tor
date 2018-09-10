@@ -75,16 +75,17 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
   }
 }
 
-/** Read from socket <b>s</b>, writing onto end of <b>buf</b>.  Read at most
- * <b>at_most</b> bytes, growing the buffer as necessary.  If recv() returns 0
- * (because of EOF), set *<b>reached_eof</b> to 1 and return 0. Return -1 on
- * error; else return the number of bytes read.
+/** Read from file descriptor <b>fd</b>, writing onto end of <b>buf</b>.  Read
+ * at most <b>at_most</b> bytes, growing the buffer as necessary.  If recv()
+ * returns 0 (because of EOF), set *<b>reached_eof</b> to 1 and return 0.
+ * Return -1 on error; else return the number of bytes read.
  */
 /* XXXX indicate "read blocked" somehow? */
-int
-buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
-                     int *reached_eof,
-                     int *socket_error)
+static int
+buf_read_from_fd(buf_t *buf, int fd, size_t at_most,
+                 int *reached_eof,
+                 int *socket_error,
+                 bool is_socket)
 {
   /* XXXX It's stupid to overload the return values for these functions:
    * "error status" and "number of bytes read" are not mutually exclusive.
@@ -94,7 +95,7 @@ buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
 
   check();
   tor_assert(reached_eof);
-  tor_assert(SOCKET_OK(s));
+  tor_assert(SOCKET_OK(fd));
 
   if (BUG(buf->datalen >= INT_MAX))
     return -1;
@@ -115,7 +116,8 @@ buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
         readlen = cap;
     }
 
-    r = read_to_chunk(buf, chunk, s, readlen, reached_eof, socket_error, true);
+    r = read_to_chunk(buf, chunk, fd, readlen,
+                      reached_eof, socket_error, is_socket);
     check();
     if (r < 0)
       return r; /* Error */
@@ -223,4 +225,17 @@ buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
                     size_t *buf_flushlen)
 {
   return buf_flush_to_fd(buf, s, sz, buf_flushlen, true);
+}
+
+/** Read from socket <b>s</b>, writing onto end of <b>buf</b>.  Read at most
+ * <b>at_most</b> bytes, growing the buffer as necessary.  If recv() returns 0
+ * (because of EOF), set *<b>reached_eof</b> to 1 and return 0. Return -1 on
+ * error; else return the number of bytes read.
+ */
+int
+buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
+                     int *reached_eof,
+                     int *socket_error)
+{
+  return buf_read_from_fd(buf, s, at_most, reached_eof, socket_error, true);
 }
