@@ -1,0 +1,5 @@
+  o Minor features (continuous integration):
+    - Only run one online rust build in Travis, to reduce network errors.
+      Skip offline rust builds on Travis for Linux gcc, because they're
+      redundant.
+      Implements ticket 27252.
