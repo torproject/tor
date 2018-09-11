@@ -3,7 +3,7 @@ dnl Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 dnl Copyright (c) 2007-2018, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
-AC_PREREQ([2.63])
+AC_PREREQ([2.69])
 AC_INIT([tor],[0.3.5.0-alpha-dev])
 AC_CONFIG_SRCDIR([src/app/main/tor_main.c])
 AC_CONFIG_MACRO_DIR([m4])
@@ -955,6 +955,36 @@ AC_CHECK_FUNCS([ \
                 SSL_CTX_set_security_level \
 		TLS_method
 	       ])
+
+dnl Check the function signature of CRYPTO_free()
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]], [
+                                 [CRYPTO_free(NULL);]
+                                 ])],
+                  [AC_DEFINE(HAVE_CRYPTO_FREE_WITHOUT_DEBUG_ARGS, 1,
+                   Define 1 if CRYPTO_free is present without file and linenum arguments)],[])
+            
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]],
+                                [[CRYPTO_free(NULL, "test.c", 12);]
+                                ])],
+                  [AC_DEFINE(HAVE_CRYPTO_FREE_WITH_DEBUG_ARGS, 1,
+                   Define 1 if CRYPTO_free is present with file and linenum arguments)],[])
+
+dnl Check if CRYPTO_set_mem_functions takes raw malloc()
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]], [
+                                 [ void * (*m) (size_t, const char *, int);
+                                  (void)CRYPTO_set_mem_functions(m, NULL, NULL);
+                                 ]
+                                 ])],
+                 [AC_DEFINE(HAVE_OPENSSL_ACCEPT_DEBUG_MALLOC, 1,
+                  Define 1 if CRYPTO_set_mem_functions takes malloc() without debug arguments)],[])
+
+dnl Check if CRYPTO_set_mem_functions takes raw realloc()
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/crypto.h>]], [
+                                 [ void * (*r) (void *, size_t, const char *, int);
+                                  (void)CRYPTO_set_mem_functions(NULL, r, NULL);]
+                                 ])],
+                 [AC_DEFINE(HAVE_OPENSSL_ACCEPT_DEBUG_REALLOC, 1,
+                  Define 1 if CRYPTO_set_mem_functions takes realloc() without debug arguments)],[])
 
 dnl Check if OpenSSL has scrypt implementation.
 AC_CHECK_FUNCS([ EVP_PBE_scrypt ])

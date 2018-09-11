@@ -4199,6 +4199,77 @@ sandbox_init_filter(void)
   return cfg;
 }
 
+/* Some older OpenSSL version used int for number of bytes. */
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+typedef size_t crypto_size_t;
+#else
+typedef int crypto_size_t;
+#endif
+
+/**
+ * Compatibility wrapper for attaching tor_malloc() to OpenSSL
+ * via CRYPTO_set_mem_functions().
+ */
+#if defined(HAVE_OPENSSL_ACCEPT_DEBUG_MALLOC)
+static void *
+tor_CRYPTO_malloc(crypto_size_t num, const char *file, int line)
+{
+  (void)file;
+  (void)line;
+
+  return tor_malloc(num);
+}
+#else
+static void *
+tor_CRYPTO_malloc(size_t num)
+{
+  return tor_malloc(num);
+}
+#endif
+
+/**
+ * Compatibility wrapper for attaching tor_realloc() to OpenSSL
+ * via CRYPTO_set_mem_functions().
+ */
+#if defined(HAVE_OPENSSL_ACCEPT_DEBUG_REALLOC)
+static void *
+tor_CRYPTO_realloc(void *addr, crypto_size_t num,
+                   const char *file, int line)
+{
+  (void)file;
+  (void)line;
+
+  return tor_realloc(addr, num);
+}
+#else
+static void *
+tor_CRYPTO_realloc(void *addr, size_t num)
+{
+  return tor_realloc(addr, num);
+}
+#endif
+
+/**
+ * Compatibility wrapper for attaching tor_free() to OpenSSL
+ * via CRYPTO_set_mem_functions().
+ */
+#if defined(HAVE_CRYPTO_FREE_WITH_DEBUG_ARGS)
+static void
+tor_CRYPTO_free(void *ptr, const char *file, int line)
+{
+  (void)file;
+  (void)line;
+
+  tor_free(ptr);
+}
+#elif defined(HAVE_CRYPTO_FREE_WITHOUT_DEBUG_ARGS)
+static void
+tor_CRYPTO_free(void *ptr)
+{
+  tor_free(ptr);
+}
+#endif
+
 /* Main entry point for the Tor process.  Called from tor_main(), and by
  * anybody embedding Tor. */
 int
@@ -4242,6 +4313,15 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
                strerror(-bt_err));
     }
   }
+
+#ifdef EVENT_SET_MEM_FUNCTIONS_IMPLEMENTED
+  event_set_mem_functions(tor_malloc_, tor_realloc_, tor_free_);
+#endif
+
+  CRYPTO_set_mem_functions(tor_CRYPTO_malloc,
+                           tor_CRYPTO_realloc,
+                           tor_CRYPTO_free);
+
   init_protocol_warning_severity_level();
 
   update_approx_time(time(NULL));
