@@ -1062,7 +1062,6 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   uint8_t sha3_as_signed[DIGEST256_LEN];
   const char *const s_dup = s;
   directory_token_t *tok;
-  int i;
   memarea_t *area = NULL, *rs_area = NULL;
   consensus_flavor_t flav = FLAV_NS;
   char *last_kwd=NULL;
@@ -1144,7 +1143,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     ns->supported_methods = smartlist_new();
     tok = find_opt_by_keyword(tokens, K_CONSENSUS_METHODS);
     if (tok) {
-      for (i=0; i < tok->n_args; ++i)
+      for (int i=0; i < tok->n_args; ++i)
         smartlist_add_strdup(ns->supported_methods, tok->args[i]);
     } else {
       smartlist_add_strdup(ns->supported_methods, "1");
@@ -1237,7 +1236,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   tok = find_by_keyword(tokens, K_KNOWN_FLAGS);
   ns->known_flags = smartlist_new();
   bool inorder = 1;
-  for (i = 0; i < tok->n_args; ++i) {
+  for (int i = 0; i < tok->n_args; ++i) {
     smartlist_add_strdup(ns->known_flags, tok->args[i]);
     if (i>0 && strcmp(tok->args[i-1], tok->args[i])>= 0) {
       log_warn(LD_DIR, "%s >= %s", tok->args[i-1], tok->args[i]);
@@ -1264,7 +1263,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     int any_dups = 0;
     inorder = 1;
     ns->net_params = smartlist_new();
-    for (i = 0; i < tok->n_args; ++i) {
+    for (int i = 0; i < tok->n_args; ++i) {
       int ok=0;
       char *eq = strchr(tok->args[i], '=');
       size_t eq_pos;
@@ -1444,7 +1443,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
     }
   }
-  for (i = 1; i < smartlist_len(ns->routerstatus_list); ++i) {
+  for (int i = 1; i < smartlist_len(ns->routerstatus_list); ++i) {
     routerstatus_t *rs1, *rs2;
     if (ns->type != NS_TYPE_CONSENSUS) {
       vote_routerstatus_t *a = smartlist_get(ns->routerstatus_list, i-1);
@@ -1514,7 +1513,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   tok = find_opt_by_keyword(footer_tokens, K_BW_WEIGHTS);
   if (tok) {
     ns->weight_params = smartlist_new();
-    for (i = 0; i < tok->n_args; ++i) {
+    for (int i = 0; i < tok->n_args; ++i) {
       int ok=0;
       char *eq = strchr(tok->args[i], '=');
       if (!eq) {
