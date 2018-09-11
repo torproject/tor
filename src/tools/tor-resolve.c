@@ -15,6 +15,7 @@
 #include "lib/string/util_string.h"
 
 #include "lib/net/socks5_status.h"
+#include "socks5.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,11 +50,68 @@
 
 static void usage(void) ATTR_NORETURN;
 
+/**
+ * Set <b>out</b> to a pointer to newly allocated buffer containing
+ * SOCKS4a RESOLVE request with <b>username</b> and <b>hostname</b>.
+ * Return number of bytes in the buffer if succeeded or -1 if failed.
+ */
+static ssize_t
+build_socks4a_resolve_request(uint8_t **out,
+                              const char *username,
+                              const char *hostname)
+{
+  tor_assert(out);
+  tor_assert(username);
+  tor_assert(hostname);
+
+  const char *errmsg = NULL;
+  uint8_t *output = NULL;
+  socks4_client_request_t *rq = socks4_client_request_new();
+
+  socks4_client_request_set_version(rq, 4);
+  socks4_client_request_set_command(rq, CMD_RESOLVE);
+  socks4_client_request_set_port(rq, 0);
+  socks4_client_request_set_addr(rq, 0x00000001u);
+  socks4_client_request_set_username(rq, username);
+  socks4_client_request_set_socks4a_addr_hostname(rq, hostname);
+
+  errmsg = socks4_client_request_check(rq);
+  if (errmsg) {
+    goto cleanup;
+  }
+
+  ssize_t encoded_len = socks4_client_request_encoded_len(rq);
+  if (encoded_len <= 0) {
+    errmsg = "socks4_client_request_encoded_len failed";
+    goto cleanup;
+  }
+
+  output = tor_malloc(encoded_len);
+  memset(output, 0, encoded_len);
+
+  encoded_len = socks4_client_request_encode(output, encoded_len, rq);
+  if (encoded_len <= 0) {
+    errmsg = "socks4_client_request_encode failed";
+    goto cleanup;
+  }
+
+  *out = output;
+
+ cleanup:
+  socks4_client_request_free(rq);
+  if (errmsg) {
+    log_err(LD_NET, "build_socks4a_resolve_request failed: %s", errmsg);
+    *out = NULL;
+    tor_free(output);
+  }
+  return errmsg ? -1 : encoded_len;
+}
+
 /** Set *<b>out</b> to a newly allocated SOCKS4a resolve request with
  * <b>username</b> and <b>hostname</b> as provided.  Return the number
  * of bytes in the request. */
 static ssize_t
-build_socks_resolve_request(char **out,
+build_socks_resolve_request(uint8_t **out,
                             const char *username,
                             const char *hostname,
                             int reverse,
@@ -65,14 +123,7 @@ build_socks_resolve_request(char **out,
   tor_assert(hostname);
 
   if (version == 4) {
-    len = 8 + strlen(username) + 1 + strlen(hostname) + 1;
-    *out = tor_malloc(len);
-    (*out)[0] = 4;      /* SOCKS version 4 */
-    (*out)[1] = '\xF0'; /* Command: resolve. */
-    set_uint16((*out)+2, htons(0)); /* port: 0. */
-    set_uint32((*out)+4, htonl(0x00000001u)); /* addr: 0.0.0.1 */
-    memcpy((*out)+8, username, strlen(username)+1);
-    memcpy((*out)+8+strlen(username)+1, hostname, strlen(hostname)+1);
+    return build_socks4a_resolve_request(out, username, hostname);
   } else if (version == 5) {
     int is_ip_address;
     tor_addr_t addr;
@@ -205,7 +256,7 @@ do_resolve(const char *hostname,
   int s = -1;
   struct sockaddr_storage ss;
   socklen_t socklen;
-  char *req = NULL;
+  uint8_t *req = NULL;
   ssize_t len = 0;
 
   tor_assert(hostname);
@@ -231,7 +282,7 @@ do_resolve(const char *hostname,
 
   if (version == 5) {
     char method_buf[2];
-    if (write_all_to_socket(s, "\x05\x01\x00", 3) != 3) {
+    if (write_all_to_socket(s, (const char *)"\x05\x01\x00", 3) != 3) {
       log_err(LD_NET, "Error sending SOCKS5 method list.");
       goto err;
     }
@@ -257,7 +308,7 @@ do_resolve(const char *hostname,
     tor_assert(!req);
     goto err;
   }
-  if (write_all_to_socket(s, req, len) != len) {
+  if (write_all_to_socket(s, (const char *)req, len) != len) {
     log_sock_error("sending SOCKS request", s);
     tor_free(req);
     goto err;
