@@ -107,6 +107,123 @@ build_socks4a_resolve_request(uint8_t **out,
   return errmsg ? -1 : encoded_len;
 }
 
+#define SOCKS5_ATYPE_HOSTNAME 0x03
+#define SOCKS5_ATYPE_IPV4     0x01
+#define SOCKS5_ATYPE_IPV6     0x04
+
+/**
+ * Set <b>out</b> to pointer to newly allocated buffer containing
+ * SOCKS5 RESOLVE/RESOLVE_PTR request with given <b>hostname<b>.
+ * Generate a reverse request if <b>reverse</b> is true.
+ * Return the number of bytes in the buffer if succeeded or -1 if failed.
+ */
+static ssize_t
+build_socks5_resolve_request(uint8_t **out,
+                             const char *hostname,
+                             int reverse)
+{
+  const char *errmsg = NULL;
+  uint8_t *outbuf = NULL;
+  int is_ip_address;
+  tor_addr_t addr;
+  size_t addrlen;
+  int ipv6;
+  is_ip_address = tor_addr_parse(&addr, hostname) != -1;
+  if (!is_ip_address && reverse) {
+    log_err(LD_GENERAL, "Tried to do a reverse lookup on a non-IP!");
+    return -1;
+  }
+  ipv6 = reverse && tor_addr_family(&addr) == AF_INET6;
+  addrlen = reverse ? (ipv6 ? 16 : 4) : 1 + strlen(hostname);
+  if (addrlen > UINT8_MAX) {
+    log_err(LD_GENERAL, "Hostname is too long!");
+    return -1;
+  }
+
+  socks5_client_request_t *rq = socks5_client_request_new();
+
+  socks5_client_request_set_version(rq, 5);
+  /* RESOLVE_PTR or RESOLVE */
+  socks5_client_request_set_command(rq, reverse ? CMD_RESOLVE_PTR :
+                                                  CMD_RESOLVE);
+  socks5_client_request_set_reserved(rq, 0);
+
+  uint8_t atype = SOCKS5_ATYPE_HOSTNAME;
+  if (reverse)
+    atype = ipv6 ? SOCKS5_ATYPE_IPV6 : SOCKS5_ATYPE_IPV4;
+
+  socks5_client_request_set_atype(rq, atype);
+
+  switch (atype) {
+    case SOCKS5_ATYPE_IPV4: {
+      socks5_client_request_set_dest_addr_ipv4(rq,
+                                        tor_addr_to_ipv4h(&addr));
+    } break;
+    case SOCKS5_ATYPE_IPV6: {
+      uint8_t *ipv6_array =
+        socks5_client_request_getarray_dest_addr_ipv6(rq);
+
+      tor_assert(ipv6_array);
+
+      memcpy(ipv6_array, tor_addr_to_in6_addr8(&addr), 16);
+    } break;
+
+    case SOCKS5_ATYPE_HOSTNAME: {
+      domainname_t *dn = domainname_new();
+      domainname_set_len(dn, addrlen - 1);
+      domainname_setlen_name(dn, addrlen - 1);
+      char *dn_buf = domainname_getarray_name(dn);
+      memcpy(dn_buf, hostname, addrlen - 1);
+
+      errmsg = domainname_check(dn);
+
+      if (errmsg) {
+        domainname_free(dn);
+        goto cleanup;
+      } else {
+        socks5_client_request_set_dest_addr_domainname(rq, dn);
+      }
+    } break;
+    default:
+      tor_assert_unreached();
+      break;
+  }
+
+  socks5_client_request_set_dest_port(rq, 0);
+
+  errmsg = socks5_client_request_check(rq);
+  if (errmsg) {
+    goto cleanup;
+  }
+
+  ssize_t encoded_len = socks5_client_request_encoded_len(rq);
+  if (encoded_len < 0) {
+    errmsg = "Cannot predict encoded length";
+    goto cleanup;
+  }
+
+  outbuf = tor_malloc(encoded_len);
+  memset(outbuf, 0, encoded_len);
+
+  encoded_len = socks5_client_request_encode(outbuf, encoded_len, rq);
+  if (encoded_len < 0) {
+    errmsg = "encoding failed";
+    goto cleanup;
+  }
+
+  *out = outbuf;
+
+ cleanup:
+  socks5_client_request_free(rq);
+  if (errmsg) {
+    tor_free(outbuf);
+    log_err(LD_NET, "build_socks5_resolve_request failed with error: %s",
+            errmsg);
+  }
+
+  return errmsg ? -1 : encoded_len;
+}
+
 /** Set *<b>out</b> to a newly allocated SOCKS4a resolve request with
  * <b>username</b> and <b>hostname</b> as provided.  Return the number
  * of bytes in the request. */
@@ -117,51 +234,20 @@ build_socks_resolve_request(uint8_t **out,
                             int reverse,
                             int version)
 {
-  size_t len = 0;
   tor_assert(out);
   tor_assert(username);
   tor_assert(hostname);
 
+  tor_assert(version == 4 || version == 5);
+
   if (version == 4) {
     return build_socks4a_resolve_request(out, username, hostname);
   } else if (version == 5) {
-    int is_ip_address;
-    tor_addr_t addr;
-    size_t addrlen;
-    int ipv6;
-    is_ip_address = tor_addr_parse(&addr, hostname) != -1;
-    if (!is_ip_address && reverse) {
-      log_err(LD_GENERAL, "Tried to do a reverse lookup on a non-IP!");
-      return -1;
-    }
-    ipv6 = reverse && tor_addr_family(&addr) == AF_INET6;
-    addrlen = reverse ? (ipv6 ? 16 : 4) : 1 + strlen(hostname);
-    if (addrlen > UINT8_MAX) {
-      log_err(LD_GENERAL, "Hostname is too long!");
-      return -1;
-    }
-    len = 6 + addrlen;
-    *out = tor_malloc(len);
-    (*out)[0] = 5; /* SOCKS version 5 */
-    (*out)[1] = reverse ? '\xF1' : '\xF0'; /* RESOLVE_PTR or RESOLVE */
-    (*out)[2] = 0; /* reserved. */
-    if (reverse) {
-      (*out)[3] = ipv6 ? 4 : 1;
-      if (ipv6)
-        memcpy((*out)+4, tor_addr_to_in6_addr8(&addr), 16);
-      else
-        set_uint32((*out)+4, tor_addr_to_ipv4n(&addr));
-    } else {
-      (*out)[3] = 3;
-      (*out)[4] = (char)(uint8_t)(addrlen - 1);
-      memcpy((*out)+5, hostname, addrlen - 1);
-    }
-    set_uint16((*out)+4+addrlen, 0); /* port */
-  } else {
-    tor_assert(0);
+    return build_socks5_resolve_request(out, hostname, reverse);
   }
 
-  return len;
+  tor_assert_unreached();
+  return -1;
 }
 
 static void
