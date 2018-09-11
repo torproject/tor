@@ -37,7 +37,8 @@ env:
     ## and it's going to take a while for them to be fixed. See:
     ##   https:/trac.torproject.org/projects/tor/ticket/25386
     ##   https:/trac.torproject.org/projects/tor/ticket/26398
-    - RUST_OPTIONS="--enable-rust --enable-cargo-online-mode" HARDENING_OPTIONS=""
+    ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
+    - RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
 
 matrix:
   ## include creates builds with gcc, linux, sudo: false
@@ -50,12 +51,12 @@ matrix:
     # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS=""
-    ## Check rust offline with distcheck, to make sure we remove rust products
+    ## Check rust online with distcheck, to make sure we remove rust products
     ## But without hardening (see above)
-    - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
-    ## Check disable module dirauth with rust, and without rust but with distcheck
+    - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode" HARDENING_OPTIONS=""
+    ## Check disable module dirauth with and without rust
     - env: MODULES_OPTIONS="--disable-module-dirauth" RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
-    - env: DISTCHECK="yes" MODULES_OPTIONS="--disable-module-dirauth"
+    - env: MODULES_OPTIONS="--disable-module-dirauth"
 
   ## Uncomment to allow the build to report success (with non-required
   ## sub-builds continuing to run) if all required sub-builds have
@@ -72,9 +73,23 @@ matrix:
     ## Clang doesn't work in containerized builds, see below.
     - compiler: clang
       sudo: false
-    ## We also exclude non-containerized gcc, because they're slow and redundant.
+    ## Non-containerized gcc are slow and redundant.
     - compiler: gcc
       sudo: required
+    ## gcc on OSX is less useful, because the default compiler is clang.
+    - compiler: gcc
+      os: osx
+    ## gcc on Linux with no env is redundant, because all the custom builds use
+    ## gcc on Linux
+    - compiler: gcc
+      os: linux
+      env:
+    ## offline rust builds for gcc on Linux are redundant, because we do an
+    ## online rust build for gcc on Linux
+    - compiler: gcc
+      os: linux
+      ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
+      env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
 
 ## We don't need sudo. (The "apt:" stanza after this allows us to not need
 ## sudo; otherwise, we would need it for getting dependencies.)
