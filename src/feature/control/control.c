@@ -7073,6 +7073,11 @@ bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
  * Tor initializes. */
 static int bootstrap_percent = BOOTSTRAP_STATUS_UNDEF;
 
+/** Like bootstrap_percent, but only takes on the enumerated values in
+ * bootstrap_status_t.
+ */
+static int bootstrap_phase = BOOTSTRAP_STATUS_UNDEF;
+
 /** As bootstrap_percent, but holds the bootstrapping level at which we last
  * logged a NOTICE-level message. We use this, plus BOOTSTRAP_PCT_INCREMENT,
  * to avoid flooding the log with a new message every time we get a few more
@@ -7095,23 +7100,46 @@ static int bootstrap_problems = 0;
  */
 #define BOOTSTRAP_PCT_INCREMENT 5
 
+/** Do the actual logging and notifications for
+ * control_event_bootstrap().  Doesn't change any state beyond that.
+ */
+static void
+control_event_bootstrap_core(int loglevel, bootstrap_status_t status,
+                             int progress)
+{
+  char buf[BOOTSTRAP_MSG_LEN];
+  const char *tag, *summary;
+
+  bootstrap_status_to_string(status, &tag, &summary);
+  /* Locally reset status if there's incremental progress */
+  if (progress)
+    status = progress;
+
+  tor_log(loglevel, LD_CONTROL,
+          "Bootstrapped %d%%: %s", status, summary);
+  tor_snprintf(buf, sizeof(buf),
+               "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
+               status, tag, summary);
+  tor_snprintf(last_sent_bootstrap_message,
+               sizeof(last_sent_bootstrap_message),
+               "NOTICE %s", buf);
+  control_event_client_status(LOG_NOTICE, "%s", buf);
+}
+
 /** Called when Tor has made progress at bootstrapping its directory
  * information and initial circuits.
  *
  * <b>status</b> is the new status, that is, what task we will be doing
  * next. <b>progress</b> is zero if we just started this task, else it
  * represents progress on the task.
- *
- * Return true if we logged a message at level NOTICE, and false otherwise.
  */
-int
+void
 control_event_bootstrap(bootstrap_status_t status, int progress)
 {
-  const char *tag, *summary;
-  char buf[BOOTSTRAP_MSG_LEN];
+  int loglevel = LOG_NOTICE;
 
   if (bootstrap_percent == BOOTSTRAP_STATUS_DONE)
-    return 0; /* already bootstrapped; nothing to be done here. */
+    return; /* already bootstrapped; nothing to be done here. */
 
   /* special case for handshaking status, since our TLS handshaking code
    * can't distinguish what the connection is going to be for. */
@@ -7123,45 +7151,70 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
     }
   }
 
-  if (status > bootstrap_percent ||
-      (progress && progress > bootstrap_percent)) {
-    int loglevel = LOG_NOTICE;
-    bootstrap_status_to_string(status, &tag, &summary);
-
-    if (status <= bootstrap_percent &&
-        (progress < notice_bootstrap_percent + BOOTSTRAP_PCT_INCREMENT)) {
-      /* We log the message at info if the status hasn't advanced, and if less
-       * than BOOTSTRAP_PCT_INCREMENT progress has been made.
-       */
+  if (status <= bootstrap_percent) {
+    /* If there's no new progress, return early. */
+    if (!progress || progress <= bootstrap_percent)
+      return;
+    /* Log at INFO if not enough progress happened. */
+    if (progress < notice_bootstrap_percent + BOOTSTRAP_PCT_INCREMENT)
       loglevel = LOG_INFO;
-    }
-
-    tor_log(loglevel, LD_CONTROL,
-            "Bootstrapped %d%%: %s", progress ? progress : status, summary);
-    tor_snprintf(buf, sizeof(buf),
-        "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
-        progress ? progress : status, tag, summary);
-    tor_snprintf(last_sent_bootstrap_message,
-                 sizeof(last_sent_bootstrap_message),
-                 "NOTICE %s", buf);
-    control_event_client_status(LOG_NOTICE, "%s", buf);
-    if (status > bootstrap_percent) {
-      bootstrap_percent = status; /* new milestone reached */
-    }
-    if (progress > bootstrap_percent) {
-      /* incremental progress within a milestone */
-      bootstrap_percent = progress;
-      bootstrap_problems = 0; /* Progress! Reset our problem counter. */
-    }
-    if (loglevel == LOG_NOTICE &&
-        bootstrap_percent > notice_bootstrap_percent) {
-      /* Remember that we gave a notice at this level. */
-      notice_bootstrap_percent = bootstrap_percent;
-    }
-    return loglevel == LOG_NOTICE;
   }
 
-  return 0;
+  control_event_bootstrap_core(loglevel, status, progress);
+
+  if (status > bootstrap_percent) {
+    bootstrap_phase = status; /* new milestone reached */
+    bootstrap_percent = status;
+  }
+  if (progress > bootstrap_percent) {
+    /* incremental progress within a milestone */
+    bootstrap_percent = progress;
+    bootstrap_problems = 0; /* Progress! Reset our problem counter. */
+  }
+  if (loglevel == LOG_NOTICE &&
+      bootstrap_percent > notice_bootstrap_percent) {
+    /* Remember that we gave a notice at this level. */
+    notice_bootstrap_percent = bootstrap_percent;
+  }
+}
+
+/** Flag whether we've opened an OR_CONN yet  */
+static int bootstrap_first_orconn = 0;
+
+/** Like bootstrap_phase, but for (possibly deferred) directory progress */
+static int bootstrap_dir_phase = BOOTSTRAP_STATUS_UNDEF;
+
+/** Like bootstrap_problems, but for (possibly deferred) directory progress  */
+static int bootstrap_dir_progress = BOOTSTRAP_STATUS_UNDEF;
+
+/** Defer directory info bootstrap events until we have successfully
+ * completed our first connection to a router.  */
+void
+control_event_boot_dir(bootstrap_status_t status, int progress)
+{
+  if (status > bootstrap_dir_progress) {
+    bootstrap_dir_progress = status;
+    bootstrap_dir_phase = status;
+  }
+  if (progress && progress >= bootstrap_dir_progress) {
+    bootstrap_dir_progress = progress;
+  }
+
+  /* Don't report unless we have successfully opened at least one OR_CONN */
+  if (!bootstrap_first_orconn)
+    return;
+
+  control_event_bootstrap(status, progress);
+}
+
+/** Set a flag to allow reporting of directory bootstrap progress.
+ * (Code that reports completion of an OR_CONN calls this.)  Also,
+ * report directory progress so far. */
+void
+control_event_boot_first_orconn(void)
+{
+  bootstrap_first_orconn = 1;
+  control_event_bootstrap(bootstrap_dir_phase, bootstrap_dir_progress);
 }
 
 /** Called when Tor has failed to make bootstrapping progress in a way
@@ -7198,9 +7251,7 @@ control_event_bootstrap_problem(const char *warn, const char *reason,
   if (we_are_hibernating())
     dowarn = 0;
 
-  while (status>=0 && bootstrap_status_to_string(status, &tag, &summary) < 0)
-    status--; /* find a recognized status string based on current progress */
-  status = bootstrap_percent; /* set status back to the actual number */
+  tor_assert(bootstrap_status_to_string(bootstrap_phase, &tag, &summary) == 0);
 
   severity = dowarn ? LOG_WARN : LOG_INFO;
 
