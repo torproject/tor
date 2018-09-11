@@ -1060,10 +1060,9 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   networkstatus_t *ns = NULL;
   common_digests_t ns_digests;
   uint8_t sha3_as_signed[DIGEST256_LEN];
-  const char *cert, *end_of_header, *end_of_footer, *s_dup = s;
+  const char *const s_dup = s;
   directory_token_t *tok;
-  struct in_addr in;
-  int i, inorder, n_signatures = 0;
+  int i;
   memarea_t *area = NULL, *rs_area = NULL;
   consensus_flavor_t flav = FLAV_NS;
   char *last_kwd=NULL;
@@ -1080,7 +1079,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
 
   area = memarea_new();
-  end_of_header = find_start_of_next_routerstatus(s);
+  const char *end_of_header = find_start_of_next_routerstatus(s);
   if (tokenize_string(area, s, end_of_header, tokens,
                       (ns_type == NS_TYPE_CONSENSUS) ?
                       networkstatus_consensus_token_table :
@@ -1110,7 +1109,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
 
   if (ns_type != NS_TYPE_CONSENSUS) {
-    const char *end_of_cert = NULL;
+    const char *cert, *end_of_cert = NULL;
     if (!(cert = strstr(s, "\ndir-key-certificate-version")))
       goto err;
     ++cert;
@@ -1237,7 +1236,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   tok = find_by_keyword(tokens, K_KNOWN_FLAGS);
   ns->known_flags = smartlist_new();
-  inorder = 1;
+  bool inorder = 1;
   for (i = 0; i < tok->n_args; ++i) {
     smartlist_add_strdup(ns->known_flags, tok->args[i]);
     if (i>0 && strcmp(tok->args[i-1], tok->args[i])>= 0) {
@@ -1341,6 +1340,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         }
       }
       voter->address = tor_strdup(tok->args[2]);
+      struct in_addr in;
       if (!tor_inet_aton(tok->args[3], &in)) {
         log_warn(LD_DIR, "Error decoding IP address %s in network-status.",
                  escaped(tok->args[3]));
@@ -1480,6 +1480,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   /* Parse footer; check signature. */
   footer_tokens = smartlist_new();
+  const char *end_of_footer;
   if ((end_of_footer = strstr(s, "\nnetwork-status-version ")))
     ++end_of_footer;
   else
@@ -1530,6 +1531,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     }
   }
 
+  unsigned n_signatures = 0;
   SMARTLIST_FOREACH_BEGIN(footer_tokens, directory_token_t *, _tok) {
     char declared_identity[DIGEST_LEN];
     networkstatus_voter_info_t *v;
