@@ -2607,12 +2607,17 @@ handle_response_fetch_consensus(dir_connection_t *conn,
     /* First find our previous consensus. Maybe it's in ram, maybe not. */
     cached_dir_t *cd = dirserv_get_consensus(flavname);
     const char *consensus_body;
+    size_t consensus_body_len;
     char *owned_consensus = NULL;
     if (cd) {
       consensus_body = cd->dir;
+      consensus_body_len = cd->dir_len;
     } else {
       owned_consensus = networkstatus_read_cached_consensus(flavname);
-      consensus_body = owned_consensus;
+      if (owned_consensus) {
+        consensus_body = owned_consensus;
+        consensus_body_len = strlen(consensus_body);
+      }
     }
     if (!consensus_body) {
       log_warn(LD_DIR, "Received a consensus diff, but we can't find "
@@ -2622,7 +2627,8 @@ handle_response_fetch_consensus(dir_connection_t *conn,
       return -1;
     }
 
-    new_consensus = consensus_diff_apply(consensus_body, body);
+    new_consensus = consensus_diff_apply(consensus_body, consensus_body_len,
+                                         body, body_len);
     tor_free(owned_consensus);
     if (new_consensus == NULL) {
       log_warn(LD_DIR, "Could not apply consensus diff received from server "

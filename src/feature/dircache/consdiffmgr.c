@@ -1496,7 +1496,10 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
     // XXXX ugh; this is going to calculate the SHA3 of both its
     // XXXX inputs again, even though we already have that. Maybe it's time
     // XXXX to change the API here?
-    consensus_diff = consensus_diff_generate(diff_from_nt, diff_to_nt);
+    consensus_diff = consensus_diff_generate(diff_from_nt,
+                                             strlen(diff_from_nt),
+                                             diff_to_nt,
+                                             strlen(diff_to_nt));
     tor_free(diff_from_nt);
     tor_free(diff_to_nt);
   }
@@ -1746,8 +1749,8 @@ consensus_compress_worker_threadfn(void *state_, void *work_)
                           (const uint8_t *)consensus, bodylen);
   {
     const char *start, *end;
-    if (router_get_networkstatus_v3_signed_boundaries(consensus,
-                                                        &start, &end) < 0) {
+    if (router_get_networkstatus_v3_signed_boundaries(consensus, bodylen,
+                                                      &start, &end) < 0) {
       start = consensus;
       end = consensus+bodylen;
     }

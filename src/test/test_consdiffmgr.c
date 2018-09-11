@@ -21,6 +21,21 @@
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
+static char *
+consensus_diff_apply_(const char *c, const char *d)
+{
+  size_t c_len = strlen(c);
+  size_t d_len = strlen(d);
+  // We use memdup here to ensure that the input is NOT nul-terminated.
+  // This makes it likelier for us to spot bugs.
+  char *c_tmp = tor_memdup(c, c_len);
+  char *d_tmp = tor_memdup(d, d_len);
+  char *result = consensus_diff_apply(c_tmp, c_len, d_tmp, d_len);
+  tor_free(c_tmp);
+  tor_free(d_tmp);
+  return result;
+}
+
 // ============================== Setup/teardown the consdiffmgr
 // These functions get run before/after each test in this module
 
@@ -153,7 +168,8 @@ lookup_diff_from(consensus_cache_entry_t **out,
                  const char *str1)
 {
   uint8_t digest[DIGEST256_LEN];
-  if (router_get_networkstatus_v3_sha3_as_signed(digest, str1)<0) {
+  if (router_get_networkstatus_v3_sha3_as_signed(digest,
+                                                 str1, strlen(str1))<0) {
     TT_FAIL(("Unable to compute sha3-as-signed"));
     return CONSDIFF_NOT_FOUND;
   }
@@ -181,7 +197,7 @@ lookup_apply_and_verify_diff(consensus_flavor_t flav,
   if (diff_string == NULL || r < 0)
     return -1;
 
-  char *applied = consensus_diff_apply(str1, diff_string);
+  char *applied = consensus_diff_apply_(str1, diff_string);
   tor_free(diff_string);
   if (applied == NULL)
     return -1;
@@ -370,7 +386,8 @@ test_consdiffmgr_make_diffs(void *arg)
   ns = fake_ns_new(FLAV_MICRODESC, now-3600);
   md_ns_body = fake_ns_body_new(FLAV_MICRODESC, now-3600);
   r = consdiffmgr_add_consensus(md_ns_body, ns);
-  router_get_networkstatus_v3_sha3_as_signed(md_ns_sha3, md_ns_body);
+  router_get_networkstatus_v3_sha3_as_signed(md_ns_sha3, md_ns_body,
+                                             strlen(md_ns_body));
   networkstatus_vote_free(ns);
   tt_int_op(r, OP_EQ, 0);
 
@@ -414,7 +431,7 @@ test_consdiffmgr_make_diffs(void *arg)
   r = consensus_cache_entry_get_body(diff, &diff_body, &diff_size);
   tt_int_op(r, OP_EQ, 0);
   diff_text = tor_memdup_nulterm(diff_body, diff_size);
-  applied = consensus_diff_apply(md_ns_body, diff_text);
+  applied = consensus_diff_apply_(md_ns_body, diff_text);
   tt_assert(applied);
   tt_str_op(applied, OP_EQ, md_ns_body_2);
 
