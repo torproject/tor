@@ -191,14 +191,15 @@ lookup_apply_and_verify_diff(consensus_flavor_t flav,
 
   consensus_cache_entry_incref(ent);
   size_t size;
-  char *diff_string = NULL;
-  int r = uncompress_or_copy(&diff_string, &size, ent);
+  const char *diff_string = NULL;
+  char *diff_owned = NULL;
+  int r = uncompress_or_set_ptr(&diff_string, &size, &diff_owned, ent);
   consensus_cache_entry_decref(ent);
   if (diff_string == NULL || r < 0)
     return -1;
 
-  char *applied = consensus_diff_apply_(str1, diff_string);
-  tor_free(diff_string);
+  char *applied = consensus_diff_apply(str1, strlen(str1), diff_string, size);
+  tor_free(diff_owned);
   if (applied == NULL)
     return -1;
 
@@ -298,7 +299,8 @@ test_consdiffmgr_add(void *arg)
   (void) arg;
   time_t now = approx_time();
 
-  char *body = NULL;
+  const char *body = NULL;
+  char *body_owned = NULL;
 
   consensus_cache_entry_t *ent = NULL;
   networkstatus_t *ns_tmp = fake_ns_new(FLAV_NS, now);
@@ -340,7 +342,7 @@ test_consdiffmgr_add(void *arg)
   tt_assert(ent);
   consensus_cache_entry_incref(ent);
   size_t s;
-  r = uncompress_or_copy(&body, &s, ent);
+  r = uncompress_or_set_ptr(&body, &s, &body_owned, ent);
   tt_int_op(r, OP_EQ, 0);
   tt_int_op(s, OP_EQ, 4);
   tt_mem_op(body, OP_EQ, "quux", 4);
@@ -353,7 +355,7 @@ test_consdiffmgr_add(void *arg)
   networkstatus_vote_free(ns_tmp);
   teardown_capture_of_logs();
   consensus_cache_entry_decref(ent);
-  tor_free(body);
+  tor_free(body_owned);
 }
 
 static void

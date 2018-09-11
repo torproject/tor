@@ -1387,18 +1387,20 @@ typedef struct consensus_diff_worker_job_t {
 } consensus_diff_worker_job_t;
 
 /** Given a consensus_cache_entry_t, check whether it has a label claiming
- * that it was compressed.  If so, uncompress its contents into <b>out</b> and
- * set <b>outlen</b> to hold their size.  If not, just copy the body into
- * <b>out</b> and set <b>outlen</b> to its length.  Return 0 on success,
- * -1 on failure.
- *
- * In all cases, the output is nul-terminated. */
+ * that it was compressed.  If so, uncompress its contents into *<b>out</b> and
+ * set <b>outlen</b> to hold their size, and set *<b>owned_out</b> to a pointer
+ * that the caller will need to free.  If not, just set *<b>out</b> and
+ * <b>outlen</b> to its extent in memory.  Return 0 on success, -1 on failure.
+ **/
 STATIC int
-uncompress_or_copy(char **out, size_t *outlen,
-                   consensus_cache_entry_t *ent)
+uncompress_or_set_ptr(const char **out, size_t *outlen,
+                      char **owned_out,
+                      consensus_cache_entry_t *ent)
 {
   const uint8_t *body;
   size_t bodylen;
+
+  *owned_out = NULL;
 
   if (consensus_cache_entry_get_body(ent, &body, &bodylen) < 0)
     return -1;
@@ -1410,8 +1412,17 @@ uncompress_or_copy(char **out, size_t *outlen,
   if (lv_compression)
     method = compression_method_get_by_name(lv_compression);
 
-  return tor_uncompress(out, outlen, (const char *)body, bodylen,
+  int rv;
+  if (method == NO_METHOD) {
+    *out = (const char *)body;
+    *outlen = bodylen;
+    rv = 0;
+  } else {
+    rv = tor_uncompress(owned_out, outlen, (const char *)body, bodylen,
                         method, 1, LOG_WARN);
+    *out = *owned_out;
+  }
+  return rv;
 }
 
 /**
@@ -1478,16 +1489,17 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
 
   char *consensus_diff;
   {
-    char *diff_from_nt = NULL, *diff_to_nt = NULL;
+    const char *diff_from_nt = NULL, *diff_to_nt = NULL;
+    char *owned1 = NULL, *owned2 = NULL;
     size_t diff_from_nt_len, diff_to_nt_len;
 
-    if (uncompress_or_copy(&diff_from_nt, &diff_from_nt_len,
-                           job->diff_from) < 0) {
+    if (uncompress_or_set_ptr(&diff_from_nt, &diff_from_nt_len, &owned1,
+                              job->diff_from) < 0) {
       return WQ_RPL_REPLY;
     }
-    if (uncompress_or_copy(&diff_to_nt, &diff_to_nt_len,
-                           job->diff_to) < 0) {
-      tor_free(diff_from_nt);
+    if (uncompress_or_set_ptr(&diff_to_nt, &diff_to_nt_len, &owned2,
+                              job->diff_to) < 0) {
+      tor_free(owned1);
       return WQ_RPL_REPLY;
     }
     tor_assert(diff_from_nt);
@@ -1497,11 +1509,11 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
     // XXXX inputs again, even though we already have that. Maybe it's time
     // XXXX to change the API here?
     consensus_diff = consensus_diff_generate(diff_from_nt,
-                                             strlen(diff_from_nt),
+                                             diff_from_nt_len,
                                              diff_to_nt,
-                                             strlen(diff_to_nt));
-    tor_free(diff_from_nt);
-    tor_free(diff_to_nt);
+                                             diff_to_nt_len);
+    tor_free(owned1);
+    tor_free(owned2);
   }
   if (!consensus_diff) {
     /* Couldn't generate consensus; we'll leave the reply blank. */

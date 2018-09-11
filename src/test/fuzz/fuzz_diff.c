@@ -48,18 +48,27 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
   size_t c2_len = data_size - c1_len - SEPLEN;
   const char *c2 = (const char *)separator + SEPLEN;
 
+  const char *cp = memchr(c1, 0, c1_len);
+  if (cp)
+    c1_len = cp - c1;
+
+  cp = memchr(c2, 0, c2_len);
+  if (cp)
+    c2_len = cp - c2;
+
   char *c3 = consensus_diff_generate(c1, c1_len, c2, c2_len);
 
   if (c3) {
     char *c4 = consensus_diff_apply(c1, c1_len, c3, strlen(c3));
     tor_assert(c4);
-    if (strcmp(c2, c4)) {
-      printf("%s\n", escaped(c1));
-      printf("%s\n", escaped(c2));
+    int equal = (c2_len == strlen(c4)) && fast_memeq(c2, c4, c2_len);
+    if (! equal) {
+      //printf("%s\n", escaped(c1));
+      //printf("%s\n", escaped(c2));
       printf("%s\n", escaped(c3));
       printf("%s\n", escaped(c4));
     }
-    tor_assert(! strcmp(c2, c4));
+    tor_assert(equal);
     tor_free(c3);
     tor_free(c4);
   }

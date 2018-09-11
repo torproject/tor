@@ -68,8 +68,9 @@ STATIC consensus_cache_entry_t *cdm_cache_lookup_consensus(
 STATIC int cdm_entry_get_sha3_value(uint8_t *digest_out,
                                     consensus_cache_entry_t *ent,
                                     const char *label);
-STATIC int uncompress_or_copy(char **out, size_t *outlen,
-                              consensus_cache_entry_t *ent);
+STATIC int uncompress_or_set_ptr(const char **out, size_t *outlen,
+                                 char **owned_out,
+                                 consensus_cache_entry_t *ent);
 #endif /* defined(CONSDIFFMGR_PRIVATE) */
 
 #endif /* !defined(TOR_CONSDIFFMGR_H) */
