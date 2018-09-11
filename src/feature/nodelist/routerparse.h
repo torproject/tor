@@ -93,6 +93,7 @@ smartlist_t *microdescs_parse_from_string(const char *s, const char *eos,
                                           smartlist_t *invalid_digests_out);
 
 authority_cert_t *authority_cert_parse_from_string(const char *s,
+                                                   size_t maxlen,
                                                    const char **end_of_string);
 int rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                                      char *desc_id_out,

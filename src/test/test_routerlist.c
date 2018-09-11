@@ -260,7 +260,9 @@ test_router_pick_directory_server_impl(void *arg)
 
   /* Init SR subsystem. */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
-  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                               strlen(AUTHORITY_CERT_1),
+                                               NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 
@@ -472,7 +474,9 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
 
   /* Initialize the SRV subsystem */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
-  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                               strlen(AUTHORITY_CERT_1),
+                                               NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 
@@ -645,7 +649,9 @@ test_skew_common(void *arg, time_t now, unsigned long *offset)
 
   /* Initialize the SRV subsystem */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
-  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                               strlen(AUTHORITY_CERT_1),
+                                               NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 

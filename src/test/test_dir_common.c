@@ -40,14 +40,20 @@ dir_common_authority_pk_init(authority_cert_t **cert1,
 {
   /* Parse certificates and keys. */
   authority_cert_t *cert;
-  cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                          strlen(AUTHORITY_CERT_1),
+                                          NULL);
   tt_assert(cert);
   tt_assert(cert->identity_key);
   *cert1 = cert;
   tt_assert(*cert1);
-  *cert2 = authority_cert_parse_from_string(AUTHORITY_CERT_2, NULL);
+  *cert2 = authority_cert_parse_from_string(AUTHORITY_CERT_2,
+                                            strlen(AUTHORITY_CERT_2),
+                                            NULL);
   tt_assert(*cert2);
-  *cert3 = authority_cert_parse_from_string(AUTHORITY_CERT_3, NULL);
+  *cert3 = authority_cert_parse_from_string(AUTHORITY_CERT_3,
+                                            strlen(AUTHORITY_CERT_3),
+                                            NULL);
   tt_assert(*cert3);
   *sign_skey_1 = crypto_pk_new();
   *sign_skey_2 = crypto_pk_new();

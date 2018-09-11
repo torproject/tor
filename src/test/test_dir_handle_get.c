@@ -1270,7 +1270,9 @@ test_dir_handle_get_server_keys_authority(void* data)
   size_t body_used = 0;
   (void) data;
 
-  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
+  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE,
+                                               strlen(TEST_CERTIFICATE),
+                                               NULL);
 
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
@@ -1420,7 +1422,9 @@ test_dir_handle_get_server_keys_sk(void* data)
   size_t body_used = 0;
   (void) data;
 
-  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
+  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE,
+                                               strlen(TEST_CERTIFICATE),
+                                               NULL);
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
@@ -2388,7 +2392,9 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   routerlist_free_all();
   dirvote_free_all();
 
-  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
+  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE,
+                                               strlen(TEST_CERTIFICATE),
+                                               NULL);
 
   /* create a trusted ds */
   ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
@@ -2466,7 +2472,9 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   routerlist_free_all();
   dirvote_free_all();
 
-  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
+  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE,
+                                               strlen(TEST_CERTIFICATE),
+                                               NULL);
 
   /* create a trusted ds */
   ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
