@@ -167,6 +167,14 @@ test_protover_vote(void *arg)
   tt_str_op(result, OP_EQ, "");
   tor_free(result);
 
+  /* Don't count double-voting. */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Foo=1 Foo=1");
+  smartlist_add(lst, (void*) "Bar=1-2,2-3");
+  result = protover_compute_vote(lst, 2);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
   /* Bad votes: the result must be empty */
   smartlist_clear(lst);
   smartlist_add(lst, (void*) "Faux=10-5");
