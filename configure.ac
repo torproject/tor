@@ -4,7 +4,7 @@ dnl Copyright (c) 2007-2017, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_PREREQ([2.63])
-AC_INIT([tor],[0.3.2.10-dev])
+AC_INIT([tor],[0.3.2.12-dev])
 AC_CONFIG_SRCDIR([src/or/main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -487,8 +487,10 @@ if test "$LIBS" != "$saved_LIBS"; then
    have_rt=yes
 fi
 
-AC_SEARCH_LIBS(pthread_create, [pthread])
-AC_SEARCH_LIBS(pthread_detach, [pthread])
+if test "$bwin32" = "false"; then
+  AC_SEARCH_LIBS(pthread_create, [pthread])
+  AC_SEARCH_LIBS(pthread_detach, [pthread])
+fi
 
 AM_CONDITIONAL(THREADS_WIN32, test "$bwin32" = "true")
 AM_CONDITIONAL(THREADS_PTHREADS, test "$bwin32" = "false")
@@ -799,6 +801,7 @@ AC_CHECK_FUNCS([ \
                 SSL_get_client_ciphers \
                 SSL_get_client_random \
 		SSL_CIPHER_find \
+                SSL_CTX_set_security_level \
 		TLS_method
 	       ])
 
@@ -1668,6 +1671,10 @@ fi
 if test "$using_custom_malloc" = "no"; then
    AC_CHECK_FUNCS(mallinfo)
 fi
+if test "$using_custom_malloc" = "yes"; then
+  # Tell the C compiler not to use the system allocator functions.
+  TOR_CHECK_CFLAGS([-fno-builtin-malloc -fno-builtin-realloc -fno-builtin-calloc -fno-builtin-free])
+fi
 
 # By default, we're going to assume we don't have mlockall()
 # bionic and other platforms have various broken mlockall subsystems.
@@ -2142,6 +2149,9 @@ dnl     -Wthread-safety-precise
   fi
   if test "$tor_cv_cflags__Woverlength_strings" = "yes"; then
     AC_DEFINE([HAVE_CFLAG_WOVERLENGTH_STRINGS], 1, [True if we have -Woverlength-strings])
+  fi
+  if test "$tor_cv_cflags__warn_unused_const_variable_2" = "yes"; then
+    AC_DEFINE([HAVE_CFLAG_WUNUSED_CONST_VARIABLE], 1, [True if we have -Wunused-const-variable])
   fi
 
   if test "x$enable_fatal_warnings" = "xyes"; then

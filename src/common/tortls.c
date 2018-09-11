@@ -896,18 +896,20 @@ tor_tls_cert_get_key(tor_x509_cert_t *cert)
 MOCK_IMPL(int,
 tor_tls_cert_matches_key,(const tor_tls_t *tls, const tor_x509_cert_t *cert))
 {
-  X509 *peercert = SSL_get_peer_certificate(tls->ssl);
+  tor_x509_cert_t *peer = tor_tls_get_peer_cert((tor_tls_t *)tls);
+  if (!peer)
+    return 0;
+
+  X509 *peercert = peer->cert;
   EVP_PKEY *link_key = NULL, *cert_key = NULL;
   int result;
 
-  if (!peercert)
-    return 0;
   link_key = X509_get_pubkey(peercert);
   cert_key = X509_get_pubkey(cert->cert);
 
   result = link_key && cert_key && EVP_PKEY_cmp(cert_key, link_key) == 1;
 
-  X509_free(peercert);
+  tor_x509_cert_free(peer);
   if (link_key)
     EVP_PKEY_free(link_key);
   if (cert_key)
@@ -1170,6 +1172,12 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   if (!(result->ctx = SSL_CTX_new(SSLv23_method())))
     goto error;
 #endif /* defined(HAVE_TLS_METHOD) */
+
+#ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
+  /* Level 1 re-enables RSA1024 and DH1024 for compatibility with old tors */
+  SSL_CTX_set_security_level(result->ctx, 1);
+#endif
+
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv3);
 
@@ -2639,4 +2647,3 @@ evaluate_ecgroup_for_tls(const char *ecgroup)
 
   return ret;
 }
-

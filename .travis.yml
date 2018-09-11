@@ -1,10 +1,207 @@
 language: c
 
-## Comment out the compiler list for now to allow an explicit build
-## matrix.
-# compiler:
-#   - gcc
-#   - clang
+cache:
+  ccache: true
+  ## cargo: true
+  directories:
+    - $HOME/.cargo
+    ## where we point CARGO_TARGET_DIR in all our cargo invocations
+    - $TRAVIS_BUILD_DIR/src/rust/target
+
+compiler:
+  - gcc
+  - clang
+
+os:
+  - linux
+  - osx
+
+## The build matrix in the following stanza expands into builds for each
+## OS and compiler.
+env:
+  global:
+    ## The Travis CI environment allows us two cores, so let's use both.
+    - MAKEFLAGS="-j 2"
+    ## We turn on hardening by default
+    ## Also known as --enable-fragile-hardening in 0.3.0.3-alpha and later
+    - HARDENING_OPTIONS="--enable-expensive-hardening"
+    ## We turn off asciidoc by default, because it's slow
+    - ASCIIDOC_OPTIONS="--disable-asciidoc"
+  matrix:
+    ## We want to use each build option at least once
+    ##
+    ## We don't list default variable values, because we set the defaults
+    ## in global (or the default is unset)
+    -
+    ## We turn off hardening for Rust builds, because they are incompatible,
+    ## and it's going to take a while for them to be fixed. See:
+    ##   https:/trac.torproject.org/projects/tor/ticket/25386
+    ##   https:/trac.torproject.org/projects/tor/ticket/26398
+    - RUST_OPTIONS="--enable-rust" RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
+
+matrix:
+  ## include creates builds with gcc, linux, sudo: false
+  include:
+    ## We include a single coverage build with the best options for coverage
+    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
+    ## We only want to check these build option combinations once
+    ## (they shouldn't vary by compiler or OS)
+    ## We run rust and coverage with hardening off, which seems like enough
+    # - env: HARDENING_OPTIONS=""
+    ## We check asciidoc with distcheck, to make sure we remove doc products
+    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS=""
+    ## Check rust online without hardening (see above), and without distcheck
+    ## Distcheck doesn't work with rust in 0.3.2
+    ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
+    - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode" HARDENING_OPTIONS=""
+
+  ## Uncomment to allow the build to report success (with non-required
+  ## sub-builds continuing to run) if all required sub-builds have
+  ## succeeded.  This is somewhat buggy currently: it can cause
+  ## duplicate notifications and prematurely report success if a
+  ## single sub-build has succeeded.  See
+  ## https://github.com/travis-ci/travis-ci/issues/1696
+  # fast_finish: true
+
+  ## Careful! We use global envs, which makes it hard to exclude or
+  ## allow failures by env:
+  ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
+  exclude:
+    ## Clang doesn't work in containerized builds, see below.
+    - compiler: clang
+      sudo: false
+    ## Non-containerized gcc are slow and redundant.
+    - compiler: gcc
+      sudo: required
+    ## gcc on OSX is less useful, because the default compiler is clang.
+    - compiler: gcc
+      os: osx
+    ## gcc on Linux with no env is redundant, because all the custom builds use
+    ## gcc on Linux
+    - compiler: gcc
+      os: linux
+      env:
+    ## offline rust builds for gcc on Linux are redundant, because we do an
+    ## online rust build for gcc on Linux
+    - compiler: gcc
+      os: linux
+      ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
+      env: RUST_OPTIONS="--enable-rust" RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
+
+## We don't need sudo. (The "apt:" stanza after this allows us to not need
+## sudo; otherwise, we would need it for getting dependencies.)
+##
+## But we use "sudo: required" to force non-containerized builds, working
+## around a Travis CI environment issue: clang LeakAnalyzer fails
+## because it requires ptrace and the containerized environment no
+## longer allows ptrace.
+## https://github.com/travis-ci/travis-ci/issues/9033
+##
+## In the matrix above, we exclude redundant combinations.
+sudo:
+  - false
+  - required
+
+## (Linux only) Use the latest Linux image (Ubuntu Trusty)
+dist: trusty
+
+## (Linux only) Download our dependencies
+addons:
+  apt:
+    packages:
+      ## Required dependencies
+      - libevent-dev
+      - zlib1g-dev
+      ## Optional dependencies
+      - libcap-dev
+      - liblzma-dev
+      - libscrypt-dev
+      - libseccomp-dev
+      ## zstd doesn't exist in Ubuntu Trusty
+      #- libzstd
+      ## Conditional dependencies
+      ## Always installed, so we don't need sudo
+      - asciidoc
+      - docbook-xsl
+      - docbook-xml
+      - xmlto
+
+## (OSX only) Use the default OSX image
+## See https://docs.travis-ci.com/user/reference/osx#os-x-version
+## Default is Xcode 9.4 on macOS 10.13 as of August 2018
+#osx_image: xcode9.4
+
+before_install:
+  ## If we're on OSX, homebrew usually needs to be updated first
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+  ## We might be upgrading some useless packages, but that's better than missing an upgrade
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade; fi
+  ## Create empty rust directories for non-Rust builds, so caching succeeds
+  - if [[ "$RUST_OPTIONS" == "" ]]; then mkdir -p $HOME/.cargo $TRAVIS_BUILD_DIR/src/rust/target; fi
+
+install:
+  ## If we're on OSX use brew to install ccache (ccache is automatically installed on Linux)
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install ccache; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH="/usr/local/opt/ccache/libexec:$PATH"; fi
+  ## If we're on OSX use brew to install required dependencies (for Linux, see the "apt:" section above)
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libevent; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install openssl; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install pkg-config; fi
+  ## macOS comes with zlib by default, so the homebrew install is keg-only
+  # - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install zlib; fi
+  ## If we're on OSX also install the optional dependencies
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libscrypt; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install xz; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install zstd; fi
+  ## If we're on OSX, OpenSSL is keg-only, so tor 0.2.9 and later need to be configured --with-openssl-dir= to build
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then OPENSSL_OPTIONS=--with-openssl-dir=`brew --prefix openssl`; fi
+  ## Install conditional features
+  ## Install coveralls
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
+  ## If we're on OSX, and using asciidoc, install asciidoc
+  - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install asciidoc; fi
+  - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install xmlto; fi
+  - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export XML_CATALOG_FILES="/usr/local/etc/xml/catalog"; fi
+  ## If we're using Rust, download rustup
+  - if [[ "$RUST_OPTIONS" != "" ]]; then curl -Ssf -o rustup.sh https://sh.rustup.rs; fi
+  ## Install the stable channels of rustc and cargo and setup our toolchain environment
+  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain stable; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then source $HOME/.cargo/env; fi
+  ## If we're testing rust builds in offline-mode, then set up our vendored dependencies
+  - if [[ "$RUST_DEPENDENCIES" == "true" ]]; then export RUST_DEPENDENCIES=$PWD/src/ext/rust/crates; fi
+  ##
+  ## Finally, list installed package versions
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then dpkg-query --show; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew list --versions; fi
+  ## Get some info about rustup, rustc and cargo
+  - if [[ "$RUST_OPTIONS" != "" ]]; then which rustup; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then which rustc; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then which cargo; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then rustup --version; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then rustc --version; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then cargo --version; fi
+
+script:
+  - ./autogen.sh
+  - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
+  - echo "Configure flags are $CONFIGURE_FLAGS"
+  - ./configure $CONFIGURE_FLAGS
+  ## We run `make check` because that's what https://jenkins.torproject.org does.
+  - if [[ "$DISTCHECK" == "" ]]; then make check; fi
+  - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
+
+after_failure:
+  ## configure will leave a log file with more details of config failures.
+  ## But the log is too long for travis' rendered view, so tail it.
+  - tail -1000 config.log || echo "tail failed"
+  ## `make check` will leave a log file with more details of test failures.
+  - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
+  ## `make distcheck` puts it somewhere different.
+  - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
+
+after_success:
+  ## If this build was one that produced coverage, upload it.
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p'; fi
 
 notifications:
   irc:
@@ -18,137 +215,3 @@ notifications:
   email:
     on_success: never
     on_failure: change
-
-os:
-  - linux
-  ## Uncomment the following line to also run the entire build matrix on OSX.
-  ## This will make your CI builds take roughly ten times longer to finish.
-  # - osx
-
-## Use the Ubuntu Trusty images.
-dist: trusty
-
-## We don't need sudo. (The "apt:" stanza after this allows us to not need sudo;
-## otherwise, we would need it for getting dependencies.)
-##
-## We override this in the explicit build matrix to work around a
-## Travis CI environment regression
-## https://github.com/travis-ci/travis-ci/issues/9033
-sudo: false
-
-## (Linux only) Download our dependencies
-addons:
-  apt:
-    packages:
-      ## Required dependencies
-      - libevent-dev
-      - libseccomp2
-      - zlib1g-dev
-      ## Optional dependencies
-      - liblzma-dev
-      - libscrypt-dev
-      ## zstd doesn't exist in Ubuntu Trusty
-      #- libzstd
-
-## The build matrix in the following two stanzas expands into four builds (per OS):
-##
-##  * with GCC, with Rust
-##  * with GCC, without Rust
-##  * with Clang, with Rust
-##  * with Clang, without Rust
-env:
-  global:
-    ## The Travis CI environment allows us two cores, so let's use both.
-    - MAKEFLAGS="-j 2"
-  matrix:
-    ## Leave at least one entry here or Travis seems to generate a
-    ## matrix entry with empty matrix environment variables.  Leaving
-    ## more than one entry causes unwanted matrix entries with
-    ## unspecified compilers.
-    - RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
-    # - RUST_OPTIONS=""
-
-matrix:
-  ## Uncomment to allow the build to report success (with non-required
-  ## sub-builds continuing to run) if all required sub-builds have
-  ## succeeded.  This is somewhat buggy currently: it can cause
-  ## duplicate notifications and prematurely report success if a
-  ## single sub-build has succeeded.  See
-  ## https://github.com/travis-ci/travis-ci/issues/1696
-  # fast_finish: true
-
-  ## Uncomment the appropriate lines below to allow the build to
-  ## report success even if some less-critical sub-builds fail and it
-  ## seems likely to take a while for someone to fix it.  Currently
-  ## Travis CI doesn't distinguish "all builds succeeded" from "some
-  ## non-required sub-builds failed" except on the individual build's
-  ## page, which makes it somewhat annoying to detect from the
-  ## branches and build history pages.  See
-  ## https://github.com/travis-ci/travis-ci/issues/8716
-  allow_failures:
-    # - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
-    # - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode
-    # - compiler: clang
-
-  ## Create explicit matrix entries to work around a Travis CI
-  ## environment issue.  Missing keys inherit from the first list
-  ## entry under that key outside the "include" clause.
-  include:
-    - compiler: gcc
-    - compiler: gcc
-      env: RUST_OPTIONS=""
-    - compiler: gcc
-      env: COVERAGE_OPTIONS="--enable-coverage"
-    - compiler: gcc
-      env: DISTCHECK="yes"
-    ## The "sudo: required" forces non-containerized builds, working
-    ## around a Travis CI environment issue: clang LeakAnalyzer fails
-    ## because it requires ptrace and the containerized environment no
-    ## longer allows ptrace.
-    - compiler: clang
-      sudo: required
-    - compiler: clang
-      sudo: required
-      env: RUST_OPTIONS=""
-
-before_install:
-  ## If we're on OSX, homebrew usually needs to updated first
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
-  ## Download rustup
-  - if [[ "$RUST_OPTIONS" != "" ]]; then curl -Ssf -o rustup.sh https://sh.rustup.rs; fi
-  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
-
-install:
-  ## If we're on OSX use brew to install required dependencies (for Linux, see the "apt:" section above)
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated openssl    || brew upgrade openssl;    }; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated libevent   || brew upgrade libevent;   }; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated pkg-config || brew upgrade pkg-config; }; fi
-  ## If we're on OSX also install the optional dependencies
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated xz         || brew upgrade xz;         }; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated libscrypt  || brew upgrade libscrypt;  }; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated zstd       || brew upgrade zstd;       }; fi
-  ## Install the stable channels of rustc and cargo and setup our toolchain environment
-  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain stable; fi
-  - if [[ "$RUST_OPTIONS" != "" ]]; then source $HOME/.cargo/env; fi
-  ## Get some info about rustc and cargo
-  - if [[ "$RUST_OPTIONS" != "" ]]; then which rustc; fi
-  - if [[ "$RUST_OPTIONS" != "" ]]; then which cargo; fi
-  - if [[ "$RUST_OPTIONS" != "" ]]; then rustc --version; fi
-  - if [[ "$RUST_OPTIONS" != "" ]]; then cargo --version; fi
-
-script:
-  - ./autogen.sh
-  - ./configure $RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening
-  ## We run `make check` because that's what https://jenkins.torproject.org does.
-  - if [[ "$DISTCHECK" == "" ]]; then make check; fi
-  - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$RUST_OPTIONS $COVERAGE_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening"; fi
-
-after_failure:
-  ## `make check` will leave a log file with more details of test failures.
-  - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log; fi
-  ## `make distcheck` puts it somewhere different.
-  - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog; fi
-
-after_success:
-  ## If this build was one that produced coverage, upload it.
-  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p'; fi
