@@ -675,6 +675,8 @@ test_decode_bad_signature(void *arg)
 
   (void) arg;
 
+  memset(&desc_plaintext, 0, sizeof(desc_plaintext));
+
   /* Update approx time to dodge cert expiration */
   update_approx_time(1502661599);
 

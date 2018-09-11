@@ -1192,10 +1192,9 @@ parse_authorized_client(const char *client_key_str)
   if (pubkey_b32) {
     memwipe(pubkey_b32, 0, strlen(pubkey_b32));
   }
-  if (fields) {
-    SMARTLIST_FOREACH(fields, char *, s, tor_free(s));
-    smartlist_free(fields);
-  }
+  tor_assert(fields);
+  SMARTLIST_FOREACH(fields, char *, s, tor_free(s));
+  smartlist_free(fields);
   return client;
 }
 

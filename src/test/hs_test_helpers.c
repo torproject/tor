@@ -241,11 +241,11 @@ hs_helper_desc_equal(const hs_descriptor_t *desc1,
       hs_desc_authorized_client_t
         *client1 = smartlist_get(desc1->superencrypted_data.clients, i),
         *client2 = smartlist_get(desc2->superencrypted_data.clients, i);
-      tor_memeq(client1->client_id, client2->client_id,
+      tt_mem_op(client1->client_id, OP_EQ, client2->client_id,
                 sizeof(client1->client_id));
-      tor_memeq(client1->iv, client2->iv,
+      tt_mem_op(client1->iv, OP_EQ, client2->iv,
                 sizeof(client1->iv));
-      tor_memeq(client1->encrypted_cookie, client2->encrypted_cookie,
+      tt_mem_op(client1->encrypted_cookie, OP_EQ, client2->encrypted_cookie,
                 sizeof(client1->encrypted_cookie));
     }
   }
