@@ -36,7 +36,8 @@ matrix:
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
     ## We only want to check these build option combinations once
     ## (they shouldn't vary by compiler or OS)
-    - env: HARDENING_OPTIONS=""
+    ## We run coverage with hardening off, which seems like enough
+    # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS=""
 
@@ -55,9 +56,17 @@ matrix:
     ## Clang doesn't work in containerized builds, see below.
     - compiler: clang
       sudo: false
-    ## We also exclude non-containerized gcc, because they're slow and redundant.
+    ## Non-containerized gcc are slow and redundant.
     - compiler: gcc
       sudo: required
+    ## gcc on OSX is less useful, because the default compiler is clang.
+    - compiler: gcc
+      os: osx
+    ## gcc on Linux with no env is redundant, because all the custom builds use
+    ## gcc on Linux
+    - compiler: gcc
+      os: linux
+      env:
 
 ## We don't need sudo. (The "apt:" stanza after this allows us to not need
 ## sudo; otherwise, we would need it for getting dependencies.)
