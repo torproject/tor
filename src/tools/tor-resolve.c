@@ -224,7 +224,7 @@ do_resolve(const char *hostname,
   socklen = tor_addr_to_sockaddr(sockshost, socksport,
                                  (struct sockaddr *)&ss, sizeof(ss));
 
-  if (connect(s, (struct sockaddr*)&ss, sizeof(socklen))) {
+  if (connect(s, (struct sockaddr*)&ss, socklen)) {
     log_sock_error("connecting to SOCKS host", s);
     goto err;
   }
