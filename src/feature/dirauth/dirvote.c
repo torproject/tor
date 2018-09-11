@@ -401,7 +401,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
 
   {
     networkstatus_t *v;
-    if (!(v = networkstatus_parse_vote_from_string(status, NULL,
+    if (!(v = networkstatus_parse_vote_from_string(status, strlen(status),
+                                                   NULL,
                                                    v3_ns->type))) {
       log_err(LD_BUG,"Generated a networkstatus %s we couldn't parse: "
               "<<%s>>",
@@ -2398,7 +2399,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   {
     networkstatus_t *c;
-    if (!(c = networkstatus_parse_vote_from_string(result, NULL,
+    if (!(c = networkstatus_parse_vote_from_string(result, strlen(result),
+                                                   NULL,
                                                    NS_TYPE_CONSENSUS))) {
       log_err(LD_BUG, "Generated a networkstatus consensus we couldn't "
               "parse.");
@@ -3121,7 +3123,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   *msg_out = NULL;
 
  again:
-  vote = networkstatus_parse_vote_from_string(vote_body, &end_of_vote,
+  vote = networkstatus_parse_vote_from_string(vote_body, strlen(vote_body),
+                                              &end_of_vote,
                                               NS_TYPE_VOTE);
   if (!end_of_vote)
     end_of_vote = vote_body + strlen(vote_body);
@@ -3379,7 +3382,9 @@ dirvote_compute_consensuses(void)
                  flavor_name);
         continue;
       }
-      consensus = networkstatus_parse_vote_from_string(consensus_body, NULL,
+      consensus = networkstatus_parse_vote_from_string(consensus_body,
+                                                       strlen(consensus_body),
+                                                       NULL,
                                                        NS_TYPE_CONSENSUS);
       if (!consensus) {
         log_warn(LD_DIR, "Couldn't parse %s consensus we generated!",
@@ -3518,7 +3523,7 @@ dirvote_add_signatures_to_pending_consensus(
      * just in case we break detached signature processing at some point. */
     {
       networkstatus_t *v = networkstatus_parse_vote_from_string(
-                                             pc->body, NULL,
+                                             pc->body, strlen(pc->body), NULL,
                                              NS_TYPE_CONSENSUS);
       tor_assert(v);
       networkstatus_vote_free(v);

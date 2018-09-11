@@ -1057,9 +1057,10 @@ router_get_networkstatus_v3_sha3_as_signed(uint8_t *digest_out,
 /** Set <b>digests</b> to all the digests of the consensus document in
  * <b>s</b> */
 int
-router_get_networkstatus_v3_hashes(const char *s, common_digests_t *digests)
+router_get_networkstatus_v3_hashes(const char *s, size_t len,
+                                   common_digests_t *digests)
 {
-  return router_get_hashes_impl(s,strlen(s),digests,
+  return router_get_hashes_impl(s, len, digests,
                                 "network-status-version",
                                 "\ndirectory-signature",
                                 ' ');
@@ -2489,18 +2490,19 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   return NULL;
 }
 
-/** Helper: given a string <b>s</b>, return the start of the next router-status
+/** Helper: given a string <b>s</b> ending at <b>s_eos</b>, return the
+ * start of the next router-status
  * object (starting with "r " at the start of a line).  If none is found,
  * return the start of the directory footer, or the next directory signature.
  * If none is found, return the end of the string. */
 static inline const char *
-find_start_of_next_routerstatus(const char *s)
+find_start_of_next_routerstatus(const char *s, const char *s_eos)
 {
   const char *eos, *footer, *sig;
-  if ((eos = strstr(s, "\nr ")))
+  if ((eos = tor_memstr(s, s_eos - s, "\nr ")))
     ++eos;
   else
-    eos = s + strlen(s);
+    eos = s_eos;
 
   footer = tor_memstr(s, eos-s, "\ndirectory-footer");
   sig = tor_memstr(s, eos-s, "\ndirectory-signature");
@@ -2632,7 +2634,8 @@ summarize_protover_flags(protover_summary_flags_t *out,
  **/
 STATIC routerstatus_t *
 routerstatus_parse_entry_from_string(memarea_t *area,
-                                     const char **s, smartlist_t *tokens,
+                                     const char **s, const char *s_eos,
+                                     smartlist_t *tokens,
                                      networkstatus_t *vote,
                                      vote_routerstatus_t *vote_rs,
                                      int consensus_method,
@@ -2651,7 +2654,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     flav = FLAV_NS;
   tor_assert(flav == FLAV_NS || flav == FLAV_MICRODESC);
 
-  eos = find_start_of_next_routerstatus(*s);
+  eos = find_start_of_next_routerstatus(*s, s_eos);
 
   if (tokenize_string(area,*s, eos, tokens, rtrstatus_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing router status");
@@ -3394,7 +3397,9 @@ extract_shared_random_srvs(networkstatus_t *ns, smartlist_t *tokens)
 /** Parse a v3 networkstatus vote, opinion, or consensus (depending on
  * ns_type), from <b>s</b>, and return the result.  Return NULL on failure. */
 networkstatus_t *
-networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
+networkstatus_parse_vote_from_string(const char *s,
+                                     size_t s_len,
+                                     const char **eos_out,
                                      networkstatus_type_t ns_type)
 {
   smartlist_t *tokens = smartlist_new();
@@ -3410,21 +3415,22 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   memarea_t *area = NULL, *rs_area = NULL;
   consensus_flavor_t flav = FLAV_NS;
   char *last_kwd=NULL;
+  const char *eos = s + s_len;
 
   tor_assert(s);
 
   if (eos_out)
     *eos_out = NULL;
 
-  if (router_get_networkstatus_v3_hashes(s, &ns_digests) ||
+  if (router_get_networkstatus_v3_hashes(s, s_len, &ns_digests) ||
       router_get_networkstatus_v3_sha3_as_signed(sha3_as_signed,
-                                                 s, strlen(s))<0) {
+                                                 s, s_len)<0) {
     log_warn(LD_DIR, "Unable to compute digest of network-status");
     goto err;
   }
 
   area = memarea_new();
-  end_of_header = find_start_of_next_routerstatus(s);
+  end_of_header = find_start_of_next_routerstatus(s, eos);
   if (tokenize_string(area, s, end_of_header, tokens,
                       (ns_type == NS_TYPE_CONSENSUS) ?
                       networkstatus_consensus_token_table :
@@ -3455,7 +3461,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   if (ns_type != NS_TYPE_CONSENSUS) {
     const char *end_of_cert = NULL;
-    if (!(cert = strstr(s, "\ndir-key-certificate-version")))
+    if (!(cert = tor_memstr(s, end_of_header - s,
+                            "\ndir-key-certificate-version")))
       goto err;
     ++cert;
     ns->cert = authority_cert_parse_from_string(cert, &end_of_cert);
@@ -3768,10 +3775,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   s = end_of_header;
   ns->routerstatus_list = smartlist_new();
 
-  while (!strcmpstart(s, "r ")) {
+  while (eos-s >= 2 && fast_memeq(s, "r ", 2)) {
     if (ns->type != NS_TYPE_CONSENSUS) {
       vote_routerstatus_t *rs = tor_malloc_zero(sizeof(vote_routerstatus_t));
-      if (routerstatus_parse_entry_from_string(rs_area, &s, rs_tokens, ns,
+      if (routerstatus_parse_entry_from_string(rs_area, &s, eos, rs_tokens, ns,
                                                rs, 0, 0)) {
         smartlist_add(ns->routerstatus_list, rs);
       } else {
@@ -3779,7 +3786,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
     } else {
       routerstatus_t *rs;
-      if ((rs = routerstatus_parse_entry_from_string(rs_area, &s, rs_tokens,
+      if ((rs = routerstatus_parse_entry_from_string(rs_area, &s, eos,
+                                                     rs_tokens,
                                                      NULL, NULL,
                                                      ns->consensus_method,
                                                      flav))) {
@@ -3824,10 +3832,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   /* Parse footer; check signature. */
   footer_tokens = smartlist_new();
-  if ((end_of_footer = strstr(s, "\nnetwork-status-version ")))
+  if ((end_of_footer = tor_memstr(s, eos-s, "\nnetwork-status-version ")))
     ++end_of_footer;
   else
-    end_of_footer = s + strlen(s);
+    end_of_footer = eos;
   if (tokenize_string(area,s, end_of_footer, footer_tokens,
                       networkstatus_vote_footer_token_table, 0)) {
     log_warn(LD_DIR, "Error tokenizing network-status vote footer.");

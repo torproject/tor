@@ -264,7 +264,9 @@ dir_common_add_rs_and_parse(networkstatus_t *vote, networkstatus_t **vote_out,
   /* dump the vote and try to parse it. */
   v_text = format_networkstatus_vote(sign_skey, vote);
   tt_assert(v_text);
-  *vote_out = networkstatus_parse_vote_from_string(v_text, NULL, NS_TYPE_VOTE);
+  *vote_out = networkstatus_parse_vote_from_string(v_text,
+                                                   strlen(v_text),
+                                                   NULL, NS_TYPE_VOTE);
 
  done:
   if (v_text)
@@ -422,4 +424,3 @@ dir_common_construct_vote_3(networkstatus_t **vote, authority_cert_t *cert,
 
   return 0;
 }
-

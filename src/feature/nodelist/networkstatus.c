@@ -1861,7 +1861,9 @@ networkstatus_set_current_consensus(const char *consensus,
   }
 
   /* Make sure it's parseable. */
-  c = networkstatus_parse_vote_from_string(consensus, NULL, NS_TYPE_CONSENSUS);
+  c = networkstatus_parse_vote_from_string(consensus,
+                                           strlen(consensus),
+                                           NULL, NS_TYPE_CONSENSUS);
   if (!c) {
     log_warn(LD_DIR, "Unable to parse networkstatus consensus");
     result = -2;

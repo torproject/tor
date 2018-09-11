@@ -30,7 +30,7 @@ enum networkstatus_type_t;
 
 int router_get_router_hash(const char *s, size_t s_len, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
-int router_get_networkstatus_v3_hashes(const char *s,
+int router_get_networkstatus_v3_hashes(const char *s, size_t len,
                                        common_digests_t *digests);
 int router_get_networkstatus_v3_signed_boundaries(const char *s, size_t len,
                                                   const char **start_out,
@@ -81,6 +81,7 @@ void dump_distinct_digest_count(int severity);
 int compare_vote_routerstatus_entries(const void **_a, const void **_b);
 int networkstatus_verify_bw_weights(networkstatus_t *ns, int);
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
+                                           size_t len,
                                            const char **eos_out,
                                            enum networkstatus_type_t ns_type);
 ns_detached_signatures_t *networkstatus_parse_detached_signatures(
@@ -139,7 +140,8 @@ STATIC void dump_desc_fifo_cleanup(void);
 struct memarea_t;
 STATIC routerstatus_t *routerstatus_parse_entry_from_string(
                                      struct memarea_t *area,
-                                     const char **s, smartlist_t *tokens,
+                                     const char **s, const char *eos,
+                                     smartlist_t *tokens,
                                      networkstatus_t *vote,
                                      vote_routerstatus_t *vote_rs,
                                      int consensus_method,
