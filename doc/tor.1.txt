@@ -1733,8 +1733,9 @@ The following options are useful only for clients (that is, if
     address over one with IPv4 if a given entry node has both. (Tor also
     prefers an IPv6 ORPort if IPv4Client is set to 0.) If this option is set
     to auto, Tor bridge clients prefer the configured bridge address, and
-    other clients prefer IPv4. Other things may influence the choice. This
-    option breaks a tie to the favor of IPv6. (Default: auto)
+    other clients choose what they have, or choose randomly if they have
+    both. Other things may influence the choice. This option breaks a tie
+    to the favor of IPv6. (Default: auto)
 
 [[PathsNeededToBuildCircuits]] **PathsNeededToBuildCircuits** __NUM__::
     Tor clients don't build circuits for user traffic until they know
