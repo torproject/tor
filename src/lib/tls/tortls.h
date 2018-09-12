@@ -94,6 +94,7 @@ void tor_tls_set_renegotiate_callback(tor_tls_t *tls,
                                       void (*cb)(tor_tls_t *, void *arg),
                                       void *arg);
 int tor_tls_is_server(tor_tls_t *tls);
+void tor_tls_release_socket(tor_tls_t *tls);
 void tor_tls_free_(tor_tls_t *tls);
 #define tor_tls_free(tls) FREE_AND_NULL(tor_tls_t, tor_tls_free_, (tls))
 int tor_tls_peer_has_cert(tor_tls_t *tls);
