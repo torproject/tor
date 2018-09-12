@@ -1087,6 +1087,16 @@ The following options are useful only for clients (that is, if
     services can be configured to require authorization using the
     **HiddenServiceAuthorizeClient** option.
 
+[[ClientOnionAuthDir]] **ClientOnionAuthDir** __path__::
+    Path to the directory containing the hidden service authorization file. The
+    files MUST have the suffix ".auth_private". Each file is for a single
+    onion address and their format is:
+ +
+      <onion-address>:descriptor:x25519:<base32-encoded-privkey>
+ +
+    The <onion-address> MUST NOT have the ".onion" suffix. See the
+    rend-spec-v3.txt Appendix G for more information.
+
 [[LongLivedPorts]] **LongLivedPorts** __PORTS__::
     A list of ports for services that tend to have long-running connections
     (e.g. chat and interactive shells). Circuits for streams that use these
@@ -2895,6 +2905,26 @@ The following options are used to configure a hidden service.
     you need to disable all client-side services on your Tor instance,
     including setting SOCKSPort to "0". Can not be changed while tor is
     running. (Default: 0)
+
+Client Authorization
+--------------------
+
+(Version 3 only)
+
+To configure client authorization on the service side, the
+"<HiddenServiceDir>/authorized_clients/" needs to exists. Each file in that
+directory should be suffixed with ".auth" (the file name is irrelevant) and
+its content format MUST be:
+
+        <auth-type>:<key-type>:<base32-encoded-public-key>
+
+The supported <auth-type> are: "descriptor". The supported <key-type> are:
+"x25519". Each file MUST contain one line only. Any malformed file will be
+ignored.
+
+Note that once you've configured client authorization, anyone else with the
+address won't be able to access it from this point on. If no authorization is
+configured, the service will be accessible to all.
 
 TESTING NETWORK OPTIONS
 -----------------------
