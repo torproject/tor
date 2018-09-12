@@ -607,8 +607,7 @@ export_hs_client_circuit_id_haproxy(const edge_connection_t *edge_conn,
   const char dst_ipv6[] = "::1";
   /* See RFC4193 regarding fc00::/7 */
   const char src_ipv6_prefix[] = "fc00:dead:beef:4dad:";
-  /* TODO: retain virtual port and use as destination port */
-  uint16_t dst_port = 443;
+  uint16_t dst_port = 0;
   uint16_t src_port = 1; /* default value */
   uint32_t gid = 0; /* default value */
 
@@ -616,6 +615,11 @@ export_hs_client_circuit_id_haproxy(const edge_connection_t *edge_conn,
   if (edge_conn->on_circuit != NULL) {
     gid = TO_ORIGIN_CIRCUIT(edge_conn->on_circuit)->global_identifier;
     src_port = gid & 0x0000ffff;
+  }
+
+  /* Grab the original dest port from the hs ident */
+  if (edge_conn->hs_ident) {
+    dst_port = edge_conn->hs_ident->orig_virtual_port;
   }
 
   /* Build the string */
