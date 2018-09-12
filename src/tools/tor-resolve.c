@@ -271,34 +271,50 @@ parse_socks4a_resolve_response(const char *hostname,
                                const char *response, size_t len,
                                tor_addr_t *addr_out)
 {
+  int result = 0;
   uint8_t status;
   tor_assert(response);
   tor_assert(addr_out);
 
-  if (len < RESPONSE_LEN_4) {
+  socks4_server_reply_t *reply;
+
+  ssize_t parsed = socks4_server_reply_parse(&reply,
+                                             (const uint8_t *)response,
+                                             len);
+
+  if (parsed == -1) {
+    log_warn(LD_PROTOCOL, "Failed parsing SOCKS4a response");
+    result = -1; goto cleanup;
+  }
+
+  if (parsed == -2) {
     log_warn(LD_PROTOCOL,"Truncated socks response.");
-    return -1;
+    result = -1; goto cleanup;
   }
-  if (((uint8_t)response[0])!=0) { /* version: 0 */
+
+  if (socks4_server_reply_get_version(reply) != 0) { /* version: 0 */
     log_warn(LD_PROTOCOL,"Nonzero version in socks response: bad format.");
-    return -1;
+    result = -1; goto cleanup;
   }
-  status = (uint8_t)response[1];
-  if (get_uint16(response+2)!=0) { /* port: 0 */
+  if (socks4_server_reply_get_port(reply) != 0) { /* port: 0 */
     log_warn(LD_PROTOCOL,"Nonzero port in socks response: bad format.");
-    return -1;
+    result = -1; goto cleanup;
   }
+  status = socks4_server_reply_get_status(reply);
   if (status != 90) {
     log_warn(LD_NET,"Got status response '%d': socks request failed.", status);
     if (!strcasecmpend(hostname, ".onion")) {
       onion_warning(hostname);
-      return -1;
+      result = -1; goto cleanup;
     }
-    return -1;
+    result = -1; goto cleanup;
   }
 
-  tor_addr_from_ipv4n(addr_out, get_uint32(response+4));
-  return 0;
+  tor_addr_from_ipv4h(addr_out, socks4_server_reply_get_addr(reply));
+
+ cleanup:
+  socks4_server_reply_free(reply);
+  return result;
 }
 
 /* It would be nice to let someone know what SOCKS5 issue a user may have */
@@ -418,6 +434,7 @@ do_resolve(const char *hostname,
       log_err(LD_NET, "Error reading SOCKS5 response.");
       goto err;
     }
+
     if (reply_buf[0] != 5) {
       log_err(LD_NET, "Bad SOCKS5 reply version.");
       goto err;
