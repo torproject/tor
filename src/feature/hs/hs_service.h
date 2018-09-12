@@ -210,6 +210,9 @@ typedef struct hs_service_config_t {
 
   /* Is this service ephemeral? */
   unsigned int is_ephemeral : 1;
+
+  /* Does this service export the circuit ID of its clients? */
+  bool export_circuit_id;
 } hs_service_config_t;
 
 /* Service state. */
@@ -315,6 +318,8 @@ void hs_service_upload_desc_to_dir(const char *encoded_desc,
                                    const ed25519_public_key_t *identity_pk,
                                    const ed25519_public_key_t *blinded_pk,
                                    const routerstatus_t *hsdir_rs);
+
+bool hs_service_exports_circuit_id(const ed25519_public_key_t *pk);
 
 #ifdef HS_SERVICE_PRIVATE
 
