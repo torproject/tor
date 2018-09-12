@@ -174,7 +174,7 @@ impl ProtoSet {
             if low == u32::MAX || high == u32::MAX {
                 return Err(ProtoverError::ExceedsMax);
             }
-            if low < last_high {
+            if low <= last_high {
                 return Err(ProtoverError::Overlap);
             } else if low > high {
                 return Err(ProtoverError::LowGreaterThanHigh);
@@ -520,7 +520,6 @@ mod test {
         test_protoset_contains_versions!(&[1], "1");
         test_protoset_contains_versions!(&[1, 2], "1,2");
         test_protoset_contains_versions!(&[1, 2, 3], "1-3");
-        test_protoset_contains_versions!(&[0, 1], "0-1");
         test_protoset_contains_versions!(&[1, 2, 5], "1-2,5");
         test_protoset_contains_versions!(&[1, 3, 4, 5], "1,3-5");
         test_protoset_contains_versions!(&[42, 55, 56, 57, 58], "42,55-58");
@@ -587,9 +586,9 @@ mod test {
 
     #[test]
     fn test_protoset_contains() {
-        let protoset: ProtoSet = ProtoSet::from_slice(&[(0, 5), (7, 9), (13, 14)]).unwrap();
+        let protoset: ProtoSet = ProtoSet::from_slice(&[(1, 5), (7, 9), (13, 14)]).unwrap();
 
-        for x in 0..6   { assert!(protoset.contains(&x), format!("should contain {}", x)); }
+        for x in 1..6   { assert!(protoset.contains(&x), format!("should contain {}", x)); }
         for x in 7..10  { assert!(protoset.contains(&x), format!("should contain {}", x)); }
         for x in 13..15 { assert!(protoset.contains(&x), format!("should contain {}", x)); }
 
@@ -599,10 +598,10 @@ mod test {
     }
 
     #[test]
-    fn test_protoset_contains_0_3() {
-        let protoset: ProtoSet = ProtoSet::from_slice(&[(0, 3)]).unwrap();
+    fn test_protoset_contains_1_3() {
+        let protoset: ProtoSet = ProtoSet::from_slice(&[(1, 3)]).unwrap();
 
-        for x in 0..4 { assert!(protoset.contains(&x), format!("should contain {}", x)); }
+        for x in 1..4 { assert!(protoset.contains(&x), format!("should contain {}", x)); }
     }
 
     macro_rules! assert_protoset_from_vec_contains_all {
@@ -622,8 +621,8 @@ mod test {
     }
 
     #[test]
-    fn test_protoset_from_vec_0_315() {
-        assert_protoset_from_vec_contains_all!(0, 1, 2, 3, 15);
+    fn test_protoset_from_vec_1_315() {
+        assert_protoset_from_vec_contains_all!(1, 2, 3, 15);
     }
 
     #[test]

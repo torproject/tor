@@ -852,10 +852,10 @@ mod test {
 
     #[test]
     fn test_protoentry_all_supported_unsupported_low_version() {
-        let protocols: UnvalidatedProtoEntry = "Cons=0-1".parse().unwrap();
+        let protocols: UnvalidatedProtoEntry = "HSIntro=2-3".parse().unwrap();
         let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
         assert_eq!(true, unsupported.is_some());
-        assert_eq!("Cons=0", &unsupported.unwrap().to_string());
+        assert_eq!("HSIntro=2", &unsupported.unwrap().to_string());
     }
 
     #[test]
