@@ -18,4 +18,6 @@ long tv_udiff(const struct timeval *start, const struct timeval *end);
 long tv_mdiff(const struct timeval *start, const struct timeval *end);
 int64_t tv_to_msec(const struct timeval *tv);
 
+time_t time_diff(const time_t from, const time_t to);
+
 #endif

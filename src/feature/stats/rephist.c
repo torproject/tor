@@ -97,6 +97,7 @@
 #include "lib/container/order.h"
 #include "lib/math/fp.h"
 #include "lib/math/laplace.h"
+#include "lib/time/tvdiff.h"
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
@@ -1548,7 +1549,7 @@ typedef struct predicted_port_t {
 /** A list of port numbers that have been used recently. */
 static smartlist_t *predicted_ports_list=NULL;
 /** How long do we keep predicting circuits? */
-static int prediction_timeout=0;
+static time_t prediction_timeout=0;
 /** When was the last time we added a prediction entry (HS or port) */
 static time_t last_prediction_add_time=0;
 
@@ -1558,30 +1559,30 @@ static time_t last_prediction_add_time=0;
 int
 predicted_ports_prediction_time_remaining(time_t now)
 {
-  time_t idle_delta;
+  time_t seconds_waited;
+  time_t seconds_left;
 
   /* Protect against overflow of return value. This can happen if the clock
    * jumps backwards in time. Update the last prediction time (aka last
    * active time) to prevent it. This update is preferable to using monotonic
    * time because it prevents clock jumps into the past from simply causing
    * very long idle timeouts while the monotonic time stands still. */
-  if (last_prediction_add_time > now) {
+  seconds_waited = time_diff(last_prediction_add_time, now);
+  if (seconds_waited == TIME_MAX) {
     last_prediction_add_time = now;
-    idle_delta = 0;
-  } else {
-    idle_delta = now - last_prediction_add_time;
+    seconds_waited = 0;
   }
 
   /* Protect against underflow of the return value. This can happen for very
    * large periods of inactivity/system sleep. */
-  if (idle_delta > prediction_timeout)
+  if (seconds_waited > prediction_timeout)
     return 0;
 
-  if (BUG((prediction_timeout - idle_delta) > INT_MAX)) {
+  seconds_left = time_diff(seconds_waited, prediction_timeout);
+  if (BUG(seconds_left == TIME_MAX))
     return INT_MAX;
-  }
 
-  return (int)(prediction_timeout - idle_delta);
+  return (int)(seconds_left);
 }
 
 /** We just got an application request for a connection with
@@ -1595,7 +1596,8 @@ add_predicted_port(time_t now, uint16_t port)
 
   //  If the list is empty, re-randomize predicted ports lifetime
   if (!any_predicted_circuits(now)) {
-    prediction_timeout = channelpadding_get_circuits_available_timeout();
+    prediction_timeout =
+     (time_t)channelpadding_get_circuits_available_timeout();
   }
 
   last_prediction_add_time = now;
@@ -1679,7 +1681,7 @@ rep_hist_get_predicted_ports(time_t now)
   smartlist_t *out = smartlist_new();
   tor_assert(predicted_ports_list);
 
-  predicted_circs_relevance_time = prediction_timeout;
+  predicted_circs_relevance_time = (int)prediction_timeout;
 
   /* clean out obsolete entries */
   SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
@@ -1765,7 +1767,7 @@ rep_hist_get_predicted_internal(time_t now, int *need_uptime,
 {
   int predicted_circs_relevance_time;
 
-  predicted_circs_relevance_time = prediction_timeout;
+  predicted_circs_relevance_time = (int)prediction_timeout;
 
   if (!predicted_internal_time) { /* initialize it */
     predicted_internal_time = now;
@@ -1787,7 +1789,7 @@ int
 any_predicted_circuits(time_t now)
 {
   int predicted_circs_relevance_time;
-  predicted_circs_relevance_time = prediction_timeout;
+  predicted_circs_relevance_time = (int)prediction_timeout;
 
   return smartlist_len(predicted_ports_list) ||
          predicted_internal_time + predicted_circs_relevance_time >= now;

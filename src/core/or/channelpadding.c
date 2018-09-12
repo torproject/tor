@@ -657,6 +657,8 @@ channelpadding_get_circuits_available_timeout(void)
   // 30..60min by default
   timeout = timeout + crypto_rand_int(timeout);
 
+  tor_assert(timeout >= 0);
+
   return timeout;
 }
 
