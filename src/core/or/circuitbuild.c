@@ -1425,13 +1425,12 @@ circuit_finish_handshake(origin_circuit_t *circ,
  * just give up: force circ to close, and return 0.
  */
 int
-circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer, int reason)
+circuit_truncated(origin_circuit_t *circ, int reason)
 {
 //  crypt_path_t *victim;
 //  connection_t *stream;
 
   tor_assert(circ);
-  tor_assert(layer);
 
   /* XXX Since we don't send truncates currently, getting a truncated
    *     means that a connection broke or an extend failed. For now,

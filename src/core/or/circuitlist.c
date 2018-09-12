@@ -99,6 +99,7 @@
 #include "core/or/crypt_path_reference_st.h"
 #include "feature/dircommon/dir_connection_st.h"
 #include "core/or/edge_connection_st.h"
+#include "core/or/half_edge_st.h"
 #include "core/or/extend_info_st.h"
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
@@ -1077,6 +1078,14 @@ circuit_free_(circuit_t *circ)
     tor_assert(circ->magic == ORIGIN_CIRCUIT_MAGIC);
 
     circuit_remove_from_origin_circuit_list(ocirc);
+
+    if (ocirc->half_streams) {
+      SMARTLIST_FOREACH_BEGIN(ocirc->half_streams, half_edge_t*,
+                              half_conn) {
+          tor_free(half_conn);
+      } SMARTLIST_FOREACH_END(half_conn);
+      smartlist_free(ocirc->half_streams);
+    }
 
     if (ocirc->build_state) {
         extend_info_free(ocirc->build_state->chosen_exit);

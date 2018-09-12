@@ -105,6 +105,7 @@
 #include "feature/nodelist/node_st.h"
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
+#include "core/or/half_edge_st.h"
 #include "core/or/socks_request_st.h"
 #include "lib/evloop/compat_libevent.h"
 
@@ -154,6 +155,11 @@ static int connection_ap_process_natd(entry_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int consider_plaintext_ports(entry_connection_t *conn, uint16_t port);
 static int connection_ap_supports_optimistic_data(const entry_connection_t *);
+STATIC void connection_half_edge_add(const edge_connection_t *conn,
+                                     origin_circuit_t *circ);
+STATIC half_edge_t *connection_half_edge_find_stream_id(
+                                    const smartlist_t *half_conns,
+                                    streamid_t stream_id);
 
 /** Convert a connection_t* to an edge_connection_t*; assert if the cast is
  * invalid. */
@@ -472,6 +478,12 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   if (circ && !circ->marked_for_close) {
     log_debug(LD_EDGE,"Sending end on conn (fd "TOR_SOCKET_T_FORMAT").",
               conn->base_.s);
+
+    if (CIRCUIT_IS_ORIGIN(circ)) {
+      origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+      connection_half_edge_add(conn, origin_circ);
+    }
+
     connection_edge_send_command(conn, RELAY_COMMAND_END,
                                  payload, payload_len);
     /* We'll log warn if the connection was an hidden service and couldn't be
@@ -486,6 +498,215 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   conn->edge_has_sent_end = 1;
   conn->end_reason = control_reason;
   return 0;
+}
+
+/**
+ * Helper function for bsearch.
+ *
+ * As per smartlist_bsearch, return < 0 if key preceeds member,
+ * > 0 if member preceeds key, and 0 if they are equal.
+ *
+ * This is equivalent to subtraction of the values of key - member
+ * (why does no one ever say that explicitly?).
+ */
+static int
+connection_half_edge_compare_bsearch(const void *key, const void **member)
+{
+  const half_edge_t *e2;
+  tor_assert(key);
+  tor_assert(member && *(half_edge_t**)member);
+  e2 = *(const half_edge_t **)member;
+
+  return *(const streamid_t*)key - e2->stream_id;
+}
+
+/**
+ * Add a half-closed connection to the list, to watch for activity.
+ *
+ * These connections are removed from the list upon receiving an end
+ * cell.
+ */
+STATIC void
+connection_half_edge_add(const edge_connection_t *conn,
+                         origin_circuit_t *circ)
+{
+  half_edge_t *half_conn = NULL;
+  int insert_at = 0;
+  int ignored;
+
+  /* Double-check for re-insertion. This should not happen,
+   * but this check is cheap compared to the sort anyway */
+  if (connection_half_edge_find_stream_id(circ->half_streams,
+                                          conn->stream_id)) {
+    log_warn(LD_BUG, "Duplicate stream close for stream %d on circuit %d",
+             conn->stream_id, circ->global_identifier);
+    return;
+  }
+
+  half_conn = tor_malloc_zero(sizeof(half_edge_t));
+
+  if (!circ->half_streams) {
+    circ->half_streams = smartlist_new();
+  }
+
+  half_conn->stream_id = conn->stream_id;
+
+  // How many sendme's should I expect?
+  half_conn->sendmes_pending =
+   (STREAMWINDOW_START-conn->package_window)/STREAMWINDOW_INCREMENT;
+
+   // Is there a connected cell pending?
+  half_conn->connected_pending = conn->base_.state ==
+      AP_CONN_STATE_CONNECT_WAIT;
+
+  /* Data should only arrive if we're not waiting on a resolved cell.
+   * It can arrive after waiting on connected, because of optimistic
+   * data. */
+  if (conn->base_.state != AP_CONN_STATE_RESOLVE_WAIT) {
+    // How many more data cells can arrive on this id?
+    half_conn->data_pending = conn->deliver_window;
+  }
+
+  insert_at = smartlist_bsearch_idx(circ->half_streams, &half_conn->stream_id,
+                                    connection_half_edge_compare_bsearch,
+                                    &ignored);
+  smartlist_insert(circ->half_streams, insert_at, half_conn);
+}
+
+/**
+ * Find a stream_id_t in the list in O(lg(n)).
+ *
+ * Returns NULL if the list is empty or element is not found.
+ * Returns a pointer to the element if found.
+ */
+STATIC half_edge_t *
+connection_half_edge_find_stream_id(const smartlist_t *half_conns,
+                                    streamid_t stream_id)
+{
+  if (!half_conns)
+    return NULL;
+
+  return smartlist_bsearch(half_conns, &stream_id,
+                           connection_half_edge_compare_bsearch);
+}
+
+/**
+ * Check if this stream_id is in a half-closed state. If so,
+ * check if it still has data cells pending, and decrement that
+ * window if so.
+ *
+ * Return 1 if the data window was not empty.
+ * Return 0 otherwise.
+ */
+int
+connection_half_edge_is_valid_data(const smartlist_t *half_conns,
+                                   streamid_t stream_id)
+{
+  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
+                                                          stream_id);
+
+  if (!half)
+    return 0;
+
+  if (half->data_pending > 0) {
+    half->data_pending--;
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
+ * Check if this stream_id is in a half-closed state. If so,
+ * check if it still has a connected cell pending, and decrement
+ * that window if so.
+ *
+ * Return 1 if the connected window was not empty.
+ * Return 0 otherwise.
+ */
+int
+connection_half_edge_is_valid_connected(const smartlist_t *half_conns,
+                                        streamid_t stream_id)
+{
+  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
+                                                          stream_id);
+
+  if (!half)
+    return 0;
+
+  if (half->connected_pending) {
+    half->connected_pending = 0;
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
+ * Check if this stream_id is in a half-closed state. If so,
+ * check if it still has sendme cells pending, and decrement that
+ * window if so.
+ *
+ * Return 1 if the sendme window was not empty.
+ * Return 0 otherwise.
+ */
+int
+connection_half_edge_is_valid_sendme(const smartlist_t *half_conns,
+                                     streamid_t stream_id)
+{
+  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
+                                                          stream_id);
+
+  if (!half)
+    return 0;
+
+  if (half->sendmes_pending > 0) {
+    half->sendmes_pending--;
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
+ * Check if this stream_id is in a half-closed state. If so, remove
+ * it from the list. No other data should come after the END cell.
+ *
+ * Return 1 if stream_id was in half-closed state.
+ * Return 0 otherwise.
+ */
+int
+connection_half_edge_is_valid_end(smartlist_t *half_conns,
+                                  streamid_t stream_id)
+{
+  half_edge_t *half;
+  int found, remove_idx;
+
+  if (!half_conns)
+    return 0;
+
+  remove_idx = smartlist_bsearch_idx(half_conns, &stream_id,
+                                    connection_half_edge_compare_bsearch,
+                                    &found);
+  if (!found)
+    return 0;
+
+  half = smartlist_get(half_conns, remove_idx);
+  smartlist_del_keeporder(half_conns, remove_idx);
+  tor_free(half);
+  return 1;
+}
+
+/**
+ * Streams that were used to send a RESOLVE cell are closed
+ * when they get the RESOLVED, without an end. So treat
+ * a RESOLVED just like an end, and remove from the list.
+ */
+int
+connection_half_edge_is_valid_resolved(smartlist_t *half_conns,
+                                       streamid_t stream_id)
+{
+  return connection_half_edge_is_valid_end(half_conns, stream_id);
 }
 
 /** An error has just occurred on an operation on an edge connection
@@ -2623,6 +2844,11 @@ get_unique_stream_id_by_circ(origin_circuit_t *circ)
   for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
     if (tmpconn->stream_id == test_stream_id)
       goto again;
+
+  if (connection_half_edge_find_stream_id(circ->half_streams,
+                                           test_stream_id))
+    goto again;
+
   return test_stream_id;
 }
 
