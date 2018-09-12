@@ -3389,6 +3389,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_notice(LD_CONFIG, "Your ContactInfo config option is not set. "
         "Please consider setting it, so we can contact you if your server is "
         "misconfigured or something else goes wrong.");
+  const char *ContactInfo = options->ContactInfo;
+  if (ContactInfo && !string_is_utf8(ContactInfo, strlen(ContactInfo)))
+    REJECT("ContactInfo config option must be UTF-8.");
 
   /* Special case on first boot if no Log options are given. */
   if (!options->Logs && !options->RunAsDaemon && !from_setconf) {
