@@ -1120,6 +1120,118 @@ networkstatus_parse_vote_from_string(const char *const s, const char **eos_out,
   return ns;
 }
 
+/** Parse 1 or more networkstatus_voter_info_t from <b>tokens</b> and
+  * add them to <b>ns</b>->voters. Return false on error.
+  */
+static bool
+parse_voters(const smartlist_t *tokens, networkstatus_t *ns)
+{
+  networkstatus_voter_info_t *voter = NULL;
+  bool success = false;
+
+  SMARTLIST_FOREACH_BEGIN(tokens, directory_token_t *, tok) {
+    if (tok->tp == K_DIR_SOURCE) {
+      tor_assert(tok->n_args >= 6);
+
+      if (voter)
+        smartlist_add(ns->voters, voter);
+      voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
+      voter->sigs = smartlist_new();
+      if (ns->type != NS_TYPE_CONSENSUS)
+        memcpy(voter->vote_digest, ns->digests.d[DIGEST_SHA1], DIGEST_LEN);
+
+      voter->nickname = tor_strdup(tok->args[0]);
+      if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
+          base16_decode(voter->identity_digest, sizeof(voter->identity_digest),
+                        tok->args[1], HEX_DIGEST_LEN)
+                        != sizeof(voter->identity_digest)) {
+        log_warn(LD_DIR, "Error decoding identity digest %s in "
+                 "network-status document.", escaped(tok->args[1]));
+        goto err;
+      }
+      if (ns->type != NS_TYPE_CONSENSUS &&
+          tor_memneq(ns->cert->cache_info.identity_digest,
+                 voter->identity_digest, DIGEST_LEN)) {
+        log_warn(LD_DIR,"Mismatch between identities in certificate and vote");
+        goto err;
+      }
+      if (ns->type != NS_TYPE_CONSENSUS) {
+        if (authority_cert_is_blacklisted(ns->cert)) {
+          log_warn(LD_DIR, "Rejecting vote signature made with blacklisted "
+                   "signing key %s",
+                   hex_str(ns->cert->signing_key_digest, DIGEST_LEN));
+          goto err;
+        }
+      }
+      voter->address = tor_strdup(tok->args[2]);
+      struct in_addr in;
+      if (!tor_inet_aton(tok->args[3], &in)) {
+        log_warn(LD_DIR, "Error decoding IP address %s in network-status.",
+                 escaped(tok->args[3]));
+        goto err;
+      }
+      voter->addr = ntohl(in.s_addr);
+      int ok;
+      voter->dir_port = (uint16_t)
+        tor_parse_long(tok->args[4], 10, 0, 65535, &ok, NULL);
+      if (!ok)
+        goto err;
+      voter->or_port = (uint16_t)
+        tor_parse_long(tok->args[5], 10, 0, 65535, &ok, NULL);
+      if (!ok)
+        goto err;
+    } else if (tok->tp == K_CONTACT) {
+      if (!voter || voter->contact) {
+        log_warn(LD_DIR, "contact element is out of place.");
+        goto err;
+      }
+      voter->contact = tor_strdup(tok->args[0]);
+    } else if (tok->tp == K_VOTE_DIGEST) {
+      tor_assert(ns->type == NS_TYPE_CONSENSUS);
+      tor_assert(tok->n_args >= 1);
+      if (!voter || ! tor_digest_is_zero(voter->vote_digest)) {
+        log_warn(LD_DIR, "vote-digest element is out of place.");
+        goto err;
+      }
+      if (strlen(tok->args[0]) != HEX_DIGEST_LEN ||
+        base16_decode(voter->vote_digest, sizeof(voter->vote_digest),
+                      tok->args[0], HEX_DIGEST_LEN)
+                      != sizeof(voter->vote_digest)) {
+        log_warn(LD_DIR, "Error decoding vote digest %s in "
+                 "network-status consensus.", escaped(tok->args[0]));
+        goto err;
+      }
+    }
+  } SMARTLIST_FOREACH_END(tok);
+  if (voter) {
+    smartlist_add(ns->voters, voter);
+    voter = NULL;
+  }
+  if (smartlist_len(ns->voters) == 0) {
+    log_warn(LD_DIR, "Missing dir-source elements in a networkstatus.");
+    goto err;
+  } else if (ns->type != NS_TYPE_CONSENSUS && smartlist_len(ns->voters) != 1) {
+    log_warn(LD_DIR, "Too many dir-source elements in a vote networkstatus.");
+    goto err;
+  }
+
+  success = true;
+ err:
+  if (voter) {
+    if (voter->sigs) {
+      SMARTLIST_FOREACH(voter->sigs, document_signature_t *, sig,
+                        document_signature_free(sig));
+      smartlist_free(voter->sigs);
+    }
+    tor_free(voter->nickname);
+    tor_free(voter->address);
+    tor_free(voter->contact);
+    tor_free(voter);
+  }
+
+  return success;
+}
+
 /** Parse the header of a v3 networkstatus vote, opinion, or consensus starting
   * at <b>s</b>. Return the number of bytes parsed, or -1 on failure.
   */
@@ -1128,7 +1240,6 @@ parse_vote_header(memarea_t *area, const char *s, networkstatus_type_t ns_type,
                   networkstatus_t *ns)
 {
   smartlist_t *tokens = smartlist_new();
-  networkstatus_voter_info_t *voter = NULL;
   char *last_kwd=NULL;
   directory_token_t *tok;
   ssize_t header_len = -1;
@@ -1354,93 +1465,9 @@ parse_vote_header(memarea_t *area, const char *s, networkstatus_type_t ns_type,
   }
 
   ns->voters = smartlist_new();
-
-  SMARTLIST_FOREACH_BEGIN(tokens, directory_token_t *, _tok) {
-    tok = _tok;
-    if (tok->tp == K_DIR_SOURCE) {
-      tor_assert(tok->n_args >= 6);
-
-      if (voter)
-        smartlist_add(ns->voters, voter);
-      voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
-      voter->sigs = smartlist_new();
-      if (ns->type != NS_TYPE_CONSENSUS)
-        memcpy(voter->vote_digest, ns->digests.d[DIGEST_SHA1], DIGEST_LEN);
-
-      voter->nickname = tor_strdup(tok->args[0]);
-      if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
-          base16_decode(voter->identity_digest, sizeof(voter->identity_digest),
-                        tok->args[1], HEX_DIGEST_LEN)
-                        != sizeof(voter->identity_digest)) {
-        log_warn(LD_DIR, "Error decoding identity digest %s in "
-                 "network-status document.", escaped(tok->args[1]));
-        goto err;
-      }
-      if (ns->type != NS_TYPE_CONSENSUS &&
-          tor_memneq(ns->cert->cache_info.identity_digest,
-                 voter->identity_digest, DIGEST_LEN)) {
-        log_warn(LD_DIR,"Mismatch between identities in certificate and vote");
-        goto err;
-      }
-      if (ns->type != NS_TYPE_CONSENSUS) {
-        if (authority_cert_is_blacklisted(ns->cert)) {
-          log_warn(LD_DIR, "Rejecting vote signature made with blacklisted "
-                   "signing key %s",
-                   hex_str(ns->cert->signing_key_digest, DIGEST_LEN));
-          goto err;
-        }
-      }
-      voter->address = tor_strdup(tok->args[2]);
-      struct in_addr in;
-      if (!tor_inet_aton(tok->args[3], &in)) {
-        log_warn(LD_DIR, "Error decoding IP address %s in network-status.",
-                 escaped(tok->args[3]));
-        goto err;
-      }
-      voter->addr = ntohl(in.s_addr);
-      int ok;
-      voter->dir_port = (uint16_t)
-        tor_parse_long(tok->args[4], 10, 0, 65535, &ok, NULL);
-      if (!ok)
-        goto err;
-      voter->or_port = (uint16_t)
-        tor_parse_long(tok->args[5], 10, 0, 65535, &ok, NULL);
-      if (!ok)
-        goto err;
-    } else if (tok->tp == K_CONTACT) {
-      if (!voter || voter->contact) {
-        log_warn(LD_DIR, "contact element is out of place.");
-        goto err;
-      }
-      voter->contact = tor_strdup(tok->args[0]);
-    } else if (tok->tp == K_VOTE_DIGEST) {
-      tor_assert(ns->type == NS_TYPE_CONSENSUS);
-      tor_assert(tok->n_args >= 1);
-      if (!voter || ! tor_digest_is_zero(voter->vote_digest)) {
-        log_warn(LD_DIR, "vote-digest element is out of place.");
-        goto err;
-      }
-      if (strlen(tok->args[0]) != HEX_DIGEST_LEN ||
-        base16_decode(voter->vote_digest, sizeof(voter->vote_digest),
-                      tok->args[0], HEX_DIGEST_LEN)
-                      != sizeof(voter->vote_digest)) {
-        log_warn(LD_DIR, "Error decoding vote digest %s in "
-                 "network-status consensus.", escaped(tok->args[0]));
-        goto err;
-      }
-    }
-  } SMARTLIST_FOREACH_END(_tok);
-  if (voter) {
-    smartlist_add(ns->voters, voter);
-    voter = NULL;
-  }
-  if (smartlist_len(ns->voters) == 0) {
-    log_warn(LD_DIR, "Missing dir-source elements in a networkstatus.");
+  if (!parse_voters(tokens, ns))
     goto err;
-  } else if (ns->type != NS_TYPE_CONSENSUS && smartlist_len(ns->voters) != 1) {
-    log_warn(LD_DIR, "Too many dir-source elements in a vote networkstatus.");
-    goto err;
-  }
+  tor_assert(smartlist_len(ns->voters) > 0);
 
   if (ns->type != NS_TYPE_CONSENSUS &&
       (tok = find_opt_by_keyword(tokens, K_LEGACY_DIR_KEY))) {
@@ -1474,17 +1501,6 @@ parse_vote_header(memarea_t *area, const char *s, networkstatus_type_t ns_type,
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);
-  }
-  if (voter) {
-    if (voter->sigs) {
-      SMARTLIST_FOREACH(voter->sigs, document_signature_t *, sig,
-                        document_signature_free(sig));
-      smartlist_free(voter->sigs);
-    }
-    tor_free(voter->nickname);
-    tor_free(voter->address);
-    tor_free(voter->contact);
-    tor_free(voter);
   }
   tor_free(last_kwd);
 
