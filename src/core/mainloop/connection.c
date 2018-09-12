@@ -1506,8 +1506,13 @@ connection_listener_new(const struct sockaddr *listensockaddr,
    */
   connection_check_oos(get_n_open_sockets(), 0);
 
-  log_notice(LD_NET, "Opened %s on %s",
-             conn_type_to_string(type), fmt_addrport(&addr, usePort));
+  if (conn->socket_family == AF_UNIX) {
+    log_notice(LD_NET, "Opened %s on %s",
+               conn_type_to_string(type), conn->address);
+  } else {
+    log_notice(LD_NET, "Opened %s on %s",
+               conn_type_to_string(type), fmt_addrport(&addr, usePort));
+  }
   return conn;
 
  err:
