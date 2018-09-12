@@ -188,6 +188,11 @@ config_has_invalid_options(const config_line_t *line_,
     NULL /* End marker. */
   };
 
+  const char *opts_exclude_v2[] = {
+    "HiddenServiceExportCircuitID",
+    NULL /* End marker. */
+  };
+
   /* Defining the size explicitly allows us to take advantage of the compiler
    * which warns us if we ever bump the max version but forget to grow this
    * array. The plus one is because we have a version 0 :). */
@@ -196,7 +201,7 @@ config_has_invalid_options(const config_line_t *line_,
   } exclude_lists[HS_VERSION_MAX + 1] = {
     { NULL }, /* v0. */
     { NULL }, /* v1. */
-    { NULL }, /* v2 */
+    { opts_exclude_v2 }, /* v2 */
     { opts_exclude_v3 }, /* v3. */
   };
 
@@ -262,6 +267,7 @@ config_service_v3(const config_line_t *line_,
                   hs_service_config_t *config)
 {
   int have_num_ip = 0;
+  bool export_circuit_id = false; /* just to detect duplicate options */
   const char *dup_opt_seen = NULL;
   const config_line_t *line;
 
@@ -286,6 +292,18 @@ config_service_v3(const config_line_t *line_,
         goto err;
       }
       have_num_ip = 1;
+      continue;
+    }
+    if (!strcasecmp(line->key, "HiddenServiceExportCircuitID")) {
+      config->export_circuit_id =
+        (unsigned int) helper_parse_uint64(line->key, line->value, 0, 1, &ok);
+      if (!ok || export_circuit_id) {
+        if (export_circuit_id) {
+          dup_opt_seen = line->key;
+        }
+        goto err;
+      }
+      export_circuit_id = true;
       continue;
     }
   }
