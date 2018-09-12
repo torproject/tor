@@ -2900,6 +2900,9 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
   } SMARTLIST_FOREACH_END(conn);
 
   smartlist_free(listeners);
+  /* Cleanup any remaining listener replacement. */
+  SMARTLIST_FOREACH(replacements, listener_replacement_t *, r, tor_free(r));
+  smartlist_free(replacements);
 
   if (old_or_port != router_get_advertised_or_port(options) ||
       old_or_port_ipv6 != router_get_advertised_or_port_by_af(options,
