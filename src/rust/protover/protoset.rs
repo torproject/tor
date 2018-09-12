@@ -174,7 +174,7 @@ impl ProtoSet {
             if low == u32::MAX || high == u32::MAX {
                 return Err(ProtoverError::ExceedsMax);
             }
-            if low < last_high {
+            if low <= last_high {
                 return Err(ProtoverError::Overlap);
             } else if low > high {
                 return Err(ProtoverError::LowGreaterThanHigh);
