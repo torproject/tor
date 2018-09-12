@@ -55,6 +55,8 @@ AC_ARG_ENABLE(zstd-advanced-apis,
    AS_HELP_STRING(--disable-zstd-advanced-apis, [Build without support for zstd's "static-only" APIs.]))
 AC_ARG_ENABLE(nss,
    AS_HELP_STRING(--enable-nss, [Use Mozilla's NSS TLS library. (EXPERIMENTAL)]))
+AC_ARG_ENABLE(pic,
+   AS_HELP_STRING(--enable-pic, [Build Tor's binaries as position-independent code, suitable to link as a library.]))
 
 if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
@@ -1138,6 +1140,10 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #error
 #endif])], have_clang=yes, have_clang=no)
 
+if test "x$enable_pic" = "xyes"; then
+    TOR_CHECK_CFLAGS(-fPIC)
+fi
+
 if test "x$enable_gcc_hardening" != "xno"; then
     CFLAGS="$CFLAGS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2"
     if test "x$have_clang" = "xyes"; then
@@ -1157,7 +1163,9 @@ m4_ifdef([AS_VAR_IF],[
     TOR_CHECK_CFLAGS(-Wstack-protector)
     TOR_CHECK_CFLAGS(--param ssp-buffer-size=1)
     if test "$bwin32" = "false" && test "$enable_libfuzzer" != "yes" && test "$enable_oss_fuzz" != "yes"; then
-       TOR_CHECK_CFLAGS(-fPIE)
+       if test "$enable_pic" != "yes"; then
+           TOR_CHECK_CFLAGS(-fPIE)
+       fi
        TOR_CHECK_LDFLAGS(-pie, "$all_ldflags_for_check", "$all_libs_for_check")
     fi
     TOR_TRY_COMPILE_WITH_CFLAGS(-fwrapv, also_link, CFLAGS_FWRAPV="-fwrapv", true)

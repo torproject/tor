@@ -1,0 +1,5 @@
+  o Minor features (build):
+    - If you pass the "--enable-pic" option to configure, Tor will try to
+      tell the compiler to build position-independent code suitable to
+      link into a library. (The default remains -fPIE, for code suitable for a
+      relocatable executable.) Closes ticket 23846.
