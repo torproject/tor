@@ -15,7 +15,7 @@
 #include "lib/string/util_string.h"
 
 #include "lib/net/socks5_status.h"
-#include "socks5.h"
+#include "trunnel/socks5.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -463,56 +463,66 @@ do_resolve(const char *hostname,
       goto err;
     }
   } else {
-    char reply_buf[16];
-    if (read_all_from_socket(s, reply_buf, 4) != 4) {
-      log_err(LD_NET, "Error reading SOCKS5 response.");
+    uint8_t reply_buf[512];
+
+    len = read_all_from_socket(s, (char *)reply_buf,
+                               sizeof(reply_buf));
+
+    socks5_server_reply_t *reply;
+
+    ssize_t parsed = socks5_server_reply_parse(&reply,
+                                               reply_buf,
+                                               len);
+    if (parsed == -1) {
+      log_err(LD_NET, "Failed parsing SOCKS5 response");
       goto err;
     }
 
-    if (reply_buf[0] != 5) {
-      log_err(LD_NET, "Bad SOCKS5 reply version.");
+    if (parsed == -2) {
+      log_err(LD_NET, "Truncated SOCKS5 response");
       goto err;
     }
+
     /* Give a user some useful feedback about SOCKS5 errors */
-    if (reply_buf[1] != 0) {
+    uint8_t reply_field = socks5_server_reply_get_reply(reply);
+    if (reply_field != 0) {
       log_warn(LD_NET,"Got SOCKS5 status response '%u': %s",
-               (unsigned)reply_buf[1],
-               socks5_reason_to_string(reply_buf[1]));
-      if (reply_buf[1] == 4 && !strcasecmpend(hostname, ".onion")) {
+               (unsigned)reply_field,
+               socks5_reason_to_string(reply_field));
+      if (reply_field == 4 && !strcasecmpend(hostname, ".onion")) {
         onion_warning(hostname);
       }
+
+      socks5_server_reply_free(reply);
       goto err;
     }
-    if (reply_buf[3] == 1) {
+
+    uint8_t atype = socks5_server_reply_get_atype(reply);
+
+    if (atype == SOCKS5_ATYPE_IPV4) {
       /* IPv4 address */
-      if (read_all_from_socket(s, reply_buf, 4) != 4) {
-        log_err(LD_NET, "Error reading address in socks5 response.");
-        goto err;
-      }
-      tor_addr_from_ipv4n(result_addr, get_uint32(reply_buf));
-    } else if (reply_buf[3] == 4) {
+      tor_addr_from_ipv4h(result_addr,
+        socks5_server_reply_get_bind_addr_ipv4(reply));
+    } else if (atype == SOCKS5_ATYPE_IPV6) {
       /* IPv6 address */
-      if (read_all_from_socket(s, reply_buf, 16) != 16) {
-        log_err(LD_NET, "Error reading address in socks5 response.");
-        goto err;
-      }
-      tor_addr_from_ipv6_bytes(result_addr, reply_buf);
-    } else if (reply_buf[3] == 3) {
+      tor_addr_from_ipv6_bytes(result_addr,
+        (const char *)socks5_server_reply_getarray_bind_addr_ipv6(reply));
+    } else if (atype == SOCKS5_ATYPE_HOSTNAME) {
       /* Domain name */
-      size_t result_len;
-      if (read_all_from_socket(s, reply_buf, 1) != 1) {
-        log_err(LD_NET, "Error reading address_length in socks5 response.");
-        goto err;
-      }
-      result_len = *(uint8_t*)(reply_buf);
+      domainname_t *dn =
+        socks5_server_reply_get_bind_addr_domainname(reply);
+
+      size_t result_len = (size_t)domainname_get_len(dn);
+
       *result_hostname = tor_malloc(result_len+1);
-      if (read_all_from_socket(s, *result_hostname, result_len)
-          != (int) result_len) {
-        log_err(LD_NET, "Error reading hostname in socks5 response.");
-        goto err;
-      }
+
+      strncpy(*result_hostname, (char *)domainname_getstr_name(dn),
+              result_len);
+
       (*result_hostname)[result_len] = '\0';
     }
+
+    socks5_server_reply_free(reply);
   }
 
   tor_close_socket(s);
