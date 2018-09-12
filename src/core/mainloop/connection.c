@@ -638,8 +638,19 @@ connection_free_minimal(connection_t *conn)
 
   if (connection_speaks_cells(conn)) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
-    tor_tls_free(or_conn->tls);
-    or_conn->tls = NULL;
+    if (or_conn->tls) {
+      if (! SOCKET_OK(conn->s)) {
+        /* The socket has been closed by somebody else; we must tell the
+         * TLS object not to close it. */
+        tor_tls_release_socket(or_conn->tls);
+      } else {
+        /* The tor_tls_free() call below will close the socket; we must tell
+         * the code below not to close it a second time. */
+        conn->s = TOR_INVALID_SOCKET;
+      }
+      tor_tls_free(or_conn->tls);
+      or_conn->tls = NULL;
+    }
     or_handshake_state_free(or_conn->handshake_state);
     or_conn->handshake_state = NULL;
     tor_free(or_conn->nickname);
