@@ -1,0 +1,4 @@
+  o Minor bugfixes (rust):
+    - The protover rewrite in 24031 allowed repeated votes from the same
+      voter for the same protocol version to be counted multiple times in
+      protover_compute_vote(). Fixes bug 27649; bugfix on 0.3.3.5-rc.
