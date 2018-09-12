@@ -458,8 +458,9 @@ fascist_firewall_use_ipv6(const or_options_t *options)
    * IPv4, or they prefer it.
    * ClientPreferIPv6DirPort is deprecated, but check it anyway. */
   return (options->ClientUseIPv6 == 1 || options->ClientUseIPv4 == 0 ||
-          options->ClientPreferIPv6ORPort ||
-          options->ClientPreferIPv6DirPort == 1 || options->UseBridges == 1);
+          options->ClientPreferIPv6ORPort == -1 ||
+          options->ClientPreferIPv6DirPort == 1 || options->UseBridges == 1 ||
+          options->ClientAutoIPv6ORPort == 1);
 }
 
 /** Do we prefer to connect to IPv6, ignoring ClientPreferIPv6ORPort and
@@ -489,7 +490,7 @@ fascist_firewall_prefer_ipv6_impl(const or_options_t *options)
 /* Choose whether we prefer IPv4 or IPv6 by randomly choosing an address
  * family. Return 0 for IPv4, and 1 for IPv6. */
 static int
-fascist_firewall_choose_preferred_addr(void)
+fascist_firewall_rand_preferred_addr(void)
 {
   /* TODO: Check for failures, and infer our preference based on this. */
   return crypto_rand_int(2);
@@ -511,8 +512,8 @@ fascist_firewall_prefer_ipv6_orport(const or_options_t *options)
   /* We can use both IPv4 and IPv6 - which do we prefer? */
   if (options->ClientPreferIPv6ORPort == 1) {
     return 1;
-  } else if (options->ClientPreferIPv6ORPort == -1) {
-    return fascist_firewall_choose_preferred_addr();
+  } else if (options->ClientAutoIPv6ORPort) {
+    return fascist_firewall_rand_preferred_addr();
   }
 
   return 0;

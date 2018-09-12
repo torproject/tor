@@ -666,6 +666,9 @@ struct or_options_t {
    * accessing this value directly.  */
   int ClientPreferIPv6DirPort;
 
+  /** If true, automatically choose between IPv4 and IPv6. */
+  int ClientAutoIPv6ORPort;
+
   /** The length of time that we think a consensus should be fresh. */
   int V3AuthVotingInterval;
   /** The length of time we think it will take to distribute votes. */
