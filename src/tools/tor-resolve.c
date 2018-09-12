@@ -383,23 +383,57 @@ do_resolve(const char *hostname,
   }
 
   if (version == 5) {
-    char method_buf[2];
-    if (write_all_to_socket(s, (const char *)"\x05\x01\x00", 3) != 3) {
+    socks5_client_version_t *v = socks5_client_version_new();
+
+    socks5_client_version_set_version(v, 5);
+    socks5_client_version_set_n_methods(v, 1);
+    socks5_client_version_setlen_methods(v, 1);
+    socks5_client_version_set_methods(v, 0, 0x00);
+
+    tor_assert(!socks5_client_version_check(v));
+    ssize_t encoded_len = socks5_client_version_encoded_len(v);
+    tor_assert(encoded_len > 0);
+
+    uint8_t *buf = tor_malloc(encoded_len);
+    encoded_len = socks5_client_version_encode(buf, encoded_len, v);
+    tor_assert(encoded_len > 0);
+
+    socks5_client_version_free(v);
+
+    if (write_all_to_socket(s, (const char *)buf,
+                            encoded_len) != encoded_len) {
       log_err(LD_NET, "Error sending SOCKS5 method list.");
+      tor_free(buf);
+
       goto err;
     }
-    if (read_all_from_socket(s, method_buf, 2) != 2) {
+
+    tor_free(buf);
+
+    uint8_t method_buf[2];
+
+    if (read_all_from_socket(s, (char *)method_buf, 2) != 2) {
       log_err(LD_NET, "Error reading SOCKS5 methods.");
       goto err;
     }
-    if (method_buf[0] != '\x05') {
-      log_err(LD_NET, "Unrecognized socks version: %u",
-              (unsigned)method_buf[0]);
+
+    socks5_server_method_t *m;
+    ssize_t parsed = socks5_server_method_parse(&m, method_buf,
+                                                sizeof(method_buf));
+
+    if (parsed < 2) {
+      log_err(LD_NET, "Failed to parse SOCKS5 method selection "
+                      "message");
       goto err;
     }
-    if (method_buf[1] != '\x00') {
+
+    uint8_t method = socks5_server_method_get_method(m);
+
+    socks5_server_method_free(m);
+
+    if (method != 0x00) {
       log_err(LD_NET, "Unrecognized socks authentication method: %u",
-              (unsigned)method_buf[1]);
+              (unsigned)method);
       goto err;
     }
   }
