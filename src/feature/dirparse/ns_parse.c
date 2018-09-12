@@ -1048,6 +1048,10 @@ extract_shared_random_srvs(networkstatus_t *ns, smartlist_t *tokens)
   }
 }
 
+static bool
+parse_vote_footer(memarea_t *area, const char *footer, size_t footer_len,
+                  networkstatus_t *ns);
+
 /** Parse a v3 networkstatus vote, opinion, or consensus (depending on
  * ns_type), from <b>s</b>, and return the result.  Return NULL on failure. */
 networkstatus_t *
@@ -1055,7 +1059,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
                                      networkstatus_type_t ns_type)
 {
   smartlist_t *tokens = smartlist_new();
-  smartlist_t *rs_tokens = NULL, *footer_tokens = NULL;
+  smartlist_t *rs_tokens = NULL;
   networkstatus_voter_info_t *voter = NULL;
   networkstatus_t *ns = NULL;
   common_digests_t ns_digests;
@@ -1478,13 +1482,64 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
 
   /* Parse footer; check signature. */
-  footer_tokens = smartlist_new();
   const char *end_of_footer;
   if ((end_of_footer = strstr(s, "\nnetwork-status-version ")))
     ++end_of_footer;
   else
     end_of_footer = s + strlen(s);
-  if (tokenize_string(area,s, end_of_footer, footer_tokens,
+
+  if (!parse_vote_footer(area, s, end_of_footer-s, ns))
+    goto err;
+
+  if (eos_out)
+    *eos_out = end_of_footer;
+
+  goto done;
+ err:
+  dump_desc(s_dup, "v3 networkstatus");
+  networkstatus_vote_free(ns);
+  ns = NULL;
+ done:
+  if (tokens) {
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
+    smartlist_free(tokens);
+  }
+  if (voter) {
+    if (voter->sigs) {
+      SMARTLIST_FOREACH(voter->sigs, document_signature_t *, sig,
+                        document_signature_free(sig));
+      smartlist_free(voter->sigs);
+    }
+    tor_free(voter->nickname);
+    tor_free(voter->address);
+    tor_free(voter->contact);
+    tor_free(voter);
+  }
+  if (rs_tokens) {
+    SMARTLIST_FOREACH(rs_tokens, directory_token_t *, t, token_clear(t));
+    smartlist_free(rs_tokens);
+  }
+  if (area) {
+    DUMP_AREA(area, "v3 networkstatus");
+    memarea_drop_all(area);
+  }
+  if (rs_area)
+    memarea_drop_all(rs_area);
+  tor_free(last_kwd);
+
+  return ns;
+}
+
+/** Parse the footer of a v3 networkstatus vote, opinion, or consensus from
+  * <b>footer</b>, checking all signatures.  Return false on failure. */
+static bool
+parse_vote_footer(memarea_t *area, const char *footer, size_t footer_len,
+                  networkstatus_t *ns)
+{
+  bool success = false;
+  smartlist_t *footer_tokens = smartlist_new();
+
+  if (tokenize_string(area, footer, footer+footer_len, footer_tokens,
                       networkstatus_vote_footer_token_table, 0)) {
     log_warn(LD_DIR, "Error tokenizing network-status vote footer.");
     goto err;
@@ -1492,17 +1547,17 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   {
     int found_sig = 0;
-    SMARTLIST_FOREACH_BEGIN(footer_tokens, directory_token_t *, _tok) {
-      tok = _tok;
+    SMARTLIST_FOREACH_BEGIN(footer_tokens, directory_token_t *, tok) {
       if (tok->tp == K_DIRECTORY_SIGNATURE)
         found_sig = 1;
       else if (found_sig) {
         log_warn(LD_DIR, "Extraneous token after first directory-signature");
         goto err;
       }
-    } SMARTLIST_FOREACH_END(_tok);
+    } SMARTLIST_FOREACH_END(tok);
   }
 
+  directory_token_t *tok;
   if ((tok = find_opt_by_keyword(footer_tokens, K_DIRECTORY_FOOTER))) {
     if (tok != smartlist_get(footer_tokens, 0)) {
       log_warn(LD_DIR, "Misplaced directory-footer token");
@@ -1613,7 +1668,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     }
 
     if (ns->type != NS_TYPE_CONSENSUS) {
-      if (check_signature_token(ns_digests.d[DIGEST_SHA1], DIGEST_LEN,
+      if (check_signature_token(ns->digests.d[DIGEST_SHA1], DIGEST_LEN,
                                 tok, ns->cert->signing_key, 0,
                                 "network-status document")) {
         tor_free(sig);
@@ -1642,45 +1697,12 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     goto err;
   }
 
-  if (eos_out)
-    *eos_out = end_of_footer;
-
-  goto done;
+  success = true;
  err:
-  dump_desc(s_dup, "v3 networkstatus");
-  networkstatus_vote_free(ns);
-  ns = NULL;
- done:
-  if (tokens) {
-    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
-    smartlist_free(tokens);
-  }
-  if (voter) {
-    if (voter->sigs) {
-      SMARTLIST_FOREACH(voter->sigs, document_signature_t *, sig,
-                        document_signature_free(sig));
-      smartlist_free(voter->sigs);
-    }
-    tor_free(voter->nickname);
-    tor_free(voter->address);
-    tor_free(voter->contact);
-    tor_free(voter);
-  }
-  if (rs_tokens) {
-    SMARTLIST_FOREACH(rs_tokens, directory_token_t *, t, token_clear(t));
-    smartlist_free(rs_tokens);
-  }
   if (footer_tokens) {
     SMARTLIST_FOREACH(footer_tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(footer_tokens);
   }
-  if (area) {
-    DUMP_AREA(area, "v3 networkstatus");
-    memarea_drop_all(area);
-  }
-  if (rs_area)
-    memarea_drop_all(rs_area);
-  tor_free(last_kwd);
 
-  return ns;
+  return success;
 }
