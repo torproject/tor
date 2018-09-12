@@ -298,13 +298,13 @@ test_protover_all_supported(void *arg)
   tor_free(msg);
 
   /* We shouldn't be able to DoS ourselves parsing a large range. */
-  tt_assert(! protover_all_supported("Sleen=0-2147483648", &msg));
-  tt_str_op(msg, OP_EQ, "Sleen=0-2147483648");
+  tt_assert(! protover_all_supported("Sleen=1-2147483648", &msg));
+  tt_str_op(msg, OP_EQ, "Sleen=1-2147483648");
   tor_free(msg);
 
   /* This case is allowed. */
-  tt_assert(! protover_all_supported("Sleen=0-4294967294", &msg));
-  tt_str_op(msg, OP_EQ, "Sleen=0-4294967294");
+  tt_assert(! protover_all_supported("Sleen=1-4294967294", &msg));
+  tt_str_op(msg, OP_EQ, "Sleen=1-4294967294");
   tor_free(msg);
 
   /* If we get a (barely) valid (but unsupported list, we say "yes, that's
@@ -321,7 +321,7 @@ test_protover_all_supported(void *arg)
   /* If we get a completely unparseable list, protover_all_supported should
    * hit a fatal assertion for BUG(entries == NULL). */
   tor_capture_bugs_(1);
-  tt_assert(protover_all_supported("Sleen=0-4294967295", &msg));
+  tt_assert(protover_all_supported("Sleen=1-4294967295", &msg));
   tor_end_capture_bugs_();
 
   /* Protocol name too long */
@@ -556,11 +556,11 @@ test_protover_vote_roundtrip(void *args)
     { "Zn=4294967295-1", NULL },
     { "Zn=4294967293-4294967295", NULL },
     /* Will fail because of 4294967295. */
-    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=0,4294967295",
+    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=1,4294967295",
        NULL },
-    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=0,4294967294",
-      "Bar=3 Foo=1,3 Quux=9-12,14-16,900 Zn=0,4294967294" },
-    { "Zu16=0,65536", "Zu16=0,65536" },
+    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=1,4294967294",
+      "Bar=3 Foo=1,3 Quux=9-12,14-16,900 Zn=1,4294967294" },
+    { "Zu16=1,65536", "Zu16=1,65536" },
     { "N-1=1,2", "N-1=1-2" },
     { "-1=4294967295", NULL },
     { "-1=3", "-1=3" },
@@ -597,9 +597,9 @@ test_protover_vote_roundtrip(void *args)
     { "Sleen=1-501", "Sleen=1-501" },
     { "Sleen=1-65537", NULL },
     /* Both C/Rust implementations should be able to handle this mild DoS. */
-    { "Sleen=0-2147483648", NULL },
+    { "Sleen=1-2147483648", NULL },
     /* Rust tests are built in debug mode, so ints are bounds-checked. */
-    { "Sleen=0-4294967295", NULL },
+    { "Sleen=1-4294967295", NULL },
   };
   unsigned u;
   smartlist_t *votes = smartlist_new();
