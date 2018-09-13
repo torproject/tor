@@ -1164,8 +1164,12 @@ m4_ifdef([AS_VAR_IF],[
     TOR_CHECK_CFLAGS(--param ssp-buffer-size=1)
     if test "$bwin32" = "false" && test "$enable_libfuzzer" != "yes" && test "$enable_oss_fuzz" != "yes"; then
        if test "$enable_pic" != "yes"; then
+           # If we have already enabled -fPIC, then we don't also need to
+           # compile with -fPIE...
            TOR_CHECK_CFLAGS(-fPIE)
        fi
+       # ... but we want to link our executables with -pie in any case, since
+       # they're executables, not a library.
        TOR_CHECK_LDFLAGS(-pie, "$all_ldflags_for_check", "$all_libs_for_check")
     fi
     TOR_TRY_COMPILE_WITH_CFLAGS(-fwrapv, also_link, CFLAGS_FWRAPV="-fwrapv", true)
