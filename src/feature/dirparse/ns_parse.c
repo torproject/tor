@@ -1587,6 +1587,90 @@ parse_statuses_in_vote(const char *const start, networkstatus_t *ns)
   return len;
 }
 
+/** Parse the signature token <b>tok</b> and if successful place the
+  * result in *<b>out</b>. Return false on a fatal error. Return true,
+  * but set *<b>out</b> to NULL, on a nonfatal parsing error.
+  */
+bool
+networkstatus_parse_signature_token(directory_token_t *tok,
+                                    document_signature_t **out)
+{
+  document_signature_t *sig;
+  const char *id_hexdigest, *sk_hexdigest, *algname;
+  digest_algorithm_t alg;
+  *out = NULL;
+
+  if (tok->tp == K_DIRECTORY_SIGNATURE) {
+    tor_assert(tok->n_args >= 2);
+    if (tok->n_args == 2) {
+      algname = "sha1";
+      id_hexdigest = tok->args[0];
+      sk_hexdigest = tok->args[1];
+    } else {
+      algname = tok->args[0];
+      id_hexdigest = tok->args[1];
+      sk_hexdigest = tok->args[2];
+    }
+  } else if (tok->tp == K_ADDITIONAL_SIGNATURE) {
+    tor_assert(tok->n_args >= 4);
+    algname = tok->args[1];
+    id_hexdigest = tok->args[2];
+    sk_hexdigest = tok->args[3];
+  } else {
+    tor_assert_nonfatal_unreached();
+    return false;
+  }
+
+  {
+    int a = crypto_digest_algorithm_parse_name(algname);
+    if (a<0) {
+      log_warn(LD_DIR, "Unknown digest algorithm %s; skipping",
+                       escaped(algname));
+      return true;
+    }
+    alg = (digest_algorithm_t) a;
+  }
+
+  if (!tok->object_type ||
+      strcmp(tok->object_type, "SIGNATURE") ||
+      tok->object_size < 128 || tok->object_size > 512) {
+    log_warn(LD_DIR, "Bad object type or length on directory-signature");
+    return false;
+  }
+
+  char id_digest[DIGEST_LEN];
+  char sk_digest[DIGEST_LEN];
+
+  if (strlen(id_hexdigest) != HEX_DIGEST_LEN ||
+      base16_decode(id_digest, sizeof(id_digest),
+                    id_hexdigest, HEX_DIGEST_LEN) != sizeof(id_digest)) {
+    log_warn(LD_DIR, "Error decoding declared identity %s in "
+             "network-status vote.", escaped(id_hexdigest));
+    return false;
+  }
+  if (strlen(sk_hexdigest) != HEX_DIGEST_LEN ||
+      base16_decode(sk_digest, sizeof(sk_digest),
+                    sk_hexdigest, HEX_DIGEST_LEN) != sizeof(sk_digest)) {
+    log_warn(LD_DIR, "Error decoding declared signing key digest %s in "
+             "network-status vote.", escaped(sk_hexdigest));
+    return false;
+  }
+
+  if (tok->object_size >= INT_MAX || tok->object_size >= SIZE_T_CEILING) {
+    return false;
+  }
+
+  sig = tor_malloc_zero(sizeof(document_signature_t));
+  sig->alg = alg;
+  memcpy(sig->identity_digest, id_digest, DIGEST_LEN);
+  memcpy(sig->signing_key_digest, sk_digest, DIGEST_LEN);
+  sig->signature = tor_memdup(tok->object_body, tok->object_size);
+  sig->signature_len = (int) tok->object_size;
+
+  *out = sig;
+  return true;
+}
+
 /** Parse the footer of a v3 networkstatus vote, opinion, or consensus from
   * <b>footer</b>, checking all signatures.  Return false on failure. */
 static bool
@@ -1644,62 +1728,22 @@ parse_vote_footer(memarea_t *area, const char *footer, size_t footer_len,
 
   unsigned n_signatures = 0;
   SMARTLIST_FOREACH_BEGIN(footer_tokens, directory_token_t *, _tok) {
-    char declared_identity[DIGEST_LEN];
     networkstatus_voter_info_t *v;
     document_signature_t *sig;
-    const char *id_hexdigest = NULL;
-    const char *sk_hexdigest = NULL;
-    digest_algorithm_t alg = DIGEST_SHA1;
     tok = _tok;
     if (tok->tp != K_DIRECTORY_SIGNATURE)
       continue;
-    tor_assert(tok->n_args >= 2);
-    if (tok->n_args == 2) {
-      id_hexdigest = tok->args[0];
-      sk_hexdigest = tok->args[1];
-    } else {
-      const char *algname = tok->args[0];
-      int a;
-      id_hexdigest = tok->args[1];
-      sk_hexdigest = tok->args[2];
-      a = crypto_digest_algorithm_parse_name(algname);
-      if (a<0) {
-        log_warn(LD_DIR, "Unknown digest algorithm %s; skipping",
-                 escaped(algname));
-        continue;
-      }
-      alg = a;
-    }
 
-    if (!tok->object_type ||
-        strcmp(tok->object_type, "SIGNATURE") ||
-        tok->object_size < 128 || tok->object_size > 512) {
-      log_warn(LD_DIR, "Bad object type or length on directory-signature");
+    sig = NULL;
+    if (!networkstatus_parse_signature_token(tok, &sig))
       goto err;
-    }
+    if (!sig) // nonfatal error, skipping this one
+      continue;
 
-    if (strlen(id_hexdigest) != HEX_DIGEST_LEN ||
-        base16_decode(declared_identity, sizeof(declared_identity),
-                      id_hexdigest, HEX_DIGEST_LEN)
-                      != sizeof(declared_identity)) {
-      log_warn(LD_DIR, "Error decoding declared identity %s in "
-               "network-status document.", escaped(id_hexdigest));
-      goto err;
-    }
+    const char *declared_identity = sig->identity_digest;
     if (!(v = networkstatus_get_voter_by_id(ns, declared_identity))) {
       log_warn(LD_DIR, "ID on signature on network-status document does "
                "not match any declared directory source.");
-      goto err;
-    }
-    sig = tor_malloc_zero(sizeof(document_signature_t));
-    memcpy(sig->identity_digest, v->identity_digest, DIGEST_LEN);
-    sig->alg = alg;
-    if (strlen(sk_hexdigest) != HEX_DIGEST_LEN ||
-        base16_decode(sig->signing_key_digest, sizeof(sig->signing_key_digest),
-                      sk_hexdigest, HEX_DIGEST_LEN)
-                      != sizeof(sig->signing_key_digest)) {
-      log_warn(LD_DIR, "Error decoding declared signing key digest %s in "
-               "network-status document.", escaped(sk_hexdigest));
       document_signature_free(sig);
       goto err;
     }
@@ -1732,13 +1776,6 @@ parse_vote_footer(memarea_t *area, const char *footer, size_t footer_len,
         goto err;
       }
       sig->good_signature = 1;
-    } else {
-      if (tok->object_size >= INT_MAX || tok->object_size >= SIZE_T_CEILING) {
-        document_signature_free(sig);
-        goto err;
-      }
-      sig->signature = tor_memdup(tok->object_body, tok->object_size);
-      sig->signature_len = (int) tok->object_size;
     }
     smartlist_add(v->sigs, sig);
 

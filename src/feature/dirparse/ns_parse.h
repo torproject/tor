@@ -26,6 +26,9 @@ enum networkstatus_type_t;
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
                                            const char **eos_out,
                                            enum networkstatus_type_t ns_type);
+struct directory_token_t;
+bool networkstatus_parse_signature_token(struct directory_token_t *tok,
+                                         document_signature_t **out);
 
 #ifdef NS_PARSE_PRIVATE
 STATIC int routerstatus_parse_guardfraction(const char *guardfraction_str,

@@ -10,6 +10,7 @@
  **/
 
 #include "core/or/or.h"
+#include "feature/dirparse/ns_parse.h"
 #include "feature/dirparse/parsecommon.h"
 #include "feature/dirparse/unparseable.h"
 #include "feature/nodelist/networkstatus.h"
@@ -66,7 +67,7 @@ detached_get_signatures(ns_detached_signatures_t *sigs,
 ns_detached_signatures_t *
 networkstatus_parse_detached_signatures(const char *s, const char *eos)
 {
-  /* XXXX there is too much duplicate shared between this function and
+  /* XXXX there is some duplicate code shared between this function and
    * networkstatus_parse_vote_from_string(). */
   directory_token_t *tok;
   memarea_t *area = NULL;
@@ -159,65 +160,29 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
   }
 
   SMARTLIST_FOREACH_BEGIN(tokens, directory_token_t *, _tok) {
-    const char *id_hexdigest;
-    const char *sk_hexdigest;
-    const char *algname;
     const char *flavor;
-    digest_algorithm_t alg;
-
-    char id_digest[DIGEST_LEN];
-    char sk_digest[DIGEST_LEN];
     smartlist_t *siglist;
     document_signature_t *sig;
     int is_duplicate;
 
     tok = _tok;
     if (tok->tp == K_DIRECTORY_SIGNATURE) {
-      tor_assert(tok->n_args >= 2);
       flavor = "ns";
-      algname = "sha1";
-      id_hexdigest = tok->args[0];
-      sk_hexdigest = tok->args[1];
     } else if (tok->tp == K_ADDITIONAL_SIGNATURE) {
-      tor_assert(tok->n_args >= 4);
       flavor = tok->args[0];
-      algname = tok->args[1];
-      id_hexdigest = tok->args[2];
-      sk_hexdigest = tok->args[3];
     } else {
       continue;
     }
 
-    {
-      int a = crypto_digest_algorithm_parse_name(algname);
-      if (a<0) {
-        log_warn(LD_DIR, "Unrecognized algorithm name %s", algname);
-        continue;
-      }
-      alg = (digest_algorithm_t) a;
-    }
+    sig = NULL;
+    if (!networkstatus_parse_signature_token(tok, &sig))
+      goto err;
+    if (!sig) // nonfatal error, skipping this one
+      continue;
 
-    if (!tok->object_type ||
-        strcmp(tok->object_type, "SIGNATURE") ||
-        tok->object_size < 128 || tok->object_size > 512) {
-      log_warn(LD_DIR, "Bad object type or length on directory-signature");
-      goto err;
-    }
-
-    if (strlen(id_hexdigest) != HEX_DIGEST_LEN ||
-        base16_decode(id_digest, sizeof(id_digest),
-                      id_hexdigest, HEX_DIGEST_LEN) != sizeof(id_digest)) {
-      log_warn(LD_DIR, "Error decoding declared identity %s in "
-               "network-status vote.", escaped(id_hexdigest));
-      goto err;
-    }
-    if (strlen(sk_hexdigest) != HEX_DIGEST_LEN ||
-        base16_decode(sk_digest, sizeof(sk_digest),
-                      sk_hexdigest, HEX_DIGEST_LEN) != sizeof(sk_digest)) {
-      log_warn(LD_DIR, "Error decoding declared signing key digest %s in "
-               "network-status vote.", escaped(sk_hexdigest));
-      goto err;
-    }
+    digest_algorithm_t alg = sig->alg;
+    const char *id_digest = sig->identity_digest;
+    const char *sk_digest = sig->signing_key_digest;
 
     siglist = detached_get_signatures(sigs, flavor);
     is_duplicate = 0;
@@ -231,19 +196,9 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     if (is_duplicate) {
       log_warn(LD_DIR, "Two signatures with identical keys and algorithm "
                "found.");
+      document_signature_free(sig);
       continue;
     }
-
-    sig = tor_malloc_zero(sizeof(document_signature_t));
-    sig->alg = alg;
-    memcpy(sig->identity_digest, id_digest, DIGEST_LEN);
-    memcpy(sig->signing_key_digest, sk_digest, DIGEST_LEN);
-    if (tok->object_size >= INT_MAX || tok->object_size >= SIZE_T_CEILING) {
-      document_signature_free(sig);
-      goto err;
-    }
-    sig->signature = tor_memdup(tok->object_body, tok->object_size);
-    sig->signature_len = (int) tok->object_size;
 
     smartlist_add(siglist, sig);
   } SMARTLIST_FOREACH_END(_tok);
