@@ -623,11 +623,23 @@ test_bridges_node_is_a_configured_bridge(void *arg)
   base16_decode(node_with_digest.identity, DIGEST_LEN,
                 fingerprint, HEX_DIGEST_LEN);
 
-  tt_assert(node_is_a_configured_bridge(&node_with_digest));
-
   node_t node_ri_ipv4 = { .ri = &ri_ipv4 };
   base16_decode(node_ri_ipv4.identity, DIGEST_LEN,
                 fingerprint2, HEX_DIGEST_LEN);
+  tt_assert(node_is_a_configured_bridge(&node_ri_ipv4));
+
+  /* This will still match bridge0, since bridge0 has no digest set. */
+  memset(node_ri_ipv4.identity, 0x3f, DIGEST_LEN);
+  tt_assert(node_is_a_configured_bridge(&node_ri_ipv4));
+
+  /* It won't match bridge1, though, since bridge1 has a digest, and this
+     isn't it! */
+  node_ri_ipv4.ri->addr = 0x06060607;
+  node_ri_ipv4.ri->or_port = 6667;
+  tt_assert(! node_is_a_configured_bridge(&node_ri_ipv4));
+  /* If we set the fingerprint right, though, it will match. */
+  base16_decode(node_ri_ipv4.identity, DIGEST_LEN,
+                "A10C4F666D27364036B562823E5830BC448E046A", HEX_DIGEST_LEN);
   tt_assert(node_is_a_configured_bridge(&node_ri_ipv4));
 
   node_t node_rs_ipv4 = { .rs = &rs_ipv4 };
