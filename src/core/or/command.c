@@ -480,6 +480,8 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
   const or_options_t *options = get_options();
   circuit_t *circ;
   int reason, direction;
+  uint32_t orig_delivered_bw = 0;
+  uint32_t orig_overhead_bw = 0;
 
   circ = circuit_get_by_circid_channel(cell->circ_id, chan);
 
@@ -512,6 +514,15 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
     /* Count the payload bytes only. We don't care about cell headers */
     ocirc->n_read_circ_bw = tor_add_u32_nowrap(ocirc->n_read_circ_bw,
                                                CELL_PAYLOAD_SIZE);
+
+    /* Stash the original delivered and overhead values. These values are
+     * updated by circuit_read_valid_data() during cell processing by
+     * connection_edge_process_relay_cell(), called from
+     * circuit_receive_relay_cell() below. If they do not change, we inform
+     * the control port about dropped cells immediately after the call
+     * to circuit_receive_relay_cell() below. */
+    orig_delivered_bw = ocirc->n_delivered_read_circ_bw;
+    orig_overhead_bw = ocirc->n_overhead_read_circ_bw;
   }
 
   if (!CIRCUIT_IS_ORIGIN(circ) &&
@@ -535,6 +546,8 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
                (unsigned)cell->circ_id);
       if (CIRCUIT_IS_ORIGIN(circ)) {
         circuit_log_path(LOG_WARN, LD_OR, TO_ORIGIN_CIRCUIT(circ));
+        /* Always emit a bandwidth event for closed circs */
+        control_event_circ_bandwidth_used_for_circ(TO_ORIGIN_CIRCUIT(circ));
       } else if (circ->n_chan) {
         log_warn(LD_OR, " upstream=%s",
                  channel_get_actual_remote_descr(circ->n_chan));
@@ -560,7 +573,31 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
     log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell "
            "(%s) failed. Closing.",
            direction==CELL_DIRECTION_OUT?"forward":"backward");
+    /* Always emit a bandwidth event for closed circs */
+    if (CIRCUIT_IS_ORIGIN(circ)) {
+      control_event_circ_bandwidth_used_for_circ(TO_ORIGIN_CIRCUIT(circ));
+    }
     circuit_mark_for_close(circ, -reason);
+  }
+
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+
+    /* If neither the delivered nor overhead values changed, this cell
+     * was dropped due to being invalid by one of the error codepaths in
+     * connection_edge_process_relay_cell(), called by
+     * circuit_receive_relay_cell().
+     *
+     * Valid cells, on the other hand, call circuit_read_valid_data()
+     * to update these values upon processing them.
+     *
+     * So, if the values are the same as those stored above,
+     * emit a control port event for CIRC_BW, so the controller can
+     * react quickly to invalid cells. */
+    if (orig_delivered_bw == ocirc->n_delivered_read_circ_bw &&
+        orig_overhead_bw == ocirc->n_overhead_read_circ_bw) {
+      control_event_circ_bandwidth_used_for_circ(ocirc);
+    }
   }
 
   /* If this is a cell in an RP circuit, count it as part of the
