@@ -6063,7 +6063,14 @@ control_event_circ_bandwidth_used(void)
   return 0;
 }
 
-/* Emit a CIRC_BW event line for a specific circuit */
+/**
+ * Emit a CIRC_BW event line for a specific circuit.
+ *
+ * This function sets the values it emits to 0, and does not emit
+ * an event if there is no new data to report since the last call.
+ *
+ * Therefore, it may be called at any frequency.
+ */
 int
 control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
 {
@@ -6075,6 +6082,12 @@ control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
   if (!EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
     return 0;
 
+  /* n_read_circ_bw and n_written_circ_bw are always updated
+   * when there is any new cell on a circuit, and set to 0 after
+   * the event, below.
+   *
+   * Therefore, checking them is sufficient to determine if there
+   * is new data to report. */
   if (!ocirc->n_read_circ_bw && !ocirc->n_written_circ_bw)
     return 0;
 
