@@ -5167,8 +5167,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
 
   tor_assert(desc);
   /* Check if desc starts correctly. */
-  if (strncmp(desc, "rendezvous-service-descriptor ",
-              strlen("rendezvous-service-descriptor "))) {
+  if (strcmpstart(desc, "rendezvous-service-descriptor ")) {
     log_info(LD_REND, "Descriptor does not start correctly.");
     goto err;
   }

@@ -201,7 +201,7 @@ networkstatus_reset_download_failures(void)
 
 /**
  * Read and and return the cached consensus of type <b>flavorname</b>.  If
- * <b>unverified</b> is false, get the one we haven't verified. Return NULL if
+ * <b>unverified</b> is true, get the one we haven't verified. Return NULL if
  * the file isn't there. */
 static char *
 networkstatus_read_cached_consensus_impl(int flav,
