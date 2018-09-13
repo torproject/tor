@@ -16,6 +16,10 @@
 #include "feature/client/bridges.h"
 #include "app/config/config.h"
 #include "feature/client/transports.h"
+#include "feature/nodelist/node_st.h"
+#include "feature/nodelist/routerinfo_st.h"
+#include "feature/nodelist/routerstatus_st.h"
+#include "feature/nodelist/microdesc_st.h"
 
 /* Test suite stuff */
 #include "test/test.h"
@@ -75,6 +79,7 @@ helper_add_bridges_to_bridgelist(void *arg)
   char *bridge5 = tor_strdup("apple 4.4.4.4:4444 "
                              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA "
                              "foo=abcdefghijklmnopqrstuvwxyz");
+  char *bridge6 = tor_strdup("[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:6666");
 
   mark_bridge_list();
 
@@ -93,6 +98,7 @@ helper_add_bridges_to_bridgelist(void *arg)
   ADD_BRIDGE(bridge3);
   ADD_BRIDGE(bridge4);
   ADD_BRIDGE(bridge5);
+  ADD_BRIDGE(bridge6);
 #undef ADD_BRIDGES
 
   sweep_bridge_list();
@@ -585,6 +591,80 @@ test_bridges_get_transport_by_bridge_addrport(void *arg)
   sweep_bridge_list();
 }
 
+static void
+test_bridges_node_is_a_configured_bridge(void *arg)
+{
+  routerinfo_t ri_ipv4 = { .addr = 0x06060606, .or_port = 6666 };
+  routerstatus_t rs_ipv4 = { .addr = 0x06060606, .or_port = 6666 };
+
+  routerinfo_t ri_ipv6 = { .ipv6_orport = 6666 };
+  tor_addr_parse(&(ri_ipv6.ipv6_addr),
+                 "2001:0db8:85a3:0000:0000:8a2e:0370:7334");
+
+  routerstatus_t rs_ipv6 = { .ipv6_orport = 6666 };
+  tor_addr_parse(&(rs_ipv6.ipv6_addr),
+                 "2001:0db8:85a3:0000:0000:8a2e:0370:7334");
+
+  microdesc_t md_ipv6 = { .ipv6_orport = 6666 };
+  tor_addr_parse(&(md_ipv6.ipv6_addr),
+                 "2001:0db8:85a3:0000:0000:8a2e:0370:7334");
+
+  helper_add_bridges_to_bridgelist(arg);
+
+  node_t node_with_digest;
+  memset(&node_with_digest, 0, sizeof(node_with_digest));
+
+  const char fingerprint[HEX_DIGEST_LEN] =
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+  const char fingerprint2[HEX_DIGEST_LEN] =
+    "ffffffffffffffffffffffffffffffffffffffff";
+
+  base16_decode(node_with_digest.identity, DIGEST_LEN,
+                fingerprint, HEX_DIGEST_LEN);
+
+  tt_assert(node_is_a_configured_bridge(&node_with_digest));
+
+  node_t node_ri_ipv4 = { .ri = &ri_ipv4 };
+  base16_decode(node_ri_ipv4.identity, DIGEST_LEN,
+                fingerprint2, HEX_DIGEST_LEN);
+  tt_assert(node_is_a_configured_bridge(&node_ri_ipv4));
+
+  node_t node_rs_ipv4 = { .rs = &rs_ipv4 };
+  base16_decode(node_rs_ipv4.identity, DIGEST_LEN,
+                fingerprint2, HEX_DIGEST_LEN);
+  tt_assert(node_is_a_configured_bridge(&node_rs_ipv4));
+
+  node_t node_ri_ipv6 = { .ri = &ri_ipv6 };
+  base16_decode(node_ri_ipv6.identity, DIGEST_LEN,
+                fingerprint2, HEX_DIGEST_LEN);
+  tt_assert(node_is_a_configured_bridge(&node_ri_ipv6));
+
+  node_t node_rs_ipv6 = { .rs = &rs_ipv6 };
+  base16_decode(node_rs_ipv6.identity, DIGEST_LEN,
+                fingerprint2, HEX_DIGEST_LEN);
+  tt_assert(node_is_a_configured_bridge(&node_rs_ipv6));
+
+  node_t node_md_ipv6 = { .md = &md_ipv6 };
+  base16_decode(node_md_ipv6.identity, DIGEST_LEN,
+                fingerprint2, HEX_DIGEST_LEN);
+  tt_assert(node_is_a_configured_bridge(&node_md_ipv6));
+
+  mark_bridge_list();
+  sweep_bridge_list();
+
+  tt_assert(!node_is_a_configured_bridge(&node_with_digest));
+  tt_assert(!node_is_a_configured_bridge(&node_ri_ipv4));
+  tt_assert(!node_is_a_configured_bridge(&node_ri_ipv6));
+  tt_assert(!node_is_a_configured_bridge(&node_rs_ipv4));
+  tt_assert(!node_is_a_configured_bridge(&node_rs_ipv6));
+  tt_assert(!node_is_a_configured_bridge(&node_md_ipv6));
+
+ done:
+  mark_bridge_list();
+  sweep_bridge_list();
+}
+
 #undef PT_PRIVATE /* defined(PT_PRIVATE) */
 
 #define B_TEST(name, flags) \
@@ -607,5 +687,6 @@ struct testcase_t bridges_tests[] = {
   B_TEST(get_transport_by_bridge_addrport_no_ptlist, 0),
   B_TEST(get_transport_by_bridge_addrport, 0),
   B_TEST(transport_is_needed, 0),
+  B_TEST(node_is_a_configured_bridge, 0),
   END_OF_TESTCASES
 };
