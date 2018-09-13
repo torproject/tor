@@ -551,9 +551,12 @@ crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
   char *buf = read_file_to_str(keyfile, 0, &st);
   if (!buf)
     return -1;
+  if (st.st_size > SSIZE_MAX)
+    return -1;
 
-  int rv = crypto_pk_read_private_key_from_string(env, buf, st.st_size);
-  memwipe(buf, 0, st.st_size);
+  int rv = crypto_pk_read_private_key_from_string(env, buf,
+                                                  (ssize_t)st.st_size);
+  memwipe(buf, 0, (size_t)st.st_size);
   tor_free(buf);
   return rv;
 }
