@@ -29,6 +29,8 @@ connection_t *test_conn_get_connection(uint8_t state,
                                        uint8_t type, uint8_t purpose);
 or_options_t *helper_parse_options(const char *conf);
 
+int create_test_directory_structure(const char *parent_dir);
+
 extern const char TEST_DESCRIPTORS[];
 
 #endif /* !defined(TOR_TEST_HELPERS_H) */
