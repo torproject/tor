@@ -1121,13 +1121,13 @@ geoip_get_dirreq_history(dirreq_type_t type)
     dltimes = tor_calloc(complete, sizeof(uint32_t));
     SMARTLIST_FOREACH_BEGIN(dirreq_completed, dirreq_map_entry_t *, ent) {
       uint32_t bytes_per_second;
-      uint32_t time_diff = (uint32_t) tv_mdiff(&ent->request_time,
+      uint32_t time_diff_ = (uint32_t) tv_mdiff(&ent->request_time,
                                                &ent->completion_time);
-      if (time_diff == 0)
-        time_diff = 1; /* Avoid DIV/0; "instant" answers are impossible
+      if (time_diff_ == 0)
+        time_diff_ = 1; /* Avoid DIV/0; "instant" answers are impossible
                         * by law of nature or something, but a millisecond
                         * is a bit greater than "instantly" */
-      bytes_per_second = (uint32_t)(1000 * ent->response_size / time_diff);
+      bytes_per_second = (uint32_t)(1000 * ent->response_size / time_diff_);
       dltimes[ent_sl_idx] = bytes_per_second;
     } SMARTLIST_FOREACH_END(ent);
     median_uint32(dltimes, complete); /* sorts as a side effect. */
