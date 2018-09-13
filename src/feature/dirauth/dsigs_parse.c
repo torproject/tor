@@ -239,7 +239,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     memcpy(sig->identity_digest, id_digest, DIGEST_LEN);
     memcpy(sig->signing_key_digest, sk_digest, DIGEST_LEN);
     if (tok->object_size >= INT_MAX || tok->object_size >= SIZE_T_CEILING) {
-      tor_free(sig);
+      document_signature_free(sig);
       goto err;
     }
     sig->signature = tor_memdup(tok->object_body, tok->object_size);

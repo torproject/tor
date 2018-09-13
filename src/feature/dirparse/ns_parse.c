@@ -1700,7 +1700,7 @@ parse_vote_footer(memarea_t *area, const char *footer, size_t footer_len,
                       != sizeof(sig->signing_key_digest)) {
       log_warn(LD_DIR, "Error decoding declared signing key digest %s in "
                "network-status document.", escaped(sk_hexdigest));
-      tor_free(sig);
+      document_signature_free(sig);
       goto err;
     }
 
@@ -1709,7 +1709,7 @@ parse_vote_footer(memarea_t *area, const char *footer, size_t footer_len,
                  DIGEST_LEN)) {
         log_warn(LD_DIR, "Digest mismatch between declared and actual on "
                  "network-status vote.");
-        tor_free(sig);
+        document_signature_free(sig);
         goto err;
       }
     }
@@ -1720,7 +1720,7 @@ parse_vote_footer(memarea_t *area, const char *footer, size_t footer_len,
       log_fn(LOG_PROTOCOL_WARN, LD_DIR, "We received a networkstatus "
              "that contains two signatures from the same voter with the same "
              "algorithm. Ignoring the second signature.");
-      tor_free(sig);
+      document_signature_free(sig);
       continue;
     }
 
@@ -1728,13 +1728,13 @@ parse_vote_footer(memarea_t *area, const char *footer, size_t footer_len,
       if (check_signature_token(ns->digests.d[DIGEST_SHA1], DIGEST_LEN,
                                 tok, ns->cert->signing_key, 0,
                                 "network-status document")) {
-        tor_free(sig);
+        document_signature_free(sig);
         goto err;
       }
       sig->good_signature = 1;
     } else {
       if (tok->object_size >= INT_MAX || tok->object_size >= SIZE_T_CEILING) {
-        tor_free(sig);
+        document_signature_free(sig);
         goto err;
       }
       sig->signature = tor_memdup(tok->object_body, tok->object_size);
