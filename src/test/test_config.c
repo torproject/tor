@@ -5617,6 +5617,24 @@ test_config_include_wildcards(void *data)
   }
   tt_int_op(len, OP_EQ, 2);
 
+  // test pattern with wildcards in folder and file
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR"*"PATH_SEPARATOR"*.conf\n",
+               dir);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
+  tt_ptr_op(result, OP_NE, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+
+  len = 0;
+  for (next = result; next != NULL; next = next->next) {
+    tor_snprintf(expected, sizeof(expected), "%d", len + 1 + 3);
+    tt_str_op(next->key, OP_EQ, "Test");
+    tt_str_op(next->value, OP_EQ, expected);
+    len++;
+  }
+  tt_int_op(len, OP_EQ, 2);
+
  done:
   config_free_lines(result);
   tor_free(folder);
@@ -5820,6 +5838,33 @@ test_config_include_opened_file_list(void *data)
   tt_int_op(smartlist_contains_string(opened_files, subfolder), OP_EQ, 1);
   // * will match the subfolder inside torrc.d, so it will be included
   tt_int_op(smartlist_contains_string(opened_files, in_subfolder), OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(opened_files, empty), OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(opened_files, file), OP_EQ, 1);
+#ifdef _WIN32
+  // * matches the dot file on Windows
+  tt_int_op(smartlist_contains_string(opened_files, dot), OP_EQ, 1);
+#endif
+
+  // test with wildcards in folder and file
+  SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
+  smartlist_clear(opened_files);
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR"*"PATH_SEPARATOR"*\n",
+               torrcd);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            opened_files), OP_EQ, 0);
+  tt_ptr_op(result, OP_NE, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+
+#ifdef _WIN32
+  tt_int_op(smartlist_len(opened_files), OP_EQ, 6);
+#else
+  tt_int_op(smartlist_len(opened_files), OP_EQ, 5);
+#endif
+  tt_int_op(smartlist_contains_string(opened_files, torrcd), OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(opened_files, subfolder), OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(opened_files, in_subfolder), OP_EQ, 1);
+  // stat is called on the follwing files, os they count as opened
   tt_int_op(smartlist_contains_string(opened_files, empty), OP_EQ, 1);
   tt_int_op(smartlist_contains_string(opened_files, file), OP_EQ, 1);
 #ifdef _WIN32

@@ -32,6 +32,17 @@
 #include "core/or/origin_circuit_st.h"
 #include "feature/nodelist/routerlist_st.h"
 
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
+#ifdef _WIN32
+/* For mkdir() */
+#include <direct.h>
+#else
+#include <dirent.h>
+#endif /* defined(_WIN32) */
+
 #include "test/test.h"
 #include "test/test_helpers.h"
 #include "test/test_connection.h"
@@ -158,6 +169,78 @@ mock_tor_addr_lookup__fail_on_bad_addrs(const char *name,
     return -1;
   }
   return tor_addr_lookup__real(name, family, out);
+}
+
+static char *
+create_directory(const char *parent_dir, const char *name)
+{
+  char *dir = NULL;
+  tor_asprintf(&dir, "%s"PATH_SEPARATOR"%s", parent_dir, name);
+#ifdef _WIN32
+  tt_int_op(mkdir(dir), OP_EQ, 0);
+#else
+  tt_int_op(mkdir(dir, 0700), OP_EQ, 0);
+#endif
+  return dir;
+
+ done:
+  tor_free(dir);
+  return NULL;
+}
+
+static char *
+create_file(const char *parent_dir, const char *name, const char *contents)
+{
+  char *path = NULL;
+  tor_asprintf(&path, "%s"PATH_SEPARATOR"%s", parent_dir, name);
+  contents = contents == NULL ? "" : contents;
+  tt_int_op(write_str_to_file(path, contents, 0), OP_EQ, 0);
+  return path;
+
+ done:
+  tor_free(path);
+  return NULL;
+}
+
+int
+create_test_directory_structure(const char *parent_dir)
+{
+  int ret = -1;
+  char *dir1 = NULL;
+  char *dir2 = NULL;
+  char *file1 = NULL;
+  char *file2 = NULL;
+  char *dot = NULL;
+  char *empty = NULL;
+  char *forbidden = NULL;
+
+  dir1 = create_directory(parent_dir, "dir1");
+  tt_assert(dir1);
+  dir2 = create_directory(parent_dir, "dir2");
+  tt_assert(dir2);
+  file1 = create_file(parent_dir, "file1", "Test 1");
+  tt_assert(file1);
+  file2 = create_file(parent_dir, "file2", "Test 2");
+  tt_assert(file2);
+  dot = create_file(parent_dir, ".test-hidden", "Test .");
+  tt_assert(dot);
+  empty = create_file(parent_dir, "empty", NULL);
+  tt_assert(empty);
+  forbidden = create_directory(parent_dir, "forbidden");
+  tt_assert(forbidden);
+#ifndef _WIN32
+  tt_int_op(chmod(forbidden, 0), OP_EQ, 0);
+#endif
+  ret = 0;
+ done:
+  tor_free(dir1);
+  tor_free(dir2);
+  tor_free(file1);
+  tor_free(file2);
+  tor_free(dot);
+  tor_free(empty);
+  tor_free(forbidden);
+  return ret;
 }
 
 /*********** Helper funcs for making new connections/streams *****************/
