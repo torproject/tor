@@ -2406,6 +2406,17 @@ circuits_handle_oom(size_t current_allocation)
 
     ++n_circuits_killed;
 
+    /* Adjust our relay stats: We read this memory from the network and
+     * recorded those in our read stats, but did not write it (or record
+     * written bytes for it). Since trying to figure out if rephist rolled
+     * over a day while (some of) this data was waiting in the queue is impossible,
+     * let's just tell rephist we wrote the data, so there is no possible
+     * read/write discrepency over time.
+     *
+     * Note that we do not take into account TLS headers, var cells, or wide
+     * circuit ID support. So there will be some noise to this. */
+    rep_hist_note_bytes_written(n*CELL_MAX_NETWORK_SIZE, approx_time());
+
     mem_recovered += n * packed_cell_mem_cost();
     mem_recovered += freed;
 
