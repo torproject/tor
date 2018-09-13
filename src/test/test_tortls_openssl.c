@@ -1848,16 +1848,44 @@ fixed_tor_tls_create_certificate(crypto_pk_t *rsa,
   (void)cname;
   (void)cname_sign;
   (void)cert_lifetime;
-  return fixed_tor_tls_create_certificate_result[
+  X509 *result = fixed_tor_tls_create_certificate_result[
                              fixed_tor_tls_create_certificate_result_index++];
+  if (result)
+    return X509_dup(result);
+  else
+    return NULL;
+}
+
+static void
+fixed_tor_tls_create_certificate_results_free(void)
+{
+  unsigned i;
+  for (i = 0; i < ARRAY_LENGTH(fixed_tor_tls_create_certificate_result); ++i) {
+    X509 *cert = fixed_tor_tls_create_certificate_result[i];
+    if (cert)
+      X509_free(cert);
+    fixed_tor_tls_create_certificate_result[i] = NULL;
+  }
+}
+
+static void
+fixed_tor_x509_cert_new_results_free(void)
+{
+  unsigned i;
+  for (i = 0; i < ARRAY_LENGTH(fixed_tor_x509_cert_new_result); ++i) {
+    tor_x509_cert_free(fixed_tor_x509_cert_new_result[i]);
+  }
 }
 
 static tor_x509_cert_t *
 fixed_tor_x509_cert_new(tor_x509_cert_impl_t *x509_cert)
 {
   (void) x509_cert;
-  return fixed_tor_x509_cert_new_result[
-                                      fixed_tor_x509_cert_new_result_index++];
+  tor_x509_cert_t **certp =
+    &fixed_tor_x509_cert_new_result[fixed_tor_x509_cert_new_result_index++];
+  tor_x509_cert_t *cert = *certp;
+  *certp = NULL;
+  return cert;
 }
 
 static void
@@ -1937,6 +1965,7 @@ test_tortls_context_new(void *ignored)
   fixed_tor_tls_create_certificate_result[2] = X509_new();
   ret = tor_tls_context_new(NULL, 0, 0, 0);
   tt_assert(!ret);
+  fixed_tor_tls_create_certificate_results_free();
 
   fixed_crypto_pk_new_result_index = 0;
   fixed_crypto_pk_new_result[0] = pk7;
@@ -1949,6 +1978,7 @@ test_tortls_context_new(void *ignored)
   fixed_tor_tls_create_certificate_result[2] = X509_new();
   ret = tor_tls_context_new(NULL, 0, 0, 0);
   tt_assert(!ret);
+  fixed_tor_tls_create_certificate_results_free();
 
   fixed_crypto_pk_new_result_index = 0;
   fixed_crypto_pk_new_result[0] = pk9;
@@ -1961,6 +1991,7 @@ test_tortls_context_new(void *ignored)
   fixed_tor_tls_create_certificate_result[2] = NULL;
   ret = tor_tls_context_new(NULL, 0, 0, 0);
   tt_assert(!ret);
+  fixed_tor_tls_create_certificate_results_free();
 
   MOCK(tor_x509_cert_new, fixed_tor_x509_cert_new);
   fixed_crypto_pk_new_result_index = 0;
@@ -1978,6 +2009,7 @@ test_tortls_context_new(void *ignored)
   fixed_tor_x509_cert_new_result[2] = NULL;
   ret = tor_tls_context_new(NULL, 0, 0, 0);
   tt_assert(!ret);
+  fixed_tor_tls_create_certificate_results_free();
 
   fixed_crypto_pk_new_result_index = 0;
   fixed_crypto_pk_new_result[0] = pk13;
@@ -1994,6 +2026,8 @@ test_tortls_context_new(void *ignored)
   fixed_tor_x509_cert_new_result[2] = NULL;
   ret = tor_tls_context_new(NULL, 0, 0, 0);
   tt_assert(!ret);
+  fixed_tor_tls_create_certificate_results_free();
+  fixed_tor_x509_cert_new_results_free();
 
   fixed_crypto_pk_new_result_index = 0;
   fixed_crypto_pk_new_result[0] = pk15;
@@ -2010,6 +2044,8 @@ test_tortls_context_new(void *ignored)
   fixed_tor_x509_cert_new_result[2] = NULL;
   ret = tor_tls_context_new(NULL, 0, 0, 0);
   tt_assert(!ret);
+  fixed_tor_tls_create_certificate_results_free();
+  fixed_tor_x509_cert_new_results_free();
 
   fixed_crypto_pk_new_result_index = 0;
   fixed_crypto_pk_new_result[0] = pk17;
@@ -2028,6 +2064,8 @@ test_tortls_context_new(void *ignored)
   tt_assert(!ret);
 
  done:
+  fixed_tor_tls_create_certificate_results_free();
+  fixed_tor_x509_cert_new_results_free();
   UNMOCK(tor_x509_cert_new);
   UNMOCK(tor_tls_create_certificate);
   UNMOCK(crypto_pk_generate_key_with_bits);
