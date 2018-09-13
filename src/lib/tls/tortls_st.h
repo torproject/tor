@@ -66,8 +66,9 @@ struct tor_tls_t {
   void *callback_arg;
 #endif
 #ifdef ENABLE_NSS
-  size_t n_read_since_last_check;
-  size_t n_written_since_last_check;
+  /** Last values retried from tor_get_prfiledesc_byte_counts(). */
+  uint64_t last_write_count;
+  uint64_t last_read_count;
 #endif
 };
 
