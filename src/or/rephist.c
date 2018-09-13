@@ -92,6 +92,11 @@
 static void bw_arrays_init(void);
 static void predicted_ports_alloc(void);
 
+typedef struct bw_array_t bw_array_t;
+STATIC uint64_t find_largest_max(bw_array_t *b);
+STATIC void commit_max(bw_array_t *b);
+STATIC void advance_obs(bw_array_t *b);
+
 /** Total number of bytes currently allocated in fields used by rephist.c. */
 uint64_t rephist_total_alloc=0;
 /** Number of or_history_t objects currently allocated. */
@@ -1278,7 +1283,7 @@ typedef struct bw_array_t {
 } bw_array_t;
 
 /** Shift the current period of b forward by one. */
-static void
+STATIC void
 commit_max(bw_array_t *b)
 {
   /* Store total from current period. */
@@ -1298,7 +1303,7 @@ commit_max(bw_array_t *b)
 }
 
 /** Shift the current observation time of <b>b</b> forward by one second. */
-static inline void
+STATIC void
 advance_obs(bw_array_t *b)
 {
   int nextidx;
@@ -1373,7 +1378,7 @@ bw_array_free(bw_array_t *b)
 /** Recent history of bandwidth observations for read operations. */
 static bw_array_t *read_array = NULL;
 /** Recent history of bandwidth observations for write operations. */
-static bw_array_t *write_array = NULL;
+STATIC bw_array_t *write_array = NULL;
 /** Recent history of bandwidth observations for read operations for the
     directory protocol. */
 static bw_array_t *dir_read_array = NULL;
@@ -1450,7 +1455,7 @@ rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when)
  * most bandwidth used in any NUM_SECS_ROLLING_MEASURE period for the last
  * NUM_SECS_BW_SUM_IS_VALID seconds.)
  */
-static uint64_t
+STATIC uint64_t
 find_largest_max(bw_array_t *b)
 {
   int i;
