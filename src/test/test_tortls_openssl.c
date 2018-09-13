@@ -1007,6 +1007,7 @@ test_tortls_try_to_extract_certs_from_tls(void *ignored)
   tt_assert(cert == c1);
   tt_assert(id_cert);
   X509_free(cert); /* decrease refcnt */
+  X509_free(id_cert); /* decrease refcnt */
 
  done:
   sk_X509_free(sess->cert_chain);
