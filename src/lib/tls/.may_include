@@ -8,6 +8,7 @@ lib/ctime/*.h
 lib/encoding/*.h
 lib/intmath/*.h
 lib/log/*.h
+lib/malloc/*.h
 lib/net/*.h
 lib/string/*.h
 lib/testsupport/testsupport.h
