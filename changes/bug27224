@@ -1,0 +1,5 @@
+  o Minor bugfixes (performance)::
+    - Rework node_is_a_configured_bridge() to no longer
+      call node_get_all_orports(), which was performing too
+      many memory allocations. Fixes bug 27224; bugfix on
+      0.2.3.9.
