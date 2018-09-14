@@ -84,7 +84,7 @@ countbytes_init(void)
 static tor_nss_bytecounts_t *
 get_counts(PRFileDesc *fd)
 {
-  tor_assert(fd->identity = countbytes_layer_id);
+  tor_assert(fd->identity == countbytes_layer_id);
   return (tor_nss_bytecounts_t*) fd->secret;
 }
 
