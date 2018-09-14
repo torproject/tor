@@ -35,6 +35,9 @@ def pick_random_port():
 
     return port
 
+if sys.hexversion < 0x02070000:
+    sys.exit("ERROR: unsupported Python version (should be >= 2.7)")
+
 control_port = pick_random_port()
 socks_port = pick_random_port()
 
