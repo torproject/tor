@@ -178,4 +178,10 @@ finish_daemon(const char *cp)
   (void)cp;
   return 0;
 }
+bool
+start_daemon_has_been_called(void)
+{
+  return false;
+}
+
 #endif /* !defined(_WIN32) */
