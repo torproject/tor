@@ -1,0 +1,7 @@
+  o Minor bugfixes (relay):
+    - If we are a relay where ExitRelay is auto and we have not specified
+      an exit policy, whether through ExitPolicy lines or ReducedExitPolicy,
+      emulate the behavior of ExitRelay as 0. Previously, we allowed exit
+      traffic if ExitRelay is auto and logged a warning message. Fixes bug
+      21530; bugfix on 0.3.5.1-alpha. Patch by Neel Chauhan.
+
