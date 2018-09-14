@@ -31,11 +31,12 @@
 #include "lib/tls/tortls.h"
 #include "lib/tls/tortls_st.h"
 #include "lib/tls/tortls_internal.h"
+#include "lib/tls/nss_countbytes.h"
 #include "lib/log/util_bug.h"
 
 DISABLE_GCC_WARNING(strict-prototypes)
 #include <prio.h>
-// For access to raw sockets.
+// For access to rar sockets.
 #include <private/pprio.h>
 #include <ssl.h>
 #include <sslt.h>
@@ -157,6 +158,8 @@ tor_tls_context_new(crypto_pk_t *identity,
 {
   SECStatus s;
   tor_assert(identity);
+
+  tor_tls_init();
 
   tor_tls_context_t *ctx = tor_malloc_zero(sizeof(tor_tls_context_t));
   ctx->refcnt = 1;
@@ -320,7 +323,7 @@ tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz)
 void
 tor_tls_init(void)
 {
-  /* We don't have any global setup to do yet, but that will change */
+  tor_nss_countbytes_init();
 }
 
 void
@@ -373,7 +376,11 @@ tor_tls_new(tor_socket_t sock, int is_server)
   if (!tcp)
     return NULL;
 
-  PRFileDesc *ssl = SSL_ImportFD(ctx->ctx, tcp);
+  PRFileDesc *count = tor_wrap_prfiledesc_with_byte_counter(tcp);
+  if (! count)
+    return NULL;
+
+  PRFileDesc *ssl = SSL_ImportFD(ctx->ctx, count);
   if (!ssl) {
     PR_Close(tcp);
     return NULL;
@@ -502,7 +509,6 @@ tor_tls_read, (tor_tls_t *tls, char *cp, size_t len))
   PRInt32 rv = PR_Read(tls->ssl, cp, (int)len);
   // log_debug(LD_NET, "PR_Read(%zu) returned %d", n, (int)rv);
   if (rv > 0) {
-    tls->n_read_since_last_check += rv;
     return rv;
   }
   if (rv == 0)
@@ -526,7 +532,6 @@ tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
   PRInt32 rv = PR_Write(tls->ssl, cp, (int)n);
   // log_debug(LD_NET, "PR_Write(%zu) returned %d", n, (int)rv);
   if (rv > 0) {
-    tls->n_written_since_last_check += rv;
     return rv;
   }
   if (rv == 0)
@@ -616,13 +621,17 @@ tor_tls_get_n_raw_bytes(tor_tls_t *tls,
   tor_assert(tls);
   tor_assert(n_read);
   tor_assert(n_written);
-  /* XXXX We don't curently have a way to measure this information correctly
-   * in NSS; we could do that with a PRIO layer, but it'll take a little
-   * coding.  For now, we just track the number of bytes sent _in_ the TLS
-   * stream.  Doing this will make our rate-limiting slightly inaccurate. */
-  *n_read = tls->n_read_since_last_check;
-  *n_written = tls->n_written_since_last_check;
-  tls->n_read_since_last_check = tls->n_written_since_last_check = 0;
+  uint64_t r, w;
+  if (tor_get_prfiledesc_byte_counts(tls->ssl, &r, &w) < 0) {
+    *n_read = *n_written = 0;
+    return;
+  }
+
+  *n_read = (size_t)(r - tls->last_read_count);
+  *n_written = (size_t)(w - tls->last_write_count);
+
+  tls->last_read_count = r;
+  tls->last_write_count = w;
 }
 
 int
