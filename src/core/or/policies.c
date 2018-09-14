@@ -1155,6 +1155,17 @@ validate_addr_policies(const or_options_t *options, char **msg)
     REJECT("Error in ExitPolicy entry.");
   }
 
+  static int warned_about_nonexit = 0;
+
+  if (!warned_about_nonexit && options->ExitPolicy == NULL &&
+      options->ExitRelay == -1 && options->ReducedExitPolicy == 0) {
+    warned_about_nonexit = 1;
+    log_notice(LD_CONFIG, "By default, Tor does not run as an exit relay. "
+               "The reason is to prevent your relay from appearing as the "
+               "source of abusive traffic. If you want to be an exit relay, "
+               "set ExitRelay to 1.");
+  }
+
   /* The rest of these calls *append* to addr_policy. So don't actually
    * use the results for anything other than checking if they parse! */
   if (parse_addr_policy(options->DirPolicy, &addr_policy, -1))
