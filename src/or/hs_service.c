@@ -1005,9 +1005,9 @@ load_service_keys(hs_service_t *service)
    * files to that directory so make sure it exists and has the right
    * permissions. We do this here because at this stage we know that Tor is
    * actually running and the service we have has been validated. */
-  if (BUG(hs_check_service_private_dir(get_options()->User,
-                                       config->directory_path,
-                                       config->dir_group_readable, 1) < 0)) {
+  if (hs_check_service_private_dir(get_options()->User,
+                                   config->directory_path,
+                                   config->dir_group_readable, 1) < 0) {
     goto end;
   }
 
