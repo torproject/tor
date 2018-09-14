@@ -78,10 +78,6 @@ test_relay_close_circuit(void *arg)
   pchan = new_fake_channel();
   tt_assert(pchan);
 
-  /* We'll need chans with working cmuxes */
-  nchan->cmux = circuitmux_alloc();
-  pchan->cmux = circuitmux_alloc();
-
   /* Make a fake orcirc */
   orcirc = new_fake_orcirc(nchan, pchan);
   tt_assert(orcirc);
