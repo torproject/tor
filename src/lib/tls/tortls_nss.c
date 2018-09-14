@@ -159,6 +159,8 @@ tor_tls_context_new(crypto_pk_t *identity,
   SECStatus s;
   tor_assert(identity);
 
+  tor_tls_init();
+
   tor_tls_context_t *ctx = tor_malloc_zero(sizeof(tor_tls_context_t));
   ctx->refcnt = 1;
 
@@ -321,7 +323,7 @@ tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz)
 void
 tor_tls_init(void)
 {
-  /* We don't have any global setup to do yet, but that will change */
+  tor_nss_countbytes_init();
 }
 
 void

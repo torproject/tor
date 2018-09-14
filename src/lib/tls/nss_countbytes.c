@@ -53,8 +53,8 @@ typedef struct tor_nss_bytecounts_t {
 /**
  * Initialize this module, if it is not already initialized.
  **/
-static void
-countbytes_init(void)
+void
+tor_nss_countbytes_init(void)
 {
   if (countbytes_initialized)
     return;
@@ -192,8 +192,8 @@ countbytes_recv_fn(PRFileDesc *fd, void *buf, PRInt32 amount,
 PRFileDesc *
 tor_wrap_prfiledesc_with_byte_counter(PRFileDesc *stack)
 {
-  if (PREDICT_UNLIKELY(! countbytes_initialized)) {
-    countbytes_init();
+  if (BUG(! countbytes_initialized)) {
+    tor_nss_countbytes_init();
   }
 
   tor_nss_bytecounts_t *bytecounts = tor_malloc_zero(sizeof(*bytecounts));
@@ -226,8 +226,8 @@ tor_get_prfiledesc_byte_counts(PRFileDesc *fd,
                                uint64_t *n_read_out,
                                uint64_t *n_written_out)
 {
-  if (PREDICT_UNLIKELY(! countbytes_initialized)) {
-    countbytes_init();
+  if (BUG(! countbytes_initialized)) {
+    tor_nss_countbytes_init();
   }
 
   tor_assert(fd);

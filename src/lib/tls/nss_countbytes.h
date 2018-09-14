@@ -12,6 +12,8 @@
 
 #include "lib/cc/torint.h"
 
+void tor_nss_countbytes_init(void);
+
 struct PRFileDesc;
 struct PRFileDesc *tor_wrap_prfiledesc_with_byte_counter(
                                                struct PRFileDesc *stack);
