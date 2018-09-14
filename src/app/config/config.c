@@ -1417,6 +1417,8 @@ options_act_reversible(const or_options_t *old_options, char **msg)
    * the subprocess.  Libevent bases can't be reliably inherited across
    * processes. */
   if (running_tor && options->RunAsDaemon) {
+    if (! start_daemon_has_been_called())
+      crypto_prefork();
     /* No need to roll back, since you can't change the value. */
     if (start_daemon())
       crypto_postfork();

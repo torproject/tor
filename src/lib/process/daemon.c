@@ -38,6 +38,16 @@ static int finish_daemon_called = 0;
 /** Socketpair used to communicate between parent and child process while
  * daemonizing. */
 static int daemon_filedes[2];
+
+/**
+ * Return true iff we've called start_daemon() at least once.
+ */
+bool
+start_daemon_has_been_called(void)
+{
+  return start_daemon_called != 0;
+}
+
 /** Start putting the process into daemon mode: fork and drop all resources
  * except standard fds.  The parent process never returns, but stays around
  * until finish_daemon is called.  (Note: it's safe to call this more

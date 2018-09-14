@@ -11,7 +11,11 @@
 #ifndef TOR_DAEMON_H
 #define TOR_DAEMON_H
 
+#include <stdbool.h>
+
 int start_daemon(void);
 int finish_daemon(const char *desired_cwd);
+
+bool start_daemon_has_been_called(void);
 
 #endif
