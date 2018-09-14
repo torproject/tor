@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden service v3):
+    - In case the hidden service directory can't be created or has wrong
+      permissions, do not BUG() on it which lead to a non fatal stacktrace.
+      Fixes bug 27335; bugfix on 0.3.2.1.
