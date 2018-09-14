@@ -48,16 +48,17 @@ new_fake_orcirc(channel_t *nchan, channel_t *pchan)
   circ->deliver_window = CIRCWINDOW_START_MAX;
   circ->n_chan_create_cell = NULL;
 
-  /* for assert_circ_ok */
-  orcirc->p_crypto = (void*)1;
-  orcirc->n_crypto = (void*)1;
-  orcirc->n_digest = (void*)1;
-  orcirc->p_digest = (void*)1;
-
   circuit_set_p_circid_chan(orcirc, get_unique_circ_id_by_chan(pchan), pchan);
   cell_queue_init(&(orcirc->p_chan_cells));
 
   return orcirc;
+}
+
+static void
+assert_circuit_ok_mock(const circuit_t *c)
+{
+  (void) c;
+  return;
 }
 
 static void
@@ -95,6 +96,8 @@ test_relay_close_circuit(void *arg)
 
   MOCK(scheduler_channel_has_waiting_cells,
        scheduler_channel_has_waiting_cells_mock);
+  MOCK(assert_circuit_ok,
+       assert_circuit_ok_mock);
 
   /* Append it */
   old_count = get_mock_scheduler_has_waiting_cells_count();
@@ -146,6 +149,7 @@ test_relay_close_circuit(void *arg)
   tor_free(orcirc);
   free_fake_channel(nchan);
   free_fake_channel(pchan);
+  UNMOCK(assert_circuit_ok);
 
   return;
 }
