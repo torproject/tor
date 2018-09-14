@@ -18,8 +18,8 @@
 // Include this after the above headers, to insure that they don't
 // depend on anything else.
 #include "orconfig.h"
-#include "feature/api/tor_api_internal.h"
 #include "lib/cc/torint.h"
+#include "feature/api/tor_api_internal.h"
 #include "lib/cc/compat_compiler.h"
 
 #include <stdio.h>
