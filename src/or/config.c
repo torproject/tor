@@ -874,6 +874,7 @@ set_options(or_options_t *new_val, char **msg)
               "Acting on config options left us in a broken state. Dying.");
       tor_shutdown_event_loop_and_exit(1);
     }
+    global_options = old_options;
     return -1;
   }
   /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
