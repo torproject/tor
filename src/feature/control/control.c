@@ -2341,9 +2341,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
         *answer = tor_strdup(consensus->dir);
     }
     if (!*answer) { /* try loading it from disk */
-      char *filename = get_cachedir_fname("cached-consensus");
-      *answer = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
-      tor_free(filename);
+      *answer = networkstatus_read_cached_consensus("ns");
       if (!*answer) { /* generate an error */
         *errmsg = "Could not open cached consensus. "
           "Make sure FetchUselessDescriptors is set to 1.";
