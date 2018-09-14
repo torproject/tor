@@ -1363,7 +1363,7 @@ bw_arrays_init(void)
  * earlier than the latest <b>when</b> you've heard of.
  */
 void
-rep_hist_note_bytes_written(size_t num_bytes, time_t when)
+rep_hist_note_bytes_written(uint64_t num_bytes, time_t when)
 {
 /* Maybe a circular array for recent seconds, and step to a new point
  * every time a new second shows up. Or simpler is to just to have
@@ -1380,7 +1380,7 @@ rep_hist_note_bytes_written(size_t num_bytes, time_t when)
  * (like rep_hist_note_bytes_written() above)
  */
 void
-rep_hist_note_bytes_read(size_t num_bytes, time_t when)
+rep_hist_note_bytes_read(uint64_t num_bytes, time_t when)
 {
 /* if we're smart, we can make this func and the one above share code */
   add_obs(read_array, when, num_bytes);
@@ -1390,7 +1390,7 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
  * <b>when</b>. (like rep_hist_note_bytes_written() above)
  */
 void
-rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when)
+rep_hist_note_dir_bytes_written(uint64_t num_bytes, time_t when)
 {
   add_obs(dir_write_array, when, num_bytes);
 }
@@ -1399,7 +1399,7 @@ rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when)
  * <b>when</b>. (like rep_hist_note_bytes_written() above)
  */
 void
-rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when)
+rep_hist_note_dir_bytes_read(uint64_t num_bytes, time_t when)
 {
   add_obs(dir_read_array, when, num_bytes);
 }
