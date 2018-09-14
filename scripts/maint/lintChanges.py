@@ -87,6 +87,12 @@ def lintfile(fname):
             warn("Bugfix does not say 'Fixes bug X; bugfix on Y'")
         elif re.search('tor-([0-9]+)', contents):
             warn("Do not prefix versions with 'tor-'. ('0.1.2', not 'tor-0.1.2'.)")
+        else:
+            bugfix_match = re.search('bugfix on ([0-9]+\.[0-9]+\.[0-9]+)', contents)
+            if bugfix_match is None:
+                warn("Versions must have at least 3 digits. ('0.1.2', '0.3.4.8', or '0.3.5.1-alpha'.)")
+            elif bugfix_match.group(0) is None:
+                warn("Versions must have at least 3 digits. ('0.1.2', '0.3.4.8', or '0.3.5.1-alpha'.)")
 
     return have_warned != []
 

@@ -1,0 +1,3 @@
+  o Minor features (changelogs):
+    - Check that bugfix versions in changes files look like Tor versions
+      from the versions spec. Closes ticket 27761.
