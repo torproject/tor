@@ -62,6 +62,8 @@ crypt_path_t *circuit_get_cpath_hop(origin_circuit_t *circ, int hopnum);
 void circuit_get_all_pending_on_channel(smartlist_t *out,
                                         channel_t *chan);
 int circuit_count_pending_on_channel(channel_t *chan);
+void circuit_synchronize_written_or_bandwidth(const circuit_t *c,
+                                              circuit_channel_direction_t dir);
 
 #define circuit_mark_for_close(c, reason)                               \
   circuit_mark_for_close_((c), (reason), __LINE__, SHORT_FILE__)

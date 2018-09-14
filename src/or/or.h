@@ -2840,6 +2840,18 @@ typedef struct testing_cell_stats_entry_t {
 } testing_cell_stats_entry_t;
 
 /**
+ * An enum to allow us to specify which channel in a circuit
+ * we're interested in.
+ *
+ * This is needed because our data structures and other fields
+ * for channel delivery are disassociated from the channel.
+ */
+typedef enum {
+  CIRCUIT_N_CHAN = 0,
+  CIRCUIT_P_CHAN = 1
+} circuit_channel_direction_t;
+
+/**
  * A circuit is a path over the onion routing
  * network. Applications can connect to one end of the circuit, and can
  * create exit connections at the other end of the circuit. AP and exit
