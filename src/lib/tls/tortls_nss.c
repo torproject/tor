@@ -414,6 +414,43 @@ tor_tls_set_renegotiate_callback(tor_tls_t *tls,
   /* We don't support renegotiation-based TLS with NSS. */
 }
 
+/**
+ * Tell the TLS library that the underlying socket for <b>tls</b> has been
+ * closed, and the library should not attempt to free that socket itself.
+ */
+void
+tor_tls_release_socket(tor_tls_t *tls)
+{
+  if (! tls)
+    return;
+
+  /* NSS doesn't have the equivalent of BIO_NO_CLOSE.  If you replace the
+   * fd with something that's invalid, it causes a memory leak in PR_Close.
+   *
+   * If there were a way to put the PRFileDesc into the CLOSED state, that
+   * would prevent it from closing its fd -- but there doesn't seem to be a
+   * supported way to do that either.
+   *
+   * So instead: we make a new sacrificial socket, and replace the original
+   * socket with that one. This seems to be the best we can do, until we
+   * redesign the mainloop code enough to make this function unnecessary.
+   */
+  tor_socket_t sock =
+    tor_open_socket_nonblocking(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (!sock) {
+    log_warn(LD_NET, "Out of sockets when trying to shut down an NSS "
+             "connection");
+    return;
+  }
+
+  PRFileDesc *tcp = PR_GetIdentitiesLayer(tls->ssl, PR_NSPR_IO_LAYER);
+  if (BUG(! tcp)) {
+    return;
+  }
+
+  PR_ChangeFileDescNativeHandle(tcp, sock);
+}
+
 void
 tor_tls_impl_free_(tor_tls_impl_t *tls)
 {

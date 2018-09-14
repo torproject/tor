@@ -1048,7 +1048,7 @@ tor_tls_new(tor_socket_t sock, int isServer)
     goto err;
   }
   result->socket = sock;
-  bio = BIO_new_socket(sock, BIO_NOCLOSE);
+  bio = BIO_new_socket(sock, BIO_CLOSE);
   if (! bio) {
     tls_log_errors(NULL, LOG_WARN, LD_NET, "opening BIO");
 #ifdef SSL_set_tlsext_host_name
@@ -1152,6 +1152,28 @@ tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls)
 #else
   (void) tls;
 #endif /* defined(SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION) && ... */
+}
+
+/**
+ * Tell the TLS library that the underlying socket for <b>tls</b> has been
+ * closed, and the library should not attempt to free that socket itself.
+ */
+void
+tor_tls_release_socket(tor_tls_t *tls)
+{
+  if (! tls)
+    return;
+
+  BIO *rbio, *wbio;
+  rbio = SSL_get_rbio(tls->ssl);
+  wbio = SSL_get_wbio(tls->ssl);
+
+  if (rbio) {
+    BIO_set_close(rbio, BIO_NOCLOSE);
+  }
+  if (wbio && wbio != rbio) {
+    BIO_set_close(wbio, BIO_NOCLOSE);
+  }
 }
 
 void
