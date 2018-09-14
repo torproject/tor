@@ -1854,16 +1854,19 @@ circuit_mark_all_dirty_circs_as_unusable(void)
  * not going to write it. This discrepancy can be used by an adversary
  * to infer information from our public relay statistics and perform
  * attacks such as guard discovery.
-
+ *
+ * This function is in the critical path of circuit_mark_for_close().
+ * It must be (and is) O(1)!
+ *
  * See https://trac.torproject.org/projects/tor/ticket/23512.
  */
 void
 circuit_synchronize_written_or_bandwidth(const circuit_t *c,
                                          circuit_channel_direction_t dir)
 {
-  size_t cells;
-  size_t cell_size;
-  size_t written_sync;
+  uint64_t cells;
+  uint64_t cell_size;
+  uint64_t written_sync;
   const channel_t *chan = NULL;
   const or_circuit_t *or_circ;
 
@@ -1872,15 +1875,13 @@ circuit_synchronize_written_or_bandwidth(const circuit_t *c,
 
   or_circ = CONST_TO_OR_CIRCUIT(c);
 
-  if (dir == CIRCUIT_N_CHAN)
+  if (dir == CIRCUIT_N_CHAN) {
     chan = c->n_chan;
-  else
-    chan = or_circ->p_chan;
-
-  if (dir == CIRCUIT_N_CHAN)
     cells = c->n_chan_cells.n;
-  else
+  } else {
+    chan = or_circ->p_chan;
     cells = or_circ->p_chan_cells.n;
+  }
 
   /* If we still know the chan, determine real cell size. Otherwise,
    * assume it's a wide circid channel */
