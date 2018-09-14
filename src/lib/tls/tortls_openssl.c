@@ -1169,10 +1169,10 @@ tor_tls_release_socket(tor_tls_t *tls)
   wbio = SSL_get_wbio(tls->ssl);
 
   if (rbio) {
-    BIO_set_close(rbio, BIO_NOCLOSE);
+    (void) BIO_set_close(rbio, BIO_NOCLOSE);
   }
   if (wbio && wbio != rbio) {
-    BIO_set_close(wbio, BIO_NOCLOSE);
+    (void) BIO_set_close(wbio, BIO_NOCLOSE);
   }
 }
 
