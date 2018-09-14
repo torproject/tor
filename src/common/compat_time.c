@@ -299,11 +299,11 @@ monotime_init_internal(void)
   }
   {
     // For converting ticks to milliseconds in a 32-bit-friendly way, we
-    // will first right-shift by 20, and then multiply by 20/19, since
-    // (1<<20) * 19/20 is about 1e6.  We precompute a new numerate and
+    // will first right-shift by 20, and then multiply by 2048/1953, since
+    // (1<<20) * 1953/2048 is about 1e6.  We precompute a new numerator and
     // denominator here to avoid multiple multiplies.
-    mach_time_info_msec_cvt.numer = mach_time_info.numer * 20;
-    mach_time_info_msec_cvt.denom = mach_time_info.denom * 19;
+    mach_time_info_msec_cvt.numer = mach_time_info.numer * 2048;
+    mach_time_info_msec_cvt.denom = mach_time_info.denom * 1953;
   }
 }
 
