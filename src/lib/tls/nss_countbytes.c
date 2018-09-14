@@ -89,14 +89,14 @@ get_counts(PRFileDesc *fd)
 }
 
 /** Helper: increment the read-count of an fd by n. */
-#define INC_READ(fd, n) do {                            \
+#define INC_READ(fd, n) STMT_BEGIN                      \
     get_counts(fd)->n_read += (n);                      \
-  } while (0)
+  STMT_END
 
 /** Helper: increment the write-count of an fd by n. */
-#define INC_WRITTEN(fd, n) do {                            \
+#define INC_WRITTEN(fd, n) STMT_BEGIN                      \
     get_counts(fd)->n_written += (n);                      \
-  } while (0)
+  STMT_END
 
 /** Implementation for PR_Close: frees the 'secret' field, then passes control
  * to the default close function */
