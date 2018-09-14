@@ -186,7 +186,8 @@ int connection_half_edge_is_valid_resolved(smartlist_t *half_conns,
                                            streamid_t stream_id);
 
 size_t half_streams_get_total_allocation(void);
-void half_edge_free_(half_edge_t *he);
+struct half_edge_t;
+void half_edge_free_(struct half_edge_t *he);
 #define half_edge_free(he) \
   FREE_AND_NULL(half_edge_t, half_edge_free_, (he))
 
