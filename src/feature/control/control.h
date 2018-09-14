@@ -146,6 +146,7 @@ int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 int control_event_stream_bandwidth(edge_connection_t *edge_conn);
 int control_event_stream_bandwidth_used(void);
 int control_event_circ_bandwidth_used(void);
+int control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc);
 int control_event_conn_bandwidth(connection_t *conn);
 int control_event_conn_bandwidth_used(void);
 int control_event_circuit_cell_stats(void);
@@ -246,7 +247,6 @@ void control_event_hs_descriptor_content(const char *onion_address,
                                          const char *desc_id,
                                          const char *hsdir_fp,
                                          const char *content);
-
 void control_free_all(void);
 
 #ifdef CONTROL_PRIVATE

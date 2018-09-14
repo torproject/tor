@@ -6047,37 +6047,65 @@ control_event_stream_bandwidth_used(void)
 int
 control_event_circ_bandwidth_used(void)
 {
-  origin_circuit_t *ocirc;
-  struct timeval now;
-  char tbuf[ISO_TIME_USEC_LEN+1];
   if (!EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
     return 0;
 
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
-    ocirc = TO_ORIGIN_CIRCUIT(circ);
-    if (!ocirc->n_read_circ_bw && !ocirc->n_written_circ_bw)
-      continue;
-    tor_gettimeofday(&now);
-    format_iso_time_nospace_usec(tbuf, &now);
-    send_control_event(EVENT_CIRC_BANDWIDTH_USED,
-                       "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu TIME=%s "
-                       "DELIVERED_READ=%lu OVERHEAD_READ=%lu "
-                       "DELIVERED_WRITTEN=%lu OVERHEAD_WRITTEN=%lu\r\n",
-                       ocirc->global_identifier,
-                       (unsigned long)ocirc->n_read_circ_bw,
-                       (unsigned long)ocirc->n_written_circ_bw,
-                       tbuf,
-                       (unsigned long)ocirc->n_delivered_read_circ_bw,
-                       (unsigned long)ocirc->n_overhead_read_circ_bw,
-                       (unsigned long)ocirc->n_delivered_written_circ_bw,
-                       (unsigned long)ocirc->n_overhead_written_circ_bw);
-    ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
-    ocirc->n_overhead_written_circ_bw = ocirc->n_overhead_read_circ_bw = 0;
-    ocirc->n_delivered_written_circ_bw = ocirc->n_delivered_read_circ_bw = 0;
+
+    control_event_circ_bandwidth_used_for_circ(TO_ORIGIN_CIRCUIT(circ));
   }
   SMARTLIST_FOREACH_END(circ);
+
+  return 0;
+}
+
+/**
+ * Emit a CIRC_BW event line for a specific circuit.
+ *
+ * This function sets the values it emits to 0, and does not emit
+ * an event if there is no new data to report since the last call.
+ *
+ * Therefore, it may be called at any frequency.
+ */
+int
+control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
+{
+  struct timeval now;
+  char tbuf[ISO_TIME_USEC_LEN+1];
+
+  tor_assert(ocirc);
+
+  if (!EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
+    return 0;
+
+  /* n_read_circ_bw and n_written_circ_bw are always updated
+   * when there is any new cell on a circuit, and set to 0 after
+   * the event, below.
+   *
+   * Therefore, checking them is sufficient to determine if there
+   * is new data to report. */
+  if (!ocirc->n_read_circ_bw && !ocirc->n_written_circ_bw)
+    return 0;
+
+  tor_gettimeofday(&now);
+  format_iso_time_nospace_usec(tbuf, &now);
+  send_control_event(EVENT_CIRC_BANDWIDTH_USED,
+                     "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu TIME=%s "
+                     "DELIVERED_READ=%lu OVERHEAD_READ=%lu "
+                     "DELIVERED_WRITTEN=%lu OVERHEAD_WRITTEN=%lu\r\n",
+                     ocirc->global_identifier,
+                     (unsigned long)ocirc->n_read_circ_bw,
+                     (unsigned long)ocirc->n_written_circ_bw,
+                     tbuf,
+                     (unsigned long)ocirc->n_delivered_read_circ_bw,
+                     (unsigned long)ocirc->n_overhead_read_circ_bw,
+                     (unsigned long)ocirc->n_delivered_written_circ_bw,
+                     (unsigned long)ocirc->n_overhead_written_circ_bw);
+  ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
+  ocirc->n_overhead_written_circ_bw = ocirc->n_overhead_read_circ_bw = 0;
+  ocirc->n_delivered_written_circ_bw = ocirc->n_delivered_read_circ_bw = 0;
 
   return 0;
 }
