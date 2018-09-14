@@ -843,7 +843,7 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
   int start, found, n_added = 0, i;
   networkstatus_t *c = networkstatus_get_latest_consensus();
   if (!c || !smartlist_len(c->routerstatus_list)) {
-    log_warn(LD_REND, "We don't have a consensus, so we can't perform v2 "
+    log_info(LD_REND, "We don't have a consensus, so we can't perform v2 "
              "rendezvous operations.");
     return -1;
   }
