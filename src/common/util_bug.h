@@ -29,6 +29,31 @@
 #error "Sorry; we don't support building with NDEBUG."
 #endif
 
+#if defined(TOR_UNIT_TESTS) && defined(__GNUC__)
+/* We define this GCC macro as a replacement for PREDICT_UNLIKELY() in this
+ * header, so that in our unit test builds, we'll get compiler warnings about
+ * stuff like tor_assert(n = 5).
+ *
+ * The key here is that (e) is wrapped in exactly one layer of parentheses,
+ * and then passed right to a conditional.  If you do anything else to the
+ * expression here, or introduce any more parentheses, the compiler won't
+ * help you.
+ */
+#define ASSERT_PREDICT_UNLIKELY_(e)             \
+  ({                                            \
+    int tor__assert_tmp_value__;                \
+    if (e)                                      \
+      tor__assert_tmp_value__ = 1;              \
+    else                                        \
+      tor__assert_tmp_value__ = 0;              \
+    tor__assert_tmp_value__;                    \
+  })
+#define ASSERT_PREDICT_LIKELY_(e) ASSERT_PREDICT_UNLIKELY_(e)
+#else
+#define ASSERT_PREDICT_UNLIKELY_(e) PREDICT_UNLIKELY(e)
+#define ASSERT_PREDICT_LIKELY_(e) PREDICT_LIKELY(e)
+#endif
+
 /* Sometimes we don't want to use assertions during branch coverage tests; it
  * leads to tons of unreached branches which in reality are only assertions we
  * didn't hit. */
@@ -40,7 +65,8 @@
 /** Like assert(3), but send assertion failures to the log as well as to
  * stderr. */
 #define tor_assert(expr) STMT_BEGIN                                     \
-  if (PREDICT_UNLIKELY(!(expr))) {                                      \
+  if (ASSERT_PREDICT_LIKELY_(expr)) {                                   \
+  } else {                                                              \
     tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__, #expr);     \
     abort();                                                            \
   } STMT_END
@@ -77,7 +103,7 @@
 #define tor_assert_nonfatal_unreached_once() tor_assert(0)
 #define tor_assert_nonfatal_once(cond) tor_assert((cond))
 #define BUG(cond)                                                       \
-  (PREDICT_UNLIKELY(cond) ?                                             \
+  (ASSERT_PREDICT_UNLIKELY_(cond) ?                                     \
    (tor_assertion_failed_(SHORT_FILE__,__LINE__,__func__,"!("#cond")"), \
     abort(), 1)                                                         \
    : 0)
@@ -86,14 +112,15 @@
 #define tor_assert_nonfatal(cond) ((void)(cond))
 #define tor_assert_nonfatal_unreached_once() STMT_NIL
 #define tor_assert_nonfatal_once(cond) ((void)(cond))
-#define BUG(cond) (PREDICT_UNLIKELY(cond) ? 1 : 0)
+#define BUG(cond) (ASSERT_PREDICT_UNLIKELY_(cond) ? 1 : 0)
 #else /* Normal case, !ALL_BUGS_ARE_FATAL, !DISABLE_ASSERTS_IN_UNIT_TESTS */
 #define tor_assert_nonfatal_unreached() STMT_BEGIN                      \
   tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, NULL, 0);         \
   STMT_END
 #define tor_assert_nonfatal(cond) STMT_BEGIN                            \
-  if (PREDICT_UNLIKELY(!(cond))) {                                      \
-    tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 0);  \
+  if (ASSERT_PREDICT_LIKELY_(cond)) {                                   \
+  } else {                                                              \
+    tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 0);      \
   }                                                                     \
   STMT_END
 #define tor_assert_nonfatal_unreached_once() STMT_BEGIN                 \
@@ -105,13 +132,14 @@
   STMT_END
 #define tor_assert_nonfatal_once(cond) STMT_BEGIN                       \
   static int warning_logged__ = 0;                                      \
-  if (!warning_logged__ && PREDICT_UNLIKELY(!(cond))) {                 \
+  if (ASSERT_PREDICT_LIKELY_(cond)) {                                   \
+  } else if (!warning_logged__) {                                       \
     warning_logged__ = 1;                                               \
     tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 1);      \
   }                                                                     \
   STMT_END
 #define BUG(cond)                                                       \
-  (PREDICT_UNLIKELY(cond) ?                                             \
+  (ASSERT_PREDICT_UNLIKELY_(cond) ?                                     \
    (tor_bug_occurred_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",0), 1) \
    : 0)
 #endif
@@ -120,17 +148,17 @@
 #define IF_BUG_ONCE__(cond,var)                                         \
   if (( {                                                               \
       static int var = 0;                                               \
-      int bool_result = (cond);                                         \
-      if (PREDICT_UNLIKELY(bool_result) && !var) {                      \
+      int bool_result = !!(cond);                                       \
+      if (bool_result && !var) {                                        \
         var = 1;                                                        \
         tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__,             \
                           "!("#cond")", 1);                             \
       }                                                                 \
-      PREDICT_UNLIKELY(bool_result); } ))
+      bool_result; } ))
 #else
 #define IF_BUG_ONCE__(cond,var)                                         \
   static int var = 0;                                                   \
-  if (PREDICT_UNLIKELY(cond) ?                                          \
+  if ((cond) ?                                                          \
       (var ? 1 :                                                        \
        (var=1,                                                          \
         tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__,             \
@@ -148,7 +176,7 @@
  */
 
 #define IF_BUG_ONCE(cond)                                       \
-  IF_BUG_ONCE__((cond),                                         \
+  IF_BUG_ONCE__(ASSERT_PREDICT_UNLIKELY_(cond),                 \
                 IF_BUG_ONCE_VARNAME__(__LINE__))
 
 /** Define this if you want Tor to crash when any problem comes up,
@@ -170,4 +198,3 @@ void tor_set_failed_assertion_callback(void (*fn)(void));
 #endif
 
 #endif
-
