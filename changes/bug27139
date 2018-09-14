@@ -1,0 +1,14 @@
+  o Minor bugfixes (32-bit OSX and iOS, timing):
+    - Fix an integer overflow bug in our optimized 32-bit millisecond-
+      difference algorithm for 32-bit Apple platforms. Previously, it
+      would overflow when calculating the difference between two times
+      more than 47 days apart.  Fixes part of bug 27139; bugfix on
+      0.3.4.1-alpha.
+    - Improve the precision of our 32-bit millisecond difference
+      algorithm for 32-bit Apple platforms. Fixes part of bug 27139;
+      bugfix on 0.3.4.1-alpha.
+    - Relax the tolerance on the mainloop/update_time_jumps test
+      when running on 32-bit Apple platforms. Fixes part of bug 27139;
+      bugfix on 0.3.4.1-alpha.
+
+
