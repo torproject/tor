@@ -1080,9 +1080,9 @@ circuit_free_(circuit_t *circ)
     circuit_remove_from_origin_circuit_list(ocirc);
 
     if (ocirc->half_streams) {
-      SMARTLIST_FOREACH_BEGIN(ocirc->half_streams, half_edge_t*,
+      SMARTLIST_FOREACH_BEGIN(ocirc->half_streams, half_edge_t *,
                               half_conn) {
-          tor_free(half_conn);
+        half_edge_free(half_conn);
       } SMARTLIST_FOREACH_END(half_conn);
       smartlist_free(ocirc->half_streams);
     }
@@ -2362,6 +2362,20 @@ n_cells_in_circ_queues(const circuit_t *c)
   return n;
 }
 
+/** Return the number of bytes allocated for <b>c</c>'s half-open streams. */
+static size_t
+circuit_alloc_in_half_streams(const circuit_t *c)
+{
+  if (! CIRCUIT_IS_ORIGIN(c)) {
+    return 0;
+  }
+  const origin_circuit_t *ocirc = CONST_TO_ORIGIN_CIRCUIT(c);
+  if (ocirc->half_streams)
+    return smartlist_len(ocirc->half_streams) * sizeof(half_edge_t);
+  else
+    return 0;
+}
+
 /**
  * Return the age of the oldest cell queued on <b>c</b>, in timestamp units.
  * Return 0 if there are no cells queued on c.  Requires that <b>now</b> be
@@ -2596,6 +2610,7 @@ circuits_handle_oom(size_t current_allocation)
 
     /* Now, kill the circuit. */
     n = n_cells_in_circ_queues(circ);
+    const size_t half_stream_alloc = circuit_alloc_in_half_streams(circ);
     if (! circ->marked_for_close) {
       circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
     }
@@ -2605,6 +2620,7 @@ circuits_handle_oom(size_t current_allocation)
     ++n_circuits_killed;
 
     mem_recovered += n * packed_cell_mem_cost();
+    mem_recovered += half_stream_alloc;
     mem_recovered += freed;
 
     if (mem_recovered >= mem_to_recover)

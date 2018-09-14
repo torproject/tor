@@ -520,6 +520,9 @@ connection_half_edge_compare_bsearch(const void *key, const void **member)
   return *(const streamid_t*)key - e2->stream_id;
 }
 
+/** Total number of half_edge_t objects allocated */
+static size_t n_half_conns_allocated = 0;
+
 /**
  * Add a half-closed connection to the list, to watch for activity.
  *
@@ -544,6 +547,7 @@ connection_half_edge_add(const edge_connection_t *conn,
   }
 
   half_conn = tor_malloc_zero(sizeof(half_edge_t));
+  ++n_half_conns_allocated;
 
   if (!circ->half_streams) {
     circ->half_streams = smartlist_new();
@@ -571,6 +575,23 @@ connection_half_edge_add(const edge_connection_t *conn,
                                     connection_half_edge_compare_bsearch,
                                     &ignored);
   smartlist_insert(circ->half_streams, insert_at, half_conn);
+}
+
+/** Release space held by <b>he</b> */
+void
+half_edge_free_(half_edge_t *he)
+{
+  if (!he)
+    return;
+  --n_half_conns_allocated;
+  tor_free(he);
+}
+
+/** Return the number of bytes devoted to storing info on half-open streams. */
+size_t
+half_streams_get_total_allocation(void)
+{
+  return n_half_conns_allocated * sizeof(half_edge_t);
 }
 
 /**
@@ -693,7 +714,7 @@ connection_half_edge_is_valid_end(smartlist_t *half_conns,
 
   half = smartlist_get(half_conns, remove_idx);
   smartlist_del_keeporder(half_conns, remove_idx);
-  tor_free(half);
+  half_edge_free(half);
   return 1;
 }
 
