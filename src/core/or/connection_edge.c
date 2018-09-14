@@ -623,8 +623,10 @@ export_hs_client_circuit_id_haproxy(const edge_connection_t *edge_conn,
   }
 
   /* Build the string */
-  tor_asprintf(&buf, "PROXY TCP6 %s:%x %s %d %d\r\n",
-               src_ipv6_prefix, gid, dst_ipv6, src_port, dst_port);
+  tor_asprintf(&buf, "PROXY TCP6 %s:%x:%x %s %d %d\r\n",
+               src_ipv6_prefix,
+               gid >> 16, gid & 0x0000ffff,
+               dst_ipv6, src_port, dst_port);
 
   connection_buf_add(buf, strlen(buf), conn);
 
