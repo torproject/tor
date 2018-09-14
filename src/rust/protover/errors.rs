@@ -18,6 +18,7 @@ pub enum ProtoverError {
     ExceedsExpansionLimit,
     UnknownProtocol,
     ExceedsNameLimit,
+    InvalidProtocol,
 }
 
 /// Descriptive error messages for `ProtoverError` variants.
@@ -47,6 +48,9 @@ impl Display for ProtoverError {
             ),
             ProtoverError::ExceedsNameLimit => {
                 write!(f, "An unrecognised protocol name was too long.")
+            }
+            ProtoverError::InvalidProtocol => {
+                write!(f, "A protocol name includes invalid characters.")
             }
         }
     }
