@@ -14,13 +14,13 @@
 
 void rep_hist_init(void);
 void rep_hist_dump_stats(time_t now, int severity);
-void rep_hist_note_bytes_read(size_t num_bytes, time_t when);
-void rep_hist_note_bytes_written(size_t num_bytes, time_t when);
+void rep_hist_note_bytes_read(uint64_t num_bytes, time_t when);
+void rep_hist_note_bytes_written(uint64_t num_bytes, time_t when);
 
 void rep_hist_make_router_pessimal(const char *id, time_t when);
 
-void rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when);
-void rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when);
+void rep_hist_note_dir_bytes_read(uint64_t num_bytes, time_t when);
+void rep_hist_note_dir_bytes_written(uint64_t num_bytes, time_t when);
 
 int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(void);
@@ -109,6 +109,8 @@ extern uint32_t rephist_total_num;
 #ifdef TOR_UNIT_TESTS
 extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1];
 extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
+typedef struct bw_array_t bw_array_t;
+extern bw_array_t *write_array;
 #endif
 
 /**
