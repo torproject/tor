@@ -600,8 +600,7 @@ connected_cell_format_payload(uint8_t *payload_out,
 /* This is an onion service client connection: Export the client circuit ID
  * according to the HAProxy proxy protocol. */
 STATIC void
-export_hs_client_circuit_id(const edge_connection_t *edge_conn,
-                            connection_t *conn,
+export_hs_client_circuit_id(edge_connection_t *edge_conn,
                             hs_circuit_id_protocol_t protocol)
 {
   /* We only support HAProxy right now. */
@@ -633,7 +632,7 @@ export_hs_client_circuit_id(const edge_connection_t *edge_conn,
                gid >> 16, gid & 0x0000ffff,
                dst_ipv6, src_port, dst_port);
 
-  connection_buf_add(buf, strlen(buf), conn);
+  connection_buf_add(buf, strlen(buf), TO_CONN(edge_conn));
 
   tor_free(buf);
 }
@@ -658,14 +657,6 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   rep_hist_note_exit_stream_opened(conn->port);
 
   conn->state = EXIT_CONN_STATE_OPEN;
-
-  /* If it's an onion service connection, we might want to include the proxy
-   * protocol header: */
-  if (edge_conn->hs_ident) {
-    hs_circuit_id_protocol_t circuit_id_protocol =
-      hs_service_exports_circuit_id(&edge_conn->hs_ident->identity_pk);
-    export_hs_client_circuit_id(edge_conn, conn, circuit_id_protocol);
-  }
 
   connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
   if (connection_get_outbuf_len(conn)) /* in case there are any queued relay
@@ -3451,6 +3442,14 @@ handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
   assert_circuit_ok(circ);
 
   hs_inc_rdv_stream_counter(origin_circ);
+
+  /* If it's an onion service connection, we might want to include the proxy
+   * protocol header: */
+  if (conn->hs_ident) {
+    hs_circuit_id_protocol_t circuit_id_protocol =
+      hs_service_exports_circuit_id(&conn->hs_ident->identity_pk);
+    export_hs_client_circuit_id(conn, circuit_id_protocol);
+  }
 
   /* Connect tor to the hidden service destination. */
   connection_exit_connect(conn);

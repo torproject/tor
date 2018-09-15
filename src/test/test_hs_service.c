@@ -2047,8 +2047,7 @@ test_export_client_circuit_id(void *arg)
   or_circ->global_identifier = 666;
 
   /* Export circuit ID */
-  export_hs_client_circuit_id(edge_conn, conn,
-                              service->config.circuit_id_protocol);
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
 
   /* Check contents */
   cp1 = buf_get_contents(conn->outbuf, &sz);
@@ -2059,8 +2058,7 @@ test_export_client_circuit_id(void *arg)
   or_circ->global_identifier = 22;
 
   /* check changes */
-  export_hs_client_circuit_id(edge_conn, conn,
-                              service->config.circuit_id_protocol);
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
   cp2 = buf_get_contents(conn->outbuf, &sz);
   tt_str_op(cp1, OP_NE, cp2);
   tor_free(cp1);
@@ -2068,8 +2066,7 @@ test_export_client_circuit_id(void *arg)
   /* Check that GID with UINT32_MAX works. */
   or_circ->global_identifier = UINT32_MAX;
 
-  export_hs_client_circuit_id(edge_conn, conn,
-                              service->config.circuit_id_protocol);
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
   cp1 = buf_get_contents(conn->outbuf, &sz);
   tt_str_op(cp1, OP_EQ,
             "PROXY TCP6 fc00:dead:beef:4dad::ffff:ffff ::1 65535 42\r\n");
@@ -2078,8 +2075,7 @@ test_export_client_circuit_id(void *arg)
   /* Check that GID with UINT16_MAX works. */
   or_circ->global_identifier = UINT16_MAX;
 
-  export_hs_client_circuit_id(edge_conn, conn,
-                              service->config.circuit_id_protocol);
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
   cp1 = buf_get_contents(conn->outbuf, &sz);
   tt_str_op(cp1, OP_EQ,
             "PROXY TCP6 fc00:dead:beef:4dad::0:ffff ::1 65535 42\r\n");
@@ -2088,8 +2084,7 @@ test_export_client_circuit_id(void *arg)
   /* Check that GID with UINT16_MAX + 7 works. */
   or_circ->global_identifier = UINT16_MAX + 7;
 
-  export_hs_client_circuit_id(edge_conn, conn,
-                              service->config.circuit_id_protocol);
+  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
   cp1 = buf_get_contents(conn->outbuf, &sz);
   tt_str_op(cp1, OP_EQ, "PROXY TCP6 fc00:dead:beef:4dad::1:6 ::1 6 42\r\n");
 
