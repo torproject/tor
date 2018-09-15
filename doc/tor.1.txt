@@ -2835,10 +2835,10 @@ The following options are used to configure a hidden service.
    not an authorization mechanism; it is instead meant to be a mild
    inconvenience to port-scanners.) (Default: 0)
 
-[[HiddenServiceExportCircuitID]] **HiddenServiceExportCircuitID** **0**|**1**::
-   If set to 1, then the onion service will use the HAProxy proxy protocol to
-   assign a unique IPv6 address (in an unused IPv6 range) to each inbound
-   client circuit. (Default: 0)
+[[HiddenServiceExportCircuitID]] **HiddenServiceExportCircuitID** __protocol__::
+   The onion service will use the given protocol to expose the global circuit
+   identifier of each inbound client circuit via the selected protocol. The only
+   protocol supported right now \'haproxy\'. This option is only for v3 services.
 
 [[HiddenServiceMaxStreams]] **HiddenServiceMaxStreams** __N__::
    The maximum number of simultaneous streams (connections) per rendezvous

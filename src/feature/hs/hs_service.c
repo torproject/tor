@@ -3764,15 +3764,15 @@ hs_service_set_conn_addr_port(const origin_circuit_t *circ,
 
 /** Does the service with identity pubkey <b>pk</b> export the circuit IDs of
  *  its clients?  */
-bool
+hs_circuit_id_protocol_t
 hs_service_exports_circuit_id(const ed25519_public_key_t *pk)
 {
   hs_service_t *service = find_service(hs_service_map, pk);
   if (!service) {
-    return 0;
+    return HS_CIRCUIT_ID_PROTOCOL_NONE;
   }
 
-  return service->config.export_circuit_id;
+  return service->config.circuit_id_protocol;
 }
 
 /* Add to file_list every filename used by a configured hidden service, and to

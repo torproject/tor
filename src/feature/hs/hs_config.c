@@ -145,6 +145,31 @@ helper_parse_uint64(const char *opt, const char *value, uint64_t min,
   return ret;
 }
 
+/** Helper function: Given a configuration option and its value, parse the
+ * value as a hs_circuit_id_protocol_t. On success, ok is set to 1 and ret is
+ * the parse value. On error, ok is set to 0 and the "none"
+ * hs_circuit_id_protocol_t is returned. This function logs on error. */
+static hs_circuit_id_protocol_t
+helper_parse_circuit_id_protocol(const char *key, const char *value, int *ok)
+{
+  tor_assert(value);
+  tor_assert(ok);
+
+  hs_circuit_id_protocol_t ret = HS_CIRCUIT_ID_PROTOCOL_NONE;
+  *ok = 0;
+
+  if (! strcasecmp(value, "haproxy")) {
+    *ok = 1;
+    ret = HS_CIRCUIT_ID_PROTOCOL_HAPROXY;
+  } else {
+    log_warn(LD_CONFIG, "%s must be 'haproxy'.", key);
+    goto err;
+  }
+
+ err:
+  return ret;
+}
+
 /* Return the service version by trying to learn it from the key on disk if
  * any. If nothing is found, the current service configured version is
  * returned. */
@@ -295,8 +320,8 @@ config_service_v3(const config_line_t *line_,
       continue;
     }
     if (!strcasecmp(line->key, "HiddenServiceExportCircuitID")) {
-      config->export_circuit_id =
-        (unsigned int) helper_parse_uint64(line->key, line->value, 0, 1, &ok);
+      config->circuit_id_protocol =
+        helper_parse_circuit_id_protocol(line->key, line->value, &ok);
       if (!ok || export_circuit_id) {
         if (export_circuit_id) {
           dup_opt_seen = line->key;

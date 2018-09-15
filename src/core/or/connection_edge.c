@@ -600,10 +600,15 @@ connected_cell_format_payload(uint8_t *payload_out,
 /* This is an onion service client connection: Export the client circuit ID
  * according to the HAProxy proxy protocol. */
 STATIC void
-export_hs_client_circuit_id_haproxy(const edge_connection_t *edge_conn,
-                                    connection_t *conn)
+export_hs_client_circuit_id(const edge_connection_t *edge_conn,
+                            connection_t *conn,
+                            hs_circuit_id_protocol_t protocol)
 {
-  char *buf;
+  /* We only support HAProxy right now. */
+  if (protocol != HS_CIRCUIT_ID_PROTOCOL_HAPROXY)
+    return;
+
+  char *buf = NULL;
   const char dst_ipv6[] = "::1";
   /* See RFC4193 regarding fc00::/7 */
   const char src_ipv6_prefix[] = "fc00:dead:beef:4dad:";
@@ -655,10 +660,11 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   conn->state = EXIT_CONN_STATE_OPEN;
 
   /* If it's an onion service connection, we might want to include the proxy
-   * protocol header */
-  if (edge_conn->hs_ident &&
-      hs_service_exports_circuit_id(&edge_conn->hs_ident->identity_pk)) {
-    export_hs_client_circuit_id_haproxy(edge_conn, conn);
+   * protocol header: */
+  if (edge_conn->hs_ident) {
+    hs_circuit_id_protocol_t circuit_id_protocol =
+      hs_service_exports_circuit_id(&edge_conn->hs_ident->identity_pk);
+    export_hs_client_circuit_id(edge_conn, conn, circuit_id_protocol);
   }
 
   connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
