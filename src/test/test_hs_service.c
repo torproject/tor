@@ -10,6 +10,7 @@
 #define CIRCUITLIST_PRIVATE
 #define CONFIG_PRIVATE
 #define CONNECTION_PRIVATE
+#define CONNECTION_EDGE_PRIVATE
 #define CRYPTO_PRIVATE
 #define HS_COMMON_PRIVATE
 #define HS_SERVICE_PRIVATE
@@ -33,6 +34,9 @@
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_edge.h"
+#include "core/or/edge_connection_st.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/fs/dir.h"
 #include "feature/dirauth/dirvote.h"
@@ -2003,6 +2007,70 @@ test_authorized_client_config_equal(void *arg)
   tor_free(config2);
 }
 
+/** Test that client circuit ID gets correctly exported */
+static void
+test_export_client_circuit_id(void *arg)
+{
+  origin_circuit_t *or_circ = NULL;
+  size_t sz;
+  char *cp1=NULL, *cp2=NULL;
+  connection_t *conn = NULL;
+
+  (void) arg;
+
+  MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
+
+  hs_service_init();
+
+  /* Create service */
+  hs_service_t *service = helper_create_service();
+  /* Check that export circuit ID detection works */
+  service->config.export_circuit_id = false;
+  tt_int_op(0, OP_EQ,
+            hs_service_exports_circuit_id(&service->keys.identity_pk));
+  service->config.export_circuit_id = true;
+  tt_int_op(1, OP_EQ,
+            hs_service_exports_circuit_id(&service->keys.identity_pk));
+
+  /* Create client connection */
+  conn = test_conn_get_connection(AP_CONN_STATE_CIRCUIT_WAIT, CONN_TYPE_AP, 0);
+
+  /* Create client edge conn hs_ident */
+  edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+  edge_conn->hs_ident = hs_ident_edge_conn_new(&service->keys.identity_pk);
+  edge_conn->hs_ident->orig_virtual_port = 42;
+
+  /* Create rend circuit */
+  or_circ = origin_circuit_new();
+  or_circ->base_.purpose = CIRCUIT_PURPOSE_C_REND_JOINED;
+  edge_conn->on_circuit = TO_CIRCUIT(or_circ);
+  or_circ->global_identifier = 666;
+
+  /* Export circuit ID */
+  export_hs_client_circuit_id_haproxy(edge_conn, conn);
+
+  /* Check contents */
+  cp1 = buf_get_contents(conn->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ,
+            "PROXY TCP6 fc00:dead:beef:4dad::0:29a ::1 666 42\r\n");
+
+  /* Change circ GID and see that the reported circuit ID also changes */
+  or_circ->global_identifier = 22;
+
+  /* check changes */
+  export_hs_client_circuit_id_haproxy(edge_conn, conn);
+  cp2 = buf_get_contents(conn->outbuf, &sz);
+  tt_str_op(cp1, OP_NE, cp2);
+
+ done:
+  UNMOCK(connection_write_to_buf_impl_);
+  circuit_free_(TO_CIRCUIT(or_circ));
+  connection_free_minimal(conn);
+  hs_service_free(service);
+  tor_free(cp1);
+  tor_free(cp2);
+}
+
 struct testcase_t hs_service_tests[] = {
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup, TT_FORK,
     NULL, NULL },
@@ -2044,6 +2112,8 @@ struct testcase_t hs_service_tests[] = {
     NULL, NULL },
   { "authorized_client_config_equal", test_authorized_client_config_equal,
     TT_FORK, NULL, NULL },
+  { "export_client_circuit_id", test_export_client_circuit_id, TT_FORK,
+    NULL, NULL },
 
   END_OF_TESTCASES
 };

@@ -125,6 +125,25 @@ connection_write_to_buf_mock(const char *string, size_t len,
   buf_add(conn->outbuf, string, len);
 }
 
+char *
+buf_get_contents(buf_t *buf, size_t *sz_out)
+{
+  tor_assert(buf);
+  tor_assert(sz_out);
+
+  char *out;
+  *sz_out = buf_datalen(buf);
+  if (*sz_out >= ULONG_MAX)
+    return NULL; /* C'mon, really? */
+  out = tor_malloc(*sz_out + 1);
+  if (buf_get_bytes(buf, out, (unsigned long)*sz_out) != 0) {
+    tor_free(out);
+    return NULL;
+  }
+  out[*sz_out] = '\0'; /* Hopefully gratuitous. */
+  return out;
+}
+
 /* Set up a fake origin circuit with the specified number of cells,
  * Return a pointer to the newly-created dummy circuit */
 circuit_t *
