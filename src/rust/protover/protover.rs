@@ -10,7 +10,6 @@ use std::str::FromStr;
 use std::string::String;
 
 use external::c_tor_version_as_new_as;
-use external::c_tor_is_using_nss;
 
 use errors::ProtoverError;
 use protoset::ProtoSet;
@@ -125,6 +124,17 @@ impl From<Protocol> for UnknownProtocol {
     }
 }
 
+#[cfg(feature="test_linking_hack")]
+fn have_linkauth_v1() -> bool {
+    true
+}
+
+#[cfg(not(feature="test_linking_hack"))]
+fn have_linkauth_v1() -> bool {
+    use external::c_tor_is_using_nss;
+    ! c_tor_is_using_nss()
+}
+
 /// Get a CStr representation of current supported protocols, for
 /// passing to C, or for converting to a `&str` for Rust.
 ///
@@ -142,7 +152,7 @@ impl From<Protocol> for UnknownProtocol {
 ///
 //  C_RUST_COUPLED: protover.c `protover_get_supported_protocols`
 pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
-    if c_tor_is_using_nss() {
+    if ! have_linkauth_v1() {
         cstr!("Cons=1-2 \
                Desc=1-2 \
                DirCache=1-2 \

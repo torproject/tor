@@ -23,3 +23,9 @@ default = []
 test-c-from-rust = [
     "crypto/test-c-from-rust",
 ]
+
+# We have to define a feature here because doctests don't get cfg(test),
+# and we need to disable some C dependencies when running the doctests
+# because of the various linker issues.  See
+# https://github.com/rust-lang/rust/issues/45599
+test_linking_hack = []
