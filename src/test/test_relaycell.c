@@ -38,8 +38,8 @@ void connection_free_minimal(connection_t*);
 int connected_cell_format_payload(uint8_t *payload_out,
                               const tor_addr_t *addr,
                               uint32_t ttl);
-int pathbias_count_valid_cells(origin_circuit_t *circ,
-                              cell_t *cell);
+void pathbias_count_valid_cells(origin_circuit_t *circ,
+                                cell_t *cell);
 half_edge_t *connection_half_edge_find_stream_id(
                                     const smartlist_t *half_conns,
                                     streamid_t stream_id);
