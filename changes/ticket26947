@@ -1,3 +1,0 @@
-  o Minor features (in-process API):
-    - The tor_api now has a function that returns the name and version
-      of the backend implementing the API. Closes ticket 26947.

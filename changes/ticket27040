@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden service v2):
-    - Demote a log warning to info in case we do not have a consensus when a
-      .onion request comes in. This can happen while bootstrapping for
-      instance. The request will follow through after so we really don't need
-      to warn the user loudly. Fixes bug 27040; bugfix on 0.2.8.2-alpha.

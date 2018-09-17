@@ -1,3 +1,0 @@
-  o Minor features (development):
-    - Tor's makefile now supports running the "clippy" Rust style tool
-      on our Rust code. Closes ticket 22156.

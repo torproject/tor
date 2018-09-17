@@ -1,3 +1,0 @@
-  o Minor bugfixes (continuous integration):
-    - Stop reinstalling identical packages in our Windows CI.
-      Fixes bug 27464; bugfix on 0.3.4.1-alpha.

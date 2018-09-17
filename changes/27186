@@ -1,4 +1,0 @@
-  o Minor features (UI):
-    - Log each included configuration file or directory as we read it, to
-      provide more visibility about where Tor is reading from.
-      Patch from Unto Sten; closes ticket 27186.

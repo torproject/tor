@@ -1,5 +1,0 @@
-  o Minor features (embedding API):
-    - The Tor controller API now supports a function to launch Tor with a
-      preconstructed owning controller FD, so that embedding applications
-      don't need to manage controller ports and authentication.  Closes
-      ticket 24204.

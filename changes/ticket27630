@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Use the simpler strcmpstart() helper in rend_parse_v2_service_descriptor
-      instead of strncmp(). Closes ticket 27630.

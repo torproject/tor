@@ -1,4 +1,0 @@
-  o Minor bugfixes (relays):
-    - Since 0.3.3.5-rc, authorities require DirCache (V2Dir) for the Guard
-      flag. Update the message logged on relays when DirCache is disabled.
-      Fixes bug 24312; bugfix on 0.3.3.5-rc.

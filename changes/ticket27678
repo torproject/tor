@@ -1,5 +1,0 @@
-  o Minor features (controller):
-    - Emit CIRC_BW events as soon as we detect that we processed an invalid
-      or otherwise dropped cell on a circuit. This allows vanguards and
-      other controllers to react more quickly to dropped cells. Closes
-      ticket 27678.

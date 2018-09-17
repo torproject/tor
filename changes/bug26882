@@ -1,5 +1,0 @@
-  o Minor bugfixes (logging, documentation):
-    - When SafeLogging is enabled, scrub IP address in
-      channel_tls_process_netinfo_cell(). Also, add a note
-      to manpage that scrubbing is not guaranteed on loglevels
-      below Notice. Fixes bug 26882; bugfix on 0.2.4.10-alpha.

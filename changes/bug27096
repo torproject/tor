@@ -1,3 +1,0 @@
-  o Minor bugfixes (testing):
-    - Fix two unit tests to work when HOME environment variable is not
-      set. Fixes bug 27096; bugfix on 0.2.8.1-alpha.

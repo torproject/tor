@@ -1,6 +1,0 @@
-  o Minor bugfixes (controller):
-    - Consider all routerinfo errors other than "not a server"
-      to be transient for the purpose of "GETINFO exit-policy/*"
-      controller request. Print stacktrace in the unlikely case
-      of failing to recompute routerinfo digest. Fixes bug 27034;
-      bugfix on 0.3.4.1-alpha.

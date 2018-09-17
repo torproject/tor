@@ -1,4 +1,0 @@
-  o Documentation:
-    - Warn users that they should not include MyFamily
-      line(s) in their torrc when running Tor bridge.
-      Closes ticket 26908.

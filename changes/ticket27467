@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove GetAdaptersAddresses_fn_t. The code that used it was removed
-      as part of the 26481 refactor. Closes ticket 27467.

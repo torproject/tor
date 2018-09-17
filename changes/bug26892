@@ -1,6 +1,0 @@
-  o Minor bugfixes (logging):
-    - As a precaution, do an early return from
-      log_addr_has_changed() if Tor is running as client. Also,
-      log a stack trace for debugging as this function should only
-      be called when Tor runs as server. Fixes bug 26892;
-      bugfix on 0.1.1.9-alpha.

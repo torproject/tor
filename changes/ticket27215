@@ -1,9 +1,0 @@
-  o Major feature (hidden service):
-    - For a newly created hidden service, the default version is now 3. Tor
-      still supports version 2 service but the operator now needs to
-      specifically set "HiddenServiceVersion 2" in order to create a new
-      service.
-
-      For existing services, tor now learns the version by reading the key
-      file so the HiddenServiceVersion is not mandatory in that case. Closes
-      ticket 27215.

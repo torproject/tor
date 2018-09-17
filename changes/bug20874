@@ -1,7 +1,0 @@
-  o Minor bugfixes (client, reachableaddresses):
-    - Instead of adding an "reject *:*" line to ReachableAddresses when
-      loading the configuration, add one to the policy after parsing it
-      in parse_reachable_addresses(). This prevents extra "reject *.*"
-      lines from accumulating on reloads. Fixes bug 20874; bugfix on
-      0.3.5.1-alpha. Patch by Neel Chauhan.
-

@@ -1,7 +1,0 @@
-  o Major features (relay):
-    - Relays no longer run as exits by default. If the "ExitRelay" option is
-      auto (or unset), and no exit policy is specified with ExitPolicy or
-      ReducedExitPolicy, we now treat ExitRelay as 0. Previously in this
-      case, we allowed exit
-      traffic and logged a warning message. Closes ticket
-      21530. Patch by Neel Chauhan.

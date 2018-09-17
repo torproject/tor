@@ -1,3 +1,0 @@
-  o Minor features (continuous integration):
-    - Don't do a distcheck with --disable-module-dirauth in Travis.
-      Implements ticket 27252.

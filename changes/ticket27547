@@ -1,7 +1,0 @@
-  o Major feature (hidden service v3):
-    - Implement client authorization at the descriptor level. A new torrc
-      option was added to control this client side: ClientOnionAuthDir <path>.
-      On the service side, if the "authorized_clients/" directory exists in
-      the onion service directory path, client configuration are read from the
-      files within. See the manpage for more details. Closes ticket 27547.
-      Patch done by Suphanat Chunhapanya (haxxpop).

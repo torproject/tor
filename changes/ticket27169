@@ -1,6 +1,0 @@
-  o Minor features (bootstrap):
-    - Improve user experience by deferring directory progress
-      reporting until after a connection to a relay or bridge has
-      succeeded.  This avoids reporting 80% progress based on cached
-      directory information when we can't even connect to a bridge or
-      relay.  Closes ticket 27169.

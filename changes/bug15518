@@ -1,6 +1,0 @@
-  o Minor bugfixes (ipv6):
-    - In addrs_in_same_network_family(), we choose the subnet size based
-      on the IP version (IPv4 or IPv6). Previously, we chose a fixed subnet
-      size of /16 for both IPv4 and IPv6 addresses. Fixes bug 15518; bugfix
-      on 0.3.5.1-alpha. Patch by Neel Chauhan.
-

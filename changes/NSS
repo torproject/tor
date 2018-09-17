@@ -1,7 +1,0 @@
-  o Major features (portability, cryptography, experimental, TLS):
-    - Tor now has the option to compile with the NSS library instead of
-      OpenSSL. This feature is experimental, and we expect that bugs may
-      remain. It is mainly intended for environments where Tor's performance
-      is not CPU-bound, and where NSS is already known to be installed.
-      To try it out, configure Tor with the --enable-nss flag.
-      Closes ticket 26631.

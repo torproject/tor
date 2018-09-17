@@ -1,5 +1,0 @@
-  o Minor bugfixes (client, memory usage):
-    - When not running as a directory cache, there is no need to store the
-      text of the current consensus networkstatus in RAM.  Previously,
-      however, clients would store this anyway, at a cost of over 5 MB.
-      Now, they do not. Fixes bug 27247; bugfix on 0.3.0.1-alpha.

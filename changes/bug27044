@@ -1,5 +1,0 @@
-  o Minor bugfixes (configuration, Onion Services):
-    - In rend_service_parse_port_config(), disallow any input to
-      remain after address-port pair was parsed. This will catch
-      address and port being whitespace-separated by mistake of
-      the user. Fixes bug 27044; bugfix on 0.2.9.10.

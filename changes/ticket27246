@@ -1,4 +1,0 @@
-  o Minor features (memory usage):
-    - When not using them, store legacy TAP public onion keys in
-      DER-encoded format, rather than as expanded public keys. This should
-      save several megabytes on typical clients. Closes ticket 27246.

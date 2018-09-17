@@ -1,5 +1,0 @@
-  o Removed features (hidden service, tor2web):
-    - Remove Tor2web functionalities. The Tor2webMode and
-      Tor2webRendezvousPoints options are now obsolete. Note that this feature
-      was never shipped in vanilla Tor and it was only possible to use this
-      feature by building the support at compile time. Closes ticket 26367.

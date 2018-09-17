@@ -1,4 +1,0 @@
-  o Minor bugfixes (C correctness):
-    - Use time_t for all values in predicted_ports_prediction_time_remaining().
-      Rework the code that computes difference between durations/timestamps.
-      Fixes bug 27165; bugfix on 0.3.1.1-alpha.

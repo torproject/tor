@@ -1,4 +1,0 @@
-  o Minor bugfixes (bootstrap):
-    - Try harder to get descriptors in non-exit test networks, by
-      using the mid weight for the third hop when there are no exits.
-      Fixes bug 27237; bugfix on 0.2.6.2-alpha.

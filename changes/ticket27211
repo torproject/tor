@@ -1,3 +1,0 @@
-  o Minor features (testing):
-    - Add scripts/test/chutney-git-bisect.sh, for bisecting using chutney.
-      Implements ticket 27211.
