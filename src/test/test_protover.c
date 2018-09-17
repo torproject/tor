@@ -10,6 +10,7 @@
 
 #include "core/or/or.h"
 #include "core/or/connection_or.h"
+#include "lib/tls/tortls.h"
 
 static void
 test_protover_parse(void *arg)
