@@ -1,4 +1,4 @@
-Changes in version 0.3.5.1-alpha-2018-09-18
+Changes in version 0.3.5.1-alpha - 2018-09-18
   Tor 0.3.5.1-alpha is the first release of the 0.3.5.x series. It adds
   client authorization for modern (v3) onion services, improves
   bootstrap reporting, begins reorganizing Tor's codebase, adds optional
@@ -43,7 +43,7 @@ Changes in version 0.3.5.1-alpha-2018-09-18
       to find out how to contact it. A new torrc option was added to
       control this client side: ClientOnionAuthDir <path>. On the
       service side, if the "authorized_clients/" directory exists in the
-      onion service directory path, client configuration are read from
+      onion service directory path, client configurations are read from
       the files within. See the manpage for more details. Closes ticket
       27547. Patch done by Suphanat Chunhapanya (haxxpop).
     - Improve revision counter generation in next-gen onion services.
@@ -67,7 +67,7 @@ Changes in version 0.3.5.1-alpha-2018-09-18
   o Major bugfixes (directory authority):
     - Actually check that the address we get from DirAuthority
       configuration line is valid IPv4. Explicitly disallow DirAuthority
-      adress to be a DNS hostname. Fixes bug 26488; bugfix
+      address to be a DNS hostname. Fixes bug 26488; bugfix
       on 0.1.2.10-rc.
 
   o Major bugfixes (restart-in-process):
@@ -131,17 +131,17 @@ Changes in version 0.3.5.1-alpha-2018-09-18
     - For purposes of CIRC_BW-based dropped cell detection, track half-
       closed stream ids, and allow their ENDs, SENDMEs, DATA and path
       bias check cells to arrive without counting it as dropped until
-      either the END arrvies, or the windows are empty. Closes
+      either the END arrives, or the windows are empty. Closes
       ticket 25573.
     - Implement a 'GETINFO md/all' controller command to enable getting
-      all known microdesriptors. Closes ticket 8323.
+      all known microdescriptors. Closes ticket 8323.
     - The GETINFO command now support an "uptime" argument, to return
       Tor's uptime in seconds. Closes ticket 25132.
 
   o Minor features (denial-of-service avoidance):
     - Make our OOM handler aware of the DNS cache so that it doesn't
       fill up the memory. This check is important for our DoS mitigation
-      subsystem. Closes ticket 18642. Patch by Neel Chauhan
+      subsystem. Closes ticket 18642. Patch by Neel Chauhan.
 
   o Minor features (development):
     - Tor's makefile now supports running the "clippy" Rust style tool
@@ -182,7 +182,7 @@ Changes in version 0.3.5.1-alpha-2018-09-18
 
   o Minor features (OpenSSL):
     - When possible, use RFC5869 HKDF implementation from OpenSSL rather
-      than own own. Resolves ticket 19979.
+      than our own. Resolves ticket 19979.
 
   o Minor features (Rust, code quality):
     - Improve rust code quality in the rust protover implementation by
@@ -201,7 +201,7 @@ Changes in version 0.3.5.1-alpha-2018-09-18
     - Log each included configuration file or directory as we read it,
       to provide more visibility about where Tor is reading from. Patch
       from Unto Sten; closes ticket 27186.
-    - Low log level of "Scheduler type KIST has been enabled" to INFO.
+    - Lower log level of "Scheduler type KIST has been enabled" to INFO.
       Closes ticket 26703.
 
   o Minor bugfixes (bootstrap):
@@ -226,7 +226,7 @@ Changes in version 0.3.5.1-alpha-2018-09-18
       on 0.3.0.1-alpha.
 
   o Minor bugfixes (client, reachableaddresses):
-    - Instead of adding an "reject *:*" line to ReachableAddresses when
+    - Instead of adding a "reject *:*" line to ReachableAddresses when
       loading the configuration, add one to the policy after parsing it
       in parse_reachable_addresses(). This prevents extra "reject *.*"
       lines from accumulating on reloads. Fixes bug 20874; bugfix on
@@ -340,7 +340,7 @@ Changes in version 0.3.5.1-alpha-2018-09-18
     - If a unit test running in a subprocess exits abnormally or with a
       nonzero status code, treat the test as having failed, even if the
       test reported success. Without this fix, memory leaks don't cause
-      cause the tests to fail, even with LeakSanitizer. Fixes bug 27658;
+      the tests to fail, even with LeakSanitizer. Fixes bug 27658;
       bugfix on 0.2.2.4-alpha.
     - When logging a version mismatch in our openssl_version tests,
       report the actual offending version strings. Fixes bug 26152;
@@ -353,8 +353,8 @@ Changes in version 0.3.5.1-alpha-2018-09-18
       8 when parsing torrc. Fixes bug 27428; bugfix on 0.0.8pre1.
 
   o Code simplification and refactoring:
-    - 'updateFallbackDirs.py' now ignores the blacklist file as it's not
-      longer needed Closes ticket 26502.
+    - 'updateFallbackDirs.py' now ignores the blacklist file, as it's not
+      longer needed. Closes ticket 26502.
     - Include paths to header files within Tor are now qualified by
       directory within the top-level src directory.
     - Many structures have been removed from the centralized "or.h"
