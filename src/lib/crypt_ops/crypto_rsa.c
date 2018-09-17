@@ -540,6 +540,9 @@ crypto_pk_read_private_key_from_string(crypto_pk_t *env,
   return crypto_pk_read_from_string_generic(env, src, len, true);
 }
 
+/** If a file is longer than this, we won't try to decode its private key */
+#define MAX_PRIVKEY_FILE_LEN (16*1024*1024)
+
 /** Read a PEM-encoded private key from the file named by
  * <b>keyfile</b> into <b>env</b>.  Return 0 on success, -1 on failure.
  */
@@ -551,7 +554,7 @@ crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
   char *buf = read_file_to_str(keyfile, 0, &st);
   if (!buf)
     return -1;
-  if (st.st_size > SSIZE_MAX)
+  if (st.st_size > MAX_PRIVKEY_FILE_LEN)
     return -1;
 
   int rv = crypto_pk_read_private_key_from_string(env, buf,
