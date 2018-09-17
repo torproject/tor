@@ -1,35 +1,12 @@
 Changes in version 0.3.5.1-alpha-2018-09-??
   BLURB HERE. NOTE ABOUT NSS.
 
-  o Major features (experimental, library support):
-    - Tor now has _partial_ support for using the NSS cryptography
-      library in place of OpenSSL. When Tor is configured with
-      --enable-nss, it will use NSS for several (but not yet all) of its
-      cryptography. (It still relies on OpenSSL for the rest.)
-      Eventually, if all goes as planned, "--enable-nss" will produce a
-      version of Tor that does not depend on OpenSSL. Implements ticket
-      26816. WARNING: This feature is experimental. Don't use it for
-      real security yet, until the code has had much more review, and
-      more bugs have been shaken out.
-    - When built with --enable-nss, Tor now uses the NSS library for
-      digests, AES, and pseudorandom numbers. Closes ticket 26815.
-
-  o Major features (hidden service v3):
-    - Implement client authorization at the descriptor level. A new
-      torrc option was added to control this client side:
-      ClientOnionAuthDir <path>. On the service side, if the
-      "authorized_clients/" directory exists in the onion service
-      directory path, client configuration are read from the files
-      within. See the manpage for more details. Closes ticket 27547.
-      Patch done by Suphanat Chunhapanya (haxxpop).
-
-  o Major features (hidden service):
-    - For a newly created hidden service, the default version is now 3.
-      Tor still supports version 2 service but the operator now needs to
-      specifically set "HiddenServiceVersion 2" in order to create a new
-      service. For existing services, tor now learns the version by
-      reading the key file so the HiddenServiceVersion is not mandatory
-      in that case. Closes ticket 27215.
+  o Major features (bootstrap):
+    - Improve user experience by deferring directory progress reporting
+      until after a connection to a relay or bridge has succeeded. This
+      avoids reporting 80% progress based on cached directory
+      information when we can't even connect to a bridge or relay.
+      Closes ticket 27169.
 
   o Major features (new code layout):
     - Nearly all of Tor's source code has been moved around into more
@@ -44,12 +21,27 @@ Changes in version 0.3.5.1-alpha-2018-09-??
       refactored to be acyclic, the main body of Tor is still too
       interconnected. We will attempt to improve this in the future.
 
-  o Major features (onion services):
+  o Major features (onion services v3):
+    - Implement client authorization at the descriptor level. A new
+      torrc option was added to control this client side:
+      ClientOnionAuthDir <path>. On the service side, if the
+      "authorized_clients/" directory exists in the onion service
+      directory path, client configuration are read from the files
+      within. See the manpage for more details. Closes ticket 27547.
+      Patch done by Suphanat Chunhapanya (haxxpop).
     - Improve revision counter generation in next-gen onion services.
       Onion services can now scale by hosting multiple instances on
       different hosts without synchronization between them, which was
       previously impossible because descriptors would get rejected by
       HSDirs. Addresses ticket 25552.
+
+  o Major features (onion services):
+    - For a newly created onion service, the default version is now 3.
+      Tor still supports version 2 service but the operator now needs to
+      specifically set "HiddenServiceVersion 2" in order to create a new
+      service. For existing services, tor now learns the version by
+      reading the key file so the HiddenServiceVersion is not mandatory
+      in that case. Closes ticket 27215.
 
   o Major features (portability, cryptography, experimental, TLS):
     - Tor now has the option to compile with the NSS library instead of
@@ -58,6 +50,19 @@ Changes in version 0.3.5.1-alpha-2018-09-??
       performance is not CPU-bound, and where NSS is already known to be
       installed. To try it out, configure Tor with the --enable-nss
       flag. Closes ticket 26631.
+    - Tor now has _partial_ support for using the NSS cryptography and
+      TLS library in place of OpenSSL. When Tor is configured with
+      --enable-nss, it will use NSS for several (but not yet all) of its
+      cryptography. (It still relies on OpenSSL for the rest.)
+      Eventually, if all goes as planned, "--enable-nss" will produce a
+      version of Tor that does not depend on OpenSSL. Implements
+      ticket 26816.
+
+      WARNING: This feature is experimental. Don't use it for real
+      security yet, until the code has had much more review, and more
+      bugs have been shaken out.
+    - When built with --enable-nss, Tor now uses the NSS library for
+      digests, AES, and pseudorandom numbers. Closes ticket 26815.
 
   o Major features (relay):
     - Relays no longer run as exits by default. If the "ExitRelay"
@@ -77,15 +82,8 @@ Changes in version 0.3.5.1-alpha-2018-09-??
       Fixes bug 27708; bugfix on 0.3.3.1-alpha.
 
   o Minor features (admin tools):
-    - Add new tool that prints expiration date of signing cert in
-      ed25519_signing_cert. Resolves issue 19506.
-
-  o Minor features (bootstrap):
-    - Improve user experience by deferring directory progress reporting
-      until after a connection to a relay or bridge has succeeded. This
-      avoids reporting 80% progress based on cached directory
-      information when we can't even connect to a bridge or relay.
-      Closes ticket 27169.
+    - Add new tool that prints expiration date of th signing cert in an
+      ed25519_signing_cert file. Resolves issue 19506.
 
   o Minor features (build):
     - If you pass the "--enable-pic" option to configure, Tor will try
@@ -111,6 +109,10 @@ Changes in version 0.3.5.1-alpha-2018-09-??
       "tcmalloc", "jemalloc", "openbsd" (deprecated), and "system" (the
       default). Addresses part of ticket 20424. Based on a patch from
       Alex Xu.
+
+  o Minor features (config):
+    - The "auto" keyword in torrc is now case insensitive. Closes
+      ticket 26663.
 
   o Minor features (continuous integration):
     - Don't do a distcheck with --disable-module-dirauth in Travis.
@@ -157,8 +159,6 @@ Changes in version 0.3.5.1-alpha-2018-09-??
     - When a bandwidth file is used to obtain the bandwidth measurements,
       include this bandwidth file headers in the votes. Closes
       ticket 3723.
-
-  o Minor features (directory):
     - Improved support for networks with only a single authority or a
       single fallback directory. Patch from Gabriel Somlo. Closes
       ticket 25928.
@@ -168,14 +168,12 @@ Changes in version 0.3.5.1-alpha-2018-09-??
       a preconstructed owning controller FD, so that embedding
       applications don't need to manage controller ports and
       authentication. Closes ticket 24204.
+    - The tor_api now has a function that returns the name and version
+      of the backend implementing the API. Closes ticket 26947.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the September 6 2018 Maxmind GeoLite2
       Country database. Closes ticket 27631.
-
-  o Minor features (in-process API):
-    - The tor_api now has a function that returns the name and version
-      of the backend implementing the API. Closes ticket 26947.
 
   o Minor features (memory management):
     - Get libevent code to use the same memory allocator that Tor code
@@ -187,12 +185,12 @@ Changes in version 0.3.5.1-alpha-2018-09-??
       encoded format, rather than as expanded public keys. This should
       save several megabytes on typical clients. Closes ticket 27246.
 
-  o Minor features (openssl):
-    - When possible, use RFC5869 HKDF implementation from OpenSSL.
-      Resolves ticket 19979.
+  o Minor features (OpenSSL):
+    - When possible, use RFC5869 HKDF implementation from OpenSSL rather
+      than own own. Resolves ticket 19979.
 
   o Minor features (rust, code quality):
-    - Improve rust code quality in the Rust protover implementation by
+    - Improve rust code quality in the rust protover implementation by
       making it more idiomatic. Includes changing an internal API to
       take &str instead of &String. Closes ticket 26492.
 
@@ -208,21 +206,6 @@ Changes in version 0.3.5.1-alpha-2018-09-??
     - Log each included configuration file or directory as we read it,
       to provide more visibility about where Tor is reading from. Patch
       from Unto Sten; closes ticket 27186.
-
-  o Minor features(config):
-    - The "auto" keyword in torrc is now case insensitive. Closes
-      ticket 26663.
-
-  o Minor bugfixes (security):
-    - Refrain from potentially insecure usage of strncat() in
-      configure_backtrace_handler(). Use snprintf() instead. Fixes bug
-      26522; bugfix on a969ce464dc23db39725a891d60537f3d3e51b50 (not in
-      any tor release).
-
-  o Minor bugfixes (appveyor ci):
-    - Improve Appveyor CI IRC logging. Generate correct branches and
-      URLs for pull requests and tags. Use unambiguous short commits.
-      Fixes bug 26979; bugfix on master.
 
   o Minor bugfixes (bootstrap):
     - Try harder to get descriptors in non-exit test networks, by using
@@ -268,6 +251,9 @@ Changes in version 0.3.5.1-alpha-2018-09-??
       27044; bugfix on 0.2.9.10.
 
   o Minor bugfixes (continuous integration):
+    - Improve Appveyor CI IRC logging. Generate correct branches and
+      URLs for pull requests and tags. Use unambiguous short commits.
+      Fixes bug 26979; bugfix on master.
     - Stop reinstalling identical packages in our Windows CI. Fixes bug
       27464; bugfix on 0.3.4.1-alpha.
 
@@ -281,18 +267,6 @@ Changes in version 0.3.5.1-alpha-2018-09-??
   o Minor bugfixes (directory connection shutdown):
     - Avoid a double-close when shutting down a stalled directory
       connection. Fixes bug 26896; bugfix on 0.3.4.1-alpha.
-
-  o Minor bugfixes (hidden service v2):
-    - Demote a log warning to info in case we do not have a consensus
-      when a .onion request comes in. This can happen while bootstrapping
-      for instance. The request will follow through after so we really
-      don't need to warn the user loudly. Fixes bug 27040; bugfix
-      on 0.2.8.2-alpha.
-
-  o Minor bugfixes (hidden service v3):
-    - In case the hidden service directory can't be created or has wrong
-      permissions, do not BUG() on it which lead to a non fatal
-      stacktrace. Fixes bug 27335; bugfix on 0.3.2.1.
 
   o Minor bugfixes (HTTP tunnel):
     - Fix a bug warning when closing an HTTP tunnel connection due to an
@@ -323,6 +297,18 @@ Changes in version 0.3.5.1-alpha-2018-09-??
     - Ensure circuitmux queues are empty before scheduling or sending
       padding. Fixes bug 25505; bugfix on 0.3.1.1-alpha.
 
+  o Minor bugfixes (onion service v2):
+    - Demote a log warning to info in case we do not have a consensus
+      when a .onion request comes in. This can happen while bootstrapping
+      for instance. The request will follow through after so we really
+      don't need to warn the user loudly. Fixes bug 27040; bugfix
+      on 0.2.8.2-alpha.
+
+  o Minor bugfixes (onion service v3):
+    - In case the onion service directory can't be created or has wrong
+      permissions, do not BUG() on it which lead to a non fatal
+      stacktrace. Fixes bug 27335; bugfix on 0.3.2.1.
+
   o Minor bugfixes (OS compatibility):
     - On Linux and Windows properly handle configuration change that
       moves a listener to/from wildcard IP address. In case first
@@ -339,15 +325,13 @@ Changes in version 0.3.5.1-alpha-2018-09-??
       is smaller than 24h in order to reduce the efficiency of guard
       discovery attacks. Fixes bug 24104; bugfix on 0.1.1.6-alpha.
 
-  o Minor bugfixes (relay):
+  o Minor bugfixes (relays):
     - In frac_nodes_with_descriptors(), add for_direct_connect, and
       replace node_has_any_descriptor() with
       node_has_preferred_descriptor(). Also, if we are using bridges and
       there is at least one bridge with a full descriptor, set f_guard
       in compute_frac_paths_available() to 1.0. Fixes bug 25886; bugfix
       on 0.3.5.1-alpha. Patch by Neel Chauhan.
-
-  o Minor bugfixes (relays):
     - Since 0.3.3.5-rc, authorities require DirCache (V2Dir) for the
       Guard flag. Update the message logged on relays when DirCache is
       disabled. Fixes bug 24312; bugfix on 0.3.3.5-rc.
@@ -371,6 +355,8 @@ Changes in version 0.3.5.1-alpha-2018-09-??
     - When logging a version mismatch in our openssl_version tests,
       report the actual offending version strings. Fixes bug 26152;
       bugfix on 0.2.9.1-alpha.
+    - Fix forking tests on Windows when there is a space somewhere in
+      the path. Fixes bug 26437; bugfix on 0.2.2.4-alpha.
 
   o Minor bugfixes (torrc):
     - Tor now validates that the ContactInfo config option is valid UTF-
@@ -424,12 +410,6 @@ Changes in version 0.3.5.1-alpha-2018-09-??
     - Tor no longer attempts to run on Windows environments without the
       GetAdaptersAddresses() function. This function has existed since
       Windows XP, which is itself already older than we support.
-
-  o Testing:
-    - Fix forking tests on Windows when there is a space somewhere in
-      the path. Fixes bug 26437; bugfix on 0.2.2.4-alpha.
-
-  o Removed features (hidden service, tor2web):
     - Remove Tor2web functionalities. The Tor2webMode and
       Tor2webRendezvousPoints options are now obsolete. Note that this
       feature was never shipped in vanilla Tor and it was only possible
