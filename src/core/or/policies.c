@@ -498,7 +498,8 @@ fascist_firewall_rand_preferred_addr(void)
 
 /** Do we prefer to connect to IPv6 ORPorts?
  * Use node_ipv6_or_preferred() whenever possible: it supports bridge client
- * per-node IPv6 preferences.
+ * per-node IPv6 preferences. Keep in mind that node_ipv6_or_preferred()
+ * can prefer IPv4 or IPv6 at random if both are available.
  */
 int
 fascist_firewall_prefer_ipv6_orport(const or_options_t *options)
@@ -736,6 +737,8 @@ fascist_firewall_allows_node(const node_t *node,
 
   node_assert_ok(node);
 
+  /* Keep in mind that node_ipv6_or_preferred() can prefer IPv4 or IPv6 at
+   * random if both are available. */
   const int pref_ipv6 = (fw_connection == FIREWALL_OR_CONNECTION
                          ? node_ipv6_or_preferred(node)
                          : node_ipv6_dir_preferred(node));
@@ -1044,6 +1047,8 @@ fascist_firewall_choose_address_node(const node_t *node,
     return;
   }
 
+  /* Keep in mind that node_ipv6_or_preferred() can prefer IPv4 or IPv6 at
+   * random if both are available. */
   const int pref_ipv6_node = (fw_connection == FIREWALL_OR_CONNECTION
                               ? node_ipv6_or_preferred(node)
                               : node_ipv6_dir_preferred(node));

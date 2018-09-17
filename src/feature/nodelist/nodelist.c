@@ -1589,6 +1589,8 @@ node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   tor_assert(ap_out);
 
+  /* Keep in mind that node_ipv6_or_preferred() can prefer IPv4 or IPv6 at
+   * random if both are available. */
   if (node_ipv6_or_preferred(node)) {
     node_get_pref_ipv6_orport(node, ap_out);
   } else {
