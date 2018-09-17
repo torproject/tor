@@ -1,0 +1,7 @@
+  o Minor bugfixes (directory permissions):
+    - When a user requests a group-readable DataDirectory, give it to
+      them. Previously, when the DataDirectory and the CacheDirectory
+      were the same, the default setting (0) for
+      CacheDirectoryGroupReadable would always override the setting for
+      DataDirectoryGroupReadable. Fixes bug 26913; bugfix on
+      0.3.3.1-alpha.
