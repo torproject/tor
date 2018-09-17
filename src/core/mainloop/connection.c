@@ -1917,6 +1917,8 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
 
   const int must_ipv4 = !fascist_firewall_use_ipv6(options);
   const int must_ipv6 = (options->ClientUseIPv4 == 0);
+  /* Keep in mind that if we have both IPv4 and IPv6,
+   * fascist_firewall_prefer_ipv6_orport() returns a random preference. */
   const int pref_ipv6 = (conn->type == CONN_TYPE_OR
                          ? fascist_firewall_prefer_ipv6_orport(options)
                          : fascist_firewall_prefer_ipv6_dirport(options));

@@ -1529,6 +1529,8 @@ node_has_ipv6_dirport(const node_t *node)
  *
  * If you don't have a node, consider looking it up.
  * If there is no node, use fascist_firewall_prefer_ipv6_orport().
+ * fascist_firewall_prefer_ipv6_orport() can infer a random
+ * preference if we have both IPv4 and IPv6.
  */
 int
 node_ipv6_or_preferred(const node_t *node)
@@ -1539,6 +1541,7 @@ node_ipv6_or_preferred(const node_t *node)
 
   /* XX/teor - node->ipv6_preferred is set from
    * fascist_firewall_prefer_ipv6_orport() each time the consensus is loaded.
+   * and can be random.
    */
   node_get_prim_orport(node, &ipv4_addr);
   if (!fascist_firewall_use_ipv6(options)) {
