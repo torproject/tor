@@ -213,7 +213,7 @@ parse_single_entry(const char *s, const char *end_of_entry)
 
     s = comma;
     // Skip the comma separator between ranges. Don't ignore a trailing comma.
-    if (s < end_of_entry && (s + 1) < end_of_entry)
+    if (s < (end_of_entry - 1))
       ++s;
   }
 
