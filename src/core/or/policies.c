@@ -687,7 +687,8 @@ fascist_firewall_allows_rs(const routerstatus_t *rs,
   }
 
   /* We don't have access to the node-specific IPv6 preference, so use the
-   * generic IPv6 preference instead. */
+   * generic IPv6 preference instead. fascist_firewall_prefer_ipv6_orport()
+   * can return a random preference should IPv4 and IPv6 be available. */
   const or_options_t *options = get_options();
   int pref_ipv6 = (fw_connection == FIREWALL_OR_CONNECTION
                    ? fascist_firewall_prefer_ipv6_orport(options)
@@ -997,7 +998,9 @@ fascist_firewall_choose_address_rs(const routerstatus_t *rs,
     fascist_firewall_choose_address_node(node, fw_connection, pref_only, ap);
   } else {
     /* There's no node-specific IPv6 preference, so use the generic IPv6
-     * preference instead. */
+     * preference instead. Keep in mind that
+     * fascist_firewall_prefer_ipv6_orport() can be random should both
+     * IPv4 and IPv6 be available. */
     int pref_ipv6 = (fw_connection == FIREWALL_OR_CONNECTION
                      ? fascist_firewall_prefer_ipv6_orport(options)
                      : fascist_firewall_prefer_ipv6_dirport(options));
