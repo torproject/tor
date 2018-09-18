@@ -61,6 +61,7 @@ crypto_pwbox(uint8_t **out, size_t *outlen_out,
   int rv;
 
   enc = pwbox_encoded_new();
+  tor_assert(enc);
 
   pwbox_encoded_setlen_skey_header(enc, S2K_MAXLEN);
 
