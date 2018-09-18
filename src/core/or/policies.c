@@ -513,7 +513,8 @@ fascist_firewall_prefer_ipv6_orport(const or_options_t *options)
   /* We can use both IPv4 and IPv6 - which do we prefer? */
   if (options->ClientPreferIPv6ORPort == 1) {
     return 1;
-  } else if (options->ClientAutoIPv6ORPort) {
+  } else if (options->ClientAutoIPv6ORPort ||
+             options->ClientPreferIPv6ORPort == -1) {
     return fascist_firewall_rand_preferred_addr();
   }
 
