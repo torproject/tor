@@ -618,7 +618,10 @@ nodelist_set_consensus(networkstatus_t *ns)
       node->is_bad_exit = rs->is_bad_exit;
       node->is_hs_dir = rs->is_hs_dir;
       node->ipv6_preferred = 0;
-      if (fascist_firewall_prefer_ipv6_orport(options) &&
+      if (options->ClientPreferIPv6ORPort == -1 &&
+          node->rs->addr && !tor_addr_is_null(&rs->ipv6_addr))
+        node->ipv6_preferred = fascist_firewall_rand_preferred_addr();
+      else if (fascist_firewall_prefer_ipv6_orport(options) &&
           (tor_addr_is_null(&rs->ipv6_addr) == 0 ||
            (node->md && tor_addr_is_null(&node->md->ipv6_addr) == 0)))
         node->ipv6_preferred = 1;
