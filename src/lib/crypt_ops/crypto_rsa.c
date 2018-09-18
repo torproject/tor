@@ -554,8 +554,10 @@ crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
   char *buf = read_file_to_str(keyfile, 0, &st);
   if (!buf)
     return -1;
-  if (st.st_size > MAX_PRIVKEY_FILE_LEN)
+  if (st.st_size > MAX_PRIVKEY_FILE_LEN) {
+    tor_free(buf);
     return -1;
+  }
 
   int rv = crypto_pk_read_private_key_from_string(env, buf,
                                                   (ssize_t)st.st_size);
