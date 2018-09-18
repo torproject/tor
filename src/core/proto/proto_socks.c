@@ -744,7 +744,7 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
       res = SOCKS_RESULT_MORE_EXPECTED;
       goto end;
     } else if (req->socks_version != SOCKS_VER_5) {
-      int have_user_pass, have_no_auth;
+      int have_user_pass=0, have_no_auth=0;
       res = parse_socks5_methods_request(raw_data, req, datalen,
                                          &have_user_pass,
                                          &have_no_auth,
