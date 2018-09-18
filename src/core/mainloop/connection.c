@@ -656,14 +656,15 @@ connection_free_minimal(connection_t *conn)
     tor_free(or_conn->nickname);
     if (or_conn->chan) {
       /* Owww, this shouldn't happen, but... */
+      channel_t *base_chan = TLS_CHAN_TO_BASE(or_conn->chan);
+      tor_assert(base_chan);
       log_info(LD_CHANNEL,
                "Freeing orconn at %p, saw channel %p with ID "
                "%"PRIu64 " left un-NULLed",
-               or_conn, TLS_CHAN_TO_BASE(or_conn->chan),
-               (
-                 TLS_CHAN_TO_BASE(or_conn->chan)->global_identifier));
-      if (!CHANNEL_FINISHED(TLS_CHAN_TO_BASE(or_conn->chan))) {
-        channel_close_for_error(TLS_CHAN_TO_BASE(or_conn->chan));
+               or_conn, base_chan,
+               base_chan->global_identifier);
+      if (!CHANNEL_FINISHED(base_chan)) {
+        channel_close_for_error(base_chan);
       }
 
       or_conn->chan->conn = NULL;
