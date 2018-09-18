@@ -2604,6 +2604,7 @@ cell_queues_check_size(void)
 {
   time_t now = time(NULL);
   size_t alloc = cell_queues_get_total_allocation();
+  alloc += half_streams_get_total_allocation();
   alloc += buf_get_total_allocation();
   alloc += tor_compress_get_total_allocation();
   const size_t rend_cache_total = rend_cache_get_total_allocation();
