@@ -17,6 +17,8 @@ Changes in version 0.3.5.1-alpha - 2018-09-18
       ExitPolicy or ReducedExitPolicy, we now treat ExitRelay as 0.
       Previously in this case, we allowed exit traffic and logged a
       warning message. Closes ticket 21530. Patch by Neel Chauhan.
+    - Tor now validates that the ContactInfo config option is valid UTF-
+      8 when parsing torrc. Closes ticket 27428.
 
   o Major features (bootstrap):
     - Don't report directory progress until after a connection to a
@@ -347,10 +349,6 @@ Changes in version 0.3.5.1-alpha - 2018-09-18
       bugfix on 0.2.9.1-alpha.
     - Fix forking tests on Windows when there is a space somewhere in
       the path. Fixes bug 26437; bugfix on 0.2.2.4-alpha.
-
-  o Minor bugfixes (torrc):
-    - Tor now validates that the ContactInfo config option is valid UTF-
-      8 when parsing torrc. Fixes bug 27428; bugfix on 0.0.8pre1.
 
   o Code simplification and refactoring:
     - 'updateFallbackDirs.py' now ignores the blacklist file, as it's not
