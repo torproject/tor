@@ -17,6 +17,8 @@ Changes in version 0.3.5.1-alpha - 2018-09-18
       ExitPolicy or ReducedExitPolicy, we now treat ExitRelay as 0.
       Previously in this case, we allowed exit traffic and logged a
       warning message. Closes ticket 21530. Patch by Neel Chauhan.
+    - Tor now validates that the ContactInfo config option is valid UTF-
+      8 when parsing torrc. Closes ticket 27428.
 
   o Major features (bootstrap):
     - Don't report directory progress until after a connection to a
@@ -231,7 +233,7 @@ Changes in version 0.3.5.1-alpha - 2018-09-18
       loading the configuration, add one to the policy after parsing it
       in parse_reachable_addresses(). This prevents extra "reject *.*"
       lines from accumulating on reloads. Fixes bug 20874; bugfix on
-      0.3.5.1-alpha. Patch by Neel Chauhan.
+      0.1.1.5-alpha. Patch by Neel Chauhan.
 
   o Minor bugfixes (code quality):
     - Rename sandbox_getaddrinfo() and other functions to no longer
@@ -268,7 +270,7 @@ Changes in version 0.3.5.1-alpha - 2018-09-18
     - In addrs_in_same_network_family(), we choose the subnet size based
       on the IP version (IPv4 or IPv6). Previously, we chose a fixed
       subnet size of /16 for both IPv4 and IPv6 addresses. Fixes bug
-      15518; bugfix on 0.3.5.1-alpha. Patch by Neel Chauhan.
+      15518; bugfix on 0.2.3.1-alpha. Patch by Neel Chauhan.
 
   o Minor bugfixes (logging):
     - As a precaution, do an early return from log_addr_has_changed() if
@@ -320,7 +322,7 @@ Changes in version 0.3.5.1-alpha - 2018-09-18
       entry and guard nodes when computing the fraction of nodes that
       have their descriptors. Also, if we are using bridges and there is
       at least one bridge with a full descriptor, treat the fraction of
-      guards available as 100%. Fixes bug 25886; bugfix on 0.3.5.1-alpha.
+      guards available as 100%. Fixes bug 25886; bugfix on 0.2.4.10-alpha.
       Patch by Neel Chauhan.
     - Update the message logged on relays when DirCache is disabled.
       Since 0.3.3.5-rc, authorities require DirCache (V2Dir) for the
@@ -348,10 +350,6 @@ Changes in version 0.3.5.1-alpha - 2018-09-18
       bugfix on 0.2.9.1-alpha.
     - Fix forking tests on Windows when there is a space somewhere in
       the path. Fixes bug 26437; bugfix on 0.2.2.4-alpha.
-
-  o Minor bugfixes (torrc):
-    - Tor now validates that the ContactInfo config option is valid UTF-
-      8 when parsing torrc. Fixes bug 27428; bugfix on 0.0.8pre1.
 
   o Code simplification and refactoring:
     - 'updateFallbackDirs.py' now ignores the blacklist file, as it's not
@@ -401,11 +399,12 @@ Changes in version 0.3.5.1-alpha - 2018-09-18
     - Tor no longer attempts to run on Windows environments without the
       GetAdaptersAddresses() function. This function has existed since
       Windows XP, which is itself already older than we support.
-    - Remove Tor2web functionality. The Tor2webMode and
-      Tor2webRendezvousPoints options are now obsolete. (This feature
-      was never shipped in vanilla Tor and it was only possible to use
-      this feature by building the support at compile time.) Closes
-      ticket 26367.
+    - Remove Tor2web functionality for version 2 onion services. The
+      Tor2webMode and Tor2webRendezvousPoints options are now obsolete.
+      (This feature was never shipped in vanilla Tor and it was only
+      possible to use this feature by building the support at compile
+      time. Tor2webMode is not implemented for version 3 onion services.)
+      Closes ticket 26367.
 
 
 Changes in version 0.2.9.17 - 2018-09-10
