@@ -62,7 +62,8 @@ Changes in version 0.3.5.1-alpha - 2018-09-18
 
       If you are experimenting with this option and using an old cached
       consensus, Tor may fail to start. To solve this, delete your
-      "cached-microdesc-consensus" file, and restart Tor.
+      "cached-consensus" and "cached-microdesc-consensus" files,
+      (if present), and restart Tor.
 
   o Major bugfixes (directory authority):
     - Actually check that the address we get from DirAuthority
