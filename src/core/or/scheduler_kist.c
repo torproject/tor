@@ -17,8 +17,6 @@
 
 #include "core/or/or_connection_st.h"
 
-#define TLS_PER_CELL_OVERHEAD 29
-
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif

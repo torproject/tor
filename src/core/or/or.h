@@ -477,6 +477,18 @@ typedef enum {
   CELL_DIRECTION_OUT=2, /**< The cell is moving away from the origin. */
 } cell_direction_t;
 
+/**
+ * An enum to allow us to specify which channel in a circuit
+ * we're interested in.
+ *
+ * This is needed because our data structures and other fields
+ * for channel delivery are disassociated from the channel.
+ */
+typedef enum {
+  CIRCUIT_N_CHAN = 0,
+  CIRCUIT_P_CHAN = 1
+} circuit_channel_direction_t;
+
 /** Initial value for both sides of a circuit transmission window when the
  * circuit is initialized.  Measured in cells. */
 #define CIRCWINDOW_START 1000
