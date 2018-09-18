@@ -116,6 +116,7 @@ static unsigned int kist_lite_mode = 1;
 static inline size_t
 channel_outbuf_length(channel_t *chan)
 {
+  tor_assert(chan);
   /* In theory, this can not happen because we can not scheduler a channel
    * without a connection that has its outbuf initialized. Just in case, bug
    * on this so we can understand a bit more why it happened. */
