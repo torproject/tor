@@ -2650,8 +2650,8 @@ onion_next_hop_in_cpath(crypt_path_t *cpath)
   return NULL;
 }
 
-/** Choose a suitable next hop in the cpath <b>head_ptr</b>,
- * based on <b>state</b>. Append the hop info to head_ptr.
+/** Choose a suitable next hop for the circuit <b>circ</b>.
+ * Append the hop info to circ->cpath.
  *
  * Return 1 if the path is complete, 0 if we successfully added a hop,
  * and -1 on error.
