@@ -354,18 +354,18 @@ fn protover_all_supported_should_exclude_some_versions_and_entire_protocols() {
 
 #[test]
 fn protover_all_supported_should_not_dos_anyones_computer() {
-    let proto: UnvalidatedProtoEntry = "Sleen=1-2147483648".parse().unwrap();
+    let proto: UnvalidatedProtoEntry = "Link=1-2147483648".parse().unwrap();
     let result: String = proto.all_supported().unwrap().to_string();
 
-    assert_eq!(result, "Sleen=1-2147483648".to_string());
+    assert_eq!(result, "Link=6-2147483648".to_string());
 }
 
 #[test]
 fn protover_all_supported_should_not_dos_anyones_computer_max_versions() {
-    let proto: UnvalidatedProtoEntry = "Sleen=1-4294967294".parse().unwrap();
+    let proto: UnvalidatedProtoEntry = "Link=1-4294967294".parse().unwrap();
     let result: String = proto.all_supported().unwrap().to_string();
 
-    assert_eq!(result, "Sleen=1-4294967294".to_string());
+    assert_eq!(result, "Link=6-4294967294".to_string());
 }
 
 #[test]
