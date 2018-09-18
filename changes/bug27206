@@ -1,0 +1,4 @@
+  o Minor bugfixes (rust):
+    - protover_all_supported() would attempt to allocate up to 16GB on some
+      inputs, leading to a potential memory DoS. Fixes bug 27206; bugfix on
+      0.3.3.5-rc.

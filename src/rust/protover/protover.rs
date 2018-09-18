@@ -378,7 +378,6 @@ impl UnvalidatedProtoEntry {
 
             let maybe_supported_versions: Option<&ProtoSet> = supported.get(&supported_protocol);
             let supported_versions: &ProtoSet;
-            let mut unsupported_versions: ProtoSet;
 
             // If the protocol wasn't in the map, then we don't know about it
             // and don't support any of its versions.  Add its versions to the
@@ -391,8 +390,7 @@ impl UnvalidatedProtoEntry {
             } else {
                 supported_versions = maybe_supported_versions.unwrap();
             }
-            unsupported_versions = versions.clone();
-            unsupported_versions.retain(|x| !supported_versions.contains(x));
+            let unsupported_versions = versions.and_not_in(supported_versions);
 
             if !unsupported_versions.is_empty() {
                 unsupported.insert(protocol.clone(), unsupported_versions);
