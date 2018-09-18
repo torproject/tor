@@ -2421,7 +2421,7 @@ n_cells_in_circ_queues(const circuit_t *c)
   return n;
 }
 
-/** Return the number of bytes allocated for <b>c</c>'s half-open streams. */
+/** Return the number of bytes allocated for <b>c</b>'s half-open streams. */
 static size_t
 circuit_alloc_in_half_streams(const circuit_t *c)
 {
