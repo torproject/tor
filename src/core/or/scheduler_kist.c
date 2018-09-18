@@ -194,6 +194,8 @@ update_socket_info_impl, (socket_table_ent_t *ent))
 {
 #ifdef HAVE_KIST_SUPPORT
   int64_t tcp_space, extra_space;
+  tor_assert(ent);
+  tor_assert(ent->chan);
   const tor_socket_t sock =
     TO_CONN(BASE_CHAN_TO_TLS((channel_t *) ent->chan)->conn)->s;
   struct tcp_info tcp;
@@ -451,6 +453,7 @@ MOCK_IMPL(int, channel_should_write_to_kernel,
  * kernel */
 MOCK_IMPL(void, channel_write_to_kernel, (channel_t *chan))
 {
+  tor_assert(chan);
   log_debug(LD_SCHED, "Writing %lu bytes to kernel for chan %" PRIu64,
             (unsigned long)channel_outbuf_length(chan),
             chan->global_identifier);
