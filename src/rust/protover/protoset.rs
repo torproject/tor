@@ -4,6 +4,8 @@
 
 //! Sets for lazily storing ordered, non-overlapping ranges of integers.
 
+use std::cmp;
+use std::iter;
 use std::slice;
 use std::str::FromStr;
 use std::u32;
@@ -240,8 +242,8 @@ impl ProtoSet {
         false
     }
 
-    /// Retain only the `Version`s in this `ProtoSet` for which the predicate
-    /// `F` returns `true`.
+    /// Returns all the `Version`s in `self` which are not also in the `other`
+    /// `ProtoSet`.
     ///
     /// # Examples
     ///
@@ -250,24 +252,45 @@ impl ProtoSet {
     /// use protover::protoset::ProtoSet;
     ///
     /// # fn do_test() -> Result<bool, ProtoverError> {
-    /// let mut protoset: ProtoSet = "1,3-5,9".parse()?;
+    /// let protoset: ProtoSet = "1,3-6,10-12,15-16".parse()?;
+    /// let other: ProtoSet = "2,5-7,9-11,14-20".parse()?;
     ///
-    /// // Keep only versions less than or equal to 8:
-    /// protoset.retain(|x| x <= &8);
+    /// let subset: ProtoSet = protoset.and_not_in(&other);
     ///
-    /// assert_eq!(protoset.expand(), vec![1, 3, 4, 5]);
+    /// assert_eq!(subset.expand(), vec![1, 3, 4, 12]);
     /// #
     /// # Ok(true)
     /// # }
     /// # fn main() { do_test(); }  // wrap the test so we can use the ? operator
     /// ```
-    // XXX we could probably do something more efficient here. —isis
-    pub fn retain<F>(&mut self, f: F)
-        where F: FnMut(&Version) -> bool
-    {
-        let mut expanded: Vec<Version> = self.clone().expand();
-        expanded.retain(f);
-        *self = expanded.into();
+    pub fn and_not_in(&self, other: &Self) -> Self {
+        if self.is_empty() || other.is_empty() {
+            return self.clone();
+        }
+
+        let pairs = self.iter().flat_map(|&(lo, hi)| {
+            let the_end = (hi + 1, hi + 1); // special case to mark the end of the range.
+            let excluded_ranges = other
+                .iter()
+                .cloned() // have to be owned tuples, to match iter::once(the_end).
+                .skip_while(move|&(_, hi2)| hi2 < lo) // skip the non-overlapping ranges.
+                .take_while(move|&(lo2, _)| lo2 <= hi) // take all the overlapping ones.
+                .chain(iter::once(the_end));
+
+            let mut nextlo = lo;
+            excluded_ranges.filter_map(move |(excluded_lo, excluded_hi)| {
+                let pair = if nextlo < excluded_lo {
+                    Some((nextlo, excluded_lo - 1))
+                } else {
+                    None
+                };
+                nextlo = cmp::min(excluded_hi, u32::MAX - 1) + 1;
+                pair
+            })
+        });
+
+        let pairs = pairs.collect();
+        ProtoSet::is_ok(ProtoSet{ pairs }).expect("should be already sorted")
     }
 }
 
