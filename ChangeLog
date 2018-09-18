@@ -398,11 +398,12 @@ Changes in version 0.3.5.1-alpha - 2018-09-18
     - Tor no longer attempts to run on Windows environments without the
       GetAdaptersAddresses() function. This function has existed since
       Windows XP, which is itself already older than we support.
-    - Remove Tor2web functionality. The Tor2webMode and
-      Tor2webRendezvousPoints options are now obsolete. (This feature
-      was never shipped in vanilla Tor and it was only possible to use
-      this feature by building the support at compile time.) Closes
-      ticket 26367.
+    - Remove Tor2web functionality for version 2 onion services. The
+      Tor2webMode and Tor2webRendezvousPoints options are now obsolete.
+      (This feature was never shipped in vanilla Tor and it was only
+      possible to use this feature by building the support at compile
+      time. Tor2webMode is not implemented for version 3 onion services.)
+      Closes ticket 26367.
 
 
 Changes in version 0.2.9.17 - 2018-09-10
