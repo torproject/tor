@@ -238,6 +238,7 @@ test_tortls_x509_cert_get_id_digests(void *ignored)
   cert->pkey_digests_set = 1;
   cert->pkey_digests = *d;
   res = tor_x509_cert_get_id_digests(cert);
+  tt_assert(res);
   tt_int_op(res->d[0][0], OP_EQ, 42);
 
  done:
