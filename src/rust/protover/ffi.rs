@@ -184,11 +184,7 @@ pub extern "C" fn protover_get_supported_protocols() -> *const c_char {
 //
 // Why is the threshold a signed integer? —isis
 #[no_mangle]
-pub extern "C" fn protover_compute_vote(
-    list: *const Stringlist,
-    threshold: c_int,
-    allow_long_proto_names: bool,
-) -> *mut c_char {
+pub extern "C" fn protover_compute_vote(list: *const Stringlist, threshold: c_int) -> *mut c_char {
     if list.is_null() {
         return allocate_and_copy_string("");
     }
@@ -200,16 +196,9 @@ pub extern "C" fn protover_compute_vote(
     let mut proto_entries: Vec<UnvalidatedProtoEntry> = Vec::new();
 
     for datum in data {
-        let entry: UnvalidatedProtoEntry = if allow_long_proto_names {
-            match UnvalidatedProtoEntry::from_str_any_len(datum.as_str()) {
-                Ok(n) => n,
-                Err(_) => continue,
-            }
-        } else {
-            match datum.parse() {
-                Ok(n) => n,
-                Err(_) => continue,
-            }
+        let entry: UnvalidatedProtoEntry = match datum.parse() {
+            Ok(n) => n,
+            Err(_) => continue,
         };
         proto_entries.push(entry);
     }
