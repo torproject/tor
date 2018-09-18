@@ -140,6 +140,8 @@ addons:
       #- zlib
       ## Optional dependencies
       - libscrypt
+      - xz
+      - zstd
       ## Required build dependencies
       ## Tor needs pkg-config to find some dependencies at build time
       - pkg-config
@@ -162,8 +164,6 @@ before_install:
 install:
   ## If we're on OSX, configure ccache (ccache is automatically installed and configured on Linux)
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH="/usr/local/opt/ccache/libexec:$PATH"; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install xz; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install zstd; fi
   ## If we're on OSX, OpenSSL is keg-only, so tor 0.2.9 and later need to be configured --with-openssl-dir= to build
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then OPENSSL_OPTIONS=--with-openssl-dir=`brew --prefix openssl`; fi
   ## Install conditional features
