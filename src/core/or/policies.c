@@ -746,9 +746,17 @@ fascist_firewall_allows_node(const node_t *node,
 
   /* Keep in mind that node_ipv6_or_preferred() can prefer IPv4 or IPv6 at
    * random if both are available. */
-  const int pref_ipv6 = (fw_connection == FIREWALL_OR_CONNECTION
-                         ? node_ipv6_or_preferred(node)
-                         : node_ipv6_dir_preferred(node));
+  int pref_ipv6 = (fw_connection == FIREWALL_OR_CONNECTION
+                   ? node_ipv6_or_preferred(node)
+                   : node_ipv6_dir_preferred(node));
+
+  const or_options_t *options = get_options();
+
+  /* If ClientPreferIPv6ORPort is auto, and we have both IPv4 and IPv6, infer
+   * a random preference. */
+  if (options->ClientPreferIPv6ORPort == -1 &&
+      node_has_ipv4_addr(node) && node_has_ipv6_addr(node))
+    pref_ipv6 = fascist_firewall_rand_preferred_addr();
 
   /* Sometimes, the rs is missing the IPv6 address info, and we need to go
    * all the way to the md */
