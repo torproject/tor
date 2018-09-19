@@ -105,7 +105,7 @@
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
 #include "lib/sandbox/sandbox.h"
-#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerset.h"
 #include "core/or/scheduler.h"
 #include "app/config/statefile.h"

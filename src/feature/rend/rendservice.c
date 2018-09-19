@@ -33,7 +33,7 @@
 #include "core/or/relay.h"
 #include "feature/stats/rephist.h"
 #include "feature/hs_common/replaycache.h"
-#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/node_select.h"
 #include "feature/nodelist/routerparse.h"
 #include "feature/nodelist/routerset.h"
 #include "lib/encoding/confline.h"

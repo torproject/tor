@@ -27,7 +27,7 @@
 #include "feature/rend/rendservice.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
-#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/node_select.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "app/config/statefile.h"
 

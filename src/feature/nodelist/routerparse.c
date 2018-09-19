@@ -75,6 +75,7 @@
 #include "feature/relay/routerkeys.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerparse.h"
+#include "feature/nodelist/authcert.h"
 #include "lib/sandbox/sandbox.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/nodelist/torcert.h"

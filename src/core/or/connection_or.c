@@ -56,6 +56,7 @@
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/ext_orport.h"
 #include "core/or/scheduler.h"

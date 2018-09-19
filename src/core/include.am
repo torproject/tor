@@ -80,9 +80,12 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/hs/hs_stats.c		\
 	src/feature/hs_common/replaycache.c	\
 	src/feature/hs_common/shared_random_client.c	\
+	src/feature/nodelist/authcert.c		\
+	src/feature/nodelist/dirlist.c		\
 	src/feature/nodelist/microdesc.c	\
 	src/feature/nodelist/networkstatus.c	\
 	src/feature/nodelist/nodelist.c		\
+	src/feature/nodelist/node_select.c	\
 	src/feature/nodelist/parsecommon.c	\
 	src/feature/nodelist/routerlist.c	\
 	src/feature/nodelist/routerparse.c	\
@@ -256,8 +259,10 @@ noinst_HEADERS +=					\
 	src/feature/hs/hsdir_index_st.h			\
 	src/feature/hs_common/replaycache.h		\
 	src/feature/hs_common/shared_random_client.h	\
+	src/feature/nodelist/authcert.h			\
 	src/feature/nodelist/authority_cert_st.h	\
 	src/feature/nodelist/desc_store_st.h		\
+	src/feature/nodelist/dirlist.h			\
 	src/feature/nodelist/document_signature_st.h	\
 	src/feature/nodelist/extrainfo_st.h		\
 	src/feature/nodelist/microdesc.h		\
@@ -268,6 +273,7 @@ noinst_HEADERS +=					\
 	src/feature/nodelist/networkstatus_voter_info_st.h	\
 	src/feature/nodelist/node_st.h			\
 	src/feature/nodelist/nodelist.h			\
+	src/feature/nodelist/node_select.h		\
 	src/feature/nodelist/parsecommon.h		\
 	src/feature/nodelist/routerinfo_st.h		\
 	src/feature/nodelist/routerlist.h		\

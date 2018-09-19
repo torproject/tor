@@ -19,6 +19,8 @@
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendcache.h"
 #include "feature/relay/router.h"
+#include "feature/nodelist/authcert.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"
 #include "test/rend_test_helpers.h"
 #include "feature/nodelist/microdesc.h"

@@ -15,6 +15,7 @@
 #define ROUTERPARSE_PRIVATE
 #define HIBERNATE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define NODE_SELECT_PRIVATE
 #define RELAY_PRIVATE
 
 #include "core/or/or.h"
@@ -38,6 +39,9 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
+#include "feature/nodelist/authcert.h"
+#include "feature/nodelist/dirlist.h"
+#include "feature/nodelist/node_select.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerparse.h"
 #include "feature/nodelist/routerset.h"

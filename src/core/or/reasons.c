@@ -17,7 +17,7 @@
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "core/or/reasons.h"
-#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/node_select.h"
 #include "lib/tls/tortls.h"
 
 /***************************** Edge (stream) reasons **********************/

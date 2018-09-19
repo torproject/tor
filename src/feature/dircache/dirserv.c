@@ -28,7 +28,9 @@
 #include "core/or/protover.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"
+
 #include "feature/nodelist/routerparse.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
