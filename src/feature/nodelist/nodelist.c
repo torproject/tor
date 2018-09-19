@@ -1483,6 +1483,23 @@ node_get_declared_family(const node_t *node)
     return NULL;
 }
 
+/* Does this node have a valid IPv4 address? */
+int
+node_has_ipv4_addr(const node_t *node)
+{
+  /* Don't check the ORPort or DirPort, as this function isn't port-specific,
+   * and the node might have a valid IPv4 address, yet have a zero
+   * ORPort or DirPort.
+   */
+  if (node->ri && tor_addr_is_valid_ipv4h(node->ri->addr, 0))
+    return 1;
+  if (node->rs && tor_addr_is_valid_ipv4h(node->rs->addr, 0))
+    return 1;
+
+  return 0;
+}
+
+
 /* Does this node have a valid IPv6 address?
  * Prefer node_has_ipv6_orport() or node_has_ipv6_dirport() for
  * checking specific ports. */

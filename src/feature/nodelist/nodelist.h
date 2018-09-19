@@ -79,6 +79,7 @@ int node_supports_ed25519_hs_intro(const node_t *node);
 int node_supports_v3_rendezvous_point(const node_t *node);
 const uint8_t *node_get_rsa_id_digest(const node_t *node);
 
+int node_has_ipv4_addr(const node_t *node);
 int node_has_ipv6_addr(const node_t *node);
 int node_has_ipv6_orport(const node_t *node);
 int node_has_ipv6_dirport(const node_t *node);
