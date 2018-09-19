@@ -1609,9 +1609,18 @@ node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   tor_assert(ap_out);
 
+  const or_options_t *options = get_options();
+
+  /* If ClientPreferIPv6ORPort is auto, and we have both IPv4 and IPv6, infer
+   * a random preference. */
+  int pref_ipv6 = 0;
+  if (options->ClientPreferIPv6ORPort == -1 &&
+      node_has_ipv4_addr(node) && node_has_ipv6_addr(node))
+    pref_ipv6 = fascist_firewall_rand_preferred_addr();
+
   /* Keep in mind that node_ipv6_or_preferred() can prefer IPv4 or IPv6 at
    * random if both are available. */
-  if (node_ipv6_or_preferred(node)) {
+  if (node_ipv6_or_preferred(node) || pref_ipv6) {
     node_get_pref_ipv6_orport(node, ap_out);
   } else {
     /* the primary ORPort is always on IPv4 */
