@@ -696,6 +696,12 @@ fascist_firewall_allows_rs(const routerstatus_t *rs,
                    ? fascist_firewall_prefer_ipv6_orport(options)
                    : fascist_firewall_prefer_ipv6_dirport(options));
 
+  /* If ClientPreferIPv6ORPort is auto, and we have both IPv4 and IPv6, infer
+   * a random preference. */
+  if (options->ClientPreferIPv6ORPort == -1 &&
+      rs->addr && !tor_addr_is_null(&rs->ipv6_addr))
+    pref_ipv6 = fascist_firewall_rand_preferred_addr();
+
   return fascist_firewall_allows_rs_impl(rs, fw_connection, pref_only,
                                          pref_ipv6);
 }
