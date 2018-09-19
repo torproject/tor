@@ -247,7 +247,7 @@ close_all_socks_conns_waiting_for_desc(const ed25519_public_key_t *identity_pk,
 
 /* Find all pending SOCKS connection waiting for a descriptor and retry them
  * all. This is called when the directory information changed. */
-static void
+STATIC void
 retry_all_socks_conn_waiting_for_desc(void)
 {
   smartlist_t *conns =

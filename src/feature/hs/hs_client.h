@@ -104,6 +104,8 @@ STATIC int handle_rendezvous2(origin_circuit_t *circ, const uint8_t *payload,
 MOCK_DECL(STATIC hs_client_fetch_status_t,
           fetch_v3_desc, (const ed25519_public_key_t *onion_identity_pk));
 
+STATIC void retry_all_socks_conn_waiting_for_desc(void);
+
 #ifdef TOR_UNIT_TESTS
 
 STATIC digest256map_t *get_hs_client_auths_map(void);
