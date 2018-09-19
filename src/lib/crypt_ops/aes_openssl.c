@@ -11,7 +11,9 @@
 
 #include "orconfig.h"
 #include "lib/crypt_ops/aes.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "lib/log/util_bug.h"
+#include "lib/arch/bytes.h"
 
 #ifdef _WIN32 /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
   #include <winsock2.h>
@@ -396,10 +398,10 @@ static void
 aes_set_iv(aes_cnt_cipher_t *cipher, const uint8_t *iv)
 {
 #ifdef USING_COUNTER_VARS
-  cipher->counter3 = ntohl(get_uint32(iv));
-  cipher->counter2 = ntohl(get_uint32(iv+4));
-  cipher->counter1 = ntohl(get_uint32(iv+8));
-  cipher->counter0 = ntohl(get_uint32(iv+12));
+  cipher->counter3 = tor_ntohl(get_uint32(iv));
+  cipher->counter2 = tor_ntohl(get_uint32(iv+4));
+  cipher->counter1 = tor_ntohl(get_uint32(iv+8));
+  cipher->counter0 = tor_ntohl(get_uint32(iv+12));
 #endif /* defined(USING_COUNTER_VARS) */
   cipher->pos = 0;
   memcpy(cipher->ctr_buf.buf, iv, 16);
