@@ -523,6 +523,9 @@ mock_connection_mark_unattached_ap_(entry_connection_t *conn, int endreason,
   (void) line;
   (void) file;
   conn->edge_.end_reason = endreason;
+  /* This function ultimately will flag this so make sure we do also in the
+   * MOCK one so we can assess closed connections vs open ones. */
+  conn->edge_.base_.marked_for_close = 1;
 }
 
 static void
@@ -771,6 +774,117 @@ test_config_client_authorization(void *arg)
   UNMOCK(check_private_dir);
 }
 
+static entry_connection_t *
+helper_build_socks_connection(const ed25519_public_key_t *service_pk,
+                              int conn_state)
+{
+  entry_connection_t *socks = entry_connection_new(CONN_TYPE_AP, AF_INET);
+  ENTRY_TO_EDGE_CONN(socks)->hs_ident = hs_ident_edge_conn_new(service_pk);
+  TO_CONN(ENTRY_TO_EDGE_CONN(socks))->state = conn_state;
+  smartlist_add(get_connection_array(), &socks->edge_.base_);
+  return socks;
+}
+
+static void
+test_desc_has_arrived_cleanup(void *arg)
+{
+  /* The goal of this test is to make sure we clean up everything in between
+   * two descriptors from the same .onion. Because intro points can change
+   * from one descriptor to another, once we received a new descriptor, we
+   * need to cleanup the remaining circuits so they aren't used or selected
+   * when establishing a connection with the newly stored descriptor.
+   *
+   * This test was created because of #27410. */
+
+  int ret;
+  char *desc_str = NULL;
+  hs_descriptor_t *desc = NULL;
+  const hs_descriptor_t *cached_desc;
+  ed25519_keypair_t signing_kp;
+  entry_connection_t *socks1 = NULL, *socks2 = NULL;
+  hs_ident_dir_conn_t hs_dir_ident;
+
+  (void) arg;
+
+  hs_init();
+
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+  MOCK(connection_mark_unattached_ap_,
+       mock_connection_mark_unattached_ap_);
+  MOCK(router_have_minimum_dir_info,
+       mock_router_have_minimum_dir_info_true);
+
+  /* Set consensus time before our time so the cache lookup can always
+   * validate that the entry is not expired. */
+  parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC", &mock_ns.valid_after);
+  parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC", &mock_ns.fresh_until);
+  parse_rfc1123_time("Sat, 26 Oct 1985 16:00:00 UTC", &mock_ns.valid_until);
+
+  /* Build a descriptor for a specific .onion. */
+  ret = ed25519_keypair_generate(&signing_kp, 0);
+  tt_int_op(ret, OP_EQ, 0);
+  desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
+  tt_assert(desc);
+  ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &desc_str);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Store in the client cache. */
+  ret = hs_cache_store_as_client(desc_str, &signing_kp.pubkey);
+  tt_int_op(ret, OP_EQ, 0);
+  cached_desc = hs_cache_lookup_as_client(&signing_kp.pubkey);
+  tt_assert(cached_desc);
+  hs_helper_desc_equal(desc, cached_desc);
+
+  /* Create two SOCKS connection for the same .onion both in the waiting for a
+   * descriptor state. */
+  socks1 = helper_build_socks_connection(&signing_kp.pubkey,
+                                         AP_CONN_STATE_RENDDESC_WAIT);
+  tt_assert(socks1);
+  socks2 = helper_build_socks_connection(&signing_kp.pubkey,
+                                         AP_CONN_STATE_RENDDESC_WAIT);
+  tt_assert(socks2);
+
+  /* Now, we'll make the intro points in the current descriptor unusable so
+   * the hs_client_desc_has_arrived() will take the right code path that we
+   * want to test that is the fetched descriptor has bad intro points. */
+  SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
+                        hs_desc_intro_point_t *, ip) {
+    hs_cache_client_intro_state_note(&signing_kp.pubkey,
+                                     &ip->auth_key_cert->signed_key,
+                                     INTRO_POINT_FAILURE_GENERIC);
+  } SMARTLIST_FOREACH_END(ip);
+
+  /* Simulate that a new descriptor just arrived. We should have both of our
+   * SOCKS connection to be ended with a resolved failed. */
+  hs_ident_dir_conn_init(&signing_kp.pubkey,
+                         &desc->plaintext_data.blinded_pubkey, &hs_dir_ident);
+  hs_client_desc_has_arrived(&hs_dir_ident);
+  tt_int_op(socks1->edge_.end_reason, OP_EQ, END_STREAM_REASON_RESOLVEFAILED);
+  /* XXX: MUST work with OP_EQ. */
+  tt_int_op(socks2->edge_.end_reason, OP_EQ, END_STREAM_REASON_RESOLVEFAILED);
+
+  /* Now let say tor cleans up the intro state cache which resets all intro
+   * point failure count. */
+  hs_cache_client_intro_state_purge();
+
+  /* Retrying all SOCKS which should basically do nothing since we don't have
+   * any pending SOCKS connection in AP_CONN_STATE_RENDDESC_WAIT state. */
+  /* XXX: BUG() is triggered here, shouldn't if socks2 wasn't alive. */
+  retry_all_socks_conn_waiting_for_desc();
+
+ done:
+  connection_free_minimal(ENTRY_TO_CONN(socks1));
+  connection_free_minimal(ENTRY_TO_CONN(socks2));
+  hs_descriptor_free(desc);
+  tor_free(desc_str);
+  hs_free_all();
+
+  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(connection_mark_unattached_ap_);
+  UNMOCK(router_have_minimum_dir_info);
+}
+
 struct testcase_t hs_client_tests[] = {
   { "e2e_rend_circuit_setup_legacy", test_e2e_rend_circuit_setup_legacy,
     TT_FORK, NULL, NULL },
@@ -786,5 +900,8 @@ struct testcase_t hs_client_tests[] = {
     NULL, NULL },
   { "config_client_authorization", test_config_client_authorization,
     TT_FORK, NULL, NULL },
+  { "desc_has_arrived_cleanup", test_desc_has_arrived_cleanup,
+    TT_FORK, NULL, NULL },
+
   END_OF_TESTCASES
 };
