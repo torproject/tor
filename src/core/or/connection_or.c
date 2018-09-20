@@ -41,7 +41,7 @@
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "feature/dircache/dirserv.h"
+#include "feature/dirauth/reachability.h"
 #include "feature/client/entrynodes.h"
 #include "feature/stats/geoip.h"
 #include "core/mainloop/main.h"

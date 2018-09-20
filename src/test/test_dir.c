@@ -6,17 +6,19 @@
 #include "orconfig.h"
 #include <math.h>
 
+#define BWAUTH_PRIVATE
 #define CONFIG_PRIVATE
 #define CONTROL_PRIVATE
 #define DIRSERV_PRIVATE
 #define DIRVOTE_PRIVATE
-#define ROUTER_PRIVATE
-#define ROUTERLIST_PRIVATE
-#define ROUTERPARSE_PRIVATE
 #define HIBERNATE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define NODE_SELECT_PRIVATE
 #define RELAY_PRIVATE
+#define ROUTERLIST_PRIVATE
+#define ROUTERPARSE_PRIVATE
+#define ROUTER_PRIVATE
+#define VOTEFLAGS_PRIVATE
 
 #include "core/or/or.h"
 #include "feature/client/bridges.h"
@@ -29,8 +31,12 @@
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "feature/dircache/directory.h"
+#include "feature/dirauth/bwauth.h"
 #include "feature/dircache/dirserv.h"
+#include "feature/dirauth/process_descs.h"
 #include "feature/dirauth/dirvote.h"
+#include "feature/dirauth/recommend_pkg.h"
+#include "feature/dirauth/voteflags.h"
 #include "feature/client/entrynodes.h"
 #include "feature/dircommon/fp_pair.h"
 #include "feature/hibernate/hibernate.h"

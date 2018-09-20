@@ -53,6 +53,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dircache/directory.h"
 #include "feature/dircache/dirserv.h"
+#include "feature/dirauth/reachability.h"
 #include "core/or/dos.h"
 #include "feature/client/entrynodes.h"
 #include "feature/hibernate/hibernate.h"
@@ -73,10 +74,12 @@
 #include "feature/nodelist/torcert.h"
 #include "core/or/channelpadding.h"
 #include "feature/dircommon/voting_schedule.h"
+#include "feature/nodelist/fmt_routerstatus.h"
 
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/mode.h"
 #include "feature/dirauth/shared_random.h"
+#include "feature/dirauth/voteflags.h"
 
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/dircommon/dir_connection_st.h"

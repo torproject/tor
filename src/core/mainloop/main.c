@@ -74,6 +74,9 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "feature/dircache/directory.h"
 #include "feature/dircache/dirserv.h"
+#include "feature/dirauth/bwauth.h"
+#include "feature/dirauth/reachability.h"
+#include "feature/dirauth/process_descs.h"
 #include "feature/relay/dns.h"
 #include "feature/client/dnsserv.h"
 #include "core/or/dos.h"
@@ -3663,7 +3666,9 @@ tor_free_all(int postfork)
   routerlist_free_all();
   networkstatus_free_all();
   addressmap_free_all();
+  dirserv_free_fingerprint_list();
   dirserv_free_all();
+  dirserv_clear_measured_bw_cache();
   rend_cache_free_all();
   rend_service_authorization_free_all();
   rep_hist_free_all();

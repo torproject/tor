@@ -47,6 +47,7 @@
 #include "app/config/config.h"
 #include "feature/control/control.h"
 #include "feature/dircache/dirserv.h"
+#include "feature/dirauth/process_descs.h"
 #include "feature/client/entrynodes.h"
 #include "feature/stats/geoip.h"
 #include "feature/hs/hs_common.h"

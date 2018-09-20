@@ -22,6 +22,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dircache/directory.h"
 #include "feature/dircache/dirserv.h"
+#include "feature/dirauth/process_descs.h"
 #include "feature/client/entrynodes.h"
 #include "feature/dircommon/fp_pair.h"
 #include "feature/stats/geoip.h"
