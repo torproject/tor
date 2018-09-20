@@ -26,6 +26,7 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
 #include "lib/container/map.h"
+#include "lib/container/buffers.h"
 #include "lib/container/smartlist.h"
 #include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_rsa.h"

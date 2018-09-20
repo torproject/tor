@@ -111,6 +111,10 @@ typedef struct hs_ident_edge_conn_t {
    * in the onion address. */
   ed25519_public_key_t identity_pk;
 
+  /* The original virtual port that was used by the client to access the onion
+   * service, regardless of the internal port forwarding that might have
+   * happened on the service-side. */
+  uint16_t orig_virtual_port;
   /* XXX: Client authorization. */
 } hs_ident_edge_conn_t;
 
