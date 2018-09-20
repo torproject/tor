@@ -11,7 +11,6 @@
 #include "orconfig.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
-
 #include "app/config/or_state_st.h"
 
 #include <stdio.h>
@@ -49,7 +48,7 @@
 #include "test/test.h"
 #include "core/mainloop/main.h"
 #include "lib/memarea/memarea.h"
-#include "core/crypto/onion.h"
+#include "core/or/onion.h"
 #include "core/crypto/onion_ntor.h"
 #include "core/crypto/onion_fast.h"
 #include "core/crypto/onion_tap.h"
@@ -64,6 +63,7 @@
 #include "feature/rend/rend_encoded_v2_service_descriptor_st.h"
 #include "feature/rend/rend_intro_point_st.h"
 #include "feature/rend/rend_service_descriptor_st.h"
+#include "feature/relay/onion_queue.h"
 
 /** Run unit tests for the onion handshake code. */
 static void

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "ed25519_cert.h"
+#include "trunnel/ed25519_cert.h"
 #include "lib/cc/torint.h"  /* TOR_PRIdSZ */
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/malloc/malloc.h"

@@ -70,7 +70,7 @@
 #include "core/mainloop/main.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
-#include "core/crypto/onion.h"
+#include "core/or/onion.h"
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"

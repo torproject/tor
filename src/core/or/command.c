@@ -50,7 +50,8 @@
 #include "core/or/dos.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/nodelist.h"
-#include "core/crypto/onion.h"
+#include "core/or/onion.h"
+#include "core/crypto/onion_crypto.h"
 #include "feature/stats/rephist.h"
 #include "core/or/relay.h"
 #include "feature/relay/router.h"
@@ -699,4 +700,3 @@ command_setup_listener(channel_listener_t *listener)
 
   channel_listener_set_listener_fn(listener, command_handle_incoming_channel);
 }
-
