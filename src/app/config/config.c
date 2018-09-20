@@ -87,7 +87,9 @@
 #else
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
 #endif
+#include "feature/dirauth/bwauth.h"
 #include "feature/dircache/dirserv.h"
+#include "feature/dirauth/guardfraction.h"
 #include "feature/relay/dns.h"
 #include "core/or/dos.h"
 #include "feature/client/entrynodes.h"
@@ -105,7 +107,7 @@
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
 #include "lib/sandbox/sandbox.h"
-#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerset.h"
 #include "core/or/scheduler.h"
 #include "app/config/statefile.h"
@@ -141,6 +143,7 @@
 #include "lib/evloop/procmon.h"
 
 #include "feature/dirauth/dirvote.h"
+#include "feature/dirauth/recommend_pkg.h"
 #include "feature/dirauth/mode.h"
 
 #include "core/or/connection_st.h"

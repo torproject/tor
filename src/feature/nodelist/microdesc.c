@@ -22,6 +22,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"
 #include "feature/relay/router.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerparse.h"
 

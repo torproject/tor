@@ -10,7 +10,7 @@
 #include "feature/hs/hs_common.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/rend/rendservice.h"
-#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/authcert.h"
 #include "feature/nodelist/nodelist.h"
 #include "test/test.h"
 #include "test/test_helpers.h"

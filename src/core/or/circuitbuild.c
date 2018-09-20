@@ -60,6 +60,7 @@
 #include "feature/rend/rendcommon.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/nodelist/node_select.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerparse.h"
 #include "feature/nodelist/routerset.h"
@@ -3007,4 +3008,3 @@ circuit_upgrade_circuits_from_guard_wait(void)
 
   smartlist_free(to_upgrade);
 }
-

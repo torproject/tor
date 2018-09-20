@@ -12,6 +12,7 @@
 #define HIBERNATE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define ROUTERLIST_PRIVATE
+#define NODE_SELECT_PRIVATE
 #define TOR_UNIT_TESTING
 #include "core/or/or.h"
 #include "app/config/config.h"
@@ -27,6 +28,8 @@
 #include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"
 #include "feature/relay/router.h"
+#include "feature/nodelist/authcert.h"
+#include "feature/nodelist/node_select.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/routerparse.h"

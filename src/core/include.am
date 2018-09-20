@@ -56,6 +56,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/client/entrynodes.c		\
 	src/feature/client/transports.c		\
 	src/feature/control/control.c		\
+	src/feature/control/fmt_serverstatus.c  \
 	src/feature/dirauth/keypin.c		\
 	src/feature/dircache/conscache.c	\
 	src/feature/dircache/consdiffmgr.c	\
@@ -80,13 +81,17 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/hs/hs_stats.c		\
 	src/feature/hs_common/replaycache.c	\
 	src/feature/hs_common/shared_random_client.c	\
+	src/feature/nodelist/authcert.c		\
+	src/feature/nodelist/dirlist.c		\
 	src/feature/nodelist/microdesc.c	\
 	src/feature/nodelist/networkstatus.c	\
 	src/feature/nodelist/nodelist.c		\
+	src/feature/nodelist/node_select.c	\
 	src/feature/nodelist/parsecommon.c	\
 	src/feature/nodelist/routerlist.c	\
 	src/feature/nodelist/routerparse.c	\
 	src/feature/nodelist/routerset.c	\
+	src/feature/nodelist/fmt_routerstatus.c	\
 	src/feature/nodelist/torcert.c		\
 	src/feature/relay/dns.c			\
 	src/feature/relay/ext_orport.c		\
@@ -99,6 +104,16 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/rend/rendservice.c		\
 	src/feature/stats/geoip.c		\
 	src/feature/stats/rephist.c
+
+# These should eventually move into module_dirauth_sources, but for now
+# the separation is only in the code location.
+LIBTOR_APP_A_SOURCES += 			\
+	src/feature/dirauth/bwauth.c		\
+	src/feature/dirauth/guardfraction.c	\
+	src/feature/dirauth/reachability.c	\
+	src/feature/dirauth/recommend_pkg.c	\
+	src/feature/dirauth/process_descs.c	\
+	src/feature/dirauth/voteflags.c
 
 if BUILD_NT_SERVICES
 LIBTOR_APP_A_SOURCES += src/app/main/ntmain.c
@@ -219,14 +234,21 @@ noinst_HEADERS +=					\
 	src/feature/client/transports.h			\
 	src/feature/control/control.h			\
 	src/feature/control/control_connection_st.h	\
+	src/feature/control/fmt_serverstatus.h		\
+	src/feature/dirauth/bwauth.h			\
 	src/feature/dirauth/dircollate.h		\
 	src/feature/dirauth/dirvote.h			\
+	src/feature/dirauth/guardfraction.h		\
 	src/feature/dirauth/keypin.h			\
 	src/feature/dirauth/mode.h			\
 	src/feature/dirauth/ns_detached_signatures_st.h	\
+	src/feature/dirauth/reachability.h		\
+	src/feature/dirauth/recommend_pkg.h		\
+	src/feature/dirauth/process_descs.h		\
 	src/feature/dirauth/shared_random.h		\
 	src/feature/dirauth/shared_random_state.h	\
 	src/feature/dirauth/vote_microdesc_hash_st.h	\
+	src/feature/dirauth/voteflags.h			\
 	src/feature/dircache/cached_dir_st.h		\
 	src/feature/dircache/conscache.h		\
 	src/feature/dircache/consdiffmgr.h		\
@@ -256,8 +278,10 @@ noinst_HEADERS +=					\
 	src/feature/hs/hsdir_index_st.h			\
 	src/feature/hs_common/replaycache.h		\
 	src/feature/hs_common/shared_random_client.h	\
+	src/feature/nodelist/authcert.h			\
 	src/feature/nodelist/authority_cert_st.h	\
 	src/feature/nodelist/desc_store_st.h		\
+	src/feature/nodelist/dirlist.h			\
 	src/feature/nodelist/document_signature_st.h	\
 	src/feature/nodelist/extrainfo_st.h		\
 	src/feature/nodelist/microdesc.h		\
@@ -268,12 +292,14 @@ noinst_HEADERS +=					\
 	src/feature/nodelist/networkstatus_voter_info_st.h	\
 	src/feature/nodelist/node_st.h			\
 	src/feature/nodelist/nodelist.h			\
+	src/feature/nodelist/node_select.h		\
 	src/feature/nodelist/parsecommon.h		\
 	src/feature/nodelist/routerinfo_st.h		\
 	src/feature/nodelist/routerlist.h		\
 	src/feature/nodelist/routerlist_st.h		\
 	src/feature/nodelist/routerparse.h		\
 	src/feature/nodelist/routerset.h		\
+	src/feature/nodelist/fmt_routerstatus.h		\
 	src/feature/nodelist/routerstatus_st.h		\
 	src/feature/nodelist/signed_descriptor_st.h	\
 	src/feature/nodelist/torcert.h			\

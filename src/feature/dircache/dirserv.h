@@ -16,46 +16,6 @@ struct ed25519_public_key_t;
 
 #include "lib/testsupport/testsupport.h"
 
-/** An enum to describe what format we're generating a routerstatus line in.
- */
-typedef enum {
-  /** For use in a v2 opinion */
-  NS_V2,
-  /** For use in a consensus networkstatus document (ns flavor) */
-  NS_V3_CONSENSUS,
-  /** For use in a vote networkstatus document */
-  NS_V3_VOTE,
-  /** For passing to the controlport in response to a GETINFO request */
-  NS_CONTROL_PORT,
-  /** For use in a consensus networkstatus document (microdesc flavor) */
-  NS_V3_CONSENSUS_MICRODESC
-} routerstatus_format_type_t;
-
-/** What fraction (1 over this number) of the relay ID space do we
- * (as a directory authority) launch connections to at each reachability
- * test? */
-#define REACHABILITY_MODULO_PER_TEST 128
-
-/** How often (in seconds) do we launch reachability tests? */
-#define REACHABILITY_TEST_INTERVAL 10
-
-/** How many seconds apart are the reachability tests for a given relay? */
-#define REACHABILITY_TEST_CYCLE_PERIOD \
-  (REACHABILITY_TEST_INTERVAL*REACHABILITY_MODULO_PER_TEST)
-
-/** Maximum length of an exit policy summary. */
-#define MAX_EXITPOLICY_SUMMARY_LEN 1000
-
-/** Maximum allowable length of a version line in a networkstatus. */
-#define MAX_V_LINE_LEN 128
-
-/** Maximum allowable length of bandwidth headers in a bandwidth file */
-#define MAX_BW_FILE_HEADER_COUNT_IN_VOTE 50
-
-/** Terminatore that separates bandwidth file headers from bandwidth file
- * relay lines */
-#define BW_FILE_HEADERS_TERMINATOR "=====\n"
-
 /** Ways to convert a spoolable_resource_t to a bunch of bytes. */
 typedef enum dir_spool_source_t {
     DIR_SPOOL_SERVER_BY_DIGEST=1, DIR_SPOOL_SERVER_BY_FP,
@@ -111,31 +71,7 @@ typedef struct spooled_resource_t {
   off_t cached_dir_offset;
 } spooled_resource_t;
 
-#ifdef DIRSERV_PRIVATE
-typedef struct measured_bw_line_t {
-  char node_id[DIGEST_LEN];
-  char node_hex[MAX_HEX_NICKNAME_LEN+1];
-  long int bw_kb;
-} measured_bw_line_t;
-#endif /* defined(DIRSERV_PRIVATE) */
-
 int connection_dirserv_flushed_some(dir_connection_t *conn);
-
-int dirserv_add_own_fingerprint(crypto_pk_t *pk);
-int dirserv_load_fingerprint_file(void);
-void dirserv_free_fingerprint_list(void);
-enum was_router_added_t dirserv_add_multiple_descriptors(
-                                     const char *desc, uint8_t purpose,
-                                     const char *source,
-                                     const char **msg);
-enum was_router_added_t dirserv_add_descriptor(routerinfo_t *ri,
-                                               const char **msg,
-                                               const char *source);
-void dirserv_set_router_is_running(routerinfo_t *router, time_t now);
-int list_server_status_v1(smartlist_t *routers, char **router_status_out,
-                          int for_controller);
-char *dirserv_get_flag_thresholds_line(void);
-void dirserv_compute_bridge_flag_thresholds(void);
 
 int directory_fetches_from_authorities(const or_options_t *options);
 int directory_fetches_dir_info_early(const or_options_t *options);
@@ -159,76 +95,10 @@ int dirserv_get_routerdesc_spool(smartlist_t *spools_out, const char *key,
                                  const char **msg_out);
 int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
                             const char **msg);
-void dirserv_orconn_tls_done(const tor_addr_t *addr,
-                             uint16_t or_port,
-                             const char *digest_rcvd,
-                             const struct ed25519_public_key_t *ed_id_rcvd);
-int dirserv_should_launch_reachability_test(const routerinfo_t *ri,
-                                            const routerinfo_t *ri_old);
-void dirserv_single_reachability_test(time_t now, routerinfo_t *router);
-void dirserv_test_reachability(time_t now);
-int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
-                                   int complain,
-                                   int *valid_out);
-uint32_t dirserv_router_get_status(const routerinfo_t *router,
-                                   const char **msg,
-                                   int severity);
-void dirserv_set_node_flags_from_authoritative_status(node_t *node,
-                                                      uint32_t authstatus);
 
-int dirserv_would_reject_router(const routerstatus_t *rs);
-char *routerstatus_format_entry(
-                              const routerstatus_t *rs,
-                              const char *version,
-                              const char *protocols,
-                              routerstatus_format_type_t format,
-                              int consensus_method,
-                              const vote_routerstatus_t *vrs);
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 cached_dir_t *new_cached_dir(char *s, time_t published);
-struct config_line_t;
-char *format_recommended_version_list(const struct config_line_t *line,
-                                      int warn);
-int validate_recommended_package_line(const char *line);
-int dirserv_query_measured_bw_cache_kb(const char *node_id,
-                                       long *bw_out,
-                                       time_t *as_of_out);
-void dirserv_clear_measured_bw_cache(void);
-int dirserv_has_measured_bw(const char *node_id);
-int dirserv_get_measured_bw_cache_size(void);
-void dirserv_count_measured_bws(const smartlist_t *routers);
-int running_long_enough_to_decide_unreachable(void);
-void dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil);
-
-#ifdef DIRSERV_PRIVATE
-
-STATIC void dirserv_set_routerstatus_testing(routerstatus_t *rs);
-
-/* Put the MAX_MEASUREMENT_AGE #define here so unit tests can see it */
-#define MAX_MEASUREMENT_AGE (3*24*60*60) /* 3 days */
-
-STATIC int measured_bw_line_parse(measured_bw_line_t *out, const char *line,
-                                  int line_is_after_headers);
-
-STATIC int measured_bw_line_apply(measured_bw_line_t *parsed_line,
-                           smartlist_t *routerstatuses);
-
-STATIC void dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
-                               time_t as_of);
-STATIC void dirserv_expire_measured_bw_cache(time_t now);
-
-STATIC int
-dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,
-                                      smartlist_t *vote_routerstatuses);
-#endif /* defined(DIRSERV_PRIVATE) */
-
-int dirserv_read_measured_bandwidths(const char *from_file,
-                                     smartlist_t *routerstatuses,
-                                     smartlist_t *bw_file_headers);
-
-int dirserv_read_guardfraction_file(const char *fname,
-                                 smartlist_t *vote_routerstatuses);
 
 spooled_resource_t *spooled_resource_new(dir_spool_source_t source,
                                          const uint8_t *digest,

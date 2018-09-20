@@ -53,7 +53,7 @@
 #include "core/or/relay.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
-#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/dirlist.h"
 #include "core/or/scheduler.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/nodelist/networkstatus.h"
