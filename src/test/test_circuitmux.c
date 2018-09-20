@@ -13,6 +13,8 @@
 #include "scheduler.h"
 #include "test.h"
 
+#include <math.h>
+
 /* XXXX duplicated function from test_circuitlist.c */
 static channel_t *
 new_fake_channel(void)
@@ -103,16 +105,19 @@ test_cmux_compute_ticks(void *arg)
   monotime_coarse_set_mock_time_nsec(now);
   tick = cell_ewma_get_current_tick_and_fraction(&rem);
   tt_uint_op(tick, OP_EQ, tick_zero);
-  tt_double_op(rem, OP_GT, .149999999);
-  tt_double_op(rem, OP_LT, .150000001);
+#ifdef USING_32BIT_MSEC_HACK
+  const double tolerance = .0005;
+#else
+  const double tolerance = .00000001;
+#endif
+  tt_double_op(fabs(rem - .15), OP_LT, tolerance);
 
   /* 25 second later and we should be in another tick. */
   now = START_NS + NS_PER_S * 25;
   monotime_coarse_set_mock_time_nsec(now);
   tick = cell_ewma_get_current_tick_and_fraction(&rem);
   tt_uint_op(tick, OP_EQ, tick_zero + 2);
-  tt_double_op(rem, OP_GT, .499999999);
-  tt_double_op(rem, OP_LT, .500000001);
+  tt_double_op(fabs(rem - .5), OP_LT, tolerance);
 
  done:
   ;
