@@ -1141,6 +1141,11 @@ node_supports_v3_rendezvous_point(const node_t *node)
 {
   tor_assert(node);
 
+  /* We can't use a v3 rendezvous point without the curve25519 onion pk. */
+  if (!node_get_curve25519_onion_key(node)) {
+    return 0;
+  }
+
   return node_get_protover_summary_flags(node)->supports_v3_rendezvous_point;
 }
 
