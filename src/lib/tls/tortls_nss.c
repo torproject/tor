@@ -444,7 +444,7 @@ tor_tls_release_socket(tor_tls_t *tls)
    */
   tor_socket_t sock =
     tor_open_socket_nonblocking(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (!sock) {
+  if (! SOCKET_OK(sock)) {
     log_warn(LD_NET, "Out of sockets when trying to shut down an NSS "
              "connection");
     return;
