@@ -646,6 +646,7 @@ connection_free_minimal(connection_t *conn)
       } else {
         /* The tor_tls_free() call below will close the socket; we must tell
          * the code below not to close it a second time. */
+        tor_release_socket_ownership(conn->s);
         conn->s = TOR_INVALID_SOCKET;
       }
       tor_tls_free(or_conn->tls);

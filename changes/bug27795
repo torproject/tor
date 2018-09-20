@@ -1,0 +1,5 @@
+  o Major bugfixes (socket accounting):
+    - In our socket accounting code, count a socket as closed even
+      when it is closed indirectly by the TLS layer. Previously, we
+      would count these sockets as still in use, and incorrectly believe that
+      we had run out of sockets. Fixes bug 27795; bugfix on 0.3.5.1-alpha.
