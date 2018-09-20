@@ -52,7 +52,7 @@
 #include "feature/stats/geoip.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_client.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"

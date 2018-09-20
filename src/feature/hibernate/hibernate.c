@@ -38,7 +38,7 @@ hibernating, phase 2:
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "feature/hibernate/hibernate.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/relay/router.h"
 #include "app/config/statefile.h"
 #include "lib/evloop/compat_libevent.h"

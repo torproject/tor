@@ -14,7 +14,7 @@
 #include "core/or/or.h"
 #include "lib/evloop/compat_libevent.h"
 #include "app/config/config.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "core/mainloop/periodic.h"
 #include "lib/evloop/compat_libevent.h"
 

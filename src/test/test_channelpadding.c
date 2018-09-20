@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 #define TOR_CHANNEL_INTERNAL_
-#define MAIN_PRIVATE
+#define MAINLOOP_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define TOR_TIMERS_PRIVATE
 #include "core/or/or.h"
@@ -16,7 +16,7 @@
 #include "lib/evloop/compat_libevent.h"
 #include "app/config/config.h"
 #include "lib/time/compat_time.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"
 #include "test/log_test_helpers.h"
 #include "lib/tls/tortls.h"

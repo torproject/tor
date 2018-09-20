@@ -71,7 +71,7 @@
 #include "lib/crypt_ops/crypto_dh.h"
 #include "feature/dircache/directory.h"
 #include "feature/client/entrynodes.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_ident.h"

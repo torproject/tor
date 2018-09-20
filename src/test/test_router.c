@@ -9,7 +9,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist.h"

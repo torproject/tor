@@ -47,7 +47,7 @@
 #include "feature/dircache/directory.h"
 #include "feature/client/entrynodes.h"
 #include "core/crypto/hs_ntor.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"

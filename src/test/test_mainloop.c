@@ -10,7 +10,7 @@
 #include "test/log_test_helpers.h"
 
 #include "core/or/or.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 
 static const uint64_t BILLION = 1000000000;
 

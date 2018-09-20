@@ -8,7 +8,7 @@
  * \brief Common pieces to implement unit tests.
  **/
 
-#define MAIN_PRIVATE
+#define MAINLOOP_PRIVATE
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "feature/control/control.h"
@@ -20,7 +20,7 @@
 #include "lib/err/backtrace.h"
 #include "test/test.h"
 #include "core/or/channelpadding.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "lib/compress/compress.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/crypt_ops/crypto_init.h"

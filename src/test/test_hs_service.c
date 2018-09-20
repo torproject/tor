@@ -15,7 +15,7 @@
 #define HS_SERVICE_PRIVATE
 #define HS_INTROPOINT_PRIVATE
 #define HS_CIRCUIT_PRIVATE
-#define MAIN_PRIVATE
+#define MAINLOOP_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define STATEFILE_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
@@ -49,7 +49,7 @@
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_service.h"
 #include "feature/hs/hs_client.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/rend/rendservice.h"
 #include "app/config/statefile.h"
 #include "feature/dirauth/shared_random_state.h"

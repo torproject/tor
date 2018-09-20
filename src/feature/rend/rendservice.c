@@ -22,7 +22,7 @@
 #include "feature/dircache/directory.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_config.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"

@@ -44,7 +44,7 @@
 #include "feature/dirauth/reachability.h"
 #include "feature/client/entrynodes.h"
 #include "feature/stats/geoip.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "trunnel/link_handshake.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"

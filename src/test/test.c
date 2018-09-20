@@ -32,7 +32,7 @@
 #define ROUTER_PRIVATE
 #define CIRCUITSTATS_PRIVATE
 #define CIRCUITLIST_PRIVATE
-#define MAIN_PRIVATE
+#define MAINLOOP_PRIVATE
 #define STATEFILE_PRIVATE
 
 #include "core/or/or.h"
@@ -46,7 +46,7 @@
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendcache.h"
 #include "test/test.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "lib/memarea/memarea.h"
 #include "core/or/onion.h"
 #include "core/crypto/onion_ntor.h"

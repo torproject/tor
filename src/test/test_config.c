@@ -31,7 +31,7 @@
 #include "feature/relay/ext_orport.h"
 #include "feature/stats/geoip.h"
 #include "feature/hibernate/hibernate.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"

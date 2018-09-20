@@ -10,6 +10,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/app/config/config.c			\
 	src/app/config/confparse.c		\
 	src/app/config/statefile.c		\
+	src/app/main/main.c			\
 	src/core/crypto/hs_ntor.c		\
 	src/core/crypto/onion_crypto.c		\
 	src/core/crypto/onion_fast.c		\
@@ -18,7 +19,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/crypto/relay_crypto.c		\
 	src/core/mainloop/connection.c		\
 	src/core/mainloop/cpuworker.c		\
-	src/core/mainloop/main.c		\
+	src/core/mainloop/mainloop.c		\
 	src/core/mainloop/periodic.c		\
 	src/core/or/address_set.c		\
 	src/core/or/channel.c			\
@@ -164,6 +165,7 @@ noinst_HEADERS +=					\
 	src/app/config/or_options_st.h			\
 	src/app/config/or_state_st.h			\
 	src/app/config/statefile.h			\
+	src/app/main/main.h				\
 	src/app/main/ntmain.h				\
 	src/core/crypto/hs_ntor.h			\
 	src/core/crypto/onion_crypto.h	        	\
@@ -173,7 +175,7 @@ noinst_HEADERS +=					\
 	src/core/crypto/relay_crypto.h			\
 	src/core/mainloop/connection.h			\
 	src/core/mainloop/cpuworker.h			\
-	src/core/mainloop/main.h			\
+	src/core/mainloop/mainloop.h			\
 	src/core/mainloop/periodic.h			\
 	src/core/or/addr_policy_st.h			\
 	src/core/or/address_set.h			\

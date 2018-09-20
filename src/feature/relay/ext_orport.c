@@ -25,7 +25,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/relay/ext_orport.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "core/proto/proto_ext_or.h"
 
 #include "core/or/or_connection_st.h"

@@ -3,7 +3,7 @@
 
 #define CONNECTION_PRIVATE
 #define EXT_ORPORT_PRIVATE
-#define MAIN_PRIVATE
+#define MAINLOOP_PRIVATE
 #include "core/or/or.h"
 #include "lib/container/buffers.h"
 #include "core/mainloop/connection.h"
@@ -12,7 +12,7 @@
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "feature/relay/ext_orport.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 
 #include "core/or/or_connection_st.h"
 
@@ -463,7 +463,7 @@ test_ext_or_handshake(void *arg)
   memcpy(ext_or_auth_cookie, "Gliding wrapt in a brown mantle," , 32);
   ext_or_auth_cookie_is_set = 1;
 
-  init_connection_lists();
+  tor_init_connection_lists();
 
   conn = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
   tt_int_op(0, OP_EQ, connection_ext_or_start_auth(conn));

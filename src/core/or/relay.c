@@ -67,7 +67,7 @@
 #include "feature/relay/dns.h"
 #include "feature/stats/geoip.h"
 #include "feature/hs/hs_cache.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/onion.h"

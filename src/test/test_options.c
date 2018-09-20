@@ -12,7 +12,7 @@
 
 #define ROUTERSET_PRIVATE
 #include "feature/nodelist/routerset.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "test/log_test_helpers.h"
 
 #include "lib/sandbox/sandbox.h"

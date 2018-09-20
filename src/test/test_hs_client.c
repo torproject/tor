@@ -8,7 +8,7 @@
 
 #define CONFIG_PRIVATE
 #define CRYPTO_PRIVATE
-#define MAIN_PRIVATE
+#define MAINLOOP_PRIVATE
 #define HS_CLIENT_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
 #define CIRCUITBUILD_PRIVATE
@@ -26,7 +26,7 @@
 #include "lib/crypt_ops/crypto_dh.h"
 #include "core/or/channeltls.h"
 #include "feature/dircache/directory.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerset.h"
 

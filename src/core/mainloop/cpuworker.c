@@ -26,7 +26,6 @@
 #include "core/mainloop/cpuworker.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "core/mainloop/main.h"
 #include "core/or/onion.h"
 #include "feature/relay/onion_queue.h"
 #include "feature/stats/rephist.h"
