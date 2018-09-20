@@ -161,8 +161,11 @@ helper_parse_circuit_id_protocol(const char *key, const char *value, int *ok)
   if (! strcasecmp(value, "haproxy")) {
     *ok = 1;
     ret = HS_CIRCUIT_ID_PROTOCOL_HAPROXY;
+  } else if (! strcasecmp(value, "none")) {
+    *ok = 1;
+    ret = HS_CIRCUIT_ID_PROTOCOL_NONE;
   } else {
-    log_warn(LD_CONFIG, "%s must be 'haproxy'.", key);
+    log_warn(LD_CONFIG, "%s must be 'haproxy' or 'none'.", key);
     goto err;
   }
 
