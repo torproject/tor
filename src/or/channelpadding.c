@@ -379,7 +379,8 @@ channelpadding_send_padding_cell_for_callback(channel_t *chan)
   chan->pending_padding_callback = 0;
 
   if (monotime_coarse_is_zero(&chan->next_padding_time) ||
-      chan->has_queued_writes(chan)) {
+      chan->has_queued_writes(chan) ||
+      (chan->cmux && circuitmux_num_cells(chan->cmux))) {
     /* We must have been active before the timer fired */
     monotime_coarse_zero(&chan->next_padding_time);
     return;
@@ -755,7 +756,11 @@ channelpadding_decide_to_pad_channel(channel_t *chan)
     return CHANNELPADDING_WONTPAD;
   }
 
-  if (!chan->has_queued_writes(chan)) {
+  /* There should always be a cmux on the circuit. After that,
+   * only schedule padding if there are no queued writes and no
+   * queued cells in circuitmux queues. */
+  if (chan->cmux && !chan->has_queued_writes(chan) &&
+      !circuitmux_num_cells(chan->cmux)) {
     int is_client_channel = 0;
 
     if (CHANNEL_IS_CLIENT(chan, options)) {

@@ -241,7 +241,7 @@ static hs_service_intro_point_t *
 helper_create_service_ip(void)
 {
   hs_desc_link_specifier_t *ls;
-  hs_service_intro_point_t *ip = service_intro_point_new(NULL, 0);
+  hs_service_intro_point_t *ip = service_intro_point_new(NULL, 0, 0);
   tor_assert(ip);
   /* Add a first unused link specifier. */
   ls = tor_malloc_zero(sizeof(*ls));

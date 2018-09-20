@@ -48,7 +48,7 @@ TEST_CHUTNEY_FLAVORS = basic-min bridges-min hs-v2-min hs-v3-min \
 TEST_CHUTNEY_FLAVORS_IPV6 = bridges+ipv6-min ipv6-exit-min hs-v23-ipv6-md \
 	single-onion-ipv6-md
 # only run if we can find a stable (or simply another) version of tor
-TEST_CHUTNEY_FLAVORS_MIXED = mixed+hs-v23
+TEST_CHUTNEY_FLAVORS_MIXED = mixed+hs-v2
 
 ### This is a lovely feature, but it requires automake >= 1.12, and Tor
 ###  doesn't require that yet.

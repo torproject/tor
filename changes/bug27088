@@ -1,0 +1,5 @@
+  o Minor bugfixes (continuous integration):
+    - Pass the module flags to distcheck configure, and
+      log the flags before running configure. (Backported
+      to 0.2.9 and later as a precaution.)
+      Fixes bug 27088; bugfix on 0.3.4.1-alpha.

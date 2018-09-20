@@ -1,0 +1,4 @@
+  o Minor bugfixes (rust):
+    - protover parsed and accepted unknown protocol names containing invalid
+      characters outside the range [A-Za-z0-9-]. Fixes bug 27687; bugfix on
+      0.3.3.1-alpha.

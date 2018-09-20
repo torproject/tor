@@ -1,0 +1,3 @@
+  o Minor bugfixes (testing, chutney):
+    - Before running make test-network-all, delete old logs and test result
+      files, to avoid spurious failures. Fixes bug 27295; bugfix on 0.2.7.3-rc.

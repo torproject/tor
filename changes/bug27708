@@ -1,0 +1,4 @@
+  o Major bugfixes (restart-in-process):
+    - Fix a use-after-free error that could be caused by passing Tor an
+      impossible set of options that would fail during options_act().
+      Fixes bug 27708; bugfix on 0.3.3.1-alpha.

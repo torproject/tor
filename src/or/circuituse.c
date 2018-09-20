@@ -1757,6 +1757,39 @@ circuit_build_failed(origin_circuit_t *circ)
    * the last hop or an earlier hop. then use this info below.
    */
   int failed_at_last_hop = 0;
+
+  /* First, check to see if this was a path failure, rather than build
+   * failure.
+   *
+   * Note that we deliberately use circuit_get_cpath_len() (and not
+   * circuit_get_cpath_opened_len()) because we only want to ensure
+   * that a full path is *chosen*. This is different than a full path
+   * being *built*. We only want to count *build* failures below.
+   *
+   * Path selection failures can happen spuriously for a number
+   * of reasons (such as aggressive/invalid user-specified path
+   * restrictions in the torrc, insufficient microdescriptors, and
+   * non-user reasons like exitpolicy issues), and so should not be
+   * counted as failures below.
+   */
+  if (circuit_get_cpath_len(circ) < circ->build_state->desired_path_len) {
+    static ratelim_t pathfail_limit = RATELIM_INIT(3600);
+    log_fn_ratelim(&pathfail_limit, LOG_NOTICE, LD_CIRC,
+             "Our circuit %u (id: %" PRIu32 ") died due to an invalid "
+             "selected path, purpose %s. This may be a torrc "
+             "configuration issue, or a bug.",
+              TO_CIRCUIT(circ)->n_circ_id, circ->global_identifier,
+              circuit_purpose_to_string(TO_CIRCUIT(circ)->purpose));
+
+    /* If the path failed on an RP, retry it. */
+    if (TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND)
+      hs_circ_retry_service_rendezvous_point(circ);
+
+    /* In all other cases, just bail. The rest is just failure accounting
+     * that we don't want to do */
+    return;
+  }
+
   /* If the last hop isn't open, and the second-to-last is, we failed
    * at the last hop. */
   if (circ->cpath &&
@@ -1806,18 +1839,8 @@ circuit_build_failed(origin_circuit_t *circ)
        * If we have guard state (new guard API) and our path selection
        * code actually chose a full path, then blame the failure of this
        * circuit on the guard.
-       *
-       * Note that we deliberately use circuit_get_cpath_len() (and not
-       * circuit_get_cpath_opened_len()) because we only want to ensure
-       * that a full path is *chosen*. This is different than a full path
-       * being *built*. We only want to blame *build* failures on this
-       * guard. Path selection failures can happen spuriously for a number
-       * of reasons (such as aggressive/invalid user-specified path
-       * restrictions in the torrc, as well as non-user reasons like
-       * exitpolicy issues), and so should not be counted here.
        */
-      if (circ->guard_state &&
-          circuit_get_cpath_len(circ) >= circ->build_state->desired_path_len)
+      if (circ->guard_state)
         entry_guard_failed(&circ->guard_state);
       /* if there are any one-hop streams waiting on this circuit, fail
        * them now so they can retry elsewhere. */

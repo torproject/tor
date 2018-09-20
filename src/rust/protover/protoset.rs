@@ -4,6 +4,8 @@
 
 //! Sets for lazily storing ordered, non-overlapping ranges of integers.
 
+use std::cmp;
+use std::iter;
 use std::slice;
 use std::str::FromStr;
 use std::u32;
@@ -174,7 +176,7 @@ impl ProtoSet {
             if low == u32::MAX || high == u32::MAX {
                 return Err(ProtoverError::ExceedsMax);
             }
-            if low < last_high {
+            if low <= last_high {
                 return Err(ProtoverError::Overlap);
             } else if low > high {
                 return Err(ProtoverError::LowGreaterThanHigh);
@@ -240,8 +242,8 @@ impl ProtoSet {
         false
     }
 
-    /// Retain only the `Version`s in this `ProtoSet` for which the predicate
-    /// `F` returns `true`.
+    /// Returns all the `Version`s in `self` which are not also in the `other`
+    /// `ProtoSet`.
     ///
     /// # Examples
     ///
@@ -250,24 +252,45 @@ impl ProtoSet {
     /// use protover::protoset::ProtoSet;
     ///
     /// # fn do_test() -> Result<bool, ProtoverError> {
-    /// let mut protoset: ProtoSet = "1,3-5,9".parse()?;
+    /// let protoset: ProtoSet = "1,3-6,10-12,15-16".parse()?;
+    /// let other: ProtoSet = "2,5-7,9-11,14-20".parse()?;
     ///
-    /// // Keep only versions less than or equal to 8:
-    /// protoset.retain(|x| x <= &8);
+    /// let subset: ProtoSet = protoset.and_not_in(&other);
     ///
-    /// assert_eq!(protoset.expand(), vec![1, 3, 4, 5]);
+    /// assert_eq!(subset.expand(), vec![1, 3, 4, 12]);
     /// #
     /// # Ok(true)
     /// # }
     /// # fn main() { do_test(); }  // wrap the test so we can use the ? operator
     /// ```
-    // XXX we could probably do something more efficient here. —isis
-    pub fn retain<F>(&mut self, f: F)
-        where F: FnMut(&Version) -> bool
-    {
-        let mut expanded: Vec<Version> = self.clone().expand();
-        expanded.retain(f);
-        *self = expanded.into();
+    pub fn and_not_in(&self, other: &Self) -> Self {
+        if self.is_empty() || other.is_empty() {
+            return self.clone();
+        }
+
+        let pairs = self.iter().flat_map(|&(lo, hi)| {
+            let the_end = (hi + 1, hi + 1); // special case to mark the end of the range.
+            let excluded_ranges = other
+                .iter()
+                .cloned() // have to be owned tuples, to match iter::once(the_end).
+                .skip_while(move|&(_, hi2)| hi2 < lo) // skip the non-overlapping ranges.
+                .take_while(move|&(lo2, _)| lo2 <= hi) // take all the overlapping ones.
+                .chain(iter::once(the_end));
+
+            let mut nextlo = lo;
+            excluded_ranges.filter_map(move |(excluded_lo, excluded_hi)| {
+                let pair = if nextlo < excluded_lo {
+                    Some((nextlo, excluded_lo - 1))
+                } else {
+                    None
+                };
+                nextlo = cmp::min(excluded_hi, u32::MAX - 1) + 1;
+                pair
+            })
+        });
+
+        let pairs = pairs.collect();
+        ProtoSet::is_ok(ProtoSet{ pairs }).expect("should be already sorted")
     }
 }
 
@@ -340,15 +363,13 @@ impl FromStr for ProtoSet {
     /// ```
     fn from_str(version_string: &str) -> Result<Self, Self::Err> {
         let mut pairs: Vec<(Version, Version)> = Vec::new();
-        let pieces: ::std::str::Split<char> = version_string.trim().split(',');
+        let pieces: ::std::str::Split<char> = version_string.split(',');
 
-        for piece in pieces {
-            let p: &str = piece.trim();
-
+        for p in pieces {
             if p.is_empty() {
                 continue;
             } else if p.contains('-') {
-                let mut pair = p.split('-');
+                let mut pair = p.splitn(2, '-');
 
                 let low  = pair.next().ok_or(ProtoverError::Unparseable)?;
                 let high = pair.next().ok_or(ProtoverError::Unparseable)?;
@@ -369,7 +390,7 @@ impl FromStr for ProtoSet {
                 pairs.push((v, v));
             }
         }
-        // If we were passed in an empty string, or a bunch of whitespace, or
+        // If we were passed in an empty string, or
         // simply a comma, or a pile of commas, then return an empty ProtoSet.
         if pairs.len() == 0 {
             return Ok(ProtoSet::default());
@@ -522,7 +543,6 @@ mod test {
         test_protoset_contains_versions!(&[1], "1");
         test_protoset_contains_versions!(&[1, 2], "1,2");
         test_protoset_contains_versions!(&[1, 2, 3], "1-3");
-        test_protoset_contains_versions!(&[0, 1], "0-1");
         test_protoset_contains_versions!(&[1, 2, 5], "1-2,5");
         test_protoset_contains_versions!(&[1, 3, 4, 5], "1,3-5");
         test_protoset_contains_versions!(&[42, 55, 56, 57, 58], "42,55-58");
@@ -539,6 +559,18 @@ mod test {
     }
 
     #[test]
+    fn test_versions_from_str_hyphens() {
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("--1"));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("-1-2"));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1--2"));
+    }
+
+    #[test]
+    fn test_versions_from_str_triple() {
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1-2-3"));
+    }
+
+    #[test]
     fn test_versions_from_str_1exclam() {
         assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1,!"));
     }
@@ -546,6 +578,13 @@ mod test {
     #[test]
     fn test_versions_from_str_percent_equal() {
         assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("%="));
+    }
+
+    #[test]
+    fn test_versions_from_str_whitespace() {
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1,2\n"));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1\r,2"));
+        assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1,\t2"));
     }
 
     #[test]
@@ -570,9 +609,9 @@ mod test {
 
     #[test]
     fn test_protoset_contains() {
-        let protoset: ProtoSet = ProtoSet::from_slice(&[(0, 5), (7, 9), (13, 14)]).unwrap();
+        let protoset: ProtoSet = ProtoSet::from_slice(&[(1, 5), (7, 9), (13, 14)]).unwrap();
 
-        for x in 0..6   { assert!(protoset.contains(&x), format!("should contain {}", x)); }
+        for x in 1..6   { assert!(protoset.contains(&x), format!("should contain {}", x)); }
         for x in 7..10  { assert!(protoset.contains(&x), format!("should contain {}", x)); }
         for x in 13..15 { assert!(protoset.contains(&x), format!("should contain {}", x)); }
 
@@ -582,10 +621,10 @@ mod test {
     }
 
     #[test]
-    fn test_protoset_contains_0_3() {
-        let protoset: ProtoSet = ProtoSet::from_slice(&[(0, 3)]).unwrap();
+    fn test_protoset_contains_1_3() {
+        let protoset: ProtoSet = ProtoSet::from_slice(&[(1, 3)]).unwrap();
 
-        for x in 0..4 { assert!(protoset.contains(&x), format!("should contain {}", x)); }
+        for x in 1..4 { assert!(protoset.contains(&x), format!("should contain {}", x)); }
     }
 
     macro_rules! assert_protoset_from_vec_contains_all {
@@ -605,8 +644,8 @@ mod test {
     }
 
     #[test]
-    fn test_protoset_from_vec_0_315() {
-        assert_protoset_from_vec_contains_all!(0, 1, 2, 3, 15);
+    fn test_protoset_from_vec_1_315() {
+        assert_protoset_from_vec_contains_all!(1, 2, 3, 15);
     }
 
     #[test]

@@ -1,0 +1,3 @@
+  o Minor bugfixes (onion services):
+    - Fix bug that causes services to not ever rotate their descriptors if they
+      were getting SIGHUPed often. Fixes bug 26932; bugfix on 0.3.2.1-alpha.

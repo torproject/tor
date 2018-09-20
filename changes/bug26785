@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation, portability):
+    - Don't try to use a pragma to temporarily disable
+      -Wunused-const-variable if the compiler doesn't support it.
+      Fixes bug 26785; bugfix on 0.3.2.11.

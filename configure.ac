@@ -4,7 +4,7 @@ dnl Copyright (c) 2007-2017, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_PREREQ([2.63])
-AC_INIT([tor],[0.3.3.7-dev])
+AC_INIT([tor],[0.3.3.10-dev])
 AC_CONFIG_SRCDIR([src/or/main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -515,8 +515,10 @@ if test "$LIBS" != "$saved_LIBS"; then
    have_rt=yes
 fi
 
-AC_SEARCH_LIBS(pthread_create, [pthread])
-AC_SEARCH_LIBS(pthread_detach, [pthread])
+if test "$bwin32" = "false"; then
+  AC_SEARCH_LIBS(pthread_create, [pthread])
+  AC_SEARCH_LIBS(pthread_detach, [pthread])
+fi
 
 AM_CONDITIONAL(THREADS_WIN32, test "$bwin32" = "true")
 AM_CONDITIONAL(THREADS_PTHREADS, test "$bwin32" = "false")
@@ -548,7 +550,6 @@ AC_CHECK_FUNCS(
         llround \
         localtime_r \
         lround \
-	mach_approximate_time \
         memmem \
         memset_s \
 	pipe \
@@ -574,9 +575,36 @@ AC_CHECK_FUNCS(
 	_vscprintf
 )
 
-# Apple messed up when they added two functions functions in Sierra: they
+# Apple messed up when they added some functions: they
 # forgot to decorate them with appropriate AVAILABLE_MAC_OS_VERSION
-# checks. So we should only probe for those functions if we are sure that we
+# checks.
+
+# We should only probe for these functions if we are sure that we
+# are not targeting OS X 10.9 or earlier.
+AC_MSG_CHECKING([for a pre-Yosemite OS X build target])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#ifdef __APPLE__
+#  include <AvailabilityMacros.h>
+#  ifndef MAC_OS_X_VERSION_10_10
+#    define MAC_OS_X_VERSION_10_10 101000
+#  endif
+#  if defined(MAC_OS_X_VERSION_MIN_REQUIRED)
+#    if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_10
+#      error "Running on Mac OS X 10.9 or earlier"
+#    endif
+#  endif
+#endif
+]], [[]])],
+   [on_macos_pre_10_10=no ; AC_MSG_RESULT([no])],
+   [on_macos_pre_10_10=yes; AC_MSG_RESULT([yes])])
+
+if test "$on_macos_pre_10_10" = "no"; then
+  AC_CHECK_FUNCS(
+        mach_approximate_time \
+  )
+fi
+
+# We should only probe for these functions if we are sure that we
 # are not targeting OSX 10.11 or earlier.
 AC_MSG_CHECKING([for a pre-Sierra OSX build target])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
@@ -828,6 +856,7 @@ AC_CHECK_FUNCS([ \
                 SSL_get_client_ciphers \
                 SSL_get_client_random \
 		SSL_CIPHER_find \
+                SSL_CTX_set_security_level \
 		TLS_method
 	       ])
 
@@ -1531,6 +1560,26 @@ AC_CHECK_SIZEOF(socklen_t, , [AC_INCLUDES_DEFAULT()
 
 AC_CHECK_SIZEOF(cell_t)
 
+# Let's see if stdatomic works. (There are some debian clangs that screw it
+# up; see Tor bug #26779 and debian bug 903709.)
+AC_CACHE_CHECK([whether C11 stdatomic.h actually works],
+               tor_cv_stdatomic_works,
+[AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+#include <stdatomic.h>
+struct x { atomic_size_t y; };
+void try_atomic_init(struct x *xx)
+{
+  atomic_init(&xx->y, 99);
+  atomic_fetch_add(&xx->y, 1);
+}
+]])], [tor_cv_stdatomic_works=yes], [tor_cv_stdatomic_works=no])])
+
+if test "$tor_cv_stdatomic_works" = "yes"; then
+   AC_DEFINE(STDATOMIC_WORKS, 1, [Set to 1 if we can compile a simple stdatomic example.])
+elif test "$ac_cv_header_stdatomic_h" = "yes"; then
+   AC_MSG_WARN([Your compiler provides the stdatomic.h header, but it doesn't seem to work.  I'll pretend it isn't there. If you are using Clang on Debian, maybe this is because of https://bugs.debian.org/903709 ])
+fi
+
 # Now make sure that NULL can be represented as zero bytes.
 AC_CACHE_CHECK([whether memset(0) sets pointers to NULL], tor_cv_null_is_zero,
 [AC_RUN_IFELSE([AC_LANG_SOURCE(
@@ -1697,6 +1746,10 @@ if test "x$tcmalloc" = "xyes"; then
 fi
 if test "$using_custom_malloc" = "no"; then
    AC_CHECK_FUNCS(mallinfo)
+fi
+if test "$using_custom_malloc" = "yes"; then
+  # Tell the C compiler not to use the system allocator functions.
+  TOR_CHECK_CFLAGS([-fno-builtin-malloc -fno-builtin-realloc -fno-builtin-calloc -fno-builtin-free])
 fi
 
 # By default, we're going to assume we don't have mlockall()
@@ -2171,6 +2224,9 @@ dnl     -Wthread-safety-precise
   fi
   if test "$tor_cv_cflags__Woverlength_strings" = "yes"; then
     AC_DEFINE([HAVE_CFLAG_WOVERLENGTH_STRINGS], 1, [True if we have -Woverlength-strings])
+  fi
+  if test "$tor_cv_cflags__warn_unused_const_variable_2" = "yes"; then
+    AC_DEFINE([HAVE_CFLAG_WUNUSED_CONST_VARIABLE], 1, [True if we have -Wunused-const-variable])
   fi
 
   if test "x$enable_fatal_warnings" = "xyes"; then

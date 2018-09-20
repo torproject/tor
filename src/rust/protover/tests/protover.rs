@@ -106,10 +106,10 @@ fn protocol_all_supported_with_unsupported_versions() {
 
 #[test]
 fn protocol_all_supported_with_unsupported_low_version() {
-    let protocols: UnvalidatedProtoEntry = "Cons=0-1".parse().unwrap();
+    let protocols: UnvalidatedProtoEntry = "HSIntro=2-3".parse().unwrap();
     let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
     assert_eq!(true, unsupported.is_some());
-    assert_eq!("Cons=0", &unsupported.unwrap().to_string());
+    assert_eq!("HSIntro=2", &unsupported.unwrap().to_string());
 }
 
 #[test]
@@ -354,18 +354,18 @@ fn protover_all_supported_should_exclude_some_versions_and_entire_protocols() {
 
 #[test]
 fn protover_all_supported_should_not_dos_anyones_computer() {
-    let proto: UnvalidatedProtoEntry = "Sleen=0-2147483648".parse().unwrap();
+    let proto: UnvalidatedProtoEntry = "Link=1-2147483648".parse().unwrap();
     let result: String = proto.all_supported().unwrap().to_string();
 
-    assert_eq!(result, "Sleen=0-2147483648".to_string());
+    assert_eq!(result, "Link=6-2147483648".to_string());
 }
 
 #[test]
 fn protover_all_supported_should_not_dos_anyones_computer_max_versions() {
-    let proto: UnvalidatedProtoEntry = "Sleen=0-4294967294".parse().unwrap();
+    let proto: UnvalidatedProtoEntry = "Link=1-4294967294".parse().unwrap();
     let result: String = proto.all_supported().unwrap().to_string();
 
-    assert_eq!(result, "Sleen=0-4294967294".to_string());
+    assert_eq!(result, "Link=6-4294967294".to_string());
 }
 
 #[test]
@@ -388,7 +388,7 @@ fn protover_unvalidatedprotoentry_should_err_entirely_unparseable_things() {
 
 #[test]
 fn protover_all_supported_over_maximum_limit() {
-    let proto: Result<UnvalidatedProtoEntry, ProtoverError> = "Sleen=0-4294967295".parse();
+    let proto: Result<UnvalidatedProtoEntry, ProtoverError> = "Sleen=1-4294967295".parse();
 
     assert_eq!(Err(ProtoverError::ExceedsMax), proto);
 }

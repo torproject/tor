@@ -3995,6 +3995,13 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 #endif
   /* On heap corruption, just give up; don't try to play along. */
   HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
+
+  /* SetProcessDEPPolicy is only supported on 32-bit Windows.
+   * (On 64-bit Windows it always fails, and some compilers don't like the
+   * PSETDEP cast.)
+   * 32-bit Windows defines _WIN32.
+   * 64-bit Windows defines _WIN32 and _WIN64. */
+#ifndef _WIN64
   /* Call SetProcessDEPPolicy to permanently enable DEP.
      The function will not resolve on earlier versions of Windows,
      and failure is not dangerous. */
@@ -4008,6 +4015,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
       setdeppolicy(3);
     }
   }
+#endif /* !defined(_WIN64) */
 #endif /* defined(_WIN32) */
 
   configure_backtrace_handler(get_version());
@@ -4035,10 +4043,10 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 #endif /* defined(NT_SERVICE) */
   {
     int init_rv = tor_init(argc, argv);
-    if (init_rv < 0)
-      return -1;
-    else if (init_rv > 0)
-      return 0;
+    if (init_rv) {
+      tor_free_all(0);
+      return (init_rv < 0) ? -1 : 0;
+    }
   }
 
   if (get_options()->Sandbox && get_options()->command == CMD_RUN_TOR) {
@@ -4046,6 +4054,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 
     if (sandbox_init(cfg)) {
       log_err(LD_BUG,"Failed to create syscall sandbox filter");
+      tor_free_all(0);
       return -1;
     }
 

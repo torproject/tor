@@ -376,17 +376,21 @@ service_intro_point_free_void(void *obj)
 }
 
 /* Return a newly allocated service intro point and fully initialized from the
- * given extend_info_t ei if non NULL. If is_legacy is true, we also generate
- * the legacy key. On error, NULL is returned.
+ * given extend_info_t ei if non NULL.
+ * If is_legacy is true, we also generate the legacy key.
+ * If supports_ed25519_link_handshake_any is true, we add the relay's ed25519
+ * key to the link specifiers.
  *
  * If ei is NULL, returns a hs_service_intro_point_t with an empty link
  * specifier list and no onion key. (This is used for testing.)
+ * On any other error, NULL is returned.
  *
  * ei must be an extend_info_t containing an IPv4 address. (We will add supoort
  * for IPv6 in a later release.) When calling extend_info_from_node(), pass
  * 0 in for_direct_connection to make sure ei always has an IPv4 address. */
 STATIC hs_service_intro_point_t *
-service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
+service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy,
+                        unsigned int supports_ed25519_link_handshake_any)
 {
   hs_desc_link_specifier_t *ls;
   hs_service_intro_point_t *ip;
@@ -453,10 +457,13 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
   }
   smartlist_add(ip->base.link_specifiers, ls);
 
-  /* ed25519 identity key is optional for intro points */
-  ls = hs_desc_link_specifier_new(ei, LS_ED25519_ID);
-  if (ls) {
-    smartlist_add(ip->base.link_specifiers, ls);
+  /* ed25519 identity key is optional for intro points. If the node supports
+   * ed25519 link authentication, we include it. */
+  if (supports_ed25519_link_handshake_any) {
+    ls = hs_desc_link_specifier_new(ei, LS_ED25519_ID);
+    if (ls) {
+      smartlist_add(ip->base.link_specifiers, ls);
+    }
   }
 
   /* IPv6 is not supported in this release. */
@@ -847,6 +854,7 @@ move_hs_state(hs_service_t *src_service, hs_service_t *dst_service)
     replaycache_free(dst->replay_cache_rend_cookie);
   }
   dst->replay_cache_rend_cookie = src->replay_cache_rend_cookie;
+  dst->next_rotation_time = src->next_rotation_time;
 
   src->replay_cache_rend_cookie = NULL; /* steal pointer reference */
 }
@@ -975,9 +983,9 @@ load_service_keys(hs_service_t *service)
    * files to that directory so make sure it exists and has the right
    * permissions. We do this here because at this stage we know that Tor is
    * actually running and the service we have has been validated. */
-  if (BUG(hs_check_service_private_dir(get_options()->User,
-                                       config->directory_path,
-                                       config->dir_group_readable, 1) < 0)) {
+  if (hs_check_service_private_dir(get_options()->User,
+                                   config->directory_path,
+                                   config->dir_group_readable, 1) < 0) {
     goto end;
   }
 
@@ -1586,8 +1594,12 @@ pick_intro_point(unsigned int direct_conn, smartlist_t *exclude_nodes)
     tor_assert_nonfatal(!ed25519_public_key_is_zero(&info->ed_identity));
   }
 
-  /* Create our objects and populate them with the node information. */
-  ip = service_intro_point_new(info, !node_supports_ed25519_hs_intro(node));
+  /* Create our objects and populate them with the node information.
+   * We don't care if the intro's link auth is compatible with us, because
+   * we are sending the ed25519 key to a remote client via the descriptor. */
+  ip = service_intro_point_new(info, !node_supports_ed25519_hs_intro(node),
+                               node_supports_ed25519_link_authentication(node,
+                                                                         0));
   if (ip == NULL) {
     goto err;
   }

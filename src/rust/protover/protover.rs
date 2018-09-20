@@ -113,11 +113,17 @@ impl fmt::Display for UnknownProtocol {
     }
 }
 
+fn is_valid_proto(s: &str) -> bool {
+    s.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+}
+
 impl FromStr for UnknownProtocol {
     type Err = ProtoverError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() <= MAX_PROTOCOL_NAME_LENGTH {
+        if !is_valid_proto(s) {
+            Err(ProtoverError::InvalidProtocol)
+        } else if s.len() <= MAX_PROTOCOL_NAME_LENGTH {
             Ok(UnknownProtocol(s.to_string()))
         } else {
             Err(ProtoverError::ExceedsNameLimit)
@@ -129,6 +135,9 @@ impl UnknownProtocol {
     /// Create an `UnknownProtocol`, ignoring whether or not it
     /// exceeds MAX_PROTOCOL_NAME_LENGTH.
     fn from_str_any_len(s: &str) -> Result<Self, ProtoverError> {
+        if !is_valid_proto(s) {
+            return Err(ProtoverError::InvalidProtocol);
+        }
         Ok(UnknownProtocol(s.to_string()))
     }
 }
@@ -356,7 +365,6 @@ impl UnvalidatedProtoEntry {
 
             let maybe_supported_versions: Option<&ProtoSet> = supported.get(&supported_protocol);
             let supported_versions: &ProtoSet;
-            let mut unsupported_versions: ProtoSet;
 
             // If the protocol wasn't in the map, then we don't know about it
             // and don't support any of its versions.  Add its versions to the
@@ -369,8 +377,7 @@ impl UnvalidatedProtoEntry {
             } else {
                 supported_versions = maybe_supported_versions.unwrap();
             }
-            unsupported_versions = versions.clone();
-            unsupported_versions.retain(|x| !supported_versions.contains(x));
+            let unsupported_versions = versions.and_not_in(supported_versions);
 
             if !unsupported_versions.is_empty() {
                 unsupported.insert(protocol.clone(), unsupported_versions);
@@ -777,6 +784,29 @@ mod test {
 
     use super::*;
 
+    macro_rules! parse_proto {
+        ($e:expr) => {{
+            let proto: Result<UnknownProtocol, _> = $e.parse();
+            let proto2 = UnknownProtocol::from_str_any_len($e);
+            assert_eq!(proto, proto2);
+            proto
+        }};
+    }
+
+    #[test]
+    fn test_protocol_from_str() {
+        assert!(parse_proto!("Cons").is_ok());
+        assert!(parse_proto!("123").is_ok());
+        assert!(parse_proto!("1-2-3").is_ok());
+
+        let err = Err(ProtoverError::InvalidProtocol);
+        assert_eq!(err, parse_proto!("a_b_c"));
+        assert_eq!(err, parse_proto!("a b"));
+        assert_eq!(err, parse_proto!("a,"));
+        assert_eq!(err, parse_proto!("b."));
+        assert_eq!(err, parse_proto!("é"));
+    }
+
     macro_rules! assert_protoentry_is_parseable {
         ($e:expr) => (
             let protoentry: Result<ProtoEntry, ProtoverError> = $e.parse();
@@ -867,10 +897,10 @@ mod test {
 
     #[test]
     fn test_protoentry_all_supported_unsupported_low_version() {
-        let protocols: UnvalidatedProtoEntry = "Cons=0-1".parse().unwrap();
+        let protocols: UnvalidatedProtoEntry = "HSIntro=2-3".parse().unwrap();
         let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
         assert_eq!(true, unsupported.is_some());
-        assert_eq!("Cons=0", &unsupported.unwrap().to_string());
+        assert_eq!("HSIntro=2", &unsupported.unwrap().to_string());
     }
 
     #[test]

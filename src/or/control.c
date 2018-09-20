@@ -1896,6 +1896,8 @@ getinfo_helper_listeners(control_connection_t *control_conn,
 
   if (!strcmp(question, "net/listeners/or"))
     type = CONN_TYPE_OR_LISTENER;
+  else if (!strcmp(question, "net/listeners/extor"))
+    type = CONN_TYPE_EXT_OR_LISTENER;
   else if (!strcmp(question, "net/listeners/dir"))
     type = CONN_TYPE_DIR_LISTENER;
   else if (!strcmp(question, "net/listeners/socks"))
@@ -1904,6 +1906,8 @@ getinfo_helper_listeners(control_connection_t *control_conn,
     type = CONN_TYPE_AP_TRANS_LISTENER;
   else if (!strcmp(question, "net/listeners/natd"))
     type = CONN_TYPE_AP_NATD_LISTENER;
+  else if (!strcmp(question, "net/listeners/httptunnel"))
+    type = CONN_TYPE_AP_HTTP_CONNECT_LISTENER;
   else if (!strcmp(question, "net/listeners/dns"))
     type = CONN_TYPE_AP_DNS_LISTENER;
   else if (!strcmp(question, "net/listeners/control"))
@@ -7610,6 +7614,14 @@ control_free_all(void)
     tor_event_free(flush_queued_events_event);
     flush_queued_events_event = NULL;
   }
+  bootstrap_percent = BOOTSTRAP_STATUS_UNDEF;
+  notice_bootstrap_percent = 0;
+  bootstrap_problems = 0;
+  authentication_cookie_is_set = 0;
+  global_event_mask = 0;
+  disable_log_messages = 0;
+  memset(last_sent_bootstrap_message, 0, sizeof(last_sent_bootstrap_message));
+  flush_queued_event_pending = 0;
 }
 
 #ifdef TOR_UNIT_TESTS
@@ -7620,4 +7632,3 @@ control_testing_set_global_event_mask(uint64_t mask)
   global_event_mask = mask;
 }
 #endif /* defined(TOR_UNIT_TESTS) */
-

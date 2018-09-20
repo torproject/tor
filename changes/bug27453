@@ -1,0 +1,3 @@
+  o Minor bugfixes (continuous integration):
+    - When a Travis build fails, and showing a log fails, keep trying to
+      show the other logs. Fixes bug 27453; bugfix on 0.3.4.7-rc.
