@@ -456,6 +456,9 @@ tor_tls_release_socket(tor_tls_t *tls)
   }
 
   PR_ChangeFileDescNativeHandle(tcp, sock);
+  /* Tell our socket accounting layer that we don't own this socket any more:
+   * NSS is about to free it for us. */
+  tor_release_socket_ownership(sock);
 }
 
 void
