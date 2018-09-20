@@ -109,8 +109,14 @@ extern uint32_t rephist_total_num;
 #ifdef TOR_UNIT_TESTS
 extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1];
 extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
+extern struct bw_array_t *write_array;
+#endif
+
+#ifdef REPHIST_PRIVATE
 typedef struct bw_array_t bw_array_t;
-extern bw_array_t *write_array;
+STATIC uint64_t find_largest_max(bw_array_t *b);
+STATIC void commit_max(bw_array_t *b);
+STATIC void advance_obs(bw_array_t *b);
 #endif
 
 /**
@@ -139,4 +145,3 @@ void rep_hist_prep_published_padding_counts(time_t now);
 void rep_hist_padding_count_timers(uint64_t num_timers);
 
 #endif /* !defined(TOR_REPHIST_H) */
-

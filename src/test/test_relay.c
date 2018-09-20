@@ -1,14 +1,17 @@
 /* Copyright (c) 2014-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "core/or/or.h"
 #define CIRCUITBUILD_PRIVATE
+#define RELAY_PRIVATE
+#define REPHIST_PRIVATE
+#include "core/or/or.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/channeltls.h"
 #include "feature/stats/rephist.h"
-#define RELAY_PRIVATE
 #include "core/or/relay.h"
+#include "feature/stats/rephist.h"
+#include "lib/container/order.h"
 /* For init/free stuff */
 #include "core/or/scheduler.h"
 
@@ -22,9 +25,6 @@
 static or_circuit_t * new_fake_orcirc(channel_t *nchan, channel_t *pchan);
 
 static void test_relay_append_cell_to_circuit_queue(void *arg);
-uint64_t find_largest_max(bw_array_t *b);
-void commit_max(bw_array_t *b);
-void advance_obs(bw_array_t *b);
 
 static or_circuit_t *
 new_fake_orcirc(channel_t *nchan, channel_t *pchan)

@@ -74,6 +74,7 @@
  * (The "rephist" name originally stood for "reputation and history". )
  **/
 
+#define REPHIST_PRIVATE
 #include "core/or/or.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
@@ -105,11 +106,6 @@
 
 static void bw_arrays_init(void);
 static void predicted_ports_alloc(void);
-
-typedef struct bw_array_t bw_array_t;
-STATIC uint64_t find_largest_max(bw_array_t *b);
-STATIC void commit_max(bw_array_t *b);
-STATIC void advance_obs(bw_array_t *b);
 
 /** Total number of bytes currently allocated in fields used by rephist.c. */
 uint64_t rephist_total_alloc=0;
