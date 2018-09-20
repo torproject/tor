@@ -1,4 +1,0 @@
-  o Minor bugfixes (memory leak):
-    - Fix an unlikely memory leak when trying to read a private key
-      from a ridiculously large file. Fixes bug 27764; bugfix on
-      0.3.5.1-alpha. This is CID 1439488.

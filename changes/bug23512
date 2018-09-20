@@ -1,6 +1,0 @@
-  o Major bugfix (Relay bandwidth statistics):
-    - When we close relayed circuits, report the data in the circuit queues
-      as being written in our relay bandwidth stats. This mitigates guard
-      discovery and other attacks that close circuits for the explicit purpose
-      of noticing this discrepancy in statistics. Fixes bug 23512; bugfix
-      on 0.0.8pre3.

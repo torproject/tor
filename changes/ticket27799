@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Divide the routerlist.c and dirserv.c modules into smaller
-      parts. Closes ticket 27799.

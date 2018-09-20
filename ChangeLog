@@ -1,3 +1,66 @@
+Changes in version 0.3.5.2-alpha - 2018-09-2?
+  Tor 0.3.5.2-alpha fixes several bugs in 0.3.5.1-alpha, including one
+  that made Tor think it had run out of sockets. Anybody running a relay
+  or an onion service on 0.3.5.1-alpha should upgrade.
+
+  o Major bugfixes (relay bandwidth statistics):
+    - When we close relayed circuits, report the data in the circuit
+      queues as being written in our relay bandwidth stats. This
+      mitigates guard discovery and other attacks that close circuits
+      for the explicit purpose of noticing this discrepancy in
+      statistics. Fixes bug 23512; bugfix on 0.0.8pre3.
+
+  o Major bugfixes (socket accounting):
+    - In our socket accounting code, count a socket as closed even when
+      it is closed indirectly by the TLS layer. Previously, we would
+      count these sockets as still in use, and incorrectly believe that
+      we had run out of sockets. Fixes bug 27795; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (32-bit OSX and iOS, timing):
+    - Fix an integer overflow bug in our optimized 32-bit millisecond-
+      difference algorithm for 32-bit Apple platforms. Previously, it
+      would overflow when calculating the difference between two times
+      more than 47 days apart. Fixes part of bug 27139; bugfix
+      on 0.3.4.1-alpha.
+    - Improve the precision of our 32-bit millisecond difference
+      algorithm for 32-bit Apple platforms. Fixes part of bug 27139;
+      bugfix on 0.3.4.1-alpha.
+    - Relax the tolerance on the mainloop/update_time_jumps test when
+      running on 32-bit Apple platforms. Fixes part of bug 27139; bugfix
+      on 0.3.4.1-alpha.
+
+  o Minor bugfixes (onion service v3):
+    - Close all SOCKS request (for the same .onion) if the newly fetched
+      descriptor is unusable. Before that, we would close only the first
+      one leaving the other hanging and let to time out by themselves.
+      Fixes bug 27410; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (memory leak):
+    - Fix an unlikely memory leak when trying to read a private key from
+      a ridiculously large file. Fixes bug 27764; bugfix on
+      0.3.5.1-alpha. This is CID 1439488.
+
+  o Minor bugfixes (NSS):
+    - Correctly detect failure to open a dummy TCP socket when stealing
+      ownership of an fd from the NSS layer. Fixes bug 27782; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (rust):
+    - protover_all_supported() would attempt to allocate up to 16GB on
+      some inputs, leading to a potential memory DoS. Fixes bug 27206;
+      bugfix on 0.3.3.5-rc.
+
+  o Minor bugfixes (testing):
+    - Revise the "conditionvar_timeout" test so that it succeeds even on
+      heavily loaded systems where the test threads are not scheduled
+      within 200 msec. Fixes bug 27073; bugfix on 0.2.6.3-alpha.
+
+  o Code simplification and refactoring:
+    - Divide the routerlist.c and dirserv.c modules into smaller parts.
+      Closes ticket 27799.
+
+
 Changes in version 0.3.5.1-alpha - 2018-09-18
   Tor 0.3.5.1-alpha is the first release of the 0.3.5.x series. It adds
   client authorization for modern (v3) onion services, improves

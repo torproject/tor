@@ -1,4 +1,0 @@
-  o Minor bugfixes (NSS):
-    - Correctly detect failure to open a dummy TCP socket when
-      stealing ownership of an fd from the NSS layer. Fixes bug 27782;
-      bugfix on 0.3.5.1-alpha.
