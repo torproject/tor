@@ -196,6 +196,7 @@ monotime_coarse_diff_msec32(const monotime_coarse_t *start,
   // on a 64-bit platform, let's assume 64/64 division is cheap.
   return (int32_t) monotime_coarse_diff_msec(start, end);
 #else
+#define USING_32BIT_MSEC_HACK
   return monotime_coarse_diff_msec32_(start, end);
 #endif
 }
