@@ -452,6 +452,7 @@ tor_tls_release_socket(tor_tls_t *tls)
 
   PRFileDesc *tcp = PR_GetIdentitiesLayer(tls->ssl, PR_NSPR_IO_LAYER);
   if (BUG(! tcp)) {
+    tor_close_socket(sock);
     return;
   }
 
