@@ -142,41 +142,6 @@ tor_close_socket_simple(tor_socket_t s)
   return r;
 }
 
-/** As tor_close_socket_simple(), but keeps track of the number
- * of open sockets. Returns 0 on success, -1 on failure. */
-MOCK_IMPL(int,
-tor_close_socket,(tor_socket_t s))
-{
-  int r = tor_close_socket_simple(s);
-
-  socket_accounting_lock();
-#ifdef DEBUG_SOCKET_COUNTING
-  if (s > max_socket || ! bitarray_is_set(open_sockets, s)) {
-    log_warn(LD_BUG, "Closing a socket (%d) that wasn't returned by tor_open_"
-             "socket(), or that was already closed or something.", s);
-  } else {
-    tor_assert(open_sockets && s <= max_socket);
-    bitarray_clear(open_sockets, s);
-  }
-#endif /* defined(DEBUG_SOCKET_COUNTING) */
-  if (r == 0) {
-    --n_sockets_open;
-  } else {
-#ifdef _WIN32
-    if (r != WSAENOTSOCK)
-      --n_sockets_open;
-#else
-    if (r != EBADF)
-      --n_sockets_open; // LCOV_EXCL_LINE -- EIO and EINTR too hard to force.
-#endif /* defined(_WIN32) */
-    r = -1;
-  }
-
-  tor_assert_nonfatal(n_sockets_open >= 0);
-  socket_accounting_unlock();
-  return r;
-}
-
 /** @{ */
 #ifdef DEBUG_SOCKET_COUNTING
 /** Helper: if DEBUG_SOCKET_COUNTING is enabled, remember that <b>s</b> is
@@ -201,10 +166,49 @@ mark_socket_open(tor_socket_t s)
   }
   bitarray_set(open_sockets, s);
 }
+static inline void
+mark_socket_closed(tor_socket_t s)
+{
+  if (s > max_socket || ! bitarray_is_set(open_sockets, s)) {
+    log_warn(LD_BUG, "Closing a socket (%d) that wasn't returned by tor_open_"
+             "socket(), or that was already closed or something.", s);
+  } else {
+    tor_assert(open_sockets && s <= max_socket);
+    bitarray_clear(open_sockets, s);
+  }
+}
 #else /* !(defined(DEBUG_SOCKET_COUNTING)) */
 #define mark_socket_open(s) ((void) (s))
+#define mark_socket_closed(s) ((void) (s))
 #endif /* defined(DEBUG_SOCKET_COUNTING) */
 /** @} */
+
+/** As tor_close_socket_simple(), but keeps track of the number
+ * of open sockets. Returns 0 on success, -1 on failure. */
+MOCK_IMPL(int,
+tor_close_socket,(tor_socket_t s))
+{
+  int r = tor_close_socket_simple(s);
+
+  socket_accounting_lock();
+  mark_socket_closed(s);
+  if (r == 0) {
+    --n_sockets_open;
+  } else {
+#ifdef _WIN32
+    if (r != WSAENOTSOCK)
+      --n_sockets_open;
+#else
+    if (r != EBADF)
+      --n_sockets_open; // LCOV_EXCL_LINE -- EIO and EINTR too hard to force.
+#endif /* defined(_WIN32) */
+    r = -1;
+  }
+
+  tor_assert_nonfatal(n_sockets_open >= 0);
+  socket_accounting_unlock();
+  return r;
+}
 
 /** As socket(), but counts the number of open sockets. */
 MOCK_IMPL(tor_socket_t,
@@ -304,6 +308,20 @@ tor_take_socket_ownership(tor_socket_t s)
   socket_accounting_lock();
   ++n_sockets_open;
   mark_socket_open(s);
+  socket_accounting_unlock();
+}
+
+/**
+ * For socket accounting: declare that we are no longer the owner of the
+ * socket <b>s</b>. This will prevent us from overallocating sockets, and
+ * prevent us from asserting later when we close the socket <b>s</b>.
+ */
+void
+tor_release_socket_ownership(tor_socket_t s)
+{
+  socket_accounting_lock();
+  --n_sockets_open;
+  mark_socket_closed(s);
   socket_accounting_unlock();
 }
 
