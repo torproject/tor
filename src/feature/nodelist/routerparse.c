@@ -61,7 +61,6 @@
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dirauth/shared_random.h"
-#include "feature/dircache/dirserv.h"
 #include "feature/client/entrynodes.h"
 #include "lib/memarea/memarea.h"
 #include "feature/nodelist/microdesc.h"

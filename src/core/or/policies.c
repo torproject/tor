@@ -20,7 +20,6 @@
 #include "core/or/or.h"
 #include "feature/client/bridges.h"
 #include "app/config/config.h"
-#include "feature/dircache/dirserv.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
@@ -38,6 +37,9 @@
 #include "core/or/port_cfg_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
+
+/** Maximum length of an exit policy summary. */
+#define MAX_EXITPOLICY_SUMMARY_LEN 1000
 
 /** Policy that addresses for incoming SOCKS connections must match. */
 static smartlist_t *socks_policy = NULL;
