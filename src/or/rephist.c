@@ -1211,7 +1211,7 @@ rep_hist_load_mtbf_data(time_t now)
 /** Structure to track bandwidth use, and remember the maxima for a given
  * time period.
  */
-typedef struct bw_array_t {
+struct bw_array_t {
   /** Observation array: Total number of bytes transferred in each of the last
    * NUM_SECS_ROLLING_MEASURE seconds. This is used as a circular array. */
   uint64_t obs[NUM_SECS_ROLLING_MEASURE];
@@ -1238,7 +1238,7 @@ typedef struct bw_array_t {
   /** Circular array of the total bandwidth usage for the last NUM_TOTALS
    * periods */
   uint64_t totals[NUM_TOTALS];
-} bw_array_t;
+};
 
 /** Shift the current period of b forward by one. */
 STATIC void
@@ -3297,4 +3297,3 @@ rep_hist_free_all(void)
   tor_assert_nonfatal(rephist_total_alloc == 0);
   tor_assert_nonfatal_once(rephist_total_num == 0);
 }
-
