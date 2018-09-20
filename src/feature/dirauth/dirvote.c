@@ -27,7 +27,7 @@
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerparse.h"
-#include "feature/nodelist/routerstatus_fmt.h"
+#include "feature/nodelist/fmt_routerstatus.h"
 #include "feature/client/entrynodes.h" /* needed for guardfraction methods */
 #include "feature/nodelist/torcert.h"
 #include "feature/dircommon/voting_schedule.h"

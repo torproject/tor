@@ -18,7 +18,7 @@
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "feature/dircache/directory.h"
 #include "feature/dircache/dirserv.h"
-#include "feature/dirauth/recv_descs.h"
+#include "feature/dirauth/process_descs.h"
 #include "feature/relay/dns.h"
 #include "feature/stats/geoip.h"
 #include "feature/hibernate/hibernate.h"

@@ -4,7 +4,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file recv_descs.c
+ * \file process_descs.c
  * \brief Make decisions about uploaded descriptors
  *
  * Authorities use the code in this module to decide what to do with just-
@@ -13,7 +13,7 @@
  **/
 
 #include "core/or/or.h"
-#include "feature/dirauth/recv_descs.h"
+#include "feature/dirauth/process_descs.h"
 
 #include "app/config/config.h"
 #include "core/or/policies.h"

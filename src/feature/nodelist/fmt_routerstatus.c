@@ -4,7 +4,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file routerstatus_fmt.h
+ * \file fmt_routerstatus.h
  * \brief Format routerstatus entries for controller, vote, or consensus.
  *
  * (Because controllers consume this format, we can't make this
@@ -12,7 +12,7 @@
  **/
 
 #include "core/or/or.h"
-#include "feature/nodelist/routerstatus_fmt.h"
+#include "feature/nodelist/fmt_routerstatus.h"
 
 /* #include "lib/container/buffers.h" */
 /* #include "app/config/config.h" */

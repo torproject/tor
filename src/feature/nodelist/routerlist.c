@@ -72,7 +72,7 @@
 #include "feature/dircache/directory.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirauth/reachability.h"
-#include "feature/dirauth/recv_descs.h"
+#include "feature/dirauth/process_descs.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/microdesc.h"

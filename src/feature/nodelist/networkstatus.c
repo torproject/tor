@@ -74,7 +74,7 @@
 #include "feature/nodelist/torcert.h"
 #include "core/or/channelpadding.h"
 #include "feature/dircommon/voting_schedule.h"
-#include "feature/nodelist/routerstatus_fmt.h"
+#include "feature/nodelist/fmt_routerstatus.h"
 
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/mode.h"

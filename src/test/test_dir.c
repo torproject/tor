@@ -33,7 +33,7 @@
 #include "feature/dircache/directory.h"
 #include "feature/dirauth/bwauth.h"
 #include "feature/dircache/dirserv.h"
-#include "feature/dirauth/recv_descs.h"
+#include "feature/dirauth/process_descs.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/recommend_pkg.h"
 #include "feature/dirauth/voteflags.h"

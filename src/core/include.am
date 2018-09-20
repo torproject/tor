@@ -91,7 +91,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/nodelist/routerlist.c	\
 	src/feature/nodelist/routerparse.c	\
 	src/feature/nodelist/routerset.c	\
-	src/feature/nodelist/routerstatus_fmt.c	\
+	src/feature/nodelist/fmt_routerstatus.c	\
 	src/feature/nodelist/torcert.c		\
 	src/feature/relay/dns.c			\
 	src/feature/relay/ext_orport.c		\
@@ -112,7 +112,7 @@ LIBTOR_APP_A_SOURCES += 			\
 	src/feature/dirauth/guardfraction.c	\
 	src/feature/dirauth/reachability.c	\
 	src/feature/dirauth/recommend_pkg.c	\
-	src/feature/dirauth/recv_descs.c	\
+	src/feature/dirauth/process_descs.c	\
 	src/feature/dirauth/voteflags.c
 
 if BUILD_NT_SERVICES
@@ -244,7 +244,7 @@ noinst_HEADERS +=					\
 	src/feature/dirauth/ns_detached_signatures_st.h	\
 	src/feature/dirauth/reachability.h		\
 	src/feature/dirauth/recommend_pkg.h		\
-	src/feature/dirauth/recv_descs.h		\
+	src/feature/dirauth/process_descs.h		\
 	src/feature/dirauth/shared_random.h		\
 	src/feature/dirauth/shared_random_state.h	\
 	src/feature/dirauth/vote_microdesc_hash_st.h	\
@@ -299,7 +299,7 @@ noinst_HEADERS +=					\
 	src/feature/nodelist/routerlist_st.h		\
 	src/feature/nodelist/routerparse.h		\
 	src/feature/nodelist/routerset.h		\
-	src/feature/nodelist/routerstatus_fmt.h		\
+	src/feature/nodelist/fmt_routerstatus.h		\
 	src/feature/nodelist/routerstatus_st.h		\
 	src/feature/nodelist/signed_descriptor_st.h	\
 	src/feature/nodelist/torcert.h			\

@@ -5,8 +5,8 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file recv_descs.h
- * \brief Header file for recv_descs.c.
+ * \file process_descs.h
+ * \brief Header file for process_descs.c.
  **/
 
 #ifndef TOR_RECV_UPLOADS_H

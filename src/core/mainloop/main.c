@@ -76,7 +76,7 @@
 #include "feature/dircache/dirserv.h"
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/reachability.h"
-#include "feature/dirauth/recv_descs.h"
+#include "feature/dirauth/process_descs.h"
 #include "feature/relay/dns.h"
 #include "feature/client/dnsserv.h"
 #include "core/or/dos.h"

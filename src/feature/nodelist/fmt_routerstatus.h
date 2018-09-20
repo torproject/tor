@@ -5,12 +5,12 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file routerstatus_fmt.h
- * \brief Header file for routerstatus_fmt.c.
+ * \file fmt_routerstatus.h
+ * \brief Header file for fmt_routerstatus.c.
  **/
 
-#ifndef TOR_ROUTERSTATUS_FMT_H
-#define TOR_ROUTERSTATUS_FMT_H
+#ifndef TOR_FMT_ROUTERSTATUS_H
+#define TOR_FMT_ROUTERSTATUS_H
 
 /** An enum to describe what format we're generating a routerstatus line in.
  */
@@ -38,4 +38,4 @@ char *routerstatus_format_entry(
                               int consensus_method,
                               const vote_routerstatus_t *vrs);
 
-#endif /* !defined(TOR_ROUTERSTATUS_FMT_H) */
+#endif /* !defined(TOR_FMT_ROUTERSTATUS_H) */
