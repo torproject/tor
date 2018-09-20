@@ -1,0 +1,7 @@
+  o Minor bugfixes (compilation):
+    - Compile the ed25519-donna code with a correct declaration of
+      crypto_strongest_rand(). Previously, we build it with one type,
+      but link it against another in the unit tests, which caused
+      compilation failures with LTO enabled, and which could have
+      caused other undefined behavior in the tests. Fixes bug 27728;
+      bugfix on 0.3.5.1-alpha.

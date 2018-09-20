@@ -3423,6 +3423,8 @@ channel_rsa_id_group_set_badness(struct channel_list_s *lst, int force)
   /* it would be more efficient to do a slice, but this case is rare */
   smartlist_t *or_conns = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(channels, channel_t *, channel) {
+    tor_assert(channel); // Suppresses some compiler warnings.
+
     if (!common_ed25519_identity)
       common_ed25519_identity = &channel->ed25519_identity;
 

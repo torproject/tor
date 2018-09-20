@@ -4436,7 +4436,9 @@ router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
     return NULL;
   }
 
-  return addr_policy_get_canonical_entry(&newe);
+  addr_policy_t *result = addr_policy_get_canonical_entry(&newe);
+  tor_assert(result != &newe); // We aren't returning the one from the stack.
+  return result;
 }
 
 /** Parse an exit policy line of the format "accept[6]/reject[6] private:...".

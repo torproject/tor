@@ -335,8 +335,18 @@ crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
  * Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
  * storing it into <b>out</b>.
  **/
+void
+crypto_strongest_rand(uint8_t *out, size_t out_len)
+{
+  crypto_strongest_rand_(out, out_len);
+}
+
+/**
+ * Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
+ * storing it into <b>out</b>. (Mockable version.)
+ **/
 MOCK_IMPL(void,
-crypto_strongest_rand,(uint8_t *out, size_t out_len))
+crypto_strongest_rand_,(uint8_t *out, size_t out_len))
 {
 #define DLEN DIGEST512_LEN
 
