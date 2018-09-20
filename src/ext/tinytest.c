@@ -207,12 +207,20 @@ testcase_run_forked_(const struct testgroup_t *group,
 		r = (int)read(outcome_pipe[0], b, 1);
 		if (r == 0) {
 			printf("[Lost connection!] ");
-			return 0;
+			return FAIL;
 		} else if (r != 1) {
 			perror("read outcome from pipe");
 		}
-		waitpid(pid, &status, 0);
+		r = waitpid(pid, &status, 0);
 		close(outcome_pipe[0]);
+		if (r == -1) {
+			perror("waitpid");
+			return FAIL;
+		}
+                if (! WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+			printf("[did not exit cleanly.]");
+			return FAIL;
+                }
 		return b[0]=='Y' ? OK : (b[0]=='S' ? SKIP : FAIL);
 	}
 #endif
