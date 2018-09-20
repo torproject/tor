@@ -576,10 +576,21 @@ send_introduce1(origin_circuit_t *intro_circ,
   /* Send the INTRODUCE1 cell. */
   if (hs_circ_send_introduce1(intro_circ, rend_circ, ip,
                               desc->subcredential) < 0) {
-    /* Unable to send the cell, the intro circuit has been marked for close so
-     * this is a permanent error. */
-    tor_assert_nonfatal(TO_CIRCUIT(intro_circ)->marked_for_close);
-    goto perm_err;
+    if (TO_CIRCUIT(intro_circ)->marked_for_close) {
+      /* If the introduction circuit was closed, we were unable to send the
+       * cell for some reasons. In any case, the intro circuit has to be
+       * closed by the above function. We'll return a transient error so tor
+       * can recover and pick a new intro point. To avoid picking that same
+       * intro point, we'll note down the intro point failure so it doesn't
+       * get reused. */
+      hs_cache_client_intro_state_note(service_identity_pk,
+                                       &intro_circ->hs_ident->intro_auth_pk,
+                                       INTRO_POINT_FAILURE_GENERIC);
+    }
+    /* It is also possible that the rendezvous circuit was closed due to being
+     * unable to use the rendezvous point node_t so in that case, we also want
+     * to recover and let tor pick a new one. */
+    goto tran_err;
   }
 
   /* Cell has been sent successfully. Copy the introduction point
