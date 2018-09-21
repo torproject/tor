@@ -59,6 +59,7 @@
 #include "feature/nodelist/torcert.h"
 #include "feature/nodelist/networkstatus.h"
 #include "trunnel/channelpadding_negotiation.h"
+#include "trunnel/netinfo.h"
 #include "core/or/channelpadding.h"
 
 #include "core/or/cell_st.h"
@@ -1637,6 +1638,35 @@ channel_tls_process_padding_negotiate_cell(cell_t *cell, channel_tls_t *chan)
 }
 
 /**
+ * Convert <b>netinfo_addr</b> into corresponding <b>tor_addr</b>.
+ * Return 0 on success; on failure, return -1 and log a warning.
+ */
+static int
+tor_addr_from_netinfo_addr(tor_addr_t *tor_addr,
+                           const netinfo_addr_t *netinfo_addr) {
+  tor_assert(tor_addr);
+  tor_assert(netinfo_addr);
+
+  uint8_t type = netinfo_addr_get_addr_type(netinfo_addr);
+  uint8_t len = netinfo_addr_get_len(netinfo_addr);
+
+  if (type == NETINFO_ADDR_TYPE_IPV4 && len == 4)  {
+    uint32_t ipv4 = netinfo_addr_get_addr_ipv4(netinfo_addr);
+    tor_addr_from_ipv4h(tor_addr, ipv4);
+  } else if (type == NETINFO_ADDR_TYPE_IPV6 && len == 16) {
+    const uint8_t *ipv6_bytes = netinfo_addr_getconstarray_addr_ipv6(
+                                  netinfo_addr);
+    tor_addr_from_ipv6_bytes(tor_addr, (const char *)ipv6_bytes);
+  } else {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Cannot read address from NETINFO "
+                                     "- wrong type/length.");
+    return -1;
+  }
+
+  return 0;
+}
+
+/**
  * Process a 'netinfo' cell.
  *
  * This function is called to handle an incoming NETINFO cell; read and act
@@ -1648,8 +1678,6 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   time_t timestamp;
   uint8_t my_addr_type;
   uint8_t my_addr_len;
-  const uint8_t *my_addr_ptr;
-  const uint8_t *cp, *end;
   uint8_t n_other_addrs;
   time_t now = time(NULL);
   const routerinfo_t *me = router_get_my_routerinfo();
@@ -1720,34 +1748,48 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   }
 
   /* Decode the cell. */
-  timestamp = ntohl(get_uint32(cell->payload));
+  netinfo_cell_t *netinfo_cell = NULL;
+
+  ssize_t parsed = netinfo_cell_parse(&netinfo_cell, cell->payload,
+                                      CELL_PAYLOAD_SIZE);
+
+  if (parsed < 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Failed to parse NETINFO cell - closing connection.");
+    connection_or_close_for_error(chan->conn, 0);
+    return;
+  }
+
+  timestamp = netinfo_cell_get_timestamp(netinfo_cell);
+
+  const netinfo_addr_t *my_addr =
+    netinfo_cell_getconst_other_addr(netinfo_cell);
+
+  my_addr_type = netinfo_addr_get_addr_type(my_addr);
+  my_addr_len = netinfo_addr_get_len(my_addr);
+
   if (labs(now - chan->conn->handshake_state->sent_versions_at) < 180) {
     apparent_skew = now - timestamp;
   }
-
-  my_addr_type = (uint8_t) cell->payload[4];
-  my_addr_len = (uint8_t) cell->payload[5];
-  my_addr_ptr = (uint8_t*) cell->payload + 6;
-  end = cell->payload + CELL_PAYLOAD_SIZE;
-  cp = cell->payload + 6 + my_addr_len;
-
   /* We used to check:
    *    if (my_addr_len >= CELL_PAYLOAD_SIZE - 6) {
    *
    * This is actually never going to happen, since my_addr_len is at most 255,
    * and CELL_PAYLOAD_LEN - 6 is 503.  So we know that cp is < end. */
 
-  if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
-    tor_addr_from_ipv4n(&my_apparent_addr, get_uint32(my_addr_ptr));
+  if (tor_addr_from_netinfo_addr(&my_apparent_addr, my_addr) == -1) {
+    connection_or_close_for_error(chan->conn, 0);
+    netinfo_cell_free(netinfo_cell);
+    return;
+  }
 
+  if (my_addr_type == NETINFO_ADDR_TYPE_IPV4 && my_addr_len == 4) {
     if (!get_options()->BridgeRelay && me &&
-        get_uint32(my_addr_ptr) == htonl(me->addr)) {
+        tor_addr_eq_ipv4h(&my_apparent_addr, me->addr)) {
       TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer = 1;
     }
-
-  } else if (my_addr_type == RESOLVED_TYPE_IPV6 && my_addr_len == 16) {
-    tor_addr_from_ipv6_bytes(&my_apparent_addr, (const char *) my_addr_ptr);
-
+  } else if (my_addr_type == NETINFO_ADDR_TYPE_IPV6 &&
+             my_addr_len == 16) {
     if (!get_options()->BridgeRelay && me &&
         !tor_addr_is_null(&me->ipv6_addr) &&
         tor_addr_eq(&my_apparent_addr, &me->ipv6_addr)) {
@@ -1755,17 +1797,21 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
     }
   }
 
-  n_other_addrs = (uint8_t) *cp++;
-  while (n_other_addrs && cp < end-2) {
+  n_other_addrs = netinfo_cell_get_n_my_addrs(netinfo_cell);
+  for (uint8_t i = 0; i < n_other_addrs; i++) {
     /* Consider all the other addresses; if any matches, this connection is
      * "canonical." */
+
+    const netinfo_addr_t *netinfo_addr =
+      netinfo_cell_getconst_my_addrs(netinfo_cell, i);
+
     tor_addr_t addr;
-    const uint8_t *next =
-      decode_address_from_payload(&addr, cp, (int)(end-cp));
-    if (next == NULL) {
+
+    if (tor_addr_from_netinfo_addr(&addr, netinfo_addr) == -1) {
       log_fn(LOG_PROTOCOL_WARN,  LD_OR,
              "Bad address in netinfo cell; closing connection.");
       connection_or_close_for_error(chan->conn, 0);
+      netinfo_cell_free(netinfo_cell);
       return;
     }
     /* A relay can connect from anywhere and be canonical, so
@@ -1779,9 +1825,9 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
       connection_or_set_canonical(chan->conn, 1);
       break;
     }
-    cp = next;
-    --n_other_addrs;
   }
+
+  netinfo_cell_free(netinfo_cell);
 
   if (me && !TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer &&
       channel_is_canonical(TLS_CHAN_TO_BASE(chan))) {
