@@ -2900,9 +2900,6 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
                        "(replaced by %s:%d)",
                conn_type_to_string(old_conn->type), old_conn->address,
                old_conn->port, new_conn->address, new_conn->port);
-
-    tor_free(r);
-    SMARTLIST_DEL_CURRENT(replacements, r);
   } SMARTLIST_FOREACH_END(r);
 #endif
 
