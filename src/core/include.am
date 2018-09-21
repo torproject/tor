@@ -38,6 +38,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/or/onion.c			\
 	src/core/or/policies.c			\
 	src/core/or/protover.c			\
+	src/core/or/protover_rust.c		\
 	src/core/or/reasons.c			\
 	src/core/or/relay.c			\
 	src/core/or/scheduler.c			\
@@ -49,7 +50,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/proto/proto_ext_or.c		\
 	src/core/proto/proto_http.c		\
 	src/core/proto/proto_socks.c		\
-	src/core/proto/protover_rust.c		\
 	src/feature/api/tor_api.c		\
 	src/feature/client/addressmap.c		\
 	src/feature/client/bridges.c		\
