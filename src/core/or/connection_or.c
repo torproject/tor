@@ -46,6 +46,7 @@
 #include "lib/geoip/geoip.h"
 #include "core/mainloop/mainloop.h"
 #include "trunnel/link_handshake.h"
+#include "trunnel/netinfo.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
@@ -2428,6 +2429,31 @@ connection_or_send_versions(or_connection_t *conn, int v3_plus)
   return 0;
 }
 
+static netinfo_addr_t *
+netinfo_addr_from_tor_addr(const tor_addr_t *tor_addr)
+{
+  sa_family_t addr_family = tor_addr_family(tor_addr);
+
+  if (BUG(addr_family != AF_INET && addr_family != AF_INET6))
+    return NULL;
+
+  netinfo_addr_t *netinfo_addr = netinfo_addr_new();
+
+  if (addr_family == AF_INET) {
+    netinfo_addr_set_addr_type(netinfo_addr, NETINFO_ADDR_TYPE_IPV4);
+    netinfo_addr_set_len(netinfo_addr, 4);
+    netinfo_addr_set_addr_ipv4(netinfo_addr, tor_addr_to_ipv4h(tor_addr));
+  } else if (addr_family == AF_INET6) {
+    netinfo_addr_set_addr_type(netinfo_addr, NETINFO_ADDR_TYPE_IPV6);
+    netinfo_addr_set_len(netinfo_addr, 16);
+    uint8_t *ipv6_buf = netinfo_addr_getarray_addr_ipv6(netinfo_addr);
+    const uint8_t *in6_addr = tor_addr_to_in6_addr8(tor_addr);
+    memcpy(ipv6_buf, in6_addr, 16);
+  }
+
+  return netinfo_addr;
+}
+
 /** Send a NETINFO cell on <b>conn</b>, telling the other server what we know
  * about their address, our address, and the current time. */
 MOCK_IMPL(int,
@@ -2436,8 +2462,7 @@ connection_or_send_netinfo,(or_connection_t *conn))
   cell_t cell;
   time_t now = time(NULL);
   const routerinfo_t *me;
-  int len;
-  uint8_t *out;
+  int r = -1;
 
   tor_assert(conn->handshake_state);
 
@@ -2450,20 +2475,21 @@ connection_or_send_netinfo,(or_connection_t *conn))
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_NETINFO;
 
+  netinfo_cell_t *netinfo_cell = netinfo_cell_new();
+
   /* Timestamp, if we're a relay. */
   if (public_server_mode(get_options()) || ! conn->is_outgoing)
-    set_uint32(cell.payload, htonl((uint32_t)now));
+    netinfo_cell_set_timestamp(netinfo_cell, (uint32_t)now);
 
   /* Their address. */
-  out = cell.payload + 4;
+  const tor_addr_t *remote_tor_addr =
+    !tor_addr_is_null(&conn->real_addr) ? &conn->real_addr : &conn->base_.addr;
   /* We use &conn->real_addr below, unless it hasn't yet been set. If it
    * hasn't yet been set, we know that base_.addr hasn't been tampered with
    * yet either. */
-  len = append_address_to_payload(out, !tor_addr_is_null(&conn->real_addr)
-                                       ? &conn->real_addr : &conn->base_.addr);
-  if (len<0)
-    return -1;
-  out += len;
+  netinfo_addr_t *their_addr = netinfo_addr_from_tor_addr(remote_tor_addr);
+
+  netinfo_cell_set_other_addr(netinfo_cell, their_addr);
 
   /* My address -- only include it if I'm a public relay, or if I'm a
    * bridge and this is an incoming connection. If I'm a bridge and this
@@ -2471,28 +2497,42 @@ connection_or_send_netinfo,(or_connection_t *conn))
   if ((public_server_mode(get_options()) || !conn->is_outgoing) &&
       (me = router_get_my_routerinfo())) {
     tor_addr_t my_addr;
-    *out++ = 1 + !tor_addr_is_null(&me->ipv6_addr);
-
     tor_addr_from_ipv4h(&my_addr, me->addr);
-    len = append_address_to_payload(out, &my_addr);
-    if (len < 0)
-      return -1;
-    out += len;
+
+    uint8_t n_my_addrs = 1 + !tor_addr_is_null(&me->ipv6_addr);
+    netinfo_cell_set_n_my_addrs(netinfo_cell, n_my_addrs);
+
+    netinfo_cell_add_my_addrs(netinfo_cell,
+                              netinfo_addr_from_tor_addr(&my_addr));
 
     if (!tor_addr_is_null(&me->ipv6_addr)) {
-      len = append_address_to_payload(out, &me->ipv6_addr);
-      if (len < 0)
-        return -1;
+      netinfo_cell_add_my_addrs(netinfo_cell,
+                                netinfo_addr_from_tor_addr(&me->ipv6_addr));
     }
-  } else {
-    *out = 0;
+  }
+
+  const char *errmsg = NULL;
+  if ((errmsg = netinfo_cell_check(netinfo_cell))) {
+    log_warn(LD_OR, "Failed to validate NETINFO cell with error: %s",
+                    errmsg);
+    goto cleanup;
+  }
+
+  if (netinfo_cell_encode(cell.payload, CELL_PAYLOAD_SIZE,
+                          netinfo_cell) < 0) {
+    log_warn(LD_OR, "Failed generating NETINFO cell");
+    goto cleanup;
   }
 
   conn->handshake_state->digest_sent_data = 0;
   conn->handshake_state->sent_netinfo = 1;
   connection_or_write_cell_to_buf(&cell, conn);
 
-  return 0;
+  r = 0;
+ cleanup:
+  netinfo_cell_free(netinfo_cell);
+
+  return r;
 }
 
 /** Helper used to add an encoded certs to a cert cell */
