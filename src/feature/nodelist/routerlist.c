@@ -1424,6 +1424,7 @@ routerlist_free_all(void)
 {
   routerlist_free(routerlist);
   routerlist = NULL;
+  dirlist_free_all();
   if (warned_nicknames) {
     SMARTLIST_FOREACH(warned_nicknames, char *, cp, tor_free(cp));
     smartlist_free(warned_nicknames);
