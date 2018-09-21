@@ -20,12 +20,14 @@
 #ifdef _WIN32
 
 #include "core/or/or.h"
+
 #include "app/config/config.h"
 #include "app/main/main.h"
 #include "app/main/ntmain.h"
-#include "lib/log/win32err.h"
-#include "lib/fs/winlib.h"
+#include "core/mainloop/mainloop.h"
 #include "lib/evloop/compat_libevent.h"
+#include "lib/fs/winlib.h"
+#include "lib/log/win32err.h"
 
 #include <windows.h>
 #define GENSRV_SERVICENAME  "tor"
