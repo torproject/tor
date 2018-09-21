@@ -4,6 +4,8 @@
 #ifndef TOR_TEST_HELPERS_H
 #define TOR_TEST_HELPERS_H
 
+#define BUFFERS_PRIVATE
+
 #include "core/or/or.h"
 
 const char *get_yesterday_date_str(void);
@@ -18,6 +20,7 @@ void helper_setup_fake_routerlist(void);
 #define GET(path) "GET " path " HTTP/1.0\r\n\r\n"
 void connection_write_to_buf_mock(const char *string, size_t len,
                                   connection_t *conn, int compressed);
+char *buf_get_contents(buf_t *buf, size_t *sz_out);
 
 int mock_tor_addr_lookup__fail_on_bad_addrs(const char *name,
                                             uint16_t family, tor_addr_t *out);

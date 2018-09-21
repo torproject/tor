@@ -2845,6 +2845,33 @@ The following options are used to configure a hidden service.
    not an authorization mechanism; it is instead meant to be a mild
    inconvenience to port-scanners.) (Default: 0)
 
+[[HiddenServiceExportCircuitID]] **HiddenServiceExportCircuitID** __protocol__::
+   The onion service will use the given protocol to expose the global circuit
+   identifier of each inbound client circuit via the selected protocol. The only
+   protocol supported right now \'haproxy\'. This option is only for v3
+   services. (Default: none) +
+ +
+   The haproxy option works in the following way: when the feature is
+   enabled, the Tor process will write a header line when a client is connecting
+   to the onion service. The header will look like this: +
+ +
+   "PROXY TCP6 fc00:dead:beef:4dad::ffff:ffff ::1 65535 42\r\n" +
+ +
+   We encode the "global circuit identifier" as the last 32-bits of the first
+   IPv6 address. All other values in the header can safely be ignored. You can
+   compute the global circuit identifier using the following formula given the
+   IPv6 address "fc00:dead:beef:4dad::AABB:CCDD": +
+ +
+      global_circuit_id = (0xAA << 24) + (0xBB << 16) + (0xCC << 8) + 0xDD; +
+ +
+   In the case above, where the last 32-bit is 0xffffffff, the global circuit
+   identifier would be 4294967295. You can use this value together with Tor's
+   control port where it is possible to terminate a circuit given the global
+   circuit identifier. For more information about this see controls-spec.txt. +
+ +
+   The HAProxy version 1 proxy protocol is described in detail at
+   https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
+
 [[HiddenServiceMaxStreams]] **HiddenServiceMaxStreams** __N__::
    The maximum number of simultaneous streams (connections) per rendezvous
    circuit. The maximum value allowed is 65535. (Setting this to 0 will allow

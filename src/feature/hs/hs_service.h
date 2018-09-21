@@ -161,6 +161,15 @@ typedef struct hs_service_authorized_client_t {
   curve25519_public_key_t client_pk;
 } hs_service_authorized_client_t;
 
+/** Which protocol to use for exporting HS client circuit ID. */
+typedef enum {
+  /** Don't expose the circuit id. */
+  HS_CIRCUIT_ID_PROTOCOL_NONE,
+
+  /** Use the HAProxy proxy protocol. */
+  HS_CIRCUIT_ID_PROTOCOL_HAPROXY
+} hs_circuit_id_protocol_t;
+
 /* Service configuration. The following are set from the torrc options either
  * set by the configuration file or by the control port. Nothing else should
  * change those values. */
@@ -210,6 +219,9 @@ typedef struct hs_service_config_t {
 
   /* Is this service ephemeral? */
   unsigned int is_ephemeral : 1;
+
+  /* Does this service export the circuit ID of its clients? */
+  hs_circuit_id_protocol_t circuit_id_protocol;
 } hs_service_config_t;
 
 /* Service state. */
@@ -315,6 +327,9 @@ void hs_service_upload_desc_to_dir(const char *encoded_desc,
                                    const ed25519_public_key_t *identity_pk,
                                    const ed25519_public_key_t *blinded_pk,
                                    const routerstatus_t *hsdir_rs);
+
+hs_circuit_id_protocol_t
+hs_service_exports_circuit_id(const ed25519_public_key_t *pk);
 
 #ifdef HS_SERVICE_PRIVATE
 

@@ -17,6 +17,7 @@
 #include "core/or/or_connection_st.h"
 
 #include "test/test.h"
+#include "test/test_helpers.h"
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -87,22 +88,6 @@ connection_write_to_buf_impl_replacement(const char *string, size_t len,
   tor_assert(string);
   tor_assert(conn);
   buf_add(conn->outbuf, string, len);
-}
-
-static char *
-buf_get_contents(buf_t *buf, size_t *sz_out)
-{
-  char *out;
-  *sz_out = buf_datalen(buf);
-  if (*sz_out >= ULONG_MAX)
-    return NULL; /* C'mon, really? */
-  out = tor_malloc(*sz_out + 1);
-  if (buf_get_bytes(buf, out, (unsigned long)*sz_out) != 0) {
-    tor_free(out);
-    return NULL;
-  }
-  out[*sz_out] = '\0'; /* Hopefully gratuitous. */
-  return out;
 }
 
 static void

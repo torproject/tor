@@ -145,6 +145,34 @@ helper_parse_uint64(const char *opt, const char *value, uint64_t min,
   return ret;
 }
 
+/** Helper function: Given a configuration option and its value, parse the
+ * value as a hs_circuit_id_protocol_t. On success, ok is set to 1 and ret is
+ * the parse value. On error, ok is set to 0 and the "none"
+ * hs_circuit_id_protocol_t is returned. This function logs on error. */
+static hs_circuit_id_protocol_t
+helper_parse_circuit_id_protocol(const char *key, const char *value, int *ok)
+{
+  tor_assert(value);
+  tor_assert(ok);
+
+  hs_circuit_id_protocol_t ret = HS_CIRCUIT_ID_PROTOCOL_NONE;
+  *ok = 0;
+
+  if (! strcasecmp(value, "haproxy")) {
+    *ok = 1;
+    ret = HS_CIRCUIT_ID_PROTOCOL_HAPROXY;
+  } else if (! strcasecmp(value, "none")) {
+    *ok = 1;
+    ret = HS_CIRCUIT_ID_PROTOCOL_NONE;
+  } else {
+    log_warn(LD_CONFIG, "%s must be 'haproxy' or 'none'.", key);
+    goto err;
+  }
+
+ err:
+  return ret;
+}
+
 /* Return the service version by trying to learn it from the key on disk if
  * any. If nothing is found, the current service configured version is
  * returned. */
@@ -188,6 +216,11 @@ config_has_invalid_options(const config_line_t *line_,
     NULL /* End marker. */
   };
 
+  const char *opts_exclude_v2[] = {
+    "HiddenServiceExportCircuitID",
+    NULL /* End marker. */
+  };
+
   /* Defining the size explicitly allows us to take advantage of the compiler
    * which warns us if we ever bump the max version but forget to grow this
    * array. The plus one is because we have a version 0 :). */
@@ -196,7 +229,7 @@ config_has_invalid_options(const config_line_t *line_,
   } exclude_lists[HS_VERSION_MAX + 1] = {
     { NULL }, /* v0. */
     { NULL }, /* v1. */
-    { NULL }, /* v2 */
+    { opts_exclude_v2 }, /* v2 */
     { opts_exclude_v3 }, /* v3. */
   };
 
@@ -262,6 +295,7 @@ config_service_v3(const config_line_t *line_,
                   hs_service_config_t *config)
 {
   int have_num_ip = 0;
+  bool export_circuit_id = false; /* just to detect duplicate options */
   const char *dup_opt_seen = NULL;
   const config_line_t *line;
 
@@ -286,6 +320,18 @@ config_service_v3(const config_line_t *line_,
         goto err;
       }
       have_num_ip = 1;
+      continue;
+    }
+    if (!strcasecmp(line->key, "HiddenServiceExportCircuitID")) {
+      config->circuit_id_protocol =
+        helper_parse_circuit_id_protocol(line->key, line->value, &ok);
+      if (!ok || export_circuit_id) {
+        if (export_circuit_id) {
+          dup_opt_seen = line->key;
+        }
+        goto err;
+      }
+      export_circuit_id = true;
       continue;
     }
   }
