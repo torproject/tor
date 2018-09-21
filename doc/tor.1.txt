@@ -2848,7 +2848,7 @@ The following options are used to configure a hidden service.
 [[HiddenServiceExportCircuitID]] **HiddenServiceExportCircuitID** __protocol__::
    The onion service will use the given protocol to expose the global circuit
    identifier of each inbound client circuit via the selected protocol. The only
-   protocol supported right now \'haproxy\'. This option is only for v3
+   protocol supported right now \'haproxy'. This option is only for v3
    services. (Default: none) +
  +
    The haproxy option works in the following way: when the feature is
