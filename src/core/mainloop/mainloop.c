@@ -2897,6 +2897,10 @@ tor_mainloop_free_all(void)
   mainloop_event_free(postloop_cleanup_ev);
   mainloop_event_free(handle_deferred_signewnym_ev);
 
+#ifdef HAVE_SYSTEMD_209
+  periodic_timer_free(systemd_watchdog_timer);
+#endif
+
   stats_n_bytes_read = stats_n_bytes_written = 0;
 
   memset(&global_bucket, 0, sizeof(global_bucket));
