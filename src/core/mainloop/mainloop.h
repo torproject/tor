@@ -5,12 +5,12 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file main.h
- * \brief Header file for main.c.
+ * \file mainloop.h
+ * \brief Header file for mainloop.c.
  **/
 
-#ifndef TOR_MAIN_H
-#define TOR_MAIN_H
+#ifndef TOR_MAINLOOP_H
+#define TOR_MAINLOOP_H
 
 int have_completed_a_circuit(void);
 void note_that_we_completed_a_circuit(void);
@@ -73,20 +73,7 @@ MOCK_DECL(void,reset_uptime,(void));
 
 unsigned get_signewnym_epoch(void);
 
-void handle_signals(void);
-void activate_signal(int signal_num);
-
-int try_locking(const or_options_t *options, int err_if_locked);
-int have_lockfile(void);
-void release_lockfile(void);
-
-void tor_remove_file(const char *filename);
-
-void tor_cleanup(void);
-void tor_free_all(int postfork);
-
 int do_main_loop(void);
-int tor_init(int argc, char **argv);
 
 void reset_main_loop_counters(void);
 uint64_t get_main_loop_success_count(void);
@@ -96,6 +83,12 @@ uint64_t get_main_loop_idle_count(void);
 void periodic_events_on_new_options(const or_options_t *options);
 void reschedule_per_second_timer(void);
 
+void do_signewnym(time_t);
+time_t get_last_signewnym_time(void);
+
+void tor_init_connection_lists(void);
+void tor_mainloop_free_all(void);
+
 struct token_bucket_rw_t;
 
 extern time_t time_of_process_start;
@@ -103,13 +96,12 @@ extern int quiet_level;
 extern struct token_bucket_rw_t global_bucket;
 extern struct token_bucket_rw_t global_relayed_bucket;
 
-#ifdef MAIN_PRIVATE
-STATIC void init_connection_lists(void);
+#ifdef MAINLOOP_PRIVATE
 STATIC void initialize_mainloop_events(void);
 STATIC void close_closeable_connections(void);
 STATIC void initialize_periodic_events(void);
 STATIC void teardown_periodic_events(void);
-STATIC int get_my_roles(const or_options_t *options);
+STATIC int get_my_roles(const or_options_t *);
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *connection_array;
 
@@ -119,4 +111,4 @@ extern periodic_event_item_t periodic_events[];
 #endif
 #endif /* defined(MAIN_PRIVATE) */
 
-#endif /* !defined(TOR_MAIN_H) */
+#endif

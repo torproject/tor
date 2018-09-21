@@ -10,15 +10,16 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/app/config/config.c			\
 	src/app/config/confparse.c		\
 	src/app/config/statefile.c		\
+	src/app/main/main.c			\
 	src/core/crypto/hs_ntor.c		\
-	src/core/crypto/onion.c			\
+	src/core/crypto/onion_crypto.c		\
 	src/core/crypto/onion_fast.c		\
 	src/core/crypto/onion_ntor.c		\
 	src/core/crypto/onion_tap.c		\
 	src/core/crypto/relay_crypto.c		\
 	src/core/mainloop/connection.c		\
 	src/core/mainloop/cpuworker.c		\
-	src/core/mainloop/main.c		\
+	src/core/mainloop/mainloop.c		\
 	src/core/mainloop/periodic.c		\
 	src/core/or/address_set.c		\
 	src/core/or/channel.c			\
@@ -34,6 +35,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/or/connection_edge.c		\
 	src/core/or/connection_or.c		\
 	src/core/or/dos.c			\
+	src/core/or/onion.c			\
 	src/core/or/policies.c			\
 	src/core/or/protover.c			\
 	src/core/or/reasons.c			\
@@ -95,6 +97,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/nodelist/torcert.c		\
 	src/feature/relay/dns.c			\
 	src/feature/relay/ext_orport.c		\
+	src/feature/relay/onion_queue.c		\
 	src/feature/relay/router.c		\
 	src/feature/relay/routerkeys.c		\
 	src/feature/rend/rendcache.c		\
@@ -162,16 +165,17 @@ noinst_HEADERS +=					\
 	src/app/config/or_options_st.h			\
 	src/app/config/or_state_st.h			\
 	src/app/config/statefile.h			\
+	src/app/main/main.h				\
 	src/app/main/ntmain.h				\
 	src/core/crypto/hs_ntor.h			\
-	src/core/crypto/onion.h				\
+	src/core/crypto/onion_crypto.h	        	\
 	src/core/crypto/onion_fast.h			\
 	src/core/crypto/onion_ntor.h			\
 	src/core/crypto/onion_tap.h			\
 	src/core/crypto/relay_crypto.h			\
 	src/core/mainloop/connection.h			\
 	src/core/mainloop/cpuworker.h			\
-	src/core/mainloop/main.h			\
+	src/core/mainloop/mainloop.h			\
 	src/core/mainloop/periodic.h			\
 	src/core/or/addr_policy_st.h			\
 	src/core/or/address_set.h			\
@@ -202,6 +206,7 @@ noinst_HEADERS +=					\
 	src/core/or/entry_port_cfg_st.h			\
 	src/core/or/extend_info_st.h			\
 	src/core/or/listener_connection_st.h		\
+	src/core/or/onion.h				\
 	src/core/or/or.h				\
 	src/core/or/or_circuit_st.h			\
 	src/core/or/or_connection_st.h			\
@@ -307,6 +312,7 @@ noinst_HEADERS +=					\
 	src/feature/relay/dns.h				\
 	src/feature/relay/dns_structs.h			\
 	src/feature/relay/ext_orport.h			\
+	src/feature/relay/onion_queue.h			\
 	src/feature/relay/router.h			\
 	src/feature/relay/routerkeys.h			\
 	src/feature/rend/rend_authorized_client_st.h	\

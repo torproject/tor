@@ -1,4 +1,3 @@
-
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
@@ -96,7 +95,8 @@
 #include "lib/log/git_revision.h"
 #include "feature/stats/geoip.h"
 #include "feature/hibernate/hibernate.h"
-#include "core/mainloop/main.h"
+#include "app/main/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"

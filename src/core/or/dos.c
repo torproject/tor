@@ -15,7 +15,7 @@
 #include "core/or/connection_or.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "feature/stats/geoip.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/relay.h"

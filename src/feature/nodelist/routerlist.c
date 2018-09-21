@@ -64,7 +64,7 @@
 
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
 #include "feature/control/control.h"

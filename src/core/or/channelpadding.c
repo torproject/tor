@@ -17,7 +17,7 @@
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
 #include "lib/time/compat_time.h"

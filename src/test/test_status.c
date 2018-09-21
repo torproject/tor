@@ -21,7 +21,7 @@
 #include "feature/stats/rephist.h"
 #include "core/or/relay.h"
 #include "feature/relay/router.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/nodelist.h"
 #include "app/config/statefile.h"
 #include "lib/tls/tortls.h"

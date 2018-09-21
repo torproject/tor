@@ -21,7 +21,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "core/mainloop/main.h"
+#include "app/main/main.h"
 #include "app/main/ntmain.h"
 #include "lib/log/win32err.h"
 #include "lib/fs/winlib.h"

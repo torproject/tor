@@ -13,7 +13,7 @@
 #include "core/or/connection_or.h"
 #include "app/config/config.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "core/crypto/onion.h"
+#include "core/or/onion.h"
 #include "core/crypto/onion_tap.h"
 #include "core/crypto/onion_fast.h"
 #include "core/crypto/onion_ntor.h"

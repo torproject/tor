@@ -22,7 +22,7 @@
 #include "core/or/relay.h"
 #include "feature/relay/router.h"
 #include "core/or/circuitlist.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/stats/rephist.h"
 #include "feature/hibernate/hibernate.h"
 #include "app/config/statefile.h"

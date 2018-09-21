@@ -8,7 +8,7 @@
 #define SCHEDULER_PRIVATE_
 #define SCHEDULER_KIST_PRIVATE
 #include "core/or/scheduler.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "lib/container/buffers.h"
 #define TOR_CHANNEL_INTERNAL_
 #include "core/or/channeltls.h"

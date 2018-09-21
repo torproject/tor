@@ -9,7 +9,7 @@
 
 #define CONFIG_PRIVATE
 #define HS_SERVICE_PRIVATE
-#define MAIN_PRIVATE
+#define MAINLOOP_PRIVATE
 
 #include "test/test.h"
 #include "test/test_helpers.h"
@@ -18,7 +18,7 @@
 #include "app/config/config.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_service.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "core/mainloop/periodic.h"
 
 /** Helper function: This is replaced in some tests for the event callbacks so

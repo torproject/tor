@@ -6,7 +6,7 @@
 #define RELAY_PRIVATE
 #define CIRCUITLIST_PRIVATE
 #include "core/or/or.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "lib/crypt_ops/crypto_cipher.h"

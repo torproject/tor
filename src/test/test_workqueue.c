@@ -5,7 +5,7 @@
 
 #include "core/or/or.h"
 #include "lib/thread/threads.h"
-#include "core/crypto/onion.h"
+#include "core/or/onion.h"
 #include "lib/evloop/workqueue.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_rand.h"

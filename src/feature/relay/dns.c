@@ -58,7 +58,7 @@
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "feature/relay/dns.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
 #include "feature/relay/router.h"

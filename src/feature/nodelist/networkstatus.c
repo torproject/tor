@@ -57,7 +57,7 @@
 #include "core/or/dos.h"
 #include "feature/client/entrynodes.h"
 #include "feature/hibernate/hibernate.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"

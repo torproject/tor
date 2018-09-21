@@ -10,7 +10,7 @@
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
 #include "feature/dircache/directory.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "test/test.h"
 
 #include "feature/dircommon/dir_connection_st.h"

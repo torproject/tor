@@ -14,7 +14,7 @@
 #include "feature/dirauth/voteflags.h"
 
 #include "app/config/config.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/policies.h"
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/reachability.h"

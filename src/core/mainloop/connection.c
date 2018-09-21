@@ -85,7 +85,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/relay/ext_orport.h"
 #include "feature/stats/geoip.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_ident.h"

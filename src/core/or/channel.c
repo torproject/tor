@@ -69,7 +69,7 @@
 #include "core/or/circuitmux.h"
 #include "feature/client/entrynodes.h"
 #include "feature/stats/geoip.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/relay.h"
 #include "feature/stats/rephist.h"

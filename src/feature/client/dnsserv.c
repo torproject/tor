@@ -27,7 +27,7 @@
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "feature/control/control.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/policies.h"
 
 #include "feature/control/control_connection_st.h"

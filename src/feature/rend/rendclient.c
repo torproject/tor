@@ -23,7 +23,7 @@
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_common.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/relay.h"
