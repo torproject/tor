@@ -1,0 +1,3 @@
+  o Minor bugfixes (testing):
+    - In test_rebind.py check if Python version is in supported
+      ranges. Fixes bug 27675; bugfix on 0.3.5.1-alpha.
