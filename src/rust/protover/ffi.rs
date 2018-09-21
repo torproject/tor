@@ -71,12 +71,7 @@ pub extern "C" fn protover_all_supported(
         if missing_out.is_null() {
             return 0;
         }
-        let c_unsupported: CString = match CString::new(unsupported.to_string()) {
-            Ok(n) => n,
-            Err(_) => return 1,
-        };
-
-        let ptr = c_unsupported.into_raw();
+        let ptr = allocate_and_copy_string(&unsupported.to_string());
         unsafe { *missing_out = ptr };
 
         return 0;
