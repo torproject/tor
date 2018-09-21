@@ -1389,7 +1389,7 @@ encrypted_data_length_is_valid(size_t len)
   /* Make sure there is enough data for the salt and the mac. The equality is
      there to ensure that there is at least one byte of encrypted data. */
   if (len <= HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN) {
-    log_info(LD_REND, "Length of descriptor's encrypted data is too small. "
+    log_warn(LD_REND, "Length of descriptor's encrypted data is too small. "
                       "Got %lu but minimum value is %d",
              (unsigned long)len, HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN);
     goto err;
