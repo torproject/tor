@@ -1,0 +1,3 @@
+  o Minor bugfixes (protover):
+    - Reject protocol names containing bytes other than alphanumeric characters
+      and hyphens ([A-Za-z0-9-]). Fixes bug 27316; bugfix on 0.2.9.4-alpha.
