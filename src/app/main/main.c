@@ -803,10 +803,6 @@ tor_free_all(int postfork)
 
   tor_mainloop_free_all();
 
-#ifdef HAVE_SYSTEMD_209
-  periodic_timer_free(systemd_watchdog_timer);
-#endif
-
   if (!postfork) {
     release_lockfile();
   }
