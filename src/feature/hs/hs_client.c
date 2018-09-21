@@ -585,7 +585,7 @@ send_introduce1(origin_circuit_t *intro_circ,
        * get reused. */
       hs_cache_client_intro_state_note(service_identity_pk,
                                        &intro_circ->hs_ident->intro_auth_pk,
-                                       INTRO_POINT_FAILURE_UNREACHABLE);
+                                       INTRO_POINT_FAILURE_GENERIC);
     }
     /* It is also possible that the rendezvous circuit was closed due to being
      * unable to use the rendezvous point node_t so in that case, we also want
