@@ -7,13 +7,15 @@
  */
 
 #define CONNECTION_PRIVATE
-#define DIRECTORY_PRIVATE
+#define DIRCACHE_PRIVATE
+#define DIRCLIENT_PRIVATE
 #define HS_CACHE_PRIVATE
 
 #include "trunnel/ed25519_cert.h"
 #include "feature/hs/hs_cache.h"
 #include "feature/rend/rendcache.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircache/dircache.h"
+#include "feature/dirclient/dirclient.h"
 #include "feature/nodelist/networkstatus.h"
 #include "core/mainloop/connection.h"
 #include "core/proto/proto_http.h"

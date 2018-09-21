@@ -25,7 +25,7 @@
 #include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "core/or/channeltls.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerset.h"

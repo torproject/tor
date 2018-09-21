@@ -63,7 +63,7 @@
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "feature/relay/dns.h"
 #include "feature/stats/geoip.h"
 #include "feature/hs/hs_cache.h"

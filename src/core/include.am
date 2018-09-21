@@ -62,9 +62,12 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/dirauth/keypin.c		\
 	src/feature/dircache/conscache.c	\
 	src/feature/dircache/consdiffmgr.c	\
-	src/feature/dircache/directory.c	\
+	src/feature/dircache/dircache.c		\
 	src/feature/dircache/dirserv.c		\
+	src/feature/dirclient/dirclient.c	\
+	src/feature/dirclient/dlstatus.c	\
 	src/feature/dircommon/consdiff.c	\
+	src/feature/dircommon/directory.c	\
 	src/feature/dircommon/fp_pair.c		\
 	src/feature/dircommon/voting_schedule.c	\
 	src/feature/hibernate/hibernate.c	\
@@ -257,12 +260,15 @@ noinst_HEADERS +=					\
 	src/feature/dircache/cached_dir_st.h		\
 	src/feature/dircache/conscache.h		\
 	src/feature/dircache/consdiffmgr.h		\
-	src/feature/dircache/directory.h		\
+	src/feature/dircache/dircache.h			\
 	src/feature/dircache/dirserv.h			\
 	src/feature/dirclient/dir_server_st.h		\
+	src/feature/dirclient/dirclient.h		\
+	src/feature/dirclient/dlstatus.h		\
 	src/feature/dirclient/download_status_st.h	\
 	src/feature/dircommon/consdiff.h		\
 	src/feature/dircommon/dir_connection_st.h	\
+	src/feature/dircommon/directory.h		\
 	src/feature/dircommon/fp_pair.h			\
 	src/feature/dircommon/vote_timing_st.h		\
 	src/feature/dircommon/voting_schedule.h		\

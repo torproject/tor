@@ -24,7 +24,7 @@
 #include "feature/hs/hs_service.h"
 #include "app/config/config.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/dircache/directory.h"
+#include "feature/dirclient/dirclient.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"

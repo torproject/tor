@@ -14,8 +14,9 @@
 
 #include "core/or/circuitbuild.h"
 #include "app/config/config.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dlstatus.h"
 #include "feature/client/entrynodes.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"

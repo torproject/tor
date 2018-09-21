@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Split directory.c into separate pieces for client, server, and
+      common functionality. Closes ticket 26744.

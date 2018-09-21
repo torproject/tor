@@ -44,7 +44,7 @@
 #include "core/or/connection_or.h"
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "feature/client/entrynodes.h"
 #include "core/crypto/hs_ntor.h"
 #include "core/mainloop/mainloop.h"

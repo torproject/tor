@@ -18,7 +18,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/rend/rendcache.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "core/or/connection_or.h"
 #include "lib/net/resolve.h"
 

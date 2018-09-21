@@ -9,8 +9,11 @@
 #define BWAUTH_PRIVATE
 #define CONFIG_PRIVATE
 #define CONTROL_PRIVATE
+#define DIRCACHE_PRIVATE
+#define DIRCLIENT_PRIVATE
 #define DIRSERV_PRIVATE
 #define DIRVOTE_PRIVATE
+#define DLSTATUS_PRIVATE
 #define HIBERNATE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define NODE_SELECT_PRIVATE
@@ -30,8 +33,11 @@
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
+#include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dlstatus.h"
 #include "feature/dirauth/bwauth.h"
+#include "feature/dircache/dircache.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dirauth/dirvote.h"

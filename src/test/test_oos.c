@@ -9,7 +9,7 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "core/mainloop/mainloop.h"
 #include "test/test.h"
 

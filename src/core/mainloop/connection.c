@@ -77,7 +77,7 @@
 #include "core/or/connection_or.h"
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/relay/dns.h"
 #include "feature/client/dnsserv.h"
