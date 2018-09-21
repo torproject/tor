@@ -1,4 +1,4 @@
-Changes in version 0.3.5.2-alpha - 2018-09-2?
+Changes in version 0.3.5.2-alpha - 2018-09-21
   Tor 0.3.5.2-alpha fixes several bugs in 0.3.5.1-alpha, including one
   that made Tor think it had run out of sockets. Anybody running a relay
   or an onion service on 0.3.5.1-alpha should upgrade.
