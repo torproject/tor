@@ -1137,7 +1137,14 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
       !smartlist_len(intro1_data.link_specifiers)) {
     log_warn(LD_REND, "Unable to get link specifiers for INTRODUCE1 cell on "
              "circuit %u.", TO_CIRCUIT(intro_circ)->n_circ_id);
-    goto done;
+    goto close;
+  }
+  /* We can end up here if we don't have the descriptor of this intro point
+   * anymore. In that case, close the circuit and we'll try another one. */
+  if (intro1_data.onion_pk == NULL) {
+    log_info(LD_REND, "Unable to get intro point onion key. Missing "
+                      "descriptor. Skip it, we'll try next one.");
+    goto close;
   }
 
   /* Final step before we encode a cell, we setup the circuit identifier which
@@ -1154,7 +1161,7 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
    * into payload which is then ready to be sent as is. */
   payload_len = hs_cell_build_introduce1(&intro1_data, payload);
   if (BUG(payload_len < 0)) {
-    goto done;
+    goto close;
   }
 
   if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(intro_circ),
@@ -1171,6 +1178,8 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
   ret = 0;
   goto done;
 
+ close:
+  circuit_mark_for_close(TO_CIRCUIT(intro_circ), END_CIRC_REASON_INTERNAL);
  done:
   hs_cell_introduce1_data_clear(&intro1_data);
   memwipe(payload, 0, sizeof(payload));
