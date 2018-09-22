@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Reimplement NETINFO cell parsing and generation to rely on
+      trunnel-generated wire format handling code. Closes ticket
+      27325.
