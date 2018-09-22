@@ -87,6 +87,7 @@ void do_signewnym(time_t);
 time_t get_last_signewnym_time(void);
 
 void tor_init_connection_lists(void);
+void initialize_mainloop_events(void);
 void tor_mainloop_free_all(void);
 
 struct token_bucket_rw_t;
@@ -97,7 +98,6 @@ extern struct token_bucket_rw_t global_bucket;
 extern struct token_bucket_rw_t global_relayed_bucket;
 
 #ifdef MAINLOOP_PRIVATE
-STATIC void initialize_mainloop_events(void);
 STATIC void close_closeable_connections(void);
 STATIC void initialize_periodic_events(void);
 STATIC void teardown_periodic_events(void);

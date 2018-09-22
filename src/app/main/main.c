@@ -1269,6 +1269,7 @@ run_tor_main_loop(void)
   handle_signals();
   monotime_init();
   timers_initialize();
+  initialize_mainloop_events();
 
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */

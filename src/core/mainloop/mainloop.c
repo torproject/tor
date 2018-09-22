@@ -2675,7 +2675,7 @@ dns_servers_relaunch_checks(void)
 }
 
 /** Initialize some mainloop_event_t objects that we require. */
-STATIC void
+void
 initialize_mainloop_events(void)
 {
   if (!schedule_active_linked_connections_event) {
