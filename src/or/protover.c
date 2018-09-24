@@ -23,6 +23,7 @@
 
 #define PROTOVER_PRIVATE
 
+#include "compat.h"
 #include "or.h"
 #include "protover.h"
 #include "routerparse.h"
@@ -178,6 +179,16 @@ parse_version_range(const char *s, const char *end_of_range,
   return -1;
 }
 
+static int
+is_valid_keyword(const char *s, size_t n)
+{
+  for (size_t i = 0; i < n; i++) {
+    if (!TOR_ISALNUM(s[i]) && s[i] != '-')
+      return 0;
+  }
+  return 1;
+}
+
 /** Parse a single protocol entry from <b>s</b> up to an optional
  * <b>end_of_entry</b> pointer, and return that protocol entry. Return NULL
  * on error.
@@ -212,6 +223,11 @@ parse_single_entry(const char *s, const char *end_of_entry)
              MAX_PROTOCOL_NAME_LENGTH, escaped(out->name));
     goto error;
   }
+
+  /* The name must contain only alphanumeric characters and hyphens. */
+  if (!is_valid_keyword(s, equals-s))
+    goto error;
+
   out->name = tor_strndup(s, equals-s);
 
   tor_assert(equals < end_of_entry);
@@ -920,4 +936,3 @@ protover_free_all(void)
 }
 
 #endif /* !defined(HAVE_RUST) */
-

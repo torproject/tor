@@ -280,6 +280,7 @@ monotime_reset_ratchets_for_testing(void)
  */
 static struct mach_timebase_info mach_time_info;
 static struct mach_timebase_info mach_time_info_msec_cvt;
+static int32_t mach_time_msec_cvt_threshold;
 static int monotime_shift = 0;
 
 static void
@@ -299,11 +300,15 @@ monotime_init_internal(void)
   }
   {
     // For converting ticks to milliseconds in a 32-bit-friendly way, we
-    // will first right-shift by 20, and then multiply by 20/19, since
-    // (1<<20) * 19/20 is about 1e6.  We precompute a new numerate and
+    // will first right-shift by 20, and then multiply by 2048/1953, since
+    // (1<<20) * 1953/2048 is about 1e6.  We precompute a new numerator and
     // denominator here to avoid multiple multiplies.
-    mach_time_info_msec_cvt.numer = mach_time_info.numer * 20;
-    mach_time_info_msec_cvt.denom = mach_time_info.denom * 19;
+    mach_time_info_msec_cvt.numer = mach_time_info.numer * 2048;
+    mach_time_info_msec_cvt.denom = mach_time_info.denom * 1953;
+    // For any value above this amount, we should divide before multiplying,
+    // to avoid overflow.  For a value below this, we should multiply
+    // before dividing, to improve accuracy.
+    mach_time_msec_cvt_threshold = INT32_MAX / mach_time_info_msec_cvt.numer;
   }
 }
 
@@ -366,8 +371,13 @@ monotime_coarse_diff_msec32_(const monotime_coarse_t *start,
   /* We already require in di_ops.c that right-shift performs a sign-extend. */
   const int32_t diff_microticks = (int32_t)(diff_ticks >> 20);
 
-  return (diff_microticks * mach_time_info_msec_cvt.numer) /
-    mach_time_info_msec_cvt.denom;
+  if (diff_microticks >= mach_time_msec_cvt_threshold) {
+    return (diff_microticks / mach_time_info_msec_cvt.denom) *
+      mach_time_info_msec_cvt.numer;
+  } else {
+    return (diff_microticks * mach_time_info_msec_cvt.numer) /
+      mach_time_info_msec_cvt.denom;
+  }
 }
 
 uint32_t

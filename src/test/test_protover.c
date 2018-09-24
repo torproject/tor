@@ -543,6 +543,10 @@ test_protover_vote_roundtrip(void *args)
     const char *input;
     const char *expected_output;
   } examples[] = {
+    { "Risqu\u00e9=1", NULL },
+    { ",,,=1", NULL },
+    { "\xc1=1", NULL },
+    { "Foo_Bar=1", NULL },
     { "Fkrkljdsf", NULL },
     { "Zn=4294967295", NULL },
     { "Zn=4294967295-1", NULL },
