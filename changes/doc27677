@@ -1,0 +1,4 @@
+  o Documentation:
+    - Mention that we require Python to be 2.7 or newer for
+      integration tests that we ship with Tor. Resolves ticket
+      27677.
