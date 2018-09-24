@@ -1,0 +1,5 @@
+  o Minor bugfixes (test, hidden service v3):
+    - Make the the hs_service tests uses the same time source when creating
+      the introduction point and testing it. This helps make test work on very
+      slow system like ARM or Travis. Fixes bug 27810; bugfix on
+      0.3.2.1-alpha.
