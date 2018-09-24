@@ -319,7 +319,7 @@ static config_var_t option_vars_[] = {
   V(BridgeRelay,                 BOOL,     "0"),
   V(BridgeDistribution,          STRING,   NULL),
   VAR("CacheDirectory",          FILENAME, CacheDirectory_option, NULL),
-  V(CacheDirectoryGroupReadable, BOOL,     "0"),
+  V(CacheDirectoryGroupReadable, AUTOBOOL,     "auto"),
   V(CellStatistics,              BOOL,     "0"),
   V(PaddingStatistics,           BOOL,     "1"),
   V(LearnCircuitBuildTimeout,    BOOL,     "1"),
@@ -1569,9 +1569,26 @@ options_act_reversible(const or_options_t *old_options, char **msg)
                                       msg) < 0) {
     goto done;
   }
+
+  /* We need to handle the group-readable flag for the cache directory
+   * specially, since the directory defaults to being the same as the
+   * DataDirectory. */
+  int cache_dir_group_readable;
+  if (options->CacheDirectoryGroupReadable != -1) {
+    /* If the user specified a value, use their setting */
+    cache_dir_group_readable = options->CacheDirectoryGroupReadable;
+  } else if (!strcmp(options->CacheDirectory, options->DataDirectory)) {
+    /* If the user left the value as "auto", and the cache is the same as the
+     * datadirectory, use the datadirectory setting.
+     */
+    cache_dir_group_readable = options->DataDirectoryGroupReadable;
+  } else {
+    /* Otherwise, "auto" means "not group readable". */
+    cache_dir_group_readable = 0;
+  }
   if (check_and_create_data_directory(running_tor /* create */,
                                       options->CacheDirectory,
-                                      options->CacheDirectoryGroupReadable,
+                                      cache_dir_group_readable,
                                       options->User,
                                       msg) < 0) {
     goto done;
