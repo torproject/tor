@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - Fix compilation on arm (and other even less-used CPUs)
+      when compiling with OpenSSL before 1.1. Fixes bug 27781;
+      bugfix on 0.3.5.1-alpha.
