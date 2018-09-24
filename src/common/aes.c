@@ -41,6 +41,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "util.h"
 #include "torlog.h"
 #include "di_ops.h"
+#include "crypto_util.h"
 
 #ifdef ANDROID
 /* Android's OpenSSL seems to have removed all of its Engine support. */
@@ -407,4 +408,3 @@ aes_set_iv(aes_cnt_cipher_t *cipher, const uint8_t *iv)
 }
 
 #endif /* defined(USE_EVP_AES_CTR) */
-
