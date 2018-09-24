@@ -32,7 +32,6 @@ extern "C" {
 }
 
 /// Return true if Tor was built to use NSS.
-pub fn c_tor_is_using_nss() -> bool
-{
+pub fn c_tor_is_using_nss() -> bool {
     0 != unsafe { tor_is_using_nss() }
 }
