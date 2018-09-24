@@ -8,12 +8,14 @@
 #define CONNECTION_PRIVATE
 #define CONFIG_PRIVATE
 #define RENDCACHE_PRIVATE
+#define DIRCACHE_PRIVATE
 
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "feature/dircache/consdiffmgr.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
+#include "feature/dircache/dircache.h"
 #include "test/test.h"
 #include "lib/compress/compress.h"
 #include "feature/rend/rendcommon.h"

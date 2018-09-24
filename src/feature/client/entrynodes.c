@@ -125,7 +125,7 @@
 #include "core/mainloop/connection.h"
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "feature/client/entrynodes.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/nodelist/microdesc.h"

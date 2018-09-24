@@ -8,7 +8,7 @@
 #define STATEFILE_PRIVATE
 #define ENTRYNODES_PRIVATE
 #define ROUTERLIST_PRIVATE
-#define DIRECTORY_PRIVATE
+#define DIRCLIENT_PRIVATE
 
 #include "core/or/or.h"
 #include "test/test.h"
@@ -19,7 +19,8 @@
 #include "app/config/config.h"
 #include "app/config/confparse.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
+#include "feature/dirclient/dirclient.h"
 #include "feature/client/entrynodes.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/networkstatus.h"

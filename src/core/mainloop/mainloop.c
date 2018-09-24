@@ -68,7 +68,7 @@
 #include "feature/control/control.h"
 #include "core/mainloop/cpuworker.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirauth/reachability.h"
 #include "feature/relay/dns.h"

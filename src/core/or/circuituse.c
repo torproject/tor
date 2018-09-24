@@ -40,7 +40,7 @@
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "feature/control/control.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "feature/client/entrynodes.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_client.h"

@@ -6,7 +6,7 @@
 #include <time.h>
 
 #define CONNECTION_PRIVATE
-#define DIRECTORY_PRIVATE
+#define DIRCLIENT_PRIVATE
 #define DIRVOTE_PRIVATE
 #define ENTRYNODES_PRIVATE
 #define HIBERNATE_PRIVATE
@@ -19,7 +19,8 @@
 #include "core/mainloop/connection.h"
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
+#include "feature/dirclient/dirclient.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/client/entrynodes.h"
 #include "feature/hibernate/hibernate.h"

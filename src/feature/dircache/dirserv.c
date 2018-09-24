@@ -10,7 +10,7 @@
 #include "core/mainloop/connection.h"
 #include "feature/dircache/conscache.h"
 #include "feature/dircache/consdiffmgr.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/routerlist.h"
