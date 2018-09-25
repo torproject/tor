@@ -144,7 +144,7 @@
 
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/recommend_pkg.h"
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/authmode.h"
 
 #include "core/or/connection_st.h"
 #include "core/or/port_cfg_st.h"

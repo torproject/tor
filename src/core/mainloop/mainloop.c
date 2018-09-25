@@ -102,7 +102,7 @@
 #include <event2/event.h>
 
 #include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/authmode.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/entry_connection_st.h"

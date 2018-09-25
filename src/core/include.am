@@ -246,12 +246,12 @@ noinst_HEADERS +=					\
 	src/feature/control/control.h			\
 	src/feature/control/control_connection_st.h	\
 	src/feature/control/fmt_serverstatus.h		\
+	src/feature/dirauth/authmode.h			\
 	src/feature/dirauth/bwauth.h			\
 	src/feature/dirauth/dircollate.h		\
 	src/feature/dirauth/dirvote.h			\
 	src/feature/dirauth/guardfraction.h		\
 	src/feature/dirauth/keypin.h			\
-	src/feature/dirauth/mode.h			\
 	src/feature/dirauth/ns_detached_signatures_st.h	\
 	src/feature/dirauth/reachability.h		\
 	src/feature/dirauth/recommend_pkg.h		\

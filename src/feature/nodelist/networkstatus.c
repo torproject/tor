@@ -79,7 +79,7 @@
 #include "feature/nodelist/fmt_routerstatus.h"
 
 #include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/authmode.h"
 #include "feature/dirauth/shared_random.h"
 #include "feature/dirauth/voteflags.h"
 

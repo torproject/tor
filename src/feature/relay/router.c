@@ -44,7 +44,7 @@
 #include "feature/client/transports.h"
 #include "feature/nodelist/routerset.h"
 
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/authmode.h"
 
 #include "feature/nodelist/authority_cert_st.h"
 #include "core/or/crypt_path_st.h"

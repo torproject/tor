@@ -81,7 +81,7 @@
 #include <event2/event.h>
 
 #include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/authmode.h"
 #include "feature/dirauth/shared_random.h"
 
 #include "core/or/or_connection_st.h"

@@ -16,7 +16,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/control/control.h"
 #include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/authmode.h"
 #include "feature/dirauth/shared_random.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirclient/dirclient.h"

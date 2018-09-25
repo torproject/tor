@@ -69,7 +69,7 @@
 
 #include <string.h>
 
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/authmode.h"
 
 #include "feature/dirclient/dir_server_st.h"
 #include "feature/nodelist/microdesc_st.h"
