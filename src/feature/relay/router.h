@@ -15,6 +15,7 @@
 #include "lib/testsupport/testsupport.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nickname.h"
+#include "feature/nodelist/routerinfo.h"
 
 struct curve25519_keypair_t;
 struct ed25519_keypair_t;
@@ -107,16 +108,6 @@ char *router_dump_router_to_string(routerinfo_t *router,
 char *router_dump_exit_policy_to_string(const routerinfo_t *router,
                                          int include_ipv4,
                                          int include_ipv6);
-void router_get_prim_orport(const routerinfo_t *router,
-                            tor_addr_port_t *addr_port_out);
-void router_get_pref_orport(const routerinfo_t *router,
-                            tor_addr_port_t *addr_port_out);
-void router_get_pref_ipv6_orport(const routerinfo_t *router,
-                                 tor_addr_port_t *addr_port_out);
-int router_ipv6_preferred(const routerinfo_t *router);
-int router_has_addr(const routerinfo_t *router, const tor_addr_t *addr);
-int router_has_orport(const routerinfo_t *router,
-                      const tor_addr_port_t *orport);
 int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
                              crypto_pk_t *ident_key,
                              const struct ed25519_keypair_t *signing_keypair);
@@ -124,15 +115,9 @@ int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
 const char *routerinfo_err_to_string(int err);
 int routerinfo_err_is_transient(int err);
 
-void router_get_verbose_nickname(char *buf, const routerinfo_t *router);
 void router_reset_warnings(void);
 void router_reset_reachability(void);
 void router_free_all(void);
-
-const char *router_purpose_to_string(uint8_t p);
-uint8_t router_purpose_from_string(const char *s);
-
-smartlist_t *router_get_all_orports(const routerinfo_t *ri);
 
 #ifdef ROUTER_PRIVATE
 /* Used only by router.c and test.c */

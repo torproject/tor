@@ -2805,36 +2805,6 @@ router_dump_exit_policy_to_string(const routerinfo_t *router,
                                include_ipv6);
 }
 
-/** Copy the primary (IPv4) OR port (IP address and TCP port) for
- * <b>router</b> into *<b>ap_out</b>. */
-void
-router_get_prim_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
-{
-  tor_assert(ap_out != NULL);
-  tor_addr_from_ipv4h(&ap_out->addr, router->addr);
-  ap_out->port = router->or_port;
-}
-
-/** Return 1 if any of <b>router</b>'s addresses are <b>addr</b>.
- *   Otherwise return 0. */
-int
-router_has_addr(const routerinfo_t *router, const tor_addr_t *addr)
-{
-  return
-    tor_addr_eq_ipv4h(addr, router->addr) ||
-    tor_addr_eq(&router->ipv6_addr, addr);
-}
-
-int
-router_has_orport(const routerinfo_t *router, const tor_addr_port_t *orport)
-{
-  return
-    (tor_addr_eq_ipv4h(&orport->addr, router->addr) &&
-     orport->port == router->or_port) ||
-    (tor_addr_eq(&orport->addr, &router->ipv6_addr) &&
-     orport->port == router->ipv6_orport);
-}
-
 /** Load the contents of <b>filename</b>, find the last line starting with
  * <b>end_line</b>, ensure that its timestamp is not more than 25 hours in
  * the past or more than 1 hour in the future with respect to <b>now</b>,
@@ -3115,37 +3085,6 @@ router_reset_warnings(void)
   }
 }
 
-/** Given a router purpose, convert it to a string.  Don't call this on
- * ROUTER_PURPOSE_UNKNOWN: The whole point of that value is that we don't
- * know its string representation. */
-const char *
-router_purpose_to_string(uint8_t p)
-{
-  switch (p)
-    {
-    case ROUTER_PURPOSE_GENERAL: return "general";
-    case ROUTER_PURPOSE_BRIDGE: return "bridge";
-    case ROUTER_PURPOSE_CONTROLLER: return "controller";
-    default:
-      tor_assert(0);
-    }
-  return NULL;
-}
-
-/** Given a string, convert it to a router purpose. */
-uint8_t
-router_purpose_from_string(const char *s)
-{
-  if (!strcmp(s, "general"))
-    return ROUTER_PURPOSE_GENERAL;
-  else if (!strcmp(s, "bridge"))
-    return ROUTER_PURPOSE_BRIDGE;
-  else if (!strcmp(s, "controller"))
-    return ROUTER_PURPOSE_CONTROLLER;
-  else
-    return ROUTER_PURPOSE_UNKNOWN;
-}
-
 /** Release all static resources held in router.c */
 void
 router_free_all(void)
@@ -3171,22 +3110,6 @@ router_free_all(void)
     smartlist_free(warned_nonexistent_family);
   }
 }
-
-/** Return a smartlist of tor_addr_port_t's with all the OR ports of
-    <b>ri</b>. Note that freeing of the items in the list as well as
-    the smartlist itself is the callers responsibility. */
-smartlist_t *
-router_get_all_orports(const routerinfo_t *ri)
-{
-  tor_assert(ri);
-  node_t fake_node;
-  memset(&fake_node, 0, sizeof(fake_node));
-  /* we don't modify ri, fake_node is passed as a const node_t *
-   */
-  fake_node.ri = (routerinfo_t *)ri;
-  return node_get_all_orports(&fake_node);
-}
-
 /* From the given RSA key object, convert it to ASN-1 encoded format and set
  * the newly allocated object in onion_pkey_out. The length of the key is set
  * in onion_pkey_len_out. */
