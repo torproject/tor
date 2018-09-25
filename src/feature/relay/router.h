@@ -56,13 +56,7 @@ int router_initialize_tls_context(void);
 int init_keys(void);
 int init_keys_client(void);
 
-int check_whether_orport_reachable(const or_options_t *options);
-int check_whether_dirport_reachable(const or_options_t *options);
 int dir_server_mode(const or_options_t *options);
-void router_do_reachability_checks(int test_or, int test_dir);
-void router_orport_found_reachable(void);
-void router_dirport_found_reachable(void);
-void router_perform_bandwidth_test(int num_circs, time_t now);
 
 int net_is_disabled(void);
 int net_is_completely_disabled(void);
@@ -80,6 +74,9 @@ uint16_t router_get_advertised_or_port_by_af(const or_options_t *options,
                                              sa_family_t family);
 uint16_t router_get_advertised_dir_port(const or_options_t *options,
                                         uint16_t dirport);
+
+int router_should_advertise_dirport(const or_options_t *options,
+                                    uint16_t dir_port);
 
 MOCK_DECL(int, server_mode, (const or_options_t *options));
 MOCK_DECL(int, public_server_mode, (const or_options_t *options));

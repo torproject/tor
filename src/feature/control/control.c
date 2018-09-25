@@ -81,6 +81,7 @@
 #include "feature/rend/rendservice.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/relay/selftest.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"

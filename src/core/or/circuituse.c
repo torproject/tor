@@ -55,6 +55,7 @@
 #include "feature/rend/rendservice.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/relay/selftest.h"
 #include "feature/nodelist/routerlist.h"
 #include "lib/math/fp.h"
 #include "lib/time/tvdiff.h"
