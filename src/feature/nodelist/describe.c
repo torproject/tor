@@ -4,6 +4,11 @@
  * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file describe.c
+ * \brief Format short descriptions of relays.
+ */
+
 #include "core/or/or.h"
 #include "feature/nodelist/describe.h"
 #include "feature/relay/router.h"

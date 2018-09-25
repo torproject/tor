@@ -14,6 +14,7 @@
 
 #include "lib/testsupport/testsupport.h"
 #include "feature/nodelist/describe.h"
+#include "feature/nodelist/nickname.h"
 
 struct curve25519_keypair_t;
 struct ed25519_keypair_t;
@@ -119,9 +120,6 @@ int router_has_orport(const routerinfo_t *router,
 int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
                              crypto_pk_t *ident_key,
                              const struct ed25519_keypair_t *signing_keypair);
-int is_legal_nickname(const char *s);
-int is_legal_nickname_or_hexdigest(const char *s);
-int is_legal_hexdigest(const char *s);
 
 const char *routerinfo_err_to_string(int err);
 int routerinfo_err_is_transient(int err);

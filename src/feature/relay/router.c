@@ -3104,55 +3104,6 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   return result;
 }
 
-/** Return true iff <b>s</b> is a valid server nickname. (That is, a string
- * containing between 1 and MAX_NICKNAME_LEN characters from
- * LEGAL_NICKNAME_CHARACTERS.) */
-int
-is_legal_nickname(const char *s)
-{
-  size_t len;
-  tor_assert(s);
-  len = strlen(s);
-  return len > 0 && len <= MAX_NICKNAME_LEN &&
-    strspn(s,LEGAL_NICKNAME_CHARACTERS) == len;
-}
-
-/** Return true iff <b>s</b> is a valid server nickname or
- * hex-encoded identity-key digest. */
-int
-is_legal_nickname_or_hexdigest(const char *s)
-{
-  if (*s!='$')
-    return is_legal_nickname(s);
-  else
-    return is_legal_hexdigest(s);
-}
-
-/** Return true iff <b>s</b> is a valid hex-encoded identity-key
- * digest. (That is, an optional $, followed by 40 hex characters,
- * followed by either nothing, or = or ~ followed by a nickname, or
- * a character other than =, ~, or a hex character.)
- */
-int
-is_legal_hexdigest(const char *s)
-{
-  size_t len;
-  tor_assert(s);
-  if (s[0] == '$') s++;
-  len = strlen(s);
-  if (len > HEX_DIGEST_LEN) {
-    if (s[HEX_DIGEST_LEN] == '=' ||
-        s[HEX_DIGEST_LEN] == '~') {
-      if (!is_legal_nickname(s+HEX_DIGEST_LEN+1))
-        return 0;
-    } else {
-      return 0;
-    }
-  }
-  return (len >= HEX_DIGEST_LEN &&
-          strspn(s,HEX_CHARACTERS)==HEX_DIGEST_LEN);
-}
-
 /** Forget that we have issued any router-related warnings, so that we'll
  * warn again if we see the same errors. */
 void
