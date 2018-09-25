@@ -1,0 +1,4 @@
+  o Documentation:
+    - In tor-resolve(1) manpage fix reference to
+      socks-extensions.txt by adding web URL. Resolves
+      ticket 27853.
