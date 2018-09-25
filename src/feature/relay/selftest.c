@@ -19,6 +19,7 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
+#include "core/mainloop/netstatus.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
@@ -29,6 +30,7 @@
 #include "feature/dirclient/dirclient.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/authority_cert_st.h"
+#include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist.h" // but...
 #include "feature/nodelist/routerset.h"

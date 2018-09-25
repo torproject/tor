@@ -10,7 +10,7 @@
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/voteflags.h"// XXXX remove
 #include "feature/nodelist/nodelist.h"
-#include "feature/relay/router.h"
+#include "feature/nodelist/routerinfo.h"
 
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"

@@ -13,10 +13,6 @@
 #define TOR_ROUTER_H
 
 #include "lib/testsupport/testsupport.h"
-#include "feature/nodelist/describe.h"
-#include "feature/nodelist/nickname.h"
-#include "feature/nodelist/routerinfo.h"
-#include "core/mainloop/netstatus.h"
 
 struct curve25519_keypair_t;
 struct ed25519_keypair_t;
