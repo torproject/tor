@@ -55,6 +55,7 @@
 #include "feature/stats/rephist.h"
 #include "core/or/relay.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "feature/nodelist/routerlist.h"
 
 #include "core/or/cell_st.h"

@@ -92,6 +92,7 @@
 #include "feature/rend/rendservice.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/selftest.h"
 #include "feature/nodelist/routerlist.h"

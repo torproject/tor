@@ -35,7 +35,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerparse.h"
-#include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 
 #include "core/or/connection_st.h"
 #include "feature/dirclient/dir_server_st.h"

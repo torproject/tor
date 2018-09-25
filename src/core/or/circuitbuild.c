@@ -61,6 +61,7 @@
 #include "feature/rend/rendcommon.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 #include "feature/nodelist/node_select.h"
 #include "feature/nodelist/routerlist.h"

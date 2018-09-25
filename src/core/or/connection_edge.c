@@ -93,6 +93,7 @@
 #include "feature/rend/rendservice.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
 #include "core/or/circuitbuild.h"

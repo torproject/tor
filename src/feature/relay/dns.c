@@ -62,6 +62,7 @@
 #include "core/or/policies.h"
 #include "core/or/relay.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "ht.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/evloop/compat_libevent.h"

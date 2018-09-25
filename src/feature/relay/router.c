@@ -34,6 +34,7 @@
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
+#include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
@@ -1178,7 +1179,7 @@ init_keys(void)
 /** Return true iff we have enough configured bandwidth to advertise or
  * automatically provide directory services from cache directory
  * information. */
-static int
+int
 router_has_bandwidth_to_be_dirserver(const or_options_t *options)
 {
   if (options->BandwidthRate < MIN_BW_TO_ADVERTISE_DIRSERVER) {
@@ -1258,19 +1259,6 @@ router_should_be_dirserver(const or_options_t *options, int dir_port)
   return advertising;
 }
 
-/** Return 1 if we are configured to accept either relay or directory requests
- * from clients and we aren't at risk of exceeding our bandwidth limits, thus
- * we should be a directory server. If not, return 0.
- */
-int
-dir_server_mode(const or_options_t *options)
-{
-  if (!options->DirCache)
-    return 0;
-  return options->DirPort_set ||
-    (server_mode(options) && router_has_bandwidth_to_be_dirserver(options));
-}
-
 /** Look at a variety of factors, and return 0 if we don't want to
  * advertise the fact that we have a DirPort open or begindir support, else
  * return 1.
@@ -1348,24 +1336,6 @@ net_is_completely_disabled(void)
   return get_options()->DisableNetwork || we_are_fully_hibernating();
 }
 
-/** Return true iff we are trying to be a server.
- */
-MOCK_IMPL(int,
-server_mode,(const or_options_t *options))
-{
-  if (options->ClientOnly) return 0;
-  return (options->ORPort_set);
-}
-
-/** Return true iff we are trying to be a non-bridge server.
- */
-MOCK_IMPL(int,
-public_server_mode,(const or_options_t *options))
-{
-  if (!server_mode(options)) return 0;
-  return (!options->BridgeRelay);
-}
-
 /** Return true iff the combination of options in <b>options</b> and parameters
  * in the consensus mean that we don't want to allow exits from circuits
  * we got from addresses not known to be servers. */
@@ -1377,42 +1347,6 @@ should_refuse_unknown_exits(const or_options_t *options)
   } else {
     return networkstatus_get_param(NULL, "refuseunknownexits", 1, 0, 1);
   }
-}
-
-/** Remember if we've advertised ourselves to the dirservers. */
-static int server_is_advertised=0;
-
-/** Return true iff we have published our descriptor lately.
- */
-MOCK_IMPL(int,
-advertised_server_mode,(void))
-{
-  return server_is_advertised;
-}
-
-/**
- * Called with a boolean: set whether we have recently published our
- * descriptor.
- */
-static void
-set_server_advertised(int s)
-{
-  server_is_advertised = s;
-}
-
-/** Return true iff we are trying to proxy client connections. */
-int
-proxy_mode(const or_options_t *options)
-{
-  (void)options;
-  SMARTLIST_FOREACH_BEGIN(get_configured_ports(), const port_cfg_t *, p) {
-    if (p->type == CONN_TYPE_AP_LISTENER ||
-        p->type == CONN_TYPE_AP_TRANS_LISTENER ||
-        p->type == CONN_TYPE_AP_DNS_LISTENER ||
-        p->type == CONN_TYPE_AP_NATD_LISTENER)
-      return 1;
-  } SMARTLIST_FOREACH_END(p);
-  return 0;
 }
 
 /** Decide if we're a publishable server. We are a publishable server if:

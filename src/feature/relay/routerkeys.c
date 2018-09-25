@@ -18,6 +18,7 @@
 #include "app/config/config.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
+#include "feature/relay/routermode.h"
 #include "feature/keymgt/loadkey.h"
 #include "feature/nodelist/torcert.h"
 

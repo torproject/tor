@@ -20,6 +20,7 @@
 #include "core/mainloop/mainloop.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "lib/time/compat_time.h"
 #include "feature/rend/rendservice.h"
 #include "lib/evloop/timers.h"

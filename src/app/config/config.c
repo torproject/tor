@@ -106,6 +106,7 @@
 #include "feature/hs/hs_config.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "lib/sandbox/sandbox.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerset.h"

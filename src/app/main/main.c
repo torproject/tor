@@ -35,6 +35,7 @@
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/relay/dns.h"
+#include "feature/relay/routermode.h"
 #include "feature/client/entrynodes.h"
 #include "feature/stats/geoip.h"
 #include "feature/hibernate/hibernate.h"

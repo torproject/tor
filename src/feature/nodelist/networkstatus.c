@@ -65,7 +65,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "core/or/protover.h"
 #include "core/or/relay.h"
-#include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/node_select.h"

@@ -19,7 +19,7 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/relay.h"
-#include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 
 #include "core/or/dos.h"
 

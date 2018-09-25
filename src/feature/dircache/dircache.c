@@ -23,7 +23,7 @@
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "feature/rend/rendcache.h"
 #include "feature/stats/geoip.h"
 #include "feature/stats/rephist.h"

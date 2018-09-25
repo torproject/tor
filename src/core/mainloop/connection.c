@@ -81,6 +81,7 @@
 #include "feature/dircommon/directory.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/relay/dns.h"
+#include "feature/relay/routermode.h"
 #include "feature/client/dnsserv.h"
 #include "core/or/dos.h"
 #include "feature/client/entrynodes.h"
