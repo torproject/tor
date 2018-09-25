@@ -30,6 +30,7 @@
 #include "core/or/policies.h"
 #include "core/or/protover.h"
 #include "core/or/relay.h"
+#include "feature/keymgt/loadkey.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
@@ -540,85 +541,6 @@ log_new_relay_greeting(void)
   already_logged = 1;
 }
 
-/** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist
- * and <b>generate</b> is true, create a new RSA key and save it in
- * <b>fname</b>.  Return the read/created key, or NULL on error.  Log all
- * errors at level <b>severity</b>. If <b>log_greeting</b> is non-zero and a
- * new key was created, log_new_relay_greeting() is called.
- */
-crypto_pk_t *
-init_key_from_file(const char *fname, int generate, int severity,
-                   int log_greeting)
-{
-  crypto_pk_t *prkey = NULL;
-
-  if (!(prkey = crypto_pk_new())) {
-    tor_log(severity, LD_GENERAL,"Error constructing key");
-    goto error;
-  }
-
-  switch (file_status(fname)) {
-    case FN_DIR:
-    case FN_ERROR:
-      tor_log(severity, LD_FS,"Can't read key from \"%s\"", fname);
-      goto error;
-    /* treat empty key files as if the file doesn't exist, and,
-     * if generate is set, replace the empty file in
-     * crypto_pk_write_private_key_to_filename() */
-    case FN_NOENT:
-    case FN_EMPTY:
-      if (generate) {
-        if (!have_lockfile()) {
-          if (try_locking(get_options(), 0)<0) {
-            /* Make sure that --list-fingerprint only creates new keys
-             * if there is no possibility for a deadlock. */
-            tor_log(severity, LD_FS, "Another Tor process has locked \"%s\". "
-                    "Not writing any new keys.", fname);
-            /*XXXX The 'other process' might make a key in a second or two;
-             * maybe we should wait for it. */
-            goto error;
-          }
-        }
-        log_info(LD_GENERAL, "No key found in \"%s\"; generating fresh key.",
-                 fname);
-        if (crypto_pk_generate_key(prkey)) {
-          tor_log(severity, LD_GENERAL,"Error generating onion key");
-          goto error;
-        }
-        if (! crypto_pk_is_valid_private_key(prkey)) {
-          tor_log(severity, LD_GENERAL,"Generated key seems invalid");
-          goto error;
-        }
-        log_info(LD_GENERAL, "Generated key seems valid");
-        if (log_greeting) {
-            log_new_relay_greeting();
-        }
-        if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-          tor_log(severity, LD_FS,
-              "Couldn't write generated key to \"%s\".", fname);
-          goto error;
-        }
-      } else {
-        tor_log(severity, LD_GENERAL, "No key found in \"%s\"", fname);
-        goto error;
-      }
-      return prkey;
-    case FN_FILE:
-      if (crypto_pk_read_private_key_from_filename(prkey, fname)) {
-        tor_log(severity, LD_GENERAL,"Error loading private key.");
-        goto error;
-      }
-      return prkey;
-    default:
-      tor_assert(0);
-  }
-
- error:
-  if (prkey)
-    crypto_pk_free(prkey);
-  return NULL;
-}
-
 /** Load a curve25519 keypair from the file <b>fname</b>, writing it into
  * <b>keys_out</b>.  If the file isn't found, or is empty, and <b>generate</b>
  * is true, create a new keypair and write it into the file.  If there are
@@ -708,7 +630,7 @@ load_authority_keyset(int legacy, crypto_pk_t **key_out,
 
   fname = get_keydir_fname(
                  legacy ? "legacy_signing_key" : "authority_signing_key");
-  signing_key = init_key_from_file(fname, 0, LOG_ERR, 0);
+  signing_key = init_key_from_file(fname, 0, LOG_ERR, NULL);
   if (!signing_key) {
     log_warn(LD_DIR, "No version 3 directory key found in %s", fname);
     goto done;
@@ -1042,9 +964,12 @@ init_keys(void)
   /* 1b. Read identity key. Make it if none is found. */
   keydir = get_keydir_fname("secret_id_key");
   log_info(LD_GENERAL,"Reading/making identity key \"%s\"...",keydir);
-  prkey = init_key_from_file(keydir, 1, LOG_ERR, 1);
+  bool created = false;
+  prkey = init_key_from_file(keydir, 1, LOG_ERR, &created);
   tor_free(keydir);
   if (!prkey) return -1;
+  if (created)
+    log_new_relay_greeting();
   set_server_identity_key(prkey);
 
   /* 1c. If we are configured as a bridge, generate a client key;
@@ -1070,7 +995,9 @@ init_keys(void)
   /* 2. Read onion key.  Make it if none is found. */
   keydir = get_keydir_fname("secret_onion_key");
   log_info(LD_GENERAL,"Reading/making onion key \"%s\"...",keydir);
-  prkey = init_key_from_file(keydir, 1, LOG_ERR, 1);
+  prkey = init_key_from_file(keydir, 1, LOG_ERR, &created);
+  if (created)
+    log_new_relay_greeting();
   tor_free(keydir);
   if (!prkey) return -1;
   set_onion_key(prkey);

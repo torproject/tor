@@ -31,6 +31,7 @@
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
 #include "feature/relay/router.h"
+#include "feature/keymgt/loadkey.h"
 #include "core/or/relay.h"
 #include "feature/stats/rephist.h"
 #include "feature/hs_common/replaycache.h"
@@ -1363,7 +1364,7 @@ rend_service_key_on_disk(const char *directory_path)
 
   /* Load key */
   fname = hs_path_from_filename(directory_path, private_key_fname);
-  pk = init_key_from_file(fname, 0, LOG_DEBUG, 0);
+  pk = init_key_from_file(fname, 0, LOG_DEBUG, NULL);
   if (pk) {
     ret = 1;
   }
@@ -1535,7 +1536,7 @@ rend_service_load_keys(rend_service_t *s)
 
   /* Load key */
   fname = rend_service_path(s, private_key_fname);
-  s->private_key = init_key_from_file(fname, 1, LOG_ERR, 0);
+  s->private_key = init_key_from_file(fname, 1, LOG_ERR, NULL);
 
   if (!s->private_key)
     goto err;

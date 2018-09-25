@@ -86,6 +86,8 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/hs/hs_stats.c		\
 	src/feature/hs_common/replaycache.c	\
 	src/feature/hs_common/shared_random_client.c	\
+	src/feature/keymgt/loadkey.c		\
+	src/feature/dirauth/keypin.c		\
 	src/feature/nodelist/authcert.c		\
 	src/feature/nodelist/dirlist.c		\
 	src/feature/nodelist/microdesc.c	\
@@ -289,6 +291,7 @@ noinst_HEADERS +=					\
 	src/feature/hs/hsdir_index_st.h			\
 	src/feature/hs_common/replaycache.h		\
 	src/feature/hs_common/shared_random_client.h	\
+	src/feature/keymgt/loadkey.h			\
 	src/feature/nodelist/authcert.h			\
 	src/feature/nodelist/authority_cert_st.h	\
 	src/feature/nodelist/desc_store_st.h		\

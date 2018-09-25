@@ -107,4 +107,10 @@ void or_handshake_certs_check_both(int severity,
 
 int tor_cert_encode_ed22519(const tor_cert_t *cert, char **cert_str_out);
 
+MOCK_DECL(int, check_tap_onion_key_crosscert,(const uint8_t *crosscert,
+                                  int crosscert_len,
+                                  const crypto_pk_t *onion_pkey,
+                                  const ed25519_public_key_t *master_id_pkey,
+                                  const uint8_t *rsa_id_digest));
+
 #endif /* !defined(TORCERT_H_INCLUDED) */
