@@ -89,6 +89,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/keymgt/loadkey.c		\
 	src/feature/dirauth/keypin.c		\
 	src/feature/nodelist/authcert.c		\
+	src/feature/nodelist/describe.c		\
 	src/feature/nodelist/dirlist.c		\
 	src/feature/nodelist/microdesc.c	\
 	src/feature/nodelist/networkstatus.c	\
@@ -297,6 +298,7 @@ noinst_HEADERS +=					\
 	src/feature/keymgt/loadkey.h			\
 	src/feature/nodelist/authcert.h			\
 	src/feature/nodelist/authority_cert_st.h	\
+	src/feature/nodelist/describe.h			\
 	src/feature/nodelist/desc_store_st.h		\
 	src/feature/nodelist/dirlist.h			\
 	src/feature/nodelist/document_signature_st.h	\

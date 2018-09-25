@@ -13,6 +13,7 @@
 #define TOR_ROUTER_H
 
 #include "lib/testsupport/testsupport.h"
+#include "feature/nodelist/describe.h"
 
 struct curve25519_keypair_t;
 struct ed25519_keypair_t;
@@ -121,11 +122,6 @@ int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);
 int is_legal_hexdigest(const char *s);
-
-const char *router_describe(const routerinfo_t *ri);
-const char *node_describe(const node_t *node);
-const char *routerstatus_describe(const routerstatus_t *ri);
-const char *extend_info_describe(const extend_info_t *ei);
 
 const char *routerinfo_err_to_string(int err);
 int routerinfo_err_is_transient(int err);
