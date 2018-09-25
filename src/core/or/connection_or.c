@@ -62,6 +62,7 @@
 #include "core/or/scheduler.h"
 #include "feature/nodelist/torcert.h"
 #include "core/or/channelpadding.h"
+#include "feature/dirauth/authmode.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/cell_queue_st.h"

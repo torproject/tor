@@ -23,6 +23,7 @@
 #include "core/mainloop/mainloop.h"
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
+#include "feature/dirauth/authmode.h"
 #include "feature/dircommon/directory.h"
 #include "feature/dirclient/dirclient.h"
 #include "feature/dirclient/dlstatus.h"

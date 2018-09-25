@@ -90,6 +90,7 @@
 #include "core/or/channelpadding.h"
 #include "core/or/connection_or.h"
 #include "app/config/statefile.h"
+#include "feature/dirauth/authmode.h"
 
 #include "feature/nodelist/networkstatus_st.h"
 #include "core/or/or_circuit_st.h"

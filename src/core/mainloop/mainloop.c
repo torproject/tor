@@ -70,6 +70,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "feature/dircommon/directory.h"
 #include "feature/dircache/dirserv.h"
+#include "feature/dirauth/authmode.h"
 #include "feature/dirauth/reachability.h"
 #include "feature/relay/dns.h"
 #include "feature/client/dnsserv.h"
