@@ -1311,24 +1311,6 @@ router_should_advertise_begindir(const or_options_t *options,
                                       supports_tunnelled_dir_requests);
 }
 
-/** Return true iff our network is in some sense disabled or shutting down:
- * either we're hibernating, entering hibernation, or the network is turned
- * off with DisableNetwork. */
-int
-net_is_disabled(void)
-{
-  return get_options()->DisableNetwork || we_are_hibernating();
-}
-
-/** Return true iff our network is in some sense "completely disabled" either
- * we're fully hibernating or the network is turned off with
- * DisableNetwork. */
-int
-net_is_completely_disabled(void)
-{
-  return get_options()->DisableNetwork || we_are_fully_hibernating();
-}
-
 /** Return true iff the combination of options in <b>options</b> and parameters
  * in the consensus mean that we don't want to allow exits from circuits
  * we got from addresses not known to be servers. */

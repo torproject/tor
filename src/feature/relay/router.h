@@ -16,6 +16,7 @@
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/routerinfo.h"
+#include "core/mainloop/netstatus.h"
 
 struct curve25519_keypair_t;
 struct ed25519_keypair_t;
@@ -58,9 +59,6 @@ void ntor_key_map_free_(di_digest256_map_t *map);
 int router_initialize_tls_context(void);
 int init_keys(void);
 int init_keys_client(void);
-
-int net_is_disabled(void);
-int net_is_completely_disabled(void);
 
 uint16_t router_get_active_listener_port_by_type_af(int listener_type,
                                                     sa_family_t family);
