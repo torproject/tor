@@ -2033,6 +2033,8 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
 
   const int must_ipv4 = !fascist_firewall_use_ipv6(options);
   const int must_ipv6 = (options->ClientUseIPv4 == 0);
+  /* Keep in mind that if we have both IPv4 and IPv6,
+   * fascist_firewall_prefer_ipv6_orport() returns a random preference. */
   const int pref_ipv6 = (conn->type == CONN_TYPE_OR
                          ? fascist_firewall_prefer_ipv6_orport(options)
                          : fascist_firewall_prefer_ipv6_dirport(options));
@@ -2067,6 +2069,12 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
   if (options->UseBridges && conn->type == CONN_TYPE_OR
       && options->ClientPreferIPv6ORPort == -1) {
     return;
+  }
+
+  if (options->ClientPreferIPv6ORPort == -1 &&
+      fascist_firewall_use_ipv6(options)) {
+    log_info(LD_NET, "Our outgoing connection is using IPv%d.",
+             tor_addr_family(&real_addr) == AF_INET6 ? 6 : 4);
   }
 
   /* Check if we couldn't satisfy an address family preference */

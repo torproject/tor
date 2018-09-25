@@ -1,0 +1,7 @@
+  o Minor features (ipv6):
+    - If ClientPreferIPv6ORPort is set to auto and a relay is being chosen
+      for an ORPort connection, we prefer IPv4 or IPv6 at random if we have
+      both. Previously, we preferred to IPv4 if ClientPreferIPv6ORPort is
+      auto except when we are using bridges. Also, we add another option
+      ClientAutoIPv6ORPort which blindly chooses between IPv4 and IPv6.
+      Closes ticket 27490. Patch by Neel Chauhan.

@@ -657,14 +657,17 @@ struct or_options_t {
   int ClientUseIPv6;
   /** If true, prefer an IPv6 OR port over an IPv4 one for entry node
    * connections. If auto, bridge clients prefer IPv6, and other clients
-   * prefer IPv4. Use node_ipv6_or_preferred() instead of accessing this value
-   * directly. */
+   * prefer what they have or choose randomly if they are dual-stack. Use
+   * node_ipv6_or_preferred() instead of accessing this value directly. */
   int ClientPreferIPv6ORPort;
   /** If true, prefer an IPv6 directory port over an IPv4 one for direct
    * directory connections. If auto, bridge clients prefer IPv6, and other
    * clients prefer IPv4. Use fascist_firewall_prefer_ipv6_dirport() instead of
    * accessing this value directly.  */
   int ClientPreferIPv6DirPort;
+
+  /** If true, automatically choose between IPv4 and IPv6. */
+  int ClientAutoIPv6ORPort;
 
   /** The length of time that we think a consensus should be fresh. */
   int V3AuthVotingInterval;

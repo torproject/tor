@@ -845,11 +845,18 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
     }
 
     if (options->ClientPreferIPv6ORPort == -1) {
-      /* Mark which address to use based on which bridge_t we got. */
-      node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
-                              !tor_addr_is_null(&node->ri->ipv6_addr));
+      if (node->ri->addr && !tor_addr_is_null(&node->ri->ipv6_addr)) {
+        /* If we have both IPv4 and IPv6, infer a random preference. */
+        node->ipv6_preferred = fascist_firewall_rand_preferred_addr();
+      } else {
+        /* Mark which address to use based on which bridge_t we got. */
+        node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
+                                !tor_addr_is_null(&node->ri->ipv6_addr));
+      }
     } else {
-      /* Mark which address to use based on user preference */
+      /* Mark which address to use based on user preference. Keep in mind
+       * that fascist_firewall_prefer_ipv6_orport() can infer a random
+       * preference if both IPv4 and IPv6 are available. */
       node->ipv6_preferred = (fascist_firewall_prefer_ipv6_orport(options) &&
                               !tor_addr_is_null(&node->ri->ipv6_addr));
     }
@@ -907,7 +914,9 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
       node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
                               !tor_addr_is_null(&node->rs->ipv6_addr));
     } else {
-      /* Mark which address to use based on user preference */
+      /* Mark which address to use based on user preference. Keep in mind
+       * that fascist_firewall_prefer_ipv6_orport() can infer a random
+       * preference if both IPv4 and IPv6 are available. */
       node->ipv6_preferred = (fascist_firewall_prefer_ipv6_orport(options) &&
                               !tor_addr_is_null(&node->rs->ipv6_addr));
     }

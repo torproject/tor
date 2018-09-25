@@ -2178,22 +2178,6 @@ test_policies_fascist_firewall_choose_address(void *arg)
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_DIR_CONNECTION, 1, 1,
                        ipv4_dir_ap);
 
-  /* Auto (Preferring IPv4) */
-  mock_options.ClientPreferIPv6ORPort = -1;
-  mock_options.ClientPreferIPv6DirPort = -1;
-  /* Simulate the initialisation of fake_node.ipv6_preferred */
-  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
-                                                                &mock_options);
-
-  CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
-                       ipv4_or_ap);
-  CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 1, 1,
-                       ipv4_or_ap);
-  CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_DIR_CONNECTION, 0, 1,
-                       ipv4_dir_ap);
-  CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_DIR_CONNECTION, 1, 1,
-                       ipv4_dir_ap);
-
   /* Preferring IPv6 */
   mock_options.ClientPreferIPv6ORPort = 1;
   mock_options.ClientPreferIPv6DirPort = 1;
@@ -2292,12 +2276,6 @@ test_policies_fascist_firewall_choose_address(void *arg)
                          ipv4_dir_ap);
   CHECK_CHOSEN_ADDR_NODE(fake_node, FIREWALL_DIR_CONNECTION, 1, 1,
                          ipv4_dir_ap);
-
-  /* When a rs has no node, it defaults to IPv4 under auto. */
-  CHECK_CHOSEN_ADDR_RS(fake_rs, FIREWALL_OR_CONNECTION, 0, 1, ipv4_or_ap);
-  CHECK_CHOSEN_ADDR_RS(fake_rs, FIREWALL_OR_CONNECTION, 1, 1, ipv4_or_ap);
-  CHECK_CHOSEN_ADDR_RS(fake_rs, FIREWALL_DIR_CONNECTION, 0, 1, ipv4_dir_ap);
-  CHECK_CHOSEN_ADDR_RS(fake_rs, FIREWALL_DIR_CONNECTION, 1, 1, ipv4_dir_ap);
 
   /* Preferring IPv6 */
   mock_options.ClientPreferIPv6ORPort = 1;
