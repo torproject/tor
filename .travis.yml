@@ -57,6 +57,8 @@ matrix:
     ## Check disable module dirauth with and without rust
     - env: MODULES_OPTIONS="--disable-module-dirauth" RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
     - env: MODULES_OPTIONS="--disable-module-dirauth"
+    ## Check NSS
+    - env: NSS_OPTIONS="--enable-nss"
 
   ## Uncomment to allow the build to report success (with non-required
   ## sub-builds continuing to run) if all required sub-builds have
@@ -118,6 +120,7 @@ addons:
       ## Optional dependencies
       - libcap-dev
       - liblzma-dev
+      - libnss3-dev
       - libscrypt-dev
       - libseccomp-dev
       ## zstd doesn't exist in Ubuntu Trusty
@@ -186,7 +189,7 @@ install:
 
 script:
   - ./autogen.sh
-  - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
+  - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $NSS_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
   - echo "Configure flags are $CONFIGURE_FLAGS"
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
