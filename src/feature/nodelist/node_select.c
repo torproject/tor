@@ -18,8 +18,9 @@
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "feature/client/entrynodes.h"
-#include "feature/dircommon/directory.h"
 #include "feature/dirclient/dirclient.h"
+#include "feature/dircommon/directory.h"
+#include "feature/nodelist/describe.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
@@ -28,6 +29,7 @@
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/math/fp.h"
 

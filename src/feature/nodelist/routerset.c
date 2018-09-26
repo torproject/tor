@@ -28,13 +28,13 @@ n * Copyright (c) 2001-2004, Roger Dingledine.
 #define ROUTERSET_PRIVATE
 
 #include "core/or/or.h"
-#include "feature/client/bridges.h"
-#include "feature/stats/geoip.h"
-#include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"
-#include "feature/relay/router.h"
+#include "feature/client/bridges.h"
+#include "feature/nodelist/nickname.h"
+#include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerparse.h"
 #include "feature/nodelist/routerset.h"
+#include "feature/stats/geoip.h"
 
 #include "core/or/addr_policy_st.h"
 #include "core/or/extend_info_st.h"

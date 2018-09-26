@@ -38,6 +38,7 @@
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"

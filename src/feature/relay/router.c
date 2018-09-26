@@ -7,60 +7,57 @@
 #define ROUTER_PRIVATE
 
 #include "core/or/or.h"
-#include "core/or/circuitbuild.h"
-#include "core/or/circuitlist.h"
-#include "core/or/circuituse.h"
 #include "app/config/config.h"
-#include "core/mainloop/connection.h"
-#include "feature/control/control.h"
-#include "lib/crypt_ops/crypto_rand.h"
-#include "lib/crypt_ops/crypto_util.h"
-#include "lib/crypt_ops/crypto_curve25519.h"
-#include "feature/dircommon/directory.h"
-#include "feature/dirclient/dirclient.h"
-#include "feature/dircache/dirserv.h"
-#include "feature/dirauth/process_descs.h"
-#include "feature/relay/dns.h"
-#include "feature/stats/geoip.h"
-#include "feature/hibernate/hibernate.h"
+#include "app/config/statefile.h"
 #include "app/main/main.h"
+#include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
-#include "feature/nodelist/networkstatus.h"
-#include "feature/nodelist/nodelist.h"
+#include "core/mainloop/netstatus.h"
 #include "core/or/policies.h"
 #include "core/or/protover.h"
-#include "core/or/relay.h"
-#include "feature/stats/rephist.h"
-#include "feature/relay/router.h"
-#include "feature/relay/routerkeys.h"
+#include "feature/client/transports.h"
+#include "feature/control/control.h"
+#include "feature/dirauth/process_descs.h"
+#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient.h"
+#include "feature/dircommon/directory.h"
+#include "feature/hibernate/hibernate.h"
+#include "feature/keymgt/loadkey.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nickname.h"
+#include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerparse.h"
-#include "app/config/statefile.h"
 #include "feature/nodelist/torcert.h"
-#include "feature/client/transports.h"
-#include "feature/nodelist/routerset.h"
-
-#include "feature/dirauth/mode.h"
-
-#include "feature/nodelist/authority_cert_st.h"
-#include "core/or/crypt_path_st.h"
-#include "feature/dircommon/dir_connection_st.h"
-#include "feature/dirclient/dir_server_st.h"
-#include "core/or/extend_info_st.h"
-#include "feature/nodelist/extrainfo_st.h"
-#include "feature/nodelist/node_st.h"
-#include "core/or/origin_circuit_st.h"
-#include "app/config/or_state_st.h"
-#include "core/or/port_cfg_st.h"
-#include "feature/nodelist/routerinfo_st.h"
-
-#include "lib/osinfo/uname.h"
-#include "lib/tls/tortls.h"
-#include "lib/encoding/confline.h"
+#include "feature/relay/dns.h"
+#include "feature/relay/router.h"
+#include "feature/relay/routerkeys.h"
+#include "feature/relay/routermode.h"
+#include "feature/relay/selftest.h"
+#include "feature/stats/geoip.h"
+#include "feature/stats/rephist.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_init.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
+#include "lib/encoding/confline.h"
+#include "lib/osinfo/uname.h"
+#include "lib/tls/tortls.h"
+
+#include "feature/dirauth/authmode.h"
+
+#include "app/config/or_state_st.h"
+#include "core/or/port_cfg_st.h"
+#include "feature/dirclient/dir_server_st.h"
+#include "feature/dircommon/dir_connection_st.h"
+#include "feature/nodelist/authority_cert_st.h"
+#include "feature/nodelist/extrainfo_st.h"
+#include "feature/nodelist/node_st.h"
+#include "feature/nodelist/routerinfo_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 
 /**
  * \file router.c
@@ -129,13 +126,6 @@ static authority_cert_t *legacy_key_certificate = NULL;
  * but this key is never actually loaded by the Tor process.  Instead, it's
  * used by tor-gencert to sign new signing keys and make new key
  * certificates. */
-
-const char *format_node_description(char *buf,
-                                    const char *id_digest,
-                                    int is_named,
-                                    const char *nickname,
-                                    const tor_addr_t *addr,
-                                    uint32_t addr32h);
 
 /** Return a readonly string with human readable description
  * of <b>err</b>.
@@ -540,85 +530,6 @@ log_new_relay_greeting(void)
   already_logged = 1;
 }
 
-/** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist
- * and <b>generate</b> is true, create a new RSA key and save it in
- * <b>fname</b>.  Return the read/created key, or NULL on error.  Log all
- * errors at level <b>severity</b>. If <b>log_greeting</b> is non-zero and a
- * new key was created, log_new_relay_greeting() is called.
- */
-crypto_pk_t *
-init_key_from_file(const char *fname, int generate, int severity,
-                   int log_greeting)
-{
-  crypto_pk_t *prkey = NULL;
-
-  if (!(prkey = crypto_pk_new())) {
-    tor_log(severity, LD_GENERAL,"Error constructing key");
-    goto error;
-  }
-
-  switch (file_status(fname)) {
-    case FN_DIR:
-    case FN_ERROR:
-      tor_log(severity, LD_FS,"Can't read key from \"%s\"", fname);
-      goto error;
-    /* treat empty key files as if the file doesn't exist, and,
-     * if generate is set, replace the empty file in
-     * crypto_pk_write_private_key_to_filename() */
-    case FN_NOENT:
-    case FN_EMPTY:
-      if (generate) {
-        if (!have_lockfile()) {
-          if (try_locking(get_options(), 0)<0) {
-            /* Make sure that --list-fingerprint only creates new keys
-             * if there is no possibility for a deadlock. */
-            tor_log(severity, LD_FS, "Another Tor process has locked \"%s\". "
-                    "Not writing any new keys.", fname);
-            /*XXXX The 'other process' might make a key in a second or two;
-             * maybe we should wait for it. */
-            goto error;
-          }
-        }
-        log_info(LD_GENERAL, "No key found in \"%s\"; generating fresh key.",
-                 fname);
-        if (crypto_pk_generate_key(prkey)) {
-          tor_log(severity, LD_GENERAL,"Error generating onion key");
-          goto error;
-        }
-        if (! crypto_pk_is_valid_private_key(prkey)) {
-          tor_log(severity, LD_GENERAL,"Generated key seems invalid");
-          goto error;
-        }
-        log_info(LD_GENERAL, "Generated key seems valid");
-        if (log_greeting) {
-            log_new_relay_greeting();
-        }
-        if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-          tor_log(severity, LD_FS,
-              "Couldn't write generated key to \"%s\".", fname);
-          goto error;
-        }
-      } else {
-        tor_log(severity, LD_GENERAL, "No key found in \"%s\"", fname);
-        goto error;
-      }
-      return prkey;
-    case FN_FILE:
-      if (crypto_pk_read_private_key_from_filename(prkey, fname)) {
-        tor_log(severity, LD_GENERAL,"Error loading private key.");
-        goto error;
-      }
-      return prkey;
-    default:
-      tor_assert(0);
-  }
-
- error:
-  if (prkey)
-    crypto_pk_free(prkey);
-  return NULL;
-}
-
 /** Load a curve25519 keypair from the file <b>fname</b>, writing it into
  * <b>keys_out</b>.  If the file isn't found, or is empty, and <b>generate</b>
  * is true, create a new keypair and write it into the file.  If there are
@@ -708,7 +619,7 @@ load_authority_keyset(int legacy, crypto_pk_t **key_out,
 
   fname = get_keydir_fname(
                  legacy ? "legacy_signing_key" : "authority_signing_key");
-  signing_key = init_key_from_file(fname, 0, LOG_ERR, 0);
+  signing_key = init_key_from_file(fname, 0, LOG_ERR, NULL);
   if (!signing_key) {
     log_warn(LD_DIR, "No version 3 directory key found in %s", fname);
     goto done;
@@ -1042,9 +953,12 @@ init_keys(void)
   /* 1b. Read identity key. Make it if none is found. */
   keydir = get_keydir_fname("secret_id_key");
   log_info(LD_GENERAL,"Reading/making identity key \"%s\"...",keydir);
-  prkey = init_key_from_file(keydir, 1, LOG_ERR, 1);
+  bool created = false;
+  prkey = init_key_from_file(keydir, 1, LOG_ERR, &created);
   tor_free(keydir);
   if (!prkey) return -1;
+  if (created)
+    log_new_relay_greeting();
   set_server_identity_key(prkey);
 
   /* 1c. If we are configured as a bridge, generate a client key;
@@ -1070,7 +984,9 @@ init_keys(void)
   /* 2. Read onion key.  Make it if none is found. */
   keydir = get_keydir_fname("secret_onion_key");
   log_info(LD_GENERAL,"Reading/making onion key \"%s\"...",keydir);
-  prkey = init_key_from_file(keydir, 1, LOG_ERR, 1);
+  prkey = init_key_from_file(keydir, 1, LOG_ERR, &created);
+  if (created)
+    log_new_relay_greeting();
   tor_free(keydir);
   if (!prkey) return -1;
   set_onion_key(prkey);
@@ -1242,68 +1158,6 @@ init_keys(void)
   return 0; /* success */
 }
 
-/* Keep track of whether we should upload our server descriptor,
- * and what type of server we are.
- */
-
-/** Whether we can reach our ORPort from the outside. */
-static int can_reach_or_port = 0;
-/** Whether we can reach our DirPort from the outside. */
-static int can_reach_dir_port = 0;
-
-/** Forget what we have learned about our reachability status. */
-void
-router_reset_reachability(void)
-{
-  can_reach_or_port = can_reach_dir_port = 0;
-}
-
-/** Return 1 if we won't do reachability checks, because:
- *   - AssumeReachable is set, or
- *   - the network is disabled.
- * Otherwise, return 0.
- */
-static int
-router_reachability_checks_disabled(const or_options_t *options)
-{
-  return options->AssumeReachable ||
-         net_is_disabled();
-}
-
-/** Return 0 if we need to do an ORPort reachability check, because:
- *   - no reachability check has been done yet, or
- *   - we've initiated reachability checks, but none have succeeded.
- *  Return 1 if we don't need to do an ORPort reachability check, because:
- *   - we've seen a successful reachability check, or
- *   - AssumeReachable is set, or
- *   - the network is disabled.
- */
-int
-check_whether_orport_reachable(const or_options_t *options)
-{
-  int reach_checks_disabled = router_reachability_checks_disabled(options);
-  return reach_checks_disabled ||
-         can_reach_or_port;
-}
-
-/** Return 0 if we need to do a DirPort reachability check, because:
- *   - no reachability check has been done yet, or
- *   - we've initiated reachability checks, but none have succeeded.
- *  Return 1 if we don't need to do a DirPort reachability check, because:
- *   - we've seen a successful reachability check, or
- *   - there is no DirPort set, or
- *   - AssumeReachable is set, or
- *   - the network is disabled.
- */
-int
-check_whether_dirport_reachable(const or_options_t *options)
-{
-  int reach_checks_disabled = router_reachability_checks_disabled(options) ||
-                              !options->DirPort_set;
-  return reach_checks_disabled ||
-         can_reach_dir_port;
-}
-
 /** The lower threshold of remaining bandwidth required to advertise (or
  * automatically provide) directory services */
 /* XXX Should this be increased? */
@@ -1312,7 +1166,7 @@ check_whether_dirport_reachable(const or_options_t *options)
 /** Return true iff we have enough configured bandwidth to advertise or
  * automatically provide directory services from cache directory
  * information. */
-static int
+int
 router_has_bandwidth_to_be_dirserver(const or_options_t *options)
 {
   if (options->BandwidthRate < MIN_BW_TO_ADVERTISE_DIRSERVER) {
@@ -1392,19 +1246,6 @@ router_should_be_dirserver(const or_options_t *options, int dir_port)
   return advertising;
 }
 
-/** Return 1 if we are configured to accept either relay or directory requests
- * from clients and we aren't at risk of exceeding our bandwidth limits, thus
- * we should be a directory server. If not, return 0.
- */
-int
-dir_server_mode(const or_options_t *options)
-{
-  if (!options->DirCache)
-    return 0;
-  return options->DirPort_set ||
-    (server_mode(options) && router_has_bandwidth_to_be_dirserver(options));
-}
-
 /** Look at a variety of factors, and return 0 if we don't want to
  * advertise the fact that we have a DirPort open or begindir support, else
  * return 1.
@@ -1445,7 +1286,7 @@ decide_to_advertise_dir_impl(const or_options_t *options,
  * advertise the fact that we have a DirPort open, else return the
  * DirPort we want to advertise.
  */
-static int
+int
 router_should_advertise_dirport(const or_options_t *options, uint16_t dir_port)
 {
   /* supports_tunnelled_dir_requests is not relevant, pass 0 */
@@ -1464,297 +1305,6 @@ router_should_advertise_begindir(const or_options_t *options,
                                       supports_tunnelled_dir_requests);
 }
 
-/** Allocate and return a new extend_info_t that can be used to build
- * a circuit to or through the router <b>r</b>. Uses the primary
- * address of the router, so should only be called on a server. */
-static extend_info_t *
-extend_info_from_router(const routerinfo_t *r)
-{
-  crypto_pk_t *rsa_pubkey;
-  extend_info_t *info;
-  tor_addr_port_t ap;
-  tor_assert(r);
-
-  /* Make sure we don't need to check address reachability */
-  tor_assert_nonfatal(router_skip_or_reachability(get_options(), 0));
-
-  const ed25519_public_key_t *ed_id_key;
-  if (r->cache_info.signing_key_cert)
-    ed_id_key = &r->cache_info.signing_key_cert->signing_key;
-  else
-    ed_id_key = NULL;
-
-  router_get_prim_orport(r, &ap);
-  rsa_pubkey = router_get_rsa_onion_pkey(r->onion_pkey, r->onion_pkey_len);
-  info = extend_info_new(r->nickname, r->cache_info.identity_digest,
-                         ed_id_key,
-                         rsa_pubkey, r->onion_curve25519_pkey,
-                         &ap.addr, ap.port);
-  crypto_pk_free(rsa_pubkey);
-  return info;
-}
-
-/**See if we currently believe our ORPort or DirPort to be
- * unreachable. If so, return 1 else return 0.
- */
-static int
-router_should_check_reachability(int test_or, int test_dir)
-{
-  const routerinfo_t *me = router_get_my_routerinfo();
-  const or_options_t *options = get_options();
-
-  if (!me)
-    return 0;
-
-  if (routerset_contains_router(options->ExcludeNodes, me, -1) &&
-      options->StrictNodes) {
-    /* If we've excluded ourself, and StrictNodes is set, we can't test
-     * ourself. */
-    if (test_or || test_dir) {
-#define SELF_EXCLUDED_WARN_INTERVAL 3600
-      static ratelim_t warning_limit=RATELIM_INIT(SELF_EXCLUDED_WARN_INTERVAL);
-      log_fn_ratelim(&warning_limit, LOG_WARN, LD_CIRC,
-                 "Can't peform self-tests for this relay: we have "
-                 "listed ourself in ExcludeNodes, and StrictNodes is set. "
-                 "We cannot learn whether we are usable, and will not "
-                 "be able to advertise ourself.");
-    }
-    return 0;
-  }
-  return 1;
-}
-
-/** Some time has passed, or we just got new directory information.
- * See if we currently believe our ORPort or DirPort to be
- * unreachable. If so, launch a new test for it.
- *
- * For ORPort, we simply try making a circuit that ends at ourselves.
- * Success is noticed in onionskin_answer().
- *
- * For DirPort, we make a connection via Tor to our DirPort and ask
- * for our own server descriptor.
- * Success is noticed in connection_dir_client_reached_eof().
- */
-void
-router_do_reachability_checks(int test_or, int test_dir)
-{
-  const routerinfo_t *me = router_get_my_routerinfo();
-  const or_options_t *options = get_options();
-  int orport_reachable = check_whether_orport_reachable(options);
-  tor_addr_t addr;
-
-  if (router_should_check_reachability(test_or, test_dir)) {
-    if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
-      extend_info_t *ei = extend_info_from_router(me);
-      /* XXX IPv6 self testing */
-      log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
-               !orport_reachable ? "reachability" : "bandwidth",
-               fmt_addr32(me->addr), me->or_port);
-      circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
-                              CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
-      extend_info_free(ei);
-    }
-
-    /* XXX IPv6 self testing */
-    tor_addr_from_ipv4h(&addr, me->addr);
-    if (test_dir && !check_whether_dirport_reachable(options) &&
-        !connection_get_by_type_addr_port_purpose(
-                  CONN_TYPE_DIR, &addr, me->dir_port,
-                  DIR_PURPOSE_FETCH_SERVERDESC)) {
-      tor_addr_port_t my_orport, my_dirport;
-      memcpy(&my_orport.addr, &addr, sizeof(addr));
-      memcpy(&my_dirport.addr, &addr, sizeof(addr));
-      my_orport.port = me->or_port;
-      my_dirport.port = me->dir_port;
-      /* ask myself, via tor, for my server descriptor. */
-      directory_request_t *req =
-        directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
-      directory_request_set_or_addr_port(req, &my_orport);
-      directory_request_set_dir_addr_port(req, &my_dirport);
-      directory_request_set_directory_id_digest(req,
-                                              me->cache_info.identity_digest);
-      // ask via an anon circuit, connecting to our dirport.
-      directory_request_set_indirection(req, DIRIND_ANON_DIRPORT);
-      directory_request_set_resource(req, "authority.z");
-      directory_initiate_request(req);
-      directory_request_free(req);
-    }
-  }
-}
-
-/** Annotate that we found our ORPort reachable. */
-void
-router_orport_found_reachable(void)
-{
-  const routerinfo_t *me = router_get_my_routerinfo();
-  const or_options_t *options = get_options();
-  if (!can_reach_or_port && me) {
-    char *address = tor_dup_ip(me->addr);
-    log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
-               "the outside. Excellent.%s",
-               options->PublishServerDescriptor_ != NO_DIRINFO
-               && check_whether_dirport_reachable(options) ?
-                 " Publishing server descriptor." : "");
-    can_reach_or_port = 1;
-    mark_my_descriptor_dirty("ORPort found reachable");
-    /* This is a significant enough change to upload immediately,
-     * at least in a test network */
-    if (options->TestingTorNetwork == 1) {
-      reschedule_descriptor_update_check();
-    }
-    control_event_server_status(LOG_NOTICE,
-                                "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
-                                address, me->or_port);
-    tor_free(address);
-  }
-}
-
-/** Annotate that we found our DirPort reachable. */
-void
-router_dirport_found_reachable(void)
-{
-  const routerinfo_t *me = router_get_my_routerinfo();
-  const or_options_t *options = get_options();
-  if (!can_reach_dir_port && me) {
-    char *address = tor_dup_ip(me->addr);
-    log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
-               "from the outside. Excellent.%s",
-               options->PublishServerDescriptor_ != NO_DIRINFO
-               && check_whether_orport_reachable(options) ?
-               " Publishing server descriptor." : "");
-    can_reach_dir_port = 1;
-    if (router_should_advertise_dirport(options, me->dir_port)) {
-      mark_my_descriptor_dirty("DirPort found reachable");
-      /* This is a significant enough change to upload immediately,
-       * at least in a test network */
-      if (options->TestingTorNetwork == 1) {
-        reschedule_descriptor_update_check();
-      }
-    }
-    control_event_server_status(LOG_NOTICE,
-                                "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
-                                address, me->dir_port);
-    tor_free(address);
-  }
-}
-
-/** We have enough testing circuits open. Send a bunch of "drop"
- * cells down each of them, to exercise our bandwidth. */
-void
-router_perform_bandwidth_test(int num_circs, time_t now)
-{
-  int num_cells = (int)(get_options()->BandwidthRate * 10 /
-                        CELL_MAX_NETWORK_SIZE);
-  int max_cells = num_cells < CIRCWINDOW_START ?
-                    num_cells : CIRCWINDOW_START;
-  int cells_per_circuit = max_cells / num_circs;
-  origin_circuit_t *circ = NULL;
-
-  log_notice(LD_OR,"Performing bandwidth self-test...done.");
-  while ((circ = circuit_get_next_by_pk_and_purpose(circ, NULL,
-                                              CIRCUIT_PURPOSE_TESTING))) {
-    /* dump cells_per_circuit drop cells onto this circ */
-    int i = cells_per_circuit;
-    if (circ->base_.state != CIRCUIT_STATE_OPEN)
-      continue;
-    circ->base_.timestamp_dirty = now;
-    while (i-- > 0) {
-      if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
-                                       RELAY_COMMAND_DROP,
-                                       NULL, 0, circ->cpath->prev)<0) {
-        return; /* stop if error */
-      }
-    }
-  }
-}
-
-/** Return true iff our network is in some sense disabled or shutting down:
- * either we're hibernating, entering hibernation, or the network is turned
- * off with DisableNetwork. */
-int
-net_is_disabled(void)
-{
-  return get_options()->DisableNetwork || we_are_hibernating();
-}
-
-/** Return true iff our network is in some sense "completely disabled" either
- * we're fully hibernating or the network is turned off with
- * DisableNetwork. */
-int
-net_is_completely_disabled(void)
-{
-  return get_options()->DisableNetwork || we_are_fully_hibernating();
-}
-
-/** Return true iff we believe ourselves to be an authoritative
- * directory server.
- */
-int
-authdir_mode(const or_options_t *options)
-{
-  return options->AuthoritativeDir != 0;
-}
-/** Return true iff we are an authoritative directory server that is
- * authoritative about receiving and serving descriptors of type
- * <b>purpose</b> on its dirport.
- */
-int
-authdir_mode_handles_descs(const or_options_t *options, int purpose)
-{
-  if (BUG(purpose < 0)) /* Deprecated. */
-    return authdir_mode(options);
-  else if (purpose == ROUTER_PURPOSE_GENERAL)
-    return authdir_mode_v3(options);
-  else if (purpose == ROUTER_PURPOSE_BRIDGE)
-    return authdir_mode_bridge(options);
-  else
-    return 0;
-}
-/** Return true iff we are an authoritative directory server that
- * publishes its own network statuses.
- */
-int
-authdir_mode_publishes_statuses(const or_options_t *options)
-{
-  if (authdir_mode_bridge(options))
-    return 0;
-  return authdir_mode(options);
-}
-/** Return true iff we are an authoritative directory server that
- * tests reachability of the descriptors it learns about.
- */
-int
-authdir_mode_tests_reachability(const or_options_t *options)
-{
-  return authdir_mode(options);
-}
-/** Return true iff we believe ourselves to be a bridge authoritative
- * directory server.
- */
-int
-authdir_mode_bridge(const or_options_t *options)
-{
-  return authdir_mode(options) && options->BridgeAuthoritativeDir != 0;
-}
-
-/** Return true iff we are trying to be a server.
- */
-MOCK_IMPL(int,
-server_mode,(const or_options_t *options))
-{
-  if (options->ClientOnly) return 0;
-  return (options->ORPort_set);
-}
-
-/** Return true iff we are trying to be a non-bridge server.
- */
-MOCK_IMPL(int,
-public_server_mode,(const or_options_t *options))
-{
-  if (!server_mode(options)) return 0;
-  return (!options->BridgeRelay);
-}
-
 /** Return true iff the combination of options in <b>options</b> and parameters
  * in the consensus mean that we don't want to allow exits from circuits
  * we got from addresses not known to be servers. */
@@ -1766,42 +1316,6 @@ should_refuse_unknown_exits(const or_options_t *options)
   } else {
     return networkstatus_get_param(NULL, "refuseunknownexits", 1, 0, 1);
   }
-}
-
-/** Remember if we've advertised ourselves to the dirservers. */
-static int server_is_advertised=0;
-
-/** Return true iff we have published our descriptor lately.
- */
-MOCK_IMPL(int,
-advertised_server_mode,(void))
-{
-  return server_is_advertised;
-}
-
-/**
- * Called with a boolean: set whether we have recently published our
- * descriptor.
- */
-static void
-set_server_advertised(int s)
-{
-  server_is_advertised = s;
-}
-
-/** Return true iff we are trying to proxy client connections. */
-int
-proxy_mode(const or_options_t *options)
-{
-  (void)options;
-  SMARTLIST_FOREACH_BEGIN(get_configured_ports(), const port_cfg_t *, p) {
-    if (p->type == CONN_TYPE_AP_LISTENER ||
-        p->type == CONN_TYPE_AP_TRANS_LISTENER ||
-        p->type == CONN_TYPE_AP_DNS_LISTENER ||
-        p->type == CONN_TYPE_AP_NATD_LISTENER)
-      return 1;
-  } SMARTLIST_FOREACH_END(p);
-  return 0;
 }
 
 /** Decide if we're a publishable server. We are a publishable server if:
@@ -3267,36 +2781,6 @@ router_dump_exit_policy_to_string(const routerinfo_t *router,
                                include_ipv6);
 }
 
-/** Copy the primary (IPv4) OR port (IP address and TCP port) for
- * <b>router</b> into *<b>ap_out</b>. */
-void
-router_get_prim_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
-{
-  tor_assert(ap_out != NULL);
-  tor_addr_from_ipv4h(&ap_out->addr, router->addr);
-  ap_out->port = router->or_port;
-}
-
-/** Return 1 if any of <b>router</b>'s addresses are <b>addr</b>.
- *   Otherwise return 0. */
-int
-router_has_addr(const routerinfo_t *router, const tor_addr_t *addr)
-{
-  return
-    tor_addr_eq_ipv4h(addr, router->addr) ||
-    tor_addr_eq(&router->ipv6_addr, addr);
-}
-
-int
-router_has_orport(const routerinfo_t *router, const tor_addr_port_t *orport)
-{
-  return
-    (tor_addr_eq_ipv4h(&orport->addr, router->addr) &&
-     orport->port == router->or_port) ||
-    (tor_addr_eq(&orport->addr, &router->ipv6_addr) &&
-     orport->port == router->ipv6_orport);
-}
-
 /** Load the contents of <b>filename</b>, find the last line starting with
  * <b>end_line</b>, ensure that its timestamp is not more than 25 hours in
  * the past or more than 1 hour in the future with respect to <b>now</b>,
@@ -3566,219 +3050,6 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   return result;
 }
 
-/** Return true iff <b>s</b> is a valid server nickname. (That is, a string
- * containing between 1 and MAX_NICKNAME_LEN characters from
- * LEGAL_NICKNAME_CHARACTERS.) */
-int
-is_legal_nickname(const char *s)
-{
-  size_t len;
-  tor_assert(s);
-  len = strlen(s);
-  return len > 0 && len <= MAX_NICKNAME_LEN &&
-    strspn(s,LEGAL_NICKNAME_CHARACTERS) == len;
-}
-
-/** Return true iff <b>s</b> is a valid server nickname or
- * hex-encoded identity-key digest. */
-int
-is_legal_nickname_or_hexdigest(const char *s)
-{
-  if (*s!='$')
-    return is_legal_nickname(s);
-  else
-    return is_legal_hexdigest(s);
-}
-
-/** Return true iff <b>s</b> is a valid hex-encoded identity-key
- * digest. (That is, an optional $, followed by 40 hex characters,
- * followed by either nothing, or = or ~ followed by a nickname, or
- * a character other than =, ~, or a hex character.)
- */
-int
-is_legal_hexdigest(const char *s)
-{
-  size_t len;
-  tor_assert(s);
-  if (s[0] == '$') s++;
-  len = strlen(s);
-  if (len > HEX_DIGEST_LEN) {
-    if (s[HEX_DIGEST_LEN] == '=' ||
-        s[HEX_DIGEST_LEN] == '~') {
-      if (!is_legal_nickname(s+HEX_DIGEST_LEN+1))
-        return 0;
-    } else {
-      return 0;
-    }
-  }
-  return (len >= HEX_DIGEST_LEN &&
-          strspn(s,HEX_CHARACTERS)==HEX_DIGEST_LEN);
-}
-
-/**
- * Longest allowed output of format_node_description, plus 1 character for
- * NUL.  This allows space for:
- * "$FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF~xxxxxxxxxxxxxxxxxxx at"
- * " [ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]"
- * plus a terminating NUL.
- */
-#define NODE_DESC_BUF_LEN (MAX_VERBOSE_NICKNAME_LEN+4+TOR_ADDR_BUF_LEN)
-
-/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
- * hold a human-readable description of a node with identity digest
- * <b>id_digest</b>, named-status <b>is_named</b>, nickname <b>nickname</b>,
- * and address <b>addr</b> or <b>addr32h</b>.
- *
- * The <b>nickname</b> and <b>addr</b> fields are optional and may be set to
- * NULL.  The <b>addr32h</b> field is optional and may be set to 0.
- *
- * Return a pointer to the front of <b>buf</b>.
- */
-const char *
-format_node_description(char *buf,
-                        const char *id_digest,
-                        int is_named,
-                        const char *nickname,
-                        const tor_addr_t *addr,
-                        uint32_t addr32h)
-{
-  char *cp;
-
-  if (!buf)
-    return "<NULL BUFFER>";
-
-  buf[0] = '$';
-  base16_encode(buf+1, HEX_DIGEST_LEN+1, id_digest, DIGEST_LEN);
-  cp = buf+1+HEX_DIGEST_LEN;
-  if (nickname) {
-    buf[1+HEX_DIGEST_LEN] = is_named ? '=' : '~';
-    strlcpy(buf+1+HEX_DIGEST_LEN+1, nickname, MAX_NICKNAME_LEN+1);
-    cp += strlen(cp);
-  }
-  if (addr32h || addr) {
-    memcpy(cp, " at ", 4);
-    cp += 4;
-    if (addr) {
-      tor_addr_to_str(cp, addr, TOR_ADDR_BUF_LEN, 0);
-    } else {
-      struct in_addr in;
-      in.s_addr = htonl(addr32h);
-      tor_inet_ntoa(&in, cp, INET_NTOA_BUF_LEN);
-    }
-  }
-  return buf;
-}
-
-/** Return a human-readable description of the routerinfo_t <b>ri</b>.
- *
- * This function is not thread-safe.  Each call to this function invalidates
- * previous values returned by this function.
- */
-const char *
-router_describe(const routerinfo_t *ri)
-{
-  static char buf[NODE_DESC_BUF_LEN];
-
-  if (!ri)
-    return "<null>";
-  return format_node_description(buf,
-                                 ri->cache_info.identity_digest,
-                                 0,
-                                 ri->nickname,
-                                 NULL,
-                                 ri->addr);
-}
-
-/** Return a human-readable description of the node_t <b>node</b>.
- *
- * This function is not thread-safe.  Each call to this function invalidates
- * previous values returned by this function.
- */
-const char *
-node_describe(const node_t *node)
-{
-  static char buf[NODE_DESC_BUF_LEN];
-  const char *nickname = NULL;
-  uint32_t addr32h = 0;
-  int is_named = 0;
-
-  if (!node)
-    return "<null>";
-
-  if (node->rs) {
-    nickname = node->rs->nickname;
-    is_named = node->rs->is_named;
-    addr32h = node->rs->addr;
-  } else if (node->ri) {
-    nickname = node->ri->nickname;
-    addr32h = node->ri->addr;
-  }
-
-  return format_node_description(buf,
-                                 node->identity,
-                                 is_named,
-                                 nickname,
-                                 NULL,
-                                 addr32h);
-}
-
-/** Return a human-readable description of the routerstatus_t <b>rs</b>.
- *
- * This function is not thread-safe.  Each call to this function invalidates
- * previous values returned by this function.
- */
-const char *
-routerstatus_describe(const routerstatus_t *rs)
-{
-  static char buf[NODE_DESC_BUF_LEN];
-
-  if (!rs)
-    return "<null>";
-  return format_node_description(buf,
-                                 rs->identity_digest,
-                                 rs->is_named,
-                                 rs->nickname,
-                                 NULL,
-                                 rs->addr);
-}
-
-/** Return a human-readable description of the extend_info_t <b>ei</b>.
- *
- * This function is not thread-safe.  Each call to this function invalidates
- * previous values returned by this function.
- */
-const char *
-extend_info_describe(const extend_info_t *ei)
-{
-  static char buf[NODE_DESC_BUF_LEN];
-
-  if (!ei)
-    return "<null>";
-  return format_node_description(buf,
-                                 ei->identity_digest,
-                                 0,
-                                 ei->nickname,
-                                 &ei->addr,
-                                 0);
-}
-
-/** Set <b>buf</b> (which must have MAX_VERBOSE_NICKNAME_LEN+1 bytes) to the
- * verbose representation of the identity of <b>router</b>.  The format is:
- *  A dollar sign.
- *  The upper-case hexadecimal encoding of the SHA1 hash of router's identity.
- *  A "=" if the router is named (no longer implemented); a "~" if it is not.
- *  The router's nickname.
- **/
-void
-router_get_verbose_nickname(char *buf, const routerinfo_t *router)
-{
-  buf[0] = '$';
-  base16_encode(buf+1, HEX_DIGEST_LEN+1, router->cache_info.identity_digest,
-                DIGEST_LEN);
-  buf[1+HEX_DIGEST_LEN] = '~';
-  strlcpy(buf+1+HEX_DIGEST_LEN+1, router->nickname, MAX_NICKNAME_LEN+1);
-}
-
 /** Forget that we have issued any router-related warnings, so that we'll
  * warn again if we see the same errors. */
 void
@@ -3788,37 +3059,6 @@ router_reset_warnings(void)
     SMARTLIST_FOREACH(warned_nonexistent_family, char *, cp, tor_free(cp));
     smartlist_clear(warned_nonexistent_family);
   }
-}
-
-/** Given a router purpose, convert it to a string.  Don't call this on
- * ROUTER_PURPOSE_UNKNOWN: The whole point of that value is that we don't
- * know its string representation. */
-const char *
-router_purpose_to_string(uint8_t p)
-{
-  switch (p)
-    {
-    case ROUTER_PURPOSE_GENERAL: return "general";
-    case ROUTER_PURPOSE_BRIDGE: return "bridge";
-    case ROUTER_PURPOSE_CONTROLLER: return "controller";
-    default:
-      tor_assert(0);
-    }
-  return NULL;
-}
-
-/** Given a string, convert it to a router purpose. */
-uint8_t
-router_purpose_from_string(const char *s)
-{
-  if (!strcmp(s, "general"))
-    return ROUTER_PURPOSE_GENERAL;
-  else if (!strcmp(s, "bridge"))
-    return ROUTER_PURPOSE_BRIDGE;
-  else if (!strcmp(s, "controller"))
-    return ROUTER_PURPOSE_CONTROLLER;
-  else
-    return ROUTER_PURPOSE_UNKNOWN;
 }
 
 /** Release all static resources held in router.c */
@@ -3846,22 +3086,6 @@ router_free_all(void)
     smartlist_free(warned_nonexistent_family);
   }
 }
-
-/** Return a smartlist of tor_addr_port_t's with all the OR ports of
-    <b>ri</b>. Note that freeing of the items in the list as well as
-    the smartlist itself is the callers responsibility. */
-smartlist_t *
-router_get_all_orports(const routerinfo_t *ri)
-{
-  tor_assert(ri);
-  node_t fake_node;
-  memset(&fake_node, 0, sizeof(fake_node));
-  /* we don't modify ri, fake_node is passed as a const node_t *
-   */
-  fake_node.ri = (routerinfo_t *)ri;
-  return node_get_all_orports(&fake_node);
-}
-
 /* From the given RSA key object, convert it to ASN-1 encoded format and set
  * the newly allocated object in onion_pkey_out. The length of the key is set
  * in onion_pkey_len_out. */

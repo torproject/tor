@@ -23,6 +23,7 @@
 #include "core/mainloop/mainloop.h"
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
+#include "feature/dirauth/authmode.h"
 #include "feature/dircommon/directory.h"
 #include "feature/dirclient/dirclient.h"
 #include "feature/dirclient/dlstatus.h"
@@ -34,7 +35,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerparse.h"
-#include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 
 #include "core/or/connection_st.h"
 #include "feature/dirclient/dir_server_st.h"

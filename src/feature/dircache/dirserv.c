@@ -15,6 +15,7 @@
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "feature/stats/rephist.h"
 
 #include "feature/dircache/cached_dir_st.h"

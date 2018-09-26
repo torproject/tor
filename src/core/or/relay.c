@@ -77,7 +77,7 @@
 #include "core/crypto/relay_crypto.h"
 #include "feature/rend/rendcache.h"
 #include "feature/rend/rendcommon.h"
-#include "feature/relay/router.h"
+#include "feature/nodelist/describe.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerparse.h"
 #include "core/or/scheduler.h"

@@ -40,6 +40,7 @@
 #include "feature/hibernate/hibernate.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "lib/sandbox/sandbox.h"
 #include "app/config/statefile.h"
 #include "lib/encoding/confline.h"

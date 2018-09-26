@@ -43,6 +43,7 @@
 #include "lib/math/fp.h"
 #include "lib/time/tvdiff.h"
 #include "lib/encoding/confline.h"
+#include "feature/dirauth/authmode.h"
 
 #include "core/or/crypt_path_st.h"
 #include "core/or/origin_circuit_st.h"

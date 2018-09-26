@@ -638,6 +638,43 @@ or_handshake_certs_ed25519_ok(int severity,
   return 1;
 }
 
+/** Check whether an RSA-TAP cross-certification is correct. Return 0 if it
+ * is, -1 if it isn't. */
+MOCK_IMPL(int,
+check_tap_onion_key_crosscert,(const uint8_t *crosscert,
+                               int crosscert_len,
+                               const crypto_pk_t *onion_pkey,
+                               const ed25519_public_key_t *master_id_pkey,
+                               const uint8_t *rsa_id_digest))
+{
+  uint8_t *cc = tor_malloc(crypto_pk_keysize(onion_pkey));
+  int cc_len =
+    crypto_pk_public_checksig(onion_pkey,
+                              (char*)cc,
+                              crypto_pk_keysize(onion_pkey),
+                              (const char*)crosscert,
+                              crosscert_len);
+  if (cc_len < 0) {
+    goto err;
+  }
+  if (cc_len < DIGEST_LEN + ED25519_PUBKEY_LEN) {
+    log_warn(LD_DIR, "Short signature on cross-certification with TAP key");
+    goto err;
+  }
+  if (tor_memneq(cc, rsa_id_digest, DIGEST_LEN) ||
+      tor_memneq(cc + DIGEST_LEN, master_id_pkey->pubkey,
+                 ED25519_PUBKEY_LEN)) {
+    log_warn(LD_DIR, "Incorrect cross-certification with TAP key");
+    goto err;
+  }
+
+  tor_free(cc);
+  return 0;
+ err:
+  tor_free(cc);
+  return -1;
+}
+
 /**
  * Check the Ed certificates and/or the RSA certificates, as appropriate.  If
  * we obtained an Ed25519 identity, set *ed_id_out. If we obtained an RSA

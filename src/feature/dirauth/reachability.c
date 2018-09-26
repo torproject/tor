@@ -16,10 +16,12 @@
 #include "core/or/channel.h"
 #include "core/or/channeltls.h"
 #include "core/or/command.h"
+#include "feature/dirauth/authmode.h"
+#include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/torcert.h"
-#include "feature/relay/router.h"
 #include "feature/stats/rephist.h"
 
 #include "feature/nodelist/node_st.h"

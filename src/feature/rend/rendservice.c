@@ -10,33 +10,36 @@
 #define RENDSERVICE_PRIVATE
 
 #include "core/or/or.h"
-#include "feature/client/circpathbias.h"
+
+#include "app/config/config.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
-#include "app/config/config.h"
+#include "core/or/policies.h"
+#include "core/or/relay.h"
+#include "feature/client/circpathbias.h"
 #include "feature/control/control.h"
-#include "lib/crypt_ops/crypto_dh.h"
-#include "lib/crypt_ops/crypto_rand.h"
-#include "lib/crypt_ops/crypto_util.h"
-#include "feature/dircommon/directory.h"
 #include "feature/dirclient/dirclient.h"
+#include "feature/dircommon/directory.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_config.h"
-#include "core/mainloop/mainloop.h"
+#include "feature/hs_common/replaycache.h"
+#include "feature/keymgt/loadkey.h"
+#include "feature/nodelist/describe.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nickname.h"
+#include "feature/nodelist/node_select.h"
 #include "feature/nodelist/nodelist.h"
-#include "core/or/policies.h"
+#include "feature/nodelist/routerparse.h"
+#include "feature/nodelist/routerset.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
-#include "feature/relay/router.h"
-#include "core/or/relay.h"
 #include "feature/stats/rephist.h"
-#include "feature/hs_common/replaycache.h"
-#include "feature/nodelist/node_select.h"
-#include "feature/nodelist/routerparse.h"
-#include "feature/nodelist/routerset.h"
+#include "lib/crypt_ops/crypto_dh.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"
 #include "lib/net/resolve.h"
 
@@ -1363,7 +1366,7 @@ rend_service_key_on_disk(const char *directory_path)
 
   /* Load key */
   fname = hs_path_from_filename(directory_path, private_key_fname);
-  pk = init_key_from_file(fname, 0, LOG_DEBUG, 0);
+  pk = init_key_from_file(fname, 0, LOG_DEBUG, NULL);
   if (pk) {
     ret = 1;
   }
@@ -1535,7 +1538,7 @@ rend_service_load_keys(rend_service_t *s)
 
   /* Load key */
   fname = rend_service_path(s, private_key_fname);
-  s->private_key = init_key_from_file(fname, 1, LOG_ERR, 0);
+  s->private_key = init_key_from_file(fname, 1, LOG_ERR, NULL);
 
   if (!s->private_key)
     goto err;

@@ -11,6 +11,7 @@
 #include "feature/relay/routerkeys.h"
 #include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_format.h"
+#include "feature/keymgt/loadkey.h"
 #include "feature/nodelist/torcert.h"
 #include "test/test.h"
 

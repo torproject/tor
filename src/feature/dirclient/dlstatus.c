@@ -11,7 +11,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/dirclient/dlstatus.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "lib/crypt_ops/crypto_rand.h"
 
 #include "feature/dirclient/download_status_st.h"

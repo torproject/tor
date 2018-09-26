@@ -34,7 +34,7 @@
 #include "feature/dircommon/voting_schedule.h"
 
 #include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/authmode.h"
 #include "feature/dirauth/shared_random_state.h"
 
 #include "feature/nodelist/authority_cert_st.h"
