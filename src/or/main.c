@@ -1493,13 +1493,18 @@ get_my_roles(const or_options_t *options)
 
   int roles = 0;
   int is_bridge = options->BridgeRelay;
-  int is_client = options_any_client_port_set(options);
   int is_relay = server_mode(options);
   int is_dirauth = authdir_mode_v3(options);
   int is_bridgeauth = authdir_mode_bridge(options);
   int is_hidden_service = !!hs_service_get_num_services() ||
                           !!rend_num_services();
   int is_dirserver = dir_server_mode(options);
+  /* We also consider tor to have the role of a client if the ControlPort is
+   * set because a lot of things can be done over the control port which
+   * requires tor to have basic functionnalities. */
+  int is_client = options_any_client_port_set(options) ||
+                  options->ControlPort_set ||
+                  options->OwningControllerFD >= 0;
 
   if (is_bridge) roles |= PERIODIC_EVENT_ROLE_BRIDGE;
   if (is_client) roles |= PERIODIC_EVENT_ROLE_CLIENT;
