@@ -374,3 +374,9 @@ EXTRA_DIST += \
 
 test-rust:
 	$(TESTS_ENVIRONMENT) "$(abs_top_srcdir)/src/test/test_rust.sh"
+
+# FIXME - proper build system integration should be done.
+test-tor-resolve:
+	$(CC) -shared -fPIC src/test/libfakesocket.c -o src/test/libfakesocket.a
+	$(PYTHON) src/test/test_resolve.py src/test/libfakesocket.a src/tools/tor-resolve
+
