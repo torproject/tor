@@ -1,0 +1,4 @@
+  o Minor features (ipv6):
+    - We add an option ClientAutoIPv6ORPort which randomly chooses between an
+      IPv4 and IPv6 ORPort if we are dual stack and a chosen node has both.
+      Closes ticket 27490. Patch by Neel Chauhan.
