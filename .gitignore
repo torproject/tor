@@ -252,6 +252,7 @@ uptime-*.json
 /src/test/test-switch-id.exe
 /src/test/test-timers.exe
 /src/test/test_workqueue.exe
+/src/test/libfakesocket.a
 
 # /src/test/fuzz
 /src/test/fuzz/fuzz-*
