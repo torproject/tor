@@ -1,0 +1,2 @@
+  o Testing:
+    - Integration test for tor-resolve(1). Resolves ticket 27854.
