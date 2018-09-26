@@ -461,7 +461,8 @@ fascist_firewall_use_ipv6(const or_options_t *options)
    * ClientPreferIPv6DirPort is deprecated, but check it anyway. */
   return (options->ClientUseIPv6 == 1 || options->ClientUseIPv4 == 0 ||
           options->ClientPreferIPv6ORPort == 1 ||
-          options->ClientPreferIPv6DirPort == 1 || options->UseBridges == 1);
+          options->ClientPreferIPv6DirPort == 1 || options->UseBridges == 1 ||
+          options->ClientAutoIPv6ORPort == 1);
 }
 
 /** Do we prefer to connect to IPv6, ignoring ClientPreferIPv6ORPort and
