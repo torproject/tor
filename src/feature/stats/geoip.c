@@ -60,7 +60,6 @@ typedef struct geoip_ipv6_entry_t {
 /** A per-country record for GeoIP request history. */
 typedef struct geoip_country_t {
   char countrycode[3];
-  uint32_t n_v3_ns_requests;
 } geoip_country_t;
 
 /** A list of geoip_country_t */
@@ -76,6 +75,12 @@ static smartlist_t *geoip_ipv4_entries = NULL, *geoip_ipv6_entries = NULL;
 /** SHA1 digest of the GeoIP files to include in extra-info descriptors. */
 static char geoip_digest[DIGEST_LEN];
 static char geoip6_digest[DIGEST_LEN];
+
+/** Number of entries in n_v3_ns_requests */
+size_t n_v3_ns_requests_len = 0;
+/** Array, indexed by country index, of number of v3 networkstatus requests
+ * received from that country */
+static uint32_t *n_v3_ns_requests;
 
 /* Total size in bytes of the geoip client history cache. Used by the OOM
  * handler. */
@@ -107,6 +112,32 @@ geoip_decrement_client_history_cache_size(size_t bytes)
     return;
   }
   geoip_client_history_cache_size -= bytes;
+}
+
+/** Add 1 to the count of v3 ns requests received from <b>country</b>. */
+static void
+increment_v3_ns_request(country_t country)
+{
+  if (country < 0)
+    return;
+
+  if ((size_t)country >= n_v3_ns_requests_len) {
+    /* We need to reallocate the array. */
+    size_t new_len;
+    if (n_v3_ns_requests_len == 0)
+      new_len = 256;
+    else
+      new_len = n_v3_ns_requests_len * 2;
+    if (new_len <= (size_t)country)
+      new_len = ((size_t)country)+1;
+    n_v3_ns_requests = tor_reallocarray(n_v3_ns_requests, new_len,
+                                        sizeof(uint32_t));
+    memset(n_v3_ns_requests + n_v3_ns_requests_len, 0,
+           sizeof(uint32_t)*(new_len - n_v3_ns_requests_len));
+    n_v3_ns_requests_len = new_len;
+  }
+
+  n_v3_ns_requests[country] += 1;
 }
 
 /** Return the index of the <b>country</b>'s entry in the GeoIP
@@ -660,10 +691,7 @@ geoip_note_client_seen(geoip_client_action_t action,
     int country_idx = geoip_get_country_by_addr(addr);
     if (country_idx < 0)
       country_idx = 0; /** unresolved requests are stored at index 0. */
-    if (country_idx >= 0 && country_idx < smartlist_len(geoip_countries)) {
-      geoip_country_t *country = smartlist_get(geoip_countries, country_idx);
-      ++country->n_v3_ns_requests;
-    }
+    increment_v3_ns_request(country_idx);
   }
 }
 
@@ -1282,7 +1310,10 @@ geoip_get_request_history(void)
   SMARTLIST_FOREACH_BEGIN(geoip_countries, geoip_country_t *, c) {
       uint32_t tot = 0;
       c_hist_t *ent;
-      tot = c->n_v3_ns_requests;
+      if ((size_t)c_sl_idx < n_v3_ns_requests_len)
+        tot = n_v3_ns_requests[c_sl_idx];
+      else
+        tot = 0;
       if (!tot)
         continue;
       ent = tor_malloc_zero(sizeof(c_hist_t));
@@ -1319,9 +1350,8 @@ geoip_dirreq_stats_init(time_t now)
 void
 geoip_reset_dirreq_stats(time_t now)
 {
-  SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
-      c->n_v3_ns_requests = 0;
-  });
+  memset(n_v3_ns_requests, 0,
+         n_v3_ns_requests_len * sizeof(uint32_t));
   {
     clientmap_entry_t **ent, **next, *this;
     for (ent = HT_START(clientmap, &client_history); ent != NULL;
@@ -1883,6 +1913,7 @@ geoip_free_all(void)
 
   clear_geoip_db();
   tor_free(bridge_stats_extrainfo);
+  tor_free(n_v3_ns_requests);
 
   memset(geoip_digest, 0, sizeof(geoip_digest));
   memset(geoip6_digest, 0, sizeof(geoip6_digest));
