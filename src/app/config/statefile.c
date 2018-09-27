@@ -143,6 +143,8 @@ static int or_state_validate_cb(void *old_options, void *options,
                                 void *default_options,
                                 int from_setconf, char **msg);
 
+static void or_state_free_cb(void *state);
+
 /** Magic value for or_state_t. */
 #define OR_STATE_MAGIC 0x57A73f57
 
@@ -162,6 +164,7 @@ static const config_format_t state_format = {
   NULL,
   state_vars_,
   or_state_validate_cb,
+  or_state_free_cb,
   &state_extra_var,
 };
 
@@ -257,6 +260,12 @@ or_state_validate_cb(void *old_state, void *state, void *default_state,
   (void) old_state;
 
   return or_state_validate(state, msg);
+}
+
+static void
+or_state_free_cb(void *state)
+{
+  or_state_free_(state);
 }
 
 /** Return 0 if every setting in <b>state</b> is reasonable, and a

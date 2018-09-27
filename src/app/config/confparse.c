@@ -1009,8 +1009,9 @@ config_dump(const config_format_t *fmt, const void *default_options,
   result = smartlist_join_strings(elements, "", 0, NULL);
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
-  if (defaults_tmp)
-    config_free(fmt, defaults_tmp);
+  if (defaults_tmp) {
+    fmt->free_fn(defaults_tmp);
+  }
   return result;
 }
 
