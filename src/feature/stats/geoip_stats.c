@@ -265,7 +265,10 @@ geoip_note_client_seen(geoip_client_action_t action,
     int country_idx = geoip_get_country_by_addr(addr);
     if (country_idx < 0)
       country_idx = 0; /** unresolved requests are stored at index 0. */
-    increment_v3_ns_request(country_idx);
+    IF_BUG_ONCE(country_idx > COUNTRY_MAX) {
+      return;
+    }
+    increment_v3_ns_request((country_t) country_idx);
   }
 }
 
