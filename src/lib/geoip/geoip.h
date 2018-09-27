@@ -14,7 +14,7 @@
 
 #include "lib/net/nettypes.h"
 #include "lib/testsupport/testsupport.h"
-#include "lib/cc/torint.h"
+#include "lib/geoip/country.h"
 
 #ifdef GEOIP_PRIVATE
 STATIC int geoip_parse_entry(const char *line, sa_family_t family);

@@ -3,7 +3,7 @@
 #include "core/mainloop/connection.h"
 #include "feature/control/control.h"
 #include "feature/control/getinfo_geoip.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 
 /** Helper used to implement GETINFO ip-to-country/... controller command. */
 int

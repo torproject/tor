@@ -32,7 +32,7 @@
 #include "feature/nodelist/routerparse.h"
 #include "feature/nodelist/networkstatus.h"
 #include "core/proto/proto_http.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirauth/dirvote.h"

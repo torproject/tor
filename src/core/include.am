@@ -117,7 +117,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/rend/rendcommon.c		\
 	src/feature/rend/rendmid.c		\
 	src/feature/rend/rendservice.c		\
-	src/feature/stats/geoip.c		\
 	src/feature/stats/geoip_stats.c		\
 	src/feature/stats/rephist.c		\
 	src/feature/stats/predict_ports.c
@@ -350,7 +349,6 @@ noinst_HEADERS +=					\
 	src/feature/rend/rendcommon.h			\
 	src/feature/rend/rendmid.h			\
 	src/feature/rend/rendservice.h			\
-	src/feature/stats/geoip.h			\
 	src/feature/stats/geoip_stats.h			\
 	src/feature/stats/rephist.h			\
 	src/feature/stats/predict_ports.h

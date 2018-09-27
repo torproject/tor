@@ -35,7 +35,7 @@
 #include "feature/control/control.h"
 #include "feature/client/dnsserv.h"
 #include "core/or/dos.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/nodelist/routerlist.h"
 

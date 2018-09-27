@@ -103,7 +103,7 @@
 #include "feature/relay/routermode.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"

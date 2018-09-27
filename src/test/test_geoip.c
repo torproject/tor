@@ -10,7 +10,7 @@
 #define GEOIP_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "feature/stats/geoip_stats.h"
 #include "test/test.h"
 

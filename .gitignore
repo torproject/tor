@@ -173,6 +173,8 @@ uptime-*.json
 /src/lib/libtor-fdio-testing.a
 /src/lib/libtor-fs.a
 /src/lib/libtor-fs-testing.a
+/src/lib/libtor-geoip.a
+/src/lib/libtor-geoip-testing.a
 /src/lib/libtor-intmath.a
 /src/lib/libtor-intmath-testing.a
 /src/lib/libtor-lock.a

@@ -29,7 +29,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
 #include "feature/relay/ext_orport.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "feature/hibernate/hibernate.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"

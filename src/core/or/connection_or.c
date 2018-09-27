@@ -43,7 +43,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dirauth/reachability.h"
 #include "feature/client/entrynodes.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "core/mainloop/mainloop.h"
 #include "trunnel/link_handshake.h"
 #include "feature/nodelist/microdesc.h"

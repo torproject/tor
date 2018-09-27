@@ -28,12 +28,7 @@
  */
 
 #define GEOIP_PRIVATE
-
-#include "lib/cc/torint.h"
-/** A signed integer representing a country code. */
-typedef int16_t country_t; // XXXX duplicate in or.h
-
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "lib/container/map.h"
 #include "lib/container/order.h"
 #include "lib/container/smartlist.h"
@@ -49,7 +44,6 @@ typedef int16_t country_t; // XXXX duplicate in or.h
 #include "lib/string/compat_string.h"
 #include "lib/string/scanf.h"
 #include "lib/string/util_string.h"
-#include "lib/time/tvdiff.h"
 
 #include <stdio.h>
 #include <string.h>
