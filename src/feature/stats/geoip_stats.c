@@ -43,7 +43,7 @@
 #include "lib/time/tvdiff.h"
 
 /** Number of entries in n_v3_ns_requests */
-size_t n_v3_ns_requests_len = 0;
+static size_t n_v3_ns_requests_len = 0;
 /** Array, indexed by country index, of number of v3 networkstatus requests
  * received from that country */
 static uint32_t *n_v3_ns_requests;
