@@ -11,6 +11,7 @@
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "feature/stats/geoip.h"
+#include "feature/stats/geoip_stats.h"
 #include "test/test.h"
 
   /* Record odd numbered fake-IPs using ipv6, even numbered fake-IPs

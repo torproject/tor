@@ -65,7 +65,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dircommon/directory.h"
 #include "feature/relay/dns.h"
-#include "feature/stats/geoip.h"
+#include "feature/stats/geoip_stats.h"
 #include "feature/hs/hs_cache.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"

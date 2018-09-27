@@ -12,7 +12,7 @@
 #include "feature/dirclient/dirclient.h"
 #include "feature/dircommon/directory.h"
 #include "feature/dircommon/fp_pair.h"
-#include "feature/stats/geoip.h"
+#include "feature/stats/geoip_stats.h"
 #include "lib/compress/compress.h"
 
 #include "feature/dircommon/dir_connection_st.h"

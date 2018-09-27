@@ -37,6 +37,7 @@
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 #include "feature/stats/geoip.h"
+#include "feature/stats/geoip_stats.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_format.h"

@@ -30,13 +30,13 @@
 #include "feature/hs/hs_stats.h"
 #include "feature/hs/hs_service.h"
 #include "core/or/dos.h"
+#include "feature/stats/geoip_stats.h"
 
 #include "app/config/or_state_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "lib/tls/tortls.h"
 
 static void log_accounting(const time_t now, const or_options_t *options);
-#include "feature/stats/geoip.h"
 
 /** Return the total number of circuits. */
 STATIC int

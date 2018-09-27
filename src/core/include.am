@@ -60,6 +60,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/client/transports.c		\
 	src/feature/control/control.c		\
 	src/feature/control/fmt_serverstatus.c  \
+	src/feature/control/getinfo_geoip.c	\
 	src/feature/dirauth/keypin.c		\
 	src/feature/dircache/conscache.c	\
 	src/feature/dircache/consdiffmgr.c	\
@@ -117,6 +118,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/rend/rendmid.c		\
 	src/feature/rend/rendservice.c		\
 	src/feature/stats/geoip.c		\
+	src/feature/stats/geoip_stats.c		\
 	src/feature/stats/rephist.c		\
 	src/feature/stats/predict_ports.c
 
@@ -254,6 +256,7 @@ noinst_HEADERS +=					\
 	src/feature/control/control.h			\
 	src/feature/control/control_connection_st.h	\
 	src/feature/control/fmt_serverstatus.h		\
+	src/feature/control/getinfo_geoip.h		\
 	src/feature/dirauth/authmode.h			\
 	src/feature/dirauth/bwauth.h			\
 	src/feature/dirauth/dircollate.h		\
@@ -348,6 +351,7 @@ noinst_HEADERS +=					\
 	src/feature/rend/rendmid.h			\
 	src/feature/rend/rendservice.h			\
 	src/feature/stats/geoip.h			\
+	src/feature/stats/geoip_stats.h			\
 	src/feature/stats/rephist.h			\
 	src/feature/stats/predict_ports.h
 
