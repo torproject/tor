@@ -12,8 +12,10 @@
 #ifndef TOR_GEOIP_H
 #define TOR_GEOIP_H
 
+#include "orconfig.h"
 #include "lib/net/nettypes.h"
 #include "lib/testsupport/testsupport.h"
+#include "lib/net/inaddr_st.h"
 #include "lib/geoip/country.h"
 
 #ifdef GEOIP_PRIVATE
