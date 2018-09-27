@@ -85,6 +85,7 @@
 #include "core/crypto/relay_crypto.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
+#include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"

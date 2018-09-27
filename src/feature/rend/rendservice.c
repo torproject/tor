@@ -36,7 +36,7 @@
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
-#include "feature/stats/rephist.h"
+#include "feature/stats/predict_ports.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"

@@ -67,7 +67,7 @@
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 #include "feature/rend/rendcommon.h"
-#include "feature/stats/rephist.h"
+#include "feature/stats/predict_ports.h"
 #include "lib/crypt_ops/crypto_rand.h"
 
 #include "core/or/cell_st.h"

@@ -117,7 +117,8 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/rend/rendmid.c		\
 	src/feature/rend/rendservice.c		\
 	src/feature/stats/geoip.c		\
-	src/feature/stats/rephist.c
+	src/feature/stats/rephist.c		\
+	src/feature/stats/predict_ports.c
 
 # These should eventually move into module_dirauth_sources, but for now
 # the separation is only in the code location.
@@ -347,7 +348,8 @@ noinst_HEADERS +=					\
 	src/feature/rend/rendmid.h			\
 	src/feature/rend/rendservice.h			\
 	src/feature/stats/geoip.h			\
-	src/feature/stats/rephist.h
+	src/feature/stats/rephist.h			\
+	src/feature/stats/predict_ports.h
 
 noinst_HEADERS +=			\
 	src/app/config/auth_dirs.inc	\
