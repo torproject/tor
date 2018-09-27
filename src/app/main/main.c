@@ -27,6 +27,7 @@
 #include "core/or/command.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
+#include "core/or/dos.h"
 #include "core/or/policies.h"
 #include "core/or/protover.h"
 #include "core/or/relay.h"
@@ -60,7 +61,9 @@
 #include "feature/rend/rendcache.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
+#include "feature/stats/geoip_stats.h"
+#include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
 #include "lib/compress/compress.h"
 #include "lib/container/buffers.h"
@@ -754,6 +757,7 @@ tor_free_all(int postfork)
     evdns_shutdown(1);
   }
   geoip_free_all();
+  geoip_stats_free_all();
   dirvote_free_all();
   routerlist_free_all();
   networkstatus_free_all();

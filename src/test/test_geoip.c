@@ -10,7 +10,8 @@
 #define GEOIP_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
+#include "feature/stats/geoip_stats.h"
 #include "test/test.h"
 
   /* Record odd numbered fake-IPs using ipv6, even numbered fake-IPs
@@ -403,7 +404,8 @@ test_geoip_load_file(void *arg)
 
   /* A nonexistant filename should fail. */
   tt_int_op(-1, OP_EQ,
-            geoip_load_file(AF_INET, "/you/did/not/put/a/file/here/I/hope"));
+            geoip_load_file(AF_INET, "/you/did/not/put/a/file/here/I/hope",
+                            LOG_INFO));
 
   /* We start out with only "Ningunpartia" in the database. */
   tt_int_op(1, OP_EQ, geoip_get_n_countries());
@@ -417,7 +419,7 @@ test_geoip_load_file(void *arg)
   const char *fname = get_fname("geoip");
   tt_int_op(0, OP_EQ, write_str_to_file(fname, GEOIP_CONTENT, 1));
 
-  int rv = geoip_load_file(AF_INET, fname);
+  int rv = geoip_load_file(AF_INET, fname, LOG_WARN);
   if (rv != 0) {
     TT_GRIPE(("Unable to load geoip from %s", escaped(fname)));
   }
@@ -467,7 +469,8 @@ test_geoip6_load_file(void *arg)
 
   /* A nonexistant filename should fail. */
   tt_int_op(-1, OP_EQ,
-            geoip_load_file(AF_INET6, "/you/did/not/put/a/file/here/I/hope"));
+            geoip_load_file(AF_INET6, "/you/did/not/put/a/file/here/I/hope",
+                            LOG_INFO));
 
   /* Any lookup attempt should say "-1" because we have no info */
   tor_inet_pton(AF_INET6, "2001:4860:4860::8888", &iaddr6);
@@ -493,7 +496,7 @@ test_geoip6_load_file(void *arg)
     "2001:4878:205::,2001:4878:214:ffff:ffff:ffff:ffff:ffff,US\n";
   tt_int_op(0, OP_EQ, write_str_to_file(fname6, CONTENT, 1));
 
-  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET6, fname6));
+  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET6, fname6, LOG_WARN));
 
   /* Check that we loaded some countries; this will fail if there are ever
    * fewer than 5 countries in our test data above. */
@@ -545,11 +548,11 @@ test_geoip_load_2nd_file(void *arg)
   tt_int_op(0, OP_EQ, write_str_to_file(fname_empty, "\n", 1));
 
   /* Load 1st geoip file */
-  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, fname_geoip));
+  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, fname_geoip, LOG_WARN));
 
   /* Load 2nd geoip (empty) file */
   /* It has to be the same IP address family */
-  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, fname_empty));
+  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, fname_empty, LOG_WARN));
 
   /* Check that there is no geoip information for 8.8.8.8, */
   /* since loading the empty 2nd file should have delete it. */

@@ -16,6 +16,7 @@
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
 #include "lib/err/backtrace.h"
 #include "test/test.h"

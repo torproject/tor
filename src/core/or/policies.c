@@ -27,7 +27,7 @@
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "feature/nodelist/routerparse.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "ht.h"
 #include "lib/encoding/confline.h"
 

@@ -9,7 +9,7 @@
 #include "core/or/dos.h"
 #include "core/or/circuitlist.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "feature/stats/geoip.h"
+#include "feature/stats/geoip_stats.h"
 #include "core/or/channel.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
@@ -500,4 +500,3 @@ struct testcase_t dos_tests[] = {
     NULL, NULL },
   END_OF_TESTCASES
 };
-

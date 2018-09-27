@@ -34,7 +34,7 @@ n * Copyright (c) 2001-2004, Roger Dingledine.
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerparse.h"
 #include "feature/nodelist/routerset.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 
 #include "core/or/addr_policy_st.h"
 #include "core/or/extend_info_st.h"

@@ -5,14 +5,13 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file geoip.h
- * \brief Header file for geoip.c.
+ * \file geoip_stats.h
+ * \brief Header file for geoip_stats.c.
  **/
 
-#ifndef TOR_GEOIP_H
-#define TOR_GEOIP_H
+#ifndef TOR_GEOIP_STATS_H
+#define TOR_GEOIP_STATS_H
 
-#include "lib/testsupport/testsupport.h"
 #include "core/or/dos.h"
 
 /** Indicates an action that we might be noting geoip statistics on.
@@ -73,13 +72,6 @@ typedef enum {
   DIRREQ_CHANNEL_BUFFER_FLUSHED = 4
 } dirreq_state_t;
 
-#ifdef GEOIP_PRIVATE
-STATIC int geoip_parse_entry(const char *line, sa_family_t family);
-STATIC int geoip_get_country_by_ipv4(uint32_t ipaddr);
-STATIC int geoip_get_country_by_ipv6(const struct in6_addr *addr);
-STATIC void clear_geoip_db(void);
-#endif /* defined(GEOIP_PRIVATE) */
-
 /** Entry in a map from IP address to the last time we've seen an incoming
  * connection from that IP address. Used by bridges only to track which
  * countries have them blocked, or the DoS mitigation subsystem if enabled. */
@@ -103,13 +95,6 @@ typedef struct clientmap_entry_t {
 } clientmap_entry_t;
 
 int should_record_bridge_info(const or_options_t *options);
-int geoip_load_file(sa_family_t family, const char *filename);
-MOCK_DECL(int, geoip_get_country_by_addr, (const tor_addr_t *addr));
-MOCK_DECL(int, geoip_get_n_countries, (void));
-const char *geoip_get_country_name(country_t num);
-MOCK_DECL(int, geoip_is_loaded, (sa_family_t family));
-const char *geoip_db_digest(sa_family_t family);
-MOCK_DECL(country_t, geoip_get_country, (const char *countrycode));
 
 void geoip_note_client_seen(geoip_client_action_t action,
                             const tor_addr_t *addr, const char *transport_name,
@@ -126,10 +111,7 @@ char *geoip_get_transport_history(void);
 int geoip_get_client_history(geoip_client_action_t action,
                              char **country_str, char **ipver_str);
 char *geoip_get_request_history(void);
-int getinfo_helper_geoip(control_connection_t *control_conn,
-                         const char *question, char **answer,
-                         const char **errmsg);
-void geoip_free_all(void);
+void geoip_stats_free_all(void);
 
 void geoip_start_dirreq(uint64_t dirreq_id, size_t response_size,
                         dirreq_type_t type);
@@ -154,4 +136,4 @@ const char *geoip_get_bridge_stats_extrainfo(time_t);
 char *geoip_get_bridge_stats_controller(time_t);
 char *format_client_stats_heartbeat(time_t now);
 
-#endif /* !defined(TOR_GEOIP_H) */
+#endif /* !defined(TOR_GEOIP_STATS_H) */

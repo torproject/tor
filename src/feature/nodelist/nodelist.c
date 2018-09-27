@@ -65,7 +65,7 @@
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/rend/rendservice.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "lib/net/address.h"
 
 #include <string.h>

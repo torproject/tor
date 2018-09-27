@@ -41,20 +41,6 @@ double rep_hist_get_weighted_fractional_uptime(const char *id, time_t when);
 long rep_hist_get_weighted_time_known(const char *id, time_t when);
 int rep_hist_have_measured_enough_stability(void);
 
-void predicted_ports_init(void);
-void rep_hist_note_used_port(time_t now, uint16_t port);
-smartlist_t *rep_hist_get_predicted_ports(time_t now);
-void rep_hist_remove_predicted_ports(const smartlist_t *rmv_ports);
-void rep_hist_note_used_resolve(time_t now);
-void rep_hist_note_used_internal(time_t now, int need_uptime,
-                                 int need_capacity);
-int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
-                                    int *need_capacity);
-
-int any_predicted_circuits(time_t now);
-int rep_hist_circbuilding_dormant(time_t now);
-int predicted_ports_prediction_time_remaining(time_t now);
-
 void rep_hist_exit_stats_init(time_t now);
 void rep_hist_reset_exit_stats(time_t now);
 void rep_hist_exit_stats_term(void);

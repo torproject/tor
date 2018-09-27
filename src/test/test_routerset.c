@@ -4,7 +4,7 @@
 #define ROUTERSET_PRIVATE
 
 #include "core/or/or.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/routerparse.h"
 #include "core/or/policies.h"

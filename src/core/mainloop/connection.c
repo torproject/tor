@@ -102,7 +102,7 @@
 #include "feature/relay/routermode.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_util.h"
 

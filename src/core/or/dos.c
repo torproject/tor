@@ -9,17 +9,17 @@
 #define DOS_PRIVATE
 
 #include "core/or/or.h"
-#include "core/or/channel.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
-#include "core/or/connection_or.h"
-#include "lib/crypt_ops/crypto_rand.h"
-#include "feature/stats/geoip.h"
 #include "core/mainloop/mainloop.h"
+#include "core/or/channel.h"
+#include "core/or/connection_or.h"
+#include "core/or/relay.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
-#include "core/or/relay.h"
 #include "feature/relay/routermode.h"
+#include "feature/stats/geoip_stats.h"
+#include "lib/crypt_ops/crypto_rand.h"
 
 #include "core/or/dos.h"
 

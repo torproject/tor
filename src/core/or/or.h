@@ -41,6 +41,7 @@
 #include "lib/fs/mmap.h"
 #include "lib/fs/path.h"
 #include "lib/fs/userdb.h"
+#include "lib/geoip/country.h"
 #include "lib/intmath/addsub.h"
 #include "lib/intmath/bits.h"
 #include "lib/intmath/cmp.h"
@@ -797,9 +798,6 @@ typedef struct download_status_t download_status_t;
 #define ROUTER_ANNOTATION_BUF_LEN 256
 
 typedef struct signed_descriptor_t signed_descriptor_t;
-
-/** A signed integer representing a country code. */
-typedef int16_t country_t;
 
 /** Flags used to summarize the declared protocol versions of a relay,
  * so we don't need to parse them again and again. */

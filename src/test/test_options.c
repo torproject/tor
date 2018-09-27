@@ -8,7 +8,7 @@
 #include "app/config/confparse.h"
 #include "app/config/config.h"
 #include "test/test.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 
 #define ROUTERSET_PRIVATE
 #include "feature/nodelist/routerset.h"
