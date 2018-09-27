@@ -1,0 +1,4 @@
+  o Major bugfixes (initialization, crash):
+    - Fix an assertion crash that would stop Tor from starting up if
+      the code tried to activate a periodic event too early. Fixes bug
+      27861; bugfix on 0.3.5.1-alpha.

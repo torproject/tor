@@ -1535,7 +1535,9 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
 STATIC void
 initialize_periodic_events(void)
 {
-  tor_assert(periodic_events_initialized == 0);
+  if (periodic_events_initialized)
+    return;
+
   periodic_events_initialized = 1;
 
   /* Set up all periodic events. We'll launch them by roles. */
@@ -2682,6 +2684,8 @@ dns_servers_relaunch_checks(void)
 void
 initialize_mainloop_events(void)
 {
+  initialize_periodic_events();
+
   if (!schedule_active_linked_connections_event) {
     schedule_active_linked_connections_event =
       mainloop_event_postloop_new(schedule_active_linked_connections_cb, NULL);
@@ -2699,10 +2703,7 @@ do_main_loop(void)
   /* initialize the periodic events first, so that code that depends on the
    * events being present does not assert.
    */
-  if (! periodic_events_initialized) {
-    initialize_periodic_events();
-  }
-
+  initialize_periodic_events();
   initialize_mainloop_events();
 
   /* set up once-a-second callback. */
