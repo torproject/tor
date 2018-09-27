@@ -96,6 +96,7 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
@@ -8348,6 +8349,11 @@ config_load_geoip_file_(sa_family_t family,
                         const char *fname,
                         const char *default_fname)
 {
+  const or_options_t *options = get_options();
+  const char *msg = "";
+  int severity = options_need_geoip_info(options, &msg) ? LOG_WARN : LOG_INFO;
+  int r;
+
 #ifdef _WIN32
   char *free_fname = NULL; /* Used to hold any temporary-allocated value */
   /* XXXX Don't use this "<default>" junk; make our filename options
@@ -8357,12 +8363,16 @@ config_load_geoip_file_(sa_family_t family,
     tor_asprintf(&free_fname, "%s\\%s", conf_root, default_fname);
     fname = free_fname;
   }
-  geoip_load_file(family, fname);
+  r = geoip_load_file(family, fname, severity);
   tor_free(free_fname);
 #else /* !(defined(_WIN32)) */
   (void)default_fname;
-  geoip_load_file(family, fname);
+  r = geoip_load_file(family, fname, severity);
 #endif /* defined(_WIN32) */
+
+  if (r < 0 && severity == LOG_WARN) {
+    log_warn(LD_GENERAL, "%s", msg);
+  }
 }
 
 /** Load geoip files for IPv4 and IPv6 if <a>options</a> and
@@ -8376,13 +8386,19 @@ config_maybe_load_geoip_files_(const or_options_t *options,
   if (options->GeoIPFile &&
       ((!old_options || !opt_streq(old_options->GeoIPFile,
                                    options->GeoIPFile))
-       || !geoip_is_loaded(AF_INET)))
+       || !geoip_is_loaded(AF_INET))) {
     config_load_geoip_file_(AF_INET, options->GeoIPFile, "geoip");
+    /* Okay, now we need to maybe change our mind about what is in
+     * which country. We do this for IPv4 only since that's what we
+     * store in node->country. */
+    refresh_all_country_info();
+  }
   if (options->GeoIPv6File &&
       ((!old_options || !opt_streq(old_options->GeoIPv6File,
                                    options->GeoIPv6File))
-       || !geoip_is_loaded(AF_INET6)))
+       || !geoip_is_loaded(AF_INET6))) {
     config_load_geoip_file_(AF_INET6, options->GeoIPv6File, "geoip6");
+  }
 }
 
 /** Initialize cookie authentication (used so far by the ControlPort

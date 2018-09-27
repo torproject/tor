@@ -28,15 +28,31 @@
  */
 
 #define GEOIP_PRIVATE
-#include "core/or/or.h"
-#include "ht.h"
-#include "lib/container/buffers.h"
-#include "app/config/config.h" // XXXX
-#include "feature/stats/geoip.h"
-#include "feature/nodelist/routerlist.h" // XXXX
 
+#include "lib/cc/torint.h"
+/** A signed integer representing a country code. */
+typedef int16_t country_t; // XXXX duplicate in or.h
+
+#include "feature/stats/geoip.h"
+#include "lib/container/map.h"
 #include "lib/container/order.h"
+#include "lib/container/smartlist.h"
+#include "lib/crypt_ops/crypto_digest.h"
+#include "lib/ctime/di_ops.h"
+#include "lib/encoding/binascii.h"
+#include "lib/fs/files.h"
+#include "lib/log/escape.h"
+#include "lib/malloc/malloc.h"
+#include "lib/net/address.h" //????
+#include "lib/net/inaddr.h"
+#include "lib/string/compat_ctype.h"
+#include "lib/string/compat_string.h"
+#include "lib/string/scanf.h"
+#include "lib/string/util_string.h"
 #include "lib/time/tvdiff.h"
+
+#include <stdio.h>
+#include <string.h>
 
 static void init_geoip_countries(void);
 
@@ -305,19 +321,16 @@ init_geoip_countries(void)
  * with '#' (comments).
  */
 int
-geoip_load_file(sa_family_t family, const char *filename)
+geoip_load_file(sa_family_t family, const char *filename, int severity)
 {
   FILE *f;
-  const char *msg = "";
-  const or_options_t *options = get_options();
-  int severity = options_need_geoip_info(options, &msg) ? LOG_WARN : LOG_INFO;
   crypto_digest_t *geoip_digest_env = NULL;
 
   tor_assert(family == AF_INET || family == AF_INET6);
 
   if (!(f = tor_fopen_cloexec(filename, "r"))) {
-    log_fn(severity, LD_GENERAL, "Failed to open GEOIP file %s.  %s",
-           filename, msg);
+    log_fn(severity, LD_GENERAL, "Failed to open GEOIP file %s.",
+           filename);
     return -1;
   }
   if (!geoip_countries)
@@ -357,10 +370,6 @@ geoip_load_file(sa_family_t family, const char *filename)
    * our extra-info descriptors. */
   if (family == AF_INET) {
     smartlist_sort(geoip_ipv4_entries, geoip_ipv4_compare_entries_);
-    /* Okay, now we need to maybe change our mind about what is in
-     * which country. We do this for IPv4 only since that's what we
-     * store in node->country. */
-    refresh_all_country_info();
     crypto_digest_get_digest(geoip_digest_env, geoip_digest, DIGEST_LEN);
   } else {
     /* AF_INET6 */
