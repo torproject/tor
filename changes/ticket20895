@@ -1,0 +1,6 @@
+  o Minor features (forward-compatibility):
+    - If a relay supports some link authentication protocol that we do not
+      recognize, then include that relay's ed25519 key when telling other
+      relays to extend to it.  Previously, we treated future versions as if
+      they were too old to support ed25519 link authentication.
+      Closes ticket 20895.
