@@ -5179,6 +5179,9 @@ connection_dir_finished_flushing(dir_connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->base_.type == CONN_TYPE_DIR);
 
+  if (conn->base_.marked_for_close)
+    return 0;
+
   /* Note that we have finished writing the directory response. For direct
    * connections this means we're done; for tunneled connections it's only
    * an intermediate step. */
@@ -5912,4 +5915,3 @@ dir_split_resource_into_spoolable(const char *resource,
   smartlist_free(fingerprints);
   return r;
 }
-
