@@ -14,8 +14,6 @@
 #define SCHEDULER_PRIVATE_
 #include "scheduler.h"
 
-#define TLS_PER_CELL_OVERHEAD 29
-
 #ifdef HAVE_KIST_SUPPORT
 /* Kernel interface needed for KIST. */
 #include <netinet/tcp.h>

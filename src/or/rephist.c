@@ -92,6 +92,11 @@
 static void bw_arrays_init(void);
 static void predicted_ports_alloc(void);
 
+typedef struct bw_array_t bw_array_t;
+STATIC uint64_t find_largest_max(bw_array_t *b);
+STATIC void commit_max(bw_array_t *b);
+STATIC void advance_obs(bw_array_t *b);
+
 /** Total number of bytes currently allocated in fields used by rephist.c. */
 uint64_t rephist_total_alloc=0;
 /** Number of or_history_t objects currently allocated. */
@@ -1009,7 +1014,7 @@ typedef struct bw_array_t {
 } bw_array_t;
 
 /** Shift the current period of b forward by one. */
-static void
+STATIC void
 commit_max(bw_array_t *b)
 {
   /* Store total from current period. */
@@ -1029,7 +1034,7 @@ commit_max(bw_array_t *b)
 }
 
 /** Shift the current observation time of <b>b</b> forward by one second. */
-static inline void
+STATIC void
 advance_obs(bw_array_t *b)
 {
   int nextidx;
@@ -1107,7 +1112,7 @@ bw_array_free_(bw_array_t *b)
 /** Recent history of bandwidth observations for read operations. */
 static bw_array_t *read_array = NULL;
 /** Recent history of bandwidth observations for write operations. */
-static bw_array_t *write_array = NULL;
+STATIC bw_array_t *write_array = NULL;
 /** Recent history of bandwidth observations for read operations for the
     directory protocol. */
 static bw_array_t *dir_read_array = NULL;
@@ -1139,7 +1144,7 @@ bw_arrays_init(void)
  * earlier than the latest <b>when</b> you've heard of.
  */
 void
-rep_hist_note_bytes_written(size_t num_bytes, time_t when)
+rep_hist_note_bytes_written(uint64_t num_bytes, time_t when)
 {
 /* Maybe a circular array for recent seconds, and step to a new point
  * every time a new second shows up. Or simpler is to just to have
@@ -1156,7 +1161,7 @@ rep_hist_note_bytes_written(size_t num_bytes, time_t when)
  * (like rep_hist_note_bytes_written() above)
  */
 void
-rep_hist_note_bytes_read(size_t num_bytes, time_t when)
+rep_hist_note_bytes_read(uint64_t num_bytes, time_t when)
 {
 /* if we're smart, we can make this func and the one above share code */
   add_obs(read_array, when, num_bytes);
@@ -1166,7 +1171,7 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
  * <b>when</b>. (like rep_hist_note_bytes_written() above)
  */
 void
-rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when)
+rep_hist_note_dir_bytes_written(uint64_t num_bytes, time_t when)
 {
   add_obs(dir_write_array, when, num_bytes);
 }
@@ -1175,7 +1180,7 @@ rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when)
  * <b>when</b>. (like rep_hist_note_bytes_written() above)
  */
 void
-rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when)
+rep_hist_note_dir_bytes_read(uint64_t num_bytes, time_t when)
 {
   add_obs(dir_read_array, when, num_bytes);
 }
@@ -1184,7 +1189,7 @@ rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when)
  * most bandwidth used in any NUM_SECS_ROLLING_MEASURE period for the last
  * NUM_SECS_BW_SUM_IS_VALID seconds.)
  */
-static uint64_t
+STATIC uint64_t
 find_largest_max(bw_array_t *b)
 {
   int i;
