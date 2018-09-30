@@ -17,7 +17,7 @@
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
-#include "feature/nodelist/parsecommon.h"
+#include "feature/dirparse/parsecommon.h"
 #include "core/or/policies.h"
 #include "core/or/protover.h"
 #include "core/or/tor_version_st.h"
@@ -27,7 +27,7 @@
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/fmt_routerstatus.h"
 #include "feature/client/entrynodes.h" /* needed for guardfraction methods */
 #include "feature/nodelist/torcert.h"

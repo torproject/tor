@@ -26,7 +26,7 @@
 #include "feature/nodelist/networkstatus.h"
 #include "core/or/policies.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/routerset.h"
 #include "app/config/statefile.h"
 

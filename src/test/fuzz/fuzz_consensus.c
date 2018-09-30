@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 #define ROUTERPARSE_PRIVATE
 #include "core/or/or.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/networkstatus.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "feature/nodelist/networkstatus_st.h"

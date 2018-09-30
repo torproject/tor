@@ -6,7 +6,7 @@
 #include "core/or/or.h"
 #include "lib/geoip/geoip.h"
 #include "feature/nodelist/routerset.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "core/or/policies.h"
 #include "feature/nodelist/nodelist.h"
 

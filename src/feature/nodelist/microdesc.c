@@ -25,7 +25,7 @@
 #include "feature/relay/router.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/networkstatus_st.h"

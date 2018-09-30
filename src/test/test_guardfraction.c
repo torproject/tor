@@ -10,7 +10,7 @@
 #include "app/config/config.h"
 #include "feature/dirauth/guardfraction.h"
 #include "feature/client/entrynodes.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/networkstatus.h"
 
 #include "feature/nodelist/networkstatus_st.h"

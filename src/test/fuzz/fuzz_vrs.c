@@ -3,7 +3,7 @@
 #define ROUTERPARSE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #include "core/or/or.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "lib/memarea/memarea.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"

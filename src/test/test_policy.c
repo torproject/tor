@@ -5,7 +5,7 @@
 #define CONFIG_PRIVATE
 #include "app/config/config.h"
 #include "feature/relay/router.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #define POLICIES_PRIVATE
 #include "core/or/policies.h"
 #include "lib/encoding/confline.h"

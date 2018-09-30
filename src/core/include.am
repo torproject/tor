@@ -72,6 +72,8 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/dircommon/directory.c	\
 	src/feature/dircommon/fp_pair.c		\
 	src/feature/dircommon/voting_schedule.c	\
+	src/feature/dirparse/parsecommon.c	\
+	src/feature/dirparse/routerparse.c	\
 	src/feature/hibernate/hibernate.c	\
 	src/feature/hs/hs_cache.c		\
 	src/feature/hs/hs_cell.c		\
@@ -98,10 +100,8 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/nodelist/nickname.c		\
 	src/feature/nodelist/nodelist.c		\
 	src/feature/nodelist/node_select.c	\
-	src/feature/nodelist/parsecommon.c	\
 	src/feature/nodelist/routerinfo.c	\
 	src/feature/nodelist/routerlist.c	\
-	src/feature/nodelist/routerparse.c	\
 	src/feature/nodelist/routerset.c	\
 	src/feature/nodelist/fmt_routerstatus.c	\
 	src/feature/nodelist/torcert.c		\
@@ -285,6 +285,8 @@ noinst_HEADERS +=					\
 	src/feature/dircommon/fp_pair.h			\
 	src/feature/dircommon/vote_timing_st.h		\
 	src/feature/dircommon/voting_schedule.h		\
+	src/feature/dirparse/parsecommon.h		\
+	src/feature/dirparse/routerparse.h		\
 	src/feature/hibernate/hibernate.h		\
 	src/feature/hs/hs_cache.h			\
 	src/feature/hs/hs_cell.h			\
@@ -320,12 +322,10 @@ noinst_HEADERS +=					\
 	src/feature/nodelist/node_st.h			\
 	src/feature/nodelist/nodelist.h			\
 	src/feature/nodelist/node_select.h		\
-	src/feature/nodelist/parsecommon.h		\
 	src/feature/nodelist/routerinfo.h		\
 	src/feature/nodelist/routerinfo_st.h		\
 	src/feature/nodelist/routerlist.h		\
 	src/feature/nodelist/routerlist_st.h		\
-	src/feature/nodelist/routerparse.h		\
 	src/feature/nodelist/routerset.h		\
 	src/feature/nodelist/fmt_routerstatus.h		\
 	src/feature/nodelist/routerstatus_st.h		\

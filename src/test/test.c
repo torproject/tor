@@ -54,7 +54,7 @@
 #include "core/crypto/onion_tap.h"
 #include "core/or/policies.h"
 #include "feature/stats/rephist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "app/config/statefile.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 

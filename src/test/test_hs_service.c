@@ -43,7 +43,7 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/relay.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_config.h"
 #include "feature/hs/hs_ident.h"

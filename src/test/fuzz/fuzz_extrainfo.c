@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 #define ROUTERPARSE_PRIVATE
 #include "core/or/or.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/routerkeys.h"
 #include "test/fuzz/fuzzing.h"

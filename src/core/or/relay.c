@@ -79,7 +79,7 @@
 #include "feature/rend/rendcommon.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "core/or/scheduler.h"
 #include "feature/stats/rephist.h"
 

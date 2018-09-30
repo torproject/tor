@@ -30,7 +30,7 @@
 #include "feature/hs_common/replaycache.h"
 #include "feature/relay/router.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/crypt_path_st.h"

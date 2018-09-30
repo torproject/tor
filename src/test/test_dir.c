@@ -51,7 +51,7 @@
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/node_select.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/relay/router.h"

@@ -12,7 +12,7 @@
 #include "app/config/config.h"
 #include "feature/stats/rephist.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "feature/rend/rendcommon.h"
 
 #include "core/or/extend_info_st.h"
