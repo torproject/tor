@@ -622,8 +622,8 @@ reply_event_cb(evutil_socket_t sock, short events, void *arg)
     tp->reply_cb(tp);
 }
 
-/** Register the threadpool <b>tp</b>'s reply queue with the libevent
- * mainloop of <b>base</b>. If <b>tp</b> is provided, it is run after
+/** Register the threadpool <b>tp</b>'s reply queue with Tor's global
+ * libevent mainloop. If <b>cb</b> is provided, it is run after
  * each time there is work to process from the reply queue. Return 0 on
  * success, -1 on failure.
  */
