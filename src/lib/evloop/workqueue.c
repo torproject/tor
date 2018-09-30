@@ -15,7 +15,7 @@
  *
  * The main thread informs the worker threads of pending work by using a
  * condition variable.  The workers inform the main process of completed work
- * by using an alert_sockets_t object, as implemented in compat_threads.c.
+ * by using an alert_sockets_t object, as implemented in net/alertsock.c.
  *
  * The main thread can also queue an "update" that will be handled by all the
  * workers.  This is useful for updating state that all the workers share.
