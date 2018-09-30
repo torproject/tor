@@ -12,19 +12,7 @@
 #ifndef TOR_ROUTERPARSE_H
 #define TOR_ROUTERPARSE_H
 
-/** Possible statuses of a version of Tor, given opinions from the directory
- * servers. */
-typedef enum version_status_t {
-  VS_RECOMMENDED=0, /**< This version is listed as recommended. */
-  VS_OLD=1, /**< This version is older than any recommended version. */
-  VS_NEW=2, /**< This version is newer than any recommended version. */
-  VS_NEW_IN_SERIES=3, /**< This version is newer than any recommended version
-                       * in its series, but later recommended versions exist.
-                       */
-  VS_UNRECOMMENDED=4, /**< This version is not recommended (general case). */
-  VS_EMPTY=5, /**< The version list was empty; no agreed-on versions. */
-  VS_UNKNOWN, /**< We have no idea. */
-} version_status_t;
+#include "core/or/versions.h"
 
 enum networkstatus_type_t;
 
@@ -65,16 +53,7 @@ extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
                              int *can_dl_again_out);
 MOCK_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
          (const char *s, int assume_action, int *malformed_list));
-version_status_t tor_version_is_obsolete(const char *myversion,
-                                         const char *versionlist);
-int tor_version_parse_platform(const char *platform,
-                               tor_version_t *version_out,
-                               int strict);
-int tor_version_as_new_as(const char *platform, const char *cutoff);
-int tor_version_parse(const char *s, tor_version_t *out);
-int tor_version_compare(tor_version_t *a, tor_version_t *b);
-int tor_version_same_series(tor_version_t *a, tor_version_t *b);
-void sort_version_list(smartlist_t *lst, int remove_duplicates);
+
 void assert_addr_policy_ok(smartlist_t *t);
 void dump_distinct_digest_count(int severity);
 

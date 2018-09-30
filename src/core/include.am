@@ -46,6 +46,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/or/scheduler_kist.c		\
 	src/core/or/scheduler_vanilla.c		\
 	src/core/or/status.c			\
+	src/core/or/versions.c			\
 	src/core/proto/proto_cell.c		\
 	src/core/proto/proto_control0.c		\
 	src/core/proto/proto_ext_or.c		\
@@ -241,6 +242,7 @@ noinst_HEADERS +=					\
 	src/core/or/status.h				\
 	src/core/or/tor_version_st.h			\
 	src/core/or/var_cell_st.h			\
+	src/core/or/versions.h				\
 	src/core/proto/proto_cell.h			\
 	src/core/proto/proto_control0.h			\
 	src/core/proto/proto_ext_or.h			\
