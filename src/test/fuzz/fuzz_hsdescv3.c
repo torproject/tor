@@ -9,6 +9,7 @@
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "feature/hs/hs_descriptor.h"
 #include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/unparseable.h"
 
 #include "test/fuzz/fuzzing.h"
 

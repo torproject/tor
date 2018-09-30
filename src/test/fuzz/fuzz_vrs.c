@@ -4,6 +4,7 @@
 #define NETWORKSTATUS_PRIVATE
 #include "core/or/or.h"
 #include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/unparseable.h"
 #include "lib/memarea/memarea.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"

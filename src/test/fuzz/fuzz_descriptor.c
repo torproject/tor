@@ -3,6 +3,7 @@
 #define ROUTERPARSE_PRIVATE
 #include "core/or/or.h"
 #include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/unparseable.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/keymgt/loadkey.h"

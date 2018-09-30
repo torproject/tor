@@ -114,28 +114,10 @@ void routerparse_init(void);
 void routerparse_free_all(void);
 
 #ifdef ROUTERPARSE_PRIVATE
-/*
- * One entry in the list of dumped descriptors; filename dumped to, length,
- * SHA-256 and timestamp.
- */
-
-typedef struct {
-  char *filename;
-  size_t len;
-  uint8_t digest_sha256[DIGEST256_LEN];
-  time_t when;
-} dumped_desc_t;
-
-EXTERN(uint64_t, len_descs_dumped)
-EXTERN(smartlist_t *, descs_dumped)
 STATIC int routerstatus_parse_guardfraction(const char *guardfraction_str,
                                             networkstatus_t *vote,
                                             vote_routerstatus_t *vote_rs,
                                             routerstatus_t *rs);
-MOCK_DECL(STATIC dumped_desc_t *, dump_desc_populate_one_file,
-    (const char *dirname, const char *f));
-STATIC void dump_desc_populate_fifo_from_directory(const char *dirname);
-STATIC void dump_desc_fifo_cleanup(void);
 struct memarea_t;
 STATIC routerstatus_t *routerstatus_parse_entry_from_string(
                                      struct memarea_t *area,
@@ -144,7 +126,6 @@ STATIC routerstatus_t *routerstatus_parse_entry_from_string(
                                      vote_routerstatus_t *vote_rs,
                                      int consensus_method,
                                      consensus_flavor_t flav);
-MOCK_DECL(STATIC void,dump_desc,(const char *desc, const char *type));
 MOCK_DECL(STATIC int, router_compute_hash_final,(char *digest,
                            const char *start, size_t len,
                            digest_algorithm_t alg));

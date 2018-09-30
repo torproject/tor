@@ -21,6 +21,7 @@
 #define ROUTERLIST_PRIVATE
 #define ROUTERPARSE_PRIVATE
 #define ROUTER_PRIVATE
+#define UNPARSEABLE_PRIVATE
 #define VOTEFLAGS_PRIVATE
 
 #include "core/or/or.h"
@@ -52,6 +53,7 @@
 #include "feature/nodelist/node_select.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/unparseable.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/relay/router.h"
