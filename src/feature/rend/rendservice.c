@@ -22,7 +22,6 @@
 #include "feature/control/control.h"
 #include "feature/dirclient/dirclient.h"
 #include "feature/dircommon/directory.h"
-#include "feature/dirparse/routerparse.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_config.h"
 #include "feature/hs_common/replaycache.h"

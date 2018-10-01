@@ -34,7 +34,6 @@
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/dirparse/authcert_parse.h"
-#include "feature/dirparse/routerparse.h"
 #include "feature/dirparse/ns_parse.h"
 #include "feature/dirauth/shared_random.h"
 #include "app/config/statefile.h"

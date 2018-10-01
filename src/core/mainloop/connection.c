@@ -91,7 +91,6 @@
 #include "feature/dirauth/authmode.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
-#include "feature/dirparse/routerparse.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_ident.h"

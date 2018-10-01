@@ -30,7 +30,6 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/client/entrynodes.h"
 #include "feature/dirparse/authcert_parse.h"
-#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/networkstatus.h"
 #include "core/proto/proto_http.h"
 #include "lib/geoip/geoip.h"

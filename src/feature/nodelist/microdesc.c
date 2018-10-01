@@ -20,7 +20,6 @@
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
 #include "feature/dirparse/microdesc_parse.h"
-#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"

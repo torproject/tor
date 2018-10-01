@@ -61,7 +61,6 @@
 #include "feature/nodelist/node_select.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/rend/rendservice.h"

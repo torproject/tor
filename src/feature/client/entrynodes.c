@@ -130,7 +130,6 @@
 #include "feature/client/transports.h"
 #include "feature/control/control.h"
 #include "feature/dircommon/directory.h"
-#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"

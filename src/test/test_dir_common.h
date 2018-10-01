@@ -5,7 +5,6 @@
 
 #include "core/or/or.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/dirparse/routerparse.h"
 
 #define TEST_DIR_ROUTER_ID_1 3
 #define TEST_DIR_ROUTER_ID_2 5

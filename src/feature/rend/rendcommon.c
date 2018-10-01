@@ -31,7 +31,6 @@
 #include "feature/hs_common/replaycache.h"
 #include "feature/relay/router.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/dirparse/routerparse.h"
 #include "feature/dirparse/signing.h"
 
 #include "core/or/cpath_build_state_st.h"
