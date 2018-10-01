@@ -50,65 +50,32 @@
  * </ul>
  **/
 
-#define ROUTERPARSE_PRIVATE
 #define EXPOSE_ROUTERDESC_TOKEN_TABLE
 
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "core/or/circuitstats.h"
 #include "core/or/policies.h"
-#include "core/or/protover.h"
-#include "feature/client/entrynodes.h"
-#include "feature/dirauth/shared_random.h"
-#include "feature/dircommon/voting_schedule.h"
 #include "feature/dirparse/parsecommon.h"
 #include "feature/dirparse/policy_parse.h"
 #include "feature/dirparse/routerparse.h"
-#include "feature/hs_common/shared_random_client.h"
-#include "feature/nodelist/authcert.h"
+#include "feature/dirparse/sigcommon.h"
+#include "feature/dirparse/unparseable.h"
 #include "feature/nodelist/describe.h"
-#include "feature/nodelist/microdesc.h"
-#include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/relay/router.h"
-#include "feature/relay/routerkeys.h"
-#include "feature/rend/rendcommon.h"
-#include "feature/stats/rephist.h"
+#include "lib/crypt_ops/crypto_curve25519.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_format.h"
-#include "lib/crypt_ops/crypto_util.h"
 #include "lib/memarea/memarea.h"
 #include "lib/sandbox/sandbox.h"
-#include "feature/dirparse/authcert_parse.h"
-#include "feature/dirparse/sigcommon.h"
-#include "feature/dirparse/unparseable.h"
-
-#include "feature/dirauth/dirvote.h"
 
 #include "core/or/addr_policy_st.h"
-#include "feature/nodelist/authority_cert_st.h"
-#include "feature/nodelist/document_signature_st.h"
-#include "core/or/extend_info_st.h"
 #include "feature/nodelist/extrainfo_st.h"
-#include "feature/nodelist/microdesc_st.h"
-#include "feature/nodelist/networkstatus_st.h"
-#include "feature/nodelist/networkstatus_voter_info_st.h"
-#include "feature/dirauth/ns_detached_signatures_st.h"
-#include "feature/rend/rend_authorized_client_st.h"
-#include "feature/rend/rend_intro_point_st.h"
-#include "feature/rend/rend_service_descriptor_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist_st.h"
-#include "core/or/tor_version_st.h"
-#include "feature/dirauth/vote_microdesc_hash_st.h"
-#include "feature/nodelist/vote_routerstatus_st.h"
-
-#include "lib/container/bloomfilt.h"
-
-#undef log
-#include <math.h>
 
 /****************************************************************************/
 
