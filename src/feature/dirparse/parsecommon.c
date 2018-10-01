@@ -51,7 +51,7 @@ token_clear(directory_token_t *tok)
 int
 tokenize_string(memarea_t *area,
                 const char *start, const char *end, smartlist_t *out,
-                token_rule_t *table, int flags)
+                const token_rule_t *table, int flags)
 {
   const char **s;
   directory_token_t *tok = NULL;
@@ -257,7 +257,7 @@ token_check_object(memarea_t *area, const char *kwd,
  */
 directory_token_t *
 get_next_token(memarea_t *area,
-               const char **s, const char *eos, token_rule_t *table)
+               const char **s, const char *eos, const token_rule_t *table)
 {
   /** Reject any object at least this big; it is probably an overflow, an
    * attack, a bug, or some other nonsense. */

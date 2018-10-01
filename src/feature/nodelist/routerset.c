@@ -30,7 +30,7 @@ n * Copyright (c) 2001-2004, Roger Dingledine.
 #include "core/or/or.h"
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
-#include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/policy_parse.h"
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerset.h"

@@ -21,6 +21,7 @@
 #include "feature/client/bridges.h"
 #include "app/config/config.h"
 #include "core/or/policies.h"
+#include "feature/dirparse/policy_parse.h"
 #include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"

@@ -302,12 +302,12 @@ void token_clear(directory_token_t *tok);
 int tokenize_string(struct memarea_t *area,
                     const char *start, const char *end,
                     struct smartlist_t *out,
-                    token_rule_t *table,
+                    const token_rule_t *table,
                     int flags);
 directory_token_t *get_next_token(struct memarea_t *area,
                                   const char **s,
                                   const char *eos,
-                                  token_rule_t *table);
+                                  const token_rule_t *table);
 
 directory_token_t *find_by_keyword_(struct smartlist_t *s,
                                     directory_keyword keyword,

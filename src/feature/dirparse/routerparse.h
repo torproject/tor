@@ -34,8 +34,6 @@ struct digest_ri_map_t;
 extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
                              int cache_copy, struct digest_ri_map_t *routermap,
                              int *can_dl_again_out);
-MOCK_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
-         (const char *s, int assume_action, int *malformed_list));
 
 int find_single_ipv6_orport(const smartlist_t *list,
                             tor_addr_t *addr_out,
@@ -43,6 +41,10 @@ int find_single_ipv6_orport(const smartlist_t *list,
 
 void routerparse_init(void);
 void routerparse_free_all(void);
+
+#ifdef EXPOSE_ROUTERDESC_TOKEN_TABLE
+extern const struct token_rule_t routerdesc_token_table[];
+#endif
 
 #define ED_DESC_SIGNATURE_PREFIX "Tor router descriptor signature v1"
 
