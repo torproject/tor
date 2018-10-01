@@ -37,4 +37,8 @@ int tor_version_compare(tor_version_t *a, tor_version_t *b);
 int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 void sort_version_list(smartlist_t *lst, int remove_duplicates);
 
+void summarize_protover_flags(protover_summary_flags_t *out,
+                              const char *protocols,
+                              const char *version);
+
 #endif /* !defined(TOR_VERSIONS_H) */

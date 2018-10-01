@@ -1201,50 +1201,6 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   return extrainfo;
 }
 
-/** Summarize the protocols listed in <b>protocols</b> into <b>out</b>,
- * falling back or correcting them based on <b>version</b> as appropriate.
- */
-void
-summarize_protover_flags(protover_summary_flags_t *out,
-                         const char *protocols,
-                         const char *version)
-{
-  tor_assert(out);
-  memset(out, 0, sizeof(*out));
-  if (protocols) {
-    out->protocols_known = 1;
-    out->supports_extend2_cells =
-      protocol_list_supports_protocol(protocols, PRT_RELAY, 2);
-    out->supports_ed25519_link_handshake_compat =
-      protocol_list_supports_protocol(protocols, PRT_LINKAUTH, 3);
-    out->supports_ed25519_link_handshake_any =
-      protocol_list_supports_protocol_or_later(protocols, PRT_LINKAUTH, 3);
-    out->supports_ed25519_hs_intro =
-      protocol_list_supports_protocol(protocols, PRT_HSINTRO, 4);
-    out->supports_v3_hsdir =
-      protocol_list_supports_protocol(protocols, PRT_HSDIR,
-                                      PROTOVER_HSDIR_V3);
-    out->supports_v3_rendezvous_point =
-      protocol_list_supports_protocol(protocols, PRT_HSREND,
-                                      PROTOVER_HS_RENDEZVOUS_POINT_V3);
-  }
-  if (version && !strcmpstart(version, "Tor ")) {
-    if (!out->protocols_known) {
-      /* The version is a "Tor" version, and where there is no
-       * list of protocol versions that we should be looking at instead. */
-
-      out->supports_extend2_cells =
-        tor_version_as_new_as(version, "0.2.4.8-alpha");
-      out->protocols_known = 1;
-    } else {
-      /* Bug #22447 forces us to filter on this version. */
-      if (!tor_version_as_new_as(version, "0.3.0.8")) {
-        out->supports_v3_hsdir = 0;
-      }
-    }
-  }
-}
-
 /** Parse the addr policy in the string <b>s</b> and return it.  If
  * assume_action is nonnegative, then insert its action (ADDR_POLICY_ACCEPT or
  * ADDR_POLICY_REJECT) for items that specify no action.

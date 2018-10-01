@@ -44,10 +44,6 @@ int find_single_ipv6_orport(const smartlist_t *list,
 void routerparse_init(void);
 void routerparse_free_all(void);
 
-void summarize_protover_flags(protover_summary_flags_t *out,
-                                    const char *protocols,
-                                     const char *version);
-
 #define ED_DESC_SIGNATURE_PREFIX "Tor router descriptor signature v1"
 
 #endif /* !defined(TOR_ROUTERPARSE_H) */
