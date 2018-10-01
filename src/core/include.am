@@ -132,6 +132,7 @@ LIBTOR_APP_A_SOURCES = 				\
 # the separation is only in the code location.
 LIBTOR_APP_A_SOURCES += 			\
 	src/feature/dirauth/bwauth.c		\
+	src/feature/dirauth/dsigs_parse.c	\
 	src/feature/dirauth/guardfraction.c	\
 	src/feature/dirauth/reachability.c	\
 	src/feature/dirauth/recommend_pkg.c	\
@@ -268,6 +269,7 @@ noinst_HEADERS +=					\
 	src/feature/dirauth/bwauth.h			\
 	src/feature/dirauth/dircollate.h		\
 	src/feature/dirauth/dirvote.h			\
+	src/feature/dirauth/dsigs_parse.h		\
 	src/feature/dirauth/guardfraction.h		\
 	src/feature/dirauth/keypin.h			\
 	src/feature/dirauth/ns_detached_signatures_st.h	\

@@ -34,6 +34,7 @@
 #include "feature/control/control.h"
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/dirvote.h"
+#include "feature/dirauth/dsigs_parse.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dirauth/recommend_pkg.h"
 #include "feature/dirauth/shared_random_state.h"

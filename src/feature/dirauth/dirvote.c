@@ -7,6 +7,7 @@
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "feature/dirauth/dircollate.h"
+#include "feature/dirauth/dsigs_parse.h"
 #include "feature/dirauth/recommend_pkg.h"
 #include "feature/dirauth/voteflags.h"
 #include "feature/dircommon/directory.h"

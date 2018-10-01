@@ -51,8 +51,6 @@ int networkstatus_verify_bw_weights(networkstatus_t *ns, int);
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
                                            const char **eos_out,
                                            enum networkstatus_type_t ns_type);
-ns_detached_signatures_t *networkstatus_parse_detached_signatures(
-                                          const char *s, const char *eos);
 
 int find_single_ipv6_orport(const smartlist_t *list,
                             tor_addr_t *addr_out,
