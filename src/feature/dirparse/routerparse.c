@@ -537,31 +537,6 @@ router_parse_list_from_string(const char **s, const char *eos,
   return 0;
 }
 
-/* For debugging: define to count every descriptor digest we've seen so we
- * know if we need to try harder to avoid duplicate verifies. */
-#undef COUNT_DISTINCT_DIGESTS
-
-#ifdef COUNT_DISTINCT_DIGESTS
-static digestmap_t *verified_digests = NULL;
-#endif
-
-/** Log the total count of the number of distinct router digests we've ever
- * verified.  When compared to the number of times we've verified routerdesc
- * signatures <i>in toto</i>, this will tell us if we're doing too much
- * multiple-verification. */
-void
-dump_distinct_digest_count(int severity)
-{
-#ifdef COUNT_DISTINCT_DIGESTS
-  if (!verified_digests)
-    verified_digests = digestmap_new();
-  tor_log(severity, LD_GENERAL, "%d *distinct* router digests verified",
-      digestmap_size(verified_digests));
-#else /* !(defined(COUNT_DISTINCT_DIGESTS)) */
-  (void)severity; /* suppress "unused parameter" warning */
-#endif /* defined(COUNT_DISTINCT_DIGESTS) */
-}
-
 /** Try to find an IPv6 OR port in <b>list</b> of directory_token_t's
  * with at least one argument (use GE(1) in setup). If found, store
  * address and port number to <b>addr_out</b> and
@@ -1139,11 +1114,6 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
 
   tok = find_by_keyword(tokens, K_ROUTER_SIGNATURE);
-#ifdef COUNT_DISTINCT_DIGESTS
-  if (!verified_digests)
-    verified_digests = digestmap_new();
-  digestmap_set(verified_digests, signed_digest, (void*)(uintptr_t)1);
-#endif
 
   if (!router->or_port) {
     log_warn(LD_DIR,"or_port unreadable or 0. Failing.");

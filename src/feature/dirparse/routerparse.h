@@ -47,7 +47,6 @@ MOCK_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
          (const char *s, int assume_action, int *malformed_list));
 
 void assert_addr_policy_ok(smartlist_t *t);
-void dump_distinct_digest_count(int severity);
 
 int compare_vote_routerstatus_entries(const void **_a, const void **_b);
 int networkstatus_verify_bw_weights(networkstatus_t *ns, int);
