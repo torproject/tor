@@ -332,17 +332,6 @@ static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
 
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 
-/** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
- * <b>s</b>.  Return 0 on success, -1 on failure.
- */
-int
-router_get_dir_hash(const char *s, char *digest)
-{
-  return router_get_hash_impl(s, strlen(s), digest,
-                              "signed-directory","\ndirectory-signature",'\n',
-                              DIGEST_SHA1);
-}
-
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the first router in
  * <b>s</b>. Return 0 on success, -1 on failure.
  */

@@ -17,7 +17,6 @@
 enum networkstatus_type_t;
 
 int router_get_router_hash(const char *s, size_t s_len, char *digest);
-int router_get_dir_hash(const char *s, char *digest);
 int router_get_networkstatus_v3_hashes(const char *s,
                                        common_digests_t *digests);
 int router_get_networkstatus_v3_signed_boundaries(const char *s,
