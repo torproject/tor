@@ -909,7 +909,7 @@ test_build_authorized_client(void *arg)
                 client_pubkey_b16,
                 strlen(client_pubkey_b16));
 
-  MOCK(crypto_strongest_rand, mock_crypto_strongest_rand);
+  MOCK(crypto_strongest_rand_, mock_crypto_strongest_rand);
 
   hs_desc_build_authorized_client(subcredential,
                                   &client_auth_pk, &auth_ephemeral_sk,
@@ -925,7 +925,7 @@ test_build_authorized_client(void *arg)
  done:
   tor_free(desc_client);
   tor_free(mem_op_hex_tmp);
-  UNMOCK(crypto_strongest_rand);
+  UNMOCK(crypto_strongest_rand_);
 }
 
 struct testcase_t hs_descriptor[] = {
