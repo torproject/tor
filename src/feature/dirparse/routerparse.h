@@ -14,16 +14,7 @@
 
 #include "core/or/versions.h"
 
-enum networkstatus_type_t;
-
 int router_get_router_hash(const char *s, size_t s_len, char *digest);
-int router_get_networkstatus_v3_hashes(const char *s,
-                                       common_digests_t *digests);
-int router_get_networkstatus_v3_signed_boundaries(const char *s,
-                                                  const char **start_out,
-                                                  const char **end_out);
-int router_get_networkstatus_v3_sha3_as_signed(uint8_t *digest_out,
-                                               const char *s);
 int router_get_extrainfo_hash(const char *s, size_t s_len, char *digest);
 
 int router_parse_list_from_string(const char **s, const char *eos,
@@ -46,12 +37,6 @@ extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
 MOCK_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
          (const char *s, int assume_action, int *malformed_list));
 
-int compare_vote_routerstatus_entries(const void **_a, const void **_b);
-int networkstatus_verify_bw_weights(networkstatus_t *ns, int);
-networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
-                                           const char **eos_out,
-                                           enum networkstatus_type_t ns_type);
-
 int find_single_ipv6_orport(const smartlist_t *list,
                             tor_addr_t *addr_out,
                             uint16_t *port_out);
@@ -59,23 +44,9 @@ int find_single_ipv6_orport(const smartlist_t *list,
 void routerparse_init(void);
 void routerparse_free_all(void);
 
-#ifdef ROUTERPARSE_PRIVATE
-STATIC int routerstatus_parse_guardfraction(const char *guardfraction_str,
-                                            networkstatus_t *vote,
-                                            vote_routerstatus_t *vote_rs,
-                                            routerstatus_t *rs);
-struct memarea_t;
-STATIC routerstatus_t *routerstatus_parse_entry_from_string(
-                                     struct memarea_t *area,
-                                     const char **s, smartlist_t *tokens,
-                                     networkstatus_t *vote,
-                                     vote_routerstatus_t *vote_rs,
-                                     int consensus_method,
-                                     consensus_flavor_t flav);
-STATIC void summarize_protover_flags(protover_summary_flags_t *out,
-                                     const char *protocols,
+void summarize_protover_flags(protover_summary_flags_t *out,
+                                    const char *protocols,
                                      const char *version);
-#endif /* defined(ROUTERPARSE_PRIVATE) */
 
 #define ED_DESC_SIGNATURE_PREFIX "Tor router descriptor signature v1"
 

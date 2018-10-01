@@ -11,7 +11,7 @@
 #include "core/mainloop/cpuworker.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/ns_parse.h"
 #include "lib/evloop/workqueue.h"
 #include "lib/compress/compress.h"
 #include "lib/encoding/confline.h"

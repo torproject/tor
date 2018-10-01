@@ -2,15 +2,15 @@
 /* See LICENSE for licensing information */
 
 #define GUARDFRACTION_PRIVATE
-#define ROUTERPARSE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define NS_PARSE_PRIVATE
 
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "feature/dirauth/guardfraction.h"
 #include "feature/client/entrynodes.h"
-#include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/ns_parse.h"
 #include "feature/nodelist/networkstatus.h"
 
 #include "feature/nodelist/networkstatus_st.h"

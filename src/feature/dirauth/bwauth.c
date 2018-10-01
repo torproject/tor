@@ -15,7 +15,7 @@
 #include "app/config/config.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/ns_parse.h"
 
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"

@@ -16,6 +16,7 @@
 #define DLSTATUS_PRIVATE
 #define HIBERNATE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define NS_PARSE_PRIVATE
 #define NODE_SELECT_PRIVATE
 #define RELAY_PRIVATE
 #define ROUTERLIST_PRIVATE
@@ -54,6 +55,7 @@
 #include "feature/nodelist/node_select.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/dirparse/authcert_parse.h"
+#include "feature/dirparse/ns_parse.h"
 #include "feature/dirparse/routerparse.h"
 #include "feature/dirparse/unparseable.h"
 #include "feature/nodelist/routerset.h"

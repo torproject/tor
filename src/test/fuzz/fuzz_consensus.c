@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 #define SIGCOMMON_PRIVATE
 #include "core/or/or.h"
-#include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/ns_parse.h"
 #include "feature/dirparse/sigcommon.h"
 #include "feature/dirparse/unparseable.h"
 #include "feature/nodelist/networkstatus.h"

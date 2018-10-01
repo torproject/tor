@@ -1,9 +1,9 @@
 /* Copyright (c) 2016-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-#define ROUTERPARSE_PRIVATE
+#define NS_PARSE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #include "core/or/or.h"
-#include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/ns_parse.h"
 #include "feature/dirparse/unparseable.h"
 #include "lib/memarea/memarea.h"
 #include "feature/nodelist/microdesc.h"
