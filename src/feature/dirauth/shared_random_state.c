@@ -63,6 +63,7 @@ DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 static int
 disk_state_validate_cb(void *old_state, void *state, void *default_state,
                        int from_setconf, char **msg);
+static void disk_state_free_cb(void *);
 
 /* Array of variables that are saved to disk as a persistent state. */
 static config_var_t state_vars[] = {
@@ -96,6 +97,7 @@ static const config_format_t state_format = {
   NULL,
   state_vars,
   disk_state_validate_cb,
+  disk_state_free_cb,
   &state_extra_var,
 };
 
@@ -340,6 +342,12 @@ disk_state_validate_cb(void *old_state, void *state, void *default_state,
   (void) state;
   (void) msg;
   return 0;
+}
+
+static void
+disk_state_free_cb(void *state)
+{
+  disk_state_free_(state);
 }
 
 /* Parse the Commit line(s) in the disk state and translate them to the

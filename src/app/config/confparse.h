@@ -155,6 +155,9 @@ typedef struct config_var_t {
  * of arguments. */
 typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
 
+/** Callback to free a configuration object. */
+typedef void (*free_cfg_fn_t)(void*);
+
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
  * configuration or storage format. */
@@ -169,6 +172,7 @@ typedef struct config_format_t {
   config_var_t *vars; /**< List of variables we recognize, their default
                        * values, and where we stick them in the structure. */
   validate_fn_t validate_fn; /**< Function to validate config. */
+  free_cfg_fn_t free_fn; /**< Function to free the configuration. */
   /** If present, extra is a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
   config_var_t *extra;

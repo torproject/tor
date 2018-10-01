@@ -827,6 +827,7 @@ static void config_maybe_load_geoip_files_(const or_options_t *options,
 static int options_validate_cb(void *old_options, void *options,
                                void *default_options,
                                int from_setconf, char **msg);
+static void options_free_cb(void *options);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
 
@@ -842,6 +843,7 @@ STATIC config_format_t options_format = {
   option_deprecation_notes_,
   option_vars_,
   options_validate_cb,
+  options_free_cb,
   NULL
 };
 
@@ -3150,6 +3152,13 @@ options_validate_cb(void *old_options, void *options, void *default_options,
                           from_setconf, msg);
   in_option_validation = 0;
   return rv;
+}
+
+/** Callback to free an or_options_t */
+static void
+options_free_cb(void *options)
+{
+  or_options_free_(options);
 }
 
 #define REJECT(arg) \
