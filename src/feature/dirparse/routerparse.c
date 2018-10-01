@@ -48,9 +48,6 @@
  *  <li>authority key certificates (managed from routerlist.c)
  *  <li>hidden service descriptors (managed from rendcommon.c and rendcache.c)
  * </ul>
- *
- * For no terribly good reason, the functions to <i>generate</i> signatures on
- * the above directory objects are also in this module.
  **/
 
 #define ROUTERPARSE_PRIVATE
@@ -82,6 +79,8 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/memarea/memarea.h"
 #include "lib/sandbox/sandbox.h"
+#include "feature/dirparse/authcert_parse.h"
+#include "feature/dirparse/sigcommon.h"
 #include "feature/dirparse/unparseable.h"
 
 #include "feature/dirauth/dirvote.h"
@@ -210,26 +209,6 @@ static token_rule_t rtrstatus_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens common to V3 authority certificates and V3 consensuses. */
-#define CERTIFICATE_MEMBERS                                                  \
-  T1("dir-key-certificate-version", K_DIR_KEY_CERTIFICATE_VERSION,           \
-                                                     GE(1),       NO_OBJ ),  \
-  T1("dir-identity-key", K_DIR_IDENTITY_KEY,         NO_ARGS,     NEED_KEY ),\
-  T1("dir-key-published",K_DIR_KEY_PUBLISHED,        CONCAT_ARGS, NO_OBJ),   \
-  T1("dir-key-expires",  K_DIR_KEY_EXPIRES,          CONCAT_ARGS, NO_OBJ),   \
-  T1("dir-signing-key",  K_DIR_SIGNING_KEY,          NO_ARGS,     NEED_KEY ),\
-  T1("dir-key-crosscert", K_DIR_KEY_CROSSCERT,       NO_ARGS,     NEED_OBJ ),\
-  T1("dir-key-certification", K_DIR_KEY_CERTIFICATION,                       \
-                                                     NO_ARGS,     NEED_OBJ), \
-  T01("dir-address",     K_DIR_ADDRESS,              GE(1),       NO_OBJ),
-
-/** List of tokens recognized in V3 authority certificates. */
-static token_rule_t dir_key_certificate_table[] = {
-  CERTIFICATE_MEMBERS
-  T1("fingerprint",      K_FINGERPRINT,              CONCAT_ARGS, NO_OBJ ),
-  END_OF_TABLE
-};
-
 /** List of tokens recognized in rendezvous service descriptors */
 static token_rule_t desc_token_table[] = {
   T1_START("rendezvous-service-descriptor", R_RENDEZVOUS_SERVICE_DESCRIPTOR,
@@ -292,7 +271,7 @@ static token_rule_t networkstatus_token_table[] = {
   T01("required-relay-protocols",    K_REQUIRED_RELAY_PROTOCOLS,
       CONCAT_ARGS, NO_OBJ ),
 
-  CERTIFICATE_MEMBERS
+#include "feature/dirparse/authcert_members.i"
 
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
@@ -385,41 +364,8 @@ static addr_policy_t *router_parse_addr_policy(directory_token_t *tok,
                                                unsigned fmt_flags);
 static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
 
-static int router_get_hash_impl_helper(const char *s, size_t s_len,
-                            const char *start_str,
-                            const char *end_str, char end_c,
-                            int log_severity,
-                            const char **start_out, const char **end_out);
-static int router_get_hash_impl(const char *s, size_t s_len, char *digest,
-                                const char *start_str, const char *end_str,
-                                char end_char,
-                                digest_algorithm_t alg);
-static int router_get_hashes_impl(const char *s, size_t s_len,
-                                  common_digests_t *digests,
-                                  const char *start_str, const char *end_str,
-                                  char end_char);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 
-#define CST_NO_CHECK_OBJTYPE  (1<<0)
-static int check_signature_token(const char *digest,
-                                 ssize_t digest_len,
-                                 directory_token_t *tok,
-                                 crypto_pk_t *pkey,
-                                 int flags,
-                                 const char *doctype);
-
-#undef DEBUG_AREA_ALLOC
-
-#ifdef DEBUG_AREA_ALLOC
-#define DUMP_AREA(a,name) STMT_BEGIN                              \
-  size_t alloc=0, used=0;                                         \
-  memarea_get_stats((a),&alloc,&used);                            \
-  log_debug(LD_MM, "Area for %s has %lu allocated; using %lu.",   \
-            name, (unsigned long)alloc, (unsigned long)used);     \
-  STMT_END
-#else /* !(defined(DEBUG_AREA_ALLOC)) */
-#define DUMP_AREA(a,name) STMT_NIL
-#endif /* defined(DEBUG_AREA_ALLOC) */
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
  * <b>s</b>.  Return 0 on success, -1 on failure.
@@ -496,149 +442,6 @@ router_get_extrainfo_hash(const char *s, size_t s_len, char *digest)
 {
   return router_get_hash_impl(s, s_len, digest, "extra-info",
                               "\nrouter-signature",'\n', DIGEST_SHA1);
-}
-
-/** Helper: used to generate signatures for routers, directories and
- * network-status objects.  Given a <b>digest_len</b>-byte digest in
- * <b>digest</b> and a secret <b>private_key</b>, generate an PKCS1-padded
- * signature, BASE64-encode it, surround it with -----BEGIN/END----- pairs,
- * and return the new signature on success or NULL on failure.
- */
-char *
-router_get_dirobj_signature(const char *digest,
-                            size_t digest_len,
-                            const crypto_pk_t *private_key)
-{
-  char *signature;
-  size_t i, keysize;
-  int siglen;
-  char *buf = NULL;
-  size_t buf_len;
-  /* overestimate of BEGIN/END lines total len. */
-#define BEGIN_END_OVERHEAD_LEN 64
-
-  keysize = crypto_pk_keysize(private_key);
-  signature = tor_malloc(keysize);
-  siglen = crypto_pk_private_sign(private_key, signature, keysize,
-                                  digest, digest_len);
-  if (siglen < 0) {
-    log_warn(LD_BUG,"Couldn't sign digest.");
-    goto err;
-  }
-
-  /* The *2 here is a ridiculous overestimate of base-64 overhead. */
-  buf_len = (siglen * 2) + BEGIN_END_OVERHEAD_LEN;
-  buf = tor_malloc(buf_len);
-
-  if (strlcpy(buf, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
-    goto truncated;
-
-  i = strlen(buf);
-  if (base64_encode(buf+i, buf_len-i, signature, siglen,
-                    BASE64_ENCODE_MULTILINE) < 0) {
-    log_warn(LD_BUG,"couldn't base64-encode signature");
-    goto err;
-  }
-
-  if (strlcat(buf, "-----END SIGNATURE-----\n", buf_len) >= buf_len)
-    goto truncated;
-
-  tor_free(signature);
-  return buf;
-
- truncated:
-  log_warn(LD_BUG,"tried to exceed string length.");
- err:
-  tor_free(signature);
-  tor_free(buf);
-  return NULL;
-}
-
-/** Helper: used to generate signatures for routers, directories and
- * network-status objects.  Given a digest in <b>digest</b> and a secret
- * <b>private_key</b>, generate a PKCS1-padded signature, BASE64-encode it,
- * surround it with -----BEGIN/END----- pairs, and write it to the
- * <b>buf_len</b>-byte buffer at <b>buf</b>.  Return 0 on success, -1 on
- * failure.
- */
-int
-router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
-                               size_t digest_len, crypto_pk_t *private_key)
-{
-  size_t sig_len, s_len;
-  char *sig = router_get_dirobj_signature(digest, digest_len, private_key);
-  if (!sig) {
-    log_warn(LD_BUG, "No signature generated");
-    return -1;
-  }
-  sig_len = strlen(sig);
-  s_len = strlen(buf);
-  if (sig_len + s_len + 1 > buf_len) {
-    log_warn(LD_BUG, "Not enough room for signature");
-    tor_free(sig);
-    return -1;
-  }
-  memcpy(buf+s_len, sig, sig_len+1);
-  tor_free(sig);
-  return 0;
-}
-
-MOCK_IMPL(STATIC int,
-signed_digest_equals, (const uint8_t *d1, const uint8_t *d2, size_t len))
-{
-  return tor_memeq(d1, d2, len);
-}
-
-/** Check whether the object body of the token in <b>tok</b> has a good
- * signature for <b>digest</b> using key <b>pkey</b>.
- * If <b>CST_NO_CHECK_OBJTYPE</b> is set, do not check
- * the object type of the signature object. Use <b>doctype</b> as the type of
- * the document when generating log messages.  Return 0 on success, negative
- * on failure.
- */
-static int
-check_signature_token(const char *digest,
-                      ssize_t digest_len,
-                      directory_token_t *tok,
-                      crypto_pk_t *pkey,
-                      int flags,
-                      const char *doctype)
-{
-  char *signed_digest;
-  size_t keysize;
-  const int check_objtype = ! (flags & CST_NO_CHECK_OBJTYPE);
-
-  tor_assert(pkey);
-  tor_assert(tok);
-  tor_assert(digest);
-  tor_assert(doctype);
-
-  if (check_objtype) {
-    if (strcmp(tok->object_type, "SIGNATURE")) {
-      log_warn(LD_DIR, "Bad object type on %s signature", doctype);
-      return -1;
-    }
-  }
-
-  keysize = crypto_pk_keysize(pkey);
-  signed_digest = tor_malloc(keysize);
-  if (crypto_pk_public_checksig(pkey, signed_digest, keysize,
-                                tok->object_body, tok->object_size)
-      < digest_len) {
-    log_warn(LD_DIR, "Error reading %s: invalid signature.", doctype);
-    tor_free(signed_digest);
-    return -1;
-  }
-  //  log_debug(LD_DIR,"Signed %s hash starts %s", doctype,
-  //            hex_str(signed_digest,4));
-  if (! signed_digest_equals((const uint8_t *)digest,
-                             (const uint8_t *)signed_digest, digest_len)) {
-    log_warn(LD_DIR, "Error reading %s: signature does not match.", doctype);
-    tor_free(signed_digest);
-    return -1;
-  }
-  tor_free(signed_digest);
-  return 0;
 }
 
 /** Helper: move *<b>s_ptr</b> ahead to the next router, the next extra-info,
@@ -1647,191 +1450,6 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   if (can_dl_again_out)
     *can_dl_again_out = can_dl_again;
   return extrainfo;
-}
-
-/** Parse a key certificate from <b>s</b>; point <b>end-of-string</b> to
- * the first character after the certificate. */
-authority_cert_t *
-authority_cert_parse_from_string(const char *s, const char **end_of_string)
-{
-  /** Reject any certificate at least this big; it is probably an overflow, an
-   * attack, a bug, or some other nonsense. */
-#define MAX_CERT_SIZE (128*1024)
-
-  authority_cert_t *cert = NULL, *old_cert;
-  smartlist_t *tokens = NULL;
-  char digest[DIGEST_LEN];
-  directory_token_t *tok;
-  char fp_declared[DIGEST_LEN];
-  char *eos;
-  size_t len;
-  int found;
-  memarea_t *area = NULL;
-  const char *s_dup = s;
-
-  s = eat_whitespace(s);
-  eos = strstr(s, "\ndir-key-certification");
-  if (! eos) {
-    log_warn(LD_DIR, "No signature found on key certificate");
-    return NULL;
-  }
-  eos = strstr(eos, "\n-----END SIGNATURE-----\n");
-  if (! eos) {
-    log_warn(LD_DIR, "No end-of-signature found on key certificate");
-    return NULL;
-  }
-  eos = strchr(eos+2, '\n');
-  tor_assert(eos);
-  ++eos;
-  len = eos - s;
-
-  if (len > MAX_CERT_SIZE) {
-    log_warn(LD_DIR, "Certificate is far too big (at %lu bytes long); "
-             "rejecting", (unsigned long)len);
-    return NULL;
-  }
-
-  tokens = smartlist_new();
-  area = memarea_new();
-  if (tokenize_string(area,s, eos, tokens, dir_key_certificate_table, 0) < 0) {
-    log_warn(LD_DIR, "Error tokenizing key certificate");
-    goto err;
-  }
-  if (router_get_hash_impl(s, strlen(s), digest, "dir-key-certificate-version",
-                           "\ndir-key-certification", '\n', DIGEST_SHA1) < 0)
-    goto err;
-  tok = smartlist_get(tokens, 0);
-  if (tok->tp != K_DIR_KEY_CERTIFICATE_VERSION || strcmp(tok->args[0], "3")) {
-    log_warn(LD_DIR,
-             "Key certificate does not begin with a recognized version (3).");
-    goto err;
-  }
-
-  cert = tor_malloc_zero(sizeof(authority_cert_t));
-  memcpy(cert->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
-
-  tok = find_by_keyword(tokens, K_DIR_SIGNING_KEY);
-  tor_assert(tok->key);
-  cert->signing_key = tok->key;
-  tok->key = NULL;
-  if (crypto_pk_get_digest(cert->signing_key, cert->signing_key_digest))
-    goto err;
-
-  tok = find_by_keyword(tokens, K_DIR_IDENTITY_KEY);
-  tor_assert(tok->key);
-  cert->identity_key = tok->key;
-  tok->key = NULL;
-
-  tok = find_by_keyword(tokens, K_FINGERPRINT);
-  tor_assert(tok->n_args);
-  if (base16_decode(fp_declared, DIGEST_LEN, tok->args[0],
-                    strlen(tok->args[0])) != DIGEST_LEN) {
-    log_warn(LD_DIR, "Couldn't decode key certificate fingerprint %s",
-             escaped(tok->args[0]));
-    goto err;
-  }
-
-  if (crypto_pk_get_digest(cert->identity_key,
-                           cert->cache_info.identity_digest))
-    goto err;
-
-  if (tor_memneq(cert->cache_info.identity_digest, fp_declared, DIGEST_LEN)) {
-    log_warn(LD_DIR, "Digest of certificate key didn't match declared "
-             "fingerprint");
-    goto err;
-  }
-
-  tok = find_opt_by_keyword(tokens, K_DIR_ADDRESS);
-  if (tok) {
-    struct in_addr in;
-    char *address = NULL;
-    tor_assert(tok->n_args);
-    /* XXX++ use some tor_addr parse function below instead. -RD */
-    if (tor_addr_port_split(LOG_WARN, tok->args[0], &address,
-                            &cert->dir_port) < 0 ||
-        tor_inet_aton(address, &in) == 0) {
-      log_warn(LD_DIR, "Couldn't parse dir-address in certificate");
-      tor_free(address);
-      goto err;
-    }
-    cert->addr = ntohl(in.s_addr);
-    tor_free(address);
-  }
-
-  tok = find_by_keyword(tokens, K_DIR_KEY_PUBLISHED);
-  if (parse_iso_time(tok->args[0], &cert->cache_info.published_on) < 0) {
-     goto err;
-  }
-  tok = find_by_keyword(tokens, K_DIR_KEY_EXPIRES);
-  if (parse_iso_time(tok->args[0], &cert->expires) < 0) {
-     goto err;
-  }
-
-  tok = smartlist_get(tokens, smartlist_len(tokens)-1);
-  if (tok->tp != K_DIR_KEY_CERTIFICATION) {
-    log_warn(LD_DIR, "Certificate didn't end with dir-key-certification.");
-    goto err;
-  }
-
-  /* If we already have this cert, don't bother checking the signature. */
-  old_cert = authority_cert_get_by_digests(
-                                     cert->cache_info.identity_digest,
-                                     cert->signing_key_digest);
-  found = 0;
-  if (old_cert) {
-    /* XXXX We could just compare signed_descriptor_digest, but that wouldn't
-     * buy us much. */
-    if (old_cert->cache_info.signed_descriptor_len == len &&
-        old_cert->cache_info.signed_descriptor_body &&
-        tor_memeq(s, old_cert->cache_info.signed_descriptor_body, len)) {
-      log_debug(LD_DIR, "We already checked the signature on this "
-                "certificate; no need to do so again.");
-      found = 1;
-    }
-  }
-  if (!found) {
-    if (check_signature_token(digest, DIGEST_LEN, tok, cert->identity_key, 0,
-                              "key certificate")) {
-      goto err;
-    }
-
-    tok = find_by_keyword(tokens, K_DIR_KEY_CROSSCERT);
-    if (check_signature_token(cert->cache_info.identity_digest,
-                              DIGEST_LEN,
-                              tok,
-                              cert->signing_key,
-                              CST_NO_CHECK_OBJTYPE,
-                              "key cross-certification")) {
-      goto err;
-    }
-  }
-
-  cert->cache_info.signed_descriptor_len = len;
-  cert->cache_info.signed_descriptor_body = tor_malloc(len+1);
-  memcpy(cert->cache_info.signed_descriptor_body, s, len);
-  cert->cache_info.signed_descriptor_body[len] = 0;
-  cert->cache_info.saved_location = SAVED_NOWHERE;
-
-  if (end_of_string) {
-    *end_of_string = eat_whitespace(eos);
-  }
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
-  smartlist_free(tokens);
-  if (area) {
-    DUMP_AREA(area, "authority cert");
-    memarea_drop_all(area);
-  }
-  return cert;
- err:
-  dump_desc(s_dup, "authority cert");
-  authority_cert_free(cert);
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
-  smartlist_free(tokens);
-  if (area) {
-    DUMP_AREA(area, "authority cert");
-    memarea_drop_all(area);
-  }
-  return NULL;
 }
 
 /** Helper: given a string <b>s</b>, return the start of the next router-status
@@ -3855,116 +3473,6 @@ find_all_exitpolicy(smartlist_t *s)
           t->tp == K_REJECT || t->tp == K_REJECT6)
         smartlist_add(out,t));
   return out;
-}
-
-/** Helper function for <b>router_get_hash_impl</b>: given <b>s</b>,
- * <b>s_len</b>, <b>start_str</b>, <b>end_str</b>, and <b>end_c</b> with the
- * same semantics as in that function, set *<b>start_out</b> (inclusive) and
- * *<b>end_out</b> (exclusive) to the boundaries of the string to be hashed.
- *
- * Return 0 on success and -1 on failure.
- */
-static int
-router_get_hash_impl_helper(const char *s, size_t s_len,
-                            const char *start_str,
-                            const char *end_str, char end_c,
-                            int log_severity,
-                            const char **start_out, const char **end_out)
-{
-  const char *start, *end;
-  start = tor_memstr(s, s_len, start_str);
-  if (!start) {
-    log_fn(log_severity,LD_DIR,
-           "couldn't find start of hashed material \"%s\"",start_str);
-    return -1;
-  }
-  if (start != s && *(start-1) != '\n') {
-    log_fn(log_severity,LD_DIR,
-             "first occurrence of \"%s\" is not at the start of a line",
-             start_str);
-    return -1;
-  }
-  end = tor_memstr(start+strlen(start_str),
-                   s_len - (start-s) - strlen(start_str), end_str);
-  if (!end) {
-    log_fn(log_severity,LD_DIR,
-           "couldn't find end of hashed material \"%s\"",end_str);
-    return -1;
-  }
-  end = memchr(end+strlen(end_str), end_c, s_len - (end-s) - strlen(end_str));
-  if (!end) {
-    log_fn(log_severity,LD_DIR,
-           "couldn't find EOL");
-    return -1;
-  }
-  ++end;
-
-  *start_out = start;
-  *end_out = end;
-  return 0;
-}
-
-/** Compute the digest of the substring of <b>s</b> taken from the first
- * occurrence of <b>start_str</b> through the first instance of c after the
- * first subsequent occurrence of <b>end_str</b>; store the 20-byte or 32-byte
- * result in <b>digest</b>; return 0 on success.
- *
- * If no such substring exists, return -1.
- */
-static int
-router_get_hash_impl(const char *s, size_t s_len, char *digest,
-                     const char *start_str,
-                     const char *end_str, char end_c,
-                     digest_algorithm_t alg)
-{
-  const char *start=NULL, *end=NULL;
-  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,LOG_WARN,
-                                  &start,&end)<0)
-    return -1;
-
-  return router_compute_hash_final(digest, start, end-start, alg);
-}
-
-/** Compute the digest of the <b>len</b>-byte directory object at
- * <b>start</b>, using <b>alg</b>. Store the result in <b>digest</b>, which
- * must be long enough to hold it. */
-MOCK_IMPL(STATIC int,
-router_compute_hash_final,(char *digest,
-                           const char *start, size_t len,
-                           digest_algorithm_t alg))
-{
-  if (alg == DIGEST_SHA1) {
-    if (crypto_digest(digest, start, len) < 0) {
-      log_warn(LD_BUG,"couldn't compute digest");
-      return -1;
-    }
-  } else {
-    if (crypto_digest256(digest, start, len, alg) < 0) {
-      log_warn(LD_BUG,"couldn't compute digest");
-      return -1;
-    }
-  }
-
-  return 0;
-}
-
-/** As router_get_hash_impl, but compute all hashes. */
-static int
-router_get_hashes_impl(const char *s, size_t s_len, common_digests_t *digests,
-                       const char *start_str,
-                       const char *end_str, char end_c)
-{
-  const char *start=NULL, *end=NULL;
-  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,LOG_WARN,
-                                  &start,&end)<0)
-    return -1;
-
-  if (crypto_common_digests(digests, start, end-start)) {
-    log_warn(LD_BUG,"couldn't compute digests");
-    return -1;
-  }
-
-  return 0;
 }
 
 /** Assuming that s starts with a microdesc, return the start of the

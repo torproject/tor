@@ -10,6 +10,7 @@
 #include "feature/dirauth/dirvote.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
+#include "feature/dirparse/authcert_parse.h"
 #include "test/test_dir_common.h"
 #include "feature/dircommon/voting_schedule.h"
 

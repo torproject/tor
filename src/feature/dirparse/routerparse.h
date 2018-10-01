@@ -26,14 +26,7 @@ int router_get_networkstatus_v3_signed_boundaries(const char *s,
 int router_get_networkstatus_v3_sha3_as_signed(uint8_t *digest_out,
                                                const char *s);
 int router_get_extrainfo_hash(const char *s, size_t s_len, char *digest);
-#define DIROBJ_MAX_SIG_LEN 256
-char *router_get_dirobj_signature(const char *digest,
-                                  size_t digest_len,
-                                  const crypto_pk_t *private_key);
-int router_append_dirobj_signature(char *buf, size_t buf_len,
-                                   const char *digest,
-                                   size_t digest_len,
-                                   crypto_pk_t *private_key);
+
 int router_parse_list_from_string(const char **s, const char *eos,
                                   smartlist_t *dest,
                                   saved_location_t saved_location,
@@ -70,8 +63,6 @@ smartlist_t *microdescs_parse_from_string(const char *s, const char *eos,
                                           saved_location_t where,
                                           smartlist_t *invalid_digests_out);
 
-authority_cert_t *authority_cert_parse_from_string(const char *s,
-                                                   const char **end_of_string);
 int rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                                      char *desc_id_out,
                                      char **intro_points_encrypted_out,
@@ -105,12 +96,6 @@ STATIC routerstatus_t *routerstatus_parse_entry_from_string(
                                      vote_routerstatus_t *vote_rs,
                                      int consensus_method,
                                      consensus_flavor_t flav);
-MOCK_DECL(STATIC int, router_compute_hash_final,(char *digest,
-                           const char *start, size_t len,
-                           digest_algorithm_t alg));
-MOCK_DECL(STATIC int, signed_digest_equals,
-          (const uint8_t *d1, const uint8_t *d2, size_t len));
-
 STATIC void summarize_protover_flags(protover_summary_flags_t *out,
                                      const char *protocols,
                                      const char *version);

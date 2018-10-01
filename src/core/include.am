@@ -73,8 +73,11 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/dircommon/directory.c	\
 	src/feature/dircommon/fp_pair.c		\
 	src/feature/dircommon/voting_schedule.c	\
+	src/feature/dirparse/authcert_parse.c	\
 	src/feature/dirparse/parsecommon.c	\
 	src/feature/dirparse/routerparse.c	\
+	src/feature/dirparse/sigcommon.c	\
+	src/feature/dirparse/signing.c		\
 	src/feature/dirparse/unparseable.c	\
 	src/feature/hibernate/hibernate.c	\
 	src/feature/hs/hs_cache.c		\
@@ -288,8 +291,12 @@ noinst_HEADERS +=					\
 	src/feature/dircommon/fp_pair.h			\
 	src/feature/dircommon/vote_timing_st.h		\
 	src/feature/dircommon/voting_schedule.h		\
+	src/feature/dirparse/authcert_members.i		\
+	src/feature/dirparse/authcert_parse.h		\
 	src/feature/dirparse/parsecommon.h		\
 	src/feature/dirparse/routerparse.h		\
+	src/feature/dirparse/sigcommon.h		\
+	src/feature/dirparse/signing.h			\
 	src/feature/dirparse/unparseable.h		\
 	src/feature/hibernate/hibernate.h		\
 	src/feature/hs/hs_cache.h			\
