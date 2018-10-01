@@ -17,6 +17,7 @@
 
 #include "app/config/config.h"
 #include "core/or/policies.h"
+#include "core/or/versions.h"
 #include "feature/dirauth/keypin.h"
 #include "feature/dirauth/reachability.h"
 #include "feature/dirclient/dlstatus.h"

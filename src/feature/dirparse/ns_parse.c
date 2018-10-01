@@ -13,6 +13,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "core/or/versions.h"
 #include "feature/client/entrynodes.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirparse/authcert_parse.h"

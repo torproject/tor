@@ -12,8 +12,6 @@
 #ifndef TOR_ROUTERPARSE_H
 #define TOR_ROUTERPARSE_H
 
-#include "core/or/versions.h"
-
 int router_get_router_hash(const char *s, size_t s_len, char *digest);
 int router_get_extrainfo_hash(const char *s, size_t s_len, char *digest);
 

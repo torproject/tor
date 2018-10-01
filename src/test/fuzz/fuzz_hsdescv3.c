@@ -1,7 +1,6 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define ROUTERPARSE_PRIVATE
 #define HS_DESCRIPTOR_PRIVATE
 
 #include "core/or/or.h"

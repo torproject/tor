@@ -55,6 +55,7 @@
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "core/or/policies.h"
+#include "core/or/versions.h"
 #include "feature/dirparse/parsecommon.h"
 #include "feature/dirparse/policy_parse.h"
 #include "feature/dirparse/routerparse.h"

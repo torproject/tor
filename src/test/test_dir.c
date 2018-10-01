@@ -20,7 +20,6 @@
 #define NODE_SELECT_PRIVATE
 #define RELAY_PRIVATE
 #define ROUTERLIST_PRIVATE
-#define ROUTERPARSE_PRIVATE
 #define ROUTER_PRIVATE
 #define UNPARSEABLE_PRIVATE
 #define VOTEFLAGS_PRIVATE
@@ -30,6 +29,7 @@
 #include "app/config/confparse.h"
 #include "core/mainloop/connection.h"
 #include "core/or/relay.h"
+#include "core/or/versions.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
 #include "feature/control/control.h"
