@@ -35,6 +35,7 @@
 #include "feature/nodelist/routerset.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
+#include "feature/rend/rendparse.h"
 #include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
 #include "lib/crypt_ops/crypto_dh.h"

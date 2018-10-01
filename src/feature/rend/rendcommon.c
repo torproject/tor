@@ -25,6 +25,7 @@
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendmid.h"
+#include "feature/rend/rendparse.h"
 #include "feature/rend/rendservice.h"
 #include "feature/stats/rephist.h"
 #include "feature/hs_common/replaycache.h"

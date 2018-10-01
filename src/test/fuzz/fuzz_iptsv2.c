@@ -1,10 +1,10 @@
 /* Copyright (c) 2016-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-#define ROUTERPARSE_PRIVATE
+
 #include "core/or/or.h"
-#include "feature/dirparse/routerparse.h"
 #include "feature/dirparse/unparseable.h"
 #include "feature/rend/rendcommon.h"
+#include "feature/rend/rendparse.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
 #include "feature/rend/rend_service_descriptor_st.h"

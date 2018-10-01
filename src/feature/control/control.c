@@ -83,6 +83,7 @@
 #include "feature/relay/selftest.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
+#include "feature/rend/rendparse.h"
 #include "feature/rend/rendservice.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
