@@ -3373,18 +3373,6 @@ router_parse_addr_policy_private(directory_token_t *tok)
   return addr_policy_get_canonical_entry(&result);
 }
 
-/** Log and exit if <b>t</b> is malformed */
-void
-assert_addr_policy_ok(smartlist_t *lst)
-{
-  if (!lst) return;
-  SMARTLIST_FOREACH(lst, addr_policy_t *, t, {
-    tor_assert(t->policy_type == ADDR_POLICY_REJECT ||
-               t->policy_type == ADDR_POLICY_ACCEPT);
-    tor_assert(t->prt_min <= t->prt_max);
-  });
-}
-
 /** Return a newly allocated smartlist of all accept or reject tokens in
  * <b>s</b>.
  */

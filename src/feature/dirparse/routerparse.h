@@ -46,8 +46,6 @@ extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
 MOCK_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
          (const char *s, int assume_action, int *malformed_list));
 
-void assert_addr_policy_ok(smartlist_t *t);
-
 int compare_vote_routerstatus_entries(const void **_a, const void **_b);
 int networkstatus_verify_bw_weights(networkstatus_t *ns, int);
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
