@@ -303,6 +303,8 @@ predicted_ports_init(void)
 void
 predicted_ports_free_all(void)
 {
+  if (!predicted_ports_list)
+    return;
   predicted_ports_total_alloc -=
     smartlist_len(predicted_ports_list)*sizeof(predicted_port_t);
   SMARTLIST_FOREACH(predicted_ports_list, predicted_port_t *,
