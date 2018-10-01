@@ -54,10 +54,9 @@ networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
 ns_detached_signatures_t *networkstatus_parse_detached_signatures(
                                           const char *s, const char *eos);
 
-smartlist_t *microdescs_parse_from_string(const char *s, const char *eos,
-                                          int allow_annotations,
-                                          saved_location_t where,
-                                          smartlist_t *invalid_digests_out);
+int find_single_ipv6_orport(const smartlist_t *list,
+                            tor_addr_t *addr_out,
+                            uint16_t *port_out);
 
 void routerparse_init(void);
 void routerparse_free_all(void);

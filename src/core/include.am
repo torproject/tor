@@ -74,6 +74,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/dircommon/fp_pair.c		\
 	src/feature/dircommon/voting_schedule.c	\
 	src/feature/dirparse/authcert_parse.c	\
+	src/feature/dirparse/microdesc_parse.c	\
 	src/feature/dirparse/parsecommon.c	\
 	src/feature/dirparse/routerparse.c	\
 	src/feature/dirparse/sigcommon.c	\
@@ -294,6 +295,7 @@ noinst_HEADERS +=					\
 	src/feature/dircommon/voting_schedule.h		\
 	src/feature/dirparse/authcert_members.i		\
 	src/feature/dirparse/authcert_parse.h		\
+	src/feature/dirparse/microdesc_parse.h		\
 	src/feature/dirparse/parsecommon.h		\
 	src/feature/dirparse/routerparse.h		\
 	src/feature/dirparse/sigcommon.h		\
