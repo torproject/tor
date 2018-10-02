@@ -9,7 +9,6 @@ build = "../build.rs"
 [lib]
 name = "crypto"
 path = "lib.rs"
-crate_type = ["rlib", "staticlib"]
 
 [dependencies]
 libc = "=0.2.39"

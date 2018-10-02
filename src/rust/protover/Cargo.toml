@@ -31,4 +31,3 @@ path = "../tor_log"
 [lib]
 name = "protover"
 path = "lib.rs"
-crate_type = ["rlib", "staticlib"]

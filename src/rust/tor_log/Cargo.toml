@@ -6,7 +6,6 @@ authors = ["The Tor Project"]
 [lib]
 name = "tor_log"
 path = "lib.rs"
-crate_type = ["rlib", "staticlib"]
 
 [features]
 # We have to define a feature here because doctests don't get cfg(test),

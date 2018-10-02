@@ -6,7 +6,6 @@ version = "0.0.1"
 [lib]
 name = "tor_util"
 path = "lib.rs"
-crate_type = ["rlib", "staticlib"]
 
 [dependencies.tor_allocate]
 path = "../tor_allocate"
