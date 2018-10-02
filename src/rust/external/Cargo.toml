@@ -5,9 +5,8 @@ name = "external"
 
 [dependencies]
 libc = "=0.2.39"
-
-[dependencies.smartlist]
-path = "../smartlist"
+smartlist = { path = "../smartlist" }
+tor_allocate = { path = "../tor_allocate" }
 
 [lib]
 name = "external"
