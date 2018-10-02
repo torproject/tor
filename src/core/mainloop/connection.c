@@ -2851,6 +2851,15 @@ retry_listener_ports(smartlist_t *old_conns,
 int
 retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
 {
+  static int retrying = 0;
+
+  if (BUG(retrying)) {
+    log_warn(LD_NET, "retry_all_listeners already running - bailing out");
+    return -1;
+  }
+
+  retrying = 1;
+
   smartlist_t *listeners = smartlist_new();
   smartlist_t *replacements = smartlist_new();
   const or_options_t *options = get_options();
@@ -2935,6 +2944,7 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
     mark_my_descriptor_dirty("Chosen Or/DirPort changed");
   }
 
+  retrying = 0;
   return retval;
 }
 
