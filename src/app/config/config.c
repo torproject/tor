@@ -1506,6 +1506,8 @@ options_act_reversible(const or_options_t *old_options, char **msg)
      * shutting down. If networking is disabled, this will close all but the
      * control listeners, but disable those. */
     if (!we_are_hibernating()) {
+      log_debug(LD_NET, "calling retry_all_listeners from "
+                        "options_act_reversible");
       if (retry_all_listeners(new_listeners, options->DisableNetwork) < 0) {
         *msg = tor_strdup("Failed to bind one of the listener ports.");
         goto rollback;

@@ -2803,7 +2803,9 @@ retry_listener_ports(smartlist_t *old_conns,
           replacement->new_port = wanted;
           smartlist_add(replacements, replacement);
 
+          tor_assert_nonfatal(smartlist_contains(launch, wanted));
           SMARTLIST_DEL_CURRENT(launch, wanted);
+          tor_assert_nonfatal(smartlist_contains(old_conns, conn));
           SMARTLIST_DEL_CURRENT(old_conns, conn);
         }
 #endif
@@ -2816,6 +2818,7 @@ retry_listener_ports(smartlist_t *old_conns,
       //    conn_type_to_string(found_port->type), conn->address, conn->port);
       smartlist_remove(launch, found_port);
       /* And we can remove the connection from old_conns too. */
+      tor_assert_nonfatal(smartlist_contains(old_conns, conn));
       SMARTLIST_DEL_CURRENT(old_conns, conn);
     }
   } SMARTLIST_FOREACH_END(conn);
@@ -2848,6 +2851,15 @@ retry_listener_ports(smartlist_t *old_conns,
 int
 retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
 {
+  static int retrying = 0;
+
+  if (BUG(retrying)) {
+    log_warn(LD_NET, "retry_all_listeners already running - bailing out");
+    return -1;
+  }
+
+  retrying = 1;
+
   smartlist_t *listeners = smartlist_new();
   smartlist_t *replacements = smartlist_new();
   const or_options_t *options = get_options();
@@ -2901,8 +2913,9 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
                conn_type_to_string(old_conn->type), old_conn->address,
                old_conn->port, new_conn->address, new_conn->port);
 
-    tor_free(r);
+    tor_assert_nonfatal(smartlist_contains(replacements, r));
     SMARTLIST_DEL_CURRENT(replacements, r);
+    tor_free(r);
   } SMARTLIST_FOREACH_END(r);
 #endif
 
@@ -2931,6 +2944,7 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
     mark_my_descriptor_dirty("Chosen Or/DirPort changed");
   }
 
+  retrying = 0;
   return retval;
 }
 

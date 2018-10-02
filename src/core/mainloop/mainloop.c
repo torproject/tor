@@ -2320,6 +2320,8 @@ retry_listeners_callback(time_t now, const or_options_t *options)
   (void)now;
   (void)options;
   if (!net_is_disabled()) {
+    log_debug(LD_NET, "calling retry_all_listeners from "
+                      "retry_listeners_callback");
     retry_all_listeners(NULL, 0);
     return 60;
   }
