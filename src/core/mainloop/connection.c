@@ -2762,6 +2762,11 @@ retry_listener_ports(smartlist_t *old_conns,
     const port_cfg_t *found_port = NULL;
 
     /* Okay, so this is a listener.  Is it configured? */
+    /* That is, is it either: 1) exact match - address and port
+     * pair match exactly between old listener and new port; or 2)
+     * wildcard match - port matches exactly, but *one* of the
+     * addresses is wildcard (0.0.0.0 or ::)?
+     */
     SMARTLIST_FOREACH_BEGIN(launch, const port_cfg_t *, wanted) {
       if (conn->type != wanted->type)
         continue;
@@ -2805,6 +2810,7 @@ retry_listener_ports(smartlist_t *old_conns,
 
           SMARTLIST_DEL_CURRENT(launch, wanted);
           SMARTLIST_DEL_CURRENT(old_conns, conn);
+          break;
         }
 #endif
       }
