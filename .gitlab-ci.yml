@@ -1,15 +1,88 @@
-before_script:
-    - apt-get update -qq
-    - apt-get upgrade -qy
 
-build:
+.artifacts-template: &artifacts-template
+  artifacts:
+    name: "${CI_PROJECT_PATH}_${CI_JOB_STAGE}_${CI_COMMIT_REF_NAME}_${CI_COMMIT_SHA}"
+    expire_in: 1 week
+    when: always
+    paths:
+      - config.log
+      - external
+      - openssl/configdata.pm
+      - src/app/tor
+
+.test-template: &test-template
   script:
-    - apt-get install -qy --fix-missing automake build-essential
-      libevent-dev libssl-dev zlib1g-dev
-      libseccomp-dev liblzma-dev libscrypt-dev
     - ./autogen.sh
-    - ./configure --disable-asciidoc --enable-fatal-warnings
-      --disable-silent-rules
+    - ./configure
+          --enable-fatal-warnings
+          --enable-lzma
+          --disable-asciidoc
+          --disable-silent-rules
+          --prefix=/usr
+    - grep -E '^# *define +HAVE_LZMA +1$' orconfig.h
+    - grep -E '^# *define +ENABLE_OPENSSL +1$' orconfig.h || true
+    - grep -E '^# *define +HAVE_TLS_METHOD +1$' orconfig.h || true
+
     - make check || (e=$?; cat test-suite.log; exit $e)
+    - readelf -d src/app/tor > readelf.txt
+
+    - grep -E '\(NEEDED\) +Shared library. \[libcrypto\.' readelf.txt
+    - grep -E '\(NEEDED\) +Shared library. \[libssl\.' readelf.txt
+    - grep -E '\(NEEDED\) +Shared library. \[liblzma\.' readelf.txt
+    - grep tor_lzma_state_size_precalc src/app/tor
     - make install
 
+.debian-template: &debian-template
+  <<: *artifacts-template
+  variables:
+    DEBIAN_FRONTEND: noninteractive
+  before_script:
+    - export LC_ALL=C.UTF-8
+    - echo Etc/UTC > /etc/timezone
+    - echo 'quiet "1";'
+           'APT::Install-Recommends "0";'
+           'APT::Install-Suggests "0";'
+           'APT::Acquire::Retries "20";'
+           'APT::Get::Assume-Yes "true";'
+           'Dpkg::Use-Pty "0";'
+        >> /etc/apt/apt.conf.d/99gitlab
+    - apt-get update
+    - apt-get dist-upgrade
+    - apt-get install
+        automake
+        build-essential
+        libevent-dev
+        liblzma-dev
+        libscrypt-dev
+        libseccomp-dev
+        libssl-dev
+        pkg-config
+        python3
+        zlib1g-dev
+  after_script:
+    - echo "Download debug artifacts from https://gitlab.com/${CI_PROJECT_PATH}/-/jobs"
+
+debian_testing:
+  image: debian:testing
+  <<: *debian-template
+  <<: *test-template
+
+debian_stable:
+  image: debian:stable
+  <<: *debian-template
+  <<: *test-template
+
+ubuntu_rolling:
+  image: ubuntu:rolling
+  <<: *debian-template
+  <<: *test-template
+
+ubuntu_lts:
+  image: ubuntu:latest
+  <<: *debian-template
+  <<: *test-template
+
+ubuntu_xenial:
+  image: ubuntu:xenial
+  <<: *debian-template
+  <<: *test-template
