@@ -1731,6 +1731,7 @@ hs_client_get_random_intro_from_edge(const edge_connection_t *edge_conn)
     client_get_random_intro(&edge_conn->hs_ident->identity_pk) :
     rend_client_get_random_intro(edge_conn->rend_data);
 }
+
 /* Called when get an INTRODUCE_ACK cell on the introduction circuit circ.
  * Return 0 on success else a negative value is returned. The circuit will be
  * closed or reuse to extend again to another intro point. */
