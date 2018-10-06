@@ -8,6 +8,10 @@ import time
 import random
 import errno
 
+LOG_TIMEOUT = 60.0
+LOG_WAIT = 0.1
+LOG_CHECK_LIMIT = LOG_TIMEOUT / LOG_WAIT
+
 def fail(msg):
     print('FAIL')
     sys.exit(msg)
@@ -20,10 +24,19 @@ def try_connecting_to_socksport():
     socks_socket.close()
 
 def wait_for_log(s):
-    while True:
+    log_checked = 0
+    while log_checked < LOG_CHECK_LIMIT:
         l = tor_process.stdout.readline()
-        if s in l.decode('utf8'):
+        l = l.decode('utf8')
+        if s in l:
             return
+        print('Tor logged: "{}", waiting for "{}"'.format(l.strip(), s))
+        # readline() returns a blank string when there is no output
+        # avoid busy-waiting
+        if len(s) == 0:
+            time.sleep(LOG_WAIT)
+        log_checked += 1
+    fail('Could not find "{}" in logs after {} seconds'.format(s, LOG_TIMEOUT))
 
 def pick_random_port():
     port = 0
