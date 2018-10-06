@@ -8,12 +8,15 @@ import time
 import random
 import errno
 
+def fail(msg):
+    print('FAIL')
+    sys.exit(msg)
+
 def try_connecting_to_socksport():
     socks_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if socks_socket.connect_ex(('127.0.0.1', socks_port)):
         tor_process.terminate()
-        print('FAIL')
-        sys.exit('Cannot connect to SOCKSPort')
+        fail('Cannot connect to SOCKSPort')
     socks_socket.close()
 
 def wait_for_log(s):
@@ -34,13 +37,16 @@ def pick_random_port():
         else:
             break
 
+    if port == 0:
+        fail('Could not find a random free port between 10000 and 60000')
+
     return port
 
 if sys.hexversion < 0x02070000:
-    sys.exit("ERROR: unsupported Python version (should be >= 2.7)")
+    fail("ERROR: unsupported Python version (should be >= 2.7)")
 
 if sys.hexversion > 0x03000000 and sys.hexversion < 0x03010000:
-    sys.exit("ERROR: unsupported Python3 version (should be >= 3.1)")
+    fail("ERROR: unsupported Python3 version (should be >= 3.1)")
 
 control_port = pick_random_port()
 socks_port = pick_random_port()
@@ -49,7 +55,7 @@ assert control_port != 0
 assert socks_port != 0
 
 if not os.path.exists(sys.argv[1]):
-    sys.exit('ERROR: cannot find tor at %s' % sys.argv[1])
+    fail('ERROR: cannot find tor at %s' % sys.argv[1])
 
 tor_path = sys.argv[1]
 
@@ -61,10 +67,10 @@ tor_process = subprocess.Popen([tor_path,
                                stderr=subprocess.PIPE)
 
 if tor_process == None:
-    sys.exit('ERROR: running tor failed')
+    fail('ERROR: running tor failed')
 
 if len(sys.argv) < 2:
-     sys.exit('Usage: %s <path-to-tor>' % sys.argv[0])
+     fail('Usage: %s <path-to-tor>' % sys.argv[0])
 
 wait_for_log('Opened Control listener on')
 
@@ -73,8 +79,7 @@ try_connecting_to_socksport()
 control_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 if control_socket.connect_ex(('127.0.0.1', control_port)):
     tor_process.terminate()
-    print('FAIL')
-    sys.exit('Cannot connect to ControlPort')
+    fail('Cannot connect to ControlPort')
 
 control_socket.sendall('AUTHENTICATE \r\n'.encode('utf8'))
 control_socket.sendall('SETCONF SOCKSPort=0.0.0.0:{}\r\n'.format(socks_port).encode('utf8'))
