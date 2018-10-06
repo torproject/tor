@@ -88,6 +88,14 @@ try_connecting_to_socksport()
 
 control_socket.sendall('SIGNAL HALT\r\n'.encode('utf8'))
 
-time.sleep(0.1)
+wait_for_log('exiting cleanly')
 print('OK')
-tor_process.terminate()
+
+try:
+    tor_process.terminate()
+except OSError as e:
+    if e.errno == 3: # No such process
+        # assume tor has already exited due to SIGNAL HALT
+        print("Tor has already exited")
+    else:
+        raise
