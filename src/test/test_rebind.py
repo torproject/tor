@@ -6,6 +6,7 @@ import socket
 import os
 import time
 import random
+import errno
 
 def try_connecting_to_socksport():
     socks_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -88,6 +89,14 @@ try_connecting_to_socksport()
 
 control_socket.sendall('SIGNAL HALT\r\n'.encode('utf8'))
 
-time.sleep(0.1)
+wait_for_log('exiting cleanly')
 print('OK')
-tor_process.terminate()
+
+try:
+    tor_process.terminate()
+except OSError as e:
+    if e.errno == errno.ESRCH: # errno 3: No such process
+        # assume tor has already exited due to SIGNAL HALT
+        print("Tor has already exited")
+    else:
+        raise
