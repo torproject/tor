@@ -51,6 +51,8 @@ matrix:
     # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
     - env: DISTCHECK="yes" ASCIIDOC_OPTIONS=""
+    # We clone our stem repo and run `make test-stem`
+    - env: TEST_STEM="yes"
     ## Check rust online with distcheck, to make sure we remove rust products
     ## But without hardening (see above)
     - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode" HARDENING_OPTIONS=""
@@ -203,6 +205,7 @@ script:
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$DISTCHECK" == "" ]]; then make check; fi
+  - if [[ "$TEST_STEM" != "" ]]; then git clone --depth 1 https://github.com/torproject/stem.git ; export STEM_SOURCE_DIR=`pwd`/stem; make test-stem; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
 
 after_failure:
