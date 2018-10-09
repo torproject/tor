@@ -53,6 +53,8 @@ crypto_dh_init_nss(void)
   circuit_dh_param.prime.len = DH1024_KEY_LEN;
   circuit_dh_param.base.data = dh_generator_data;
   circuit_dh_param.base.len = 1;
+
+  dh_initialized = 1;
 }
 
 void
