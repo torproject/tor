@@ -105,12 +105,15 @@ sudo:
 ## (Linux only) Use the latest Linux image (Ubuntu Trusty)
 dist: trusty
 
-## (Linux only) Download our dependencies
+## Download our dependencies
 addons:
+  ## (Linux only)
   apt:
     packages:
       ## Required dependencies
       - libevent-dev
+      ## Ubuntu comes with OpenSSL by default
+      #- libssl-dev
       - zlib1g-dev
       ## Optional dependencies
       - libcap-dev
@@ -119,11 +122,34 @@ addons:
       - libseccomp-dev
       ## zstd doesn't exist in Ubuntu Trusty
       #- libzstd
-      ## Conditional dependencies
+      ## Conditional build dependencies
       ## Always installed, so we don't need sudo
       - asciidoc
       - docbook-xsl
       - docbook-xml
+      - xmlto
+  ## (OSX only)
+  homebrew:
+    packages:
+      ## Required dependencies
+      - libevent
+      ## The OSX version of OpenSSL is way too old
+      - openssl
+      ## OSX comes with zlib by default
+      ## to use a newer zlib, pass the keg path to configure (like OpenSSL)
+      #- zlib
+      ## Optional dependencies
+      - libscrypt
+      - xz
+      - zstd
+      ## Required build dependencies
+      ## Tor needs pkg-config to find some dependencies at build time
+      - pkg-config
+      ## Optional build dependencies
+      - ccache
+      ## Conditional build dependencies
+      ## Always installed, because manual brew installs are hard to get right
+      - asciidoc
       - xmlto
 
 ## (OSX only) Use the default OSX image
@@ -132,35 +158,18 @@ addons:
 #osx_image: xcode9.4
 
 before_install:
-  ## If we're on OSX, homebrew usually needs to be updated first
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
-  ## We might be upgrading some useless packages, but that's better than missing an upgrade
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade; fi
   ## Create empty rust directories for non-Rust builds, so caching succeeds
   - if [[ "$RUST_OPTIONS" == "" ]]; then mkdir -p $HOME/.cargo $TRAVIS_BUILD_DIR/src/rust/target; fi
 
 install:
-  ## If we're on OSX use brew to install ccache (ccache is automatically installed on Linux)
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install ccache; fi
+  ## If we're on OSX, configure ccache (ccache is automatically installed and configured on Linux)
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH="/usr/local/opt/ccache/libexec:$PATH"; fi
-  ## If we're on OSX use brew to install required dependencies (for Linux, see the "apt:" section above)
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libevent; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install openssl; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install pkg-config; fi
-  ## macOS comes with zlib by default, so the homebrew install is keg-only
-  # - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install zlib; fi
-  ## If we're on OSX also install the optional dependencies
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libscrypt; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install xz; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install zstd; fi
   ## If we're on OSX, OpenSSL is keg-only, so tor 0.2.9 and later need to be configured --with-openssl-dir= to build
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then OPENSSL_OPTIONS=--with-openssl-dir=`brew --prefix openssl`; fi
   ## Install conditional features
   ## Install coveralls
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
-  ## If we're on OSX, and using asciidoc, install asciidoc
-  - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install asciidoc; fi
-  - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install xmlto; fi
+  ## If we're on OSX, and using asciidoc, configure asciidoc
   - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export XML_CATALOG_FILES="/usr/local/etc/xml/catalog"; fi
   ## If we're using Rust, download rustup
   - if [[ "$RUST_OPTIONS" != "" ]]; then curl -Ssf -o rustup.sh https://sh.rustup.rs; fi
