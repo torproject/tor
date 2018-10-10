@@ -1,0 +1,5 @@
+  o Minor bugfixes (CI, appveyor):
+    - Only install the necessary mingw packages during our appveyor
+      builds. This change makes the build a little faster, and prevents a
+      conflict with a preinstalled mingw openssl that appveyor now ships.
+      Fixes bugs 27943 and 27765; bugfix on 0.3.4.2-alpha.

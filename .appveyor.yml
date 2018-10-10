@@ -9,10 +9,12 @@ environment:
   - target: i686-w64-mingw32
     compiler_path: mingw32
     openssl_path: /c/OpenSSL-Win32
+    mingw_prefix: mingw-w64-i686
     hardening:
   - target: x86_64-w64-mingw32
     compiler_path: mingw64
     openssl_path: /c/OpenSSL-Win64
+    mingw_prefix: mingw-w64-x86_64
     hardening: --disable-gcc-hardening
 
 install:
@@ -28,7 +30,7 @@ install:
     {
         Execute-Command 'c:\msys64\usr\bin\bash' '-e' '-c' $args
     }
-    Execute-Command "C:\msys64\usr\bin\pacman" -Sy --needed --noconfirm openssl-devel openssl libevent-devel libevent mingw-w64-i686-libevent mingw-w64-x86_64-libevent mingw-w64-i686-openssl mingw-w64-x86_64-openssl mingw-w64-i686-zstd mingw-w64-x86_64-zstd
+    Execute-Command "C:\msys64\usr\bin\pacman" -Sy --needed --noconfirm openssl-devel openssl libevent-devel libevent ${env:mingw_prefix}-libevent ${env:mingw_prefix}-zstd ;
 
 build_script:
 - ps: >-
