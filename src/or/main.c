@@ -1501,9 +1501,10 @@ get_my_roles(const or_options_t *options)
   int is_dirserver = dir_server_mode(options);
   /* We also consider tor to have the role of a client if the ControlPort is
    * set because a lot of things can be done over the control port which
-   * requires tor to have basics functionnalities. */
+   * requires tor to have basic functionnalities. */
   int is_client = options_any_client_port_set(options) ||
-                  options->ControlPort_set;
+                  options->ControlPort_set ||
+                  options->OwningControllerFD;
 
   if (is_bridge) roles |= PERIODIC_EVENT_ROLE_BRIDGE;
   if (is_client) roles |= PERIODIC_EVENT_ROLE_CLIENT;
