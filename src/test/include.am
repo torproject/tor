@@ -182,6 +182,7 @@ src_test_test_SOURCES += \
 	src/test/test_x509.c \
 	src/test/test_helpers.c \
 	src/test/test_dns.c \
+	src/test/test_parsecommon.c \
 	src/test/testing_common.c \
 	src/test/testing_rsakeys.c \
 	src/ext/tinytest.c
