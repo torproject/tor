@@ -245,7 +245,8 @@ parse_single_entry(const char *s, const char *end_of_entry)
     }
 
     s = comma;
-    while (*s == ',' && s < end_of_entry)
+    // Skip the comma separator between ranges. Don't ignore a trailing comma.
+    if (s < (end_of_entry - 1))
       ++s;
   }
 
