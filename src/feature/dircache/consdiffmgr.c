@@ -20,7 +20,7 @@
 #include "feature/dircache/consdiffmgr.h"
 #include "core/mainloop/cpuworker.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/ns_parse.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/evloop/workqueue.h"
 #include "lib/compress/compress.h"

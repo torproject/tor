@@ -1,19 +1,20 @@
 /* Copyright (c) 2013-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "core/or/or.h"
 #define CONFIG_PRIVATE
-#include "app/config/config.h"
-#include "feature/relay/router.h"
-#include "feature/nodelist/routerparse.h"
 #define POLICIES_PRIVATE
+
+#include "core/or/or.h"
+#include "app/config/config.h"
 #include "core/or/policies.h"
+#include "feature/dirparse/policy_parse.h"
+#include "feature/relay/router.h"
 #include "lib/encoding/confline.h"
 #include "test/test.h"
 
 #include "core/or/addr_policy_st.h"
-#include "feature/nodelist/node_st.h"
 #include "core/or/port_cfg_st.h"
+#include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
 

@@ -45,6 +45,7 @@
 #include "feature/dirauth/process_descs.h"
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dircache/dirserv.h"
+#include "feature/dirparse/routerparse.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_cache.h"
 #include "feature/nodelist/authcert.h"
@@ -52,7 +53,6 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
 #include "feature/relay/onion_queue.h"
@@ -61,7 +61,6 @@
 #include "feature/rend/rendcache.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
-#include "lib/geoip/geoip.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
@@ -70,6 +69,8 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_s2k.h"
 #include "lib/err/backtrace.h"
+#include "lib/geoip/geoip.h"
+
 #include "lib/process/waitpid.h"
 
 #include "lib/meminfo/meminfo.h"
@@ -423,7 +424,6 @@ dumpstats(int severity)
 
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);
-  dump_distinct_digest_count(severity);
 }
 
 /** Called by exit() as we shut down the process.

@@ -61,7 +61,7 @@
 #include "core/or/circuitbuild.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "feature/nodelist/parsecommon.h"
+#include "feature/dirparse/parsecommon.h"
 #include "feature/rend/rendcache.h"
 #include "feature/hs/hs_cache.h"
 #include "feature/hs/hs_config.h"

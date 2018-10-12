@@ -16,11 +16,12 @@
 #define DLSTATUS_PRIVATE
 #define HIBERNATE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define NS_PARSE_PRIVATE
 #define NODE_SELECT_PRIVATE
 #define RELAY_PRIVATE
 #define ROUTERLIST_PRIVATE
-#define ROUTERPARSE_PRIVATE
 #define ROUTER_PRIVATE
+#define UNPARSEABLE_PRIVATE
 #define VOTEFLAGS_PRIVATE
 
 #include "core/or/or.h"
@@ -28,11 +29,13 @@
 #include "app/config/confparse.h"
 #include "core/mainloop/connection.h"
 #include "core/or/relay.h"
+#include "core/or/versions.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
 #include "feature/control/control.h"
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/dirvote.h"
+#include "feature/dirauth/dsigs_parse.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dirauth/recommend_pkg.h"
 #include "feature/dirauth/shared_random_state.h"
@@ -51,7 +54,10 @@
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/node_select.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/authcert_parse.h"
+#include "feature/dirparse/ns_parse.h"
+#include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/unparseable.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/relay/router.h"

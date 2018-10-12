@@ -46,6 +46,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/or/scheduler_kist.c		\
 	src/core/or/scheduler_vanilla.c		\
 	src/core/or/status.c			\
+	src/core/or/versions.c			\
 	src/core/proto/proto_cell.c		\
 	src/core/proto/proto_control0.c		\
 	src/core/proto/proto_ext_or.c		\
@@ -72,6 +73,15 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/dircommon/directory.c	\
 	src/feature/dircommon/fp_pair.c		\
 	src/feature/dircommon/voting_schedule.c	\
+	src/feature/dirparse/authcert_parse.c	\
+	src/feature/dirparse/microdesc_parse.c	\
+	src/feature/dirparse/ns_parse.c		\
+	src/feature/dirparse/parsecommon.c	\
+	src/feature/dirparse/policy_parse.c	\
+	src/feature/dirparse/routerparse.c	\
+	src/feature/dirparse/sigcommon.c	\
+	src/feature/dirparse/signing.c		\
+	src/feature/dirparse/unparseable.c	\
 	src/feature/hibernate/hibernate.c	\
 	src/feature/hs/hs_cache.c		\
 	src/feature/hs/hs_cell.c		\
@@ -98,10 +108,8 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/nodelist/nickname.c		\
 	src/feature/nodelist/nodelist.c		\
 	src/feature/nodelist/node_select.c	\
-	src/feature/nodelist/parsecommon.c	\
 	src/feature/nodelist/routerinfo.c	\
 	src/feature/nodelist/routerlist.c	\
-	src/feature/nodelist/routerparse.c	\
 	src/feature/nodelist/routerset.c	\
 	src/feature/nodelist/fmt_routerstatus.c	\
 	src/feature/nodelist/torcert.c		\
@@ -116,6 +124,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/rend/rendclient.c		\
 	src/feature/rend/rendcommon.c		\
 	src/feature/rend/rendmid.c		\
+	src/feature/rend/rendparse.c		\
 	src/feature/rend/rendservice.c		\
 	src/feature/stats/geoip_stats.c		\
 	src/feature/stats/rephist.c		\
@@ -125,6 +134,7 @@ LIBTOR_APP_A_SOURCES = 				\
 # the separation is only in the code location.
 LIBTOR_APP_A_SOURCES += 			\
 	src/feature/dirauth/bwauth.c		\
+	src/feature/dirauth/dsigs_parse.c	\
 	src/feature/dirauth/guardfraction.c	\
 	src/feature/dirauth/reachability.c	\
 	src/feature/dirauth/recommend_pkg.c	\
@@ -240,6 +250,7 @@ noinst_HEADERS +=					\
 	src/core/or/status.h				\
 	src/core/or/tor_version_st.h			\
 	src/core/or/var_cell_st.h			\
+	src/core/or/versions.h				\
 	src/core/proto/proto_cell.h			\
 	src/core/proto/proto_control0.h			\
 	src/core/proto/proto_ext_or.h			\
@@ -260,6 +271,7 @@ noinst_HEADERS +=					\
 	src/feature/dirauth/bwauth.h			\
 	src/feature/dirauth/dircollate.h		\
 	src/feature/dirauth/dirvote.h			\
+	src/feature/dirauth/dsigs_parse.h		\
 	src/feature/dirauth/guardfraction.h		\
 	src/feature/dirauth/keypin.h			\
 	src/feature/dirauth/ns_detached_signatures_st.h	\
@@ -285,6 +297,16 @@ noinst_HEADERS +=					\
 	src/feature/dircommon/fp_pair.h			\
 	src/feature/dircommon/vote_timing_st.h		\
 	src/feature/dircommon/voting_schedule.h		\
+	src/feature/dirparse/authcert_members.i		\
+	src/feature/dirparse/authcert_parse.h		\
+	src/feature/dirparse/microdesc_parse.h		\
+	src/feature/dirparse/ns_parse.h			\
+	src/feature/dirparse/parsecommon.h		\
+	src/feature/dirparse/policy_parse.h		\
+	src/feature/dirparse/routerparse.h		\
+	src/feature/dirparse/sigcommon.h		\
+	src/feature/dirparse/signing.h			\
+	src/feature/dirparse/unparseable.h		\
 	src/feature/hibernate/hibernate.h		\
 	src/feature/hs/hs_cache.h			\
 	src/feature/hs/hs_cell.h			\
@@ -320,12 +342,10 @@ noinst_HEADERS +=					\
 	src/feature/nodelist/node_st.h			\
 	src/feature/nodelist/nodelist.h			\
 	src/feature/nodelist/node_select.h		\
-	src/feature/nodelist/parsecommon.h		\
 	src/feature/nodelist/routerinfo.h		\
 	src/feature/nodelist/routerinfo_st.h		\
 	src/feature/nodelist/routerlist.h		\
 	src/feature/nodelist/routerlist_st.h		\
-	src/feature/nodelist/routerparse.h		\
 	src/feature/nodelist/routerset.h		\
 	src/feature/nodelist/fmt_routerstatus.h		\
 	src/feature/nodelist/routerstatus_st.h		\
@@ -348,6 +368,7 @@ noinst_HEADERS +=					\
 	src/feature/rend/rendclient.h			\
 	src/feature/rend/rendcommon.h			\
 	src/feature/rend/rendmid.h			\
+	src/feature/rend/rendparse.h			\
 	src/feature/rend/rendservice.h			\
 	src/feature/stats/geoip_stats.h			\
 	src/feature/stats/rephist.h			\

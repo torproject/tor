@@ -25,7 +25,7 @@
 
 #include "core/or/or.h"
 #include "core/or/protover.h"
-#include "feature/nodelist/routerparse.h"
+#include "core/or/versions.h"
 #include "lib/tls/tortls.h"
 
 #ifndef HAVE_RUST

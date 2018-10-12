@@ -1,14 +1,13 @@
 /* Copyright (c) 2017-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define ROUTERPARSE_PRIVATE
 #define HS_DESCRIPTOR_PRIVATE
 
 #include "core/or/or.h"
 #include "trunnel/ed25519_cert.h" /* Trunnel interface. */
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "feature/hs/hs_descriptor.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/unparseable.h"
 
 #include "test/fuzz/fuzzing.h"
 

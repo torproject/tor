@@ -19,7 +19,7 @@
 #include "feature/relay/routerkeys.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/authcert_parse.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/dircommon/voting_schedule.h"
 

@@ -17,6 +17,7 @@
 
 #include "app/config/config.h"
 #include "core/or/policies.h"
+#include "core/or/versions.h"
 #include "feature/dirauth/keypin.h"
 #include "feature/dirauth/reachability.h"
 #include "feature/dirclient/dlstatus.h"
@@ -26,7 +27,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/relay/router.h"
 

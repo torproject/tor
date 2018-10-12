@@ -53,6 +53,7 @@
 #include "core/or/protover.h"
 #include "core/or/relay.h"
 #include "core/or/scheduler.h"
+#include "core/or/versions.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
@@ -64,6 +65,7 @@
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
 #include "feature/dircommon/voting_schedule.h"
+#include "feature/dirparse/ns_parse.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
@@ -74,7 +76,6 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/relay/routermode.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -2703,25 +2704,6 @@ networkstatus_check_required_protocols(const networkstatus_t *ns,
   tor_assert_nonfatal(missing == NULL);
 
   return 0;
-}
-
-/** Release all storage held in <b>s</b>. */
-void
-ns_detached_signatures_free_(ns_detached_signatures_t *s)
-{
-  if (!s)
-    return;
-  if (s->signatures) {
-    STRMAP_FOREACH(s->signatures, flavor, smartlist_t *, sigs) {
-      SMARTLIST_FOREACH(sigs, document_signature_t *, sig,
-                        document_signature_free(sig));
-      smartlist_free(sigs);
-    } STRMAP_FOREACH_END;
-    strmap_free(s->signatures, NULL);
-    strmap_free(s->digests, tor_free_);
-  }
-
-  tor_free(s);
 }
 
 /** Free all storage held locally in this module. */

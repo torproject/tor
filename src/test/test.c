@@ -45,6 +45,7 @@
 #include "core/or/connection_edge.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendcache.h"
+#include "feature/rend/rendparse.h"
 #include "test/test.h"
 #include "core/mainloop/mainloop.h"
 #include "lib/memarea/memarea.h"
@@ -54,7 +55,6 @@
 #include "core/crypto/onion_tap.h"
 #include "core/or/policies.h"
 #include "feature/stats/rephist.h"
-#include "feature/nodelist/routerparse.h"
 #include "app/config/statefile.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 

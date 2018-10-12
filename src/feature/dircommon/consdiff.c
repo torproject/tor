@@ -41,7 +41,7 @@
 #include "core/or/or.h"
 #include "feature/dircommon/consdiff.h"
 #include "lib/memarea/memarea.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/ns_parse.h"
 
 static const char* ns_diff_version = "network-status-diff-version 1";
 static const char* hash_token = "hash";

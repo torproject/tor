@@ -4,13 +4,14 @@
 #include "orconfig.h"
 #include "core/or/or.h"
 
-#include "app/config/config.h"
 #define DIRVOTE_PRIVATE
+#include "app/config/config.h"
 #include "feature/dirauth/dirvote.h"
+#include "feature/dirparse/microdesc_parse.h"
+#include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
 #include "feature/nodelist/torcert.h"
 
 #include "feature/nodelist/microdesc_st.h"

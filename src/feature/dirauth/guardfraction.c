@@ -12,7 +12,7 @@
 #include "core/or/or.h"
 #include "feature/dirauth/guardfraction.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/ns_parse.h"
 
 #include "feature/nodelist/vote_routerstatus_st.h"
 
