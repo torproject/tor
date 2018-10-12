@@ -114,8 +114,45 @@ test_parsecommon_get_next_token_parse_keys(void *arg)
   tt_assert(token->key);
   tt_assert(!token->error);
 
-  // TODO: same with secret key
+  const char *base64_skey =
+    "MIICXAIBAAKBgQCwS810a2auH2PQchOBz9smNgjlDu31aq0IYlUohSYbhcv5AJ+d\n"
+    "DY0nfZWzS+mZPwzL3UiEnTt6PVv7AgoZ5V9ZJWJTKIURjJpkK0mstfJKHKIZhf84\n"
+    "pmFfRej9GQViB6NLtp1obOXJgJixSlMfw9doDI4NoAnEISCyH/tD77Qs2wIDAQAB\n"
+    "AoGAbDg8CKkdQOnX9c7xFpCnsE8fKqz9eddgHHNwXw1NFTwOt+2gDWKSMZmv2X5S\n"
+    "CVZg3owZxf5W0nT0D6Ny2+6nliak7foYAvkD0BsCiBhgftwC0zAo6k5rIbUKB3PJ\n"
+    "QLFXgpJhqWuXkODyt/hS/GTernR437WVSEGp1bnALqiFabECQQDaqHOxzoWY/nvH\n"
+    "KrfUi8EhqCnqERlRHwrW0MQZ1RPvF16OPPma+xa+ht/amfh3vYN5tZY82Zm43gGl\n"
+    "XWL5cZhNAkEAzmdSootYVnqLLLRMfHKXnO1XbaEcA/08MDNKGlSclBJixFenE8jX\n"
+    "iQsUbHwMJuGONvzWpRGPBP2f8xBd28ZtxwJARY+LZshtpfNniz/ixYJESaHG28je\n"
+    "xfjbKOW3TQSFV+2WTifFvHEeljQwKMoMyoMGvYRwLCGJjs9JtMLVxsdFjQJBAKwD\n"
+    "3BBvBQ39TuPQ1zWX4tb7zjMlY83HTFP3Sriq71tP/1QWoL2SUl56B2lp8E6vB/C3\n"
+    "wsMK4SCNprHRYAd7VZ0CQDKn6Zhd11P94PLs0msybFEh1VXr6CEW/BrxBgbL4ls6\n"
+    "dbX5XO0z4Ra8gYXgObgimhyMDYO98Idt5+Z3HIdyrSc=\n";
 
+  const char decoded2[128];
+  base64_decode((char *)decoded2, sizeof(decoded2), base64_skey,
+                strlen(base64_skey));
+
+  char *str2;
+  tor_asprintf(&str2, "client-key\n"
+                      "-----BEGIN RSA PRIVATE KEY-----\n"
+                      "%s"
+                      "-----END RSA PRIVATE KEY-----\n", base64_skey);
+  const char *end2 = str2 + strlen(str2);
+  const char **s2 = (const char **)&str2;
+
+  token_rule_t rule2 = T01("client-key", C_CLIENT_KEY, NO_ARGS,
+                           NEED_SKEY_1024);
+
+  directory_token_t *token2 = get_next_token(area, s2, end2, &rule2);
+
+  tt_int_op(token2->tp, OP_EQ, C_CLIENT_KEY);
+  tt_int_op(token2->n_args, OP_EQ, 0);
+  tt_str_op(token2->object_type, OP_EQ, "RSA PRIVATE KEY");
+  tt_int_op(token2->object_size, OP_EQ, 0);
+  tt_assert(!token2->object_body);
+  tt_assert(token2->key);
+  tt_assert(!token->error);
 
  done:
   memarea_drop_all(area);
