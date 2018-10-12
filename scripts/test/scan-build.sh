@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright 2014 The Tor Project, Inc
 # See LICENSE for licensing information
 #
