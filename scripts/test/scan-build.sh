@@ -33,6 +33,7 @@ CHECKERS="\
     -enable-checker security.insecureAPI.strcpy \
 "
 
+# shellcheck disable=SC2034
 # These have high false-positive rates.
 EXTRA_CHECKERS="\
     -enable-checker alpha.security.ArrayBoundV2 \
@@ -40,6 +41,7 @@ EXTRA_CHECKERS="\
     -enable-checker alpha.core.CastSize \
 "
 
+# shellcheck disable=SC2034
 # These don't seem to generate anything useful
 NOISY_CHECKERS="\
     -enable-checker alpha.clone.CloneChecker \
