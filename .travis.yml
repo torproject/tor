@@ -210,6 +210,7 @@ after_failure:
   - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
+  - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-core || echo "make failed"; fi
 
 after_success:
   ## If this build was one that produced coverage, upload it.
