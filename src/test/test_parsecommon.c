@@ -60,12 +60,33 @@ test_parsecommon_get_next_token_success(void *arg)
   return;
 }
 
+static void
+test_parsecommon_get_next_token_concat_args(void *arg)
+{
+  memarea_t *area = memarea_new();
+  const char *str = "proto A=1 B=2";
+  const char *end = str + strlen(str);
+  const char **s = &str;
+  token_rule_t rule = T01("proto", K_PROTO, CONCAT_ARGS, NO_OBJ);
+  (void)arg;
+
+  directory_token_t *token = get_next_token(area, s, end, &rule);
+
+  tt_int_op(token->tp, OP_EQ, K_PROTO);
+  tt_int_op(token->n_args, OP_EQ, 1);
+  tt_str_op(*(token->args), OP_EQ, "A=1 B=2");
+
+ done:
+  memarea_drop_all(area);
+}
+
 #define PARSECOMMON_TEST(name) \
   { #name, test_parsecommon_ ## name, 0, NULL, NULL }
 
 struct testcase_t parsecommon_tests[] = {
   PARSECOMMON_TEST(tokenize_string_null),
   PARSECOMMON_TEST(get_next_token_success),
+  PARSECOMMON_TEST(get_next_token_concat_args),
   END_OF_TESTCASES
 };
 
