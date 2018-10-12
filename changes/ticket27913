@@ -1,0 +1,3 @@
+  o Testing:
+    - Add new CI job to Travis configuration that runs stem-based
+      integration tests. Closes ticket 27913.
