@@ -885,6 +885,107 @@ test_desc_has_arrived_cleanup(void *arg)
   UNMOCK(router_have_minimum_dir_info);
 }
 
+static void
+test_close_intro_circuits_new_desc(void *arg)
+{
+  int ret;
+  ed25519_keypair_t service_kp;
+  circuit_t *circ = NULL;
+  origin_circuit_t *ocirc = NULL;
+  hs_descriptor_t *desc1 = NULL, *desc2 = NULL;
+
+  (void) arg;
+
+  hs_init();
+
+  /* This is needed because of the client cache expiration timestamp is based
+   * on having a consensus. See cached_client_descriptor_has_expired(). */
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  /* Set consensus time */
+  parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.valid_after);
+  parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                           &mock_ns.fresh_until);
+  parse_rfc1123_time("Sat, 26 Oct 1985 16:00:00 UTC",
+                           &mock_ns.valid_until);
+
+  /* Generate service keypair */
+  tt_int_op(0, OP_EQ, ed25519_keypair_generate(&service_kp, 0));
+
+  /* Create and add to the global list a dummy client introduction circuits.
+   * We'll then make sure the hs_ident is attached to a dummy descriptor. */
+  circ = dummy_origin_circuit_new(0);
+  tt_assert(circ);
+  circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
+  ocirc = TO_ORIGIN_CIRCUIT(circ);
+
+  /* Build the first descriptor and cache it. */
+  {
+    char *encoded;
+    desc1 = hs_helper_build_hs_desc_with_ip(&service_kp);
+    tt_assert(desc1);
+    ret = hs_desc_encode_descriptor(desc1, &service_kp, NULL, &encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    /* Store it */
+    ret = hs_cache_store_as_client(encoded, &service_kp.pubkey);
+    tt_int_op(ret, OP_EQ, 0);
+    tor_free(encoded);
+    tt_assert(hs_cache_lookup_as_client(&service_kp.pubkey));
+  }
+
+  /* We'll pick one introduction point and associate it with the circuit. */
+  {
+    const hs_desc_intro_point_t *ip =
+      smartlist_get(desc1->encrypted_data.intro_points, 0);
+    tt_assert(ip);
+    ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey,
+                                           HS_IDENT_CIRCUIT_INTRO);
+    ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk,
+                        &ip->auth_key_cert->signed_key);
+  }
+
+  /* Before we are about to clean up the intro circuits, make sure it is
+   * actually there. */
+  tt_assert(circuit_get_next_intro_circ(NULL, true));
+
+  /* Build the second descriptor for the same service and cache it. */
+  {
+    char *encoded;
+    desc2 = hs_helper_build_hs_desc_with_ip(&service_kp);
+    tt_assert(desc2);
+    tt_mem_op(&desc1->plaintext_data.signing_pubkey, OP_EQ,
+              &desc2->plaintext_data.signing_pubkey, ED25519_PUBKEY_LEN);
+    /* To replace the existing descriptor, the revision counter needs to be
+     * bigger. */
+    desc2->plaintext_data.revision_counter =
+      desc1->plaintext_data.revision_counter + 1;
+
+    ret = hs_desc_encode_descriptor(desc2, &service_kp, NULL, &encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    hs_cache_store_as_client(encoded, &service_kp.pubkey);
+    tt_int_op(ret, OP_EQ, 0);
+    tor_free(encoded);
+    tt_assert(hs_cache_lookup_as_client(&service_kp.pubkey));
+  }
+
+  /* Once stored, our intro circuit should be closed because it is related to
+   * an old introduction point that doesn't exists anymore. */
+  tt_assert(!circuit_get_next_intro_circ(NULL, true));
+
+ done:
+  circuit_free(circ);
+  hs_descriptor_free(desc1);
+  hs_descriptor_free(desc2);
+  hs_free_all();
+  UNMOCK(networkstatus_get_live_consensus);
+}
+
 struct testcase_t hs_client_tests[] = {
   { "e2e_rend_circuit_setup_legacy", test_e2e_rend_circuit_setup_legacy,
     TT_FORK, NULL, NULL },
@@ -901,6 +1002,8 @@ struct testcase_t hs_client_tests[] = {
   { "config_client_authorization", test_config_client_authorization,
     TT_FORK, NULL, NULL },
   { "desc_has_arrived_cleanup", test_desc_has_arrived_cleanup,
+    TT_FORK, NULL, NULL },
+  { "close_intro_circuits_new_desc", test_close_intro_circuits_new_desc,
     TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
