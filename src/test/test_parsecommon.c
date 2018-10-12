@@ -80,6 +80,47 @@ test_parsecommon_get_next_token_concat_args(void *arg)
   memarea_drop_all(area);
 }
 
+static void
+test_parsecommon_get_next_token_parse_keys(void *arg)
+{
+  (void)arg;
+
+  memarea_t *area = memarea_new();
+  const char *base64_key =
+    "MIGJAoGBAMDdIya33BfNlHOkzoTKSTT8EjD64waMfUr372syVHiFjHhObwKwGA5u\n"
+    "sHaMIe9r+Ij/4C1dKyuXkcz3DOl6gWNhTD7dZ89I+Okoh1jWe30jxCiAcywC22p5\n"
+    "XLhrDkX1A63Z7XCH9ltwU2WMqWsVM98N2GR6MTujP7wtqdLExYN1AgMBAAE=\n";
+  char *str;
+  tor_asprintf(&str, "onion-key\n"
+                     "-----BEGIN RSA PUBLIC KEY-----\n"
+                     "%s"
+                     "-----END RSA PUBLIC KEY-----\n", base64_key);
+  const char *end = str + strlen(str);
+  const char **s = (const char **)&str;
+  const char decoded[128];
+
+  base64_decode((char *)decoded, sizeof(decoded), base64_key,
+                strlen(base64_key));
+
+  token_rule_t rule = T1("onion-key", R_IPO_ONION_KEY, NO_ARGS, NEED_KEY_1024);
+
+  directory_token_t *token = get_next_token(area, s, end, &rule);
+
+  tt_int_op(token->tp, OP_EQ, R_IPO_ONION_KEY);
+  tt_int_op(token->n_args, OP_EQ, 0);
+  tt_str_op(token->object_type, OP_EQ, "RSA PUBLIC KEY");
+  tt_int_op(token->object_size, OP_EQ, 0);
+  tt_assert(!token->object_body);
+  tt_assert(token->key);
+  tt_assert(!token->error);
+
+  // TODO: same with secret key
+
+
+ done:
+  memarea_drop_all(area);
+}
+
 #define PARSECOMMON_TEST(name) \
   { #name, test_parsecommon_ ## name, 0, NULL, NULL }
 
@@ -87,6 +128,7 @@ struct testcase_t parsecommon_tests[] = {
   PARSECOMMON_TEST(tokenize_string_null),
   PARSECOMMON_TEST(get_next_token_success),
   PARSECOMMON_TEST(get_next_token_concat_args),
+  PARSECOMMON_TEST(get_next_token_parse_keys),
   END_OF_TESTCASES
 };
 
