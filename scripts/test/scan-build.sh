@@ -7,7 +7,7 @@
 
 # These don't seem to cause false positives in our code, so let's turn
 # them on.
-CHECKERS="\
+CHECKERS=(
     -enable-checker alpha.core.CallAndMessageUnInitRefArg \
     -enable-checker alpha.core.CastToStruct \
     -enable-checker alpha.core.Conversion \
@@ -31,22 +31,22 @@ CHECKERS="\
     -enable-checker valist.Unterminated \
     -enable-checker security.FloatLoopCounter \
     -enable-checker security.insecureAPI.strcpy \
-"
+)
 
 # shellcheck disable=SC2034
 # These have high false-positive rates.
-EXTRA_CHECKERS="\
+EXTRA_CHECKERS=(
     -enable-checker alpha.security.ArrayBoundV2 \
     -enable-checker alpha.unix.cstring.OutOfBounds \
     -enable-checker alpha.core.CastSize \
-"
+)
 
 # shellcheck disable=SC2034
 # These don't seem to generate anything useful
-NOISY_CHECKERS="\
+NOISY_CHECKERS=(
     -enable-checker alpha.clone.CloneChecker \
     -enable-checker alpha.deadcode.UnreachableCode \
-"
+)
 
 if test "x$SCAN_BUILD_OUTPUT" != "x"; then
    OUTPUTARG="-o $SCAN_BUILD_OUTPUT"
@@ -55,7 +55,7 @@ else
 fi
 
 scan-build \
-    $CHECKERS \
+    "${CHECKERS[@]}" \
     ./configure
 
 scan-build \
@@ -64,16 +64,15 @@ scan-build \
 # Make this not get scanned for dead assignments, since it has lots of
 # dead assignments we don't care about.
 scan-build \
-    $CHECKERS \
+    "${CHECKERS[@]}" \
     -disable-checker deadcode.DeadStores \
     make -j5 -k ./src/ext/ed25519/ref10/libed25519_ref10.a
 
 scan-build \
-    $CHECKERS $OUTPUTARG \
+    "${CHECKERS[@]}" $OUTPUTARG \
     make -j5 -k
 
-CHECKERS="\
-"
+CHECKERS=()
 
 # This one gives a false positive on every strcmp.
 #    -enable-checker alpha.core.PointerSub
