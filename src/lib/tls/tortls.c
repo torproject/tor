@@ -71,13 +71,19 @@ tor_tls_get_my_certs(int server,
                      const tor_x509_cert_t **id_cert_out)
 {
   tor_tls_context_t *ctx = tor_tls_context_get(server);
-  if (! ctx)
-    return -1;
+  int rv = -1;
+  const tor_x509_cert_t *link_cert = NULL;
+  const tor_x509_cert_t *id_cert = NULL;
+  if (ctx) {
+    rv = 0;
+    link_cert = server ? ctx->my_link_cert : ctx->my_auth_cert;
+    id_cert = ctx->my_id_cert;
+  }
   if (link_cert_out)
-    *link_cert_out = server ? ctx->my_link_cert : ctx->my_auth_cert;
+    *link_cert_out = link_cert;
   if (id_cert_out)
-    *id_cert_out = ctx->my_id_cert;
-  return 0;
+    *id_cert_out = id_cert;
+  return rv;
 }
 
 /**

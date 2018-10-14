@@ -297,6 +297,7 @@ channelpadding_send_disable_command(channel_t *chan)
   channelpadding_negotiate_t disable;
   cell_t cell;
 
+  tor_assert(chan);
   tor_assert(BASE_CHAN_TO_TLS(chan)->conn->link_proto >=
              MIN_LINK_PROTO_FOR_CHANNEL_PADDING);
 
@@ -329,6 +330,7 @@ channelpadding_send_enable_command(channel_t *chan, uint16_t low_timeout,
   channelpadding_negotiate_t enable;
   cell_t cell;
 
+  tor_assert(chan);
   tor_assert(BASE_CHAN_TO_TLS(chan)->conn->link_proto >=
              MIN_LINK_PROTO_FOR_CHANNEL_PADDING);
 

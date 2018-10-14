@@ -537,6 +537,7 @@ test_load_keys_with_client_auth(void *arg)
   tt_int_op(get_hs_service_map_size(), OP_EQ, 1);
 
   service = get_first_service();
+  tt_assert(service);
   tt_assert(service->config.clients);
   tt_int_op(smartlist_len(service->config.clients), OP_EQ,
             smartlist_len(pubkey_b32_list));

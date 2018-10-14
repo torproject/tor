@@ -168,7 +168,14 @@ router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
     return NULL;
   }
 
-  return addr_policy_get_canonical_entry(&newe);
+  addr_policy_t *result = addr_policy_get_canonical_entry(&newe);
+  /* It would be a nasty error to return 'newe', and sometimes
+   * addr_policy_get_canonical_entry() can return its argument.  But in this
+   * case, it won't, since newe is *not* canonical.  We assert here to make
+   * sure that the compiler knows it too.
+   */
+  tor_assert(result != &newe);
+  return result;
 }
 
 /** Parse an exit policy line of the format "accept[6]/reject[6] private:...".
@@ -215,4 +222,3 @@ router_parse_addr_policy_private(directory_token_t *tok)
 
   return addr_policy_get_canonical_entry(&result);
 }
-

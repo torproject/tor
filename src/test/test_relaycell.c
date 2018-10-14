@@ -5,6 +5,9 @@
 
 #define RELAY_PRIVATE
 #define CIRCUITLIST_PRIVATE
+#define CONNECTION_EDGE_PRIVATE
+#define CONNECTION_PRIVATE
+
 #include "core/or/or.h"
 #include "core/mainloop/mainloop.h"
 #include "app/config/config.h"
@@ -25,6 +28,9 @@
 #include "core/or/socks_request_st.h"
 #include "core/or/half_edge_st.h"
 
+#include "feature/client/circpathbias.h"
+#include "core/or/connection_edge.h"
+
 static int srm_ncalls;
 static entry_connection_t *srm_conn;
 static int srm_atype;
@@ -33,23 +39,6 @@ static int srm_answer_is_set;
 static uint8_t srm_answer[512];
 static int srm_ttl;
 static time_t srm_expires;
-
-void connection_free_minimal(connection_t*);
-int connected_cell_format_payload(uint8_t *payload_out,
-                              const tor_addr_t *addr,
-                              uint32_t ttl);
-void pathbias_count_valid_cells(origin_circuit_t *circ,
-                                cell_t *cell);
-half_edge_t *connection_half_edge_find_stream_id(
-                                    const smartlist_t *half_conns,
-                                    streamid_t stream_id);
-void connection_half_edge_add(const edge_connection_t *conn,
-                         origin_circuit_t *circ);
-
-int mock_send_command(streamid_t stream_id, circuit_t *circ,
-                               uint8_t relay_command, const char *payload,
-                               size_t payload_len, crypt_path_t *cpath_layer,
-                               const char *filename, int lineno);
 
 /* Mock replacement for connection_ap_hannshake_socks_resolved() */
 static void
@@ -150,7 +139,7 @@ mock_start_reading(connection_t *conn)
   return;
 }
 
-int
+static int
 mock_send_command(streamid_t stream_id, circuit_t *circ,
                                uint8_t relay_command, const char *payload,
                                size_t payload_len, crypt_path_t *cpath_layer,
@@ -237,7 +226,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   /* Data cell not in the half-opened list */
   PACK_CELL(4000, RELAY_COMMAND_DATA, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                        circ->cpath);
@@ -246,7 +235,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   /* Sendme cell not in the half-opened list */
   PACK_CELL(4000, RELAY_COMMAND_SENDME, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -255,7 +244,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   /* Connected cell not in the half-opened list */
   PACK_CELL(4000, RELAY_COMMAND_CONNECTED, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -264,7 +253,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   /* Resolved cell not in the half-opened list */
   PACK_CELL(4000, RELAY_COMMAND_RESOLVED, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -274,7 +263,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   edgeconn = ENTRY_TO_EDGE_CONN(entryconn2);
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_CONNECTED, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -286,7 +275,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
     ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
     PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_DATA, "Data1234");
     if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-      pathbias_count_valid_cells(circ, &cell);
+      pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
     else
       connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                        circ->cpath);
@@ -297,7 +286,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_DATA, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -309,7 +298,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
     ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
     PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_SENDME, "Data1234");
     if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-      pathbias_count_valid_cells(circ, &cell);
+      pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
     else
       connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                        circ->cpath);
@@ -320,7 +309,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_SENDME, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -331,7 +320,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_END, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -341,7 +330,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   ENTRY_TO_CONN(entryconn2)->outbuf_flushlen = 0;
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_END, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -366,7 +355,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   connection_edge_reached_eof(edgeconn);
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_CONNECTED, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ),  NULL,
                                      circ->cpath);
@@ -376,7 +365,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   ENTRY_TO_CONN(entryconn3)->outbuf_flushlen = 0;
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_CONNECTED, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ),  NULL,
                                      circ->cpath);
@@ -387,7 +376,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   ENTRY_TO_CONN(entryconn3)->outbuf_flushlen = 0;
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_END, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ),  NULL,
                                      circ->cpath);
@@ -406,7 +395,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   ENTRY_TO_CONN(entryconn3)->outbuf_flushlen = 0;
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_DATA, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -426,7 +415,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_RESOLVED,
             "\x04\x04\x12\x00\x00\x01\x00\x00\x02\x00");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -445,7 +434,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   ENTRY_TO_CONN(entryconn4)->outbuf_flushlen = 0;
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_DATA, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -456,7 +445,7 @@ subtest_circbw_halfclosed(origin_circuit_t *circ, streamid_t init_id)
   ENTRY_TO_CONN(entryconn4)->outbuf_flushlen = 0;
   PACK_CELL(edgeconn->stream_id, RELAY_COMMAND_END, "Data1234");
   if (circ->base_.purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
-    pathbias_count_valid_cells(circ, &cell);
+    pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   else
     connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), NULL,
                                      circ->cpath);
@@ -877,7 +866,7 @@ test_circbw_relay(void *arg)
   /* Path bias: truncated */
   tt_int_op(circ->base_.marked_for_close, OP_EQ, 0);
   PACK_CELL(0, RELAY_COMMAND_TRUNCATED, "Data1234");
-  pathbias_count_valid_cells(circ, &cell);
+  pathbias_count_valid_cells(TO_CIRCUIT(circ), &cell);
   tt_int_op(circ->base_.marked_for_close, OP_EQ, 1);
 
  done:
