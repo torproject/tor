@@ -452,6 +452,15 @@ show-distdir-testlog:
 	else \
 	  cat $(distdir)/_build/$(TEST_SUITE_LOG); fi
 
+# Similarly, this relies on automake internals to run file on an
+# intermittent core file whose provenance is not known to us.  See
+# ticket 26787.
+show-distdir-core:
+	@if test -d "$(distdir)/_build/sub"; then \
+	  file $(distdir)/_build/sub/core ; \
+	else \
+	  file $(distdir)/_build/core; fi
+
 show-libs:
 	@echo $(TOR_INTERNAL_LIBS)
 
