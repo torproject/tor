@@ -265,7 +265,6 @@ STATIC int connection_ap_process_http_connect(entry_connection_t *conn);
 STATIC void export_hs_client_circuit_id(edge_connection_t *edge_conn,
                             hs_circuit_id_protocol_t protocol);
 
-
 struct half_edge_t;
 STATIC void connection_half_edge_add(const edge_connection_t *conn,
                                      origin_circuit_t *circ);

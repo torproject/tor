@@ -51,7 +51,7 @@ tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
   tor_cert_t *torcert = NULL;
 
   ed25519_cert_t *cert = ed25519_cert_new();
-  tor_assert(cert); // Trunnel's new functions can return NULL.
+  tor_assert(cert); // Unlike Tor's, Trunnel's "new" functions can return NULL.
   cert->cert_type = cert_type;
   cert->exp_field = (uint32_t) CEIL_DIV(now + lifetime, 3600);
   cert->cert_key_type = signed_key_type;
