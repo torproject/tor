@@ -103,7 +103,12 @@
   } STMT_END
 #endif /* defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TESTS) */
 
-#define tor_assert_unreached() tor_assert(0)
+#define tor_assert_unreached()                                  \
+  STMT_BEGIN {                                                  \
+    tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__,     \
+                          "line should be unreached");          \
+    abort();                                                    \
+  } STMT_END
 
 /* Non-fatal bug assertions. The "unreached" variants mean "this line should
  * never be reached." The "once" variants mean "Don't log a warning more than

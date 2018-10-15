@@ -530,7 +530,7 @@ rend_data_get_address(const rend_data_t *rend_data)
     return TO_REND_DATA_V2(rend_data)->onion_address;
   default:
     /* We should always have a supported version. */
-    tor_assert(0);
+    tor_assert_unreached();
   }
 }
 
@@ -553,7 +553,7 @@ rend_data_get_desc_id(const rend_data_t *rend_data, uint8_t replica,
     return TO_REND_DATA_V2(rend_data)->descriptor_id[replica];
   default:
     /* We should always have a supported version. */
-    tor_assert(0);
+    tor_assert_unreached();
   }
 }
 
@@ -576,7 +576,7 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
   }
   default:
     /* We should always have a supported version. */
-    tor_assert(0);
+    tor_assert_unreached();
   }
 }
 
