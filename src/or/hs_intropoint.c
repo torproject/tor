@@ -58,7 +58,7 @@ get_auth_key_from_cell(ed25519_public_key_t *auth_key_out,
   default:
     /* Getting here is really bad as it means we got a unknown cell type from
      * this file where every call has an hardcoded value. */
-    tor_assert(0); /* LCOV_EXCL_LINE */
+    tor_assert_unreached(); /* LCOV_EXCL_LINE */
   }
   tor_assert(key_array);
   tor_assert(auth_key_len == sizeof(auth_key_out->pubkey));
@@ -609,4 +609,3 @@ hs_intropoint_clear(hs_intropoint_t *ip)
   smartlist_free(ip->link_specifiers);
   memset(ip, 0, sizeof(hs_intropoint_t));
 }
-
