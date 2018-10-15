@@ -86,25 +86,22 @@ test_parsecommon_get_next_token_parse_keys(void *arg)
   (void)arg;
 
   memarea_t *area = memarea_new();
-  const char *base64_key =
+  const char *str =
+    "onion-key\n"
+    "-----BEGIN RSA PUBLIC KEY-----\n"
     "MIGJAoGBAMDdIya33BfNlHOkzoTKSTT8EjD64waMfUr372syVHiFjHhObwKwGA5u\n"
     "sHaMIe9r+Ij/4C1dKyuXkcz3DOl6gWNhTD7dZ89I+Okoh1jWe30jxCiAcywC22p5\n"
-    "XLhrDkX1A63Z7XCH9ltwU2WMqWsVM98N2GR6MTujP7wtqdLExYN1AgMBAAE=\n";
-  char *str;
-  tor_asprintf(&str, "onion-key\n"
-                     "-----BEGIN RSA PUBLIC KEY-----\n"
-                     "%s"
-                     "-----END RSA PUBLIC KEY-----\n", base64_key);
+    "XLhrDkX1A63Z7XCH9ltwU2WMqWsVM98N2GR6MTujP7wtqdLExYN1AgMBAAE=\n"
+    "-----END RSA PUBLIC KEY-----\n";
+
   const char *end = str + strlen(str);
   const char **s = (const char **)&str;
-  const char decoded[128];
-
-  base64_decode((char *)decoded, sizeof(decoded), base64_key,
-                strlen(base64_key));
+  directory_token_t *token = NULL;
+  directory_token_t *token2 = NULL;
 
   token_rule_t rule = T1("onion-key", R_IPO_ONION_KEY, NO_ARGS, NEED_KEY_1024);
 
-  directory_token_t *token = get_next_token(area, s, end, &rule);
+  token = get_next_token(area, s, end, &rule);
 
   tt_int_op(token->tp, OP_EQ, R_IPO_ONION_KEY);
   tt_int_op(token->n_args, OP_EQ, 0);
@@ -114,7 +111,9 @@ test_parsecommon_get_next_token_parse_keys(void *arg)
   tt_assert(token->key);
   tt_assert(!token->error);
 
-  const char *base64_skey =
+  const char *str2 =
+    "client-key\n"
+    "-----BEGIN RSA PRIVATE KEY-----\n"
     "MIICXAIBAAKBgQCwS810a2auH2PQchOBz9smNgjlDu31aq0IYlUohSYbhcv5AJ+d\n"
     "DY0nfZWzS+mZPwzL3UiEnTt6PVv7AgoZ5V9ZJWJTKIURjJpkK0mstfJKHKIZhf84\n"
     "pmFfRej9GQViB6NLtp1obOXJgJixSlMfw9doDI4NoAnEISCyH/tD77Qs2wIDAQAB\n"
@@ -127,24 +126,16 @@ test_parsecommon_get_next_token_parse_keys(void *arg)
     "xfjbKOW3TQSFV+2WTifFvHEeljQwKMoMyoMGvYRwLCGJjs9JtMLVxsdFjQJBAKwD\n"
     "3BBvBQ39TuPQ1zWX4tb7zjMlY83HTFP3Sriq71tP/1QWoL2SUl56B2lp8E6vB/C3\n"
     "wsMK4SCNprHRYAd7VZ0CQDKn6Zhd11P94PLs0msybFEh1VXr6CEW/BrxBgbL4ls6\n"
-    "dbX5XO0z4Ra8gYXgObgimhyMDYO98Idt5+Z3HIdyrSc=\n";
+    "dbX5XO0z4Ra8gYXgObgimhyMDYO98Idt5+Z3HIdyrSc=\n"
+    "-----END RSA PRIVATE KEY-----\n";
 
-  const char decoded2[128];
-  base64_decode((char *)decoded2, sizeof(decoded2), base64_skey,
-                strlen(base64_skey));
-
-  char *str2;
-  tor_asprintf(&str2, "client-key\n"
-                      "-----BEGIN RSA PRIVATE KEY-----\n"
-                      "%s"
-                      "-----END RSA PRIVATE KEY-----\n", base64_skey);
   const char *end2 = str2 + strlen(str2);
   const char **s2 = (const char **)&str2;
 
   token_rule_t rule2 = T01("client-key", C_CLIENT_KEY, NO_ARGS,
                            NEED_SKEY_1024);
 
-  directory_token_t *token2 = get_next_token(area, s2, end2, &rule2);
+  token2 = get_next_token(area, s2, end2, &rule2);
 
   tt_int_op(token2->tp, OP_EQ, C_CLIENT_KEY);
   tt_int_op(token2->n_args, OP_EQ, 0);
@@ -155,6 +146,8 @@ test_parsecommon_get_next_token_parse_keys(void *arg)
   tt_assert(!token->error);
 
  done:
+  if (token) token_clear(token);
+  if (token2) token_clear(token2);
   memarea_drop_all(area);
 }
 
