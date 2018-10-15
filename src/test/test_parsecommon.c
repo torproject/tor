@@ -207,6 +207,173 @@ test_parsecommon_get_next_token_object(void *arg)
   memarea_drop_all(area);
 }
 
+static void
+test_parsecommon_get_next_token_err_too_many_args(void *arg)
+{
+  memarea_t *area = memarea_new();
+  const char *str = "uptime 1024 1024 1024";
+  const char *end = str + strlen(str);
+  const char **s = &str;
+  token_rule_t table = T01("uptime", K_UPTIME, EQ(1), NO_OBJ);
+  (void)arg;
+
+  directory_token_t *token = get_next_token(area, s, end, &table);
+
+  tt_int_op(token->tp, OP_EQ, ERR_);
+  tt_str_op(token->error, OP_EQ, "Too many arguments to uptime");
+
+ done:
+  memarea_drop_all(area);
+  return;
+}
+
+static void
+test_parsecommon_get_next_token_err_too_few_args(void *arg)
+{
+  memarea_t *area = memarea_new();
+  const char *str = "uptime";
+  const char *end = str + strlen(str);
+  const char **s = &str;
+  token_rule_t table = T01("uptime", K_UPTIME, EQ(1), NO_OBJ);
+  (void)arg;
+
+  directory_token_t *token = get_next_token(area, s, end, &table);
+
+  tt_int_op(token->tp, OP_EQ, ERR_);
+  tt_str_op(token->error, OP_EQ, "Too few arguments to uptime");
+
+ done:
+  memarea_drop_all(area);
+  return;
+}
+
+static void
+test_parsecommon_get_next_token_err_obj_missing_endline(void *arg)
+{
+  memarea_t *area = memarea_new();
+
+  const char *str =
+    "directory-signature 0232AF901C31A04EE9848595AF9BB7620D4C5B2E "
+    "CD1FD971855430880D3C31E0331C5C55800C2F79\n"
+    "-----BEGIN SIGNATURE-----\n"
+    "dLTbc1Lad/OWKBJhA/dERzDHumswTAzBFAWAz2vnQhLsebs1SOm0W/vceEsiEkiF\n"
+    "A+JJSzIyfywJc6Mnk7aKMEIFjOO/MaxuAp4zv+q+JonJkF0ExjMqvKR0D6pSFmfN\n"
+    "cnemnxGHxNuPDnKl0imbWKmWDsHtwgi4zWeTq3MekfMOXKi6gIh+bDFzCs9/Vquh\n"
+    "uNKJI1jW/A2DEKeaSAODEv9VoCsYSvbVVEuHCBWjeNAurd5aL26BrAolW6m7pkD6\n"
+    "I+cQ8dQG6Wa/Zt6gLXtBbOP2o/iDI7ahDP9diNkBI/rm4nfp9j4piTwsqpi7xz9J\n"
+    "Ua9DEZB9KbJHVX1rGShrLA==\n";
+
+  const char *end = str + strlen(str);
+  const char **s = &str;
+  token_rule_t rule = T("directory-signature", K_DIRECTORY_SIGNATURE,
+                        GE(2), NEED_OBJ);
+  (void)arg;
+
+  directory_token_t *token = get_next_token(area, s, end, &rule);
+
+  tt_int_op(token->tp, OP_EQ, ERR_);
+  tt_str_op(token->error, OP_EQ, "Malformed object: missing object end line");
+
+ done:
+  memarea_drop_all(area);
+  return;
+}
+
+static void
+test_parsecommon_get_next_token_err_bad_beginline(void *arg)
+{
+  memarea_t *area = memarea_new();
+
+  const char *str =
+    "directory-signature 0232AF901C31A04EE9848595AF9BB7620D4C5B2E "
+    "CD1FD971855430880D3C31E0331C5C55800C2F79\n"
+    "-----BEGIN SIGNATURE-Z---\n"
+    "dLTbc1Lad/OWKBJhA/dERzDHumswTAzBFAWAz2vnQhLsebs1SOm0W/vceEsiEkiF\n"
+    "A+JJSzIyfywJc6Mnk7aKMEIFjOO/MaxuAp4zv+q+JonJkF0ExjMqvKR0D6pSFmfN\n"
+    "cnemnxGHxNuPDnKl0imbWKmWDsHtwgi4zWeTq3MekfMOXKi6gIh+bDFzCs9/Vquh\n"
+    "uNKJI1jW/A2DEKeaSAODEv9VoCsYSvbVVEuHCBWjeNAurd5aL26BrAolW6m7pkD6\n"
+    "I+cQ8dQG6Wa/Zt6gLXtBbOP2o/iDI7ahDP9diNkBI/rm4nfp9j4piTwsqpi7xz9J\n"
+    "Ua9DEZB9KbJHVX1rGShrLA==\n"
+    "-----END SIGNATURE-----\n";
+
+  const char *end = str + strlen(str);
+  const char **s = &str;
+  token_rule_t rule = T("directory-signature", K_DIRECTORY_SIGNATURE,
+                        GE(2), NEED_OBJ);
+  (void)arg;
+
+  directory_token_t *token = get_next_token(area, s, end, &rule);
+
+  tt_int_op(token->tp, OP_EQ, ERR_);
+  tt_str_op(token->error, OP_EQ, "Malformed object: bad begin line");
+
+ done:
+  memarea_drop_all(area);
+  return;
+}
+
+static void
+test_parsecommon_get_next_token_err_tag_mismatch(void *arg)
+{
+  memarea_t *area = memarea_new();
+
+  const char *str =
+    "directory-signature 0232AF901C31A04EE9848595AF9BB7620D4C5B2E "
+    "CD1FD971855430880D3C31E0331C5C55800C2F79\n"
+    "-----BEGIN SIGNATURE-----\n"
+    "dLTbc1Lad/OWKBJhA/dERzDHumswTAzBFAWAz2vnQhLsebs1SOm0W/vceEsiEkiF\n"
+    "A+JJSzIyfywJc6Mnk7aKMEIFjOO/MaxuAp4zv+q+JonJkF0ExjMqvKR0D6pSFmfN\n"
+    "cnemnxGHxNuPDnKl0imbWKmWDsHtwgi4zWeTq3MekfMOXKi6gIh+bDFzCs9/Vquh\n"
+    "uNKJI1jW/A2DEKeaSAODEv9VoCsYSvbVVEuHCBWjeNAurd5aL26BrAolW6m7pkD6\n"
+    "I+cQ8dQG6Wa/Zt6gLXtBbOP2o/iDI7ahDP9diNkBI/rm4nfp9j4piTwsqpi7xz9J\n"
+    "Ua9DEZB9KbJHVX1rGShrLA==\n"
+    "-----END SOMETHINGELSE-----\n";
+
+  const char *end = str + strlen(str);
+  const char **s = &str;
+  token_rule_t rule = T("directory-signature", K_DIRECTORY_SIGNATURE,
+                        GE(2), NEED_OBJ);
+  (void)arg;
+
+  directory_token_t *token = get_next_token(area, s, end, &rule);
+
+  tt_int_op(token->tp, OP_EQ, ERR_);
+  tt_str_op(token->error, OP_EQ,
+            "Malformed object: mismatched end tag SIGNATURE");
+
+ done:
+  memarea_drop_all(area);
+  return;
+}
+
+static void
+test_parsecommon_get_next_token_err_bad_base64(void *arg)
+{
+  memarea_t *area = memarea_new();
+
+  const char *str =
+    "directory-signature 0232AF901C31A04EE9848595AF9BB7620D4C5B2E "
+    "CD1FD971855430880D3C31E0331C5C55800C2F79\n"
+    "-----BEGIN SIGNATURE-----\n"
+    "%%@%%%%%%%!!!'\n"
+    "-----END SIGNATURE-----\n";
+
+  const char *end = str + strlen(str);
+  const char **s = &str;
+  token_rule_t rule = T("directory-signature", K_DIRECTORY_SIGNATURE,
+                        GE(2), NEED_OBJ);
+  (void)arg;
+
+  directory_token_t *token = get_next_token(area, s, end, &rule);
+
+  tt_int_op(token->tp, OP_EQ, ERR_);
+  tt_str_op(token->error, OP_EQ, "Malformed object: bad base64-encoded data");
+
+ done:
+  memarea_drop_all(area);
+  return;
+}
+
 #define PARSECOMMON_TEST(name) \
   { #name, test_parsecommon_ ## name, 0, NULL, NULL }
 
@@ -216,6 +383,12 @@ struct testcase_t parsecommon_tests[] = {
   PARSECOMMON_TEST(get_next_token_concat_args),
   PARSECOMMON_TEST(get_next_token_parse_keys),
   PARSECOMMON_TEST(get_next_token_object),
+  PARSECOMMON_TEST(get_next_token_err_too_many_args),
+  PARSECOMMON_TEST(get_next_token_err_too_few_args),
+  PARSECOMMON_TEST(get_next_token_err_obj_missing_endline),
+  PARSECOMMON_TEST(get_next_token_err_bad_beginline),
+  PARSECOMMON_TEST(get_next_token_err_tag_mismatch),
+  PARSECOMMON_TEST(get_next_token_err_bad_base64),
   END_OF_TESTCASES
 };
 
