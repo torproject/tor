@@ -44,14 +44,14 @@
  * these macros to just be synonyms for PREDICT_(UN)LIKELY.
  */
 #define ASSERT_PREDICT_UNLIKELY_(e)             \
-  ({                                            \
+  ( {                                           \
     int tor__assert_tmp_value__;                \
     if (e)                                      \
       tor__assert_tmp_value__ = 1;              \
     else                                        \
       tor__assert_tmp_value__ = 0;              \
     tor__assert_tmp_value__;                    \
-  })
+  } )
 #define ASSERT_PREDICT_LIKELY_(e) ASSERT_PREDICT_UNLIKELY_(e)
 #else
 #define ASSERT_PREDICT_UNLIKELY_(e) PREDICT_UNLIKELY(e)
