@@ -151,6 +151,62 @@ test_parsecommon_get_next_token_parse_keys(void *arg)
   memarea_drop_all(area);
 }
 
+static void
+test_parsecommon_get_next_token_object(void *arg)
+{
+  memarea_t *area = memarea_new();
+
+  const char *str =
+    "directory-signature 0232AF901C31A04EE9848595AF9BB7620D4C5B2E "
+    "CD1FD971855430880D3C31E0331C5C55800C2F79\n"
+    "-----BEGIN SIGNATURE-----\n"
+    "dLTbc1Lad/OWKBJhA/dERzDHumswTAzBFAWAz2vnQhLsebs1SOm0W/vceEsiEkiF\n"
+    "A+JJSzIyfywJc6Mnk7aKMEIFjOO/MaxuAp4zv+q+JonJkF0ExjMqvKR0D6pSFmfN\n"
+    "cnemnxGHxNuPDnKl0imbWKmWDsHtwgi4zWeTq3MekfMOXKi6gIh+bDFzCs9/Vquh\n"
+    "uNKJI1jW/A2DEKeaSAODEv9VoCsYSvbVVEuHCBWjeNAurd5aL26BrAolW6m7pkD6\n"
+    "I+cQ8dQG6Wa/Zt6gLXtBbOP2o/iDI7ahDP9diNkBI/rm4nfp9j4piTwsqpi7xz9J\n"
+    "Ua9DEZB9KbJHVX1rGShrLA==\n"
+    "-----END SIGNATURE-----\n";
+
+  const char *end = str + strlen(str);
+  const char **s = &str;
+  token_rule_t rule = T("directory-signature", K_DIRECTORY_SIGNATURE,
+                        GE(2), NEED_OBJ);
+  (void)arg;
+
+  directory_token_t *token = get_next_token(area, s, end, &rule);
+
+  tt_int_op(token->tp, OP_EQ, K_DIRECTORY_SIGNATURE);
+  tt_int_op(token->n_args, OP_EQ, 2);
+  tt_str_op(token->args[0], OP_EQ,
+                  "0232AF901C31A04EE9848595AF9BB7620D4C5B2E");
+  tt_str_op(token->args[1], OP_EQ,
+                  "CD1FD971855430880D3C31E0331C5C55800C2F79");
+
+  tt_assert(!token->error);
+
+  char decoded[256];
+  const char *signature =
+    "dLTbc1Lad/OWKBJhA/dERzDHumswTAzBFAWAz2vnQhLsebs1SOm0W/vceEsiEkiF\n"
+    "A+JJSzIyfywJc6Mnk7aKMEIFjOO/MaxuAp4zv+q+JonJkF0ExjMqvKR0D6pSFmfN\n"
+    "cnemnxGHxNuPDnKl0imbWKmWDsHtwgi4zWeTq3MekfMOXKi6gIh+bDFzCs9/Vquh\n"
+    "uNKJI1jW/A2DEKeaSAODEv9VoCsYSvbVVEuHCBWjeNAurd5aL26BrAolW6m7pkD6\n"
+    "I+cQ8dQG6Wa/Zt6gLXtBbOP2o/iDI7ahDP9diNkBI/rm4nfp9j4piTwsqpi7xz9J\n"
+    "Ua9DEZB9KbJHVX1rGShrLA==\n";
+  tt_assert(signature);
+  size_t signature_len = strlen(signature);
+  base64_decode(decoded, sizeof(decoded), signature, signature_len);
+
+  tt_str_op(token->object_type, OP_EQ, "SIGNATURE");
+  tt_int_op(token->object_size, OP_EQ, 256);
+  tt_mem_op(token->object_body, OP_EQ, decoded, 256);
+
+  tt_assert(!token->key);
+
+ done:
+  memarea_drop_all(area);
+}
+
 #define PARSECOMMON_TEST(name) \
   { #name, test_parsecommon_ ## name, 0, NULL, NULL }
 
@@ -159,6 +215,7 @@ struct testcase_t parsecommon_tests[] = {
   PARSECOMMON_TEST(get_next_token_success),
   PARSECOMMON_TEST(get_next_token_concat_args),
   PARSECOMMON_TEST(get_next_token_parse_keys),
+  PARSECOMMON_TEST(get_next_token_object),
   END_OF_TESTCASES
 };
 
