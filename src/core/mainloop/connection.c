@@ -2797,6 +2797,15 @@ retry_listener_ports(smartlist_t *old_conns,
           break;
         }
 #ifdef ENABLE_LISTENER_REBIND
+        /* Rebinding may be needed if all of the following are true:
+         * 1) Address family is the same in old and new listeners.
+         * 2) Port number matches exactly (numeric value is the same).
+         * 3) *One* of listeners (either old one or new one) has a
+         *    wildcard IP address (0.0.0.0 or [::]).
+         *
+         * These are the exact conditions for a first bind() syscall
+         * to fail with EADDRINUSE.
+         */
         const int may_need_rebind =
           tor_addr_family(&wanted->addr) == tor_addr_family(&conn->addr) &&
           port_matches_exact && bool_neq(tor_addr_is_null(&wanted->addr),
