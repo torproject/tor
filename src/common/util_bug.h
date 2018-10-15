@@ -38,6 +38,10 @@
  * and then passed right to a conditional.  If you do anything else to the
  * expression here, or introduce any more parentheses, the compiler won't
  * help you.
+ *
+ * We only do this for the unit-test build case because it interferes with
+ * the likely-branch labeling.  Note below that in the other case, we define
+ * these macros to just be synonyms for PREDICT_(UN)LIKELY.
  */
 #define ASSERT_PREDICT_UNLIKELY_(e)             \
   ({                                            \
