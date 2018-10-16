@@ -620,7 +620,7 @@ hs_cell_parse_intro_established(const uint8_t *payload, size_t payload_len)
   return ret;
 }
 
-/* Parsse the INTRODUCE2 cell using data which contains everything we need to
+/* Parse the INTRODUCE2 cell using data which contains everything we need to
  * do so and contains the destination buffers of information we extract and
  * compute from the cell. Return 0 on success else a negative value. The
  * service and circ are only used for logging purposes. */
