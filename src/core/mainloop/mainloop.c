@@ -1503,7 +1503,7 @@ get_my_roles(const or_options_t *options)
    * requires tor to have basic functionnalities. */
   int is_client = options_any_client_port_set(options) ||
                   options->ControlPort_set ||
-                  options->OwningControllerFD >= 0;
+                  options->OwningControllerFD != UINT64_MAX;
 
   if (is_bridge) roles |= PERIODIC_EVENT_ROLE_BRIDGE;
   if (is_client) roles |= PERIODIC_EVENT_ROLE_CLIENT;
