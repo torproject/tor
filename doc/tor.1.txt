@@ -1749,8 +1749,10 @@ The following options are useful only for clients (that is, if
     option breaks a tie to the favor of IPv6. (Default: auto)
 
 [[ClientAutoIPv6ORPort]] **ClientAutoIPv6ORPort** **0**|**1**::
-    If this option is set to 1, Tor randomly chooses between IPv4 and IPv6 for
-    an OR port should the chosen node have both. (Default: 0)
+    If this option is set to 1, Tor clients randomly prefer a node's IPv4 or
+    IPv6 ORPort. The random preference is set every time a node is loaded
+    from a new consensus or bridge config. When this option is set to 1,
+    **ClientPreferIPv6ORPort** is ignored. (Default: 0)
 
 [[PathsNeededToBuildCircuits]] **PathsNeededToBuildCircuits** __NUM__::
     Tor clients don't build circuits for user traffic until they know

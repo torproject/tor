@@ -492,7 +492,7 @@ fascist_firewall_prefer_ipv6_impl(const or_options_t *options)
 /* Choose whether we prefer IPv4 or IPv6 by randomly choosing an address
  * family. Return 0 for IPv4, and 1 for IPv6. */
 static int
-fascist_firewall_rand_preferred_addr(void)
+fascist_firewall_rand_prefer_ipv6_addr(void)
 {
   /* TODO: Check for failures, and infer our preference based on this. */
   return crypto_rand_int(2);
@@ -512,11 +512,11 @@ fascist_firewall_prefer_ipv6_orport(const or_options_t *options)
   }
 
   /* We can use both IPv4 and IPv6 - which do we prefer? */
-  if (options->ClientPreferIPv6ORPort == 1) {
-    return 1;
-  } else if (options->ClientAutoIPv6ORPort == 1) {
+  if (options->ClientAutoIPv6ORPort == 1) {
     /* If ClientAutoIPv6ORPort is 1, we prefer IPv4 or IPv6 at random. */
-    return fascist_firewall_rand_preferred_addr();
+    return fascist_firewall_rand_prefer_ipv6_addr();
+  } else if (options->ClientPreferIPv6ORPort == 1) {
+    return 1;
   }
 
   return 0;

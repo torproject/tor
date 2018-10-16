@@ -2069,8 +2069,7 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
     return;
   }
 
-  if (options->ClientAutoIPv6ORPort == 1 &&
-      fascist_firewall_use_ipv6(options)) {
+  if (fascist_firewall_use_ipv6(options)) {
     log_info(LD_NET, "Our outgoing connection is using IPv%d.",
              tor_addr_family(&real_addr) == AF_INET6 ? 6 : 4);
   }
