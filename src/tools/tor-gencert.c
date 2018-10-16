@@ -190,6 +190,7 @@ parse_commandline(int argc, char **argv)
         fprintf(stderr, "%s must resolve to an IPv4 address", addr_arg);
         return 1;
       }
+      tor_free(address);
       address = tor_strdup(fmt_addrport(&addr, port));
     } else if (!strcmp(argv[i], "--create-identity-key")) {
       make_new_id = 1;
