@@ -1,0 +1,5 @@
+  o Major bugfixes (mainloop, bootstrap):
+    - Make sure Tor bootstraps and works properly if only the ControlPort is
+      set. Prior to this fix, Tor would only bootstrap with at least a client
+      port being set (Socks, Trans, NATD, DNS or HTTPTunnel port). Fixes bug
+      27849; bugfix on 0.3.4.1-alpha.
