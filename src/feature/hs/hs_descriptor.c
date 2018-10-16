@@ -1443,20 +1443,6 @@ build_descriptor_cookie_keys(const uint8_t *subcredential,
   *keys_out = keystream;
 }
 
-/* From the keys, return a pointer to the start of the CLIENT-ID. */
-static inline const uint8_t *
-get_client_id_from_keys(const uint8_t *keys)
-{
-  return keys;
-}
-
-/* From the keys, return a pointer to the start of the COOKIE-KEY. */
-static inline const uint8_t *
-get_cookie_key_from_keys(const uint8_t *keys)
-{
-  return keys + HS_DESC_CLIENT_ID_LEN;
-}
-
 /* Decrypt the descriptor cookie given the descriptor, the auth client,
  * and the client secret key. On sucess, return 0 and a newly allocated
  * descriptor cookie descriptor_cookie_out. On error or if the client id
@@ -1493,11 +1479,10 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
   /* If the client id of auth client is not the same as the calculcated
    * client id, it means that this auth client is invaild according to the
    * client secret key client_auth_sk. */
-  if (tor_memneq(client->client_id,
-                 get_client_id_from_keys(keystream), HS_DESC_CLIENT_ID_LEN)) {
+  if (tor_memneq(client->client_id, keystream, HS_DESC_CLIENT_ID_LEN)) {
     goto done;
   }
-  cookie_key = get_cookie_key_from_keys(keystream);
+  cookie_key = keystream + HS_DESC_CLIENT_ID_LEN;
 
   /* This creates a cipher for AES. It can't fail. */
   cipher = crypto_cipher_new_with_iv_and_bits(cookie_key, client->iv,
@@ -2938,9 +2923,8 @@ hs_desc_build_authorized_client(const uint8_t *subcredential,
                                auth_ephemeral_sk, client_auth_pk, &keystream);
 
   /* Extract the CLIENT-ID and COOKIE-KEY from the KEYS. */
-  memcpy(client_out->client_id,
-         get_client_id_from_keys(keystream), HS_DESC_CLIENT_ID_LEN);
-  cookie_key = get_cookie_key_from_keys(keystream);
+  memcpy(client_out->client_id, keystream, HS_DESC_CLIENT_ID_LEN);
+  cookie_key = keystream + HS_DESC_CLIENT_ID_LEN;
 
   /* Random IV */
   crypto_strongest_rand(client_out->iv, sizeof(client_out->iv));
