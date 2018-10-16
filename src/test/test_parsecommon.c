@@ -141,6 +141,66 @@ test_parsecommon_tokenize_string_max_cnt(void *arg)
 }
 
 static void
+test_parsecommon_tokenize_string_at_start(void *arg)
+{
+  memarea_t *area = memarea_new();
+  smartlist_t *tokens = smartlist_new();
+
+  (void)arg;
+
+  token_rule_t table[] = {
+          T1_START("client-name", C_CLIENT_NAME, CONCAT_ARGS, NO_OBJ),
+          T01("uptime", K_UPTIME, EQ(1), NO_OBJ),
+          END_OF_TABLE,
+  };
+
+  // "client-name" is not the first line.
+  char *str = tor_strdup(
+                  "uptime 1024\nclient-name Alice\n");
+
+  int retval =
+  tokenize_string(area, str, NULL, tokens, table, 0);
+
+  tt_int_op(retval, OP_EQ, -1);
+
+ done:
+  tor_free(str);
+  memarea_drop_all(area);
+  smartlist_free(tokens);
+  return;
+}
+
+static void
+test_parsecommon_tokenize_string_at_end(void *arg)
+{
+  memarea_t *area = memarea_new();
+  smartlist_t *tokens = smartlist_new();
+
+  (void)arg;
+
+  token_rule_t table[] = {
+          T1_END("client-name", C_CLIENT_NAME, CONCAT_ARGS, NO_OBJ),
+          T01("uptime", K_UPTIME, EQ(1), NO_OBJ),
+          END_OF_TABLE,
+  };
+
+  // "client-name" is not the last line.
+  char *str = tor_strdup(
+                  "client-name Alice\nuptime 1024\n");
+
+  int retval =
+  tokenize_string(area, str, NULL, tokens, table, 0);
+
+  tt_int_op(retval, OP_EQ, -1);
+
+ done:
+  tor_free(str);
+  memarea_drop_all(area);
+  smartlist_free(tokens);
+  return;
+}
+
+static void
 test_parsecommon_get_next_token_success(void *arg)
 {
   memarea_t *area = memarea_new();
@@ -488,6 +548,8 @@ struct testcase_t parsecommon_tests[] = {
   PARSECOMMON_TEST(tokenize_string_multiple_lines),
   PARSECOMMON_TEST(tokenize_string_min_cnt),
   PARSECOMMON_TEST(tokenize_string_max_cnt),
+  PARSECOMMON_TEST(tokenize_string_at_start),
+  PARSECOMMON_TEST(tokenize_string_at_end),
   PARSECOMMON_TEST(get_next_token_success),
   PARSECOMMON_TEST(get_next_token_concat_args),
   PARSECOMMON_TEST(get_next_token_parse_keys),
