@@ -201,6 +201,33 @@ test_parsecommon_tokenize_string_at_end(void *arg)
 }
 
 static void
+test_parsecommon_tokenize_string_no_annotations(void *arg)
+{
+  memarea_t *area = memarea_new();
+  smartlist_t *tokens = smartlist_new();
+
+  (void)arg;
+
+  token_rule_t table[] = {
+          A01("@last-listed", A_LAST_LISTED, CONCAT_ARGS, NO_OBJ),
+          END_OF_TABLE,
+  };
+
+  char *str = tor_strdup("@last-listed 2018-09-21 15:30:03\n");
+
+  int retval =
+  tokenize_string(area, str, NULL, tokens, table, 0);
+
+  tt_int_op(retval, OP_EQ, -1);
+
+ done:
+  tor_free(str);
+  memarea_drop_all(area);
+  smartlist_free(tokens);
+  return;
+}
+
+static void
 test_parsecommon_get_next_token_success(void *arg)
 {
   memarea_t *area = memarea_new();
@@ -550,6 +577,7 @@ struct testcase_t parsecommon_tests[] = {
   PARSECOMMON_TEST(tokenize_string_max_cnt),
   PARSECOMMON_TEST(tokenize_string_at_start),
   PARSECOMMON_TEST(tokenize_string_at_end),
+  PARSECOMMON_TEST(tokenize_string_no_annotations),
   PARSECOMMON_TEST(get_next_token_success),
   PARSECOMMON_TEST(get_next_token_concat_args),
   PARSECOMMON_TEST(get_next_token_parse_keys),
