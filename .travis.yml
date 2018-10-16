@@ -204,8 +204,8 @@ script:
   - echo "Configure flags are $CONFIGURE_FLAGS"
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
-  - if [[ "$DISTCHECK" == "" ]]; then make check; fi
-  - if [[ "$TEST_STEM" != "" ]]; then git clone --depth 1 https://github.com/torproject/stem.git ; export STEM_SOURCE_DIR=`pwd`/stem; make test-stem; fi
+  - if [[ "$DISTCHECK" == "" && "$TEST_STEM" == "" ]]; then make check; fi
+  - if [[ "$TEST_STEM" != "" ]]; then git clone --depth 1 https://github.com/torproject/stem.git ; export STEM_SOURCE_DIR=`pwd`/stem; make src/app/tor test-stem; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
 
 after_failure:
