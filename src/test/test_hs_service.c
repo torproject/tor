@@ -492,6 +492,8 @@ test_helper_functions(void *arg)
   MOCK(node_get_by_id, mock_node_get_by_id);
 
   hs_service_init();
+  time_t now = time(NULL);
+  update_approx_time(now);
 
   service = helper_create_service();
 
@@ -551,7 +553,6 @@ test_helper_functions(void *arg)
 
   /* Testing can_service_launch_intro_circuit() */
   {
-    time_t now = time(NULL);
     /* Put the start of the retry period back in time, we should be allowed.
      * to launch intro circuit. */
     service->state.num_intro_circ_launched = 2;
@@ -575,7 +576,6 @@ test_helper_functions(void *arg)
 
   /* Testing intro_point_should_expire(). */
   {
-    time_t now = time(NULL);
     /* Just some basic test of the current state. */
     tt_u64_op(ip->introduce2_max, OP_GE,
               INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS);
