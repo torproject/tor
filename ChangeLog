@@ -37,7 +37,7 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
     - Update geoip and geoip6 to the October 9 2018 Maxmind GeoLite2
       Country database. Closes ticket 27991.
 
-  o Minor features (onion services):
+  o Major features (onion services):
     - Version 3 onion services can now use the per-service
       HiddenServiceExportCircuitID option to differentiate client
       circuits. It communicates with the service by using the HAProxy
@@ -62,10 +62,10 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
       on 0.3.5.1-alpha.
 
   o Minor bugfixes (continuous integration, appveyor):
-    - Only install the necessary mingw packages during our appveyor
+    - Install only the necessary mingw packages during our appveyor
       builds. This change makes the build a little faster, and prevents
       a conflict with a preinstalled mingw openssl that appveyor now
-      ships. Fixes bugs 27943 and 27765; bugfix on 0.3.4.2-alpha.
+      ships. Fixes bugs 27765 and 27943; bugfix on 0.3.4.2-alpha.
 
   o Minor bugfixes (directory permissions):
     - When a user requests a group-readable DataDirectory, give it to
@@ -91,14 +91,14 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
     - Stop dumping a stack trace when trying to connect to an intro
       point without having a descriptor for it. Fixes bug 27774; bugfix
       on 0.3.2.1-alpha.
-    - Don't warn so loudly when Tor is unable to decode a descriptor.
-      This can now happen as a normal use case if a client gets a
+    - Don't warn so loudly when Tor is unable to decode an onion
+      descriptor. This can now happen as a normal use case if a client gets a
       descriptor with client authorization but the client is not
       authorized. Fixes bug 27550; bugfix on 0.3.5.1-alpha.
     - When selecting a v3 rendezvous point, don't only look at the
       protover, but also check whether the curve25519 onion key is
       present. This way we avoid picking a relay that supports the v3
-      rendezvous but for which we don't have the descriptor. Fixes bug
+      rendezvous but for which we don't have the microdescriptor. Fixes bug
       27797; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (protover):
@@ -107,12 +107,12 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
       on 0.2.9.4-alpha.
 
   o Minor bugfixes (testing):
-    - Make the the hs_service tests uses the same time source when
-      creating the introduction point and testing it. This helps make
-      test work on very slow system like ARM or Travis. Fixes bug 27810;
+    - Make the hs_service tests use the same time source when
+      creating the introduction point and when testing it. Now tests work
+      better on very slow systems like ARM or Travis. Fixes bug 27810;
       bugfix on 0.3.2.1-alpha.
-    - In test_rebind.py, check if the Python version is in supported
-      ranges. Fixes bug 27675; bugfix on 0.3.5.1-alpha.
+    - In test_rebind.py, check if the Python version is in the supported
+      range. Fixes bug 27675; bugfix on 0.3.5.1-alpha.
 
   o Code simplification and refactoring:
     - Divide more large Tor source files -- especially ones that span
@@ -130,8 +130,8 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
       help with future modularization. Closes ticket 27864.
 
   o Documentation:
-    - In the tor-resolve(1) manpage, fix the reference to socks-
-      extensions.txt by adding web URL. Resolves ticket 27853.
+    - In the tor-resolve(1) manpage, fix the reference to
+      socks-extensions.txt by adding a web URL. Resolves ticket 27853.
     - Mention that we require Python to be 2.7 or newer for some
       integration tests that we ship with Tor. Resolves ticket 27677.
 
