@@ -290,7 +290,7 @@ impl ProtoSet {
         });
 
         let pairs = pairs.collect();
-        ProtoSet::is_ok(ProtoSet{ pairs }).expect("should be already sorted")
+        ProtoSet::is_ok(ProtoSet { pairs }).expect("should be already sorted")
     }
 }
 

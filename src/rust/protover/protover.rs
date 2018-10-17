@@ -124,15 +124,15 @@ impl From<Protocol> for UnknownProtocol {
     }
 }
 
-#[cfg(feature="test_linking_hack")]
+#[cfg(feature = "test_linking_hack")]
 fn have_linkauth_v1() -> bool {
     true
 }
 
-#[cfg(not(feature="test_linking_hack"))]
+#[cfg(not(feature = "test_linking_hack"))]
 fn have_linkauth_v1() -> bool {
     use external::c_tor_is_using_nss;
-    ! c_tor_is_using_nss()
+    !c_tor_is_using_nss()
 }
 
 /// Get a CStr representation of current supported protocols, for
@@ -152,29 +152,31 @@ fn have_linkauth_v1() -> bool {
 ///
 //  C_RUST_COUPLED: protover.c `protover_get_supported_protocols`
 pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
-    if ! have_linkauth_v1() {
-        cstr!("Cons=1-2 \
-               Desc=1-2 \
-               DirCache=1-2 \
-               HSDir=1-2 \
-               HSIntro=3-4 \
-               HSRend=1-2 \
-               Link=1-5 \
-               LinkAuth=3 \
-               Microdesc=1-2 \
-               Relay=1-2"
+    if !have_linkauth_v1() {
+        cstr!(
+            "Cons=1-2 \
+             Desc=1-2 \
+             DirCache=1-2 \
+             HSDir=1-2 \
+             HSIntro=3-4 \
+             HSRend=1-2 \
+             Link=1-5 \
+             LinkAuth=3 \
+             Microdesc=1-2 \
+             Relay=1-2"
         )
     } else {
-        cstr!("Cons=1-2 \
-               Desc=1-2 \
-               DirCache=1-2 \
-               HSDir=1-2 \
-               HSIntro=3-4 \
-               HSRend=1-2 \
-               Link=1-5 \
-               LinkAuth=1,3 \
-               Microdesc=1-2 \
-               Relay=1-2"
+        cstr!(
+            "Cons=1-2 \
+             Desc=1-2 \
+             DirCache=1-2 \
+             HSDir=1-2 \
+             HSIntro=3-4 \
+             HSRend=1-2 \
+             Link=1-5 \
+             LinkAuth=1,3 \
+             Microdesc=1-2 \
+             Relay=1-2"
         )
     }
 }
