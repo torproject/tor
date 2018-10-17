@@ -546,6 +546,41 @@ copy_service_on_prunning(rend_service_t *dst, rend_service_t *src)
   dst->n_intro_points_wanted = src->n_intro_points_wanted;
 }
 
+/** A SIGHUP occured and service pruning might have happened; some services
+ *  might not be available anymore. Check if any introduction circuits are now
+ *  useless and need to be cleaned up. */
+static void
+clean_intro_circs_after_service_prune(const smartlist_t *surviving_services) {
+  origin_circuit_t *ocirc = NULL;
+
+  /* For every service introduction circuit we can find, see if we have a
+   * matching surviving configured service. If not, close the circuit. */
+  while ((ocirc = circuit_get_next_service_intro_circ(ocirc))) {
+    int keep_it = 0;
+    if (ocirc->rend_data == NULL) {
+      /* This is a v3 circuit, ignore it. */
+      continue;
+    }
+    SMARTLIST_FOREACH_BEGIN(surviving_services, const rend_service_t *, s) {
+      if (rend_circuit_pk_digest_eq(ocirc, (uint8_t *) s->pk_digest)) {
+        /* Keep this circuit as we have a matching configured service. */
+        keep_it = 1;
+        break;
+      }
+    } SMARTLIST_FOREACH_END(s);
+    if (keep_it) {
+      continue;
+    }
+    log_info(LD_REND, "Closing intro point %s for service %s.",
+             safe_str_client(extend_info_describe(
+                                        ocirc->build_state->chosen_exit)),
+             safe_str_client(rend_data_get_address(ocirc->rend_data)));
+    /* Reason is FINISHED because service has been removed and thus the
+     * circuit is considered old/uneeded. */
+    circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
+  }
+}
+
 /* Helper: Actual implementation of the pruning on reload which we've
  * decoupled in order to make the unit test workeable without ugly hacks.
  * Furthermore, this function does NOT free any memory but will nullify the
@@ -553,7 +588,6 @@ copy_service_on_prunning(rend_service_t *dst, rend_service_t *src)
 STATIC void
 rend_service_prune_list_impl_(void)
 {
-  origin_circuit_t *ocirc = NULL;
   smartlist_t *surviving_services, *old_service_list, *new_service_list;
 
   /* When pruning our current service list, we must have a staging list that
@@ -629,32 +663,9 @@ rend_service_prune_list_impl_(void)
     } SMARTLIST_FOREACH_END(old);
   } SMARTLIST_FOREACH_END(new);
 
-  /* For every service introduction circuit we can find, see if we have a
-   * matching surviving configured service. If not, close the circuit. */
-  while ((ocirc = circuit_get_next_service_intro_circ(ocirc))) {
-    int keep_it = 0;
-    if (ocirc->rend_data == NULL) {
-      /* This is a v3 circuit, ignore it. */
-      continue;
-    }
-    SMARTLIST_FOREACH_BEGIN(surviving_services, const rend_service_t *, s) {
-      if (rend_circuit_pk_digest_eq(ocirc, (uint8_t *) s->pk_digest)) {
-        /* Keep this circuit as we have a matching configured service. */
-        keep_it = 1;
-        break;
-      }
-    } SMARTLIST_FOREACH_END(s);
-    if (keep_it) {
-      continue;
-    }
-    log_info(LD_REND, "Closing intro point %s for service %s.",
-             safe_str_client(extend_info_describe(
-                                        ocirc->build_state->chosen_exit)),
-             safe_str_client(rend_data_get_address(ocirc->rend_data)));
-    /* Reason is FINISHED because service has been removed and thus the
-     * circuit is considered old/uneeded. */
-    circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
-  }
+  /* See if any intro circuits are now useless/bad and need to be cleaned up */
+  clean_intro_circs_after_service_prune(surviving_services);
+
   smartlist_free(surviving_services);
   /* Notify that our global service list has changed. */
   hs_service_map_has_changed();
