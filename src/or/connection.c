@@ -3111,7 +3111,7 @@ connection_write_bw_exhausted(connection_t *conn, bool is_global_bw)
 {
   (void)is_global_bw;
   conn->write_blocked_on_bw = 1;
-  connection_stop_reading(conn);
+  connection_stop_writing(conn);
   reenable_blocked_connection_schedule();
 }
 

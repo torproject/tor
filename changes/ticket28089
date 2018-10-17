@@ -1,0 +1,6 @@
+  o Major bugfixes (relay):
+    - When our write bandwidth limit is exhausted, stop writing on the
+      connection. Previously, we had a typo in the code that would make us stop
+      reading leading to relay connections being stuck indefinitely. Fixes bug
+      28089; bugfix on 0.3.4.1-alpha.
+
