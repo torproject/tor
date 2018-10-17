@@ -265,7 +265,7 @@ retry_all_socks_conn_waiting_for_desc(void)
     }
     /* In this loop, we will possibly try to fetch a descriptor for the
      * pending connections because we just got more directory information.
-     * However, the refetch process can cleanup all SOCKS request so the same
+     * However, the refetch process can cleanup all SOCKS request to the same
      * service if an internal error happens. Thus, we can end up with closed
      * connections in our list. */
     if (base_conn->marked_for_close) {

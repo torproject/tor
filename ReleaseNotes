@@ -692,7 +692,7 @@ Changes in version 0.3.4.8 - 2018-09-10
   o Minor bugfixes (correctness, flow control):
     - Upon receiving a stream-level SENDME cell, verify that our window
       has not grown too large. Fixes bug 26214; bugfix on svn
-      r54 (pre-0.0.1)
+      r54 (pre-0.0.1).
 
   o Minor bugfixes (directory authority):
     - When voting for recommended versions, make sure that all of the
@@ -937,7 +937,7 @@ Changes in version 0.3.4.8 - 2018-09-10
       once had an ed25519 key associated with their RSA key to always
       have that key, instead of allowing them to drop back to a version
       that didn't support ed25519. This means they need to use a new RSA
-      key if the want to downgrade to an older version of tor without
+      key if they want to downgrade to an older version of tor without
       ed25519. Closes ticket 20522.
 
   o Removed features:

@@ -467,7 +467,7 @@ cache_intro_state_free_(hs_cache_intro_state_t *state)
   tor_free(state);
 }
 
-/* Helper function: use by the free all function. */
+/* Helper function: used by the free all function. */
 static void
 cache_intro_state_free_void(void *state)
 {
@@ -488,7 +488,7 @@ cache_client_intro_state_new(void)
   FREE_AND_NULL(hs_cache_client_intro_state_t,          \
                 cache_client_intro_state_free_, (val))
 
-/* Free a cache client intro state object. */
+/* Free a cache_client_intro_state object. */
 static void
 cache_client_intro_state_free_(hs_cache_client_intro_state_t *cache)
 {
@@ -499,7 +499,7 @@ cache_client_intro_state_free_(hs_cache_client_intro_state_t *cache)
   tor_free(cache);
 }
 
-/* Helper function: use by the free all function. */
+/* Helper function: used by the free all function. */
 static void
 cache_client_intro_state_free_void(void *entry)
 {
