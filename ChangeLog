@@ -3,6 +3,13 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
   versions. It's still an alpha, but we hope it's getting closer and
   closer to stability.
 
+  o Major bugfixes (relay):
+    - When our write bandwidth limit is exhausted, stop writing on the
+      connection. Previously, we had a typo in the code that would make us
+      stop reading instead, leading to relay connections being stuck
+      indefinitely and consuming kernel RAM. Fixes bug 28089; bugfix on
+      0.3.4.1-alpha.
+
   o Major bugfixes (compilation):
     - Fix compilation on ARM (and other less-used CPUs) when compiling
       with OpenSSL before 1.1. Fixes bug 27781; bugfix on 0.3.4.1-alpha.
