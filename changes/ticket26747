@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Divide more large Tor source files -- especially ones that span
-      multiple areas of functionality -- into smaller parts, including
-      onion.c and main.c. Closes ticket 26747.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (networking):
-    - Refrain from attempting socket rebinding when old
-      and new listeners are in different address families.
-      Fixes bug 27928; bugfix on 0.3.5.1-alpha.

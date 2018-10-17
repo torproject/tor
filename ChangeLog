@@ -1,3 +1,135 @@
+Changes in version 0.3.5.3-alpha - 2018-10-17
+  Tor 0.3.5.3-alpha fixes several bugs, mostly from previous 0.3.5.x
+  versions.  It's still an alpha, but we hope it's getting closer and
+  closer to stability.
+
+  o Major bugfixes (compilation):
+    - Fix compilation on ARM (and other less-used CPUs)
+      when compiling with OpenSSL before 1.1. Fixes bug 27781;
+      bugfix on 0.3.4.1-alpha.
+
+  o Major bugfixes (initialization, crash):
+    - Fix an assertion crash that would stop Tor from starting up if
+      it tried to activate a periodic event too early. Fixes bug
+      27861; bugfix on 0.3.5.1-alpha.
+
+  o Major bugfixes (mainloop, bootstrap):
+    - Make sure Tor bootstraps and works properly if only the ControlPort is
+      set. Prior to this fix, Tor would only bootstrap when a client
+      port was set (Socks, Trans, NATD, DNS or HTTPTunnel port). Fixes bug
+      27849; bugfix on 0.3.4.1-alpha.
+
+  o Minor features (continuous integration):
+    - Use the Travis Homebrew addon to install packages on macOS during
+      Travis CI. The package
+      list is the same, but the Homebrew addon does not do a `brew update` by
+      default. Implements ticket 27738.
+    - Report what program produced the mysterious core file that we
+      occasionally see on Travis CI during make distcheck.  Closes
+      ticket 28024.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the October 9 2018 Maxmind GeoLite2
+      Country database. Closes ticket 27991.
+
+  o Minor features (onion services):
+    - Version 3 onion services can now use the per-service
+      HiddenServiceExportCircuitID option to differentiate client circuits by
+      using the HAProxy proxy protocol which assigns IP addresses to inbound client
+      circuits. Closes ticket 4700. Patch by Mahrud Sayrafi.
+
+  o Minor bugfixes (continuous integration, appveyor):
+    - Only install the necessary mingw packages during our appveyor
+      builds. This change makes the build a little faster, and prevents a
+      conflict with a preinstalled mingw openssl that appveyor now ships.
+      Fixes bugs 27943 and 27765; bugfix on 0.3.4.2-alpha.
+
+  o Minor bugfixes (code safety):
+    - Rewrite our assertion macros so that they no longer suppress
+      the compiler's -Wparentheses warnings on their inputs. Fixes bug 27709;
+      bugfix on 0.0.6.
+
+  o Minor bugfixes (compilation):
+    - Compile the ed25519-donna code with a correct declaration of
+      crypto_strongest_rand(). Previously, we build it with one type,
+      but link it against another in the unit tests, which caused
+      compilation failures with LTO enabled, and which could have
+      caused other undefined behavior in the tests. Fixes bug 27728;
+      bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (compilation, netbsd):
+    - Add a missing include back into procmon.c. Fixes bug 27990;
+      bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (directory permissions):
+    - When a user requests a group-readable DataDirectory, give it to
+      them. Previously, when the DataDirectory and the CacheDirectory
+      were the same, the default setting (0) for
+      CacheDirectoryGroupReadable would always override the setting for
+      DataDirectoryGroupReadable. Fixes bug 26913; bugfix on
+      0.3.3.1-alpha.
+
+  o Minor bugfixes (onion service v3):
+    - Client side would dump a stack trace if tor doesn't have the descriptor
+      for the intro point it is trying to connect to. Fixes bug 27774; bugfix
+      on 0.3.2.1-alpha.
+    - Don't warn so loudly when tor is unable to decode a descriptor. This can
+      now happen as a normal use case if a client gets a descriptor with
+      client authorization but the client is not authorized. Fixes bug 27550;
+      bugfix on 0.3.5.1-alpha.
+    - When selecting a v3 rendezvous point, not only look at the protover but
+      also if the curve25519 onion key is present. That way we avoid picking a
+      node that supports the v3 rendezvous but for which we don't have the
+      descriptor yet for the key. Fixes bug 27797; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (memory leaks):
+    - Fix a small memory leak when calling Tor with --dump-config.
+      Fixes bug 27893; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (networking):
+    - In retry_listeners_ports() make sure that we're removing
+      a member of old_conns smartlist at most once.
+      Fixes bug 27808; bugfix on 0.3.5.1-alpha.
+    - Refrain from attempting socket rebinding when old
+      and new listeners are in different address families.
+      Fixes bug 27928; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (protover):
+    - Reject protocol names containing bytes other than alphanumeric characters
+      and hyphens ([A-Za-z0-9-]). Fixes bug 27316; bugfix on 0.2.9.4-alpha.
+
+  o Minor bugfixes (testing):
+    - Make the the hs_service tests uses the same time source when creating
+      the introduction point and testing it. This helps make test work on very
+      slow system like ARM or Travis. Fixes bug 27810; bugfix on
+      0.3.2.1-alpha.
+    - In test_rebind.py check if Python version is in supported
+      ranges. Fixes bug 27675; bugfix on 0.3.5.1-alpha.
+
+  o Code simplification and refactoring:
+    - Divide more large Tor source files -- especially ones that span
+      multiple areas of functionality -- into smaller parts, including
+      onion.c and main.c. Closes ticket 26747.
+    - Divide the "routerparse.c" module into separate modules for each
+      group of parsed objects. Closes ticket 27924.
+    - Move protover_rust.c to the same place protover.c was moved to.
+      Closes ticket 27814.
+    - Split directory.c into separate pieces for client, server, and
+      common functionality. Closes ticket 26744.
+    - Split the non-statistics-related parts from the rephist.c and geoip.c
+      modules. Closes ticket 27892.
+    - Split the router.c file into relay-only and shared components,
+      to help with future modularization. Closes ticket 27864.
+
+  o Documentation:
+    - In tor-resolve(1) manpage, fix the reference to
+      socks-extensions.txt by adding web URL. Resolves
+      ticket 27853.
+    - Mention that we require Python to be 2.7 or newer for
+      integration tests that we ship with Tor. Resolves ticket
+      27677.
+
+
 Changes in version 0.3.5.2-alpha - 2018-09-21
   Tor 0.3.5.2-alpha fixes several bugs in 0.3.5.1-alpha, including one
   that made Tor think it had run out of sockets. Anybody running a relay

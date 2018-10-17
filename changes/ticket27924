@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Divide the "routerparse.c" module into separate modules for each
-      group of parsed objects. Closes ticket 27924.

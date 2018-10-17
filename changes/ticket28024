@@ -1,4 +1,0 @@
-  o Minor features (testing):
-    - Report what program produced the mysterious core file that we
-      occasionally see on Travis CI during make distcheck.  Closes
-      ticket 28024.

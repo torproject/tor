@@ -1,3 +1,0 @@
-  o Minor bugfixes (memory leaks):
-    - Fix a small memory leak when calling Tor with --dump-config.
-      Fixes bug 27893; bugfix on 0.3.2.1-alpha.

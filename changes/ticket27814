@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Move protover_rust.c to the same place protover.c was moved to.
-      Closes ticket 27814.

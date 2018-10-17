@@ -1,4 +1,0 @@
-  o Minor bugfixes (networking):
-    - In retry_listeners_ports() make sure that we're removing
-      a member of old_conns smartlist at most once.
-      Fixes bug 27808; bugfix on 0.3.5.1-alpha.

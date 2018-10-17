@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Split the non-statistics-related parts from the rephist.c and geoip.c
-      modules. Closes ticket 27892.

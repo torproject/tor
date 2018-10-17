@@ -1,4 +1,0 @@
-  o Minor bugfixes (hidden service v3):
-    - Client side would dump a stack trace if tor doesn't have the descriptor
-      for the intro point it is trying to connect to. Fixes bug 27774; bugfix
-      on 0.3.2.1-alpha.

@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation, netbsd):
-    - Add a missing include back into procmon.c. Fixes bug 27990;
-      bugfix on 0.3.5.1-alpha.

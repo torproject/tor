@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Split the router.c file into relay-only and shared components,
-      to help with future modularization. Closes ticket 27864.

@@ -1,5 +1,0 @@
-  o Minor features (onion services):
-    - Version 3 onion services can now use the per-service
-      HiddenServiceExportCircuitID option to differentiate client circuits by
-      using the HAProxy proxy protocol which assigns IP addresses to inbound client
-      circuits. Closes ticket 4700. Patch by Mahrud Sayrafi.
