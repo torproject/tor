@@ -1,7 +1,9 @@
 Changes in version 0.3.5.3-alpha - 2018-10-17
   Tor 0.3.5.3-alpha fixes several bugs, mostly from previous 0.3.5.x
-  versions. It's still an alpha, but we hope it's getting closer and
-  closer to stability.
+  versions. One important fix for relays addresses a problem with rate-
+  limiting code from back in 0.3.4.x: If the fix works out, we'll be
+  backporting it soon. This release is still an alpha, but we hope it's
+  getting closer and closer to stability.
 
   o Major features (onion services):
     - Version 3 onion services can now use the per-service
