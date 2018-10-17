@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Remove unnecessarily unsafe code from the rust macro cstr!. Closes
+      ticket 28077.
