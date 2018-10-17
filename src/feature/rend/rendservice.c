@@ -631,7 +631,7 @@ rend_service_prune_list_impl_(void)
 
   /* For every service introduction circuit we can find, see if we have a
    * matching surviving configured service. If not, close the circuit. */
-  while ((ocirc = circuit_get_next_service_intro_circ(ocirc))) {
+  while ((ocirc = circuit_get_next_intro_circ(ocirc, false))) {
     int keep_it = 0;
     if (ocirc->rend_data == NULL) {
       /* This is a v3 circuit, ignore it. */

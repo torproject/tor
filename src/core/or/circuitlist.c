@@ -1644,15 +1644,24 @@ circuit_get_ready_rend_circ_by_rend_data(const rend_data_t *rend_data)
   return NULL;
 }
 
-/** Return the first service introduction circuit originating from the global
- * circuit list after <b>start</b> or at the start of the list if <b>start</b>
- * is NULL. Return NULL if no circuit is found.
+/** Return the first introduction circuit originating from the global circuit
+ * list after <b>start</b> or at the start of the list if <b>start</b> is
+ * NULL. Return NULL if no circuit is found.
  *
- * A service introduction point circuit has a purpose of either
- * CIRCUIT_PURPOSE_S_ESTABLISH_INTRO or CIRCUIT_PURPOSE_S_INTRO. This does not
- * return a circuit marked for close and its state must be open. */
+ * If <b>want_client_circ</b> is true, then we are looking for client-side
+ * introduction circuits: A client introduction point circuit has a purpose of
+ * either CIRCUIT_PURPOSE_C_INTRODUCING, CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT
+ * or CIRCUIT_PURPOSE_C_INTRODUCE_ACKED. This does not return a circuit marked
+ * for close, but it returns circuits regardless of their circuit state.
+ *
+ * If <b>want_client_circ</b> is false, then we are looking for service-side
+ * introduction circuits: A service introduction point circuit has a purpose of
+ * either CIRCUIT_PURPOSE_S_ESTABLISH_INTRO or CIRCUIT_PURPOSE_S_INTRO. This
+ * does not return circuits marked for close, or in any state other than open.
+ */
 origin_circuit_t *
-circuit_get_next_service_intro_circ(origin_circuit_t *start)
+circuit_get_next_intro_circ(const origin_circuit_t *start,
+                            bool want_client_circ)
 {
   int idx = 0;
   smartlist_t *lst = circuit_get_global_list();
@@ -1664,54 +1673,29 @@ circuit_get_next_service_intro_circ(origin_circuit_t *start)
   for ( ; idx < smartlist_len(lst); ++idx) {
     circuit_t *circ = smartlist_get(lst, idx);
 
-    /* Ignore a marked for close circuit or purpose not matching a service
-     * intro point or if the state is not open. */
-    if (circ->marked_for_close || circ->state != CIRCUIT_STATE_OPEN ||
-        (circ->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO &&
-         circ->purpose != CIRCUIT_PURPOSE_S_INTRO)) {
+    /* Ignore a marked for close circuit or if the state is not open. */
+    if (circ->marked_for_close) {
       continue;
     }
-    /* The purposes we are looking for are only for origin circuits so the
-     * following is valid. */
-    return TO_ORIGIN_CIRCUIT(circ);
-  }
-  /* Not found. */
-  return NULL;
-}
 
-/** Return the first client introduction circuit originating from the global
- * circuit list after <b>start</b> or at the start of the list if <b>start</b>
- * is NULL. Return NULL if no circuit is found.
- *
- * A client introduction point circuit has a purpose of either
- * CIRCUIT_PURPOSE_C_INTRODUCING, CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT or
- * CIRCUIT_PURPOSE_C_INTRODUCE_ACKED. This does not return a circuit marked
- * for close.
- *
- * Contrary to other similar functions, this doesn't look at the circuit
- * state. The goal is to return any client circuit regardless of its state
- * because the caller should decide to keep it or not. */
-origin_circuit_t *
-circuit_get_next_client_intro_circ(const origin_circuit_t *start)
-{
-  int idx = 0;
-  smartlist_t *lst = circuit_get_global_list();
-
-  if (start) {
-    idx = TO_CIRCUIT(start)->global_circuitlist_idx + 1;
-  }
-
-  for ( ; idx < smartlist_len(lst); ++idx) {
-    circuit_t *circ = smartlist_get(lst, idx);
-
-    /* Ignore a marked for close circuit or purpose not matching a client
-     * intro point or if the state is not open. */
-    if (circ->marked_for_close ||
-        (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCING &&
-         circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT &&
-         circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACKED)) {
-      continue;
+    /* Depending on whether we are looking for client or service circs, skip
+     * circuits with other purposes. */
+    if (want_client_circ) {
+      if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCING &&
+          circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT &&
+          circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACKED) {
+        continue;
+      }
+    } else { /* we are looking for service-side circs */
+      if (circ->state != CIRCUIT_STATE_OPEN) {
+        continue;
+      }
+      if (circ->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO &&
+          circ->purpose != CIRCUIT_PURPOSE_S_INTRO) {
+        continue;
+      }
     }
+
     /* The purposes we are looking for are only for origin circuits so the
      * following is valid. */
     return TO_ORIGIN_CIRCUIT(circ);

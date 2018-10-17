@@ -950,7 +950,7 @@ test_close_intro_circuits_new_desc(void *arg)
 
   /* Before we are about to clean up the intro circuits, make sure it is
    * actually there. */
-  tt_assert(circuit_get_next_client_intro_circ(NULL));
+  tt_assert(circuit_get_next_intro_circ(NULL, true));
 
   /* Build the second descriptor for the same service and cache it. */
   {
@@ -976,7 +976,7 @@ test_close_intro_circuits_new_desc(void *arg)
 
   /* Once stored, our intro circuit should be closed because it is related to
    * an old introduction point that doesn't exists anymore. */
-  tt_assert(!circuit_get_next_client_intro_circ(NULL));
+  tt_assert(!circuit_get_next_intro_circ(NULL, true));
 
  done:
   circuit_free(circ);

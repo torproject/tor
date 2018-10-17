@@ -1860,7 +1860,7 @@ hs_client_close_intro_circuits_from_desc(const hs_descriptor_t *desc)
 
   /* We iterate over all client intro circuits because they aren't kept in the
    * HS circuitmap. That is probably something we want to do one day. */
-  while ((ocirc = circuit_get_next_client_intro_circ(ocirc))) {
+  while ((ocirc = circuit_get_next_intro_circ(ocirc, true))) {
     if (ocirc->hs_ident == NULL) {
       /* Not a v3 circuit, ignore it. */
       continue;
