@@ -33,20 +33,20 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
   o Minor features (onion services):
     - Version 3 onion services can now use the per-service
       HiddenServiceExportCircuitID option to differentiate client
-      circuits by using the HAProxy proxy protocol which assigns IP
-      addresses to inbound client circuits. Closes ticket 4700. Patch by
-      Mahrud Sayrafi.
+      circuits. It communicates with the service by using the HAProxy
+      protocol to assign virtual IP addresses to inbound client
+      circuits. Closes ticket 4700. Patch by Mahrud Sayrafi.
 
   o Minor bugfixes (code safety):
     - Rewrite our assertion macros so that they no longer suppress the
-      compiler's -Wparentheses warnings on their inputs. Fixes bug
-      27709; bugfix on 0.0.6.
+      compiler's -Wparentheses warnings. Fixes bug 27709; bugfix
+      on 0.0.6.
 
   o Minor bugfixes (compilation):
     - Compile the ed25519-donna code with a correct declaration of
-      crypto_strongest_rand(). Previously, we build it with one type,
-      but link it against another in the unit tests, which caused
-      compilation failures with LTO enabled, and which could have caused
+      crypto_strongest_rand(). Previously, we built it with one type,
+      but linked it against another in the unit tests, which caused
+      compilation failures with LTO enabled. This could have caused
       other undefined behavior in the tests. Fixes bug 27728; bugfix
       on 0.3.5.1-alpha.
 
@@ -64,7 +64,7 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
     - When a user requests a group-readable DataDirectory, give it to
       them. Previously, when the DataDirectory and the CacheDirectory
       were the same, the default setting (0) for
-      CacheDirectoryGroupReadable would always override the setting for
+      CacheDirectoryGroupReadable would override the setting for
       DataDirectoryGroupReadable. Fixes bug 26913; bugfix
       on 0.3.3.1-alpha.
 
@@ -73,7 +73,7 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
       bug 27893; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (networking):
-    - In retry_listeners_ports() make sure that we're removing a member
+    - In retry_listeners_ports(), make sure that we're removing a member
       of old_conns smartlist at most once. Fixes bug 27808; bugfix
       on 0.3.5.1-alpha.
     - Refrain from attempting socket rebinding when old and new
@@ -81,17 +81,17 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
       bugfix on 0.3.5.1-alpha.
 
   o Minor bugfixes (onion service v3):
-    - Client side would dump a stack trace if tor doesn't have the
-      descriptor for the intro point it is trying to connect to. Fixes
-      bug 27774; bugfix on 0.3.2.1-alpha.
-    - Don't warn so loudly when tor is unable to decode a descriptor.
+    - Stop dumping a stack trace when trying to connect to an intro
+      point without having a descriptor for it. Fixes bug 27774; bugfix
+      on 0.3.2.1-alpha.
+    - Don't warn so loudly when Tor is unable to decode a descriptor.
       This can now happen as a normal use case if a client gets a
       descriptor with client authorization but the client is not
       authorized. Fixes bug 27550; bugfix on 0.3.5.1-alpha.
-    - When selecting a v3 rendezvous point, not only look at the
-      protover but also if the curve25519 onion key is present. That way
-      we avoid picking a node that supports the v3 rendezvous but for
-      which we don't have the descriptor yet for the key. Fixes bug
+    - When selecting a v3 rendezvous point, don't only look at the
+      protover, but also check whether the curve25519 onion key is
+      present. This way we avoid picking a relay that supports the v3
+      rendezvous but for which we don't have the descriptor. Fixes bug
       27797; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (protover):
@@ -104,8 +104,8 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
       creating the introduction point and testing it. This helps make
       test work on very slow system like ARM or Travis. Fixes bug 27810;
       bugfix on 0.3.2.1-alpha.
-    - In test_rebind.py check if Python version is in supported ranges.
-      Fixes bug 27675; bugfix on 0.3.5.1-alpha.
+    - In test_rebind.py, check if the Python version is in supported
+      ranges. Fixes bug 27675; bugfix on 0.3.5.1-alpha.
 
   o Code simplification and refactoring:
     - Divide more large Tor source files -- especially ones that span
@@ -123,10 +123,10 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
       help with future modularization. Closes ticket 27864.
 
   o Documentation:
-    - In tor-resolve(1) manpage, fix the reference to socks-
+    - In the tor-resolve(1) manpage, fix the reference to socks-
       extensions.txt by adding web URL. Resolves ticket 27853.
-    - Mention that we require Python to be 2.7 or newer for integration
-      tests that we ship with Tor. Resolves ticket 27677.
+    - Mention that we require Python to be 2.7 or newer for some
+      integration tests that we ship with Tor. Resolves ticket 27677.
 
 
 Changes in version 0.3.5.2-alpha - 2018-09-21
