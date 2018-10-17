@@ -3,12 +3,12 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
   versions. It's still an alpha, but we hope it's getting closer and
   closer to stability.
 
-  o Major bugfixes (relay):
-    - When our write bandwidth limit is exhausted, stop writing on the
-      connection. Previously, we had a typo in the code that would make us
-      stop reading instead, leading to relay connections being stuck
-      indefinitely and consuming kernel RAM. Fixes bug 28089; bugfix on
-      0.3.4.1-alpha.
+  o Major features (onion services):
+    - Version 3 onion services can now use the per-service
+      HiddenServiceExportCircuitID option to differentiate client
+      circuits. It communicates with the service by using the HAProxy
+      protocol to assign virtual IP addresses to inbound client
+      circuits. Closes ticket 4700. Patch by Mahrud Sayrafi.
 
   o Major bugfixes (compilation):
     - Fix compilation on ARM (and other less-used CPUs) when compiling
@@ -25,6 +25,13 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
       when a client port was set (Socks, Trans, NATD, DNS or HTTPTunnel
       port). Fixes bug 27849; bugfix on 0.3.4.1-alpha.
 
+  o Major bugfixes (relay):
+    - When our write bandwidth limit is exhausted, stop writing on the
+      connection. Previously, we had a typo in the code that would make
+      us stop reading instead, leading to relay connections being stuck
+      indefinitely and consuming kernel RAM. Fixes bug 28089; bugfix
+      on 0.3.4.1-alpha.
+
   o Minor features (continuous integration):
     - Use the Travis Homebrew addon to install packages on macOS during
       Travis CI. The package list is the same, but the Homebrew addon
@@ -36,13 +43,6 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
   o Minor features (geoip):
     - Update geoip and geoip6 to the October 9 2018 Maxmind GeoLite2
       Country database. Closes ticket 27991.
-
-  o Major features (onion services):
-    - Version 3 onion services can now use the per-service
-      HiddenServiceExportCircuitID option to differentiate client
-      circuits. It communicates with the service by using the HAProxy
-      protocol to assign virtual IP addresses to inbound client
-      circuits. Closes ticket 4700. Patch by Mahrud Sayrafi.
 
   o Minor bugfixes (code safety):
     - Rewrite our assertion macros so that they no longer suppress the
@@ -92,14 +92,14 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
       point without having a descriptor for it. Fixes bug 27774; bugfix
       on 0.3.2.1-alpha.
     - Don't warn so loudly when Tor is unable to decode an onion
-      descriptor. This can now happen as a normal use case if a client gets a
-      descriptor with client authorization but the client is not
+      descriptor. This can now happen as a normal use case if a client
+      gets a descriptor with client authorization but the client is not
       authorized. Fixes bug 27550; bugfix on 0.3.5.1-alpha.
     - When selecting a v3 rendezvous point, don't only look at the
       protover, but also check whether the curve25519 onion key is
       present. This way we avoid picking a relay that supports the v3
-      rendezvous but for which we don't have the microdescriptor. Fixes bug
-      27797; bugfix on 0.3.2.1-alpha.
+      rendezvous but for which we don't have the microdescriptor. Fixes
+      bug 27797; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (protover):
     - Reject protocol names containing bytes other than alphanumeric
@@ -107,10 +107,10 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
       on 0.2.9.4-alpha.
 
   o Minor bugfixes (testing):
-    - Make the hs_service tests use the same time source when
-      creating the introduction point and when testing it. Now tests work
-      better on very slow systems like ARM or Travis. Fixes bug 27810;
-      bugfix on 0.3.2.1-alpha.
+    - Make the hs_service tests use the same time source when creating
+      the introduction point and when testing it. Now tests work better
+      on very slow systems like ARM or Travis. Fixes bug 27810; bugfix
+      on 0.3.2.1-alpha.
     - In test_rebind.py, check if the Python version is in the supported
       range. Fixes bug 27675; bugfix on 0.3.5.1-alpha.
 
@@ -130,8 +130,8 @@ Changes in version 0.3.5.3-alpha - 2018-10-17
       help with future modularization. Closes ticket 27864.
 
   o Documentation:
-    - In the tor-resolve(1) manpage, fix the reference to
-      socks-extensions.txt by adding a web URL. Resolves ticket 27853.
+    - In the tor-resolve(1) manpage, fix the reference to socks-
+      extensions.txt by adding a web URL. Resolves ticket 27853.
     - Mention that we require Python to be 2.7 or newer for some
       integration tests that we ship with Tor. Resolves ticket 27677.
 
