@@ -43,6 +43,7 @@
 #include "or.h"
 #include "address.h"
 #include "address_set.h"
+#include "backtrace.h"
 #include "bridges.h"
 #include "config.h"
 #include "control.h"
@@ -63,6 +64,7 @@
 #include "routerparse.h"
 #include "routerset.h"
 #include "torcert.h"
+#include "util_format.h"
 
 #include <string.h>
 
@@ -273,6 +275,20 @@ node_remove_from_ed25519_map(node_t *node)
   return rv;
 }
 
+/** Helper function to log details of duplicated ed2559_ids */
+static void
+node_log_dup_ed_id(const node_t *old, const node_t *node, const char *ed_id)
+{
+  char *s;
+  char *olddesc = tor_strdup(node_describe(old));
+
+  tor_asprintf(&s, "Reused ed25519_id %s: old %s new %s", ed_id,
+               olddesc, node_describe(node));
+  log_backtrace(LOG_NOTICE, LD_DIR, s);
+  tor_free(olddesc);
+  tor_free(s);
+}
+
 /** If <b>node</b> has an ed25519 id, and it is not already in the ed25519 id
  * map, set its ed25519_id field, and add it to the ed25519 map.
  */
@@ -294,11 +310,24 @@ node_add_to_ed25519_map(node_t *node)
   node_t *old;
   memcpy(&node->ed25519_id, key, sizeof(node->ed25519_id));
   old = HT_FIND(nodelist_ed_map, &the_nodelist->nodes_by_ed_id, node);
-  if (BUG(old)) {
-    /* XXXX order matters here, and this may mean that authorities aren't
-     * pinning. */
-    if (old != node)
+  if (old) {
+    char ed_id[BASE32_BUFSIZE(sizeof(key->pubkey))];
+
+    base32_encode(ed_id, sizeof(ed_id), (const char *)key->pubkey,
+                  sizeof(key->pubkey));
+    if (BUG(old == node)) {
+      /* Actual bug: all callers of this function call
+       * node_remove_from_ed25519_map first. */
+      log_err(LD_BUG,
+              "Unexpectedly found deleted node with ed25519_id %s", ed_id);
+    } else {
+      /* Distinct nodes sharing a ed25519 id, possibly due to relay
+       * misconfiguration.  The key pinning might not catch this,
+       * possibly due to downloading a missing descriptor during
+       * consensus voting. */
+      node_log_dup_ed_id(old, node, ed_id);
       memset(&node->ed25519_id, 0, sizeof(node->ed25519_id));
+    }
     return 0;
   }
 
