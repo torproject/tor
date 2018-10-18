@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden service v3, client authorization):
+    - Fix an assert() when adding a client authorization for the first time
+      and then sending a HUP signal to the service. Before that, tor would
+      stop abruptly. Fixes bug 27995; bugfix on 0.3.5.1-alpha.

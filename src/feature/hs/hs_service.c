@@ -1924,12 +1924,10 @@ build_service_desc_keys(const hs_service_t *service,
     goto end;
   }
 
-  /* Random a descriptor cookie to be used as a part of a key to encrypt the
-   * descriptor, if the client auth is enabled. */
-  if (service->config.is_client_auth_enabled) {
-    crypto_strongest_rand(desc->descriptor_cookie,
-                          sizeof(desc->descriptor_cookie));
-  }
+  /* Random descriptor cookie to be used as a part of a key to encrypt the
+   * descriptor, only if the client auth is enabled will it be used. */
+  crypto_strongest_rand(desc->descriptor_cookie,
+                        sizeof(desc->descriptor_cookie));
 
   /* Success. */
   ret = 0;
