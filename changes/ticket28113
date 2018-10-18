@@ -1,0 +1,3 @@
+  o Minor bugfixes (relay shutdown, systemd):
+    - Notify systemd of ShutdownWaitLength so it can be set to longer than
+      systemd's TimeoutStopSec. Fixes bug 28113; bugfix on 0.2.6.2-alpha.
