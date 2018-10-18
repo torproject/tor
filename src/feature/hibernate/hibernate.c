@@ -856,6 +856,10 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
                "connections, and will shut down in %d seconds. Interrupt "
                "again to exit now.", options->ShutdownWaitLength);
     shutdown_time = time(NULL) + options->ShutdownWaitLength;
+#ifdef HAVE_SYSTEMD
+    sd_notifyf(0, "EXTEND_TIMEOUT_USEC=%lu",
+            options->ShutdownWaitLength * 1000000UL + 10000000);
+#endif
   } else { /* soft limit reached */
     hibernate_end_time = interval_end_time;
   }
