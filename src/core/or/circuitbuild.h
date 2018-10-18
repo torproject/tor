@@ -84,7 +84,8 @@ void circuit_upgrade_circuits_from_guard_wait(void);
 STATIC circid_t get_unique_circ_id_by_chan(channel_t *chan);
 STATIC int new_route_len(uint8_t purpose, extend_info_t *exit_ei,
                          smartlist_t *nodes);
-MOCK_DECL(STATIC int, count_acceptable_nodes, (smartlist_t *nodes));
+MOCK_DECL(STATIC int, count_acceptable_nodes, (smartlist_t *nodes,
+                                               int direct));
 
 STATIC int onion_extend_cpath(origin_circuit_t *circ);
 
