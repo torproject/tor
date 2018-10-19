@@ -48,7 +48,7 @@ struct crypto_ope_t {
 /** The type to add up in order to produce our OPE ciphertexts */
 typedef uint16_t ope_val_t;
 
-#ifdef WORDS_BIG_ENDIAN
+#ifdef WORDS_BIGENDIAN
 /** Convert an OPE value to little-endian */
 static inline ope_val_t
 ope_val_to_le(ope_val_t x)
