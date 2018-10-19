@@ -208,7 +208,7 @@ script:
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$DISTCHECK" == "" && "$TEST_STEM" == "" ]]; then make check; fi
   - if [[ "$TEST_STEM" != "" ]]; then make src/app/tor test-stem; fi
-  - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
+  - if [[ "$DISTCHECK" != "" && "$TEST_STEM" == "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
 
 after_failure:
   ## configure will leave a log file with more details of config failures.
