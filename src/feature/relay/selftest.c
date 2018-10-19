@@ -207,7 +207,7 @@ router_do_reachability_checks(int test_or, int test_dir)
                                               me->cache_info.identity_digest);
       // ask via an anon circuit, connecting to our dirport.
       directory_request_set_indirection(req, DIRIND_ANON_DIRPORT);
-      directory_request_set_resource(req, "authority.z");
+      directory_request_set_resource(req, "authority");
       directory_initiate_request(req);
       directory_request_free(req);
     }

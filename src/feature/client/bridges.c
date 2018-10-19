@@ -695,7 +695,7 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
   directory_request_set_or_addr_port(req, &bridge_addrport);
   directory_request_set_directory_id_digest(req, bridge->identity);
   directory_request_set_router_purpose(req, ROUTER_PURPOSE_BRIDGE);
-  directory_request_set_resource(req, "authority.z");
+  directory_request_set_resource(req, "authority");
   if (guard_state) {
     directory_request_set_guard_state(req, guard_state);
   }
@@ -783,11 +783,10 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
         /* We have a digest and we want to ask an authority. We could
          * combine all the requests into one, but that may give more
          * hints to the bridge authority than we want to give. */
-        char resource[10 + HEX_DIGEST_LEN];
+        char resource[7 + HEX_DIGEST_LEN];
         memcpy(resource, "fp/", 3);
         base16_encode(resource+3, HEX_DIGEST_LEN+1,
                       bridge->identity, DIGEST_LEN);
-        memcpy(resource+3+HEX_DIGEST_LEN, ".z", 3);
         log_info(LD_DIR, "Fetching bridge info '%s' from bridge authority.",
                  resource);
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,

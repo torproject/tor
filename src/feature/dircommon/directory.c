@@ -95,7 +95,7 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose,
 
   if (router_purpose == ROUTER_PURPOSE_BRIDGE) {
     if (dir_purpose == DIR_PURPOSE_FETCH_SERVERDESC
-        && resource && !strcmp(resource, "authority.z")) {
+        && resource && !strcmp(resource, "authority")) {
       /* We are asking a bridge for its own descriptor. That doesn't need
          anonymity. */
       return 0;

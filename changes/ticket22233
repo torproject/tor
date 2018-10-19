@@ -1,0 +1,4 @@
+  o Minor features (HTTP standards compliance):
+    - Stop sending requests for "foo.z". Currently, Tor does that and then
+      expects a transparently compressed version of "foo", not "foo.z". This
+      does not conform to the HTTP standards. Closes ticket 22233.

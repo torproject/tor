@@ -2358,7 +2358,7 @@ initiate_descriptor_downloads,(const routerstatus_t *source,
   }
 
   cp = smartlist_join_strings(tmp, sep, 0, NULL);
-  tor_asprintf(&resource, "d/%s.z", cp);
+  tor_asprintf(&resource, "d/%s", cp);
 
   SMARTLIST_FOREACH(tmp, char *, cp1, tor_free(cp1));
   smartlist_free(tmp);
@@ -2385,14 +2385,14 @@ max_dl_per_request(const or_options_t *options, int purpose)
 {
   /* Since squid does not like URLs >= 4096 bytes we limit it to 96.
    *   4096 - strlen(http://[ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:65535
-   *                 /tor/server/d/.z) == 4026
-   *   4026/41 (40 for the hash and 1 for the + that separates them) => 98
+   *                 /tor/server/d/) == 4028
+   *   4028/41 (40 for the hash and 1 for the + that separates them) = ~98
    *   So use 96 because it's a nice number.
    *
    * For microdescriptors, the calculation is
    *   4096 - strlen(http://[ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:65535
-   *                 /tor/micro/d/.z) == 4027
-   *   4027/44 (43 for the hash and 1 for the - that separates them) => 91
+   *                 /tor/micro/d/) == 4029
+   *   4029/44 (43 for the hash and 1 for the - that separates them) = ~91
    *   So use 90 because it's a nice number.
    */
   int max = 96;
@@ -2688,7 +2688,7 @@ launch_dummy_descriptor_download_as_needed(time_t now,
      * I'm leaving the previous behaviour intact, because I don't like
      * the idea of some relays contacting an authority every 20 minutes. */
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
-                                 ROUTER_PURPOSE_GENERAL, "authority.z",
+                                 ROUTER_PURPOSE_GENERAL, "authority",
                                  PDS_RETRY_IF_NO_SERVERS,
                                  DL_WANT_ANY_DIRSERVER);
   }

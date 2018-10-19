@@ -1491,7 +1491,7 @@ directory_get_consensus_url(const char *resource)
     authority_id_list = smartlist_join_strings(authority_digests,
                                                "+", 0, NULL);
 
-    tor_asprintf(&url, "/tor/status-vote/current/consensus%s%s/%s.z",
+    tor_asprintf(&url, "/tor/status-vote/current/consensus%s%s/%s",
                  hyphen, flavor, authority_id_list);
 
     SMARTLIST_FOREACH(authority_digests, char *, cp, tor_free(cp));
@@ -1634,13 +1634,13 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(resource);
       tor_assert(!payload);
       httpcommand = "GET";
-      tor_asprintf(&url, "/tor/status-vote/next/%s.z", resource);
+      tor_asprintf(&url, "/tor/status-vote/next/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
       tor_assert(!resource);
       tor_assert(!payload);
       httpcommand = "GET";
-      url = tor_strdup("/tor/status-vote/next/consensus-signatures.z");
+      url = tor_strdup("/tor/status-vote/next/consensus-signatures");
       break;
     case DIR_PURPOSE_FETCH_SERVERDESC:
       tor_assert(resource);
@@ -2354,7 +2354,7 @@ handle_response_fetch_status_vote(dir_connection_t *conn,
   if (status_code != 200) {
     log_warn(LD_DIR,
              "Received http status code %d (%s) from server "
-             "'%s:%d' while fetching \"/tor/status-vote/next/%s.z\".",
+             "'%s:%d' while fetching \"/tor/status-vote/next/%s\".",
              status_code, escaped(reason), conn->base_.address,
              conn->base_.port, conn->requested_resource);
     return -1;
@@ -2389,7 +2389,7 @@ handle_response_fetch_detached_signatures(dir_connection_t *conn,
   if (status_code != 200) {
     log_warn(LD_DIR,
         "Received http status code %d (%s) from server '%s:%d' while fetching "
-        "\"/tor/status-vote/next/consensus-signatures.z\".",
+        "\"/tor/status-vote/next/consensus-signatures\".",
         status_code, escaped(reason), conn->base_.address,
         conn->base_.port);
     return -1;

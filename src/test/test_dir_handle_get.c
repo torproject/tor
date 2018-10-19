@@ -167,7 +167,6 @@ test_dir_handle_get_v1_command(void *data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/html\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 20\r\n"));
 
   tt_int_op(body_used, OP_EQ, strlen(body));
@@ -229,7 +228,6 @@ test_dir_handle_get_robots_txt(void *data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 28\r\n"));
 
   tt_int_op(body_used, OP_EQ, strlen(body));
@@ -424,7 +422,6 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_success(void *data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Pragma: no-cache\r\n"));
   tor_snprintf(buff, sizeof(buff), "Content-Length: %ld\r\n", (long) body_len);
   tt_assert(strstr(header, buff));
@@ -544,7 +541,6 @@ test_dir_handle_get_micro_d(void *data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
 
   tt_int_op(body_used, OP_EQ, strlen(body));
   tt_str_op(body, OP_EQ, microdesc);
@@ -678,7 +674,6 @@ test_dir_handle_get_networkstatus_bridges(void *data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 0\r\n"));
 
   done:
@@ -797,7 +792,6 @@ test_dir_handle_get_server_descriptors_all(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
 
   //TODO: Is this a BUG?
   //This is what should be expected: tt_int_op(body_used, OP_EQ, strlen(body));
@@ -903,7 +897,6 @@ test_dir_handle_get_server_descriptors_authority(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
 
   tt_int_op(body_used, OP_EQ, strlen(body));
 
@@ -975,7 +968,6 @@ test_dir_handle_get_server_descriptors_fp(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
 
   tt_int_op(body_used, OP_EQ, strlen(body));
 
@@ -1037,7 +1029,6 @@ test_dir_handle_get_server_descriptors_d(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
 
   //TODO: Is this a BUG?
   //This is what should be expected:
@@ -1216,7 +1207,6 @@ test_dir_handle_get_server_keys_all(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 1883\r\n"));
 
   tt_str_op(TEST_CERTIFICATE, OP_EQ, body);
@@ -1293,7 +1283,6 @@ test_dir_handle_get_server_keys_authority(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 1883\r\n"));
 
   tt_str_op(TEST_CERTIFICATE, OP_EQ, body);
@@ -1376,7 +1365,6 @@ test_dir_handle_get_server_keys_fp(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 1883\r\n"));
 
   tt_str_op(TEST_CERTIFICATE, OP_EQ, body);
@@ -1449,7 +1437,6 @@ test_dir_handle_get_server_keys_sk(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 1883\r\n"));
 
   tt_str_op(TEST_CERTIFICATE, OP_EQ, body);
@@ -1535,7 +1522,6 @@ test_dir_handle_get_server_keys_fpsk(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 1883\r\n"));
 
   tt_str_op(TEST_CERTIFICATE, OP_EQ, body);
@@ -1863,7 +1849,6 @@ test_dir_handle_get_status_vote_current_consensus_ns(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Pragma: no-cache\r\n"));
 
   compress_method_t compression = detect_compression_method(comp_body,
@@ -2082,7 +2067,6 @@ test_dir_handle_get_status_vote_d(void* data)
   tt_assert(header);
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 4135\r\n"));
 
   tt_str_op(VOTE_BODY_V3, OP_EQ, body);
@@ -2095,7 +2079,6 @@ test_dir_handle_get_status_vote_d(void* data)
   tt_assert(header);
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 4135\r\n"));
 
   tt_str_op(VOTE_BODY_V3, OP_EQ, body);
@@ -2241,7 +2224,6 @@ test_dir_handle_get_status_vote_next_consensus(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 17\r\n"));
 
   tt_str_op("pending consensus", OP_EQ, body);
@@ -2339,7 +2321,6 @@ test_dir_handle_get_status_vote_next_consensus_signatures(void* data)
 
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 21\r\n"));
 
   tt_str_op("pending detached sigs", OP_EQ, body);
@@ -2435,7 +2416,6 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   tt_assert(header);
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 4135\r\n"));
 
   tt_str_op(VOTE_BODY_V3, OP_EQ, body);
@@ -2517,7 +2497,6 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   tt_assert(header);
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 4135\r\n"));
 
   tt_str_op(VOTE_BODY_V3, OP_EQ, body);

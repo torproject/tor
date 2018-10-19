@@ -4171,7 +4171,7 @@ test_dir_purpose_needs_anonymity_returns_false_for_own_bridge_desc(void *arg)
   (void)arg;
   tt_int_op(0, OP_EQ, purpose_needs_anonymity(DIR_PURPOSE_FETCH_SERVERDESC,
                                            ROUTER_PURPOSE_BRIDGE,
-                                           "authority.z"));
+                                           "authority"));
  done: ;
 }
 
