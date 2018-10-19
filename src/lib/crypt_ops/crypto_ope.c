@@ -49,16 +49,16 @@ struct crypto_ope_t {
 typedef uint16_t ope_val_t;
 
 #ifdef WORDS_BIGENDIAN
-/** Convert an OPE value to little-endian */
+/** Convert an OPE value from little-endian. */
 static inline ope_val_t
-ope_val_to_le(ope_val_t x)
+ope_val_from_le(ope_val_t x)
 {
   return
     ((x) >> 8) |
     (((x)&0xff) << 8);
 }
 #else
-#define ope_val_to_le(x) (x)
+#define ope_val_from_le(x) (x)
 #endif
 
 /**
@@ -104,7 +104,7 @@ sum_values_from_cipher(crypto_cipher_t *c, size_t n)
     crypto_cipher_crypt_inplace(c, (char*)buf, BUFSZ*sizeof(ope_val_t));
 
     for (i = 0; i < BUFSZ; ++i) {
-      total += ope_val_to_le(buf[i]);
+      total += ope_val_from_le(buf[i]);
       total += 1;
     }
     n -= BUFSZ;
@@ -113,7 +113,7 @@ sum_values_from_cipher(crypto_cipher_t *c, size_t n)
   memset(buf, 0, n*sizeof(ope_val_t));
   crypto_cipher_crypt_inplace(c, (char*)buf, n*sizeof(ope_val_t));
   for (i = 0; i < n; ++i) {
-    total += ope_val_to_le(buf[i]);
+    total += ope_val_from_le(buf[i]);
     total += 1;
   }
 
