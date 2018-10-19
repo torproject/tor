@@ -33,6 +33,7 @@
 #include "core/or/relay.h"
 #include "core/or/scheduler.h"
 #include "core/or/status.h"
+#include "core/or/versions.h"
 #include "feature/api/tor_api.h"
 #include "feature/api/tor_api_internal.h"
 #include "feature/client/addressmap.h"
@@ -791,6 +792,7 @@ tor_free_all(int postfork)
   dos_free_all();
   circuitmux_ewma_free_all();
   accounting_free_all();
+  protover_summary_cache_free_all();
 
   if (!postfork) {
     config_free_all();
