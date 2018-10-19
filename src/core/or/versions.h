@@ -41,4 +41,6 @@ void summarize_protover_flags(protover_summary_flags_t *out,
                               const char *protocols,
                               const char *version);
 
+void protover_summary_cache_free_all(void);
+
 #endif /* !defined(TOR_VERSIONS_H) */
