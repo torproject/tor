@@ -198,7 +198,7 @@ install:
   - if [[ "$RUST_OPTIONS" != "" ]]; then rustup --version; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then rustc --version; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then cargo --version; fi
-  - if [[ "$TEST_STEM" != "" ]]; then pushd stem; python -c "from stem import stem; print(stem.__version__);"; popd; fi
+  - if [[ "$TEST_STEM" != "" ]]; then pushd stem; python -c "from stem import stem; print(stem.__version__);"; git log -1; popd; fi
 
 script:
   - ./autogen.sh
