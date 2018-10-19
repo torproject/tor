@@ -857,8 +857,16 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
                "again to exit now.", options->ShutdownWaitLength);
     shutdown_time = time(NULL) + options->ShutdownWaitLength;
 #ifdef HAVE_SYSTEMD
-    sd_notifyf(0, "EXTEND_TIMEOUT_USEC=%lu",
-            options->ShutdownWaitLength * 1000000UL + 10000000);
+    /* tell systemd that we may need more than the default 90 seconds to shut
+     * down so they don't kill us. add some extra time to actually finish
+     * shutting down, otherwise systemd will kill us immediately after the
+     * EXTEND_TIMEOUT_USEC expires.
+     *
+     * 2^31 usec = ~2147 sec = ~35 min. probably nobody will actually set
+     * ShutdownWaitLength to more than that, but use a longer type just in case
+     */
+    sd_notifyf(0, "EXTEND_TIMEOUT_USEC=%" PRIu64,
+            (uint64_t)(options->ShutdownWaitLength + 30) * TOR_USEC_PER_SEC);
 #endif
   } else { /* soft limit reached */
     hibernate_end_time = interval_end_time;
