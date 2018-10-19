@@ -195,7 +195,7 @@ install:
   - if [[ "$RUST_OPTIONS" != "" ]]; then rustup --version; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then rustc --version; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then cargo --version; fi
-  - if [[ "$TEST_STEM" != "" ]]; then echo "stem.__version__" | ./stem/tor-prompt
+  - if [[ "$TEST_STEM" != "" ]]; then echo "stem.__version__" | ./stem/tor-prompt; fi
 
 script:
   - ./autogen.sh
