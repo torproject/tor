@@ -1399,7 +1399,7 @@ configure_nameservers(int force)
       return 0;
     }
 
-    if (st.st_size == 0)
+    if (stat_res == 0 && st.st_size == 0)
       missing_resolv_conf = 1;
 
     if (nameservers_configured) {
