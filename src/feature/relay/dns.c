@@ -1433,10 +1433,10 @@ configure_nameservers(int force)
       resolv_conf_fname = tor_strdup(conf_fname);
       resolv_conf_mtime = st.st_mtime;
     } else {
-      log_warn(LD_EXIT, "Could not read your resolv.conf - "
+      log_warn(LD_EXIT, "Could not read your DNS config from '%s' - "
                         "please investigate your DNS configuration. "
                         "This is possibly a problem. Meanwhile, falling"
-                        " back to local DNS at 127.0.0.1.");
+                        " back to local DNS at 127.0.0.1.", conf_fname);
       evdns_base_nameserver_ip_add(the_evdns_base, "127.0.0.1");
     }
 
