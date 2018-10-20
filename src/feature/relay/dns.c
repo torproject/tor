@@ -1357,6 +1357,36 @@ evdns_err_is_transient(int err)
   }
 }
 
+/**
+ * Return number of configured nameservers in <b>the_evdns_base</b>.
+ */
+size_t
+number_of_configured_nameservers(void)
+{
+  return evdns_base_count_nameservers(the_evdns_base);
+}
+
+/**
+ * Return address of configured nameserver in <b>the_evdns_base</b>
+ * at index <b>idx</b>.
+ */
+tor_addr_t *
+configured_nameserver_address(const size_t idx)
+{
+ struct sockaddr_storage sa;
+ ev_socklen_t sa_len = sizeof(sa);
+
+ if (evdns_base_get_nameserver_addr(the_evdns_base, (int)idx,
+                                    (struct sockaddr *)&sa,
+                                    sa_len) > 0) {
+   tor_addr_t *tor_addr = tor_malloc(sizeof(tor_addr_t));
+   tor_addr_from_sockaddr(tor_addr, (const struct sockaddr *)&sa, NULL);
+   return tor_addr;
+ }
+
+ return NULL;
+}
+
 /** Configure eventdns nameservers if force is true, or if the configuration
  * has changed since the last time we called this function, or if we failed on
  * our last attempt.  On Unix, this reads from /etc/resolv.conf or
