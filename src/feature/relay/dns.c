@@ -1416,10 +1416,10 @@ configure_nameservers(int force)
 #endif /* defined(DNS_OPTION_HOSTSFILE) && defined(USE_LIBSECCOMP) */
 
     if (!missing_resolv_conf) {
-      log_info(LD_EXIT, "parsing resolver configuration in '%s'", conf_fname);
+      log_info(LD_EXIT, "Parsing resolver configuration in '%s'", conf_fname);
       if ((r = evdns_base_resolv_conf_parse(the_evdns_base, flags,
           sandbox_intern_string(conf_fname)))) {
-        log_warn(LD_EXIT, "unable to parse '%s', or no nameservers "
+        log_warn(LD_EXIT, "Unable to parse '%s', or no nameservers "
                           "in '%s' (%d)", conf_fname, conf_fname, r);
 
         if (r != 6) // "r = 6" means "no DNS servers were in resolv.conf" -
@@ -1427,7 +1427,7 @@ configure_nameservers(int force)
                     // fallback.
       }
       if (evdns_base_count_nameservers(the_evdns_base) == 0) {
-        log_warn(LD_EXIT, "unable to find any nameservers in '%s'.",
+        log_warn(LD_EXIT, "Unable to find any nameservers in '%s'.",
                  conf_fname);
       }
       resolv_conf_fname = tor_strdup(conf_fname);
