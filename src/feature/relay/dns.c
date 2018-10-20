@@ -1430,6 +1430,8 @@ configure_nameservers(int force)
         log_warn(LD_EXIT, "Unable to find any nameservers in '%s'.",
                  conf_fname);
       }
+
+      tor_free(resolv_conf_fname);
       resolv_conf_fname = tor_strdup(conf_fname);
       resolv_conf_mtime = st.st_mtime;
     } else {
@@ -1439,8 +1441,6 @@ configure_nameservers(int force)
                         " back to local DNS at 127.0.0.1.", conf_fname);
       evdns_base_nameserver_ip_add(the_evdns_base, "127.0.0.1");
     }
-
-    tor_free(resolv_conf_fname);
 
     if (nameservers_configured)
       evdns_base_resume(the_evdns_base);
