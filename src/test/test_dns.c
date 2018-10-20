@@ -1,6 +1,7 @@
 /* Copyright (c) 2015-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#include "orconfig.h"
 #include "core/or/or.h"
 #include "test/test.h"
 
@@ -21,6 +22,7 @@
 
 #define NS_MODULE dns
 
+#ifdef HAVE_EVDNS_BASE_GET_NAMESERVER_ADDR
 #define NS_SUBMODULE configure_nameservers_fallback
 
 static or_options_t options = {
@@ -75,6 +77,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
+#endif
 
 #define NS_SUBMODULE clip_ttl
 
@@ -796,7 +799,9 @@ NS(test_main)(void *arg)
 #undef NS_SUBMODULE
 
 struct testcase_t dns_tests[] = {
+#ifdef HAVE_EVDNS_BASE_GET_NAMESERVER_ADDR
    TEST_CASE(configure_nameservers_fallback),
+#endif
    TEST_CASE(clip_ttl),
    TEST_CASE(resolve),
    TEST_CASE_ASPECT(resolve_impl, addr_is_ip_no_need_to_resolve),
