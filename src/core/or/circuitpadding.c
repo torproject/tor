@@ -433,39 +433,72 @@ circpad_distribution_sample(circpad_distribution_t dist)
       p += dist.param1;
       return p;
     case CIRCPAD_DIST_LOGISTIC:
-      p = crypto_rand_double();
+      while ((p = crypto_rand_double()) <= 0)
+        continue;
       /* https://en.wikipedia.org/wiki/Logistic_distribution#Quantile_function
        * param1 is Mu, param2 is s. */
-      if (p <= 0.0) // Avoid log(0)
-        return 0;
       return dist.param1 + dist.param2*tor_mathlog(p/(1.0-p));
     case CIRCPAD_DIST_LOG_LOGISTIC:
       p = crypto_rand_double();
       /* https://en.wikipedia.org/wiki/Log-logistic_distribution#Quantiles
-       * param1 is Alpha, param2 is Beta */
-      return dist.param1 * pow(p/(1.0-p), 1.0/dist.param2);
+       * param1 is Alpha, param2 is 1.0/Beta */
+      return dist.param1 * pow(p/(1.0-p), dist.param2);
     case CIRCPAD_DIST_GEOMETRIC:
       p = crypto_rand_double();
       /* https://github.com/distributions-io/geometric-quantile/
        * param1 is 'p' (success probability) */
-      return ceil(tor_mathlog(1.0-p)/tor_mathlog(1.0-dist.param1));
+      return ceil(log1p(-p)/log1p(-dist.param1));
     case CIRCPAD_DIST_WEIBULL:
       p = crypto_rand_double();
       /* https://en.wikipedia.org/wiki/Weibull_distribution \
        *    #Cumulative_distribution_function
-       * param1 is k, param2 is Lambda */
-      return dist.param2*pow(-tor_mathlog(1.0-p), 1.0/dist.param1);
+       * param1 is 1.0/k, param2 is Lambda */
+      // XXX: It is still not clear to me that this log1p(-p) is OK
+      // for p near 1.0. However, our p is always at least 2^-32 away
+      // from 1.0..
+      return dist.param2*pow(-log1p(-p), dist.param1);
     case CIRCPAD_DIST_PARETO:
       p = 1.0-crypto_rand_double(); // Pareto quantile needs (0,1]
 
       /* https://en.wikipedia.org/wiki/Generalized_Pareto_distribution \
        *    #Generating_generalized_Pareto_random_variables
-       * param1 is Sigma, param2 is Xi
-       * Since it's piecewise, we must define it for 0 (or close to 0) */
-      if (fabs(dist.param2) <= 1e-22)
+       * param1 is sigma, param2 is xi, p is U
+       *
+       * To compute f(xi) = (U^{-xi} - 1)/xi = (e^{-xi log U} - 1)/xi
+       * for xi near zero (note f(xi) --> -log U as xi --> 0), write
+       * the absolutely convergent Taylor expansion
+       *
+       *        f(xi) = (1/xi)*(-xi log U + \sum_{n=2}^\infty (-xi log U)^n/n!
+       *              = -log U + (1/xi)*\sum_{n=2}^\infty (-xi log U)^n/n!
+       *              = -log U + \sum_{n=2}^\infty xi^{n-1} (-log U)^n/n!
+       *              = -log U - log U \sum_{n=2}^\infty (-xi log U)^{n-1}/n!
+       *              = -log U (1 + \sum_{n=2}^\infty (-xi log U)^{n-1}/n!).
+       *
+       * Let E(xi) = \sum_{n=2}^\infty (-xi log U)^{n-1}/n!.  What do
+       * we lose if we discard it and use -log U as an approximation to
+       * f(xi)?  If |xi| < eps/-4log U, then
+       *
+       *        |E(xi)| <= \sum_{n=2}^\infty |xi log U|^{n-1}/n!
+       *                <= \sum_{n=2}^\infty (eps/4)^{n-1}/n!
+       *                <= \sum_{n=1}^\infty (eps/4)^n
+       *                 = (eps/4) \sum_{n=0}^\infty (eps/4)^n
+       *                 = (eps/4)/(1 - eps/4)
+       *                 < eps/2,
+       *
+       * for any 0 < eps < 2.  Hence, as long as |xi| < eps/-2log U,
+       * f(xi) = -log U (1 + E(xi)) for |E(xi)| <= eps/2.  |E(xi)| is
+       * the relative error of f(xi) from -log U; from this bound, the
+       * relative error of -log U from f(xi) is at most (eps/2)/(1 -
+       * eps/2) = eps/2 + (eps/2)^2 + (eps/2)^3 + ... < eps for 0 < eps
+       * < 1.  Since -log U < 1000 for all U in (0, 1] in binary64
+       * floating-point, we can safely cut xi off at 1e-20 < eps/4000
+       * and attain <1ulp error.
+       */
+      if (fabs(dist.param2) <= 1e-20)
         return -dist.param1*tor_mathlog(p);
       else
-        return dist.param1*(pow(p, -dist.param2) - 1.0)/dist.param2;
+        /* U^-xi - 1 = e^{-xi log U} - 1 = expm1(-xi*log(U)) */
+        return dist.param1*expm1(-dist.param2*tor_mathlog(p))/dist.param2;
   }
   return 0;
 }
