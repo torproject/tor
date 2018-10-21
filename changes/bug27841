@@ -1,0 +1,7 @@
+  o Minor bugfixes (onion services):
+    - On an intro point, if we have sent an ACK on an introduction circuit
+      for a version 3 onion service, we should close the intro circuit as
+      clients already close it on their side. Previously, we closed the
+      circuits on on NACK, but that prevents clients from re-extending to
+      a new IP, and reqires another round trip for a DESTROY cell. Fixes
+      bug 27841; bugfix on 0.3.6.1-alpha. Patch by Neel Chaunan
