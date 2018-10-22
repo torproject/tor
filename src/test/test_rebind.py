@@ -1,12 +1,12 @@
 from __future__ import print_function
 
-import sys
-import subprocess
-import socket
-import os
-import time
-import random
 import errno
+import os
+import random
+import socket
+import subprocess
+import sys
+import time
 
 LOG_TIMEOUT = 60.0
 LOG_WAIT = 0.1
