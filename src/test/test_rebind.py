@@ -6,6 +6,7 @@ import socket
 import os
 import time
 import random
+import errno
 
 LOG_TIMEOUT = 60.0
 LOG_WAIT = 0.1
@@ -112,7 +113,7 @@ print('OK')
 try:
     tor_process.terminate()
 except OSError as e:
-    if e.errno == 3: # No such process
+    if e.errno == errno.ESRCH: # errno 3: No such process
         # assume tor has already exited due to SIGNAL HALT
         print("Tor has already exited")
     else:
