@@ -602,7 +602,9 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
        * one of them.  Don't worry about the conn protocol version:
        * append_cell_to_circuit_queue will fix it up. */
       cell.command = CELL_RELAY_EARLY;
-      --origin_circ->remaining_relay_early_cells;
+      /* If we're out of relay early cells, tell circpad */
+      if (--origin_circ->remaining_relay_early_cells == 0)
+        circpad_machine_event_circ_has_no_relay_early(origin_circ);
       log_debug(LD_OR, "Sending a RELAY_EARLY cell; %d remaining.",
                 (int)origin_circ->remaining_relay_early_cells);
       /* Memorize the command that is sent as RELAY_EARLY cell; helps debug
