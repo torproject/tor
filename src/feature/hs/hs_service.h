@@ -99,48 +99,64 @@ typedef struct hs_service_intropoints_t {
   digestmap_t *failed_id;
 } hs_service_intropoints_t;
 
-/* Representation of a service descriptor. */
+/* Representation of a service descriptor.
+ *
+ * Some elements of the descriptor are mutable whereas others are immutable:
+
+ * Immutable elements are initialized once when the descriptor is built (when
+ * service descriptors gets rotated). This means that these elements are
+ * initialized once and then they don't change for the lifetime of the
+ * descriptor. See build_service_descriptor().
+ *
+ * Mutable elements are initialized when we build the descriptor but they are
+ * also altered during the lifetime of the descriptor. They could be
+ * _refreshed_ everytime we upload the descriptor (which happens multiple times
+ * over the lifetime of the descriptor), or through periodic events. We do this
+ * for elements like the descriptor revision counter and various
+ * certificates. See refresh_service_descriptor() and
+ * update_service_descriptor_intro_points().
+ */
 typedef struct hs_service_descriptor_t {
-  /* Decoded descriptor. This object is used for encoding when the service
-   * publishes the descriptor. */
+  /* Mutable: Decoded descriptor. This object is used for encoding when the
+   * service publishes the descriptor. */
   hs_descriptor_t *desc;
 
-  /* Client authorization ephemeral keypair. */
+  /* Immutable: Client authorization ephemeral keypair. */
   curve25519_keypair_t auth_ephemeral_kp;
 
-  /* Descriptor cookie used to encrypt the descriptor, when the client
-   * authorization is enabled */
+  /* Immutable: Descriptor cookie used to encrypt the descriptor, when the
+   * client authorization is enabled */
   uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
 
-  /* Descriptor signing keypair. */
+  /* Immutable: Descriptor signing keypair. */
   ed25519_keypair_t signing_kp;
 
-  /* Blinded keypair derived from the master identity public key. */
+  /* Immutable: Blinded keypair derived from the master identity public key. */
   ed25519_keypair_t blinded_kp;
 
-  /* When is the next time when we should upload the descriptor. */
+  /* Mutable: When is the next time when we should upload the descriptor. */
   time_t next_upload_time;
 
-  /* Introduction points assign to this descriptor which contains
-   * hs_service_intropoints_t object indexed by authentication key (the RSA
-   * key if the node is legacy). */
+  /* Mutable: Introduction points assign to this descriptor which contains
+   * hs_service_intropoints_t object indexed by authentication key (the RSA key
+   * if the node is legacy). */
   hs_service_intropoints_t intro_points;
 
-  /* The time period number this descriptor has been created for. */
+  /* Immutable: The time period number this descriptor has been created for. */
   uint64_t time_period_num;
 
-  /* True iff we have missing intro points for this descriptor because we
-   * couldn't pick any nodes. */
+  /* Mutable: True iff we have missing intro points for this descriptor because
+   * we couldn't pick any nodes. */
   unsigned int missing_intro_points : 1;
 
-  /** List of the responsible HSDirs (their b64ed identity digest) last time we
-   *  uploaded this descriptor. If the set of responsible HSDirs is different
-   *  from this list, this means we received new dirinfo and we need to
-   *  reupload our descriptor. */
+  /** Mutable: List of the responsible HSDirs (their b64ed identity digest)
+   *  last time we uploaded this descriptor. If the set of responsible HSDirs
+   *  is different from this list, this means we received new dirinfo and we
+   *  need to reupload our descriptor. */
   smartlist_t *previous_hsdirs;
 
-  /** The OPE cipher for encrypting revision counters for this descriptor.
-   *  Tied to the descriptor blinded key. */
+  /** Immutable: The OPE cipher for encrypting revision counters for this
+   *  descriptor.  Tied to the descriptor blinded key. */
   struct crypto_ope_t *ope_cipher;
 } hs_service_descriptor_t;
 
