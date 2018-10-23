@@ -68,7 +68,6 @@ const char *node_get_platform(const node_t *node);
 uint32_t node_get_prim_addr_ipv4h(const node_t *node);
 void node_get_address_string(const node_t *node, char *cp, size_t len);
 long node_get_declared_uptime(const node_t *node);
-const smartlist_t *node_get_declared_family(const node_t *node);
 const struct ed25519_public_key_t *node_get_ed25519_id(const node_t *node);
 int node_ed25519_id_matches(const node_t *node,
                             const struct ed25519_public_key_t *id);
