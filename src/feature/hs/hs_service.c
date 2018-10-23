@@ -2293,12 +2293,9 @@ service_desc_schedule_upload(hs_service_descriptor_t *desc,
   }
 }
 
-/* Update the given descriptor from the given service. The possible update
- * actions includes:
- *    - Picking missing intro points if needed.
- */
+/* Pick missing intro points for this descriptor if needed. */
 static void
-update_service_descriptor(hs_service_t *service,
+update_service_descriptor_intro_points(hs_service_t *service,
                           hs_service_descriptor_t *desc, time_t now)
 {
   unsigned int num_intro_points;
@@ -2337,15 +2334,17 @@ update_service_descriptor(hs_service_t *service,
   }
 }
 
-/* Update descriptors for each service if needed. */
+/* Update descriptor intro points for each service if needed. We do this as
+ * part of the periodic event because we need to establish intro point circuits
+ * before we publish descriptors. */
 STATIC void
-update_all_descriptors(time_t now)
+update_all_descriptors_intro_points(time_t now)
 {
   FOR_EACH_SERVICE_BEGIN(service) {
     /* We'll try to update each descriptor that is if certain conditions apply
      * in order for the descriptor to be updated. */
     FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
-      update_service_descriptor(service, desc, now);
+      update_service_descriptor_intro_points(service, desc, now);
     } FOR_EACH_DESCRIPTOR_END;
   } FOR_EACH_SERVICE_END;
 }
@@ -2630,10 +2629,10 @@ run_build_descriptor_event(time_t now)
    * been rotated or we just started up. */
   build_all_descriptors(now);
 
-  /* Finally, we'll check if we should update the descriptors. Missing
-   * introduction points will be picked in this function which is useful for
-   * newly built descriptors. */
-  update_all_descriptors(now);
+  /* Finally, we'll check if we should update the descriptors' intro
+   * points. Missing introduction points will be picked in this function which
+   * is useful for newly built descriptors. */
+  update_all_descriptors_intro_points(now);
 }
 
 /* For the given service, launch any intro point circuits that could be

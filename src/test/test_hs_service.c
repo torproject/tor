@@ -1457,7 +1457,7 @@ test_build_update_descriptors(void *arg)
   /* Time to test the update of those descriptors. At first, we have no node
    * in the routerlist so this will find NO suitable node for the IPs. */
   setup_full_capture_of_logs(LOG_INFO);
-  update_all_descriptors(now);
+  update_all_descriptors_intro_points(now);
   expect_log_msg_containing("Unable to find a suitable node to be an "
                             "introduction point for service");
   teardown_capture_of_logs();
@@ -1508,7 +1508,7 @@ test_build_update_descriptors(void *arg)
 
   /* We expect to pick only one intro point from the node above. */
   setup_full_capture_of_logs(LOG_INFO);
-  update_all_descriptors(now);
+  update_all_descriptors_intro_points(now);
   tor_free(node->ri->onion_curve25519_pkey); /* Avoid memleak. */
   tor_free(node->ri->cache_info.signing_key_cert);
   tor_free(node->ri->onion_pkey);

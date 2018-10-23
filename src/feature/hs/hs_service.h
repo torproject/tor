@@ -387,7 +387,7 @@ STATIC int intro_point_should_expire(const hs_service_intro_point_t *ip,
 STATIC void run_housekeeping_event(time_t now);
 STATIC void rotate_all_descriptors(time_t now);
 STATIC void build_all_descriptors(time_t now);
-STATIC void update_all_descriptors(time_t now);
+STATIC void update_all_descriptors_intro_points(time_t now);
 STATIC void run_upload_descriptor_event(time_t now);
 
 STATIC void service_descriptor_free_(hs_service_descriptor_t *desc);
