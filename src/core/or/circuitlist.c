@@ -62,6 +62,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/circuitstats.h"
+#include "core/or/circuitpadding.h"
 #include "core/mainloop/connection.h"
 #include "app/config/config.h"
 #include "core/or/connection_edge.h"
@@ -1230,6 +1231,9 @@ circuit_free_(circuit_t *circ)
            n_circ_id,
            CIRCUIT_IS_ORIGIN(circ) ?
               TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
+
+  /* Free any circuit padding structures */
+  circpad_circuit_free_all_machineinfos(circ);
 
   if (should_free) {
     memwipe(mem, 0xAA, memlen); /* poison memory */
