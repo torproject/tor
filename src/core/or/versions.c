@@ -403,6 +403,8 @@ summarize_protover_flags(protover_summary_flags_t *out,
     out->supports_v3_rendezvous_point =
       protocol_list_supports_protocol(protocols, PRT_HSREND,
                                       PROTOVER_HS_RENDEZVOUS_POINT_V3);
+    out->supports_padding =
+      protocol_list_supports_protocol(protocols, PRT_PADDING, 1);
   }
   if (version && !strcmpstart(version, "Tor ")) {
     if (!out->protocols_known) {
