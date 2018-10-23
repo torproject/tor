@@ -836,6 +836,10 @@ typedef struct protover_summary_flags_t {
    * service rendezvous point supporting version 3 as seen in proposal 224.
    * This requires HSRend=2. */
   unsigned int supports_v3_rendezvous_point: 1;
+
+  /** True iff this router has a protocol list that allows clients to
+   * negotiate link-level padding. Requires Padding>=1. */
+  unsigned int supports_padding : 1;
 } protover_summary_flags_t;
 
 typedef struct routerinfo_t routerinfo_t;
