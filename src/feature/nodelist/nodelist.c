@@ -2393,6 +2393,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   smartlist_free(mid);
   smartlist_free(exits);
 
+  // XXX-MP-AP: Do the same for options->MiddleNodes?
   if (options->ExitNodes) {
     double f_myexit, f_myexit_unflagged;
     smartlist_t *myexits= smartlist_new();
