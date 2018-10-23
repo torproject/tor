@@ -117,10 +117,6 @@ typedef struct hs_service_intropoints_t {
  * update_service_descriptor_intro_points().
  */
 typedef struct hs_service_descriptor_t {
-  /* Mutable: Decoded descriptor. This object is used for encoding when the
-   * service publishes the descriptor. */
-  hs_descriptor_t *desc;
-
   /* Immutable: Client authorization ephemeral keypair. */
   curve25519_keypair_t auth_ephemeral_kp;
 
@@ -134,6 +130,17 @@ typedef struct hs_service_descriptor_t {
   /* Immutable: Blinded keypair derived from the master identity public key. */
   ed25519_keypair_t blinded_kp;
 
+  /* Immutable: The time period number this descriptor has been created for. */
+  uint64_t time_period_num;
+
+  /** Immutable: The OPE cipher for encrypting revision counters for this
+   *  descriptor.  Tied to the descriptor blinded key. */
+  struct crypto_ope_t *ope_cipher;
+
+  /* Mutable: Decoded descriptor. This object is used for encoding when the
+   * service publishes the descriptor. */
+  hs_descriptor_t *desc;
+
   /* Mutable: When is the next time when we should upload the descriptor. */
   time_t next_upload_time;
 
@@ -141,9 +148,6 @@ typedef struct hs_service_descriptor_t {
    * hs_service_intropoints_t object indexed by authentication key (the RSA key
    * if the node is legacy). */
   hs_service_intropoints_t intro_points;
-
-  /* Immutable: The time period number this descriptor has been created for. */
-  uint64_t time_period_num;
 
   /* Mutable: True iff we have missing intro points for this descriptor because
    * we couldn't pick any nodes. */
@@ -154,10 +158,6 @@ typedef struct hs_service_descriptor_t {
    *  is different from this list, this means we received new dirinfo and we
    *  need to reupload our descriptor. */
   smartlist_t *previous_hsdirs;
-
-  /** Immutable: The OPE cipher for encrypting revision counters for this
-   *  descriptor.  Tied to the descriptor blinded key. */
-  struct crypto_ope_t *ope_cipher;
 } hs_service_descriptor_t;
 
 /* Service key material. */
