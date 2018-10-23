@@ -2350,7 +2350,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   const int authdir = authdir_mode_v3(options);
 
   count_usable_descriptors(num_present_out, num_usable_out,
-                           mid, consensus, now, NULL,
+                           mid, consensus, now, options->MiddleNodes,
                            USABLE_DESCRIPTOR_ALL);
   log_debug(LD_NET,
             "%s: %d present, %d usable",

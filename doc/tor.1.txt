@@ -1011,6 +1011,21 @@ The following options are useful only for clients (that is, if
     The .exit address notation, if enabled via MapAddress, overrides
     this option.
 
+[[MiddleNodes]] **MiddleNodes** __node__,__node__,__...__::
+    A list of identity fingerprints and country codes of nodes
+    to use for "middle" hops in your normal circuits.
+    Normal circuits include all circuits except for direct connections
+    to directory servers. Middle hops are all hops other than exit and entry. +
++
+    The HSLayer2Node and HSLayer3Node options override this option for onion
+    service circuits, if they are set. The vanguards addon will read this
+    option, and if set, it will set HSLayer2Nodes and HSLayer3Nodes to nodes
+    from this set.
++
+    The ExcludeNodes option overrides this option: any node listed in both
+    MiddleNodes and ExcludeNodes is treated as excluded. See
+    the **ExcludeNodes** option for more information on how to specify nodes.
+
 [[EntryNodes]] **EntryNodes** __node__,__node__,__...__::
     A list of identity fingerprints and country codes of nodes
     to use for the first hop in your normal circuits.
@@ -1027,13 +1042,14 @@ The following options are useful only for clients (that is, if
     If StrictNodes is set to 1, Tor will treat solely the ExcludeNodes option
     as a requirement to follow for all the circuits you generate, even if
     doing so will break functionality for you (StrictNodes applies to neither
-    ExcludeExitNodes nor to ExitNodes).  If StrictNodes is set to 0, Tor will
-    still try to avoid nodes in the ExcludeNodes list, but it will err on the
-    side of avoiding unexpected errors.  Specifically, StrictNodes 0 tells Tor
-    that it is okay to use an excluded node when it is *necessary* to perform
-    relay reachability self-tests, connect to a hidden service, provide a
-    hidden service to a client, fulfill a .exit request, upload directory
-    information, or download directory information.  (Default: 0)
+    ExcludeExitNodes nor to ExitNodes, nor to MiddleNodes).  If StrictNodes
+    is set to 0, Tor will still try to avoid nodes in the ExcludeNodes list,
+    but it will err on the side of avoiding unexpected errors.
+    Specifically, StrictNodes 0 tells Tor that it is okay to use an excluded
+    node when it is *necessary* to perform relay reachability self-tests,
+    connect to a hidden service, provide a hidden service to a client,
+    fulfill a .exit request, upload directory information, or download
+    directory information.  (Default: 0)
 
 [[FascistFirewall]] **FascistFirewall** **0**|**1**::
     If 1, Tor will only create outgoing connections to ORs running on ports
