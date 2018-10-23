@@ -35,6 +35,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuitstats.h"
 #include "core/or/circuituse.h"
+#include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
 #include "core/or/policies.h"
 #include "feature/client/addressmap.h"
@@ -1419,6 +1420,11 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
       if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
         hs_dec_rdv_stream_counter(origin_circ);
       }
+
+      /* If there are no more streams on this circ, tell circpad */
+      if (!origin_circ->p_streams)
+        circpad_machine_event_circ_has_no_streams(origin_circ);
+
       return;
     }
   } else {
@@ -2587,6 +2593,12 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
   /* add it into the linked list of streams on this circuit */
   log_debug(LD_APP|LD_CIRC, "attaching new conn to circ. n_circ_id %u.",
             (unsigned)circ->base_.n_circ_id);
+
+  /* If this is the first stream on this circuit, tell circpad
+   * that streams are attached */
+  if (!circ->p_streams)
+    circpad_machine_event_circ_has_streams(circ);
+
   /* reset it, so we can measure circ timeouts */
   ENTRY_TO_CONN(apconn)->timestamp_last_read_allowed = time(NULL);
   ENTRY_TO_EDGE_CONN(apconn)->next_stream = circ->p_streams;
@@ -3065,6 +3077,8 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
   if (CIRCUIT_IS_ORIGIN(circ)) {
     control_event_circuit_purpose_changed(TO_ORIGIN_CIRCUIT(circ),
                                           old_purpose);
+
+    circpad_machine_event_circ_purpose_changed(TO_ORIGIN_CIRCUIT(circ));
   }
 }
 
