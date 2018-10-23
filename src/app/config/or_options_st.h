@@ -72,6 +72,9 @@ struct or_options_t {
   routerset_t *ExitNodes; /**< Structure containing nicknames, digests,
                            * country codes and IP address patterns of ORs to
                            * consider as exits. */
+  routerset_t *MiddleNodes; /**< Structure containing nicknames, digests,
+                             * country codes and IP address patterns of ORs to
+                             * consider as middles. */
   routerset_t *EntryNodes;/**< Structure containing nicknames, digests,
                            * country codes and IP address patterns of ORs to
                            * consider as entry points. */
