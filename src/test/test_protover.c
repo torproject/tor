@@ -268,6 +268,7 @@ test_protover_all_supported(void *arg)
   tt_ptr_op(msg, OP_EQ, NULL);
 
   // Some things we don't support
+  tt_assert(! protover_all_supported("Wombat=9", NULL));
   tt_assert(! protover_all_supported("Wombat=9", &msg));
   tt_str_op(msg, OP_EQ, "Wombat=9");
   tor_free(msg);
