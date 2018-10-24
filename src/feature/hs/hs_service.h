@@ -220,6 +220,9 @@ typedef struct hs_service_config_t {
   /* Is this service ephemeral? */
   unsigned int is_ephemeral : 1;
 
+  /* Have we explicitly set HiddenServiceVersion? */
+  unsigned int hs_version_explicitly_set : 1;
+
   /* Does this service export the circuit ID of its clients? */
   hs_circuit_id_protocol_t circuit_id_protocol;
 } hs_service_config_t;
