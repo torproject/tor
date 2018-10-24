@@ -366,6 +366,22 @@ test_invalid_service_v3(void *arg)
     teardown_capture_of_logs();
   }
 
+  /* v2-specific HiddenServiceAuthorizeClient set. */
+  {
+    const char *conf =
+      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+      "HiddenServiceVersion 3\n"
+      "HiddenServiceAuthorizeClient stealth client1\n";
+    setup_full_capture_of_logs(LOG_WARN);
+    ret = helper_config_service(conf, validate_only);
+    tt_int_op(ret, OP_EQ, -1);
+    expect_log_msg_containing("Hidden service option "
+                              "HiddenServiceAuthorizeClient is incompatible "
+                              "with version 3 of service in "
+                              "/tmp/tor-test-hs-RANDOM/hs1");
+    teardown_capture_of_logs();
+  }
+
  done:
   ;
 }
