@@ -1,0 +1,3 @@
+  o Minor bugfixes (onion services v2):
+    - Services now correctly enforce client authorization settings if those
+      change after a SIGHUP. Fixes bug 26812; bugfix on 0.0.6pre1.
