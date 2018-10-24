@@ -926,5 +926,6 @@ struct testgroup_t testgroups[] = {
   { "util/thread/", thread_tests },
   { "util/handle/", handle_tests },
   { "dns/", dns_tests },
+  { "parsecommon/", parsecommon_tests },
   END_OF_GROUPS
 };

@@ -266,6 +266,7 @@ extern struct testcase_t dns_tests[];
 extern struct testcase_t handle_tests[];
 extern struct testcase_t sr_tests[];
 extern struct testcase_t x509_tests[];
+extern struct testcase_t parsecommon_tests[];
 
 extern struct testcase_t slow_crypto_tests[];
 extern struct testcase_t slow_util_tests[];
