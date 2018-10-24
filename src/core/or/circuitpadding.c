@@ -814,8 +814,13 @@ circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
                                  0, NULL);
   }
 
-  /* The above functions could cause us to transition. Check that
-   * we still have a padding machineinfo, and then check our token
+  rep_hist_padding_count_write(PADDING_TYPE_DROP);
+  /* This is a padding cell sent from the client or from the middle node,
+   * (because it's invoked from circuitpadding.c) */
+  circpad_cell_event_padding_sent(circ);
+
+  /* The circpad_cell_event_padding_sent() could cause us to transition.
+   * Check that we still have a padding machineinfo, and then check our token
    * supply. */
   if (circ->padding_info[machine_idx] != NULL)
     circpad_check_token_supply(circ->padding_info[machine_idx]);
@@ -1686,10 +1691,12 @@ circpad_deliver_sent_relay_cell_events(circuit_t *circ,
    * tor. (CELL_PADDING is a channel-level padding cell, which is not relayed
    * or processed here) */
   if (relay_command == RELAY_COMMAND_DROP) {
-    rep_hist_padding_count_write(PADDING_TYPE_DROP);
-    /* This is a padding cell sent from the client or from the middle node,
-     * (because it's invoked from circuitpadding.c) */
-    circpad_cell_event_padding_sent(circ);
+    /* Optimization: The event for RELAY_COMMAND_DROP is sent directly
+     * from circpad_send_padding_cell_for_callback(). This is to avoid
+     * putting a cell_t and a relay_header_t on the stack repeatedly
+     * if we decide to send a long train of padidng cells back-to-back
+     * with 0 delay. So we do nothing here. */
+    return;
   } else {
     /* This is a non-padding cell sent from the client or from
      * this node. */
