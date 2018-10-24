@@ -89,15 +89,15 @@ pub mod log {
     use super::LogSeverity;
     use libc::{c_char, c_int};
 
-    /// Severity log types. These mirror definitions in /src/common/torlog.h
-    /// C_RUST_COUPLED: src/common/log.c, log domain types
+    /// Severity log types. These mirror definitions in src/lib/log/log.h
+    /// C_RUST_COUPLED: src/lib/log/log.c, log domain types
     extern "C" {
         static LOG_WARN_: c_int;
         static LOG_NOTICE_: c_int;
     }
 
-    /// Domain log types. These mirror definitions in /src/common/torlog.h
-    /// C_RUST_COUPLED: src/common/log.c, log severity types
+    /// Domain log types. These mirror definitions in src/lib/log/log.h
+    /// C_RUST_COUPLED: src/lib/log/log.c, log severity types
     extern "C" {
         static LD_NET_: u32;
         static LD_GENERAL_: u32;
