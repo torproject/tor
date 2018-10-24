@@ -21,6 +21,8 @@
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
+#define consdiffmgr_add_consensus consdiffmgr_add_consensus_nulterm
+
 static char *
 consensus_diff_apply_(const char *c, const char *d)
 {

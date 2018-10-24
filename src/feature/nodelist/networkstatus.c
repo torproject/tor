@@ -2107,17 +2107,18 @@ networkstatus_set_current_consensus(const char *consensus,
 
   if (we_want_to_fetch_flavor(options, flav)) {
     dirserv_set_cached_consensus_networkstatus(consensus,
+                                               consensus_len,
                                                flavor,
                                                &c->digests,
                                                c->digest_sha3_as_signed,
                                                c->valid_after);
     if (dir_server_mode(get_options())) {
-      consdiffmgr_add_consensus(consensus, c);
+      consdiffmgr_add_consensus(consensus, consensus_len, c);
     }
   }
 
   if (!from_cache) {
-    write_str_to_file(consensus_fname, consensus, 0);
+    write_bytes_to_file(consensus_fname, consensus, consensus_len, 0);
   }
 
   warn_early_consensus(c, flavor, now);

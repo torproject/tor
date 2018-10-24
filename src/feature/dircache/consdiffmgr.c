@@ -189,6 +189,7 @@ static consdiff_cfg_t consdiff_cfg = {
 
 static int consdiffmgr_ensure_space_for_files(int n);
 static int consensus_queue_compression_work(const char *consensus,
+                                            size_t consensus_len,
                                             const networkstatus_t *as_parsed);
 static int consensus_diff_queue_diff_work(consensus_cache_entry_t *diff_from,
                                           consensus_cache_entry_t *diff_to);
@@ -509,8 +510,25 @@ get_max_age_to_cache(void)
                                         MAX_MAX_AGE_TO_CACHE);
 }
 
+#ifdef TOR_UNIT_TESTS
+/** As consdiffmgr_add_consensus, but requires a nul-terminated input. For
+ * testing. */
+int
+consdiffmgr_add_consensus_nulterm(const char *consensus,
+                                  const networkstatus_t *as_parsed)
+{
+  size_t len = strlen(consensus);
+  /* make a non-nul-terminated copy so that we can have a better chance
+   * of catching errors. */
+  char *ctmp = tor_memdup(consensus, len);
+  int r = consdiffmgr_add_consensus(ctmp, len, as_parsed);
+  tor_free(ctmp);
+  return r;
+}
+#endif
+
 /**
- * Given a string containing a networkstatus consensus, and the results of
+ * Given a buffer containing a networkstatus consensus, and the results of
  * having parsed that consensus, add that consensus to the cache if it is not
  * already present and not too old.  Create new consensus diffs from or to
  * that consensus as appropriate.
@@ -519,6 +537,7 @@ get_max_age_to_cache(void)
  */
 int
 consdiffmgr_add_consensus(const char *consensus,
+                          size_t consensus_len,
                           const networkstatus_t *as_parsed)
 {
   if (BUG(consensus == NULL) || BUG(as_parsed == NULL))
@@ -544,7 +563,7 @@ consdiffmgr_add_consensus(const char *consensus,
   }
 
   /* We don't have it. Add it to the cache. */
-  return consensus_queue_compression_work(consensus, as_parsed);
+  return consensus_queue_compression_work(consensus, consensus_len, as_parsed);
 }
 
 /**
@@ -1826,14 +1845,15 @@ static int background_compression = 0;
  */
 static int
 consensus_queue_compression_work(const char *consensus,
+                                 size_t consensus_len,
                                  const networkstatus_t *as_parsed)
 {
   tor_assert(consensus);
   tor_assert(as_parsed);
 
   consensus_compress_worker_job_t *job = tor_malloc_zero(sizeof(*job));
-  job->consensus = tor_strdup(consensus);
-  job->consensus_len = strlen(consensus);
+  job->consensus = tor_memdup_nulterm(consensus, consensus_len);
+  job->consensus_len = strlen(job->consensus);
   job->flavor = as_parsed->flavor;
 
   char va_str[ISO_TIME_LEN+1];

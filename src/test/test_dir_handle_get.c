@@ -67,6 +67,8 @@ ENABLE_GCC_WARNING(overlength-strings)
 #define NOT_ENOUGH_CONSENSUS_SIGNATURES "HTTP/1.0 404 " \
   "Consensus not signed by sufficient number of requested authorities\r\n\r\n"
 
+#define consdiffmgr_add_consensus consdiffmgr_add_consensus_nulterm
+
 static dir_connection_t *
 new_dir_conn(void)
 {
