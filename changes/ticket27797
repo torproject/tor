@@ -1,0 +1,5 @@
+  o Minor bugfixes (node, hidden service v3):
+    - When selecting a v3 rendezvous point, not only look at the protover but
+      also if the curve25519 onion key is present. That way we avoid picking a
+      node that supports the v3 rendezvous but for which we don't have the
+      descriptor yet for the key. Fixes bug 27797; bugfix on 0.3.2.1-alpha.
