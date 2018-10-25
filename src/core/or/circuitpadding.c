@@ -1974,23 +1974,17 @@ circpad_node_supports_padding(const node_t *node)
 
 /**
  * Get a node_t for the nth hop in our circuit, starting from 1.
+ *
+ * Returns node_t from the consensus for that hop, if it is opened.
+ * Otherwise returns NULL.
  */
 static const node_t *
-circuit_get_nth_hop(origin_circuit_t *circ, int hop)
+circuit_get_nth_node(origin_circuit_t *circ, int hop)
 {
-  crypt_path_t *iter = circ->cpath;
-  int i;
+  crypt_path_t *iter = circuit_get_cpath_hop(circ, hop);
 
-  for (i = 1; i < hop; i++) {
-    iter = iter->next;
-
-    // Did we wrap around?
-    if (iter == circ->cpath)
-      return NULL;
-
-    if (iter->state != CPATH_STATE_OPEN)
-      return NULL;
-  }
+  if (!iter || iter->state != CPATH_STATE_OPEN)
+    return NULL;
 
   return node_get_by_id(iter->extend_info->identity_digest);
 }
@@ -2005,7 +1999,7 @@ circpad_circuit_supports_padding(origin_circuit_t *circ,
 {
   const node_t *hop;
 
-  if (!(hop = circuit_get_nth_hop(circ, target_hopnum))) {
+  if (!(hop = circuit_get_nth_node(circ, target_hopnum))) {
     return 0;
   }
 
