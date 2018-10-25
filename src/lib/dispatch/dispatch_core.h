@@ -76,7 +76,11 @@ dispatch_builder_t *dispatch_builder_new(void);
  * Free a dispatch builder.  This should only happen on error paths, where
  * we have decided not to construct a dispatcher for some reason.
  */
-void dispatch_builder_free(dispatch_builder_t *);
+#define dispatch_builder_free(db) \
+  FREE_AND_NULL(dispatch_builder_t, dispatch_builder_free_, (db))
+
+/** Internal implementation of dispatch_builder_free(). */
+void dispatch_builder_free_(dispatch_builder_t *);
 
 /**
  * Create a dispatch connector that a single subsystem will use to
@@ -89,7 +93,10 @@ dispatch_connector_t *dispatch_connector_for_subsystem(dispatch_builder_t *,
 /**
  * The main-init code does this after subsystem initialization.
  */
-void dispatch_connector_free(dispatch_connector_t *);
+#define dispatch_connector_free(c) \
+  FREE_AND_NULL(dispatch_connector_t, dispatch_connector_free_, (c))
+
+void dispatch_connector_free_(dispatch_connector_t *);
 
 /**
  * Constructs a dispatcher from a dispatch_builder, after checking that the
@@ -99,53 +106,39 @@ void dispatch_connector_free(dispatch_connector_t *);
  * This should happen after every subsystem has initialized, and before
  * entering the mainloop.
  */
-dispatcher_t *dispatch_finalize(dispatch_builder_t *);
+dispatcher_t *dispatch_builder_finalize(dispatch_builder_t *);
 
 /**
  * Free a dispatcher.  Tor does this at exit.
  */
-void dispatch_free(dispatcher_t *);
+#define dispatcher_free(d) \
+  FREE_AND_NULL(dispatcher_t, dispatcher_free_, (d))
+
+void dispatcher_free_(dispatcher_t *);
 
 /* Flush up to <b>max_msgs</b> currently pending messages from the
  * dispatcher.  Messages that are not pending when this function are
  * called, are not flushed by this call.  Return 0 on success, -1 on
  * unrecoverable error.
  */
-int dispatch_flush(dispatcher_t *, int max_msgs);
+int dispatch_flush(dispatcher_t *, channel_id_t chan, int max_msgs);
 
-// ============================================================
-// Inner message handling: registration
+int dispatcher_set_alert_fn(dispatcher_t *d, channel_id_t chan,
+                            dispatch_alertfn_t fn, void *userdata);
 
-/* Lowest level function to add a message to be published.  You won't be
- * calling this directly.  It return 0 on success and -1 on failure.
- */
-int dispatch_connector_add_pub_message_internal(dispatch_connector_t *,
-                                                channel_id_t,
-                                                message_id_t,
-                                                msg_type_id_t,
-                                                unsigned flags);
+#define dispatcher_free_msg(d,msg)                              \
+  STMT_BEGIN {                                                  \
+    msg_t **msg_tmp_ptr__ = &(msg);                             \
+    dispatcher_free_msg_((d), *msg_tmp_ptr__);                  \
+    *msg_tmp_ptr__= NULL;                                       \
+  } STMT_END
+void dispatcher_free_msg_(const dispatcher_t *d, msg_t *msg);
 
-typedef void (*recv_fn_t)(const msg_t *);
-
-/* Lowest level function to add a message to be received. You won't be
- * calling this one directly either.  It returns 0 on succcess and -1 on
- * failure.
- */
-int dispatch_connector_add_sub_message_internal(dispatch_connector_t *,
-                                                channel_id_t,
-                                                message_id_t,
-                                                msg_type_id_t,
-                                                unsigned flags,
-                                                recv_fn_t recv_fn);
-
-// Inner message handling: type registration.  We jump through some hoops
-// for typesafety.
-
-typedef void (*freefn_t)(void *);
-
-int dispatch_connector_define_type(dispatch_connector_t *,
-                                   msg_type_id_t,
-                                   freefn_t,
-                                   recv_fn_t);
+#ifdef DISPATCH_PRIVATE
+struct dispatch_cfg_t;
+#define dispatch_cfg_free(cfg) \
+  FREE_AND_NULL(dispatch_cfg_t, dispatch_cfg_free_, (cfg))
+void dispatch_cfg_free_(struct dispatch_cfg_t *cfg);
+#endif
 
 #endif

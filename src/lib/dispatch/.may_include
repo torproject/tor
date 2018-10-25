@@ -7,3 +7,4 @@ lib/container/*.h
 lib/dispatch/*.h
 lib/log/*.h
 lib/malloc/*.h
+lib/string/*.h

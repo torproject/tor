@@ -7,6 +7,7 @@ endif
 
 src_lib_libtor_dispatch_a_SOURCES =			\
 	src/lib/dispatch/dispatch.c			\
+	src/lib/dispatch/dispatch_build.c		\
 	src/lib/dispatch/namemap.c
 
 src_lib_libtor_dispatch_testing_a_SOURCES = \
@@ -16,6 +17,7 @@ src_lib_libtor_dispatch_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 noinst_HEADERS +=					\
 	src/lib/dispatch/dispatch_core.h		\
+	src/lib/dispatch/dispatch_st.h			\
 	src/lib/dispatch/msg.h				\
 	src/lib/dispatch/msgtypes.h			\
 	src/lib/dispatch/msg_impl.h			\

@@ -131,6 +131,13 @@ namemap_get_or_create_id(namemap_t *map,
   return new_id;
 }
 
+/** Return the number of entries in 'names' */
+size_t
+namemap_get_size(const namemap_t *map)
+{
+  return smartlist_len(map->names);
+}
+
 /**
  * Release all storage held in <b>map</b>.
  */

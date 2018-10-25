@@ -45,6 +45,7 @@ unsigned namemap_get_id(const namemap_t *map,
                         const char *name);
 unsigned namemap_get_or_create_id(namemap_t *map,
                                   const char *name);
+size_t namemap_get_size(const namemap_t *map);
 void namemap_clear(namemap_t *map);
 #endif
 

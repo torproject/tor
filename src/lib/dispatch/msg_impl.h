@@ -34,29 +34,34 @@ subsys_id_t get_subsys_id(const char *);
 const char *get_subsys_id_name(subsys_id_t);
 
 /* As above, but for types. Note that types additionally must be
-* "defined", if any message is to use them. */
+ * "defined", if any message is to use them. */
 msg_type_id_t get_msg_type_id(const char *);
 const char *get_msg_type_id_name(msg_type_id_t);
 
-/* Publish a message using untyped data. */
-int publish_internal(const pub_binding_t *pub, void *auxdata);
+int dispatch_pub_(const pub_binding_t *pub, msg_aux_data_t auxdata);
 
-/* Register to publish a message */
 int dispatch_add_pub_(dispatch_connector_t *con,
                       pub_binding_t *out,
                       channel_id_t channel,
                       message_id_t msg,
                       msg_type_id_t type,
-                      unsigned flags);
+                      unsigned flags,
+                      const char *file,
+                      unsigned line);
 
-typedef void (*recv_fn_t)(const msg_t *m);
-
-/* Register to receive a message */
 int dispatch_add_sub_(dispatch_connector_t *con,
                       recv_fn_t recv_fn,
                       channel_id_t channel,
                       message_id_t msg,
                       msg_type_id_t type,
-                      unsigned flags);
+                      unsigned flags,
+                      const char *file,
+                      unsigned line);
+
+int dispatch_connector_define_type_(dispatch_connector_t *,
+                                    msg_type_id_t,
+                                    dispatch_typefns_t *,
+                                    const char *file,
+                                    unsigned line);
 
 #endif
