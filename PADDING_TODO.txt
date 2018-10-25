@@ -9,6 +9,7 @@ TODO sketch for this branch, in rough priority order:
   - compute_frac_paths_available() for MiddleNodes
   - Manpage for MiddleNodes, documenting vanguards compat too
   - Fix timer flapping in tests (mock monotime for libevent?)
+  - Test SMARTLIST_FOREACH_REVERSE_BEGIN()
   - Tests for circuit getting marked or freed before callback.
   - Tests for detecting padding from wrong hop
   - Tests for machine replacement on all conditions
@@ -23,10 +24,13 @@ TODO sketch for this branch, in rough priority order:
 - Do we even need handles? We cancel all timers whenever the object is freed.
   - Removing handles saves a *lot* of per-circuit overhead, too!
 
+- Remaining relay_early_cell condition?
+  - This would allow another way to start/stop circuit setup machines.
+
 - Nick's API doc
   - Consider how we'd use it.
 
-- Vanguards compatibility for MiddleNodes
+- Vanguards compatibility for MiddleNodes (via changes to vanguards addon)
 
 - Rephist timer stats
   - Is this a privacy risk? The adversary could create lots of circuits
