@@ -50,13 +50,13 @@ find_start_of_next_microdesc(const char *s, const char *eos)
     return NULL;
 
 #define CHECK_LENGTH() STMT_BEGIN \
-    if (s+32 > eos)               \
+    if (eos - s < 32)             \
       return NULL;                \
   STMT_END
 
 #define NEXT_LINE() STMT_BEGIN            \
     s = memchr(s, '\n', eos-s);           \
-    if (!s || s+1 >= eos)                 \
+    if (!s || eos - s <= 1)               \
       return NULL;                        \
     s++;                                  \
   STMT_END
@@ -80,7 +80,7 @@ find_start_of_next_microdesc(const char *s, const char *eos)
   /* Okay, now we're pointed at the first line of the microdescriptor which is
      not an annotation or onion-key.  The next line that _is_ an annotation or
      onion-key is the start of the next microdescriptor. */
-  while (s+32 < eos) {
+  while (eos - s > 32) {
     if (*s == '@' || !strcmpstart(s, "onion-key"))
       return s;
     NEXT_LINE();
