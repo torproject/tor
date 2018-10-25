@@ -217,4 +217,8 @@
 /** Macro: Yields the number of elements in array x. */
 #define ARRAY_LENGTH(x) ((sizeof(x)) / sizeof(x[0]))
 
+/* Eat a semicolon that somebody puts at the end of a global macro. */
+#define EAT_SEMICOLON                                   \
+  struct dummy_semicolon_eater__
+
 #endif /* !defined(TOR_COMPAT_H) */
