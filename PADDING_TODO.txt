@@ -21,11 +21,14 @@ TODO sketch for this branch, in rough priority order:
   - Tests for dists, length and iat sampling
   - Better test coverage in general
 
-- Do we even need handles? We cancel all timers whenever the object is freed.
-  - Removing handles saves a *lot* of per-circuit overhead, too!
+- Remove handles and use direct pointers
+
+- Global overhead values?
+  - But these can be soaked up by malicious clients...
 
 - Remaining relay_early_cell condition?
   - This would allow another way to start/stop circuit setup machines.
+  - circpad_circuit_state_t RELAY_EARLY_LEFT
 
 - Nick's API doc
   - Consider how we'd use it.
