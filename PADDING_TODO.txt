@@ -5,10 +5,28 @@ TODO sketch for this branch, in rough priority order:
    machine.
 
 - Clean up/fix XXX's and FIXMEs
-  - Add tests for dists, length and iat sampling
-  - Add tests for detecting padding from wrong hop
-  - Add tests for machine replacement
+  - TOR_USEC_PER_SEC
+  - compute_frac_paths_available() for MiddleNodes
+  - Manpage for MiddleNodes, documenting vanguards compat too
+  - Fix timer flapping in tests (mock monotime for libevent?)
+  - Tests for circuit getting marked or freed before callback.
+  - Tests for detecting padding from wrong hop
+  - Tests for machine replacement on all conditions
+  - Tests for STATE_END teardown due to infinity, bins_empty, and/or length
+    with pending timers, new machines, etc.
+  - Tests for consensus and machine rate limiting
+  - Test all types of token removal
+  - Go down dist precision rabbithole and comment
+  - Tests for dists, length and iat sampling
   - Better test coverage in general
+
+- Do we even need handles? We cancel all timers whenever the object is freed.
+  - Removing handles saves a *lot* of per-circuit overhead, too!
+
+- Nick's API doc
+  - Consider how we'd use it.
+
+- Vanguards compatibility for MiddleNodes
 
 - Rephist timer stats
   - Is this a privacy risk? The adversary could create lots of circuits
@@ -19,6 +37,9 @@ TODO sketch for this branch, in rough priority order:
 - Specify target circuit lifetime?
 
 - Specify ports for machine??
+
+- circpad_machine_validate() function to sanity-check histograms loaded from
+  consensus/torrc.
 
 - Support torrc load+serialization of state machines
   - ??
