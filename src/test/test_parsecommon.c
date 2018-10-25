@@ -295,6 +295,7 @@ test_parsecommon_get_next_token_parse_keys(void *arg)
   token_rule_t rule = T1("onion-key", R_IPO_ONION_KEY, NO_ARGS, NEED_KEY_1024);
 
   token = get_next_token(area, s, end, &rule);
+  tt_assert(token);
 
   tt_int_op(token->tp, OP_EQ, R_IPO_ONION_KEY);
   tt_int_op(token->n_args, OP_EQ, 0);
@@ -329,6 +330,7 @@ test_parsecommon_get_next_token_parse_keys(void *arg)
                            NEED_SKEY_1024);
 
   token2 = get_next_token(area, s2, end2, &rule2);
+  tt_assert(token2);
 
   tt_int_op(token2->tp, OP_EQ, C_CLIENT_KEY);
   tt_int_op(token2->n_args, OP_EQ, 0);
@@ -590,4 +592,3 @@ struct testcase_t parsecommon_tests[] = {
   PARSECOMMON_TEST(get_next_token_err_bad_base64),
   END_OF_TESTCASES
 };
-
