@@ -4964,7 +4964,7 @@ get_next_token(memarea_t *area,
     goto check_object;
 
   obstart = *s; /* Set obstart to start of object spec */
-  if (*s+16 >= eol || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
+  if (eol - *s <= 16 || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
       strcmp_len(eol-5, "-----", 5) ||           /* nuls or invalid endings */
       (eol-*s) > MAX_UNPARSED_OBJECT_SIZE) {     /* name too long */
     RET_ERR("Malformed object: bad begin line");
