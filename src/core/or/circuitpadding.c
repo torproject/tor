@@ -374,8 +374,8 @@ circpad_distribution_sample(circpad_distribution_t dist)
     case CIRCPAD_DIST_LOG_LOGISTIC:
       p = crypto_rand_double();
       /* https://en.wikipedia.org/wiki/Log-logistic_distribution#Quantiles
-       * param1 is Alpha, param2 is Beta */
-      return dist.param1 * pow(p/(1.0-p), 1.0/dist.param2);
+       * param1 is Alpha, param2 is 1.0/Beta */
+      return dist.param1 * pow(p/(1.0-p), dist.param2);
     case CIRCPAD_DIST_GEOMETRIC:
       p = crypto_rand_double();
       /* https://github.com/distributions-io/geometric-quantile/
@@ -385,8 +385,8 @@ circpad_distribution_sample(circpad_distribution_t dist)
       p = crypto_rand_double();
       /* https://en.wikipedia.org/wiki/Weibull_distribution \
        *    #Cumulative_distribution_function
-       * param1 is k, param2 is Lambda */
-      return dist.param2*pow(-log1p(p), 1.0/dist.param1);
+       * param1 is 1.0/k, param2 is Lambda */
+      return dist.param2*pow(-log1p(-p), dist.param1);
     case CIRCPAD_DIST_PARETO:
       p = 1.0-crypto_rand_double(); // Pareto quantile needs (0,1]
 
