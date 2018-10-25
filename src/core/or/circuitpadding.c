@@ -1454,6 +1454,12 @@ circpad_shutdown_old_machines(origin_circuit_t *on_circ)
 
 /**
  * Negotiate new machines that would apply to this circuit.
+ *
+ * This function checks to see if we have any free machine indexes,
+ * and for each free machine index, it initializes the most recently
+ * added origin-side padding machine that matches the target machine
+ * index and circuit conditions, and negotiates it with the appropriate
+ * middle relay.
  */
 static void
 circpad_add_matching_machines(origin_circuit_t *on_circ)
@@ -1467,13 +1473,22 @@ circpad_add_matching_machines(origin_circuit_t *on_circ)
 #endif
 
   for (int i = 0; i < CIRCPAD_MAX_MACHINES; i++) {
+    /* If there is a padding machine info, this index is occupied.
+     * No need to check conditions for this index. */
     if (circ->padding_info[i])
       continue;
 
-    /* We have a free index */
+    /* We have a free machine index. Check the origin padding
+     * machines in reverse order, so that more recently added
+     * machines take priority over older ones. */
     SMARTLIST_FOREACH_REVERSE_BEGIN(origin_padding_machines,
                                     circpad_machine_t *,
                                     machine) {
+      /* Machine definitions have a specific target machine index.
+       * This is so event ordering is deterministic with respect
+       * to which machine gets events first when there are two
+       * machines installed on a circuit. Make sure we only
+       * add this machine if its target machine index is free. */
       if (machine->machine_index == i &&
           circpad_machine_conditions_met(on_circ, machine)) {
 
@@ -2012,6 +2027,8 @@ circpad_negotiate_padding(origin_circuit_t *circ,
   cell_t cell;
   ssize_t len;
 
+  /* Check that the target hop lists support for padding in
+   * its ProtoVer fields */
   if (!circpad_circuit_supports_padding(circ, target_hopnum)) {
     return 0;
   }
