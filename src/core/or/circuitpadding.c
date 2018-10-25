@@ -1239,8 +1239,10 @@ void
 circpad_cell_event_nonpadding_sent(circuit_t *on_circ)
 {
   /* If there are no machines then this loop should not iterate */
-  for (int i = 0; i < CIRCPAD_MAX_MACHINES && on_circ->padding_info[i];
-       i++) {
+  for (int i = 0; i < CIRCPAD_MAX_MACHINES; i++) {
+    if (!on_circ->padding_info[i])
+      continue;
+
     /* First, update any RTT estimate */
     circpad_estimate_circ_rtt_on_send(on_circ, on_circ->padding_info[i]);
 
@@ -1266,8 +1268,10 @@ circpad_cell_event_nonpadding_sent(circuit_t *on_circ)
 void
 circpad_cell_event_nonpadding_received(circuit_t *on_circ)
 {
-  for (int i = 0; i < CIRCPAD_MAX_MACHINES && on_circ->padding_info[i];
-      i++) {
+  for (int i = 0; i < CIRCPAD_MAX_MACHINES; i++) {
+    if (!on_circ->padding_info[i])
+      continue;
+
     /* First, update any RTT estimate */
     circpad_estimate_circ_rtt_on_received(on_circ, on_circ->padding_info[i]);
 
@@ -1287,8 +1291,10 @@ circpad_cell_event_nonpadding_received(circuit_t *on_circ)
 void
 circpad_cell_event_padding_sent(circuit_t *on_circ)
 {
-  for (int i = 0; i < CIRCPAD_MAX_MACHINES && on_circ->padding_info[i];
-       i++) {
+  for (int i = 0; i < CIRCPAD_MAX_MACHINES; i++) {
+    if (!on_circ->padding_info[i])
+      continue;
+
     circpad_machine_transition(on_circ->padding_info[i],
                              CIRCPAD_EVENT_PADDING_SENT);
   }
@@ -1306,8 +1312,10 @@ void
 circpad_cell_event_padding_received(circuit_t *on_circ)
 {
   /* identical to padding sent */
-  for (int i = 0; i < CIRCPAD_MAX_MACHINES && on_circ->padding_info[i];
-       i++) {
+  for (int i = 0; i < CIRCPAD_MAX_MACHINES; i++) {
+    if (!on_circ->padding_info[i])
+      continue;
+
     circpad_machine_transition(on_circ->padding_info[i],
                               CIRCPAD_EVENT_PADDING_RECV);
   }
