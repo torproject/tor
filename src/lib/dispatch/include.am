@@ -6,7 +6,8 @@ noinst_LIBRARIES += src/lib/libtor-dispatch-testing.a
 endif
 
 src_lib_libtor_dispatch_a_SOURCES =			\
-	src/lib/dispatch/dispatch.c
+	src/lib/dispatch/dispatch.c			\
+	src/lib/dispatch/namemap.c
 
 src_lib_libtor_dispatch_testing_a_SOURCES = \
 	$(src_lib_libtor_dispatch_a_SOURCES)
@@ -17,4 +18,5 @@ noinst_HEADERS +=					\
 	src/lib/dispatch/dispatch_core.h		\
 	src/lib/dispatch/msg.h				\
 	src/lib/dispatch/msgtypes.h			\
-	src/lib/dispatch/msg_impl.h
+	src/lib/dispatch/msg_impl.h			\
+	src/lib/dispatch/namemap.h

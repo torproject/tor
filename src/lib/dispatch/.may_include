@@ -1,3 +1,9 @@
 orconfig.h
+siphash.h
+ht.h
+
 lib/cc/*.h
+lib/container/*.h
 lib/dispatch/*.h
+lib/log/*.h
+lib/malloc/*.h

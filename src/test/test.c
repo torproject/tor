@@ -868,6 +868,7 @@ struct testgroup_t testgroups[] = {
   { "dir/md/", microdesc_tests },
   { "dir/voting-schedule/", voting_schedule_tests },
   { "dir_handle_get/", dir_handle_get_tests },
+  { "dispatch/namemap/", dispatch_namemap_tests },
   { "dns/", dns_tests },
   { "dos/", dos_tests },
   { "entryconn/", entryconn_tests },

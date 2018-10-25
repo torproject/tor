@@ -8,8 +8,6 @@
 #include "lib/dispatch/msg.h"
 #include "lib/dispatch/msgtypes.h"
 
-
-
 dispatch_builder_t *
 dispatch_builder_new(void)
 {
