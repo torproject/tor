@@ -2445,7 +2445,8 @@ netinfo_addr_from_tor_addr(const tor_addr_t *tor_addr)
     netinfo_addr_set_addr_type(netinfo_addr, NETINFO_ADDR_TYPE_IPV6);
     netinfo_addr_set_len(netinfo_addr, 16);
     uint8_t *ipv6_buf = netinfo_addr_getarray_addr_ipv6(netinfo_addr);
-    memcpy(ipv6_buf, tor_addr->addr.in6_addr.s6_addr, 16);
+    const uint8_t *in6_addr = tor_addr_to_in6_addr8(tor_addr);
+    memcpy(ipv6_buf, in6_addr, 16);
   }
 
   return netinfo_addr;
