@@ -1783,9 +1783,8 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   }
 
   if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
-    uint32_t ipv4 = netinfo_addr_get_addr_ipv4(my_addr);
-
-    if (!get_options()->BridgeRelay && me && ipv4 == me->addr) {
+    if (!get_options()->BridgeRelay && me &&
+        tor_addr_eq_ipv4h(&my_apparent_addr, me->addr)) {
       TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer = 1;
     }
   } else if (my_addr_type == RESOLVED_TYPE_IPV6 && my_addr_len == 16) {
