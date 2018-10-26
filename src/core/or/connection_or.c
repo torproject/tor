@@ -2460,7 +2460,7 @@ connection_or_send_netinfo,(or_connection_t *conn))
   cell_t cell;
   time_t now = time(NULL);
   const routerinfo_t *me;
-  int r = 0;
+  int r = -1;
 
   tor_assert(conn->handshake_state);
 
@@ -2513,14 +2513,12 @@ connection_or_send_netinfo,(or_connection_t *conn))
   if ((errmsg = netinfo_cell_check(netinfo_cell))) {
     log_warn(LD_OR, "Failed to validate NETINFO cell with error: %s",
                     errmsg);
-    r = -1;
     goto cleanup;
   }
 
   if (netinfo_cell_encode(cell.payload, CELL_PAYLOAD_SIZE,
                           netinfo_cell) < 0) {
     log_warn(LD_OR, "Failed generating NETINFO cell");
-    r = -1;
     goto cleanup;
   }
 
@@ -2528,6 +2526,7 @@ connection_or_send_netinfo,(or_connection_t *conn))
   conn->handshake_state->sent_netinfo = 1;
   connection_or_write_cell_to_buf(&cell, conn);
 
+  r = 0;
  cleanup:
   netinfo_cell_free(netinfo_cell);
 
