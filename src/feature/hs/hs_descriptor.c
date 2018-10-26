@@ -1406,10 +1406,10 @@ encrypted_data_length_is_valid(size_t len)
  *    SECRET_SEED = x25519(sk, pk)
  *    KEYS = KDF(subcredential | SECRET_SEED, 40)
  *
- * The keys_out parameter will points to the buffer containing the KEYS. The
- * caller should wipe and free its content once done with it. This function
- * can't fail. */
-static void
+ * Set the <b>keys_out</b> argument to point to the buffer containing the KEYS,
+ * and return the buffer's length. The caller should wipe and free its content
+ * once done with it. This function can't fail. */
+static size_t
 build_descriptor_cookie_keys(const uint8_t *subcredential,
                              size_t subcredential_len,
                              const curve25519_secret_key_t *sk,
@@ -1441,6 +1441,7 @@ build_descriptor_cookie_keys(const uint8_t *subcredential,
   memwipe(secret_seed, 0, sizeof(secret_seed));
 
   *keys_out = keystream;
+  return keystream_len;
 }
 
 /* Decrypt the descriptor cookie given the descriptor, the auth client,
@@ -1456,6 +1457,7 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
 {
   int ret = -1;
   uint8_t *keystream = NULL;
+  size_t keystream_length = 0;
   uint8_t *descriptor_cookie = NULL;
   const uint8_t *cookie_key = NULL;
   crypto_cipher_t *cipher = NULL;
@@ -1471,10 +1473,12 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
   tor_assert(!tor_mem_is_zero((char *) desc->subcredential, DIGEST256_LEN));
 
   /* Get the KEYS component to derive the CLIENT-ID and COOKIE-KEY. */
-  build_descriptor_cookie_keys(desc->subcredential, DIGEST256_LEN,
-                          client_auth_sk,
-                          &desc->superencrypted_data.auth_ephemeral_pubkey,
-                          &keystream);
+  keystream_length =
+    build_descriptor_cookie_keys(desc->subcredential, DIGEST256_LEN,
+                             client_auth_sk,
+                             &desc->superencrypted_data.auth_ephemeral_pubkey,
+                             &keystream);
+  tor_assert(keystream_length > 0);
 
   /* If the client id of auth client is not the same as the calculcated
    * client id, it means that this auth client is invaild according to the
@@ -1500,7 +1504,7 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
   if (cipher) {
     crypto_cipher_free(cipher);
   }
-  memwipe(keystream, 0, sizeof(keystream));
+  memwipe(keystream, 0, keystream_length);
   tor_free(keystream);
   return ret;
 }
@@ -2915,6 +2919,7 @@ hs_desc_build_authorized_client(const uint8_t *subcredential,
                                 hs_desc_authorized_client_t *client_out)
 {
   uint8_t *keystream = NULL;
+  size_t keystream_length = 0;
   const uint8_t *cookie_key;
   crypto_cipher_t *cipher;
 
@@ -2933,8 +2938,11 @@ hs_desc_build_authorized_client(const uint8_t *subcredential,
                               DIGEST256_LEN));
 
   /* Get the KEYS part so we can derive the CLIENT-ID and COOKIE-KEY. */
-  build_descriptor_cookie_keys(subcredential, DIGEST256_LEN,
-                               auth_ephemeral_sk, client_auth_pk, &keystream);
+  keystream_length =
+    build_descriptor_cookie_keys(subcredential, DIGEST256_LEN,
+                                 auth_ephemeral_sk, client_auth_pk,
+                                 &keystream);
+  tor_assert(keystream_length > 0);
 
   /* Extract the CLIENT-ID and COOKIE-KEY from the KEYS. */
   memcpy(client_out->client_id, keystream, HS_DESC_CLIENT_ID_LEN);
@@ -2951,7 +2959,7 @@ hs_desc_build_authorized_client(const uint8_t *subcredential,
                         (const char *) descriptor_cookie,
                         HS_DESC_DESCRIPTOR_COOKIE_LEN);
 
-  memwipe(keystream, 0, sizeof(keystream));
+  memwipe(keystream, 0, keystream_length);
   tor_free(keystream);
 
   crypto_cipher_free(cipher);
