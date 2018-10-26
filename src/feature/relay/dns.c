@@ -1381,8 +1381,11 @@ configured_nameserver_address(const size_t idx)
                                     (struct sockaddr *)&sa,
                                     sa_len) > 0) {
    tor_addr_t *tor_addr = tor_malloc(sizeof(tor_addr_t));
-   tor_addr_from_sockaddr(tor_addr, (const struct sockaddr *)&sa, NULL);
-   return tor_addr;
+   if (tor_addr_from_sockaddr(tor_addr,
+                              (const struct sockaddr *)&sa,
+                              NULL) == 0) {
+     return tor_addr;
+   }
  }
 
  return NULL;
