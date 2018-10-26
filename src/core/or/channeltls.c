@@ -1796,7 +1796,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   }
 
   n_other_addrs = netinfo_cell_get_n_my_addrs(netinfo_cell);
-  for (size_t i = 0; i < n_other_addrs; i++) {
+  for (uint8_t i = 0; i < n_other_addrs; i++) {
     /* Consider all the other addresses; if any matches, this connection is
      * "canonical." */
 
