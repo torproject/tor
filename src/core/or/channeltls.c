@@ -1761,7 +1761,8 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
   timestamp = netinfo_cell_get_timestamp(netinfo_cell);
 
-  netinfo_addr_t *my_addr = netinfo_cell_get_other_addr(netinfo_cell);
+  const netinfo_addr_t *my_addr =
+    netinfo_cell_getconst_other_addr(netinfo_cell);
 
   my_addr_type = netinfo_addr_get_addr_type(my_addr);
   my_addr_len = netinfo_addr_get_len(my_addr);
