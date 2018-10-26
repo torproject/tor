@@ -1782,12 +1782,13 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
     return;
   }
 
-  if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
+  if (my_addr_type == NETINFO_ADDR_TYPE_IPV4 && my_addr_len == 4) {
     if (!get_options()->BridgeRelay && me &&
         tor_addr_eq_ipv4h(&my_apparent_addr, me->addr)) {
       TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer = 1;
     }
-  } else if (my_addr_type == RESOLVED_TYPE_IPV6 && my_addr_len == 16) {
+  } else if (my_addr_type == NETINFO_ADDR_TYPE_IPV6 &&
+             my_addr_len == 16) {
     if (!get_options()->BridgeRelay && me &&
         !tor_addr_is_null(&me->ipv6_addr) &&
         tor_addr_eq(&my_apparent_addr, &me->ipv6_addr)) {
