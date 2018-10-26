@@ -113,7 +113,8 @@
 #define LD_PT        (1u<<27)
 /** Bootstrap tracker. */
 #define LD_BTRACK    (1u<<28)
-/** Number of logging domains in the code. */
+/** Message-passing backend. */
+#define LD_MESG      (1u<<29)
 #define N_LOGGING_DOMAINS 29
 
 /** This log message is not safe to send to a callback-based logger
