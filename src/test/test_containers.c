@@ -10,6 +10,7 @@
 #include "test/test.h"
 
 #include "lib/container/bitarray.h"
+#include "lib/container/mqueue.h"
 #include "lib/container/order.h"
 #include "lib/crypt_ops/digestset.h"
 
@@ -1272,6 +1273,80 @@ test_container_smartlist_strings_eq(void *arg)
   smartlist_free(sl2);
 }
 
+static void
+mul_cb(void *arg, void *userarg)
+{
+  if (!arg)
+    return;
+  int *the_product = userarg;
+  *the_product *= *(int*)arg;
+}
+
+static void
+copy_out_cb(void *arg, void *userarg)
+{
+  int **ptr = userarg;
+  int num = arg ? *(int*)arg : -1;
+  *(*ptr)++ = num;
+}
+
+static void
+test_container_mqueue(void *arg)
+{
+  (void)arg;
+  mqueue_t m;
+  int ia[] = { 1, 2, 3, 4, 5, 6 };
+  mqueue_init(&m);
+
+  tt_uint_op(0, OP_EQ, mqueue_len(&m));
+
+  mqueue_push(&m, &ia[0]);
+  mqueue_push(&m, &ia[1]);
+  mqueue_push(&m, &ia[2]);
+  mqueue_push(&m, &ia[3]);
+  tt_uint_op(4, OP_EQ, mqueue_len(&m));
+
+  tt_ptr_op(&ia[0], OP_EQ, mqueue_pop(&m));
+  tt_uint_op(3, OP_EQ, mqueue_len(&m));
+
+  mqueue_push(&m, NULL);
+  mqueue_push(&m, &ia[5]);
+  tt_uint_op(5, OP_EQ, mqueue_len(&m));
+
+  tt_ptr_op(&ia[1], OP_EQ, mqueue_pop(&m));
+  tt_uint_op(4, OP_EQ, mqueue_len(&m));
+
+  // Make sure foreach works.
+  int the_product = 1;
+  mqueue_foreach(&m, mul_cb, &the_product);
+  tt_int_op(the_product, OP_EQ, 72); // 3 * 4 * 6, skipping NULL
+
+  // Make sure foreach puts items in the right order.
+  int arry[10];
+  memset(arry, 0, sizeof(arry));
+  int *ptr = &arry[0];
+  mqueue_foreach(&m, copy_out_cb, &ptr);
+  tt_int_op(arry[0], OP_EQ, 3);
+  tt_int_op(arry[1], OP_EQ, 4);
+  tt_int_op(arry[2], OP_EQ, -1);
+  tt_int_op(arry[3], OP_EQ, 6);
+  tt_ptr_op(ptr, OP_EQ, &arry[4]);
+
+  tt_ptr_op(&ia[2], OP_EQ, mqueue_pop(&m));
+  tt_ptr_op(&ia[3], OP_EQ, mqueue_pop(&m));
+  tt_uint_op(2, OP_EQ, mqueue_len(&m));
+
+  tt_ptr_op(NULL, OP_EQ, mqueue_pop(&m));
+  tt_ptr_op(&ia[5], OP_EQ, mqueue_pop(&m));
+  tt_uint_op(0, OP_EQ, mqueue_len(&m));
+
+  tt_ptr_op(NULL, OP_EQ, mqueue_pop(&m));
+  tt_uint_op(0, OP_EQ, mqueue_len(&m));
+
+ done:
+  mqueue_clear(&m);
+}
+
 #define CONTAINER_LEGACY(name)                                          \
   { #name, test_container_ ## name , 0, NULL, NULL }
 
@@ -1297,5 +1372,6 @@ struct testcase_t container_tests[] = {
   CONTAINER(smartlist_most_frequent, 0),
   CONTAINER(smartlist_sort_ptrs, 0),
   CONTAINER(smartlist_strings_eq, 0),
+  CONTAINER(mqueue, 0),
   END_OF_TESTCASES
 };

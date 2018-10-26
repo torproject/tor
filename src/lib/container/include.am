@@ -9,6 +9,7 @@ src_lib_libtor_container_a_SOURCES =			\
 	src/lib/container/bloomfilt.c			\
 	src/lib/container/buffers.c			\
 	src/lib/container/map.c				\
+	src/lib/container/mqueue.c			\
 	src/lib/container/order.c			\
 	src/lib/container/smartlist.c
 
@@ -23,5 +24,6 @@ noinst_HEADERS +=					\
 	src/lib/container/buffers.h			\
 	src/lib/container/handles.h			\
 	src/lib/container/map.h				\
+	src/lib/container/mqueue.h			\
 	src/lib/container/order.h			\
 	src/lib/container/smartlist.h
