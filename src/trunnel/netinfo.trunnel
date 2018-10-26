@@ -1,3 +1,6 @@
+// Warning: make sure these values are consistent with RESOLVED_TYPE_*
+// constants in Tor code and numbers in Section 6.4 of tor-spec.txt.
+
 const NETINFO_ADDR_TYPE_IPV4 = 4;
 const NETINFO_ADDR_TYPE_IPV6 = 6;
 
