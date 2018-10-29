@@ -12,7 +12,7 @@ TESTS_ENVIRONMENT = \
 	export EXTRA_CARGO_OPTIONS="$(EXTRA_CARGO_OPTIONS)"; \
 	export CARGO_ONLINE="$(CARGO_ONLINE)"; \
 	export CCLD="$(CCLD)"; \
-	export RUSTFLAGS="-C linker=`echo '$(CC)' | cut -d' ' -f 1` $(RUST_LINKER_OPTIONS) -C default-linker-libraries";
+	export RUSTFLAGS="-C linker=`echo '$(CC)' | cut -d' ' -f 1` $(RUST_LINKER_OPTIONS)";
 
 TESTSCRIPTS = \
 	src/test/fuzz_static_testcases.sh \
