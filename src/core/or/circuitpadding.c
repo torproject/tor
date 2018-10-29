@@ -62,8 +62,12 @@ static void circpad_setup_machine_on_circ(circuit_t *on_circ,
 static double circpad_distribution_sample(circpad_distribution_t dist);
 
 /** Cached consensus params */
-static uint8_t circpad_per_hop_max_padding_percent;
-static uint16_t circpad_per_hop_allowed_cells;
+static uint8_t circpad_global_max_padding_percent;
+static uint16_t circpad_global_allowed_cells;
+
+/** Global cell counts, for rate limiting */
+static uint64_t circpad_global_padding_sent;
+static uint64_t circpad_global_nonpadding_sent;
 
 /* Machines for various usecases */
 static smartlist_t *origin_padding_machines = NULL;
@@ -801,6 +805,11 @@ circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
     mi->padding_sent /= 2;
     mi->nonpadding_sent /= 2;
   }
+  circpad_global_padding_sent++;
+  if (circpad_global_padding_sent == UINT64_MAX) {
+    circpad_global_padding_sent /= 2;
+    circpad_global_nonpadding_sent /= 2;
+  }
 
   log_fn(LOG_INFO,LD_CIRC, "Padding callback. Sending.");
 
@@ -862,12 +871,12 @@ circpad_send_padding_callback(tor_timer_t *timer, void *args,
 void
 circpad_new_consensus_params(networkstatus_t *ns)
 {
-  circpad_per_hop_allowed_cells =
-      networkstatus_get_param(ns, "circpad_allowed_cells",
+  circpad_global_allowed_cells =
+      networkstatus_get_param(ns, "circpad_global_allowed_cells",
          0, 0, UINT16_MAX-1);
 
-  circpad_per_hop_max_padding_percent =
-      networkstatus_get_param(ns, "circpad_max_padding_pct",
+  circpad_global_max_padding_percent =
+      networkstatus_get_param(ns, "circpad_global_max_padding_pct",
          0, 0, 100);
 }
 
@@ -880,8 +889,7 @@ circpad_new_consensus_params(networkstatus_t *ns)
  * optionally allow very light padding of things like circuit setup
  * while there is no other traffic on the circuit).
  *
- * The consensus versions are per-hop values, so they must be divided
- * by target_hopnum.
+ * TODO: Don't apply limits to machines form torrc.
  *
  * Returns 1 if limits are set and we've hit them. Otherwise returns 0.
  */
@@ -889,33 +897,25 @@ static bool
 circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi)
 {
   const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
-  uint8_t max_padding_pct;
-  uint16_t allowed_cells;
 
-  /* If consensus parameters have been set, they override the per-machine
-   * values. They are also per-hop, so we must divide them by how many
-   * hops we're using. */
-  if (circpad_per_hop_allowed_cells) {
-    allowed_cells = circpad_per_hop_allowed_cells/machine->target_hopnum;
-  } else {
-    allowed_cells = machine->allowed_padding_count;
-  }
-
-  if (circpad_per_hop_max_padding_percent) {
-    max_padding_pct = circpad_per_hop_max_padding_percent/
-                          machine->target_hopnum;
-  } else {
-    max_padding_pct = machine->max_padding_percent;
-  }
-
-  /* If max_padding_pct is non-zero, enforce limits. We allow up to
-   * allowed_cells before checking limits. After that is exceeded,
-   * the percents apply. */
-  if (max_padding_pct &&
-      mi->padding_sent >= allowed_cells &&
+  /* If machine_padding_pct is non-zero, enforce machine limits.
+   * We allow up to allowed_cells before checking limits. After that
+   * is exceeded, the percents apply. */
+  if (machine->max_padding_percent &&
+      mi->padding_sent >= machine->allowed_padding_count &&
       (100*mi->padding_sent) / (mi->padding_sent + mi->nonpadding_sent) >
-        max_padding_pct) {
+        machine->max_padding_percent) {
     return 1; // limit is reached. Stop.
+  }
+
+  /* If circpad_max_global_padding_pct is non-zero, check our global
+   * process limit. */
+  if (circpad_global_max_padding_percent &&
+      circpad_global_padding_sent >= circpad_global_allowed_cells &&
+      (100*circpad_global_padding_sent) /
+         (circpad_global_padding_sent + circpad_global_nonpadding_sent) >
+         circpad_global_max_padding_percent) {
+    return 1; // global limit reached. Stop.
   }
 
   return 0; // All good!
@@ -1226,6 +1226,13 @@ circpad_estimate_circ_rtt_on_send(circuit_t *circ,
 void
 circpad_cell_event_nonpadding_sent(circuit_t *on_circ)
 {
+  /* Update global cell count */
+  circpad_global_nonpadding_sent++;
+  if (circpad_global_nonpadding_sent == UINT64_MAX) {
+    circpad_global_nonpadding_sent /= 2;
+    circpad_global_padding_sent /= 2;
+  }
+
   /* If there are no machines then this loop should not iterate */
   for (int i = 0; i < CIRCPAD_MAX_MACHINES; i++) {
     if (!on_circ->padding_info[i])
