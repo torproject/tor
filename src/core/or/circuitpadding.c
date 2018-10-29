@@ -28,7 +28,9 @@
 
 #include "app/config/config.h"
 
-#define USEC_PER_SEC (1000000)
+/* XXX: This is a dup of the constant in ./src/lib/time/tvdiff.c.
+ * Should/Do we have a header for time constants like this? */
+#define TOR_USEC_PER_SEC (1000000)
 
 void circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi);
 circpad_decision_t circpad_machine_remove_token(circpad_machineinfo_t *mi);
@@ -152,7 +154,7 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
     return start_usec+1;
 
   return start_usec
-      + (state->range_sec*USEC_PER_SEC)/(1<<(state->histogram_len-bin+1));
+      + (state->range_sec*TOR_USEC_PER_SEC)/(1<<(state->histogram_len-bin+1));
 }
 
 /**
@@ -163,7 +165,7 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
  * in order to simplify the rest of the code.
  *
  * This means that technically the last bin (histogram_len-2)
- * has range [start_usec+range_sec*USEC_PER_SEC,
+ * has range [start_usec+range_sec*TOR_USEC_PER_SEC,
  * CIRCPAD_DELAY_INFINITE].
  */
 STATIC int
@@ -191,7 +193,7 @@ circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi, circpad_delay_t us)
     return 1;
 
   bin = state->histogram_len -
-    tor_log2((state->range_sec*USEC_PER_SEC)/(us-start_usec+1));
+    tor_log2((state->range_sec*TOR_USEC_PER_SEC)/(us-start_usec+1));
 
   /* Clamp the return value to account for timevals before the start
    * of bin 0, or after the last bin. Don't return the infinity bin
@@ -297,7 +299,7 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
     /* Sample from a fixed IAT distribution and return */
     double val = circpad_distribution_sample(state->iat_dist);
     val = MAX(0, val);
-    val = MIN(val, state->range_sec*USEC_PER_SEC);
+    val = MIN(val, state->range_sec*TOR_USEC_PER_SEC);
 
     val += start_usec;
     return (circpad_delay_t)tor_lround(val);
@@ -345,7 +347,7 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
 
   /* Truncate the high bin in case it's the infinity bin:
    * Don't actually schedule an "infinite"-1 delay */
-  bin_end = MIN(bin_end, start_usec+state->range_sec*USEC_PER_SEC*2);
+  bin_end = MIN(bin_end, start_usec+state->range_sec*TOR_USEC_PER_SEC*2);
 
   // Sample uniformly between histogram[i] to histogram[i+1]-1,
   // but no need to sample if they are the same timeval (aka bin 0).
@@ -1009,8 +1011,8 @@ circpad_machine_schedule_padding(circpad_machineinfo_t *mi)
     return CIRCPAD_STATE_UNCHANGED;
   }
 
-  timeout.tv_sec = in_us/USEC_PER_SEC;
-  timeout.tv_usec = (in_us%USEC_PER_SEC);
+  timeout.tv_sec = in_us/TOR_USEC_PER_SEC;
+  timeout.tv_usec = (in_us%TOR_USEC_PER_SEC);
 
   log_fn(LOG_INFO, LD_CIRC, "Padding in %u sec, %u usec\n",
           (unsigned)timeout.tv_sec, (unsigned)timeout.tv_usec);
