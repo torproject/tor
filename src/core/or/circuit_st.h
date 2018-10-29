@@ -14,7 +14,6 @@
 struct hs_token_t;
 typedef struct circpad_machine_t circpad_machine_t;
 typedef struct circpad_machineinfo_t circpad_machineinfo_t;
-typedef struct circpad_machineinfo_handle_t circpad_machineinfo_handle_t;
 
 /** Number of padding state machines on a circuit. */
 #define CIRCPAD_MAX_MACHINES (2)
@@ -193,8 +192,6 @@ struct circuit_t {
    *  per-circuit mutable information, such as the current state and
    *  histogram token counts. Some of it is optional (aka NULL). */
   circpad_machineinfo_t *padding_info[CIRCPAD_MAX_MACHINES];
-  /** Handles to safely access padding_info during callback */
-  circpad_machineinfo_handle_t *padding_handles[CIRCPAD_MAX_MACHINES];
 };
 
 #endif
