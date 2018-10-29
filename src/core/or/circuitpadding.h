@@ -10,7 +10,6 @@
 #define TOR_CIRCUITPADDING_H
 
 #include "circpad_negotiation.h"
-#include "lib/container/handles.h"
 #include "lib/evloop/timers.h"
 
 typedef struct circuit_t circuit_t;
@@ -296,8 +295,6 @@ typedef struct circpad_state_t {
  * XXX: Play with layout to minimize space on x64 Linux (most common relay).
  */
 typedef struct circpad_machineinfo_t {
-  HANDLE_ENTRY(circpad_machineinfo, circpad_machineinfo_t);
-
   /** The callback pointer for the padding callbacks */
   tor_timer_t *padding_timer;
 
@@ -377,8 +374,6 @@ typedef struct circpad_machineinfo_t {
   uint8_t machine_index : 1;
 
 } circpad_machineinfo_t;
-
-HANDLE_DECL(circpad_machineinfo, circpad_machineinfo_t,)
 
 /** Helper macro to get an actual state machine from a machineinfo */
 #define CIRCPAD_GET_MACHINE(machineinfo) \

@@ -28,11 +28,6 @@
 
 #include "app/config/config.h"
 
-HANDLE_IMPL(circpad_machineinfo, circpad_machineinfo_t,)
-#define circpad_machineinfo_handle_free(h)    \
-   FREE_AND_NULL(circpad_machineinfo_handle_t, \
-                 circpad_machineinfo_handle_free_, (h))
-
 #define USEC_PER_SEC (1000000)
 
 void circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi);
@@ -835,22 +830,23 @@ circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
 /**
  * Tor-timer compatible callback that tells us to send a padding cell.
  *
- * Conver the handle to a pointer; do some basic sanity checks, then
- * send appropriate data to the callback helper to send the cell.
+ * Timers are associated with circpad_machineinfo_t's. When the machineinfo
+ * is freed on a circuit, the timers are cancelled. Since the lifetime
+ * of machineinfo is always longer than the timers, handles are not
+ * needed.
  */
 static void
 circpad_send_padding_callback(tor_timer_t *timer, void *args,
                               const struct monotime_t *time)
 {
-  circpad_machineinfo_t *mi =
-    circpad_machineinfo_handle_get((struct circpad_machineinfo_handle_t*)args);
+  circpad_machineinfo_t *mi = ((circpad_machineinfo_t*)args);
   (void)timer; (void)time;
 
   if (mi && mi->on_circ) {
     assert_circuit_ok(mi->on_circ);
     circpad_send_padding_cell_for_callback(mi);
   } else {
-    // This shouldn't happen (represents a handle leak)
+    // This shouldn't happen (represents a timer leak)
     log_fn(LOG_WARN,LD_CIRC,
             "Circuit closed while waiting for padding timer.");
     tor_fragile_assert();
@@ -1004,19 +1000,11 @@ circpad_machine_schedule_padding(circpad_machineinfo_t *mi)
   log_fn(LOG_INFO, LD_CIRC, "Padding in %u sec, %u usec\n",
           (unsigned)timeout.tv_sec, (unsigned)timeout.tv_usec);
 
-  if (!mi->on_circ->padding_handles[mi->machine_index]) {
-    mi->on_circ->padding_handles[mi->machine_index] =
-        circpad_machineinfo_handle_new(mi);
-  }
-
   if (mi->padding_timer) {
-    timer_set_cb(mi->padding_timer,
-                 circpad_send_padding_callback,
-                 mi->on_circ->padding_handles[mi->machine_index]);
+    timer_set_cb(mi->padding_timer, circpad_send_padding_callback, mi);
   } else {
     mi->padding_timer =
-        timer_new(circpad_send_padding_callback,
-                  mi->on_circ->padding_handles[mi->machine_index]);
+        timer_new(circpad_send_padding_callback, mi);
   }
   timer_schedule(mi->padding_timer, &timeout);
   mi->padding_timer_scheduled = 1;
@@ -1739,10 +1727,7 @@ circpad_deliver_sent_relay_cell_events(circuit_t *circ,
 static void
 circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
 {
-  circpad_machineinfo_handle_free(circ->padding_handles[idx]);
-
   if (circ->padding_info[idx]) {
-    circpad_machineinfo_handles_clear(circ->padding_info[idx]);
     tor_free(circ->padding_info[idx]->histogram);
     timer_free(circ->padding_info[idx]->padding_timer);
     tor_free(circ->padding_info[idx]);
