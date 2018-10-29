@@ -1,8 +1,7 @@
 # Maintaining Tor
 
-This document details the roles and processes on maintaining the Tor code
-base. We do have many policies in place and the maintainers are there as a
-last line of defense to enforce them.
+This document details the duties and processes on maintaining the Tor code
+base.
 
 The first section describes who is the current Tor maintainer and what are the
 responsabilities. Tor has one main single maintainer but does have many
