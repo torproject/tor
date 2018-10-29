@@ -2931,8 +2931,8 @@ set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc, time_t now,
   /* The OPE module returns CRYPTO_OPE_ERROR in case of errors. */
   tor_assert_nonfatal(rev_counter < CRYPTO_OPE_ERROR);
 
-  log_info(LD_REND, "Encrypted revision counter %d to %ld",
-           (int) seconds_since_start_of_srv, (long int) rev_counter);
+  log_info(LD_REND, "Encrypted revision counter %d to %" PRIu64,
+           (int) seconds_since_start_of_srv, rev_counter);
 
   hs_desc->desc->plaintext_data.revision_counter = rev_counter;
 }
