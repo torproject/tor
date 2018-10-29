@@ -315,6 +315,8 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
     val = MAX(0, val);
     val = MIN(val, state->range_sec*TOR_USEC_PER_SEC);
 
+    /* This addition is exact, because val is at most 2**16 * USEC_PER_SEC ~= 2**46,
+     * start_usec is at most 2**32, and doubles have a precision of 53 bits. */
     val += start_usec;
     return (circpad_delay_t)tor_lround(val);
   }
