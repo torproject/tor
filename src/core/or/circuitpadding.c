@@ -366,7 +366,7 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
   bin_end = MIN(bin_end, start_usec+state->range_sec*TOR_USEC_PER_SEC*2);
 
   // Sample uniformly between histogram[i] to histogram[i+1]-1,
-  // but no need to sample if they are the same timeval (aka bin 0).
+  // but no need to sample if they are the same timeval (aka bin 0 or bin 1).
   if (bin_end <= bin_start+1)
     return bin_start;
   else
