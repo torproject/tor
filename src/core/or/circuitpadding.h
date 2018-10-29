@@ -147,8 +147,7 @@ typedef enum {
   CIRCPAD_TOKEN_REMOVAL_HIGHER = 1,
   /** Remove from the first non-zero lower bin index when current is empty. */
   CIRCPAD_TOKEN_REMOVAL_LOWER = 2,
-  /** Remove from the closest non-zero lower bin index in either direction
-   *  when current is empty. */
+  /** Remove from the closest non-zero bin index when current is empty. */
   CIRCPAD_TOKEN_REMOVAL_CLOSEST = 3,
   /** Remove from the closest bin by time value (since bins are
    *  exponentially spaced). */
