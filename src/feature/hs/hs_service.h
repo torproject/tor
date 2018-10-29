@@ -178,6 +178,9 @@ typedef struct hs_service_config_t {
    * option. */
   uint32_t version;
 
+  /* Have we explicitly set HiddenServiceVersion? */
+  unsigned int hs_version_explicitly_set : 1;
+
   /* List of rend_service_port_config_t */
   smartlist_t *ports;
 
@@ -219,9 +222,6 @@ typedef struct hs_service_config_t {
 
   /* Is this service ephemeral? */
   unsigned int is_ephemeral : 1;
-
-  /* Have we explicitly set HiddenServiceVersion? */
-  unsigned int hs_version_explicitly_set : 1;
 
   /* Does this service export the circuit ID of its clients? */
   hs_circuit_id_protocol_t circuit_id_protocol;

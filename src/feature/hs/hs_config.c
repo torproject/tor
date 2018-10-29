@@ -557,8 +557,9 @@ config_service(const config_line_t *line, const or_options_t *options,
   /* We'll try to learn the service version here by loading the key(s) if
    * present and we did not set HiddenServiceVersion. Depending on the key
    * format, we can figure out the service version. */
-  if (!service->config.hs_version_explicitly_set)
+  if (!service->config.hs_version_explicitly_set) {
     service->config.version = config_learn_service_version(service);
+  }
 
   /* We make sure that this set of options for a service are valid that is for
    * instance an option only for v2 is not used for v3. */
@@ -581,7 +582,6 @@ config_service(const config_line_t *line, const or_options_t *options,
     tor_assert_nonfatal_unreached();
     goto err;
   }
-
   if (ret < 0) {
     goto err;
   }
