@@ -153,8 +153,14 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
   if (bin == 1)
     return start_usec+1;
 
-  return start_usec
-      + (state->range_sec*TOR_USEC_PER_SEC)/(1<<(state->histogram_len-bin+1));
+  /* The bin widths double every index, so that we can have more resolution
+   * for lower time values in the histogram. */
+  const circpad_time_t bin_width_exponent = 1<<(state->histogram_len-bin+1);
+  const circpad_time_t histogram_range_usec =
+                          state->range_sec*TOR_USEC_PER_SEC;
+  return (circpad_delay_t)MIN(start_usec +
+                              histogram_range_usec/bin_width_exponent,
+                              CIRCPAD_DELAY_INFINITE);
 }
 
 /**
@@ -192,8 +198,10 @@ circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi, circpad_delay_t us)
   if (us == start_usec+1)
     return 1;
 
+  const circpad_time_t histogram_range_usec =
+                       state->range_sec*TOR_USEC_PER_SEC;
   bin = state->histogram_len -
-    tor_log2((state->range_sec*TOR_USEC_PER_SEC)/(us-start_usec+1));
+    tor_log2(histogram_range_usec/(us-start_usec+1));
 
   /* Clamp the return value to account for timevals before the start
    * of bin 0, or after the last bin. Don't return the infinity bin
