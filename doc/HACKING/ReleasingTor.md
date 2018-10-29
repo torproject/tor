@@ -39,7 +39,7 @@ new Tor release:
    Does 'make distcheck' complain?
 
    How about 'make test-stem' and 'make test-network' and
-   `make test-network-full`?
+   `make test-network-all`?
 
        - Are all those tests still happy with --enable-expensive-hardening ?
 
