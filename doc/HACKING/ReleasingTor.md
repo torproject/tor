@@ -36,9 +36,9 @@ new Tor release:
 
    What about clang scan-build?
 
-   Does 'make distcheck' complain?
+   Does `make distcheck` complain?
 
-   How about 'make test-stem' and 'make test-network' and
+   How about `make test-stem` and `make test-network` and
    `make test-network-all`?
 
        - Are all those tests still happy with --enable-expensive-hardening ?
@@ -79,7 +79,7 @@ new Tor release:
 
       Present and imperative tense: not past.
 
-      'Relays', not 'servers' or 'nodes' or 'Tor relays'.
+      "Relays", not "servers" or "nodes" or "Tor relays".
 
       "Stop FOOing", not "Fix a bug where we would FOO".
 
@@ -100,7 +100,7 @@ new Tor release:
 
    For stable releases that backport things from later, we try to compose
    their releases, we try to make sure that we keep the changelog entries
-   identical to their original versions, with a 'backport from 0.x.y.z'
+   identical to their original versions, with a "backport from 0.x.y.z"
    note added to each section.  So in this case, once you have the items
    from the changes files copied together, don't use them to build a new
    changelog: instead, look up the corrected versions that were merged
