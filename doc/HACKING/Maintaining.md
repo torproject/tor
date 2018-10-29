@@ -68,9 +68,8 @@ maintain the following subsystems:
 
 These are the tasks of a subsystem maintainer:
 
-1. Regurlarly go over `merge_ready` tickets tagged with the keyword of the
-   related subsystems and for the current alpha or development (master)
-   Milestone.
+1. Regurlarly go over `merge_ready` tickets relevant to the related subsystem
+   and for the current alpha or development (master branch) Milestone.
 
 2. A subsystem maintainer is also in charge of contributing to any design
    changes (including proposals) or large patch set about the subsystem.
