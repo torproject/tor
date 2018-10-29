@@ -15,7 +15,7 @@ SUBITEMS="fn_graph fn_invgraph fn_scc fn_scc_weaklinks module_graph module_invgr
 
 for calculation in $SUBITEMS; do
   echo "======== $calculation"
-  python -m calltool $calculation > callgraph/$calculation
+  python -m calltool "$calculation" > callgraph/"$calculation"
 done
 
 echo <<EOF > callgraph/README
