@@ -310,6 +310,8 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
   } else {
     /* Sample from a fixed IAT distribution and return */
     double val = circpad_distribution_sample(state->iat_dist);
+    /* These comparisons are safe, because the output is in the range [0, 2**46],
+     * and double has a precision of 53 bits. */
     val = MAX(0, val);
     val = MIN(val, state->range_sec*TOR_USEC_PER_SEC);
 
