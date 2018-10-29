@@ -71,8 +71,12 @@ static uint16_t circpad_global_allowed_cells;
 static uint64_t circpad_global_padding_sent;
 static uint64_t circpad_global_nonpadding_sent;
 
-/* Machines for various usecases */
+/** This is the list of circpad_machine_t's parsed from consensus and torrc
+ *  that have origin_side == 1 (ie: are for client side) */
 static smartlist_t *origin_padding_machines = NULL;
+
+/** This is the list of circpad_machine_t's parsed from consensus and torrc
+ *  that have origin_side == 0 (ie: are for relay side) */
 static smartlist_t *relay_padding_machines = NULL;
 
 /** Loop over the current padding state machines using <b>loop_var</b> as the
@@ -1951,6 +1955,8 @@ circpad_machines_init(void)
 
   origin_padding_machines = smartlist_new();
   relay_padding_machines = smartlist_new();
+
+  // TODO: Parse machines from consensus and torrc
 
   circpad_circ_client_machine_init();
   circpad_circ_responder_machine_init();
