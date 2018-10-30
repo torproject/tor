@@ -5,9 +5,6 @@ TODO sketch for this branch, in rough priority order:
    machine.
 
 - Clean up/fix XXX's and FIXMEs
-  - TOR_USEC_PER_SEC
-  - compute_frac_paths_available() for MiddleNodes
-  - Manpage for MiddleNodes, documenting vanguards compat too
   - Fix timer flapping in tests (mock monotime for libevent?)
   - Test SMARTLIST_FOREACH_REVERSE_BEGIN()
   - Tests for circuit getting marked or freed before callback.
@@ -21,14 +18,16 @@ TODO sketch for this branch, in rough priority order:
   - Tests for dists, length and iat sampling
   - Better test coverage in general
 
-- Remove handles and use direct pointers
-
-- Global overhead values?
-  - But these can be soaked up by malicious clients...
-
 - Remaining relay_early_cell condition?
   - This would allow another way to start/stop circuit setup machines.
-  - circpad_circuit_state_t RELAY_EARLY_LEFT
+  - circpad_circuit_state_t RELAY_EARLY_LEFT instead of BUILDING?
+  - Or NO_RELAY_EARLY_LEFT?
+  - Also deliver an event for this?
+
+- Does it even make sense to provide an option to destroy machines when
+  they hit END? Why wouldn't such machines go back to START?
+  - If their conditions still apply, they are going to be restarted anyway
+    after being torn down.
 
 - Nick's API doc
   - Consider how we'd use it.
