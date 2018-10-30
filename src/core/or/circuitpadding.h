@@ -161,7 +161,7 @@ typedef enum {
 } circpad_removal_t;
 
 /** The maximum length any histogram can be. */
-/** Each bin is twice as large as the last bin, and there is an extra bin for 0 */
+/** Each bin is twice as large as the previous, with an extra bin for 0 */
 #define CIRCPAD_MAX_HISTOGRAM_LEN (sizeof(circpad_delay_t)*8 + 1)
 
 /**
