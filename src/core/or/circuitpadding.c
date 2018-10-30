@@ -338,12 +338,12 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
   } else {
     /* Sample from a fixed IAT distribution and return */
     double val = circpad_distribution_sample(state->iat_dist);
-    /* These comparisons are safe, because the output is in the range [0, 2**46],
-     * and double has a precision of 53 bits. */
+    /* These comparisons are safe, because the output is in the range
+     * [0, 2**46], and double has a precision of 53 bits. */
     val = MAX(0, val);
     val = MIN(val, state->range_sec*TOR_USEC_PER_SEC);
 
-    /* This addition is exact, because val is at most 2**16 * USEC_PER_SEC ~= 2**46,
+    /* This addition is exact: val is at most 2**16 * USEC_PER_SEC ~= 2**46,
      * start_usec is at most 2**32, and doubles have a precision of 53 bits. */
     val += start_usec;
     /* Clamp the distribution at infinite delay val */
@@ -423,10 +423,11 @@ circpad_distribution_sample(circpad_distribution_t dist)
     case CIRCPAD_DIST_UNIFORM:
       p = crypto_rand_double();
       // param2 is upper bound, param1 is lower
-      /* This subtraction is exact as long as param2 and param1 are both less than 2**53.
-       * This multiplication is accurate as long as (param2 - param1) is less than 2**52.
-       * (And when they are large, the low bits aren't important.)
-       * The result covers the full range of outputs, as long as p has a resolution of 1/2**32 or greater. */
+      /* The subtraction is exact as long as param2 and param1 are less than
+       * 2**53. The multiplication is accurate as long as (param2 - param1)
+       * is less than 2**52. (And when they are large, the low bits aren't
+       * important.) The result covers the full range of outputs, as long as
+       * p has a resolution of 1/2**32 or greater. */
       p *= (dist.param2 - dist.param1);
       p += dist.param1;
       return p;
@@ -886,7 +887,8 @@ circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
   } else {
     // If we're a non-origin circ, we can just send from here as if we're the
     // edge.
-    log_fn(LOG_INFO,LD_CIRC, "Callback: Sending padding to non-origin circuit.");
+    log_fn(LOG_INFO,LD_CIRC,
+          "Callback: Sending padding to non-origin circuit.");
     relay_send_command_from_edge(0, mi->on_circ, RELAY_COMMAND_DROP, NULL,
                                  0, NULL);
   }
@@ -1748,9 +1750,10 @@ circpad_deliver_recognized_relay_cell_events(circuit_t *circ,
        destination, which means that we received a padding cell. We might be
        the client or the Middle node, still, because leaky-pipe. */
     circpad_cell_event_padding_received(circ);
-    log_notice(LD_OR,"Got padding cell on %s circuit %u.",
-               CIRCUIT_IS_ORIGIN(circ) ? "origin" : "non-origin",
-               CIRCUIT_IS_ORIGIN(circ) ? TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
+    log_fn(LOG_INFO, LD_CIRC, "Got padding cell on %s circuit %u.",
+           CIRCUIT_IS_ORIGIN(circ) ? "origin" : "non-origin",
+           CIRCUIT_IS_ORIGIN(circ) ?
+             TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
   } else {
     /* We received a non-padding cell on the edge */
     circpad_cell_event_nonpadding_received(circ);
@@ -1768,7 +1771,7 @@ circpad_deliver_sent_relay_cell_events(circuit_t *circ,
                                        uint8_t relay_command)
 {
   /* Padding negotiate cells are ignored by the state machines
-   * for simplicity. */
+   * for si
   if (relay_command == RELAY_COMMAND_PADDING_NEGOTIATE ||
       relay_command == RELAY_COMMAND_PADDING_NEGOTIATED) {
     return;
