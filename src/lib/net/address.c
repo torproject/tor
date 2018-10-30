@@ -1187,14 +1187,22 @@ tor_addr_parse(tor_addr_t *addr, const char *src)
   int result;
   struct in_addr in_tmp;
   struct in6_addr in6_tmp;
+  int brackets_detected = 0;
+
   tor_assert(addr && src);
-  if (src[0] == '[' && src[1])
+
+  size_t len = strlen(src);
+
+  if (len && src[0] == '[' && src[len - 1] == ']') {
+    brackets_detected = 1;
     src = tmp = tor_strndup(src+1, strlen(src)-2);
+  }
 
   if (tor_inet_pton(AF_INET6, src, &in6_tmp) > 0) {
     result = AF_INET6;
     tor_addr_from_in6(addr, &in6_tmp);
-  } else if (tor_inet_pton(AF_INET, src, &in_tmp) > 0) {
+  } else if (!brackets_detected &&
+             tor_inet_pton(AF_INET, src, &in_tmp) > 0) {
     result = AF_INET;
     tor_addr_from_in(addr, &in_tmp);
   } else {
