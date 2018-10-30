@@ -18,17 +18,6 @@ TODO sketch for this branch, in rough priority order:
   - Tests for dists, length and iat sampling
   - Better test coverage in general
 
-- Remaining relay_early_cell condition?
-  - This would allow another way to start/stop circuit setup machines.
-  - circpad_circuit_state_t RELAY_EARLY_LEFT instead of BUILDING?
-  - Or NO_RELAY_EARLY_LEFT?
-  - Also deliver an event for this?
-
-- Does it even make sense to provide an option to destroy machines when
-  they hit END? Why wouldn't such machines go back to START?
-  - If their conditions still apply, they are going to be restarted anyway
-    after being torn down.
-
 - Nick's API doc
   - Consider how we'd use it.
 
@@ -45,7 +34,13 @@ TODO sketch for this branch, in rough priority order:
 - Specify ports for machine??
 
 - circpad_machine_validate() function to sanity-check histograms loaded from
-  consensus/torrc.
+  consensus/torrc (can also be used to help guide a GA).
+  - Check bin construction
+  - no type overflow (start_usec + range_sec, etc)
+  - no conflicting state transitions (or overlap with cancel events)
+  - no use of both histograms and iat_dist
+  - at least two histogram bins
+  - min_hop vs target_hop
 
 - Support torrc load+serialization of state machines
   - ??
