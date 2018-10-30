@@ -87,12 +87,17 @@ typedef uint32_t circpad_delay_t;
 typedef enum {
   CIRCPAD_CIRC_BUILDING = 1<<0,
   CIRCPAD_CIRC_OPENED = 1<<1,
-  CIRCPAD_CIRC_STREAMS = 1<<2
+  CIRCPAD_CIRC_NO_STREAMS = 1<<2,
+  CIRCPAD_CIRC_STREAMS = 1<<3,
+  CIRCPAD_CIRC_HAS_RELAY_EARLY = 1<<4,
+  CIRCPAD_CIRC_HAS_NO_RELAY_EARLY = 1<<5
 } circpad_circuit_state_t;
 
 /** Bitmask that says "apply this machine to all states" */
 #define CIRCPAD_STATE_ALL   \
-    (CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED|CIRCPAD_CIRC_STREAMS)
+    (CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED| \
+     CIRCPAD_CIRC_STREAMS|CIRCPAD_CIRC_NO_STREAMS| \
+     CIRCPAD_CIRC_HAS_RELAY_EARLY|CIRCPAD_CIRC_HAS_NO_RELAY_EARLY)
 
 /**
  * A compact circuit purpose bitfield mask that allows us to compactly
@@ -497,12 +502,14 @@ circpad_decision_t circpad_internal_event_bins_empty(circpad_machineinfo_t *);
 circpad_decision_t circpad_internal_event_state_length_up(
                                   circpad_machineinfo_t *);
 
-/** Machine creation events */
+/** Machine creation events are events that cause us to set up or
+ *  tear down padding state machines. */
 void circpad_machine_event_circ_added_hop(origin_circuit_t *on_circ);
 void circpad_machine_event_circ_built(origin_circuit_t *circ);
-void circpad_machine_event_purpose_changed(origin_circuit_t *circ);
+void circpad_machine_event_circ_purpose_changed(origin_circuit_t *circ);
 void circpad_machine_event_circ_has_streams(origin_circuit_t *circ);
 void circpad_machine_event_circ_has_no_streams(origin_circuit_t *circ);
+void circpad_machine_event_circ_has_no_relay_early(origin_circuit_t *circ);
 
 void circpad_machines_init(void);
 void circpad_machines_free(void);
