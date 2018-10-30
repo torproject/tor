@@ -33,12 +33,8 @@ env:
     ## We don't list default variable values, because we set the defaults
     ## in global (or the default is unset)
     -
-    ## We turn off hardening for Rust builds, because they are incompatible,
-    ## and it's going to take a while for them to be fixed. See:
-    ##   https:/trac.torproject.org/projects/tor/ticket/25386
-    ##   https:/trac.torproject.org/projects/tor/ticket/26398
     ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
-    - RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
+    - RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
 
 matrix:
   ## include creates builds with gcc, linux, sudo: false
@@ -54,10 +50,9 @@ matrix:
     # We clone our stem repo and run `make test-stem`
     - env: TEST_STEM="yes"
     ## Check rust online with distcheck, to make sure we remove rust products
-    ## But without hardening (see above)
-    - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode" HARDENING_OPTIONS=""
+    - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
     ## Check disable module dirauth with and without rust
-    - env: MODULES_OPTIONS="--disable-module-dirauth" RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
+    - env: MODULES_OPTIONS="--disable-module-dirauth" RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
     - env: MODULES_OPTIONS="--disable-module-dirauth"
     ## Check NSS
     - env: NSS_OPTIONS="--enable-nss"
@@ -181,8 +176,8 @@ install:
   - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export XML_CATALOG_FILES="/usr/local/etc/xml/catalog"; fi
   ## If we're using Rust, download rustup
   - if [[ "$RUST_OPTIONS" != "" ]]; then curl -Ssf -o rustup.sh https://sh.rustup.rs; fi
-  ## Install the stable channels of rustc and cargo and setup our toolchain environment
-  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain stable; fi
+  ## Install the nightly channels of rustc and cargo and setup our toolchain environment
+  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain nightly; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then source $HOME/.cargo/env; fi
   ## If we're testing rust builds in offline-mode, then set up our vendored dependencies
   - if [[ "$TOR_RUST_DEPENDENCIES" == "true" ]]; then export TOR_RUST_DEPENDENCIES=$PWD/src/ext/rust/crates; fi
