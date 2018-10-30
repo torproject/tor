@@ -1210,17 +1210,17 @@ dnl variable.
 RUST_LINKER_OPTIONS=""
 if test "x$have_clang" = "xyes"; then
 	if test "x$CFLAGS_ASAN" != "x"; then
-		RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS $CFLAGS_ASAN"
+		RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -Clink-arg=$CFLAGS_ASAN -Cdefault-linker-libraries"
 	fi
 	if test "x$CFLAGS_UBSAN" != "x"; then
-        	RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS $CFLAGS_UBSAN"
+        	RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -Clink-arg=$CFLAGS_UBSAN -Cdefault-linker-libraries"
 	fi
 else
 	if test "x$CFLAGS_ASAN" != "x"; then
-		RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -lasan"
+		RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -Clink-arg=-fsanitize=address -Cdefault-linker-libraries"
 	fi
 	if test "x$CFLAGS_UBSAN" != "x"; then
-        	RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -lubsan"
+        	RUST_LINKER_OPTIONS="$RUST_LINKER_OPTIONS -Clink-arg=-fsanitize=undefined -Cdefault-linker-libraries"
 	fi
 fi
 AC_SUBST(RUST_LINKER_OPTIONS)
@@ -2416,7 +2416,6 @@ AC_CONFIG_FILES([
 	Doxyfile
 	Makefile
 	config.rust
-	link_rust.sh
 	contrib/dist/suse/tor.sh
 	contrib/operator-tools/tor.logrotate
 	contrib/dist/tor.sh

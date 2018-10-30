@@ -8,7 +8,7 @@
 //! module implementing this functionality repeatedly.
 
 extern crate libc;
-
+extern crate tor_allocate;
 extern crate smartlist;
 
 pub mod crypto_digest;

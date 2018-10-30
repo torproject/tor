@@ -13,19 +13,3 @@ members = [
 [profile.release]
 debug = true
 panic = "abort"
-
-[features]
-default = []
-# If this feature is enabled, test code which calls Tor C code from Rust will
-# execute with `cargo test`.  Due to numerous linker issues (#25386), this is
-# currently disabled by default.  Crates listed here are those which, in their
-# unittests, doctests, and/or integration tests, call C code.
-test-c-from-rust = [
-    "crypto/test-c-from-rust",
-]
-
-# We have to define a feature here because doctests don't get cfg(test),
-# and we need to disable some C dependencies when running the doctests
-# because of the various linker issues.  See
-# https://github.com/rust-lang/rust/issues/45599
-test_linking_hack = []
