@@ -614,7 +614,6 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
        * task 878. */
       origin_circ->relay_early_commands[
           origin_circ->relay_early_cells_sent++] = relay_command;
-
     } else if (relay_command == RELAY_COMMAND_EXTEND ||
                relay_command == RELAY_COMMAND_EXTEND2) {
       /* If no RELAY_EARLY cells can be sent over this circuit, log which
