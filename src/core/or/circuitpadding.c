@@ -423,6 +423,9 @@ circpad_distribution_sample(circpad_distribution_t dist)
       /* https://en.wikipedia.org/wiki/Weibull_distribution \
        *    #Cumulative_distribution_function
        * param1 is 1.0/k, param2 is Lambda */
+      // XXX: It is still not clear to me that this log1p(-p) is OK
+      // for p near 1.0. However, our p is always at least 2^-32 away
+      // from 1.0..
       return dist.param2*pow(-log1p(-p), dist.param1);
     case CIRCPAD_DIST_PARETO:
       p = 1.0-crypto_rand_double(); // Pareto quantile needs (0,1]
