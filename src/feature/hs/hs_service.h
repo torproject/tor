@@ -178,6 +178,9 @@ typedef struct hs_service_config_t {
    * option. */
   uint32_t version;
 
+  /* Have we explicitly set HiddenServiceVersion? */
+  unsigned int hs_version_explicitly_set : 1;
+
   /* List of rend_service_port_config_t */
   smartlist_t *ports;
 

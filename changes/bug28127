@@ -1,0 +1,7 @@
+  o Minor bugfixes (onion services):
+    - Unless we have explicitly set HiddenServiceVersion, detect the onion
+      service version and then look for invalid options. Previously, we
+      did the reverse, but that broke existing configs which were pointed
+      to a v2 hidden service and had options like HiddenServiceAuthorizeClient
+      set Fixes bug 28127; bugfix on 0.3.5.1-alpha. Patch by Neel Chauhan.
+

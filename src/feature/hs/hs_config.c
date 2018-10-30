@@ -419,7 +419,7 @@ config_generic_service(const config_line_t *line_,
           dup_opt_seen = line->key;
         goto err;
       }
-      have_version = 1;
+      have_version = service->config.hs_version_explicitly_set = 1;
       continue;
     }
     /* Virtual port. */
@@ -534,18 +534,15 @@ config_service(const config_line_t *line, const or_options_t *options,
 
   /* We have a new hidden service. */
   service = hs_service_new(options);
+
   /* We'll configure that service as a generic one and then pass it to a
    * specific function according to the configured version number. */
   if (config_generic_service(line, options, service) < 0) {
     goto err;
   }
+
   tor_assert(service->config.version <= HS_VERSION_MAX);
-  /* Before we configure the service on a per-version basis, we'll make
-   * sure that this set of options for a service are valid that is for
-   * instance an option only for v2 is not used for v3. */
-  if (config_has_invalid_options(line->next, service)) {
-    goto err;
-  }
+
   /* Check permission on service directory that was just parsed. And this must
    * be done regardless of the service version. Do not ask for the directory
    * to be created, this is done when the keys are loaded because we could be
@@ -556,11 +553,19 @@ config_service(const config_line_t *line, const or_options_t *options,
                                    0) < 0) {
     goto err;
   }
+
   /* We'll try to learn the service version here by loading the key(s) if
-   * present. Depending on the key format, we can figure out the service
-   * version. If we can't find a key, the configuration version will be used
-   * which has been set previously. */
-  service->config.version = config_learn_service_version(service);
+   * present and we did not set HiddenServiceVersion. Depending on the key
+   * format, we can figure out the service version. */
+  if (!service->config.hs_version_explicitly_set) {
+    service->config.version = config_learn_service_version(service);
+  }
+
+  /* We make sure that this set of options for a service are valid that is for
+   * instance an option only for v2 is not used for v3. */
+  if (config_has_invalid_options(line->next, service)) {
+    goto err;
+  }
 
   /* Different functions are in charge of specific options for a version. We
    * start just after the service directory line so once we hit another
@@ -580,13 +585,16 @@ config_service(const config_line_t *line, const or_options_t *options,
   if (ret < 0) {
     goto err;
   }
+
   /* We'll check if this service can be kept depending on the others
    * configured previously. */
   if (service_is_duplicate_in_list(service_list, service)) {
     goto err;
   }
+
   /* Passes, add it to the given list. */
   smartlist_add(service_list, service);
+
   return 0;
 
  err:
