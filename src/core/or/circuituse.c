@@ -3078,7 +3078,7 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
     control_event_circuit_purpose_changed(TO_ORIGIN_CIRCUIT(circ),
                                           old_purpose);
 
-    circpad_machine_event_purpose_changed(TO_ORIGIN_CIRCUIT(circ));
+    circpad_machine_event_circ_purpose_changed(TO_ORIGIN_CIRCUIT(circ));
   }
 }
 
