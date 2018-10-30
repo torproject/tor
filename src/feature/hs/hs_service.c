@@ -1696,6 +1696,32 @@ build_desc_intro_points(const hs_service_t *service,
   } DIGEST256MAP_FOREACH_END;
 }
 
+/* Build the descriptor signing key certificate. */
+static void
+build_desc_signing_key_cert(hs_service_descriptor_t *desc, time_t now)
+{
+  hs_desc_plaintext_data_t *plaintext;
+
+  tor_assert(desc);
+  tor_assert(desc->desc);
+
+  /* Ease our life a bit. */
+  plaintext = &desc->desc->plaintext_data;
+
+  /* Get rid of what we have right now. */
+  tor_cert_free(plaintext->signing_key_cert);
+
+  /* Fresh certificate for the signing key. */
+  plaintext->signing_key_cert =
+    tor_cert_create(&desc->blinded_kp, CERT_TYPE_SIGNING_HS_DESC,
+                    &desc->signing_kp.pubkey, now, HS_DESC_CERT_LIFETIME,
+                    CERT_FLAG_INCLUDE_SIGNING_KEY);
+  /* If the cert creation fails, the descriptor encoding will fail and thus
+   * ultimately won't be uploaded. We'll get a stack trace to help us learn
+   * where the call came from and the tor_cert_create() will log the error. */
+  tor_assert_nonfatal(plaintext->signing_key_cert);
+}
+
 /* Populate the descriptor encrypted section from the given service object.
  * This will generate a valid list of introduction points that can be used
  * after for circuit creation. Return 0 on success else -1 on error. */
@@ -1811,17 +1837,15 @@ build_service_desc_superencrypted(const hs_service_t *service,
 
 /* Populate the descriptor plaintext section from the given service object.
  * The caller must make sure that the keys in the descriptors are valid that
- * is are non-zero. Return 0 on success else -1 on error. */
-static int
+ * is are non-zero. This can't fail. */
+static void
 build_service_desc_plaintext(const hs_service_t *service,
-                             hs_service_descriptor_t *desc, time_t now)
+                             hs_service_descriptor_t *desc)
 {
-  int ret = -1;
   hs_desc_plaintext_data_t *plaintext;
 
   tor_assert(service);
   tor_assert(desc);
-  /* XXX: Use a "assert_desc_ok()" ? */
   tor_assert(!tor_mem_is_zero((char *) &desc->blinded_kp,
                               sizeof(desc->blinded_kp)));
   tor_assert(!tor_mem_is_zero((char *) &desc->signing_kp,
@@ -1835,24 +1859,13 @@ build_service_desc_plaintext(const hs_service_t *service,
 
   plaintext->version = service->config.version;
   plaintext->lifetime_sec = HS_DESC_DEFAULT_LIFETIME;
-  plaintext->signing_key_cert =
-    tor_cert_create(&desc->blinded_kp, CERT_TYPE_SIGNING_HS_DESC,
-                    &desc->signing_kp.pubkey, now, HS_DESC_CERT_LIFETIME,
-                    CERT_FLAG_INCLUDE_SIGNING_KEY);
-  if (plaintext->signing_key_cert == NULL) {
-    log_warn(LD_REND, "Unable to create descriptor signing certificate for "
-                      "service %s",
-             safe_str_client(service->onion_address));
-    goto end;
-  }
   /* Copy public key material to go in the descriptor. */
   ed25519_pubkey_copy(&plaintext->signing_pubkey, &desc->signing_kp.pubkey);
   ed25519_pubkey_copy(&plaintext->blinded_pubkey, &desc->blinded_kp.pubkey);
-  /* Success. */
-  ret = 0;
 
- end:
-  return ret;
+  /* Create the signing key certificate. This will be updated before each
+   * upload but we create it here so we don't complexify our unit tests. */
+  build_desc_signing_key_cert(desc, approx_time());
 }
 
 /** Compute the descriptor's OPE cipher for encrypting revision counters. */
@@ -1942,8 +1955,7 @@ build_service_desc_keys(const hs_service_t *service,
  *
  * This can error if we are unable to create keys or certificate. */
 static void
-build_service_descriptor(hs_service_t *service, time_t now,
-                         uint64_t time_period_num,
+build_service_descriptor(hs_service_t *service, uint64_t time_period_num,
                          hs_service_descriptor_t **desc_out)
 {
   char *encoded_desc;
@@ -1962,9 +1974,8 @@ build_service_descriptor(hs_service_t *service, time_t now,
     goto err;
   }
   /* Setup plaintext descriptor content. */
-  if (build_service_desc_plaintext(service, desc, now) < 0) {
-    goto err;
-  }
+  build_service_desc_plaintext(service, desc);
+
   /* Setup superencrypted descriptor content. */
   if (build_service_desc_superencrypted(service, desc) < 0) {
     goto err;
@@ -2037,10 +2048,8 @@ build_descriptors_for_new_service(hs_service_t *service, time_t now)
   }
 
   /* Build descriptors. */
-  build_service_descriptor(service, now, current_desc_tp,
-                           &service->desc_current);
-  build_service_descriptor(service, now, next_desc_tp,
-                           &service->desc_next);
+  build_service_descriptor(service, current_desc_tp, &service->desc_current);
+  build_service_descriptor(service, next_desc_tp, &service->desc_next);
   log_info(LD_REND, "Hidden service %s has just started. Both descriptors "
                     "built. Now scheduled for upload.",
            safe_str_client(service->onion_address));
@@ -2070,7 +2079,7 @@ build_all_descriptors(time_t now)
     }
 
     if (service->desc_next == NULL) {
-      build_service_descriptor(service, now, hs_get_next_time_period_num(0),
+      build_service_descriptor(service, hs_get_next_time_period_num(0),
                                &service->desc_next);
       log_info(LD_REND, "Hidden service %s next descriptor successfully "
                         "built. Now scheduled for upload.",
@@ -2282,12 +2291,9 @@ service_desc_schedule_upload(hs_service_descriptor_t *desc,
   }
 }
 
-/* Update the given descriptor from the given service. The possible update
- * actions includes:
- *    - Picking missing intro points if needed.
- */
+/* Pick missing intro points for this descriptor if needed. */
 static void
-update_service_descriptor(hs_service_t *service,
+update_service_descriptor_intro_points(hs_service_t *service,
                           hs_service_descriptor_t *desc, time_t now)
 {
   unsigned int num_intro_points;
@@ -2326,15 +2332,17 @@ update_service_descriptor(hs_service_t *service,
   }
 }
 
-/* Update descriptors for each service if needed. */
+/* Update descriptor intro points for each service if needed. We do this as
+ * part of the periodic event because we need to establish intro point circuits
+ * before we publish descriptors. */
 STATIC void
-update_all_descriptors(time_t now)
+update_all_descriptors_intro_points(time_t now)
 {
   FOR_EACH_SERVICE_BEGIN(service) {
     /* We'll try to update each descriptor that is if certain conditions apply
      * in order for the descriptor to be updated. */
     FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
-      update_service_descriptor(service, desc, now);
+      update_service_descriptor_intro_points(service, desc, now);
     } FOR_EACH_DESCRIPTOR_END;
   } FOR_EACH_SERVICE_END;
 }
@@ -2619,10 +2627,10 @@ run_build_descriptor_event(time_t now)
    * been rotated or we just started up. */
   build_all_descriptors(now);
 
-  /* Finally, we'll check if we should update the descriptors. Missing
-   * introduction points will be picked in this function which is useful for
-   * newly built descriptors. */
-  update_all_descriptors(now);
+  /* Finally, we'll check if we should update the descriptors' intro
+   * points. Missing introduction points will be picked in this function which
+   * is useful for newly built descriptors. */
+  update_all_descriptors_intro_points(now);
 }
 
 /* For the given service, launch any intro point circuits that could be
@@ -3083,6 +3091,37 @@ should_service_upload_descriptor(const hs_service_t *service,
   return 0;
 }
 
+/* Refresh the given service descriptor meaning this will update every mutable
+ * field that needs to be updated before we upload.
+ *
+ * This should ONLY be called before uploading a descriptor. It assumes that
+ * the descriptor has been built (desc->desc) and that all intro point
+ * circuits have been established.  */
+static void
+refresh_service_descriptor(const hs_service_t *service,
+                           hs_service_descriptor_t *desc, time_t now)
+{
+  /* There are few fields that we consider "mutable" in the descriptor meaning
+   * we need to update them regurlarly over the lifetime fo the descriptor.
+   * The rest are set once and should not be modified.
+   *
+   *  - Signing key certificate.
+   *  - Revision counter.
+   *  - Introduction points which includes many thing. See
+   *    hs_desc_intro_point_t. and the setup_desc_intro_point() function.
+   */
+
+  /* Create the signing key certificate. */
+  build_desc_signing_key_cert(desc, now);
+
+  /* Build the intro points descriptor section. The refresh step is just
+   * before we upload so all circuits have been properly established. */
+  build_desc_intro_points(service, desc, now);
+
+  /* Set the desc revision counter right before uploading */
+  set_descriptor_revision_counter(desc, now, service->desc_current == desc);
+}
+
 /* Scheduled event run from the main loop. Try to upload the descriptor for
  * each service. */
 STATIC void
@@ -3118,15 +3157,12 @@ run_upload_descriptor_event(time_t now)
                service->config.num_intro_points,
                (desc->missing_intro_points) ? " (couldn't pick more)" : "");
 
-      /* At this point, we have to upload the descriptor so start by building
-       * the intro points descriptor section which we are now sure to be
-       * accurate because all circuits have been established. */
-      build_desc_intro_points(service, desc, now);
+      /* We are about to upload so we need to do one last step which is to
+       * update the service's descriptor mutable fields in order to upload a
+       * coherent descriptor. */
+      refresh_service_descriptor(service, desc, now);
 
-      /* Set the desc revision counter right before uploading */
-      set_descriptor_revision_counter(desc, approx_time(),
-                                      service->desc_current == desc);
-
+      /* Proceed with the upload, the descriptor is ready to be encoded. */
       upload_descriptor_to_all(service, desc);
     } FOR_EACH_DESCRIPTOR_END;
   } FOR_EACH_SERVICE_END;
