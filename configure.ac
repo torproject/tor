@@ -812,6 +812,8 @@ fi
 dnl Now check for particular libevent functions.
 AC_CHECK_FUNCS([evutil_secure_rng_set_urandom_device_file \
                 evutil_secure_rng_add_bytes \
+                evdns_base_get_nameserver_addr \
+
 ])
 
 LIBS="$save_LIBS"
