@@ -1142,18 +1142,30 @@ circpad_machine_transition(circpad_machineinfo_t *mi,
         if (s == CIRCPAD_STATE_END) {
           const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
 
+          /*
+           * We allow machines to shut down and delete themselves as opposed
+           * to just going back to START or waiting forever in END so that
+           * we can handle the case where this machine started while it was
+           * the only machine that matched conditions, but *since* then more
+           * "higher ranking" machines now match the conditions, and would
+           * be given a chance to take precidence over this one in
+           * circpad_add_matching_machines().
+           *
+           * Returning to START or waiting forever in END would not give those
+           * other machines a chance to be launched, where as shutting down
+           * here does.
+           */
           if (machine->negotiate_end) {
             if (machine->origin_side) {
               circpad_negotiate_padding(TO_ORIGIN_CIRCUIT(mi->on_circ),
                                         machine->machine_num,
                                         machine->target_hopnum,
                                         CIRCPAD_COMMAND_STOP);
-              mi->padding_scheduled_at_us = 0;
-              if (mi->padding_timer_scheduled) {
-                mi->padding_timer_scheduled = 0;
-                /* Cancel current timer (if any) */
-                timer_disable(mi->padding_timer);
-              }
+              /* We free the machine info here so that we can be replaced
+               * by a different machine. But we must leave the padding_machine
+               * in place to wait for the negotiated response */
+              circpad_circuit_machineinfo_free_idx(mi->on_circ,
+                                                   machine->machine_index);
             } else {
               circpad_padding_negotiated(mi->on_circ,
                                         machine->machine_num,
