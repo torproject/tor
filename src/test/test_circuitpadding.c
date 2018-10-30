@@ -388,7 +388,7 @@ circpad_circ_token_machine_setup(circuit_t *on_circ)
   on_circ->padding_machine[0] = &circ_client_machine;
   on_circ->padding_info[0] = circpad_circuit_machineinfo_new(on_circ, 0);
 
-   circ_client_machine.start.transition_events[CIRCPAD_STATE_BURST] =
+  circ_client_machine.start.transition_events[CIRCPAD_STATE_BURST] =
     CIRCPAD_EVENT_NONPADDING_RECV;
 
   circ_client_machine.burst.transition_events[CIRCPAD_STATE_BURST] =
@@ -504,16 +504,20 @@ test_circuitpadding_tokens(void *arg)
 
   /* 2.b. Higher Infinity bin */
   {
-    tt_int_op(mi->histogram[4], OP_EQ, 2);
+    /* We have to save the infinity bin because one inf delay
+     * could have been chosen when we transition to burst */
+    circpad_hist_bin_t inf_bin = mi->histogram[4];
+
+    tt_int_op(mi->histogram[4], OP_EQ, inf_bin);
     circpad_machine_remove_higher_token(mi,
          circpad_histogram_bin_to_usec(mi, 2)+1);
-    tt_int_op(mi->histogram[4], OP_EQ, 2);
+    tt_int_op(mi->histogram[4], OP_EQ, inf_bin);
 
     /* Test past the infinity bin */
     circpad_machine_remove_higher_token(mi,
          circpad_histogram_bin_to_usec(mi, 5)+1000000);
 
-    tt_int_op(mi->histogram[4], OP_EQ, 2);
+    tt_int_op(mi->histogram[4], OP_EQ, inf_bin);
   }
 
   /* 2.c. Bin 0 */
