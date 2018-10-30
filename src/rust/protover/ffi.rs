@@ -7,7 +7,6 @@
 
 use libc::{c_char, c_int, uint32_t};
 use std::ffi::CStr;
-use std::ffi::CString;
 
 use smartlist::*;
 use tor_allocate::allocate_and_copy_string;
