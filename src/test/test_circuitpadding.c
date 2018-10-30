@@ -1,4 +1,5 @@
 #define TOR_CHANNEL_INTERNAL_
+#define TOR_TIMERS_PRIVATE
 #include "core/or/or.h"
 #include "test.h"
 #include "lib/testsupport/testsupport.h"
@@ -29,6 +30,9 @@ extern networkstatus_t *current_ns_consensus;
 extern networkstatus_t *current_md_consensus;
 
 #define USEC_PER_SEC (1000000)
+#define NSEC_PER_USEC (1000)
+#define NSEC_PER_MSEC (1000*1000)
+
 circid_t get_unique_circ_id_by_chan(channel_t *chan);
 circpad_delay_t circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi,
                                        int bin);
@@ -65,10 +69,21 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
 void free_fake_orcirc(circuit_t *circ);
 void free_fake_origin_circuit(origin_circuit_t *circ);
 
+static int64_t curr_mocked_time;
+
 static node_t padding_node;
 static node_t non_padding_node;
 
 static channel_t dummy_channel;
+
+static void
+timers_advance_and_run(int64_t msec_update)
+{
+  curr_mocked_time += msec_update*NSEC_PER_MSEC;
+  monotime_coarse_set_mock_time_nsec(curr_mocked_time);
+  monotime_set_mock_time_nsec(curr_mocked_time);
+  timers_run_pending();
+}
 
 static void
 nodes_init(void)
@@ -240,7 +255,7 @@ circuit_package_relay_cell_mock(cell_t *cell, circuit_t *circ,
   }
 
  done:
-  event_base_loopbreak(tor_libevent_get_base());
+  timers_advance_and_run(1);
   return 0;
 }
 
@@ -275,6 +290,11 @@ test_circuitpadding_rtt(void *arg)
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
   monotime_init();
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(1*NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*NSEC_PER_USEC);
+  curr_mocked_time = 1*NSEC_PER_USEC;
+
   timers_initialize();
   circpad_machines_init();
 
@@ -288,7 +308,8 @@ test_circuitpadding_rtt(void *arg)
   circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
   tt_int_op(relay_side->padding_info[0]->last_received_time_us, OP_NE, 0);
 
-  tor_sleep_msec(20);
+  timers_advance_and_run(20);
+
   circpad_cell_event_nonpadding_sent((circuit_t*)relay_side);
   tt_int_op(relay_side->padding_info[0]->last_received_time_us, OP_EQ, 0);
 
@@ -303,13 +324,13 @@ test_circuitpadding_rtt(void *arg)
   circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
   circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
   tt_int_op(relay_side->padding_info[0]->last_received_time_us, OP_NE, 0);
-  tor_sleep_msec(40);
+  timers_advance_and_run(20);
   circpad_cell_event_nonpadding_sent((circuit_t*)relay_side);
   circpad_cell_event_nonpadding_sent((circuit_t*)relay_side);
   tt_int_op(relay_side->padding_info[0]->last_received_time_us, OP_EQ, 0);
 
-  tt_int_op(relay_side->padding_info[0]->rtt_estimate_us, OP_GE, 29000);
-  tt_int_op(relay_side->padding_info[0]->rtt_estimate_us, OP_LE, 50000);
+  tt_int_op(relay_side->padding_info[0]->rtt_estimate_us, OP_GE, 20000);
+  tt_int_op(relay_side->padding_info[0]->rtt_estimate_us, OP_LE, 21000);
   tt_int_op(circpad_histogram_bin_to_usec(relay_side->padding_info[0], 0),
             OP_EQ,
             relay_side->padding_info[0]->rtt_estimate_us+
@@ -321,7 +342,7 @@ test_circuitpadding_rtt(void *arg)
   rtt_estimate = relay_side->padding_info[0]->rtt_estimate_us;
 
   circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
-  tor_sleep_msec(4);
+  timers_advance_and_run(4);
   circpad_cell_event_nonpadding_sent((circuit_t*)relay_side);
 
   tt_int_op(relay_side->padding_info[0]->rtt_estimate_us, OP_EQ, rtt_estimate);
@@ -337,7 +358,7 @@ test_circuitpadding_rtt(void *arg)
   circpad_cell_event_nonpadding_received((circuit_t*)client_side);
   tt_int_op(client_side->padding_info[0]->last_received_time_us, OP_EQ, 0);
 
-  tor_sleep_msec(20);
+  timers_advance_and_run(20);
   circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   tt_int_op(client_side->padding_info[0]->last_received_time_us, OP_EQ, 0);
 
@@ -353,6 +374,7 @@ test_circuitpadding_rtt(void *arg)
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
   circuitmux_free(dummy_channel.cmux);
   timers_shutdown();
+  monotime_disable_test_mocking();
   UNMOCK(circuit_package_relay_cell);
   UNMOCK(circuitmux_attach_circuit);
 
@@ -425,6 +447,11 @@ test_circuitpadding_tokens(void *arg)
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
   monotime_init();
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(1*NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*NSEC_PER_USEC);
+  curr_mocked_time = 1*NSEC_PER_USEC;
+
   timers_initialize();
 
   circpad_circ_token_machine_setup(client_side);
@@ -599,6 +626,7 @@ test_circuitpadding_tokens(void *arg)
 
  done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  monotime_disable_test_mocking();
 }
 
 void
@@ -626,7 +654,13 @@ test_circuitpadding_negotiation(void *arg)
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
   nodes_init();
+
   monotime_init();
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(1*NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*NSEC_PER_USEC);
+  curr_mocked_time = 1*NSEC_PER_USEC;
+
   timers_initialize();
   circpad_machines_init();
 
@@ -693,6 +727,7 @@ test_circuitpadding_negotiation(void *arg)
   free_fake_orcirc(relay_side);
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
   circuitmux_free(dummy_channel.cmux);
+  monotime_disable_test_mocking();
   UNMOCK(node_get_by_id);
   UNMOCK(circuit_package_relay_cell);
   UNMOCK(circuitmux_attach_circuit);
@@ -713,8 +748,10 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
   // Receive extend cell at middle
   circpad_cell_event_nonpadding_received((circuit_t*)mid_relay);
 
-  // Sleep a tiny bit so we can calculate an RTT
-  tor_sleep_msec(10);
+  // Advance time a tiny bit so we can calculate an RTT
+  curr_mocked_time += 10 * NSEC_PER_MSEC;
+  monotime_coarse_set_mock_time_nsec(curr_mocked_time);
+  monotime_set_mock_time_nsec(curr_mocked_time);
 
   // Receive extended cell at middle
   circpad_cell_event_nonpadding_sent((circuit_t*)mid_relay);
@@ -772,7 +809,13 @@ test_circuitpadding_circuitsetup_machine(void *arg)
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
   nodes_init();
+
   monotime_init();
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(1*NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*NSEC_PER_USEC);
+  curr_mocked_time = 1*NSEC_PER_USEC;
+
   timers_initialize();
   circpad_machines_init();
 
@@ -797,7 +840,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_NE, 0);
   tt_int_op(relay_side->padding_info[0]->padding_timer_scheduled,
             OP_EQ, 0);
-  event_base_loop(tor_libevent_get_base(), 0);
+  timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 2);
   tt_int_op(n_relay_cells, OP_EQ, 1);
 
@@ -808,7 +851,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
             OP_NE, 0);
-  event_base_loop(tor_libevent_get_base(), 0);
+  timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 2);
   tt_int_op(n_relay_cells, OP_EQ, 2);
 
@@ -816,7 +859,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_NE, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
             OP_EQ, 0);
-  event_base_loop(tor_libevent_get_base(), 0);
+  timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 3);
   tt_int_op(n_relay_cells, OP_EQ, 2);
 
@@ -824,7 +867,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
             OP_NE, 0);
-  event_base_loop(tor_libevent_get_base(), 0);
+  timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 3);
   tt_int_op(n_relay_cells, OP_EQ, 3);
 
@@ -832,7 +875,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_NE, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
             OP_EQ, 0);
-  event_base_loop(tor_libevent_get_base(), 0);
+  timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 4);
   tt_int_op(n_relay_cells, OP_EQ, 3);
 
@@ -840,7 +883,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
             OP_NE, 0);
-  event_base_loop(tor_libevent_get_base(), 0);
+  timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 4);
   tt_int_op(n_relay_cells, OP_EQ, 4);
 
@@ -848,7 +891,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_NE, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
             OP_EQ, 0);
-  event_base_loop(tor_libevent_get_base(), 0);
+  timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 5);
   tt_int_op(n_relay_cells, OP_EQ, 4);
 
@@ -856,7 +899,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
             OP_NE, 0);
-  event_base_loop(tor_libevent_get_base(), 0);
+  timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 5);
   tt_int_op(n_relay_cells, OP_EQ, 5);
 
@@ -864,7 +907,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_NE, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
             OP_EQ, 0);
-  event_base_loop(tor_libevent_get_base(), 0);
+  timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 6);
   tt_int_op(n_relay_cells, OP_EQ, 5);
 
@@ -872,7 +915,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
             OP_NE, 0);
-  event_base_loop(tor_libevent_get_base(), 0);
+  timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 6);
   tt_int_op(n_relay_cells, OP_EQ, 6);
 
@@ -907,6 +950,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
   circuitmux_free(dummy_channel.cmux);
   timers_shutdown();
+  monotime_disable_test_mocking();
   UNMOCK(circuit_package_relay_cell);
   UNMOCK(circuitmux_attach_circuit);
 
