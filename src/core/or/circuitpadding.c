@@ -394,6 +394,10 @@ circpad_distribution_sample(circpad_distribution_t dist)
     case CIRCPAD_DIST_UNIFORM:
       p = crypto_rand_double();
       // param2 is upper bound, param1 is lower
+      /* This subtraction is exact as long as param2 and param1 are both less than 2**53.
+       * This multiplication is accurate as long as (param2 - param1) is less than 2**52.
+       * (And when they are large, the low bits aren't important.)
+       * The result covers the full range of outputs, as long as p has a resolution of 1/2**32 or greater. */
       p *= (dist.param2 - dist.param1);
       p += dist.param1;
       return p;
