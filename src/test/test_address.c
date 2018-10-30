@@ -1173,7 +1173,8 @@ test_address_tor_addr_in_same_network_family(void *ignored)
 }
 
 static node_t *
-helper_create_mock_node(char id_char) {
+helper_create_mock_node(char id_char)
+{
   node_t *node = tor_malloc_zero(sizeof(node_t));
   routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
   tor_addr_make_null(&ri->ipv6_addr, AF_INET6);
@@ -1183,7 +1184,8 @@ helper_create_mock_node(char id_char) {
 }
 
 static void
-helper_free_mock_node(node_t *node) {
+helper_free_mock_node(node_t *node)
+{
   tor_free(node->ri);
   tor_free(node);
 }
