@@ -1910,7 +1910,7 @@ circpad_circ_client_machine_init(void)
   // merge?
   circ_client_machine->conditions.min_hops = 2;
   circ_client_machine->conditions.state_mask =
-      CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED;
+      CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED|CIRCPAD_CIRC_HAS_RELAY_EARLY;
   circ_client_machine->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
 
   circ_client_machine->target_hopnum = 2;
