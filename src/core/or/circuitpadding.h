@@ -109,19 +109,22 @@ typedef uint32_t circpad_purpose_mask_t;
 /**
  * This type specifies all of the conditions that must be met before
  * a client decides to initiate padding on a circuit.
+ *
+ * A circuit must satisfy every sub-field in this type in order
+ * to be considered to match the conditions.
  */
 typedef struct circpad_machine_conditions_t {
-  /**Only apply padding *if* the circuit has this many hops */
+  /** Only apply the machine *if* the circuit has at least this many hops */
   uint8_t min_hops : 3;
 
-  /** Only apply this machine if vanguards are enabled */
+  /** Only apply the machine *if* vanguards are enabled */
   uint8_t requires_vanguards : 1;
 
-  /** Only apply padding *if* the circuit's state matches any of
+  /** Only apply the machine *if* the circuit's state matches any of
    *  the bits set in this bitmask. */
   circpad_circuit_state_t state_mask;
 
-  /** Only apply padding *if* the circuit's purpose matches one
+  /** Only apply a machine *if* the circuit's purpose matches one
    *  of the bits set in this bitmask */
   circpad_purpose_mask_t purpose_mask;
 
@@ -407,7 +410,7 @@ typedef struct circpad_machine_t {
    *  1-indexed (ie: hop #1 is guard, #2 middle, #3 exit). */
   uint8_t target_hopnum : 3;
 
-  /** This machine can only kill fascists if the right conditions are met. */
+  /** This machine only kills fascists if the following conditions are met. */
   circpad_machine_conditions_t conditions;
 
   /** How many padding cells can be sent before we apply overhead limits?
