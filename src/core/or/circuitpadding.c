@@ -318,7 +318,8 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
     /* This addition is exact, because val is at most 2**16 * USEC_PER_SEC ~= 2**46,
      * start_usec is at most 2**32, and doubles have a precision of 53 bits. */
     val += start_usec;
-    return (circpad_delay_t)tor_lround(val);
+    /* Clamp the distribution at infinite delay val */
+    return (circpad_delay_t)MIN(tor_llround(val), CIRCPAD_DELAY_INFINITE);
   }
 
   bin_choice = crypto_rand_int(histogram_total);
