@@ -1445,6 +1445,11 @@ circpad_machine_conditions_met(origin_circuit_t *circ,
       return 0;
   }
 
+  /* We check for any bits set in the circuit state mask so that machines
+   * can say any of the following through their state bitmask:
+   * "I want to apply to circuits with either streams or no streams"; OR
+   * "I only want to apply to circuits with streams"; OR
+   * "I only want to apply to circuits without streams". */
   if (!(circpad_circuit_state(circ) & machine->conditions.state_mask))
     return 0;
 
@@ -1458,20 +1463,33 @@ circpad_machine_conditions_met(origin_circuit_t *circ,
  * Returns a minimized representation of the circuit state.
  *
  * The padding code only cares if the circuit is building,
- * opened, or used for streams. This returns which one is true.
+ * opened, used for streams, and/or still has relay early cells.
+ * This returns a bitmask of all state properities that apply to
+ * this circuit.
  */
 static inline
 circpad_circuit_state_t
 circpad_circuit_state(origin_circuit_t *circ)
 {
+  circpad_circuit_state_t retmask = 0;
+
   if (circ->p_streams)
-    return CIRCPAD_CIRC_STREAMS;
+    retmask |= CIRCPAD_CIRC_STREAMS;
+  else
+    retmask |= CIRCPAD_CIRC_NO_STREAMS;
 
   /* We use has_opened to prevent cannibialized circs from flapping. */
   if (circ->has_opened)
-    return CIRCPAD_CIRC_OPENED;
+    retmask |= CIRCPAD_CIRC_OPENED;
+  else
+    retmask |= CIRCPAD_CIRC_BUILDING;
 
-  return CIRCPAD_CIRC_BUILDING;
+  if (circ->remaining_relay_early_cells > 0)
+    retmask |= CIRCPAD_CIRC_HAS_RELAY_EARLY;
+  else
+    retmask |= CIRCPAD_CIRC_HAS_NO_RELAY_EARLY;
+
+  return retmask;
 }
 
 /**
@@ -1613,7 +1631,21 @@ circpad_machine_event_circ_built(origin_circuit_t *circ)
  * Activate any new ones that do.
  */
 void
-circpad_machine_event_purpose_changed(origin_circuit_t *circ)
+circpad_machine_event_circ_purpose_changed(origin_circuit_t *circ)
+{
+  circpad_shutdown_old_machines(circ);
+  circpad_add_matching_machines(circ);
+}
+
+/**
+ * Event that tells us that an origin circuit is out of RELAY_EARLY
+ * cells.
+ *
+ * Shut down any machines that only applied to RELAY_EARLY circuits.
+ * Activate any new ones.
+ */
+void
+circpad_machine_event_circ_has_no_relay_early(origin_circuit_t *circ)
 {
   circpad_shutdown_old_machines(circ);
   circpad_add_matching_machines(circ);
@@ -1771,7 +1803,7 @@ circpad_deliver_sent_relay_cell_events(circuit_t *circ,
                                        uint8_t relay_command)
 {
   /* Padding negotiate cells are ignored by the state machines
-   * for si
+   * for simplicity. */
   if (relay_command == RELAY_COMMAND_PADDING_NEGOTIATE ||
       relay_command == RELAY_COMMAND_PADDING_NEGOTIATED) {
     return;
