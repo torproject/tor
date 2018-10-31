@@ -24,6 +24,8 @@
 #endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
 
 #include "core/or/or.h"
+#include "feature/nodelist/routerinfo_st.h"
+#include "feature/nodelist/node_st.h"
 #include "feature/nodelist/nodelist.h"
 #include "lib/net/address.h"
 #include "test/test.h"
@@ -1170,6 +1172,78 @@ test_address_tor_addr_in_same_network_family(void *ignored)
   return;
 }
 
+static node_t *
+helper_create_mock_node(char id_char)
+{
+  node_t *node = tor_malloc_zero(sizeof(node_t));
+  routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
+  tor_addr_make_null(&ri->ipv6_addr, AF_INET6);
+  node->ri = ri;
+  memset(node->identity, id_char, sizeof(node->identity));
+  return node;
+}
+
+static void
+helper_free_mock_node(node_t *node)
+{
+  tor_free(node->ri);
+  tor_free(node);
+}
+
+#define NODE_SET_IPV4(node, ipv4_addr, ipv4_port) { \
+    tor_addr_t addr; \
+    tor_addr_parse(&addr, ipv4_addr); \
+    node->ri->addr = tor_addr_to_ipv4h(&addr); \
+    node->ri->or_port = ipv4_port; \
+  }
+
+#define NODE_CLEAR_IPV4(node) { \
+    node->ri->addr = 0; \
+    node->ri->or_port = 0; \
+  }
+
+#define NODE_SET_IPV6(node, ipv6_addr_str, ipv6_port) { \
+    tor_addr_parse(&node->ri->ipv6_addr, ipv6_addr_str); \
+    node->ri->ipv6_orport = ipv6_port; \
+  }
+
+static void
+test_address_tor_node_in_same_network_family(void *ignored)
+{
+  (void)ignored;
+  node_t *node_a = helper_create_mock_node('a');
+  node_t *node_b = helper_create_mock_node('b');
+
+  NODE_SET_IPV4(node_a, "8.8.8.8", 1);
+  NODE_SET_IPV4(node_b, "8.8.4.4", 1);
+
+  tt_int_op(nodes_in_same_family(node_a, node_b), OP_EQ, 1);
+
+  NODE_SET_IPV4(node_a, "8.8.8.8", 1);
+  NODE_SET_IPV4(node_b, "1.1.1.1", 1);
+
+  tt_int_op(nodes_in_same_family(node_a, node_b), OP_EQ, 0);
+
+  NODE_CLEAR_IPV4(node_a);
+  NODE_SET_IPV6(node_a, "2001:470:20::2", 1);
+
+  tt_int_op(nodes_in_same_family(node_a, node_b), OP_EQ, 0);
+
+  NODE_CLEAR_IPV4(node_b);
+  NODE_SET_IPV6(node_b, "2606:4700:4700::1111", 1);
+
+  tt_int_op(nodes_in_same_family(node_a, node_b), OP_EQ, 0);
+
+  NODE_SET_IPV6(node_a, "2606:4700:4700::1001", 1);
+  tt_int_op(nodes_in_same_family(node_a, node_b), OP_EQ, 1);
+
+  helper_free_mock_node(node_a);
+  helper_free_mock_node(node_b);
+
+ done:
+  return;
+}
+
 #define ADDRESS_TEST(name, flags) \
   { #name, test_address_ ## name, flags, NULL, NULL }
 
@@ -1202,6 +1276,7 @@ struct testcase_t address_tests[] = {
   ADDRESS_TEST(tor_addr_to_mapped_ipv4h, 0),
   ADDRESS_TEST(tor_addr_eq_ipv4h, 0),
   ADDRESS_TEST(tor_addr_in_same_network_family, 0),
+  ADDRESS_TEST(tor_node_in_same_network_family, 0),
   END_OF_TESTCASES
 };
 

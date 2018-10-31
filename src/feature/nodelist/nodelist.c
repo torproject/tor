@@ -1867,6 +1867,9 @@ int
 addrs_in_same_network_family(const tor_addr_t *a1,
                              const tor_addr_t *a2)
 {
+  if (tor_addr_is_null(a1) || tor_addr_is_null(a2))
+    return 0;
+
   switch (tor_addr_family(a1)) {
     case AF_INET:
       return 0 == tor_addr_compare_masked(a1, a2, 16, CMP_SEMANTIC);
@@ -1917,7 +1920,13 @@ nodes_in_same_family(const node_t *node1, const node_t *node2)
     tor_addr_t a1, a2;
     node_get_addr(node1, &a1);
     node_get_addr(node2, &a2);
-    if (addrs_in_same_network_family(&a1, &a2))
+
+    tor_addr_port_t ap6_1, ap6_2;
+    node_get_pref_ipv6_orport(node1, &ap6_1);
+    node_get_pref_ipv6_orport(node2, &ap6_2);
+
+    if (addrs_in_same_network_family(&a1, &a2) ||
+        addrs_in_same_network_family(&ap6_1.addr, &ap6_2.addr))
       return 1;
   }
 
@@ -1974,12 +1983,17 @@ nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
   /* First, add any nodes with similar network addresses. */
   if (options->EnforceDistinctSubnets) {
     tor_addr_t node_addr;
+    tor_addr_port_t node_ap6;
     node_get_addr(node, &node_addr);
+    node_get_pref_ipv6_orport(node, &node_ap6);
 
     SMARTLIST_FOREACH_BEGIN(all_nodes, const node_t *, node2) {
       tor_addr_t a;
+      tor_addr_port_t ap6;
       node_get_addr(node2, &a);
-      if (addrs_in_same_network_family(&a, &node_addr))
+      node_get_pref_ipv6_orport(node2, &ap6);
+      if (addrs_in_same_network_family(&a, &node_addr) ||
+          addrs_in_same_network_family(&ap6.addr, &node_ap6.addr))
         smartlist_add(sl, (void*)node2);
     } SMARTLIST_FOREACH_END(node2);
   }
