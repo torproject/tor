@@ -1386,6 +1386,7 @@ configured_nameserver_address(const size_t idx)
                               NULL) == 0) {
      return tor_addr;
    }
+   tor_free(tor_addr);
  }
 
  return NULL;
