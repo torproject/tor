@@ -53,24 +53,24 @@ fuzz_cleanup(void)
 int
 fuzz_main(const uint8_t *data, size_t sz)
 {
-  char *str = tor_memdup_nulterm(data, sz);
   const char *s;
   routerstatus_t *rs_ns = NULL, *rs_md = NULL, *rs_vote = NULL;
   vote_routerstatus_t *vrs = tor_malloc_zero(sizeof(*vrs));
   smartlist_t *tokens = smartlist_new();
+  const char *eos = (const char *)data + sz;
 
-  s = str;
-  rs_ns = routerstatus_parse_entry_from_string(area, &s, tokens,
+  s = (const char *)data;
+  rs_ns = routerstatus_parse_entry_from_string(area, &s, eos, tokens,
                                                NULL, NULL, 26, FLAV_NS);
   tor_assert(smartlist_len(tokens) == 0);
 
-  s = str;
-  rs_md = routerstatus_parse_entry_from_string(area, &s, tokens,
+  s = (const char *)data;
+  rs_md = routerstatus_parse_entry_from_string(area, &s, eos, tokens,
                                                NULL, NULL, 26, FLAV_MICRODESC);
   tor_assert(smartlist_len(tokens) == 0);
 
-  s = str;
-  rs_vote = routerstatus_parse_entry_from_string(area, &s, tokens,
+  s = (const char *)data;
+  rs_vote = routerstatus_parse_entry_from_string(area, &s, eos, tokens,
                                               dummy_vote, vrs, 26, FLAV_NS);
   tor_assert(smartlist_len(tokens) == 0);
 
@@ -82,6 +82,6 @@ fuzz_main(const uint8_t *data, size_t sz)
   vote_routerstatus_free(vrs);
   memarea_clear(area);
   smartlist_free(tokens);
-  tor_free(str);
+
   return 0;
 }
