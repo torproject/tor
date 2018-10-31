@@ -462,6 +462,10 @@ test_circuitpadding_tokens(void *arg)
   // XXX: This messes us up.. Padding gets scheduled..
   circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   circpad_cell_event_nonpadding_received((circuit_t*)client_side);
+  /* We have to save the infinity bin because one inf delay
+   * could have been chosen when we transition to burst */
+  circpad_hist_bin_t inf_bin = mi->histogram[4];
+
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
 
@@ -504,10 +508,6 @@ test_circuitpadding_tokens(void *arg)
 
   /* 2.b. Higher Infinity bin */
   {
-    /* We have to save the infinity bin because one inf delay
-     * could have been chosen when we transition to burst */
-    circpad_hist_bin_t inf_bin = mi->histogram[4];
-
     tt_int_op(mi->histogram[4], OP_EQ, inf_bin);
     circpad_machine_remove_higher_token(mi,
          circpad_histogram_bin_to_usec(mi, 2)+1);
@@ -529,11 +529,11 @@ test_circuitpadding_tokens(void *arg)
   }
 
   /* Drain the infinity bin and cause a refill */
-  tt_int_op(mi->histogram[4], OP_EQ, 2);
-  circpad_cell_event_nonpadding_received((circuit_t*)client_side);
-  tt_int_op(mi->histogram[4], OP_EQ, 1);
-  circpad_cell_event_nonpadding_received((circuit_t*)client_side);
-  tt_int_op(mi->histogram[4], OP_EQ, 0);
+  while (inf_bin != 0) {
+    tt_int_op(mi->histogram[4], OP_EQ, inf_bin);
+    circpad_cell_event_nonpadding_received((circuit_t*)client_side);
+    inf_bin--;
+  }
 
   circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
 
