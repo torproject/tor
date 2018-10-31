@@ -702,11 +702,13 @@ main(int argc, const char **argv)
       perror("X");
       return 1;
     }
+    size_t f1len = strlen(f1);
+    size_t f2len = strlen(f2);
     for (i = 0; i < N; ++i) {
-      char *diff = consensus_diff_generate(f1, f2);
+      char *diff = consensus_diff_generate(f1, f1len, f2, f2len);
       tor_free(diff);
     }
-    char *diff = consensus_diff_generate(f1, f2);
+    char *diff = consensus_diff_generate(f1, f1len, f2, f2len);
     printf("%s", diff);
     tor_free(f1);
     tor_free(f2);

@@ -636,7 +636,7 @@ load_authority_keyset(int legacy, crypto_pk_t **key_out,
                fname);
     goto done;
   }
-  parsed = authority_cert_parse_from_string(cert, &eos);
+  parsed = authority_cert_parse_from_string(cert, strlen(cert), &eos);
   if (!parsed) {
     log_warn(LD_DIR, "Unable to parse certificate in %s", fname);
     goto done;

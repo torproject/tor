@@ -265,7 +265,9 @@ test_router_pick_directory_server_impl(void *arg)
 
   /* Init SR subsystem. */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
-  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                               strlen(AUTHORITY_CERT_1),
+                                               NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 
@@ -275,7 +277,9 @@ test_router_pick_directory_server_impl(void *arg)
 
   construct_consensus(&consensus_text_md, now);
   tt_assert(consensus_text_md);
-  con_md = networkstatus_parse_vote_from_string(consensus_text_md, NULL,
+  con_md = networkstatus_parse_vote_from_string(consensus_text_md,
+                                                strlen(consensus_text_md),
+                                                NULL,
                                                 NS_TYPE_CONSENSUS);
   tt_assert(con_md);
   tt_int_op(con_md->flavor,OP_EQ, FLAV_MICRODESC);
@@ -475,7 +479,9 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
 
   /* Initialize the SRV subsystem */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
-  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                               strlen(AUTHORITY_CERT_1),
+                                               NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 
@@ -648,7 +654,9 @@ test_skew_common(void *arg, time_t now, unsigned long *offset)
 
   /* Initialize the SRV subsystem */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
-  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                               strlen(AUTHORITY_CERT_1),
+                                               NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 
@@ -662,7 +670,8 @@ test_skew_common(void *arg, time_t now, unsigned long *offset)
   MOCK(clock_skew_warning, mock_clock_skew_warning);
   /* Caller will call teardown_capture_of_logs() */
   setup_capture_of_logs(LOG_WARN);
-  retval = networkstatus_set_current_consensus(consensus, "microdesc", 0,
+  retval = networkstatus_set_current_consensus(consensus, strlen(consensus),
+                                               "microdesc", 0,
                                                NULL);
 
  done:

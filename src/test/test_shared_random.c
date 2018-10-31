@@ -65,7 +65,9 @@ init_authority_state(void)
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
 
   or_options_t *options = get_options_mutable();
-  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                               strlen(AUTHORITY_CERT_1),
+                                               NULL);
   tt_assert(mock_cert);
   options->AuthoritativeDir = 1;
   tt_int_op(load_ed_keys(options, time(NULL)), OP_GE, 0);
@@ -421,7 +423,9 @@ test_sr_commit(void *arg)
   {  /* Setup a minimal dirauth environment for this test  */
     or_options_t *options = get_options_mutable();
 
-    auth_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+    auth_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                                 strlen(AUTHORITY_CERT_1),
+                                                 NULL);
     tt_assert(auth_cert);
 
     options->AuthoritativeDir = 1;
@@ -824,7 +828,9 @@ test_sr_setup_commits(void)
   {  /* Setup a minimal dirauth environment for this test  */
     or_options_t *options = get_options_mutable();
 
-    auth_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+    auth_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                                 strlen(AUTHORITY_CERT_1),
+                                                 NULL);
     tt_assert(auth_cert);
 
     options->AuthoritativeDir = 1;
