@@ -166,8 +166,8 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
   buf_free(buf);
 }
 
-/** As write_http_response_header_impl, but translates compress_method_t into
- * const char * */
+/** As write_http_response_header_impl, but translates method into
+ * encoding */
 static void
 write_http_response_headers(dir_connection_t *conn, ssize_t length,
                             compress_method_t method,
