@@ -1,0 +1,6 @@
+  o Minor bugfixes (tests):
+    - Treat backtrace test failures as expected on BSD-derived systems
+      (NetBSD, OpenBSD, and macOS/Darwin) until we solve bug 17808.
+      (FreeBSD failures have been treated as expected since 18204 in 0.2.8.)
+      Fixes bug 27948; bugfix on 0.2.5.2-alpha.
+
