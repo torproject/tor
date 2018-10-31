@@ -1936,7 +1936,7 @@ node_lookup_declared_family(smartlist_t *out, const node_t *node)
       smartlist_len(node->ri->declared_family)) {
     SMARTLIST_FOREACH_BEGIN(node->ri->declared_family, const char *, name) {
       const node_t *n2 = node_get_by_nickname(name, NNF_NO_WARN_UNNAMED);
-      if (node) {
+      if (n2) {
         smartlist_add(out, (node_t *)n2);
       }
     } SMARTLIST_FOREACH_END(name);
