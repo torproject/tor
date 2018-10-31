@@ -32,7 +32,8 @@
  * Should/Do we have a header for time constants like this? */
 #define TOR_USEC_PER_SEC (1000000)
 
-void circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi);
+circpad_decision_t circpad_send_padding_cell_for_callback(
+                                 circpad_machineinfo_t *mi);
 circpad_decision_t circpad_machine_remove_token(circpad_machineinfo_t *mi);
 circpad_decision_t circpad_machine_schedule_padding(circpad_machineinfo_t *);
 circpad_decision_t circpad_machine_transition(circpad_machineinfo_t *mi,
@@ -841,18 +842,19 @@ circpad_send_command_to_hop(origin_circuit_t *circ, int hopnum,
  * callback happens, it is canceled. So when we're called here, send padding
  * right away.
  */
-void
+circpad_decision_t
 circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
 {
   circuit_t *circ = mi->on_circ;
   int machine_idx = mi->machine_index;
   mi->padding_scheduled_at_us = 0;
+  circpad_statenum_t state = mi->current_state;
 
   // Make sure circuit didn't close on us
   if (mi->on_circ->marked_for_close) {
     log_fn(LOG_INFO,LD_CIRC,
            "Padding callback on a circuit marked for close. Ignoring.");
-    return;
+    return CIRCPAD_STATE_CHANGED;
   }
 
   if (mi->histogram && mi->histogram_len) {
@@ -901,8 +903,14 @@ circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
   /* The circpad_cell_event_padding_sent() could cause us to transition.
    * Check that we still have a padding machineinfo, and then check our token
    * supply. */
-  if (circ->padding_info[machine_idx] != NULL)
-    circpad_check_token_supply(circ->padding_info[machine_idx]);
+  if (circ->padding_info[machine_idx] != NULL) {
+    if (state != circ->padding_info[machine_idx]->current_state)
+      return CIRCPAD_STATE_CHANGED;
+    else
+      return circpad_check_token_supply(circ->padding_info[machine_idx]);
+  } else {
+    return CIRCPAD_STATE_CHANGED;
+  }
 }
 
 /**
@@ -1058,8 +1066,7 @@ circpad_machine_schedule_padding(circpad_machineinfo_t *mi)
   }
 
   if (in_us <= 0) {
-    circpad_send_padding_cell_for_callback(mi);
-    return CIRCPAD_STATE_UNCHANGED;
+    return circpad_send_padding_cell_for_callback(mi);
   }
 
   timeout.tv_sec = in_us/TOR_USEC_PER_SEC;
