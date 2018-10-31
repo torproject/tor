@@ -172,6 +172,12 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
   const circpad_state_t *state = circpad_machine_current_state(mi);
   circpad_delay_t start_usec;
 
+  /* Our state should have been checked to be non-null by the caller
+   * (circpad_machine_remove_token()) */
+  if (BUG(state == NULL)) {
+    return CIRCPAD_DELAY_INFINITE;
+  }
+
   if (state->use_rtt_estimate)
     start_usec = mi->rtt_estimate_us+state->start_usec;
   else
