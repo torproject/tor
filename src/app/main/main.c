@@ -15,6 +15,7 @@
 #include "app/config/statefile.h"
 #include "app/main/main.h"
 #include "app/main/ntmain.h"
+#include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/cpuworker.h"
 #include "core/mainloop/mainloop.h"
@@ -813,6 +814,9 @@ tor_free_all(int postfork)
     release_lockfile();
   }
   tor_libevent_free_all();
+
+  subsystems_shutdown();
+
   /* Stuff in util.c and address.c*/
   if (!postfork) {
     escaped(NULL);
@@ -1425,6 +1429,8 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 #ifdef EVENT_SET_MEM_FUNCTIONS_IMPLEMENTED
   event_set_mem_functions(tor_malloc_, tor_realloc_, tor_free_);
 #endif
+
+  subsystems_init();
 
   init_protocol_warning_severity_level();
 

@@ -43,6 +43,8 @@ typedef struct subsys_fns_t {
    *
    * This function MUST NOT rely on any runtime configuration information;
    * it is only for global state or pre-configuration state.
+   *
+   * This function MUST NOT have any parts that can fail.
    **/
   int (*initialize)(void);
 
@@ -59,5 +61,8 @@ typedef struct subsys_fns_t {
   void (*shutdown)(void);
 
 } subsys_fns_t;
+
+#define MIN_SUBSYS_LEVEL -100
+#define MAX_SUBSYS_LEVEL 100
 
 #endif

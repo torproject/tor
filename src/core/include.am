@@ -11,6 +11,8 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/app/config/confparse.c		\
 	src/app/config/statefile.c		\
 	src/app/main/main.c			\
+	src/app/main/subsystem_list.c		\
+	src/app/main/subsysmgr.c		\
 	src/core/crypto/hs_ntor.c		\
 	src/core/crypto/onion_crypto.c		\
 	src/core/crypto/onion_fast.c		\
@@ -191,6 +193,7 @@ noinst_HEADERS +=					\
 	src/app/config/statefile.h			\
 	src/app/main/main.h				\
 	src/app/main/ntmain.h				\
+	src/app/main/subsysmgr.h			\
 	src/core/crypto/hs_ntor.h			\
 	src/core/crypto/onion_crypto.h	        	\
 	src/core/crypto/onion_fast.h			\
