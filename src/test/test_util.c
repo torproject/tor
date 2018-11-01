@@ -4024,6 +4024,13 @@ test_util_string_is_utf8(void *ptr)
   tt_int_op(1, OP_EQ, string_is_utf8("ascii\x7f\n", 7));
   tt_int_op(1, OP_EQ, string_is_utf8("Risqu\u00e9=1", 9));
 
+  /* Test the utf8_no_bom function */
+  tt_int_op(0, OP_EQ, string_is_utf8_no_bom("\uFEFF", 3));
+  tt_int_op(0, OP_EQ, string_is_utf8_no_bom("\uFFFE", 3));
+  tt_int_op(0, OP_EQ, string_is_utf8_no_bom("\uFEFFlove", 7));
+  tt_int_op(1, OP_EQ, string_is_utf8_no_bom("loveandrespect",
+                                            strlen("loveandrespect")));
+
   // Validate exactly 'len' bytes.
   tt_int_op(0, OP_EQ, string_is_utf8("\0\x80", 2));
   tt_int_op(0, OP_EQ, string_is_utf8("Risqu\u00e9=1", 6));
