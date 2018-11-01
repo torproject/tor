@@ -210,6 +210,8 @@ uptime-*.json
 /src/lib/libtor-tls.a
 /src/lib/libtor-tls-testing.a
 /src/lib/libtor-trace.a
+/src/lib/libtor-version.a
+/src/lib/libtor-version-testing.a
 /src/lib/libtor-wallclock.a
 /src/lib/libtor-wallclock-testing.a
 

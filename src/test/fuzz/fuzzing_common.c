@@ -9,6 +9,7 @@
 #include "lib/compress/compress.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_init.h"
+#include "lib/version/torversion.h"
 
 static or_options_t *mock_options = NULL;
 static const or_options_t *

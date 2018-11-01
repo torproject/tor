@@ -25,6 +25,7 @@
 #include "lib/compress/compress.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/crypt_ops/crypto_init.h"
+#include "lib/version/torversion.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H

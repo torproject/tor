@@ -162,6 +162,7 @@ pub fn main() {
             cfg.component("tor-malloc");
             cfg.component("tor-wallclock");
             cfg.component("tor-err-testing");
+            cfg.component("tor-version-testing");
             cfg.component("tor-intmath-testing");
             cfg.component("tor-ctime-testing");
             cfg.component("curve25519_donna");

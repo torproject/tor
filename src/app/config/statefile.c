@@ -45,6 +45,7 @@
 #include "app/config/statefile.h"
 #include "lib/encoding/confline.h"
 #include "lib/net/resolve.h"
+#include "lib/version/torversion.h"
 
 #include "app/config/or_state_st.h"
 

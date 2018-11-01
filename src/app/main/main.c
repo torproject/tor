@@ -84,6 +84,7 @@
 #include "lib/encoding/confline.h"
 #include "lib/evloop/timers.h"
 #include "lib/crypt_ops/crypto_init.h"
+#include "lib/version/torversion.h"
 
 #include <event2/event.h>
 

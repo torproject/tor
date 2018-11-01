@@ -92,6 +92,7 @@
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"
 #include "lib/evloop/compat_libevent.h"
+#include "lib/version/torversion.h"
 
 #include "feature/dircache/cached_dir_st.h"
 #include "feature/control/control_connection_st.h"
