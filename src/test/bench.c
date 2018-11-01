@@ -24,6 +24,7 @@
 
 #include "core/or/circuitlist.h"
 #include "app/config/config.h"
+#include "app/main/subsysmgr.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "core/crypto/onion_ntor.h"
@@ -690,9 +691,10 @@ main(int argc, const char **argv)
   char *errmsg;
   or_options_t *options;
 
-  tor_threads_init();
+  subsystems_init_upto(SUBSYS_LEVEL_LIBS);
+  flush_log_messages_from_startup();
+
   tor_compress_init();
-  init_logging(1);
 
   if (argc == 4 && !strcmp(argv[1], "diff")) {
     const int N = 200;
@@ -739,7 +741,6 @@ main(int argc, const char **argv)
 
   init_protocol_warning_severity_level();
   options = options_new();
-  init_logging(1);
   options->command = CMD_RUN_UNITTESTS;
   options->DataDirectory = tor_strdup("");
   options->KeyDirectory = tor_strdup("");

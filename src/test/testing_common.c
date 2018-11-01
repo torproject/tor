@@ -26,6 +26,7 @@
 #include "lib/evloop/compat_libevent.h"
 #include "lib/crypt_ops/crypto_init.h"
 #include "lib/version/torversion.h"
+#include "app/main/subsysmgr.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -251,12 +252,9 @@ main(int c, const char **v)
   int loglevel = LOG_ERR;
   int accel_crypto = 0;
 
-  /* We must initialise logs before we call tor_assert() */
-  init_logging(1);
+  subsystems_init_upto(SUBSYS_LEVEL_LIBS);
 
-  update_approx_time(time(NULL));
   options = options_new();
-  tor_threads_init();
   tor_compress_init();
 
   network_init();
@@ -268,7 +266,6 @@ main(int c, const char **v)
   tor_libevent_initialize(&cfg);
 
   control_initialize_event_queue();
-  configure_backtrace_handler(get_version());
 
   for (i_out = i = 1; i < c; ++i) {
     if (!strcmp(v[i], "--warn")) {
@@ -295,6 +292,7 @@ main(int c, const char **v)
     s.masks[LOG_WARN-LOG_ERR] |= LD_BUG;
     add_stream_log(&s, "", fileno(stdout));
   }
+  flush_log_messages_from_startup();
   init_protocol_warning_severity_level();
 
   options->command = CMD_RUN_UNITTESTS;

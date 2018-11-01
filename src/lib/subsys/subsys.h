@@ -65,4 +65,8 @@ typedef struct subsys_fns_t {
 #define MIN_SUBSYS_LEVEL -100
 #define MAX_SUBSYS_LEVEL 100
 
+/* All tor "libraries" (in src/libs) should have a subsystem level equal to or
+ * less than this value. */
+#define SUBSYS_LEVEL_LIBS -10
+
 #endif
