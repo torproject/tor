@@ -25,6 +25,7 @@ include src/lib/osinfo/include.am
 include src/lib/process/include.am
 include src/lib/sandbox/include.am
 include src/lib/string/include.am
+include src/lib/subsys/include.am
 include src/lib/smartlist_core/include.am
 include src/lib/term/include.am
 include src/lib/testsupport/include.am
