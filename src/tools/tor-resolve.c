@@ -501,7 +501,7 @@ do_resolve(const char *hostname,
 
     if (atype == SOCKS5_ATYPE_IPV4) {
       /* IPv4 address */
-      tor_addr_from_ipv4n(result_addr,
+      tor_addr_from_ipv4h(result_addr,
         socks5_server_reply_get_bind_addr_ipv4(reply));
     } else if (atype == SOCKS5_ATYPE_IPV6) {
       /* IPv6 address */
