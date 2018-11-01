@@ -819,9 +819,7 @@ tor_free_all(int postfork)
 
   /* Stuff in util.c and address.c*/
   if (!postfork) {
-    escaped(NULL);
     esc_router_info(NULL);
-    logs_free_all(); /* free log strings. do this last so logs keep working. */
   }
 }
 
@@ -1398,7 +1396,6 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 
   update_approx_time(time(NULL));
   tor_compress_init();
-  init_logging(0);
   monotime_init();
 
   int argc = tor_cfg->argc + tor_cfg->argc_owned;
