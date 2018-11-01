@@ -123,6 +123,16 @@ tor_log_set_sigsafe_err_fds(const int *fds, int n)
 }
 
 /**
+ * Reset the list of emergency error fds to its default.
+ */
+void
+tor_log_reset_sigsafe_err_fds(void)
+{
+  int fds[] = { STDERR_FILENO };
+  tor_log_set_sigsafe_err_fds(fds, 1);
+}
+
+/**
  * Set the granularity (in ms) to use when reporting fatal errors outside
  * the logging system.
  */

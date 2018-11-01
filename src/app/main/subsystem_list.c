@@ -8,13 +8,15 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
 
+#include "lib/err/torerr_sys.h"
+
 #include <stddef.h>
 
 /**
  * Global list of the subsystems in Tor, in the order of their initialization.
  **/
 const subsys_fns_t *tor_subsystems[] = {
-   NULL // placeholder.
+  &sys_torerr,
 };
 
 const unsigned n_tor_subsystems = ARRAY_LENGTH(tor_subsystems);

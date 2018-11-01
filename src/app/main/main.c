@@ -69,7 +69,6 @@
 #include "lib/container/buffers.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_s2k.h"
-#include "lib/err/backtrace.h"
 #include "lib/geoip/geoip.h"
 
 #include "lib/process/waitpid.h"
@@ -822,7 +821,6 @@ tor_free_all(int postfork)
   if (!postfork) {
     escaped(NULL);
     esc_router_info(NULL);
-    clean_up_backtrace_handler();
     logs_free_all(); /* free log strings. do this last so logs keep working. */
   }
 }
@@ -1418,14 +1416,6 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   }
 #endif /* !defined(_WIN64) */
 #endif /* defined(_WIN32) */
-
-  {
-    int bt_err = configure_backtrace_handler(get_version());
-    if (bt_err < 0) {
-      log_warn(LD_BUG, "Unable to install backtrace handler: %s",
-               strerror(-bt_err));
-    }
-  }
 
 #ifdef EVENT_SET_MEM_FUNCTIONS_IMPLEMENTED
   event_set_mem_functions(tor_malloc_, tor_realloc_, tor_free_);
