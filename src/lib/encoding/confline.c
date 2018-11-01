@@ -101,8 +101,10 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
   size_t stringlen = strlen(string);
 
   if (!string_is_utf8(string, stringlen)) {
-    log_warn(LD_CONFIG, "Error while parsing configuration: not valid UTF-8.");
-    return -1;
+    log_warn(LD_CONFIG, "Configuration is not UTF-8 encoded. Tor will keep "
+                        "parsing it but future version might only support "
+                        "UTF-8 so consider re-enconding your configuration "
+                        "files for forward compatibility.");
   }
 
   if (recursion_level > MAX_INCLUDE_RECURSION_LEVEL) {
