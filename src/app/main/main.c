@@ -1397,7 +1397,6 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   init_protocol_warning_severity_level();
 
   update_approx_time(time(NULL));
-  tor_threads_init();
   tor_compress_init();
   init_logging(0);
   monotime_init();
