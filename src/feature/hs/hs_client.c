@@ -1441,7 +1441,7 @@ client_service_authorization_free_(hs_client_service_authorization_t *auth)
 }
 
 /** Helper for digest256map_free. */
-static void
+STATIC void
 client_service_authorization_free_void(void *auth)
 {
   client_service_authorization_free_(auth);

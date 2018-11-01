@@ -86,6 +86,7 @@ void hs_client_free_all(void);
 #ifdef HS_CLIENT_PRIVATE
 
 STATIC int auth_key_filename_is_valid(const char *filename);
+STATIC void client_service_authorization_free_void(void *auth);
 
 STATIC hs_client_service_authorization_t *
 parse_auth_file_content(const char *client_key_str);

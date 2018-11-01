@@ -89,6 +89,39 @@ helper_config_client(const char *conf, int validate_only)
   return ret;
 }
 
+/* Test helper function: Given an onion address, return a newly allocated
+ * service authorization object with and a newly generated private key. */
+static hs_client_service_authorization_t *
+helper_create_service_authorization(const char *onion_address)
+{
+  int ret;
+  hs_client_service_authorization_t *auth;
+  auth = tor_malloc_zero(sizeof(hs_client_service_authorization_t));
+
+  strlcpy(auth->onion_address, onion_address, sizeof(auth->onion_address));
+
+  /* Generate a new private key. */
+  ret = curve25519_secret_key_generate(&auth->enc_seckey, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+ done:
+  return auth;
+}
+
+/* Test helper function: Clone a service authorization. */
+static hs_client_service_authorization_t *
+helper_service_authorization_dup(hs_client_service_authorization_t *auth)
+{
+  hs_client_service_authorization_t *new_auth;
+  new_auth = tor_malloc_zero(sizeof(hs_client_service_authorization_t));
+
+  strlcpy(new_auth->onion_address, auth->onion_address,
+          sizeof(new_auth->onion_address));
+  memcpy(new_auth->enc_seckey.secret_key, auth->enc_seckey.secret_key,
+         sizeof(new_auth->enc_seckey.secret_key));
+  return new_auth;
+}
+
 /* Test helper function: Setup a circuit and a stream with the same hidden
  * service destination, and put them in <b>circ_out</b> and
  * <b>conn_out</b>. Make the stream wait for circuits to be established to the
@@ -986,6 +1019,162 @@ test_close_intro_circuits_new_desc(void *arg)
   UNMOCK(networkstatus_get_live_consensus);
 }
 
+static void
+test_extract_changed_auths(void *arg)
+{
+  (void) arg;
+  ed25519_public_key_t pk1, pk2, pk3, pk4;
+  const char *address1 =
+    "4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad";
+  const char *address2 =
+    "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid";
+  const char *address3 =
+    "ivnpoyxpc35x3kn7rkzemt35dtld2xv7ythsyvuwwamlffaoddj3nkid";
+  const char *address4 =
+    "4cmp634t7wre4zhr3xvbryl4hrl3g3jvf2vp7mkp4d23dbrmbrhdbbad";
+
+  hs_parse_address(address1, &pk1, NULL, NULL);
+  hs_parse_address(address2, &pk2, NULL, NULL);
+  hs_parse_address(address3, &pk3, NULL, NULL);
+  hs_parse_address(address4, &pk4, NULL, NULL);
+
+  hs_init();
+
+  /* Nothing changes. */
+  {
+    smartlist_t *list = NULL;
+    digest256map_t *old_auths = digest256map_new();
+    digest256map_t *new_auths = digest256map_new();
+    hs_client_service_authorization_t *auth =
+                          helper_create_service_authorization(address1);
+
+    digest256map_set(old_auths, pk1.pubkey, auth);
+    digest256map_set(new_auths, pk1.pubkey,
+                     helper_service_authorization_dup(auth));
+
+    list = extract_changed_auths(old_auths, new_auths);
+
+    tt_int_op(digest256map_size(old_auths), OP_EQ, 1);
+    tt_int_op(digest256map_size(new_auths), OP_EQ, 1);
+    tt_int_op(smartlist_len(list), OP_EQ, 0);
+
+    SMARTLIST_FOREACH(list, uint8_t *, s, tor_free(s));
+    smartlist_free(list);
+
+    digest256map_free(old_auths, client_service_authorization_free_void);
+    digest256map_free(new_auths, client_service_authorization_free_void);
+  }
+
+  /* Add an authorization. */
+  {
+    smartlist_t *list = NULL;
+    digest256map_t *old_auths = digest256map_new();
+    digest256map_t *new_auths = digest256map_new();
+    digest256map_set(new_auths, pk1.pubkey,
+                     helper_create_service_authorization(address1));
+
+    list = extract_changed_auths(old_auths, new_auths);
+
+    tt_int_op(digest256map_size(old_auths), OP_EQ, 0);
+    tt_int_op(digest256map_size(new_auths), OP_EQ, 1);
+    tt_int_op(smartlist_len(list), OP_EQ, 1);
+    tt_mem_op(smartlist_get(list, 0), OP_EQ, pk1.pubkey, DIGEST256_LEN);
+
+    SMARTLIST_FOREACH(list, uint8_t *, s, tor_free(s));
+    smartlist_free(list);
+
+    digest256map_free(old_auths, client_service_authorization_free_void);
+    digest256map_free(new_auths, client_service_authorization_free_void);
+  }
+
+  /* Remove an authorization. */
+  {
+    smartlist_t *list = NULL;
+    digest256map_t *old_auths = digest256map_new();
+    digest256map_t *new_auths = digest256map_new();
+    digest256map_set(old_auths, pk1.pubkey,
+                     helper_create_service_authorization(address1));
+
+    list = extract_changed_auths(old_auths, new_auths);
+
+    tt_int_op(digest256map_size(old_auths), OP_EQ, 1);
+    tt_int_op(digest256map_size(new_auths), OP_EQ, 0);
+    tt_int_op(smartlist_len(list), OP_EQ, 1);
+    tt_mem_op(smartlist_get(list, 0), OP_EQ, pk1.pubkey, DIGEST256_LEN);
+
+    SMARTLIST_FOREACH(list, uint8_t *, s, tor_free(s));
+    smartlist_free(list);
+
+    digest256map_free(old_auths, client_service_authorization_free_void);
+    digest256map_free(new_auths, client_service_authorization_free_void);
+  }
+
+  /* Change an authorization. */
+  {
+    smartlist_t *list = NULL;
+    digest256map_t *old_auths = digest256map_new();
+    digest256map_t *new_auths = digest256map_new();
+    digest256map_set(old_auths, pk1.pubkey,
+                     helper_create_service_authorization(address1));
+    digest256map_set(new_auths, pk1.pubkey,
+                     helper_create_service_authorization(address1));
+
+    list = extract_changed_auths(old_auths, new_auths);
+
+    tt_int_op(smartlist_len(list), OP_EQ, 1);
+    tt_mem_op(smartlist_get(list, 0), OP_EQ, pk1.pubkey, DIGEST256_LEN);
+
+    SMARTLIST_FOREACH(list, uint8_t *, s, tor_free(s));
+    smartlist_free(list);
+
+    digest256map_free(old_auths, client_service_authorization_free_void);
+    digest256map_free(new_auths, client_service_authorization_free_void);
+  }
+
+  /* Mix everything together. */
+  {
+    smartlist_t *list = NULL;
+    digest256map_t *old_auths = digest256map_new();
+    digest256map_t *new_auths = digest256map_new();
+
+    /* The service that doesn't change. */
+    hs_client_service_authorization_t *auth =
+                          helper_create_service_authorization(address1);
+    digest256map_set(old_auths, pk1.pubkey, auth);
+    digest256map_set(new_auths, pk1.pubkey,
+                     helper_service_authorization_dup(auth));
+
+    /* The service that is addded. */
+    digest256map_set(new_auths, pk2.pubkey,
+                     helper_create_service_authorization(address2));
+
+    /* The service that is removed. */
+    digest256map_set(old_auths, pk3.pubkey,
+                     helper_create_service_authorization(address3));
+
+    /* The service that is changed. */
+    digest256map_set(old_auths, pk4.pubkey,
+                     helper_create_service_authorization(address4));
+    digest256map_set(new_auths, pk4.pubkey,
+                     helper_create_service_authorization(address4));
+
+    list = extract_changed_auths(old_auths, new_auths);
+
+    tt_int_op(digest256map_size(old_auths), OP_EQ, 3);
+    tt_int_op(digest256map_size(new_auths), OP_EQ, 3);
+    tt_int_op(smartlist_len(list), OP_EQ, 3);
+
+    SMARTLIST_FOREACH(list, uint8_t *, s, tor_free(s));
+    smartlist_free(list);
+
+    digest256map_free(old_auths, client_service_authorization_free_void);
+    digest256map_free(new_auths, client_service_authorization_free_void);
+  }
+
+ done:
+  hs_free_all();
+}
+
 struct testcase_t hs_client_tests[] = {
   { "e2e_rend_circuit_setup_legacy", test_e2e_rend_circuit_setup_legacy,
     TT_FORK, NULL, NULL },
@@ -1004,6 +1193,8 @@ struct testcase_t hs_client_tests[] = {
   { "desc_has_arrived_cleanup", test_desc_has_arrived_cleanup,
     TT_FORK, NULL, NULL },
   { "close_intro_circuits_new_desc", test_close_intro_circuits_new_desc,
+    TT_FORK, NULL, NULL },
+  { "extract_changed_auths", test_extract_changed_auths,
     TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
