@@ -1,11 +1,6 @@
 TODO sketch for this branch, in rough priority order:
 
-- Update proposal
--- Switch from sending state machines to requesting a "menu option" of state
-   machine.
-
 - Clean up/fix XXX's and FIXMEs
-  - Fix timer flapping in tests (mock monotime for libevent?)
   - Test SMARTLIST_FOREACH_REVERSE_BEGIN()
   - Tests for circuit getting marked or freed before callback.
   - Tests for detecting padding from wrong hop
@@ -17,6 +12,14 @@ TODO sketch for this branch, in rough priority order:
   - Go down dist precision rabbithole and comment
   - Tests for dists, length and iat sampling
   - Better test coverage in general
+
+- Negotiate errors are not remembered.. If there is a consensus desync,
+  clients will keep trying machines that middles do not have..
+
+- Larger types?
+  - Larger/different mechanism for machine numbering than just uint8_t
+  - Larger circpad_delay_t?
+  - Larger circpad_hist_bin_t?
 
 - Nick's API doc
   - Consider how we'd use it.
