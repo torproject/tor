@@ -107,6 +107,9 @@ MOCK_DECL(STATIC hs_client_fetch_status_t,
 
 STATIC void retry_all_socks_conn_waiting_for_desc(void);
 
+STATIC smartlist_t *
+extract_changed_auths(digest256map_t *old_auths, digest256map_t *new_auths);
+
 #ifdef TOR_UNIT_TESTS
 
 STATIC digest256map_t *get_hs_client_auths_map(void);

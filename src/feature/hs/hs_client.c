@@ -1538,6 +1538,81 @@ parse_auth_file_content(const char *client_key_str)
   return auth;
 }
 
+/* If two authorizations are equal, return 0. If the first one should come
+ * before the second, return less than zero. If the first should come after
+ * the second, return greater than zero. */
+static int
+service_authorization_cmp(const hs_client_service_authorization_t *auth1,
+                          const hs_client_service_authorization_t *auth2)
+{
+  tor_assert(auth1);
+  tor_assert(auth2);
+
+  /* Currently, hs_client_service_authorization_t has two components.
+   * The private key and the onion address. We will let the onion address
+   * have higher precendence. */
+  int ret = strcmp(auth1->onion_address, auth2->onion_address);
+  if (ret != 0) {
+    return ret;
+  }
+
+  /* If the onion addresses are the same, compare the private key. */
+  return tor_memcmp(auth1->enc_seckey.secret_key,
+                    auth2->enc_seckey.secret_key,
+                    CURVE25519_SECKEY_LEN);
+}
+
+/* Compare two auth lists and extract identity public keys of all the
+ * services whose authorization information is changed. */
+STATIC smartlist_t *
+extract_changed_auths(digest256map_t *old_auths, digest256map_t *new_auths)
+{
+  smartlist_t *list = smartlist_new();
+  digest256map_iter_t *iter = NULL;
+
+  tor_assert(old_auths);
+  tor_assert(new_auths);
+
+  /* Find all added services. */
+  iter = digest256map_iter_init(new_auths);
+  while (!digest256map_iter_done(iter)) {
+    const uint8_t *key;
+    void *val;
+
+    digest256map_iter_get(iter, &key, &val);
+    /* Ignore value. */
+    (void) val;
+
+    /* If we cannot find the service in the old auth list, it is a new auth. */
+    if (!digest256map_get(old_auths, key)) {
+      smartlist_add(list, tor_memdup(key, DIGEST256_LEN));
+    }
+
+    /* Move the iterator. */
+    iter = digest256map_iter_next(new_auths, iter);
+  }
+
+  /* Find all removed or changed services. */
+  iter = digest256map_iter_init(old_auths);
+  while (!digest256map_iter_done(iter)) {
+    const uint8_t *key;
+    hs_client_service_authorization_t *old_auth = NULL, *new_auth = NULL;
+
+    digest256map_iter_get(iter, &key, (void *) &old_auth);
+    new_auth = digest256map_get(new_auths, key);
+
+    /* If the service is removed or changed, add it to the list. */
+    if (!new_auth || service_authorization_cmp(old_auth, new_auth) != 0) {
+      smartlist_add(list, tor_memdup(key, DIGEST256_LEN));
+    }
+
+    /* Move the iterator. */
+    iter = digest256map_iter_next(old_auths, iter);
+  }
+
+  return list;
+}
+
 /* From a set of <b>options</b>, setup every client authorization detail
  * found. Return 0 on success or -1 on failure. If <b>validate_only</b>
  * is set, parse, warn and return as normal, but don't actually change
@@ -1547,9 +1622,10 @@ hs_config_client_authorization(const or_options_t *options,
                                int validate_only)
 {
   int ret = -1;
-  digest256map_t *auths = digest256map_new();
+  digest256map_t *new_auths = digest256map_new();
   char *key_dir = NULL;
   smartlist_t *file_list = NULL;
+  smartlist_t *service_list = NULL;
   char *client_key_str = NULL;
   char *client_key_file_path = NULL;
 
@@ -1617,7 +1693,7 @@ hs_config_client_authorization(const or_options_t *options,
         continue;
       }
 
-      if (digest256map_get(auths, identity_pk.pubkey)) {
+      if (digest256map_get(new_auths, identity_pk.pubkey)) {
         client_service_authorization_free(auth);
         log_warn(LD_REND, "Duplicate authorization for the same hidden "
                           "service address %s.",
@@ -1625,11 +1701,18 @@ hs_config_client_authorization(const or_options_t *options,
         goto end;
       }
 
-      digest256map_set(auths, identity_pk.pubkey, auth);
+      digest256map_set(new_auths, identity_pk.pubkey, auth);
       log_info(LD_REND, "Loaded a client authorization key file %s.",
                filename);
     }
   } SMARTLIST_FOREACH_END(filename);
+
+  if (client_auths) {
+    /* After we get a new authorization list, we need to find all the services
+     * that we want to close the circuits. */
+    service_list = extract_changed_auths(client_auths, new_auths);
+    (void) service_list;
+  }
 
   /* Success. */
   ret = 0;
@@ -1638,6 +1721,10 @@ hs_config_client_authorization(const or_options_t *options,
   tor_free(key_dir);
   tor_free(client_key_str);
   tor_free(client_key_file_path);
+  if (service_list) {
+    SMARTLIST_FOREACH(service_list, uint8_t *, s, tor_free(s));
+    smartlist_free(service_list);
+  }
   if (file_list) {
     SMARTLIST_FOREACH(file_list, char *, s, tor_free(s));
     smartlist_free(file_list);
@@ -1645,9 +1732,9 @@ hs_config_client_authorization(const or_options_t *options,
 
   if (!validate_only && ret == 0) {
     client_service_authorization_free_all();
-    client_auths = auths;
+    client_auths = new_auths;
   } else {
-    digest256map_free(auths, client_service_authorization_free_void);
+    digest256map_free(new_auths, client_service_authorization_free_void);
   }
 
   return ret;
