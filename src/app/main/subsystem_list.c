@@ -8,6 +8,7 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
 
+#include "lib/compress/compress_sys.h"
 #include "lib/crypt_ops/crypto_sys.h"
 #include "lib/err/torerr_sys.h"
 #include "lib/log/log_sys.h"
@@ -30,6 +31,7 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_logging,
   &sys_time,
   &sys_network,
+  &sys_compress,
   &sys_crypto,
 };
 

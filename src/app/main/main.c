@@ -1367,8 +1367,6 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 
   init_protocol_warning_severity_level();
 
-  tor_compress_init();
-
   int argc = tor_cfg->argc + tor_cfg->argc_owned;
   char **argv = tor_calloc(argc, sizeof(char*));
   memcpy(argv, tor_cfg->argv, tor_cfg->argc*sizeof(char*));

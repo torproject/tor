@@ -255,7 +255,6 @@ main(int c, const char **v)
   subsystems_init_upto(SUBSYS_LEVEL_LIBS);
 
   options = options_new();
-  tor_compress_init();
 
   struct tor_libevent_cfg cfg;
   memset(&cfg, 0, sizeof(cfg));
