@@ -1186,6 +1186,8 @@ helper_create_mock_node(char id_char)
 static void
 helper_free_mock_node(node_t *node)
 {
+  if (!node)
+    return;
   tor_free(node->ri);
   tor_free(node);
 }
@@ -1237,11 +1239,9 @@ test_address_tor_node_in_same_network_family(void *ignored)
   NODE_SET_IPV6(node_a, "2606:4700:4700::1001", 1);
   tt_int_op(nodes_in_same_family(node_a, node_b), OP_EQ, 1);
 
+ done:
   helper_free_mock_node(node_a);
   helper_free_mock_node(node_b);
-
- done:
-  return;
 }
 
 #define ADDRESS_TEST(name, flags) \
@@ -1279,4 +1279,3 @@ struct testcase_t address_tests[] = {
   ADDRESS_TEST(tor_node_in_same_network_family, 0),
   END_OF_TESTCASES
 };
-
