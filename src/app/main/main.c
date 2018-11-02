@@ -427,18 +427,6 @@ dumpstats(int severity)
   rend_service_dump_stats(severity);
 }
 
-/** Called by exit() as we shut down the process.
- */
-static void
-exit_function(void)
-{
-  /* NOTE: If we ever daemonize, this gets called immediately.  That's
-   * okay for now, because we only use this on Windows.  */
-#ifdef _WIN32
-  WSACleanup();
-#endif
-}
-
 #ifdef _WIN32
 #define UNIX_ONLY 0
 #else
@@ -632,12 +620,6 @@ tor_init(int argc, char *argv[])
   rust_log_welcome_string();
 #endif /* defined(HAVE_RUST) */
 
-  if (network_init()<0) {
-    log_err(LD_BUG,"Error initializing network; exiting.");
-    return -1;
-  }
-  atexit(exit_function);
-
   int init_rv = options_init_from_torrc(argc,argv);
   if (init_rv < 0) {
     log_err(LD_CONFIG,"Reading config failed--see warnings above.");
@@ -784,7 +766,6 @@ tor_free_all(int postfork)
   routerparse_free_all();
   ext_orport_free_all();
   control_free_all();
-  tor_free_getaddrinfo_cache();
   protover_free_all();
   bridges_free_all();
   consdiffmgr_free_all();

@@ -257,8 +257,6 @@ main(int c, const char **v)
   options = options_new();
   tor_compress_init();
 
-  network_init();
-
   monotime_init();
 
   struct tor_libevent_cfg cfg;

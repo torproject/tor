@@ -10,6 +10,7 @@
 
 #include "lib/err/torerr_sys.h"
 #include "lib/log/log_sys.h"
+#include "lib/net/network_sys.h"
 #include "lib/process/winprocess_sys.h"
 #include "lib/thread/thread_sys.h"
 #include "lib/wallclock/wallclock_sys.h"
@@ -25,6 +26,7 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_wallclock,
   &sys_threads,
   &sys_logging,
+  &sys_network,
 };
 
 const unsigned n_tor_subsystems = ARRAY_LENGTH(tor_subsystems);

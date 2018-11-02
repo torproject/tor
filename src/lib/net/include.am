@@ -11,6 +11,7 @@ src_lib_libtor_net_a_SOURCES =			\
 	src/lib/net/buffers_net.c		\
 	src/lib/net/gethostname.c		\
 	src/lib/net/inaddr.c			\
+	src/lib/net/network_sys.c		\
 	src/lib/net/resolve.c			\
 	src/lib/net/socket.c			\
 	src/lib/net/socketpair.c
@@ -28,6 +29,7 @@ noinst_HEADERS +=				\
 	src/lib/net/inaddr.h			\
 	src/lib/net/inaddr_st.h			\
 	src/lib/net/nettypes.h			\
+	src/lib/net/network_sys.h		\
 	src/lib/net/resolve.h			\
 	src/lib/net/socket.h			\
 	src/lib/net/socketpair.h		\
