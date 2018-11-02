@@ -14,6 +14,7 @@
 #include "lib/net/network_sys.h"
 #include "lib/process/winprocess_sys.h"
 #include "lib/thread/thread_sys.h"
+#include "lib/time/time_sys.h"
 #include "lib/wallclock/wallclock_sys.h"
 
 #include <stddef.h>
@@ -27,6 +28,7 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_wallclock,
   &sys_threads,
   &sys_logging,
+  &sys_time,
   &sys_network,
   &sys_crypto,
 };

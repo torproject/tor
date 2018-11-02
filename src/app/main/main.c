@@ -1248,7 +1248,6 @@ static int
 run_tor_main_loop(void)
 {
   handle_signals();
-  monotime_init();
   timers_initialize();
   initialize_mainloop_events();
 
@@ -1369,7 +1368,6 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   init_protocol_warning_severity_level();
 
   tor_compress_init();
-  monotime_init();
 
   int argc = tor_cfg->argc + tor_cfg->argc_owned;
   char **argv = tor_calloc(argc, sizeof(char*));
