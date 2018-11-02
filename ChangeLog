@@ -1,7 +1,7 @@
 Changes in version 0.3.4.9 - 2018-11-02
   Tor 0.3.4.9 is the second stable release in its series; it backports
   numerous fixes, including a fix for a bandwidth management bug that
-  was causing memory exhaustion on relays.  Anyone running an earlier
+  was causing memory exhaustion on relays. Anyone running an earlier
   version of Tor 0.3.4.9 should upgrade.
 
   o Major bugfixes (compilation, backport from 0.3.5.3-alpha):
@@ -60,15 +60,15 @@ Changes in version 0.3.4.9 - 2018-11-02
       on 0.3.4.1-alpha.
 
   o Minor bugfixes (C correctness, to appear in 0.3.5.4-alpha):
-    - Avoid undefined behavior in an end-of-string check when parsing the
-      BEGIN line in a directory object.  Fixes bug 28202; bugfix on
-      0.2.0.3-alpha.
+    - Avoid undefined behavior in an end-of-string check when parsing
+      the BEGIN line in a directory object. Fixes bug 28202; bugfix
+      on 0.2.0.3-alpha.
 
-  o Minor bugfixes (CI, appveyor):
+  o Minor bugfixes (CI, appveyor, to appear in 0.3.5.4-alpha):
     - Only install the necessary mingw packages during our appveyor
-      builds. This change makes the build a little faster, and prevents a
-      conflict with a preinstalled mingw openssl that appveyor now ships.
-      Fixes bugs 27943 and 27765; bugfix on 0.3.4.2-alpha.
+      builds. This change makes the build a little faster, and prevents
+      a conflict with a preinstalled mingw openssl that appveyor now
+      ships. Fixes bugs 27943 and 27765; bugfix on 0.3.4.2-alpha.
 
   o Minor bugfixes (code safety, backport from 0.3.5.3-alpha):
     - Rewrite our assertion macros so that they no longer suppress the
@@ -79,9 +79,9 @@ Changes in version 0.3.4.9 - 2018-11-02
       27464; bugfix on 0.3.4.1-alpha.
 
   o Minor bugfixes (directory authority, to appear in 0.3.5.4-alpha):
-    - Log additional info when we get a relay that shares an ed25519
-      ID with a different relay, instead making a BUG() warning.
-      Fixes bug 27800; bugfix on 0.3.2.1-alpha.
+    - Log additional info when we get a relay that shares an ed25519 ID
+      with a different relay, instead making a BUG() warning. Fixes bug
+      27800; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (directory connection shutdown, backport from 0.3.5.1-alpha):
     - Avoid a double-close when shutting down a stalled directory
@@ -119,7 +119,7 @@ Changes in version 0.3.4.9 - 2018-11-02
       characters and hyphens ([A-Za-z0-9-]). Fixes bug 27316; bugfix
       on 0.2.9.4-alpha.
 
-  o Minor bugfixes (rust, backport from 0.3.5.1-alpha)
+  o Minor bugfixes (rust, backport from 0.3.5.1-alpha):
     - Compute protover votes correctly in the rust version of the
       protover code. Previously, the protover rewrite in 24031 allowed
       repeated votes from the same voter for the same protocol version
@@ -133,18 +133,18 @@ Changes in version 0.3.4.9 - 2018-11-02
       some inputs, leading to a potential memory DoS. Fixes bug 27206;
       bugfix on 0.3.3.5-rc.
 
-  o Minor bugfixes (rust, to appear in 0.3.5.4-alpha):
-    - Fix a potential null dereference in protover_all_supported().
-      Add a test for it. Fixes bug 27804; bugfix on 0.3.3.1-alpha.
-    - Return a string that can be safely freed by C code, not one created by
-      the rust allocator, in protover_all_supported(). Fixes bug 27740; bugfix
-      on 0.3.3.1-alpha.
-
   o Minor bugfixes (rust, directory authority, to appear in 0.3.5.4-alpha):
     - Fix an API mismatch in the rust implementation of
       protover_compute_vote(). This bug could have caused crashes on any
       directory authorities running Tor with Rust (which we do not yet
       recommend). Fixes bug 27741; bugfix on 0.3.3.6.
+
+  o Minor bugfixes (rust, to appear in 0.3.5.4-alpha):
+    - Fix a potential null dereference in protover_all_supported(). Add
+      a test for it. Fixes bug 27804; bugfix on 0.3.3.1-alpha.
+    - Return a string that can be safely freed by C code, not one
+      created by the rust allocator, in protover_all_supported(). Fixes
+      bug 27740; bugfix on 0.3.3.1-alpha.
 
   o Minor bugfixes (testing, backport from 0.3.5.1-alpha):
     - If a unit test running in a subprocess exits abnormally or with a
@@ -159,11 +159,11 @@ Changes in version 0.3.4.9 - 2018-11-02
       on very slow systems like ARM or Travis. Fixes bug 27810; bugfix
       on 0.3.2.1-alpha.
 
-  o Minor bugfixes (testin, to appear in 0.3.5.4-alpha):
+  o Minor bugfixes (testing, to appear in 0.3.5.4-alpha):
     - Treat backtrace test failures as expected on BSD-derived systems
       (NetBSD, OpenBSD, and macOS/Darwin) until we solve bug 17808.
-      (FreeBSD failures have been treated as expected since 18204 in 0.2.8.)
-      Fixes bug 27948; bugfix on 0.2.5.2-alpha.
+      (FreeBSD failures have been treated as expected since 18204 in
+      0.2.8.) Fixes bug 27948; bugfix on 0.2.5.2-alpha.
 
 
 Changes in version 0.3.4.8 - 2018-09-10
