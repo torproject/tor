@@ -20,7 +20,7 @@ if [ ! -z "$1" ]; then
 fi
 
 if [ ! -z "$2" ]; then
-    cd "$2"
+    cd "$2" || exit
 fi
 
 CHUTNEY_TEST_CMD="make test-network-all"
@@ -54,9 +54,9 @@ while [ "$i" -le "$CHUTNEY_TRIES" ]; do
         echo "test '$CHUTNEY_TEST_CMD' succeeded after $i/$CHUTNEY_TRIES attempts, good"
         exit 0
     fi
-    i=$[$i+1]
+    i=$((i+1))
 done
 
-i=$[$i-1]
+i=$((i-1))
 echo "test '$CHUTNEY_TEST_CMD' failed $i/$CHUTNEY_TRIES attempts, bad"
 exit 1
