@@ -331,8 +331,6 @@ main(int c, const char **v)
 
   free_pregenerated_keys();
 
-  crypto_global_cleanup();
-
   if (have_failed)
     return 1;
   else

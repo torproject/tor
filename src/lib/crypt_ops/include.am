@@ -66,5 +66,6 @@ noinst_HEADERS +=					\
 	src/lib/crypt_ops/crypto_rand.h			\
 	src/lib/crypt_ops/crypto_rsa.h			\
 	src/lib/crypt_ops/crypto_s2k.h			\
+	src/lib/crypt_ops/crypto_sys.h			\
 	src/lib/crypt_ops/crypto_util.h                 \
 	src/lib/crypt_ops/digestset.h

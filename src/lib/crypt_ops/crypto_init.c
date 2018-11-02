@@ -20,6 +20,9 @@
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
 #include "lib/crypt_ops/crypto_nss_mgt.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_sys.h"
+
+#include "lib/subsys/subsys.h"
 
 #include "siphash.h"
 
@@ -202,3 +205,26 @@ tor_is_using_nss(void)
   return 0;
 #endif
 }
+
+static int
+init_crypto_sys(void)
+{
+  if (crypto_early_init() < 0)
+    return -1;
+  crypto_dh_init();
+  return 0;
+}
+
+static void
+shutdown_crypto_sys(void)
+{
+  crypto_global_cleanup();
+}
+
+const struct subsys_fns_t sys_crypto = {
+  .name = "crypto",
+  .supported = true,
+  .level = -60,
+  .initialize = init_crypto_sys,
+  .shutdown = shutdown_crypto_sys,
+};

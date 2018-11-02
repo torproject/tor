@@ -8,6 +8,7 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
 
+#include "lib/crypt_ops/crypto_sys.h"
 #include "lib/err/torerr_sys.h"
 #include "lib/log/log_sys.h"
 #include "lib/net/network_sys.h"
@@ -27,6 +28,7 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_threads,
   &sys_logging,
   &sys_network,
+  &sys_crypto,
 };
 
 const unsigned n_tor_subsystems = ARRAY_LENGTH(tor_subsystems);

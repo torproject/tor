@@ -535,12 +535,6 @@ tor_init(int argc, char *argv[])
   tor_snprintf(progname, sizeof(progname), "Tor %s", get_version());
   log_set_application_name(progname);
 
-  /* Set up the crypto nice and early */
-  if (crypto_early_init() < 0) {
-    log_err(LD_GENERAL, "Unable to initialize the crypto subsystem!");
-    return -1;
-  }
-
   /* Initialize the history structures. */
   rep_hist_init();
   /* Initialize the service cache. */
@@ -859,7 +853,6 @@ tor_cleanup(void)
                       later, if it makes shutdown unacceptably slow.  But for
                       now, leave it here: it's helped us catch bugs in the
                       past. */
-  crypto_global_cleanup();
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */
