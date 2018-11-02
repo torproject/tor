@@ -357,12 +357,15 @@ static int handle_get_robots(dir_connection_t *conn,
                                 const get_handler_args_t *args);
 static int handle_get_networkstatus_bridges(dir_connection_t *conn,
                                 const get_handler_args_t *args);
+static int handle_get_next_bandwidth(dir_connection_t *conn,
+                                     const get_handler_args_t *args);
 
 /** Table for handling GET requests. */
 static const url_table_ent_t url_table[] = {
   { "/tor/", 0, handle_get_frontpage },
   { "/tor/status-vote/current/consensus", 1, handle_get_current_consensus },
   { "/tor/status-vote/current/", 1, handle_get_status_vote },
+  { "/tor/status-vote/next/bandwidth", 0, handle_get_next_bandwidth },
   { "/tor/status-vote/next/", 1, handle_get_status_vote },
   { "/tor/micro/d/", 1, handle_get_microdesc },
   { "/tor/server/", 1, handle_get_descriptor },
@@ -1435,6 +1438,27 @@ handle_get_networkstatus_bridges(dir_connection_t *conn,
     goto done;
   }
  done:
+  return 0;
+}
+
+/** Helper function for GET the bandwidth file used for the next vote */
+static int
+handle_get_next_bandwidth(dir_connection_t *conn,
+                          const get_handler_args_t *args)
+{
+  (void)args;
+  log_debug(LD_DIR, "Getting next bandwidth.");
+  const or_options_t *options = get_options();
+  if (options->V3BandwidthsFile) {
+    int lifetime = 60;
+    char *bandwidth =  read_file_to_str(options->V3BandwidthsFile, 0, NULL);
+    size_t len = strlen(bandwidth);
+    write_http_response_header(conn, len, NO_METHOD, lifetime);
+    connection_buf_add(bandwidth, len, TO_CONN(conn));
+    tor_free(bandwidth);
+  } else {
+    write_short_http_response(conn, 404, "Not found");
+  }
   return 0;
 }
 
