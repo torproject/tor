@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Fix shellcheck warnings in run_calltool.sh. Resolves
+      ticket 28011.
