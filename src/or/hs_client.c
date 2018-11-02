@@ -1429,7 +1429,7 @@ hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
       /* We are unable to use the descriptor so remove the directory request
        * from the cache so the next connection can try again. */
       note_connection_attempt_succeeded(edge_conn->hs_ident);
-      goto end;
+      continue;
     }
 
     log_info(LD_REND, "Descriptor has arrived. Launching circuits.");
