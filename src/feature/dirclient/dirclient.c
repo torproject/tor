@@ -2221,6 +2221,7 @@ handle_response_fetch_consensus(dir_connection_t *conn,
     if (!consensus_body) {
       log_warn(LD_DIR, "Received a consensus diff, but we can't find "
                "any %s-flavored consensus in our current cache.",flavname);
+      tor_munmap_file(mapped_consensus);
       networkstatus_consensus_download_failed(0, flavname);
       // XXXX if this happens too much, see below
       return -1;
