@@ -166,22 +166,16 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
   buf_free(buf);
 }
 
-/** As write_http_response_header_impl, but sets encoding and content-typed
- * based on whether the response will be <b>compressed</b> or not. */
+/** As write_http_response_header_impl, but translates method into
+ * encoding */
 static void
 write_http_response_headers(dir_connection_t *conn, ssize_t length,
                             compress_method_t method,
                             const char *extra_headers, long cache_lifetime)
 {
-  const char *methodname = compression_method_get_name(method);
-  const char *doctype;
-  if (method == NO_METHOD)
-    doctype = "text/plain";
-  else
-    doctype = "application/octet-stream";
   write_http_response_header_impl(conn, length,
-                                  doctype,
-                                  methodname,
+                                  "text/plain",
+                                  compression_method_get_name(method),
                                   extra_headers,
                                   cache_lifetime);
 }
