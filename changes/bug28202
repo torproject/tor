@@ -1,4 +1,0 @@
-  o Minor bugfixes (C correctness):
-    - Avoid undefined behavior in an end-of-string check when parsing the
-      BEGIN line in a directory object.  Fixes bug 28202; bugfix on
-      0.2.0.3-alpha.
