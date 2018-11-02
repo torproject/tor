@@ -776,7 +776,6 @@ tor_free_all(int postfork)
     policies_free_all();
   }
   if (!postfork) {
-    tor_tls_free_all();
 #ifndef _WIN32
     tor_getpwnam(NULL);
 #endif

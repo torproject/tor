@@ -36,5 +36,6 @@ noinst_HEADERS +=				\
 	src/lib/tls/tortls.h			\
 	src/lib/tls/tortls_internal.h		\
 	src/lib/tls/tortls_st.h			\
+	src/lib/tls/tortls_sys.h		\
 	src/lib/tls/x509.h			\
 	src/lib/tls/x509_internal.h

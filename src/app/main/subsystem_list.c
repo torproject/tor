@@ -16,6 +16,7 @@
 #include "lib/process/winprocess_sys.h"
 #include "lib/thread/thread_sys.h"
 #include "lib/time/time_sys.h"
+#include "lib/tls/tortls_sys.h"
 #include "lib/wallclock/wallclock_sys.h"
 
 #include <stddef.h>
@@ -33,6 +34,7 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_network,
   &sys_compress,
   &sys_crypto,
+  &sys_tortls,
 };
 
 const unsigned n_tor_subsystems = ARRAY_LENGTH(tor_subsystems);
