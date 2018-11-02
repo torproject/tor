@@ -2403,7 +2403,9 @@ networkstatus_dump_bridge_status_to_file(time_t now)
                published, thresholds, fingerprint_line ? fingerprint_line : "",
                status);
   fname = get_datadir_fname("networkstatus-bridges");
-  write_str_to_file(fname,published_thresholds_and_status,0);
+  if (write_str_to_file(fname,published_thresholds_and_status,0)<0) {
+    log_warn(LD_DIRSERV, "Unable to write networkstatus-bridges file.");
+  }
   tor_free(thresholds);
   tor_free(published_thresholds_and_status);
   tor_free(fname);
