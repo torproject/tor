@@ -1,0 +1,4 @@
+  o Minor bugfixes (HTTP tunnel):
+    - Fix a bug warning when closing an HTTP tunnel connection due to
+      an HTTP request we couldn't handle. Fixes bug 26470; bugfix on
+      0.3.2.1-alpha.

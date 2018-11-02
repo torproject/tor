@@ -2556,8 +2556,11 @@ connection_ap_process_http_connect(entry_connection_t *conn)
  err:
   if (BUG(errmsg == NULL))
     errmsg = "HTTP/1.0 400 Bad Request\r\n\r\n";
-  log_warn(LD_EDGE, "Saying %s", escaped(errmsg));
+  log_info(LD_EDGE, "HTTP tunnel error: saying %s", escaped(errmsg));
   connection_buf_add(errmsg, strlen(errmsg), ENTRY_TO_CONN(conn));
+  /* Mark it as "has_finished" so that we don't try to send an extra socks
+   * reply. */
+  conn->socks_request->has_finished = 1;
   connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_HTTPPROTOCOL|
                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
