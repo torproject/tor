@@ -17,4 +17,8 @@ int subsystems_init_upto(int level);
 void subsystems_shutdown(void);
 void subsystems_shutdown_downto(int level);
 
+void subsystems_prefork(void);
+void subsystems_postfork(void);
+void subsystems_thread_cleanup(void);
+
 #endif

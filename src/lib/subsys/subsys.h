@@ -54,6 +54,22 @@ typedef struct subsys_fns_t {
   int (*add_pubsub)(struct dispatch_connector_t *);
 
   /**
+   * Perform any necessary pre-fork cleanup.  This function may not fail.
+   */
+  void (*prefork)(void);
+
+  /**
+   * Perform any necessary post-fork setup. This function may not fail.
+   */
+  void (*postfork)(void);
+
+  /**
+   * Free any thread-local resources held by this subsystem. Called before
+   * the thread exits.
+   */
+  void (*thread_cleanup)(void);
+
+  /**
    * Free all resources held by this subsystem.
    *
    * This function is not allowed to fail.

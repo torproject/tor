@@ -64,6 +64,7 @@
 #include "app/config/confparse.h"
 #include "app/config/statefile.h"
 #include "app/main/main.h"
+#include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/cpuworker.h"
 #include "core/mainloop/mainloop.h"
@@ -1393,10 +1394,10 @@ options_act_reversible(const or_options_t *old_options, char **msg)
    * processes. */
   if (running_tor && options->RunAsDaemon) {
     if (! start_daemon_has_been_called())
-      crypto_prefork();
+      subsystems_prefork();
     /* No need to roll back, since you can't change the value. */
     if (start_daemon())
-      crypto_postfork();
+      subsystems_postfork();
   }
 
 #ifdef HAVE_SYSTEMD

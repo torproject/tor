@@ -227,4 +227,7 @@ const struct subsys_fns_t sys_crypto = {
   .level = -60,
   .initialize = init_crypto_sys,
   .shutdown = shutdown_crypto_sys,
+  .prefork = crypto_prefork,
+  .postfork = crypto_postfork,
+  .thread_cleanup = crypto_thread_cleanup,
 };

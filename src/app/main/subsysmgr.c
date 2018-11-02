@@ -128,3 +128,60 @@ subsystems_shutdown_downto(int target_level)
     sys_initialized[i] = false;
   }
 }
+
+/**
+ * Run pre-fork code on all subsystems that declare any
+ **/
+void
+subsystems_prefork(void)
+{
+  check_and_setup();
+
+  for (int i = (int)n_tor_subsystems - 1; i >= 0; --i) {
+    const subsys_fns_t *sys = tor_subsystems[i];
+    if (!sys->supported)
+      continue;
+    if (! sys_initialized[i])
+      continue;
+    if (sys->prefork)
+      sys->prefork();
+  }
+}
+
+/**
+ * Run post-fork code on all subsystems that declare any
+ **/
+void
+subsystems_postfork(void)
+{
+  check_and_setup();
+
+  for (unsigned i = 0; i < n_tor_subsystems; ++i) {
+    const subsys_fns_t *sys = tor_subsystems[i];
+    if (!sys->supported)
+      continue;
+    if (! sys_initialized[i])
+      continue;
+    if (sys->postfork)
+      sys->postfork();
+  }
+}
+
+/**
+ * Run thread-clanup code on all subsystems that declare any
+ **/
+void
+subsystems_thread_cleanup(void)
+{
+  check_and_setup();
+
+  for (int i = (int)n_tor_subsystems - 1; i >= 0; --i) {
+    const subsys_fns_t *sys = tor_subsystems[i];
+    if (!sys->supported)
+      continue;
+    if (! sys_initialized[i])
+      continue;
+    if (sys->thread_cleanup)
+      sys->thread_cleanup();
+  }
+}

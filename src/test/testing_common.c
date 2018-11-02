@@ -232,12 +232,12 @@ void
 tinytest_prefork(void)
 {
   free_pregenerated_keys();
-  crypto_prefork();
+  subsystems_prefork();
 }
 void
 tinytest_postfork(void)
 {
-  crypto_postfork();
+  subsystems_postfork();
   init_pregenerated_keys();
 }
 
