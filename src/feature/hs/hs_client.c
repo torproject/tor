@@ -1711,7 +1711,23 @@ hs_config_client_authorization(const or_options_t *options,
     /* After we get a new authorization list, we need to find all the services
      * that we want to close the circuits. */
     service_list = extract_changed_auths(client_auths, new_auths);
-    (void) service_list;
+
+    SMARTLIST_FOREACH_BEGIN(service_list, uint8_t *, pubkey) {
+      ed25519_public_key_t identity_pk;
+      smartlist_t *circuits = NULL;
+
+      memcpy(identity_pk.pubkey, pubkey, ED25519_PUBKEY_LEN);
+      /* Get a list of all rendezvous circuits associated with the service. */
+      circuits = hs_circuitmap_get_rend_circ_by_service_client_side(
+                                                              &identity_pk);
+
+      /* Close all circuits associated with the service. */
+      SMARTLIST_FOREACH(circuits, origin_circuit_t *, circuit,
+                        circuit_mark_for_close(TO_CIRCUIT(circuit),
+                                               END_CIRC_REASON_TORPROTOCOL));
+
+      smartlist_free(circuits);
+    } SMARTLIST_FOREACH_END(pubkey);
   }
 
   /* Success. */
