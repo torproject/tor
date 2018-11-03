@@ -109,6 +109,7 @@ struct hs_token_t {
 #ifdef TOR_UNIT_TESTS
 
 hs_circuitmap_ht *get_hs_circuitmap(void);
+digest256map_t *get_service_to_rend_circuitmap(void);
 
 #endif /* TOR_UNIT_TESTS */
 

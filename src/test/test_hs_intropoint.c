@@ -550,12 +550,18 @@ static void
 test_circuitmap_free_all(void)
 {
   hs_circuitmap_ht *the_hs_circuitmap = NULL;
+  digest256map_t *the_service_to_rend_circuitmap = NULL;
 
   the_hs_circuitmap = get_hs_circuitmap();
   tt_assert(the_hs_circuitmap);
+  the_service_to_rend_circuitmap = get_service_to_rend_circuitmap();
+  tt_assert(the_service_to_rend_circuitmap);
+
   hs_circuitmap_free_all();
   the_hs_circuitmap = get_hs_circuitmap();
   tt_ptr_op(the_hs_circuitmap, OP_EQ, NULL);
+  the_service_to_rend_circuitmap = get_service_to_rend_circuitmap();
+  tt_ptr_op(the_service_to_rend_circuitmap, OP_EQ, NULL);
  done:
   ;
 }

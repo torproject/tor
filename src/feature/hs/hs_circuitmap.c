@@ -95,6 +95,13 @@ get_hs_circuitmap(void)
   return the_hs_circuitmap;
 }
 
+/* Return the global HS service to rendezvous circuitmap. Used by unittests. */
+digest256map_t *
+get_service_to_rend_circuitmap(void)
+{
+  return the_service_to_rend_circuitmap;
+}
+
 #endif /* defined(TOR_UNIT_TESTS) */
 
 /****************** HS circuitmap utility functions **************************/

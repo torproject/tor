@@ -185,8 +185,11 @@ test_clist_maps(void *arg)
 static void
 test_rend_token_maps(void *arg)
 {
+  int ret;
   or_circuit_t *c1, *c2, *c3, *c4;
-  origin_circuit_t *c5;
+  origin_circuit_t *c5, *c6, *c7;
+  ed25519_keypair_t identity_kp1, identity_kp2;
+  smartlist_t *list = NULL;
   const uint8_t tok1[REND_TOKEN_LEN] = "The cat can't tell y";
   const uint8_t tok2[REND_TOKEN_LEN] = "ou its name, and it ";
   const uint8_t tok3[REND_TOKEN_LEN] = "doesn't really care.";
@@ -201,7 +204,21 @@ test_rend_token_maps(void *arg)
   c2 = or_circuit_new(0, NULL);
   c3 = or_circuit_new(0, NULL);
   c4 = or_circuit_new(0, NULL);
+  /* v2 rendezvous circuit. */
   c5 = origin_circuit_new();
+  /* v3 rendezvous circuit. */
+  c6 = origin_circuit_new();
+  c7 = origin_circuit_new();
+
+  ret = ed25519_keypair_generate(&identity_kp1, 0);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = ed25519_keypair_generate(&identity_kp2, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  c6->hs_ident = hs_ident_circuit_new(&identity_kp1.pubkey,
+                                      HS_IDENT_CIRCUIT_RENDEZVOUS);
+  c7->hs_ident = hs_ident_circuit_new(&identity_kp1.pubkey,
+                                      HS_IDENT_CIRCUIT_RENDEZVOUS);
 
   /* Make sure we really filled up the tok* variables */
   tt_int_op(tok1[REND_TOKEN_LEN-1], OP_EQ, 'y');
@@ -272,12 +289,42 @@ test_rend_token_maps(void *arg)
   tt_ptr_op(TO_CIRCUIT(c4)->hs_token, OP_EQ, NULL);
   tt_ptr_op(NULL, OP_EQ, hs_circuitmap_get_intro_circ_v2_relay_side(tok3));
 
-  /* Now let's do a check for the client-side rend circuitmap */
+  /* Now let's do a check for the v2 client-side rend circuitmap */
   c5->base_.purpose = CIRCUIT_PURPOSE_C_ESTABLISH_REND;
   hs_circuitmap_register_rend_circ_client_side(c5, tok1);
 
   tt_ptr_op(c5, OP_EQ, hs_circuitmap_get_rend_circ_client_side(tok1));
   tt_ptr_op(NULL, OP_EQ, hs_circuitmap_get_rend_circ_client_side(tok2));
+
+  /* Now let's do a check for the v3 client-side rend circuitmap */
+  c6->base_.purpose = CIRCUIT_PURPOSE_C_ESTABLISH_REND;
+  hs_circuitmap_register_rend_circ_client_side(c6, tok1);
+
+  tt_ptr_op(c6, OP_EQ, hs_circuitmap_get_rend_circ_client_side(tok1));
+  tt_ptr_op(NULL, OP_EQ, hs_circuitmap_get_rend_circ_client_side(tok2));
+
+  /* Now let's do a check for the v3 client-side rend circuitmap by service
+   * identity public key. */
+  list = hs_circuitmap_get_rend_circ_by_service_client_side(
+                                                      &identity_kp1.pubkey);
+  tt_int_op(smartlist_len(list), OP_EQ, 1);
+  tt_ptr_op(c6, OP_EQ, smartlist_get(list, 0));
+  smartlist_free(list);
+
+  list = hs_circuitmap_get_rend_circ_by_service_client_side(
+                                                      &identity_kp2.pubkey);
+  tt_int_op(smartlist_len(list), OP_EQ, 0);
+  smartlist_free(list);
+
+  /* Now let's add another circuit of the same service. */
+  c7->base_.purpose = CIRCUIT_PURPOSE_C_ESTABLISH_REND;
+  hs_circuitmap_register_rend_circ_client_side(c7, tok2);
+  list = hs_circuitmap_get_rend_circ_by_service_client_side(
+                                                      &identity_kp1.pubkey);
+  tt_int_op(smartlist_len(list), OP_EQ, 2);
+  tt_ptr_op(c6, OP_EQ, smartlist_get(list, 0));
+  tt_ptr_op(c7, OP_EQ, smartlist_get(list, 1));
+  smartlist_free(list);
 
  done:
   if (c1)
@@ -290,6 +337,10 @@ test_rend_token_maps(void *arg)
     circuit_free_(TO_CIRCUIT(c4));
   if (c5)
     circuit_free_(TO_CIRCUIT(c5));
+  if (c6)
+    circuit_free_(TO_CIRCUIT(c6));
+  if (c7)
+    circuit_free_(TO_CIRCUIT(c7));
 }
 
 static void
