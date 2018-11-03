@@ -28,6 +28,11 @@
    token it's easy to find the corresponding circuit. */
 static struct hs_circuitmap_ht *the_hs_circuitmap = NULL;
 
+/* (v3 only) This is a map between a service identity public key and a list of
+ * client side rendezvous circuits. This is used when we want to close all
+ * rendezvous circuits given a service. */
+static struct digest256map_t *the_service_to_rend_circuitmap = NULL;
+
 /* This is a helper function used by the hash table code (HT_). It returns 1 if
  * two circuits have the same HS token. */
 static int
@@ -268,6 +273,14 @@ hs_circuitmap_get_or_circuit(hs_token_type_t type,
   return TO_OR_CIRCUIT(circ);
 }
 
+/* Helper for digest256map_free. */
+static void
+smartlist_free_void(void *list_)
+{
+  smartlist_t *list = (smartlist_t *) list_;
+  smartlist_free(list);
+}
+
 /************** Public circuitmap API ****************************************/
 
 /**** Public relay-side getters: */
@@ -445,6 +458,26 @@ hs_circuitmap_get_rend_circ_client_side(const uint8_t *cookie)
   return circ;
 }
 
+/* Public function: Return a list of client-side rendezvous circuit using
+ * service identity public key <b>identity_pk</b>. It will look for circuits
+ * with any purpose. */
+smartlist_t *
+hs_circuitmap_get_rend_circ_by_service_client_side(
+                                      const ed25519_public_key_t *identity_pk)
+{
+  smartlist_t *result = smartlist_new();
+  smartlist_t *list = NULL;
+
+  tor_assert(identity_pk);
+
+  list = digest256map_get(the_service_to_rend_circuitmap, identity_pk->pubkey);
+  if (list) {
+    smartlist_add_all(result, list);
+  }
+
+  return result;
+}
+
 /*  Public function: Return client-side established rendezvous circuit with
  *  rendezvous <b>cookie</b>. It will look for circuits with the following
  *  purposes:
@@ -533,6 +566,23 @@ hs_circuitmap_register_rend_circ_client_side(origin_circuit_t *or_circ,
 
   hs_circuitmap_register_circuit(circ, HS_TOKEN_REND_CLIENT_SIDE,
                                  REND_TOKEN_LEN, cookie);
+
+  /* Also add the circuit to the_client_side_rend_circuitmap. */
+  /* If the circuit is for hsv3. */
+  if (or_circ->hs_ident) {
+    smartlist_t *list = NULL;
+    list = digest256map_get(the_service_to_rend_circuitmap,
+                            or_circ->hs_ident->identity_pk.pubkey);
+    /* If the list doesn't exist, create a new one. */
+    if (!list) {
+      list = smartlist_new();
+      digest256map_set(the_service_to_rend_circuitmap,
+                       or_circ->hs_ident->identity_pk.pubkey, list);
+    }
+
+    /* Add the circuit to the list. */
+    smartlist_add(list, or_circ);
+  }
 }
 
 /**** Misc public functions: */
@@ -546,6 +596,29 @@ hs_circuitmap_remove_circuit(circuit_t *circ)
 
   if (!circ || !circ->hs_token) {
     return;
+  }
+
+  /* If the circuit is for hsv3 (by checking hs_ident) and is a client-side
+   * rendezvous circuit, remove it from the_service_to_rend_circuitmap. */
+  if (circ->hs_token->type == HS_TOKEN_REND_CLIENT_SIDE) {
+    tor_assert(CIRCUIT_IS_ORIGIN(circ));
+    origin_circuit_t *or_circ = TO_ORIGIN_CIRCUIT(circ);
+
+    if (or_circ->hs_ident) {
+      smartlist_t *list = NULL;
+      list = digest256map_get(the_service_to_rend_circuitmap,
+                              or_circ->hs_ident->identity_pk.pubkey);
+      tor_assert(list);
+
+      /* Remove the circuit from the list. */
+      smartlist_remove(list, or_circ);
+      /* If the list is empty, free it. */
+      if (smartlist_len(list) == 0) {
+        smartlist_free(list);
+        digest256map_remove(the_service_to_rend_circuitmap,
+                            or_circ->hs_ident->identity_pk.pubkey);
+      }
+    }
   }
 
   /* Remove circ from circuitmap */
@@ -569,9 +642,11 @@ void
 hs_circuitmap_init(void)
 {
   tor_assert(!the_hs_circuitmap);
+  tor_assert(!the_service_to_rend_circuitmap);
 
   the_hs_circuitmap = tor_malloc_zero(sizeof(struct hs_circuitmap_ht));
   HT_INIT(hs_circuitmap_ht, the_hs_circuitmap);
+  the_service_to_rend_circuitmap = digest256map_new();
 }
 
 /* Public function: Free all memory allocated by the global HS circuitmap. */
@@ -582,4 +657,5 @@ hs_circuitmap_free_all(void)
     HT_CLEAR(hs_circuitmap_ht, the_hs_circuitmap);
     tor_free(the_hs_circuitmap);
   }
+  digest256map_free(the_service_to_rend_circuitmap, smartlist_free_void);
 }

@@ -47,6 +47,9 @@ struct origin_circuit_t *
 hs_circuitmap_get_rend_circ_client_side(const uint8_t *cookie);
 struct origin_circuit_t *
 hs_circuitmap_get_established_rend_circ_client_side(const uint8_t *cookie);
+struct smartlist_t *
+hs_circuitmap_get_rend_circ_by_service_client_side(
+                                    const ed25519_public_key_t *identity_pk);
 
 void hs_circuitmap_register_intro_circ_v2_service_side(
                                         struct origin_circuit_t *circ,
