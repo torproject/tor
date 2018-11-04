@@ -3375,12 +3375,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
    * Always use the value of UseEntryGuards, not UseEntryGuards_option. */
   options->UseEntryGuards = options->UseEntryGuards_option;
 
-  if (warn_about_relative_paths(options) && options->RunAsDaemon) {
-    REJECT("You have specified at least one relative path (see above) "
-           "with the RunAsDaemon option. RunAsDaemon is not compatible "
-           "with relative paths.");
-  }
-
   if (server_mode(options) &&
       (!strcmpstart(uname, "Windows 95") ||
        !strcmpstart(uname, "Windows 98") ||
@@ -3396,6 +3390,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (validate_data_directories(options)<0)
     REJECT("Invalid DataDirectory");
+
+  /* need to check for relative paths after we populate
+   * options->DataDirectory (just above). */
+  if (warn_about_relative_paths(options) && options->RunAsDaemon) {
+    REJECT("You have specified at least one relative path (see above) "
+           "with the RunAsDaemon option. RunAsDaemon is not compatible "
+           "with relative paths.");
+  }
 
   if (options->Nickname == NULL) {
     if (server_mode(options)) {
