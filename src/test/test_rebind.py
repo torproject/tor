@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import errno
+import logging
 import os
 import random
 import socket
@@ -13,7 +14,7 @@ LOG_WAIT = 0.1
 LOG_CHECK_LIMIT = LOG_TIMEOUT / LOG_WAIT
 
 def fail(msg):
-    print('FAIL')
+    logging.error('FAIL')
     sys.exit(msg)
 
 def try_connecting_to_socksport():
@@ -30,7 +31,7 @@ def wait_for_log(s):
         l = l.decode('utf8')
         if s in l:
             return
-        print('Tor logged: "{}", waiting for "{}"'.format(l.strip(), s))
+        logging.info('Tor logged: "{}", waiting for "{}"'.format(l.strip(), s))
         # readline() returns a blank string when there is no output
         # avoid busy-waiting
         if len(s) == 0:
@@ -54,6 +55,10 @@ def pick_random_port():
         fail('Could not find a random free port between 10000 and 60000')
 
     return port
+
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s.%(msecs)03d %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 if sys.hexversion < 0x02070000:
     fail("ERROR: unsupported Python version (should be >= 2.7)")
@@ -108,13 +113,13 @@ try_connecting_to_socksport()
 control_socket.sendall('SIGNAL HALT\r\n'.encode('utf8'))
 
 wait_for_log('exiting cleanly')
-print('OK')
+logging.info('OK')
 
 try:
     tor_process.terminate()
 except OSError as e:
     if e.errno == errno.ESRCH: # errno 3: No such process
         # assume tor has already exited due to SIGNAL HALT
-        print("Tor has already exited")
+        logging.warn("Tor has already exited")
     else:
         raise
