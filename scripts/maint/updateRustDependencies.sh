@@ -20,11 +20,11 @@
 
 set -e
 
-HERE=`dirname $(realpath $0)`
-TOPLEVEL=`dirname $(dirname $HERE)`
+HERE=$(dirname $(realpath $0))
+TOPLEVEL=$(dirname $(dirname $HERE))
 TOML="$TOPLEVEL/src/rust/Cargo.toml"
 VENDORED="$TOPLEVEL/src/ext/rust/crates"
-CARGO=`which cargo`
+CARGO=$(which cargo)
 
 if ! test -f "$TOML"  ; then
     printf "Error: Couldn't find workspace Cargo.toml in expected location: %s\n" "$TOML"
@@ -38,7 +38,7 @@ if test -z "$CARGO" ; then
     printf "Error: cargo must be installed and in your \$PATH\n"
 fi
 
-if test -z `cargo --list | grep vendor` ; then
+if test -z $(cargo --list | grep vendor) ; then
     printf "Error: cargo-vendor not installed\n"
 fi
 
