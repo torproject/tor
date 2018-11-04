@@ -80,6 +80,7 @@ tor_path = sys.argv[1]
 tor_process = subprocess.Popen([tor_path,
                                '-ControlPort', '127.0.0.1:{}'.format(control_port),
                                '-SOCKSPort', '127.0.0.1:{}'.format(socks_port),
+                               '-Log', 'debug stdout',
                                '-FetchServerDescriptors', '0'],
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
