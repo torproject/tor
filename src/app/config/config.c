@@ -974,9 +974,12 @@ set_options(or_options_t *new_val, char **msg)
 
 /** The version of this Tor process, as parsed. */
 static char *the_tor_version = NULL;
-/** A shorter version of this Tor process's version, for export in our router
+/** A shorter version for this Tor process, for export in our router
  *  descriptor.  (Does not include the git version, if any.) */
 static char *the_short_tor_version = NULL;
+/** An extended list of tor, OS, and library versions for this process, for
+ *  logging. */
+static char *the_tor_library_versions = NULL;
 
 /** Return the current Tor version. */
 const char *
@@ -1006,6 +1009,31 @@ get_short_version(void)
 #endif
   }
   return the_short_tor_version;
+}
+
+/** Return the current Tor, OS, and library versions. */
+const char *
+get_library_versions(void)
+{
+  const char *version = get_version();
+
+  if (the_tor_library_versions == NULL) {
+    tor_asprintf(&the_tor_library_versions, "Tor %s running on %s "
+                 "with Libevent %s, %s %s, Zlib %s, Liblzma %s, "
+                 "and Libzstd %s.",
+                 version,
+                 get_uname(),
+                 tor_libevent_get_version_str(),
+                 crypto_get_library_name(),
+                 crypto_get_library_version_string(),
+                 tor_compress_supports_method(ZLIB_METHOD) ?
+                   tor_compress_version_str(ZLIB_METHOD) : "N/A",
+                 tor_compress_supports_method(LZMA_METHOD) ?
+                   tor_compress_version_str(LZMA_METHOD) : "N/A",
+                 tor_compress_supports_method(ZSTD_METHOD) ?
+                   tor_compress_version_str(ZSTD_METHOD) : "N/A");
+  }
+  return the_tor_library_versions;
 }
 
 /** Release additional memory allocated in options
@@ -1069,6 +1097,7 @@ config_free_all(void)
 
   tor_free(the_short_tor_version);
   tor_free(the_tor_version);
+  tor_free(the_tor_library_versions);
 
   cleanup_protocol_warning_severity_level();
 
