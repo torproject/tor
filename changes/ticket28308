@@ -1,0 +1,3 @@
+  o Minor features (testing):
+    - Print the tor, OS, and library versions when running the unit tests.
+      Closes ticket 28308.
