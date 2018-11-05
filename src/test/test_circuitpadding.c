@@ -306,65 +306,66 @@ test_circuitpadding_rtt(void *arg)
 
   /* Test 1: Test measuring RTT */
   circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
-  tt_int_op(relay_side->padding_info[0]->last_received_time_us, OP_NE, 0);
+  tt_int_op(relay_side->padding_info[0]->last_received_time_usec, OP_NE, 0);
 
   timers_advance_and_run(20);
 
   circpad_cell_event_nonpadding_sent((circuit_t*)relay_side);
-  tt_int_op(relay_side->padding_info[0]->last_received_time_us, OP_EQ, 0);
+  tt_int_op(relay_side->padding_info[0]->last_received_time_usec, OP_EQ, 0);
 
-  tt_int_op(relay_side->padding_info[0]->rtt_estimate_us, OP_GE, 19000);
-  tt_int_op(relay_side->padding_info[0]->rtt_estimate_us, OP_LE, 30000);
+  tt_int_op(relay_side->padding_info[0]->rtt_estimate_usec, OP_GE, 19000);
+  tt_int_op(relay_side->padding_info[0]->rtt_estimate_usec, OP_LE, 30000);
   tt_int_op(circpad_histogram_bin_to_usec(relay_side->padding_info[0], 0),
             OP_EQ,
-            relay_side->padding_info[0]->rtt_estimate_us+
+            relay_side->padding_info[0]->rtt_estimate_usec+
             circpad_machine_current_state(
              relay_side->padding_info[0])->start_usec);
 
   circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
   circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
-  tt_int_op(relay_side->padding_info[0]->last_received_time_us, OP_NE, 0);
+  tt_int_op(relay_side->padding_info[0]->last_received_time_usec, OP_NE, 0);
   timers_advance_and_run(20);
   circpad_cell_event_nonpadding_sent((circuit_t*)relay_side);
   circpad_cell_event_nonpadding_sent((circuit_t*)relay_side);
-  tt_int_op(relay_side->padding_info[0]->last_received_time_us, OP_EQ, 0);
+  tt_int_op(relay_side->padding_info[0]->last_received_time_usec, OP_EQ, 0);
 
-  tt_int_op(relay_side->padding_info[0]->rtt_estimate_us, OP_GE, 20000);
-  tt_int_op(relay_side->padding_info[0]->rtt_estimate_us, OP_LE, 21000);
+  tt_int_op(relay_side->padding_info[0]->rtt_estimate_usec, OP_GE, 20000);
+  tt_int_op(relay_side->padding_info[0]->rtt_estimate_usec, OP_LE, 21000);
   tt_int_op(circpad_histogram_bin_to_usec(relay_side->padding_info[0], 0),
             OP_EQ,
-            relay_side->padding_info[0]->rtt_estimate_us+
+            relay_side->padding_info[0]->rtt_estimate_usec+
             circpad_machine_current_state(
              relay_side->padding_info[0])->start_usec);
 
   /* Test 2: Termination of RTT measurement (from the previous test) */
   tt_int_op(relay_side->padding_info[0]->stop_rtt_update, OP_EQ, 1);
-  rtt_estimate = relay_side->padding_info[0]->rtt_estimate_us;
+  rtt_estimate = relay_side->padding_info[0]->rtt_estimate_usec;
 
   circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
   timers_advance_and_run(4);
   circpad_cell_event_nonpadding_sent((circuit_t*)relay_side);
 
-  tt_int_op(relay_side->padding_info[0]->rtt_estimate_us, OP_EQ, rtt_estimate);
-  tt_int_op(relay_side->padding_info[0]->last_received_time_us, OP_EQ, 0);
+  tt_int_op(relay_side->padding_info[0]->rtt_estimate_usec, OP_EQ,
+            rtt_estimate);
+  tt_int_op(relay_side->padding_info[0]->last_received_time_usec, OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->stop_rtt_update, OP_EQ, 1);
   tt_int_op(circpad_histogram_bin_to_usec(relay_side->padding_info[0], 0),
             OP_EQ,
-            relay_side->padding_info[0]->rtt_estimate_us+
+            relay_side->padding_info[0]->rtt_estimate_usec+
             circpad_machine_current_state(
              relay_side->padding_info[0])->start_usec);
 
   /* Test 3: Make sure client side machine properly ignores RTT */
   circpad_cell_event_nonpadding_received((circuit_t*)client_side);
-  tt_int_op(client_side->padding_info[0]->last_received_time_us, OP_EQ, 0);
+  tt_int_op(client_side->padding_info[0]->last_received_time_usec, OP_EQ, 0);
 
   timers_advance_and_run(20);
   circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
-  tt_int_op(client_side->padding_info[0]->last_received_time_us, OP_EQ, 0);
+  tt_int_op(client_side->padding_info[0]->last_received_time_usec, OP_EQ, 0);
 
-  tt_int_op(client_side->padding_info[0]->rtt_estimate_us, OP_EQ, 0);
+  tt_int_op(client_side->padding_info[0]->rtt_estimate_usec, OP_EQ, 0);
   tt_int_op(circpad_histogram_bin_to_usec(client_side->padding_info[0], 0),
-            OP_NE, client_side->padding_info[0]->rtt_estimate_us);
+            OP_NE, client_side->padding_info[0]->rtt_estimate_usec);
   tt_int_op(circpad_histogram_bin_to_usec(client_side->padding_info[0], 0),
             OP_EQ,
             circpad_machine_current_state(
@@ -410,7 +411,7 @@ circpad_circ_token_machine_setup(circuit_t *on_circ)
   circ_client_machine.burst.histogram[2] = 2;
   circ_client_machine.burst.histogram[3] = 2;
   circ_client_machine.burst.histogram[4] = 2;
-  circ_client_machine.burst.histogram_total = 7;
+  circ_client_machine.burst.histogram_total_tokens = 7;
   circ_client_machine.burst.use_rtt_estimate = 1;
 
   return;
@@ -840,9 +841,9 @@ test_circuitpadding_circuitsetup_machine(void *arg)
   tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
           CIRCPAD_STATE_BURST);
 
-  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
-  tt_int_op(relay_side->padding_info[0]->padding_timer_scheduled,
+  tt_int_op(relay_side->padding_info[0]->is_padding_timer_scheduled,
             OP_EQ, 0);
   timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 2);
@@ -851,73 +852,73 @@ test_circuitpadding_circuitsetup_machine(void *arg)
   tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
               CIRCPAD_STATE_GAP);
 
-  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
-  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
   timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 2);
   tt_int_op(n_relay_cells, OP_EQ, 2);
 
-  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
-  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
   timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 3);
   tt_int_op(n_relay_cells, OP_EQ, 2);
 
-  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
-  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
   timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 3);
   tt_int_op(n_relay_cells, OP_EQ, 3);
 
-  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
-  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
   timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 4);
   tt_int_op(n_relay_cells, OP_EQ, 3);
 
-  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
-  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
   timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 4);
   tt_int_op(n_relay_cells, OP_EQ, 4);
 
-  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
-  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
   timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 5);
   tt_int_op(n_relay_cells, OP_EQ, 4);
 
-  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
-  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
   timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 5);
   tt_int_op(n_relay_cells, OP_EQ, 5);
 
-  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
-  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
   timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 6);
   tt_int_op(n_relay_cells, OP_EQ, 5);
 
-  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
-  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
   timers_advance_and_run(2000);
   tt_int_op(n_client_cells, OP_EQ, 6);
@@ -925,11 +926,11 @@ test_circuitpadding_circuitsetup_machine(void *arg)
 
   tt_int_op(client_side->padding_info[0]->current_state,
             OP_EQ, CIRCPAD_STATE_END);
-  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->current_state,
             OP_EQ, CIRCPAD_STATE_GAP);
-  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_us,
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
 
   /* Simulate application traffic */
