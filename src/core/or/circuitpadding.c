@@ -194,7 +194,8 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
 
   /* The bin widths double every index, so that we can have more resolution
    * for lower time values in the histogram. */
-  const circpad_time_t bin_width_exponent = 1<<(state->histogram_len-bin+1);
+  /* l-(l-2)-1 == l-l+2-1 == l-l+1 */
+  const circpad_time_t bin_width_exponent = 1<<(state->histogram_len-bin-1);
   const circpad_time_t histogram_range_usec =
                           state->range_sec*TOR_USEC_PER_SEC;
   return (circpad_delay_t)MIN(start_usec +
@@ -239,8 +240,15 @@ circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi, circpad_delay_t usec)
 
   const circpad_time_t histogram_range_usec =
                        state->range_sec*TOR_USEC_PER_SEC;
+  /* We need to find the bin corresponding to our position in the range.
+   * Since bins are exponentially spaced in powers of two, we need to
+   * take the log2 of our position in histogram_range_usec. However,
+   * since tor_log2() returns the floor(log2(u64)), we have to adjust
+   * it to behave like ceil(log2(u64)). This is verified in our tests
+   * to properly invert the operation done in
+   * circpad_histogram_bin_to_usec(). */
   bin = state->histogram_len -
-    tor_log2(histogram_range_usec/(usec-start_usec+1));
+    tor_log2(2*histogram_range_usec/(usec-start_usec+1))-1;
 
   /* Clamp the return value to account for timevals before the start
    * of bin 0, or after the last bin. Don't return the infinity bin
