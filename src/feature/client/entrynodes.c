@@ -287,7 +287,9 @@ create_initial_guard_context(void)
   guard_selection_type_t type = GS_TYPE_INFER;
   const char *name = choose_guard_selection(
                              get_options(),
-                             networkstatus_get_live_consensus(approx_time()),
+                             networkstatus_get_reasonably_live_consensus(
+                                                    approx_time(),
+                                                    usable_consensus_flavor()),
                              NULL,
                              &type);
   tor_assert(name); // "name" can only be NULL if we had an old name.
@@ -726,7 +728,9 @@ update_guard_selection_choice(const or_options_t *options)
   guard_selection_type_t type = GS_TYPE_INFER;
   const char *new_name = choose_guard_selection(
                              options,
-                             networkstatus_get_live_consensus(approx_time()),
+                             networkstatus_get_reasonably_live_consensus(
+                                                    approx_time(),
+                                                    usable_consensus_flavor()),
                              curr_guard_context,
                              &type);
   tor_assert(new_name);
@@ -1125,14 +1129,16 @@ select_and_add_guard_item_for_sample(guard_selection_t *gs,
  * or if we don't need a consensus because we're using bridges.)
  */
 static int
-live_consensus_is_missing(const guard_selection_t *gs)
+reasonably_live_consensus_is_missing(const guard_selection_t *gs)
 {
   tor_assert(gs);
   if (gs->type == GS_TYPE_BRIDGE) {
     /* We don't update bridges from the consensus; they aren't there. */
     return 0;
   }
-  return networkstatus_get_live_consensus(approx_time()) == NULL;
+  return networkstatus_get_reasonably_live_consensus(
+                                            approx_time(),
+                                            usable_consensus_flavor()) == NULL;
 }
 
 /**
@@ -1147,9 +1153,9 @@ entry_guards_expand_sample(guard_selection_t *gs)
   tor_assert(gs);
   const or_options_t *options = get_options();
 
-  if (live_consensus_is_missing(gs)) {
+  if (reasonably_live_consensus_is_missing(gs)) {
     log_info(LD_GUARD, "Not expanding the sample guard set; we have "
-             "no live consensus.");
+             "no reasonably live consensus.");
     return NULL;
   }
 
@@ -1395,11 +1401,12 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
 {
   tor_assert(gs);
 
-  // It's important to use only a live consensus here; we don't want to
-  // make changes based on anything expired or old.
-  if (live_consensus_is_missing(gs)) {
+  // It's important to use a reasonably live consensus here; we want clients
+  // to bootstrap even if their clock is skewed by more than 2-3 hours.
+  // But we don't want to make changes based on anything that's really old.
+  if (reasonably_live_consensus_is_missing(gs)) {
     log_info(LD_GUARD, "Not updating the sample guard set; we have "
-             "no live consensus.");
+             "no reasonably live consensus.");
     return;
   }
   log_info(LD_GUARD, "Updating sampled guard status based on received "
