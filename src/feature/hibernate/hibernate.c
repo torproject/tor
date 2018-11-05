@@ -856,6 +856,26 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
                "connections, and will shut down in %d seconds. Interrupt "
                "again to exit now.", options->ShutdownWaitLength);
     shutdown_time = time(NULL) + options->ShutdownWaitLength;
+#ifdef HAVE_SYSTEMD
+    /* tell systemd that we may need more than the default 90 seconds to shut
+     * down so they don't kill us. add some extra time to actually finish
+     * shutting down, otherwise systemd will kill us immediately after the
+     * EXTEND_TIMEOUT_USEC expires. this is an *upper* limit; tor will probably
+     * only take one or two more seconds, but assume that maybe we got swapped
+     * out and it takes a little while longer.
+     *
+     * as of writing, this is a no-op with all-defaults: ShutdownWaitLength is
+     * 30 seconds, so this will extend the timeout to 60 seconds.
+     * default systemd DefaultTimeoutStopSec is 90 seconds, so systemd will
+     * wait (up to) 90 seconds anyways.
+     *
+     * 2^31 usec = ~2147 sec = ~35 min. probably nobody will actually set
+     * ShutdownWaitLength to more than that, but use a longer type so we don't
+     * need to think about UB on overflow
+     */
+    sd_notifyf(0, "EXTEND_TIMEOUT_USEC=%" PRIu64,
+            ((uint64_t)(options->ShutdownWaitLength) + 30) * TOR_USEC_PER_SEC);
+#endif
   } else { /* soft limit reached */
     hibernate_end_time = interval_end_time;
   }
