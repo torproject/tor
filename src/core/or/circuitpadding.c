@@ -72,6 +72,11 @@ static uint16_t circpad_global_allowed_cells;
 static uint64_t circpad_global_padding_sent;
 static uint64_t circpad_global_nonpadding_sent;
 
+/* We scale our counts down by a factor of two when we're within
+ * a factor of 200 of UINT64_MAX, because we have to multiply by
+ * 100 and add without overflow */
+#define CIRCPAD_SCALE_GLOBAL_COUNTS_AT (UINT64_MAX/200)
+
 /** This is the list of circpad_machine_t's parsed from consensus and torrc
  *  that have origin_side == 1 (ie: are for client side) */
 static smartlist_t *origin_padding_machines = NULL;
@@ -889,7 +894,7 @@ circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
     mi->nonpadding_sent /= 2;
   }
   circpad_global_padding_sent++;
-  if (circpad_global_padding_sent == UINT64_MAX) {
+  if (circpad_global_padding_sent >= CIRCPAD_SCALE_GLOBAL_COUNTS_AT) {
     circpad_global_padding_sent /= 2;
     circpad_global_nonpadding_sent /= 2;
   }
@@ -989,24 +994,33 @@ circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi)
 {
   const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
 
-  /* If machine_padding_pct is non-zero, enforce machine limits.
-   * We allow up to allowed_cells before checking limits. After that
-   * is exceeded, the percents apply. */
+  /* If machine_padding_pct is non-zero, and we've sent more
+   * than the allowed count of padding cells, then check our
+   * percent limits for this machine. */
   if (machine->max_padding_percent &&
-      mi->padding_sent >= machine->allowed_padding_count &&
-      (100*mi->padding_sent) / (mi->padding_sent + mi->nonpadding_sent) >
+      mi->padding_sent >= machine->allowed_padding_count) {
+    uint32_t total_cells = mi->padding_sent + mi->nonpadding_sent;
+
+    /* Check the percent */
+    if ((100*(uint32_t)mi->padding_sent) / total_cells >
         machine->max_padding_percent) {
-    return 1; // limit is reached. Stop.
+      return 1; // limit is reached. Stop.
+    }
   }
 
-  /* If circpad_max_global_padding_pct is non-zero, check our global
-   * process limit. */
+  /* If circpad_max_global_padding_pct is non-zero, and we've
+   * sent more than the global padding cell limit, then check our
+   * gloabl tor process percentage limit on padding. */
   if (circpad_global_max_padding_percent &&
-      circpad_global_padding_sent >= circpad_global_allowed_cells &&
-      (100*circpad_global_padding_sent) /
-         (circpad_global_padding_sent + circpad_global_nonpadding_sent) >
+      circpad_global_padding_sent >= circpad_global_allowed_cells) {
+    uint64_t total_cells = circpad_global_padding_sent +
+              circpad_global_nonpadding_sent;
+
+    /* Check the percent */
+    if ((100*circpad_global_padding_sent) / total_cells >
          circpad_global_max_padding_percent) {
-    return 1; // global limit reached. Stop.
+      return 1; // global limit reached. Stop.
+    }
   }
 
   return 0; // All good!
@@ -1352,7 +1366,7 @@ circpad_cell_event_nonpadding_sent(circuit_t *on_circ)
 {
   /* Update global cell count */
   circpad_global_nonpadding_sent++;
-  if (circpad_global_nonpadding_sent == UINT64_MAX) {
+  if (circpad_global_nonpadding_sent >= CIRCPAD_SCALE_GLOBAL_COUNTS_AT) {
     circpad_global_nonpadding_sent /= 2;
     circpad_global_padding_sent /= 2;
   }
