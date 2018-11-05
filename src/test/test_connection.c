@@ -4,7 +4,7 @@
 #include "orconfig.h"
 
 #define CONNECTION_PRIVATE
-#define MAIN_PRIVATE
+#define MAINLOOP_PRIVATE
 #define CONNECTION_OR_PRIVATE
 
 #include "core/or/or.h"
@@ -13,12 +13,12 @@
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "feature/hs/hs_common.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/rend/rendcache.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "core/or/connection_or.h"
 #include "lib/net/resolve.h"
 

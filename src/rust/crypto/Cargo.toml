@@ -9,7 +9,6 @@ build = "../build.rs"
 [lib]
 name = "crypto"
 path = "lib.rs"
-crate_type = ["rlib", "staticlib"]
 
 [dependencies]
 libc = "=0.2.39"
@@ -30,3 +29,9 @@ rand_core = { version = "=0.2.0-pre.0", default-features = false }
 # execute with `cargo test`.  Due to numerous linker issues (#25386), this is
 # currently disabled by default.
 test-c-from-rust = []
+
+# We have to define a feature here because doctests don't get cfg(test),
+# and we need to disable some C dependencies when running the doctests
+# because of the various linker issues.  See
+# https://github.com/rust-lang/rust/issues/45599
+test_linking_hack = []

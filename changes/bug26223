@@ -1,3 +1,0 @@
-  o Minor features (directory authority):
-    - There is no longer an artificial upper limit on the length of bandwidth
-      lines. Closes ticket 26223.

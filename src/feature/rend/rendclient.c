@@ -8,31 +8,32 @@
  **/
 
 #include "core/or/or.h"
-#include "feature/client/circpathbias.h"
+#include "app/config/config.h"
+#include "core/mainloop/connection.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
-#include "app/config/config.h"
-#include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
+#include "core/or/relay.h"
+#include "feature/client/circpathbias.h"
 #include "feature/control/control.h"
-#include "lib/crypt_ops/crypto_dh.h"
-#include "lib/crypt_ops/crypto_rand.h"
-#include "lib/crypt_ops/crypto_util.h"
-#include "feature/dircache/directory.h"
+#include "feature/dirclient/dirclient.h"
+#include "feature/dircommon/directory.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_common.h"
-#include "core/mainloop/main.h"
+#include "feature/nodelist/describe.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
-#include "core/or/relay.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/routerset.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/stats/rephist.h"
-#include "feature/relay/router.h"
-#include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerset.h"
+#include "lib/crypt_ops/crypto_dh.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"
 
 #include "core/or/cpath_build_state_st.h"
@@ -252,6 +253,15 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     dh_offset = v3_shift+7+DIGEST_LEN+2+klen+REND_COOKIE_LEN;
   } else {
     /* Version 0. */
+
+    /* Some compilers are smart enough to work out that nickname can be more
+     * than 19 characters, when it's a hexdigest. They warn that strncpy()
+     * will truncate hexdigests without NUL-terminating them. But we only put
+     * hexdigests in HSDir and general circuit exits. */
+    if (BUG(strlen(rendcirc->build_state->chosen_exit->nickname)
+            > MAX_NICKNAME_LEN)) {
+      goto perm_err;
+    }
     strncpy(tmp, rendcirc->build_state->chosen_exit->nickname,
             (MAX_NICKNAME_LEN+1)); /* nul pads */
     memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_data->rend_cookie,
@@ -449,12 +459,7 @@ directory_get_from_hs_dir(const char *desc_id,
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
   const rend_data_v2_t *rend_data;
-#ifdef ENABLE_TOR2WEB_MODE
-  const int tor2web_mode = get_options()->Tor2webMode;
-  const int how_to_fetch = tor2web_mode ? DIRIND_ONEHOP : DIRIND_ANONYMOUS;
-#else
   const int how_to_fetch = DIRIND_ANONYMOUS;
-#endif /* defined(ENABLE_TOR2WEB_MODE) */
 
   tor_assert(desc_id);
   tor_assert(rend_query);
@@ -1222,36 +1227,4 @@ rend_parse_service_authorization(const or_options_t *options,
     strmap_free(parsed, rend_service_authorization_free_void);
   }
   return res;
-}
-
-/* Can Tor client code make direct (non-anonymous) connections to introduction
- * or rendezvous points?
- * Returns true if tor was compiled with NON_ANONYMOUS_MODE_ENABLED, and is
- * configured in Tor2web mode. */
-int
-rend_client_allow_non_anonymous_connection(const or_options_t *options)
-{
-  /* Tor2web support needs to be compiled in to a tor binary. */
-#ifdef NON_ANONYMOUS_MODE_ENABLED
-  /* Tor2web */
-  return options->Tor2webMode ? 1 : 0;
-#else
-  (void)options;
-  return 0;
-#endif /* defined(NON_ANONYMOUS_MODE_ENABLED) */
-}
-
-/* At compile-time, was non-anonymous mode enabled via
- * NON_ANONYMOUS_MODE_ENABLED ? */
-int
-rend_client_non_anonymous_mode_enabled(const or_options_t *options)
-{
-  (void)options;
-  /* Tor2web support needs to be compiled in to a tor binary. */
-#ifdef NON_ANONYMOUS_MODE_ENABLED
-  /* Tor2web */
-  return 1;
-#else
-  return 0;
-#endif /* defined(NON_ANONYMOUS_MODE_ENABLED) */
 }

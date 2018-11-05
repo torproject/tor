@@ -33,13 +33,14 @@
 #include "core/or/circuitstats.h"
 #include "app/config/config.h"
 #include "app/config/confparse.h"
+#include "core/mainloop/mainloop.h"
 #include "core/mainloop/connection.h"
 #include "feature/control/control.h"
 #include "feature/client/entrynodes.h"
 #include "feature/hibernate/hibernate.h"
-#include "core/mainloop/main.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "lib/sandbox/sandbox.h"
 #include "app/config/statefile.h"
 #include "lib/encoding/confline.h"
@@ -142,6 +143,8 @@ static int or_state_validate_cb(void *old_options, void *options,
                                 void *default_options,
                                 int from_setconf, char **msg);
 
+static void or_state_free_cb(void *state);
+
 /** Magic value for or_state_t. */
 #define OR_STATE_MAGIC 0x57A73f57
 
@@ -161,6 +164,7 @@ static const config_format_t state_format = {
   NULL,
   state_vars_,
   or_state_validate_cb,
+  or_state_free_cb,
   &state_extra_var,
 };
 
@@ -256,6 +260,12 @@ or_state_validate_cb(void *old_state, void *state, void *default_state,
   (void) old_state;
 
   return or_state_validate(state, msg);
+}
+
+static void
+or_state_free_cb(void *state)
+{
+  or_state_free_(state);
 }
 
 /** Return 0 if every setting in <b>state</b> is reasonable, and a

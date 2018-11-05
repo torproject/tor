@@ -7,8 +7,8 @@ keep from introducing bugs.  The major ones are:
 
    1. Unit tests written in C and shipped with the Tor distribution.
 
-   2. Integration tests written in Python and shipped with the Tor
-      distribution.
+   2. Integration tests written in Python 2 (>= 2.7) or Python 3
+      (>= 3.1) and shipped with the Tor distribution.
 
    3. Integration tests written in Python and shipped with the Stem
       library.  Some of these use the Tor controller protocol.

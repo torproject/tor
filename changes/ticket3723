@@ -1,3 +1,0 @@
-  o Minor features (directory authority):
-    - When a bandwidth file is used to obtain the bandwidth measurements,
-      include this bandwidth file headers in the votes. Closes ticket 3723.

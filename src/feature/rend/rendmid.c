@@ -12,7 +12,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "app/config/config.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
 #include "core/or/dos.h"
 #include "core/or/relay.h"
 #include "feature/rend/rendmid.h"
@@ -236,8 +236,8 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
     goto err;
   }
 
-  /* Check if we are configured to accept established rendezvous cells from
-   * client or in other words tor2web clients. */
+  /* Check if we are configured to defend ourselves from clients that
+   * attempt to establish rendezvous points directly to us. */
   if (channel_is_client(circ->p_chan) &&
       dos_should_refuse_single_hop_client()) {
     /* Note it down for the heartbeat log purposes. */

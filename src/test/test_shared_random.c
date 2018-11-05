@@ -17,8 +17,9 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
-#include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/nodelist/authcert.h"
+#include "feature/nodelist/dirlist.h"
+#include "feature/dirparse/authcert_parse.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/dircommon/voting_schedule.h"
 
@@ -64,7 +65,9 @@ init_authority_state(void)
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
 
   or_options_t *options = get_options_mutable();
-  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                               strlen(AUTHORITY_CERT_1),
+                                               NULL);
   tt_assert(mock_cert);
   options->AuthoritativeDir = 1;
   tt_int_op(load_ed_keys(options, time(NULL)), OP_GE, 0);
@@ -290,6 +293,40 @@ test_get_start_time_of_current_run(void *arg)
     tt_str_op("2015-04-20 00:00:00", OP_EQ, tbuf);
   }
 
+  {
+    /* We want the local time to be past midnight, but the current consensus to
+     * have valid-after 23:00 (e.g. this can happen if we fetch a new consensus
+     * at 00:08 before dircaches have a chance to get the midnight consensus).
+     *
+     * Basically, we want to cause a desynch between ns->valid_after (23:00)
+     * and the voting_schedule.interval_starts (01:00), to make sure that
+     * sr_state_get_start_time_of_current_protocol_run() handles it gracefully:
+     * It should actually follow the local consensus time and not the voting
+     * schedule (which is designed for authority voting purposes). */
+    retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
+                                &mock_consensus.fresh_until);
+    tt_int_op(retval, OP_EQ, 0);
+
+    retval = parse_rfc1123_time("Mon, 19 Apr 2015 23:00:00 UTC",
+                                &mock_consensus.valid_after);
+
+    retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:08:00 UTC",
+                                &current_time);
+    tt_int_op(retval, OP_EQ, 0);
+    update_approx_time(current_time);
+    voting_schedule_recalculate_timing(get_options(), current_time);
+
+    run_start_time = sr_state_get_start_time_of_current_protocol_run();
+
+    /* Compare it with the correct result */
+    format_iso_time(tbuf, run_start_time);
+    tt_str_op("2015-04-19 00:00:00", OP_EQ, tbuf);
+    /* Check that voting_schedule.interval_starts is at 01:00 (see above) */
+    time_t interval_starts = voting_schedule_get_next_valid_after_time();
+    format_iso_time(tbuf, interval_starts);
+    tt_str_op("2015-04-20 01:00:00", OP_EQ, tbuf);
+  }
+
   /* Next test is testing it without a consensus to use the testing voting
    * interval . */
   UNMOCK(networkstatus_get_live_consensus);
@@ -386,7 +423,9 @@ test_sr_commit(void *arg)
   {  /* Setup a minimal dirauth environment for this test  */
     or_options_t *options = get_options_mutable();
 
-    auth_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+    auth_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                                 strlen(AUTHORITY_CERT_1),
+                                                 NULL);
     tt_assert(auth_cert);
 
     options->AuthoritativeDir = 1;
@@ -789,7 +828,9 @@ test_sr_setup_commits(void)
   {  /* Setup a minimal dirauth environment for this test  */
     or_options_t *options = get_options_mutable();
 
-    auth_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+    auth_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                                 strlen(AUTHORITY_CERT_1),
+                                                 NULL);
     tt_assert(auth_cert);
 
     options->AuthoritativeDir = 1;
@@ -1284,7 +1325,7 @@ test_keep_commit(void *arg)
     expect_log_msg_containing("doesn't match the commit value.");
     expect_log_msg_containing("has an invalid reveal value.");
     assert_log_predicate(mock_saved_log_n_entries() == 2,
-                         "expected 2 log entries");
+                         ("expected 2 log entries"));
     teardown_capture_of_logs();
     memcpy(commit->hashed_reveal, place_holder.hashed_reveal,
            sizeof(commit->hashed_reveal));

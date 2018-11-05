@@ -24,7 +24,9 @@
 #include "core/or/or_handshake_state_st.h"
 #include "core/or/var_cell_st.h"
 
+#define TOR_X509_PRIVATE
 #include "lib/tls/tortls.h"
+#include "lib/tls/x509.h"
 
 #include "test/test.h"
 #include "test/log_test_helpers.h"
@@ -793,11 +795,26 @@ CERTS_FAIL(bad_rsa_id_cert, /*ed25519*/
   {
     require_failure_message = "legacy RSA ID certificate was not valid";
     certs_cell_cert_t *cert = certs_cell_get_certs(d->ccell, 1);
-    uint8_t *body = certs_cell_cert_getarray_body(cert);
-    ssize_t body_len = certs_cell_cert_getlen_body(cert);
-    /* Frob a byte in the signature */
-    body[body_len - 13] ^= 7;
+    uint8_t *body;
+    /* Frob a byte in the signature, after making a new cert. (NSS won't let
+     * us just frob the old cert, since it will see that the issuer & serial
+     * number are the same, which will make it fail at an earlier stage than
+     * signature verification.) */
+    const tor_x509_cert_t *idc;
+    tor_x509_cert_t *newc;
+    tor_tls_get_my_certs(1, NULL, &idc);
+    time_t new_end = time(NULL) + 86400 * 10;
+    newc = tor_x509_cert_replace_expiration(idc, new_end, d->key2);
+    const uint8_t *encoded;
+    size_t encoded_len;
+    tor_x509_cert_get_der(newc, &encoded, &encoded_len);
+    certs_cell_cert_setlen_body(cert, encoded_len);
+    certs_cell_cert_set_cert_len(cert, encoded_len);
+    body = certs_cell_cert_getarray_body(cert);
+    memcpy(body, encoded, encoded_len);
+    body[encoded_len - 13] ^= 7;
     REENCODE();
+    tor_x509_cert_free(newc);
   })
 CERTS_FAIL(expired_rsa_id, /* both */
   {
@@ -809,9 +826,12 @@ CERTS_FAIL(expired_rsa_id, /* both */
     tor_x509_cert_t *newc;
     time_t new_end = time(NULL) - 86400 * 10;
     newc = tor_x509_cert_replace_expiration(idc, new_end, d->key2);
-    certs_cell_cert_setlen_body(cert, newc->encoded_len);
-    memcpy(certs_cell_cert_getarray_body(cert),
-           newc->encoded, newc->encoded_len);
+    const uint8_t *encoded;
+    size_t encoded_len;
+    tor_x509_cert_get_der(newc, &encoded, &encoded_len);
+    certs_cell_cert_setlen_body(cert, encoded_len);
+    certs_cell_cert_set_cert_len(cert, encoded_len);
+    memcpy(certs_cell_cert_getarray_body(cert), encoded, encoded_len);
     REENCODE();
     tor_x509_cert_free(newc);
   })
@@ -922,15 +942,25 @@ test_link_handshake_send_authchallenge(void *arg)
   cell1 = mock_got_var_cell;
   tt_int_op(0, OP_EQ, connection_or_send_auth_challenge_cell(c1));
   cell2 = mock_got_var_cell;
+#ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
   tt_int_op(38, OP_EQ, cell1->payload_len);
   tt_int_op(38, OP_EQ, cell2->payload_len);
+#else
+  tt_int_op(36, OP_EQ, cell1->payload_len);
+  tt_int_op(36, OP_EQ, cell2->payload_len);
+#endif
   tt_int_op(0, OP_EQ, cell1->circ_id);
   tt_int_op(0, OP_EQ, cell2->circ_id);
   tt_int_op(CELL_AUTH_CHALLENGE, OP_EQ, cell1->command);
   tt_int_op(CELL_AUTH_CHALLENGE, OP_EQ, cell2->command);
 
+#ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
   tt_mem_op("\x00\x02\x00\x01\x00\x03", OP_EQ, cell1->payload + 32, 6);
   tt_mem_op("\x00\x02\x00\x01\x00\x03", OP_EQ, cell2->payload + 32, 6);
+#else
+  tt_mem_op("\x00\x01\x00\x03", OP_EQ, cell1->payload + 32, 4);
+  tt_mem_op("\x00\x01\x00\x03", OP_EQ, cell2->payload + 32, 4);
+#endif
   tt_mem_op(cell1->payload, OP_NE, cell2->payload, 32);
 
  done:
@@ -972,6 +1002,8 @@ static void *
 recv_authchallenge_setup(const struct testcase_t *test)
 {
   (void)test;
+
+  testing__connection_or_pretend_TLSSECRET_is_supported = 1;
   authchallenge_data_t *d = tor_malloc_zero(sizeof(*d));
   d->c = or_connection_new(CONN_TYPE_OR, AF_INET);
   d->chan = tor_malloc_zero(sizeof(*d->chan));
@@ -1184,6 +1216,8 @@ authenticate_data_setup(const struct testcase_t *test)
 {
   authenticate_data_t *d = tor_malloc_zero(sizeof(*d));
   int is_ed = d->is_ed = (test->setup_data == (void*)3);
+
+  testing__connection_or_pretend_TLSSECRET_is_supported = 1;
 
   scheduler_init();
 

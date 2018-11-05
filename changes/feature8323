@@ -1,3 +1,0 @@
-  o Minor features (controller):
-    - Implement 'GETINFO md/all' controller command to enable
-      getting all known microdesriptors. Closes ticket 8323.

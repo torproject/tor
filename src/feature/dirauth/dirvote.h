@@ -115,6 +115,10 @@ int dirvote_add_signatures(const char *detached_signatures_body,
                            const char *source,
                            const char **msg_out);
 
+struct config_line_t;
+char *format_recommended_version_list(const struct config_line_t *line,
+                                      int warn);
+
 #else /* HAVE_MODULE_DIRAUTH */
 
 static inline time_t
@@ -192,10 +196,6 @@ const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
  * API used _only_ by the dirauth subsystem.
  */
 
-void set_routerstatus_from_routerinfo(routerstatus_t *rs,
-                                      node_t *node,
-                                      routerinfo_t *ri, time_t now,
-                                      int listbadexits);
 networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                         authority_cert_t *cert);

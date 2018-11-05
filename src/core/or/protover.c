@@ -25,7 +25,8 @@
 
 #include "core/or/or.h"
 #include "core/or/protover.h"
-#include "feature/nodelist/routerparse.h"
+#include "core/or/versions.h"
+#include "lib/tls/tortls.h"
 
 #ifndef HAVE_RUST
 
@@ -178,6 +179,16 @@ parse_version_range(const char *s, const char *end_of_range,
   return -1;
 }
 
+static int
+is_valid_keyword(const char *s, size_t n)
+{
+  for (size_t i = 0; i < n; i++) {
+    if (!TOR_ISALNUM(s[i]) && s[i] != '-')
+      return 0;
+  }
+  return 1;
+}
+
 /** Parse a single protocol entry from <b>s</b> up to an optional
  * <b>end_of_entry</b> pointer, and return that protocol entry. Return NULL
  * on error.
@@ -212,6 +223,11 @@ parse_single_entry(const char *s, const char *end_of_entry)
              MAX_PROTOCOL_NAME_LENGTH, escaped(out->name));
     goto error;
   }
+
+  /* The name must contain only alphanumeric characters and hyphens. */
+  if (!is_valid_keyword(s, equals-s))
+    goto error;
+
   out->name = tor_strndup(s, equals-s);
 
   tor_assert(equals < end_of_entry);
@@ -374,7 +390,11 @@ protover_get_supported_protocols(void)
     "HSIntro=3-4 "
     "HSRend=1-2 "
     "Link=1-5 "
+#ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
     "LinkAuth=1,3 "
+#else
+    "LinkAuth=3 "
+#endif
     "Microdesc=1-2 "
     "Relay=1-2";
 }
@@ -920,4 +940,3 @@ protover_free_all(void)
 }
 
 #endif /* !defined(HAVE_RUST) */
-

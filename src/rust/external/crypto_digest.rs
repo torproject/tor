@@ -125,15 +125,35 @@ type smartlist_t = Stringlist;
 #[allow(dead_code)]
 extern "C" {
     fn crypto_digest(digest: *mut c_char, m: *const c_char, len: size_t) -> c_int;
-    fn crypto_digest256(digest: *mut c_char, m: *const c_char, len: size_t,
-                        algorithm: digest_algorithm_t) -> c_int;
-    fn crypto_digest512(digest: *mut c_char, m: *const c_char, len: size_t,
-                        algorithm: digest_algorithm_t) -> c_int;
-    fn crypto_common_digests(ds_out: *mut common_digests_t, m: *const c_char, len: size_t) -> c_int;
-    fn crypto_digest_smartlist_prefix(digest_out: *mut c_char, len_out: size_t, prepend: *const c_char,
-                                      lst: *const smartlist_t, append: *const c_char, alg: digest_algorithm_t);
-    fn crypto_digest_smartlist(digest_out: *mut c_char, len_out: size_t,
-                               lst: *const smartlist_t, append: *const c_char, alg: digest_algorithm_t);
+    fn crypto_digest256(
+        digest: *mut c_char,
+        m: *const c_char,
+        len: size_t,
+        algorithm: digest_algorithm_t,
+    ) -> c_int;
+    fn crypto_digest512(
+        digest: *mut c_char,
+        m: *const c_char,
+        len: size_t,
+        algorithm: digest_algorithm_t,
+    ) -> c_int;
+    fn crypto_common_digests(ds_out: *mut common_digests_t, m: *const c_char, len: size_t)
+        -> c_int;
+    fn crypto_digest_smartlist_prefix(
+        digest_out: *mut c_char,
+        len_out: size_t,
+        prepend: *const c_char,
+        lst: *const smartlist_t,
+        append: *const c_char,
+        alg: digest_algorithm_t,
+    );
+    fn crypto_digest_smartlist(
+        digest_out: *mut c_char,
+        len_out: size_t,
+        lst: *const smartlist_t,
+        append: *const c_char,
+        alg: digest_algorithm_t,
+    );
     fn crypto_digest_algorithm_get_name(alg: digest_algorithm_t) -> *const c_char;
     fn crypto_digest_algorithm_get_length(alg: digest_algorithm_t) -> size_t;
     fn crypto_digest_algorithm_parse_name(name: *const c_char) -> c_int;
@@ -145,11 +165,21 @@ extern "C" {
     fn crypto_digest_get_digest(digest: *mut crypto_digest_t, out: *mut c_char, out_len: size_t);
     fn crypto_digest_dup(digest: *const crypto_digest_t) -> *mut crypto_digest_t;
     fn crypto_digest_assign(into: *mut crypto_digest_t, from: *const crypto_digest_t);
-    fn crypto_hmac_sha256(hmac_out: *mut c_char, key: *const c_char, key_len: size_t,
-                          msg: *const c_char, msg_len: size_t);
-    fn crypto_mac_sha3_256(mac_out: *mut uint8_t, len_out: size_t,
-                           key: *const uint8_t, key_len: size_t,
-                           msg: *const uint8_t, msg_len: size_t);
+    fn crypto_hmac_sha256(
+        hmac_out: *mut c_char,
+        key: *const c_char,
+        key_len: size_t,
+        msg: *const c_char,
+        msg_len: size_t,
+    );
+    fn crypto_mac_sha3_256(
+        mac_out: *mut uint8_t,
+        len_out: size_t,
+        key: *const uint8_t,
+        key_len: size_t,
+        msg: *const uint8_t,
+        msg_len: size_t,
+    );
     fn crypto_xof_new() -> *mut crypto_xof_t;
     fn crypto_xof_add_bytes(xof: *mut crypto_xof_t, data: *const uint8_t, len: size_t);
     fn crypto_xof_squeeze_bytes(xof: *mut crypto_xof_t, out: *mut uint8_t, len: size_t);
@@ -238,12 +268,12 @@ impl CryptoDigest {
             unsafe {
                 // XXX This is a pretty awkward API to use from Rust...
                 digest = match algo {
-                    DIGEST_SHA1     => crypto_digest_new(),
-                    DIGEST_SHA256   => crypto_digest256_new(DIGEST_SHA256),
+                    DIGEST_SHA1 => crypto_digest_new(),
+                    DIGEST_SHA256 => crypto_digest256_new(DIGEST_SHA256),
                     DIGEST_SHA3_256 => crypto_digest256_new(DIGEST_SHA3_256),
-                    DIGEST_SHA512   => crypto_digest512_new(DIGEST_SHA512),
+                    DIGEST_SHA512 => crypto_digest512_new(DIGEST_SHA512),
                     DIGEST_SHA3_512 => crypto_digest512_new(DIGEST_SHA3_512),
-                    _               => abort(),
+                    _ => abort(),
                 }
             }
         }
@@ -285,9 +315,11 @@ impl CryptoDigest {
     /// * `crypto_digest_add_bytes`
     pub fn add_bytes(&self, bytes: &[u8]) {
         unsafe {
-            crypto_digest_add_bytes(self.0 as *mut crypto_digest_t,
-                                    bytes.as_ptr() as *const c_char,
-                                    bytes.len() as size_t)
+            crypto_digest_add_bytes(
+                self.0 as *mut crypto_digest_t,
+                bytes.as_ptr() as *const c_char,
+                bytes.len() as size_t,
+            )
         }
     }
 }
@@ -331,9 +363,11 @@ pub fn get_256_bit_digest(digest: CryptoDigest) -> [u8; DIGEST256_LEN] {
     let mut buffer: [u8; DIGEST256_LEN] = [0u8; DIGEST256_LEN];
 
     unsafe {
-        crypto_digest_get_digest(digest.0,
-                                 buffer.as_mut_ptr() as *mut c_char,
-                                 DIGEST256_LEN as size_t);
+        crypto_digest_get_digest(
+            digest.0,
+            buffer.as_mut_ptr() as *mut c_char,
+            DIGEST256_LEN as size_t,
+        );
 
         if buffer.as_ptr().is_null() {
             abort();
@@ -373,9 +407,11 @@ pub fn get_512_bit_digest(digest: CryptoDigest) -> [u8; DIGEST512_LEN] {
     let mut buffer: [u8; DIGEST512_LEN] = [0u8; DIGEST512_LEN];
 
     unsafe {
-        crypto_digest_get_digest(digest.0,
-                                 buffer.as_mut_ptr() as *mut c_char,
-                                 DIGEST512_LEN as size_t);
+        crypto_digest_get_digest(
+            digest.0,
+            buffer.as_mut_ptr() as *mut c_char,
+            DIGEST512_LEN as size_t,
+        );
 
         if buffer.as_ptr().is_null() {
             abort();
@@ -390,17 +426,29 @@ mod test {
 
     #[test]
     fn test_layout_common_digests_t() {
-        assert_eq!(::std::mem::size_of::<common_digests_t>(), 64usize,
-                   concat!("Size of: ", stringify!(common_digests_t)));
-        assert_eq!(::std::mem::align_of::<common_digests_t>(), 1usize,
-                   concat!("Alignment of ", stringify!(common_digests_t)));
+        assert_eq!(
+            ::std::mem::size_of::<common_digests_t>(),
+            64usize,
+            concat!("Size of: ", stringify!(common_digests_t))
+        );
+        assert_eq!(
+            ::std::mem::align_of::<common_digests_t>(),
+            1usize,
+            concat!("Alignment of ", stringify!(common_digests_t))
+        );
     }
 
     #[test]
     fn test_layout_crypto_digest_t() {
-        assert_eq!(::std::mem::size_of::<crypto_digest_t>(), 0usize,
-                   concat!("Size of: ", stringify!(crypto_digest_t)));
-        assert_eq!(::std::mem::align_of::<crypto_digest_t>(), 1usize,
-                   concat!("Alignment of ", stringify!(crypto_digest_t)));
+        assert_eq!(
+            ::std::mem::size_of::<crypto_digest_t>(),
+            0usize,
+            concat!("Size of: ", stringify!(crypto_digest_t))
+        );
+        assert_eq!(
+            ::std::mem::align_of::<crypto_digest_t>(),
+            1usize,
+            concat!("Alignment of ", stringify!(crypto_digest_t))
+        );
     }
 }

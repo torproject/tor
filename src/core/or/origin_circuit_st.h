@@ -78,6 +78,10 @@ struct origin_circuit_t {
    * associated with this circuit. */
   edge_connection_t *p_streams;
 
+  /** Smartlist of half-closed streams (half_edge_t*) that still
+   * have pending activity */
+  smartlist_t *half_streams;
+
   /** Bytes read on this circuit since last call to
    * control_event_circ_bandwidth_used().  Only used if we're configured
    * to emit CIRC_BW events. */

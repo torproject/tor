@@ -1,3 +1,0 @@
-  o Minor bugfixes (logging):
-    - Refrain from mentioning bug 21018, as it is already fixed.
-      Fixes bug 25477; bugfix on 0.2.9.8.

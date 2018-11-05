@@ -8,11 +8,11 @@
 #include "app/config/confparse.h"
 #include "app/config/config.h"
 #include "test/test.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 
 #define ROUTERSET_PRIVATE
 #include "feature/nodelist/routerset.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "test/log_test_helpers.h"
 
 #include "lib/sandbox/sandbox.h"
@@ -473,6 +473,13 @@ test_options_validate__uname_for_server(void *ignored)
 {
   (void)ignored;
   char *msg;
+
+#ifndef _WIN32
+  int unset_home_env = 0;
+  if (setenv("HOME", "/home/john", 0) == 0)
+    unset_home_env = 1;
+#endif
+
   options_test_data_t *tdata = get_options_test_data(
                                       "ORPort 127.0.0.1:5555");
   setup_capture_of_logs(LOG_WARN);
@@ -512,6 +519,10 @@ test_options_validate__uname_for_server(void *ignored)
   free_options_test_data(tdata);
   tor_free(msg);
   teardown_capture_of_logs();
+#ifndef _WIN32
+  if (unset_home_env)
+    unsetenv("HOME");
+#endif
 }
 
 static void
@@ -1413,6 +1424,13 @@ test_options_validate__paths_needed(void *ignored)
   (void)ignored;
   int ret;
   char *msg;
+
+#ifndef _WIN32
+  int unset_home_env = 0;
+  if (setenv("HOME", "/home/john", 0) == 0)
+    unset_home_env = 1;
+#endif
+
   setup_capture_of_logs(LOG_WARN);
   options_test_data_t *tdata = get_options_test_data(
                                       "PathsNeededToBuildCircuits 0.1\n"
@@ -1455,6 +1473,10 @@ test_options_validate__paths_needed(void *ignored)
   teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
+#ifndef _WIN32
+  if (unset_home_env)
+    unsetenv("HOME");
+#endif
 }
 
 static void
@@ -1632,6 +1654,18 @@ test_options_validate__reachable_addresses(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
   expect_log_entry();
   tt_str_op(tdata->opt->ReachableAddresses->value, OP_EQ, "*:82");
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  mock_clean_saved_logs();
+  tdata = get_options_test_data("FascistFirewall 1\n"
+                                "ReachableAddresses *:82\n"
+                                "MaxClientCircuitsPending 1\n"
+                                "ConnLimit 1\n");
+
+  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_ptr_op(tdata->opt->ReachableAddresses->next, OP_EQ, NULL);
   tor_free(msg);
 
 #define SERVERS_REACHABLE_MSG "Servers must be able to freely connect to" \
@@ -2425,36 +2459,6 @@ test_options_validate__circuits(void *ignored)
 }
 
 static void
-test_options_validate__tor2web(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  char *msg;
-  options_test_data_t *tdata = NULL;
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "Tor2webRendezvousPoints 1\n");
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ,
-            "Tor2webRendezvousPoints cannot be set without Tor2webMode.");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "Tor2webRendezvousPoints 1\nTor2webMode 1\n");
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  tor_free(msg);
-
- done:
-  policies_free_all();
-  free_options_test_data(tdata);
-  tor_free(msg);
-}
-
-static void
 test_options_validate__rend(void *ignored)
 {
   (void)ignored;
@@ -2567,13 +2571,11 @@ test_options_validate__single_onion(void *ignored)
   tt_ptr_op(msg, OP_EQ, NULL);
   free_options_test_data(tdata);
 
-  /* Test that SOCKSPort must come with Tor2webMode if
-   * HiddenServiceSingleHopMode is 1 */
+  /* Test that SOCKSPort if HiddenServiceSingleHopMode is 1 */
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "SOCKSPort 5000\n"
                                 "HiddenServiceSingleHopMode 1\n"
                                 "HiddenServiceNonAnonymousMode 1\n"
-                                "Tor2webMode 0\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
@@ -2588,7 +2590,6 @@ test_options_validate__single_onion(void *ignored)
                                 "SOCKSPort 0\n"
                                 "HiddenServiceSingleHopMode 1\n"
                                 "HiddenServiceNonAnonymousMode 1\n"
-                                "Tor2webMode 0\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -2598,27 +2599,13 @@ test_options_validate__single_onion(void *ignored)
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "SOCKSPort 5000\n"
                                 "HiddenServiceSingleHopMode 0\n"
-                                "Tor2webMode 0\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
   tt_ptr_op(msg, OP_EQ, NULL);
   free_options_test_data(tdata);
 
-  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "SOCKSPort 5000\n"
-                                "HiddenServiceSingleHopMode 1\n"
-                                "HiddenServiceNonAnonymousMode 1\n"
-                                "Tor2webMode 1\n"
-                                );
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  tt_ptr_op(msg, OP_EQ, NULL);
-  free_options_test_data(tdata);
-
-  /* Test that a hidden service can't be run with Tor2web
-   * Use HiddenServiceNonAnonymousMode instead of Tor2webMode, because
-   * Tor2webMode requires a compilation #define */
+  /* Test that a hidden service can't be run in non anonymous mode. */
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                   "HiddenServiceNonAnonymousMode 1\n"
                   "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
@@ -4223,7 +4210,6 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(path_bias),
   LOCAL_VALIDATE_TEST(bandwidth),
   LOCAL_VALIDATE_TEST(circuits),
-  LOCAL_VALIDATE_TEST(tor2web),
   LOCAL_VALIDATE_TEST(rend),
   LOCAL_VALIDATE_TEST(single_onion),
   LOCAL_VALIDATE_TEST(accounting),

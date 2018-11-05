@@ -1,16 +1,16 @@
 /* Copyright (c) 2014-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define DIRSERV_PRIVATE
-#define ROUTERPARSE_PRIVATE
+#define GUARDFRACTION_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define NS_PARSE_PRIVATE
 
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "feature/dircache/dirserv.h"
+#include "feature/dirauth/guardfraction.h"
 #include "feature/client/entrynodes.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/ns_parse.h"
 #include "feature/nodelist/networkstatus.h"
 
 #include "feature/nodelist/networkstatus_st.h"
@@ -422,4 +422,3 @@ struct testcase_t guardfraction_tests[] = {
 
   END_OF_TESTCASES
 };
-

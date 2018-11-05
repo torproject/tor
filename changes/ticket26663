@@ -1,3 +1,0 @@
-  o Minor features(config):
-    - The "auto" keyword in torrc is now case insensitive.
-      Closes ticket 26663.

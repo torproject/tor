@@ -53,7 +53,8 @@
 #include "core/or/relay.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
-#include "feature/nodelist/routerlist.h"
+#include "feature/relay/routermode.h"
+#include "feature/nodelist/dirlist.h"
 #include "core/or/scheduler.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/nodelist/networkstatus.h"
@@ -70,6 +71,7 @@
 #include "core/or/var_cell_st.h"
 
 #include "lib/tls/tortls.h"
+#include "lib/tls/x509.h"
 
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;
@@ -1837,7 +1839,8 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
              (int)(chan->conn->link_proto),
              hex_str(identity_digest, DIGEST_LEN),
              tor_addr_is_null(&my_apparent_addr) ?
-             "<none>" : fmt_and_decorate_addr(&my_apparent_addr));
+               "<none>" :
+               safe_str_client(fmt_and_decorate_addr(&my_apparent_addr)));
   }
   assert_connection_ok(TO_CONN(chan->conn),time(NULL));
 }

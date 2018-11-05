@@ -6,49 +6,73 @@
 #include "orconfig.h"
 #include <math.h>
 
+#define BWAUTH_PRIVATE
 #define CONFIG_PRIVATE
 #define CONTROL_PRIVATE
+#define DIRCACHE_PRIVATE
+#define DIRCLIENT_PRIVATE
 #define DIRSERV_PRIVATE
 #define DIRVOTE_PRIVATE
-#define ROUTER_PRIVATE
-#define ROUTERLIST_PRIVATE
-#define ROUTERPARSE_PRIVATE
+#define DLSTATUS_PRIVATE
 #define HIBERNATE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define NS_PARSE_PRIVATE
+#define NODE_SELECT_PRIVATE
 #define RELAY_PRIVATE
+#define ROUTERLIST_PRIVATE
+#define ROUTER_PRIVATE
+#define UNPARSEABLE_PRIVATE
+#define VOTEFLAGS_PRIVATE
 
 #include "core/or/or.h"
-#include "feature/client/bridges.h"
-#include "core/mainloop/connection.h"
-#include "app/config/confparse.h"
 #include "app/config/config.h"
+#include "app/config/confparse.h"
+#include "core/mainloop/connection.h"
+#include "core/or/relay.h"
+#include "core/or/versions.h"
+#include "feature/client/bridges.h"
+#include "feature/client/entrynodes.h"
 #include "feature/control/control.h"
-#include "lib/encoding/confline.h"
+#include "feature/dirauth/bwauth.h"
+#include "feature/dirauth/dirvote.h"
+#include "feature/dirauth/dsigs_parse.h"
+#include "feature/dirauth/process_descs.h"
+#include "feature/dirauth/recommend_pkg.h"
+#include "feature/dirauth/shared_random_state.h"
+#include "feature/dirauth/voteflags.h"
+#include "feature/dircache/dircache.h"
+#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dlstatus.h"
+#include "feature/dircommon/directory.h"
+#include "feature/dircommon/fp_pair.h"
+#include "feature/dircommon/voting_schedule.h"
+#include "feature/hibernate/hibernate.h"
+#include "feature/nodelist/authcert.h"
+#include "feature/nodelist/dirlist.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nickname.h"
+#include "feature/nodelist/node_select.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/dirparse/authcert_parse.h"
+#include "feature/dirparse/ns_parse.h"
+#include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/unparseable.h"
+#include "feature/nodelist/routerset.h"
+#include "feature/nodelist/torcert.h"
+#include "feature/relay/router.h"
+#include "feature/relay/routerkeys.h"
+#include "feature/relay/routermode.h"
+#include "lib/compress/compress.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "feature/dircache/directory.h"
-#include "feature/dircache/dirserv.h"
-#include "feature/dirauth/dirvote.h"
-#include "feature/client/entrynodes.h"
-#include "feature/dircommon/fp_pair.h"
-#include "feature/hibernate/hibernate.h"
+#include "lib/encoding/confline.h"
 #include "lib/memarea/memarea.h"
 #include "lib/osinfo/uname.h"
-#include "feature/nodelist/networkstatus.h"
-#include "feature/relay/router.h"
-#include "feature/relay/routerkeys.h"
-#include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
-#include "feature/nodelist/routerset.h"
-#include "feature/dirauth/shared_random_state.h"
+#include "test/log_test_helpers.h"
 #include "test/test.h"
 #include "test/test_dir_common.h"
-#include "feature/nodelist/torcert.h"
-#include "core/or/relay.h"
-#include "test/log_test_helpers.h"
-#include "feature/dircommon/voting_schedule.h"
-#include "lib/compress/compress.h"
 
 #include "core/or/addr_policy_st.h"
 #include "feature/nodelist/authority_cert_st.h"
@@ -69,6 +93,23 @@
 #endif
 
 #define NS_MODULE dir
+
+static networkstatus_t *
+networkstatus_parse_vote_from_string_(const char *s,
+                                      const char **eos_out,
+                                      enum networkstatus_type_t ns_type)
+{
+  size_t len = strlen(s);
+  // memdup so that it won't be nul-terminated.
+  char *tmp = tor_memdup(s, len);
+  networkstatus_t *result =
+    networkstatus_parse_vote_from_string(tmp, len, eos_out, ns_type);
+  if (eos_out && *eos_out) {
+    *eos_out = s + (*eos_out - tmp);
+  }
+  tor_free(tmp);
+  return result;
+}
 
 static void
 test_dir_nicknames(void *arg)
@@ -166,7 +207,7 @@ test_dir_formats(void *arg)
   r1->supports_tunnelled_dir_requests = 1;
   tor_addr_parse(&r1->ipv6_addr, "1:2:3:4::");
   r1->ipv6_orport = 9999;
-  r1->onion_pkey = crypto_pk_dup_key(pk1);
+  router_set_rsa_onion_pkey(pk1, &r1->onion_pkey, &r1->onion_pkey_len);
   /* Fake just enough of an ntor key to get by */
   curve25519_keypair_t r1_onion_keypair;
   curve25519_keypair_generate(&r1_onion_keypair, 0);
@@ -209,7 +250,7 @@ test_dir_formats(void *arg)
   r2->or_port = 9005;
   r2->dir_port = 0;
   r2->supports_tunnelled_dir_requests = 1;
-  r2->onion_pkey = crypto_pk_dup_key(pk2);
+  router_set_rsa_onion_pkey(pk2, &r2->onion_pkey, &r2->onion_pkey_len);
   curve25519_keypair_t r2_onion_keypair;
   curve25519_keypair_generate(&r2_onion_keypair, 0);
   r2->onion_curve25519_pkey = tor_memdup(&r2_onion_keypair.pubkey,
@@ -302,7 +343,10 @@ test_dir_formats(void *arg)
   tt_int_op(rp1->bandwidthrate,OP_EQ, r1->bandwidthrate);
   tt_int_op(rp1->bandwidthburst,OP_EQ, r1->bandwidthburst);
   tt_int_op(rp1->bandwidthcapacity,OP_EQ, r1->bandwidthcapacity);
-  tt_int_op(crypto_pk_cmp_keys(rp1->onion_pkey, pk1), OP_EQ, 0);
+  crypto_pk_t *onion_pkey = router_get_rsa_onion_pkey(rp1->onion_pkey,
+                                                      rp1->onion_pkey_len);
+  tt_int_op(crypto_pk_cmp_keys(onion_pkey, pk1), OP_EQ, 0);
+  crypto_pk_free(onion_pkey);
   tt_int_op(crypto_pk_cmp_keys(rp1->identity_pkey, pk2), OP_EQ, 0);
   tt_assert(rp1->supports_tunnelled_dir_requests);
   //tt_assert(rp1->exit_policy == NULL);
@@ -419,7 +463,10 @@ test_dir_formats(void *arg)
   tt_mem_op(rp2->onion_curve25519_pkey->public_key,OP_EQ,
              r2->onion_curve25519_pkey->public_key,
              CURVE25519_PUBKEY_LEN);
-  tt_int_op(crypto_pk_cmp_keys(rp2->onion_pkey, pk2), OP_EQ, 0);
+  onion_pkey = router_get_rsa_onion_pkey(rp2->onion_pkey,
+                                         rp2->onion_pkey_len);
+  tt_int_op(crypto_pk_cmp_keys(onion_pkey, pk2), OP_EQ, 0);
+  crypto_pk_free(onion_pkey);
   tt_int_op(crypto_pk_cmp_keys(rp2->identity_pkey, pk1), OP_EQ, 0);
   tt_assert(rp2->supports_tunnelled_dir_requests);
 
@@ -2776,11 +2823,17 @@ test_a_networkstatus(
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
 
   /* Parse certificates and keys. */
-  cert1 = mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  cert1 = mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                                 strlen(AUTHORITY_CERT_1),
+                                                 NULL);
   tt_assert(cert1);
-  cert2 = authority_cert_parse_from_string(AUTHORITY_CERT_2, NULL);
+  cert2 = authority_cert_parse_from_string(AUTHORITY_CERT_2,
+                                           strlen(AUTHORITY_CERT_2),
+                                           NULL);
   tt_assert(cert2);
-  cert3 = authority_cert_parse_from_string(AUTHORITY_CERT_3, NULL);
+  cert3 = authority_cert_parse_from_string(AUTHORITY_CERT_3,
+                                           strlen(AUTHORITY_CERT_3),
+                                           NULL);
   tt_assert(cert3);
   sign_skey_1 = crypto_pk_new();
   sign_skey_2 = crypto_pk_new();
@@ -2882,7 +2935,7 @@ test_a_networkstatus(
                                                    sign_skey_leg1,
                                                    FLAV_NS);
   tt_assert(consensus_text);
-  con = networkstatus_parse_vote_from_string(consensus_text, NULL,
+  con = networkstatus_parse_vote_from_string_(consensus_text, NULL,
                                              NS_TYPE_CONSENSUS);
   tt_assert(con);
   //log_notice(LD_GENERAL, "<<%s>>\n<<%s>>\n<<%s>>\n",
@@ -2894,7 +2947,7 @@ test_a_networkstatus(
                                                    sign_skey_leg1,
                                                    FLAV_MICRODESC);
   tt_assert(consensus_text_md);
-  con_md = networkstatus_parse_vote_from_string(consensus_text_md, NULL,
+  con_md = networkstatus_parse_vote_from_string_(consensus_text_md, NULL,
                                                 NS_TYPE_CONSENSUS);
   tt_assert(con_md);
   tt_int_op(con_md->flavor,OP_EQ, FLAV_MICRODESC);
@@ -2993,13 +3046,13 @@ test_a_networkstatus(
     tt_assert(consensus_text3);
     tt_assert(consensus_text_md2);
     tt_assert(consensus_text_md3);
-    con2 = networkstatus_parse_vote_from_string(consensus_text2, NULL,
+    con2 = networkstatus_parse_vote_from_string_(consensus_text2, NULL,
                                                 NS_TYPE_CONSENSUS);
-    con3 = networkstatus_parse_vote_from_string(consensus_text3, NULL,
+    con3 = networkstatus_parse_vote_from_string_(consensus_text3, NULL,
                                                 NS_TYPE_CONSENSUS);
-    con_md2 = networkstatus_parse_vote_from_string(consensus_text_md2, NULL,
+    con_md2 = networkstatus_parse_vote_from_string_(consensus_text_md2, NULL,
                                                 NS_TYPE_CONSENSUS);
-    con_md3 = networkstatus_parse_vote_from_string(consensus_text_md3, NULL,
+    con_md3 = networkstatus_parse_vote_from_string_(consensus_text_md3, NULL,
                                                 NS_TYPE_CONSENSUS);
     tt_assert(con2);
     tt_assert(con3);
@@ -6014,9 +6067,10 @@ test_dir_assumed_flags(void *arg)
        "192.168.0.1 9001 0\n"
     "m thisoneislongerbecauseitisa256bitmddigest33\n"
     "s Fast Guard Stable\n";
+  const char *eos = str1 + strlen(str1);
 
   const char *cp = str1;
-  rs = routerstatus_parse_entry_from_string(area, &cp, tokens, NULL, NULL,
+  rs = routerstatus_parse_entry_from_string(area, &cp, eos, tokens, NULL, NULL,
                                             24, FLAV_MICRODESC);
   tt_assert(rs);
   tt_assert(rs->is_flagged_running);

@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Include paths to header files within Tor are now qualified by directory
-      within the top-level src directory.

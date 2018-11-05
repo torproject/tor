@@ -23,6 +23,9 @@
  * This implementation differs from memcmp in that its timing behavior is not
  * data-dependent: it should return in the same amount of time regardless of
  * the contents of <b>a</b> and <b>b</b>.
+ *
+ * Note that if all you care about is equality, this implementation is
+ * overkill: it would be better to use tor_memeq() or tor_memneq().
  */
 int
 tor_memcmp(const void *a, const void *b, size_t len)

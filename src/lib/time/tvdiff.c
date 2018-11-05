@@ -165,3 +165,25 @@ tv_to_msec(const struct timeval *tv)
   conv += ((int64_t)tv->tv_usec+500)/1000L;
   return conv;
 }
+
+/**
+ * Return duration in seconds between time_t values
+ * <b>t1</b> and <b>t2</b> iff <b>t1</b> is numerically
+ * less or equal than <b>t2</b>. Otherwise, return TIME_MAX.
+ *
+ * This provides a safe way to compute difference between
+ * two UNIX timestamps (<b>t2</b> can be assumed by calling
+ * code to be later than <b>t1</b>) or two durations measured
+ * in seconds (<b>t2</b> can be assumed to be longer than
+ * <b>t1</b>). Calling code is expected to check for TIME_MAX
+ * return value and interpret that as error condition.
+ */
+time_t
+time_diff(const time_t t1, const time_t t2)
+{
+  if (t1 <= t2)
+    return t2 - t1;
+
+  return TIME_MAX;
+}
+

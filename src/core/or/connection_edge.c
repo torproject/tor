@@ -59,43 +59,46 @@
 
 #include "lib/err/backtrace.h"
 
-#include "feature/client/addressmap.h"
-#include "lib/container/buffers.h"
-#include "core/or/channel.h"
-#include "feature/client/circpathbias.h"
-#include "core/or/circuitlist.h"
-#include "core/or/circuituse.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
+#include "core/mainloop/mainloop.h"
+#include "core/or/channel.h"
+#include "core/or/circuitbuild.h"
+#include "core/or/circuitlist.h"
+#include "core/or/circuituse.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
-#include "feature/control/control.h"
-#include "lib/crypt_ops/crypto_util.h"
-#include "feature/relay/dns.h"
-#include "feature/client/dnsserv.h"
-#include "feature/dircache/directory.h"
-#include "feature/dircache/dirserv.h"
-#include "feature/hibernate/hibernate.h"
-#include "feature/hs/hs_common.h"
-#include "feature/hs/hs_cache.h"
-#include "feature/hs/hs_client.h"
-#include "feature/hs/hs_circuit.h"
-#include "core/mainloop/main.h"
-#include "feature/nodelist/networkstatus.h"
-#include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"
-#include "core/proto/proto_http.h"
-#include "core/proto/proto_socks.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
+#include "core/proto/proto_http.h"
+#include "core/proto/proto_socks.h"
+#include "feature/client/addressmap.h"
+#include "feature/client/circpathbias.h"
+#include "feature/client/dnsserv.h"
+#include "feature/control/control.h"
+#include "feature/dircache/dirserv.h"
+#include "feature/dircommon/directory.h"
+#include "feature/hibernate/hibernate.h"
+#include "feature/hs/hs_cache.h"
+#include "feature/hs/hs_circuit.h"
+#include "feature/hs/hs_client.h"
+#include "feature/hs/hs_common.h"
+#include "feature/nodelist/describe.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/routerset.h"
+#include "feature/relay/dns.h"
+#include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
+#include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
-#include "feature/relay/router.h"
-#include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerset.h"
-#include "core/or/circuitbuild.h"
+#include "lib/container/buffers.h"
+#include "lib/crypt_ops/crypto_util.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/cpath_build_state_st.h"
@@ -105,6 +108,7 @@
 #include "feature/nodelist/node_st.h"
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
+#include "core/or/half_edge_st.h"
 #include "core/or/socks_request_st.h"
 #include "lib/evloop/compat_libevent.h"
 
@@ -472,6 +476,12 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   if (circ && !circ->marked_for_close) {
     log_debug(LD_EDGE,"Sending end on conn (fd "TOR_SOCKET_T_FORMAT").",
               conn->base_.s);
+
+    if (CIRCUIT_IS_ORIGIN(circ)) {
+      origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+      connection_half_edge_add(conn, origin_circ);
+    }
+
     connection_edge_send_command(conn, RELAY_COMMAND_END,
                                  payload, payload_len);
     /* We'll log warn if the connection was an hidden service and couldn't be
@@ -486,6 +496,236 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   conn->edge_has_sent_end = 1;
   conn->end_reason = control_reason;
   return 0;
+}
+
+/**
+ * Helper function for bsearch.
+ *
+ * As per smartlist_bsearch, return < 0 if key preceeds member,
+ * > 0 if member preceeds key, and 0 if they are equal.
+ *
+ * This is equivalent to subtraction of the values of key - member
+ * (why does no one ever say that explicitly?).
+ */
+static int
+connection_half_edge_compare_bsearch(const void *key, const void **member)
+{
+  const half_edge_t *e2;
+  tor_assert(key);
+  tor_assert(member && *(half_edge_t**)member);
+  e2 = *(const half_edge_t **)member;
+
+  return *(const streamid_t*)key - e2->stream_id;
+}
+
+/** Total number of half_edge_t objects allocated */
+static size_t n_half_conns_allocated = 0;
+
+/**
+ * Add a half-closed connection to the list, to watch for activity.
+ *
+ * These connections are removed from the list upon receiving an end
+ * cell.
+ */
+STATIC void
+connection_half_edge_add(const edge_connection_t *conn,
+                         origin_circuit_t *circ)
+{
+  half_edge_t *half_conn = NULL;
+  int insert_at = 0;
+  int ignored;
+
+  /* Double-check for re-insertion. This should not happen,
+   * but this check is cheap compared to the sort anyway */
+  if (connection_half_edge_find_stream_id(circ->half_streams,
+                                          conn->stream_id)) {
+    log_warn(LD_BUG, "Duplicate stream close for stream %d on circuit %d",
+             conn->stream_id, circ->global_identifier);
+    return;
+  }
+
+  half_conn = tor_malloc_zero(sizeof(half_edge_t));
+  ++n_half_conns_allocated;
+
+  if (!circ->half_streams) {
+    circ->half_streams = smartlist_new();
+  }
+
+  half_conn->stream_id = conn->stream_id;
+
+  // How many sendme's should I expect?
+  half_conn->sendmes_pending =
+   (STREAMWINDOW_START-conn->package_window)/STREAMWINDOW_INCREMENT;
+
+   // Is there a connected cell pending?
+  half_conn->connected_pending = conn->base_.state ==
+      AP_CONN_STATE_CONNECT_WAIT;
+
+  /* Data should only arrive if we're not waiting on a resolved cell.
+   * It can arrive after waiting on connected, because of optimistic
+   * data. */
+  if (conn->base_.state != AP_CONN_STATE_RESOLVE_WAIT) {
+    // How many more data cells can arrive on this id?
+    half_conn->data_pending = conn->deliver_window;
+  }
+
+  insert_at = smartlist_bsearch_idx(circ->half_streams, &half_conn->stream_id,
+                                    connection_half_edge_compare_bsearch,
+                                    &ignored);
+  smartlist_insert(circ->half_streams, insert_at, half_conn);
+}
+
+/** Release space held by <b>he</b> */
+void
+half_edge_free_(half_edge_t *he)
+{
+  if (!he)
+    return;
+  --n_half_conns_allocated;
+  tor_free(he);
+}
+
+/** Return the number of bytes devoted to storing info on half-open streams. */
+size_t
+half_streams_get_total_allocation(void)
+{
+  return n_half_conns_allocated * sizeof(half_edge_t);
+}
+
+/**
+ * Find a stream_id_t in the list in O(lg(n)).
+ *
+ * Returns NULL if the list is empty or element is not found.
+ * Returns a pointer to the element if found.
+ */
+STATIC half_edge_t *
+connection_half_edge_find_stream_id(const smartlist_t *half_conns,
+                                    streamid_t stream_id)
+{
+  if (!half_conns)
+    return NULL;
+
+  return smartlist_bsearch(half_conns, &stream_id,
+                           connection_half_edge_compare_bsearch);
+}
+
+/**
+ * Check if this stream_id is in a half-closed state. If so,
+ * check if it still has data cells pending, and decrement that
+ * window if so.
+ *
+ * Return 1 if the data window was not empty.
+ * Return 0 otherwise.
+ */
+int
+connection_half_edge_is_valid_data(const smartlist_t *half_conns,
+                                   streamid_t stream_id)
+{
+  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
+                                                          stream_id);
+
+  if (!half)
+    return 0;
+
+  if (half->data_pending > 0) {
+    half->data_pending--;
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
+ * Check if this stream_id is in a half-closed state. If so,
+ * check if it still has a connected cell pending, and decrement
+ * that window if so.
+ *
+ * Return 1 if the connected window was not empty.
+ * Return 0 otherwise.
+ */
+int
+connection_half_edge_is_valid_connected(const smartlist_t *half_conns,
+                                        streamid_t stream_id)
+{
+  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
+                                                          stream_id);
+
+  if (!half)
+    return 0;
+
+  if (half->connected_pending) {
+    half->connected_pending = 0;
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
+ * Check if this stream_id is in a half-closed state. If so,
+ * check if it still has sendme cells pending, and decrement that
+ * window if so.
+ *
+ * Return 1 if the sendme window was not empty.
+ * Return 0 otherwise.
+ */
+int
+connection_half_edge_is_valid_sendme(const smartlist_t *half_conns,
+                                     streamid_t stream_id)
+{
+  half_edge_t *half = connection_half_edge_find_stream_id(half_conns,
+                                                          stream_id);
+
+  if (!half)
+    return 0;
+
+  if (half->sendmes_pending > 0) {
+    half->sendmes_pending--;
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
+ * Check if this stream_id is in a half-closed state. If so, remove
+ * it from the list. No other data should come after the END cell.
+ *
+ * Return 1 if stream_id was in half-closed state.
+ * Return 0 otherwise.
+ */
+int
+connection_half_edge_is_valid_end(smartlist_t *half_conns,
+                                  streamid_t stream_id)
+{
+  half_edge_t *half;
+  int found, remove_idx;
+
+  if (!half_conns)
+    return 0;
+
+  remove_idx = smartlist_bsearch_idx(half_conns, &stream_id,
+                                    connection_half_edge_compare_bsearch,
+                                    &found);
+  if (!found)
+    return 0;
+
+  half = smartlist_get(half_conns, remove_idx);
+  smartlist_del_keeporder(half_conns, remove_idx);
+  half_edge_free(half);
+  return 1;
+}
+
+/**
+ * Streams that were used to send a RESOLVE cell are closed
+ * when they get the RESOLVED, without an end. So treat
+ * a RESOLVED just like an end, and remove from the list.
+ */
+int
+connection_half_edge_is_valid_resolved(smartlist_t *half_conns,
+                                       streamid_t stream_id)
+{
+  return connection_half_edge_is_valid_end(half_conns, stream_id);
 }
 
 /** An error has just occurred on an operation on an edge connection
@@ -597,6 +837,46 @@ connected_cell_format_payload(uint8_t *payload_out,
   return connected_payload_len;
 }
 
+/* This is an onion service client connection: Export the client circuit ID
+ * according to the HAProxy proxy protocol. */
+STATIC void
+export_hs_client_circuit_id(edge_connection_t *edge_conn,
+                            hs_circuit_id_protocol_t protocol)
+{
+  /* We only support HAProxy right now. */
+  if (protocol != HS_CIRCUIT_ID_PROTOCOL_HAPROXY)
+    return;
+
+  char *buf = NULL;
+  const char dst_ipv6[] = "::1";
+  /* See RFC4193 regarding fc00::/7 */
+  const char src_ipv6_prefix[] = "fc00:dead:beef:4dad:";
+  uint16_t dst_port = 0;
+  uint16_t src_port = 1; /* default value */
+  uint32_t gid = 0; /* default value */
+
+  /* Generate a GID and source port for this client */
+  if (edge_conn->on_circuit != NULL) {
+    gid = TO_ORIGIN_CIRCUIT(edge_conn->on_circuit)->global_identifier;
+    src_port = gid & 0x0000ffff;
+  }
+
+  /* Grab the original dest port from the hs ident */
+  if (edge_conn->hs_ident) {
+    dst_port = edge_conn->hs_ident->orig_virtual_port;
+  }
+
+  /* Build the string */
+  tor_asprintf(&buf, "PROXY TCP6 %s:%x:%x %s %d %d\r\n",
+               src_ipv6_prefix,
+               gid >> 16, gid & 0x0000ffff,
+               dst_ipv6, src_port, dst_port);
+
+  connection_buf_add(buf, strlen(buf), TO_CONN(edge_conn));
+
+  tor_free(buf);
+}
+
 /** Connected handler for exit connections: start writing pending
  * data, deliver 'CONNECTED' relay cells as appropriate, and check
  * any pending data that may have been received. */
@@ -617,6 +897,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   rep_hist_note_exit_stream_opened(conn->port);
 
   conn->state = EXIT_CONN_STATE_OPEN;
+
   connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
   if (connection_get_outbuf_len(conn)) /* in case there are any queued relay
                                         * cells */
@@ -1842,18 +2123,6 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       return -1;
     }
 
-#ifdef ENABLE_TOR2WEB_MODE
-    /* If we're running in Tor2webMode, we don't allow anything BUT .onion
-     * addresses. */
-    if (options->Tor2webMode) {
-      log_warn(LD_APP, "Refusing to connect to non-hidden-service hostname "
-               "or IP address %s because tor2web mode is enabled.",
-               safe_str_client(socks->address));
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
-      return -1;
-    }
-#endif /* defined(ENABLE_TOR2WEB_MODE) */
-
     /* socks->address is a non-onion hostname or IP address.
      * If we can't do any non-onion requests, refuse the connection.
      * If we have a hostname but can't do DNS, refuse the connection.
@@ -2598,8 +2867,11 @@ connection_ap_process_http_connect(entry_connection_t *conn)
  err:
   if (BUG(errmsg == NULL))
     errmsg = "HTTP/1.0 400 Bad Request\r\n\r\n";
-  log_warn(LD_EDGE, "Saying %s", escaped(errmsg));
+  log_info(LD_EDGE, "HTTP tunnel error: saying %s", escaped(errmsg));
   connection_buf_add(errmsg, strlen(errmsg), ENTRY_TO_CONN(conn));
+  /* Mark it as "has_finished" so that we don't try to send an extra socks
+   * reply. */
+  conn->socks_request->has_finished = 1;
   connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_HTTPPROTOCOL|
                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
@@ -2635,6 +2907,11 @@ get_unique_stream_id_by_circ(origin_circuit_t *circ)
   for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
     if (tmpconn->stream_id == test_stream_id)
       goto again;
+
+  if (connection_half_edge_find_stream_id(circ->half_streams,
+                                           test_stream_id))
+    goto again;
+
   return test_stream_id;
 }
 
@@ -3413,6 +3690,14 @@ handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
   assert_circuit_ok(circ);
 
   hs_inc_rdv_stream_counter(origin_circ);
+
+  /* If it's an onion service connection, we might want to include the proxy
+   * protocol header: */
+  if (conn->hs_ident) {
+    hs_circuit_id_protocol_t circuit_id_protocol =
+      hs_service_exports_circuit_id(&conn->hs_ident->identity_pk);
+    export_hs_client_circuit_id(conn, circuit_id_protocol);
+  }
 
   /* Connect tor to the hidden service destination. */
   connection_exit_connect(conn);

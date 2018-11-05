@@ -46,6 +46,12 @@
 static void child(const tor_main_configuration_t *cfg)
   __attribute__((noreturn));
 
+const char *
+tor_api_get_provider_version(void)
+{
+  return "libtorrunner " VERSION;
+}
+
 int
 tor_run_main(const tor_main_configuration_t *cfg)
 {
@@ -86,9 +92,13 @@ child(const tor_main_configuration_t *cfg)
 {
   /* XXXX Close unused file descriptors. */
 
-  char **args = real_calloc(cfg->argc+1, sizeof(char *));
+  char **args = real_calloc(cfg->argc + cfg->argc_owned+1, sizeof(char *));
   memcpy(args, cfg->argv, cfg->argc * sizeof(char *));
-  args[cfg->argc] = NULL;
+  if (cfg->argc_owned)
+    memcpy(args + cfg->argc, cfg->argv_owned,
+           cfg->argc_owned * sizeof(char *));
+
+  args[cfg->argc + cfg->argc_owned] = NULL;
 
   int rv = execv(BINDIR "/tor", args);
 
@@ -98,4 +108,3 @@ child(const tor_main_configuration_t *cfg)
     abort(); /* Unreachable */
   }
 }
-

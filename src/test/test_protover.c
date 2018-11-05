@@ -10,6 +10,7 @@
 
 #include "core/or/or.h"
 #include "core/or/connection_or.h"
+#include "lib/tls/tortls.h"
 
 static void
 test_protover_parse(void *arg)
@@ -167,6 +168,14 @@ test_protover_vote(void *arg)
   tt_str_op(result, OP_EQ, "");
   tor_free(result);
 
+  /* Don't count double-voting. */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Foo=1 Foo=1");
+  smartlist_add(lst, (void*) "Bar=1-2,2-3");
+  result = protover_compute_vote(lst, 2);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
   /* Bad votes: the result must be empty */
   smartlist_clear(lst);
   smartlist_add(lst, (void*) "Faux=10-5");
@@ -259,6 +268,7 @@ test_protover_all_supported(void *arg)
   tt_ptr_op(msg, OP_EQ, NULL);
 
   // Some things we don't support
+  tt_assert(! protover_all_supported("Wombat=9", NULL));
   tt_assert(! protover_all_supported("Wombat=9", &msg));
   tt_str_op(msg, OP_EQ, "Wombat=9");
   tor_free(msg);
@@ -290,13 +300,13 @@ test_protover_all_supported(void *arg)
   tor_free(msg);
 
   /* We shouldn't be able to DoS ourselves parsing a large range. */
-  tt_assert(! protover_all_supported("Sleen=0-2147483648", &msg));
-  tt_str_op(msg, OP_EQ, "Sleen=0-2147483648");
+  tt_assert(! protover_all_supported("Sleen=1-2147483648", &msg));
+  tt_str_op(msg, OP_EQ, "Sleen=1-2147483648");
   tor_free(msg);
 
   /* This case is allowed. */
-  tt_assert(! protover_all_supported("Sleen=0-4294967294", &msg));
-  tt_str_op(msg, OP_EQ, "Sleen=0-4294967294");
+  tt_assert(! protover_all_supported("Sleen=1-4294967294", &msg));
+  tt_str_op(msg, OP_EQ, "Sleen=1-4294967294");
   tor_free(msg);
 
   /* If we get a (barely) valid (but unsupported list, we say "yes, that's
@@ -313,7 +323,7 @@ test_protover_all_supported(void *arg)
   /* If we get a completely unparseable list, protover_all_supported should
    * hit a fatal assertion for BUG(entries == NULL). */
   tor_capture_bugs_(1);
-  tt_assert(protover_all_supported("Sleen=0-4294967295", &msg));
+  tt_assert(protover_all_supported("Sleen=1-4294967295", &msg));
   tor_end_capture_bugs_();
 
   /* Protocol name too long */
@@ -444,10 +454,12 @@ test_protover_supported_protocols(void *arg)
     }
   }
 
+#ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
   /* Legacy LinkAuth does not appear anywhere in the code. */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_LINKAUTH,
                                             PROTOVER_LINKAUTH_V1));
+#endif
   /* Latest LinkAuth is not exposed in the headers. */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_LINKAUTH,
@@ -543,16 +555,20 @@ test_protover_vote_roundtrip(void *args)
     const char *input;
     const char *expected_output;
   } examples[] = {
+    { "Risqu\u00e9=1", NULL },
+    { ",,,=1", NULL },
+    { "\xc1=1", NULL },
+    { "Foo_Bar=1", NULL },
     { "Fkrkljdsf", NULL },
     { "Zn=4294967295", NULL },
     { "Zn=4294967295-1", NULL },
     { "Zn=4294967293-4294967295", NULL },
     /* Will fail because of 4294967295. */
-    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=0,4294967295",
+    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=1,4294967295",
        NULL },
-    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=0,4294967294",
-      "Bar=3 Foo=1,3 Quux=9-12,14-16,900 Zn=0,4294967294" },
-    { "Zu16=0,65536", "Zu16=0,65536" },
+    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=1,4294967294",
+      "Bar=3 Foo=1,3 Quux=9-12,14-16,900 Zn=1,4294967294" },
+    { "Zu16=1,65536", "Zu16=1,65536" },
     { "N-1=1,2", "N-1=1-2" },
     { "-1=4294967295", NULL },
     { "-1=3", "-1=3" },
@@ -575,15 +591,23 @@ test_protover_vote_roundtrip(void *args)
     { "Faux=-1", NULL },
     { "Faux=-1-3", NULL },
     { "Faux=1--1", NULL },
+    { "Link=1-2-", NULL },
+    { "Link=1-2-3", NULL },
+    { "Faux=1-2-", NULL },
+    { "Faux=1-2-3", NULL },
+    { "Link=\t1,3", NULL },
+    { "Link=1\n,3", NULL },
+    { "Faux=1,\r3", NULL },
+    { "Faux=1,3\f", NULL },
     /* Large integers */
     { "Link=4294967296", NULL },
     /* Large range */
     { "Sleen=1-501", "Sleen=1-501" },
     { "Sleen=1-65537", NULL },
     /* Both C/Rust implementations should be able to handle this mild DoS. */
-    { "Sleen=0-2147483648", NULL },
+    { "Sleen=1-2147483648", NULL },
     /* Rust tests are built in debug mode, so ints are bounds-checked. */
-    { "Sleen=0-4294967295", NULL },
+    { "Sleen=1-4294967295", NULL },
   };
   unsigned u;
   smartlist_t *votes = smartlist_new();
@@ -625,4 +649,3 @@ struct testcase_t protover_tests[] = {
   PV_TEST(vote_roundtrip, 0),
   END_OF_TESTCASES
 };
-

@@ -37,12 +37,6 @@ struct link_specifier_t;
 #define HS_DESC_CERT_LIFETIME (54 * 60 * 60)
 /* Length of the salt needed for the encrypted section of a descriptor. */
 #define HS_DESC_ENCRYPTED_SALT_LEN 16
-/* Length of the secret input needed for the KDF construction which derives
- * the encryption key for the encrypted data section of the descriptor. This
- * adds up to 68 bytes being the blinded key, hashed subcredential and
- * revision counter. */
-#define HS_DESC_ENCRYPTED_SECRET_INPUT_LEN \
-  ED25519_PUBKEY_LEN + DIGEST256_LEN + sizeof(uint64_t)
 /* Length of the KDF output value which is the length of the secret key,
  * the secret IV and MAC key length which is the length of H() output. */
 #define HS_DESC_ENCRYPTED_KDF_OUTPUT_LEN \
@@ -58,6 +52,17 @@ struct link_specifier_t;
  * following is the length in bytes and the bit size. */
 #define HS_DESC_ENCRYPTED_KEY_LEN CIPHER256_KEY_LEN
 #define HS_DESC_ENCRYPTED_BIT_SIZE (HS_DESC_ENCRYPTED_KEY_LEN * 8)
+
+/* Length of each components in the auth client section in the descriptor. */
+#define HS_DESC_CLIENT_ID_LEN 8
+#define HS_DESC_DESCRIPTOR_COOKIE_LEN 16
+#define HS_DESC_COOKIE_KEY_LEN 32
+#define HS_DESC_COOKIE_KEY_BIT_SIZE (HS_DESC_COOKIE_KEY_LEN * 8)
+#define HS_DESC_ENCRYPED_COOKIE_LEN HS_DESC_DESCRIPTOR_COOKIE_LEN
+
+/* The number of auth client entries in the descriptor must be the multiple
+ * of this constant. */
+#define HS_DESC_AUTH_CLIENT_MULTIPLE 16
 
 /* Type of authentication in the descriptor. */
 typedef enum {
@@ -126,6 +131,20 @@ typedef struct hs_desc_intro_point_t {
   unsigned int cross_certified : 1;
 } hs_desc_intro_point_t;
 
+/* Authorized client information located in a descriptor. */
+typedef struct hs_desc_authorized_client_t {
+  /* An identifier that the client will use to identify which auth client
+   * entry it needs to use. */
+  uint8_t client_id[HS_DESC_CLIENT_ID_LEN];
+
+  /* An IV that is used to decrypt the encrypted descriptor cookie. */
+  uint8_t iv[CIPHER_IV_LEN];
+
+  /* An encrypted descriptor cookie that the client needs to decrypt to use
+   * it to decrypt the descriptor. */
+  uint8_t encrypted_cookie[HS_DESC_ENCRYPED_COOKIE_LEN];
+} hs_desc_authorized_client_t;
+
 /* The encrypted data section of a descriptor. Obviously the data in this is
  * in plaintext but encrypted once encoded. */
 typedef struct hs_desc_encrypted_data_t {
@@ -143,6 +162,24 @@ typedef struct hs_desc_encrypted_data_t {
   /* A list of intro points. Contains hs_desc_intro_point_t objects. */
   smartlist_t *intro_points;
 } hs_desc_encrypted_data_t;
+
+/* The superencrypted data section of a descriptor. Obviously the data in
+ * this is in plaintext but encrypted once encoded. */
+typedef struct hs_desc_superencrypted_data_t {
+  /* This field contains ephemeral x25519 public key which is used by
+   * the encryption scheme in the client authorization. */
+  curve25519_public_key_t auth_ephemeral_pubkey;
+
+  /* A list of authorized clients. Contains hs_desc_authorized_client_t
+   * objects. */
+  smartlist_t *clients;
+
+  /* Decoding only: The b64-decoded encrypted blob from the descriptor */
+  uint8_t *encrypted_blob;
+
+  /* Decoding only: Size of the encrypted_blob */
+  size_t encrypted_blob_size;
+} hs_desc_superencrypted_data_t;
 
 /* Plaintext data that is unencrypted information of the descriptor. */
 typedef struct hs_desc_plaintext_data_t {
@@ -182,6 +219,11 @@ typedef struct hs_descriptor_t {
   /* Contains the plaintext part of the descriptor. */
   hs_desc_plaintext_data_t plaintext_data;
 
+  /* The following contains what's in the superencrypted part of the
+   * descriptor. It's only encrypted in the encoded version of the descriptor
+   * thus the data contained in that object is in plaintext. */
+  hs_desc_superencrypted_data_t superencrypted_data;
+
   /* The following contains what's in the encrypted part of the descriptor.
    * It's only encrypted in the encoded version of the descriptor thus the
    * data contained in that object is in plaintext. */
@@ -211,6 +253,10 @@ void hs_descriptor_free_(hs_descriptor_t *desc);
 void hs_desc_plaintext_data_free_(hs_desc_plaintext_data_t *desc);
 #define hs_desc_plaintext_data_free(desc) \
   FREE_AND_NULL(hs_desc_plaintext_data_t, hs_desc_plaintext_data_free_, (desc))
+void hs_desc_superencrypted_data_free_(hs_desc_superencrypted_data_t *desc);
+#define hs_desc_superencrypted_data_free(desc) \
+  FREE_AND_NULL(hs_desc_superencrypted_data_t, \
+                hs_desc_superencrypted_data_free_, (desc))
 void hs_desc_encrypted_data_free_(hs_desc_encrypted_data_t *desc);
 #define hs_desc_encrypted_data_free(desc) \
   FREE_AND_NULL(hs_desc_encrypted_data_t, hs_desc_encrypted_data_free_, (desc))
@@ -226,14 +272,19 @@ void hs_descriptor_clear_intro_points(hs_descriptor_t *desc);
 MOCK_DECL(int,
           hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
                                      const ed25519_keypair_t *signing_kp,
+                                     const uint8_t *descriptor_cookie,
                                      char **encoded_out));
 
 int hs_desc_decode_descriptor(const char *encoded,
                               const uint8_t *subcredential,
+                              const curve25519_secret_key_t *client_auth_sk,
                               hs_descriptor_t **desc_out);
 int hs_desc_decode_plaintext(const char *encoded,
                              hs_desc_plaintext_data_t *plaintext);
+int hs_desc_decode_superencrypted(const hs_descriptor_t *desc,
+                                 hs_desc_superencrypted_data_t *desc_out);
 int hs_desc_decode_encrypted(const hs_descriptor_t *desc,
+                             const curve25519_secret_key_t *client_auth_sk,
                              hs_desc_encrypted_data_t *desc_out);
 
 size_t hs_desc_obj_size(const hs_descriptor_t *data);
@@ -243,9 +294,26 @@ hs_desc_intro_point_t *hs_desc_intro_point_new(void);
 void hs_desc_intro_point_free_(hs_desc_intro_point_t *ip);
 #define hs_desc_intro_point_free(ip) \
   FREE_AND_NULL(hs_desc_intro_point_t, hs_desc_intro_point_free_, (ip))
+void hs_desc_authorized_client_free_(hs_desc_authorized_client_t *client);
+#define hs_desc_authorized_client_free(client) \
+  FREE_AND_NULL(hs_desc_authorized_client_t, \
+                hs_desc_authorized_client_free_, (client))
 
 link_specifier_t *hs_desc_lspec_to_trunnel(
                                    const hs_desc_link_specifier_t *spec);
+
+hs_desc_authorized_client_t *hs_desc_build_fake_authorized_client(void);
+void hs_desc_build_authorized_client(const uint8_t *subcredential,
+                                     const curve25519_public_key_t *
+                                     client_auth_pk,
+                                     const curve25519_secret_key_t *
+                                     auth_ephemeral_sk,
+                                     const uint8_t *descriptor_cookie,
+                                     hs_desc_authorized_client_t *client_out);
+void hs_desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc);
+void hs_desc_superencrypted_data_free_contents(
+                                        hs_desc_superencrypted_data_t *desc);
+void hs_desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc);
 
 #ifdef HS_DESCRIPTOR_PRIVATE
 
@@ -265,13 +333,11 @@ STATIC int cert_is_valid(tor_cert_t *cert, uint8_t type,
 STATIC int desc_sig_is_valid(const char *b64_sig,
                              const ed25519_public_key_t *signing_pubkey,
                              const char *encoded_desc, size_t encoded_len);
-STATIC size_t decode_superencrypted(const char *message, size_t message_len,
-                                   uint8_t **encrypted_out);
-STATIC void desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc);
 
 MOCK_DECL(STATIC size_t, decrypt_desc_layer,(const hs_descriptor_t *desc,
                                              const uint8_t *encrypted_blob,
                                              size_t encrypted_blob_size,
+                                             const uint8_t *descriptor_cookie,
                                              int is_superencrypted_layer,
                                              char **decrypted_out));
 

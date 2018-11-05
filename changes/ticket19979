@@ -1,3 +1,0 @@
-  o Minor features (openssl):
-    - When possible, use RFC5869 HKDF implementation from OpenSSL.
-      Resolves ticket 19979.

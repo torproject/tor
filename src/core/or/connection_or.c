@@ -41,10 +41,10 @@
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "feature/dircache/dirserv.h"
+#include "feature/dirauth/reachability.h"
 #include "feature/client/entrynodes.h"
-#include "feature/stats/geoip.h"
-#include "core/mainloop/main.h"
+#include "lib/geoip/geoip.h"
+#include "core/mainloop/mainloop.h"
 #include "trunnel/link_handshake.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
@@ -56,11 +56,14 @@
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
+#include "feature/relay/routermode.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/ext_orport.h"
 #include "core/or/scheduler.h"
 #include "feature/nodelist/torcert.h"
 #include "core/or/channelpadding.h"
+#include "feature/dirauth/authmode.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/cell_queue_st.h"
@@ -73,6 +76,7 @@
 #include "lib/crypt_ops/crypto_format.h"
 
 #include "lib/tls/tortls.h"
+#include "lib/tls/x509.h"
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_launch_v3_or_handshake(or_connection_t *conn);
@@ -704,6 +708,7 @@ connection_or_finished_connecting(or_connection_t *or_conn)
   log_debug(LD_HANDSHAKE,"OR connect() to router at %s:%u finished.",
             conn->address,conn->port);
   control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
+  control_event_boot_first_orconn();
 
   if (proxy_type != PROXY_NONE) {
     /* start proxy handshake */
@@ -2639,6 +2644,12 @@ connection_or_send_certs_cell(or_connection_t *conn)
   return 0;
 }
 
+#ifdef TOR_UNIT_TESTS
+int testing__connection_or_pretend_TLSSECRET_is_supported = 0;
+#else
+#define testing__connection_or_pretend_TLSSECRET_is_supported 0
+#endif
+
 /** Return true iff <b>challenge_type</b> is an AUTHCHALLENGE type that
  * we can send and receive. */
 int
@@ -2646,6 +2657,11 @@ authchallenge_type_is_supported(uint16_t challenge_type)
 {
   switch (challenge_type) {
      case AUTHTYPE_RSA_SHA256_TLSSECRET:
+#ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
+       return 1;
+#else
+       return testing__connection_or_pretend_TLSSECRET_is_supported;
+#endif
      case AUTHTYPE_ED25519_SHA256_RFC5705:
        return 1;
      case AUTHTYPE_RSA_SHA256_RFC5705:
@@ -2688,11 +2704,13 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
   tor_assert(sizeof(ac->challenge) == 32);
   crypto_rand((char*)ac->challenge, sizeof(ac->challenge));
 
-  auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_TLSSECRET);
+  if (authchallenge_type_is_supported(AUTHTYPE_RSA_SHA256_TLSSECRET))
+    auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_TLSSECRET);
   /* Disabled, because everything that supports this method also supports
    * the much-superior ED25519_SHA256_RFC5705 */
   /* auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_RFC5705); */
-  auth_challenge_cell_add_methods(ac, AUTHTYPE_ED25519_SHA256_RFC5705);
+  if (authchallenge_type_is_supported(AUTHTYPE_ED25519_SHA256_RFC5705))
+    auth_challenge_cell_add_methods(ac, AUTHTYPE_ED25519_SHA256_RFC5705);
   auth_challenge_cell_set_n_methods(ac,
                                     auth_challenge_cell_getlen_methods(ac));
 
@@ -2853,7 +2871,11 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
   /* HMAC of clientrandom and serverrandom using master key : 32 octets */
   if (old_tlssecrets_algorithm) {
-    tor_tls_get_tlssecrets(conn->tls, auth->tlssecrets);
+    if (tor_tls_get_tlssecrets(conn->tls, auth->tlssecrets) < 0) {
+      log_fn(LOG_PROTOCOL_WARN, LD_OR, "Somebody asked us for an older TLS "
+         "authentication method (AUTHTYPE_RSA_SHA256_TLSSECRET) "
+         "which we don't support.");
+    }
   } else {
     char label[128];
     tor_snprintf(label, sizeof(label),

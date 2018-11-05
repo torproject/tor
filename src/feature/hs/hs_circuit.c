@@ -8,27 +8,26 @@
 #define HS_CIRCUIT_PRIVATE
 
 #include "core/or/or.h"
-#include "feature/client/circpathbias.h"
+#include "app/config/config.h"
+#include "core/crypto/hs_ntor.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
-#include "app/config/config.h"
+#include "core/or/policies.h"
+#include "core/or/relay.h"
+#include "feature/client/circpathbias.h"
+#include "feature/hs/hs_cell.h"
+#include "feature/hs/hs_circuit.h"
+#include "feature/hs/hs_circuitmap.h"
+#include "feature/hs/hs_ident.h"
+#include "feature/hs/hs_service.h"
+#include "feature/nodelist/describe.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/rend/rendservice.h"
+#include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "feature/nodelist/nodelist.h"
-#include "core/or/policies.h"
-#include "core/or/relay.h"
-#include "feature/rend/rendservice.h"
-#include "feature/stats/rephist.h"
-#include "feature/relay/router.h"
-
-#include "feature/hs/hs_cell.h"
-#include "feature/hs/hs_circuitmap.h"
-#include "feature/hs/hs_ident.h"
-#include "core/crypto/hs_ntor.h"
-#include "feature/hs/hs_service.h"
-#include "feature/hs/hs_circuit.h"
 
 /* Trunnel. */
 #include "trunnel/ed25519_cert.h"
@@ -646,16 +645,16 @@ get_lspecs_from_node(const node_t *node, smartlist_t *lspecs)
  * already allocated intro1_data object with the needed key material and link
  * specifiers.
  *
- * If rp_node has an invalid primary address, intro1_data->link_specifiers
- * will be an empty list. Otherwise, this function can't fail. The ip
- * MUST be a valid object containing the needed keys and authentication
- * method. */
-static void
+ * Return 0 on success or a negative value if we couldn't properly filled the
+ * introduce1 data from the RP node. In other word, it means the RP node is
+ * unusable to use in the introduction. */
+static int
 setup_introduce1_data(const hs_desc_intro_point_t *ip,
                       const node_t *rp_node,
                       const uint8_t *subcredential,
                       hs_cell_introduce1_data_t *intro1_data)
 {
+  int ret = -1;
   smartlist_t *rp_lspecs;
 
   tor_assert(ip);
@@ -667,6 +666,11 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
    * circuit that we've picked previously. */
   rp_lspecs = smartlist_new();
   get_lspecs_from_node(rp_node, rp_lspecs);
+  if (smartlist_len(rp_lspecs) == 0) {
+    /* We can't rendezvous without link specifiers. */
+    smartlist_free(rp_lspecs);
+    goto end;
+  }
 
   /* Populate the introduce1 data object. */
   memset(intro1_data, 0, sizeof(hs_cell_introduce1_data_t));
@@ -677,8 +681,17 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
   intro1_data->auth_pk = &ip->auth_key_cert->signed_key;
   intro1_data->enc_pk = &ip->enc_key;
   intro1_data->subcredential = subcredential;
-  intro1_data->onion_pk = node_get_curve25519_onion_key(rp_node);
   intro1_data->link_specifiers = rp_lspecs;
+  intro1_data->onion_pk = node_get_curve25519_onion_key(rp_node);
+  if (intro1_data->onion_pk == NULL) {
+    /* We can't rendezvous without the curve25519 onion key. */
+    goto end;
+  }
+  /* Success, we have valid introduce data. */
+  ret = 0;
+
+ end:
+  return ret;
 }
 
 /* ========== */
@@ -1130,14 +1143,13 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
              "Failing.", TO_CIRCUIT(intro_circ)->n_circ_id);
     goto done;
   }
-  setup_introduce1_data(ip, exit_node, subcredential, &intro1_data);
-  /* If we didn't get any link specifiers, it's because our node was
-   * bad. */
-  if (BUG(!intro1_data.link_specifiers) ||
-      !smartlist_len(intro1_data.link_specifiers)) {
-    log_warn(LD_REND, "Unable to get link specifiers for INTRODUCE1 cell on "
-             "circuit %u.", TO_CIRCUIT(intro_circ)->n_circ_id);
-    goto done;
+
+  /* We should never select an invalid rendezvous point in theory but if we
+   * do, this function will fail to populate the introduce data. */
+  if (setup_introduce1_data(ip, exit_node, subcredential, &intro1_data) < 0) {
+    log_warn(LD_REND, "Unable to setup INTRODUCE1 data. The chosen rendezvous "
+                      "point is unusable. Closing circuit.");
+    goto close;
   }
 
   /* Final step before we encode a cell, we setup the circuit identifier which
@@ -1154,7 +1166,7 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
    * into payload which is then ready to be sent as is. */
   payload_len = hs_cell_build_introduce1(&intro1_data, payload);
   if (BUG(payload_len < 0)) {
-    goto done;
+    goto close;
   }
 
   if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(intro_circ),
@@ -1171,6 +1183,8 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
   ret = 0;
   goto done;
 
+ close:
+  circuit_mark_for_close(TO_CIRCUIT(rend_circ), END_CIRC_REASON_INTERNAL);
  done:
   hs_cell_introduce1_data_clear(&intro1_data);
   memwipe(payload, 0, sizeof(payload));

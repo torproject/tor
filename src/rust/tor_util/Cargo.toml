@@ -6,7 +6,6 @@ version = "0.0.1"
 [lib]
 name = "tor_util"
 path = "lib.rs"
-crate_type = ["rlib", "staticlib"]
 
 [dependencies.tor_allocate]
 path = "../tor_allocate"
@@ -17,3 +16,9 @@ path = "../tor_log"
 [dependencies]
 libc = "=0.2.39"
 
+[features]
+# We have to define a feature here because doctests don't get cfg(test),
+# and we need to disable some C dependencies when running the doctests
+# because of the various linker issues.  See
+# https://github.com/rust-lang/rust/issues/45599
+test_linking_hack = []

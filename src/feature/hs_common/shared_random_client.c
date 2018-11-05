@@ -51,9 +51,13 @@ get_voting_interval(void)
   return interval;
 }
 
-/* Given the time <b>now</b>, return the start time of the current round of
+/* Given the current consensus, return the start time of the current round of
  * the SR protocol. For example, if it's 23:47:08, the current round thus
- * started at 23:47:00 for a voting interval of 10 seconds. */
+ * started at 23:47:00 for a voting interval of 10 seconds.
+ *
+ * This function uses the consensus voting schedule to derive its results,
+ * instead of the actual consensus we are currently using, so it should be used
+ * for voting purposes. */
 time_t
 get_start_time_of_current_round(void)
 {
@@ -231,8 +235,17 @@ sr_state_get_start_time_of_current_protocol_run(void)
 {
   int total_rounds = SHARED_RANDOM_N_ROUNDS * SHARED_RANDOM_N_PHASES;
   int voting_interval = get_voting_interval();
-  /* Find the time the current round started. */
-  time_t beginning_of_curr_round = get_start_time_of_current_round();
+  time_t beginning_of_curr_round;
+
+  /* This function is not used for voting purposes, so if we have a live
+     consensus, use its valid-after as the beginning of the current round,
+     otherwise resort to the voting schedule which should always exist. */
+  networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
+  if (ns) {
+    beginning_of_curr_round = ns->valid_after;
+  } else {
+    beginning_of_curr_round = get_start_time_of_current_round();
+  }
 
   /* Get current SR protocol round */
   int curr_round_slot;

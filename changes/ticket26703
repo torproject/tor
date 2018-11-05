@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Low log level of "Scheduler type KIST has been enabled" to INFO.
-      Ticket 26703

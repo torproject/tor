@@ -146,6 +146,7 @@ int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 int control_event_stream_bandwidth(edge_connection_t *edge_conn);
 int control_event_stream_bandwidth_used(void);
 int control_event_circ_bandwidth_used(void);
+int control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc);
 int control_event_conn_bandwidth(connection_t *conn);
 int control_event_conn_bandwidth_used(void);
 int control_event_circuit_cell_stats(void);
@@ -191,10 +192,12 @@ void enable_control_logging(void);
 
 void monitor_owning_controller_process(const char *process_spec);
 
-int control_event_bootstrap(bootstrap_status_t status, int progress);
+void control_event_bootstrap(bootstrap_status_t status, int progress);
 MOCK_DECL(void, control_event_bootstrap_prob_or,(const char *warn,
                                                  int reason,
                                                  or_connection_t *or_conn));
+void control_event_boot_dir(bootstrap_status_t status, int progress);
+void control_event_boot_first_orconn(void);
 void control_event_bootstrap_problem(const char *warn, const char *reason,
                                      const connection_t *conn, int dowarn);
 
@@ -244,7 +247,6 @@ void control_event_hs_descriptor_content(const char *onion_address,
                                          const char *desc_id,
                                          const char *hsdir_fp,
                                          const char *content);
-
 void control_free_all(void);
 
 #ifdef CONTROL_PRIVATE

@@ -1,4 +1,4 @@
-src_lib_libcurve25519_donna_a_CFLAGS=
+src_lib_libcurve25519_donna_a_CFLAGS=$(TOR_CFLAGS_CRYPTO)
 
 if BUILD_CURVE25519_DONNA
 src_lib_libcurve25519_donna_a_SOURCES=\

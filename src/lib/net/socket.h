@@ -23,6 +23,7 @@ struct sockaddr;
 int tor_close_socket_simple(tor_socket_t s);
 MOCK_DECL(int, tor_close_socket, (tor_socket_t s));
 void tor_take_socket_ownership(tor_socket_t s);
+void tor_release_socket_ownership(tor_socket_t s);
 tor_socket_t tor_open_socket_with_extensions(
                                            int domain, int type, int protocol,
                                            int cloexec, int nonblock);
@@ -109,14 +110,6 @@ const char *tor_socket_strerror(int e);
 #define tor_socket_errno(sock)       (errno)
 #define tor_socket_strerror(e)       strerror(e)
 #endif /* defined(_WIN32) */
-
-#ifdef SOCKET_PRIVATE
-#if !defined(HAVE_SOCKETPAIR) || defined(_WIN32) || defined(TOR_UNIT_TESTS)
-#define NEED_ERSATZ_SOCKETPAIR
-STATIC int tor_ersatz_socketpair(int family, int type, int protocol,
-                                   tor_socket_t fd[2]);
-#endif
-#endif /* defined(COMPAT_PRIVATE) */
 
 #if defined(_WIN32) && !defined(SIO_IDEAL_SEND_BACKLOG_QUERY)
 #define SIO_IDEAL_SEND_BACKLOG_QUERY 0x4004747b

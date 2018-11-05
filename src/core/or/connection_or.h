@@ -160,6 +160,7 @@ STATIC void note_or_connect_failed(const or_connection_t *or_conn);
 
 #ifdef TOR_UNIT_TESTS
 extern int certs_cell_ed25519_disabled_for_testing;
+extern int testing__connection_or_pretend_TLSSECRET_is_supported;
 #endif
 
 #endif /* !defined(TOR_CONNECTION_OR_H) */

@@ -10,15 +10,17 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/app/config/config.c			\
 	src/app/config/confparse.c		\
 	src/app/config/statefile.c		\
+	src/app/main/main.c			\
 	src/core/crypto/hs_ntor.c		\
-	src/core/crypto/onion.c			\
+	src/core/crypto/onion_crypto.c		\
 	src/core/crypto/onion_fast.c		\
 	src/core/crypto/onion_ntor.c		\
 	src/core/crypto/onion_tap.c		\
 	src/core/crypto/relay_crypto.c		\
 	src/core/mainloop/connection.c		\
 	src/core/mainloop/cpuworker.c		\
-	src/core/mainloop/main.c		\
+	src/core/mainloop/mainloop.c		\
+	src/core/mainloop/netstatus.c		\
 	src/core/mainloop/periodic.c		\
 	src/core/or/address_set.c		\
 	src/core/or/channel.c			\
@@ -34,20 +36,22 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/or/connection_edge.c		\
 	src/core/or/connection_or.c		\
 	src/core/or/dos.c			\
+	src/core/or/onion.c			\
 	src/core/or/policies.c			\
 	src/core/or/protover.c			\
+	src/core/or/protover_rust.c		\
 	src/core/or/reasons.c			\
 	src/core/or/relay.c			\
 	src/core/or/scheduler.c			\
 	src/core/or/scheduler_kist.c		\
 	src/core/or/scheduler_vanilla.c		\
 	src/core/or/status.c			\
+	src/core/or/versions.c			\
 	src/core/proto/proto_cell.c		\
 	src/core/proto/proto_control0.c		\
 	src/core/proto/proto_ext_or.c		\
 	src/core/proto/proto_http.c		\
 	src/core/proto/proto_socks.c		\
-	src/core/proto/protover_rust.c		\
 	src/feature/api/tor_api.c		\
 	src/feature/client/addressmap.c		\
 	src/feature/client/bridges.c		\
@@ -56,14 +60,28 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/client/entrynodes.c		\
 	src/feature/client/transports.c		\
 	src/feature/control/control.c		\
+	src/feature/control/fmt_serverstatus.c  \
+	src/feature/control/getinfo_geoip.c	\
 	src/feature/dirauth/keypin.c		\
 	src/feature/dircache/conscache.c	\
 	src/feature/dircache/consdiffmgr.c	\
-	src/feature/dircache/directory.c	\
+	src/feature/dircache/dircache.c		\
 	src/feature/dircache/dirserv.c		\
+	src/feature/dirclient/dirclient.c	\
+	src/feature/dirclient/dlstatus.c	\
 	src/feature/dircommon/consdiff.c	\
+	src/feature/dircommon/directory.c	\
 	src/feature/dircommon/fp_pair.c		\
 	src/feature/dircommon/voting_schedule.c	\
+	src/feature/dirparse/authcert_parse.c	\
+	src/feature/dirparse/microdesc_parse.c	\
+	src/feature/dirparse/ns_parse.c		\
+	src/feature/dirparse/parsecommon.c	\
+	src/feature/dirparse/policy_parse.c	\
+	src/feature/dirparse/routerparse.c	\
+	src/feature/dirparse/sigcommon.c	\
+	src/feature/dirparse/signing.c		\
+	src/feature/dirparse/unparseable.c	\
 	src/feature/hibernate/hibernate.c	\
 	src/feature/hs/hs_cache.c		\
 	src/feature/hs/hs_cell.c		\
@@ -80,25 +98,48 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/hs/hs_stats.c		\
 	src/feature/hs_common/replaycache.c	\
 	src/feature/hs_common/shared_random_client.c	\
+	src/feature/keymgt/loadkey.c		\
+	src/feature/dirauth/keypin.c		\
+	src/feature/nodelist/authcert.c		\
+	src/feature/nodelist/describe.c		\
+	src/feature/nodelist/dirlist.c		\
 	src/feature/nodelist/microdesc.c	\
 	src/feature/nodelist/networkstatus.c	\
+	src/feature/nodelist/nickname.c		\
 	src/feature/nodelist/nodelist.c		\
-	src/feature/nodelist/parsecommon.c	\
+	src/feature/nodelist/node_select.c	\
+	src/feature/nodelist/routerinfo.c	\
 	src/feature/nodelist/routerlist.c	\
-	src/feature/nodelist/routerparse.c	\
 	src/feature/nodelist/routerset.c	\
+	src/feature/nodelist/fmt_routerstatus.c	\
 	src/feature/nodelist/torcert.c		\
 	src/feature/relay/dns.c			\
 	src/feature/relay/ext_orport.c		\
+	src/feature/relay/onion_queue.c		\
 	src/feature/relay/router.c		\
 	src/feature/relay/routerkeys.c		\
+	src/feature/relay/routermode.c		\
+	src/feature/relay/selftest.c		\
 	src/feature/rend/rendcache.c		\
 	src/feature/rend/rendclient.c		\
 	src/feature/rend/rendcommon.c		\
 	src/feature/rend/rendmid.c		\
+	src/feature/rend/rendparse.c		\
 	src/feature/rend/rendservice.c		\
-	src/feature/stats/geoip.c		\
-	src/feature/stats/rephist.c
+	src/feature/stats/geoip_stats.c		\
+	src/feature/stats/rephist.c		\
+	src/feature/stats/predict_ports.c
+
+# These should eventually move into module_dirauth_sources, but for now
+# the separation is only in the code location.
+LIBTOR_APP_A_SOURCES += 			\
+	src/feature/dirauth/bwauth.c		\
+	src/feature/dirauth/dsigs_parse.c	\
+	src/feature/dirauth/guardfraction.c	\
+	src/feature/dirauth/reachability.c	\
+	src/feature/dirauth/recommend_pkg.c	\
+	src/feature/dirauth/process_descs.c	\
+	src/feature/dirauth/voteflags.c
 
 if BUILD_NT_SERVICES
 LIBTOR_APP_A_SOURCES += src/app/main/ntmain.c
@@ -114,6 +155,7 @@ LIBTOR_APP_TESTING_A_SOURCES = $(LIBTOR_APP_A_SOURCES)
 
 # The Directory Authority module.
 MODULE_DIRAUTH_SOURCES = 					\
+	src/feature/dirauth/authmode.c				\
 	src/feature/dirauth/dircollate.c			\
 	src/feature/dirauth/dirvote.c				\
 	src/feature/dirauth/shared_random.c			\
@@ -147,16 +189,18 @@ noinst_HEADERS +=					\
 	src/app/config/or_options_st.h			\
 	src/app/config/or_state_st.h			\
 	src/app/config/statefile.h			\
+	src/app/main/main.h				\
 	src/app/main/ntmain.h				\
 	src/core/crypto/hs_ntor.h			\
-	src/core/crypto/onion.h				\
+	src/core/crypto/onion_crypto.h	        	\
 	src/core/crypto/onion_fast.h			\
 	src/core/crypto/onion_ntor.h			\
 	src/core/crypto/onion_tap.h			\
 	src/core/crypto/relay_crypto.h			\
 	src/core/mainloop/connection.h			\
 	src/core/mainloop/cpuworker.h			\
-	src/core/mainloop/main.h			\
+	src/core/mainloop/mainloop.h			\
+	src/core/mainloop/netstatus.h			\
 	src/core/mainloop/periodic.h			\
 	src/core/or/addr_policy_st.h			\
 	src/core/or/address_set.h			\
@@ -182,10 +226,12 @@ noinst_HEADERS +=					\
 	src/core/or/destroy_cell_queue_st.h		\
 	src/core/or/dos.h				\
 	src/core/or/edge_connection_st.h		\
+	src/core/or/half_edge_st.h		\
 	src/core/or/entry_connection_st.h		\
 	src/core/or/entry_port_cfg_st.h			\
 	src/core/or/extend_info_st.h			\
 	src/core/or/listener_connection_st.h		\
+	src/core/or/onion.h				\
 	src/core/or/or.h				\
 	src/core/or/or_circuit_st.h			\
 	src/core/or/or_connection_st.h			\
@@ -204,6 +250,7 @@ noinst_HEADERS +=					\
 	src/core/or/status.h				\
 	src/core/or/tor_version_st.h			\
 	src/core/or/var_cell_st.h			\
+	src/core/or/versions.h				\
 	src/core/proto/proto_cell.h			\
 	src/core/proto/proto_control0.h			\
 	src/core/proto/proto_ext_or.h			\
@@ -218,26 +265,48 @@ noinst_HEADERS +=					\
 	src/feature/client/transports.h			\
 	src/feature/control/control.h			\
 	src/feature/control/control_connection_st.h	\
+	src/feature/control/fmt_serverstatus.h		\
+	src/feature/control/getinfo_geoip.h		\
+	src/feature/dirauth/authmode.h			\
+	src/feature/dirauth/bwauth.h			\
 	src/feature/dirauth/dircollate.h		\
 	src/feature/dirauth/dirvote.h			\
+	src/feature/dirauth/dsigs_parse.h		\
+	src/feature/dirauth/guardfraction.h		\
 	src/feature/dirauth/keypin.h			\
-	src/feature/dirauth/mode.h			\
 	src/feature/dirauth/ns_detached_signatures_st.h	\
+	src/feature/dirauth/reachability.h		\
+	src/feature/dirauth/recommend_pkg.h		\
+	src/feature/dirauth/process_descs.h		\
 	src/feature/dirauth/shared_random.h		\
 	src/feature/dirauth/shared_random_state.h	\
 	src/feature/dirauth/vote_microdesc_hash_st.h	\
+	src/feature/dirauth/voteflags.h			\
 	src/feature/dircache/cached_dir_st.h		\
 	src/feature/dircache/conscache.h		\
 	src/feature/dircache/consdiffmgr.h		\
-	src/feature/dircache/directory.h		\
+	src/feature/dircache/dircache.h			\
 	src/feature/dircache/dirserv.h			\
 	src/feature/dirclient/dir_server_st.h		\
+	src/feature/dirclient/dirclient.h		\
+	src/feature/dirclient/dlstatus.h		\
 	src/feature/dirclient/download_status_st.h	\
 	src/feature/dircommon/consdiff.h		\
 	src/feature/dircommon/dir_connection_st.h	\
+	src/feature/dircommon/directory.h		\
 	src/feature/dircommon/fp_pair.h			\
 	src/feature/dircommon/vote_timing_st.h		\
 	src/feature/dircommon/voting_schedule.h		\
+	src/feature/dirparse/authcert_members.i		\
+	src/feature/dirparse/authcert_parse.h		\
+	src/feature/dirparse/microdesc_parse.h		\
+	src/feature/dirparse/ns_parse.h			\
+	src/feature/dirparse/parsecommon.h		\
+	src/feature/dirparse/policy_parse.h		\
+	src/feature/dirparse/routerparse.h		\
+	src/feature/dirparse/sigcommon.h		\
+	src/feature/dirparse/signing.h			\
+	src/feature/dirparse/unparseable.h		\
 	src/feature/hibernate/hibernate.h		\
 	src/feature/hs/hs_cache.h			\
 	src/feature/hs/hs_cell.h			\
@@ -255,8 +324,12 @@ noinst_HEADERS +=					\
 	src/feature/hs/hsdir_index_st.h			\
 	src/feature/hs_common/replaycache.h		\
 	src/feature/hs_common/shared_random_client.h	\
+	src/feature/keymgt/loadkey.h			\
+	src/feature/nodelist/authcert.h			\
 	src/feature/nodelist/authority_cert_st.h	\
+	src/feature/nodelist/describe.h			\
 	src/feature/nodelist/desc_store_st.h		\
+	src/feature/nodelist/dirlist.h			\
 	src/feature/nodelist/document_signature_st.h	\
 	src/feature/nodelist/extrainfo_st.h		\
 	src/feature/nodelist/microdesc.h		\
@@ -265,14 +338,16 @@ noinst_HEADERS +=					\
 	src/feature/nodelist/networkstatus_sr_info_st.h	\
 	src/feature/nodelist/networkstatus_st.h		\
 	src/feature/nodelist/networkstatus_voter_info_st.h	\
+	src/feature/nodelist/nickname.h			\
 	src/feature/nodelist/node_st.h			\
 	src/feature/nodelist/nodelist.h			\
-	src/feature/nodelist/parsecommon.h		\
+	src/feature/nodelist/node_select.h		\
+	src/feature/nodelist/routerinfo.h		\
 	src/feature/nodelist/routerinfo_st.h		\
 	src/feature/nodelist/routerlist.h		\
 	src/feature/nodelist/routerlist_st.h		\
-	src/feature/nodelist/routerparse.h		\
 	src/feature/nodelist/routerset.h		\
+	src/feature/nodelist/fmt_routerstatus.h		\
 	src/feature/nodelist/routerstatus_st.h		\
 	src/feature/nodelist/signed_descriptor_st.h	\
 	src/feature/nodelist/torcert.h			\
@@ -280,8 +355,11 @@ noinst_HEADERS +=					\
 	src/feature/relay/dns.h				\
 	src/feature/relay/dns_structs.h			\
 	src/feature/relay/ext_orport.h			\
+	src/feature/relay/onion_queue.h			\
 	src/feature/relay/router.h			\
 	src/feature/relay/routerkeys.h			\
+	src/feature/relay/routermode.h			\
+	src/feature/relay/selftest.h			\
 	src/feature/rend/rend_authorized_client_st.h	\
 	src/feature/rend/rend_encoded_v2_service_descriptor_st.h	\
 	src/feature/rend/rend_intro_point_st.h		\
@@ -290,9 +368,11 @@ noinst_HEADERS +=					\
 	src/feature/rend/rendclient.h			\
 	src/feature/rend/rendcommon.h			\
 	src/feature/rend/rendmid.h			\
+	src/feature/rend/rendparse.h			\
 	src/feature/rend/rendservice.h			\
-	src/feature/stats/geoip.h			\
-	src/feature/stats/rephist.h
+	src/feature/stats/geoip_stats.h			\
+	src/feature/stats/rephist.h			\
+	src/feature/stats/predict_ports.h
 
 noinst_HEADERS +=			\
 	src/app/config/auth_dirs.inc	\

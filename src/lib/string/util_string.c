@@ -451,3 +451,93 @@ string_is_C_identifier(const char *string)
 
   return 1;
 }
+
+/** A byte with the top <b>x</b> bits set. */
+#define TOP_BITS(x) ((uint8_t)(0xFF << (8 - (x))))
+/** A byte with the lowest <b>x</b> bits set. */
+#define LOW_BITS(x) ((uint8_t)(0xFF >> (8 - (x))))
+
+/** Given the leading byte <b>b</b>, return the total number of bytes in the
+ * UTF-8 character. Returns 0 if it's an invalid leading byte.
+ */
+static uint8_t
+bytes_in_char(uint8_t b)
+{
+  if ((TOP_BITS(1) & b) == 0x00)
+    return 1; // a 1-byte UTF-8 char, aka ASCII
+  if ((TOP_BITS(3) & b) == TOP_BITS(2))
+    return 2; // a 2-byte UTF-8 char
+  if ((TOP_BITS(4) & b) == TOP_BITS(3))
+    return 3; // a 3-byte UTF-8 char
+  if ((TOP_BITS(5) & b) == TOP_BITS(4))
+    return 4; // a 4-byte UTF-8 char
+
+  // Invalid: either the top 2 bits are 10, or the top 5 bits are 11111.
+  return 0;
+}
+
+/** Returns true iff <b>b</b> is a UTF-8 continuation byte. */
+static bool
+is_continuation_byte(uint8_t b)
+{
+  uint8_t top2bits = b & TOP_BITS(2);
+  return top2bits == TOP_BITS(1);
+}
+
+/** Returns true iff the <b>len</b> bytes in <b>c</b> are a valid UTF-8
+ * character.
+ */
+static bool
+validate_char(const uint8_t *c, uint8_t len)
+{
+  if (len == 1)
+    return true; // already validated this is an ASCII char earlier.
+
+  uint8_t mask = LOW_BITS(7 - len); // bitmask for the leading byte.
+  uint32_t codepoint = c[0] & mask;
+
+  mask = LOW_BITS(6); // bitmask for continuation bytes.
+  for (uint8_t i = 1; i < len; i++) {
+    if (!is_continuation_byte(c[i]))
+      return false;
+    codepoint <<= 6;
+    codepoint |= (c[i] & mask);
+  }
+
+  if (len == 2 && codepoint <= 0x7f)
+    return false; // Invalid, overly long encoding, should have fit in 1 byte.
+
+  if (len == 3 && codepoint <= 0x7ff)
+    return false; // Invalid, overly long encoding, should have fit in 2 bytes.
+
+  if (len == 4 && codepoint <= 0xffff)
+    return false; // Invalid, overly long encoding, should have fit in 3 bytes.
+
+  if (codepoint >= 0xd800 && codepoint <= 0xdfff)
+    return false; // Invalid, reserved for UTF-16 surrogate pairs.
+
+  return codepoint <= 0x10ffff; // Check if within maximum.
+}
+
+/** Returns true iff the first <b>len</b> bytes in <b>str</b> are a
+    valid UTF-8 string. */
+int
+string_is_utf8(const char *str, size_t len)
+{
+  for (size_t i = 0; i < len;) {
+    uint8_t num_bytes = bytes_in_char(str[i]);
+    if (num_bytes == 0) // Invalid leading byte found.
+      return false;
+
+    size_t next_char = i + num_bytes;
+    if (next_char > len)
+      return false;
+
+    // Validate the continuation bytes in this multi-byte character,
+    // and advance to the next character in the string.
+    if (!validate_char((const uint8_t*)&str[i], num_bytes))
+      return false;
+    i = next_char;
+  }
+  return true;
+}

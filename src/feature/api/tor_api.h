@@ -49,6 +49,18 @@ tor_main_configuration_t *tor_main_configuration_new(void);
 int tor_main_configuration_set_command_line(tor_main_configuration_t *cfg,
                                             int argc, char *argv[]);
 
+#ifdef _WIN32
+typedef SOCKET tor_control_socket_t;
+#define INVALID_TOR_CONTROL_SOCKET INVALID_SOCKET
+#else
+typedef int tor_control_socket_t;
+#define INVALID_TOR_CONTROL_SOCKET (-1)
+#endif
+
+/** DOCDOC */
+tor_control_socket_t tor_main_configuration_setup_control_socket(
+                                          tor_main_configuration_t *cfg);
+
 /**
  * Release all storage held in <b>cfg</b>.
  *
@@ -56,6 +68,23 @@ int tor_main_configuration_set_command_line(tor_main_configuration_t *cfg,
  * must not free it until tor_run_main() has finished.
  */
 void tor_main_configuration_free(tor_main_configuration_t *cfg);
+
+/**
+ * Return the name and version of the software implementing the tor_api
+ * functionality.  Current implementors are "tor" and "libtorrunner".
+ *
+ * Note that if you're using libtorrunner, you'll see the version of
+ * libtorrunner, not the version of Tor that it's invoking for you.
+ *
+ * Added in Tor 0.3.5.1-alpha.
+ *
+ * Example return values include "tor 0.3.5.1-alpha" when linked directly
+ * against tor, and "libtorrunner 0.3.5.1-alpha" when linked against
+ * libtorrunner while it is invoking an arbitrary version of Tor.  HOWEVER,
+ * the user MUST NOT depend on any particular format or contents of this
+ * string: there may be other things that implement Tor in the future.
+ **/
+const char *tor_api_get_provider_version(void);
 
 /**
  * Run the tor process, as if from the command line.
@@ -98,4 +127,3 @@ int tor_run_main(const tor_main_configuration_t *);
 int tor_main(int argc, char **argv);
 
 #endif /* !defined(TOR_API_H) */
-

@@ -2,6 +2,7 @@ orconfig.h
 siphash.h
 ht.h
 
+lib/arch/*.h
 lib/cc/*.h
 lib/container/*.h
 lib/ctime/*.h

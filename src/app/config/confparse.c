@@ -195,6 +195,19 @@ config_assign_value(const config_format_t *fmt, void *options,
     *(int *)lvalue = i;
     break;
 
+  case CONFIG_TYPE_UINT64: {
+    uint64_t u64 = tor_parse_uint64(c->value, 10,
+                                    0, UINT64_MAX, &ok, NULL);
+    if (!ok) {
+      tor_asprintf(msg,
+          "uint64 keyword '%s %s' is malformed or out of bounds.",
+          c->key, c->value);
+      return -1;
+    }
+    *(uint64_t *)lvalue = u64;
+    break;
+  }
+
   case CONFIG_TYPE_CSV_INTERVAL: {
     /* We used to have entire smartlists here.  But now that all of our
      * download schedules use exponential backoff, only the first part
@@ -574,6 +587,7 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
       tor_asprintf(&result->value, "%d", *(int*)value);
       escape_val = 0; /* Can't need escape. */
       break;
+    case CONFIG_TYPE_UINT64: /* Fall through */
     case CONFIG_TYPE_MEMUNIT:
       tor_asprintf(&result->value, "%"PRIu64,
                    (*(uint64_t*)value));
@@ -781,6 +795,7 @@ config_clear(const config_format_t *fmt, void *options,
     case CONFIG_TYPE_AUTOBOOL:
       *(int*)lvalue = -1;
       break;
+    case CONFIG_TYPE_UINT64:
     case CONFIG_TYPE_MEMUNIT:
       *(uint64_t*)lvalue = 0;
       break;
@@ -994,8 +1009,9 @@ config_dump(const config_format_t *fmt, const void *default_options,
   result = smartlist_join_strings(elements, "", 0, NULL);
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
-  if (defaults_tmp)
-    config_free(fmt, defaults_tmp);
+  if (defaults_tmp) {
+    fmt->free_fn(defaults_tmp);
+  }
   return result;
 }
 

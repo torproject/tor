@@ -33,6 +33,7 @@
 #include "lib/log/log.h"
 #include "trunnel/link_handshake.h"
 #include "lib/tls/tortls.h"
+#include "lib/tls/x509.h"
 
 #include "core/or/or_handshake_certs_st.h"
 
@@ -50,6 +51,7 @@ tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
   tor_cert_t *torcert = NULL;
 
   ed25519_cert_t *cert = ed25519_cert_new();
+  tor_assert(cert); // Unlike Tor's, Trunnel's "new" functions can return NULL.
   cert->cert_type = cert_type;
   cert->exp_field = (uint32_t) CEIL_DIV(now + lifetime, 3600);
   cert->cert_key_type = signed_key_type;
@@ -635,6 +637,43 @@ or_handshake_certs_ed25519_ok(int severity,
   }
 
   return 1;
+}
+
+/** Check whether an RSA-TAP cross-certification is correct. Return 0 if it
+ * is, -1 if it isn't. */
+MOCK_IMPL(int,
+check_tap_onion_key_crosscert,(const uint8_t *crosscert,
+                               int crosscert_len,
+                               const crypto_pk_t *onion_pkey,
+                               const ed25519_public_key_t *master_id_pkey,
+                               const uint8_t *rsa_id_digest))
+{
+  uint8_t *cc = tor_malloc(crypto_pk_keysize(onion_pkey));
+  int cc_len =
+    crypto_pk_public_checksig(onion_pkey,
+                              (char*)cc,
+                              crypto_pk_keysize(onion_pkey),
+                              (const char*)crosscert,
+                              crosscert_len);
+  if (cc_len < 0) {
+    goto err;
+  }
+  if (cc_len < DIGEST_LEN + ED25519_PUBKEY_LEN) {
+    log_warn(LD_DIR, "Short signature on cross-certification with TAP key");
+    goto err;
+  }
+  if (tor_memneq(cc, rsa_id_digest, DIGEST_LEN) ||
+      tor_memneq(cc + DIGEST_LEN, master_id_pkey->pubkey,
+                 ED25519_PUBKEY_LEN)) {
+    log_warn(LD_DIR, "Incorrect cross-certification with TAP key");
+    goto err;
+  }
+
+  tor_free(cc);
+  return 0;
+ err:
+  tor_free(cc);
+  return -1;
 }
 
 /**

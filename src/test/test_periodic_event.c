@@ -9,7 +9,7 @@
 
 #define CONFIG_PRIVATE
 #define HS_SERVICE_PRIVATE
-#define MAIN_PRIVATE
+#define MAINLOOP_PRIVATE
 
 #include "test/test.h"
 #include "test/test_helpers.h"
@@ -18,7 +18,7 @@
 #include "app/config/config.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_service.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "core/mainloop/periodic.h"
 
 /** Helper function: This is replaced in some tests for the event callbacks so
@@ -87,15 +87,19 @@ test_pe_launch(void *arg)
     item->fn = dumb_event_fn;
   }
 
-  /* Lets make sure that before intialization, we can't scan the periodic
-   * events list and launch them. Lets try by being a Client. */
   options = get_options_mutable();
   options->SocksPort_set = 1;
   periodic_events_on_new_options(options);
+#if 0
+  /* Lets make sure that before intialization, we can't scan the periodic
+   * events list and launch them. Lets try by being a Client. */
+  /* XXXX We make sure these events are initialized now way earlier than we
+   * did before. */
   for (int i = 0; periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &periodic_events[i];
     tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
   }
+#endif
 
   initialize_periodic_events();
 
@@ -106,11 +110,11 @@ test_pe_launch(void *arg)
     periodic_event_item_t *item = &periodic_events[i];
     if (item->roles & PERIODIC_EVENT_ROLE_CLIENT) {
       tt_int_op(periodic_event_is_enabled(item), OP_EQ, 1);
-      tt_u64_op(item->last_action_time, OP_NE, 0);
     } else {
       tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
-      tt_u64_op(item->last_action_time, OP_EQ, 0);
     }
+    // enabled or not, the event has not yet been run.
+    tt_u64_op(item->last_action_time, OP_EQ, 0);
   }
 
   /* Remove Client but become a Relay. */
@@ -127,12 +131,9 @@ test_pe_launch(void *arg)
     /* Only Client role should be disabled. */
     if (item->roles == PERIODIC_EVENT_ROLE_CLIENT) {
       tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
-      /* Was previously enabled so they should never be to 0. */
-      tt_u64_op(item->last_action_time, OP_NE, 0);
     }
     if (item->roles & PERIODIC_EVENT_ROLE_RELAY) {
       tt_int_op(periodic_event_is_enabled(item), OP_EQ, 1);
-      tt_u64_op(item->last_action_time, OP_NE, 0);
     }
     /* Non Relay role should be disabled, except for Dirserver. */
     if (!(item->roles & roles)) {
@@ -330,4 +331,3 @@ struct testcase_t periodic_event_tests[] = {
 
   END_OF_TESTCASES
 };
-

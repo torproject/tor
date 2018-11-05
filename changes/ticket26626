@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Tor now assumes that you have standards-conformant stdint.h and
-      inttypes.h headers when compiling.  Closes ticket 26626.

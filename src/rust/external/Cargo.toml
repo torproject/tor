@@ -5,12 +5,16 @@ name = "external"
 
 [dependencies]
 libc = "=0.2.39"
-
-[dependencies.smartlist]
-path = "../smartlist"
+smartlist = { path = "../smartlist" }
+tor_allocate = { path = "../tor_allocate" }
 
 [lib]
 name = "external"
 path = "lib.rs"
-crate_type = ["rlib", "staticlib"]
 
+[features]
+# We have to define a feature here because doctests don't get cfg(test),
+# and we need to disable some C dependencies when running the doctests
+# because of the various linker issues.  See
+# https://github.com/rust-lang/rust/issues/45599
+test_linking_hack = []

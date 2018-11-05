@@ -1,4 +1,0 @@
-  o Minor bugfixes (testing):
-    - When logging a version mismatch in our openssl_version tests,
-      report the actual offending version strings. Fixes bug 26152; bugfix on
-      0.2.9.1-alpha.

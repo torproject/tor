@@ -18,13 +18,4 @@
 /** OpenSSL-based utility functions. */
 void memwipe(void *mem, uint8_t byte, size_t sz);
 
-/** Log utility function */
-void crypto_log_errors(int severity, const char *doing);
-
-#ifdef CRYPTO_UTIL_PRIVATE
-#ifdef TOR_UNIT_TESTS
-#endif /* defined(TOR_UNIT_TESTS) */
-#endif /* defined(CRYPTO_UTIL_PRIVATE) */
-
 #endif /* !defined(TOR_CRYPTO_UTIL_H) */
-

@@ -6,27 +6,39 @@
 #define DIRVOTE_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "feature/dirauth/dircollate.h"
-#include "feature/dircache/directory.h"
-#include "feature/dircache/dirserv.h"
-#include "feature/nodelist/microdesc.h"
-#include "feature/nodelist/networkstatus.h"
-#include "feature/nodelist/nodelist.h"
-#include "feature/nodelist/parsecommon.h"
 #include "core/or/policies.h"
 #include "core/or/protover.h"
 #include "core/or/tor_version_st.h"
-#include "feature/stats/rephist.h"
+#include "core/or/versions.h"
+#include "feature/dirauth/bwauth.h"
+#include "feature/dirauth/dircollate.h"
+#include "feature/dirauth/dsigs_parse.h"
+#include "feature/dirauth/guardfraction.h"
+#include "feature/dirauth/recommend_pkg.h"
+#include "feature/dirauth/voteflags.h"
+#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient.h"
+#include "feature/dircommon/directory.h"
+#include "feature/dirparse/microdesc_parse.h"
+#include "feature/dirparse/ns_parse.h"
+#include "feature/dirparse/parsecommon.h"
+#include "feature/dirparse/signing.h"
+#include "feature/nodelist/authcert.h"
+#include "feature/nodelist/dirlist.h"
+#include "feature/nodelist/fmt_routerstatus.h"
+#include "feature/nodelist/microdesc.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerlist.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
-#include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/stats/rephist.h"
 #include "feature/client/entrynodes.h" /* needed for guardfraction methods */
 #include "feature/nodelist/torcert.h"
 #include "feature/dircommon/voting_schedule.h"
 
 #include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/authmode.h"
 #include "feature/dirauth/shared_random_state.h"
 
 #include "feature/nodelist/authority_cert_st.h"
@@ -401,7 +413,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
 
   {
     networkstatus_t *v;
-    if (!(v = networkstatus_parse_vote_from_string(status, NULL,
+    if (!(v = networkstatus_parse_vote_from_string(status, strlen(status),
+                                                   NULL,
                                                    v3_ns->type))) {
       log_err(LD_BUG,"Generated a networkstatus %s we couldn't parse: "
               "<<%s>>",
@@ -2398,7 +2411,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   {
     networkstatus_t *c;
-    if (!(c = networkstatus_parse_vote_from_string(result, NULL,
+    if (!(c = networkstatus_parse_vote_from_string(result, strlen(result),
+                                                   NULL,
                                                    NS_TYPE_CONSENSUS))) {
       log_err(LD_BUG, "Generated a networkstatus consensus we couldn't "
               "parse.");
@@ -3121,7 +3135,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   *msg_out = NULL;
 
  again:
-  vote = networkstatus_parse_vote_from_string(vote_body, &end_of_vote,
+  vote = networkstatus_parse_vote_from_string(vote_body, strlen(vote_body),
+                                              &end_of_vote,
                                               NS_TYPE_VOTE);
   if (!end_of_vote)
     end_of_vote = vote_body + strlen(vote_body);
@@ -3379,7 +3394,9 @@ dirvote_compute_consensuses(void)
                  flavor_name);
         continue;
       }
-      consensus = networkstatus_parse_vote_from_string(consensus_body, NULL,
+      consensus = networkstatus_parse_vote_from_string(consensus_body,
+                                                       strlen(consensus_body),
+                                                       NULL,
                                                        NS_TYPE_CONSENSUS);
       if (!consensus) {
         log_warn(LD_DIR, "Couldn't parse %s consensus we generated!",
@@ -3518,7 +3535,7 @@ dirvote_add_signatures_to_pending_consensus(
      * just in case we break detached signature processing at some point. */
     {
       networkstatus_t *v = networkstatus_parse_vote_from_string(
-                                             pc->body, NULL,
+                                             pc->body, strlen(pc->body), NULL,
                                              NS_TYPE_CONSENSUS);
       tor_assert(v);
       networkstatus_vote_free(v);
@@ -3643,7 +3660,9 @@ dirvote_publish_consensus(void)
       continue;
     }
 
-    if (networkstatus_set_current_consensus(pending->body, name, 0, NULL))
+    if (networkstatus_set_current_consensus(pending->body,
+                                            strlen(pending->body),
+                                            name, 0, NULL))
       log_warn(LD_DIR, "Error publishing %s consensus", name);
     else
       log_notice(LD_DIR, "Published %s consensus", name);
@@ -3754,8 +3773,10 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
   size_t keylen;
   smartlist_t *chunks = smartlist_new();
   char *output = NULL;
+  crypto_pk_t *rsa_pubkey = router_get_rsa_onion_pkey(ri->onion_pkey,
+                                                      ri->onion_pkey_len);
 
-  if (crypto_pk_write_public_key_to_string(ri->onion_pkey, &key, &keylen)<0)
+  if (crypto_pk_write_public_key_to_string(rsa_pubkey, &key, &keylen)<0)
     goto done;
   summary = policy_summarize(ri->exit_policy, AF_INET);
   if (ri->declared_family)
@@ -3826,6 +3847,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
   }
 
  done:
+  crypto_pk_free(rsa_pubkey);
   tor_free(output);
   tor_free(key);
   tor_free(summary);
@@ -4566,16 +4588,16 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   /* These are hardwired, to avoid disaster. */
   v3_out->recommended_relay_protocols =
     tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
+               "Link=4 Microdesc=1-2 Relay=2");
   v3_out->recommended_client_protocols =
     tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
+               "Link=4 Microdesc=1-2 Relay=2");
   v3_out->required_client_protocols =
     tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
+               "Link=4 Microdesc=1-2 Relay=2");
   v3_out->required_relay_protocols =
     tor_strdup("Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
-               "Link=3-4 LinkAuth=1 Microdesc=1 Relay=1-2");
+               "Link=3-4 Microdesc=1 Relay=1-2");
 
   /* We are not allowed to vote to require anything we don't have. */
   tor_assert(protover_all_supported(v3_out->required_relay_protocols, NULL));

@@ -17,9 +17,10 @@
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "lib/time/compat_time.h"
 #include "feature/rend/rendservice.h"
 #include "lib/evloop/timers.h"
@@ -52,8 +53,6 @@ static int consensus_nf_conntimeout_clients;
 static int consensus_nf_pad_before_usage;
 /** Should we pad relay-to-relay connections? */
 static int consensus_nf_pad_relays;
-/** Should we pad tor2web connections? */
-static int consensus_nf_pad_tor2web;
 /** Should we pad rosos connections? */
 static int consensus_nf_pad_single_onion;
 
@@ -140,11 +139,6 @@ channelpadding_new_consensus_params(networkstatus_t *ns)
 
   consensus_nf_pad_relays =
     networkstatus_get_param(ns, "nf_pad_relays", 0, 0, 1);
-
-  consensus_nf_pad_tor2web =
-    networkstatus_get_param(ns,
-                            CHANNELPADDING_TOR2WEB_PARAM,
-                            CHANNELPADDING_TOR2WEB_DEFAULT, 0, 1);
 
   consensus_nf_pad_single_onion =
     networkstatus_get_param(ns,
@@ -303,6 +297,7 @@ channelpadding_send_disable_command(channel_t *chan)
   channelpadding_negotiate_t disable;
   cell_t cell;
 
+  tor_assert(chan);
   tor_assert(BASE_CHAN_TO_TLS(chan)->conn->link_proto >=
              MIN_LINK_PROTO_FOR_CHANNEL_PADDING);
 
@@ -335,6 +330,7 @@ channelpadding_send_enable_command(channel_t *chan, uint16_t low_timeout,
   channelpadding_negotiate_t enable;
   cell_t cell;
 
+  tor_assert(chan);
   tor_assert(BASE_CHAN_TO_TLS(chan)->conn->link_proto >=
              MIN_LINK_PROTO_FOR_CHANNEL_PADDING);
 
@@ -383,7 +379,8 @@ channelpadding_send_padding_cell_for_callback(channel_t *chan)
   chan->pending_padding_callback = 0;
 
   if (monotime_coarse_is_zero(&chan->next_padding_time) ||
-      chan->has_queued_writes(chan)) {
+      chan->has_queued_writes(chan) ||
+      (chan->cmux && circuitmux_num_cells(chan->cmux))) {
     /* We must have been active before the timer fired */
     monotime_coarse_zero(&chan->next_padding_time);
     return;
@@ -663,6 +660,8 @@ channelpadding_get_circuits_available_timeout(void)
   // 30..60min by default
   timeout = timeout + crypto_rand_int(timeout);
 
+  tor_assert(timeout >= 0);
+
   return timeout;
 }
 
@@ -740,15 +739,6 @@ channelpadding_decide_to_pad_channel(channel_t *chan)
     return CHANNELPADDING_WONTPAD;
   }
 
-  if (options->Tor2webMode && !consensus_nf_pad_tor2web) {
-    /* If the consensus just changed values, this channel may still
-     * think padding is enabled. Negotiate it off. */
-    if (chan->padding_enabled)
-      channelpadding_disable_padding_on_channel(chan);
-
-    return CHANNELPADDING_WONTPAD;
-  }
-
   if (rend_service_allow_non_anonymous_connection(options) &&
       !consensus_nf_pad_single_onion) {
     /* If the consensus just changed values, this channel may still
@@ -759,7 +749,11 @@ channelpadding_decide_to_pad_channel(channel_t *chan)
     return CHANNELPADDING_WONTPAD;
   }
 
-  if (!chan->has_queued_writes(chan)) {
+  /* There should always be a cmux on the circuit. After that,
+   * only schedule padding if there are no queued writes and no
+   * queued cells in circuitmux queues. */
+  if (chan->cmux && !chan->has_queued_writes(chan) &&
+      !circuitmux_num_cells(chan->cmux)) {
     int is_client_channel = 0;
 
     if (CHANNEL_IS_CLIENT(chan, options)) {

@@ -29,15 +29,17 @@
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
 #include "feature/relay/ext_orport.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
 #include "feature/hibernate/hibernate.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
 #include "app/config/statefile.h"
@@ -5600,6 +5602,12 @@ test_config_include_opened_file_list(void *data)
 
   config_line_t *result = NULL;
   smartlist_t *opened_files = smartlist_new();
+  char *torrcd = NULL;
+  char *subfolder = NULL;
+  char *path = NULL;
+  char *empty = NULL;
+  char *file = NULL;
+  char *dot = NULL;
   char *dir = tor_strdup(get_fname("test_include_opened_file_list"));
   tt_ptr_op(dir, OP_NE, NULL);
 
@@ -5609,8 +5617,7 @@ test_config_include_opened_file_list(void *data)
   tt_int_op(mkdir(dir, 0700), OP_EQ, 0);
 #endif
 
-  char torrcd[PATH_MAX+1];
-  tor_snprintf(torrcd, sizeof(torrcd), "%s"PATH_SEPARATOR"%s", dir, "torrc.d");
+  tor_asprintf(&torrcd, "%s"PATH_SEPARATOR"%s", dir, "torrc.d");
 
 #ifdef _WIN32
   tt_int_op(mkdir(torrcd), OP_EQ, 0);
@@ -5618,9 +5625,7 @@ test_config_include_opened_file_list(void *data)
   tt_int_op(mkdir(torrcd, 0700), OP_EQ, 0);
 #endif
 
-  char subfolder[PATH_MAX+1];
-  tor_snprintf(subfolder, sizeof(subfolder), "%s"PATH_SEPARATOR"%s", torrcd,
-               "subfolder");
+  tor_asprintf(&subfolder, "%s"PATH_SEPARATOR"%s", torrcd, "subfolder");
 
 #ifdef _WIN32
   tt_int_op(mkdir(subfolder), OP_EQ, 0);
@@ -5628,21 +5633,17 @@ test_config_include_opened_file_list(void *data)
   tt_int_op(mkdir(subfolder, 0700), OP_EQ, 0);
 #endif
 
-  char path[PATH_MAX+1];
-  tor_snprintf(path, sizeof(path), "%s"PATH_SEPARATOR"%s", subfolder,
+  tor_asprintf(&path, "%s"PATH_SEPARATOR"%s", subfolder,
                "01_file_in_subfolder");
   tt_int_op(write_str_to_file(path, "Test 1\n", 0), OP_EQ, 0);
 
-  char empty[PATH_MAX+1];
-  tor_snprintf(empty, sizeof(empty), "%s"PATH_SEPARATOR"%s", torrcd, "empty");
+  tor_asprintf(&empty, "%s"PATH_SEPARATOR"%s", torrcd, "empty");
   tt_int_op(write_str_to_file(empty, "", 0), OP_EQ, 0);
 
-  char file[PATH_MAX+1];
-  tor_snprintf(file, sizeof(file), "%s"PATH_SEPARATOR"%s", torrcd, "file");
+  tor_asprintf(&file, "%s"PATH_SEPARATOR"%s", torrcd, "file");
   tt_int_op(write_str_to_file(file, "Test 2\n", 0), OP_EQ, 0);
 
-  char dot[PATH_MAX+1];
-  tor_snprintf(dot, sizeof(dot), "%s"PATH_SEPARATOR"%s", torrcd, ".dot");
+  tor_asprintf(&dot, "%s"PATH_SEPARATOR"%s", torrcd, ".dot");
   tt_int_op(write_str_to_file(dot, "Test 3\n", 0), OP_EQ, 0);
 
   char torrc_contents[1000];
@@ -5669,6 +5670,12 @@ test_config_include_opened_file_list(void *data)
   SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
   smartlist_free(opened_files);
   config_free_lines(result);
+  tor_free(torrcd);
+  tor_free(subfolder);
+  tor_free(path);
+  tor_free(empty);
+  tor_free(file);
+  tor_free(dot);
   tor_free(dir);
 }
 
@@ -5740,6 +5747,72 @@ test_config_compute_max_mem_in_queues(void *data)
 #undef MEGABYTE
 }
 
+static void
+test_config_extended_fmt(void *arg)
+{
+  (void)arg;
+  config_line_t *lines = NULL, *lp;
+  const char string1[] =
+    "thing1 is here\n"
+    "+thing2 is over here\n"
+    "/thing3\n"
+    "/thing4 is back here\n";
+
+  /* Try with the "extended" flag disabled. */
+  int r = config_get_lines(string1, &lines, 0);
+  tt_int_op(r, OP_EQ, 0);
+  lp = lines;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "thing1");
+  tt_str_op(lp->value, OP_EQ, "is here");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_NORMAL);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "+thing2");
+  tt_str_op(lp->value, OP_EQ, "is over here");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_NORMAL);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "/thing3");
+  tt_str_op(lp->value, OP_EQ, "");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_NORMAL);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "/thing4");
+  tt_str_op(lp->value, OP_EQ, "is back here");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_NORMAL);
+  lp = lp->next;
+  config_free_lines(lines);
+
+  /* Try with the "extended" flag enabled. */
+  r = config_get_lines(string1, &lines, 1);
+  tt_int_op(r, OP_EQ, 0);
+  lp = lines;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "thing1");
+  tt_str_op(lp->value, OP_EQ, "is here");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_NORMAL);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "thing2");
+  tt_str_op(lp->value, OP_EQ, "is over here");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_APPEND);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "thing3");
+  tt_str_op(lp->value, OP_EQ, "");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_CLEAR);
+  lp = lp->next;
+  tt_ptr_op(lp, OP_NE, NULL);
+  tt_str_op(lp->key, OP_EQ, "thing4");
+  tt_str_op(lp->value, OP_EQ, "");
+  tt_int_op(lp->command, OP_EQ, CONFIG_LINE_CLEAR);
+  lp = lp->next;
+
+ done:
+  config_free_lines(lines);
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -5790,5 +5863,6 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(check_bridge_distribution_setting_unrecognised, 0),
   CONFIG_TEST(include_opened_file_list, 0),
   CONFIG_TEST(compute_max_mem_in_queues, 0),
+  CONFIG_TEST(extended_fmt, 0),
   END_OF_TESTCASES
 };

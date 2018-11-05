@@ -36,9 +36,11 @@
 #define CONTROL_PRIVATE
 
 #include "core/or/or.h"
-#include "feature/client/addressmap.h"
-#include "feature/client/bridges.h"
-#include "lib/container/buffers.h"
+#include "app/config/config.h"
+#include "app/config/confparse.h"
+#include "app/main/main.h"
+#include "core/mainloop/connection.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/channel.h"
 #include "core/or/channeltls.h"
 #include "core/or/circuitbuild.h"
@@ -46,41 +48,50 @@
 #include "core/or/circuitstats.h"
 #include "core/or/circuituse.h"
 #include "core/or/command.h"
-#include "lib/evloop/compat_libevent.h"
-#include "app/config/config.h"
-#include "app/config/confparse.h"
-#include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
-#include "feature/control/control.h"
-#include "lib/crypt_ops/crypto_rand.h"
-#include "lib/crypt_ops/crypto_util.h"
-#include "feature/dircache/directory.h"
-#include "feature/dircache/dirserv.h"
+#include "core/or/policies.h"
+#include "core/or/reasons.h"
+#include "core/or/versions.h"
+#include "core/proto/proto_control0.h"
+#include "core/proto/proto_http.h"
+#include "feature/client/addressmap.h"
+#include "feature/client/bridges.h"
 #include "feature/client/dnsserv.h"
 #include "feature/client/entrynodes.h"
-#include "feature/stats/geoip.h"
+#include "feature/control/control.h"
+#include "feature/control/fmt_serverstatus.h"
+#include "feature/control/getinfo_geoip.h"
+#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dlstatus.h"
+#include "feature/dircommon/directory.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_cache.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_control.h"
-#include "core/mainloop/main.h"
+#include "feature/hs_common/shared_random_client.h"
+#include "feature/nodelist/authcert.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
-#include "core/or/policies.h"
-#include "core/proto/proto_control0.h"
-#include "core/proto/proto_http.h"
-#include "core/or/reasons.h"
+#include "feature/nodelist/routerinfo.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
+#include "feature/relay/selftest.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
+#include "feature/rend/rendparse.h"
 #include "feature/rend/rendservice.h"
-#include "feature/stats/rephist.h"
-#include "feature/relay/router.h"
-#include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
-#include "feature/hs_common/shared_random_client.h"
+#include "feature/stats/geoip_stats.h"
+#include "feature/stats/predict_ports.h"
+#include "lib/container/buffers.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"
+#include "lib/evloop/compat_libevent.h"
 
 #include "feature/dircache/cached_dir_st.h"
 #include "feature/control/control_connection_st.h"
@@ -1896,6 +1907,9 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     tor_asprintf(answer, "%"PRIu64, (get_bytes_read()));
   } else if (!strcmp(question, "traffic/written")) {
     tor_asprintf(answer, "%"PRIu64, (get_bytes_written()));
+  } else if (!strcmp(question, "uptime")) {
+    long uptime_secs = get_uptime();
+    tor_asprintf(answer, "%ld", uptime_secs);
   } else if (!strcmp(question, "process/pid")) {
     int myPid = -1;
 
@@ -2056,7 +2070,7 @@ getinfo_helper_listeners(control_connection_t *control_conn,
 }
 
 /** Implementation helper for GETINFO: answers requests for information about
- * the current time in both local and UTF forms. */
+ * the current time in both local and UTC forms. */
 STATIC int
 getinfo_helper_current_time(control_connection_t *control_conn,
                          const char *question,
@@ -2338,9 +2352,11 @@ getinfo_helper_dir(control_connection_t *control_conn,
         *answer = tor_strdup(consensus->dir);
     }
     if (!*answer) { /* try loading it from disk */
-      char *filename = get_cachedir_fname("cached-consensus");
-      *answer = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
-      tor_free(filename);
+      tor_mmap_t *mapped = networkstatus_map_cached_consensus("ns");
+      if (mapped) {
+        *answer = tor_memdup_nulterm(mapped->data, mapped->size);
+        tor_munmap_file(mapped);
+      }
       if (!*answer) { /* generate an error */
         *errmsg = "Could not open cached consensus. "
           "Make sure FetchUselessDescriptors is set to 1.";
@@ -3360,6 +3376,7 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("traffic/read", misc,"Bytes read since the process was started."),
   ITEM("traffic/written", misc,
        "Bytes written since the process was started."),
+  ITEM("uptime", misc, "Uptime of the Tor daemon in seconds."),
   ITEM("process/pid", misc, "Process id belonging to the main tor process."),
   ITEM("process/uid", misc, "User id running the tor process."),
   ITEM("process/user", misc,
@@ -4994,7 +5011,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
 
   if (!strcasecmp(key_type_rsa1024, key_type)) {
     /* "RSA:<Base64 Blob>" - Loading a pre-existing RSA1024 key. */
-    pk = crypto_pk_base64_decode(key_blob, strlen(key_blob));
+    pk = crypto_pk_base64_decode_private(key_blob, strlen(key_blob));
     if (!pk) {
       err_msg = tor_strdup("512 Failed to decode RSA key\r\n");
       goto err;
@@ -5029,7 +5046,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
         goto err;
       }
       if (!discard_pk) {
-        if (crypto_pk_base64_encode(pk, &key_new_blob)) {
+        if (crypto_pk_base64_encode_private(pk, &key_new_blob)) {
           crypto_pk_free(pk);
           tor_asprintf(&err_msg, "551 Failed to encode %s key\r\n",
                        key_type_rsa1024);
@@ -6045,37 +6062,65 @@ control_event_stream_bandwidth_used(void)
 int
 control_event_circ_bandwidth_used(void)
 {
-  origin_circuit_t *ocirc;
-  struct timeval now;
-  char tbuf[ISO_TIME_USEC_LEN+1];
   if (!EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
     return 0;
 
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
-    ocirc = TO_ORIGIN_CIRCUIT(circ);
-    if (!ocirc->n_read_circ_bw && !ocirc->n_written_circ_bw)
-      continue;
-    tor_gettimeofday(&now);
-    format_iso_time_nospace_usec(tbuf, &now);
-    send_control_event(EVENT_CIRC_BANDWIDTH_USED,
-                       "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu TIME=%s "
-                       "DELIVERED_READ=%lu OVERHEAD_READ=%lu "
-                       "DELIVERED_WRITTEN=%lu OVERHEAD_WRITTEN=%lu\r\n",
-                       ocirc->global_identifier,
-                       (unsigned long)ocirc->n_read_circ_bw,
-                       (unsigned long)ocirc->n_written_circ_bw,
-                       tbuf,
-                       (unsigned long)ocirc->n_delivered_read_circ_bw,
-                       (unsigned long)ocirc->n_overhead_read_circ_bw,
-                       (unsigned long)ocirc->n_delivered_written_circ_bw,
-                       (unsigned long)ocirc->n_overhead_written_circ_bw);
-    ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
-    ocirc->n_overhead_written_circ_bw = ocirc->n_overhead_read_circ_bw = 0;
-    ocirc->n_delivered_written_circ_bw = ocirc->n_delivered_read_circ_bw = 0;
+
+    control_event_circ_bandwidth_used_for_circ(TO_ORIGIN_CIRCUIT(circ));
   }
   SMARTLIST_FOREACH_END(circ);
+
+  return 0;
+}
+
+/**
+ * Emit a CIRC_BW event line for a specific circuit.
+ *
+ * This function sets the values it emits to 0, and does not emit
+ * an event if there is no new data to report since the last call.
+ *
+ * Therefore, it may be called at any frequency.
+ */
+int
+control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
+{
+  struct timeval now;
+  char tbuf[ISO_TIME_USEC_LEN+1];
+
+  tor_assert(ocirc);
+
+  if (!EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
+    return 0;
+
+  /* n_read_circ_bw and n_written_circ_bw are always updated
+   * when there is any new cell on a circuit, and set to 0 after
+   * the event, below.
+   *
+   * Therefore, checking them is sufficient to determine if there
+   * is new data to report. */
+  if (!ocirc->n_read_circ_bw && !ocirc->n_written_circ_bw)
+    return 0;
+
+  tor_gettimeofday(&now);
+  format_iso_time_nospace_usec(tbuf, &now);
+  send_control_event(EVENT_CIRC_BANDWIDTH_USED,
+                     "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu TIME=%s "
+                     "DELIVERED_READ=%lu OVERHEAD_READ=%lu "
+                     "DELIVERED_WRITTEN=%lu OVERHEAD_WRITTEN=%lu\r\n",
+                     ocirc->global_identifier,
+                     (unsigned long)ocirc->n_read_circ_bw,
+                     (unsigned long)ocirc->n_written_circ_bw,
+                     tbuf,
+                     (unsigned long)ocirc->n_delivered_read_circ_bw,
+                     (unsigned long)ocirc->n_overhead_read_circ_bw,
+                     (unsigned long)ocirc->n_delivered_written_circ_bw,
+                     (unsigned long)ocirc->n_overhead_written_circ_bw);
+  ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
+  ocirc->n_overhead_written_circ_bw = ocirc->n_overhead_read_circ_bw = 0;
+  ocirc->n_delivered_written_circ_bw = ocirc->n_delivered_read_circ_bw = 0;
 
   return 0;
 }
@@ -7069,6 +7114,11 @@ bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
  * Tor initializes. */
 static int bootstrap_percent = BOOTSTRAP_STATUS_UNDEF;
 
+/** Like bootstrap_percent, but only takes on the enumerated values in
+ * bootstrap_status_t.
+ */
+static int bootstrap_phase = BOOTSTRAP_STATUS_UNDEF;
+
 /** As bootstrap_percent, but holds the bootstrapping level at which we last
  * logged a NOTICE-level message. We use this, plus BOOTSTRAP_PCT_INCREMENT,
  * to avoid flooding the log with a new message every time we get a few more
@@ -7091,23 +7141,46 @@ static int bootstrap_problems = 0;
  */
 #define BOOTSTRAP_PCT_INCREMENT 5
 
+/** Do the actual logging and notifications for
+ * control_event_bootstrap().  Doesn't change any state beyond that.
+ */
+static void
+control_event_bootstrap_core(int loglevel, bootstrap_status_t status,
+                             int progress)
+{
+  char buf[BOOTSTRAP_MSG_LEN];
+  const char *tag, *summary;
+
+  bootstrap_status_to_string(status, &tag, &summary);
+  /* Locally reset status if there's incremental progress */
+  if (progress)
+    status = progress;
+
+  tor_log(loglevel, LD_CONTROL,
+          "Bootstrapped %d%%: %s", status, summary);
+  tor_snprintf(buf, sizeof(buf),
+               "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
+               status, tag, summary);
+  tor_snprintf(last_sent_bootstrap_message,
+               sizeof(last_sent_bootstrap_message),
+               "NOTICE %s", buf);
+  control_event_client_status(LOG_NOTICE, "%s", buf);
+}
+
 /** Called when Tor has made progress at bootstrapping its directory
  * information and initial circuits.
  *
  * <b>status</b> is the new status, that is, what task we will be doing
  * next. <b>progress</b> is zero if we just started this task, else it
  * represents progress on the task.
- *
- * Return true if we logged a message at level NOTICE, and false otherwise.
  */
-int
+void
 control_event_bootstrap(bootstrap_status_t status, int progress)
 {
-  const char *tag, *summary;
-  char buf[BOOTSTRAP_MSG_LEN];
+  int loglevel = LOG_NOTICE;
 
   if (bootstrap_percent == BOOTSTRAP_STATUS_DONE)
-    return 0; /* already bootstrapped; nothing to be done here. */
+    return; /* already bootstrapped; nothing to be done here. */
 
   /* special case for handshaking status, since our TLS handshaking code
    * can't distinguish what the connection is going to be for. */
@@ -7119,45 +7192,70 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
     }
   }
 
-  if (status > bootstrap_percent ||
-      (progress && progress > bootstrap_percent)) {
-    int loglevel = LOG_NOTICE;
-    bootstrap_status_to_string(status, &tag, &summary);
-
-    if (status <= bootstrap_percent &&
-        (progress < notice_bootstrap_percent + BOOTSTRAP_PCT_INCREMENT)) {
-      /* We log the message at info if the status hasn't advanced, and if less
-       * than BOOTSTRAP_PCT_INCREMENT progress has been made.
-       */
+  if (status <= bootstrap_percent) {
+    /* If there's no new progress, return early. */
+    if (!progress || progress <= bootstrap_percent)
+      return;
+    /* Log at INFO if not enough progress happened. */
+    if (progress < notice_bootstrap_percent + BOOTSTRAP_PCT_INCREMENT)
       loglevel = LOG_INFO;
-    }
-
-    tor_log(loglevel, LD_CONTROL,
-            "Bootstrapped %d%%: %s", progress ? progress : status, summary);
-    tor_snprintf(buf, sizeof(buf),
-        "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
-        progress ? progress : status, tag, summary);
-    tor_snprintf(last_sent_bootstrap_message,
-                 sizeof(last_sent_bootstrap_message),
-                 "NOTICE %s", buf);
-    control_event_client_status(LOG_NOTICE, "%s", buf);
-    if (status > bootstrap_percent) {
-      bootstrap_percent = status; /* new milestone reached */
-    }
-    if (progress > bootstrap_percent) {
-      /* incremental progress within a milestone */
-      bootstrap_percent = progress;
-      bootstrap_problems = 0; /* Progress! Reset our problem counter. */
-    }
-    if (loglevel == LOG_NOTICE &&
-        bootstrap_percent > notice_bootstrap_percent) {
-      /* Remember that we gave a notice at this level. */
-      notice_bootstrap_percent = bootstrap_percent;
-    }
-    return loglevel == LOG_NOTICE;
   }
 
-  return 0;
+  control_event_bootstrap_core(loglevel, status, progress);
+
+  if (status > bootstrap_percent) {
+    bootstrap_phase = status; /* new milestone reached */
+    bootstrap_percent = status;
+  }
+  if (progress > bootstrap_percent) {
+    /* incremental progress within a milestone */
+    bootstrap_percent = progress;
+    bootstrap_problems = 0; /* Progress! Reset our problem counter. */
+  }
+  if (loglevel == LOG_NOTICE &&
+      bootstrap_percent > notice_bootstrap_percent) {
+    /* Remember that we gave a notice at this level. */
+    notice_bootstrap_percent = bootstrap_percent;
+  }
+}
+
+/** Flag whether we've opened an OR_CONN yet  */
+static int bootstrap_first_orconn = 0;
+
+/** Like bootstrap_phase, but for (possibly deferred) directory progress */
+static int bootstrap_dir_phase = BOOTSTRAP_STATUS_UNDEF;
+
+/** Like bootstrap_problems, but for (possibly deferred) directory progress  */
+static int bootstrap_dir_progress = BOOTSTRAP_STATUS_UNDEF;
+
+/** Defer directory info bootstrap events until we have successfully
+ * completed our first connection to a router.  */
+void
+control_event_boot_dir(bootstrap_status_t status, int progress)
+{
+  if (status > bootstrap_dir_progress) {
+    bootstrap_dir_progress = status;
+    bootstrap_dir_phase = status;
+  }
+  if (progress && progress >= bootstrap_dir_progress) {
+    bootstrap_dir_progress = progress;
+  }
+
+  /* Don't report unless we have successfully opened at least one OR_CONN */
+  if (!bootstrap_first_orconn)
+    return;
+
+  control_event_bootstrap(status, progress);
+}
+
+/** Set a flag to allow reporting of directory bootstrap progress.
+ * (Code that reports completion of an OR_CONN calls this.)  Also,
+ * report directory progress so far. */
+void
+control_event_boot_first_orconn(void)
+{
+  bootstrap_first_orconn = 1;
+  control_event_bootstrap(bootstrap_dir_phase, bootstrap_dir_progress);
 }
 
 /** Called when Tor has failed to make bootstrapping progress in a way
@@ -7194,9 +7292,7 @@ control_event_bootstrap_problem(const char *warn, const char *reason,
   if (we_are_hibernating())
     dowarn = 0;
 
-  while (status>=0 && bootstrap_status_to_string(status, &tag, &summary) < 0)
-    status--; /* find a recognized status string based on current progress */
-  status = bootstrap_percent; /* set status back to the actual number */
+  tor_assert(bootstrap_status_to_string(bootstrap_phase, &tag, &summary) == 0);
 
   severity = dowarn ? LOG_WARN : LOG_INFO;
 
@@ -7702,11 +7798,11 @@ control_event_hsv3_descriptor_failed(const char *onion_address,
   tor_free(desc_id_field);
 }
 
-/** Send HS_DESC_CONTENT event after completion of a successful fetch from hs
- * directory. If <b>hsdir_id_digest</b> is NULL, it is replaced by "UNKNOWN".
- * If <b>content</b> is NULL, it is replaced by an empty string. The
- * <b>onion_address</b> or <b>desc_id</b> set to NULL will no trigger the
- * control event. */
+/** Send HS_DESC_CONTENT event after completion of a successful fetch
+ * from hs directory. If <b>hsdir_id_digest</b> is NULL, it is replaced
+ * by "UNKNOWN". If <b>content</b> is NULL, it is replaced by an empty
+ * string. The  <b>onion_address</b> or <b>desc_id</b> set to NULL will
+ * not trigger the control event. */
 void
 control_event_hs_descriptor_content(const char *onion_address,
                                     const char *desc_id,

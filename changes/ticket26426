@@ -1,4 +1,0 @@
-  o Removed features:
-    - Tor no longer supports building with the dmalloc library. For debugging
-      memory issues, we suggest using gperftools or msan instead.
-      Closes ticket 26426.

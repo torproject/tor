@@ -1,0 +1,3 @@
+  o Minor features (log messages):
+    - Improve log message in HSv3 service that could print out negative
+      revision counters. Closes ticket 27707. Patch by "ffmancera".

@@ -101,7 +101,7 @@ sev_to_string(int severity)
     case LOG_NOTICE:  return "notice";
     case LOG_WARN:    return "warn";
     case LOG_ERR:     return "err";
-    default:     /* Call assert, not tor_assert, since tor_assert
+    default:     /* Call raw_assert, not tor_assert, since tor_assert
                   * calls log on failure. */
                  raw_assert_unreached(); return "UNKNOWN"; // LCOV_EXCL_LINE
   }
@@ -122,7 +122,8 @@ should_log_function_name(log_domain_mask_t domain, int severity)
       /* We care about places where bugs occur. */
       return (domain & (LD_BUG|LD_NOFUNCNAME)) == LD_BUG;
     default:
-      /* Call assert, not tor_assert, since tor_assert calls log on failure. */
+      /* Call raw_assert, not tor_assert, since tor_assert calls
+       * log on failure. */
       raw_assert(0); return 0; // LCOV_EXCL_LINE
   }
 }
@@ -579,7 +580,7 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
   char *end_of_prefix=NULL;
   int callbacks_deferred = 0;
 
-  /* Call assert, not raw_assert, since raw_assert calls log on failure. */
+  /* Call raw_assert, not tor_assert, since tor_assert calls log on failure. */
   raw_assert(format);
   /* check that severity is sane.  Overrunning the masks array leads to
    * interesting and hard to diagnose effects */
@@ -694,7 +695,7 @@ tor_log_update_sigsafe_err_fds(void)
   if (!found_real_stderr &&
       int_array_contains(fds, n_fds, STDOUT_FILENO)) {
     /* Don't use a virtual stderr when we're also logging to stdout. */
-    raw_assert(n_fds >= 2); /* Don't raw_assert inside log fns */
+    raw_assert(n_fds >= 2); /* Don't tor_assert inside log fns */
     fds[0] = fds[--n_fds];
   }
 

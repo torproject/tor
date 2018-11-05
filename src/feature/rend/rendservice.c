@@ -10,32 +10,36 @@
 #define RENDSERVICE_PRIVATE
 
 #include "core/or/or.h"
-#include "feature/client/circpathbias.h"
+
+#include "app/config/config.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
-#include "app/config/config.h"
+#include "core/or/policies.h"
+#include "core/or/relay.h"
+#include "feature/client/circpathbias.h"
 #include "feature/control/control.h"
+#include "feature/dirclient/dirclient.h"
+#include "feature/dircommon/directory.h"
+#include "feature/hs/hs_common.h"
+#include "feature/hs/hs_config.h"
+#include "feature/hs_common/replaycache.h"
+#include "feature/keymgt/loadkey.h"
+#include "feature/nodelist/describe.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nickname.h"
+#include "feature/nodelist/node_select.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerset.h"
+#include "feature/rend/rendclient.h"
+#include "feature/rend/rendcommon.h"
+#include "feature/rend/rendparse.h"
+#include "feature/rend/rendservice.h"
+#include "feature/stats/predict_ports.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "feature/dircache/directory.h"
-#include "feature/hs/hs_common.h"
-#include "feature/hs/hs_config.h"
-#include "core/mainloop/main.h"
-#include "feature/nodelist/networkstatus.h"
-#include "feature/nodelist/nodelist.h"
-#include "core/or/policies.h"
-#include "feature/rend/rendclient.h"
-#include "feature/rend/rendcommon.h"
-#include "feature/rend/rendservice.h"
-#include "feature/relay/router.h"
-#include "core/or/relay.h"
-#include "feature/stats/rephist.h"
-#include "feature/hs_common/replaycache.h"
-#include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
-#include "feature/nodelist/routerset.h"
 #include "lib/encoding/confline.h"
 #include "lib/net/resolve.h"
 
@@ -451,11 +455,19 @@ rend_service_parse_port_config(const char *string, const char *sep,
     int is_unix;
     ret = port_cfg_line_extract_addrport(addrport_element, &addrport,
                                          &is_unix, &rest);
+
     if (ret < 0) {
       tor_asprintf(&err_msg, "Couldn't process address <%s> from hidden "
                    "service configuration", addrport_element);
       goto err;
     }
+
+    if (rest && strlen(rest)) {
+      err_msg = tor_strdup("HiddenServicePort parse error: invalid port "
+                           "mapping");
+      goto err;
+    }
+
     if (is_unix) {
       socket_path = addrport;
       is_unix_addr = 1;
@@ -619,7 +631,7 @@ rend_service_prune_list_impl_(void)
 
   /* For every service introduction circuit we can find, see if we have a
    * matching surviving configured service. If not, close the circuit. */
-  while ((ocirc = circuit_get_next_service_intro_circ(ocirc))) {
+  while ((ocirc = circuit_get_next_intro_circ(ocirc, false))) {
     int keep_it = 0;
     if (ocirc->rend_data == NULL) {
       /* This is a v3 circuit, ignore it. */
@@ -1341,6 +1353,29 @@ rend_service_poison_new_single_onion_dir(const rend_service_t *s,
   return 0;
 }
 
+/* Return true iff the given service identity key is present on disk. This is
+ * used to try to learn the service version during configuration time. */
+int
+rend_service_key_on_disk(const char *directory_path)
+{
+  int ret = 0;
+  char *fname;
+  crypto_pk_t *pk = NULL;
+
+  tor_assert(directory_path);
+
+  /* Load key */
+  fname = hs_path_from_filename(directory_path, private_key_fname);
+  pk = init_key_from_file(fname, 0, LOG_DEBUG, NULL);
+  if (pk) {
+    ret = 1;
+  }
+
+  crypto_pk_free(pk);
+  tor_free(fname);
+  return ret;
+}
+
 /** Load and/or generate private keys for all hidden services, possibly
  * including keys for client authorization.
  * If a <b>service_list</b> is provided, treat it as the list of hidden
@@ -1503,7 +1538,7 @@ rend_service_load_keys(rend_service_t *s)
 
   /* Load key */
   fname = rend_service_path(s, private_key_fname);
-  s->private_key = init_key_from_file(fname, 1, LOG_ERR, 0);
+  s->private_key = init_key_from_file(fname, 1, LOG_ERR, NULL);
 
   if (!s->private_key)
     goto err;
@@ -1629,7 +1664,7 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
         crypto_pk_free(prkey);
         goto err;
       }
-      if (crypto_pk_check_key(prkey) <= 0) {
+      if (! crypto_pk_is_valid_private_key(prkey)) {
         log_warn(LD_BUG,"Generated client key seems invalid");
         crypto_pk_free(prkey);
         goto err;

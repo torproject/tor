@@ -9,7 +9,7 @@
 #define ROUTERLIST_PRIVATE
 #define CONFIG_PRIVATE
 #define CONNECTION_PRIVATE
-#define MAIN_PRIVATE
+#define MAINLOOP_PRIVATE
 
 #include "orconfig.h"
 #include "core/or/or.h"
@@ -19,7 +19,7 @@
 #include "app/config/confparse.h"
 #include "core/mainloop/connection.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/relay.h"
 #include "feature/nodelist/routerlist.h"
@@ -125,6 +125,25 @@ connection_write_to_buf_mock(const char *string, size_t len,
   buf_add(conn->outbuf, string, len);
 }
 
+char *
+buf_get_contents(buf_t *buf, size_t *sz_out)
+{
+  tor_assert(buf);
+  tor_assert(sz_out);
+
+  char *out;
+  *sz_out = buf_datalen(buf);
+  if (*sz_out >= ULONG_MAX)
+    return NULL; /* C'mon, really? */
+  out = tor_malloc(*sz_out + 1);
+  if (buf_get_bytes(buf, out, (unsigned long)*sz_out) != 0) {
+    tor_free(out);
+    return NULL;
+  }
+  out[*sz_out] = '\0'; /* Hopefully gratuitous. */
+  return out;
+}
+
 /* Set up a fake origin circuit with the specified number of cells,
  * Return a pointer to the newly-created dummy circuit */
 circuit_t *
@@ -217,7 +236,7 @@ test_conn_get_connection(uint8_t state, uint8_t type, uint8_t purpose)
        mock_connection_connect_sockaddr);
   MOCK(tor_close_socket, fake_close_socket);
 
-  init_connection_lists();
+  tor_init_connection_lists();
 
   conn = connection_new(type, TEST_CONN_FAMILY);
   tt_assert(conn);

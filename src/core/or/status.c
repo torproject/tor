@@ -21,21 +21,22 @@
 #include "feature/nodelist/nodelist.h"
 #include "core/or/relay.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
 #include "core/or/circuitlist.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/stats/rephist.h"
 #include "feature/hibernate/hibernate.h"
 #include "app/config/statefile.h"
 #include "feature/hs/hs_stats.h"
 #include "feature/hs/hs_service.h"
 #include "core/or/dos.h"
+#include "feature/stats/geoip_stats.h"
 
 #include "app/config/or_state_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "lib/tls/tortls.h"
 
 static void log_accounting(const time_t now, const or_options_t *options);
-#include "feature/stats/geoip.h"
 
 /** Return the total number of circuits. */
 STATIC int

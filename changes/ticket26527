@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove ATTR_NONNULL macro from codebase. Resolves
-      ticket 26527.

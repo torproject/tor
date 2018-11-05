@@ -6,19 +6,21 @@
 #include <time.h>
 
 #define CONNECTION_PRIVATE
-#define DIRECTORY_PRIVATE
+#define DIRCLIENT_PRIVATE
 #define DIRVOTE_PRIVATE
 #define ENTRYNODES_PRIVATE
 #define HIBERNATE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define ROUTERLIST_PRIVATE
+#define NODE_SELECT_PRIVATE
 #define TOR_UNIT_TESTING
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
+#include "feature/dirclient/dirclient.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/client/entrynodes.h"
 #include "feature/hibernate/hibernate.h"
@@ -27,9 +29,12 @@
 #include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"
 #include "feature/relay/router.h"
+#include "feature/nodelist/authcert.h"
+#include "feature/nodelist/node_select.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/authcert_parse.h"
+#include "feature/dirparse/ns_parse.h"
 #include "feature/dirauth/shared_random.h"
 #include "app/config/statefile.h"
 
@@ -260,7 +265,9 @@ test_router_pick_directory_server_impl(void *arg)
 
   /* Init SR subsystem. */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
-  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                               strlen(AUTHORITY_CERT_1),
+                                               NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 
@@ -270,7 +277,9 @@ test_router_pick_directory_server_impl(void *arg)
 
   construct_consensus(&consensus_text_md, now);
   tt_assert(consensus_text_md);
-  con_md = networkstatus_parse_vote_from_string(consensus_text_md, NULL,
+  con_md = networkstatus_parse_vote_from_string(consensus_text_md,
+                                                strlen(consensus_text_md),
+                                                NULL,
                                                 NS_TYPE_CONSENSUS);
   tt_assert(con_md);
   tt_int_op(con_md->flavor,OP_EQ, FLAV_MICRODESC);
@@ -470,7 +479,9 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
 
   /* Initialize the SRV subsystem */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
-  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                               strlen(AUTHORITY_CERT_1),
+                                               NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 
@@ -643,7 +654,9 @@ test_skew_common(void *arg, time_t now, unsigned long *offset)
 
   /* Initialize the SRV subsystem */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
-  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1,
+                                               strlen(AUTHORITY_CERT_1),
+                                               NULL);
   sr_init(0);
   UNMOCK(get_my_v3_authority_cert);
 
@@ -657,7 +670,8 @@ test_skew_common(void *arg, time_t now, unsigned long *offset)
   MOCK(clock_skew_warning, mock_clock_skew_warning);
   /* Caller will call teardown_capture_of_logs() */
   setup_capture_of_logs(LOG_WARN);
-  retval = networkstatus_set_current_consensus(consensus, "microdesc", 0,
+  retval = networkstatus_set_current_consensus(consensus, strlen(consensus),
+                                               "microdesc", 0,
                                                NULL);
 
  done:

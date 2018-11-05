@@ -1,7 +1,0 @@
-  o Minor bugfixes (relay):
-    - In frac_nodes_with_descriptors(), add for_direct_connect, and replace
-      node_has_any_descriptor() with node_has_preferred_descriptor(). Also,
-      if we are using bridges and there is at least one bridge with a full
-      descriptor, set f_guard in compute_frac_paths_available() to 1.0.
-      Fixes bug 25886; bugfix on 0.3.5.1-alpha. Patch by Neel Chauhan.
-

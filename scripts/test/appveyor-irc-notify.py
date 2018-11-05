@@ -22,6 +22,12 @@
 #  - Accept UTF-8
 #  - only guess github URLs
 #  - stop using ANSI colors
+#
+# Modified by teor in 2018:
+#  - fix github provider detection ('gitHub' or 'gitHubEnterprise', apparently)
+#  - make short commits 10 hexdigits long (that's what git does for tor)
+#  - generate correct branches and URLs for pull requests and tags
+#  - switch to one URL per line
 
 # This program is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software Foundation;
@@ -45,19 +51,19 @@ delineate multiple messages.
 
 
 Example:
-export APPVEYOR_URL=https://ci.appveyor.com
-export APPVEYOR_PROJECT_NAME=tor
-export APPVEYOR_REPO_COMMIT_AUTHOR=isislovecruft
-export APPVEYOR_REPO_COMMIT_TIMESTAMP=2018-04-23
-export APPVEYOR_REPO_PROVIDER=gihub
-export APPVEYOR_REPO_BRANCH=repo_branch
-export APPVEYOR_PULL_REQUEST_TITLE=pull_request_title
-export APPVEYOR_BUILD_VERSION=1
-export APPVEYOR_REPO_COMMIT=22c95b72e29248dc4de9b85e590ee18f6f587de8
-export APPVEYOR_REPO_COMMIT_MESSAGE="some IRC test"
 export APPVEYOR_ACCOUNT_NAME=isislovecruft
+export APPVEYOR_BUILD_VERSION=1
+export APPVEYOR_PROJECT_NAME=tor
 export APPVEYOR_PULL_REQUEST_NUMBER=pull_request_number
+export APPVEYOR_PULL_REQUEST_TITLE=pull_request_title
+export APPVEYOR_REPO_BRANCH=repo_branch
+export APPVEYOR_REPO_COMMIT=22c95b72e29248dc4de9b85e590ee18f6f587de8
+export APPVEYOR_REPO_COMMIT_AUTHOR=isislovecruft
+export APPVEYOR_REPO_COMMIT_MESSAGE="some IRC test"
+export APPVEYOR_REPO_COMMIT_TIMESTAMP=2018-04-23
 export APPVEYOR_REPO_NAME=isislovecruft/tor
+export APPVEYOR_REPO_PROVIDER=github
+export APPVEYOR_URL=https://ci.appveyor.com
 python ./appveyor-irc-notify.py irc.oftc.net:6697 tor-ci '{repo_name} {repo_branch} {short_commit} - {repo_commit_author}: {repo_commit_message}','Build #{build_version} passed. Details: {build_url} |  Commit: {commit_url}
 
 See also https://github.com/gridsync/gridsync/blob/master/appveyor.yml for examples
@@ -82,7 +88,7 @@ import time
 
 def appveyor_vars():
     """
-    Return a dict of key value carfted from appveyor environment variables.
+    Return a dict of key value crafted from appveyor environment variables.
     """
 
     vars = dict([
@@ -90,33 +96,52 @@ def appveyor_vars():
                 v.replace('APPVEYOR_', '').lower(),
                 os.getenv(v, '').decode('utf-8')
             ) for v in [
-                'APPVEYOR_URL',
-                'APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED',
+                'APPVEYOR_ACCOUNT_NAME',
+                'APPVEYOR_BUILD_VERSION',
+                'APPVEYOR_PROJECT_NAME',
+                'APPVEYOR_PULL_REQUEST_HEAD_COMMIT',
+                'APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH',
+                'APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME',
+                'APPVEYOR_PULL_REQUEST_NUMBER',
+                'APPVEYOR_PULL_REQUEST_TITLE',
                 'APPVEYOR_REPO_BRANCH',
+                'APPVEYOR_REPO_COMMIT',
                 'APPVEYOR_REPO_COMMIT_AUTHOR',
                 'APPVEYOR_REPO_COMMIT_AUTHOR_EMAIL',
-                'APPVEYOR_REPO_COMMIT_TIMESTAMP',
-                'APPVEYOR_REPO_PROVIDER',
-                'APPVEYOR_PROJECT_NAME',
-                'APPVEYOR_PULL_REQUEST_TITLE',
-                'APPVEYOR_BUILD_VERSION',
-                'APPVEYOR_REPO_COMMIT',
                 'APPVEYOR_REPO_COMMIT_MESSAGE',
-                'APPVEYOR_ACCOUNT_NAME',
-                'APPVEYOR_PULL_REQUEST_NUMBER',
-                'APPVEYOR_REPO_NAME'
+                'APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED',
+                'APPVEYOR_REPO_COMMIT_TIMESTAMP',
+                'APPVEYOR_REPO_NAME',
+                'APPVEYOR_REPO_PROVIDER',
+                'APPVEYOR_REPO_TAG_NAME',
+                'APPVEYOR_URL',
             ]
     ])
 
     BUILD_FMT = u'{url}/project/{account_name}/{project_name}/build/{build_version}'
 
-    if vars["repo_provider"] == 'github':
-        COMMIT_FMT = u'https://{repo_provider}.com/{repo_name}/commit/{repo_commit}'
+    if vars["repo_tag_name"]:
+        BRANCH_FMT = u'{repo_name} {repo_tag_name} {short_commit}'
+    else:
+        BRANCH_FMT = u'{repo_name} {repo_branch} {short_commit}'
+
+    vars.update(head_commit=vars["repo_commit"])
+
+    if vars["repo_provider"].lower().startswith('github'):
+        COMMIT_FMT = u'https://github.com/{repo_name}/commit/{repo_commit}'
+        if vars["pull_request_number"]:
+            vars.update(head_commit=vars["pull_request_head_commit"])
+            BRANCH_FMT = u'{repo_name} {repo_branch} pull {pull_request_head_repo_name} {pull_request_head_repo_branch} {short_commit}'
+            COMMIT_FMT = u'https://github.com/{pull_request_head_repo_name}/commit/{pull_request_head_commit}'
+            PULL_FMT = u'https://github.com/{repo_name}/pull/{pull_request_number}'
+            vars.update(pull_url=PULL_FMT.format(**vars))
         vars.update(commit_url=COMMIT_FMT.format(**vars))
+
+    vars.update(short_commit=vars["head_commit"][:10])
 
     vars.update(
         build_url=BUILD_FMT.format(**vars),
-        short_commit=vars["repo_commit"][:7],
+        branch_detail=BRANCH_FMT.format(**vars),
     )
     return vars
 
@@ -134,17 +159,19 @@ def notify():
 
     if success or failure:
         messages = []
-        messages.append(u"{repo_name} {repo_branch} {short_commit} - {repo_commit_author}: {repo_commit_message}")
+        messages.append(u"{branch_detail} - {repo_commit_author}: {repo_commit_message}")
 
         if success:
-            m = u"Build #{build_version} passed. Details: {build_url}"
+            messages.append(u"Build #{build_version} passed. Details: {build_url}")
         if failure:
-            m = u"Build #{build_version} failed. Details: {build_url}"
+            messages.append(u"Build #{build_version} failed. Details: {build_url}")
 
         if "commit_url" in apvy_vars:
-            m += " Commit: {commit_url}"
-     
-        messages.append(m)
+            messages.append(u"Commit: {commit_url}")
+
+        if "pull_url" in apvy_vars:
+            messages.append(u"Pull: {pull_url}")
+
     else:
         messages = sys.argv[3:]
         messages = ' '.join(messages)

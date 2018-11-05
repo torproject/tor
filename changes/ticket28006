@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Fix issues that shellcheck found in chutney-git-bisect.sh.
+      Resolves ticket 28006.

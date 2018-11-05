@@ -1187,14 +1187,22 @@ tor_addr_parse(tor_addr_t *addr, const char *src)
   int result;
   struct in_addr in_tmp;
   struct in6_addr in6_tmp;
+  int brackets_detected = 0;
+
   tor_assert(addr && src);
-  if (src[0] == '[' && src[1])
+
+  size_t len = strlen(src);
+
+  if (len && src[0] == '[' && src[len - 1] == ']') {
+    brackets_detected = 1;
     src = tmp = tor_strndup(src+1, strlen(src)-2);
+  }
 
   if (tor_inet_pton(AF_INET6, src, &in6_tmp) > 0) {
     result = AF_INET6;
     tor_addr_from_in6(addr, &in6_tmp);
-  } else if (tor_inet_pton(AF_INET, src, &in_tmp) > 0) {
+  } else if (!brackets_detected &&
+             tor_inet_pton(AF_INET, src, &in_tmp) > 0) {
     result = AF_INET;
     tor_addr_from_in(addr, &in_tmp);
   } else {
@@ -1204,11 +1212,6 @@ tor_addr_parse(tor_addr_t *addr, const char *src)
   tor_free(tmp);
   return result;
 }
-
-#ifdef _WIN32
-typedef ULONG (WINAPI *GetAdaptersAddresses_fn_t)(
-              ULONG, ULONG, PVOID, PIP_ADAPTER_ADDRESSES, PULONG);
-#endif
 
 #ifdef HAVE_IFADDRS_TO_SMARTLIST
 /*
@@ -1295,9 +1298,9 @@ ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses)
   return result;
 }
 
-/** Windows only: use GetAdaptersInfo() function to retrieve network interface
- * addresses of current machine and return them to caller as smartlist of
- * <b>tor_addr_t</b>  structures.
+/** Windows only: use GetAdaptersAddresses() to retrieve the network interface
+ * addresses of the current machine.
+ * Returns a smartlist of <b>tor_addr_t</b>  structures.
  */
 STATIC smartlist_t *
 get_interface_addresses_win32(int severity, sa_family_t family)

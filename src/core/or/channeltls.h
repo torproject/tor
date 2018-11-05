@@ -15,6 +15,8 @@
 struct ed25519_public_key_t;
 struct curve25519_public_key_t;
 
+#define TLS_PER_CELL_OVERHEAD 29
+
 #define BASE_CHAN_TO_TLS(c) (channel_tls_from_base((c)))
 #define TLS_CHAN_TO_BASE(c) (channel_tls_to_base((c)))
 

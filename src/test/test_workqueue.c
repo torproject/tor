@@ -5,13 +5,14 @@
 
 #include "core/or/or.h"
 #include "lib/thread/threads.h"
-#include "core/crypto/onion.h"
+#include "core/or/onion.h"
 #include "lib/evloop/workqueue.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/net/alertsock.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/intmath/weakrng.h"
+#include "lib/crypt_ops/crypto_init.h"
 
 #include <stdio.h>
 

@@ -1,8 +1,8 @@
 // Copyright (c) 2016-2018, The Tor Project, Inc. */
 // See LICENSE for licensing information */
 
-use std::collections::HashMap;
 use std::collections::hash_map;
+use std::collections::HashMap;
 use std::ffi::CStr;
 use std::fmt;
 use std::str;
@@ -12,8 +12,8 @@ use std::string::String;
 use external::c_tor_version_as_new_as;
 
 use errors::ProtoverError;
-use protoset::Version;
 use protoset::ProtoSet;
+use protoset::Version;
 
 /// The first version of Tor that included "proto" entries in its descriptors.
 /// Authorities should use this to decide whether to guess proto lines.
@@ -26,7 +26,7 @@ const FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS: &'static str = "0.2.9.3-alpha";
 /// before concluding that someone is trying to DoS us
 ///
 /// C_RUST_COUPLED: protover.c `MAX_PROTOCOLS_TO_EXPAND`
-const MAX_PROTOCOLS_TO_EXPAND: usize = (1<<16);
+const MAX_PROTOCOLS_TO_EXPAND: usize = (1 << 16);
 
 /// The maximum size an `UnknownProtocol`'s name may be.
 pub(crate) const MAX_PROTOCOL_NAME_LENGTH: usize = 100;
@@ -89,11 +89,17 @@ impl fmt::Display for UnknownProtocol {
     }
 }
 
+fn is_valid_proto(s: &str) -> bool {
+    s.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+}
+
 impl FromStr for UnknownProtocol {
     type Err = ProtoverError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() <= MAX_PROTOCOL_NAME_LENGTH {
+        if !is_valid_proto(s) {
+            Err(ProtoverError::InvalidProtocol)
+        } else if s.len() <= MAX_PROTOCOL_NAME_LENGTH {
             Ok(UnknownProtocol(s.to_string()))
         } else {
             Err(ProtoverError::ExceedsNameLimit)
@@ -105,6 +111,9 @@ impl UnknownProtocol {
     /// Create an `UnknownProtocol`, ignoring whether or not it
     /// exceeds MAX_PROTOCOL_NAME_LENGTH.
     fn from_str_any_len(s: &str) -> Result<Self, ProtoverError> {
+        if !is_valid_proto(s) {
+            return Err(ProtoverError::InvalidProtocol);
+        }
         Ok(UnknownProtocol(s.to_string()))
     }
 }
@@ -113,6 +122,17 @@ impl From<Protocol> for UnknownProtocol {
     fn from(p: Protocol) -> UnknownProtocol {
         UnknownProtocol(p.to_string())
     }
+}
+
+#[cfg(feature = "test_linking_hack")]
+fn have_linkauth_v1() -> bool {
+    true
+}
+
+#[cfg(not(feature = "test_linking_hack"))]
+fn have_linkauth_v1() -> bool {
+    use external::c_tor_is_using_nss;
+    !c_tor_is_using_nss()
 }
 
 /// Get a CStr representation of current supported protocols, for
@@ -132,16 +152,33 @@ impl From<Protocol> for UnknownProtocol {
 ///
 //  C_RUST_COUPLED: protover.c `protover_get_supported_protocols`
 pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
-    cstr!("Cons=1-2 \
-           Desc=1-2 \
-           DirCache=1-2 \
-           HSDir=1-2 \
-           HSIntro=3-4 \
-           HSRend=1-2 \
-           Link=1-5 \
-           LinkAuth=1,3 \
-           Microdesc=1-2 \
-           Relay=1-2")
+    if !have_linkauth_v1() {
+        cstr!(
+            "Cons=1-2 \
+             Desc=1-2 \
+             DirCache=1-2 \
+             HSDir=1-2 \
+             HSIntro=3-4 \
+             HSRend=1-2 \
+             Link=1-5 \
+             LinkAuth=3 \
+             Microdesc=1-2 \
+             Relay=1-2"
+        )
+    } else {
+        cstr!(
+            "Cons=1-2 \
+             Desc=1-2 \
+             DirCache=1-2 \
+             HSDir=1-2 \
+             HSIntro=3-4 \
+             HSRend=1-2 \
+             Link=1-5 \
+             LinkAuth=1,3 \
+             Microdesc=1-2 \
+             Relay=1-2"
+        )
+    }
 }
 
 /// A map of protocol names to the versions of them which are supported.
@@ -150,7 +187,7 @@ pub struct ProtoEntry(HashMap<Protocol, ProtoSet>);
 
 impl Default for ProtoEntry {
     fn default() -> ProtoEntry {
-        ProtoEntry( HashMap::new() )
+        ProtoEntry(HashMap::new())
     }
 }
 
@@ -204,9 +241,7 @@ impl FromStr for ProtoEntry {
     ///
     /// # Returns
     ///
-    /// A `Result` whose `Ok` value is a `ProtoEntry`, where the
-    /// first element is the subprotocol type (see `protover::Protocol`) and the last
-    /// element is an ordered set of `(low, high)` unique version numbers which are supported.
+    /// A `Result` whose `Ok` value is a `ProtoEntry`.
     /// Otherwise, the `Err` value of this `Result` is a `ProtoverError`.
     fn from_str(protocol_entry: &str) -> Result<ProtoEntry, ProtoverError> {
         let mut proto_entry: ProtoEntry = ProtoEntry::default();
@@ -240,7 +275,7 @@ impl FromStr for ProtoEntry {
 /// Generate an implementation of `ToString` for either a `ProtoEntry` or an
 /// `UnvalidatedProtoEntry`.
 macro_rules! impl_to_string_for_proto_entry {
-    ($t:ty) => (
+    ($t:ty) => {
         impl ToString for $t {
             fn to_string(&self) -> String {
                 let mut parts: Vec<String> = Vec::new();
@@ -252,7 +287,7 @@ macro_rules! impl_to_string_for_proto_entry {
                 parts.join(" ")
             }
         }
-    )
+    };
 }
 
 impl_to_string_for_proto_entry!(ProtoEntry);
@@ -266,7 +301,7 @@ pub struct UnvalidatedProtoEntry(HashMap<UnknownProtocol, ProtoSet>);
 
 impl Default for UnvalidatedProtoEntry {
     fn default() -> UnvalidatedProtoEntry {
-        UnvalidatedProtoEntry( HashMap::new() )
+        UnvalidatedProtoEntry(HashMap::new())
     }
 }
 
@@ -324,7 +359,7 @@ impl UnvalidatedProtoEntry {
     pub fn all_supported(&self) -> Option<UnvalidatedProtoEntry> {
         let mut unsupported: UnvalidatedProtoEntry = UnvalidatedProtoEntry::default();
         let supported: ProtoEntry = match ProtoEntry::supported() {
-            Ok(x)  => x,
+            Ok(x) => x,
             Err(_) => return None,
         };
 
@@ -345,7 +380,6 @@ impl UnvalidatedProtoEntry {
 
             let maybe_supported_versions: Option<&ProtoSet> = supported.get(&supported_protocol);
             let supported_versions: &ProtoSet;
-            let mut unsupported_versions: ProtoSet;
 
             // If the protocol wasn't in the map, then we don't know about it
             // and don't support any of its versions.  Add its versions to the
@@ -358,8 +392,7 @@ impl UnvalidatedProtoEntry {
             } else {
                 supported_versions = maybe_supported_versions.unwrap();
             }
-            unsupported_versions = versions.clone();
-            unsupported_versions.retain(|x| !supported_versions.contains(x));
+            let unsupported_versions = versions.and_not_in(supported_versions);
 
             if !unsupported_versions.is_empty() {
                 unsupported.insert(protocol.clone(), unsupported_versions);
@@ -452,11 +485,12 @@ impl UnvalidatedProtoEntry {
     /// following are true:
     ///
     /// * If a protocol name is an empty string, e.g. `"Cons=1,3 =3-5"`.
-    /// * If a protocol name cannot be parsed as utf-8.
-    /// * If the version numbers are an empty string, e.g. `"Cons="`.
-    fn parse_protocol_and_version_str<'a>(protocol_string: &'a str)
-        -> Result<Vec<(&'a str, &'a str)>, ProtoverError>
-    {
+    /// * If an entry has no equals sign, e.g. `"Cons=1,3 Desc"`.
+    /// * If there is leading or trailing whitespace, e.g. `" Cons=1,3 Link=3"`.
+    /// * If there is any other extra whitespice, e.g. `"Cons=1,3  Link=3"`.
+    fn parse_protocol_and_version_str<'a>(
+        protocol_string: &'a str,
+    ) -> Result<Vec<(&'a str, &'a str)>, ProtoverError> {
         let mut protovers: Vec<(&str, &str)> = Vec::new();
 
         for subproto in protocol_string.split(' ') {
@@ -492,11 +526,9 @@ impl FromStr for UnvalidatedProtoEntry {
     ///
     /// # Returns
     ///
-    /// A `Result` whose `Ok` value is a `ProtoSet` holding all of the
-    /// unique version numbers.
+    /// A `Result` whose `Ok` value is an `UnvalidatedProtoEntry`.
     ///
-    /// The returned `Result`'s `Err` value is an `ProtoverError` whose `Display`
-    /// impl has a description of the error.
+    /// The returned `Result`'s `Err` value is an `ProtoverError`.
     ///
     /// # Errors
     ///
@@ -523,9 +555,9 @@ impl FromStr for UnvalidatedProtoEntry {
 impl UnvalidatedProtoEntry {
     /// Create an `UnknownProtocol`, ignoring whether or not it
     /// exceeds MAX_PROTOCOL_NAME_LENGTH.
-    pub(crate) fn from_str_any_len(protocol_string: &str)
-        -> Result<UnvalidatedProtoEntry, ProtoverError>
-    {
+    pub(crate) fn from_str_any_len(
+        protocol_string: &str,
+    ) -> Result<UnvalidatedProtoEntry, ProtoverError> {
         let mut parsed: UnvalidatedProtoEntry = UnvalidatedProtoEntry::default();
         let parts: Vec<(&str, &str)> =
             UnvalidatedProtoEntry::parse_protocol_and_version_str(protocol_string)?;
@@ -560,11 +592,11 @@ impl From<ProtoEntry> for UnvalidatedProtoEntry {
 /// The "protocols" are *not* guaranteed to be known/supported `Protocol`s, in
 /// order to allow new subprotocols to be introduced even if Directory
 /// Authorities don't yet know of them.
-pub struct ProtoverVote( HashMap<UnknownProtocol, HashMap<Version, usize>> );
+pub struct ProtoverVote(HashMap<UnknownProtocol, HashMap<Version, usize>>);
 
 impl Default for ProtoverVote {
     fn default() -> ProtoverVote {
-        ProtoverVote( HashMap::new() )
+        ProtoverVote(HashMap::new())
     }
 }
 
@@ -578,9 +610,10 @@ impl IntoIterator for ProtoverVote {
 }
 
 impl ProtoverVote {
-    pub fn entry(&mut self, key: UnknownProtocol)
-        -> hash_map::Entry<UnknownProtocol, HashMap<Version, usize>>
-    {
+    pub fn entry(
+        &mut self,
+        key: UnknownProtocol,
+    ) -> hash_map::Entry<UnknownProtocol, HashMap<Version, usize>> {
         self.0.entry(key)
     }
 
@@ -602,7 +635,10 @@ impl ProtoverVote {
     /// assert_eq!("Link=3", vote.to_string());
     /// ```
     // C_RUST_COUPLED: protover.c protover_compute_vote
-    pub fn compute(proto_entries: &[UnvalidatedProtoEntry], threshold: &usize) -> UnvalidatedProtoEntry {
+    pub fn compute(
+        proto_entries: &[UnvalidatedProtoEntry],
+        threshold: &usize,
+    ) -> UnvalidatedProtoEntry {
         let mut all_count: ProtoverVote = ProtoverVote::default();
         let mut final_output: UnvalidatedProtoEntry = UnvalidatedProtoEntry::default();
 
@@ -628,8 +664,7 @@ impl ProtoverVote {
                     all_count.entry(protocol.clone()).or_insert(HashMap::new());
 
                 for version in versions.clone().expand() {
-                    let counter: &mut usize =
-                        supported_vers.entry(version).or_insert(0);
+                    let counter: &mut usize = supported_vers.entry(version).or_insert(0);
                     *counter += 1;
                 }
             }
@@ -708,16 +743,22 @@ pub(crate) fn compute_for_old_tor_cstr(version: &str) -> &'static CStr {
         return empty;
     }
     if c_tor_version_as_new_as(version, "0.2.9.1-alpha") {
-        return cstr!("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1-2 \
-                      Link=1-4 LinkAuth=1 Microdesc=1-2 Relay=1-2");
+        return cstr!(
+            "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1-2 \
+             Link=1-4 LinkAuth=1 Microdesc=1-2 Relay=1-2"
+        );
     }
     if c_tor_version_as_new_as(version, "0.2.7.5") {
-        return cstr!("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 \
-                      Link=1-4 LinkAuth=1 Microdesc=1-2 Relay=1-2");
+        return cstr!(
+            "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 \
+             Link=1-4 LinkAuth=1 Microdesc=1-2 Relay=1-2"
+        );
     }
     if c_tor_version_as_new_as(version, "0.2.4.19") {
-        return cstr!("Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 \
-                      Link=1-4 LinkAuth=1 Microdesc=1 Relay=1-2");
+        return cstr!(
+            "Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 \
+             Link=1-4 LinkAuth=1 Microdesc=1 Relay=1-2"
+        );
     }
     empty
 }
@@ -752,7 +793,9 @@ pub(crate) fn compute_for_old_tor_cstr(version: &str) -> &'static CStr {
 pub fn compute_for_old_tor(version: &str) -> Result<&'static str, ProtoverError> {
     // .to_str() fails with a Utf8Error if it couldn't validate the
     // utf-8, so convert that here into an Unparseable ProtoverError.
-    compute_for_old_tor_cstr(version).to_str().or(Err(ProtoverError::Unparseable))
+    compute_for_old_tor_cstr(version)
+        .to_str()
+        .or(Err(ProtoverError::Unparseable))
 }
 
 #[cfg(test)]
@@ -762,20 +805,43 @@ mod test {
 
     use super::*;
 
+    macro_rules! parse_proto {
+        ($e:expr) => {{
+            let proto: Result<UnknownProtocol, _> = $e.parse();
+            let proto2 = UnknownProtocol::from_str_any_len($e);
+            assert_eq!(proto, proto2);
+            proto
+        }};
+    }
+
+    #[test]
+    fn test_protocol_from_str() {
+        assert!(parse_proto!("Cons").is_ok());
+        assert!(parse_proto!("123").is_ok());
+        assert!(parse_proto!("1-2-3").is_ok());
+
+        let err = Err(ProtoverError::InvalidProtocol);
+        assert_eq!(err, parse_proto!("a_b_c"));
+        assert_eq!(err, parse_proto!("a b"));
+        assert_eq!(err, parse_proto!("a,"));
+        assert_eq!(err, parse_proto!("b."));
+        assert_eq!(err, parse_proto!("é"));
+    }
+
     macro_rules! assert_protoentry_is_parseable {
-        ($e:expr) => (
+        ($e:expr) => {
             let protoentry: Result<ProtoEntry, ProtoverError> = $e.parse();
 
             assert!(protoentry.is_ok(), format!("{:?}", protoentry.err()));
-        )
+        };
     }
 
     macro_rules! assert_protoentry_is_unparseable {
-        ($e:expr) => (
+        ($e:expr) => {
             let protoentry: Result<ProtoEntry, ProtoverError> = $e.parse();
 
             assert!(protoentry.is_err());
-        )
+        };
     }
 
     #[test]
@@ -852,33 +918,54 @@ mod test {
 
     #[test]
     fn test_protoentry_all_supported_unsupported_low_version() {
-        let protocols: UnvalidatedProtoEntry = "Cons=0-1".parse().unwrap();
+        let protocols: UnvalidatedProtoEntry = "HSIntro=2-3".parse().unwrap();
         let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
         assert_eq!(true, unsupported.is_some());
-        assert_eq!("Cons=0", &unsupported.unwrap().to_string());
+        assert_eq!("HSIntro=2", &unsupported.unwrap().to_string());
     }
 
     #[test]
     fn test_contract_protocol_list() {
         let mut versions = "";
-        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
+        assert_eq!(
+            String::from(versions),
+            ProtoSet::from_str(&versions).unwrap().to_string()
+        );
 
         versions = "1";
-        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
+        assert_eq!(
+            String::from(versions),
+            ProtoSet::from_str(&versions).unwrap().to_string()
+        );
 
         versions = "1-2";
-        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
+        assert_eq!(
+            String::from(versions),
+            ProtoSet::from_str(&versions).unwrap().to_string()
+        );
 
         versions = "1,3";
-        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
+        assert_eq!(
+            String::from(versions),
+            ProtoSet::from_str(&versions).unwrap().to_string()
+        );
 
         versions = "1-4";
-        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
+        assert_eq!(
+            String::from(versions),
+            ProtoSet::from_str(&versions).unwrap().to_string()
+        );
 
         versions = "1,3,5-7";
-        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
+        assert_eq!(
+            String::from(versions),
+            ProtoSet::from_str(&versions).unwrap().to_string()
+        );
 
         versions = "1-3,500";
-        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
+        assert_eq!(
+            String::from(versions),
+            ProtoSet::from_str(&versions).unwrap().to_string()
+        );
     }
 }

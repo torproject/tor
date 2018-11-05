@@ -26,8 +26,10 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
 #include "lib/container/map.h"
+#include "lib/container/buffers.h"
 #include "lib/container/smartlist.h"
-#include "lib/crypt_ops/crypto.h"
+#include "lib/crypt_ops/crypto_cipher.h"
+#include "lib/crypt_ops/crypto_rsa.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/defs/dh_sizes.h"
 #include "lib/encoding/binascii.h"
@@ -39,6 +41,7 @@
 #include "lib/fs/mmap.h"
 #include "lib/fs/path.h"
 #include "lib/fs/userdb.h"
+#include "lib/geoip/country.h"
 #include "lib/intmath/addsub.h"
 #include "lib/intmath/bits.h"
 #include "lib/intmath/cmp.h"
@@ -99,10 +102,6 @@ struct curve25519_public_key_t;
 /* On Irix, stdlib.h defines a cell_t type, so we need to make sure
  * that our stuff always calls cell_t something different. */
 #define cell_t tor_cell_t
-#endif
-
-#ifdef ENABLE_TOR2WEB_MODE
-#define NON_ANONYMOUS_MODE_ENABLED 1
 #endif
 
 /** Helper macro: Given a pointer to to.base_, of type from*, return &to. */
@@ -480,6 +479,18 @@ typedef enum {
   CELL_DIRECTION_OUT=2, /**< The cell is moving away from the origin. */
 } cell_direction_t;
 
+/**
+ * An enum to allow us to specify which channel in a circuit
+ * we're interested in.
+ *
+ * This is needed because our data structures and other fields
+ * for channel delivery are disassociated from the channel.
+ */
+typedef enum {
+  CIRCUIT_N_CHAN = 0,
+  CIRCUIT_P_CHAN = 1
+} circuit_channel_direction_t;
+
 /** Initial value for both sides of a circuit transmission window when the
  * circuit is initialized.  Measured in cells. */
 #define CIRCWINDOW_START 1000
@@ -787,9 +798,6 @@ typedef struct download_status_t download_status_t;
 #define ROUTER_ANNOTATION_BUF_LEN 256
 
 typedef struct signed_descriptor_t signed_descriptor_t;
-
-/** A signed integer representing a country code. */
-typedef int16_t country_t;
 
 /** Flags used to summarize the declared protocol versions of a relay,
  * so we don't need to parse them again and again. */

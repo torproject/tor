@@ -55,6 +55,7 @@
 
 #include "core/or/or.h"
 #include "core/or/channel.h"
+#include "core/or/channeltls.h"
 #include "feature/client/circpathbias.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
@@ -68,21 +69,23 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/crypt_ops/crypto_dh.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
 #include "feature/client/entrynodes.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
-#include "core/crypto/onion.h"
+#include "feature/relay/onion_queue.h"
+#include "core/crypto/onion_crypto.h"
 #include "core/crypto/onion_fast.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
 #include "core/crypto/relay_crypto.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
+#include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
@@ -99,6 +102,7 @@
 #include "core/or/crypt_path_reference_st.h"
 #include "feature/dircommon/dir_connection_st.h"
 #include "core/or/edge_connection_st.h"
+#include "core/or/half_edge_st.h"
 #include "core/or/extend_info_st.h"
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
@@ -1078,6 +1082,14 @@ circuit_free_(circuit_t *circ)
 
     circuit_remove_from_origin_circuit_list(ocirc);
 
+    if (ocirc->half_streams) {
+      SMARTLIST_FOREACH_BEGIN(ocirc->half_streams, half_edge_t *,
+                              half_conn) {
+        half_edge_free(half_conn);
+      } SMARTLIST_FOREACH_END(half_conn);
+      smartlist_free(ocirc->half_streams);
+    }
+
     if (ocirc->build_state) {
         extend_info_free(ocirc->build_state->chosen_exit);
         circuit_free_cpath_node(ocirc->build_state->pending_final_cpath);
@@ -1632,15 +1644,24 @@ circuit_get_ready_rend_circ_by_rend_data(const rend_data_t *rend_data)
   return NULL;
 }
 
-/** Return the first service introduction circuit originating from the global
- * circuit list after <b>start</b> or at the start of the list if <b>start</b>
- * is NULL. Return NULL if no circuit is found.
+/** Return the first introduction circuit originating from the global circuit
+ * list after <b>start</b> or at the start of the list if <b>start</b> is
+ * NULL. Return NULL if no circuit is found.
  *
- * A service introduction point circuit has a purpose of either
- * CIRCUIT_PURPOSE_S_ESTABLISH_INTRO or CIRCUIT_PURPOSE_S_INTRO. This does not
- * return a circuit marked for close and its state must be open. */
+ * If <b>want_client_circ</b> is true, then we are looking for client-side
+ * introduction circuits: A client introduction point circuit has a purpose of
+ * either CIRCUIT_PURPOSE_C_INTRODUCING, CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT
+ * or CIRCUIT_PURPOSE_C_INTRODUCE_ACKED. This does not return a circuit marked
+ * for close, but it returns circuits regardless of their circuit state.
+ *
+ * If <b>want_client_circ</b> is false, then we are looking for service-side
+ * introduction circuits: A service introduction point circuit has a purpose of
+ * either CIRCUIT_PURPOSE_S_ESTABLISH_INTRO or CIRCUIT_PURPOSE_S_INTRO. This
+ * does not return circuits marked for close, or in any state other than open.
+ */
 origin_circuit_t *
-circuit_get_next_service_intro_circ(origin_circuit_t *start)
+circuit_get_next_intro_circ(const origin_circuit_t *start,
+                            bool want_client_circ)
 {
   int idx = 0;
   smartlist_t *lst = circuit_get_global_list();
@@ -1652,13 +1673,29 @@ circuit_get_next_service_intro_circ(origin_circuit_t *start)
   for ( ; idx < smartlist_len(lst); ++idx) {
     circuit_t *circ = smartlist_get(lst, idx);
 
-    /* Ignore a marked for close circuit or purpose not matching a service
-     * intro point or if the state is not open. */
-    if (circ->marked_for_close || circ->state != CIRCUIT_STATE_OPEN ||
-        (circ->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO &&
-         circ->purpose != CIRCUIT_PURPOSE_S_INTRO)) {
+    /* Ignore a marked for close circuit or if the state is not open. */
+    if (circ->marked_for_close) {
       continue;
     }
+
+    /* Depending on whether we are looking for client or service circs, skip
+     * circuits with other purposes. */
+    if (want_client_circ) {
+      if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCING &&
+          circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT &&
+          circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACKED) {
+        continue;
+      }
+    } else { /* we are looking for service-side circs */
+      if (circ->state != CIRCUIT_STATE_OPEN) {
+        continue;
+      }
+      if (circ->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO &&
+          circ->purpose != CIRCUIT_PURPOSE_S_INTRO) {
+        continue;
+      }
+    }
+
     /* The purposes we are looking for are only for origin circuits so the
      * following is valid. */
     return TO_ORIGIN_CIRCUIT(circ);
@@ -2023,6 +2060,61 @@ circuit_mark_all_dirty_circs_as_unusable(void)
   SMARTLIST_FOREACH_END(circ);
 }
 
+/**
+ * Report any queued cells on or_circuits as written in our bandwidth
+ * totals, for the specified channel direction.
+ *
+ * When we close a circuit or clear its cell queues, we've read
+ * data and recorded those bytes in our read statistics, but we're
+ * not going to write it. This discrepancy can be used by an adversary
+ * to infer information from our public relay statistics and perform
+ * attacks such as guard discovery.
+ *
+ * This function is in the critical path of circuit_mark_for_close().
+ * It must be (and is) O(1)!
+ *
+ * See https://trac.torproject.org/projects/tor/ticket/23512.
+ */
+void
+circuit_synchronize_written_or_bandwidth(const circuit_t *c,
+                                         circuit_channel_direction_t dir)
+{
+  uint64_t cells;
+  uint64_t cell_size;
+  uint64_t written_sync;
+  const channel_t *chan = NULL;
+  const or_circuit_t *or_circ;
+
+  if (!CIRCUIT_IS_ORCIRC(c))
+    return;
+
+  or_circ = CONST_TO_OR_CIRCUIT(c);
+
+  if (dir == CIRCUIT_N_CHAN) {
+    chan = c->n_chan;
+    cells = c->n_chan_cells.n;
+  } else {
+    chan = or_circ->p_chan;
+    cells = or_circ->p_chan_cells.n;
+  }
+
+  /* If we still know the chan, determine real cell size. Otherwise,
+   * assume it's a wide circid channel */
+  if (chan)
+    cell_size = get_cell_network_size(chan->wide_circ_ids);
+  else
+    cell_size = CELL_MAX_NETWORK_SIZE;
+
+  /* The missing written bytes are the cell counts times their cell
+   * size plus TLS per cell overhead */
+  written_sync = cells*(cell_size+TLS_PER_CELL_OVERHEAD);
+
+  /* Report the missing bytes as written, to avoid asymmetry.
+   * We must use time() for consistency with rephist, even though on
+   * some very old rare platforms, approx_time() may be faster. */
+  rep_hist_note_bytes_written(written_sync, time(NULL));
+}
+
 /** Mark <b>circ</b> to be closed next time we call
  * circuit_close_all_marked(). Do any cleanup needed:
  *   - If state is onionskin_pending, remove circ from the onion_pending
@@ -2073,6 +2165,9 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
     /* We don't send reasons when closing circuits at the origin. */
     reason = END_CIRC_REASON_NONE;
   }
+
+  circuit_synchronize_written_or_bandwidth(circ, CIRCUIT_N_CHAN);
+  circuit_synchronize_written_or_bandwidth(circ, CIRCUIT_P_CHAN);
 
   if (reason & END_CIRC_REASON_FLAG_REMOTE)
     reason &= ~END_CIRC_REASON_FLAG_REMOTE;
@@ -2353,6 +2448,20 @@ n_cells_in_circ_queues(const circuit_t *c)
   return n;
 }
 
+/** Return the number of bytes allocated for <b>c</b>'s half-open streams. */
+static size_t
+circuit_alloc_in_half_streams(const circuit_t *c)
+{
+  if (! CIRCUIT_IS_ORIGIN(c)) {
+    return 0;
+  }
+  const origin_circuit_t *ocirc = CONST_TO_ORIGIN_CIRCUIT(c);
+  if (ocirc->half_streams)
+    return smartlist_len(ocirc->half_streams) * sizeof(half_edge_t);
+  else
+    return 0;
+}
+
 /**
  * Return the age of the oldest cell queued on <b>c</b>, in timestamp units.
  * Return 0 if there are no cells queued on c.  Requires that <b>now</b> be
@@ -2587,6 +2696,7 @@ circuits_handle_oom(size_t current_allocation)
 
     /* Now, kill the circuit. */
     n = n_cells_in_circ_queues(circ);
+    const size_t half_stream_alloc = circuit_alloc_in_half_streams(circ);
     if (! circ->marked_for_close) {
       circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
     }
@@ -2596,6 +2706,7 @@ circuits_handle_oom(size_t current_allocation)
     ++n_circuits_killed;
 
     mem_recovered += n * packed_cell_mem_cost();
+    mem_recovered += half_stream_alloc;
     mem_recovered += freed;
 
     if (mem_recovered >= mem_to_recover)

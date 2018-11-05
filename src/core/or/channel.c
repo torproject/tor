@@ -58,28 +58,29 @@
 #define CHANNEL_PRIVATE_
 
 #include "core/or/or.h"
+#include "app/config/config.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/channel.h"
-#include "core/or/channeltls.h"
 #include "core/or/channelpadding.h"
+#include "core/or/channeltls.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
-#include "core/or/circuitstats.h"
-#include "app/config/config.h"
-#include "core/or/connection_or.h" /* For var_cell_free() */
 #include "core/or/circuitmux.h"
-#include "feature/client/entrynodes.h"
-#include "feature/stats/geoip.h"
-#include "core/mainloop/main.h"
-#include "feature/nodelist/nodelist.h"
+#include "core/or/circuitstats.h"
+#include "core/or/connection_or.h" /* For var_cell_free() */
+#include "core/or/dos.h"
 #include "core/or/relay.h"
-#include "feature/stats/rephist.h"
-#include "feature/relay/router.h"
-#include "feature/nodelist/routerlist.h"
 #include "core/or/scheduler.h"
-#include "lib/time/compat_time.h"
+#include "feature/client/entrynodes.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/relay/router.h"
 #include "feature/rend/rendservice.h"
+#include "feature/stats/geoip_stats.h"
+#include "feature/stats/rephist.h"
 #include "lib/evloop/timers.h"
+#include "lib/time/compat_time.h"
 
 #include "core/or/cell_queue_st.h"
 
@@ -1882,13 +1883,6 @@ channel_do_open_actions(channel_t *chan)
     if (!get_options()->ConnectionPadding) {
       /* Disable if torrc disabled */
       channelpadding_disable_padding_on_channel(chan);
-    } else if (get_options()->Tor2webMode &&
-            !networkstatus_get_param(NULL,
-                                     CHANNELPADDING_TOR2WEB_PARAM,
-                                     CHANNELPADDING_TOR2WEB_DEFAULT, 0, 1)) {
-      /* Disable if we're using tor2web and the consensus disabled padding
-       * for tor2web */
-      channelpadding_disable_padding_on_channel(chan);
     } else if (rend_service_allow_non_anonymous_connection(get_options()) &&
                !networkstatus_get_param(NULL,
                                         CHANNELPADDING_SOS_PARAM,
@@ -3430,6 +3424,8 @@ channel_rsa_id_group_set_badness(struct channel_list_s *lst, int force)
   /* it would be more efficient to do a slice, but this case is rare */
   smartlist_t *or_conns = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(channels, channel_t *, channel) {
+    tor_assert(channel); // Suppresses some compiler warnings.
+
     if (!common_ed25519_identity)
       common_ed25519_identity = &channel->ed25519_identity;
 

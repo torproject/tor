@@ -7,6 +7,10 @@
 #ifndef TOR_COMPAT_OPENSSL_H
 #define TOR_COMPAT_OPENSSL_H
 
+#include "orconfig.h"
+
+#ifdef ENABLE_OPENSSL
+
 #include <openssl/opensslv.h>
 #include "lib/crypt_ops/crypto_openssl_mgt.h"
 
@@ -46,6 +50,8 @@
   ((st) == TLS_ST_SW_SRVR_HELLO)
 #define CONST_IF_OPENSSL_1_1_API const
 #endif /* !defined(OPENSSL_1_1_API) */
+
+#endif /* defined(ENABLE_OPENSSL) */
 
 #endif /* !defined(TOR_COMPAT_OPENSSL_H) */
 

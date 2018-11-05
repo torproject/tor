@@ -14,6 +14,8 @@
 
 #include "lib/testsupport/testsupport.h"
 
+#include "feature/hs/hs_service.h"
+
 edge_connection_t *TO_EDGE_CONN(connection_t *);
 entry_connection_t *TO_ENTRY_CONN(connection_t *);
 entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *);
@@ -174,6 +176,23 @@ void connection_ap_warn_and_unmark_if_pending_circ(
                                              entry_connection_t *entry_conn,
                                              const char *where);
 
+int connection_half_edge_is_valid_data(const smartlist_t *half_conns,
+                                       streamid_t stream_id);
+int connection_half_edge_is_valid_sendme(const smartlist_t *half_conns,
+                                         streamid_t stream_id);
+int connection_half_edge_is_valid_connected(const smartlist_t *half_conns,
+                                            streamid_t stream_id);
+int connection_half_edge_is_valid_end(smartlist_t *half_conns,
+                                      streamid_t stream_id);
+int connection_half_edge_is_valid_resolved(smartlist_t *half_conns,
+                                           streamid_t stream_id);
+
+size_t half_streams_get_total_allocation(void);
+struct half_edge_t;
+void half_edge_free_(struct half_edge_t *he);
+#define half_edge_free(he) \
+  FREE_AND_NULL(half_edge_t, half_edge_free_, (he))
+
 /** @name Begin-cell flags
  *
  * These flags are used in RELAY_BEGIN cells to change the default behavior
@@ -243,6 +262,15 @@ STATIC void connection_ap_handshake_rewrite(entry_connection_t *conn,
                                             rewrite_result_t *out);
 
 STATIC int connection_ap_process_http_connect(entry_connection_t *conn);
+STATIC void export_hs_client_circuit_id(edge_connection_t *edge_conn,
+                            hs_circuit_id_protocol_t protocol);
+
+struct half_edge_t;
+STATIC void connection_half_edge_add(const edge_connection_t *conn,
+                                     origin_circuit_t *circ);
+STATIC struct half_edge_t *connection_half_edge_find_stream_id(
+                                     const smartlist_t *half_conns,
+                                     streamid_t stream_id);
 #endif /* defined(CONNECTION_EDGE_PRIVATE) */
 
 #endif /* !defined(TOR_CONNECTION_EDGE_H) */

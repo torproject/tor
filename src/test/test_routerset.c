@@ -4,11 +4,11 @@
 #define ROUTERSET_PRIVATE
 
 #include "core/or/or.h"
-#include "feature/stats/geoip.h"
-#include "feature/nodelist/routerset.h"
-#include "feature/nodelist/routerparse.h"
 #include "core/or/policies.h"
+#include "feature/dirparse/policy_parse.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerset.h"
+#include "lib/geoip/geoip.h"
 
 #include "core/or/addr_policy_st.h"
 #include "core/or/extend_info_st.h"
@@ -1496,6 +1496,7 @@ NS(test_main)(void *arg)
   int r;
   (void)arg;
 
+  memset(&NS(mock_node), 0, sizeof(NS(mock_node)));
   NS(mock_node).ri = NULL;
   NS(mock_node).rs = NULL;
 
@@ -1529,6 +1530,7 @@ NS(test_main)(void *arg)
 
   strncpy(rs.nickname, nickname, sizeof(rs.nickname) - 1);
   rs.nickname[sizeof(rs.nickname) - 1] = '\0';
+  memset(&NS(mock_node), 0, sizeof(NS(mock_node)));
   NS(mock_node).ri = NULL;
   NS(mock_node).rs = &rs;
 
@@ -1560,6 +1562,7 @@ NS(test_main)(void *arg)
   strmap_set_lc(set->names, nickname, (void *)1);
 
   ri.nickname = (char *)nickname;
+  memset(&mock_node, 0, sizeof(mock_node));
   mock_node.ri = &ri;
   mock_node.rs = NULL;
 

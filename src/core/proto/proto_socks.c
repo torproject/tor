@@ -353,6 +353,7 @@ process_socks5_methods_request(socks_request_t *req, int have_user_pass,
 {
   socks_result_t res = SOCKS_RESULT_DONE;
   socks5_server_method_t *trunnel_resp = socks5_server_method_new();
+  tor_assert(trunnel_resp);
 
   socks5_server_method_set_version(trunnel_resp, SOCKS_VER_5);
 
@@ -478,6 +479,7 @@ process_socks5_userpass_auth(socks_request_t *req)
   socks_result_t res = SOCKS_RESULT_DONE;
   socks5_server_userpass_auth_t *trunnel_resp =
     socks5_server_userpass_auth_new();
+  tor_assert(trunnel_resp);
 
   if (req->socks_version != SOCKS_VER_5) {
     res = SOCKS_RESULT_INVALID;
@@ -742,7 +744,7 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
       res = SOCKS_RESULT_MORE_EXPECTED;
       goto end;
     } else if (req->socks_version != SOCKS_VER_5) {
-      int have_user_pass, have_no_auth;
+      int have_user_pass=0, have_no_auth=0;
       res = parse_socks5_methods_request(raw_data, req, datalen,
                                          &have_user_pass,
                                          &have_no_auth,
@@ -869,6 +871,7 @@ socks_request_set_socks5_error(socks_request_t *req,
                   socks5_reply_status_t reason)
 {
   socks5_server_reply_t *trunnel_resp = socks5_server_reply_new();
+  tor_assert(trunnel_resp);
 
   socks5_server_reply_set_version(trunnel_resp, SOCKS_VER_5);
   socks5_server_reply_set_reply(trunnel_resp, reason);

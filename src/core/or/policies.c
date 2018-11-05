@@ -20,14 +20,14 @@
 #include "core/or/or.h"
 #include "feature/client/bridges.h"
 #include "app/config/config.h"
-#include "feature/dircache/dirserv.h"
+#include "core/or/policies.h"
+#include "feature/dirparse/policy_parse.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
-#include "core/or/policies.h"
 #include "feature/relay/router.h"
-#include "feature/nodelist/routerparse.h"
-#include "feature/stats/geoip.h"
+#include "feature/relay/routermode.h"
+#include "lib/geoip/geoip.h"
 #include "ht.h"
 #include "lib/encoding/confline.h"
 #include "trunnel/ed25519_cert.h"
@@ -39,6 +39,9 @@
 #include "core/or/port_cfg_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
+
+/** Maximum length of an exit policy summary. */
+#define MAX_EXITPOLICY_SUMMARY_LEN 1000
 
 /** Policy that addresses for incoming SOCKS connections must match. */
 static smartlist_t *socks_policy = NULL;
@@ -316,6 +319,14 @@ parse_reachable_addresses(void)
                    "ReachableDirAddresses reject all IPv6 addresses. "
                    "Tor will not connect using IPv6.");
     }
+  }
+
+  /* Append a reject *:* to reachable_(or|dir)_addr_policy */
+  if (!ret && (options->ReachableDirAddresses ||
+               options->ReachableORAddresses ||
+               options->ReachableAddresses)) {
+    append_exit_policy_string(&reachable_or_addr_policy, "reject *:*");
+    append_exit_policy_string(&reachable_dir_addr_policy, "reject *:*");
   }
 
   return ret;
@@ -1214,31 +1225,16 @@ validate_addr_policies(const or_options_t *options, char **msg)
     REJECT("Error in ExitPolicy entry.");
   }
 
-  static int warned_about_exitrelay = 0;
+  static int warned_about_nonexit = 0;
 
-  const int exitrelay_setting_is_auto = options->ExitRelay == -1;
-  const int policy_accepts_something =
-    ! (policy_is_reject_star(addr_policy, AF_INET, 1) &&
-       policy_is_reject_star(addr_policy, AF_INET6, 1));
-
-  if (server_mode(options) &&
-      ! warned_about_exitrelay &&
-      exitrelay_setting_is_auto &&
-      policy_accepts_something) {
-      /* Policy accepts something */
-    warned_about_exitrelay = 1;
-    log_warn(LD_CONFIG,
-             "Tor is running as an exit relay%s. If you did not want this "
-             "behavior, please set the ExitRelay option to 0. If you do "
-             "want to run an exit Relay, please set the ExitRelay option "
-             "to 1 to disable this warning, and for forward compatibility.",
-             options->ExitPolicy == NULL ?
-                 " with the default exit policy" : "");
-    if (options->ExitPolicy == NULL && options->ReducedExitPolicy == 0) {
-      log_warn(LD_CONFIG,
-               "In a future version of Tor, ExitRelay 0 may become the "
-               "default when no ExitPolicy is given.");
-    }
+  if (public_server_mode(options) &&
+      !warned_about_nonexit && options->ExitPolicy == NULL &&
+      options->ExitRelay == -1 && options->ReducedExitPolicy == 0) {
+    warned_about_nonexit = 1;
+    log_notice(LD_CONFIG, "By default, Tor does not run as an exit relay. "
+               "If you want to be an exit relay, "
+               "set ExitRelay to 1. To suppress this message in the future, "
+               "set ExitRelay to 0.");
   }
 
   /* The rest of these calls *append* to addr_policy. So don't actually
@@ -2176,8 +2172,8 @@ policies_copy_outbound_addresses_to_smartlist(smartlist_t *addr_list,
  * If <b>or_options->BridgeRelay</b> is false, append entries of default
  * Tor exit policy into <b>result</b> smartlist.
  *
- * If or_options->ExitRelay is false, then make our exit policy into
- * "reject *:*" regardless.
+ * If or_options->ExitRelay is false, or is auto without specifying an exit
+ * policy, then make our exit policy into "reject *:*" regardless.
  */
 int
 policies_parse_exit_policy_from_options(const or_options_t *or_options,
@@ -2189,8 +2185,10 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
   smartlist_t *configured_addresses = NULL;
   int rv = 0;
 
-  /* Short-circuit for non-exit relays */
-  if (or_options->ExitRelay == 0) {
+  /* Short-circuit for non-exit relays, or for relays where we didn't specify
+   * ExitPolicy or ReducedExitPolicy and ExitRelay is auto. */
+  if (or_options->ExitRelay == 0 || (or_options->ExitPolicy == NULL &&
+      or_options->ExitRelay == -1 && or_options->ReducedExitPolicy == 0)) {
     append_exit_policy_string(result, "reject *4:*");
     append_exit_policy_string(result, "reject *6:*");
     return 0;

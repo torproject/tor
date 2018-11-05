@@ -74,36 +74,31 @@
  * (The "rephist" name originally stood for "reputation and history". )
  **/
 
+#define REPHIST_PRIVATE
 #include "core/or/or.h"
-#include "core/or/circuitlist.h"
-#include "core/or/circuituse.h"
 #include "app/config/config.h"
-#include "lib/crypt_ops/crypto_rand.h"
+#include "app/config/statefile.h"
+#include "core/or/circuitlist.h"
+#include "core/or/connection_or.h"
+#include "feature/dirauth/authmode.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/relay/routermode.h"
+#include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
-#include "feature/relay/router.h"
-#include "feature/nodelist/routerlist.h"
-#include "ht.h"
-#include "core/or/channelpadding.h"
-#include "core/or/connection_or.h"
-#include "app/config/statefile.h"
+#include "lib/container/order.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/math/laplace.h"
 
 #include "feature/nodelist/networkstatus_st.h"
 #include "core/or/or_circuit_st.h"
 #include "app/config/or_state_st.h"
-
-#include "lib/container/bloomfilt.h"
-#include "lib/container/order.h"
-#include "lib/math/fp.h"
-#include "lib/math/laplace.h"
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
 
 static void bw_arrays_init(void);
-static void predicted_ports_alloc(void);
 
 /** Total number of bytes currently allocated in fields used by rephist.c. */
 uint64_t rephist_total_alloc=0;
@@ -238,7 +233,6 @@ rep_hist_init(void)
 {
   history_map = digestmap_new();
   bw_arrays_init();
-  predicted_ports_alloc();
 }
 
 /** We have just decided that this router with identity digest <b>id</b> is
@@ -992,7 +986,7 @@ rep_hist_load_mtbf_data(time_t now)
 /** Structure to track bandwidth use, and remember the maxima for a given
  * time period.
  */
-typedef struct bw_array_t {
+struct bw_array_t {
   /** Observation array: Total number of bytes transferred in each of the last
    * NUM_SECS_ROLLING_MEASURE seconds. This is used as a circular array. */
   uint64_t obs[NUM_SECS_ROLLING_MEASURE];
@@ -1019,10 +1013,10 @@ typedef struct bw_array_t {
   /** Circular array of the total bandwidth usage for the last NUM_TOTALS
    * periods */
   uint64_t totals[NUM_TOTALS];
-} bw_array_t;
+};
 
 /** Shift the current period of b forward by one. */
-static void
+STATIC void
 commit_max(bw_array_t *b)
 {
   /* Store total from current period. */
@@ -1042,7 +1036,7 @@ commit_max(bw_array_t *b)
 }
 
 /** Shift the current observation time of <b>b</b> forward by one second. */
-static inline void
+STATIC void
 advance_obs(bw_array_t *b)
 {
   int nextidx;
@@ -1120,7 +1114,7 @@ bw_array_free_(bw_array_t *b)
 /** Recent history of bandwidth observations for read operations. */
 static bw_array_t *read_array = NULL;
 /** Recent history of bandwidth observations for write operations. */
-static bw_array_t *write_array = NULL;
+STATIC bw_array_t *write_array = NULL;
 /** Recent history of bandwidth observations for read operations for the
     directory protocol. */
 static bw_array_t *dir_read_array = NULL;
@@ -1152,7 +1146,7 @@ bw_arrays_init(void)
  * earlier than the latest <b>when</b> you've heard of.
  */
 void
-rep_hist_note_bytes_written(size_t num_bytes, time_t when)
+rep_hist_note_bytes_written(uint64_t num_bytes, time_t when)
 {
 /* Maybe a circular array for recent seconds, and step to a new point
  * every time a new second shows up. Or simpler is to just to have
@@ -1169,7 +1163,7 @@ rep_hist_note_bytes_written(size_t num_bytes, time_t when)
  * (like rep_hist_note_bytes_written() above)
  */
 void
-rep_hist_note_bytes_read(size_t num_bytes, time_t when)
+rep_hist_note_bytes_read(uint64_t num_bytes, time_t when)
 {
 /* if we're smart, we can make this func and the one above share code */
   add_obs(read_array, when, num_bytes);
@@ -1179,7 +1173,7 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
  * <b>when</b>. (like rep_hist_note_bytes_written() above)
  */
 void
-rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when)
+rep_hist_note_dir_bytes_written(uint64_t num_bytes, time_t when)
 {
   add_obs(dir_write_array, when, num_bytes);
 }
@@ -1188,7 +1182,7 @@ rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when)
  * <b>when</b>. (like rep_hist_note_bytes_written() above)
  */
 void
-rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when)
+rep_hist_note_dir_bytes_read(uint64_t num_bytes, time_t when)
 {
   add_obs(dir_read_array, when, num_bytes);
 }
@@ -1197,7 +1191,7 @@ rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when)
  * most bandwidth used in any NUM_SECS_ROLLING_MEASURE period for the last
  * NUM_SECS_BW_SUM_IS_VALID seconds.)
  */
-static uint64_t
+STATIC uint64_t
 find_largest_max(bw_array_t *b)
 {
   int i;
@@ -1216,8 +1210,8 @@ find_largest_max(bw_array_t *b)
  *
  * Return the smaller of these sums, divided by NUM_SECS_ROLLING_MEASURE.
  */
-int
-rep_hist_bandwidth_assess(void)
+MOCK_IMPL(int,
+rep_hist_bandwidth_assess,(void))
 {
   uint64_t w,r;
   r = find_largest_max(read_array);
@@ -1531,286 +1525,6 @@ rep_hist_load_state(or_state_t *state, char **err)
     return -1;
   }
   return 0;
-}
-
-/*********************************************************************/
-
-/** A single predicted port: used to remember which ports we've made
- * connections to, so that we can try to keep making circuits that can handle
- * those ports. */
-typedef struct predicted_port_t {
-  /** The port we connected to */
-  uint16_t port;
-  /** The time at which we last used it */
-  time_t time;
-} predicted_port_t;
-
-/** A list of port numbers that have been used recently. */
-static smartlist_t *predicted_ports_list=NULL;
-/** How long do we keep predicting circuits? */
-static int prediction_timeout=0;
-/** When was the last time we added a prediction entry (HS or port) */
-static time_t last_prediction_add_time=0;
-
-/**
- * How much time left until we stop predicting circuits?
- */
-int
-predicted_ports_prediction_time_remaining(time_t now)
-{
-  time_t idle_delta;
-
-  /* Protect against overflow of return value. This can happen if the clock
-   * jumps backwards in time. Update the last prediction time (aka last
-   * active time) to prevent it. This update is preferable to using monotonic
-   * time because it prevents clock jumps into the past from simply causing
-   * very long idle timeouts while the monotonic time stands still. */
-  if (last_prediction_add_time > now) {
-    last_prediction_add_time = now;
-    idle_delta = 0;
-  } else {
-    idle_delta = now - last_prediction_add_time;
-  }
-
-  /* Protect against underflow of the return value. This can happen for very
-   * large periods of inactivity/system sleep. */
-  if (idle_delta > prediction_timeout)
-    return 0;
-
-  if (BUG((prediction_timeout - idle_delta) > INT_MAX)) {
-    return INT_MAX;
-  }
-
-  return (int)(prediction_timeout - idle_delta);
-}
-
-/** We just got an application request for a connection with
- * port <b>port</b>. Remember it for the future, so we can keep
- * some circuits open that will exit to this port.
- */
-static void
-add_predicted_port(time_t now, uint16_t port)
-{
-  predicted_port_t *pp = tor_malloc(sizeof(predicted_port_t));
-
-  //  If the list is empty, re-randomize predicted ports lifetime
-  if (!any_predicted_circuits(now)) {
-    prediction_timeout = channelpadding_get_circuits_available_timeout();
-  }
-
-  last_prediction_add_time = now;
-
-  log_info(LD_CIRC,
-          "New port prediction added. Will continue predictive circ building "
-          "for %d more seconds.",
-          predicted_ports_prediction_time_remaining(now));
-
-  pp->port = port;
-  pp->time = now;
-  rephist_total_alloc += sizeof(*pp);
-  smartlist_add(predicted_ports_list, pp);
-}
-
-/**
- * Allocate whatever memory and structs are needed for predicting
- * which ports will be used. Also seed it with port 80, so we'll build
- * circuits on start-up.
- */
-static void
-predicted_ports_alloc(void)
-{
-  predicted_ports_list = smartlist_new();
-}
-
-void
-predicted_ports_init(void)
-{
-  add_predicted_port(time(NULL), 443); // Add a port to get us started
-}
-
-/** Free whatever memory is needed for predicting which ports will
- * be used.
- */
-static void
-predicted_ports_free_all(void)
-{
-  rephist_total_alloc -=
-    smartlist_len(predicted_ports_list)*sizeof(predicted_port_t);
-  SMARTLIST_FOREACH(predicted_ports_list, predicted_port_t *,
-                    pp, tor_free(pp));
-  smartlist_free(predicted_ports_list);
-}
-
-/** Remember that <b>port</b> has been asked for as of time <b>now</b>.
- * This is used for predicting what sorts of streams we'll make in the
- * future and making exit circuits to anticipate that.
- */
-void
-rep_hist_note_used_port(time_t now, uint16_t port)
-{
-  tor_assert(predicted_ports_list);
-
-  if (!port) /* record nothing */
-    return;
-
-  SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
-    if (pp->port == port) {
-      pp->time = now;
-
-      last_prediction_add_time = now;
-      log_info(LD_CIRC,
-               "New port prediction added. Will continue predictive circ "
-               "building for %d more seconds.",
-               predicted_ports_prediction_time_remaining(now));
-      return;
-    }
-  } SMARTLIST_FOREACH_END(pp);
-  /* it's not there yet; we need to add it */
-  add_predicted_port(now, port);
-}
-
-/** Return a newly allocated pointer to a list of uint16_t * for ports that
- * are likely to be asked for in the near future.
- */
-smartlist_t *
-rep_hist_get_predicted_ports(time_t now)
-{
-  int predicted_circs_relevance_time;
-  smartlist_t *out = smartlist_new();
-  tor_assert(predicted_ports_list);
-
-  predicted_circs_relevance_time = prediction_timeout;
-
-  /* clean out obsolete entries */
-  SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
-    if (pp->time + predicted_circs_relevance_time < now) {
-      log_debug(LD_CIRC, "Expiring predicted port %d", pp->port);
-
-      rephist_total_alloc -= sizeof(predicted_port_t);
-      tor_free(pp);
-      SMARTLIST_DEL_CURRENT(predicted_ports_list, pp);
-    } else {
-      smartlist_add(out, tor_memdup(&pp->port, sizeof(uint16_t)));
-    }
-  } SMARTLIST_FOREACH_END(pp);
-  return out;
-}
-
-/**
- * Take a list of uint16_t *, and remove every port in the list from the
- * current list of predicted ports.
- */
-void
-rep_hist_remove_predicted_ports(const smartlist_t *rmv_ports)
-{
-  /* Let's do this on O(N), not O(N^2). */
-  bitarray_t *remove_ports = bitarray_init_zero(UINT16_MAX);
-  SMARTLIST_FOREACH(rmv_ports, const uint16_t *, p,
-                    bitarray_set(remove_ports, *p));
-  SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
-    if (bitarray_is_set(remove_ports, pp->port)) {
-      tor_free(pp);
-      rephist_total_alloc -= sizeof(*pp);
-      SMARTLIST_DEL_CURRENT(predicted_ports_list, pp);
-    }
-  } SMARTLIST_FOREACH_END(pp);
-  bitarray_free(remove_ports);
-}
-
-/** The user asked us to do a resolve. Rather than keeping track of
- * timings and such of resolves, we fake it for now by treating
- * it the same way as a connection to port 80. This way we will continue
- * to have circuits lying around if the user only uses Tor for resolves.
- */
-void
-rep_hist_note_used_resolve(time_t now)
-{
-  rep_hist_note_used_port(now, 80);
-}
-
-/** The last time at which we needed an internal circ. */
-static time_t predicted_internal_time = 0;
-/** The last time we needed an internal circ with good uptime. */
-static time_t predicted_internal_uptime_time = 0;
-/** The last time we needed an internal circ with good capacity. */
-static time_t predicted_internal_capacity_time = 0;
-
-/** Remember that we used an internal circ at time <b>now</b>. */
-void
-rep_hist_note_used_internal(time_t now, int need_uptime, int need_capacity)
-{
-  // If the list is empty, re-randomize predicted ports lifetime
-  if (!any_predicted_circuits(now)) {
-    prediction_timeout = channelpadding_get_circuits_available_timeout();
-  }
-
-  last_prediction_add_time = now;
-
-  log_info(LD_CIRC,
-          "New port prediction added. Will continue predictive circ building "
-          "for %d more seconds.",
-          predicted_ports_prediction_time_remaining(now));
-
-  predicted_internal_time = now;
-  if (need_uptime)
-    predicted_internal_uptime_time = now;
-  if (need_capacity)
-    predicted_internal_capacity_time = now;
-}
-
-/** Return 1 if we've used an internal circ recently; else return 0. */
-int
-rep_hist_get_predicted_internal(time_t now, int *need_uptime,
-                                int *need_capacity)
-{
-  int predicted_circs_relevance_time;
-
-  predicted_circs_relevance_time = prediction_timeout;
-
-  if (!predicted_internal_time) { /* initialize it */
-    predicted_internal_time = now;
-    predicted_internal_uptime_time = now;
-    predicted_internal_capacity_time = now;
-  }
-  if (predicted_internal_time + predicted_circs_relevance_time < now)
-    return 0; /* too long ago */
-  if (predicted_internal_uptime_time + predicted_circs_relevance_time >= now)
-    *need_uptime = 1;
-  // Always predict that we need capacity.
-  *need_capacity = 1;
-  return 1;
-}
-
-/** Any ports used lately? These are pre-seeded if we just started
- * up or if we're running a hidden service. */
-int
-any_predicted_circuits(time_t now)
-{
-  int predicted_circs_relevance_time;
-  predicted_circs_relevance_time = prediction_timeout;
-
-  return smartlist_len(predicted_ports_list) ||
-         predicted_internal_time + predicted_circs_relevance_time >= now;
-}
-
-/** Return 1 if we have no need for circuits currently, else return 0. */
-int
-rep_hist_circbuilding_dormant(time_t now)
-{
-  const or_options_t *options = get_options();
-
-  if (any_predicted_circuits(now))
-    return 0;
-
-  /* see if we'll still need to build testing circuits */
-  if (server_mode(options) &&
-      (!check_whether_orport_reachable(options) ||
-       !circuit_enough_testing_circs()))
-    return 0;
-  if (!check_whether_dirport_reachable(options))
-    return 0;
-
-  return 1;
 }
 
 /*** Exit port statistics ***/

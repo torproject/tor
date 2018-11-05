@@ -14,15 +14,15 @@
 
 void rep_hist_init(void);
 void rep_hist_dump_stats(time_t now, int severity);
-void rep_hist_note_bytes_read(size_t num_bytes, time_t when);
-void rep_hist_note_bytes_written(size_t num_bytes, time_t when);
+void rep_hist_note_bytes_read(uint64_t num_bytes, time_t when);
+void rep_hist_note_bytes_written(uint64_t num_bytes, time_t when);
 
 void rep_hist_make_router_pessimal(const char *id, time_t when);
 
-void rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when);
-void rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when);
+void rep_hist_note_dir_bytes_read(uint64_t num_bytes, time_t when);
+void rep_hist_note_dir_bytes_written(uint64_t num_bytes, time_t when);
 
-int rep_hist_bandwidth_assess(void);
+MOCK_DECL(int, rep_hist_bandwidth_assess, (void));
 char *rep_hist_get_bandwidth_lines(void);
 void rep_hist_update_state(or_state_t *state);
 int rep_hist_load_state(or_state_t *state, char **err);
@@ -40,20 +40,6 @@ double rep_hist_get_stability(const char *id, time_t when);
 double rep_hist_get_weighted_fractional_uptime(const char *id, time_t when);
 long rep_hist_get_weighted_time_known(const char *id, time_t when);
 int rep_hist_have_measured_enough_stability(void);
-
-void predicted_ports_init(void);
-void rep_hist_note_used_port(time_t now, uint16_t port);
-smartlist_t *rep_hist_get_predicted_ports(time_t now);
-void rep_hist_remove_predicted_ports(const smartlist_t *rmv_ports);
-void rep_hist_note_used_resolve(time_t now);
-void rep_hist_note_used_internal(time_t now, int need_uptime,
-                                 int need_capacity);
-int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
-                                    int *need_capacity);
-
-int any_predicted_circuits(time_t now);
-int rep_hist_circbuilding_dormant(time_t now);
-int predicted_ports_prediction_time_remaining(time_t now);
 
 void rep_hist_exit_stats_init(time_t now);
 void rep_hist_reset_exit_stats(time_t now);
@@ -109,6 +95,14 @@ extern uint32_t rephist_total_num;
 #ifdef TOR_UNIT_TESTS
 extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1];
 extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
+extern struct bw_array_t *write_array;
+#endif
+
+#ifdef REPHIST_PRIVATE
+typedef struct bw_array_t bw_array_t;
+STATIC uint64_t find_largest_max(bw_array_t *b);
+STATIC void commit_max(bw_array_t *b);
+STATIC void advance_obs(bw_array_t *b);
 #endif
 
 /**
@@ -137,4 +131,3 @@ void rep_hist_prep_published_padding_counts(time_t now);
 void rep_hist_padding_count_timers(uint64_t num_timers);
 
 #endif /* !defined(TOR_REPHIST_H) */
-

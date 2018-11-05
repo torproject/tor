@@ -38,42 +38,53 @@
 
 #define NETWORKSTATUS_PRIVATE
 #include "core/or/or.h"
-#include "feature/client/bridges.h"
+#include "app/config/config.h"
+#include "core/mainloop/connection.h"
+#include "core/mainloop/mainloop.h"
+#include "core/mainloop/netstatus.h"
 #include "core/or/channel.h"
+#include "core/or/channelpadding.h"
 #include "core/or/circuitmux.h"
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitstats.h"
-#include "app/config/config.h"
-#include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
-#include "feature/dircache/consdiffmgr.h"
-#include "feature/control/control.h"
-#include "lib/crypt_ops/crypto_rand.h"
-#include "lib/crypt_ops/crypto_util.h"
-#include "feature/dircache/directory.h"
-#include "feature/dircache/dirserv.h"
 #include "core/or/dos.h"
-#include "feature/client/entrynodes.h"
-#include "feature/hibernate/hibernate.h"
-#include "core/mainloop/main.h"
-#include "feature/nodelist/microdesc.h"
-#include "feature/nodelist/networkstatus.h"
-#include "feature/nodelist/nodelist.h"
 #include "core/or/protover.h"
 #include "core/or/relay.h"
-#include "feature/relay/router.h"
-#include "feature/nodelist/routerlist.h"
-#include "feature/nodelist/routerparse.h"
 #include "core/or/scheduler.h"
+#include "core/or/versions.h"
+#include "feature/client/bridges.h"
+#include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
-#include "feature/nodelist/torcert.h"
-#include "core/or/channelpadding.h"
+#include "feature/control/control.h"
+#include "feature/dirauth/reachability.h"
+#include "feature/dircache/consdiffmgr.h"
+#include "feature/dircache/dirserv.h"
+#include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dlstatus.h"
+#include "feature/dircommon/directory.h"
 #include "feature/dircommon/voting_schedule.h"
+#include "feature/dirparse/ns_parse.h"
+#include "feature/hibernate/hibernate.h"
+#include "feature/nodelist/authcert.h"
+#include "feature/nodelist/dirlist.h"
+#include "feature/nodelist/fmt_routerstatus.h"
+#include "feature/nodelist/microdesc.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/node_select.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerinfo.h"
+#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/torcert.h"
+#include "feature/relay/routermode.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 
 #include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/authmode.h"
 #include "feature/dirauth/shared_random.h"
+#include "feature/dirauth/voteflags.h"
 
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/dircommon/dir_connection_st.h"
@@ -105,8 +116,6 @@ STATIC networkstatus_t *current_md_consensus = NULL;
 typedef struct consensus_waiting_for_certs_t {
   /** The consensus itself. */
   networkstatus_t *consensus;
-  /** The encoded version of the consensus, nul-terminated. */
-  char *body;
   /** When did we set the current value of consensus_waiting_for_certs?  If
    * this is too recent, we shouldn't try to fetch a new consensus for a
    * little while, to give ourselves time to get certificates for this one. */
@@ -199,14 +208,11 @@ networkstatus_reset_download_failures(void)
     download_status_reset(&consensus_bootstrap_dl_status[i]);
 }
 
-/**
- * Read and and return the cached consensus of type <b>flavorname</b>.  If
- * <b>unverified</b> is false, get the one we haven't verified. Return NULL if
- * the file isn't there. */
+/** Return the filename used to cache the consensus of a given flavor */
 static char *
-networkstatus_read_cached_consensus_impl(int flav,
-                                         const char *flavorname,
-                                         int unverified_consensus)
+networkstatus_get_cache_fname(int flav,
+                              const char *flavorname,
+                              int unverified_consensus)
 {
   char buf[128];
   const char *prefix;
@@ -221,21 +227,35 @@ networkstatus_read_cached_consensus_impl(int flav,
     tor_snprintf(buf, sizeof(buf), "%s-%s-consensus", prefix, flavorname);
   }
 
-  char *filename = get_cachedir_fname(buf);
-  char *result = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
+  return get_cachedir_fname(buf);
+}
+
+/**
+ * Read and and return the cached consensus of type <b>flavorname</b>.  If
+ * <b>unverified</b> is false, get the one we haven't verified. Return NULL if
+ * the file isn't there. */
+static tor_mmap_t *
+networkstatus_map_cached_consensus_impl(int flav,
+                                        const char *flavorname,
+                                        int unverified_consensus)
+{
+  char *filename = networkstatus_get_cache_fname(flav,
+                                                 flavorname,
+                                                 unverified_consensus);
+  tor_mmap_t *result = tor_mmap_file(filename);
   tor_free(filename);
   return result;
 }
 
-/** Return a new string containing the current cached consensus of flavor
- * <b>flavorname</b>. */
-char *
-networkstatus_read_cached_consensus(const char *flavorname)
- {
+/** Map the file containing the current cached consensus of flavor
+ * <b>flavorname</b> */
+tor_mmap_t *
+networkstatus_map_cached_consensus(const char *flavorname)
+{
   int flav = networkstatus_parse_flavor_name(flavorname);
   if (flav < 0)
     return NULL;
-  return networkstatus_read_cached_consensus_impl(flav, flavorname, 0);
+  return networkstatus_map_cached_consensus_impl(flav, flavorname, 0);
 }
 
 /** Read every cached v3 consensus networkstatus from the disk. */
@@ -248,24 +268,26 @@ router_reload_consensus_networkstatus(void)
   /* FFFF Suppress warnings if cached consensus is bad? */
   for (flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
     const char *flavor = networkstatus_get_flavor_name(flav);
-    char *s = networkstatus_read_cached_consensus_impl(flav, flavor, 0);
-    if (s) {
-      if (networkstatus_set_current_consensus(s, flavor, flags, NULL) < -1) {
+    tor_mmap_t *m = networkstatus_map_cached_consensus_impl(flav, flavor, 0);
+    if (m) {
+      if (networkstatus_set_current_consensus(m->data, m->size,
+                                              flavor, flags, NULL) < -1) {
         log_warn(LD_FS, "Couldn't load consensus %s networkstatus from cache",
                  flavor);
       }
-      tor_free(s);
+      tor_munmap_file(m);
     }
 
-    s = networkstatus_read_cached_consensus_impl(flav, flavor, 1);
-    if (s) {
-      if (networkstatus_set_current_consensus(s, flavor,
+    m = networkstatus_map_cached_consensus_impl(flav, flavor, 1);
+    if (m) {
+      if (networkstatus_set_current_consensus(m->data, m->size,
+                                     flavor,
                                      flags | NSSET_WAS_WAITING_FOR_CERTS,
                                      NULL)) {
         log_info(LD_FS, "Couldn't load unverified consensus %s networkstatus "
                  "from cache", flavor);
       }
-      tor_free(s);
+      tor_munmap_file(m);
     }
   }
 
@@ -1833,6 +1855,7 @@ warn_early_consensus(const networkstatus_t *c, const char *flavor,
  */
 int
 networkstatus_set_current_consensus(const char *consensus,
+                                    size_t consensus_len,
                                     const char *flavor,
                                     unsigned flags,
                                     const char *source_dir)
@@ -1861,7 +1884,9 @@ networkstatus_set_current_consensus(const char *consensus,
   }
 
   /* Make sure it's parseable. */
-  c = networkstatus_parse_vote_from_string(consensus, NULL, NS_TYPE_CONSENSUS);
+  c = networkstatus_parse_vote_from_string(consensus,
+                                           consensus_len,
+                                           NULL, NS_TYPE_CONSENSUS);
   if (!c) {
     log_warn(LD_DIR, "Unable to parse networkstatus consensus");
     result = -2;
@@ -1949,14 +1974,12 @@ networkstatus_set_current_consensus(const char *consensus,
           c->valid_after > current_valid_after) {
         waiting = &consensus_waiting_for_certs[flav];
         networkstatus_vote_free(waiting->consensus);
-        tor_free(waiting->body);
         waiting->consensus = c;
         free_consensus = 0;
-        waiting->body = tor_strdup(consensus);
         waiting->set_at = now;
         waiting->dl_failed = 0;
         if (!from_cache) {
-          write_str_to_file(unverified_fname, consensus, 0);
+          write_bytes_to_file(unverified_fname, consensus, consensus_len, 0);
         }
         if (dl_certs)
           authority_certs_fetch_missing(c, now, source_dir);
@@ -2047,10 +2070,6 @@ networkstatus_set_current_consensus(const char *consensus,
       waiting->consensus->valid_after <= c->valid_after) {
     networkstatus_vote_free(waiting->consensus);
     waiting->consensus = NULL;
-    if (consensus != waiting->body)
-      tor_free(waiting->body);
-    else
-      waiting->body = NULL;
     waiting->set_at = 0;
     waiting->dl_failed = 0;
     if (unlink(unverified_fname) != 0) {
@@ -2098,18 +2117,20 @@ networkstatus_set_current_consensus(const char *consensus,
   }
 
   if (we_want_to_fetch_flavor(options, flav)) {
-    dirserv_set_cached_consensus_networkstatus(consensus,
-                                               flavor,
-                                               &c->digests,
-                                               c->digest_sha3_as_signed,
-                                               c->valid_after);
     if (dir_server_mode(get_options())) {
-      consdiffmgr_add_consensus(consensus, c);
+      dirserv_set_cached_consensus_networkstatus(consensus,
+                                                 consensus_len,
+                                                 flavor,
+                                                 &c->digests,
+                                                 c->digest_sha3_as_signed,
+                                                 c->valid_after);
+
+      consdiffmgr_add_consensus(consensus, consensus_len, c);
     }
   }
 
   if (!from_cache) {
-    write_str_to_file(consensus_fname, consensus, 0);
+    write_bytes_to_file(consensus_fname, consensus, consensus_len, 0);
   }
 
   warn_early_consensus(c, flavor, now);
@@ -2145,14 +2166,16 @@ networkstatus_note_certs_arrived(const char *source_dir)
     if (!waiting->consensus)
       continue;
     if (networkstatus_check_consensus_signature(waiting->consensus, 0)>=0) {
-      char *waiting_body = waiting->body;
-      if (!networkstatus_set_current_consensus(
-                                 waiting_body,
-                                 flavor_name,
-                                 NSSET_WAS_WAITING_FOR_CERTS,
-                                 source_dir)) {
-        tor_free(waiting_body);
+      tor_mmap_t *mapping = networkstatus_map_cached_consensus_impl(
+                                                 i, flavor_name, 1);
+      if (mapping) {
+        networkstatus_set_current_consensus(mapping->data,
+                                            mapping->size,
+                                            flavor_name,
+                                            NSSET_WAS_WAITING_FOR_CERTS,
+                                            source_dir);
       }
+      tor_munmap_file(mapping);
     }
   }
 }
@@ -2380,7 +2403,9 @@ networkstatus_dump_bridge_status_to_file(time_t now)
                published, thresholds, fingerprint_line ? fingerprint_line : "",
                status);
   fname = get_datadir_fname("networkstatus-bridges");
-  write_str_to_file(fname,published_thresholds_and_status,0);
+  if (write_str_to_file(fname,published_thresholds_and_status,0)<0) {
+    log_warn(LD_DIRSERV, "Unable to write networkstatus-bridges file.");
+  }
   tor_free(thresholds);
   tor_free(published_thresholds_and_status);
   tor_free(fname);
@@ -2694,25 +2719,6 @@ networkstatus_check_required_protocols(const networkstatus_t *ns,
   return 0;
 }
 
-/** Release all storage held in <b>s</b>. */
-void
-ns_detached_signatures_free_(ns_detached_signatures_t *s)
-{
-  if (!s)
-    return;
-  if (s->signatures) {
-    STRMAP_FOREACH(s->signatures, flavor, smartlist_t *, sigs) {
-      SMARTLIST_FOREACH(sigs, document_signature_t *, sig,
-                        document_signature_free(sig));
-      smartlist_free(sigs);
-    } STRMAP_FOREACH_END;
-    strmap_free(s->signatures, NULL);
-    strmap_free(s->digests, tor_free_);
-  }
-
-  tor_free(s);
-}
-
 /** Free all storage held locally in this module. */
 void
 networkstatus_free_all(void)
@@ -2728,6 +2734,5 @@ networkstatus_free_all(void)
       networkstatus_vote_free(waiting->consensus);
       waiting->consensus = NULL;
     }
-    tor_free(waiting->body);
   }
 }

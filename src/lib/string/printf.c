@@ -101,7 +101,7 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
   /* If the platform gives us one, use it. */
   int r = vasprintf(&strp_tmp, fmt, args);
   if (r < 0)
-    *strp = NULL;
+    *strp = NULL; // LCOV_EXCL_LINE -- no cross-platform way to force this
   else
     *strp = strp_tmp;
   return r;

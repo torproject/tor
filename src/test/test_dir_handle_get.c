@@ -8,27 +8,32 @@
 #define CONNECTION_PRIVATE
 #define CONFIG_PRIVATE
 #define RENDCACHE_PRIVATE
+#define DIRCACHE_PRIVATE
 
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "feature/dircache/consdiffmgr.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircommon/directory.h"
+#include "feature/dircache/dircache.h"
 #include "test/test.h"
 #include "lib/compress/compress.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendcache.h"
 #include "feature/relay/router.h"
+#include "feature/nodelist/authcert.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/routerlist.h"
 #include "test/rend_test_helpers.h"
 #include "feature/nodelist/microdesc.h"
 #include "test/test_helpers.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/client/entrynodes.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/authcert_parse.h"
 #include "feature/nodelist/networkstatus.h"
 #include "core/proto/proto_http.h"
-#include "feature/stats/geoip.h"
+#include "lib/geoip/geoip.h"
+#include "feature/stats/geoip_stats.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirauth/dirvote.h"
 #include "test/log_test_helpers.h"
@@ -66,6 +71,8 @@ ENABLE_GCC_WARNING(overlength-strings)
 #define TOO_OLD "HTTP/1.0 404 Consensus is too old\r\n\r\n"
 #define NOT_ENOUGH_CONSENSUS_SIGNATURES "HTTP/1.0 404 " \
   "Consensus not signed by sufficient number of requested authorities\r\n\r\n"
+
+#define consdiffmgr_add_consensus consdiffmgr_add_consensus_nulterm
 
 static dir_connection_t *
 new_dir_conn(void)
@@ -1270,7 +1277,9 @@ test_dir_handle_get_server_keys_authority(void* data)
   size_t body_used = 0;
   (void) data;
 
-  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
+  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE,
+                                               strlen(TEST_CERTIFICATE),
+                                               NULL);
 
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
@@ -1420,7 +1429,9 @@ test_dir_handle_get_server_keys_sk(void* data)
   size_t body_used = 0;
   (void) data;
 
-  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
+  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE,
+                                               strlen(TEST_CERTIFICATE),
+                                               NULL);
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
@@ -2102,6 +2113,7 @@ test_dir_handle_get_status_vote_d(void* data)
 
     clear_dir_servers();
     dirvote_free_all();
+    routerlist_free_all();
 }
 
 static void
@@ -2387,7 +2399,9 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   routerlist_free_all();
   dirvote_free_all();
 
-  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
+  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE,
+                                               strlen(TEST_CERTIFICATE),
+                                               NULL);
 
   /* create a trusted ds */
   ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
@@ -2465,7 +2479,9 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   routerlist_free_all();
   dirvote_free_all();
 
-  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
+  mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE,
+                                               strlen(TEST_CERTIFICATE),
+                                               NULL);
 
   /* create a trusted ds */
   ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
@@ -2638,4 +2654,3 @@ struct testcase_t dir_handle_get_tests[] = {
   DIR_HANDLE_CMD(parse_accept_encoding, 0),
   END_OF_TESTCASES
 };
-

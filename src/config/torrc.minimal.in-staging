@@ -167,6 +167,7 @@
 ##
 ## If you are running multiple relays, you MUST set this option.
 ##
+## Note: do not use MyFamily on bridge relays.
 #MyFamily $keyid,$keyid,...
 
 ## Uncomment this if you want your relay to allow IPv6 exit traffic.
@@ -212,6 +213,9 @@
 ## won't be able to block all the bridges. Also, websites won't treat you
 ## differently because they won't know you're running Tor. If you can
 ## be a real relay, please do; but if not, be a bridge!
+##
+## Warning: when running your Tor as a bridge, make sure than MyFamily is
+## NOT configured.
 #BridgeRelay 1
 ## By default, Tor will advertise your bridge to users through various
 ## mechanisms like https://bridges.torproject.org/. If you want to run

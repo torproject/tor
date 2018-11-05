@@ -1,4 +1,3 @@
-
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
@@ -61,52 +60,68 @@
 
 #define CONFIG_PRIVATE
 #include "core/or/or.h"
-#include "feature/client/bridges.h"
-#include "feature/client/addressmap.h"
+#include "app/config/config.h"
+#include "app/config/confparse.h"
+#include "app/config/statefile.h"
+#include "app/main/main.h"
+#include "core/mainloop/connection.h"
+#include "core/mainloop/cpuworker.h"
+#include "core/mainloop/mainloop.h"
+#include "core/mainloop/netstatus.h"
 #include "core/or/channel.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuitmux.h"
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitstats.h"
-#include "lib/compress/compress.h"
-#include "app/config/config.h"
-#include "lib/encoding/confline.h"
-#include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
-#include "feature/dircache/consdiffmgr.h"
-#include "feature/control/control.h"
-#include "app/config/confparse.h"
-#include "core/mainloop/cpuworker.h"
-#include "lib/crypt_ops/crypto_rand.h"
-#include "lib/crypt_ops/crypto_util.h"
-#include "feature/dircache/dirserv.h"
-#include "feature/relay/dns.h"
 #include "core/or/dos.h"
-#include "feature/client/entrynodes.h"
-#include "lib/log/git_revision.h"
-#include "feature/stats/geoip.h"
-#include "feature/hibernate/hibernate.h"
-#include "core/mainloop/main.h"
-#include "feature/nodelist/networkstatus.h"
-#include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
-#include "feature/rend/rendclient.h"
-#include "feature/rend/rendservice.h"
+#include "core/or/scheduler.h"
+#include "feature/client/addressmap.h"
+#include "feature/client/bridges.h"
+#include "feature/client/entrynodes.h"
+#include "feature/client/transports.h"
+#include "feature/control/control.h"
+#include "feature/dirauth/bwauth.h"
+#include "feature/dirauth/guardfraction.h"
+#include "feature/dircache/consdiffmgr.h"
+#include "feature/dircache/dirserv.h"
+#include "feature/dircommon/voting_schedule.h"
+#include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_config.h"
-#include "feature/stats/rephist.h"
-#include "feature/relay/router.h"
-#include "lib/sandbox/sandbox.h"
+#include "feature/nodelist/dirlist.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nickname.h"
+#include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
-#include "core/or/scheduler.h"
-#include "app/config/statefile.h"
-#include "feature/client/transports.h"
+#include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/relay/routermode.h"
+#include "feature/rend/rendclient.h"
+#include "feature/rend/rendservice.h"
+#include "lib/geoip/geoip.h"
+#include "feature/stats/geoip_stats.h"
+#include "feature/stats/predict_ports.h"
+#include "feature/stats/rephist.h"
+#include "lib/compress/compress.h"
+#include "lib/crypt_ops/crypto_init.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
+#include "lib/encoding/confline.h"
+#include "lib/log/git_revision.h"
 #include "lib/net/resolve.h"
+#include "lib/sandbox/sandbox.h"
+
+#ifdef ENABLE_NSS
+#include "lib/crypt_ops/crypto_nss_mgt.h"
+#else
+#include "lib/crypt_ops/crypto_openssl_mgt.h"
+#endif
+
 #ifdef _WIN32
 #include <shlobj.h>
 #endif
@@ -135,7 +150,8 @@
 #include "lib/evloop/procmon.h"
 
 #include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/recommend_pkg.h"
+#include "feature/dirauth/authmode.h"
 
 #include "core/or/connection_st.h"
 #include "core/or/port_cfg_st.h"
@@ -174,7 +190,6 @@ static config_abbrev_t option_abbrevs_[] = {
   PLURAL(AuthDirRejectCC),
   PLURAL(EntryNode),
   PLURAL(ExcludeNode),
-  PLURAL(Tor2webRendezvousPoint),
   PLURAL(FirewallPort),
   PLURAL(LongLivedPort),
   PLURAL(HiddenServiceNode),
@@ -260,6 +275,9 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
   VAR(#member, LINELIST_S, member ## _lines, NULL),             \
   VAR("__" #member, LINELIST_S, member ## _lines, NULL)
 
+/** UINT64_MAX as a decimal string */
+#define UINT64_MAX_STRING "18446744073709551615"
+
 /** Array of configuration options.  Until we disallow nonstandard
  * abbreviations, order is significant, since the first matching option will
  * be chosen first.
@@ -308,7 +326,7 @@ static config_var_t option_vars_[] = {
   V(BridgeRelay,                 BOOL,     "0"),
   V(BridgeDistribution,          STRING,   NULL),
   VAR("CacheDirectory",          FILENAME, CacheDirectory_option, NULL),
-  V(CacheDirectoryGroupReadable, BOOL,     "0"),
+  V(CacheDirectoryGroupReadable, AUTOBOOL,     "auto"),
   V(CellStatistics,              BOOL,     "0"),
   V(PaddingStatistics,           BOOL,     "1"),
   V(LearnCircuitBuildTimeout,    BOOL,     "1"),
@@ -449,8 +467,10 @@ static config_var_t option_vars_[] = {
   VAR("HiddenServiceMaxStreams",LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceMaxStreamsCloseCircuit",LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceNumIntroductionPoints", LINELIST_S, RendConfigLines, NULL),
+  VAR("HiddenServiceExportCircuitID", LINELIST_S,  RendConfigLines, NULL),
   VAR("HiddenServiceStatistics", BOOL, HiddenServiceStatistics_option, "1"),
   V(HidServAuth,                 LINELIST, NULL),
+  V(ClientOnionAuthDir,          FILENAME, NULL),
   OBSOLETE("CloseHSClientCircuitsImmediatelyOnTimeout"),
   OBSOLETE("CloseHSServiceRendCircuitsImmediatelyOnTimeout"),
   V(HiddenServiceSingleHopMode,  BOOL,     "0"),
@@ -598,8 +618,8 @@ static config_var_t option_vars_[] = {
   OBSOLETE("Support022HiddenServices"),
   V(TestSocks,                   BOOL,     "0"),
   V(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
-  V(Tor2webMode,                 BOOL,     "0"),
-  V(Tor2webRendezvousPoints,      ROUTERSET, NULL),
+  OBSOLETE("Tor2webMode"),
+  OBSOLETE("Tor2webRendezvousPoints"),
   OBSOLETE("TLSECGroup"),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
@@ -647,7 +667,7 @@ static config_var_t option_vars_[] = {
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
-  VAR("__OwningControllerFD",INT,OwningControllerFD, "-1"),
+  VAR("__OwningControllerFD", UINT64, OwningControllerFD, UINT64_MAX_STRING),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
   V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
@@ -807,6 +827,7 @@ static void config_maybe_load_geoip_files_(const or_options_t *options,
 static int options_validate_cb(void *old_options, void *options,
                                void *default_options,
                                int from_setconf, char **msg);
+static void options_free_cb(void *options);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
 
@@ -822,6 +843,7 @@ STATIC config_format_t options_format = {
   option_deprecation_notes_,
   option_vars_,
   options_validate_cb,
+  options_free_cb,
   NULL
 };
 
@@ -902,6 +924,7 @@ set_options(or_options_t *new_val, char **msg)
               "Acting on config options left us in a broken state. Dying.");
       tor_shutdown_event_loop_and_exit(1);
     }
+    global_options = old_options;
     return -1;
   }
   /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
@@ -1397,7 +1420,6 @@ static int
 options_act_reversible(const or_options_t *old_options, char **msg)
 {
   smartlist_t *new_listeners = smartlist_new();
-  smartlist_t *replaced_listeners = smartlist_new();
   or_options_t *options = get_options_mutable();
   int running_tor = options->command == CMD_RUN_TOR;
   int set_conn_limit = 0;
@@ -1409,8 +1431,11 @@ options_act_reversible(const or_options_t *old_options, char **msg)
    * the subprocess.  Libevent bases can't be reliably inherited across
    * processes. */
   if (running_tor && options->RunAsDaemon) {
+    if (! start_daemon_has_been_called())
+      crypto_prefork();
     /* No need to roll back, since you can't change the value. */
-    start_daemon();
+    if (start_daemon())
+      crypto_postfork();
   }
 
 #ifdef HAVE_SYSTEMD
@@ -1481,8 +1506,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
      * shutting down. If networking is disabled, this will close all but the
      * control listeners, but disable those. */
     if (!we_are_hibernating()) {
-      if (retry_all_listeners(replaced_listeners, new_listeners,
-                              options->DisableNetwork) < 0) {
+      if (retry_all_listeners(new_listeners, options->DisableNetwork) < 0) {
         *msg = tor_strdup("Failed to bind one of the listener ports.");
         goto rollback;
       }
@@ -1554,9 +1578,26 @@ options_act_reversible(const or_options_t *old_options, char **msg)
                                       msg) < 0) {
     goto done;
   }
+
+  /* We need to handle the group-readable flag for the cache directory
+   * specially, since the directory defaults to being the same as the
+   * DataDirectory. */
+  int cache_dir_group_readable;
+  if (options->CacheDirectoryGroupReadable != -1) {
+    /* If the user specified a value, use their setting */
+    cache_dir_group_readable = options->CacheDirectoryGroupReadable;
+  } else if (!strcmp(options->CacheDirectory, options->DataDirectory)) {
+    /* If the user left the value as "auto", and the cache is the same as the
+     * datadirectory, use the datadirectory setting.
+     */
+    cache_dir_group_readable = options->DataDirectoryGroupReadable;
+  } else {
+    /* Otherwise, "auto" means "not group readable". */
+    cache_dir_group_readable = 0;
+  }
   if (check_and_create_data_directory(running_tor /* create */,
                                       options->CacheDirectory,
-                                      options->CacheDirectoryGroupReadable,
+                                      cache_dir_group_readable,
                                       options->User,
                                       msg) < 0) {
     goto done;
@@ -1618,17 +1659,6 @@ options_act_reversible(const or_options_t *old_options, char **msg)
                "Overwrite the log afterwards.", badness);
   }
 
-  SMARTLIST_FOREACH(replaced_listeners, connection_t *, conn,
-  {
-    int marked = conn->marked_for_close;
-    log_notice(LD_NET, "Closing old %s on %s:%d",
-               conn_type_to_string(conn->type), conn->address, conn->port);
-    connection_close_immediate(conn);
-    if (!marked) {
-      connection_mark_for_close(conn);
-    }
-  });
-
   if (set_conn_limit) {
     /*
      * If we adjusted the conn limit, recompute the OOS threshold too
@@ -1682,7 +1712,6 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 
  done:
   smartlist_free(new_listeners);
-  smartlist_free(replaced_listeners);
   return r;
 }
 
@@ -1698,8 +1727,7 @@ options_need_geoip_info(const or_options_t *options, const char **reason_out)
     routerset_needs_geoip(options->ExcludeExitNodes) ||
     routerset_needs_geoip(options->ExcludeNodes) ||
     routerset_needs_geoip(options->HSLayer2Nodes) ||
-    routerset_needs_geoip(options->HSLayer3Nodes) ||
-    routerset_needs_geoip(options->Tor2webRendezvousPoints);
+    routerset_needs_geoip(options->HSLayer3Nodes);
 
   if (routerset_usage && reason_out) {
     *reason_out = "We've been configured to use (or avoid) nodes in certain "
@@ -1882,27 +1910,6 @@ options_act(const or_options_t *old_options)
              "in a non-anonymous mode. It will provide NO ANONYMITY.");
   }
 
-#ifdef ENABLE_TOR2WEB_MODE
-/* LCOV_EXCL_START */
-  // XXXX This should move into options_validate()
-  if (!options->Tor2webMode) {
-    log_err(LD_CONFIG, "This copy of Tor was compiled to run in "
-            "'tor2web mode'. It can only be run with the Tor2webMode torrc "
-            "option enabled.");
-    return -1;
-  }
-/* LCOV_EXCL_STOP */
-#else /* !(defined(ENABLE_TOR2WEB_MODE)) */
-  // XXXX This should move into options_validate()
-  if (options->Tor2webMode) {
-    log_err(LD_CONFIG, "This copy of Tor was not compiled to run in "
-            "'tor2web mode'. It cannot be run with the Tor2webMode torrc "
-            "option enabled. To enable Tor2webMode recompile with the "
-            "--enable-tor2web-mode option.");
-    return -1;
-  }
-#endif /* defined(ENABLE_TOR2WEB_MODE) */
-
   /* If we are a bridge with a pluggable transport proxy but no
      Extended ORPort, inform the user that they are missing out. */
   if (server_mode(options) && options->ServerTransportPlugin &&
@@ -1940,7 +1947,7 @@ options_act(const or_options_t *old_options)
     // LCOV_EXCL_STOP
   }
 
-  if (running_tor && rend_parse_service_authorization(options, 0) < 0) {
+  if (running_tor && hs_config_client_auth_all(options, 0) < 0) {
     // LCOV_EXCL_START
     log_warn(LD_BUG, "Previously validated client authorization for "
                      "hidden services could not be added!");
@@ -1948,12 +1955,8 @@ options_act(const or_options_t *old_options)
     // LCOV_EXCL_STOP
   }
 
-  if (running_tor && !old_options && options->OwningControllerFD != -1) {
-#ifdef _WIN32
-    log_warn(LD_CONFIG, "OwningControllerFD is not supported on Windows. "
-             "If you need it, tell the Tor developers.");
-    return -1;
-#else
+  if (running_tor && !old_options &&
+      options->OwningControllerFD != UINT64_MAX) {
     const unsigned ctrl_flags =
       CC_LOCAL_FD_IS_OWNER |
       CC_LOCAL_FD_IS_AUTHENTICATED;
@@ -1963,7 +1966,6 @@ options_act(const or_options_t *old_options)
                "given FD.");
       return -1;
     }
-#endif /* defined(_WIN32) */
   }
 
   /* Load state */
@@ -2164,8 +2166,6 @@ options_act(const or_options_t *old_options)
                          options->HSLayer2Nodes) ||
         !routerset_equal(old_options->HSLayer3Nodes,
                          options->HSLayer3Nodes) ||
-        !routerset_equal(old_options->Tor2webRendezvousPoints,
-                         options->Tor2webRendezvousPoints) ||
         options->StrictNodes != old_options->StrictNodes) {
       log_info(LD_CIRC,
                "Changed to using entry guards or bridges, or changed "
@@ -3154,6 +3154,13 @@ options_validate_cb(void *old_options, void *options, void *default_options,
   return rv;
 }
 
+/** Callback to free an or_options_t */
+static void
+options_free_cb(void *options)
+{
+  or_options_free_(options);
+}
+
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
 #if defined(__GNUC__) && __GNUC__ <= 3
@@ -3213,6 +3220,8 @@ warn_about_relative_paths(or_options_t *options)
   n += warn_if_option_path_is_relative("AccelDir",options->AccelDir);
   n += warn_if_option_path_is_relative("DataDirectory",options->DataDirectory);
   n += warn_if_option_path_is_relative("PidFile",options->PidFile);
+  n += warn_if_option_path_is_relative("ClientOnionAuthDir",
+                                        options->ClientOnionAuthDir);
 
   for (config_line_t *hs_line = options->RendConfigLines; hs_line;
        hs_line = hs_line->next) {
@@ -3307,21 +3316,10 @@ options_validate_single_onion(or_options_t *options, char **msg)
                                options->NATDPort_set ||
                                options->DNSPort_set ||
                                options->HTTPTunnelPort_set);
-  if (rend_service_non_anonymous_mode_enabled(options) && client_port_set &&
-      !options->Tor2webMode) {
+  if (rend_service_non_anonymous_mode_enabled(options) && client_port_set) {
     REJECT("HiddenServiceNonAnonymousMode is incompatible with using Tor as "
            "an anonymous client. Please set Socks/Trans/NATD/DNSPort to 0, or "
            "revert HiddenServiceNonAnonymousMode to 0.");
-  }
-
-  /* If you run a hidden service in non-anonymous mode, the hidden service
-   * loses anonymity, even if SOCKSPort / Tor2web mode isn't used. */
-  if (!rend_service_non_anonymous_mode_enabled(options) &&
-      options->RendConfigLines && options->Tor2webMode) {
-    REJECT("Non-anonymous (Tor2web) mode is incompatible with using Tor as a "
-           "hidden service. Please remove all HiddenServiceDir lines, or use "
-           "a version of tor compiled without --enable-tor2web-mode, or use "
-           "HiddenServiceNonAnonymousMode.");
   }
 
   if (rend_service_allow_non_anonymous_connection(options)
@@ -3359,7 +3357,6 @@ STATIC int
 options_validate(or_options_t *old_options, or_options_t *options,
                  or_options_t *default_options, int from_setconf, char **msg)
 {
-  int i;
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
@@ -3418,6 +3415,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_notice(LD_CONFIG, "Your ContactInfo config option is not set. "
         "Please consider setting it, so we can contact you if your server is "
         "misconfigured or something else goes wrong.");
+  const char *ContactInfo = options->ContactInfo;
+  if (ContactInfo && !string_is_utf8(ContactInfo, strlen(ContactInfo)))
+    REJECT("ContactInfo config option must be UTF-8.");
 
   /* Special case on first boot if no Log options are given. */
   if (!options->Logs && !options->RunAsDaemon && !from_setconf) {
@@ -3680,30 +3680,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-  /* Terminate Reachable*Addresses with reject *
-   */
-  for (i=0; i<3; i++) {
-    config_line_t **linep =
-      (i==0) ? &options->ReachableAddresses :
-        (i==1) ? &options->ReachableORAddresses :
-                 &options->ReachableDirAddresses;
-    if (!*linep)
-      continue;
-    /* We need to end with a reject *:*, not an implicit accept *:* */
-    for (;;) {
-      linep = &((*linep)->next);
-      if (!*linep) {
-        *linep = tor_malloc_zero(sizeof(config_line_t));
-        (*linep)->key = tor_strdup(
-          (i==0) ?  "ReachableAddresses" :
-            (i==1) ? "ReachableORAddresses" :
-                     "ReachableDirAddresses");
-        (*linep)->value = tor_strdup("reject *:*");
-        break;
-      }
-    }
-  }
-
   if ((options->ReachableAddresses ||
        options->ReachableORAddresses ||
        options->ReachableDirAddresses ||
@@ -3816,26 +3792,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     // so just make the user fix the value themselves rather than
     // silently keep a shadow value lower than what they asked for.
     REJECT("CircuitsAvailableTimeout is too large. Max is 24 hours.");
-  }
-
-#ifdef ENABLE_TOR2WEB_MODE
-  if (options->Tor2webMode && options->UseEntryGuards) {
-    /* tor2web mode clients do not (and should not) use entry guards
-     * in any meaningful way.  Further, tor2web mode causes the hidden
-     * service client code to do things which break the path bias
-     * detector, and it's far easier to turn off entry guards (and
-     * thus the path bias detector with it) than to figure out how to
-     * make a piece of code which cannot possibly help tor2web mode
-     * users compatible with tor2web mode.
-     */
-    log_notice(LD_CONFIG,
-               "Tor2WebMode is enabled; disabling UseEntryGuards.");
-    options->UseEntryGuards = 0;
-  }
-#endif /* defined(ENABLE_TOR2WEB_MODE) */
-
-  if (options->Tor2webRendezvousPoints && !options->Tor2webMode) {
-    REJECT("Tor2webRendezvousPoints cannot be set without Tor2webMode.");
   }
 
   if (options->EntryNodes && !options->UseEntryGuards) {
@@ -4420,7 +4376,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Failed to configure rendezvous options. See logs for details.");
 
   /* Parse client-side authorization for hidden services. */
-  if (rend_parse_service_authorization(options, 1) < 0)
+  if (hs_config_client_auth_all(options, 1) < 0)
     REJECT("Failed to configure client authorization for hidden services. "
            "See logs for details.");
 
@@ -4714,8 +4670,7 @@ have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
   } else {
     if (total_mem >= DIRCACHE_MIN_MEM_BYTES) {
       *msg = tor_strdup("DirCache is disabled and we are configured as a "
-               "relay. This may disqualify us from becoming a guard in the "
-               "future.");
+               "relay. We will not become a Guard.");
     }
   }
   return *msg == NULL ? 0 : -1;
@@ -5236,9 +5191,16 @@ options_init_from_torrc(int argc, char **argv)
     printf("Libevent\t\t%-15s\t\t%s\n",
                       tor_libevent_get_header_version_str(),
                       tor_libevent_get_version_str());
+#ifdef ENABLE_OPENSSL
     printf("OpenSSL \t\t%-15s\t\t%s\n",
                       crypto_openssl_get_header_version_str(),
                       crypto_openssl_get_version_str());
+#endif
+#ifdef ENABLE_NSS
+    printf("NSS \t\t%-15s\t\t%s\n",
+           crypto_nss_get_header_version_str(),
+           crypto_nss_get_version_str());
+#endif
     if (tor_compress_supports_method(ZLIB_METHOD)) {
       printf("Zlib    \t\t%-15s\t\t%s\n",
                         tor_compress_version_str(ZLIB_METHOD),
@@ -7632,8 +7594,8 @@ check_server_ports(const smartlist_t *ports,
   }
   if (n_orport_advertised && !n_orport_advertised_ipv4 &&
       !options->BridgeRelay) {
-    log_warn(LD_CONFIG, "Configured non-bridge only to listen on an IPv6 "
-             "address.");
+    log_warn(LD_CONFIG, "Configured public relay to listen only on an IPv6 "
+             "address. Tor needs to listen on an IPv4 address too.");
     r = -1;
   }
 
@@ -8197,6 +8159,7 @@ getinfo_helper_config(control_connection_t *conn,
         case CONFIG_TYPE_STRING: type = "String"; break;
         case CONFIG_TYPE_FILENAME: type = "Filename"; break;
         case CONFIG_TYPE_UINT: type = "Integer"; break;
+        case CONFIG_TYPE_UINT64: type = "Integer"; break;
         case CONFIG_TYPE_INT: type = "SignedInteger"; break;
         case CONFIG_TYPE_PORT: type = "Port"; break;
         case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break;
@@ -8395,6 +8358,11 @@ config_load_geoip_file_(sa_family_t family,
                         const char *fname,
                         const char *default_fname)
 {
+  const or_options_t *options = get_options();
+  const char *msg = "";
+  int severity = options_need_geoip_info(options, &msg) ? LOG_WARN : LOG_INFO;
+  int r;
+
 #ifdef _WIN32
   char *free_fname = NULL; /* Used to hold any temporary-allocated value */
   /* XXXX Don't use this "<default>" junk; make our filename options
@@ -8404,12 +8372,16 @@ config_load_geoip_file_(sa_family_t family,
     tor_asprintf(&free_fname, "%s\\%s", conf_root, default_fname);
     fname = free_fname;
   }
-  geoip_load_file(family, fname);
+  r = geoip_load_file(family, fname, severity);
   tor_free(free_fname);
 #else /* !(defined(_WIN32)) */
   (void)default_fname;
-  geoip_load_file(family, fname);
+  r = geoip_load_file(family, fname, severity);
 #endif /* defined(_WIN32) */
+
+  if (r < 0 && severity == LOG_WARN) {
+    log_warn(LD_GENERAL, "%s", msg);
+  }
 }
 
 /** Load geoip files for IPv4 and IPv6 if <a>options</a> and
@@ -8423,13 +8395,19 @@ config_maybe_load_geoip_files_(const or_options_t *options,
   if (options->GeoIPFile &&
       ((!old_options || !opt_streq(old_options->GeoIPFile,
                                    options->GeoIPFile))
-       || !geoip_is_loaded(AF_INET)))
+       || !geoip_is_loaded(AF_INET))) {
     config_load_geoip_file_(AF_INET, options->GeoIPFile, "geoip");
+    /* Okay, now we need to maybe change our mind about what is in
+     * which country. We do this for IPv4 only since that's what we
+     * store in node->country. */
+    refresh_all_country_info();
+  }
   if (options->GeoIPv6File &&
       ((!old_options || !opt_streq(old_options->GeoIPv6File,
                                    options->GeoIPv6File))
-       || !geoip_is_loaded(AF_INET6)))
+       || !geoip_is_loaded(AF_INET6))) {
     config_load_geoip_file_(AF_INET6, options->GeoIPv6File, "geoip6");
+  }
 }
 
 /** Initialize cookie authentication (used so far by the ControlPort

@@ -24,7 +24,7 @@
 #include "feature/hs/hs_service.h"
 #include "app/config/config.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/dircache/directory.h"
+#include "feature/dirclient/dirclient.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
@@ -428,11 +428,13 @@ mock_directory_initiate_request(directory_request_t *req)
 
 static int
 mock_hs_desc_encode_descriptor(const hs_descriptor_t *desc,
-                           const ed25519_keypair_t *signing_kp,
-                           char **encoded_out)
+                               const ed25519_keypair_t *signing_kp,
+                               const uint8_t *descriptor_cookie,
+                               char **encoded_out)
 {
   (void)desc;
   (void)signing_kp;
+  (void)descriptor_cookie;
 
   tor_asprintf(encoded_out, "lulu");
   return 0;

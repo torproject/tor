@@ -322,6 +322,72 @@ test_cntev_event_mask(void *arg)
   ;
 }
 
+static char *saved_event_str = NULL;
+
+static void
+mock_queue_control_event_string(uint16_t event, char *msg)
+{
+  (void)event;
+
+  tor_free(saved_event_str);
+  saved_event_str = msg;
+}
+
+/* Helper macro for checking bootstrap control event strings */
+#define assert_bootmsg(s)                                               \
+  tt_ptr_op(strstr(saved_event_str, "650 STATUS_CLIENT NOTICE "         \
+                   "BOOTSTRAP PROGRESS=" s), OP_EQ, saved_event_str)
+
+/* Test deferral of directory bootstrap messages (requesting_descriptors) */
+static void
+test_cntev_dirboot_defer_desc(void *arg)
+{
+  (void)arg;
+
+  MOCK(queue_control_event_string, mock_queue_control_event_string);
+  control_testing_set_global_event_mask(EVENT_MASK_(EVENT_STATUS_CLIENT));
+  control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
+  assert_bootmsg("0 TAG=starting");
+  /* This event should get deferred */
+  control_event_boot_dir(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
+  assert_bootmsg("0 TAG=starting");
+  control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DIR, 0);
+  assert_bootmsg("5 TAG=conn_dir");
+  control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
+  assert_bootmsg("10 TAG=handshake_dir");
+  /* The deferred event should appear */
+  control_event_boot_first_orconn();
+  assert_bootmsg("45 TAG=requesting_descriptors");
+ done:
+  tor_free(saved_event_str);
+  UNMOCK(queue_control_event_string);
+}
+
+/* Test deferral of directory bootstrap messages (conn_or) */
+static void
+test_cntev_dirboot_defer_orconn(void *arg)
+{
+  (void)arg;
+
+  MOCK(queue_control_event_string, mock_queue_control_event_string);
+  control_testing_set_global_event_mask(EVENT_MASK_(EVENT_STATUS_CLIENT));
+  control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
+  assert_bootmsg("0 TAG=starting");
+  /* This event should get deferred */
+  control_event_boot_dir(BOOTSTRAP_STATUS_CONN_OR, 0);
+  assert_bootmsg("0 TAG=starting");
+  control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DIR, 0);
+  assert_bootmsg("5 TAG=conn_dir");
+  control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
+  assert_bootmsg("10 TAG=handshake_dir");
+  /* The deferred event should appear */
+  control_event_boot_first_orconn();
+  assert_bootmsg("80 TAG=conn_or");
+ done:
+  tor_free(saved_event_str);
+  UNMOCK(queue_control_event_string);
+}
+
 #define TEST(name, flags)                                               \
   { #name, test_cntev_ ## name, flags, 0, NULL }
 
@@ -330,5 +396,7 @@ struct testcase_t controller_event_tests[] = {
   TEST(append_cell_stats, TT_FORK),
   TEST(format_cell_stats, TT_FORK),
   TEST(event_mask, TT_FORK),
+  TEST(dirboot_defer_desc, TT_FORK),
+  TEST(dirboot_defer_orconn, TT_FORK),
   END_OF_TESTCASES
 };

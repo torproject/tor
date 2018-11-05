@@ -467,7 +467,7 @@ cache_intro_state_free_(hs_cache_intro_state_t *state)
   tor_free(state);
 }
 
-/* Helper function: use by the free all function. */
+/* Helper function: used by the free all function. */
 static void
 cache_intro_state_free_void(void *state)
 {
@@ -488,7 +488,7 @@ cache_client_intro_state_new(void)
   FREE_AND_NULL(hs_cache_client_intro_state_t,          \
                 cache_client_intro_state_free_, (val))
 
-/* Free a cache client intro state object. */
+/* Free a cache_client_intro_state object. */
 static void
 cache_client_intro_state_free_(hs_cache_client_intro_state_t *cache)
 {
@@ -499,7 +499,7 @@ cache_client_intro_state_free_(hs_cache_client_intro_state_t *cache)
   tor_free(cache);
 }
 
-/* Helper function: use by the free all function. */
+/* Helper function: used by the free all function. */
 static void
 cache_client_intro_state_free_void(void *entry)
 {
@@ -647,6 +647,13 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
     }
     /* Remove old entry. Make space for the new one! */
     remove_v3_desc_as_client(cache_entry);
+
+    /* We just removed an old descriptor and will replace it. We'll close all
+     * intro circuits related to this old one so we don't have leftovers. We
+     * leave the rendezvous circuits opened because they could be in use. */
+    hs_client_close_intro_circuits_from_desc(cache_entry->desc);
+
+    /* Free it. */
     cache_client_desc_free(cache_entry);
   }
 

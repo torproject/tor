@@ -27,7 +27,9 @@
 
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_config.h"
+#include "feature/hs/hs_client.h"
 #include "feature/hs/hs_service.h"
+#include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
 #include "lib/encoding/confline.h"
 #include "app/config/or_options_st.h"
@@ -143,6 +145,52 @@ helper_parse_uint64(const char *opt, const char *value, uint64_t min,
   return ret;
 }
 
+/** Helper function: Given a configuration option and its value, parse the
+ * value as a hs_circuit_id_protocol_t. On success, ok is set to 1 and ret is
+ * the parse value. On error, ok is set to 0 and the "none"
+ * hs_circuit_id_protocol_t is returned. This function logs on error. */
+static hs_circuit_id_protocol_t
+helper_parse_circuit_id_protocol(const char *key, const char *value, int *ok)
+{
+  tor_assert(value);
+  tor_assert(ok);
+
+  hs_circuit_id_protocol_t ret = HS_CIRCUIT_ID_PROTOCOL_NONE;
+  *ok = 0;
+
+  if (! strcasecmp(value, "haproxy")) {
+    *ok = 1;
+    ret = HS_CIRCUIT_ID_PROTOCOL_HAPROXY;
+  } else if (! strcasecmp(value, "none")) {
+    *ok = 1;
+    ret = HS_CIRCUIT_ID_PROTOCOL_NONE;
+  } else {
+    log_warn(LD_CONFIG, "%s must be 'haproxy' or 'none'.", key);
+    goto err;
+  }
+
+ err:
+  return ret;
+}
+
+/* Return the service version by trying to learn it from the key on disk if
+ * any. If nothing is found, the current service configured version is
+ * returned. */
+static int
+config_learn_service_version(hs_service_t *service)
+{
+  int version;
+
+  tor_assert(service);
+
+  version = hs_service_get_version_from_key(service);
+  if (version < 0) {
+    version = service->config.version;
+  }
+
+  return version;
+}
+
 /* Return true iff the given options starting at line_ for a hidden service
  * contains at least one invalid option. Each hidden service option don't
  * apply to all versions so this function can find out. The line_ MUST start
@@ -168,6 +216,11 @@ config_has_invalid_options(const config_line_t *line_,
     NULL /* End marker. */
   };
 
+  const char *opts_exclude_v2[] = {
+    "HiddenServiceExportCircuitID",
+    NULL /* End marker. */
+  };
+
   /* Defining the size explicitly allows us to take advantage of the compiler
    * which warns us if we ever bump the max version but forget to grow this
    * array. The plus one is because we have a version 0 :). */
@@ -176,7 +229,7 @@ config_has_invalid_options(const config_line_t *line_,
   } exclude_lists[HS_VERSION_MAX + 1] = {
     { NULL }, /* v0. */
     { NULL }, /* v1. */
-    { NULL }, /* v2 */
+    { opts_exclude_v2 }, /* v2 */
     { opts_exclude_v3 }, /* v3. */
   };
 
@@ -242,6 +295,7 @@ config_service_v3(const config_line_t *line_,
                   hs_service_config_t *config)
 {
   int have_num_ip = 0;
+  bool export_circuit_id = false; /* just to detect duplicate options */
   const char *dup_opt_seen = NULL;
   const config_line_t *line;
 
@@ -266,6 +320,18 @@ config_service_v3(const config_line_t *line_,
         goto err;
       }
       have_num_ip = 1;
+      continue;
+    }
+    if (!strcasecmp(line->key, "HiddenServiceExportCircuitID")) {
+      config->circuit_id_protocol =
+        helper_parse_circuit_id_protocol(line->key, line->value, &ok);
+      if (!ok || export_circuit_id) {
+        if (export_circuit_id) {
+          dup_opt_seen = line->key;
+        }
+        goto err;
+      }
+      export_circuit_id = true;
       continue;
     }
   }
@@ -353,7 +419,7 @@ config_generic_service(const config_line_t *line_,
           dup_opt_seen = line->key;
         goto err;
       }
-      have_version = 1;
+      have_version = service->config.hs_version_explicitly_set = 1;
       continue;
     }
     /* Virtual port. */
@@ -468,18 +534,15 @@ config_service(const config_line_t *line, const or_options_t *options,
 
   /* We have a new hidden service. */
   service = hs_service_new(options);
+
   /* We'll configure that service as a generic one and then pass it to a
    * specific function according to the configured version number. */
   if (config_generic_service(line, options, service) < 0) {
     goto err;
   }
+
   tor_assert(service->config.version <= HS_VERSION_MAX);
-  /* Before we configure the service on a per-version basis, we'll make
-   * sure that this set of options for a service are valid that is for
-   * instance an option only for v2 is not used for v3. */
-  if (config_has_invalid_options(line->next, service)) {
-    goto err;
-  }
+
   /* Check permission on service directory that was just parsed. And this must
    * be done regardless of the service version. Do not ask for the directory
    * to be created, this is done when the keys are loaded because we could be
@@ -490,6 +553,20 @@ config_service(const config_line_t *line, const or_options_t *options,
                                    0) < 0) {
     goto err;
   }
+
+  /* We'll try to learn the service version here by loading the key(s) if
+   * present and we did not set HiddenServiceVersion. Depending on the key
+   * format, we can figure out the service version. */
+  if (!service->config.hs_version_explicitly_set) {
+    service->config.version = config_learn_service_version(service);
+  }
+
+  /* We make sure that this set of options for a service are valid that is for
+   * instance an option only for v2 is not used for v3. */
+  if (config_has_invalid_options(line->next, service)) {
+    goto err;
+  }
+
   /* Different functions are in charge of specific options for a version. We
    * start just after the service directory line so once we hit another
    * directory line, the function knows that it has to stop parsing. */
@@ -508,13 +585,16 @@ config_service(const config_line_t *line, const or_options_t *options,
   if (ret < 0) {
     goto err;
   }
+
   /* We'll check if this service can be kept depending on the others
    * configured previously. */
   if (service_is_duplicate_in_list(service_list, service)) {
     goto err;
   }
+
   /* Passes, add it to the given list. */
   smartlist_add(service_list, service);
+
   return 0;
 
  err:
@@ -587,5 +667,30 @@ hs_config_service_all(const or_options_t *options, int validate_only)
  end:
   smartlist_free(new_service_list);
   /* Tor main should call the free all function on error. */
+  return ret;
+}
+
+/* From a set of <b>options</b>, setup every client authorization found.
+ * Return 0 on success or -1 on failure. If <b>validate_only</b> is set,
+ * parse, warn and return as normal, but don't actually change the
+ * configured state. */
+int
+hs_config_client_auth_all(const or_options_t *options, int validate_only)
+{
+  int ret = -1;
+
+  /* Configure v2 authorization. */
+  if (rend_parse_service_authorization(options, validate_only) < 0) {
+    goto done;
+  }
+
+  /* Configure v3 authorization. */
+  if (hs_config_client_authorization(options, validate_only) < 0) {
+    goto done;
+  }
+
+  /* Success. */
+  ret = 0;
+ done:
   return ret;
 }

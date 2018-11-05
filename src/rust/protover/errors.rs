@@ -18,26 +18,40 @@ pub enum ProtoverError {
     ExceedsExpansionLimit,
     UnknownProtocol,
     ExceedsNameLimit,
+    InvalidProtocol,
 }
 
 /// Descriptive error messages for `ProtoverError` variants.
 impl Display for ProtoverError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ProtoverError::Overlap
-                => write!(f, "Two or more (low, high) protover ranges would overlap once expanded."),
-            ProtoverError::LowGreaterThanHigh
-                => write!(f, "The low in a (low, high) protover range was greater than high."),
-            ProtoverError::Unparseable
-                => write!(f, "The protover string was unparseable."),
-            ProtoverError::ExceedsMax
-                => write!(f, "The high in a (low, high) protover range exceeds u32::MAX."),
-            ProtoverError::ExceedsExpansionLimit
-                => write!(f, "The protover string would exceed the maximum expansion limit."),
-            ProtoverError::UnknownProtocol
-                => write!(f, "A protocol in the protover string we attempted to parse is unknown."),
-            ProtoverError::ExceedsNameLimit
-                => write!(f, "An unrecognised protocol name was too long."),
+            ProtoverError::Overlap => write!(
+                f,
+                "Two or more (low, high) protover ranges would overlap once expanded."
+            ),
+            ProtoverError::LowGreaterThanHigh => write!(
+                f,
+                "The low in a (low, high) protover range was greater than high."
+            ),
+            ProtoverError::Unparseable => write!(f, "The protover string was unparseable."),
+            ProtoverError::ExceedsMax => write!(
+                f,
+                "The high in a (low, high) protover range exceeds u32::MAX."
+            ),
+            ProtoverError::ExceedsExpansionLimit => write!(
+                f,
+                "The protover string would exceed the maximum expansion limit."
+            ),
+            ProtoverError::UnknownProtocol => write!(
+                f,
+                "A protocol in the protover string we attempted to parse is unknown."
+            ),
+            ProtoverError::ExceedsNameLimit => {
+                write!(f, "An unrecognised protocol name was too long.")
+            }
+            ProtoverError::InvalidProtocol => {
+                write!(f, "A protocol name includes invalid characters.")
+            }
         }
     }
 }

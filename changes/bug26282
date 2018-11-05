@@ -1,4 +1,0 @@
-  o Minor bugfixes (C correctness):
-    - Avoid casting smartlist index to int implicitly, as it may trigger
-      a warning (-Wshorten-64-to-32). Fixes bug 26282; bugfix on
-      0.2.3.13-alpha, 0.2.7.1-alpha and 0.2.1.1-alpha.

@@ -6,17 +6,17 @@
 
 pub use digest::Digest;
 
+use digest::generic_array::typenum::U32;
+use digest::generic_array::typenum::U64;
+use digest::generic_array::GenericArray;
 use digest::BlockInput;
 use digest::FixedOutput;
 use digest::Input;
-use digest::generic_array::GenericArray;
-use digest::generic_array::typenum::U32;
-use digest::generic_array::typenum::U64;
 
-use external::crypto_digest::CryptoDigest;
-use external::crypto_digest::DigestAlgorithm;
 use external::crypto_digest::get_256_bit_digest;
 use external::crypto_digest::get_512_bit_digest;
+use external::crypto_digest::CryptoDigest;
+use external::crypto_digest::DigestAlgorithm;
 
 pub use external::crypto_digest::DIGEST256_LEN;
 pub use external::crypto_digest::DIGEST512_LEN;
@@ -54,7 +54,9 @@ pub struct Sha256 {
 /// A new `Sha256` digest.
 impl Default for Sha256 {
     fn default() -> Sha256 {
-        Sha256{ engine: CryptoDigest::new(Some(DigestAlgorithm::SHA2_256)) }
+        Sha256 {
+            engine: CryptoDigest::new(Some(DigestAlgorithm::SHA2_256)),
+        }
     }
 }
 
@@ -121,7 +123,9 @@ pub struct Sha512 {
 /// A new `Sha512` digest.
 impl Default for Sha512 {
     fn default() -> Sha512 {
-        Sha512{ engine: CryptoDigest::new(Some(DigestAlgorithm::SHA2_512)) }
+        Sha512 {
+            engine: CryptoDigest::new(Some(DigestAlgorithm::SHA2_512)),
+        }
     }
 }
 
@@ -182,9 +186,10 @@ mod test {
     fn sha256_digest() {
         let mut h: Sha256 = Sha256::new();
         let mut result: [u8; DIGEST256_LEN] = [0u8; DIGEST256_LEN];
-        let expected = [151, 223, 53, 136, 181, 163, 242, 75, 171, 195,
-                        133, 27, 55, 47, 11, 167, 26, 157, 205, 222, 212,
-                        59, 20, 185, 208, 105, 97, 191, 193, 112, 125, 157];
+        let expected = [
+            151, 223, 53, 136, 181, 163, 242, 75, 171, 195, 133, 27, 55, 47, 11, 167, 26, 157, 205,
+            222, 212, 59, 20, 185, 208, 105, 97, 191, 193, 112, 125, 157,
+        ];
 
         h.input(b"foo");
         h.input(b"bar");
@@ -209,11 +214,12 @@ mod test {
         let mut h: Sha512 = Sha512::new();
         let mut result: [u8; DIGEST512_LEN] = [0u8; DIGEST512_LEN];
 
-        let expected = [203, 55, 124, 16, 176, 245, 166, 44, 128, 54, 37, 167,
-                153, 217, 233, 8, 190, 69, 231, 103, 245, 209, 71, 212, 116,
-                73, 7, 203, 5, 89, 122, 164, 237, 211, 41, 160, 175, 20, 122,
-                221, 12, 244, 24, 30, 211, 40, 250, 30, 121, 148, 38, 88, 38,
-                179, 237, 61, 126, 246, 240, 103, 202, 153, 24, 90];
+        let expected = [
+            203, 55, 124, 16, 176, 245, 166, 44, 128, 54, 37, 167, 153, 217, 233, 8, 190, 69, 231,
+            103, 245, 209, 71, 212, 116, 73, 7, 203, 5, 89, 122, 164, 237, 211, 41, 160, 175, 20,
+            122, 221, 12, 244, 24, 30, 211, 40, 250, 30, 121, 148, 38, 88, 38, 179, 237, 61, 126,
+            246, 240, 103, 202, 153, 24, 90,
+        ];
 
         h.input(b"foo");
         h.input(b"bar");

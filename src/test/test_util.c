@@ -38,6 +38,7 @@
 #include "lib/meminfo/meminfo.h"
 #include "lib/time/tvdiff.h"
 #include "lib/encoding/confline.h"
+#include "lib/net/socketpair.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>
@@ -922,6 +923,32 @@ test_util_time(void *arg)
       teardown_capture_of_logs();
     }
   }
+  {
+    /* As above, but with localtime. */
+    t_res = -9223372036854775LL;
+    tor_localtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (1970-1900) ||
+              b_time.tm_year == (1-1900));
+
+    /* while unlikely, the system's gmtime(_r) could return
+     * a "correct" retrospective gregorian negative year value,
+     * which I'm pretty sure is:
+     * -1*(2^63)/60/60/24*2000/730485 + 1970 = -292277022657
+     * 730485 is the number of days in two millennia, including leap days
+     * (int64_t)b_time.tm_year == (-292277022657LL-1900LL) without clamping */
+    t_res = INT64_MIN;
+    CAPTURE();
+    tor_localtime_r(&t_res, &b_time);
+    if (! (b_time.tm_year == (1970-1900) ||
+           b_time.tm_year == (1-1900))) {
+      tt_int_op(b_time.tm_year, OP_EQ, 1970-1900);
+    }
+    if (b_time.tm_year != 1970-1900) {
+      CHECK_TIMEGM_WARNING("Rounding up to ");
+    } else {
+      teardown_capture_of_logs();
+    }
+  }
 #endif /* SIZEOF_TIME_T == 8 */
 
   /* time_t >= INT_MAX yields a year clamped to 2037 or 9999,
@@ -935,6 +962,17 @@ test_util_time(void *arg)
 
     t_res = INT32_MAX;
     tor_gmtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (2038-1900));
+  }
+  {
+    /* as above but with localtime. */
+    t_res = 3*(1 << 29);
+    tor_localtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2021-1900));
+
+    t_res = INT32_MAX;
+    tor_localtime_r(&t_res, &b_time);
     tt_assert(b_time.tm_year == (2037-1900) ||
               b_time.tm_year == (2038-1900));
   }
@@ -958,6 +996,27 @@ test_util_time(void *arg)
     t_res = INT64_MAX;
     CAPTURE();
     tor_gmtime_r(&t_res, &b_time);
+    CHECK_TIMEGM_WARNING("Rounding down to ");
+
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (9999-1900));
+  }
+  {
+    /* As above but with localtime. */
+    t_res = 9223372036854775LL;
+    tor_localtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (9999-1900));
+
+    /* while unlikely, the system's gmtime(_r) could return
+     * a "correct" proleptic gregorian year value,
+     * which I'm pretty sure is:
+     * (2^63-1)/60/60/24*2000/730485 + 1970 = 292277026596
+     * 730485 is the number of days in two millennia, including leap days
+     * (int64_t)b_time.tm_year == (292277026596L-1900L) without clamping */
+    t_res = INT64_MAX;
+    CAPTURE();
+    tor_localtime_r(&t_res, &b_time);
     CHECK_TIMEGM_WARNING("Rounding down to ");
 
     tt_assert(b_time.tm_year == (2037-1900) ||
@@ -3163,6 +3222,21 @@ test_util_sscanf(void *arg)
   test_feq(d3, -900123123.2000787);
   test_feq(d4, 3.2);
 
+  /* missing float */
+  r = tor_sscanf("3 ", "%d %lf", &int1, &d1);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(int1, OP_EQ, 3);
+
+  /* not a float */
+  r = tor_sscanf("999 notafloat", "%d %lf", &int1, &d1);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(int1, OP_EQ, 999);
+
+  /* %s but no buffer. */
+  char *nullbuf = NULL;
+  r = tor_sscanf("hello", "%3s", nullbuf);
+  tt_int_op(r, OP_EQ, 0);
+
  done:
   tor_free(huge);
 }
@@ -3933,6 +4007,53 @@ test_util_string_is_C_identifier(void *ptr)
   tt_int_op(0,OP_EQ, string_is_C_identifier("_;"));
   tt_int_op(0,OP_EQ, string_is_C_identifier("í"));
   tt_int_op(0,OP_EQ, string_is_C_identifier("ñ"));
+
+ done:
+  ;
+}
+
+static void
+test_util_string_is_utf8(void *ptr)
+{
+  (void)ptr;
+
+  tt_int_op(1, OP_EQ, string_is_utf8(NULL, 0));
+  tt_int_op(1, OP_EQ, string_is_utf8("", 1));
+  tt_int_op(1, OP_EQ, string_is_utf8("\uFEFF", 3));
+  tt_int_op(1, OP_EQ, string_is_utf8("\uFFFE", 3));
+  tt_int_op(1, OP_EQ, string_is_utf8("ascii\x7f\n", 7));
+  tt_int_op(1, OP_EQ, string_is_utf8("Risqu\u00e9=1", 9));
+
+  // Validate exactly 'len' bytes.
+  tt_int_op(0, OP_EQ, string_is_utf8("\0\x80", 2));
+  tt_int_op(0, OP_EQ, string_is_utf8("Risqu\u00e9=1", 6));
+
+  // Reject sequences with missing bytes.
+  tt_int_op(0, OP_EQ, string_is_utf8("\x80", 1));
+  tt_int_op(0, OP_EQ, string_is_utf8("\xc2", 1));
+  tt_int_op(0, OP_EQ, string_is_utf8("\xc2 ", 2));
+  tt_int_op(0, OP_EQ, string_is_utf8("\xe1\x80", 2));
+  tt_int_op(0, OP_EQ, string_is_utf8("\xe1\x80 ", 3));
+  tt_int_op(0, OP_EQ, string_is_utf8("\xf1\x80\x80", 3));
+  tt_int_op(0, OP_EQ, string_is_utf8("\xf1\x80\x80 ", 4));
+
+  // Reject encodings that are overly long.
+  tt_int_op(0, OP_EQ, string_is_utf8("\xc1\xbf", 2));
+  tt_int_op(1, OP_EQ, string_is_utf8("\xc2\x80", 2));
+  tt_int_op(0, OP_EQ, string_is_utf8("\xe0\x9f\xbf", 3));
+  tt_int_op(1, OP_EQ, string_is_utf8("\xe0\xa0\x80", 3));
+  tt_int_op(0, OP_EQ, string_is_utf8("\xf0\x8f\xbf\xbf", 4));
+  tt_int_op(1, OP_EQ, string_is_utf8("\xf0\x90\x80\x80", 4));
+
+  // Reject UTF-16 surrogate halves.
+  tt_int_op(1, OP_EQ, string_is_utf8("\xed\x9f\xbf", 3));
+  tt_int_op(0, OP_EQ, string_is_utf8("\xed\xa0\x80", 3));
+  tt_int_op(0, OP_EQ, string_is_utf8("\xed\xbf\xbf", 3));
+  tt_int_op(1, OP_EQ, string_is_utf8("\xee\x80\x80", 3));
+
+  // The maximum legal codepoint, 10FFFF.
+  tt_int_op(1, OP_EQ, string_is_utf8("\xf4\x8f\xbf\xbf", 4));
+  tt_int_op(0, OP_EQ, string_is_utf8("\xf4\x90\x80\x80", 4));
 
  done:
   ;
@@ -5539,10 +5660,13 @@ test_util_socketpair(void *arg)
 
   tt_assert(SOCKET_OK(fds[0]));
   tt_assert(SOCKET_OK(fds[1]));
-  tt_int_op(get_n_open_sockets(), OP_EQ, n + 2);
+  if (ersatz)
+    tt_int_op(get_n_open_sockets(), OP_EQ, n);
+  else
+    tt_int_op(get_n_open_sockets(), OP_EQ, n + 2);
 #ifdef CAN_CHECK_CLOEXEC
-  tt_int_op(fd_is_cloexec(fds[0]), OP_EQ, 1);
-  tt_int_op(fd_is_cloexec(fds[1]), OP_EQ, 1);
+  tt_int_op(fd_is_cloexec(fds[0]), OP_EQ, !ersatz);
+  tt_int_op(fd_is_cloexec(fds[1]), OP_EQ, !ersatz);
 #endif
 #ifdef CAN_CHECK_NONBLOCK
   tt_int_op(fd_is_nonblocking(fds[0]), OP_EQ, 0);
@@ -5550,10 +5674,17 @@ test_util_socketpair(void *arg)
 #endif
 
  done:
-  if (SOCKET_OK(fds[0]))
-    tor_close_socket(fds[0]);
-  if (SOCKET_OK(fds[1]))
-    tor_close_socket(fds[1]);
+  if (ersatz) {
+    if (SOCKET_OK(fds[0]))
+      tor_close_socket_simple(fds[0]);
+    if (SOCKET_OK(fds[1]))
+      tor_close_socket_simple(fds[1]);
+  } else {
+    if (SOCKET_OK(fds[0]))
+      tor_close_socket(fds[0]);
+    if (SOCKET_OK(fds[1]))
+      tor_close_socket(fds[1]);
+  }
 }
 
 #undef SOCKET_EPROTO
@@ -5671,6 +5802,18 @@ test_util_ipv4_validation(void *arg)
   tt_assert(!string_is_valid_ipv4_address("abcd"));
   tt_assert(!string_is_valid_ipv4_address("300.300.300.300"));
   tt_assert(!string_is_valid_ipv4_address("8.8."));
+
+  done:
+  return;
+}
+
+static void
+test_util_ipv6_validation(void *arg)
+{
+  (void)arg;
+
+  tt_assert(string_is_valid_ipv6_address("2a00:1450:401b:800::200e"));
+  tt_assert(!string_is_valid_ipv6_address("11:22::33:44:"));
 
   done:
   return;
@@ -6189,6 +6332,57 @@ test_util_get_unquoted_path(void *arg)
   tor_free(r);
 }
 
+static void
+test_util_log_mallinfo(void *arg)
+{
+  (void)arg;
+  char *log1 = NULL, *log2 = NULL, *mem = NULL;
+#ifdef HAVE_MALLINFO
+  setup_capture_of_logs(LOG_INFO);
+  tor_log_mallinfo(LOG_INFO);
+  expect_single_log_msg_containing("mallinfo() said: ");
+  mock_saved_log_entry_t *lg = smartlist_get(mock_saved_logs(), 0);
+  log1 = tor_strdup(lg->generated_msg);
+
+  mock_clean_saved_logs();
+  mem = tor_malloc(8192);
+  tor_log_mallinfo(LOG_INFO);
+  expect_single_log_msg_containing("mallinfo() said: ");
+  lg = smartlist_get(mock_saved_logs(), 0);
+  log2 = tor_strdup(lg->generated_msg);
+
+  /* Make sure that the amount of used memory increased. */
+  const char *used1 = strstr(log1, "uordblks=");
+  const char *used2 = strstr(log2, "uordblks=");
+  tt_assert(used1);
+  tt_assert(used2);
+  used1 += strlen("uordblks=");
+  used2 += strlen("uordblks=");
+
+  int ok1, ok2;
+  char *next1 = NULL, *next2 = NULL;
+  uint64_t mem1 = tor_parse_uint64(used1, 10, 0, UINT64_MAX, &ok1, &next1);
+  uint64_t mem2 = tor_parse_uint64(used2, 10, 0, UINT64_MAX, &ok2, &next2);
+  tt_assert(ok1);
+  tt_assert(ok2);
+  tt_assert(next1);
+  tt_assert(next2);
+  if (mem2 == 0) {
+    /* This is a fake mallinfo that doesn't actually fill in its outputs. */
+    tt_u64_op(mem1, OP_EQ, 0);
+  } else {
+    tt_u64_op(mem1, OP_LT, mem2);
+  }
+#else
+  tt_skip();
+#endif
+ done:
+  teardown_capture_of_logs();
+  tor_free(log1);
+  tor_free(log2);
+  tor_free(mem);
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, test_util_ ## name , 0, NULL, NULL }
 
@@ -6274,6 +6468,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(clamp_double_to_int64, 0),
   UTIL_TEST(find_str_at_start_of_line, 0),
   UTIL_TEST(string_is_C_identifier, 0),
+  UTIL_TEST(string_is_utf8, 0),
   UTIL_TEST(asprintf, 0),
   UTIL_TEST(listdir, 0),
   UTIL_TEST(parent_dir, 0),
@@ -6315,6 +6510,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(hostname_validation, 0),
   UTIL_TEST(dest_validation_edgecase, 0),
   UTIL_TEST(ipv4_validation, 0),
+  UTIL_TEST(ipv6_validation, 0),
   UTIL_TEST(writepid, 0),
   UTIL_TEST(get_avail_disk_space, 0),
   UTIL_TEST(touch_file, 0),
@@ -6326,5 +6522,6 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(monotonic_time_add_msec, 0),
   UTIL_TEST(htonll, 0),
   UTIL_TEST(get_unquoted_path, 0),
+  UTIL_TEST(log_mallinfo, 0),
   END_OF_TESTCASES
 };

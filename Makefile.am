@@ -40,6 +40,7 @@ endif
 
 # "Common" libraries used to link tor's utility code.
 TOR_UTIL_LIBS = \
+        src/lib/libtor-geoip.a \
 	src/lib/libtor-process.a \
 	src/lib/libtor-time.a \
 	src/lib/libtor-fs.a \
@@ -68,6 +69,7 @@ TOR_UTIL_LIBS = \
 # and tests)
 if UNITTESTS_ENABLED
 TOR_UTIL_TESTING_LIBS = \
+        src/lib/libtor-geoip-testing.a \
 	src/lib/libtor-process-testing.a \
 	src/lib/libtor-time-testing.a \
 	src/lib/libtor-fs-testing.a \
@@ -131,6 +133,14 @@ TOR_INTERNAL_TESTING_LIBS = \
 	$(TOR_UTIL_TESTING_LIBS) \
 	src/trunnel/libor-trunnel-testing.a \
 	src/lib/libtor-trace.a
+endif
+
+TOR_LDFLAGS_CRYPTLIB=@TOR_LDFLAGS_openssl@
+TOR_LIBS_CRYPTLIB=@TOR_OPENSSL_LIBS@
+TOR_CFLAGS_CRYPTLIB=
+if USE_NSS
+TOR_CFLAGS_CRYPTLIB+=@NSS_CFLAGS@
+TOR_LIBS_CRYPTLIB+=@NSS_LIBS@
 endif
 
 # All libraries used to link tor-cov
@@ -203,7 +213,7 @@ doxygen:
 test: all
 	$(top_builddir)/src/test/test
 
-check-local: check-spaces check-changes
+check-local: check-spaces check-changes check-includes
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
@@ -231,6 +241,7 @@ test-network: need-chutney-path $(TESTING_TOR_BINARY) src/tools/tor-gencert
 # because they're incompatible
 test-network-all: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/tor-gencert
 	mkdir -p $(TEST_NETWORK_ALL_LOG_DIR)
+	rm -f $(TEST_NETWORK_ALL_LOG_DIR)/*.log $(TEST_NETWORK_ALL_LOG_DIR)/*.trs
 	@flavors="$(TEST_CHUTNEY_FLAVORS)"; \
 	if ping6 -q -c 1 -o ::1 >/dev/null 2>&1 || ping6 -q -c 1 -W 1 ::1 >/dev/null 2>&1 || ping -6 -c 1 -W 1 ::1 >/dev/null 2>&1; then \
 		echo "ping6 ::1 or ping ::1 succeeded, running IPv6 flavors: $(TEST_CHUTNEY_FLAVORS_IPV6)."; \
@@ -254,7 +265,7 @@ test-network-all: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/
 		$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_WARNING_FLAGS); \
 	done; \
 	echo "Log and result files are available in $(TEST_NETWORK_ALL_LOG_DIR)."; \
-	! grep -q FAIL test_network_log/*.trs
+	! grep -q FAIL $(TEST_NETWORK_ALL_LOG_DIR)/*.trs
 
 need-stem-path:
 	@if test ! -d "$$STEM_SOURCE_DIR"; then \
@@ -320,7 +331,7 @@ endif
 
 check-includes:
 if USEPYTHON
-	$(top_srcdir)/scripts/maint/checkIncludes.py
+	$(PYTHON) $(top_srcdir)/scripts/maint/checkIncludes.py
 endif
 
 check-docs: all
@@ -349,6 +360,37 @@ check-typos:
 		echo "It seems that you don't have misspell installed."; \
 		echo "You can install the latest version of misspell here: https://github.com/client9/misspell#install"; \
 	fi
+
+.PHONY: rustfmt
+rustfmt:
+if USE_RUST
+	@if test -x "`which cargo-fmt 2>&1;true`"; then \
+		echo "Formatting Rust code ..."; \
+		(cd "$(top_srcdir)/src/rust" && cargo fmt --all --); \
+	else \
+		echo "Tor uses rustfmt (via cargo-fmt) to format Rust code."; \
+		echo "However, it seems that you don't have rustfmt installed."; \
+		printf "You can install rustfmt by following the directions here:"; \
+		echo " https://github.com/rust-lang-nursery/rustfmt"; \
+	fi
+endif
+
+.PHONY: check-rustfmt
+check-rustfmt:
+if USE_RUST
+	@if test -x "`which cargo-fmt 2>&1;true`"; then \
+		printf "Running rustfmt..."; \
+		(cd "$(top_srcdir)/src/rust" && cargo fmt --all -- --check && echo "done.") || \
+		(echo "**************** check-rustfmt failed. ****************"; \
+		 echo "   Run \`make rustfmt\` to apply the above changes."; \
+		 exit 1); \
+	else \
+		echo "Tor uses rustfmt (via cargo-fmt) to format Rust code."; \
+		echo "However, it seems that you don't have rustfmt installed."; \
+		printf "You can install rustfmt by following the directions here:"; \
+		echo " https://github.com/rust-lang-nursery/rustfmt"; \
+	fi
+endif
 
 .PHONY: clippy
 clippy:
@@ -409,6 +451,15 @@ show-distdir-testlog:
 	  cat $(distdir)/_build/sub/$(TEST_SUITE_LOG); \
 	else \
 	  cat $(distdir)/_build/$(TEST_SUITE_LOG); fi
+
+# Similarly, this relies on automake internals to run file on an
+# intermittent core file whose provenance is not known to us.  See
+# ticket 26787.
+show-distdir-core:
+	@if test -d "$(distdir)/_build/sub"; then \
+	  file $(distdir)/_build/sub/core ; \
+	else \
+	  file $(distdir)/_build/core; fi
 
 show-libs:
 	@echo $(TOR_INTERNAL_LIBS)

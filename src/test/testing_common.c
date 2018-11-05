@@ -8,7 +8,7 @@
  * \brief Common pieces to implement unit tests.
  **/
 
-#define MAIN_PRIVATE
+#define MAINLOOP_PRIVATE
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "feature/control/control.h"
@@ -16,13 +16,15 @@
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
 #include "lib/err/backtrace.h"
 #include "test/test.h"
 #include "core/or/channelpadding.h"
-#include "core/mainloop/main.h"
+#include "core/mainloop/mainloop.h"
 #include "lib/compress/compress.h"
 #include "lib/evloop/compat_libevent.h"
+#include "lib/crypt_ops/crypto_init.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -112,8 +114,8 @@ get_fname_suffix(const char *name, const char *suffix)
   setup_directory();
   if (!name)
     return temp_dir;
-  tor_snprintf(buf,sizeof(buf),"%s/%s%s%s",temp_dir,name,suffix ? "_" : "",
-               suffix ? suffix : "");
+  tor_snprintf(buf,sizeof(buf),"%s%s%s%s%s", temp_dir, PATH_SEPARATOR, name,
+               suffix ? "_" : "", suffix ? suffix : "");
   return buf;
 }
 
@@ -222,6 +224,21 @@ an_assertion_failed(void)
   tinytest_set_test_failed_();
 }
 
+void tinytest_prefork(void);
+void tinytest_postfork(void);
+void
+tinytest_prefork(void)
+{
+  free_pregenerated_keys();
+  crypto_prefork();
+}
+void
+tinytest_postfork(void)
+{
+  crypto_postfork();
+  init_pregenerated_keys();
+}
+
 /** Main entry point for unit test code: parse the command line, and run
  * some unit tests. */
 int
@@ -284,7 +301,6 @@ main(int c, const char **v)
     printf("Can't initialize crypto subsystem; exiting.\n");
     return 1;
   }
-  crypto_set_tls_dh_prime();
   if (crypto_seed_rng() < 0) {
     printf("Couldn't seed RNG; exiting.\n");
     return 1;

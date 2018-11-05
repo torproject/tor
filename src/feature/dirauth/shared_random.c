@@ -96,13 +96,13 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
-#include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/dirauth/shared_random_state.h"
 #include "feature/dircommon/voting_schedule.h"
 
 #include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/mode.h"
+#include "feature/dirauth/authmode.h"
 
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/nodelist/networkstatus_st.h"
@@ -1288,4 +1288,3 @@ set_num_srv_agreements(int32_t value)
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
-

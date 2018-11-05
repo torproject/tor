@@ -15,23 +15,23 @@
 
 #include "app/config/config.h"
 #include "core/or/circuitbuild.h"
-#include "lib/crypt_ops/crypto_rand.h"
-#include "lib/crypt_ops/crypto_util.h"
-#include "feature/nodelist/networkstatus.h"
-#include "feature/nodelist/nodelist.h"
+#include "core/or/policies.h"
+#include "feature/dirauth/shared_random_state.h"
 #include "feature/hs/hs_cache.h"
-#include "feature/hs/hs_common.h"
+#include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"
+#include "feature/hs/hs_common.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_service.h"
-#include "feature/hs/hs_circuitmap.h"
-#include "core/or/policies.h"
+#include "feature/hs_common/shared_random_client.h"
+#include "feature/nodelist/describe.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerset.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
-#include "feature/nodelist/routerset.h"
-#include "feature/relay/router.h"
-#include "feature/hs_common/shared_random_client.h"
-#include "feature/dirauth/shared_random_state.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_util.h"
 
 #include "core/or/edge_connection_st.h"
 #include "feature/nodelist/networkstatus_st.h"
@@ -530,7 +530,7 @@ rend_data_get_address(const rend_data_t *rend_data)
     return TO_REND_DATA_V2(rend_data)->onion_address;
   default:
     /* We should always have a supported version. */
-    tor_assert(0);
+    tor_assert_unreached();
   }
 }
 
@@ -553,7 +553,7 @@ rend_data_get_desc_id(const rend_data_t *rend_data, uint8_t replica,
     return TO_REND_DATA_V2(rend_data)->descriptor_id[replica];
   default:
     /* We should always have a supported version. */
-    tor_assert(0);
+    tor_assert_unreached();
   }
 }
 
@@ -576,7 +576,7 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
   }
   default:
     /* We should always have a supported version. */
-    tor_assert(0);
+    tor_assert_unreached();
   }
 }
 
@@ -882,6 +882,11 @@ hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
   smartlist_free(matching_ports);
   if (chosen_port) {
     if (!(chosen_port->is_unix_addr)) {
+      /* save the original destination before we overwrite it */
+      if (conn->hs_ident) {
+        conn->hs_ident->orig_virtual_port = TO_CONN(conn)->port;
+      }
+
       /* Get a non-AF_UNIX connection ready for connection_exit_connect() */
       tor_addr_copy(&TO_CONN(conn)->addr, &chosen_port->real_addr);
       TO_CONN(conn)->port = chosen_port->real_port;

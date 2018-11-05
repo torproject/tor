@@ -4,14 +4,14 @@
 #include "orconfig.h"
 
 #define BUFFERS_PRIVATE
-#define DIRECTORY_PRIVATE
+#define DIRCACHE_PRIVATE
 
 #include "core/or/or.h"
 #include "lib/err/backtrace.h"
 #include "lib/container/buffers.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
-#include "feature/dircache/directory.h"
+#include "feature/dircache/dircache.h"
 #include "lib/log/log.h"
 
 #include "feature/dircommon/dir_connection_st.h"
@@ -132,4 +132,3 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
 
   return 0;
 }
-

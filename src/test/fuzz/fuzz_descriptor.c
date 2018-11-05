@@ -1,10 +1,13 @@
 /* Copyright (c) 2016-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-#define ROUTERPARSE_PRIVATE
+#define SIGCOMMON_PRIVATE
 #include "core/or/or.h"
-#include "feature/nodelist/routerparse.h"
+#include "feature/dirparse/routerparse.h"
+#include "feature/dirparse/sigcommon.h"
+#include "feature/dirparse/unparseable.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/relay/routerkeys.h"
+#include "feature/nodelist/torcert.h"
+#include "feature/keymgt/loadkey.h"
 #include "test/fuzz/fuzzing.h"
 
 static int
@@ -76,4 +79,3 @@ fuzz_main(const uint8_t *data, size_t sz)
   }
   return 0;
 }
-

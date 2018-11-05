@@ -100,6 +100,16 @@ typedef int32_t ssize_t;
 #  define TOR_PRIuSZ "zu"
 #endif
 
+#ifdef _WIN32
+#  ifdef _WIN64
+#    define TOR_PRIdSZ PRId64
+#  else
+#    define TOR_PRIdSZ PRId32
+#  endif
+#else
+#  define TOR_PRIdSZ "zd"
+#endif
+
 #ifndef SSIZE_MAX
 #if (SIZEOF_SIZE_T == 4)
 #define SSIZE_MAX INT32_MAX

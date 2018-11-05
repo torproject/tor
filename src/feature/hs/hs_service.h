@@ -24,7 +24,7 @@
 /* When loading and configuring a service, this is the default version it will
  * be configured for as it is possible that no HiddenServiceVersion is
  * present. */
-#define HS_SERVICE_DEFAULT_VERSION HS_VERSION_TWO
+#define HS_SERVICE_DEFAULT_VERSION HS_VERSION_THREE
 
 /* As described in the specification, service publishes their next descriptor
  * at a random time between those two values (in seconds). */
@@ -99,42 +99,65 @@ typedef struct hs_service_intropoints_t {
   digestmap_t *failed_id;
 } hs_service_intropoints_t;
 
-/* Representation of a service descriptor. */
-typedef struct hs_service_descriptor_t {
-  /* Decoded descriptor. This object is used for encoding when the service
-   * publishes the descriptor. */
-  hs_descriptor_t *desc;
+/* Representation of a service descriptor.
+ *
+ * Some elements of the descriptor are mutable whereas others are immutable:
 
-  /* Descriptor signing keypair. */
+ * Immutable elements are initialized once when the descriptor is built (when
+ * service descriptors gets rotated). This means that these elements are
+ * initialized once and then they don't change for the lifetime of the
+ * descriptor. See build_service_descriptor().
+ *
+ * Mutable elements are initialized when we build the descriptor but they are
+ * also altered during the lifetime of the descriptor. They could be
+ * _refreshed_ everytime we upload the descriptor (which happens multiple times
+ * over the lifetime of the descriptor), or through periodic events. We do this
+ * for elements like the descriptor revision counter and various
+ * certificates. See refresh_service_descriptor() and
+ * update_service_descriptor_intro_points().
+ */
+typedef struct hs_service_descriptor_t {
+  /* Immutable: Client authorization ephemeral keypair. */
+  curve25519_keypair_t auth_ephemeral_kp;
+
+  /* Immutable: Descriptor cookie used to encrypt the descriptor, when the
+   * client authorization is enabled */
+  uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+
+  /* Immutable: Descriptor signing keypair. */
   ed25519_keypair_t signing_kp;
 
-  /* Blinded keypair derived from the master identity public key. */
+  /* Immutable: Blinded keypair derived from the master identity public key. */
   ed25519_keypair_t blinded_kp;
 
-  /* When is the next time when we should upload the descriptor. */
-  time_t next_upload_time;
-
-  /* Introduction points assign to this descriptor which contains
-   * hs_service_intropoints_t object indexed by authentication key (the RSA
-   * key if the node is legacy). */
-  hs_service_intropoints_t intro_points;
-
-  /* The time period number this descriptor has been created for. */
+  /* Immutable: The time period number this descriptor has been created for. */
   uint64_t time_period_num;
 
-  /* True iff we have missing intro points for this descriptor because we
-   * couldn't pick any nodes. */
+  /** Immutable: The OPE cipher for encrypting revision counters for this
+   *  descriptor.  Tied to the descriptor blinded key. */
+  struct crypto_ope_t *ope_cipher;
+
+  /* Mutable: Decoded descriptor. This object is used for encoding when the
+   * service publishes the descriptor. */
+  hs_descriptor_t *desc;
+
+  /* Mutable: When is the next time when we should upload the descriptor. */
+  time_t next_upload_time;
+
+  /* Mutable: Introduction points assign to this descriptor which contains
+   * hs_service_intropoints_t object indexed by authentication key (the RSA key
+   * if the node is legacy). */
+  hs_service_intropoints_t intro_points;
+
+  /* Mutable: True iff we have missing intro points for this descriptor because
+   * we couldn't pick any nodes. */
   unsigned int missing_intro_points : 1;
 
-  /** List of the responsible HSDirs (their b64ed identity digest) last time we
-   *  uploaded this descriptor. If the set of responsible HSDirs is different
-   *  from this list, this means we received new dirinfo and we need to
-   *  reupload our descriptor. */
+  /** Mutable: List of the responsible HSDirs (their b64ed identity digest)
+   *  last time we uploaded this descriptor. If the set of responsible HSDirs
+   *  is different from this list, this means we received new dirinfo and we
+   *  need to reupload our descriptor. */
   smartlist_t *previous_hsdirs;
-
-  /** The OPE cipher for encrypting revision counters for this descriptor.
-   *  Tied to the descriptor blinded key. */
-  struct crypto_ope_t *ope_cipher;
 } hs_service_descriptor_t;
 
 /* Service key material. */
@@ -148,6 +171,21 @@ typedef struct hs_service_keys_t {
   unsigned int is_identify_key_offline : 1;
 } hs_service_keys_t;
 
+/** Service side configuration of client authorization. */
+typedef struct hs_service_authorized_client_t {
+  /* The client auth public key used to encrypt the descriptor cookie. */
+  curve25519_public_key_t client_pk;
+} hs_service_authorized_client_t;
+
+/** Which protocol to use for exporting HS client circuit ID. */
+typedef enum {
+  /** Don't expose the circuit id. */
+  HS_CIRCUIT_ID_PROTOCOL_NONE,
+
+  /** Use the HAProxy proxy protocol. */
+  HS_CIRCUIT_ID_PROTOCOL_HAPROXY
+} hs_circuit_id_protocol_t;
+
 /* Service configuration. The following are set from the torrc options either
  * set by the configuration file or by the control port. Nothing else should
  * change those values. */
@@ -155,6 +193,9 @@ typedef struct hs_service_config_t {
   /* Protocol version of the service. Specified by HiddenServiceVersion
    * option. */
   uint32_t version;
+
+  /* Have we explicitly set HiddenServiceVersion? */
+  unsigned int hs_version_explicitly_set : 1;
 
   /* List of rend_service_port_config_t */
   smartlist_t *ports;
@@ -176,6 +217,13 @@ typedef struct hs_service_config_t {
    * HiddenServiceNumIntroductionPoints option. */
   unsigned int num_intro_points;
 
+  /* True iff the client auth is enabled. */
+  unsigned int is_client_auth_enabled : 1;
+
+  /* List of hs_service_authorized_client_t's of clients that may access this
+   * service. Specified by HiddenServiceAuthorizeClient option. */
+  smartlist_t *clients;
+
   /* True iff we allow request made on unknown ports. Specified by
    * HiddenServiceAllowUnknownPorts option. */
   unsigned int allow_unknown_ports : 1;
@@ -190,6 +238,9 @@ typedef struct hs_service_config_t {
 
   /* Is this service ephemeral? */
   unsigned int is_ephemeral : 1;
+
+  /* Does this service export the circuit ID of its clients? */
+  hs_circuit_id_protocol_t circuit_id_protocol;
 } hs_service_config_t;
 
 /* Service state. */
@@ -262,6 +313,7 @@ void hs_service_free_(hs_service_t *service);
 unsigned int hs_service_get_num_services(void);
 void hs_service_stage_services(const smartlist_t *service_list);
 int hs_service_load_all_keys(void);
+int hs_service_get_version_from_key(const hs_service_t *service);
 void hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
                                          smartlist_t *dir_list);
 int hs_service_set_conn_addr_port(const origin_circuit_t *circ,
@@ -294,6 +346,9 @@ void hs_service_upload_desc_to_dir(const char *encoded_desc,
                                    const ed25519_public_key_t *identity_pk,
                                    const ed25519_public_key_t *blinded_pk,
                                    const routerstatus_t *hsdir_rs);
+
+hs_circuit_id_protocol_t
+hs_service_exports_circuit_id(const ed25519_public_key_t *pk);
 
 #ifdef HS_SERVICE_PRIVATE
 
@@ -335,6 +390,9 @@ STATIC hs_service_descriptor_t *service_desc_find_by_intro(
                                          const hs_service_t *service,
                                          const hs_service_intro_point_t *ip);
 /* Helper functions. */
+STATIC int client_filename_is_valid(const char *filename);
+STATIC hs_service_authorized_client_t *
+parse_authorized_client(const char *client_key_str);
 STATIC void get_objects_from_ident(const hs_ident_circuit_t *ident,
                                    hs_service_t **service,
                                    hs_service_intro_point_t **ip,
@@ -348,13 +406,20 @@ STATIC int intro_point_should_expire(const hs_service_intro_point_t *ip,
 STATIC void run_housekeeping_event(time_t now);
 STATIC void rotate_all_descriptors(time_t now);
 STATIC void build_all_descriptors(time_t now);
-STATIC void update_all_descriptors(time_t now);
+STATIC void update_all_descriptors_intro_points(time_t now);
 STATIC void run_upload_descriptor_event(time_t now);
 
 STATIC void service_descriptor_free_(hs_service_descriptor_t *desc);
 #define service_descriptor_free(d) \
   FREE_AND_NULL(hs_service_descriptor_t, \
                            service_descriptor_free_, (d))
+
+STATIC void
+service_authorized_client_free_(hs_service_authorized_client_t *client);
+#define service_authorized_client_free(c) \
+  FREE_AND_NULL(hs_service_authorized_client_t, \
+                           service_authorized_client_free_, (c))
+
 STATIC int
 write_address_to_file(const hs_service_t *service, const char *fname_);
 
@@ -367,6 +432,12 @@ STATIC void service_desc_schedule_upload(hs_service_descriptor_t *desc,
 
 STATIC int service_desc_hsdirs_changed(const hs_service_t *service,
                                 const hs_service_descriptor_t *desc);
+
+STATIC int service_authorized_client_config_equal(
+                                         const hs_service_config_t *config1,
+                                         const hs_service_config_t *config2);
+
+STATIC void service_clear_config(hs_service_config_t *config);
 
 #endif /* defined(HS_SERVICE_PRIVATE) */
 

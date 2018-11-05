@@ -234,25 +234,33 @@ test_threads_conditionvar(void *arg)
   if (timeout) {
     ti->tv = &msec100;
   }
+
+#define SPIN_UNTIL(condition,sleep_msec)        \
+  while (1) {                                   \
+    tor_mutex_acquire(ti->mutex);               \
+    if (condition) {                            \
+      break;                                    \
+    }                                           \
+    tor_mutex_release(ti->mutex);               \
+    tor_sleep_msec(sleep_msec);                 \
+  }
+
   spawn_func(cv_test_thr_fn_, ti);
   spawn_func(cv_test_thr_fn_, ti);
   spawn_func(cv_test_thr_fn_, ti);
   spawn_func(cv_test_thr_fn_, ti);
 
-  tor_mutex_acquire(ti->mutex);
+  SPIN_UNTIL(ti->n_threads == 4, 10);
+
+  time_t started_at = time(NULL);
+
   ti->addend = 7;
   ti->shutdown = 1;
   tor_cond_signal_one(ti->cond);
   tor_mutex_release(ti->mutex);
 
 #define SPIN()                                  \
-  while (1) {                                   \
-    tor_mutex_acquire(ti->mutex);               \
-    if (ti->addend == 0) {                      \
-      break;                                    \
-    }                                           \
-    tor_mutex_release(ti->mutex);               \
-  }
+  SPIN_UNTIL(ti->addend == 0, 0)
 
   SPIN();
 
@@ -279,8 +287,9 @@ test_threads_conditionvar(void *arg)
   if (!timeout) {
     tt_int_op(ti->n_shutdown, OP_EQ, 4);
   } else {
-    tor_sleep_msec(200);
-    tor_mutex_acquire(ti->mutex);
+    const int GIVE_UP_AFTER_SEC = 30;
+    SPIN_UNTIL((ti->n_timeouts == 2 ||
+                time(NULL) >= started_at + GIVE_UP_AFTER_SEC), 10);
     tt_int_op(ti->n_shutdown, OP_EQ, 2);
     tt_int_op(ti->n_timeouts, OP_EQ, 2);
     tor_mutex_release(ti->mutex);
@@ -301,4 +310,3 @@ struct testcase_t thread_tests[] = {
     &passthrough_setup, (void*)"tv" },
   END_OF_TESTCASES
 };
-
