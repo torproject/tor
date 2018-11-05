@@ -61,10 +61,10 @@ get_uname,(void))
      */
     /* Windows Server 2019 is indistinguishable from Windows Server 2016
      * using GetVersionEx().
-    { 10,  0, NULL,                        "Windows Server 2019 or later" }, */
-    { 10,  0, "Windows 10 or later",       "Windows Server 2016 or later" },
-    {  6,  3, "Windows 8.1 or later",      "Windows Server 2012 R2 or later" },
-    {  6,  2, "Windows 8 or later",        "Windows Server 2012 or later" },
+    { 10,  0, NULL,                        "Windows Server 2019" }, */
+    { 10,  0, "Windows 10",                "Windows Server 2016" },
+    {  6,  3, "Windows 8.1",               "Windows Server 2012 R2" },
+    {  6,  2, "Windows 8",                 "Windows Server 2012" },
     {  6,  1, "Windows 7",                 "Windows Server 2008 R2" },
     {  6,  0, "Windows Vista",             "Windows Server 2008" },
     {  5,  2, "Windows XP Professional",   "Windows Server 2003" },
