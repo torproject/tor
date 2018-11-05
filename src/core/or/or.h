@@ -841,7 +841,7 @@ typedef struct protover_summary_flags_t {
   unsigned int supports_v3_rendezvous_point: 1;
 
   /** True iff this router has a protocol list that allows clients to
-   * negotiate link-level padding. Requires Padding=1. */
+   * negotiate link-level padding. Requires Padding>=1. */
   unsigned int supports_padding : 1;
 } protover_summary_flags_t;
 
