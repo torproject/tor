@@ -12,6 +12,7 @@
 #include "test/test.h"
 
 #include "core/or/addr_policy_st.h"
+#include "feature/hs/hs_descriptor.h"
 #include "feature/nodelist/node_st.h"
 #include "core/or/port_cfg_st.h"
 #include "feature/nodelist/routerinfo_st.h"
@@ -2023,6 +2024,18 @@ test_policies_fascist_firewall_allows_address(void *arg)
                            expect_ap); \
   STMT_END
 
+/* Check that fascist_firewall_choose_address_ls() returns the expected
+ * results. */
+#define CHECK_CHOSEN_ADDR_LS(fake_ls, pref_only, expect_rv, expect_ap) \
+  STMT_BEGIN \
+    tor_addr_port_t chosen_ls_ap; \
+    tor_addr_make_null(&chosen_ls_ap.addr, AF_UNSPEC); \
+    chosen_ls_ap.port = 0; \
+    fascist_firewall_choose_address_ls(fake_ls, pref_only, &chosen_ls_ap); \
+    tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_ls_ap.addr)); \
+    tt_int_op((expect_ap).port, OP_EQ, chosen_ls_ap.port); \
+  STMT_END
+
 /** Run unit tests for fascist_firewall_choose_address */
 static void
 test_policies_fascist_firewall_choose_address(void *arg)
@@ -2420,6 +2433,69 @@ test_policies_fascist_firewall_choose_address(void *arg)
                        ipv4_dir_ap);
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_DIR_CONNECTION, 1, 1,
                        ipv4_dir_ap);
+
+  /* Test firewall_choose_address_ls(). To do this, we make a fake link
+   * specifier. */
+  smartlist_t *lspecs = smartlist_new();
+  link_specifier_t *fake_ls;
+
+  /* IPv4 link specifier */
+  fake_ls = link_specifier_new();
+  link_specifier_set_ls_type(fake_ls, LS_IPV4);
+  link_specifier_set_un_ipv4_addr(fake_ls,
+                                  tor_addr_to_ipv4h(&ipv4_or_ap.addr));
+  link_specifier_set_un_ipv4_port(fake_ls, ipv4_or_ap.port);
+  link_specifier_set_ls_len(fake_ls, sizeof(ipv4_or_ap.addr.addr.in_addr) +
+                            sizeof(ipv4_or_ap.port));
+  smartlist_add(lspecs, fake_ls);
+
+  /* IPv6 link specifier */
+  fake_ls = link_specifier_new();
+  link_specifier_set_ls_type(fake_ls, LS_IPV6);
+  size_t addr_len = link_specifier_getlen_un_ipv6_addr(fake_ls);
+  const uint8_t *in6_addr = tor_addr_to_in6_addr8(&ipv6_or_ap.addr);
+  uint8_t *ipv6_array = link_specifier_getarray_un_ipv6_addr(fake_ls);
+  memcpy(ipv6_array, in6_addr, addr_len);
+  link_specifier_set_un_ipv6_port(fake_ls, ipv6_or_ap.port);
+  link_specifier_set_ls_len(fake_ls, addr_len + sizeof(ipv6_or_ap.port));
+  smartlist_add(lspecs, fake_ls);
+
+  /* Enable both IPv4 and IPv6. */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 1;
+  mock_options.ClientUseIPv6 = 1;
+
+  /* Prefer IPv4, enable both IPv4 and IPv6. */
+  mock_options.ClientPreferIPv6ORPort = 0;
+
+  CHECK_CHOSEN_ADDR_LS(lspecs, 0, 1, ipv4_or_ap);
+  CHECK_CHOSEN_ADDR_LS(lspecs, 1, 1, ipv4_or_ap);
+
+  /* Prefer IPv6, enable both IPv4 and IPv6. */
+  mock_options.ClientPreferIPv6ORPort = 1;
+
+  CHECK_CHOSEN_ADDR_LS(lspecs, 0, 1, ipv6_or_ap);
+  CHECK_CHOSEN_ADDR_LS(lspecs, 1, 1, ipv6_or_ap);
+
+  /* IPv4-only. */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 1;
+  mock_options.ClientUseIPv6 = 0;
+
+  CHECK_CHOSEN_ADDR_LS(lspecs, 0, 1, ipv4_or_ap);
+  CHECK_CHOSEN_ADDR_LS(lspecs, 1, 1, ipv4_or_ap);
+
+  /* IPv6-only. */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 0;
+  mock_options.ClientUseIPv6 = 1;
+
+  CHECK_CHOSEN_ADDR_LS(lspecs, 0, 1, ipv6_or_ap);
+  CHECK_CHOSEN_ADDR_LS(lspecs, 1, 1, ipv6_or_ap);
+
+  SMARTLIST_FOREACH(lspecs, link_specifier_t *, lspec,
+                    link_specifier_free(lspec));
+  smartlist_free(lspecs);
 
  done:
   UNMOCK(get_options);
