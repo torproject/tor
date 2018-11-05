@@ -188,7 +188,7 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
   else
     start_usec = state->start_usec;
 
-  if (bin >= state->histogram_len-1)
+  if (bin >= CIRCPAD_INFINITY_BIN(state))
     return CIRCPAD_DELAY_INFINITE;
 
   if (bin == 0)
@@ -200,7 +200,8 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
   /* The bin widths double every index, so that we can have more resolution
    * for lower time values in the histogram. */
   /* l-(l-2)-1 == l-l+2-1 == l-l+1 */
-  const circpad_time_t bin_width_exponent = 1<<(state->histogram_len-bin-1);
+  const circpad_time_t bin_width_exponent =
+        1 << (CIRCPAD_INFINITY_BIN(state) - bin);
   const circpad_time_t histogram_range_usec =
                           state->range_sec*TOR_USEC_PER_SEC;
   return (circpad_delay_t)MIN(start_usec +
@@ -252,13 +253,13 @@ circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi, circpad_delay_t usec)
    * it to behave like ceil(log2(u64)). This is verified in our tests
    * to properly invert the operation done in
    * circpad_histogram_bin_to_usec(). */
-  bin = state->histogram_len -
-    tor_log2(2*histogram_range_usec/(usec-start_usec+1))-1;
+  bin = CIRCPAD_INFINITY_BIN(state) -
+    tor_log2(2*histogram_range_usec/(usec-start_usec+1));
 
   /* Clamp the return value to account for timevals before the start
    * of bin 0, or after the last bin. Don't return the infinity bin
    * index. */
-  bin = MIN(MAX(bin, 1), state->histogram_len-2);
+  bin = MIN(MAX(bin, 1), CIRCPAD_INFINITY_BIN(state)-1);
   return bin;
 }
 
@@ -394,7 +395,7 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
     mi->chosen_bin = curr_bin;
   }
 
-  if (curr_bin == state->histogram_len-1) {
+  if (curr_bin == CIRCPAD_INFINITY_BIN(state)) {
     if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE &&
         mi->histogram[curr_bin] > 0) {
       mi->histogram[curr_bin]--;
@@ -405,7 +406,7 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
     return CIRCPAD_DELAY_INFINITE;
   }
 
-  tor_assert(curr_bin < state->histogram_len - 1);
+  tor_assert(curr_bin < CIRCPAD_INFINITY_BIN(state));
 
   bin_start = circpad_histogram_bin_to_usec(mi, curr_bin);
   bin_end = circpad_histogram_bin_to_usec(mi, curr_bin+1);
@@ -533,7 +534,7 @@ circpad_machine_first_higher_index(circpad_machineinfo_t *mi,
   int bin = circpad_histogram_usec_to_bin(mi, target_bin_usec);
 
   /* Don't remove from the infinity bin */
-  for (; bin < mi->histogram_len-1; bin++) {
+  for (; bin < CIRCPAD_INFINITY_BIN(mi); bin++) {
     if (mi->histogram[bin] &&
         circpad_histogram_bin_to_usec(mi, bin+1) > target_bin_usec) {
       return bin;
@@ -576,7 +577,7 @@ circpad_machine_remove_higher_token(circpad_machineinfo_t *mi,
    * has tokens remaining. */
   int bin = circpad_machine_first_higher_index(mi, target_bin_usec);
 
-  if (bin >= 0 && bin < mi->histogram_len-1) {
+  if (bin >= 0 && bin < CIRCPAD_INFINITY_BIN(mi)) {
     tor_assert(mi->histogram[bin]);
     mi->histogram[bin]--;
   }
@@ -592,7 +593,7 @@ circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
 {
   int bin = circpad_machine_first_lower_index(mi, target_bin_usec);
 
-  if (bin >= 0 && bin < mi->histogram_len-1) {
+  if (bin >= 0 && bin < CIRCPAD_INFINITY_BIN(mi)) {
     tor_assert(mi->histogram[bin]);
     mi->histogram[bin]--;
   }
@@ -710,7 +711,7 @@ circpad_check_token_supply(circpad_machineinfo_t *mi)
    * We also do not count infinity bin in histogram totals.
    */
   if (mi->histogram_len && mi->histogram) {
-    for (int b = 0; b < mi->histogram_len-1; b++)
+    for (int b = 0; b < CIRCPAD_INFINITY_BIN(mi); b++)
       histogram_total_tokens += mi->histogram[b];
 
     /* If we change state, we're done */
