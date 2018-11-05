@@ -1,3 +1,5 @@
   o Minor features (relay usability):
     - Notify systemd of ShutdownWaitLength so it can be set to longer than
-      systemd's TimeoutStopSec. Closes ticket 28113.
+      systemd's TimeoutStopSec. In tor's systemd service file, set
+      TimeoutSec to 60 seconds, to allow tor some time to shut down.
+      Closes ticket 28113.
