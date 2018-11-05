@@ -1,0 +1,6 @@
+  o Major features (refactoring):
+    - Tor now uses an explicit list of its own subsystems when initializing
+      and shutting down.  Previously, these systems were managed implicitly
+      though various places throughout the codebase.  (There still some
+      subsystems using the old system.)
+      Closes ticket 28330.
