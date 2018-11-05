@@ -78,6 +78,13 @@ typedef uint32_t circpad_delay_t;
 #define CIRCPAD_DELAY_INFINITE  (UINT32_MAX)
 
 /**
+ * Macro to clarify when we're checking the infinity bin.
+ *
+ * Works with either circpad_state_t or circpad_machineinfo_t
+ */
+#define CIRCPAD_INFINITY_BIN(mi)  ((mi)->histogram_len-1)
+
+/**
  * These constants form a bitfield that specifies when a state machine
  * should be applied to a circuit.
  *
