@@ -67,7 +67,7 @@
 #endif
 
 struct rend_service_t;
-static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
+static origin_circuit_t *find_intro_circuit(const rend_intro_point_t *intro,
                                             const char *pk_digest);
 static rend_intro_point_t *find_intro_point(origin_circuit_t *circ);
 static rend_intro_point_t *find_expiring_intro_point(
@@ -546,6 +546,20 @@ copy_service_on_prunning(rend_service_t *dst, rend_service_t *src)
   dst->n_intro_points_wanted = src->n_intro_points_wanted;
 }
 
+/** Close the introduction circuits of <b>s</b>. This function does not remove
+ *  the intro points from the service. */
+static void
+close_intro_circs(const rend_service_t *s)
+{
+  SMARTLIST_FOREACH_BEGIN(s->intro_nodes, const rend_intro_point_t *, intro) {
+    origin_circuit_t *intro_circ = find_intro_circuit(intro, s->pk_digest);
+    if (!intro_circ) {
+      continue;
+    }
+    circuit_mark_for_close(TO_CIRCUIT(intro_circ), END_CIRC_REASON_FINISHED);
+  } SMARTLIST_FOREACH_END(intro);
+}
+
 /* Helper: Actual implementation of the pruning on reload which we've
  * decoupled in order to make the unit test workeable without ugly hacks.
  * Furthermore, this function does NOT free any memory but will nullify the
@@ -615,6 +629,17 @@ rend_service_prune_list_impl_(void)
           strcmp(old->directory, new->directory)) {
         continue;
       }
+
+      /* If client authorization settings changed, kill the introduction
+       * circuits since they should be rebuilt to reflect the new client auth
+       * settings. We don't actually remove the intro points from the
+       * 'intro_nodes' list, since they should remain the same and the service
+       * should just make new circuits. */
+      if (old->auth_type != new->auth_type) {
+        log_info(LD_REND, "Client auth config changed: Closing intro circs.");
+        close_intro_circs(old);
+      }
+
       smartlist_add_all(new->intro_nodes, old->intro_nodes);
       smartlist_clear(old->intro_nodes);
       smartlist_add_all(new->expiring_nodes, old->expiring_nodes);
@@ -3553,7 +3578,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
  * found.
  */
 static origin_circuit_t *
-find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest)
+find_intro_circuit(const rend_intro_point_t *intro, const char *pk_digest)
 {
   origin_circuit_t *circ = NULL;
 
