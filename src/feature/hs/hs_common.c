@@ -1697,7 +1697,15 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
   tor_addr_make_null(&ap.addr, AF_UNSPEC);
   ap.port = 0;
 
-  tor_assert(lspecs);
+  if (lspecs == NULL) {
+    log_warn(LD_BUG, "Specified link specifiers is null");
+    goto done;
+  }
+
+  if (onion_key == NULL) {
+    log_warn(LD_BUG, "Specified onion key is null");
+    goto done;
+  }
 
   if (smartlist_len(lspecs) == 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND, "Empty link specifier list.");
@@ -1744,8 +1752,14 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
     fascist_firewall_choose_address_ls(lspecs, 0, &ap);
 
   /* Legacy ID is mandatory, and we require an IP address. */
-  if (!tor_addr_port_is_valid_ap(&ap, 0) || !have_legacy_id) {
-    /* If we're missing the legacy ID or the IP address, return NULL. */
+  if (!tor_addr_port_is_valid_ap(&ap, 0)) {
+    /* If we're missing the IP address, log a warning and return NULL. */
+    log_info(LD_NET, "Unreachable or invalid IP address in link state");
+    goto done;
+  }
+  if (!have_legacy_id) {
+    /* If we're missing the legacy ID, log a warning and return NULL. */
+    log_warn(LD_PROTOCOL, "Missing Legacy ID in link state");
     goto done;
   }
 
