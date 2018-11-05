@@ -216,7 +216,7 @@ typedef struct circpad_state_t {
    * widths are exponentially spaced, in microseconds */
   circpad_hist_bin_t histogram[CIRCPAD_MAX_HISTOGRAM_LEN];
   /** total number of tokens */
-  uint32_t histogram_total;
+  uint32_t histogram_total_tokens;
 
   /** Microseconds of the first bin of histogram, or base of iat dist */
   circpad_delay_t start_usec;
@@ -337,14 +337,14 @@ typedef struct circpad_machineinfo_t {
   /**
    * EWMA estimate of the RTT of the circuit from this hop
    * to the exit end, in microseconds. */
-  circpad_delay_t rtt_estimate_us;
+  circpad_delay_t rtt_estimate_usec;
 
   /**
    * The last time we got an event relevant to estimating
    * the RTT. Monotonic time in microseconds since system
    * start.
    */
-  circpad_time_t last_received_time_us;
+  circpad_time_t last_received_time_usec;
 
   /**
    * The time at which we scheduled a non-padding packet,
@@ -353,7 +353,7 @@ typedef struct circpad_machineinfo_t {
    * Monotonic time in microseconds since system start.
    * This is 0 if we haven't chosen a padding delay.
    */
-  circpad_time_t padding_scheduled_at_us;
+  circpad_time_t padding_scheduled_at_usec;
 
   /** What state is this machine in? */
   ENUM_BF(circpad_statenum_t) current_state : 2;
@@ -363,9 +363,9 @@ typedef struct circpad_machineinfo_t {
    *
    * This is 1 if a timer is pending. It is 0 if
    * no timer is scheduled. (It can be 0 even when
-   * padding_was_scheduled_at_us is non-zero).
+   * padding_was_scheduled_at_usec is non-zero).
    */
-  uint8_t padding_timer_scheduled : 1;
+  uint8_t is_padding_timer_scheduled : 1;
 
   /**
    * If this is true, we have seen full duplex behavior.
@@ -405,11 +405,11 @@ typedef struct circpad_machine_t {
   uint8_t machine_index : 1;
 
   /** Send a padding negotiate to shut down machine at end state? */
-  uint8_t negotiate_end : 1;
+  uint8_t should_negotiate_end : 1;
 
   // These next three fields are origin machine-only...
   /** Origin side or relay side */
-  uint8_t origin_side : 1;
+  uint8_t is_origin_side : 1;
 
   /** Which hop in the circuit should we send padding to/from?
    *  1-indexed (ie: hop #1 is guard, #2 middle, #3 exit). */
