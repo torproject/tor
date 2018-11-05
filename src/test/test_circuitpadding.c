@@ -472,9 +472,45 @@ test_circuitpadding_tokens(void *arg)
 
   state = circpad_machine_current_state(client_side->padding_info[0]);
 
-  // Test 1: converting usec->bin->usec->usec
-  for (circpad_delay_t i = 0;
-           i < state->start_usec + state->range_sec*USEC_PER_SEC*2;
+  // Test 0: convert bin->usec->bin
+  // Bin 0+1 have different semantics
+  for (int bin = 0; bin < 2; bin++) {
+    circpad_delay_t usec =
+        circpad_histogram_bin_to_usec(client_side->padding_info[0], bin);
+    int bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
+                                             usec);
+    tt_int_op(bin, OP_EQ, bin2);
+  }
+  for (int bin = 2; bin < state->histogram_len-1; bin++) {
+    circpad_delay_t usec =
+        circpad_histogram_bin_to_usec(client_side->padding_info[0], bin);
+    int bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
+                                             usec);
+    tt_int_op(bin, OP_EQ, bin2);
+    /* Verify we round down */
+    bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
+                                             usec+3);
+    tt_int_op(bin, OP_EQ, bin2);
+
+    bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
+                                             usec-1);
+    tt_int_op(bin, OP_EQ, bin2+1);
+  }
+
+  // Test 1: converting usec->bin->usec->bin
+  // Bin 0+1 have different semantics.
+  for (circpad_delay_t i = 0; i <= state->start_usec+1; i++) {
+    int bin = circpad_histogram_usec_to_bin(client_side->padding_info[0],
+                                            i);
+    circpad_delay_t usec =
+        circpad_histogram_bin_to_usec(client_side->padding_info[0], bin);
+    int bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
+                                             usec);
+    tt_int_op(bin, OP_EQ, bin2);
+    tt_int_op(i, OP_LE, usec);
+  }
+  for (circpad_delay_t i = state->start_usec+1;
+           i <= state->start_usec + state->range_sec*USEC_PER_SEC;
            i++) {
     int bin = circpad_histogram_usec_to_bin(client_side->padding_info[0],
                                             i);
@@ -483,6 +519,7 @@ test_circuitpadding_tokens(void *arg)
     int bin2 = circpad_histogram_usec_to_bin(client_side->padding_info[0],
                                              usec);
     tt_int_op(bin, OP_EQ, bin2);
+    tt_int_op(i, OP_GE, usec);
   }
 
   /* 2.a. Normal higher bin */
@@ -491,6 +528,7 @@ test_circuitpadding_tokens(void *arg)
     tt_int_op(mi->histogram[3], OP_EQ, 2);
     circpad_machine_remove_higher_token(mi,
          circpad_histogram_bin_to_usec(mi, 2)+1);
+    tt_int_op(mi->histogram[3], OP_EQ, 2);
     tt_int_op(mi->histogram[2], OP_EQ, 1);
 
     circpad_machine_remove_higher_token(mi,
@@ -502,6 +540,7 @@ test_circuitpadding_tokens(void *arg)
          circpad_histogram_bin_to_usec(mi, 2)+1);
     circpad_machine_remove_higher_token(mi,
          circpad_histogram_bin_to_usec(mi, 2)+1);
+    tt_int_op(mi->histogram[3], OP_EQ, 0);
     circpad_machine_remove_higher_token(mi,
          circpad_histogram_bin_to_usec(mi, 2)+1);
     tt_int_op(mi->histogram[3], OP_EQ, 0);
@@ -856,7 +895,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
-  timers_advance_and_run(2000);
+  timers_advance_and_run(5000);
   tt_int_op(n_client_cells, OP_EQ, 2);
   tt_int_op(n_relay_cells, OP_EQ, 2);
 
@@ -872,7 +911,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
-  timers_advance_and_run(2000);
+  timers_advance_and_run(5000);
   tt_int_op(n_client_cells, OP_EQ, 3);
   tt_int_op(n_relay_cells, OP_EQ, 3);
 
@@ -888,7 +927,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
-  timers_advance_and_run(2000);
+  timers_advance_and_run(5000);
   tt_int_op(n_client_cells, OP_EQ, 4);
   tt_int_op(n_relay_cells, OP_EQ, 4);
 
@@ -904,7 +943,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
-  timers_advance_and_run(2000);
+  timers_advance_and_run(5000);
   tt_int_op(n_client_cells, OP_EQ, 5);
   tt_int_op(n_relay_cells, OP_EQ, 5);
 
@@ -920,7 +959,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_EQ, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
-  timers_advance_and_run(2000);
+  timers_advance_and_run(5000);
   tt_int_op(n_client_cells, OP_EQ, 6);
   tt_int_op(n_relay_cells, OP_EQ, 6);
 
