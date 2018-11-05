@@ -1097,6 +1097,56 @@ circpad_machine_schedule_padding(circpad_machineinfo_t *mi)
 }
 
 /**
+ * If the machine transitioned to the END state, we need
+ * to check to see if it wants us to shut it down immediately.
+ * If it does, then we need to send the appropate negotation commands
+ * depending on which side it is.
+ *
+ * After this function is called, mi may point to freed memory. Do
+ * not access it.
+ */
+static void
+circpad_machine_transitioned_to_end(circpad_machineinfo_t *mi)
+{
+  const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
+
+  /*
+   * We allow machines to shut down and delete themselves as opposed
+   * to just going back to START or waiting forever in END so that
+   * we can handle the case where this machine started while it was
+   * the only machine that matched conditions, but *since* then more
+   * "higher ranking" machines now match the conditions, and would
+   * be given a chance to take precidence over this one in
+   * circpad_add_matching_machines().
+   *
+   * Returning to START or waiting forever in END would not give those
+   * other machines a chance to be launched, where as shutting down
+   * here does.
+   */
+  if (machine->should_negotiate_end) {
+    if (machine->is_origin_side) {
+      circpad_negotiate_padding(TO_ORIGIN_CIRCUIT(mi->on_circ),
+                                machine->machine_num,
+                                machine->target_hopnum,
+                                CIRCPAD_COMMAND_STOP);
+      /* We free the machine info here so that we can be replaced
+       * by a different machine. But we must leave the padding_machine
+       * in place to wait for the negotiated response */
+      circpad_circuit_machineinfo_free_idx(mi->on_circ,
+                                           machine->machine_index);
+    } else {
+      circpad_padding_negotiated(mi->on_circ,
+                                machine->machine_num,
+                                CIRCPAD_COMMAND_STOP,
+                                CIRCPAD_RESPONSE_OK);
+      mi->on_circ->padding_machine[machine->machine_index] = NULL;
+      circpad_circuit_machineinfo_free_idx(mi->on_circ,
+                                           machine->machine_index);
+    }
+  }
+}
+
+/**
  * Generic state transition function for padding state machines.
  *
  * Given an event and our mutable machine info, decide if/how to
@@ -1153,43 +1203,10 @@ circpad_machine_transition(circpad_machineinfo_t *mi,
         /* If we transition to the end state, check to see
          * if this machine wants to be shut down at end */
         if (s == CIRCPAD_STATE_END) {
-          const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
-
-          /*
-           * We allow machines to shut down and delete themselves as opposed
-           * to just going back to START or waiting forever in END so that
-           * we can handle the case where this machine started while it was
-           * the only machine that matched conditions, but *since* then more
-           * "higher ranking" machines now match the conditions, and would
-           * be given a chance to take precidence over this one in
-           * circpad_add_matching_machines().
-           *
-           * Returning to START or waiting forever in END would not give those
-           * other machines a chance to be launched, where as shutting down
-           * here does.
-           */
-          if (machine->should_negotiate_end) {
-            if (machine->is_origin_side) {
-              circpad_negotiate_padding(TO_ORIGIN_CIRCUIT(mi->on_circ),
-                                        machine->machine_num,
-                                        machine->target_hopnum,
-                                        CIRCPAD_COMMAND_STOP);
-              /* We free the machine info here so that we can be replaced
-               * by a different machine. But we must leave the padding_machine
-               * in place to wait for the negotiated response */
-              circpad_circuit_machineinfo_free_idx(mi->on_circ,
-                                                   machine->machine_index);
-            } else {
-              circpad_padding_negotiated(mi->on_circ,
-                                        machine->machine_num,
-                                        CIRCPAD_COMMAND_STOP,
-                                        CIRCPAD_RESPONSE_OK);
-              mi->on_circ->padding_machine[machine->machine_index] = NULL;
-              circpad_circuit_machineinfo_free_idx(mi->on_circ,
-                                                   machine->machine_index);
-            }
-          }
-          /* We transitioned but we don't pad in end */
+          circpad_machine_transitioned_to_end(mi);
+          /* We transitioned but we don't pad in end. Also, mi
+           * may be freed. Returning STATE_CHANGED prevents us
+           * from accessing it in any callers of this function. */
           return CIRCPAD_STATE_CHANGED;
         }
 
