@@ -87,7 +87,7 @@
 #include "feature/rend/rendservice.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"

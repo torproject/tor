@@ -11,7 +11,7 @@
 
 #define BUFFERS_PRIVATE
 #include "lib/net/buffers_net.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/net/nettypes.h"

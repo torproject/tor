@@ -30,7 +30,7 @@
 #include "core/or/or.h"
 
 #include "ht.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "app/config/config.h"
 #include "feature/control/control.h"
 #include "feature/client/dnsserv.h"

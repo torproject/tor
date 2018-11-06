@@ -6,7 +6,7 @@
 
 #include "core/or/or.h"
 #include "feature/client/addressmap.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "core/mainloop/connection.h"
 #include "feature/control/control.h"
 #include "app/config/config.h"

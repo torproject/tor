@@ -1,6 +1,7 @@
 orconfig.h
 
 lib/arch/*.h
+lib/buf/*.h
 lib/cc/*.h
 lib/container/*.h
 lib/crypt_ops/*.h
