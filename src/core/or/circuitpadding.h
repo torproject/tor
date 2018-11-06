@@ -227,9 +227,9 @@ typedef struct circpad_state_t {
 
   /** Microseconds of the first bin of histogram, or base of iat dist */
   circpad_delay_t start_usec;
-  /** The span of the histogram in seconds, used to calculate bin with.
+  /** The span of the histogram in microseconds, used to calculate bin width.
    *  For iat dist use, this is used as a max delay cap on the distribution. */
-  uint16_t range_sec;
+  circpad_delay_t range_usec;
 
   /**
    * The iat_dist is a parametrized way of encoding inter-packet delay
