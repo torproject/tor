@@ -21,6 +21,7 @@ TODO sketch for this branch, in rough priority order:
   - Larger/different mechanism for machine numbering than just uint8_t
   - Larger circpad_delay_t?
   - Larger circpad_hist_bin_t?
+  - Large state->range_sec for histograms?
 
 - Nick's API doc
   - Consider how we'd use it.
