@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2018 Taylor R. Campbell
+ * Copyright (c) 2018 The Tor Project, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
