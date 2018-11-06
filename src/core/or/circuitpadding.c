@@ -61,7 +61,7 @@ static inline circpad_circuit_state_t circpad_circuit_state(
                                         origin_circuit_t *circ);
 static void circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx);
 static void circpad_setup_machine_on_circ(circuit_t *on_circ,
-                                          circpad_machine_t *machine);
+                                          const circpad_machine_t *machine);
 static double circpad_distribution_sample(circpad_distribution_t dist);
 
 /** Cached consensus params */
@@ -1928,7 +1928,8 @@ circpad_circuit_machineinfo_new(circuit_t *on_circ, int machine_index)
 }
 
 static void
-circpad_setup_machine_on_circ(circuit_t *on_circ, circpad_machine_t *machine)
+circpad_setup_machine_on_circ(circuit_t *on_circ,
+                              const circpad_machine_t *machine)
 {
   if (CIRCUIT_IS_ORIGIN(on_circ) && !machine->is_origin_side) {
     log_fn(LOG_WARN, LD_BUG,
@@ -2271,6 +2272,7 @@ circpad_padding_negotiated(circuit_t *circ,
 int
 circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
 {
+  int retval = 0;
   circpad_negotiate_t *negotiate;
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
@@ -2282,13 +2284,8 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
   if (circpad_negotiate_parse(&negotiate, cell->payload+RELAY_HEADER_SIZE,
                                CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE) < 0) {
     log_fn(LOG_WARN, LD_CIRC,
-          "Received malformed PADDING_NEGOTIATE cell; "
-          "dropping.");
-    circpad_padding_negotiated(circ, negotiate->machine_type,
-                               negotiate->command,
-                               CIRCPAD_RESPONSE_ERR);
-    circpad_negotiate_free(negotiate);
-    return -1;
+          "Received malformed PADDING_NEGOTIATE cell; dropping.");
+    goto err;
   }
 
   if (negotiate->command == CIRCPAD_COMMAND_STOP) {
@@ -2297,40 +2294,32 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
       if (circ->padding_machine[i]->machine_num == negotiate->machine_type) {
         circpad_circuit_machineinfo_free_idx(circ, i);
         circ->padding_machine[i] = NULL;
-        circpad_padding_negotiated(circ, negotiate->machine_type,
-                                   negotiate->command,
-                                   CIRCPAD_RESPONSE_OK);
-        circpad_negotiate_free(negotiate);
-        return 0;
+        goto done;
       }
     } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
     log_fn(LOG_WARN, LD_CIRC,
           "Received circuit padding stop command for unknown machine.");
-    circpad_padding_negotiated(circ, negotiate->machine_type,
-                               negotiate->command,
-                               CIRCPAD_RESPONSE_ERR);
-    circpad_negotiate_free(negotiate);
-    return -1;
+    goto err;
   } else if (negotiate->command == CIRCPAD_COMMAND_START) {
     SMARTLIST_FOREACH_BEGIN(relay_padding_machines,
-                            circpad_machine_t *,
-                            m) {
+                            const circpad_machine_t *, m) {
       if (m->machine_num == negotiate->machine_type) {
         circpad_setup_machine_on_circ(circ, m);
-        circpad_padding_negotiated(circ, negotiate->machine_type,
-                                   negotiate->command,
-                                   CIRCPAD_RESPONSE_OK);
-        circpad_negotiate_free(negotiate);
-        return 0;
+        goto done;
       }
     } SMARTLIST_FOREACH_END(m);
   }
 
-  circpad_padding_negotiated(circ, negotiate->machine_type,
-                             negotiate->command,
-                             CIRCPAD_RESPONSE_ERR);
-  circpad_negotiate_free(negotiate);
-  return -1;
+  err:
+    retval = -1;
+
+  done:
+    circpad_padding_negotiated(circ, negotiate->machine_type,
+                   negotiate->command,
+                   (retval == 0) ? CIRCPAD_RESPONSE_OK : CIRCPAD_RESPONSE_ERR);
+    circpad_negotiate_free(negotiate);
+
+    return retval;
 }
 
 /**
@@ -2388,7 +2377,7 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
     // This can happen due to consensus drift.. free the machines
     // and be sad
     log_fn(LOG_INFO, LD_CIRC,
-           "Middle node did not accept our padidng request.");
+           "Middle node did not accept our padding request.");
   }
 
   circpad_negotiated_free(negotiated);
