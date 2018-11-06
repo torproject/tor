@@ -43,7 +43,7 @@
 #if __STDC_VERSION__ >= 201112L
 
 /* If C11 is available, just use _Static_assert.  */
-#define CTASSERT(x) _Static_assert(x, #x)
+#define CTASSERT(x) _Static_assert((x), #x)
 
 #else
 
@@ -59,11 +59,12 @@
  * error.
  */
 #if defined(__COUNTER__)
-#define CTASSERT(x) CTASSERT_EXPN(x, c, __COUNTER__)
+#define CTASSERT(x) CTASSERT_EXPN((x), c, __COUNTER__)
 #elif defined(__INCLUDE_LEVEL__)
-#define CTASSERT(x) CTASSERT_EXPN(x, __INCLUDE_LEVEL__, __LINE__)
+#define CTASSERT(x) CTASSERT_EXPN((x), __INCLUDE_LEVEL__, __LINE__)
 #else
-#define CTASSERT(x) CTASSERT_EXPN(x, l, __LINE__) /* hope it's unique enough */
+/* hope it's unique enough */
+#define CTASSERT(x) CTASSERT_EXPN((x), l, __LINE__)
 #endif
 
 #define CTASSERT_EXPN(x, a, b) CTASSERT_DECL(x, a, b)
