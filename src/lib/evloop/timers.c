@@ -39,6 +39,10 @@
 #include "lib/malloc/malloc.h"
 #include "lib/time/compat_time.h"
 
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+
 #ifdef _WIN32
 // For struct timeval.
 #include <winsock2.h>
