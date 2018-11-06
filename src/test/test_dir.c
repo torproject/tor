@@ -1765,7 +1765,8 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, "", 0);
   setup_capture_of_logs(LOG_WARN);
   tt_int_op(-1, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                        bw_file_headers));
+                                                        bw_file_headers,
+                                                        NULL));
   expect_log_msg("Empty bandwidth file\n");
   teardown_capture_of_logs();
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
@@ -1781,7 +1782,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(-1, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                        bw_file_headers));
+                                                        bw_file_headers,
+                                                        NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op("", OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1792,7 +1795,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, header_lines_v100, 0);
   bw_file_headers = smartlist_new();
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v100, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1805,7 +1810,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v100, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1816,7 +1823,8 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tor_asprintf(&content, "%s%s", header_lines_v100, relay_lines_v100);
   write_str_to_file(fname, content, 0);
   tor_free(content);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL, NULL));
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL, NULL,
+                                                       NULL));
 
   /* Test bandwidth file including v1.1.0 bandwidth headers and
    * v1.0.0 relay lines. bw_file_headers will contain the v1.1.0 headers. */
@@ -1826,7 +1834,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1842,7 +1852,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v100, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1859,7 +1871,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v100, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1870,7 +1884,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   bw_file_headers = smartlist_new();
   write_str_to_file(fname, header_lines_v110_no_terminator, 0);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1881,7 +1897,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   bw_file_headers = smartlist_new();
   write_str_to_file(fname, header_lines_v110, 0);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1896,7 +1914,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1911,7 +1931,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1927,7 +1949,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_v110, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1944,7 +1968,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
   tt_str_op(bw_file_headers_str_bad, OP_EQ, bw_file_headers_str);
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
@@ -1962,7 +1988,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_EQ,
             smartlist_len(bw_file_headers));
   bw_file_headers_str = smartlist_join_strings(bw_file_headers, " ", 0, NULL);
@@ -1983,7 +2011,9 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   write_str_to_file(fname, content, 0);
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
-                                                       bw_file_headers));
+                                                       bw_file_headers,
+                                                       NULL));
+
   tt_int_op(MAX_BW_FILE_HEADER_COUNT_IN_VOTE, OP_EQ,
             smartlist_len(bw_file_headers));
   /* force bw_file_headers to be bigger than
