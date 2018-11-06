@@ -40,6 +40,7 @@
 
 #include "lib/net/address.h"
 #include "lib/net/socket.h"
+#include "lib/cc/ctassert.h"
 #include "lib/container/smartlist.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/log/log.h"
@@ -98,6 +99,7 @@
 #if AF_UNSPEC != 0
 #error We rely on AF_UNSPEC being 0. Let us know about your platform, please!
 #endif
+CTASSERT(AF_UNSPEC == 0);
 
 /** Convert the tor_addr_t in <b>a</b>, with port in <b>port</b>, into a
  * sockaddr object in *<b>sa_out</b> of object size <b>len</b>.  If not enough
