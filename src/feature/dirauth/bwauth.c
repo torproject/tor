@@ -20,6 +20,7 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
 
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/encoding/keyval.h"
 
 /** Total number of routers with measured bandwidth; this is set by
@@ -313,6 +314,56 @@ dirserv_read_measured_bandwidths(const char *from_file,
   if (fp)
     fclose(fp);
   return rv;
+}
+
+/**
+ * Get the base64 encoded digest of the bandwidth file used for the vote
+ * and store it in <b>b64_digest_bw_file_out</b>.
+ * Returns -1 on error, 0 otherwise.
+ * It is implemented separated from dirserv_read_measured_bandwidths,
+ * since it reads line by line and it should be refactor in the future.
+ * It is similiar to dump_desc_populate_one_file, except that digest in not
+ * part of the bandwidth file name.
+ */
+int
+dirauth_get_bw_file_b64_digest(char *b64_digest_bw_file_out,
+                               const char *from_file,
+                               digest_algorithm_t digest_alg) {
+  char *content_bw_file = NULL;
+  char digest_bw_file[DIGEST256_LEN];
+  char b64_digest_bw_file[BASE64_DIGEST256_LEN+1];
+
+  if (from_file == NULL) {
+    log_warn(LD_DIR, "Can't open bandwidth file at configured location: %s",
+             from_file);
+    goto err;
+  }
+
+  content_bw_file = read_file_to_str(from_file, RFTS_IGNORE_MISSING, NULL);
+  if (!content_bw_file) {
+    /* We couldn't read it */
+    log_notice(LD_DIR, "Failed to read %s.", from_file);
+   goto err;
+  }
+
+  if (crypto_digest256(digest_bw_file, content_bw_file,
+                       (size_t)strlen(content_bw_file), digest_alg) < 0) {
+    /* Weird, but okay */
+    log_info(LD_DIR, "Unable to hash content of %s.", from_file);
+    goto err;
+  }
+
+  digest_to_base64(b64_digest_bw_file, digest_bw_file);
+  memcpy(b64_digest_bw_file_out, b64_digest_bw_file, BASE64_DIGEST256_LEN + 1);
+  goto done;
+
+ err:
+  tor_free(content_bw_file);
+  return -1;
+
+ done:
+  tor_free(content_bw_file);
+  return 0;
 }
 
 /**
