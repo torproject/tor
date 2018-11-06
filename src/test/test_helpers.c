@@ -14,7 +14,7 @@
 #include "orconfig.h"
 #include "core/or/or.h"
 
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "app/config/config.h"
 #include "app/config/confparse.h"
 #include "core/mainloop/connection.h"

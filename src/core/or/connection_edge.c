@@ -97,7 +97,7 @@
 #include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/crypt_ops/crypto_util.h"
 
 #include "core/or/cell_st.h"

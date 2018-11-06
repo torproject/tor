@@ -5,7 +5,7 @@
 #define EXT_ORPORT_PRIVATE
 #define MAINLOOP_PRIVATE
 #include "core/or/or.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
 #include "app/config/config.h"

@@ -25,7 +25,7 @@
 #define BUFFERS_PRIVATE
 #include "orconfig.h"
 #include <stddef.h>
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/cc/torint.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"

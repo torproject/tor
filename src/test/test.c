@@ -37,7 +37,7 @@
 
 #include "core/or/or.h"
 #include "lib/err/backtrace.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuitstats.h"
 #include "lib/compress/compress.h"
