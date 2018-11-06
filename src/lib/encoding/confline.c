@@ -149,9 +149,6 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
           tor_free(v);
           return -1;
         }
-        log_notice(LD_CONFIG, "Included configuration file or "
-                   "directory at recursion level %d: \"%s\".",
-                   recursion_level, v);
         *next = include_list;
         if (list_last)
           next = &list_last->next;
