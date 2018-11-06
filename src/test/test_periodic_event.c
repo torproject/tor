@@ -19,6 +19,7 @@
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_service.h"
 #include "core/mainloop/mainloop.h"
+#include "core/mainloop/netstatus.h"
 #include "core/mainloop/periodic.h"
 
 /** Helper function: This is replaced in some tests for the event callbacks so
@@ -59,7 +60,9 @@ test_pe_initialize(void *arg)
     tt_u64_op(item->last_action_time, OP_EQ, 0);
     /* Every event must have role(s) assign to it. This is done statically. */
     tt_u64_op(item->roles, OP_NE, 0);
-    tt_uint_op(periodic_event_is_enabled(item), OP_EQ, 0);
+    int should_be_enabled = (item->roles & PERIODIC_EVENT_ROLE_ALL) &&
+      !(item->flags & PERIODIC_EVENT_FLAG_NEED_NET);
+    tt_uint_op(periodic_event_is_enabled(item), OP_EQ, should_be_enabled);
   }
 
  done:
@@ -106,13 +109,12 @@ test_pe_launch(void *arg)
   /* Now that we've initialized, rescan the list to launch. */
   periodic_events_on_new_options(options);
 
+  int mask = PERIODIC_EVENT_ROLE_CLIENT|PERIODIC_EVENT_ROLE_ALL|
+    PERIODIC_EVENT_ROLE_NET_PARTICIPANT;
   for (int i = 0; periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &periodic_events[i];
-    if (item->roles & PERIODIC_EVENT_ROLE_CLIENT) {
-      tt_int_op(periodic_event_is_enabled(item), OP_EQ, 1);
-    } else {
-      tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
-    }
+    int should_be_enabled = !!(item->roles & mask);
+    tt_int_op(periodic_event_is_enabled(item), OP_EQ, should_be_enabled);
     // enabled or not, the event has not yet been run.
     tt_u64_op(item->last_action_time, OP_EQ, 0);
   }
@@ -124,7 +126,8 @@ test_pe_launch(void *arg)
 
   unsigned roles = get_my_roles(options);
   tt_uint_op(roles, OP_EQ,
-             PERIODIC_EVENT_ROLE_RELAY|PERIODIC_EVENT_ROLE_DIRSERVER);
+             PERIODIC_EVENT_ROLE_RELAY|PERIODIC_EVENT_ROLE_DIRSERVER|
+             PERIODIC_EVENT_ROLE_ALL|PERIODIC_EVENT_ROLE_NET_PARTICIPANT);
 
   for (int i = 0; periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &periodic_events[i];
@@ -144,17 +147,21 @@ test_pe_launch(void *arg)
   /* Disable everything and we'll enable them ALL. */
   options->SocksPort_set = 0;
   options->ORPort_set = 0;
+  options->DisableNetwork = 1;
   periodic_events_on_new_options(options);
 
   for (int i = 0; periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &periodic_events[i];
-    tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
+    int should_be_enabled = (item->roles & PERIODIC_EVENT_ROLE_ALL) &&
+      !(item->flags & PERIODIC_EVENT_FLAG_NEED_NET);
+    tt_int_op(periodic_event_is_enabled(item), OP_EQ, should_be_enabled);
   }
 
   /* Enable everything. */
   options->SocksPort_set = 1; options->ORPort_set = 1;
   options->BridgeRelay = 1; options->AuthoritativeDir = 1;
   options->V3AuthoritativeDir = 1; options->BridgeAuthoritativeDir = 1;
+  options->DisableNetwork = 0;
   register_dummy_hidden_service(&service);
   periodic_events_on_new_options(options);
   /* Note down the reference because we need to remove this service from the
@@ -188,41 +195,46 @@ test_pe_get_roles(void *arg)
   or_options_t *options = get_options_mutable();
   tt_assert(options);
 
+  const int ALL = PERIODIC_EVENT_ROLE_ALL;
+
   /* Nothing configured, should be no roles. */
+  tt_assert(net_is_disabled());
   roles = get_my_roles(options);
-  tt_int_op(roles, OP_EQ, 0);
+  tt_int_op(roles, OP_EQ, ALL);
 
   /* Indicate we have a SocksPort, roles should be come Client. */
   options->SocksPort_set = 1;
   roles = get_my_roles(options);
-  tt_int_op(roles, OP_EQ, PERIODIC_EVENT_ROLE_CLIENT);
+  tt_int_op(roles, OP_EQ, PERIODIC_EVENT_ROLE_CLIENT|ALL);
 
   /* Now, we'll add a ORPort so should now be a Relay + Client. */
   options->ORPort_set = 1;
   roles = get_my_roles(options);
   tt_int_op(roles, OP_EQ,
             (PERIODIC_EVENT_ROLE_CLIENT | PERIODIC_EVENT_ROLE_RELAY |
-             PERIODIC_EVENT_ROLE_DIRSERVER));
+             PERIODIC_EVENT_ROLE_DIRSERVER | ALL));
 
   /* Now add a Bridge. */
   options->BridgeRelay = 1;
   roles = get_my_roles(options);
   tt_int_op(roles, OP_EQ,
             (PERIODIC_EVENT_ROLE_CLIENT | PERIODIC_EVENT_ROLE_RELAY |
-             PERIODIC_EVENT_ROLE_BRIDGE | PERIODIC_EVENT_ROLE_DIRSERVER));
+             PERIODIC_EVENT_ROLE_BRIDGE | PERIODIC_EVENT_ROLE_DIRSERVER |
+             ALL));
   tt_assert(roles & PERIODIC_EVENT_ROLE_ROUTER);
   /* Unset client so we can solely test Router role. */
   options->SocksPort_set = 0;
   roles = get_my_roles(options);
   tt_int_op(roles, OP_EQ,
-            PERIODIC_EVENT_ROLE_ROUTER | PERIODIC_EVENT_ROLE_DIRSERVER);
+            PERIODIC_EVENT_ROLE_ROUTER | PERIODIC_EVENT_ROLE_DIRSERVER |
+            ALL);
 
   /* Reset options so we can test authorities. */
   options->SocksPort_set = 0;
   options->ORPort_set = 0;
   options->BridgeRelay = 0;
   roles = get_my_roles(options);
-  tt_int_op(roles, OP_EQ, 0);
+  tt_int_op(roles, OP_EQ, ALL);
 
   /* Now upgrade to Dirauth. */
   options->DirPort_set = 1;
@@ -230,7 +242,7 @@ test_pe_get_roles(void *arg)
   options->V3AuthoritativeDir = 1;
   roles = get_my_roles(options);
   tt_int_op(roles, OP_EQ,
-            PERIODIC_EVENT_ROLE_DIRAUTH|PERIODIC_EVENT_ROLE_DIRSERVER);
+            PERIODIC_EVENT_ROLE_DIRAUTH|PERIODIC_EVENT_ROLE_DIRSERVER|ALL);
   tt_assert(roles & PERIODIC_EVENT_ROLE_AUTHORITIES);
 
   /* Now Bridge Authority. */
@@ -238,7 +250,7 @@ test_pe_get_roles(void *arg)
   options->BridgeAuthoritativeDir = 1;
   roles = get_my_roles(options);
   tt_int_op(roles, OP_EQ,
-            PERIODIC_EVENT_ROLE_BRIDGEAUTH|PERIODIC_EVENT_ROLE_DIRSERVER);
+            PERIODIC_EVENT_ROLE_BRIDGEAUTH|PERIODIC_EVENT_ROLE_DIRSERVER|ALL);
   tt_assert(roles & PERIODIC_EVENT_ROLE_AUTHORITIES);
 
   /* Move that bridge auth to become a relay. */
@@ -246,7 +258,7 @@ test_pe_get_roles(void *arg)
   roles = get_my_roles(options);
   tt_int_op(roles, OP_EQ,
             (PERIODIC_EVENT_ROLE_BRIDGEAUTH | PERIODIC_EVENT_ROLE_RELAY
-             | PERIODIC_EVENT_ROLE_DIRSERVER));
+             | PERIODIC_EVENT_ROLE_DIRSERVER|ALL));
   tt_assert(roles & PERIODIC_EVENT_ROLE_AUTHORITIES);
 
   /* And now an Hidden service. */
@@ -257,7 +269,8 @@ test_pe_get_roles(void *arg)
   remove_service(get_hs_service_map(), &service);
   tt_int_op(roles, OP_EQ,
             (PERIODIC_EVENT_ROLE_BRIDGEAUTH | PERIODIC_EVENT_ROLE_RELAY |
-             PERIODIC_EVENT_ROLE_HS_SERVICE | PERIODIC_EVENT_ROLE_DIRSERVER));
+             PERIODIC_EVENT_ROLE_HS_SERVICE | PERIODIC_EVENT_ROLE_DIRSERVER |
+             ALL));
   tt_assert(roles & PERIODIC_EVENT_ROLE_AUTHORITIES);
 
  done:
