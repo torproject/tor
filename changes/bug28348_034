@@ -1,0 +1,5 @@
+  o Major bugfixes (embedding, main loop):
+    - When DisableNetwork becomes set, actually disable periodic events that
+      are already enabled. (Previously, we would refrain from enabling new
+      ones, but we would leave the old ones turned on.)
+      Fixes bug 28348; bugfix on 0.3.4.1-alpha.
