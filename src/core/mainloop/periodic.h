@@ -16,6 +16,9 @@
 #define PERIODIC_EVENT_ROLE_HS_SERVICE  (1U << 5)
 #define PERIODIC_EVENT_ROLE_DIRSERVER   (1U << 6)
 
+#define PERIODIC_EVENT_ROLE_NET_PARTICIPANT (1U << 7)
+#define PERIODIC_EVENT_ROLE_ALL         (1U << 8)
+
 /* Helper macro to make it a bit less annoying to defined groups of roles that
  * are often used. */
 
@@ -25,10 +28,6 @@
 /* Authorities that is both bridge and directory. */
 #define PERIODIC_EVENT_ROLE_AUTHORITIES \
   (PERIODIC_EVENT_ROLE_BRIDGEAUTH | PERIODIC_EVENT_ROLE_DIRAUTH)
-/* All roles. */
-#define PERIODIC_EVENT_ROLE_ALL \
-  (PERIODIC_EVENT_ROLE_AUTHORITIES | PERIODIC_EVENT_ROLE_CLIENT | \
-   PERIODIC_EVENT_ROLE_HS_SERVICE | PERIODIC_EVENT_ROLE_ROUTER)
 
 /*
  * Event flags which can change the behavior of an event.

@@ -1377,16 +1377,27 @@ CALLBACK(write_stats_file);
 STATIC periodic_event_item_t periodic_events[] = {
   /* Everyone needs to run those. */
   CALLBACK(add_entropy, ALL, 0),
-  CALLBACK(check_expired_networkstatus, ALL, 0),
-  CALLBACK(clean_caches, ALL, 0),
-  CALLBACK(fetch_networkstatus, ALL, 0),
   CALLBACK(heartbeat, ALL, 0),
-  CALLBACK(launch_descriptor_fetches, ALL, FL(NEED_NET)),
-  CALLBACK(reset_padding_counts, ALL, 0),
+
+  /* XXXX Do we have a reason to do this on a callback? */
   CALLBACK(retry_listeners, ALL, FL(NEED_NET)),
-  CALLBACK(save_state, ALL, 0),
-  CALLBACK(rotate_x509_certificate, ALL, 0),
-  CALLBACK(write_stats_file, ALL, 0),
+
+  /* We need to do these if we're participating in the Tor network. */
+  CALLBACK(check_expired_networkstatus, NET_PARTICIPANT, 0),
+  CALLBACK(fetch_networkstatus, NET_PARTICIPANT, 0),
+  CALLBACK(launch_descriptor_fetches, NET_PARTICIPANT, FL(NEED_NET)),
+  CALLBACK(rotate_x509_certificate, NET_PARTICIPANT, 0),
+
+  /* We need to do these if we're participating in the Tor network, and
+   * immediately before we stop. */
+  CALLBACK(clean_caches, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
+  CALLBACK(save_state, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
+
+  /* XXXX investigate this. */
+  CALLBACK(write_stats_file, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
+
+  /* XXXX investigate this. */
+  CALLBACK(reset_padding_counts, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
 
   /* Routers (bridge and relay) only. */
   CALLBACK(check_descriptor, ROUTER, FL(NEED_NET)),
@@ -1418,7 +1429,8 @@ STATIC periodic_event_item_t periodic_events[] = {
   CALLBACK(record_bridge_stats, BRIDGE, 0),
 
   /* Client only. */
-  CALLBACK(rend_cache_failure_clean, CLIENT, 0),
+  /* XXXX this could be restricted to CLIENT even. */
+  CALLBACK(rend_cache_failure_clean, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
 
   /* Bridge Authority only. */
   CALLBACK(write_bridge_ns, BRIDGEAUTH, 0),
@@ -1477,7 +1489,7 @@ get_my_roles(const or_options_t *options)
 {
   tor_assert(options);
 
-  int roles = 0;
+  int roles = PERIODIC_EVENT_ROLE_ALL;
   int is_bridge = options->BridgeRelay;
   int is_relay = server_mode(options);
   int is_dirauth = authdir_mode_v3(options);
@@ -1492,6 +1504,9 @@ get_my_roles(const or_options_t *options)
                   options->ControlPort_set ||
                   options->OwningControllerFD != UINT64_MAX;
 
+  /* We actually want a better definition here for our work on dormancy. */
+  int is_net_participant = ! net_is_disabled();
+
   if (is_bridge) roles |= PERIODIC_EVENT_ROLE_BRIDGE;
   if (is_client) roles |= PERIODIC_EVENT_ROLE_CLIENT;
   if (is_relay) roles |= PERIODIC_EVENT_ROLE_RELAY;
@@ -1499,6 +1514,7 @@ get_my_roles(const or_options_t *options)
   if (is_bridgeauth) roles |= PERIODIC_EVENT_ROLE_BRIDGEAUTH;
   if (is_hidden_service) roles |= PERIODIC_EVENT_ROLE_HS_SERVICE;
   if (is_dirserver) roles |= PERIODIC_EVENT_ROLE_DIRSERVER;
+  if (is_net_participant) roles |= PERIODIC_EVENT_ROLE_NET_PARTICIPANT;
 
   return roles;
 }
