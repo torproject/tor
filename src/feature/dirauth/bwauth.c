@@ -20,6 +20,7 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
 
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/encoding/keyval.h"
 
 /** Total number of routers with measured bandwidth; this is set by
@@ -313,6 +314,53 @@ dirserv_read_measured_bandwidths(const char *from_file,
   if (fp)
     fclose(fp);
   return rv;
+}
+
+/**
+ * Compute the digest of the bandwidth file used for the vote
+ * and store it in <b>digest_bw_file_out</b>.
+ * Returns -1 on error, 0 otherwise.
+ * It is implemented separated from dirserv_read_measured_bandwidths,
+ * since it should be refactor in the future.
+ */
+int
+bwauth_bw_file_digest255(uint8_t *digest_bw_file_out, const char *from_file,
+                         digest_algorithm_t digest_alg) {
+  char *bw_file_content = NULL;
+  char digest_bw_file[DIGEST256_LEN];
+
+  if (from_file == NULL) {
+    /* Not giving warnings when there is no file. */
+    /* It is not possible to return a digest without knowing the file. */
+    log_notice(LD_DIR, "Can't open bandwidth file.");
+    goto err;
+  }
+
+  bw_file_content = read_file_to_str(from_file, RFTS_IGNORE_MISSING, NULL);
+  if (!bw_file_content) {
+    /* It is not possible to return a digest of a file that can't be read. */
+    log_notice(LD_DIR, "Failed to read %s.", from_file);
+    goto err;
+  }
+
+  if (crypto_digest256(digest_bw_file, (const char *)bw_file_content,
+                       sizeof(bw_file_content), digest_alg) < 0) {
+    /* Weird, but still not possible to return a digest. */
+    log_notice(LD_DIR, "Unable to hash content of %s.", from_file);
+    goto err;
+  }
+
+  /* Not encoding here. */
+  memcpy(digest_bw_file_out, digest_bw_file, DIGEST256_LEN);
+  goto done;
+
+ err:
+  tor_free(bw_file_content);
+  return -1;
+
+ done:
+  tor_free(bw_file_content);
+  return 0;
 }
 
 /**
