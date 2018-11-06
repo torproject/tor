@@ -3830,6 +3830,58 @@ mock_get_options(void)
   return mock_options;
 }
 
+/**
+ * Test dirauth_get_b64_digest_bw_file.
+ * This function should be near the other bwauth functions, but it needs
+ * mock_get_options, that is only defined here.
+ */
+
+static void
+test_dir_bwauth_bw_file_digest255(void *arg)
+{
+  (void)arg;
+  uint8_t bw_file_digest[DIGEST256_LEN];
+  const char *content =
+    "1541171221\n"
+    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 "
+    "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
+    "bw=760 nick=Test time=2018-05-08T16:13:26\n";
+
+  /* Init options */
+  mock_options = tor_malloc(sizeof(or_options_t));
+  reset_options(mock_options, &mock_get_options_calls);
+  MOCK(get_options, mock_get_options);
+
+  /* When there is not a bandwidth file configured */
+  tt_int_op(-1, OP_EQ,
+            bwauth_bw_file_digest255(bw_file_digest,
+                                      mock_options->V3BandwidthsFile,
+                                      DIGEST_SHA256));
+
+  mock_options->V3BandwidthsFile = tor_strdup(
+    get_fname_rnd("V3BandwidthsFile")
+  );
+
+  /* When there is a bandwidth file configured, but it can not be found. */
+  tt_int_op(-1, OP_EQ,
+            bwauth_bw_file_digest255(bw_file_digest,
+                                      mock_options->V3BandwidthsFile,
+                                      DIGEST_SHA256));
+
+  /* When there is a bandwidth file and it can be read.
+   * It is not being tested here whether the file was parseable. */
+  write_str_to_file(mock_options->V3BandwidthsFile, content, 0);
+  tt_int_op(0, OP_EQ,
+            bwauth_bw_file_digest255(bw_file_digest,
+                                      mock_options->V3BandwidthsFile,
+                                      DIGEST_SHA256));
+  goto done;
+
+  done:
+    UNMOCK(get_options);
+    or_options_free(mock_options); mock_options = NULL;
+}
+
 static void
 reset_routerstatus(routerstatus_t *rs,
                    const char *hex_identity_digest,
@@ -6337,6 +6389,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(measured_bw_kb_line_is_after_headers),
   DIR_LEGACY(measured_bw_kb_cache),
   DIR_LEGACY(dirserv_read_measured_bandwidths),
+  DIR(bwauth_bw_file_digest255, 0),
   DIR_LEGACY(param_voting),
   DIR(param_voting_lookup, 0),
   DIR_LEGACY(v3_networkstatus),
