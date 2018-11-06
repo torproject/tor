@@ -38,7 +38,6 @@
 #include "lib/err/torerr.h"
 #include "lib/log/log.h"
 #include "lib/cc/torint.h"
-#include "lib/net/resolve.h"
 #include "lib/malloc/malloc.h"
 #include "lib/string/scanf.h"
 
@@ -1553,7 +1552,6 @@ install_syscall_filter(sandbox_cfg_t* cfg)
 
   // marking the sandbox as active
   sandbox_active = 1;
-  tor_make_getaddrinfo_cache_active();
 
  end:
   seccomp_release(ctx);

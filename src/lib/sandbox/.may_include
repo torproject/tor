@@ -5,7 +5,6 @@ lib/container/*.h
 lib/err/*.h
 lib/log/*.h
 lib/malloc/*.h
-lib/net/*.h
 lib/sandbox/*.h
 lib/sandbox/*.inc
 lib/string/*.h
