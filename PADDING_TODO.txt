@@ -7,6 +7,7 @@ TODO sketch for this branch, in rough priority order:
   - Tests for machine replacement on all conditions
   - Tests for STATE_END teardown due to infinity, bins_empty, and/or length
     with pending timers, new machines, etc.
+  - Test histogram spacing for larger length histograms
   - Tests for consensus and machine rate limiting
   - Test all types of token removal
   - Go down dist precision rabbithole and comment
@@ -25,6 +26,9 @@ TODO sketch for this branch, in rough priority order:
   - Consider how we'd use it.
 
 - Vanguards compatibility for MiddleNodes (via changes to vanguards addon)
+
+- Circuit RTT measurement will break on var_cell/EXTEND2 cells
+  - Are there any heuristics we can use here?
 
 - Rephist timer stats
   - Is this a privacy risk? The adversary could create lots of circuits
