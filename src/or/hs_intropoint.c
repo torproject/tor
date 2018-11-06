@@ -501,12 +501,6 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
     /* Circuit has been closed on failure of transmission. */
     goto done;
   }
-  if (status != HS_INTRO_ACK_STATUS_SUCCESS) {
-    /* We just sent a NACK that is a non success status code so close the
-     * circuit because it's not useful to keep it open. Remember, a client can
-     * only send one INTRODUCE1 cell on a circuit. */
-    circuit_mark_for_close(TO_CIRCUIT(client_circ), END_CIRC_REASON_INTERNAL);
-  }
  done:
   trn_cell_introduce1_free(parsed_cell);
   return ret;
