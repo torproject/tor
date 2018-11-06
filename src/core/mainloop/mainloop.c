@@ -1379,8 +1379,9 @@ STATIC periodic_event_item_t periodic_events[] = {
   CALLBACK(add_entropy, ALL, 0),
   CALLBACK(heartbeat, ALL, 0),
 
-  /* XXXX Do we have a reason to do this on a callback? */
-  CALLBACK(retry_listeners, ALL, FL(NEED_NET)),
+  /* XXXX Do we have a reason to do this on a callback? Does it do any good at
+   * all?  For now, if we're dormant, we can let our listeners decay. */
+  CALLBACK(retry_listeners, NET_PARTICIPANT, FL(NEED_NET)),
 
   /* We need to do these if we're participating in the Tor network. */
   CALLBACK(check_expired_networkstatus, NET_PARTICIPANT, 0),
@@ -1393,10 +1394,10 @@ STATIC periodic_event_item_t periodic_events[] = {
   CALLBACK(clean_caches, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
   CALLBACK(save_state, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
 
-  /* XXXX investigate this. */
+  /* XXXX investigate this. ??? */
   CALLBACK(write_stats_file, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
 
-  /* XXXX investigate this. */
+  /* XXXX investigate this. ???? */
   CALLBACK(reset_padding_counts, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
 
   /* Routers (bridge and relay) only. */
@@ -1423,13 +1424,13 @@ STATIC periodic_event_item_t periodic_events[] = {
   CALLBACK(check_dns_honesty, RELAY, FL(NEED_NET)),
 
   /* Hidden Service service only. */
-  CALLBACK(hs_service, HS_SERVICE, FL(NEED_NET)),
+  CALLBACK(hs_service, HS_SERVICE, FL(NEED_NET)), // XXXX break this down more
 
   /* Bridge only. */
   CALLBACK(record_bridge_stats, BRIDGE, 0),
 
   /* Client only. */
-  /* XXXX this could be restricted to CLIENT even. */
+  /* XXXX this could be restricted to CLIENT+NET_PARTICIPANT */
   CALLBACK(rend_cache_failure_clean, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
 
   /* Bridge Authority only. */
@@ -1730,18 +1731,24 @@ run_scheduled_events(time_t now)
    * expired; or if our bandwidth limits are exhausted and we
    * should hibernate; or if it's time to wake up from hibernation.
    */
+  // TODO: Refactor or rewrite, or NET_PARTICIPANT. Needs separate wakeup
+  //       handling.
   consider_hibernation(now);
 
   /* Maybe enough time elapsed for us to reconsider a circuit. */
+  // TODO: NET_PARTICIPANT
   circuit_upgrade_circuits_from_guard_wait();
 
   if (options->UseBridges && !net_is_disabled()) {
     /* Note: this check uses net_is_disabled(), not should_delay_dir_fetches()
      * -- the latter is only for fetching consensus-derived directory info. */
+    // TODO: client+NET_PARTICIPANT.
+    //     Also, schedule this rather than probing 1x / sec
     fetch_bridge_descriptors(options, now);
   }
 
   if (accounting_is_enabled(options)) {
+    // TODO: refactor or rewrite; NET_PARTICIPANT
     accounting_run_housekeeping(now);
   }
 
@@ -1752,6 +1759,7 @@ run_scheduled_events(time_t now)
    */
   /* (If our circuit build timeout can ever become lower than a second (which
    * it can't, currently), we should do this more often.) */
+  // TODO: All expire stuff can become NET_PARTICIPANT, FLUSH_ON_DISABLE
   circuit_expire_building();
   circuit_expire_waiting_for_better_guard();
 
@@ -1760,10 +1768,12 @@ run_scheduled_events(time_t now)
    *     Do this before step 4, so we can put them back into pending
    *     state to be picked up by the new circuit.
    */
+  // TODO: All expire stuff can become NET_PARTICIPANT, FLUSH_ON_DISABLE
   connection_ap_expire_beginning();
 
   /* 3c. And expire connections that we've held open for too long.
    */
+  // TODO: All expire stuff can become NET_PARTICIPANT, FLUSH_ON_DISABLE
   connection_expire_held_open();
 
   /* 4. Every second, we try a new circuit if there are no valid
@@ -1773,19 +1783,24 @@ run_scheduled_events(time_t now)
    */
   const int have_dir_info = router_have_minimum_dir_info();
   if (have_dir_info && !net_is_disabled()) {
+    // TODO: NET_PARTICIPANT.
     circuit_build_needed_circs(now);
   } else {
+    // TODO: NET_PARTICIPANT, FLUSH_ON_DISABLE
     circuit_expire_old_circs_as_needed(now);
   }
 
   /* 5. We do housekeeping for each connection... */
+  // TODO: NET_PARTICIPANT
   channel_update_bad_for_new_circs(NULL, 0);
   int i;
   for (i=0;i<smartlist_len(connection_array);i++) {
+    // TODO: NET_PARTICIPANT, FLUSH_ON_DISABLE
     run_connection_housekeeping(i, now);
   }
 
   /* 11b. check pending unconfigured managed proxies */
+  // NET_PARTICIPANT.
   if (!net_is_disabled() && pt_proxies_configuration_pending())
     pt_configure_remaining_proxies();
 }
@@ -2625,6 +2640,7 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
    */
   update_current_time(now);
 
+  // TODO XXXX Turn this into a separate event.
   /* Maybe some controller events are ready to fire */
   control_per_second_events();
 
