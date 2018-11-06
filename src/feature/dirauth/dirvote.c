@@ -60,6 +60,9 @@
 #include "lib/encoding/confline.h"
 #include "lib/crypt_ops/crypto_format.h"
 
+/* Algorithm to use for the bandwidth file digest. */
+#define DIGEST_ALG_BW_FILE DIGEST_SHA256
+
 /**
  * \file dirvote.c
  * \brief Functions to compute directory consensus, and schedule voting.
@@ -268,6 +271,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     char *flag_thresholds = dirserv_get_flag_thresholds_line();
     char *params;
     char *bw_headers_line = NULL;
+    char *bw_file_value = NULL;
+    char *bw_file = NULL;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
       make_consensus_method_list(MIN_SUPPORTED_CONSENSUS_METHOD,
@@ -307,6 +312,16 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
       tor_free(bw_file_headers);
     }
 
+    /* v3_ns->b64_digest_bw_file is only set when V3BandwidthsFile is
+     * configured and the bandwidth file was not empty nor has only
+     * timestamp. */
+    if (strlen(v3_ns->b64_digest_bw_file) == BASE64_DIGEST256_LEN) {
+      tor_asprintf(&bw_file_value, "%s %s",
+                   crypto_digest_algorithm_get_name(DIGEST_ALG_BW_FILE),
+                   v3_ns->b64_digest_bw_file);
+      bw_file = format_line_if_present("bandwidth-file", bw_file_value);
+    }
+
     smartlist_add_asprintf(chunks,
                  "network-status-version 3\n"
                  "vote-status %s\n"
@@ -326,6 +341,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "contact %s\n"
                  "%s" /* shared randomness information */
                  "%s" /* bandwidth file headers */
+                 "%s" /* bandwidth file */
                  ,
                  v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
                  methods,
@@ -344,7 +360,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  shared_random_vote_str ?
                            shared_random_vote_str : "",
                  bw_headers_line ?
-                           bw_headers_line : "");
+                           bw_headers_line : "",
+                 bw_file ? bw_file: "");
 
     tor_free(params);
     tor_free(flags);
@@ -352,6 +369,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     tor_free(methods);
     tor_free(shared_random_vote_str);
     tor_free(bw_headers_line);
+    tor_free(bw_file_value);
+    tor_free(bw_file);
 
     if (!tor_digest_is_zero(voter->legacy_id_digest)) {
       char fpbuf[HEX_DIGEST_LEN+1];
@@ -4396,6 +4415,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   const int vote_on_reachability = running_long_enough_to_decide_unreachable();
   smartlist_t *microdescriptors = NULL;
   smartlist_t *bw_file_headers = NULL;
+  char b64_digest_bw_file[BASE64_DIGEST256_LEN+1];
 
   tor_assert(private_key);
   tor_assert(cert);
@@ -4537,8 +4557,17 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   if (options->V3BandwidthsFile) {
     /* Only set bw_file_headers when V3BandwidthsFile is configured */
     bw_file_headers = smartlist_new();
-    dirserv_read_measured_bandwidths(options->V3BandwidthsFile,
-                                     routerstatuses, bw_file_headers);
+
+    if (dirserv_read_measured_bandwidths(
+          options->V3BandwidthsFile, routerstatuses, bw_file_headers)
+        != -1) {
+      /* If there was an empty file or only had timestamp, there is no
+       * bandwidth file to hash.
+       */
+      dirauth_get_bw_file_b64_digest(b64_digest_bw_file,
+                                     options->V3BandwidthsFile,
+                                     DIGEST_ALG_BW_FILE);
+    }
   } else {
     /*
      * No bandwidths file; clear the measured bandwidth cache in case we had
@@ -4635,6 +4664,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     smartlist_sort_strings(v3_out->net_params);
   }
   v3_out->bw_file_headers = bw_file_headers;
+  memcpy(v3_out->b64_digest_bw_file, b64_digest_bw_file, BASE64_DIGEST256_LEN);
 
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
   voter->nickname = tor_strdup(options->Nickname);

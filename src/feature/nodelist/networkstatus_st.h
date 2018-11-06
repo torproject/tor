@@ -99,6 +99,8 @@ struct networkstatus_t {
 
   /** List of key=value strings from the headers of the bandwidth list file */
   smartlist_t *bw_file_headers;
+
+  char b64_digest_bw_file[BASE64_DIGEST256_LEN+1];
 };
 
 #endif
