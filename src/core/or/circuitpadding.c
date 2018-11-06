@@ -1280,7 +1280,9 @@ circpad_estimate_circ_rtt_on_received(circuit_t *circ,
   if (mi->last_received_time_usec) {
     /* We also allow multiple back-to-back packets if the circuit is not
      * opened, to handle var cells.
-     * XXX: Will this work with out var cell plans? */
+     * XXX: Will this work with out var cell plans? Maybe not,
+     * since we're opened at the middle hop as soon as we process
+     * one var extend2 :/ */
     if (circ->state == CIRCUIT_STATE_OPEN) {
       log_fn(LOG_INFO, LD_CIRC,
            "Stopping padding RTT estimation on circuit (%"PRIu64
@@ -1331,14 +1333,15 @@ circpad_estimate_circ_rtt_on_send(circuit_t *circ,
       return;
     }
 
-    /* If the circuit is opened and we have an RTT estimate, update
-     * via an EWMA. */
-    if (circ->state == CIRCUIT_STATE_OPEN && mi->rtt_estimate_usec) {
+    /* If the old RTT estimate is lower than this one, use this one, because
+     * the circuit is getting longer. If this estimate is somehow
+     * faster than the previous, then maybe that was network jitter.
+     * In that case, average them. */
+    if (mi->rtt_estimate_usec < (circpad_delay_t)rtt_time) {
+      mi->rtt_estimate_usec = (circpad_delay_t)rtt_time;
+    } else {
       mi->rtt_estimate_usec += (circpad_delay_t)rtt_time;
       mi->rtt_estimate_usec /= 2;
-    } else {
-      /* If the circuit is not opened yet, just replace the estimate */
-      mi->rtt_estimate_usec = (circpad_delay_t)rtt_time;
     }
   } else if (circ->state == CIRCUIT_STATE_OPEN) {
     /* If last_received_time_usec is zero, then we have gotten two cells back
