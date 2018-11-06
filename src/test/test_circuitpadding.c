@@ -405,7 +405,7 @@ circpad_circ_token_machine_setup(circuit_t *on_circ)
   // FIXME: Tune this histogram
   circ_client_machine.burst.histogram_len = 5;
   circ_client_machine.burst.start_usec = 500;
-  circ_client_machine.burst.range_sec = 1;
+  circ_client_machine.burst.range_usec = 1000000;
   circ_client_machine.burst.histogram[0] = 1;
   circ_client_machine.burst.histogram[1] = 0;
   circ_client_machine.burst.histogram[2] = 2;
@@ -510,8 +510,7 @@ test_circuitpadding_tokens(void *arg)
     tt_int_op(i, OP_LE, usec);
   }
   for (circpad_delay_t i = state->start_usec+1;
-           i <= state->start_usec + state->range_sec*USEC_PER_SEC;
-           i++) {
+           i <= state->start_usec + state->range_usec; i++) {
     int bin = circpad_histogram_usec_to_bin(client_side->padding_info[0],
                                             i);
     circpad_delay_t usec =
