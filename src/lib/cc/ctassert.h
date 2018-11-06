@@ -38,7 +38,7 @@
 /**
  * CTASSERT(expression)
  *
- *	Trigger a compiler error if expression is false.
+ *       Trigger a compiler error if expression is false.
  */
 #if __STDC_VERSION__ >= 201112L
 
