@@ -61,6 +61,9 @@
 #include "lib/encoding/confline.h"
 #include "lib/crypt_ops/crypto_format.h"
 
+/* Algorithm to use for the bandwidth file digest. */
+#define DIGEST_ALG_BW_FILE DIGEST_SHA256
+
 /**
  * \file dirvote.c
  * \brief Functions to compute directory consensus, and schedule voting.
@@ -269,6 +272,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     char *flag_thresholds = dirserv_get_flag_thresholds_line();
     char *params;
     char *bw_headers_line = NULL;
+    char *bw_file_digest = NULL;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
       make_consensus_method_list(MIN_SUPPORTED_CONSENSUS_METHOD,
@@ -308,6 +312,28 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
       tor_free(bw_file_headers);
     }
 
+    /* Create bandwidth-file-digest if applicable.
+     * v3_ns->b64_digest_bw_file will contain the digest when V3BandwidthsFile
+     * is configured and the bandwidth file could be read, even if it was not
+     * parseable.
+     */
+    if (!tor_digest256_is_zero((const char *)v3_ns->bw_file_digest256)) {
+      /* Encode the digest. */
+      char b64_digest_bw_file[BASE64_DIGEST256_LEN+1] = {0};
+      if (digest256_to_base64(b64_digest_bw_file,
+                              (const char *)v3_ns->bw_file_digest256)>0) {
+        /* "bandwidth-file-digest" 1*(SP algorithm "=" digest) NL */
+        char *digest_algo_b64_digest_bw_file = NULL;
+        tor_asprintf(&digest_algo_b64_digest_bw_file, "%s=%s",
+                     crypto_digest_algorithm_get_name(DIGEST_ALG_BW_FILE),
+                     b64_digest_bw_file);
+        /* No need for tor_strdup(""), format_line_if_present does it. */
+        bw_file_digest = format_line_if_present(
+          "bandwidth-file-digest", digest_algo_b64_digest_bw_file);
+        tor_free(digest_algo_b64_digest_bw_file);
+      }
+    }
+
     smartlist_add_asprintf(chunks,
                  "network-status-version 3\n"
                  "vote-status %s\n"
@@ -327,6 +353,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "contact %s\n"
                  "%s" /* shared randomness information */
                  "%s" /* bandwidth file headers */
+                 "%s" /* bandwidth file */
                  ,
                  v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
                  methods,
@@ -345,7 +372,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  shared_random_vote_str ?
                            shared_random_vote_str : "",
                  bw_headers_line ?
-                           bw_headers_line : "");
+                           bw_headers_line : "",
+                 bw_file_digest ? bw_file_digest: "");
 
     tor_free(params);
     tor_free(flags);
@@ -353,6 +381,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     tor_free(methods);
     tor_free(shared_random_vote_str);
     tor_free(bw_headers_line);
+    tor_free(bw_file_digest);
 
     if (!tor_digest_is_zero(voter->legacy_id_digest)) {
       char fpbuf[HEX_DIGEST_LEN+1];
@@ -4425,6 +4454,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   const int vote_on_reachability = running_long_enough_to_decide_unreachable();
   smartlist_t *microdescriptors = NULL;
   smartlist_t *bw_file_headers = NULL;
+  uint8_t bw_file_digest256[DIGEST256_LEN] = {0};
 
   tor_assert(private_key);
   tor_assert(cert);
@@ -4462,7 +4492,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
    * set_routerstatus_from_routerinfo() see up-to-date bandwidth info.
    */
   if (options->V3BandwidthsFile) {
-    dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL);
+    dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL,
+                                     NULL);
   } else {
     /*
      * No bandwidths file; clear the measured bandwidth cache in case we had
@@ -4567,7 +4598,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     /* Only set bw_file_headers when V3BandwidthsFile is configured */
     bw_file_headers = smartlist_new();
     dirserv_read_measured_bandwidths(options->V3BandwidthsFile,
-                                     routerstatuses, bw_file_headers);
+                                     routerstatuses, bw_file_headers,
+                                     bw_file_digest256);
+
   } else {
     /*
      * No bandwidths file; clear the measured bandwidth cache in case we had
@@ -4664,6 +4697,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     smartlist_sort_strings(v3_out->net_params);
   }
   v3_out->bw_file_headers = bw_file_headers;
+  memcpy(v3_out->bw_file_digest256, bw_file_digest256, DIGEST256_LEN);
 
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
   voter->nickname = tor_strdup(options->Nickname);
