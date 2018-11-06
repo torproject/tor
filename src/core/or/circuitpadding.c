@@ -199,13 +199,10 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
 
   /* The bin widths double every index, so that we can have more resolution
    * for lower time values in the histogram. */
-  /* l-(l-2)-1 == l-l+2-1 == l-l+1 */
   const circpad_time_t bin_width_exponent =
         1 << (CIRCPAD_INFINITY_BIN(state) - bin);
-  const circpad_time_t histogram_range_usec =
-                          state->range_sec*TOR_USEC_PER_SEC;
   return (circpad_delay_t)MIN(start_usec +
-                              histogram_range_usec/bin_width_exponent,
+                              state->range_usec/bin_width_exponent,
                               CIRCPAD_DELAY_INFINITE);
 }
 
@@ -217,8 +214,7 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
  * in order to simplify the rest of the code.
  *
  * This means that technically the last bin (histogram_len-2)
- * has range [start_usec+range_sec*TOR_USEC_PER_SEC,
- * CIRCPAD_DELAY_INFINITE].
+ * has range [start_usec+range_usec, CIRCPAD_DELAY_INFINITE].
  */
 STATIC int
 circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi, circpad_delay_t usec)
@@ -244,8 +240,7 @@ circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi, circpad_delay_t usec)
   if (usec == start_usec+1)
     return 1;
 
-  const circpad_time_t histogram_range_usec =
-                       state->range_sec*TOR_USEC_PER_SEC;
+  const circpad_time_t histogram_range_usec = state->range_usec;
   /* We need to find the bin corresponding to our position in the range.
    * Since bins are exponentially spaced in powers of two, we need to
    * take the log2 of our position in histogram_range_usec. However,
@@ -362,7 +357,7 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
     /* These comparisons are safe, because the output is in the range
      * [0, 2**46], and double has a precision of 53 bits. */
     val = MAX(0, val);
-    val = MIN(val, state->range_sec*TOR_USEC_PER_SEC);
+    val = MIN(val, state->range_usec);
 
     /* This addition is exact: val is at most 2**16 * USEC_PER_SEC ~= 2**46,
      * start_usec is at most 2**32, and doubles have a precision of 53 bits. */
@@ -413,7 +408,7 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
 
   /* Truncate the high bin in case it's the infinity bin:
    * Don't actually schedule an "infinite"-1 delay */
-  bin_end = MIN(bin_end, start_usec+state->range_sec*TOR_USEC_PER_SEC*2);
+  bin_end = MIN(bin_end, start_usec+state->range_usec);
 
   // Sample uniformly between histogram[i] to histogram[i+1]-1,
   // but no need to sample if they are the same timeval (aka bin 0 or bin 1).
@@ -1993,7 +1988,7 @@ circpad_circ_client_machine_init(void)
   // FIXME: Tune this histogram
   circ_client_machine->burst.histogram_len = 2;
   circ_client_machine->burst.start_usec = 500;
-  circ_client_machine->burst.range_sec = 1;
+  circ_client_machine->burst.range_usec = 1000000;
   /* We have 5 tokens in the histogram, which means that all circuits will look
    * like they have 7 hops (since we start this machine after the second hop,
    * and tokens are decremented for any valid hops, and fake extends are
@@ -2046,7 +2041,7 @@ circpad_circ_responder_machine_init(void)
   /* The histogram is 2 bins: an empty one, and infinity */
   circ_responder_machine->burst.histogram_len = 2;
   circ_responder_machine->burst.start_usec = 5000;
-  circ_responder_machine->burst.range_sec = 10;
+  circ_responder_machine->burst.range_usec = 1000000;
   /* During burst state we wait forever for padding to arrive.
 
      We are waiting for a padding cell from the client to come in, so that we
@@ -2074,7 +2069,7 @@ circpad_circ_responder_machine_init(void)
   circ_responder_machine->gap.use_rtt_estimate = 1;
   circ_responder_machine->gap.histogram_len = 6;
   circ_responder_machine->gap.start_usec = 5000;
-  circ_responder_machine->gap.range_sec = 10;
+  circ_responder_machine->gap.range_usec = 1000000;
   circ_responder_machine->gap.histogram[0] = 0;
   circ_responder_machine->gap.histogram[1] = 1;
   circ_responder_machine->gap.histogram[2] = 2;
