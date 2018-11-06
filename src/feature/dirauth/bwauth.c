@@ -254,7 +254,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
     goto continue_digest;
   }
 
-  now = time(NULL);
+  now = approx_time();
   if ((now - file_time) > MAX_MEASUREMENT_AGE) {
     log_warn(LD_DIRSERV, "Bandwidth measurement file stale. Age: %u",
              (unsigned)(time(NULL) - file_time));
