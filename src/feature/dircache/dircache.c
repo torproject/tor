@@ -1451,7 +1451,8 @@ handle_get_next_bandwidth(dir_connection_t *conn,
   const or_options_t *options = get_options();
   if (options->V3BandwidthsFile) {
     int lifetime = 60;
-    char *bandwidth =  read_file_to_str(options->V3BandwidthsFile, 0, NULL);
+    char *bandwidth = read_file_to_str(options->V3BandwidthsFile,
+                                       RFTS_IGNORE_MISSING, NULL);
     size_t len = strlen(bandwidth);
     write_http_response_header(conn, len, NO_METHOD, lifetime);
     connection_buf_add(bandwidth, len, TO_CONN(conn));
