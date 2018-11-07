@@ -4270,35 +4270,46 @@ test_util_glob(void *ptr)
   chmod(forbidden, 0);
 #endif
 
-#define T(input,result) \
+#define TEST(input) \
   do { \
     tor_asprintf(&pattern, "%s"PATH_SEPARATOR"%s", dirname, input); \
     results = tor_glob(pattern); \
     tor_free(pattern); \
     tt_assert(results); \
     smartlist_sort_strings(results); \
-    i = 0; \
+  } while (0);
+
+#define EXPECT(result) \
+  do { \
     tt_int_op(smartlist_len(results), OP_EQ, \
-                          sizeof(result)/sizeof(*result)); \
-    if (sizeof(result) > 0) { /* avoid compiler warning */ \
-      SMARTLIST_FOREACH_BEGIN(results, const char *, f) { \
-        tor_asprintf(&expected, "%s"PATH_SEPARATOR"%s", dirname, result[i]); \
-        tt_str_op(f, OP_EQ, expected); \
-        i++; \
-        tor_free(expected); \
-      } SMARTLIST_FOREACH_END(f); \
-      SMARTLIST_FOREACH(results, char *, f, tor_free(f)); \
-      smartlist_free(results); \
-    } \
+                            sizeof(result)/sizeof(*result)); \
+    i = 0; \
+    SMARTLIST_FOREACH_BEGIN(results, const char *, f) { \
+      tor_asprintf(&expected, "%s"PATH_SEPARATOR"%s", dirname, result[i]); \
+      tt_str_op(f, OP_EQ, expected); \
+      i++; \
+      tor_free(expected); \
+    } SMARTLIST_FOREACH_END(f); \
+    SMARTLIST_FOREACH(results, char *, f, tor_free(f)); \
+    smartlist_free(results); \
+  } while (0);
+
+#define EXPECT_EMPTY() \
+  do { \
+    tt_int_op(smartlist_len(results), OP_EQ, 0); \
+    SMARTLIST_FOREACH(results, char *, f, tor_free(f)); \
+    smartlist_free(results); \
   } while (0);
 
   // wilcards at beginning
   const char *results_test1[] = {"dir2", "file2"};
-  T("*2", results_test1);
+  TEST("*2");
+  EXPECT(results_test1);
 
   // wildcards at end
   const char *results_test2[] = {"dir1", "dir2"};
-  T("d*", results_test2);
+  TEST("d*");
+  EXPECT(results_test2);
 
   // wildcards at beginning and end
 #ifdef _WIN32
@@ -4309,36 +4320,43 @@ test_util_glob(void *ptr)
   const char *results_test3[] = {"dir1", "dir2", "file1", "file2",
                                  "forbidden"};
 #endif
-  T("*i*", results_test3);
+  TEST("*i*");
+  EXPECT(results_test3);
 
   // wildcards in middle
   const char *results_test4[] = {"dir1", "dir2"};
-  T("d?r*", results_test4);
+  TEST("d?r*");
+  EXPECT(results_test4);
 
   // test file that does not exist
-  const char *results_test5[] = {};
-  T("not-exist", results_test5);
+  TEST("not-exist");
+  EXPECT_EMPTY();
 
   // test wildcard that matches nothing
-  const char *results_test6[] = {};
-  T("*not-exist*", results_test6);
+  TEST("*not-exist*");
+  EXPECT_EMPTY();
 
   // test path separator at end - no wildcards
   const char *results_test7[] = {"dir1"};
-  T("dir1", results_test7);
+  TEST("dir1");
+  EXPECT(results_test7);
 
   const char *results_test8[] = {"dir1"};
-  T("dir1"PATH_SEPARATOR, results_test8);
+  TEST("dir1"PATH_SEPARATOR);
+  EXPECT(results_test8);
 
   const char *results_test9[] = {"file1"};
-  T("file1", results_test9);
+  TEST("file1");
+  EXPECT(results_test9);
 
   const char *results_test10[] = {"file1"};
-  T("file1"PATH_SEPARATOR, results_test10);
+  TEST("file1"PATH_SEPARATOR);
+  EXPECT(results_test10);
 
   // test path separator at end - with wildcards
   const char *results_test11[] = {"dir1", "dir2", "forbidden"};
-  T("*"PATH_SEPARATOR, results_test11);
+  TEST("*"PATH_SEPARATOR);
+  EXPECT(results_test11);
 
 #ifdef _WIN32
   // dot files are not ignored on Windows
@@ -4348,7 +4366,8 @@ test_util_glob(void *ptr)
   const char *results_test12[] = {"dir1", "dir2", "empty", "file1", "file2",
                                   "forbidden"};
 #endif
-  T("*", results_test12);
+  TEST("*");
+  EXPECT(results_test12);
 
   // wildcards on folder and file
   const char *results_test13[] = {"dir1"PATH_SEPARATOR"dir1",
@@ -4359,28 +4378,31 @@ test_util_glob(void *ptr)
                                   "dir2"PATH_SEPARATOR"dir2",
                                   "dir2"PATH_SEPARATOR"file1",
                                   "dir2"PATH_SEPARATOR"file2"};
-  T("?i*"PATH_SEPARATOR"?i*", results_test13);
+  TEST("?i*"PATH_SEPARATOR"?i*");
+  EXPECT(results_test13);
 
   // wildcards on file only
   const char *results_test14[] = {"dir1"PATH_SEPARATOR"dir1",
                                   "dir1"PATH_SEPARATOR"dir2",
                                   "dir1"PATH_SEPARATOR"file1",
                                   "dir1"PATH_SEPARATOR"file2"};
-  T("dir1"PATH_SEPARATOR"?i*", results_test14);
+  TEST("dir1"PATH_SEPARATOR"?i*");
+  EXPECT(results_test14);
 
   // wildcards on folder only
   const char *results_test15[] = {"dir1"PATH_SEPARATOR"file1",
                                   "dir2"PATH_SEPARATOR"file1"};
-  T("?i*"PATH_SEPARATOR"file1", results_test15);
+  TEST("?i*"PATH_SEPARATOR"file1");
+  EXPECT(results_test15);
 
   // wildcards after file name
-  const char *results_test16[] = {};
-  T("file1"PATH_SEPARATOR"*", results_test16);
+  TEST("file1"PATH_SEPARATOR"*");
+  EXPECT_EMPTY();
 
 #ifndef _WIN32
   // test wildcard escaping
-  const char *results_test17[] = {};
-  T("\\*", results_test17);
+  TEST("\\*");
+  EXPECT_EMPTY();
 
   // test forbidden directory
   tor_asprintf(&pattern, "%s"PATH_SEPARATOR"*"PATH_SEPARATOR"*", dirname);
@@ -4389,7 +4411,9 @@ test_util_glob(void *ptr)
   tt_assert(!results);
 #endif
 
-#undef T
+#undef TEST
+#undef EXPECT
+#undef EXPECT_EMPTY
 
  done:
 #ifndef _WIN32
@@ -4460,7 +4484,7 @@ test_util_get_glob_opened_files(void *ptr)
   chmod(forbidden, 0);
 #endif
 
-#define T(input,result) \
+#define TEST(input) \
   do { \
     if (*input) { \
       tor_asprintf(&pattern, "%s"PATH_SEPARATOR"%s", dirname, input); \
@@ -4471,32 +4495,43 @@ test_util_get_glob_opened_files(void *ptr)
     tor_free(pattern); \
     tt_assert(results); \
     smartlist_sort_strings(results); \
-    i = 0; \
+  } while (0);
+
+#define EXPECT(result) \
+  do { \
     tt_int_op(smartlist_len(results), OP_EQ, \
                           sizeof(result)/sizeof(*result)); \
-    if (sizeof(result) > 0) { /* avoid compiler warning */ \
-      SMARTLIST_FOREACH_BEGIN(results, const char *, f) { \
-        if (*result[i]) { \
-          tor_asprintf(&expected, "%s"PATH_SEPARATOR"%s", dirname, result[i]);\
-        } else { /* do not add path separator if empty string */ \
-          tor_asprintf(&expected, "%s", dirname); \
-        } \
-        tt_str_op(f, OP_EQ, expected); \
-        i++; \
-        tor_free(expected); \
-      } SMARTLIST_FOREACH_END(f); \
-      SMARTLIST_FOREACH(results, char *, f, tor_free(f)); \
-      smartlist_free(results); \
-    } \
+    i = 0; \
+    SMARTLIST_FOREACH_BEGIN(results, const char *, f) { \
+      if (*result[i]) { \
+        tor_asprintf(&expected, "%s"PATH_SEPARATOR"%s", dirname, result[i]); \
+      } else { /* do not add path separator if empty string */ \
+        tor_asprintf(&expected, "%s", dirname); \
+      } \
+      tt_str_op(f, OP_EQ, expected); \
+      i++; \
+      tor_free(expected); \
+    } SMARTLIST_FOREACH_END(f); \
+    SMARTLIST_FOREACH(results, char *, f, tor_free(f)); \
+    smartlist_free(results); \
+  } while (0);
+
+#define EXPECT_EMPTY() \
+  do { \
+    tt_int_op(smartlist_len(results), OP_EQ, 0); \
+    SMARTLIST_FOREACH(results, char *, f, tor_free(f)); \
+    smartlist_free(results); \
   } while (0);
 
   // all files on folder
   const char *results_test1[] = {""}; // only the folder is read
-  T("*", results_test1);
+  TEST("*");
+  EXPECT(results_test1);
 
   // same as before but ending in path separator
   const char *results_test2[] = {""}; // only the folder is read
-  T("*"PATH_SEPARATOR, results_test2);
+  TEST("*"PATH_SEPARATOR);
+  EXPECT(results_test2);
 
   // wilcards in multiple path components
 #ifndef _WIN32
@@ -4507,7 +4542,8 @@ test_util_get_glob_opened_files(void *ptr)
   const char *results_test3[] = {"", ".test-hidden", "dir1", "dir2", "empty",
                                  "file1", "file2", "forbidden"};
 #endif
-  T("*"PATH_SEPARATOR"*", results_test3);
+  TEST("*"PATH_SEPARATOR"*");
+  EXPECT(results_test3);
 
   // same as before but ending in path separator
 #ifndef _WIN32
@@ -4518,45 +4554,49 @@ test_util_get_glob_opened_files(void *ptr)
   const char *results_test4[] = {"", ".test-hidden", "dir1", "dir2", "empty",
                                  "file1", "file2", "forbidden"};
 #endif
-  T("*"PATH_SEPARATOR"*"PATH_SEPARATOR, results_test4);
+  TEST("*"PATH_SEPARATOR"*"PATH_SEPARATOR);
+  EXPECT(results_test4);
 
   // no glob - folder
-  const char *results_test5[] = {};
-  T("", results_test5);
+  TEST("");
+  EXPECT_EMPTY();
 
   // same as before but ending in path separator
-  const char *results_test6[] = {};
-  T(PATH_SEPARATOR, results_test6);
+  TEST(PATH_SEPARATOR);
+  EXPECT_EMPTY();
 
   // no glob - file
-  const char *results_test7[] = {};
-  T("file1", results_test7);
+  TEST("file1");
+  EXPECT_EMPTY();
 
   // same as before but ending in path separator
-  const char *results_test8[] = {};
-  T("file1"PATH_SEPARATOR, results_test8);
+  TEST("file1"PATH_SEPARATOR);
+  EXPECT_EMPTY();
 
   // file but with wildcard after
   const char *results_test9[] = {"file1"};
-  T("file1"PATH_SEPARATOR"*", results_test9);
+  TEST("file1"PATH_SEPARATOR"*");
+  EXPECT(results_test9);
 
   // dir inside dir
-  const char *results_test10[] = {};
-  T("dir1"PATH_SEPARATOR"dir1", results_test10);
+  TEST("dir1"PATH_SEPARATOR"dir1");
+  EXPECT_EMPTY();
 
   // same as before but ending in path separator
-  const char *results_test11[] = {};
-  T("dir1"PATH_SEPARATOR"dir1"PATH_SEPARATOR, results_test11);
+  TEST("dir1"PATH_SEPARATOR"dir1"PATH_SEPARATOR);
+  EXPECT_EMPTY();
 
   // no glob - empty
-  const char *results_test12[] = {};
-  T("empty", results_test12);
+  TEST("empty");
+  EXPECT_EMPTY();
 
   // same as before but ending in path separator
-  const char *results_test13[] = {};
-  T("empty"PATH_SEPARATOR, results_test13);
+  TEST("empty"PATH_SEPARATOR);
+  EXPECT_EMPTY();
 
-#undef T
+#undef TEST
+#undef EXPECT
+#undef EXPECT_EMPTY
 
  done:
 #ifndef _WIN32
