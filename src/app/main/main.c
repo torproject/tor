@@ -71,6 +71,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_s2k.h"
 #include "lib/geoip/geoip.h"
+#include "lib/net/resolve.h"
 
 #include "lib/process/waitpid.h"
 
