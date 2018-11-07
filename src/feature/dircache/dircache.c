@@ -49,7 +49,8 @@
 #define ROUTERDESC_BY_DIGEST_CACHE_LIFETIME (48*60*60)
 #define ROBOTS_CACHE_LIFETIME (24*60*60)
 #define MICRODESC_CACHE_LIFETIME (48*60*60)
-
+/* Bandwidth files change every hour. */
+#define BANDWIDTH_CACHE_LIFETIME (30*60)
 /** Parse an HTTP request string <b>headers</b> of the form
  * \verbatim
  * "\%s [http[s]://]\%s HTTP/1..."
@@ -1453,7 +1454,6 @@ handle_get_next_bandwidth(dir_connection_t *conn,
     find_best_compression_method(args->compression_supported, 1);
 
   if (options->V3BandwidthsFile) {
-    int lifetime = 60;
     char *bandwidth = read_file_to_str(options->V3BandwidthsFile,
                                        RFTS_IGNORE_MISSING, NULL);
     if (bandwidth != NULL) {
