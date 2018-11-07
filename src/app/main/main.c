@@ -70,6 +70,7 @@
 #include "lib/crypt_ops/crypto_s2k.h"
 #include "lib/err/backtrace.h"
 #include "lib/geoip/geoip.h"
+#include "lib/net/resolve.h"
 
 #include "lib/process/waitpid.h"
 
