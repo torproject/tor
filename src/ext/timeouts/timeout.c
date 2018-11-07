@@ -38,7 +38,7 @@
 
 #include <errno.h>     /* errno */
 
-#include "tor_queue.h" /* TAILQ(3) */
+#include "ext/tor_queue.h" /* TAILQ(3) */
 
 #include "timeout.h"
 
@@ -531,7 +531,7 @@ static timeout_t timeouts_int(struct timeouts *T) {
 			timeout = MIN(_timeout, timeout);
 		}
 
-		relmask <<= WHEEL_BIT; 
+		relmask <<= WHEEL_BIT;
 		relmask |= WHEEL_MASK;
 	}
 
@@ -751,4 +751,3 @@ TIMEOUT_PUBLIC int timeout_v_abi(void) {
 TIMEOUT_PUBLIC int timeout_v_api(void) {
 	return TIMEOUT_V_API;
 } /* timeout_version() */
-
