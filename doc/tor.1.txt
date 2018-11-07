@@ -635,9 +635,7 @@ GENERAL OPTIONS
 
 [[KeepalivePeriod]] **KeepalivePeriod** __NUM__::
     To keep firewalls from expiring connections, send a padding keepalive cell
-    every NUM seconds on open connections that are in use. If the connection
-    has no open circuits, it will instead be closed after NUM seconds of
-    idleness. (Default: 5 minutes)
+    every NUM seconds on open connections that are in use. (Default: 5 minutes)
 
 [[Log]] **Log** __minSeverity__[-__maxSeverity__] **stderr**|**stdout**|**syslog**::
     Send all messages between __minSeverity__ and __maxSeverity__ to the standard
