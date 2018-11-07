@@ -1,0 +1,5 @@
+  o Minor features (performance):
+    - Avoid parsing the same protocol-versions string over and over
+      in summarize_protover_flags(). This should save us a huge number
+      of malloc calls on startup, and may reduce memory fragmentation with
+      some allocators. Closes ticket 27225.
