@@ -1,0 +1,7 @@
+  o Minor bugfixes (guards):
+    - In count_acceptable_nodes(), check if we have at least one bridge
+      or guard node, and two non-guard nodes for a circuit. Previously,
+      we have added up the sum of all nodes with a descriptor, but that
+      could cause us to build circuits that fail if we had either too
+      many bridges, or not enough guard nodes. Fixes bug 25885; bugfix
+      on 0.3.6.1-alpha. Patch by Neel Chauhan.

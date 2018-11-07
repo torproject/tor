@@ -1658,22 +1658,25 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
 STATIC int
 new_route_len(uint8_t purpose, extend_info_t *exit_ei, smartlist_t *nodes)
 {
-  int num_acceptable_routers;
   int routelen;
 
   tor_assert(nodes);
 
   routelen = route_len_for_purpose(purpose, exit_ei);
 
-  num_acceptable_routers = count_acceptable_nodes(nodes);
+  int num_acceptable_direct = count_acceptable_nodes(nodes, 1);
+  int num_acceptable_indirect = count_acceptable_nodes(nodes, 0);
 
-  log_debug(LD_CIRC,"Chosen route length %d (%d/%d routers suitable).",
-            routelen, num_acceptable_routers, smartlist_len(nodes));
+  log_debug(LD_CIRC,"Chosen route length %d (%d direct and %d indirect "
+             "routers suitable).", routelen, num_acceptable_direct,
+             num_acceptable_indirect);
 
-  if (num_acceptable_routers < routelen) {
+  if (num_acceptable_direct < 1 || num_acceptable_indirect < routelen - 1) {
     log_info(LD_CIRC,
-             "Not enough acceptable routers (%d/%d). Discarding this circuit.",
-             num_acceptable_routers, routelen);
+             "Not enough acceptable routers (%d/%d direct and %d/%d "
+             "indirect routers suitable). Discarding this circuit.",
+             num_acceptable_direct, routelen,
+             num_acceptable_indirect, routelen);
     return -1;
   }
 
@@ -2315,7 +2318,7 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
  * particular router. See bug #25885.)
  */
 MOCK_IMPL(STATIC int,
-count_acceptable_nodes, (smartlist_t *nodes))
+count_acceptable_nodes, (smartlist_t *nodes, int direct))
 {
   int num=0;
 
@@ -2329,7 +2332,7 @@ count_acceptable_nodes, (smartlist_t *nodes))
     if (! node->is_valid)
 //      log_debug(LD_CIRC,"Nope, the directory says %d is not valid.",i);
       continue;
-    if (! node_has_any_descriptor(node))
+    if (! node_has_preferred_descriptor(node, direct))
       continue;
     /* The node has a descriptor, so we can just check the ntor key directly */
     if (!node_has_curve25519_onion_key(node))

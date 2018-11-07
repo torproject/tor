@@ -21,11 +21,11 @@ static smartlist_t dummy_nodes;
 static extend_info_t dummy_ei;
 
 static int
-mock_count_acceptable_nodes(smartlist_t *nodes)
+mock_count_acceptable_nodes(smartlist_t *nodes, int direct)
 {
   (void)nodes;
 
-  return DEFAULT_ROUTE_LEN + 1;
+  return direct ? 1 : DEFAULT_ROUTE_LEN + 1;
 }
 
 /* Test route lengths when the caller of new_route_len() doesn't
