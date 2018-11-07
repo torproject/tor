@@ -2516,6 +2516,16 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
   tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Content-Length: 167\r\n"));
 
+  /* Check cache lifetime */
+  char expbuf[RFC1123_TIME_LEN+1];
+  time_t now = time(NULL);
+  /* BANDWIDTH_CACHE_LIFETIME is defined in dircache.c. */
+  format_rfc1123_time(expbuf, (time_t)(now + 30*60));
+  char *expires = NULL;
+  /* Change to 'Cache-control: max-age=%d' if using http/1.1. */
+  tor_asprintf(&expires, "Expires: %s\r\n", expbuf);
+  tt_assert(strstr(header, expires));
+
   tt_int_op(body_used, OP_EQ, strlen(body));
   tt_str_op(content, OP_EQ, body);
 
@@ -2525,6 +2535,7 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
     connection_free_minimal(TO_CONN(conn));
     tor_free(header);
     tor_free(body);
+    tor_free(expires);
     or_options_free(mock_options); mock_options = NULL;
 }
 
