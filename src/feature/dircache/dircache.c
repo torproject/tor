@@ -1453,13 +1453,15 @@ handle_get_next_bandwidth(dir_connection_t *conn,
     int lifetime = 60;
     char *bandwidth = read_file_to_str(options->V3BandwidthsFile,
                                        RFTS_IGNORE_MISSING, NULL);
-    size_t len = strlen(bandwidth);
-    write_http_response_header(conn, len, NO_METHOD, lifetime);
-    connection_buf_add(bandwidth, len, TO_CONN(conn));
-    tor_free(bandwidth);
-  } else {
-    write_short_http_response(conn, 404, "Not found");
+    if (bandwidth != NULL) {
+      site_t len = strlen(bandwidth);
+      write_http_response_header(conn, len, NO_METHOD, lifetime);
+      connection_buf_add(bandwidth, len, TO_CONN(conn));
+      tor_free(bandwidth);
+      return 0;
+    }
   }
+  write_short_http_response(conn, 404, "Not found");
   return 0;
 }
 
