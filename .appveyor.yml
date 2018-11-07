@@ -2,6 +2,12 @@ version: 1.0.{build}
 
 clone_depth: 50
 
+image:
+  # Windows Server 2012 R2
+  - Visual Studio 2015
+  # Windows Server 2016
+  - Visual Studio 2017
+
 environment:
   compiler: mingw
 
