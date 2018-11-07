@@ -1,5 +1,5 @@
 Changes in version 0.3.5.4-alpha - 2018-11-07
-  Tor 0.3.5.4-alpha includes numerous bugfixes on earlier versions, and
+  Tor 0.3.5.4-alpha includes numerous bugfixes on earlier versions and
   improves our continuous integration support. It continues our attempts
   to stabilize this alpha branch and build it into a foundation for an
   acceptable long-term-support release.
