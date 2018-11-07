@@ -1,4 +1,0 @@
-  o Minor bugfixes (rust):
-    - Return a string that can be safely freed by C code, not one created by
-      the rust allocator, in protover_all_supported(). Fixes bug 27740; bugfix
-      on 0.3.3.1-alpha.

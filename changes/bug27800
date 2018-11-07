@@ -1,4 +1,0 @@
-  o Minor bugfixes (directory authority):
-    - Log additional info when we get a relay that shares an ed25519
-      ID with a different relay, instead making a BUG() warning.
-      Fixes bug 27800; bugfix on 0.3.2.1-alpha.
