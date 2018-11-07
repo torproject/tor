@@ -67,7 +67,7 @@ Changes in version 0.3.5.4-alpha - 2018-11-07
       onion service version and then look for invalid options.
       Previously, we did the reverse, but that broke existing configs
       which were pointed to a v2 service and had options like
-      HiddenServiceAuthorizeClient set Fixes bug 28127; bugfix on
+      HiddenServiceAuthorizeClient set. Fixes bug 28127; bugfix on
       0.3.5.1-alpha. Patch by Neel Chauhan.
 
   o Minor bugfixes (portability):
@@ -82,7 +82,7 @@ Changes in version 0.3.5.4-alpha - 2018-11-07
   o Minor bugfixes (relay shutdown, systemd):
     - Notify systemd of ShutdownWaitLength so it can be set to longer
       than systemd's TimeoutStopSec. In Tor's systemd service file, set
-      TimeoutSec to 60 seconds, to allow Tor some time to shut down.
+      TimeoutSec to 60 seconds to allow Tor some time to shut down.
       Fixes bug 28113; bugfix on 0.2.6.2-alpha.
 
   o Minor bugfixes (rust, also in 0.3.4.9):
