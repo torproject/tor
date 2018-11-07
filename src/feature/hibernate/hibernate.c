@@ -50,6 +50,16 @@ hibernating, phase 2:
 #include <unistd.h>
 #endif
 
+#ifdef HAVE_SYSTEMD
+#  if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)
+/* Systemd's use of gcc's __INCLUDE_LEVEL__ extension macro appears to confuse
+ * Coverity. Here's a kludge to unconfuse it.
+ */
+#   define __INCLUDE_LEVEL__ 2
+# endif /* defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__) */
+#include <systemd/sd-daemon.h>
+#endif /* defined(HAVE_SYSTEMD) */
+
 /** Are we currently awake, asleep, running out of bandwidth, or shutting
  * down? */
 static hibernate_state_t hibernate_state = HIBERNATE_STATE_INITIAL;
@@ -820,6 +830,8 @@ hibernate_soft_limit_reached(void)
     return 0;
   return get_accounting_bytes() >= soft_limit;
 }
+
+#define TOR_USEC_PER_SEC (1000000)
 
 /** Called when we get a SIGINT, or when bandwidth soft limit is
  * reached. Puts us into "loose hibernation": we don't accept new
