@@ -2529,6 +2529,25 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
   tt_int_op(body_used, OP_EQ, strlen(body));
   tt_str_op(content, OP_EQ, body);
 
+  tor_free(header);
+  tor_free(body);
+
+  /* Request the file using compression, the result should be the same. */
+  tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
+    GET("/tor/status-vote/next/bandwidth.z"), NULL, 0));
+
+  fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
+                      &body, &body_used, strlen(content)+1, 0);
+
+  tt_assert(header);
+  tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
+  tt_assert(strstr(header, "Content-Encoding: deflate\r\n"));
+
+  /* Since using connection_write_to_buf_mock instead of mocking
+   * connection_buf_add_compress, the content is not actually compressed.
+   * If it would, the size and content would be different than the original.
+  */
+
   done:
     UNMOCK(get_options);
     UNMOCK(connection_write_to_buf_impl_);
