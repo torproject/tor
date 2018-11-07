@@ -30,12 +30,12 @@
 */
 
 #include "lib/cc/torint.h"
-#include "lib/log/util_bug.h"
+#include "lib/err/torerr.h"
 
-#include "siphash.h"
+#include "ext/siphash.h"
 #include <string.h>
 #include <stdlib.h>
-#include "byteorder.h"
+#include "ext/byteorder.h"
 
 #define ROTATE(x, b) (uint64_t)( ((x) << (b)) | ( (x) >> (64 - (b))) )
 
@@ -112,13 +112,13 @@ static int the_siphash_key_is_set = 0;
 static struct sipkey the_siphash_key;
 
 uint64_t siphash24g(const void *src, unsigned long src_sz) {
-	tor_assert(the_siphash_key_is_set);
+	raw_assert(the_siphash_key_is_set);
 	return siphash24(src, src_sz, &the_siphash_key);
 }
 
 void siphash_set_global_key(const struct sipkey *key)
 {
-	tor_assert(! the_siphash_key_is_set);
+	raw_assert(! the_siphash_key_is_set);
 	the_siphash_key.k0 = key->k0;
 	the_siphash_key.k1 = key->k1;
 	the_siphash_key_is_set = 1;
