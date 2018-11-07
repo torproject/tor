@@ -1449,13 +1449,19 @@ handle_get_next_bandwidth(dir_connection_t *conn,
   (void)args;
   log_debug(LD_DIR, "Getting next bandwidth.");
   const or_options_t *options = get_options();
+  const compress_method_t compress_method =
+    find_best_compression_method(args->compression_supported, 1);
+
   if (options->V3BandwidthsFile) {
     int lifetime = 60;
     char *bandwidth = read_file_to_str(options->V3BandwidthsFile,
                                        RFTS_IGNORE_MISSING, NULL);
     if (bandwidth != NULL) {
-      site_t len = strlen(bandwidth);
-      write_http_response_header(conn, len, NO_METHOD, lifetime);
+      size_t len = strlen(bandwidth);
+      write_http_response_header(conn, len, compress_method, lifetime);
+      if (compress_method != NO_METHOD)
+        conn->compress_state = tor_compress_new(1, compress_method,
+                                        choose_compression_level(len));
       connection_buf_add(bandwidth, len, TO_CONN(conn));
       tor_free(bandwidth);
       return 0;
