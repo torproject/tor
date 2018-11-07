@@ -1,13 +1,14 @@
 Changes in version 0.3.5.4-alpha - 2018-11-07
-  Tor 0.3.5.4-alpha includes numerous bugfixes, and continues our
-  attempts to stabilize this alpha branch and build it into a foundation
-  for an acceptable long-term-support release.
+  Tor 0.3.5.4-alpha includes numerous bugfixes on earlier versions, and
+  improves our continuous integration support. It continues our attempts
+  to stabilize this alpha branch and build it into a foundation for an
+  acceptable long-term-support release.
 
   o Major bugfixes (compilation, rust):
     - Rust tests can now build and run successfully with the
       --enable-fragile-hardening option enabled. Doing this currently
       requires the rust beta channel; it will be possible with stable
-      rust as of rust version 1.31 is out. Patch from Alex Crichton.
+      rust once Rust version 1.31 is released. Patch from Alex Crichton.
       Fixes bugs 27272, 27273, and 27274. Bugfix on 0.3.1.1-alpha.
 
   o Major bugfixes (embedding, main loop):
@@ -19,7 +20,7 @@ Changes in version 0.3.5.4-alpha - 2018-11-07
   o Minor features (continuous integration):
     - Add a Travis CI build for --enable-nss on Linux gcc. Closes
       ticket 27751.
-    - Add new CI job to Travis configuration to runs stem-based
+    - Add new CI job to Travis configuration to run stem-based
       integration tests. Closes ticket 27913.
 
   o Minor features (Windows, continuous integration):
@@ -36,8 +37,8 @@ Changes in version 0.3.5.4-alpha - 2018-11-07
       on 0.3.5.1-alpha. Patch from Kris Katterjohn.
 
   o Minor bugfixes (compilation, OpenSolaris):
-    - Add a missing include to compat_pthreads.c, to fix compilation on
-      OpenSolaris and its descendants. Fixes bug 27963; bugfix
+    - Fix compilation on OpenSolaris and its descendants by adding a
+      missing include to compat_pthreads.c. Fixes bug 27963; bugfix
       on 0.3.5.1-alpha.
 
   o Minor bugfixes (configuration):
@@ -47,8 +48,8 @@ Changes in version 0.3.5.4-alpha - 2018-11-07
 
   o Minor bugfixes (directory authority, also in 0.3.4.9):
     - Log additional info when we get a relay that shares an ed25519 ID
-      with a different relay, instead making a BUG() warning. Fixes bug
-      27800; bugfix on 0.3.2.1-alpha.
+      with a different relay, instead of a BUG() warning with a
+      backtrace. Fixes bug 27800; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (onion service v3):
     - Build the service descriptor's signing key certificate before
@@ -80,8 +81,8 @@ Changes in version 0.3.5.4-alpha - 2018-11-07
 
   o Minor bugfixes (relay shutdown, systemd):
     - Notify systemd of ShutdownWaitLength so it can be set to longer
-      than systemd's TimeoutStopSec. In tor's systemd service file, set
-      TimeoutSec to 60 seconds, to allow tor some time to shut down.
+      than systemd's TimeoutStopSec. In Tor's systemd service file, set
+      TimeoutSec to 60 seconds, to allow Tor some time to shut down.
       Fixes bug 28113; bugfix on 0.2.6.2-alpha.
 
   o Minor bugfixes (rust, also in 0.3.4.9):
