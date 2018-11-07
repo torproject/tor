@@ -36,7 +36,7 @@
 #include "lib/net/socket.h"
 #include "lib/thread/threads.h"
 
-#include "tor_queue.h"
+#include "ext/tor_queue.h"
 #include <event2/event.h>
 #include <string.h>
 

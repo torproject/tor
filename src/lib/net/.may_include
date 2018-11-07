@@ -1,6 +1,6 @@
 orconfig.h
-siphash.h
-ht.h
+ext/siphash.h
+ext/ht.h
 
 lib/arch/*.h
 lib/buf/*.h

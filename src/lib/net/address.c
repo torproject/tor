@@ -53,7 +53,7 @@
 #include "lib/string/printf.h"
 #include "lib/string/util_string.h"
 
-#include "siphash.h"
+#include "ext/siphash.h"
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>

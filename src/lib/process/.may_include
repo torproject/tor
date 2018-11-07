@@ -15,4 +15,4 @@ lib/subsys/*.h
 lib/testsupport/*.h
 lib/thread/*.h
 
-ht.h
+ext/ht.h
