@@ -135,6 +135,7 @@ def load_include_rules(fname):
     return result
 
 list_unused = False
+log_sorted_levels = False
 
 uses_dirs = { }
 
@@ -169,11 +170,12 @@ while uses_dirs:
     for k in cur_level:
         del uses_dirs[k]
     n += 1
-    if cur_level:
+    if cur_level and log_sorted_levels:
         print(n, cur_level)
     if n > 100:
         break
 
 if uses_dirs:
-    print("Circular dependencies in here somewhere:", uses_dirs)
+    print("There are circular .may_include dependencies in here somewhere:",
+          uses_dirs)
     sys.exit(1)
