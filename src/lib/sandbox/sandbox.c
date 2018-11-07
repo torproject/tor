@@ -41,9 +41,9 @@
 #include "lib/malloc/malloc.h"
 #include "lib/string/scanf.h"
 
-#include "tor_queue.h"
-#include "ht.h"
-#include "siphash.h"
+#include "ext/tor_queue.h"
+#include "ext/ht.h"
+#include "ext/siphash.h"
 
 #define DEBUGGING_CLOSE
 

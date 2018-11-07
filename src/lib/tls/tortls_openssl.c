@@ -461,7 +461,7 @@ static const char UNRESTRICTED_SERVER_CIPHER_LIST[] =
 /** List of ciphers that clients should advertise, omitting items that
  * our OpenSSL doesn't know about. */
 static const char CLIENT_CIPHER_LIST[] =
-#include "ciphers.inc"
+#include "lib/tls/ciphers.inc"
   /* Tell it not to use SSLv2 ciphers, so that it can select an SSLv3 version
    * of any cipher we say. */
   "!SSLv2"

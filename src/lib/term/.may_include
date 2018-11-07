@@ -5,5 +5,4 @@ lib/log/*.h
 lib/term/*.h
 lib/malloc/*.h
 
-# From src/ext
-tor_readpassphrase.h
+ext/tor_readpassphrase.h

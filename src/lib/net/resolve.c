@@ -16,8 +16,8 @@
 #include "lib/string/parse_int.h"
 #include "lib/string/util_string.h"
 
-#include "siphash.h"
-#include "ht.h"
+#include "ext/siphash.h"
+#include "ext/ht.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>

@@ -9,6 +9,6 @@ lib/sandbox/*.h
 lib/sandbox/*.inc
 lib/string/*.h
 
-ht.h
-siphash.h
-tor_queue.h
+ext/ht.h
+ext/siphash.h
+ext/tor_queue.h

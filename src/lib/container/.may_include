@@ -7,9 +7,9 @@ lib/malloc/*.h
 lib/err/*.h
 lib/smartlist_core/*.h
 lib/string/*.h
-lib/testsupport/testsupport.h
+lib/testsupport/*.h
 lib/intmath/*.h
 lib/log/*.h
 
-ht.h
-siphash.h
+ext/ht.h
+ext/siphash.h

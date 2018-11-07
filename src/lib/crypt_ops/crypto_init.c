@@ -21,7 +21,7 @@
 #include "lib/crypt_ops/crypto_nss_mgt.h"
 #include "lib/crypt_ops/crypto_rand.h"
 
-#include "siphash.h"
+#include "ext/siphash.h"
 
 /** Boolean: has our crypto library been initialized? (early phase) */
 static int crypto_early_initialized_ = 0;

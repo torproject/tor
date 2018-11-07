@@ -12,7 +12,6 @@ lib/log/*.h
 lib/malloc/*.h
 lib/net/*.h
 lib/string/*.h
-lib/testsupport/testsupport.h
+lib/testsupport/*.h
 lib/tls/*.h
-
-ciphers.inc
+lib/tls/*.inc
