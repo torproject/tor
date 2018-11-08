@@ -17,21 +17,6 @@ typedef struct origin_circuit_t origin_circuit_t;
 typedef struct cell_t cell_t;
 
 /**
- * Circpad state specifier.
- *
- * Each circuit has up to two state machines, and each state
- * machine consists of these states. Machines transition between
- * these states using the event transition specifiers below.
- */
-typedef enum {
-  CIRCPAD_STATE_START = 0,
-  CIRCPAD_STATE_BURST = 1,
-  CIRCPAD_STATE_GAP = 2,
-  CIRCPAD_STATE_END = 3
-} circpad_statenum_t;
-#define CIRCPAD_NUM_STATES  ((uint8_t)CIRCPAD_STATE_END+1)
-
-/**
  * These constants form a bitfield to specify the types of events
  * that can cause transitions between state machine states.
  *
@@ -280,8 +265,11 @@ typedef struct circpad_state_t {
    *
    * Example: If the bins are empty (CIRCPAD_TRANSITION_ON_BINS_EMPTY) and that
    * bit is set in the burst state index, then transition to the burst state.
+   *
+   * XXX: Invert this to be event->state (or dynamically allocate).
    */
-  circpad_event_t transition_events[CIRCPAD_NUM_STATES];
+#define  CIRCPAD_MAX_STATES   (UINT8_MAX)
+  circpad_event_t transition_events[CIRCPAD_MAX_STATES];
 
   /**
    * If true, estimate the RTT from this relay to the exit/website and add that
@@ -295,6 +283,62 @@ typedef struct circpad_state_t {
    *  non-padding activity. */
   circpad_removal_t token_removal;
 } circpad_state_t;
+
+/** State number type. Represents current state of state machine. */
+typedef uint8_t circpad_statenum_t;
+
+/**
+ * The start state for this machine.
+ *
+ * In the original WTF-PAD, this is only used for transition to/from
+ * the burst state. All other fields are not used. But to simplify the
+ * code we've made it a first-class state. This has no performance
+ * consequences, but may make naive serialization of the state machine
+ * large, if we're not careful about how we represent empty fields.
+ */
+#define  CIRCPAD_STATE_START       0
+
+/**
+ * The burst state for this machine.
+ *
+ * In the original Adaptive Padding algorithm and in WTF-PAD
+ * (https://www.freehaven.net/anonbib/cache/ShWa-Timing06.pdf and
+ * https://www.cs.kau.se/pulls/hot/thebasketcase-wtfpad/), the burst
+ * state serves to detect bursts in traffic. This is done by using longer
+ * delays in its histogram, which represent the expected delays between
+ * bursts of packets in the target stream. If this delay expires without a
+ * real packet being sent, the burst state sends a padding packet and then
+ * immediately transitions to the gap state, which is used to generate
+ * a synthetic padding packet train. In this implementation, this transition
+ * needs to be explicitly specified in the burst state's transition events.
+ *
+ * Because of this flexibility, other padding mechanisms can transition
+ * between these two states arbitrarily, to encode other dynamics of
+ * target traffic.
+ */
+#define  CIRCPAD_STATE_BURST       1
+
+/**
+ * The gap state for this machine.
+ *
+ * In the original Adaptive Padding algorithm and in WTF-PAD, the gap
+ * state serves to simulate an artificial packet train composed of padding
+ * packets. It does this by specifying much lower inter-packet delays than
+ * the burst state, and transitioning back to itself after padding is sent
+ * if these timers expire before real traffic is sent. If real traffic is
+ * sent, it transitions back to the burst state.
+ *
+ * Again, in this implementation, these transitions must be specified
+ * explicitly, and other transitions are also permitted.
+ */
+#define  CIRCPAD_STATE_GAP         2
+
+/**
+ * The end state.
+ *
+ * The machine either shuts down or simply goes idle in this state.
+ */
+#define  CIRCPAD_STATE_END         3
 
 /**
  * Mutable padding machine info.
@@ -363,7 +407,7 @@ typedef struct circpad_machineinfo_t {
   circpad_time_t padding_scheduled_at_usec;
 
   /** What state is this machine in? */
-  ENUM_BF(circpad_statenum_t) current_state : 2;
+  circpad_statenum_t current_state;
 
   /**
    * True if we have scheduled a timer for padding.
@@ -436,52 +480,11 @@ typedef struct circpad_machine_t {
    * Prop#265. */
   uint8_t max_padding_percent;
 
-  /**
-   * The start state for this machine.
-   *
-   * In the original WTF-PAD, this is only used for transition to/from
-   * the burst state. All other fields are not used. But to simplify the
-   * code we've made it a first-class state. This has no performance
-   * consequences, but may make naive serialization of the state machine
-   * large, if we're not careful about how we represent empty fields.
-   */
-  circpad_state_t start;
+  /** State array: indexed by circpad_statenum_t */
+  circpad_state_t *states;
 
-  /**
-   * The burst state for this machine.
-   *
-   * In the original Adaptive Padding algorithm and in WTF-PAD
-   * (https://www.freehaven.net/anonbib/cache/ShWa-Timing06.pdf and
-   * https://www.cs.kau.se/pulls/hot/thebasketcase-wtfpad/), the burst
-   * state serves to detect bursts in traffic. This is done by using longer
-   * delays in its histogram, which represent the expected delays between
-   * bursts of packets in the target stream. If this delay expires without a
-   * real packet being sent, the burst state sends a padding packet and then
-   * immediately transitions to the gap state, which is used to generate
-   * a synthetic padding packet train. In this implementation, this transition
-   * needs to be explicitly specified in the burst state's transition events.
-   *
-   * Because of this flexibility, other padding mechanisms can transition
-   * between these two states arbitrarily, to encode other dynamics of
-   * target traffic.
-   */
-  circpad_state_t burst;
-
-  /**
-   * The gap state for this machine.
-   *
-   * In the original Adaptive Padding algorithm and in WTF-PAD, the gap
-   * state serves to simulate an artificial packet train composed of padding
-   * packets. It does this by specifying much lower inter-packet delays than
-   * the burst state, and transitioning back to itself after padding is sent
-   * if these timers expire before real traffic is sent. If real traffic is
-   * sent, it transitions back to the burst state.
-   *
-   * Again, in this implementation, these transitions must be specified
-   * explicitly, and other transitions are also permitted.
-   */
-  circpad_state_t gap;
-
+  /** Number of states this machine has (ie: length of the states array). */
+  circpad_statenum_t num_states;
 } circpad_machine_t;
 
 void circpad_new_consensus_params(networkstatus_t *ns);
