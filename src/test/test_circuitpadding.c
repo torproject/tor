@@ -386,33 +386,39 @@ static circpad_machine_t circ_client_machine;
 void
 circpad_circ_token_machine_setup(circuit_t *on_circ)
 {
+  static circpad_state_t states[2];
   on_circ->padding_machine[0] = &circ_client_machine;
   on_circ->padding_info[0] = circpad_circuit_machineinfo_new(on_circ, 0);
 
-  circ_client_machine.start.transition_events[CIRCPAD_STATE_BURST] =
-    CIRCPAD_EVENT_NONPADDING_RECV;
+  circ_client_machine.num_states = 4; /* Start, burst, (no gap), end */
+  circ_client_machine.states = states;
 
-  circ_client_machine.burst.transition_events[CIRCPAD_STATE_BURST] =
-    CIRCPAD_EVENT_PADDING_RECV |
-    CIRCPAD_EVENT_NONPADDING_RECV;
+  circ_client_machine.states[CIRCPAD_STATE_START].
+      transition_events[CIRCPAD_STATE_BURST] = CIRCPAD_EVENT_NONPADDING_RECV;
 
-  circ_client_machine.burst.transition_cancel_events =
+  circ_client_machine.states[CIRCPAD_STATE_BURST].
+      transition_events[CIRCPAD_STATE_BURST] =
+             CIRCPAD_EVENT_PADDING_RECV |
+             CIRCPAD_EVENT_NONPADDING_RECV;
+
+  circ_client_machine.states[CIRCPAD_STATE_BURST].transition_cancel_events =
     CIRCPAD_EVENT_NONPADDING_SENT;
 
   // FIXME: Is this what we want?
-  circ_client_machine.burst.token_removal = CIRCPAD_TOKEN_REMOVAL_HIGHER;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].token_removal =
+      CIRCPAD_TOKEN_REMOVAL_HIGHER;
 
   // FIXME: Tune this histogram
-  circ_client_machine.burst.histogram_len = 5;
-  circ_client_machine.burst.start_usec = 500;
-  circ_client_machine.burst.range_usec = 1000000;
-  circ_client_machine.burst.histogram[0] = 1;
-  circ_client_machine.burst.histogram[1] = 0;
-  circ_client_machine.burst.histogram[2] = 2;
-  circ_client_machine.burst.histogram[3] = 2;
-  circ_client_machine.burst.histogram[4] = 2;
-  circ_client_machine.burst.histogram_total_tokens = 7;
-  circ_client_machine.burst.use_rtt_estimate = 1;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_len = 5;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].start_usec = 500;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].range_usec = 1000000;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[0] = 1;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[1] = 0;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[2] = 2;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[3] = 2;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[4] = 2;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_total_tokens = 7;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].use_rtt_estimate = 1;
 
   return;
 }
