@@ -1,3 +1,118 @@
+Changes in version 0.3.5.4-alpha - 2018-11-08
+  Tor 0.3.5.4-alpha includes numerous bugfixes on earlier versions and
+  improves our continuous integration support. It continues our attempts
+  to stabilize this alpha branch and build it into a foundation for an
+  acceptable long-term-support release.
+
+  o Major bugfixes (compilation, rust):
+    - Rust tests can now build and run successfully with the
+      --enable-fragile-hardening option enabled. Doing this currently
+      requires the rust beta channel; it will be possible with stable
+      rust once Rust version 1.31 is released. Patch from Alex Crichton.
+      Fixes bugs 27272, 27273, and 27274. Bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (embedding, main loop):
+    - When DisableNetwork becomes set, actually disable periodic events
+      that are already enabled. (Previously, we would refrain from
+      enabling new ones, but we would leave the old ones turned on.)
+      Fixes bug 28348; bugfix on 0.3.4.1-alpha.
+
+  o Minor features (continuous integration):
+    - Add a Travis CI build for --enable-nss on Linux gcc. Closes
+      ticket 27751.
+    - Add new CI job to Travis configuration to run stem-based
+      integration tests. Closes ticket 27913.
+
+  o Minor features (Windows, continuous integration):
+    - Build tor on Windows Server 2012 R2 and Windows Server 2016 using
+      Appveyor's CI. Closes ticket 28318.
+
+  o Minor bugfixes (C correctness, also in 0.3.4.9):
+    - Avoid undefined behavior in an end-of-string check when parsing
+      the BEGIN line in a directory object. Fixes bug 28202; bugfix
+      on 0.2.0.3-alpha.
+
+  o Minor bugfixes (compilation):
+    - Fix a pair of missing headers on OpenBSD. Fixes bug 28303; bugfix
+      on 0.3.5.1-alpha. Patch from Kris Katterjohn.
+
+  o Minor bugfixes (compilation, OpenSolaris):
+    - Fix compilation on OpenSolaris and its descendants by adding a
+      missing include to compat_pthreads.c. Fixes bug 27963; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (configuration):
+    - Refuse to start with relative file paths and RunAsDaemon set
+      (regression from the fix for bug 22731). Fixes bug 28298; bugfix
+      on 0.3.3.1-alpha.
+
+  o Minor bugfixes (directory authority, also in 0.3.4.9):
+    - Log additional info when we get a relay that shares an ed25519 ID
+      with a different relay, instead of a BUG() warning with a
+      backtrace. Fixes bug 27800; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion service v3):
+    - Build the service descriptor's signing key certificate before
+      uploading, so we always have a fresh one: leaving no chances for
+      it to expire service side. Fixes bug 27838; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion service v3, client authorization):
+    - Fix an assert() when adding a client authorization for the first
+      time and then sending a HUP signal to the service. Before that,
+      Tor would stop abruptly. Fixes bug 27995; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (onion services):
+    - Unless we have explicitly set HiddenServiceVersion, detect the
+      onion service version and then look for invalid options.
+      Previously, we did the reverse, but that broke existing configs
+      which were pointed to a v2 service and had options like
+      HiddenServiceAuthorizeClient set. Fixes bug 28127; bugfix on
+      0.3.5.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (portability):
+    - Make the OPE code (which is used for v3 onion services) run
+      correctly on big-endian platforms. Fixes bug 28115; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (protover, rust):
+    - Reject extra commas in version strings. Fixes bug 27197; bugfix
+      on 0.3.3.3-alpha.
+
+  o Minor bugfixes (relay shutdown, systemd):
+    - Notify systemd of ShutdownWaitLength so it can be set to longer
+      than systemd's TimeoutStopSec. In Tor's systemd service file, set
+      TimeoutSec to 60 seconds to allow Tor some time to shut down.
+      Fixes bug 28113; bugfix on 0.2.6.2-alpha.
+
+  o Minor bugfixes (rust, also in 0.3.4.9):
+    - Fix a potential null dereference in protover_all_supported(). Add
+      a test for it. Fixes bug 27804; bugfix on 0.3.3.1-alpha.
+    - Return a string that can be safely freed by C code, not one
+      created by the rust allocator, in protover_all_supported(). Fixes
+      bug 27740; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (rust, directory authority, also in 0.3.4.9):
+    - Fix an API mismatch in the rust implementation of
+      protover_compute_vote(). This bug could have caused crashes on any
+      directory authorities running Tor with Rust (which we do not yet
+      recommend). Fixes bug 27741; bugfix on 0.3.3.6.
+
+  o Minor bugfixes (testing):
+    - Avoid hangs and race conditions in test_rebind.py. Fixes bug
+      27968; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (testing, also in 0.3.4.9):
+    - Treat backtrace test failures as expected on BSD-derived systems
+      (NetBSD, OpenBSD, and macOS/Darwin) until we solve bug 17808.
+      (FreeBSD failures have been treated as expected since 18204 in
+      0.2.8.) Fixes bug 27948; bugfix on 0.2.5.2-alpha.
+
+  o Documentation (onion service manpage):
+    - Improve HSv3 client authorization by making some options more
+      explicit and detailed. Closes ticket 28026. Patch by Mike Tigas.
+
+
 Changes in version 0.3.4.9 - 2018-11-02
   Tor 0.3.4.9 is the second stable release in its series; it backports
   numerous fixes, including a fix for a bandwidth management bug that
