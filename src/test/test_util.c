@@ -4349,9 +4349,14 @@ test_util_glob(void *ptr)
   TEST("file1");
   EXPECT(results_test9);
 
+#ifndef __APPLE__
   const char *results_test10[] = {"file1"};
   TEST("file1"PATH_SEPARATOR);
   EXPECT(results_test10);
+#else
+  TEST("file1"PATH_SEPARATOR);
+  EXPECT_EMPTY();
+#endif
 
   // test path separator at end - with wildcards
   const char *results_test11[] = {"dir1", "dir2", "forbidden"};
