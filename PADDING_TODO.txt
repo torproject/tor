@@ -17,11 +17,16 @@ TODO sketch for this branch, in rough priority order:
 - Negotiate errors are not remembered.. If there is a consensus desync,
   clients will keep trying machines that middles do not have..
 
+- Invert state->event transiton array to be event->state
+
 - Larger types?
   - Larger/different mechanism for machine numbering than just uint8_t
   - Larger circpad_delay_t?
   - Larger circpad_hist_bin_t?
   - Large state->range_sec for histograms?
+  - More 65535 max states instead of 255?
+
+- Specify an ordered preference list of padding machines
 
 - Nick's API doc
   - Consider how we'd use it.
