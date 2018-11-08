@@ -122,7 +122,7 @@ circpad_state_to_string(circpad_statenum_t state)
     descr = "END";
     break;
   default:
-    descr ="INVALID";
+    descr = "CUSTOM"; // XXX: Just return # in static char buf?
   }
 
   return descr;
@@ -133,28 +133,21 @@ circpad_state_to_string(circpad_statenum_t state)
  * mutable info.
  */
 STATIC const circpad_state_t *
-circpad_machine_current_state(circpad_machineinfo_t *machine)
+circpad_machine_current_state(circpad_machineinfo_t *mi)
 {
-  switch (machine->current_state) {
-    case CIRCPAD_STATE_END:
-      return NULL;
+  const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
 
-    case CIRCPAD_STATE_START:
-      return &CIRCPAD_GET_MACHINE(machine)->start;
+  if (mi->current_state == CIRCPAD_STATE_END) {
+    return NULL;
+  } else if (BUG(mi->current_state >= machine->num_states)) {
+    log_fn(LOG_WARN,LD_CIRC,
+           "Invalid circuit padding state %d",
+           mi->current_state);
 
-    case CIRCPAD_STATE_BURST:
-      return &CIRCPAD_GET_MACHINE(machine)->burst;
-
-    case CIRCPAD_STATE_GAP:
-      return &CIRCPAD_GET_MACHINE(machine)->gap;
+    return NULL;
   }
 
-  log_fn(LOG_WARN,LD_CIRC,
-         "Invalid circuit padding state %d",
-         machine->current_state);
-  //tor_fragile_assert();
-
-  return NULL;
+  return &machine->states[mi->current_state];
 }
 
 /**
@@ -1178,6 +1171,7 @@ circpad_machine_transition(circpad_machineinfo_t *mi,
 {
   const circpad_state_t *state =
       circpad_machine_current_state(mi);
+  const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
 
   /* If state is null we are in the end state. */
   if (!state) {
@@ -1203,7 +1197,7 @@ circpad_machine_transition(circpad_machineinfo_t *mi,
    * So if a state only wants to schedule padding for an event, it specifies a
    * transition to itself. All non-specified events are ignored.
    */
-  for (uint8_t s = CIRCPAD_STATE_START; s < CIRCPAD_NUM_STATES; s++) {
+  for (uint8_t s = CIRCPAD_STATE_START; s < machine->num_states; s++) {
     if (state->transition_events[s] & event) {
 
       log_fn(LOG_INFO, LD_CIRC,
@@ -1967,34 +1961,40 @@ circpad_circ_client_machine_init(void)
   circ_client_machine->target_hopnum = 2;
   circ_client_machine->is_origin_side = 1;
 
-  circ_client_machine->start.transition_events[CIRCPAD_STATE_BURST] =
-    CIRCPAD_EVENT_NONPADDING_RECV;
+  circ_client_machine->num_states = 4; /* Start, gap, burst, and end */
+  circ_client_machine->states = tor_malloc_zero(sizeof(circpad_state_t)*
+          circ_client_machine->num_states-1);
 
-  circ_client_machine->burst.transition_events[CIRCPAD_STATE_BURST] =
-    CIRCPAD_EVENT_PADDING_RECV |
-    CIRCPAD_EVENT_NONPADDING_RECV;
+  circ_client_machine->states[CIRCPAD_STATE_START].
+      transition_events[CIRCPAD_STATE_BURST] = CIRCPAD_EVENT_NONPADDING_RECV;
+
+  circ_client_machine->states[CIRCPAD_STATE_BURST].
+      transition_events[CIRCPAD_STATE_BURST] =
+                 CIRCPAD_EVENT_PADDING_RECV |
+                 CIRCPAD_EVENT_NONPADDING_RECV;
 
   /* If we are in burst state, and we send a non-padding cell, then we cancel
      the timer for the next padding cell:
      We dont want to send fake extends when actual extends are going on */
-  circ_client_machine->burst.transition_cancel_events =
+  circ_client_machine->states[CIRCPAD_STATE_BURST].transition_cancel_events =
     CIRCPAD_EVENT_NONPADDING_SENT;
 
-  circ_client_machine->burst.transition_events[CIRCPAD_STATE_END] =
-    CIRCPAD_EVENT_BINS_EMPTY;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].
+      transition_events[CIRCPAD_STATE_END] = CIRCPAD_EVENT_BINS_EMPTY;
 
-  circ_client_machine->burst.token_removal = CIRCPAD_TOKEN_REMOVAL_CLOSEST;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].token_removal =
+      CIRCPAD_TOKEN_REMOVAL_CLOSEST;
 
   // FIXME: Tune this histogram
-  circ_client_machine->burst.histogram_len = 2;
-  circ_client_machine->burst.start_usec = 500;
-  circ_client_machine->burst.range_usec = 1000000;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_len = 2;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].start_usec = 500;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].range_usec = 1000000;
   /* We have 5 tokens in the histogram, which means that all circuits will look
    * like they have 7 hops (since we start this machine after the second hop,
    * and tokens are decremented for any valid hops, and fake extends are
    * used after that -- 2+5==7). */
-  circ_client_machine->burst.histogram[0] = 5;
-  circ_client_machine->burst.histogram_total_tokens = 5;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram[0] = 5;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_total_tokens = 5;
 
   circ_client_machine->machine_num = smartlist_len(origin_padding_machines);
   smartlist_add(origin_padding_machines, circ_client_machine);
@@ -2014,70 +2014,80 @@ circpad_circ_responder_machine_init(void)
   circ_responder_machine->target_hopnum = 2;
   circ_responder_machine->is_origin_side = 0;
 
+  circ_responder_machine->num_states = 4; /* Start, gap, burst, and end */
+  circ_responder_machine->states = tor_malloc_zero(sizeof(circpad_state_t)*
+          circ_responder_machine->num_states-1);
+
   /* This is the settings of the state machine. In the future we are gonna
      serialize this into the consensus or the torrc */
 
   /* We transition to the burst state on padding receive and on non-padding
    * recieve */
-  circ_responder_machine->start.transition_events[CIRCPAD_STATE_BURST] =
-    CIRCPAD_EVENT_PADDING_RECV |
-    CIRCPAD_EVENT_NONPADDING_RECV;
+  circ_responder_machine->states[CIRCPAD_STATE_START].
+      transition_events[CIRCPAD_STATE_BURST] =
+            CIRCPAD_EVENT_PADDING_RECV |
+            CIRCPAD_EVENT_NONPADDING_RECV;
 
   /* Inside the burst state we _stay_ in the burst state when a non-padding
    * is sent */
-  circ_responder_machine->burst.transition_events[CIRCPAD_STATE_BURST] =
-    CIRCPAD_EVENT_NONPADDING_SENT;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].
+      transition_events[CIRCPAD_STATE_BURST] =
+            CIRCPAD_EVENT_NONPADDING_SENT;
 
   /* Inside the burst state we transition to the gap state when we receive a
    * padding cell */
-  circ_responder_machine->burst.transition_events[CIRCPAD_STATE_GAP] =
-    CIRCPAD_EVENT_PADDING_RECV;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].
+      transition_events[CIRCPAD_STATE_GAP] = CIRCPAD_EVENT_PADDING_RECV;
 
   /* These describe the padding charasteristics when in burst state */
 
   /* use_rtt_estimate tries to estimate how long padding cells take to go from
      C->M, and uses that as what as the base of the histogram */
-  circ_responder_machine->burst.use_rtt_estimate = 1;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].use_rtt_estimate = 1;
   /* The histogram is 2 bins: an empty one, and infinity */
-  circ_responder_machine->burst.histogram_len = 2;
-  circ_responder_machine->burst.start_usec = 5000;
-  circ_responder_machine->burst.range_usec = 1000000;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram_len = 2;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].start_usec = 5000;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].range_usec = 1000000;
   /* During burst state we wait forever for padding to arrive.
 
      We are waiting for a padding cell from the client to come in, so that we
      respond, and we immitate how extend looks like */
-  circ_responder_machine->burst.histogram[0] = 0;
-  circ_responder_machine->burst.histogram[1] = 1; // Only infinity bin here
-  circ_responder_machine->burst.histogram_total_tokens = 1;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram[0] = 0;
+  // Only infinity bin:
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram[1] = 1;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].
+      histogram_total_tokens = 1;
 
   /* From the gap state, we _stay_ in the gap state, when we receive padding
    * or non padding */
-  circ_responder_machine->gap.transition_events[CIRCPAD_STATE_GAP] =
-    CIRCPAD_EVENT_PADDING_RECV |
-    CIRCPAD_EVENT_NONPADDING_RECV;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].
+      transition_events[CIRCPAD_STATE_GAP] =
+         CIRCPAD_EVENT_PADDING_RECV |
+         CIRCPAD_EVENT_NONPADDING_RECV;
 
   /* And from the gap state, we go to the end, when the bins are empty or a
    * non-padding cell is sent */
-  circ_responder_machine->gap.transition_events[CIRCPAD_STATE_END] =
-    CIRCPAD_EVENT_BINS_EMPTY |
-    CIRCPAD_EVENT_NONPADDING_SENT;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].
+      transition_events[CIRCPAD_STATE_END] =
+          CIRCPAD_EVENT_BINS_EMPTY |
+          CIRCPAD_EVENT_NONPADDING_SENT;
 
   // FIXME: Tune this histogram
 
   /* The gap state is the delay you wait after you receive a padding cell
      before you send a padding response */
-  circ_responder_machine->gap.use_rtt_estimate = 1;
-  circ_responder_machine->gap.histogram_len = 6;
-  circ_responder_machine->gap.start_usec = 5000;
-  circ_responder_machine->gap.range_usec = 1000000;
-  circ_responder_machine->gap.histogram[0] = 0;
-  circ_responder_machine->gap.histogram[1] = 1;
-  circ_responder_machine->gap.histogram[2] = 2;
-  circ_responder_machine->gap.histogram[3] = 2;
-  circ_responder_machine->gap.histogram[4] = 1;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].use_rtt_estimate = 1;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_len = 6;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].start_usec = 5000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].range_usec = 1000000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[0] = 0;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[1] = 1;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[2] = 2;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[3] = 2;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[4] = 1;
   /* Total number of tokens */
-  circ_responder_machine->gap.histogram_total_tokens = 6;
-  circ_responder_machine->gap.token_removal =
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_total_tokens = 6;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].token_removal =
       CIRCPAD_TOKEN_REMOVAL_CLOSEST_USEC;
 
   circ_responder_machine->machine_num = smartlist_len(relay_padding_machines);
@@ -2114,14 +2124,14 @@ circpad_machines_free(void)
   if (origin_padding_machines) {
     SMARTLIST_FOREACH(origin_padding_machines,
                       circpad_machine_t *,
-                      m, tor_free(m));
+                      m, tor_free(m->states); tor_free(m));
     smartlist_free(origin_padding_machines);
   }
 
   if (relay_padding_machines) {
     SMARTLIST_FOREACH(relay_padding_machines,
                       circpad_machine_t *,
-                      m, tor_free(m));
+                      m, tor_free(m->states); tor_free(m));
     smartlist_free(relay_padding_machines);
   }
 }
@@ -2397,6 +2407,7 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
 
 /* Serialization */
 // TODO: Should we use keyword=value here? Are there helpers for that?
+#if 0
 static void
 circpad_state_serialize(const circpad_state_t *state,
                         smartlist_t *chunks)
@@ -2419,16 +2430,20 @@ circpad_state_serialize(const circpad_state_t *state,
                          state->use_rtt_estimate,
                          state->token_removal);
 }
+#endif
 
 char *
 circpad_machine_to_string(const circpad_machine_t *machine)
 {
   smartlist_t *chunks = smartlist_new();
   char *out;
+  (void)machine;
 
+#if 0
   circpad_state_serialize(&machine->start, chunks);
   circpad_state_serialize(&machine->gap, chunks);
   circpad_state_serialize(&machine->burst, chunks);
+#endif
 
   out = smartlist_join_strings(chunks, "", 0, NULL);
 
