@@ -1447,7 +1447,6 @@ static int
 handle_get_next_bandwidth(dir_connection_t *conn,
                           const get_handler_args_t *args)
 {
-  (void)args;
   log_debug(LD_DIR, "Getting next bandwidth.");
   const or_options_t *options = get_options();
   const compress_method_t compress_method =
