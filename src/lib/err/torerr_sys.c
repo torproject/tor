@@ -18,7 +18,8 @@
 static int
 torerr_subsys_init(void)
 {
-  configure_backtrace_handler(get_version());
+  if (configure_backtrace_handler(get_version()) < 0)
+    return -1;
   tor_log_reset_sigsafe_err_fds();
 
   return 0;
