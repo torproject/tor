@@ -17,8 +17,8 @@ typedef struct origin_circuit_t origin_circuit_t;
 typedef struct cell_t cell_t;
 
 /**
- * These constants form a bitfield to specify the types of events
- * that can cause transitions between state machine states.
+ * These constants specify the types of events that can cause
+ * transitions between state machine states.
  *
  * Note that SENT and RECV are relative to this endpoint. For
  * relays, SENT means packets destined towards the client and
@@ -27,14 +27,15 @@ typedef struct cell_t cell_t;
  * means packets destined towards the client.
  */
 typedef enum {
-  CIRCPAD_EVENT_NONPADDING_RECV = 1<<0,
-  CIRCPAD_EVENT_NONPADDING_SENT = 1<<1,
-  CIRCPAD_EVENT_PADDING_SENT = 1<<2,
-  CIRCPAD_EVENT_PADDING_RECV = 1<<3,
-  CIRCPAD_EVENT_INFINITY = 1<<4,
-  CIRCPAD_EVENT_BINS_EMPTY = 1<<5,
-  CIRCPAD_EVENT_LENGTH_COUNT = 1<<6
+  CIRCPAD_EVENT_NONPADDING_RECV = 0,
+  CIRCPAD_EVENT_NONPADDING_SENT = 1,
+  CIRCPAD_EVENT_PADDING_SENT = 2,
+  CIRCPAD_EVENT_PADDING_RECV = 3,
+  CIRCPAD_EVENT_INFINITY = 4,
+  CIRCPAD_EVENT_BINS_EMPTY = 5,
+  CIRCPAD_EVENT_LENGTH_COUNT = 6
 } circpad_event_t;
+#define CIRCPAD_NUM_EVENTS ((int)CIRCPAD_EVENT_LENGTH_COUNT+1)
 
 /** Boolean type that says if we decided to transition states or not */
 typedef enum {
@@ -192,6 +193,10 @@ typedef struct circpad_distribution_t {
   double param2;
 } circpad_distribution_t;
 
+/** State number type. Represents current state of state machine. */
+typedef uint16_t circpad_statenum_t;
+#define  CIRCPAD_STATENUM_MAX   (UINT16_MAX)
+
 /**
  * A circuit padding state machine state.
  *
@@ -250,26 +255,19 @@ typedef struct circpad_state_t {
   uint8_t length_includes_nonpadding : 1;
 
   /**
-   * This is a bitfield that specifies which direction and types
-   * of traffic that cause us to remain in the current state. Cancel the
-   * pending padding packet (if any), and then await the next event.
+   * This is an array that specifies the next state to transition to upon
+   * receipt an event matching the indicated array index.
    *
-   * Example: Cancel padding if I saw a regular data packet.
+   * This aborts our scheduled packet and switches to the state
+   * corresponding to the index of the array. Tokens are filled upon
+   * this transition.
+   *
+   * States are allowed to transition to themselves, which means re-schedule
+   * a new padding timer. They are also allowed to temporarily "transition"
+   * to the "IGNORE" and "CANCEL" pseudo-states. See #defines below
+   * for details on state behavior and meaning.
    */
-  circpad_event_t transition_cancel_events;
-
-  /**
-   * This is an array of bitfields that specifies which direction and
-   * types of traffic that cause us to abort our scheduled packet and
-   * switch to the state corresponding to the index of the array.
-   *
-   * Example: If the bins are empty (CIRCPAD_TRANSITION_ON_BINS_EMPTY) and that
-   * bit is set in the burst state index, then transition to the burst state.
-   *
-   * XXX: Invert this to be event->state (or dynamically allocate).
-   */
-#define  CIRCPAD_MAX_STATES   (UINT8_MAX)
-  circpad_event_t transition_events[CIRCPAD_MAX_STATES];
+  circpad_statenum_t next_state[CIRCPAD_NUM_EVENTS];
 
   /**
    * If true, estimate the RTT from this relay to the exit/website and add that
@@ -283,9 +281,6 @@ typedef struct circpad_state_t {
    *  non-padding activity. */
   circpad_removal_t token_removal;
 } circpad_state_t;
-
-/** State number type. Represents current state of state machine. */
-typedef uint8_t circpad_statenum_t;
 
 /**
  * The start state for this machine.
@@ -334,11 +329,35 @@ typedef uint8_t circpad_statenum_t;
 #define  CIRCPAD_STATE_GAP         2
 
 /**
- * The end state.
+ * End is a pseudo-state that causes the machine to go completely
+ * idle, and optionally get torn down (depending on the
+ * value of circpad_machine_t.should_negotiate_end)
  *
- * The machine either shuts down or simply goes idle in this state.
+ * End MUST NOT occupy a slot in the machine state array.
  */
-#define  CIRCPAD_STATE_END         3
+#define  CIRCPAD_STATE_END         CIRCPAD_STATENUM_MAX
+
+/**
+ * "Ignore" is a pseudo-state that means "do not react to this
+ * event".
+ *
+ * "Ignore" MUST NOT occupy a slot in the machine state array.
+ */
+#define  CIRCPAD_STATE_IGNORE         (CIRCPAD_STATENUM_MAX-1)
+
+/**
+ * "Cancel" is a pseudo-state that means "cancel pending timers,
+ * but remain in your current state".
+ *
+ * Cancel MUST NOT occupy a slot in the machine state array.
+ */
+#define  CIRCPAD_STATE_CANCEL         (CIRCPAD_STATENUM_MAX-2)
+
+/**
+ * Since we have 3 pseudo-states, the max state array length is
+ * up to one less than cancel's statenum.
+ */
+#define CIRCPAD_MAX_MACHINE_STATES  (CIRCPAD_STATE_CANCEL-1)
 
 /**
  * Mutable padding machine info.
@@ -483,7 +502,9 @@ typedef struct circpad_machine_t {
   /** State array: indexed by circpad_statenum_t */
   circpad_state_t *states;
 
-  /** Number of states this machine has (ie: length of the states array). */
+  /**
+   * Number of states this machine has (ie: length of the states array).
+   * XXX: This field is not needed other than for safety. */
   circpad_statenum_t num_states;
 } circpad_machine_t;
 
@@ -523,6 +544,9 @@ void circpad_machine_event_circ_has_no_relay_early(origin_circuit_t *circ);
 
 void circpad_machines_init(void);
 void circpad_machines_free(void);
+
+void circpad_machine_states_init(circpad_machine_t *machine,
+                                 circpad_statenum_t num_states);
 
 void circpad_circuit_machineinfo_free(circuit_t *circ);
 
