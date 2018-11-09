@@ -1284,6 +1284,22 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     SSL_CTX_set_tmp_dh(result->ctx, crypto_dh_get_dh_(dh));
     crypto_dh_free(dh);
   }
+/* We check for this function in two ways, since it might be either a symbol
+ * or a macro. */
+#if defined(SSL_CTX_set1_groups_list) || defined(HAVE_SSL_CTX_SET1_GROUPS_LIST)
+  {
+    const char *list;
+    if (flags & TOR_TLS_CTX_USE_ECDHE_P224)
+      list = "P-224:P-256";
+    else if (flags & TOR_TLS_CTX_USE_ECDHE_P256)
+      list = "P-256:P-224";
+    else
+      list = "P-256:P-224";
+    int r = SSL_CTX_set1_groups_list(result->ctx, list);
+    if (r < 0)
+      goto error;
+  }
+#else
   if (! is_client) {
     int nid;
     EC_KEY *ec_key;
@@ -1299,6 +1315,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
       SSL_CTX_set_tmp_ecdh(result->ctx, ec_key);
     EC_KEY_free(ec_key);
   }
+#endif
   SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER,
                      always_accept_verify_cb);
   /* let us realloc bufs that we're writing from */
