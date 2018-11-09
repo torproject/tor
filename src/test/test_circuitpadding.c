@@ -41,7 +41,7 @@ int circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi,
 
 const circpad_state_t *circpad_machine_current_state(
         circpad_machineinfo_t *machine);
-void circpad_circ_token_machine_setup(circuit_t *on_circ);
+void circpad_circ_token_machine_setup(void);
 
 circpad_machineinfo_t *circpad_circuit_machineinfo_new(circuit_t *on_circ,
                                                int machine_index);
@@ -75,6 +75,7 @@ static node_t padding_node;
 static node_t non_padding_node;
 
 static channel_t dummy_channel;
+static circpad_machine_t circ_client_machine;
 
 static void
 timers_advance_and_run(int64_t msec_update)
@@ -297,12 +298,17 @@ test_circuitpadding_rtt(void *arg)
 
   timers_initialize();
   circpad_machines_init();
+  circpad_circ_token_machine_setup();
 
   MOCK(circuit_package_relay_cell,
        circuit_package_relay_cell_mock);
 
-  circpad_circ_token_machine_setup(client_side);
-  circpad_circ_token_machine_setup(relay_side);
+  client_side->padding_machine[0] = &circ_client_machine;
+  client_side->padding_info[0] = circpad_circuit_machineinfo_new(client_side,
+                                                                 0);
+
+  relay_side->padding_machine[0] = &circ_client_machine;
+  relay_side->padding_info[0] = circpad_circuit_machineinfo_new(client_side,0);
 
   /* Test 1: Test measuring RTT */
   circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
@@ -378,31 +384,27 @@ test_circuitpadding_rtt(void *arg)
   monotime_disable_test_mocking();
   UNMOCK(circuit_package_relay_cell);
   UNMOCK(circuitmux_attach_circuit);
+  tor_free(circ_client_machine.states);
 
   return;
 }
 
-static circpad_machine_t circ_client_machine;
 void
-circpad_circ_token_machine_setup(circuit_t *on_circ)
+circpad_circ_token_machine_setup(void)
 {
-  static circpad_state_t states[2];
-  on_circ->padding_machine[0] = &circ_client_machine;
-  on_circ->padding_info[0] = circpad_circuit_machineinfo_new(on_circ, 0);
-
-  circ_client_machine.num_states = 4; /* Start, burst, (no gap), end */
-  circ_client_machine.states = states;
+  /* Start, burst */
+  circpad_machine_states_init(&circ_client_machine, 2);
 
   circ_client_machine.states[CIRCPAD_STATE_START].
-      transition_events[CIRCPAD_STATE_BURST] = CIRCPAD_EVENT_NONPADDING_RECV;
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
 
   circ_client_machine.states[CIRCPAD_STATE_BURST].
-      transition_events[CIRCPAD_STATE_BURST] =
-             CIRCPAD_EVENT_PADDING_RECV |
-             CIRCPAD_EVENT_NONPADDING_RECV;
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
 
-  circ_client_machine.states[CIRCPAD_STATE_BURST].transition_cancel_events =
-    CIRCPAD_EVENT_NONPADDING_SENT;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_CANCEL;
 
   // FIXME: Is this what we want?
   circ_client_machine.states[CIRCPAD_STATE_BURST].token_removal =
@@ -461,7 +463,10 @@ test_circuitpadding_tokens(void *arg)
 
   timers_initialize();
 
-  circpad_circ_token_machine_setup(client_side);
+  circpad_circ_token_machine_setup();
+  client_side->padding_machine[0] = &circ_client_machine;
+  client_side->padding_info[0] = circpad_circuit_machineinfo_new(client_side,
+                                                                 0);
 
   mi = client_side->padding_info[0];
 
@@ -676,6 +681,7 @@ test_circuitpadding_tokens(void *arg)
  done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
+  tor_free(circ_client_machine.states);
 }
 
 void
