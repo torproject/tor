@@ -1189,7 +1189,6 @@ circpad_machine_transition(circpad_machineinfo_t *mi,
 {
   const circpad_state_t *state =
       circpad_machine_current_state(mi);
-  const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
 
   /* If state is null we are in the end state. */
   if (!state) {
@@ -1197,58 +1196,57 @@ circpad_machine_transition(circpad_machineinfo_t *mi,
     return CIRCPAD_STATE_UNCHANGED;
   }
 
-  /* Check cancel events and cancel any pending padding */
-  if (state->transition_cancel_events & event) {
+  /* Check if this event is ignored or causes a cancel */
+  if (state->next_state[event] == CIRCPAD_STATE_IGNORE) {
+    return CIRCPAD_STATE_UNCHANGED;
+  } else if (state->next_state[event] == CIRCPAD_STATE_CANCEL) {
+    /* Check cancel events and cancel any pending padding */
     mi->padding_scheduled_at_usec = 0;
     if (mi->is_padding_timer_scheduled) {
       mi->is_padding_timer_scheduled = 0;
       /* Cancel current timer (if any) */
       timer_disable(mi->padding_timer);
-      return CIRCPAD_STATE_UNCHANGED;
     }
     return CIRCPAD_STATE_UNCHANGED;
-  }
+  } else {
+    circpad_statenum_t s = state->next_state[event];
+    /* See if we need to transition to any other states based on this event.
+     * Whenever a transition happens, even to our own state, we schedule
+     * padding.
+     *
+     * So if a state only wants to schedule padding for an event, it specifies
+     * a transition to itself. All non-specified events are ignored.
+     */
+    log_fn(LOG_INFO, LD_CIRC,
+           "Circpad machine %d transitioning from %s to %s",
+            mi->machine_index, circpad_state_to_string(mi->current_state),
+            circpad_state_to_string(s));
 
-  /* See if we need to transition to any other states based on this event.
-   * Whenever a transition happens, even to our own state, we schedule padding.
-   *
-   * So if a state only wants to schedule padding for an event, it specifies a
-   * transition to itself. All non-specified events are ignored.
-   */
-  for (uint8_t s = CIRCPAD_STATE_START; s < machine->num_states; s++) {
-    if (state->transition_events[s] & event) {
+    /* If this is not the same state, switch and init tokens,
+     * otherwise just reschedule padding. */
+    if (mi->current_state != s) {
+      mi->current_state = s;
+      circpad_machine_setup_tokens(mi);
+      circpad_choose_state_length(mi);
 
-      log_fn(LOG_INFO, LD_CIRC,
-             "Circpad machine %d transitioning from %s to %s",
-              mi->machine_index, circpad_state_to_string(mi->current_state),
-              circpad_state_to_string(s));
-
-      /* If this is not the same state, switch and init tokens,
-       * otherwise just reschedule padding. */
-      if (mi->current_state != s) {
-        mi->current_state = s;
-        circpad_machine_setup_tokens(mi);
-        circpad_choose_state_length(mi);
-
-        /* If we transition to the end state, check to see
-         * if this machine wants to be shut down at end */
-        if (s == CIRCPAD_STATE_END) {
-          circpad_machine_transitioned_to_end(mi);
-          /* We transitioned but we don't pad in end. Also, mi
-           * may be freed. Returning STATE_CHANGED prevents us
-           * from accessing it in any callers of this function. */
-          return CIRCPAD_STATE_CHANGED;
-        }
-
-        /* We transitioned to a new state, schedule padding */
-        circpad_machine_schedule_padding(mi);
+      /* If we transition to the end state, check to see
+       * if this machine wants to be shut down at end */
+      if (s == CIRCPAD_STATE_END) {
+        circpad_machine_transitioned_to_end(mi);
+        /* We transitioned but we don't pad in end. Also, mi
+         * may be freed. Returning STATE_CHANGED prevents us
+         * from accessing it in any callers of this function. */
         return CIRCPAD_STATE_CHANGED;
       }
 
-      /* We transitioned back to the same state. Schedule padding,
-       * and inform if that causes a state transition. */
-      return circpad_machine_schedule_padding(mi);
+      /* We transitioned to a new state, schedule padding */
+      circpad_machine_schedule_padding(mi);
+      return CIRCPAD_STATE_CHANGED;
     }
+
+    /* We transitioned back to the same state. Schedule padding,
+     * and inform if that causes a state transition. */
+    return circpad_machine_schedule_padding(mi);
   }
 
   return CIRCPAD_STATE_UNCHANGED;
@@ -1943,6 +1941,29 @@ circpad_circuit_machineinfo_new(circuit_t *on_circ, int machine_index)
   return mi;
 }
 
+/**
+ * Initialize the states array for a circpad machine.
+ */
+void
+circpad_machine_states_init(circpad_machine_t *machine,
+                            circpad_statenum_t num_states)
+{
+  if (BUG(num_states > CIRCPAD_MAX_MACHINE_STATES)) {
+    num_states = CIRCPAD_MAX_MACHINE_STATES;
+  }
+
+  machine->num_states = num_states;
+  machine->states = tor_malloc_zero(sizeof(circpad_state_t)*num_states);
+
+  /* Initialize the default next state for all events to
+   * "ignore" -- if events aren't specified, they are ignored. */
+  for (circpad_statenum_t s = 0; s < num_states; s++) {
+    for (int e = 0; e < CIRCPAD_NUM_EVENTS; e++) {
+      machine->states[s].next_state[e] = CIRCPAD_STATE_IGNORE;
+    }
+  }
+}
+
 static void
 circpad_setup_machine_on_circ(circuit_t *on_circ,
                               const circpad_machine_t *machine)
@@ -1984,26 +2005,25 @@ circpad_circ_client_machine_init(void)
   circ_client_machine->target_hopnum = 2;
   circ_client_machine->is_origin_side = 1;
 
-  circ_client_machine->num_states = 4; /* Start, gap, burst, and end */
-  circ_client_machine->states = tor_malloc_zero(sizeof(circpad_state_t)*
-          circ_client_machine->num_states-1);
+  /* Start, gap, burst */
+  circpad_machine_states_init(circ_client_machine, 3);
 
   circ_client_machine->states[CIRCPAD_STATE_START].
-      transition_events[CIRCPAD_STATE_BURST] = CIRCPAD_EVENT_NONPADDING_RECV;
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
 
   circ_client_machine->states[CIRCPAD_STATE_BURST].
-      transition_events[CIRCPAD_STATE_BURST] =
-                 CIRCPAD_EVENT_PADDING_RECV |
-                 CIRCPAD_EVENT_NONPADDING_RECV;
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
 
   /* If we are in burst state, and we send a non-padding cell, then we cancel
      the timer for the next padding cell:
      We dont want to send fake extends when actual extends are going on */
-  circ_client_machine->states[CIRCPAD_STATE_BURST].transition_cancel_events =
-    CIRCPAD_EVENT_NONPADDING_SENT;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_CANCEL;
 
   circ_client_machine->states[CIRCPAD_STATE_BURST].
-      transition_events[CIRCPAD_STATE_END] = CIRCPAD_EVENT_BINS_EMPTY;
+      next_state[CIRCPAD_EVENT_BINS_EMPTY] = CIRCPAD_STATE_END;
 
   circ_client_machine->states[CIRCPAD_STATE_BURST].token_removal =
       CIRCPAD_TOKEN_REMOVAL_CLOSEST;
@@ -2037,9 +2057,8 @@ circpad_circ_responder_machine_init(void)
   circ_responder_machine->target_hopnum = 2;
   circ_responder_machine->is_origin_side = 0;
 
-  circ_responder_machine->num_states = 4; /* Start, gap, burst, and end */
-  circ_responder_machine->states = tor_malloc_zero(sizeof(circpad_state_t)*
-          circ_responder_machine->num_states-1);
+  /* Start, gap, burst */
+  circpad_machine_states_init(circ_responder_machine, 3);
 
   /* This is the settings of the state machine. In the future we are gonna
      serialize this into the consensus or the torrc */
@@ -2047,20 +2066,19 @@ circpad_circ_responder_machine_init(void)
   /* We transition to the burst state on padding receive and on non-padding
    * recieve */
   circ_responder_machine->states[CIRCPAD_STATE_START].
-      transition_events[CIRCPAD_STATE_BURST] =
-            CIRCPAD_EVENT_PADDING_RECV |
-            CIRCPAD_EVENT_NONPADDING_RECV;
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
+  circ_responder_machine->states[CIRCPAD_STATE_START].
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
 
   /* Inside the burst state we _stay_ in the burst state when a non-padding
    * is sent */
   circ_responder_machine->states[CIRCPAD_STATE_BURST].
-      transition_events[CIRCPAD_STATE_BURST] =
-            CIRCPAD_EVENT_NONPADDING_SENT;
+      next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_BURST;
 
   /* Inside the burst state we transition to the gap state when we receive a
    * padding cell */
   circ_responder_machine->states[CIRCPAD_STATE_BURST].
-      transition_events[CIRCPAD_STATE_GAP] = CIRCPAD_EVENT_PADDING_RECV;
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_GAP;
 
   /* These describe the padding charasteristics when in burst state */
 
@@ -2084,16 +2102,16 @@ circpad_circ_responder_machine_init(void)
   /* From the gap state, we _stay_ in the gap state, when we receive padding
    * or non padding */
   circ_responder_machine->states[CIRCPAD_STATE_GAP].
-      transition_events[CIRCPAD_STATE_GAP] =
-         CIRCPAD_EVENT_PADDING_RECV |
-         CIRCPAD_EVENT_NONPADDING_RECV;
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_GAP;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_GAP;
 
   /* And from the gap state, we go to the end, when the bins are empty or a
    * non-padding cell is sent */
   circ_responder_machine->states[CIRCPAD_STATE_GAP].
-      transition_events[CIRCPAD_STATE_END] =
-          CIRCPAD_EVENT_BINS_EMPTY |
-          CIRCPAD_EVENT_NONPADDING_SENT;
+      next_state[CIRCPAD_EVENT_BINS_EMPTY] = CIRCPAD_STATE_END;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].
+      next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_END;
 
   // FIXME: Tune this histogram
 
