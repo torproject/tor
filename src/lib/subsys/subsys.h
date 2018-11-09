@@ -14,7 +14,11 @@ struct dispatch_connector_t;
  * A subsystem is a part of Tor that is initialized, shut down, configured,
  * and connected to other parts of Tor.
  *
- * Subsystems
+ * All callbacks are optional -- if a callback is set to NULL, the subsystem
+ * manager will treat it as a no-op.
+ *
+ * You should use c99 named-field initializers with this structure: we
+ * will be adding more fields, often in the middle of the structure.
  **/
 typedef struct subsys_fns_t {
   /**
