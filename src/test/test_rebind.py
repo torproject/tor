@@ -31,7 +31,7 @@ def wait_for_log(s):
         l = l.decode('utf8')
         if s in l:
             return
-        logging.info('Tor logged: "{}", waiting for "{}"'.format(l.strip(), s))
+        print('Tor logged: "{}", waiting for "{}"'.format(l.strip(), s))
         # readline() returns a blank string when there is no output
         # avoid busy-waiting
         if len(s) == 0:
