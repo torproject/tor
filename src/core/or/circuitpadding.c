@@ -745,7 +745,9 @@ circpad_machine_remove_token(circpad_machineinfo_t *mi)
   circpad_time_t current_time;
   circpad_delay_t target_bin_usec;
 
-  /* Update non-padding counts for rate limiting */
+  /* Update non-padding counts for rate limiting: We scale at UINT16_MAX
+   * because we only use this for a percentile limit of 2 sig figs, and
+   * space is scare in the machineinfo struct. */
   mi->nonpadding_sent++;
   if (mi->nonpadding_sent == UINT16_MAX) {
     mi->padding_sent /= 2;
@@ -888,7 +890,11 @@ circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
     mi->state_length--;
   }
 
-  /* Update padding counts */
+  /*
+   * Update non-padding counts for rate limiting: We scale at UINT16_MAX
+   * because we only use this for a percentile limit of 2 sig figs, and
+   * space is scare in the machineinfo struct.
+   */
   mi->padding_sent++;
   if (mi->padding_sent == UINT16_MAX) {
     mi->padding_sent /= 2;
