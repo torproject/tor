@@ -537,7 +537,7 @@ const circpad_machine_t *circpad_string_to_machine(const char *str);
 int circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell);
 int circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
                                       crypt_path_t *layer_hint);
-bool circpad_negotiate_padding(origin_circuit_t *circ,
+int circpad_negotiate_padding(origin_circuit_t *circ,
                           circpad_machine_num_t machine,
                           int target_hopnum,
                           int command);
