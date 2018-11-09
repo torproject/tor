@@ -3,12 +3,14 @@
 #define CRYPTO_ED25519_PRIVATE
 #include "orconfig.h"
 #include "core/or/or.h"
+#include "app/main/subsysmgr.h"
 #include "lib/err/backtrace.h"
 #include "app/config/config.h"
 #include "test/fuzz/fuzzing.h"
 #include "lib/compress/compress.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_init.h"
+#include "lib/version/torversion.h"
 
 static or_options_t *mock_options = NULL;
 static const or_options_t *
@@ -94,12 +96,10 @@ disable_signature_checking(void)
 static void
 global_init(void)
 {
-  tor_threads_init();
-  tor_compress_init();
+  subsystems_init_upto(SUBSYS_LEVEL_LIBS);
+  flush_log_messages_from_startup();
 
-  /* Initialise logging first */
-  init_logging(1);
-  configure_backtrace_handler(get_version());
+  tor_compress_init();
 
   if (crypto_global_init(0, NULL, NULL) < 0)
     abort();

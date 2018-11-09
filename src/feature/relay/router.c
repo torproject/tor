@@ -49,6 +49,7 @@
 #include "lib/encoding/confline.h"
 #include "lib/osinfo/uname.h"
 #include "lib/tls/tortls.h"
+#include "lib/version/torversion.h"
 
 #include "feature/dirauth/authmode.h"
 

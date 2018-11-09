@@ -12,6 +12,7 @@ lib/malloc/*.h
 lib/intmath/*.h
 lib/sandbox/*.h
 lib/string/*.h
+lib/subsys/*.h
 lib/testsupport/testsupport.h
 lib/thread/*.h
 lib/log/*.h

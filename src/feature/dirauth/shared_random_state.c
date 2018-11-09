@@ -22,6 +22,7 @@
 #include "feature/dirauth/shared_random_state.h"
 #include "feature/dircommon/voting_schedule.h"
 #include "lib/encoding/confline.h"
+#include "lib/version/torversion.h"
 
 #include "app/config/or_state_st.h"
 

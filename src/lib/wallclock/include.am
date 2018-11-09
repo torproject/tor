@@ -19,4 +19,5 @@ noinst_HEADERS +=					\
 	src/lib/wallclock/approx_time.h			\
 	src/lib/wallclock/timeval.h			\
 	src/lib/wallclock/time_to_tm.h			\
-	src/lib/wallclock/tor_gettimeofday.h
+	src/lib/wallclock/tor_gettimeofday.h		\
+	src/lib/wallclock/wallclock_sys.h

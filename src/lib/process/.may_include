@@ -11,6 +11,7 @@ lib/malloc/*.h
 lib/net/*.h
 lib/process/*.h
 lib/string/*.h
+lib/subsys/*.h
 lib/testsupport/*.h
 lib/thread/*.h
 

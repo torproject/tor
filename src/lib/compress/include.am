@@ -22,5 +22,6 @@ noinst_HEADERS	+=				\
 	src/lib/compress/compress.h		\
 	src/lib/compress/compress_lzma.h	\
 	src/lib/compress/compress_none.h	\
+	src/lib/compress/compress_sys.h		\
 	src/lib/compress/compress_zlib.h	\
 	src/lib/compress/compress_zstd.h

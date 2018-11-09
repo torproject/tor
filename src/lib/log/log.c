@@ -32,7 +32,8 @@
 
 #define LOG_PRIVATE
 #include "lib/log/log.h"
-#include "lib/log/git_revision.h"
+#include "lib/log/log_sys.h"
+#include "lib/version/git_revision.h"
 #include "lib/log/ratelim.h"
 #include "lib/lock/compat_mutex.h"
 #include "lib/smartlist_core/smartlist_core.h"

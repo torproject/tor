@@ -39,6 +39,7 @@ void tor_raw_assertion_failed_msg_(const char *file, int line,
 void tor_log_err_sigsafe(const char *m, ...);
 int tor_log_get_sigsafe_err_fds(const int **out);
 void tor_log_set_sigsafe_err_fds(const int *fds, int n);
+void tor_log_reset_sigsafe_err_fds(void);
 void tor_log_sigsafe_err_set_granularity(int ms);
 
 int format_hex_number_sigsafe(unsigned long x, char *buf, int max_len);

@@ -7,6 +7,7 @@ endif
 
 src_lib_libtor_time_a_SOURCES =	\
 		src/lib/time/compat_time.c	\
+		src/lib/time/time_sys.c		\
 		src/lib/time/tvdiff.c
 
 src_lib_libtor_time_testing_a_SOURCES = \
@@ -16,4 +17,5 @@ src_lib_libtor_time_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 noinst_HEADERS +=				\
 		src/lib/time/compat_time.h	\
+		src/lib/time/time_sys.h		\
 		src/lib/time/tvdiff.h

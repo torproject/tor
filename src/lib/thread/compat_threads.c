@@ -14,9 +14,11 @@
 #include "orconfig.h"
 #include <stdlib.h>
 #include "lib/thread/threads.h"
+#include "lib/thread/thread_sys.h"
 
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
+#include "lib/subsys/subsys.h"
 
 #include <string.h>
 
@@ -109,3 +111,17 @@ atomic_counter_exchange(atomic_counter_t *counter, size_t newval)
   return oldval;
 }
 #endif /* !defined(HAVE_WORKING_STDATOMIC) */
+
+static int
+subsys_threads_initialize(void)
+{
+  tor_threads_init();
+  return 0;
+}
+
+const subsys_fns_t sys_threads = {
+  .name = "threads",
+  .supported = true,
+  .level = -95,
+  .initialize = subsys_threads_initialize,
+};

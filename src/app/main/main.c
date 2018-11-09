@@ -15,6 +15,7 @@
 #include "app/config/statefile.h"
 #include "app/main/main.h"
 #include "app/main/ntmain.h"
+#include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/cpuworker.h"
 #include "core/mainloop/mainloop.h"
@@ -69,7 +70,6 @@
 #include "lib/container/buffers.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_s2k.h"
-#include "lib/err/backtrace.h"
 #include "lib/geoip/geoip.h"
 
 #include "lib/process/waitpid.h"
@@ -84,6 +84,7 @@
 #include "lib/encoding/confline.h"
 #include "lib/evloop/timers.h"
 #include "lib/crypt_ops/crypto_init.h"
+#include "lib/version/torversion.h"
 
 #include <event2/event.h>
 
@@ -427,18 +428,6 @@ dumpstats(int severity)
   rend_service_dump_stats(severity);
 }
 
-/** Called by exit() as we shut down the process.
- */
-static void
-exit_function(void)
-{
-  /* NOTE: If we ever daemonize, this gets called immediately.  That's
-   * okay for now, because we only use this on Windows.  */
-#ifdef _WIN32
-  WSACleanup();
-#endif
-}
-
 #ifdef _WIN32
 #define UNIX_ONLY 0
 #else
@@ -547,12 +536,6 @@ tor_init(int argc, char *argv[])
   tor_snprintf(progname, sizeof(progname), "Tor %s", get_version());
   log_set_application_name(progname);
 
-  /* Set up the crypto nice and early */
-  if (crypto_early_init() < 0) {
-    log_err(LD_GENERAL, "Unable to initialize the crypto subsystem!");
-    return -1;
-  }
-
   /* Initialize the history structures. */
   rep_hist_init();
   /* Initialize the service cache. */
@@ -631,12 +614,6 @@ tor_init(int argc, char *argv[])
 #ifdef HAVE_RUST
   rust_log_welcome_string();
 #endif /* defined(HAVE_RUST) */
-
-  if (network_init()<0) {
-    log_err(LD_BUG,"Error initializing network; exiting.");
-    return -1;
-  }
-  atexit(exit_function);
 
   int init_rv = options_init_from_torrc(argc,argv);
   if (init_rv < 0) {
@@ -784,7 +761,6 @@ tor_free_all(int postfork)
   routerparse_free_all();
   ext_orport_free_all();
   control_free_all();
-  tor_free_getaddrinfo_cache();
   protover_free_all();
   bridges_free_all();
   consdiffmgr_free_all();
@@ -802,7 +778,6 @@ tor_free_all(int postfork)
     policies_free_all();
   }
   if (!postfork) {
-    tor_tls_free_all();
 #ifndef _WIN32
     tor_getpwnam(NULL);
 #endif
@@ -815,12 +790,12 @@ tor_free_all(int postfork)
     release_lockfile();
   }
   tor_libevent_free_all();
+
+  subsystems_shutdown();
+
   /* Stuff in util.c and address.c*/
   if (!postfork) {
-    escaped(NULL);
     esc_router_info(NULL);
-    clean_up_backtrace_handler();
-    logs_free_all(); /* free log strings. do this last so logs keep working. */
   }
 }
 
@@ -879,7 +854,6 @@ tor_cleanup(void)
                       later, if it makes shutdown unacceptably slow.  But for
                       now, leave it here: it's helped us catch bugs in the
                       past. */
-  crypto_global_cleanup();
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */
@@ -1275,7 +1249,6 @@ static int
 run_tor_main_loop(void)
 {
   handle_signals();
-  monotime_init();
   timers_initialize();
   initialize_mainloop_events();
 
@@ -1387,54 +1360,13 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 {
   int result = 0;
 
-#ifdef _WIN32
-#ifndef HeapEnableTerminationOnCorruption
-#define HeapEnableTerminationOnCorruption 1
-#endif
-  /* On heap corruption, just give up; don't try to play along. */
-  HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
-
-  /* SetProcessDEPPolicy is only supported on 32-bit Windows.
-   * (On 64-bit Windows it always fails, and some compilers don't like the
-   * PSETDEP cast.)
-   * 32-bit Windows defines _WIN32.
-   * 64-bit Windows defines _WIN32 and _WIN64. */
-#ifndef _WIN64
-  /* Call SetProcessDEPPolicy to permanently enable DEP.
-     The function will not resolve on earlier versions of Windows,
-     and failure is not dangerous. */
-  HMODULE hMod = GetModuleHandleA("Kernel32.dll");
-  if (hMod) {
-    typedef BOOL (WINAPI *PSETDEP)(DWORD);
-    PSETDEP setdeppolicy = (PSETDEP)GetProcAddress(hMod,
-                           "SetProcessDEPPolicy");
-    if (setdeppolicy) {
-      /* PROCESS_DEP_ENABLE | PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION */
-      setdeppolicy(3);
-    }
-  }
-#endif /* !defined(_WIN64) */
-#endif /* defined(_WIN32) */
-
-  {
-    int bt_err = configure_backtrace_handler(get_version());
-    if (bt_err < 0) {
-      log_warn(LD_BUG, "Unable to install backtrace handler: %s",
-               strerror(-bt_err));
-    }
-  }
-
 #ifdef EVENT_SET_MEM_FUNCTIONS_IMPLEMENTED
   event_set_mem_functions(tor_malloc_, tor_realloc_, tor_free_);
 #endif
 
-  init_protocol_warning_severity_level();
+  subsystems_init();
 
-  update_approx_time(time(NULL));
-  tor_threads_init();
-  tor_compress_init();
-  init_logging(0);
-  monotime_init();
+  init_protocol_warning_severity_level();
 
   int argc = tor_cfg->argc + tor_cfg->argc_owned;
   char **argv = tor_calloc(argc, sizeof(char*));

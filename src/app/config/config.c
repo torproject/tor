@@ -64,6 +64,7 @@
 #include "app/config/confparse.h"
 #include "app/config/statefile.h"
 #include "app/main/main.h"
+#include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/cpuworker.h"
 #include "core/mainloop/mainloop.h"
@@ -112,9 +113,9 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"
-#include "lib/log/git_revision.h"
 #include "lib/net/resolve.h"
 #include "lib/sandbox/sandbox.h"
+#include "lib/version/torversion.h"
 
 #ifdef ENABLE_NSS
 #include "lib/crypt_ops/crypto_nss_mgt.h"
@@ -972,42 +973,6 @@ set_options(or_options_t *new_val, char **msg)
   return 0;
 }
 
-/** The version of this Tor process, as parsed. */
-static char *the_tor_version = NULL;
-/** A shorter version of this Tor process's version, for export in our router
- *  descriptor.  (Does not include the git version, if any.) */
-static char *the_short_tor_version = NULL;
-
-/** Return the current Tor version. */
-const char *
-get_version(void)
-{
-  if (the_tor_version == NULL) {
-    if (strlen(tor_git_revision)) {
-      tor_asprintf(&the_tor_version, "%s (git-%s)", get_short_version(),
-                   tor_git_revision);
-    } else {
-      the_tor_version = tor_strdup(get_short_version());
-    }
-  }
-  return the_tor_version;
-}
-
-/** Return the current Tor version, without any git tag. */
-const char *
-get_short_version(void)
-{
-
-  if (the_short_tor_version == NULL) {
-#ifdef TOR_BUILD_TAG
-    tor_asprintf(&the_short_tor_version, "%s (%s)", VERSION, TOR_BUILD_TAG);
-#else
-    the_short_tor_version = tor_strdup(VERSION);
-#endif
-  }
-  return the_short_tor_version;
-}
-
 /** Release additional memory allocated in options
  */
 STATIC void
@@ -1066,9 +1031,6 @@ config_free_all(void)
   tor_free(torrc_fname);
   tor_free(torrc_defaults_fname);
   tor_free(global_dirfrontpagecontents);
-
-  tor_free(the_short_tor_version);
-  tor_free(the_tor_version);
 
   cleanup_protocol_warning_severity_level();
 
@@ -1432,10 +1394,10 @@ options_act_reversible(const or_options_t *old_options, char **msg)
    * processes. */
   if (running_tor && options->RunAsDaemon) {
     if (! start_daemon_has_been_called())
-      crypto_prefork();
+      subsystems_prefork();
     /* No need to roll back, since you can't change the value. */
     if (start_daemon())
-      crypto_postfork();
+      subsystems_postfork();
   }
 
 #ifdef HAVE_SYSTEMD

@@ -23,5 +23,6 @@ src_lib_libtor_thread_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
 src_lib_libtor_thread_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 noinst_HEADERS +=					\
-	src/lib/thread/threads.h			\
-	src/lib/thread/numcpus.h
+	src/lib/thread/numcpus.h			\
+	src/lib/thread/thread_sys.h			\
+	src/lib/thread/threads.h

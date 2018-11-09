@@ -9,7 +9,7 @@ lib/lock/*.h
 lib/log/*.h
 lib/malloc/*.h
 lib/string/*.h
+lib/subsys/*.h
 lib/testsupport/*.h
+lib/version/*.h
 lib/wallclock/*.h
-
-micro-revision.i
