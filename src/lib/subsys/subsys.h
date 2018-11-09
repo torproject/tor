@@ -44,6 +44,9 @@ typedef struct subsys_fns_t {
    * This function MUST NOT rely on any runtime configuration information;
    * it is only for global state or pre-configuration state.
    *
+   * (If you need to do any setup that depends on configuration, you'll need
+   * to declare a configuration callback. (Not yet designed))
+   *
    * This function MUST NOT have any parts that can fail.
    **/
   int (*initialize)(void);
