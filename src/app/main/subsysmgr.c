@@ -7,6 +7,8 @@
 #include "app/main/subsysmgr.h"
 #include "lib/err/torerr.h"
 
+#include "lib/log/log.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -85,8 +87,13 @@ subsystems_init_upto(int target_level)
     if (sys_initialized[i])
       continue;
     int r = 0;
-    if (sys->initialize)
+    if (sys->initialize) {
+      // Note that the logging subsystem is designed so that it does no harm
+      // to log a message in an uninitialized state.  These messages will be
+      // discarded for now, however.
+      log_debug(LD_GENERAL, "Initializing %s", sys->name);
       r = sys->initialize();
+    }
     if (r < 0) {
       fprintf(stderr, "BUG: subsystem %s (at %u) initialization failed.\n",
               sys->name, i);
@@ -123,8 +130,10 @@ subsystems_shutdown_downto(int target_level)
       break;
     if (! sys_initialized[i])
       continue;
-    if (sys->shutdown)
+    if (sys->shutdown) {
+      log_debug(LD_GENERAL, "Shutting down %s", sys->name);
       sys->shutdown();
+    }
     sys_initialized[i] = false;
   }
 }
@@ -143,8 +152,10 @@ subsystems_prefork(void)
       continue;
     if (! sys_initialized[i])
       continue;
-    if (sys->prefork)
+    if (sys->prefork) {
+      log_debug(LD_GENERAL, "Pre-fork: %s", sys->name);
       sys->prefork();
+    }
   }
 }
 
@@ -162,13 +173,15 @@ subsystems_postfork(void)
       continue;
     if (! sys_initialized[i])
       continue;
-    if (sys->postfork)
+    if (sys->postfork) {
+      log_debug(LD_GENERAL, "Post-fork: %s", sys->name);
       sys->postfork();
+    }
   }
 }
 
 /**
- * Run thread-clanup code on all subsystems that declare any
+ * Run thread-cleanup code on all subsystems that declare any
  **/
 void
 subsystems_thread_cleanup(void)
@@ -181,7 +194,9 @@ subsystems_thread_cleanup(void)
       continue;
     if (! sys_initialized[i])
       continue;
-    if (sys->thread_cleanup)
+    if (sys->thread_cleanup) {
+      log_debug(LD_GENERAL, "Thread cleanup: %s", sys->name);
       sys->thread_cleanup();
+    }
   }
 }
