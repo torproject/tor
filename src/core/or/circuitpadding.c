@@ -308,6 +308,28 @@ circpad_choose_state_length(circpad_machineinfo_t *mi)
 }
 
 /**
+ * Sample a value from our iat_dist, and clamp it safely
+ * to circpad_delay_t.
+ */
+static circpad_delay_t
+circpad_distribution_sample_iat_delay(const circpad_state_t *state,
+                                      circpad_delay_t start_usec)
+{
+  double val = circpad_distribution_sample(state->iat_dist);
+  /* These comparisons are safe, because the output is in the range
+   * [0, 2**32), and double has a precision of 53 bits. */
+  val = MAX(0, val);
+  val = MIN(val, state->range_usec);
+
+  /* This addition is exact: val is at most 2**32-1, start_usec
+   * is at most 2**32-1, and doubles have a precision of 53 bits. */
+  val += start_usec;
+
+  /* Clamp the distribution at infinite delay val */
+  return (circpad_delay_t)MIN(tor_llround(val), CIRCPAD_DELAY_INFINITE);
+}
+
+/**
  * Sample an expected time-until-next-packet delay from the histogram.
  *
  * The bin is chosen with probability proportional to the number
@@ -333,30 +355,20 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
   else
     start_usec = state->start_usec;
 
-  if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE) {
+  if (state->iat_dist.type != CIRCPAD_DIST_NONE) {
+    /* Sample from a fixed IAT distribution and return */
+    return circpad_distribution_sample_iat_delay(state, start_usec);
+  } else if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE) {
     /* We have a mutable histogram */
     tor_assert(mi->histogram && mi->histogram_len == state->histogram_len);
 
     histogram = mi->histogram;
     for (int b = 0; b < state->histogram_len; b++)
       histogram_total_tokens += histogram[b];
-  } else if (state->iat_dist.type == CIRCPAD_DIST_NONE) {
+  } else {
     /* We have a histogram, but it's immutable */
     histogram = state->histogram;
     histogram_total_tokens = state->histogram_total_tokens;
-  } else {
-    /* Sample from a fixed IAT distribution and return */
-    double val = circpad_distribution_sample(state->iat_dist);
-    /* These comparisons are safe, because the output is in the range
-     * [0, 2**46], and double has a precision of 53 bits. */
-    val = MAX(0, val);
-    val = MIN(val, state->range_usec);
-
-    /* This addition is exact: val is at most 2**16 * USEC_PER_SEC ~= 2**46,
-     * start_usec is at most 2**32, and doubles have a precision of 53 bits. */
-    val += start_usec;
-    /* Clamp the distribution at infinite delay val */
-    return (circpad_delay_t)MIN(tor_llround(val), CIRCPAD_DELAY_INFINITE);
   }
 
   bin_choice = crypto_rand_int(histogram_total_tokens);
