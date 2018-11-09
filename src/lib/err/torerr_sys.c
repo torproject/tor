@@ -16,7 +16,7 @@
 #include <stddef.h>
 
 static int
-torerr_subsys_init(void)
+subsys_torerr_initialize(void)
 {
   if (configure_backtrace_handler(get_version()) < 0)
     return -1;
@@ -25,7 +25,7 @@ torerr_subsys_init(void)
   return 0;
 }
 static void
-torerr_subsys_shutdown(void)
+subsys_torerr_shutdown(void)
 {
   tor_log_reset_sigsafe_err_fds();
   clean_up_backtrace_handler();
@@ -35,6 +35,6 @@ const subsys_fns_t sys_torerr = {
   .name = "err",
   .level = -100,
   .supported = true,
-  .initialize = torerr_subsys_init,
-  .shutdown = torerr_subsys_shutdown
+  .initialize = subsys_torerr_initialize,
+  .shutdown = subsys_torerr_shutdown
 };

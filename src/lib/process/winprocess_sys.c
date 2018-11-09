@@ -19,7 +19,7 @@
 #define WINPROCESS_SYS_ENABLED true
 
 static int
-init_windows_process_params(void)
+subsys_winprocess_initialize(void)
 {
 #ifndef HeapEnableTerminationOnCorruption
 #define HeapEnableTerminationOnCorruption 1
@@ -53,12 +53,12 @@ init_windows_process_params(void)
 }
 #else  /* !defined(_WIN32) */
 #define WINPROCESS_SYS_ENABLED false
-#define init_windows_process_params NULL
+#define subsys_winprocess_initialize NULL
 #endif /* defined(_WIN32) */
 
 const subsys_fns_t sys_winprocess = {
   .name = "winprocess",
   .level = -100,
   .supported = WINPROCESS_SYS_ENABLED,
-  .initialize = init_windows_process_params,
+  .initialize = subsys_winprocess_initialize,
 };

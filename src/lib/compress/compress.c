@@ -686,9 +686,15 @@ tor_compress_log_init_warnings(void)
   tor_zstd_warn_if_version_mismatched();
 }
 
+static int
+subsys_compress_initialize(void)
+{
+  return tor_compress_init();
+}
+
 const subsys_fns_t sys_compress = {
   .name = "compress",
   .supported = true,
   .level = -70,
-  .initialize = tor_compress_init,
+  .initialize = subsys_compress_initialize,
 };

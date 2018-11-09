@@ -113,7 +113,7 @@ atomic_counter_exchange(atomic_counter_t *counter, size_t newval)
 #endif /* !defined(HAVE_WORKING_STDATOMIC) */
 
 static int
-sys_threads_initialize(void)
+subsys_threads_initialize(void)
 {
   tor_threads_init();
   return 0;
@@ -123,5 +123,5 @@ const subsys_fns_t sys_threads = {
   .name = "threads",
   .supported = true,
   .level = -95,
-  .initialize = sys_threads_initialize,
+  .initialize = subsys_threads_initialize,
 };

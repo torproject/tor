@@ -12,7 +12,7 @@
 #include "lib/time/compat_time.h"
 
 static int
-init_time_sys(void)
+subsys_time_initialize(void)
 {
   monotime_init();
   return 0;
@@ -22,5 +22,5 @@ const subsys_fns_t sys_time = {
   .name = "time",
   .level = -90,
   .supported = true,
-  .initialize = init_time_sys,
+  .initialize = subsys_time_initialize,
 };

@@ -207,7 +207,7 @@ tor_is_using_nss(void)
 }
 
 static int
-init_crypto_sys(void)
+subsys_crypto_initialize(void)
 {
   if (crypto_early_init() < 0)
     return -1;
@@ -216,18 +216,36 @@ init_crypto_sys(void)
 }
 
 static void
-shutdown_crypto_sys(void)
+subsys_crypto_shutdown(void)
 {
   crypto_global_cleanup();
+}
+
+static void
+subsys_crypto_prefork(void)
+{
+  crypto_prefork();
+}
+
+static void
+subsys_crypto_postfork(void)
+{
+  crypto_postfork();
+}
+
+static void
+subsys_crypto_thread_cleanup(void)
+{
+  crypto_thread_cleanup();
 }
 
 const struct subsys_fns_t sys_crypto = {
   .name = "crypto",
   .supported = true,
   .level = -60,
-  .initialize = init_crypto_sys,
-  .shutdown = shutdown_crypto_sys,
-  .prefork = crypto_prefork,
-  .postfork = crypto_postfork,
-  .thread_cleanup = crypto_thread_cleanup,
+  .initialize = subsys_crypto_initialize,
+  .shutdown = subsys_crypto_shutdown,
+  .prefork = subsys_crypto_prefork,
+  .postfork = subsys_crypto_postfork,
+  .thread_cleanup = subsys_crypto_thread_cleanup,
 };

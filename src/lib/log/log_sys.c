@@ -13,14 +13,14 @@
 #include "lib/log/log_sys.h"
 
 static int
-init_logging_subsys(void)
+subsys_logging_initialize(void)
 {
   init_logging(0);
   return 0;
 }
 
 static void
-shutdown_logging_subsys(void)
+subsys_logging_shutdown(void)
 {
   logs_free_all();
   escaped(NULL);
@@ -30,6 +30,6 @@ const subsys_fns_t sys_logging = {
   .name = "log",
   .supported = true,
   .level = -90,
-  .initialize = init_logging_subsys,
-  .shutdown = shutdown_logging_subsys,
+  .initialize = subsys_logging_initialize,
+  .shutdown = subsys_logging_shutdown,
 };

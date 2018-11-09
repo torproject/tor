@@ -45,7 +45,7 @@ update_approx_time(time_t now)
 #endif /* !defined(TIME_IS_FAST) */
 
 static int
-init_wallclock_subsys(void)
+subsys_wallclock_initialize(void)
 {
   update_approx_time(time(NULL));
   return 0;
@@ -55,5 +55,5 @@ const subsys_fns_t sys_wallclock = {
   .name = "wallclock",
   .supported = true,
   .level = -99,
-  .initialize = init_wallclock_subsys,
+  .initialize = subsys_wallclock_initialize,
 };

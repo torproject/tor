@@ -18,7 +18,7 @@
 #endif
 
 static int
-init_network_sys(void)
+subsys_network_initialize(void)
 {
   if (network_init() < 0)
     return -1;
@@ -27,7 +27,7 @@ init_network_sys(void)
 }
 
 static void
-shutdown_network_sys(void)
+subsys_network_shutdown(void)
 {
 #ifdef _WIN32
   WSACleanup();
@@ -39,6 +39,6 @@ const subsys_fns_t sys_network = {
   .name = "network",
   .level = -90,
   .supported = true,
-  .initialize = init_network_sys,
-  .shutdown = shutdown_network_sys,
+  .initialize = subsys_network_initialize,
+  .shutdown = subsys_network_shutdown,
 };

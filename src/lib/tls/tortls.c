@@ -443,8 +443,14 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity)
   return rv;
 }
 
+static void
+subsys_tortls_shutdown(void)
+{
+  tor_tls_free_all();
+}
+
 const subsys_fns_t sys_tortls = {
   .name = "tortls",
   .level = -50,
-  .shutdown = tor_tls_free_all
+  .shutdown = subsys_tortls_shutdown
 };
