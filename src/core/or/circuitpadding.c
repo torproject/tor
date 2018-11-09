@@ -1663,10 +1663,14 @@ circpad_add_matching_machines(origin_circuit_t *on_circ)
           circ->padding_machine[i] = NULL;
         }
 
-        circpad_negotiate_padding(on_circ, machine->machine_num,
+        /* Try to negotiate padding, and if we send the negotiation
+         * cell, set up the machine immediately. (We'll tear it down
+         * upon receipt of an ERR response). */
+        if (circpad_negotiate_padding(on_circ, machine->machine_num,
                                   machine->target_hopnum,
-                                  CIRCPAD_COMMAND_START);
-        circpad_setup_machine_on_circ(circ, machine);
+                                  CIRCPAD_COMMAND_START) == 0) {
+          circpad_setup_machine_on_circ(circ, machine);
+        }
       }
     } SMARTLIST_FOREACH_END(machine);
   } FOR_EACH_CIRCUIT_MACHINE_END;
@@ -2208,9 +2212,9 @@ circpad_circuit_supports_padding(origin_circuit_t *circ,
 /**
  * Try to negotiate padding.
  *
- * Returns 1 if successful (or already set up), 0 otherwise.
+ * Returns -1 on error, 0 on success.
  */
-bool
+int
 circpad_negotiate_padding(origin_circuit_t *circ,
                           circpad_machine_num_t machine,
                           int target_hopnum,
@@ -2223,7 +2227,7 @@ circpad_negotiate_padding(origin_circuit_t *circ,
   /* Check that the target hop lists support for padding in
    * its ProtoVer fields */
   if (!circpad_circuit_supports_padding(circ, target_hopnum)) {
-    return 0;
+    return -1;
   }
 
   memset(&cell, 0, sizeof(cell_t));
@@ -2239,14 +2243,14 @@ circpad_negotiate_padding(origin_circuit_t *circ,
 
   if ((len = circpad_negotiate_encode(cell.payload, CELL_PAYLOAD_SIZE,
         &type)) < 0)
-    return 0;
+    return -1;
 
   log_fn(LOG_INFO,LD_CIRC, "Negotiating padding on circuit %u",
          circ->global_identifier);
 
   return circpad_send_command_to_hop(circ, target_hopnum,
                                      RELAY_COMMAND_PADDING_NEGOTIATE,
-                                     cell.payload, len) == 0;
+                                     cell.payload, len);
 }
 
 /**
