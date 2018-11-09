@@ -25,7 +25,7 @@
  * Global list of the subsystems in Tor, in the order of their initialization.
  **/
 const subsys_fns_t *tor_subsystems[] = {
-  &sys_winprocess,
+  &sys_winprocess, /* -100 */
   &sys_torerr,
   &sys_wallclock,
   &sys_threads,
