@@ -22,10 +22,16 @@ typedef uint16_t message_id_t;
  **/
 typedef uint16_t msg_type_id_t;
 
+/**
+ * An ID value returned for *_type_t when none exists.
+ */
 #define ERROR_ID 65535
 
 /**
  * Auxiliary (untyped) data sent along with a message.
+ *
+ * We define this as a union of a pointer and a u64, so that the integer
+ * types will have the same range across platforms.
  **/
 typedef union {
   void *ptr;
@@ -63,8 +69,10 @@ typedef struct msg_t {
 
 struct dispatcher_t;
 
-/** A pub_binding_t is an opaque object that subsystems use to publish
- * mesages. */
+/**
+ * A pub_binding_t is an opaque object that subsystems use to publish
+ * messages.  The DISPATCH_ADD_PUB*() macros set it up.
+ **/
 typedef struct pub_binding_t {
   struct dispatcher_t *dispatch_ptr;
   msg_t msg_template;
@@ -86,8 +94,8 @@ typedef struct dispatch_connector_t dispatch_connector_t;
 typedef void (*recv_fn_t)(const msg_t *m);
 
 /**
- * Table of functions to use for a given C type.  Any omitted functions will
- * be treated as no-ops.
+ * Table of functions to use for a given C type.  Any omitted (NULL) functions
+ * will be treated as no-ops.
  **/
 typedef struct dispatch_typefns_t {
   /** Release storage held for */
