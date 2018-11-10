@@ -20,8 +20,8 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
 
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/encoding/keyval.h"
-
 /** Total number of routers with measured bandwidth; this is set by
  * dirserv_count_measured_bs() before the loop in
  * dirserv_generate_networkstatus_vote_obj() and checked by
@@ -313,6 +313,57 @@ dirserv_read_measured_bandwidths(const char *from_file,
   if (fp)
     fclose(fp);
   return rv;
+}
+
+/**
+ * Get the base 16 encoded digest of the bandwidth file used for the vote
+ * and store it in <b>b16_digest_bw_file_out</b>.
+ * Returns -1 on error, 0 otherwise.
+ * It is implemented separated from dirserv_read_measured_bandwidths,
+ * since it reads line by line and it should be refactor in the future.
+ * It is similiar to dump_desc_populate_one_file, except that digest in not
+ * part of the bandwidth file name.
+ */
+int
+dirauth_get_b16_digest_bw_file(char *b16_digest_bw_file_out,
+                               const char *from_file) {
+  char *content_bw_file = NULL;
+  char digest_bw_file[DIGEST_LEN];
+  char b16_digest_bw_file[HEX_DIGEST_LEN+1];
+
+  if (from_file == NULL) {
+    /* Do not give warnings when there is no file. */
+    log_notice(LD_DIR, "Can't open bandwidth file at configured location: %s",
+             from_file);
+    goto err;
+  }
+
+  content_bw_file = read_file_to_str(from_file, RFTS_IGNORE_MISSING, NULL);
+  if (!content_bw_file) {
+    log_notice(LD_DIR, "Failed to read %s.", from_file);
+   goto err;
+  }
+  /* Using SHA1 to get 40 characters. Using SHA256 would give 64 characters,
+   * less human-readable. */
+  if (crypto_digest(digest_bw_file, (const char *)content_bw_file,
+                       sizeof(content_bw_file)) < 0) {
+    /* Weird, but okay */
+    log_notice(LD_DIR, "Unable to hash content of %s.", from_file);
+    goto err;
+  }
+
+  base16_encode(b16_digest_bw_file, sizeof(b16_digest_bw_file),
+                digest_bw_file, DIGEST_LEN);
+  memcpy(b16_digest_bw_file_out, b16_digest_bw_file, HEX_DIGEST_LEN+1);
+  goto done;
+
+ err:
+  tor_free(content_bw_file);
+  return -1;
+
+ done:
+  tor_free(content_bw_file);
+  return 0;
 }
 
 /**

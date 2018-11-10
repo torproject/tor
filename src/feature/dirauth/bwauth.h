@@ -23,6 +23,9 @@ int dirserv_read_measured_bandwidths(const char *from_file,
                                      smartlist_t *routerstatuses,
                                      smartlist_t *bw_file_headers);
 
+int dirauth_get_b16_digest_bw_file(char *b16_digest_bw_file_out,
+                                   const char *from_file);
+
 int dirserv_query_measured_bw_cache_kb(const char *node_id,
                                        long *bw_out,
                                        time_t *as_of_out);
