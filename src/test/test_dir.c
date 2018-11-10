@@ -3830,6 +3830,54 @@ mock_get_options(void)
   return mock_options;
 }
 
+/* Test dirauth_get_bw_file_digest.
+ * This function should be near the other bwauth functions, but it needs
+ * mock_get_options, that is only defined here. */
+
+static void
+test_dir_dirauth_get_b16_digest_bw_file(void *arg)
+{
+  (void)arg;
+  char b16_digest_bw_file[HEX_DIGEST_LEN+1];
+  const char *content =
+    "1541171221\n"
+    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 "
+    "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
+    "bw=760 nick=Test time=2018-05-08T16:13:26\n";
+
+  /* Init options */
+  mock_options = tor_malloc(sizeof(or_options_t));
+  reset_options(mock_options, &mock_get_options_calls);
+  MOCK(get_options, mock_get_options);
+
+  /* When there is not a bandwidth file configured */
+  tt_int_op(-1, OP_EQ, dirauth_get_b16_digest_bw_file(b16_digest_bw_file,
+            mock_options->V3BandwidthsFile));
+
+  mock_options->V3BandwidthsFile = tor_strdup(
+    get_fname_rnd("V3BandwidthsFile")
+  );
+
+  /* When there is a bandwidth file configured, but the file does not exist */
+  tt_int_op(-1, OP_EQ, dirauth_get_b16_digest_bw_file(b16_digest_bw_file,
+            mock_options->V3BandwidthsFile));
+
+  /* When there is a bandwidth file */
+  write_str_to_file(mock_options->V3BandwidthsFile, content, 0);
+  tt_int_op(0, OP_EQ, dirauth_get_b16_digest_bw_file(b16_digest_bw_file,
+            mock_options->V3BandwidthsFile));
+  tt_int_op(HEX_DIGEST_LEN, OP_EQ, strlen(b16_digest_bw_file));
+  tt_int_op(HEX_DIGEST_LEN+1, OP_EQ, sizeof(b16_digest_bw_file));
+  tt_str_op(b16_digest_bw_file, OP_EQ,
+            "985D58F285B7C78DDD13EA64AC582664238F314D");
+
+  goto done;
+
+  done:
+    UNMOCK(get_options);
+    or_options_free(mock_options); mock_options = NULL;
+}
+
 static void
 reset_routerstatus(routerstatus_t *rs,
                    const char *hex_identity_digest,
@@ -6337,6 +6385,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(measured_bw_kb_line_is_after_headers),
   DIR_LEGACY(measured_bw_kb_cache),
   DIR_LEGACY(dirserv_read_measured_bandwidths),
+  DIR(dirauth_get_b16_digest_bw_file, 0),
   DIR_LEGACY(param_voting),
   DIR(param_voting_lookup, 0),
   DIR_LEGACY(v3_networkstatus),
