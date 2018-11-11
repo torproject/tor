@@ -1274,7 +1274,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
       list = "P-256:P-224";
     else
       list = "P-256:P-224";
-    int r = SSL_CTX_set1_groups_list(result->ctx, list);
+    int r = (int) SSL_CTX_set1_groups_list(result->ctx, list);
     if (r < 0)
       goto error;
   }
