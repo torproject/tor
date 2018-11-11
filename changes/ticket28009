@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Fix shellcheck warnings in cov-diff script. Resolves issue
+      28009.
