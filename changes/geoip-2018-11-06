@@ -1,0 +1,4 @@
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the November 6 2018 Maxmind GeoLite2
+      Country database. Closes ticket 28395.
+
