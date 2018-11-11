@@ -1,0 +1,5 @@
+  o Minor bugfixes (periodic events):
+    - Refrain from calling routerlist_remove_old_routers() from
+      check_descriptor_callback(). Instead, create a new periodic
+      event that will run every minute even if Tor is not configured
+      as onion router. Fixes bug 27929; bugfix on 0.2.8.1-alpha.
