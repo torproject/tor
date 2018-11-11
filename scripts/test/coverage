@@ -8,9 +8,9 @@
 dst=$1
 
 for fn in src/core/*/*.c src/feature/*/*.c src/app/*/*.c src/lib/*/*.c; do
-    BN=$(basename $fn)
-    DN=$(dirname $fn)
-    F=$(echo $BN | sed -e 's/\.c$//;')
+    BN=$(basename "$fn")
+    DN=$(dirname "$fn")
+    F=$(echo "$BN" | sed -e 's/\.c$//;')
     GC="${BN}.gcov"
     # Figure out the object file names
     ONS=$(echo ${DN}/src_*-${F}.o)
@@ -20,18 +20,18 @@ for fn in src/core/*/*.c src/feature/*/*.c src/app/*/*.c src/lib/*/*.c; do
     then
       for on in $ONS; do
         # We should have a gcno file
-        GCNO=$(echo $on | sed -e 's/\.o$/\.gcno/;')
-        if [ -e $GCNO ]
+        GCNO=$(echo "$on" | sed -e 's/\.o$/\.gcno/;')
+        if [ -e "$GCNO" ]
         then
           # No need to test for gcda, since gcov assumes no execution
           # if it's absent
-          rm -f $GC
-          gcov -o $on $fn
-          if [ -e $GC ]
+          rm -f "$GC"
+          gcov -o "$on" "$fn"
+          if [ -e "$GC" ]
           then
             if [ -d "$dst" ]
             then
-              mv $GC $dst/$GC
+              mv "$GC" "$dst"/"$GC"
             fi
           else
             echo "gcov -o $on $fn didn't make a .gcov file"
