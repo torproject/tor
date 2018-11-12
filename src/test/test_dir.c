@@ -3877,9 +3877,63 @@ test_dir_bwauth_bw_file_digest255(void *arg)
                                       DIGEST_SHA256));
   goto done;
 
-  done:
-    UNMOCK(get_options);
-    or_options_free(mock_options); mock_options = NULL;
+ done:
+  UNMOCK(get_options);
+  or_options_free(mock_options); mock_options = NULL;
+}
+
+/**
+ * Test the format of "bandwidth-file-digest" in the votes.
+ * This should be in a format_networkstatus_vote test and do not duplicate
+ * code from the function.
+ */
+static void
+test_dir_dirvote_format_bw_file_digest_vote(void *arg)
+{
+  (void)arg;
+  const char *content =
+    "1541171221\n"
+    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 "
+    "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
+    "bw=760 nick=Test time=2018-05-08T16:13:26\n";
+  const char *b64_digest_bw_file_expected =
+    "HcZLCV92yJmAsjyZ0Gt0nWtG2qnCcOT6HgJ2BcvAKjk";
+  const char *bw_file_digest_expected = "bandwidth-file-digest "
+    "sha256=HcZLCV92yJmAsjyZ0Gt0nWtG2qnCcOT6HgJ2BcvAKjk\n";
+  uint8_t bw_file_digest255[DIGEST256_LEN];
+  char b64_digest_bw_file[BASE64_DIGEST256_LEN+1];
+  char *bw_file_digest = NULL;
+  char *digest_algo_b64_digest_bw_file = NULL;
+
+  /* Init options */
+  mock_options = tor_malloc(sizeof(or_options_t));
+  reset_options(mock_options, &mock_get_options_calls);
+  MOCK(get_options, mock_get_options);
+
+  mock_options->V3BandwidthsFile = tor_strdup(
+    get_fname_rnd("V3BandwidthsFile")
+  );
+  write_str_to_file(mock_options->V3BandwidthsFile, content, 0);
+  /* Compute the digest. */
+  bwauth_bw_file_digest255(bw_file_digest255, mock_options->V3BandwidthsFile,
+                           DIGEST_SHA256);
+  /* Encode the digest */
+  digest256_to_base64(b64_digest_bw_file, (const char *)bw_file_digest255);
+  tt_str_op(b64_digest_bw_file, OP_EQ, b64_digest_bw_file_expected);
+  /* "bandwidth-file-digest" 1*(SP algorithm "=" digest) NL */
+  tor_asprintf(&digest_algo_b64_digest_bw_file, "%s=%s",
+              crypto_digest_algorithm_get_name(DIGEST_SHA256),
+              b64_digest_bw_file);
+  tor_asprintf(&bw_file_digest, "%s %s\n", "bandwidth-file-digest",
+               digest_algo_b64_digest_bw_file);
+  tt_str_op(bw_file_digest, OP_EQ, bw_file_digest_expected);
+  goto done;
+
+ done:
+  UNMOCK(get_options);
+  or_options_free(mock_options); mock_options = NULL;
+  tor_free(digest_algo_b64_digest_bw_file);
+  tor_free(bw_file_digest);
 }
 
 static void
@@ -6390,6 +6444,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(measured_bw_kb_cache),
   DIR_LEGACY(dirserv_read_measured_bandwidths),
   DIR(bwauth_bw_file_digest255, 0),
+  DIR(dirvote_format_bw_file_digest_vote, 0),
   DIR_LEGACY(param_voting),
   DIR(param_voting_lookup, 0),
   DIR_LEGACY(v3_networkstatus),
