@@ -99,12 +99,12 @@ aes_cnt_cipher_t *
 aes_new_cipher(const uint8_t *key, const uint8_t *iv, int key_bits)
 {
   EVP_CIPHER_CTX *cipher = EVP_CIPHER_CTX_new();
-  const EVP_CIPHER *c;
+  const EVP_CIPHER *c = NULL;
   switch (key_bits) {
     case 128: c = EVP_aes_128_ctr(); break;
     case 192: c = EVP_aes_192_ctr(); break;
     case 256: c = EVP_aes_256_ctr(); break;
-    default: tor_assert(0); // LCOV_EXCL_LINE
+    default: tor_assert_unreached(); // LCOV_EXCL_LINE
   }
   EVP_EncryptInit(cipher, c, key, iv);
   return (aes_cnt_cipher_t *) cipher;
@@ -402,4 +402,3 @@ aes_set_iv(aes_cnt_cipher_t *cipher, const uint8_t *iv)
 }
 
 #endif
-
