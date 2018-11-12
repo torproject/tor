@@ -2,6 +2,7 @@
 authors = ["The Tor Project"]
 version = "0.0.1"
 name = "external"
+build = "../build.rs"
 
 [dependencies]
 libc = "=0.2.39"
