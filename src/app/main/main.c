@@ -85,6 +85,7 @@
 #include "lib/evloop/timers.h"
 #include "lib/crypt_ops/crypto_init.h"
 #include "lib/version/torversion.h"
+#include "lib/process/process.h"
 
 #include <event2/event.h>
 
@@ -542,6 +543,10 @@ tor_init(int argc, char *argv[])
   rend_cache_init();
   addressmap_init(); /* Init the client dns cache. Do it always, since it's
                       * cheap. */
+
+  /* Initialize process subsystem. */
+  process_init();
+
   /* Initialize the HS subsystem. */
   hs_init();
 
@@ -769,6 +774,7 @@ tor_free_all(int postfork)
   circuitmux_ewma_free_all();
   accounting_free_all();
   protover_summary_cache_free_all();
+  process_free_all();
 
   if (!postfork) {
     config_free_all();
