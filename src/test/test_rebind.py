@@ -30,6 +30,7 @@ def wait_for_log(s):
         l = tor_process.stdout.readline()
         l = l.decode('utf8')
         if s in l:
+            logging.info('Tor logged: "{}"'.format(l.strip()))
             return
         logging.info('Tor logged: "{}", waiting for "{}"'.format(l.strip(), s))
         # readline() returns a blank string when there is no output
