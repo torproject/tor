@@ -93,6 +93,7 @@ child(const tor_main_configuration_t *cfg)
   int rv = execv(BINDIR "/tor", args);
 
   if (rv < 0) {
+    free(args);
     exit(254);
   } else {
     abort(); /* Unreachable */
