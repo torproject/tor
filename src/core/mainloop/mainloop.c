@@ -1366,6 +1366,7 @@ CALLBACK(save_stability);
 CALLBACK(save_state);
 CALLBACK(write_bridge_ns);
 CALLBACK(write_stats_file);
+CALLBACK(control_per_second_events);
 
 #undef CALLBACK
 
@@ -1439,6 +1440,9 @@ STATIC periodic_event_item_t periodic_events[] = {
   /* Directory server only. */
   CALLBACK(clean_consdiffmgr, DIRSERVER, 0),
 
+  /* Controller with per-second events only. */
+  CALLBACK(control_per_second_events, CONTROLEV, 0),
+
   END_OF_PERIODIC_EVENTS
 };
 #undef CALLBACK
@@ -1498,6 +1502,8 @@ get_my_roles(const or_options_t *options)
   int is_hidden_service = !!hs_service_get_num_services() ||
                           !!rend_num_services();
   int is_dirserver = dir_server_mode(options);
+  int sending_control_events = control_any_per_second_event_enabled();
+
   /* We also consider tor to have the role of a client if the ControlPort is
    * set because a lot of things can be done over the control port which
    * requires tor to have basic functionnalities. */
@@ -1516,6 +1522,7 @@ get_my_roles(const or_options_t *options)
   if (is_hidden_service) roles |= PERIODIC_EVENT_ROLE_HS_SERVICE;
   if (is_dirserver) roles |= PERIODIC_EVENT_ROLE_DIRSERVER;
   if (is_net_participant) roles |= PERIODIC_EVENT_ROLE_NET_PARTICIPANT;
+  if (sending_control_events) roles |= PERIODIC_EVENT_ROLE_CONTROLEV;
 
   return roles;
 }
@@ -2524,6 +2531,21 @@ hs_service_callback(time_t now, const or_options_t *options)
   return 1;
 }
 
+/*
+ * Periodic callback: Send once-per-second events to the controller(s).
+ * This is called every second.
+ */
+static int
+control_per_second_events_callback(time_t now, const or_options_t *options)
+{
+  (void) options;
+  (void) now;
+
+  control_per_second_events();
+
+  return 1;
+}
+
 /** Timer: used to invoke second_elapsed_callback() once per second. */
 static periodic_timer_t *second_timer = NULL;
 
@@ -2546,8 +2568,7 @@ reschedule_per_second_timer(void)
     tor_assert(second_timer);
   }
 
-  const bool run_per_second_events =
-    control_any_per_second_event_enabled() || ! net_is_completely_disabled();
+  const bool run_per_second_events = ! net_is_completely_disabled();
 
   if (run_per_second_events) {
     periodic_timer_launch(second_timer, &one_second);
@@ -2639,10 +2660,6 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
    * to disable this callback, and the time will still get updated.
    */
   update_current_time(now);
-
-  // TODO XXXX Turn this into a separate event.
-  /* Maybe some controller events are ready to fire */
-  control_per_second_events();
 
   run_scheduled_events(now);
 }
