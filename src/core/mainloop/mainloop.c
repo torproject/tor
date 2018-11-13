@@ -2674,6 +2674,11 @@ update_current_time(time_t now)
   if (seconds_elapsed < -NUM_JUMPED_SECONDS_BEFORE_WARN) {
     // moving back in time is always a bad sign.
     circuit_note_clock_jumped(seconds_elapsed, false);
+
+    /* Don't go dormant just because we jumped in time. */
+    if (is_participating_on_network()) {
+      reset_user_activity(now);
+    }
   } else if (seconds_elapsed >= NUM_JUMPED_SECONDS_BEFORE_WARN) {
     /* Compare the monotonic clock to the result of time(). */
     const int32_t monotime_msec_passed =
@@ -2694,6 +2699,11 @@ update_current_time(time_t now)
 
     if (clock_jumped || seconds_elapsed >= NUM_IDLE_SECONDS_BEFORE_WARN) {
       circuit_note_clock_jumped(seconds_elapsed, ! clock_jumped);
+    }
+
+    /* Don't go dormant just because we jumped in time. */
+    if (is_participating_on_network()) {
+      reset_user_activity(now);
     }
   } else if (seconds_elapsed > 0) {
     stats_n_seconds_working += seconds_elapsed;
