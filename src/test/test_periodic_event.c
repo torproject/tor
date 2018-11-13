@@ -51,6 +51,8 @@ test_pe_initialize(void *arg)
    * need to run the main loop and then wait for a second delaying the unit
    * tests. Instead, we'll test the callback work indepedently elsewhere. */
   initialize_periodic_events();
+  set_network_participation(false);
+  rescan_periodic_events(get_options());
 
   /* Validate that all events have been set up. */
   for (int i = 0; periodic_events[i].name; ++i) {
@@ -82,6 +84,8 @@ test_pe_launch(void *arg)
    * network gets enabled. */
   consider_hibernation(time(NULL));
 
+  set_network_participation(true);
+
   /* Hack: We'll set a dumb fn() of each events so they don't get called when
    * dispatching them. We just want to test the state of the callbacks, not
    * the whole code path. */
@@ -93,6 +97,7 @@ test_pe_launch(void *arg)
   options = get_options_mutable();
   options->SocksPort_set = 1;
   periodic_events_on_new_options(options);
+
 #if 0
   /* Lets make sure that before intialization, we can't scan the periodic
    * events list and launch them. Lets try by being a Client. */
@@ -148,6 +153,7 @@ test_pe_launch(void *arg)
   options->SocksPort_set = 0;
   options->ORPort_set = 0;
   options->DisableNetwork = 1;
+  set_network_participation(false);
   periodic_events_on_new_options(options);
 
   for (int i = 0; periodic_events[i].name; ++i) {
@@ -162,6 +168,7 @@ test_pe_launch(void *arg)
   options->BridgeRelay = 1; options->AuthoritativeDir = 1;
   options->V3AuthoritativeDir = 1; options->BridgeAuthoritativeDir = 1;
   options->DisableNetwork = 0;
+  set_network_participation(true);
   register_dummy_hidden_service(&service);
   periodic_events_on_new_options(options);
   /* Note down the reference because we need to remove this service from the
@@ -195,8 +202,10 @@ test_pe_get_roles(void *arg)
 
   or_options_t *options = get_options_mutable();
   tt_assert(options);
+  set_network_participation(true);
 
-  const int ALL = PERIODIC_EVENT_ROLE_ALL;
+  const int ALL = PERIODIC_EVENT_ROLE_ALL |
+    PERIODIC_EVENT_ROLE_NET_PARTICIPANT;
 
   /* Nothing configured, should be no roles. */
   tt_assert(net_is_disabled());

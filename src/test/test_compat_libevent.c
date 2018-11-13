@@ -187,4 +187,3 @@ struct testcase_t compat_libevent_tests[] = {
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-
