@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - Initialize a variable in aes_new_cipher(), since some compilers
+      cannot tell that we always initialize it before use. Fixes bug 28413;
+      bugfix on 0.2.9.3-alpha.
