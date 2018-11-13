@@ -1376,9 +1376,11 @@ CALLBACK(second_elapsed);
 #define FL(name) (PERIODIC_EVENT_FLAG_ ## name)
 
 STATIC periodic_event_item_t periodic_events[] = {
-  /* Everyone needs to run those. */
+  /* Everyone needs to run these. They need to have very long timeouts for
+   * that to be safe. */
   CALLBACK(add_entropy, ALL, 0),
   CALLBACK(heartbeat, ALL, 0),
+  CALLBACK(reset_padding_counts, ALL, 0),
 
   /* This is a legacy catch-all callback that runs once per second if
    * we are online and active. */
@@ -1402,9 +1404,6 @@ STATIC periodic_event_item_t periodic_events[] = {
 
   /* XXXX investigate this. ??? */
   CALLBACK(write_stats_file, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
-
-  /* XXXX investigate this. ???? */
-  CALLBACK(reset_padding_counts, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
 
   /* Routers (bridge and relay) only. */
   CALLBACK(check_descriptor, ROUTER, FL(NEED_NET)),
