@@ -86,6 +86,8 @@ void reschedule_per_second_timer(void);
 void do_signewnym(time_t);
 time_t get_last_signewnym_time(void);
 
+void mainloop_schedule_shutdown(int delay_sec);
+
 void tor_init_connection_lists(void);
 void initialize_mainloop_events(void);
 void tor_mainloop_free_all(void);
