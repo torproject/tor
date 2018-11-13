@@ -4429,6 +4429,16 @@ connection_get_by_type_state(int type, int state)
   CONN_GET_TEMPLATE(conn, conn->type == type && conn->state == state);
 }
 
+/**
+ * Return a connection of type <b>type</b> that is not an internally linked
+ * connection, and is not marked for close.
+ **/
+connection_t *
+connection_get_by_type_nonlinked(int type)
+{
+  CONN_GET_TEMPLATE(conn, conn->type == type && !conn->linked);
+}
+
 /** Return a connection of type <b>type</b> that has rendquery equal
  * to <b>rendquery</b>, and that is not marked for close. If state
  * is non-zero, conn must be of that state too.

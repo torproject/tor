@@ -1372,6 +1372,7 @@ CALLBACK(write_bridge_ns);
 CALLBACK(write_stats_file);
 CALLBACK(control_per_second_events);
 CALLBACK(second_elapsed);
+CALLBACK(check_network_participation);
 
 #undef CALLBACK
 
@@ -1401,6 +1402,7 @@ STATIC periodic_event_item_t periodic_events[] = {
   CALLBACK(fetch_networkstatus, NET_PARTICIPANT, 0),
   CALLBACK(launch_descriptor_fetches, NET_PARTICIPANT, FL(NEED_NET)),
   CALLBACK(rotate_x509_certificate, NET_PARTICIPANT, 0),
+  CALLBACK(check_network_participation, NET_PARTICIPANT, 0),
 
   /* We need to do these if we're participating in the Tor network, and
    * immediately before we stop. */
@@ -2001,6 +2003,55 @@ add_entropy_callback(time_t now, const or_options_t *options)
   /** How often do we add more entropy to OpenSSL's RNG pool? */
 #define ENTROPY_INTERVAL (60*60)
   return ENTROPY_INTERVAL;
+}
+
+/** Periodic callback: if there has been no network usage in a while,
+ * enter a dormant state. */
+static int
+check_network_participation_callback(time_t now, const or_options_t *options)
+{
+  /* If we're a server, we can't become dormant. */
+  if (server_mode(options)) {
+    note_user_activity(now);
+    goto end;
+  }
+
+  /* If we're running an onion service, we can't become dormant. */
+  /* XXXX this would be nice to change, so that we can be dormant with a
+   * service. */
+  if (hs_service_get_num_services() || rend_num_services()) {
+    note_user_activity(now);
+    goto end;
+  }
+
+  /* XXXX Add an option to never become dormant. */
+
+  /* If we have any currently open entry streams other than "linked"
+   * connections used for directory requests, those count as user activity.
+   */
+  /* XXXX make this configurable? */
+  if (connection_get_by_type_nonlinked(CONN_TYPE_AP) != NULL) {
+    note_user_activity(now);
+    goto end;
+  }
+
+  /** Become dormant if there has been no user activity in this long. */
+  /* XXXX make this configurable! */
+#define BECOME_DORMANT_AFTER_INACTIVITY (24*60*60)
+  if (get_last_user_activity_time() + BECOME_DORMANT_AFTER_INACTIVITY >= now) {
+    log_notice(LD_GENERAL, "No user activity in a long time: becoming"
+               " dormant.");
+    set_network_participation(false);
+    rescan_periodic_events(options);
+    goto end;
+  }
+
+/* XXXX Make this configurable? */
+/** How often do we check whether we have had network activity? */
+#define CHECK_PARTICIPATION_INTERVAL (5*60)
+
+ end:
+  return CHECK_PARTICIPATION_INTERVAL;
 }
 
 /**
