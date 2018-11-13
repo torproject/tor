@@ -57,7 +57,8 @@ def pick_random_port():
     return port
 
 logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(message)s')
+                    format='%(asctime)s.%(msecs)03d %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 if sys.hexversion < 0x02070000:
     fail("ERROR: unsupported Python version (should be >= 2.7)")
