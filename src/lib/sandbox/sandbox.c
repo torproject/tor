@@ -1798,9 +1798,4 @@ sandbox_is_active(void)
   return 0;
 }
 
-void
-sandbox_disable_getaddrinfo_cache(void)
-{
-}
-
 #endif /* !defined(USE_LIBSECCOMP) */
