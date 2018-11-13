@@ -1993,9 +1993,6 @@ options_act(const or_options_t *old_options)
     finish_daemon(options->DataDirectory);
   }
 
-  /* See whether we need to enable/disable our once-a-second timer. */
-  reschedule_per_second_timer();
-
   /* We want to reinit keys as needed before we do much of anything else:
      keys are important, and other things can depend on them. */
   if (transition_affects_workers ||

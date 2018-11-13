@@ -1248,8 +1248,6 @@ on_hibernate_state_change(hibernate_state_t prev_state)
   if (prev_state != HIBERNATE_STATE_INITIAL) {
     rescan_periodic_events(get_options());
   }
-
-  reschedule_per_second_timer();
 }
 
 /** Free all resources held by the accounting module */
