@@ -45,7 +45,7 @@ STATIC digestmap_t *rend_cache_v2_dir = NULL;
  * looked up in this cache and if present, it is discarded from the fetched
  * descriptor. At the end, all IP(s) in the cache, for a specific service
  * ID, that were NOT present in the descriptor are removed from this cache.
- * Which means that if at least one IP was not in this cache, thus usuable,
+ * Which means that if at least one IP was not in this cache, thus usable,
  * it's considered a new descriptor so we keep it. Else, if all IPs were in
  * this cache, we discard the descriptor as it's considered unusable.
  *
