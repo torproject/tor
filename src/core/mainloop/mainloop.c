@@ -1401,8 +1401,6 @@ STATIC periodic_event_item_t periodic_events[] = {
    * immediately before we stop. */
   CALLBACK(clean_caches, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
   CALLBACK(save_state, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
-
-  /* XXXX investigate this. ??? */
   CALLBACK(write_stats_file, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
 
   /* Routers (bridge and relay) only. */
