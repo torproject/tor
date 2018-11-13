@@ -1727,12 +1727,21 @@ safe_timer_diff(time_t now, time_t next)
 }
 
 /** Perform regular maintenance tasks.  This function gets run once per
- * second by second_elapsed_callback().
+ * second.
  */
 static void
-run_scheduled_events(time_t now)
+second_elapsed_callback(periodic_timer_t *timer, void *arg)
 {
+  (void) timer;
+  (void) arg;
+  const time_t now = time(NULL);
   const or_options_t *options = get_options();
+
+  /* We don't need to do this once-per-second any more: time-updating is
+   * only in this callback _because it is a callback_. It should be fine
+   * to disable this callback, and the time will still get updated.
+   */
+  update_current_time(now);
 
   /* 0. See if we've been asked to shut down and our timeout has
    * expired; or if our bandwidth limits are exhausted and we
@@ -2640,28 +2649,6 @@ update_current_time(time_t now)
 
   update_approx_time(now);
   current_second = now;
-}
-
-/** Libevent callback: invoked once every second. */
-static void
-second_elapsed_callback(periodic_timer_t *timer, void *arg)
-{
-  /* XXXX This could be sensibly refactored into multiple callbacks, and we
-   * could use Libevent's timers for this rather than checking the current
-   * time against a bunch of timeouts every second. */
-  time_t now;
-  (void)timer;
-  (void)arg;
-
-  now = time(NULL);
-
-  /* We don't need to do this once-per-second any more: time-updating is
-   * only in this callback _because it is a callback_. It should be fine
-   * to disable this callback, and the time will still get updated.
-   */
-  update_current_time(now);
-
-  run_scheduled_events(now);
 }
 
 #ifdef HAVE_SYSTEMD_209
