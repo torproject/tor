@@ -222,6 +222,7 @@ static int filter_nopar_gen[] = {
 #ifdef __NR_setrlimit
     SCMP_SYS(setrlimit),
 #endif
+    SCMP_SYS(shutdown),
 #ifdef __NR_sigaltstack
     SCMP_SYS(sigaltstack),
 #endif
@@ -1803,4 +1804,5 @@ void
 sandbox_disable_getaddrinfo_cache(void)
 {
 }
+
 #endif /* !defined(USE_LIBSECCOMP) */
