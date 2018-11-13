@@ -205,7 +205,6 @@ static void connection_start_reading_from_linked_conn(connection_t *conn);
 static int connection_should_read_from_linked_conn(connection_t *conn);
 static void conn_read_callback(evutil_socket_t fd, short event, void *_conn);
 static void conn_write_callback(evutil_socket_t fd, short event, void *_conn);
-static void second_elapsed_callback(periodic_timer_t *timer, void *args);
 static void shutdown_did_not_work_callback(evutil_socket_t fd, short event,
                                            void *arg) ATTR_NORETURN;
 
@@ -1367,6 +1366,7 @@ CALLBACK(save_state);
 CALLBACK(write_bridge_ns);
 CALLBACK(write_stats_file);
 CALLBACK(control_per_second_events);
+CALLBACK(second_elapsed);
 
 #undef CALLBACK
 
@@ -1379,6 +1379,11 @@ STATIC periodic_event_item_t periodic_events[] = {
   /* Everyone needs to run those. */
   CALLBACK(add_entropy, ALL, 0),
   CALLBACK(heartbeat, ALL, 0),
+
+  /* This is a legacy catch-all callback that runs once per second if
+   * we are online and active. */
+  CALLBACK(second_elapsed, NET_PARTICIPANT,
+           FL(NEED_NET)|FL(FLUSH_ON_DISABLE)),
 
   /* XXXX Do we have a reason to do this on a callback? Does it do any good at
    * all?  For now, if we're dormant, we can let our listeners decay. */
@@ -1753,43 +1758,30 @@ safe_timer_diff(time_t now, time_t next)
 /** Perform regular maintenance tasks.  This function gets run once per
  * second.
  */
-static void
-second_elapsed_callback(periodic_timer_t *timer, void *arg)
+static int
+second_elapsed_callback(time_t now, const or_options_t *options)
 {
-  (void) timer;
-  (void) arg;
-  const time_t now = time(NULL);
-  const or_options_t *options = get_options();
-
-  /* We don't need to do this once-per-second any more: time-updating is
-   * only in this callback _because it is a callback_. It should be fine
-   * to disable this callback, and the time will still get updated.
-   */
-  update_current_time(now);
-
-  /* 0. See if our bandwidth limits are exhausted and we should hibernate; or
-   * if it's time to wake up from hibernation; or if we have a scheduled
-   * shutdown and it's time to run it.
+  /* 0. See if our bandwidth limits are exhausted and we should hibernate
    *
-   * Note: we have redundant mechanisms to handle the
+   * Note: we have redundant mechanisms to handle the case where it's
+   * time to wake up from hibernation; or where we have a scheduled
+   * shutdown and it's time to run it, but this will also handle those.
    */
-  // TODO: NET_PARTICIPANT.
   consider_hibernation(now);
 
   /* Maybe enough time elapsed for us to reconsider a circuit. */
-  // TODO: NET_PARTICIPANT
   circuit_upgrade_circuits_from_guard_wait();
 
   if (options->UseBridges && !net_is_disabled()) {
     /* Note: this check uses net_is_disabled(), not should_delay_dir_fetches()
      * -- the latter is only for fetching consensus-derived directory info. */
-    // TODO: client+NET_PARTICIPANT.
+    // TODO: client
     //     Also, schedule this rather than probing 1x / sec
     fetch_bridge_descriptors(options, now);
   }
 
   if (accounting_is_enabled(options)) {
-    // TODO: refactor or rewrite; NET_PARTICIPANT
+    // TODO: refactor or rewrite?
     accounting_run_housekeeping(now);
   }
 
@@ -1809,12 +1801,10 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
    *     Do this before step 4, so we can put them back into pending
    *     state to be picked up by the new circuit.
    */
-  // TODO: All expire stuff can become NET_PARTICIPANT, FLUSH_ON_DISABLE
   connection_ap_expire_beginning();
 
   /* 3c. And expire connections that we've held open for too long.
    */
-  // TODO: All expire stuff can become NET_PARTICIPANT, FLUSH_ON_DISABLE
   connection_expire_held_open();
 
   /* 4. Every second, we try a new circuit if there are no valid
@@ -1824,26 +1814,24 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
    */
   const int have_dir_info = router_have_minimum_dir_info();
   if (have_dir_info && !net_is_disabled()) {
-    // TODO: NET_PARTICIPANT.
     circuit_build_needed_circs(now);
   } else {
-    // TODO: NET_PARTICIPANT, FLUSH_ON_DISABLE
     circuit_expire_old_circs_as_needed(now);
   }
 
   /* 5. We do housekeeping for each connection... */
-  // TODO: NET_PARTICIPANT
   channel_update_bad_for_new_circs(NULL, 0);
   int i;
   for (i=0;i<smartlist_len(connection_array);i++) {
-    // TODO: NET_PARTICIPANT, FLUSH_ON_DISABLE
     run_connection_housekeeping(i, now);
   }
 
   /* 11b. check pending unconfigured managed proxies */
-  // NET_PARTICIPANT.
   if (!net_is_disabled() && pt_proxies_configuration_pending())
     pt_configure_remaining_proxies();
+
+  /* Run again in a second. */
+  return 1;
 }
 
 /* Periodic callback: rotate the onion keys after the period defined by the
@@ -2580,37 +2568,6 @@ control_per_second_events_callback(time_t now, const or_options_t *options)
   return 1;
 }
 
-/** Timer: used to invoke second_elapsed_callback() once per second. */
-static periodic_timer_t *second_timer = NULL;
-
-/**
- * Enable or disable the per-second timer as appropriate, creating it if
- * necessary.
- */
-void
-reschedule_per_second_timer(void)
-{
-  struct timeval one_second;
-  one_second.tv_sec = 1;
-  one_second.tv_usec = 0;
-
-  if (! second_timer) {
-    second_timer = periodic_timer_new(tor_libevent_get_base(),
-                                      &one_second,
-                                      second_elapsed_callback,
-                                      NULL);
-    tor_assert(second_timer);
-  }
-
-  const bool run_per_second_events = ! net_is_completely_disabled();
-
-  if (run_per_second_events) {
-    periodic_timer_launch(second_timer, &one_second);
-  } else {
-    periodic_timer_disable(second_timer);
-  }
-}
-
 /** Last time that update_current_time was called. */
 static time_t current_second = 0;
 /** Last time that update_current_time updated current_second. */
@@ -2765,9 +2722,6 @@ do_main_loop(void)
    */
   initialize_periodic_events();
   initialize_mainloop_events();
-
-  /* set up once-a-second callback. */
-  reschedule_per_second_timer();
 
 #ifdef HAVE_SYSTEMD_209
   uint64_t watchdog_delay;
@@ -2953,7 +2907,6 @@ tor_mainloop_free_all(void)
   smartlist_free(connection_array);
   smartlist_free(closeable_connection_lst);
   smartlist_free(active_linked_connection_lst);
-  periodic_timer_free(second_timer);
   teardown_periodic_events();
   tor_event_free(shutdown_did_not_work_event);
   tor_event_free(initialize_periodic_events_event);
