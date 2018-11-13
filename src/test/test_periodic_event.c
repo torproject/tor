@@ -172,7 +172,8 @@ test_pe_launch(void *arg)
 
   for (int i = 0; periodic_events[i].name; ++i) {
     periodic_event_item_t *item = &periodic_events[i];
-    tt_int_op(periodic_event_is_enabled(item), OP_EQ, 1);
+    tt_int_op(periodic_event_is_enabled(item), OP_EQ,
+              (item->roles != PERIODIC_EVENT_ROLE_CONTROLEV));
   }
 
  done:
