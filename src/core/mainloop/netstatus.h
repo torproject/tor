@@ -10,4 +10,11 @@
 int net_is_disabled(void);
 int net_is_completely_disabled(void);
 
+void note_user_activity(time_t now);
+void reset_user_activity(time_t now);
+time_t get_last_user_activity_time(void);
+
+void set_network_participation(bool participation);
+bool is_participating_on_network(void);
+
 #endif

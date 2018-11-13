@@ -1681,6 +1681,8 @@ static const struct signal_t signal_table[] = {
   { SIGNEWNYM, "NEWNYM" },
   { SIGCLEARDNSCACHE, "CLEARDNSCACHE"},
   { SIGHEARTBEAT, "HEARTBEAT"},
+  { SIGACTIVE, "ACTIVE" },
+  { SIGDORMANT, "DORMANT" },
   { 0, NULL },
 };
 

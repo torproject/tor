@@ -1513,8 +1513,7 @@ get_my_roles(const or_options_t *options)
                   options->ControlPort_set ||
                   options->OwningControllerFD != UINT64_MAX;
 
-  /* We actually want a better definition here for our work on dormancy. */
-  int is_net_participant = ! net_is_disabled();
+  int is_net_participant = is_participating_on_network();
 
   if (is_bridge) roles |= PERIODIC_EVENT_ROLE_BRIDGE;
   if (is_client) roles |= PERIODIC_EVENT_ROLE_CLIENT;
@@ -1590,6 +1589,30 @@ teardown_periodic_events(void)
     periodic_event_destroy(&periodic_events[i]);
   }
   periodic_events_initialized = 0;
+}
+
+static mainloop_event_t *rescan_periodic_events_ev = NULL;
+
+/** Callback: rescan the periodic event list. */
+static void
+rescan_periodic_events_cb(mainloop_event_t *event, void *arg)
+{
+  (void)event;
+  (void)arg;
+  rescan_periodic_events(get_options());
+}
+
+/**
+ * Schedule an event that will rescan which periodic events should run.
+ **/
+void
+schedule_rescan_periodic_events(void)
+{
+  if (!rescan_periodic_events_ev) {
+    rescan_periodic_events_ev =
+      mainloop_event_new(rescan_periodic_events_cb, NULL);
+  }
+  mainloop_event_activate(rescan_periodic_events_ev);
 }
 
 /** Do a pass at all our periodic events, disable those we don't need anymore
@@ -2714,6 +2737,12 @@ initialize_mainloop_events(void)
 int
 do_main_loop(void)
 {
+  /* For now, starting Tor always counts as user activity. Later, we might
+   * have an option to control this.
+   */
+  reset_user_activity(approx_time());
+  set_network_participation(true);
+
   /* initialize the periodic events first, so that code that depends on the
    * events being present does not assert.
    */
@@ -2912,6 +2941,7 @@ tor_mainloop_free_all(void)
   mainloop_event_free(postloop_cleanup_ev);
   mainloop_event_free(handle_deferred_signewnym_ev);
   mainloop_event_free(scheduled_shutdown_ev);
+  mainloop_event_free(rescan_periodic_events_ev);
 
 #ifdef HAVE_SYSTEMD_209
   periodic_timer_free(systemd_watchdog_timer);
