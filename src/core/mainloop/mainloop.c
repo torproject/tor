@@ -1703,6 +1703,30 @@ mainloop_schedule_postloop_cleanup(void)
   mainloop_event_activate(postloop_cleanup_ev);
 }
 
+/** Event to run 'scheduled_shutdown_cb' */
+static mainloop_event_t *scheduled_shutdown_ev=NULL;
+
+/** Callback: run a scheduled shutdown */
+static void
+scheduled_shutdown_cb(mainloop_event_t *ev, void *arg)
+{
+  (void)ev;
+  (void)arg;
+  log_notice(LD_GENERAL, "Clean shutdown finished. Exiting.");
+  tor_shutdown_event_loop_and_exit(0);
+}
+
+/** Schedule the mainloop to exit after <b>delay_sec</b> seconds. */
+void
+mainloop_schedule_shutdown(int delay_sec)
+{
+  const struct timeval delay_tv = { delay_sec, 0 };
+  if (! scheduled_shutdown_ev) {
+    scheduled_shutdown_ev = mainloop_event_new(scheduled_shutdown_cb, NULL);
+  }
+  mainloop_event_schedule(scheduled_shutdown_ev, &delay_tv);
+}
+
 #define LONGEST_TIMER_PERIOD (30 * 86400)
 /** Helper: Return the number of seconds between <b>now</b> and <b>next</b>,
  * clipped to the range [1 second, LONGEST_TIMER_PERIOD]. */
@@ -1743,12 +1767,13 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
    */
   update_current_time(now);
 
-  /* 0. See if we've been asked to shut down and our timeout has
-   * expired; or if our bandwidth limits are exhausted and we
-   * should hibernate; or if it's time to wake up from hibernation.
+  /* 0. See if our bandwidth limits are exhausted and we should hibernate; or
+   * if it's time to wake up from hibernation; or if we have a scheduled
+   * shutdown and it's time to run it.
+   *
+   * Note: we have redundant mechanisms to handle the
    */
-  // TODO: Refactor or rewrite, or NET_PARTICIPANT. Needs separate wakeup
-  //       handling.
+  // TODO: NET_PARTICIPANT.
   consider_hibernation(now);
 
   /* Maybe enough time elapsed for us to reconsider a circuit. */
@@ -2936,6 +2961,7 @@ tor_mainloop_free_all(void)
   mainloop_event_free(schedule_active_linked_connections_event);
   mainloop_event_free(postloop_cleanup_ev);
   mainloop_event_free(handle_deferred_signewnym_ev);
+  mainloop_event_free(scheduled_shutdown_ev);
 
 #ifdef HAVE_SYSTEMD_209
   periodic_timer_free(systemd_watchdog_timer);
