@@ -1469,7 +1469,9 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
       tor_free_all(0);
       return -1;
     }
+#ifdef USE_SANDBOX_GETADDRINFO
     tor_make_getaddrinfo_cache_active();
+#endif
 
     // registering libevent rng
 #ifdef HAVE_EVUTIL_SECURE_RNG_SET_URANDOM_DEVICE_FILE
