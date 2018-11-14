@@ -13,7 +13,7 @@ lib/intmath/*.h
 lib/sandbox/*.h
 lib/string/*.h
 lib/subsys/*.h
-lib/testsupport/testsupport.h
+lib/testsupport/*.h
 lib/thread/*.h
 lib/log/*.h
 
@@ -22,4 +22,4 @@ trunnel/pwbox.h
 keccak-tiny/*.h
 ed25519/*.h
 
-siphash.h
+ext/siphash.h

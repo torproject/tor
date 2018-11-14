@@ -95,7 +95,7 @@
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/err/backtrace.h"
 #include "lib/tls/buffers_tls.h"
