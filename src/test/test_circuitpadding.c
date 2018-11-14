@@ -1,5 +1,7 @@
 #define TOR_CHANNEL_INTERNAL_
 #define TOR_TIMERS_PRIVATE
+#define CIRCUITPADDING_PRIVATE
+
 #include "core/or/or.h"
 #include "test.h"
 #include "lib/testsupport/testsupport.h"
@@ -1012,6 +1014,110 @@ test_circuitpadding_circuitsetup_machine(void *arg)
   return;
 }
 
+/** Initializes a padding machine where every state uses a different
+ *  probability distribution.  */
+static void
+circpad_circ_distribution_machine_setup(double min, double max)
+{
+  circpad_machine_states_init(&circ_client_machine, 6);
+
+  circpad_state_t *zero_st = &circ_client_machine.states[0];
+  zero_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 1;
+  zero_st->iat_dist.type = CIRCPAD_DIST_UNIFORM;
+  zero_st->iat_dist.param1 = min;
+  zero_st->iat_dist.param2 = max;
+  zero_st->range_usec = 500; /* max delay */
+
+  circpad_state_t *first_st = &circ_client_machine.states[1];
+  first_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 2;
+  first_st->iat_dist.type = CIRCPAD_DIST_LOGISTIC;
+  first_st->iat_dist.param1 = min;
+  first_st->iat_dist.param2 = max;
+  first_st->range_usec = 500; /* max delay */
+
+  circpad_state_t *second_st = &circ_client_machine.states[2];
+  second_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 3;
+  second_st->iat_dist.type = CIRCPAD_DIST_LOG_LOGISTIC;
+  second_st->iat_dist.param1 = min;
+  second_st->iat_dist.param2 = max;
+  second_st->range_usec = 500; /* max delay */
+
+  circpad_state_t *third_st = &circ_client_machine.states[3];
+  third_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 4;
+  third_st->iat_dist.type = CIRCPAD_DIST_GEOMETRIC;
+  third_st->iat_dist.param1 = min;
+  third_st->iat_dist.param2 = max;
+  third_st->range_usec = 500; /* max delay */
+
+  circpad_state_t *fourth_st = &circ_client_machine.states[4];
+  fourth_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 5;
+  fourth_st->iat_dist.type = CIRCPAD_DIST_WEIBULL;
+  fourth_st->iat_dist.param1 = min;
+  fourth_st->iat_dist.param2 = max;
+  fourth_st->range_usec = 500; /* max delay */
+
+  circpad_state_t *fifth_st = &circ_client_machine.states[5];
+  fifth_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 6;
+  fifth_st->iat_dist.type = CIRCPAD_DIST_PARETO;
+  fifth_st->iat_dist.param1 = min;
+  fifth_st->iat_dist.param2 = max;
+  fifth_st->range_usec = 500; /* max delay */
+}
+
+static circpad_decision_t
+circpad_machine_schedule_padding_mock(circpad_machineinfo_t *mi)
+{
+  (void)mi;
+  return 0;
+}
+
+static void
+test_circuitpadding_sample_distribution(void *arg)
+{
+  circpad_machineinfo_t *mi;
+  int n_samples;
+  int n_states;
+
+  (void) arg;
+
+  /* mock this function so that we dont actually schedule any padding */
+  MOCK(circpad_machine_schedule_padding,
+       circpad_machine_schedule_padding_mock);
+
+  /* Initialize a machine with multiple probability distributions that should
+   * return values between 0 and 5 */
+  circpad_machines_init();
+  circpad_circ_distribution_machine_setup(0, 5);
+
+  /* Initialize machine and circuits */
+  client_side = TO_CIRCUIT(origin_circuit_new());
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  client_side->padding_machine[0] = &circ_client_machine;
+  client_side->padding_info[0] =
+    circpad_circuit_machineinfo_new(client_side, 0);
+  mi = client_side->padding_info[0];
+
+  /* For every state, sample a bunch of values from the distribution and ensure
+   * they fall within range. */
+  for (n_states = 0 ; n_states < 5; n_states++) {
+    /* Make sure we in the right state */
+    tt_int_op(client_side->padding_info[0]->current_state, OP_EQ, n_states);
+
+    for (n_samples = 0; n_samples < 5; n_samples++) {
+      circpad_delay_t delay = circpad_machine_sample_delay(mi);
+      tt_int_op(delay, OP_GE, 0);
+      tt_int_op(delay, OP_LE, 5);
+    }
+
+    /* send a non-padding cell to move to the next machine state */
+    circpad_cell_event_nonpadding_received((circuit_t*)client_side);
+  }
+
+ done:
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  UNMOCK(circpad_machine_schedule_padding);
+}
+
 #define TEST_CIRCUITPADDING(name, flags) \
     { #name, test_##name, (flags), NULL, NULL }
 
@@ -1021,6 +1127,7 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_negotiation, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_circuitsetup_machine, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_rtt, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_sample_distribution, TT_FORK),
   END_OF_TESTCASES
 };
 

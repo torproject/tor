@@ -1,6 +1,8 @@
 /* Copyright (c) 2017 The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define CIRCUITPADDING_PRIVATE
+
 #include <math.h>
 #include "lib/math/fp.h"
 #include "core/or/or.h"
@@ -35,7 +37,6 @@
 circpad_decision_t circpad_send_padding_cell_for_callback(
                                  circpad_machineinfo_t *mi);
 circpad_decision_t circpad_machine_remove_token(circpad_machineinfo_t *mi);
-circpad_decision_t circpad_machine_schedule_padding(circpad_machineinfo_t *);
 circpad_decision_t circpad_machine_transition(circpad_machineinfo_t *mi,
                                               circpad_event_t event);
 circpad_machineinfo_t *circpad_circuit_machineinfo_new(circuit_t *on_circ,
@@ -336,7 +337,7 @@ circpad_distribution_sample_iat_delay(const circpad_state_t *state,
  * of tokens in each bin, and then a time value is chosen uniformly from
  * that bin's [start,end) time range.
  */
-static circpad_delay_t
+STATIC circpad_delay_t
 circpad_machine_sample_delay(circpad_machineinfo_t *mi)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
@@ -437,6 +438,9 @@ static double
 circpad_distribution_sample(circpad_distribution_t dist)
 {
   double p = 0;
+
+  log_fn(LOG_DEBUG,LD_CIRC, "Sampling delay with distribution %d",
+         dist.type);
 
   switch (dist.type) {
     case CIRCPAD_DIST_NONE:
@@ -1044,8 +1048,8 @@ circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi)
  * Returns 1 if we decide to transition states (due to infinity bin),
  * 0 otherwise.
  */
-circpad_decision_t
-circpad_machine_schedule_padding(circpad_machineinfo_t *mi)
+MOCK_IMPL(circpad_decision_t,
+circpad_machine_schedule_padding,(circpad_machineinfo_t *mi))
 {
   circpad_delay_t in_usec = 0;
   struct timeval timeout;
