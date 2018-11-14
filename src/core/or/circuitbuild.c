@@ -255,9 +255,8 @@ get_unique_circ_id_by_chan(channel_t *chan)
 /** If <b>verbose</b> is false, allocate and return a comma-separated list of
  * the currently built elements of <b>circ</b>. If <b>verbose</b> is true, also
  * list information about link status in a more verbose format using spaces.
- * If <b>verbose_names</b> is false, give nicknames for Named routers and hex
- * digests for others; if <b>verbose_names</b> is true, use $DIGEST=Name style
- * names.
+ * If <b>verbose_names</b> is false, give hex digests; if <b>verbose_names</b>
+ * is true, use $DIGEST=Name style names.
  */
 static char *
 circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)

@@ -1941,7 +1941,7 @@ nodes_in_same_family(const node_t *node1, const node_t *node2)
       return 1;
   }
 
-  /* Are they in the same option because the user says they are? */
+  /* Are they in the same family because the user says they are? */
   if (options->NodeFamilySets) {
     SMARTLIST_FOREACH(options->NodeFamilySets, const routerset_t *, rs, {
         if (routerset_contains_node(rs, node1) &&
