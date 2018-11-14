@@ -1386,7 +1386,7 @@ STATIC periodic_event_item_t periodic_events[] = {
   /* This is a legacy catch-all callback that runs once per second if
    * we are online and active. */
   CALLBACK(second_elapsed, NET_PARTICIPANT,
-           FL(NEED_NET)|FL(FLUSH_ON_DISABLE)),
+           FL(NEED_NET)|FL(RUN_ON_DISABLE)),
 
   /* XXXX Do we have a reason to do this on a callback? Does it do any good at
    * all?  For now, if we're dormant, we can let our listeners decay. */
@@ -1401,9 +1401,9 @@ STATIC periodic_event_item_t periodic_events[] = {
 
   /* We need to do these if we're participating in the Tor network, and
    * immediately before we stop. */
-  CALLBACK(clean_caches, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
-  CALLBACK(save_state, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
-  CALLBACK(write_stats_file, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
+  CALLBACK(clean_caches, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
+  CALLBACK(save_state, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
+  CALLBACK(write_stats_file, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
 
   /* Routers (bridge and relay) only. */
   CALLBACK(check_descriptor, ROUTER, FL(NEED_NET)),
@@ -1436,7 +1436,7 @@ STATIC periodic_event_item_t periodic_events[] = {
 
   /* Client only. */
   /* XXXX this could be restricted to CLIENT+NET_PARTICIPANT */
-  CALLBACK(rend_cache_failure_clean, NET_PARTICIPANT, FL(FLUSH_ON_DISABLE)),
+  CALLBACK(rend_cache_failure_clean, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
 
   /* Bridge Authority only. */
   CALLBACK(write_bridge_ns, BRIDGEAUTH, 0),
@@ -1651,8 +1651,8 @@ rescan_periodic_events(const or_options_t *options)
       periodic_event_enable(item);
     } else {
       log_debug(LD_GENERAL, "Disabling periodic event %s", item->name);
-      if (item->flags & PERIODIC_EVENT_FLAG_FLUSH_ON_DISABLE) {
-        periodic_event_flush_and_disable(item);
+      if (item->flags & PERIODIC_EVENT_FLAG_RUN_ON_DISABLE) {
+        periodic_event_schedule_and_disable(item);
       } else {
         periodic_event_disable(item);
       }
@@ -1814,7 +1814,7 @@ second_elapsed_callback(time_t now, const or_options_t *options)
    */
   /* (If our circuit build timeout can ever become lower than a second (which
    * it can't, currently), we should do this more often.) */
-  // TODO: All expire stuff can become NET_PARTICIPANT, FLUSH_ON_DISABLE
+  // TODO: All expire stuff can become NET_PARTICIPANT, RUN_ON_DISABLE
   circuit_expire_building();
   circuit_expire_waiting_for_better_guard();
 

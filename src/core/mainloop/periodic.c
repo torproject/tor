@@ -174,7 +174,7 @@ periodic_event_disable(periodic_event_item_t *event)
  * Do nothing if the event was already disabled.
  */
 void
-periodic_event_flush_and_disable(periodic_event_item_t *event)
+periodic_event_schedule_and_disable(periodic_event_item_t *event)
 {
   tor_assert(event);
   if (!periodic_event_is_enabled(event))
