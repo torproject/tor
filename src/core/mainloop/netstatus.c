@@ -58,8 +58,11 @@ note_user_activity(time_t now)
 }
 
 /**
- * As note_user_activity, but sets the time without checking whether it is in
- * the past, and without causing any rescan.
+ * Change the time at which "user activitiy" was last seen to <b>now</b>.
+ *
+ * Unlike note_user_actity, this function sets the time without checking
+ * whether it is in the past, and without causing any rescan of periodic events
+ * or change in participation status.
  */
 void
 reset_user_activity(time_t now)
