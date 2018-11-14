@@ -42,8 +42,10 @@ static bool participating_on_network = false;
 
 /**
  * Record the fact that we have seen "user activity" at the time now.  Move
- * "last activity seen" time forwards, but never backwards.  Launch periodic
- * events if we were previously not participating on the network.
+ * "last activity seen" time forwards, but never backwards.
+ *
+ * If we were previously not participating on the network, set our
+ * participation status to true, and launch periodic events as appropriate.
  **/
 void
 note_user_activity(time_t now)
