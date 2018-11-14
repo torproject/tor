@@ -570,4 +570,12 @@ bool circpad_padding_negotiated(circuit_t *circ,
                            int command,
                            int response);
 
+MOCK_DECL(circpad_decision_t,
+circpad_machine_schedule_padding,(circpad_machineinfo_t *));
+
+#ifdef CIRCUITPADDING_PRIVATE
+STATIC circpad_delay_t
+circpad_machine_sample_delay(circpad_machineinfo_t *mi);
+#endif
+
 #endif
