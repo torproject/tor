@@ -1019,8 +1019,7 @@ node_get_by_nickname,(const char *nickname, unsigned flags))
       } SMARTLIST_FOREACH_END(node);
 
       if (any_unwarned) {
-        log_warn(LD_CONFIG, "There are multiple matches for the name %s, "
-                 "but none is listed as Named in the directory consensus. "
+        log_warn(LD_CONFIG, "There are multiple matches for the name %s. "
                  "Choosing one arbitrarily.", nickname);
       }
     } else if (smartlist_len(matches)==1 && warn_if_unnamed) {
