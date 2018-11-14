@@ -2012,16 +2012,14 @@ check_network_participation_callback(time_t now, const or_options_t *options)
 {
   /* If we're a server, we can't become dormant. */
   if (server_mode(options)) {
-    note_user_activity(now);
-    goto end;
+    goto found_activity;
   }
 
   /* If we're running an onion service, we can't become dormant. */
   /* XXXX this would be nice to change, so that we can be dormant with a
    * service. */
   if (hs_service_get_num_services() || rend_num_services()) {
-    note_user_activity(now);
-    goto end;
+    goto found_activity;
   }
 
   /* XXXX Add an option to never become dormant. */
@@ -2031,9 +2029,12 @@ check_network_participation_callback(time_t now, const or_options_t *options)
    */
   /* XXXX make this configurable? */
   if (connection_get_by_type_nonlinked(CONN_TYPE_AP) != NULL) {
-    note_user_activity(now);
-    goto end;
+    goto found_activity;
   }
+
+  /* XXXX Make this configurable? */
+/** How often do we check whether we have had network activity? */
+#define CHECK_PARTICIPATION_INTERVAL (5*60)
 
   /** Become dormant if there has been no user activity in this long. */
   /* XXXX make this configurable! */
@@ -2043,14 +2044,12 @@ check_network_participation_callback(time_t now, const or_options_t *options)
                " dormant.");
     set_network_participation(false);
     rescan_periodic_events(options);
-    goto end;
   }
 
-/* XXXX Make this configurable? */
-/** How often do we check whether we have had network activity? */
-#define CHECK_PARTICIPATION_INTERVAL (5*60)
+  return CHECK_PARTICIPATION_INTERVAL;
 
- end:
+ found_activity:
+  note_user_activity(now);
   return CHECK_PARTICIPATION_INTERVAL;
 }
 
