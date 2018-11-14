@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging):
+    - Stop talking about the Named flag in log messages. Clients have
+      ignored the Named flag since 0.3.2. Fixes bug 28441;
+      bugfix on 0.3.2.1-alpha.
