@@ -1515,7 +1515,8 @@ get_my_roles(const or_options_t *options)
                   options->ControlPort_set ||
                   options->OwningControllerFD != UINT64_MAX;
 
-  int is_net_participant = is_participating_on_network();
+  int is_net_participant = is_participating_on_network() ||
+    is_relay || is_hidden_service;
 
   if (is_bridge) roles |= PERIODIC_EVENT_ROLE_BRIDGE;
   if (is_client) roles |= PERIODIC_EVENT_ROLE_CLIENT;
