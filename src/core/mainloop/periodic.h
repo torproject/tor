@@ -39,10 +39,10 @@
  * the net_is_disabled() check. */
 #define PERIODIC_EVENT_FLAG_NEED_NET  (1U << 0)
 
-/* Indicate that it the event is enabled, it event needs to be run once before
+/* Indicate that if the event is enabled, it needs to be run once before
  * it becomes disabled.
  */
-#define PERIODIC_EVENT_FLAG_FLUSH_ON_DISABLE  (1U << 1)
+#define PERIODIC_EVENT_FLAG_RUN_ON_DISABLE  (1U << 1)
 
 /** Callback function for a periodic event to take action.  The return value
 * influences the next time the function will get called.  Return
