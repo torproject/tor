@@ -80,6 +80,7 @@ tor_run_main(const tor_main_configuration_t *cfg)
 /* circumlocution to avoid getting warned about calling calloc instead of
  * tor_calloc. */
 #define real_calloc calloc
+#define real_free free
 
 static void
 child(const tor_main_configuration_t *cfg)
@@ -93,9 +94,9 @@ child(const tor_main_configuration_t *cfg)
   int rv = execv(BINDIR "/tor", args);
 
   if (rv < 0) {
+    real_free(args);
     exit(254);
   } else {
     abort(); /* Unreachable */
   }
 }
-
