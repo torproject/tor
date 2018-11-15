@@ -249,6 +249,7 @@ main(int c, const char **v)
   int i, i_out;
   int loglevel = LOG_ERR;
   int accel_crypto = 0;
+  int opt_forked = 0;
 
   /* We must initialise logs before we call tor_assert() */
   init_logging(1);
@@ -270,6 +271,7 @@ main(int c, const char **v)
   configure_backtrace_handler(get_version());
 
   for (i_out = i = 1; i < c; ++i) {
+    /* Consume these arguments */
     if (!strcmp(v[i], "--warn")) {
       loglevel = LOG_WARN;
     } else if (!strcmp(v[i], "--notice")) {
@@ -281,6 +283,11 @@ main(int c, const char **v)
     } else if (!strcmp(v[i], "--accel")) {
       accel_crypto = 1;
     } else {
+      /* Pass these arguments, and unknown arguments,
+       * through to tinytest_main() */
+      if (!strcmp(v[i], "--RUNNING-FORKED")) {
+        opt_forked = 1;
+      }
       v[i_out++] = v[i];
     }
   }
@@ -298,9 +305,11 @@ main(int c, const char **v)
 
   options->command = CMD_RUN_UNITTESTS;
 
-  /* TODO: only print this in the main process on Windows,
-   * not any of the forked processes */
-  printf("Unit tests for %s\n", get_library_versions());
+  /* Only print this in the main process on Windows, not any of the
+   * "forked" processes. */
+  if (!opt_forked) {
+    printf("Unit tests for %s\n", get_library_versions());
+  }
 
   if (crypto_global_init(accel_crypto, NULL, NULL)) {
     printf("Can't initialize crypto subsystem; exiting.\n");
