@@ -1,0 +1,5 @@
+  o Minor bugfixes (hidden service v3):
+    - Don't warn so loudly when tor is unable to decode a descriptor. This can
+      now happen as a normal use case if a client gets a descriptor with
+      client authorization but the client is not authorized. Fixes bug 27550;
+      bugfix on 0.3.5.1-alpha.
