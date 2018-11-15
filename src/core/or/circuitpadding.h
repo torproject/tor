@@ -573,9 +573,20 @@ bool circpad_padding_negotiated(circuit_t *circ,
 MOCK_DECL(circpad_decision_t,
 circpad_machine_schedule_padding,(circpad_machineinfo_t *));
 
+MOCK_DECL(circpad_decision_t,
+circpad_machine_transition, (circpad_machineinfo_t *mi,
+                             circpad_event_t event));
+
+circpad_decision_t circpad_send_padding_cell_for_callback(
+                                 circpad_machineinfo_t *mi);
+
 #ifdef CIRCUITPADDING_PRIVATE
 STATIC circpad_delay_t
 circpad_machine_sample_delay(circpad_machineinfo_t *mi);
+
+STATIC bool
+circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi);
+
 #endif
 
 #endif
