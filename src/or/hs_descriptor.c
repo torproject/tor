@@ -1361,7 +1361,7 @@ decrypt_desc_layer,(const hs_descriptor_t *desc,
    * This is a critical check that is making sure the computed MAC matches the
    * one in the descriptor. */
   if (!tor_memeq(our_mac, desc_mac, sizeof(our_mac))) {
-    log_warn(LD_REND, "Encrypted service descriptor MAC check failed");
+    log_info(LD_REND, "Encrypted service descriptor MAC check failed");
     goto err;
   }
 
@@ -1544,7 +1544,6 @@ desc_decrypt_all(const hs_descriptor_t *desc, char **decrypted_out)
                                         superencrypted_len,
                                         &encrypted_blob);
   if (!encrypted_len) {
-    log_warn(LD_REND, "Decrypting encrypted desc failed.");
     goto err;
   }
   tor_assert(encrypted_blob);
@@ -2046,7 +2045,11 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
    * in the descriptor as a blob of bytes. */
   message_len = desc_decrypt_all(desc, &message);
   if (!message_len) {
-    log_warn(LD_REND, "Service descriptor decryption failed.");
+    /* Inform at notice level that the onion address requested can't be
+     * reached without client authorization most likely. */
+    log_notice(LD_REND, "Fail to decrypt descriptor for requested onion "
+                        "address. It is likely requiring client "
+                        "authorization.");
     goto err;
   }
   tor_assert(message);
