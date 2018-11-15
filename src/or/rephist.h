@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2017, The Tor Project, Inc. */
+ * Copyright (c) 2007-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -22,7 +22,7 @@ void rep_hist_make_router_pessimal(const char *id, time_t when);
 void rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when);
 void rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when);
 
-int rep_hist_bandwidth_assess(void);
+MOCK_DECL(int, rep_hist_bandwidth_assess, (void));
 char *rep_hist_get_bandwidth_lines(void);
 void rep_hist_update_state(or_state_t *state);
 int rep_hist_load_state(or_state_t *state, char **err);
@@ -137,4 +137,3 @@ void rep_hist_prep_published_padding_counts(time_t now);
 void rep_hist_padding_count_timers(uint64_t num_timers);
 
 #endif /* !defined(TOR_REPHIST_H) */
-
