@@ -62,6 +62,7 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
+#include "core/mainloop/netstatus.h"
 #include "core/or/channel.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
@@ -297,6 +298,11 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
       }
       return 0;
     case AP_CONN_STATE_OPEN:
+      if (! conn->base_.linked) {
+        note_user_activity(approx_time());
+      }
+
+      /* falls through. */
     case EXIT_CONN_STATE_OPEN:
       if (connection_edge_package_raw_inbuf(conn, package_partial, NULL) < 0) {
         /* (We already sent an end cell if possible) */
@@ -751,6 +757,11 @@ connection_edge_flushed_some(edge_connection_t *conn)
 {
   switch (conn->base_.state) {
     case AP_CONN_STATE_OPEN:
+      if (! conn->base_.linked) {
+        note_user_activity(approx_time());
+      }
+
+      /* falls through. */
     case EXIT_CONN_STATE_OPEN:
       connection_edge_consider_sending_sendme(conn);
       break;

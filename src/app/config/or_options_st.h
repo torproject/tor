@@ -1072,6 +1072,16 @@ struct or_options_t {
 
   /** Autobool: Do we refuse single hop client rendezvous? */
   int DoSRefuseSingleHopClientRendezvous;
+
+  /** Interval: how long without activity does it take for a client
+   * to become dormant?
+   **/
+  int DormantClientTimeout;
+
+  /** Boolean: true if having an idle stream is sufficient to prevent a client
+   * from becoming dormant.
+   **/
+  int DormantTimeoutDisabledByIdleStreams;
 };
 
 #endif

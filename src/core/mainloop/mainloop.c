@@ -2018,24 +2018,25 @@ check_network_participation_callback(time_t now, const or_options_t *options)
     goto found_activity;
   }
 
-  /* XXXX Add an option to never become dormant. */
-
   /* If we have any currently open entry streams other than "linked"
    * connections used for directory requests, those count as user activity.
    */
-  /* XXXX make this configurable? */
-  if (connection_get_by_type_nonlinked(CONN_TYPE_AP) != NULL) {
-    goto found_activity;
+  if (options->DormantTimeoutDisabledByIdleStreams) {
+    if (connection_get_by_type_nonlinked(CONN_TYPE_AP) != NULL) {
+      goto found_activity;
+    }
   }
 
   /* XXXX Make this configurable? */
 /** How often do we check whether we have had network activity? */
 #define CHECK_PARTICIPATION_INTERVAL (5*60)
 
-  /** Become dormant if there has been no user activity in this long. */
-  /* XXXX make this configurable! */
-#define BECOME_DORMANT_AFTER_INACTIVITY (24*60*60)
-  if (get_last_user_activity_time() + BECOME_DORMANT_AFTER_INACTIVITY >= now) {
+  /* Become dormant if there has been no user activity in a long time.
+   * (The funny checks below are in order to prevent overflow.) */
+  time_t time_since_last_activity = 0;
+  if (get_last_user_activity_time() < now)
+    time_since_last_activity = now - get_last_user_activity_time();
+  if (time_since_last_activity >= options->DormantClientTimeout) {
     log_notice(LD_GENERAL, "No user activity in a long time: becoming"
                " dormant.");
     set_network_participation(false);

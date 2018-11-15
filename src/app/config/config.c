@@ -389,6 +389,8 @@ static config_var_t option_vars_[] = {
   OBSOLETE("DynamicDHGroups"),
   VPORT(DNSPort),
   OBSOLETE("DNSListenAddress"),
+  V(DormantClientTimeout,         INTERVAL, "24 hours"),
+  V(DormantTimeoutDisabledByIdleStreams, BOOL,     "1"),
   /* DoS circuit creation options. */
   V(DoSCircuitCreationEnabled,   AUTOBOOL, "auto"),
   V(DoSCircuitCreationMinConnections,      UINT, "0"),
@@ -3834,6 +3836,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_fn(severity, LD_CONFIG, "You disabled LearnCircuitBuildTimeout, but "
            "didn't specify a CircuitBuildTimeout. I'll pick a plausible "
            "default.");
+  }
+
+  if (options->DormantClientTimeout < 10*60 && !options->TestingTorNetwork) {
+    REJECT("DormantClientTimeout is too low. It must be at least 10 minutes.");
   }
 
   if (options->PathBiasNoticeRate > 1.0) {
