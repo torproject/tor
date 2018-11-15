@@ -34,11 +34,7 @@
  * Should/Do we have a header for time constants like this? */
 #define TOR_USEC_PER_SEC (1000000)
 
-circpad_decision_t circpad_send_padding_cell_for_callback(
-                                 circpad_machineinfo_t *mi);
 circpad_decision_t circpad_machine_remove_token(circpad_machineinfo_t *mi);
-circpad_decision_t circpad_machine_transition(circpad_machineinfo_t *mi,
-                                              circpad_event_t event);
 circpad_machineinfo_t *circpad_circuit_machineinfo_new(circuit_t *on_circ,
                                                int machine_index);
 STATIC circpad_delay_t circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi,
@@ -1000,7 +996,7 @@ circpad_new_consensus_params(networkstatus_t *ns)
  *
  * Returns 1 if limits are set and we've hit them. Otherwise returns 0.
  */
-static bool
+STATIC bool
 circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi)
 {
   const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
@@ -1008,7 +1004,7 @@ circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi)
   /* If machine_padding_pct is non-zero, and we've sent more
    * than the allowed count of padding cells, then check our
    * percent limits for this machine. */
-  if (machine->max_padding_percent &&
+   if (machine->max_padding_percent &&
       mi->padding_sent >= machine->allowed_padding_count) {
     uint32_t total_cells = mi->padding_sent + mi->nonpadding_sent;
 
@@ -1029,7 +1025,7 @@ circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi)
 
     /* Check the percent */
     if ((100*circpad_global_padding_sent) / total_cells >
-         circpad_global_max_padding_percent) {
+        circpad_global_max_padding_percent) {
       return 1; // global limit reached. Stop.
     }
   }
@@ -1187,9 +1183,9 @@ circpad_machine_transitioned_to_end(circpad_machineinfo_t *mi)
  *
  * Returns 1 if we transition states, 0 otherwise.
  */
-circpad_decision_t
-circpad_machine_transition(circpad_machineinfo_t *mi,
-                           circpad_event_t event)
+MOCK_IMPL(circpad_decision_t,
+circpad_machine_transition,(circpad_machineinfo_t *mi,
+                            circpad_event_t event))
 {
   const circpad_state_t *state =
       circpad_machine_current_state(mi);
