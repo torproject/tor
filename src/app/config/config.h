@@ -41,6 +41,7 @@ const char *escaped_safe_str_client(const char *address);
 const char *escaped_safe_str(const char *address);
 void init_protocol_warning_severity_level(void);
 int get_protocol_warning_severity_level(void);
+const char *get_library_versions(void);
 
 /** An error from options_trial_assign() or options_init_from_string(). */
 typedef enum setopt_err_t {
