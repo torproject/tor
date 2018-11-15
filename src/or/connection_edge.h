@@ -133,6 +133,11 @@ int connection_half_edge_is_valid_end(smartlist_t *half_conns,
 int connection_half_edge_is_valid_resolved(smartlist_t *half_conns,
                                            streamid_t stream_id);
 
+size_t half_streams_get_total_allocation(void);
+void half_edge_free_(half_edge_t *he);
+#define half_edge_free(he) \
+  FREE_AND_NULL(half_edge_t, half_edge_free_, (he))
+
 /** @name Begin-cell flags
  *
  * These flags are used in RELAY_BEGIN cells to change the default behavior
@@ -211,4 +216,3 @@ STATIC struct half_edge_t *connection_half_edge_find_stream_id(
 #endif /* defined(CONNECTION_EDGE_PRIVATE) */
 
 #endif /* !defined(TOR_CONNECTION_EDGE_H) */
-
