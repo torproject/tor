@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Tor Project, Inc. */
+/* Copyright (c) 2015-2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 #define LOG_PRIVATE
 #include "torlog.h"
@@ -158,6 +158,26 @@ mock_saved_log_has_message_containing(const char *msg)
   return 0;
 }
 
+/**
+ * Return true iff there is not a message recorded by log capture
+ * that contains <b>msg</b> as a substring.
+ */
+int
+mock_saved_log_has_message_not_containing(const char *msg)
+{
+  if (saved_logs) {
+    SMARTLIST_FOREACH(
+      saved_logs, mock_saved_log_entry_t *, m,
+      {
+        if (msg && m->generated_msg && strstr(m->generated_msg, msg))
+          return 0;
+      }
+    );
+  }
+
+  return 1;
+}
+
 /** Return true iff the saved logs have any messages with <b>severity</b> */
 int
 mock_saved_log_has_severity(int severity)
@@ -238,4 +258,3 @@ mock_dump_saved_logs(void)
            escaped(m->generated_msg));
   } SMARTLIST_FOREACH_END(m);
 }
-
