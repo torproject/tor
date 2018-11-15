@@ -389,7 +389,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("DynamicDHGroups"),
   VPORT(DNSPort),
   OBSOLETE("DNSListenAddress"),
-  V(DormantClientTimeout,         INTERVAL, "12 hours"),
+  V(DormantClientTimeout,         INTERVAL, "24 hours"),
   V(DormantTimeoutDisabledByIdleStreams, BOOL,     "1"),
   /* DoS circuit creation options. */
   V(DoSCircuitCreationEnabled,   AUTOBOOL, "auto"),
