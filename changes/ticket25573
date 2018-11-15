@@ -1,0 +1,5 @@
+  o Minor features (controller):
+    - For purposes of CIRC_BW-based dropped cell detection, track half-closed
+      stream ids, and allow their ENDs, SENDMEs, DATA and path bias check
+      cells to arrive without counting it as dropped until either the END arrvies,
+      or the windows are empty. Closes ticket 25573.

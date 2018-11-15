@@ -1745,6 +1745,27 @@ typedef struct edge_connection_t {
   uint64_t dirreq_id;
 } edge_connection_t;
 
+/**
+ * Struct to track a connection that we closed that the other end
+ * still thinks is open. Exists in origin_circuit_t.half_streams until
+ * we get an end cell or a resolved cell for this stream id.
+ */
+typedef struct half_edge_t {
+  /** stream_id for the half-closed connection */
+  streamid_t stream_id;
+
+  /** How many sendme's can the other end still send, based on how
+   * much data we had sent at the time of close */
+  int sendmes_pending;
+
+  /** How much more data can the other end still send, based on
+   * our deliver window */
+  int data_pending;
+
+  /** Is there a connected cell pending? */
+  int connected_pending : 1;
+} half_edge_t;
+
 /** Subtype of edge_connection_t for an "entry connection" -- that is, a SOCKS
  * connection, a DNS request, a TransPort connection or a NATD connection */
 typedef struct entry_connection_t {
@@ -3260,6 +3281,10 @@ typedef struct origin_circuit_t {
   /** Linked list of AP streams (or EXIT streams if hidden service)
    * associated with this circuit. */
   edge_connection_t *p_streams;
+
+  /** Smartlist of half-closed streams (half_edge_t*) that still
+   * have pending activity */
+  smartlist_t *half_streams;
 
   /** Bytes read on this circuit since last call to
    * control_event_circ_bandwidth_used().  Only used if we're configured
