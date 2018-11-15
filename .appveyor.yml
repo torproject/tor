@@ -43,7 +43,7 @@ build_script:
             Set-Location "${env:build}"
             Execute-Bash "which ${env:target}-gcc"
             Execute-Bash "${env:target}-gcc --version"
-            Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target} --disable-asciidoc --enable-fatal-warnings ${env:hardening}"
+            Execute-Bash "ZSTD_CFLAGS='-L/${env:compiler_path}/include' ZSTD_LIBS='-L/${env:compiler_path}/lib -lzstd' ../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target} --disable-asciidoc --enable-fatal-warnings ${env:hardening}"
             Execute-Bash "V=1 make -j2"
             Execute-Bash "V=1 make -j2 install"
      }
