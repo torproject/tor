@@ -426,10 +426,12 @@ GENERAL OPTIONS
     running.
     (Default: uses the value of DataDirectory.)
 
-[[CacheDirectoryGroupReadable]] **CacheDirectoryGroupReadable** **0**|**1**::
+[[CacheDirectoryGroupReadable]] **CacheDirectoryGroupReadable** **0**|**1**|**auto**::
     If this option is set to 0, don't allow the filesystem group to read the
     CacheDirectory. If the option is set to 1, make the CacheDirectory readable
-    by the default GID. (Default: 0)
+    by the default GID. If the option is "auto", then we use the
+    setting for DataDirectoryGroupReadable when the CacheDirectory is the
+    same as the DataDirectory, and 0 otherwise. (Default: auto)
 
 [[FallbackDir]] **FallbackDir** __ipv4address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__] [ipv6=**[**__ipv6address__**]**:__orport__]::
     When we're unable to connect to any directory cache for directory info
