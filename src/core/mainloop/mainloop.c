@@ -1658,7 +1658,7 @@ rescan_periodic_events(const or_options_t *options)
     } else {
       log_debug(LD_GENERAL, "Disabling periodic event %s", item->name);
       if (item->flags & PERIODIC_EVENT_FLAG_RUN_ON_DISABLE) {
-        periodic_event_flush_and_disable(item);
+        periodic_event_schedule_and_disable(item);
       } else {
         periodic_event_disable(item);
       }

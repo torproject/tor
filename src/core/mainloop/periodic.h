@@ -88,6 +88,6 @@ void periodic_event_destroy(periodic_event_item_t *event);
 void periodic_event_reschedule(periodic_event_item_t *event);
 void periodic_event_enable(periodic_event_item_t *event);
 void periodic_event_disable(periodic_event_item_t *event);
-void periodic_event_flush_and_disable(periodic_event_item_t *event);
+void periodic_event_schedule_and_disable(periodic_event_item_t *event);
 
 #endif /* !defined(TOR_PERIODIC_H) */
