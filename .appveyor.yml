@@ -30,7 +30,7 @@ install:
     {
         Execute-Command 'c:\msys64\usr\bin\bash' '-e' '-c' $args
     }
-    Execute-Command "C:\msys64\usr\bin\pacman" -Sy --needed --noconfirm openssl-devel openssl libevent-devel libevent ${env:mingw_prefix}-libevent ${env:mingw_prefix}-zstd ;
+    Execute-Command "C:\msys64\usr\bin\pacman" -Sy --verbose --needed --noconfirm ${env:mingw_prefix}-libevent ${env:mingw_prefix}-openssl ${env:mingw_prefix}-pkg-config ${env:mingw_prefix}-xz ${env:mingw_prefix}-zstd ;
 
 build_script:
 - ps: >-
