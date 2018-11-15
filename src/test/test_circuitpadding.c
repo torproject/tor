@@ -1,6 +1,7 @@
 #define TOR_CHANNEL_INTERNAL_
 #define TOR_TIMERS_PRIVATE
 #define CIRCUITPADDING_PRIVATE
+#define NETWORKSTATUS_PRIVATE
 
 #include "core/or/or.h"
 #include "test.h"
@@ -21,6 +22,7 @@
 #include "lib/evloop/compat_libevent.h"
 
 #include "feature/nodelist/routerstatus_st.h"
+#include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/node_st.h"
 #include "core/or/cell_st.h"
 #include "core/or/crypt_path_st.h"
@@ -28,8 +30,6 @@
 #include "core/or/origin_circuit_st.h"
 
 extern smartlist_t *connection_array;
-extern networkstatus_t *current_ns_consensus;
-extern networkstatus_t *current_md_consensus;
 
 #define USEC_PER_SEC (1000000)
 #define NSEC_PER_USEC (1000)
@@ -1122,6 +1122,139 @@ test_circuitpadding_sample_distribution(void *arg)
   UNMOCK(circpad_machine_schedule_padding);
 }
 
+static circpad_decision_t
+circpad_machine_transition_mock(circpad_machineinfo_t *mi,
+                                circpad_event_t event)
+{
+  (void) mi;
+  (void) event;
+
+  return CIRCPAD_STATE_UNCHANGED;
+}
+
+/* Test per-machine padding rate limits */
+static void
+test_circuitpadding_machine_rate_limiting(void *arg)
+{
+  (void) arg;
+  bool retval;
+  circpad_machineinfo_t *mi;
+  int i;
+
+  /* Ignore machine transitions for the purposes of this function, we only
+   * really care about padding counts */
+  MOCK(circpad_machine_transition, circpad_machine_transition_mock);
+
+  /* Setup machine and circuits */
+  client_side = (circuit_t *)origin_circuit_new();
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  circpad_circ_token_machine_setup();
+  client_side->padding_machine[0] = &circ_client_machine;
+  client_side->padding_info[0] =
+    circpad_circuit_machineinfo_new(client_side, 0);
+  mi = client_side->padding_info[0];
+  /* Set up the machine info so that we can get through the basic functions */
+  mi->state_length = 500;
+
+  /* First we are going to test the per-machine rate limits */
+  circ_client_machine.max_padding_percent = 50;
+  circ_client_machine.allowed_padding_count = 100;
+
+  /* Check padding limit, should be fine since we haven't sent anything yet. */
+  retval = circpad_machine_reached_padding_limit(mi);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Send 99 padding cells which is below circpad_global_allowed_cells=100, so
+   * the rate limit will not trigger */
+  for (i=0;i<99;i++) {
+    circpad_send_padding_cell_for_callback(mi);
+  }
+  retval = circpad_machine_reached_padding_limit(mi);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Now send another padding cell to pass circpad_global_allowed_cells=100,
+     and see that the limit will trigger */
+  circpad_send_padding_cell_for_callback(mi);
+  retval = circpad_machine_reached_padding_limit(mi);
+  tt_int_op(retval, OP_EQ, 1);
+
+ done:
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+}
+
+/* Test global padding rate limits */
+static void
+test_circuitpadding_global_rate_limiting(void *arg)
+{
+  (void) arg;
+  bool retval;
+  circpad_machineinfo_t *mi;
+  int i;
+
+  /* Ignore machine transitions for the purposes of this function, we only
+   * really care about padding counts */
+  MOCK(circpad_machine_transition, circpad_machine_transition_mock);
+
+  /* Setup machine and circuits */
+  client_side = (circuit_t *)origin_circuit_new();
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  circpad_circ_token_machine_setup();
+  client_side->padding_machine[0] = &circ_client_machine;
+  client_side->padding_info[0] =
+    circpad_circuit_machineinfo_new(client_side, 0);
+  mi = client_side->padding_info[0];
+  /* Set up the machine info so that we can get through the basic functions */
+  mi->state_length = 500;
+
+  /* Now test the global limits by setting up the consensus */
+  networkstatus_t vote1;
+  vote1.net_params = smartlist_new();
+  smartlist_split_string(vote1.net_params,
+                         "circpad_global_allowed_cells=100 circpad_global_max_padding_pct=50",
+                         NULL, 0, 0);
+  /* Register global limits with the padding subsystem */
+  circpad_new_consensus_params(&vote1);
+
+  /* Check padding limit, should be fine since we haven't sent anything yet. */
+  retval = circpad_machine_reached_padding_limit(mi);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Send 99 padding cells which is below circpad_global_allowed_cells=100, so
+   * the rate limit will not trigger */
+  for (i=0;i<99;i++) {
+    circpad_send_padding_cell_for_callback(mi);
+  }
+  retval = circpad_machine_reached_padding_limit(mi);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Now send another padding cell to pass circpad_global_allowed_cells=100,
+     and see that the limit will trigger */
+  circpad_send_padding_cell_for_callback(mi);
+  retval = circpad_machine_reached_padding_limit(mi);
+  tt_int_op(retval, OP_EQ, 1);
+
+  /* Now send 96 non-padding cells to get near the
+   * circpad_global_max_padding_pct=50 limit; in particular with 96 non-padding
+   * cells, the padding traffic is still 51% of total traffic so limit should
+   * trigger */
+  for (i=0;i<96;i++) {
+    circpad_cell_event_nonpadding_sent(client_side);
+  }
+  retval = circpad_machine_reached_padding_limit(mi);
+  tt_int_op(retval, OP_EQ, 1);
+
+  /* Send another non-padding cell to bring the padding traffic to 50% of total
+   * traffic and get past the limit */
+  circpad_cell_event_nonpadding_sent(client_side);
+  retval = circpad_machine_reached_padding_limit(mi);
+  tt_int_op(retval, OP_EQ, 0);
+
+ done:
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  SMARTLIST_FOREACH(vote1.net_params, char *, cp, tor_free(cp));
+  smartlist_free(vote1.net_params);
+}
+
 #define TEST_CIRCUITPADDING(name, flags) \
     { #name, test_##name, (flags), NULL, NULL }
 
@@ -1132,6 +1265,8 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_circuitsetup_machine, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_rtt, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_sample_distribution, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_machine_rate_limiting, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_global_rate_limiting, TT_FORK),
   END_OF_TESTCASES
 };
 
