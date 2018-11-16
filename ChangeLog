@@ -1,3 +1,70 @@
+Changes in version 0.3.5.5-alpha - 2018-11-16
+  Tor 0.3.5.5-alpha includes numerous bugfixes on earlier releases,
+  including several that we hope to backport to older release series in
+  the future.
+
+  o Major bugfixes (OpenSSL, portability):
+    - Fix our usage of named groups when running as a TLS 1.3 client in
+      OpenSSL 1.1.1. Previously, we only initialized EC groups when
+      running as a relay, which caused clients to fail to negotiate TLS
+      1.3 with relays. Fixes bug 28245; bugfix on 0.2.9.15 (when TLS 1.3
+      support was added).
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the November 6 2018 Maxmind GeoLite2
+      Country database. Closes ticket 28395.
+
+  o Minor bugfixes (compilation):
+    - Initialize a variable unconditionally in aes_new_cipher(), since
+      some compilers cannot tell that we always initialize it before
+      use. Fixes bug 28413; bugfix on 0.2.9.3-alpha.
+
+  o Minor bugfixes (connection, relay):
+    - Avoid a logging a BUG() stacktrace when closing connection held
+      open because the write side is rate limited but not the read side.
+      Now, the connection read side is simply shut down until Tor is
+      able to flush the connection and close it. Fixes bug 27750; bugfix
+      on 0.3.4.1-alpha.
+
+  o Minor bugfixes (continuous integration, Windows):
+    - Manually configure the zstd compiler options, when building using
+      mingw on Appveyor Windows CI. The MSYS2 mingw zstd package does
+      not come with a pkg-config file. Fixes bug 28454; bugfix
+      on 0.3.4.1-alpha.
+    - Stop using an external OpenSSL install, and stop installing MSYS2
+      packages, when building using mingw on Appveyor Windows CI. Fixes
+      bug 28399; bugfix on 0.3.4.1-alpha.
+
+  o Minor bugfixes (documentation):
+    - Make Doxygen work again after the code movement in the 0.3.5
+      source tree. Fixes bug 28435; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - Permit the "shutdown()" system call, which is apparently used by
+      OpenSSL under some circumstances. Fixes bug 28183; bugfix
+      on 0.2.5.1-alpha.
+
+  o Minor bugfixes (logging):
+    - Stop talking about the Named flag in log messages. Clients have
+      ignored the Named flag since 0.3.2. Fixes bug 28441; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (memory leaks):
+    - Fix a harmless memory leak in libtorrunner.a. Fixes bug 28419;
+      bugfix on 0.3.3.1-alpha. Patch from Martin Kepplinger.
+
+  o Minor bugfixes (onion services):
+    - On an intro point for a version 3 onion service, stop closing
+      introduction circuits on an NACK. This lets the client decide
+      whether to reuse the circuit or discard it. Previously, we closed
+      intro circuits when sending NACKs. Fixes bug 27841; bugfix on
+      0.3.2.1-alpha. Patch by Neel Chaunan.
+    - When replacing a descriptor in the client cache, make sure to
+      close all client introduction circuits for the old descriptor, so
+      we don't end up with unusable leftover circuits. Fixes bug 27471;
+      bugfix on 0.3.2.1-alpha.
+
+
 Changes in version 0.3.5.4-alpha - 2018-11-08
   Tor 0.3.5.4-alpha includes numerous bugfixes on earlier versions and
   improves our continuous integration support. It continues our attempts
