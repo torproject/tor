@@ -275,11 +275,19 @@ router_dirport_found_reachable(void)
 void
 router_perform_bandwidth_test(int num_circs, time_t now)
 {
-  int num_cells = (int)(get_options()->BandwidthRate * 10 /
-                        CELL_MAX_NETWORK_SIZE);
-  int max_cells = num_cells < CIRCWINDOW_START ?
-                    num_cells : CIRCWINDOW_START;
-  int cells_per_circuit = max_cells / num_circs;
+  /* The number bytes to send is the minimum between the BandwidthRate limit
+   * and the minimal bandwidth required to have a guard flag.
+   * This not being limited by CIRCWINDOW_START (1024).
+   */
+  const uint64_t num_bytes = get_options()->AuthDirGuardBWGuarantee <
+                  get_options()->BandwidthRate ?
+                  get_options()->AuthDirGuardBWGuarantee :
+                  get_options()->BandwidthRate;
+  /* The number of cells to send is the number of bytes multiplied by 10
+   * seconds and divided by the cell size.
+  */
+  int num_cells = (int)(num_bytes * 10 / CELL_MAX_NETWORK_SIZE);
+  int cells_per_circuit = num_cells / num_circs;
   origin_circuit_t *circ = NULL;
 
   log_notice(LD_OR,"Performing bandwidth self-test...done.");
