@@ -2275,7 +2275,7 @@ check_for_reachability_bw_callback(time_t now, const or_options_t *options)
       static int first_time = 1;
       if (!first_time && me &&
           me->bandwidthcapacity < me->bandwidthrate &&
-          me->bandwidthcapacity < 51200) {
+          me->bandwidthcapacity < options->AuthDirGuardBWGuarantee) {
         reset_bandwidth_test();
       }
       first_time = 0;
