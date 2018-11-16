@@ -2279,8 +2279,11 @@ check_for_reachability_bw_callback(time_t now, const or_options_t *options)
         reset_bandwidth_test();
       }
       first_time = 0;
-#define BANDWIDTH_RECHECK_INTERVAL (12*60*60)
-      return BANDWIDTH_RECHECK_INTERVAL;
+/* Perform bandwidth test again at a random time betwen 12 and 24h. */
+#define MIN_BANDWIDTH_RECHECK_INTERVAL (12*60*60)
+#define MAX_BANDWIDTH_RECHECK_INTERVAL (24*60*60)
+      return crypto_rand_int_range(MIN_BANDWIDTH_RECHECK_INTERVAL,
+                                   MAX_BANDWIDTH_RECHECK_INTERVAL);
     }
   }
   return CHECK_DESCRIPTOR_INTERVAL;
