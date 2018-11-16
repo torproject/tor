@@ -1,0 +1,4 @@
+  o Minor bugfixes (selftest):
+    - perform larger bandwidth self-test when the bandwidth capacity is lower
+      than minimum bandwidth to obtain the guard flag, every 12-24 hours
+      at random. Fixes bug 22453; bugfix on 0.1.2.2-alpha.
