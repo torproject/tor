@@ -77,6 +77,7 @@ int hs_config_client_authorization(const or_options_t *options,
                                    int validate_only);
 
 int hs_client_reextend_intro_circuit(origin_circuit_t *circ);
+void hs_client_close_intro_circuits_from_desc(const hs_descriptor_t *desc);
 
 void hs_client_purge_state(void);
 

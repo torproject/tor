@@ -647,6 +647,13 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
     }
     /* Remove old entry. Make space for the new one! */
     remove_v3_desc_as_client(cache_entry);
+
+    /* We just removed an old descriptor and will replace it. We'll close all
+     * intro circuits related to this old one so we don't have leftovers. We
+     * leave the rendezvous circuits opened because they could be in use. */
+    hs_client_close_intro_circuits_from_desc(cache_entry->desc);
+
+    /* Free it. */
     cache_client_desc_free(cache_entry);
   }
 

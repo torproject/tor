@@ -1844,6 +1844,38 @@ hs_client_reextend_intro_circuit(origin_circuit_t *circ)
   return ret;
 }
 
+/* Close all client introduction circuits related to the given descriptor.
+ * This is called with a descriptor that is about to get replaced in the
+ * client cache.
+ *
+ * Even though the introduction point might be exactly the same, we'll rebuild
+ * them if needed but the odds are very low that an existing matching
+ * introduction circuit exists at that stage. */
+void
+hs_client_close_intro_circuits_from_desc(const hs_descriptor_t *desc)
+{
+  origin_circuit_t *ocirc = NULL;
+
+  tor_assert(desc);
+
+  /* We iterate over all client intro circuits because they aren't kept in the
+   * HS circuitmap. That is probably something we want to do one day. */
+  while ((ocirc = circuit_get_next_intro_circ(ocirc, true))) {
+    if (ocirc->hs_ident == NULL) {
+      /* Not a v3 circuit, ignore it. */
+      continue;
+    }
+
+    /* Does it match any IP in the given descriptor? If not, ignore. */
+    if (find_desc_intro_point_by_ident(ocirc->hs_ident, desc) == NULL) {
+      continue;
+    }
+
+    /* We have a match. Close the circuit as consider it expired. */
+    circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
+  }
+}
+
 /* Release all the storage held by the client subsystem. */
 void
 hs_client_free_all(void)

@@ -1,0 +1,5 @@
+  o Minor bugfixes (hidden service v3, client):
+    - When replacing a descriptor in the client cache with a newer descriptor,
+      make sure to close all client introduction circuits of the old
+      descriptor so we don't end up with unusable leftover circuits. Fixes bug
+      27471; bugfix on 0.3.2.1-alpha.
