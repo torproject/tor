@@ -6,6 +6,8 @@
  * \brief Unit tests for nodelist related functions.
  **/
 
+#define NODELIST_PRIVATE
+
 #include "core/or/or.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "feature/nodelist/networkstatus.h"
@@ -483,6 +485,131 @@ test_nodelist_nodefamily_lookup(void *arg)
   tor_free(mem_op_hex_tmp);
 }
 
+static void
+test_nodelist_nickname_matches(void *arg)
+{
+  (void)arg;
+  node_t mock_node;
+  routerstatus_t mock_rs;
+  memset(&mock_node, 0, sizeof(mock_node));
+  memset(&mock_rs, 0, sizeof(mock_rs));
+
+  strlcpy(mock_rs.nickname, "evilgeniuses", sizeof(mock_rs.nickname));
+  mock_node.rs = &mock_rs;
+  memcpy(mock_node.identity, ".forabettertomorrow.", DIGEST_LEN);
+
+#define match(x) tt_assert(node_nickname_matches(&mock_node, (x)))
+#define no_match(x) tt_assert(! node_nickname_matches(&mock_node, (x)))
+
+  match("evilgeniuses");
+  match("EvilGeniuses");
+  match("EvilGeniuses");
+  match("2e666f7261626574746572746f6d6f72726f772e");
+  match("2E666F7261626574746572746F6D6F72726F772E");
+  match("$2e666f7261626574746572746f6d6f72726f772e");
+  match("$2E666F7261626574746572746F6D6F72726F772E");
+  match("$2E666F7261626574746572746F6D6F72726F772E~evilgeniuses");
+  match("$2E666F7261626574746572746F6D6F72726F772E~EVILGENIUSES");
+
+  no_match("evilgenius");
+  no_match("evilgeniuseses");
+  no_match("evil.genius");
+  no_match("$2E666F7261626574746572746F6D6F72726FFFFF");
+  no_match("2E666F7261626574746572746F6D6F72726FFFFF");
+  no_match("$2E666F7261626574746572746F6D6F72726F772E~fred");
+  no_match("$2E666F7261626574746572746F6D6F72726F772E=EVILGENIUSES");
+ done:
+  ;
+}
+
+static void
+test_nodelist_node_nodefamily(void *arg)
+{
+  (void)arg;
+  node_t mock_node1;
+  routerstatus_t mock_rs;
+  microdesc_t mock_md;
+
+  node_t mock_node2;
+  routerinfo_t mock_ri;
+
+  smartlist_t *nodes=smartlist_new();
+
+  memset(&mock_node1, 0, sizeof(mock_node1));
+  memset(&mock_node2, 0, sizeof(mock_node2));
+  memset(&mock_rs, 0, sizeof(mock_rs));
+  memset(&mock_md, 0, sizeof(mock_md));
+  memset(&mock_ri, 0, sizeof(mock_ri));
+
+  mock_node1.rs = &mock_rs;
+  mock_node1.md = &mock_md;
+
+  mock_node2.ri = &mock_ri;
+
+  strlcpy(mock_rs.nickname, "nodeone", sizeof(mock_rs.nickname));
+  mock_ri.nickname = tor_strdup("nodetwo");
+
+  memcpy(mock_node1.identity, "NodeOneNode1NodeOne1", DIGEST_LEN);
+  memcpy(mock_node2.identity, "SecondNodeWe'reTestn", DIGEST_LEN);
+
+  // empty families.
+  tt_assert(! node_family_contains(&mock_node1, &mock_node2));
+  tt_assert(! node_family_contains(&mock_node2, &mock_node1));
+
+  // Families contain nodes, but not these nodes
+  mock_ri.declared_family = smartlist_new();
+  smartlist_add(mock_ri.declared_family, (char*)"NodeThree");
+  mock_md.family = nodefamily_parse("NodeFour", NULL, 0);
+  tt_assert(! node_family_contains(&mock_node1, &mock_node2));
+  tt_assert(! node_family_contains(&mock_node2, &mock_node1));
+
+  // Families contain one another.
+  smartlist_add(mock_ri.declared_family, (char*)
+                "4e6f64654f6e654e6f6465314e6f64654f6e6531");
+  tt_assert(! node_family_contains(&mock_node1, &mock_node2));
+  tt_assert(node_family_contains(&mock_node2, &mock_node1));
+
+  nodefamily_free(mock_md.family);
+  mock_md.family = nodefamily_parse(
+            "NodeFour "
+            "5365636f6e644e6f64655765277265546573746e", NULL, 0);
+  tt_assert(node_family_contains(&mock_node1, &mock_node2));
+  tt_assert(node_family_contains(&mock_node2, &mock_node1));
+
+  // Try looking up families now.
+  MOCK(node_get_by_nickname, mock_node_get_by_nickname);
+  MOCK(node_get_by_id, mock_node_get_by_id);
+
+  node_lookup_declared_family(nodes, &mock_node1);
+  tt_int_op(smartlist_len(nodes), OP_EQ, 2);
+  const node_t *n = smartlist_get(nodes, 0);
+  tt_str_op(n->identity, OP_EQ, "NodeFour");
+  n = smartlist_get(nodes, 1);
+  tt_mem_op(n->identity, OP_EQ, "SecondNodeWe'reTestn", DIGEST_LEN);
+
+  // free, try the other one.
+  SMARTLIST_FOREACH(nodes, node_t *, x, tor_free(x));
+  smartlist_clear(nodes);
+
+  node_lookup_declared_family(nodes, &mock_node2);
+  tt_int_op(smartlist_len(nodes), OP_EQ, 2);
+  n = smartlist_get(nodes, 0);
+  tt_str_op(n->identity, OP_EQ, "NodeThree");
+  n = smartlist_get(nodes, 1);
+  // This gets a truncated hex hex ID since it was looked up by name
+  tt_str_op(n->identity, OP_EQ, "4e6f64654f6e654e6f6");
+
+ done:
+  UNMOCK(node_get_by_nickname);
+  UNMOCK(node_get_by_id);
+  smartlist_free(mock_ri.declared_family);
+  nodefamily_free(mock_md.family);
+  tor_free(mock_ri.nickname);
+  // use tor_free, these aren't real nodes
+  SMARTLIST_FOREACH(nodes, node_t *, x, tor_free(x));
+  smartlist_free(nodes);
+}
+
 #define NODE(name, flags) \
   { #name, test_nodelist_##name, (flags), NULL, NULL }
 
@@ -494,5 +621,7 @@ struct testcase_t nodelist_tests[] = {
   NODE(nodefamily, TT_FORK),
   NODE(nodefamily_parse_err, TT_FORK),
   NODE(nodefamily_lookup, TT_FORK),
+  NODE(nickname_matches, 0),
+  NODE(node_nodefamily, TT_FORK),
   END_OF_TESTCASES
 };
