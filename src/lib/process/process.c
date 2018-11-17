@@ -126,6 +126,10 @@ void
 process_init(void)
 {
   processes = smartlist_new();
+
+#ifdef _WIN32
+  process_win32_init();
+#endif
 }
 
 /** Free up all resources that is handled by the Process subsystem. Note that
@@ -133,6 +137,10 @@ process_init(void)
 void
 process_free_all(void)
 {
+#ifdef _WIN32
+  process_win32_deinit();
+#endif
+
   SMARTLIST_FOREACH(processes, process_t *, x, process_free(x));
   smartlist_free(processes);
 }
