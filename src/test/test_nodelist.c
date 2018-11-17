@@ -259,6 +259,10 @@ test_nodelist_nodefamily(void *arg)
   nodefamily_t *nf2 = NULL;
   nodefamily_t *nf3 = NULL;
 
+  enc = nodefamily_format(NULL);
+  tt_str_op(enc, OP_EQ, "");
+  tor_free(enc);
+
   /* Make sure that sorting and de-duplication work. */
   tor_asprintf(&enc, "$%s hello", h1);
   nf1 = nodefamily_parse(enc, NULL, 0);
@@ -361,6 +365,7 @@ test_nodelist_nodefamily(void *arg)
   nodefamily_free(nf1);
   nodefamily_free(nf2);
   nodefamily_free(nf3);
+  nodefamily_free_all();
 }
 
 static void
