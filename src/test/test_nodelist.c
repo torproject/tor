@@ -280,6 +280,7 @@ test_nodelist_nodefamily(void *arg)
   tt_assert(nodefamily_contains_rsa_id(nf1, d1));
   tt_assert(! nodefamily_contains_rsa_id(nf1, d2));
   tt_assert(nodefamily_contains_nickname(nf1, "hello"));
+  tt_assert(nodefamily_contains_nickname(nf1, "HELLO"));
   tt_assert(! nodefamily_contains_nickname(nf1, "goodbye"));
 
   tt_int_op(nf1->refcnt, OP_EQ, 3);

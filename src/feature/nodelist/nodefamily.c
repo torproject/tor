@@ -268,10 +268,10 @@ nodefamily_contains_nickname(const nodefamily_t *family,
   unsigned i;
   for (i = 0; i < family->n_members; ++i) {
     const uint8_t *ptr = NODEFAMILY_MEMBER_PTR(family, i);
-    // note that the strcmp() is safe because there is always at least one
-    // NUL in the encoded nickname, because all legal nicknames less than
+    // note that the strcasecmp() is safe because there is always at least one
+    // NUL in the encoded nickname, because all legal nicknames are less than
     // DIGEST_LEN bytes long.
-    if (ptr[0] == NODEFAMILY_BY_NICKNAME && !strcmp((char*)ptr+1, name)) {
+    if (ptr[0] == NODEFAMILY_BY_NICKNAME && !strcasecmp((char*)ptr+1, name)) {
       return true;
     }
   }
