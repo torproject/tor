@@ -2231,7 +2231,7 @@ retry_dns_callback(time_t now, const or_options_t *options)
 static int
 prune_old_routers_callback(time_t now, const or_options_t *options)
 {
-#define ROUTERLIST_PRUNING_INTERVAL (60) // 1 minute.
+#define ROUTERLIST_PRUNING_INTERVAL (60*60) // 1 hour.
   (void)now;
   (void)options;
 
