@@ -1870,7 +1870,7 @@ addrs_in_same_network_family(const tor_addr_t *a1,
  * (case-insensitive), or if <b>node's</b> identity key digest
  * matches a hexadecimal value stored in <b>nickname</b>.  Return
  * false otherwise. */
-static int
+STATIC int
 node_nickname_matches(const node_t *node, const char *nickname)
 {
   const char *n = node_get_nickname(node);
@@ -1882,7 +1882,7 @@ node_nickname_matches(const node_t *node, const char *nickname)
 }
 
 /** Return true iff <b>node</b> is named by some nickname in <b>lst</b>. */
-static inline int
+STATIC int
 node_in_nickname_smartlist(const smartlist_t *lst, const node_t *node)
 {
   if (!lst) return 0;
@@ -1894,7 +1894,7 @@ node_in_nickname_smartlist(const smartlist_t *lst, const node_t *node)
 }
 
 /** Return true iff n1's declared family contains n2. */
-static int
+STATIC int
 node_family_contains(const node_t *n1, const node_t *n2)
 {
   if (n1->ri && n1->ri->declared_family) {
@@ -1909,7 +1909,7 @@ node_family_contains(const node_t *n1, const node_t *n2)
 /**
  * Return true iff <b>node</b> has declared a nonempty family.
  **/
-static bool
+STATIC bool
 node_has_declared_family(const node_t *node)
 {
   if (node->ri && node->ri->declared_family &&
@@ -1929,7 +1929,7 @@ node_has_declared_family(const node_t *node)
  * its family.  (Note that these nodes are not in node's family unless they
  * also agree that node is in their family.)
  **/
-static void
+STATIC void
 node_lookup_declared_family(smartlist_t *out, const node_t *node)
 {
   if (node->ri && node->ri->declared_family &&
