@@ -53,7 +53,7 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
 #ifdef _WIN32
       if (e == WSAENOBUFS)
-        log_warn(LD_NET, "%s() failed: WSAENOBUFS. Not enough ram?"
+        log_warn(LD_NET, "%s() failed: WSAENOBUFS. Not enough ram?",
                  is_socket ? "recv" : "read");
 #endif
       if (error)
