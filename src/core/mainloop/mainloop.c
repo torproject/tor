@@ -1608,8 +1608,8 @@ rescan_periodic_events_cb(mainloop_event_t *event, void *arg)
 /**
  * Schedule an event that will rescan which periodic events should run.
  **/
-void
-schedule_rescan_periodic_events(void)
+MOCK_IMPL(void,
+schedule_rescan_periodic_events,(void))
 {
   if (!rescan_periodic_events_ev) {
     rescan_periodic_events_ev =
