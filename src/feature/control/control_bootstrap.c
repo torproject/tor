@@ -1,0 +1,403 @@
+/* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
+ * Copyright (c) 2007-2018, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
+/**
+ * \file control_bootstrap.c
+ * \brief Provide bootstrap progress events for the control port.
+ */
+#include "core/or/or.h"
+
+#include "app/config/config.h"
+#include "core/mainloop/connection.h"
+#include "core/or/connection_or.h"
+#include "core/or/connection_st.h"
+#include "core/or/or_connection_st.h"
+#include "core/or/reasons.h"
+#include "feature/control/control.h"
+#include "feature/hibernate/hibernate.h"
+#include "feature/nodelist/nodelist.h"
+#include "lib/malloc/malloc.h"
+
+/** A sufficiently large size to record the last bootstrap phase string. */
+#define BOOTSTRAP_MSG_LEN 1024
+
+/** What was the last bootstrap phase message we sent? We keep track
+ * of this so we can respond to getinfo status/bootstrap-phase queries. */
+static char last_sent_bootstrap_message[BOOTSTRAP_MSG_LEN];
+
+/** Convert the name of a bootstrapping phase <b>s</b> into strings
+ * <b>tag</b> and <b>summary</b> suitable for display by the controller. */
+static int
+bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
+                           const char **summary)
+{
+  switch (s) {
+    case BOOTSTRAP_STATUS_UNDEF:
+      *tag = "undef";
+      *summary = "Undefined";
+      break;
+    case BOOTSTRAP_STATUS_STARTING:
+      *tag = "starting";
+      *summary = "Starting";
+      break;
+    case BOOTSTRAP_STATUS_CONN_DIR:
+      *tag = "conn_dir";
+      *summary = "Connecting to directory server";
+      break;
+    case BOOTSTRAP_STATUS_HANDSHAKE:
+      *tag = "status_handshake";
+      *summary = "Finishing handshake";
+      break;
+    case BOOTSTRAP_STATUS_HANDSHAKE_DIR:
+      *tag = "handshake_dir";
+      *summary = "Finishing handshake with directory server";
+      break;
+    case BOOTSTRAP_STATUS_ONEHOP_CREATE:
+      *tag = "onehop_create";
+      *summary = "Establishing an encrypted directory connection";
+      break;
+    case BOOTSTRAP_STATUS_REQUESTING_STATUS:
+      *tag = "requesting_status";
+      *summary = "Asking for networkstatus consensus";
+      break;
+    case BOOTSTRAP_STATUS_LOADING_STATUS:
+      *tag = "loading_status";
+      *summary = "Loading networkstatus consensus";
+      break;
+    case BOOTSTRAP_STATUS_LOADING_KEYS:
+      *tag = "loading_keys";
+      *summary = "Loading authority key certs";
+      break;
+    case BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS:
+      *tag = "requesting_descriptors";
+      /* XXXX this appears to incorrectly report internal on most loads */
+      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
+        "Asking for relay descriptors for internal paths" :
+        "Asking for relay descriptors";
+      break;
+    /* If we're sure there are no exits in the consensus,
+     * inform the controller by adding "internal"
+     * to the status summaries.
+     * (We only check this while loading descriptors,
+     * so we may not know in the earlier stages.)
+     * But if there are exits, we can't be sure whether
+     * we're creating internal or exit paths/circuits.
+     * XXXX Or should be use different tags or statuses
+     * for internal and exit/all? */
+    case BOOTSTRAP_STATUS_LOADING_DESCRIPTORS:
+      *tag = "loading_descriptors";
+      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
+        "Loading relay descriptors for internal paths" :
+        "Loading relay descriptors";
+      break;
+    case BOOTSTRAP_STATUS_CONN_OR:
+      *tag = "conn_or";
+      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
+        "Connecting to the Tor network internally" :
+        "Connecting to the Tor network";
+      break;
+    case BOOTSTRAP_STATUS_HANDSHAKE_OR:
+      *tag = "handshake_or";
+      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
+        "Finishing handshake with first hop of internal circuit" :
+        "Finishing handshake with first hop";
+      break;
+    case BOOTSTRAP_STATUS_CIRCUIT_CREATE:
+      *tag = "circuit_create";
+      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
+        "Establishing an internal Tor circuit" :
+        "Establishing a Tor circuit";
+      break;
+    case BOOTSTRAP_STATUS_DONE:
+      *tag = "done";
+      *summary = "Done";
+      break;
+    default:
+//      log_warn(LD_BUG, "Unrecognized bootstrap status code %d", s);
+      *tag = *summary = "unknown";
+      return -1;
+  }
+  return 0;
+}
+
+/** What percentage through the bootstrap process are we? We remember
+ * this so we can avoid sending redundant bootstrap status events, and
+ * so we can guess context for the bootstrap messages which are
+ * ambiguous. It starts at 'undef', but gets set to 'starting' while
+ * Tor initializes. */
+static int bootstrap_percent = BOOTSTRAP_STATUS_UNDEF;
+
+/** Like bootstrap_percent, but only takes on the enumerated values in
+ * bootstrap_status_t.
+ */
+static int bootstrap_phase = BOOTSTRAP_STATUS_UNDEF;
+
+/** As bootstrap_percent, but holds the bootstrapping level at which we last
+ * logged a NOTICE-level message. We use this, plus BOOTSTRAP_PCT_INCREMENT,
+ * to avoid flooding the log with a new message every time we get a few more
+ * microdescriptors */
+static int notice_bootstrap_percent = 0;
+
+/** How many problems have we had getting to the next bootstrapping phase?
+ * These include failure to establish a connection to a Tor relay,
+ * failures to finish the TLS handshake, failures to validate the
+ * consensus document, etc. */
+static int bootstrap_problems = 0;
+
+/** We only tell the controller once we've hit a threshold of problems
+ * for the current phase. */
+#define BOOTSTRAP_PROBLEM_THRESHOLD 10
+
+/** When our bootstrapping progress level changes, but our bootstrapping
+ * status has not advanced, we only log at NOTICE when we have made at least
+ * this much progress.
+ */
+#define BOOTSTRAP_PCT_INCREMENT 5
+
+/** Do the actual logging and notifications for
+ * control_event_bootstrap().  Doesn't change any state beyond that.
+ */
+static void
+control_event_bootstrap_core(int loglevel, bootstrap_status_t status,
+                             int progress)
+{
+  char buf[BOOTSTRAP_MSG_LEN];
+  const char *tag, *summary;
+
+  bootstrap_status_to_string(status, &tag, &summary);
+  /* Locally reset status if there's incremental progress */
+  if (progress)
+    status = progress;
+
+  tor_log(loglevel, LD_CONTROL,
+          "Bootstrapped %d%%: %s", status, summary);
+  tor_snprintf(buf, sizeof(buf),
+               "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
+               status, tag, summary);
+  tor_snprintf(last_sent_bootstrap_message,
+               sizeof(last_sent_bootstrap_message),
+               "NOTICE %s", buf);
+  control_event_client_status(LOG_NOTICE, "%s", buf);
+}
+
+/** Called when Tor has made progress at bootstrapping its directory
+ * information and initial circuits.
+ *
+ * <b>status</b> is the new status, that is, what task we will be doing
+ * next. <b>progress</b> is zero if we just started this task, else it
+ * represents progress on the task.
+ */
+void
+control_event_bootstrap(bootstrap_status_t status, int progress)
+{
+  int loglevel = LOG_NOTICE;
+
+  if (bootstrap_percent == BOOTSTRAP_STATUS_DONE)
+    return; /* already bootstrapped; nothing to be done here. */
+
+  /* special case for handshaking status, since our TLS handshaking code
+   * can't distinguish what the connection is going to be for. */
+  if (status == BOOTSTRAP_STATUS_HANDSHAKE) {
+    if (bootstrap_percent < BOOTSTRAP_STATUS_CONN_OR) {
+      status = BOOTSTRAP_STATUS_HANDSHAKE_DIR;
+    } else {
+      status = BOOTSTRAP_STATUS_HANDSHAKE_OR;
+    }
+  }
+
+  if (status <= bootstrap_percent) {
+    /* If there's no new progress, return early. */
+    if (!progress || progress <= bootstrap_percent)
+      return;
+    /* Log at INFO if not enough progress happened. */
+    if (progress < notice_bootstrap_percent + BOOTSTRAP_PCT_INCREMENT)
+      loglevel = LOG_INFO;
+  }
+
+  control_event_bootstrap_core(loglevel, status, progress);
+
+  if (status > bootstrap_percent) {
+    bootstrap_phase = status; /* new milestone reached */
+    bootstrap_percent = status;
+  }
+  if (progress > bootstrap_percent) {
+    /* incremental progress within a milestone */
+    bootstrap_percent = progress;
+    bootstrap_problems = 0; /* Progress! Reset our problem counter. */
+  }
+  if (loglevel == LOG_NOTICE &&
+      bootstrap_percent > notice_bootstrap_percent) {
+    /* Remember that we gave a notice at this level. */
+    notice_bootstrap_percent = bootstrap_percent;
+  }
+}
+
+/** Flag whether we've opened an OR_CONN yet  */
+static int bootstrap_first_orconn = 0;
+
+/** Like bootstrap_phase, but for (possibly deferred) directory progress */
+static int bootstrap_dir_phase = BOOTSTRAP_STATUS_UNDEF;
+
+/** Like bootstrap_problems, but for (possibly deferred) directory progress  */
+static int bootstrap_dir_progress = BOOTSTRAP_STATUS_UNDEF;
+
+/** Defer directory info bootstrap events until we have successfully
+ * completed our first connection to a router.  */
+void
+control_event_boot_dir(bootstrap_status_t status, int progress)
+{
+  if (status > bootstrap_dir_progress) {
+    bootstrap_dir_progress = status;
+    bootstrap_dir_phase = status;
+  }
+  if (progress && progress >= bootstrap_dir_progress) {
+    bootstrap_dir_progress = progress;
+  }
+
+  /* Don't report unless we have successfully opened at least one OR_CONN */
+  if (!bootstrap_first_orconn)
+    return;
+
+  control_event_bootstrap(status, progress);
+}
+
+/** Set a flag to allow reporting of directory bootstrap progress.
+ * (Code that reports completion of an OR_CONN calls this.)  Also,
+ * report directory progress so far. */
+void
+control_event_boot_first_orconn(void)
+{
+  bootstrap_first_orconn = 1;
+  control_event_bootstrap(bootstrap_dir_phase, bootstrap_dir_progress);
+}
+
+/** Called when Tor has failed to make bootstrapping progress in a way
+ * that indicates a problem. <b>warn</b> gives a human-readable hint
+ * as to why, and <b>reason</b> provides a controller-facing short
+ * tag.  <b>conn</b> is the connection that caused this problem and
+ * can be NULL if a connection cannot be easily identified.
+ */
+void
+control_event_bootstrap_problem(const char *warn, const char *reason,
+                                const connection_t *conn, int dowarn)
+{
+  int status = bootstrap_percent;
+  const char *tag = "", *summary = "";
+  char buf[BOOTSTRAP_MSG_LEN];
+  const char *recommendation = "ignore";
+  int severity;
+  char *or_id = NULL, *hostaddr = NULL;
+  or_connection_t *or_conn = NULL;
+
+  /* bootstrap_percent must not be in "undefined" state here. */
+  tor_assert(status >= 0);
+
+  if (bootstrap_percent == 100)
+    return; /* already bootstrapped; nothing to be done here. */
+
+  bootstrap_problems++;
+
+  if (bootstrap_problems >= BOOTSTRAP_PROBLEM_THRESHOLD)
+    dowarn = 1;
+
+  /* Don't warn about our bootstrapping status if we are hibernating or
+   * shutting down. */
+  if (we_are_hibernating())
+    dowarn = 0;
+
+  tor_assert(bootstrap_status_to_string(bootstrap_phase, &tag, &summary) == 0);
+
+  severity = dowarn ? LOG_WARN : LOG_INFO;
+
+  if (dowarn)
+    recommendation = "warn";
+
+  if (conn && conn->type == CONN_TYPE_OR) {
+    /* XXX TO_OR_CONN can't deal with const */
+    or_conn = TO_OR_CONN((connection_t *)conn);
+    or_id = tor_strdup(hex_str(or_conn->identity_digest, DIGEST_LEN));
+  } else {
+    or_id = tor_strdup("?");
+  }
+
+  if (conn)
+    tor_asprintf(&hostaddr, "%s:%d", conn->address, (int)conn->port);
+  else
+    hostaddr = tor_strdup("?");
+
+  log_fn(severity,
+         LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s; "
+         "count %d; recommendation %s; host %s at %s)",
+         status, summary, warn, reason,
+         bootstrap_problems, recommendation,
+         or_id, hostaddr);
+
+  connection_or_report_broken_states(severity, LD_HANDSHAKE);
+
+  tor_snprintf(buf, sizeof(buf),
+      "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s "
+      "COUNT=%d RECOMMENDATION=%s HOSTID=\"%s\" HOSTADDR=\"%s\"",
+      bootstrap_percent, tag, summary, warn, reason, bootstrap_problems,
+      recommendation,
+      or_id, hostaddr);
+
+  tor_snprintf(last_sent_bootstrap_message,
+               sizeof(last_sent_bootstrap_message),
+               "WARN %s", buf);
+  control_event_client_status(LOG_WARN, "%s", buf);
+
+  tor_free(hostaddr);
+  tor_free(or_id);
+}
+
+/** Called when Tor has failed to make bootstrapping progress in a way
+ * that indicates a problem. <b>warn</b> gives a hint as to why, and
+ * <b>reason</b> provides an "or_conn_end_reason" tag.  <b>or_conn</b>
+ * is the connection that caused this problem.
+ */
+MOCK_IMPL(void,
+control_event_bootstrap_prob_or, (const char *warn, int reason,
+                                  or_connection_t *or_conn))
+{
+  int dowarn = 0;
+
+  if (or_conn->have_noted_bootstrap_problem)
+    return;
+
+  or_conn->have_noted_bootstrap_problem = 1;
+
+  if (reason == END_OR_CONN_REASON_NO_ROUTE)
+    dowarn = 1;
+
+  /* If we are using bridges and all our OR connections are now
+     closed, it means that we totally failed to connect to our
+     bridges. Throw a warning. */
+  if (get_options()->UseBridges && !any_other_active_or_conns(or_conn))
+    dowarn = 1;
+
+  control_event_bootstrap_problem(warn,
+                                  orconn_end_reason_to_control_string(reason),
+                                  TO_CONN(or_conn), dowarn);
+}
+
+/** Return a copy of the last sent bootstrap message. */
+char *
+control_event_boot_last_msg(void)
+{
+  return tor_strdup(last_sent_bootstrap_message);
+}
+
+/** Reset bootstrap tracking state. */
+void
+control_event_bootstrap_reset(void)
+{
+  bootstrap_percent = BOOTSTRAP_STATUS_UNDEF;
+  bootstrap_phase = BOOTSTRAP_STATUS_UNDEF;
+  notice_bootstrap_percent = 0;
+  bootstrap_problems = 0;
+  bootstrap_first_orconn = 0;
+  bootstrap_dir_progress = BOOTSTRAP_STATUS_UNDEF;
+  bootstrap_dir_phase = BOOTSTRAP_STATUS_UNDEF;
+  memset(last_sent_bootstrap_message, 0, sizeof(last_sent_bootstrap_message));
+}

@@ -62,6 +62,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/client/entrynodes.c		\
 	src/feature/client/transports.c		\
 	src/feature/control/control.c		\
+	src/feature/control/control_bootstrap.c	\
 	src/feature/control/fmt_serverstatus.c  \
 	src/feature/control/getinfo_geoip.c	\
 	src/feature/dirauth/keypin.c		\
