@@ -81,7 +81,7 @@ new Tor release:
 
       "Relays", not "servers" or "nodes" or "Tor relays".
 
-      "Onion services", not "hidden servies".
+      "Onion services", not "hidden services".
 
       "Stop FOOing", not "Fix a bug where we would FOO".
 
@@ -151,7 +151,7 @@ new Tor release:
 
    If you want, wait until at least one person has built it
    successfully.  (We used to say "wait for others to test it", but our
-   CI has successfully caught this kind of errors for the last several
+   CI has successfully caught these kinds of errors for the last several
    years.)
 
 
@@ -224,7 +224,7 @@ new Tor release:
 
    Post the changelog on the blog as well. You can generate a
    blog-formatted version of the changelog with
-      `./scripts/maint/format_changelog.py --B
+      `./scripts/maint/format_changelog.py --B`
 
    When you post, include an estimate of when the next TorBrowser
    releases will come out that include this Tor release.  This will
