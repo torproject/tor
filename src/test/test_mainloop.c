@@ -151,7 +151,7 @@ static void
 test_mainloop_user_activity(void *arg)
 {
   (void)arg;
-  static time_t start = 1542658829;
+  const time_t start = 1542658829;
   update_approx_time(start);
 
   MOCK(schedule_rescan_periodic_events, mock_schedule_rescan_periodic_events);
