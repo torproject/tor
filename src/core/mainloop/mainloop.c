@@ -1367,7 +1367,6 @@ CALLBACK(write_bridge_ns);
 CALLBACK(write_stats_file);
 CALLBACK(control_per_second_events);
 CALLBACK(second_elapsed);
-CALLBACK(check_network_participation);
 
 #undef CALLBACK
 
@@ -2003,7 +2002,7 @@ add_entropy_callback(time_t now, const or_options_t *options)
 
 /** Periodic callback: if there has been no network usage in a while,
  * enter a dormant state. */
-static int
+STATIC int
 check_network_participation_callback(time_t now, const or_options_t *options)
 {
   /* If we're a server, we can't become dormant. */

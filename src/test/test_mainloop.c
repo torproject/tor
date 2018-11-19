@@ -6,12 +6,20 @@
  * \brief Tests for functions closely related to the Tor main loop
  */
 
+#define CONFIG_PRIVATE
+#define MAINLOOP_PRIVATE
+
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
 #include "core/or/or.h"
+#include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/netstatus.h"
+
+#include "feature/hs/hs_service.h"
+
+#include "app/config/config.h"
 
 static const uint64_t BILLION = 1000000000;
 
@@ -186,6 +194,85 @@ test_mainloop_user_activity(void *arg)
   UNMOCK(schedule_rescan_periodic_events);
 }
 
+static unsigned int
+mock_get_num_services(void)
+{
+  return 1;
+}
+
+static connection_t *
+mock_connection_gbtu(int type)
+{
+  (void) type;
+  return (void *)"hello fellow connections";
+}
+
+static void
+test_mainloop_check_participation(void *arg)
+{
+  (void)arg;
+  or_options_t *options = options_new();
+  const time_t start = 1542658829;
+  const time_t ONE_DAY = 24*60*60;
+
+  // Suppose we've been idle for a day or two
+  reset_user_activity(start - 2*ONE_DAY);
+  set_network_participation(true);
+  check_network_participation_callback(start, options);
+  tt_int_op(is_participating_on_network(), OP_EQ, false);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start-2*ONE_DAY);
+
+  // suppose we've been idle for 2 days... but we are a server.
+  reset_user_activity(start - 2*ONE_DAY);
+  options->ORPort_set = 1;
+  set_network_participation(true);
+  check_network_participation_callback(start+2, options);
+  tt_int_op(is_participating_on_network(), OP_EQ, true);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+2);
+  options->ORPort_set = 0;
+
+  // idle for 2 days, but we have a hidden service.
+  reset_user_activity(start - 2*ONE_DAY);
+  set_network_participation(true);
+  MOCK(hs_service_get_num_services, mock_get_num_services);
+  check_network_participation_callback(start+3, options);
+  tt_int_op(is_participating_on_network(), OP_EQ, true);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+3);
+  UNMOCK(hs_service_get_num_services);
+
+  // idle for 2 days but we have at least one user connection
+  MOCK(connection_get_by_type_nonlinked, mock_connection_gbtu);
+  reset_user_activity(start - 2*ONE_DAY);
+  set_network_participation(true);
+  options->DormantTimeoutDisabledByIdleStreams = 1;
+  check_network_participation_callback(start+10, options);
+  tt_int_op(is_participating_on_network(), OP_EQ, true);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+10);
+
+  // as above, but DormantTimeoutDisabledByIdleStreams is not set
+  reset_user_activity(start - 2*ONE_DAY);
+  set_network_participation(true);
+  options->DormantTimeoutDisabledByIdleStreams = 0;
+  check_network_participation_callback(start+13, options);
+  tt_int_op(is_participating_on_network(), OP_EQ, false);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start-2*ONE_DAY);
+  UNMOCK(connection_get_by_type_nonlinked);
+  options->DormantTimeoutDisabledByIdleStreams = 1;
+
+  // idle for 2 days but DormantClientTimeout is 3 days
+  reset_user_activity(start - 2*ONE_DAY);
+  set_network_participation(true);
+  options->DormantClientTimeout = ONE_DAY * 3;
+  check_network_participation_callback(start+30, options);
+  tt_int_op(is_participating_on_network(), OP_EQ, true);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start-2*ONE_DAY);
+
+ done:
+  or_options_free(options);
+  UNMOCK(hs_service_get_num_services);
+  UNMOCK(connection_get_by_type_nonlinked);
+}
+
 #define MAINLOOP_TEST(name) \
   { #name, test_mainloop_## name , TT_FORK, NULL, NULL }
 
@@ -193,5 +280,6 @@ struct testcase_t mainloop_tests[] = {
   MAINLOOP_TEST(update_time_normal),
   MAINLOOP_TEST(update_time_jumps),
   MAINLOOP_TEST(user_activity),
+  MAINLOOP_TEST(check_participation),
   END_OF_TESTCASES
 };

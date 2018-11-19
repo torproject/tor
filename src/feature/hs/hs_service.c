@@ -3667,8 +3667,8 @@ hs_service_lookup_current_desc(const ed25519_public_key_t *pk)
 }
 
 /* Return the number of service we have configured and usable. */
-unsigned int
-hs_service_get_num_services(void)
+MOCK_IMPL(unsigned int,
+hs_service_get_num_services,(void))
 {
   if (hs_service_map == NULL) {
     return 0;

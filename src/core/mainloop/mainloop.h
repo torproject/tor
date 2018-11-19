@@ -104,6 +104,9 @@ STATIC void close_closeable_connections(void);
 STATIC void initialize_periodic_events(void);
 STATIC void teardown_periodic_events(void);
 STATIC int get_my_roles(const or_options_t *);
+STATIC int check_network_participation_callback(time_t now,
+                                                const or_options_t *options);
+
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *connection_array;
 

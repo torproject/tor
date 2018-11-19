@@ -310,7 +310,7 @@ hs_service_t *hs_service_new(const or_options_t *options);
 void hs_service_free_(hs_service_t *service);
 #define hs_service_free(s) FREE_AND_NULL(hs_service_t, hs_service_free_, (s))
 
-unsigned int hs_service_get_num_services(void);
+MOCK_DECL(unsigned int, hs_service_get_num_services,(void));
 void hs_service_stage_services(const smartlist_t *service_list);
 int hs_service_load_all_keys(void);
 int hs_service_get_version_from_key(const hs_service_t *service);

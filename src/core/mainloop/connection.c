@@ -4433,8 +4433,8 @@ connection_get_by_type_state(int type, int state)
  * Return a connection of type <b>type</b> that is not an internally linked
  * connection, and is not marked for close.
  **/
-connection_t *
-connection_get_by_type_nonlinked(int type)
+MOCK_IMPL(connection_t *,
+connection_get_by_type_nonlinked,(int type))
 {
   CONN_GET_TEMPLATE(conn, conn->type == type && !conn->linked);
 }
