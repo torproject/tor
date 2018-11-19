@@ -41,7 +41,7 @@ src_tools_tor_print_ed_signing_cert_LDADD = \
         $(TOR_CRYPTO_LIBS) \
         $(TOR_UTIL_LIBS) \
 	@TOR_LIB_MATH@ $(TOR_LIBS_CRYPTLIB) \
-	@TOR_LIB_WS32@ @TOR_LIB_USERENV@
+	@TOR_LIB_WS32@ @TOR_LIB_USERENV@ @TOR_LIB_GDI@
 
 if USE_NSS
 # ...
