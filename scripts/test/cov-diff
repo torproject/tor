@@ -7,9 +7,9 @@
 DIRA="$1"
 DIRB="$2"
 
-for B in $DIRB/*; do
-  A=$DIRA/`basename $B`
-  if [ -f $A ]; then
+for B in "$DIRB"/*; do
+  A=$DIRA/$(basename "$B")
+  if [ -f "$A" ]; then
       perl -pe 's/^\s*\!*\d+(\*?):/        1$1:/; s/^([^:]+:)[\d\s]+:/$1/; s/^ *-:(Runs|Programs):.*//;' "$A" > "$A.tmp"
   else
       cat /dev/null > "$A.tmp"
