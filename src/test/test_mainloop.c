@@ -11,6 +11,7 @@
 
 #include "core/or/or.h"
 #include "core/mainloop/mainloop.h"
+#include "core/mainloop/netstatus.h"
 
 static const uint64_t BILLION = 1000000000;
 
@@ -131,12 +132,66 @@ test_mainloop_update_time_jumps(void *arg)
   monotime_disable_test_mocking();
 }
 
+static int schedule_rescan_called = 0;
+static void
+mock_schedule_rescan_periodic_events(void)
+{
+  ++schedule_rescan_called;
+}
+
+static void
+test_mainloop_user_activity(void *arg)
+{
+  (void)arg;
+  const time_t start = 1542658829;
+  update_approx_time(start);
+
+  MOCK(schedule_rescan_periodic_events, mock_schedule_rescan_periodic_events);
+
+  reset_user_activity(start);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start);
+
+  set_network_participation(false);
+
+  // reset can move backwards and forwards, but does not change network
+  // participation.
+  reset_user_activity(start-10);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start-10);
+  reset_user_activity(start+10);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+10);
+
+  tt_int_op(schedule_rescan_called, OP_EQ, 0);
+  tt_int_op(false, OP_EQ, is_participating_on_network());
+
+  // "note" can only move forward.  Calling it from a non-participating
+  // state makes us rescan the periodic callbacks and set participation.
+  note_user_activity(start+20);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+20);
+  tt_int_op(true, OP_EQ, is_participating_on_network());
+  tt_int_op(schedule_rescan_called, OP_EQ, 1);
+
+  // Calling it again will move us forward, but not call rescan again.
+  note_user_activity(start+25);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+25);
+  tt_int_op(true, OP_EQ, is_participating_on_network());
+  tt_int_op(schedule_rescan_called, OP_EQ, 1);
+
+  // We won't move backwards.
+  note_user_activity(start+20);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+25);
+  tt_int_op(true, OP_EQ, is_participating_on_network());
+  tt_int_op(schedule_rescan_called, OP_EQ, 1);
+
+ done:
+  UNMOCK(schedule_rescan_periodic_events);
+}
+
 #define MAINLOOP_TEST(name) \
   { #name, test_mainloop_## name , TT_FORK, NULL, NULL }
 
 struct testcase_t mainloop_tests[] = {
   MAINLOOP_TEST(update_time_normal),
   MAINLOOP_TEST(update_time_jumps),
+  MAINLOOP_TEST(user_activity),
   END_OF_TESTCASES
 };
-
