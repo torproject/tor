@@ -7880,8 +7880,12 @@ control_free_all(void)
     flush_queued_events_event = NULL;
   }
   bootstrap_percent = BOOTSTRAP_STATUS_UNDEF;
+  bootstrap_phase = BOOTSTRAP_STATUS_UNDEF;
   notice_bootstrap_percent = 0;
   bootstrap_problems = 0;
+  bootstrap_first_orconn = 0;
+  bootstrap_dir_progress = BOOTSTRAP_STATUS_UNDEF;
+  bootstrap_dir_phase = BOOTSTRAP_STATUS_UNDEF;
   authentication_cookie_is_set = 0;
   global_event_mask = 0;
   disable_log_messages = 0;
