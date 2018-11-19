@@ -2554,16 +2554,15 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
 
   tt_int_op(body_used, OP_EQ, strlen(body));
   tt_str_op(content, OP_EQ, body);
-  goto done;
 
-  done:
-    UNMOCK(get_options);
-    UNMOCK(connection_write_to_buf_impl_);
-    connection_free_minimal(TO_CONN(conn));
-    tor_free(header);
-    tor_free(body);
-    tor_free(expires);
-    or_options_free(mock_options); mock_options = NULL;
+ done:
+  UNMOCK(get_options);
+  UNMOCK(connection_write_to_buf_impl_);
+  connection_free_minimal(TO_CONN(conn));
+  tor_free(header);
+  tor_free(body);
+  tor_free(expires);
+  or_options_free(mock_options);
 }
 
 static void
