@@ -11,6 +11,7 @@
 #include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nodefamily.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/torcert.h"
 
@@ -70,6 +71,7 @@ test_md_cache(void *data)
   const char *test_md3_noannotation = strchr(test_md3, '\n')+1;
   time_t time1, time2, time3;
   char *fn = NULL, *s = NULL;
+  char *encoded_family = NULL;
   (void)data;
 
   options = get_options_mutable();
@@ -172,8 +174,9 @@ test_md_cache(void *data)
 
   tt_ptr_op(md1->family, OP_EQ, NULL);
   tt_ptr_op(md3->family, OP_NE, NULL);
-  tt_int_op(smartlist_len(md3->family), OP_EQ, 3);
-  tt_str_op(smartlist_get(md3->family, 0), OP_EQ, "nodeX");
+
+  encoded_family = nodefamily_format(md3->family);
+  tt_str_op(encoded_family, OP_EQ, "nodeX nodeY nodeZ");
 
   /* Now rebuild the cache! */
   tt_int_op(microdesc_cache_rebuild(mc, 1), OP_EQ, 0);
@@ -254,6 +257,7 @@ test_md_cache(void *data)
   smartlist_free(wanted);
   tor_free(s);
   tor_free(fn);
+  tor_free(encoded_family);
 }
 
 static const char truncated_md[] =

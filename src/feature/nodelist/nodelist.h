@@ -68,7 +68,6 @@ const char *node_get_platform(const node_t *node);
 uint32_t node_get_prim_addr_ipv4h(const node_t *node);
 void node_get_address_string(const node_t *node, char *cp, size_t len);
 long node_get_declared_uptime(const node_t *node);
-const smartlist_t *node_get_declared_family(const node_t *node);
 const struct ed25519_public_key_t *node_get_ed25519_id(const node_t *node);
 int node_ed25519_id_matches(const node_t *node,
                             const struct ed25519_public_key_t *id);
@@ -155,10 +154,16 @@ int count_loading_descriptors_progress(void);
 
 #ifdef NODELIST_PRIVATE
 
+STATIC int node_nickname_matches(const node_t *node, const char *nickname);
+STATIC int node_in_nickname_smartlist(const smartlist_t *lst,
+                                      const node_t *node);
+STATIC int node_family_contains(const node_t *n1, const node_t *n2);
+STATIC bool node_has_declared_family(const node_t *node);
+STATIC void node_lookup_declared_family(smartlist_t *out, const node_t *node);
+
 #ifdef TOR_UNIT_TESTS
 
-STATIC void
-node_set_hsdir_index(node_t *node, const networkstatus_t *ns);
+STATIC void node_set_hsdir_index(node_t *node, const networkstatus_t *ns);
 
 #endif /* defined(TOR_UNIT_TESTS) */
 

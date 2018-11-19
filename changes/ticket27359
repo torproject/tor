@@ -1,0 +1,3 @@
+  o Minor features (memory usage):
+    - Store microdescriptor family lists with a more compact representation
+      to save memory.  Closes ticket 27359.

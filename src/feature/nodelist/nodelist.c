@@ -59,6 +59,7 @@
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/node_select.h"
+#include "feature/nodelist/nodefamily.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
@@ -1503,19 +1504,6 @@ node_is_me(const node_t *node)
   return router_digest_is_me(node->identity);
 }
 
-/** Return <b>node</b> declared family (as a list of names), or NULL if
- * the node didn't declare a family. */
-const smartlist_t *
-node_get_declared_family(const node_t *node)
-{
-  if (node->ri && node->ri->declared_family)
-    return node->ri->declared_family;
-  else if (node->md && node->md->family)
-    return node->md->family;
-  else
-    return NULL;
-}
-
 /* Does this node have a valid IPv6 address?
  * Prefer node_has_ipv6_orport() or node_has_ipv6_dirport() for
  * checking specific ports. */
@@ -1884,7 +1872,7 @@ addrs_in_same_network_family(const tor_addr_t *a1,
  * (case-insensitive), or if <b>node's</b> identity key digest
  * matches a hexadecimal value stored in <b>nickname</b>.  Return
  * false otherwise. */
-static int
+STATIC int
 node_nickname_matches(const node_t *node, const char *nickname)
 {
   const char *n = node_get_nickname(node);
@@ -1896,7 +1884,7 @@ node_nickname_matches(const node_t *node, const char *nickname)
 }
 
 /** Return true iff <b>node</b> is named by some nickname in <b>lst</b>. */
-static inline int
+STATIC int
 node_in_nickname_smartlist(const smartlist_t *lst, const node_t *node)
 {
   if (!lst) return 0;
@@ -1905,6 +1893,61 @@ node_in_nickname_smartlist(const smartlist_t *lst, const node_t *node)
       return 1;
   });
   return 0;
+}
+
+/** Return true iff n1's declared family contains n2. */
+STATIC int
+node_family_contains(const node_t *n1, const node_t *n2)
+{
+  if (n1->ri && n1->ri->declared_family) {
+    return node_in_nickname_smartlist(n1->ri->declared_family, n2);
+  } else if (n1->md) {
+    return nodefamily_contains_node(n1->md->family, n2);
+  } else {
+    return 0;
+  }
+}
+
+/**
+ * Return true iff <b>node</b> has declared a nonempty family.
+ **/
+STATIC bool
+node_has_declared_family(const node_t *node)
+{
+  if (node->ri && node->ri->declared_family &&
+      smartlist_len(node->ri->declared_family)) {
+    return true;
+  }
+
+  if (node->md && node->md->family) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Add to <b>out</b> every node_t that is listed by <b>node</b> as being in
+ * its family.  (Note that these nodes are not in node's family unless they
+ * also agree that node is in their family.)
+ **/
+STATIC void
+node_lookup_declared_family(smartlist_t *out, const node_t *node)
+{
+  if (node->ri && node->ri->declared_family &&
+      smartlist_len(node->ri->declared_family)) {
+    SMARTLIST_FOREACH_BEGIN(node->ri->declared_family, const char *, name) {
+      const node_t *n2 = node_get_by_nickname(name, NNF_NO_WARN_UNNAMED);
+      if (n2) {
+        smartlist_add(out, (node_t *)n2);
+      }
+    } SMARTLIST_FOREACH_END(name);
+    return;
+  }
+
+  if (node->md && node->md->family) {
+    nodefamily_add_nodes_to_smartlist(node->md->family, out);
+  }
 }
 
 /** Return true iff r1 and r2 are in the same family, but not the same
@@ -1930,14 +1973,9 @@ nodes_in_same_family(const node_t *node1, const node_t *node2)
   }
 
   /* Are they in the same family because the agree they are? */
-  {
-    const smartlist_t *f1, *f2;
-    f1 = node_get_declared_family(node1);
-    f2 = node_get_declared_family(node2);
-    if (f1 && f2 &&
-        node_in_nickname_smartlist(f1, node2) &&
-        node_in_nickname_smartlist(f2, node1))
-      return 1;
+  if (node_family_contains(node1, node2) &&
+      node_family_contains(node2, node1)) {
+    return 1;
   }
 
   /* Are they in the same family because the user says they are? */
@@ -1965,12 +2003,9 @@ void
 nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
 {
   const smartlist_t *all_nodes = nodelist_get_list();
-  const smartlist_t *declared_family;
   const or_options_t *options = get_options();
 
   tor_assert(node);
-
-  declared_family = node_get_declared_family(node);
 
   /* Let's make sure that we have the node itself, if it's a real node. */
   {
@@ -1997,25 +2032,20 @@ nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
     } SMARTLIST_FOREACH_END(node2);
   }
 
-  /* Now, add all nodes in the declared_family of this node, if they
+  /* Now, add all nodes in the declared family of this node, if they
    * also declare this node to be in their family. */
-  if (declared_family) {
+  if (node_has_declared_family(node)) {
+    smartlist_t *declared_family = smartlist_new();
+    node_lookup_declared_family(declared_family, node);
+
     /* Add every r such that router declares familyness with node, and node
      * declares familyhood with router. */
-    SMARTLIST_FOREACH_BEGIN(declared_family, const char *, name) {
-      const node_t *node2;
-      const smartlist_t *family2;
-      if (!(node2 = node_get_by_nickname(name, NNF_NO_WARN_UNNAMED)))
-        continue;
-      if (!(family2 = node_get_declared_family(node2)))
-        continue;
-      SMARTLIST_FOREACH_BEGIN(family2, const char *, name2) {
-          if (node_nickname_matches(node, name2)) {
-            smartlist_add(sl, (void*)node2);
-            break;
-          }
-      } SMARTLIST_FOREACH_END(name2);
-    } SMARTLIST_FOREACH_END(name);
+    SMARTLIST_FOREACH_BEGIN(declared_family, const node_t *, node2) {
+      if (node_family_contains(node2, node)) {
+        smartlist_add(sl, (void*)node2);
+      }
+    } SMARTLIST_FOREACH_END(node2);
+    smartlist_free(declared_family);
   }
 
   /* If the user declared any families locally, honor those too. */

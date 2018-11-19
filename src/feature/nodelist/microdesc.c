@@ -23,6 +23,7 @@
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nodefamily.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/router.h"
@@ -882,10 +883,7 @@ microdesc_free_(microdesc_t *md, const char *fname, int lineno)
   if (md->body && md->saved_location != SAVED_IN_CACHE)
     tor_free(md->body);
 
-  if (md->family) {
-    SMARTLIST_FOREACH(md->family, char *, cp, tor_free(cp));
-    smartlist_free(md->family);
-  }
+  nodefamily_free(md->family);
   short_policy_free(md->exit_policy);
   short_policy_free(md->ipv6_exit_policy);
 
