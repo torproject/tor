@@ -16,7 +16,6 @@
 #include "core/or/reasons.h"
 #include "feature/control/control.h"
 #include "feature/hibernate/hibernate.h"
-#include "feature/nodelist/nodelist.h"
 #include "lib/malloc/malloc.h"
 
 /** A sufficiently large size to record the last bootstrap phase string. */
@@ -26,99 +25,55 @@
  * of this so we can respond to getinfo status/bootstrap-phase queries. */
 static char last_sent_bootstrap_message[BOOTSTRAP_MSG_LEN];
 
+/** Table to convert bootstrap statuses to strings.  */
+static const struct {
+  bootstrap_status_t status;
+  const char *tag;
+  const char *summary;
+} boot_to_str_tab[] = {
+  { BOOTSTRAP_STATUS_UNDEF, "undef", "Undefined" },
+  { BOOTSTRAP_STATUS_STARTING, "starting", "Starting" },
+  { BOOTSTRAP_STATUS_CONN_DIR, "conn_dir", "Connecting to directory server" },
+  { BOOTSTRAP_STATUS_HANDSHAKE, "status_handshake", "Finishing handshake" },
+  { BOOTSTRAP_STATUS_HANDSHAKE_DIR, "handshake_dir",
+    "Finishing handshake with directory server" },
+  { BOOTSTRAP_STATUS_ONEHOP_CREATE, "onehop_create",
+    "Establishing an encrypted directory connection" },
+  { BOOTSTRAP_STATUS_REQUESTING_STATUS, "requesting_status",
+    "Asking for networkstatus consensus" },
+  { BOOTSTRAP_STATUS_LOADING_STATUS, "loading_status",
+    "Loading networkstatus consensus" },
+  { BOOTSTRAP_STATUS_LOADING_KEYS, "loading_keys",
+    "Loading authority key certs" },
+  { BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, "requesting_descriptors",
+    "Asking for relay descriptors" },
+  { BOOTSTRAP_STATUS_LOADING_DESCRIPTORS, "loading_descriptors",
+    "Loading relay descriptors" },
+  { BOOTSTRAP_STATUS_CONN_OR, "conn_or", "Connecting to the Tor network" },
+  { BOOTSTRAP_STATUS_HANDSHAKE_OR, "handshake_or",
+    "Finishing handshake with first hop" },
+  { BOOTSTRAP_STATUS_CIRCUIT_CREATE, "circuit_create",
+    "Establishing a Tor circuit" },
+  { BOOTSTRAP_STATUS_DONE, "done", "Done" },
+};
+#define N_BOOT_TO_STR (sizeof(boot_to_str_tab)/sizeof(boot_to_str_tab[0]))
+
 /** Convert the name of a bootstrapping phase <b>s</b> into strings
  * <b>tag</b> and <b>summary</b> suitable for display by the controller. */
 static int
 bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
                            const char **summary)
 {
-  switch (s) {
-    case BOOTSTRAP_STATUS_UNDEF:
-      *tag = "undef";
-      *summary = "Undefined";
-      break;
-    case BOOTSTRAP_STATUS_STARTING:
-      *tag = "starting";
-      *summary = "Starting";
-      break;
-    case BOOTSTRAP_STATUS_CONN_DIR:
-      *tag = "conn_dir";
-      *summary = "Connecting to directory server";
-      break;
-    case BOOTSTRAP_STATUS_HANDSHAKE:
-      *tag = "status_handshake";
-      *summary = "Finishing handshake";
-      break;
-    case BOOTSTRAP_STATUS_HANDSHAKE_DIR:
-      *tag = "handshake_dir";
-      *summary = "Finishing handshake with directory server";
-      break;
-    case BOOTSTRAP_STATUS_ONEHOP_CREATE:
-      *tag = "onehop_create";
-      *summary = "Establishing an encrypted directory connection";
-      break;
-    case BOOTSTRAP_STATUS_REQUESTING_STATUS:
-      *tag = "requesting_status";
-      *summary = "Asking for networkstatus consensus";
-      break;
-    case BOOTSTRAP_STATUS_LOADING_STATUS:
-      *tag = "loading_status";
-      *summary = "Loading networkstatus consensus";
-      break;
-    case BOOTSTRAP_STATUS_LOADING_KEYS:
-      *tag = "loading_keys";
-      *summary = "Loading authority key certs";
-      break;
-    case BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS:
-      *tag = "requesting_descriptors";
-      /* XXXX this appears to incorrectly report internal on most loads */
-      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
-        "Asking for relay descriptors for internal paths" :
-        "Asking for relay descriptors";
-      break;
-    /* If we're sure there are no exits in the consensus,
-     * inform the controller by adding "internal"
-     * to the status summaries.
-     * (We only check this while loading descriptors,
-     * so we may not know in the earlier stages.)
-     * But if there are exits, we can't be sure whether
-     * we're creating internal or exit paths/circuits.
-     * XXXX Or should be use different tags or statuses
-     * for internal and exit/all? */
-    case BOOTSTRAP_STATUS_LOADING_DESCRIPTORS:
-      *tag = "loading_descriptors";
-      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
-        "Loading relay descriptors for internal paths" :
-        "Loading relay descriptors";
-      break;
-    case BOOTSTRAP_STATUS_CONN_OR:
-      *tag = "conn_or";
-      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
-        "Connecting to the Tor network internally" :
-        "Connecting to the Tor network";
-      break;
-    case BOOTSTRAP_STATUS_HANDSHAKE_OR:
-      *tag = "handshake_or";
-      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
-        "Finishing handshake with first hop of internal circuit" :
-        "Finishing handshake with first hop";
-      break;
-    case BOOTSTRAP_STATUS_CIRCUIT_CREATE:
-      *tag = "circuit_create";
-      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
-        "Establishing an internal Tor circuit" :
-        "Establishing a Tor circuit";
-      break;
-    case BOOTSTRAP_STATUS_DONE:
-      *tag = "done";
-      *summary = "Done";
-      break;
-    default:
-//      log_warn(LD_BUG, "Unrecognized bootstrap status code %d", s);
-      *tag = *summary = "unknown";
-      return -1;
+  for (size_t i = 0; i < N_BOOT_TO_STR; i++) {
+    if (s == boot_to_str_tab[i].status) {
+      *tag = boot_to_str_tab[i].tag;
+      *summary = boot_to_str_tab[i].summary;
+      return 0;
+    }
   }
-  return 0;
+
+  *tag = *summary = "unknown";
+  return -1;
 }
 
 /** What percentage through the bootstrap process are we? We remember
