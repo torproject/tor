@@ -6,13 +6,16 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "core/or/circuitbuild.h"
 #include "core/or/policies.h"
+#include "feature/hs/hs_common.h"
 #include "feature/dirparse/policy_parse.h"
 #include "feature/relay/router.h"
 #include "lib/encoding/confline.h"
 #include "test/test.h"
 
 #include "core/or/addr_policy_st.h"
+#include "core/or/extend_info_st.h"
 #include "feature/hs/hs_descriptor.h"
 #include "feature/nodelist/node_st.h"
 #include "core/or/port_cfg_st.h"
@@ -2037,6 +2040,18 @@ test_policies_fascist_firewall_allows_address(void *arg)
     tt_int_op((expect_ap).port, OP_EQ, chosen_ls_ap.port); \
   STMT_END
 
+#define CHECK_HS_EXTEND_INFO_ADDR_LS(fake_ls, expect_ap) \
+  STMT_BEGIN \
+    curve25519_secret_key_t seckey; \
+    curve25519_secret_key_generate(&seckey, 0); \
+    curve25519_public_key_t pubkey; \
+    curve25519_public_key_generate(&pubkey, &seckey); \
+    extend_info_t *ei = hs_get_extend_info_from_lspecs(fake_ls, &pubkey, 1); \
+    tt_assert(tor_addr_eq(&(expect_ap).addr, &ei->addr)); \
+    tt_int_op((expect_ap).port, OP_EQ, ei->port); \
+    extend_info_free(ei); \
+  STMT_END
+
 /** Run unit tests for fascist_firewall_choose_address */
 static void
 test_policies_fascist_firewall_choose_address(void *arg)
@@ -2461,6 +2476,15 @@ test_policies_fascist_firewall_choose_address(void *arg)
   link_specifier_set_ls_len(fake_ls, addr_len + sizeof(ipv6_or_ap.port));
   smartlist_add(lspecs, fake_ls);
 
+  /* Legacy ID link specifier */
+  fake_ls = link_specifier_new();
+  link_specifier_set_ls_type(fake_ls, LS_LEGACY_ID);
+  uint8_t *legacy_id = link_specifier_getarray_un_legacy_id(fake_ls);
+  memset(legacy_id, 'A', sizeof(*legacy_id));
+  link_specifier_set_ls_len(fake_ls,
+                            link_specifier_getlen_un_legacy_id(fake_ls));
+  smartlist_add(lspecs, fake_ls);
+
   /* Enable both IPv4 and IPv6. */
   memset(&mock_options, 0, sizeof(or_options_t));
   mock_options.ClientUseIPv4 = 1;
@@ -2472,11 +2496,15 @@ test_policies_fascist_firewall_choose_address(void *arg)
   CHECK_CHOSEN_ADDR_LS(lspecs, 0, 1, ipv4_or_ap);
   CHECK_CHOSEN_ADDR_LS(lspecs, 1, 1, ipv4_or_ap);
 
+  CHECK_HS_EXTEND_INFO_ADDR_LS(lspecs, ipv4_or_ap);
+
   /* Prefer IPv6, enable both IPv4 and IPv6. */
   mock_options.ClientPreferIPv6ORPort = 1;
 
   CHECK_CHOSEN_ADDR_LS(lspecs, 0, 1, ipv6_or_ap);
   CHECK_CHOSEN_ADDR_LS(lspecs, 1, 1, ipv6_or_ap);
+
+  CHECK_HS_EXTEND_INFO_ADDR_LS(lspecs, ipv6_or_ap);
 
   /* IPv4-only. */
   memset(&mock_options, 0, sizeof(or_options_t));
@@ -2486,6 +2514,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   CHECK_CHOSEN_ADDR_LS(lspecs, 0, 1, ipv4_or_ap);
   CHECK_CHOSEN_ADDR_LS(lspecs, 1, 1, ipv4_or_ap);
 
+  CHECK_HS_EXTEND_INFO_ADDR_LS(lspecs, ipv4_or_ap);
+
   /* IPv6-only. */
   memset(&mock_options, 0, sizeof(or_options_t));
   mock_options.ClientUseIPv4 = 0;
@@ -2493,6 +2523,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
 
   CHECK_CHOSEN_ADDR_LS(lspecs, 0, 1, ipv6_or_ap);
   CHECK_CHOSEN_ADDR_LS(lspecs, 1, 1, ipv6_or_ap);
+
+  CHECK_HS_EXTEND_INFO_ADDR_LS(lspecs, ipv6_or_ap);
 
   SMARTLIST_FOREACH(lspecs, link_specifier_t *, lspec,
                     link_specifier_free(lspec));
