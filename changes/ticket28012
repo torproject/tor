@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Fix issues that shellcheck found in updateRustDependencies.sh.
+      Resolves ticket 28012.
