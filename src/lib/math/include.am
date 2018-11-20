@@ -7,7 +7,8 @@ endif
 
 src_lib_libtor_math_a_SOURCES =	\
 		src/lib/math/fp.c		\
-		src/lib/math/laplace.c
+		src/lib/math/laplace.c 	\
+		src/lib/math/prob_distr.c
 
 
 src_lib_libtor_math_testing_a_SOURCES = \
@@ -17,4 +18,5 @@ src_lib_libtor_math_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 noinst_HEADERS +=				\
 		src/lib/math/fp.h		\
-		src/lib/math/laplace.h
+		src/lib/math/laplace.h  \
+		src/lib/math/prob_distr.h
