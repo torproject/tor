@@ -159,13 +159,16 @@ new Tor release:
    (Otherwise, users will get confused when it complains to them
    about its status.)
 
+   If it is not, you'll need to poke Roger, Weasel, and Sebastian again: see
+   item 0.1 at the start of this document.
+
 === IV. Commit, upload, announce
 
 1. Sign the tarball, then sign and push the git tag:
 
         gpg -ba <the_tarball>
-        git tag -s tor-0.4.x.y-status
-        git push origin tag tor-0.4.x.y-status
+        git tag -s tor-0.4.x.y-<status>
+        git push origin tag tor-0.4.x.y-<status>
 
    (You must do this before you update the website: the website scripts
    rely on finding the version by tag.)
