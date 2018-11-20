@@ -155,7 +155,7 @@ new Tor release:
    years.)
 
 
-3. Make sure that the new version is recommened in the latest consensus.
+3. Make sure that the new version is recommended in the latest consensus.
    (Otherwise, users will get confused when it complains to them
    about its status.)
 
