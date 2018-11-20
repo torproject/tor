@@ -20,8 +20,8 @@
 
 set -e
 
-HERE=$(dirname $(realpath $0))
-TOPLEVEL=$(dirname $(dirname $HERE))
+HERE=$(dirname "$(realpath "$0")")
+TOPLEVEL=$(dirname "$(dirname "$HERE")")
 TOML="$TOPLEVEL/src/rust/Cargo.toml"
 VENDORED="$TOPLEVEL/src/ext/rust/crates"
 CARGO=$(which cargo)
@@ -38,8 +38,8 @@ if test -z "$CARGO" ; then
     printf "Error: cargo must be installed and in your \$PATH\\n"
 fi
 
-if test -z $(cargo --list | grep vendor) ; then
+if test -z "$(cargo --list | grep vendor)" ; then
     printf "Error: cargo-vendor not installed\\n"
 fi
 
-$CARGO vendor -v --locked --explicit-version --no-delete --sync $TOML $VENDORED
+$CARGO vendor -v --locked --explicit-version --no-delete --sync "$TOML" "$VENDORED"
