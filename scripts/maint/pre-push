@@ -1,0 +1,56 @@
+#!/bin/sh
+
+# git pre-push hook script to prevent "fixup!" and "squash!" commit
+# from ending up in master, or in any branch if CUR_BRANCH check is removed.
+# It is meant to be placed in .git/hooks directory.
+#
+# The following sample script was used as starting point:
+# https://github.com/git/git/blob/master/templates/hooks--pre-push.sample
+
+z40=0000000000000000000000000000000000000000
+
+CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CUR_BRANCH" != "master" ]
+then
+        exit 0
+fi
+
+echo "Running pre-push hook"
+
+# shellcheck disable=SC2034
+while read -r local_ref local_sha remote_ref remote_sha
+do
+	if [ "$local_sha" = $z40 ]
+	then
+		# Handle delete
+		:
+	else
+		if [ "$remote_sha" = $z40 ]
+		then
+			# New branch, examine all commits
+			range="$local_sha"
+		else
+			# Update to existing branch, examine new commits
+			range="$remote_sha..$local_sha"
+		fi
+
+                # Check for fixup! commit
+                commit=$(git rev-list -n 1 --grep '^fixup!' "$range")
+		if [ -n "$commit" ]
+		then
+			echo >&2 "Found fixup! commit in $local_ref, not pushing"
+			exit 1
+		fi
+
+                # Check for squash! commit
+                commit=$(git rev-list -n 1 --grep '^squash!' "$range")
+		if [ -n "$commit" ]
+		then
+			echo >&2 "Found squash! commit in $local_ref, not pushing"
+			exit 1
+		fi
+	fi
+done
+
+exit 0
+
