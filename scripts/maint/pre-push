@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # git pre-push hook script to prevent "fixup!" and "squash!" commit
 # from ending up in master, or in any branch if CUR_BRANCH check is removed.
@@ -10,7 +10,8 @@
 z40=0000000000000000000000000000000000000000
 
 CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [ "$CUR_BRANCH" != "master" ]
+if [ "$CUR_BRANCH" != "master" ] && [[ $CUR_BRANCH != release-* ]] &&
+        [[ $CUR_BRANCH != maint-* ]]
 then
         exit 0
 fi
