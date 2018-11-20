@@ -76,7 +76,7 @@ test_script:
             Execute-Bash "VERBOSE=1 make -j2 check"
     }
 
-on_failure:
+on_finish:
 - ps: >-
     if ($env:compiler -eq "mingw") {
             <# use the MSYS2 user binaries to archive failures #>
@@ -91,5 +91,7 @@ on_failure:
             Execute-Bash "tail -1000 config.log || true"
             Execute-Bash "cat test-suite.log || true"
     }
+
 # notify the IRC channel of any failures
+on_failure:
 - cmd: C:\Python27\python.exe %APPVEYOR_BUILD_FOLDER%\scripts\test\appveyor-irc-notify.py irc.oftc.net:6697 tor-ci failure
