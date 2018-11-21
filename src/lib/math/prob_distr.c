@@ -52,18 +52,6 @@
 	    + validate_const_container_of(PTR, TYPE, FIELD))
 
 /**
- * Draw an unsigned 32-bit integer uniformly at random.
- */
-/* XXX */
-STATIC uint32_t
-crypto_rand_uint32(void)
-{
-  uint32_t rand;
-  crypto_rand((void*)&rand, sizeof(rand));
-  return rand;
-}
-
-/**
  * Count number of one bits in 32-bit word.
  */
 static unsigned
@@ -1216,7 +1204,8 @@ sample_exponential(uint32_t s, double p0)
  *	https://doi.org/10.1007/978-3-642-39206-1_23
  *	https://people.mpi-inf.mpg.de/~kbringma/paper/2013ICALP-1.pdf
  */
-STATIC unsigned
+/* XXX Create geometric_sample and a geometric dist struct for the API to conform */
+unsigned
 sample_geometric(uint32_t s, double p0, double p)
 {
 	double x = sample_exponential(s, p0);
