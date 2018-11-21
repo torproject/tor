@@ -7,6 +7,7 @@
 #include "core/or/or.h"
 
 #include "lib/math/prob_distr.h"
+#include "lib/crypt_ops/crypto_rand.h"
 
 #include <assert.h>
 #include <float.h>

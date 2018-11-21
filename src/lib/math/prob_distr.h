@@ -32,6 +32,8 @@ struct dist_ops {
 
 /* Geometric distribution */
 
+unsigned sample_geometric(uint32_t s, double p0, double p);
+
 /* Pareto distribution */
 
 struct genpareto {
@@ -149,10 +151,6 @@ STATIC double sf_genpareto(double x, double mu, double sigma, double xi);
 STATIC double icdf_genpareto(double p, double mu, double sigma, double xi);
 STATIC double isf_genpareto(double p, double mu, double sigma, double xi);
 STATIC double sample_genpareto(uint32_t s, double p0, double xi);
-
-STATIC unsigned sample_geometric(uint32_t s, double p0, double p);
-
-STATIC uint32_t crypto_rand_uint32(void);
 
 #endif
 
