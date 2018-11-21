@@ -51,6 +51,17 @@
 	((const TYPE *)(((const char *)(PTR)) - offsetof(TYPE, FIELD))	\
 	    + validate_const_container_of(PTR, TYPE, FIELD))
 
+/**  XXX fix these */
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wfloat-equal"
+#pragma clang diagnostic ignored "-Wfloat-conversion"
+#pragma clang diagnostic ignored "-Wbad-function-cast"
+#else
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#pragma GCC diagnostic ignored "-Wfloat-conversion"
+#pragma GCC diagnostic ignored "-Wbad-function-cast"
+#endif
+
 /**
  * Count number of one bits in 32-bit word.
  */

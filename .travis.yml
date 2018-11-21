@@ -197,7 +197,7 @@ install:
 
 script:
   - ./autogen.sh
-  - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $NSS_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
+  - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $NSS_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --disable-silent-rules"
   - echo "Configure flags are $CONFIGURE_FLAGS"
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.

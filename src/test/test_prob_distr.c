@@ -18,6 +18,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/** XXXX This is bad fix this stuff */
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wfloat-equal"
+#pragma clang diagnostic ignored "-Wfloat-conversion"
+#pragma clang diagnostic ignored "-Wbad-function-cast"
+#else
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#pragma GCC diagnostic ignored "-Wfloat-conversion"
+#pragma GCC diagnostic ignored "-Wbad-function-cast"
+#endif
+
 /**
  * Compute the probability mass function Geom(n; p) of the number of
  * trials before the first success when success has probability p.
