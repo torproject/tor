@@ -317,9 +317,7 @@ test_logit_logistic(void *arg)
 		    sample_logistic(1, 1, p0));
 	}
 
-	if (ok)
-		printf("pass logit/logistic / logistic cdf/sf\n");
-	else
+	if (!ok)
 		printf("fail logit/logistic / logistic cdf/sf\n");
 
     tt_assert(ok);
@@ -463,9 +461,7 @@ test_log_logistic(void *arg)
 		    sample_log_logistic(1, p0));
 	}
 
-	if (ok)
-		printf("pass log logistic cdf/sf\n");
-	else
+	if (!ok)
 		printf("fail log logistic cdf/sf\n");
 
     tt_assert(ok);
@@ -538,8 +534,7 @@ test_weibull(void *arg)
 			 * this is significant.
 			 */
 			double t = -expm1(-x*(2*DBL_EPSILON + DBL_EPSILON));
-			double relerr_bound =
-			    t + DBL_EPSILON + t*DBL_EPSILON;
+			relerr_bound = t + DBL_EPSILON + t*DBL_EPSILON;
 			if (relerr_bound < 3e-15)
 				/*
 				 * The tests are written only to 16
@@ -583,9 +578,7 @@ test_weibull(void *arg)
 		    sample_weibull(1, p0, 3, 2));
 	}
 
-	if (ok)
-		printf("pass Weibull cdf/sf\n");
-	else
+	if (!ok)
 		printf("fail Weibull cdf/sf\n");
 
     tt_assert(ok);
@@ -635,7 +628,7 @@ test_genpareto(void *arg)
 		{ 10, 100, .49886285755007337, .5011371424499267 },
 		{ 10, 1000, .6018968102992647, .3981031897007353 },
 	};
-	double xi[] = { -1.5, -1, -1e-30, 0, 1e-30, 1, 1.5 };
+	double xi_array[] = { -1.5, -1, -1e-30, 0, 1e-30, 1, 1.5 };
 	size_t i, j;
 	double relerr_bound = 3e-15;
 	bool ok = true;
@@ -665,11 +658,11 @@ test_genpareto(void *arg)
 		}
 	}
 
-	for (i = 0; i < arraycount(xi); i++) {
+	for (i = 0; i < arraycount(xi_array); i++) {
 		for (j = 0; j <= 100; j++) {
 			double p0 = (j == 0 ? 2*DBL_MIN : (double)j/100);
 
-			if (xi[i] == 0) {
+			if (xi_array[i] == 0) {
 				/*
 				 * When xi == 0, the generalized Pareto
 				 * distribution reduces to an
@@ -680,21 +673,24 @@ test_genpareto(void *arg)
 				CHECK_RELERR(-log1p(-p0/2),
 				    sample_genpareto(1, p0, 0));
 			} else {
-				CHECK_RELERR(expm1(-xi[i]*log(p0/2))/xi[i],
-				    sample_genpareto(0, p0, xi[i]));
+				CHECK_RELERR(expm1(-xi_array[i]*log(p0/2))/xi_array[i],
+				    sample_genpareto(0, p0, xi_array[i]));
 				CHECK_RELERR((j == 0 ? DBL_MIN :
-					expm1(-xi[i]*log1p(-p0/2))/xi[i]),
-				    sample_genpareto(1, p0, xi[i]));
+					expm1(-xi_array[i]*log1p(-p0/2))/xi_array[i]),
+				    sample_genpareto(1, p0, xi_array[i]));
 			}
 
-			CHECK_RELERR(isf_genpareto(p0/2, 0, 1, xi[i]),
-			    sample_genpareto(0, p0, xi[i]));
-			CHECK_RELERR(icdf_genpareto(p0/2, 0, 1, xi[i]),
-			    sample_genpareto(1, p0, xi[i]));
+			CHECK_RELERR(isf_genpareto(p0/2, 0, 1, xi_array[i]),
+			    sample_genpareto(0, p0, xi_array[i]));
+			CHECK_RELERR(icdf_genpareto(p0/2, 0, 1, xi_array[i]),
+			    sample_genpareto(1, p0, xi_array[i]));
 		}
 	}
 
-	return true;
+	tt_assert(ok);
+
+ done:
+    ;
 }
 
 /**
@@ -852,8 +848,9 @@ test_stochastic_geometric_impl(double p)
 				break;
 		}
 	}
+
 	if (npass >= NPASSES_MIN) {
-		printf("pass %s sampler\n", "geometric");
+      /* printf("pass %s sampler\n", "geometric"); */
 		return true;
 	} else {
 		printf("fail %s sampler\n", "geometric");
@@ -948,7 +945,7 @@ test_psi_dist_sample(const struct dist *dist)
 		}
 	}
 	if (npass >= NPASSES_MIN) {
-		printf("pass %s sampler\n", dist->ops->name);
+      /* printf("pass %s sampler\n", dist->ops->name);*/
 		return true;
 	} else {
 		printf("fail %s sampler\n", dist->ops->name);
