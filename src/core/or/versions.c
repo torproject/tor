@@ -399,6 +399,7 @@ memoize_protover_summary(protover_summary_flags_t *out,
 
   if (strmap_size(protover_summary_map) >= MAX_PROTOVER_SUMMARY_MAP_LEN) {
     protover_summary_cache_free_all();
+    protover_summary_map = strmap_new();
   }
 
   const protover_summary_flags_t *cached =
