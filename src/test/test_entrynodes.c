@@ -74,9 +74,10 @@ bfn_mock_nodelist_get_list(void)
 }
 
 static networkstatus_t *
-bfn_mock_networkstatus_get_live_consensus(time_t now)
+bfn_mock_networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
 {
   (void)now;
+  (void)flavor;
   return dummy_consensus;
 }
 
@@ -118,7 +119,7 @@ big_fake_network_cleanup(const struct testcase_t *testcase, void *ptr)
   UNMOCK(nodelist_get_list);
   UNMOCK(node_get_by_id);
   UNMOCK(get_or_state);
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
   or_state_free(dummy_state);
   dummy_state = NULL;
   tor_free(dummy_consensus);
@@ -198,8 +199,8 @@ big_fake_network_setup(const struct testcase_t *testcase)
   MOCK(node_get_by_id, bfn_mock_node_get_by_id);
   MOCK(get_or_state,
        get_or_state_replacement);
-  MOCK(networkstatus_get_live_consensus,
-       bfn_mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       bfn_mock_networkstatus_get_reasonably_live_consensus);
   /* Return anything but NULL (it's interpreted as test fail) */
   return (void*)testcase;
 }

@@ -1459,13 +1459,10 @@ networkstatus_valid_until_is_reasonably_live(time_t valid_until,
   return (now <= valid_until + REASONABLY_LIVE_TIME);
 }
 
-/* XXXX remove this in favor of get_live_consensus. But actually,
- * leave something like it for bridge users, who need to not totally
- * lose if they spend a while fetching a new consensus. */
 /** As networkstatus_get_live_consensus(), but is way more tolerant of expired
  * consensuses. */
-networkstatus_t *
-networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
+MOCK_IMPL(networkstatus_t *,
+networkstatus_get_reasonably_live_consensus,(time_t now, int flavor))
 {
   networkstatus_t *consensus =
     networkstatus_get_latest_consensus_by_flavor(flavor);
