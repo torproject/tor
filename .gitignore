@@ -111,6 +111,11 @@ uptime-*.json
 /doc/tor-resolve.html
 /doc/tor-resolve.html.in
 /doc/tor-resolve.1.xml
+/doc/tor-genkey.1
+/doc/tor-genkey.1.in
+/doc/tor-genkey.html
+/doc/tor-genkey.html.in
+/doc/tor-genkey.1.xml
 /doc/torify.1
 /doc/torify.1.in
 /doc/torify.html
@@ -265,6 +270,7 @@ uptime-*.json
 /src/tools/libtorrunner.a
 /src/tools/tor-checkkey
 /src/tools/tor-resolve
+/src/tools/tor-genkey
 /src/tools/tor-cov-resolve
 /src/tools/tor-gencert
 /src/tools/tor-print-ed-signing-cert
@@ -272,6 +278,7 @@ uptime-*.json
 /src/tools/tor-cov-gencert
 /src/tools/tor-checkkey.exe
 /src/tools/tor-resolve.exe
+/src/tools/tor-genkey.exe
 /src/tools/tor-cov-resolve.exe
 /src/tools/tor-gencert.exe
 /src/tools/tor-cov-gencert.exe

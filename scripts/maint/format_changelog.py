@@ -35,6 +35,7 @@ import optparse
 NO_HYPHENATE=set("""
 pf-divert
 tor-resolve
+tor-genkey
 tor-gencert
 """.split())
 

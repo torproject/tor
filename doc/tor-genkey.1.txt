@@ -1,0 +1,48 @@
+// Copyright (c) The Tor Project, Inc.
+// See LICENSE for licensing information
+// This is an asciidoc file used to generate the manpage/html reference.
+// Learn asciidoc on http://www.methods.co.nz/asciidoc/userguide.html
+:man source:   Tor
+:man manual:   Tor Manual
+tor-genkey(1)
+==============
+Suphanat Chunhapanya
+
+NAME
+----
+tor-genkey - utility to generate various keys for tor
+
+SYNOPSIS
+--------
+**tor-genkey** [-t|--type __keytype__] [-o|--out __filename__]
+
+DESCRIPTION
+-----------
+**tor-genkey** is a key generation utility to be used to generate various keys
+for many subsystems of tor.
+
+OPTIONS
+-------
+**-t**, **--type** __keytype__::
+    Specify which key type you want to generate.
+
+**-o**, **--output** __filename__::
+    Output your key in __filename__.
+
+KEY TYPES
+---------
+**HsClientDescriptorAuth**::
+    When using this type, **tor-genkey** will generates a public key and
+    a private key to be used in onion service v3 client authorization.
+    The public key will be in <__filename__>.auth, while the private key will be
+    in <__filename__>.auth_private. +
+ +
+    See Section Client Authorization in **tor**(1) for more information.
+
+SEE ALSO
+--------
+**tor**(1) +
+
+AUTHORS
+-------
+Suphanat Chunhapanya.
