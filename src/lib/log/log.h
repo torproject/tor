@@ -109,8 +109,10 @@
 #define LD_DOS       (1u<<25)
 /** Processes */
 #define LD_PROCESS   (1u<<26)
+/** Pluggable Transports. */
+#define LD_PT        (1u<<27)
 /** Number of logging domains in the code. */
-#define N_LOGGING_DOMAINS 27
+#define N_LOGGING_DOMAINS 28
 
 /** This log message is not safe to send to a callback-based logger
  * immediately.  Used as a flag, not a log domain. */
