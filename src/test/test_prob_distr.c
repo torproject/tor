@@ -1185,7 +1185,10 @@ struct testcase_t prob_distr_tests[] = {
   { "weibull", test_weibull, TT_FORK, NULL, NULL },
   { "genpareto", test_genpareto, TT_FORK, NULL, NULL },
   { "uniform_interval", test_uniform_interval, TT_FORK, NULL, NULL },
+  END_OF_TESTCASES
+};
 
+struct testcase_t slow_stochastic_prob_distr_tests[] = {
   { "stochastic_genpareto", test_stochastic_genpareto, TT_FORK, NULL, NULL },
   { "stochastic_geometric", test_stochastic_geometric, TT_FORK, NULL, NULL },
   { "stochastic_uniform", test_stochastic_uniform, TT_FORK, NULL, NULL },
