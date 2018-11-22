@@ -34,6 +34,8 @@ void process_win32_deinit(void);
 
 process_status_t process_win32_exec(struct process_t *process);
 
+process_pid_t process_win32_get_pid(struct process_t *process);
+
 int process_win32_write(struct process_t *process, buf_t *buffer);
 int process_win32_read_stdout(struct process_t *process, buf_t *buffer);
 int process_win32_read_stderr(struct process_t *process, buf_t *buffer);

@@ -255,6 +255,19 @@ process_exec(process_t *process)
   return status;
 }
 
+/** Returns the unique process identifier for the given <b>process</b>. */
+process_pid_t
+process_get_pid(process_t *process)
+{
+  tor_assert(process);
+
+#ifndef _WIN32
+  return process_unix_get_pid(process);
+#else
+  return process_win32_get_pid(process);
+#endif
+}
+
 /** Set the callback function for output from the child process's standard out
  * handle.  This function sets the callback function which is called every time
  * the child process have written output to its standard out file handle.

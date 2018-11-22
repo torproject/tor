@@ -160,6 +160,9 @@ test_default_values(void *arg)
   tt_assert(smartlist_contains(process_get_all_processes(),
                                process));
 
+  /* Default PID is 0. */
+  tt_int_op(0, OP_EQ, process_get_pid(process));
+
   /* Our arguments should be empty. */
   tt_int_op(0, OP_EQ,
             smartlist_len(process_get_arguments(process)));

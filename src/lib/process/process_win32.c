@@ -271,6 +271,16 @@ process_win32_exec(process_t *process)
   return PROCESS_STATUS_RUNNING;
 }
 
+/** Returns the unique process identifier for the given <b>process</b>. */
+process_pid_t
+process_win32_get_pid(process_t *process)
+{
+  tor_assert(process);
+
+  process_win32_t *win32_process = process_get_win32_process(process);
+  return (process_pid_t)win32_process->process_information.dwProcessId;
+}
+
 /** Schedule an async write of the data found in <b>buffer</b> for the given
  * process.  This function runs an async write operation of the content of
  * buffer, if we are not already waiting for a pending I/O request. Returns the
