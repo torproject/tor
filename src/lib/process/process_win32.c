@@ -445,12 +445,15 @@ process_win32_timer_callback(periodic_timer_t *timer, void *data)
   tor_assert(data == NULL);
 
   log_debug(LD_PROCESS, "Windows Process I/O timer ticked");
+
+  /* Move the process into an alertable state. */
+  process_win32_trigger_completion_callbacks();
+
+  /* Check if our processes are still alive. */
   const smartlist_t *processes = process_get_all_processes();
 
   SMARTLIST_FOREACH(processes, process_t *, p,
                     process_win32_timer_test_process(p));
-
-  process_win32_trigger_completion_callbacks();
 }
 
 /** Test whether a given process is still alive. Notify the Process subsystem
