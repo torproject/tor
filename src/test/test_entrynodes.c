@@ -137,6 +137,12 @@ big_fake_network_setup(const struct testcase_t *testcase)
    * that we need for entrynodes.c. */
   const int N_NODES = 271;
 
+  const char *argument = testcase->setup_data;
+  int reasonably_live_consensus = 0;
+  if (argument) {
+    reasonably_live_consensus = strstr(argument, "reasonably-live") != NULL;
+  }
+
   big_fake_net_nodes = smartlist_new();
   for (i = 0; i < N_NODES; ++i) {
     curve25519_secret_key_t curve25519_secret_key;
@@ -192,8 +198,16 @@ big_fake_network_setup(const struct testcase_t *testcase)
 
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
   dummy_consensus = tor_malloc_zero(sizeof(networkstatus_t));
-  dummy_consensus->valid_after = approx_time() - 3600;
-  dummy_consensus->valid_until = approx_time() + 3600;
+  if (reasonably_live_consensus) {
+    /* Make the dummy consensus valid from 4 hours ago, but expired an hour
+     * ago. */
+    dummy_consensus->valid_after = approx_time() - 4*3600;
+    dummy_consensus->valid_until = approx_time() - 3600;
+  } else {
+    /* Make the dummy consensus valid for an hour either side of now. */
+    dummy_consensus->valid_after = approx_time() - 3600;
+    dummy_consensus->valid_until = approx_time() + 3600;
+  }
 
   MOCK(nodelist_get_list, bfn_mock_nodelist_get_list);
   MOCK(node_get_by_id, bfn_mock_node_get_by_id);
@@ -3020,10 +3034,14 @@ static const struct testcase_setup_t upgrade_circuits = {
 #define EN_TEST_FORK(name) EN_TEST_BASE(name, TT_FORK, NULL, NULL)
 
 #define BFN_TEST(name) \
-  EN_TEST_BASE(name, TT_FORK, &big_fake_network, NULL)
+  EN_TEST_BASE(name, TT_FORK, &big_fake_network, NULL), \
+  { #name "_reasonably_live", test_entry_guard_ ## name, TT_FORK, \
+    &big_fake_network, (void*)("reasonably-live") }
 
 #define UPGRADE_TEST(name, arg) \
-  EN_TEST_BASE(name, TT_FORK, &upgrade_circuits, arg)
+  EN_TEST_BASE(name, TT_FORK, &upgrade_circuits, arg), \
+  { #name "_reasonably_live", test_entry_guard_ ## name, TT_FORK, \
+    &upgrade_circuits, (void*)(arg " reasonably-live") }
 
 struct testcase_t entrynodes_tests[] = {
   NO_PREFIX_TEST(node_preferred_orport),
