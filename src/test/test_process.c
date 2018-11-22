@@ -14,6 +14,8 @@
 #include "lib/process/process.h"
 #define PROCESS_UNIX_PRIVATE
 #include "lib/process/process_unix.h"
+#define PROCESS_WIN32_PRIVATE
+#include "lib/process/process_win32.h"
 
 static const char *stdout_read_buffer;
 static const char *stderr_read_buffer;
@@ -553,10 +555,28 @@ test_unix(void *arg)
 #ifndef _WIN32
   process_init();
 
-  process_t *process = process_new();
+  process_t *process = process_new("");
 
   /* On Unix all processes should have a Unix process handle. */
   tt_ptr_op(NULL, OP_NE, process_get_unix_process(process));
+
+ done:
+  process_free(process);
+  process_free_all();
+#endif
+}
+
+static void
+test_win32(void *arg)
+{
+  (void)arg;
+#ifdef _WIN32
+  process_init();
+
+  process_t *process = process_new("");
+
+  /* On Win32 all processes should have a Win32 process handle. */
+  tt_ptr_op(NULL, OP_NE, process_get_win32_process(process));
 
  done:
   process_free(process);
@@ -575,5 +595,6 @@ struct testcase_t process_tests[] = {
   { "exit_simple", test_exit_simple, TT_FORK, NULL, NULL },
   { "argv_simple", test_argv_simple, TT_FORK, NULL, NULL },
   { "unix", test_unix, TT_FORK, NULL, NULL },
+  { "win32", test_win32, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };

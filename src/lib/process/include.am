@@ -11,6 +11,7 @@ src_lib_libtor_process_a_SOURCES =		\
 	src/lib/process/pidfile.c		\
 	src/lib/process/process.c		\
 	src/lib/process/process_unix.c		\
+	src/lib/process/process_win32.c		\
 	src/lib/process/restrict.c		\
 	src/lib/process/setuid.c		\
 	src/lib/process/subprocess.c		\
@@ -28,6 +29,7 @@ noinst_HEADERS +=				\
 	src/lib/process/pidfile.h		\
 	src/lib/process/process.h		\
 	src/lib/process/process_unix.h		\
+	src/lib/process/process_win32.h		\
 	src/lib/process/restrict.h		\
 	src/lib/process/setuid.h		\
 	src/lib/process/subprocess.h		\
