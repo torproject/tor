@@ -33,8 +33,10 @@
 
 /** Read up to <b>at_most</b> bytes from the file descriptor <b>fd</b> into
  * <b>chunk</b> (which must be on <b>buf</b>). If we get an EOF, set
- * *<b>reached_eof</b> to 1.  Return -1 on error, 0 on eof or blocking,
- * and the number of bytes read otherwise. */
+ * *<b>reached_eof</b> to 1. Uses <b>tor_socket_recv()</b> iff <b>is_socket</b>
+ * is true, otherwise it uses <b>read()</b>.  Return -1 on error (and sets
+ * *<b>error</b> to errno), 0 on eof or blocking, and the number of bytes read
+ * otherwise. */
 static inline int
 read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
               int *reached_eof, int *error, bool is_socket)
