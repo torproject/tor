@@ -51,13 +51,6 @@
 	((const TYPE *)(((const char *)(PTR)) - offsetof(TYPE, FIELD))	\
 	    + validate_const_container_of(PTR, TYPE, FIELD))
 
-/**  XXX fix these */
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wbad-function-cast"
-#else
-#pragma GCC diagnostic ignored "-Wbad-function-cast"
-#endif
-
 /**
  * Count number of one bits in 32-bit word.
  */
@@ -1219,7 +1212,9 @@ sample_geometric(uint32_t s, double p0, double p)
 
 	if (p >= 1)		/* XXX -Wfloat-equal */
 		return 1;
-	return (unsigned)ceil(-x/log1p(-p));
+
+    double tmp = ceil(-x/log1p(-p));
+	return (unsigned) tmp;
 }
 
 /**

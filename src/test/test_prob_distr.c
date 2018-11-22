@@ -18,12 +18,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/** XXXX This is bad fix this stuff */
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wbad-function-cast"
-#else
-#pragma GCC diagnostic ignored "-Wbad-function-cast"
-#endif
+/** Return the integer part of double <b>d</b>. If <b>use_floor</b> is true,
+ *  then use the floor() function otherwise use ceil(). */
+static size_t
+get_size_t_from_double(double d, bool use_floor)
+{
+  double integral_d = use_floor ? floor(d) : ceil(d);
+  return (size_t) integral_d;
+}
 
 /**
  * Compute the probability mass function Geom(n; p) of the number of
@@ -884,7 +886,8 @@ bin_cdfs(const struct dist *dist, double lo, double hi, double *logP, size_t n)
 	const double w = (hi - lo)/(n - 2);
 	double halfway = dist->ops->icdf(dist, 0.5);
 	double x_0, x_1;
-	size_t i, n2 = (size_t)ceil((halfway - lo)/w);
+	size_t i;
+    size_t n2 = get_size_t_from_double((halfway - lo)/w, false);
 
 	assert(lo <= halfway);
 	assert(halfway <= hi);
@@ -926,7 +929,7 @@ bin_samples(const struct dist *dist, double lo, double hi, size_t *C, size_t n)
 		if (x < lo)
 			bin = 0;
 		else if (x < hi)
-			bin = 1 + (size_t)floor((x - lo)/w);
+            bin = 1 + get_size_t_from_double((x - lo)/w, true);
 		else
 			bin = n - 1;
 		assert(bin < n);
