@@ -241,6 +241,7 @@ extern struct testcase_t pem_tests[];
 extern struct testcase_t periodic_event_tests[];
 extern struct testcase_t policy_tests[];
 extern struct testcase_t procmon_tests[];
+extern struct testcase_t process_tests[];
 extern struct testcase_t proto_http_tests[];
 extern struct testcase_t proto_misc_tests[];
 extern struct testcase_t protover_tests[];
