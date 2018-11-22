@@ -16,6 +16,7 @@
 #include "lib/log/util_bug.h"
 #include "lib/process/process.h"
 #include "lib/process/process_unix.h"
+#include "lib/process/process_win32.h"
 #include "lib/process/env.h"
 
 #ifdef HAVE_STDDEF_H
@@ -69,6 +70,9 @@ struct process_t {
 #ifndef _WIN32
   /** Our Unix process handle. */
   process_unix_t *unix_process;
+#else
+  /** Our Win32 process handle. */
+  process_win32_t *win32_process;
 #endif
 };
 
@@ -117,6 +121,10 @@ void
 process_init(void)
 {
   processes = smartlist_new();
+
+#ifdef _WIN32
+  process_win32_init();
+#endif
 }
 
 /** Free up all resources that is handled by the Process subsystem. Note that
@@ -124,6 +132,10 @@ process_init(void)
 void
 process_free_all(void)
 {
+#ifdef _WIN32
+  process_win32_deinit();
+#endif
+
   SMARTLIST_FOREACH(processes, process_t *, x, process_free(x));
   smartlist_free(processes);
 }
@@ -170,6 +182,9 @@ process_new(const char *command)
 #ifndef _WIN32
   /* Prepare our Unix process handle. */
   process->unix_process = process_unix_new();
+#else
+  /* Prepare our Win32 process handle. */
+  process->win32_process = process_win32_new();
 #endif
 
   smartlist_add(processes, process);
@@ -202,6 +217,9 @@ process_free_(process_t *process)
 #ifndef _WIN32
   /* Cleanup our Unix process handle. */
   process_unix_free(process->unix_process);
+#else
+  /* Cleanup our Win32 process handle. */
+  process_win32_free(process->win32_process);
 #endif
 
   smartlist_remove(processes, process);
@@ -222,6 +240,8 @@ process_exec(process_t *process)
 
 #ifndef _WIN32
   status = process_unix_exec(process);
+#else
+  status = process_win32_exec(process);
 #endif
 
   /* Update our state. */
@@ -420,6 +440,15 @@ process_get_unix_process(const process_t *process)
   tor_assert(process->unix_process);
   return process->unix_process;
 }
+#else
+/** Get the internal handle for Windows backend. */
+process_win32_t *
+process_get_win32_process(const process_t *process)
+{
+  tor_assert(process);
+  tor_assert(process->win32_process);
+  return process->win32_process;
+}
 #endif
 
 /** Write <b>size</b> bytes of <b>data</b> to the given process's standard
@@ -544,7 +573,7 @@ MOCK_IMPL(STATIC int, process_read_stdout, (process_t *process, buf_t *buffer))
 #ifndef _WIN32
   return process_unix_read_stdout(process, buffer);
 #else
-  return 0;
+  return process_win32_read_stdout(process, buffer);
 #endif
 }
 
@@ -559,7 +588,7 @@ MOCK_IMPL(STATIC int, process_read_stderr, (process_t *process, buf_t *buffer))
 #ifndef _WIN32
   return process_unix_read_stderr(process, buffer);
 #else
-  return 0;
+  return process_win32_read_stderr(process, buffer);
 #endif
 }
 
@@ -573,6 +602,8 @@ MOCK_IMPL(STATIC void, process_write_stdin,
 
 #ifndef _WIN32
   process_unix_write(process, buffer);
+#else
+  process_win32_write(process, buffer);
 #endif
 }
 

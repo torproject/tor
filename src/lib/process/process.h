@@ -98,6 +98,9 @@ process_status_t process_get_status(const process_t *process);
 #ifndef _WIN32
 struct process_unix_t;
 struct process_unix_t *process_get_unix_process(const process_t *process);
+#else
+struct process_win32_t;
+struct process_win32_t *process_get_win32_process(const process_t *process);
 #endif
 
 void process_write(process_t *process,
