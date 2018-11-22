@@ -356,6 +356,16 @@ process_unix_exec(process_t *process)
   return PROCESS_STATUS_RUNNING;
 }
 
+/** Returns the unique process identifier for the given <b>process</b>. */
+process_pid_t
+process_unix_get_pid(process_t *process)
+{
+  tor_assert(process);
+
+  process_unix_t *unix_process = process_get_unix_process(process);
+  return (process_pid_t)unix_process->pid;
+}
+
 /** Write the given <b>buffer</b> as input to the given <b>process</b>'s
  * standard input. Returns the number of bytes written. */
 int

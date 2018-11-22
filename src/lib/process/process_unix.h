@@ -30,6 +30,8 @@ void process_unix_free_(process_unix_t *unix_process);
 
 process_status_t process_unix_exec(struct process_t *process);
 
+process_pid_t process_unix_get_pid(struct process_t *process);
+
 int process_unix_write(struct process_t *process, buf_t *buffer);
 int process_unix_read_stdout(struct process_t *process, buf_t *buffer);
 int process_unix_read_stderr(struct process_t *process, buf_t *buffer);
