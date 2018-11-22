@@ -53,12 +53,8 @@
 
 /**  XXX fix these */
 #ifdef __clang__
-#pragma clang diagnostic ignored "-Wfloat-equal"
-#pragma clang diagnostic ignored "-Wfloat-conversion"
 #pragma clang diagnostic ignored "-Wbad-function-cast"
 #else
-#pragma GCC diagnostic ignored "-Wfloat-equal"
-#pragma GCC diagnostic ignored "-Wfloat-conversion"
 #pragma GCC diagnostic ignored "-Wbad-function-cast"
 #endif
 
@@ -1065,7 +1061,7 @@ sample_uniform_interval(double p0, double a, double b)
 		 *
 		 * QED.
 		 */
-		if (p0 == 1)
+		if (p0 >= 1)	/* XXX -Wfloat-equal */
 			return b;
 		return a + (b - a)*p0;
 	}
@@ -1221,9 +1217,9 @@ sample_geometric(uint32_t s, double p0, double p)
 {
 	double x = sample_exponential(s, p0);
 
-	if (p == 1)
+	if (p >= 1)		/* XXX -Wfloat-equal */
 		return 1;
-	return ceil(-x/log1p(-p));
+	return (unsigned)ceil(-x/log1p(-p));
 }
 
 /**

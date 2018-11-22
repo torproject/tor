@@ -20,12 +20,8 @@
 
 /** XXXX This is bad fix this stuff */
 #ifdef __clang__
-#pragma clang diagnostic ignored "-Wfloat-equal"
-#pragma clang diagnostic ignored "-Wfloat-conversion"
 #pragma clang diagnostic ignored "-Wbad-function-cast"
 #else
-#pragma GCC diagnostic ignored "-Wfloat-equal"
-#pragma GCC diagnostic ignored "-Wfloat-conversion"
 #pragma GCC diagnostic ignored "-Wbad-function-cast"
 #endif
 
@@ -37,7 +33,7 @@ static double
 logpmf_geometric(unsigned n, double p)
 {
 
-	if (p == 1) {
+	if (p >= 1) {		/* XXX -Wfloat-equal */
 		if (n == 1)
 			return 0;
 		else
@@ -173,10 +169,14 @@ log1mexp(double x)
 static double
 relerr(double expected, double actual)
 {
-	if (expected == 0 || isinf(expected))
-		return (actual == expected ? 0 : 1);
-	else
+	if (fabs(expected) <= 0 || isinf(expected)) { /* XXX -Wfloat-equal */
+		if (actual <= expected && actual >= expected)
+			return 0;
+		else
+			return 1;
+	} else {
 		return fabs((expected - actual)/expected);
+	}
 }
 
 /* Caller must arrange to have i and relerr_bound in scope.  */
@@ -525,7 +525,8 @@ test_weibull(void *arg)
 		CHECK_RELERR(p, cdf_weibull(x/2, .5, 1));
 		CHECK_RELERR(p, cdf_weibull(x*2, 2, 1));
 		/* For 0 < x < sqrt(DBL_MIN), x^2 loses lots of bits.  */
-		if (x == 0 || sqrt(DBL_MIN) <= x) {
+		if (x <= 0 ||	/* XXX -Wfloat-equal */
+		    sqrt(DBL_MIN) <= x) {
 			CHECK_RELERR(p, cdf_weibull(x*x, 1, .5));
 			CHECK_RELERR(p, cdf_weibull(x*x/2, .5, .5));
 			CHECK_RELERR(p, cdf_weibull(x*x*2, 2, .5));
@@ -569,7 +570,7 @@ test_weibull(void *arg)
 			CHECK_RELERR(x/2, icdf_weibull(p, .5, 1));
 			CHECK_RELERR(x*2, icdf_weibull(p, 2, 1));
 		}
-		if (p >= 0.25 && !isinf(x) && np != 0) {
+		if (p >= 0.25 && !isinf(x) && np > 0) {
 			/*
 			 * For p near 0, not enough precision in np
 			 * near 1 to recover x.  For 0, isf gives inf,
@@ -674,7 +675,7 @@ test_genpareto(void *arg)
 		for (j = 0; j <= 100; j++) {
 			double p0 = (j == 0 ? 2*DBL_MIN : (double)j/100);
 
-			if (xi_array[i] == 0) {
+			if (fabs(xi_array[i]) <= 0) { /* XXX -Wfloat-equal */
 				/*
 				 * When xi == 0, the generalized Pareto
 				 * distribution reduces to an
@@ -883,7 +884,7 @@ bin_cdfs(const struct dist *dist, double lo, double hi, double *logP, size_t n)
 	const double w = (hi - lo)/(n - 2);
 	double halfway = dist->ops->icdf(dist, 0.5);
 	double x_0, x_1;
-	size_t i, n2 = ceil((halfway - lo)/w);
+	size_t i, n2 = (size_t)ceil((halfway - lo)/w);
 
 	assert(lo <= halfway);
 	assert(halfway <= hi);
