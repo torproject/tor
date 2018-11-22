@@ -1070,3 +1070,6 @@
 
 # Email sent directly to Phoul
 192.42.116.16:80 orport=443 id=81B75D534F91BFB7C57AB67DA10BCEF622582AE8
+
+# https://lists.torproject.org/pipermail/tor-relays/2018-November/016610.html
+24.117.194.80:80 orport=443 id=B6C4C9A43658F686F8892CA5666717532F72979C
