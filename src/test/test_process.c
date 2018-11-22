@@ -12,6 +12,8 @@
 
 #define PROCESS_PRIVATE
 #include "lib/process/process.h"
+#define PROCESS_UNIX_PRIVATE
+#include "lib/process/process_unix.h"
 
 static const char *stdout_read_buffer;
 static const char *stderr_read_buffer;
@@ -544,6 +546,24 @@ test_argv_simple(void *arg)
   process_free_all();
 }
 
+static void
+test_unix(void *arg)
+{
+  (void)arg;
+#ifndef _WIN32
+  process_init();
+
+  process_t *process = process_new();
+
+  /* On Unix all processes should have a Unix process handle. */
+  tt_ptr_op(NULL, OP_NE, process_get_unix_process(process));
+
+ done:
+  process_free(process);
+  process_free_all();
+#endif
+}
+
 struct testcase_t process_tests[] = {
   { "default_values", test_default_values, TT_FORK, NULL, NULL },
   { "stringified_types", test_stringified_types, TT_FORK, NULL, NULL },
@@ -554,5 +574,6 @@ struct testcase_t process_tests[] = {
   { "write_simple", test_write_simple, TT_FORK, NULL, NULL },
   { "exit_simple", test_exit_simple, TT_FORK, NULL, NULL },
   { "argv_simple", test_argv_simple, TT_FORK, NULL, NULL },
+  { "unix", test_unix, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };

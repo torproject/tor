@@ -15,6 +15,7 @@
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/process/process.h"
+#include "lib/process/process_unix.h"
 #include "lib/process/env.h"
 
 #ifdef HAVE_STDDEF_H
@@ -64,6 +65,11 @@ struct process_t {
 
   /** Do we need to store some custom data with the process? */
   void *data;
+
+#ifndef _WIN32
+  /** Our Unix process handle. */
+  process_unix_t *unix_process;
+#endif
 };
 
 /** Convert a given process status in <b>status</b> to its string
@@ -161,6 +167,11 @@ process_new(const char *command)
   process->stderr_buffer = buf_new();
   process->stdin_buffer = buf_new();
 
+#ifndef _WIN32
+  /* Prepare our Unix process handle. */
+  process->unix_process = process_unix_new();
+#endif
+
   smartlist_add(processes, process);
 
   return process;
@@ -188,6 +199,11 @@ process_free_(process_t *process)
   buf_free(process->stderr_buffer);
   buf_free(process->stdin_buffer);
 
+#ifndef _WIN32
+  /* Cleanup our Unix process handle. */
+  process_unix_free(process->unix_process);
+#endif
+
   smartlist_remove(processes, process);
 
   tor_free(process);
@@ -203,6 +219,10 @@ process_exec(process_t *process)
   process_status_t status = PROCESS_STATUS_NOT_RUNNING;
 
   log_info(LD_PROCESS, "Starting new process: %s", process->command);
+
+#ifndef _WIN32
+  status = process_unix_exec(process);
+#endif
 
   /* Update our state. */
   process_set_status(process, status);
@@ -391,6 +411,17 @@ process_get_environment(const process_t *process)
   return process_environment_make(process->environment);
 }
 
+#ifndef _WIN32
+/** Get the internal handle for the Unix backend. */
+process_unix_t *
+process_get_unix_process(const process_t *process)
+{
+  tor_assert(process);
+  tor_assert(process->unix_process);
+  return process->unix_process;
+}
+#endif
+
 /** Write <b>size</b> bytes of <b>data</b> to the given process's standard
  * input. */
 void
@@ -510,7 +541,11 @@ MOCK_IMPL(STATIC int, process_read_stdout, (process_t *process, buf_t *buffer))
   tor_assert(process);
   tor_assert(buffer);
 
+#ifndef _WIN32
+  return process_unix_read_stdout(process, buffer);
+#else
   return 0;
+#endif
 }
 
 /** This function is called whenever the Process backend have notified us that
@@ -521,7 +556,11 @@ MOCK_IMPL(STATIC int, process_read_stderr, (process_t *process, buf_t *buffer))
   tor_assert(process);
   tor_assert(buffer);
 
+#ifndef _WIN32
+  return process_unix_read_stderr(process, buffer);
+#else
   return 0;
+#endif
 }
 
 /** This function calls the backend function for the given process whenever
@@ -531,6 +570,10 @@ MOCK_IMPL(STATIC void, process_write_stdin,
 {
   tor_assert(process);
   tor_assert(buffer);
+
+#ifndef _WIN32
+  process_unix_write(process, buffer);
+#endif
 }
 
 /** This function calls the protocol handlers based on the value of
