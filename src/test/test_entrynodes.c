@@ -2692,7 +2692,7 @@ test_entry_guard_upgrade_not_blocked_by_worse_circ_pending(void *arg)
 }
 
 static void
-test_enty_guard_should_expire_waiting(void *arg)
+test_entry_guard_should_expire_waiting(void *arg)
 {
   (void)arg;
   circuit_guard_state_t *fake_state = tor_malloc_zero(sizeof(*fake_state));
@@ -3010,39 +3010,38 @@ static const struct testcase_setup_t upgrade_circuits = {
   upgrade_circuits_setup, upgrade_circuits_cleanup
 };
 
-#define BFN_TEST(name) \
-  { #name, test_entry_guard_ ## name, TT_FORK, &big_fake_network, NULL }
+#define NO_PREFIX_TEST(name) \
+  { #name, test_ ## name, 0, NULL, NULL }
 
-#define UPGRADE_TEST(name, arg)                                         \
-  { #name, test_entry_guard_ ## name, TT_FORK, &upgrade_circuits,       \
-      (void*)(arg) }
+#define EN_TEST_BASE(name, fork, setup, arg) \
+  { #name, test_entry_guard_ ## name, fork, setup, (void*)(arg) }
+
+#define EN_TEST(name)      EN_TEST_BASE(name, 0,       NULL, NULL)
+#define EN_TEST_FORK(name) EN_TEST_BASE(name, TT_FORK, NULL, NULL)
+
+#define BFN_TEST(name) \
+  EN_TEST_BASE(name, TT_FORK, &big_fake_network, NULL)
+
+#define UPGRADE_TEST(name, arg) \
+  EN_TEST_BASE(name, TT_FORK, &upgrade_circuits, arg)
 
 struct testcase_t entrynodes_tests[] = {
-  { "node_preferred_orport",
-    test_node_preferred_orport,
-    0, NULL, NULL },
-  { "entry_guard_describe", test_entry_guard_describe, 0, NULL, NULL },
-  { "randomize_time", test_entry_guard_randomize_time, 0, NULL, NULL },
-  { "encode_for_state_minimal",
-    test_entry_guard_encode_for_state_minimal, 0, NULL, NULL },
-  { "encode_for_state_maximal",
-    test_entry_guard_encode_for_state_maximal, 0, NULL, NULL },
-  { "parse_from_state_minimal",
-    test_entry_guard_parse_from_state_minimal, 0, NULL, NULL },
-  { "parse_from_state_maximal",
-    test_entry_guard_parse_from_state_maximal, 0, NULL, NULL },
-  { "parse_from_state_failure",
-    test_entry_guard_parse_from_state_failure, 0, NULL, NULL },
-  { "parse_from_state_partial_failure",
-    test_entry_guard_parse_from_state_partial_failure, 0, NULL, NULL },
-  { "parse_from_state_full",
-    test_entry_guard_parse_from_state_full, TT_FORK, NULL, NULL },
-  { "parse_from_state_broken",
-    test_entry_guard_parse_from_state_broken, TT_FORK, NULL, NULL },
-  { "get_guard_selection_by_name",
-    test_entry_guard_get_guard_selection_by_name, TT_FORK, NULL, NULL },
-  { "number_of_primaries",
-    test_entry_guard_number_of_primaries, TT_FORK, NULL, NULL },
+  NO_PREFIX_TEST(node_preferred_orport),
+  NO_PREFIX_TEST(entry_guard_describe),
+
+  EN_TEST(randomize_time),
+  EN_TEST(encode_for_state_minimal),
+  EN_TEST(encode_for_state_maximal),
+  EN_TEST(parse_from_state_minimal),
+  EN_TEST(parse_from_state_maximal),
+  EN_TEST(parse_from_state_failure),
+  EN_TEST(parse_from_state_partial_failure),
+
+  EN_TEST_FORK(parse_from_state_full),
+  EN_TEST_FORK(parse_from_state_broken),
+  EN_TEST_FORK(get_guard_selection_by_name),
+  EN_TEST_FORK(number_of_primaries),
+
   BFN_TEST(choose_selection_initial),
   BFN_TEST(add_single_guard),
   BFN_TEST(node_filter),
@@ -3056,7 +3055,9 @@ struct testcase_t entrynodes_tests[] = {
   BFN_TEST(sample_reachable_filtered_empty),
   BFN_TEST(retry_unreachable),
   BFN_TEST(manage_primary),
-  { "guard_preferred", test_entry_guard_guard_preferred, TT_FORK, NULL, NULL },
+
+  EN_TEST_FORK(guard_preferred),
+
   BFN_TEST(select_for_circuit_no_confirmed),
   BFN_TEST(select_for_circuit_confirmed),
   BFN_TEST(select_for_circuit_highlevel_primary),
@@ -3079,8 +3080,8 @@ struct testcase_t entrynodes_tests[] = {
   UPGRADE_TEST(upgrade_not_blocked_by_restricted_circ_pending,
                "c2-done"),
   UPGRADE_TEST(upgrade_not_blocked_by_worse_circ_pending, "c1-done"),
-  { "should_expire_waiting", test_enty_guard_should_expire_waiting, TT_FORK,
-    NULL, NULL },
+
+  EN_TEST_FORK(should_expire_waiting),
 
   END_OF_TESTCASES
 };
