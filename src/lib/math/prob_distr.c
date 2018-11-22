@@ -1,28 +1,23 @@
-/*-
- * Copyright (c) 2018 Taylor R. Campbell
- * All rights reserved.
+/* Copyright (c) 2018, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
+/**
+ * \file prob_distr.c
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
+ * \brief
+ *  Implements various probability distributions.
+ *  Almost all code is courtesy of Riastradh.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- */
+ * \details
+ * Here are some details that might help you understand this file:
+ *
+ * - Throughout this file the "machine epsilon" denoted by DBL_EPSILON is the
+ * spacing between floating-point numbers (the distance from 1 to the next
+ * greater floating point number). It helps us define an upper bound on the
+ * relative error due to rounding, which is denoted as 'eps' through this file
+ * and is defined as 'eps = (DBL_EPSILON/2)'.
+ *
+ **/
 
 #define PROB_DISTR_PRIVATE
 
@@ -37,16 +32,19 @@
 #include <math.h>
 #include <stddef.h>
 
+
+/** Validators for downcasting macros below */
 #define validate_container_of(PTR, TYPE, FIELD)				\
 	(0 * sizeof((PTR) - &((TYPE *)(((char *)(PTR)) -		\
 		    offsetof(TYPE, FIELD)))->FIELD))
 #define validate_const_container_of(PTR, TYPE, FIELD)			\
 	(0 * sizeof((PTR) - &((const TYPE *)(((const char *)(PTR)) -	\
 		    offsetof(TYPE, FIELD)))->FIELD))
-
+/** Downcasting macro */
 #define	container_of(PTR, TYPE, FIELD)					\
 	((TYPE *)(((char *)(PTR)) - offsetof(TYPE, FIELD))		\
 	    + validate_container_of(PTR, TYPE, FIELD))
+/** Constified downcasting macro */
 #define	const_container_of(PTR, TYPE, FIELD)				\
 	((const TYPE *)(((const char *)(PTR)) - offsetof(TYPE, FIELD))	\
 	    + validate_const_container_of(PTR, TYPE, FIELD))
@@ -90,7 +88,8 @@ clz32(uint32_t x)
 }
 
 /*
- * Some lemmas for error bounds.
+ * Some lemmas that will be used throughout this file to prove various error
+ * bounds:
  *
  * Lemma 1.  If |d| <= 1/2, then 1/(1 + d) <= 2.
  *
@@ -159,9 +158,9 @@ clz32(uint32_t x)
  */
 
 /**
- * Compute the logistic function: 1/(1 + e^{-x}) = e^x/(1 + e^x).  Maps
- * a log-odds-space probability in [-\infty, +\infty] into a
- * direct-space probability in [0,1].  Inverse of logit.
+ * Compute the logistic function: f(x) = 1/(1 + e^{-x}) = e^x/(1 + e^x).
+ * Maps a log-odds-space probability in [-\infty, +\infty] into a direct-space
+ * probability in [0,1].  Inverse of logit.
  *
  * Ill-conditioned for large x; the identity logistic(-x) = 1 -
  * logistic(x) and the function logistichalf(x) = logistic(x) - 1/2 may
@@ -172,10 +171,13 @@ clz32(uint32_t x)
 STATIC double
 logistic(double x)
 {
-
-	if (x <= log(DBL_EPSILON/2)) {
+  	if (x <= log(DBL_EPSILON/2)) {
 		/*
-		 * e^x <= eps, so
+         * If x <= log(DBL_EPSILON/2) = log(eps), then e^x <= eps. In this case
+         * we will approximate the logistic() function with e^x because the
+         * relative error is less than eps. Here is a calculation of the
+         * relative error between the logistic() function and e^x and a proof
+         * that it's less than eps:
 		 *
 		 *     |e^x - e^x/(1 + e^x)|/|e^x/(1 + e^x)|
 		 *     <= |1 - 1/(1 + e^x)|*|1 + e^x|
@@ -183,7 +185,7 @@ logistic(double x)
 		 *      = |e^x|
 		 *     <= eps.
 		 */
-		return exp(x);
+        return exp(x); /* return e^x */
 	} else if (x <= -log(DBL_EPSILON/2)) {
 		/*
 		 * e^{-x} > 0, so 1 + e^{-x} > 1, and 0 < 1/(1 +
@@ -463,9 +465,9 @@ random_uniform_01(void)
 	return s * ldexp(1, -(64 + z));
 }
 
-/*
- * Geometric(p) distribution, supported on {1, 2, 3, ...}.
- */
+/*******************************************************************/
+
+/* Functions for specific probability distributions start here: */
 
 /*
  * Logistic(mu, sigma) distribution, supported on (-\infty,+\infty)
@@ -882,13 +884,15 @@ isf_genpareto(double p, double mu, double sigma, double xi)
 		return mu + sigma*expm1(-xi*log(p))/xi;
 }
 
-/*
+/*******************************************************************/
+
+/**
  * Deterministic samplers, parametrized by uniform integer and (0,1]
  * samples.  No guarantees are made about _which_ mapping from the
  * integer and (0,1] samples these use; all that is guaranteed is the
  * distribution of the outputs conditioned on a uniform distribution on
- * the inputs.  The automatic tests below double-check the particular
- * mappings we use.
+ * the inputs.  The automatic tests in test_prob_distr.c double-check
+ * the particular mappings we use.
  *
  * Beware: Unlike random_uniform_01(), these are not guaranteed to be
  * supported on all possible outputs.  See Ilya Mironov, `On the
@@ -916,7 +920,6 @@ isf_genpareto(double p, double mu, double sigma, double xi)
 STATIC double
 sample_uniform_interval(double p0, double a, double b)
 {
-
 	/*
 	 * XXX Prove that the distribution is, in fact, uniform on
 	 * [a,b], particularly around p0 = 1, or at least has very
@@ -1185,39 +1188,6 @@ sample_exponential(uint32_t s, double p0)
 }
 
 /**
- * Deterministically sample from the geometric distribution with
- * per-trial success probability p.
- *
- * XXX Quantify the error (KL divergence?) of this
- * ceiling-of-exponential sampler from a true geometric distribution,
- * which we could get by rejection sampling.  Relevant papers:
- *
- *	John F. Monahan, `Accuracy in Random Number Generation',
- *	Mathematics of Computation 45(172), October 1984, pp. 559--568.
- *	https://pdfs.semanticscholar.org/aca6/74b96da1df77b2224e8cfc5dd6d61a471632.pdf
- *
- *	Karl Bringmann and Tobias Friedrich, `Exact and Efficient
- *	Generation of Geometric Random Variates and Random Graphs', in
- *	Proceedings of the 40th International Colloaquium on Automata,
- *	Languages, and Programming -- ICALP 2013, Springer LNCS 7965,
- *	pp.267--278.
- *	https://doi.org/10.1007/978-3-642-39206-1_23
- *	https://people.mpi-inf.mpg.de/~kbringma/paper/2013ICALP-1.pdf
- */
-/* XXX Create geometric_sample and a geometric dist struct for the API to conform */
-unsigned
-sample_geometric(uint32_t s, double p0, double p)
-{
-	double x = sample_exponential(s, p0);
-
-	if (p >= 1)		/* XXX -Wfloat-equal */
-		return 1;
-
-    double tmp = ceil(-x/log1p(-p));
-	return (unsigned) tmp;
-}
-
-/**
  * Deterministically sample from a Weibull distribution with scale
  * lambda and shape k -- just an exponential with a shape parameter in
  * addition to a scale parameter.  (Yes, lambda really is the scale,
@@ -1289,8 +1259,15 @@ sample_genpareto_locscale(uint32_t s, double p0, double mu, double sigma,
 	return mu + sigma*sample_genpareto(s, p0, xi);
 }
 
-/** Public functions */
+/*******************************************************************/
 
+/** Public API for probability distributions:
+ *
+ *  For each probability distribution we define each public functions
+ *  (sample/cdf/sf/icdf/isf) as part of its dist_ops structure.
+ */
+
+/** Functions for uniform distribution */
 const struct dist_ops uniform_ops = {
 	.name = "uniform",
 	.sample = uniform_sample,
@@ -1358,6 +1335,7 @@ uniform_isf(const struct dist *dist, double p)
 	return (p < 0.5 ? (U->b - w*p) : (U->a + w*(1 - p)));
 }
 
+/** Functions for logistic distribution: */
 const struct dist_ops logistic_ops = {
 	.name = "logistic",
 	.sample = logistic_sample,
@@ -1415,6 +1393,7 @@ logistic_isf(const struct dist *dist, double p)
 	return isf_logistic(p, L->mu, L->sigma);
 }
 
+/** Functions for log-logistic distribution: */
 const struct dist_ops log_logistic_ops = {
 	.name = "log logistic",
 	.sample = log_logistic_sample,
@@ -1471,6 +1450,8 @@ log_logistic_isf(const struct dist *dist, double p)
 	return isf_log_logistic(p, LL->alpha, LL->beta);
 }
 
+
+/** Functions for Weibull distribution */
 const struct dist_ops weibull_ops = {
 	.name = "Weibull",
 	.sample = weibull_sample,
@@ -1527,6 +1508,7 @@ weibull_isf(const struct dist *dist, double p)
 	return isf_weibull(p, W->lambda, W->k);
 }
 
+/** Functions for generalized Pareto distributions */
 const struct dist_ops genpareto_ops = {
 	.name = "generalized Pareto",
 	.sample = genpareto_sample,
@@ -1583,3 +1565,36 @@ genpareto_isf(const struct dist *dist, double p)
 	return isf_genpareto(p, GP->mu, GP->sigma, GP->xi);
 }
 
+/**
+ * Deterministically sample from the geometric distribution with
+ * per-trial success probability p.
+ *
+ * XXX Quantify the error (KL divergence?) of this
+ * ceiling-of-exponential sampler from a true geometric distribution,
+ * which we could get by rejection sampling.  Relevant papers:
+ *
+ *	John F. Monahan, `Accuracy in Random Number Generation',
+ *	Mathematics of Computation 45(172), October 1984, pp. 559--568.
+ *	https://pdfs.semanticscholar.org/aca6/74b96da1df77b2224e8cfc5dd6d61a471632.pdf
+ *
+ *	Karl Bringmann and Tobias Friedrich, `Exact and Efficient
+ *	Generation of Geometric Random Variates and Random Graphs', in
+ *	Proceedings of the 40th International Colloaquium on Automata,
+ *	Languages, and Programming -- ICALP 2013, Springer LNCS 7965,
+ *	pp.267--278.
+ *	https://doi.org/10.1007/978-3-642-39206-1_23
+ *	https://people.mpi-inf.mpg.de/~kbringma/paper/2013ICALP-1.pdf
+ */
+/* XXX Create geometric_sample and a geometric dist struct for the API to
+ * conform? */
+unsigned
+sample_geometric(uint32_t s, double p0, double p)
+{
+	double x = sample_exponential(s, p0);
+
+	if (p >= 1)		/* XXX -Wfloat-equal */
+		return 1;
+
+    double tmp = ceil(-x/log1p(-p));
+	return (unsigned) tmp;
+}

@@ -1,3 +1,26 @@
+/* Copyright (c) 2018, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
+/**
+ * \file test_prob_distr.c
+ * \brief Test probability distributions.
+ * \detail
+ *
+ * For each probability distribution we do two kinds of tests:
+ *
+ * a) We do numerical deterministic testing of their cdf/icdf/sf/isf functions
+ *    and the various relationships between them for each distribution. We also
+ *    do deterministic tests on their sampling functions. Test vectors for
+ *    these tests were computed from alternative implementations and were
+ *    eyeballed to make sure they make sense (e.g. GNU mpfr was used with
+ *    200-bit precision).
+ *
+ * b) We do stochastic hypothesis testing (G-test) to ensure that sampling from
+ *    the given distributions is distributed properly. The stochastic tests are
+ *    slow and their false positive rate is not well suited for CI, so they are
+ *    currently disabled-by-default and put into 'tests-slow'.
+ */
+
 #define PROB_DISTR_PRIVATE
 
 #include "orconfig.h"
@@ -27,7 +50,9 @@ get_size_t_from_double(double d, bool use_floor)
   return (size_t) integral_d;
 }
 
-/**
+/*
+ * Geometric(p) distribution, supported on {1, 2, 3, ...}.
+ *
  * Compute the probability mass function Geom(n; p) of the number of
  * trials before the first success when success has probability p.
  */
@@ -168,6 +193,7 @@ log1mexp(double x)
 
 #define arraycount(A) (sizeof(A)/sizeof(A[0]))
 
+/** Return relative error between <b>actual</b> and <b>expected</b>. */
 static double
 relerr(double expected, double actual)
 {
@@ -181,7 +207,9 @@ relerr(double expected, double actual)
 	}
 }
 
-/* Caller must arrange to have i and relerr_bound in scope.  */
+/** Check that relative error of <b>expected</b> and <b>actual</b> is within
+ *  <b>relerr_bound</b>.  Caller must arrange to have i and relerr_bound in
+ *  scope.  */
 #define CHECK_RELERR(expected, actual) do {				      \
 	double check_expected = (expected);				      \
 	double check_actual = (actual);					      \
@@ -197,7 +225,8 @@ relerr(double expected, double actual)
 	}								      \
 } while (0)
 
-/* Caller must arrange to have i in scope.  */
+/* Check that a <= b.
+ * Caller must arrange to have i in scope.  */
 #define CHECK_LE(a, b) do {						      \
 	double check_a = (a);						      \
 	double check_b = (b);						      \
@@ -290,7 +319,7 @@ test_logit_logistic(void *arg)
 		 */
 		if (fabs(p) > DBL_EPSILON && fabs(p) < 0.4) {
 			CHECK_RELERR(cdf_logistic(x, 0, 1),
-			    cdf_logistic(x*2 + 1, 1, 2));
+                         cdf_logistic(x*2 + 1, 1, 2));
 			CHECK_RELERR(sf_logistic(x, 0, 1),
 			    sf_logistic(x*2 + 1, 1, 2));
 			CHECK_RELERR(icdf_logistic(p, 0, 1),
