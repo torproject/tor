@@ -1853,10 +1853,6 @@ second_elapsed_callback(time_t now, const or_options_t *options)
     run_connection_housekeeping(i, now);
   }
 
-  /* 11b. check pending unconfigured managed proxies */
-  if (!net_is_disabled() && pt_proxies_configuration_pending())
-    pt_configure_remaining_proxies();
-
   /* Run again in a second. */
   return 1;
 }
