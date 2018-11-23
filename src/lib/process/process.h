@@ -83,6 +83,7 @@ void process_append_argument(process_t *process, const char *argument);
 const smartlist_t *process_get_arguments(const process_t *process);
 char **process_get_argv(const process_t *process);
 
+void process_reset_environment(process_t *process, const smartlist_t *env);
 void process_set_environment(process_t *process,
                              const char *key,
                              const char *value);
