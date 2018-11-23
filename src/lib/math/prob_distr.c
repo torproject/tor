@@ -11,12 +11,25 @@
  * \details
  * Here are some details that might help you understand this file:
  *
- * - Throughout this file the "machine epsilon" denoted by DBL_EPSILON is the
- * spacing between floating-point numbers (the distance from 1 to the next
- * greater floating point number). It helps us define an upper bound on the
- * relative error due to rounding, which is denoted as 'eps' through this file
- * and is defined as 'eps = (DBL_EPSILON/2)'.
+ * - Throughout this file, `eps' means the largest relative error of a
+ *   correctly rounded floating-point operation, which in binary64
+ *   floating-point arithmetic is 2^-53.  Here the relative error of a
+ *   true value x from a computed value y is |x - y|/|x|.  This
+ *   definition of epsilon is conventional for numerical analysts when
+ *   writing error analyses.  (If your libm doesn't provide correctly
+ *   rounded exp and log, their relative error is usually below 2*2^-53
+ *   and probably closer to 1.1*2^-53 instead.)
  *
+ *   The C constant DBL_EPSILON is actually twice this, and should
+ *   perhaps rather be named ulp(1) -- that is, it is the distance from
+ *   1 to the next greater floating-point number, which is usually of
+ *   more interest to programmers and hardware engineers.
+ *
+ *   Since this file is concerned mainly with error bounds rather than
+ *   with low-level bit-hacking of floating-point numbers, we adopt the
+ *   numerical analysts' definition in the comments, though we do use
+ *   DBL_EPSILON in a handful of places where it is convenient to use
+ *   some function of eps = DBL_EPSILON/2 in a case analysis.
  **/
 
 #define PROB_DISTR_PRIVATE
