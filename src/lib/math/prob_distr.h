@@ -16,18 +16,18 @@
  * Container for distribution parameters for sampling, CDF, &c.
  */
 struct dist {
-	const struct dist_ops *ops;
+  const struct dist_ops *ops;
 };
 
-#define	DIST_BASE(OPS)	{ .ops = (OPS) }
+#define DIST_BASE(OPS)  { .ops = (OPS) }
 
 struct dist_ops {
-	const char *name;
-	double (*sample)(const struct dist *);
-	double (*cdf)(const struct dist *, double x);
-	double (*sf)(const struct dist *, double x);
-	double (*icdf)(const struct dist *, double p);
-	double (*isf)(const struct dist *, double p);
+  const char *name;
+  double (*sample)(const struct dist *);
+  double (*cdf)(const struct dist *, double x);
+  double (*sf)(const struct dist *, double x);
+  double (*icdf)(const struct dist *, double p);
+  double (*isf)(const struct dist *, double p);
 };
 
 /* Geometric distribution */
@@ -37,10 +37,10 @@ unsigned sample_geometric(uint32_t s, double p0, double p);
 /* Pareto distribution */
 
 struct genpareto {
-	struct dist base;
-	double mu;
-	double sigma;
-	double xi;
+  struct dist base;
+  double mu;
+  double sigma;
+  double xi;
 };
 
 double genpareto_sample(const struct dist *dist);
@@ -54,9 +54,9 @@ extern const struct dist_ops genpareto_ops;
 /* Weibull distribution */
 
 struct weibull {
-	struct dist base;
-	double lambda;
-	double k;
+  struct dist base;
+  double lambda;
+  double k;
 };
 
 double weibull_sample(const struct dist *dist);
@@ -70,9 +70,9 @@ extern const struct dist_ops weibull_ops;
 /* Log-logistic distribution */
 
 struct log_logistic {
-	struct dist base;
-	double alpha;
-	double beta;
+  struct dist base;
+  double alpha;
+  double beta;
 };
 
 double log_logistic_sample(const struct dist *dist);
@@ -86,9 +86,9 @@ extern const struct dist_ops log_logistic_ops;
 /* Logistic distribution */
 
 struct logistic {
-	struct dist base;
-	double mu;
-	double sigma;
+  struct dist base;
+  double mu;
+  double sigma;
 };
 
 double logistic_sample(const struct dist *dist);
@@ -102,9 +102,9 @@ extern const struct dist_ops logistic_ops;
 /* Uniform distribution */
 
 struct uniform {
-	struct dist base;
-	double a;
-	double b;
+  struct dist base;
+  double a;
+  double b;
 };
 
 double uniform_sample(const struct dist *dist);
