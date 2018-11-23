@@ -441,6 +441,23 @@ process_get_argv(const process_t *process)
   return argv;
 }
 
+/** This function clears the internal environment and copies over every string
+ * from <b>env</b> as the new environment. */
+void
+process_reset_environment(process_t *process, const smartlist_t *env)
+{
+  tor_assert(process);
+  tor_assert(env);
+
+  /* Cleanup old environment. */
+  SMARTLIST_FOREACH(process->environment, char *, x, tor_free(x));
+  smartlist_free(process->environment);
+  process->environment = smartlist_new();
+
+  SMARTLIST_FOREACH(env, char *, x,
+                    smartlist_add(process->environment, tor_strdup(x)));
+}
+
 /** Set the given <b>key</b>/<b>value</b> pair as environment variable in the
  * given process. */
 void
