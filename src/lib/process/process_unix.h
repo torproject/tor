@@ -29,6 +29,7 @@ void process_unix_free_(process_unix_t *unix_process);
   FREE_AND_NULL(process_unix_t, process_unix_free_, (s))
 
 process_status_t process_unix_exec(struct process_t *process);
+bool process_unix_terminate(struct process_t *process);
 
 process_pid_t process_unix_get_pid(struct process_t *process);
 

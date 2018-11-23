@@ -33,6 +33,7 @@ void process_win32_init(void);
 void process_win32_deinit(void);
 
 process_status_t process_win32_exec(struct process_t *process);
+bool process_win32_terminate(struct process_t *process);
 
 process_pid_t process_win32_get_pid(struct process_t *process);
 

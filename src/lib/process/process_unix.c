@@ -356,6 +356,32 @@ process_unix_exec(process_t *process)
   return PROCESS_STATUS_RUNNING;
 }
 
+/** Terminate the given process. Returns true on success, otherwise false. */
+bool
+process_unix_terminate(process_t *process)
+{
+  tor_assert(process);
+
+  process_unix_t *unix_process = process_get_unix_process(process);
+
+  /* All running processes should have a waitpid. */
+  if (BUG(unix_process->waitpid == NULL))
+    return false;
+
+  /* Send a SIGTERM to our child process. */
+  int ret;
+
+  ret = kill(unix_process->pid, SIGTERM);
+
+  if (ret == -1) {
+    log_warn(LD_PROCESS, "Unable to terminate process: %s",
+             strerror(errno));
+    return false;
+  }
+
+  return ret == 0;
+}
+
 /** Returns the unique process identifier for the given <b>process</b>. */
 process_pid_t
 process_unix_get_pid(process_t *process)

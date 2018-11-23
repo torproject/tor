@@ -271,6 +271,28 @@ process_win32_exec(process_t *process)
   return PROCESS_STATUS_RUNNING;
 }
 
+/** Terminate the given process. Returns true on success, otherwise false. */
+bool
+process_win32_terminate(process_t *process)
+{
+  tor_assert(process);
+
+  process_win32_t *win32_process = process_get_win32_process(process);
+
+  /* Terminate our process. */
+  BOOL ret;
+
+  ret = TerminateProcess(win32_process->process_information.hProcess, 0);
+
+  if (! ret) {
+    log_warn(LD_PROCESS, "TerminateProcess() failed: %s",
+             format_win32_error(GetLastError()));
+    return false;
+  }
+
+  return true;
+}
+
 /** Returns the unique process identifier for the given <b>process</b>. */
 process_pid_t
 process_win32_get_pid(process_t *process)
