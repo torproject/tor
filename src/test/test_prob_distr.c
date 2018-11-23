@@ -313,15 +313,14 @@ test_logit_logistic(void *arg)
     CHECK_RELERR(icdf_logistic(p, 0, 1), icdf_logistic(p, 0,.5)*2);
     CHECK_RELERR(isf_logistic(p, 0, 1), isf_logistic(p, 0, .5)*2);
 
+    CHECK_RELERR(cdf_logistic(x, 0, 1), cdf_logistic(x*2 + 1, 1, 2));
+    CHECK_RELERR(sf_logistic(x, 0, 1), sf_logistic(x*2 + 1, 1, 2));
+
     /*
      * For p near 0 and p near 1/2, the arithmetic of
      * translating by 1 loses precision.
      */
     if (fabs(p) > DBL_EPSILON && fabs(p) < 0.4) {
-      CHECK_RELERR(cdf_logistic(x, 0, 1),
-          cdf_logistic(x*2 + 1, 1, 2));
-      CHECK_RELERR(sf_logistic(x, 0, 1),
-          sf_logistic(x*2 + 1, 1, 2));
       CHECK_RELERR(icdf_logistic(p, 0, 1),
           (icdf_logistic(p, 1, 2) - 1)/2);
       CHECK_RELERR(isf_logistic(p, 0, 1),
@@ -330,19 +329,43 @@ test_logit_logistic(void *arg)
 
     CHECK_RELERR(p, logistic(x));
     CHECK_RELERR(phalf, logistichalf(x));
-    if ((0 < p && p <= 1/(1 + exp(1))
-      && 0.5 + 1/(1 + exp(1)) <= p && p < 1)
-        || isinf(x)) {
-      if (p <= 1/(1 + exp(1)) || 0.5 + 1/(1 + exp(1)) <= p)
+
+    /*
+     * On the interior floating-point numbers, either logit or
+     * logithalf had better give the correct answer.
+     *
+     * For probabilities near 0, we can get much finer resolution with
+     * logit, and for probabilities near 1/2, we can get much finer
+     * resolution with logithalf by representing them using p - 1/2.
+     *
+     * E.g., we can write -.00001 for phalf, and .49999 for p, but the
+     * difference 1/2 - .00001 gives 1.0000000000010001e-5 in binary64
+     * arithmetic.  So test logit(.49999) which should give the same
+     * answer as logithalf(-1.0000000000010001e-5), namely
+     * -4.000000000537333e-5, and also test logithalf(-.00001) which
+     * gives -4.000000000533334e-5 instead -- but don't expect
+     * logit(.49999) to give -4.000000000533334e-5 even though it looks
+     * like 1/2 - .00001.
+     *
+     * A naive implementation of logit will just use log(p/(1 - p)) and
+     * give the answer -4.000000000551673e-05 for .49999, which is
+     * wrong in a lot of digits, which happens because log is
+     * ill-conditioned near 1 and thus amplifies whatever relative
+     * error we made in computing p/(1 - p).
+     */
+    if ((0 < p && p < 1) || isinf(x)) {
+      if (phalf >= p - 0.5 && phalf <= p - 0.5) /* XXX -Wfloat-equal */
         CHECK_RELERR(x, logit(p));
-      CHECK_RELERR(x, logithalf(phalf));
+      if (p >= 0.5 + phalf && p <= 0.5 + phalf) /* XXX -Wfloat-equal */
+        CHECK_RELERR(x, logithalf(phalf));
     }
+
     CHECK_RELERR(-phalf, logistichalf(-x));
-    if (fabs(phalf) < 0.5)
+    if (fabs(phalf) < 0.5 || isinf(x))
       CHECK_RELERR(-x, logithalf(-phalf));
-    if (p < 1) {
+    if (p < 1 || isinf(x)) {
       CHECK_RELERR(1 - p, logistic(-x));
-      if (p > .75)
+      if (p > .75 || isinf(x))
         CHECK_RELERR(-x, logit(1 - p));
     } else {
       CHECK_LE(logistic(-x), 1e-300);
