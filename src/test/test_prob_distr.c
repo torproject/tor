@@ -41,13 +41,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/** Return the integer part of double <b>d</b>. If <b>use_floor</b> is true,
- *  then use the floor() function otherwise use ceil(). */
+/**
+ * Return floor(d) converted to size_t, as a workaround for complaints
+ * under -Wbad-function-cast for (size_t)floor(d).
+ */
 static size_t
-get_size_t_from_double(double d, bool use_floor)
+floor_to_size_t(double d)
 {
-  double integral_d = use_floor ? floor(d) : ceil(d);
-  return (size_t) integral_d;
+  double integral_d = floor(d);
+  return (size_t)integral_d;
+}
+
+/**
+ * Return ceil(d) converted to size_t, as a workaround for complaints
+ * under -Wbad-function-cast for (size_t)ceil(d).
+ */
+static size_t
+ceil_to_size_t(double d)
+{
+  double integral_d = ceil(d);
+  return (size_t)integral_d;
 }
 
 /*
@@ -939,7 +952,7 @@ bin_cdfs(const struct dist *dist, double lo, double hi, double *logP, size_t n)
   double halfway = dist->ops->icdf(dist, 0.5);
   double x_0, x_1;
   size_t i;
-  size_t n2 = get_size_t_from_double((halfway - lo)/w, false);
+  size_t n2 = ceil_to_size_t((halfway - lo)/w);
 
   assert(lo <= halfway);
   assert(halfway <= hi);
@@ -981,7 +994,7 @@ bin_samples(const struct dist *dist, double lo, double hi, size_t *C, size_t n)
     if (x < lo)
       bin = 0;
     else if (x < hi)
-      bin = 1 + get_size_t_from_double((x - lo)/w, true);
+      bin = 1 + floor_to_size_t((x - lo)/w);
     else
       bin = n - 1;
     assert(bin < n);
