@@ -32,7 +32,6 @@
 #include <math.h>
 #include <stddef.h>
 
-
 /** Validators for downcasting macros below */
 #define validate_container_of(PTR, TYPE, FIELD)                         \
   (0 * sizeof((PTR) - &((TYPE *)(((char *)(PTR)) -                      \
@@ -409,7 +408,6 @@ logithalf(double p0)
     return log((0.5 + p0)/(0.5 - p0));
   }
 }
-
 
 /*
  * The following random_uniform_01 is tailored for IEEE 754 binary64
@@ -1449,7 +1447,6 @@ log_logistic_isf(const struct dist *dist, double p)
 
   return isf_log_logistic(p, LL->alpha, LL->beta);
 }
-
 
 /** Functions for Weibull distribution */
 const struct dist_ops weibull_ops = {

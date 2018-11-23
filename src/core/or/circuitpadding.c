@@ -454,9 +454,9 @@ circpad_distribution_sample(circpad_distribution_t dist)
       {
         // param2 is upper bound, param1 is lower
         const struct uniform my_uniform = {
-                                           .base = DIST_BASE(&uniform_ops),
-                                           .a = dist.param1,
-                                           .b = dist.param2,
+          .base = DIST_BASE(&uniform_ops),
+          .a = dist.param1,
+          .b = dist.param2,
         };
         return uniform_sample(&my_uniform.base);
       }
@@ -464,19 +464,19 @@ circpad_distribution_sample(circpad_distribution_t dist)
       {
       /* param1 is Mu, param2 is sigma. */
         const struct logistic my_logistic = {
-                                           .base = DIST_BASE(&uniform_ops),
-                                           .mu = dist.param1,
-                                           .sigma = dist.param2,
+          .base = DIST_BASE(&uniform_ops),
+          .mu = dist.param1,
+          .sigma = dist.param2,
         };
         return logistic_sample(&my_logistic.base);
       }
     case CIRCPAD_DIST_LOG_LOGISTIC:
       {
         /* param1 is Alpha, param2 is 1.0/Beta */
-       	const struct log_logistic my_log_logistic = {
-                                                     .base = DIST_BASE(&log_logistic_ops),
-                                                     .alpha = dist.param1,
-                                                     .beta = dist.param2,
+        const struct log_logistic my_log_logistic = {
+          .base = DIST_BASE(&log_logistic_ops),
+          .alpha = dist.param1,
+          .beta = dist.param2,
         };
         return log_logistic_sample(&my_log_logistic.base);
       }
@@ -494,9 +494,9 @@ circpad_distribution_sample(circpad_distribution_t dist)
       {
         /* param1 is k, param2 is Lambda */
         const struct weibull my_weibull = {
-                                     .base = DIST_BASE(&weibull_ops),
-                                     .k = dist.param1,
-                                     .lambda = dist.param2,
+          .base = DIST_BASE(&weibull_ops),
+          .k = dist.param1,
+          .lambda = dist.param2,
         };
         return weibull_sample(&my_weibull.base);
       }
@@ -507,10 +507,10 @@ circpad_distribution_sample(circpad_distribution_t dist)
           continue;
         }
         const struct genpareto my_genpareto = {
-                                               .base = DIST_BASE(&weibull_ops),
-                                               .mu = p,
-                                               .sigma = dist.param1,
-                                               .xi = dist.param2,
+          .base = DIST_BASE(&weibull_ops),
+          .mu = p,
+          .sigma = dist.param1,
+          .xi = dist.param2,
         };
         return genpareto_sample(&my_genpareto.base);
       }

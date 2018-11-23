@@ -1169,7 +1169,6 @@ test_stochastic_logistic(void *arg)
 
  done:
   ;
-
 }
 
 static void
@@ -1226,8 +1225,8 @@ struct testcase_t slow_stochastic_prob_distr_tests[] = {
   { "stochastic_geometric", test_stochastic_geometric, TT_FORK, NULL, NULL },
   { "stochastic_uniform", test_stochastic_uniform, TT_FORK, NULL, NULL },
   { "stochastic_logistic", test_stochastic_logistic, TT_FORK, NULL, NULL },
-  { "stochastic_log_logistic", test_stochastic_log_logistic, TT_FORK, NULL, NULL },
+  { "stochastic_log_logistic", test_stochastic_log_logistic, TT_FORK, NULL,
+    NULL },
   { "stochastic_weibull", test_stochastic_weibull, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-
