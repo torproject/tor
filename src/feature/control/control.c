@@ -7395,6 +7395,17 @@ control_event_transport_launched(const char *mode, const char *transport_name,
                      mode, transport_name, fmt_addr(addr), port);
 }
 
+/** A pluggable transport called <b>transport_name</b> has emitted a log
+ * message found in <b>message</b>. */
+void
+control_event_transport_log(const char *transport_name, const char *message)
+{
+  send_control_event(EVENT_TRANSPORT_LOG,
+                     "650 TRANSPORT_LOG %s %s\r\n",
+                     transport_name,
+                     message);
+}
+
 /** Convert rendezvous auth type to string for HS_DESC control events
  */
 const char *

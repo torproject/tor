@@ -205,6 +205,8 @@ void control_event_clients_seen(const char *controller_str);
 void control_event_transport_launched(const char *mode,
                                       const char *transport_name,
                                       tor_addr_t *addr, uint16_t port);
+void control_event_transport_log(const char *transport_name,
+                                 const char *message);
 const char *rend_auth_type_to_string(rend_auth_type_t auth_type);
 MOCK_DECL(const char *, node_describe_longname_by_id,(const char *id_digest));
 void control_event_hs_descriptor_requested(const char *onion_address,
@@ -293,7 +295,8 @@ void control_free_all(void);
 #define EVENT_HS_DESC                 0x0021
 #define EVENT_HS_DESC_CONTENT         0x0022
 #define EVENT_NETWORK_LIVENESS        0x0023
-#define EVENT_MAX_                    0x0023
+#define EVENT_TRANSPORT_LOG           0x0024
+#define EVENT_MAX_                    0x0024
 
 /* sizeof(control_connection_t.event_mask) in bits, currently a uint64_t */
 #define EVENT_CAPACITY_               0x0040

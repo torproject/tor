@@ -128,6 +128,7 @@ static void parse_method_error(const char *line, int is_server_method);
 #define PROTO_SMETHODS_DONE "SMETHODS DONE"
 #define PROTO_PROXY_DONE "PROXY DONE"
 #define PROTO_PROXY_ERROR "PROXY-ERROR"
+#define PROTO_LOG "LOG"
 
 /** The first and only supported - at the moment - configuration
     protocol version. */
@@ -909,6 +910,9 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
 
     parse_proxy_error(line);
     goto err;
+  } else if (!strcmpstart(line, PROTO_LOG)) {
+    parse_log_line(line);
+    return;
   } else if (!strcmpstart(line, SPAWN_ERROR_MESSAGE)) {
     /* managed proxy launch failed: parse error message to learn why. */
     int retval, child_state, saved_errno;
@@ -1144,6 +1148,44 @@ parse_proxy_error(const char *line)
   log_warn(LD_CONFIG, "Managed proxy failed to configure the "
            "pluggable transport's outgoing proxy. (%s)",
            line+strlen(PROTO_PROXY_ERROR)+1);
+}
+
+/** Parses a LOG <b>line</b> and emit log events accordingly. */
+STATIC void
+parse_log_line(const char *line)
+{
+  smartlist_t *items = smartlist_new();
+
+  if (strlen(line) < (strlen(PROTO_LOG) + 1)) {
+    log_warn(LD_PT, "Managed proxy sent us a %s line "
+                    "with missing arguments.", PROTO_LOG);
+    goto done;
+  }
+
+  const char *arguments = line + strlen(PROTO_LOG) + 1;
+
+  /* The format is 'LOG <transport> <message>'. We accept empty messages. */
+  smartlist_split_string(items, arguments, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
+
+  if (smartlist_len(items) < 2) {
+    log_warn(LD_PT, "Managed proxy sent us a %s line "
+                    "with too few arguments.", PROTO_LOG);
+    goto done;
+  }
+
+  const char *transport_name = smartlist_get(items, 0);
+  const char *message = smartlist_get(items, 1);
+
+  log_info(LD_PT, "Managed proxy transport \"%s\" says: %s",
+           transport_name, message);
+
+  /* Emit control port event. */
+  control_event_transport_log(transport_name, message);
+
+ done:
+  SMARTLIST_FOREACH(items, char *, s, tor_free(s));
+  smartlist_free(items);
 }
 
 /** Return a newly allocated string that tor should place in
