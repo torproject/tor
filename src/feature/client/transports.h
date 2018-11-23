@@ -128,6 +128,7 @@ STATIC int parse_version(const char *line, managed_proxy_t *mp);
 STATIC void parse_env_error(const char *line);
 STATIC void parse_proxy_error(const char *line);
 STATIC void handle_proxy_line(const char *line, managed_proxy_t *mp);
+STATIC void parse_log_line(const char *line);
 STATIC char *get_transport_options_for_server_proxy(const managed_proxy_t *mp);
 
 STATIC void managed_proxy_destroy(managed_proxy_t *mp,
