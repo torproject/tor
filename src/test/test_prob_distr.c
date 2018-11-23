@@ -32,7 +32,6 @@
 #include "lib/math/prob_distr.h"
 #include "lib/crypt_ops/crypto_rand.h"
 
-#include <assert.h>
 #include <float.h>
 #include <math.h>
 #include <stdbool.h>
@@ -954,9 +953,9 @@ bin_cdfs(const struct dist *dist, double lo, double hi, double *logP, size_t n)
   size_t i;
   size_t n2 = ceil_to_size_t((halfway - lo)/w);
 
-  assert(lo <= halfway);
-  assert(halfway <= hi);
-  assert(n2 <= n);
+  tor_assert(lo <= halfway);
+  tor_assert(halfway <= hi);
+  tor_assert(n2 <= n);
 
   x_1 = lo;
   logP[0] = log(CDF(x_1) - 0); /* 0 = CDF(-inf) */
@@ -997,7 +996,7 @@ bin_samples(const struct dist *dist, double lo, double hi, size_t *C, size_t n)
       bin = 1 + floor_to_size_t((x - lo)/w);
     else
       bin = n - 1;
-    assert(bin < n);
+    tor_assert(bin < n);
     C[bin]++;
   }
 }
