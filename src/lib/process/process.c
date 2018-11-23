@@ -255,6 +255,26 @@ process_exec(process_t *process)
   return status;
 }
 
+/** Terminate the given process. Returns true on success,
+ * otherwise false. */
+bool
+process_terminate(process_t *process)
+{
+  tor_assert(process);
+
+  /* Terminating a non-running process isn't going to work. */
+  if (process_get_status(process) != PROCESS_STATUS_RUNNING)
+    return false;
+
+  log_debug(LD_PROCESS, "Terminating process");
+
+#ifndef _WIN32
+  return process_unix_terminate(process);
+#else
+  return process_win32_terminate(process);
+#endif
+}
+
 /** Returns the unique process identifier for the given <b>process</b>. */
 process_pid_t
 process_get_pid(process_t *process)

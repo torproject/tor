@@ -66,6 +66,7 @@ void process_free_(process_t *process);
 #define process_free(s) FREE_AND_NULL(process_t, process_free_, (s))
 
 process_status_t process_exec(process_t *process);
+bool process_terminate(process_t *process);
 
 process_pid_t process_get_pid(process_t *process);
 
