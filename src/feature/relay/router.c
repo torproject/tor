@@ -1807,6 +1807,71 @@ router_check_descriptor_address_consistency(uint32_t ipv4h_desc_addr)
                                                    CONN_TYPE_DIR_LISTENER);
 }
 
+/**
+ * Return a new smartlist containing the family members configured in
+ * <b>options</b>.  Warn about invalid or missing entries.  Return NULL
+ * if this relay should not declare a family.
+ **/
+static smartlist_t *
+get_declared_family(const or_options_t *options)
+{
+  if (!options->MyFamily)
+    return NULL;
+
+  if (options->BridgeRelay)
+    return NULL;
+
+  if (!warned_nonexistent_family)
+    warned_nonexistent_family = smartlist_new();
+
+  smartlist_t *declared_family = smartlist_new();
+  config_line_t *family;
+  for (family = options->MyFamily; family; family = family->next) {
+    char *name = family->value;
+    const node_t *member;
+    if (!strcasecmp(name, options->Nickname))
+      continue; /* Don't list ourself, that's redundant */
+    else
+      member = node_get_by_nickname(name, 0);
+    if (!member) {
+      int is_legal = is_legal_nickname_or_hexdigest(name);
+      if (!smartlist_contains_string(warned_nonexistent_family, name) &&
+          !is_legal_hexdigest(name)) {
+        if (is_legal)
+          log_warn(LD_CONFIG,
+                   "I have no descriptor for the router named \"%s\" in my "
+                   "declared family; I'll use the nickname as is, but "
+                   "this may confuse clients.", name);
+        else
+          log_warn(LD_CONFIG, "There is a router named \"%s\" in my "
+                   "declared family, but that isn't a legal nickname. "
+                   "Skipping it.", escaped(name));
+        smartlist_add_strdup(warned_nonexistent_family, name);
+      }
+      if (is_legal) {
+        smartlist_add_strdup(declared_family, name);
+      }
+    } else if (router_digest_is_me(member->identity)) {
+      /* Don't list ourself in our own family; that's redundant */
+      /* XXX shouldn't be possible */
+    } else {
+      char *fp = tor_malloc(HEX_DIGEST_LEN+2);
+      fp[0] = '$';
+      base16_encode(fp+1,HEX_DIGEST_LEN+1,
+                    member->identity, DIGEST_LEN);
+      smartlist_add(declared_family, fp);
+      if (smartlist_contains_string(warned_nonexistent_family, name))
+        smartlist_string_remove(warned_nonexistent_family, name);
+    }
+  }
+
+  /* remove duplicates from the list */
+  smartlist_sort_strings(declared_family);
+  smartlist_uniq_strings(declared_family);
+
+  return declared_family;
+}
+
 /** Build a fresh routerinfo, signed server descriptor, and extra-info document
  * for this OR. Set r to the generated routerinfo, e to the generated
  * extra-info document. Return 0 on success, -1 on temporary error. Failure to
@@ -1921,54 +1986,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     tor_free(p_tmp);
   }
 
-  if (options->MyFamily && ! options->BridgeRelay) {
-    if (!warned_nonexistent_family)
-      warned_nonexistent_family = smartlist_new();
-    ri->declared_family = smartlist_new();
-    config_line_t *family;
-    for (family = options->MyFamily; family; family = family->next) {
-       char *name = family->value;
-       const node_t *member;
-       if (!strcasecmp(name, options->Nickname))
-         continue; /* Don't list ourself, that's redundant */
-       else
-         member = node_get_by_nickname(name, 0);
-       if (!member) {
-         int is_legal = is_legal_nickname_or_hexdigest(name);
-         if (!smartlist_contains_string(warned_nonexistent_family, name) &&
-             !is_legal_hexdigest(name)) {
-           if (is_legal)
-             log_warn(LD_CONFIG,
-                      "I have no descriptor for the router named \"%s\" in my "
-                      "declared family; I'll use the nickname as is, but "
-                      "this may confuse clients.", name);
-           else
-             log_warn(LD_CONFIG, "There is a router named \"%s\" in my "
-                      "declared family, but that isn't a legal nickname. "
-                      "Skipping it.", escaped(name));
-           smartlist_add_strdup(warned_nonexistent_family, name);
-         }
-         if (is_legal) {
-           smartlist_add_strdup(ri->declared_family, name);
-         }
-       } else if (router_digest_is_me(member->identity)) {
-         /* Don't list ourself in our own family; that's redundant */
-         /* XXX shouldn't be possible */
-       } else {
-         char *fp = tor_malloc(HEX_DIGEST_LEN+2);
-         fp[0] = '$';
-         base16_encode(fp+1,HEX_DIGEST_LEN+1,
-                       member->identity, DIGEST_LEN);
-         smartlist_add(ri->declared_family, fp);
-         if (smartlist_contains_string(warned_nonexistent_family, name))
-           smartlist_string_remove(warned_nonexistent_family, name);
-       }
-    }
-
-    /* remove duplicates from the list */
-    smartlist_sort_strings(ri->declared_family);
-    smartlist_uniq_strings(ri->declared_family);
-  }
+  ri->declared_family = get_declared_family(options);
 
   /* Now generate the extrainfo. */
   ei = tor_malloc_zero(sizeof(extrainfo_t));
