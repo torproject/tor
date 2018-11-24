@@ -1,0 +1,5 @@
+  o Minor features (directory authority):
+    - Directory authorities support a new consensus algorithm,
+      under which microdescriptor entries are encoded in a canonical
+      form. This improves their compressibility in transit and on the client.
+      Closes ticket 28266; implements proposal 298.
