@@ -610,6 +610,36 @@ test_nodelist_node_nodefamily(void *arg)
   smartlist_free(nodes);
 }
 
+static void
+test_nodelist_nodefamily_canonicalize(void *arg)
+{
+  (void)arg;
+  char *c = NULL;
+
+  c = nodefamily_canonicalize("", NULL, 0);
+  tt_str_op(c, OP_EQ, "");
+  tor_free(c);
+
+  uint8_t own_id[20];
+  memset(own_id, 0, sizeof(own_id));
+  c = nodefamily_canonicalize(
+           "alice BOB caroL %potrzebie !!!@#@# "
+           "$bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb=fred "
+           "ffffffffffffffffffffffffffffffffffffffff "
+           "$cccccccccccccccccccccccccccccccccccccccc ", own_id, 0);
+  tt_str_op(c, OP_EQ,
+           "!!!@#@# "
+           "$0000000000000000000000000000000000000000 "
+           "$BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB "
+           "$CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC "
+           "$FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF "
+           "%potrzebie "
+           "alice bob carol");
+
+ done:
+  tor_free(c);
+}
+
 #define NODE(name, flags) \
   { #name, test_nodelist_##name, (flags), NULL, NULL }
 
@@ -623,5 +653,6 @@ struct testcase_t nodelist_tests[] = {
   NODE(nodefamily_lookup, TT_FORK),
   NODE(nickname_matches, 0),
   NODE(node_nodefamily, TT_FORK),
+  NODE(nodefamily_canonicalize, 0),
   END_OF_TESTCASES
 };
