@@ -135,6 +135,7 @@ nodefamily_from_members(const smartlist_t *members,
       ptr[0] = NODEFAMILY_BY_NICKNAME;
       tor_assert(strlen(cp) < DIGEST_LEN); // guaranteed by is_legal_nickname
       memcpy(ptr+1, cp, strlen(cp));
+      tor_strlower((char*) ptr+1);
       bad_element = false;
     } else if (is_legal_hexdigest(cp)) {
       char digest_buf[DIGEST_LEN];
@@ -346,6 +347,7 @@ nodefamily_format(const nodefamily_t *family)
         char buf[HEX_DIGEST_LEN+2];
         buf[0]='$';
         base16_encode(buf+1, sizeof(buf)-1, (char*)ptr+1, DIGEST_LEN);
+        tor_strupper(buf);
         smartlist_add_strdup(sl, buf);
         break;
       }

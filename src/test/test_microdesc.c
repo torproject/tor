@@ -176,7 +176,7 @@ test_md_cache(void *data)
   tt_ptr_op(md3->family, OP_NE, NULL);
 
   encoded_family = nodefamily_format(md3->family);
-  tt_str_op(encoded_family, OP_EQ, "nodeX nodeY nodeZ");
+  tt_str_op(encoded_family, OP_EQ, "nodex nodey nodez");
 
   /* Now rebuild the cache! */
   tt_int_op(microdesc_cache_rebuild(mc, 1), OP_EQ, 0);

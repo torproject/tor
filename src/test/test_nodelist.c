@@ -299,7 +299,7 @@ test_nodelist_nodefamily(void *arg)
   tt_ptr_op(nf1, OP_EQ, nf3);
 
   /* Do we get the expected result when we re-encode? */
-  tor_asprintf(&enc, "hello $%s", h1);
+  tor_asprintf(&enc, "$%s hello", h1);
   enc2 = nodefamily_format(nf1);
   tt_str_op(enc2, OP_EQ, enc);
   tor_free(enc2);
@@ -399,8 +399,8 @@ test_nodelist_nodefamily_parse_err(void *arg)
         tt_assert(nf1);
         enc = nodefamily_format(nf1);
         tt_str_op(enc, OP_EQ,
-                  "reticulatogranulate "
-                  "$7468696E67732D696E2D7468656D73656C766573");
+                  "$7468696E67732D696E2D7468656D73656C766573 "
+                  "reticulatogranulate");
         tor_free(enc);
       }
 
@@ -470,11 +470,11 @@ test_nodelist_nodefamily_lookup(void *arg)
   tt_int_op(smartlist_len(sl), OP_EQ, 3);
 
   const node_t *n = smartlist_get(sl, 0);
-  tt_str_op(n->identity, OP_EQ, "erewhon");
-  n = smartlist_get(sl, 1);
   test_memeq_hex(n->identity, "3333333333333333333333333333333333333333");
-  n = smartlist_get(sl, 2);
+  n = smartlist_get(sl, 1);
   test_memeq_hex(n->identity, "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
+  n = smartlist_get(sl, 2);
+  tt_str_op(n->identity, OP_EQ, "erewhon");
 
  done:
   UNMOCK(node_get_by_nickname);
@@ -583,9 +583,9 @@ test_nodelist_node_nodefamily(void *arg)
   node_lookup_declared_family(nodes, &mock_node1);
   tt_int_op(smartlist_len(nodes), OP_EQ, 2);
   const node_t *n = smartlist_get(nodes, 0);
-  tt_str_op(n->identity, OP_EQ, "NodeFour");
-  n = smartlist_get(nodes, 1);
   tt_mem_op(n->identity, OP_EQ, "SecondNodeWe'reTestn", DIGEST_LEN);
+  n = smartlist_get(nodes, 1);
+  tt_str_op(n->identity, OP_EQ, "nodefour");
 
   // free, try the other one.
   SMARTLIST_FOREACH(nodes, node_t *, x, tor_free(x));
@@ -594,9 +594,9 @@ test_nodelist_node_nodefamily(void *arg)
   node_lookup_declared_family(nodes, &mock_node2);
   tt_int_op(smartlist_len(nodes), OP_EQ, 2);
   n = smartlist_get(nodes, 0);
+  // This gets a truncated hex hex ID since it was looked up by name
   tt_str_op(n->identity, OP_EQ, "NodeThree");
   n = smartlist_get(nodes, 1);
-  // This gets a truncated hex hex ID since it was looked up by name
   tt_str_op(n->identity, OP_EQ, "4e6f64654f6e654e6f6");
 
  done:
