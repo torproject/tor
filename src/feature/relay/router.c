@@ -30,6 +30,7 @@
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nickname.h"
+#include "feature/nodelist/nodefamily.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/torcert.h"
@@ -339,6 +340,16 @@ set_server_identity_key(crypto_pk_t *k)
     tor_assert(0);
   }
 }
+
+#ifdef TOR_UNIT_TESTS
+/** Testing only -- set the server's RSA identity digest to
+ * be <b>digest</b> */
+void
+set_server_identity_key_digest_testing(const uint8_t *digest)
+{
+  memcpy(server_identitykey_digest, digest, DIGEST_LEN);
+}
+#endif
 
 /** Make sure that we have set up our identity keys to match or not match as
  * appropriate, and die with an assertion if we have not. */
@@ -1691,10 +1702,6 @@ router_get_descriptor_gen_reason(void)
   return desc_gen_reason;
 }
 
-/** A list of nicknames that we've warned about including in our family
- * declaration verbatim rather than as digests. */
-static smartlist_t *warned_nonexistent_family = NULL;
-
 static int router_guess_address_from_dir_headers(uint32_t *guess);
 
 /** Make a current best guess at our address, either because
@@ -1807,13 +1814,17 @@ router_check_descriptor_address_consistency(uint32_t ipv4h_desc_addr)
                                                    CONN_TYPE_DIR_LISTENER);
 }
 
+/** A list of nicknames that we've warned about including in our family,
+ * for one reason or another. */
+static smartlist_t *warned_family = NULL;
+
 /**
  * Return a new smartlist containing the family members configured in
  * <b>options</b>.  Warn about invalid or missing entries.  Return NULL
  * if this relay should not declare a family.
  **/
-static smartlist_t *
-get_declared_family(const or_options_t *options)
+STATIC smartlist_t *
+get_my_declared_family(const or_options_t *options)
 {
   if (!options->MyFamily)
     return NULL;
@@ -1821,55 +1832,112 @@ get_declared_family(const or_options_t *options)
   if (options->BridgeRelay)
     return NULL;
 
-  if (!warned_nonexistent_family)
-    warned_nonexistent_family = smartlist_new();
+  if (!warned_family)
+    warned_family = smartlist_new();
 
   smartlist_t *declared_family = smartlist_new();
   config_line_t *family;
+
+  /* First we try to get the whole family in the form of hexdigests. */
   for (family = options->MyFamily; family; family = family->next) {
     char *name = family->value;
     const node_t *member;
-    if (!strcasecmp(name, options->Nickname))
-      continue; /* Don't list ourself, that's redundant */
+    if (options->Nickname && !strcasecmp(name, options->Nickname))
+      continue; /* Don't list ourself by nickname, that's redundant */
     else
       member = node_get_by_nickname(name, 0);
+
     if (!member) {
+      /* This node doesn't seem to exist, so warn about it if it is not
+       * a hexdigest. */
       int is_legal = is_legal_nickname_or_hexdigest(name);
-      if (!smartlist_contains_string(warned_nonexistent_family, name) &&
+      if (!smartlist_contains_string(warned_family, name) &&
           !is_legal_hexdigest(name)) {
         if (is_legal)
           log_warn(LD_CONFIG,
-                   "I have no descriptor for the router named \"%s\" in my "
-                   "declared family; I'll use the nickname as is, but "
-                   "this may confuse clients.", name);
+                   "There is a router named %s in my declared family, but "
+                   "I have no descriptor for it. I'll use the nickname "
+                   "as is, but this may confuse clients. Please list it "
+                   "by identity digest instead.", escaped(name));
         else
-          log_warn(LD_CONFIG, "There is a router named \"%s\" in my "
-                   "declared family, but that isn't a legal nickname. "
+          log_warn(LD_CONFIG, "There is a router named %s in my declared "
+                   "family, but that isn't a legal digest or nickname. "
                    "Skipping it.", escaped(name));
-        smartlist_add_strdup(warned_nonexistent_family, name);
+        smartlist_add_strdup(warned_family, name);
       }
       if (is_legal) {
         smartlist_add_strdup(declared_family, name);
       }
-    } else if (router_digest_is_me(member->identity)) {
-      /* Don't list ourself in our own family; that's redundant */
-      /* XXX shouldn't be possible */
     } else {
+      /* List the node by digest. */
       char *fp = tor_malloc(HEX_DIGEST_LEN+2);
       fp[0] = '$';
       base16_encode(fp+1,HEX_DIGEST_LEN+1,
                     member->identity, DIGEST_LEN);
       smartlist_add(declared_family, fp);
-      if (smartlist_contains_string(warned_nonexistent_family, name))
-        smartlist_string_remove(warned_nonexistent_family, name);
+
+      if (! is_legal_hexdigest(name) &&
+          !smartlist_contains_string(warned_family, name)) {
+        /* Warn if this node was not specified by hexdigest. */
+        log_warn(LD_CONFIG, "There is a router named %s in my declared "
+                 "family, but it wasn't listed by digest. Please consider "
+                 "saying %s instead, if that's what you meant.",
+                 escaped(name), fp);
+        smartlist_add_strdup(warned_family, name);
+      }
     }
   }
 
-  /* remove duplicates from the list */
-  smartlist_sort_strings(declared_family);
-  smartlist_uniq_strings(declared_family);
+  /* Now declared_family should have the closest we can come to the
+   * identities that the user wanted.
+   *
+   * Unlike older versions of Tor, we _do_ include our own identity: this
+   * helps microdescriptor compression, and helps in-memory compression
+   * on clients. */
+  nodefamily_t *nf = nodefamily_from_members(declared_family,
+                                     router_get_my_id_digest(),
+                                     NF_WARN_MALFORMED,
+                                     NULL);
+  SMARTLIST_FOREACH(declared_family, char *, s, tor_free(s));
+  smartlist_free(declared_family);
+  if (!nf) {
+    return NULL;
+  }
 
-  return declared_family;
+  char *s = nodefamily_format(nf);
+  nodefamily_free(nf);
+
+  smartlist_t *result = smartlist_new();
+  smartlist_split_string(result, s, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  tor_free(s);
+
+  if (smartlist_len(result) == 1) {
+    /* This is a one-element list containing only ourself; instead return
+     * nothing */
+    const char *singleton = smartlist_get(result, 0);
+    bool is_me = false;
+    if (singleton[0] == '$') {
+      char d[DIGEST_LEN];
+      int n = base16_decode(d, sizeof(d), singleton+1, strlen(singleton+1));
+      if (n == DIGEST_LEN &&
+          fast_memeq(d, router_get_my_id_digest(), DIGEST_LEN)) {
+        is_me = true;
+      }
+    }
+    if (!is_me) {
+      // LCOV_EXCL_START
+      log_warn(LD_BUG, "Found a singleton family list with an element "
+               "that wasn't us! Element was %s", escaped(singleton));
+      // LCOV_EXCL_STOP
+    } else {
+      SMARTLIST_FOREACH(result, char *, cp, tor_free(cp));
+      smartlist_free(result);
+      return NULL;
+    }
+  }
+
+  return result;
 }
 
 /** Build a fresh routerinfo, signed server descriptor, and extra-info document
@@ -1986,7 +2054,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     tor_free(p_tmp);
   }
 
-  ri->declared_family = get_declared_family(options);
+  ri->declared_family = get_my_declared_family(options);
 
   /* Now generate the extrainfo. */
   ei = tor_malloc_zero(sizeof(extrainfo_t));
@@ -3077,9 +3145,9 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
 void
 router_reset_warnings(void)
 {
-  if (warned_nonexistent_family) {
-    SMARTLIST_FOREACH(warned_nonexistent_family, char *, cp, tor_free(cp));
-    smartlist_clear(warned_nonexistent_family);
+  if (warned_family) {
+    SMARTLIST_FOREACH(warned_family, char *, cp, tor_free(cp));
+    smartlist_clear(warned_family);
   }
 }
 
@@ -3103,11 +3171,12 @@ router_free_all(void)
   memwipe(&curve25519_onion_key, 0, sizeof(curve25519_onion_key));
   memwipe(&last_curve25519_onion_key, 0, sizeof(last_curve25519_onion_key));
 
-  if (warned_nonexistent_family) {
-    SMARTLIST_FOREACH(warned_nonexistent_family, char *, cp, tor_free(cp));
-    smartlist_free(warned_nonexistent_family);
+  if (warned_family) {
+    SMARTLIST_FOREACH(warned_family, char *, cp, tor_free(cp));
+    smartlist_free(warned_family);
   }
 }
+
 /* From the given RSA key object, convert it to ASN-1 encoded format and set
  * the newly allocated object in onion_pkey_out. The length of the key is set
  * in onion_pkey_len_out. */

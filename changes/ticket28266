@@ -3,3 +3,8 @@
       under which microdescriptor entries are encoded in a canonical
       form. This improves their compressibility in transit and on the client.
       Closes ticket 28266; implements proposal 298.
+
+  o Minor features (relay):
+    - When listing relay families, list them in canonical form including the
+      relay's own identity, and try to give a more useful set of warnings.
+      Part of ticket 28266 and proposal 298.
