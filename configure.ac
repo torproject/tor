@@ -8,6 +8,15 @@ AC_INIT([tor],[0.4.0.0-alpha-dev])
 AC_CONFIG_SRCDIR([src/app/main/tor_main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
+# DO NOT EDIT THIS DEFINITION BY HAND UNLESS YOU KNOW WHAT YOU'RE DOING.
+#
+# The update_versions.py script updates this definition when the
+# version number changes.  Tor uses it to make sure that it
+# only shuts down for missing "required protocols" when those protocols
+# are listed as required by a consensus after this date.
+AC_DEFINE(APPROX_RELEASE_DATE, ["2019-01-15"], # for 0.4.0.0-alpha-dev
+          [Approximate date when this software was released. (Updated when the version changes.)])
+
 # "foreign" means we don't follow GNU package layout standards
 # "1.11" means we require automake version 1.11 or newer
 # "subdir-objects" means put .o files in the same directory as the .c files
@@ -2417,7 +2426,6 @@ AC_CONFIG_FILES([
 	src/config/torrc.minimal
 	src/rust/.cargo/config
 	scripts/maint/checkOptionDocs.pl
-	scripts/maint/updateVersions.pl
 ])
 
 if test "x$asciidoc" = "xtrue" && test "$ASCIIDOC" = "none"; then

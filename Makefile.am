@@ -416,7 +416,7 @@ endif
 
 .PHONY: update-versions
 update-versions:
-	$(PERL) $(top_builddir)/scripts/maint/updateVersions.pl
+	abs_top_srcdir="$(abs_top_srcdir)" $(PYTHON) $(top_srcdir)/scripts/maint/update_versions.py
 
 .PHONY: callgraph
 callgraph:
