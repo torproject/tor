@@ -1,0 +1,8 @@
+  o Minor features (directory authority, relay):
+    - Authorities now vote on a "StaleDesc" flag to indicate that a relay's
+      descriptor is so old that the relay should upload again soon.  Relays
+      understand this flag, and treat it as a signal to upload a new
+      descriptor.  This flag will eventually let us remove the 'published'
+      date from routerstatus entries, and save a great deal of space in our
+      consensus diffs. Closes ticket 26770; implements proposal 293.
+
