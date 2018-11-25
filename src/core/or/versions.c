@@ -16,6 +16,25 @@
 
 #include "core/or/tor_version_st.h"
 
+/**
+ * Return the approximate date when this release came out, or was
+ * scheduled to come out, according to the APPROX_RELEASE_DATE set in
+ * configure.ac
+ **/
+time_t
+tor_get_approx_release_date(void)
+{
+  char tbuf[ISO_TIME_LEN+1];
+  tor_snprintf(tbuf, sizeof(tbuf),
+               "%s 00:00:00", APPROX_RELEASE_DATE);
+  time_t result = 0;
+  int r = parse_iso_time(tbuf, &result);
+  if (BUG(r < 0)) {
+    result = 0;
+  }
+  return result;
+}
+
 /** Return VS_RECOMMENDED if <b>myversion</b> is contained in
  * <b>versionlist</b>.  Else, return VS_EMPTY if versionlist has no
  * entries. Else, return VS_OLD if every member of

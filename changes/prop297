@@ -1,0 +1,7 @@
+  o Minor features (required protocols):
+    - Tor no longer exits if it is missing a required protocol, if the
+      consensus that requires the protocol predates the release date of the
+      version of Tor. This change prevents Tor releases from exiting because
+      of an old cached consensus, on the theory that a newer cached
+      consensus might not require the protocol.  Implements proposal 297;
+      closes ticket 27735.
