@@ -25,6 +25,9 @@ void set_routerstatus_from_routerinfo(routerstatus_t *rs,
 void dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil);
 
 #ifdef VOTEFLAGS_PRIVATE
+/** Any descriptor older than this age causes the authorities to set the
+ * StaleDesc flag. */
+#define DESC_IS_STALE_INTERVAL (18*60*60)
 STATIC void dirserv_set_routerstatus_testing(routerstatus_t *rs);
 #endif
 

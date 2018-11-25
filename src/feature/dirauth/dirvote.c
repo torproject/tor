@@ -4620,7 +4620,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   v3_out->known_flags = smartlist_new();
   smartlist_split_string(v3_out->known_flags,
-                         "Authority Exit Fast Guard Stable V2Dir Valid HSDir",
+                         "Authority Exit Fast Guard Stable V2Dir Valid HSDir "
+                         "StaleDesc",
                          0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (vote_on_reachability)
     smartlist_add_strdup(v3_out->known_flags, "Running");

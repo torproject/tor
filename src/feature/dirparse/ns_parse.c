@@ -434,6 +434,8 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         rs->is_hs_dir = 1;
       } else if (!strcmp(tok->args[i], "V2Dir")) {
         rs->is_v2_dir = 1;
+      } else if (!strcmp(tok->args[i], "StaleDesc")) {
+        rs->is_staledesc = 1;
       }
     }
     /* These are implied true by having been included in a consensus made

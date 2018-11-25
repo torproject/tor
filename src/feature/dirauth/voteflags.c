@@ -593,6 +593,10 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->or_port = ri->or_port;
   rs->dir_port = ri->dir_port;
   rs->is_v2_dir = ri->supports_tunnelled_dir_requests;
+
+  rs->is_staledesc =
+    (ri->cache_info.published_on + DESC_IS_STALE_INTERVAL) < now;
+
   if (options->AuthDirHasIPv6Connectivity == 1 &&
       !tor_addr_is_null(&ri->ipv6_addr) &&
       node->last_reachable6 >= now - REACHABLE_TIMEOUT) {
