@@ -611,6 +611,7 @@ GENERAL OPTIONS
     ServerDNSResolvConfFile
     Tor must remain in client or server mode (some changes to ClientOnly and
     ORPort are not allowed).
+    ClientOnionAuthDir and any files in it won't reload on HUP signal.
     (Default: 0)
 
 [[Socks4Proxy]] **Socks4Proxy** __host__[:__port__]::
