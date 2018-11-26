@@ -45,6 +45,8 @@ typedef enum {
 
 const char *process_protocol_to_string(process_protocol_t protocol);
 
+void tor_disable_spawning_background_processes(void);
+
 struct process_t;
 typedef struct process_t process_t;
 

@@ -8,7 +8,6 @@
 #define UTIL_PRIVATE
 #define STATEFILE_PRIVATE
 #define CONTROL_PRIVATE
-#define SUBPROCESS_PRIVATE
 #define PROCESS_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
@@ -18,7 +17,6 @@
 #include "core/or/circuitbuild.h"
 #include "app/config/statefile.h"
 #include "test/test.h"
-#include "lib/process/subprocess.h"
 #include "lib/encoding/confline.h"
 #include "lib/net/resolve.h"
 #include "lib/process/process.h"

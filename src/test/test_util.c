@@ -10,7 +10,7 @@
 #define UTIL_PRIVATE
 #define UTIL_MALLOC_PRIVATE
 #define SOCKET_PRIVATE
-#define SUBPROCESS_PRIVATE
+#define PROCESS_WIN32_PRIVATE
 #include "lib/testsupport/testsupport.h"
 #include "core/or/or.h"
 #include "lib/container/buffers.h"
@@ -22,6 +22,7 @@
 #include "test/test.h"
 #include "lib/memarea/memarea.h"
 #include "lib/process/waitpid.h"
+#include "lib/process/process_win32.h"
 #include "test/log_test_helpers.h"
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_zstd.h"
@@ -30,7 +31,6 @@
 #include "lib/fs/winlib.h"
 #include "lib/process/env.h"
 #include "lib/process/pidfile.h"
-#include "lib/process/subprocess.h"
 #include "lib/intmath/weakrng.h"
 #include "lib/thread/numcpus.h"
 #include "lib/math/fp.h"
@@ -4395,57 +4395,6 @@ test_util_format_dec_number(void *ptr)
   return;
 }
 
-/**
- * Test that we can properly format a Windows command line
- */
-static void
-test_util_join_win_cmdline(void *ptr)
-{
-  /* Based on some test cases from "Parsing C++ Command-Line Arguments" in
-   * MSDN but we don't exercise all quoting rules because tor_join_win_cmdline
-   * will try to only generate simple cases for the child process to parse;
-   * i.e. we never embed quoted strings in arguments. */
-
-  const char *argvs[][4] = {
-    {"a", "bb", "CCC", NULL}, // Normal
-    {NULL, NULL, NULL, NULL}, // Empty argument list
-    {"", NULL, NULL, NULL}, // Empty argument
-    {"\"a", "b\"b", "CCC\"", NULL}, // Quotes
-    {"a\tbc", "dd  dd", "E", NULL}, // Whitespace
-    {"a\\\\\\b", "de fg", "H", NULL}, // Backslashes
-    {"a\\\"b", "\\c", "D\\", NULL}, // Backslashes before quote
-    {"a\\\\b c", "d", "E", NULL}, // Backslashes not before quote
-    { NULL } // Terminator
-  };
-
-  const char *cmdlines[] = {
-    "a bb CCC",
-    "",
-    "\"\"",
-    "\\\"a b\\\"b CCC\\\"",
-    "\"a\tbc\" \"dd  dd\" E",
-    "a\\\\\\b \"de fg\" H",
-    "a\\\\\\\"b \\c D\\",
-    "\"a\\\\b c\" d E",
-    NULL // Terminator
-  };
-
-  int i;
-  char *joined_argv = NULL;
-
-  (void)ptr;
-
-  for (i=0; cmdlines[i]!=NULL; i++) {
-    log_info(LD_GENERAL, "Joining argvs[%d], expecting <%s>", i, cmdlines[i]);
-    joined_argv = tor_join_win_cmdline(argvs[i]);
-    tt_str_op(cmdlines[i],OP_EQ, joined_argv);
-    tor_free(joined_argv);
-  }
-
- done:
-  tor_free(joined_argv);
-}
-
 #define MAX_SPLIT_LINE_COUNT 4
 struct split_lines_test_t {
   const char *orig_line; // Line to be split (may contain \0's)
@@ -6226,7 +6175,6 @@ struct testcase_t util_tests[] = {
   UTIL_TEST_WIN_ONLY(load_win_lib, 0),
   UTIL_TEST(format_hex_number, 0),
   UTIL_TEST(format_dec_number, 0),
-  UTIL_TEST(join_win_cmdline, 0),
   UTIL_TEST(n_bits_set, 0),
   UTIL_TEST(eat_whitespace, 0),
   UTIL_TEST(sl_new_from_text_lines, 0),
