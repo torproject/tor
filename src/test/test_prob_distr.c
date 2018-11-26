@@ -416,8 +416,13 @@ test_log_logistic(void *arg)
   (void) arg;
 
   static const struct {
+    /* x is a point in the support of the LogLogistic distribution */
     double x;
+    /* 'p' is the probability that a random variable X for a given LogLogistic
+     * probability ditribution will take value less-or-equal to x */
     double p;
+    /* 'np' is the probability that a random variable X for a given LogLogistic
+     * probability distribution will take value greater-or-equal to x. */
     double np;
   } cases[] = {
     { 0, 0, 1 },
@@ -560,8 +565,13 @@ test_weibull(void *arg)
   (void) arg;
 
   static const struct {
+    /* x is a point in the support of the Weibull distribution */
     double x;
+    /* 'p' is the probability that a random variable X for a given Weibull
+     * probability ditribution will take value less-or-equal to x */
     double p;
+    /* 'np' is the probability that a random variable X for a given Weibull
+     * probability distribution will take value greater-or-equal to x. */
     double np;
   } cases[] = {
     { 0, 0, 1 },
@@ -679,6 +689,8 @@ test_genpareto(void *arg)
   (void) arg;
 
   struct {
+    /* xi is the 'xi' parameter of the generalized Pareto distribution, and the
+     * rest are the same as in the above tests */
     double xi, x, p, np;
   } cases[] = {
     { 0, 0, 0, 1 },
@@ -787,6 +799,8 @@ test_uniform_interval(void *arg)
 {
   (void) arg;
   struct {
+    /* Sample from a uniform distribution with parameters 'a' and 'b', using
+     * 't' as the sampling index. */
     double t, a, b;
   } cases[] = {
     { 0, 0, 0 },
