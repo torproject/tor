@@ -899,6 +899,7 @@ struct testgroup_t testgroups[] = {
   { "parsecommon/", parsecommon_tests },
   { "periodic-event/" , periodic_event_tests },
   { "policy/" , policy_tests },
+  { "prob_distr/", prob_distr_tests },
   { "procmon/", procmon_tests },
   { "process/", process_tests },
   { "proto/http/", proto_http_tests },
