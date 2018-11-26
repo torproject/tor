@@ -12,8 +12,9 @@
  *    and the various relationships between them for each distribution. We also
  *    do deterministic tests on their sampling functions. Test vectors for
  *    these tests were computed from alternative implementations and were
- *    eyeballed to make sure they make sense (e.g. GNU mpfr was used with
- *    200-bit precision).
+ *    eyeballed to make sure they make sense
+ *    (e.g. src/test/prob_distr_mpfr_ref.c computes logit(p) using GNU mpfr
+ *    with 200-bit precision and is then tested in test_logit_logistic()).
  *
  * b) We do stochastic hypothesis testing (G-test) to ensure that sampling from
  *    the given distributions is distributed properly. The stochastic tests are
@@ -276,6 +277,7 @@ test_logit_logistic(void *arg)
     { -1.0000001, .2689414017088022, -.23105859829119776 },
     { -1, .2689414213699951, -.23105857863000487 },
     { -0.9999999, .26894144103118883, -.2310585589688111 },
+    /* see src/test/prob_distr_mpfr_ref.c for computation */
     { -4.000000000537333e-5, .49999, -1.0000000000010001e-5 },
     { -4.000000000533334e-5, .49999, -.00001 },
     { -4.000000108916878e-9, .499999999, -1.0000000272292198e-9 },
