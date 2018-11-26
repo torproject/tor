@@ -71,8 +71,9 @@ ceil_to_size_t(double d)
 static double
 logpmf_geometric(unsigned n, double p)
 {
-
-  if (p >= 1) {                 /* XXX -Wfloat-equal */
+  /* This is actually a check against 1, but we do >= so that the compiler
+     does not raise a -Wfloat-equal */
+  if (p >= 1) {
     if (n == 1)
       return 0;
     else
@@ -209,7 +210,7 @@ log1mexp(double x)
 static double
 relerr(double expected, double actual)
 {
-  if (fabs(expected) <= 0 || isinf(expected)) { /* XXX -Wfloat-equal */
+  if (fabs(expected) <= 0 || isinf(expected)) {
     if (actual <= expected && actual >= expected)
       return 0;
     else
@@ -366,9 +367,9 @@ test_logit_logistic(void *arg)
      * error we made in computing p/(1 - p).
      */
     if ((0 < p && p < 1) || isinf(x)) {
-      if (phalf >= p - 0.5 && phalf <= p - 0.5) /* XXX -Wfloat-equal */
+      if (phalf >= p - 0.5 && phalf <= p - 0.5)
         CHECK_RELERR(x, logit(p));
-      if (p >= 0.5 + phalf && p <= 0.5 + phalf) /* XXX -Wfloat-equal */
+      if (p >= 0.5 + phalf && p <= 0.5 + phalf)
         CHECK_RELERR(x, logithalf(phalf));
     }
 
@@ -591,7 +592,7 @@ test_weibull(void *arg)
     CHECK_RELERR(p, cdf_weibull(x/2, .5, 1));
     CHECK_RELERR(p, cdf_weibull(x*2, 2, 1));
     /* For 0 < x < sqrt(DBL_MIN), x^2 loses lots of bits.  */
-    if (x <= 0 ||               /* XXX -Wfloat-equal */
+    if (x <= 0 ||
         sqrt(DBL_MIN) <= x) {
       CHECK_RELERR(p, cdf_weibull(x*x, 1, .5));
       CHECK_RELERR(p, cdf_weibull(x*x/2, .5, .5));
@@ -741,7 +742,9 @@ test_genpareto(void *arg)
     for (j = 0; j <= 100; j++) {
       double p0 = (j == 0 ? 2*DBL_MIN : (double)j/100);
 
-      if (fabs(xi_array[i]) <= 0) { /* XXX -Wfloat-equal */
+      /* This is actually a check against 0, but we do <= so that the compiler
+         does not raise a -Wfloat-equal */
+      if (fabs(xi_array[i]) <= 0) {
         /*
          * When xi == 0, the generalized Pareto
          * distribution reduces to an

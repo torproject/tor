@@ -1,8 +1,8 @@
 
 /**
- * \file XXX
+ * \file prob_distr.h
  *
- * \brief XXX
+ * \brief Header for prob_distr.c
  **/
 
 #ifndef TOR_PROB_DISTR_H
@@ -117,7 +117,6 @@ extern const struct dist_ops uniform_ops;
 
 /** Only by unittests */
 
-/* XXX only by unittests */
 #ifdef PROB_DISTR_PRIVATE
 
 STATIC double logithalf(double p0);

@@ -1068,7 +1068,7 @@ sample_uniform_interval(double p0, double a, double b)
      *
      * QED.
      */
-    if (p0 >= 1)                /* XXX -Wfloat-equal */
+    if (p0 >= 1)
       return b;
     return a + (b - a)*p0;
   }
@@ -1602,7 +1602,9 @@ sample_geometric(uint32_t s, double p0, double p)
 {
   double x = sample_exponential(s, p0);
 
-  if (p >= 1)                   /* XXX -Wfloat-equal */
+  /* This is actually a check against 1, but we do >= so that the compiler
+     does not raise a -Wfloat-equal */
+  if (p >= 1)
     return 1;
 
   double tmp = ceil(-x/log1p(-p));
