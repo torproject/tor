@@ -239,7 +239,6 @@ uptime-*.json
 /src/test/test
 /src/test/test-slow
 /src/test/test-bt-cl
-/src/test/test-child
 /src/test/test-process
 /src/test/test-memwipe
 /src/test/test-ntor-cl
@@ -250,7 +249,6 @@ uptime-*.json
 /src/test/test.exe
 /src/test/test-slow.exe
 /src/test/test-bt-cl.exe
-/src/test/test-child.exe
 /src/test/test-process.exe
 /src/test/test-ntor-cl.exe
 /src/test/test-hs-ntor-cl.exe
