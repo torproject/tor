@@ -54,6 +54,7 @@ else
    OUTPUTARG=""
 fi
 
+# shellcheck disable=SC2086
 scan-build \
     $CHECKERS \
     ./configure
@@ -63,13 +64,15 @@ scan-build \
 
 # Make this not get scanned for dead assignments, since it has lots of
 # dead assignments we don't care about.
+# shellcheck disable=SC2086
 scan-build \
     $CHECKERS \
     -disable-checker deadcode.DeadStores \
     make -j5 -k ./src/ext/ed25519/ref10/libed25519_ref10.a
 
+# shellcheck disable=SC2086
 scan-build \
-    $CHECKERS $OUTPUTARG \
+    $CHECKERS "$OUTPUTARG" \
     make -j5 -k
 
 CHECKERS="\
