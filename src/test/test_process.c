@@ -9,6 +9,7 @@
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "test/test.h"
+#include "lib/process/env.h"
 
 #define PROCESS_PRIVATE
 #include "lib/process/process.h"
@@ -168,6 +169,56 @@ test_default_values(void *arg)
             smartlist_len(process_get_arguments(process)));
 
  done:
+  process_free(process);
+  process_free_all();
+}
+
+static void
+test_environment(void *arg)
+{
+  (void)arg;
+  process_init();
+
+  process_t *process = process_new("");
+  process_environment_t *env = NULL;
+
+  process_set_environment(process, "E", "F");
+  process_set_environment(process, "C", "D");
+  process_set_environment(process, "A", "B");
+
+  env = process_get_environment(process);
+  tt_mem_op(env->windows_environment_block, OP_EQ,
+            "A=B\0C=D\0E=F\0", 12);
+  tt_str_op(env->unixoid_environment_block[0], OP_EQ,
+            "A=B");
+  tt_str_op(env->unixoid_environment_block[1], OP_EQ,
+            "C=D");
+  tt_str_op(env->unixoid_environment_block[2], OP_EQ,
+            "E=F");
+  tt_ptr_op(env->unixoid_environment_block[3], OP_EQ,
+            NULL);
+  process_environment_free(env);
+
+  /* Reset our environment. */
+  smartlist_t *new_env = smartlist_new();
+  smartlist_add(new_env, (char *)"FOO=bar");
+  smartlist_add(new_env, (char *)"HELLO=world");
+
+  process_reset_environment(process, new_env);
+  smartlist_free(new_env);
+
+  env = process_get_environment(process);
+  tt_mem_op(env->windows_environment_block, OP_EQ,
+            "FOO=bar\0HELLO=world\0", 20);
+  tt_str_op(env->unixoid_environment_block[0], OP_EQ,
+            "FOO=bar");
+  tt_str_op(env->unixoid_environment_block[1], OP_EQ,
+            "HELLO=world");
+  tt_ptr_op(env->unixoid_environment_block[2], OP_EQ,
+            NULL);
+
+ done:
+  process_environment_free(env);
   process_free(process);
   process_free_all();
 }
@@ -589,6 +640,7 @@ test_win32(void *arg)
 
 struct testcase_t process_tests[] = {
   { "default_values", test_default_values, TT_FORK, NULL, NULL },
+  { "environment", test_environment, TT_FORK, NULL, NULL },
   { "stringified_types", test_stringified_types, TT_FORK, NULL, NULL },
   { "line_protocol_simple", test_line_protocol_simple, TT_FORK, NULL, NULL },
   { "line_protocol_multi", test_line_protocol_multi, TT_FORK, NULL, NULL },
