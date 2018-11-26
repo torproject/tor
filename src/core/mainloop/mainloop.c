@@ -1353,6 +1353,7 @@ CALLBACK(heartbeat);
 CALLBACK(hs_service);
 CALLBACK(launch_descriptor_fetches);
 CALLBACK(launch_reachability_tests);
+CALLBACK(prune_old_routers);
 CALLBACK(reachability_warnings);
 CALLBACK(record_bridge_stats);
 CALLBACK(rend_cache_failure_clean);
@@ -1376,6 +1377,7 @@ CALLBACK(second_elapsed);
 #define FL(name) (PERIODIC_EVENT_FLAG_ ## name)
 
 STATIC periodic_event_item_t periodic_events[] = {
+
   /* Everyone needs to run these. They need to have very long timeouts for
    * that to be safe. */
   CALLBACK(add_entropy, ALL, 0),
@@ -1403,6 +1405,7 @@ STATIC periodic_event_item_t periodic_events[] = {
   CALLBACK(clean_caches, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
   CALLBACK(save_state, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
   CALLBACK(write_stats_file, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
+  CALLBACK(prune_old_routers, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
 
   /* Routers (bridge and relay) only. */
   CALLBACK(check_descriptor, ROUTER, FL(NEED_NET)),
@@ -1461,6 +1464,7 @@ static periodic_event_item_t *fetch_networkstatus_event=NULL;
 static periodic_event_item_t *launch_descriptor_fetches_event=NULL;
 static periodic_event_item_t *check_dns_honesty_event=NULL;
 static periodic_event_item_t *save_state_event=NULL;
+static periodic_event_item_t *prune_old_routers_event=NULL;
 
 /** Reset all the periodic events so we'll do all our actions again as if we
  * just started up.
@@ -1570,6 +1574,7 @@ initialize_periodic_events(void)
   STMT_BEGIN name ## _event = find_periodic_event( #name ); STMT_END
 
   NAMED_CALLBACK(check_descriptor);
+  NAMED_CALLBACK(prune_old_routers);
   NAMED_CALLBACK(dirvote);
   NAMED_CALLBACK(fetch_networkstatus);
   NAMED_CALLBACK(launch_descriptor_fetches);
@@ -2342,6 +2347,27 @@ retry_dns_callback(time_t now, const or_options_t *options)
   return RETRY_DNS_INTERVAL;
 }
 
+/**
+ * Periodic callback: prune routerlist of old information about Tor network.
+ */
+static int
+prune_old_routers_callback(time_t now, const or_options_t *options)
+{
+#define ROUTERLIST_PRUNING_INTERVAL (60*60) // 1 hour.
+  (void)now;
+  (void)options;
+
+  if (!net_is_disabled()) {
+    /* If any networkstatus documents are no longer recent, we need to
+     * update all the descriptors' running status. */
+    /* Remove dead routers. */
+    log_debug(LD_GENERAL, "Pruning routerlist...");
+    routerlist_remove_old_routers();
+  }
+
+  return ROUTERLIST_PRUNING_INTERVAL;
+}
+
 /** Periodic callback: consider rebuilding or and re-uploading our descriptor
  * (if we've passed our internal checks). */
 static int
@@ -2361,12 +2387,6 @@ check_descriptor_callback(time_t now, const or_options_t *options)
     check_descriptor_ipaddress_changed(now);
     mark_my_descriptor_dirty_if_too_old(now);
     consider_publishable_server(0);
-    /* If any networkstatus documents are no longer recent, we need to
-     * update all the descriptors' running status. */
-    /* Remove dead routers. */
-    /* XXXX This doesn't belong here, but it was here in the pre-
-     * XXXX refactoring code. */
-    routerlist_remove_old_routers();
   }
 
   return CHECK_DESCRIPTOR_INTERVAL;
