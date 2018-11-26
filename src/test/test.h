@@ -271,7 +271,6 @@ extern struct testcase_t x509_tests[];
 
 extern struct testcase_t slow_crypto_tests[];
 extern struct testcase_t slow_process_tests[];
-extern struct testcase_t slow_util_tests[];
 
 extern struct testgroup_t testgroups[];
 
