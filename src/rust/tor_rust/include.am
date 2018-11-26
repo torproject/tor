@@ -4,7 +4,10 @@ EXTRA_DIST +=\
 
 EXTRA_CARGO_OPTIONS=
 
-@TOR_RUST_LIB_PATH@: FORCE
+RUST_LIB_BUILD_DEPS=\
+	src/lib/libtor-crypt-ops-testing.a
+
+@TOR_RUST_LIB_PATH@: FORCE $(RUST_LIB_BUILD_DEPS)
 	( cd "$(abs_top_builddir)/src/rust" ; \
 		CARGO_TARGET_DIR="$(abs_top_builddir)/src/rust/target" \
 		$(CARGO) build --release $(EXTRA_CARGO_OPTIONS) \
