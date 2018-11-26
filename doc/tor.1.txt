@@ -1790,6 +1790,19 @@ The following options are useful only for clients (that is, if
     Try this many simultaneous connections to download a consensus before
     waiting for one to complete, timeout, or error out. (Default: 3)
 
+[[DormantClientTimeout]] **DormantClientTimeout**  __N__ **minutes**|**hours**|**days**|**weeks**::
+    If Tor spends this much time without any client activity,
+    enter a dormant state where automatic circuits are not built, and
+    directory information is not fetched.
+    Does not affect servers or onion services. Must be at least 10 minutes.
+    (Default: 24 hours)
+
+[[DormantTimeoutDisabledByIdleStreams]] **DormantTimeoutDisabledByIdleStreams  **0**|**1**::
+    If true, then any open client stream (even one not reading or writing)
+    counts as client activity for the purpose of DormantClientTimeout.
+    If false, then only network activity counts. (Default: 1)
+
+
 SERVER OPTIONS
 --------------
 

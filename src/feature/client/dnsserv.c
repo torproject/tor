@@ -28,6 +28,7 @@
 #include "core/or/connection_edge.h"
 #include "feature/control/control.h"
 #include "core/mainloop/mainloop.h"
+#include "core/mainloop/netstatus.h"
 #include "core/or/policies.h"
 
 #include "feature/control/control_connection_st.h"
@@ -212,6 +213,9 @@ dnsserv_launch_request(const char *name, int reverse,
   entry_connection_t *entry_conn;
   edge_connection_t *conn;
   char *q_name;
+
+  /* Launching a request for a user counts as user activity. */
+  note_user_activity(approx_time());
 
   /* Make a new dummy AP connection, and attach the request to it. */
   entry_conn = entry_connection_new(CONN_TYPE_AP, AF_INET);

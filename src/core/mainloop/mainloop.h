@@ -65,6 +65,7 @@ void reschedule_or_state_save(void);
 void reschedule_dirvote(const or_options_t *options);
 void mainloop_schedule_postloop_cleanup(void);
 void rescan_periodic_events(const or_options_t *options);
+MOCK_DECL(void, schedule_rescan_periodic_events,(void));
 
 void update_current_time(time_t now);
 
@@ -81,10 +82,11 @@ uint64_t get_main_loop_error_count(void);
 uint64_t get_main_loop_idle_count(void);
 
 void periodic_events_on_new_options(const or_options_t *options);
-void reschedule_per_second_timer(void);
 
 void do_signewnym(time_t);
 time_t get_last_signewnym_time(void);
+
+void mainloop_schedule_shutdown(int delay_sec);
 
 void tor_init_connection_lists(void);
 void initialize_mainloop_events(void);
@@ -102,6 +104,9 @@ STATIC void close_closeable_connections(void);
 STATIC void initialize_periodic_events(void);
 STATIC void teardown_periodic_events(void);
 STATIC int get_my_roles(const or_options_t *);
+STATIC int check_network_participation_callback(time_t now,
+                                                const or_options_t *options);
+
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *connection_array;
 

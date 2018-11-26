@@ -45,10 +45,6 @@ periodic_event_dispatch(mainloop_event_t *ev, void *data)
   periodic_event_item_t *event = data;
   tor_assert(ev == event->ev);
 
-  if (BUG(!periodic_event_is_enabled(event))) {
-    return;
-  }
-
   time_t now = time(NULL);
   update_current_time(now);
   const or_options_t *options = get_options();
@@ -57,7 +53,7 @@ periodic_event_dispatch(mainloop_event_t *ev, void *data)
   int next_interval = 0;
 
   if (!periodic_event_is_enabled(event)) {
-    /* The event got disabled from inside its callback; no need to
+    /* The event got disabled from inside its callback, or before: no need to
      * reschedule. */
     return;
   }
@@ -171,4 +167,20 @@ periodic_event_disable(periodic_event_item_t *event)
   }
   mainloop_event_cancel(event->ev);
   event->enabled = 0;
+}
+
+/**
+ * Disable an event, then schedule it to run once.
+ * Do nothing if the event was already disabled.
+ */
+void
+periodic_event_schedule_and_disable(periodic_event_item_t *event)
+{
+  tor_assert(event);
+  if (!periodic_event_is_enabled(event))
+    return;
+
+  periodic_event_disable(event);
+
+  mainloop_event_activate(event->ev);
 }

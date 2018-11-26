@@ -368,7 +368,7 @@ control_update_global_event_mask(void)
     control_get_bytes_rw_last_sec(&r, &w);
   }
   if (any_old_per_sec_events != control_any_per_second_event_enabled()) {
-    reschedule_per_second_timer();
+    rescan_periodic_events(get_options());
   }
 
 #undef NEWLY_ENABLED
@@ -1681,6 +1681,8 @@ static const struct signal_t signal_table[] = {
   { SIGNEWNYM, "NEWNYM" },
   { SIGCLEARDNSCACHE, "CLEARDNSCACHE"},
   { SIGHEARTBEAT, "HEARTBEAT"},
+  { SIGACTIVE, "ACTIVE" },
+  { SIGDORMANT, "DORMANT" },
   { 0, NULL },
 };
 

@@ -389,6 +389,8 @@ static config_var_t option_vars_[] = {
   OBSOLETE("DynamicDHGroups"),
   VPORT(DNSPort),
   OBSOLETE("DNSListenAddress"),
+  V(DormantClientTimeout,         INTERVAL, "24 hours"),
+  V(DormantTimeoutDisabledByIdleStreams, BOOL,     "1"),
   /* DoS circuit creation options. */
   V(DoSCircuitCreationEnabled,   AUTOBOOL, "auto"),
   V(DoSCircuitCreationMinConnections,      UINT, "0"),
@@ -1992,9 +1994,6 @@ options_act(const or_options_t *old_options)
     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
     finish_daemon(options->DataDirectory);
   }
-
-  /* See whether we need to enable/disable our once-a-second timer. */
-  reschedule_per_second_timer();
 
   /* We want to reinit keys as needed before we do much of anything else:
      keys are important, and other things can depend on them. */
@@ -3837,6 +3836,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_fn(severity, LD_CONFIG, "You disabled LearnCircuitBuildTimeout, but "
            "didn't specify a CircuitBuildTimeout. I'll pick a plausible "
            "default.");
+  }
+
+  if (options->DormantClientTimeout < 10*60 && !options->TestingTorNetwork) {
+    REJECT("DormantClientTimeout is too low. It must be at least 10 minutes.");
   }
 
   if (options->PathBiasNoticeRate > 1.0) {

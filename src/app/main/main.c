@@ -303,6 +303,19 @@ process_signal(int sig)
       log_heartbeat(time(NULL));
       control_event_signal(sig);
       break;
+    case SIGACTIVE:
+      /* "SIGACTIVE" counts as ersatz user activity. */
+      note_user_activity(approx_time());
+      control_event_signal(sig);
+      break;
+    case SIGDORMANT:
+      /* "SIGDORMANT" means to ignore past user activity */
+      log_notice(LD_GENERAL, "Going dormant because of controller request.");
+      reset_user_activity(0);
+      set_network_participation(false);
+      schedule_rescan_periodic_events();
+      control_event_signal(sig);
+      break;
   }
 }
 
@@ -472,6 +485,8 @@ static struct {
   { SIGNEWNYM, 0, NULL },
   { SIGCLEARDNSCACHE, 0, NULL },
   { SIGHEARTBEAT, 0, NULL },
+  { SIGACTIVE, 0, NULL },
+  { SIGDORMANT, 0, NULL },
   { -1, -1, NULL }
 };
 

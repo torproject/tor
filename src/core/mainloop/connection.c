@@ -1874,6 +1874,9 @@ connection_init_accepted_conn(connection_t *conn,
       TO_ENTRY_CONN(conn)->nym_epoch = get_signewnym_epoch();
       TO_ENTRY_CONN(conn)->socks_request->listener_type = listener->base_.type;
 
+      /* Any incoming connection on an entry port counts as user activity. */
+      note_user_activity(approx_time());
+
       switch (TO_CONN(listener)->type) {
         case CONN_TYPE_AP_LISTENER:
           conn->state = AP_CONN_STATE_SOCKS_WAIT;
@@ -4424,6 +4427,16 @@ connection_t *
 connection_get_by_type_state(int type, int state)
 {
   CONN_GET_TEMPLATE(conn, conn->type == type && conn->state == state);
+}
+
+/**
+ * Return a connection of type <b>type</b> that is not an internally linked
+ * connection, and is not marked for close.
+ **/
+MOCK_IMPL(connection_t *,
+connection_get_by_type_nonlinked,(int type))
+{
+  CONN_GET_TEMPLATE(conn, conn->type == type && !conn->linked);
 }
 
 /** Return a connection of type <b>type</b> that has rendquery equal

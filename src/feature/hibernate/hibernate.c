@@ -66,8 +66,9 @@ static hibernate_state_t hibernate_state = HIBERNATE_STATE_INITIAL;
 /** If are hibernating, when do we plan to wake up? Set to 0 if we
  * aren't hibernating. */
 static time_t hibernate_end_time = 0;
-/** If we are shutting down, when do we plan finally exit? Set to 0 if
- * we aren't shutting down. */
+/** If we are shutting down, when do we plan finally exit? Set to 0 if we
+ * aren't shutting down. (This is obsolete; scheduled shutdowns are supposed
+ * to happen from mainloop_schedule_shutdown() now.) */
 static time_t shutdown_time = 0;
 
 /** A timed event that we'll use when it's time to wake up from
@@ -867,7 +868,13 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
     log_notice(LD_GENERAL,"Interrupt: we have stopped accepting new "
                "connections, and will shut down in %d seconds. Interrupt "
                "again to exit now.", options->ShutdownWaitLength);
-    shutdown_time = time(NULL) + options->ShutdownWaitLength;
+    /* We add an arbitrary delay here so that even if something goes wrong
+     * with the mainloop shutdown code, we can still shutdown from
+     * consider_hibernation() if we call it... but so that the
+     * mainloop_schedule_shutdown() mechanism will be the first one called.
+     */
+    shutdown_time = time(NULL) + options->ShutdownWaitLength + 5;
+    mainloop_schedule_shutdown(options->ShutdownWaitLength);
 #ifdef HAVE_SYSTEMD
     /* tell systemd that we may need more than the default 90 seconds to shut
      * down so they don't kill us. add some extra time to actually finish
@@ -1096,11 +1103,12 @@ consider_hibernation(time_t now)
   hibernate_state_t prev_state = hibernate_state;
 
   /* If we're in 'exiting' mode, then we just shut down after the interval
-   * elapses. */
+   * elapses.  The mainloop was supposed to catch this via
+   * mainloop_schedule_shutdown(), but apparently it didn't. */
   if (hibernate_state == HIBERNATE_STATE_EXITING) {
     tor_assert(shutdown_time);
     if (shutdown_time <= now) {
-      log_notice(LD_GENERAL, "Clean shutdown finished. Exiting.");
+      log_notice(LD_BUG, "Mainloop did not catch shutdown event; exiting.");
       tor_shutdown_event_loop_and_exit(0);
     }
     return; /* if exiting soon, don't worry about bandwidth limits */
@@ -1112,7 +1120,7 @@ consider_hibernation(time_t now)
     if (hibernate_end_time > now && accounting_enabled) {
       /* If we're hibernating, don't wake up until it's time, regardless of
        * whether we're in a new interval. */
-      return ;
+      return;
     } else {
       hibernate_end_time_elapsed(now);
     }
@@ -1240,8 +1248,6 @@ on_hibernate_state_change(hibernate_state_t prev_state)
   if (prev_state != HIBERNATE_STATE_INITIAL) {
     rescan_periodic_events(get_options());
   }
-
-  reschedule_per_second_timer();
 }
 
 /** Free all resources held by the accounting module */
