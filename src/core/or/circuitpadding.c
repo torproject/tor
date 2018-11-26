@@ -1,8 +1,11 @@
 /* Copyright (c) 2017 The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define CIRCUITPADDING_PRIVATE
+
 #include <math.h>
 #include "lib/math/fp.h"
+#include "lib/math/prob_distr.h"
 #include "core/or/or.h"
 #include "core/or/circuitpadding.h"
 #include "core/or/circuitlist.h"
@@ -374,7 +377,7 @@ circpad_distribution_sample_iat_delay(const circpad_state_t *state,
  * of tokens in each bin, and then a time value is chosen uniformly from
  * that bin's [start,end) time range.
  */
-static circpad_delay_t
+STATIC circpad_delay_t
 circpad_machine_sample_delay(circpad_machineinfo_t *mi)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
@@ -487,57 +490,75 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
 static double
 circpad_distribution_sample(circpad_distribution_t dist)
 {
-  double p = 0;
+  log_fn(LOG_DEBUG,LD_CIRC, "Sampling delay with distribution %d",
+         dist.type);
 
   switch (dist.type) {
     case CIRCPAD_DIST_NONE:
-      return 0;
-    case CIRCPAD_DIST_UNIFORM:
-      p = crypto_rand_double();
-      // param2 is upper bound, param1 is lower
-      /* The subtraction is exact as long as param2 and param1 are less than
-       * 2**53. The multiplication is accurate as long as (param2 - param1)
-       * is less than 2**52. (And when they are large, the low bits aren't
-       * important.) The result covers the full range of outputs, as long as
-       * p has a resolution of 1/2**32 or greater. */
-      p *= (dist.param2 - dist.param1);
-      p += dist.param1;
-      return p;
-    case CIRCPAD_DIST_LOGISTIC:
-      p = crypto_rand_double();
-      /* https://en.wikipedia.org/wiki/Logistic_distribution#Quantile_function
-       * param1 is Mu, param2 is s. */
-      if (p <= 0.0) // Avoid log(0)
+      {
+        /* We should not get in here like this */
+        tor_assert_nonfatal_unreached();
         return 0;
-      return dist.param1 + dist.param2*tor_mathlog(p/(1.0-p));
+      }
+    case CIRCPAD_DIST_UNIFORM:
+      {
+        // param2 is upper bound, param1 is lower
+        const struct uniform my_uniform = {
+          .base = DIST_BASE(&uniform_ops),
+          .a = dist.param1,
+          .b = dist.param2,
+        };
+        return uniform_sample(&my_uniform.base);
+      }
+    case CIRCPAD_DIST_LOGISTIC:
+      {
+      /* param1 is Mu, param2 is sigma. */
+        const struct logistic my_logistic = {
+          .base = DIST_BASE(&uniform_ops),
+          .mu = dist.param1,
+          .sigma = dist.param2,
+        };
+        return logistic_sample(&my_logistic.base);
+      }
     case CIRCPAD_DIST_LOG_LOGISTIC:
-      p = crypto_rand_double();
-      /* https://en.wikipedia.org/wiki/Log-logistic_distribution#Quantiles
-       * param1 is Alpha, param2 is Beta */
-      return dist.param1 * pow(p/(1.0-p), 1.0/dist.param2);
+      {
+        /* param1 is Alpha, param2 is 1.0/Beta */
+        const struct log_logistic my_log_logistic = {
+          .base = DIST_BASE(&log_logistic_ops),
+          .alpha = dist.param1,
+          .beta = dist.param2,
+        };
+        return log_logistic_sample(&my_log_logistic.base);
+      }
     case CIRCPAD_DIST_GEOMETRIC:
       {
         /* param1 is 'p' (success probability) */
         return geometric_sample(dist.param1);
       }
     case CIRCPAD_DIST_WEIBULL:
-      p = crypto_rand_double();
-      /* https://en.wikipedia.org/wiki/Weibull_distribution \
-       *    #Cumulative_distribution_function
-       * param1 is k, param2 is Lambda */
-      return dist.param2*pow(-tor_mathlog(1.0-p), 1.0/dist.param1);
+      {
+        /* param1 is k, param2 is Lambda */
+        const struct weibull my_weibull = {
+          .base = DIST_BASE(&weibull_ops),
+          .k = dist.param1,
+          .lambda = dist.param2,
+        };
+        return weibull_sample(&my_weibull.base);
+      }
     case CIRCPAD_DIST_PARETO:
-      p = 1.0-crypto_rand_double(); // Pareto quantile needs (0,1]
-
-      /* https://en.wikipedia.org/wiki/Generalized_Pareto_distribution \
-       *    #Generating_generalized_Pareto_random_variables
-       * param1 is Sigma, param2 is Xi
-       * Since it's piecewise, we must define it for 0 (or close to 0) */
-      if (fabs(dist.param2) <= 1e-22)
-        return -dist.param1*tor_mathlog(p);
-      else
-        return dist.param1*(pow(p, -dist.param2) - 1.0)/dist.param2;
+      {
+        /* param1 is sigma, param2 is xi, no more params for mu so we use 0 */
+        const struct genpareto my_genpareto = {
+          .base = DIST_BASE(&weibull_ops),
+          .mu = 0,
+          .sigma = dist.param1,
+          .xi = dist.param2,
+        };
+        return genpareto_sample(&my_genpareto.base);
+      }
   }
+
+  tor_assert_nonfatal_unreached();
   return 0;
 }
 
@@ -1086,8 +1107,8 @@ circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi)
  * Returns 1 if we decide to transition states (due to infinity bin),
  * 0 otherwise.
  */
-circpad_decision_t
-circpad_machine_schedule_padding(circpad_machineinfo_t *mi)
+MOCK_IMPL(circpad_decision_t,
+circpad_machine_schedule_padding,(circpad_machineinfo_t *mi))
 {
   circpad_delay_t in_usec = 0;
   struct timeval timeout;
