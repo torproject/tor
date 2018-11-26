@@ -67,12 +67,19 @@ socks_port = pick_random_port()
 assert control_port != 0
 assert socks_port != 0
 
+if len(sys.argv) < 3:
+     fail('Usage: %s <path-to-tor> <data-dir>' % sys.argv[0])
+
 if not os.path.exists(sys.argv[1]):
     fail('ERROR: cannot find tor at %s' % sys.argv[1])
+if not os.path.exists(sys.argv[2]):
+    fail('ERROR: cannot find datadir at %s' % sys.argv[2])
 
 tor_path = sys.argv[1]
+data_dir = sys.argv[2]
 
 tor_process = subprocess.Popen([tor_path,
+                               '-DataDirectory', data_dir,
                                '-ControlPort', '127.0.0.1:{}'.format(control_port),
                                '-SOCKSPort', '127.0.0.1:{}'.format(socks_port),
                                '-FetchServerDescriptors', '0'],
@@ -81,9 +88,6 @@ tor_process = subprocess.Popen([tor_path,
 
 if tor_process == None:
     fail('ERROR: running tor failed')
-
-if len(sys.argv) < 2:
-     fail('Usage: %s <path-to-tor>' % sys.argv[0])
 
 wait_for_log('Opened Control listener on')
 
