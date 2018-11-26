@@ -1118,14 +1118,14 @@ test_stochastic_weibull_impl(double lambda, double k)
     .k = k,
   };
 
-  /*
-   * XXX Consider applying a Tiku-Singh test:
-   *
-   *    M.L. Tiku and M. Singh, `Testing the two-parameter
-   *    Weibull distribution', Communications in Statistics --
-   *    Theory and Methods A10(9), 1981, 907--918.
-   *    https://www.tandfonline.com/doi/pdf/10.1080/03610928108828082?needAccess=true
-   */
+/*
+ * XXX Consider applying a Tiku-Singh test:
+ *
+ *    M.L. Tiku and M. Singh, `Testing the two-parameter
+ *    Weibull distribution', Communications in Statistics --
+ *    Theory and Methods A10(9), 1981, 907--918.
+ *https://www.tandfonline.com/doi/pdf/10.1080/03610928108828082?needAccess=true
+ */
   return test_psi_dist_sample(&dist.base);
 }
 

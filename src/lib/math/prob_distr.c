@@ -1585,7 +1585,7 @@ genpareto_isf(const struct dist *dist, double p)
  *
  *      John F. Monahan, `Accuracy in Random Number Generation',
  *      Mathematics of Computation 45(172), October 1984, pp. 559--568.
- *      https://pdfs.semanticscholar.org/aca6/74b96da1df77b2224e8cfc5dd6d61a471632.pdf
+*https://pdfs.semanticscholar.org/aca6/74b96da1df77b2224e8cfc5dd6d61a471632.pdf
  *
  *      Karl Bringmann and Tobias Friedrich, `Exact and Efficient
  *      Generation of Geometric Random Variates and Random Graphs', in
