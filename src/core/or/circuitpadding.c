@@ -516,10 +516,10 @@ circpad_distribution_sample(circpad_distribution_t dist)
        * param1 is Alpha, param2 is Beta */
       return dist.param1 * pow(p/(1.0-p), 1.0/dist.param2);
     case CIRCPAD_DIST_GEOMETRIC:
-      p = crypto_rand_double();
-      /* https://github.com/distributions-io/geometric-quantile/
-       * param1 is 'p' (success probability) */
-      return ceil(tor_mathlog(1.0-p)/tor_mathlog(1.0-dist.param1));
+      {
+        /* param1 is 'p' (success probability) */
+        return geometric_sample(dist.param1);
+      }
     case CIRCPAD_DIST_WEIBULL:
       p = crypto_rand_double();
       /* https://en.wikipedia.org/wiki/Weibull_distribution \
