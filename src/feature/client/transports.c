@@ -103,7 +103,6 @@
 #include "feature/control/control.h"
 
 #include "lib/process/process.h"
-#include "lib/process/subprocess.h"
 #include "lib/process/env.h"
 
 static smartlist_t *

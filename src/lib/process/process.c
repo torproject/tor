@@ -26,6 +26,12 @@
 /** A list of all <b>process_t</b> instances currently allocated. */
 static smartlist_t *processes;
 
+/**
+ * Boolean.  If true, then Tor may call execve or CreateProcess via
+ * tor_spawn_background.
+ **/
+static int may_spawn_background_process = 1;
+
 /** Structure to represent a child process. */
 struct process_t {
   /** Process status. */
@@ -112,6 +118,16 @@ process_protocol_to_string(process_protocol_t protocol)
   tor_assert_unreached();
   return NULL;
   /* LCOV_EXCL_STOP */
+}
+
+/**
+ * Turn off may_spawn_background_process, so that all future calls to
+ * tor_spawn_background are guaranteed to fail.
+ **/
+void
+tor_disable_spawning_background_processes(void)
+{
+  may_spawn_background_process = 0;
 }
 
 /** Initialize the Process subsystem.  This function initializes the Process
@@ -233,6 +249,9 @@ process_status_t
 process_exec(process_t *process)
 {
   tor_assert(process);
+
+  if (BUG(may_spawn_background_process == 0))
+    return PROCESS_STATUS_ERROR;
 
   process_status_t status = PROCESS_STATUS_NOT_RUNNING;
 

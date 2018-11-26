@@ -18,11 +18,14 @@
 #include "lib/log/win32err.h"
 #include "lib/process/process.h"
 #include "lib/process/process_win32.h"
-#include "lib/process/subprocess.h"
 #include "lib/process/env.h"
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
+#endif
+
+#ifdef HAVE_STRING_H
+#include <string.h>
 #endif
 
 #ifdef _WIN32
@@ -887,6 +890,106 @@ process_win32_handle_read_completion(process_win32_handle_t *handle,
 
   /* Our caller should NOT schedule the next read. */
   return false;
+}
+
+/** Format a single argument for being put on a Windows command line.
+ * Returns a newly allocated string */
+STATIC char *
+format_win_cmdline_argument(const char *arg)
+{
+  char *formatted_arg;
+  char need_quotes;
+  const char *c;
+  int i;
+  int bs_counter = 0;
+  /* Backslash we can point to when one is inserted into the string */
+  const char backslash = '\\';
+
+  /* Smartlist of *char */
+  smartlist_t *arg_chars;
+  arg_chars = smartlist_new();
+
+  /* Quote string if it contains whitespace or is empty */
+  need_quotes = (strchr(arg, ' ') || strchr(arg, '\t') || '\0' == arg[0]);
+
+  /* Build up smartlist of *chars */
+  for (c=arg; *c != '\0'; c++) {
+    if ('"' == *c) {
+      /* Double up backslashes preceding a quote */
+      for (i=0; i<(bs_counter*2); i++)
+        smartlist_add(arg_chars, (void*)&backslash);
+      bs_counter = 0;
+      /* Escape the quote */
+      smartlist_add(arg_chars, (void*)&backslash);
+      smartlist_add(arg_chars, (void*)c);
+    } else if ('\\' == *c) {
+      /* Count backslashes until we know whether to double up */
+      bs_counter++;
+    } else {
+      /* Don't double up slashes preceding a non-quote */
+      for (i=0; i<bs_counter; i++)
+        smartlist_add(arg_chars, (void*)&backslash);
+      bs_counter = 0;
+      smartlist_add(arg_chars, (void*)c);
+    }
+  }
+  /* Don't double up trailing backslashes */
+  for (i=0; i<bs_counter; i++)
+    smartlist_add(arg_chars, (void*)&backslash);
+
+  /* Allocate space for argument, quotes (if needed), and terminator */
+  const size_t formatted_arg_len = smartlist_len(arg_chars) +
+    (need_quotes ? 2 : 0) + 1;
+  formatted_arg = tor_malloc_zero(formatted_arg_len);
+
+  /* Add leading quote */
+  i=0;
+  if (need_quotes)
+    formatted_arg[i++] = '"';
+
+  /* Add characters */
+  SMARTLIST_FOREACH(arg_chars, char*, ch,
+  {
+    formatted_arg[i++] = *ch;
+  });
+
+  /* Add trailing quote */
+  if (need_quotes)
+    formatted_arg[i++] = '"';
+  formatted_arg[i] = '\0';
+
+  smartlist_free(arg_chars);
+  return formatted_arg;
+}
+
+/** Format a command line for use on Windows, which takes the command as a
+ * string rather than string array. Follows the rules from "Parsing C++
+ * Command-Line Arguments" in MSDN. Algorithm based on list2cmdline in the
+ * Python subprocess module. Returns a newly allocated string */
+STATIC char *
+tor_join_win_cmdline(const char *argv[])
+{
+  smartlist_t *argv_list;
+  char *joined_argv;
+  int i;
+
+  /* Format each argument and put the result in a smartlist */
+  argv_list = smartlist_new();
+  for (i=0; argv[i] != NULL; i++) {
+    smartlist_add(argv_list, (void *)format_win_cmdline_argument(argv[i]));
+  }
+
+  /* Join the arguments with whitespace */
+  joined_argv = smartlist_join_strings(argv_list, " ", 0, NULL);
+
+  /* Free the newly allocated arguments, and the smartlist */
+  SMARTLIST_FOREACH(argv_list, char *, arg,
+  {
+    tor_free(arg);
+  });
+  smartlist_free(argv_list);
+
+  return joined_argv;
 }
 
 #endif /* ! defined(_WIN32). */

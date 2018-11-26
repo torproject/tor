@@ -9,7 +9,6 @@
 #include "lib/err/torerr.h"
 #include "lib/log/log.h"
 #include "test/test.h"
-#include "lib/process/subprocess.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

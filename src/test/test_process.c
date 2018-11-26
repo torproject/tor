@@ -628,11 +628,51 @@ test_win32(void *arg)
   process_init();
 
   process_t *process = process_new("");
+  char *joined_argv = NULL;
 
   /* On Win32 all processes should have a Win32 process handle. */
   tt_ptr_op(NULL, OP_NE, process_get_win32_process(process));
 
+  /* Based on some test cases from "Parsing C++ Command-Line Arguments" in
+   * MSDN but we don't exercise all quoting rules because tor_join_win_cmdline
+   * will try to only generate simple cases for the child process to parse;
+   * i.e. we never embed quoted strings in arguments. */
+
+  const char *argvs[][4] = {
+    {"a", "bb", "CCC", NULL}, // Normal
+    {NULL, NULL, NULL, NULL}, // Empty argument list
+    {"", NULL, NULL, NULL}, // Empty argument
+    {"\"a", "b\"b", "CCC\"", NULL}, // Quotes
+    {"a\tbc", "dd  dd", "E", NULL}, // Whitespace
+    {"a\\\\\\b", "de fg", "H", NULL}, // Backslashes
+    {"a\\\"b", "\\c", "D\\", NULL}, // Backslashes before quote
+    {"a\\\\b c", "d", "E", NULL}, // Backslashes not before quote
+    { NULL } // Terminator
+  };
+
+  const char *cmdlines[] = {
+    "a bb CCC",
+    "",
+    "\"\"",
+    "\\\"a b\\\"b CCC\\\"",
+    "\"a\tbc\" \"dd  dd\" E",
+    "a\\\\\\b \"de fg\" H",
+    "a\\\\\\\"b \\c D\\",
+    "\"a\\\\b c\" d E",
+    NULL // Terminator
+  };
+
+  int i;
+
+  for (i=0; cmdlines[i]!=NULL; i++) {
+    log_info(LD_GENERAL, "Joining argvs[%d], expecting <%s>", i, cmdlines[i]);
+    joined_argv = tor_join_win_cmdline(argvs[i]);
+    tt_str_op(cmdlines[i],OP_EQ, joined_argv);
+    tor_free(joined_argv);
+  }
+
  done:
+  tor_free(joined_argv);
   process_free(process);
   process_free_all();
 #endif
