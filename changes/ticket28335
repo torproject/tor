@@ -1,0 +1,7 @@
+  o Major features (client):
+    - When Tor is running as a client, and it is unused for a long time, it
+      can now enter a "dormant" state.  When Tor is dormant, it avoids
+      network activity and CPU wakeups until it is reawoken either by a user
+      request or by a controller command.  For more information, see
+      the configuration options starting with "Dormant". Implements tickets
+      2149 and 28335.
