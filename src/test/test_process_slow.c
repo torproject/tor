@@ -324,7 +324,7 @@ test_callbacks_terminate(void *arg)
 }
 
 struct testcase_t slow_process_tests[] = {
-  { "callbacks", test_callbacks, TT_FORK, NULL, NULL },
-  { "callbacks_terminate", test_callbacks_terminate, TT_FORK, NULL, NULL },
+  { "callbacks", test_callbacks, 0, NULL, NULL },
+  { "callbacks_terminate", test_callbacks_terminate, 0, NULL, NULL },
   END_OF_TESTCASES
 };
