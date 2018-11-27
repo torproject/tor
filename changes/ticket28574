@@ -1,0 +1,4 @@
+  o Minor bugfixes (continuous integration, Windows):
+    - Explicitly specify the path to the OpenSSL library and do not download
+      OpenSSL from Pacman, but instead use the library that is already provided
+      by AppVeyor. Fixes bug 28574; bugfix on master.
