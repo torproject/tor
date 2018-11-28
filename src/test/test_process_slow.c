@@ -6,6 +6,7 @@
  * \brief Slow test cases for the Process API.
  */
 
+#define MAINLOOP_PRIVATE
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "core/mainloop/mainloop.h"
@@ -168,7 +169,7 @@ run_main_loop(void)
                                                NULL);
 
   /* Run our main loop. */
-  ret = do_main_loop();
+  ret = run_main_loop_until_done();
 
   /* Clean up our main loop timeout timer. */
   tt_int_op(ret, OP_EQ, 0);
