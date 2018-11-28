@@ -293,6 +293,11 @@ process_win32_terminate(process_t *process)
     return false;
   }
 
+  /* Cleanup our handles. */
+  process_win32_cleanup_handle(&win32_process->stdin_handle);
+  process_win32_cleanup_handle(&win32_process->stdout_handle);
+  process_win32_cleanup_handle(&win32_process->stderr_handle);
+
   return true;
 }
 

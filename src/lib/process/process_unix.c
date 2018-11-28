@@ -119,7 +119,11 @@ process_unix_free_(process_unix_t *unix_process)
   if (! unix_process->stderr_handle.reached_eof)
     process_unix_stop_reading(&unix_process->stderr_handle);
 
-  process_unix_stop_writing(&unix_process->stdin_handle);
+  if (unix_process->stdin_handle.is_writing)
+    process_unix_stop_writing(&unix_process->stdin_handle);
+
+  /* Close all our file descriptors. */
+  process_unix_close_file_descriptors(unix_process);
 
   tor_event_free(unix_process->stdout_handle.event);
   tor_event_free(unix_process->stderr_handle.event);
@@ -368,6 +372,8 @@ process_unix_terminate(process_t *process)
   if (BUG(unix_process->waitpid == NULL))
     return false;
 
+  bool success = true;
+
   /* Send a SIGTERM to our child process. */
   int ret;
 
@@ -376,10 +382,14 @@ process_unix_terminate(process_t *process)
   if (ret == -1) {
     log_warn(LD_PROCESS, "Unable to terminate process: %s",
              strerror(errno));
-    return false;
+    success = false;
   }
 
-  return ret == 0;
+  /* Close all our FD's. */
+  if (! process_unix_close_file_descriptors(unix_process))
+    success = false;
+
+  return success;
 }
 
 /** Returns the unique process identifier for the given <b>process</b>. */
@@ -646,6 +656,49 @@ process_unix_read_handle(process_t *process,
   }
 
   return ret;
+}
+
+/** Close the standard in, out, and error handles of the given
+ * <b>unix_process</b>. */
+STATIC bool
+process_unix_close_file_descriptors(process_unix_t *unix_process)
+{
+  tor_assert(unix_process);
+
+  int ret;
+  bool success = true;
+
+  if (unix_process->stdin_handle.fd != -1) {
+    ret = close(unix_process->stdin_handle.fd);
+    if (ret == -1) {
+      log_warn(LD_PROCESS, "Unable to close standard in");
+      success = false;
+    }
+
+    unix_process->stdin_handle.fd = -1;
+  }
+
+  if (unix_process->stdout_handle.fd != -1) {
+    ret = close(unix_process->stdout_handle.fd);
+    if (ret == -1) {
+      log_warn(LD_PROCESS, "Unable to close standard out");
+      success = false;
+    }
+
+    unix_process->stdout_handle.fd = -1;
+  }
+
+  if (unix_process->stderr_handle.fd != -1) {
+    ret = close(unix_process->stderr_handle.fd);
+    if (ret == -1) {
+      log_warn(LD_PROCESS, "Unable to close standard error");
+      success = false;
+    }
+
+    unix_process->stderr_handle.fd = -1;
+  }
+
+  return success;
 }
 
 #endif /* defined(_WIN32). */
