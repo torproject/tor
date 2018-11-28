@@ -474,28 +474,47 @@ process_win32_timer_callback(periodic_timer_t *timer, void *data)
   tor_assert(timer == periodic_timer);
   tor_assert(data == NULL);
 
-  log_debug(LD_PROCESS, "Windows Process I/O timer ticked");
-
   /* Move the process into an alertable state. */
   process_win32_trigger_completion_callbacks();
 
   /* Check if our processes are still alive. */
-  const smartlist_t *processes = process_get_all_processes();
 
-  SMARTLIST_FOREACH(processes, process_t *, p,
-                    process_win32_timer_test_process(p));
+  /* Since the call to process_win32_timer_test_process() might call
+   * process_notify_event_exit() which again might call process_free() which
+   * updates the list of processes returned by process_get_all_processes() it
+   * is important here that we make sure to not touch the list of processes if
+   * the call to process_win32_timer_test_process() returns true. */
+  bool done;
+
+  do {
+    const smartlist_t *processes = process_get_all_processes();
+    done = true;
+
+    SMARTLIST_FOREACH_BEGIN(processes, process_t *, process) {
+      /* If process_win32_timer_test_process() returns true, it means that
+       * smartlist_remove() might have been called on the list returned by
+       * process_get_all_processes(). We start the loop over again until we
+       * have a succesful run over the entire list where the list was not
+       * modified. */
+      if (process_win32_timer_test_process(process)) {
+        done = false;
+        break;
+      }
+    } SMARTLIST_FOREACH_END(process);
+  } while (! done);
 }
 
 /** Test whether a given process is still alive. Notify the Process subsystem
- * if our process have died. */
-STATIC void
+ * if our process have died. Returns true iff the given process have
+ * terminated. */
+STATIC bool
 process_win32_timer_test_process(process_t *process)
 {
   tor_assert(process);
 
   /* No need to look at processes that don't claim they are running. */
   if (process_get_status(process) != PROCESS_STATUS_RUNNING)
-    return;
+    return false;
 
   process_win32_t *win32_process = process_get_win32_process(process);
   BOOL ret = FALSE;
@@ -508,12 +527,19 @@ process_win32_timer_test_process(process_t *process)
   if (! ret) {
     log_warn(LD_PROCESS, "GetExitCodeProcess() failed: %s",
              format_win32_error(GetLastError()));
-    return;
+    return false;
   }
 
-  /* Notify our process_t that our process have terminated. */
-  if (exit_code != STILL_ACTIVE)
+  /* Notify our process_t that our process have terminated. Since our
+   * exit_callback might decide to process_free() our process handle it is very
+   * important that we do not touch the process_t after the call to
+   * process_notify_event_exit(). */
+  if (exit_code != STILL_ACTIVE) {
     process_notify_event_exit(process, exit_code);
+    return true;
+  }
+
+  return false;
 }
 
 /** Create a new overlapped named pipe. This function creates a new connected,
