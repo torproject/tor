@@ -94,7 +94,7 @@ process_stderr_callback(process_t *process, char *data, size_t size)
   return;
 }
 
-static void
+static bool
 process_exit_callback(process_t *process, process_exit_code_t exit_code)
 {
   tt_ptr_op(process, OP_NE, NULL);
@@ -106,7 +106,8 @@ process_exit_callback(process_t *process, process_exit_code_t exit_code)
   tor_shutdown_event_loop_and_exit(0);
 
  done:
-  return;
+  /* Do not free up our process_t. */
+  return false;
 }
 
 #ifdef _WIN32
