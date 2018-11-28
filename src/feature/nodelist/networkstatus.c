@@ -1377,7 +1377,7 @@ networkstatus_get_dl_status_by_flavor_running,(consensus_flavor_t flavor))
 }
 
 /** Return the most recent consensus that we have downloaded, or NULL if we
- * don't have one. */
+ * don't have one. May return future or expired consensuses. */
 MOCK_IMPL(networkstatus_t *,
 networkstatus_get_latest_consensus,(void))
 {
@@ -1388,7 +1388,7 @@ networkstatus_get_latest_consensus,(void))
 }
 
 /** Return the latest consensus we have whose flavor matches <b>f</b>, or NULL
- * if we don't have one. */
+ * if we don't have one. May return future or expired consensuses. */
 MOCK_IMPL(networkstatus_t *,
 networkstatus_get_latest_consensus_by_flavor,(consensus_flavor_t f))
 {
@@ -1422,10 +1422,11 @@ networkstatus_is_live(const networkstatus_t *ns, time_t now)
   return (ns->valid_after <= now && now <= ns->valid_until);
 }
 
-/** Determine if <b>consensus</b> is valid or expired recently enough that
- * we can still use it.
+/** Determine if <b>consensus</b> is valid, or expired recently enough, or not
+ * too far in the future, so that we can still use it.
  *
- * Return 1 if the consensus is reasonably live, or 0 if it is too old.
+ * Return 1 if the consensus is reasonably live, or 0 if it is too old or
+ * too new.
  */
 int
 networkstatus_consensus_reasonably_live(const networkstatus_t *consensus,
@@ -1434,29 +1435,42 @@ networkstatus_consensus_reasonably_live(const networkstatus_t *consensus,
   if (BUG(!consensus))
     return 0;
 
-  return networkstatus_valid_until_is_reasonably_live(consensus->valid_until,
+  return networkstatus_valid_after_is_reasonably_live(consensus->valid_after,
+                                                      now) &&
+         networkstatus_valid_until_is_reasonably_live(consensus->valid_until,
                                                       now);
 }
 
+#define REASONABLY_LIVE_TIME (24*60*60)
+
+/** As networkstatus_consensus_reasonably_live, but takes a valid_after
+ * time, and checks to see if it is in the past, or not too far in the future.
+ */
+int
+networkstatus_valid_after_is_reasonably_live(time_t valid_after,
+                                             time_t now)
+{
+  return (now >= valid_after - REASONABLY_LIVE_TIME);
+}
+
 /** As networkstatus_consensus_reasonably_live, but takes a valid_until
- * time rather than an entire consensus. */
+ * time, and checks to see if it is in the future, or not too far in the past.
+ */
 int
 networkstatus_valid_until_is_reasonably_live(time_t valid_until,
                                              time_t now)
 {
-#define REASONABLY_LIVE_TIME (24*60*60)
   return (now <= valid_until + REASONABLY_LIVE_TIME);
 }
 
 /** As networkstatus_get_live_consensus(), but is way more tolerant of expired
- * consensuses. */
+ *  and future consensuses. */
 MOCK_IMPL(networkstatus_t *,
 networkstatus_get_reasonably_live_consensus,(time_t now, int flavor))
 {
   networkstatus_t *consensus =
     networkstatus_get_latest_consensus_by_flavor(flavor);
   if (consensus &&
-      consensus->valid_after <= now &&
       networkstatus_consensus_reasonably_live(consensus, now))
     return consensus;
   else
@@ -2082,7 +2096,6 @@ networkstatus_set_current_consensus(const char *consensus,
 
     nodelist_set_consensus(c);
 
-    /* XXXXNM Microdescs: needs a non-ns variant. ???? NM*/
     update_consensus_networkstatus_fetch_time(now);
 
     /* Change the cell EWMA settings */
