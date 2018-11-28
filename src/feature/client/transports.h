@@ -145,7 +145,7 @@ STATIC void free_execve_args(char **arg);
 
 STATIC void managed_proxy_stdout_callback(process_t *, char *, size_t);
 STATIC void managed_proxy_stderr_callback(process_t *, char *, size_t);
-STATIC void managed_proxy_exit_callback(process_t *, process_exit_code_t);
+STATIC bool managed_proxy_exit_callback(process_t *, process_exit_code_t);
 
 #endif /* defined(PT_PRIVATE) */
 

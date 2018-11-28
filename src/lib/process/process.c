@@ -612,7 +612,8 @@ process_notify_event_stdin(process_t *process)
 /** This function is called by the Process backend when a given process have
  * terminated. The exit status code is passed in <b>exit_code</b>. We mark the
  * process as no longer running and calls the <b>exit_callback</b> with
- * information about the process termination. */
+ * information about the process termination. The given <b>process</b> is
+ * free'd iff the exit_callback returns true. */
 void
 process_notify_event_exit(process_t *process, process_exit_code_t exit_code)
 {
@@ -626,9 +627,14 @@ process_notify_event_exit(process_t *process, process_exit_code_t exit_code)
   process->exit_code = exit_code;
 
   /* Call our exit callback, if it exists. */
-  if (process->exit_callback) {
-    process->exit_callback(process, exit_code);
-  }
+  bool free_process_handle = false;
+
+  /* The exit callback will tell us if we should process_free() our handle. */
+  if (process->exit_callback)
+    free_process_handle = process->exit_callback(process, exit_code);
+
+  if (free_process_handle)
+    process_free(process);
 }
 
 /** This function is called whenever the Process backend have notified us that

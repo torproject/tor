@@ -1759,8 +1759,9 @@ managed_proxy_stderr_callback(process_t *process, char *line, size_t size)
 
 /** Callback function that is called when our PT process terminates. The
  * process exit code can be found in <b>exit_code</b> and our process can be
- * found in <b>process</b>. */
-STATIC void
+ * found in <b>process</b>. Returns true iff we want the process subsystem to
+ * free our process_t handle for us. */
+STATIC bool
 managed_proxy_exit_callback(process_t *process, process_exit_code_t exit_code)
 {
   tor_assert(process);
@@ -1772,10 +1773,14 @@ managed_proxy_exit_callback(process_t *process, process_exit_code_t exit_code)
   /* We detach ourself from the MP (if we are attached) and free ourself. */
   managed_proxy_t *mp = process_get_data(process);
 
+  /* If we are still attached to the process, it is probably because our PT
+   * process crashed before we got to call process_set_data(p, NULL); */
   if (BUG(mp != NULL)) {
+    /* FIXME(ahf): Our process stopped without us having told it to stop
+     * (crashed). Should we restart it here? */
     mp->process = NULL;
     process_set_data(process, NULL);
   }
 
-  process_free(process);
+  return true;
 }

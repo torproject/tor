@@ -49,7 +49,7 @@ STATIC void process_win32_timer_start(void);
 STATIC void process_win32_timer_stop(void);
 STATIC bool process_win32_timer_running(void);
 STATIC void process_win32_timer_callback(periodic_timer_t *, void *);
-STATIC void process_win32_timer_test_process(process_t *);
+STATIC bool process_win32_timer_test_process(process_t *);
 
 /* I/O pipe handling. */
 struct process_win32_handle_t;
