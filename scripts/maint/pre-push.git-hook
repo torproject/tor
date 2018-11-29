@@ -1,8 +1,10 @@
 #!/bin/bash
 
-# git pre-push hook script to prevent "fixup!" and "squash!" commit
-# from ending up in master, or in any branch if CUR_BRANCH check is removed.
-# It is meant to be placed in .git/hooks directory.
+# To install this script, copy it into .git/hooks/pre-push path in your
+# local copy of git repository. Make sure it has permission to execute.
+#
+# This is git pre-push hook script to prevent "fixup!" and "squash!" commits
+# from ending up in upstream branches (master, release-* or maint-*).
 #
 # The following sample script was used as starting point:
 # https://github.com/git/git/blob/master/templates/hooks--pre-push.sample
