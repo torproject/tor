@@ -42,6 +42,7 @@ do
 		if [ -n "$commit" ]
 		then
 			echo >&2 "Found fixup! commit in $local_ref, not pushing"
+			echo >&2 "If you really want to push this, use --no-verify."
 			exit 1
 		fi
 
@@ -50,6 +51,7 @@ do
 		if [ -n "$commit" ]
 		then
 			echo >&2 "Found squash! commit in $local_ref, not pushing"
+			echo >&2 "If you really want to push this, use --no-verify."
 			exit 1
 		fi
 	fi
