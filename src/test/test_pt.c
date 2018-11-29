@@ -310,7 +310,7 @@ process_read_stdout_replacement(process_t *process, buf_t *buffer)
   } else if (times_called <= 6) {
     buf_add_string(buffer, "SMETHODS DONE\n");
   } else if (times_called <= 7) {
-    buf_add_string(buffer, "LOG mock3 Oh noes, something bad happened. "
+    buf_add_string(buffer, "LOG Oh noes, something bad happened. "
                            "What do we do!?\n");
   }
 
@@ -417,10 +417,10 @@ test_pt_configure_proxy(void *arg)
   process_notify_event_stdout(mp->process);
 
   tt_int_op(controlevent_n, OP_EQ, 6);
-  tt_int_op(controlevent_event, OP_EQ, EVENT_TRANSPORT_LOG);
+  tt_int_op(controlevent_event, OP_EQ, EVENT_PT_LOG);
   tt_int_op(smartlist_len(controlevent_msgs), OP_EQ, 6);
   tt_str_op(smartlist_get(controlevent_msgs, 5), OP_EQ,
-            "650 TRANSPORT_LOG mock3 Oh noes, something bad happened. "
+            "650 PT_LOG <testcase> Oh noes, something bad happened. "
             "What do we do!?\r\n");
 
   { /* check that the transport info were saved properly in the tor state */
