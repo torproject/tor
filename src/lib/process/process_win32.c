@@ -484,19 +484,23 @@ process_win32_timer_callback(periodic_timer_t *timer, void *data)
    * updates the list of processes returned by process_get_all_processes() it
    * is important here that we make sure to not touch the list of processes if
    * the call to process_win32_timer_test_process() returns true. */
-  bool done = true;
+  bool done;
 
   do {
     const smartlist_t *processes = process_get_all_processes();
+    done = true;
 
     SMARTLIST_FOREACH_BEGIN(processes, process_t *, process) {
+      /* If process_win32_timer_test_process() returns true, it means that
+       * smartlist_remove() might have been called on the list returned by
+       * process_get_all_processes(). We start the loop over again until we
+       * have a succesful run over the entire list where the list was not
+       * modified. */
       if (process_win32_timer_test_process(process)) {
         done = false;
         break;
       }
     } SMARTLIST_FOREACH_END(process);
-
-    done = true;
   } while (! done);
 }
 
