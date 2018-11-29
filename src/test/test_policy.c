@@ -13,6 +13,7 @@
 #include "feature/relay/router.h"
 #include "lib/encoding/confline.h"
 #include "test/test.h"
+#include "test/log_test_helpers.h"
 
 #include "core/or/addr_policy_st.h"
 #include "core/or/extend_info_st.h"
@@ -2030,14 +2031,43 @@ test_policies_fascist_firewall_allows_address(void *arg)
 
 /* Check that fascist_firewall_choose_address_ls() returns the expected
  * results. */
+#define CHECK_CHOSEN_ADDR_NULL_LS() \
+  STMT_BEGIN \
+    tor_addr_port_t chosen_ls_ap; \
+    tor_addr_make_null(&chosen_ls_ap.addr, AF_UNSPEC); \
+    chosen_ls_ap.port = 0; \
+    setup_full_capture_of_logs(LOG_WARN); \
+    fascist_firewall_choose_address_ls(NULL, 1, &chosen_ls_ap); \
+    expect_single_log_msg("Unknown or missing link specifiers"); \
+    teardown_capture_of_logs(); \
+  STMT_END
+
 #define CHECK_CHOSEN_ADDR_LS(fake_ls, pref_only, expect_rv, expect_ap) \
   STMT_BEGIN \
     tor_addr_port_t chosen_ls_ap; \
     tor_addr_make_null(&chosen_ls_ap.addr, AF_UNSPEC); \
     chosen_ls_ap.port = 0; \
+    setup_full_capture_of_logs(LOG_WARN); \
     fascist_firewall_choose_address_ls(fake_ls, pref_only, &chosen_ls_ap); \
-    tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_ls_ap.addr)); \
-    tt_int_op((expect_ap).port, OP_EQ, chosen_ls_ap.port); \
+    if (smartlist_len(fake_ls) == 0) { \
+      expect_single_log_msg("Unknown or missing link specifiers"); \
+    } else { \
+      expect_no_log_entry(); \
+      tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_ls_ap.addr)); \
+      tt_int_op((expect_ap).port, OP_EQ, chosen_ls_ap.port); \
+    } \
+    teardown_capture_of_logs(); \
+  STMT_END
+
+#define CHECK_LS_LEGACY_ONLY(fake_ls) \
+  STMT_BEGIN \
+    tor_addr_port_t chosen_ls_ap; \
+    tor_addr_make_null(&chosen_ls_ap.addr, AF_UNSPEC); \
+    chosen_ls_ap.port = 0; \
+    setup_full_capture_of_logs(LOG_WARN); \
+    fascist_firewall_choose_address_ls(fake_ls, 0, &chosen_ls_ap); \
+    expect_single_log_msg("None of our link specifiers have IPv4 or IPv6"); \
+    teardown_capture_of_logs(); \
   STMT_END
 
 #define CHECK_HS_EXTEND_INFO_ADDR_LS(fake_ls, expect_ap) \
@@ -2452,7 +2482,11 @@ test_policies_fascist_firewall_choose_address(void *arg)
 
   /* Test firewall_choose_address_ls(). To do this, we make a fake link
    * specifier. */
-  smartlist_t *lspecs = smartlist_new();
+  smartlist_t *lspecs = smartlist_new(),
+              *lspecs_blank = smartlist_new(),
+              *lspecs_v4 = smartlist_new(),
+              *lspecs_v6 = smartlist_new(),
+              *lspecs_legacy_only = smartlist_new();
   link_specifier_t *fake_ls;
 
   /* IPv4 link specifier */
@@ -2464,6 +2498,7 @@ test_policies_fascist_firewall_choose_address(void *arg)
   link_specifier_set_ls_len(fake_ls, sizeof(ipv4_or_ap.addr.addr.in_addr) +
                             sizeof(ipv4_or_ap.port));
   smartlist_add(lspecs, fake_ls);
+  smartlist_add(lspecs_v4, fake_ls);
 
   /* IPv6 link specifier */
   fake_ls = link_specifier_new();
@@ -2475,6 +2510,7 @@ test_policies_fascist_firewall_choose_address(void *arg)
   link_specifier_set_un_ipv6_port(fake_ls, ipv6_or_ap.port);
   link_specifier_set_ls_len(fake_ls, addr_len + sizeof(ipv6_or_ap.port));
   smartlist_add(lspecs, fake_ls);
+  smartlist_add(lspecs_v6, fake_ls);
 
   /* Legacy ID link specifier */
   fake_ls = link_specifier_new();
@@ -2484,6 +2520,23 @@ test_policies_fascist_firewall_choose_address(void *arg)
   link_specifier_set_ls_len(fake_ls,
                             link_specifier_getlen_un_legacy_id(fake_ls));
   smartlist_add(lspecs, fake_ls);
+  smartlist_add(lspecs_legacy_only, fake_ls);
+
+  /* Check with bogus requests. */
+  tor_addr_port_t null_ap; \
+  tor_addr_make_null(&null_ap.addr, AF_UNSPEC); \
+  null_ap.port = 0; \
+
+  /* Check for a null link state. */
+  CHECK_CHOSEN_ADDR_NULL_LS();
+
+  /* Check for a blank link state. */
+  CHECK_CHOSEN_ADDR_LS(lspecs_blank, 0, 0, null_ap);
+  smartlist_free(lspecs_blank);
+
+  /* Check for a link state with only a Legacy ID. */
+  CHECK_LS_LEGACY_ONLY(lspecs_legacy_only);
+  smartlist_free(lspecs_legacy_only);
 
   /* Enable both IPv4 and IPv6. */
   memset(&mock_options, 0, sizeof(or_options_t));
@@ -2514,6 +2567,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
   CHECK_CHOSEN_ADDR_LS(lspecs, 0, 1, ipv4_or_ap);
   CHECK_CHOSEN_ADDR_LS(lspecs, 1, 1, ipv4_or_ap);
 
+  CHECK_CHOSEN_ADDR_LS(lspecs_v6, 0, 0, null_ap);
+
   CHECK_HS_EXTEND_INFO_ADDR_LS(lspecs, ipv4_or_ap);
 
   /* IPv6-only. */
@@ -2524,10 +2579,15 @@ test_policies_fascist_firewall_choose_address(void *arg)
   CHECK_CHOSEN_ADDR_LS(lspecs, 0, 1, ipv6_or_ap);
   CHECK_CHOSEN_ADDR_LS(lspecs, 1, 1, ipv6_or_ap);
 
+  CHECK_CHOSEN_ADDR_LS(lspecs_v4, 0, 0, null_ap);
+
   CHECK_HS_EXTEND_INFO_ADDR_LS(lspecs, ipv6_or_ap);
 
-  SMARTLIST_FOREACH(lspecs, link_specifier_t *, lspec,
-                    link_specifier_free(lspec));
+  smartlist_free(lspecs_v4);
+  smartlist_free(lspecs_v6);
+
+  SMARTLIST_FOREACH(lspecs, link_specifier_t *, lspec, \
+                    link_specifier_free(lspec)); \
   smartlist_free(lspecs);
 
  done:

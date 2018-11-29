@@ -1017,6 +1017,11 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
 
   tor_assert(ap);
 
+  if (lspecs == NULL || smartlist_len(lspecs) == 0) {
+    log_warn(LD_BUG, "Unknown or missing link specifiers");
+    return;
+  }
+
   tor_addr_make_null(&ap->addr, AF_UNSPEC);
   ap->port = 0;
 
@@ -1047,6 +1052,12 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
       break;
     }
   } SMARTLIST_FOREACH_END(ls);
+
+  /* If we don't have IPv4 or IPv6 in link specifiers, log a bug and return. */
+  if (!have_v4 && !have_v6) {
+    log_warn(LD_BUG, "None of our link specifiers have IPv4 or IPv6");
+    return;
+  }
 
   /* Here, don't check for DirPorts as link specifiers are only used for
    * ORPorts. */
