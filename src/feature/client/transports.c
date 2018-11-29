@@ -910,7 +910,7 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
     parse_proxy_error(line);
     goto err;
   } else if (!strcmpstart(line, PROTO_LOG)) {
-    parse_log_line(line);
+    parse_log_line(line, mp);
     return;
   }
 
@@ -1135,40 +1135,27 @@ parse_proxy_error(const char *line)
 
 /** Parses a LOG <b>line</b> and emit log events accordingly. */
 STATIC void
-parse_log_line(const char *line)
+parse_log_line(const char *line, managed_proxy_t *mp)
 {
-  smartlist_t *items = smartlist_new();
+  tor_assert(line);
+  tor_assert(mp);
 
   if (strlen(line) < (strlen(PROTO_LOG) + 1)) {
     log_warn(LD_PT, "Managed proxy sent us a %s line "
-                    "with missing arguments.", PROTO_LOG);
+                    "with missing argument.", PROTO_LOG);
     goto done;
   }
 
-  const char *arguments = line + strlen(PROTO_LOG) + 1;
+  const char *message = line + strlen(PROTO_LOG) + 1;
 
-  /* The format is 'LOG <transport> <message>'. We accept empty messages. */
-  smartlist_split_string(items, arguments, NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
-
-  if (smartlist_len(items) < 2) {
-    log_warn(LD_PT, "Managed proxy sent us a %s line "
-                    "with too few arguments.", PROTO_LOG);
-    goto done;
-  }
-
-  const char *transport_name = smartlist_get(items, 0);
-  const char *message = smartlist_get(items, 1);
-
-  log_info(LD_PT, "Managed proxy transport \"%s\" says: %s",
-           transport_name, message);
+  log_info(LD_PT, "Managed proxy \"%s\" says: %s",
+           mp->argv[0], message);
 
   /* Emit control port event. */
-  control_event_transport_log(transport_name, message);
+  control_event_pt_log(mp->argv[0], message);
 
  done:
-  SMARTLIST_FOREACH(items, char *, s, tor_free(s));
-  smartlist_free(items);
+  return;
 }
 
 /** Return a newly allocated string that tor should place in
