@@ -1699,7 +1699,15 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
   tor_addr_make_null(&ap.addr, AF_UNSPEC);
   ap.port = 0;
 
-  tor_assert(lspecs);
+  if (lspecs == NULL) {
+    log_warn(LD_BUG, "Specified link specifiers is null");
+    goto done;
+  }
+
+  if (onion_key == NULL) {
+    log_warn(LD_BUG, "Specified onion key is null");
+    goto done;
+  }
 
   SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
     switch (link_specifier_get_ls_type(ls)) {
