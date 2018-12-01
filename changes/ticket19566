@@ -1,0 +1,6 @@
+  o Code simplification and refactoring (shared random, dirauth):
+    - Change many tor_assert() to use BUG() instead. The idea is to not crash
+      a dirauth but rather scream loudly with a stacktrace and let it continue
+      run. The shared random subsystem is very resilient and if anything wrong
+      happens with it, at worst a non coherent value will be put in the vote
+      and discarded by the other authorities. Closes ticket 19566.
