@@ -2819,13 +2819,16 @@ test_entry_guard_outdated_dirserver_exclusion(void *arg)
                                   digests, 3, 7, 0);
 
     /* ... and check that because we failed to fetch microdescs from all our
-     * primaries, we didnt end up selecting a primary for fetching dir info */
+     * primaries, we didn't end up selecting a primary for fetching dir info */
     expect_log_msg_containing("No primary or confirmed guards available.");
     teardown_capture_of_logs();
   }
 
  done:
+  UNMOCK(networkstatus_get_latest_consensus_by_flavor);
+  UNMOCK(directory_initiate_request);
   smartlist_free(digests);
+  tor_free(mock_ns_val);
   tor_free(args);
   if (conn) {
     tor_free(conn->requested_resource);
