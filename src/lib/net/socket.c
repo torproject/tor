@@ -31,6 +31,9 @@
 #endif
 #include <stddef.h>
 #include <string.h>
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+#endif
 
 /** Called before we make any calls to network-related functions.
  * (Some operating systems require their network libraries to be
@@ -58,6 +61,32 @@ network_init(void)
    * too few sockets available. */
 #endif /* defined(_WIN32) */
   return 0;
+}
+
+/**
+ * Warn the user if any system network parameters should be changed.
+ */
+void
+check_network_configuration(bool server_mode)
+{
+#ifdef __FreeBSD__
+  if (server_mode) {
+    int random_id_state;
+    size_t state_size = sizeof(random_id_state);
+
+    if (sysctlbyname("net.inet.ip.random_id", &random_id_state,
+                     &state_size, NULL, 0)) {
+      log_warn(LD_CONFIG,
+               "Failed to figure out if IP ids are randomized.");
+    } else if (random_id_state == 0) {
+      log_warn(LD_CONFIG, "Looks like IP ids are not randomized. "
+               "Please consider setting the net.inet.ip.random_id sysctl, "
+               "so your relay makes it harder to figure out how busy it is.");
+    }
+  }
+#else
+  (void) server_mode;
+#endif
 }
 
 /* When set_max_file_sockets() is called, update this with the max file

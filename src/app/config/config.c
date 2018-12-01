@@ -157,10 +157,6 @@
 #include "core/or/connection_st.h"
 #include "core/or/port_cfg_st.h"
 
-#ifdef __FreeBSD__
-#include <sys/sysctl.h>
-#endif
-
 #ifdef HAVE_SYSTEMD
 #   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)
 /* Systemd's use of gcc's __INCLUDE_LEVEL__ extension macro appears to confuse
@@ -3386,22 +3382,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (ContactInfo && !string_is_utf8(ContactInfo, strlen(ContactInfo)))
     REJECT("ContactInfo config option must be UTF-8.");
 
-#ifdef __FreeBSD__
-  if (server_mode(options)) {
-    int random_id_state;
-    size_t state_size = sizeof(random_id_state);
-
-    if (sysctlbyname("net.inet.ip.random_id", &random_id_state,
-        &state_size, NULL, 0)) {
-      log_warn(LD_CONFIG,
-          "Failed to figure out if IP ids are randomized.");
-    } else if (random_id_state == 0) {
-      log_warn(LD_CONFIG, "Looks like IP ids are not randomized. "
-          "Please consider setting the net.inet.ip.random_id sysctl, "
-          "so your relay makes it harder to figure out how busy it is.");
-    }
-  }
-#endif
+  check_network_configuration(server_mode(options));
 
   /* Special case on first boot if no Log options are given. */
   if (!options->Logs && !options->RunAsDaemon && !from_setconf) {

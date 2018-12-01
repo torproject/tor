@@ -54,6 +54,7 @@ int tor_addr_from_getsockname(struct tor_addr_t *addr_out, tor_socket_t sock);
 int set_socket_nonblocking(tor_socket_t socket);
 int tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2]);
 int network_init(void);
+void check_network_configuration(bool server_mode);
 
 int get_max_sockets(void);
 void set_max_sockets(int);
