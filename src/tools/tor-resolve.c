@@ -512,14 +512,7 @@ do_resolve(const char *hostname,
       domainname_t *dn =
         socks5_server_reply_get_bind_addr_domainname(reply);
 
-      size_t result_len = (size_t)domainname_get_len(dn);
-
-      *result_hostname = tor_malloc(result_len+1);
-
-      strncpy(*result_hostname, (char *)domainname_getstr_name(dn),
-              result_len);
-
-      (*result_hostname)[result_len] = '\0';
+      *result_hostname = tor_strdup(domainname_getstr_name(dn));
     }
 
     socks5_server_reply_free(reply);
