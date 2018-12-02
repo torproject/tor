@@ -2076,6 +2076,11 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
     return;
   }
 
+  if (fascist_firewall_use_ipv6(options)) {
+    log_info(LD_NET, "Our outgoing connection is using IPv%d.",
+             tor_addr_family(&real_addr) == AF_INET6 ? 6 : 4);
+  }
+
   /* Check if we couldn't satisfy an address family preference */
   if ((!pref_ipv6 && tor_addr_family(&real_addr) == AF_INET6)
       || (pref_ipv6 && tor_addr_family(&real_addr) == AF_INET)) {

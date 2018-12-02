@@ -2024,6 +2024,20 @@ test_policies_fascist_firewall_allows_address(void *arg)
                            expect_ap); \
   STMT_END
 
+/** Mock the preferred address function to return zero (prefer IPv4). */
+static int
+mock_fascist_firewall_rand_prefer_ipv6_addr_use_ipv4(void)
+{
+  return 0;
+}
+
+/** Mock the preferred address function to return one (prefer IPv6). */
+static int
+mock_fascist_firewall_rand_prefer_ipv6_addr_use_ipv6(void)
+{
+  return 1;
+}
+
 /** Run unit tests for fascist_firewall_choose_address */
 static void
 test_policies_fascist_firewall_choose_address(void *arg)
@@ -2421,6 +2435,42 @@ test_policies_fascist_firewall_choose_address(void *arg)
                        ipv4_dir_ap);
   CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_DIR_CONNECTION, 1, 1,
                        ipv4_dir_ap);
+
+  /* Test ClientAutoIPv6ORPort and pretend we prefer IPv4. */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientAutoIPv6ORPort = 1;
+  mock_options.ClientUseIPv4 = 1;
+  mock_options.ClientUseIPv6 = 1;
+  MOCK(fascist_firewall_rand_prefer_ipv6_addr,
+       mock_fascist_firewall_rand_prefer_ipv6_addr_use_ipv4);
+  /* Simulate the initialisation of fake_node.ipv6_preferred */
+  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
+                                                                &mock_options);
+
+  CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
+                       ipv4_or_ap);
+  CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 1, 1,
+                       ipv4_or_ap);
+
+  UNMOCK(fascist_firewall_rand_prefer_ipv6_addr);
+
+  /* Test ClientAutoIPv6ORPort and pretend we prefer IPv6. */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientAutoIPv6ORPort = 1;
+  mock_options.ClientUseIPv4 = 1;
+  mock_options.ClientUseIPv6 = 1;
+  MOCK(fascist_firewall_rand_prefer_ipv6_addr,
+       mock_fascist_firewall_rand_prefer_ipv6_addr_use_ipv6);
+  /* Simulate the initialisation of fake_node.ipv6_preferred */
+  fake_node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(
+                                                                &mock_options);
+
+  CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 0, 1,
+                       ipv6_or_ap);
+  CHECK_CHOSEN_ADDR_RN(fake_rs, fake_node, FIREWALL_OR_CONNECTION, 1, 1,
+                       ipv6_or_ap);
+
+  UNMOCK(fascist_firewall_rand_prefer_ipv6_addr);
 
  done:
   UNMOCK(get_options);
