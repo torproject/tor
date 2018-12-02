@@ -1457,8 +1457,8 @@ handle_get_next_bandwidth(dir_connection_t *conn,
                                        RFTS_IGNORE_MISSING, NULL);
     if (bandwidth != NULL) {
       size_t len = strlen(bandwidth);
-      write_http_response_header(conn, len, compress_method,
-                                 BANDWIDTH_CACHE_LIFETIME);
+      write_http_response_header(conn, compress_method != NO_METHOD ? -1 : len,
+                                 compress_method, BANDWIDTH_CACHE_LIFETIME);
       if (compress_method != NO_METHOD)
         conn->compress_state = tor_compress_new(1, compress_method,
                                         choose_compression_level(len));
