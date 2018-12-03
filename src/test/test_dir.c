@@ -6053,6 +6053,80 @@ test_dir_find_dl_min_delay(void* data)
 }
 
 static void
+test_dir_matching_flags(void *arg)
+{
+  (void) arg;
+  routerstatus_t *rs_noflags = NULL;
+  routerstatus_t *rs = NULL;
+  char *s = NULL;
+
+  smartlist_t *tokens = smartlist_new();
+  memarea_t *area = memarea_new();
+
+  int expected_val_when_unused = 0;
+
+  const char *ex_noflags =
+    "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
+       "192.168.0.1 9001 0\n"
+    "m thisoneislongerbecauseitisa256bitmddigest33\n"
+    "s\n";
+  const char *cp = ex_noflags;
+  rs_noflags = routerstatus_parse_entry_from_string(
+         area, &cp,
+         cp + strlen(cp),
+         tokens, NULL, NULL,
+         MAX_SUPPORTED_CONSENSUS_METHOD, FLAV_MICRODESC);
+  tt_assert(rs_noflags);
+
+#define FLAG(string, field) STMT_BEGIN {        \
+    tor_asprintf(&s,\
+                 "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 " \
+                 "192.168.0.1 9001 0\n"                                 \
+                 "m thisoneislongerbecauseitisa256bitmddigest33\n"      \
+                 "s %s\n", string);                                     \
+    cp = s;                                                             \
+    rs =  routerstatus_parse_entry_from_string(                         \
+      area, &cp,                                                        \
+      cp + strlen(cp),                                                  \
+      tokens, NULL, NULL,                                               \
+      MAX_SUPPORTED_CONSENSUS_METHOD, FLAV_MICRODESC);                  \
+    /* the field should usually be 0 when no flags are listed */        \
+    tt_int_op(rs_noflags->field, OP_EQ, expected_val_when_unused);      \
+    /* the field should be 1 when this flags islisted */                \
+    tt_int_op(rs->field, OP_EQ, 1);                                     \
+    tor_free(s);                                                        \
+    routerstatus_free(rs);                                              \
+} STMT_END
+
+  FLAG("Authority", is_authority);
+  FLAG("BadExit", is_bad_exit);
+  FLAG("Exit", is_exit);
+  FLAG("Fast", is_fast);
+  FLAG("Guard", is_possible_guard);
+  FLAG("HSDir", is_hs_dir);
+  FLAG("Stable", is_stable);
+  FLAG("StaleDesc", is_staledesc);
+  FLAG("V2Dir", is_v2_dir);
+
+  // These flags are assumed to be set whether they're declared or not.
+  expected_val_when_unused = 1;
+  FLAG("Running", is_flagged_running);
+  FLAG("Valid", is_valid);
+  expected_val_when_unused = 0;
+
+  // These flags are no longer used, but still parsed.
+  FLAG("Named", is_named);
+  FLAG("Unnamed", is_unnamed);
+
+ done:
+  tor_free(s);
+  routerstatus_free(rs);
+  routerstatus_free(rs_noflags);
+  memarea_drop_all(area);
+  smartlist_free(tokens);
+}
+
+static void
 test_dir_assumed_flags(void *arg)
 {
   (void)arg;
@@ -6377,6 +6451,7 @@ struct testcase_t dir_tests[] = {
   DIR_ARG(find_dl_min_delay, TT_FORK, "cfr"),
   DIR_ARG(find_dl_min_delay, TT_FORK, "car"),
   DIR(assumed_flags, 0),
+  DIR(matching_flags, 0),
   DIR(networkstatus_compute_bw_weights_v10, 0),
   DIR(platform_str, 0),
   DIR(networkstatus_consensus_has_ipv6, TT_FORK),
