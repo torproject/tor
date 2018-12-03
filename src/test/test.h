@@ -265,6 +265,7 @@ extern struct testcase_t tortls_tests[];
 extern struct testcase_t util_format_tests[];
 extern struct testcase_t util_process_tests[];
 extern struct testcase_t util_tests[];
+extern struct testcase_t voting_flags_tests[];
 extern struct testcase_t voting_schedule_tests[];
 extern struct testcase_t x509_tests[];
 
