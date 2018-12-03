@@ -262,7 +262,6 @@ test_router_mark_if_too_old(void *arg)
        mock_networkstatus_get_live_consensus);
   MOCK(networkstatus_vote_find_entry, mock_networkstatus_vote_find_entry);
 
-
   routerstatus_t rs;
   networkstatus_t ns;
   memset(&rs, 0, sizeof(rs));
