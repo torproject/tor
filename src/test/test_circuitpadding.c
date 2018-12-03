@@ -427,7 +427,7 @@ helper_create_basic_machine(void)
 
 /** Setup a machine with a big histogram */
 static void
-helper_create_machine_with_big_histogram(void)
+helper_create_machine_with_big_histogram(circpad_removal_t removal_strategy)
 {
   const int tokens_per_bin = 2;
 
@@ -459,7 +459,7 @@ helper_create_machine_with_big_histogram(void)
 
   burst_state->histogram_total_tokens = n_tokens;
   burst_state->use_rtt_estimate = 1;
-  burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_CLOSEST_USEC;
+  burst_state->token_removal = removal_strategy;
 }
 
 static circpad_decision_t
@@ -492,7 +492,7 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   monotime_enable_test_mocking();
 
   /* Create test machine */
-  helper_create_machine_with_big_histogram();
+  helper_create_machine_with_big_histogram(CIRCPAD_TOKEN_REMOVAL_CLOSEST_USEC);
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
     circpad_circuit_machineinfo_new(client_side, 0);
@@ -558,6 +558,65 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   /* Check that all bins have been refilled */
   for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
+  }
+
+ done:
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  monotime_disable_test_mocking();
+  tor_free(circ_client_machine.states);
+}
+
+/** Test closest token removal strategy with usec  */
+static void
+test_circuitpadding_token_removal_exact(void *arg)
+{
+  circpad_machineinfo_t *mi;
+  (void)arg;
+
+  /* Mock it up */
+  MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
+  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+
+  /* Setup test environment (time etc.) */
+  client_side = (circuit_t *)origin_circuit_new();
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  monotime_enable_test_mocking();
+
+  /* Create test machine */
+  helper_create_machine_with_big_histogram(CIRCPAD_TOKEN_REMOVAL_EXACT);
+  client_side->padding_machine[0] = &circ_client_machine;
+  client_side->padding_info[0] =
+    circpad_circuit_machineinfo_new(client_side, 0);
+
+  /* move the machine to the right state */
+  circpad_cell_event_nonpadding_received((circuit_t*)client_side);
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_BURST);
+
+  /* Get the machine and setup tokens */
+  mi = client_side->padding_info[0];
+  tt_assert(mi);
+
+  /**********************************************************************/
+  uint64_t current_time = monotime_absolute_usec();
+
+  /* Ensure that we will clear out bin #4 with this usec */
+  mi->padding_scheduled_at_usec = current_time - 57;
+  tt_int_op(mi->histogram[4], OP_EQ, 2);
+  circpad_machine_remove_token(mi);
+  mi->padding_scheduled_at_usec = current_time - 57;
+  tt_int_op(mi->histogram[4], OP_EQ, 1);
+  circpad_machine_remove_token(mi);
+  tt_int_op(mi->histogram[4], OP_EQ, 0);
+
+  /* Ensure that we will not remove any other tokens even tho we try to, since
+   * this is what the exact strategy dictates */
+  mi->padding_scheduled_at_usec = current_time - 57;
+  circpad_machine_remove_token(mi);
+  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    if (i != 4) {
+      tt_int_op(mi->histogram[i], OP_EQ, 2);
+    }
   }
 
  done:
@@ -1402,6 +1461,7 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_machine_rate_limiting, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_global_rate_limiting, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_closest_token_removal_usec, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_token_removal_exact, TT_FORK),
   END_OF_TESTCASES
 };
 
