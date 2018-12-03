@@ -19,7 +19,8 @@ int running_long_enough_to_decide_unreachable(void);
 
 void set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                       node_t *node,
-                                      routerinfo_t *ri, time_t now,
+                                      const routerinfo_t *ri,
+                                      time_t now,
                                       int listbadexits);
 
 void dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil);

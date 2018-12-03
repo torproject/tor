@@ -95,7 +95,7 @@ real_uptime(const routerinfo_t *router, time_t now)
  */
 static int
 dirserv_thinks_router_is_unreliable(time_t now,
-                                    routerinfo_t *router,
+                                    const routerinfo_t *router,
                                     int need_uptime, int need_capacity)
 {
   if (need_uptime) {
@@ -541,7 +541,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
 void
 set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  node_t *node,
-                                 routerinfo_t *ri,
+                                 const routerinfo_t *ri,
                                  time_t now,
                                  int listbadexits)
 {
