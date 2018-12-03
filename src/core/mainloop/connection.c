@@ -2907,6 +2907,10 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
     retval = -1;
 
 #ifdef ENABLE_LISTENER_REBIND
+  if (smartlist_len(replacements))
+    log_debug(LD_NET, "%d replacements - starting rebinding loop.",
+              smartlist_len(replacements));
+
   SMARTLIST_FOREACH_BEGIN(replacements, listener_replacement_t *, r) {
     int addr_in_use = 0;
     int skip = 0;
@@ -2918,8 +2922,11 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
       connection_listener_new_for_port(r->new_port, &skip, &addr_in_use);
     connection_t *old_conn = r->old_conn;
 
-    if (skip)
+    if (skip) {
+      log_debug(LD_NET, "Skipping creating new listener for %s:%d",
+                old_conn->address, old_conn->port);
       continue;
+    }
 
     connection_close_immediate(old_conn);
     connection_mark_for_close(old_conn);
