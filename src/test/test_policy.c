@@ -2111,6 +2111,19 @@ test_policies_fascist_firewall_allows_address(void *arg)
     tt_ptr_op(ei, OP_EQ, NULL); \
   STMT_END
 
+#define CHECK_HS_EXTEND_INFO_ADDR_LS_EXPECT_MSG(fake_ls, msg_level, msg) \
+  STMT_BEGIN \
+    curve25519_secret_key_t seckey; \
+    curve25519_secret_key_generate(&seckey, 0); \
+    curve25519_public_key_t pubkey; \
+    curve25519_public_key_generate(&pubkey, &seckey); \
+    setup_full_capture_of_logs(msg_level); \
+    extend_info_t *ei = hs_get_extend_info_from_lspecs(fake_ls, &pubkey, 0); \
+    tt_ptr_op(ei, OP_EQ, NULL); \
+    expect_single_log_msg(msg); \
+    teardown_capture_of_logs(); \
+  STMT_END
+
 /** Run unit tests for fascist_firewall_choose_address */
 static void
 test_policies_fascist_firewall_choose_address(void *arg)
@@ -2515,6 +2528,7 @@ test_policies_fascist_firewall_choose_address(void *arg)
               *lspecs_blank = smartlist_new(),
               *lspecs_v4 = smartlist_new(),
               *lspecs_v6 = smartlist_new(),
+              *lspecs_no_legacy = smartlist_new(),
               *lspecs_legacy_only = smartlist_new();
   link_specifier_t *fake_ls;
 
@@ -2528,6 +2542,7 @@ test_policies_fascist_firewall_choose_address(void *arg)
                             sizeof(ipv4_or_ap.port));
   smartlist_add(lspecs, fake_ls);
   smartlist_add(lspecs_v4, fake_ls);
+  smartlist_add(lspecs_no_legacy, fake_ls);
 
   /* IPv6 link specifier */
   fake_ls = link_specifier_new();
@@ -2574,6 +2589,11 @@ test_policies_fascist_firewall_choose_address(void *arg)
   /* Check with a null onion_key. */
   CHECK_HS_EXTEND_INFO_ADDR_LS_NULL_KEY(lspecs_blank);
   smartlist_free(lspecs_blank);
+
+  /* Check with a null onion_key. */
+  CHECK_HS_EXTEND_INFO_ADDR_LS_EXPECT_MSG(lspecs_no_legacy, LOG_WARN,
+                                          "Missing Legacy ID in link state");
+  smartlist_free(lspecs_no_legacy);
 
   /* Enable both IPv4 and IPv6. */
   memset(&mock_options, 0, sizeof(or_options_t));
