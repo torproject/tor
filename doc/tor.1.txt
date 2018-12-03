@@ -3271,10 +3271,6 @@ __CacheDirectory__**/cached-microdescs** and **cached-microdescs.new**::
     router. The ".new" file is an append-only journal; when it gets too
     large, all entries are merged into a new cached-microdescs file.
 
-__CacheDirectory__**/cached-routers** and **cached-routers.new**::
-    Obsolete versions of cached-descriptors and cached-descriptors.new. When
-    Tor can't find the newer files, it looks here instead.
-
 __DataDirectory__**/state**::
     A set of persistent key-value mappings. These are documented in
     the file. These include:
