@@ -1460,6 +1460,19 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                tor_socket_strerror(tor_socket_errno(s)));
       goto err;
     }
+
+#ifndef __APPLE__
+    int value;
+    socklen_t len = sizeof(value);
+
+    if (!getsockopt(s, SOL_SOCKET, SO_ACCEPTCONN, &value, &len)) {
+      if (value == 0) {
+        log_err(LD_NET, "Could not listen on %s - "
+                        "getsockopt(.,SO_ACCEPTCONN,.) yields 0.", address);
+        goto err;
+      }
+    }
+#endif /* __APPLE__ */
 #endif /* defined(HAVE_SYS_UN_H) */
   } else {
     log_err(LD_BUG, "Got unexpected address family %d.",
