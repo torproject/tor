@@ -1178,6 +1178,8 @@ test_circuitpadding_machine_rate_limiting(void *arg)
   retval = circpad_machine_reached_padding_limit(mi);
   tt_int_op(retval, OP_EQ, 1);
 
+  circpad_machine_schedule_padding(mi);
+
  done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
 }
