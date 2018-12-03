@@ -1471,9 +1471,9 @@ static extrainfo_t *desc_extrainfo = NULL;
 static const char *desc_gen_reason = "uninitialized reason";
 /** Since when has our descriptor been "clean"?  0 if we need to regenerate it
  * now. */
-static time_t desc_clean_since = 0;
+STATIC time_t desc_clean_since = 0;
 /** Why did we mark the descriptor dirty? */
-static const char *desc_dirty_reason = "Tor just started";
+STATIC const char *desc_dirty_reason = "Tor just started";
 /** Boolean: do we need to regenerate the above? */
 static int desc_needs_upload = 0;
 

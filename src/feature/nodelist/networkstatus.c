@@ -724,8 +724,8 @@ networkstatus_vote_find_mutable_entry(networkstatus_t *ns, const char *digest)
 
 /** Return the entry in <b>ns</b> for the identity digest <b>digest</b>, or
  * NULL if none was found. */
-const routerstatus_t *
-networkstatus_vote_find_entry(networkstatus_t *ns, const char *digest)
+MOCK_IMPL(const routerstatus_t *,
+networkstatus_vote_find_entry,(networkstatus_t *ns, const char *digest))
 {
   return networkstatus_vote_find_mutable_entry(ns, digest);
 }
