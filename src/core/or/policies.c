@@ -1018,7 +1018,7 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
   tor_assert(ap);
 
   if (lspecs == NULL || smartlist_len(lspecs) == 0) {
-    log_warn(LD_BUG, "Unknown or missing link specifiers");
+    log_warn(LD_PROTOCOL, "Unknown or missing link specifiers");
     return;
   }
 
@@ -1055,7 +1055,11 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
 
   /* If we don't have IPv4 or IPv6 in link specifiers, log a bug and return. */
   if (!have_v4 && !have_v6) {
-    log_warn(LD_BUG, "None of our link specifiers have IPv4 or IPv6");
+    if (!have_v6) {
+      log_warn(LD_PROTOCOL, "None of our link specifiers have IPv4 or IPv6");
+    } else {
+      log_warn(LD_PROTOCOL, "None of our link specifiers have IPv4");
+    }
     return;
   }
 
