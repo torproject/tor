@@ -4372,6 +4372,23 @@ clear_status_flags_on_sybil(routerstatus_t *rs)
    * forget to add it to this clause. */
 }
 
+/** Space-separated list of all the flags that we will always vote on. */
+const char DIRVOTE_UNIVERSAL_FLAGS[] =
+  "Authority "
+  "Exit "
+  "Fast "
+  "Guard "
+  "HSDir "
+  "Stable "
+  "StaleDesc "
+  "V2Dir "
+  "Valid";
+/** Space-separated list of all flags that we may or may not vote on,
+ * depending on our configuration. */
+const char DIRVOTE_OPTIONAL_FLAGS[] =
+  "BadExit "
+  "Running";
+
 /** Return a new networkstatus_t* containing our current opinion. (For v3
  * authorities) */
 networkstatus_t *
@@ -4620,8 +4637,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   v3_out->known_flags = smartlist_new();
   smartlist_split_string(v3_out->known_flags,
-                         "Authority Exit Fast Guard Stable V2Dir Valid HSDir "
-                         "StaleDesc",
+                         DIRVOTE_UNIVERSAL_FLAGS,
                          0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (vote_on_reachability)
     smartlist_add_strdup(v3_out->known_flags, "Running");

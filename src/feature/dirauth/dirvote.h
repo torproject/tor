@@ -92,6 +92,9 @@
 /** Maximum size of a line in a vote. */
 #define MAX_BW_FILE_HEADERS_LINE_LEN 1024
 
+extern const char DIRVOTE_UNIVERSAL_FLAGS[];
+extern const char DIRVOTE_OPTIONAL_FLAGS[];
+
 /*
  * Public API. Used outside of the dirauth subsystem.
  *
