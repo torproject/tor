@@ -35,16 +35,11 @@
  * Should/Do we have a header for time constants like this? */
 #define TOR_USEC_PER_SEC (1000000)
 
-circpad_decision_t circpad_machine_remove_token(circpad_machineinfo_t *mi);
 circpad_machineinfo_t *circpad_circuit_machineinfo_new(circuit_t *on_circ,
                                                int machine_index);
-STATIC circpad_delay_t circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi,
-                                              int bin);
 STATIC int circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi,
                                          circpad_delay_t us);
 
-STATIC const circpad_state_t *circpad_machine_current_state(
-                                      circpad_machineinfo_t *machine);
 void circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
                                         circpad_delay_t target_bin_us);
 void circpad_machine_remove_higher_token(circpad_machineinfo_t *mi,
@@ -131,7 +126,7 @@ circpad_state_to_string(circpad_statenum_t state)
  * mutable info.
  */
 STATIC const circpad_state_t *
-circpad_machine_current_state(circpad_machineinfo_t *mi)
+circpad_machine_current_state(const circpad_machineinfo_t *mi)
 {
   const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
 
@@ -163,7 +158,7 @@ circpad_machine_current_state(circpad_machineinfo_t *mi)
  * It has a usec value of CIRCPAD_DELAY_INFINITE (UINT32_MAX).
  */
 STATIC circpad_delay_t
-circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
+circpad_histogram_bin_to_usec(const circpad_machineinfo_t *mi, int bin)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
   circpad_delay_t start_usec;
@@ -195,6 +190,18 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
   return (circpad_delay_t)MIN(start_usec +
                               state->range_usec/bin_width_exponent,
                               CIRCPAD_DELAY_INFINITE);
+}
+
+/** Return the midpoint of the histogram bin <b>bin_index</b>. */
+static circpad_delay_t
+get_histogram_bin_midpoint(const circpad_machineinfo_t *mi,
+                           int bin_index)
+{
+  circpad_delay_t left_bound = circpad_histogram_bin_to_usec(mi, bin_index);
+  circpad_delay_t right_bound =
+    circpad_histogram_bin_to_usec(mi, bin_index+1)-1;
+
+  return left_bound + (right_bound - left_bound)/2;
 }
 
 /**
@@ -407,6 +414,8 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
   tor_assert(curr_bin < CIRCPAD_INFINITY_BIN(state));
 
   bin_start = circpad_histogram_bin_to_usec(mi, curr_bin);
+  /* We don't need to reduct 1 from the upper bound because the random range
+   * function below samples from [bin_start, bin_end) */
   bin_end = circpad_histogram_bin_to_usec(mi, curr_bin+1);
 
   /* Truncate the high bin in case it's the infinity bin:
@@ -590,7 +599,9 @@ circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
 /**
  * Remove a token from the closest non-empty bin to the target.
  *
- * If use_usec is true, measure "closest" in terms of bin start usec.
+ * If use_usec is true, measure "closest" in terms of the next closest bin
+ * midpoint.
+ *
  * If it is false, use bin index distance only.
  */
 void
@@ -601,55 +612,53 @@ circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
   int lower = circpad_machine_first_lower_index(mi, target_bin_usec);
   int higher = circpad_machine_first_higher_index(mi, target_bin_usec);
   int current = circpad_histogram_usec_to_bin(mi, target_bin_usec);
-  circpad_delay_t lower_usec;
-  circpad_delay_t higher_usec;
+  int bin_to_remove = -1;
 
   tor_assert(lower <= current);
   tor_assert(higher >= current);
 
+  /* Take care of edge cases first */
   if (higher == mi->histogram_len && lower == -1) {
-    // Bins are empty
+    /* All bins are empty */
     return;
   } else if (higher == mi->histogram_len) {
-    // Higher bins are empty
+    /* All higher bins are empty */
     tor_assert(mi->histogram[lower]);
     mi->histogram[lower]--;
     return;
   } else if (lower == -1) {
-    // Lower bins are empty
+    /* All lower bins are empty */
     tor_assert(mi->histogram[higher]);
     mi->histogram[higher]--;
     return;
   }
 
+  /* Now handle the intermediate cases */
   if (use_usec) {
     /* Find the closest bin midpoint to the target */
-    lower_usec = circpad_histogram_bin_to_usec(mi, lower)/2 +
-                circpad_histogram_bin_to_usec(mi, lower+1)/2;
-    higher_usec = circpad_histogram_bin_to_usec(mi, higher)/2 +
-                circpad_histogram_bin_to_usec(mi, higher+1)/2;
+    circpad_delay_t lower_usec = get_histogram_bin_midpoint(mi, lower);
+    circpad_delay_t higher_usec = get_histogram_bin_midpoint(mi, higher);
 
     if (target_bin_usec < lower_usec) {
       // Lower bin is closer
       tor_assert(mi->histogram[lower]);
-      mi->histogram[lower]--;
-      return;
+      bin_to_remove = lower;
     } else if (target_bin_usec > higher_usec) {
       // Higher bin is closer
       tor_assert(mi->histogram[higher]);
-      mi->histogram[higher]--;
-      return;
+      bin_to_remove = higher;
     } else if (target_bin_usec-lower_usec > higher_usec-target_bin_usec) {
       // Higher bin is closer
       tor_assert(mi->histogram[higher]);
-      mi->histogram[higher]--;
-      return;
+      bin_to_remove = higher;
     } else {
       // Lower bin is closer
       tor_assert(mi->histogram[lower]);
-      mi->histogram[lower]--;
-      return;
+      bin_to_remove = lower;
     }
+    mi->histogram[bin_to_remove]--;
+    log_debug(LD_GENERAL, "Removing token from bin %d", bin_to_remove);
+    return;
   } else {
     if (current - lower > higher - current) {
       // Higher bin is closer
@@ -726,7 +735,7 @@ circpad_check_token_supply(circpad_machineinfo_t *mi)
  *
  * Returns 1 if we transition states, 0 otherwise.
  */
-circpad_decision_t
+STATIC circpad_decision_t
 circpad_machine_remove_token(circpad_machineinfo_t *mi)
 {
   const circpad_state_t *state = NULL;

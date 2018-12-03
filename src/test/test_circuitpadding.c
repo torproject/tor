@@ -36,14 +36,10 @@ extern smartlist_t *connection_array;
 #define NSEC_PER_MSEC (1000*1000)
 
 circid_t get_unique_circ_id_by_chan(channel_t *chan);
-circpad_delay_t circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi,
-                                       int bin);
 int circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi,
                                        circpad_delay_t us);
 
-const circpad_state_t *circpad_machine_current_state(
-        circpad_machineinfo_t *machine);
-void circpad_circ_token_machine_setup(void);
+void helper_create_basic_machine(void);
 
 circpad_machineinfo_t *circpad_circuit_machineinfo_new(circuit_t *on_circ,
                                                int machine_index);
@@ -300,7 +296,7 @@ test_circuitpadding_rtt(void *arg)
 
   timers_initialize();
   circpad_machines_init();
-  circpad_circ_token_machine_setup();
+  helper_create_basic_machine();
 
   MOCK(circuit_package_relay_cell,
        circuit_package_relay_cell_mock);
@@ -392,7 +388,7 @@ test_circuitpadding_rtt(void *arg)
 }
 
 void
-circpad_circ_token_machine_setup(void)
+helper_create_basic_machine(void)
 {
   /* Start, burst */
   circpad_machine_states_init(&circ_client_machine, 2);
@@ -426,6 +422,151 @@ circpad_circ_token_machine_setup(void)
 
   return;
 }
+
+#define BIG_HISTOGRAM_LEN 10
+
+/** Setup a machine with a big histogram */
+static void
+helper_create_machine_with_big_histogram(void)
+{
+  const int tokens_per_bin = 2;
+
+  /* Start, burst */
+  circpad_machine_states_init(&circ_client_machine, 2);
+
+  circpad_state_t *burst_state =
+    &circ_client_machine.states[CIRCPAD_STATE_BURST];
+
+  circ_client_machine.states[CIRCPAD_STATE_START].
+    next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
+
+  burst_state->next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
+  burst_state->next_state[CIRCPAD_EVENT_NONPADDING_RECV] =CIRCPAD_STATE_BURST;
+
+  burst_state->next_state[CIRCPAD_EVENT_NONPADDING_SENT] =CIRCPAD_STATE_CANCEL;
+
+  burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_HIGHER;
+
+  burst_state->histogram_len = BIG_HISTOGRAM_LEN;
+  burst_state->start_usec = 0;
+  burst_state->range_usec = 1000;
+
+  int n_tokens = 0;
+  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    burst_state->histogram[i] = tokens_per_bin;
+    n_tokens += 2;
+  }
+
+  burst_state->histogram_total_tokens = n_tokens;
+  burst_state->use_rtt_estimate = 1;
+  burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_CLOSEST_USEC;
+}
+
+static circpad_decision_t
+circpad_machine_schedule_padding_mock(circpad_machineinfo_t *mi)
+{
+  (void)mi;
+  return 0;
+}
+
+static uint64_t
+mock_monotime_absolute_usec(void)
+{
+  return 100;
+}
+
+/** Test closest token removal strategy with usec  */
+static void
+test_circuitpadding_closest_token_removal_usec(void *arg)
+{
+  circpad_machineinfo_t *mi;
+  (void)arg;
+
+  /* Mock it up */
+  MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
+  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+
+  /* Setup test environment (time etc.) */
+  client_side = (circuit_t *)origin_circuit_new();
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  monotime_enable_test_mocking();
+
+  /* Create test machine */
+  helper_create_machine_with_big_histogram();
+  client_side->padding_machine[0] = &circ_client_machine;
+  client_side->padding_info[0] =
+    circpad_circuit_machineinfo_new(client_side, 0);
+
+  /* move the machine to the right state */
+  circpad_cell_event_nonpadding_received((circuit_t*)client_side);
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_BURST);
+
+  /* Get the machine and setup tokens */
+  mi = client_side->padding_info[0];
+  tt_assert(mi);
+
+  /*************************************************************************/
+
+  uint64_t current_time = monotime_absolute_usec();
+
+  /* Test left boundaries of each histogram bin: */
+  const circpad_delay_t bin_left_bounds[] =
+    {0, 1, 7, 15, 31, 62, 125, 250, 500, CIRCPAD_DELAY_INFINITE};
+  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    tt_uint_op(bin_left_bounds[i], OP_EQ,
+               circpad_histogram_bin_to_usec(mi, i));
+  }
+
+  /* XXX we want to test remove_token_exact and
+     circpad_machine_remove_closest_token() with usec */
+
+  /* Check that all bins have two tokens right now */
+  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    tt_int_op(mi->histogram[i], OP_EQ, 2);
+  }
+
+  /* This is the right order to remove tokens from this histogram. That is, we
+   * first remove tokens from the 4th bin since 57 usec is nearest to the 4th
+   * bin midpoint (31 + (62-31)/2 == 46). Then we remove from the 3rd bin for
+   * the same reason, then from the 5th, etc. */
+  const int bin_removal_order[] = {4, 3, 5, 2, 1, 0, 6, 7, 8, 9};
+
+  /* Remove all tokens from all bins apart from the infinity bin */
+  for (int i = 0; i < BIG_HISTOGRAM_LEN-1 ; i++) {
+    int bin_to_remove = bin_removal_order[i];
+    log_debug(LD_GENERAL, "Testing that %d attempt removes %d bin",
+              i, bin_to_remove);
+
+    tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 2);
+
+    mi->padding_scheduled_at_usec = current_time - 57;
+    circpad_machine_remove_token(mi);
+
+    tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 1);
+
+    mi->padding_scheduled_at_usec = current_time - 57;
+    circpad_machine_remove_token(mi);
+
+    /* Test that we cleaned out this bin. Don't do this in the case of the last
+       bin since the tokens will get refilled */
+    if (i != BIG_HISTOGRAM_LEN - 2) {
+      tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 0);
+    }
+  }
+
+  /* Check that all bins have been refilled */
+  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    tt_int_op(mi->histogram[i], OP_EQ, 2);
+  }
+
+ done:
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  monotime_disable_test_mocking();
+  tor_free(circ_client_machine.states);
+}
+
+#undef BIG_HISTOGRAM_LEN
 
 void
 test_circuitpadding_tokens(void *arg)
@@ -465,7 +606,7 @@ test_circuitpadding_tokens(void *arg)
 
   timers_initialize();
 
-  circpad_circ_token_machine_setup();
+  helper_create_basic_machine();
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] = circpad_circuit_machineinfo_new(client_side,
                                                                  0);
@@ -1064,13 +1205,6 @@ helper_circpad_circ_distribution_machine_setup(double min, double max)
   fifth_st->range_usec = 500; /* max delay */
 }
 
-static circpad_decision_t
-circpad_machine_schedule_padding_mock(circpad_machineinfo_t *mi)
-{
-  (void)mi;
-  return 0;
-}
-
 /** Simple test that the padding delays sampled from a uniform distribution
  *  actually faill within the uniform distribution range. */
 /* TODO: Upgrade this test so that each state tests a different prob
@@ -1148,7 +1282,7 @@ test_circuitpadding_machine_rate_limiting(void *arg)
   /* Setup machine and circuits */
   client_side = (circuit_t *)origin_circuit_new();
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
-  circpad_circ_token_machine_setup();
+  helper_create_basic_machine();
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
     circpad_circuit_machineinfo_new(client_side, 0);
@@ -1198,7 +1332,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
   /* Setup machine and circuits */
   client_side = (circuit_t *)origin_circuit_new();
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
-  circpad_circ_token_machine_setup();
+  helper_create_basic_machine();
   client_side->padding_machine[0] = &circ_client_machine;
   client_side->padding_info[0] =
     circpad_circuit_machineinfo_new(client_side, 0);
@@ -1210,7 +1344,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
   networkstatus_t vote1;
   vote1.net_params = smartlist_new();
   smartlist_split_string(vote1.net_params,
-                         "circpad_global_allowed_cells=100 circpad_global_max_padding_pct=50",
+         "circpad_global_allowed_cells=100 circpad_global_max_padding_pct=50",
                          NULL, 0, 0);
   /* Register global limits with the padding subsystem */
   circpad_new_consensus_params(&vote1);
@@ -1267,6 +1401,7 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_sample_distribution, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_machine_rate_limiting, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_global_rate_limiting, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_closest_token_removal_usec, TT_FORK),
   END_OF_TESTCASES
 };
 

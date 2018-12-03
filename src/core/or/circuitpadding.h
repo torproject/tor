@@ -587,6 +587,15 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi);
 STATIC bool
 circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi);
 
+STATIC
+circpad_decision_t circpad_machine_remove_token(circpad_machineinfo_t *mi);
+
+STATIC circpad_delay_t
+circpad_histogram_bin_to_usec(const circpad_machineinfo_t *mi, int bin);
+
+STATIC const circpad_state_t *
+circpad_machine_current_state(const circpad_machineinfo_t *mi);
+
 #endif
 
 #endif
