@@ -1451,17 +1451,20 @@ handle_get_next_bandwidth(dir_connection_t *conn,
   const or_options_t *options = get_options();
   const compress_method_t compress_method =
     find_best_compression_method(args->compression_supported, 1);
+  // this will log: [notice] compress_method 2
+  // ie, ZLIB_METHOD
+  log_notice(LD_DIR, "compress_method %d", compress_method);
 
   if (options->V3BandwidthsFile) {
     char *bandwidth = read_file_to_str(options->V3BandwidthsFile,
                                        RFTS_IGNORE_MISSING, NULL);
     if (bandwidth != NULL) {
-      size_t len = strlen(bandwidth);
+      ssize_t len = strlen(bandwidth);
       write_http_response_header(conn, compress_method != NO_METHOD ? -1 : len,
                                  compress_method, BANDWIDTH_CACHE_LIFETIME);
       if (compress_method != NO_METHOD)
         conn->compress_state = tor_compress_new(1, compress_method,
-                                        choose_compression_level(len));
+                                        choose_compression_level(len/2));
       connection_buf_add(bandwidth, len, TO_CONN(conn));
       tor_free(bandwidth);
       return 0;

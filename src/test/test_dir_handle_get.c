@@ -1851,7 +1851,7 @@ static void
 test_dir_handle_get_status_vote_current_consensus_ns(void* data)
 {
   char *header = NULL;
-  char *body = NULL, *comp_body = NULL;
+  char *body = NULL, *comp_body;
   size_t body_used = 0, comp_body_used = 0;
   char *stats = NULL, *hist = NULL;
   (void) data;
@@ -2493,6 +2493,8 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
   dir_connection_t *conn = NULL;
   char *header = NULL, *body = NULL;
   size_t body_used = 0;
+  char *comp_body;
+  size_t comp_body_used = 0;
   (void) data;
 
   const char *content =
@@ -2544,16 +2546,28 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/next/bandwidth.z"), NULL, 0));
 
+  // this will log: [debug] fetch_from_buf_http(): headerlen 163, bodylen 167.
   fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
-                      &body, &body_used, strlen(content)+1, 0);
+                      &comp_body, &comp_body_used, strlen(content)+1, 0);
 
   tt_assert(header);
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Encoding: deflate\r\n"));
-  tt_assert(strstr(header, "Content-Length: 167\r\n"));
+  log_notice(LD_DIR, "%s", header);
+  // assert there is no content-lenght
 
-  tt_int_op(body_used, OP_EQ, strlen(body));
-  tt_str_op(content, OP_EQ, body);
+  // !!, if it's compressed, this should not be the case
+  tt_int_op(comp_body_used, OP_EQ, strlen(comp_body));
+  tt_str_op(content, OP_EQ, comp_body);
+
+  compress_method_t compression = detect_compression_method(comp_body,
+                                                            comp_body_used);
+  // this will log: [notice] 5
+  // ie, UNKNOWN_METHOD
+  log_notice(LD_DIR, "%d", compression);
+
+  tor_free(comp_body);
+
 
  done:
   UNMOCK(get_options);
