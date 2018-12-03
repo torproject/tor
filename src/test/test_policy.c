@@ -2050,7 +2050,7 @@ test_policies_fascist_firewall_allows_address(void *arg)
     setup_full_capture_of_logs(LOG_WARN); \
     fascist_firewall_choose_address_ls(fake_ls, pref_only, &chosen_ls_ap); \
     if (smartlist_len(fake_ls) == 0) { \
-      expect_single_log_msg("Unknown or missing link specifiers"); \
+      expect_single_log_msg("Link specifiers are empty"); \
     } else { \
       expect_no_log_entry(); \
       tt_assert(tor_addr_eq(&(expect_ap).addr, &chosen_ls_ap.addr)); \

@@ -1017,8 +1017,12 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
 
   tor_assert(ap);
 
-  if (lspecs == NULL || smartlist_len(lspecs) == 0) {
-    log_warn(LD_PROTOCOL, "Unknown or missing link specifiers");
+  if (lspecs == NULL) {
+    log_warn(LD_BUG, "Unknown or missing link specifiers");
+    return;
+  }
+  if (smartlist_len(lspecs) == 0) {
+    log_warn(LD_PROTOCOL, "Link specifiers are empty");
     return;
   }
 

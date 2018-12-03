@@ -1750,7 +1750,7 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
   /* Legacy ID is mandatory, and we require an IP address. */
   if (!tor_addr_port_is_valid_ap(&ap, 0)) {
     /* If we're missing the IP address, log a warning and return NULL. */
-    log_info(LD_NET, "Unknown or invalid IP address in link state");
+    log_info(LD_NET, "Unreachable or invalid IP address in link state");
     goto done;
   }
   if (!have_legacy_id) {
