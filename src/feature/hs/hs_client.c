@@ -296,12 +296,19 @@ retry_all_socks_conn_waiting_for_desc(void)
 
     /* Order a refetch in case it works this time. */
     status = hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
-    if (BUG(status == HS_CLIENT_FETCH_HAVE_DESC)) {
-      /* This case is unique because it can NOT happen in theory. Once we get
-       * a new descriptor, the HS client subsystem is notified immediately and
-       * the connections waiting for it are handled which means the state will
-       * change from renddesc wait state. Log this and continue to next
-       * connection. */
+    if (status == HS_CLIENT_FETCH_HAVE_DESC) {
+      /* This is a rare case where a SOCKS connection is in state waiting for
+       * a descriptor but we do have it in the cache.
+       *
+       * This can happen is tor comes back from suspend where it previously
+       * had the descriptor but the intro points were not usuable. Once it
+       * came back to life, the intro point failure cache was cleaned up and
+       * thus the descriptor became usable again leaving us in this code path.
+       *
+       * We'll mark the connection as waiting for a circuit so the descriptor
+       * can be retried. This is safe because a connection in state waiting
+       * for a descriptor can not be in the entry connection pending list. */
+      mark_conn_as_waiting_for_circuit(base_conn, approx_time());
       continue;
     }
     /* In the case of an error, either all SOCKS connections have been
