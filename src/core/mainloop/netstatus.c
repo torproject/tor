@@ -146,3 +146,15 @@ netstatus_load_from_state(const or_state_t *state, time_t now)
   }
   reset_user_activity(last_activity);
 }
+
+/**
+ * Adjust the time at which the user was last active by <b>seconds_diff</b>
+ * in response to a clock jump.
+ */
+void
+netstatus_note_clock_jumped(time_t seconds_diff)
+{
+  time_t last_active = get_last_user_activity_time();
+  if (last_active)
+    reset_user_activity(last_active + seconds_diff);
+}
