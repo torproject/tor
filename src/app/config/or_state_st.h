@@ -87,6 +87,14 @@ struct or_state_t {
 
   /** When did we last rotate our onion key?  "0" for 'no idea'. */
   time_t LastRotatedOnionKey;
+
+  /** Do we automatically fail IPv4 or IPv6? If so, set one of these to 1. */
+  int IPv4AutoFail;
+  int IPv6AutoFail;
+
+  /** Count the number of failures for IPv4 and IPv6 respectively. */
+  int IPv4Fails;
+  int IPv6Fails;
 };
 
 #endif

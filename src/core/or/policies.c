@@ -20,6 +20,8 @@
 #include "core/or/or.h"
 #include "feature/client/bridges.h"
 #include "app/config/config.h"
+#include "app/config/or_state_st.h"
+#include "app/config/statefile.h"
 #include "core/or/policies.h"
 #include "feature/dirparse/policy_parse.h"
 #include "feature/nodelist/microdesc.h"
@@ -495,8 +497,26 @@ fascist_firewall_prefer_ipv6_impl(const or_options_t *options)
 MOCK_IMPL(int,
 fascist_firewall_rand_prefer_ipv6_addr, (void))
 {
-  /* TODO: Check for failures, and infer our preference based on this. */
-  return crypto_rand_int(2);
+  or_state_t *state = get_or_state();
+
+  if (state->IPv4AutoFail && !state->IPv6AutoFail) {
+    /* If we fail IPv4 automatically, prefer IPv6. */
+    return 1;
+  } else if (!state->IPv4AutoFail && state->IPv6AutoFail) {
+    /* If we fail IPv6 automatically, prefer IPv4. */
+    return 0;
+  } else if (state->IPv4AutoFail && state->IPv6AutoFail) {
+    /* If we fail both IPv4 and IPv6, reset the auto fail counters and then
+     * select randomly. */
+    state->IPv4AutoFail = state->IPv6AutoFail = 0;
+  }
+
+  int fail_sum = state->IPv4Fails + state->IPv6Fails;
+  int chosen_number = crypto_rand_int(fail_sum);
+
+  /* Prefer IPv4 or IPv6 based on whether the random number is below the number
+   * of IPv6 failures (prefer IPv6), or above (prefer IPv4). */
+  return (chosen_number < state->IPv6Fails);
 }
 
 /** Do we prefer to connect to IPv6 ORPorts?

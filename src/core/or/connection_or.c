@@ -36,6 +36,8 @@
 #include "core/or/circuitstats.h"
 #include "core/or/command.h"
 #include "app/config/config.h"
+#include "app/config/or_state_st.h"
+#include "app/config/statefile.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
 #include "feature/control/control.h"
@@ -1364,10 +1366,26 @@ void
 connection_or_connect_failed(or_connection_t *conn,
                              int reason, const char *msg)
 {
+  const or_options_t *options = get_options();
+
   control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED, reason);
-  if (!authdir_mode_tests_reachability(get_options()))
+  if (!authdir_mode_tests_reachability(options))
     control_event_bootstrap_prob_or(msg, reason, conn);
   note_or_connect_failed(conn);
+
+  if (options->ClientAutoIPv6ORPort) {
+    or_state_t *state = get_or_state();
+    switch (tor_addr_family(&conn->real_addr)) {
+      case AF_INET:
+        if (reason == END_OR_CONN_REASON_NO_ROUTE) state->IPv4AutoFail = 1;
+        state->IPv4Fails++;
+        break;
+      case AF_INET6:
+        if (reason == END_OR_CONN_REASON_NO_ROUTE) state->IPv6AutoFail = 1;
+        state->IPv6Fails++;
+        break;
+    }
+  }
 }
 
 /** <b>conn</b> got an error in connection_handle_read_impl() or
