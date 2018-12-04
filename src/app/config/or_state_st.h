@@ -92,6 +92,10 @@ struct or_state_t {
   int IPv4AutoFail;
   int IPv6AutoFail;
 
+  /** When did we fail IPv4 or IPv6? */
+  time_t IPv4AutoFailTime;
+  time_t IPv6AutoFailTime;
+
   /** Count the number of failures for IPv4 and IPv6 respectively. */
   int IPv4Fails;
   int IPv6Fails;

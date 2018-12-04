@@ -133,8 +133,10 @@ static config_var_t state_vars_[] = {
   VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
 
   V(IPv4AutoFail,                     UINT,     "0"),
-  V(IPv6AutoFail,                     UINT,     "0"),
+  V(IPv4AutoFailTime,                 ISOTIME,  NULL),
   V(IPv4Fails,                        UINT,     "1"),
+  V(IPv6AutoFail,                     UINT,     "0"),
+  V(IPv6AutoFailTime,                 ISOTIME,  NULL),
   V(IPv6Fails,                        UINT,     "1"),
 
   END_OF_CONFIG_VARS

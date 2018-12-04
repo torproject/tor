@@ -1377,11 +1377,19 @@ connection_or_connect_failed(or_connection_t *conn,
     or_state_t *state = get_or_state();
     switch (tor_addr_family(&conn->real_addr)) {
       case AF_INET:
-        if (reason == END_OR_CONN_REASON_NO_ROUTE) state->IPv4AutoFail = 1;
+        if (reason == END_OR_CONN_REASON_NO_ROUTE) {
+          state->IPv4AutoFail = 1;
+          if (!state->IPv4AutoFailTime)
+            state->IPv4AutoFailTime = time(NULL);
+        }
         state->IPv4Fails++;
         break;
       case AF_INET6:
-        if (reason == END_OR_CONN_REASON_NO_ROUTE) state->IPv6AutoFail = 1;
+        if (reason == END_OR_CONN_REASON_NO_ROUTE) {
+          state->IPv6AutoFail = 1;
+          if (!state->IPv6AutoFailTime)
+            state->IPv6AutoFailTime = time(NULL);
+        }
         state->IPv6Fails++;
         break;
     }
