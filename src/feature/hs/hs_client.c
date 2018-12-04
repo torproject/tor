@@ -200,6 +200,26 @@ directory_request_is_pending(const ed25519_public_key_t *identity_pk)
   return ret;
 }
 
+/* Helper function that changes the state of an entry connection to waiting
+ * for a circuit. For this to work properly, the connection timestamps are set
+ * to now and the connection is then marked as pending for a circuit. */
+static void
+mark_conn_as_waiting_for_circuit(connection_t *conn, time_t now)
+{
+  tor_assert(conn);
+
+  /* Because the connection can now proceed to opening circuit and ultimately
+   * connect to the service, reset those timestamp so the connection is
+   * considered "fresh" and can continue without being closed too early. */
+  conn->timestamp_created = now;
+  conn->timestamp_last_read_allowed = now;
+  conn->timestamp_last_write_allowed = now;
+  /* Change connection's state into waiting for a circuit. */
+  conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+
+  connection_ap_mark_as_pending_circuit(TO_ENTRY_CONN(conn));
+}
+
 /* We failed to fetch a descriptor for the service with <b>identity_pk</b>
  * because of <b>status</b>. Find all pending SOCKS connections for this
  * service that are waiting on the descriptor and close them with
@@ -1700,17 +1720,9 @@ hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
 
     log_info(LD_REND, "Descriptor has arrived. Launching circuits.");
 
-    /* Because the connection can now proceed to opening circuit and
-     * ultimately connect to the service, reset those timestamp so the
-     * connection is considered "fresh" and can continue without being closed
-     * too early. */
-    base_conn->timestamp_created = now;
-    base_conn->timestamp_last_read_allowed = now;
-    base_conn->timestamp_last_write_allowed = now;
-    /* Change connection's state into waiting for a circuit. */
-    base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-
-    connection_ap_mark_as_pending_circuit(entry_conn);
+    /* Mark connection as waiting for a circuit since we do have a usable
+     * descriptor now. */
+    mark_conn_as_waiting_for_circuit(base_conn, now);
   } SMARTLIST_FOREACH_END(base_conn);
 
  end:
