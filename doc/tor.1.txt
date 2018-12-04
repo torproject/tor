@@ -2981,6 +2981,10 @@ Note that once you've configured client authorization, anyone else with the
 address won't be able to access it from this point on. If no authorization is
 configured, the service will be accessible to anyone with the onion address.
 
+Revoking a client can be done by removing their ".auth" file, however the
+revocation will be in effect only after the tor process gets restarted even if
+a SIGHUP takes place.
+
 See the Appendix G in the rend-spec-v3.txt file of
 https://spec.torproject.org/[torspec] for more information.
 

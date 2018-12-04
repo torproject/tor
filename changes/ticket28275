@@ -1,0 +1,4 @@
+  o Documentation (hidden service v3, man page):
+    - Note in the man page that the only real way to fully revoke an onion
+      service v3 client authorization is by restarting the tor process. Closes
+      ticket 28275.
