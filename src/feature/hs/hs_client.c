@@ -142,8 +142,7 @@ flag_all_conn_wait_desc(const ed25519_public_key_t *service_identity_pk)
     if (edge_conn->hs_ident &&
         ed25519_pubkey_eq(&edge_conn->hs_ident->identity_pk,
                           service_identity_pk)) {
-      connection_ap_mark_as_non_pending_circuit(TO_ENTRY_CONN(conn));
-      conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+      connection_ap_mark_as_waiting_for_renddesc(TO_ENTRY_CONN(conn));
     }
   } SMARTLIST_FOREACH_END(conn);
 
