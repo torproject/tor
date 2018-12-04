@@ -129,8 +129,14 @@ netstatus_load_from_state(const or_state_t *state, time_t now)
 {
   time_t last_activity;
   if (state->Dormant == -1) { // Initial setup.
-    last_activity = now;
-    participating_on_network = true;
+    if (get_options()->DormantOnFirstStartup) {
+      last_activity = 0;
+      participating_on_network = false;
+    } else {
+      // Start up as active, treat activity as happening now.
+      last_activity = now;
+      participating_on_network = true;
+    }
   } else if (state->Dormant) {
     last_activity = 0;
     participating_on_network = false;

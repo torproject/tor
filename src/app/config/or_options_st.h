@@ -1085,6 +1085,10 @@ struct or_options_t {
    * from becoming dormant.
    **/
   int DormantTimeoutDisabledByIdleStreams;
+
+  /** Boolean: true if Tor should be dormant the first time it starts with
+   * a datadirectory; false otherwise. */
+  int DormantOnFirstStartup;
 };
 
 #endif
