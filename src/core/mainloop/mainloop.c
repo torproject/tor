@@ -1627,6 +1627,7 @@ schedule_rescan_periodic_events,(void))
 void
 rescan_periodic_events(const or_options_t *options)
 {
+  puts("RESCAN");
   tor_assert(options);
 
   /* Avoid scanning the event list if we haven't initialized it yet. This is
@@ -2818,12 +2819,6 @@ initialize_mainloop_events(void)
 int
 do_main_loop(void)
 {
-  /* For now, starting Tor always counts as user activity. Later, we might
-   * have an option to control this.
-   */
-  reset_user_activity(approx_time());
-  set_network_participation(true);
-
   /* initialize the periodic events first, so that code that depends on the
    * events being present does not assert.
    */

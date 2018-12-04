@@ -34,6 +34,7 @@
 #include "app/config/config.h"
 #include "app/config/confparse.h"
 #include "core/mainloop/mainloop.h"
+#include "core/mainloop/netstatus.h"
 #include "core/mainloop/connection.h"
 #include "feature/control/control.h"
 #include "feature/client/entrynodes.h"
@@ -131,6 +132,9 @@ static config_var_t state_vars_[] = {
   V(CircuitBuildAbandonedCount,       UINT,     "0"),
   VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
   VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
+
+  V(MinutesSinceUserActivity,         UINT,     NULL),
+  V(Dormant,                          AUTOBOOL, "auto"),
 
   END_OF_CONFIG_VARS
 };
@@ -309,6 +313,8 @@ or_state_set(or_state_t *new_state)
       get_circuit_build_times_mutable(),global_state) < 0) {
     ret = -1;
   }
+  netstatus_load_from_state(global_state, time(NULL));
+
   return ret;
 }
 
@@ -500,6 +506,8 @@ or_state_save(time_t now)
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
   circuit_build_times_update_state(get_circuit_build_times(), global_state);
+  netstatus_flush_to_state(global_state, now);
+
   if (accounting_is_enabled(get_options()))
     accounting_run_housekeeping(now);
 
