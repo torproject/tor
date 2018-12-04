@@ -8,6 +8,7 @@
 
 #define CONFIG_PRIVATE
 #define MAINLOOP_PRIVATE
+#define STATEFILE_PRIVATE
 
 #include "test/test.h"
 #include "test/log_test_helpers.h"
@@ -20,6 +21,8 @@
 #include "feature/hs/hs_service.h"
 
 #include "app/config/config.h"
+#include "app/config/statefile.h"
+#include "app/config/or_state_st.h"
 
 static const uint64_t BILLION = 1000000000;
 
@@ -190,6 +193,13 @@ test_mainloop_user_activity(void *arg)
   tt_int_op(true, OP_EQ, is_participating_on_network());
   tt_int_op(schedule_rescan_called, OP_EQ, 1);
 
+  // We _will_ adjust if the clock jumps though.
+  netstatus_note_clock_jumped(500);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+525);
+
+  netstatus_note_clock_jumped(-400);
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start+125);
+
  done:
   UNMOCK(schedule_rescan_periodic_events);
 }
@@ -273,6 +283,70 @@ test_mainloop_check_participation(void *arg)
   UNMOCK(connection_get_by_type_nonlinked);
 }
 
+static void
+test_mainloop_dormant_load_state(void *arg)
+{
+  (void)arg;
+  or_state_t *state = or_state_new();
+  const time_t start = 1543956575;
+
+  reset_user_activity(0);
+  set_network_participation(false);
+
+  // When we construct a new state, it starts out in "auto" mode.
+  tt_int_op(state->Dormant, OP_EQ, -1);
+
+  // Initializing from "auto" makes us start out (by default) non-Dormant,
+  // with activity right now.
+  netstatus_load_from_state(state, start);
+  tt_assert(is_participating_on_network());
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start);
+
+  // Initializing from dormant clears the last user activity time, and
+  // makes us dormant.
+  state->Dormant = 1;
+  netstatus_load_from_state(state, start);
+  tt_assert(! is_participating_on_network());
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, 0);
+
+  // Initializing from non-dormant sets the last user activity time, and
+  // makes us non-dormant.
+  state->Dormant = 0;
+  state->MinutesSinceUserActivity = 123;
+  netstatus_load_from_state(state, start);
+  tt_assert(is_participating_on_network());
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start - 123*60);
+
+ done:
+  or_state_free(state);
+}
+
+static void
+test_mainloop_dormant_save_state(void *arg)
+{
+  (void)arg;
+  or_state_t *state = or_state_new();
+  const time_t start = 1543956575;
+
+  // Can we save a non-dormant state correctly?
+  reset_user_activity(start - 1000);
+  set_network_participation(true);
+  netstatus_flush_to_state(state, start);
+
+  tt_int_op(state->Dormant, OP_EQ, 0);
+  tt_int_op(state->MinutesSinceUserActivity, OP_EQ, 1000 / 60);
+
+  // Can we save a dormant state correctly?
+  set_network_participation(false);
+  netstatus_flush_to_state(state, start);
+
+  tt_int_op(state->Dormant, OP_EQ, 1);
+  tt_int_op(state->MinutesSinceUserActivity, OP_EQ, 0);
+
+ done:
+  or_state_free(state);
+}
+
 #define MAINLOOP_TEST(name) \
   { #name, test_mainloop_## name , TT_FORK, NULL, NULL }
 
@@ -281,5 +355,7 @@ struct testcase_t mainloop_tests[] = {
   MAINLOOP_TEST(update_time_jumps),
   MAINLOOP_TEST(user_activity),
   MAINLOOP_TEST(check_participation),
+  MAINLOOP_TEST(dormant_load_state),
+  MAINLOOP_TEST(dormant_save_state),
   END_OF_TESTCASES
 };
