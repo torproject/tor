@@ -1462,6 +1462,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
 
 #ifndef __APPLE__
+    /* This code was introduced to help debug #28229. */
     int value;
     socklen_t len = sizeof(value);
 
