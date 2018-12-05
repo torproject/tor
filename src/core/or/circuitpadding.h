@@ -17,6 +17,16 @@ typedef struct origin_circuit_t origin_circuit_t;
 typedef struct cell_t cell_t;
 
 /**
+ * Signed error return with the specific property that negative
+ * values mean error codes of various semantics, 0 means success,
+ * and positive values are unused.
+ *
+ * XXX: Tor uses this concept a lot but just calls it int. Should we move
+ * this somewhere centralized? Where?
+ */
+typedef int signed_error_t;
+
+/**
  * These constants specify the types of events that can cause
  * transitions between state machine states.
  *
@@ -43,8 +53,11 @@ typedef enum {
   CIRCPAD_STATE_CHANGED = 1
 } circpad_decision_t;
 
-/** The type for histogram bins */
-typedef uint16_t circpad_hist_bin_t;
+/** The type for the things in histogram bins (aka tokens) */
+typedef uint16_t circpad_hist_token_t;
+
+/** The type for histogram indexes (needs to be negative for errors) */
+typedef int8_t circpad_hist_index_t;
 
 /** The type for absolute time, from monotime_absolute_usec() */
 typedef uint64_t circpad_time_t;
@@ -208,10 +221,10 @@ typedef uint16_t circpad_statenum_t;
 typedef struct circpad_state_t {
   /** how long the histogram is (in bins). Histograms must have at least 2
    *  bins (or 0, if iat distributions are in use). */
-  uint8_t histogram_len;
+  circpad_hist_index_t histogram_len;
   /** histogram itself: an array of uint16s of tokens, whose
    * widths are exponentially spaced, in microseconds */
-  circpad_hist_bin_t histogram[CIRCPAD_MAX_HISTOGRAM_LEN];
+  circpad_hist_token_t histogram[CIRCPAD_MAX_HISTOGRAM_LEN];
   /** total number of tokens */
   uint32_t histogram_total_tokens;
 
@@ -381,16 +394,16 @@ typedef struct circpad_machineinfo_t {
 
   /** A mutable copy of the histogram for the current state.
    *  NULL if remove_tokens is false for that state */
-  circpad_hist_bin_t *histogram;
+  circpad_hist_token_t *histogram;
   /** Length of the above histogram.
    * XXX: This field *could* be removed at the expense of added
    * complexity+overhead for reaching back into the immutable machine
    * state every time we need to inspect the histogram. It's only a byte,
    * though, so it seemed worth it.
    */
-  uint8_t histogram_len;
+  circpad_hist_index_t histogram_len;
   /** Remove token from this index upon sending padding */
-  uint8_t chosen_bin;
+  circpad_hist_index_t chosen_bin;
 
   /** Stop padding/transition if this many cells sent */
   uint64_t state_length;
@@ -558,17 +571,17 @@ char *circpad_machine_to_string(const circpad_machine_t *machine);
 const circpad_machine_t *circpad_string_to_machine(const char *str);
 
 /* Padding negotiation between client and middle */
-int circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell);
-int circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
+signed_error_t circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell);
+signed_error_t circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
                                       crypt_path_t *layer_hint);
-int circpad_negotiate_padding(origin_circuit_t *circ,
+signed_error_t circpad_negotiate_padding(origin_circuit_t *circ,
                           circpad_machine_num_t machine,
-                          int target_hopnum,
-                          int command);
+                          uint8_t target_hopnum,
+                          uint8_t command);
 bool circpad_padding_negotiated(circuit_t *circ,
                            circpad_machine_num_t machine,
-                           int command,
-                           int response);
+                           uint8_t command,
+                           uint8_t response);
 
 MOCK_DECL(circpad_decision_t,
 circpad_machine_schedule_padding,(circpad_machineinfo_t *));
