@@ -16,10 +16,8 @@ TODO sketch for this branch, in rough priority order:
 - Specify an ordered preference list of padding machines
 
 - Larger types?
-  - Larger/different mechanism for machine numbering than just uint8_t
+  - Larger circpad_hist_token_t?
   - Larger circpad_delay_t?
-  - Larger circpad_hist_bin_t?
-  - Large state->range_sec for histograms?
   - Larger circpad_statenum_t?
 
 - Nick's API doc
@@ -29,6 +27,9 @@ TODO sketch for this branch, in rough priority order:
 
 - Circuit RTT measurement will break on var_cell/EXTEND2 cells
   - Are there any heuristics we can use here?
+    - If RELAY_EARLY is only for the first cell of an EXTEND2 series,
+      we can use that. But the proposal currently says MAY, but not MUST
+      for this behavior.
 
 - Rephist timer stats
   - Is this a privacy risk? The adversary could create lots of circuits
