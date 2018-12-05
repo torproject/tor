@@ -3,9 +3,12 @@
 
 #define CONFIG_PRIVATE
 #define POLICIES_PRIVATE
+#define STATEFILE_PRIVATE
 
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "app/config/or_state_st.h"
+#include "app/config/statefile.h"
 #include "core/or/policies.h"
 #include "feature/dirparse/policy_parse.h"
 #include "feature/relay/router.h"
@@ -1527,11 +1530,19 @@ mock_router_get_my_routerinfo_with_err(int *err)
 #define TEST_IPV6_ADDR ("2003::ef01")
 
 static or_options_t mock_options;
+static or_state_t *dummy_state = NULL;
 
 static const or_options_t *
 mock_get_options(void)
 {
   return &mock_options;
+}
+
+/* Mock function to get fake or state */
+static or_state_t *
+get_or_state_replacement(void)
+{
+  return dummy_state;
 }
 
 /** Run unit tests for generating summary lines of exit policies */
@@ -2472,8 +2483,26 @@ test_policies_fascist_firewall_choose_address(void *arg)
 
   UNMOCK(fascist_firewall_rand_prefer_ipv6_addr);
 
+  /* Test auto-failing IPv4 in fascist_firewall_rand_prefer_ipv6_addr(). */
+  MOCK(get_or_state, get_or_state_replacement);
+  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+  dummy_state->IPv4AutoFail = 1;
+  dummy_state->IPv6AutoFail = 0;
+
+  CHECK_CHOSEN_ADDR_RS(fake_rs, FIREWALL_OR_CONNECTION, 0, 1, ipv6_or_ap);
+  CHECK_CHOSEN_ADDR_RS(fake_rs, FIREWALL_OR_CONNECTION, 1, 1, ipv6_or_ap);
+
+  /* Test auto-failing IPv6 in fascist_firewall_rand_prefer_ipv6_addr(). */
+  dummy_state->IPv4AutoFail = 0;
+  dummy_state->IPv6AutoFail = 1;
+
+  CHECK_CHOSEN_ADDR_RS(fake_rs, FIREWALL_OR_CONNECTION, 0, 1, ipv4_or_ap);
+  CHECK_CHOSEN_ADDR_RS(fake_rs, FIREWALL_OR_CONNECTION, 1, 1, ipv4_or_ap);
+
  done:
   UNMOCK(get_options);
+  UNMOCK(get_or_state);
+  or_state_free(dummy_state);
 }
 
 #undef TEST_IPV4_ADDR_STR
