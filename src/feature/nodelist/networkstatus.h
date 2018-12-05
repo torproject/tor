@@ -40,8 +40,9 @@ int compare_digest_to_routerstatus_entry(const void *_key,
                                          const void **_member);
 int compare_digest_to_vote_routerstatus_entry(const void *_key,
                                               const void **_member);
-const routerstatus_t *networkstatus_vote_find_entry(networkstatus_t *ns,
-                                              const char *digest);
+MOCK_DECL(const routerstatus_t *,networkstatus_vote_find_entry,(
+                                              networkstatus_t *ns,
+                                              const char *digest));
 routerstatus_t *networkstatus_vote_find_mutable_entry(networkstatus_t *ns,
                                               const char *digest);
 int networkstatus_vote_find_entry_idx(networkstatus_t *ns,

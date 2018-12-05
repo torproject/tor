@@ -7,12 +7,17 @@
  * \brief Unittests for code in router.c
  **/
 
+#define ROUTER_PRIVATE
+
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/hibernate/hibernate.h"
+#include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/routerstatus_st.h"
 #include "feature/relay/router.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
@@ -231,11 +236,104 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
   UNMOCK(we_are_hibernating);
 }
 
+static networkstatus_t *mock_ns = NULL;
+static networkstatus_t *
+mock_networkstatus_get_live_consensus(time_t now)
+{
+  (void)now;
+  return mock_ns;
+}
+
+static routerstatus_t *mock_rs = NULL;
+static const routerstatus_t *
+mock_networkstatus_vote_find_entry(networkstatus_t *ns, const char *digest)
+{
+  (void)ns;
+  (void)digest;
+  return mock_rs;
+}
+
+static void
+test_router_mark_if_too_old(void *arg)
+{
+  (void)arg;
+  time_t now = approx_time();
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_vote_find_entry, mock_networkstatus_vote_find_entry);
+
+  routerstatus_t rs;
+  networkstatus_t ns;
+  memset(&rs, 0, sizeof(rs));
+  memset(&ns, 0, sizeof(ns));
+  mock_ns = &ns;
+  mock_ns->valid_after = now-3600;
+  mock_rs = &rs;
+  mock_rs->published_on = now - 10;
+
+  // no reason to mark this time.
+  desc_clean_since = now-10;
+  desc_dirty_reason = NULL;
+  mark_my_descriptor_dirty_if_too_old(now);
+  tt_i64_op(desc_clean_since, OP_EQ, now-10);
+
+  // Doesn't appear in consensus?  Still don't mark it.
+  mock_ns = NULL;
+  mark_my_descriptor_dirty_if_too_old(now);
+  tt_i64_op(desc_clean_since, OP_EQ, now-10);
+  mock_ns = &ns;
+
+  // No new descriptor in a long time?  Mark it.
+  desc_clean_since = now - 3600 * 96;
+  mark_my_descriptor_dirty_if_too_old(now);
+  tt_i64_op(desc_clean_since, OP_EQ, 0);
+  tt_str_op(desc_dirty_reason, OP_EQ, "time for new descriptor");
+
+  // Version in consensus published a long time ago?  We won't mark it
+  // if it's been clean for only a short time.
+  desc_clean_since = now - 10;
+  desc_dirty_reason = NULL;
+  mock_rs->published_on = now - 3600 * 96;
+  mark_my_descriptor_dirty_if_too_old(now);
+  tt_i64_op(desc_clean_since, OP_EQ, now - 10);
+
+  // ... but if it's been clean a while, we mark.
+  desc_clean_since = now - 2 * 3600;
+  mark_my_descriptor_dirty_if_too_old(now);
+  tt_i64_op(desc_clean_since, OP_EQ, 0);
+  tt_str_op(desc_dirty_reason, OP_EQ,
+            "version listed in consensus is quite old");
+
+  // same deal if we're marked stale.
+  desc_clean_since = now - 2 * 3600;
+  desc_dirty_reason = NULL;
+  mock_rs->published_on = now - 10;
+  mock_rs->is_staledesc = 1;
+  mark_my_descriptor_dirty_if_too_old(now);
+  tt_i64_op(desc_clean_since, OP_EQ, 0);
+  tt_str_op(desc_dirty_reason, OP_EQ,
+            "listed as stale in consensus");
+
+  // same deal if we're absent from the consensus.
+  desc_clean_since = now - 2 * 3600;
+  desc_dirty_reason = NULL;
+  mock_rs = NULL;
+  mark_my_descriptor_dirty_if_too_old(now);
+  tt_i64_op(desc_clean_since, OP_EQ, 0);
+  tt_str_op(desc_dirty_reason, OP_EQ,
+            "not listed in consensus");
+
+ done:
+  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_vote_find_entry);
+}
+
 #define ROUTER_TEST(name, flags)                          \
   { #name, test_router_ ## name, flags, NULL, NULL }
 
 struct testcase_t router_tests[] = {
   ROUTER_TEST(check_descriptor_bandwidth_changed, TT_FORK),
   ROUTER_TEST(dump_router_to_string_no_bridge_distribution_method, TT_FORK),
+  ROUTER_TEST(mark_if_too_old, TT_FORK),
   END_OF_TESTCASES
 };

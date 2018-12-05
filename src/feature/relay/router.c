@@ -59,6 +59,7 @@
 #include "feature/dircommon/dir_connection_st.h"
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/nodelist/extrainfo_st.h"
+#include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
@@ -1470,9 +1471,9 @@ static extrainfo_t *desc_extrainfo = NULL;
 static const char *desc_gen_reason = "uninitialized reason";
 /** Since when has our descriptor been "clean"?  0 if we need to regenerate it
  * now. */
-static time_t desc_clean_since = 0;
+STATIC time_t desc_clean_since = 0;
 /** Why did we mark the descriptor dirty? */
-static const char *desc_dirty_reason = "Tor just started";
+STATIC const char *desc_dirty_reason = "Tor just started";
 /** Boolean: do we need to regenerate the above? */
 static int desc_needs_upload = 0;
 
@@ -2134,7 +2135,9 @@ mark_my_descriptor_dirty_if_too_old(time_t now)
   /* Now we see whether we want to be retrying frequently or no.  The
    * rule here is that we'll retry frequently if we aren't listed in the
    * live consensus we have, or if the publication time of the
-   * descriptor listed for us in the consensus is very old. */
+   * descriptor listed for us in the consensus is very old, or if the
+   * consensus lists us as "stale" and we haven't regenerated since the
+   * consensus was published. */
   ns = networkstatus_get_live_consensus(now);
   if (ns) {
     rs = networkstatus_vote_find_entry(ns, server_identitykey_digest);
@@ -2142,6 +2145,8 @@ mark_my_descriptor_dirty_if_too_old(time_t now)
       retry_fast_reason = "not listed in consensus";
     else if (rs->published_on < slow_cutoff)
       retry_fast_reason = "version listed in consensus is quite old";
+    else if (rs->is_staledesc && ns->valid_after > desc_clean_since)
+      retry_fast_reason = "listed as stale in consensus";
   }
 
   if (retry_fast_reason && desc_clean_since < fast_cutoff)

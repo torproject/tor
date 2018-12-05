@@ -95,7 +95,7 @@ real_uptime(const routerinfo_t *router, time_t now)
  */
 static int
 dirserv_thinks_router_is_unreliable(time_t now,
-                                    routerinfo_t *router,
+                                    const routerinfo_t *router,
                                     int need_uptime, int need_capacity)
 {
   if (need_uptime) {
@@ -541,7 +541,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
 void
 set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  node_t *node,
-                                 routerinfo_t *ri,
+                                 const routerinfo_t *ri,
                                  time_t now,
                                  int listbadexits)
 {
@@ -593,6 +593,10 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->or_port = ri->or_port;
   rs->dir_port = ri->dir_port;
   rs->is_v2_dir = ri->supports_tunnelled_dir_requests;
+
+  rs->is_staledesc =
+    (ri->cache_info.published_on + DESC_IS_STALE_INTERVAL) < now;
+
   if (options->AuthDirHasIPv6Connectivity == 1 &&
       !tor_addr_is_null(&ri->ipv6_addr) &&
       node->last_reachable6 >= now - REACHABLE_TIMEOUT) {

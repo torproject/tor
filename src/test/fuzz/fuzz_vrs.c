@@ -3,6 +3,7 @@
 #define NS_PARSE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #include "core/or/or.h"
+#include "feature/dirauth/dirvote.h"
 #include "feature/dirparse/ns_parse.h"
 #include "feature/dirparse/unparseable.h"
 #include "lib/memarea/memarea.h"
@@ -35,9 +36,12 @@ fuzz_init(void)
   dummy_vote = tor_malloc_zero(sizeof(*dummy_vote));
   dummy_vote->known_flags = smartlist_new();
   smartlist_split_string(dummy_vote->known_flags,
-                         "Authority BadExit Exit Fast Guard HSDir "
-                         "NoEdConsensus Running Stable V2Dir Valid",
+                         DIRVOTE_UNIVERSAL_FLAGS,
                          " ", 0, 0);
+  smartlist_split_string(dummy_vote->known_flags,
+                         DIRVOTE_OPTIONAL_FLAGS,
+                         " ", 0, 0);
+  smartlist_sort_strings(dummy_vote->known_flags);
   return 0;
 }
 
