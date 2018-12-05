@@ -610,7 +610,8 @@ GENERAL OPTIONS
     Logs
     ServerDNSResolvConfFile
     Tor must remain in client or server mode (some changes to ClientOnly and
-    ORPort are not allowed).
+    ORPort are not allowed). Launching new Onion Services through Control
+    Port is not supported with current syscall sandboxing implementation.
     ClientOnionAuthDir and any files in it won't reload on HUP signal.
     (Default: 0)
 
@@ -2821,6 +2822,8 @@ The following options are used to configure a hidden service.
     Store data files for a hidden service in DIRECTORY. Every hidden service
     must have a separate directory. You may use this option  multiple times to
     specify multiple services. If DIRECTORY does not exist, Tor will create it.
+    Please note that you cannot add new Onion Service to already running Tor
+    instance if **Sandbox** is enabled.
     (Note: in current versions of Tor, if DIRECTORY is a relative path,
     it will be relative to the current
     working directory of Tor instance, not to its DataDirectory.  Do not
