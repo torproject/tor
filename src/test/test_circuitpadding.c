@@ -478,7 +478,7 @@ test_circuitpadding_tokens(void *arg)
   circpad_cell_event_nonpadding_received((circuit_t*)client_side);
   /* We have to save the infinity bin because one inf delay
    * could have been chosen when we transition to burst */
-  circpad_hist_bin_t inf_bin = mi->histogram[4];
+  circpad_hist_token_t inf_bin = mi->histogram[4];
 
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
