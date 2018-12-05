@@ -1460,6 +1460,19 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                tor_socket_strerror(tor_socket_errno(s)));
       goto err;
     }
+
+#ifndef __APPLE__
+    int value;
+    socklen_t len = sizeof(value);
+
+    if (!getsockopt(s, SOL_SOCKET, SO_ACCEPTCONN, &value, &len)) {
+      if (value == 0) {
+        log_err(LD_NET, "Could not listen on %s - "
+                        "getsockopt(.,SO_ACCEPTCONN,.) yields 0.", address);
+        goto err;
+      }
+    }
+#endif /* __APPLE__ */
 #endif /* defined(HAVE_SYS_UN_H) */
   } else {
     log_err(LD_BUG, "Got unexpected address family %d.",
@@ -2894,6 +2907,10 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
     retval = -1;
 
 #ifdef ENABLE_LISTENER_REBIND
+  if (smartlist_len(replacements))
+    log_debug(LD_NET, "%d replacements - starting rebinding loop.",
+              smartlist_len(replacements));
+
   SMARTLIST_FOREACH_BEGIN(replacements, listener_replacement_t *, r) {
     int addr_in_use = 0;
     int skip = 0;
@@ -2905,8 +2922,11 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
       connection_listener_new_for_port(r->new_port, &skip, &addr_in_use);
     connection_t *old_conn = r->old_conn;
 
-    if (skip)
+    if (skip) {
+      log_debug(LD_NET, "Skipping creating new listener for %s:%d",
+                old_conn->address, old_conn->port);
       continue;
+    }
 
     connection_close_immediate(old_conn);
     connection_mark_for_close(old_conn);
