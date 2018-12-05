@@ -67,10 +67,11 @@
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
 #include "lib/compress/compress.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_s2k.h"
 #include "lib/geoip/geoip.h"
+#include "lib/net/resolve.h"
 
 #include "lib/process/waitpid.h"
 
@@ -1417,6 +1418,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
       tor_free_all(0);
       return -1;
     }
+    tor_make_getaddrinfo_cache_active();
 
     // registering libevent rng
 #ifdef HAVE_EVUTIL_SECURE_RNG_SET_URANDOM_DEVICE_FILE

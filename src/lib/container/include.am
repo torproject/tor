@@ -7,7 +7,6 @@ endif
 
 src_lib_libtor_container_a_SOURCES =			\
 	src/lib/container/bloomfilt.c			\
-	src/lib/container/buffers.c			\
 	src/lib/container/map.c				\
 	src/lib/container/order.c			\
 	src/lib/container/smartlist.c
@@ -20,7 +19,6 @@ src_lib_libtor_container_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 noinst_HEADERS +=					\
 	src/lib/container/bitarray.h			\
 	src/lib/container/bloomfilt.h			\
-	src/lib/container/buffers.h			\
 	src/lib/container/handles.h			\
 	src/lib/container/map.h				\
 	src/lib/container/order.h			\

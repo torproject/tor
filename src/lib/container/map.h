@@ -15,7 +15,7 @@
 #include "lib/testsupport/testsupport.h"
 #include "lib/cc/torint.h"
 
-#include "siphash.h"
+#include "ext/siphash.h"
 
 #define DECLARE_MAP_FNS(maptype, keytype, prefix)                       \
   typedef struct maptype maptype;                                       \

@@ -16,8 +16,8 @@
 #include "lib/string/parse_int.h"
 #include "lib/string/util_string.h"
 
-#include "siphash.h"
-#include "ht.h"
+#include "ext/siphash.h"
+#include "ext/ht.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -420,5 +420,14 @@ void
 tor_make_getaddrinfo_cache_active(void)
 {
   sandbox_getaddrinfo_is_active = 1;
+}
+#else
+void
+sandbox_disable_getaddrinfo_cache(void)
+{
+}
+void
+tor_make_getaddrinfo_cache_active(void)
+{
 }
 #endif

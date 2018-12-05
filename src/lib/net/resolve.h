@@ -42,7 +42,6 @@ int tor_getaddrinfo(const char *name, const char *servname,
                         struct addrinfo **res);
 void tor_freeaddrinfo(struct addrinfo *addrinfo);
 void tor_free_getaddrinfo_cache(void);
-void tor_make_getaddrinfo_cache_active(void);
 #else /* !(defined(USE_SANDBOX_GETADDRINFO)) */
 #define tor_getaddrinfo(name, servname, hints, res)  \
   getaddrinfo((name),(servname), (hints),(res))
@@ -54,5 +53,6 @@ void tor_make_getaddrinfo_cache_active(void);
 #endif /* defined(USE_SANDBOX_GETADDRINFO) */
 
 void sandbox_disable_getaddrinfo_cache(void);
+void tor_make_getaddrinfo_cache_active(void);
 
 #endif

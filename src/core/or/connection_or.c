@@ -22,7 +22,7 @@
  **/
 #include "core/or/or.h"
 #include "feature/client/bridges.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 /*
  * Define this so we get channel internal functions, since we're implementing
  * part of a subclass (channel_tls_t).

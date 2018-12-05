@@ -57,7 +57,7 @@
 #define CONNECTION_PRIVATE
 #include "core/or/or.h"
 #include "feature/client/bridges.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/tls/buffers_tls.h"
 #include "lib/err/backtrace.h"
 

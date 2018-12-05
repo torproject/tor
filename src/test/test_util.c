@@ -13,7 +13,7 @@
 #define SUBPROCESS_PRIVATE
 #include "lib/testsupport/testsupport.h"
 #include "core/or/or.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "app/config/config.h"
 #include "feature/control/control.h"
 #include "feature/client/transports.h"

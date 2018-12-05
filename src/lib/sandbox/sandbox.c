@@ -38,13 +38,12 @@
 #include "lib/err/torerr.h"
 #include "lib/log/log.h"
 #include "lib/cc/torint.h"
-#include "lib/net/resolve.h"
 #include "lib/malloc/malloc.h"
 #include "lib/string/scanf.h"
 
-#include "tor_queue.h"
-#include "ht.h"
-#include "siphash.h"
+#include "ext/tor_queue.h"
+#include "ext/ht.h"
+#include "ext/siphash.h"
 
 #define DEBUGGING_CLOSE
 
@@ -1553,7 +1552,6 @@ install_syscall_filter(sandbox_cfg_t* cfg)
 
   // marking the sandbox as active
   sandbox_active = 1;
-  tor_make_getaddrinfo_cache_active();
 
  end:
   seccomp_release(ctx);
@@ -1798,11 +1796,6 @@ int
 sandbox_is_active(void)
 {
   return 0;
-}
-
-void
-sandbox_disable_getaddrinfo_cache(void)
-{
 }
 
 #endif /* !defined(USE_LIBSECCOMP) */
