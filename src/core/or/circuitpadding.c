@@ -37,10 +37,11 @@
 
 circpad_decision_t circpad_machine_remove_token(circpad_machineinfo_t *mi);
 circpad_machineinfo_t *circpad_circuit_machineinfo_new(circuit_t *on_circ,
-                                               int machine_index);
+                                                       int machine_index);
 STATIC circpad_delay_t circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi,
-                                              int bin);
-STATIC int circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi,
+                                                     circpad_hist_index_t bin);
+STATIC circpad_hist_index_t circpad_histogram_usec_to_bin(
+                                         circpad_machineinfo_t *mi,
                                          circpad_delay_t us);
 
 STATIC const circpad_state_t *circpad_machine_current_state(
@@ -51,7 +52,7 @@ void circpad_machine_remove_higher_token(circpad_machineinfo_t *mi,
                                          circpad_delay_t target_bin_us);
 void circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
                                           circpad_delay_t target_bin_us,
-                                          int use_usec);
+                                          bool use_usec);
 STATIC void circpad_machine_setup_tokens(circpad_machineinfo_t *mi);
 static inline circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t
                                           circ_purpose);
@@ -163,7 +164,8 @@ circpad_machine_current_state(circpad_machineinfo_t *mi)
  * It has a usec value of CIRCPAD_DELAY_INFINITE (UINT32_MAX).
  */
 STATIC circpad_delay_t
-circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
+circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi,
+                              circpad_hist_index_t bin)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
   circpad_delay_t start_usec;
@@ -207,12 +209,12 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi, int bin)
  * This means that technically the last bin (histogram_len-2)
  * has range [start_usec+range_usec, CIRCPAD_DELAY_INFINITE].
  */
-STATIC int
+STATIC circpad_hist_index_t
 circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi, circpad_delay_t usec)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
   circpad_delay_t start_usec;
-  int bin;
+  int32_t bin; /* Larger than return type to properly clamp overflow */
 
   /* Our state should have been checked to be non-null by the caller
    * (circpad_machine_remove_token()) */
@@ -274,13 +276,13 @@ circpad_machine_setup_tokens(circpad_machineinfo_t *mi)
   if (!mi->histogram || (mi->histogram
           && mi->histogram_len != state->histogram_len)) {
     tor_free(mi->histogram); // null ok
-    mi->histogram = tor_malloc_zero(sizeof(circpad_hist_bin_t)
+    mi->histogram = tor_malloc_zero(sizeof(circpad_hist_token_t)
                                     *state->histogram_len);
   }
   mi->histogram_len = state->histogram_len;
 
   memcpy(mi->histogram, state->histogram,
-         sizeof(circpad_hist_bin_t)*state->histogram_len);
+         sizeof(circpad_hist_token_t)*state->histogram_len);
 }
 
 /**
@@ -338,8 +340,8 @@ STATIC circpad_delay_t
 circpad_machine_sample_delay(circpad_machineinfo_t *mi)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
-  const circpad_hist_bin_t *histogram = NULL;
-  int curr_bin = 0;
+  const circpad_hist_token_t *histogram = NULL;
+  circpad_hist_index_t curr_bin = 0;
   uint32_t curr_weight = 0;
   uint32_t histogram_total_tokens = 0;
   uint32_t bin_choice;
@@ -361,7 +363,7 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
     tor_assert(mi->histogram && mi->histogram_len == state->histogram_len);
 
     histogram = mi->histogram;
-    for (int b = 0; b < state->histogram_len; b++)
+    for (circpad_hist_index_t b = 0; b < state->histogram_len; b++)
       histogram_total_tokens += histogram[b];
   } else {
     /* We have a histogram, but it's immutable */
@@ -515,11 +517,12 @@ circpad_distribution_sample(circpad_distribution_t dist)
  * Find the index of the first bin whose upper bound is
  * greater than the target, and that has tokens remaining.
  */
-static int
+static circpad_hist_index_t
 circpad_machine_first_higher_index(circpad_machineinfo_t *mi,
                                    circpad_delay_t target_bin_usec)
 {
-  int bin = circpad_histogram_usec_to_bin(mi, target_bin_usec);
+  circpad_hist_index_t bin = circpad_histogram_usec_to_bin(mi,
+                                                           target_bin_usec);
 
   /* Don't remove from the infinity bin */
   for (; bin < CIRCPAD_INFINITY_BIN(mi); bin++) {
@@ -536,11 +539,12 @@ circpad_machine_first_higher_index(circpad_machineinfo_t *mi,
  * Find the index of the first bin whose lower bound is
  * lower than the target, and that has tokens remaining.
  */
-static int
+static circpad_hist_index_t
 circpad_machine_first_lower_index(circpad_machineinfo_t *mi,
                                   circpad_delay_t target_bin_usec)
 {
-  int bin = circpad_histogram_usec_to_bin(mi, target_bin_usec);
+  circpad_hist_index_t bin = circpad_histogram_usec_to_bin(mi,
+                                                           target_bin_usec);
 
   for (; bin >= 0; bin--) {
     if (mi->histogram[bin] &&
@@ -563,7 +567,8 @@ circpad_machine_remove_higher_token(circpad_machineinfo_t *mi,
   /* We need to remove the token from the first bin
    * whose upper bound is greater than the target, and that
    * has tokens remaining. */
-  int bin = circpad_machine_first_higher_index(mi, target_bin_usec);
+  circpad_hist_index_t bin = circpad_machine_first_higher_index(mi,
+                                                     target_bin_usec);
 
   if (bin >= 0 && bin < CIRCPAD_INFINITY_BIN(mi)) {
     tor_assert(mi->histogram[bin]);
@@ -579,7 +584,8 @@ void
 circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
                                    circpad_delay_t target_bin_usec)
 {
-  int bin = circpad_machine_first_lower_index(mi, target_bin_usec);
+  circpad_hist_index_t bin = circpad_machine_first_lower_index(mi,
+          target_bin_usec);
 
   if (bin >= 0 && bin < CIRCPAD_INFINITY_BIN(mi)) {
     tor_assert(mi->histogram[bin]);
@@ -596,11 +602,14 @@ circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
 void
 circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
                                      circpad_delay_t target_bin_usec,
-                                     int use_usec)
+                                     bool use_usec)
 {
-  int lower = circpad_machine_first_lower_index(mi, target_bin_usec);
-  int higher = circpad_machine_first_higher_index(mi, target_bin_usec);
-  int current = circpad_histogram_usec_to_bin(mi, target_bin_usec);
+  circpad_hist_index_t lower = circpad_machine_first_lower_index(mi,
+          target_bin_usec);
+  circpad_hist_index_t higher = circpad_machine_first_higher_index(mi,
+          target_bin_usec);
+  circpad_hist_index_t current = circpad_histogram_usec_to_bin(mi,
+          target_bin_usec);
   circpad_delay_t lower_usec;
   circpad_delay_t higher_usec;
 
@@ -674,7 +683,8 @@ static void
 circpad_machine_remove_exact(circpad_machineinfo_t *mi,
                              circpad_delay_t target_bin_usec)
 {
-  int bin = circpad_histogram_usec_to_bin(mi, target_bin_usec);
+  circpad_hist_index_t bin = circpad_histogram_usec_to_bin(mi,
+          target_bin_usec);
 
   if (mi->histogram[bin] > 0)
     mi->histogram[bin]--;
@@ -699,7 +709,7 @@ circpad_check_token_supply(circpad_machineinfo_t *mi)
    * We also do not count infinity bin in histogram totals.
    */
   if (mi->histogram_len && mi->histogram) {
-    for (int b = 0; b < CIRCPAD_INFINITY_BIN(mi); b++)
+    for (circpad_hist_index_t b = 0; b < CIRCPAD_INFINITY_BIN(mi); b++)
       histogram_total_tokens += mi->histogram[b];
 
     /* If we change state, we're done */
@@ -811,13 +821,13 @@ circpad_machine_remove_token(circpad_machineinfo_t *mi)
  *
  * Returns negative on error, 0 on success.
  */
-static int
-circpad_send_command_to_hop(origin_circuit_t *circ, int hopnum,
+static signed_error_t
+circpad_send_command_to_hop(origin_circuit_t *circ, uint8_t hopnum,
                             uint8_t relay_command, const uint8_t *payload,
                             ssize_t payload_len)
 {
   crypt_path_t *target_hop = circuit_get_cpath_hop(circ, hopnum);
-  int ret;
+  signed_error_t ret;
 
   /* Check that the cpath has the target hop */
   if (!target_hop) {
@@ -2220,11 +2230,11 @@ circpad_circuit_supports_padding(origin_circuit_t *circ,
  *
  * Returns -1 on error, 0 on success.
  */
-int
+signed_error_t
 circpad_negotiate_padding(origin_circuit_t *circ,
                           circpad_machine_num_t machine,
-                          int target_hopnum,
-                          int command)
+                          uint8_t target_hopnum,
+                          uint8_t command)
 {
   circpad_negotiate_t type;
   cell_t cell;
@@ -2267,8 +2277,8 @@ circpad_negotiate_padding(origin_circuit_t *circ,
 bool
 circpad_padding_negotiated(circuit_t *circ,
                            circpad_machine_num_t machine,
-                           int command,
-                           int response)
+                           uint8_t command,
+                           uint8_t response)
 {
   circpad_negotiated_t type;
   cell_t cell;
@@ -2307,7 +2317,7 @@ circpad_padding_negotiated(circuit_t *circ,
  *
  * Returns -1 on error, 0 on success.
  */
-int
+signed_error_t
 circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
 {
   int retval = 0;
@@ -2368,7 +2378,7 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
  *
  * Returns -1 on error, 0 on success.
  */
-int
+signed_error_t
 circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
                                   crypt_path_t *layer_hint)
 {
