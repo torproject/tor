@@ -6972,8 +6972,8 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
       loglevel = LOG_INFO;
     }
 
-    tor_log(loglevel, LD_CONTROL,
-            "Bootstrapped %d%%: %s", progress ? progress : status, summary);
+    tor_log(loglevel, LD_CONTROL, "Bootstrapped %d%% (%s): %s",
+            progress ? progress : status, tag, summary);
     tor_snprintf(buf, sizeof(buf),
         "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
         progress ? progress : status, tag, summary);
@@ -7055,9 +7055,9 @@ control_event_bootstrap_problem(const char *warn, const char *reason,
     hostaddr = tor_strdup("?");
 
   log_fn(severity,
-         LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s; "
+         LD_CONTROL, "Problem bootstrapping. Stuck at %d%% (%s): %s. (%s; %s; "
          "count %d; recommendation %s; host %s at %s)",
-         status, summary, warn, reason,
+         status, tag, summary, warn, reason,
          bootstrap_problems, recommendation,
          or_id, hostaddr);
 
