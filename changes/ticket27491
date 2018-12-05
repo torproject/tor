@@ -1,0 +1,6 @@
+  o Minor features (ipv6):
+    - If ClientAutoIPv6ORPort is set and we fail IPv4 or IPv6 connections, mark
+      the number of failures based on the IP version. This is used to prefer
+      the more reliable IP version. If we automatically fail a version, mark
+      it as "failed" and avoid it. These counters expire after a week. Closes
+      ticket 27491. Patch by Neel Chauhan.
