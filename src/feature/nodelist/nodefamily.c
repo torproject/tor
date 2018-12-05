@@ -93,10 +93,44 @@ nodefamily_parse(const char *s, const uint8_t *rsa_id_self,
 {
   smartlist_t *sl = smartlist_new();
   smartlist_split_string(sl, s, NULL, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  nodefamily_t *result = nodefamily_from_members(sl, rsa_id_self, flags);
+  nodefamily_t *result = nodefamily_from_members(sl, rsa_id_self, flags, NULL);
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_free(sl);
   return result;
+}
+
+/**
+ * Canonicalize the family list <b>s</b>, returning a newly allocated string.
+ *
+ * The canonicalization rules are fully specified in dir-spec.txt, but,
+ * briefly: $hexid entries are put in caps, $hexid[=~]foo entries are
+ * truncated, nicknames are put into lowercase, unrecognized entries are left
+ * alone, and everything is sorted.
+ **/
+char *
+nodefamily_canonicalize(const char *s, const uint8_t *rsa_id_self,
+                        unsigned flags)
+{
+  smartlist_t *sl = smartlist_new();
+  smartlist_t *result_members = smartlist_new();
+  smartlist_split_string(sl, s, NULL, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  nodefamily_t *nf = nodefamily_from_members(sl, rsa_id_self, flags,
+                                             result_members);
+
+  char *formatted = nodefamily_format(nf);
+  smartlist_split_string(result_members, formatted, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  smartlist_sort_strings(result_members);
+  char *combined = smartlist_join_strings(result_members, " ", 0, NULL);
+
+  nodefamily_free(nf);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_free(sl);
+  SMARTLIST_FOREACH(result_members, char *, cp, tor_free(cp));
+  smartlist_free(result_members);
+  tor_free(formatted);
+
+  return combined;
 }
 
 /**
@@ -117,11 +151,15 @@ compare_members(const void *a, const void *b)
  * family declaration if it is not there already.
  *
  * The <b>flags</b> element is interpreted as in nodefamily_parse().
+ *
+ * If <b>unrecognized</b> is provided, fill it copies of any unrecognized
+ * members.  (Note that malformed $hexids are not considered unrecognized.)
  **/
 nodefamily_t *
 nodefamily_from_members(const smartlist_t *members,
                         const uint8_t *rsa_id_self,
-                        unsigned flags)
+                        unsigned flags,
+                        smartlist_t *unrecognized_out)
 {
   const int n_self = rsa_id_self ? 1 : 0;
   int n_bad_elements = 0;
@@ -135,6 +173,7 @@ nodefamily_from_members(const smartlist_t *members,
       ptr[0] = NODEFAMILY_BY_NICKNAME;
       tor_assert(strlen(cp) < DIGEST_LEN); // guaranteed by is_legal_nickname
       memcpy(ptr+1, cp, strlen(cp));
+      tor_strlower((char*) ptr+1);
       bad_element = false;
     } else if (is_legal_hexdigest(cp)) {
       char digest_buf[DIGEST_LEN];
@@ -145,6 +184,9 @@ nodefamily_from_members(const smartlist_t *members,
         ptr[0] = NODEFAMILY_BY_RSA_ID;
         memcpy(ptr+1, digest_buf, DIGEST_LEN);
       }
+    } else {
+      if (unrecognized_out)
+        smartlist_add_strdup(unrecognized_out, cp);
     }
 
     if (bad_element) {
@@ -346,6 +388,7 @@ nodefamily_format(const nodefamily_t *family)
         char buf[HEX_DIGEST_LEN+2];
         buf[0]='$';
         base16_encode(buf+1, sizeof(buf)-1, (char*)ptr+1, DIGEST_LEN);
+        tor_strupper(buf);
         smartlist_add_strdup(sl, buf);
         break;
       }

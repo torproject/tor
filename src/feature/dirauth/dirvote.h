@@ -57,7 +57,7 @@
 #define MIN_SUPPORTED_CONSENSUS_METHOD 25
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 28
+#define MAX_SUPPORTED_CONSENSUS_METHOD 29
 
 /** Lowest consensus method where authorities vote on required/recommended
  * protocols. */
@@ -78,6 +78,12 @@
 /** Lowest consensus method where microdescriptors do not contain relay IPv6
  * addresses. See #23828 and #20916. */
 #define MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC 28
+
+/**
+ * Lowest consensus method where microdescriptor lines are put in canonical
+ * form for improved compressibility and ease of storage. See proposal 298.
+ **/
+#define MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS 29
 
 /** Default bandwidth to clip unmeasured bandwidths to using method >=
  * MIN_METHOD_TO_CLIP_UNMEASURED_BW.  (This is not a consensus method; do not

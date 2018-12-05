@@ -117,10 +117,14 @@ void router_free_all(void);
 /* Used only by router.c and test.c */
 STATIC void get_platform_str(char *platform, size_t len);
 STATIC int router_write_fingerprint(int hashed);
+STATIC smartlist_t *get_my_declared_family(const or_options_t *options);
+
 #ifdef TOR_UNIT_TESTS
 extern time_t desc_clean_since;
 extern const char *desc_dirty_reason;
+void set_server_identity_key_digest_testing(const uint8_t *digest);
 #endif
+
 #endif
 
 #endif /* !defined(TOR_ROUTER_H) */

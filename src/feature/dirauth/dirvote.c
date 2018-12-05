@@ -28,6 +28,7 @@
 #include "feature/nodelist/fmt_routerstatus.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nodefamily.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/router.h"
@@ -3799,8 +3800,16 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
     smartlist_add_asprintf(chunks, "a %s\n",
                            fmt_addrport(&ri->ipv6_addr, ri->ipv6_orport));
 
-  if (family)
-    smartlist_add_asprintf(chunks, "family %s\n", family);
+  if (family) {
+    if (consensus_method < MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS) {
+      smartlist_add_asprintf(chunks, "family %s\n", family);
+    } else {
+      const uint8_t *id = (const uint8_t *)ri->cache_info.identity_digest;
+      char *canonical_family = nodefamily_canonicalize(family, id, 0);
+      smartlist_add_asprintf(chunks, "family %s\n", canonical_family);
+      tor_free(canonical_family);
+    }
+  }
 
   if (summary && strcmp(summary, "reject 1-65535"))
     smartlist_add_asprintf(chunks, "p %s\n", summary);
@@ -3898,7 +3907,10 @@ static const struct consensus_method_range_t {
   int high;
 } microdesc_consensus_methods[] = {
   {MIN_SUPPORTED_CONSENSUS_METHOD, MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC - 1},
-  {MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC, MAX_SUPPORTED_CONSENSUS_METHOD},
+  {MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC,
+   MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS - 1},
+  {MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS,
+   MAX_SUPPORTED_CONSENSUS_METHOD},
   {-1, -1}
 };
 

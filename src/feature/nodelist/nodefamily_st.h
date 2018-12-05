@@ -26,12 +26,12 @@ struct nodefamily_t {
 
 #define NODEFAMILY_MEMBER_LEN (1+DIGEST_LEN)
 
-/** Tag byte, indicates that the following bytes are a NUL-padded nickname.
- */
-#define NODEFAMILY_BY_NICKNAME 0
 /** Tag byte, indicates that the following bytes are a RSA1024 SHA1 ID.
  */
-#define NODEFAMILY_BY_RSA_ID 1
+#define NODEFAMILY_BY_RSA_ID 0
+/** Tag byte, indicates that the following bytes are a NUL-padded nickname.
+ */
+#define NODEFAMILY_BY_NICKNAME 1
 
 /**
  * Number of bytes to allocate in the array for a nodefamily_t with N members.

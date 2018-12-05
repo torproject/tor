@@ -7,6 +7,7 @@
  * \brief Unittests for code in router.c
  **/
 
+#define CONFIG_PRIVATE
 #define ROUTER_PRIVATE
 
 #include "core/or/or.h"
@@ -15,6 +16,8 @@
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/networkstatus_st.h"
+#include "feature/nodelist/node_st.h"
+#include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerstatus_st.h"
@@ -22,6 +25,7 @@
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/encoding/confline.h"
 
 /* Test suite stuff */
 #include "test/test.h"
@@ -328,6 +332,155 @@ test_router_mark_if_too_old(void *arg)
   UNMOCK(networkstatus_vote_find_entry);
 }
 
+static node_t fake_node;
+static const node_t *
+mock_node_get_by_nickname(const char *name, unsigned flags)
+{
+  (void)flags;
+  if (!strcasecmp(name, "crumpet"))
+    return &fake_node;
+  else
+    return NULL;
+}
+
+static void
+test_router_get_my_family(void *arg)
+{
+  (void)arg;
+  or_options_t *options = options_new();
+  smartlist_t *sl = NULL;
+  char *join = NULL;
+  // Overwrite the result of router_get_my_identity_digest().  This
+  // happens to be okay, but only for testing.
+  set_server_identity_key_digest_testing(
+                                   (const uint8_t*)"holeinthebottomofthe");
+
+  setup_capture_of_logs(LOG_WARN);
+
+  // No family listed -- so there's no list.
+  sl = get_my_declared_family(options);
+  tt_ptr_op(sl, OP_EQ, NULL);
+  expect_no_log_entry();
+
+#define CLEAR() do {                                    \
+    if (sl) {                                           \
+      SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));  \
+      smartlist_free(sl);                               \
+    }                                                   \
+    tor_free(join);                                     \
+    mock_clean_saved_logs();                            \
+  } while (0)
+
+  // Add a single nice friendly hex member.  This should be enough
+  // to have our own ID added.
+  tt_ptr_op(options->MyFamily, OP_EQ, NULL);
+  config_line_append(&options->MyFamily, "MyFamily",
+                     "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+
+  sl = get_my_declared_family(options);
+  tt_ptr_op(sl, OP_NE, NULL);
+  tt_int_op(smartlist_len(sl), OP_EQ, 2);
+  join = smartlist_join_strings(sl, " ", 0, NULL);
+  tt_str_op(join, OP_EQ,
+            "$686F6C65696E746865626F74746F6D6F66746865 "
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+  expect_no_log_entry();
+  CLEAR();
+
+  // Add a hex member with a ~.  The ~ part should get removed.
+  config_line_append(&options->MyFamily, "MyFamily",
+                     "$0123456789abcdef0123456789abcdef01234567~Muffin");
+  sl = get_my_declared_family(options);
+  tt_ptr_op(sl, OP_NE, NULL);
+  tt_int_op(smartlist_len(sl), OP_EQ, 3);
+  join = smartlist_join_strings(sl, " ", 0, NULL);
+  tt_str_op(join, OP_EQ,
+            "$0123456789ABCDEF0123456789ABCDEF01234567 "
+            "$686F6C65696E746865626F74746F6D6F66746865 "
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+  expect_no_log_entry();
+  CLEAR();
+
+  // Nickname lookup will fail, so a nickname will appear verbatim.
+  config_line_append(&options->MyFamily, "MyFamily",
+                     "BAGEL");
+  sl = get_my_declared_family(options);
+  tt_ptr_op(sl, OP_NE, NULL);
+  tt_int_op(smartlist_len(sl), OP_EQ, 4);
+  join = smartlist_join_strings(sl, " ", 0, NULL);
+  tt_str_op(join, OP_EQ,
+            "$0123456789ABCDEF0123456789ABCDEF01234567 "
+            "$686F6C65696E746865626F74746F6D6F66746865 "
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA "
+            "bagel");
+  expect_single_log_msg_containing(
+           "There is a router named \"BAGEL\" in my declared family, but "
+           "I have no descriptor for it.");
+  CLEAR();
+
+  // A bogus digest should fail entirely.
+  config_line_append(&options->MyFamily, "MyFamily",
+                     "$painauchocolat");
+  sl = get_my_declared_family(options);
+  tt_ptr_op(sl, OP_NE, NULL);
+  tt_int_op(smartlist_len(sl), OP_EQ, 4);
+  join = smartlist_join_strings(sl, " ", 0, NULL);
+  tt_str_op(join, OP_EQ,
+            "$0123456789ABCDEF0123456789ABCDEF01234567 "
+            "$686F6C65696E746865626F74746F6D6F66746865 "
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA "
+            "bagel");
+  // "BAGEL" is still there, but it won't make a warning, because we already
+  // warned about it.
+  expect_single_log_msg_containing(
+           "There is a router named \"$painauchocolat\" in my declared "
+           "family, but that isn't a legal digest or nickname. Skipping it.");
+  CLEAR();
+
+  // Let's introduce a node we can look up by nickname
+  memset(&fake_node, 0, sizeof(fake_node));
+  memcpy(fake_node.identity, "whydoyouasknonononon", DIGEST_LEN);
+  MOCK(node_get_by_nickname, mock_node_get_by_nickname);
+
+  config_line_append(&options->MyFamily, "MyFamily",
+                     "CRUmpeT");
+  sl = get_my_declared_family(options);
+  tt_ptr_op(sl, OP_NE, NULL);
+  tt_int_op(smartlist_len(sl), OP_EQ, 5);
+  join = smartlist_join_strings(sl, " ", 0, NULL);
+  tt_str_op(join, OP_EQ,
+            "$0123456789ABCDEF0123456789ABCDEF01234567 "
+            "$686F6C65696E746865626F74746F6D6F66746865 "
+            "$776879646F796F7561736B6E6F6E6F6E6F6E6F6E "
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA "
+            "bagel");
+  // "BAGEL" is still there, but it won't make a warning, because we already
+  // warned about it.  Some with "$painauchocolat".
+  expect_single_log_msg_containing(
+           "There is a router named \"CRUmpeT\" in my declared "
+           "family, but it wasn't listed by digest. Please consider saying "
+           "$776879646F796F7561736B6E6F6E6F6E6F6E6F6E instead, if that's "
+           "what you meant.");
+  CLEAR();
+  UNMOCK(node_get_by_nickname);
+
+  // Try a singleton list containing only us: It should give us NULL.
+  config_free_lines(options->MyFamily);
+  config_line_append(&options->MyFamily, "MyFamily",
+                     "$686F6C65696E746865626F74746F6D6F66746865");
+  sl = get_my_declared_family(options);
+  tt_ptr_op(sl, OP_EQ, NULL);
+  expect_no_log_entry();
+
+ done:
+  or_options_free(options);
+  teardown_capture_of_logs();
+  CLEAR();
+  UNMOCK(node_get_by_nickname);
+
+#undef CLEAR
+}
+
 #define ROUTER_TEST(name, flags)                          \
   { #name, test_router_ ## name, flags, NULL, NULL }
 
@@ -335,5 +488,6 @@ struct testcase_t router_tests[] = {
   ROUTER_TEST(check_descriptor_bandwidth_changed, TT_FORK),
   ROUTER_TEST(dump_router_to_string_no_bridge_distribution_method, TT_FORK),
   ROUTER_TEST(mark_if_too_old, TT_FORK),
+  ROUTER_TEST(get_my_family, TT_FORK),
   END_OF_TESTCASES
 };

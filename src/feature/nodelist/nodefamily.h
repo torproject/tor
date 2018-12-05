@@ -27,7 +27,8 @@ nodefamily_t *nodefamily_parse(const char *s,
                                unsigned flags);
 nodefamily_t *nodefamily_from_members(const struct smartlist_t *members,
                                       const uint8_t *rsa_id_self,
-                                      unsigned flags);
+                                      unsigned flags,
+                                      smartlist_t *unrecognized_out);
 void nodefamily_free_(nodefamily_t *family);
 #define nodefamily_free(family) \
   FREE_AND_NULL(nodefamily_t, nodefamily_free_, (family))
@@ -41,6 +42,8 @@ bool nodefamily_contains_node(const nodefamily_t *family,
 void nodefamily_add_nodes_to_smartlist(const nodefamily_t *family,
                                        struct smartlist_t *out);
 char *nodefamily_format(const nodefamily_t *family);
+char *nodefamily_canonicalize(const char *s, const uint8_t *rsa_id_self,
+                              unsigned flags);
 
 void nodefamily_free_all(void);
 
