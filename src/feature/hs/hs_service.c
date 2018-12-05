@@ -3627,8 +3627,10 @@ hs_service_del_ephemeral(const char *address)
     goto err;
   }
 
-  /* Close circuits, remove from map and finally free. */
-  close_service_circuits(service);
+  /* Close introduction circuits, remove from map and finally free. Notice
+   * that the rendezvous circuits aren't closed in order for any existing
+   * connections to finish. We let the application terminate them. */
+  close_service_intro_circuits(service);
   remove_service(hs_service_map, service);
   hs_service_free(service);
 
