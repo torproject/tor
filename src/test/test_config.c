@@ -5820,7 +5820,7 @@ test_config_kvline_parse(void *arg)
   (void)arg;
 
   config_line_t *lines = NULL;
-  char *enc;
+  char *enc = NULL;
 
   lines = kvline_parse("A=B CD=EF", 0);
   tt_assert(lines);
