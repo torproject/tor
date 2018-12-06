@@ -193,6 +193,9 @@ install:
   - if [[ "$RUST_OPTIONS" != "" ]]; then rustup --version; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then rustc --version; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then cargo --version; fi
+  ## Get python version
+  - python --version
+  ## run stem tests if they are enabled.
   - if [[ "$TEST_STEM" != "" ]]; then pushd stem; python -c "from stem import stem; print(stem.__version__);"; git log -1; popd; fi
 
 script:
