@@ -18,8 +18,8 @@
 # Optionally uses ipaddress (python 3 builtin) or py2-ipaddress (package)
 # for netblock analysis.
 #
-# Then read the logs to make sure the fallbacks aren't dominated by a single
-# netblock or port.
+# After running this script, read the logs to make sure the fallbacks aren't
+# dominated by a single netblock or port.
 
 # Script by weasel, April 2015
 # Portions by gsathya & karsten, 2013
@@ -39,8 +39,6 @@ import urllib
 import urllib2
 import hashlib
 import dateutil.parser
-# bson_lazy provides bson
-#from bson import json_util
 import copy
 import re
 
@@ -1400,7 +1398,7 @@ class CandidateList(dict):
         each line's key/value pairs are placed in a dictonary,
         (of string -> string key/value pairs),
         and these dictionaries are placed in an array.
-        comments start with # and are ignored """
+        comments start with # and are ignored. """
     file_data = file_obj['data']
     file_name = file_obj['name']
     relaylist = []
