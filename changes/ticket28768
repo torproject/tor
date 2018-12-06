@@ -1,0 +1,4 @@
+  o Minor features (fallback directory mirrors):
+    - Accept fallbacks that deliver reasonably live consensuses.
+      (Consensuses that expired less than 24 hours ago.)
+      Closes ticket 28768.

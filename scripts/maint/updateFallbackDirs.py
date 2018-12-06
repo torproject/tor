@@ -98,19 +98,24 @@ MUST_BE_RUNNING_NOW = (PERFORM_IPV4_DIRPORT_CHECKS
 # Clients have been using microdesc consensuses by default for a while now
 DOWNLOAD_MICRODESC_CONSENSUS = True
 
-# If a relay delivers an expired consensus, if it expired less than this many
-# seconds ago, we still allow the relay. This should never be less than -90,
-# as all directory mirrors should have downloaded a consensus 90 minutes
-# before it expires. It should never be more than 24 hours, because clients
-# reject consensuses that are older than REASONABLY_LIVE_TIME.
-# For the consensus expiry check to be accurate, the machine running this
-# script needs an accurate clock.
+# If a relay delivers an invalid consensus, if it expired less than this many
+# seconds ago, accept the relay as a fallback. For the consensus expiry check
+# to be accurate, the machine running this script needs an accurate clock.
 #
-# Relays on 0.3.0 and later return a 404 when they are about to serve an
-# expired consensus. This makes them fail the download check.
-# We use a tolerance of 0, so that 0.2.x series relays also fail the download
-# check if they serve an expired consensus.
-CONSENSUS_EXPIRY_TOLERANCE = 0
+# Relays on 0.3.0 and later return a 404 when they are about to serve a
+# consensus that expired more than 24 hours ago. 0.2.9 and earlier relays
+# will serve consensuses that are very old.
+#
+# A 404 makes relays fail the download check. We use a tolerance of 24 hours,
+# so that 0.2.9 relays also fail the download check if they serve a consensus
+# that is not reasonably live.
+#
+# CONSENSUS_EXPIRY_TOLERANCE should never be more than 24 hours, because
+# clients reject consensuses that are older than REASONABLY_LIVE_TIME. Clients
+# on 0.3.5.5-alpha? and earlier also won't select guards from consensuses that
+# have expired, but can bootstrap if they already have guards in their state
+# file.
+CONSENSUS_EXPIRY_TOLERANCE = 24*60*60
 
 # Output fallback name, flags, bandwidth, and ContactInfo in a C comment?
 OUTPUT_COMMENTS = True if OUTPUT_CANDIDATES else False
