@@ -98,13 +98,18 @@ MUST_BE_RUNNING_NOW = (PERFORM_IPV4_DIRPORT_CHECKS
 # Clients have been using microdesc consensuses by default for a while now
 DOWNLOAD_MICRODESC_CONSENSUS = True
 
-# If a relay delivers an invalid consensus, if it expired less than this many
-# seconds ago, accept the relay as a fallback. For the consensus expiry check
-# to be accurate, the machine running this script needs an accurate clock.
+# If a relay delivers an invalid consensus, if it will become valid less than
+# this many seconds in the future, or expired less than this many seconds ago,
+# accept the relay as a fallback. For the consensus expiry check to be
+# accurate, the machine running this script needs an accurate clock.
 #
 # Relays on 0.3.0 and later return a 404 when they are about to serve a
 # consensus that expired more than 24 hours ago. 0.2.9 and earlier relays
 # will serve consensuses that are very old.
+#
+# Relays on 0.3.5.6-rc? and later return a 404 when they are about to serve a
+# consensus that will become valid more than 24 hours in the future. Older
+# relays don't serve future consensuses.
 #
 # A 404 makes relays fail the download check. We use a tolerance of 24 hours,
 # so that 0.2.9 relays also fail the download check if they serve a consensus
@@ -1127,6 +1132,7 @@ class Candidate(object):
                                 ).run()[0]
       end = datetime.datetime.utcnow()
       time_since_expiry = (end - consensus.valid_until).total_seconds()
+      time_until_valid = (consensus.valid_after - end).total_seconds()
     except Exception, stem_error:
       end = datetime.datetime.utcnow()
       log_excluded('Unable to retrieve a consensus from %s: %s', nickname,
@@ -1145,6 +1151,15 @@ class Candidate(object):
     elif (time_since_expiry > 0):
       status = 'outdated consensus, expired %ds ago'%(int(time_since_expiry))
       if time_since_expiry <= CONSENSUS_EXPIRY_TOLERANCE:
+        status += ', tolerating up to %ds'%(CONSENSUS_EXPIRY_TOLERANCE)
+        level = logging.INFO
+      else:
+        status += ', invalid'
+        level = logging.WARNING
+        download_failed = True
+    elif (time_until_valid > 0):
+      status = 'future consensus, valid in %ds'%(int(time_until_valid))
+      if time_until_valid <= CONSENSUS_EXPIRY_TOLERANCE:
         status += ', tolerating up to %ds'%(CONSENSUS_EXPIRY_TOLERANCE)
         level = logging.INFO
       else:
