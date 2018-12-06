@@ -9,6 +9,7 @@ src_lib_libtor_encoding_a_SOURCES =			\
 	src/lib/encoding/confline.c			\
 	src/lib/encoding/cstring.c			\
 	src/lib/encoding/keyval.c			\
+	src/lib/encoding/kvline.c			\
 	src/lib/encoding/pem.c				\
 	src/lib/encoding/time_fmt.c
 
@@ -22,5 +23,6 @@ noinst_HEADERS +=					\
 	src/lib/encoding/confline.h			\
 	src/lib/encoding/cstring.h			\
 	src/lib/encoding/keyval.h			\
+	src/lib/encoding/kvline.h			\
 	src/lib/encoding/pem.h				\
 	src/lib/encoding/time_fmt.h
