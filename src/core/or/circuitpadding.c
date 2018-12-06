@@ -621,7 +621,7 @@ circpad_machine_remove_closest_token(const circpad_machineinfo_t *mi,
           target_bin_usec);
   circpad_hist_index_t current = circpad_histogram_usec_to_bin(mi,
           target_bin_usec);
-  int bin_to_remove = -1;
+  circpad_hist_index_t bin_to_remove = -1;
 
   tor_assert(lower <= current);
   tor_assert(higher >= current);
