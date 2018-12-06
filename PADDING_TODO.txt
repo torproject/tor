@@ -7,7 +7,6 @@ TODO sketch for this branch, in rough priority order:
   - Tests for STATE_END teardown due to infinity, bins_empty, and/or length
     with pending timers, new machines, etc.
   - Test histogram spacing for larger length histograms
-  - Test all types of token removal
   - Better test coverage in general
 
 - Negotiate errors are not remembered.. If there is a consensus desync,
