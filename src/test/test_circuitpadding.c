@@ -36,21 +36,7 @@ extern smartlist_t *connection_array;
 #define NSEC_PER_MSEC (1000*1000)
 
 circid_t get_unique_circ_id_by_chan(channel_t *chan);
-int circpad_histogram_usec_to_bin(circpad_machineinfo_t *mi,
-                                       circpad_delay_t us);
-
 void helper_create_basic_machine(void);
-
-circpad_machineinfo_t *circpad_circuit_machineinfo_new(circuit_t *on_circ,
-                                               int machine_index);
-void circpad_machine_remove_higher_token(circpad_machineinfo_t *mi,
-                                         circpad_delay_t target_bin_us);
-void circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
-                                         circpad_delay_t target_bin_us);
-void circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
-                                         circpad_delay_t target_bin_us,
-                                         int use_usec);
-STATIC void circpad_machine_setup_tokens(circpad_machineinfo_t *mi);
 
 static or_circuit_t * new_fake_orcirc(channel_t *nchan, channel_t *pchan);
 channel_t *new_fake_channel(void);
