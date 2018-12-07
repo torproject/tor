@@ -549,8 +549,8 @@ circpad_machine_first_higher_index(const circpad_machineinfo_t *mi,
 }
 
 /**
- * Find the index of the first bin whose lower bound is
- * lower than the target, and that has tokens remaining.
+ * Find the index of the first bin whose lower bound is lower or equal to
+ * <b>target_bin_usec</b>, and that still has tokens remaining.
  */
 static circpad_hist_index_t
 circpad_machine_first_lower_index(const circpad_machineinfo_t *mi,
