@@ -35,20 +35,6 @@
  * Should/Do we have a header for time constants like this? */
 #define TOR_USEC_PER_SEC (1000000)
 
-circpad_machineinfo_t *circpad_circuit_machineinfo_new(circuit_t *on_circ,
-                                                       int machine_index);
-STATIC circpad_hist_index_t circpad_histogram_usec_to_bin(
-                                         const circpad_machineinfo_t *mi,
-                                         circpad_delay_t us);
-
-void circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
-                                        circpad_delay_t target_bin_us);
-void circpad_machine_remove_higher_token(circpad_machineinfo_t *mi,
-                                         circpad_delay_t target_bin_us);
-void circpad_machine_remove_closest_token(const circpad_machineinfo_t *mi,
-                                          circpad_delay_t target_bin_us,
-                                          bool use_usec);
-STATIC void circpad_machine_setup_tokens(circpad_machineinfo_t *mi);
 static inline circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t
                                           circ_purpose);
 static inline circpad_circuit_state_t circpad_circuit_state(
@@ -217,7 +203,8 @@ circpad_get_histogram_bin_midpoint(const circpad_machineinfo_t *mi,
  * has range [start_usec+range_usec, CIRCPAD_DELAY_INFINITE].
  */
 STATIC circpad_hist_index_t
-circpad_histogram_usec_to_bin(const circpad_machineinfo_t *mi, circpad_delay_t usec)
+circpad_histogram_usec_to_bin(const circpad_machineinfo_t *mi,
+                              circpad_delay_t usec)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
   circpad_delay_t start_usec;
@@ -569,7 +556,7 @@ circpad_machine_first_lower_index(const circpad_machineinfo_t *mi,
  * Remove a token from the first non-empty bin whose upper bound is
  * greater than the target.
  */
-void
+STATIC void
 circpad_machine_remove_higher_token(circpad_machineinfo_t *mi,
                                     circpad_delay_t target_bin_usec)
 {
@@ -589,7 +576,7 @@ circpad_machine_remove_higher_token(circpad_machineinfo_t *mi,
  * Remove a token from the first non-empty bin whose upper bound is
  * lower than the target.
  */
-void
+STATIC void
 circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
                                    circpad_delay_t target_bin_usec)
 {
@@ -610,8 +597,8 @@ circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
  *
  * If it is false, use bin index distance only.
  */
-void
-circpad_machine_remove_closest_token(const circpad_machineinfo_t *mi,
+STATIC void
+circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
                                      circpad_delay_t target_bin_usec,
                                      bool use_usec)
 {
@@ -646,7 +633,8 @@ circpad_machine_remove_closest_token(const circpad_machineinfo_t *mi,
   if (use_usec) {
     /* Find the closest bin midpoint to the target */
     circpad_delay_t lower_usec = circpad_get_histogram_bin_midpoint(mi, lower);
-    circpad_delay_t higher_usec = circpad_get_histogram_bin_midpoint(mi, higher);
+    circpad_delay_t higher_usec =
+        circpad_get_histogram_bin_midpoint(mi, higher);
 
     if (target_bin_usec < lower_usec) {
       // Lower bin is closer
@@ -1938,7 +1926,7 @@ circpad_circuit_machineinfo_free(circuit_t *circ)
 /**
  * Allocate a new mutable machineinfo structure.
  */
-circpad_machineinfo_t *
+STATIC circpad_machineinfo_t *
 circpad_circuit_machineinfo_new(circuit_t *on_circ, int machine_index)
 {
   circpad_machineinfo_t *mi = tor_malloc_zero(sizeof(circpad_machineinfo_t));
