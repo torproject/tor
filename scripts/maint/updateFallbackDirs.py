@@ -1061,13 +1061,39 @@ class Candidate(object):
       return False
     return True
 
+  def entry_matches_fuzzy(self, entry):
+    """ Is entry a fuzzy match for this fallback?
+        A fallback is a fuzzy match for entry if at least one of these keys
+        in entry matches:
+          id
+          ipv4
+          ipv6 (if present in both the fallback and whitelist)
+        The ports and nickname are ignored. Missing or extra ipv6 addresses
+        are ignored.
+
+        Doesn't log any warning messages. """
+    if self.id_matches(entry['id'], exact=False):
+      return True
+    if self.ipv4_addr_matches(entry['ipv4'], exact=False):
+      return True
+    if entry.has_key('ipv6') and self.has_ipv6():
+      # if both entry and fallback have an ipv6 address, compare them
+      if self.ipv6_addr_matches(entry['ipv6_addr'], exact=False):
+        return True
+    return False
+
   def is_in_whitelist(self, relaylist, exact=False):
     """ If exact is True (existing fallback list), check if this fallback is
         an exact match for any whitelist entry, using entry_matches_exact().
-    """
+
+        If exact is False (new fallback whitelist), check if this fallback is
+        a fuzzy match for any whitelist entry, using entry_matches_fuzzy(). """
     for entry in relaylist:
       if exact:
         if self.entry_matches_exact(entry):
+          return True
+      else:
+        if self.entry_matches_fuzzy(entry):
           return True
     return False
 
@@ -2193,7 +2219,7 @@ def process_default():
   logging.getLogger('stem').setLevel(logging.WARNING)
   whitelist = {'data': read_from_file(WHITELIST_FILE_NAME, MAX_LIST_FILE_SIZE),
                'name': WHITELIST_FILE_NAME}
-  list_fallbacks(whitelist, exact=True)
+  list_fallbacks(whitelist, exact=False)
 
 ## Main Function
 def main():
