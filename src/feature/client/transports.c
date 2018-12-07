@@ -1711,7 +1711,9 @@ tor_escape_str_for_pt_args(const char *string, const char *chars_to_escape)
  * stdout. Our process can be found in <b>process</b>, the data can be found in
  * <b>line</b> and the length of our line is given in <b>size</b>. */
 STATIC void
-managed_proxy_stdout_callback(process_t *process, char *line, size_t size)
+managed_proxy_stdout_callback(process_t *process,
+                              const char *line,
+                              size_t size)
 {
   tor_assert(process);
   tor_assert(line);
@@ -1732,7 +1734,9 @@ managed_proxy_stdout_callback(process_t *process, char *line, size_t size)
  * stderr. Our process can be found in <b>process</b>, the data can be found in
  * <b>line</b> and the length of our line is given in <b>size</b>. */
 STATIC void
-managed_proxy_stderr_callback(process_t *process, char *line, size_t size)
+managed_proxy_stderr_callback(process_t *process,
+                              const char *line,
+                              size_t size)
 {
   tor_assert(process);
   tor_assert(line);

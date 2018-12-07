@@ -98,7 +98,7 @@ process_mocked_write_stdin(process_t *process, buf_t *buffer)
 }
 
 static void
-process_stdout_callback(process_t *process, char *data, size_t size)
+process_stdout_callback(process_t *process, const char *data, size_t size)
 {
   tt_ptr_op(process, OP_NE, NULL);
   tt_ptr_op(data, OP_NE, NULL);
@@ -112,7 +112,7 @@ process_stdout_callback(process_t *process, char *data, size_t size)
 }
 
 static void
-process_stderr_callback(process_t *process, char *data, size_t size)
+process_stderr_callback(process_t *process, const char *data, size_t size)
 {
   tt_ptr_op(process, OP_NE, NULL);
   tt_ptr_op(data, OP_NE, NULL);
