@@ -185,7 +185,10 @@ struct circuit_t {
 
   /** Adaptive Padding state machines: these are immutable. The state machines
    *  that come from the consensus are saved to a global structure, to avoid
-   *  per-circuit allocations. This merely points to the global copy. */
+   *  per-circuit allocations. This merely points to the global copy.
+   *
+   *  Each element of this array corresponds to a different padding machine,
+   *  and we can have up to CIRCPAD_MAX_MACHINES such machines. */
   const circpad_machine_t *padding_machine[CIRCPAD_MAX_MACHINES];
 
   /** Adaptive Padding machine info for above machines. This is the
@@ -193,7 +196,10 @@ struct circuit_t {
    *  histogram token counts. Some of it is optional (aka NULL).
    *  If a machine is being shut down, these indexes can be NULL
    *  without the corresponding padding_machine being NULL, while we
-   *  wait for the other end to respond to our shutdown request. */
+   *  wait for the other end to respond to our shutdown request.
+   *
+   *  Each element of this array corresponds to a different padding machine,
+   *  and we can have up to CIRCPAD_MAX_MACHINES such machines. */
   circpad_machineinfo_t *padding_info[CIRCPAD_MAX_MACHINES];
 };
 
