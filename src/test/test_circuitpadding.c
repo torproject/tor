@@ -268,9 +268,8 @@ test_circuitpadding_rtt(void *arg)
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
 
   dummy_channel.cmux = circuitmux_alloc();
-  relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel,
-                                            &dummy_channel);
-  client_side = (circuit_t *)origin_circuit_new();
+  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
+  client_side = TO_CIRCUIT(origin_circuit_new());
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
@@ -640,7 +639,7 @@ test_circuitpadding_tokens(void *arg)
    *    c. Closest 0
    *    d. Closest Infinity
    */
-  client_side = (circuit_t *)origin_circuit_new();
+  client_side = TO_CIRCUIT(origin_circuit_new());
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
   monotime_init();
@@ -889,10 +888,9 @@ test_circuitpadding_negotiation(void *arg)
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
 
-  client_side = (circuit_t *)origin_circuit_new();
+  client_side = TO_CIRCUIT(origin_circuit_new());
   dummy_channel.cmux = circuitmux_alloc();
-  relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel,
-                                            &dummy_channel);
+  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
 
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
@@ -932,9 +930,8 @@ test_circuitpadding_negotiation(void *arg)
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   free_fake_orcirc(relay_side);
 
-  client_side = (circuit_t *)origin_circuit_new();
-  relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel,
-                                            &dummy_channel);
+  client_side = TO_CIRCUIT(origin_circuit_new());
+  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
@@ -1045,8 +1042,8 @@ test_circuitpadding_circuitsetup_machine(void *arg)
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
 
   dummy_channel.cmux = circuitmux_alloc();
-  client_side = (circuit_t *)origin_circuit_new();
-  relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel, &dummy_channel);
+  client_side = TO_CIRCUIT(origin_circuit_new());
+  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
 
   relay_side->purpose = CIRCUIT_PURPOSE_OR;
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
@@ -1325,7 +1322,7 @@ test_circuitpadding_machine_rate_limiting(void *arg)
   MOCK(circpad_machine_transition, circpad_machine_transition_mock);
 
   /* Setup machine and circuits */
-  client_side = (circuit_t *)origin_circuit_new();
+  client_side = TO_CIRCUIT(origin_circuit_new());
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
   helper_create_basic_machine();
   client_side->padding_machine[0] = &circ_client_machine;
@@ -1377,7 +1374,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
   MOCK(circpad_machine_transition, circpad_machine_transition_mock);
 
   /* Setup machine and circuits */
-  client_side = (circuit_t *)origin_circuit_new();
+  client_side = TO_CIRCUIT(origin_circuit_new());
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
   helper_create_basic_machine();
   client_side->padding_machine[0] = &circ_client_machine;
