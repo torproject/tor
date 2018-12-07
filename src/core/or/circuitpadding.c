@@ -123,8 +123,11 @@ circpad_state_to_string(circpad_statenum_t state)
 }
 
 /**
- * Return the circpad_stat_t for the current state based on the
+ * Return the circpad_state_t for the current state based on the
  * mutable info.
+ *
+ * This function returns NULL when the machine is in the end state or in an
+ * invalid state.
  */
 STATIC const circpad_state_t *
 circpad_machine_current_state(const circpad_machineinfo_t *mi)
@@ -217,7 +220,8 @@ circpad_get_histogram_bin_midpoint(const circpad_machineinfo_t *mi,
  * has range [start_usec+range_usec, CIRCPAD_DELAY_INFINITE].
  */
 STATIC circpad_hist_index_t
-circpad_histogram_usec_to_bin(const circpad_machineinfo_t *mi, circpad_delay_t usec)
+circpad_histogram_usec_to_bin(const circpad_machineinfo_t *mi,
+                              circpad_delay_t usec)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
   circpad_delay_t start_usec;
@@ -646,7 +650,8 @@ circpad_machine_remove_closest_token(const circpad_machineinfo_t *mi,
   if (use_usec) {
     /* Find the closest bin midpoint to the target */
     circpad_delay_t lower_usec = circpad_get_histogram_bin_midpoint(mi, lower);
-    circpad_delay_t higher_usec = circpad_get_histogram_bin_midpoint(mi, higher);
+    circpad_delay_t higher_usec =
+      circpad_get_histogram_bin_midpoint(mi, higher);
 
     if (target_bin_usec < lower_usec) {
       // Lower bin is closer
@@ -979,7 +984,7 @@ circpad_send_padding_callback(tor_timer_t *timer, void *args,
  * Cache our consensus parameters upon consensus update.
  */
 void
-circpad_new_consensus_params(networkstatus_t *ns)
+circpad_new_consensus_params(const networkstatus_t *ns)
 {
   circpad_global_allowed_cells =
       networkstatus_get_param(ns, "circpad_global_allowed_cells",
