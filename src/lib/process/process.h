@@ -54,7 +54,7 @@ typedef uint64_t process_exit_code_t;
 typedef uint64_t process_pid_t;
 
 typedef void (*process_read_callback_t)(process_t *,
-                                        char *,
+                                        const char *,
                                         size_t);
 typedef bool
 (*process_exit_callback_t)(process_t *, process_exit_code_t);
