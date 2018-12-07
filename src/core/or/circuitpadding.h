@@ -37,12 +37,20 @@ typedef int signed_error_t;
  * means packets destined towards the client.
  */
 typedef enum {
+  /* A non-padding cell was received. */
   CIRCPAD_EVENT_NONPADDING_RECV = 0,
+  /* A non-padding cell was sent. */
   CIRCPAD_EVENT_NONPADDING_SENT = 1,
+  /* A padding cell (RELAY_COMMAND_DROP) was sent. */
   CIRCPAD_EVENT_PADDING_SENT = 2,
+  /* A padding cell was received. */
   CIRCPAD_EVENT_PADDING_RECV = 3,
+  /* We tried to schedule padding but we ended up picking the infinity bin
+   * which means that padding was delayed infinitely */
   CIRCPAD_EVENT_INFINITY = 4,
+  /* All histogram bins are empty (we are out of tokens) */
   CIRCPAD_EVENT_BINS_EMPTY = 5,
+  /* just a counter of the events above */
   CIRCPAD_EVENT_LENGTH_COUNT = 6
 } circpad_event_t;
 #define CIRCPAD_NUM_EVENTS ((int)CIRCPAD_EVENT_LENGTH_COUNT+1)
