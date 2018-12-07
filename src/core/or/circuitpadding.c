@@ -17,6 +17,7 @@
 #include "core/or/channel.h"
 
 #include "lib/time/compat_time.h"
+#include "lib/defs/time.h"
 #include "lib/crypt_ops/crypto_rand.h"
 
 #include "core/or/crypt_path_st.h"
@@ -30,10 +31,6 @@
 #include "feature/nodelist/nodelist.h"
 
 #include "app/config/config.h"
-
-/* XXX: This is a dup of the constant in ./src/lib/time/tvdiff.c.
- * Should/Do we have a header for time constants like this? */
-#define TOR_USEC_PER_SEC (1000000)
 
 circpad_machineinfo_t *circpad_circuit_machineinfo_new(circuit_t *on_circ,
                                                        int machine_index);
