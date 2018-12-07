@@ -1,34 +1,21 @@
 # updateFallbackDirs.py directory mirror whitelist
-#
-# Format:
-# IPv4:DirPort orport=<ORPort> id=<ID> [ ipv6=<IPv6>:<IPv6 ORPort> ]
-# or use:
-# scripts/maint/generateFallbackDirLine.py fingerprint ...
-#
+
 # All attributes must match for the directory mirror to be included.
 # If the fallback has an ipv6 key, the whitelist line must also have
 # it, and vice versa, otherwise they don't match.
-# (The blacklist overrides the whitelist.)
 
 # To replace this list with the hard-coded fallback list (for testing), use
-# a command similar to:
+# "updateFallbackDirs.py check_existing", or a command similar to:
 #   cat src/app/config/fallback_dirs.inc | grep \" | grep -v weight | \
 #   tr -d '\n' | \
 #   sed 's/"" / /g' | sed 's/""/"/g' | tr \" '\n' | grep -v '^$' \
 #   > scripts/maint/fallback.whitelist
-#
-# When testing before a release, exclusions due to changed details will result
-# in a warning, unless the IPv4 address or port change happened recently.
-# Then it is only logged at info level, as part of the eligibility check.
-# Exclusions due to stability also are only shown at info level.
-#
-# Add the number of selected, slow, and excluded relays, and compare that to
-# the number of hard-coded relays. If it's less, use info-level logs to find
-# out why each of the missing relays was excluded.
 
 # If a relay operator wants their relay to be a FallbackDir,
 # enter the following information here:
-# <IPv4>:<DirPort> orport=<ORPort> id=<ID> [ ipv6=<IPv6>:<IPv6 ORPort> ]
+# <IPv4>:<DirPort> orport=<ORPort> id=<ID> ( ipv6=[<IPv6>]:<IPv6 ORPort> )?
+# or use:
+# scripts/maint/generateFallbackDirLine.py fingerprint ...
 
 # https://lists.torproject.org/pipermail/tor-relays/2015-December/008362.html
 # https://trac.torproject.org/projects/tor/ticket/22321#comment:22

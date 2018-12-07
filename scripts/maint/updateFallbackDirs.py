@@ -920,61 +920,155 @@ class Candidate(object):
       return False
     return True
 
-  def is_in_whitelist(self, relaylist):
-    """ A fallback matches if each key in the whitelist line matches:
+  def id_matches(self, id, exact=False):
+    """ Does this fallback's id match id?
+        exact is ignored. """
+    return self._fpr == id
+
+  def ipv4_addr_matches(self, ipv4_addr, exact=False):
+    """ Does this fallback's IPv4 address match ipv4_addr?
+        exact is ignored. """
+    return self.dirip == ipv4_addr
+
+  def ipv4_dirport_matches(self, ipv4_dirport, exact=False):
+    """ Does this fallback's IPv4 dirport match ipv4_dirport?
+        If exact is False, always return True. """
+    if exact:
+      return self.dirport == int(ipv4_dirport)
+    else:
+      return True
+
+  def ipv4_and_dirport_matches(self, ipv4_addr, ipv4_dirport, exact=False):
+    """ Does this fallback's IPv4 address match ipv4_addr?
+        If exact is True, also check ipv4_dirport. """
+    ipv4_match = self.ipv4_addr_matches(ipv4_addr, exact=exact)
+    if exact:
+      return ipv4_match and self.ipv4_dirport_matches(ipv4_dirport,
+                                                      exact=exact)
+    else:
+      return ipv4_match
+
+  def ipv4_orport_matches(self, ipv4_orport, exact=False):
+    """ Does this fallback's IPv4 orport match ipv4_orport?
+        If exact is False, always return True. """
+    if exact:
+      return self.orport == int(ipv4_orport)
+    else:
+      return True
+
+  def ipv4_and_orport_matches(self, ipv4_addr, ipv4_orport, exact=False):
+    """ Does this fallback's IPv4 address match ipv4_addr?
+        If exact is True, also check ipv4_orport. """
+    ipv4_match = self.ipv4_addr_matches(ipv4_addr, exact=exact)
+    if exact:
+      return ipv4_match and self.ipv4_orport_matches(ipv4_orport,
+                                                     exact=exact)
+    else:
+      return ipv4_match
+
+  def ipv6_addr_matches(self, ipv6_addr, exact=False):
+    """ Does this fallback's IPv6 address match ipv6_addr?
+        Both addresses must be present to match.
+        exact is ignored. """
+    if self.has_ipv6() and ipv6_addr is not None:
+      # Check that we have a bracketed IPv6 address without a port
+      assert(ipv6_addr.startswith('[') and ipv6_addr.endswith(']'))
+      return self.ipv6addr == ipv6_addr
+    else:
+      return False
+
+  def ipv6_orport_matches(self, ipv6_orport, exact=False):
+    """ Does this fallback's IPv6 orport match ipv6_orport?
+        Both ports must be present to match.
+        If exact is False, always return True. """
+    if exact:
+      return (self.has_ipv6() and ipv6_orport is not None and
+              self.ipv6orport == int(ipv6_orport))
+    else:
+      return True
+
+  def ipv6_and_orport_matches(self, ipv6_addr, ipv6_orport, exact=False):
+    """ Does this fallback's IPv6 address match ipv6_addr?
+        If exact is True, also check ipv6_orport. """
+    ipv6_match = self.ipv6_addr_matches(ipv6_addr, exact=exact)
+    if exact:
+      return ipv6_match and self.ipv6_orport_matches(ipv6_orport,
+                                                     exact=exact)
+    else:
+      return ipv6_match
+
+  def entry_matches_exact(self, entry):
+    """ Is entry an exact match for this fallback?
+        A fallback is an exact match for entry if each key in entry matches:
           ipv4
           dirport
           orport
           id
-          ipv6 address and port (if present)
+          ipv6 address and port (if present in the fallback or the whitelist)
         If the fallback has an ipv6 key, the whitelist line must also have
-        it, and vice versa, otherwise they don't match. """
-    ipv6 = None
-    if self.has_ipv6():
-      ipv6 = '%s:%d'%(self.ipv6addr, self.ipv6orport)
+        it, otherwise they don't match.
+
+        Logs a warning-level message if the fallback would be an exact match,
+        but one of the id, ipv4, ipv4 orport, ipv4 dirport, or ipv6 orport
+        have changed. """
+    if not self.id_matches(entry['id'], exact=True):
+      # can't log here unless we match an IP and port, because every relay's
+      # fingerprint is compared to every entry's fingerprint
+      if self.ipv4_and_orport_matches(entry['ipv4'],
+                                      entry['orport'],
+                                      exact=True):
+        logging.warning('%s excluded: has OR %s:%d changed fingerprint to ' +
+                        '%s?', entry['id'], self.dirip, self.orport,
+                        self._fpr)
+      if self.ipv6_and_orport_matches(entry.get('ipv6_addr'),
+                                      entry.get('ipv6_orport'),
+                                      exact=True):
+        logging.warning('%s excluded: has OR %s changed fingerprint to ' +
+                        '%s?', entry['id'], entry['ipv6'], self._fpr)
+      return False
+    if not self.ipv4_addr_matches(entry['ipv4'], exact=True):
+      logging.warning('%s excluded: has it changed IPv4 from %s to %s?',
+                      self._fpr, entry['ipv4'], self.dirip)
+      return False
+    if not self.ipv4_dirport_matches(entry['dirport'], exact=True):
+      logging.warning('%s excluded: has it changed DirPort from %s:%d to ' +
+                      '%s:%d?', self._fpr, self.dirip, int(entry['dirport']),
+                      self.dirip, self.dirport)
+      return False
+    if not self.ipv4_orport_matches(entry['orport'], exact=True):
+      logging.warning('%s excluded: has it changed ORPort from %s:%d to ' +
+                      '%s:%d?', self._fpr, self.dirip, int(entry['orport']),
+                      self.dirip, self.orport)
+      return False
+    if entry.has_key('ipv6') and self.has_ipv6():
+      # if both entry and fallback have an ipv6 address, compare them
+      if not self.ipv6_and_orport_matches(entry['ipv6_addr'],
+                                          entry['ipv6_orport'],
+                                          exact=True):
+        logging.warning('%s excluded: has it changed IPv6 ORPort from %s ' +
+                        'to %s:%d?', self._fpr, entry['ipv6'],
+                        self.ipv6addr, self.ipv6orport)
+        return False
+    # if the fallback has an IPv6 address but the whitelist entry
+    # doesn't, or vice versa, the whitelist entry doesn't match
+    elif entry.has_key('ipv6') and not self.has_ipv6():
+      logging.warning('%s excluded: has it lost its former IPv6 address %s?',
+                      self._fpr, entry['ipv6'])
+      return False
+    elif not entry.has_key('ipv6') and self.has_ipv6():
+      logging.warning('%s excluded: has it gained an IPv6 address %s:%d?',
+                      self._fpr, self.ipv6addr, self.ipv6orport)
+      return False
+    return True
+
+  def is_in_whitelist(self, relaylist, exact=False):
+    """ If exact is True (existing fallback list), check if this fallback is
+        an exact match for any whitelist entry, using entry_matches_exact().
+    """
     for entry in relaylist:
-      if entry['id'] != self._fpr:
-        # can't log here unless we match an IP and port, because every relay's
-        # fingerprint is compared to every entry's fingerprint
-        if entry['ipv4'] == self.dirip and int(entry['orport']) == self.orport:
-          logging.warning('%s excluded: has OR %s:%d changed fingerprint to ' +
-                          '%s?', entry['id'], self.dirip, self.orport,
-                          self._fpr)
-        if self.has_ipv6() and entry.has_key('ipv6') and entry['ipv6'] == ipv6:
-          logging.warning('%s excluded: has OR %s changed fingerprint to ' +
-                          '%s?', entry['id'], ipv6, self._fpr)
-        continue
-      if entry['ipv4'] != self.dirip:
-        logging.warning('%s excluded: has it changed IPv4 from %s to %s?',
-                        self._fpr, entry['ipv4'], self.dirip)
-        continue
-      if int(entry['dirport']) != self.dirport:
-        logging.warning('%s excluded: has it changed DirPort from %s:%d to ' +
-                        '%s:%d?', self._fpr, self.dirip, int(entry['dirport']),
-                        self.dirip, self.dirport)
-        continue
-      if int(entry['orport']) != self.orport:
-        logging.warning('%s excluded: has it changed ORPort from %s:%d to ' +
-                        '%s:%d?', self._fpr, self.dirip, int(entry['orport']),
-                        self.dirip, self.orport)
-        continue
-      if entry.has_key('ipv6') and self.has_ipv6():
-        # if both entry and fallback have an ipv6 address, compare them
-        if entry['ipv6'] != ipv6:
-          logging.warning('%s excluded: has it changed IPv6 ORPort from %s ' +
-                          'to %s?', self._fpr, entry['ipv6'], ipv6)
-          continue
-      # if the fallback has an IPv6 address but the whitelist entry
-      # doesn't, or vice versa, the whitelist entry doesn't match
-      elif entry.has_key('ipv6') and not self.has_ipv6():
-        logging.warning('%s excluded: has it lost its former IPv6 address %s?',
-                        self._fpr, entry['ipv6'])
-        continue
-      elif not entry.has_key('ipv6') and self.has_ipv6():
-        logging.warning('%s excluded: has it gained an IPv6 address %s?',
-                        self._fpr, ipv6)
-        continue
-      return True
+      if exact:
+        if self.entry_matches_exact(entry):
+          return True
     return False
 
   def cw_to_bw_factor(self):
@@ -1458,18 +1552,28 @@ class CandidateList(dict):
             relay_entry['dirport'] = ipv4_maybe_dirport_split[1]
         elif kvl == 2:
           relay_entry[key_value_split[0]] = key_value_split[1]
+          # split ipv6 addresses and orports
+          if key_value_split[0] == 'ipv6':
+            ipv6_orport_split = key_value_split[1].rsplit(':', 1)
+            ipv6l = len(ipv6_orport_split)
+            if ipv6l != 2:
+              print '#error Bad %s IPv6 item: %s, format is [ipv6]:orport.'%(
+                                                          file_name, item)
+            relay_entry['ipv6_addr'] = ipv6_orport_split[0]
+            relay_entry['ipv6_orport'] = ipv6_orport_split[1]
       relaylist.append(relay_entry)
     return relaylist
 
-  # apply the fallback whitelist
-  def apply_filter_lists(self, whitelist_obj):
+  def apply_filter_lists(self, whitelist_obj, exact=False):
+    """ Apply the fallback whitelist_obj to this fallback list,
+        passing exact to is_in_whitelist(). """
     excluded_count = 0
     logging.debug('Applying whitelist')
     # parse the whitelist
     whitelist = self.load_relaylist(whitelist_obj)
     filtered_fallbacks = []
     for f in self.fallbacks:
-      in_whitelist = f.is_in_whitelist(whitelist)
+      in_whitelist = f.is_in_whitelist(whitelist, exact=exact)
       if in_whitelist:
         # include
         filtered_fallbacks.append(f)
@@ -2082,14 +2186,14 @@ def process_existing():
   logging.getLogger('stem').setLevel(logging.INFO)
   whitelist = {'data': parse_fallback_file(FALLBACK_FILE_NAME),
                'name': FALLBACK_FILE_NAME}
-  list_fallbacks(whitelist)
+  list_fallbacks(whitelist, exact=True)
 
 def process_default():
   logging.basicConfig(level=logging.WARNING)
   logging.getLogger('stem').setLevel(logging.WARNING)
   whitelist = {'data': read_from_file(WHITELIST_FILE_NAME, MAX_LIST_FILE_SIZE),
                'name': WHITELIST_FILE_NAME}
-  list_fallbacks(whitelist)
+  list_fallbacks(whitelist, exact=True)
 
 ## Main Function
 def main():
@@ -2110,10 +2214,10 @@ def log_excluded(msg, *args):
   else:
     logging.info(msg, *args)
 
-def list_fallbacks(whitelist):
+def list_fallbacks(whitelist, exact=False):
   """ Fetches required onionoo documents and evaluates the
-      fallback directory criteria for each of the relays """
-
+      fallback directory criteria for each of the relays,
+      passing exact to apply_filter_lists(). """
   print "/* type=fallback */"
   print ("/* version={} */"
          .format(cleanse_c_multiline_comment(FALLBACK_FORMAT_VERSION)))
@@ -2153,7 +2257,7 @@ def list_fallbacks(whitelist):
   # warning that the details have changed from those in the whitelist.
   # instead, there will be an info-level log during the eligibility check.
   initial_count = len(candidates.fallbacks)
-  excluded_count = candidates.apply_filter_lists(whitelist)
+  excluded_count = candidates.apply_filter_lists(whitelist, exact=exact)
   print candidates.summarise_filters(initial_count, excluded_count)
   eligible_count = len(candidates.fallbacks)
 
