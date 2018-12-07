@@ -610,6 +610,22 @@ circpad_histogram_bin_to_usec(const circpad_machineinfo_t *mi,
 STATIC const circpad_state_t *
 circpad_machine_current_state(const circpad_machineinfo_t *mi);
 
+STATIC circpad_hist_index_t circpad_histogram_usec_to_bin(
+                                       const circpad_machineinfo_t *mi,
+                                       circpad_delay_t us);
+
+STATIC circpad_machineinfo_t *circpad_circuit_machineinfo_new(
+                                               circuit_t *on_circ,
+                                               int machine_index);
+STATIC void circpad_machine_remove_higher_token(circpad_machineinfo_t *mi,
+                                         circpad_delay_t target_bin_us);
+STATIC void circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
+                                         circpad_delay_t target_bin_us);
+STATIC void circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
+                                         circpad_delay_t target_bin_us,
+                                         bool use_usec);
+STATIC void circpad_machine_setup_tokens(circpad_machineinfo_t *mi);
+
 #endif
 
 #endif
