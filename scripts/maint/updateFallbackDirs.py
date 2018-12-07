@@ -115,12 +115,12 @@ DOWNLOAD_MICRODESC_CONSENSUS = True
 # so that 0.2.9 relays also fail the download check if they serve a consensus
 # that is not reasonably live.
 #
-# CONSENSUS_EXPIRY_TOLERANCE should never be more than 24 hours, because
-# clients reject consensuses that are older than REASONABLY_LIVE_TIME. Clients
-# on 0.3.5.5-alpha? and earlier also won't select guards from consensuses that
-# have expired, but can bootstrap if they already have guards in their state
-# file.
-CONSENSUS_EXPIRY_TOLERANCE = 24*60*60
+# REASONABLY_LIVE_TIME should never be more than Tor's REASONABLY_LIVE_TIME,
+# (24 hours), because clients reject consensuses that are older than that.
+# Clients on 0.3.5.5-alpha? and earlier also won't select guards from
+# consensuses that have expired, but can bootstrap if they already have guards
+# in their state file.
+REASONABLY_LIVE_TIME = 24*60*60
 
 # Output fallback name, flags, bandwidth, and ContactInfo in a C comment?
 OUTPUT_COMMENTS = True if OUTPUT_CANDIDATES else False
@@ -1150,8 +1150,8 @@ class Candidate(object):
       download_failed = True
     elif (time_since_expiry > 0):
       status = 'outdated consensus, expired %ds ago'%(int(time_since_expiry))
-      if time_since_expiry <= CONSENSUS_EXPIRY_TOLERANCE:
-        status += ', tolerating up to %ds'%(CONSENSUS_EXPIRY_TOLERANCE)
+      if time_since_expiry <= REASONABLY_LIVE_TIME:
+        status += ', tolerating up to %ds'%(REASONABLY_LIVE_TIME)
         level = logging.INFO
       else:
         status += ', invalid'
@@ -1159,8 +1159,8 @@ class Candidate(object):
         download_failed = True
     elif (time_until_valid > 0):
       status = 'future consensus, valid in %ds'%(int(time_until_valid))
-      if time_until_valid <= CONSENSUS_EXPIRY_TOLERANCE:
-        status += ', tolerating up to %ds'%(CONSENSUS_EXPIRY_TOLERANCE)
+      if time_until_valid <= REASONABLY_LIVE_TIME:
+        status += ', tolerating up to %ds'%(REASONABLY_LIVE_TIME)
         level = logging.INFO
       else:
         status += ', invalid'
