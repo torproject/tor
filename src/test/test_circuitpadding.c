@@ -12,6 +12,7 @@
 #include <event.h>
 #include "lib/evloop/compat_libevent.h"
 #include "lib/time/compat_time.h"
+#include "lib/defs/time.h"
 #include "core/or/relay.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuitbuild.h"
@@ -31,10 +32,6 @@
 #include "core/or/origin_circuit_st.h"
 
 extern smartlist_t *connection_array;
-
-#define USEC_PER_SEC (1000000)
-#define NSEC_PER_USEC (1000)
-#define NSEC_PER_MSEC (1000*1000)
 
 circid_t get_unique_circ_id_by_chan(channel_t *chan);
 void helper_create_basic_machine(void);
@@ -69,7 +66,7 @@ static circpad_machine_t circ_client_machine;
 static void
 timers_advance_and_run(int64_t msec_update)
 {
-  curr_mocked_time += msec_update*NSEC_PER_MSEC;
+  curr_mocked_time += msec_update*TOR_NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(curr_mocked_time);
   monotime_set_mock_time_nsec(curr_mocked_time);
   timers_run_pending();
@@ -304,9 +301,9 @@ test_circuitpadding_rtt(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*NSEC_PER_USEC);
-  curr_mocked_time = 1*NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
 
   timers_initialize();
   circpad_machines_init();
@@ -994,9 +991,9 @@ test_circuitpadding_tokens(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*NSEC_PER_USEC);
-  curr_mocked_time = 1*NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
 
   timers_initialize();
 
@@ -1441,9 +1438,9 @@ test_circuitpadding_negotiation(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*NSEC_PER_USEC);
-  curr_mocked_time = 1*NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
 
   timers_initialize();
   circpad_machines_init();
@@ -1562,7 +1559,7 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
   circpad_cell_event_nonpadding_received((circuit_t*)mid_relay);
 
   // Advance time a tiny bit so we can calculate an RTT
-  curr_mocked_time += 10 * NSEC_PER_MSEC;
+  curr_mocked_time += 10 * TOR_NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(curr_mocked_time);
   monotime_set_mock_time_nsec(curr_mocked_time);
 
@@ -1715,9 +1712,9 @@ test_circuitpadding_conditions(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*NSEC_PER_USEC);
-  curr_mocked_time = 1*NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
 
   timers_initialize();
   helper_create_conditional_machines();
@@ -1835,9 +1832,9 @@ test_circuitpadding_circuitsetup_machine(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*NSEC_PER_USEC);
-  curr_mocked_time = 1*NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
 
   timers_initialize();
   circpad_machines_init();
