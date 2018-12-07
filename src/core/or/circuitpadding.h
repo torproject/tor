@@ -394,7 +394,12 @@ typedef struct circpad_state_t {
  * XXX: Play with layout to minimize space on x64 Linux (most common relay).
  */
 typedef struct circpad_machineinfo_t {
-  /** The callback pointer for the padding callbacks */
+  /** The callback pointer for the padding callbacks.
+   *
+   *  These timers stick around the machineinfo until the machineinfo's circuit
+   *  is closed, at which point the timer is cancelled. For this reason it's
+   *  safe to assume that the machineinfo exists if this timer gets
+   *  triggered. */
   tor_timer_t *padding_timer;
 
   /** The circuit for this machine */
@@ -529,7 +534,7 @@ typedef struct circpad_machine_t {
   circpad_statenum_t num_states;
 } circpad_machine_t;
 
-void circpad_new_consensus_params(networkstatus_t *ns);
+void circpad_new_consensus_params(const networkstatus_t *ns);
 
 /**
  * The following are event call-in points that are of interest to
