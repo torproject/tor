@@ -134,10 +134,10 @@ typedef uint32_t circpad_purpose_mask_t;
  */
 typedef struct circpad_machine_conditions_t {
   /** Only apply the machine *if* the circuit has at least this many hops */
-  uint8_t min_hops : 3;
+  unsigned min_hops : 3;
 
   /** Only apply the machine *if* vanguards are enabled */
-  uint8_t requires_vanguards : 1;
+  unsigned requires_vanguards : 1;
 
   /** Only apply the machine *if* the circuit's state matches any of
    *  the bits set in this bitmask. */
@@ -273,7 +273,7 @@ typedef struct circpad_state_t {
   /** Should we decrement length when we see a nonpadding packet?
    * XXX: Are there any machines that actually want to set this to 0? There may
    * not be. OTOH, it's only a bit.. */
-  uint8_t length_includes_nonpadding : 1;
+  unsigned length_includes_nonpadding : 1;
 
   /**
    * This is an array that specifies the next state to transition to upon
@@ -296,7 +296,7 @@ typedef struct circpad_state_t {
    *
    * Right now this is only supported for relay-side state machines.
    */
-  uint8_t use_rtt_estimate : 1;
+  unsigned use_rtt_estimate : 1;
 
   /** This specifies the token removal strategy to use upon padding and
    *  non-padding activity. */
@@ -456,13 +456,13 @@ typedef struct circpad_machineinfo_t {
    * no timer is scheduled. (It can be 0 even when
    * padding_was_scheduled_at_usec is non-zero).
    */
-  uint8_t is_padding_timer_scheduled : 1;
+  unsigned is_padding_timer_scheduled : 1;
 
   /**
    * If this is true, we have seen full duplex behavior.
    * Stop updating the RTT.
    */
-  uint8_t stop_rtt_update : 1;
+  unsigned stop_rtt_update : 1;
 
 /** Max number of padding machines on each circuit. If changed,
  * also ensure the machine_index bitwith supports the new size. */
@@ -470,7 +470,7 @@ typedef struct circpad_machineinfo_t {
   /** Which padding machine index was this for.
    * (make sure changes to the bitwidth can support the
    * CIRCPAD_MAX_MACHINES define). */
-  uint8_t machine_index : 1;
+  unsigned machine_index : 1;
 
 } circpad_machineinfo_t;
 
@@ -493,18 +493,18 @@ typedef struct circpad_machine_t {
 
   /** Which machine index slot should this machine go into in
    *  the array on the circuit_t */
-  uint8_t machine_index : 1;
+  unsigned machine_index : 1;
 
   /** Send a padding negotiate to shut down machine at end state? */
-  uint8_t should_negotiate_end : 1;
+  unsigned should_negotiate_end : 1;
 
   // These next three fields are origin machine-only...
   /** Origin side or relay side */
-  uint8_t is_origin_side : 1;
+  unsigned is_origin_side : 1;
 
   /** Which hop in the circuit should we send padding to/from?
    *  1-indexed (ie: hop #1 is guard, #2 middle, #3 exit). */
-  uint8_t target_hopnum : 3;
+  unsigned target_hopnum : 3;
 
   /** This machine only kills fascists if the following conditions are met. */
   circpad_machine_conditions_t conditions;
