@@ -72,7 +72,7 @@ scan-build \
 
 # shellcheck disable=SC2086
 scan-build \
-    $CHECKERS "$OUTPUTARG" \
+    $CHECKERS $OUTPUTARG \
     make -j5 -k
 
 CHECKERS="\
