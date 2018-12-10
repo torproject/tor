@@ -245,14 +245,16 @@ relerr(double expected, double actual)
 #define CHECK_RELERR(expected, actual) do {                                   \
   double check_expected = (expected);                                         \
   double check_actual = (actual);                                             \
+  const char *str_expected = #expected;                                       \
+  const char *str_actual = #actual;                                           \
   double check_relerr = relerr(expected, actual);                             \
   if (!(relerr(check_expected, check_actual) <= relerr_bound)) {              \
-    printf("%s:%d: case %zu: relerr(%s=%.17e, %s=%.17e)"                      \
-        " = %.17e > %.17e\n",                                                 \
-        __func__, __LINE__, i,                                                \
-        #expected, check_expected,                                            \
-        #actual, check_actual,                                                \
-        check_relerr, relerr_bound);                                          \
+    log_warn(LD_GENERAL, "%s:%d: case %u: relerr(%s=%.17e, %s=%.17e)"        \
+             " = %.17e > %.17e\n",                                            \
+             __func__, __LINE__, (unsigned) i,                                \
+             str_expected, check_expected,                                    \
+             str_actual, check_actual,                                        \
+             check_relerr, relerr_bound);                                     \
     ok = false;                                                               \
   }                                                                           \
 } while (0)
@@ -262,10 +264,12 @@ relerr(double expected, double actual)
 #define CHECK_LE(a, b) do {                                                   \
   double check_a = (a);                                                       \
   double check_b = (b);                                                       \
+  const char *str_a = #a;                                                     \
+  const char *str_b = #b;                                                     \
   if (!(check_a <= check_b)) {                                                \
-    printf("%s:%d: case %zu: %s=%.17e > %s=%.17e\n",                          \
-        __func__, __LINE__, i,                                                \
-        #a, check_a, #b, check_b);                                            \
+    log_warn(LD_GENERAL, "%s:%d: case %u: %s=%.17e > %s=%.17e\n",             \
+             __func__, __LINE__, (unsigned) i,                                \
+             str_a, check_a, str_b, check_b);                                 \
     ok = false;                                                               \
   }                                                                           \
 } while (0)
