@@ -95,15 +95,27 @@ typedef uint32_t circpad_delay_t;
  * These constants form a bitfield that specifies when a state machine
  * should be applied to a circuit.
  *
+ * If any of these elements is set, then the circuit will be tested against
+ * that specific condition. If an element is unset, then we don't test it.
+ * (E.g. If neither NO_STREAMS or STREAMS are set, then we will not care
+ * whether a circuit has streams attached when we apply a state machine)
+ *
  * The helper function circpad_circuit_state() converts circuit state
  * flags into this more compact representation.
  */
 typedef enum {
+  /* Only apply machine if the circuit is still building */
   CIRCPAD_CIRC_BUILDING = 1<<0,
+  /* Only apply machine if the circuit is open */
   CIRCPAD_CIRC_OPENED = 1<<1,
+  /* Only apply machine if the circuit has no attached streams */
   CIRCPAD_CIRC_NO_STREAMS = 1<<2,
+  /* Only apply machine if the circuit has attached streams */
   CIRCPAD_CIRC_STREAMS = 1<<3,
+  /* Only apply machine if the circuit still allows RELAY_EARLY cells */
   CIRCPAD_CIRC_HAS_RELAY_EARLY = 1<<4,
+  /* Only apply machine if the circuit has depleted its RELAY_EARLY cells
+   * allowance. */
   CIRCPAD_CIRC_HAS_NO_RELAY_EARLY = 1<<5
 } circpad_circuit_state_t;
 
