@@ -353,8 +353,10 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
     /* Sample from a fixed IAT distribution and return */
     return circpad_distribution_sample_iat_delay(state, start_usec);
   } else if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE) {
-    /* We have a mutable histogram */
-    tor_assert(mi->histogram && mi->histogram_len == state->histogram_len);
+    /* We have a mutable histogram. Do basic sanity check and apply: */
+    if (BUG(!mi->histogram) || BUG(mi->histogram_len != state->histogram_len)){
+      return CIRCPAD_DELAY_INFINITE;
+    }
 
     histogram = mi->histogram;
     for (circpad_hist_index_t b = 0; b < state->histogram_len; b++)
@@ -377,19 +379,25 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
   // really need it to be, though.
   while (curr_weight < bin_choice) {
     curr_bin++;
-    tor_assert(curr_bin < state->histogram_len);
+    /* It should be impossible to run past the end of the histogram */
+    if (BUG(curr_bin >= state->histogram_len)) {
+      return CIRCPAD_DELAY_INFINITE;
+    }
     curr_weight += histogram[curr_bin];
   }
 
-  tor_assert(curr_bin < state->histogram_len);
-  tor_assert(histogram[curr_bin] > 0);
+  /* Do some basic checking of the current bin we are in */
+  if (BUG(curr_bin >= state->histogram_len) ||
+      BUG(histogram[curr_bin] == 0)) {
+    return CIRCPAD_DELAY_INFINITE;
+  }
 
   // Store this index to remove the token upon callback.
   if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE) {
     mi->chosen_bin = curr_bin;
   }
 
-  if (curr_bin == CIRCPAD_INFINITY_BIN(state)) {
+  if (curr_bin >= CIRCPAD_INFINITY_BIN(state)) {
     if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE &&
         mi->histogram[curr_bin] > 0) {
       mi->histogram[curr_bin]--;
@@ -567,8 +575,9 @@ circpad_machine_remove_higher_token(circpad_machineinfo_t *mi,
                                                      target_bin_usec);
 
   if (bin >= 0 && bin < CIRCPAD_INFINITY_BIN(mi)) {
-    tor_assert(mi->histogram[bin]);
-    mi->histogram[bin]--;
+    if (!BUG(mi->histogram[bin] == 0)) {
+      mi->histogram[bin]--;
+    }
   }
 }
 
@@ -584,10 +593,18 @@ circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
           target_bin_usec);
 
   if (bin >= 0 && bin < CIRCPAD_INFINITY_BIN(mi)) {
-    tor_assert(mi->histogram[bin]);
-    mi->histogram[bin]--;
+    if (!BUG(mi->histogram[bin] == 0)) {
+      mi->histogram[bin]--;
+    }
   }
 }
+
+/* Helper macro: Ensure that the bin has tokens available, and BUG out of the
+ * function if it's not the case. */
+#define ENSURE_BIN_CAPACITY(bin_index) \
+  if (BUG(mi->histogram[bin_index] == 0)) {                   \
+    return;                                                   \
+  }
 
 /**
  * Remove a token from the closest non-empty bin to the target.
@@ -602,16 +619,17 @@ circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
                                      circpad_delay_t target_bin_usec,
                                      bool use_usec)
 {
-  circpad_hist_index_t lower = circpad_machine_first_lower_index(mi,
-          target_bin_usec);
-  circpad_hist_index_t higher = circpad_machine_first_higher_index(mi,
-          target_bin_usec);
-  circpad_hist_index_t current = circpad_histogram_usec_to_bin(mi,
-          target_bin_usec);
+  circpad_hist_index_t lower, higher, current;
   circpad_hist_index_t bin_to_remove = -1;
 
-  tor_assert(lower <= current);
-  tor_assert(higher >= current);
+  lower = circpad_machine_first_lower_index(mi, target_bin_usec);
+  higher = circpad_machine_first_higher_index(mi, target_bin_usec);
+  current = circpad_histogram_usec_to_bin(mi, target_bin_usec);
+
+  /* Sanity check the results */
+  if (BUG(lower > current) || BUG(higher < current)) {
+    return;
+  }
 
   /* Take care of edge cases first */
   if (higher == mi->histogram_len && lower == -1) {
@@ -619,12 +637,12 @@ circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
     return;
   } else if (higher == mi->histogram_len) {
     /* All higher bins are empty */
-    tor_assert(mi->histogram[lower]);
+    ENSURE_BIN_CAPACITY(lower);
     mi->histogram[lower]--;
     return;
   } else if (lower == -1) {
     /* All lower bins are empty */
-    tor_assert(mi->histogram[higher]);
+    ENSURE_BIN_CAPACITY(higher);
     mi->histogram[higher]--;
     return;
   }
@@ -638,19 +656,19 @@ circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
 
     if (target_bin_usec < lower_usec) {
       // Lower bin is closer
-      tor_assert(mi->histogram[lower]);
+      ENSURE_BIN_CAPACITY(lower);
       bin_to_remove = lower;
     } else if (target_bin_usec > higher_usec) {
       // Higher bin is closer
-      tor_assert(mi->histogram[higher]);
+      ENSURE_BIN_CAPACITY(higher);
       bin_to_remove = higher;
     } else if (target_bin_usec-lower_usec > higher_usec-target_bin_usec) {
       // Higher bin is closer
-      tor_assert(mi->histogram[higher]);
+      ENSURE_BIN_CAPACITY(higher);
       bin_to_remove = higher;
     } else {
       // Lower bin is closer
-      tor_assert(mi->histogram[lower]);
+      ENSURE_BIN_CAPACITY(lower);
       bin_to_remove = lower;
     }
     mi->histogram[bin_to_remove]--;
@@ -659,17 +677,19 @@ circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
   } else {
     if (current - lower > higher - current) {
       // Higher bin is closer
-      tor_assert(mi->histogram[higher]);
+      ENSURE_BIN_CAPACITY(higher);
       mi->histogram[higher]--;
       return;
     } else {
       // Lower bin is closer
-      tor_assert(mi->histogram[lower]);
+      ENSURE_BIN_CAPACITY(lower);
       mi->histogram[lower]--;
       return;
     }
   }
 }
+
+#undef ENSURE_BIN_CAPACITY
 
 /**
  * Remove a token from the exact bin corresponding to the target.
@@ -858,6 +878,9 @@ circpad_send_command_to_hop(origin_circuit_t *circ, uint8_t hopnum,
  * without another packet being sent first. If a packet is sent before this
  * callback happens, it is canceled. So when we're called here, send padding
  * right away.
+ *
+ * If sending this padding cell forced us to transition states return
+ * CIRCPAD_STATE_CHANGED. Otherwise return CIRCPAD_STATE_UNCHANGED.
  */
 circpad_decision_t
 circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
@@ -874,14 +897,20 @@ circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
     return CIRCPAD_STATE_CHANGED;
   }
 
+  /* If it's a histogram, reduce the token count */
   if (mi->histogram && mi->histogram_len) {
-    tor_assert(mi->chosen_bin < mi->histogram_len);
-    tor_assert(mi->histogram[mi->chosen_bin] > 0);
+    /* Basic sanity check on the histogram before removing anything */
+    if (BUG(mi->chosen_bin >= mi->histogram_len) ||
+        BUG(mi->histogram[mi->chosen_bin] == 0)) {
+      return CIRCPAD_STATE_CHANGED;
+    }
+
     mi->histogram[mi->chosen_bin]--;
   }
 
-  if (mi->state_length != CIRCPAD_STATE_LENGTH_INFINITE) {
-    tor_assert(mi->state_length > 0);
+  /* If we have a valid state length bound, consider it */
+  if (mi->state_length != CIRCPAD_STATE_LENGTH_INFINITE &&
+      !BUG(mi->state_length <= 0)) {
     mi->state_length--;
   }
 
