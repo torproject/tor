@@ -179,10 +179,6 @@ typedef enum {
   CIRCPAD_TOKEN_REMOVAL_EXACT = 5
 } circpad_removal_t;
 
-/** The maximum length any histogram can be. */
-/** Each bin is twice as large as the previous, with an extra bin for 0 */
-#define CIRCPAD_MAX_HISTOGRAM_LEN (sizeof(circpad_delay_t)*8 + 1)
-
 /**
  * Distribution types supported by circpad_distribution_sample().
  *
@@ -217,6 +213,15 @@ typedef struct circpad_distribution_t {
 /** State number type. Represents current state of state machine. */
 typedef uint16_t circpad_statenum_t;
 #define  CIRCPAD_STATENUM_MAX   (UINT16_MAX)
+
+/** A histogram is used to sample padding delays given a machine state.  This
+ *  constant defines the maximum histogram width (i.e. the max number of bins)
+ *
+ *  Each histogram bin is twice as large as the previous. Two exceptions: The
+ *  first bin has zero width (which means that minimum delay is applied to the
+ *  next padding cell), and the last bin (infinity bin) has infinite width
+ *  (which means that the next padding cell will be delayed infinitely). */
+#define CIRCPAD_MAX_HISTOGRAM_LEN (sizeof(circpad_delay_t)*8 + 1)
 
 /**
  * A circuit padding state machine state.
