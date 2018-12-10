@@ -31,6 +31,7 @@
 #include "core/or/or.h"
 
 #include "lib/math/prob_distr.h"
+#include "lib/math/fp.h"
 #include "lib/crypt_ops/crypto_rand.h"
 
 #include <float.h>
@@ -228,7 +229,7 @@ relerr(double expected, double actual)
    * and (actual <= expected && actual >= expected) iff actual ==
    * expected whether expected is zero or infinite.
    */
-  if (fabs(expected) <= 0 || isinf(expected)) {
+  if (fabs(expected) <= 0 || tor_isinf(expected)) {
     if (actual <= expected && actual >= expected)
       return 0;
     else
@@ -385,7 +386,7 @@ test_logit_logistic(void *arg)
      * ill-conditioned near 1 and thus amplifies whatever relative
      * error we made in computing p/(1 - p).
      */
-    if ((0 < p && p < 1) || isinf(x)) {
+    if ((0 < p && p < 1) || tor_isinf(x)) {
       if (phalf >= p - 0.5 && phalf <= p - 0.5)
         CHECK_RELERR(x, logit(p));
       if (p >= 0.5 + phalf && p <= 0.5 + phalf)
@@ -393,11 +394,11 @@ test_logit_logistic(void *arg)
     }
 
     CHECK_RELERR(-phalf, logistichalf(-x));
-    if (fabs(phalf) < 0.5 || isinf(x))
+    if (fabs(phalf) < 0.5 || tor_isinf(x))
       CHECK_RELERR(-x, logithalf(-phalf));
-    if (p < 1 || isinf(x)) {
+    if (p < 1 || tor_isinf(x)) {
       CHECK_RELERR(1 - p, logistic(-x));
-      if (p > .75 || isinf(x))
+      if (p > .75 || tor_isinf(x))
         CHECK_RELERR(-x, logit(1 - p));
     } else {
       CHECK_LE(logistic(-x), 1e-300);
@@ -666,7 +667,7 @@ test_weibull(void *arg)
       CHECK_RELERR(x/2, icdf_weibull(p, .5, 1));
       CHECK_RELERR(x*2, icdf_weibull(p, 2, 1));
     }
-    if (p >= 0.25 && !isinf(x) && np > 0) {
+    if (p >= 0.25 && !tor_isinf(x) && np > 0) {
       /*
        * For p near 0, not enough precision in np
        * near 1 to recover x.  For 0, isf gives inf,
