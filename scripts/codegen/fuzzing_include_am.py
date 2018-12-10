@@ -13,6 +13,7 @@ FUZZERS = """
 	iptsv2
 	microdesc
 	socks
+	strops
 	vrs
 """
 
