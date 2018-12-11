@@ -1257,10 +1257,6 @@ test_stochastic_log_logistic(void *arg)
   tt_assert(ok);
   ok = test_stochastic_log_logistic_impl(1, 10);
   tt_assert(ok);
-  ok = test_stochastic_log_logistic_impl(M_E, 1e-1);
-  tt_assert(ok);
-  ok = test_stochastic_log_logistic_impl(exp(-10), 1e-2);
-  tt_assert(ok);
 
  done:
   ;
