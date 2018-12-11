@@ -200,6 +200,8 @@ void control_event_boot_dir(bootstrap_status_t status, int progress);
 void control_event_boot_first_orconn(void);
 void control_event_bootstrap_problem(const char *warn, const char *reason,
                                      const connection_t *conn, int dowarn);
+char *control_event_boot_last_msg(void);
+void control_event_bootstrap_reset(void);
 
 void control_event_clients_seen(const char *controller_str);
 void control_event_transport_launched(const char *mode,

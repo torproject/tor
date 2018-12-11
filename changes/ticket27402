@@ -1,0 +1,10 @@
+  o Minor feature (bootstrap):
+    - When reporting bootstrap progress, stop distinguishing between
+      situations where it seems that only internal paths are available
+      and situations where it seems that external paths are available.
+      Previously, tor would often erroneously report that it had only
+      internal paths.  Closes ticket 27402.
+
+  o Code simplification and refactoring:
+    - Split out bootstrap progress reporting from control.c into a
+      separate file.  Part of ticket 27402.
