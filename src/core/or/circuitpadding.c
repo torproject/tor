@@ -349,7 +349,8 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
     return circpad_distribution_sample_iat_delay(state, start_usec);
   } else if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE) {
     /* We have a mutable histogram. Do basic sanity check and apply: */
-    if (BUG(!mi->histogram) || BUG(mi->histogram_len != state->histogram_len)){
+    if (BUG(!mi->histogram) ||
+        BUG(mi->histogram_len != state->histogram_len)) {
       return CIRCPAD_DELAY_INFINITE;
     }
 
