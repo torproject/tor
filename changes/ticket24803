@@ -2,4 +2,4 @@
     - Replace the 150 fallbacks originally introduced in Tor 0.3.3.1-alpha in
       January 2018 (of which ~115 were still functional), with a list of
       157 fallbacks (92 new, 65 existing, 85 removed) generated in
-      December 2018.
+      December 2018.  Closes ticket 24803.
