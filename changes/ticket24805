@@ -1,0 +1,3 @@
+  o Minor features (fallback directory list):
+    - Update the fallback whitelist based on operator opt-ins and opt-outs.
+      Closes ticket 24805, patch by Phoul.
