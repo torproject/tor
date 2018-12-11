@@ -135,12 +135,8 @@ new Tor release:
 === III. Making the source release.
 
 1. In `maint-0.?.x`, bump the version number in `configure.ac` and run
-   `perl scripts/maint/updateVersions.pl` to update version numbers in other
+   `make update-versions` to update version numbers in other
    places, and commit.  Then merge `maint-0.?.x` into `release-0.?.x`.
-
-   (NOTE: To bump the version number, edit `configure.ac`, and then run
-   either `make`, or `perl scripts/maint/updateVersions.pl`, depending on
-   your version.)
 
    When you merge the maint branch forward to the next maint branch, or into
    master, merge it with "-s ours" to avoid a needless version bump.
