@@ -96,6 +96,30 @@ test_container_smartlist_basic(void *arg)
   tor_free(v555);
 }
 
+/** Test SMARTLIST_FOREACH_REVERSE_BEGIN loop macro */
+static void
+test_container_smartlist_foreach_reverse(void *arg)
+{
+  smartlist_t *sl = smartlist_new();
+  int i;
+
+  (void) arg;
+
+  /* Add integers to smartlist in increasing order */
+  for (i=0;i<100;i++) {
+    smartlist_add(sl, (void*)(uintptr_t)i);
+  }
+
+  /* Pop them out in reverse and test their value */
+  SMARTLIST_FOREACH_REVERSE_BEGIN(sl, void*, k) {
+    i--;
+    tt_ptr_op(k, OP_EQ, (void*)(uintptr_t)i);
+  } SMARTLIST_FOREACH_END(k);
+
+ done:
+  smartlist_free(sl);
+}
+
 /** Run unit tests for smartlist-of-strings functionality. */
 static void
 test_container_smartlist_strings(void *arg)
@@ -1281,6 +1305,7 @@ test_container_smartlist_strings_eq(void *arg)
 struct testcase_t container_tests[] = {
   CONTAINER_LEGACY(smartlist_basic),
   CONTAINER_LEGACY(smartlist_strings),
+  CONTAINER_LEGACY(smartlist_foreach_reverse),
   CONTAINER_LEGACY(smartlist_overlap),
   CONTAINER_LEGACY(smartlist_digests),
   CONTAINER_LEGACY(smartlist_join),

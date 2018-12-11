@@ -3221,6 +3221,8 @@ refresh_all_country_info(void)
     routerset_refresh_countries(options->EntryNodes);
   if (options->ExitNodes)
     routerset_refresh_countries(options->ExitNodes);
+  if (options->MiddleNodes)
+    routerset_refresh_countries(options->MiddleNodes);
   if (options->ExcludeNodes)
     routerset_refresh_countries(options->ExcludeNodes);
   if (options->ExcludeExitNodes)

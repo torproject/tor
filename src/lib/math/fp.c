@@ -117,3 +117,28 @@ ENABLE_GCC_WARNING(double-promotion)
 ENABLE_GCC_WARNING(float-conversion)
 #endif
 }
+
+/* isinf() wrapper for tor */
+int
+tor_isinf(double x)
+{
+  /* Same as above, work around the "double promotion" warnings */
+#if defined(MINGW_ANY) && GCC_VERSION >= 409
+#define PROBLEMATIC_FLOAT_CONVERSION_WARNING
+DISABLE_GCC_WARNING(float-conversion)
+#endif /* defined(MINGW_ANY) && GCC_VERSION >= 409 */
+#if defined(__clang__)
+#if __has_warning("-Wdouble-promotion")
+#define PROBLEMATIC_DOUBLE_PROMOTION_WARNING
+DISABLE_GCC_WARNING(double-promotion)
+#endif
+#endif /* defined(__clang__) */
+  return isinf(x);
+#ifdef PROBLEMATIC_DOUBLE_PROMOTION_WARNING
+ENABLE_GCC_WARNING(double-promotion)
+#endif
+#ifdef PROBLEMATIC_FLOAT_CONVERSION_WARNING
+ENABLE_GCC_WARNING(float-conversion)
+#endif
+}
+
