@@ -5874,6 +5874,16 @@ test_config_kvline_parse(void *arg)
   lines = kvline_parse("A\"B=C CDE=\"F\" \"GHI\" ", KV_QUOTED|KV_OMIT_KEYS);
   tt_assert(! lines);
 
+  lines = kvline_parse("AB=", KV_QUOTED);
+  tt_assert(lines);
+  tt_str_op(lines->key, OP_EQ, "AB");
+  tt_str_op(lines->value, OP_EQ, "");
+
+  lines = kvline_parse("AB=", 0);
+  tt_assert(lines);
+  tt_str_op(lines->key, OP_EQ, "AB");
+  tt_str_op(lines->value, OP_EQ, "");
+
  done:
   config_free_lines(lines);
   tor_free(enc);

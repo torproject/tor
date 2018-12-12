@@ -32,9 +32,9 @@
 /** Return true iff we need to quote and escape the string <b>s</b> to encode
  * it. */
 static bool
-needs_escape(const char *s)
+needs_escape(const char *s, bool as_keyless_val)
 {
-  if (*s == 0)
+  if (as_keyless_val && *s == 0)
     return true;
 
   for (; *s; ++s) {
@@ -63,7 +63,8 @@ static bool
 kvline_can_encode_lines(const config_line_t *line, unsigned flags)
 {
   for ( ; line; line = line->next) {
-    if (line_has_no_key(line)) {
+    const bool keyless = line_has_no_key(line);
+    if (keyless) {
       if (! (flags & KV_OMIT_KEYS)) {
         /* If KV_OMIT_KEYS is not set, we can't encode a line with no key. */
         return false;
@@ -74,12 +75,12 @@ kvline_can_encode_lines(const config_line_t *line, unsigned flags)
       }
     }
 
-    if (needs_escape(line->value) && ! (flags & KV_QUOTED)) {
+    if (needs_escape(line->value, keyless) && ! (flags & KV_QUOTED)) {
       /* If KV_QUOTED is false, we can't encode a value that needs quotes. */
       return false;
     }
     if (line->key && strlen(line->key) &&
-        (needs_escape(line->key) || strchr(line->key, '='))) {
+        (needs_escape(line->key, false) || strchr(line->key, '='))) {
       /* We can't handle keys that need quoting. */
       return false;
     }
@@ -114,10 +115,11 @@ kvline_encode(const config_line_t *line,
     const char *k = "";
     const char *eq = "=";
     const char *v = "";
-    bool esc = needs_escape(line->value);
+    const bool keyless = line_has_no_key(line);
+    bool esc = needs_escape(line->value, keyless);
     char *tmp = NULL;
 
-    if (line->key && strlen(line->key)) {
+    if (! keyless) {
       k = line->key;
     } else {
       eq = "";
@@ -229,8 +231,9 @@ kvline_parse(const char *line, unsigned flags)
     key = val = NULL;
   }
 
-  if (!kvline_can_encode_lines(result, flags))
+  if (!kvline_can_encode_lines(result, flags)) {
     goto err;
+  }
   return result;
 
  err:
