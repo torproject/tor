@@ -5878,6 +5878,7 @@ test_config_kvline_parse(void *arg)
   tt_assert(lines);
   tt_str_op(lines->key, OP_EQ, "AB");
   tt_str_op(lines->value, OP_EQ, "");
+  config_free_lines(lines);
 
   lines = kvline_parse("AB=", 0);
   tt_assert(lines);
