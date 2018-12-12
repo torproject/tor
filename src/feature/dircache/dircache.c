@@ -511,22 +511,20 @@ warn_consensus_is_not_reasonably_live(
                                       NOT_REASONABLY_LIVE_WARNING_INTERVAL) };
   char timestamp[ISO_TIME_LEN+1];
   /* valid_after if is_too_new, valid_until if !is_too_new */
-  time_t valid_time;
-  char *dupes;
+  time_t valid_time = 0;
+  char *dupes = NULL;
 
   if (is_too_new) {
     if (consensus_cache_entry_get_valid_after(consensus, &valid_time))
       return;
+    dupes = rate_limit_log(&warned[1], now);
   } else {
     if (consensus_cache_entry_get_valid_until(consensus, &valid_time))
       return;
+    dupes = rate_limit_log(&warned[0], now);
   }
 
-  /* Check that is_too_new is a valid array index */
-  if (BUG(is_too_new != 0 && is_too_new != 1))
-    return;
-
-  if ((dupes = rate_limit_log(&warned[is_too_new], now))) {
+  if (dupes) {
     format_local_iso_time(timestamp, valid_time);
     log_warn(LD_DIRSERV, "Our %s%sconsensus is too %s, so we will not "
              "serve it to clients. It was valid %s %s local time and we "
