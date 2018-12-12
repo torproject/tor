@@ -715,7 +715,7 @@ circpad_machine_remove_exact(circpad_machineinfo_t *mi,
  * otherwise returns 0.
  */
 static circpad_decision_t
-circpad_check_token_supply(circpad_machineinfo_t *mi)
+check_machine_token_supply(circpad_machineinfo_t *mi)
 {
   uint32_t histogram_total_tokens = 0;
 
@@ -826,7 +826,7 @@ circpad_machine_remove_token(circpad_machineinfo_t *mi)
   }
 
   /* Check our token and state length limits */
-  return circpad_check_token_supply(mi);
+  return check_machine_token_supply(mi);
 }
 
 /**
@@ -958,7 +958,7 @@ circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
     if (state != circ->padding_info[machine_idx]->current_state)
       return CIRCPAD_STATE_CHANGED;
     else
-      return circpad_check_token_supply(circ->padding_info[machine_idx]);
+      return check_machine_token_supply(circ->padding_info[machine_idx]);
   } else {
     return CIRCPAD_STATE_CHANGED;
   }
