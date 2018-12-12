@@ -5873,7 +5873,7 @@ test_config_include_opened_file_list(void *data)
   tt_int_op(smartlist_contains_string(opened_files, torrcd), OP_EQ, 1);
   tt_int_op(smartlist_contains_string(opened_files, subfolder), OP_EQ, 1);
   tt_int_op(smartlist_contains_string(opened_files, in_subfolder), OP_EQ, 1);
-  // stat is called on the follwing files, os they count as opened
+  // stat is called on the following files, so they count as opened
   tt_int_op(smartlist_contains_string(opened_files, empty), OP_EQ, 1);
   tt_int_op(smartlist_contains_string(opened_files, file), OP_EQ, 1);
 #ifdef _WIN32

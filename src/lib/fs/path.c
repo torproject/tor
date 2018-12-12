@@ -43,11 +43,30 @@
 #include <errno.h>
 #include <string.h>
 
-typedef struct smartlist_t *(*unglob_fn)(const char*);
-typedef int (*handle_glob_fn)(const char *pattern, int start_sep, int end_sep,
+/** Represents a function that unglobs <b>pattern</b>. Returns a list of paths
+ * that match <b>pattern</b>. See comments on process_glob to understand why
+ * this is necessary. */
+typedef struct smartlist_t *(*unglob_fn)(const char *pattern);
+
+/** Represents a function called when a pattern is first processed.
+ *   - <b>pattern</b> - pattern being processed
+ *   - <b>start_sep</b> - index of separator before path component being
+ *                        processed
+ *   - <b>end_sep</b> - index of separator after path component being processed
+ *   - <b>result</b> - current results list, items may be added to this list
+ * Return false if <b>pattern</b> is to be ignored, true otherwise
+ **/
+typedef bool (*handle_glob_fn)(const char *pattern, int start_sep, int end_sep,
                                smartlist_t *results);
-typedef int (*glob_predicate_fn)(file_status_t file_type,
-                                 const char *pattern_after);
+
+/** Represents a function called for each path resulting from the expansion of
+ * a path component containing a glob.
+ *  - <b>file_type</b> - type of path resulting from the glob expansion
+ *  - <b>pattern_after</b> - what is after the path component being expanded
+ * Return false if path is to be ignored, true otherwise
+ **/
+typedef bool (*glob_predicate_fn)(file_status_t file_type,
+                                  const char *pattern_after);
 
 static struct smartlist_t *
 process_glob(const char *pattern, int add_no_glob, unglob_fn unglob,
@@ -323,29 +342,20 @@ make_path_absolute(char *fname)
 #endif /* defined(_WIN32) */
 }
 
-static char *
-get_path_until_separator(const char *path, int sep_index)
-{
-  size_t len = sep_index < 1 ? sep_index + 1 : sep_index;
-  return tor_strndup(path, len);
-}
+/**** Helper functions of type glob_predicate_fn used for glob processing ****/
 
-/* Auxiliary functions of type glob_predicate_fn used for glob processing
- *
- * These functions are called for each path resulting from the expansion of a
- * path component containing a glob
- *  - file_type: type of path resulting from the glob expansion
- *  - pattern_after: what is after the path component being expanded
- * Return 0 if path is to be ignored, 1 otherwise
- */
-static int
+/** Returns true if <b>file_type</b> represents an existing file (even if
+ * empty). Returns false otherwise. */
+static bool
 is_file(file_status_t file_type, const char *pattern_after)
 {
   (void)pattern_after;
   return file_type != FN_ERROR && file_type != FN_NOENT && file_type != FN_DIR;
 }
 
-static int
+/** Returns true if <b>file_type</b> represents an existing directory. Returns
+ * false otherwise. */
+static bool
 is_dir(file_status_t file_type, const char *pattern_after)
 {
   (void)pattern_after;
@@ -353,30 +363,42 @@ is_dir(file_status_t file_type, const char *pattern_after)
 }
 
 #ifdef _WIN32
-static int
+/** Returns true if the path where <b>file_type</b> was obtained from
+ * concatenated with <b>pattern_after</b> is a complete path and points to an
+ * existing file or directory. Returns false otherwise. */
+static bool
 no_pattern_after(file_status_t file_type, const char *pattern_after)
 {
   return file_type != FN_ERROR && file_type != FN_NOENT && !*pattern_after;
 }
 
-static int
+/** Returns true if the path where <b>file_type</b> was obtained from points to
+ * an existing directory and <b>pattern_after</b> is not empty. */
+static bool
 dir_pattern_after(file_status_t file_type, const char *pattern_after)
 {
   return is_dir(file_type, pattern_after) && *pattern_after;
 }
+#endif /* defined(_WIN32) */
 
-/* Auxiliary functions of type handle_glob_fn used for glob processing
- *
- * These functions are called when a pattern is first processed
- *  - pattern - pattern being processed
- *  - start_sep - index of path separator before path component being processed
- *  - end_sep - index of path separator after path component being processed
- *  - result - current results list, items may be added to this list
- * Return 0 if pattern is to be ignored, 1 otherwise
- */
-static int
+/*****************************************************************************/
+
+/** Returns a copy of <b>path</b> cut before <b>sep_index</b>. */
+static char *
+get_path_until_separator(const char *path, int sep_index)
+{
+  size_t len = sep_index < 1 ? sep_index + 1 : sep_index;
+  return tor_strndup(path, len);
+}
+
+/***** Helper functions of type handle_glob_fn used for glob processing ******/
+
+#ifdef _WIN32
+/** Returns true if <b>pattern</b> cut before <b>start_sep</b> is the path of
+ * an existing directory. Returns false otherwise. */
+static bool
 handle_glob_win32(const char *pattern, int start_sep, int end_sep,
-                 smartlist_t *result)
+                  smartlist_t *result)
 {
   (void)end_sep;
   (void)result;
@@ -388,7 +410,10 @@ handle_glob_win32(const char *pattern, int start_sep, int end_sep,
 }
 #endif /* defined(_WIN32) */
 
-static int
+/** Adds <b>pattern</b> cut before <b>start_sep</b> to <b>results</b>. Returns
+ * true if <b>pattern</b> contains a glob after <b>end_sep</b>. Returns false
+ * otherwise. */
+static bool
 handle_glob_opened_files(const char *pattern, int start_sep, int end_sep,
                          smartlist_t *result)
 {
@@ -398,6 +423,8 @@ handle_glob_opened_files(const char *pattern, int start_sep, int end_sep,
   const char *pattern_after = &pattern[end_sep+1];
   return has_glob(pattern_after);
 }
+
+/*****************************************************************************/
 
 #ifdef _WIN32
 /** Returns a list of paths that match <b>pattern</b>. Retruns NULL on error.
@@ -676,18 +703,18 @@ tor_glob(const char *pattern)
   return result;
 }
 
-/** Returns 1 if <b>s</b> contains characters that can be globbed.
- * Returns 0 otherwise. */
-int
+/** Returns true if <b>s</b> contains characters that can be globbed.
+ * Returns false otherwise. */
+bool
 has_glob(const char *s)
 {
   int i;
   for (i = 0; s[i]; i++) {
     if (IS_GLOB_CHAR(s, i)) {
-      return 1;
+      return true;
     }
   }
-  return 0;
+  return false;
 }
 
 /** Returns a list of files that are opened by the tor_glob function when
