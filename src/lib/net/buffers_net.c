@@ -51,7 +51,8 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
     read_result = read(fd, CHUNK_WRITE_PTR(chunk), at_most);
 
   if (read_result < 0) {
-    int e = tor_socket_errno(fd);
+    int e = is_socket ? tor_socket_errno(fd) : errno;
+
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
 #ifdef _WIN32
       if (e == WSAENOBUFS)
@@ -152,7 +153,8 @@ flush_chunk(tor_socket_t fd, buf_t *buf, chunk_t *chunk, size_t sz,
     write_result = write(fd, chunk->data, sz);
 
   if (write_result < 0) {
-    int e = tor_socket_errno(fd);
+    int e = is_socket ? tor_socket_errno(fd) : errno;
+
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
 #ifdef _WIN32
       if (e == WSAENOBUFS)
