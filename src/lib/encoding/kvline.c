@@ -27,8 +27,6 @@
 #include <stddef.h>
 #include <string.h>
 
-#include <stdio.h>//XXXX
-
 /** Return true iff we need to quote and escape the string <b>s</b> to encode
  * it. */
 static bool
@@ -135,14 +133,11 @@ kvline_encode(const config_line_t *line,
       v = line->value;
     }
 
-    //printf("  <%s!%s!%s>::\n", k,eq,v);//XXXX
     smartlist_add_asprintf(elements, "%s%s%s", k, eq, v);
     tor_free(tmp);
   }
 
   char *result = smartlist_join_strings(elements, " ", 0, NULL);
-
-  //printf("::%s::\n", result);//XXXX
 
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
