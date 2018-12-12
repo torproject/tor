@@ -1184,11 +1184,34 @@ test_stochastic_genpareto_impl(double mu, double sigma, double xi)
   return test_psi_dist_sample(&dist.base);
 }
 
+/** Produce deterministic randomness for the stochastic tests.
+ *
+ *  This function produces deterministic data over multiple calls iff it's
+ *  called in the same call order with the same 'n' parameter (which is the
+ *  case for the psi test). If not, outputs will deviate. */
+static void
+crypto_rand_deterministic(char *out, size_t n)
+{
+  /* This is the counter we gonna hash out every time */
+  static uint32_t counter = 0;
+  /* Use a XOF to squeeze bytes out of that silly counter */
+  crypto_xof_t *xof = crypto_xof_new();
+  tor_assert(xof);
+  crypto_xof_add_bytes(xof, (uint8_t*)&counter, sizeof(counter));
+  crypto_xof_squeeze_bytes(xof, (uint8_t*)out, n);
+  crypto_xof_free(xof);
+
+  /* Increase counter for next run */
+  counter++;
+}
+
 static void
 test_stochastic_genpareto(void *arg)
 {
   bool ok = 0;
   (void) arg;
+
+  MOCK(crypto_rand, crypto_rand_deterministic);
 
   ok = test_stochastic_genpareto_impl(0, 1, -0.25);
   tt_assert(ok);
@@ -1215,6 +1238,8 @@ test_stochastic_geometric(void *arg)
   bool ok = 0;
   (void) arg;
 
+  MOCK(crypto_rand, crypto_rand_deterministic);
+
   ok = test_stochastic_geometric_impl(0.1);
   tt_assert(ok);
   ok = test_stochastic_geometric_impl(0.5);
@@ -1233,6 +1258,8 @@ test_stochastic_logistic(void *arg)
 {
   bool ok = 0;
   (void) arg;
+
+  MOCK(crypto_rand, crypto_rand_deterministic);
 
   ok = test_stochastic_logistic_impl(0, 1);
   tt_assert(ok);
@@ -1271,6 +1298,8 @@ test_stochastic_weibull(void *arg)
 {
   bool ok = 0;
   (void) arg;
+
+  MOCK(crypto_rand, crypto_rand_deterministic);
 
   ok = test_stochastic_weibull_impl(1, 0.5);
   tt_assert(ok);
