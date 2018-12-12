@@ -93,8 +93,8 @@ kvline_can_encode_lines(const config_line_t *line, unsigned flags)
  * allocated string on success, or NULL on failure.
  *
  * If KV_QUOTED is set in <b>flags</b>, then all values that contain
- * spaces or unusual characters are escaped.  Otherwise, such values are
- * not allowed.
+ * spaces or unusual characters are escaped and quoted.  Otherwise, such
+ * values are not allowed.
  *
  * If KV_OMIT_KEYS is set in <b>flags</b>, then pairs with empty keys are
  * allowed, and are encoded as 'Value'.  Otherwise, such pairs are not
@@ -153,7 +153,7 @@ kvline_encode(const config_line_t *line,
  * pairs, using the provided <b>flags</b> to decode it.  Return a newly
  * allocated list of pairs on success, or NULL on failure.
  *
- * If KV_QUOTED is set in <b>flags</b>, then quoted values are
+ * If KV_QUOTED is set in <b>flags</b>, then (double-)quoted values are
  * allowed. Otherwise, such values are not allowed.
  *
  * If KV_OMIT_KEYS is set in <b>flags</b>, then values without keys are
