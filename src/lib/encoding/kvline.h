@@ -13,7 +13,6 @@
 #ifndef TOR_KVLINE_H
 #define TOR_KVLINE_H
 
-struct smartlist_t;
 struct config_line_t;
 
 #define KV_QUOTED    (1u<<0)
