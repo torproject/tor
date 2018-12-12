@@ -43,11 +43,12 @@ int process_win32_read_stderr(struct process_t *process, buf_t *buffer);
 
 void process_win32_trigger_completion_callbacks(void);
 
-#ifdef PROCESS_WIN32_PRIVATE
 /* Timer handling. */
-STATIC void process_win32_timer_start(void);
-STATIC void process_win32_timer_stop(void);
-STATIC bool process_win32_timer_running(void);
+void process_win32_timer_start(void);
+void process_win32_timer_stop(void);
+bool process_win32_timer_running(void);
+
+#ifdef PROCESS_WIN32_PRIVATE
 STATIC void process_win32_timer_callback(periodic_timer_t *, void *);
 STATIC bool process_win32_timer_test_process(process_t *);
 
