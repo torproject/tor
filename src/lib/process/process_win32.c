@@ -429,7 +429,7 @@ process_win32_trigger_completion_callbacks(void)
 /** Start the periodic timer which is reponsible for checking whether processes
  * are still alive and to make sure that the Tor process is periodically being
  * moved into an alertable state. */
-STATIC void
+void
 process_win32_timer_start(void)
 {
   /* Make sure we never start our timer if it's already running. */
@@ -447,7 +447,7 @@ process_win32_timer_start(void)
 }
 
 /** Stops the periodic timer. */
-STATIC void
+void
 process_win32_timer_stop(void)
 {
   if (BUG(periodic_timer == NULL))
@@ -458,7 +458,7 @@ process_win32_timer_stop(void)
 }
 
 /** Returns true iff the periodic timer is running. */
-STATIC bool
+bool
 process_win32_timer_running(void)
 {
   return periodic_timer != NULL;
