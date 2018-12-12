@@ -49,11 +49,6 @@ static uint16_t circpad_global_allowed_cells;
 static uint64_t circpad_global_padding_sent;
 static uint64_t circpad_global_nonpadding_sent;
 
-/* We scale our counts down by a factor of two when we're within
- * a factor of 200 of UINT64_MAX, because we have to multiply by
- * 100 and add without overflow */
-#define CIRCPAD_SCALE_GLOBAL_COUNTS_AT (UINT64_MAX/200)
-
 /** This is the list of circpad_machine_t's parsed from consensus and torrc
  *  that have origin_side == 1 (ie: are for client side) */
 static smartlist_t *origin_padding_machines = NULL;
@@ -849,10 +844,8 @@ circpad_send_command_to_hop(origin_circuit_t *circ, uint8_t hopnum,
 
   /* Check that the cpath has the target hop */
   if (!target_hop) {
-    log_fn(LOG_WARN,LD_CIRC,
-           "Padding circuit %u has %d hops, not %d",
-           circ->global_identifier,
-           circuit_get_cpath_len(circ), hopnum);
+    log_fn(LOG_WARN, LD_BUG, "Padding circuit %u has %d hops, not %d",
+           circ->global_identifier, circuit_get_cpath_len(circ), hopnum);
     return -1;
   }
 
@@ -926,10 +919,6 @@ circpad_send_padding_cell_for_callback(circpad_machineinfo_t *mi)
     mi->nonpadding_sent /= 2;
   }
   circpad_global_padding_sent++;
-  if (circpad_global_padding_sent >= CIRCPAD_SCALE_GLOBAL_COUNTS_AT) {
-    circpad_global_padding_sent /= 2;
-    circpad_global_nonpadding_sent /= 2;
-  }
 
   if (CIRCUIT_IS_ORIGIN(mi->on_circ)) {
     circpad_send_command_to_hop(TO_ORIGIN_CIRCUIT(mi->on_circ),
@@ -1400,10 +1389,6 @@ circpad_cell_event_nonpadding_sent(circuit_t *on_circ)
 {
   /* Update global cell count */
   circpad_global_nonpadding_sent++;
-  if (circpad_global_nonpadding_sent >= CIRCPAD_SCALE_GLOBAL_COUNTS_AT) {
-    circpad_global_nonpadding_sent /= 2;
-    circpad_global_padding_sent /= 2;
-  }
 
   /* If there are no machines then this loop should not iterate */
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, on_circ) {
