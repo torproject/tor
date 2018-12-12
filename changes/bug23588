@@ -1,7 +1,5 @@
-  o Minor bugfixes (address selection):
-    - Introduce fascist_firewall_choose_address_ls() which chooses an
-      IPv6 or IPv4 address based on a smartlist of link specifiers of
-      what is available and what we prefer. We use this function in
-      hs_get_extend_info_from_lspecs(). Fixes bug 23588; bugfix on
-      0.3.5.1-alpha. Patch by Neel Chauhan.
-
+  o Minor bugfixes (v3 onion services):
+    - Stop ignoring IPv6 link specifiers sent to v3 onion services.
+      v3 onion service IPv6 support is still incomplete, see 23493 for
+      details. Fixes bug 23588; bugfix on 0.3.2.1-alpha.
+      Patch by Neel Chauhan.
