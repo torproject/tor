@@ -55,7 +55,11 @@ struct process_t {
   /** Name of the command we want to execute (for example: /bin/ls). */
   char *command;
 
-  /** The arguments used for the new process. */
+  /** The arguments used for the new process. The format here is one argument
+   * per element of the smartlist_t. On Windows these arguments are combined
+   * together using the <b>tor_join_win_cmdline</b> function. On Unix the
+   * process name (argv[0]) and the trailing NULL is added automatically before
+   * the process is executed. */
   smartlist_t *arguments;
 
   /** The environment used for the new process. */
