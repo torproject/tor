@@ -95,15 +95,27 @@ typedef uint32_t circpad_delay_t;
  * These constants form a bitfield that specifies when a state machine
  * should be applied to a circuit.
  *
+ * If any of these elements is set, then the circuit will be tested against
+ * that specific condition. If an element is unset, then we don't test it.
+ * (E.g. If neither NO_STREAMS or STREAMS are set, then we will not care
+ * whether a circuit has streams attached when we apply a state machine)
+ *
  * The helper function circpad_circuit_state() converts circuit state
  * flags into this more compact representation.
  */
 typedef enum {
+  /* Only apply machine if the circuit is still building */
   CIRCPAD_CIRC_BUILDING = 1<<0,
+  /* Only apply machine if the circuit is open */
   CIRCPAD_CIRC_OPENED = 1<<1,
+  /* Only apply machine if the circuit has no attached streams */
   CIRCPAD_CIRC_NO_STREAMS = 1<<2,
+  /* Only apply machine if the circuit has attached streams */
   CIRCPAD_CIRC_STREAMS = 1<<3,
+  /* Only apply machine if the circuit still allows RELAY_EARLY cells */
   CIRCPAD_CIRC_HAS_RELAY_EARLY = 1<<4,
+  /* Only apply machine if the circuit has depleted its RELAY_EARLY cells
+   * allowance. */
   CIRCPAD_CIRC_HAS_NO_RELAY_EARLY = 1<<5
 } circpad_circuit_state_t;
 
@@ -179,10 +191,6 @@ typedef enum {
   CIRCPAD_TOKEN_REMOVAL_EXACT = 5
 } circpad_removal_t;
 
-/** The maximum length any histogram can be. */
-/** Each bin is twice as large as the previous, with an extra bin for 0 */
-#define CIRCPAD_MAX_HISTOGRAM_LEN (sizeof(circpad_delay_t)*8 + 1)
-
 /**
  * Distribution types supported by circpad_distribution_sample().
  *
@@ -218,33 +226,63 @@ typedef struct circpad_distribution_t {
 typedef uint16_t circpad_statenum_t;
 #define  CIRCPAD_STATENUM_MAX   (UINT16_MAX)
 
+/** A histogram is used to sample padding delays given a machine state.  This
+ *  constant defines the maximum histogram width (i.e. the max number of bins)
+ *
+ *  Each histogram bin is twice as large as the previous. Two exceptions: The
+ *  first bin has zero width (which means that minimum delay is applied to the
+ *  next padding cell), and the last bin (infinity bin) has infinite width
+ *  (which means that the next padding cell will be delayed infinitely). */
+#define CIRCPAD_MAX_HISTOGRAM_LEN (sizeof(circpad_delay_t)*8 + 1)
+
 /**
- * A circuit padding state machine state.
+ * A state of a padding machine. The information here are immutable and
+ * represent the initial form of the state; it does not get updated as things
+ * happen. The mutable information that gets updated in runtime are carried in
+ * a circpad_machineinfo_t.
  *
  * This struct describes the histograms and parameters of a single
  * state in the adaptive padding machine. Instances of this struct
  * exist in global circpad machine definitions that come from torrc
- * or the consensus, and are immutable.
+ * or the consensus.
  */
 typedef struct circpad_state_t {
-  /** how long the histogram is (in bins). Histograms must have at least 2
-   *  bins (or 0, if iat distributions are in use). */
+  /** If a histogram is used for this state, this specifies the number of bins
+   *  of this histogram. Histograms must have at least 2 bins.
+   *
+   *  If a delay probability distribution is used for this state, this is set
+   *  to 0. */
   circpad_hist_index_t histogram_len;
-  /** histogram itself: an array of uint16s of tokens, whose
-   * widths are exponentially spaced, in microseconds */
+  /** The histogram itself: an array of uint16s of tokens, whose
+   *  widths are exponentially spaced, in microseconds */
   circpad_hist_token_t histogram[CIRCPAD_MAX_HISTOGRAM_LEN];
-  /** total number of tokens */
+  /** Total number of tokens in this histogram. This is a constant and is *not*
+   *  decremented every time we spend a token. It's used for initializing and
+   *  refilling the histogram. */
   uint32_t histogram_total_tokens;
 
-  /** Microseconds of the first bin of histogram, or base of iat dist */
+  /** Minimum padding delay of this state in microseconds.
+   *
+   *  If histograms are used, this is the left (and right) bound of the first
+   *  bin (since it has zero width).
+   *
+   *  If a delay probability distribution is used, this represents the minimum
+   *  delay we can sample from the distribution.
+   */
   circpad_delay_t start_usec;
-  /** The span of the histogram in microseconds, used to calculate bin width.
-   *  For iat dist use, this is used as a max delay cap on the distribution. */
+
+  /** If histograms are used, this is the width of the whole histogram in
+   *  microseconds, and it's used to calculate individual bin width.
+   *
+   *  If a delay probability distribution is used, this is used as the max
+   *  delay we can sample from the distribution.
+   */
   circpad_delay_t range_usec;
 
   /**
-   * The iat_dist is a parametrized way of encoding inter-packet delay
-   * information in microseconds. It can be used instead of histograms.
+   * Represents a delay probability distribution (aka IAT distribution). It's a
+   * parametrized way of encoding inter-packet delay information in
+   * microseconds. It can be used instead of histograms.
    *
    * If it is used, token_removal below must be set to
    * CIRCPAD_TOKEN_REMOVAL_NONE.
@@ -263,10 +301,8 @@ typedef struct circpad_state_t {
    * It may be specified instead of or in addition to
    * the infinity bins and bins empty conditions. */
   circpad_distribution_t length_dist;
-
   /** A minimum length value, added to the output of length_dist */
   uint16_t start_length;
-
   /** A cap on the length value that can be sampled from the length_dist */
   uint64_t max_length;
 
