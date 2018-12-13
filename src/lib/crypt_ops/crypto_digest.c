@@ -955,3 +955,27 @@ crypto_xof_free_(crypto_xof_t *xof)
   memwipe(xof, 0, sizeof(crypto_xof_t));
   tor_free(xof);
 }
+
+/** Compute the XOF (SHAKE256) of a <b>input_len</b> bytes at <b>input</b>,
+ * putting <b>output_len</b> bytes at <b>output</b>. */
+void
+crypto_xof(uint8_t *output, size_t output_len,
+           const uint8_t *input, size_t input_len)
+{
+#ifdef OPENSSL_HAS_SHA3
+  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+  tor_assert(ctx);
+  int r = EVP_DigestInit(ctx, EVP_shake256());
+  tor_assert(r == 1);
+  r = EVP_DigestUpdate(ctx, input, input_len);
+  tor_assert(r == 1);
+  r = EVP_DigestFinalXOF(ctx, output, output_len);
+  tor_assert(r == 1);
+  EVP_MD_CTX_free(ctx);
+#else
+  crypto_xof_t *xof = crypto_xof_new();
+  crypto_xof_add_bytes(xof, input, input_len);
+  crypto_xof_squeeze_bytes(xof, output, output_len);
+  crypto_xof_free(xof);
+#endif
+}

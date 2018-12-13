@@ -1173,6 +1173,11 @@ test_crypto_sha3_xof(void *arg)
   crypto_xof_free(xof);
   memset(out, 0, sizeof(out));
 
+  /* Test one-function absorb/squeeze. */
+  crypto_xof(out, sizeof(out), msg, sizeof(msg));
+  test_memeq_hex(out, squeezed_hex);
+  memset(out, 0, sizeof(out));
+
   /* Test incremental absorb/squeeze. */
   xof = crypto_xof_new();
   tt_assert(xof);
