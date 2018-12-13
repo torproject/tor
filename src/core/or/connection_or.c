@@ -408,16 +408,12 @@ connection_or_report_broken_states(int severity, int domain)
 static void
 connection_or_change_state(or_connection_t *conn, uint8_t state)
 {
-  uint8_t old_state;
-
   tor_assert(conn);
 
-  old_state = conn->base_.state;
   conn->base_.state = state;
 
   if (conn->chan)
-    channel_tls_handle_state_change_on_orconn(conn->chan, conn,
-                                              old_state, state);
+    channel_tls_handle_state_change_on_orconn(conn->chan, conn, state);
 }
 
 /** Return the number of circuits using an or_connection_t; this used to
