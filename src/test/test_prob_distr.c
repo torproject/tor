@@ -1002,14 +1002,14 @@ bin_cdfs(const struct dist *dist, double lo, double hi, double *logP, size_t n)
   logP[0] = log(CDF(x_1) - 0); /* 0 = CDF(-inf) */
   for (i = 1; i < n2; i++) {
     x_0 = x_1;
-    x_1 = lo + i*w;
+    x_1 = (i <= n/2 ? lo + i*w : hi - (n - 2 - i)*w);
     logP[i] = log(CDF(x_1) - CDF(x_0));
   }
   x_0 = hi;
   logP[n - 1] = log(SF(x_0) - 0); /* 0 = SF(+inf) = 1 - CDF(+inf) */
   for (i = 1; i < n - n2; i++) {
     x_1 = x_0;
-    x_0 = hi - i*w;
+    x_0 = (i <= n/2 ? hi - i*w : lo + (n - 2 - i)*w);
     logP[n - i - 1] = log(SF(x_0) - SF(x_1));
   }
 #undef SF
