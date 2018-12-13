@@ -2686,6 +2686,17 @@ update_current_time(time_t now)
   memcpy(&last_updated, &current_second_last_changed, sizeof(last_updated));
   monotime_coarse_get(&current_second_last_changed);
 
+  /** How much clock jumping means that we should adjust our idea of when
+   * to go dormant? */
+#define NUM_JUMPED_SECONDS_BEFORE_NETSTATUS_UPDATE 20
+
+  /* Don't go dormant early or late just because we jumped in time. */
+  if (ABS(seconds_elapsed) >= NUM_JUMPED_SECONDS_BEFORE_NETSTATUS_UPDATE) {
+    if (is_participating_on_network()) {
+      netstatus_note_clock_jumped(seconds_elapsed);
+    }
+  }
+
   /** How much clock jumping do we tolerate? */
 #define NUM_JUMPED_SECONDS_BEFORE_WARN 100
 
@@ -2696,10 +2707,6 @@ update_current_time(time_t now)
     // moving back in time is always a bad sign.
     circuit_note_clock_jumped(seconds_elapsed, false);
 
-    /* Don't go dormant just because we jumped in time. */
-    if (is_participating_on_network()) {
-      reset_user_activity(now);
-    }
   } else if (seconds_elapsed >= NUM_JUMPED_SECONDS_BEFORE_WARN) {
     /* Compare the monotonic clock to the result of time(). */
     const int32_t monotime_msec_passed =
@@ -2720,11 +2727,6 @@ update_current_time(time_t now)
 
     if (clock_jumped || seconds_elapsed >= NUM_IDLE_SECONDS_BEFORE_WARN) {
       circuit_note_clock_jumped(seconds_elapsed, ! clock_jumped);
-    }
-
-    /* Don't go dormant just because we jumped in time. */
-    if (is_participating_on_network()) {
-      reset_user_activity(now);
     }
   } else if (seconds_elapsed > 0) {
     stats_n_seconds_working += seconds_elapsed;
@@ -2818,12 +2820,6 @@ initialize_mainloop_events(void)
 int
 do_main_loop(void)
 {
-  /* For now, starting Tor always counts as user activity. Later, we might
-   * have an option to control this.
-   */
-  reset_user_activity(approx_time());
-  set_network_participation(true);
-
   /* initialize the periodic events first, so that code that depends on the
    * events being present does not assert.
    */

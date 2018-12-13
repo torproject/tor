@@ -1809,11 +1809,20 @@ The following options are useful only for clients (that is, if
     Does not affect servers or onion services. Must be at least 10 minutes.
     (Default: 24 hours)
 
-[[DormantTimeoutDisabledByIdleStreams]] **DormantTimeoutDisabledByIdleStreams  **0**|**1**::
+[[DormantTimeoutDisabledByIdleStreams]] **DormantTimeoutDisabledByIdleStreams**  **0**|**1**::
     If true, then any open client stream (even one not reading or writing)
     counts as client activity for the purpose of DormantClientTimeout.
     If false, then only network activity counts. (Default: 1)
 
+[[DormantOnFirstStartup]] **DormantOnFirstStartup** **0**|**1**::
+    If true, then the first time Tor starts up with a fresh DataDirectory,
+    it starts in dormant mode, and takes no actions until the user has made
+    a request.  (This mode is recommended if installing a Tor client for a
+    user who might not actually use it.)  If false, Tor bootstraps the first
+    time it is started, whether it sees a user request or not.
+ +
+    After the first time Tor starts, it begins in dormant mode if it was
+    dormant before, and not otherwise. (Default: 0)
 
 SERVER OPTIONS
 --------------

@@ -1,0 +1,5 @@
+  o Minor features (battery management, client, dormant mode):
+    - The client's memory of whether it is "dormant", and how long it has
+      spend idle, persists across invocations.  Implements ticket 28624.
+    - There is a  DormantOnFirstStartup option that integrators can use if
+      they expect that in many cases, Tor will be installed but not used.
