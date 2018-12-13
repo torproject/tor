@@ -2,6 +2,9 @@ version: 1.0.{build}
 
 clone_depth: 50
 
+# Appveyor images are named after the Visual Studio version they contain.
+# But we compile using MinGW, not Visual Studio.
+# We use these images because they have different Windows versions.
 image:
   # Windows Server 2012 R2
   - Visual Studio 2015
