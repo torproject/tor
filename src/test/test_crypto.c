@@ -1178,8 +1178,9 @@ test_crypto_sha3_xof(void *arg)
   tt_assert(xof);
   for (size_t i = 0; i < sizeof(msg); i++)
     crypto_xof_add_bytes(xof, msg + i, 1);
-  for (size_t i = 0; i < sizeof(out); i++)
+  for (size_t i = 0; i < sizeof(out); i++) {
     crypto_xof_squeeze_bytes(xof, out + i, 1);
+  }
   test_memeq_hex(out, squeezed_hex);
 
  done:
