@@ -909,7 +909,11 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
 
     parse_proxy_error(line);
     goto err;
-  } else if (!strcmpstart(line, PROTO_LOG)) {
+
+    /* We check for the additional " " after the PROTO_LOG string to make sure
+     * we can later extend this big if/else-if table with something that begins
+     * with "LOG" without having to get the order right. */
+  } else if (!strcmpstart(line, PROTO_LOG " ")) {
     parse_log_line(line, mp);
     return;
   }
