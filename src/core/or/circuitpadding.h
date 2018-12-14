@@ -626,6 +626,11 @@ STATIC void circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
                                          bool use_usec);
 STATIC void circpad_machine_setup_tokens(circpad_machineinfo_t *mi);
 
+#ifdef TOR_UNIT_TESTS
+extern smartlist_t *origin_padding_machines;
+extern smartlist_t *relay_padding_machines;
+#endif
+
 #endif
 
 #endif
