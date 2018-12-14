@@ -266,7 +266,7 @@ get_next_token(memarea_t *area,
    * attack, a bug, or some other nonsense. */
 #define MAX_LINE_LENGTH (128*1024)
 
-  const char *next, *eol, *obstart;
+  const char *next, *eol;
   size_t obname_len;
   int i;
   directory_token_t *tok;
@@ -352,7 +352,6 @@ get_next_token(memarea_t *area,
   if (!eol || eol-*s<11 || strcmpstart(*s, "-----BEGIN ")) /* No object. */
     goto check_object;
 
-  obstart = *s; /* Set obstart to start of object spec */
   if (eol - *s <= 16 || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
       strcmp_len(eol-5, "-----", 5) ||           /* nuls or invalid endings */
       (eol-*s) > MAX_UNPARSED_OBJECT_SIZE) {     /* name too long */
@@ -383,15 +382,7 @@ get_next_token(memarea_t *area,
   if (next - *s > MAX_UNPARSED_OBJECT_SIZE)
     RET_ERR("Couldn't parse object: missing footer or object much too big.");
 
-  if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) { /* If it's a public key */
-    tok->key = crypto_pk_new();
-    if (crypto_pk_read_public_key_from_string(tok->key, obstart, eol-obstart))
-      RET_ERR("Couldn't parse public key.");
-  } else if (!strcmp(tok->object_type, "RSA PRIVATE KEY")) { /* private key */
-    tok->key = crypto_pk_new();
-    if (crypto_pk_read_private_key_from_string(tok->key, obstart, eol-obstart))
-      RET_ERR("Couldn't parse private key.");
-  } else { /* If it's something else, try to base64-decode it */
+  {
     int r;
     size_t maxsize = base64_decode_maxsize(next-*s);
     tok->object_body = ALLOC(maxsize);
@@ -399,6 +390,17 @@ get_next_token(memarea_t *area,
     if (r<0)
       RET_ERR("Malformed object: bad base64-encoded data");
     tok->object_size = r;
+  }
+
+  if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) { /* If it's a public key */
+    tok->key = crypto_pk_asn1_decode(tok->object_body, tok->object_size);
+    if (! tok->key)
+      RET_ERR("Couldn't parse public key.");
+  } else if (!strcmp(tok->object_type, "RSA PRIVATE KEY")) { /* private key */
+    tok->key = crypto_pk_asn1_decode_private(tok->object_body,
+                                             tok->object_size);
+    if (! tok->key)
+      RET_ERR("Couldn't parse private key.");
   }
   *s = eol;
 
