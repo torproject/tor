@@ -392,10 +392,13 @@ test_util_format_encoded_size(void *arg)
 
     base64_encode(outbuf, sizeof(outbuf), (char *)inbuf, i, 0);
     tt_int_op(strlen(outbuf), OP_EQ, base64_encode_size(i, 0));
+    tt_int_op(i, OP_LE, base64_decode_maxsize(strlen(outbuf)));
+
     base64_encode(outbuf, sizeof(outbuf), (char *)inbuf, i,
                   BASE64_ENCODE_MULTILINE);
     tt_int_op(strlen(outbuf), OP_EQ,
               base64_encode_size(i, BASE64_ENCODE_MULTILINE));
+    tt_int_op(i, OP_LE, base64_decode_maxsize(strlen(outbuf)));
   }
 
  done:
@@ -417,4 +420,3 @@ struct testcase_t util_format_tests[] = {
   { "encoded_size", test_util_format_encoded_size, 0, NULL, NULL },
   END_OF_TESTCASES
 };
-

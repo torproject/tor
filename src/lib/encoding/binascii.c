@@ -179,6 +179,18 @@ base64_encode_size(size_t srclen, int flags)
   return enclen;
 }
 
+/** Return an upper bound on the number of bytes that might be needed to hold
+ * the data from decoding the base64 string <b>srclen</b>.  This is only an
+ * upper bound, since some part of the base64 string might be padding or
+ * space. */
+size_t
+base64_decode_maxsize(size_t srclen)
+{
+  tor_assert(srclen < INT_MAX / 3);
+
+  return CEIL_DIV(srclen * 3, 4);
+}
+
 /** Internal table mapping 6 bit values to the Base64 alphabet. */
 static const char base64_encode_table[64] = {
   'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
