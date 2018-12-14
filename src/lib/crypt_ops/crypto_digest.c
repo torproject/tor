@@ -975,7 +975,7 @@ crypto_xof(uint8_t *output, size_t output_len,
 #else
   crypto_xof_t *xof = crypto_xof_new();
   crypto_xof_add_bytes(xof, input, input_len);
-  crypto_xof_squeeze_bytes(xof, out, outlen);
+  crypto_xof_squeeze_bytes(xof, output, output_len);
   crypto_xof_free(xof);
 #endif
 }
