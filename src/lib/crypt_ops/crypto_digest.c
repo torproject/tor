@@ -623,7 +623,9 @@ crypto_digest_get_digest(crypto_digest_t *digest,
   }
 #endif
 
+#ifdef OPENSSL_HAS_SHA3
  done:
+#endif
   memcpy(out, r, out_len);
   memwipe(r, 0, sizeof(r));
 }
