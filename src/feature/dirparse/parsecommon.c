@@ -393,8 +393,9 @@ get_next_token(memarea_t *area,
       RET_ERR("Couldn't parse private key.");
   } else { /* If it's something else, try to base64-decode it */
     int r;
-    tok->object_body = ALLOC(next-*s); /* really, this is too much RAM. */
-    r = base64_decode(tok->object_body, next-*s, *s, next-*s);
+    size_t maxsize = base64_decode_maxsize(next-*s);
+    tok->object_body = ALLOC(maxsize);
+    r = base64_decode(tok->object_body, maxsize, *s, next-*s);
     if (r<0)
       RET_ERR("Malformed object: bad base64-encoded data");
     tok->object_size = r;
