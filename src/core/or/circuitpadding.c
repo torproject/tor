@@ -1809,7 +1809,7 @@ circpad_deliver_unrecognized_cell_events(circuit_t *circ,
 {
   // We should never see unrecognized cells at origin.
   // Our caller emits a warn when this happens.
-  if (!CIRCUIT_IS_ORIGIN(circ)) {
+  if (CIRCUIT_IS_ORIGIN(circ)) {
     return;
   }
 
