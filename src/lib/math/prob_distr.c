@@ -30,6 +30,12 @@
  *   numerical analysts' definition in the comments, though we do use
  *   DBL_EPSILON in a handful of places where it is convenient to use
  *   some function of eps = DBL_EPSILON/2 in a case analysis.
+ *
+ * - In various functions (e.g. sample_log_logistic()) we jump through hoops so
+ *   that we can use reals closer to 0 than closer to 1, since we achieve much
+ *   greater accuracy for floating point numbers near 0. In particular, we can
+ *   represent differences as small as 10^-300 for numbers near 0, but of no
+ *   less than 10^-16 for numbers near 1.
  **/
 
 #define PROB_DISTR_PRIVATE
