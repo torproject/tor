@@ -266,7 +266,7 @@ get_next_token(memarea_t *area,
    * attack, a bug, or some other nonsense. */
 #define MAX_LINE_LENGTH (128*1024)
 
-  const char *next, *eol, *obstart;
+  const char *next, *eol;
   size_t obname_len;
   int i;
   directory_token_t *tok;
@@ -352,7 +352,6 @@ get_next_token(memarea_t *area,
   if (!eol || eol-*s<11 || strcmpstart(*s, "-----BEGIN ")) /* No object. */
     goto check_object;
 
-  obstart = *s; /* Set obstart to start of object spec */
   if (eol - *s <= 16 || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
       strcmp_len(eol-5, "-----", 5) ||           /* nuls or invalid endings */
       (eol-*s) > MAX_UNPARSED_OBJECT_SIZE) {     /* name too long */
