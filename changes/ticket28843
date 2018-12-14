@@ -1,0 +1,3 @@
+  o Minor features (controller):
+    - Add a DROPOWNERSHIP command to undo the effects of TAKEOWNERSHIP.
+      Implements ticket 28843.
