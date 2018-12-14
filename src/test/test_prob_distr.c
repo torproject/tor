@@ -1184,7 +1184,18 @@ test_stochastic_genpareto_impl(double mu, double sigma, double xi)
   return test_psi_dist_sample(&dist.base);
 }
 
-/** Produce deterministic randomness for the stochastic tests.
+/* This is the seed of the deterministic randomness */
+static uint32_t deterministic_rand_counter;
+
+/** Initialize the seed of the deterministic randomness. */
+static void
+init_deterministic_rand(void)
+{
+  deterministic_rand_counter = crypto_rand_uint32();
+}
+
+/** Produce deterministic randomness for the stochastic tests using the global
+ *  deterministic_rand_counter seed
  *
  *  This function produces deterministic data over multiple calls iff it's
  *  called in the same call order with the same 'n' parameter (which is the
@@ -1192,25 +1203,26 @@ test_stochastic_genpareto_impl(double mu, double sigma, double xi)
 static void
 crypto_rand_deterministic(char *out, size_t n)
 {
-  /* This is the counter we gonna hash out every time */
-  static uint32_t counter = 0;
   /* Use a XOF to squeeze bytes out of that silly counter */
   crypto_xof_t *xof = crypto_xof_new();
   tor_assert(xof);
-  crypto_xof_add_bytes(xof, (uint8_t*)&counter, sizeof(counter));
+  crypto_xof_add_bytes(xof, (uint8_t*)&deterministic_rand_counter,
+                       sizeof(deterministic_rand_counter));
   crypto_xof_squeeze_bytes(xof, (uint8_t*)out, n);
   crypto_xof_free(xof);
 
   /* Increase counter for next run */
-  counter++;
+  deterministic_rand_counter++;
 }
 
 static void
 test_stochastic_genpareto(void *arg)
 {
   bool ok = 0;
+  bool tests_failed = true;
   (void) arg;
 
+  init_deterministic_rand();
   MOCK(crypto_rand, crypto_rand_deterministic);
 
   ok = test_stochastic_genpareto_impl(0, 1, -0.25);
@@ -1228,16 +1240,24 @@ test_stochastic_genpareto(void *arg)
   ok = test_stochastic_genpareto_impl(1, 2, 0.25);
   tt_assert(ok);
 
+  tests_failed = false;
+
  done:
-  ;
+  if (tests_failed) {
+    printf("seed: %"PRIu32, deterministic_rand_counter);
+  }
+  UNMOCK(crypto_rand);
 }
 
 static void
 test_stochastic_geometric(void *arg)
 {
   bool ok = 0;
+  bool tests_failed = true;
+
   (void) arg;
 
+  init_deterministic_rand();
   MOCK(crypto_rand, crypto_rand_deterministic);
 
   ok = test_stochastic_geometric_impl(0.1);
@@ -1249,16 +1269,23 @@ test_stochastic_geometric(void *arg)
   ok = test_stochastic_geometric_impl(1);
   tt_assert(ok);
 
+  tests_failed = false;
+
  done:
-  ;
+  if (tests_failed) {
+    printf("seed: %"PRIu32, deterministic_rand_counter);
+  }
+  UNMOCK(crypto_rand);
 }
 
 static void
 test_stochastic_logistic(void *arg)
 {
   bool ok = 0;
+  bool tests_failed = true;
   (void) arg;
 
+  init_deterministic_rand();
   MOCK(crypto_rand, crypto_rand_deterministic);
 
   ok = test_stochastic_logistic_impl(0, 1);
@@ -1270,15 +1297,24 @@ test_stochastic_logistic(void *arg)
   ok = test_stochastic_logistic_impl(-10, 100);
   tt_assert(ok);
 
+  tests_failed = false;
+
  done:
-  ;
+  if (tests_failed) {
+    printf("seed: %"PRIu32, deterministic_rand_counter);
+  }
+  UNMOCK(crypto_rand);
 }
 
 static void
 test_stochastic_log_logistic(void *arg)
 {
   bool ok = 0;
+  bool tests_failed = true;
   (void) arg;
+
+  init_deterministic_rand();
+  MOCK(crypto_rand, crypto_rand_deterministic);
 
   ok = test_stochastic_log_logistic_impl(1, 1);
   tt_assert(ok);
@@ -1289,16 +1325,23 @@ test_stochastic_log_logistic(void *arg)
   ok = test_stochastic_log_logistic_impl(exp(-10), 1e-2);
   tt_assert(ok);
 
+  tests_failed = false;
+
  done:
-  ;
+  if (tests_failed) {
+    printf("seed: %"PRIu32, deterministic_rand_counter);
+  }
+  UNMOCK(crypto_rand);
 }
 
 static void
 test_stochastic_weibull(void *arg)
 {
   bool ok = 0;
+  bool tests_failed = true;
   (void) arg;
 
+  init_deterministic_rand();
   MOCK(crypto_rand, crypto_rand_deterministic);
 
   ok = test_stochastic_weibull_impl(1, 0.5);
@@ -1312,8 +1355,13 @@ test_stochastic_weibull(void *arg)
   ok = test_stochastic_weibull_impl(10, 1);
   tt_assert(ok);
 
+  tests_failed = false;
+
  done:
-  ;
+  if (tests_failed) {
+    printf("seed: %"PRIu32, deterministic_rand_counter);
+  }
+  UNMOCK(crypto_rand);
 }
 
 struct testcase_t prob_distr_tests[] = {
