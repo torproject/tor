@@ -789,7 +789,7 @@ process_read_lines(process_t *process,
     }
 
     /* No complete line for us to read. We are done for now. */
-    tor_assert(ret == 0);
+    tor_assert_nonfatal(ret == 0);
     break;
   }
 
