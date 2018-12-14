@@ -766,13 +766,13 @@ process_read_lines(process_t *process,
     tor_assert(ret != -1);
 
     /* Remove \n from the end of the line. */
-    if (data[line_size - 1] == '\n') {
+    if (line_size >= 1 && data[line_size - 1] == '\n') {
       data[line_size - 1] = '\0';
       --line_size;
     }
 
     /* Remove \r from the end of the line. */
-    if (data[line_size - 1] == '\r') {
+    if (line_size >= 1 && data[line_size - 1] == '\r') {
       data[line_size - 1] = '\0';
       --line_size;
     }
