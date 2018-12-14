@@ -59,11 +59,11 @@ static uint64_t circpad_global_nonpadding_sent;
 
 /** This is the list of circpad_machine_t's parsed from consensus and torrc
  *  that have origin_side == 1 (ie: are for client side) */
-static smartlist_t *origin_padding_machines = NULL;
+STATIC smartlist_t *origin_padding_machines = NULL;
 
 /** This is the list of circpad_machine_t's parsed from consensus and torrc
  *  that have origin_side == 0 (ie: are for relay side) */
-static smartlist_t *relay_padding_machines = NULL;
+STATIC smartlist_t *relay_padding_machines = NULL;
 
 /** Loop over the current padding state machines using <b>loop_var</b> as the
  *  loop variable. */
@@ -1148,24 +1148,25 @@ circpad_machine_transitioned_to_end(circpad_machineinfo_t *mi)
    * here does.
    */
   if (machine->should_negotiate_end) {
+    circuit_t *on_circ = mi->on_circ;
     if (machine->is_origin_side) {
-      circpad_negotiate_padding(TO_ORIGIN_CIRCUIT(mi->on_circ),
-                                machine->machine_num,
-                                machine->target_hopnum,
-                                CIRCPAD_COMMAND_STOP);
       /* We free the machine info here so that we can be replaced
        * by a different machine. But we must leave the padding_machine
        * in place to wait for the negotiated response */
-      circpad_circuit_machineinfo_free_idx(mi->on_circ,
+      circpad_circuit_machineinfo_free_idx(on_circ,
                                            machine->machine_index);
+      circpad_negotiate_padding(TO_ORIGIN_CIRCUIT(on_circ),
+                                machine->machine_num,
+                                machine->target_hopnum,
+                                CIRCPAD_COMMAND_STOP);
     } else {
-      circpad_padding_negotiated(mi->on_circ,
+      circpad_circuit_machineinfo_free_idx(on_circ,
+                                           machine->machine_index);
+      circpad_padding_negotiated(on_circ,
                                 machine->machine_num,
                                 CIRCPAD_COMMAND_STOP,
                                 CIRCPAD_RESPONSE_OK);
-      mi->on_circ->padding_machine[machine->machine_index] = NULL;
-      circpad_circuit_machineinfo_free_idx(mi->on_circ,
-                                           machine->machine_index);
+      on_circ->padding_machine[machine->machine_index] = NULL;
     }
   }
 }
@@ -1656,13 +1657,17 @@ circpad_add_matching_machines(origin_circuit_t *on_circ)
           circ->padding_machine[i] = NULL;
         }
 
-        /* Try to negotiate padding, and if we send the negotiation
-         * cell, set up the machine immediately. (We'll tear it down
-         * upon receipt of an ERR response). */
+        /* Set up the machine immediately so that the slot is occupied.
+         * We will tear it down on error return, or if there is an error
+         * response from the relay. */
+        circpad_setup_machine_on_circ(circ, machine);
         if (circpad_negotiate_padding(on_circ, machine->machine_num,
                                   machine->target_hopnum,
-                                  CIRCPAD_COMMAND_START) == 0) {
-          circpad_setup_machine_on_circ(circ, machine);
+                                  CIRCPAD_COMMAND_START) < 0) {
+          circpad_circuit_machineinfo_free_idx(circ, i);
+        } else {
+          /* Success. Don't try any more machines */
+          return;
         }
       }
     } SMARTLIST_FOREACH_END(machine);
