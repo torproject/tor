@@ -1,0 +1,4 @@
+  o Minor features (performance):
+    - Remove a needless memset() call from get_token_arguments,
+      thereby speeding up the tokenization of directory objects by about
+      20%. Closes ticket 28852.
