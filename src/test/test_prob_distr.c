@@ -861,6 +861,8 @@ test_uniform_interval(void *arg)
   ;
 }
 
+/********************** Stochastic tests ****************************/
+
 /*
  * Psi test, sometimes also called G-test.  The psi test statistic,
  * suitably scaled, has chi^2 distribution, but the psi test tends to
@@ -892,7 +894,9 @@ test_uniform_interval(void *arg)
  */
 
 static const size_t NSAMPLES = 100000;
+/* Number of chances we give to the test to succeed. */
 static const unsigned NTRIALS = 2;
+/* Number of times we want the test to pass per NTRIALS. */
 static const unsigned NPASSES_MIN = 1;
 
 #define PSI_DF 100                          /* degrees of freedom */
@@ -979,9 +983,16 @@ test_stochastic_geometric_impl(double p)
 }
 
 /**
- * Set logP[i] = log(F(x_i) - F(x_{i-1})), where x_-1 = -inf, x_n =
- * +inf, and x_i = i*(hi - lo)/(n - 2), and where F(x) is the CDF of
- * dist.
+ * Divide the support of <b>dist</b> into histogram bins in <b>logP</b>. Start
+ * at the 1st percentile and ending at the 99th percentile. Pick the bin
+ * boundaries using linear interpolation so that they are uniformly spaced.
+ *
+ * In each bin logP[i] we insert the expected log-probability that a sampled
+ * value will fall into that bin. We will use this as the null hypothesis of
+ * the psi test.
+ *
+ * Set logP[i] = log(CDF(x_i) - CDF(x_{i-1})), where x_-1 = -inf, x_n =
+ * +inf, and x_i = i*(hi - lo)/(n - 2).
  */
 static void
 bin_cdfs(const struct dist *dist, double lo, double hi, double *logP, size_t n)
@@ -1002,14 +1013,23 @@ bin_cdfs(const struct dist *dist, double lo, double hi, double *logP, size_t n)
   logP[0] = log(CDF(x_1) - 0); /* 0 = CDF(-inf) */
   for (i = 1; i < n2; i++) {
     x_0 = x_1;
+    /* do the linear interpolation */
     x_1 = (i <= n/2 ? lo + i*w : hi - (n - 2 - i)*w);
+    /* set the expected log-probability */
     logP[i] = log(CDF(x_1) - CDF(x_0));
   }
   x_0 = hi;
   logP[n - 1] = log(SF(x_0) - 0); /* 0 = SF(+inf) = 1 - CDF(+inf) */
+
+  /* In this loop we are filling out the high part of the array. We are using
+   * SF because in these cases the CDF is near 1 where precision is lower. So
+   * instead we are using SF near 0 where the precision is higher. We have
+   * SF(t) = 1 - CDF(t).  */
   for (i = 1; i < n - n2; i++) {
     x_1 = x_0;
+    /* do the linear interpolation */
     x_0 = (i <= n/2 ? hi - i*w : lo + (n - 2 - i)*w);
+    /* set the expected log-probability */
     logP[n - i - 1] = log(SF(x_0) - SF(x_1));
   }
 #undef SF
@@ -1043,6 +1063,8 @@ bin_samples(const struct dist *dist, double lo, double hi, size_t *C, size_t n)
 }
 
 /**
+ * Carry out a Psi test on <b>dist</b>.
+ *
  * Sample NSAMPLES from dist, putting them in bins from -inf to lo to
  * hi to +inf, and apply up to two psi tests.  True if at least one psi
  * test passes; false if not.  False positive rate should be bounded by
@@ -1056,7 +1078,10 @@ test_psi_dist_sample(const struct dist *dist)
   double lo = dist->ops->icdf(dist, 1/(double)(PSI_DF + 2));
   double hi = dist->ops->isf(dist, 1/(double)(PSI_DF + 2));
 
+  /* Create the null hypothesis in logP */
   bin_cdfs(dist, lo, hi, logP, PSI_DF);
+
+  /* Now run the test */
   while (ntry --> 0) {
     size_t C[PSI_DF] = {0};
     bin_samples(dist, lo, hi, C, PSI_DF);
@@ -1065,6 +1090,8 @@ test_psi_dist_sample(const struct dist *dist)
         break;
     }
   }
+
+  /* Did we fail or succeed? */
   if (npass >= NPASSES_MIN) {
     /* printf("pass %s sampler\n", dist->ops->name);*/
     return true;
