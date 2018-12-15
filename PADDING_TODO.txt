@@ -1,13 +1,14 @@
 TODO sketch for this branch, in rough priority order:
 
 - Clean up/fix XXX's and FIXMEs
-  - Tests for circuit getting marked or freed before callback.
-  - Tests for detecting padding from wrong hop
-  - Tests for machine replacement on all conditions
-  - Tests for STATE_END teardown due to infinity, bins_empty, and/or length
-    with pending timers, new machines, etc.
-  - Test histogram spacing for larger length histograms
-  - Better test coverage in general
+  - Callback tests:
+    - Tests for STATE_END teardown with pending timers
+    - Tests for circuit getting marked or freed before callback.
+  - Tokens test:
+    - Use tokens test for detecting padding from wrong hop
+    - Token removal rules (closest and lower)
+    - Verify token removal testing is thorough
+  - Fix: adding rate limits after wrap
 
 - Negotiate errors are not remembered.. If there is a consensus desync,
   clients will keep trying machines that middles do not have..
