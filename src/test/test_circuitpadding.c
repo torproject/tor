@@ -20,6 +20,7 @@
 #include "core/or/protover.h"
 #include "feature/nodelist/nodelist.h"
 #include "lib/evloop/compat_libevent.h"
+#include "app/config/config.h"
 
 #include "feature/nodelist/routerstatus_st.h"
 #include "feature/nodelist/networkstatus_st.h"
@@ -37,10 +38,13 @@ extern smartlist_t *connection_array;
 
 circid_t get_unique_circ_id_by_chan(channel_t *chan);
 void helper_create_basic_machine(void);
+static void helper_create_conditional_machines(void);
 
 static or_circuit_t * new_fake_orcirc(channel_t *nchan, channel_t *pchan);
 channel_t *new_fake_channel(void);
 void test_circuitpadding_negotiation(void *arg);
+
+void test_circuitpadding_conditions(void *arg);
 
 void test_circuitpadding_serialize(void *arg);
 void test_circuitpadding_rtt(void *arg);
@@ -200,7 +204,8 @@ static int
 circuit_package_relay_cell_mock(cell_t *cell, circuit_t *circ,
                            cell_direction_t cell_direction,
                            crypt_path_t *layer_hint, streamid_t on_stream,
-                           const char *filename, int lineno) {
+                           const char *filename, int lineno)
+{
   (void)cell; (void)on_stream; (void)filename; (void)lineno;
 
   if (circ == client_side) {
@@ -214,11 +219,13 @@ circuit_package_relay_cell_mock(cell_t *cell, circuit_t *circ,
       tt_int_op(cell_direction, OP_EQ, CELL_DIRECTION_OUT);
       tt_int_op(is_target_hop, OP_EQ, 1);
 
-      // Pretend a padding cell was sent
-      circpad_cell_event_padding_sent(client_side);
+      // No need to pretend a padding cell was sent: This event is
+      // now emitted internally when the circuitpadding code sends them.
+      //circpad_cell_event_padding_sent(client_side);
 
       // Receive padding cell at middle
-      circpad_cell_event_padding_received(relay_side);
+      circpad_deliver_recognized_relay_cell_events(relay_side,
+              cell->payload[0], NULL);
     }
     n_client_cells++;
   } else if (circ == relay_side) {
@@ -230,10 +237,14 @@ circuit_package_relay_cell_mock(cell_t *cell, circuit_t *circ,
                                         TO_ORIGIN_CIRCUIT(client_side)
                                            ->cpath->next);
     } else {
-      // Pretend a padding cell was sent
-      circpad_cell_event_padding_sent(relay_side);
+      // No need to pretend a padding cell was sent: This event is
+      // now emitted internally when the circuitpadding code sends them.
+      //circpad_cell_event_padding_sent(relay_side);
+
       // Receive padding cell at client
-      circpad_cell_event_padding_received(client_side);
+      circpad_deliver_recognized_relay_cell_events(client_side,
+              cell->payload[0],
+              TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
     }
 
     n_relay_cells++;
@@ -1027,6 +1038,192 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
   circpad_machine_event_circ_added_hop(TO_ORIGIN_CIRCUIT(client));
 }
 
+static circpad_machine_t *
+helper_create_conditional_machine(void)
+{
+  circpad_machine_t *ret = tor_malloc_zero(sizeof(circpad_machine_t));
+
+  /* Start, burst */
+  circpad_machine_states_init(ret, 2);
+
+  ret->states[CIRCPAD_STATE_START].
+      next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
+
+  ret->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
+
+  ret->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
+
+  ret->states[CIRCPAD_STATE_BURST].token_removal =
+      CIRCPAD_TOKEN_REMOVAL_LOWER;
+
+  ret->states[CIRCPAD_STATE_BURST].histogram_len = 3;
+  ret->states[CIRCPAD_STATE_BURST].start_usec = 0;
+  ret->states[CIRCPAD_STATE_BURST].range_usec = 1000000;
+  ret->states[CIRCPAD_STATE_BURST].histogram[0] = 6;
+  ret->states[CIRCPAD_STATE_BURST].histogram[1] = 0;
+  ret->states[CIRCPAD_STATE_BURST].histogram[1] = 0;
+  ret->states[CIRCPAD_STATE_BURST].histogram_total_tokens = 6;
+  ret->states[CIRCPAD_STATE_BURST].use_rtt_estimate = 0;
+  ret->states[CIRCPAD_STATE_BURST].length_includes_nonpadding = 1;
+
+  return ret;
+}
+
+static void
+helper_create_conditional_machines(void)
+{
+  circpad_machine_t *add = helper_create_conditional_machine();
+  origin_padding_machines = smartlist_new();
+  relay_padding_machines = smartlist_new();
+
+  add->machine_num = 2;
+  add->is_origin_side = 1;
+  add->should_negotiate_end = 1;
+  add->target_hopnum = 2;
+
+  /* Let's have this one end after 4 packets */
+  add->states[CIRCPAD_STATE_BURST].length_dist.type = CIRCPAD_DIST_UNIFORM;
+  add->states[CIRCPAD_STATE_BURST].length_dist.param1 = 4;
+  add->states[CIRCPAD_STATE_BURST].length_dist.param2 = 4;
+  add->states[CIRCPAD_STATE_BURST].max_length = 4;
+
+  add->conditions.requires_vanguards = 0;
+  add->conditions.min_hops = 2;
+  add->conditions.state_mask = CIRCPAD_CIRC_BUILDING|
+           CIRCPAD_CIRC_NO_STREAMS|CIRCPAD_CIRC_HAS_RELAY_EARLY;
+  add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
+
+  smartlist_add(origin_padding_machines, add);
+
+  add = helper_create_conditional_machine();
+  add->machine_num = 3;
+  add->is_origin_side = 1;
+  add->should_negotiate_end = 1;
+  add->target_hopnum = 2;
+
+  /* Let's have this one end after 4 packets */
+  add->states[CIRCPAD_STATE_BURST].length_dist.type = CIRCPAD_DIST_UNIFORM;
+  add->states[CIRCPAD_STATE_BURST].length_dist.param1 = 4;
+  add->states[CIRCPAD_STATE_BURST].length_dist.param2 = 4;
+  add->states[CIRCPAD_STATE_BURST].max_length = 4;
+
+  add->conditions.requires_vanguards = 1;
+  add->conditions.min_hops = 3;
+  add->conditions.state_mask = CIRCPAD_CIRC_OPENED|
+           CIRCPAD_CIRC_STREAMS|CIRCPAD_CIRC_HAS_NO_RELAY_EARLY;
+  add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
+  smartlist_add(origin_padding_machines, add);
+
+  add = helper_create_conditional_machine();
+  add->machine_num = 2;
+  smartlist_add(relay_padding_machines, add);
+
+  add = helper_create_conditional_machine();
+  add->machine_num = 3;
+  smartlist_add(relay_padding_machines, add);
+}
+
+void
+test_circuitpadding_conditions(void *arg)
+{
+  /**
+   * Test plan:
+   *  0. Make a few origin and client machines with diff conditions
+   *     * vanguards, purposes, has_opened circs, no relay early
+   *     * Client side should_negotiate_end
+   *     * Length limits
+   *  1. Test STATE_END transitions
+   *  2. Test new machine after end with same conditions
+   *  3. Test new machine due to changed conditions
+   *     * Esp: built event, no relay early, no streams
+   * XXX: Diff test:
+   *  1. Test STATE_END with pending timers
+   *  2. Test marking a circuit before padding callback fires
+   *  3. Test freeing a circuit before padding callback fires
+   */
+  (void)arg;
+  MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
+
+  nodes_init();
+  dummy_channel.cmux = circuitmux_alloc();
+  relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel,
+                                            &dummy_channel);
+  client_side = (circuit_t *)origin_circuit_new();
+  relay_side->purpose = CIRCUIT_PURPOSE_OR;
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+
+  monotime_init();
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(1*NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*NSEC_PER_USEC);
+  curr_mocked_time = 1*NSEC_PER_USEC;
+
+  timers_initialize();
+  helper_create_conditional_machines();
+
+  MOCK(circuit_package_relay_cell,
+       circuit_package_relay_cell_mock);
+  MOCK(node_get_by_id,
+       node_get_by_id_mock);
+
+  /* Simulate extend. This should result in the original machine getting
+   * added, since the circuit is not built */
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  simulate_single_hop_extend(client_side, relay_side, 1);
+
+  /* Verify that machine #2 is added */
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 2);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
+
+  /* Deliver a padding cell to the client, to trigger burst state */
+  circpad_cell_event_padding_sent(client_side);
+
+  /* This should have trigger length shutdown condition on client.. */
+  tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
+
+  /* Verify machine is gone from both sides */
+  tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+
+  /* Send another event.. verify machine gets re-added properly
+   * (test race with shutdown) */
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 2);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
+
+  TO_ORIGIN_CIRCUIT(client_side)->p_streams = 0;
+  circpad_machine_event_circ_has_no_streams(TO_ORIGIN_CIRCUIT(client_side));
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 2);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
+
+  /* Now make the circuit opened and send built event */
+  TO_ORIGIN_CIRCUIT(client_side)->has_opened = 1;
+  circpad_machine_event_circ_built(TO_ORIGIN_CIRCUIT(client_side));
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 2);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
+
+  TO_ORIGIN_CIRCUIT(client_side)->remaining_relay_early_cells = 0;
+  circpad_machine_event_circ_has_no_relay_early(
+          TO_ORIGIN_CIRCUIT(client_side));
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 2);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
+
+  get_options_mutable()->HSLayer2Nodes = (void*)1;
+  TO_ORIGIN_CIRCUIT(client_side)->p_streams = (void*)1;
+  circpad_machine_event_circ_has_streams(TO_ORIGIN_CIRCUIT(client_side));
+
+  /* Verify different machine is added */
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 3);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 3);
+
+ done:
+  /* Free everything */
+  return;
+}
+
 void
 test_circuitpadding_circuitsetup_machine(void *arg)
 {
@@ -1172,10 +1369,11 @@ test_circuitpadding_circuitsetup_machine(void *arg)
             OP_EQ, 0);
 
   /* Simulate application traffic */
-  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
-  circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
-  circpad_cell_event_nonpadding_sent((circuit_t*)relay_side);
-  circpad_cell_event_nonpadding_received((circuit_t*)client_side);
+  circpad_cell_event_nonpadding_sent(client_side);
+  circpad_deliver_unrecognized_cell_events(relay_side, CELL_DIRECTION_OUT);
+  circpad_deliver_unrecognized_cell_events(relay_side, CELL_DIRECTION_IN);
+  circpad_deliver_recognized_relay_cell_events(client_side, RELAY_COMMAND_DATA,
+                                  TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
 
   tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
   tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
@@ -1444,6 +1642,7 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_tokens, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_negotiation, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_circuitsetup_machine, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_conditions, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_rtt, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_sample_distribution, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_machine_rate_limiting, TT_FORK),
