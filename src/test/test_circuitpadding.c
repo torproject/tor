@@ -562,6 +562,15 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
 
+  /* Test below the lowest bin, for coverage */
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_BURST);
+  circ_client_machine.states[CIRCPAD_STATE_BURST].start_usec = 100;
+  mi->padding_scheduled_at_usec = current_time - 102;
+  mi->histogram[0] = 0;
+  circpad_machine_remove_token(mi);
+  tt_int_op(mi->histogram[1], OP_EQ, 1);
+
  done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
