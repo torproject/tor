@@ -451,11 +451,16 @@ helper_create_machine_with_big_histogram(circpad_removal_t removal_strategy)
   int n_tokens = 0;
   for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
     burst_state->histogram[i] = tokens_per_bin;
-    n_tokens += 2;
+    n_tokens += tokens_per_bin;
   }
 
   burst_state->histogram_total_tokens = n_tokens;
-  burst_state->use_rtt_estimate = 1;
+  burst_state->length_dist.type = CIRCPAD_DIST_UNIFORM;
+  burst_state->length_dist.param1 = n_tokens;
+  burst_state->length_dist.param2 = n_tokens;
+  burst_state->max_length = n_tokens;
+  burst_state->length_includes_nonpadding = 1;
+  burst_state->use_rtt_estimate = 0;
   burst_state->token_removal = removal_strategy;
 }
 
@@ -1056,7 +1061,7 @@ helper_create_conditional_machine(void)
       next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 
   ret->states[CIRCPAD_STATE_BURST].token_removal =
-      CIRCPAD_TOKEN_REMOVAL_LOWER;
+      CIRCPAD_TOKEN_REMOVAL_NONE;
 
   ret->states[CIRCPAD_STATE_BURST].histogram_len = 3;
   ret->states[CIRCPAD_STATE_BURST].start_usec = 0;
@@ -1401,51 +1406,57 @@ test_circuitpadding_circuitsetup_machine(void *arg)
 /** Helper function: Initializes a padding machine where every state uses the
  *  uniform probability distribution.  */
 static void
-helper_circpad_circ_distribution_machine_setup(double min, double max)
+helper_circpad_circ_distribution_machine_setup(int min, int max)
 {
-  circpad_machine_states_init(&circ_client_machine, 6);
+  circpad_machine_states_init(&circ_client_machine, 7);
 
   circpad_state_t *zero_st = &circ_client_machine.states[0];
   zero_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 1;
   zero_st->iat_dist.type = CIRCPAD_DIST_UNIFORM;
   zero_st->iat_dist.param1 = min;
   zero_st->iat_dist.param2 = max;
-  zero_st->range_usec = 500; /* max delay */
+  zero_st->start_usec = min;
+  zero_st->range_usec = max;
 
   circpad_state_t *first_st = &circ_client_machine.states[1];
   first_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 2;
-  first_st->iat_dist.type = CIRCPAD_DIST_UNIFORM;
+  first_st->iat_dist.type = CIRCPAD_DIST_LOGISTIC;
   first_st->iat_dist.param1 = min;
   first_st->iat_dist.param2 = max;
-  first_st->range_usec = 500; /* max delay */
+  first_st->start_usec = min;
+  first_st->range_usec = max;
 
   circpad_state_t *second_st = &circ_client_machine.states[2];
   second_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 3;
-  second_st->iat_dist.type = CIRCPAD_DIST_UNIFORM;
+  second_st->iat_dist.type = CIRCPAD_DIST_LOG_LOGISTIC;
   second_st->iat_dist.param1 = min;
   second_st->iat_dist.param2 = max;
-  second_st->range_usec = 500; /* max delay */
+  second_st->start_usec = min;
+  second_st->range_usec = max;
 
   circpad_state_t *third_st = &circ_client_machine.states[3];
   third_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 4;
-  third_st->iat_dist.type = CIRCPAD_DIST_UNIFORM;
+  third_st->iat_dist.type = CIRCPAD_DIST_GEOMETRIC;
   third_st->iat_dist.param1 = min;
   third_st->iat_dist.param2 = max;
-  third_st->range_usec = 500; /* max delay */
+  third_st->start_usec = min;
+  third_st->range_usec = max;
 
   circpad_state_t *fourth_st = &circ_client_machine.states[4];
   fourth_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 5;
-  fourth_st->iat_dist.type = CIRCPAD_DIST_UNIFORM;
+  fourth_st->iat_dist.type = CIRCPAD_DIST_WEIBULL;
   fourth_st->iat_dist.param1 = min;
   fourth_st->iat_dist.param2 = max;
-  fourth_st->range_usec = 500; /* max delay */
+  fourth_st->start_usec = min;
+  fourth_st->range_usec = max;
 
   circpad_state_t *fifth_st = &circ_client_machine.states[5];
   fifth_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 6;
-  fifth_st->iat_dist.type = CIRCPAD_DIST_UNIFORM;
+  fifth_st->iat_dist.type = CIRCPAD_DIST_PARETO;
   fifth_st->iat_dist.param1 = min;
   fifth_st->iat_dist.param2 = max;
-  fifth_st->range_usec = 500; /* max delay */
+  fifth_st->start_usec = min;
+  fifth_st->range_usec = max;
 }
 
 /** Simple test that the padding delays sampled from a uniform distribution
@@ -1480,7 +1491,7 @@ test_circuitpadding_sample_distribution(void *arg)
 
   /* For every state, sample a bunch of values from the distribution and ensure
    * they fall within range. */
-  for (n_states = 0 ; n_states < 5; n_states++) {
+  for (n_states = 0 ; n_states < 6; n_states++) {
     /* Make sure we in the right state */
     tt_int_op(client_side->padding_info[0]->current_state, OP_EQ, n_states);
 
