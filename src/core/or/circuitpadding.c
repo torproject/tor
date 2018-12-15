@@ -2459,7 +2459,6 @@ circpad_state_serialize(const circpad_state_t *state,
                          state->use_rtt_estimate,
                          state->token_removal);
 }
-#endif
 
 char *
 circpad_machine_to_string(const circpad_machine_t *machine)
@@ -2468,11 +2467,9 @@ circpad_machine_to_string(const circpad_machine_t *machine)
   char *out;
   (void)machine;
 
-#if 0
   circpad_state_serialize(&machine->start, chunks);
   circpad_state_serialize(&machine->gap, chunks);
   circpad_state_serialize(&machine->burst, chunks);
-#endif
 
   out = smartlist_join_strings(chunks, "", 0, NULL);
 
@@ -2489,3 +2486,4 @@ circpad_string_to_machine(const char *str)
   return NULL;
 }
 
+#endif
