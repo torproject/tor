@@ -34,8 +34,6 @@ netinfo_addr_new(void)
   netinfo_addr_t *val = trunnel_calloc(1, sizeof(netinfo_addr_t));
   if (NULL == val)
     return NULL;
-  val->addr_type = NETINFO_ADDR_TYPE_IPV4;
-  val->len = 4;
   return val;
 }
 
@@ -65,10 +63,6 @@ netinfo_addr_get_addr_type(const netinfo_addr_t *inp)
 int
 netinfo_addr_set_addr_type(netinfo_addr_t *inp, uint8_t val)
 {
-  if (! ((val == NETINFO_ADDR_TYPE_IPV4 || val == NETINFO_ADDR_TYPE_IPV6))) {
-     TRUNNEL_SET_ERROR_CODE(inp);
-     return -1;
-  }
   inp->addr_type = val;
   return 0;
 }
@@ -80,10 +74,6 @@ netinfo_addr_get_len(const netinfo_addr_t *inp)
 int
 netinfo_addr_set_len(netinfo_addr_t *inp, uint8_t val)
 {
-  if (! ((val == 4 || val == 16))) {
-     TRUNNEL_SET_ERROR_CODE(inp);
-     return -1;
-  }
   inp->len = val;
   return 0;
 }
@@ -141,10 +131,6 @@ netinfo_addr_check(const netinfo_addr_t *obj)
     return "Object was NULL";
   if (obj->trunnel_error_code_)
     return "A set function failed on this object";
-  if (! (obj->addr_type == NETINFO_ADDR_TYPE_IPV4 || obj->addr_type == NETINFO_ADDR_TYPE_IPV6))
-    return "Integer out of bounds";
-  if (! (obj->len == 4 || obj->len == 16))
-    return "Integer out of bounds";
   switch (obj->addr_type) {
 
     case NETINFO_ADDR_TYPE_IPV4:
@@ -169,10 +155,10 @@ netinfo_addr_encoded_len(const netinfo_addr_t *obj)
      return -1;
 
 
-  /* Length of u8 addr_type IN [NETINFO_ADDR_TYPE_IPV4, NETINFO_ADDR_TYPE_IPV6] */
+  /* Length of u8 addr_type */
   result += 1;
 
-  /* Length of u8 len IN [4, 16] */
+  /* Length of u8 len */
   result += 1;
   switch (obj->addr_type) {
 
@@ -219,14 +205,14 @@ netinfo_addr_encode(uint8_t *output, const size_t avail, const netinfo_addr_t *o
   trunnel_assert(encoded_len >= 0);
 #endif
 
-  /* Encode u8 addr_type IN [NETINFO_ADDR_TYPE_IPV4, NETINFO_ADDR_TYPE_IPV6] */
+  /* Encode u8 addr_type */
   trunnel_assert(written <= avail);
   if (avail - written < 1)
     goto truncated;
   trunnel_set_uint8(ptr, (obj->addr_type));
   written += 1; ptr += 1;
 
-  /* Encode u8 len IN [4, 16] */
+  /* Encode u8 len */
   trunnel_assert(written <= avail);
   if (avail - written < 1)
     goto truncated;
@@ -296,19 +282,15 @@ netinfo_addr_parse_into(netinfo_addr_t *obj, const uint8_t *input, const size_t 
   ssize_t result = 0;
   (void)result;
 
-  /* Parse u8 addr_type IN [NETINFO_ADDR_TYPE_IPV4, NETINFO_ADDR_TYPE_IPV6] */
+  /* Parse u8 addr_type */
   CHECK_REMAINING(1, truncated);
   obj->addr_type = (trunnel_get_uint8(ptr));
   remaining -= 1; ptr += 1;
-  if (! (obj->addr_type == NETINFO_ADDR_TYPE_IPV4 || obj->addr_type == NETINFO_ADDR_TYPE_IPV6))
-    goto fail;
 
-  /* Parse u8 len IN [4, 16] */
+  /* Parse u8 len */
   CHECK_REMAINING(1, truncated);
   obj->len = (trunnel_get_uint8(ptr));
   remaining -= 1; ptr += 1;
-  if (! (obj->len == 4 || obj->len == 16))
-    goto fail;
 
   /* Parse union addr[addr_type] */
   switch (obj->addr_type) {

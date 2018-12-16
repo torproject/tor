@@ -5,14 +5,14 @@ const NETINFO_ADDR_TYPE_IPV4 = 4;
 const NETINFO_ADDR_TYPE_IPV6 = 6;
 
 struct netinfo_addr {
-  u8 addr_type IN [NETINFO_ADDR_TYPE_IPV4, NETINFO_ADDR_TYPE_IPV6];
-  u8 len IN [4, 16];
+  u8 addr_type;
+  u8 len;
   union addr[addr_type] {
     NETINFO_ADDR_TYPE_IPV4: u32 ipv4;
     NETINFO_ADDR_TYPE_IPV6: u8 ipv6[16];
     default: fail;
   };
-  
+
 }
 
 struct netinfo_cell {
