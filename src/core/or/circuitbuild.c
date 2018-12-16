@@ -583,8 +583,6 @@ circuit_handle_first_hop(origin_circuit_t *circ)
     circ->base_.n_hop = extend_info_dup(firsthop->extend_info);
 
     if (should_launch) {
-      if (circ->build_state->onehop_tunnel)
-        control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DIR, 0);
       n_chan = channel_connect_for_circuit(
           &firsthop->extend_info->addr,
           firsthop->extend_info->port,

@@ -34,7 +34,6 @@ static const struct {
   { BOOTSTRAP_STATUS_UNDEF, "undef", "Undefined" },
   { BOOTSTRAP_STATUS_STARTING, "starting", "Starting" },
   { BOOTSTRAP_STATUS_CONN_DIR, "conn_dir", "Connecting to directory server" },
-  { BOOTSTRAP_STATUS_HANDSHAKE, "status_handshake", "Finishing handshake" },
   { BOOTSTRAP_STATUS_HANDSHAKE_DIR, "handshake_dir",
     "Finishing handshake with directory server" },
   { BOOTSTRAP_STATUS_ONEHOP_CREATE, "onehop_create",
@@ -150,16 +149,6 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
 
   if (bootstrap_percent == BOOTSTRAP_STATUS_DONE)
     return; /* already bootstrapped; nothing to be done here. */
-
-  /* special case for handshaking status, since our TLS handshaking code
-   * can't distinguish what the connection is going to be for. */
-  if (status == BOOTSTRAP_STATUS_HANDSHAKE) {
-    if (bootstrap_percent < BOOTSTRAP_STATUS_CONN_OR) {
-      status = BOOTSTRAP_STATUS_HANDSHAKE_DIR;
-    } else {
-      status = BOOTSTRAP_STATUS_HANDSHAKE_OR;
-    }
-  }
 
   if (status <= bootstrap_percent) {
     /* If there's no new progress, return early. */
