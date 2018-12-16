@@ -8,6 +8,7 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
 
+#include "core/or/orconn_event_sys.h"
 #include "lib/compress/compress_sys.h"
 #include "lib/crypt_ops/crypto_sys.h"
 #include "lib/err/torerr_sys.h"
@@ -35,6 +36,7 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_compress, /* -70 */
   &sys_crypto, /* -60 */
   &sys_tortls, /* -50 */
+  &sys_orconn_event, /* -40 */
 };
 
 const unsigned n_tor_subsystems = ARRAY_LENGTH(tor_subsystems);

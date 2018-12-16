@@ -29,6 +29,8 @@ typedef enum circuit_status_minor_event_t {
   CIRC_MINOR_EVENT_CANNIBALIZED,
 } circuit_status_minor_event_t;
 
+#include "core/or/orconn_event.h"
+
 /** Used to indicate the type of a stream event passed to the controller.
  * The various types are defined in control-spec.txt */
 typedef enum stream_status_event_t {
@@ -42,16 +44,6 @@ typedef enum stream_status_event_t {
   STREAM_EVENT_FAILED_RETRIABLE = 7,
   STREAM_EVENT_REMAP        = 8
 } stream_status_event_t;
-
-/** Used to indicate the type of an OR connection event passed to the
- * controller.  The various types are defined in control-spec.txt */
-typedef enum or_conn_status_event_t {
-  OR_CONN_EVENT_LAUNCHED     = 0,
-  OR_CONN_EVENT_CONNECTED    = 1,
-  OR_CONN_EVENT_FAILED       = 2,
-  OR_CONN_EVENT_CLOSED       = 3,
-  OR_CONN_EVENT_NEW          = 4,
-} or_conn_status_event_t;
 
 /** Used to indicate the type of a buildtime event */
 typedef enum buildtimeout_set_event_t {

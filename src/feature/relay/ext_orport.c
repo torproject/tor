@@ -90,7 +90,7 @@ connection_ext_or_transition(or_connection_t *conn)
 
   conn->base_.type = CONN_TYPE_OR;
   TO_CONN(conn)->state = 0; // set the state to a neutral value
-  control_event_or_conn_status(conn, OR_CONN_EVENT_NEW, 0);
+  connection_or_event_status(conn, OR_CONN_EVENT_NEW, 0);
   connection_tls_start_handshake(conn, 1);
 }
 
