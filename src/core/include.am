@@ -39,6 +39,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/or/connection_or.c		\
 	src/core/or/dos.c			\
 	src/core/or/onion.c			\
+	src/core/or/ocirc_event.c		\
 	src/core/or/orconn_event.c		\
 	src/core/or/policies.c			\
 	src/core/or/protover.c			\
@@ -245,6 +246,8 @@ noinst_HEADERS +=					\
 	src/core/or/or_connection_st.h			\
 	src/core/or/or_handshake_certs_st.h		\
 	src/core/or/or_handshake_state_st.h		\
+	src/core/or/ocirc_event.h			\
+	src/core/or/ocirc_event_sys.h			\
 	src/core/or/origin_circuit_st.h			\
 	src/core/or/policies.h				\
 	src/core/or/port_cfg_st.h			\

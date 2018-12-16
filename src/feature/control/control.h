@@ -12,15 +12,7 @@
 #ifndef TOR_CONTROL_H
 #define TOR_CONTROL_H
 
-/** Used to indicate the type of a circuit event passed to the controller.
- * The various types are defined in control-spec.txt */
-typedef enum circuit_status_event_t {
-  CIRC_EVENT_LAUNCHED = 0,
-  CIRC_EVENT_BUILT    = 1,
-  CIRC_EVENT_EXTENDED = 2,
-  CIRC_EVENT_FAILED   = 3,
-  CIRC_EVENT_CLOSED   = 4,
-} circuit_status_event_t;
+#include "core/or/ocirc_event.h"
 
 /** Used to indicate the type of a CIRC_MINOR event passed to the controller.
  * The various types are defined in control-spec.txt . */

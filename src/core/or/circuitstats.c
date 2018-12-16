@@ -639,9 +639,9 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
 void
 circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ)
 {
-  control_event_circuit_status(circ,
-                               CIRC_EVENT_FAILED,
-                               END_CIRC_REASON_TIMEOUT);
+  circuit_event_status(circ,
+                       CIRC_EVENT_FAILED,
+                       END_CIRC_REASON_TIMEOUT);
   circuit_change_purpose(TO_CIRCUIT(circ),
                          CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT);
   /* Record this event to check for too many timeouts

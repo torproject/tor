@@ -26,6 +26,7 @@
  **/
 
 #define CIRCUITBUILD_PRIVATE
+#define OCIRC_EVENT_PRIVATE
 
 #include "core/or/or.h"
 #include "app/config/config.h"
@@ -46,6 +47,7 @@
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
 #include "core/or/onion.h"
+#include "core/or/ocirc_event.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
 #include "feature/client/bridges.h"
@@ -492,7 +494,7 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *exit_ei, int flags)
     return NULL;
   }
 
-  control_event_circuit_status(circ, CIRC_EVENT_LAUNCHED, 0);
+  circuit_event_status(circ, CIRC_EVENT_LAUNCHED, 0);
 
   if ((err_reason = circuit_handle_first_hop(circ)) < 0) {
     circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
@@ -506,6 +508,28 @@ circuit_guard_state_t *
 origin_circuit_get_guard_state(origin_circuit_t *circ)
 {
   return circ->guard_state;
+}
+
+/**
+ * Helper function to publish a channel association message
+ *
+ * circuit_handle_first_hop() calls this to notify subscribers about a
+ * channel launch event, which associates a circuit with a channel.
+ * This doesn't always correspond to an assignment of the circuit's
+ * n_chan field, because that seems to be only for fully-open
+ * channels.
+ **/
+static void
+circuit_chan_publish(const origin_circuit_t *circ, const channel_t *chan)
+{
+  ocirc_event_msg_t msg;
+
+  msg.type = OCIRC_MSGTYPE_CHAN;
+  msg.u.chan.gid = circ->global_identifier;
+  msg.u.chan.chan = chan->global_identifier;
+  msg.u.chan.onehop = circ->build_state->onehop_tunnel;
+
+  ocirc_event_publish(&msg);
 }
 
 /** Start establishing the first hop of our circuit. Figure out what
@@ -570,6 +594,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
         log_info(LD_CIRC,"connect to firsthop failed. Closing.");
         return -END_CIRC_REASON_CONNECTFAILED;
       }
+      circuit_chan_publish(circ, n_chan);
     }
 
     log_debug(LD_CIRC,"connecting in progress (or finished). Good.");
@@ -581,6 +606,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   } else { /* it's already open. use it. */
     tor_assert(!circ->base_.n_hop);
     circ->base_.n_chan = n_chan;
+    circuit_chan_publish(circ, n_chan);
     log_debug(LD_CIRC,"Conn open. Delivering first onion skin.");
     if ((err_reason = circuit_send_next_onion_skin(circ)) < 0) {
       log_info(LD_CIRC,"circuit_send_next_onion_skin failed.");
@@ -1416,7 +1442,7 @@ circuit_finish_handshake(origin_circuit_t *circ,
   hop->state = CPATH_STATE_OPEN;
   log_info(LD_CIRC,"Finished building circuit hop:");
   circuit_log_path(LOG_INFO,LD_CIRC,circ);
-  control_event_circuit_status(circ, CIRC_EVENT_EXTENDED, 0);
+  circuit_event_status(circ, CIRC_EVENT_EXTENDED, 0);
 
   return 0;
 }
