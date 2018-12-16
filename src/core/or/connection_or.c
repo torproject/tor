@@ -751,8 +751,6 @@ connection_or_finished_connecting(or_connection_t *or_conn)
 
   log_debug(LD_HANDSHAKE,"OR connect() to router at %s:%u finished.",
             conn->address,conn->port);
-  control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
-  control_event_boot_first_orconn();
 
   if (proxy_type != PROXY_NONE) {
     /* start proxy handshake */

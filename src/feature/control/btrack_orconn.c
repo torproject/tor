@@ -27,6 +27,10 @@
  * might be a one-hop circuit for directory lookups, or it might be a
  * connection for an application circuit because we already have
  * enough directory info to build an application circuit.
+ *
+ * We call functions in btrack_orconn_cevent.c to generate the actual
+ * controller events, because some of the state decoding we need to do
+ * is complicated.
  **/
 
 #include <stdbool.h>
@@ -38,6 +42,7 @@
 #include "core/or/ocirc_event.h"
 #include "core/or/orconn_event.h"
 #include "feature/control/btrack_orconn.h"
+#include "feature/control/btrack_orconn_cevent.h"
 #include "feature/control/btrack_orconn_maps.h"
 #include "lib/log/log.h"
 
@@ -86,9 +91,10 @@ bto_update_bests(const bt_orconn_t *bto)
 {
   tor_assert(bto->is_orig);
 
-  bto_update_best(bto, &best_any, "ANY");
-  if (!bto->is_onehop)
-    bto_update_best(bto, &best_ap, "AP");
+  if (bto_update_best(bto, &best_any, "ANY"))
+    bto_cevent_anyconn(bto);
+  if (!bto->is_onehop && bto_update_best(bto, &best_ap, "AP"))
+    bto_cevent_apconn(bto);
 }
 
 /** Reset cached "best" values */
@@ -196,4 +202,5 @@ btrack_orconn_fini(void)
 {
   bto_clear_maps();
   bto_reset_bests();
+  bto_cevent_reset();
 }
