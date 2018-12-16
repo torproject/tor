@@ -1809,10 +1809,8 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
     if (tor_addr_from_netinfo_addr(&addr, netinfo_addr) == -1) {
       log_fn(LOG_PROTOCOL_WARN,  LD_OR,
-             "Bad address in netinfo cell; closing connection.");
-      connection_or_close_for_error(chan->conn, 0);
-      netinfo_cell_free(netinfo_cell);
-      return;
+             "Bad address in netinfo cell; Skipping.");
+      continue;
     }
     /* A relay can connect from anywhere and be canonical, so
      * long as it tells you from where it came. This may sound a bit
