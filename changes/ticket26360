@@ -1,0 +1,4 @@
+  o Minor bugfixes (pluggable transports):
+    - Make sure that data is continously read from standard out and error of the
+      PT child-process to avoid deadlocking when the pipes' buffer is full.
+      Fixes bug 26360; bugfix on 0.2.3.6-alpha.
