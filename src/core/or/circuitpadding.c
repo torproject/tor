@@ -834,10 +834,10 @@ circpad_machine_remove_token(circpad_machineinfo_t *mi)
  *
  * Returns negative on error, 0 on success.
  */
-static signed_error_t
-circpad_send_command_to_hop(origin_circuit_t *circ, uint8_t hopnum,
-                            uint8_t relay_command, const uint8_t *payload,
-                            ssize_t payload_len)
+MOCK_IMPL(STATIC signed_error_t,
+circpad_send_command_to_hop,(origin_circuit_t *circ, uint8_t hopnum,
+                             uint8_t relay_command, const uint8_t *payload,
+                             ssize_t payload_len))
 {
   crypt_path_t *target_hop = circuit_get_cpath_hop(circ, hopnum);
   signed_error_t ret;
