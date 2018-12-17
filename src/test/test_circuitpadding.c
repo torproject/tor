@@ -1402,13 +1402,72 @@ test_circuitpadding_circuitsetup_machine(void *arg)
 
   tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+  tt_int_op(n_client_cells, OP_EQ, 6);
+  tt_int_op(n_relay_cells, OP_EQ, 7);
 
-  // FIXME: Test refill
-  // FIXME: Test timer cancellation
+  // Test timer cancellation
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  timers_advance_and_run(5000);
+  circpad_cell_event_padding_received(client_side);
+
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+                CIRCPAD_STATE_BURST);
+  tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
+          CIRCPAD_STATE_GAP);
+
+  tt_int_op(n_client_cells, OP_EQ, 8);
+  tt_int_op(n_relay_cells, OP_EQ, 8);
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
+            OP_NE, 0);
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
+            OP_NE, 0);
+
+  /* Simulate application traffic to cancel timer */
+  circpad_cell_event_nonpadding_sent(client_side);
+  circpad_deliver_unrecognized_cell_events(relay_side, CELL_DIRECTION_OUT);
+  circpad_deliver_unrecognized_cell_events(relay_side, CELL_DIRECTION_IN);
+  circpad_deliver_recognized_relay_cell_events(client_side, RELAY_COMMAND_DATA,
+                                  TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
+
+  tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
+
+  tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+
+  /* No cells sent, except negotiate end from relay */
+  tt_int_op(n_client_cells, OP_EQ, 8);
+  tt_int_op(n_relay_cells, OP_EQ, 9);
+
+  /* Test mark for close and free */
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  timers_advance_and_run(5000);
+  circpad_cell_event_padding_received(client_side);
+
+  tt_int_op(n_client_cells, OP_EQ, 10);
+  tt_int_op(n_relay_cells, OP_EQ, 10);
+
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+                CIRCPAD_STATE_BURST);
+  tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
+          CIRCPAD_STATE_GAP);
+
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
+            OP_NE, 0);
+  tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
+            OP_NE, 0);
+  circuit_mark_for_close(client_side, END_CIRC_REASON_FLAG_REMOTE);
+  free_fake_orcirc(relay_side);
+  timers_advance_and_run(5000);
+
+  /* No cells sent */
+  tt_int_op(n_client_cells, OP_EQ, 10);
+  tt_int_op(n_relay_cells, OP_EQ, 10);
 
  done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
-  free_fake_orcirc(relay_side);
 
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
   circuitmux_free(dummy_channel.cmux);
@@ -1560,7 +1619,7 @@ test_circuitpadding_machine_rate_limiting(void *arg)
     circpad_circuit_machineinfo_new(client_side, 0);
   mi = client_side->padding_info[0];
   /* Set up the machine info so that we can get through the basic functions */
-  mi->state_length = 500;
+  mi->state_length = CIRCPAD_STATE_LENGTH_INFINITE;
 
   /* First we are going to test the per-machine rate limits */
   circ_client_machine.max_padding_percent = 50;
@@ -1584,7 +1643,22 @@ test_circuitpadding_machine_rate_limiting(void *arg)
   retval = circpad_machine_reached_padding_limit(mi);
   tt_int_op(retval, OP_EQ, 1);
 
-  circpad_machine_schedule_padding(mi);
+  retval = circpad_machine_schedule_padding(mi);
+  tt_int_op(retval, OP_EQ, CIRCPAD_STATE_UNCHANGED);
+
+  /* Cover wrap */
+  for (;i<UINT16_MAX;i++) {
+    circpad_send_padding_cell_for_callback(mi);
+  }
+  tt_int_op(mi->padding_sent, OP_EQ, UINT16_MAX/2+1);
+
+  tt_ptr_op(client_side->padding_info[0], OP_EQ, mi);
+  for (i=0;i<UINT16_MAX;i++) {
+    circpad_cell_event_nonpadding_sent(client_side);
+  }
+
+  tt_int_op(mi->nonpadding_sent, OP_EQ, UINT16_MAX/2);
+  tt_int_op(mi->padding_sent, OP_EQ, UINT16_MAX/4+1);
 
  done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
