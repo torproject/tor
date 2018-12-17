@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing):
+    - Make sure that test_rebind.py actually obeys its timeout, even
+      when it receives a large number of log messages. Fixes bug 28883;
+      bugfix on 0.3.5.4-alpha.
