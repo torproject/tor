@@ -787,8 +787,8 @@ monotime_absolute_nsec(void)
   return monotime_diff_nsec(&initialized_at, &now);
 }
 
-uint64_t
-monotime_absolute_usec(void)
+MOCK_IMPL(uint64_t,
+monotime_absolute_usec,(void))
 {
   return monotime_absolute_nsec() / 1000;
 }
