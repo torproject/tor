@@ -89,7 +89,8 @@ COMMAND-LINE OPTIONS
     future version. (This is a warning, not a promise.)
 
 [[opt-version]] **--version**::
-    Display Tor version and exit.
+    Display Tor version and exit. The output is a line of the format,
+    "Tor version [version number]."
 
 [[opt-quiet]] **--quiet**|**--hush**::
     Override the default console log.  By default, Tor starts out logging
