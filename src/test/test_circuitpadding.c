@@ -259,6 +259,19 @@ test_circuitpadding_serialize(void *arg)
   (void)arg;
 }
 
+static signed_error_t
+circpad_send_command_to_hop_mock(origin_circuit_t *circ, uint8_t hopnum,
+                                 uint8_t relay_command, const uint8_t *payload,
+                                 ssize_t payload_len)
+{
+  (void) circ;
+  (void) hopnum;
+  (void) relay_command;
+  (void) payload;
+  (void) payload_len;
+  return 0;
+}
+
 void
 test_circuitpadding_rtt(void *arg)
 {
@@ -274,6 +287,7 @@ test_circuitpadding_rtt(void *arg)
   (void)arg;
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
+  MOCK(circpad_send_command_to_hop, circpad_send_command_to_hop_mock);
 
   dummy_channel.cmux = circuitmux_alloc();
   relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
@@ -1535,6 +1549,7 @@ test_circuitpadding_machine_rate_limiting(void *arg)
   /* Ignore machine transitions for the purposes of this function, we only
    * really care about padding counts */
   MOCK(circpad_machine_transition, circpad_machine_transition_mock);
+  MOCK(circpad_send_command_to_hop, circpad_send_command_to_hop_mock);
 
   /* Setup machine and circuits */
   client_side = TO_CIRCUIT(origin_circuit_new());
@@ -1587,6 +1602,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
   /* Ignore machine transitions for the purposes of this function, we only
    * really care about padding counts */
   MOCK(circpad_machine_transition, circpad_machine_transition_mock);
+  MOCK(circpad_send_command_to_hop, circpad_send_command_to_hop_mock);
 
   /* Setup machine and circuits */
   client_side = TO_CIRCUIT(origin_circuit_new());
