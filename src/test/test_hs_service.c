@@ -1654,6 +1654,9 @@ test_build_descriptors(void *arg)
     service->desc_current = NULL;
 
     build_all_descriptors(now);
+    tt_assert(service->desc_current);
+    tt_assert(service->desc_current->desc);
+
     hs_desc_superencrypted_data_t *superencrypted;
     superencrypted = &service->desc_current->desc->superencrypted_data;
     tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 16);
