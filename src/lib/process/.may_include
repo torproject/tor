@@ -1,5 +1,6 @@
 orconfig.h
 
+lib/buf/*.h
 lib/cc/*.h
 lib/container/*.h
 lib/ctime/*.h
