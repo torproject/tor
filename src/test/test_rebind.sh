@@ -14,6 +14,19 @@ fi
 
 exitcode=0
 
-"${PYTHON:-python}" "${abs_top_srcdir:-.}/src/test/test_rebind.py" "${TESTING_TOR_BINARY}" || exitcode=1
+tmpdir=
+clean () { test -n "$tmpdir" && test -d "$tmpdir" && rm -rf "$tmpdir" || :; }
+trap clean EXIT HUP INT TERM
+
+tmpdir="`mktemp -d -t tor_rebind_test.XXXXXX`"
+if [ -z "$tmpdir" ]; then
+  echo >&2 mktemp failed
+  exit 2
+elif [ ! -d "$tmpdir" ]; then
+  echo >&2 mktemp failed to make a directory
+  exit 3
+fi
+
+"${PYTHON:-python}" "${abs_top_srcdir:-.}/src/test/test_rebind.py" "${TESTING_TOR_BINARY}" "$tmpdir" || exitcode=1
 
 exit ${exitcode}
