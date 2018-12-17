@@ -33,9 +33,24 @@ static const struct {
 } boot_to_str_tab[] = {
   { BOOTSTRAP_STATUS_UNDEF, "undef", "Undefined" },
   { BOOTSTRAP_STATUS_STARTING, "starting", "Starting" },
-  { BOOTSTRAP_STATUS_CONN_DIR, "conn_dir", "Connecting to directory server" },
-  { BOOTSTRAP_STATUS_HANDSHAKE_DIR, "handshake_dir",
-    "Finishing handshake with directory server" },
+
+  /* Initial connection to any relay */
+
+  { BOOTSTRAP_STATUS_CONN_PT, "conn_pt", "Connecting to pluggable transport" },
+  { BOOTSTRAP_STATUS_CONN_DONE_PT, "conn_done_pt",
+    "Connected to pluggable transport" },
+  { BOOTSTRAP_STATUS_CONN_PROXY, "conn_proxy", "Connecting to proxy" },
+  { BOOTSTRAP_STATUS_CONN_DONE_PROXY, "conn_done_proxy",
+    "Connected to proxy" },
+  { BOOTSTRAP_STATUS_CONN, "conn", "Connecting to a relay" },
+  { BOOTSTRAP_STATUS_CONN_DONE, "conn_done", "Connected to a relay" },
+  { BOOTSTRAP_STATUS_HANDSHAKE, "handshake",
+    "Handshaking with a relay" },
+  { BOOTSTRAP_STATUS_HANDSHAKE_DONE, "handshake_done",
+    "Handshake with a relay done" },
+
+  /* Loading directory info */
+
   { BOOTSTRAP_STATUS_ONEHOP_CREATE, "onehop_create",
     "Establishing an encrypted directory connection" },
   { BOOTSTRAP_STATUS_REQUESTING_STATUS, "requesting_status",
@@ -48,9 +63,30 @@ static const struct {
     "Asking for relay descriptors" },
   { BOOTSTRAP_STATUS_LOADING_DESCRIPTORS, "loading_descriptors",
     "Loading relay descriptors" },
-  { BOOTSTRAP_STATUS_CONN_OR, "conn_or", "Connecting to the Tor network" },
-  { BOOTSTRAP_STATUS_HANDSHAKE_OR, "handshake_or",
-    "Finishing handshake with first hop" },
+  { BOOTSTRAP_STATUS_ENOUGH_DIRINFO, "enough_dirinfo",
+    "Loaded enough directory info to build circuits" },
+
+  /* Connecting to a relay for AP circuits */
+
+  { BOOTSTRAP_STATUS_AP_CONN_PT, "ap_conn_pt",
+    "Connecting to pluggable transport to build circuits" },
+  { BOOTSTRAP_STATUS_AP_CONN_DONE_PT, "ap_conn_done_pt",
+    "Connected to pluggable transport to build circuits" },
+  { BOOTSTRAP_STATUS_AP_CONN_PROXY, "ap_conn_proxy",
+    "Connecting to proxy " },
+  { BOOTSTRAP_STATUS_AP_CONN_DONE_PROXY, "ap_conn_done_proxy",
+    "Connected to proxy to build circuits" },
+  { BOOTSTRAP_STATUS_AP_CONN, "ap_conn",
+    "Connecting to a relay to build circuits" },
+  { BOOTSTRAP_STATUS_AP_CONN_DONE, "ap_conn_done",
+    "Connected to a relay to build circuits" },
+  { BOOTSTRAP_STATUS_AP_HANDSHAKE, "ap_handshake",
+    "Finishing handshake with a relay to build circuits" },
+  { BOOTSTRAP_STATUS_AP_HANDSHAKE_DONE, "ap_handshake_done",
+    "Handshake fininshed with a relay to build circuits" },
+
+  /* Creating AP circuits */
+
   { BOOTSTRAP_STATUS_CIRCUIT_CREATE, "circuit_create",
     "Establishing a Tor circuit" },
   { BOOTSTRAP_STATUS_DONE, "done", "Done" },

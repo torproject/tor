@@ -351,10 +351,10 @@ test_cntev_dirboot_defer_desc(void *arg)
   /* This event should get deferred */
   control_event_boot_dir(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
   assert_bootmsg("0 TAG=starting");
-  control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DIR, 0);
-  assert_bootmsg("5 TAG=conn_dir");
-  control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE_DIR, 0);
-  assert_bootmsg("10 TAG=handshake_dir");
+  control_event_bootstrap(BOOTSTRAP_STATUS_CONN, 0);
+  assert_bootmsg("5 TAG=conn");
+  control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
+  assert_bootmsg("14 TAG=handshake");
   /* The deferred event should appear */
   control_event_boot_first_orconn();
   assert_bootmsg("45 TAG=requesting_descriptors");
@@ -374,15 +374,15 @@ test_cntev_dirboot_defer_orconn(void *arg)
   control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
   assert_bootmsg("0 TAG=starting");
   /* This event should get deferred */
-  control_event_boot_dir(BOOTSTRAP_STATUS_CONN_OR, 0);
+  control_event_boot_dir(BOOTSTRAP_STATUS_ENOUGH_DIRINFO, 0);
   assert_bootmsg("0 TAG=starting");
-  control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DIR, 0);
-  assert_bootmsg("5 TAG=conn_dir");
-  control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE_DIR, 0);
-  assert_bootmsg("10 TAG=handshake_dir");
+  control_event_bootstrap(BOOTSTRAP_STATUS_CONN, 0);
+  assert_bootmsg("5 TAG=conn");
+  control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
+  assert_bootmsg("14 TAG=handshake");
   /* The deferred event should appear */
   control_event_boot_first_orconn();
-  assert_bootmsg("80 TAG=conn_or");
+  assert_bootmsg("75 TAG=enough_dirinfo");
  done:
   tor_free(saved_event_str);
   UNMOCK(queue_control_event_string);
