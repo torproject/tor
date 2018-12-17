@@ -10,7 +10,7 @@
 
 #define PROCESS_UNIX_PRIVATE
 #include "lib/intmath/cmp.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/net/buffers_net.h"
 #include "lib/container/smartlist.h"
 #include "lib/evloop/compat_libevent.h"

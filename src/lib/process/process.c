@@ -9,7 +9,7 @@
  **/
 
 #define PROCESS_PRIVATE
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/net/buffers_net.h"
 #include "lib/container/smartlist.h"
 #include "lib/log/log.h"
