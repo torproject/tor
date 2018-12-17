@@ -74,6 +74,7 @@
 #include "lib/net/resolve.h"
 
 #include "lib/process/waitpid.h"
+#include "lib/process/process.h"
 
 #include "lib/meminfo/meminfo.h"
 #include "lib/osinfo/uname.h"
@@ -558,6 +559,10 @@ tor_init(int argc, char *argv[])
   rend_cache_init();
   addressmap_init(); /* Init the client dns cache. Do it always, since it's
                       * cheap. */
+
+  /* Initialize Process subsystem. */
+  process_init();
+
   /* Initialize the HS subsystem. */
   hs_init();
 
@@ -785,6 +790,7 @@ tor_free_all(int postfork)
   circuitmux_ewma_free_all();
   accounting_free_all();
   protover_summary_cache_free_all();
+  process_free_all();
 
   if (!postfork) {
     config_free_all();

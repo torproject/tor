@@ -10,7 +10,7 @@
 #define UTIL_PRIVATE
 #define UTIL_MALLOC_PRIVATE
 #define SOCKET_PRIVATE
-#define SUBPROCESS_PRIVATE
+#define PROCESS_WIN32_PRIVATE
 #include "lib/testsupport/testsupport.h"
 #include "core/or/or.h"
 #include "lib/buf/buffers.h"
@@ -22,6 +22,7 @@
 #include "test/test.h"
 #include "lib/memarea/memarea.h"
 #include "lib/process/waitpid.h"
+#include "lib/process/process_win32.h"
 #include "test/log_test_helpers.h"
 #include "lib/compress/compress.h"
 #include "lib/compress/compress_zstd.h"
@@ -30,7 +31,6 @@
 #include "lib/fs/winlib.h"
 #include "lib/process/env.h"
 #include "lib/process/pidfile.h"
-#include "lib/process/subprocess.h"
 #include "lib/intmath/weakrng.h"
 #include "lib/thread/numcpus.h"
 #include "lib/math/fp.h"
@@ -4301,204 +4301,6 @@ test_util_load_win_lib(void *ptr)
 }
 #endif /* defined(_WIN32) */
 
-#ifndef _WIN32
-static void
-clear_hex_errno(char *hex_errno)
-{
-  memset(hex_errno, '\0', HEX_ERRNO_SIZE + 1);
-}
-
-static void
-test_util_exit_status(void *ptr)
-{
-  /* Leave an extra byte for a \0 so we can do string comparison */
-  char hex_errno[HEX_ERRNO_SIZE + 1];
-  int n;
-
-  (void)ptr;
-
-  clear_hex_errno(hex_errno);
-  tt_str_op("",OP_EQ, hex_errno);
-
-  clear_hex_errno(hex_errno);
-  n = format_helper_exit_status(0, 0, hex_errno);
-  tt_str_op("0/0\n",OP_EQ, hex_errno);
-  tt_int_op(n,OP_EQ, strlen(hex_errno));
-
-#if SIZEOF_INT == 4
-
-  clear_hex_errno(hex_errno);
-  n = format_helper_exit_status(0, 0x7FFFFFFF, hex_errno);
-  tt_str_op("0/7FFFFFFF\n",OP_EQ, hex_errno);
-  tt_int_op(n,OP_EQ, strlen(hex_errno));
-
-  clear_hex_errno(hex_errno);
-  n = format_helper_exit_status(0xFF, -0x80000000, hex_errno);
-  tt_str_op("FF/-80000000\n",OP_EQ, hex_errno);
-  tt_int_op(n,OP_EQ, strlen(hex_errno));
-  tt_int_op(n,OP_EQ, HEX_ERRNO_SIZE);
-
-#elif SIZEOF_INT == 8
-
-  clear_hex_errno(hex_errno);
-  n = format_helper_exit_status(0, 0x7FFFFFFFFFFFFFFF, hex_errno);
-  tt_str_op("0/7FFFFFFFFFFFFFFF\n",OP_EQ, hex_errno);
-  tt_int_op(n,OP_EQ, strlen(hex_errno));
-
-  clear_hex_errno(hex_errno);
-  n = format_helper_exit_status(0xFF, -0x8000000000000000, hex_errno);
-  tt_str_op("FF/-8000000000000000\n",OP_EQ, hex_errno);
-  tt_int_op(n,OP_EQ, strlen(hex_errno));
-  tt_int_op(n,OP_EQ, HEX_ERRNO_SIZE);
-
-#endif /* SIZEOF_INT == 4 || ... */
-
-  clear_hex_errno(hex_errno);
-  n = format_helper_exit_status(0x7F, 0, hex_errno);
-  tt_str_op("7F/0\n",OP_EQ, hex_errno);
-  tt_int_op(n,OP_EQ, strlen(hex_errno));
-
-  clear_hex_errno(hex_errno);
-  n = format_helper_exit_status(0x08, -0x242, hex_errno);
-  tt_str_op("8/-242\n",OP_EQ, hex_errno);
-  tt_int_op(n,OP_EQ, strlen(hex_errno));
-
-  clear_hex_errno(hex_errno);
-  tt_str_op("",OP_EQ, hex_errno);
-
- done:
-  ;
-}
-#endif /* !defined(_WIN32) */
-
-#ifndef _WIN32
-static void
-test_util_string_from_pipe(void *ptr)
-{
-  int test_pipe[2] = {-1, -1};
-  int retval = 0;
-  enum stream_status status = IO_STREAM_TERM;
-  ssize_t retlen;
-  char buf[4] = { 0 };
-
-  (void)ptr;
-
-  errno = 0;
-
-  /* Set up a pipe to test on */
-  retval = pipe(test_pipe);
-  tt_int_op(retval, OP_EQ, 0);
-
-  /* Send in a string. */
-  retlen = write(test_pipe[1], "ABC", 3);
-  tt_int_op(retlen, OP_EQ, 3);
-
-  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
-  tt_str_op(buf, OP_EQ, "ABC");
-  errno = 0;
-
-  /* Send in a string that contains a nul. */
-  retlen = write(test_pipe[1], "AB\0", 3);
-  tt_int_op(retlen, OP_EQ, 3);
-
-  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
-  tt_str_op(buf, OP_EQ, "AB");
-  errno = 0;
-
-  /* Send in a string that contains a nul only. */
-  retlen = write(test_pipe[1], "\0", 1);
-  tt_int_op(retlen, OP_EQ, 1);
-
-  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
-  tt_str_op(buf, OP_EQ, "");
-  errno = 0;
-
-  /* Send in a string that contains a trailing newline. */
-  retlen = write(test_pipe[1], "AB\n", 3);
-  tt_int_op(retlen, OP_EQ, 3);
-
-  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
-  tt_str_op(buf, OP_EQ, "AB");
-  errno = 0;
-
-  /* Send in a string that contains a newline only. */
-  retlen = write(test_pipe[1], "\n", 1);
-  tt_int_op(retlen, OP_EQ, 1);
-
-  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
-  tt_str_op(buf, OP_EQ, "");
-  errno = 0;
-
-  /* Send in a string and check that we nul terminate return values. */
-  retlen = write(test_pipe[1], "AAA", 3);
-  tt_int_op(retlen, OP_EQ, 3);
-
-  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
-  tt_str_op(buf, OP_EQ, "AAA");
-  tt_mem_op(buf, OP_EQ, "AAA\0", sizeof(buf));
-  errno = 0;
-
-  retlen = write(test_pipe[1], "B", 1);
-  tt_int_op(retlen, OP_EQ, 1);
-
-  memset(buf, '\xff', sizeof(buf));
-  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
-  tt_str_op(buf, OP_EQ, "B");
-  tt_mem_op(buf, OP_EQ, "B\0\xff\xff", sizeof(buf));
-  errno = 0;
-
-  /* Send in multiple lines. */
-  retlen = write(test_pipe[1], "A\nB", 3);
-  tt_int_op(retlen, OP_EQ, 3);
-
-  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
-  tt_str_op(buf, OP_EQ, "A\nB");
-  errno = 0;
-
-  /* Send in a line and close */
-  retlen = write(test_pipe[1], "AB", 2);
-  tt_int_op(retlen, OP_EQ, 2);
-  retval = close(test_pipe[1]);
-  tt_int_op(retval, OP_EQ, 0);
-  test_pipe[1] = -1;
-
-  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
-  tt_str_op(buf, OP_EQ, "AB");
-  errno = 0;
-
-  /* Check for EOF */
-  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_int_op(status, OP_EQ, IO_STREAM_CLOSED);
-  errno = 0;
-
- done:
-  if (test_pipe[0] != -1)
-    close(test_pipe[0]);
-  if (test_pipe[1] != -1)
-    close(test_pipe[1]);
-}
-
-#endif /* !defined(_WIN32) */
-
 /**
  * Test for format_hex_number_sigsafe()
  */
@@ -4593,124 +4395,12 @@ test_util_format_dec_number(void *ptr)
   return;
 }
 
-/**
- * Test that we can properly format a Windows command line
- */
-static void
-test_util_join_win_cmdline(void *ptr)
-{
-  /* Based on some test cases from "Parsing C++ Command-Line Arguments" in
-   * MSDN but we don't exercise all quoting rules because tor_join_win_cmdline
-   * will try to only generate simple cases for the child process to parse;
-   * i.e. we never embed quoted strings in arguments. */
-
-  const char *argvs[][4] = {
-    {"a", "bb", "CCC", NULL}, // Normal
-    {NULL, NULL, NULL, NULL}, // Empty argument list
-    {"", NULL, NULL, NULL}, // Empty argument
-    {"\"a", "b\"b", "CCC\"", NULL}, // Quotes
-    {"a\tbc", "dd  dd", "E", NULL}, // Whitespace
-    {"a\\\\\\b", "de fg", "H", NULL}, // Backslashes
-    {"a\\\"b", "\\c", "D\\", NULL}, // Backslashes before quote
-    {"a\\\\b c", "d", "E", NULL}, // Backslashes not before quote
-    { NULL } // Terminator
-  };
-
-  const char *cmdlines[] = {
-    "a bb CCC",
-    "",
-    "\"\"",
-    "\\\"a b\\\"b CCC\\\"",
-    "\"a\tbc\" \"dd  dd\" E",
-    "a\\\\\\b \"de fg\" H",
-    "a\\\\\\\"b \\c D\\",
-    "\"a\\\\b c\" d E",
-    NULL // Terminator
-  };
-
-  int i;
-  char *joined_argv = NULL;
-
-  (void)ptr;
-
-  for (i=0; cmdlines[i]!=NULL; i++) {
-    log_info(LD_GENERAL, "Joining argvs[%d], expecting <%s>", i, cmdlines[i]);
-    joined_argv = tor_join_win_cmdline(argvs[i]);
-    tt_str_op(cmdlines[i],OP_EQ, joined_argv);
-    tor_free(joined_argv);
-  }
-
- done:
-  tor_free(joined_argv);
-}
-
 #define MAX_SPLIT_LINE_COUNT 4
 struct split_lines_test_t {
   const char *orig_line; // Line to be split (may contain \0's)
   int orig_length; // Length of orig_line
   const char *split_line[MAX_SPLIT_LINE_COUNT]; // Split lines
 };
-
-/**
- * Test that we properly split a buffer into lines
- */
-static void
-test_util_split_lines(void *ptr)
-{
-  /* Test cases. orig_line of last test case must be NULL.
-   * The last element of split_line[i] must be NULL. */
-  struct split_lines_test_t tests[] = {
-    {"", 0, {NULL}},
-    {"foo", 3, {"foo", NULL}},
-    {"\n\rfoo\n\rbar\r\n", 12, {"foo", "bar", NULL}},
-    {"fo o\r\nb\tar", 10, {"fo o", "b.ar", NULL}},
-    {"\x0f""f\0o\0\n\x01""b\0r\0\r", 12, {".f.o.", ".b.r.", NULL}},
-    {"line 1\r\nline 2", 14, {"line 1", "line 2", NULL}},
-    {"line 1\r\n\r\nline 2", 16, {"line 1", "line 2", NULL}},
-    {"line 1\r\n\r\r\r\nline 2", 18, {"line 1", "line 2", NULL}},
-    {"line 1\r\n\n\n\n\rline 2", 18, {"line 1", "line 2", NULL}},
-    {"line 1\r\n\r\t\r\nline 3", 18, {"line 1", ".", "line 3", NULL}},
-    {"\n\t\r\t\nline 3", 11, {".", ".", "line 3", NULL}},
-    {NULL, 0, { NULL }}
-  };
-
-  int i, j;
-  char *orig_line=NULL;
-  smartlist_t *sl=NULL;
-
-  (void)ptr;
-
-  for (i=0; tests[i].orig_line; i++) {
-    sl = smartlist_new();
-    /* Allocate space for string and trailing NULL */
-    orig_line = tor_memdup(tests[i].orig_line, tests[i].orig_length + 1);
-    tor_split_lines(sl, orig_line, tests[i].orig_length);
-
-    j = 0;
-    log_info(LD_GENERAL, "Splitting test %d of length %d",
-             i, tests[i].orig_length);
-    SMARTLIST_FOREACH_BEGIN(sl, const char *, line) {
-      /* Check we have not got too many lines */
-      tt_int_op(MAX_SPLIT_LINE_COUNT, OP_GT, j);
-      /* Check that there actually should be a line here */
-      tt_ptr_op(tests[i].split_line[j], OP_NE, NULL);
-      log_info(LD_GENERAL, "Line %d of test %d, should be <%s>",
-               j, i, tests[i].split_line[j]);
-      /* Check that the line is as expected */
-      tt_str_op(line,OP_EQ, tests[i].split_line[j]);
-      j++;
-    } SMARTLIST_FOREACH_END(line);
-    /* Check that we didn't miss some lines */
-    tt_ptr_op(NULL,OP_EQ, tests[i].split_line[j]);
-    tor_free(orig_line);
-    smartlist_free(sl);
-    sl = NULL;
-  }
-
- done:
-  tor_free(orig_line);
-  smartlist_free(sl);
-}
 
 static void
 test_util_di_ops(void *arg)
@@ -6483,12 +6173,8 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(nowrap_math, 0),
   UTIL_TEST(num_cpus, 0),
   UTIL_TEST_WIN_ONLY(load_win_lib, 0),
-  UTIL_TEST_NO_WIN(exit_status, 0),
-  UTIL_TEST_NO_WIN(string_from_pipe, 0),
   UTIL_TEST(format_hex_number, 0),
   UTIL_TEST(format_dec_number, 0),
-  UTIL_TEST(join_win_cmdline, 0),
-  UTIL_TEST(split_lines, 0),
   UTIL_TEST(n_bits_set, 0),
   UTIL_TEST(eat_whitespace, 0),
   UTIL_TEST(sl_new_from_text_lines, 0),

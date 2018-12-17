@@ -200,7 +200,6 @@ static int can_complete_circuits = 0;
 #define LAZY_DESCRIPTOR_RETRY_INTERVAL (60)
 
 static int conn_close_if_marked(int i);
-static int run_main_loop_until_done(void);
 static void connection_start_reading_from_linked_conn(connection_t *conn);
 static int connection_should_read_from_linked_conn(connection_t *conn);
 static void conn_read_callback(evutil_socket_t fd, short event, void *_conn);
@@ -1853,10 +1852,6 @@ second_elapsed_callback(time_t now, const or_options_t *options)
     run_connection_housekeeping(i, now);
   }
 
-  /* 11b. check pending unconfigured managed proxies */
-  if (!net_is_disabled() && pt_proxies_configuration_pending())
-    pt_configure_remaining_proxies();
-
   /* Run again in a second. */
   return 1;
 }
@@ -2847,10 +2842,6 @@ do_main_loop(void)
     }
   }
 #endif /* defined(HAVE_SYSTEMD_209) */
-
-  main_loop_should_exit = 0;
-  main_loop_exit_value = 0;
-
 #ifdef ENABLE_RESTART_DEBUGGING
   {
     static int first_time = 1;
@@ -2976,10 +2967,14 @@ run_main_loop_once(void)
  *
  * Shadow won't invoke this function, so don't fill it up with things.
  */
-static int
+STATIC int
 run_main_loop_until_done(void)
 {
   int loop_result = 1;
+
+  main_loop_should_exit = 0;
+  main_loop_exit_value = 0;
+
   do {
     loop_result = run_main_loop_once();
   } while (loop_result == 1);

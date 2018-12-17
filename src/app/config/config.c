@@ -142,7 +142,7 @@
 #include "lib/process/pidfile.h"
 #include "lib/process/restrict.h"
 #include "lib/process/setuid.h"
-#include "lib/process/subprocess.h"
+#include "lib/process/process.h"
 #include "lib/net/gethostname.h"
 #include "lib/thread/numcpus.h"
 
