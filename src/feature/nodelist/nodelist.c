@@ -2546,7 +2546,7 @@ count_loading_descriptors_progress(void)
   if (fraction > 1.0)
     return 0; /* it's not the number of descriptors holding us back */
   return BOOTSTRAP_STATUS_LOADING_DESCRIPTORS + (int)
-    (fraction*(BOOTSTRAP_STATUS_CONN_OR-1 -
+    (fraction*(BOOTSTRAP_STATUS_ENOUGH_DIRINFO-1 -
                BOOTSTRAP_STATUS_LOADING_DESCRIPTORS));
 }
 
@@ -2633,6 +2633,7 @@ update_router_have_minimum_dir_info(void)
   /* If paths have just become available in this update. */
   if (res && !have_min_dir_info) {
     control_event_client_status(LOG_NOTICE, "ENOUGH_DIR_INFO");
+    control_event_boot_dir(BOOTSTRAP_STATUS_ENOUGH_DIRINFO, 0);
     log_info(LD_DIR,
              "We now have enough directory information to build circuits.");
   }
