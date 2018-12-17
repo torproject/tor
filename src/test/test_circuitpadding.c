@@ -1164,9 +1164,9 @@ test_circuitpadding_conditions(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*NSEC_PER_USEC);
-  curr_mocked_time = 1*NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
 
   timers_initialize();
   helper_create_conditional_machines();
