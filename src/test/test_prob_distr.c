@@ -1101,6 +1101,37 @@ test_psi_dist_sample(const struct dist *dist)
   }
 }
 
+/* This is the seed of the deterministic randomness */
+static uint32_t deterministic_rand_counter;
+
+/** Initialize the seed of the deterministic randomness. */
+static void
+init_deterministic_rand(void)
+{
+  deterministic_rand_counter = crypto_rand_uint32();
+}
+
+/** Produce deterministic randomness for the stochastic tests using the global
+ *  deterministic_rand_counter seed
+ *
+ *  This function produces deterministic data over multiple calls iff it's
+ *  called in the same call order with the same 'n' parameter (which is the
+ *  case for the psi test). If not, outputs will deviate. */
+static void
+crypto_rand_deterministic(char *out, size_t n)
+{
+  /* Use a XOF to squeeze bytes out of that silly counter */
+  crypto_xof_t *xof = crypto_xof_new();
+  tor_assert(xof);
+  crypto_xof_add_bytes(xof, (uint8_t*)&deterministic_rand_counter,
+                       sizeof(deterministic_rand_counter));
+  crypto_xof_squeeze_bytes(xof, (uint8_t*)out, n);
+  crypto_xof_free(xof);
+
+  /* Increase counter for next run */
+  deterministic_rand_counter++;
+}
+
 static void
 test_stochastic_uniform(void *arg)
 {
@@ -1137,6 +1168,9 @@ test_stochastic_uniform(void *arg)
     .b = 4e-310,
   };
   bool ok = true;
+
+  init_deterministic_rand();
+  MOCK(crypto_rand, crypto_rand_deterministic);
 
   ok &= test_psi_dist_sample(&uniform01.base);
   ok &= test_psi_dist_sample(&uniform_pos.base);
@@ -1209,37 +1243,6 @@ test_stochastic_genpareto_impl(double mu, double sigma, double xi)
 
   /* XXX Consider some fancier GPD test.  */
   return test_psi_dist_sample(&dist.base);
-}
-
-/* This is the seed of the deterministic randomness */
-static uint32_t deterministic_rand_counter;
-
-/** Initialize the seed of the deterministic randomness. */
-static void
-init_deterministic_rand(void)
-{
-  deterministic_rand_counter = crypto_rand_uint32();
-}
-
-/** Produce deterministic randomness for the stochastic tests using the global
- *  deterministic_rand_counter seed
- *
- *  This function produces deterministic data over multiple calls iff it's
- *  called in the same call order with the same 'n' parameter (which is the
- *  case for the psi test). If not, outputs will deviate. */
-static void
-crypto_rand_deterministic(char *out, size_t n)
-{
-  /* Use a XOF to squeeze bytes out of that silly counter */
-  crypto_xof_t *xof = crypto_xof_new();
-  tor_assert(xof);
-  crypto_xof_add_bytes(xof, (uint8_t*)&deterministic_rand_counter,
-                       sizeof(deterministic_rand_counter));
-  crypto_xof_squeeze_bytes(xof, (uint8_t*)out, n);
-  crypto_xof_free(xof);
-
-  /* Increase counter for next run */
-  deterministic_rand_counter++;
 }
 
 static void
