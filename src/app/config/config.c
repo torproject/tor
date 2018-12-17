@@ -6913,6 +6913,8 @@ parse_port_config(smartlist_t *out,
 
   for (; ports; ports = ports->next) {
     tor_addr_t addr;
+    tor_addr_make_unspec(&addr);
+
     int port;
     int sessiongroup = SESSION_GROUP_UNSET;
     unsigned isolation = ISO_DEFAULT;
