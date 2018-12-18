@@ -20,7 +20,7 @@
 
 struct testgroup_t testgroups[] = {
   { "slow/crypto/", slow_crypto_tests },
-  { "slow/util/", slow_util_tests },
+  { "slow/process/", slow_process_tests },
   END_OF_GROUPS
 };
 

@@ -8,7 +8,7 @@
 #define UTIL_PRIVATE
 #define STATEFILE_PRIVATE
 #define CONTROL_PRIVATE
-#define SUBPROCESS_PRIVATE
+#define PROCESS_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "app/config/confparse.h"
@@ -17,9 +17,9 @@
 #include "core/or/circuitbuild.h"
 #include "app/config/statefile.h"
 #include "test/test.h"
-#include "lib/process/subprocess.h"
 #include "lib/encoding/confline.h"
 #include "lib/net/resolve.h"
+#include "lib/process/process.h"
 
 #include "app/config/or_state_st.h"
 
@@ -151,6 +151,8 @@ test_pt_get_transport_options(void *arg)
   config_line_t *cl = NULL;
   (void)arg;
 
+  process_init();
+
   execve_args = tor_malloc(sizeof(char*)*2);
   execve_args[0] = tor_strdup("cheeseshop");
   execve_args[1] = NULL;
@@ -190,6 +192,7 @@ test_pt_get_transport_options(void *arg)
   config_free_lines(cl);
   managed_proxy_destroy(mp, 0);
   smartlist_free(transport_list);
+  process_free_all();
 }
 
 static void
@@ -253,6 +256,8 @@ test_pt_get_extrainfo_string(void *arg)
   char *s = NULL;
   (void) arg;
 
+  process_init();
+
   argv1 = tor_malloc_zero(sizeof(char*)*3);
   argv1[0] = tor_strdup("ewige");
   argv1[1] = tor_strdup("Blumenkraft");
@@ -286,43 +291,30 @@ test_pt_get_extrainfo_string(void *arg)
   smartlist_free(t1);
   smartlist_free(t2);
   tor_free(s);
+  process_free_all();
 }
 
-#ifdef _WIN32
-#define STDIN_HANDLE HANDLE*
-#else
-#define STDIN_HANDLE int
-#endif
-
-static smartlist_t *
-tor_get_lines_from_handle_replacement(STDIN_HANDLE handle,
-                                      enum stream_status *stream_status_out)
+static int
+process_read_stdout_replacement(process_t *process, buf_t *buffer)
 {
+  (void)process;
   static int times_called = 0;
-  smartlist_t *retval_sl = smartlist_new();
-
-  (void) handle;
-  (void) stream_status_out;
 
   /* Generate some dummy CMETHOD lines the first 5 times. The 6th
      time, send 'CMETHODS DONE' to finish configuring the proxy. */
-  if (times_called++ != 5) {
-    smartlist_add_asprintf(retval_sl, "SMETHOD mock%d 127.0.0.1:555%d",
+  times_called++;
+
+  if (times_called <= 5) {
+    buf_add_printf(buffer, "SMETHOD mock%d 127.0.0.1:555%d\n",
                            times_called, times_called);
-  } else {
-    smartlist_add_strdup(retval_sl, "SMETHODS DONE");
+  } else if (times_called <= 6) {
+    buf_add_string(buffer, "SMETHODS DONE\n");
+  } else if (times_called <= 7) {
+    buf_add_string(buffer, "LOG Oh noes, something bad happened. "
+                           "What do we do!?\n");
   }
 
-  return retval_sl;
-}
-
-/* NOP mock */
-static void
-tor_process_handle_destroy_replacement(process_handle_t *process_handle,
-                                       int also_terminate_process)
-{
-  (void) process_handle;
-  (void) also_terminate_process;
+  return (int)buf_datalen(buffer);
 }
 
 static or_state_t *dummy_state = NULL;
@@ -355,12 +347,11 @@ test_pt_configure_proxy(void *arg)
   managed_proxy_t *mp = NULL;
   (void) arg;
 
+  process_init();
+
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
-  MOCK(tor_get_lines_from_handle,
-       tor_get_lines_from_handle_replacement);
-  MOCK(tor_process_handle_destroy,
-       tor_process_handle_destroy_replacement);
+  MOCK(process_read_stdout, process_read_stdout_replacement);
   MOCK(get_or_state,
        get_or_state_replacement);
   MOCK(queue_control_event_string,
@@ -372,23 +363,33 @@ test_pt_configure_proxy(void *arg)
   mp->conf_state = PT_PROTO_ACCEPTING_METHODS;
   mp->transports = smartlist_new();
   mp->transports_to_launch = smartlist_new();
-  mp->process_handle = tor_malloc_zero(sizeof(process_handle_t));
   mp->argv = tor_malloc_zero(sizeof(char*)*2);
   mp->argv[0] = tor_strdup("<testcase>");
   mp->is_server = 1;
+
+  /* Configure the process. */
+  mp->process = process_new("");
+  process_set_stdout_read_callback(mp->process, managed_proxy_stdout_callback);
+  process_set_data(mp->process, mp);
 
   /* Test the return value of configure_proxy() by calling it some
      times while it is uninitialized and then finally finalizing its
      configuration. */
   for (i = 0 ; i < 5 ; i++) {
+    /* force a read from our mocked stdout reader. */
+    process_notify_event_stdout(mp->process);
+    /* try to configure our proxy. */
     retval = configure_proxy(mp);
     /* retval should be zero because proxy hasn't finished configuring yet */
     tt_int_op(retval, OP_EQ, 0);
     /* check the number of registered transports */
-    tt_assert(smartlist_len(mp->transports) == i+1);
+    tt_int_op(smartlist_len(mp->transports), OP_EQ, i+1);
     /* check that the mp is still waiting for transports */
     tt_assert(mp->conf_state == PT_PROTO_ACCEPTING_METHODS);
   }
+
+  /* Get the SMETHOD DONE written to the process. */
+  process_notify_event_stdout(mp->process);
 
   /* this last configure_proxy() should finalize the proxy configuration. */
   retval = configure_proxy(mp);
@@ -411,6 +412,16 @@ test_pt_configure_proxy(void *arg)
             "650 TRANSPORT_LAUNCHED server mock4 127.0.0.1 5554\r\n");
   tt_str_op(smartlist_get(controlevent_msgs, 4), OP_EQ,
             "650 TRANSPORT_LAUNCHED server mock5 127.0.0.1 5555\r\n");
+
+  /* Get the log message out. */
+  process_notify_event_stdout(mp->process);
+
+  tt_int_op(controlevent_n, OP_EQ, 6);
+  tt_int_op(controlevent_event, OP_EQ, EVENT_PT_LOG);
+  tt_int_op(smartlist_len(controlevent_msgs), OP_EQ, 6);
+  tt_str_op(smartlist_get(controlevent_msgs, 5), OP_EQ,
+            "650 PT_LOG <testcase> Oh noes, something bad happened. "
+            "What do we do!?\r\n");
 
   { /* check that the transport info were saved properly in the tor state */
     config_line_t *transport_in_state = NULL;
@@ -435,8 +446,7 @@ test_pt_configure_proxy(void *arg)
 
  done:
   or_state_free(dummy_state);
-  UNMOCK(tor_get_lines_from_handle);
-  UNMOCK(tor_process_handle_destroy);
+  UNMOCK(process_read_stdout);
   UNMOCK(get_or_state);
   UNMOCK(queue_control_event_string);
   if (controlevent_msgs) {
@@ -449,10 +459,11 @@ test_pt_configure_proxy(void *arg)
     smartlist_free(mp->transports);
   }
   smartlist_free(mp->transports_to_launch);
-  tor_free(mp->process_handle);
+  process_free(mp->process);
   tor_free(mp->argv[0]);
   tor_free(mp->argv);
   tor_free(mp);
+  process_free_all();
 }
 
 /* Test the get_pt_proxy_uri() function. */

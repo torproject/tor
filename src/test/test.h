@@ -241,6 +241,7 @@ extern struct testcase_t pem_tests[];
 extern struct testcase_t periodic_event_tests[];
 extern struct testcase_t policy_tests[];
 extern struct testcase_t procmon_tests[];
+extern struct testcase_t process_tests[];
 extern struct testcase_t proto_http_tests[];
 extern struct testcase_t proto_misc_tests[];
 extern struct testcase_t protover_tests[];
@@ -270,7 +271,7 @@ extern struct testcase_t voting_schedule_tests[];
 extern struct testcase_t x509_tests[];
 
 extern struct testcase_t slow_crypto_tests[];
-extern struct testcase_t slow_util_tests[];
+extern struct testcase_t slow_process_tests[];
 
 extern struct testgroup_t testgroups[];
 
