@@ -1267,7 +1267,7 @@ sandbox_init_filter(void)
   return cfg;
 }
 
-static int
+int
 run_tor_main_loop(void)
 {
   handle_signals();
