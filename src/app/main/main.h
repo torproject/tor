@@ -26,4 +26,6 @@ void tor_free_all(int postfork);
 
 int tor_init(int argc, char **argv);
 
+int run_tor_main_loop(void);
+
 #endif /* !defined(TOR_MAIN_H) */

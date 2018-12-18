@@ -298,7 +298,7 @@ nt_service_body(int argc, char **argv)
   service_status.dwCurrentState = SERVICE_RUNNING;
   service_fns.SetServiceStatus_fn(hStatus, &service_status);
   set_main_thread();
-  do_main_loop();
+  run_tor_main_loop();
   tor_cleanup();
 }
 
@@ -326,7 +326,7 @@ nt_service_main(void)
         return;
       switch (get_options()->command) {
       case CMD_RUN_TOR:
-        do_main_loop();
+        run_tor_main_loop();
         break;
       case CMD_LIST_FINGERPRINT:
       case CMD_HASH_PASSWORD:
