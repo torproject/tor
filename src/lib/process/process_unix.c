@@ -112,16 +112,6 @@ process_unix_free_(process_unix_t *unix_process)
   /* FIXME(ahf): Refactor waitpid code? */
   unix_process->waitpid = NULL;
 
-  /* Cleanup our events. */
-  if (! unix_process->stdout_handle.reached_eof)
-    process_unix_stop_reading(&unix_process->stdout_handle);
-
-  if (! unix_process->stderr_handle.reached_eof)
-    process_unix_stop_reading(&unix_process->stderr_handle);
-
-  if (unix_process->stdin_handle.is_writing)
-    process_unix_stop_writing(&unix_process->stdin_handle);
-
   /* Close all our file descriptors. */
   process_unix_close_file_descriptors(unix_process);
 
@@ -667,6 +657,17 @@ process_unix_close_file_descriptors(process_unix_t *unix_process)
 
   int ret;
   bool success = true;
+
+  /* Stop reading and writing before we close() our
+   * file descriptors. */
+  if (! unix_process->stdout_handle.reached_eof)
+    process_unix_stop_reading(&unix_process->stdout_handle);
+
+  if (! unix_process->stderr_handle.reached_eof)
+    process_unix_stop_reading(&unix_process->stderr_handle);
+
+  if (unix_process->stdin_handle.is_writing)
+    process_unix_stop_writing(&unix_process->stdin_handle);
 
   if (unix_process->stdin_handle.fd != -1) {
     ret = close(unix_process->stdin_handle.fd);

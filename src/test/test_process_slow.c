@@ -36,6 +36,7 @@ struct process_data_t {
   smartlist_t *stderr_data;
   smartlist_t *stdin_data;
   process_exit_code_t exit_code;
+  bool did_exit;
 };
 
 typedef struct process_data_t process_data_t;
@@ -97,13 +98,17 @@ process_stderr_callback(process_t *process, const char *data, size_t size)
 static bool
 process_exit_callback(process_t *process, process_exit_code_t exit_code)
 {
+  process_status_t status;
+
   tt_ptr_op(process, OP_NE, NULL);
 
   process_data_t *process_data = process_get_data(process);
   process_data->exit_code = exit_code;
+  process_data->did_exit = true;
 
-  /* Our process died. Let's check the values it returned. */
-  tor_shutdown_event_loop_and_exit(0);
+  /* Check if our process is still running? */
+  status = process_get_status(process);
+  tt_int_op(status, OP_EQ, PROCESS_STATUS_NOT_RUNNING);
 
  done:
   /* Do not free up our process_t. */
@@ -137,9 +142,16 @@ main_loop_timeout_cb(periodic_timer_t *timer, void *data)
 {
   /* Sanity check. */
   tt_ptr_op(timer, OP_EQ, main_loop_timeout_timer);
-  tt_ptr_op(data, OP_EQ, NULL);
+  tt_ptr_op(data, OP_NE, NULL);
 
-  /* Have we been called 10 times we exit. */
+  /* Our process data. */
+  process_data_t *process_data = data;
+
+  /* Our process did exit. */
+  if (process_data->did_exit)
+    tor_shutdown_event_loop_and_exit(0);
+
+  /* Have we been called 10 times we exit the main loop. */
   timer_tick_count++;
 
   tt_int_op(timer_tick_count, OP_LT, 10);
@@ -156,7 +168,7 @@ main_loop_timeout_cb(periodic_timer_t *timer, void *data)
 }
 
 static void
-run_main_loop(void)
+run_main_loop(process_data_t *process_data)
 {
   int ret;
 
@@ -167,7 +179,7 @@ run_main_loop(void)
   main_loop_timeout_timer = periodic_timer_new(tor_libevent_get_base(),
                                                &interval,
                                                main_loop_timeout_cb,
-                                               NULL);
+                                               process_data);
 
   /* Run our main loop. */
   ret = run_main_loop_until_done();
@@ -225,11 +237,7 @@ test_callbacks(void *arg)
   process_printf(process, " lines?\r\n");
 
   /* Start our main loop. */
-  run_main_loop();
-
-  /* Check if our process is still running? */
-  status = process_get_status(process);
-  tt_int_op(status, OP_EQ, PROCESS_STATUS_NOT_RUNNING);
+  run_main_loop(process_data);
 
   /* We returned. Let's see what our event loop said. */
   tt_int_op(smartlist_len(process_data->stdout_data), OP_EQ, 12);
@@ -310,14 +318,16 @@ test_callbacks_terminate(void *arg)
   tt_int_op(status, OP_EQ, PROCESS_STATUS_RUNNING);
 
   /* Zap our process. */
-  process_terminate(process);
+  bool success;
+
+  success = process_terminate(process);
+  tt_assert(success);
 
   /* Start our main loop. */
-  run_main_loop();
+  run_main_loop(process_data);
 
-  /* Check if our process is still running? */
-  status = process_get_status(process);
-  tt_int_op(status, OP_EQ, PROCESS_STATUS_NOT_RUNNING);
+  /* Check if we did exit. */
+  tt_assert(process_data->did_exit);
 
  done:
   process_data_free(process_data);
