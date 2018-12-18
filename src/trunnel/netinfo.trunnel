@@ -7,10 +7,10 @@ const NETINFO_ADDR_TYPE_IPV6 = 6;
 struct netinfo_addr {
   u8 addr_type;
   u8 len;
-  union addr[addr_type] {
+  union addr[addr_type] with length len {
     NETINFO_ADDR_TYPE_IPV4: u32 ipv4;
     NETINFO_ADDR_TYPE_IPV6: u8 ipv6[16];
-    default: fail;
+    default: ignore;
   };
 
 }

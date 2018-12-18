@@ -140,7 +140,6 @@ netinfo_addr_check(const netinfo_addr_t *obj)
       break;
 
     default:
-        return "Bad tag for union";
       break;
   }
   return NULL;
@@ -175,7 +174,6 @@ netinfo_addr_encoded_len(const netinfo_addr_t *obj)
       break;
 
     default:
-      trunnel_assert(0);
       break;
   }
   return result;
@@ -198,6 +196,8 @@ netinfo_addr_encode(uint8_t *output, const size_t avail, const netinfo_addr_t *o
   const ssize_t encoded_len = netinfo_addr_encoded_len(obj);
 #endif
 
+  uint8_t *backptr_len = NULL;
+
   if (NULL != (msg = netinfo_addr_check(obj)))
     goto check_failed;
 
@@ -213,39 +213,49 @@ netinfo_addr_encode(uint8_t *output, const size_t avail, const netinfo_addr_t *o
   written += 1; ptr += 1;
 
   /* Encode u8 len */
+  backptr_len = ptr;
   trunnel_assert(written <= avail);
   if (avail - written < 1)
     goto truncated;
   trunnel_set_uint8(ptr, (obj->len));
   written += 1; ptr += 1;
+  {
+    size_t written_before_union = written;
 
-  /* Encode union addr[addr_type] */
-  trunnel_assert(written <= avail);
-  switch (obj->addr_type) {
+    /* Encode union addr[addr_type] */
+    trunnel_assert(written <= avail);
+    switch (obj->addr_type) {
 
-    case NETINFO_ADDR_TYPE_IPV4:
+      case NETINFO_ADDR_TYPE_IPV4:
 
-      /* Encode u32 addr_ipv4 */
-      trunnel_assert(written <= avail);
-      if (avail - written < 4)
-        goto truncated;
-      trunnel_set_uint32(ptr, trunnel_htonl(obj->addr_ipv4));
-      written += 4; ptr += 4;
-      break;
+        /* Encode u32 addr_ipv4 */
+        trunnel_assert(written <= avail);
+        if (avail - written < 4)
+          goto truncated;
+        trunnel_set_uint32(ptr, trunnel_htonl(obj->addr_ipv4));
+        written += 4; ptr += 4;
+        break;
 
-    case NETINFO_ADDR_TYPE_IPV6:
+      case NETINFO_ADDR_TYPE_IPV6:
 
-      /* Encode u8 addr_ipv6[16] */
-      trunnel_assert(written <= avail);
-      if (avail - written < 16)
-        goto truncated;
-      memcpy(ptr, obj->addr_ipv6, 16);
-      written += 16; ptr += 16;
-      break;
+        /* Encode u8 addr_ipv6[16] */
+        trunnel_assert(written <= avail);
+        if (avail - written < 16)
+          goto truncated;
+        memcpy(ptr, obj->addr_ipv6, 16);
+        written += 16; ptr += 16;
+        break;
 
-    default:
-      trunnel_assert(0);
-      break;
+      default:
+        break;
+    }
+    /* Write the length field back to len */
+    trunnel_assert(written >= written_before_union);
+#if UINT8_MAX < SIZE_MAX
+    if (written - written_before_union > UINT8_MAX)
+      goto check_failed;
+#endif
+    trunnel_set_uint8(backptr_len, (written - written_before_union));
   }
 
 
@@ -291,29 +301,39 @@ netinfo_addr_parse_into(netinfo_addr_t *obj, const uint8_t *input, const size_t 
   CHECK_REMAINING(1, truncated);
   obj->len = (trunnel_get_uint8(ptr));
   remaining -= 1; ptr += 1;
+  {
+    size_t remaining_after;
+    CHECK_REMAINING(obj->len, truncated);
+    remaining_after = remaining - obj->len;
+    remaining = obj->len;
 
-  /* Parse union addr[addr_type] */
-  switch (obj->addr_type) {
+    /* Parse union addr[addr_type] */
+    switch (obj->addr_type) {
 
-    case NETINFO_ADDR_TYPE_IPV4:
+      case NETINFO_ADDR_TYPE_IPV4:
 
-      /* Parse u32 addr_ipv4 */
-      CHECK_REMAINING(4, truncated);
-      obj->addr_ipv4 = trunnel_ntohl(trunnel_get_uint32(ptr));
-      remaining -= 4; ptr += 4;
-      break;
+        /* Parse u32 addr_ipv4 */
+        CHECK_REMAINING(4, fail);
+        obj->addr_ipv4 = trunnel_ntohl(trunnel_get_uint32(ptr));
+        remaining -= 4; ptr += 4;
+        break;
 
-    case NETINFO_ADDR_TYPE_IPV6:
+      case NETINFO_ADDR_TYPE_IPV6:
 
-      /* Parse u8 addr_ipv6[16] */
-      CHECK_REMAINING(16, truncated);
-      memcpy(obj->addr_ipv6, ptr, 16);
-      remaining -= 16; ptr += 16;
-      break;
+        /* Parse u8 addr_ipv6[16] */
+        CHECK_REMAINING(16, fail);
+        memcpy(obj->addr_ipv6, ptr, 16);
+        remaining -= 16; ptr += 16;
+        break;
 
-    default:
+      default:
+        /* Skip to end of union */
+        ptr += remaining; remaining = 0;
+        break;
+    }
+    if (remaining != 0)
       goto fail;
-      break;
+    remaining = remaining_after;
   }
   trunnel_assert(ptr + remaining == input + len_in);
   return len_in - remaining;
