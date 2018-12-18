@@ -1,3 +1,87 @@
+Changes in version 0.3.5.6-rc - 2018-12-18
+  Tor 0.3.5.6-rc fixes numerous small bugs in earlier versions of Tor.
+  It is the first release candidate in the 0.3.5.x series; if no further
+  huge bugs are found, our next release may be the stable 0.3.5.x.
+
+  o Minor features (continuous integration, Windows):
+    - Always show the configure and test logs, and upload them as build
+      artifacts, when building for Windows using Appveyor CI.
+      Implements 28459.
+
+  o Minor features (fallback directory list):
+    - Replace the 150 fallbacks originally introduced in Tor
+      0.3.3.1-alpha in January 2018 (of which ~115 were still
+      functional), with a list of 157 fallbacks (92 new, 65 existing, 85
+      removed) generated in December 2018. Closes ticket 24803.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the December 5 2018 Maxmind GeoLite2
+      Country database. Closes ticket 28744.
+
+  o Minor bugfixes (compilation):
+    - Add missing dependency on libgdi32.dll for tor-print-ed-signing-
+      cert.exe on Windows. Fixes bug 28485; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (continuous integration, Windows):
+    - Explicitly specify the path to the OpenSSL library and do not
+      download OpenSSL from Pacman, but instead use the library that is
+      already provided by AppVeyor. Fixes bug 28574; bugfix on master.
+
+  o Minor bugfixes (onion service v3):
+    - When deleting an ephemeral onion service (DEL_ONION), do not close
+      any rendezvous circuits in order to let the existing client
+      connections finish by themselves or closed by the application. The
+      HS v2 is doing that already so now we have the same behavior for
+      all versions. Fixes bug 28619; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (restart-in-process, boostrap):
+    - Add missing resets of bootstrap tracking state when shutting down
+      (regression caused by ticket 27169). Fixes bug 28524; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Use a separate DataDirectory for the test_rebind script.
+      Previously, this script would run using the default DataDirectory,
+      and sometimes fail. Fixes bug 28562; bugfix on 0.3.5.1-alpha.
+      Patch from Taylor R Campbell.
+    - Stop leaking memory in an entry guard unit test. Fixes bug 28554;
+      bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (Windows):
+    - Correctly identify Windows 8.1, Windows 10, and Windows Server
+      2008 and later from their NT versions. Fixes bug 28096; bugfix on
+      0.2.2.34; reported by Keifer Bly.
+    - On recent Windows versions, the GetVersionEx() function may report
+      an earlier Windows version than the running OS. To avoid user
+      confusion, add "[or later]" to Tor's version string on affected
+      versions of Windows. Fixes bug 28096; bugfix on 0.2.2.34; reported
+      by Keifer Bly.
+    - Remove Windows versions that were never supported by the
+      GetVersionEx() function. Stop duplicating the latest Windows
+      version in get_uname(). Fixes bug 28096; bugfix on 0.2.2.34;
+      reported by Keifer Bly.
+
+  o Testing:
+    - Increase logging and tag all log entries with timestamps in
+      test_rebind.py. Provides diagnostics for issue 28229.
+
+  o Code simplification and refactoring (shared random, dirauth):
+    - Change many tor_assert() to use BUG() instead. The idea is to not
+      crash a dirauth but rather scream loudly with a stacktrace and let
+      it continue run. The shared random subsystem is very resilient and
+      if anything wrong happens with it, at worst a non coherent value
+      will be put in the vote and discarded by the other authorities.
+      Closes ticket 19566.
+
+  o Documentation (onion services):
+    - Document in the man page that changing ClientOnionAuthDir value or
+      adding a new file in the directory will not work at runtime upon
+      sending a HUP if Sandbox 1. Closes ticket 28128.
+    - Note in the man page that the only real way to fully revoke an
+      onion service v3 client authorization is by restarting the tor
+      process. Closes ticket 28275.
+
+
 Changes in version 0.3.5.5-alpha - 2018-11-16
   Tor 0.3.5.5-alpha includes numerous bugfixes on earlier releases,
   including several that we hope to backport to older release series in
