@@ -3897,7 +3897,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->HeartbeatPeriod &&
-      options->HeartbeatPeriod < MIN_HEARTBEAT_PERIOD) {
+      options->HeartbeatPeriod < MIN_HEARTBEAT_PERIOD &&
+      !options->TestingTorNetwork) {
     log_warn(LD_CONFIG, "HeartbeatPeriod option is too short; "
              "raising to %d seconds.", MIN_HEARTBEAT_PERIOD);
     options->HeartbeatPeriod = MIN_HEARTBEAT_PERIOD;
