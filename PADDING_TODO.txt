@@ -9,20 +9,17 @@ TODO sketch for this branch, in rough priority order:
     - Use tokens test for detecting padding from wrong hop
     - unknown machine test
 
-- Negotiate errors are not remembered.. If there is a consensus desync,
-  clients will keep trying machines that middles do not have..
-
-- Specify an ordered preference list of padding machines
+- Option to keep circuits open if machine present
 
 - Larger types?
   - Larger circpad_hist_token_t?
   - Larger circpad_delay_t?
   - Larger circpad_statenum_t?
 
-- Nick's API doc
-  - Consider how we'd use it.
+- Negotiate errors are not remembered.. If there is a consensus desync,
+  clients will keep trying machines that middles do not have..
 
-- Vanguards compatibility for MiddleNodes (via changes to vanguards addon)
+- Specify an ordered preference list of padding machines
 
 - Circuit RTT measurement will break on var_cell/EXTEND2 cells
   - Are there any heuristics we can use here?
@@ -30,15 +27,14 @@ TODO sketch for this branch, in rough priority order:
       we can use that. But the proposal currently says MAY, but not MUST
       for this behavior.
 
-- Rephist timer stats
-  - Is this a privacy risk? The adversary could create lots of circuits
-    to find a layer2 vanguard.. Otherwise they will be spread across middles.
+======== 0.3.6 ========
 
-- Determine good hardcoded/example histograms
+- Come up with some good histograms for eg circuit setup fingerprinting,
+  website fingerprinting, and vanguards usage.
 
-- Specify target circuit lifetime?
+- Specify exit policy for machine conditions?
 
-- Specify ports for machine??
+- Vanguards compatibility for MiddleNodes (via changes to vanguards addon)
 
 - circpad_machine_validate() function to sanity-check histograms loaded from
   consensus/torrc (can also be used to help guide a GA).
@@ -55,9 +51,10 @@ TODO sketch for this branch, in rough priority order:
 - Support consensus load+serialization of state machines
   - ??
 
-======== 0.3.6 ========
+- Prop #265 load balancing
 
-- Come up with some good histograms for eg circuit setup fingerprinting,
-  website fingerprinting, and vanguards usage.
-- Experiment with run-length histograms and other histogram/distribution
-  encoding methods.
+- Rephist timer stats
+  - Is this a privacy risk? The adversary could create lots of circuits
+    to find a layer2 vanguard.. Otherwise they will be spread across middles.
+
+
