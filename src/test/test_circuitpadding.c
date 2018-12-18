@@ -1390,6 +1390,11 @@ test_circuitpadding_circuitsetup_machine(void *arg)
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
             OP_EQ, 0);
 
+  /* Verify we can't schedule padding in END state */
+  circpad_decision_t ret =
+      circpad_machine_schedule_padding(client_side->padding_info[0]);
+  tt_int_op(ret, OP_EQ, CIRCPAD_STATE_UNCHANGED);
+
   /* Simulate application traffic */
   circpad_cell_event_nonpadding_sent(client_side);
   circpad_deliver_unrecognized_cell_events(relay_side, CELL_DIRECTION_OUT);
@@ -1421,6 +1426,14 @@ test_circuitpadding_circuitsetup_machine(void *arg)
   tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
   tt_int_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
+            OP_NE, 0);
+
+  /* Test timer cancel due to state rules */
+  circpad_cell_event_nonpadding_sent(client_side);
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
+            OP_EQ, 0);
+  circpad_cell_event_padding_received(client_side);
+  tt_int_op(client_side->padding_info[0]->padding_scheduled_at_usec,
             OP_NE, 0);
 
   /* Simulate application traffic to cancel timer */
@@ -1676,18 +1689,35 @@ test_circuitpadding_global_rate_limiting(void *arg)
   /* Ignore machine transitions for the purposes of this function, we only
    * really care about padding counts */
   MOCK(circpad_machine_transition, circpad_machine_transition_mock);
-  MOCK(circpad_send_command_to_hop, circpad_send_command_to_hop_mock);
+  MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
+  MOCK(circuit_package_relay_cell,
+       circuit_package_relay_cell_mock);
+  MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
+
+  monotime_init();
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  timers_initialize();
+
+  client_side = (circuit_t *)origin_circuit_new();
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  dummy_channel.cmux = circuitmux_alloc();
 
   /* Setup machine and circuits */
-  client_side = TO_CIRCUIT(origin_circuit_new());
-  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel, &dummy_channel);
+  relay_side->purpose = CIRCUIT_PURPOSE_OR;
   helper_create_basic_machine();
-  client_side->padding_machine[0] = &circ_client_machine;
-  client_side->padding_info[0] =
-    circpad_circuit_machineinfo_new(client_side, 0);
-  mi = client_side->padding_info[0];
+  relay_side->padding_machine[0] = &circ_client_machine;
+  relay_side->padding_info[0] =
+    circpad_circuit_machineinfo_new(relay_side, 0);
+  mi = relay_side->padding_info[0];
   /* Set up the machine info so that we can get through the basic functions */
-  mi->state_length = 500;
+  mi->state_length = CIRCPAD_STATE_LENGTH_INFINITE;
+
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  simulate_single_hop_extend(client_side, relay_side, 1);
 
   /* Now test the global limits by setting up the consensus */
   networkstatus_t vote1;
@@ -1716,24 +1746,29 @@ test_circuitpadding_global_rate_limiting(void *arg)
   retval = circpad_machine_reached_padding_limit(mi);
   tt_int_op(retval, OP_EQ, 1);
 
-  /* Now send 96 non-padding cells to get near the
+  retval = circpad_machine_schedule_padding(mi);
+  tt_int_op(retval, OP_EQ, CIRCPAD_STATE_UNCHANGED);
+
+  /* Now send 92 non-padding cells to get near the
    * circpad_global_max_padding_pct=50 limit; in particular with 96 non-padding
    * cells, the padding traffic is still 51% of total traffic so limit should
    * trigger */
-  for (i=0;i<96;i++) {
-    circpad_cell_event_nonpadding_sent(client_side);
+  for (i=0;i<92;i++) {
+    circpad_cell_event_nonpadding_sent(relay_side);
   }
   retval = circpad_machine_reached_padding_limit(mi);
   tt_int_op(retval, OP_EQ, 1);
 
   /* Send another non-padding cell to bring the padding traffic to 50% of total
    * traffic and get past the limit */
-  circpad_cell_event_nonpadding_sent(client_side);
+  circpad_cell_event_nonpadding_sent(relay_side);
   retval = circpad_machine_reached_padding_limit(mi);
   tt_int_op(retval, OP_EQ, 0);
 
  done:
-  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  free_fake_orcirc(relay_side);
+  circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
+  circuitmux_free(dummy_channel.cmux);
   SMARTLIST_FOREACH(vote1.net_params, char *, cp, tor_free(cp));
   smartlist_free(vote1.net_params);
 }
