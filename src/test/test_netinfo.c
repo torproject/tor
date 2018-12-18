@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#include "core/or/or.h" // XXX: is this needed?
+#include "core/or/or.h"
 #include "trunnel/netinfo.h"
 #include "test/test.h"
 
