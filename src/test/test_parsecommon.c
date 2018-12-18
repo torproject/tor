@@ -300,8 +300,8 @@ test_parsecommon_get_next_token_parse_keys(void *arg)
   tt_int_op(token->tp, OP_EQ, R_IPO_ONION_KEY);
   tt_int_op(token->n_args, OP_EQ, 0);
   tt_str_op(token->object_type, OP_EQ, "RSA PUBLIC KEY");
-  tt_int_op(token->object_size, OP_EQ, 0);
-  tt_assert(!token->object_body);
+  tt_int_op(token->object_size, OP_EQ, 140);
+  tt_assert(token->object_body);
   tt_assert(token->key);
   tt_assert(!token->error);
 
@@ -335,8 +335,8 @@ test_parsecommon_get_next_token_parse_keys(void *arg)
   tt_int_op(token2->tp, OP_EQ, C_CLIENT_KEY);
   tt_int_op(token2->n_args, OP_EQ, 0);
   tt_str_op(token2->object_type, OP_EQ, "RSA PRIVATE KEY");
-  tt_int_op(token2->object_size, OP_EQ, 0);
-  tt_assert(!token2->object_body);
+  tt_int_op(token2->object_size, OP_EQ, 608);
+  tt_assert(token2->object_body);
   tt_assert(token2->key);
   tt_assert(!token->error);
 

@@ -177,8 +177,8 @@ microdescs_parse_from_string(const char *s, const char *eos,
                "Relay's onion key had invalid exponent.");
       goto next;
     }
-    router_set_rsa_onion_pkey(tok->key, &md->onion_pkey,
-                              &md->onion_pkey_len);
+    md->onion_pkey = tor_memdup(tok->object_body, tok->object_size);
+    md->onion_pkey_len = tok->object_size;
     crypto_pk_free(tok->key);
 
     if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {

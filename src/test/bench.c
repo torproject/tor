@@ -39,6 +39,9 @@
 #include "lib/crypt_ops/digestset.h"
 #include "lib/crypt_ops/crypto_init.h"
 
+#include "feature/dirparse/microdesc_parse.h"
+#include "feature/nodelist/microdesc.h"
+
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)
 static uint64_t nanostart;
 static inline uint64_t
@@ -639,6 +642,41 @@ bench_ecdh_p224(void)
 }
 #endif
 
+static void
+bench_md_parse(void)
+{
+  uint64_t start, end;
+  const int N = 100000;
+  // selected arbitrarily
+  const char md_text[] =
+    "@last-listed 2018-12-14 18:14:14\n"
+    "onion-key\n"
+    "-----BEGIN RSA PUBLIC KEY-----\n"
+    "MIGJAoGBAMHkZeXNDX/49JqM2BVLmh1Fnb5iMVnatvZZTLJyedqDLkbXZ1WKP5oh\n"
+    "7ec14dj/k3ntpwHD4s2o3Lb6nfagWbug4+F/rNJ7JuFru/PSyOvDyHGNAuegOXph\n"
+    "3gTGjdDpv/yPoiadGebbVe8E7n6hO+XxM2W/4dqheKimF0/s9B7HAgMBAAE=\n"
+    "-----END RSA PUBLIC KEY-----\n"
+    "ntor-onion-key QgF/EjqlNG1wRHLIop/nCekEH+ETGZSgYOhu26eiTF4=\n"
+    "family $00E9A86E7733240E60D8435A7BBD634A23894098 "
+    "$329BD7545DEEEBBDC8C4285F243916F248972102 "
+    "$69E06EBB2573A4F89330BDF8BC869794A3E10E4D "
+    "$DCA2A3FAE50B3729DAA15BC95FB21AF03389818B\n"
+    "p accept 53,80,443,5222-5223,25565\n"
+    "id ed25519 BzffzY99z6Q8KltcFlUTLWjNTBU7yKK+uQhyi1Ivb3A\n";
+
+  reset_perftime();
+  start = perftime();
+  for (int i = 0; i < N; ++i) {
+    smartlist_t *s = microdescs_parse_from_string(md_text, NULL, 1,
+                                                  SAVED_IN_CACHE, NULL);
+    SMARTLIST_FOREACH(s, microdesc_t *, md, microdesc_free(md));
+    smartlist_free(s);
+  }
+
+  end = perftime();
+  printf("Microdesc parse: %f nsec\n", NANOCOUNT(start, end, N));
+}
+
 typedef void (*bench_fn)(void);
 
 typedef struct benchmark_t {
@@ -666,6 +704,8 @@ static struct benchmark_t benchmarks[] = {
   ENT(ecdh_p256),
   ENT(ecdh_p224),
 #endif
+
+  ENT(md_parse),
   {NULL,NULL,0}
 };
 
