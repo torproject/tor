@@ -1,4 +1,0 @@
-  o Minor features (bootstrap):
-    - Add the bootstrap tag name to the log messages, so people
-      troubleshooting connection problems can look up a symbol instead
-      of a number.  Closes ticket 28731.
