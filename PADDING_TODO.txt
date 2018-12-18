@@ -1,14 +1,13 @@
 TODO sketch for this branch, in rough priority order:
 
 - Clean up/fix XXX's and FIXMEs
-  - Callback tests:
-    - Tests for STATE_END teardown with pending timers
-    - Tests for circuit getting marked or freed before callback.
   - Tokens test:
-    - Use tokens test for detecting padding from wrong hop
     - Token removal rules (closest and lower)
     - Verify token removal testing is thorough
-  - Fix: adding rate limits after wrap
+  - Wronghop test:
+    - Padding negotiate and other cells from wrong hop/non-origin circ
+    - Use tokens test for detecting padding from wrong hop
+    - unknown machine test
 
 - Negotiate errors are not remembered.. If there is a consensus desync,
   clients will keep trying machines that middles do not have..
