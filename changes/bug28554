@@ -1,3 +1,0 @@
-  o Minor bugfixes (unit tests, guard selection):
-    - Stop leaking memory in an entry guard unit test. Fixes bug 28554;
-      bugfix on 0.3.0.1-alpha.
