@@ -8,29 +8,26 @@ TODO sketch for this branch, in rough priority order:
   - Test event entry points into circuitpad?
     - Most of our events come from completely untested code :/
 
-- Option to keep circuits open if machine present
+- Compat-breaking changes to be decided/done ASAP
+  - Negotiate errors are not remembered.. If there is a consensus desync,
+    clients will keep trying machines that middles do not have..
+  - Specify an ordered preference list of padding machines
+  - Option to keep circuits open if machine present
+  - Larger types?
+    - Larger circpad_hist_token_t? Yes. Should be uint32_t
+    - Larger circpad_delay_t? Nah
+    - Larger circpad_statenum_t? Nah
+  - Specify exit policy for machine conditions?
+    - Accept and reject? based on attached streams?
+    - md-compatibile representation only.. for brevity.
 
-- Larger types?
-  - Larger circpad_hist_token_t? Yes. Should be uint32_t
-  - Larger circpad_delay_t? Nah
-  - Larger circpad_statenum_t? Nah
-
-- Negotiate errors are not remembered.. If there is a consensus desync,
-  clients will keep trying machines that middles do not have..
-
-- Specify an ordered preference list of padding machines
-
-- Specify exit policy for machine conditions?
-  - Accept and reject? based on attached streams?
-  - md-compatibile representation only.. for brevity.
-
-- Remove circuitsetup machine (but place it in unittests -- they depend on it)
-
-- Circuit RTT measurement will break on var_cell/EXTEND2 cells
-  - Are there any heuristics we can use here?
-    - If RELAY_EARLY is only for the first cell of an EXTEND2 series,
-      we can use that. But the proposal currently says MAY, but not MUST
-      for this behavior.
+- Misc fixes:
+  - Remove circuitsetup machine (but place it in unittests -- they depend on it)
+  - Circuit RTT measurement will break on var_cell/EXTEND2 cells
+    - Are there any heuristics we can use here?
+      - If RELAY_EARLY is only for the first cell of an EXTEND2 series,
+        we can use that. But the proposal currently says MAY, but not MUST
+        for this behavior.
 
 ======== 0.3.6 ========
 
