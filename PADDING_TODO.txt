@@ -11,14 +11,18 @@ TODO sketch for this branch, in rough priority order:
 - Option to keep circuits open if machine present
 
 - Larger types?
-  - Larger circpad_hist_token_t?
-  - Larger circpad_delay_t?
-  - Larger circpad_statenum_t?
+  - Larger circpad_hist_token_t? Yes. Should be uint32_t
+  - Larger circpad_delay_t? Nah
+  - Larger circpad_statenum_t? Nah
 
 - Negotiate errors are not remembered.. If there is a consensus desync,
   clients will keep trying machines that middles do not have..
 
 - Specify an ordered preference list of padding machines
+
+- Specify exit policy for machine conditions?
+  - Accept and reject? based on attached streams?
+  - md-compatibile representation only.. for brevity.
 
 - Remove circuitsetup machine (but place it in unittests -- they depend on it)
 
@@ -32,8 +36,6 @@ TODO sketch for this branch, in rough priority order:
 
 - Come up with some good histograms for eg circuit setup fingerprinting,
   website fingerprinting, and vanguards usage.
-
-- Specify exit policy for machine conditions?
 
 - Vanguards compatibility for MiddleNodes (via changes to vanguards addon)
 
