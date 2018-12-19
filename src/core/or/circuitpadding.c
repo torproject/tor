@@ -36,7 +36,6 @@ static inline circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t
                                           circ_purpose);
 static inline circpad_circuit_state_t circpad_circuit_state(
                                         origin_circuit_t *circ);
-static void circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx);
 static void circpad_setup_machine_on_circ(circuit_t *on_circ,
                                           const circpad_machine_t *machine);
 static double circpad_distribution_sample(circpad_distribution_t dist);
@@ -98,6 +97,44 @@ circpad_state_to_string(circpad_statenum_t state)
   }
 
   return descr;
+}
+
+/**
+ * Free the machineinfo at an index
+ */
+static void
+circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
+{
+  if (circ->padding_info[idx]) {
+    tor_free(circ->padding_info[idx]->histogram);
+    timer_free(circ->padding_info[idx]->padding_timer);
+    tor_free(circ->padding_info[idx]);
+  }
+}
+
+/**
+ * Free all padding machines and mutable info associated with
+ * circuit
+ */
+void
+circpad_circuit_machineinfo_free(circuit_t *circ)
+{
+  FOR_EACH_CIRCUIT_MACHINE_BEGIN(i) {
+    circpad_circuit_machineinfo_free_idx(circ, i);
+  } FOR_EACH_CIRCUIT_MACHINE_END;
+}
+
+/**
+ * Allocate a new mutable machineinfo structure.
+ */
+STATIC circpad_machineinfo_t *
+circpad_circuit_machineinfo_new(circuit_t *on_circ, int machine_index)
+{
+  circpad_machineinfo_t *mi = tor_malloc_zero(sizeof(circpad_machineinfo_t));
+  mi->machine_index = machine_index;
+  mi->on_circ = on_circ;
+
+  return mi;
 }
 
 /**
@@ -1917,44 +1954,6 @@ circpad_deliver_sent_relay_cell_events(circuit_t *circ,
      * this node. */
     circpad_cell_event_nonpadding_sent(circ);
   }
-}
-
-/**
- * Free the machineinfo at an index
- */
-static void
-circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
-{
-  if (circ->padding_info[idx]) {
-    tor_free(circ->padding_info[idx]->histogram);
-    timer_free(circ->padding_info[idx]->padding_timer);
-    tor_free(circ->padding_info[idx]);
-  }
-}
-
-/**
- * Free all padding machines and mutable info associated with
- * circuit
- */
-void
-circpad_circuit_machineinfo_free(circuit_t *circ)
-{
-  FOR_EACH_CIRCUIT_MACHINE_BEGIN(i) {
-    circpad_circuit_machineinfo_free_idx(circ, i);
-  } FOR_EACH_CIRCUIT_MACHINE_END;
-}
-
-/**
- * Allocate a new mutable machineinfo structure.
- */
-STATIC circpad_machineinfo_t *
-circpad_circuit_machineinfo_new(circuit_t *on_circ, int machine_index)
-{
-  circpad_machineinfo_t *mi = tor_malloc_zero(sizeof(circpad_machineinfo_t));
-  mi->machine_index = machine_index;
-  mi->on_circ = on_circ;
-
-  return mi;
 }
 
 /**
