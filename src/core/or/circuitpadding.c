@@ -1680,6 +1680,7 @@ circpad_add_matching_machines(origin_circuit_t *on_circ)
                                   machine->target_hopnum,
                                   CIRCPAD_COMMAND_START) < 0) {
           circpad_circuit_machineinfo_free_idx(circ, i);
+          circ->padding_machine[i] = NULL;
         } else {
           /* Success. Don't try any more machines */
           return;
@@ -2350,7 +2351,7 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
                                CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE) < 0) {
     log_fn(LOG_WARN, LD_CIRC,
           "Received malformed PADDING_NEGOTIATE cell; dropping.");
-    goto err;
+    return -1;
   }
 
   if (negotiate->command == CIRCPAD_COMMAND_STOP) {
@@ -2403,7 +2404,7 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
 
   if (!CIRCUIT_IS_ORIGIN(circ)) {
     log_fn(LOG_WARN, LD_PROTOCOL,
-           "Padding negotiate cell unsupported at non-origin.");
+           "Padding negotiated cell unsupported at non-origin.");
     return -1;
   }
 
@@ -2419,8 +2420,6 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
     log_fn(LOG_WARN, LD_CIRC,
           "Received malformed PADDING_NEGOTIATED cell; "
           "dropping.");
-
-    circpad_negotiated_free(negotiated);
     return -1;
   }
 
@@ -2441,6 +2440,13 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
              negotiated->response == CIRCPAD_RESPONSE_ERR) {
     // This can happen due to consensus drift.. free the machines
     // and be sad
+    FOR_EACH_CIRCUIT_MACHINE_BEGIN(i) {
+      if (circ->padding_machine[i] &&
+          circ->padding_machine[i]->machine_num == negotiated->machine_type) {
+        circpad_circuit_machineinfo_free_idx(circ, i);
+        circ->padding_machine[i] = NULL;
+      }
+    } FOR_EACH_CIRCUIT_MACHINE_END;
     log_fn(LOG_INFO, LD_CIRC,
            "Middle node did not accept our padding request.");
   }
