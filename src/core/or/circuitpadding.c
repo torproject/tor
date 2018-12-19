@@ -112,6 +112,19 @@ circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
   }
 }
 
+/** Free all the machineinfos in <b>circ</b> that match <b>machine_num</b>. */
+static void
+free_circ_machineinfos_with_machine_num(circuit_t *circ, int machine_num)
+{
+  FOR_EACH_CIRCUIT_MACHINE_BEGIN(i) {
+    if (circ->padding_machine[i] &&
+        circ->padding_machine[i]->machine_num == machine_num) {
+      circpad_circuit_machineinfo_free_idx(circ, i);
+      circ->padding_machine[i] = NULL;
+    }
+  } FOR_EACH_CIRCUIT_MACHINE_END;
+}
+
 /**
  * Free all padding machines and mutable info associated with circuit
  */
@@ -2353,14 +2366,8 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
   }
 
   if (negotiate->command == CIRCPAD_COMMAND_STOP) {
-    /* Find the machine corresponding to this machine type */
-    FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, circ) {
-      if (circ->padding_machine[i]->machine_num == negotiate->machine_type) {
-        circpad_circuit_machineinfo_free_idx(circ, i);
-        circ->padding_machine[i] = NULL;
-        goto done;
-      }
-    } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
+    /* Free the machine corresponding to this machine type */
+    free_circ_machineinfos_with_machine_num(circ, negotiate->machine_type);
     log_fn(LOG_WARN, LD_CIRC,
           "Received circuit padding stop command for unknown machine.");
     goto err;
@@ -2422,29 +2429,17 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
   }
 
   if (negotiated->command == CIRCPAD_COMMAND_STOP) {
-    FOR_EACH_CIRCUIT_MACHINE_BEGIN(i) {
-      /* There may not be a padding_info here if we shut down the
-       * machine in circpad_shutdown_old_machines(). Or, if
-       * circpad_add_matching_matchines() added a new machine,
-       * there may be a padding_machine for a different machine num
-       * than this response. */
-      if (circ->padding_machine[i] &&
-          circ->padding_machine[i]->machine_num == negotiated->machine_type) {
-        circpad_circuit_machineinfo_free_idx(circ, i);
-        circ->padding_machine[i] = NULL;
-      }
-    } FOR_EACH_CIRCUIT_MACHINE_END;
+    /* There may not be a padding_info here if we shut down the
+     * machine in circpad_shutdown_old_machines(). Or, if
+     * circpad_add_matching_matchines() added a new machine,
+     * there may be a padding_machine for a different machine num
+     * than this response. */
+    free_circ_machineinfos_with_machine_num(circ, negotiated->machine_type);
   } else if (negotiated->command == CIRCPAD_COMMAND_START &&
              negotiated->response == CIRCPAD_RESPONSE_ERR) {
     // This can happen due to consensus drift.. free the machines
     // and be sad
-    FOR_EACH_CIRCUIT_MACHINE_BEGIN(i) {
-      if (circ->padding_machine[i] &&
-          circ->padding_machine[i]->machine_num == negotiated->machine_type) {
-        circpad_circuit_machineinfo_free_idx(circ, i);
-        circ->padding_machine[i] = NULL;
-      }
-    } FOR_EACH_CIRCUIT_MACHINE_END;
+    free_circ_machineinfos_with_machine_num(circ, negotiated->machine_type);
     log_fn(LOG_INFO, LD_CIRC,
            "Middle node did not accept our padding request.");
   }
