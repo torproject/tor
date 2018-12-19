@@ -528,12 +528,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
     case CIRCPAD_DIST_GEOMETRIC:
       {
         /* param1 is 'p' (success probability) */
-        uint32_t s = crypto_rand_uint32();
-        double p0;
-        while ((p0 = crypto_rand_double()) <= 0) {
-          continue;
-        }
-        return sample_geometric(s, p0, dist.param1);
+        return geometric_sample(dist.param1);
       }
     case CIRCPAD_DIST_WEIBULL:
       {

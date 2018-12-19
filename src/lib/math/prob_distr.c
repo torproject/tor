@@ -1278,6 +1278,39 @@ sample_genpareto_locscale(uint32_t s, double p0, double mu, double sigma,
   return mu + sigma*sample_genpareto(s, p0, xi);
 }
 
+/**
+ * Deterministically sample from the geometric distribution with
+ * per-trial success probability p.
+ *
+ * XXX Quantify the error (KL divergence?) of this
+ * ceiling-of-exponential sampler from a true geometric distribution,
+ * which we could get by rejection sampling.  Relevant papers:
+ *
+ *      John F. Monahan, `Accuracy in Random Number Generation',
+ *      Mathematics of Computation 45(172), October 1984, pp. 559--568.
+*https://pdfs.semanticscholar.org/aca6/74b96da1df77b2224e8cfc5dd6d61a471632.pdf
+ *
+ *      Karl Bringmann and Tobias Friedrich, `Exact and Efficient
+ *      Generation of Geometric Random Variates and Random Graphs', in
+ *      Proceedings of the 40th International Colloaquium on Automata,
+ *      Languages, and Programming -- ICALP 2013, Springer LNCS 7965,
+ *      pp.267--278.
+ *      https://doi.org/10.1007/978-3-642-39206-1_23
+ *      https://people.mpi-inf.mpg.de/~kbringma/paper/2013ICALP-1.pdf
+ */
+static double
+sample_geometric(uint32_t s, double p0, double p)
+{
+  double x = sample_exponential(s, p0);
+
+  /* This is actually a check against 1, but we do >= so that the compiler
+     does not raise a -Wfloat-equal */
+  if (p >= 1)
+    return 1;
+
+  return (-x/log1p(-p));
+}
+
 /*******************************************************************/
 
 /** Public API for probability distributions:
@@ -1583,38 +1616,13 @@ genpareto_isf(const struct dist *dist, double p)
   return isf_genpareto(p, GP->mu, GP->sigma, GP->xi);
 }
 
-/**
- * Deterministically sample from the geometric distribution with
- * per-trial success probability p.
- *
- * XXX Quantify the error (KL divergence?) of this
- * ceiling-of-exponential sampler from a true geometric distribution,
- * which we could get by rejection sampling.  Relevant papers:
- *
- *      John F. Monahan, `Accuracy in Random Number Generation',
- *      Mathematics of Computation 45(172), October 1984, pp. 559--568.
-*https://pdfs.semanticscholar.org/aca6/74b96da1df77b2224e8cfc5dd6d61a471632.pdf
- *
- *      Karl Bringmann and Tobias Friedrich, `Exact and Efficient
- *      Generation of Geometric Random Variates and Random Graphs', in
- *      Proceedings of the 40th International Colloaquium on Automata,
- *      Languages, and Programming -- ICALP 2013, Springer LNCS 7965,
- *      pp.267--278.
- *      https://doi.org/10.1007/978-3-642-39206-1_23
- *      https://people.mpi-inf.mpg.de/~kbringma/paper/2013ICALP-1.pdf
- */
-/* XXX Create geometric_sample and a geometric dist struct for the API to
- * conform? */
-unsigned
-sample_geometric(uint32_t s, double p0, double p)
+/* Deterministically sample from the geometric distribution with
+ * per-trial success probability p. */
+double
+geometric_sample(double p)
 {
-  double x = sample_exponential(s, p0);
-
-  /* This is actually a check against 1, but we do >= so that the compiler
-     does not raise a -Wfloat-equal */
-  if (p >= 1)
-    return 1;
-
-  double tmp = ceil(-x/log1p(-p));
-  return (unsigned) tmp;
+  uint32_t s = crypto_rand_uint32();
+  double p0 = random_uniform_01();
+  return sample_geometric(s, p0, p);
 }
+
