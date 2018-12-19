@@ -155,14 +155,14 @@ free_fake_orcirc(circuit_t *circ)
 
   relay_crypto_clear(&orcirc->crypto);
 
-  circpad_circuit_machineinfo_free(circ);
+  circpad_circuit_free_all_machineinfos(circ);
   tor_free(circ);
 }
 
 void
 free_fake_origin_circuit(origin_circuit_t *circ)
 {
-  circpad_circuit_machineinfo_free(TO_CIRCUIT(circ));
+  circpad_circuit_free_all_machineinfos(TO_CIRCUIT(circ));
   circuit_clear_cpath(circ);
   tor_free(circ);
 }
