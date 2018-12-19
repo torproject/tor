@@ -11,7 +11,6 @@ import time
 
 LOG_TIMEOUT = 60.0
 LOG_WAIT = 0.1
-LOG_CHECK_LIMIT = LOG_TIMEOUT / LOG_WAIT
 
 def fail(msg):
     logging.error('FAIL')
@@ -25,8 +24,8 @@ def try_connecting_to_socksport():
     socks_socket.close()
 
 def wait_for_log(s):
-    log_checked = 0
-    while log_checked < LOG_CHECK_LIMIT:
+    cutoff = time.time() + LOG_TIMEOUT
+    while time.time() < cutoff:
         l = tor_process.stdout.readline()
         l = l.decode('utf8')
         if s in l:
@@ -37,7 +36,6 @@ def wait_for_log(s):
         # avoid busy-waiting
         if len(s) == 0:
             time.sleep(LOG_WAIT)
-        log_checked += 1
     fail('Could not find "{}" in logs after {} seconds'.format(s, LOG_TIMEOUT))
 
 def pick_random_port():
