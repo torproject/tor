@@ -4,10 +4,9 @@ TODO sketch for this branch, in rough priority order:
   - Tokens test:
     - Token removal rules (closest and lower)
     - Verify token removal testing is thorough
-  - Wronghop test:
-    - Padding negotiate and other cells from wrong hop/non-origin circ
-    - Use tokens test for detecting padding from wrong hop
-    - unknown machine test
+  - valgrind all tests and fix leaks...
+  - Test event entry points into circuitpad?
+    - Most of our events come from completely untested code :/
 
 - Option to keep circuits open if machine present
 
@@ -20,6 +19,8 @@ TODO sketch for this branch, in rough priority order:
   clients will keep trying machines that middles do not have..
 
 - Specify an ordered preference list of padding machines
+
+- Remove circuitsetup machine (but place it in unittests -- they depend on it)
 
 - Circuit RTT measurement will break on var_cell/EXTEND2 cells
   - Are there any heuristics we can use here?
