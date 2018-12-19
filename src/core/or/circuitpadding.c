@@ -113,11 +113,10 @@ circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
 }
 
 /**
- * Free all padding machines and mutable info associated with
- * circuit
+ * Free all padding machines and mutable info associated with circuit
  */
 void
-circpad_circuit_machineinfo_free(circuit_t *circ)
+circpad_circuit_free_all_machineinfos(circuit_t *circ)
 {
   FOR_EACH_CIRCUIT_MACHINE_BEGIN(i) {
     circpad_circuit_machineinfo_free_idx(circ, i);
