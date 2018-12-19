@@ -958,9 +958,8 @@ test_stochastic_geometric_impl(double p)
     size_t C[PSI_DF] = {0};
 
     for (j = 0; j < NSAMPLES; j++) {
-      uint32_t s = crypto_rand_uint32();
-      double p0 = random_uniform_01();
-      unsigned n = sample_geometric(s, p0, p);
+      double n_tmp = ceil(geometric_sample(p));
+      unsigned n = (unsigned) n_tmp;
 
       if (n > PSI_DF)
         n = PSI_DF;

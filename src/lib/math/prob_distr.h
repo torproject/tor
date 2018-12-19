@@ -32,7 +32,7 @@ struct dist_ops {
 
 /* Geometric distribution */
 
-unsigned sample_geometric(uint32_t s, double p0, double p);
+double geometric_sample(double p);
 
 /* Pareto distribution */
 
