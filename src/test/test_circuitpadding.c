@@ -40,7 +40,7 @@ static void helper_create_conditional_machines(void);
 static or_circuit_t * new_fake_orcirc(channel_t *nchan, channel_t *pchan);
 channel_t *new_fake_channel(void);
 void test_circuitpadding_negotiation(void *arg);
-
+void test_circuitpadding_wronghop(void *arg);
 void test_circuitpadding_conditions(void *arg);
 
 void test_circuitpadding_serialize(void *arg);
@@ -54,6 +54,7 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
 void free_fake_orcirc(circuit_t *circ);
 void free_fake_origin_circuit(origin_circuit_t *circ);
 
+static int deliver_negotiated = 1;
 static int64_t curr_mocked_time;
 
 static node_t padding_node;
@@ -230,9 +231,12 @@ circuit_package_relay_cell_mock(cell_t *cell, circuit_t *circ,
 
     if (cell->payload[0] == RELAY_COMMAND_PADDING_NEGOTIATED) {
       // XXX: blah need right layer_hint..
-      circpad_handle_padding_negotiated(client_side, cell,
-                                        TO_ORIGIN_CIRCUIT(client_side)
-                                           ->cpath->next);
+      if (deliver_negotiated)
+        circpad_handle_padding_negotiated(client_side, cell,
+                                          TO_ORIGIN_CIRCUIT(client_side)
+                                             ->cpath->next);
+    } else if (cell->payload[0] == RELAY_COMMAND_PADDING_NEGOTIATE) {
+      circpad_handle_padding_negotiate(client_side, cell);
     } else {
       // No need to pretend a padding cell was sent: This event is
       // now emitted internally when the circuitpadding code sends them.
@@ -908,6 +912,200 @@ test_circuitpadding_tokens(void *arg)
 }
 
 void
+test_circuitpadding_wronghop(void *arg)
+{
+  /**
+   * Test plan:
+   * 1. Padding sent from hop 1 and 3 to client
+   * 2. Send negotiated from hop 1 and 3 to client
+   * 3. Garbled negotiated cell
+   * 4. Padding negotiate sent to client
+   * 5. Send negotiate stop command for unknown machine
+   * 6. Send negotiated to relay
+   * 7. Garbled padding negotiate cell
+   */
+  (void)arg;
+  uint32_t read_bw = 0, overhead_bw = 0;
+  cell_t cell;
+  signed_error_t ret;
+  origin_circuit_t *orig_client;
+
+  MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
+
+  client_side = (circuit_t *)origin_circuit_new();
+  dummy_channel.cmux = circuitmux_alloc();
+  relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel,
+                                            &dummy_channel);
+  orig_client = TO_ORIGIN_CIRCUIT(client_side);
+
+  relay_side->purpose = CIRCUIT_PURPOSE_OR;
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  nodes_init();
+
+  monotime_init();
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+
+  timers_initialize();
+  circpad_machines_init();
+
+  MOCK(node_get_by_id,
+       node_get_by_id_mock);
+
+  MOCK(circuit_package_relay_cell,
+       circuit_package_relay_cell_mock);
+
+  /* Build three hops */
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  simulate_single_hop_extend(client_side, relay_side, 1);
+
+  /* verify padding was negotiated */
+  tt_ptr_op(relay_side->padding_machine[0], OP_NE, NULL);
+  tt_ptr_op(relay_side->padding_info[0], OP_NE, NULL);
+
+  /* verify echo was sent */
+  tt_int_op(n_relay_cells, OP_EQ, 1);
+  tt_int_op(n_client_cells, OP_EQ, 1);
+
+  read_bw = orig_client->n_delivered_read_circ_bw;
+  overhead_bw = orig_client->n_overhead_read_circ_bw;
+
+  /* 1. Test padding from first and third hop */
+  circpad_deliver_recognized_relay_cell_events(client_side,
+              RELAY_COMMAND_DROP,
+              TO_ORIGIN_CIRCUIT(client_side)->cpath);
+  tt_int_op(read_bw, OP_EQ,
+            orig_client->n_delivered_read_circ_bw);
+  tt_int_op(overhead_bw, OP_EQ,
+            orig_client->n_overhead_read_circ_bw);
+
+  circpad_deliver_recognized_relay_cell_events(client_side,
+              RELAY_COMMAND_DROP,
+              TO_ORIGIN_CIRCUIT(client_side)->cpath->next->next);
+  tt_int_op(read_bw, OP_EQ,
+            orig_client->n_delivered_read_circ_bw);
+  tt_int_op(overhead_bw, OP_EQ,
+            orig_client->n_overhead_read_circ_bw);
+
+  circpad_deliver_recognized_relay_cell_events(client_side,
+              RELAY_COMMAND_DROP,
+              TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
+  tt_int_op(read_bw, OP_EQ,
+            orig_client->n_delivered_read_circ_bw);
+  tt_int_op(overhead_bw, OP_LT,
+            orig_client->n_overhead_read_circ_bw);
+
+  /* 2. Test padding negotiated not handled from hops 1,3 */
+  ret = circpad_handle_padding_negotiated(client_side, &cell,
+          TO_ORIGIN_CIRCUIT(client_side)->cpath);
+  tt_int_op(ret, OP_EQ, -1);
+
+  ret = circpad_handle_padding_negotiated(client_side, &cell,
+          TO_ORIGIN_CIRCUIT(client_side)->cpath->next->next);
+  tt_int_op(ret, OP_EQ, -1);
+
+  /* 3. Garbled negotiated cell */
+  memset(&cell, 255, sizeof(cell));
+  ret = circpad_handle_padding_negotiated(client_side, &cell,
+          TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
+  tt_int_op(ret, OP_EQ, -1);
+
+  /* 4. Test that negotiate is dropped at origin */
+  read_bw = orig_client->n_delivered_read_circ_bw;
+  overhead_bw = orig_client->n_overhead_read_circ_bw;
+  relay_send_command_from_edge(0, relay_side,
+                               RELAY_COMMAND_PADDING_NEGOTIATE,
+                               (void*)cell.payload,
+                               (size_t)3, NULL);
+  tt_int_op(read_bw, OP_EQ,
+            orig_client->n_delivered_read_circ_bw);
+  tt_int_op(overhead_bw, OP_EQ,
+            orig_client->n_overhead_read_circ_bw);
+
+  tt_int_op(n_relay_cells, OP_EQ, 2);
+  tt_int_op(n_client_cells, OP_EQ, 1);
+
+  /* 5. Test that asking to stop the wrong machine does nothing */
+  circpad_negotiate_padding(TO_ORIGIN_CIRCUIT(client_side),
+                            255, 2, CIRCPAD_COMMAND_STOP);
+  tt_ptr_op(client_side->padding_machine[0], OP_NE, NULL);
+  tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
+  tt_ptr_op(relay_side->padding_machine[0], OP_NE, NULL);
+  tt_ptr_op(relay_side->padding_info[0], OP_NE, NULL);
+  tt_int_op(n_relay_cells, OP_EQ, 3);
+  tt_int_op(n_client_cells, OP_EQ, 2);
+
+  /* 6. Sending negotiated command to relay does nothing */
+  ret = circpad_handle_padding_negotiated(relay_side, &cell, NULL);
+  tt_int_op(ret, OP_EQ, -1);
+
+  /* 7. Test garbled negotated cell (bad command 255) */
+  memset(&cell, 0, sizeof(cell));
+  ret = circpad_handle_padding_negotiate(relay_side, &cell);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(n_client_cells, OP_EQ, 2);
+
+  /* Test 2: Test no padding */
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  free_fake_orcirc(relay_side);
+
+  client_side = (circuit_t *)origin_circuit_new();
+  relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel,
+                                            &dummy_channel);
+  relay_side->purpose = CIRCUIT_PURPOSE_OR;
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  simulate_single_hop_extend(client_side, relay_side, 0);
+
+  /* verify no padding was negotiated */
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
+  tt_int_op(n_relay_cells, OP_EQ, 3);
+  tt_int_op(n_client_cells, OP_EQ, 2);
+
+  /* verify no echo was sent */
+  tt_int_op(n_relay_cells, OP_EQ, 3);
+  tt_int_op(n_client_cells, OP_EQ, 2);
+
+  /* Finish circuit */
+  simulate_single_hop_extend(client_side, relay_side, 1);
+
+  /* Spoof padding negotiated on circuit with no padding */
+  circpad_padding_negotiated(relay_side,
+                             CIRCPAD_MACHINE_CIRC_SETUP,
+                             CIRCPAD_COMMAND_START,
+                             CIRCPAD_RESPONSE_OK);
+
+  /* verify no padding was negotiated */
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
+
+  circpad_padding_negotiated(relay_side,
+                             CIRCPAD_MACHINE_CIRC_SETUP,
+                             CIRCPAD_COMMAND_START,
+                             CIRCPAD_RESPONSE_ERR);
+
+  /* verify no padding was negotiated */
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
+
+ done:
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  free_fake_orcirc(relay_side);
+  circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
+  circuitmux_free(dummy_channel.cmux);
+  monotime_disable_test_mocking();
+  UNMOCK(node_get_by_id);
+  UNMOCK(circuit_package_relay_cell);
+  UNMOCK(circuitmux_attach_circuit);
+  nodes_free();
+}
+
+void
 test_circuitpadding_negotiation(void *arg)
 {
   /**
@@ -917,8 +1115,7 @@ test_circuitpadding_negotiation(void *arg)
    *    b. Test padding negotiation delivery and parsing
    * 2. Test circuit where padding is unsupported by middle
    *    a. Make sure padding negotiation is not sent
-   * FIXME: Test the actual relay and circuit functions that
-   * call us. And maybe test the leaky hop delivery?
+   * 3. Test failure to negotiate a machine due to desync.
    */
   (void)arg;
 
@@ -975,6 +1172,7 @@ test_circuitpadding_negotiation(void *arg)
   simulate_single_hop_extend(client_side, relay_side, 0);
 
   /* verify no padding was negotiated */
+  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
   tt_int_op(n_relay_cells, OP_EQ, 1);
   tt_int_op(n_client_cells, OP_EQ, 1);
@@ -993,10 +1191,39 @@ test_circuitpadding_negotiation(void *arg)
 
   /* verify no padding was negotiated */
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
 
   /* verify no echo was sent */
   tt_int_op(n_relay_cells, OP_EQ, 1);
   tt_int_op(n_client_cells, OP_EQ, 1);
+
+  /* 3. Test failure to negotiate a machine due to desync */
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  free_fake_orcirc(relay_side);
+
+  client_side = TO_CIRCUIT(origin_circuit_new());
+  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
+  relay_side->purpose = CIRCUIT_PURPOSE_OR;
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+
+  SMARTLIST_FOREACH(relay_padding_machines,
+          circpad_machine_t *,
+          m, tor_free(m->states); tor_free(m));
+  smartlist_free(relay_padding_machines);
+  relay_padding_machines = smartlist_new();
+
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  simulate_single_hop_extend(client_side, relay_side, 1);
+
+  /* verify echo was sent */
+  tt_int_op(n_client_cells, OP_EQ, 2);
+  tt_int_op(n_relay_cells, OP_EQ, 2);
+
+  /* verify no padding was negotiated */
+  tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
 
  done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
@@ -1241,8 +1468,32 @@ test_circuitpadding_conditions(void *arg)
   tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 3);
   tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 3);
 
+  /* Hold off on negotiated */
+  deliver_negotiated = 0;
+
+  /* Deliver a padding cell to the client, to trigger burst state */
+  circpad_cell_event_padding_sent(client_side);
+
+  /* This should have trigger length shutdown condition on client
+   * but not the response for the padding machine */
+  tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_NE, NULL);
+
+  /* Verify machine is gone from the relay (but negotiated not back yet */
+  tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+
+  /* Add another hop and verify it's back */
+  simulate_single_hop_extend(client_side, relay_side, 1);
+
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 3);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 3);
+
+  tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
+  tt_ptr_op(relay_side->padding_info[0], OP_NE, NULL);
+
  done:
-  /* Free everything */
+  /* XXX: Free everything */
   return;
 }
 
@@ -1780,6 +2031,7 @@ struct testcase_t circuitpadding_tests[] = {
   //TEST_CIRCUITPADDING(circuitpadding_circuitsetup_machine, 0),
   TEST_CIRCUITPADDING(circuitpadding_tokens, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_negotiation, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_wronghop, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_circuitsetup_machine, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_conditions, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_rtt, TT_FORK),
