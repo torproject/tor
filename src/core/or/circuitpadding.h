@@ -610,7 +610,7 @@ void circpad_machines_free(void);
 void circpad_machine_states_init(circpad_machine_t *machine,
                                  circpad_statenum_t num_states);
 
-void circpad_circuit_machineinfo_free(circuit_t *circ);
+void circpad_circuit_free_all_machineinfos(circuit_t *circ);
 
 bool circpad_padding_is_from_expected_hop(circuit_t *circ,
                                          crypt_path_t *from_hop);
