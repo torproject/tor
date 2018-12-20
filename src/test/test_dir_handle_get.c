@@ -2559,6 +2559,7 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
   // !!, if it's compressed, this should not be the case
   tt_int_op(comp_body_used, OP_EQ, strlen(comp_body));
   // This will fail, content and comp_body are the same, though they shouldn't
+  // nickm comment: can't compare compressed bytes with tt_str_op nor strcmp
   // tt_str_op(content, OP_NE, comp_body);
 
   compress_method_t compression = detect_compression_method(comp_body,
