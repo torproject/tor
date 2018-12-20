@@ -151,8 +151,6 @@ test_pt_get_transport_options(void *arg)
   config_line_t *cl = NULL;
   (void)arg;
 
-  process_init();
-
   execve_args = tor_malloc(sizeof(char*)*2);
   execve_args[0] = tor_strdup("cheeseshop");
   execve_args[1] = NULL;
@@ -192,7 +190,6 @@ test_pt_get_transport_options(void *arg)
   config_free_lines(cl);
   managed_proxy_destroy(mp, 0);
   smartlist_free(transport_list);
-  process_free_all();
 }
 
 static void
@@ -256,8 +253,6 @@ test_pt_get_extrainfo_string(void *arg)
   char *s = NULL;
   (void) arg;
 
-  process_init();
-
   argv1 = tor_malloc_zero(sizeof(char*)*3);
   argv1[0] = tor_strdup("ewige");
   argv1[1] = tor_strdup("Blumenkraft");
@@ -291,7 +286,6 @@ test_pt_get_extrainfo_string(void *arg)
   smartlist_free(t1);
   smartlist_free(t2);
   tor_free(s);
-  process_free_all();
 }
 
 static int
@@ -346,8 +340,6 @@ test_pt_configure_proxy(void *arg)
   int i, retval;
   managed_proxy_t *mp = NULL;
   (void) arg;
-
-  process_init();
 
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
@@ -463,7 +455,6 @@ test_pt_configure_proxy(void *arg)
   tor_free(mp->argv[0]);
   tor_free(mp->argv);
   tor_free(mp);
-  process_free_all();
 }
 
 /* Test the get_pt_proxy_uri() function. */
