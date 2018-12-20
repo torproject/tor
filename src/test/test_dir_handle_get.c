@@ -2570,7 +2570,6 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
 
   tor_free(comp_body);
 
-
  done:
   UNMOCK(get_options);
   UNMOCK(connection_write_to_buf_impl_);
