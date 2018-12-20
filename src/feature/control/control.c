@@ -7043,6 +7043,16 @@ control_event_pt_log(const char *log)
                      log);
 }
 
+/** A pluggable transport has emitted a STATUS message found in
+ * <b>status</b>. */
+void
+control_event_pt_status(const char *status)
+{
+  send_control_event(EVENT_PT_STATUS,
+                     "650 PT_STATUS %s\r\n",
+                     status);
+}
+
 /** Convert rendezvous auth type to string for HS_DESC control events
  */
 const char *

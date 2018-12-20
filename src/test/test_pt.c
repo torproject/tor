@@ -316,6 +316,10 @@ process_read_stdout_replacement(process_t *process, buf_t *buffer)
     buf_add_string(buffer, "LOG SEVERITY=notice MESSAGE=\"notice msg\"\n");
     buf_add_string(buffer, "LOG SEVERITY=info MESSAGE=\"info msg\"\n");
     buf_add_string(buffer, "LOG SEVERITY=debug MESSAGE=\"debug msg\"\n");
+  } else if (times_called <= 8) {
+    buf_add_string(buffer, "STATUS TYPE=a K_1=a K_2=b K_3=\"foo bar\"\n");
+    buf_add_string(buffer, "STATUS TYPE=b K_1=a K_2=b K_3=\"foo bar\"\n");
+    buf_add_string(buffer, "STATUS TYPE=c K_1=a K_2=b K_3=\"foo bar\"\n");
   }
 
   return (int)buf_datalen(buffer);
@@ -439,6 +443,23 @@ test_pt_configure_proxy(void *arg)
   tt_str_op(smartlist_get(controlevent_msgs, 9), OP_EQ,
             "650 PT_LOG PT=<testcase> SEVERITY=debug "
             "MESSAGE=\"debug msg\"\r\n");
+
+  /* Get the STATUS messages out. */
+  process_notify_event_stdout(mp->process);
+
+  tt_int_op(controlevent_n, OP_EQ, 13);
+  tt_int_op(controlevent_event, OP_EQ, EVENT_PT_STATUS);
+  tt_int_op(smartlist_len(controlevent_msgs), OP_EQ, 13);
+
+  tt_str_op(smartlist_get(controlevent_msgs, 10), OP_EQ,
+            "650 PT_STATUS "
+            "PT=<testcase> TYPE=a K_1=a K_2=b K_3=\"foo bar\"\r\n");
+  tt_str_op(smartlist_get(controlevent_msgs, 11), OP_EQ,
+            "650 PT_STATUS "
+            "PT=<testcase> TYPE=b K_1=a K_2=b K_3=\"foo bar\"\r\n");
+  tt_str_op(smartlist_get(controlevent_msgs, 12), OP_EQ,
+            "650 PT_STATUS "
+            "PT=<testcase> TYPE=c K_1=a K_2=b K_3=\"foo bar\"\r\n");
 
   { /* check that the transport info were saved properly in the tor state */
     config_line_t *transport_in_state = NULL;

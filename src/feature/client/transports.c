@@ -130,6 +130,7 @@ static void parse_method_error(const char *line, int is_server_method);
 #define PROTO_PROXY_DONE "PROXY DONE"
 #define PROTO_PROXY_ERROR "PROXY-ERROR"
 #define PROTO_LOG "LOG"
+#define PROTO_STATUS "STATUS"
 
 /** The first and only supported - at the moment - configuration
     protocol version. */
@@ -912,11 +913,15 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
     parse_proxy_error(line);
     goto err;
 
-    /* We check for the additional " " after the PROTO_LOG string to make sure
-     * we can later extend this big if/else-if table with something that begins
-     * with "LOG" without having to get the order right. */
+    /* We check for the additional " " after the PROTO_LOG * PROTO_STATUS
+     * string to make sure we can later extend this big if/else-if table with
+     * something that begins with "LOG" without having to get the order right.
+     * */
   } else if (!strcmpstart(line, PROTO_LOG " ")) {
     parse_log_line(line, mp);
+    return;
+  } else if (!strcmpstart(line, PROTO_STATUS " ")) {
+    parse_status_line(line, mp);
     return;
   }
 
@@ -1203,6 +1208,55 @@ parse_log_line(const char *line, managed_proxy_t *mp)
  done:
   config_free_lines(values);
   tor_free(log_message);
+}
+
+/** Parses a STATUS <b>line</b> and emit control events accordingly. */
+STATIC void
+parse_status_line(const char *line, managed_proxy_t *mp)
+{
+  tor_assert(line);
+  tor_assert(mp);
+
+  config_line_t *values = NULL;
+  char *status_message = NULL;
+
+  if (strlen(line) < (strlen(PROTO_STATUS) + 1)) {
+    log_warn(LD_PT, "Managed proxy sent us a %s line "
+                    "with missing argument.", PROTO_STATUS);
+    goto done;
+  }
+
+  const char *data = line + strlen(PROTO_STATUS) + 1;
+
+  values = kvline_parse(data, KV_QUOTED);
+
+  if (! values) {
+    log_warn(LD_PT, "Managed proxy \"%s\" wrote an invalid "
+             "STATUS message: %s", mp->argv[0], data);
+    goto done;
+  }
+
+  /* We check if we received the TYPE parameter, which is the only *required*
+   * value. */
+  const config_line_t *type = config_line_find(values, "TYPE");
+
+  if (! type) {
+    log_warn(LD_PT, "Managed proxy \"%s\" wrote a STATUS line without "
+                    "TYPE: %s", mp->argv[0], data);
+    goto done;
+  }
+
+  /* Prepend the PT name. */
+  config_line_prepend(&values, "PT", mp->argv[0]);
+  status_message = kvline_encode(values, KV_QUOTED);
+
+  /* We have checked that TYPE is there, we can now emit the STATUS event via
+   * the control port. */
+  control_event_pt_status(status_message);
+
+ done:
+  config_free_lines(values);
+  tor_free(status_message);
 }
 
 /** Return a newly allocated string that tor should place in
