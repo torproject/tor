@@ -1,3 +1,3 @@
   o Minor features (pluggable transports):
     - Add support for logging to Tor's logging subsystem from a pluggable
-      transport process. Partial implementation for ticket 28180
+      transport process. Closes ticket 28180
