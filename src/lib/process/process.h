@@ -47,6 +47,8 @@ const char *process_protocol_to_string(process_protocol_t protocol);
 
 void tor_disable_spawning_background_processes(void);
 
+struct smartlist_t;
+
 struct process_t;
 typedef struct process_t process_t;
 
@@ -61,7 +63,7 @@ typedef bool
 
 void process_init(void);
 void process_free_all(void);
-const smartlist_t *process_get_all_processes(void);
+const struct smartlist_t *process_get_all_processes(void);
 
 process_t *process_new(const char *command);
 void process_free_(process_t *process);
@@ -82,10 +84,11 @@ void process_set_exit_callback(process_t *,
 const char *process_get_command(const process_t *process);
 
 void process_append_argument(process_t *process, const char *argument);
-const smartlist_t *process_get_arguments(const process_t *process);
+const struct smartlist_t *process_get_arguments(const process_t *process);
 char **process_get_argv(const process_t *process);
 
-void process_reset_environment(process_t *process, const smartlist_t *env);
+void process_reset_environment(process_t *process,
+                               const struct smartlist_t *env);
 void process_set_environment(process_t *process,
                              const char *key,
                              const char *value);
