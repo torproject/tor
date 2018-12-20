@@ -101,6 +101,8 @@
 #include "core/or/connection_or.h"
 #include "feature/relay/ext_orport.h"
 #include "feature/control/control.h"
+#include "lib/encoding/confline.h"
+#include "lib/encoding/kvline.h"
 
 #include "lib/process/process.h"
 #include "lib/process/env.h"
@@ -1144,22 +1146,63 @@ parse_log_line(const char *line, managed_proxy_t *mp)
   tor_assert(line);
   tor_assert(mp);
 
+  config_line_t *values = NULL;
+  char *log_message = NULL;
+
   if (strlen(line) < (strlen(PROTO_LOG) + 1)) {
     log_warn(LD_PT, "Managed proxy sent us a %s line "
                     "with missing argument.", PROTO_LOG);
     goto done;
   }
 
-  const char *message = line + strlen(PROTO_LOG) + 1;
+  const char *data = line + strlen(PROTO_LOG) + 1;
+  values = kvline_parse(data, KV_QUOTED);
 
-  log_info(LD_PT, "Managed proxy \"%s\" says: %s",
-           mp->argv[0], message);
+  if (! values) {
+    log_warn(LD_PT, "Managed proxy \"%s\" wrote an invalid LOG message: %s",
+             mp->argv[0], data);
+    goto done;
+  }
+
+  const config_line_t *severity = config_line_find(values, "SEVERITY");
+  const config_line_t *message = config_line_find(values, "MESSAGE");
+
+  /* Check if we got a message. */
+  if (! message) {
+    log_warn(LD_PT, "Managed proxy \"%s\" wrote a LOG line without "
+                    "MESSAGE: %s", mp->argv[0], data);
+    goto done;
+  }
+
+  /* Check if severity is there and whether it's valid. */
+  if (! severity) {
+    log_warn(LD_PT, "Managed proxy \"%s\" wrote a LOG line without "
+                    "SEVERITY: %s", mp->argv[0], data);
+    goto done;
+  }
+
+  int log_severity = managed_proxy_severity_parse(severity->value);
+
+  if (log_severity == -1) {
+    log_warn(LD_PT, "Managed proxy \"%s\" wrote a LOG line with an "
+                    "invalid severity level: %s",
+                    mp->argv[0], severity->value);
+    goto done;
+  }
+
+  tor_log(log_severity, LD_PT, "Managed proxy \"%s\": %s",
+          mp->argv[0], message->value);
+
+  /* Prepend the PT name. */
+  config_line_prepend(&values, "PT", mp->argv[0]);
+  log_message = kvline_encode(values, KV_QUOTED);
 
   /* Emit control port event. */
-  control_event_pt_log(mp->argv[0], message);
+  control_event_pt_log(log_message);
 
  done:
-  return;
+  config_free_lines(values);
+  tor_free(log_message);
 }
 
 /** Return a newly allocated string that tor should place in
@@ -1778,4 +1821,31 @@ managed_proxy_exit_callback(process_t *process, process_exit_code_t exit_code)
   }
 
   return true;
+}
+
+/** Returns a valid integer log severity level from <b>severity</b> that
+ * is compatible with Tor's logging functions. Returns <b>-1</b> on
+ * error. */
+STATIC int
+managed_proxy_severity_parse(const char *severity)
+{
+  tor_assert(severity);
+
+  /* Slightly different than log.c's parse_log_level :-( */
+  if (! strcmp(severity, "debug"))
+    return LOG_DEBUG;
+
+  if (! strcmp(severity, "info"))
+    return LOG_INFO;
+
+  if (! strcmp(severity, "notice"))
+    return LOG_NOTICE;
+
+  if (! strcmp(severity, "warning"))
+    return LOG_WARN;
+
+  if (! strcmp(severity, "error"))
+    return LOG_ERR;
+
+  return -1;
 }

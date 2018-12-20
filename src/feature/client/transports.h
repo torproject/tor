@@ -147,6 +147,8 @@ STATIC void managed_proxy_stdout_callback(process_t *, const char *, size_t);
 STATIC void managed_proxy_stderr_callback(process_t *, const char *, size_t);
 STATIC bool managed_proxy_exit_callback(process_t *, process_exit_code_t);
 
+STATIC int managed_proxy_severity_parse(const char *);
+
 #endif /* defined(PT_PRIVATE) */
 
 #endif /* !defined(TOR_TRANSPORTS_H) */

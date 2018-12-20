@@ -207,7 +207,7 @@ void control_event_clients_seen(const char *controller_str);
 void control_event_transport_launched(const char *mode,
                                       const char *transport_name,
                                       tor_addr_t *addr, uint16_t port);
-void control_event_pt_log(const char *pt_name, const char *message);
+void control_event_pt_log(const char *log);
 const char *rend_auth_type_to_string(rend_auth_type_t auth_type);
 MOCK_DECL(const char *, node_describe_longname_by_id,(const char *id_digest));
 void control_event_hs_descriptor_requested(const char *onion_address,

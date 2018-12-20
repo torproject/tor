@@ -310,8 +310,12 @@ process_read_stdout_replacement(process_t *process, buf_t *buffer)
   } else if (times_called <= 6) {
     buf_add_string(buffer, "SMETHODS DONE\n");
   } else if (times_called <= 7) {
-    buf_add_string(buffer, "LOG Oh noes, something bad happened. "
-                           "What do we do!?\n");
+    buf_add_string(buffer, "LOG SEVERITY=error MESSAGE=\"Oh noes, something "
+                           "bad happened. What do we do!?\"\n");
+    buf_add_string(buffer, "LOG SEVERITY=warning MESSAGE=\"warning msg\"\n");
+    buf_add_string(buffer, "LOG SEVERITY=notice MESSAGE=\"notice msg\"\n");
+    buf_add_string(buffer, "LOG SEVERITY=info MESSAGE=\"info msg\"\n");
+    buf_add_string(buffer, "LOG SEVERITY=debug MESSAGE=\"debug msg\"\n");
   }
 
   return (int)buf_datalen(buffer);
@@ -416,12 +420,25 @@ test_pt_configure_proxy(void *arg)
   /* Get the log message out. */
   process_notify_event_stdout(mp->process);
 
-  tt_int_op(controlevent_n, OP_EQ, 6);
+  tt_int_op(controlevent_n, OP_EQ, 10);
   tt_int_op(controlevent_event, OP_EQ, EVENT_PT_LOG);
-  tt_int_op(smartlist_len(controlevent_msgs), OP_EQ, 6);
+  tt_int_op(smartlist_len(controlevent_msgs), OP_EQ, 10);
   tt_str_op(smartlist_get(controlevent_msgs, 5), OP_EQ,
-            "650 PT_LOG <testcase> Oh noes, something bad happened. "
-            "What do we do!?\r\n");
+            "650 PT_LOG PT=<testcase> SEVERITY=error "
+            "MESSAGE=\"Oh noes, "
+            "something bad happened. What do we do!?\"\r\n");
+  tt_str_op(smartlist_get(controlevent_msgs, 6), OP_EQ,
+            "650 PT_LOG PT=<testcase> SEVERITY=warning "
+            "MESSAGE=\"warning msg\"\r\n");
+  tt_str_op(smartlist_get(controlevent_msgs, 7), OP_EQ,
+            "650 PT_LOG PT=<testcase> SEVERITY=notice "
+            "MESSAGE=\"notice msg\"\r\n");
+  tt_str_op(smartlist_get(controlevent_msgs, 8), OP_EQ,
+            "650 PT_LOG PT=<testcase> SEVERITY=info "
+            "MESSAGE=\"info msg\"\r\n");
+  tt_str_op(smartlist_get(controlevent_msgs, 9), OP_EQ,
+            "650 PT_LOG PT=<testcase> SEVERITY=debug "
+            "MESSAGE=\"debug msg\"\r\n");
 
   { /* check that the transport info were saved properly in the tor state */
     config_line_t *transport_in_state = NULL;
