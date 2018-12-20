@@ -8,6 +8,7 @@
 
 #include "orconfig.h"
 #include "lib/subsys/subsys.h"
+#include "lib/process/process_sys.h"
 #include "lib/process/process.h"
 
 static int
