@@ -765,15 +765,6 @@ process_win32_stdout_read_done(DWORD error_code,
   tor_assert(overlapped);
   tor_assert(overlapped->hEvent);
 
-  /* This happens when we have asked ReadFileEx() to read some data, but we
-   * then decided to call CloseHandle() on the HANDLE. This can happen if
-   * someone runs process_free() in the exit_callback of process_t, which means
-   * we cannot call process_get_win32_process() here. */
-  if (error_code == ERROR_BROKEN_PIPE) {
-    log_debug(LD_PROCESS, "Process reported broken pipe on standard out");
-    return;
-  }
-
   /* Extract our process_t from the hEvent member of OVERLAPPED. */
   process_t *process = (process_t *)overlapped->hEvent;
   process_win32_t *win32_process = process_get_win32_process(process);
@@ -796,15 +787,6 @@ process_win32_stderr_read_done(DWORD error_code,
 {
   tor_assert(overlapped);
   tor_assert(overlapped->hEvent);
-
-  /* This happens when we have asked ReadFileEx() to read some data, but we
-   * then decided to call CloseHandle() on the HANDLE. This can happen if
-   * someone runs process_free() in the exit_callback of process_t, which means
-   * we cannot call process_get_win32_process() here. */
-  if (error_code == ERROR_BROKEN_PIPE) {
-    log_debug(LD_PROCESS, "Process reported broken pipe on standard error");
-    return;
-  }
 
   /* Extract our process_t from the hEvent member of OVERLAPPED. */
   process_t *process = (process_t *)overlapped->hEvent;
@@ -831,15 +813,6 @@ process_win32_stdin_write_done(DWORD error_code,
 
   (void)byte_count;
 
-  /* This happens when we have asked WriteFileEx() to write some data, but we
-   * then decided to call CloseHandle() on the HANDLE. This can happen if
-   * someone runs process_free() in the exit_callback of process_t, which means
-   * we cannot call process_get_win32_process() here. */
-  if (error_code == ERROR_BROKEN_PIPE) {
-    log_debug(LD_PROCESS, "Process reported broken pipe on standard input");
-    return;
-  }
-
   process_t *process = (process_t *)overlapped->hEvent;
   process_win32_t *win32_process = process_get_win32_process(process);
 
@@ -860,7 +833,8 @@ process_win32_stdin_write_done(DWORD error_code,
 
     /* Schedule the next write. */
     process_notify_event_stdin(process);
-  } else if (error_code == ERROR_HANDLE_EOF) {
+  } else if (error_code == ERROR_HANDLE_EOF ||
+             error_code == ERROR_BROKEN_PIPE) {
     /* Our WriteFileEx() call was succesful, but we reached the end of our
      * file.  We mark our handle as having reached EOF and returns. */
     tor_assert(byte_count == 0);
@@ -983,9 +957,10 @@ process_win32_handle_read_completion(process_win32_handle_t *handle,
 
     /* Tell our caller to schedule the next read. */
     return true;
-  } else if (error_code == ERROR_HANDLE_EOF) {
-    /* Our ReadFileEx() call was succesful, but we reached the end of our file.
-     * We mark our handle as having reached EOF and returns. */
+  } else if (error_code == ERROR_HANDLE_EOF ||
+             error_code == ERROR_BROKEN_PIPE) {
+    /* Our ReadFileEx() finished, but we reached the end of our file.  We mark
+     * our handle as having reached EOF and returns. */
     tor_assert(byte_count == 0);
 
     handle->reached_eof = true;
