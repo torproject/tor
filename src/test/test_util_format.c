@@ -346,7 +346,7 @@ test_util_format_base32_decode(void *arg)
     const char *src = "mjwgc2dcnrswqmjs";
 
     ret = base32_decode(dst, strlen(expected), src, strlen(src));
-    tt_int_op(ret, OP_EQ, 0);
+    tt_int_op(ret, OP_EQ, 10);
     tt_str_op(expected, OP_EQ, dst);
   }
 
@@ -357,7 +357,7 @@ test_util_format_base32_decode(void *arg)
     const char *src = "mjwgc2dcnrswq";
 
     ret = base32_decode(dst, strlen(expected), src, strlen(src));
-    tt_int_op(ret, OP_EQ, 0);
+    tt_int_op(ret, OP_EQ, 8);
     tt_mem_op(expected, OP_EQ, dst, strlen(expected));
   }
 

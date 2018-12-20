@@ -854,7 +854,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     *entry = NULL;
   }
   if (base32_decode(want_desc_id, sizeof(want_desc_id),
-                    desc_id_base32, strlen(desc_id_base32)) != 0) {
+                    desc_id_base32, strlen(desc_id_base32)) < 0) {
     log_warn(LD_BUG, "Couldn't decode base32 %s for descriptor id.",
              escaped_safe_str_client(desc_id_base32));
     goto err;
@@ -1005,4 +1005,3 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   tor_free(intro_content);
   return retval;
 }
-
