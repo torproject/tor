@@ -525,6 +525,28 @@ process_win32_timer_test_process(process_t *process)
   BOOL ret = FALSE;
   DWORD exit_code = 0;
 
+  /* Sometimes the Windows kernel wont give us the EOF/Broken Pipe error
+   * message until some time after the process have actually terminated. We
+   * make sure that our ReadFileEx() calls for the process have *all* returned
+   * and both standard out and error have been marked as EOF before we try to
+   * see if the process terminated.
+   *
+   * This ensures that we *never* call the exit callback of the `process_t`,
+   * which potentially ends up calling `process_free()` on our `process_t`,
+   * before all data have been received from the process.
+   *
+   * We do NOT have a check here for whether standard in reached EOF since
+   * standard in's WriteFileEx() function is only called on-demand when we have
+   * something to write and is thus usually not awaiting to finish any
+   * operations. If we WriteFileEx() to a file that has terminated we'll simply
+   * get an error from ReadFileEx() or its completion routine and move on with
+   * life.  */
+  if (! win32_process->stdout_handle.reached_eof)
+    return false;
+
+  if (! win32_process->stderr_handle.reached_eof)
+    return false;
+
   /* We start by testing whether our process is still running. */
   ret = GetExitCodeProcess(win32_process->process_information.hProcess,
                            &exit_code);
