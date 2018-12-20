@@ -2553,7 +2553,7 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
   tt_assert(header);
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Encoding: deflate\r\n"));
-  log_notice(LD_DIR, "%s", header);
+  log_debug(LD_DIR, "%s", header);
   // assert there is no content-lenght
 
   // !!, if it's compressed, this should not be the case
@@ -2562,9 +2562,9 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
 
   compress_method_t compression = detect_compression_method(comp_body,
                                                             comp_body_used);
-  // this will log: [notice] 5
+  // this will log: [debug] 5
   // ie, UNKNOWN_METHOD
-  log_notice(LD_DIR, "%d", compression);
+  log_debug(LD_DIR, "%d", compression);
 
   tor_free(comp_body);
 

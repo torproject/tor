@@ -1451,9 +1451,9 @@ handle_get_next_bandwidth(dir_connection_t *conn,
   const or_options_t *options = get_options();
   const compress_method_t compress_method =
     find_best_compression_method(args->compression_supported, 1);
-  // this will log: [notice] compress_method 2
+  // this will log: [debug] compress_method 2
   // ie, ZLIB_METHOD
-  log_notice(LD_DIR, "compress_method %d", compress_method);
+  log_debug(LD_DIR, "compress_method %d", compress_method);
 
   if (options->V3BandwidthsFile) {
     char *bandwidth = read_file_to_str(options->V3BandwidthsFile,
