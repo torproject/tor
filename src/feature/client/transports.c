@@ -1175,14 +1175,14 @@ parse_log_line(const char *line, managed_proxy_t *mp)
   /* Check if we got a message. */
   if (! message) {
     log_warn(LD_PT, "Managed proxy \"%s\" wrote a LOG line without "
-                    "MESSAGE: %s", mp->argv[0], data);
+                    "MESSAGE: %s", mp->argv[0], escaped(data));
     goto done;
   }
 
   /* Check if severity is there and whether it's valid. */
   if (! severity) {
     log_warn(LD_PT, "Managed proxy \"%s\" wrote a LOG line without "
-                    "SEVERITY: %s", mp->argv[0], data);
+                    "SEVERITY: %s", mp->argv[0], escaped(data));
     goto done;
   }
 
@@ -1232,7 +1232,7 @@ parse_status_line(const char *line, managed_proxy_t *mp)
 
   if (! values) {
     log_warn(LD_PT, "Managed proxy \"%s\" wrote an invalid "
-             "STATUS message: %s", mp->argv[0], data);
+             "STATUS message: %s", mp->argv[0], escaped(data));
     goto done;
   }
 
@@ -1242,7 +1242,7 @@ parse_status_line(const char *line, managed_proxy_t *mp)
 
   if (! type) {
     log_warn(LD_PT, "Managed proxy \"%s\" wrote a STATUS line without "
-                    "TYPE: %s", mp->argv[0], data);
+                    "TYPE: %s", mp->argv[0], escaped(data));
     goto done;
   }
 
