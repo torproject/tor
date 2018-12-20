@@ -443,7 +443,7 @@ directory_handle_command_get,(dir_connection_t *conn, const char *headers,
 
   /* Remove all methods that we don't both support. */
   compression_methods_supported &= tor_compress_get_supported_method_bitmask();
-
+  log_debug(LD_DIR, "compression supported %i", compression_methods_supported);
   get_handler_args_t args;
   args.url = url;
   args.headers = headers;
