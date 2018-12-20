@@ -720,30 +720,23 @@ process_win32_cleanup_handle(process_win32_handle_t *handle)
   tor_assert(handle);
 
 #if 0
-  /* FIXME(ahf): My compiler does not set _WIN32_WINNT to a high enough value
-   * for this code to be available. Should we force it? CancelIoEx() is
-   * available from Windows 7 and above. If we decide to require this, we need
-   * to update the checks in all the three I/O completion callbacks to handle
-   * the ERROR_OPERATION_ABORTED as well as ERROR_BROKEN_PIPE. */
-
-#if _WIN32_WINNT >= 0x0600
-  /* This code is only supported from Windows 7 and onwards. */
   BOOL ret;
   DWORD error_code;
 
-  /* Cancel any pending I/O requests. */
-  ret = CancelIoEx(handle->pipe, &handle->overlapped);
+  /* Cancel any pending I/O requests: This means that instead of getting
+   * ERROR_BROKEN_PIPE we get ERROR_OPERATION_ABORTED, but it doesn't seem
+   * like this is needed. */
+  ret = CancelIo(handle->pipe);
 
   if (! ret) {
     error_code = GetLastError();
 
     /* There was no pending I/O requests for our handle. */
     if (error_code != ERROR_NOT_FOUND) {
-      log_warn(LD_PROCESS, "CancelIoEx() failed: %s",
+      log_warn(LD_PROCESS, "CancelIo() failed: %s",
                format_win32_error(error_code));
     }
   }
-#endif
 #endif
 
   /* Close our handle. */
