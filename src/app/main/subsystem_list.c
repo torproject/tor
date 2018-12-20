@@ -18,6 +18,7 @@
 #include "lib/time/time_sys.h"
 #include "lib/tls/tortls_sys.h"
 #include "lib/wallclock/wallclock_sys.h"
+#include "lib/process/process_sys.h"
 
 #include <stddef.h>
 
@@ -32,6 +33,7 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_logging, /* -90 */
   &sys_time, /* -90 */
   &sys_network, /* -90 */
+  &sys_process, /* -80 */
   &sys_compress, /* -70 */
   &sys_crypto, /* -60 */
   &sys_tortls, /* -50 */
