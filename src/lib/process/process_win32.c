@@ -329,6 +329,7 @@ process_win32_write(struct process_t *process, buf_t *buffer)
 
   process_win32_t *win32_process = process_get_win32_process(process);
   BOOL ret = FALSE;
+  DWORD error_code = 0;
   const size_t buffer_size = buf_datalen(buffer);
 
   /* Windows is still writing our buffer. */
@@ -350,6 +351,12 @@ process_win32_write(struct process_t *process, buf_t *buffer)
   /* Read data from the process_t buffer into our intermediate buffer. */
   buf_get_bytes(buffer, win32_process->stdin_handle.buffer, write_size);
 
+  /* Because of the slightly weird API for WriteFileEx() we must set this to 0
+   * before we call WriteFileEx() because WriteFileEx() does not reset the last
+   * error itself when it's succesful. See comment below after the call to
+   * GetLastError(). */
+  SetLastError(0);
+
   /* Schedule our write. */
   ret = WriteFileEx(win32_process->stdin_handle.pipe,
                     win32_process->stdin_handle.buffer,
@@ -361,6 +368,24 @@ process_win32_write(struct process_t *process, buf_t *buffer)
     log_warn(LD_PROCESS, "WriteFileEx() failed: %s",
              format_win32_error(GetLastError()));
     return 0;
+  }
+
+  /* Here be dragons: According to MSDN's documentation for WriteFileEx() we
+   * should check GetLastError() after a call to WriteFileEx() even though the
+   * `ret` return value was successful. If everything is good, GetLastError()
+   * returns `ERROR_SUCCESS` and nothing happens.
+   *
+   * XXX(ahf): I have not managed to trigger this code while stress-testing
+   * this code. */
+  error_code = GetLastError();
+
+  if (error_code != ERROR_SUCCESS) {
+    /* LCOV_EXCL_START */
+    log_warn(LD_PROCESS, "WriteFileEx() failed after returning success: %s",
+             format_win32_error(error_code));
+    win32_process->stdin_handle.reached_eof = true;
+    return 0;
+    /* LCOV_EXCL_STOP */
   }
 
   /* This cast should be safe since our buffer can maximum be BUFFER_SIZE
@@ -864,6 +889,7 @@ process_win32_read_from_handle(process_win32_handle_t *handle,
 
   BOOL ret = FALSE;
   int bytes_available = 0;
+  DWORD error_code = 0;
 
   /* We already have a request to read data that isn't complete yet. */
   if (BUG(handle->busy))
@@ -887,6 +913,12 @@ process_win32_read_from_handle(process_win32_handle_t *handle,
     memset(handle->buffer, 0, sizeof(handle->buffer));
   }
 
+  /* Because of the slightly weird API for ReadFileEx() we must set this to 0
+   * before we call ReadFileEx() because ReadFileEx() does not reset the last
+   * error itself when it's succesful. See comment below after the call to
+   * GetLastError(). */
+  SetLastError(0);
+
   /* Ask the Windows kernel to read data from our pipe into our buffer and call
    * the callback function when it is done. */
   ret = ReadFileEx(handle->pipe,
@@ -899,6 +931,24 @@ process_win32_read_from_handle(process_win32_handle_t *handle,
     log_warn(LD_PROCESS, "ReadFileEx() failed: %s",
              format_win32_error(GetLastError()));
     return bytes_available;
+  }
+
+  /* Here be dragons: According to MSDN's documentation for ReadFileEx() we
+   * should check GetLastError() after a call to ReadFileEx() even though the
+   * `ret` return value was successful. If everything is good, GetLastError()
+   * returns `ERROR_SUCCESS` and nothing happens.
+   *
+   * XXX(ahf): I have not managed to trigger this code while stress-testing
+   * this code. */
+  error_code = GetLastError();
+
+  if (error_code != ERROR_SUCCESS) {
+    /* LCOV_EXCL_START */
+    log_warn(LD_PROCESS, "ReadFileEx() failed after returning success: %s",
+             format_win32_error(error_code));
+    handle->reached_eof = true;
+    return bytes_available;
+    /* LCOV_EXCL_STOP */
   }
 
   /* We mark our handle as having a pending I/O request. */
