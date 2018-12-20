@@ -1,0 +1,11 @@
+  o Major features (bootstrap):
+    - Report the first connection to a relay as the earliest phases of
+      bootstrap progress, regardless of whether it's a connection for
+      building application circuits.  This allows finer-grained
+      reporting of early progress than previously possible with the
+      improvements of ticket 27169.  Closes tickets 27167 and 27103.
+      Addresses ticket 27308.
+    - Separately report the intermediate stage of having connected to
+      a proxy or pluggable transport, versus succesfully using that
+      proxy or pluggable transport to connect to a relay.  Closes
+      tickets 27100 and 28884.
