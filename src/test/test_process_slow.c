@@ -242,6 +242,7 @@ test_callbacks(void *arg)
   /* We returned. Let's see what our event loop said. */
   tt_int_op(smartlist_len(process_data->stdout_data), OP_EQ, 12);
   tt_int_op(smartlist_len(process_data->stderr_data), OP_EQ, 3);
+  tt_assert(process_data->did_exit);
   tt_int_op(process_data->exit_code, OP_EQ, 0);
 
   /* Check stdout output. */

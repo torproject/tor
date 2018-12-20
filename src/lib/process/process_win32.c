@@ -248,6 +248,11 @@ process_win32_exec(process_t *process)
   win32_process->stderr_handle.pipe = stderr_pipe_read;
   win32_process->stdin_handle.pipe = stdin_pipe_write;
 
+  /* Close our ends of the pipes that is now owned by the child process. */
+  CloseHandle(stdout_pipe_write);
+  CloseHandle(stderr_pipe_write);
+  CloseHandle(stdin_pipe_read);
+
   /* Used by the callback functions from ReadFileEx() and WriteFileEx() such
    * that we can figure out which process_t that was responsible for the event.
    *
@@ -324,6 +329,7 @@ process_win32_write(struct process_t *process, buf_t *buffer)
 
   process_win32_t *win32_process = process_get_win32_process(process);
   BOOL ret = FALSE;
+  DWORD error_code = 0;
   const size_t buffer_size = buf_datalen(buffer);
 
   /* Windows is still writing our buffer. */
@@ -345,6 +351,12 @@ process_win32_write(struct process_t *process, buf_t *buffer)
   /* Read data from the process_t buffer into our intermediate buffer. */
   buf_get_bytes(buffer, win32_process->stdin_handle.buffer, write_size);
 
+  /* Because of the slightly weird API for WriteFileEx() we must set this to 0
+   * before we call WriteFileEx() because WriteFileEx() does not reset the last
+   * error itself when it's succesful. See comment below after the call to
+   * GetLastError(). */
+  SetLastError(0);
+
   /* Schedule our write. */
   ret = WriteFileEx(win32_process->stdin_handle.pipe,
                     win32_process->stdin_handle.buffer,
@@ -353,9 +365,37 @@ process_win32_write(struct process_t *process, buf_t *buffer)
                     process_win32_stdin_write_done);
 
   if (! ret) {
-    log_warn(LD_PROCESS, "WriteFileEx() failed: %s",
-             format_win32_error(GetLastError()));
+    error_code = GetLastError();
+
+    /* No need to log at warning level for these two. */
+    if (error_code == ERROR_HANDLE_EOF || error_code == ERROR_BROKEN_PIPE) {
+      log_debug(LD_PROCESS, "WriteFileEx() returned EOF from pipe: %s",
+                format_win32_error(error_code));
+    } else {
+      log_warn(LD_PROCESS, "WriteFileEx() failed: %s",
+               format_win32_error(error_code));
+    }
+
+    win32_process->stdin_handle.reached_eof = true;
     return 0;
+  }
+
+  /* Here be dragons: According to MSDN's documentation for WriteFileEx() we
+   * should check GetLastError() after a call to WriteFileEx() even though the
+   * `ret` return value was successful. If everything is good, GetLastError()
+   * returns `ERROR_SUCCESS` and nothing happens.
+   *
+   * XXX(ahf): I have not managed to trigger this code while stress-testing
+   * this code. */
+  error_code = GetLastError();
+
+  if (error_code != ERROR_SUCCESS) {
+    /* LCOV_EXCL_START */
+    log_warn(LD_PROCESS, "WriteFileEx() failed after returning success: %s",
+             format_win32_error(error_code));
+    win32_process->stdin_handle.reached_eof = true;
+    return 0;
+    /* LCOV_EXCL_STOP */
   }
 
   /* This cast should be safe since our buffer can maximum be BUFFER_SIZE
@@ -520,6 +560,28 @@ process_win32_timer_test_process(process_t *process)
   BOOL ret = FALSE;
   DWORD exit_code = 0;
 
+  /* Sometimes the Windows kernel wont give us the EOF/Broken Pipe error
+   * message until some time after the process have actually terminated. We
+   * make sure that our ReadFileEx() calls for the process have *all* returned
+   * and both standard out and error have been marked as EOF before we try to
+   * see if the process terminated.
+   *
+   * This ensures that we *never* call the exit callback of the `process_t`,
+   * which potentially ends up calling `process_free()` on our `process_t`,
+   * before all data have been received from the process.
+   *
+   * We do NOT have a check here for whether standard in reached EOF since
+   * standard in's WriteFileEx() function is only called on-demand when we have
+   * something to write and is thus usually not awaiting to finish any
+   * operations. If we WriteFileEx() to a file that has terminated we'll simply
+   * get an error from ReadFileEx() or its completion routine and move on with
+   * life.  */
+  if (! win32_process->stdout_handle.reached_eof)
+    return false;
+
+  if (! win32_process->stderr_handle.reached_eof)
+    return false;
+
   /* We start by testing whether our process is still running. */
   ret = GetExitCodeProcess(win32_process->process_information.hProcess,
                            &exit_code);
@@ -667,36 +729,30 @@ process_win32_cleanup_handle(process_win32_handle_t *handle)
   tor_assert(handle);
 
 #if 0
-  /* FIXME(ahf): My compiler does not set _WIN32_WINNT to a high enough value
-   * for this code to be available. Should we force it? CancelIoEx() is
-   * available from Windows 7 and above. If we decide to require this, we need
-   * to update the checks in all the three I/O completion callbacks to handle
-   * the ERROR_OPERATION_ABORTED as well as ERROR_BROKEN_PIPE. */
-
-#if _WIN32_WINNT >= 0x0600
-  /* This code is only supported from Windows 7 and onwards. */
   BOOL ret;
   DWORD error_code;
 
-  /* Cancel any pending I/O requests. */
-  ret = CancelIoEx(handle->pipe, &handle->overlapped);
+  /* Cancel any pending I/O requests: This means that instead of getting
+   * ERROR_BROKEN_PIPE we get ERROR_OPERATION_ABORTED, but it doesn't seem
+   * like this is needed. */
+  ret = CancelIo(handle->pipe);
 
   if (! ret) {
     error_code = GetLastError();
 
     /* There was no pending I/O requests for our handle. */
     if (error_code != ERROR_NOT_FOUND) {
-      log_warn(LD_PROCESS, "CancelIoEx() failed: %s",
+      log_warn(LD_PROCESS, "CancelIo() failed: %s",
                format_win32_error(error_code));
     }
   }
-#endif
 #endif
 
   /* Close our handle. */
   if (handle->pipe != INVALID_HANDLE_VALUE) {
     CloseHandle(handle->pipe);
     handle->pipe = INVALID_HANDLE_VALUE;
+    handle->reached_eof = true;
   }
 }
 
@@ -710,15 +766,6 @@ process_win32_stdout_read_done(DWORD error_code,
 {
   tor_assert(overlapped);
   tor_assert(overlapped->hEvent);
-
-  /* This happens when we have asked ReadFileEx() to read some data, but we
-   * then decided to call CloseHandle() on the HANDLE. This can happen if
-   * someone runs process_free() in the exit_callback of process_t, which means
-   * we cannot call process_get_win32_process() here. */
-  if (error_code == ERROR_BROKEN_PIPE) {
-    log_debug(LD_PROCESS, "Process reported broken pipe on standard out");
-    return;
-  }
 
   /* Extract our process_t from the hEvent member of OVERLAPPED. */
   process_t *process = (process_t *)overlapped->hEvent;
@@ -742,15 +789,6 @@ process_win32_stderr_read_done(DWORD error_code,
 {
   tor_assert(overlapped);
   tor_assert(overlapped->hEvent);
-
-  /* This happens when we have asked ReadFileEx() to read some data, but we
-   * then decided to call CloseHandle() on the HANDLE. This can happen if
-   * someone runs process_free() in the exit_callback of process_t, which means
-   * we cannot call process_get_win32_process() here. */
-  if (error_code == ERROR_BROKEN_PIPE) {
-    log_debug(LD_PROCESS, "Process reported broken pipe on standard error");
-    return;
-  }
 
   /* Extract our process_t from the hEvent member of OVERLAPPED. */
   process_t *process = (process_t *)overlapped->hEvent;
@@ -777,15 +815,6 @@ process_win32_stdin_write_done(DWORD error_code,
 
   (void)byte_count;
 
-  /* This happens when we have asked WriteFileEx() to write some data, but we
-   * then decided to call CloseHandle() on the HANDLE. This can happen if
-   * someone runs process_free() in the exit_callback of process_t, which means
-   * we cannot call process_get_win32_process() here. */
-  if (error_code == ERROR_BROKEN_PIPE) {
-    log_debug(LD_PROCESS, "Process reported broken pipe on standard input");
-    return;
-  }
-
   process_t *process = (process_t *)overlapped->hEvent;
   process_win32_t *win32_process = process_get_win32_process(process);
 
@@ -806,7 +835,8 @@ process_win32_stdin_write_done(DWORD error_code,
 
     /* Schedule the next write. */
     process_notify_event_stdin(process);
-  } else if (error_code == ERROR_HANDLE_EOF) {
+  } else if (error_code == ERROR_HANDLE_EOF ||
+             error_code == ERROR_BROKEN_PIPE) {
     /* Our WriteFileEx() call was succesful, but we reached the end of our
      * file.  We mark our handle as having reached EOF and returns. */
     tor_assert(byte_count == 0);
@@ -837,6 +867,7 @@ process_win32_read_from_handle(process_win32_handle_t *handle,
 
   BOOL ret = FALSE;
   int bytes_available = 0;
+  DWORD error_code = 0;
 
   /* We already have a request to read data that isn't complete yet. */
   if (BUG(handle->busy))
@@ -860,6 +891,12 @@ process_win32_read_from_handle(process_win32_handle_t *handle,
     memset(handle->buffer, 0, sizeof(handle->buffer));
   }
 
+  /* Because of the slightly weird API for ReadFileEx() we must set this to 0
+   * before we call ReadFileEx() because ReadFileEx() does not reset the last
+   * error itself when it's succesful. See comment below after the call to
+   * GetLastError(). */
+  SetLastError(0);
+
   /* Ask the Windows kernel to read data from our pipe into our buffer and call
    * the callback function when it is done. */
   ret = ReadFileEx(handle->pipe,
@@ -869,9 +906,37 @@ process_win32_read_from_handle(process_win32_handle_t *handle,
                    callback);
 
   if (! ret) {
-    log_warn(LD_PROCESS, "ReadFileEx() failed: %s",
-             format_win32_error(GetLastError()));
+    error_code = GetLastError();
+
+    /* No need to log at warning level for these two. */
+    if (error_code == ERROR_HANDLE_EOF || error_code == ERROR_BROKEN_PIPE) {
+      log_debug(LD_PROCESS, "ReadFileEx() returned EOF from pipe: %s",
+                format_win32_error(error_code));
+    } else {
+      log_warn(LD_PROCESS, "ReadFileEx() failed: %s",
+               format_win32_error(error_code));
+    }
+
+    handle->reached_eof = true;
     return bytes_available;
+  }
+
+  /* Here be dragons: According to MSDN's documentation for ReadFileEx() we
+   * should check GetLastError() after a call to ReadFileEx() even though the
+   * `ret` return value was successful. If everything is good, GetLastError()
+   * returns `ERROR_SUCCESS` and nothing happens.
+   *
+   * XXX(ahf): I have not managed to trigger this code while stress-testing
+   * this code. */
+  error_code = GetLastError();
+
+  if (error_code != ERROR_SUCCESS) {
+    /* LCOV_EXCL_START */
+    log_warn(LD_PROCESS, "ReadFileEx() failed after returning success: %s",
+             format_win32_error(error_code));
+    handle->reached_eof = true;
+    return bytes_available;
+    /* LCOV_EXCL_STOP */
   }
 
   /* We mark our handle as having a pending I/O request. */
@@ -903,9 +968,10 @@ process_win32_handle_read_completion(process_win32_handle_t *handle,
 
     /* Tell our caller to schedule the next read. */
     return true;
-  } else if (error_code == ERROR_HANDLE_EOF) {
-    /* Our ReadFileEx() call was succesful, but we reached the end of our file.
-     * We mark our handle as having reached EOF and returns. */
+  } else if (error_code == ERROR_HANDLE_EOF ||
+             error_code == ERROR_BROKEN_PIPE) {
+    /* Our ReadFileEx() finished, but we reached the end of our file.  We mark
+     * our handle as having reached EOF and returns. */
     tor_assert(byte_count == 0);
 
     handle->reached_eof = true;
