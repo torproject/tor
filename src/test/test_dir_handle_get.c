@@ -2566,7 +2566,7 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
                                                             comp_body_used);
   // this will log: [debug] 5
   // ie, UNKNOWN_METHOD
-  log_debug(LD_DIR, "%d", compression);
+  log_debug(LD_DIR, "detect_compression_method: %d", compression);
 
   tor_free(comp_body);
 
