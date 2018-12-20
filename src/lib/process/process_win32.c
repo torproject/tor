@@ -367,6 +367,7 @@ process_win32_write(struct process_t *process, buf_t *buffer)
   if (! ret) {
     log_warn(LD_PROCESS, "WriteFileEx() failed: %s",
              format_win32_error(GetLastError()));
+    win32_process->stdin_handle.reached_eof = true;
     return 0;
   }
 
@@ -749,6 +750,7 @@ process_win32_cleanup_handle(process_win32_handle_t *handle)
   if (handle->pipe != INVALID_HANDLE_VALUE) {
     CloseHandle(handle->pipe);
     handle->pipe = INVALID_HANDLE_VALUE;
+    handle->reached_eof = true;
   }
 }
 
@@ -930,6 +932,7 @@ process_win32_read_from_handle(process_win32_handle_t *handle,
   if (! ret) {
     log_warn(LD_PROCESS, "ReadFileEx() failed: %s",
              format_win32_error(GetLastError()));
+    handle->reached_eof = true;
     return bytes_available;
   }
 
