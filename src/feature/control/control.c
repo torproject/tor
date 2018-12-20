@@ -7033,15 +7033,24 @@ control_event_transport_launched(const char *mode, const char *transport_name,
                      mode, transport_name, fmt_addr(addr), port);
 }
 
-/** A pluggable transport called <b>pt_name</b> has emitted a log
- * message found in <b>message</b>. */
+/** A pluggable transport called <b>pt_name</b> has emitted a log message
+ * found in <b>message</b> at <b>severity</b> log level. */
 void
-control_event_pt_log(const char *pt_name, const char *message)
+control_event_pt_log(const char *log)
 {
   send_control_event(EVENT_PT_LOG,
-                     "650 PT_LOG %s %s\r\n",
-                     pt_name,
-                     message);
+                     "650 PT_LOG %s\r\n",
+                     log);
+}
+
+/** A pluggable transport has emitted a STATUS message found in
+ * <b>status</b>. */
+void
+control_event_pt_status(const char *status)
+{
+  send_control_event(EVENT_PT_STATUS,
+                     "650 PT_STATUS %s\r\n",
+                     status);
 }
 
 /** Convert rendezvous auth type to string for HS_DESC control events
