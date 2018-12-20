@@ -248,6 +248,11 @@ process_win32_exec(process_t *process)
   win32_process->stderr_handle.pipe = stderr_pipe_read;
   win32_process->stdin_handle.pipe = stdin_pipe_write;
 
+  /* Close our ends of the pipes that is now owned by the child process. */
+  CloseHandle(stdout_pipe_write);
+  CloseHandle(stderr_pipe_write);
+  CloseHandle(stdin_pipe_read);
+
   /* Used by the callback functions from ReadFileEx() and WriteFileEx() such
    * that we can figure out which process_t that was responsible for the event.
    *
