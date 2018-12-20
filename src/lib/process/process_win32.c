@@ -365,8 +365,17 @@ process_win32_write(struct process_t *process, buf_t *buffer)
                     process_win32_stdin_write_done);
 
   if (! ret) {
-    log_warn(LD_PROCESS, "WriteFileEx() failed: %s",
-             format_win32_error(GetLastError()));
+    error_code = GetLastError();
+
+    /* No need to log at warning level for these two. */
+    if (error_code == ERROR_HANDLE_EOF || error_code == ERROR_BROKEN_PIPE) {
+      log_debug(LD_PROCESS, "WriteFileEx() returned EOF from pipe: %s",
+                format_win32_error(error_code));
+    } else {
+      log_warn(LD_PROCESS, "WriteFileEx() failed: %s",
+               format_win32_error(error_code));
+    }
+
     win32_process->stdin_handle.reached_eof = true;
     return 0;
   }
@@ -897,8 +906,17 @@ process_win32_read_from_handle(process_win32_handle_t *handle,
                    callback);
 
   if (! ret) {
-    log_warn(LD_PROCESS, "ReadFileEx() failed: %s",
-             format_win32_error(GetLastError()));
+    error_code = GetLastError();
+
+    /* No need to log at warning level for these two. */
+    if (error_code == ERROR_HANDLE_EOF || error_code == ERROR_BROKEN_PIPE) {
+      log_debug(LD_PROCESS, "ReadFileEx() returned EOF from pipe: %s",
+                format_win32_error(error_code));
+    } else {
+      log_warn(LD_PROCESS, "ReadFileEx() failed: %s",
+               format_win32_error(error_code));
+    }
+
     handle->reached_eof = true;
     return bytes_available;
   }
