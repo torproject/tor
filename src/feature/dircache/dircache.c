@@ -1462,10 +1462,16 @@ handle_get_next_bandwidth(dir_connection_t *conn,
       ssize_t len = strlen(bandwidth);
       write_http_response_header(conn, compress_method != NO_METHOD ? -1 : len,
                                  compress_method, BANDWIDTH_CACHE_LIFETIME);
-      if (compress_method != NO_METHOD)
+      if (compress_method != NO_METHOD) {
         conn->compress_state = tor_compress_new(1, compress_method,
                                         choose_compression_level(len/2));
-      connection_buf_add(bandwidth, len, TO_CONN(conn));
+        log_debug(LD_DIR, "Calling connection_buf_add_compress.");
+        connection_buf_add_compress(bandwidth, len, conn, 0);
+        connection_buf_add_compress("", 0, conn, 1);
+      } else {
+        log_debug(LD_DIR, "compress_method was NO_METHOD, not compressing.");
+        connection_buf_add(bandwidth, len, TO_CONN(conn));
+      }
       tor_free(bandwidth);
       return 0;
     }
