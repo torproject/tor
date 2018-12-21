@@ -491,6 +491,200 @@ mock_monotime_absolute_usec(void)
   return 100;
 }
 
+/** Test higher token removal strategy by bin  */
+static void
+test_circuitpadding_token_removal_higher(void *arg)
+{
+  circpad_machineinfo_t *mi;
+  (void)arg;
+
+  /* Mock it up */
+  MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
+  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+
+  /* Setup test environment (time etc.) */
+  client_side = (circuit_t *)origin_circuit_new();
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  monotime_enable_test_mocking();
+
+  /* Create test machine */
+  helper_create_machine_with_big_histogram(CIRCPAD_TOKEN_REMOVAL_HIGHER);
+  client_side->padding_machine[0] = &circ_client_machine;
+  client_side->padding_info[0] =
+    circpad_circuit_machineinfo_new(client_side, 0);
+
+  /* move the machine to the right state */
+  circpad_cell_event_nonpadding_received((circuit_t*)client_side);
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_BURST);
+
+  /* Get the machine and setup tokens */
+  mi = client_side->padding_info[0];
+  tt_assert(mi);
+
+  /*************************************************************************/
+
+  uint64_t current_time = monotime_absolute_usec();
+
+  /* Test left boundaries of each histogram bin: */
+  const circpad_delay_t bin_left_bounds[] =
+    {0, 1, 7, 15, 31, 62, 125, 250, 500, CIRCPAD_DELAY_INFINITE};
+  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    tt_uint_op(bin_left_bounds[i], OP_EQ,
+               circpad_histogram_bin_to_usec(mi, i));
+  }
+
+  /* Check that all bins have two tokens right now */
+  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    tt_int_op(mi->histogram[i], OP_EQ, 2);
+  }
+
+  /* This is the right order to remove tokens from this histogram. That is, we
+   * first remove tokens from the 4th bin since 57 usec is nearest to the 4th
+   * bin midpoint (31 + (62-31)/2 == 46). Then we remove from the 3rd bin for
+   * the same reason, then from the 5th, etc. */
+  const int bin_removal_order[] = {4, 5, 6, 7, 8};
+  unsigned i;
+
+  /* Remove all tokens from all bins apart from the infinity bin */
+  for (i = 0; i < sizeof(bin_removal_order)/sizeof(int) ; i++) {
+    int bin_to_remove = bin_removal_order[i];
+    log_debug(LD_GENERAL, "Testing that %d attempt removes %d bin",
+              i, bin_to_remove);
+
+    tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 2);
+
+    mi->padding_scheduled_at_usec = current_time - 57;
+    circpad_machine_remove_token(mi);
+
+    tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 1);
+
+    mi->padding_scheduled_at_usec = current_time - 57;
+    circpad_machine_remove_token(mi);
+
+    /* Test that we cleaned out this bin. Don't do this in the case of the last
+       bin since the tokens will get refilled */
+    if (i != BIG_HISTOGRAM_LEN - 2) {
+      tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 0);
+    }
+  }
+
+  /* Check that all lowe bins are not touched */
+  for (i=0; i < 4 ; i++) {
+    tt_int_op(mi->histogram[i], OP_EQ, 2);
+  }
+
+  /* Test below the lowest bin, for coverage */
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_BURST);
+  circ_client_machine.states[CIRCPAD_STATE_BURST].start_usec = 100;
+  mi->padding_scheduled_at_usec = current_time - 1;
+  circpad_machine_remove_token(mi);
+  tt_int_op(mi->histogram[0], OP_EQ, 1);
+
+ done:
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  monotime_disable_test_mocking();
+  tor_free(circ_client_machine.states);
+}
+
+/** Test lower token removal strategy by bin  */
+static void
+test_circuitpadding_token_removal_lower(void *arg)
+{
+  circpad_machineinfo_t *mi;
+  (void)arg;
+
+  /* Mock it up */
+  MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
+  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+
+  /* Setup test environment (time etc.) */
+  client_side = (circuit_t *)origin_circuit_new();
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  monotime_enable_test_mocking();
+
+  /* Create test machine */
+  helper_create_machine_with_big_histogram(CIRCPAD_TOKEN_REMOVAL_LOWER);
+  client_side->padding_machine[0] = &circ_client_machine;
+  client_side->padding_info[0] =
+    circpad_circuit_machineinfo_new(client_side, 0);
+
+  /* move the machine to the right state */
+  circpad_cell_event_nonpadding_received((circuit_t*)client_side);
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_BURST);
+
+  /* Get the machine and setup tokens */
+  mi = client_side->padding_info[0];
+  tt_assert(mi);
+
+  /*************************************************************************/
+
+  uint64_t current_time = monotime_absolute_usec();
+
+  /* Test left boundaries of each histogram bin: */
+  const circpad_delay_t bin_left_bounds[] =
+    {0, 1, 7, 15, 31, 62, 125, 250, 500, CIRCPAD_DELAY_INFINITE};
+  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    tt_uint_op(bin_left_bounds[i], OP_EQ,
+               circpad_histogram_bin_to_usec(mi, i));
+  }
+
+  /* Check that all bins have two tokens right now */
+  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    tt_int_op(mi->histogram[i], OP_EQ, 2);
+  }
+
+  /* This is the right order to remove tokens from this histogram. That is, we
+   * first remove tokens from the 4th bin since 57 usec is nearest to the 4th
+   * bin midpoint (31 + (62-31)/2 == 46). Then we remove from the 3rd bin for
+   * the same reason, then from the 5th, etc. */
+  const int bin_removal_order[] = {4, 3, 2, 1, 0};
+  unsigned i;
+
+  /* Remove all tokens from all bins apart from the infinity bin */
+  for (i = 0; i < sizeof(bin_removal_order)/sizeof(int) ; i++) {
+    int bin_to_remove = bin_removal_order[i];
+    log_debug(LD_GENERAL, "Testing that %d attempt removes %d bin",
+              i, bin_to_remove);
+
+    tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 2);
+
+    mi->padding_scheduled_at_usec = current_time - 57;
+    circpad_machine_remove_token(mi);
+
+    tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 1);
+
+    mi->padding_scheduled_at_usec = current_time - 57;
+    circpad_machine_remove_token(mi);
+
+    /* Test that we cleaned out this bin. Don't do this in the case of the last
+       bin since the tokens will get refilled */
+    if (i != BIG_HISTOGRAM_LEN - 2) {
+      tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 0);
+    }
+  }
+
+  /* Check that all higher bins are untouched */
+  for (i = 5; i < BIG_HISTOGRAM_LEN ; i++) {
+    tt_int_op(mi->histogram[i], OP_EQ, 2);
+  }
+
+  /* Test above the highest bin, for coverage */
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_BURST);
+  circ_client_machine.states[CIRCPAD_STATE_BURST].start_usec = 100;
+  mi->padding_scheduled_at_usec = current_time - 29202;
+  circpad_machine_remove_token(mi);
+  tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN-2], OP_EQ, 1);
+
+ done:
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  monotime_disable_test_mocking();
+  tor_free(circ_client_machine.states);
+}
+
 /** Test closest token removal strategy by bin  */
 static void
 test_circuitpadding_closest_token_removal(void *arg)
@@ -2151,6 +2345,8 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_sample_distribution, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_machine_rate_limiting, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_global_rate_limiting, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_token_removal_lower, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_token_removal_higher, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_closest_token_removal, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_closest_token_removal_usec, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_token_removal_exact, TT_FORK),
