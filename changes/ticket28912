@@ -1,0 +1,6 @@
+  o Major bugfixes (relay, directory):
+    - A connection serving directory information wouldn't get reactivated after
+      the first chunk of data was sent (usually 32KB). Tor now always activate
+      the main loop event that goes through these connections as long as at
+      least one connection is still active. Fixes bug 28912; bugfix on
+      0.3.4.1-alpha. Patch by "cypherpunks3".
