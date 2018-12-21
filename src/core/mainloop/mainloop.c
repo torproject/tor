@@ -377,6 +377,9 @@ connection_unlink(connection_t *conn)
   connection_free(conn);
 }
 
+/** Event that invokes schedule_active_linked_connections_cb. */
+static mainloop_event_t *schedule_active_linked_connections_event = NULL;
+
 /**
  * Callback: used to activate read events for all linked connections, so
  * libevent knows to call their read callbacks.  This callback run as a
@@ -393,10 +396,18 @@ schedule_active_linked_connections_cb(mainloop_event_t *event, void *arg)
    * so that libevent knows to run their callbacks. */
   SMARTLIST_FOREACH(active_linked_connection_lst, connection_t *, conn,
                     event_active(conn->read_event, EV_READ, 1));
-}
 
-/** Event that invokes schedule_active_linked_connections_cb. */
-static mainloop_event_t *schedule_active_linked_connections_event = NULL;
+  /* Reactivate the event if we still have connections in the active list.
+   *
+   * A linked connection doesn't get woken up by I/O but rather artificially
+   * by this event callback. It has directory data spooled in it and it is
+   * sent incrementally by small chunks unless spool_eagerly is true. For that
+   * to happen, we need to induce the activation of the read event so it can
+   * be flushed. */
+  if (smartlist_len(active_linked_connection_lst)) {
+    mainloop_event_activate(schedule_active_linked_connections_event);
+  }
+}
 
 /** Initialize the global connection list, closeable connection list,
  * and active connection list. */
