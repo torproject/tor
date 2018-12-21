@@ -203,9 +203,6 @@ test_callbacks(void *arg)
   filename = TEST_PROCESS;
 #endif
 
-  /* Initialize Process subsystem. */
-  process_init();
-
   /* Process callback data. */
   process_data_t *process_data = process_data_new();
 
@@ -286,7 +283,6 @@ test_callbacks(void *arg)
  done:
   process_data_free(process_data);
   process_free(process);
-  process_free_all();
 }
 
 static void
@@ -300,9 +296,6 @@ test_callbacks_terminate(void *arg)
 #else
   filename = TEST_PROCESS;
 #endif
-
-  /* Initialize Process subsystem. */
-  process_init();
 
   /* Process callback data. */
   process_data_t *process_data = process_data_new();
@@ -333,7 +326,6 @@ test_callbacks_terminate(void *arg)
  done:
   process_data_free(process_data);
   process_free(process);
-  process_free_all();
 }
 
 struct testcase_t slow_process_tests[] = {

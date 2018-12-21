@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file log_time.h
+ * \file time_sys.h
  * \brief Declare subsystem object for the time module.
  **/
 

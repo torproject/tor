@@ -142,8 +142,6 @@ static void
 test_default_values(void *arg)
 {
   (void)arg;
-  process_init();
-
   process_t *process = process_new("/path/to/nothing");
 
   /* We are not running by default. */
@@ -171,14 +169,12 @@ test_default_values(void *arg)
 
  done:
   process_free(process);
-  process_free_all();
 }
 
 static void
 test_environment(void *arg)
 {
   (void)arg;
-  process_init();
 
   process_t *process = process_new("");
   process_environment_t *env = NULL;
@@ -221,7 +217,6 @@ test_environment(void *arg)
  done:
   process_environment_free(env);
   process_free(process);
-  process_free_all();
 }
 
 static void
@@ -249,7 +244,6 @@ static void
 test_line_protocol_simple(void *arg)
 {
   (void)arg;
-  process_init();
 
   process_data_t *process_data = process_data_new();
 
@@ -289,7 +283,6 @@ test_line_protocol_simple(void *arg)
  done:
   process_data_free(process_data);
   process_free(process);
-  process_free_all();
 
   UNMOCK(process_read_stdout);
   UNMOCK(process_read_stderr);
@@ -299,7 +292,6 @@ static void
 test_line_protocol_multi(void *arg)
 {
   (void)arg;
-  process_init();
 
   process_data_t *process_data = process_data_new();
 
@@ -349,7 +341,6 @@ test_line_protocol_multi(void *arg)
  done:
   process_data_free(process_data);
   process_free(process);
-  process_free_all();
 
   UNMOCK(process_read_stdout);
   UNMOCK(process_read_stderr);
@@ -359,7 +350,6 @@ static void
 test_line_protocol_partial(void *arg)
 {
   (void)arg;
-  process_init();
 
   process_data_t *process_data = process_data_new();
 
@@ -431,7 +421,6 @@ test_line_protocol_partial(void *arg)
  done:
   process_data_free(process_data);
   process_free(process);
-  process_free_all();
 
   UNMOCK(process_read_stdout);
   UNMOCK(process_read_stderr);
@@ -441,7 +430,6 @@ static void
 test_raw_protocol_simple(void *arg)
 {
   (void)arg;
-  process_init();
 
   process_data_t *process_data = process_data_new();
 
@@ -499,7 +487,6 @@ test_raw_protocol_simple(void *arg)
  done:
   process_data_free(process_data);
   process_free(process);
-  process_free_all();
 
   UNMOCK(process_read_stdout);
   UNMOCK(process_read_stderr);
@@ -509,8 +496,6 @@ static void
 test_write_simple(void *arg)
 {
   (void)arg;
-
-  process_init();
 
   process_data_t *process_data = process_data_new();
 
@@ -530,7 +515,6 @@ test_write_simple(void *arg)
  done:
   process_data_free(process_data);
   process_free(process);
-  process_free_all();
 
   UNMOCK(process_write_stdin);
 }
@@ -539,8 +523,6 @@ static void
 test_exit_simple(void *arg)
 {
   (void)arg;
-
-  process_init();
 
   process_data_t *process_data = process_data_new();
 
@@ -566,14 +548,12 @@ test_exit_simple(void *arg)
   process_set_data(process, process_data);
   process_data_free(process_data);
   process_free(process);
-  process_free_all();
 }
 
 static void
 test_argv_simple(void *arg)
 {
   (void)arg;
-  process_init();
 
   process_t *process = process_new("/bin/cat");
   char **argv = NULL;
@@ -600,7 +580,6 @@ test_argv_simple(void *arg)
  done:
   tor_free(argv);
   process_free(process);
-  process_free_all();
 }
 
 static void
@@ -608,8 +587,6 @@ test_unix(void *arg)
 {
   (void)arg;
 #ifndef _WIN32
-  process_init();
-
   process_t *process = process_new("");
 
   /* On Unix all processes should have a Unix process handle. */
@@ -617,7 +594,6 @@ test_unix(void *arg)
 
  done:
   process_free(process);
-  process_free_all();
 #endif
 }
 
@@ -626,8 +602,6 @@ test_win32(void *arg)
 {
   (void)arg;
 #ifdef _WIN32
-  process_init();
-
   process_t *process = process_new("");
   char *joined_argv = NULL;
 
@@ -675,7 +649,6 @@ test_win32(void *arg)
  done:
   tor_free(joined_argv);
   process_free(process);
-  process_free_all();
 #endif
 }
 
