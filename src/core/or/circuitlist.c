@@ -51,6 +51,7 @@
  * logic, which was originally circuit-focused.
  **/
 #define CIRCUITLIST_PRIVATE
+#define OCIRC_EVENT_PRIVATE
 #include "lib/cc/torint.h"  /* TOR_PRIuSZ */
 
 #include "core/or/or.h"
@@ -95,6 +96,9 @@
 #include "lib/compress/compress_zlib.h"
 #include "lib/compress/compress_zstd.h"
 #include "lib/buf/buffers.h"
+
+#define OCIRC_EVENT_PRIVATE
+#include "core/or/ocirc_event.h"
 
 #include "ht.h"
 
@@ -481,6 +485,56 @@ circuit_set_n_circid_chan(circuit_t *circ, circid_t id,
   }
 }
 
+/**
+ * Helper function to publish a message about events on an origin circuit
+ *
+ * Publishes a message to subscribers of origin circuit events, and
+ * sends the control event.
+ **/
+int
+circuit_event_status(origin_circuit_t *circ, circuit_status_event_t tp,
+                     int reason_code)
+{
+  ocirc_event_msg_t msg;
+
+  tor_assert(circ);
+
+  msg.type = OCIRC_MSGTYPE_CEVENT;
+  msg.u.cevent.gid = circ->global_identifier;
+  msg.u.cevent.evtype = tp;
+  msg.u.cevent.reason = reason_code;
+  msg.u.cevent.onehop = circ->build_state->onehop_tunnel;
+
+  ocirc_event_publish(&msg);
+  return control_event_circuit_status(circ, tp, reason_code);
+}
+
+/**
+ * Helper function to publish a state change message
+ *
+ * circuit_set_state() calls this to notify subscribers about a change
+ * of the state of an origin circuit.
+ **/
+static void
+circuit_state_publish(const circuit_t *circ)
+{
+  ocirc_event_msg_t msg;
+  const origin_circuit_t *ocirc;
+
+  if (!CIRCUIT_IS_ORIGIN(circ))
+    return;
+  ocirc = CONST_TO_ORIGIN_CIRCUIT(circ);
+  /* Only inbound OR circuits can be in this state, not origin circuits. */
+  tor_assert(circ->state != CIRCUIT_STATE_ONIONSKIN_PENDING);
+
+  msg.type = OCIRC_MSGTYPE_STATE;
+  msg.u.state.gid = ocirc->global_identifier;
+  msg.u.state.state = circ->state;
+  msg.u.state.onehop = ocirc->build_state->onehop_tunnel;
+
+  ocirc_event_publish(&msg);
+}
+
 /** Change the state of <b>circ</b> to <b>state</b>, adding it to or removing
  * it from lists as appropriate. */
 void
@@ -510,6 +564,7 @@ circuit_set_state(circuit_t *circ, uint8_t state)
   if (state == CIRCUIT_STATE_GUARD_WAIT || state == CIRCUIT_STATE_OPEN)
     tor_assert(!circ->n_chan_create_cell);
   circ->state = state;
+  circuit_state_publish(circ);
 }
 
 /** Append to <b>out</b> all circuits in state CHAN_WAIT waiting for
@@ -2270,7 +2325,7 @@ circuit_about_to_free(circuit_t *circ)
     smartlist_remove(circuits_pending_other_guards, circ);
   }
   if (CIRCUIT_IS_ORIGIN(circ)) {
-    control_event_circuit_status(TO_ORIGIN_CIRCUIT(circ),
+    circuit_event_status(TO_ORIGIN_CIRCUIT(circ),
      (circ->state == CIRCUIT_STATE_OPEN ||
       circ->state == CIRCUIT_STATE_GUARD_WAIT) ?
                                  CIRC_EVENT_CLOSED:CIRC_EVENT_FAILED,

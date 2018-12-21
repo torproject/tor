@@ -94,6 +94,7 @@ src_test_test_SOURCES += \
 	src/test/test_address.c \
 	src/test/test_address_set.c \
 	src/test/test_bridges.c \
+	src/test/test_btrack.c \
 	src/test/test_buffers.c \
 	src/test/test_bwmgt.c \
 	src/test/test_cell_formats.c \

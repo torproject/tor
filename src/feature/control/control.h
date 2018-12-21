@@ -12,15 +12,7 @@
 #ifndef TOR_CONTROL_H
 #define TOR_CONTROL_H
 
-/** Used to indicate the type of a circuit event passed to the controller.
- * The various types are defined in control-spec.txt */
-typedef enum circuit_status_event_t {
-  CIRC_EVENT_LAUNCHED = 0,
-  CIRC_EVENT_BUILT    = 1,
-  CIRC_EVENT_EXTENDED = 2,
-  CIRC_EVENT_FAILED   = 3,
-  CIRC_EVENT_CLOSED   = 4,
-} circuit_status_event_t;
+#include "core/or/ocirc_event.h"
 
 /** Used to indicate the type of a CIRC_MINOR event passed to the controller.
  * The various types are defined in control-spec.txt . */
@@ -28,6 +20,8 @@ typedef enum circuit_status_minor_event_t {
   CIRC_MINOR_EVENT_PURPOSE_CHANGED,
   CIRC_MINOR_EVENT_CANNIBALIZED,
 } circuit_status_minor_event_t;
+
+#include "core/or/orconn_event.h"
 
 /** Used to indicate the type of a stream event passed to the controller.
  * The various types are defined in control-spec.txt */
@@ -43,16 +37,6 @@ typedef enum stream_status_event_t {
   STREAM_EVENT_REMAP        = 8
 } stream_status_event_t;
 
-/** Used to indicate the type of an OR connection event passed to the
- * controller.  The various types are defined in control-spec.txt */
-typedef enum or_conn_status_event_t {
-  OR_CONN_EVENT_LAUNCHED     = 0,
-  OR_CONN_EVENT_CONNECTED    = 1,
-  OR_CONN_EVENT_FAILED       = 2,
-  OR_CONN_EVENT_CLOSED       = 3,
-  OR_CONN_EVENT_NEW          = 4,
-} or_conn_status_event_t;
-
 /** Used to indicate the type of a buildtime event */
 typedef enum buildtimeout_set_event_t {
   BUILDTIMEOUT_SET_EVENT_COMPUTED  = 0,
@@ -67,18 +51,42 @@ typedef enum buildtimeout_set_event_t {
 typedef enum {
   BOOTSTRAP_STATUS_UNDEF=-1,
   BOOTSTRAP_STATUS_STARTING=0,
-  BOOTSTRAP_STATUS_CONN_DIR=5,
-  BOOTSTRAP_STATUS_HANDSHAKE=-2,
-  BOOTSTRAP_STATUS_HANDSHAKE_DIR=10,
-  BOOTSTRAP_STATUS_ONEHOP_CREATE=15,
-  BOOTSTRAP_STATUS_REQUESTING_STATUS=20,
-  BOOTSTRAP_STATUS_LOADING_STATUS=25,
+
+  /* Initial connection to any relay */
+
+  BOOTSTRAP_STATUS_CONN_PT=1,
+  BOOTSTRAP_STATUS_CONN_DONE_PT=2,
+  BOOTSTRAP_STATUS_CONN_PROXY=3,
+  BOOTSTRAP_STATUS_CONN_DONE_PROXY=4,
+  BOOTSTRAP_STATUS_CONN=5,
+  BOOTSTRAP_STATUS_CONN_DONE=10,
+  BOOTSTRAP_STATUS_HANDSHAKE=14,
+  BOOTSTRAP_STATUS_HANDSHAKE_DONE=15,
+
+  /* Loading directory info */
+
+  BOOTSTRAP_STATUS_ONEHOP_CREATE=20,
+  BOOTSTRAP_STATUS_REQUESTING_STATUS=25,
+  BOOTSTRAP_STATUS_LOADING_STATUS=30,
   BOOTSTRAP_STATUS_LOADING_KEYS=40,
   BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS=45,
   BOOTSTRAP_STATUS_LOADING_DESCRIPTORS=50,
-  BOOTSTRAP_STATUS_CONN_OR=80,
-  BOOTSTRAP_STATUS_HANDSHAKE_OR=85,
-  BOOTSTRAP_STATUS_CIRCUIT_CREATE=90,
+  BOOTSTRAP_STATUS_ENOUGH_DIRINFO=75,
+
+  /* Connecting to a relay for AP circuits */
+
+  BOOTSTRAP_STATUS_AP_CONN_PT=76,
+  BOOTSTRAP_STATUS_AP_CONN_DONE_PT=77,
+  BOOTSTRAP_STATUS_AP_CONN_PROXY=78,
+  BOOTSTRAP_STATUS_AP_CONN_DONE_PROXY=79,
+  BOOTSTRAP_STATUS_AP_CONN=80,
+  BOOTSTRAP_STATUS_AP_CONN_DONE=85,
+  BOOTSTRAP_STATUS_AP_HANDSHAKE=89,
+  BOOTSTRAP_STATUS_AP_HANDSHAKE_DONE=90,
+
+  /* Creating AP circuits */
+
+  BOOTSTRAP_STATUS_CIRCUIT_CREATE=95,
   BOOTSTRAP_STATUS_DONE=100
 } bootstrap_status_t;
 

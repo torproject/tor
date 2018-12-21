@@ -14,6 +14,7 @@
 
 #include "lib/testsupport/testsupport.h"
 #include "feature/hs/hs_ident.h"
+#include "core/or/ocirc_event.h"
 
 /** Circuit state: I'm the origin, still haven't done all my handshakes. */
 #define CIRCUIT_STATE_BUILDING 0
@@ -184,6 +185,8 @@ void channel_mark_circid_unusable(channel_t *chan, circid_t id);
 void channel_mark_circid_usable(channel_t *chan, circid_t id);
 time_t circuit_id_when_marked_unusable_on_channel(circid_t circ_id,
                                                   channel_t *chan);
+int circuit_event_status(origin_circuit_t *circ, circuit_status_event_t tp,
+                         int reason_code);
 void circuit_set_state(circuit_t *circ, uint8_t state);
 void circuit_close_all_marked(void);
 int32_t circuit_initial_package_window(void);

@@ -857,6 +857,7 @@ struct testgroup_t testgroups[] = {
   { "consdiffmgr/", consdiffmgr_tests },
   { "container/", container_tests },
   { "control/", controller_tests },
+  { "control/btrack/", btrack_tests },
   { "control/event/", controller_event_tests },
   { "crypto/", crypto_tests },
   { "crypto/ope/", crypto_ope_tests },

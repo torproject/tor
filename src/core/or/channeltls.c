@@ -950,7 +950,6 @@ channel_tls_listener_describe_transport_method(channel_listener_t *chan_l)
 void
 channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
                                           or_connection_t *conn,
-                                          uint8_t old_state,
                                           uint8_t state)
 {
   channel_t *base_chan;
@@ -959,8 +958,6 @@ channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
   tor_assert(conn);
   tor_assert(conn->chan == chan);
   tor_assert(chan->conn == conn);
-  /* Shut the compiler up without triggering -Wtautological-compare */
-  (void)old_state;
 
   base_chan = TLS_CHAN_TO_BASE(chan);
 

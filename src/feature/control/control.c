@@ -34,6 +34,7 @@
  **/
 
 #define CONTROL_PRIVATE
+#define OCIRC_EVENT_PRIVATE
 
 #include "core/or/or.h"
 #include "app/config/config.h"
@@ -50,6 +51,7 @@
 #include "core/or/command.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
+#include "core/or/ocirc_event.h"
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/versions.h"
@@ -3749,7 +3751,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   connection_printf_to_buf(conn, "250 EXTENDED %lu\r\n",
                              (unsigned long)circ->global_identifier);
   if (zero_circ) /* send a 'launched' event, for completeness */
-    control_event_circuit_status(circ, CIRC_EVENT_LAUNCHED, 0);
+    circuit_event_status(circ, CIRC_EVENT_LAUNCHED, 0);
  done:
   SMARTLIST_FOREACH(router_nicknames, char *, n, tor_free(n));
   smartlist_free(router_nicknames);
@@ -5625,6 +5627,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
 {
   const char *status;
   char reasons[64] = "";
+
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
   tor_assert(circ);

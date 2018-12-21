@@ -29,6 +29,7 @@
  */
 #define TOR_CHANNEL_INTERNAL_
 #define CONNECTION_OR_PRIVATE
+#define ORCONN_EVENT_PRIVATE
 #include "core/or/channel.h"
 #include "core/or/channeltls.h"
 #include "core/or/circuitbuild.h"
@@ -78,6 +79,8 @@
 
 #include "lib/tls/tortls.h"
 #include "lib/tls/x509.h"
+
+#include "core/or/orconn_event.h"
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_launch_v3_or_handshake(or_connection_t *conn);
@@ -401,6 +404,49 @@ connection_or_report_broken_states(int severity, int domain)
   smartlist_free(items);
 }
 
+/**
+ * Helper function to publish an OR connection status event
+ *
+ * Publishes a messages to subscribers of ORCONN messages, and sends
+ * the control event.
+ **/
+void
+connection_or_event_status(or_connection_t *conn, or_conn_status_event_t tp,
+                           int reason)
+{
+  orconn_event_msg_t msg;
+
+  msg.type = ORCONN_MSGTYPE_STATUS;
+  msg.u.status.gid = conn->base_.global_identifier;
+  msg.u.status.status = tp;
+  msg.u.status.reason = reason;
+  orconn_event_publish(&msg);
+  control_event_or_conn_status(conn, tp, reason);
+}
+
+/**
+ * Helper function to publish a state change message
+ *
+ * connection_or_change_state() calls this to notify subscribers about
+ * a change of an OR connection state.
+ **/
+static void
+connection_or_state_publish(const or_connection_t *conn, uint8_t state)
+{
+  orconn_event_msg_t msg;
+
+  msg.type = ORCONN_MSGTYPE_STATE;
+  msg.u.state.gid = conn->base_.global_identifier;
+  msg.u.state.proxy_type = conn->proxy_type;
+  msg.u.state.state = state;
+  if (conn->chan) {
+    msg.u.state.chan = TLS_CHAN_TO_BASE(conn->chan)->global_identifier;
+  } else {
+    msg.u.state.chan = 0;
+  }
+  orconn_event_publish(&msg);
+}
+
 /** Call this to change or_connection_t states, so the owning channel_tls_t can
  * be notified.
  */
@@ -408,16 +454,13 @@ connection_or_report_broken_states(int severity, int domain)
 static void
 connection_or_change_state(or_connection_t *conn, uint8_t state)
 {
-  uint8_t old_state;
-
   tor_assert(conn);
 
-  old_state = conn->base_.state;
   conn->base_.state = state;
 
+  connection_or_state_publish(conn, state);
   if (conn->chan)
-    channel_tls_handle_state_change_on_orconn(conn->chan, conn,
-                                              old_state, state);
+    channel_tls_handle_state_change_on_orconn(conn->chan, conn, state);
 }
 
 /** Return the number of circuits using an or_connection_t; this used to
@@ -708,8 +751,6 @@ connection_or_finished_connecting(or_connection_t *or_conn)
 
   log_debug(LD_HANDSHAKE,"OR connect() to router at %s:%u finished.",
             conn->address,conn->port);
-  control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
-  control_event_boot_first_orconn();
 
   if (proxy_type != PROXY_NONE) {
     /* start proxy handshake */
@@ -759,8 +800,8 @@ connection_or_about_to_close(or_connection_t *or_conn)
       entry_guard_chan_failed(TLS_CHAN_TO_BASE(or_conn->chan));
       if (conn->state >= OR_CONN_STATE_TLS_HANDSHAKING) {
         int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
-        control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
-                                     reason);
+        connection_or_event_status(or_conn, OR_CONN_EVENT_FAILED,
+                                   reason);
         if (!authdir_mode_tests_reachability(options))
           control_event_bootstrap_prob_or(
                 orconn_end_reason_to_control_string(reason),
@@ -770,10 +811,10 @@ connection_or_about_to_close(or_connection_t *or_conn)
   } else if (conn->hold_open_until_flushed) {
     /* We only set hold_open_until_flushed when we're intentionally
      * closing a connection. */
-    control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
+    connection_or_event_status(or_conn, OR_CONN_EVENT_CLOSED,
                 tls_error_to_orconn_end_reason(or_conn->tls_error));
   } else if (!tor_digest_is_zero(or_conn->identity_digest)) {
-    control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
+    connection_or_event_status(or_conn, OR_CONN_EVENT_CLOSED,
                 tls_error_to_orconn_end_reason(or_conn->tls_error));
   }
 }
@@ -1365,7 +1406,7 @@ void
 connection_or_connect_failed(or_connection_t *conn,
                              int reason, const char *msg)
 {
-  control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED, reason);
+  connection_or_event_status(conn, OR_CONN_EVENT_FAILED, reason);
   if (!authdir_mode_tests_reachability(get_options()))
     control_event_bootstrap_prob_or(msg, reason, conn);
   note_or_connect_failed(conn);
@@ -1472,9 +1513,6 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
     return NULL;
   }
 
-  connection_or_change_state(conn, OR_CONN_STATE_CONNECTING);
-  control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
-
   conn->is_outgoing = 1;
 
   /* If we are using a proxy server, find it and use it. */
@@ -1486,7 +1524,14 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
       port = proxy_port;
       conn->base_.proxy_state = PROXY_INFANT;
     }
+    connection_or_change_state(conn, OR_CONN_STATE_CONNECTING);
+    connection_or_event_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
   } else {
+    /* This duplication of state change calls is necessary in case we
+     * run into an error condition below */
+    connection_or_change_state(conn, OR_CONN_STATE_CONNECTING);
+    connection_or_event_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
+
     /* get_proxy_addrport() might fail if we have a Bridge line that
        references a transport, but no ClientTransportPlugin lines
        defining its transport proxy. If this is the case, let's try to
@@ -1982,8 +2027,8 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
 
     /* Tell the new guard API about the channel failure */
     entry_guard_chan_failed(TLS_CHAN_TO_BASE(conn->chan));
-    control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
-                                 END_OR_CONN_REASON_OR_IDENTITY);
+    connection_or_event_status(conn, OR_CONN_EVENT_FAILED,
+                               END_OR_CONN_REASON_OR_IDENTITY);
     if (!authdir_mode_tests_reachability(options))
       control_event_bootstrap_prob_or(
                                 "Unexpected identity in router certificate",
@@ -2223,7 +2268,7 @@ int
 connection_or_set_state_open(or_connection_t *conn)
 {
   connection_or_change_state(conn, OR_CONN_STATE_OPEN);
-  control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED, 0);
+  connection_or_event_status(conn, OR_CONN_EVENT_CONNECTED, 0);
 
   /* Link protocol 3 appeared in Tor 0.2.3.6-alpha, so any connection
    * that uses an earlier link protocol should not be treated as a relay. */

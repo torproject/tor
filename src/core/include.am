@@ -39,6 +39,8 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/or/connection_or.c		\
 	src/core/or/dos.c			\
 	src/core/or/onion.c			\
+	src/core/or/ocirc_event.c		\
+	src/core/or/orconn_event.c		\
 	src/core/or/policies.c			\
 	src/core/or/protover.c			\
 	src/core/or/protover_rust.c		\
@@ -61,6 +63,11 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/client/dnsserv.c		\
 	src/feature/client/entrynodes.c		\
 	src/feature/client/transports.c		\
+	src/feature/control/btrack.c		\
+	src/feature/control/btrack_circuit.c	\
+	src/feature/control/btrack_orconn.c	\
+	src/feature/control/btrack_orconn_cevent.c	\
+	src/feature/control/btrack_orconn_maps.c	\
 	src/feature/control/control.c		\
 	src/feature/control/control_bootstrap.c	\
 	src/feature/control/fmt_serverstatus.c  \
@@ -238,10 +245,14 @@ noinst_HEADERS +=					\
 	src/core/or/listener_connection_st.h		\
 	src/core/or/onion.h				\
 	src/core/or/or.h				\
+	src/core/or/orconn_event.h			\
+	src/core/or/orconn_event_sys.h			\
 	src/core/or/or_circuit_st.h			\
 	src/core/or/or_connection_st.h			\
 	src/core/or/or_handshake_certs_st.h		\
 	src/core/or/or_handshake_state_st.h		\
+	src/core/or/ocirc_event.h			\
+	src/core/or/ocirc_event_sys.h			\
 	src/core/or/origin_circuit_st.h			\
 	src/core/or/policies.h				\
 	src/core/or/port_cfg_st.h			\
@@ -268,6 +279,11 @@ noinst_HEADERS +=					\
 	src/feature/client/dnsserv.h			\
 	src/feature/client/entrynodes.h			\
 	src/feature/client/transports.h			\
+	src/feature/control/btrack_circuit.h		\
+	src/feature/control/btrack_orconn.h		\
+	src/feature/control/btrack_orconn_cevent.h	\
+	src/feature/control/btrack_orconn_maps.h	\
+	src/feature/control/btrack_sys.h		\
 	src/feature/control/control.h			\
 	src/feature/control/control_connection_st.h	\
 	src/feature/control/fmt_serverstatus.h		\
