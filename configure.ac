@@ -2129,6 +2129,8 @@ case "$host_os" in
     LDFLAGS="$LDFLAGS -dead_strip" ;;
 esac
 
+TOR_WARNING_FLAGS=""
+
 # Add some more warnings which we use in development but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)
 #
@@ -2145,6 +2147,8 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
       # with maximal warnings on OpenBSD.
       CFLAGS="$CFLAGS -Wno-system-headers" ;;
   esac
+
+  CFLAGS_NOWARNINGS="$CFLAGS"
 
   # GCC4.3 users once report trouble with -Wstrict-overflow=5.  GCC5 users
   # have it work better.
@@ -2361,7 +2365,9 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wvisibility
      -Wvla-extension
      -Wzero-length-array
-  ], [ TOR_CHECK_CFLAGS([warning_flag]) ])
+  ], [ TOR_TRY_COMPILE_WITH_CFLAGS(warning_flag, [],
+              [TOR_WARNING_FLAGS="$TOR_WARNING_FLAGS warning_flag" CFLAGS="$CFLAGS warning_flag"], true)
+     ])
 
 dnl    We should re-enable this in some later version.  Clang doesn't
 dnl    mind, but it causes trouble with GCC.
@@ -2375,16 +2381,19 @@ dnl     -Wthread-safety-attributes
 dnl     -Wthread-safety-beta
 dnl     -Wthread-safety-precise
 
-  CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith"
-  CFLAGS="$CFLAGS -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings"
-  CFLAGS="$CFLAGS -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2"
-  CFLAGS="$CFLAGS -Wwrite-strings"
-  CFLAGS="$CFLAGS -Wnested-externs -Wbad-function-cast -Wswitch-enum"
-  CFLAGS="$CFLAGS -Waggregate-return -Wpacked -Wunused"
-  CFLAGS="$CFLAGS -Wunused-parameter "
+  W_FLAGS="$W_FLAGS -W -Wfloat-equal -Wundef -Wpointer-arith"
+  W_FLAGS="$W_FLAGS -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings"
+  W_FLAGS="$W_FLAGS -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2"
+  W_FLAGS="$W_FLAGS -Wwrite-strings"
+  W_FLAGS="$W_FLAGS -Wnested-externs -Wbad-function-cast -Wswitch-enum"
+  W_FLAGS="$W_FLAGS -Waggregate-return -Wpacked -Wunused"
+  W_FLAGS="$W_FLAGS -Wunused-parameter "
   # These interfere with building main() { return 0; }, which autoconf
   # likes to use as its default program.
-  CFLAGS="$CFLAGS -Wold-style-definition -Wmissing-declarations"
+  W_FLAGS="$W_FLAGS -Wold-style-definition -Wmissing-declarations"
+
+  TOR_WARNING_FLAGS="$TOR_WARNING_FLAGS $W_FLAGS"
+  CFLAGS="$CFLAGS $W_FLAGS"
 
   if test "$tor_cv_cflags__Wnull_dereference" = "yes"; then
     AC_DEFINE([HAVE_CFLAG_WNULL_DEREFERENCE], 1, [True if we have -Wnull-dereference])
@@ -2396,6 +2405,8 @@ dnl     -Wthread-safety-precise
     AC_DEFINE([HAVE_CFLAG_WUNUSED_CONST_VARIABLE], 1, [True if we have -Wunused-const-variable])
   fi
 
+  CFLAGS="$CFLAGS_NOWARNINGS"
+
   if test "x$enable_fatal_warnings" = "xyes"; then
     # I'd like to use TOR_CHECK_CFLAGS here, but I can't, since the
     # default autoconf programs are full of errors.
@@ -2403,6 +2414,14 @@ dnl     -Wthread-safety-precise
   fi
 
 fi
+
+AC_SUBST(TOR_WARNING_FLAGS)
+
+echo "$TOR_WARNING_FLAGS">warning_flags
+
+TOR_TRY_COMPILE_WITH_CFLAGS([@warning_flags], [],
+                            CFLAGS="$CFLAGS @warning_flags",
+                            CFLAGS="$CFLAGS $TOR_WARNING_FLAGS")
 
 if test "$enable_coverage" = "yes" && test "$have_clang" = "no"; then
    case "$host_os" in
@@ -2427,6 +2446,7 @@ AC_CONFIG_FILES([
 	src/rust/.cargo/config
 	scripts/maint/checkOptionDocs.pl
 	scripts/maint/updateVersions.pl
+        warning_flags
 ])
 
 if test "x$asciidoc" = "xtrue" && test "$ASCIIDOC" = "none"; then

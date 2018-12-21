@@ -72,8 +72,11 @@ uptime-*.json
 /mkinstalldirs
 /Tor*Bundle.dmg
 /tor-*-win32.exe
+/warning_flags
+
 /coverage_html/
 /callgraph/
+
 
 # /contrib/
 /contrib/dist/tor.sh
