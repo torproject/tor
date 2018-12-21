@@ -1,9 +1,6 @@
 TODO sketch for this branch, in rough priority order:
 
 - Clean up/fix XXX's and FIXMEs
-  - Tokens test:
-    - Token removal rules (closest and lower)
-    - Verify token removal testing is thorough
   - valgrind all tests and fix leaks...
   - Test event entry points into circuitpad?
     - Most of our events come from completely untested code :/
