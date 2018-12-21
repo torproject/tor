@@ -33,10 +33,10 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_logging, /* -90 */
   &sys_time, /* -90 */
   &sys_network, /* -90 */
-  &sys_process, /* -80 */
   &sys_compress, /* -70 */
   &sys_crypto, /* -60 */
   &sys_tortls, /* -50 */
+  &sys_process, /* -35 */
 };
 
 const unsigned n_tor_subsystems = ARRAY_LENGTH(tor_subsystems);

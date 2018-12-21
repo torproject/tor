@@ -26,7 +26,7 @@ subsys_process_shutdown(void)
 
 const subsys_fns_t sys_process = {
   .name = "process",
-  .level = -80,
+  .level = -35,
   .supported = true,
   .initialize = subsys_process_initialize,
   .shutdown = subsys_process_shutdown
