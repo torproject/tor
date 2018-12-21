@@ -2550,10 +2550,11 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
   tt_assert(header);
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Encoding: deflate\r\n"));
-  tt_assert(strstr(header, "Content-Length: 167\r\n"));
 
-  tt_int_op(body_used, OP_EQ, strlen(body));
-  tt_str_op(content, OP_EQ, body);
+  /* Since using connection_write_to_buf_mock instead of mocking
+   * connection_buf_add_compress, the content is not actually compressed.
+   * If it would, the size and content would be different than the original.
+  */
 
  done:
   UNMOCK(get_options);
