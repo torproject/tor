@@ -62,6 +62,9 @@ bto_update_best(const bt_orconn_t *bto, bto_best_t *best, const char *type)
 {
   if (bto->state < best->state)
     return false;
+  /* Update even if we won't change best->state, because it's more
+   * recent information that a particular connection transitioned to
+   * that state. */
   best->gid = bto->gid;
   if (bto->state > best->state) {
     log_info(LD_BTRACK, "ORCONN BEST_%s state %d->%d gid=%"PRIu64, type,
