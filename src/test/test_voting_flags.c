@@ -35,7 +35,7 @@ setup_cfg(flag_vote_test_cfg_t *c)
   strlcpy(c->expected.nickname, "testing100", sizeof(c->expected.nickname));
 
   memset(c->ri.cache_info.identity_digest, 0xff, DIGEST_LEN);
-  memset(c->ri.cache_info.signed_descriptor_digest, 0xee, DIGEST256_LEN);
+  memset(c->ri.cache_info.signed_descriptor_digest, 0xee, DIGEST_LEN);
 
   c->ri.cache_info.published_on = c->now - 100;
   c->expected.published_on = c->now - 100;
