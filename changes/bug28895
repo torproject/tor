@@ -1,0 +1,5 @@
+  o Minor bugfixes (usability):
+    - Stop saying "Your Guard ..." in pathbias_measure_{use,close}_rate()
+      as that confusingly suggests that mentioned guard node is under control
+      and responsibility of end user, which it is not. Fixes bug 28895;
+      bugfix on Tor 0.3.0.1-alpha.
