@@ -23,6 +23,10 @@
 #include "test/test_helpers.h"
 #include "lib/net/resolve.h"
 
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+
 #define NS_MODULE test_options
 
 typedef struct {
