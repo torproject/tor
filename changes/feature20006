@@ -1,0 +1,4 @@
+  o Minor features (controller, Onion Services):
+    - Make HSFETCH support Onion Services that have client auth enabled by
+      checking if we previously received auth cookie from HidServAuth
+      configuration entry. Resolves ticket 20006.

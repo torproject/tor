@@ -4470,8 +4470,23 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
     }
   }
 
-  rend_query = rend_data_client_create(hsaddress, desc_id, NULL,
-                                       REND_NO_AUTH);
+  rend_auth_type_t auth_type = REND_NO_AUTH;
+  rend_service_authorization_t *auth = NULL;
+
+  char *cookie = NULL;
+
+  if (hsaddress) {
+    auth = rend_client_lookup_service_authorization(hsaddress);
+
+    if (auth) {
+      auth_type = auth->auth_type;
+      cookie = (char *)auth->descriptor_cookie;
+    }
+  }
+
+  rend_query = rend_data_client_create(hsaddress, desc_id,
+                                       (const char *)cookie,
+                                       auth_type);
   if (rend_query == NULL) {
     connection_printf_to_buf(conn, "551 Error creating the HS query\r\n");
     goto done;
