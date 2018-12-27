@@ -5,8 +5,6 @@ TODO sketch for this branch, in rough priority order:
     - Most of our events come from completely untested code :/
 
 - Compat-breaking changes to be decided/done ASAP
-  - Negotiate errors are not remembered.. If there is a consensus desync,
-    clients will keep trying machines that middles do not have..
   - Option to keep circuits open if machine present
   - Specify an ordered preference list of padding machines
   - Specify exit policy for machine conditions?
