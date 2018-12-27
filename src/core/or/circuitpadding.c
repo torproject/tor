@@ -2018,6 +2018,8 @@ circpad_setup_machine_on_circ(circuit_t *on_circ,
   on_circ->padding_machine[machine->machine_index] = machine;
 }
 
+/* These padding machines are only used for tests pending #28634. */
+#ifdef TOR_UNIT_TESTS
 static void
 circpad_circ_client_machine_init(void)
 {
@@ -2163,6 +2165,7 @@ circpad_circ_responder_machine_init(void)
   circ_responder_machine->machine_num = smartlist_len(relay_padding_machines);
   smartlist_add(relay_padding_machines, circ_responder_machine);
 }
+#endif
 
 /**
  * Initialize all of our padding machines.
@@ -2180,9 +2183,10 @@ circpad_machines_init(void)
   relay_padding_machines = smartlist_new();
 
   // TODO: Parse machines from consensus and torrc
-
+#ifdef TOR_UNIT_TESTS
   circpad_circ_client_machine_init();
   circpad_circ_responder_machine_init();
+#endif
 }
 
 /**
