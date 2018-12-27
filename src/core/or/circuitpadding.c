@@ -380,11 +380,13 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
   const circpad_state_t *state = circpad_machine_current_state(mi);
   const circpad_hist_token_t *histogram = NULL;
   circpad_hist_index_t curr_bin = 0;
-  uint32_t curr_weight = 0;
-  uint32_t histogram_total_tokens = 0;
-  uint32_t bin_choice;
   circpad_delay_t bin_start, bin_end;
   circpad_delay_t start_usec;
+  /* These three must all be larger than circpad_hist_token_t, because
+   * we sum several circpad_hist_token_t values across the histogram */
+  uint64_t curr_weight = 0;
+  uint64_t histogram_total_tokens = 0;
+  uint64_t bin_choice;
 
   tor_assert(state);
 
@@ -412,7 +414,7 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
     histogram_total_tokens = state->histogram_total_tokens;
   }
 
-  bin_choice = crypto_rand_int(histogram_total_tokens);
+  bin_choice = crypto_rand_uint64(histogram_total_tokens);
 
   /* Skip all the initial zero bins */
   while (!histogram[curr_bin]) {
