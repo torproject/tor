@@ -10,8 +10,16 @@ TODO sketch for this branch, in rough priority order:
   - Specify an ordered preference list of padding machines
   - Option to keep circuits open if machine present
   - Specify exit policy for machine conditions?
-    - Accept and reject? based on attached streams?
-    - md-compatibile representation only.. for brevity.
+    - short_policy_t looks good, except for its flexible array member :/
+      - Can we make our own struct with a small, fixed number of policy
+        entries? Say 3-4? Or is that a bad idea to lose this flexibility?
+    - Check conditions based on attached streams on the circuit
+      - Accept should mean "only apply if matched"
+      - Reject should mean "don't apply if matched"
+      - If a policy is specified, Reject *:* is implicit default (so reject
+        policies need an Accept entry).
+      - With no policy, Accept *:* is implicit default.
+
 
 - Misc fixes:
   - Remove circuitsetup machine (but place it in unittests -- they depend on it)
