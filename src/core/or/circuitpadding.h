@@ -62,7 +62,7 @@ typedef enum {
 } circpad_decision_t;
 
 /** The type for the things in histogram bins (aka tokens) */
-typedef uint16_t circpad_hist_token_t;
+typedef uint32_t circpad_hist_token_t;
 
 /** The type for histogram indexes (needs to be negative for errors) */
 typedef int8_t circpad_hist_index_t;
