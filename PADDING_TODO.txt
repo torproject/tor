@@ -9,10 +9,6 @@ TODO sketch for this branch, in rough priority order:
     clients will keep trying machines that middles do not have..
   - Specify an ordered preference list of padding machines
   - Option to keep circuits open if machine present
-  - Larger types?
-    - Larger circpad_hist_token_t? Yes. Should be uint32_t
-    - Larger circpad_delay_t? Nah
-    - Larger circpad_statenum_t? Nah
   - Specify exit policy for machine conditions?
     - Accept and reject? based on attached streams?
     - md-compatibile representation only.. for brevity.
