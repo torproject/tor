@@ -1688,6 +1688,10 @@ circpad_add_matching_machines(origin_circuit_t *on_circ)
     return;
 #endif
 
+  /* If padding negotiation failed before, do not try again */
+  if (on_circ->padding_negotiation_failed)
+    return;
+
   FOR_EACH_CIRCUIT_MACHINE_BEGIN(i) {
     /* If there is a padding machine info, this index is occupied.
      * No need to check conditions for this index. */
@@ -1727,6 +1731,7 @@ circpad_add_matching_machines(origin_circuit_t *on_circ)
                                   CIRCPAD_COMMAND_START) < 0) {
           circpad_circuit_machineinfo_free_idx(circ, i);
           circ->padding_machine[i] = NULL;
+          on_circ->padding_negotiation_failed = 1;
         } else {
           /* Success. Don't try any more machines */
           return;
@@ -2441,6 +2446,7 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
     // This can happen due to consensus drift.. free the machines
     // and be sad
     free_circ_machineinfos_with_machine_num(circ, negotiated->machine_type);
+    TO_ORIGIN_CIRCUIT(circ)->padding_negotiation_failed = 1;
     log_fn(LOG_INFO, LD_CIRC,
            "Middle node did not accept our padding request.");
   }
