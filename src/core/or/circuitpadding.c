@@ -157,7 +157,7 @@ circpad_circuit_machineinfo_new(circuit_t *on_circ, int machine_index)
  * invalid state.
  */
 STATIC const circpad_state_t *
-circpad_machine_current_state(circpad_machineinfo_t *mi)
+circpad_machine_current_state(const circpad_machineinfo_t *mi)
 {
   const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
 
@@ -189,7 +189,7 @@ circpad_machine_current_state(circpad_machineinfo_t *mi)
  * It has a usec value of CIRCPAD_DELAY_INFINITE (UINT32_MAX).
  */
 STATIC circpad_delay_t
-circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi,
+circpad_histogram_bin_to_usec(const circpad_machineinfo_t *mi,
                               circpad_hist_index_t bin)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
@@ -222,6 +222,18 @@ circpad_histogram_bin_to_usec(circpad_machineinfo_t *mi,
   return (circpad_delay_t)MIN(start_usec +
                               state->range_usec/bin_width_exponent,
                               CIRCPAD_DELAY_INFINITE);
+}
+
+/** Return the midpoint of the histogram bin <b>bin_index</b>. */
+static circpad_delay_t
+circpad_get_histogram_bin_midpoint(const circpad_machineinfo_t *mi,
+                           int bin_index)
+{
+  circpad_delay_t left_bound = circpad_histogram_bin_to_usec(mi, bin_index);
+  circpad_delay_t right_bound =
+    circpad_histogram_bin_to_usec(mi, bin_index+1)-1;
+
+  return left_bound + (right_bound - left_bound)/2;
 }
 
 /**
@@ -446,6 +458,8 @@ circpad_machine_sample_delay(circpad_machineinfo_t *mi)
   tor_assert(curr_bin < CIRCPAD_INFINITY_BIN(state));
 
   bin_start = circpad_histogram_bin_to_usec(mi, curr_bin);
+  /* We don't need to reduct 1 from the upper bound because the random range
+   * function below samples from [bin_start, bin_end) */
   bin_end = circpad_histogram_bin_to_usec(mi, curr_bin+1);
 
   /* Truncate the high bin in case it's the infinity bin:
@@ -532,7 +546,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
  * greater than the target, and that has tokens remaining.
  */
 static circpad_hist_index_t
-circpad_machine_first_higher_index(circpad_machineinfo_t *mi,
+circpad_machine_first_higher_index(const circpad_machineinfo_t *mi,
                                    circpad_delay_t target_bin_usec)
 {
   circpad_hist_index_t bin = circpad_histogram_usec_to_bin(mi,
@@ -554,7 +568,7 @@ circpad_machine_first_higher_index(circpad_machineinfo_t *mi,
  * <b>target_bin_usec</b>, and that still has tokens remaining.
  */
 static circpad_hist_index_t
-circpad_machine_first_lower_index(circpad_machineinfo_t *mi,
+circpad_machine_first_lower_index(const circpad_machineinfo_t *mi,
                                   circpad_delay_t target_bin_usec)
 {
   circpad_hist_index_t bin = circpad_histogram_usec_to_bin(mi,
@@ -619,7 +633,9 @@ circpad_machine_remove_lower_token(circpad_machineinfo_t *mi,
 /**
  * Remove a token from the closest non-empty bin to the target.
  *
- * If use_usec is true, measure "closest" in terms of bin start usec.
+ * If use_usec is true, measure "closest" in terms of the next closest bin
+ * midpoint.
+ *
  * If it is false, use bin index distance only.
  */
 STATIC void
@@ -639,8 +655,9 @@ circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
     return;
   }
 
+  /* Take care of edge cases first */
   if (higher == mi->histogram_len && lower == -1) {
-    // Bins are empty
+    /* All bins are empty */
     return;
   } else if (higher == mi->histogram_len) {
     /* All higher bins are empty */
@@ -654,6 +671,7 @@ circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
     return;
   }
 
+  /* Now handle the intermediate cases */
   if (use_usec) {
     /* Find the closest bin midpoint to the target */
     circpad_delay_t lower_usec = circpad_get_histogram_bin_midpoint(mi, lower);
@@ -677,6 +695,9 @@ circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
       ENSURE_BIN_CAPACITY(lower);
       bin_to_remove = lower;
     }
+    mi->histogram[bin_to_remove]--;
+    log_debug(LD_GENERAL, "Removing token from bin %d", bin_to_remove);
+    return;
   } else {
     if (current - lower > higher - current) {
       // Higher bin is closer
@@ -756,7 +777,7 @@ check_machine_token_supply(circpad_machineinfo_t *mi)
  *
  * Returns 1 if we transition states, 0 otherwise.
  */
-circpad_decision_t
+STATIC circpad_decision_t
 circpad_machine_remove_token(circpad_machineinfo_t *mi)
 {
   const circpad_state_t *state = NULL;
@@ -841,10 +862,10 @@ circpad_machine_remove_token(circpad_machineinfo_t *mi)
  *
  * Returns negative on error, 0 on success.
  */
-static signed_error_t
-circpad_send_command_to_hop(origin_circuit_t *circ, uint8_t hopnum,
-                            uint8_t relay_command, const uint8_t *payload,
-                            ssize_t payload_len)
+MOCK_IMPL(STATIC signed_error_t,
+circpad_send_command_to_hop,(origin_circuit_t *circ, uint8_t hopnum,
+                             uint8_t relay_command, const uint8_t *payload,
+                             ssize_t payload_len))
 {
   crypt_path_t *target_hop = circuit_get_cpath_hop(circ, hopnum);
   signed_error_t ret;
@@ -1017,7 +1038,7 @@ circpad_new_consensus_params(const networkstatus_t *ns)
  *
  * Returns 1 if limits are set and we've hit them. Otherwise returns 0.
  */
-static bool
+STATIC bool
 circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi)
 {
   const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
@@ -1025,7 +1046,7 @@ circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi)
   /* If machine_padding_pct is non-zero, and we've sent more
    * than the allowed count of padding cells, then check our
    * percent limits for this machine. */
-  if (machine->max_padding_percent &&
+   if (machine->max_padding_percent &&
       mi->padding_sent >= machine->allowed_padding_count) {
     uint32_t total_cells = mi->padding_sent + mi->nonpadding_sent;
 
@@ -1046,7 +1067,7 @@ circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi)
 
     /* Check the percent */
     if ((100*circpad_global_padding_sent) / total_cells >
-         circpad_global_max_padding_percent) {
+        circpad_global_max_padding_percent) {
       return 1; // global limit reached. Stop.
     }
   }
@@ -1205,9 +1226,9 @@ circpad_machine_transitioned_to_end(circpad_machineinfo_t *mi)
  *
  * Returns 1 if we transition states, 0 otherwise.
  */
-circpad_decision_t
-circpad_machine_transition(circpad_machineinfo_t *mi,
-                           circpad_event_t event)
+MOCK_IMPL(circpad_decision_t,
+circpad_machine_transition,(circpad_machineinfo_t *mi,
+                            circpad_event_t event))
 {
   const circpad_state_t *state =
       circpad_machine_current_state(mi);

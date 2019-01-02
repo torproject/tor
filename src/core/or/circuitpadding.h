@@ -675,6 +675,11 @@ STATIC void circpad_machine_remove_closest_token(circpad_machineinfo_t *mi,
                                          bool use_usec);
 STATIC void circpad_machine_setup_tokens(circpad_machineinfo_t *mi);
 
+MOCK_DECL(STATIC signed_error_t,
+circpad_send_command_to_hop,(origin_circuit_t *circ, uint8_t hopnum,
+                             uint8_t relay_command, const uint8_t *payload,
+                             ssize_t payload_len));
+
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *origin_padding_machines;
 extern smartlist_t *relay_padding_machines;
