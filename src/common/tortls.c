@@ -2613,6 +2613,7 @@ tor_tls_export_key_material,(tor_tls_t *tls, uint8_t *secrets_out,
                                      label, strlen(label),
                                      context, context_len, 1);
 
+#ifdef TLS1_3_VERSION
   if (r != 1 &&
       strlen(label) > 12 &&
       SSL_version(tls->ssl) >= TLS1_3_VERSION) {
@@ -2637,6 +2638,7 @@ tor_tls_export_key_material,(tor_tls_t *tls, uint8_t *secrets_out,
     else
       return -1;
   }
+#endif
 
   return (r == 1) ? 0 : -1;
 }
