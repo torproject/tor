@@ -1,0 +1,4 @@
+  o Minor features (compilation):
+    - When possible, place our warning flags in a separate file, to avoid
+      flooding verbose build logs to an unacceptable amount. Closes ticket
+      28924.
