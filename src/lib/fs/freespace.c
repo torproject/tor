@@ -19,6 +19,7 @@
 #include <windows.h>
 #endif
 
+#include <errno.h>
 #include <string.h>
 
 /** Return the amount of free disk space we have permission to use, in
