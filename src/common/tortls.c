@@ -2613,6 +2613,11 @@ tor_tls_export_key_material,(tor_tls_t *tls, uint8_t *secrets_out,
                                      label, strlen(label),
                                      context, context_len, 1);
 
+  if (r != 1) {
+    int severity = openssl_bug_7712_is_present ? LOG_WARN : LOG_DEBUG;
+    tls_log_errors(tls, severity, LD_NET, "exporting keying material");
+  }
+
 #ifdef TLS1_3_VERSION
   if (r != 1 &&
       strlen(label) > 12 &&
