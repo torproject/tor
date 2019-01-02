@@ -104,7 +104,7 @@ static void
 test_voting_flags_minimal(void *arg)
 {
   flag_vote_test_cfg_t *cfg = arg;
-  check_result(cfg);
+  (void) check_result(cfg);
 }
 
 static void
@@ -189,4 +189,3 @@ struct testcase_t voting_flags_tests[] = {
   T(staledesc, TT_FORK),
   END_OF_TESTCASES
 };
-
