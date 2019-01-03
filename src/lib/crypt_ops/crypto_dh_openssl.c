@@ -45,6 +45,8 @@ static BIGNUM *dh_param_p_tls = NULL;
 /** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
 
+/* This function is disabled unless we change the DH parameters. */
+#if 0
 /** Validate a given set of Diffie-Hellman parameters.  This is moderately
  * computationally expensive (milliseconds), so should only be called when
  * the DH parameters change. Returns 0 on success, * -1 on failure.
@@ -98,6 +100,7 @@ crypto_validate_dh_params(const BIGNUM *p, const BIGNUM *g)
     DH_free(dh);
   return ret;
 }
+#endif
 
 /**
  * Helper: convert <b>hex<b> to a bignum, and return it.  Assert that the
@@ -151,8 +154,11 @@ crypto_dh_init_openssl(void)
   dh_param_p = bignum_from_hex(OAKLEY_PRIME_2);
   dh_param_p_tls = bignum_from_hex(TLS_DH_PRIME);
 
+  /* Checks below are disabled unless we change the hardcoded DH parameters. */
+#if 0
   tor_assert(0 == crypto_validate_dh_params(dh_param_p, dh_param_g));
   tor_assert(0 == crypto_validate_dh_params(dh_param_p_tls, dh_param_g));
+#endif
 }
 
 /** Number of bits to use when choosing the x or y value in a Diffie-Hellman
