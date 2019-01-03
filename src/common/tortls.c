@@ -106,6 +106,9 @@ ENABLE_GCC_WARNING(redundant-decls)
 #define SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION 0x0010
 #endif
 
+/** Set to true iff openssl bug 7712 has been detected. */
+static int openssl_bug_7712_is_present = 0;
+
 /** Return values for tor_tls_classify_client_ciphers.
  *
  * @{
@@ -1722,6 +1725,13 @@ tor_tls_new(int sock, int isServer)
   }
 #endif /* defined(SSL_set_tlsext_host_name) */
 
+#ifdef SSL_CTRL_SET_MAX_PROTO_VERSION
+  if (openssl_bug_7712_is_present) {
+    /* We can't actually use TLS 1.3 until this bug is fixed. */
+    SSL_set_max_proto_version(result->ssl, TLS1_2_VERSION);
+  }
+#endif
+
   if (!SSL_set_cipher_list(result->ssl,
                      isServer ? SERVER_CIPHER_LIST : CLIENT_CIPHER_LIST)) {
     tls_log_errors(NULL, LOG_WARN, LD_NET, "setting ciphers");
@@ -2607,7 +2617,8 @@ tor_tls_get_tlssecrets,(tor_tls_t *tls, uint8_t *secrets_out))
  * provided <b>context</b> (<b>context_len</b> bytes long) and
  * <b>label</b> (a NUL-terminated string), compute a 32-byte secret in
  * <b>secrets_out</b> that only the parties to this TLS session can
- * compute.  Return 0 on success and -1 on failure.
+ * compute.  Return 0 on success; -1 on failure; and -2 on failure
+ * caused by OpenSSL bug 7712.
  */
 MOCK_IMPL(int,
 tor_tls_export_key_material,(tor_tls_t *tls, uint8_t *secrets_out,
@@ -2622,6 +2633,39 @@ tor_tls_export_key_material,(tor_tls_t *tls, uint8_t *secrets_out,
                                      secrets_out, DIGEST256_LEN,
                                      label, strlen(label),
                                      context, context_len, 1);
+
+  if (r != 1) {
+    int severity = openssl_bug_7712_is_present ? LOG_WARN : LOG_DEBUG;
+    tls_log_errors(tls, severity, LD_NET, "exporting keying material");
+  }
+
+#ifdef TLS1_3_VERSION
+  if (r != 1 &&
+      strlen(label) > 12 &&
+      SSL_version(tls->ssl) >= TLS1_3_VERSION) {
+
+    if (! openssl_bug_7712_is_present) {
+      /* We might have run into OpenSSL issue 7712, which caused OpenSSL
+       * 1.1.1a to not handle long labels.  Let's test to see if we have.
+       */
+      r = SSL_export_keying_material(tls->ssl, secrets_out, DIGEST256_LEN,
+                                     "short", 5, context, context_len, 1);
+      if (r == 1) {
+        /* A short label succeeds, but a long label fails. This was openssl
+         * issue 7712. */
+        openssl_bug_7712_is_present = 1;
+        log_warn(LD_GENERAL, "Detected OpenSSL bug 7712: disabling TLS 1.3 on "
+                 "future connections. A fix is expected to appear in OpenSSL "
+                 "1.1.1b.");
+      }
+    }
+    if (openssl_bug_7712_is_present)
+      return -2;
+    else
+      return -1;
+  }
+#endif
+
   return (r == 1) ? 0 : -1;
 }
 
