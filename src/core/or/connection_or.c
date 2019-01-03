@@ -2965,9 +2965,15 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     char label[128];
     tor_snprintf(label, sizeof(label),
                  "EXPORTER FOR TOR TLS CLIENT BINDING %s", authtype_str);
-    tor_tls_export_key_material(conn->tls, auth->tlssecrets,
-                                auth->cid, sizeof(auth->cid),
-                                label);
+    int r = tor_tls_export_key_material(conn->tls, auth->tlssecrets,
+                                        auth->cid, sizeof(auth->cid),
+                                        label);
+    if (r < 0) {
+      if (r != -2)
+        log_warn(LD_BUG, "TLS key export failed for unknown reason.");
+      // If r == -2, this was openssl bug 7712.
+      goto err;
+    }
   }
 
   /* 8 octets were reserved for the current time, but we're trying to get out
@@ -3095,10 +3101,8 @@ connection_or_send_authenticate_cell,(or_connection_t *conn, int authtype))
                                                  get_current_auth_keypair(),
                                                  0 /* not server */);
   if (! cell) {
-    /* LCOV_EXCL_START */
-    log_warn(LD_BUG, "Unable to compute authenticate cell!");
+    log_fn(LOG_PROTOCOL_WARN, LD_NET, "Unable to compute authenticate cell!");
     return -1;
-    /* LCOV_EXCL_STOP */
   }
   connection_or_write_var_cell_to_buf(cell, conn);
   var_cell_free(cell);
