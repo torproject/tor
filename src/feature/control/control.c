@@ -3069,11 +3069,6 @@ getinfo_helper_events(control_connection_t *control_conn,
           case VS_UNKNOWN: *answer = tor_strdup("unknown"); break;
           default: tor_fragile_assert();
           }
-      } else if (!strcmp(question, "status/version/num-versioning") ||
-                 !strcmp(question, "status/version/num-concurring")) {
-        tor_asprintf(answer, "%d", get_n_authorities(V3_DIRINFO));
-        log_warn(LD_GENERAL, "%s is deprecated; it no longer gives useful "
-                 "information", question);
       }
     } else if (!strcmp(question, "status/clients-seen")) {
       char *bridge_stats = geoip_get_bridge_stats_controller(time(NULL));
@@ -3366,10 +3361,6 @@ static const getinfo_item_t getinfo_items[] = {
       "A fresh relay/ei descriptor pair for Tor's current state. Not stored."),
   DOC("status/version/recommended", "List of currently recommended versions."),
   DOC("status/version/current", "Status of the current version."),
-  DOC("status/version/num-versioning", "Number of versioning authorities."),
-  DOC("status/version/num-concurring",
-      "Number of versioning authorities agreeing on the status of the "
-      "current version"),
   ITEM("address", misc, "IP address of this Tor host, if we can guess it."),
   ITEM("traffic/read", misc,"Bytes read since the process was started."),
   ITEM("traffic/written", misc,
