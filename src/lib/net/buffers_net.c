@@ -21,7 +21,10 @@
 #endif
 
 #include <stdlib.h>
+
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #ifdef PARANOIA
 /** Helper: If PARANOIA is defined, assert that the buffer in local variable
