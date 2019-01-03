@@ -130,7 +130,7 @@ get_total_system_memory_impl(void)
    * HW_PHYSMEM. */
   size_t memsize=0;
   size_t len = sizeof(memsize);
-  int mib[2] = {CTL_HW, HW_USERMEM};
+  int mib[2] = {CTL_HW, HW_PHYSMEM};
   if (sysctl(mib,2,&memsize,&len,NULL,0))
     return 0;
 
