@@ -160,6 +160,79 @@ circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
   }
 }
 
+/** Check if the current active machine on this circuit wants to manage circuit
+ * lifetimes on its own, and return true if the circuit should be marked for
+ * close, or false otherwise.
+ *
+ * If the machine does not manage the circuit lifetime itself, we just close
+ * the circuit if we get here. In the case where the machine manages the
+ * circuit lifetime there are 3 cases under which we can find ourselves here:
+ *
+ * 1) Machine has *not* reached END state, and another subsystem wants to close
+ *    the circuit: change the circuit purpose to ours but dont close it.
+ *
+ * 2) Machine has reached END state, and another subsystem wants to close the
+ *    circuit now: close the circuit!
+ *
+ * 3) Another subsystem had tried to close the circuit, and the machine just
+ *    reached END state: close the circuit.
+ */
+int
+circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
+{
+  /* If the circuit purpose is measurement or path bias, don't
+   * hold it open */
+  if (circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING ||
+      circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+    return 1;
+  }
+
+  /* If the circuit is closed for any reason other than these three valid,
+   * client-side close reasons, do not try to keep it open. It is probably
+   * damaged or unusable. Note this is OK with vanguards because
+   * controller-closed circuits have REASON=REQUESTED, so vanguards-closed
+   * circuits will not be held open (we want them to close ASAP). */
+  if (!(reason == END_CIRC_REASON_NONE ||
+        reason == END_CIRC_REASON_FINISHED ||
+        reason == END_CIRC_REASON_IP_NOW_REDUNDANT)) {
+    return 1;
+  }
+
+  FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, circ) {
+    circpad_machineinfo_t *mi = circ->padding_info[i];
+    if (!mi) {
+      continue;
+    }
+
+    const circpad_state_t *state = circpad_machine_current_state(mi);
+
+    /* If we're in END state (NULL here), then allow circ to get marked */
+    if (!state) {
+      continue;
+    }
+
+    /* If the machine does not want to control the circuit close itself, then
+     * just close the circuit right now */
+    if (!circ->padding_machine[i]->manage_circ_lifetime) {
+      return 1;
+    }
+
+    /* We now know that the machine controls when a circuit should be
+     * closed. In this case, we only want to close the circuit if another
+     * subsystem of Tor has already asked us to close this circuit AND the
+     * machine has reached the end state */
+
+    /* Change the circuit purpose regardless of whether we close the
+     * circuit. */
+    circuit_change_purpose(circ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
+
+    /* If the machine has reached the END state, close the circuit. */
+    return (mi->current_state == CIRCPAD_STATE_END) ? 1 : 0;
+  } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
+
+  return 1;
+}
+
 /** Free all the machineinfos in <b>circ</b> that match <b>machine_num</b>. */
 static void
 free_circ_machineinfos_with_machine_num(circuit_t *circ, int machine_num)
