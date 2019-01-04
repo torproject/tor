@@ -1,0 +1,6 @@
+  o Minor bugfixes (hidden service v3):
+    - When deleting an ephemeral onion service (DEL_ONION), do not close any
+      rendezvous circuits in order to let the existing client connections
+      finish by themselves or closed by the application. The HS v2 is doing
+      that already so now we have the same behavior for all versions. Fixes
+      bug 28619; bugfix on 0.3.3.1-alpha.
