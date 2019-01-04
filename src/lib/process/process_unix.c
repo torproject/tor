@@ -183,8 +183,8 @@ process_unix_exec(process_t *process)
     close(stdin_pipe[1]);
 
     /** Cleanup standard out pipe. */
-    close(stdin_pipe[0]);
-    close(stdin_pipe[1]);
+    close(stdout_pipe[0]);
+    close(stdout_pipe[1]);
 
     return PROCESS_STATUS_ERROR;
   }
@@ -281,8 +281,8 @@ process_unix_exec(process_t *process)
     close(stdin_pipe[1]);
 
     /** Cleanup standard out pipe. */
-    close(stdin_pipe[0]);
-    close(stdin_pipe[1]);
+    close(stdout_pipe[0]);
+    close(stdout_pipe[1]);
 
     /** Cleanup standard error pipe. */
     close(stderr_pipe[0]);
