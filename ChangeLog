@@ -1,3 +1,65 @@
+Changes in version 0.3.5.7 - 2019-01-07
+  Blurb.
+
+  o Major bugfixes (relay, directory):
+    - Always reactivate linked connections in the mainloop so long as
+      any linked connection has been active. Previously, connections
+      serving directory information wouldn't get reactivated after the
+      first chunk of data was sent (usually 32KB), which would prevent
+      clients from bootstrapping. Fixes bug 28912; bugfix on
+      0.3.4.1-alpha. Patch by "cypherpunks3".
+
+  o Minor features (compilation):
+    - When possible, place our warning flags in a separate file, to
+      avoid flooding verbose build logs. Closes ticket 28924.
+
+  o Minor features (OpenSSL bug workaround):
+    - Work around a bug in OpenSSL 1.1.1a, which prevented the TLS 1.3
+      key export function from handling long labels. When this bug is
+      detected, Tor will disable TLS 1.3. We recommend upgrading to a
+      version of OpenSSL without this bug when it becomes available.
+      Closes ticket 28973.
+
+  o Minor features (performance):
+    - Remove about 96% of the work from the function that we run at
+      startup to test our curve25519_basepoint implementation. Since
+      this function has yet to find an actual failure, we now only run
+      it for 8 iterations instead of 200. Based on our profile
+      information, this change should save around 8% of our startup time
+      on typical desktops, and may have a similar effect on other
+      platforms. Closes ticket 28838.
+    - Stop re-validating our hardcoded Diffie-Hellman parameters on
+      every startup. Doing this wasted time and cycles, especially on
+      low-powered devices. Closes ticket 28851.
+
+  o Minor bugfixes (compilation):
+    - Fix compilation for Android by adding a missing header to
+      freespace.c. Fixes bug 28974; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (correctness):
+    - Fix an unreached code path where we checked the value of
+      "hostname" inside send_resolved_hostname_cell(). Previously, we
+      used it before checking it; now we check it first. Fixes bug
+      28879; bugfix on 0.1.2.7-alpha.
+
+  o Minor bugfixes (testing):
+    - Make sure that test_rebind.py actually obeys its timeout, even
+      when it receives a large number of log messages. Fixes bug 28883;
+      bugfix on 0.3.5.4-alpha.
+    - Stop running stem's unit tests as part of "make test-stem", but
+      continue to run stem's unit and online tests during "make test-
+      stem-full". Fixes bug 28568; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (windows services):
+    - Make Tor start correctly as an NT service again: previously it was
+      broken by refactoring. Fixes bug 28612; bugfix on 0.3.5.3-alpha.
+
+  o Code simplification and refactoring:
+    - When parsing a port configuration, make it more obvious to static
+      analyzer tools that we always initialize the address. Closes
+      ticket 28881.
+
+
 Changes in version 0.3.5.6-rc - 2018-12-18
   Tor 0.3.5.6-rc fixes numerous small bugs in earlier versions of Tor.
   It is the first release candidate in the 0.3.5.x series; if no further
