@@ -1,5 +1,19 @@
 Changes in version 0.3.5.7 - 2019-01-07
-  Blurb.
+  Tor 0.3.5.7 is the first stable release in its series; it includes
+  compilation and portability fixes, and a fix for a severe problem
+  affecting directory caches.
+
+  The Tor 0.3.5 series includes several new features and performance
+  improvements, including client authorization for v3 onion services,
+  cleanups to bootstrap reporting, support for improved bandwidth-
+  measurement tools, experimental support for NSS in place of OpenSSL,
+  and much more. It also begins a full reorganization of Tor's code
+  layout, for improved modularity and maintainability in the future.
+  Finally, there is the usual set of performance improvements and
+  bugfixes that we try to do in every release series.
+
+  Below are the changes since 0.3.5.6-rc. For a complete list of changes
+  since 0.3.4.9, see the ReleaseNotes file.
 
   o Major bugfixes (relay, directory):
     - Always reactivate linked connections in the mainloop so long as
