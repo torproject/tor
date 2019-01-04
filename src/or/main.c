@@ -1047,23 +1047,18 @@ conn_close_if_marked(int i)
          * busy Libevent loops where we keep ending up here and returning
          * 0 until we are no longer blocked on bandwidth.
          */
-        connection_consider_empty_read_buckets(conn);
         connection_consider_empty_write_buckets(conn);
-
         /* Make sure that consider_empty_buckets really disabled the
          * connection: */
         if (BUG(connection_is_writing(conn))) {
           connection_write_bw_exhausted(conn, true);
         }
-        if (BUG(connection_is_reading(conn))) {
-          /* XXXX+ We should make this code unreachable; if a connection is
-           * marked for close and flushing, there is no point in reading to it
-           * at all. Further, checking at this point is a bit of a hack: it
-           * would make much more sense to react in
-           * connection_handle_read_impl, or to just stop reading in
-           * mark_and_flush */
-          connection_read_bw_exhausted(conn, true/* kludge. */);
-        }
+
+        /* The connection is being held due to write rate limit and thus will
+         * flush its data later. We need to stop reading because this
+         * connection is about to be closed once flushed. It should not
+         * process anything more coming in at this stage. */
+        connection_stop_reading(conn);
       }
       return 0;
     }
