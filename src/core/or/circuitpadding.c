@@ -112,6 +112,64 @@ circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
   }
 }
 
+/** Check if the current active machine on this circuit wants to manage circuit
+ * lifetimes on its own, and return true if the circuit should be marked for
+ * close, or false otherwise.
+ *
+ * If the machine does not manage the circuit lifetime itself, we just close
+ * the circuit if we get here. In the case where the machine manages the
+ * circuit lifetime there are 4 cases under which we can find ourselves here:
+ *
+ * 1) Machine has *not* reached END state, and another subsystem wants to close
+ *    the circuit: tag the circuit but dont close it.
+ *
+ * 2) Machine has reached END state, and another subsystem wants to close the
+ *    circuit now: close the circuit!
+ *
+ * 3) Another subsystem had tried to close the circuit, and the machine just
+ *    reached END state: close the circuit.
+ *
+ * 4) *No* other subsystem has tried to close the circuit, and the machine just
+ *    reached END state: don't close the circuit and dont mark. We actually
+ *    never reach this case because we only enter this function from
+ *    circpad_machine_transitioned_to_end() if circuit_was_asked_to_be_closed
+ *    is set.
+ */
+int
+circpad_circuit_should_be_marked_for_close(circuit_t *circ)
+{
+  FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, circ) {
+    circpad_machineinfo_t *mi = circ->padding_info[i];
+    if (!mi) {
+      continue;
+    }
+
+    const circpad_state_t *state = circpad_machine_current_state(mi);
+    if (!state) {
+      continue;
+    }
+
+    /* If the machine does not want to control the circuit close itself, then
+     * just close the circuit right now */
+    if (!circ->padding_machine[i]->manage_circ_lifetime) {
+      return 1;
+    }
+
+    /* We now know that the machine controls when a circuit should be
+     * closed. In this case, we only want to close the circuit if another
+     * subsystem of Tor has already asked us to close this circuit AND the
+     * machine has reached the end state */
+
+    /* Tag this close attempt regardless of whether we close the circuit. */
+    mi->circuit_was_asked_to_be_closed = 1;
+
+    /* If the machine has reached the END state, close the circuit. */
+    return (mi->current_state == CIRCPAD_STATE_END) ? 1 : 0;
+  } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
+
+  return 1;
+}
+
 /** Free all the machineinfos in <b>circ</b> that match <b>machine_num</b>. */
 static void
 free_circ_machineinfos_with_machine_num(circuit_t *circ, int machine_num)
@@ -1198,6 +1256,17 @@ static void
 circpad_machine_transitioned_to_end(circpad_machineinfo_t *mi)
 {
   const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
+
+  /** If this machine handles cirucit lifetime on its own, shut the circuit
+   *  down now if we must.
+   *
+   *  XXX We ignore should_negotiate_end in this case */
+  if (machine->manage_circ_lifetime) {
+    circuit_t *on_circ = mi->on_circ;
+    if (mi->circuit_was_asked_to_be_closed) {
+      circuit_mark_for_close(on_circ, END_CIRC_REASON_NONE);
+    }
+  }
 
   /*
    * We allow machines to shut down and delete themselves as opposed

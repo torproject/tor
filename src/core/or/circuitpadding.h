@@ -505,6 +505,16 @@ typedef struct circpad_machineinfo_t {
    */
   unsigned stop_rtt_update : 1;
 
+  /**
+   * This circuit was asked to be closed by another part of Tor but might have
+   * been kept open by the circuitpadding subsystem because the machine
+   * requested it (see circpad_machine_t.manage_circ_lifetime).
+   *
+   * We use this flag so that we can close the circuit ourselves when the
+   * machine transitions to the END state.
+   */
+  unsigned circuit_was_asked_to_be_closed : 1;
+
 /** Max number of padding machines on each circuit. If changed,
  * also ensure the machine_index bitwith supports the new size. */
 #define CIRCPAD_MAX_MACHINES    (2)
@@ -547,6 +557,14 @@ typedef struct circpad_machine_t {
    *  1-indexed (ie: hop #1 is guard, #2 middle, #3 exit). */
   unsigned target_hopnum : 3;
 
+  /** If this flag is enabled, don't close circuits that use this machine even
+   *  if another part of Tor wants to close this circuit.
+
+   *  If this flag is set, the circuitpadding subsystem will close circuits the
+   *  moment the machine transitions to the END state, and only if the circuit
+   *  has already been asked to be closed by another part of Tor. */
+  unsigned manage_circ_lifetime : 1;
+
   /** This machine only kills fascists if the following conditions are met. */
   circpad_machine_conditions_t conditions;
 
@@ -571,6 +589,8 @@ typedef struct circpad_machine_t {
 } circpad_machine_t;
 
 void circpad_new_consensus_params(const networkstatus_t *ns);
+
+int circpad_circuit_should_be_marked_for_close(circuit_t *circ);
 
 /**
  * The following are event call-in points that are of interest to

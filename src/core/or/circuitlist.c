@@ -2199,6 +2199,11 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
   tor_assert(line);
   tor_assert(file);
 
+  /* Check whether the circuitpadding subsystem wants to block this close */
+  if (!circpad_circuit_should_be_marked_for_close(circ)) {
+    return;
+  }
+
   if (circ->marked_for_close) {
     log_warn(LD_BUG,
         "Duplicate call to circuit_mark_for_close at %s:%d"
