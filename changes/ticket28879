@@ -1,0 +1,5 @@
+  o Minor bugfixes (correctness):
+    - Fix an unreached code-path where we checked the value of "hostname"
+      inside send_resolved_hostnam_cell(). Previously, we used it before
+      checking it; now we check it first. Fixes bug 28879; bugfix on
+      0.1.2.7-alpha.
