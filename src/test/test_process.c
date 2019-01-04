@@ -161,7 +161,7 @@ test_default_values(void *arg)
                                process));
 
   /* Default PID is 0. */
-  tt_int_op(0, OP_EQ, process_get_pid(process));
+  tt_u64_op(0, OP_EQ, process_get_pid(process));
 
   /* Our arguments should be empty. */
   tt_int_op(0, OP_EQ,
@@ -531,7 +531,7 @@ test_exit_simple(void *arg)
   process_set_exit_callback(process, process_exit_callback);
 
   /* Our default is 0. */
-  tt_int_op(0, OP_EQ, process_data->exit_code);
+  tt_u64_op(0, OP_EQ, process_data->exit_code);
 
   /* Fake that we are a running process. */
   process_set_status(process, PROCESS_STATUS_RUNNING);
@@ -542,7 +542,7 @@ test_exit_simple(void *arg)
 
   /* Check if our state changed and if our callback fired. */
   tt_int_op(process_get_status(process), OP_EQ, PROCESS_STATUS_NOT_RUNNING);
-  tt_int_op(1337, OP_EQ, process_data->exit_code);
+  tt_u64_op(1337, OP_EQ, process_data->exit_code);
 
  done:
   process_set_data(process, process_data);
