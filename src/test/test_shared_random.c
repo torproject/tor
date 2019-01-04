@@ -309,6 +309,7 @@ test_get_start_time_of_current_run(void *arg)
 
     retval = parse_rfc1123_time("Mon, 19 Apr 2015 23:00:00 UTC",
                                 &mock_consensus.valid_after);
+    tt_int_op(retval, OP_EQ, 0);
 
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:08:00 UTC",
                                 &current_time);

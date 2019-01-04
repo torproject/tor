@@ -1396,7 +1396,6 @@ static void
 test_build_update_descriptors(void *arg)
 {
   int ret;
-  time_t now = time(NULL);
   node_t *node;
   hs_service_t *service;
   hs_service_intro_point_t *ip_cur, *ip_next;
@@ -1422,7 +1421,8 @@ test_build_update_descriptors(void *arg)
   voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
 
   update_approx_time(mock_ns.valid_after+1);
-  now = mock_ns.valid_after+1;
+
+  time_t now = mock_ns.valid_after+1;
 
   /* Create a service without a current descriptor to trigger a build. */
   service = helper_create_service();
@@ -1654,6 +1654,9 @@ test_build_descriptors(void *arg)
     service->desc_current = NULL;
 
     build_all_descriptors(now);
+    tt_assert(service->desc_current);
+    tt_assert(service->desc_current->desc);
+
     hs_desc_superencrypted_data_t *superencrypted;
     superencrypted = &service->desc_current->desc->superencrypted_data;
     tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 16);
