@@ -586,8 +586,11 @@ send_resolved_hostname_cell,(edge_connection_t *conn,
   char buf[RELAY_PAYLOAD_SIZE];
   size_t buflen;
   uint32_t ttl;
+
+  if (BUG(!hostname))
+    return;
+
   size_t namelen = strlen(hostname);
-  tor_assert(hostname);
 
   tor_assert(namelen < 256);
   ttl = dns_clip_ttl(conn->address_ttl);
