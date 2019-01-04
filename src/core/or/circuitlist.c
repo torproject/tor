@@ -823,6 +823,8 @@ circuit_purpose_to_controller_string(uint8_t purpose)
       return "PATH_BIAS_TESTING";
     case CIRCUIT_PURPOSE_HS_VANGUARDS:
       return "HS_VANGUARDS";
+    case CIRCUIT_PURPOSE_C_CIRCUIT_PADDING:
+      return "CIRCUIT_PADDING";
 
     default:
       tor_snprintf(buf, sizeof(buf), "UNKNOWN_%d", (int)purpose);
@@ -852,6 +854,7 @@ circuit_purpose_to_controller_hs_state_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_CONTROLLER:
     case CIRCUIT_PURPOSE_PATH_BIAS_TESTING:
     case CIRCUIT_PURPOSE_HS_VANGUARDS:
+    case CIRCUIT_PURPOSE_C_CIRCUIT_PADDING:
       return NULL;
 
     case CIRCUIT_PURPOSE_INTRO_POINT:
@@ -951,6 +954,9 @@ circuit_purpose_to_string(uint8_t purpose)
 
     case CIRCUIT_PURPOSE_HS_VANGUARDS:
       return "Hidden service: Pre-built vanguard circuit";
+
+    case CIRCUIT_PURPOSE_C_CIRCUIT_PADDING:
+      return "Circuit kept open for padding";
 
     default:
       tor_snprintf(buf, sizeof(buf), "UNKNOWN_%d", (int)purpose);
@@ -2198,6 +2204,11 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
   assert_circuit_ok(circ);
   tor_assert(line);
   tor_assert(file);
+
+  /* Check whether the circuitpadding subsystem wants to block this close */
+  if (!circpad_circuit_should_be_marked_for_close(circ, reason)) {
+    return;
+  }
 
   if (circ->marked_for_close) {
     log_warn(LD_BUG,

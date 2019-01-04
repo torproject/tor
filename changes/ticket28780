@@ -1,0 +1,3 @@
+  o Minor features (circuit padding):
+    - Provide the ability for circuit padding machines to hold a circuit open
+      until they are done padding it. Closes ticket 28780.
