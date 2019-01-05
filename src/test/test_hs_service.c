@@ -289,6 +289,20 @@ helper_create_service(void)
   return service;
 }
 
+/* Helper: Deallocate a given service object, it's child objects and
+ * remove it from onion service map.
+ * */
+static void
+helper_destroy_service(hs_service_t *service)
+{
+  if (!service)
+    return;
+
+  remove_service(get_hs_service_map(), service);
+
+  hs_service_free(service);
+}
+
 /* Helper: Return a newly allocated service object with clients. */
 static hs_service_t *
 helper_create_service_with_clients(int num_clients)
@@ -1660,6 +1674,8 @@ test_build_descriptors(void *arg)
     hs_desc_superencrypted_data_t *superencrypted;
     superencrypted = &service->desc_current->desc->superencrypted_data;
     tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 16);
+
+    helper_destroy_service(service);
   }
 
   /* Generate a valid number of fake auth clients when the number of
@@ -1673,6 +1689,8 @@ test_build_descriptors(void *arg)
     hs_desc_superencrypted_data_t *superencrypted;
     superencrypted = &service->desc_current->desc->superencrypted_data;
     tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 16);
+
+    helper_destroy_service(service);
   }
 
   /* Generate a valid number of fake auth clients when the number of
@@ -1686,6 +1704,8 @@ test_build_descriptors(void *arg)
     hs_desc_superencrypted_data_t *superencrypted;
     superencrypted = &service->desc_current->desc->superencrypted_data;
     tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 32);
+
+    helper_destroy_service(service);
   }
 
   /* Do not generate any fake desc client when the number of clients is
@@ -1699,6 +1719,8 @@ test_build_descriptors(void *arg)
     hs_desc_superencrypted_data_t *superencrypted;
     superencrypted = &service->desc_current->desc->superencrypted_data;
     tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 32);
+
+    helper_destroy_service(service);
   }
 
  done:
