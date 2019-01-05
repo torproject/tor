@@ -267,7 +267,7 @@ helper_clone_authorized_client(const hs_service_authorized_client_t *client)
 
 /* Helper: Return a newly allocated service object with the identity keypair
  * sets and the current descriptor. Then register it to the global map.
- * Caller should us hs_free_all() to free this service or remove it from the
+ * Caller should use hs_free_all() to free this service or remove it from the
  * global map before freeing. */
 static hs_service_t *
 helper_create_service(void)
