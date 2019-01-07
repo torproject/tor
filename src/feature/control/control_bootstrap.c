@@ -73,7 +73,7 @@ static const struct {
   { BOOTSTRAP_STATUS_AP_CONN_DONE_PT, "ap_conn_done_pt",
     "Connected to pluggable transport to build circuits" },
   { BOOTSTRAP_STATUS_AP_CONN_PROXY, "ap_conn_proxy",
-    "Connecting to proxy " },
+    "Connecting to proxy to build circuits" },
   { BOOTSTRAP_STATUS_AP_CONN_DONE_PROXY, "ap_conn_done_proxy",
     "Connected to proxy to build circuits" },
   { BOOTSTRAP_STATUS_AP_CONN, "ap_conn",
