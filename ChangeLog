@@ -19,7 +19,7 @@ Changes in version 0.3.5.7 - 2019-01-07
   changed; if you use stem, you may need to update to the latest version
   so it will recognize them.
 
-  We have designated 0.3.5 as a "long-term support" (LTS) series: We
+  We have designated 0.3.5 as a "long-term support" (LTS) series: we
   will continue to patch major bugs in typical configurations of 0.3.5
   until at least 1 Feb 2022. (We do not plan to provide long-term
   support for embedding, Rust support, NSS support, running a directory
