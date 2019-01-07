@@ -3,17 +3,17 @@ release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
 Changes in version 0.3.3.11 - 2018-01-07
-  Tor 0.3.3.11 backports numerous fixes from later versions of Tor.
-  numerous fixes, including an important fix for anyone using OpenSSL
-  1.1.1. Anyone running an earlier version of Tor 0.3.3 should upgrade
-  to this version, or to a later series.
+  Tor 0.3.3.11 backports numerous fixes from later versions of Tor,
+  including an important fix for anyone using OpenSSL 1.1.1. Anyone
+  running an earlier version of Tor 0.3.3 should upgrade to this version,
+  or to a later series.
 
-  As a reminder, support the Tor 0.3.3 series will end on 22 Feb 2019.
+  As a reminder, support for the Tor 0.3.3 series will end on 22 Feb 2019.
   We anticipate that this will be the last release of Tor 0.3.3, unless
-  some major bug is before then. Some time between now and then, users
-  should switch to either the Tor 0.3.4 series (supported until at least
-  10 June 2019), or the Tor 0.3.5 series, which will receive long-term
-  support until at least 1 Feb 2022.
+  some major bug is found before then. Some time between now and then,
+  users should switch to either the Tor 0.3.4 series (supported until
+  at least 10 June 2019), or the Tor 0.3.5 series, which will receive
+  long-term support until at least 1 Feb 2022.
 
   o Major bugfixes (OpenSSL, portability, backport from 0.3.5.5-alpha):
     - Fix our usage of named groups when running as a TLS 1.3 client in
@@ -98,7 +98,7 @@ Changes in version 0.3.3.11 - 2018-01-07
   o Minor bugfixes (onion service v3, backport from 0.3.5.2-alpha):
     - Close all SOCKS request (for the same .onion) if the newly fetched
       descriptor is unusable. Before that, we would close only the first
-      one leaving the other hanging and let to time out by themselves.
+      one leaving the other hanging and left to time out by themselves.
       Fixes bug 27410; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (onion service v3, backport from 0.3.5.3-alpha):
