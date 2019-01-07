@@ -16,7 +16,7 @@ Changes in version 0.3.5.7 - 2019-01-07
   since 0.3.4.9, see the ReleaseNotes file.
 
   o Major bugfixes (relay, directory):
-    - Always reactivate linked connections in the mainloop so long as
+    - Always reactivate linked connections in the main loop so long as
       any linked connection has been active. Previously, connections
       serving directory information wouldn't get reactivated after the
       first chunk of data was sent (usually 32KB), which would prevent
