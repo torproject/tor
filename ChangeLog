@@ -12,6 +12,20 @@ Changes in version 0.3.5.7 - 2019-01-07
   Finally, there is the usual set of performance improvements and
   bugfixes that we try to do in every release series.
 
+  There are a couple of changes in the 0.3.5 that may affect
+  compatibility. First, the default version for newly created onion
+  services is now v3. Use the HiddenServiceVersion option if you want to
+  override this. Second, some log messages related to bootstrapping have
+  changed; if you use stem, you may need to update to the latest version
+  so it will recognize them.
+
+  We have designated 0.3.5 as a "long-term support" (LTS) series: We
+  will continue to patch major bugs in typical configurations of 0.3.5
+  until at least 1 Feb 2022. (We do not plan to provide long-term
+  support for embedding, Rust support, NSS support, running a directory
+  authority, or unsupported platforms. For these, you will need to stick
+  with the latest stable release.)
+
   Below are the changes since 0.3.5.6-rc. For a complete list of changes
   since 0.3.4.9, see the ReleaseNotes file.
 
