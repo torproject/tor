@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden service v3):
-    - Close all SOCKS request (for the same .onion) if the newly fetched
-      descriptor is unusable. Before that, we would close only the first one
-      leaving the other hanging and let to time out by themselves. Fixes bug
-      27410; bugfix on 0.3.2.1-alpha.

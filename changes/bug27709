@@ -1,4 +1,0 @@
-  o Minor bugfixes (code safety):
-    - Rewrite our assertion macros so that they no longer suppress
-      the compiler's -Wparentheses warnings on their inputs. Fixes bug 27709;
-      bugfix on 0.0.6.

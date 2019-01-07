@@ -1,4 +1,0 @@
-  o Minor features (continuous integration):
-    - Use the Travis Homebrew addon to install packages on macOS. The package
-      list is the same, but the Homebrew addon does not do a `brew update` by
-      default. Implements ticket 27738.

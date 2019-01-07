@@ -1,6 +1,0 @@
-  o Minor features (continuous integration):
-    - Skip gcc on OSX in Travis CI, it's rarely used.
-      Skip a duplicate hardening-off build in Travis on Tor 0.2.9.
-      Skip gcc on Linux with default settings, because all the non-default
-      builds use gcc on Linux.
-      Implements ticket 27252.
