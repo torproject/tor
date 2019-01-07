@@ -1,0 +1,3 @@
+  o Minor bugfixes (fallback scripts):
+    - In updateFallbackDirs.py, say "fallback list" instead of "whitelist".
+      Fixes bug 24953; bugfix on 0.3.5.1-alpha.

@@ -1594,7 +1594,7 @@ class CandidateList(dict):
     """ Apply the fallback whitelist_obj to this fallback list,
         passing exact to is_in_whitelist(). """
     excluded_count = 0
-    logging.debug('Applying whitelist')
+    logging.debug('Applying fallback list')
     # parse the whitelist
     whitelist = self.load_relaylist(whitelist_obj)
     filtered_fallbacks = []
@@ -1609,14 +1609,14 @@ class CandidateList(dict):
       else:
           # exclude
           excluded_count += 1
-          log_excluded('Excluding %s: not in whitelist.',
+          log_excluded('Excluding %s: not in fallback list.',
                        f._fpr)
     self.fallbacks = filtered_fallbacks
     return excluded_count
 
   @staticmethod
   def summarise_filters(initial_count, excluded_count):
-    return '/* Whitelist excluded %d of %d candidates. */'%(
+    return '/* Fallback list excluded %d of %d candidates. */'%(
                                                 excluded_count, initial_count)
 
   # calculate each fallback's measured bandwidth based on the median
