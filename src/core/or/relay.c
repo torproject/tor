@@ -93,6 +93,7 @@
 #include "core/or/origin_circuit_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "core/or/socks_request_st.h"
+#include "core/or/sendme.h"
 
 #include "lib/intmath/weakrng.h"
 
@@ -100,8 +101,6 @@ static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
                                             crypt_path_t *layer_hint);
 
-static void circuit_consider_sending_sendme(circuit_t *circ,
-                                            crypt_path_t *layer_hint);
 static void circuit_resume_edge_reading(circuit_t *circ,
                                         crypt_path_t *layer_hint);
 static int circuit_resume_edge_reading_helper(edge_connection_t *conn,
@@ -1569,7 +1568,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       log_debug(domain,"circ deliver_window now %d.", layer_hint ?
                 layer_hint->deliver_window : circ->deliver_window);
 
-      circuit_consider_sending_sendme(circ, layer_hint);
+      sendme_circuit_consider_sending(circ, layer_hint);
 
       if (rh.stream_id == 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Relay data cell with zero "
@@ -1620,7 +1619,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         /* Only send a SENDME if we're not getting optimistic data; otherwise
          * a SENDME could arrive before the CONNECTED.
          */
-        connection_edge_consider_sending_sendme(conn);
+        sendme_connection_edge_consider_sending(conn);
       }
 
       return 0;
@@ -1874,7 +1873,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       /* Don't allow the other endpoint to request more than our maximum
        * (i.e. initial) stream SENDME window worth of data. Well-behaved
        * stock clients will not request more than this max (as per the check
-       * in the while loop of connection_edge_consider_sending_sendme()).
+       * in the while loop of sendme_connection_edge_consider_sending()).
        */
       if (conn->package_window + STREAMWINDOW_INCREMENT >
           STREAMWINDOW_START_MAX) {
@@ -2122,42 +2121,6 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   goto repeat_connection_edge_package_raw_inbuf;
 }
 
-/** Called when we've just received a relay data cell, when
- * we've just finished flushing all bytes to stream <b>conn</b>,
- * or when we've flushed *some* bytes to the stream <b>conn</b>.
- *
- * If conn->outbuf is not too full, and our deliver window is
- * low, send back a suitable number of stream-level sendme cells.
- */
-void
-connection_edge_consider_sending_sendme(edge_connection_t *conn)
-{
-  circuit_t *circ;
-
-  if (connection_outbuf_too_full(TO_CONN(conn)))
-    return;
-
-  circ = circuit_get_by_edge_conn(conn);
-  if (!circ) {
-    /* this can legitimately happen if the destroy has already
-     * arrived and torn down the circuit */
-    log_info(LD_APP,"No circuit associated with conn. Skipping.");
-    return;
-  }
-
-  while (conn->deliver_window <= STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
-    log_debug(conn->base_.type == CONN_TYPE_AP ?LD_APP:LD_EXIT,
-              "Outbuf %d, Queuing stream sendme.",
-              (int)conn->base_.outbuf_flushlen);
-    conn->deliver_window += STREAMWINDOW_INCREMENT;
-    if (connection_edge_send_command(conn, RELAY_COMMAND_SENDME,
-                                     NULL, 0) < 0) {
-      log_warn(LD_APP,"connection_edge_send_command failed. Skipping.");
-      return; /* the circuit's closed, don't continue */
-    }
-  }
-}
-
 /** The circuit <b>circ</b> has received a circuit-level sendme
  * (on hop <b>layer_hint</b>, if we're the OP). Go through all the
  * attached streams and let them resume reading and packaging, if
@@ -2377,33 +2340,6 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
     return 1;
   }
   return 0;
-}
-
-/** Check if the deliver_window for circuit <b>circ</b> (at hop
- * <b>layer_hint</b> if it's defined) is low enough that we should
- * send a circuit-level sendme back down the circuit. If so, send
- * enough sendmes that the window would be overfull if we sent any
- * more.
- */
-static void
-circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
-{
-//  log_fn(LOG_INFO,"Considering: layer_hint is %s",
-//         layer_hint ? "defined" : "null");
-  while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <=
-          CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
-    log_debug(LD_CIRC,"Queuing circuit sendme.");
-    if (layer_hint)
-      layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
-    else
-      circ->deliver_window += CIRCWINDOW_INCREMENT;
-    if (relay_send_command_from_edge(0, circ, RELAY_COMMAND_SENDME,
-                                     NULL, 0, layer_hint) < 0) {
-      log_warn(LD_CIRC,
-               "relay_send_command_from_edge failed. Circuit's closed.");
-      return; /* the circuit's closed, don't continue */
-    }
-  }
 }
 
 /** The total number of cells we have allocated. */

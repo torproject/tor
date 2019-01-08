@@ -73,6 +73,7 @@
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
+#include "core/or/sendme.h"
 #include "core/proto/proto_http.h"
 #include "core/proto/proto_socks.h"
 #include "feature/client/addressmap.h"
@@ -767,7 +768,7 @@ connection_edge_flushed_some(edge_connection_t *conn)
 
       /* falls through. */
     case EXIT_CONN_STATE_OPEN:
-      connection_edge_consider_sending_sendme(conn);
+      sendme_connection_edge_consider_sending(conn);
       break;
   }
   return 0;
@@ -791,7 +792,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
   switch (conn->base_.state) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
-      connection_edge_consider_sending_sendme(conn);
+      sendme_connection_edge_consider_sending(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
     case AP_CONN_STATE_NATD_WAIT:
