@@ -458,7 +458,9 @@ get_n_open_sockets(void)
  * localhost is inaccessible (for example, if the networking
  * stack is down). And even if it succeeds, the socket pair will not
  * be able to read while localhost is down later (the socket pair may
- * even close, depending on OS-specific timeouts).
+ * even close, depending on OS-specific timeouts). The socket pair
+ * should work on IPv4-only, IPv6-only, and dual-stack systems, as long
+ * as they have the standard localhost addresses.
  *
  * Returns 0 on success and -errno on failure; do not rely on the value
  * of errno or WSAGetLastError().
