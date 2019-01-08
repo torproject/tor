@@ -1594,7 +1594,11 @@ class CandidateList(dict):
     """ Apply the fallback whitelist_obj to this fallback list,
         passing exact to is_in_whitelist(). """
     excluded_count = 0
-    logging.debug('Applying fallback list')
+    list_type = 'whitelist'
+    if whitelist_obj['check_existing']:
+        list_type = 'fallback list'
+
+    logging.debug('Applying {}'.format(list_type))
     # parse the whitelist
     whitelist = self.load_relaylist(whitelist_obj)
     filtered_fallbacks = []
@@ -1609,8 +1613,8 @@ class CandidateList(dict):
       else:
           # exclude
           excluded_count += 1
-          log_excluded('Excluding %s: not in fallback list.',
-                       f._fpr)
+          log_excluded('Excluding %s: not in %s.',
+                       f._fpr, list_type)
     self.fallbacks = filtered_fallbacks
     return excluded_count
 
@@ -2150,7 +2154,7 @@ class CandidateList(dict):
                                                       fallback_count)))
 
   def summarise_fallbacks(self, eligible_count, operator_count, failed_count,
-                          guard_count, target_count):
+                          guard_count, target_count, check_existing):
     s = ''
     # Report:
     #  whether we checked consensus download times
@@ -2202,12 +2206,15 @@ class CandidateList(dict):
     s += '\n'
     s += '*/'
     if fallback_count < MIN_FALLBACK_COUNT:
+      list_type = 'whitelist'
+      if check_existing:
+          list_type = 'fallback list'
       # We must have a minimum number of fallbacks so they are always
       # reachable, and are in diverse locations
       s += '\n'
       s += '#error Fallback Count %d is too low. '%(fallback_count)
       s += 'Must be at least %d for diversity. '%(MIN_FALLBACK_COUNT)
-      s += 'Try adding entries to the whitelist, '
+      s += 'Try adding entries to %s, '%(list_type)
       s += 'or setting INCLUDE_UNLISTED_ENTRIES = True.'
     return s
 
@@ -2215,14 +2222,16 @@ def process_existing():
   logging.basicConfig(level=logging.INFO)
   logging.getLogger('stem').setLevel(logging.INFO)
   whitelist = {'data': parse_fallback_file(FALLBACK_FILE_NAME),
-               'name': FALLBACK_FILE_NAME}
+               'name': FALLBACK_FILE_NAME,
+               'check_existing' : True}
   list_fallbacks(whitelist, exact=True)
 
 def process_default():
   logging.basicConfig(level=logging.WARNING)
   logging.getLogger('stem').setLevel(logging.WARNING)
   whitelist = {'data': read_from_file(WHITELIST_FILE_NAME, MAX_LIST_FILE_SIZE),
-               'name': WHITELIST_FILE_NAME}
+               'name': WHITELIST_FILE_NAME,
+               'check_existing': False}
   list_fallbacks(whitelist, exact=False)
 
 ## Main Function
@@ -2248,7 +2257,11 @@ def list_fallbacks(whitelist, exact=False):
   """ Fetches required onionoo documents and evaluates the
       fallback directory criteria for each of the relays,
       passing exact to apply_filter_lists(). """
-  print "/* type=fallback */"
+  if whitelist['check_existing']:
+      print "/* type=fallback */"
+  else:
+      print "/* type=whitelist */"
+
   print ("/* version={} */"
          .format(cleanse_c_multiline_comment(FALLBACK_FORMAT_VERSION)))
   now = datetime.datetime.utcnow()
@@ -2342,7 +2355,8 @@ def list_fallbacks(whitelist, exact=False):
   if len(candidates.fallbacks) > 0:
     print candidates.summarise_fallbacks(eligible_count, operator_count,
                                          failed_count, guard_count,
-                                         target_count)
+                                         target_count,
+                                         whitelist['check_existing'])
   else:
     print '/* No Fallbacks met criteria */'
 
