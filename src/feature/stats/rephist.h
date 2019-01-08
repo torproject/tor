@@ -24,6 +24,9 @@ void rep_hist_note_dir_bytes_written(uint64_t num_bytes, time_t when);
 
 MOCK_DECL(int, rep_hist_bandwidth_assess, (void));
 char *rep_hist_get_bandwidth_lines(void);
+
+char *rep_hist_get_privcount_lines(void);
+
 void rep_hist_update_state(or_state_t *state);
 int rep_hist_load_state(or_state_t *state, char **err);
 void rep_history_clean(time_t before);

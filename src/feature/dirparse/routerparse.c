@@ -158,6 +158,20 @@ static token_rule_t extrainfo_token_table[] = {
   T01("exit-kibibytes-read", K_EXIT_READ,           ARGS,    NO_OBJ ),
   T01("exit-streams-opened", K_EXIT_OPENED,         ARGS,    NO_OBJ ),
 
+  /* Put PrivCount counters in extrainfos for debugging and testing */
+  /* PrivCount check counters */
+  T01("pc-zero",             K_PC_ZERO,             ARGS,    NO_OBJ ),
+  T01("pc-dc-count",         K_PC_DC_COUNT,         ARGS,    NO_OBJ ),
+  T01("pc-noise-sample",     K_PC_NOISE_SAMPLE,     ARGS,    NO_OBJ ),
+  /* PrivCount consumed bandwidth counters by flag */
+  T01("pc-rw-bytes",        K_PC_RW_BYTES,          ARGS,    NO_OBJ ),
+  T01("pc-g-rw-bytes",      K_PC_G_RW_BYTES,        ARGS,    NO_OBJ ),
+  T01("pc-e-rw-bytes",      K_PC_E_RW_BYTES,        ARGS,    NO_OBJ ),
+  T01("pc-ge-rw-bytes",     K_PC_GE_RW_BYTES,       ARGS,    NO_OBJ ),
+  T01("pc-m-rw-bytes",      K_PC_M_RW_BYTES,        ARGS,    NO_OBJ ),
+  /* End of PrivCount stats */
+  T01("pc-stats-end",       K_PC_END,               ARGS,    NO_OBJ ),
+
   T1_START( "extra-info",          K_EXTRA_INFO,          GE(2),   NO_OBJ ),
 
   END_OF_TABLE

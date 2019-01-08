@@ -3047,6 +3047,12 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
         smartlist_add_strdup(chunks, bridge_stats);
       }
     }
+    /* TODO: dump PrivCount statistics to a stats file */
+    if (1 /* options->PrivCountStatistics */) {
+      contents = rep_hist_get_privcount_lines();
+      if (contents)
+        smartlist_add(chunks, contents);
+    }
   }
 
   if (emit_ed_sigs) {

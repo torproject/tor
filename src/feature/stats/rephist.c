@@ -88,6 +88,7 @@
 #include "feature/stats/rephist.h"
 #include "lib/container/order.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/intmath/addsub.h"
 #include "lib/math/laplace.h"
 
 #include "feature/nodelist/networkstatus_st.h"
@@ -1239,6 +1240,25 @@ rep_hist_get_oldest_bandwidth_history_index(const bw_array_t *b)
   }
 }
 
+/* Return the newest bandwidth history index in b's circular array.
+ * If no history has been written to b, returns zero.
+ * Callers must check that num_maxes_set is greater than zero. */
+static int
+rep_hist_get_newest_bandwidth_history_index(const bw_array_t *b)
+{
+  if (b->num_maxes_set == 0) {
+    /* No indexes are set. */
+    return 0;
+  } else if (b->next_max_idx == 0) {
+    /* We are going to write to the start of the array next, so the last total
+     * is at the end. */
+    return NUM_TOTALS - 1;
+  } else {
+    /* The index just before the next index to be written is the newest. */
+    return b->next_max_idx - 1;
+  }
+}
+
 /* Return the bandwidth history amount for b at index i.
  * To avoid disclosing sensitive information, limit the bandwidth based on
  * RelayBandwidthRate, and round the bandwidth to the nearest kilobyte.
@@ -1276,6 +1296,30 @@ rep_hist_get_bandwidth_history_for_index(const bw_array_t *b, int i)
     total = cutoff;
 
   return total;
+}
+
+/* Return the newest bandwidth history amount in b's circular array.
+ * If no history has been written to b, returns zero. */
+static uint64_t
+rep_hist_get_newest_bandwidth_history_amount(const bw_array_t *b)
+{
+  if (b->num_maxes_set == 0)
+    return 0;
+
+  int i = rep_hist_get_newest_bandwidth_history_index(b);
+  return rep_hist_get_bandwidth_history_for_index(b, i);
+}
+
+/* Return the sum of the newest bandwidth history read and write amounts.
+ * If no bandwidth totals have been written to the history, returns zero.
+ * If the sum would overflow, returns UINT64_MAX. */
+static uint64_t
+rep_hist_get_newest_bandwidth_history_rw_amount(void)
+{
+  uint64_t w = rep_hist_get_newest_bandwidth_history_amount(write_array);
+  uint64_t r = rep_hist_get_newest_bandwidth_history_amount(read_array);
+
+  return tor_add_u64_nowrap(w, r);
 }
 
 /** Print the bandwidth history of b (either [dir-]read_array or
@@ -1365,6 +1409,52 @@ rep_hist_get_bandwidth_lines(void)
     ++cp;
   }
   return buf;
+}
+
+/** Allocate and return lines for representing this server's privcount
+ * statistics. We publish these lines in our extra-info descriptor for
+ * debugging and testing.
+ *
+ * Sensitive statistics MUST NOT be published in extra-info descriptors.
+ * TODO: work out how to publish sensitive lines in test networks (#29007).
+ */
+char *
+rep_hist_get_privcount_lines(void)
+{
+  char *result = NULL;
+  uint64_t rw_bytes = rep_hist_get_newest_bandwidth_history_rw_amount();
+
+  /* When we add noise, some results can be negative, so we use PRId64.*/
+  tor_asprintf(&result,
+               /* PrivCount check counters:
+                * always zero
+                * always 1: data collector count
+                * some sampled noise: almost always not zero */
+               "pc-zero 0\n"
+               "pc-dc-count 1\n"
+               "pc-noise-sample TODO\n"
+               /* PrivCount consumed bandwidth counters by flag:
+                * read+write bytes for guard-only, exit-only, guard+exit, and
+                * middle flags */
+               /* We need separate totals, because summing the parts adds too
+                * much noise. We add read and write bytes together, because
+                * adding more counters adds significantly more noise to the set
+                * of counters.
+                *
+                * Alternately, we could add special aggregation logic to Tally
+                * Reporters, so that they aggregate pc-rw-bytes by relay flag.
+                */
+               "pc-rw-bytes %" PRIu64 "\n" /* TODO: add noise and PRId64 */
+               "pc-g-rw-bytes TODO\n"
+               "pc-e-rw-bytes TODO\n"
+               "pc-ge-rw-bytes TODO\n"
+               "pc-m-rw-bytes TODO\n"
+               /* TODO: write stats to file, add a timestamp? */
+               "pc-stats-end\n",
+               rw_bytes
+               );
+
+  return result;
 }
 
 /** Write a single bw_array_t into the Values, Ends, Interval, and Maximum
