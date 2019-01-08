@@ -2313,7 +2313,8 @@ is non-zero):
     When this option is enabled and BridgeRelay is also enabled, and we have
     GeoIP data, Tor keeps a per-country count of how many client
     addresses have contacted it so that it can help the bridge authority guess
-    which countries have blocked access to it. (Default: 1)
+    which countries have blocked access to it. If ExtraInfoStatistics is
+    enabled, it will be published as part of extra-info document. (Default: 1)
 
 [[ServerDNSRandomizeCase]] **ServerDNSRandomizeCase** **0**|**1**::
     When this option is set, Tor sets the case of each character randomly in
@@ -2395,6 +2396,8 @@ is non-zero):
 [[ExtraInfoStatistics]] **ExtraInfoStatistics** **0**|**1**::
     When this option is enabled, Tor includes previously gathered statistics in
     its extra-info documents that it uploads to the directory authorities.
+    Disabling this option also disables bandwidth usage statistics, GeoIPFile
+    hashes, and ServerTransportPlugin lists in the extra-info file.
     (Default: 1)
 
 [[ExtendAllowPrivateAddresses]] **ExtendAllowPrivateAddresses** **0**|**1**::

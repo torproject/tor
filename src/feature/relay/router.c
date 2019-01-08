@@ -2942,7 +2942,6 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   char identity[HEX_DIGEST_LEN+1];
   char published[ISO_TIME_LEN+1];
   char digest[DIGEST_LEN];
-  char *bandwidth_usage;
   int result;
   static int write_stats_to_extrainfo = 1;
   char sig[DIROBJ_MAX_SIG_LEN+1];
@@ -2957,7 +2956,6 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   base16_encode(identity, sizeof(identity),
                 extrainfo->cache_info.identity_digest, DIGEST_LEN);
   format_iso_time(published, extrainfo->cache_info.published_on);
-  bandwidth_usage = rep_hist_get_bandwidth_lines();
   if (emit_ed_sigs) {
     if (!extrainfo->cache_info.signing_key_cert->signing_key_included ||
         !ed25519_pubkey_eq(&extrainfo->cache_info.signing_key_cert->signed_key,
@@ -2983,21 +2981,25 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
     ed_cert_line = tor_strdup("");
   }
 
-  tor_asprintf(&pre, "extra-info %s %s\n%spublished %s\n%s",
+  tor_asprintf(&pre, "extra-info %s %s\n%spublished %s\n",
                extrainfo->nickname, identity,
                ed_cert_line,
-               published, bandwidth_usage);
+               published);
   smartlist_add(chunks, pre);
-
-  if (geoip_is_loaded(AF_INET))
-    smartlist_add_asprintf(chunks, "geoip-db-digest %s\n",
-                           geoip_db_digest(AF_INET));
-  if (geoip_is_loaded(AF_INET6))
-    smartlist_add_asprintf(chunks, "geoip6-db-digest %s\n",
-                           geoip_db_digest(AF_INET6));
 
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
+    /* Bandwidth usage stats don't have their own option */
+    {
+      contents = rep_hist_get_bandwidth_lines();
+      smartlist_add(chunks, contents);
+    }
+    if (geoip_is_loaded(AF_INET))
+      smartlist_add_asprintf(chunks, "geoip-db-digest %s\n",
+                             geoip_db_digest(AF_INET));
+    if (geoip_is_loaded(AF_INET6))
+      smartlist_add_asprintf(chunks, "geoip6-db-digest %s\n",
+                             geoip_db_digest(AF_INET6));
     if (options->DirReqStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
                         "dirreq-stats-end", now, &contents) > 0) {
@@ -3033,19 +3035,17 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
       if (contents)
         smartlist_add(chunks, contents);
     }
-  }
-
-  /* Add information about the pluggable transports we support. */
-  if (options->ServerTransportPlugin) {
-    char *pluggable_transports = pt_get_extra_info_descriptor_string();
-    if (pluggable_transports)
-      smartlist_add(chunks, pluggable_transports);
-  }
-
-  if (should_record_bridge_info(options) && write_stats_to_extrainfo) {
-    const char *bridge_stats = geoip_get_bridge_stats_extrainfo(now);
-    if (bridge_stats) {
-      smartlist_add_strdup(chunks, bridge_stats);
+    /* Add information about the pluggable transports we support. */
+    if (options->ServerTransportPlugin) {
+      char *pluggable_transports = pt_get_extra_info_descriptor_string();
+      if (pluggable_transports)
+        smartlist_add(chunks, pluggable_transports);
+    }
+    if (should_record_bridge_info(options)) {
+      const char *bridge_stats = geoip_get_bridge_stats_extrainfo(now);
+      if (bridge_stats) {
+        smartlist_add_strdup(chunks, bridge_stats);
+      }
     }
   }
 
@@ -3139,7 +3139,6 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   tor_free(s_dup);
   tor_free(ed_cert_line);
   extrainfo_free(ei_tmp);
-  tor_free(bandwidth_usage);
 
   return result;
 }
