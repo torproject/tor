@@ -5920,6 +5920,23 @@ test_util_nowrap_math(void *arg)
   tt_u64_op(UINT32_MAX, OP_EQ, tor_add_u32_nowrap(2, UINT32_MAX-1));
   tt_u64_op(UINT32_MAX, OP_EQ, tor_add_u32_nowrap(UINT32_MAX, UINT32_MAX));
 
+  tt_u64_op(0, OP_EQ, tor_add_u64_nowrap(0, 0));
+  tt_u64_op(1, OP_EQ, tor_add_u64_nowrap(0, 1));
+  tt_u64_op(1, OP_EQ, tor_add_u64_nowrap(1, 0));
+  tt_u64_op(4, OP_EQ, tor_add_u64_nowrap(2, 2));
+  /* Repeat the 32-bit checks with the 64-bit function, and get different
+   * results */
+  tt_u64_op((uint64_t)UINT32_MAX+1, OP_EQ,
+            tor_add_u64_nowrap(UINT32_MAX-1, 2));
+  tt_u64_op((uint64_t)UINT32_MAX+1, OP_EQ,
+            tor_add_u64_nowrap(2, UINT32_MAX-1));
+  tt_u64_op((uint64_t)UINT32_MAX*2, OP_EQ,
+            tor_add_u64_nowrap(UINT32_MAX, UINT32_MAX));
+  /* Now do the 64-bit checks with 64-bit limits */
+  tt_u64_op(UINT64_MAX, OP_EQ, tor_add_u64_nowrap(UINT64_MAX-1, 2));
+  tt_u64_op(UINT64_MAX, OP_EQ, tor_add_u64_nowrap(2, UINT64_MAX-1));
+  tt_u64_op(UINT64_MAX, OP_EQ, tor_add_u64_nowrap(UINT64_MAX, UINT64_MAX));
+
  done:
   ;
 }

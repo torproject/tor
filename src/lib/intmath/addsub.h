@@ -15,5 +15,6 @@
 #include "lib/cc/torint.h"
 
 uint32_t tor_add_u32_nowrap(uint32_t a, uint32_t b);
+uint64_t tor_add_u64_nowrap(uint64_t a, uint64_t b);
 
 #endif /* !defined(TOR_INTMATH_MULDIV_H) */

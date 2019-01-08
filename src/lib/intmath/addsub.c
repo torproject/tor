@@ -26,3 +26,16 @@ tor_add_u32_nowrap(uint32_t a, uint32_t b)
     return a+b;
   }
 }
+
+/* Helper: safely add two uint64_t's, capping at UINT64_MAX rather
+ * than overflow */
+uint64_t
+tor_add_u64_nowrap(uint64_t a, uint64_t b)
+{
+  /* a+b > UINT64_MAX check, without overflow */
+  if (PREDICT_UNLIKELY(a > UINT64_MAX - b)) {
+    return UINT64_MAX;
+  } else {
+    return a+b;
+  }
+}
