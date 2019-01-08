@@ -1640,6 +1640,7 @@ test_build_descriptors(void *arg)
 {
   int ret;
   time_t now = time(NULL);
+  hs_service_t *last_service = NULL;
 
   (void) arg;
 
@@ -1664,6 +1665,7 @@ test_build_descriptors(void *arg)
    * is disabled. */
   {
     hs_service_t *service = helper_create_service();
+    last_service = service;
     service_descriptor_free(service->desc_current);
     service->desc_current = NULL;
 
@@ -1676,12 +1678,14 @@ test_build_descriptors(void *arg)
     tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 16);
 
     helper_destroy_service(service);
+    last_service = NULL;
   }
 
   /* Generate a valid number of fake auth clients when the number of
    * clients is zero. */
   {
     hs_service_t *service = helper_create_service_with_clients(0);
+    last_service = service;
     service_descriptor_free(service->desc_current);
     service->desc_current = NULL;
 
@@ -1691,12 +1695,14 @@ test_build_descriptors(void *arg)
     tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 16);
 
     helper_destroy_service(service);
+    last_service = NULL;
   }
 
   /* Generate a valid number of fake auth clients when the number of
    * clients is not a multiple of 16. */
   {
     hs_service_t *service = helper_create_service_with_clients(20);
+    last_service = service;
     service_descriptor_free(service->desc_current);
     service->desc_current = NULL;
 
@@ -1706,12 +1712,14 @@ test_build_descriptors(void *arg)
     tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 32);
 
     helper_destroy_service(service);
+    last_service = NULL;
   }
 
   /* Do not generate any fake desc client when the number of clients is
    * a multiple of 16 but not zero. */
   {
     hs_service_t *service = helper_create_service_with_clients(32);
+    last_service = service;
     service_descriptor_free(service->desc_current);
     service->desc_current = NULL;
 
@@ -1721,9 +1729,11 @@ test_build_descriptors(void *arg)
     tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 32);
 
     helper_destroy_service(service);
+    last_service = NULL;
   }
 
  done:
+  helper_destroy_service(last_service);
   hs_free_all();
 }
 
