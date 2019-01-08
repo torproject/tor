@@ -9,8 +9,10 @@
 
 #include "core/or/or.h"
 
+#include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/or/circuitlist.h"
+#include "core/or/circuituse.h"
 #include "core/or/relay.h"
 #include "core/or/sendme.h"
 
@@ -81,4 +83,100 @@ sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
       return; /* the circuit's closed, don't continue */
     }
   }
+}
+
+/* Process a circuit-level SENDME cell that we just received. The layer_hint,
+ * if not NULL, is the Exit hop of the connection which means that we are a
+ * client. In that case, circ must be an origin circuit. The cell_body_len is
+ * the length of the SENDME cell payload (excluding the header).
+ *
+ * Return 0 on success that is the SENDME is valid and the package window has
+ * been updated properly.
+ *
+ * On error, a negative value is returned which indicate that the circuit must
+ * be closed using the value as the reason for it. */
+int
+sendme_process_circuit_level(crypt_path_t *layer_hint,
+                             circuit_t *circ, uint16_t cell_body_len)
+{
+  tor_assert(circ);
+
+  /* If we are the origin of the circuit, we are the Client so we use the
+   * layer hint (the Exit hop) for the package window tracking. */
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    if ((layer_hint->package_window + CIRCWINDOW_INCREMENT) >
+        CIRCWINDOW_START_MAX) {
+      static struct ratelim_t exit_warn_ratelim = RATELIM_INIT(600);
+      log_fn_ratelim(&exit_warn_ratelim, LOG_WARN, LD_PROTOCOL,
+                     "Unexpected sendme cell from exit relay. "
+                     "Closing circ.");
+      return -END_CIRC_REASON_TORPROTOCOL;
+    }
+    layer_hint->package_window += CIRCWINDOW_INCREMENT;
+    log_debug(LD_APP, "circ-level sendme at origin, packagewindow %d.",
+              layer_hint->package_window);
+
+    /* We count circuit-level sendme's as valid delivered data because they
+     * are rate limited. */
+    circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), cell_body_len);
+  } else {
+    /* We aren't the origin of this circuit so we are the Exit and thus we
+     * track the package window with the circuit object. */
+    if ((circ->package_window + CIRCWINDOW_INCREMENT) >
+        CIRCWINDOW_START_MAX) {
+      static struct ratelim_t client_warn_ratelim = RATELIM_INIT(600);
+      log_fn_ratelim(&client_warn_ratelim, LOG_PROTOCOL_WARN, LD_PROTOCOL,
+                     "Unexpected sendme cell from client. "
+                     "Closing circ (window %d).", circ->package_window);
+      return -END_CIRC_REASON_TORPROTOCOL;
+    }
+    circ->package_window += CIRCWINDOW_INCREMENT;
+    log_debug(LD_EXIT, "circ-level sendme at non-origin, packagewindow %d.",
+              circ->package_window);
+  }
+
+  return 0;
+}
+
+/* Process a stream-level SENDME cell that we just received. The conn is the
+ * edge connection (stream) that the circuit circ is associated with. The
+ * cell_body_len is the length of the payload (excluding the header).
+ *
+ * Return 0 on success that is the SENDME is valid and the package window has
+ * been updated properly.
+ *
+ * On error, a negative value is returned which indicate that the circuit must
+ * be closed using the value as the reason for it. */
+int
+sendme_process_stream_level(edge_connection_t *conn, circuit_t *circ,
+                            uint16_t cell_body_len)
+{
+  tor_assert(conn);
+  tor_assert(circ);
+
+  /* Don't allow the other endpoint to request more than our maximum (i.e.
+   * initial) stream SENDME window worth of data. Well-behaved stock clients
+   * will not request more than this max (as per the check in the while loop
+   * of sendme_connection_edge_consider_sending()). */
+  if ((conn->package_window + STREAMWINDOW_INCREMENT) >
+      STREAMWINDOW_START_MAX) {
+    static struct ratelim_t stream_warn_ratelim = RATELIM_INIT(600);
+    log_fn_ratelim(&stream_warn_ratelim, LOG_PROTOCOL_WARN, LD_PROTOCOL,
+                   "Unexpected stream sendme cell. Closing circ (window %d).",
+                   conn->package_window);
+    return -END_CIRC_REASON_TORPROTOCOL;
+  }
+  /* At this point, the stream sendme is valid */
+  conn->package_window += STREAMWINDOW_INCREMENT;
+
+  /* We count circuit-level sendme's as valid delivered data because they are
+   * rate limited. */
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), cell_body_len);
+  }
+
+  log_debug(CIRCUIT_IS_ORIGIN(circ) ? LD_APP : LD_EXIT,
+            "stream-level sendme, package_window now %d.",
+            conn->package_window);
+  return 0;
 }
