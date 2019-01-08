@@ -289,7 +289,7 @@ helper_create_service(void)
   return service;
 }
 
-/* Helper: Deallocate a given service object, it's child objects and
+/* Helper: Deallocate a given service object, its child objects and
  * remove it from onion service map.
  * */
 static void
