@@ -14,40 +14,48 @@
 #include "core/or/relay.h"
 #include "core/or/sendme.h"
 
-/** Called when we've just received a relay data cell, when
- * we've just finished flushing all bytes to stream <b>conn</b>,
- * or when we've flushed *some* bytes to the stream <b>conn</b>.
+/** Called when we've just received a relay data cell, when we've just
+ * finished flushing all bytes to stream <b>conn</b>, or when we've flushed
+ * *some* bytes to the stream <b>conn</b>.
  *
- * If conn->outbuf is not too full, and our deliver window is
- * low, send back a suitable number of stream-level sendme cells.
+ * If conn->outbuf is not too full, and our deliver window is low, send back a
+ * suitable number of stream-level sendme cells.
  */
 void
 sendme_connection_edge_consider_sending(edge_connection_t *conn)
 {
-  circuit_t *circ;
+  tor_assert(conn);
 
-  if (connection_outbuf_too_full(TO_CONN(conn)))
-    return;
+  int log_domain = TO_CONN(conn)->type == CONN_TYPE_AP ? LD_APP : LD_EXIT;
 
-  circ = circuit_get_by_edge_conn(conn);
-  if (!circ) {
-    /* this can legitimately happen if the destroy has already
-     * arrived and torn down the circuit */
-    log_info(LD_APP,"No circuit associated with conn. Skipping.");
-    return;
+  /* Don't send it if we still have data to deliver. */
+  if (connection_outbuf_too_full(TO_CONN(conn))) {
+    goto end;
   }
 
-  while (conn->deliver_window <= STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
-    log_debug(conn->base_.type == CONN_TYPE_AP ?LD_APP:LD_EXIT,
-              "Outbuf %d, Queuing stream sendme.",
-              (int)conn->base_.outbuf_flushlen);
+  if (circuit_get_by_edge_conn(conn) == NULL) {
+    /* This can legitimately happen if the destroy has already arrived and
+     * torn down the circuit. */
+    log_info(log_domain, "No circuit associated with edge connection. "
+                         "Skipping sending SENDME.");
+    goto end;
+  }
+
+  while (conn->deliver_window <=
+         (STREAMWINDOW_START - STREAMWINDOW_INCREMENT)) {
+    log_debug(log_domain, "Outbuf %lu, queuing stream SENDME.",
+              TO_CONN(conn)->outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if (connection_edge_send_command(conn, RELAY_COMMAND_SENDME,
                                      NULL, 0) < 0) {
-      log_warn(LD_APP,"connection_edge_send_command failed. Skipping.");
-      return; /* the circuit's closed, don't continue */
+      log_warn(LD_APP, "connection_edge_send_command failed while sending "
+                       "a SENDME. Circuit probably closed, skipping.");
+      goto end; /* The circuit's closed, don't continue */
     }
   }
+
+ end:
+  return;
 }
 
 /** Check if the deliver_window for circuit <b>circ</b> (at hop
