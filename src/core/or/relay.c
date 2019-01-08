@@ -1812,87 +1812,52 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                (unsigned)circ->n_circ_id, rh.stream_id);
       return 0;
     case RELAY_COMMAND_SENDME:
+    {
+      int ret;
+
       if (!rh.stream_id) {
-        if (layer_hint) {
-          if (layer_hint->package_window + CIRCWINDOW_INCREMENT >
-                CIRCWINDOW_START_MAX) {
-            static struct ratelim_t exit_warn_ratelim = RATELIM_INIT(600);
-            log_fn_ratelim(&exit_warn_ratelim, LOG_WARN, LD_PROTOCOL,
-                   "Unexpected sendme cell from exit relay. "
-                   "Closing circ.");
-            return -END_CIRC_REASON_TORPROTOCOL;
-          }
-          layer_hint->package_window += CIRCWINDOW_INCREMENT;
-          log_debug(LD_APP,"circ-level sendme at origin, packagewindow %d.",
-                    layer_hint->package_window);
-          circuit_resume_edge_reading(circ, layer_hint);
-
-          /* We count circuit-level sendme's as valid delivered data because
-           * they are rate limited.
-           */
-          if (CIRCUIT_IS_ORIGIN(circ)) {
-            circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ),
-                                    rh.length);
-          }
-
-        } else {
-          if (circ->package_window + CIRCWINDOW_INCREMENT >
-                CIRCWINDOW_START_MAX) {
-            static struct ratelim_t client_warn_ratelim = RATELIM_INIT(600);
-            log_fn_ratelim(&client_warn_ratelim,LOG_PROTOCOL_WARN, LD_PROTOCOL,
-                   "Unexpected sendme cell from client. "
-                   "Closing circ (window %d).",
-                   circ->package_window);
-            return -END_CIRC_REASON_TORPROTOCOL;
-          }
-          circ->package_window += CIRCWINDOW_INCREMENT;
-          log_debug(LD_APP,
-                    "circ-level sendme at non-origin, packagewindow %d.",
-                    circ->package_window);
-          circuit_resume_edge_reading(circ, layer_hint);
+        /* Circuit level SENDME cell. */
+        ret = sendme_process_circuit_level(layer_hint, circ, rh.length);
+        if (ret < 0) {
+          return ret;
         }
+        /* Resume reading on any streams now that we've processed a valid
+         * SENDME cell that updated our package window. */
+        circuit_resume_edge_reading(circ, layer_hint);
+        /* We are done, the rest of the code is for the stream level. */
         return 0;
       }
+
+      /* No connection, might be half edge state. We are done if so. */
       if (!conn) {
         if (CIRCUIT_IS_ORIGIN(circ)) {
           origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
           if (connection_half_edge_is_valid_sendme(ocirc->half_streams,
                                                    rh.stream_id)) {
             circuit_read_valid_data(ocirc, rh.length);
-            log_info(domain,
-                    "sendme cell on circ %u valid on half-closed "
-                    "stream id %d", ocirc->global_identifier, rh.stream_id);
+            log_info(domain, "Sendme cell on circ %u valid on half-closed "
+                             "stream id %d",
+                     ocirc->global_identifier, rh.stream_id);
           }
         }
 
-        log_info(domain,"sendme cell dropped, unknown stream (streamid %d).",
+        log_info(domain, "SENDME cell dropped, unknown stream (streamid %d).",
                  rh.stream_id);
         return 0;
       }
 
-      /* Don't allow the other endpoint to request more than our maximum
-       * (i.e. initial) stream SENDME window worth of data. Well-behaved
-       * stock clients will not request more than this max (as per the check
-       * in the while loop of sendme_connection_edge_consider_sending()).
-       */
-      if (conn->package_window + STREAMWINDOW_INCREMENT >
-          STREAMWINDOW_START_MAX) {
-        static struct ratelim_t stream_warn_ratelim = RATELIM_INIT(600);
-        log_fn_ratelim(&stream_warn_ratelim, LOG_PROTOCOL_WARN, LD_PROTOCOL,
-               "Unexpected stream sendme cell. Closing circ (window %d).",
-               conn->package_window);
-        return -END_CIRC_REASON_TORPROTOCOL;
+      /* Stream level SENDME cell. */
+      ret = sendme_process_stream_level(conn, circ, rh.length);
+      if (ret < 0) {
+        /* Means we need to close the circuit with reason ret. */
+        return ret;
       }
 
-      /* At this point, the stream sendme is valid */
-      if (CIRCUIT_IS_ORIGIN(circ)) {
-        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ),
-                                rh.length);
-      }
+      /* We've now processed properly a SENDME cell, all windows have been
+       * properly updated, we'll read on the edge connection to see if we can
+       * get data out towards the end point (Exit or client) since we are now
+       * allowed to deliver more cells. */
 
-      conn->package_window += STREAMWINDOW_INCREMENT;
-      log_debug(domain,"stream-level sendme, packagewindow now %d.",
-                conn->package_window);
       if (circuit_queue_streams_are_blocked(circ)) {
         /* Still waiting for queue to flush; don't touch conn */
         return 0;
@@ -1905,6 +1870,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
       return 0;
+    }
     case RELAY_COMMAND_RESOLVE:
       if (layer_hint) {
         log_fn(LOG_PROTOCOL_WARN, LD_APP,
