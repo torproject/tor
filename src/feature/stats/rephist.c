@@ -1243,19 +1243,28 @@ rep_hist_get_oldest_bandwidth_history_index(const bw_array_t *b)
  * To avoid disclosing sensitive information, limit the bandwidth based on
  * RelayBandwidthRate, and round the bandwidth to the nearest kilobyte.
  *
- * Asserts if the index is out of bounds. */
+ * If the index is out of bounds, logs a BUG() warning and returns zero. */
 static uint64_t
 rep_hist_get_bandwidth_history_for_index(const bw_array_t *b, int i)
 {
   const or_options_t *options = get_options();
   uint64_t cutoff, total;
 
-  tor_assert(i < NUM_TOTALS);
+  if (BUG(i < 0))
+    return 0;
+
+  if (BUG(i >= NUM_TOTALS))
+    return 0;
+
+  if (BUG(i >= b->num_maxes_set))
+    return 0;
 
   if (options->RelayBandwidthRate) {
     /* We don't want to report that we used more bandwidth than the max we're
      * willing to relay; otherwise everybody will know how much traffic
      * we used ourself. */
+    /* ensure_bandwidth_cap() makes sure that this multiplication can't
+     * overflow. */
     cutoff = options->RelayBandwidthRate * NUM_SECS_BW_SUM_INTERVAL;
   } else {
     cutoff = UINT64_MAX;
