@@ -1,0 +1,18 @@
+/* This file contains the SENDME cell definition. */
+
+struct sendme_cell {
+  /* Version field. */
+  u8 version IN [0x00, 0x01];
+
+  /* The data content depends on the version. */
+  u16 data_len;
+  u8 data[data_len];
+}
+
+/* SENDME version 0. No data. */
+
+/* SENDME version 1. Authenticated with digest. */
+struct sendme_data_v1 {
+  /* A 4 bytes digest. */
+  u8 digest[4];
+}
