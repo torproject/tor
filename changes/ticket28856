@@ -1,0 +1,3 @@
+  o Minor features (performance):
+    - Speed up directory parsing a little by avoiding use of the
+      non-inlined strcmp_len() function. Closes ticket 28856.
