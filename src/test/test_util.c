@@ -2153,15 +2153,6 @@ test_util_strmisc(void *arg)
   tt_int_op(strcmp_opt(NULL,  "foo"), OP_LT, 0);
   tt_int_op(strcmp_opt("foo", NULL),  OP_GT, 0);
 
-  /* Test strcmp_len */
-  tt_int_op(strcmp_len("foo", "bar", 3),   OP_GT, 0);
-  tt_int_op(strcmp_len("foo", "bar", 2),   OP_LT, 0);
-  tt_int_op(strcmp_len("foo2", "foo1", 4), OP_GT, 0);
-  tt_int_op(strcmp_len("foo2", "foo1", 3), OP_LT, 0); /* Really stop at len */
-  tt_int_op(strcmp_len("foo2", "foo", 3), OP_EQ, 0);  /* Really stop at len */
-  tt_int_op(strcmp_len("blah", "", 4),     OP_GT, 0);
-  tt_int_op(strcmp_len("blah", "", 0),    OP_EQ, 0);
-
  done:
   tor_free(cp_tmp);
 }

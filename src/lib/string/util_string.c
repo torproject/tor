@@ -212,21 +212,6 @@ strcmpstart(const char *s1, const char *s2)
   return strncmp(s1, s2, n);
 }
 
-/** Compare the s1_len-byte string <b>s1</b> with <b>s2</b>,
- * without depending on a terminating nul in s1.  Sorting order is first by
- * length, then lexically; return values are as for strcmp.
- */
-int
-strcmp_len(const char *s1, const char *s2, size_t s1_len)
-{
-  size_t s2_len = strlen(s2);
-  if (s1_len < s2_len)
-    return -1;
-  if (s1_len > s2_len)
-    return 1;
-  return fast_memcmp(s1, s2, s2_len);
-}
-
 /** Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcasecmp.
  */
