@@ -1553,8 +1553,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       return connection_exit_begin_conn(cell, circ);
     case RELAY_COMMAND_DATA:
       ++stats_n_data_cells_received;
-      if (( layer_hint && --layer_hint->deliver_window < 0) ||
-          (!layer_hint && --circ->deliver_window < 0)) {
+
+      /* Update our circuit-level deliver window that we received a DATA cell.
+       * If the deliver window goes below 0, we end the connection due to a
+       * protocol failure. */
+      if (sendme_circuit_data_received(circ, layer_hint) < 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "(relay data) circ deliver_window below 0. Killing.");
         if (conn) {
@@ -1565,9 +1568,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         }
         return -END_CIRC_REASON_TORPROTOCOL;
       }
-      log_debug(domain,"circ deliver_window now %d.", layer_hint ?
-                layer_hint->deliver_window : circ->deliver_window);
 
+      /* Consider sending a circuit-level SENDME cell. */
       sendme_circuit_consider_sending(circ, layer_hint);
 
       if (rh.stream_id == 0) {
@@ -1591,7 +1593,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
 
-      if (--conn->deliver_window < 0) { /* is it below 0 after decrement? */
+      /* Update our stream-level deliver window that we just received a DATA
+       * cell. Going below 0 means we have a protocol level error so the
+       * circuit is closed. */
+
+      if (sendme_stream_data_received(conn) < 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "(relay data) conn deliver_window below 0. Killing.");
         return -END_CIRC_REASON_TORPROTOCOL;

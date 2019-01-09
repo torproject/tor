@@ -180,3 +180,36 @@ sendme_process_stream_level(edge_connection_t *conn, circuit_t *circ,
             conn->package_window);
   return 0;
 }
+
+/* Called when a relay DATA cell is received on the given circuit. If
+ * layer_hint is NULL, this means we are the Exit end point else we are the
+ * Client. Update the deliver window and return its new value. */
+int
+sendme_circuit_data_received(circuit_t *circ, crypt_path_t *layer_hint)
+{
+  int deliver_window, domain;
+
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    tor_assert(layer_hint);
+    --layer_hint->deliver_window;
+    deliver_window = layer_hint->deliver_window;
+    domain = LD_APP;
+  } else {
+    tor_assert(!layer_hint);
+    --circ->deliver_window;
+    deliver_window = circ->deliver_window;
+    domain = LD_EXIT;
+  }
+
+  log_debug(domain, "Circuit deliver_window now %d.", deliver_window);
+  return deliver_window;
+}
+
+/* Called when a relay DATA cell is received for the given edge connection
+ * conn. Update the deliver window and return its new value. */
+int
+sendme_stream_data_received(edge_connection_t *conn)
+{
+  tor_assert(conn);
+  return --conn->deliver_window;
+}
