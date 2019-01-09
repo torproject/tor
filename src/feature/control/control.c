@@ -1743,6 +1743,26 @@ handle_control_takeownership(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+/** Called when we get a DROPOWNERSHIP command.  Mark this connection
+ * as a non-owning connection, so that we will not exit if the connection
+ * closes. */
+static int
+handle_control_dropownership(control_connection_t *conn, uint32_t len,
+                             const char *body)
+{
+  (void)len;
+  (void)body;
+
+  conn->is_owning_control_connection = 0;
+
+  log_info(LD_CONTROL, "Control connection %d has dropped ownership of this "
+           "Tor instance.",
+           (int)(conn->base_.s));
+
+  send_control_done(conn);
+  return 0;
+}
+
 /** Return true iff <b>addr</b> is unusable as a mapaddress target because of
  * containing funny characters. */
 static int
@@ -5549,6 +5569,9 @@ connection_control_process_inbuf(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "TAKEOWNERSHIP")) {
     if (handle_control_takeownership(conn, cmd_data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "DROPOWNERSHIP")) {
+    if (handle_control_dropownership(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "MAPADDRESS")) {
     if (handle_control_mapaddress(conn, cmd_data_len, args))
