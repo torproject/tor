@@ -34,4 +34,7 @@ int sendme_circuit_data_received(circuit_t *circ, crypt_path_t *layer_hint);
 int sendme_circuit_data_packaged(circuit_t *circ, crypt_path_t *layer_hint);
 int sendme_stream_data_packaged(edge_connection_t *conn);
 
+/* Track cell digest. */
+void sendme_note_cell_digest(circuit_t *circ);
+
 #endif /* !defined(TOR_SENDME_H) */

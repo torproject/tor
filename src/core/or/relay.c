@@ -644,6 +644,14 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
     circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
     return -1;
   }
+
+  /* If applicable, note the cell digest for the SENDME version 1 purpose if
+   * we need to. This call needs to be after the circuit_package_relay_cell()
+   * because the cell digest is set within that function. */
+  if (relay_command == RELAY_COMMAND_DATA) {
+    sendme_note_cell_digest(circ);
+  }
+
   return 0;
 }
 

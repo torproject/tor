@@ -1227,6 +1227,12 @@ circuit_free_(circuit_t *circ)
    * "active" checks will be violated. */
   cell_queue_clear(&circ->n_chan_cells);
 
+  /* Cleanup possible SENDME state. */
+  if (circ->sendme_last_digests) {
+    SMARTLIST_FOREACH(circ->sendme_last_digests, uint8_t *, d, tor_free(d));
+    smartlist_free(circ->sendme_last_digests);
+  }
+
   log_info(LD_CIRC, "Circuit %u (id: %" PRIu32 ") has been freed.",
            n_circ_id,
            CIRCUIT_IS_ORIGIN(circ) ?

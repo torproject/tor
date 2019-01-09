@@ -110,6 +110,12 @@ struct circuit_t {
    * circuit-level sendme cells to indicate that we're willing to accept
    * more. */
   int deliver_window;
+  /** FIFO containing the digest of the cells that are just before a SENDME is
+   * sent by the client. It is done at the last cell before our package_window
+   * goes down to 0 which is when we expect a SENDME. The protocol doesn't
+   * allow more than 10 outstanding SENDMEs worth of data meaning this list
+   * should only contain at most 10 digests of 4 bytes each. */
+  smartlist_t *sendme_last_digests;
 
   /** Temporary field used during circuits_handle_oom. */
   uint32_t age_tmp;
