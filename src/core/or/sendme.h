@@ -16,7 +16,8 @@
 /* Sending SENDME cell. */
 void sendme_connection_edge_consider_sending(edge_connection_t *edge_conn);
 void sendme_circuit_consider_sending(circuit_t *circ,
-                                     crypt_path_t *layer_hint);
+                                     crypt_path_t *layer_hint,
+                                     crypto_digest_t *digest);
 
 /* Processing SENDME cell. */
 int sendme_process_circuit_level(crypt_path_t *layer_hint,
