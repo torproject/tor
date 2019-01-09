@@ -62,7 +62,7 @@ get_local_listener(int family, int type)
     len = sizeof(sin);
   } else {
     sa = (struct sockaddr *) &sin6;
-    sin6.sin6_family = AF_INET;
+    sin6.sin6_family = AF_INET6;
     sin6.sin6_addr.s6_addr[15] = 1;
     len = sizeof(sin6);
   }
