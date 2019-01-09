@@ -15,6 +15,39 @@
 #include "core/or/circuituse.h"
 #include "core/or/relay.h"
 #include "core/or/sendme.h"
+#include "feature/nodelist/networkstatus.h"
+
+/* The cell version constants for when emitting a cell. */
+#define SENDME_EMIT_MIN_VERSION_DEFAULT 0
+#define SENDME_EMIT_MIN_VERSION_MIN 0
+#define SENDME_EMIT_MIN_VERSION_MAX UINT8_MAX
+
+/* The cell version constants for when accepting a cell. */
+#define SENDME_ACCEPT_MIN_VERSION_DEFAULT 0
+#define SENDME_ACCEPT_MIN_VERSION_MIN 0
+#define SENDME_ACCEPT_MIN_VERSION_MAX UINT8_MAX
+
+/* Return the minimum version given by the consensus (if any) that should be
+ * used when emitting a SENDME cell. */
+static int
+get_emit_min_version(void)
+{
+  return networkstatus_get_param(NULL, "sendme_emit_min_version",
+                                 SENDME_EMIT_MIN_VERSION_DEFAULT,
+                                 SENDME_EMIT_MIN_VERSION_MIN,
+                                 SENDME_EMIT_MIN_VERSION_MAX);
+}
+
+/* Return the minimum version given by the consensus (if any) that should be
+ * accepted when receiving a SENDME cell. */
+static int
+get_accept_min_version(void)
+{
+  return networkstatus_get_param(NULL, "sendme_accept_min_version",
+                                 SENDME_ACCEPT_MIN_VERSION_DEFAULT,
+                                 SENDME_ACCEPT_MIN_VERSION_MIN,
+                                 SENDME_ACCEPT_MIN_VERSION_MAX);
+}
 
 /** Called when we've just received a relay data cell, when we've just
  * finished flushing all bytes to stream <b>conn</b>, or when we've flushed
