@@ -16,6 +16,7 @@
 #include "core/or/relay.h"
 #include "core/or/sendme.h"
 #include "feature/nodelist/networkstatus.h"
+#include "trunnel/sendme.h"
 
 /* The cell version constants for when emitting a cell. */
 #define SENDME_EMIT_MIN_VERSION_DEFAULT 0
@@ -38,6 +39,7 @@ get_emit_min_version(void)
                                  SENDME_EMIT_MIN_VERSION_MAX);
 }
 
+#if 0
 /* Return the minimum version given by the consensus (if any) that should be
  * accepted when receiving a SENDME cell. */
 static int
@@ -47,6 +49,98 @@ get_accept_min_version(void)
                                  SENDME_ACCEPT_MIN_VERSION_DEFAULT,
                                  SENDME_ACCEPT_MIN_VERSION_MIN,
                                  SENDME_ACCEPT_MIN_VERSION_MAX);
+}
+#endif
+
+/* Build and encode a version 1 SENDME cell into payload, which must be at
+ * least of RELAY_PAYLOAD_SIZE bytes, using the digest for the cell data.
+ *
+ * Return the size in bytes of the encoded cell in payload. A negative value
+ * is returned on encoding failure. */
+static ssize_t
+build_cell_payload_v1(crypto_digest_t *cell_digest, uint8_t *payload)
+{
+  ssize_t len = -1;
+  sendme_cell_t *cell = NULL;
+  sendme_data_v1_t *data = NULL;
+
+  tor_assert(cell_digest);
+  tor_assert(payload);
+
+  cell = sendme_cell_new();
+  data = sendme_data_v1_new();
+
+  /* Building a payload for version 1. */
+  sendme_cell_set_version(cell, 0x01);
+
+  /* Copy the digest into the data payload. */
+  crypto_digest_get_digest(cell_digest,
+                           (char *) sendme_data_v1_getarray_digest(data),
+                           sendme_data_v1_getlen_digest(data));
+
+  /* Set the length of the data in the cell payload. It is the encoded length
+   * of the v1 data object. */
+  sendme_cell_setlen_data(cell, sendme_data_v1_encoded_len(data));
+  /* Encode into the cell's data field using its current length just set. */
+  if (sendme_data_v1_encode(sendme_cell_getarray_data(cell),
+                            sendme_cell_getlen_data(cell), data) < 0) {
+    goto end;
+  }
+  /* Set the DATA_LEN field to what we've just encoded. */
+  sendme_cell_set_data_len(cell, sendme_cell_getlen_data(cell));
+
+  /* Finally, encode the cell into the payload. */
+  len = sendme_cell_encode(payload, RELAY_PAYLOAD_SIZE, cell);
+
+ end:
+  sendme_cell_free(cell);
+  sendme_data_v1_free(data);
+  return len;
+}
+
+/* Send a circuit-level SENDME on the given circuit using the layer_hint if
+ * not NULL. The digest is only used for version 1.
+ *
+ * Return 0 on success else a negative value and the circuit will be closed
+ * because we failed to send the cell on it. */
+static int
+send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
+                          crypto_digest_t *cell_digest)
+{
+  uint8_t emit_version;
+  uint8_t payload[RELAY_PAYLOAD_SIZE];
+  ssize_t payload_len;
+
+  tor_assert(circ);
+  tor_assert(cell_digest);
+
+  emit_version = get_emit_min_version();
+  switch (emit_version) {
+  case 0x01:
+    payload_len = build_cell_payload_v1(cell_digest, payload);
+    if (BUG(payload_len < 0)) {
+      /* Unable to encode the cell, abort. We can recover from this by closing
+       * the circuit but in theory it should never happen. */
+      return -1;
+    }
+    log_debug(LD_PROTOCOL, "Emitting SENDME version 1 cell.");
+    break;
+  case 0x00:
+    /* Fallthrough because default is to use v0. */
+  default:
+    /* Unknown version, fallback to version 0 meaning no payload. */
+    payload_len = 0;
+    break;
+  }
+
+  if (relay_send_command_from_edge(0, circ, RELAY_COMMAND_SENDME,
+                                   (char *) payload, payload_len,
+                                   layer_hint) < 0) {
+    log_warn(LD_CIRC,
+             "SENDME relay_send_command_from_edge failed. Circuit's closed.");
+    return -1; /* the circuit's closed, don't continue */
+  }
+  return 0;
 }
 
 /** Called when we've just received a relay data cell, when we've just
@@ -100,8 +194,11 @@ sendme_connection_edge_consider_sending(edge_connection_t *conn)
  * more.
  */
 void
-sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
+sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint,
+                                crypto_digest_t *digest)
 {
+  tor_assert(digest);
+
   while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <=
           CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
     log_debug(LD_CIRC,"Queuing circuit sendme.");
@@ -109,11 +206,8 @@ sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
     else
       circ->deliver_window += CIRCWINDOW_INCREMENT;
-    if (relay_send_command_from_edge(0, circ, RELAY_COMMAND_SENDME,
-                                     NULL, 0, layer_hint) < 0) {
-      log_warn(LD_CIRC,
-               "relay_send_command_from_edge failed. Circuit's closed.");
-      return; /* the circuit's closed, don't continue */
+    if (send_circuit_level_sendme(circ, layer_hint, digest) < 0) {
+      return; /* The circuit's closed, don't continue */
     }
   }
 }
