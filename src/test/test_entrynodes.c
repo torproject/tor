@@ -127,6 +127,9 @@ big_fake_network_cleanup(const struct testcase_t *testcase, void *ptr)
   return 1; /* NOP */
 }
 
+#define REASONABLY_FUTURE " reasonably-future"
+#define REASONABLY_PAST " reasonably-past"
+
 /* Unittest setup function: Setup a fake network. */
 static void *
 big_fake_network_setup(const struct testcase_t *testcase)
@@ -138,9 +141,10 @@ big_fake_network_setup(const struct testcase_t *testcase)
   const int N_NODES = 271;
 
   const char *argument = testcase->setup_data;
-  int reasonably_live_consensus = 0;
+  int reasonably_future_consensus = 0, reasonably_past_consensus = 0;
   if (argument) {
-    reasonably_live_consensus = strstr(argument, "reasonably-live") != NULL;
+    reasonably_future_consensus = strstr(argument, REASONABLY_FUTURE) != NULL;
+    reasonably_past_consensus = strstr(argument, REASONABLY_PAST) != NULL;
   }
 
   big_fake_net_nodes = smartlist_new();
@@ -198,11 +202,15 @@ big_fake_network_setup(const struct testcase_t *testcase)
 
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
   dummy_consensus = tor_malloc_zero(sizeof(networkstatus_t));
-  if (reasonably_live_consensus) {
-    /* Make the dummy consensus valid from 4 hours ago, but expired an hour
+  if (reasonably_future_consensus) {
+    /* Make the dummy consensus valid in 6 hours, and expiring in 7 hours. */
+    dummy_consensus->valid_after = approx_time() + 6*3600;
+    dummy_consensus->valid_until = approx_time() + 7*3600;
+  } else if (reasonably_past_consensus) {
+    /* Make the dummy consensus valid from 16 hours ago, but expired 12 hours
      * ago. */
-    dummy_consensus->valid_after = approx_time() - 4*3600;
-    dummy_consensus->valid_until = approx_time() - 3600;
+    dummy_consensus->valid_after = approx_time() - 16*3600;
+    dummy_consensus->valid_until = approx_time() - 12*3600;
   } else {
     /* Make the dummy consensus valid for an hour either side of now. */
     dummy_consensus->valid_after = approx_time() - 3600;
@@ -3038,13 +3046,17 @@ static const struct testcase_setup_t upgrade_circuits = {
 
 #define BFN_TEST(name) \
   EN_TEST_BASE(name, TT_FORK, &big_fake_network, NULL), \
-  { #name "_reasonably_live", test_entry_guard_ ## name, TT_FORK, \
-    &big_fake_network, (void*)("reasonably-live") }
+  { #name "_reasonably_future", test_entry_guard_ ## name, TT_FORK, \
+    &big_fake_network, (void*)(REASONABLY_FUTURE) }, \
+  { #name "_reasonably_past", test_entry_guard_ ## name, TT_FORK, \
+    &big_fake_network, (void*)(REASONABLY_PAST) }
 
 #define UPGRADE_TEST(name, arg) \
   EN_TEST_BASE(name, TT_FORK, &upgrade_circuits, arg), \
-  { #name "_reasonably_live", test_entry_guard_ ## name, TT_FORK, \
-    &upgrade_circuits, (void*)(arg " reasonably-live") }
+  { #name "_reasonably_future", test_entry_guard_ ## name, TT_FORK, \
+    &upgrade_circuits, (void*)(arg REASONABLY_FUTURE) }, \
+  { #name "_reasonably_past", test_entry_guard_ ## name, TT_FORK, \
+    &upgrade_circuits, (void*)(arg REASONABLY_PAST) }
 
 struct testcase_t entrynodes_tests[] = {
   NO_PREFIX_TEST(node_preferred_orport),

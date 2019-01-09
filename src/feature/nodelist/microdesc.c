@@ -111,8 +111,9 @@ microdesc_note_outdated_dirserver(const char *relay_digest)
 
   /* If we have a reasonably live consensus, then most of our dirservers should
    * still be caching all the microdescriptors in it. Reasonably live
-   * consensuses are up to a day old. But microdescriptors expire 7 days after
-   * the last consensus that referenced them. */
+   * consensuses are up to a day old (or a day in the future). But
+   * microdescriptors expire 7 days after the last consensus that referenced
+   * them. */
   if (!networkstatus_get_reasonably_live_consensus(approx_time(),
                                                    FLAV_MICRODESC)) {
     return;
@@ -545,8 +546,8 @@ microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force)
   size_t bytes_dropped = 0;
   time_t now = time(NULL);
 
-  /* If we don't know a live consensus, don't believe last_listed values: we
-   * might be starting up after being down for a while. */
+  /* If we don't know a reasonably live consensus, don't believe last_listed
+   * values: we might be starting up after being down for a while. */
   if (! force &&
       ! networkstatus_get_reasonably_live_consensus(now, FLAV_MICRODESC))
       return;
@@ -971,6 +972,7 @@ update_microdesc_downloads(time_t now)
   if (directory_too_idle_to_fetch_descriptors(options, now))
     return;
 
+  /* Give up if we don't have a reasonably live consensus. */
   consensus = networkstatus_get_reasonably_live_consensus(now, FLAV_MICRODESC);
   if (!consensus)
     return;

@@ -489,28 +489,47 @@ handle_get_frontpage(dir_connection_t *conn, const get_handler_args_t *args)
 }
 
 /** Warn that the cached consensus <b>consensus</b> of type
- * <b>flavor</b> is too old and will not be served to clients. Rate-limit the
- * warning to avoid logging an entry on every request.
+ * <b>flavor</b> too new or too old, based on <b>is_too_new</b>,
+ * and will not be served to clients. Rate-limit the warning to avoid logging
+ * an entry on every request.
  */
 static void
-warn_consensus_is_too_old(const struct consensus_cache_entry_t *consensus,
-                          const char *flavor, time_t now)
+warn_consensus_is_not_reasonably_live(
+                          const struct consensus_cache_entry_t *consensus,
+                          const char *flavor, time_t now, bool is_too_new)
 {
-#define TOO_OLD_WARNING_INTERVAL (60*60)
-  static ratelim_t warned = RATELIM_INIT(TOO_OLD_WARNING_INTERVAL);
+#define NOT_REASONABLY_LIVE_WARNING_INTERVAL (60*60)
+  static ratelim_t warned[2] = { RATELIM_INIT(
+                                      NOT_REASONABLY_LIVE_WARNING_INTERVAL),
+                                RATELIM_INIT(
+                                      NOT_REASONABLY_LIVE_WARNING_INTERVAL) };
   char timestamp[ISO_TIME_LEN+1];
-  time_t valid_until;
-  char *dupes;
+  /* valid_after if is_too_new, valid_until if !is_too_new */
+  time_t valid_time = 0;
+  char *dupes = NULL;
 
-  if (consensus_cache_entry_get_valid_until(consensus, &valid_until))
-    return;
+  if (is_too_new) {
+    if (consensus_cache_entry_get_valid_after(consensus, &valid_time))
+      return;
+    dupes = rate_limit_log(&warned[1], now);
+  } else {
+    if (consensus_cache_entry_get_valid_until(consensus, &valid_time))
+      return;
+    dupes = rate_limit_log(&warned[0], now);
+  }
 
-  if ((dupes = rate_limit_log(&warned, now))) {
-    format_local_iso_time(timestamp, valid_until);
-    log_warn(LD_DIRSERV, "Our %s%sconsensus is too old, so we will not "
-             "serve it to clients. It was valid until %s local time and we "
-             "continued to serve it for up to 24 hours after it expired.%s",
-             flavor ? flavor : "", flavor ? " " : "", timestamp, dupes);
+  if (dupes) {
+    format_local_iso_time(timestamp, valid_time);
+    log_warn(LD_DIRSERV, "Our %s%sconsensus is too %s, so we will not "
+             "serve it to clients. It was valid %s %s local time and we "
+             "continued to serve it for up to 24 hours %s.%s",
+             flavor ? flavor : "",
+             flavor ? " " : "",
+             is_too_new ? "new" : "old",
+             is_too_new ? "after" : "until",
+             timestamp,
+             is_too_new ? "before it was valid" : "after it expired",
+             dupes);
     tor_free(dupes);
   }
 }
@@ -853,7 +872,6 @@ handle_get_current_consensus(dir_connection_t *conn,
 
   if (req.diff_only && !cached_consensus) {
     write_short_http_response(conn, 404, "No such diff available");
-    // XXXX warn_consensus_is_too_old(v, req.flavor, now);
     geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
     goto done;
   }
@@ -864,19 +882,30 @@ handle_get_current_consensus(dir_connection_t *conn,
                                            &compression_used);
   }
 
-  time_t fresh_until, valid_until;
-  int have_fresh_until = 0, have_valid_until = 0;
+  time_t valid_after, fresh_until, valid_until;
+  int have_valid_after = 0, have_fresh_until = 0, have_valid_until = 0;
   if (cached_consensus) {
+    have_valid_after =
+      !consensus_cache_entry_get_valid_after(cached_consensus, &valid_after);
     have_fresh_until =
       !consensus_cache_entry_get_fresh_until(cached_consensus, &fresh_until);
     have_valid_until =
       !consensus_cache_entry_get_valid_until(cached_consensus, &valid_until);
   }
 
-  if (cached_consensus && have_valid_until &&
+  if (cached_consensus && have_valid_after &&
+      !networkstatus_valid_after_is_reasonably_live(valid_after, now)) {
+    write_short_http_response(conn, 404, "Consensus is too new");
+    warn_consensus_is_not_reasonably_live(cached_consensus, req.flavor, now,
+                                          1);
+    geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
+    goto done;
+  } else if (
+      cached_consensus && have_valid_until &&
       !networkstatus_valid_until_is_reasonably_live(valid_until, now)) {
     write_short_http_response(conn, 404, "Consensus is too old");
-    warn_consensus_is_too_old(cached_consensus, req.flavor, now);
+    warn_consensus_is_not_reasonably_live(cached_consensus, req.flavor, now,
+                                          0);
     geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
     goto done;
   }

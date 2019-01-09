@@ -2166,11 +2166,9 @@ check_expired_networkstatus_callback(time_t now, const or_options_t *options)
   (void)options;
   /* Check whether our networkstatus has expired. */
   networkstatus_t *ns = networkstatus_get_latest_consensus();
-  /*XXXX RD: This value needs to be the same as REASONABLY_LIVE_TIME in
-   * networkstatus_get_reasonably_live_consensus(), but that value is way
-   * way too high.  Arma: is the bridge issue there resolved yet? -NM */
-#define NS_EXPIRY_SLOP (24*60*60)
-  if (ns && ns->valid_until < (now - NS_EXPIRY_SLOP) &&
+  /* Use reasonably live consensuses until they are no longer reasonably live.
+   */
+  if (ns && !networkstatus_consensus_reasonably_live(ns, now) &&
       router_have_minimum_dir_info()) {
     router_dir_info_changed();
   }
