@@ -1555,17 +1555,12 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       ++stats_n_data_cells_received;
 
       /* Update our circuit-level deliver window that we received a DATA cell.
-       * If the deliver window goes below 0, we end the connection due to a
-       * protocol failure. */
+       * If the deliver window goes below 0, we end the circuit and stream due
+       * to a protocol failure. */
       if (sendme_circuit_data_received(circ, layer_hint) < 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "(relay data) circ deliver_window below 0. Killing.");
-        if (conn) {
-          /* XXXX Do we actually need to do this?  Will killing the circuit
-           * not send an END and mark the stream for close as appropriate? */
-          connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL);
-          connection_mark_for_close(TO_CONN(conn));
-        }
+        connection_edge_end_close(conn, END_STREAM_REASON_TORPROTOCOL);
         return -END_CIRC_REASON_TORPROTOCOL;
       }
 
@@ -1595,11 +1590,12 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
       /* Update our stream-level deliver window that we just received a DATA
        * cell. Going below 0 means we have a protocol level error so the
-       * circuit is closed. */
+       * stream and circuit are closed. */
 
       if (sendme_stream_data_received(conn) < 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "(relay data) conn deliver_window below 0. Killing.");
+        connection_edge_end_close(conn, END_STREAM_REASON_TORPROTOCOL);
         return -END_CIRC_REASON_TORPROTOCOL;
       }
       /* Total all valid application bytes delivered */

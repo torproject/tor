@@ -4540,6 +4540,25 @@ circuit_clear_isolation(origin_circuit_t *circ)
   circ->socks_username_len = circ->socks_password_len = 0;
 }
 
+/** Send an END and mark for close the given edge connection conn using the
+ * given reason that has to be a stream reason.
+ *
+ * Note: We don't unattached the AP connection (if applicable) because we
+ * don't want to flush the remaining data. This function aims at ending
+ * everything quickly regardless of the connection state.
+ *
+ * This function can't fail and does nothing if conn is NULL. */
+void
+connection_edge_end_close(edge_connection_t *conn, uint8_t reason)
+{
+  if (!conn) {
+    return;
+  }
+
+  connection_edge_end(conn, reason);
+  connection_mark_for_close(TO_CONN(conn));
+}
+
 /** Free all storage held in module-scoped variables for connection_edge.c */
 void
 connection_edge_free_all(void)
