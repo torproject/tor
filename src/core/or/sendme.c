@@ -11,6 +11,7 @@
 
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
+#include "core/or/cell_st.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/relay.h"
@@ -506,4 +507,32 @@ sendme_stream_data_packaged(edge_connection_t *conn)
 {
   tor_assert(conn);
   return --conn->package_window;
+}
+
+/* Note the cell digest in the circuit sendme last digests FIFO if applicable.
+ * It is safe to pass a circuit that isn't meant to track those digests. */
+void
+sendme_note_cell_digest(circuit_t *circ)
+{
+  uint8_t *digest;
+
+  tor_assert(circ);
+
+  /* We only keep the cell digest if we are the Exit on that circuit and if
+   * this cell is the last one before the client should send a SENDME. */
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    return;
+  }
+  /* Is this the last cell before a SENDME? The idea is that if the
+   * package_window reaches a multiple of the increment, after this cell, we
+   * should expect a SENDME. */
+  if (((circ->package_window - 1) % CIRCWINDOW_INCREMENT) != 0) {
+    return;
+  }
+
+  digest = tor_malloc_zero(4);
+  if (circ->sendme_last_digests == NULL) {
+    circ->sendme_last_digests = smartlist_new();
+  }
+  smartlist_add(circ->sendme_last_digests, digest);
 }
