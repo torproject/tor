@@ -21,7 +21,8 @@ void sendme_circuit_consider_sending(circuit_t *circ,
 
 /* Processing SENDME cell. */
 int sendme_process_circuit_level(crypt_path_t *layer_hint,
-                                 circuit_t *circ, uint16_t cell_body_len);
+                                 circuit_t *circ, const uint8_t *cell_payload,
+                                 uint16_t cell_payload_len);
 int sendme_process_stream_level(edge_connection_t *conn, circuit_t *circ,
                                 uint16_t cell_body_len);
 

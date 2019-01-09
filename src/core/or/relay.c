@@ -1819,7 +1819,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
       if (!rh.stream_id) {
         /* Circuit level SENDME cell. */
-        ret = sendme_process_circuit_level(layer_hint, circ, rh.length);
+        ret = sendme_process_circuit_level(layer_hint, circ,
+                                           cell->payload + RELAY_HEADER_SIZE,
+                                           rh.length);
         if (ret < 0) {
           return ret;
         }
