@@ -138,6 +138,13 @@ circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
 int
 circpad_circuit_should_be_marked_for_close(circuit_t *circ)
 {
+  /* If the circuit purpose is measurement or path bias, don't
+   * hold it open */
+  if (circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING ||
+      circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+    return 1;
+  }
+
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, circ) {
     circpad_machineinfo_t *mi = circ->padding_info[i];
     if (!mi) {
