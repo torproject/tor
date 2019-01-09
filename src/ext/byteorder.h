@@ -29,6 +29,10 @@
     Jean-Philippe Aumasson (https://131002.net/siphash/siphash24.c)
 */
 
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+
 /* This code is extracted from csiphash.h */
 
 #if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) &&      \

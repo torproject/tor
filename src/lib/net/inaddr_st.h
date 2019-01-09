@@ -28,6 +28,9 @@
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -60,7 +63,7 @@ struct in6_addr
 /** @{ */
 /** Many BSD variants seem not to define these. */
 #if defined(__APPLE__) || defined(__darwin__) || \
-  defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+  defined(__FreeBSD__) || defined(__NetBSD__) || defined(OpenBSD)
 #ifndef s6_addr16
 #define s6_addr16 __u6_addr.__u6_addr16
 #endif

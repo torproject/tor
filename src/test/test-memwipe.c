@@ -12,6 +12,10 @@
 #include <sys/types.h>
 #include <stdlib.h>
 
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+
 static unsigned fill_a_buffer_memset(void) __attribute__((noinline));
 static unsigned fill_a_buffer_memwipe(void) __attribute__((noinline));
 static unsigned fill_a_buffer_nothing(void) __attribute__((noinline));
