@@ -145,6 +145,8 @@ circpad_circuit_should_be_marked_for_close(circuit_t *circ)
     }
 
     const circpad_state_t *state = circpad_machine_current_state(mi);
+
+    /* If we're in END state (NULL here), then allow circ to get marked */
     if (!state) {
       continue;
     }
@@ -1258,13 +1260,15 @@ circpad_machine_transitioned_to_end(circpad_machineinfo_t *mi)
   const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
 
   /** If this machine handles cirucit lifetime on its own, shut the circuit
-   *  down now if we must.
-   *
-   *  XXX We ignore should_negotiate_end in this case */
+   *  down now if we must. */
   if (machine->manage_circ_lifetime) {
     circuit_t *on_circ = mi->on_circ;
     if (mi->circuit_was_asked_to_be_closed) {
-      circuit_mark_for_close(on_circ, END_CIRC_REASON_NONE);
+      circuit_mark_for_close(on_circ, END_CIRC_REASON_FINISHED);
+      /* If we close the circuit, we don't want to send a negotiate
+       * cell right when we do, since that is an information leak
+       * that signals we were padding. So just return here. */
+      return;
     }
   }
 
