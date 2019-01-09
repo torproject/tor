@@ -1332,7 +1332,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
       if (pathbias_get_dropguards(options)) {
         if (!pb->path_bias_disabled) {
           log_warn(LD_CIRC,
-                 "Your Guard %s is failing to carry an extremely large "
+                 "Guard %s is failing to carry an extremely large "
                  "amount of stream on its circuits. "
                  "To avoid potential route manipulation attacks, Tor has "
                  "disabled use of this guard. "
@@ -1356,7 +1356,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
       } else if (!pb->path_bias_use_extreme) {
         pb->path_bias_use_extreme = 1;
         log_warn(LD_CIRC,
-                 "Your Guard %s is failing to carry an extremely large "
+                 "Guard %s is failing to carry an extremely large "
                  "amount of streams on its circuits. "
                  "This could indicate a route manipulation attack, network "
                  "overload, bad local network connectivity, or a bug. "
@@ -1380,7 +1380,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
       if (!pb->path_bias_use_noticed) {
         pb->path_bias_use_noticed = 1;
         log_notice(LD_CIRC,
-                 "Your Guard %s is failing to carry more streams on its "
+                 "Guard %s is failing to carry more streams on its "
                  "circuits than usual. "
                  "Most likely this means the Tor network is overloaded "
                  "or your network connection is poor. "
@@ -1437,7 +1437,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       if (pathbias_get_dropguards(options)) {
         if (!pb->path_bias_disabled) {
           log_warn(LD_CIRC,
-                 "Your Guard %s is failing an extremely large "
+                 "Guard %s is failing an extremely large "
                  "amount of circuits. "
                  "To avoid potential route manipulation attacks, Tor has "
                  "disabled use of this guard. "
@@ -1461,7 +1461,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       } else if (!pb->path_bias_extreme) {
         pb->path_bias_extreme = 1;
         log_warn(LD_CIRC,
-                 "Your Guard %s is failing an extremely large "
+                 "Guard %s is failing an extremely large "
                  "amount of circuits. "
                  "This could indicate a route manipulation attack, "
                  "extreme network overload, or a bug. "
@@ -1485,7 +1485,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       if (!pb->path_bias_warned) {
         pb->path_bias_warned = 1;
         log_warn(LD_CIRC,
-                 "Your Guard %s is failing a very large "
+                 "Guard %s is failing a very large "
                  "amount of circuits. "
                  "Most likely this means the Tor network is "
                  "overloaded, but it could also mean an attack against "
@@ -1510,7 +1510,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       if (!pb->path_bias_noticed) {
         pb->path_bias_noticed = 1;
         log_notice(LD_CIRC,
-                 "Your Guard %s is failing more circuits than "
+                 "Guard %s is failing more circuits than "
                  "usual. "
                  "Most likely this means the Tor network is overloaded. "
                  "Success counts are %ld/%ld. Use counts are %ld/%ld. "
