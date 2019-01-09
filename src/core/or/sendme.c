@@ -18,6 +18,10 @@
 #include "feature/nodelist/networkstatus.h"
 #include "trunnel/sendme.h"
 
+/* The maximum supported version. Above that value, the cell can't be
+ * recognized as a valid SENDME. */
+#define SENDME_MAX_SUPPORTED_VERSION 1
+
 /* The cell version constants for when emitting a cell. */
 #define SENDME_EMIT_MIN_VERSION_DEFAULT 0
 #define SENDME_EMIT_MIN_VERSION_MIN 0
@@ -39,7 +43,6 @@ get_emit_min_version(void)
                                  SENDME_EMIT_MIN_VERSION_MAX);
 }
 
-#if 0
 /* Return the minimum version given by the consensus (if any) that should be
  * accepted when receiving a SENDME cell. */
 static int
@@ -50,7 +53,124 @@ get_accept_min_version(void)
                                  SENDME_ACCEPT_MIN_VERSION_MIN,
                                  SENDME_ACCEPT_MIN_VERSION_MAX);
 }
-#endif
+
+/* Return true iff the given decoded SENDME version 1 cell is valid.
+ *
+ * Validation is done by comparing the digest in the cell from the previous
+ * cell we saw which tells us that the other side has in fact seen that cell.
+ * See proposal 289 for more details. */
+static bool
+cell_v1_is_valid(const sendme_cell_t *cell)
+{
+  sendme_data_v1_t *data = NULL;
+
+  tor_assert(cell);
+
+  if (sendme_data_v1_parse(&data, sendme_cell_getconstarray_data(cell),
+                           sendme_cell_getlen_data(cell)) < 0) {
+    goto invalid;
+  }
+
+  /* XXX: Match the digest in the cell to the previous cell. Needs to be
+   * implemented that is passed to this function and compared. For this, we
+   * need #26839 that is making tor remember the last digest(s). */
+
+  /* Validated SENDME v1 cell. */
+  sendme_data_v1_free(data);
+  return 1;
+ invalid:
+  sendme_data_v1_free(data);
+  return 0;
+}
+
+/* Return true iff the given cell version can be handled or if the minimum
+ * accepted version from the consensus is known to us. */
+static bool
+cell_version_is_valid(uint8_t cell_version)
+{
+  int accept_version = get_accept_min_version();
+
+  /* Can we handle this version? */
+  if (accept_version > SENDME_MAX_SUPPORTED_VERSION) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Unable to handle SENDME version %u. We only support <= %d "
+           "(from consensus). Probably your tor is too old?",
+           accept_version, cell_version);
+    goto invalid;
+  }
+
+  /* We only accept a SENDME cell from what the consensus tells us. */
+  if (cell_version < accept_version) {
+    log_info(LD_PROTOCOL, "Unacceptable SENDME version %d. Only "
+                          "accepting %u (taken from the consensus). "
+                          "Closing circuit.",
+             cell_version, accept_version);
+    goto invalid;
+  }
+
+  return 1;
+ invalid:
+  return 0;
+}
+
+/* Return true iff the encoded SENDME cell in cell_payload of length
+ * cell_payload_len is valid. For each version:
+ *
+ *  0: No validation
+ *  1: Authenticated with last cell digest.
+ *
+ * This is the main critical function to make sure we can continue to
+ * send/recv cells on a circuit. If the SENDME is invalid, the circuit should
+ * be mark for close. */
+static bool
+sendme_is_valid(const uint8_t *cell_payload, size_t cell_payload_len)
+{
+  uint8_t cell_version;
+  sendme_cell_t *cell = NULL;
+
+  tor_assert(cell_payload);
+
+  /* An empty payload means version 0 so skip trunnel parsing. We won't be
+   * able to parse a 0 length buffer into a valid SENDME cell. */
+  if (cell_payload_len == 0) {
+    cell_version = 0;
+  } else {
+    /* First we'll decode the cell so we can get the version. */
+    if (sendme_cell_parse(&cell, cell_payload, cell_payload_len) < 0) {
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Unparseable SENDME cell received. Closing circuit.");
+      goto invalid;
+    }
+    cell_version = sendme_cell_get_version(cell);
+  }
+
+  /* Validate that we can handle this cell version. */
+  if (!cell_version_is_valid(cell_version)) {
+    goto invalid;
+  }
+
+  /* Validate depending on the version now. */
+  switch (cell_version) {
+  case 0x01:
+    if (!cell_v1_is_valid(cell)) {
+      goto invalid;
+    }
+    break;
+  case 0x00:
+    /* Fallthrough. Version 0, there is no work to be done on the payload so
+     * it is necessarily valid if we pass the version validation. */
+  default:
+    /* Unknown version means we can't handle it so fallback to version 0. */
+    break;
+  }
+
+  /* Valid cell. */
+  sendme_cell_free(cell);
+  return 1;
+ invalid:
+  sendme_cell_free(cell);
+  return 0;
+}
 
 /* Build and encode a version 1 SENDME cell into payload, which must be at
  * least of RELAY_PAYLOAD_SIZE bytes, using the digest for the cell data.
@@ -215,7 +335,8 @@ sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint,
 /* Process a circuit-level SENDME cell that we just received. The layer_hint,
  * if not NULL, is the Exit hop of the connection which means that we are a
  * client. In that case, circ must be an origin circuit. The cell_body_len is
- * the length of the SENDME cell payload (excluding the header).
+ * the length of the SENDME cell payload (excluding the header). The
+ * cell_payload is the payload.
  *
  * Return 0 on success that is the SENDME is valid and the package window has
  * been updated properly.
@@ -224,9 +345,11 @@ sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint,
  * be closed using the value as the reason for it. */
 int
 sendme_process_circuit_level(crypt_path_t *layer_hint,
-                             circuit_t *circ, uint16_t cell_body_len)
+                             circuit_t *circ, const uint8_t *cell_payload,
+                             uint16_t cell_payload_len)
 {
   tor_assert(circ);
+  tor_assert(cell_payload);
 
   /* If we are the origin of the circuit, we are the Client so we use the
    * layer hint (the Exit hop) for the package window tracking. */
@@ -245,8 +368,15 @@ sendme_process_circuit_level(crypt_path_t *layer_hint,
 
     /* We count circuit-level sendme's as valid delivered data because they
      * are rate limited. */
-    circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), cell_body_len);
+    circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), cell_payload_len);
   } else {
+    /* Validate the SENDME cell. Depending on the version, different
+     * validation can be done. An invalid SENDME requires us to close the
+     * circuit. It is only done if we are the Exit of the circuit. */
+    if (!sendme_is_valid(cell_payload, cell_payload_len)) {
+      return -END_CIRC_REASON_TORPROTOCOL;
+    }
+
     /* We aren't the origin of this circuit so we are the Exit and thus we
      * track the package window with the circuit object. */
     if ((circ->package_window + CIRCWINDOW_INCREMENT) >
