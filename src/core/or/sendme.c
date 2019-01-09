@@ -17,6 +17,7 @@
 #include "core/or/relay.h"
 #include "core/or/sendme.h"
 #include "feature/nodelist/networkstatus.h"
+#include "lib/ctime/di_ops.h"
 #include "trunnel/sendme.h"
 
 /* The maximum supported version. Above that value, the cell can't be
@@ -61,7 +62,7 @@ get_accept_min_version(void)
  * cell we saw which tells us that the other side has in fact seen that cell.
  * See proposal 289 for more details. */
 static bool
-cell_v1_is_valid(const sendme_cell_t *cell)
+cell_v1_is_valid(const sendme_cell_t *cell, const circuit_t *circ)
 {
   sendme_data_v1_t *data = NULL;
 
@@ -72,9 +73,33 @@ cell_v1_is_valid(const sendme_cell_t *cell)
     goto invalid;
   }
 
-  /* XXX: Match the digest in the cell to the previous cell. Needs to be
-   * implemented that is passed to this function and compared. For this, we
-   * need #26839 that is making tor remember the last digest(s). */
+  /* We shouldn't have received this SENDME if we have no digests. Log at
+   * protocol warning because it can be tricked by sending many SENDMEs
+   * without prior data cell. */
+  if (circ->sendme_last_digests == NULL ||
+      smartlist_len(circ->sendme_last_digests) == 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "We received a SENDME but we have no cell digests to match. "
+           "Closing circuit.");
+    goto invalid;
+  }
+
+  /* Pop the first element that was added (FIFO) and compare it. */
+  {
+    uint8_t *digest = smartlist_get(circ->sendme_last_digests, 0);
+    smartlist_del_keeporder(circ->sendme_last_digests, 0);
+
+    /* Compare the digest with the one in the SENDME. This cell is invalid
+     * without a perfect match. */
+    if (tor_memcmp(digest, sendme_data_v1_getconstarray_digest(data),
+                   sendme_data_v1_getlen_digest(data))) {
+      tor_free(digest);
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "SENDME v1 cell digest do not match.");
+      goto invalid;
+    }
+    tor_free(digest);
+  }
 
   /* Validated SENDME v1 cell. */
   sendme_data_v1_free(data);
@@ -124,11 +149,13 @@ cell_version_is_valid(uint8_t cell_version)
  * send/recv cells on a circuit. If the SENDME is invalid, the circuit should
  * be mark for close. */
 static bool
-sendme_is_valid(const uint8_t *cell_payload, size_t cell_payload_len)
+sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
+                size_t cell_payload_len)
 {
   uint8_t cell_version;
   sendme_cell_t *cell = NULL;
 
+  tor_assert(circ);
   tor_assert(cell_payload);
 
   /* An empty payload means version 0 so skip trunnel parsing. We won't be
@@ -153,7 +180,7 @@ sendme_is_valid(const uint8_t *cell_payload, size_t cell_payload_len)
   /* Validate depending on the version now. */
   switch (cell_version) {
   case 0x01:
-    if (!cell_v1_is_valid(cell)) {
+    if (!cell_v1_is_valid(cell, circ)) {
       goto invalid;
     }
     break;
@@ -374,7 +401,7 @@ sendme_process_circuit_level(crypt_path_t *layer_hint,
     /* Validate the SENDME cell. Depending on the version, different
      * validation can be done. An invalid SENDME requires us to close the
      * circuit. It is only done if we are the Exit of the circuit. */
-    if (!sendme_is_valid(cell_payload, cell_payload_len)) {
+    if (!sendme_is_valid(circ, cell_payload, cell_payload_len)) {
       return -END_CIRC_REASON_TORPROTOCOL;
     }
 
