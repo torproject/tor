@@ -21,6 +21,13 @@ struct dist {
 
 #define DIST_BASE(OPS)  { .ops = (OPS) }
 
+const char *dist_name(const struct dist *);
+double dist_sample(const struct dist *);
+double dist_cdf(const struct dist *, double x);
+double dist_sf(const struct dist *, double x);
+double dist_icdf(const struct dist *, double p);
+double dist_isf(const struct dist *, double p);
+
 struct dist_ops {
   const char *name;
   double (*sample)(const struct dist *);
@@ -30,9 +37,14 @@ struct dist_ops {
   double (*isf)(const struct dist *, double p);
 };
 
-/* Geometric distribution */
+/* Geometric distribution on positive number of trials before first success */
 
-double geometric_sample(double p);
+struct geometric {
+  struct dist base;
+  double p; /* success probability */
+};
+
+extern const struct dist_ops geometric_ops;
 
 /* Pareto distribution */
 
@@ -42,12 +54,6 @@ struct genpareto {
   double sigma;
   double xi;
 };
-
-double genpareto_sample(const struct dist *dist);
-double genpareto_cdf(const struct dist *dist, double x);
-double genpareto_sf(const struct dist *dist, double x);
-double genpareto_icdf(const struct dist *dist, double p);
-double genpareto_isf(const struct dist *dist, double p);
 
 extern const struct dist_ops genpareto_ops;
 
@@ -59,12 +65,6 @@ struct weibull {
   double k;
 };
 
-double weibull_sample(const struct dist *dist);
-double weibull_cdf(const struct dist *dist, double x);
-double weibull_sf(const struct dist *dist, double x);
-double weibull_icdf(const struct dist *dist, double p);
-double weibull_isf(const struct dist *dist, double p);
-
 extern const struct dist_ops weibull_ops;
 
 /* Log-logistic distribution */
@@ -74,12 +74,6 @@ struct log_logistic {
   double alpha;
   double beta;
 };
-
-double log_logistic_sample(const struct dist *dist);
-double log_logistic_cdf(const struct dist *dist, double x);
-double log_logistic_sf(const struct dist *dist, double x);
-double log_logistic_icdf(const struct dist *dist, double p);
-double log_logistic_isf(const struct dist *dist, double p);
 
 extern const struct dist_ops log_logistic_ops;
 
@@ -91,12 +85,6 @@ struct logistic {
   double sigma;
 };
 
-double logistic_sample(const struct dist *dist);
-double logistic_cdf(const struct dist *dist, double x);
-double logistic_sf(const struct dist *dist, double x);
-double logistic_icdf(const struct dist *dist, double p);
-double logistic_isf(const struct dist *dist, double p);
-
 extern const struct dist_ops logistic_ops;
 
 /* Uniform distribution */
@@ -106,12 +94,6 @@ struct uniform {
   double a;
   double b;
 };
-
-double uniform_sample(const struct dist *dist);
-double uniform_cdf(const struct dist *dist, double x);
-double uniform_sf(const struct dist *dist, double x);
-double uniform_icdf(const struct dist *dist, double p);
-double uniform_isf(const struct dist *dist, double p);
 
 extern const struct dist_ops uniform_ops;
 

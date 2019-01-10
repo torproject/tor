@@ -545,7 +545,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
           .a = dist.param1,
           .b = dist.param2,
         };
-        return uniform_sample(&my_uniform.base);
+        return dist_sample(&my_uniform.base);
       }
     case CIRCPAD_DIST_LOGISTIC:
       {
@@ -555,7 +555,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
           .mu = dist.param1,
           .sigma = dist.param2,
         };
-        return logistic_sample(&my_logistic.base);
+        return dist_sample(&my_logistic.base);
       }
     case CIRCPAD_DIST_LOG_LOGISTIC:
       {
@@ -565,12 +565,16 @@ circpad_distribution_sample(circpad_distribution_t dist)
           .alpha = dist.param1,
           .beta = dist.param2,
         };
-        return log_logistic_sample(&my_log_logistic.base);
+        return dist_sample(&my_log_logistic.base);
       }
     case CIRCPAD_DIST_GEOMETRIC:
       {
         /* param1 is 'p' (success probability) */
-        return geometric_sample(dist.param1);
+        const struct geometric my_geometric = {
+          .base = DIST_BASE(&geometric_ops),
+          .p = dist.param1,
+        };
+        return dist_sample(&my_geometric.base);
       }
     case CIRCPAD_DIST_WEIBULL:
       {
@@ -580,7 +584,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
           .k = dist.param1,
           .lambda = dist.param2,
         };
-        return weibull_sample(&my_weibull.base);
+        return dist_sample(&my_weibull.base);
       }
     case CIRCPAD_DIST_PARETO:
       {
@@ -591,7 +595,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
           .sigma = dist.param1,
           .xi = dist.param2,
         };
-        return genpareto_sample(&my_genpareto.base);
+        return dist_sample(&my_genpareto.base);
       }
   }
 

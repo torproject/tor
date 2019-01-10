@@ -942,6 +942,10 @@ psi_test(const size_t C[PSI_DF], const double logP[PSI_DF], size_t N)
 static bool
 test_stochastic_geometric_impl(double p)
 {
+  const struct geometric geometric = {
+    .base = DIST_BASE(&geometric_ops),
+    .p = p,
+  };
   double logP[PSI_DF] = {0};
   unsigned ntry = NTRIALS, npass = 0;
   unsigned i;
@@ -958,7 +962,7 @@ test_stochastic_geometric_impl(double p)
     size_t C[PSI_DF] = {0};
 
     for (j = 0; j < NSAMPLES; j++) {
-      double n_tmp = geometric_sample(p);
+      double n_tmp = dist_sample(&geometric.base);
 
       /* Must be an integer.  (XXX -Wfloat-equal)  */
       tor_assert(ceil(n_tmp) <= n_tmp && ceil(n_tmp) >= n_tmp);
@@ -1006,10 +1010,10 @@ test_stochastic_geometric_impl(double p)
 static void
 bin_cdfs(const struct dist *dist, double lo, double hi, double *logP, size_t n)
 {
-#define CDF(x)  dist->ops->cdf(dist, x)
-#define SF(x)   dist->ops->sf(dist, x)
+#define CDF(x)  dist_cdf(dist, x)
+#define SF(x)   dist_sf(dist, x)
   const double w = (hi - lo)/(n - 2);
-  double halfway = dist->ops->icdf(dist, 0.5);
+  double halfway = dist_icdf(dist, 0.5);
   double x_0, x_1;
   size_t i;
   size_t n2 = ceil_to_size_t((halfway - lo)/w);
@@ -1057,7 +1061,7 @@ bin_samples(const struct dist *dist, double lo, double hi, size_t *C, size_t n)
   size_t i;
 
   for (i = 0; i < NSAMPLES; i++) {
-    double x = dist->ops->sample(dist);
+    double x = dist_sample(dist);
     size_t bin;
 
     if (x < lo)
@@ -1084,8 +1088,8 @@ test_psi_dist_sample(const struct dist *dist)
 {
   double logP[PSI_DF] = {0};
   unsigned ntry = NTRIALS, npass = 0;
-  double lo = dist->ops->icdf(dist, 1/(double)(PSI_DF + 2));
-  double hi = dist->ops->isf(dist, 1/(double)(PSI_DF + 2));
+  double lo = dist_icdf(dist, 1/(double)(PSI_DF + 2));
+  double hi = dist_isf(dist, 1/(double)(PSI_DF + 2));
 
   /* Create the null hypothesis in logP */
   bin_cdfs(dist, lo, hi, logP, PSI_DF);
@@ -1102,10 +1106,10 @@ test_psi_dist_sample(const struct dist *dist)
 
   /* Did we fail or succeed? */
   if (npass >= NPASSES_MIN) {
-    /* printf("pass %s sampler\n", dist->ops->name);*/
+    /* printf("pass %s sampler\n", dist_name(dist));*/
     return true;
   } else {
-    printf("fail %s sampler\n", dist->ops->name);
+    printf("fail %s sampler\n", dist_name(dist));
     return false;
   }
 }

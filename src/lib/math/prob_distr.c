@@ -1319,17 +1319,45 @@ sample_geometric(uint32_t s, double p0, double p)
  *  (sample/cdf/sf/icdf/isf) as part of its dist_ops structure.
  */
 
-/** Functions for uniform distribution */
-const struct dist_ops uniform_ops = {
-  .name = "uniform",
-  .sample = uniform_sample,
-  .cdf = uniform_cdf,
-  .sf = uniform_sf,
-  .icdf = uniform_icdf,
-  .isf = uniform_isf,
-};
+const char *
+dist_name(const struct dist *dist)
+{
+  return dist->ops->name;
+}
 
 double
+dist_sample(const struct dist *dist)
+{
+  return dist->ops->sample(dist);
+}
+
+double
+dist_cdf(const struct dist *dist, double x)
+{
+  return dist->ops->cdf(dist, x);
+}
+
+double
+dist_sf(const struct dist *dist, double x)
+{
+  return dist->ops->sf(dist, x);
+}
+
+double
+dist_icdf(const struct dist *dist, double p)
+{
+  return dist->ops->icdf(dist, p);
+}
+
+double
+dist_isf(const struct dist *dist, double p)
+{
+  return dist->ops->isf(dist, p);
+}
+
+/** Functions for uniform distribution */
+
+static double
 uniform_sample(const struct dist *dist)
 {
   const struct uniform *U = const_container_of(dist, struct uniform,
@@ -1339,7 +1367,7 @@ uniform_sample(const struct dist *dist)
   return sample_uniform_interval(p0, U->a, U->b);
 }
 
-double
+static double
 uniform_cdf(const struct dist *dist, double x)
 {
   const struct uniform *U = const_container_of(dist, struct uniform,
@@ -1353,7 +1381,7 @@ uniform_cdf(const struct dist *dist, double x)
     return 1;
 }
 
-double
+static double
 uniform_sf(const struct dist *dist, double x)
 {
   const struct uniform *U = const_container_of(dist, struct uniform,
@@ -1367,7 +1395,7 @@ uniform_sf(const struct dist *dist, double x)
     return 1;
 }
 
-double
+static double
 uniform_icdf(const struct dist *dist, double p)
 {
   const struct uniform *U = const_container_of(dist, struct uniform,
@@ -1377,7 +1405,7 @@ uniform_icdf(const struct dist *dist, double p)
   return (p < 0.5 ? (U->a + w*p) : (U->b - w*(1 - p)));
 }
 
-double
+static double
 uniform_isf(const struct dist *dist, double p)
 {
   const struct uniform *U = const_container_of(dist, struct uniform,
@@ -1387,17 +1415,18 @@ uniform_isf(const struct dist *dist, double p)
   return (p < 0.5 ? (U->b - w*p) : (U->a + w*(1 - p)));
 }
 
-/** Functions for logistic distribution: */
-const struct dist_ops logistic_ops = {
-  .name = "logistic",
-  .sample = logistic_sample,
-  .cdf = logistic_cdf,
-  .sf = logistic_sf,
-  .icdf = logistic_icdf,
-  .isf = logistic_isf,
+const struct dist_ops uniform_ops = {
+  .name = "uniform",
+  .sample = uniform_sample,
+  .cdf = uniform_cdf,
+  .sf = uniform_sf,
+  .icdf = uniform_icdf,
+  .isf = uniform_isf,
 };
 
-double
+/** Functions for logistic distribution: */
+
+static double
 logistic_sample(const struct dist *dist)
 {
   const struct logistic *L = const_container_of(dist, struct logistic,
@@ -1409,7 +1438,7 @@ logistic_sample(const struct dist *dist)
   return sample_logistic_locscale(s, t, p0, L->mu, L->sigma);
 }
 
-double
+static double
 logistic_cdf(const struct dist *dist, double x)
 {
   const struct logistic *L = const_container_of(dist, struct logistic,
@@ -1418,7 +1447,7 @@ logistic_cdf(const struct dist *dist, double x)
   return cdf_logistic(x, L->mu, L->sigma);
 }
 
-double
+static double
 logistic_sf(const struct dist *dist, double x)
 {
   const struct logistic *L = const_container_of(dist, struct logistic,
@@ -1427,7 +1456,7 @@ logistic_sf(const struct dist *dist, double x)
   return sf_logistic(x, L->mu, L->sigma);
 }
 
-double
+static double
 logistic_icdf(const struct dist *dist, double p)
 {
   const struct logistic *L = const_container_of(dist, struct logistic,
@@ -1436,7 +1465,7 @@ logistic_icdf(const struct dist *dist, double p)
   return icdf_logistic(p, L->mu, L->sigma);
 }
 
-double
+static double
 logistic_isf(const struct dist *dist, double p)
 {
   const struct logistic *L = const_container_of(dist, struct logistic,
@@ -1445,17 +1474,18 @@ logistic_isf(const struct dist *dist, double p)
   return isf_logistic(p, L->mu, L->sigma);
 }
 
-/** Functions for log-logistic distribution: */
-const struct dist_ops log_logistic_ops = {
-  .name = "log logistic",
-  .sample = log_logistic_sample,
-  .cdf = log_logistic_cdf,
-  .sf = log_logistic_sf,
-  .icdf = log_logistic_icdf,
-  .isf = log_logistic_isf,
+const struct dist_ops logistic_ops = {
+  .name = "logistic",
+  .sample = logistic_sample,
+  .cdf = logistic_cdf,
+  .sf = logistic_sf,
+  .icdf = logistic_icdf,
+  .isf = logistic_isf,
 };
 
-double
+/** Functions for log-logistic distribution: */
+
+static double
 log_logistic_sample(const struct dist *dist)
 {
   const struct log_logistic *LL = const_container_of(dist, struct
@@ -1466,7 +1496,7 @@ log_logistic_sample(const struct dist *dist)
   return sample_log_logistic_scaleshape(s, p0, LL->alpha, LL->beta);
 }
 
-double
+static double
 log_logistic_cdf(const struct dist *dist, double x)
 {
   const struct log_logistic *LL = const_container_of(dist,
@@ -1475,7 +1505,7 @@ log_logistic_cdf(const struct dist *dist, double x)
   return cdf_log_logistic(x, LL->alpha, LL->beta);
 }
 
-double
+static double
 log_logistic_sf(const struct dist *dist, double x)
 {
   const struct log_logistic *LL = const_container_of(dist,
@@ -1484,7 +1514,7 @@ log_logistic_sf(const struct dist *dist, double x)
   return sf_log_logistic(x, LL->alpha, LL->beta);
 }
 
-double
+static double
 log_logistic_icdf(const struct dist *dist, double p)
 {
   const struct log_logistic *LL = const_container_of(dist,
@@ -1493,7 +1523,7 @@ log_logistic_icdf(const struct dist *dist, double p)
   return icdf_log_logistic(p, LL->alpha, LL->beta);
 }
 
-double
+static double
 log_logistic_isf(const struct dist *dist, double p)
 {
   const struct log_logistic *LL = const_container_of(dist,
@@ -1502,17 +1532,18 @@ log_logistic_isf(const struct dist *dist, double p)
   return isf_log_logistic(p, LL->alpha, LL->beta);
 }
 
-/** Functions for Weibull distribution */
-const struct dist_ops weibull_ops = {
-  .name = "Weibull",
-  .sample = weibull_sample,
-  .cdf = weibull_cdf,
-  .sf = weibull_sf,
-  .icdf = weibull_icdf,
-  .isf = weibull_isf,
+const struct dist_ops log_logistic_ops = {
+  .name = "log logistic",
+  .sample = log_logistic_sample,
+  .cdf = log_logistic_cdf,
+  .sf = log_logistic_sf,
+  .icdf = log_logistic_icdf,
+  .isf = log_logistic_isf,
 };
 
-double
+/** Functions for Weibull distribution */
+
+static double
 weibull_sample(const struct dist *dist)
 {
   const struct weibull *W = const_container_of(dist, struct weibull,
@@ -1523,7 +1554,7 @@ weibull_sample(const struct dist *dist)
   return sample_weibull(s, p0, W->lambda, W->k);
 }
 
-double
+static double
 weibull_cdf(const struct dist *dist, double x)
 {
   const struct weibull *W = const_container_of(dist, struct weibull,
@@ -1532,7 +1563,7 @@ weibull_cdf(const struct dist *dist, double x)
   return cdf_weibull(x, W->lambda, W->k);
 }
 
-double
+static double
 weibull_sf(const struct dist *dist, double x)
 {
   const struct weibull *W = const_container_of(dist, struct weibull,
@@ -1541,7 +1572,7 @@ weibull_sf(const struct dist *dist, double x)
   return sf_weibull(x, W->lambda, W->k);
 }
 
-double
+static double
 weibull_icdf(const struct dist *dist, double p)
 {
   const struct weibull *W = const_container_of(dist, struct weibull,
@@ -1550,7 +1581,7 @@ weibull_icdf(const struct dist *dist, double p)
   return icdf_weibull(p, W->lambda, W->k);
 }
 
-double
+static double
 weibull_isf(const struct dist *dist, double p)
 {
   const struct weibull *W = const_container_of(dist, struct weibull,
@@ -1559,17 +1590,18 @@ weibull_isf(const struct dist *dist, double p)
   return isf_weibull(p, W->lambda, W->k);
 }
 
-/** Functions for generalized Pareto distributions */
-const struct dist_ops genpareto_ops = {
-  .name = "generalized Pareto",
-  .sample = genpareto_sample,
-  .cdf = genpareto_cdf,
-  .sf = genpareto_sf,
-  .icdf = genpareto_icdf,
-  .isf = genpareto_isf,
+const struct dist_ops weibull_ops = {
+  .name = "Weibull",
+  .sample = weibull_sample,
+  .cdf = weibull_cdf,
+  .sf = weibull_sf,
+  .icdf = weibull_icdf,
+  .isf = weibull_isf,
 };
 
-double
+/** Functions for generalized Pareto distributions */
+
+static double
 genpareto_sample(const struct dist *dist)
 {
   const struct genpareto *GP = const_container_of(dist, struct genpareto,
@@ -1580,7 +1612,7 @@ genpareto_sample(const struct dist *dist)
   return sample_genpareto_locscale(s, p0, GP->mu, GP->sigma, GP->xi);
 }
 
-double
+static double
 genpareto_cdf(const struct dist *dist, double x)
 {
   const struct genpareto *GP = const_container_of(dist, struct genpareto,
@@ -1589,7 +1621,7 @@ genpareto_cdf(const struct dist *dist, double x)
   return cdf_genpareto(x, GP->mu, GP->sigma, GP->xi);
 }
 
-double
+static double
 genpareto_sf(const struct dist *dist, double x)
 {
   const struct genpareto *GP = const_container_of(dist, struct genpareto,
@@ -1598,7 +1630,7 @@ genpareto_sf(const struct dist *dist, double x)
   return sf_genpareto(x, GP->mu, GP->sigma, GP->xi);
 }
 
-double
+static double
 genpareto_icdf(const struct dist *dist, double p)
 {
   const struct genpareto *GP = const_container_of(dist, struct genpareto,
@@ -1607,7 +1639,7 @@ genpareto_icdf(const struct dist *dist, double p)
   return icdf_genpareto(p, GP->mu, GP->sigma, GP->xi);
 }
 
-double
+static double
 genpareto_isf(const struct dist *dist, double p)
 {
   const struct genpareto *GP = const_container_of(dist, struct genpareto,
@@ -1616,13 +1648,70 @@ genpareto_isf(const struct dist *dist, double p)
   return isf_genpareto(p, GP->mu, GP->sigma, GP->xi);
 }
 
-/* Deterministically sample from the geometric distribution with
- * per-trial success probability p. */
-double
-geometric_sample(double p)
+const struct dist_ops genpareto_ops = {
+  .name = "generalized Pareto",
+  .sample = genpareto_sample,
+  .cdf = genpareto_cdf,
+  .sf = genpareto_sf,
+  .icdf = genpareto_icdf,
+  .isf = genpareto_isf,
+};
+
+/** Functions for geometric distribution on number of trials before success */
+
+static double
+geometric_sample(const struct dist *dist)
 {
+  const struct geometric *G = const_container_of(dist, struct geometric, base);
   uint32_t s = crypto_rand_u32();
   double p0 = random_uniform_01();
-  return sample_geometric(s, p0, p);
+
+  return sample_geometric(s, p0, G->p);
 }
 
+static double
+geometric_cdf(const struct dist *dist, double x)
+{
+  const struct geometric *G = const_container_of(dist, struct geometric, base);
+
+  if (x < 1)
+    return 0;
+  /* 1 - (1 - p)^floor(x) = 1 - e^{floor(x) log(1 - p)} */
+  return -expm1(floor(x)*log1p(-G->p));
+}
+
+static double
+geometric_sf(const struct dist *dist, double x)
+{
+  const struct geometric *G = const_container_of(dist, struct geometric, base);
+
+  if (x < 1)
+    return 0;
+  /* (1 - p)^floor(x) = e^{ceil(x) log(1 - p)} */
+  return exp(floor(x)*log1p(-G->p));
+}
+
+static double
+geometric_icdf(const struct dist *dist, double p)
+{
+  const struct geometric *G = const_container_of(dist, struct geometric, base);
+
+  return log1p(-p)/log1p(-G->p);
+}
+
+static double
+geometric_isf(const struct dist *dist, double p)
+{
+  const struct geometric *G = const_container_of(dist, struct geometric, base);
+
+  return log(p)/log1p(-G->p);
+}
+
+const struct dist_ops geometric_ops = {
+  .name = "geometric (1-based)",
+  .sample = geometric_sample,
+  .cdf = geometric_cdf,
+  .sf = geometric_sf,
+  .icdf = geometric_icdf,
+  .isf = geometric_isf,
+};
