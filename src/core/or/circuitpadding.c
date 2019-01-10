@@ -182,6 +182,7 @@ circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
 
     /* Tag this close attempt regardless of whether we close the circuit. */
     mi->circuit_was_asked_to_be_closed = 1;
+    circuit_change_purpose(circ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
 
     /* If the machine has reached the END state, close the circuit. */
     return (mi->current_state == CIRCPAD_STATE_END) ? 1 : 0;

@@ -2340,6 +2340,9 @@ helper_create_ender_machine(void)
 
   circ_client_machine.states[CIRCPAD_STATE_START].
       next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_END;
+
+  circ_client_machine.conditions.state_mask = CIRCPAD_STATE_ALL;
+  circ_client_machine.conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
 }
 
 /** Test manual managing of circuit lifetimes by the circuitpadding
@@ -2373,8 +2376,30 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
   tt_int_op(client_side->marked_for_close, OP_EQ, 0);
   tt_int_op(mi->circuit_was_asked_to_be_closed, OP_EQ, 0);
 
-  /* Mark this circuit for close */
-  circuit_mark_for_close(client_side, 0);
+  /* Mark this circuit for close due to a remote reason */
+  circuit_mark_for_close(client_side,
+                         END_CIRC_REASON_FLAG_REMOTE|END_CIRC_REASON_NONE);
+  tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
+  tt_int_op(client_side->marked_for_close, OP_NE, 0);
+  tt_int_op(mi->circuit_was_asked_to_be_closed, OP_EQ, 0);
+  client_side->marked_for_close = 0;
+
+  /* Mark this circuit for close due to a protocol issue */
+  circuit_mark_for_close(client_side, END_CIRC_REASON_TORPROTOCOL);
+  tt_int_op(client_side->marked_for_close, OP_NE, 0);
+  tt_int_op(mi->circuit_was_asked_to_be_closed, OP_EQ, 0);
+  client_side->marked_for_close = 0;
+
+  /* Mark a measurement circuit for close */
+  client_side->purpose = CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT;
+  circuit_mark_for_close(client_side, END_CIRC_REASON_NONE);
+  tt_int_op(client_side->marked_for_close, OP_NE, 0);
+  tt_int_op(mi->circuit_was_asked_to_be_closed, OP_EQ, 0);
+  client_side->marked_for_close = 0;
+
+  /* Mark a general circuit for close */
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  circuit_mark_for_close(client_side, END_CIRC_REASON_NONE);
 
   /* Check that this circuit is still not marked for close since we are
    * managing the lifetime manually, but the circuit was tagged as such by the
@@ -2385,7 +2410,8 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
   /* We just tested case (1) from the comments of
    * circpad_circuit_should_be_marked_for_close() */
 
-  /* Transition the machine to the END state */
+  /* Transition the machine to the END state but did not delete its machine */
+  tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
   circpad_cell_event_nonpadding_received(client_side);
   tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
 
