@@ -13,7 +13,7 @@
 
 struct hs_token_t;
 typedef struct circpad_machine_spec_t circpad_machine_spec_t;
-typedef struct circpad_machineinfo_t circpad_machineinfo_t;
+typedef struct circpad_machine_state_t circpad_machine_state_t;
 
 /** Number of padding state machines on a circuit. */
 #define CIRCPAD_MAX_MACHINES (2)
@@ -200,7 +200,7 @@ struct circuit_t {
    *
    *  Each element of this array corresponds to a different padding machine,
    *  and we can have up to CIRCPAD_MAX_MACHINES such machines. */
-  circpad_machineinfo_t *padding_info[CIRCPAD_MAX_MACHINES];
+  circpad_machine_state_t *padding_info[CIRCPAD_MAX_MACHINES];
 };
 
 #endif
