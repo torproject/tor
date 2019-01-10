@@ -2080,12 +2080,16 @@ router_build_fresh_routerinfo(routerinfo_t **ri_out)
 
 /** Allocate and return an extrainfo for this OR, based on the routerinfo ri.
  *
+ * If ri is NULL, logs a BUG() warning and returns NULL.
  * Caller is responsible for freeing the generated extrainfo.
  */
 static extrainfo_t *
 router_build_fresh_extrainfo(const routerinfo_t *ri)
 {
   extrainfo_t *ei = NULL;
+
+  if (BUG(!ri))
+    return NULL;
 
   /* Now generate the extrainfo. */
   ei = tor_malloc_zero(sizeof(extrainfo_t));
@@ -2104,11 +2108,15 @@ router_build_fresh_extrainfo(const routerinfo_t *ri)
 /** Create a signed descriptor for ei, and add it to ei->cache_info.
  *
  * Return 0 on success, -1 on temporary error.
+ * If ei is NULL, logs a BUG() warning and returns -1.
  * On error, ei->cache_info is not modified.
  */
 static int
 router_update_extrainfo_descriptor_body(extrainfo_t *ei)
 {
+  if (BUG(!ei))
+    return -1;
+
   if (extrainfo_dump_to_string(&ei->cache_info.signed_descriptor_body,
                                ei, get_server_identity_key(),
                                get_master_signing_keypair()) < 0) {
@@ -2129,23 +2137,27 @@ router_update_extrainfo_descriptor_body(extrainfo_t *ei)
 }
 
 /** Set the fields in ri that depend on ei.
+ *
+ * If ei is NULL, logs a BUG() warning and zeroes the relevant fields.
  */
 static void
 router_update_routerinfo_from_extrainfo(routerinfo_t *ri,
                                         const extrainfo_t *ei)
 {
-  /* Now finish the router descriptor. */
-  if (ei) {
-    memcpy(ri->cache_info.extra_info_digest,
-           ei->cache_info.signed_descriptor_digest,
-           DIGEST_LEN);
-    memcpy(ri->cache_info.extra_info_digest256,
-           ei->digest256,
-           DIGEST256_LEN);
-  } else {
-    /* ri was allocated with tor_malloc_zero, so there is no need to
-     * zero ri->cache_info.extra_info_digest here. */
+  if (BUG(!ei)) {
+    /* Just to be safe, zero ri->cache_info.extra_info_digest* here. */
+    memset(ri->cache_info.extra_info_digest, 0, DIGEST_LEN);
+    memset(ri->cache_info.extra_info_digest256, 0, DIGEST256_LEN);
+    return;
   }
+
+  /* Now finish the router descriptor. */
+  memcpy(ri->cache_info.extra_info_digest,
+         ei->cache_info.signed_descriptor_digest,
+         DIGEST_LEN);
+  memcpy(ri->cache_info.extra_info_digest256,
+         ei->digest256,
+         DIGEST256_LEN);
 }
 
 /** Create a signed descriptor for ri, and add it to ri->cache_info.
@@ -2261,7 +2273,6 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   if (result < 0)
     goto skip_ei;
 
-  /* TODO: don't rely on tor_malloc_zero */
   router_update_routerinfo_from_extrainfo(ri, ei);
 
   /* TODO: disentangle these GOTOs, or split into another function. */
