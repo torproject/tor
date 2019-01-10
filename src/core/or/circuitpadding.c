@@ -136,12 +136,23 @@ circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
  *    is set.
  */
 int
-circpad_circuit_should_be_marked_for_close(circuit_t *circ)
+circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
 {
   /* If the circuit purpose is measurement or path bias, don't
    * hold it open */
   if (circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING ||
       circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+    return 1;
+  }
+
+  /* If the circuit is closed for any reason other than these three valid,
+   * client-side close reasons, do not try to keep it open. It is probably
+   * damaged or unusable. Note this is OK with vanguards because
+   * controller-closed circuits have REASON=REQUESTED, so vanguards-closed
+   * circuits will not be held open (we want them to close ASAP). */
+  if (!(reason == END_CIRC_REASON_NONE ||
+        reason == END_CIRC_REASON_FINISHED ||
+        reason == END_CIRC_REASON_IP_NOW_REDUNDANT)) {
     return 1;
   }
 
