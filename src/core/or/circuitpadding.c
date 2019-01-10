@@ -541,7 +541,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
       {
         // param2 is upper bound, param1 is lower
         const struct uniform my_uniform = {
-          .base = DIST_BASE(&uniform_ops),
+          .base = UNIFORM(my_uniform),
           .a = dist.param1,
           .b = dist.param2,
         };
@@ -551,7 +551,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
       {
       /* param1 is Mu, param2 is sigma. */
         const struct logistic my_logistic = {
-          .base = DIST_BASE(&uniform_ops),
+          .base = LOGISTIC(my_uniform),
           .mu = dist.param1,
           .sigma = dist.param2,
         };
@@ -561,7 +561,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
       {
         /* param1 is Alpha, param2 is 1.0/Beta */
         const struct log_logistic my_log_logistic = {
-          .base = DIST_BASE(&log_logistic_ops),
+          .base = LOG_LOGISTIC(my_log_logistic),
           .alpha = dist.param1,
           .beta = dist.param2,
         };
@@ -571,7 +571,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
       {
         /* param1 is 'p' (success probability) */
         const struct geometric my_geometric = {
-          .base = DIST_BASE(&geometric_ops),
+          .base = GEOMETRIC(my_geometric),
           .p = dist.param1,
         };
         return dist_sample(&my_geometric.base);
@@ -580,7 +580,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
       {
         /* param1 is k, param2 is Lambda */
         const struct weibull my_weibull = {
-          .base = DIST_BASE(&weibull_ops),
+          .base = WEIBULL(my_weibull),
           .k = dist.param1,
           .lambda = dist.param2,
         };
@@ -590,7 +590,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
       {
         /* param1 is sigma, param2 is xi, no more params for mu so we use 0 */
         const struct genpareto my_genpareto = {
-          .base = DIST_BASE(&weibull_ops),
+          .base = GENPARETO(my_weibull),
           .mu = 0,
           .sigma = dist.param1,
           .xi = dist.param2,

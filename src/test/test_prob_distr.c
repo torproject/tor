@@ -943,7 +943,7 @@ static bool
 test_stochastic_geometric_impl(double p)
 {
   const struct geometric geometric = {
-    .base = DIST_BASE(&geometric_ops),
+    .base = GEOMETRIC(geometric),
     .p = p,
   };
   double logP[PSI_DF] = {0};
@@ -1151,32 +1151,32 @@ test_stochastic_uniform(void *arg)
   (void) arg;
 
   const struct uniform uniform01 = {
-    .base = DIST_BASE(&uniform_ops),
+    .base = UNIFORM(uniform01),
     .a = 0,
     .b = 1,
   };
   const struct uniform uniform_pos = {
-    .base = DIST_BASE(&uniform_ops),
+    .base = UNIFORM(uniform_pos),
     .a = 1.23,
     .b = 4.56,
   };
   const struct uniform uniform_neg = {
-    .base = DIST_BASE(&uniform_ops),
+    .base = UNIFORM(uniform_neg),
     .a = -10,
     .b = -1,
   };
   const struct uniform uniform_cross = {
-    .base = DIST_BASE(&uniform_ops),
+    .base = UNIFORM(uniform_cross),
     .a = -1.23,
     .b = 4.56,
   };
   const struct uniform uniform_subnormal = {
-    .base = DIST_BASE(&uniform_ops),
+    .base = UNIFORM(uniform_subnormal),
     .a = 4e-324,
     .b = 4e-310,
   };
   const struct uniform uniform_subnormal_cross = {
-    .base = DIST_BASE(&uniform_ops),
+    .base = UNIFORM(uniform_subnormal_cross),
     .a = -4e-324,
     .b = 4e-310,
   };
@@ -1202,7 +1202,7 @@ static bool
 test_stochastic_logistic_impl(double mu, double sigma)
 {
   const struct logistic dist = {
-    .base = DIST_BASE(&logistic_ops),
+    .base = LOGISTIC(dist),
     .mu = mu,
     .sigma = sigma,
   };
@@ -1215,7 +1215,7 @@ static bool
 test_stochastic_log_logistic_impl(double alpha, double beta)
 {
   const struct log_logistic dist = {
-    .base = DIST_BASE(&log_logistic_ops),
+    .base = LOG_LOGISTIC(dist),
     .alpha = alpha,
     .beta = beta,
   };
@@ -1228,7 +1228,7 @@ static bool
 test_stochastic_weibull_impl(double lambda, double k)
 {
   const struct weibull dist = {
-    .base = DIST_BASE(&weibull_ops),
+    .base = WEIBULL(dist),
     .lambda = lambda,
     .k = k,
   };
@@ -1248,7 +1248,7 @@ static bool
 test_stochastic_genpareto_impl(double mu, double sigma, double xi)
 {
   const struct genpareto dist = {
-    .base = DIST_BASE(&genpareto_ops),
+    .base = GENPARETO(dist),
     .mu = mu,
     .sigma = sigma,
     .xi = xi,

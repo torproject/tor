@@ -20,6 +20,8 @@ struct dist {
 };
 
 #define DIST_BASE(OPS)  { .ops = (OPS) }
+#define DIST_BASE_TYPED(OPS, OBJ, TYPE)                         \
+  DIST_BASE((OPS) + 0*sizeof(&(OBJ) - (const TYPE *)&(OBJ)))
 
 const char *dist_name(const struct dist *);
 double dist_sample(const struct dist *);
@@ -46,6 +48,9 @@ struct geometric {
 
 extern const struct dist_ops geometric_ops;
 
+#define GEOMETRIC(OBJ)                                      \
+  DIST_BASE_TYPED(&geometric_ops, OBJ, struct geometric)
+
 /* Pareto distribution */
 
 struct genpareto {
@@ -57,6 +62,9 @@ struct genpareto {
 
 extern const struct dist_ops genpareto_ops;
 
+#define GENPARETO(OBJ)                                      \
+  DIST_BASE_TYPED(&genpareto_ops, OBJ, struct genpareto)
+
 /* Weibull distribution */
 
 struct weibull {
@@ -66,6 +74,9 @@ struct weibull {
 };
 
 extern const struct dist_ops weibull_ops;
+
+#define WEIBULL(OBJ)                                    \
+  DIST_BASE_TYPED(&weibull_ops, OBJ, struct weibull)
 
 /* Log-logistic distribution */
 
@@ -77,6 +88,9 @@ struct log_logistic {
 
 extern const struct dist_ops log_logistic_ops;
 
+#define LOG_LOGISTIC(OBJ)                                       \
+  DIST_BASE_TYPED(&log_logistic_ops, OBJ, struct log_logistic)
+
 /* Logistic distribution */
 
 struct logistic {
@@ -87,6 +101,9 @@ struct logistic {
 
 extern const struct dist_ops logistic_ops;
 
+#define LOGISTIC(OBJ)                                   \
+  DIST_BASE_TYPED(&logistic_ops, OBJ, struct logistic)
+
 /* Uniform distribution */
 
 struct uniform {
@@ -96,6 +113,9 @@ struct uniform {
 };
 
 extern const struct dist_ops uniform_ops;
+
+#define UNIFORM(OBJ)                                    \
+  DIST_BASE_TYPED(&uniform_ops, OBJ, struct uniform)
 
 /** Only by unittests */
 
