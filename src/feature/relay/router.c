@@ -2158,6 +2158,40 @@ router_update_extrainfo_descriptor_body(extrainfo_t *ei)
   return 0;
 }
 
+/** Allocate and return a fresh, signed extrainfo for this OR, based on the
+ * routerinfo ri.
+ *
+ * If ri is NULL, logs a BUG() warning and returns NULL.
+ * Caller is responsible for freeing the generated extrainfo.
+ */
+static extrainfo_t *
+router_build_signed_extrainfo(const routerinfo_t *ri)
+{
+  int result = -1;
+  extrainfo_t *ei = NULL;
+
+  if (BUG(!ri))
+    return NULL;
+
+  ei = router_build_fresh_extrainfo(ri);
+  /* router_build_fresh_extrainfo() should not fail. */
+  if (BUG(!ei))
+    goto err;
+
+  result = router_update_extrainfo_descriptor_body(ei);
+  if (result < 0)
+    goto err;
+
+  goto done;
+
+ err:
+  extrainfo_free(ei);
+  return NULL;
+
+ done:
+  return ei;
+}
+
 /** Set the fields in ri that depend on ei.
  *
  * If ei is NULL, logs a BUG() warning and zeroes the relevant fields.
@@ -2268,26 +2302,13 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     goto err;
   }
 
-  ei = router_build_fresh_extrainfo(ri);
-  /* Failing to create an ei is not an error, but at this stage,
-   * router_build_fresh_extrainfo() should not fail. */
-  if (BUG(!ei))
-    goto skip_ei;
+  ei = router_build_signed_extrainfo(ri);
 
-  result = router_update_extrainfo_descriptor_body(ei);
-  if (result < 0)
-    goto skip_ei;
+  /* Failing to create an ei is not an error. */
+  if (ei) {
+    router_update_routerinfo_from_extrainfo(ri, ei);
+  }
 
-  router_update_routerinfo_from_extrainfo(ri, ei);
-
-  /* TODO: disentangle these GOTOs, or split into another function. */
-  goto ei_ok;
-
- skip_ei:
-  extrainfo_free(ei);
-  ei = NULL;
-
- ei_ok:
   result = router_update_routerinfo_descriptor_body(ri);
   if (result < 0)
     goto err;
