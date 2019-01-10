@@ -1,6 +1,44 @@
 /* Copyright (c) 2017 The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file circuitpadding.c
+ * \brief Circuit-level padding implementation
+ *
+ * \details
+ *
+ * This file implements Tor proposal 254 "Padding Negotiation" which is heavily
+ * inspired by the paper "Toward an Efficient Website Fingerprinting Defense"
+ * by M. Juarez, M. Imani, M. Perry, C. Diaz, M. Wright.
+ *
+ * In particular the code in this file describes mechanisms for clients to
+ * negotiate various types of circuit-level padding from relays.
+ *
+ * Each padding type is described by a state machine (circpad_machine_t), which
+ * is also referred as a "padding machine" in this file.  Currently, these
+ * state machines are hardcoded in the source code (e.g. see
+ * circpad_circ_client_machine_init()), but in the future we will be able to
+ * serialize them in the torrc or the consensus.
+ *
+ * As specified by prop#254, clients can negotiate padding with relays by using
+ * PADDING_NEGOTIATE cells. After successful padding negotiation, padding
+ * machines are assigned to the circuit in their mutable form as a
+ * circpad_machineinfo_t.
+ *
+ * Each state of a padding state machine can be either:
+ * - A histogram that specifies inter-arrival padding delays.
+ * - Or a parametrized probability distribution that specifies inter-arrival
+ *   delays (see circpad_distribution_type_t).
+ *
+ * Padding machines start from the START state and finish with the END
+ * state. They can transition between states using the events in
+ * circpad_event_t.
+ *
+ * When a padding machine reaches the END state, it gets wiped from the circuit
+ * so that other padding machines can take over if needed (see
+ * circpad_machine_transitioned_to_end()).
+ **/
+
 #define CIRCUITPADDING_PRIVATE
 
 #include <math.h>

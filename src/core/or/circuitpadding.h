@@ -6,10 +6,11 @@
  * \file circuitpadding.h
  * \brief Header file for circuitpadding.c.
  **/
+
 #ifndef TOR_CIRCUITPADDING_H
 #define TOR_CIRCUITPADDING_H
 
-#include "circpad_negotiation.h"
+#include "src/trunnel/circpad_negotiation.h"
 #include "lib/evloop/timers.h"
 
 typedef struct circuit_t circuit_t;
