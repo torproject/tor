@@ -14,9 +14,9 @@
  * In particular the code in this file describes mechanisms for clients to
  * negotiate various types of circuit-level padding from relays.
  *
- * Each padding type is described by a state machine (circpad_machine_t), which
- * is also referred as a "padding machine" in this file.  Currently, these
- * state machines are hardcoded in the source code (e.g. see
+ * Each padding type is described by a state machine (circpad_machine_spec_t),
+ * which is also referred as a "padding machine" in this file.  Currently,
+ * these state machines are hardcoded in the source code (e.g. see
  * circpad_circ_client_machine_init()), but in the future we will be able to
  * serialize them in the torrc or the consensus.
  *
@@ -36,7 +36,7 @@
  *
  * When a padding machine reaches the END state, it gets wiped from the circuit
  * so that other padding machines can take over if needed (see
- * circpad_machine_transitioned_to_end()).
+ * circpad_machine_spec_transitioned_to_end()).
  **/
 
 #define CIRCUITPADDING_PRIVATE
@@ -75,7 +75,7 @@ static inline circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t
 static inline circpad_circuit_state_t circpad_circuit_state(
                                         origin_circuit_t *circ);
 static void circpad_setup_machine_on_circ(circuit_t *on_circ,
-                                          const circpad_machine_t *machine);
+                                        const circpad_machine_spec_t *machine);
 static double circpad_distribution_sample(circpad_distribution_t dist);
 
 /** Cached consensus params */
@@ -86,12 +86,12 @@ static uint16_t circpad_global_allowed_cells;
 static uint64_t circpad_global_padding_sent;
 static uint64_t circpad_global_nonpadding_sent;
 
-/** This is the list of circpad_machine_t's parsed from consensus and torrc
- *  that have origin_side == 1 (ie: are for client side) */
+/** This is the list of circpad_machine_spec_t's parsed from consensus and
+ *  torrc that have origin_side == 1 (ie: are for client side) */
 STATIC smartlist_t *origin_padding_machines = NULL;
 
-/** This is the list of circpad_machine_t's parsed from consensus and torrc
- *  that have origin_side == 0 (ie: are for relay side) */
+/** This is the list of circpad_machine_spec_t's parsed from consensus and
+ *  torrc that have origin_side == 0 (ie: are for relay side) */
 STATIC smartlist_t *relay_padding_machines = NULL;
 
 /** Loop over the current padding state machines using <b>loop_var</b> as the
@@ -197,7 +197,7 @@ circpad_circuit_machineinfo_new(circuit_t *on_circ, int machine_index)
 STATIC const circpad_state_t *
 circpad_machine_current_state(const circpad_machineinfo_t *mi)
 {
-  const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
+  const circpad_machine_spec_t *machine = CIRCPAD_GET_MACHINE(mi);
 
   if (mi->current_state == CIRCPAD_STATE_END) {
     return NULL;
@@ -1097,7 +1097,7 @@ circpad_new_consensus_params(const networkstatus_t *ns)
 STATIC bool
 circpad_machine_reached_padding_limit(circpad_machineinfo_t *mi)
 {
-  const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
+  const circpad_machine_spec_t *machine = CIRCPAD_GET_MACHINE(mi);
 
   /* If machine_padding_pct is non-zero, and we've sent more
    * than the allowed count of padding cells, then check our
@@ -1233,9 +1233,9 @@ circpad_machine_schedule_padding,(circpad_machineinfo_t *mi))
  * not access it.
  */
 static void
-circpad_machine_transitioned_to_end(circpad_machineinfo_t *mi)
+circpad_machine_spec_transitioned_to_end(circpad_machineinfo_t *mi)
 {
-  const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
+  const circpad_machine_spec_t *machine = CIRCPAD_GET_MACHINE(mi);
 
   /*
    * We allow machines to shut down and delete themselves as opposed
@@ -1283,7 +1283,7 @@ circpad_machine_transitioned_to_end(circpad_machineinfo_t *mi)
  * Returns 1 if we transition states, 0 otherwise.
  */
 MOCK_IMPL(circpad_decision_t,
-circpad_machine_transition,(circpad_machineinfo_t *mi,
+circpad_machine_spec_transition,(circpad_machineinfo_t *mi,
                             circpad_event_t event))
 {
   const circpad_state_t *state =
@@ -1331,7 +1331,7 @@ circpad_machine_transition,(circpad_machineinfo_t *mi,
       /* If we transition to the end state, check to see
        * if this machine wants to be shut down at end */
       if (s == CIRCPAD_STATE_END) {
-        circpad_machine_transitioned_to_end(mi);
+        circpad_machine_spec_transitioned_to_end(mi);
         /* We transitioned but we don't pad in end. Also, mi
          * may be freed. Returning STATE_CHANGED prevents us
          * from accessing it in any callers of this function. */
@@ -1485,7 +1485,7 @@ circpad_cell_event_nonpadding_sent(circuit_t *on_circ)
     if (!circpad_machine_remove_token(on_circ->padding_info[i])) {
       /* If removing a token did not cause a transition, check if
        * non-padding sent event should */
-      circpad_machine_transition(on_circ->padding_info[i],
+      circpad_machine_spec_transition(on_circ->padding_info[i],
                                  CIRCPAD_EVENT_NONPADDING_SENT);
     }
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
@@ -1506,7 +1506,7 @@ circpad_cell_event_nonpadding_received(circuit_t *on_circ)
     /* First, update any RTT estimate */
     circpad_estimate_circ_rtt_on_received(on_circ, on_circ->padding_info[i]);
 
-    circpad_machine_transition(on_circ->padding_info[i],
+    circpad_machine_spec_transition(on_circ->padding_info[i],
                                CIRCPAD_EVENT_NONPADDING_RECV);
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
 }
@@ -1523,7 +1523,7 @@ void
 circpad_cell_event_padding_sent(circuit_t *on_circ)
 {
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, on_circ) {
-    circpad_machine_transition(on_circ->padding_info[i],
+    circpad_machine_spec_transition(on_circ->padding_info[i],
                              CIRCPAD_EVENT_PADDING_SENT);
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
 }
@@ -1541,7 +1541,7 @@ circpad_cell_event_padding_received(circuit_t *on_circ)
 {
   /* identical to padding sent */
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, on_circ) {
-    circpad_machine_transition(on_circ->padding_info[i],
+    circpad_machine_spec_transition(on_circ->padding_info[i],
                               CIRCPAD_EVENT_PADDING_RECV);
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
 }
@@ -1558,7 +1558,7 @@ circpad_cell_event_padding_received(circuit_t *on_circ)
 circpad_decision_t
 circpad_internal_event_infinity(circpad_machineinfo_t *mi)
 {
-  return circpad_machine_transition(mi, CIRCPAD_EVENT_INFINITY);
+  return circpad_machine_spec_transition(mi, CIRCPAD_EVENT_INFINITY);
 }
 
 /**
@@ -1572,7 +1572,7 @@ circpad_internal_event_infinity(circpad_machineinfo_t *mi)
 circpad_decision_t
 circpad_internal_event_bins_empty(circpad_machineinfo_t *mi)
 {
-  if (circpad_machine_transition(mi, CIRCPAD_EVENT_BINS_EMPTY)
+  if (circpad_machine_spec_transition(mi, CIRCPAD_EVENT_BINS_EMPTY)
       == CIRCPAD_STATE_CHANGED) {
     return CIRCPAD_STATE_CHANGED;
   } else {
@@ -1591,7 +1591,7 @@ circpad_internal_event_bins_empty(circpad_machineinfo_t *mi)
 circpad_decision_t
 circpad_internal_event_state_length_up(circpad_machineinfo_t *mi)
 {
-  return circpad_machine_transition(mi, CIRCPAD_EVENT_LENGTH_COUNT);
+  return circpad_machine_spec_transition(mi, CIRCPAD_EVENT_LENGTH_COUNT);
 }
 
 /**
@@ -1599,7 +1599,7 @@ circpad_internal_event_state_length_up(circpad_machineinfo_t *mi)
  */
 static inline bool
 circpad_machine_conditions_met(origin_circuit_t *circ,
-                               const circpad_machine_t *machine)
+                               const circpad_machine_spec_t *machine)
 {
   if (!(circpad_circ_purpose_to_mask(TO_CIRCUIT(circ)->purpose)
       & machine->conditions.purpose_mask))
@@ -1740,7 +1740,7 @@ circpad_add_matching_machines(origin_circuit_t *on_circ)
      * machines in reverse order, so that more recently added
      * machines take priority over older ones. */
     SMARTLIST_FOREACH_REVERSE_BEGIN(origin_padding_machines,
-                                    circpad_machine_t *,
+                                    circpad_machine_spec_t *,
                                     machine) {
       /* Machine definitions have a specific target machine index.
        * This is so event ordering is deterministic with respect
@@ -2012,7 +2012,7 @@ circpad_deliver_sent_relay_cell_events(circuit_t *circ,
  * Initialize the states array for a circpad machine.
  */
 void
-circpad_machine_states_init(circpad_machine_t *machine,
+circpad_machine_states_init(circpad_machine_spec_t *machine,
                             circpad_statenum_t num_states)
 {
   if (BUG(num_states > CIRCPAD_MAX_MACHINE_STATES)) {
@@ -2033,7 +2033,7 @@ circpad_machine_states_init(circpad_machine_t *machine,
 
 static void
 circpad_setup_machine_on_circ(circuit_t *on_circ,
-                              const circpad_machine_t *machine)
+                              const circpad_machine_spec_t *machine)
 {
   if (CIRCUIT_IS_ORIGIN(on_circ) && !machine->is_origin_side) {
     log_fn(LOG_WARN, LD_BUG,
@@ -2061,8 +2061,8 @@ circpad_setup_machine_on_circ(circuit_t *on_circ,
 static void
 circpad_circ_client_machine_init(void)
 {
-  circpad_machine_t *circ_client_machine
-      = tor_malloc_zero(sizeof(circpad_machine_t));
+  circpad_machine_spec_t *circ_client_machine
+      = tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
   // XXX: Better conditions for merge.. Or disable this machine in
   // merge?
@@ -2115,8 +2115,8 @@ circpad_circ_client_machine_init(void)
 static void
 circpad_circ_responder_machine_init(void)
 {
-  circpad_machine_t *circ_responder_machine
-      = tor_malloc_zero(sizeof(circpad_machine_t));
+  circpad_machine_spec_t *circ_responder_machine
+      = tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
   /* Shut down the machine after we've sent enough packets */
   circ_responder_machine->should_negotiate_end = 1;
@@ -2235,14 +2235,14 @@ circpad_machines_free(void)
 {
   if (origin_padding_machines) {
     SMARTLIST_FOREACH(origin_padding_machines,
-                      circpad_machine_t *,
+                      circpad_machine_spec_t *,
                       m, tor_free(m->states); tor_free(m));
     smartlist_free(origin_padding_machines);
   }
 
   if (relay_padding_machines) {
     SMARTLIST_FOREACH(relay_padding_machines,
-                      circpad_machine_t *,
+                      circpad_machine_spec_t *,
                       m, tor_free(m->states); tor_free(m));
     smartlist_free(relay_padding_machines);
   }
@@ -2417,7 +2417,7 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
     goto err;
   } else if (negotiate->command == CIRCPAD_COMMAND_START) {
     SMARTLIST_FOREACH_BEGIN(relay_padding_machines,
-                            const circpad_machine_t *, m) {
+                            const circpad_machine_spec_t *, m) {
       if (m->machine_num == negotiate->machine_type) {
         circpad_setup_machine_on_circ(circ, m);
         goto done;
@@ -2520,7 +2520,7 @@ circpad_state_serialize(const circpad_state_t *state,
 }
 
 char *
-circpad_machine_to_string(const circpad_machine_t *machine)
+circpad_machine_spec_to_string(const circpad_machine_spec_t *machine)
 {
   smartlist_t *chunks = smartlist_new();
   char *out;
@@ -2538,7 +2538,7 @@ circpad_machine_to_string(const circpad_machine_t *machine)
 }
 
 // XXX: Writeme
-const circpad_machine_t *
+const circpad_machine_spec_t *
 circpad_string_to_machine(const char *str)
 {
   (void)str;

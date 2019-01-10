@@ -61,7 +61,7 @@ static node_t padding_node;
 static node_t non_padding_node;
 
 static channel_t dummy_channel;
-static circpad_machine_t circ_client_machine;
+static circpad_machine_spec_t circ_client_machine;
 
 static void
 timers_advance_and_run(int64_t msec_update)
@@ -1514,7 +1514,7 @@ test_circuitpadding_negotiation(void *arg)
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
   SMARTLIST_FOREACH(relay_padding_machines,
-          circpad_machine_t *,
+          circpad_machine_spec_t *,
           m, tor_free(m->states); tor_free(m));
   smartlist_free(relay_padding_machines);
   relay_padding_machines = smartlist_new();
@@ -1594,10 +1594,11 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
   circpad_machine_event_circ_added_hop(TO_ORIGIN_CIRCUIT(client));
 }
 
-static circpad_machine_t *
+static circpad_machine_spec_t *
 helper_create_conditional_machine(void)
 {
-  circpad_machine_t *ret = tor_malloc_zero(sizeof(circpad_machine_t));
+  circpad_machine_spec_t *ret =
+    tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
   /* Start, burst */
   circpad_machine_states_init(ret, 2);
@@ -1630,7 +1631,7 @@ helper_create_conditional_machine(void)
 static void
 helper_create_conditional_machines(void)
 {
-  circpad_machine_t *add = helper_create_conditional_machine();
+  circpad_machine_spec_t *add = helper_create_conditional_machine();
   origin_padding_machines = smartlist_new();
   relay_padding_machines = smartlist_new();
 
@@ -2158,7 +2159,7 @@ test_circuitpadding_sample_distribution(void *arg)
 }
 
 static circpad_decision_t
-circpad_machine_transition_mock(circpad_machineinfo_t *mi,
+circpad_machine_spec_transition_mock(circpad_machineinfo_t *mi,
                                 circpad_event_t event)
 {
   (void) mi;
@@ -2178,7 +2179,7 @@ test_circuitpadding_machine_rate_limiting(void *arg)
 
   /* Ignore machine transitions for the purposes of this function, we only
    * really care about padding counts */
-  MOCK(circpad_machine_transition, circpad_machine_transition_mock);
+  MOCK(circpad_machine_spec_transition, circpad_machine_spec_transition_mock);
   MOCK(circpad_send_command_to_hop, circpad_send_command_to_hop_mock);
 
   /* Setup machine and circuits */
@@ -2246,7 +2247,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
 
   /* Ignore machine transitions for the purposes of this function, we only
    * really care about padding counts */
-  MOCK(circpad_machine_transition, circpad_machine_transition_mock);
+  MOCK(circpad_machine_spec_transition, circpad_machine_spec_transition_mock);
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
   MOCK(circuit_package_relay_cell,
        circuit_package_relay_cell_mock);

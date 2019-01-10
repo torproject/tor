@@ -389,7 +389,7 @@ typedef struct circpad_state_t {
 /**
  * End is a pseudo-state that causes the machine to go completely
  * idle, and optionally get torn down (depending on the
- * value of circpad_machine_t.should_negotiate_end)
+ * value of circpad_machine_spec_t.should_negotiate_end)
  *
  * End MUST NOT occupy a slot in the machine state array.
  */
@@ -529,7 +529,7 @@ typedef struct circpad_machineinfo_t {
 typedef uint8_t circpad_machine_num_t;
 
 /** Global state machine structure from the consensus */
-typedef struct circpad_machine_t {
+typedef struct circpad_machine_spec_t {
   /** Global machine number */
   circpad_machine_num_t machine_num;
 
@@ -569,7 +569,7 @@ typedef struct circpad_machine_t {
    * Number of states this machine has (ie: length of the states array).
    * XXX: This field is not needed other than for safety. */
   circpad_statenum_t num_states;
-} circpad_machine_t;
+} circpad_machine_spec_t;
 
 void circpad_new_consensus_params(const networkstatus_t *ns);
 
@@ -608,7 +608,7 @@ void circpad_machine_event_circ_has_no_relay_early(origin_circuit_t *circ);
 void circpad_machines_init(void);
 void circpad_machines_free(void);
 
-void circpad_machine_states_init(circpad_machine_t *machine,
+void circpad_machine_states_init(circpad_machine_spec_t *machine,
                                  circpad_statenum_t num_states);
 
 void circpad_circuit_free_all_machineinfos(circuit_t *circ);
@@ -617,8 +617,8 @@ bool circpad_padding_is_from_expected_hop(circuit_t *circ,
                                          crypt_path_t *from_hop);
 
 /** Serializaton functions for writing to/from torrc and consensus */
-char *circpad_machine_to_string(const circpad_machine_t *machine);
-const circpad_machine_t *circpad_string_to_machine(const char *str);
+char *circpad_machine_spec_to_string(const circpad_machine_spec_t *machine);
+const circpad_machine_spec_t *circpad_string_to_machine(const char *str);
 
 /* Padding negotiation between client and middle */
 signed_error_t circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell);
@@ -637,7 +637,7 @@ MOCK_DECL(circpad_decision_t,
 circpad_machine_schedule_padding,(circpad_machineinfo_t *));
 
 MOCK_DECL(circpad_decision_t,
-circpad_machine_transition, (circpad_machineinfo_t *mi,
+circpad_machine_spec_transition, (circpad_machineinfo_t *mi,
                              circpad_event_t event));
 
 circpad_decision_t circpad_send_padding_cell_for_callback(

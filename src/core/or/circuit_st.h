@@ -12,7 +12,7 @@
 #include "core/or/cell_queue_st.h"
 
 struct hs_token_t;
-typedef struct circpad_machine_t circpad_machine_t;
+typedef struct circpad_machine_spec_t circpad_machine_spec_t;
 typedef struct circpad_machineinfo_t circpad_machineinfo_t;
 
 /** Number of padding state machines on a circuit. */
@@ -189,7 +189,7 @@ struct circuit_t {
    *
    *  Each element of this array corresponds to a different padding machine,
    *  and we can have up to CIRCPAD_MAX_MACHINES such machines. */
-  const circpad_machine_t *padding_machine[CIRCPAD_MAX_MACHINES];
+  const circpad_machine_spec_t *padding_machine[CIRCPAD_MAX_MACHINES];
 
   /** Adaptive Padding machine info for above machines. This is the
    *  per-circuit mutable information, such as the current state and
