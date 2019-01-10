@@ -2253,11 +2253,7 @@ def list_fallbacks(whitelist, exact=False):
   """ Fetches required onionoo documents and evaluates the
       fallback directory criteria for each of the relays,
       passing exact to apply_filter_lists(). """
-  if whitelist['check_existing']:
-      print "/* type=fallback */"
-  else:
-      print "/* type=whitelist */"
-
+  print "/* type=fallback */"
   print ("/* version={} */"
          .format(cleanse_c_multiline_comment(FALLBACK_FORMAT_VERSION)))
   now = datetime.datetime.utcnow()
