@@ -115,7 +115,7 @@ void router_reset_reachability(void);
 void router_free_all(void);
 
 #ifdef ROUTER_PRIVATE
-/* Used only by router.c and test.c */
+/* Used only by router.c and the unit tests */
 STATIC void get_platform_str(char *platform, size_t len);
 STATIC int router_write_fingerprint(int hashed);
 STATIC smartlist_t *get_my_declared_family(const or_options_t *options);
