@@ -1107,7 +1107,7 @@ static uint32_t deterministic_rand_counter;
 static void
 init_deterministic_rand(void)
 {
-  deterministic_rand_counter = crypto_rand_uint32();
+  deterministic_rand_counter = crypto_rand_u32();
 }
 
 /** Produce deterministic randomness for the stochastic tests using the global

@@ -458,7 +458,7 @@ random_uniform_01(void)
    * system is broken.
    */
   z = 0;
-  while ((x = crypto_rand_uint32()) == 0) {
+  while ((x = crypto_rand_u32()) == 0) {
     if (z >= 1088)
       /* Your bit sampler is broken.  Go home.  */
       return 0;
@@ -472,8 +472,8 @@ random_uniform_01(void)
    * occur only with measure zero in the uniform distribution on
    * [0, 1].
    */
-  hi = crypto_rand_uint32() | UINT32_C(0x80000000);
-  lo = crypto_rand_uint32() | UINT32_C(0x00000001);
+  hi = crypto_rand_u32() | UINT32_C(0x80000000);
+  lo = crypto_rand_u32() | UINT32_C(0x00000001);
 
   /* Round to nearest scaled significand in [2^63, 2^64].  */
   s = hi*(double)4294967296 + lo;
@@ -1402,7 +1402,7 @@ logistic_sample(const struct dist *dist)
 {
   const struct logistic *L = const_container_of(dist, struct logistic,
     base);
-  uint32_t s = crypto_rand_uint32();
+  uint32_t s = crypto_rand_u32();
   double t = random_uniform_01();
   double p0 = random_uniform_01();
 
@@ -1460,7 +1460,7 @@ log_logistic_sample(const struct dist *dist)
 {
   const struct log_logistic *LL = const_container_of(dist, struct
     log_logistic, base);
-  uint32_t s = crypto_rand_uint32();
+  uint32_t s = crypto_rand_u32();
   double p0 = random_uniform_01();
 
   return sample_log_logistic_scaleshape(s, p0, LL->alpha, LL->beta);
@@ -1517,7 +1517,7 @@ weibull_sample(const struct dist *dist)
 {
   const struct weibull *W = const_container_of(dist, struct weibull,
     base);
-  uint32_t s = crypto_rand_uint32();
+  uint32_t s = crypto_rand_u32();
   double p0 = random_uniform_01();
 
   return sample_weibull(s, p0, W->lambda, W->k);
@@ -1574,7 +1574,7 @@ genpareto_sample(const struct dist *dist)
 {
   const struct genpareto *GP = const_container_of(dist, struct genpareto,
     base);
-  uint32_t s = crypto_rand_uint32();
+  uint32_t s = crypto_rand_u32();
   double p0 = random_uniform_01();
 
   return sample_genpareto_locscale(s, p0, GP->mu, GP->sigma, GP->xi);
@@ -1621,7 +1621,7 @@ genpareto_isf(const struct dist *dist, double p)
 double
 geometric_sample(double p)
 {
-  uint32_t s = crypto_rand_uint32();
+  uint32_t s = crypto_rand_u32();
   double p0 = random_uniform_01();
   return sample_geometric(s, p0, p);
 }

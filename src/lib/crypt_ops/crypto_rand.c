@@ -532,7 +532,7 @@ crypto_rand_unmocked(char *to, size_t n)
  * Draw an unsigned 32-bit integer uniformly at random.
  */
 uint32_t
-crypto_rand_uint32(void)
+crypto_rand_u32(void)
 {
   uint32_t rand;
   crypto_rand((void*)&rand, sizeof(rand));
