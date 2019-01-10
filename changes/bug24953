@@ -1,3 +1,4 @@
   o Minor bugfixes (fallback scripts):
-    - In updateFallbackDirs.py, say "fallback list" instead of "whitelist".
-      Fixes bug 24953; bugfix on 0.3.5.1-alpha.
+    - In updateFallbackDirs.py, call the filter file a "fallback list"
+      instead of a "whitelist" in check_existing mode.
+      Fixes bug 24953; bugfix on 0.3.0.3-alpha.
