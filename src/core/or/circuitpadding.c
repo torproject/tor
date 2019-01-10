@@ -551,7 +551,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
       {
       /* param1 is Mu, param2 is sigma. */
         const struct logistic my_logistic = {
-          .base = LOGISTIC(my_uniform),
+          .base = LOGISTIC(my_logistic),
           .mu = dist.param1,
           .sigma = dist.param2,
         };
@@ -590,7 +590,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
       {
         /* param1 is sigma, param2 is xi, no more params for mu so we use 0 */
         const struct genpareto my_genpareto = {
-          .base = GENPARETO(my_weibull),
+          .base = GENPARETO(my_genpareto),
           .mu = 0,
           .sigma = dist.param1,
           .xi = dist.param2,
