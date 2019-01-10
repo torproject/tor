@@ -70,6 +70,28 @@
 #define INFINITY_DBL ((double)INFINITY)
 #define NAN_DBL ((double)NAN)
 
+/** Test the tor_isinf() wrapper */
+static void
+test_tor_isinf(void *arg)
+{
+  (void) arg;
+
+  tt_assert(tor_isinf(INFINITY_DBL));
+
+  tt_assert(!tor_isinf(NAN_DBL));
+  tt_assert(!tor_isinf(DBL_EPSILON));
+  tt_assert(!tor_isinf(DBL_MAX));
+  tt_assert(!tor_isinf(DBL_MIN));
+
+  tt_assert(!tor_isinf(0.0));
+  tt_assert(!tor_isinf(0.1));
+  tt_assert(!tor_isinf(3));
+  tt_assert(!tor_isinf(3.14));
+
+ done:
+  ;
+}
+
 /* XXXX this is a minimal wrapper to make the unit tests compile with the
  * changed tor_timegm interface. */
 static time_t
@@ -6191,6 +6213,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(mathlog, 0),
   UTIL_TEST(fraction, 0),
   UTIL_TEST(weak_random, 0),
+  { "tor_isinf", test_tor_isinf, TT_FORK, NULL, NULL },
   { "socket_ipv4", test_util_socket, TT_FORK, &passthrough_setup,
     (void*)"4" },
   { "socket_ipv6", test_util_socket, TT_FORK,
