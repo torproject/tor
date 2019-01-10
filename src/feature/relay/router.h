@@ -23,6 +23,7 @@ struct ed25519_keypair_t;
 #define TOR_ROUTERINFO_ERROR_DIGEST_FAILED   (-4)
 #define TOR_ROUTERINFO_ERROR_CANNOT_GENERATE (-5)
 #define TOR_ROUTERINFO_ERROR_DESC_REBUILDING (-6)
+#define TOR_ROUTERINFO_ERROR_INTERNAL_BUG    (-7)
 
 crypto_pk_t *get_onion_key(void);
 time_t get_onion_key_set_at(void);

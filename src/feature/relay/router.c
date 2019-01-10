@@ -152,6 +152,8 @@ routerinfo_err_to_string(int err)
       return "Cannot generate descriptor";
     case TOR_ROUTERINFO_ERROR_DESC_REBUILDING:
       return "Descriptor still rebuilding - not ready yet";
+    case TOR_ROUTERINFO_ERROR_INTERNAL_BUG:
+      return "Internal bug, see logs for details";
   }
 
   log_warn(LD_BUG, "unknown routerinfo error %d - shouldn't happen", err);
@@ -1941,23 +1943,33 @@ get_my_declared_family(const or_options_t *options)
   return result;
 }
 
-/** Build a fresh routerinfo for this OR, without any of the fields that depend
- * on the corresponding extrainfo. Set r to the generated routerinfo.
- * Return 0 on success, -1 on temporary error. Caller is responsible for
- * freeing the generated routerinfo if 0 is returned.
+/** Allocate a fresh, unsigned routerinfo for this OR, without any of the
+ * fields that depend on the corresponding extrainfo.
+ *
+ * On success, set ri_out to the new routerinfo, and return 0.
+ * Caller is responsible for freeing the generated routerinfo.
+ *
+ * Returns a negative value and sets ri_out to NULL on temporary error.
  */
 static int
-router_build_fresh_routerinfo(routerinfo_t **r)
+router_build_fresh_routerinfo(routerinfo_t **ri_out)
 {
-  routerinfo_t *ri;
+  routerinfo_t *ri = NULL;
   uint32_t addr;
   char platform[256];
   int hibernating = we_are_hibernating();
   const or_options_t *options = get_options();
+  int result = TOR_ROUTERINFO_ERROR_INTERNAL_BUG;
+
+  if (BUG(!ri_out)) {
+    result = TOR_ROUTERINFO_ERROR_INTERNAL_BUG;
+    goto err;
+  }
 
   if (router_pick_published_address(options, &addr, 0) < 0) {
     log_warn(LD_CONFIG, "Don't know my address while generating descriptor");
-    return TOR_ROUTERINFO_ERROR_NO_EXT_ADDR;
+    result = TOR_ROUTERINFO_ERROR_NO_EXT_ADDR;
+    goto err;
   }
 
   /* Log a message if the address in the descriptor doesn't match the ORPort
@@ -2014,8 +2026,8 @@ router_build_fresh_routerinfo(routerinfo_t **r)
   ri->identity_pkey = crypto_pk_dup_key(get_server_identity_key());
   if (BUG(crypto_pk_get_digest(ri->identity_pkey,
                            ri->cache_info.identity_digest) < 0)) {
-    routerinfo_free(ri);
-    return TOR_ROUTERINFO_ERROR_DIGEST_FAILED;
+    result = TOR_ROUTERINFO_ERROR_DIGEST_FAILED;
+    goto err;
   }
   ri->cache_info.signing_key_cert =
     tor_cert_dup(get_master_signing_key_cert());
@@ -2054,20 +2066,26 @@ router_build_fresh_routerinfo(routerinfo_t **r)
 
   ri->declared_family = get_my_declared_family(options);
 
-  *r = ri;
+  goto done;
+
+ err:
+  routerinfo_free(ri);
+  *ri_out = NULL;
+  return result;
+
+ done:
+  *ri_out = ri;
   return 0;
 }
 
-/** Build an extrainfo for this OR, based on the routerinfo ri. Set e to the
- * generated extrainfo. Return 0 on success, -1 on temporary error. Failure to
- * generate an extrainfo is not an error and is indicated by setting e to
- * NULL. Caller is responsible for freeing the generated extrainfo if 0 is
- * returned.
+/** Allocate and return an extrainfo for this OR, based on the routerinfo ri.
+ *
+ * Caller is responsible for freeing the generated extrainfo.
  */
-static int
-router_build_fresh_extrainfo(const routerinfo_t *ri, extrainfo_t **e)
+static extrainfo_t *
+router_build_fresh_extrainfo(const routerinfo_t *ri)
 {
-  extrainfo_t *ei;
+  extrainfo_t *ei = NULL;
 
   /* Now generate the extrainfo. */
   ei = tor_malloc_zero(sizeof(extrainfo_t));
@@ -2079,24 +2097,23 @@ router_build_fresh_extrainfo(const routerinfo_t *ri, extrainfo_t **e)
 
   memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,
          DIGEST_LEN);
-  *e = ei;
-  return 0;
+
+  return ei;
 }
 
 /** Create a signed descriptor for ei, and add it to ei->cache_info.
- * Return ei on success, free ei and return NULL on temporary error.
- * Caller is responsible for freeing the returned extrainfo
- * (if it is not NULL), including any extra fields set in ei->cache_info.
+ *
+ * Return 0 on success, -1 on temporary error.
+ * On error, ei->cache_info is not modified.
  */
-static extrainfo_t *
+static int
 router_update_extrainfo_descriptor_body(extrainfo_t *ei)
 {
   if (extrainfo_dump_to_string(&ei->cache_info.signed_descriptor_body,
                                ei, get_server_identity_key(),
                                get_master_signing_keypair()) < 0) {
     log_warn(LD_BUG, "Couldn't generate extra-info descriptor.");
-    extrainfo_free(ei);
-    ei = NULL;
+    return -1;
   } else {
     ei->cache_info.signed_descriptor_len =
       strlen(ei->cache_info.signed_descriptor_body);
@@ -2107,12 +2124,11 @@ router_update_extrainfo_descriptor_body(extrainfo_t *ei)
                      ei->cache_info.signed_descriptor_body,
                      ei->cache_info.signed_descriptor_len,
                      DIGEST_SHA256);
+    return 0;
   }
-
-  return ei;
 }
 
-/** If ei is not NULL, set the fields in ri that depend on ei.
+/** Set the fields in ri that depend on ei.
  */
 static void
 router_update_routerinfo_from_extrainfo(routerinfo_t *ri,
@@ -2133,24 +2149,26 @@ router_update_routerinfo_from_extrainfo(routerinfo_t *ri,
 }
 
 /** Create a signed descriptor for ri, and add it to ri->cache_info.
- * Return 0 on success, free ri and ei and return -1 on temporary error.
- * TODO: freeing ri and ei, but leaving dangling pointers, is a bad interface.
- * Caller is responsible for freeing the generated ri and ei if 0 is returned,
- * including any extra fields set in ri->cache_info.
+ *
+ * Return 0 on success, and a negative value on temporary error.
+ * If ri is NULL, logs a BUG() warning and returns a negative value.
+ * On error, ri->cache_info is not modified.
  */
 static int
-router_update_routerinfo_descriptor_body(routerinfo_t *ri, extrainfo_t *ei)
+router_update_routerinfo_descriptor_body(routerinfo_t *ri)
 {
+  if (BUG(!ri))
+    return TOR_ROUTERINFO_ERROR_INTERNAL_BUG;
+
   if (! (ri->cache_info.signed_descriptor_body =
           router_dump_router_to_string(ri, get_server_identity_key(),
                                        get_onion_key(),
                                        get_current_curve25519_keypair(),
                                        get_master_signing_keypair())) ) {
     log_warn(LD_BUG, "Couldn't generate router descriptor.");
-    routerinfo_free(ri);
-    extrainfo_free(ei);
     return TOR_ROUTERINFO_ERROR_CANNOT_GENERATE;
   }
+
   ri->cache_info.signed_descriptor_len =
     strlen(ri->cache_info.signed_descriptor_body);
 
@@ -2200,40 +2218,63 @@ router_update_routerinfo_digest(routerinfo_t *ri)
                          ri->cache_info.signed_descriptor_digest);
 }
 
-/** Build a fresh routerinfo, signed server descriptor, and extra-info document
- * for this OR. Set r to the generated routerinfo, e to the generated
- * extra-info document. Return 0 on success, -1 on temporary error. Failure to
- * generate an extra-info document is not an error and is indicated by setting
- * e to NULL. Caller is responsible for freeing generated documents if 0 is
- * returned.
+/** Build a fresh routerinfo, signed server descriptor, and signed extra-info
+ * document for this OR.
+ *
+ * Set r to the generated routerinfo, e to the generated extra-info document.
+ * Failure to generate an extra-info document is not an error and is indicated
+ * by setting e to NULL.
+ * Return 0 on success, and a negative value on temporary error.
+ * Caller is responsible for freeing generated documents on success.
  */
 int
 router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
 {
-  int result = -1;
+  int result = TOR_ROUTERINFO_ERROR_INTERNAL_BUG;
   routerinfo_t *ri = NULL;
   extrainfo_t *ei = NULL;
 
-  /* TODO: return ri */
+  if (BUG(!r))
+    goto err;
+
+  if (BUG(!e))
+    goto err;
+
   result = router_build_fresh_routerinfo(&ri);
-  if (result < 0)
-    return result;
+  if (result < 0) {
+    goto err;
+  }
+  /* If ri is NULL, then result should be negative. So this check should be
+   * unreachable. */
+  if (BUG(!ri)) {
+    result = TOR_ROUTERINFO_ERROR_INTERNAL_BUG;
+    goto err;
+  }
 
-  /* TODO: return ei */
-  result = router_build_fresh_extrainfo(ri, &ei);
-  if (result < 0)
-    return result;
+  ei = router_build_fresh_extrainfo(ri);
+  /* Failing to create an ei is not an error, but at this stage,
+   * router_build_fresh_extrainfo() should not fail. */
+  if (BUG(!ei))
+    goto skip_ei;
 
-  /* TODO: this function frees ei on failure, instead, goto err */
-  ei = router_update_extrainfo_descriptor_body(ei);
+  result = router_update_extrainfo_descriptor_body(ei);
+  if (result < 0)
+    goto skip_ei;
 
   /* TODO: don't rely on tor_malloc_zero */
   router_update_routerinfo_from_extrainfo(ri, ei);
 
-  /* TODO: this function frees ri and ei on failure, instead, goto err */
-  result = router_update_routerinfo_descriptor_body(ri, ei);
+  /* TODO: disentangle these GOTOs, or split into another function. */
+  goto ei_ok;
+
+ skip_ei:
+  extrainfo_free(ei);
+  ei = NULL;
+
+ ei_ok:
+  result = router_update_routerinfo_descriptor_body(ri);
   if (result < 0)
-    return result;
+    goto err;
 
   /* TODO: fold into router_build_fresh_routerinfo() */
   router_update_routerinfo_purpose(ri);
@@ -2246,11 +2287,23 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   router_update_routerinfo_digest(ri);
 
   if (ei) {
-    tor_assert(!
-          routerinfo_incompatible_with_extrainfo(ri->identity_pkey, ei,
-                                                 &ri->cache_info, NULL));
+     if (BUG(routerinfo_incompatible_with_extrainfo(ri->identity_pkey, ei,
+                                                    &ri->cache_info, NULL))) {
+       result = TOR_ROUTERINFO_ERROR_INTERNAL_BUG;
+       goto err;
+     }
   }
 
+  goto done;
+
+ err:
+  routerinfo_free(ri);
+  extrainfo_free(ei);
+  *r = NULL;
+  *e = NULL;
+  return result;
+
+ done:
   *r = ri;
   *e = ei;
   return 0;
