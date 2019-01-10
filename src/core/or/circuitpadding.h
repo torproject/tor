@@ -13,9 +13,9 @@
 #include "src/trunnel/circpad_negotiation.h"
 #include "lib/evloop/timers.h"
 
-typedef struct circuit_t circuit_t;
-typedef struct origin_circuit_t origin_circuit_t;
-typedef struct cell_t cell_t;
+struct circuit_t;
+struct origin_circuit_t;
+struct cell_t;
 
 /**
  * Signed error return with the specific property that negative
@@ -440,7 +440,7 @@ typedef struct circpad_machine_state_t {
   tor_timer_t *padding_timer;
 
   /** The circuit for this machine */
-  circuit_t *on_circ;
+  struct circuit_t *on_circ;
 
   /** A mutable copy of the histogram for the current state.
    *  NULL if remove_tokens is false for that state */
@@ -576,19 +576,19 @@ void circpad_new_consensus_params(const networkstatus_t *ns);
 /**
  * The following are event call-in points that are of interest to
  * the state machines. They are called during cell processing. */
-void circpad_deliver_unrecognized_cell_events(circuit_t *circ,
+void circpad_deliver_unrecognized_cell_events(struct circuit_t *circ,
                                               cell_direction_t dir);
-void circpad_deliver_sent_relay_cell_events(circuit_t *circ,
+void circpad_deliver_sent_relay_cell_events(struct circuit_t *circ,
                                             uint8_t relay_command);
-void circpad_deliver_recognized_relay_cell_events(circuit_t *circ,
+void circpad_deliver_recognized_relay_cell_events(struct circuit_t *circ,
                                                   uint8_t relay_command,
                                                   crypt_path_t *layer_hint);
 
 /** Cell events are delivered by the above delivery functions */
-void circpad_cell_event_nonpadding_sent(circuit_t *on_circ);
-void circpad_cell_event_nonpadding_received(circuit_t *on_circ);
-void circpad_cell_event_padding_sent(circuit_t *on_circ);
-void circpad_cell_event_padding_received(circuit_t *on_circ);
+void circpad_cell_event_nonpadding_sent(struct circuit_t *on_circ);
+void circpad_cell_event_nonpadding_received(struct circuit_t *on_circ);
+void circpad_cell_event_padding_sent(struct circuit_t *on_circ);
+void circpad_cell_event_padding_received(struct circuit_t *on_circ);
 
 /** Internal events are events the machines send to themselves */
 circpad_decision_t
@@ -600,12 +600,13 @@ circpad_decision_t circpad_internal_event_state_length_up(
 
 /** Machine creation events are events that cause us to set up or
  *  tear down padding state machines. */
-void circpad_machine_event_circ_added_hop(origin_circuit_t *on_circ);
-void circpad_machine_event_circ_built(origin_circuit_t *circ);
-void circpad_machine_event_circ_purpose_changed(origin_circuit_t *circ);
-void circpad_machine_event_circ_has_streams(origin_circuit_t *circ);
-void circpad_machine_event_circ_has_no_streams(origin_circuit_t *circ);
-void circpad_machine_event_circ_has_no_relay_early(origin_circuit_t *circ);
+void circpad_machine_event_circ_added_hop(struct origin_circuit_t *on_circ);
+void circpad_machine_event_circ_built(struct origin_circuit_t *circ);
+void circpad_machine_event_circ_purpose_changed(struct origin_circuit_t *circ);
+void circpad_machine_event_circ_has_streams(struct origin_circuit_t *circ);
+void circpad_machine_event_circ_has_no_streams(struct origin_circuit_t *circ);
+void
+circpad_machine_event_circ_has_no_relay_early(struct origin_circuit_t *circ);
 
 void circpad_machines_init(void);
 void circpad_machines_free(void);
@@ -613,9 +614,9 @@ void circpad_machines_free(void);
 void circpad_machine_states_init(circpad_machine_spec_t *machine,
                                  circpad_statenum_t num_states);
 
-void circpad_circuit_free_all_machineinfos(circuit_t *circ);
+void circpad_circuit_free_all_machineinfos(struct circuit_t *circ);
 
-bool circpad_padding_is_from_expected_hop(circuit_t *circ,
+bool circpad_padding_is_from_expected_hop(struct circuit_t *circ,
                                          crypt_path_t *from_hop);
 
 /** Serializaton functions for writing to/from torrc and consensus */
@@ -623,14 +624,16 @@ char *circpad_machine_spec_to_string(const circpad_machine_spec_t *machine);
 const circpad_machine_spec_t *circpad_string_to_machine(const char *str);
 
 /* Padding negotiation between client and middle */
-signed_error_t circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell);
-signed_error_t circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
+signed_error_t circpad_handle_padding_negotiate(struct circuit_t *circ,
+                                      struct cell_t *cell);
+signed_error_t circpad_handle_padding_negotiated(struct circuit_t *circ,
+                                      struct cell_t *cell,
                                       crypt_path_t *layer_hint);
-signed_error_t circpad_negotiate_padding(origin_circuit_t *circ,
+signed_error_t circpad_negotiate_padding(struct origin_circuit_t *circ,
                           circpad_machine_num_t machine,
                           uint8_t target_hopnum,
                           uint8_t command);
-bool circpad_padding_negotiated(circuit_t *circ,
+bool circpad_padding_negotiated(struct circuit_t *circ,
                            circpad_machine_num_t machine,
                            uint8_t command,
                            uint8_t response);
@@ -667,7 +670,7 @@ STATIC circpad_hist_index_t circpad_histogram_usec_to_bin(
                                        circpad_delay_t us);
 
 STATIC circpad_machine_state_t *circpad_circuit_machineinfo_new(
-                                               circuit_t *on_circ,
+                                               struct circuit_t *on_circ,
                                                int machine_index);
 STATIC void circpad_machine_remove_higher_token(circpad_machine_state_t *mi,
                                          circpad_delay_t target_bin_us);
@@ -679,7 +682,7 @@ STATIC void circpad_machine_remove_closest_token(circpad_machine_state_t *mi,
 STATIC void circpad_machine_setup_tokens(circpad_machine_state_t *mi);
 
 MOCK_DECL(STATIC signed_error_t,
-circpad_send_command_to_hop,(origin_circuit_t *circ, uint8_t hopnum,
+circpad_send_command_to_hop,(struct origin_circuit_t *circ, uint8_t hopnum,
                              uint8_t relay_command, const uint8_t *payload,
                              ssize_t payload_len));
 
