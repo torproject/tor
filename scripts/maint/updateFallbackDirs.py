@@ -1619,8 +1619,12 @@ class CandidateList(dict):
     return excluded_count
 
   @staticmethod
-  def summarise_filters(initial_count, excluded_count):
-    return '/* Fallback list excluded %d of %d candidates. */'%(
+  def summarise_filters(initial_count, excluded_count, check_existing):
+    list_type = 'Whitelist'
+    if check_existing:
+        list_type = 'Fallback list'
+
+    return '/* %s excluded %d of %d candidates. */'%(list_type,
                                                 excluded_count, initial_count)
 
   # calculate each fallback's measured bandwidth based on the median
@@ -2293,7 +2297,8 @@ def list_fallbacks(whitelist, exact=False):
   # instead, there will be an info-level log during the eligibility check.
   initial_count = len(candidates.fallbacks)
   excluded_count = candidates.apply_filter_lists(whitelist, exact=exact)
-  print candidates.summarise_filters(initial_count, excluded_count)
+  print candidates.summarise_filters(initial_count, excluded_count,
+          whitelist['check_existing'])
   eligible_count = len(candidates.fallbacks)
 
   # calculate the measured bandwidth of each relay,
