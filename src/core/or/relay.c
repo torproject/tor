@@ -527,6 +527,7 @@ relay_command_to_string(uint8_t command)
     case RELAY_COMMAND_EXTEND2: return "EXTEND2";
     case RELAY_COMMAND_EXTENDED2: return "EXTENDED2";
     case RELAY_COMMAND_PADDING_NEGOTIATE: return "PADDING_NEGOTIATE";
+    case RELAY_COMMAND_PADDING_NEGOTIATED: return "PADDING_NEGOTIATED";
     default:
       tor_snprintf(buf, sizeof(buf), "Unrecognized relay command %u",
                    (unsigned)command);

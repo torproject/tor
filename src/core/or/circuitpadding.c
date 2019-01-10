@@ -304,6 +304,7 @@ circpad_histogram_usec_to_bin(const circpad_machine_state_t *mi,
   else
     start_usec = state->start_usec;
 
+  /* The first bin (#0) has zero width and starts (and ends) at start_usec. */
   if (usec <= start_usec)
     return 0;
 

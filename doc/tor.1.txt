@@ -1026,6 +1026,11 @@ The following options are useful only for clients (that is, if
     Normal circuits include all circuits except for direct connections
     to directory servers. Middle hops are all hops other than exit and entry. +
 +
+    This is an **experimental** feature that is meant to be used by researchers
+    and developers to test new features in the Tor network safely. Using it
+    without care will strongly influence your anonymity. This feature might get
+    removed in the future.
++
     The HSLayer2Node and HSLayer3Node options override this option for onion
     service circuits, if they are set. The vanguards addon will read this
     option, and if set, it will set HSLayer2Nodes and HSLayer3Nodes to nodes
