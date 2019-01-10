@@ -2066,6 +2066,9 @@ router_build_fresh_routerinfo(routerinfo_t **ri_out)
 
   ri->declared_family = get_my_declared_family(options);
 
+  ri->purpose =
+    options->BridgeRelay ? ROUTER_PURPOSE_BRIDGE : ROUTER_PURPOSE_GENERAL;
+
   goto done;
 
  err:
@@ -2122,18 +2125,20 @@ router_update_extrainfo_descriptor_body(extrainfo_t *ei)
                                get_master_signing_keypair()) < 0) {
     log_warn(LD_BUG, "Couldn't generate extra-info descriptor.");
     return -1;
-  } else {
-    ei->cache_info.signed_descriptor_len =
-      strlen(ei->cache_info.signed_descriptor_body);
-    router_get_extrainfo_hash(ei->cache_info.signed_descriptor_body,
-                              ei->cache_info.signed_descriptor_len,
-                              ei->cache_info.signed_descriptor_digest);
-    crypto_digest256((char*) ei->digest256,
-                     ei->cache_info.signed_descriptor_body,
-                     ei->cache_info.signed_descriptor_len,
-                     DIGEST_SHA256);
-    return 0;
   }
+
+  ei->cache_info.signed_descriptor_len =
+    strlen(ei->cache_info.signed_descriptor_body);
+
+  router_get_extrainfo_hash(ei->cache_info.signed_descriptor_body,
+                            ei->cache_info.signed_descriptor_len,
+                            ei->cache_info.signed_descriptor_digest);
+  crypto_digest256((char*) ei->digest256,
+                   ei->cache_info.signed_descriptor_body,
+                   ei->cache_info.signed_descriptor_len,
+                   DIGEST_SHA256);
+
+  return 0;
 }
 
 /** Set the fields in ri that depend on ei.
@@ -2184,18 +2189,11 @@ router_update_routerinfo_descriptor_body(routerinfo_t *ri)
   ri->cache_info.signed_descriptor_len =
     strlen(ri->cache_info.signed_descriptor_body);
 
+  router_get_router_hash(ri->cache_info.signed_descriptor_body,
+                         strlen(ri->cache_info.signed_descriptor_body),
+                         ri->cache_info.signed_descriptor_digest);
+
   return 0;
-}
-
-/** Set the purpose field in ri.
- */
-static void
-router_update_routerinfo_purpose(routerinfo_t *ri)
-{
-  const or_options_t *options = get_options();
-
-  ri->purpose =
-    options->BridgeRelay ? ROUTER_PURPOSE_BRIDGE : ROUTER_PURPOSE_GENERAL;
 }
 
 /** Set the cache_info.send_unencrypted fields in ri and ei.
@@ -2218,16 +2216,6 @@ router_update_info_send_unencrypted(routerinfo_t *ri, extrainfo_t *ei)
     if (ei)
       ei->cache_info.send_unencrypted = 1;
   }
-}
-
-/** Set signed_descriptor_digest in ri->cache_info.
- */
-static void
-router_update_routerinfo_digest(routerinfo_t *ri)
-{
-  router_get_router_hash(ri->cache_info.signed_descriptor_body,
-                         strlen(ri->cache_info.signed_descriptor_body),
-                         ri->cache_info.signed_descriptor_digest);
 }
 
 /** Build a fresh routerinfo, signed server descriptor, and signed extra-info
@@ -2287,15 +2275,9 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   if (result < 0)
     goto err;
 
-  /* TODO: fold into router_build_fresh_routerinfo() */
-  router_update_routerinfo_purpose(ri);
-
   /* TODO: fold into router_update_extrainfo_descriptor_body() and
    * router_update_routerinfo_descriptor_body() ? */
   router_update_info_send_unencrypted(ri, ei);
-
-  /* TODO: fold into router_update_routerinfo_descriptor_body() */
-  router_update_routerinfo_digest(ri);
 
   if (ei) {
      if (BUG(routerinfo_incompatible_with_extrainfo(ri->identity_pkey, ei,
