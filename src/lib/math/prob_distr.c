@@ -1308,7 +1308,7 @@ sample_geometric(uint32_t s, double p0, double p)
   if (p >= 1)
     return 1;
 
-  return (-x/log1p(-p));
+  return ceil(-x/log1p(-p));
 }
 
 /*******************************************************************/

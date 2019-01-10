@@ -958,7 +958,17 @@ test_stochastic_geometric_impl(double p)
     size_t C[PSI_DF] = {0};
 
     for (j = 0; j < NSAMPLES; j++) {
-      double n_tmp = ceil(geometric_sample(p));
+      double n_tmp = geometric_sample(p);
+
+      /* Must be an integer.  (XXX -Wfloat-equal)  */
+      tor_assert(ceil(n_tmp) <= n_tmp && ceil(n_tmp) >= n_tmp);
+
+      /* Must be a positive integer.  */
+      tor_assert(n_tmp >= 1);
+
+      /* Probability of getting a value in the billions is negligible.  */
+      tor_assert(n_tmp <= (double)UINT_MAX);
+
       unsigned n = (unsigned) n_tmp;
 
       if (n > PSI_DF)
