@@ -1,0 +1,5 @@
+  o Minor bugfixes (unit tests):
+    - Instead of relying on hs_free_all() to clean up all onion service
+      objects we created in test_build_descriptors(), deallocate
+      them one by one. This lets Coverity know that we are not leaking memory
+      here and fixes CID 1442277. Fixes bug 28989; bugfix on 0.3.5.1-alpha.
