@@ -1,0 +1,6 @@
+  o Minor bugfix (hidden service v3, client):
+    - Avoid a BUG() stacktrace in case a SOCKS connection is found waiting for
+      the descriptor while we do have it in the cache. There is a rare case
+      when this can happen. Now, tor will recover and retry the descriptor.
+      Fixes bug 28669; bugfix on 0.3.2.4-alpha.
+    
