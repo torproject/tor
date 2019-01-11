@@ -2067,15 +2067,17 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     return 0;
   }
 
-  if (!cpath_layer) { /* non-rendezvous exit */
-    tor_assert(circ->package_window > 0);
-    circ->package_window--;
-  } else { /* we're an AP, or an exit on a rendezvous circ */
-    tor_assert(cpath_layer->package_window > 0);
-    cpath_layer->package_window--;
+  /* Handle the circuit-level SENDME package window. */
+  if (sendme_circuit_data_packaged(circ, cpath_layer) < 0) {
+    /* Package window has gone under 0. Protocol issue. */
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Circuit package window is below 0. Closing circuit.");
+    conn->end_reason = END_STREAM_REASON_TORPROTOCOL;
+    return -1;
   }
 
-  if (--conn->package_window <= 0) { /* is it 0 after decrement? */
+  /* Handle the stream-level SENDME package window. */
+  if (sendme_stream_data_packaged(conn) < 0) {
     connection_stop_reading(TO_CONN(conn));
     log_debug(domain,"conn->package_window reached 0.");
     circuit_consider_stop_edge_reading(circ, cpath_layer);

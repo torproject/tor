@@ -28,4 +28,8 @@ int sendme_process_stream_level(edge_connection_t *conn, circuit_t *circ,
 int sendme_stream_data_received(edge_connection_t *conn);
 int sendme_circuit_data_received(circuit_t *circ, crypt_path_t *layer_hint);
 
+/* Update package window functions. */
+int sendme_circuit_data_packaged(circuit_t *circ, crypt_path_t *layer_hint);
+int sendme_stream_data_packaged(edge_connection_t *conn);
+
 #endif /* !defined(TOR_SENDME_H) */
