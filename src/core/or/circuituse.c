@@ -2377,8 +2377,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
         } else {
           hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
         }
-        connection_ap_mark_as_non_pending_circuit(conn);
-        ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_RENDDESC_WAIT;
+        connection_ap_mark_as_waiting_for_renddesc(conn);
         return 0;
       }
       log_info(LD_REND,"Chose %s as intro point for '%s'.",

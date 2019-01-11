@@ -150,8 +150,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
 
       while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
                        AP_CONN_STATE_CIRCUIT_WAIT, onion_address))) {
-        connection_ap_mark_as_non_pending_circuit(TO_ENTRY_CONN(conn));
-        conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+        connection_ap_mark_as_waiting_for_renddesc(TO_ENTRY_CONN(conn));
       }
     }
 
@@ -864,8 +863,7 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
     while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
                                    AP_CONN_STATE_CIRCUIT_WAIT,
                                    onion_address))) {
-      connection_ap_mark_as_non_pending_circuit(TO_ENTRY_CONN(conn));
-      conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+      connection_ap_mark_as_waiting_for_renddesc(TO_ENTRY_CONN(conn));
     }
 
     return 0;
