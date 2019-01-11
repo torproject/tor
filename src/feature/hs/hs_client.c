@@ -142,8 +142,7 @@ flag_all_conn_wait_desc(const ed25519_public_key_t *service_identity_pk)
     if (edge_conn->hs_ident &&
         ed25519_pubkey_eq(&edge_conn->hs_ident->identity_pk,
                           service_identity_pk)) {
-      connection_ap_mark_as_non_pending_circuit(TO_ENTRY_CONN(conn));
-      conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+      connection_ap_mark_as_waiting_for_renddesc(TO_ENTRY_CONN(conn));
     }
   } SMARTLIST_FOREACH_END(conn);
 
@@ -199,6 +198,26 @@ directory_request_is_pending(const ed25519_public_key_t *identity_pk)
   /* No ownership of the objects in this list. */
   smartlist_free(conns);
   return ret;
+}
+
+/* Helper function that changes the state of an entry connection to waiting
+ * for a circuit. For this to work properly, the connection timestamps are set
+ * to now and the connection is then marked as pending for a circuit. */
+static void
+mark_conn_as_waiting_for_circuit(connection_t *conn, time_t now)
+{
+  tor_assert(conn);
+
+  /* Because the connection can now proceed to opening circuit and ultimately
+   * connect to the service, reset those timestamp so the connection is
+   * considered "fresh" and can continue without being closed too early. */
+  conn->timestamp_created = now;
+  conn->timestamp_last_read_allowed = now;
+  conn->timestamp_last_write_allowed = now;
+  /* Change connection's state into waiting for a circuit. */
+  conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+
+  connection_ap_mark_as_pending_circuit(TO_ENTRY_CONN(conn));
 }
 
 /* We failed to fetch a descriptor for the service with <b>identity_pk</b>
@@ -277,12 +296,19 @@ retry_all_socks_conn_waiting_for_desc(void)
 
     /* Order a refetch in case it works this time. */
     status = hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
-    if (BUG(status == HS_CLIENT_FETCH_HAVE_DESC)) {
-      /* This case is unique because it can NOT happen in theory. Once we get
-       * a new descriptor, the HS client subsystem is notified immediately and
-       * the connections waiting for it are handled which means the state will
-       * change from renddesc wait state. Log this and continue to next
-       * connection. */
+    if (status == HS_CLIENT_FETCH_HAVE_DESC) {
+      /* This is a rare case where a SOCKS connection is in state waiting for
+       * a descriptor but we do have it in the cache.
+       *
+       * This can happen is tor comes back from suspend where it previously
+       * had the descriptor but the intro points were not usuable. Once it
+       * came back to life, the intro point failure cache was cleaned up and
+       * thus the descriptor became usable again leaving us in this code path.
+       *
+       * We'll mark the connection as waiting for a circuit so the descriptor
+       * can be retried. This is safe because a connection in state waiting
+       * for a descriptor can not be in the entry connection pending list. */
+      mark_conn_as_waiting_for_circuit(base_conn, approx_time());
       continue;
     }
     /* In the case of an error, either all SOCKS connections have been
@@ -1701,17 +1727,9 @@ hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
 
     log_info(LD_REND, "Descriptor has arrived. Launching circuits.");
 
-    /* Because the connection can now proceed to opening circuit and
-     * ultimately connect to the service, reset those timestamp so the
-     * connection is considered "fresh" and can continue without being closed
-     * too early. */
-    base_conn->timestamp_created = now;
-    base_conn->timestamp_last_read_allowed = now;
-    base_conn->timestamp_last_write_allowed = now;
-    /* Change connection's state into waiting for a circuit. */
-    base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-
-    connection_ap_mark_as_pending_circuit(entry_conn);
+    /* Mark connection as waiting for a circuit since we do have a usable
+     * descriptor now. */
+    mark_conn_as_waiting_for_circuit(base_conn, now);
   } SMARTLIST_FOREACH_END(base_conn);
 
  end:

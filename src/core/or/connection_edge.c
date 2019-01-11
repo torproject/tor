@@ -1357,6 +1357,21 @@ connection_ap_mark_as_non_pending_circuit(entry_connection_t *entry_conn)
   smartlist_remove(pending_entry_connections, entry_conn);
 }
 
+/** Mark <b>entry_conn</b> as waiting for a rendezvous descriptor. This
+ * function will remove the entry connection from the waiting for a circuit
+ * list (pending_entry_connections).
+ *
+ * This pattern is used across the code base because a connection in state
+ * AP_CONN_STATE_RENDDESC_WAIT must not be in the pending list. */
+void
+connection_ap_mark_as_waiting_for_renddesc(entry_connection_t *entry_conn)
+{
+  tor_assert(entry_conn);
+
+  connection_ap_mark_as_non_pending_circuit(entry_conn);
+  ENTRY_TO_CONN(entry_conn)->state = AP_CONN_STATE_RENDDESC_WAIT;
+}
+
 /* DOCDOC */
 void
 connection_ap_warn_and_unmark_if_pending_circ(entry_connection_t *entry_conn,

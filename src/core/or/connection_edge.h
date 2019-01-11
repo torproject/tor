@@ -126,6 +126,9 @@ void connection_ap_mark_as_pending_circuit_(entry_connection_t *entry_conn,
 #define connection_ap_mark_as_pending_circuit(c) \
   connection_ap_mark_as_pending_circuit_((c), __FILE__, __LINE__)
 void connection_ap_mark_as_non_pending_circuit(entry_connection_t *entry_conn);
+void connection_ap_mark_as_waiting_for_renddesc(
+                                       entry_connection_t *entry_conn);
+
 #define CONNECTION_AP_EXPECT_NONPENDING(c) do {                         \
     if (ENTRY_TO_CONN(c)->state == AP_CONN_STATE_CIRCUIT_WAIT) {        \
       log_warn(LD_BUG, "At %s:%d: %p was unexpectedly in circuit_wait.", \
