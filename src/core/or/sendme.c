@@ -213,3 +213,40 @@ sendme_stream_data_received(edge_connection_t *conn)
   tor_assert(conn);
   return --conn->deliver_window;
 }
+
+/* Called when a relay DATA cell is packaged on the given circuit. If
+ * layer_hint is NULL, this means we are the Exit end point else we are the
+ * Client. Update the package window and return its new value. */
+int
+sendme_circuit_data_packaged(circuit_t *circ, crypt_path_t *layer_hint)
+{
+  int package_window, domain;
+
+  tor_assert(circ);
+
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    /* Client side. */
+    tor_assert(layer_hint);
+    --layer_hint->package_window;
+    package_window = layer_hint->package_window;
+    domain = LD_APP;
+  } else {
+    /* Exit side. */
+    tor_assert(!layer_hint);
+    --circ->package_window;
+    package_window = circ->package_window;
+    domain = LD_EXIT;
+  }
+
+  log_debug(domain, "Circuit package_window now %d.", package_window);
+  return package_window;
+}
+
+/* Called when a relay DATA cell is packaged for the given edge connection
+ * conn. Update the package window and return its new value. */
+int
+sendme_stream_data_packaged(edge_connection_t *conn)
+{
+  tor_assert(conn);
+  return --conn->package_window;
+}
