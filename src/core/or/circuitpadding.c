@@ -87,11 +87,19 @@ static uint64_t circpad_global_padding_sent;
 static uint64_t circpad_global_nonpadding_sent;
 
 /** This is the list of circpad_machine_spec_t's parsed from consensus and
- *  torrc that have origin_side == 1 (ie: are for client side) */
+ *  torrc that have origin_side == 1 (ie: are for client side).
+ *
+ *  The machines in this smartlist are considered immutable and they are used
+ *  as-is by circuits so they should not change or get deallocated in Tor's
+ *  runtime and as long as circuits are alive. */
 STATIC smartlist_t *origin_padding_machines = NULL;
 
 /** This is the list of circpad_machine_spec_t's parsed from consensus and
- *  torrc that have origin_side == 0 (ie: are for relay side) */
+ *  torrc that have origin_side == 0 (ie: are for relay side).
+ *
+ *  The machines in this smartlist are considered immutable and they are used
+ *  as-is by circuits so they should not change or get deallocated in Tor's
+ *  runtime and as long as circuits are alive. */
 STATIC smartlist_t *relay_padding_machines = NULL;
 
 /** Loop over the current padding state machines using <b>loop_var</b> as the

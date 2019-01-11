@@ -185,7 +185,9 @@ struct circuit_t {
 
   /** Adaptive Padding state machines: these are immutable. The state machines
    *  that come from the consensus are saved to a global structure, to avoid
-   *  per-circuit allocations. This merely points to the global copy.
+   *  per-circuit allocations. This merely points to the global copy in
+   *  origin_padding_machines or relay_padding_machines that should never
+   *  change or get deallocated.
    *
    *  Each element of this array corresponds to a different padding machine,
    *  and we can have up to CIRCPAD_MAX_MACHINES such machines. */
