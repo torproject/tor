@@ -174,7 +174,8 @@ circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
      * subsystem of Tor has already asked us to close this circuit AND the
      * machine has reached the end state */
 
-    /* Change the circuit purpose regardless of whether we close the circuit. */
+    /* Change the circuit purpose regardless of whether we close the
+     * circuit. */
     circuit_change_purpose(circ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
 
     /* If the machine has reached the END state, close the circuit. */
