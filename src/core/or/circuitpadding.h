@@ -505,16 +505,6 @@ typedef struct circpad_machineinfo_t {
    */
   unsigned stop_rtt_update : 1;
 
-  /**
-   * This circuit was asked to be closed by another part of Tor but might have
-   * been kept open by the circuitpadding subsystem because the machine
-   * requested it (see circpad_machine_t.manage_circ_lifetime).
-   *
-   * We use this flag so that we can close the circuit ourselves when the
-   * machine transitions to the END state.
-   */
-  unsigned circuit_was_asked_to_be_closed : 1;
-
 /** Max number of padding machines on each circuit. If changed,
  * also ensure the machine_index bitwith supports the new size. */
 #define CIRCPAD_MAX_MACHINES    (2)

@@ -2374,27 +2374,27 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
 
   /* Check that the circuit is not marked for close */
   tt_int_op(client_side->marked_for_close, OP_EQ, 0);
-  tt_int_op(mi->circuit_was_asked_to_be_closed, OP_EQ, 0);
+  tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_GENERAL);
 
   /* Mark this circuit for close due to a remote reason */
   circuit_mark_for_close(client_side,
                          END_CIRC_REASON_FLAG_REMOTE|END_CIRC_REASON_NONE);
   tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
   tt_int_op(client_side->marked_for_close, OP_NE, 0);
-  tt_int_op(mi->circuit_was_asked_to_be_closed, OP_EQ, 0);
+  tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_GENERAL);
   client_side->marked_for_close = 0;
 
   /* Mark this circuit for close due to a protocol issue */
   circuit_mark_for_close(client_side, END_CIRC_REASON_TORPROTOCOL);
   tt_int_op(client_side->marked_for_close, OP_NE, 0);
-  tt_int_op(mi->circuit_was_asked_to_be_closed, OP_EQ, 0);
+  tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_GENERAL);
   client_side->marked_for_close = 0;
 
   /* Mark a measurement circuit for close */
   client_side->purpose = CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT;
   circuit_mark_for_close(client_side, END_CIRC_REASON_NONE);
   tt_int_op(client_side->marked_for_close, OP_NE, 0);
-  tt_int_op(mi->circuit_was_asked_to_be_closed, OP_EQ, 0);
+  tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT);
   client_side->marked_for_close = 0;
 
   /* Mark a general circuit for close */
@@ -2405,7 +2405,7 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
    * managing the lifetime manually, but the circuit was tagged as such by the
    * circpadding subsystem */
   tt_int_op(client_side->marked_for_close, OP_EQ, 0);
-  tt_int_op(mi->circuit_was_asked_to_be_closed, OP_EQ, 1);
+  tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
 
   /* We just tested case (1) from the comments of
    * circpad_circuit_should_be_marked_for_close() */
@@ -2436,7 +2436,7 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
 
   /* First, reset all close marks and tags */
   client_side->marked_for_close = 0;
-  mi->circuit_was_asked_to_be_closed = 0;
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
   /* Now re-create the ender machine so that we can transition to END again */
   /* Free up some stuff first */

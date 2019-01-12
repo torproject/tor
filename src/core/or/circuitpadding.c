@@ -118,22 +118,16 @@ circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
  *
  * If the machine does not manage the circuit lifetime itself, we just close
  * the circuit if we get here. In the case where the machine manages the
- * circuit lifetime there are 4 cases under which we can find ourselves here:
+ * circuit lifetime there are 3 cases under which we can find ourselves here:
  *
  * 1) Machine has *not* reached END state, and another subsystem wants to close
- *    the circuit: tag the circuit but dont close it.
+ *    the circuit: change the circuit purpose to ours but dont close it.
  *
  * 2) Machine has reached END state, and another subsystem wants to close the
  *    circuit now: close the circuit!
  *
  * 3) Another subsystem had tried to close the circuit, and the machine just
  *    reached END state: close the circuit.
- *
- * 4) *No* other subsystem has tried to close the circuit, and the machine just
- *    reached END state: don't close the circuit and dont mark. We actually
- *    never reach this case because we only enter this function from
- *    circpad_machine_transitioned_to_end() if circuit_was_asked_to_be_closed
- *    is set.
  */
 int
 circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
@@ -180,8 +174,7 @@ circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
      * subsystem of Tor has already asked us to close this circuit AND the
      * machine has reached the end state */
 
-    /* Tag this close attempt regardless of whether we close the circuit. */
-    mi->circuit_was_asked_to_be_closed = 1;
+    /* Change the circuit purpose regardless of whether we close the circuit. */
     circuit_change_purpose(circ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
 
     /* If the machine has reached the END state, close the circuit. */
@@ -1282,7 +1275,7 @@ circpad_machine_transitioned_to_end(circpad_machineinfo_t *mi)
    *  down now if we must. */
   if (machine->manage_circ_lifetime) {
     circuit_t *on_circ = mi->on_circ;
-    if (mi->circuit_was_asked_to_be_closed) {
+    if (on_circ->purpose == CIRCUIT_PURPOSE_C_CIRCUIT_PADDING) {
       circuit_mark_for_close(on_circ, END_CIRC_REASON_FINISHED);
       /* If we close the circuit, we don't want to send a negotiate
        * cell right when we do, since that is an information leak
