@@ -193,6 +193,15 @@ void tor_log_get_logfile_names(struct smartlist_t *out);
 
 extern int log_global_min_severity_;
 
+static inline bool debug_logging_enabled(void);
+/**
+ * Return true iff debug logging is enabled for at least one domain.
+ */
+static inline bool debug_logging_enabled(void)
+{
+  return PREDICT_UNLIKELY(log_global_min_severity_ == LOG_DEBUG);
+}
+
 void log_fn_(int severity, log_domain_mask_t domain,
              const char *funcname, const char *format, ...)
   CHECK_PRINTF(4,5);
@@ -222,8 +231,8 @@ void tor_log_string(int severity, log_domain_mask_t domain,
   log_fn_ratelim_(ratelim, severity, domain, __FUNCTION__, args)
 #define log_debug(domain, args...)                                      \
   STMT_BEGIN                                                            \
-    if (PREDICT_UNLIKELY(log_global_min_severity_ == LOG_DEBUG))        \
-      log_fn_(LOG_DEBUG, domain, __FUNCTION__, args);            \
+    if (debug_logging_enabled())                                        \
+      log_fn_(LOG_DEBUG, domain, __FUNCTION__, args);                   \
   STMT_END
 #define log_info(domain, args...)                           \
   log_fn_(LOG_INFO, domain, __FUNCTION__, args)
@@ -240,8 +249,8 @@ void tor_log_string(int severity, log_domain_mask_t domain,
 
 #define log_debug(domain, args, ...)                                        \
   STMT_BEGIN                                                                \
-    if (PREDICT_UNLIKELY(log_global_min_severity_ == LOG_DEBUG))            \
-      log_fn_(LOG_DEBUG, domain, __FUNCTION__, args, ##__VA_ARGS__); \
+    if (debug_logging_enabled())                                            \
+      log_fn_(LOG_DEBUG, domain, __FUNCTION__, args, ##__VA_ARGS__);        \
   STMT_END
 #define log_info(domain, args,...)                                      \
   log_fn_(LOG_INFO, domain, __FUNCTION__, args, ##__VA_ARGS__)
