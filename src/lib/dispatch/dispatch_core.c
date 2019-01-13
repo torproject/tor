@@ -14,6 +14,7 @@
 
 #include "lib/dispatch/dispatch.h"
 #include "lib/dispatch/dispatch_st.h"
+#include "lib/dispatch/dispatch_naming.h"
 
 #include "lib/malloc/malloc.h"
 #include "lib/log/util_bug.h"
@@ -180,6 +181,17 @@ dispatch_send_msg_unchecked(dispatch_t *d, msg_t *m)
   /* Append the message. */
   TOR_SIMPLEQ_INSERT_TAIL(&q->queue, m, next);
 
+  if (debug_logging_enabled()) {
+    char *arg = dispatch_fmt_msg_data(d, m);
+    log_debug(LD_MESG,
+              "Queued: %s (%s) from %s, on %s.",
+              get_message_id_name(m->msg),
+              arg,
+              get_subsys_id_name(m->sender),
+              get_channel_id_name(m->channel));
+    tor_free(arg);
+  }
+
   /* If we just made the queue nonempty for the first time, call the alert
    * function. */
   if (was_empty) {
@@ -199,10 +211,24 @@ dispatcher_run_msg_cbs(const dispatch_t *d, msg_t *m)
   dtbl_entry_t *ent = d->table[m->msg];
   int n_fns = ent->n_fns;
 
+  if (debug_logging_enabled()) {
+    char *arg = dispatch_fmt_msg_data(d, m);
+    log_debug(LD_MESG,
+              "Delivering: %s (%s) from %s, on %s:",
+              get_message_id_name(m->msg),
+              arg,
+              get_subsys_id_name(m->sender),
+              get_channel_id_name(m->channel));
+    tor_free(arg);
+  }
+
   int i;
   for (i=0; i < n_fns; ++i) {
-    if (ent->rcv[i].enabled)
+    if (ent->rcv[i].enabled) {
+      log_debug(LD_MESG, "  Delivering to %s.",
+                get_subsys_id_name(ent->rcv[i].sys));
       ent->rcv[i].fn(m);
+    }
   }
 }
 
