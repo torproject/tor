@@ -910,6 +910,7 @@ struct testgroup_t testgroups[] = {
   { "proto/misc/", proto_misc_tests },
   { "protover/", protover_tests },
   { "pt/", pt_tests },
+  { "pubsub/build/", pubsub_build_tests },
   { "pubsub/msg/", pubsub_msg_tests },
   { "relay/" , relay_tests },
   { "relaycell/", relaycell_tests },
