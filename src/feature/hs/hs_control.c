@@ -10,6 +10,7 @@
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "feature/hs/hs_client.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_control.h"
 #include "feature/hs/hs_descriptor.h"
@@ -258,4 +259,17 @@ hs_control_hspost_command(const char *body, const char *onion_address,
   /* We don't have ownership of the objects in this list. */
   smartlist_free(hsdirs);
   return ret;
+}
+
+/* With a given <b>onion_identity_pk</b>, fetch its descriptor, optionally
+ * using the list of directory servers given in <b>hsdirs</b>, or a random
+ * server if it is NULL. This function calls hs_client_launch_v3_desc_fetch().
+ */
+void
+hs_control_hsfetch_command(const ed25519_public_key_t *onion_identity_pk,
+                           const smartlist_t *hsdirs)
+{
+  tor_assert(onion_identity_pk);
+
+  hs_client_launch_v3_desc_fetch(onion_identity_pk, hsdirs);
 }
