@@ -2874,24 +2874,23 @@ rep_hist_get_padding_count_lines(void)
 void
 rep_hist_log_link_protocol_counts(void)
 {
-  log_notice(LD_HEARTBEAT,
-             "Since startup, we have initiated "
-             "%"PRIu64" v1 connections, "
-             "%"PRIu64" v2 connections, "
-             "%"PRIu64" v3 connections, and "
-             "%"PRIu64" v4 connections; and received "
-             "%"PRIu64" v1 connections, "
-             "%"PRIu64" v2 connections, "
-             "%"PRIu64" v3 connections, and "
-             "%"PRIu64" v4 connections.",
-             (link_proto_count[1][1]),
-             (link_proto_count[2][1]),
-             (link_proto_count[3][1]),
-             (link_proto_count[4][1]),
-             (link_proto_count[1][0]),
-             (link_proto_count[2][0]),
-             (link_proto_count[3][0]),
-             (link_proto_count[4][0]));
+  smartlist_t *lines = smartlist_new();
+
+  for (int i = 1; i <= MAX_LINK_PROTO; i++) {
+     char *line = NULL;
+     tor_asprintf(&line, "initiated %"PRIu64" and received "
+                  "%"PRIu64" v%d connections", link_proto_count[i][1],
+                  link_proto_count[i][0], i);
+     smartlist_add(lines, line);
+  }
+
+  char *log_line = smartlist_join_strings(lines, "; ", 0, NULL);
+
+  log_notice(LD_HEARTBEAT, "Since startup we %s.", log_line);
+
+  SMARTLIST_FOREACH(lines, char *, s, tor_free(s));
+  smartlist_free(lines);
+  tor_free(log_line);
 }
 
 /** Free all storage held by the OR/link history caches, by the
