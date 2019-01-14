@@ -1236,13 +1236,13 @@ parse_status_line(const char *line, managed_proxy_t *mp)
     goto done;
   }
 
-  /* We check if we received the TYPE parameter, which is the only *required*
-   * value. */
-  const config_line_t *type = config_line_find(values, "TYPE");
+  /* We check if we received the TRANSPORT parameter, which is the only
+   * *required* value. */
+  const config_line_t *type = config_line_find(values, "TRANSPORT");
 
   if (! type) {
     log_warn(LD_PT, "Managed proxy \"%s\" wrote a STATUS line without "
-                    "TYPE: %s", mp->argv[0], escaped(data));
+                    "TRANSPORT: %s", mp->argv[0], escaped(data));
     goto done;
   }
 
@@ -1250,8 +1250,8 @@ parse_status_line(const char *line, managed_proxy_t *mp)
   config_line_prepend(&values, "PT", mp->argv[0]);
   status_message = kvline_encode(values, KV_QUOTED);
 
-  /* We have checked that TYPE is there, we can now emit the STATUS event via
-   * the control port. */
+  /* We have checked that TRANSPORT is there, we can now emit the STATUS event
+   * via the control port. */
   control_event_pt_status(status_message);
 
  done:
