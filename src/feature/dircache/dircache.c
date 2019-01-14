@@ -1462,11 +1462,12 @@ handle_get_next_bandwidth(dir_connection_t *conn,
       if (compress_method != NO_METHOD) {
         conn->compress_state = tor_compress_new(1, compress_method,
                                         choose_compression_level(len/2));
-        log_debug(LD_DIR, "Calling connection_buf_add_compress.");
+        log_debug(LD_DIR, "Compressing bandwidth file.");
         connection_buf_add_compress(bandwidth, len, conn, 0);
+        /* Flush the compression state. */
         connection_buf_add_compress("", 0, conn, 1);
       } else {
-        log_debug(LD_DIR, "compress_method was NO_METHOD, not compressing.");
+        log_debug(LD_DIR, "Not compressing bandwidth file.");
         connection_buf_add(bandwidth, len, TO_CONN(conn));
       }
       tor_free(bandwidth);
