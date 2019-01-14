@@ -19,6 +19,7 @@
 #include "feature/client/transports.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/defs/time.h"
 #include "test/test.h"
 #include "lib/memarea/memarea.h"
 #include "lib/process/waitpid.h"
@@ -404,7 +405,6 @@ test_util_time(void *arg)
 
 /* Assume tv_usec is an unsigned integer until proven otherwise */
 #define TV_USEC_MAX UINT_MAX
-#define TOR_USEC_PER_SEC 1000000
 
   /* Overflows in the result type */
 

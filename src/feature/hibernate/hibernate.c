@@ -37,6 +37,7 @@ hibernating, phase 2:
 #include "core/or/connection_or.h"
 #include "feature/control/control.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/defs/time.h"
 #include "feature/hibernate/hibernate.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/relay/router.h"
@@ -831,8 +832,6 @@ hibernate_soft_limit_reached(void)
     return 0;
   return get_accounting_bytes() >= soft_limit;
 }
-
-#define TOR_USEC_PER_SEC (1000000)
 
 /** Called when we get a SIGINT, or when bandwidth soft limit is
  * reached. Puts us into "loose hibernation": we don't accept new

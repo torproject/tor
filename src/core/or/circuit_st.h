@@ -12,6 +12,11 @@
 #include "core/or/cell_queue_st.h"
 
 struct hs_token_t;
+typedef struct circpad_machine_t circpad_machine_t;
+typedef struct circpad_machineinfo_t circpad_machineinfo_t;
+
+/** Number of padding state machines on a circuit. */
+#define CIRCPAD_MAX_MACHINES (2)
 
 /** "magic" value for an origin_circuit_t */
 #define ORIGIN_CIRCUIT_MAGIC 0x35315243u
@@ -177,6 +182,25 @@ struct circuit_t {
   /** Hashtable node: used to look up the circuit by its HS token using the HS
       circuitmap. */
   HT_ENTRY(circuit_t) hs_circuitmap_node;
+
+  /** Adaptive Padding state machines: these are immutable. The state machines
+   *  that come from the consensus are saved to a global structure, to avoid
+   *  per-circuit allocations. This merely points to the global copy.
+   *
+   *  Each element of this array corresponds to a different padding machine,
+   *  and we can have up to CIRCPAD_MAX_MACHINES such machines. */
+  const circpad_machine_t *padding_machine[CIRCPAD_MAX_MACHINES];
+
+  /** Adaptive Padding machine info for above machines. This is the
+   *  per-circuit mutable information, such as the current state and
+   *  histogram token counts. Some of it is optional (aka NULL).
+   *  If a machine is being shut down, these indexes can be NULL
+   *  without the corresponding padding_machine being NULL, while we
+   *  wait for the other end to respond to our shutdown request.
+   *
+   *  Each element of this array corresponds to a different padding machine,
+   *  and we can have up to CIRCPAD_MAX_MACHINES such machines. */
+  circpad_machineinfo_t *padding_info[CIRCPAD_MAX_MACHINES];
 };
 
 #endif

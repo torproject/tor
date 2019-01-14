@@ -43,6 +43,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuitstats.h"
 #include "core/or/circuituse.h"
+#include "core/or/circuitpadding.h"
 #include "core/or/command.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
@@ -950,12 +951,15 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
   crypt_path_t *hop = onion_next_hop_in_cpath(circ->cpath);
   circuit_build_times_handle_completed_hop(circ);
 
+  circpad_machine_event_circ_added_hop(circ);
+
   if (hop) {
     /* Case two: we're on a hop after the first. */
     return circuit_send_intermediate_onion_skin(circ, hop);
   }
 
   /* Case three: the circuit is finished. Do housekeeping tasks on it. */
+  circpad_machine_event_circ_built(circ);
   return circuit_build_no_more_hops(circ);
 }
 
@@ -2606,7 +2610,24 @@ choose_good_middle_server(uint8_t purpose,
     return choice;
   }
 
-  choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
+  if (options->MiddleNodes) {
+    smartlist_t *sl = smartlist_new();
+    routerset_get_all_nodes(sl, options->MiddleNodes,
+                            options->ExcludeNodes, 1);
+
+    smartlist_subtract(sl, excluded);
+
+    choice = node_sl_choose_by_bandwidth(sl, WEIGHT_FOR_MID);
+    smartlist_free(sl);
+    if (choice) {
+      log_fn(LOG_INFO, LD_CIRC, "Chose fixed middle node: %s",
+          hex_str(choice->identity, DIGEST_LEN));
+    } else {
+      log_fn(LOG_NOTICE, LD_CIRC, "Restricted middle not available");
+    }
+  } else {
+    choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
+  }
   smartlist_free(excluded);
   return choice;
 }
