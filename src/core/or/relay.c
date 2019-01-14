@@ -55,6 +55,7 @@
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
+#include "core/or/circuitpadding.h"
 #include "lib/compress/compress.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
@@ -80,7 +81,6 @@
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/routerlist.h"
 #include "core/or/scheduler.h"
-#include "feature/stats/rephist.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/cell_queue_st.h"
@@ -293,7 +293,9 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
     return 0;
   }
 
-  /* not recognized. pass it on. */
+  /* not recognized. inform circpad and pass it on. */
+  circpad_deliver_unrecognized_cell_events(circ, cell_direction);
+
   if (cell_direction == CELL_DIRECTION_OUT) {
     cell->circ_id = circ->n_circ_id; /* switch it */
     chan = circ->n_chan;
@@ -353,11 +355,11 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
  *  - Encrypt it to the right layer
  *  - Append it to the appropriate cell_queue on <b>circ</b>.
  */
-static int
-circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
+MOCK_IMPL(int,
+circuit_package_relay_cell, (cell_t *cell, circuit_t *circ,
                            cell_direction_t cell_direction,
                            crypt_path_t *layer_hint, streamid_t on_stream,
-                           const char *filename, int lineno)
+                           const char *filename, int lineno))
 {
   channel_t *chan; /* where to send the cell */
 
@@ -524,6 +526,8 @@ relay_command_to_string(uint8_t command)
     case RELAY_COMMAND_INTRODUCE_ACK: return "INTRODUCE_ACK";
     case RELAY_COMMAND_EXTEND2: return "EXTEND2";
     case RELAY_COMMAND_EXTENDED2: return "EXTENDED2";
+    case RELAY_COMMAND_PADDING_NEGOTIATE: return "PADDING_NEGOTIATE";
+    case RELAY_COMMAND_PADDING_NEGOTIATED: return "PADDING_NEGOTIATED";
     default:
       tor_snprintf(buf, sizeof(buf), "Unrecognized relay command %u",
                    (unsigned)command);
@@ -577,8 +581,8 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
   log_debug(LD_OR,"delivering %d cell %s.", relay_command,
             cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
-  if (relay_command == RELAY_COMMAND_DROP)
-    rep_hist_padding_count_write(PADDING_TYPE_DROP);
+  /* Tell circpad we're sending a relay cell */
+  circpad_deliver_sent_relay_cell_events(circ, relay_command);
 
   /* If we are sending an END cell and this circuit is used for a tunneled
    * directory request, advance its state. */
@@ -602,7 +606,9 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
        * one of them.  Don't worry about the conn protocol version:
        * append_cell_to_circuit_queue will fix it up. */
       cell.command = CELL_RELAY_EARLY;
-      --origin_circ->remaining_relay_early_cells;
+      /* If we're out of relay early cells, tell circpad */
+      if (--origin_circ->remaining_relay_early_cells == 0)
+        circpad_machine_event_circ_has_no_relay_early(origin_circ);
       log_debug(LD_OR, "Sending a RELAY_EARLY cell; %d remaining.",
                 (int)origin_circ->remaining_relay_early_cells);
       /* Memorize the command that is sent as RELAY_EARLY cell; helps debug
@@ -1481,9 +1487,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     }
   }
 
+  /* Tell circpad that we've recieved a recognized cell */
+  circpad_deliver_recognized_relay_cell_events(circ, rh.command, layer_hint);
+
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
-
   if (conn && !connection_state_is_open(TO_CONN(conn))) {
     if (conn->base_.type == CONN_TYPE_EXIT &&
         (conn->base_.state == EXIT_CONN_STATE_CONNECTING ||
@@ -1504,8 +1512,14 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
   switch (rh.command) {
     case RELAY_COMMAND_DROP:
-      rep_hist_padding_count_read(PADDING_TYPE_DROP);
-//      log_info(domain,"Got a relay-level padding cell. Dropping.");
+      /* Already examined in circpad_deliver_recognized_relay_cell_events */
+      return 0;
+    case RELAY_COMMAND_PADDING_NEGOTIATE:
+      circpad_handle_padding_negotiate(circ, cell);
+      return 0;
+    case RELAY_COMMAND_PADDING_NEGOTIATED:
+      if (circpad_handle_padding_negotiated(circ, cell, layer_hint) == 0)
+        circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh.length);
       return 0;
     case RELAY_COMMAND_BEGIN:
     case RELAY_COMMAND_BEGIN_DIR:

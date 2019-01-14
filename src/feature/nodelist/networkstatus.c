@@ -44,6 +44,7 @@
 #include "core/mainloop/netstatus.h"
 #include "core/or/channel.h"
 #include "core/or/channelpadding.h"
+#include "core/or/circuitpadding.h"
 #include "core/or/circuitmux.h"
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitstats.h"
@@ -2116,6 +2117,7 @@ networkstatus_set_current_consensus(const char *consensus,
     circuit_build_times_new_consensus_params(
                                get_circuit_build_times_mutable(), c);
     channelpadding_new_consensus_params(c);
+    circpad_new_consensus_params(c);
   }
 
   /* Reset the failure count only if this consensus is actually valid. */

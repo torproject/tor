@@ -199,7 +199,7 @@ uint64_t monotime_absolute_nsec(void);
 /**
  * Return the number of microseconds since the timer system was initialized.
  */
-uint64_t monotime_absolute_usec(void);
+MOCK_DECL(uint64_t, monotime_absolute_usec,(void));
 /**
  * Return the number of milliseconds since the timer system was initialized.
  */

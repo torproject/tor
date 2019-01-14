@@ -67,6 +67,7 @@
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
+#include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
 #include "core/or/policies.h"
@@ -3711,6 +3712,10 @@ handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
 
   /* Link the circuit and the connection crypt path. */
   conn->cpath_layer = origin_circ->cpath->prev;
+
+  /* If this is the first stream on this circuit, tell circpad */
+  if (!origin_circ->p_streams)
+    circpad_machine_event_circ_has_streams(origin_circ);
 
   /* Add it into the linked list of p_streams on this circuit */
   conn->next_stream = origin_circ->p_streams;

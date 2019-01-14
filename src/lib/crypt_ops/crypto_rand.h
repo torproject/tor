@@ -27,6 +27,7 @@ int crypto_rand_int(unsigned int max);
 int crypto_rand_int_range(unsigned int min, unsigned int max);
 uint64_t crypto_rand_uint64_range(uint64_t min, uint64_t max);
 time_t crypto_rand_time_range(time_t min, time_t max);
+uint32_t crypto_rand_u32(void);
 uint64_t crypto_rand_uint64(uint64_t max);
 double crypto_rand_double(void);
 struct tor_weak_rng_t;

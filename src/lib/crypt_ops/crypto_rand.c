@@ -529,6 +529,17 @@ crypto_rand_unmocked(char *to, size_t n)
 }
 
 /**
+ * Draw an unsigned 32-bit integer uniformly at random.
+ */
+uint32_t
+crypto_rand_u32(void)
+{
+  uint32_t rand;
+  crypto_rand((void*)&rand, sizeof(rand));
+  return rand;
+}
+
+/**
  * Return a pseudorandom integer, chosen uniformly from the values
  * between 0 and <b>max</b>-1 inclusive.  <b>max</b> must be between 1 and
  * INT_MAX+1, inclusive.
