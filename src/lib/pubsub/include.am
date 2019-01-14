@@ -22,4 +22,5 @@ noinst_HEADERS +=					\
 	src/lib/pubsub/pubsub_builder_st.h		\
 	src/lib/pubsub/pubsub_connect.h			\
 	src/lib/pubsub/pubsub_flags.h			\
+	src/lib/pubsub/pubsub_macros.h			\
 	src/lib/pubsub/pubsub_publish.h

@@ -80,6 +80,7 @@
 #include "lib/pubsub/pub_binding_st.h"
 #include "lib/pubsub/pubsub_connect.h"
 #include "lib/pubsub/pubsub_flags.h"
+#include "lib/pubsub/pubsub_macros.h"
 #include "lib/pubsub/pubsub_publish.h"
 
 #endif
