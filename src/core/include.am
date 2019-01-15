@@ -22,6 +22,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/mainloop/connection.c		\
 	src/core/mainloop/cpuworker.c		\
 	src/core/mainloop/mainloop.c		\
+	src/core/mainloop/mainloop_pubsub.c	\
 	src/core/mainloop/netstatus.c		\
 	src/core/mainloop/periodic.c		\
 	src/core/or/address_set.c		\
@@ -213,6 +214,7 @@ noinst_HEADERS +=					\
 	src/core/mainloop/connection.h			\
 	src/core/mainloop/cpuworker.h			\
 	src/core/mainloop/mainloop.h			\
+	src/core/mainloop/mainloop_pubsub.h		\
 	src/core/mainloop/netstatus.h			\
 	src/core/mainloop/periodic.h			\
 	src/core/or/addr_policy_st.h			\
