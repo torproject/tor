@@ -242,14 +242,29 @@ pubsub_connector_define_type_(pubsub_connector_t *con,
  * for <b>d</b>.
  */
 static void
-dispatch_fill_pub_binding_backptrs(pubsub_builder_t *builder,
-                                   dispatch_t *d)
+pubsub_items_install_bindings(pubsub_items_t *items,
+                              dispatch_t *d)
 {
-  SMARTLIST_FOREACH_BEGIN(builder->items->items, pubsub_cfg_t *, cfg) {
+  SMARTLIST_FOREACH_BEGIN(items->items, pubsub_cfg_t *, cfg) {
     if (cfg->pub_binding) {
       // XXXX we could skip this for STUB publishers, and for any publishers
       // XXXX where all subscribers are STUB.
       cfg->pub_binding->dispatch_ptr = d;
+    }
+  } SMARTLIST_FOREACH_END(cfg);
+}
+
+/**
+ * Remove the dispatch_ptr fields for all the relevant publish bindings
+ * in <b>items</b>.  The prevents subsequent dispatch_pub_() calls from
+ * sending messages to a dispatcher that has been freed.
+ **/
+void
+pubsub_items_clear_bindings(pubsub_items_t *items)
+{
+  SMARTLIST_FOREACH_BEGIN(items->items, pubsub_cfg_t *, cfg) {
+    if (cfg->pub_binding) {
+      cfg->pub_binding->dispatch_ptr = NULL;
     }
   } SMARTLIST_FOREACH_END(cfg);
 }
@@ -260,7 +275,8 @@ dispatch_fill_pub_binding_backptrs(pubsub_builder_t *builder,
  * Consumes and frees its input.
  **/
 dispatch_t *
-pubsub_builder_finalize(pubsub_builder_t *builder)
+pubsub_builder_finalize(pubsub_builder_t *builder,
+                        pubsub_items_t **items_out)
 {
   dispatch_t *dispatcher = NULL;
   tor_assert_nonfatal(builder->n_connectors == 0);
@@ -276,7 +292,11 @@ pubsub_builder_finalize(pubsub_builder_t *builder)
   if (!dispatcher)
     goto err;
 
-  dispatch_fill_pub_binding_backptrs(builder, dispatcher);
+  pubsub_items_install_bindings(builder->items, dispatcher);
+  if (items_out) {
+    *items_out = builder->items;
+    builder->items = NULL; /* Prevent free */
+  }
 
  err:
   pubsub_builder_free(builder);

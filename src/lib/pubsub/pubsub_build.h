@@ -33,6 +33,13 @@ typedef struct pubsub_builder_t pubsub_builder_t;
 typedef struct pubsub_connector_t pubsub_connector_t;
 
 /**
+ * A "pubsub items" holds the configuration items used to configure a
+ * pubsub_builder.  After the builder is finalized, this field is extracted,
+ * and used later to tear down pointers that enable publishing.
+ **/
+typedef struct pubsub_items_t pubsub_items_t;
+
+/**
  * Create a new pubsub_builder. This should only happen in the
  * main-init code.
  */
@@ -75,13 +82,16 @@ void pubsub_connector_free_(pubsub_connector_t *);
  * This should happen after every subsystem has initialized, and before
  * entering the mainloop.
  */
-struct dispatch_t *pubsub_builder_finalize(pubsub_builder_t *);
+struct dispatch_t *pubsub_builder_finalize(pubsub_builder_t *,
+                                           pubsub_items_t **items_out);
 
-#ifdef PUBSUB_PRIVATE
-struct pubsub_items_t;
+/**
+ * Clear all pub_binding_t backpointers in <b>items</b>.
+ **/
+void pubsub_items_clear_bindings(pubsub_items_t *items);
+
 #define pubsub_items_free(cfg) \
   FREE_AND_NULL(pubsub_items_t, pubsub_items_free_, (cfg))
-void pubsub_items_free_(struct pubsub_items_t *cfg);
-#endif
+void pubsub_items_free_(pubsub_items_t *cfg);
 
 #endif

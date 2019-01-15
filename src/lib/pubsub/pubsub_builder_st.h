@@ -91,12 +91,12 @@ typedef struct pubsub_type_cfg_t {
  * The set of configuration requests for a dispatcher, as made by various
  * subsystems.
  **/
-typedef struct pubsub_items_t {
+struct pubsub_items_t {
   /** List of pubsub_cfg_t. */
   struct smartlist_t *items;
   /** List of pubsub_type_cfg_t. */
   struct smartlist_t *type_items;
-} pubsub_items_t;
+};
 
 /**
  * Type used to construct a dispatcher.  We use this type to build up the
@@ -111,7 +111,7 @@ struct pubsub_builder_t {
   int n_errors;
   /** In-progress configuration that we're constructing, as a list of the
    * requests that have been made. */
-  pubsub_items_t *items;
+  struct pubsub_items_t *items;
   /** In-progress configuration that we're constructing, in a form that can
    * be converted to a dispatch_t. */
   struct dispatch_cfg_t *cfg;
