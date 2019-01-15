@@ -7,6 +7,7 @@ endif
 
 src_lib_libtor_pubsub_a_SOURCES =			\
 	src/lib/pubsub/pubsub_build.c			\
+	src/lib/pubsub/pubsub_check.c			\
 	src/lib/pubsub/pubsub_publish.c
 
 src_lib_libtor_pubsub_testing_a_SOURCES = \
