@@ -1637,17 +1637,17 @@ hs_config_client_authorization(const or_options_t *options,
        * as a key of global map in the future. */
       if (hs_parse_address(auth->onion_address, &identity_pk,
                            NULL, NULL) < 0) {
-        client_service_authorization_free(auth);
         log_warn(LD_REND, "The onion address \"%s\" is invalid in "
                           "file %s", filename, auth->onion_address);
+        client_service_authorization_free(auth);
         continue;
       }
 
       if (digest256map_get(auths, identity_pk.pubkey)) {
-        client_service_authorization_free(auth);
         log_warn(LD_REND, "Duplicate authorization for the same hidden "
                           "service address %s.",
                  safe_str_client(auth->onion_address));
+        client_service_authorization_free(auth);
         goto end;
       }
 
