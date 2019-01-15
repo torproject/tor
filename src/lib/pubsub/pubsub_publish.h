@@ -5,6 +5,7 @@
 /* See LICENSE for licensing information */
 
 #ifndef TOR_PUBSUB_PUBLISH_H
+#define TOR_PUBSUB_PUBLISH_H
 
 #include "lib/dispatch/msgtypes.h"
 struct pub_binding_t;
