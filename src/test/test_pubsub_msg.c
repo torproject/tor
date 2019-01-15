@@ -148,7 +148,7 @@ setup_dispatcher(const struct testcase_t *testcase)
     tor_free(sys);
   }
 
-  return pubsub_builder_finalize(builder);
+  return pubsub_builder_finalize(builder, NULL);
 }
 
 static int
