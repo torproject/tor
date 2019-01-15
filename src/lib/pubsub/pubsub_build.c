@@ -268,10 +268,8 @@ pubsub_builder_finalize(pubsub_builder_t *builder)
   if (builder->n_errors)
     goto err;
 
-  /* Coming in the next commit.
   if (pubsub_builder_check(builder) < 0)
     goto err;
-  */
 
   dispatcher = dispatch_new(builder->cfg);
 

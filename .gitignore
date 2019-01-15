@@ -202,6 +202,8 @@ uptime-*.json
 /src/lib/libtor-osinfo-testing.a
 /src/lib/libtor-process.a
 /src/lib/libtor-process-testing.a
+/src/lib/libtor-pubsub.a
+/src/lib/libtor-pubsub-testing.a
 /src/lib/libtor-sandbox.a
 /src/lib/libtor-sandbox-testing.a
 /src/lib/libtor-string.a
