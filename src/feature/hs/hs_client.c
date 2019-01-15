@@ -1646,7 +1646,7 @@ hs_config_client_authorization(const or_options_t *options,
       if (digest256map_get(auths, identity_pk.pubkey)) {
         log_warn(LD_REND, "Duplicate authorization for the same hidden "
                           "service address %s.",
-                 safe_str_client(auth->onion_address));
+                 safe_str_client_opts(options, auth->onion_address));
         client_service_authorization_free(auth);
         goto end;
       }
