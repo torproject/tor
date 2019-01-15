@@ -131,6 +131,7 @@ addons:
       - docbook-xsl
       - docbook-xml
       - xmlto
+      - shellcheck
   ## (OSX only)
   homebrew:
     packages:
@@ -154,6 +155,7 @@ addons:
       ## Always installed, because manual brew installs are hard to get right
       - asciidoc
       - xmlto
+      - shellcheck
 
 ## (OSX only) Use the default OSX image
 ## See https://docs.travis-ci.com/user/reference/osx#os-x-version

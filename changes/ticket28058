@@ -1,0 +1,2 @@
+  o Testing:
+    - Run shellcheck for stuff in scripts/ directory. Closes ticket 28058.

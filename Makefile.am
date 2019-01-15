@@ -215,7 +215,16 @@ doxygen:
 test: all
 	$(top_builddir)/src/test/test
 
-check-local: check-spaces check-changes check-includes
+shellcheck:
+        # Only use shellcheck if it is present
+	if command -v shellcheck; then \
+	        find $(top_srcdir)/scripts/ -name "*.sh" -exec shellcheck {} +; \
+	        if [ -d "$(top_srcdir)/scripts/test" ]; then \
+                        shellcheck $(top_srcdir)/scripts/test/cov-diff $(top_builddir)/scripts/test/coverage; \
+                fi; \
+	fi
+
+check-local: check-spaces check-changes check-includes shellcheck
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
