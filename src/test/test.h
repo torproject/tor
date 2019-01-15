@@ -253,6 +253,7 @@ extern struct testcase_t proto_http_tests[];
 extern struct testcase_t proto_misc_tests[];
 extern struct testcase_t protover_tests[];
 extern struct testcase_t pt_tests[];
+extern struct testcase_t pubsub_msg_tests[];
 extern struct testcase_t relay_tests[];
 extern struct testcase_t relaycell_tests[];
 extern struct testcase_t relaycrypt_tests[];
