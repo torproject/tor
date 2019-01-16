@@ -60,7 +60,7 @@ tor_log_mallinfo(int severity)
 ENABLE_GCC_WARNING(aggregate-return)
 
 #if defined(HW_PHYSMEM64)
-/* This appears to be an OpenBSD thing */
+/* OpenBSD and NetBSD define this */
 #define INT64_HW_MEM HW_PHYSMEM64
 #elif defined(HW_MEMSIZE)
 /* OSX defines this one */
@@ -115,7 +115,7 @@ get_total_system_memory_impl(void)
   return ms.ullTotalPhys;
 
 #elif defined(HAVE_SYSCTL) && defined(INT64_HW_MEM)
-  /* On many systems, HW_PYHSMEM is clipped to 32 bits; let's use a better
+  /* On many systems, HW_PHYSMEM is clipped to 32 bits; let's use a better
    * variant if we know about it. */
   uint64_t memsize = 0;
   size_t len = sizeof(memsize);
@@ -130,7 +130,7 @@ get_total_system_memory_impl(void)
    * HW_PHYSMEM. */
   size_t memsize=0;
   size_t len = sizeof(memsize);
-  int mib[2] = {CTL_HW, HW_USERMEM};
+  int mib[2] = {CTL_HW, HW_PHYSMEM};
   if (sysctl(mib,2,&memsize,&len,NULL,0))
     return 0;
 
