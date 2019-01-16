@@ -1,3 +1,0 @@
-  o Minor features (developer tooling):
-    - Provide git hook script to prevent "fixup!" and "squash!" commits from
-      ending up in master. Closes ticket 27993.

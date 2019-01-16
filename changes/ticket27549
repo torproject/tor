@@ -1,3 +1,0 @@
-  o Code simplification and refactoring (hidden service v3):
-    - Consolidate the authorized client descriptor cookie computation code
-      from client and service into one function. Closes ticket 27549.

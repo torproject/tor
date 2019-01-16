@@ -1,3 +1,0 @@
-  o Minor features (pluggable transports):
-    - Add support for emitting STATUS updates to Tor's control port from a
-      pluggable transport process. Closes ticket 28846.

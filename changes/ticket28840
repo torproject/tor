@@ -1,3 +1,0 @@
-  o Minor features (testing):
-    - Allow HeartbeatPeriod of less than 30 minutes in testing Tor networks.
-      Closes ticket 28840, patch by robgjansen

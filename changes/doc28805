@@ -1,4 +1,0 @@
-  o Documentation (manpage):
-    - Improve ControlPort description in tor manpage to mention that it
-      accepts address/port pair, and can be used multiple times. Closes ticket
-      28805.

@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Fix shellcheck warnings in run_trunnel.sh. Resolves issue
-      28010.

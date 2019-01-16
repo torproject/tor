@@ -1,6 +1,0 @@
-  o Minor features (ipv6):
-    - We add an option ClientAutoIPv6ORPort which makes clients randomly
-      prefer a node's IPv4 or IPv6 ORPort. The random preference is set
-      every time a node is loaded from a new consensus or bridge config.
-      Closes ticket 27490. Patch by Neel Chauhan.
-

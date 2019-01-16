@@ -1,3 +1,0 @@
-  o Minor features (performance):
-    - Replace parse_short_policy() with a faster implementation, to improve
-      microdescriptor parsing time. Closes ticket 28853.

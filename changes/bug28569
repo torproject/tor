@@ -1,3 +1,0 @@
-  o Minor bugfixes (unit tests, directory clients):
-    - Mark outdated dirservers when Tor only has a reasonably live consensus.
-      Fixes bug 28569; bugfix on 0.3.2.5-alpha.

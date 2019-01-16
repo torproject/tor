@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Cleanup scan-build.sh to silence shellcheck warnings.
-      Closes ticket 28007.

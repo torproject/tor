@@ -1,5 +1,0 @@
-  o Minor features (memory usage):
-    - Tor clients no longer need to keep the full text of a consensus in
-      memory in order to parse it, or apply a diff to it. Instead, they
-      use mmap() to read the consensus files from disk. Closes ticket
-      27244.

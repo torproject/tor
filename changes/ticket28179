@@ -1,5 +1,0 @@
-  o Minor features (process):
-    - Add new Process API for handling child processes. This
-      new API allows Tor to have bi-directional
-      communication with child processes on both Unix and Windows.
-      Closes ticket 28179.

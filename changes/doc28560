@@ -1,3 +1,0 @@
-  o Documentation (hidden service manpage, sandbox):
-    - Mention that you cannot add new Onion Service if Tor is already
-      running with Sandbox enabled. Closes ticket 28560.

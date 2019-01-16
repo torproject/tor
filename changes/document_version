@@ -1,2 +1,0 @@
-  o Documentation:
-    - Document the exact output of "tor --version". Closes ticket 28889.

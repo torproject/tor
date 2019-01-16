@@ -1,4 +1,0 @@
-  o Testing:
-    - Write some unit tests for tokenize_string() and
-      get_next_token() functions. Resolves ticket 27625.
-

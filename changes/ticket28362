@@ -1,6 +1,0 @@
-  o Code simplification and refactoring:
-    - The .may_include files that we use to describe our
-      directory-by-directory dependency structure now describe a noncircular
-      dependency graph over the directories that they cover.
-      Our checkIncludes.py tool now enforces this.
-      Closes ticket 28362.

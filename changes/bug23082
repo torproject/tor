@@ -1,4 +1,0 @@
-  o Minor bugfixes (networking):
-    - Introduce additional checks into tor_addr_parse() to
-      reject certain incorrect inputs that previously were
-      not detected. Fixes bug 23082; bugfix on 0.2.0.10-alpha.

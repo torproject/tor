@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Fix shellcheck warnings in scripts/test/coverage. Resolves issue
-      28008.

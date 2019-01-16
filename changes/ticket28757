@@ -1,5 +1,0 @@
-  o Removed features:
-    - Stop responding to 'GETINFO status/version/num-concurring' and
-      'GETINFO status/version/num-versioning' control port commands, as those
-      were deprecated back in 0.2.0.30. Also stop listing them in output of
-      'GETINFO info/names'. Resolves ticket 28757.

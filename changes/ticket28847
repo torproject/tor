@@ -1,3 +1,0 @@
-  o Minor features (process):
-    - Use the subsystem module to initialize and shut down the process module.
-      Closes ticket 28847.

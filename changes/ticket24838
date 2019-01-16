@@ -1,6 +1,0 @@
-  o Minor features (fallback directory mirrors):
-    - Accept relays that are a fuzzy match to a fallback whitelist entry.
-      If a relay matches at least one fingerprint, IPv4 address, or IPv6
-      address in the fallback whitelist, it can become a fallback. This
-      reduces the work required to keep the list up to date.
-      Closes ticket 24838.

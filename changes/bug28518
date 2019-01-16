@@ -1,4 +1,0 @@
-  o Minor features (FreeBSD):
-    - Warn relay operators if the "net.inet.ip.random_id" sysctl (IP ID
-      randomization) is disabled on their relay if it is running on FreeBSD
-      based operating systems. Closes ticket 28518.

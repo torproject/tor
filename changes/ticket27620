@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Rework SOCKS wire format handling to rely on trunnel-generated
-      parsing/generation code. Resolves ticket 27620.

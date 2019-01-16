@@ -1,3 +1,0 @@
-  o Minor features (performance):
-    - Speed up microdesriptor parsing by about 30%, to help
-      improve startup time.  Closes ticket 28839.

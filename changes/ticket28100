@@ -1,3 +1,0 @@
-  o Minor features (HTTP standards compliance):
-    - Don't send Content-Type: application/octet-stream for transparently
-      compressed documents, which confused browsers. Closes ticket 28100.

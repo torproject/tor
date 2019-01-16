@@ -1,3 +1,0 @@
-  o Minor features (Continuous Integration):
-    - Log Python version during each Travis CI job. Resolves issue
-      28551.

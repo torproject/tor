@@ -1,3 +1,0 @@
-  o Minor bugfixes (directory mirror):
-    - When Tor's clock is behind the clocks on the authorities, allow Tor to
-      serve future consensuses. Fixes bug 28654; bugfix on 0.3.0.1-alpha.
