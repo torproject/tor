@@ -3870,46 +3870,68 @@ static void
 test_dir_bwauth_bw_file_digest255(void *arg)
 {
   (void)arg;
-  uint8_t bw_file_digest[DIGEST256_LEN];
   const char *content =
     "1541171221\n"
     "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 "
     "master_key_ed25519=YaqV4vbvPYKucElk297eVdNArDz9HtIwUoIeo0+cVIpQ "
     "bw=760 nick=Test time=2018-05-08T16:13:26\n";
 
-  /* Init options */
-  mock_options = tor_malloc(sizeof(or_options_t));
-  reset_options(mock_options, &mock_get_options_calls);
-  MOCK(get_options, mock_get_options);
+  char *fname = tor_strdup(get_fname("V3BandwidthsFile"));
+  uint8_t digest[DIGEST256_LEN] = {0};
+  char b64_digest[BASE64_DIGEST256_LEN+1] = {0};
+  char *b64_digest_str = NULL;
+  char *b64_digest_algo_str = NULL;
+  char *vote_bw_file_digest_line = NULL;
+  const char *b64_digest_str_expected =
+    "J+9Lm7UT4FYWSIXgOJcAiIWbHBeiUl+0cmEOKpw7Fnk";
+  const char *bw_file_digest_line_expected =
+    "bandwidth-file-digest sha256=J+9Lm7UT4FYWSIXgOJcAiIWbHBeiUl+0cmEOKpw7Fnk"
+    "\n";
 
   /* When there is not a bandwidth file configured */
   tt_int_op(-1, OP_EQ,
-            bwauth_bw_file_digest255(bw_file_digest,
-                                      mock_options->V3BandwidthsFile,
-                                      DIGEST_SHA256));
-
-  mock_options->V3BandwidthsFile = tor_strdup(
-    get_fname_rnd("V3BandwidthsFile")
-  );
+            dirserv_read_measured_bandwidths("",
+                                             NULL, NULL, digest));
+  tt_int_op(1, OP_EQ, tor_digest256_is_zero((const char *)digest));
 
   /* When there is a bandwidth file configured, but it can not be found. */
   tt_int_op(-1, OP_EQ,
-            bwauth_bw_file_digest255(bw_file_digest,
-                                      mock_options->V3BandwidthsFile,
-                                      DIGEST_SHA256));
+            dirserv_read_measured_bandwidths(fname,
+                                             NULL, NULL, digest));
+  tt_int_op(1, OP_EQ, tor_digest256_is_zero((const char *)digest));
 
-  /* When there is a bandwidth file and it can be read.
-   * It is not being tested here whether the file was parseable. */
-  write_str_to_file(mock_options->V3BandwidthsFile, content, 0);
+  /* When there is a timestamp but it is too old. */
+  write_str_to_file(fname, content, 0);
+  tt_int_op(-1, OP_EQ,
+            dirserv_read_measured_bandwidths(fname,
+                                             NULL, NULL, digest));
+  tt_int_op(0, OP_EQ, tor_digest256_is_zero((const char *)digest));
+
+  update_approx_time(1541171221);
+
+  /* When there is a bandwidth file and it can be read. */
   tt_int_op(0, OP_EQ,
-            bwauth_bw_file_digest255(bw_file_digest,
-                                      mock_options->V3BandwidthsFile,
-                                      DIGEST_SHA256));
-  goto done;
+            dirserv_read_measured_bandwidths(fname,
+                                             NULL, NULL, digest));
+  tt_int_op(0, OP_EQ, tor_digest256_is_zero((const char *)digest));
+
+  digest256_to_base64(b64_digest, (const char *)digest);
+  tor_asprintf(&b64_digest_str, "%s", b64_digest);
+  tt_str_op(b64_digest_str_expected, OP_EQ, b64_digest_str);
+
+  /* "bandwidth-file-digest" 1*(SP algorithm "=" digest) NL */
+  tor_asprintf(&b64_digest_algo_str, "%s=%s",
+              crypto_digest_algorithm_get_name(DIGEST_SHA256),
+              b64_digest_str);
+  tor_asprintf(&vote_bw_file_digest_line, "%s %s\n", "bandwidth-file-digest",
+               b64_digest_algo_str);
+  tt_str_op(bw_file_digest_line_expected, OP_EQ, vote_bw_file_digest_line);
 
  done:
-  UNMOCK(get_options);
-  or_options_free(mock_options); mock_options = NULL;
+  tor_free(fname);
+  tor_free(b64_digest_str);
+  tor_free(b64_digest_algo_str);
+  tor_free(vote_bw_file_digest_line);
 }
 
 /**
