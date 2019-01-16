@@ -5,7 +5,7 @@
 /* trunnel.h -- Public declarations for trunnel, to be included
  * in trunnel header files.
 
- * Copyright 2014-2017, The Tor Project, Inc.
+ * Copyright 2014-2019, The Tor Project, Inc.
  * See license at the end of this file for copying information.
  */
 

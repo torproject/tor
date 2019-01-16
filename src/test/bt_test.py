@@ -1,4 +1,4 @@
-# Copyright 2013-2018, The Tor Project, Inc
+# Copyright 2013-2019, The Tor Project, Inc
 # See LICENSE for licensing information
 
 """
