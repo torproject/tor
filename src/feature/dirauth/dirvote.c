@@ -4463,7 +4463,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
    * set_routerstatus_from_routerinfo() see up-to-date bandwidth info.
    */
   if (options->V3BandwidthsFile) {
-    dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL);
+    dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL,
+                                     NULL);
   } else {
     /*
      * No bandwidths file; clear the measured bandwidth cache in case we had
@@ -4568,10 +4569,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     /* Only set bw_file_headers when V3BandwidthsFile is configured */
     bw_file_headers = smartlist_new();
     dirserv_read_measured_bandwidths(options->V3BandwidthsFile,
-                                     routerstatuses, bw_file_headers);
-    /* Only set bw_file_digest255 when V3BandwidthsFile is configured. */
-    bwauth_bw_file_digest255(bw_file_digest255, options->V3BandwidthsFile,
-                             DIGEST_ALG_BW_FILE);
+                                     routerstatuses, bw_file_headers,
+                                     bw_file_digest255);
 
   } else {
     /*
