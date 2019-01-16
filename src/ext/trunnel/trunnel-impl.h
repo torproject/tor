@@ -5,7 +5,7 @@
 /* trunnel-impl.h -- Implementation helpers for trunnel, included by
  * generated trunnel files
  *
- * Copyright 2014-2017, The Tor Project, Inc.
+ * Copyright 2014-2019, The Tor Project, Inc.
  * See license at the end of this file for copying information.
  */
 

@@ -1,5 +1,5 @@
 /* Copyright (c) 2014, Daniel Martí
- * Copyright (c) 2014-2018, The Tor Project, Inc. */
+ * Copyright (c) 2014-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**

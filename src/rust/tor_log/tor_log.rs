@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018, The Tor Project, Inc. */
+// Copyright (c) 2016-2019, The Tor Project, Inc. */
 // See LICENSE for licensing information */
 
 // Note that these functions are untested due to the fact that there are no

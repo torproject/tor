@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright 2018, The Tor Project, Inc. See LICENSE for licensing info.
+# Copyright 2018-2019, The Tor Project, Inc. See LICENSE for licensing info.
 
 # Reference implementation for our rudimentary OPE code, used to
 # generate test vectors. See crypto_ope.c for more details.
