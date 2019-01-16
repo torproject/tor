@@ -1,0 +1,4 @@
+  o Removed features:
+    - The scripts used to generate and maintain the list of fallback
+      directories have been extracted into a new "fallback-scripts"
+      repository. Closes ticket 27914.
