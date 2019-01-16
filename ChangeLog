@@ -14,7 +14,7 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
       configuration options starting with "Dormant". Implements tickets
       2149 and 28335.
     - The client's memory of whether it is "dormant", and how long it
-      has spend idle, persists across invocations. Implements
+      has spent idle, persists across invocations. Implements
       ticket 28624.
     - There is a DormantOnFirstStartup option that integrators can use
       if they expect that in many cases, Tor will be installed but
@@ -27,9 +27,9 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
       progress than previously possible, with the improvements of ticket
       27169. Closes tickets 27167 and 27103. Addresses ticket 27308.
     - When reporting bootstrap progress, treat connecting to a proxy or
-      pluggable transport as separate from having successfully using
-      that proxy or pluggable transport to connect to a relay. Closes
-      tickets 27100 and 28884.
+      pluggable transport as separate from having successfully used that
+      proxy or pluggable transport to connect to a relay. Closes tickets
+      27100 and 28884.
 
   o Major features (circuit padding):
     - Implement preliminary support for the circuit padding portion of
@@ -45,16 +45,16 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
   o Major features (refactoring):
     - Tor now uses an explicit list of its own subsystems when
       initializing and shutting down. Previously, these systems were
-      managed implicitly though various places throughout the codebase.
-      (There still some subsystems using the old system.) Closes
+      managed implicitly in various places throughout the codebase.
+      (There may still be some subsystems using the old system.) Closes
       ticket 28330.
 
   o Minor features (bootstrap reporting):
     - When reporting bootstrap progress, stop distinguishing between
-      situations where it seems that only internal paths are available
-      and situations where it seems that external paths are available.
-      Previously, Tor would often erroneously report that it had only
-      internal paths. Closes ticket 27402.
+      situations where only internal paths are available and situations
+      where external paths are available. Previously, Tor would often
+      erroneously report that it had only internal paths. Closes
+      ticket 27402.
 
   o Minor features (continuous integration):
     - Log Python version during each Travis CI job. Resolves
@@ -81,9 +81,8 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
       relay's descriptor is so old that the relay should upload again
       soon. Relays treat this flag as a signal to upload a new
       descriptor. This flag will eventually let us remove the
-      'published' date from routerstatus entries, and make our our
-      consensus diffs much smaller. Closes ticket 26770; implements
-      proposal 293.
+      'published' date from routerstatus entries, and make our consensus
+      diffs much smaller. Closes ticket 26770; implements proposal 293.
 
   o Minor features (fallback directory mirrors):
     - Update the fallback whitelist based on operator opt-ins and opt-
@@ -112,14 +111,14 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
       Patch by Neel Chauhan.
 
   o Minor features (log messages):
-    - Improve log message in v3 onion services service that could print
-      out negative revision counters. Closes ticket 27707. Patch
+    - Improve log message in v3 onion services that could print out
+      negative revision counters. Closes ticket 27707. Patch
       by "ffmancera".
 
   o Minor features (memory usage):
     - Save memory by storing microdescriptor family lists with a more
       compact representation. Closes ticket 27359.
-    - Tor clients now use mmap() to read consensus files from disk, sot
+    - Tor clients now use mmap() to read consensus files from disk, so
       that they no longer need keep the full text of a consensus in
       memory when parsing it or applying a diff. Closes ticket 27244.
 
@@ -130,10 +129,10 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
 
   o Minor features (performance):
     - Cache the results of summarize_protocol_flags(), so that we don't
-      have to parse the same Avoid parsing the same protocol-versions
-      string over and over. This should save us a huge number of malloc
-      calls on startup, and may reduce memory fragmentation with some
-      allocators. Closes ticket 27225.
+      have to parse the same protocol-versions string over and over.
+      This should save us a huge number of malloc calls on startup, and
+      may reduce memory fragmentation with some allocators. Closes
+      ticket 27225.
     - Remove a needless memset() call from get_token_arguments, thereby
       speeding up the tokenization of directory objects by about 20%.
       Closes ticket 28852.
@@ -148,7 +147,7 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
     - Add support for emitting STATUS updates to Tor's control port from
       a pluggable transport process. Closes ticket 28846.
     - Add support for logging to Tor's logging subsystem from a
-      pluggable transport process. Closes ticket 28180
+      pluggable transport process. Closes ticket 28180.
 
   o Minor features (process management):
     - Add a new process API for handling child processes. This new API
@@ -203,12 +202,12 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
       21900; bugfix on 0.2.1.10-alpha.
 
   o Minor bugfixes (guards):
-    - In count_acceptable_nodes() we now treat the minimum number of
-      nodes as at one bridge or guard node, and two non-guard nodes for
-      a circuit. Previously, we had added up the sum of all nodes with a
-      descriptor, but that could cause us to build failing circuits when
-      we had either too many bridges, or not enough guard nodes. Fixes
-      bug 25885; bugfix on 0.3.6.1-alpha. Patch by Neel Chauhan.
+    - In count_acceptable_nodes(), the minimum number is now one bridge
+      or guard node, and two non-guard nodes for a circuit. Previously,
+      we had added up the sum of all nodes with a descriptor, but that
+      could cause us to build failing circuits when we had either too
+      many bridges or not enough guard nodes. Fixes bug 25885; bugfix on
+      0.3.6.1-alpha. Patch by Neel Chauhan.
 
   o Minor bugfixes (IPv6):
     - Fix tor_ersatz_socketpair on IPv6-only systems. Previously, the
@@ -229,22 +228,22 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
       bug 23082; bugfix on 0.2.0.10-alpha.
 
   o Minor bugfixes (onion service v3, client):
-    - Avoid a BUG() stacktrace in case a SOCKS connection is found
-      waiting for the descriptor while we do have it in the cache. There
-      is a rare case when this can happen. Now, tor will recover and
-      retry the descriptor. Fixes bug 28669; bugfix on 0.3.2.4-alpha.
+    - Stop logging a "BUG()" warning and stacktrace when we find a SOCKS
+      connection waiting for a descriptor that we actually have in the
+      cache. It turns out that this can actually happen, though it is
+      rare. Now, tor will recover and retry the descriptor. Fixes bug
+      28669; bugfix on 0.3.2.4-alpha.
 
   o Minor bugfixes (periodic events):
     - Refrain from calling routerlist_remove_old_routers() from
-      check_descriptor_callback(). Instead, create a new periodic event
-      that will run once every hour even if Tor is not configured as
-      onion router. Fixes bug 27929; bugfix on 0.2.8.1-alpha.
+      check_descriptor_callback(). Instead, create a new hourly periodic
+      event. Fixes bug 27929; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (pluggable transports):
     - Make sure that data is continously read from standard output and
       standard error pipes of a pluggable transport child-process, to
-      avoid deadlocking when the a pipe's buffer is full. Fixes bug
-      26360; bugfix on 0.2.3.6-alpha.
+      avoid deadlocking when a pipe's buffer is full. Fixes bug 26360;
+      bugfix on 0.2.3.6-alpha.
 
   o Minor bugfixes (unit tests):
     - Instead of relying on hs_free_all() to clean up all onion service
@@ -261,7 +260,7 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
   o Code simplification and refactoring:
     - Reimplement NETINFO cell parsing and generation to rely on
       trunnel-generated wire format handling code. Closes ticket 27325.
-    - Remove unnecessarily unsafe code from the Rust macro cstr!. Closes
+    - Remove unnecessary unsafe code from the Rust macro "cstr!". Closes
       ticket 28077.
     - Rework SOCKS wire format handling to rely on trunnel-generated
       parsing/generation code. Resolves ticket 27620.
@@ -276,7 +275,7 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
   o Documentation:
     - Mention that you cannot add a new onion service if Tor is already
       running with Sandbox enabled. Closes ticket 28560.
-    - Improve ControlPort deocumentation mention that it accepts
+    - Improve ControlPort documentation. Mention that it accepts
       address:port pairs, and can be used multiple times. Closes
       ticket 28805.
     - Document the exact output of "tor --version". Closes ticket 28889.
