@@ -206,7 +206,8 @@ dirserv_get_credible_bandwidth_kb(const routerinfo_t *ri)
 int
 dirserv_read_measured_bandwidths(const char *from_file,
                                  smartlist_t *routerstatuses,
-                                 smartlist_t *bw_file_headers)
+                                 smartlist_t *bw_file_headers,
+                                 uint8_t *digest_out)
 {
   FILE *fp = tor_fopen_cloexec(from_file, "r");
   int applied_lines = 0;
@@ -220,6 +221,8 @@ dirserv_read_measured_bandwidths(const char *from_file,
   int rv = -1;
   char *line = NULL;
   size_t n = 0;
+  int digest_has_bytes = 0;
+  crypto_digest_t *digest = crypto_digest256_new(DIGEST_SHA256);
 
   /* Initialise line, so that we can't possibly run off the end. */
 
@@ -240,20 +243,22 @@ dirserv_read_measured_bandwidths(const char *from_file,
              escaped(line));
     goto err;
   }
+  crypto_digest_add_bytes(digest, (const char *) line, strlen(line));
+  digest_has_bytes = 1;
 
   line[strlen(line)-1] = '\0';
   file_time = (time_t)tor_parse_ulong(line, 10, 0, ULONG_MAX, &ok, NULL);
   if (!ok) {
     log_warn(LD_DIRSERV, "Non-integer time in bandwidth file: %s",
              escaped(line));
-    goto err;
+    goto continue_digest;
   }
 
   now = time(NULL);
   if ((now - file_time) > MAX_MEASUREMENT_AGE) {
     log_warn(LD_DIRSERV, "Bandwidth measurement file stale. Age: %u",
              (unsigned)(time(NULL) - file_time));
-    goto err;
+    goto continue_digest;
   }
 
   /* If timestamp was correct and bw_file_headers is not NULL,
@@ -268,6 +273,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
   while (!feof(fp)) {
     measured_bw_line_t parsed_line;
     if (tor_getline(&line, &n, fp) >= 0) {
+      crypto_digest_add_bytes(digest, (const char *) line, strlen(line));
       if (measured_bw_line_parse(&parsed_line, line,
                                  line_is_after_headers) != -1) {
         /* This condition will be true when the first complete valid bw line
@@ -306,6 +312,14 @@ dirserv_read_measured_bandwidths(const char *from_file,
            "Applied %d measurements.", applied_lines);
   rv = 0;
 
+ continue_digest:
+  /* Continue parsing lines to return the digest of the Bandwidth File. */
+  while (!feof(fp)) {
+    if (tor_getline(&line, &n, fp) >= 0) {
+      crypto_digest_add_bytes(digest, (const char *) line, strlen(line));
+    }
+  }
+
  err:
   if (line) {
     // we need to raw_free this buffer because we got it from tor_getdelim()
@@ -313,54 +327,10 @@ dirserv_read_measured_bandwidths(const char *from_file,
   }
   if (fp)
     fclose(fp);
+  if (digest_has_bytes)
+    crypto_digest_get_digest(digest, (char *) digest_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
   return rv;
-}
-
-/**
- * Compute the digest of the bandwidth file used for the vote
- * and store it in <b>digest_bw_file_out</b>.
- * Returns -1 on error, 0 otherwise.
- * It is implemented separated from dirserv_read_measured_bandwidths,
- * since it should be refactor in the future.
- */
-int
-bwauth_bw_file_digest255(uint8_t *digest_bw_file_out, const char *from_file,
-                         digest_algorithm_t digest_alg) {
-  char *bw_file_content = NULL;
-  char digest_bw_file[DIGEST256_LEN];
-
-  if (from_file == NULL) {
-    /* Not giving warnings when there is no file. */
-    /* It is not possible to return a digest without knowing the file. */
-    log_notice(LD_DIR, "Can't open bandwidth file.");
-    goto err;
-  }
-
-  bw_file_content = read_file_to_str(from_file, RFTS_IGNORE_MISSING, NULL);
-  if (!bw_file_content) {
-    /* It is not possible to return a digest of a file that can't be read. */
-    log_notice(LD_DIR, "Failed to read %s.", from_file);
-    goto err;
-  }
-
-  if (crypto_digest256(digest_bw_file, (const char *)bw_file_content,
-                       sizeof(bw_file_content), digest_alg) < 0) {
-    /* Weird, but still not possible to return a digest. */
-    log_notice(LD_DIR, "Unable to hash content of %s.", from_file);
-    goto err;
-  }
-
-  /* Not encoding here. */
-  memcpy(digest_bw_file_out, digest_bw_file, DIGEST256_LEN);
-  goto done;
-
- err:
-  tor_free(bw_file_content);
-  return -1;
-
- done:
-  tor_free(bw_file_content);
-  return 0;
 }
 
 /**
