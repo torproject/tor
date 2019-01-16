@@ -23,6 +23,8 @@
 
 #include "app/config/or_state_st.h"
 
+#include "test/log_test_helpers.h"
+
 static void
 reset_mp(managed_proxy_t *mp)
 {
@@ -414,7 +416,10 @@ test_pt_configure_proxy(void *arg)
             "650 TRANSPORT_LAUNCHED server mock5 127.0.0.1 5555\r\n");
 
   /* Get the log message out. */
+  setup_full_capture_of_logs(LOG_ERR);
   process_notify_event_stdout(mp->process);
+  expect_single_log_msg_containing("Oh noes, something bad happened");
+  teardown_capture_of_logs();
 
   tt_int_op(controlevent_n, OP_EQ, 10);
   tt_int_op(controlevent_event, OP_EQ, EVENT_PT_LOG);
@@ -475,6 +480,7 @@ test_pt_configure_proxy(void *arg)
   }
 
  done:
+  teardown_capture_of_logs();
   or_state_free(dummy_state);
   UNMOCK(process_read_stdout);
   UNMOCK(get_or_state);
