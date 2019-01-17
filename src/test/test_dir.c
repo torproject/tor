@@ -3867,7 +3867,7 @@ mock_get_options(void)
  */
 
 static void
-test_dir_bwauth_bw_file_digest255(void *arg)
+test_dir_bwauth_bw_file_digest256(void *arg)
 {
   (void)arg;
   const char *content =
@@ -6446,7 +6446,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(measured_bw_kb_line_is_after_headers),
   DIR_LEGACY(measured_bw_kb_cache),
   DIR_LEGACY(dirserv_read_measured_bandwidths),
-  DIR(bwauth_bw_file_digest255, 0),
+  DIR(bwauth_bw_file_digest256, 0),
   DIR_LEGACY(param_voting),
   DIR(param_voting_lookup, 0),
   DIR_LEGACY(v3_networkstatus),
