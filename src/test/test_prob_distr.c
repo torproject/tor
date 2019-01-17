@@ -1137,7 +1137,11 @@ teardown_deterministic_rand(void)
 static void
 dump_seed(void)
 {
-  printf("\nSeed: %s\n",
+  printf("\n"
+         "NOTE: This is a stochastic test, and we expect it to fail from\n"
+         "time to time, with some low probability. If you see it fail more\n"
+         "than one trial in 100, though, please tell us.\n\n"
+         "Seed: %s\n",
          hex_str((const char*)rng_seed, sizeof(rng_seed)));
 }
 
