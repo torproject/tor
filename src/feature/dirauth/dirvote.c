@@ -318,7 +318,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
      */
     if (!tor_digest256_is_zero((const char *)v3_ns->bw_file_digest255)) {
       /* Encode the digest. */
-      char b64_digest_bw_file[BASE64_DIGEST256_LEN+1];
+      char b64_digest_bw_file[BASE64_DIGEST256_LEN+1] = {0};
       if (digest256_to_base64(b64_digest_bw_file,
                               (const char *)v3_ns->bw_file_digest255)>0) {
         /* "bandwidth-file-digest" 1*(SP algorithm "=" digest) NL */
@@ -4425,7 +4425,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   const int vote_on_reachability = running_long_enough_to_decide_unreachable();
   smartlist_t *microdescriptors = NULL;
   smartlist_t *bw_file_headers = NULL;
-  uint8_t bw_file_digest255[DIGEST256_LEN];
+  uint8_t bw_file_digest255[DIGEST256_LEN] = {0};
 
   tor_assert(private_key);
   tor_assert(cert);
