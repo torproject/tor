@@ -1115,13 +1115,30 @@ test_psi_dist_sample(const struct dist *dist)
 }
 
 /* This is the seed of the deterministic randomness */
-static uint32_t deterministic_rand_counter;
+static uint8_t rng_seed[16];
+static crypto_xof_t *rng_xof = NULL;
 
 /** Initialize the seed of the deterministic randomness. */
 static void
 init_deterministic_rand(void)
 {
-  deterministic_rand_counter = crypto_rand_u32();
+  crypto_rand((char*)rng_seed, sizeof(rng_seed));
+  crypto_xof_free(rng_xof);
+  rng_xof = crypto_xof_new();
+  crypto_xof_add_bytes(rng_xof, rng_seed, sizeof(rng_seed));
+}
+
+static void
+teardown_deterministic_rand(void)
+{
+  crypto_xof_free(rng_xof);
+}
+
+static void
+dump_seed(void)
+{
+  printf("\nSeed: %s\n",
+         hex_str((const char*)rng_seed, sizeof(rng_seed)));
 }
 
 /** Produce deterministic randomness for the stochastic tests using the global
@@ -1134,15 +1151,8 @@ static void
 crypto_rand_deterministic(char *out, size_t n)
 {
   /* Use a XOF to squeeze bytes out of that silly counter */
-  crypto_xof_t *xof = crypto_xof_new();
-  tor_assert(xof);
-  crypto_xof_add_bytes(xof, (uint8_t*)&deterministic_rand_counter,
-                       sizeof(deterministic_rand_counter));
-  crypto_xof_squeeze_bytes(xof, (uint8_t*)out, n);
-  crypto_xof_free(xof);
-
-  /* Increase counter for next run */
-  deterministic_rand_counter++;
+  tor_assert(rng_xof);
+  crypto_xof_squeeze_bytes(rng_xof, (uint8_t*)out, n);
 }
 
 static void
@@ -1287,8 +1297,9 @@ test_stochastic_genpareto(void *arg)
 
  done:
   if (tests_failed) {
-    printf("seed: %"PRIu32, deterministic_rand_counter);
+    dump_seed();
   }
+  teardown_deterministic_rand();
   UNMOCK(crypto_rand);
 }
 
@@ -1316,8 +1327,9 @@ test_stochastic_geometric(void *arg)
 
  done:
   if (tests_failed) {
-    printf("seed: %"PRIu32, deterministic_rand_counter);
+    dump_seed();
   }
+  teardown_deterministic_rand();
   UNMOCK(crypto_rand);
 }
 
@@ -1344,8 +1356,9 @@ test_stochastic_logistic(void *arg)
 
  done:
   if (tests_failed) {
-    printf("seed: %"PRIu32, deterministic_rand_counter);
+    dump_seed();
   }
+  teardown_deterministic_rand();
   UNMOCK(crypto_rand);
 }
 
@@ -1372,8 +1385,9 @@ test_stochastic_log_logistic(void *arg)
 
  done:
   if (tests_failed) {
-    printf("seed: %"PRIu32, deterministic_rand_counter);
+    dump_seed();
   }
+  teardown_deterministic_rand();
   UNMOCK(crypto_rand);
 }
 
@@ -1402,8 +1416,9 @@ test_stochastic_weibull(void *arg)
 
  done:
   if (tests_failed) {
-    printf("seed: %"PRIu32, deterministic_rand_counter);
+    dump_seed();
   }
+  teardown_deterministic_rand();
   UNMOCK(crypto_rand);
 }
 
