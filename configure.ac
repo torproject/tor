@@ -976,9 +976,9 @@ AC_CHECK_SIZEOF(SHA_CTX, , [AC_INCLUDES_DEFAULT()
 
 fi # enable_nss
 
-dnl We will sometimes make KECCAK_TINY optional, but we still need it for
-dnl SHAKE, since openssl's SHAKE isn't streamable.  See comment in the
-dnl definition of crypto_xof_t.
+dnl We will someday make KECCAK_TINY optional, but for now we still need
+dnl it for SHAKE, since OpenSSL's SHAKE can't be squeezed more than
+dnl once.  See comment in the definition of crypto_xof_t.
 
 dnl AM_CONDITIONAL(BUILD_KECCAK_TINY,
 dnl   test "x$ac_cv_func_EVP_sha3_256" != "xyes")
