@@ -33,7 +33,8 @@ max_in_sl(const smartlist_t *sl, intptr_t dflt)
 {
   if (!smartlist_len(sl))
     return dflt;
-  intptr_t max = VOID_TO_ID(smartlist_get(sl, 0));
+  void *as_ptr = smartlist_get(sl, 0);
+  intptr_t max = VOID_TO_ID(as_ptr);
   SMARTLIST_FOREACH_BEGIN(sl, void *, p) {
     intptr_t i = VOID_TO_ID(p);
     if (i > max)
