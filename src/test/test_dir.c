@@ -91,6 +91,9 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 #define NS_MODULE dir
 
@@ -2027,6 +2030,7 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tor_free(bw_file_headers_str);
 
  done:
+  unlink(fname);
   tor_free(fname);
   tor_free(header_lines_v100);
   tor_free(header_lines_v110_no_terminator);
@@ -3933,10 +3937,12 @@ test_dir_bwauth_bw_file_digest256(void *arg)
   tt_str_op(bw_file_digest_line_expected, OP_EQ, vote_bw_file_digest_line);
 
  done:
+  unlink(fname);
   tor_free(fname);
   tor_free(b64_digest_str);
   tor_free(b64_digest_algo_str);
   tor_free(vote_bw_file_digest_line);
+  update_approx_time(time(NULL));
 }
 
 static void
