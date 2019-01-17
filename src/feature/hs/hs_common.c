@@ -926,7 +926,8 @@ hs_parse_address(const char *address, ed25519_public_key_t *key_out,
   }
 
   /* Decode address so we can extract needed fields. */
-  if (base32_decode(decoded, sizeof(decoded), address, strlen(address)) < 0) {
+  if (base32_decode(decoded, sizeof(decoded), address, strlen(address))
+      != sizeof(decoded)) {
     log_warn(LD_REND, "Service address %s can't be decoded.",
              escaped_safe_str(address));
     goto invalid;

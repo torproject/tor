@@ -1517,7 +1517,10 @@ parse_auth_file_content(const char *client_key_str)
   auth = tor_malloc_zero(sizeof(hs_client_service_authorization_t));
   if (base32_decode((char *) auth->enc_seckey.secret_key,
                     sizeof(auth->enc_seckey.secret_key),
-                    seckey_b32, strlen(seckey_b32)) < 0) {
+                    seckey_b32, strlen(seckey_b32)) !=
+      sizeof(auth->enc_seckey.secret_key)) {
+    log_warn(LD_REND, "Client authorization encoded base32 private key "
+                      "can't be decoded: %s", seckey_b32);
     goto err;
   }
   strncpy(auth->onion_address, onion_address, HS_SERVICE_ADDR_LEN_BASE32);
