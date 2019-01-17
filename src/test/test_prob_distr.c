@@ -1194,7 +1194,7 @@ test_stochastic_uniform(void *arg)
     .a = -4e-324,
     .b = 4e-310,
   };
-  bool ok = true;
+  bool ok = true, tests_failed = true;
 
   init_deterministic_rand();
   MOCK(crypto_rand, crypto_rand_deterministic);
@@ -1208,8 +1208,14 @@ test_stochastic_uniform(void *arg)
 
   tt_assert(ok);
 
+  tests_failed = false;
+
  done:
-    ;
+  if (tests_failed) {
+    dump_seed();
+  }
+  teardown_deterministic_rand();
+  UNMOCK(crypto_rand);
 }
 
 static bool
