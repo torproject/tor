@@ -325,7 +325,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
         char *digest_algo_b64_digest_bw_file = NULL;
         tor_asprintf(&digest_algo_b64_digest_bw_file, "%s=%s",
                      crypto_digest_algorithm_get_name(DIGEST_ALG_BW_FILE),
-                     v3_ns->bw_file_digest255);
+                     b64_digest_bw_file);
         /* No need for tor_strdup(""), format_line_if_present does it. */
         bw_file_digest = format_line_if_present(
           "bandwidth-file-digest", digest_algo_b64_digest_bw_file);
