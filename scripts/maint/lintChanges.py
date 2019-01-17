@@ -43,7 +43,7 @@ def split_tor_version(version):
 
     If the version is malformed, returns None.
     '''
-    version_match = re.search('([0-9]+)\.([0-9]+)\.([0-9]+)(\.([0-9]+))?', version)
+    version_match = re.match('([0-9]+)\.([0-9]+)\.([0-9]+)(\.([0-9]+))?', version)
     if version_match is None:
         return None
 
@@ -125,7 +125,7 @@ def lintfile(fname):
                 warn("Versions must have at least 3 digits. ('0.1.2', '0.3.4.8', or '0.3.5.1-alpha'.)")
             else:
                 bugfix_match = re.search('bugfix on ([0-9a-z][-.0-9a-z]+[0-9a-z])', contents)
-                bugfix_group = bugfix_match.groups(0) if bugfix_match is not None else None
+                bugfix_group = bugfix_match.groups() if bugfix_match is not None else None
                 bugfix_version = bugfix_group[0] if bugfix_group is not None else None
                 package_version = os.environ.get('PACKAGE_VERSION', None)
                 if bugfix_version is None:
