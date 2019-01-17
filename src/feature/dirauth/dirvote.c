@@ -316,11 +316,11 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
      * is configured and the bandwidth file could be read, even if it was not
      * parseable.
      */
-    if (!tor_digest256_is_zero((const char *)v3_ns->bw_file_digest255)) {
+    if (!tor_digest256_is_zero((const char *)v3_ns->bw_file_digest256)) {
       /* Encode the digest. */
       char b64_digest_bw_file[BASE64_DIGEST256_LEN+1] = {0};
       if (digest256_to_base64(b64_digest_bw_file,
-                              (const char *)v3_ns->bw_file_digest255)>0) {
+                              (const char *)v3_ns->bw_file_digest256)>0) {
         /* "bandwidth-file-digest" 1*(SP algorithm "=" digest) NL */
         char *digest_algo_b64_digest_bw_file = NULL;
         tor_asprintf(&digest_algo_b64_digest_bw_file, "%s=%s",
@@ -4425,7 +4425,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   const int vote_on_reachability = running_long_enough_to_decide_unreachable();
   smartlist_t *microdescriptors = NULL;
   smartlist_t *bw_file_headers = NULL;
-  uint8_t bw_file_digest255[DIGEST256_LEN] = {0};
+  uint8_t bw_file_digest256[DIGEST256_LEN] = {0};
 
   tor_assert(private_key);
   tor_assert(cert);
@@ -4570,7 +4570,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     bw_file_headers = smartlist_new();
     dirserv_read_measured_bandwidths(options->V3BandwidthsFile,
                                      routerstatuses, bw_file_headers,
-                                     bw_file_digest255);
+                                     bw_file_digest256);
 
   } else {
     /*
@@ -4668,7 +4668,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     smartlist_sort_strings(v3_out->net_params);
   }
   v3_out->bw_file_headers = bw_file_headers;
-  memcpy(v3_out->bw_file_digest255, bw_file_digest255, DIGEST256_LEN);
+  memcpy(v3_out->bw_file_digest256, bw_file_digest256, DIGEST256_LEN);
 
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
   voter->nickname = tor_strdup(options->Nickname);
