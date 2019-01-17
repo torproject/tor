@@ -1137,7 +1137,11 @@ teardown_deterministic_rand(void)
 static void
 dump_seed(void)
 {
-  printf("\nSeed: %s\n",
+  printf("\n"
+         "NOTE: This is a stochastic test, and we expect it to fail from\n"
+         "time to time, with some low probability. If you see it fail more\n"
+         "than one trial in 100, though, please tell us.\n\n"
+         "Seed: %s\n",
          hex_str((const char*)rng_seed, sizeof(rng_seed)));
 }
 
@@ -1190,7 +1194,7 @@ test_stochastic_uniform(void *arg)
     .a = -4e-324,
     .b = 4e-310,
   };
-  bool ok = true;
+  bool ok = true, tests_failed = true;
 
   init_deterministic_rand();
   MOCK(crypto_rand, crypto_rand_deterministic);
@@ -1204,8 +1208,14 @@ test_stochastic_uniform(void *arg)
 
   tt_assert(ok);
 
+  tests_failed = false;
+
  done:
-    ;
+  if (tests_failed) {
+    dump_seed();
+  }
+  teardown_deterministic_rand();
+  UNMOCK(crypto_rand);
 }
 
 static bool
