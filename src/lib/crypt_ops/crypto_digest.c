@@ -524,7 +524,7 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
 #endif
 #ifdef OPENSSL_HAS_SHA3
     case DIGEST_SHA3_256: /* FALLSTHROUGH */
-  case DIGEST_SHA3_512: {
+    case DIGEST_SHA3_512: {
       int r = EVP_DigestUpdate(digest->d.md, data, len);
       tor_assert(r);
   }
