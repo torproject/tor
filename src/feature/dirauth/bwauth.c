@@ -327,7 +327,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
   }
   if (fp)
     fclose(fp);
-  if (digest_has_bytes)
+  if (digest_has_bytes && digest_out)
     crypto_digest_get_digest(digest, (char *) digest_out, DIGEST256_LEN);
   crypto_digest_free(digest);
   return rv;
