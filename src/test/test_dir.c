@@ -3877,8 +3877,12 @@ test_dir_bwauth_bw_file_digest255(void *arg)
     "bw=760 nick=Test time=2018-05-08T16:13:26\n";
 
   char *fname = tor_strdup(get_fname("V3BandwidthsFile"));
+  /* Since digest are bytes, initialize to 0 so that it's easier to compare
+   * whether it has a value (0) */
   uint8_t digest[DIGEST256_LEN] = {0};
-  char b64_digest[BASE64_DIGEST256_LEN+1] = {0};
+  /* Initialize to a wrong base 64 encoded digest. */
+  char b64_digest[BASE64_DIGEST256_LEN+1] =
+    "0123456789abcdefghijklmnopqrstuvwxyz0123456";
   char *b64_digest_str = NULL;
   char *b64_digest_algo_str = NULL;
   char *vote_bw_file_digest_line = NULL;
@@ -3905,6 +3909,7 @@ test_dir_bwauth_bw_file_digest255(void *arg)
   tt_int_op(-1, OP_EQ,
             dirserv_read_measured_bandwidths(fname,
                                              NULL, NULL, digest));
+  /* The digest will be correct. */
   tt_int_op(0, OP_EQ, tor_digest256_is_zero((const char *)digest));
 
   update_approx_time(1541171221);
