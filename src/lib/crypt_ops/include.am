@@ -27,12 +27,14 @@ src_lib_libtor_crypt_ops_a_SOURCES =			\
 if USE_NSS
 src_lib_libtor_crypt_ops_a_SOURCES +=			\
 	src/lib/crypt_ops/aes_nss.c			\
+	src/lib/crypt_ops/crypto_digest_nss.c		\
 	src/lib/crypt_ops/crypto_dh_nss.c		\
 	src/lib/crypt_ops/crypto_nss_mgt.c		\
 	src/lib/crypt_ops/crypto_rsa_nss.c
 else
 src_lib_libtor_crypt_ops_a_SOURCES +=			\
 	src/lib/crypt_ops/aes_openssl.c			\
+	src/lib/crypt_ops/crypto_digest_openssl.c	\
 	src/lib/crypt_ops/crypto_rsa_openssl.c
 endif
 
