@@ -314,7 +314,7 @@ Changes in version 0.4.0.1-alpha - 2019-01-18
       issue 28008.
 
 
-Changes in version 0.3.3.11 - 2018-01-07
+Changes in version 0.3.3.11 - 2019-01-07
   Tor 0.3.3.11 backports numerous fixes from later versions of Tor.
   numerous fixes, including an important fix for anyone using OpenSSL
   1.1.1. Anyone running an earlier version of Tor 0.3.3 should upgrade
@@ -487,7 +487,7 @@ Changes in version 0.3.3.11 - 2018-01-07
       bugfix on 0.3.0.1-alpha.
 
 
-Changes in version 0.3.4.10 - 2018-01-07
+Changes in version 0.3.4.10 - 2019-01-07
   Tor 0.3.4.9 is the second stable release in its series; it backports
   numerous fixes, including an important fix for relays, and for anyone
   using OpenSSL 1.1.1. Anyone running an  earlier version of Tor 0.3.4

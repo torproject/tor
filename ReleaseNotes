@@ -2,7 +2,7 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
-Changes in version 0.3.3.11 - 2018-01-07
+Changes in version 0.3.3.11 - 2019-01-07
   Tor 0.3.3.11 backports numerous fixes from later versions of Tor.
   numerous fixes, including an important fix for anyone using OpenSSL
   1.1.1. Anyone running an earlier version of Tor 0.3.3 should upgrade
@@ -175,7 +175,7 @@ Changes in version 0.3.3.11 - 2018-01-07
       bugfix on 0.3.0.1-alpha.
 
 
-Changes in version 0.3.4.10 - 2018-01-07
+Changes in version 0.3.4.10 - 2019-01-07
   Tor 0.3.4.9 is the second stable release in its series; it backports
   numerous fixes, including an important fix for relays, and for anyone
   using OpenSSL 1.1.1. Anyone running an  earlier version of Tor 0.3.4
