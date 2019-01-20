@@ -3883,17 +3883,6 @@ test_dir_bwauth_bw_file_digest256(void *arg)
   char *fname = tor_strdup(get_fname("V3BandwidthsFile"));
   /* Initialize to a wrong digest. */
   uint8_t digest[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
-  /* Initialize to a wrong base 64 encoded digest. */
-  char b64_digest[BASE64_DIGEST256_LEN+1] =
-    "0123456789abcdefghijklmnopqrstuvwxyz0123456";
-  char *b64_digest_str = NULL;
-  char *b64_digest_algo_str = NULL;
-  char *vote_bw_file_digest_line = NULL;
-  const char *b64_digest_str_expected =
-    "J+9Lm7UT4FYWSIXgOJcAiIWbHBeiUl+0cmEOKpw7Fnk";
-  const char *bw_file_digest_line_expected =
-    "bandwidth-file-digest sha256=J+9Lm7UT4FYWSIXgOJcAiIWbHBeiUl+0cmEOKpw7Fnk"
-    "\n";
 
   /* Digest of an empty string */
   char digest_empty_str[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
@@ -3945,24 +3934,9 @@ test_dir_bwauth_bw_file_digest256(void *arg)
                                              NULL, NULL, digest));
   tt_mem_op(digest, OP_EQ, digest_expected, DIGEST256_LEN);
 
-  digest256_to_base64(b64_digest, (const char *)digest);
-  tor_asprintf(&b64_digest_str, "%s", b64_digest);
-  tt_str_op(b64_digest_str_expected, OP_EQ, b64_digest_str);
-
-  /* "bandwidth-file-digest" 1*(SP algorithm "=" digest) NL */
-  tor_asprintf(&b64_digest_algo_str, "%s=%s",
-              crypto_digest_algorithm_get_name(DIGEST_SHA256),
-              b64_digest_str);
-  tor_asprintf(&vote_bw_file_digest_line, "%s %s\n", "bandwidth-file-digest",
-               b64_digest_algo_str);
-  tt_str_op(bw_file_digest_line_expected, OP_EQ, vote_bw_file_digest_line);
-
  done:
   unlink(fname);
   tor_free(fname);
-  tor_free(b64_digest_str);
-  tor_free(b64_digest_algo_str);
-  tor_free(vote_bw_file_digest_line);
   crypto_digest_free(digest_tmp);
   update_approx_time(time(NULL));
 }
