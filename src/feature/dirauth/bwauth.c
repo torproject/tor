@@ -221,7 +221,6 @@ dirserv_read_measured_bandwidths(const char *from_file,
   int rv = -1;
   char *line = NULL;
   size_t n = 0;
-  int digest_has_bytes = 0;
   crypto_digest_t *digest = crypto_digest256_new(DIGEST_SHA256);
 
   /* Initialise line, so that we can't possibly run off the end. */
@@ -237,14 +236,15 @@ dirserv_read_measured_bandwidths(const char *from_file,
     log_warn(LD_DIRSERV, "Empty bandwidth file");
     goto err;
   }
+  /* If the line could be gotten, add it to the digest */
+  crypto_digest_add_bytes(digest, (const char *) line, strlen(line));
 
   if (!strlen(line) || line[strlen(line)-1] != '\n') {
     log_warn(LD_DIRSERV, "Long or truncated time in bandwidth file: %s",
              escaped(line));
-    goto err;
+    /* Continue adding lines to the digest. */
+    goto continue_digest;
   }
-  crypto_digest_add_bytes(digest, (const char *) line, strlen(line));
-  digest_has_bytes = 1;
 
   line[strlen(line)-1] = '\0';
   file_time = (time_t)tor_parse_ulong(line, 10, 0, ULONG_MAX, &ok, NULL);
@@ -327,7 +327,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
   }
   if (fp)
     fclose(fp);
-  if (digest_has_bytes && digest_out)
+  if (digest_out)
     crypto_digest_get_digest(digest, (char *) digest_out, DIGEST256_LEN);
   crypto_digest_free(digest);
   return rv;
