@@ -3881,9 +3881,8 @@ test_dir_bwauth_bw_file_digest256(void *arg)
     "bw=760 nick=Test time=2018-05-08T16:13:26\n";
 
   char *fname = tor_strdup(get_fname("V3BandwidthsFile"));
-  /* Since digest are bytes, initialize to 0 so that it's easier to compare
-   * whether it has a value (0) */
-  uint8_t digest[DIGEST256_LEN] = {0};
+  /* Initialize to a wrong digest. */
+  uint8_t digest[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
   /* Initialize to a wrong base 64 encoded digest. */
   char b64_digest[BASE64_DIGEST256_LEN+1] =
     "0123456789abcdefghijklmnopqrstuvwxyz0123456";
@@ -3896,17 +3895,31 @@ test_dir_bwauth_bw_file_digest256(void *arg)
     "bandwidth-file-digest sha256=J+9Lm7UT4FYWSIXgOJcAiIWbHBeiUl+0cmEOKpw7Fnk"
     "\n";
 
+  /* Digest of an empty string */
+  char digest_empty_str[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
+  crypto_digest256(digest_empty_str, "", 0, DIGEST_SHA256);
+
+  /* Digest of the content */
+  uint8_t digest_expected[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
+  crypto_digest_t *digest_tmp = crypto_digest256_new(DIGEST_SHA256);
+  crypto_digest_add_bytes(digest_tmp, content, strlen(content));
+  crypto_digest_get_digest(digest_tmp, (char *) digest_expected,
+                           DIGEST256_LEN);
+  /* Logs 27EF4B9BB513E056164885E038970088859B1C17A2525FB472610E2A9C3B1679 */
+  log_debug(LD_DIR, "%s",
+            hex_str((const char *) digest_expected, DIGEST256_LEN));
+
   /* When there is not a bandwidth file configured */
   tt_int_op(-1, OP_EQ,
             dirserv_read_measured_bandwidths("",
                                              NULL, NULL, digest));
-  tt_int_op(1, OP_EQ, tor_digest256_is_zero((const char *)digest));
+  tt_mem_op(digest, OP_EQ, digest_empty_str, DIGEST256_LEN);
 
   /* When there is a bandwidth file configured, but it can not be found. */
   tt_int_op(-1, OP_EQ,
             dirserv_read_measured_bandwidths(fname,
                                              NULL, NULL, digest));
-  tt_int_op(1, OP_EQ, tor_digest256_is_zero((const char *)digest));
+  tt_mem_op(digest, OP_EQ, digest_empty_str, DIGEST256_LEN);
 
   /* When there is a timestamp but it is too old. */
   write_str_to_file(fname, content, 0);
@@ -3914,7 +3927,7 @@ test_dir_bwauth_bw_file_digest256(void *arg)
             dirserv_read_measured_bandwidths(fname,
                                              NULL, NULL, digest));
   /* The digest will be correct. */
-  tt_int_op(0, OP_EQ, tor_digest256_is_zero((const char *)digest));
+  tt_mem_op(digest, OP_EQ, digest_expected, DIGEST256_LEN);
 
   update_approx_time(1541171221);
 
@@ -3922,7 +3935,7 @@ test_dir_bwauth_bw_file_digest256(void *arg)
   tt_int_op(0, OP_EQ,
             dirserv_read_measured_bandwidths(fname,
                                              NULL, NULL, digest));
-  tt_int_op(0, OP_EQ, tor_digest256_is_zero((const char *)digest));
+  tt_mem_op(digest, OP_EQ, digest_expected, DIGEST256_LEN);
 
   digest256_to_base64(b64_digest, (const char *)digest);
   tor_asprintf(&b64_digest_str, "%s", b64_digest);
@@ -3942,6 +3955,7 @@ test_dir_bwauth_bw_file_digest256(void *arg)
   tor_free(b64_digest_str);
   tor_free(b64_digest_algo_str);
   tor_free(vote_bw_file_digest_line);
+  crypto_digest_free(digest_tmp);
   update_approx_time(time(NULL));
 }
 
