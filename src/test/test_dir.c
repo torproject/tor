@@ -3900,6 +3900,14 @@ test_dir_bwauth_bw_file_digest256(void *arg)
   crypto_digest256(digest_empty_str, "", 0, DIGEST_SHA256);
 
   /* Digest of the content */
+  char digest_expected2[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
+  crypto_digest256(digest_expected2, content, sizeof(content), DIGEST_SHA256);
+  /* Logs 1DC64B095F76C89980B23C99D06B749D6B46DAA9C270E4FA1E027605CBC02A39 */
+  log_debug(LD_DIR, "%s", hex_str(digest_expected2, DIGEST256_LEN));
+  /* Using sha256sum in command line a file with the content gives
+   * ecaa36314fc835d3269ca304d2f9be3c87cbd2c068faee0c2b8aabfe538bef8c */
+
+  /* Digest of the content */
   uint8_t digest_expected[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
   crypto_digest_t *digest_tmp = crypto_digest256_new(DIGEST_SHA256);
   crypto_digest_add_bytes(digest_tmp, content, strlen(content));
