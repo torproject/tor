@@ -1527,7 +1527,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                conn_type_to_string(type), conn->address);
   } else {
     log_notice(LD_NET, "Opened %s on %s",
-               conn_type_to_string(type), fmt_addrport(&addr, usePort));
+               conn_type_to_string(type), fmt_addrport(&addr, gotPort));
   }
   return conn;
 
