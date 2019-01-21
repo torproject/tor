@@ -778,8 +778,8 @@ hs_cache_store_as_client(const char *desc_str,
   /* Create client cache descriptor object */
   client_desc = cache_client_desc_new(desc_str, identity_pk);
   if (!client_desc) {
-    log_warn(LD_GENERAL, "Failed to parse received descriptor %s.",
-             escaped(desc_str));
+    log_warn(LD_GENERAL, "HSDesc parsing failed!");
+    log_debug(LD_GENERAL, "Failed to parse HSDesc: %s.", escaped(desc_str));
     goto err;
   }
 
