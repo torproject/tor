@@ -3906,7 +3906,7 @@ test_dir_bwauth_bw_file_digest256(void *arg)
   log_debug(LD_DIR, "%s",
             hex_str((const char *) digest_expected, DIGEST256_LEN));
 
-  /* When there is not a bandwidth file configured */
+  /* When the bandwidth file can not be found. */
   tt_int_op(-1, OP_EQ,
             dirserv_read_measured_bandwidths("",
                                              NULL, NULL, digest));
