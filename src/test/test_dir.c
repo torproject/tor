@@ -3884,7 +3884,7 @@ test_dir_bwauth_bw_file_digest256(void *arg)
   /* Initialize to a wrong digest. */
   uint8_t digest[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
 
-  /* Digest of an empty string */
+  /* Digest of an empty string. Initialize to a wrong digest. */
   char digest_empty_str[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
   crypto_digest256(digest_empty_str, "", 0, DIGEST_SHA256);
 
