@@ -3896,7 +3896,7 @@ test_dir_bwauth_bw_file_digest256(void *arg)
   /* Using sha256sum in command line a file with the content gives
    * ecaa36314fc835d3269ca304d2f9be3c87cbd2c068faee0c2b8aabfe538bef8c */
 
-  /* Digest of the content */
+  /* Digest of the content. Initialize to a wrong digest. */
   uint8_t digest_expected[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
   crypto_digest_t *digest_tmp = crypto_digest256_new(DIGEST_SHA256);
   crypto_digest_add_bytes(digest_tmp, content, strlen(content));
