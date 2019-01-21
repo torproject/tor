@@ -1239,6 +1239,10 @@ test_circuitpadding_wronghop(void *arg)
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
 
+  /* Mock this function so that our cell counting tests don't get confused by
+   * padding that gets sent by scheduled timers. */
+  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+
   client_side = (circuit_t *)origin_circuit_new();
   dummy_channel.cmux = circuitmux_alloc();
   relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel,
