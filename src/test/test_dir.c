@@ -3888,23 +3888,9 @@ test_dir_bwauth_bw_file_digest256(void *arg)
   char digest_empty_str[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
   crypto_digest256(digest_empty_str, "", 0, DIGEST_SHA256);
 
-  /* Digest of the content */
-  char digest_expected2[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
-  crypto_digest256(digest_expected2, content, sizeof(content), DIGEST_SHA256);
-  /* Logs 1DC64B095F76C89980B23C99D06B749D6B46DAA9C270E4FA1E027605CBC02A39 */
-  log_debug(LD_DIR, "%s", hex_str(digest_expected2, DIGEST256_LEN));
-  /* Using sha256sum in command line a file with the content gives
-   * ecaa36314fc835d3269ca304d2f9be3c87cbd2c068faee0c2b8aabfe538bef8c */
-
   /* Digest of the content. Initialize to a wrong digest. */
-  uint8_t digest_expected[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
-  crypto_digest_t *digest_tmp = crypto_digest256_new(DIGEST_SHA256);
-  crypto_digest_add_bytes(digest_tmp, content, strlen(content));
-  crypto_digest_get_digest(digest_tmp, (char *) digest_expected,
-                           DIGEST256_LEN);
-  /* Logs 27EF4B9BB513E056164885E038970088859B1C17A2525FB472610E2A9C3B1679 */
-  log_debug(LD_DIR, "%s",
-            hex_str((const char *) digest_expected, DIGEST256_LEN));
+  char digest_expected[DIGEST256_LEN] = "01234567890123456789abcdefghijkl";
+  crypto_digest256(digest_expected, content, strlen(content), DIGEST_SHA256);
 
   /* When the bandwidth file can not be found. */
   tt_int_op(-1, OP_EQ,
@@ -3937,7 +3923,6 @@ test_dir_bwauth_bw_file_digest256(void *arg)
  done:
   unlink(fname);
   tor_free(fname);
-  crypto_digest_free(digest_tmp);
   update_approx_time(time(NULL));
 }
 
