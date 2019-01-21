@@ -3894,12 +3894,6 @@ test_dir_bwauth_bw_file_digest256(void *arg)
 
   /* When the bandwidth file can not be found. */
   tt_int_op(-1, OP_EQ,
-            dirserv_read_measured_bandwidths("",
-                                             NULL, NULL, digest));
-  tt_mem_op(digest, OP_EQ, digest_empty_str, DIGEST256_LEN);
-
-  /* When there is a bandwidth file configured, but it can not be found. */
-  tt_int_op(-1, OP_EQ,
             dirserv_read_measured_bandwidths(fname,
                                              NULL, NULL, digest));
   tt_mem_op(digest, OP_EQ, digest_empty_str, DIGEST256_LEN);
