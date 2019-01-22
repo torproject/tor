@@ -15,10 +15,15 @@ fi
 exitcode=0
 
 tmpdir=
-clean () { test -n "$tmpdir" && test -d "$tmpdir" && rm -rf "$tmpdir" || :; }
+clean () {
+  if [ -n "$tmpdir" ] && [ -d "$tmpdir" ]; then
+    rm -rf "$tmpdir"
+  fi
+}
+
 trap clean EXIT HUP INT TERM
 
-tmpdir="`mktemp -d -t tor_rebind_test.XXXXXX`"
+tmpdir="$(mktemp -d -t tor_rebind_test.XXXXXX)"
 if [ -z "$tmpdir" ]; then
   echo >&2 mktemp failed
   exit 2
