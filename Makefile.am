@@ -421,7 +421,7 @@ endif
 check-changes:
 if USEPYTHON
 	@if test -d "$(top_srcdir)/changes"; then \
-		$(PYTHON) $(top_srcdir)/scripts/maint/lintChanges.py $(top_srcdir)/changes; \
+		PACKAGE_VERSION=$(PACKAGE_VERSION) $(PYTHON) $(top_srcdir)/scripts/maint/lintChanges.py $(top_srcdir)/changes; \
 		fi
 endif
 
