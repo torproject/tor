@@ -21,6 +21,7 @@
 #include "lib/log/util_bug.h"
 #include "lib/fs/files.h"
 
+#include "lib/log/escape.h"
 #include "lib/log/log.h"
 #include "lib/encoding/binascii.h"
 #include "lib/encoding/pem.h"
@@ -484,11 +485,13 @@ crypto_pk_write_private_key_to_string(crypto_pk_t *env,
  */
 static int
 crypto_pk_read_from_string_generic(crypto_pk_t *env, const char *src,
-                                   size_t len, bool private_key)
+                                   size_t len, int severity,
+                                   bool private_key)
 {
   if (len == (size_t)-1) // "-1" indicates "use the length of the string."
     len = strlen(src);
 
+  const char *ktype = private_key ? "private key" : "public key";
   const char *tag =
     private_key ? RSA_PRIVATE_TAG : RSA_PUBLIC_TAG;
   size_t buflen = len;
@@ -496,14 +499,20 @@ crypto_pk_read_from_string_generic(crypto_pk_t *env, const char *src,
   int rv = -1;
 
   int n = pem_decode(buf, buflen, src, len, tag);
-  if (n < 0)
+  if (n < 0) {
+    log_fn(severity, LD_CRYPTO,
+           "Error decoding PEM wrapper while reading %s", ktype);
     goto done;
+  }
 
   crypto_pk_t *pk = private_key
     ? crypto_pk_asn1_decode_private((const char*)buf, n)
     : crypto_pk_asn1_decode((const char*)buf, n);
-  if (! pk)
+  if (! pk) {
+    log_fn(severity, LD_CRYPTO,
+           "Error decoding ASN.1 while reading %s", ktype);
     goto done;
+  }
 
   if (private_key)
     crypto_pk_assign_private(env, pk);
@@ -526,7 +535,7 @@ int
 crypto_pk_read_public_key_from_string(crypto_pk_t *env,
                                       const char *src, size_t len)
 {
-  return crypto_pk_read_from_string_generic(env, src, len, false);
+  return crypto_pk_read_from_string_generic(env, src, len, LOG_INFO, false);
 }
 
 /** Read a PEM-encoded private key from the <b>len</b>-byte string <b>src</b>
@@ -537,7 +546,7 @@ int
 crypto_pk_read_private_key_from_string(crypto_pk_t *env,
                                        const char *src, ssize_t len)
 {
-  return crypto_pk_read_from_string_generic(env, src, len, true);
+  return crypto_pk_read_from_string_generic(env, src, len, LOG_INFO, true);
 }
 
 /** If a file is longer than this, we won't try to decode its private key */
@@ -552,15 +561,24 @@ crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
 {
   struct stat st;
   char *buf = read_file_to_str(keyfile, 0, &st);
-  if (!buf)
+  if (!buf) {
+    log_warn(LD_CRYPTO, "Unable to read file for private key in %s",
+             escaped(keyfile));
     return -1;
+  }
   if (st.st_size > MAX_PRIVKEY_FILE_LEN) {
+    log_warn(LD_CRYPTO, "Private key file %s was far too large.",
+             escaped(keyfile));
     tor_free(buf);
     return -1;
   }
 
-  int rv = crypto_pk_read_private_key_from_string(env, buf,
-                                                  (ssize_t)st.st_size);
+  int rv = crypto_pk_read_from_string_generic(env, buf, (ssize_t)st.st_size,
+                                              LOG_WARN, true);
+  if (rv < 0) {
+    log_warn(LD_CRYPTO, "Unable to decode private key from file %s",
+             escaped(keyfile));
+  }
   memwipe(buf, 0, (size_t)st.st_size);
   tor_free(buf);
   return rv;
