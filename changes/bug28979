@@ -1,0 +1,4 @@
+  o Minor bugfixes (documentation):
+    - Describe the contents of the v3 onion service client authorization
+      files correctly: They hold public keys, not private keys. Fixes bug
+      28979; bugfix on 0.3.5.1-alpha. Spotted by "Felixix".
