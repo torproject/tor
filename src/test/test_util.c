@@ -1087,7 +1087,10 @@ test_util_time(void *arg)
 
   /* This value is out of range with 32 bit time_t, but in range for 64 bit
    * time_t */
+  CAPTURE();
   format_rfc1123_time(timestr, (time_t)2150000000UL);
+  CHECK_POSSIBLE_EINVAL();
+
 #if SIZEOF_TIME_T == 4
 #if 0
   /* Wrapping around will have made it this. */
