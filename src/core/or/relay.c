@@ -1573,7 +1573,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
 
       /* Consider sending a circuit-level SENDME cell. */
-      sendme_circuit_consider_sending(circ, layer_hint, NULL);
+      sendme_circuit_consider_sending(circ, layer_hint);
 
       if (rh.stream_id == 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Relay data cell with zero "

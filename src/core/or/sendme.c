@@ -14,6 +14,7 @@
 #include "core/or/cell_st.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
+#include "core/or/or_circuit_st.h"
 #include "core/or/relay.h"
 #include "core/or/sendme.h"
 #include "feature/nodelist/networkstatus.h"
@@ -342,18 +343,20 @@ sendme_connection_edge_consider_sending(edge_connection_t *conn)
  * more.
  */
 void
-sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint,
-                                crypto_digest_t *digest)
+sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
 {
-  tor_assert(digest);
+  crypto_digest_t *digest;
 
   while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <=
           CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
     log_debug(LD_CIRC,"Queuing circuit sendme.");
-    if (layer_hint)
+    if (layer_hint) {
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
-    else
+      digest = layer_hint->crypto.sendme_digest;
+    } else {
       circ->deliver_window += CIRCWINDOW_INCREMENT;
+      digest = TO_OR_CIRCUIT(circ)->crypto.sendme_digest;
+    }
     if (send_circuit_level_sendme(circ, layer_hint, digest) < 0) {
       return; /* The circuit's closed, don't continue */
     }
@@ -557,9 +560,16 @@ sendme_note_cell_digest(circuit_t *circ)
     return;
   }
 
-  digest = tor_malloc_zero(4);
-  if (circ->sendme_last_digests == NULL) {
-    circ->sendme_last_digests = smartlist_new();
+  /* Only note the digest if we actually have the digest of the previous cell
+   * recorded. It should never happen in theory as we always record the last
+   * digest for the v1 SENDME. */
+  if (TO_OR_CIRCUIT(circ)->crypto.sendme_digest) {
+    digest = tor_malloc_zero(4);
+    crypto_digest_get_digest(TO_OR_CIRCUIT(circ)->crypto.sendme_digest,
+                             (char *) digest, 4);
+    if (circ->sendme_last_digests == NULL) {
+      circ->sendme_last_digests = smartlist_new();
+    }
+    smartlist_add(circ->sendme_last_digests, digest);
   }
-  smartlist_add(circ->sendme_last_digests, digest);
 }
