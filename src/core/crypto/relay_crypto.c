@@ -142,6 +142,13 @@ relay_decrypt_cell(circuit_t *circ, cell_t *cell,
           if (relay_digest_matches(thishop->crypto.b_digest, cell)) {
             *recognized = 1;
             *layer_hint = thishop;
+            /* Keep current digest of this cell for the possible SENDME. */
+            if (thishop->crypto.sendme_digest) {
+              crypto_digest_free(thishop->crypto.sendme_digest);
+            }
+            thishop->crypto.sendme_digest =
+              crypto_digest_dup(thishop->crypto.b_digest);
+
             return 0;
           }
         }
@@ -212,6 +219,11 @@ relay_encrypt_cell_inbound(cell_t *cell,
                            or_circuit_t *or_circ)
 {
   relay_set_digest(or_circ->crypto.b_digest, cell);
+  /* Keep a record of this cell, we might use it for validating the SENDME. */
+  if (or_circ->crypto.sendme_digest) {
+    crypto_digest_free(or_circ->crypto.sendme_digest);
+  }
+  or_circ->crypto.sendme_digest = crypto_digest_dup(or_circ->crypto.b_digest);
   /* encrypt one layer */
   relay_crypt_one_payload(or_circ->crypto.b_crypto, cell->payload);
 }
@@ -229,6 +241,7 @@ relay_crypto_clear(relay_crypto_t *crypto)
   crypto_cipher_free(crypto->b_crypto);
   crypto_digest_free(crypto->f_digest);
   crypto_digest_free(crypto->b_digest);
+  crypto_digest_free(crypto->sendme_digest);
 }
 
 /** Initialize <b>crypto</b> from the key material in key_data.
