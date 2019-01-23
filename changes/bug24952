@@ -1,5 +1,0 @@
-  o Minor bugfix (channel connection):
-    - The accurate address of a connection is real_addr, not the addr member.
-      TLS Channel remote address is now real_addr content instead of addr
-      member. Fixes bug 24952; bugfix on 707c1e2e26 in 0.2.4.11-alpha.
-      Patch by "ffmancera".

@@ -1,5 +1,0 @@
-  o Minor bugfixes (controller):
-    - Do not crash when receiving a POSTDESCRIPTOR command with an
-      empty body. Fixes part of bug 22644; bugfix on 0.2.0.1-alpha.
-    - Do not crash when receiving a HSPOST command with an empty body.
-      Fixes part of bug 22644; bugfix on 0.2.7.1-alpha.

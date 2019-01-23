@@ -1,5 +1,0 @@
-  o Minor features (new fallback directories):
-    - The fallback directory list has been re-generated based on the
-      current status of the network. Tor uses fallback directories to
-      bootstrap it doesn't yet have up-to-date directory
-      information. Closes ticket 24801.

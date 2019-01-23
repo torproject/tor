@@ -1,4 +1,0 @@
-  o Minor bugfixes (controller, linux seccomp2 sandbox):
-    - Avoid a crash when attempting to use the seccomp2 sandbox
-      together with the OwningControllerProcess feature.
-      Fixes bug 24198; bugfix on 0.2.5.1-alpha.

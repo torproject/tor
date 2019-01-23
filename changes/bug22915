@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation warnings):
-    - Suppress -Wdouble-promotion warnings with clang 4.0. Fixes bug 22915;
-      bugfix on 0.2.8.1-alpha.

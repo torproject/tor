@@ -1,4 +1,0 @@
-  o Minor bugfixes (hardening):
-    - Prevent a possible out-of-bounds smartlist read in
-      protover_compute_vote(). Fixes bug 26196; bugfix on
-      0.2.9.4-alpha.

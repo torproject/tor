@@ -1,7 +1,0 @@
-  o Minor bugfixes (compatibility, openssl):
-    - Work around a change in OpenSSL 1.1.1 where
-      return values that would previously indicate "no password" now
-      indicate an empty password. Without this workaround, Tor instances
-      running with OpenSSL 1.1.1 would accept descriptors that other Tor
-      instances would reject. Fixes bug 26116; bugfix on 0.2.5.16.
-      

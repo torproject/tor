@@ -1,4 +1,0 @@
-  o Minor features (continuous integration):
-    - Our .travis.yml configuration now includes support for testing
-      the results of "make distcheck". (It's not uncommon for "make check" to
-      pass but "make distcheck" to fail.)  Closes ticket 25814.

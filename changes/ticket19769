@@ -1,7 +1,0 @@
-  o Major features (security):
-    - Change the algorithm used to decide DNS TTLs on client and server side,
-      to better resist DNS-based correlation attacks like the DefecTor attack
-      of Greschbach, Pulls, Roberts, Winter, and Feamster).  Now
-      relays only return one of two possible DNS TTL values, and clients
-      are willing to believe DNS TTL values up to 3 hours long.
-      Closes ticket 19769.

@@ -1,3 +1,0 @@
-  o Minor bugfixes (code correctness):
-    - Repair a couple of (unreachable or harmless) cases of the risky
-      comparison-by-subtraction pattern that caused bug 21278.

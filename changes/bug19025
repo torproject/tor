@@ -1,4 +1,0 @@
-  o Major bugfixes (DNS):
-    - Fix a bug that prevented exit nodes from caching DNS records for more
-      than 60 seconds.
-      Fixes bug 19025; bugfix on 0.2.4.7-alpha.

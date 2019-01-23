@@ -1,5 +1,0 @@
-  o Minor bugfixes (compilation, mingw, backport from 0.3.1.1-alpha):
-    - Backport a fix for an "unused variable" warning that appeared
-      in some versions of mingw. Fixes bug 22838; bugfix on
-      0.2.8.1-alpha.
-

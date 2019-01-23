@@ -1,6 +1,0 @@
-  o Minor features (directory authorities):
-    - Remove longclaw's IPv6 address, as it will soon change.
-      Authority IPv6 addresses were originally added in 0.2.8.1-alpha.
-      This leaves 3/8 directory authorities with IPv6 addresses, but there
-      are also 52 fallback directory mirrors with IPv6 addresses.
-      Resolves 19760.

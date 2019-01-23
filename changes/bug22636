@@ -1,8 +1,0 @@
- o Build features:
-   - Tor's repository now includes a Travis Continuous Integration (CI)
-     configuration file (.travis.yml). This is meant to help new developers and
-     contributors who fork Tor to a Github repository be better able to test
-     their changes, and understand what we expect to pass. To use this new build
-     feature, you must fork Tor to your Github account, then go into the
-     "Integrations" menu in the repository settings for your fork and enable
-     Travis, then push your changes.

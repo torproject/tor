@@ -1,6 +1,0 @@
-  o Minor features (bridge):
-    - Bridges now include notice in their descriptors that they are bridges,
-      and notice of their distribution status, based on their publication
-      settings.  Implements ticket 18329.  For more fine-grained control of
-      how a bridge is distributed, upgrade to 0.3.2.x or later.
-

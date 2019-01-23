@@ -1,5 +1,0 @@
-  o Minor bugfixes (voting consistency):
-    - Reject version numbers with non-numeric prefixes (such as +, -, and
-      whitespace). Disallowing whitespace prevents differential version
-      parsing between POSIX-based and Windows platforms.
-      Fixes bug 21507 and part of 21508; bugfix on 0.0.8pre1.

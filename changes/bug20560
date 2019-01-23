@@ -1,4 +1,0 @@
-  o Minor bugfixes (portability):
-    - Run correctly when built on Windows build environments that require
-      _vcsprintf(). Fixes bug 20560; bugfix on 0.2.2.11-alpha.
-

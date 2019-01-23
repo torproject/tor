@@ -1,4 +1,0 @@
-  o Minor features (sandbox):
-    - Explicitly permit the poll() system call when the Linux seccomp2-based
-      sandbox is enabled: apparently, some versions of libc use poll() when
-      calling getpwnam(). Closes ticket 25313.

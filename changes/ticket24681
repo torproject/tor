@@ -1,6 +1,0 @@
-  o Minor features (fallback directory mirrors):
-    - Make the default DirAuthorityFallbackRate 0.1, so that clients on the
-      public tor network prefer to bootstrap off fallback directory mirrors.
-      This is a follow-up to 24679, which removed weights from the default
-      fallbacks.
-      Implements ticket 24681.

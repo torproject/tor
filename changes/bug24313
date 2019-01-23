@@ -1,5 +1,0 @@
-  o Major bugfixes (security, hidden service v2):
-    - Fix a use-after-free error that could crash v2 Tor hidden services
-      when it failed to open circuits while expiring introductions
-      points. Fixes bug 24313; bugfix on 0.2.7.2-alpha.  This
-      issue is also tracked as TROVE-2017-013 and CVE-2017-8823.

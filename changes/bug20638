@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden services):
-    - Stop ignoring hidden service key anonymity when first starting tor.
-      Instead, refuse to start tor if any hidden service key has been used in
-      a different hidden service anonymity mode.
-      Fixes bug 20638; bugfix on 17178 in 0.2.9.3-alpha; reported by ahf.

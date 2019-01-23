@@ -1,4 +1,0 @@
-  o Minor feature (relay statistics): 
-    - Change relay bandwidth reporting stats interval from 4 hours to 24 hours
-      in order to reduce the efficiency of guard discovery attacks. Fixes
-      ticket 23856.

@@ -1,5 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix a compilation warning on some versions of GCC when
-      building code that calls routerinfo_get_my_routerinfo() twice,
-      assuming that the second call will succeed if the first one did.
-      Fixes bug 26269; bugfix on 0.2.8.2-alpha.

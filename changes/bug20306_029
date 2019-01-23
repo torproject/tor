@@ -1,4 +1,0 @@
-  o Minor bugfixes (fascistfirewall):
-    - Avoid spurious warnings when ReachableAddresses or FascistFirewall
-      is set. Fixes bug 20306; bugfix on 0.2.8.2-alpha.
-

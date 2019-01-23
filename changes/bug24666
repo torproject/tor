@@ -1,7 +1,0 @@
-  o Minor bugfixes (memory usage):
-
-    - When queuing DESTROY cells on a channel, only queue the
-      circuit-id and reason fields: not the entire 514-byte
-      cell. This fix should help mitigate any bugs or attacks that
-      fill up these queues, and free more RAM for other uses. Fixes
-      bug 24666; bugfix on 0.2.5.1-alpha.

@@ -1,6 +1,0 @@
-  o Minor bugfixes (address selection):
-    - When the fascist_firewall_choose_address_ functions don't find a
-      reachable address, set the returned address to the null address and port.
-      This is a precautionary measure, because some callers do not check the
-      return value.
-      Fixes bug 24736; bugfix on 0.2.8.2-alpha.
