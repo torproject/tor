@@ -12,6 +12,11 @@ if test "$UNAME_OS" = 'CYGWIN' || \
   fi
 fi
 
+if test "$CC_FOR_BUILD" = "clang" && test "$UNAME_OS" = 'Linux'; then
+  echo "This test is disabled on Linux clang builds. Skipping." >&2
+  exit 77
+fi
+
 exitcode=0
 
 "${PYTHON:-python}" "${abs_top_srcdir:-.}/src/test/test_resolve.py" \
