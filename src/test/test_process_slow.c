@@ -240,7 +240,7 @@ test_callbacks(void *arg)
   tt_int_op(smartlist_len(process_data->stdout_data), OP_EQ, 12);
   tt_int_op(smartlist_len(process_data->stderr_data), OP_EQ, 3);
   tt_assert(process_data->did_exit);
-  tt_int_op(process_data->exit_code, OP_EQ, 0);
+  tt_u64_op(process_data->exit_code, OP_EQ, 0);
 
   /* Check stdout output. */
   char argv0_expected[256];
