@@ -10,7 +10,7 @@ workdir=$(git rev-parse --show-toplevel)
 
 cd "$workdir" || exit 1
 
-python scripts/maint/lintChanges.py ./changes
+python scripts/maint/lintChanges.py ./changes/*
 
 perl scripts/maint/checkSpace.pl -C \
 src/lib/*/*.[ch] \
