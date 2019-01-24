@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+# To install this script, copy it to .git/hooks/pre-commit in local copy of
+# tor git repo and make sure it has permission to execute.
+#
+# This is pre-commit git hook script that prevents commiting your changeset if
+# it fails our code formatting or changelog entry formatting checkers.
+
+workdir=$(git rev-parse --show-toplevel)
+
+cd "$workdir" || exit 1
+
+python scripts/maint/lintChanges.py ./changes/*
+
+perl scripts/maint/checkSpace.pl -C \
+src/lib/*/*.[ch] \
+src/core/*/*.[ch] \
+src/feature/*/*.[ch] \
+src/app/*/*.[ch] \
+src/test/*.[ch] \
+src/test/*/*.[ch] \
+src/tools/*.[ch]
+
+if test -e scripts/maint/checkIncludes.py; then
+    python scripts/maint/checkIncludes.py
+fi
