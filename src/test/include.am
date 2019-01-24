@@ -375,8 +375,8 @@ src_test_test_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB)
 src_test_test_ntor_cl_LDADD = \
 	$(TOR_INTERNAL_LIBS) \
 	$(rust_ldadd) \
-	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
-	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	@TOR_LIB_MATH@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_ZLIB_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ @TOR_LZMA_LIBS@
 src_test_test_ntor_cl_AM_CPPFLAGS =	       \
 	$(AM_CPPFLAGS)
@@ -385,8 +385,8 @@ src_test_test_hs_ntor_cl_SOURCES  = src/test/test_hs_ntor_cl.c
 src_test_test_hs_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB)
 src_test_test_hs_ntor_cl_LDADD = \
 	$(TOR_INTERNAL_LIBS) \
-	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
-	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
+	@TOR_LIB_MATH@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_ZLIB_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 src_test_test_hs_ntor_cl_AM_CPPFLAGS =	       \
 	$(AM_CPPFLAGS)
 

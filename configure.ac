@@ -941,7 +941,7 @@ AC_ARG_WITH(ssl-dir,
   ])
 
 AC_MSG_NOTICE([Now, we'll look for OpenSSL >= 1.0.1])
-TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI $TOR_LIB_WS32],
+TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto -lz $TOR_LIB_GDI $TOR_LIB_WS32],
     [#include <openssl/ssl.h>
      char *getenv(const char *);],
     [struct ssl_cipher_st;
@@ -973,7 +973,7 @@ dnl Now check for particular openssl functions.
 save_LIBS="$LIBS"
 save_LDFLAGS="$LDFLAGS"
 save_CPPFLAGS="$CPPFLAGS"
-LIBS="$TOR_OPENSSL_LIBS $LIBS"
+LIBS="$TOR_OPENSSL_LIBS -lz $LIBS"
 LDFLAGS="$TOR_LDFLAGS_openssl $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_openssl $CPPFLAGS"
 
