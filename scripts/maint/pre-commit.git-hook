@@ -21,3 +21,5 @@ src/test/*.[ch] \
 src/test/*/*.[ch] \
 src/tools/*.[ch]
 
+python scripts/maint/checkIncludes.py
+
