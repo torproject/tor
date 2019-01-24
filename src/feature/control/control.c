@@ -4473,7 +4473,7 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
   rend_auth_type_t auth_type = REND_NO_AUTH;
   rend_service_authorization_t *auth = NULL;
 
-  char *cookie = NULL;
+  const char *cookie = NULL;
 
   if (hsaddress) {
     auth = rend_client_lookup_service_authorization(hsaddress);
