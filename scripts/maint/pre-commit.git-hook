@@ -21,5 +21,6 @@ src/test/*.[ch] \
 src/test/*/*.[ch] \
 src/tools/*.[ch]
 
-python scripts/maint/checkIncludes.py
-
+if test -e scripts/maint/checkIncludes.py; then
+    python scripts/maint/checkIncludes.py
+fi
