@@ -9,5 +9,15 @@
 workdir=$(git rev-parse --show-toplevel)
 
 cd "$workdir" || exit 1
-exec make check-changes check-spaces
+
+python scripts/maint/lintChanges.py ./changes
+
+perl scripts/maint/checkSpace.pl -C \
+src/lib/*/*.[ch] \
+src/core/*/*.[ch] \
+src/feature/*/*.[ch] \
+src/app/*/*.[ch] \
+src/test/*.[ch] \
+src/test/*/*.[ch] \
+src/tools/*.[ch]
 
