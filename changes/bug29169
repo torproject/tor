@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Fix compilation warnings in test_circuitpadding.c.  Fixes bug 29169;
+      bugfix on 0.4.0.1-alpha.
