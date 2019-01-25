@@ -360,10 +360,23 @@ rend_client_close_other_intros(const uint8_t *rend_pk_digest)
       origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(c);
       if (oc->rend_data &&
           rend_circuit_pk_digest_eq(oc, rend_pk_digest)) {
-        log_info(LD_REND|LD_CIRC, "Closing introduction circuit %d that we "
-                 "built in parallel (Purpose %d).", oc->global_identifier,
-                 c->purpose);
-        circuit_mark_for_close(c, END_CIRC_REASON_IP_NOW_REDUNDANT);
+        int stream_is_not_ok = 0;
+
+        for (edge_connection_t *oc_stream = oc->p_streams; oc_stream != NULL;
+             oc_stream = oc_stream->next_stream) {
+          if (!connection_edge_compatible_with_circuit(
+                EDGE_TO_ENTRY_CONN(oc_stream), TO_ORIGIN_CIRCUIT(c))) {
+            stream_is_not_ok = 1;
+            break;
+          }
+        }
+
+        if (stream_is_not_ok) {
+          log_info(LD_REND|LD_CIRC, "Closing introduction circuit %d that we "
+                   "built in parallel (Purpose %d).", oc->global_identifier,
+                   c->purpose);
+          circuit_mark_for_close(c, END_CIRC_REASON_IP_NOW_REDUNDANT);
+        }
       }
     }
   }
