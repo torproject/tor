@@ -66,12 +66,6 @@ struct circuit_t {
    */
   circid_t n_circ_id;
 
-  /**
-   * Circuit mux associated with n_chan to which this circuit is attached;
-   * NULL if we have no n_chan.
-   */
-  circuitmux_t *n_mux;
-
   /** Queue of cells waiting to be transmitted on n_chan */
   cell_queue_t n_chan_cells;
 

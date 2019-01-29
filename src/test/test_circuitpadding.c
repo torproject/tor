@@ -115,7 +115,6 @@ new_fake_orcirc(channel_t *nchan, channel_t *pchan)
 
   //circ->n_chan = nchan;
   circ->n_circ_id = get_unique_circ_id_by_chan(nchan);
-  circ->n_mux = NULL; /* ?? */
   cell_queue_init(&(circ->n_chan_cells));
   circ->n_hop = NULL;
   circ->streams_blocked_on_n_chan = 0;
