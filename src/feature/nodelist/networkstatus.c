@@ -1991,7 +1991,7 @@ networkstatus_set_current_consensus(const char *consensus,
         waiting->set_at = now;
         waiting->dl_failed = 0;
         if (!from_cache) {
-          write_bytes_to_file(unverified_fname, consensus, consensus_len, 0);
+          write_bytes_to_file(unverified_fname, consensus, consensus_len, 1);
         }
         if (dl_certs)
           authority_certs_fetch_missing(c, now, source_dir);
@@ -2142,7 +2142,7 @@ networkstatus_set_current_consensus(const char *consensus,
   }
 
   if (!from_cache) {
-    write_bytes_to_file(consensus_fname, consensus, consensus_len, 0);
+    write_bytes_to_file(consensus_fname, consensus, consensus_len, 1);
   }
 
   warn_early_consensus(c, flavor, now);

@@ -1,0 +1,4 @@
+  o Major bugfixes (windows, startup):
+    - When writing a consensus file to disk, always write in
+      "binary" mode so that we can safely map it into memory later.
+      Fixes part bug 28614; bugfix on 0.4.0.1-alpha.
