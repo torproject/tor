@@ -1159,17 +1159,18 @@ The following options are useful only for clients (that is, if
 
     1. When evaluating MapAddress expressions Tor stops when it hits the most
     recently added expression that matches the requested address. So if you
-    have the following in your torrc, www.torproject.org will map to 1.1.1.1:
+    have the following in your torrc, www.torproject.org will map to
+    198.51.100.1:
 
-     MapAddress www.torproject.org 2.2.2.2
-     MapAddress www.torproject.org 1.1.1.1
+     MapAddress www.torproject.org 192.0.2.1
+     MapAddress www.torproject.org 198.51.100.1
 
     2. Tor evaluates the MapAddress configuration until it finds no matches. So
     if you have the following in your torrc, www.torproject.org will map to
-    2.2.2.2:
+    203.0.113.1:
 
-      MapAddress 1.1.1.1 2.2.2.2
-      MapAddress www.torproject.org 1.1.1.1
+      MapAddress 198.51.100.1 203.0.113.1
+      MapAddress www.torproject.org 198.51.100.1
 
     3. The following MapAddress expression is invalid (and will be
     ignored) because you cannot map from a specific address to a wildcard
