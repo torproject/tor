@@ -38,4 +38,4 @@ if [ "$op" != "0" ]; then
 fi
 
 echo
-echo -n "$router "; echo "$lines" | grep 'fingerprint' | sed -e 's/^opt //' -e 's/^fingerprint //';
+printf '%s\n%s' "$router" "$lines" | grep 'fingerprint' | sed -e 's/^opt //' -e 's/^fingerprint //';
