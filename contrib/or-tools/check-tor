@@ -33,8 +33,8 @@ echo ">>" openssl s_client -connect "$ipor"
 timeout 5 openssl s_client -connect "$ipor" < /dev/null
 if [ "$op" != "0" ]; then
 	echo
-	echo ">>" wget --proxy=off -O - http://$ipop/tor/
-	timeout 5 wget --proxy=off -O - http://$ipop/tor/ | head -n3
+	echo ">>" wget --proxy=off -O - http://"$ipop"/tor/
+	timeout 5 wget --proxy=off -O - http://"$ipop"/tor/ | head -n3
 fi
 
 echo
