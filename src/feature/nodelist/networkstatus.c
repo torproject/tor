@@ -178,6 +178,10 @@ static void update_consensus_bootstrap_multiple_downloads(
 static int networkstatus_check_required_protocols(const networkstatus_t *ns,
                                                   int client_mode,
                                                   char **warning_out);
+static int reload_consensus_from_file(const char *fname,
+                                      const char *flavor,
+                                      unsigned flags,
+                                      const char *source_dir);
 
 /** Forget that we've warned about anything networkstatus-related, so we will
  * give fresh warnings if the same behavior happens again. */
@@ -269,27 +273,15 @@ router_reload_consensus_networkstatus(void)
   /* FFFF Suppress warnings if cached consensus is bad? */
   for (flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
     const char *flavor = networkstatus_get_flavor_name(flav);
-    tor_mmap_t *m = networkstatus_map_cached_consensus_impl(flav, flavor, 0);
-    if (m) {
-      if (networkstatus_set_current_consensus(m->data, m->size,
-                                              flavor, flags, NULL) < -1) {
-        log_warn(LD_FS, "Couldn't load consensus %s networkstatus from cache",
-                 flavor);
-      }
-      tor_munmap_file(m);
-    }
+    char *fname = networkstatus_get_cache_fname(flav, flavor, 0);
+    reload_consensus_from_file(fname, flavor, flags, NULL);
+    tor_free(fname);
 
-    m = networkstatus_map_cached_consensus_impl(flav, flavor, 1);
-    if (m) {
-      if (networkstatus_set_current_consensus(m->data, m->size,
-                                     flavor,
-                                     flags | NSSET_WAS_WAITING_FOR_CERTS,
-                                     NULL)) {
-        log_info(LD_FS, "Couldn't load unverified consensus %s networkstatus "
-                 "from cache", flavor);
-      }
-      tor_munmap_file(m);
-    }
+    fname = networkstatus_get_cache_fname(flav, flavor, 1);
+    reload_consensus_from_file(fname, flavor,
+                               flags | NSSET_WAS_WAITING_FOR_CERTS,
+                               NULL);
+    tor_free(fname);
   }
 
   update_certificate_downloads(time(NULL));
@@ -1751,6 +1743,41 @@ networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
 #endif /* defined(TOR_UNIT_TESTS) */
 
 /**
+ * Helper: Read a the current consensus of type <b>flavor</b> from
+ * <b>fname</b>.  Flags and return values are as for
+ * networkstatus_set_current_consensus().
+ **/
+static int
+reload_consensus_from_file(const char *fname,
+                           const char *flavor,
+                           unsigned flags,
+                           const char *source_dir)
+{
+  tor_mmap_t *map = tor_mmap_file(fname);
+  if (!map)
+    return 0;
+
+  int rv = networkstatus_set_current_consensus(map->data, map->size,
+                                               flavor, flags, source_dir);
+#ifdef _WIN32
+  if (rv < 0 && tor_memstr(map->data, map->size, "\r\n")) {
+    log_info(LD_GENERAL, "Found CRLF in consensus file %s; falling back to "
+             "read_file_to_string.", escaped(fname));
+    char *content = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
+    rv = networkstatus_set_current_consensus(content, strlen(content),
+                                             flavor, flags, source_dir);
+    tor_free(content);
+  }
+#endif
+  if (rv < -1) {
+    log_warn(LD_GENERAL, "Couldn't set consensus from cache file %s",
+             escaped(fname));
+  }
+  tor_munmap_file(map);
+  return rv;
+}
+
+/**
  * Helper for handle_missing_protocol_warning: handles either the
  * client case (if <b>is_client</b> is set) or the server case otherwise.
  */
@@ -2178,16 +2205,10 @@ networkstatus_note_certs_arrived(const char *source_dir)
     if (!waiting->consensus)
       continue;
     if (networkstatus_check_consensus_signature(waiting->consensus, 0)>=0) {
-      tor_mmap_t *mapping = networkstatus_map_cached_consensus_impl(
-                                                 i, flavor_name, 1);
-      if (mapping) {
-        networkstatus_set_current_consensus(mapping->data,
-                                            mapping->size,
-                                            flavor_name,
-                                            NSSET_WAS_WAITING_FOR_CERTS,
-                                            source_dir);
-      }
-      tor_munmap_file(mapping);
+      char *fname = networkstatus_get_cache_fname(i, flavor_name, 1);
+      reload_consensus_from_file(fname, flavor_name,
+                                 NSSET_WAS_WAITING_FOR_CERTS, source_dir);
+      tor_free(fname);
     }
   }
 }
