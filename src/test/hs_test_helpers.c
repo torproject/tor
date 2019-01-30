@@ -24,34 +24,32 @@ hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
     tor_addr_t a;
     tor_addr_make_unspec(&a);
     link_specifier_t *ls_legacy = link_specifier_new();
-    /* TODO: this name is wrong: it is sometimes an IPv6 address */
-    link_specifier_t *ls_v4 = link_specifier_new();
+    link_specifier_t *ls_ip = link_specifier_new();
     link_specifier_set_ls_type(ls_legacy, LS_LEGACY_ID);
-    memcpy(link_specifier_getarray_un_legacy_id(ls_legacy),
-           /* TODO: this code is wrong: it copies hex into binary */
-           "0299F268FCA9D55CD157976D39AE92B4B455B3A8",
+    memset(link_specifier_getarray_un_legacy_id(ls_legacy), 'C',
            link_specifier_getlen_un_legacy_id(ls_legacy));
     int family = tor_addr_parse(&a, addr);
     switch (family) {
     case AF_INET:
-          link_specifier_set_ls_type(ls_v4, LS_IPV4);
-          link_specifier_set_un_ipv4_addr(ls_v4, tor_addr_to_ipv4h(&a));
-          link_specifier_set_un_ipv4_port(ls_v4, 9001);
+          link_specifier_set_ls_type(ls_ip, LS_IPV4);
+          link_specifier_set_un_ipv4_addr(ls_ip, tor_addr_to_ipv4h(&a));
+          link_specifier_set_un_ipv4_port(ls_ip, 9001);
           break;
         case AF_INET6:
-          link_specifier_set_ls_type(ls_v4, LS_IPV6);
-          memcpy(link_specifier_getarray_un_ipv6_addr(ls_v4),
+          link_specifier_set_ls_type(ls_ip, LS_IPV6);
+          memcpy(link_specifier_getarray_un_ipv6_addr(ls_ip),
                  tor_addr_to_in6_addr8(&a),
-                 link_specifier_getlen_un_ipv6_addr(ls_v4));
-          link_specifier_set_un_ipv6_port(ls_v4, 9001);
+                 link_specifier_getlen_un_ipv6_addr(ls_ip));
+          link_specifier_set_un_ipv6_port(ls_ip, 9001);
           break;
         default:
-          /* Stop the test, not suppose to have an error. */
-          /* TODO: just tt_fail(), because this code is confusing */
-          tt_int_op(family, OP_EQ, AF_INET);
+          /* Stop the test, not supposed to have an error.
+           * Compare with -1 to show the actual family.
+           */
+          tt_int_op(family, OP_EQ, -1);
     }
     smartlist_add(ip->link_specifiers, ls_legacy);
-    smartlist_add(ip->link_specifiers, ls_v4);
+    smartlist_add(ip->link_specifiers, ls_ip);
   }
 
   ret = ed25519_keypair_generate(&auth_kp, 0);
