@@ -1,0 +1,2 @@
+  o Code simplification and refactoring (shell scripts):
+    - Fix shellcheck warnings in check-tor script. Resolves issue 29072.
