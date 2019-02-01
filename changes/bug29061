@@ -1,0 +1,4 @@
+  o Minor bugfixes (shell scripts):
+    - Change test_bt.sh to bash, as 'ulimit -c' is not supported on POSIX
+      shell. Silences shellcheck warning SC2039. Fixes bug 29061; bugfix on
+      0.3.5.1-alpha.

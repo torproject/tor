@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Test backtrace functionality.
 
 exitcode=0
