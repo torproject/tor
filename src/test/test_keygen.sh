@@ -77,7 +77,7 @@ if [ ! -d "$DATA_DIR" ]; then
   echo "Failure: mktemp invocation result doesn't point to directory" >&2
   exit 3
 fi
-trap "rm -rf '$DATA_DIR'" 0
+trap 'rm -rf "$DATA_DIR"' 0
 
 # Use an absolute path for this or Tor will complain
 DATA_DIR=$(cd "${DATA_DIR}" && pwd)
