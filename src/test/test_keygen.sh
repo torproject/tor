@@ -6,7 +6,7 @@
 umask 077
 set -e
 
-if [ $# -eq 0 ] || [ ! -f ${1} ] || [ ! -x ${1} ]; then
+if [ $# -eq 0 ] || [ ! -f "${1}" ] || [ ! -x "${1}" ]; then
   if [ "$TESTING_TOR_BINARY" = "" ] ; then
     echo "Usage: ${0} PATH_TO_TOR [case-number]"
     exit 1
@@ -65,7 +65,7 @@ die() { echo "$1" >&2 ; exit 5; }
 check_dir() { [ -d "$1" ] || die "$1 did not exist"; }
 check_file() { [ -e "$1" ] || die "$1 did not exist"; }
 check_no_file() { [ -e "$1" ] && die "$1 was not supposed to exist" || true; }
-check_files_eq() { cmp "$1" "$2" || die "$1 and $2 did not match: $(dump $1) vs $(dump $2)"; }
+check_files_eq() { cmp "$1" "$2" || die "$1 and $2 did not match: $(dump "$1") vs $(dump "$2")"; }
 check_keys_eq() { check_files_eq "${SRC}/keys/${1}" "${ME}/keys/${1}"; }
 
 DATA_DIR=$(mktemp -d -t tor_keygen_tests.XXXXXX)
@@ -143,7 +143,7 @@ ME="${DATA_DIR}/case2a"
 SRC="${DATA_DIR}/orig"
 mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/"
-${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/stdout" && die "Somehow succeeded when missing secret key, certs: $(cat ${ME}/stdout)" || true
+${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/stdout" && die "Somehow succeeded when missing secret key, certs: $(cat "${ME}/stdout")" || true
 check_files_eq "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/ed25519_master_id_public_key"
 
 grep "We needed to load a secret key.*but couldn't find it" "${ME}/stdout" >/dev/null || die "Tor didn't declare that it was missing a secret key"
