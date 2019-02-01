@@ -1,0 +1,2 @@
+  o Code simplification and refactoring (shell scripts):
+    - Fix shellcheck warning in test_rust.sh. Fixes issue 29064.
