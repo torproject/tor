@@ -64,7 +64,7 @@ dump() { xxd -p "$1" | tr -d '\n '; }
 die() { echo "$1" >&2 ; exit 5; }
 check_dir() { [ -d "$1" ] || die "$1 did not exist"; }
 check_file() { [ -e "$1" ] || die "$1 did not exist"; }
-check_no_file() { [ -e "$1" ] && die "$1 was not supposed to exist" || true; }
+check_no_file() { if [ -e "$1" ]; then die "$1 was not supposed to exist"; fi }
 check_files_eq() { cmp "$1" "$2" || die "$1 and $2 did not match: $(dump "$1") vs $(dump "$2")"; }
 check_keys_eq() { check_files_eq "${SRC}/keys/${1}" "${ME}/keys/${1}"; }
 
@@ -143,7 +143,9 @@ ME="${DATA_DIR}/case2a"
 SRC="${DATA_DIR}/orig"
 mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/"
-${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/stdout" && die "Somehow succeeded when missing secret key, certs: $(cat "${ME}/stdout")" || true
+if ${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/stdout"; then
+  die "Somehow succeeded when missing secret key, certs: $(cat "${ME}/stdout")"
+fi
 check_files_eq "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/ed25519_master_id_public_key"
 
 grep "We needed to load a secret key.*but couldn't find it" "${ME}/stdout" >/dev/null || die "Tor didn't declare that it was missing a secret key"
@@ -280,7 +282,9 @@ SRC="${DATA_DIR}/encrypted"
 mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_secret_key_encrypted" "${ME}/keys/"
 cp "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/"
-${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/stdout" && die "Tor started with encrypted secret key and no certs" || true
+if ${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/stdout"; then
+  die "Tor started with encrypted secret key and no certs"
+fi
 check_no_file "${ME}/keys/ed25519_signing_cert"
 check_no_file "${ME}/keys/ed25519_signing_secret_key"
 
@@ -369,7 +373,9 @@ mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/"
 cp "${OTHER}/keys/ed25519_master_id_secret_key" "${ME}/keys/"
 
-${TOR} --DataDirectory "${ME}" --list-fingerprint >"${ME}/stdout" && die "Successfully started with mismatched keys!?" || true
+if ${TOR} --DataDirectory "${ME}" --list-fingerprint >"${ME}/stdout"; then
+  die "Successfully started with mismatched keys!?"
+fi
 
 grep "public_key does not match.*secret_key" "${ME}/stdout" >/dev/null || die "Tor didn't declare that there was a key mismatch"
 
@@ -385,7 +391,9 @@ ME="${DATA_DIR}/case11a"
 
 mkdir -p "${ME}/keys"
 
-${TOR} --DataDirectory "${ME}" --passphrase-fd 1 > "${ME}/stdout" && die "Successfully started with passphrase-fd but no keygen?" || true
+if ${TOR} --DataDirectory "${ME}" --passphrase-fd 1 > "${ME}/stdout"; then
+  die "Successfully started with passphrase-fd but no keygen?"
+fi
 
 grep "passphrase-fd specified without --keygen" "${ME}/stdout" >/dev/null || die "Tor didn't declare that there was a problem with the arguments."
 
@@ -401,7 +409,9 @@ ME="${DATA_DIR}/case11b"
 
 mkdir -p "${ME}/keys"
 
-${TOR} --DataDirectory "${ME}" --no-passphrase > "${ME}/stdout" && die "Successfully started with no-passphrase but no keygen?" || true
+if ${TOR} --DataDirectory "${ME}" --no-passphrase > "${ME}/stdout"; then
+  die "Successfully started with no-passphrase but no keygen?"
+fi
 
 grep "no-passphrase specified without --keygen" "${ME}/stdout" >/dev/null || die "Tor didn't declare that there was a problem with the arguments."
 
@@ -417,7 +427,9 @@ ME="${DATA_DIR}/case11C"
 
 mkdir -p "${ME}/keys"
 
-${TOR} --DataDirectory "${ME}" --newpass > "${ME}/stdout" && die "Successfully started with newpass but no keygen?" || true
+if ${TOR} --DataDirectory "${ME}" --newpass > "${ME}/stdout"; then
+  die "Successfully started with newpass but no keygen?"
+fi
 
 grep "newpass specified without --keygen" "${ME}/stdout" >/dev/null || die "Tor didn't declare that there was a problem with the arguments."
 
@@ -455,7 +467,9 @@ ME="${DATA_DIR}/case11E"
 
 mkdir -p "${ME}/keys"
 
-${TOR} --DataDirectory "${ME}" --keygen --passphrase-fd ewigeblumenkraft > "${ME}/stdout" && die "Successfully started with bogus passphrase-fd?" || true
+if ${TOR} --DataDirectory "${ME}" --keygen --passphrase-fd ewigeblumenkraft > "${ME}/stdout"; then
+  die "Successfully started with bogus passphrase-fd?"
+fi
 
 grep "Invalid --passphrase-fd value" "${ME}/stdout" >/dev/null || die "Tor didn't declare that there was a problem with the arguments."
 
@@ -472,7 +486,9 @@ ME="${DATA_DIR}/case11F"
 
 mkdir -p "${ME}/keys"
 
-${TOR} --DataDirectory "${ME}" --keygen --passphrase-fd 1 --no-passphrase > "${ME}/stdout" && die "Successfully started with bogus passphrase-fd combination?" || true
+if ${TOR} --DataDirectory "${ME}" --keygen --passphrase-fd 1 --no-passphrase > "${ME}/stdout"; then
+  die "Successfully started with bogus passphrase-fd combination?"
+fi
 
 grep "no-passphrase specified with --passphrase-fd" "${ME}/stdout" >/dev/null || die "Tor didn't declare that there was a problem with the arguments."
 
