@@ -14,6 +14,8 @@
 #include "core/crypto/onion_tap.h"
 #include "core/crypto/relay_crypto.h"
 
+#include "lib/intmath/weakrng.h"
+
 #ifdef ENABLE_OPENSSL
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
@@ -333,6 +335,65 @@ bench_ed25519(void)
     ed25519_set_impl_params(donna);
     bench_ed25519_impl();
   }
+}
+
+static void
+bench_rand_len(int len)
+{
+  const int N = 100000;
+  int i;
+  char *buf = tor_malloc(len);
+  uint64_t start,end;
+
+  start = perftime();
+  for (i = 0; i < N; ++i) {
+    crypto_rand(buf, len);
+  }
+  end = perftime();
+  printf("crypto_rand(%d): %f nsec.\n", len, NANOCOUNT(start,end,N));
+
+  crypto_fast_rng_t *fr = crypto_fast_rng_new();
+  start = perftime();
+  for (i = 0; i < N; ++i) {
+    crypto_fast_rng_getbytes(fr,(uint8_t*)buf,len);
+  }
+  end = perftime();
+  printf("crypto_fast_rng_getbytes(%d): %f nsec.\n", len,
+         NANOCOUNT(start,end,N));
+  crypto_fast_rng_free(fr);
+
+  if (len <= 32) {
+    start = perftime();
+    for (i = 0; i < N; ++i) {
+      crypto_strongest_rand((uint8_t*)buf, len);
+    }
+    end = perftime();
+    printf("crypto_strongest_rand(%d): %f nsec.\n", len,
+           NANOCOUNT(start,end,N));
+  }
+
+  if (len == 4) {
+    tor_weak_rng_t weak;
+    tor_init_weak_random(&weak, 1337);
+
+    start = perftime();
+    uint32_t t=0;
+    for (i = 0; i < N; ++i) {
+      t += tor_weak_random(&weak);
+    }
+    end = perftime();
+    printf("weak_rand(4): %f nsec.\n", NANOCOUNT(start,end,N));
+  }
+
+  tor_free(buf);
+}
+
+static void
+bench_rand(void)
+{
+  bench_rand_len(4);
+  bench_rand_len(16);
+  bench_rand_len(128);
 }
 
 static void
@@ -695,6 +756,7 @@ static struct benchmark_t benchmarks[] = {
   ENT(onion_TAP),
   ENT(onion_ntor),
   ENT(ed25519),
+  ENT(rand),
 
   ENT(cell_aes),
   ENT(cell_ops),
