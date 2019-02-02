@@ -16,7 +16,7 @@ fi
 # Do we output anything at all?
 ECHO="${ECHO:-echo}"
 # Output is prefixed with the name of the script
-myname=$(basename $0)
+myname=$(basename "$0")
 
 # Save the arguments before we destroy them
 # This might not preserve arguments with spaces in them
