@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # This script calls the equivalent script in chutney/tools
 
@@ -20,7 +20,7 @@ myname=$(basename $0)
 
 # Save the arguments before we destroy them
 # This might not preserve arguments with spaces in them
-ORIGINAL_ARGS="$@"
+ORIGINAL_ARGS=( "$@" )
 
 # We need to find CHUTNEY_PATH, so that we can call the version of this script
 # in chutney/tools with the same arguments. We also need to respect --quiet.
@@ -99,7 +99,7 @@ if [ -d "$CHUTNEY_PATH" ] && [ -x "$TEST_NETWORK" ]; then
     # this may fail if some arguments have spaces in them
     # if so, set CHUTNEY_PATH before calling test-network.sh, and spaces
     # will be handled correctly
-    exec "$TEST_NETWORK" $ORIGINAL_ARGS
+    exec "$TEST_NETWORK" "${ORIGINAL_ARGS[@]}" # $ORIGINAL_ARGS
 else
     $ECHO "$myname: Could not find tools/test-network.sh in CHUTNEY_PATH."
     $ECHO "$myname: Please update your chutney using 'git pull'."
