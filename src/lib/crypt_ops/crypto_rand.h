@@ -16,6 +16,7 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
 #include "lib/testsupport/testsupport.h"
+#include "lib/malloc/malloc.h"
 
 /* random numbers */
 int crypto_seed_rng(void) ATTR_WUR;
@@ -24,6 +25,7 @@ void crypto_rand_unmocked(char *to, size_t n);
 void crypto_strongest_rand(uint8_t *out, size_t out_len);
 MOCK_DECL(void,crypto_strongest_rand_,(uint8_t *out, size_t out_len));
 int crypto_rand_int(unsigned int max);
+unsigned crypto_rand_uint(unsigned limit);
 int crypto_rand_int_range(unsigned int min, unsigned int max);
 uint64_t crypto_rand_uint64_range(uint64_t min, uint64_t max);
 time_t crypto_rand_time_range(time_t min, time_t max);
@@ -40,6 +42,36 @@ struct smartlist_t;
 void *smartlist_choose(const struct smartlist_t *sl);
 void smartlist_shuffle(struct smartlist_t *sl);
 int crypto_force_rand_ssleay(void);
+
+/**
+ * A fast PRNG, for use when the PRNG provided by our crypto library isn't
+ * fast enough.  This one _should_ be cryptographically strong, but
+ * has seen less auditing than the PRNGs in OpenSSL and NSS.  Use with
+ * caution.
+ *
+ * Note that this object is NOT thread-safe.  If you need a thread-safe
+ * prng, use crypto_rand(), or wrap this in a mutex.
+ **/
+typedef struct crypto_fast_rng_t crypto_fast_rng_t;
+/**
+ * Number of bytes used to seed a crypto_rand_fast_t.
+ **/
+crypto_fast_rng_t *crypto_fast_rng_new(void);
+#define CRYPTO_FAST_RNG_SEED_LEN 48
+crypto_fast_rng_t *crypto_fast_rng_new_from_seed(const uint8_t *seed);
+void crypto_fast_rng_getbytes(crypto_fast_rng_t *rng, uint8_t *out, size_t n);
+void crypto_fast_rng_free_(crypto_fast_rng_t *);
+#define crypto_fast_rng_free(c)                                 \
+  FREE_AND_NULL(crypto_fast_rng_t, crypto_fast_rng_free_, (c))
+
+unsigned crypto_fast_rng_get_uint(crypto_fast_rng_t *rng, unsigned limit);
+uint64_t crypto_fast_rng_get_uint64(crypto_fast_rng_t *rng, uint64_t limit);
+double crypto_fast_rng_get_double(crypto_fast_rng_t *rng);
+
+#if defined(TOR_UNIT_TESTS)
+/* Used for white-box testing */
+size_t crypto_fast_rng_get_bytes_used_per_stream(void);
+#endif
 
 #ifdef CRYPTO_RAND_PRIVATE
 
