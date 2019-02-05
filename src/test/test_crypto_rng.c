@@ -173,6 +173,121 @@ test_crypto_rng_strongest(void *arg)
 #undef N
 }
 
+static void
+test_crypto_rng_fast(void *arg)
+{
+  (void)arg;
+  crypto_fast_rng_t *rng = crypto_fast_rng_new();
+  tt_assert(rng);
+
+  /* Rudimentary black-block test to make sure that our prng outputs
+   * have all bits sometimes on and all bits sometimes off. */
+  uint64_t m1 = 0, m2 = ~(uint64_t)0;
+  const int N = 128;
+
+  for (int i=0; i < N; ++i) {
+    uint64_t v;
+    crypto_fast_rng_getbytes(rng, (void*)&v, sizeof(v));
+    m1 |= v;
+    m2 &= v;
+  }
+
+  tt_u64_op(m1, OP_EQ, ~(uint64_t)0);
+  tt_u64_op(m2, OP_EQ, 0);
+
+  /* Check range functions. */
+  int counts[5];
+  memset(counts, 0, sizeof(counts));
+  for (int i=0; i < N; ++i) {
+    unsigned u = crypto_fast_rng_get_uint(rng, 5);
+    tt_int_op(u, OP_GE, 0);
+    tt_int_op(u, OP_LT, 5);
+    counts[u]++;
+
+    uint64_t u64 = crypto_fast_rng_get_uint64(rng, UINT64_C(1)<<40);
+    tt_u64_op(u64, OP_GE, 0);
+    tt_u64_op(u64, OP_LT, UINT64_C(1)<<40);
+  }
+
+  /* All values should have come up once. */
+  for (int i=0; i<5; ++i) {
+    tt_int_op(counts[i], OP_GT, 0);
+  }
+
+ done:
+  crypto_fast_rng_free(rng);
+}
+
+static void
+test_crypto_rng_fast_whitebox(void *arg)
+{
+  (void)arg;
+  const size_t buflen = crypto_fast_rng_get_bytes_used_per_stream();
+  char *buf = tor_malloc_zero(buflen);
+  char *buf2 = tor_malloc_zero(buflen);
+
+  crypto_cipher_t *cipher = NULL;
+  uint8_t seed[CRYPTO_FAST_RNG_SEED_LEN];
+  memset(seed, 0, sizeof(seed));
+
+  /* Start with a prng with zero key and zero IV. */
+  crypto_fast_rng_t *rng = crypto_fast_rng_new_from_seed(seed);
+  tt_assert(rng);
+
+  /* We'll use a stream cipher to keep in sync */
+  cipher = crypto_cipher_new_with_iv_and_bits(seed, seed+32, 256);
+
+  /* The first 48 bytes are used for the next seed -- let's make sure we have
+   * them.
+   */
+  memset(seed, 0, sizeof(seed));
+  crypto_cipher_crypt_inplace(cipher, (char*)seed, sizeof(seed));
+
+  /* if we get 128 bytes, they should match the bytes from the aes256-counter
+   * stream, starting at position 48.
+   */
+  crypto_fast_rng_getbytes(rng, (uint8_t*)buf, 128);
+  memset(buf2, 0, 128);
+  crypto_cipher_crypt_inplace(cipher, buf2, 128);
+  tt_mem_op(buf, OP_EQ, buf2, 128);
+
+  /* Try that again, with an odd number of bytes. */
+  crypto_fast_rng_getbytes(rng, (uint8_t*)buf, 199);
+  memset(buf2, 0, 199);
+  crypto_cipher_crypt_inplace(cipher, buf2, 199);
+  tt_mem_op(buf, OP_EQ, buf2, 199);
+
+  /* Make sure that refilling works as expected: skip all but the last 5 bytes
+   * of this steam. */
+  size_t skip = buflen - (199+128) - 5;
+  crypto_fast_rng_getbytes(rng, (uint8_t*)buf, skip);
+  crypto_cipher_crypt_inplace(cipher, buf2, skip);
+
+  /* Now get the next 128 bytes. The first 5 will come from this stream, and
+   * the next 5 will come from the stream keyed by the new value of 'seed'. */
+  crypto_fast_rng_getbytes(rng, (uint8_t*)buf, 128);
+  memset(buf2, 0, 128);
+  crypto_cipher_crypt_inplace(cipher, buf2, 5);
+  crypto_cipher_free(cipher);
+  cipher = crypto_cipher_new_with_iv_and_bits(seed, seed+32, 256);
+  memset(seed, 0, sizeof(seed));
+  crypto_cipher_crypt_inplace(cipher, (char*)seed, sizeof(seed));
+  crypto_cipher_crypt_inplace(cipher, buf2+5, 128-5);
+  tt_mem_op(buf, OP_EQ, buf2, 128);
+
+  /* And check the next 7 bytes to make sure we didn't discard anything. */
+  crypto_fast_rng_getbytes(rng, (uint8_t*)buf, 7);
+  memset(buf2, 0, 7);
+  crypto_cipher_crypt_inplace(cipher, buf2, 7);
+  tt_mem_op(buf, OP_EQ, buf2, 7);
+
+ done:
+  crypto_fast_rng_free(rng);
+  crypto_cipher_free(cipher);
+  tor_free(buf);
+  tor_free(buf2);
+}
+
 struct testcase_t crypto_rng_tests[] = {
   { "rng", test_crypto_rng, 0, NULL, NULL },
   { "rng_range", test_crypto_rng_range, 0, NULL, NULL },
@@ -183,5 +298,7 @@ struct testcase_t crypto_rng_tests[] = {
     &passthrough_setup, (void*)"nofallback" },
   { "rng_strongest_broken", test_crypto_rng_strongest, TT_FORK,
     &passthrough_setup, (void*)"broken" },
+  { "fast", test_crypto_rng_fast, 0, NULL, NULL },
+  { "fast_whitebox", test_crypto_rng_fast_whitebox, 0, NULL, NULL },
   END_OF_TESTCASES
 };

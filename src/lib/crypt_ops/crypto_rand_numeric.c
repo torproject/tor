@@ -31,9 +31,11 @@
     }                                                                   \
   } while (0)
 
-/** Helper: Return a pseudorandom integer chosen uniformly from the
- * values between 0 and limit-1 inclusive. */
-static unsigned
+/**
+ * Return a pseudorandom integer chosen uniformly from the values between 0
+ * and <b>limit</b>-1 inclusive. limit must be strictly between 0 and
+ * UINT_MAX. */
+unsigned
 crypto_rand_uint(unsigned limit)
 {
   tor_assert(limit < UINT_MAX);
@@ -108,6 +110,14 @@ crypto_rand_uint64(uint64_t max)
                           crypto_rand((char*)&val, sizeof(val)));
 }
 
+#if SIZEOF_INT == 4
+#define UINT_MAX_AS_DOUBLE 4294967296.0
+#elif SIZEOF_INT == 8
+#define UINT_MAX_AS_DOUBLE 1.8446744073709552e+19
+#else
+#error SIZEOF_INT is neither 4 nor 8
+#endif /* SIZEOF_INT == 4 || ... */
+
 /**
  * Return a pseudorandom double d, chosen uniformly from the range
  * 0.0 <= d < 1.0.
@@ -119,12 +129,38 @@ crypto_rand_double(void)
    * more than 32 bits of resolution */
   unsigned int u;
   crypto_rand((char*)&u, sizeof(u));
-#if SIZEOF_INT == 4
-#define UINT_MAX_AS_DOUBLE 4294967296.0
-#elif SIZEOF_INT == 8
-#define UINT_MAX_AS_DOUBLE 1.8446744073709552e+19
-#else
-#error SIZEOF_INT is neither 4 nor 8
-#endif /* SIZEOF_INT == 4 || ... */
+  return ((double)u) / UINT_MAX_AS_DOUBLE;
+}
+
+/**
+ * As crypto_rand_uint, but extract the result from a crypto_fast_rng_t
+ */
+unsigned
+crypto_fast_rng_get_uint(crypto_fast_rng_t *rng, unsigned limit)
+{
+  tor_assert(limit < UINT_MAX);
+  IMPLEMENT_RAND_UNSIGNED(unsigned, UINT_MAX, limit,
+                  crypto_fast_rng_getbytes(rng, (void*)&val, sizeof(val)));
+}
+
+/**
+ * As crypto_rand_uint64, but extract the result from a crypto_fast_rng_t.
+ */
+uint64_t
+crypto_fast_rng_get_uint64(crypto_fast_rng_t *rng, uint64_t limit)
+{
+  tor_assert(limit < UINT64_MAX);
+  IMPLEMENT_RAND_UNSIGNED(uint64_t, UINT64_MAX, limit,
+                  crypto_fast_rng_getbytes(rng, (void*)&val, sizeof(val)));
+}
+
+/**
+ * As crypto_rand_, but extract the result from a crypto_fast_rng_t.
+ */
+double
+crypto_fast_rng_get_double(crypto_fast_rng_t *rng)
+{
+  unsigned int u;
+  crypto_fast_rng_getbytes(rng, (void*)&u, sizeof(u));
   return ((double)u) / UINT_MAX_AS_DOUBLE;
 }
