@@ -605,8 +605,10 @@ AC_CHECK_FUNCS(
 	llround \
 	localtime_r \
 	lround \
+	madvise \
 	memmem \
 	memset_s \
+	minherit \
 	mmap \
 	pipe \
 	pipe2 \
@@ -1450,6 +1452,7 @@ AC_CHECK_HEADERS([errno.h \
 		  inttypes.h \
 		  limits.h \
 		  linux/types.h \
+		  mach/vm_inherit.h \
 		  machine/limits.h \
 		  malloc.h \
 		  malloc/malloc.h \

@@ -40,6 +40,7 @@
 #include "lib/time/tvdiff.h"
 #include "lib/encoding/confline.h"
 #include "lib/net/socketpair.h"
+#include "lib/malloc/map_anon.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>
@@ -58,6 +59,12 @@
 #endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+#ifdef HAVE_SYS_MMAN_H
+#include <sys/mman.h>
+#endif
+#ifdef HAVE_SYS_WAIT_H
+#include <sys/wait.h>
 #endif
 
 #ifdef _WIN32
@@ -6093,6 +6100,104 @@ test_util_log_mallinfo(void *arg)
   tor_free(mem);
 }
 
+static void
+test_util_map_anon(void *arg)
+{
+  (void)arg;
+  char *ptr = NULL;
+  size_t sz = 16384;
+
+  /* Basic checks. */
+  ptr = tor_mmap_anonymous(sz, 0);
+  tt_ptr_op(ptr, OP_NE, 0);
+  ptr[sz-1] = 3;
+  tt_int_op(ptr[0], OP_EQ, 0);
+  tt_int_op(ptr[sz-2], OP_EQ, 0);
+  tt_int_op(ptr[sz-1], OP_EQ, 3);
+
+  /* Try again, with a private (non-swappable) mapping. */
+  tor_munmap_anonymous(ptr, sz);
+  ptr = tor_mmap_anonymous(sz, ANONMAP_PRIVATE);
+  tt_ptr_op(ptr, OP_NE, 0);
+  ptr[sz-1] = 10;
+  tt_int_op(ptr[0], OP_EQ, 0);
+  tt_int_op(ptr[sz/2], OP_EQ, 0);
+  tt_int_op(ptr[sz-1], OP_EQ, 10);
+
+  /* Now let's test a drop-on-fork mapping. */
+  tor_munmap_anonymous(ptr, sz);
+  ptr = tor_mmap_anonymous(sz, ANONMAP_NOINHERIT);
+  tt_ptr_op(ptr, OP_NE, 0);
+  ptr[sz-1] = 10;
+  tt_int_op(ptr[0], OP_EQ, 0);
+  tt_int_op(ptr[sz/2], OP_EQ, 0);
+  tt_int_op(ptr[sz-1], OP_EQ, 10);
+
+ done:
+  tor_munmap_anonymous(ptr, sz);
+}
+
+static void
+test_util_map_anon_nofork(void *arg)
+{
+  (void)arg;
+#if !defined(HAVE_MADVISE) && !defined(HAVE_MINHERIT)
+  /* The operating system doesn't support this. */
+  tt_skip();
+ done:
+  ;
+#else
+  /* We have the right OS support.  We're going to try marking the buffer as
+   * either zero-on-fork or as drop-on-fork, whichever is supported.  Then we
+   * will fork and send a byte back to the parent process.  This will either
+   * crash, or send zero. */
+
+  char *ptr = NULL;
+  size_t sz = 16384;
+  int pipefd[2] = {-1, -1};
+
+  tor_munmap_anonymous(ptr, sz);
+  ptr = tor_mmap_anonymous(sz, ANONMAP_NOINHERIT);
+  tt_ptr_op(ptr, OP_NE, 0);
+  memset(ptr, 0xd0, sz);
+
+  tt_int_op(0, OP_EQ, pipe(pipefd));
+  pid_t child = fork();
+  if (child == 0) {
+    /* We're in the child. */
+    close(pipefd[0]);
+    ssize_t r = write(pipefd[1], &ptr[sz-1], 1); /* This may crash. */
+    close(pipefd[1]);
+    if (r < 0)
+      exit(1);
+    exit(0);
+  }
+  tt_int_op(child, OP_GT, 0);
+  /* In the parent. */
+  close(pipefd[1]);
+  pipefd[1] = -1;
+  char buf[1];
+  ssize_t r = read(pipefd[0], buf, 1);
+#if defined(INHERIT_ZERO) || defined(MADV_WIPEONFORK)
+  tt_int_op((int)r, OP_EQ, 1); // child should send us a byte.
+  tt_int_op(buf[0], OP_EQ, 0);
+#else
+  tt_int_op(r, OP_LE, 0); // child said nothing; it should have crashed.
+#endif
+  int ws;
+  waitpid(child, &ws, 0);
+
+ done:
+  tor_munmap_anonymous(ptr, sz);
+  if (pipefd[0] >= 0) {
+    close(pipefd[0]);
+  }
+  if (pipefd[1] >= 0) {
+    close(pipefd[1]);
+  }
+#endif
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, test_util_ ## name , 0, NULL, NULL }
 
@@ -6230,5 +6335,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(htonll, 0),
   UTIL_TEST(get_unquoted_path, 0),
   UTIL_TEST(log_mallinfo, 0),
+  UTIL_TEST(map_anon, 0),
+  UTIL_TEST(map_anon_nofork, 0),
   END_OF_TESTCASES
 };
