@@ -53,8 +53,8 @@ TMPFILE=$(mktemp)
 trap 'rm -f "$TMPFILE"' 0
 
 for dirserver in $DIRSERVERS; do
-	wget -q -O "$TMPFILE" "http://$dirserver/tor/keys/fp/$identity"
-	if [ "$?" = 0 ]; then
+	if wget -q -O "$TMPFILE" "http://$dirserver/tor/keys/fp/$identity"
+        then
 		break
 	else
 		cat /dev/null > "$TMPFILE"
