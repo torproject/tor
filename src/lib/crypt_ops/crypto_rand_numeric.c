@@ -9,6 +9,39 @@
 #include "lib/log/util_bug.h"
 
 /**
+ * Implementation macro: yields code that returns a uniform unbiased
+ * random number between 0 and limit.  "type" is the type of the number to
+ * return; "maxval" is the largest possible value of "type"; and "fill_stmt"
+ * is a code snippet that fills an object named "val" with random bits.
+ **/
+#define IMPLEMENT_RAND_UNSIGNED(type, maxval, limit, fill_stmt)         \
+  do {                                                                  \
+    type val;                                                           \
+    type cutoff;                                                        \
+    tor_assert((limit) > 0);                                            \
+                                                                        \
+    /* We ignore any values that are >= 'cutoff,' to avoid biasing */   \
+    /* the distribution with clipping at the upper end of the type's */ \
+    /* range. */                                                        \
+    cutoff = (maxval) - ((maxval)%(limit));                             \
+    while (1) {                                                         \
+      fill_stmt;                                                        \
+      if (val < cutoff)                                                 \
+        return val % (limit);                                           \
+    }                                                                   \
+  } while (0)
+
+/** Helper: Return a pseudorandom integer chosen uniformly from the
+ * values between 0 and limit-1 inclusive. */
+static unsigned
+crypto_rand_uint(unsigned limit)
+{
+  tor_assert(limit < UINT_MAX);
+  IMPLEMENT_RAND_UNSIGNED(unsigned, UINT_MAX, limit,
+                          crypto_rand((char*)&val, sizeof(val)));
+}
+
+/**
  * Return a pseudorandom integer, chosen uniformly from the values
  * between 0 and <b>max</b>-1 inclusive.  <b>max</b> must be between 1 and
  * INT_MAX+1, inclusive.
@@ -16,21 +49,13 @@
 int
 crypto_rand_int(unsigned int max)
 {
-  unsigned int val;
-  unsigned int cutoff;
-  tor_assert(max <= ((unsigned int)INT_MAX)+1);
-  tor_assert(max > 0); /* don't div by 0 */
-
-  /* We ignore any values that are >= 'cutoff,' to avoid biasing the
-   * distribution with clipping at the upper end of unsigned int's
-   * range.
+  /* We can't use IMPLEMENT_RAND_UNSIGNED directly, since we're trying
+   * to return a signed type. Instead we make sure that the range is
+   * reasonable for a nonnegative int, use crypto_rand_uint(), and cast.
    */
-  cutoff = UINT_MAX - (UINT_MAX%max);
-  while (1) {
-    crypto_rand((char*)&val, sizeof(val));
-    if (val < cutoff)
-      return val % max;
-  }
+  tor_assert(max <= ((unsigned int)INT_MAX)+1);
+
+  return (int)crypto_rand_uint(max);
 }
 
 /**
@@ -78,21 +103,9 @@ crypto_rand_time_range(time_t min, time_t max)
 uint64_t
 crypto_rand_uint64(uint64_t max)
 {
-  uint64_t val;
-  uint64_t cutoff;
   tor_assert(max < UINT64_MAX);
-  tor_assert(max > 0); /* don't div by 0 */
-
-  /* We ignore any values that are >= 'cutoff,' to avoid biasing the
-   * distribution with clipping at the upper end of unsigned int's
-   * range.
-   */
-  cutoff = UINT64_MAX - (UINT64_MAX%max);
-  while (1) {
-    crypto_rand((char*)&val, sizeof(val));
-    if (val < cutoff)
-      return val % max;
-  }
+  IMPLEMENT_RAND_UNSIGNED(uint64_t, UINT64_MAX, max,
+                          crypto_rand((char*)&val, sizeof(val)));
 }
 
 /**
