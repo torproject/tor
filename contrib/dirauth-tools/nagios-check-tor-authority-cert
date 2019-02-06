@@ -74,10 +74,10 @@ now=$(date +%s)
 if [ "$now" -ge "$expiryunix" ]; then
 	echo "CRITICAL: Certificate expired $expirydate (authority $identity)."
 	exit 2
-elif [ "$(( $now + 7*24*60*60 ))" -ge "$expiryunix" ]; then
+elif [ "$(( now + 7*24*60*60 ))" -ge "$expiryunix" ]; then
 	echo "CRITICAL: Certificate expires $expirydate (authority $identity)."
 	exit 2
-elif [ "$(( $now + 30*24*60*60 ))" -ge "$expiryunix" ]; then
+elif [ "$(( now + 30*24*60*60 ))" -ge "$expiryunix" ]; then
 	echo "WARNING: Certificate expires $expirydate (authority $identity)."
 	exit 1
 else
