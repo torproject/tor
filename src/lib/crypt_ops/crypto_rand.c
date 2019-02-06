@@ -11,7 +11,6 @@
  * number generators, and working with randomness.
  **/
 
-#ifndef CRYPTO_RAND_PRIVATE
 #define CRYPTO_RAND_PRIVATE
 
 #include "lib/crypt_ops/crypto_rand.h"
@@ -737,5 +736,3 @@ crypto_force_rand_ssleay(void)
 #endif
   return 0;
 }
-
-#endif /* !defined(CRYPTO_RAND_PRIVATE) */
