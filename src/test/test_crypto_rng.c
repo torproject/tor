@@ -207,6 +207,10 @@ test_crypto_rng_fast(void *arg)
     uint64_t u64 = crypto_fast_rng_get_uint64(rng, UINT64_C(1)<<40);
     tt_u64_op(u64, OP_GE, 0);
     tt_u64_op(u64, OP_LT, UINT64_C(1)<<40);
+
+    double d = crypto_fast_rng_get_double(rng);
+    tt_assert(d >= 0.0);
+    tt_assert(d < 1.0);
   }
 
   /* All values should have come up once. */
