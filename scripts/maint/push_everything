@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Push all active maintenance and release branches to origin.
+
+# This script needs to get updated when new branches are made, or old branches
+# become unsupported.
+
+git push origin \
+   master \
+   {release,maint}-0.3.5 \
+   {release,maint}-0.3.4 \
+   {release,maint}-0.3.3 \
+   {release,maint}-0.2.9

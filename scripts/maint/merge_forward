@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# Merge each maintenance branch into its corresponding release branch, and
+# into the next maintenance branch.
+#
+# This script assumes that you have git configured to use multiple worktrees,
+# and that you have placed them in the same directories that are listed below.
+
+# This script needs to get updated when new branches are made, or old branches
+# become unsupported.
+
+set -e
+
+cd ~/src/tor-029
+git checkout maint-0.2.9
+
+cd ~/src/tor-r029
+git checkout release-0.2.9
+git merge --no-edit maint-0.2.9
+
+cd ~/src/tor-033
+git checkout maint-0.3.3
+git merge --no-edit maint-0.2.9
+
+cd ~/src/tor-r033
+git checkout release-0.3.3
+git merge --no-edit maint-0.3.3
+
+cd ~/src/tor-034
+git checkout maint-0.3.4
+git merge --no-edit maint-0.3.3
+
+cd ~/src/tor-r034
+git checkout release-0.3.4
+git merge --no-edit maint-0.3.4
+
+cd ~/src/tor-035
+git checkout maint-0.3.5
+git merge --no-edit maint-0.3.4
+
+cd ~/src/tor-r035
+git checkout release-0.3.5
+git merge --no-edit maint-0.3.5
+
+cd ~/src/tor
+git checkout master
+git merge --no-edit maint-0.3.5

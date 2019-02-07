@@ -1,0 +1,3 @@
+  o Minor features (maintenance):
+    - Tor's repository now includes the scripts that we use to keep
+      the maintenance branches in sync. Closes ticket 29391.
