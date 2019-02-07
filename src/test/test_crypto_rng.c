@@ -229,8 +229,9 @@ test_crypto_rng_fast_whitebox(void *arg)
   const size_t buflen = crypto_fast_rng_get_bytes_used_per_stream();
   char *buf = tor_malloc_zero(buflen);
   char *buf2 = tor_malloc_zero(buflen);
+  char *buf3 = NULL, *buf4 = NULL;
 
-  crypto_cipher_t *cipher = NULL;
+  crypto_cipher_t *cipher = NULL, *cipher2 = NULL;
   uint8_t seed[CRYPTO_FAST_RNG_SEED_LEN];
   memset(seed, 0, sizeof(seed));
 
@@ -285,11 +286,26 @@ test_crypto_rng_fast_whitebox(void *arg)
   crypto_cipher_crypt_inplace(cipher, buf2, 7);
   tt_mem_op(buf, OP_EQ, buf2, 7);
 
+  /* Now try the optimization for long outputs. */
+  buf3 = tor_malloc(65536);
+  crypto_fast_rng_getbytes(rng, (uint8_t*)buf3, 65536);
+
+  buf4 = tor_malloc_zero(65536);
+  uint8_t seed2[CRYPTO_FAST_RNG_SEED_LEN];
+  memset(seed2, 0, sizeof(seed2));
+  crypto_cipher_crypt_inplace(cipher, (char*)seed2, sizeof(seed2));
+  cipher2 = crypto_cipher_new_with_iv_and_bits(seed2, seed2+32, 256);
+  crypto_cipher_crypt_inplace(cipher2, buf4, 65536);
+  tt_mem_op(buf3, OP_EQ, buf4, 65536);
+
  done:
   crypto_fast_rng_free(rng);
   crypto_cipher_free(cipher);
+  crypto_cipher_free(cipher2);
   tor_free(buf);
   tor_free(buf2);
+  tor_free(buf3);
+  tor_free(buf4);
 }
 
 struct testcase_t crypto_rng_tests[] = {
