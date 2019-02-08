@@ -105,7 +105,7 @@ AVG_PKT=900 # should be more like 600 for non-exit nodes
 # The queue size should be no larger than your bandwidth-delay
 # product. This is RT latency*bandwidth/MTU/2
 
-BDP=$(($RTT_LATENCY \* $RATE_UP / $AVG_PKT))
+BDP=$((RTT_LATENCY * RATE_UP / AVG_PKT))
 
 # Further research indicates that the BDP calculations should use
 # RTT/sqrt(n) where n is the expected number of active connections..
