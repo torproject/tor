@@ -104,12 +104,12 @@ AVG_PKT=900 # should be more like 600 for non-exit nodes
 # The queue size should be no larger than your bandwidth-delay
 # product. This is RT latency*bandwidth/MTU/2
 
-BDP=$(expr $RTT_LATENCY \* $RATE_UP / $AVG_PKT)
+BDP=$(($RTT_LATENCY \* $RATE_UP / $AVG_PKT))
 
 # Further research indicates that the BDP calculations should use
 # RTT/sqrt(n) where n is the expected number of active connections..
 
-BDP=$(expr "$BDP" / 4)
+BDP=$(("$BDP" / 4))
 
 if [ "$1" = "status" ]
 then
@@ -157,7 +157,7 @@ tc class add dev $DEV parent 1: classid 1:1 htb rate ${RATE_UP}kbit
 
 # Create the two classes, giving Tor at least RATE_UP_TOR kbit and capping
 # total upstream at RATE_UP so the queue is under our control.
-tc class add dev $DEV parent 1:1 classid 1:20 htb rate $(expr $RATE_UP - $RATE_UP_TOR)kbit ceil ${RATE_UP}kbit prio 0
+tc class add dev $DEV parent 1:1 classid 1:20 htb rate $(($RATE_UP -$RATE_UP_TOR))kbit ceil ${RATE_UP}kbit prio 0
 tc class add dev $DEV parent 1:1 classid 1:21 htb rate $[$RATE_UP_TOR]kbit ceil ${RATE_UP_TOR_CEIL}kbit prio 10
 
 # Start up pfifo
