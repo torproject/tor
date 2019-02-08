@@ -16,6 +16,5 @@ for B in "$DIRB"/*; do
   fi
   perl -pe 's/^\s*\!*\d+(\*?):/        1$1:/; s/^([^:]+:)[\d\s]+:/$1/; s/^ *-:(Runs|Programs):.*//;' "$B" > "$B.tmp"
   diff -u "$A.tmp" "$B.tmp" |perl -pe 's/^((?:\+\+\+|---)(?:.*tmp))\s+.*/$1/;'
-  rm "$A.tmp" "$B.tmp"
+  rm -f "$A.tmp" "$B.tmp"
 done
-
