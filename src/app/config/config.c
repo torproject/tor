@@ -1086,10 +1086,14 @@ config_free_all(void)
  * (We return "[scrubbed]" if SafeLogging is "1", and address otherwise.)
  */
 const char *
-safe_str_client(const char *address)
+safe_str_client_opts(const or_options_t *options, const char *address)
 {
   tor_assert(address);
-  if (get_options()->SafeLogging_ == SAFELOG_SCRUB_ALL)
+  if (!options) {
+    options = get_options();
+  }
+
+  if (options->SafeLogging_ == SAFELOG_SCRUB_ALL)
     return "[scrubbed]";
   else
     return address;
@@ -1103,10 +1107,14 @@ safe_str_client(const char *address)
  * otherwise.)
  */
 const char *
-safe_str(const char *address)
+safe_str_opts(const or_options_t *options, const char *address)
 {
   tor_assert(address);
-  if (get_options()->SafeLogging_ != SAFELOG_SCRUB_NONE)
+  if (!options) {
+    options = get_options();
+  }
+
+  if (options->SafeLogging_ != SAFELOG_SCRUB_NONE)
     return "[scrubbed]";
   else
     return address;

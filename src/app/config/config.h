@@ -143,6 +143,16 @@ MOCK_DECL(char *,
 #define get_cachedir_fname_suffix(sub1, suffix) \
   options_get_cachedir_fname2_suffix(get_options(), (sub1), NULL, (suffix))
 
+#define safe_str_client(address) \
+  safe_str_client_opts(NULL, address)
+#define safe_str(address) \
+  safe_str_opts(NULL, address)
+
+const char * safe_str_client_opts(const or_options_t *options,
+                                  const char *address);
+const char * safe_str_opts(const or_options_t *options,
+                           const char *address);
+
 int using_default_dir_authorities(const or_options_t *options);
 
 int create_keys_directory(const or_options_t *options);
