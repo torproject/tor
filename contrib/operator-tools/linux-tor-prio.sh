@@ -110,7 +110,7 @@ BDP=$(expr $RTT_LATENCY \* $RATE_UP / $AVG_PKT)
 # Further research indicates that the BDP calculations should use
 # RTT/sqrt(n) where n is the expected number of active connections..
 
-BDP=$(expr $BDP / 4)
+BDP=$(expr "$BDP" / 4)
 
 if [ "$1" = "status" ]
 then
@@ -148,7 +148,7 @@ fi
 
 # Outbound Shaping (limits total bandwidth to RATE_UP)
 
-ip link set dev $DEV qlen $BDP
+ip link set dev $DEV qlen "$BDP"
 
 # Add HTB root qdisc, default is high prio
 tc qdisc add dev $DEV root handle 1: htb default 20
@@ -162,8 +162,8 @@ tc class add dev $DEV parent 1:1 classid 1:20 htb rate $(expr $RATE_UP - $RATE_U
 tc class add dev $DEV parent 1:1 classid 1:21 htb rate $[$RATE_UP_TOR]kbit ceil ${RATE_UP_TOR_CEIL}kbit prio 10
 
 # Start up pfifo
-tc qdisc add dev $DEV parent 1:20 handle 20: pfifo limit $BDP
-tc qdisc add dev $DEV parent 1:21 handle 21: pfifo limit $BDP
+tc qdisc add dev $DEV parent 1:20 handle 20: pfifo limit "$BDP"
+tc qdisc add dev $DEV parent 1:21 handle 21: pfifo limit "$BDP"
 
 # filter traffic into classes by fwmark
 tc filter add dev $DEV parent 1:0 prio 0 protocol ip handle 20 fw flowid 1:20
@@ -176,13 +176,13 @@ iptables -t mangle -I $CHAIN -o $DEV -j TORSHAPER-OUT
 
 # Set firewall marks
 # Low priority to Tor
-if [ ""$TOR_IP == "" ]
+if [ "$TOR_IP" == "" ]
 then
 	echo "Using UID-based QoS. UID $TOR_UID marked as low priority."
-	iptables -t mangle -A TORSHAPER-OUT -m owner --uid-owner $TOR_UID -j MARK --set-mark 21
+	iptables -t mangle -A TORSHAPER-OUT -m owner --uid-owner "$TOR_UID" -j MARK --set-mark 21
 else
 	echo "Using IP-based QoS. $TOR_IP marked as low priority."
-	iptables -t mangle -A TORSHAPER-OUT -s $TOR_IP -j MARK --set-mark 21
+	iptables -t mangle -A TORSHAPER-OUT -s "$TOR_IP" -j MARK --set-mark 21
 fi
 
 # High prio for everything else
