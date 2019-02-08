@@ -479,6 +479,44 @@ test_socks_5_authenticate(void *ptr)
   ;
 }
 
+/** Perform SOCKS 5 authentication with empty username/password fields.
+ * Technically this violates RfC 1929, but some client software will send
+ * this kind of message to Tor.
+ * */
+static void
+test_socks_5_authenticate_empty_user_pass(void *ptr)
+{
+  SOCKS_TEST_INIT();
+
+  /* SOCKS 5 Negotiate username/password authentication */
+  ADD_DATA(buf, "\x05\x01\x02");
+
+  tt_assert(!fetch_from_buf_socks(buf, socks,
+                                   get_options()->TestSocks,
+                                   get_options()->SafeSocks));
+  tt_int_op(2,OP_EQ, socks->replylen);
+  tt_int_op(5,OP_EQ, socks->reply[0]);
+  tt_int_op(SOCKS_USER_PASS,OP_EQ, socks->reply[1]);
+  tt_int_op(5,OP_EQ, socks->socks_version);
+
+  tt_int_op(0,OP_EQ, buf_datalen(buf));
+
+  /* SOCKS 5 Send username/password auth message with empty user/pass fields */
+  ADD_DATA(buf, "\x01\x00\x00");
+  tt_assert(!fetch_from_buf_socks(buf, socks,
+                                   get_options()->TestSocks,
+                                   get_options()->SafeSocks));
+  tt_int_op(5,OP_EQ, socks->socks_version);
+  tt_int_op(2,OP_EQ, socks->replylen);
+  tt_int_op(1,OP_EQ, socks->reply[0]);
+  tt_int_op(0,OP_EQ, socks->reply[1]);
+
+  tt_int_op(0,OP_EQ, socks->usernamelen);
+  tt_int_op(0,OP_EQ, socks->passwordlen);
+
+ done:
+  ;
+}
 /** Perform SOCKS 5 authentication and send data all in one go */
 static void
 test_socks_5_authenticate_with_data(void *ptr)
@@ -1035,6 +1073,7 @@ struct testcase_t socks_tests[] = {
   SOCKSENT(5_auth_unsupported_version),
   SOCKSENT(5_auth_before_negotiation),
   SOCKSENT(5_authenticate),
+  SOCKSENT(5_authenticate_empty_user_pass),
   SOCKSENT(5_authenticate_with_data),
   SOCKSENT(5_malformed_commands),
   SOCKSENT(5_bad_arguments),
