@@ -50,7 +50,7 @@
 #define OPENSSL_V_SERIES(a,b,c) \
   OPENSSL_VER((a),(b),(c),0,0)
 
-#ifdef ANDROID
+#ifdef OPENSSL_NO_ENGINE
 /* Android's OpenSSL seems to have removed all of its Engine support. */
 #define DISABLE_ENGINES
 #endif
