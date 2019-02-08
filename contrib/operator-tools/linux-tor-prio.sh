@@ -159,7 +159,7 @@ tc class add dev $DEV parent 1: classid 1:1 htb rate ${RATE_UP}kbit
 # Create the two classes, giving Tor at least RATE_UP_TOR kbit and capping
 # total upstream at RATE_UP so the queue is under our control.
 tc class add dev $DEV parent 1:1 classid 1:20 htb rate $((RATE_UP - RATE_UP_TOR))kbit ceil ${RATE_UP}kbit prio 0
-tc class add dev $DEV parent 1:1 classid 1:21 htb rate $[$RATE_UP_TOR]kbit ceil ${RATE_UP_TOR_CEIL}kbit prio 10
+tc class add dev $DEV parent 1:1 classid 1:21 htb rate $((RATE_UP_TOR))kbit ceil ${RATE_UP_TOR_CEIL}kbit prio 10
 
 # Start up pfifo
 tc qdisc add dev $DEV parent 1:20 handle 20: pfifo limit "$BDP"
