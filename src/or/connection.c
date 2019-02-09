@@ -4112,6 +4112,23 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
 }
 
 /**
+ * Write a <b>string</b> (of size <b>len</b> to directory connection
+ * <b>dir_conn</b>. Apply compression if connection is configured to use
+ * it and finalize it if <b>done</b> is true.
+ */
+void
+connection_dir_buf_add(const char *string, size_t len,
+                       dir_connection_t *dir_conn, int done)
+{
+  if (dir_conn->compress_state != NULL) {
+    connection_buf_add_compress(string, len, dir_conn, done);
+    return;
+  }
+
+  connection_buf_add(string, len, TO_CONN(dir_conn));
+}
+
+/**
  * Add all bytes from <b>buf</b> to <b>conn</b>'s outbuf, draining them
  * from <b>buf</b>. (If the connection is marked and will soon be closed,
  * nothing is drained.)
