@@ -1,0 +1,3 @@
+  o Minor bugfixes (linux seccomp sandbox):
+    - Fix startup crash when experimental sandbox support is enabled.
+      Fixes bug 29150; bugfix on 0.4.0.1-alpha. Patch by Peter Gerber.
