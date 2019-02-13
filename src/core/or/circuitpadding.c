@@ -399,17 +399,17 @@ circpad_choose_state_length(circpad_machine_state_t *mi)
  */
 static circpad_delay_t
 circpad_distribution_sample_iat_delay(const circpad_state_t *state,
-                                      circpad_delay_t start_usec)
+                                      circpad_delay_t min_delay)
 {
   double val = circpad_distribution_sample(state->iat_dist);
   /* These comparisons are safe, because the output is in the range
    * [0, 2**32), and double has a precision of 53 bits. */
   val = MAX(0, val);
-  val = MIN(val, state->range_usec);
+  val = MIN(val, state->dist_max_usec);
 
-  /* This addition is exact: val is at most 2**32-1, start_usec
+  /* This addition is exact: val is at most 2**32-1, min_delay
    * is at most 2**32-1, and doubles have a precision of 53 bits. */
-  val += start_usec;
+  val += min_delay;
 
   /* Clamp the distribution at infinite delay val */
   return (circpad_delay_t)MIN(tor_llround(val), CIRCPAD_DELAY_INFINITE);
@@ -429,7 +429,6 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
   const circpad_hist_token_t *histogram = NULL;
   circpad_hist_index_t curr_bin = 0;
   circpad_delay_t bin_start, bin_end;
-  circpad_delay_t start_usec;
   /* These three must all be larger than circpad_hist_token_t, because
    * we sum several circpad_hist_token_t values across the histogram */
   uint64_t curr_weight = 0;
@@ -438,14 +437,11 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
 
   tor_assert(state);
 
-  if (state->use_rtt_estimate)
-    start_usec = mi->rtt_estimate_usec+state->start_usec;
-  else
-    start_usec = state->start_usec;
-
   if (state->iat_dist.type != CIRCPAD_DIST_NONE) {
     /* Sample from a fixed IAT distribution and return */
-    return circpad_distribution_sample_iat_delay(state, start_usec);
+    circpad_delay_t min_iat_delay = state->use_rtt_estimate ?
+      mi->rtt_estimate_usec + state->dist_min_usec : state->dist_min_usec;
+    return circpad_distribution_sample_iat_delay(state, min_iat_delay);
   } else if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE) {
     /* We have a mutable histogram. Do basic sanity check and apply: */
     if (BUG(!mi->histogram) ||

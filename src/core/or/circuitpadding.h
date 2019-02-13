@@ -297,24 +297,6 @@ typedef struct circpad_state_t {
    *  refilling the histogram. */
   uint32_t histogram_total_tokens;
 
-  /** Minimum padding delay of this state in microseconds.
-   *
-   *  If histograms are used, this is the left (and right) bound of the first
-   *  bin (since it has zero width).
-   *
-   *  If a delay probability distribution is used, this represents the minimum
-   *  delay we can sample from the distribution.
-   */
-  circpad_delay_t start_usec;
-
-  /** If histograms are used, this is the width of the whole histogram in
-   *  microseconds, and it's used to calculate individual bin width.
-   *
-   *  If a delay probability distribution is used, this is used as the max
-   *  delay we can sample from the distribution.
-   */
-  circpad_delay_t range_usec;
-
   /**
    * Represents a delay probability distribution (aka IAT distribution). It's a
    * parametrized way of encoding inter-packet delay information in
@@ -327,6 +309,13 @@ typedef struct circpad_state_t {
    * results of sampling from this distribution (range_sec is used as a max).
    */
   circpad_distribution_t iat_dist;
+  /*  If a delay probability distribution is used, this represents the minimum
+   *  delay we can sample from the distribution. */
+  circpad_delay_t dist_min_usec;
+  /*  If a delay probability distribution is used, this is used as the max
+   *  delay we can sample from the distribution.
+   */
+  circpad_delay_t dist_max_usec;
 
   /**
    * The length dist is a parameterized way of encoding how long this
