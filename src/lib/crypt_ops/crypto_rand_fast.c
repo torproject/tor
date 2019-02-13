@@ -146,7 +146,7 @@ crypto_fast_rng_new_from_seed(const uint8_t *seed)
 static inline crypto_cipher_t *
 cipher_from_seed(const uint8_t *seed)
 {
-  return crypto_cipher_new_with_iv_and_bits(seed, seed+KEY_LEN, KEY_LEN*8);
+  return crypto_cipher_new_with_iv_and_bits(seed, seed+KEY_LEN, KEY_BITS);
 }
 
 /**
