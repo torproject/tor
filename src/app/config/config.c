@@ -3554,7 +3554,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "(Bridge/V3)AuthoritativeDir is set.");
     /* If we have a v3bandwidthsfile and it's broken, complain on startup */
     if (options->V3BandwidthsFile && !old_options) {
-      dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL);
+      dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL,
+                                       NULL);
     }
     /* same for guardfraction file */
     if (options->GuardfractionFile && !old_options) {

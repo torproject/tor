@@ -20,6 +20,7 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
 
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/encoding/keyval.h"
 
 /** Total number of routers with measured bandwidth; this is set by
@@ -205,7 +206,8 @@ dirserv_get_credible_bandwidth_kb(const routerinfo_t *ri)
 int
 dirserv_read_measured_bandwidths(const char *from_file,
                                  smartlist_t *routerstatuses,
-                                 smartlist_t *bw_file_headers)
+                                 smartlist_t *bw_file_headers,
+                                 uint8_t *digest_out)
 {
   FILE *fp = tor_fopen_cloexec(from_file, "r");
   int applied_lines = 0;
@@ -219,6 +221,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
   int rv = -1;
   char *line = NULL;
   size_t n = 0;
+  crypto_digest_t *digest = crypto_digest256_new(DIGEST_SHA256);
 
   /* Initialise line, so that we can't possibly run off the end. */
 
@@ -233,11 +236,14 @@ dirserv_read_measured_bandwidths(const char *from_file,
     log_warn(LD_DIRSERV, "Empty bandwidth file");
     goto err;
   }
+  /* If the line could be gotten, add it to the digest */
+  crypto_digest_add_bytes(digest, (const char *) line, strlen(line));
 
   if (!strlen(line) || line[strlen(line)-1] != '\n') {
     log_warn(LD_DIRSERV, "Long or truncated time in bandwidth file: %s",
              escaped(line));
-    goto err;
+    /* Continue adding lines to the digest. */
+    goto continue_digest;
   }
 
   line[strlen(line)-1] = '\0';
@@ -245,14 +251,14 @@ dirserv_read_measured_bandwidths(const char *from_file,
   if (!ok) {
     log_warn(LD_DIRSERV, "Non-integer time in bandwidth file: %s",
              escaped(line));
-    goto err;
+    goto continue_digest;
   }
 
-  now = time(NULL);
+  now = approx_time();
   if ((now - file_time) > MAX_MEASUREMENT_AGE) {
     log_warn(LD_DIRSERV, "Bandwidth measurement file stale. Age: %u",
              (unsigned)(time(NULL) - file_time));
-    goto err;
+    goto continue_digest;
   }
 
   /* If timestamp was correct and bw_file_headers is not NULL,
@@ -267,6 +273,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
   while (!feof(fp)) {
     measured_bw_line_t parsed_line;
     if (tor_getline(&line, &n, fp) >= 0) {
+      crypto_digest_add_bytes(digest, (const char *) line, strlen(line));
       if (measured_bw_line_parse(&parsed_line, line,
                                  line_is_after_headers) != -1) {
         /* This condition will be true when the first complete valid bw line
@@ -305,6 +312,14 @@ dirserv_read_measured_bandwidths(const char *from_file,
            "Applied %d measurements.", applied_lines);
   rv = 0;
 
+ continue_digest:
+  /* Continue parsing lines to return the digest of the Bandwidth File. */
+  while (!feof(fp)) {
+    if (tor_getline(&line, &n, fp) >= 0) {
+      crypto_digest_add_bytes(digest, (const char *) line, strlen(line));
+    }
+  }
+
  err:
   if (line) {
     // we need to raw_free this buffer because we got it from tor_getdelim()
@@ -312,6 +327,9 @@ dirserv_read_measured_bandwidths(const char *from_file,
   }
   if (fp)
     fclose(fp);
+  if (digest_out)
+    crypto_digest_get_digest(digest, (char *) digest_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
   return rv;
 }
 
