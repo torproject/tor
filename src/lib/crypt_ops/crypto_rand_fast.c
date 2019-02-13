@@ -79,7 +79,8 @@ struct crypto_fast_rng_t {
   /** How many bytes are remaining in cbuf.bytes? */
   uint16_t bytes_left;
   struct cbuf {
-    /** The seed that we will use the next time that we refill cbuf. */
+    /** The seed (key and IV) that we will use the next time that we refill
+     * cbuf. */
     uint8_t seed[SEED_LEN];
     /**
      * Bytes that we are yielding to the user.  The next byte to be
@@ -150,7 +151,7 @@ cipher_from_seed(const uint8_t *seed)
 
 /**
  * Helper: refill the seed bytes and output buffer of <b>rng</b>, using
- * the input seed bytes as input to the stream cipher.
+ * the input seed bytes as input (key and IV) for the stream cipher.
  *
  * If the n_till_reseed counter has reached zero, mix more random bytes into
  * the seed before refilling the buffer.
