@@ -690,6 +690,12 @@ test_util_time(void *arg)
     expect_single_log_msg_containing(msg);                              \
     teardown_capture_of_logs();                                         \
   } while (0)
+#define CHECK_POSSIBLE_EINVAL() do {                            \
+    if (mock_saved_log_n_entries()) {                           \
+      expect_single_log_msg_containing("Invalid argument");     \
+    }                                                           \
+    teardown_capture_of_logs();                                 \
+  } while (0)
 
 #define CHECK_TIMEGM_ARG_OUT_OF_RANGE(msg) \
     CHECK_TIMEGM_WARNING("Out-of-range argument to tor_timegm")
@@ -885,12 +891,16 @@ test_util_time(void *arg)
 
   if (sizeof(time_t) == 4 || sizeof(time_t) == 8) {
     t_res = -1*(1 << 30);
+    CAPTURE();
     tor_gmtime_r(&t_res, &b_time);
+    CHECK_POSSIBLE_EINVAL();
     tt_assert(b_time.tm_year == (1970-1900) ||
               b_time.tm_year == (1935-1900));
 
     t_res = INT32_MIN;
+    CAPTURE();
     tor_gmtime_r(&t_res, &b_time);
+    CHECK_POSSIBLE_EINVAL();
     tt_assert(b_time.tm_year == (1970-1900) ||
               b_time.tm_year == (1901-1900));
   }
@@ -900,7 +910,9 @@ test_util_time(void *arg)
     /* one of the smallest tm_year values my 64 bit system supports:
      * b_time.tm_year == (-292275055LL-1900LL) without clamping */
     t_res = -9223372036854775LL;
+    CAPTURE();
     tor_gmtime_r(&t_res, &b_time);
+    CHECK_POSSIBLE_EINVAL();
     tt_assert(b_time.tm_year == (1970-1900) ||
               b_time.tm_year == (1-1900));
 
@@ -926,7 +938,9 @@ test_util_time(void *arg)
   {
     /* As above, but with localtime. */
     t_res = -9223372036854775LL;
+    CAPTURE();
     tor_localtime_r(&t_res, &b_time);
+    CHECK_POSSIBLE_EINVAL();
     tt_assert(b_time.tm_year == (1970-1900) ||
               b_time.tm_year == (1-1900));
 
@@ -983,7 +997,9 @@ test_util_time(void *arg)
     /* one of the largest tm_year values my 64 bit system supports:
      * b_time.tm_year == (292278994L-1900L) without clamping */
     t_res = 9223372036854775LL;
+    CAPTURE();
     tor_gmtime_r(&t_res, &b_time);
+    CHECK_POSSIBLE_EINVAL();
     tt_assert(b_time.tm_year == (2037-1900) ||
               b_time.tm_year == (9999-1900));
 
@@ -1004,7 +1020,9 @@ test_util_time(void *arg)
   {
     /* As above but with localtime. */
     t_res = 9223372036854775LL;
+    CAPTURE();
     tor_localtime_r(&t_res, &b_time);
+    CHECK_POSSIBLE_EINVAL();
     tt_assert(b_time.tm_year == (2037-1900) ||
               b_time.tm_year == (9999-1900));
 
@@ -1047,7 +1065,10 @@ test_util_time(void *arg)
 
   /* This value is out of range with 32 bit time_t, but in range for 64 bit
    * time_t */
+  CAPTURE();
   format_rfc1123_time(timestr, (time_t)2150000000UL);
+  CHECK_POSSIBLE_EINVAL();
+
 #if SIZEOF_TIME_T == 4
 #if 0
   /* Wrapping around will have made it this. */
@@ -1216,7 +1237,9 @@ test_util_time(void *arg)
   /* This value is out of range with 32 bit time_t, but in range for 64 bit
    * time_t */
   tv.tv_sec = (time_t)2150000000UL;
+  CAPTURE();
   format_iso_time(timestr, (time_t)tv.tv_sec);
+  CHECK_POSSIBLE_EINVAL();
 #if SIZEOF_TIME_T == 4
   /* format_iso_time should indicate failure on overflow, but it doesn't yet.
    * Hopefully #18480 will improve the failure semantics in this case.
@@ -1231,6 +1254,7 @@ test_util_time(void *arg)
 
 #undef CAPTURE
 #undef CHECK_TIMEGM_ARG_OUT_OF_RANGE
+#undef CHECK_POSSIBLE_EINVAL
 
  done:
   teardown_capture_of_logs();

@@ -239,6 +239,15 @@ tinytest_postfork(void)
   init_pregenerated_keys();
 }
 
+static void
+log_callback_failure(int severity, uint32_t domain, const char *msg)
+{
+  (void)msg;
+  if (severity == LOG_ERR || (domain & LD_BUG)) {
+    tinytest_set_test_failed_();
+  }
+}
+
 /** Main entry point for unit test code: parse the command line, and run
  * some unit tests. */
 int
@@ -287,12 +296,21 @@ main(int c, const char **v)
   c = i_out;
 
   {
+    /* setup logs to stdout */
     log_severity_list_t s;
     memset(&s, 0, sizeof(s));
     set_log_severity_config(loglevel, LOG_ERR, &s);
     /* ALWAYS log bug warnings. */
     s.masks[LOG_WARN-LOG_ERR] |= LD_BUG;
     add_stream_log(&s, "", fileno(stdout));
+  }
+  {
+    /* Setup logs that cause failure. */
+    log_severity_list_t s;
+    memset(&s, 0, sizeof(s));
+    set_log_severity_config(LOG_ERR, LOG_ERR, &s);
+    s.masks[LOG_WARN-LOG_ERR] |= LD_BUG;
+    add_callback_log(&s, log_callback_failure);
   }
   init_protocol_warning_severity_level();
 
