@@ -51,6 +51,10 @@ crypto_rand_uint(unsigned limit)
 int
 crypto_rand_int(unsigned int max)
 {
+  /* We can't use IMPLEMENT_RAND_UNSIGNED directly, since we're trying
+   * to return a signed type. Instead we make sure that the range is
+   * reasonable for a nonnegative int, use crypto_rand_uint(), and cast.
+   */
   tor_assert(max <= ((unsigned int)INT_MAX)+1);
 
   return (int)crypto_rand_uint(max);
