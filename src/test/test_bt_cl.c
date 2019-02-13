@@ -4,6 +4,7 @@
 #include "orconfig.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/resource.h>
 
 /* To prevent 'assert' from going away. */
 #undef TOR_COVERAGE
@@ -87,6 +88,9 @@ main(int argc, char **argv)
          "\"backtraces\" or \"none\"");
     return 1;
   }
+
+  struct rlimit rlim = { .rlim_cur = 0, .rlim_max = 0 };
+  setrlimit(RLIMIT_CORE, &rlim);
 
 #if !(defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
    defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION))
