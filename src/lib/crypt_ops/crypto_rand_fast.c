@@ -24,8 +24,8 @@
  * BUFLEN - SEED_LEN bytes to the user as they invoke the PRNG.  As we yield
  * bytes to the user, we clear them from the buffer.
  *
- * Every RESEED_AFTER times we refill the buffer, we mix in an additional
- * SEED_LEN bytes from our strong PRNG into the seed.
+ * After we have refilled the buffer RESEED_AFTER times, we mix in an
+ * additional SEED_LEN bytes from our strong PRNG into the seed.
  *
  * If the user ever asks for a huge number of bytes at once, we pull SEED_LEN
  * bytes from the PRNG and use them with our stream cipher to fill the user's
