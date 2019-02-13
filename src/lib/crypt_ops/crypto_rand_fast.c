@@ -42,6 +42,8 @@
 #include "lib/cc/ctassert.h"
 #include "lib/malloc/map_anon.h"
 
+#include "lib/log/util_bug.h"
+
 #include <string.h>
 
 /* Alias for CRYPTO_FAST_RNG_SEED_LEN to make our code shorter.
@@ -203,20 +205,25 @@ crypto_fast_rng_free_(crypto_fast_rng_t *rng)
  * optimize the case when the user has asked for a huge output.
  **/
 static void
-crypto_fast_rng_getbytes_impl(crypto_fast_rng_t *rng, uint8_t *out, size_t n)
+crypto_fast_rng_getbytes_impl(crypto_fast_rng_t *rng, uint8_t *out,
+                              const size_t n)
 {
-  while (n) {
+  size_t bytes_to_yield = n;
+
+  while (bytes_to_yield) {
     if (rng->bytes_left == 0)
       crypto_fast_rng_refill(rng);
 
-    const size_t to_copy = MIN(rng->bytes_left, n);
+    const size_t to_copy = MIN(rng->bytes_left, bytes_to_yield);
+
+    tor_assert(sizeof(rng->buf.bytes) >= rng->bytes_left);
     uint8_t *copy_from = rng->buf.bytes +
       (sizeof(rng->buf.bytes) - rng->bytes_left);
     memcpy(out, copy_from, to_copy);
     memset(copy_from, 0, to_copy);
 
     out += to_copy;
-    n -= to_copy;
+    bytes_to_yield -= to_copy;
     rng->bytes_left -= to_copy;
   }
 }
