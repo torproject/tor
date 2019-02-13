@@ -18,7 +18,7 @@
  *
  * Here's how it works:
  *
- * We generate psuedorandom bytes using AES-CTR-256.  We generate BUFLEN bytes
+ * We generate pseudorandom bytes using AES-CTR-256.  We generate BUFLEN bytes
  * at a time.  When we do this, we keep the first SEED_LEN bytes as the key
  * and the IV for our next invocation of AES_CTR, and yield the remaining
  * BUFLEN - SEED_LEN bytes to the user as they invoke the PRNG.  As we yield
