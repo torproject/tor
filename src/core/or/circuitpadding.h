@@ -228,13 +228,15 @@ typedef uint16_t circpad_statenum_t;
 #define  CIRCPAD_STATENUM_MAX   (UINT16_MAX)
 
 /** A histogram is used to sample padding delays given a machine state.  This
- *  constant defines the maximum histogram width (i.e. the max number of bins)
+ *  constant defines the maximum histogram width (i.e. the max number of bins).
  *
- *  Each histogram bin is twice as large as the previous. Two exceptions: The
- *  first bin has zero width (which means that minimum delay is applied to the
- *  next padding cell), and the last bin (infinity bin) has infinite width
- *  (which means that the next padding cell will be delayed infinitely). */
-#define CIRCPAD_MAX_HISTOGRAM_LEN (sizeof(circpad_delay_t)*8 + 1)
+ * The current limit is arbitrary and could be raised if there is a need,
+ * however too many bins will be hard to serialize in the future.
+ *
+ * Memory concerns are not so great here since the corresponding histogram and
+ * histogram_edges arrays are global and not per-circuit.
+ */
+#define CIRCPAD_MAX_HISTOGRAM_LEN (100)
 
 /**
  * A state of a padding state machine. The information here are immutable and
@@ -248,15 +250,48 @@ typedef uint16_t circpad_statenum_t;
  * or the consensus.
  */
 typedef struct circpad_state_t {
-  /** If a histogram is used for this state, this specifies the number of bins
-   *  of this histogram. Histograms must have at least 2 bins.
+  /**
+   * If a histogram is used for this state, this specifies the number of bins
+   * of this histogram. Histograms must have at least 2 bins.
    *
-   *  If a delay probability distribution is used for this state, this is set
-   *  to 0. */
+   * In particular, the following histogram:
+   *
+   * Tokens
+   *         +
+   *      10 |    +----+
+   *       9 |    |    |           +---------+
+   *       8 |    |    |           |         |
+   *       7 |    |    |     +-----+         |
+   *       6 +----+ Bin+-----+     |         +---------------+
+   *       5 |    | #1 |     |     |         |               |
+   *         | Bin|    | Bin | Bin |  Bin #4 |    Bin #5     |
+   *         | #0 |    | #2  | #3  |         | (infinity bin)|
+   *         |    |    |     |     |         |               |
+   *         |    |    |     |     |         |               |
+   *       0 +----+----+-----+-----+---------+---------------+
+   *         0   100  200   350   500      1000              ∞  microseconds
+   *
+   * would be specified the following way:
+   *    histogram_len = 6;
+   *    histogram[] =        {   6,  10,   6,  7,    9,     6 }
+   *    histogram_edges[] =  { 0, 100, 200, 350, 500, 1000 }
+   *
+   * If a delay probability distribution is used for this state, this is set
+   * to 0. */
   circpad_hist_index_t histogram_len;
   /** The histogram itself: an array of uint16s of tokens, whose
-   *  widths are exponentially spaced, in microseconds */
+   *  widths are exponentially spaced, in microseconds.
+   *
+   *  This array must have histogram_len elements. */
   circpad_hist_token_t histogram[CIRCPAD_MAX_HISTOGRAM_LEN];
+  /* The histogram bin edges in usec.
+   *
+   * Each element of this array specifies the left edge of the corresponding
+   * bin. The rightmost edge is always infinity and is not specified in this
+   * array.
+   *
+   * This array must have histogram_len+1 elements. */
+  circpad_delay_t histogram_edges[CIRCPAD_MAX_HISTOGRAM_LEN+1];
   /** Total number of tokens in this histogram. This is a constant and is *not*
    *  decremented every time we spend a token. It's used for initializing and
    *  refilling the histogram. */
