@@ -1015,7 +1015,7 @@ test_address_get_if_addrs6(void *arg)
 
   (void)arg;
 
-  rv = get_interface_address6(LOG_ERR, AF_INET6, &tor_addr);
+  rv = get_interface_address6(LOG_WARN, AF_INET6, &tor_addr);
 
   /* Work even on systems without IPv6 interfaces */
   if (rv == 0) {
