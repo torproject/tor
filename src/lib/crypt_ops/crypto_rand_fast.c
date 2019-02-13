@@ -55,7 +55,7 @@
 /* The number of random bytes that we can yield to the user after each
  * time we fill a crypto_fast_rng_t's buffer.
  */
-#define BUFLEN (MAPLEN - 4 - SEED_LEN)
+#define BUFLEN (MAPLEN - 2*sizeof(uint16_t) - SEED_LEN)
 
 /* The number of buffer refills after which we should fetch more
  * entropy from crypto_strongest_rand().
