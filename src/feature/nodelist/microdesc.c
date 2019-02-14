@@ -108,10 +108,12 @@ microdesc_note_outdated_dirserver(const char *relay_digest)
 {
   char relay_hexdigest[HEX_DIGEST_LEN+1];
 
-  /* Don't register outdated dirservers if we don't have a live consensus,
-   * since we might be trying to fetch microdescriptors that are not even
-   * currently active. */
-  if (!networkstatus_get_live_consensus(approx_time())) {
+  /* If we have a reasonably live consensus, then most of our dirservers should
+   * still be caching all the microdescriptors in it. Reasonably live
+   * consensuses are up to a day old. But microdescriptors expire 7 days after
+   * the last consensus that referenced them. */
+  if (!networkstatus_get_reasonably_live_consensus(approx_time(),
+                                                   FLAV_MICRODESC)) {
     return;
   }
 
