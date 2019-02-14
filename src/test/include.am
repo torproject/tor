@@ -68,7 +68,8 @@ noinst_PROGRAMS+= \
 	src/test/test-process \
 	src/test/test_workqueue \
 	src/test/test-switch-id \
-	src/test/test-timers
+	src/test/test-timers \
+	src/test/test-rng
 endif
 
 src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
@@ -120,6 +121,7 @@ src_test_test_SOURCES += \
 	src/test/test_controller_events.c \
 	src/test/test_crypto.c \
 	src/test/test_crypto_ope.c \
+	src/test/test_crypto_rng.c \
 	src/test/test_data.c \
 	src/test/test_dir.c \
 	src/test/test_dir_common.c \
@@ -257,7 +259,13 @@ src_test_test_LDADD = \
 src_test_test_slow_CPPFLAGS = $(src_test_test_CPPFLAGS)
 src_test_test_slow_CFLAGS = $(src_test_test_CFLAGS)
 src_test_test_slow_LDADD = $(src_test_test_LDADD)
-src_test_test_slow_LDFLAGS = $(src_test_test_LDFLAGS)
+src_test_test_slow_LDFLAGS =@TOR_LDFLAGS_openssl@
+
+src_test_test_rng_CPPFLAGS = $(src_test_test_CPPFLAGS)
+src_test_test_rng_CFLAGS = $(src_test_test_CFLAGS)
+src_test_test_rng_SOURCES = src/test/test_rng.c
+src_test_test_rng_LDFLAGS =  $(src_test_test_LDFLAGS)
+src_test_test_rng_LDADD = $(src_test_test_LDADD)
 
 src_test_test_memwipe_CPPFLAGS = $(src_test_test_CPPFLAGS)
 # Don't use bugtrap cflags here: memwipe tests require memory violations.
