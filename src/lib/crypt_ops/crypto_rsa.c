@@ -31,6 +31,10 @@
 #include <sys/stat.h>
 #endif
 
+#ifdef ENABLE_OPENSSL
+#include <openssl/rsa.h>
+#endif
+
 /** Return the number of bytes added by padding method <b>padding</b>.
  */
 int

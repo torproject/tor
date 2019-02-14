@@ -43,7 +43,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "lib/log/log.h"
 #include "lib/ctime/di_ops.h"
 
-#ifdef ANDROID
+#ifdef OPENSSL_NO_ENGINE
 /* Android's OpenSSL seems to have removed all of its Engine support. */
 #define DISABLE_ENGINES
 #endif
