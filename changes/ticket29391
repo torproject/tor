@@ -1,0 +1,3 @@
+  o Minor feature (maintenance scripts):
+    - Add to scripts/maint/ helper maintainer scripts used for git maintenance.
+      Closes ticket 29391.
