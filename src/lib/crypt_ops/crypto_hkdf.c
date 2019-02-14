@@ -18,6 +18,7 @@
 #include "lib/log/util_bug.h"
 
 #ifdef ENABLE_OPENSSL
+#include <openssl/evp.h>
 #include <openssl/opensslv.h>
 
 #if defined(HAVE_ERR_LOAD_KDF_STRINGS)
