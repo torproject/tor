@@ -2086,13 +2086,15 @@ circpad_circ_client_machine_init(void)
 
   // FIXME: Tune this histogram
   circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_len = 2;
-  circ_client_machine->states[CIRCPAD_STATE_BURST].start_usec = 500;
-  circ_client_machine->states[CIRCPAD_STATE_BURST].range_usec = 1000000;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_edges[0]= 500;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_edges[1]= 1000000;
+
   /* We have 5 tokens in the histogram, which means that all circuits will look
    * like they have 7 hops (since we start this machine after the second hop,
    * and tokens are decremented for any valid hops, and fake extends are
    * used after that -- 2+5==7). */
   circ_client_machine->states[CIRCPAD_STATE_BURST].histogram[0] = 5;
+
   circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_total_tokens = 5;
 
   circ_client_machine->machine_num = smartlist_len(origin_padding_machines);
@@ -2143,8 +2145,9 @@ circpad_circ_responder_machine_init(void)
   circ_responder_machine->states[CIRCPAD_STATE_BURST].use_rtt_estimate = 1;
   /* The histogram is 2 bins: an empty one, and infinity */
   circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram_len = 2;
-  circ_responder_machine->states[CIRCPAD_STATE_BURST].start_usec = 5000;
-  circ_responder_machine->states[CIRCPAD_STATE_BURST].range_usec = 1000000;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram_edges[0]= 500;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram_edges[1] =
+    1000000;
   /* During burst state we wait forever for padding to arrive.
 
      We are waiting for a padding cell from the client to come in, so that we
@@ -2175,8 +2178,15 @@ circpad_circ_responder_machine_init(void)
      before you send a padding response */
   circ_responder_machine->states[CIRCPAD_STATE_GAP].use_rtt_estimate = 1;
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_len = 6;
-  circ_responder_machine->states[CIRCPAD_STATE_GAP].start_usec = 5000;
-  circ_responder_machine->states[CIRCPAD_STATE_GAP].range_usec = 1000000;
+  /* Specify histogram bins */
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[0]= 500;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[1]= 1000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[2]= 2000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[3]= 4000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[4]= 8000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[5]= 16000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[6]=1000000;
+  /* Specify histogram tokens */
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[0] = 0;
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[1] = 1;
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[2] = 2;
@@ -2184,6 +2194,7 @@ circpad_circ_responder_machine_init(void)
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[4] = 1;
   /* Total number of tokens */
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_total_tokens = 6;
+
   circ_responder_machine->states[CIRCPAD_STATE_GAP].token_removal =
       CIRCPAD_TOKEN_REMOVAL_CLOSEST_USEC;
 
