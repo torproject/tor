@@ -222,25 +222,15 @@ circpad_machine_current_state(const circpad_machine_state_t *mi)
 }
 
 /**
- * Calculate the lower bound of a histogram bin. The upper bound
- * is obtained by calling this function with bin+1, and subtracting 1.
- *
- * The 0th bin has a special value -- it only represents start_usec.
- * This is so we can specify a probability on 0-delay values.
- *
- * After bin 0, bins are exponentially spaced, so that each subsequent
- * bin is twice as large as the previous. This is done so that higher
- * time resolution is given to lower time values.
- *
- * The infinity bin is a the last bin in the array (histogram_len-1).
- * It has a usec value of CIRCPAD_DELAY_INFINITE (UINT32_MAX).
+ * Get the lower bound of a histogram bin. The upper bound is obtained by
+ * calling this function with bin+1, and subtracting 1.
  */
 STATIC circpad_delay_t
 circpad_histogram_bin_to_usec(const circpad_machine_state_t *mi,
                               circpad_hist_index_t bin)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
-  circpad_delay_t start_usec;
+  circpad_delay_t rtt_add_usec = 0;
 
   /* Our state should have been checked to be non-null by the caller
    * (circpad_machine_remove_token()) */
@@ -248,27 +238,29 @@ circpad_histogram_bin_to_usec(const circpad_machine_state_t *mi,
     return CIRCPAD_DELAY_INFINITE;
   }
 
-  if (state->use_rtt_estimate)
-    start_usec = mi->rtt_estimate_usec+state->start_usec;
-  else
-    start_usec = state->start_usec;
-
-  if (bin >= CIRCPAD_INFINITY_BIN(state))
+  /* The infinity bin has an upper bound of infinity, so make sure we return
+   * that if they ask for it. */
+  if (bin > CIRCPAD_INFINITY_BIN(mi)) {
     return CIRCPAD_DELAY_INFINITE;
+  }
 
-  if (bin == 0)
-    return start_usec;
+  /* If we are using an RTT estimate, consider it as well. */
+  if (state->use_rtt_estimate) {
+    rtt_add_usec = mi->rtt_estimate_usec;
+  }
 
-  if (bin == 1)
-    return start_usec+1;
+  return state->histogram_edges[bin] + rtt_add_usec;
+}
 
-  /* The bin widths double every index, so that we can have more resolution
-   * for lower time values in the histogram. */
-  const circpad_time_t bin_width_exponent =
-        1 << (CIRCPAD_INFINITY_BIN(state) - bin);
-  return (circpad_delay_t)MIN(start_usec +
-                              state->range_usec/bin_width_exponent,
-                              CIRCPAD_DELAY_INFINITE);
+/**
+ * Like circpad_histogram_bin_to_usec() but return the upper bound of bin.
+ * (The upper bound is included in the bin.)
+ */
+STATIC circpad_delay_t
+histogram_get_bin_upper_bound(const circpad_machine_state_t *mi,
+                              circpad_hist_index_t bin)
+{
+  return circpad_histogram_bin_to_usec(mi, bin+1) - 1;
 }
 
 /** Return the midpoint of the histogram bin <b>bin_index</b>. */
@@ -287,19 +279,17 @@ circpad_get_histogram_bin_midpoint(const circpad_machine_state_t *mi,
  * Return the bin that contains the usec argument.
  * "Contains" is defined as us in [lower, upper).
  *
- * This function will never return the infinity bin (histogram_len-1),
- * in order to simplify the rest of the code.
- *
- * This means that technically the last bin (histogram_len-2)
- * has range [start_usec+range_usec, CIRCPAD_DELAY_INFINITE].
+ * This function will never return the infinity bin (histogram_len-1), in order
+ * to simplify the rest of the code, so if a usec is provided that falls above
+ * the highest non-infinity bin, that bin index will be returned.
  */
 STATIC circpad_hist_index_t
 circpad_histogram_usec_to_bin(const circpad_machine_state_t *mi,
                               circpad_delay_t usec)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
-  circpad_delay_t start_usec;
-  int32_t bin; /* Larger than return type to properly clamp overflow */
+  circpad_delay_t rtt_add_usec = 0;
+  int32_t bin;
 
   /* Our state should have been checked to be non-null by the caller
    * (circpad_machine_remove_token()) */
@@ -307,34 +297,25 @@ circpad_histogram_usec_to_bin(const circpad_machine_state_t *mi,
     return 0;
   }
 
-  if (state->use_rtt_estimate)
-    start_usec = mi->rtt_estimate_usec+state->start_usec;
-  else
-    start_usec = state->start_usec;
+  /* If we are using an RTT estimate, consider it as well. */
+  if (state->use_rtt_estimate) {
+    rtt_add_usec = mi->rtt_estimate_usec;
+  }
 
-  /* The first bin (#0) has zero width and starts (and ends) at start_usec. */
-  if (usec <= start_usec)
-    return 0;
+  /* Walk through the bins and check the upper bound of each bin, if 'usec' is
+   * less-or-equal to that, return that bin. If rtt_estimate is enabled then
+   * add that to the upper bound of each bin.
+   *
+   * We don't want to return the infinity bin here, so don't go there. */
+  for (bin = 0 ; bin < CIRCPAD_INFINITY_BIN(state) ; bin++) {
+    if (usec <= histogram_get_bin_upper_bound(mi, bin) + rtt_add_usec) {
+      return bin;
+    }
+  }
 
-  if (usec == start_usec+1)
-    return 1;
-
-  const circpad_time_t histogram_range_usec = state->range_usec;
-  /* We need to find the bin corresponding to our position in the range.
-   * Since bins are exponentially spaced in powers of two, we need to
-   * take the log2 of our position in histogram_range_usec. However,
-   * since tor_log2() returns the floor(log2(u64)), we have to adjust
-   * it to behave like ceil(log2(u64)). This is verified in our tests
-   * to properly invert the operation done in
-   * circpad_histogram_bin_to_usec(). */
-  bin = CIRCPAD_INFINITY_BIN(state) -
-    tor_log2(2*histogram_range_usec/(usec-start_usec+1));
-
-  /* Clamp the return value to account for timevals before the start
-   * of bin 0, or after the last bin. Don't return the infinity bin
-   * index. */
-  bin = MIN(MAX(bin, 1), CIRCPAD_INFINITY_BIN(state)-1);
-  return bin;
+  /* We don't want to return the infinity bin here, so if we still didn't find
+   * the right bin, return the highest non-infinity bin */
+  return CIRCPAD_INFINITY_BIN(state)-1;
 }
 
 /**
@@ -506,10 +487,6 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
    * function below samples from [bin_start, bin_end) */
   bin_end = circpad_histogram_bin_to_usec(mi, curr_bin+1);
 
-  /* Truncate the high bin in case it's the infinity bin:
-   * Don't actually schedule an "infinite"-1 delay */
-  bin_end = MIN(bin_end, start_usec+state->range_usec);
-
   // Sample uniformly between histogram[i] to histogram[i+1]-1,
   // but no need to sample if they are the same timeval (aka bin 0 or bin 1).
   if (bin_end <= bin_start+1)
@@ -621,7 +598,7 @@ circpad_machine_first_higher_index(const circpad_machine_state_t *mi,
   /* Don't remove from the infinity bin */
   for (; bin < CIRCPAD_INFINITY_BIN(mi); bin++) {
     if (mi->histogram[bin] &&
-        circpad_histogram_bin_to_usec(mi, bin+1) > target_bin_usec) {
+        histogram_get_bin_upper_bound(mi, bin) >= target_bin_usec) {
       return bin;
     }
   }

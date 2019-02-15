@@ -710,6 +710,10 @@ circpad_send_command_to_hop,(struct origin_circuit_t *circ, uint8_t hopnum,
                              uint8_t relay_command, const uint8_t *payload,
                              ssize_t payload_len));
 
+STATIC circpad_delay_t
+histogram_get_bin_upper_bound(const circpad_machine_state_t *mi,
+                              circpad_hist_index_t bin);
+
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *origin_padding_machines;
 extern smartlist_t *relay_padding_machines;
