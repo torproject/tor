@@ -239,8 +239,8 @@ tor_addr_make_null(tor_addr_t *a, sa_family_t family)
 }
 
 /** Return true iff <b>ip</b> is an IP reserved to localhost or local networks
- * in RFC1918 or RFC4193 or RFC4291. (fec0::/10, deprecated by RFC3879, is
- * also treated as internal for now.)
+ * in RFC1918, RFC4193, RFC4291 or RFC6598. (fec0::/10, deprecated by RFC3879,
+ * is also treated as internal for now.)
  */
 int
 tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
@@ -297,6 +297,13 @@ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
         ((iph4 & 0xfff00000) == 0xac100000) || /*  172.16/12 */
         ((iph4 & 0xffff0000) == 0xc0a80000))   /* 192.168/16 */
       return 1;
+    /* Check for RFC6598 (100.64/10) Carrier Grade NAT ranges. */
+    if ((iph4 & 0xffc00000) == 0x64400000) {
+      if (for_listening & IP_LISTEN_EXTERNAL)
+        return 0;
+      else if (for_listening & IP_LISTEN_INTERNAL)
+        return 1;
+    }
     return 0;
   }
 

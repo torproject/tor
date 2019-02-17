@@ -6622,7 +6622,7 @@ warn_nonlocal_client_ports(const smartlist_t *ports,
       continue;
     if (port->is_unix_addr) {
       /* Unix sockets aren't accessible over a network. */
-    } else if (!tor_addr_is_internal(&port->addr, 1)) {
+    } else if (!tor_addr_is_internal(&port->addr, IP_LISTEN_EXTERNAL)) {
       log_warn(LD_CONFIG, "You specified a public address '%s' for %sPort. "
                "Other people on the Internet might find your computer and "
                "use it as an open proxy. Please don't allow this unless you "
@@ -6649,7 +6649,7 @@ warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
     if (port->is_unix_addr)
       continue;
     /* XXX maybe warn even if address is RFC1918? */
-    if (!tor_addr_is_internal(&port->addr, 1)) {
+    if (!tor_addr_is_internal(&port->addr, IP_LISTEN_EXTERNAL)) {
       log_warn(LD_CONFIG, "You specified a public address '%s' for %sPort. "
                "This is not advised; this address is supposed to only be "
                "exposed on localhost so that your pluggable transport "

@@ -253,6 +253,10 @@ int tor_addr_is_internal_(const tor_addr_t *ip, int for_listening,
   tor_addr_is_internal_((addr), (for_listening), SHORT_FILE__, __LINE__)
 int tor_addr_is_multicast(const tor_addr_t *a);
 
+/* Flags for listening on IPv4 internally and externally. */
+#define IP_LISTEN_INTERNAL (1u<<0)
+#define IP_LISTEN_EXTERNAL (1u<<1)
+
 /** Longest length that can be required for a reverse lookup name. */
 /* 32 nybbles, 32 dots, 8 characters of "ip6.arpa", 1 NUL: 73 characters. */
 #define REVERSE_LOOKUP_NAME_BUF_LEN 73
