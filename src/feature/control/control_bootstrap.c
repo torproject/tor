@@ -83,7 +83,7 @@ static const struct {
   { BOOTSTRAP_STATUS_AP_HANDSHAKE, "ap_handshake",
     "Finishing handshake with a relay to build circuits" },
   { BOOTSTRAP_STATUS_AP_HANDSHAKE_DONE, "ap_handshake_done",
-    "Handshake fininshed with a relay to build circuits" },
+    "Handshake finished with a relay to build circuits" },
 
   /* Creating AP circuits */
 
