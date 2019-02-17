@@ -1,0 +1,5 @@
+  o Minor features (address selection):
+    - Make Tor aware of the RFC 6598 (Carrier Grade NAT) IP range, which is the
+      subnet 100.64.0.0/10. This is deployed by many ISPs as an alternative to
+      RFC 1918 that does not break existing internal networks. Closes ticket
+      28525. Patch by Neel Chauhan.
