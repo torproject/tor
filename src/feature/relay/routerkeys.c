@@ -631,14 +631,14 @@ get_master_identity_keypair(void)
 }
 #endif /* defined(TOR_UNIT_TESTS) */
 
-const ed25519_keypair_t *
-get_master_signing_keypair(void)
+MOCK_IMPL(const ed25519_keypair_t *,
+get_master_signing_keypair,(void))
 {
   return master_signing_key;
 }
 
-const struct tor_cert_st *
-get_master_signing_key_cert(void)
+MOCK_IMPL(const struct tor_cert_st *,
+get_master_signing_key_cert,(void))
 {
   return signing_key_cert;
 }

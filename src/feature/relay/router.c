@@ -271,11 +271,12 @@ expire_old_onion_keys(void)
 
 /** Return the current secret onion key for the ntor handshake. Must only
  * be called from the main thread. */
-static const curve25519_keypair_t *
-get_current_curve25519_keypair(void)
+MOCK_IMPL(STATIC const struct curve25519_keypair_t *,
+get_current_curve25519_keypair,(void))
 {
   return &curve25519_onion_key;
 }
+
 /** Return a map from KEYID (the key itself) to keypairs for use in the ntor
  * handshake. Must only be called from the main thread. */
 di_digest256_map_t *

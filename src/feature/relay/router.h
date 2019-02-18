@@ -124,6 +124,8 @@ STATIC smartlist_t *get_my_declared_family(const or_options_t *options);
 extern time_t desc_clean_since;
 extern const char *desc_dirty_reason;
 void set_server_identity_key_digest_testing(const uint8_t *digest);
+MOCK_DECL(STATIC const struct curve25519_keypair_t *,
+                                       get_current_curve25519_keypair,(void));
 
 MOCK_DECL(STATIC int,
               router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out));

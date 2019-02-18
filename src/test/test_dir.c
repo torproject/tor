@@ -196,6 +196,45 @@ mock_get_onion_key(void)
   return mocked_onionkey;
 }
 
+static routerinfo_t *mocked_routerinfo = NULL;
+
+/* Returns 0 and sets ri_out to mocked_routerinfo.
+ * ri_out must not be NULL. There are no other checks. */
+static int
+mock_router_build_fresh_unsigned_routerinfo(routerinfo_t **ri_out)
+{
+  tor_assert(ri_out);
+  *ri_out = mocked_routerinfo;
+  return 0;
+}
+
+static ed25519_keypair_t *mocked_master_signing_key = NULL;
+
+/* Returns mocked_master_signing_key with no checks. */
+static const ed25519_keypair_t *
+mock_get_master_signing_keypair(void)
+{
+  return mocked_master_signing_key;
+}
+
+static struct tor_cert_st *mocked_signing_key_cert = NULL;
+
+/* Returns mocked_signing_key_cert with no checks. */
+static const struct tor_cert_st *
+mock_get_master_signing_key_cert(void)
+{
+  return mocked_signing_key_cert;
+}
+
+static curve25519_keypair_t *mocked_curve25519_onion_key = NULL;
+
+/* Returns mocked_curve25519_onion_key with no checks. */
+static const curve25519_keypair_t *
+mock_get_current_curve25519_keypair(void)
+{
+  return mocked_curve25519_onion_key;
+}
+
 /** Run unit tests for router descriptor generation logic for a RSA-only
  * router. Tor versions without ed25519 (0.2.6 and earlier) are no longer
  * officially supported, but the authorities still accept their descriptors.
@@ -372,6 +411,22 @@ test_dir_formats_rsa(void *arg)
   mocked_onionkey = pk1;
   MOCK(get_onion_key, mock_get_onion_key);
 
+  /* Fake just enough of an ORPort and DirPort to get by */
+  MOCK(get_configured_ports, mock_get_configured_ports);
+  mocked_configured_ports = smartlist_new();
+
+  memset(&orport, 0, sizeof(orport));
+  orport.type = CONN_TYPE_OR_LISTENER;
+  orport.addr.family = AF_INET;
+  orport.port = 9000;
+  smartlist_add(mocked_configured_ports, &orport);
+
+  memset(&dirport, 0, sizeof(dirport));
+  dirport.type = CONN_TYPE_DIR_LISTENER;
+  dirport.addr.family = AF_INET;
+  dirport.port = 9003;
+  smartlist_add(mocked_configured_ports, &dirport);
+
   /* Test some of the low-level static functions. */
   e1 = router_build_fresh_signed_extrainfo(r1);
   tt_assert(e1);
@@ -391,6 +446,10 @@ test_dir_formats_rsa(void *arg)
   UNMOCK(get_server_identity_key);
   mocked_onionkey = NULL;
   UNMOCK(get_onion_key);
+
+  UNMOCK(get_configured_ports);
+  smartlist_free(mocked_configured_ports);
+  mocked_configured_ports = NULL;
 
   /* Test that the signed ri is parseable */
   tt_assert(r1->cache_info.signed_descriptor_body);
@@ -468,6 +527,7 @@ test_dir_formats_rsa_ed25519(void *arg)
   time_t now = time(NULL);
   port_cfg_t orport;
   char cert_buf[256];
+  int rv = -1;
 
   (void)arg;
   pk1 = pk_generate(0);
@@ -478,7 +538,10 @@ test_dir_formats_rsa_ed25519(void *arg)
   hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
 
   get_platform_str(platform, sizeof(platform));
-    /* r2 is a RSA + ed25519 descriptor, with an exit policy */
+
+  /* We can't use init_mock_ed_keys() here, because the keys are seeded */
+
+  /* r2 is a RSA + ed25519 descriptor, with an exit policy */
   ex1 = tor_malloc_zero(sizeof(addr_policy_t));
   ex2 = tor_malloc_zero(sizeof(addr_policy_t));
   ex1->policy_type = ADDR_POLICY_ACCEPT;
@@ -661,6 +724,137 @@ test_dir_formats_rsa_ed25519(void *arg)
   tt_int_op(p->maskbits,OP_EQ, 8);
   tt_int_op(p->prt_min,OP_EQ, 24);
   tt_int_op(p->prt_max,OP_EQ, 24);
+
+  routerinfo_free(rp2);
+
+  /* Test extrainfo creation. */
+
+  /* router_build_fresh_descriptor() requires
+   * router_build_fresh_unsigned_routerinfo(), but the implementation is
+   * too complex. Instead, we re-use r2.
+   */
+  mocked_routerinfo = r2;
+  MOCK(router_build_fresh_unsigned_routerinfo,
+       mock_router_build_fresh_unsigned_routerinfo);
+
+  /* router_build_fresh_signed_extrainfo() requires options->Nickname */
+  tor_free(options->Nickname);
+  options->Nickname = tor_strdup(r2->nickname);
+  /* router_build_fresh_signed_extrainfo() requires get_server_identity_key().
+   * Use the same one as the call to router_dump_router_to_string() above.
+   * For the second router, the keys are swapped.
+   */
+  mocked_server_identitykey = pk1;
+  MOCK(get_server_identity_key, mock_get_server_identity_key);
+  /* router_dump_and_sign_routerinfo_descriptor_body() requires
+   * get_onion_key(). Use the same one as r1.
+   */
+  mocked_onionkey = pk2;
+  MOCK(get_onion_key, mock_get_onion_key);
+
+  /* r2 uses ed25519, so we need to mock the ed key functions */
+  mocked_master_signing_key = &kp2;
+  MOCK(get_master_signing_keypair, mock_get_master_signing_keypair);
+
+  mocked_signing_key_cert = r2->cache_info.signing_key_cert;
+  MOCK(get_master_signing_key_cert, mock_get_master_signing_key_cert);
+
+  mocked_curve25519_onion_key = &r2_onion_keypair;
+  MOCK(get_current_curve25519_keypair, mock_get_current_curve25519_keypair);
+
+  /* Fake just enough of an ORPort to get by */
+  MOCK(get_configured_ports, mock_get_configured_ports);
+  mocked_configured_ports = smartlist_new();
+
+  memset(&orport, 0, sizeof(orport));
+  orport.type = CONN_TYPE_OR_LISTENER;
+  orport.addr.family = AF_INET;
+  orport.port = 9005;
+  smartlist_add(mocked_configured_ports, &orport);
+
+  /* Test the high-level interface. */
+  rv = router_build_fresh_descriptor(&r2_out, &e2);
+  if (rv < 0) {
+    /* router_build_fresh_descriptor() frees r2 on failure. */
+    r2 = NULL;
+    /* Get rid of an alias to rp2 */
+    r2_out = NULL;
+  }
+  tt_assert(rv == 0);
+  tt_assert(r2_out);
+  tt_assert(e2);
+  /* Guaranteed by mock_router_build_fresh_unsigned_routerinfo() */
+  tt_ptr_op(r2_out, OP_EQ, r2);
+  /* Get rid of an alias to r2 */
+  r2_out = NULL;
+
+  /* Now cleanup */
+  mocked_routerinfo = NULL;
+  UNMOCK(router_build_fresh_unsigned_routerinfo);
+  tor_free(options->Nickname);
+  mocked_server_identitykey = NULL;
+  UNMOCK(get_server_identity_key);
+  mocked_onionkey = NULL;
+  UNMOCK(get_onion_key);
+  mocked_master_signing_key = NULL;
+  UNMOCK(get_master_signing_keypair);
+  mocked_signing_key_cert = NULL;
+  UNMOCK(get_master_signing_key_cert);
+  mocked_curve25519_onion_key = NULL;
+  UNMOCK(get_current_curve25519_keypair);
+
+  UNMOCK(get_configured_ports);
+  smartlist_free(mocked_configured_ports);
+  mocked_configured_ports = NULL;
+
+  /* Test that the signed ri is parseable */
+  tt_assert(r2->cache_info.signed_descriptor_body);
+  cp = r2->cache_info.signed_descriptor_body;
+  rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
+  tt_assert(rp2);
+  tt_int_op(rp2->addr,OP_EQ, r2->addr);
+  tt_int_op(rp2->or_port,OP_EQ, r2->or_port);
+  tt_int_op(rp2->dir_port,OP_EQ, r2->dir_port);
+  tt_int_op(rp2->bandwidthrate,OP_EQ, r2->bandwidthrate);
+  tt_int_op(rp2->bandwidthburst,OP_EQ, r2->bandwidthburst);
+  tt_int_op(rp2->bandwidthcapacity,OP_EQ, r2->bandwidthcapacity);
+  tt_mem_op(rp2->onion_curve25519_pkey->public_key,OP_EQ,
+            r2->onion_curve25519_pkey->public_key,
+            CURVE25519_PUBKEY_LEN);
+  onion_pkey = router_get_rsa_onion_pkey(rp2->onion_pkey,
+                                         rp2->onion_pkey_len);
+  tt_int_op(crypto_pk_cmp_keys(onion_pkey, pk2), OP_EQ, 0);
+  crypto_pk_free(onion_pkey);
+  tt_int_op(crypto_pk_cmp_keys(rp2->identity_pkey, pk1), OP_EQ, 0);
+  tt_assert(rp2->supports_tunnelled_dir_requests);
+
+  tt_int_op(smartlist_len(rp2->exit_policy),OP_EQ, 2);
+
+  p = smartlist_get(rp2->exit_policy, 0);
+  tt_int_op(p->policy_type,OP_EQ, ADDR_POLICY_ACCEPT);
+  tt_assert(tor_addr_is_null(&p->addr));
+  tt_int_op(p->maskbits,OP_EQ, 0);
+  tt_int_op(p->prt_min,OP_EQ, 80);
+  tt_int_op(p->prt_max,OP_EQ, 80);
+
+  p = smartlist_get(rp2->exit_policy, 1);
+  tt_int_op(p->policy_type,OP_EQ, ADDR_POLICY_REJECT);
+  tt_assert(tor_addr_eq(&p->addr, &ex2->addr));
+  tt_int_op(p->maskbits,OP_EQ, 8);
+  tt_int_op(p->prt_min,OP_EQ, 24);
+  tt_int_op(p->prt_max,OP_EQ, 24);
+
+  routerinfo_free(rp2);
+
+  /* Test that the signed ei is parseable */
+  tt_assert(e2->cache_info.signed_descriptor_body);
+  cp = e2->cache_info.signed_descriptor_body;
+  ep2 = extrainfo_parse_entry_from_string((const char*)cp,NULL,1,NULL,NULL);
+  tt_assert(ep2);
+  tt_str_op(ep2->nickname, OP_EQ, r2->nickname);
+  /* In future tests, we could check the actual extrainfo statistics. */
+
+  extrainfo_free(ep2);
 
 #if 0
   /* Okay, now for the directories. */
