@@ -196,8 +196,8 @@ set_onion_key(crypto_pk_t *k)
 
 /** Return the current onion key.  Requires that the onion key has been
  * loaded or generated. */
-crypto_pk_t *
-get_onion_key(void)
+MOCK_IMPL(crypto_pk_t *,
+get_onion_key,(void))
 {
   tor_assert(onionkey);
   return onionkey;
@@ -376,8 +376,8 @@ assert_identity_keys_ok(void)
 /** Returns the current server identity key; requires that the key has
  * been set, and that we are running as a Tor server.
  */
-crypto_pk_t *
-get_server_identity_key(void)
+MOCK_IMPL(crypto_pk_t *,
+get_server_identity_key,(void))
 {
   tor_assert(server_identitykey);
   tor_assert(server_mode(get_options()));
@@ -1951,8 +1951,8 @@ get_my_declared_family(const or_options_t *options)
  *
  * Returns a negative value and sets ri_out to NULL on temporary error.
  */
-static int
-router_build_fresh_unsigned_routerinfo(routerinfo_t **ri_out)
+MOCK_IMPL(STATIC int,
+router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
 {
   routerinfo_t *ri = NULL;
   uint32_t addr;
@@ -2171,7 +2171,7 @@ router_dump_and_sign_extrainfo_descriptor_body(extrainfo_t *ei)
  * If ri is NULL, logs a BUG() warning and returns NULL.
  * Caller is responsible for freeing the generated extrainfo.
  */
-static extrainfo_t *
+STATIC extrainfo_t *
 router_build_fresh_signed_extrainfo(const routerinfo_t *ri)
 {
   int result = -1;
@@ -2203,7 +2203,7 @@ router_build_fresh_signed_extrainfo(const routerinfo_t *ri)
  *
  * If ei is NULL, logs a BUG() warning and zeroes the relevant fields.
  */
-static void
+STATIC void
 router_update_routerinfo_from_extrainfo(routerinfo_t *ri,
                                         const extrainfo_t *ei)
 {
@@ -2231,7 +2231,7 @@ router_update_routerinfo_from_extrainfo(routerinfo_t *ri,
  * If ri is NULL, logs a BUG() warning and returns a negative value.
  * On error, ri->cache_info is not modified.
  */
-static int
+STATIC int
 router_dump_and_sign_routerinfo_descriptor_body(routerinfo_t *ri)
 {
   if (BUG(!ri))

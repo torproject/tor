@@ -25,10 +25,10 @@ struct ed25519_keypair_t;
 #define TOR_ROUTERINFO_ERROR_DESC_REBUILDING (-6)
 #define TOR_ROUTERINFO_ERROR_INTERNAL_BUG    (-7)
 
-crypto_pk_t *get_onion_key(void);
+MOCK_DECL(crypto_pk_t *,get_onion_key,(void));
 time_t get_onion_key_set_at(void);
 void set_server_identity_key(crypto_pk_t *k);
-crypto_pk_t *get_server_identity_key(void);
+MOCK_DECL(crypto_pk_t *,get_server_identity_key,(void));
 int server_identity_key_is_set(void);
 void set_client_identity_key(crypto_pk_t *k);
 crypto_pk_t *get_tlsclient_identity_key(void);
@@ -124,6 +124,14 @@ STATIC smartlist_t *get_my_declared_family(const or_options_t *options);
 extern time_t desc_clean_since;
 extern const char *desc_dirty_reason;
 void set_server_identity_key_digest_testing(const uint8_t *digest);
+
+MOCK_DECL(STATIC int,
+              router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out));
+STATIC extrainfo_t *router_build_fresh_signed_extrainfo(
+                                                      const routerinfo_t *ri);
+STATIC void router_update_routerinfo_from_extrainfo(routerinfo_t *ri,
+                                                    const extrainfo_t *ei);
+STATIC int router_dump_and_sign_routerinfo_descriptor_body(routerinfo_t *ri);
 #endif
 
 #endif

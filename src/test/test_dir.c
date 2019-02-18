@@ -171,6 +171,31 @@ mock_get_configured_ports(void)
   return mocked_configured_ports;
 }
 
+static tor_cert_t *
+mock_tor_cert_dup_null(const tor_cert_t *cert)
+{
+  (void)cert;
+  return NULL;
+}
+
+static crypto_pk_t *mocked_server_identitykey = NULL;
+
+/* Returns mocked_server_identitykey with no checks. */
+static crypto_pk_t *
+mock_get_server_identity_key(void)
+{
+  return mocked_server_identitykey;
+}
+
+static crypto_pk_t *mocked_onionkey = NULL;
+
+/* Returns mocked_onionkey with no checks. */
+static crypto_pk_t *
+mock_get_onion_key(void)
+{
+  return mocked_onionkey;
+}
+
 /** Run unit tests for router descriptor generation logic. */
 static void
 test_dir_formats(void *arg)
@@ -182,8 +207,11 @@ test_dir_formats(void *arg)
   char *pk1_str = NULL, *pk2_str = NULL, *cp;
   size_t pk1_str_len, pk2_str_len;
   routerinfo_t *r1=NULL, *r2=NULL;
+  extrainfo_t *e1 = NULL, *e2 = NULL;
   crypto_pk_t *pk1 = NULL, *pk2 = NULL;
+  routerinfo_t *r2_out = NULL;
   routerinfo_t *rp1 = NULL, *rp2 = NULL;
+  extrainfo_t *ep1 = NULL, *ep2 = NULL;
   addr_policy_t *ex1, *ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
   uint8_t *rsa_cc = NULL;
@@ -192,6 +220,8 @@ test_dir_formats(void *arg)
   time_t now = time(NULL);
   port_cfg_t orport, dirport;
   char cert_buf[256];
+  int rv = -1;
+  const char *msg = NULL;
 
   (void)arg;
   pk1 = pk_generate(0);
@@ -202,6 +232,8 @@ test_dir_formats(void *arg)
   hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
 
   get_platform_str(platform, sizeof(platform));
+
+  /* r1 is a minimal, RSA-only descriptor */
   r1 = tor_malloc_zero(sizeof(routerinfo_t));
   r1->addr = 0xc0a80001u; /* 192.168.0.1 */
   r1->cache_info.published_on = 0;
@@ -224,6 +256,7 @@ test_dir_formats(void *arg)
   r1->nickname = tor_strdup("Magri");
   r1->platform = tor_strdup(platform);
 
+  /* r2 is a RSA + ed25519 descriptor, with an exit policy */
   ex1 = tor_malloc_zero(sizeof(addr_policy_t));
   ex2 = tor_malloc_zero(sizeof(addr_policy_t));
   ex1->policy_type = ADDR_POLICY_ACCEPT;
@@ -352,8 +385,86 @@ test_dir_formats(void *arg)
   crypto_pk_free(onion_pkey);
   tt_int_op(crypto_pk_cmp_keys(rp1->identity_pkey, pk2), OP_EQ, 0);
   tt_assert(rp1->supports_tunnelled_dir_requests);
-  //tt_assert(rp1->exit_policy == NULL);
+  tt_assert(rp1->policy_is_reject_star);
+
   tor_free(buf);
+  routerinfo_free(rp1);
+
+  /* Test extrainfo creation.
+   * We avoid calling router_build_fresh_unsigned_routerinfo(), because it's
+   * too complex. Instead, we re-use the manually-created routerinfos.
+   */
+
+  /* router_build_fresh_signed_extrainfo() requires options->Nickname */
+  tor_free(options->Nickname);
+  options->Nickname = tor_strdup(r1->nickname);
+  /* router_build_fresh_signed_extrainfo() passes the result of
+   * get_master_signing_key_cert() directly to tor_cert_dup(), which fails on
+   * NULL. But we want a NULL ei->cache_info.signing_key_cert to test the
+   * non-ed key path.
+   */
+  MOCK(tor_cert_dup, mock_tor_cert_dup_null);
+  /* router_build_fresh_signed_extrainfo() requires get_server_identity_key().
+   * Use the same one as the call to router_dump_router_to_string() above.
+   */
+  mocked_server_identitykey = pk2;
+  MOCK(get_server_identity_key, mock_get_server_identity_key);
+  /* router_dump_and_sign_routerinfo_descriptor_body() requires
+   * get_onion_key(). Use the same one as r1.
+   */
+  mocked_onionkey = pk1;
+  MOCK(get_onion_key, mock_get_onion_key);
+
+  /* Test some of the low-level static functions. */
+  e1 = router_build_fresh_signed_extrainfo(r1);
+  tt_assert(e1);
+  router_update_routerinfo_from_extrainfo(r1, e1);
+  rv = router_dump_and_sign_routerinfo_descriptor_body(r1);
+  tt_assert(rv == 0);
+  msg = "";
+  rv = routerinfo_incompatible_with_extrainfo(r1->identity_pkey, e1,
+                                              &r1->cache_info, &msg);
+  tt_str_op(msg, OP_EQ, "");
+  tt_assert(rv == 0);
+
+  /* Now cleanup */
+  tor_free(options->Nickname);
+  UNMOCK(tor_cert_dup);
+  mocked_server_identitykey = NULL;
+  UNMOCK(get_server_identity_key);
+  mocked_onionkey = NULL;
+  UNMOCK(get_onion_key);
+
+  /* Test that the signed ri is parseable */
+  tt_assert(r1->cache_info.signed_descriptor_body);
+  cp = r1->cache_info.signed_descriptor_body;
+  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
+  tt_assert(rp1);
+  tt_int_op(rp1->addr,OP_EQ, r1->addr);
+  tt_int_op(rp1->or_port,OP_EQ, r1->or_port);
+  tt_int_op(rp1->dir_port,OP_EQ, r1->dir_port);
+  tt_int_op(rp1->bandwidthrate,OP_EQ, r1->bandwidthrate);
+  tt_int_op(rp1->bandwidthburst,OP_EQ, r1->bandwidthburst);
+  tt_int_op(rp1->bandwidthcapacity,OP_EQ, r1->bandwidthcapacity);
+  onion_pkey = router_get_rsa_onion_pkey(rp1->onion_pkey,
+                                         rp1->onion_pkey_len);
+  tt_int_op(crypto_pk_cmp_keys(onion_pkey, pk1), OP_EQ, 0);
+  crypto_pk_free(onion_pkey);
+  tt_int_op(crypto_pk_cmp_keys(rp1->identity_pkey, pk2), OP_EQ, 0);
+  tt_assert(rp1->supports_tunnelled_dir_requests);
+  tt_assert(rp1->policy_is_reject_star);
+
+  routerinfo_free(rp1);
+
+  /* Test that the signed ei is parseable */
+  tt_assert(e1->cache_info.signed_descriptor_body);
+  cp = e1->cache_info.signed_descriptor_body;
+  ep1 = extrainfo_parse_entry_from_string((const char*)cp,NULL,1,NULL,NULL);
+  tt_assert(ep1);
+  tt_str_op(ep1->nickname, OP_EQ, r1->nickname);
+  /* In future tests, we could check the actual extrainfo statistics. */
+
+  extrainfo_free(ep1);
 
   strlcpy(buf2,
           "router Fred 10.3.2.1 9005 0 0\n"
@@ -503,20 +614,23 @@ test_dir_formats(void *arg)
   dirserv_free_fingerprint_list();
 
  done:
-  if (r1)
-    routerinfo_free(r1);
-  if (r2)
-    routerinfo_free(r2);
-  if (rp2)
-    routerinfo_free(rp2);
+  routerinfo_free(r1);
+  routerinfo_free(r2);
+  routerinfo_free(r2_out);
+  routerinfo_free(rp1);
+  routerinfo_free(rp2);
+
+  extrainfo_free(e1);
+  extrainfo_free(e2);
+  extrainfo_free(ep1);
+  extrainfo_free(ep2);
 
   tor_free(rsa_cc);
   tor_free(buf);
   tor_free(pk1_str);
   tor_free(pk2_str);
-  if (pk1) crypto_pk_free(pk1);
-  if (pk2) crypto_pk_free(pk2);
-  if (rp1) routerinfo_free(rp1);
+  crypto_pk_free(pk1);
+  crypto_pk_free(pk2);
   tor_free(dir1); /* XXXX And more !*/
   tor_free(dir2); /* And more !*/
 }
