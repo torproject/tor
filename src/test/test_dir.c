@@ -196,9 +196,12 @@ mock_get_onion_key(void)
   return mocked_onionkey;
 }
 
-/** Run unit tests for router descriptor generation logic. */
+/** Run unit tests for router descriptor generation logic for a RSA-only
+ * router. Tor versions without ed25519 (0.2.6 and earlier) are no longer
+ * officially supported, but the authorities still accept their descriptors.
+ */
 static void
-test_dir_formats(void *arg)
+test_dir_formats_rsa(void *arg)
 {
   char *buf = NULL;
   char buf2[8192];
@@ -206,18 +209,14 @@ test_dir_formats(void *arg)
   char fingerprint[FINGERPRINT_LEN+1];
   char *pk1_str = NULL, *pk2_str = NULL, *cp;
   size_t pk1_str_len, pk2_str_len;
-  routerinfo_t *r1=NULL, *r2=NULL;
-  extrainfo_t *e1 = NULL, *e2 = NULL;
+  routerinfo_t *r1 = NULL;
+  extrainfo_t *e1 = NULL;
   crypto_pk_t *pk1 = NULL, *pk2 = NULL;
-  routerinfo_t *r2_out = NULL;
-  routerinfo_t *rp1 = NULL, *rp2 = NULL;
-  extrainfo_t *ep1 = NULL, *ep2 = NULL;
-  addr_policy_t *ex1, *ex2;
+  routerinfo_t *rp1 = NULL;
+  extrainfo_t *ep1 = NULL;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
   uint8_t *rsa_cc = NULL;
   or_options_t *options = get_options_mutable();
-  const addr_policy_t *p;
-  time_t now = time(NULL);
   port_cfg_t orport, dirport;
   char cert_buf[256];
   int rv = -1;
@@ -256,57 +255,15 @@ test_dir_formats(void *arg)
   r1->nickname = tor_strdup("Magri");
   r1->platform = tor_strdup(platform);
 
-  /* r2 is a RSA + ed25519 descriptor, with an exit policy */
-  ex1 = tor_malloc_zero(sizeof(addr_policy_t));
-  ex2 = tor_malloc_zero(sizeof(addr_policy_t));
-  ex1->policy_type = ADDR_POLICY_ACCEPT;
-  tor_addr_from_ipv4h(&ex1->addr, 0);
-  ex1->maskbits = 0;
-  ex1->prt_min = ex1->prt_max = 80;
-  ex2->policy_type = ADDR_POLICY_REJECT;
-  tor_addr_from_ipv4h(&ex2->addr, 18<<24);
-  ex2->maskbits = 8;
-  ex2->prt_min = ex2->prt_max = 24;
-  r2 = tor_malloc_zero(sizeof(routerinfo_t));
-  r2->addr = 0x0a030201u; /* 10.3.2.1 */
-  ed25519_keypair_t kp1, kp2;
-  ed25519_secret_key_from_seed(&kp1.seckey,
-                          (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
-  ed25519_public_key_generate(&kp1.pubkey, &kp1.seckey);
-  ed25519_secret_key_from_seed(&kp2.seckey,
-                          (const uint8_t*)"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
-  ed25519_public_key_generate(&kp2.pubkey, &kp2.seckey);
-  r2->cache_info.signing_key_cert = tor_cert_create(&kp1,
-                                         CERT_TYPE_ID_SIGNING,
-                                         &kp2.pubkey,
-                                         now, 86400,
-                                         CERT_FLAG_INCLUDE_SIGNING_KEY);
-  r2->platform = tor_strdup(platform);
-  r2->cache_info.published_on = 5;
-  r2->or_port = 9005;
-  r2->dir_port = 0;
-  r2->supports_tunnelled_dir_requests = 1;
-  router_set_rsa_onion_pkey(pk2, &r2->onion_pkey, &r2->onion_pkey_len);
-  curve25519_keypair_t r2_onion_keypair;
-  curve25519_keypair_generate(&r2_onion_keypair, 0);
-  r2->onion_curve25519_pkey = tor_memdup(&r2_onion_keypair.pubkey,
-                                         sizeof(curve25519_public_key_t));
-  r2->identity_pkey = crypto_pk_dup_key(pk1);
-  r2->bandwidthrate = r2->bandwidthburst = r2->bandwidthcapacity = 3000;
-  r2->exit_policy = smartlist_new();
-  smartlist_add(r2->exit_policy, ex1);
-  smartlist_add(r2->exit_policy, ex2);
-  r2->nickname = tor_strdup("Fred");
-
   tt_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
-                                                    &pk1_str_len));
+                                                  &pk1_str_len));
   tt_assert(!crypto_pk_write_public_key_to_string(pk2 , &pk2_str,
-                                                    &pk2_str_len));
+                                                  &pk2_str_len));
 
   /* XXXX+++ router_dump_to_string should really take this from ri.*/
   options->ContactInfo = tor_strdup("Magri White "
                                     "<magri@elsewhere.example.com>");
-  /* Skip reachability checks for DirPort and tunnelled-dir-server */
+  /* Skip reachability checks for DirPort, ORPort, and tunnelled-dir-server */
   options->AssumeReachable = 1;
 
   /* Fake just enough of an ORPort and DirPort to get by */
@@ -466,6 +423,108 @@ test_dir_formats(void *arg)
 
   extrainfo_free(ep1);
 
+ done:
+  dirserv_free_fingerprint_list();
+
+  routerinfo_free(r1);
+  routerinfo_free(rp1);
+
+  extrainfo_free(e1);
+  extrainfo_free(ep1);
+
+  tor_free(rsa_cc);
+  tor_free(buf);
+  tor_free(pk1_str);
+  tor_free(pk2_str);
+  crypto_pk_free(pk1);
+  crypto_pk_free(pk2);
+  tor_free(dir1); /* XXXX And more !*/
+  tor_free(dir2); /* And more !*/
+}
+
+/** Run unit tests for router descriptor generation logic for a RSA + ed25519
+ * router.
+ */
+static void
+test_dir_formats_rsa_ed25519(void *arg)
+{
+  char *buf = NULL;
+  char buf2[8192];
+  char platform[256];
+  char fingerprint[FINGERPRINT_LEN+1];
+  char *pk1_str = NULL, *pk2_str = NULL, *cp;
+  size_t pk1_str_len, pk2_str_len;
+  routerinfo_t *r2 = NULL;
+  extrainfo_t *e2 = NULL;
+  crypto_pk_t *pk1 = NULL, *pk2 = NULL;
+  routerinfo_t *r2_out = NULL;
+  routerinfo_t *rp2 = NULL;
+  extrainfo_t *ep2 = NULL;
+  addr_policy_t *ex1, *ex2;
+  routerlist_t *dir1 = NULL, *dir2 = NULL;
+  uint8_t *rsa_cc = NULL;
+  or_options_t *options = get_options_mutable();
+  const addr_policy_t *p;
+  time_t now = time(NULL);
+  port_cfg_t orport;
+  char cert_buf[256];
+
+  (void)arg;
+  pk1 = pk_generate(0);
+  pk2 = pk_generate(1);
+
+  tt_assert(pk1 && pk2);
+
+  hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
+
+  get_platform_str(platform, sizeof(platform));
+    /* r2 is a RSA + ed25519 descriptor, with an exit policy */
+  ex1 = tor_malloc_zero(sizeof(addr_policy_t));
+  ex2 = tor_malloc_zero(sizeof(addr_policy_t));
+  ex1->policy_type = ADDR_POLICY_ACCEPT;
+  tor_addr_from_ipv4h(&ex1->addr, 0);
+  ex1->maskbits = 0;
+  ex1->prt_min = ex1->prt_max = 80;
+  ex2->policy_type = ADDR_POLICY_REJECT;
+  tor_addr_from_ipv4h(&ex2->addr, 18<<24);
+  ex2->maskbits = 8;
+  ex2->prt_min = ex2->prt_max = 24;
+  r2 = tor_malloc_zero(sizeof(routerinfo_t));
+  r2->addr = 0x0a030201u; /* 10.3.2.1 */
+  ed25519_keypair_t kp1, kp2;
+  ed25519_secret_key_from_seed(&kp1.seckey,
+                          (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+  ed25519_public_key_generate(&kp1.pubkey, &kp1.seckey);
+  ed25519_secret_key_from_seed(&kp2.seckey,
+                          (const uint8_t*)"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+  ed25519_public_key_generate(&kp2.pubkey, &kp2.seckey);
+  r2->cache_info.signing_key_cert = tor_cert_create(&kp1,
+                                         CERT_TYPE_ID_SIGNING,
+                                         &kp2.pubkey,
+                                         now, 86400,
+                                         CERT_FLAG_INCLUDE_SIGNING_KEY);
+  r2->platform = tor_strdup(platform);
+  r2->cache_info.published_on = 5;
+  r2->or_port = 9005;
+  r2->dir_port = 0;
+  r2->supports_tunnelled_dir_requests = 1;
+  router_set_rsa_onion_pkey(pk2, &r2->onion_pkey, &r2->onion_pkey_len);
+  curve25519_keypair_t r2_onion_keypair;
+  curve25519_keypair_generate(&r2_onion_keypair, 0);
+  r2->onion_curve25519_pkey = tor_memdup(&r2_onion_keypair.pubkey,
+                                         sizeof(curve25519_public_key_t));
+  r2->identity_pkey = crypto_pk_dup_key(pk1);
+  r2->bandwidthrate = r2->bandwidthburst = r2->bandwidthcapacity = 3000;
+  r2->exit_policy = smartlist_new();
+  smartlist_add(r2->exit_policy, ex1);
+  smartlist_add(r2->exit_policy, ex2);
+  r2->nickname = tor_strdup("Fred");
+
+  tt_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
+                                                    &pk1_str_len));
+  tt_assert(!crypto_pk_write_public_key_to_string(pk2 , &pk2_str,
+                                                    &pk2_str_len));
+
   strlcpy(buf2,
           "router Fred 10.3.2.1 9005 0 0\n"
           "identity-ed25519\n"
@@ -540,6 +599,9 @@ test_dir_formats(void *arg)
   strlcat(buf2, "tunnelled-dir-server\n", sizeof(buf2));
   strlcat(buf2, "router-sig-ed25519 ", sizeof(buf2));
 
+  /* Skip reachability checks for ORPort and tunnelled-dir-server */
+  options->AssumeReachable = 1;
+
   /* Fake just enough of an ORPort to get by */
   MOCK(get_configured_ports, mock_get_configured_ports);
   mocked_configured_ports = smartlist_new();
@@ -577,8 +639,8 @@ test_dir_formats(void *arg)
   tt_mem_op(rp2->onion_curve25519_pkey->public_key,OP_EQ,
              r2->onion_curve25519_pkey->public_key,
              CURVE25519_PUBKEY_LEN);
-  onion_pkey = router_get_rsa_onion_pkey(rp2->onion_pkey,
-                                         rp2->onion_pkey_len);
+  crypto_pk_t *onion_pkey = router_get_rsa_onion_pkey(rp2->onion_pkey,
+                                                      rp2->onion_pkey_len);
   tt_int_op(crypto_pk_cmp_keys(onion_pkey, pk2), OP_EQ, 0);
   crypto_pk_free(onion_pkey);
   tt_int_op(crypto_pk_cmp_keys(rp2->identity_pkey, pk1), OP_EQ, 0);
@@ -611,18 +673,15 @@ test_dir_formats(void *arg)
   }
 
 #endif /* 0 */
-  dirserv_free_fingerprint_list();
 
  done:
-  routerinfo_free(r1);
+  dirserv_free_fingerprint_list();
+
   routerinfo_free(r2);
   routerinfo_free(r2_out);
-  routerinfo_free(rp1);
   routerinfo_free(rp2);
 
-  extrainfo_free(e1);
   extrainfo_free(e2);
-  extrainfo_free(ep1);
   extrainfo_free(ep2);
 
   tor_free(rsa_cc);
@@ -6601,7 +6660,8 @@ test_dir_format_versions_list(void *arg)
 
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),
-  DIR_LEGACY(formats),
+  DIR_LEGACY(formats_rsa),
+  DIR_LEGACY(formats_rsa_ed25519),
   DIR(routerinfo_parsing, 0),
   DIR(extrainfo_parsing, 0),
   DIR(parse_router_list, TT_FORK),
