@@ -411,6 +411,19 @@ get_new_ntor_onion_key_line(const curve25519_public_key_t *ntor_onion_pubkey)
   return line;
 }
 
+/* Allocate and return a new string containing a "bridge-distribution-request"
+ * line for options.
+ */
+static char *
+get_new_bridge_distribution_request_line(const or_options_t *options)
+{
+  if (options->BridgeRelay) {
+    return tor_strdup("bridge-distribution-request any\n");
+  } else {
+    return tor_strdup("");
+  }
+}
+
 static smartlist_t *mocked_configured_ports = NULL;
 
 /** Returns mocked_configured_ports */
@@ -577,6 +590,43 @@ setup_mocks_for_fresh_descriptor(const routerinfo_t *r1,
   MOCK(get_onion_key, mock_get_onion_key);
 }
 
+/* Set options based on arg.
+ *
+ * b: BridgeRelay 1
+ * e: ExtraInfoStatistics 1
+ * s: sets all the individual statistics options to 1
+ *
+ * Always sets AssumeReachable to 1.
+ *
+ * Does not set ServerTransportPlugin, because it's parsed before use.
+ *
+ * Does not set BridgeRecordUsageByCountry, because the tests don't have access
+ * to a GeoIPFile or GeoIPv6File. */
+static void
+setup_dir_formats_options(const char *arg, or_options_t *options)
+{
+  /* Skip reachability checks for DirPort, ORPort, and tunnelled-dir-server */
+  options->AssumeReachable = 1;
+
+  if (strchr(arg, 'b')) {
+    options->BridgeRelay = 1;
+  }
+
+  if (strchr(arg, 'e')) {
+    options->ExtraInfoStatistics = 1;
+  }
+
+  if (strchr(arg, 's')) {
+    options->DirReqStatistics = 1;
+    options->HiddenServiceStatistics = 1;
+    options->EntryStatistics = 1;
+    options->CellStatistics = 1;
+    options->ExitPortStatistics = 1;
+    options->ConnDirectionStatistics = 1;
+    options->PaddingStatistics = 1;
+  }
+}
+
 /* Check that routerinfos r1 and rp1 are consistent.
  * Only performs some basic checks.
  */
@@ -638,8 +688,7 @@ test_dir_formats_rsa(void *arg)
   int rv = -1;
 
   or_options_t *options = get_options_mutable();
-
-  (void)arg;
+  setup_dir_formats_options((const char *)arg, options);
 
   hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
 
@@ -665,8 +714,6 @@ test_dir_formats_rsa(void *arg)
   /* XXXX+++ router_dump_to_string should really take this from ri. */
   options->ContactInfo = tor_strdup("Magri White "
                                     "<magri@elsewhere.example.com>");
-  /* Skip reachability checks for DirPort, ORPort, and tunnelled-dir-server */
-  options->AssumeReachable = 1;
 
   setup_mock_configured_ports(r1->or_port, r1->dir_port);
 
@@ -697,6 +744,7 @@ test_dir_formats_rsa(void *arg)
   smartlist_add_strdup(chunks, "contact Magri White "
                                "<magri@elsewhere.example.com>\n");
 
+  smartlist_add(chunks, get_new_bridge_distribution_request_line(options));
   smartlist_add(chunks, get_new_ntor_onion_key_line(&r1_onion_keypair.pubkey));
   smartlist_add_strdup(chunks, "reject *:*\n");
   smartlist_add_strdup(chunks, "tunnelled-dir-server\n");
@@ -869,8 +917,7 @@ test_dir_formats_rsa_ed25519(void *arg)
   int rv = -1;
 
   or_options_t *options = get_options_mutable();
-
-  (void)arg;
+  setup_dir_formats_options((const char *)arg, options);
 
   hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
 
@@ -918,9 +965,6 @@ test_dir_formats_rsa_ed25519(void *arg)
   r2->exit_policy = smartlist_new();
   smartlist_add(r2->exit_policy, ex1);
   smartlist_add(r2->exit_policy, ex2);
-
-  /* Skip reachability checks for ORPort and tunnelled-dir-server */
-  options->AssumeReachable = 1;
 
   /* Fake just enough of an ORPort to get by */
   setup_mock_configured_ports(r2->or_port, 0);
@@ -1001,6 +1045,7 @@ test_dir_formats_rsa_ed25519(void *arg)
 
   smartlist_add_strdup(chunks, "hidden-service-dir\n");
 
+  smartlist_add(chunks, get_new_bridge_distribution_request_line(options));
   smartlist_add(chunks, get_new_ntor_onion_key_line(&r2_onion_keypair.pubkey));
   smartlist_add_strdup(chunks, "accept *:80\nreject 18.0.0.0/8:24\n");
   smartlist_add_strdup(chunks, "tunnelled-dir-server\n");
@@ -7119,8 +7164,22 @@ test_dir_format_versions_list(void *arg)
 
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),
-  DIR_LEGACY(formats_rsa),
-  DIR_LEGACY(formats_rsa_ed25519),
+  /* extrainfo without any stats */
+  DIR_ARG(formats_rsa, TT_FORK, ""),
+  DIR_ARG(formats_rsa_ed25519, TT_FORK, ""),
+  /* on a bridge */
+  DIR_ARG(formats_rsa, TT_FORK, "b"),
+  DIR_ARG(formats_rsa_ed25519, TT_FORK, "b"),
+  /* extrainfo with basic stats */
+  DIR_ARG(formats_rsa, TT_FORK, "e"),
+  DIR_ARG(formats_rsa_ed25519, TT_FORK, "e"),
+  DIR_ARG(formats_rsa, TT_FORK, "be"),
+  DIR_ARG(formats_rsa_ed25519, TT_FORK, "be"),
+  /* extrainfo with all stats */
+  DIR_ARG(formats_rsa, TT_FORK, "es"),
+  DIR_ARG(formats_rsa_ed25519, TT_FORK, "es"),
+  DIR_ARG(formats_rsa, TT_FORK, "bes"),
+  DIR_ARG(formats_rsa_ed25519, TT_FORK, "bes"),
   DIR(routerinfo_parsing, 0),
   DIR(extrainfo_parsing, 0),
   DIR(parse_router_list, TT_FORK),
