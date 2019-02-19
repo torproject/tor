@@ -572,6 +572,14 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
   if (payload_len)
     memcpy(cell.payload+RELAY_HEADER_SIZE, payload, payload_len);
 
+  /* Add random bytes to the unused portion of the payload, to foil attacks
+   * where the other side can predict all of the bytes in the payload and thus
+   * compute authenticated sendme cells without seeing the traffic.  See
+   * proposal 289. */
+  crypto_fast_rng_getbytes(get_thread_fast_rng(),
+                           cell.payload + RELAY_HEADER_SIZE + payload_len,
+                           RELAY_PAYLOAD_SIZE - payload_len);
+
   log_debug(LD_OR,"delivering %d cell %s.", relay_command,
             cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
