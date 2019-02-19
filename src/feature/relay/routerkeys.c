@@ -706,6 +706,8 @@ make_tap_onion_key_crosscert(const crypto_pk_t *onion_key,
 
   *len_out = 0;
   if (crypto_pk_get_digest(rsa_id_key, (char*)signed_data) < 0) {
+    log_info(LD_OR, "crypto_pk_get_digest failed in "
+                    "make_tap_onion_key_crosscert!");
     return NULL;
   }
   memcpy(signed_data + DIGEST_LEN, master_id_key->pubkey, ED25519_PUBKEY_LEN);
@@ -713,8 +715,12 @@ make_tap_onion_key_crosscert(const crypto_pk_t *onion_key,
   int r = crypto_pk_private_sign(onion_key,
                                (char*)signature, sizeof(signature),
                                (const char*)signed_data, sizeof(signed_data));
-  if (r < 0)
+  if (r < 0) {
+    /* It's probably missing the private key */
+    log_info(LD_OR, "crypto_pk_private_sign failed in "
+                    "make_tap_onion_key_crosscert!");
     return NULL;
+  }
 
   *len_out = r;
 
