@@ -355,8 +355,9 @@ get_new_rsa_key_block(const char *key_name, crypto_pk_t *pk1)
                "%s\n%s",
                key_name,
                pk1_str);
-  tor_assert(block);
+  tor_free(pk1_str);
 
+  tor_assert(block);
   return block;
 }
 
