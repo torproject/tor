@@ -923,6 +923,7 @@ struct testgroup_t testgroups[] = {
   { "routerlist/", routerlist_tests },
   { "routerset/" , routerset_tests },
   { "scheduler/", scheduler_tests },
+  { "sendme/", sendme_tests },
   { "shared-random/", sr_tests },
   { "socks/", socks_tests },
   { "status/" , status_tests },

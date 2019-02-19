@@ -7,6 +7,8 @@
  *        creating/parsing cells and handling the content.
  */
 
+#define SENDME_PRIVATE
+
 #include "core/or/or.h"
 
 #include "app/config/config.h"
@@ -37,7 +39,7 @@
 
 /* Return the minimum version given by the consensus (if any) that should be
  * used when emitting a SENDME cell. */
-static int
+STATIC int
 get_emit_min_version(void)
 {
   return networkstatus_get_param(NULL, "sendme_emit_min_version",
@@ -48,7 +50,7 @@ get_emit_min_version(void)
 
 /* Return the minimum version given by the consensus (if any) that should be
  * accepted when receiving a SENDME cell. */
-static int
+STATIC int
 get_accept_min_version(void)
 {
   return networkstatus_get_param(NULL, "sendme_accept_min_version",
@@ -112,7 +114,7 @@ cell_v1_is_valid(const sendme_cell_t *cell, const circuit_t *circ)
 
 /* Return true iff the given cell version can be handled or if the minimum
  * accepted version from the consensus is known to us. */
-static bool
+STATIC bool
 cell_version_is_valid(uint8_t cell_version)
 {
   int accept_version = get_accept_min_version();
@@ -149,7 +151,7 @@ cell_version_is_valid(uint8_t cell_version)
  * This is the main critical function to make sure we can continue to
  * send/recv cells on a circuit. If the SENDME is invalid, the circuit should
  * be mark for close. */
-static bool
+STATIC bool
 sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
                 size_t cell_payload_len)
 {
@@ -206,7 +208,7 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
  *
  * Return the size in bytes of the encoded cell in payload. A negative value
  * is returned on encoding failure. */
-static ssize_t
+STATIC ssize_t
 build_cell_payload_v1(crypto_digest_t *cell_digest, uint8_t *payload)
 {
   ssize_t len = -1;
