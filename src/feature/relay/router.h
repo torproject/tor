@@ -134,8 +134,8 @@ STATIC extrainfo_t *router_build_fresh_signed_extrainfo(
 STATIC void router_update_routerinfo_from_extrainfo(routerinfo_t *ri,
                                                     const extrainfo_t *ei);
 STATIC int router_dump_and_sign_routerinfo_descriptor_body(routerinfo_t *ri);
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
-#endif
+#endif /* defined(ROUTER_PRIVATE) */
 
 #endif /* !defined(TOR_ROUTER_H) */
