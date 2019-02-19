@@ -68,6 +68,15 @@ unsigned crypto_fast_rng_get_uint(crypto_fast_rng_t *rng, unsigned limit);
 uint64_t crypto_fast_rng_get_uint64(crypto_fast_rng_t *rng, uint64_t limit);
 double crypto_fast_rng_get_double(crypto_fast_rng_t *rng);
 
+crypto_fast_rng_t *get_thread_fast_rng(void);
+
+#ifdef CRYPTO_PRIVATE
+/* These are only used from crypto_init.c */
+void destroy_thread_fast_rng(void);
+void crypto_rand_fast_init(void);
+void crypto_rand_fast_shutdown(void);
+#endif
+
 #if defined(TOR_UNIT_TESTS)
 /* Used for white-box testing */
 size_t crypto_fast_rng_get_bytes_used_per_stream(void);

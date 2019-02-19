@@ -33,6 +33,7 @@
  */
 
 #define CRYPTO_RAND_FAST_PRIVATE
+#define CRYPTO_PRIVATE
 
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_cipher.h"
@@ -41,6 +42,7 @@
 #include "lib/intmath/cmp.h"
 #include "lib/cc/ctassert.h"
 #include "lib/malloc/map_anon.h"
+#include "lib/thread/threads.h"
 
 #include "lib/log/util_bug.h"
 
@@ -122,7 +124,8 @@ crypto_fast_rng_new(void)
  * long.
  *
  * Note that this object is NOT thread-safe.  If you need a thread-safe
- * prng, use crypto_rand(), or wrap this in a mutex.
+ * prng, you should probably look at get_thread_fast_rng().  Alternatively,
+ * use crypto_rand(), wrap this in a mutex.
  **/
 crypto_fast_rng_t *
 crypto_fast_rng_new_from_seed(const uint8_t *seed)
@@ -261,3 +264,65 @@ crypto_fast_rng_get_bytes_used_per_stream(void)
   return BUFLEN;
 }
 #endif
+
+/**
+ * Thread-local instance for our fast RNG.
+ **/
+static tor_threadlocal_t thread_rng;
+
+/**
+ * Return a per-thread fast RNG, initializing it if necessary.
+ *
+ * You do not need to free this yourself.
+ *
+ * It is NOT safe to share this value across threads.
+ **/
+crypto_fast_rng_t *
+get_thread_fast_rng(void)
+{
+  crypto_fast_rng_t *rng = tor_threadlocal_get(&thread_rng);
+
+  if (PREDICT_UNLIKELY(rng == NULL)) {
+    rng = crypto_fast_rng_new();
+    tor_threadlocal_set(&thread_rng, rng);
+  }
+
+  return rng;
+}
+
+/**
+ * Used when a thread is exiting: free the per-thread fast RNG if needed.
+ * Invoked from the crypto subsystem's thread-cleanup code.
+ **/
+void
+destroy_thread_fast_rng(void)
+{
+  crypto_fast_rng_t *rng = tor_threadlocal_get(&thread_rng);
+  if (!rng)
+    return;
+  crypto_fast_rng_free(rng);
+  tor_threadlocal_set(&thread_rng, NULL);
+}
+
+/**
+ * Initialize the global thread-local key that will be used to keep track
+ * of per-thread fast RNG instances.  Called from the crypto subsystem's
+ * initialization code.
+ **/
+void
+crypto_rand_fast_init(void)
+{
+  tor_threadlocal_init(&thread_rng);
+}
+
+/**
+ * Initialize the global thread-local key that will be used to keep track
+ * of per-thread fast RNG instances.  Called from the crypto subsystem's
+ * shutdown code.
+ **/
+void
+crypto_rand_fast_shutdown(void)
+{
+  destroy_thread_fast_rng();
+  tor_threadlocal_destroy(&thread_rng);
+}
