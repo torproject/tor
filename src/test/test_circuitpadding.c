@@ -46,7 +46,6 @@ void test_circuitpadding_conditions(void *arg);
 void test_circuitpadding_serialize(void *arg);
 void test_circuitpadding_rtt(void *arg);
 void test_circuitpadding_tokens(void *arg);
-void test_circuitpadding_circuitsetup_machine(void *arg);
 
 static void
 simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
@@ -1809,6 +1808,8 @@ test_circuitpadding_conditions(void *arg)
   return;
 }
 
+/** Disabled unstable test until #29298 is implemented (see #29122) */
+#if 0
 void
 test_circuitpadding_circuitsetup_machine(void *arg)
 {
@@ -2054,6 +2055,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
 
   return;
 }
+#endif
 
 /** Helper function: Initializes a padding machine where every state uses the
  *  uniform probability distribution.  */
@@ -2340,11 +2342,11 @@ test_circuitpadding_global_rate_limiting(void *arg)
     { #name, test_##name, (flags), NULL, NULL }
 
 struct testcase_t circuitpadding_tests[] = {
-  //TEST_CIRCUITPADDING(circuitpadding_circuitsetup_machine, 0),
   TEST_CIRCUITPADDING(circuitpadding_tokens, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_negotiation, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_wronghop, TT_FORK),
-  TEST_CIRCUITPADDING(circuitpadding_circuitsetup_machine, TT_FORK),
+  /** Disabled unstable test until #29298 is implemented (see #29122) */
+  //  TEST_CIRCUITPADDING(circuitpadding_circuitsetup_machine, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_conditions, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_rtt, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_sample_distribution, TT_FORK),
