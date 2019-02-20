@@ -94,8 +94,6 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "core/or/socks_request_st.h"
 
-#include "lib/intmath/weakrng.h"
-
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
                                             crypt_path_t *layer_hint);
@@ -133,9 +131,6 @@ uint64_t stats_n_relay_cells_delivered = 0;
 /** Stats: how many circuits have we closed due to the cell queue limit being
  * reached (see append_cell_to_circuit_queue()) */
 uint64_t stats_n_circ_max_cell_reached = 0;
-
-/** Used to tell which stream to read from first on a circuit. */
-static tor_weak_rng_t stream_choice_rng = TOR_WEAK_RNG_INIT;
 
 /**
  * Update channel usage state based on the type of relay cell and
@@ -2180,12 +2175,6 @@ circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
                                        circ, layer_hint);
 }
 
-void
-stream_choice_seed_weak_rng(void)
-{
-  crypto_seed_weak_rng(&stream_choice_rng);
-}
-
 /** A helper function for circuit_resume_edge_reading() above.
  * The arguments are the same, except that <b>conn</b> is the head
  * of a linked list of edge streams that should each be considered.
@@ -2237,7 +2226,8 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
     int num_streams = 0;
     for (conn = first_conn; conn; conn = conn->next_stream) {
       num_streams++;
-      if (tor_weak_random_one_in_n(&stream_choice_rng, num_streams)) {
+
+      if (crypto_fast_rng_one_in_n(get_thread_fast_rng(), num_streams)) {
         chosen_stream = conn;
       }
       /* Invariant: chosen_stream has been chosen uniformly at random from

@@ -94,8 +94,6 @@ const uint8_t *decode_address_from_payload(tor_addr_t *addr_out,
                                         int payload_len);
 void circuit_clear_cell_queue(circuit_t *circ, channel_t *chan);
 
-void stream_choice_seed_weak_rng(void);
-
 circid_t packed_cell_get_circid(const packed_cell_t *cell, int wide_circ_ids);
 
 #ifdef RELAY_PRIVATE
@@ -126,4 +124,3 @@ STATIC int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 #endif /* defined(RELAY_PRIVATE) */
 
 #endif /* !defined(TOR_RELAY_H) */
-
