@@ -6360,6 +6360,6 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(get_unquoted_path, 0),
   UTIL_TEST(log_mallinfo, 0),
   UTIL_TEST(map_anon, 0),
-  UTIL_TEST(map_anon_nofork, 0),
+  UTIL_TEST(map_anon_nofork, TT_SKIP /* See bug #29535 */),
   END_OF_TESTCASES
 };

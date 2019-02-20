@@ -3,6 +3,6 @@
       "binary" mode so that we can safely map it into memory later.
       Fixes part of bug 28614; bugfix on 0.4.0.1-alpha.
     - When reading a consensus file from disk, detect whether it
-      was written in text mode, and re-read it in text mode if it
+      was written in text mode, and re-read it in text mode if so.
       Fixes part of bug 28614; bugfix on 0.4.0.1-alpha.
 
