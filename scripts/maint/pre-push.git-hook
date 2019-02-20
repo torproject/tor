@@ -19,7 +19,7 @@ CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 # Only allow pushing master, release-* and maint-* branches to origin.
 if [ "$remote" == "origin" ]
 then
-        if  [ "$CUR_BRANCH" != "master" ] || [[ $CUR_BRANCH != release-* ]] ||
+        if  [ "$CUR_BRANCH" != "master" ] && [[ $CUR_BRANCH != release-* ]] &&
              [[ $CUR_BRANCH != maint-* ]]
         then
                 echo >&2 "Not pushing $CUR_BRANCH to origin"
