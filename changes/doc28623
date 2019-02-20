@@ -1,3 +1,0 @@
-  o Documentation:
-    - In manpage entry describing MapAddress torrc setting, use example
-      IP addresses from ranges specified by RFC 5737. Resolves issue 28623.

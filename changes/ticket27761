@@ -1,4 +1,0 @@
-  o Minor features (changelogs):
-    - Check that bugfix versions in changes files look like Tor versions
-      from the versions spec. Warn when bugfixes claim to be on a future
-      release. Closes ticket 27761.

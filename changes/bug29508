@@ -1,3 +1,0 @@
-  o Minor bugfixes (scheduler):
-    - When readding channels to the pending list, check the correct channel's
-      sched_heap_idx. Fixes bug 29508; bugfix on 0.3.2.10
