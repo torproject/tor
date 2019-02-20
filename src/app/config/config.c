@@ -4188,6 +4188,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "You should also make sure you aren't listing this bridge's "
              "fingerprint in any other MyFamily.");
   }
+  if (options->MyFamily_lines && !options->ContactInfo) {
+    log_warn(LD_CONFIG, "MyFamily is set but ContactInfo is not configured. "
+             "ContactInfo should always be set when MyFamily option is too.");
+  }
   if (normalize_nickname_list(&options->MyFamily,
                               options->MyFamily_lines, "MyFamily", msg))
     return -1;
