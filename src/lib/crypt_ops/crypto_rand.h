@@ -68,6 +68,9 @@ unsigned crypto_fast_rng_get_uint(crypto_fast_rng_t *rng, unsigned limit);
 uint64_t crypto_fast_rng_get_uint64(crypto_fast_rng_t *rng, uint64_t limit);
 double crypto_fast_rng_get_double(crypto_fast_rng_t *rng);
 
+#define crypto_fast_rng_one_in_n(rng, n)        \
+  (0 == (crypto_fast_rng_get_uint((rng), (n))))
+
 crypto_fast_rng_t *get_thread_fast_rng(void);
 
 #ifdef CRYPTO_PRIVATE
