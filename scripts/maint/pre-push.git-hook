@@ -1,17 +1,32 @@
 #!/bin/bash
 
+# git pre-push hook script to prevent "fixup!" and "squash!" commit
+# from ending up in master, or in any branch if CUR_BRANCH check is removed.
+# Furthermore, it disallows pushing branches other than master, release-*
+# and maint-* to origin (e.g. gitweb.torproject.org).
+#
 # To install this script, copy it into .git/hooks/pre-push path in your
 # local copy of git repository. Make sure it has permission to execute.
-#
-# This is git pre-push hook script to prevent "fixup!" and "squash!" commits
-# from ending up in upstream branches (master, release-* or maint-*).
 #
 # The following sample script was used as starting point:
 # https://github.com/git/git/blob/master/templates/hooks--pre-push.sample
 
 z40=0000000000000000000000000000000000000000
 
+remote="$1"
 CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Only allow pushing master, release-* and maint-* branches to origin.
+if [ "$remote" == "origin" ]
+then
+        if  [ "$CUR_BRANCH" != "master" ] && [[ $CUR_BRANCH != release-* ]] &&
+             [[ $CUR_BRANCH != maint-* ]]
+        then
+                echo >&2 "Not pushing $CUR_BRANCH to origin"
+                exit 1
+        fi
+fi
+
 if [ "$CUR_BRANCH" != "master" ] && [[ $CUR_BRANCH != release-* ]] &&
         [[ $CUR_BRANCH != maint-* ]]
 then
