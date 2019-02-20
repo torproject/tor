@@ -1743,7 +1743,7 @@ networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
 #endif /* defined(TOR_UNIT_TESTS) */
 
 /**
- * Helper: Read a the current consensus of type <b>flavor</b> from
+ * Helper: Read the current consensus of type <b>flavor</b> from
  * <b>fname</b>.  Flags and return values are as for
  * networkstatus_set_current_consensus().
  **/
