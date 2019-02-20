@@ -11,29 +11,20 @@
 # The following sample script was used as starting point:
 # https://github.com/git/git/blob/master/templates/hooks--pre-push.sample
 
+echo "Running pre-push hook"
+
 z40=0000000000000000000000000000000000000000
 
 remote="$1"
-CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-# Only allow pushing master, release-* and maint-* branches to origin.
-if [ "$remote" == "origin" ]
-then
-        if  [ "$CUR_BRANCH" != "master" ] && [[ $CUR_BRANCH != release-* ]] &&
-             [[ $CUR_BRANCH != maint-* ]]
+ref_is_upstream_branch() {
+        if [ "$1" == "refs/heads/master" ] ||
+                [[ "$1" == refs/heads/release-* ]] ||
+                [[ "$1" == refs/heads/maint-* ]]
         then
-                echo >&2 "Not pushing $CUR_BRANCH to origin"
-                exit 1
+                return 1
         fi
-fi
-
-if [ "$CUR_BRANCH" != "master" ] && [[ $CUR_BRANCH != release-* ]] &&
-        [[ $CUR_BRANCH != maint-* ]]
-then
-        exit 0
-fi
-
-echo "Running pre-push hook"
+}
 
 # shellcheck disable=SC2034
 while read -r local_ref local_sha remote_ref remote_sha
@@ -51,6 +42,19 @@ do
 			# Update to existing branch, examine new commits
 			range="$remote_sha..$local_sha"
 		fi
+
+                if ref_is_upstream_branch "$local_ref" == 0 ||
+                        ref_is_upstream_branch "$remote_ref"  == 0
+                then
+                        if [ "$remote" == "origin" ]
+                        then
+                                echo >&2 "Not pushing: $local_ref to $remote_ref"
+			        echo >&2 "If you really want to push this, use --no-verify."
+                                exit 1
+                        else
+                                continue
+                        fi
+                fi
 
                 # Check for fixup! commit
                 commit=$(git rev-list -n 1 --grep '^fixup!' "$range")
