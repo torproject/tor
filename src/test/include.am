@@ -259,7 +259,7 @@ src_test_test_LDADD = \
 src_test_test_slow_CPPFLAGS = $(src_test_test_CPPFLAGS)
 src_test_test_slow_CFLAGS = $(src_test_test_CFLAGS)
 src_test_test_slow_LDADD = $(src_test_test_LDADD)
-src_test_test_slow_LDFLAGS = @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
+src_test_test_slow_LDFLAGS = $(src_test_test_LDFLAGS)
 
 src_test_test_rng_CPPFLAGS = $(src_test_test_CPPFLAGS)
 src_test_test_rng_CFLAGS = $(src_test_test_CFLAGS)
