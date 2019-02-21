@@ -1,0 +1,5 @@
+  o Major bugfixes (cell scheduler, KIST):
+    - Make KIST to always take into account the outbuf length when computing
+      what we can actually put in the outbuf. This could lead to the outbuf
+      being filled up and thus a possible memory DoS vector. TROVE-2019-001.
+      Fixes bug 29168; bugfix on 0.3.2.1-alpha.
