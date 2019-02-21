@@ -1,3 +1,324 @@
+Changes in version 0.3.5.8 - 2019-02-21
+  Tor 0.3.5.8 backports serveral fixes from later releases, including fixes
+  for an annoying SOCKS-parsing bug that affected users in earlier 0.3.5.x
+  releases.
+
+  It also includes a fix for a medium-severity security bug affecting Tor
+  0.3.2.1-alpha and later. All Tor instances running an affected release
+  should upgrade to 0.3.3.12, 0.3.4.11, 0.3.5.8, or 0.4.0.2-alpha.
+
+  o Major bugfixes (cell scheduler, KIST, security):
+    - Make KIST consider the outbuf length when computing what it can
+      put in the outbuf. Previously, KIST acted as though the outbuf
+      were empty, which could lead to the outbuf becoming too full. It
+      is possible that an attacker could exploit this bug to cause a Tor
+      client or relay to run out of memory and crash. Fixes bug 29168;
+      bugfix on 0.3.2.1-alpha. This issue is also being tracked as
+      TROVE-2019-001 and CVE-2019-8955.
+
+  o Major bugfixes (networking, backport from 0.4.0.2-alpha):
+    - Gracefully handle empty username/password fields in SOCKS5
+      username/password auth messsage and allow SOCKS5 handshake to
+      continue. Previously, we had rejected these handshakes, breaking
+      certain applications. Fixes bug 29175; bugfix on 0.3.5.1-alpha.
+
+  o Minor features (compilation, backport from 0.4.0.2-alpha):
+    - Compile correctly when OpenSSL is built with engine support
+      disabled, or with deprecated APIs disabled. Closes ticket 29026.
+      Patches from "Mangix".
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the February 5 2019 Maxmind GeoLite2
+      Country database. Closes ticket 29478.
+
+  o Minor features (testing, backport from 0.4.0.2-alpha):
+    - Treat all unexpected ERR and BUG messages as test failures. Closes
+      ticket 28668.
+
+  o Minor bugfixes (onion service v3, client, backport from 0.4.0.1-alpha):
+    - Stop logging a "BUG()" warning and stacktrace when we find a SOCKS
+      connection waiting for a descriptor that we actually have in the
+      cache. It turns out that this can actually happen, though it is
+      rare. Now, tor will recover and retry the descriptor. Fixes bug
+      28669; bugfix on 0.3.2.4-alpha.
+
+  o Minor bugfixes (IPv6, backport from 0.4.0.1-alpha):
+    - Fix tor_ersatz_socketpair on IPv6-only systems. Previously, the
+      IPv6 socket was bound using an address family of AF_INET instead
+      of AF_INET6. Fixes bug 28995; bugfix on 0.3.5.1-alpha. Patch from
+      Kris Katterjohn.
+
+  o Minor bugfixes (build, compatibility, rust, backport from 0.4.0.2-alpha):
+    - Update Cargo.lock file to match the version made by the latest
+      version of Rust, so that "make distcheck" will pass again. Fixes
+      bug 29244; bugfix on 0.3.3.4-alpha.
+
+  o Minor bugfixes (client, clock skew, backport from 0.4.0.1-alpha):
+    - Select guards even if the consensus has expired, as long as the
+      consensus is still reasonably live. Fixes bug 24661; bugfix
+      on 0.3.0.1-alpha.
+
+  o Minor bugfixes (compilation, backport from 0.4.0.1-alpha):
+    - Compile correctly on OpenBSD; previously, we were missing some
+      headers required in order to detect it properly. Fixes bug 28938;
+      bugfix on 0.3.5.1-alpha. Patch from Kris Katterjohn.
+
+  o Minor bugfixes (documentation, backport from 0.4.0.2-alpha):
+    - Describe the contents of the v3 onion service client authorization
+      files correctly: They hold public keys, not private keys. Fixes
+      bug 28979; bugfix on 0.3.5.1-alpha. Spotted by "Felixix".
+
+  o Minor bugfixes (logging, backport from 0.4.0.1-alpha):
+    - Rework rep_hist_log_link_protocol_counts() to iterate through all
+      link protocol versions when logging incoming/outgoing connection
+      counts. Tor no longer skips version 5, and we won't have to
+      remember to update this function when new link protocol version is
+      developed. Fixes bug 28920; bugfix on 0.2.6.10.
+
+  o Minor bugfixes (logging, backport from 0.4.0.2-alpha):
+    - Log more information at "warning" level when unable to read a
+      private key; log more information at "info" level when unable to
+      read a public key. We had warnings here before, but they were lost
+      during our NSS work. Fixes bug 29042; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (misc, backport from 0.4.0.2-alpha):
+    - The amount of total available physical memory is now determined
+      using the sysctl identifier HW_PHYSMEM (rather than HW_USERMEM)
+      when it is defined and a 64-bit variant is not available. Fixes
+      bug 28981; bugfix on 0.2.5.4-alpha. Patch from Kris Katterjohn.
+
+  o Minor bugfixes (onion services, backport from 0.4.0.2-alpha):
+    - Avoid crashing if ClientOnionAuthDir (incorrectly) contains more
+      than one private key for a hidden service. Fixes bug 29040; bugfix
+      on 0.3.5.1-alpha.
+    - In hs_cache_store_as_client() log an HSDesc we failed to parse at
+      "debug" level. Tor used to log it as a warning, which caused very
+      long log lines to appear for some users. Fixes bug 29135; bugfix
+      on 0.3.2.1-alpha.
+    - Stop logging "Tried to establish rendezvous on non-OR circuit..."
+      as a warning. Instead, log it as a protocol warning, because there
+      is nothing that relay operators can do to fix it. Fixes bug 29029;
+      bugfix on 0.2.5.7-rc.
+
+  o Minor bugfixes (tests, directory clients, backport from 0.4.0.1-alpha):
+    - Mark outdated dirservers when Tor only has a reasonably live
+      consensus. Fixes bug 28569; bugfix on 0.3.2.5-alpha.
+
+  o Minor bugfixes (tests, backport from 0.4.0.2-alpha):
+    - Detect and suppress "bug" warnings from the util/time test on
+      Windows. Fixes bug 29161; bugfix on 0.2.9.3-alpha.
+    - Do not log an error-level message if we fail to find an IPv6
+      network interface from the unit tests. Fixes bug 29160; bugfix
+      on 0.2.7.3-rc.
+
+  o Minor bugfixes (usability, backport from 0.4.0.1-alpha):
+    - Stop saying "Your Guard ..." in pathbias_measure_{use,close}_rate().
+      Some users took this phrasing to mean that the mentioned guard was
+      under their control or responsibility, which it is not. Fixes bug
+      28895; bugfix on Tor 0.3.0.1-alpha.
+
+
+Changes in version 0.3.4.11 - 2019-02-21
+  Tor 0.3.4.11 is the third stable release in its series.  It includes
+  a fix for a medium-severity security bug affecting Tor 0.3.2.1-alpha and
+  later. All Tor instances running an affected release should upgrade to
+  0.3.3.12, 0.3.4.11, 0.3.5.8, or 0.4.0.2-alpha.
+
+  o Major bugfixes (cell scheduler, KIST, security):
+    - Make KIST consider the outbuf length when computing what it can
+      put in the outbuf. Previously, KIST acted as though the outbuf
+      were empty, which could lead to the outbuf becoming too full. It
+      is possible that an attacker could exploit this bug to cause a Tor
+      client or relay to run out of memory and crash. Fixes bug 29168;
+      bugfix on 0.3.2.1-alpha. This issue is also being tracked as
+      TROVE-2019-001 and CVE-2019-8955.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the February 5 2019 Maxmind GeoLite2
+      Country database. Closes ticket 29478.
+
+  o Minor bugfixes (build, compatibility, rust, backport from 0.4.0.2-alpha):
+    - Update Cargo.lock file to match the version made by the latest
+      version of Rust, so that "make distcheck" will pass again. Fixes
+      bug 29244; bugfix on 0.3.3.4-alpha.
+
+  o Minor bugfixes (onion services, backport from 0.4.0.2-alpha):
+    - Stop logging "Tried to establish rendezvous on non-OR circuit..."
+      as a warning. Instead, log it as a protocol warning, because there
+      is nothing that relay operators can do to fix it. Fixes bug 29029;
+      bugfix on 0.2.5.7-rc.
+
+
+Changes in version 0.3.3.12 - 2019-02-21
+  Tor 0.3.3.12 fixes a medium-severity security bug affecting Tor
+  0.3.2.1-alpha and later. All Tor instances running an affected release
+  should upgrade to 0.3.3.12, 0.3.4.11, 0.3.5.8, or 0.4.0.2-alpha.
+
+  This release marks the end of support for the Tor 0.3.3.x series. We
+  recommend that users switch to either the Tor 0.3.4 series (supported
+  until at least 10 June 2019), or the Tor 0.3.5 series, which will
+  receive long-term support until at least 1 Feb 2022.
+
+  o Major bugfixes (cell scheduler, KIST, security):
+    - Make KIST consider the outbuf length when computing what it can
+      put in the outbuf. Previously, KIST acted as though the outbuf
+      were empty, which could lead to the outbuf becoming too full. It
+      is possible that an attacker could exploit this bug to cause a Tor
+      client or relay to run out of memory and crash. Fixes bug 29168;
+      bugfix on 0.3.2.1-alpha. This issue is also being tracked as
+      TROVE-2019-001 and CVE-2019-8955.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the February 5 2019 Maxmind GeoLite2
+      Country database. Closes ticket 29478.
+
+  o Minor bugfixes (build, compatibility, rust, backport from 0.4.0.2-alpha):
+    - Update Cargo.lock file to match the version made by the latest
+      version of Rust, so that "make distcheck" will pass again. Fixes
+      bug 29244; bugfix on 0.3.3.4-alpha.
+
+  o Minor bugfixes (onion services, backport from 0.4.0.2-alpha):
+    - Stop logging "Tried to establish rendezvous on non-OR circuit..."
+      as a warning. Instead, log it as a protocol warning, because there
+      is nothing that relay operators can do to fix it. Fixes bug 29029;
+      bugfix on 0.2.5.7-rc.
+
+
+Changes in version 0.4.0.2-alpha - 2019-02-21
+  Tor 0.4.0.2-alpha is the second alpha in its series; it fixes several
+  bugs from earlier versions, including several that had broken
+  backward compatibility.
+
+  It also includes a fix for a medium-severity security bug affecting Tor
+  0.3.2.1-alpha and later. All Tor instances running an affected release
+  should upgrade to 0.3.3.12, 0.3.4.11, 0.3.5.8, or 0.4.0.2-alpha.
+
+  o Major bugfixes (cell scheduler, KIST, security):
+    - Make KIST consider the outbuf length when computing what it can
+      put in the outbuf. Previously, KIST acted as though the outbuf
+      were empty, which could lead to the outbuf becoming too full. It
+      is possible that an attacker could exploit this bug to cause a Tor
+      client or relay to run out of memory and crash. Fixes bug 29168;
+      bugfix on 0.3.2.1-alpha. This issue is also being tracked as
+      TROVE-2019-001 and CVE-2019-8955.
+
+  o Major bugfixes (networking):
+    - Gracefully handle empty username/password fields in SOCKS5
+      username/password auth messsage and allow SOCKS5 handshake to
+      continue. Previously, we had rejected these handshakes, breaking
+      certain applications. Fixes bug 29175; bugfix on 0.3.5.1-alpha.
+
+  o Major bugfixes (windows, startup):
+    - When reading a consensus file from disk, detect whether it was
+      written in text mode, and re-read it in text mode if so. Always
+      write consensus files in binary mode so that we can map them into
+      memory later. Previously, we had written in text mode, which
+      confused us when we tried to map the file on windows. Fixes bug
+      28614; bugfix on 0.4.0.1-alpha.
+
+  o Minor features (compilation):
+    - Compile correctly when OpenSSL is built with engine support
+      disabled, or with deprecated APIs disabled. Closes ticket 29026.
+      Patches from "Mangix".
+
+  o Minor features (developer tooling):
+    - Check that bugfix versions in changes files look like Tor versions
+      from the versions spec. Warn when bugfixes claim to be on a future
+      release. Closes ticket 27761.
+    - Provide a git pre-commit hook that disallows commiting if we have
+      any failures in our code and changelog formatting checks. It is
+      now available in scripts/maint/pre-commit.git-hook. Implements
+      feature 28976.
+
+  o Minor features (directory authority):
+    - When a directory authority is using a bandwidth file to obtain
+      bandwidth values, include the digest of that file in the vote.
+      Closes ticket 26698.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the February 5 2019 Maxmind GeoLite2
+      Country database. Closes ticket 29478.
+
+  o Minor features (testing):
+    - Treat all unexpected ERR and BUG messages as test failures. Closes
+      ticket 28668.
+
+  o Minor bugfixes (build, compatibility, rust):
+    - Update Cargo.lock file to match the version made by the latest
+      version of Rust, so that "make distcheck" will pass again. Fixes
+      bug 29244; bugfix on 0.3.3.4-alpha.
+
+  o Minor bugfixes (compilation):
+    - Fix compilation warnings in test_circuitpadding.c. Fixes bug
+      29169; bugfix on 0.4.0.1-alpha.
+    - Silence a compiler warning in test-memwipe.c on OpenBSD. Fixes bug
+      29145; bugfix on 0.2.9.3-alpha. Patch from Kris Katterjohn.
+
+  o Minor bugfixes (documentation):
+    - Describe the contents of the v3 onion service client authorization
+      files correctly: They hold public keys, not private keys. Fixes
+      bug 28979; bugfix on 0.3.5.1-alpha. Spotted by "Felixix".
+
+  o Minor bugfixes (linux seccomp sandbox):
+    - Fix startup crash when experimental sandbox support is enabled.
+      Fixes bug 29150; bugfix on 0.4.0.1-alpha. Patch by Peter Gerber.
+
+  o Minor bugfixes (logging):
+    - Avoid logging that we are relaxing a circuit timeout when that
+      timeout is fixed. Fixes bug 28698; bugfix on 0.2.4.7-alpha.
+    - Log more information at "warning" level when unable to read a
+      private key; log more information at "info" level when unable to
+      read a public key. We had warnings here before, but they were lost
+      during our NSS work. Fixes bug 29042; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (misc):
+    - The amount of total available physical memory is now determined
+      using the sysctl identifier HW_PHYSMEM (rather than HW_USERMEM)
+      when it is defined and a 64-bit variant is not available. Fixes
+      bug 28981; bugfix on 0.2.5.4-alpha. Patch from Kris Katterjohn.
+
+  o Minor bugfixes (onion services):
+    - Avoid crashing if ClientOnionAuthDir (incorrectly) contains more
+      than one private key for a hidden service. Fixes bug 29040; bugfix
+      on 0.3.5.1-alpha.
+    - In hs_cache_store_as_client() log an HSDesc we failed to parse at
+      "debug" level. Tor used to log it as a warning, which caused very
+      long log lines to appear for some users. Fixes bug 29135; bugfix
+      on 0.3.2.1-alpha.
+    - Stop logging "Tried to establish rendezvous on non-OR circuit..."
+      as a warning. Instead, log it as a protocol warning, because there
+      is nothing that relay operators can do to fix it. Fixes bug 29029;
+      bugfix on 0.2.5.7-rc.
+
+  o Minor bugfixes (scheduler):
+    - When re-adding channels to the pending list, check the correct
+      channel's sched_heap_idx. This issue has had no effect in mainline
+      Tor, but could have led to bugs down the road in improved versions
+      of our circuit scheduling code. Fixes bug 29508; bugfix
+      on 0.3.2.10.
+
+  o Minor bugfixes (tests):
+    - Fix intermittent failures on an adaptive padding test. Fixes one
+      case of bug 29122; bugfix on 0.4.0.1-alpha.
+    - Disable an unstable circuit-padding test that was failing
+      intermittently because of an ill-defined small histogram. Such
+      histograms will be allowed again after 29298 is implemented. Fixes
+      a second case of bug 29122; bugfix on 0.4.0.1-alpha.
+    - Detect and suppress "bug" warnings from the util/time test on
+      Windows. Fixes bug 29161; bugfix on 0.2.9.3-alpha.
+    - Do not log an error-level message if we fail to find an IPv6
+      network interface from the unit tests. Fixes bug 29160; bugfix
+      on 0.2.7.3-rc.
+
+  o Documentation:
+    - In the manpage entry describing MapAddress torrc setting, use
+      example IP addresses from ranges specified for use in documentation
+      by RFC 5737. Resolves issue 28623.
+
+  o Removed features:
+    - Remove the old check-tor script. Resolves issue 29072.
+
+
 Changes in version 0.4.0.1-alpha - 2019-01-18
   Tor 0.4.0.1-alpha is the first release in the new 0.4.0.x series. It
   introduces improved features for power and bandwidth conservation,
