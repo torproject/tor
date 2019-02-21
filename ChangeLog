@@ -1,5 +1,17 @@
 Changes in version 0.3.4.11 - 2019-02-21
-  Tor 0.3.4.11 is the third stable release in its series.
+  Tor 0.3.4.11 is the third stable release in its series.  It includes
+  a fix for a medium-severity security bug affecting Tor 0.3.2.1-alpha and
+  later. All Tor instances running an affected release should upgrade to
+  0.3.3.12, 0.3.4.11, 0.3.5.8, or 0.4.0.2-alpha.
+
+  o Major bugfixes (cell scheduler, KIST, security):
+    - Make KIST consider the outbuf length when computing what it can
+      put in the outbuf. Previously, KIST acted as though the outbuf
+      were empty, which could lead to the outbuf becoming too full. It
+      is possible that an attacker could exploit this bug to cause a Tor
+      client or relay to run out of memory and crash. Fixes bug 29168;
+      bugfix on 0.3.2.1-alpha. This issue is also being tracked as
+      TROVE-2019-001 and CVE-2019-8955.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the February 5 2019 Maxmind GeoLite2
