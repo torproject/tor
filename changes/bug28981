@@ -1,5 +1,0 @@
-  o Minor bugfixes (misc):
-    - The amount of total available physical memory is now determined
-      using the sysctl identifier HW_PHYSMEM (rather than HW_USERMEM)
-      when it is defined and a 64-bit variant is not available.  Fixes
-      bug 28981; bugfix on 0.2.5.4-alpha.  Patch from Kris Katterjohn.
