@@ -1,3 +1,38 @@
+Changes in version 0.3.3.12 - 2019-02-21
+  Tor 0.3.3.12 fixes a medium-severity security bug affecting Tor
+  0.3.2.1-alpha and later. All Tor instances running an affected release
+  should upgrade to 0.3.3.12, 0.3.4.11, 0.3.5.8, or 0.4.0.2-alpha.
+
+  This release marks the end of support for the Tor 0.3.3.x series. We
+  recommend that users switch to either the Tor 0.3.4 series (supported
+  until at least 10 June 2019), or the Tor 0.3.5 series, which will
+  receive long-term support until at least 1 Feb 2022.
+
+  o Major bugfixes (cell scheduler, KIST, security):
+    - Make KIST consider the outbuf length when computing what it can
+      put in the outbuf. Previously, KIST acted as though the outbuf
+      were empty, which could lead to the outbuf becoming too full. It
+      is possible that an attacker could exploit this bug to cause a Tor
+      client or relay to run out of memory and crash. Fixes bug 29168;
+      bugfix on 0.3.2.1-alpha. This issue is also being tracked as
+      TROVE-2019-001 and CVE-2019-8955.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the February 5 2019 Maxmind GeoLite2
+      Country database. Closes ticket 29478.
+
+  o Minor bugfixes (build, compatibility, rust, backport from 0.4.0.2-alpha):
+    - Update Cargo.lock file to match the version made by the latest
+      version of Rust, so that "make distcheck" will pass again. Fixes
+      bug 29244; bugfix on 0.3.3.4-alpha.
+
+  o Minor bugfixes (onion services, backport from 0.4.0.2-alpha):
+    - Stop logging "Tried to establish rendezvous on non-OR circuit..."
+      as a warning. Instead, log it as a protocol warning, because there
+      is nothing that relay operators can do to fix it. Fixes bug 29029;
+      bugfix on 0.2.5.7-rc.
+
+
 Changes in version 0.3.3.11 - 2019-01-07
   Tor 0.3.3.11 backports numerous fixes from later versions of Tor.
   numerous fixes, including an important fix for anyone using OpenSSL
