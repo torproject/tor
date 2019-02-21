@@ -1,4 +1,4 @@
-Changes in 0.4.0.2-alpha - 2019-02-21:
+Changes in version 0.4.0.2-alpha - 2019-02-21
   Tor 0.4.0.2-alpha is the second alpha in its series; it fixes several
   bugs from earlier versions, including several that had broken
   backward compatibility.
