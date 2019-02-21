@@ -10,16 +10,31 @@ workdir=$(git rev-parse --show-toplevel)
 
 cd "$workdir" || exit 1
 
-python scripts/maint/lintChanges.py ./changes/*
+set -e
 
-perl scripts/maint/checkSpace.pl -C \
-src/lib/*/*.[ch] \
-src/core/*/*.[ch] \
-src/feature/*/*.[ch] \
-src/app/*/*.[ch] \
-src/test/*.[ch] \
-src/test/*/*.[ch] \
-src/tools/*.[ch]
+if [ ! -z "ls ./changes/*" ]; then
+    python scripts/maint/lintChanges.py ./changes/*
+fi
+
+if [ -d src/lib ]; then
+    # This is the layout in 0.3.5
+    perl scripts/maint/checkSpace.pl -C \
+         src/lib/*/*.[ch] \
+         src/core/*/*.[ch] \
+         src/feature/*/*.[ch] \
+         src/app/*/*.[ch] \
+         src/test/*.[ch] \
+         src/test/*/*.[ch] \
+         src/tools/*.[ch]
+elif [ -d src/common]; then
+    # This was the layout before 0.3.5
+    perl scripts/maint/checkSpace.pl -C \
+         src/common/*/*.[ch] \
+         src/or/*/*.[ch] \
+         src/test/*.[ch] \
+         src/test/*/*.[ch] \
+         src/tools/*.[ch]
+fi
 
 if test -e scripts/maint/checkIncludes.py; then
     python scripts/maint/checkIncludes.py
