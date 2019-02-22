@@ -46,7 +46,7 @@ do
 
                 if (ref_is_upstream_branch "$local_ref" == 0 ||
                         ref_is_upstream_branch "$remote_ref"  == 0) &&
-                        "$local_ref" ne "$remote_ref"
+                        "$local_ref" != "$remote_ref"
                 then
                         if [ "$remote" == "origin" ]
                         then
