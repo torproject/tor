@@ -44,8 +44,9 @@ do
 			range="$remote_sha..$local_sha"
 		fi
 
-                if ref_is_upstream_branch "$local_ref" == 0 ||
-                        ref_is_upstream_branch "$remote_ref"  == 0
+                if (ref_is_upstream_branch "$local_ref" == 0 ||
+                        ref_is_upstream_branch "$remote_ref"  == 0) &&
+                        [ "$local_ref" != "$remote_ref" ]
                 then
                         if [ "$remote" == "origin" ]
                         then
