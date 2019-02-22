@@ -531,6 +531,20 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
   node->is_running = answer;
 }
 
+/* Check <b>node</b> and <b>ri</b> on whether or not we should publish a
+ * relay's IPv6 addresses. */
+static int
+should_publish_node_ipv6(const node_t *node, const routerinfo_t *ri,
+                         time_t now)
+{
+  const or_options_t *options = get_options();
+
+  return options->AuthDirHasIPv6Connectivity == 1 &&
+    !tor_addr_is_null(&ri->ipv6_addr) &&
+    ((node->last_reachable6 >= now - REACHABLE_TIMEOUT) ||
+     router_is_me(ri));
+}
+
 /** Extract status information from <b>ri</b> and from other authority
  * functions and store it in <b>rs</b>. <b>rs</b> is zeroed out before it is
  * set.
@@ -597,9 +611,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->is_staledesc =
     (ri->cache_info.published_on + DESC_IS_STALE_INTERVAL) < now;
 
-  if (options->AuthDirHasIPv6Connectivity == 1 &&
-      !tor_addr_is_null(&ri->ipv6_addr) &&
-      node->last_reachable6 >= now - REACHABLE_TIMEOUT) {
+  if (should_publish_node_ipv6(node, ri, now)) {
     /* We're configured as having IPv6 connectivity. There's an IPv6
        OR port and it's reachable so copy it to the routerstatus.  */
     tor_addr_copy(&rs->ipv6_addr, &ri->ipv6_addr);
