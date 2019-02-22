@@ -12,6 +12,8 @@
 
 #include "orconfig.h"
 
+#define CRYPTO_PRIVATE
+
 #include "lib/crypt_ops/crypto_init.h"
 
 #include "lib/crypt_ops/crypto_curve25519.h"
@@ -69,6 +71,8 @@ crypto_early_init(void)
     if (crypto_init_siphash_key() < 0)
       return -1;
 
+    crypto_rand_fast_init();
+
     curve25519_init();
     ed25519_init();
   }
@@ -111,6 +115,7 @@ crypto_thread_cleanup(void)
 #ifdef ENABLE_OPENSSL
   crypto_openssl_thread_cleanup();
 #endif
+  destroy_thread_fast_rng();
 }
 
 /**
@@ -128,6 +133,8 @@ crypto_global_cleanup(void)
 #ifdef ENABLE_NSS
   crypto_nss_global_cleanup();
 #endif
+
+  crypto_rand_fast_shutdown();
 
   crypto_early_initialized_ = 0;
   crypto_global_initialized_ = 0;
