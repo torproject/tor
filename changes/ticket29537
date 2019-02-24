@@ -1,0 +1,3 @@
+  o Testing:
+    - Introduce unit test that checks for interoperability between intptr_t
+      and regular void pointer. Closes ticket 29537.

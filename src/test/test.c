@@ -65,6 +65,32 @@
 #include "feature/rend/rend_service_descriptor_st.h"
 #include "feature/relay/onion_queue.h"
 
+static void
+test_intptr_t_void_star_interop(void *arg)
+{
+   int dummy = 42;
+   (void)arg;
+
+   void *a = NULL;
+   intptr_t b = (intptr_t)a;
+   void *c = (void*)b;
+   intptr_t d = (intptr_t)c;
+
+   tt_ptr_op(a, OP_EQ, c);
+   tt_assert(b == d);
+
+   a = &dummy;
+   b = (intptr_t)a;
+   c = (void*)b;
+   d = (intptr_t)c;
+
+   tt_ptr_op(a, OP_EQ, c);
+   tt_assert(b == d);
+
+  done:
+   return;
+}
+
 /** Run unit tests for the onion handshake code. */
 static void
 test_onion_handshake(void *arg)
@@ -817,6 +843,7 @@ test_stats(void *arg)
   { #name, test_ ## name , TT_FORK, NULL, NULL }
 
 static struct testcase_t test_array[] = {
+  ENT(intptr_t_void_star_interop),
   ENT(onion_handshake),
   { "bad_onion_handshake", test_bad_onion_handshake, 0, NULL, NULL },
   ENT(onion_queues),
