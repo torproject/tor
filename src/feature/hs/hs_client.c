@@ -459,6 +459,24 @@ fetch_v3_desc, (const ed25519_public_key_t *onion_identity_pk))
   return directory_launch_v3_desc_fetch(onion_identity_pk, hsdir_rs);
 }
 
+/* With a given <b>onion_identity_pk</b>, fetch its descriptor. If
+ * <b>hsdirs</b> is specified, use the directory servers specified in the list.
+ * Else, use a random server. */
+void
+hs_client_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
+                               const smartlist_t *hsdirs)
+{
+  tor_assert(onion_identity_pk);
+
+  if (hsdirs != NULL) {
+    SMARTLIST_FOREACH_BEGIN(hsdirs, const routerstatus_t *, hsdir) {
+      directory_launch_v3_desc_fetch(onion_identity_pk, hsdir);
+    } SMARTLIST_FOREACH_END(hsdir);
+  } else {
+    fetch_v3_desc(onion_identity_pk);
+  }
+}
+
 /* Make sure that the given v3 origin circuit circ is a valid correct
  * introduction circuit. This will BUG() on any problems and hard assert if
  * the anonymity of the circuit is not ok. Return 0 on success else -1 where

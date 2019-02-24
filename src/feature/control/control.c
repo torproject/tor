@@ -4426,6 +4426,8 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
   static const char *v2_str = "v2-";
   const size_t v2_str_len = strlen(v2_str);
   rend_data_t *rend_query = NULL;
+  ed25519_public_key_t v3_pk;
+  uint32_t version;
 
   /* Make sure we have at least one argument, the HSAddress. */
   args = getargs_helper(hsfetch_command, conn, body, 1, -1);
@@ -4438,6 +4440,7 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
   /* Test if it's an HS address without the .onion part. */
   if (rend_valid_v2_service_id(arg1)) {
     hsaddress = arg1;
+    version = HS_VERSION_TWO;
   } else if (strcmpstart(arg1, v2_str) == 0 &&
              rend_valid_descriptor_id(arg1 + v2_str_len) &&
              base32_decode(digest, sizeof(digest), arg1 + v2_str_len,
@@ -4445,6 +4448,11 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
     /* We have a well formed version 2 descriptor ID. Keep the decoded value
      * of the id. */
     desc_id = digest;
+    version = HS_VERSION_TWO;
+  } else if (hs_address_is_valid(arg1)) {
+    hsaddress = arg1;
+    version = HS_VERSION_THREE;
+    hs_parse_address(hsaddress, &v3_pk, NULL, NULL);
   } else {
     connection_printf_to_buf(conn, "513 Invalid argument \"%s\"\r\n",
                              arg1);
@@ -4481,11 +4489,13 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
     }
   }
 
-  rend_query = rend_data_client_create(hsaddress, desc_id, NULL,
-                                       REND_NO_AUTH);
-  if (rend_query == NULL) {
-    connection_printf_to_buf(conn, "551 Error creating the HS query\r\n");
-    goto done;
+  if (version == HS_VERSION_TWO) {
+    rend_query = rend_data_client_create(hsaddress, desc_id, NULL,
+                                         REND_NO_AUTH);
+    if (rend_query == NULL) {
+      connection_printf_to_buf(conn, "551 Error creating the HS query\r\n");
+      goto done;
+    }
   }
 
   /* Using a descriptor ID, we force the user to provide at least one
@@ -4504,7 +4514,11 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
   /* Trigger the fetch using the built rend query and possibly a list of HS
    * directory to use. This function ignores the client cache thus this will
    * always send a fetch command. */
-  rend_client_fetch_v2_desc(rend_query, hsdirs);
+  if (version == HS_VERSION_TWO) {
+    rend_client_fetch_v2_desc(rend_query, hsdirs);
+  } else if (version == HS_VERSION_THREE) {
+    hs_control_hsfetch_command(&v3_pk, hsdirs);
+  }
 
  done:
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
