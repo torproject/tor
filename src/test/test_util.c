@@ -6165,8 +6165,8 @@ static void
 test_util_map_anon_nofork(void *arg)
 {
   (void)arg;
-#if !defined(HAVE_MADVISE) && !defined(HAVE_MINHERIT)
-  /* The operating system doesn't support this. */
+#ifdef _WIN32
+  /* The operating system doesn't support forking. */
   tt_skip();
  done:
   ;
@@ -6182,6 +6182,7 @@ test_util_map_anon_nofork(void *arg)
 
   tor_munmap_anonymous(ptr, sz);
   ptr = tor_mmap_anonymous(sz, ANONMAP_NOINHERIT);
+  int outcome = get_last_anon_map_noinherit();
   tt_ptr_op(ptr, OP_NE, 0);
   memset(ptr, 0xd0, sz);
 
@@ -6202,14 +6203,29 @@ test_util_map_anon_nofork(void *arg)
   pipefd[1] = -1;
   char buf[1];
   ssize_t r = read(pipefd[0], buf, 1);
-#if defined(INHERIT_ZERO) || defined(MADV_WIPEONFORK)
-  tt_int_op((int)r, OP_EQ, 1); // child should send us a byte.
-  tt_int_op(buf[0], OP_EQ, 0);
-#else
-  tt_int_op(r, OP_LE, 0); // child said nothing; it should have crashed.
-#endif
+
+  if (outcome == 2) {
+    // We should be seeing clear-on-fork behavior.
+    tt_int_op((int)r, OP_EQ, 1); // child should send us a byte.
+    tt_int_op(buf[0], OP_EQ, 0); // that byte should be zero.
+  } else if (outcome == 1) {
+    // We should be seeing noinherit behavior.
+    tt_int_op(r, OP_LE, 0); // child said nothing; it should have crashed.
+  } else {
+    // noinherit isn't implemented.
+    tt_int_op(outcome, OP_EQ, 0);
+    tt_int_op((int)r, OP_EQ, 1); // child should send us a byte.
+    tt_int_op(buf[0], OP_EQ, 0xd0); // that byte should what we set it to.
+  }
+
   int ws;
   waitpid(child, &ws, 0);
+
+  if (outcome == 0) {
+    /* Call this test "skipped", not "passed", since noinherit wasn't
+     * implemented. */
+    tt_skip();
+  }
 
  done:
   tor_munmap_anonymous(ptr, sz);
@@ -6360,6 +6376,6 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(get_unquoted_path, 0),
   UTIL_TEST(log_mallinfo, 0),
   UTIL_TEST(map_anon, 0),
-  UTIL_TEST(map_anon_nofork, TT_SKIP /* See bug #29535 */),
+  UTIL_TEST(map_anon_nofork, 0),
   END_OF_TESTCASES
 };

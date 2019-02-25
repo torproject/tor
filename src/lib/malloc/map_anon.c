@@ -107,6 +107,29 @@ nodump_mem(void *mem, size_t sz)
 #endif
 }
 
+#ifdef TOR_UNIT_TESTS
+static unsigned last_anon_map_noinherit = ~0;
+/* Testing helper: return the outcome of the last call to noinherit_mem():
+ * 0 if it did no good; 1 if it caused the memory not to be inherited, and
+ * 2 if it caused the memory to be cleared on fork */
+unsigned
+get_last_anon_map_noinherit(void)
+{
+  return last_anon_map_noinherit;
+}
+static void
+set_last_anon_map_noinherit(unsigned f)
+{
+  last_anon_map_noinherit = f;
+}
+#else
+static void
+set_last_anon_map_noinherit(unsigned f)
+{
+  (void)f;
+}
+#endif
+
 /**
  * Helper: try to prevent the <b>sz</b> bytes at <b>mem</b> from being
  * accessible in child processes -- ideally by having them set to 0 after a
@@ -117,13 +140,20 @@ nodump_mem(void *mem, size_t sz)
 static int
 noinherit_mem(void *mem, size_t sz)
 {
+  set_last_anon_map_noinherit(0);
 #ifdef FLAG_ZERO
   int r = MINHERIT(mem, sz, FLAG_ZERO);
-  if (r == 0)
+  if (r == 0) {
+    set_last_anon_map_noinherit(2);
     return 0;
+  }
 #endif
 #ifdef FLAG_NOINHERIT
-  return MINHERIT(mem, sz, FLAG_NOINHERIT);
+  int r2 = MINHERIT(mem, sz, FLAG_NOINHERIT);
+  if (r2 == 0) {
+    set_last_anon_map_noinherit(1);
+  }
+  return r2;
 #else
   (void)mem;
   (void)sz;

@@ -34,4 +34,8 @@
 void *tor_mmap_anonymous(size_t sz, unsigned flags);
 void tor_munmap_anonymous(void *mapping, size_t sz);
 
+#ifdef TOR_UNIT_TESTS
+unsigned get_last_anon_map_noinherit(void);
+#endif
+
 #endif /* !defined(TOR_MAP_ANON_H) */
