@@ -380,17 +380,17 @@ circpad_choose_state_length(circpad_machine_state_t *mi)
  */
 static circpad_delay_t
 circpad_distribution_sample_iat_delay(const circpad_state_t *state,
-                                      circpad_delay_t min_delay)
+                                      circpad_delay_t delay_shift)
 {
   double val = circpad_distribution_sample(state->iat_dist);
   /* These comparisons are safe, because the output is in the range
    * [0, 2**32), and double has a precision of 53 bits. */
   val = MAX(0, val);
-  val = MIN(val, state->dist_max_usec);
+  val = MIN(val, state->dist_max_sample_usec);
 
   /* This addition is exact: val is at most 2**32-1, min_delay
    * is at most 2**32-1, and doubles have a precision of 53 bits. */
-  val += min_delay;
+  val += delay_shift;
 
   /* Clamp the distribution at infinite delay val */
   return (circpad_delay_t)MIN(tor_llround(val), CIRCPAD_DELAY_INFINITE);
@@ -420,9 +420,10 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
 
   if (state->iat_dist.type != CIRCPAD_DIST_NONE) {
     /* Sample from a fixed IAT distribution and return */
-    circpad_delay_t min_iat_delay = state->use_rtt_estimate ?
-      mi->rtt_estimate_usec + state->dist_min_usec : state->dist_min_usec;
-    return circpad_distribution_sample_iat_delay(state, min_iat_delay);
+    circpad_delay_t iat_delay_shift = state->use_rtt_estimate ?
+      mi->rtt_estimate_usec + state->dist_added_shift_usec :
+      state->dist_added_shift_usec;
+    return circpad_distribution_sample_iat_delay(state, iat_delay_shift);
   } else if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE) {
     /* We have a mutable histogram. Do basic sanity check and apply: */
     if (BUG(!mi->histogram) ||

@@ -2098,48 +2098,48 @@ helper_circpad_circ_distribution_machine_setup(int min, int max)
   zero_st->iat_dist.type = CIRCPAD_DIST_UNIFORM;
   zero_st->iat_dist.param1 = min;
   zero_st->iat_dist.param2 = max;
-  zero_st->dist_min_usec = min;
-  zero_st->dist_max_usec = max;
+  zero_st->dist_added_shift_usec = min;
+  zero_st->dist_max_sample_usec = max;
 
   circpad_state_t *first_st = &circ_client_machine.states[1];
   first_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 2;
   first_st->iat_dist.type = CIRCPAD_DIST_LOGISTIC;
   first_st->iat_dist.param1 = min;
   first_st->iat_dist.param2 = max;
-  first_st->dist_min_usec = min;
-  first_st->dist_max_usec = max;
+  first_st->dist_added_shift_usec = min;
+  first_st->dist_max_sample_usec = max;
 
   circpad_state_t *second_st = &circ_client_machine.states[2];
   second_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 3;
   second_st->iat_dist.type = CIRCPAD_DIST_LOG_LOGISTIC;
   second_st->iat_dist.param1 = min;
   second_st->iat_dist.param2 = max;
-  second_st->dist_min_usec = min;
-  second_st->dist_max_usec = max;
+  second_st->dist_added_shift_usec = min;
+  second_st->dist_max_sample_usec = max;
 
   circpad_state_t *third_st = &circ_client_machine.states[3];
   third_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 4;
   third_st->iat_dist.type = CIRCPAD_DIST_GEOMETRIC;
   third_st->iat_dist.param1 = min;
   third_st->iat_dist.param2 = max;
-  third_st->dist_min_usec = min;
-  third_st->dist_max_usec = max;
+  third_st->dist_added_shift_usec = min;
+  third_st->dist_max_sample_usec = max;
 
   circpad_state_t *fourth_st = &circ_client_machine.states[4];
   fourth_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 5;
   fourth_st->iat_dist.type = CIRCPAD_DIST_WEIBULL;
   fourth_st->iat_dist.param1 = min;
   fourth_st->iat_dist.param2 = max;
-  fourth_st->dist_min_usec = min;
-  fourth_st->dist_max_usec = max;
+  fourth_st->dist_added_shift_usec = min;
+  fourth_st->dist_max_sample_usec = max;
 
   circpad_state_t *fifth_st = &circ_client_machine.states[5];
   fifth_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 6;
   fifth_st->iat_dist.type = CIRCPAD_DIST_PARETO;
   fifth_st->iat_dist.param1 = min;
   fifth_st->iat_dist.param2 = max;
-  fifth_st->dist_min_usec = min;
-  fifth_st->dist_max_usec = max;
+  fifth_st->dist_added_shift_usec = min;
+  fifth_st->dist_max_sample_usec = max;
 }
 
 /** Simple test that the padding delays sampled from a uniform distribution

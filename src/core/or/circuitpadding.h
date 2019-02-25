@@ -309,13 +309,16 @@ typedef struct circpad_state_t {
    * results of sampling from this distribution (range_sec is used as a max).
    */
   circpad_distribution_t iat_dist;
-  /*  If a delay probability distribution is used, this represents the minimum
-   *  delay we can sample from the distribution. */
-  circpad_delay_t dist_min_usec;
   /*  If a delay probability distribution is used, this is used as the max
-   *  delay we can sample from the distribution.
-   */
-  circpad_delay_t dist_max_usec;
+   *  value we can sample from the distribution. However, RTT measurements and
+   *  dist_added_shift gets applied on top of this value to derive the final
+   *  padding delay. */
+  circpad_delay_t dist_max_sample_usec;
+  /*  If a delay probability distribution is used and this is set, we will add
+   *  this value on top of the value sampled from the IAT distribution to
+   *  derive the final padding delay (We also add the RTT measurement if it's
+   *  enabled.). */
+  circpad_delay_t dist_added_shift_usec;
 
   /**
    * The length dist is a parameterized way of encoding how long this
