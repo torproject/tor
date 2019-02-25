@@ -211,6 +211,7 @@ src_test_test_slow_SOURCES += \
 	src/test/test_crypto_slow.c \
 	src/test/test_process_slow.c \
 	src/test/test_prob_distr.c \
+	src/test/test_ptr_slow.c \
 	src/test/testing_common.c \
 	src/test/testing_rsakeys.c \
 	src/ext/tinytest.c

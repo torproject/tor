@@ -1,0 +1,3 @@
+  o Testing:
+    - Check that all valid values of `int` and `unsigned int` can be
+      represented by `void *`. Resolves issue 29537.
