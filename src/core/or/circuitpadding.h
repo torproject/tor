@@ -276,6 +276,12 @@ typedef struct circpad_state_t {
    *    histogram[] =        {   6,  10,   6,  7,    9,     6 }
    *    histogram_edges[] =  { 0, 100, 200, 350, 500, 1000 }
    *
+   * The final bin is called the "infinity bin" and if it's chosen we don't
+   * schedule any padding. The infinity bin is strange because its lower edge
+   * is the max value of possible non-infinite delay allowed by this histogram,
+   * and its upper edge is CIRCPAD_DELAY_INFINITE. You can tell if the infinity
+   * bin is chosen by inspecting its bin index or inspecting its upper edge.
+   *
    * If a delay probability distribution is used for this state, this is set
    * to 0. */
   circpad_hist_index_t histogram_len;

@@ -224,6 +224,10 @@ circpad_machine_current_state(const circpad_machine_state_t *mi)
 /**
  * Get the lower bound of a histogram bin. The upper bound is obtained by
  * calling this function with bin+1, and subtracting 1.
+ *
+ * This function can also be called with 'bin' set to a value equal or greater
+ * than histogram_len in which case the infinity bin is chosen and
+ * CIRCPAD_DELAY_INFINITE is returned.
  */
 STATIC circpad_delay_t
 circpad_histogram_bin_to_usec(const circpad_machine_state_t *mi,
