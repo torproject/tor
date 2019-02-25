@@ -198,14 +198,23 @@ typedef enum {
  * These can be used instead of histograms for the inter-packet
  * timing distribution, or to specify a distribution on the number
  * of cells that can be sent while in a specific state of the state
- * machine. */
+ * machine.
+ *
+ * Each distribution takes up to two parameters which are described below. */
 typedef enum {
+  /* No probability distribution is used */
   CIRCPAD_DIST_NONE = 0,
+  /* Uniform distribution: param1 is lower bound and param2 is upper bound */
   CIRCPAD_DIST_UNIFORM = 1,
+  /* Logistic distribution: param1 is Mu, param2 is sigma. */
   CIRCPAD_DIST_LOGISTIC = 2,
+  /* Log-logistic distribution: param1 is Alpha, param2 is 1.0/Beta */
   CIRCPAD_DIST_LOG_LOGISTIC = 3,
+  /* Geometric distribution: param1 is 'p' (success probability) */
   CIRCPAD_DIST_GEOMETRIC = 4,
+  /* Weibull distribution: param1 is k, param2 is Lambda */
   CIRCPAD_DIST_WEIBULL = 5,
+  /* Generalized Pareto distribution: param1 is sigma, param2 is xi */
   CIRCPAD_DIST_PARETO = 6
 } circpad_distribution_type_t;
 
