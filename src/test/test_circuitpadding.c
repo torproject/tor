@@ -425,8 +425,6 @@ helper_create_basic_machine(void)
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[2] = 5000;
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[3] = 10000;
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[4] = 20000;
-  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[5] = 400000;
-  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[6] = 1000000;
 
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[0] = 1;
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[1] = 0;

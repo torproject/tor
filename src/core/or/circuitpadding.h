@@ -290,7 +290,7 @@ typedef struct circpad_state_t {
    * bin. The rightmost edge is always infinity and is not specified in this
    * array.
    *
-   * This array must have histogram_len+1 elements. */
+   * This array must have histogram_len elements. */
   circpad_delay_t histogram_edges[CIRCPAD_MAX_HISTOGRAM_LEN+1];
   /** Total number of tokens in this histogram. This is a constant and is *not*
    *  decremented every time we spend a token. It's used for initializing and

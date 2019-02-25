@@ -2185,7 +2185,6 @@ circpad_circ_responder_machine_init(void)
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[3]= 4000;
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[4]= 8000;
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[5]= 16000;
-  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[6]=1000000;
   /* Specify histogram tokens */
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[0] = 0;
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[1] = 1;
