@@ -293,7 +293,7 @@ circpad_histogram_usec_to_bin(const circpad_machine_state_t *mi,
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
   circpad_delay_t rtt_add_usec = 0;
-  int32_t bin;
+  circpad_hist_index_t bin;
 
   /* Our state should have been checked to be non-null by the caller
    * (circpad_machine_remove_token()) */

@@ -235,6 +235,9 @@ typedef uint16_t circpad_statenum_t;
  *
  * Memory concerns are not so great here since the corresponding histogram and
  * histogram_edges arrays are global and not per-circuit.
+ *
+ * If we ever upgrade this to a value that can't be represented by 8-bits we
+ * also need to upgrade circpad_hist_index_t.
  */
 #define CIRCPAD_MAX_HISTOGRAM_LEN (100)
 
