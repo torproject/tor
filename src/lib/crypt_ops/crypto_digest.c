@@ -37,6 +37,12 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/sha.h>
 
 ENABLE_GCC_WARNING(redundant-decls)
+
+#ifdef HAVE_EVP_SHA3_256
+#define OPENSSL_HAS_SHA3
+#include <openssl/evp.h>
+#endif
+
 #endif
 
 #ifdef ENABLE_NSS
@@ -150,8 +156,13 @@ crypto_digest256(char *digest, const char *m, size_t len,
     ret = (SHA256((const uint8_t*)m,len,(uint8_t*)digest) != NULL);
 #endif
   } else {
+#ifdef OPENSSL_HAS_SHA3
+    unsigned int dlen = DIGEST256_LEN;
+    ret = EVP_Digest(m, len, (uint8_t*)digest, &dlen, EVP_sha3_256(), NULL);
+#else
     ret = (sha3_256((uint8_t *)digest, DIGEST256_LEN,(const uint8_t *)m, len)
            > -1);
+#endif
   }
 
   if (!ret)
@@ -179,8 +190,13 @@ crypto_digest512(char *digest, const char *m, size_t len,
            != NULL);
 #endif
   } else {
+#ifdef OPENSSL_HAS_SHA3
+    unsigned int dlen = DIGEST512_LEN;
+    ret = EVP_Digest(m, len, (uint8_t*)digest, &dlen, EVP_sha3_512(), NULL);
+#else
     ret = (sha3_512((uint8_t*)digest, DIGEST512_LEN, (const uint8_t*)m, len)
            > -1);
+#endif
   }
 
   if (!ret)
@@ -282,7 +298,11 @@ struct crypto_digest_t {
     SHA256_CTX sha2; /**< state for SHA256 */
     SHA512_CTX sha512; /**< state for SHA512 */
 #endif
+#ifdef OPENSSL_HAS_SHA3
+    EVP_MD_CTX *md;
+#else
     keccak_state sha3; /**< state for SHA3-[256,512] */
+#endif
   } d;
 };
 
@@ -325,9 +345,15 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
     case DIGEST_SHA512:
       return END_OF_FIELD(d.sha512);
 #endif
-    case DIGEST_SHA3_256:
+#ifdef OPENSSL_HAS_SHA3
+    case DIGEST_SHA3_256: /* Fall through */
+    case DIGEST_SHA3_512:
+      return END_OF_FIELD(d.md);
+#else
+    case DIGEST_SHA3_256: /* Fall through */
     case DIGEST_SHA3_512:
       return END_OF_FIELD(d.sha3);
+#endif
     default:
       tor_assert(0); // LCOV_EXCL_LINE
       return 0;      // LCOV_EXCL_LINE
@@ -373,12 +399,29 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
       SHA512_Init(&r->d.sha512);
       break;
 #endif
+#ifdef OPENSSL_HAS_SHA3
+    case DIGEST_SHA3_256:
+      r->d.md = EVP_MD_CTX_new();
+      if (!EVP_DigestInit(r->d.md, EVP_sha3_256())) {
+        crypto_digest_free(r);
+        return NULL;
+      }
+      break;
+    case DIGEST_SHA3_512:
+      r->d.md = EVP_MD_CTX_new();
+      if (!EVP_DigestInit(r->d.md, EVP_sha3_512())) {
+        crypto_digest_free(r);
+        return NULL;
+      }
+      break;
+#else
     case DIGEST_SHA3_256:
       keccak_digest_init(&r->d.sha3, 256);
       break;
     case DIGEST_SHA3_512:
       keccak_digest_init(&r->d.sha3, 512);
       break;
+#endif
     default:
       tor_assert_unreached();
     }
@@ -428,6 +471,14 @@ crypto_digest_free_(crypto_digest_t *digest)
     PK11_DestroyContext(digest->d.ctx, PR_TRUE);
   }
 #endif
+#ifdef OPENSSL_HAS_SHA3
+  if (digest->algorithm == DIGEST_SHA3_256 ||
+      digest->algorithm == DIGEST_SHA3_512) {
+    if (digest->d.md) {
+      EVP_MD_CTX_free(digest->d.md);
+    }
+  }
+#endif
   size_t bytes = crypto_digest_alloc_bytes(digest->algorithm);
   memwipe(digest, 0, bytes);
   tor_free(digest);
@@ -471,10 +522,19 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
       SHA512_Update(&digest->d.sha512, (void*)data, len);
       break;
 #endif
+#ifdef OPENSSL_HAS_SHA3
+    case DIGEST_SHA3_256: /* FALLSTHROUGH */
+    case DIGEST_SHA3_512: {
+      int r = EVP_DigestUpdate(digest->d.md, data, len);
+      tor_assert(r);
+  }
+      break;
+#else
     case DIGEST_SHA3_256: /* FALLSTHROUGH */
     case DIGEST_SHA3_512:
       keccak_digest_update(&digest->d.sha3, (const uint8_t *)data, len);
       break;
+#endif
     default:
       /* LCOV_EXCL_START */
       tor_fragile_assert();
@@ -499,12 +559,24 @@ crypto_digest_get_digest(crypto_digest_t *digest,
   tor_assert(out);
   tor_assert(out_len <= crypto_digest_algorithm_get_length(digest->algorithm));
 
-  /* The SHA-3 code handles copying into a temporary ctx, and also can handle
-   * short output buffers by truncating appropriately. */
   if (digest->algorithm == DIGEST_SHA3_256 ||
       digest->algorithm == DIGEST_SHA3_512) {
+#ifdef OPENSSL_HAS_SHA3
+    unsigned dlen = (unsigned)
+      crypto_digest_algorithm_get_length(digest->algorithm);
+    EVP_MD_CTX *tmp = EVP_MD_CTX_new();
+    EVP_MD_CTX_copy(tmp, digest->d.md);
+    memset(r, 0xff, sizeof(r));
+    int res = EVP_DigestFinal(tmp, r, &dlen);
+    EVP_MD_CTX_free(tmp);
+    tor_assert(res == 1);
+    goto done;
+#else
+    /* Tiny-Keccak handles copying into a temporary ctx, and also can handle
+     * short output buffers by truncating appropriately. */
     keccak_digest_sum(&digest->d.sha3, (uint8_t *)out, out_len);
     return;
+#endif
   }
 
 #ifdef ENABLE_NSS
@@ -550,6 +622,10 @@ crypto_digest_get_digest(crypto_digest_t *digest,
 //LCOV_EXCL_STOP
   }
 #endif
+
+#ifdef OPENSSL_HAS_SHA3
+ done:
+#endif
   memcpy(out, r, out_len);
   memwipe(r, 0, sizeof(r));
 }
@@ -569,6 +645,13 @@ crypto_digest_dup(const crypto_digest_t *digest)
 #ifdef ENABLE_NSS
   if (library_supports_digest(digest->algorithm)) {
     result->d.ctx = PK11_CloneContext(digest->d.ctx);
+  }
+#endif
+#ifdef OPENSSL_HAS_SHA3
+  if (digest->algorithm == DIGEST_SHA3_256 ||
+      digest->algorithm == DIGEST_SHA3_512) {
+    result->d.md = EVP_MD_CTX_new();
+    EVP_MD_CTX_copy(result->d.md, digest->d.md);
   }
 #endif
   return result;
@@ -637,6 +720,15 @@ crypto_digest_assign(crypto_digest_t *into,
     return;
   }
 #endif
+
+#ifdef OPENSSL_HAS_SHA3
+  if (from->algorithm == DIGEST_SHA3_256 ||
+      from->algorithm == DIGEST_SHA3_512) {
+    EVP_MD_CTX_copy(into->d.md, from->d.md);
+    return;
+  }
+#endif
+
   memcpy(into,from,alloc_bytes);
 }
 
@@ -779,7 +871,23 @@ crypto_mac_sha3_256(uint8_t *mac_out, size_t len_out,
 
 /** Internal state for a eXtendable-Output Function (XOF). */
 struct crypto_xof_t {
+#ifdef OPENSSL_HAS_SHAKE3_EVP
+  /* XXXX We can't enable this yet, because OpenSSL's
+   * DigestFinalXOF function can't be called repeatedly on the same
+   * XOF.
+   *
+   * We could in theory use the undocumented SHA3_absorb and SHA3_squeeze
+   * functions, but let's not mess with undocumented OpenSSL internals any
+   * more than we have to.
+   *
+   * We could also revise our XOF code so that it only allows a single
+   * squeeze operation; we don't require streaming squeeze operations
+   * outside the tests yet.
+   */
+  EVP_MD_CTX *ctx;
+#else
   keccak_state s;
+#endif
 };
 
 /** Allocate a new XOF object backed by SHAKE-256.  The security level
@@ -792,7 +900,14 @@ crypto_xof_new(void)
 {
   crypto_xof_t *xof;
   xof = tor_malloc(sizeof(crypto_xof_t));
+#ifdef OPENSSL_HAS_SHAKE256
+  xof->ctx = EVP_MD_CTX_new();
+  tor_assert(xof->ctx);
+  int r = EVP_DigestInit(xof->ctx, EVP_shake256());
+  tor_assert(r == 1);
+#else
   keccak_xof_init(&xof->s, 256);
+#endif
   return xof;
 }
 
@@ -803,8 +918,13 @@ crypto_xof_new(void)
 void
 crypto_xof_add_bytes(crypto_xof_t *xof, const uint8_t *data, size_t len)
 {
+#ifdef OPENSSL_HAS_SHAKE256
+  int r = EVP_DigestUpdate(xof->ctx, data, len);
+  tor_assert(r == 1);
+#else
   int i = keccak_xof_absorb(&xof->s, data, len);
   tor_assert(i == 0);
+#endif
 }
 
 /** Squeeze bytes out of a XOF object.  Calling this routine will render
@@ -813,8 +933,13 @@ crypto_xof_add_bytes(crypto_xof_t *xof, const uint8_t *data, size_t len)
 void
 crypto_xof_squeeze_bytes(crypto_xof_t *xof, uint8_t *out, size_t len)
 {
+#ifdef OPENSSL_HAS_SHAKE256
+  int r = EVP_DigestFinalXOF(xof->ctx, out, len);
+  tor_assert(r == 1);
+#else
   int i = keccak_xof_squeeze(&xof->s, out, len);
   tor_assert(i == 0);
+#endif
 }
 
 /** Cleanse and deallocate a XOF object. */
@@ -823,6 +948,34 @@ crypto_xof_free_(crypto_xof_t *xof)
 {
   if (!xof)
     return;
+#ifdef OPENSSL_HAS_SHAKE256
+  if (xof->ctx)
+    EVP_MD_CTX_free(xof->ctx);
+#endif
   memwipe(xof, 0, sizeof(crypto_xof_t));
   tor_free(xof);
+}
+
+/** Compute the XOF (SHAKE256) of a <b>input_len</b> bytes at <b>input</b>,
+ * putting <b>output_len</b> bytes at <b>output</b>. */
+void
+crypto_xof(uint8_t *output, size_t output_len,
+           const uint8_t *input, size_t input_len)
+{
+#ifdef OPENSSL_HAS_SHA3
+  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+  tor_assert(ctx);
+  int r = EVP_DigestInit(ctx, EVP_shake256());
+  tor_assert(r == 1);
+  r = EVP_DigestUpdate(ctx, input, input_len);
+  tor_assert(r == 1);
+  r = EVP_DigestFinalXOF(ctx, output, output_len);
+  tor_assert(r == 1);
+  EVP_MD_CTX_free(ctx);
+#else
+  crypto_xof_t *xof = crypto_xof_new();
+  crypto_xof_add_bytes(xof, input, input_len);
+  crypto_xof_squeeze_bytes(xof, output, output_len);
+  crypto_xof_free(xof);
+#endif
 }
