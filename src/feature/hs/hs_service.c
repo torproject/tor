@@ -1179,7 +1179,8 @@ parse_authorized_client(const char *client_key_str)
   client = tor_malloc_zero(sizeof(hs_service_authorized_client_t));
   if (base32_decode((char *) client->client_pk.public_key,
                     sizeof(client->client_pk.public_key),
-                    pubkey_b32, strlen(pubkey_b32)) < 0) {
+                    pubkey_b32, strlen(pubkey_b32)) !=
+      sizeof(client->client_pk.public_key)) {
     log_warn(LD_REND, "Client authorization public key cannot be decoded: %s",
              pubkey_b32);
     goto err;

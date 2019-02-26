@@ -593,10 +593,10 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
   char desc_id_digest[DIGEST_LEN];
   tor_assert(rend_cache_v2_dir);
   if (base32_decode(desc_id_digest, DIGEST_LEN,
-                    desc_id, REND_DESC_ID_V2_LEN_BASE32) < 0) {
+                    desc_id, REND_DESC_ID_V2_LEN_BASE32) != DIGEST_LEN) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Rejecting v2 rendezvous descriptor request -- descriptor ID "
-           "contains illegal characters: %s",
+           "has wrong length or illegal characters: %s",
            safe_str(desc_id));
     return -1;
   }
@@ -854,7 +854,8 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     *entry = NULL;
   }
   if (base32_decode(want_desc_id, sizeof(want_desc_id),
-                    desc_id_base32, strlen(desc_id_base32)) != 0) {
+                    desc_id_base32, strlen(desc_id_base32)) !=
+      sizeof(want_desc_id)) {
     log_warn(LD_BUG, "Couldn't decode base32 %s for descriptor id.",
              escaped_safe_str_client(desc_id_base32));
     goto err;
@@ -1005,4 +1006,3 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   tor_free(intro_content);
   return retval;
 }
-

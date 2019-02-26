@@ -1703,13 +1703,13 @@ test_crypto_base32_decode(void *arg)
   /* Encode and decode a random string. */
   base32_encode(encoded, 96 + 1, plain, 60);
   res = base32_decode(decoded, 60, encoded, 96);
-  tt_int_op(res,OP_EQ, 0);
+  tt_int_op(res, OP_EQ, 60);
   tt_mem_op(plain,OP_EQ, decoded, 60);
   /* Encode, uppercase, and decode a random string. */
   base32_encode(encoded, 96 + 1, plain, 60);
   tor_strupper(encoded);
   res = base32_decode(decoded, 60, encoded, 96);
-  tt_int_op(res,OP_EQ, 0);
+  tt_int_op(res, OP_EQ, 60);
   tt_mem_op(plain,OP_EQ, decoded, 60);
   /* Change encoded string and decode. */
   if (encoded[0] == 'A' || encoded[0] == 'a')
@@ -1717,12 +1717,12 @@ test_crypto_base32_decode(void *arg)
   else
     encoded[0] = 'A';
   res = base32_decode(decoded, 60, encoded, 96);
-  tt_int_op(res,OP_EQ, 0);
+  tt_int_op(res, OP_EQ, 60);
   tt_mem_op(plain,OP_NE, decoded, 60);
   /* Bad encodings. */
   encoded[0] = '!';
   res = base32_decode(decoded, 60, encoded, 96);
-  tt_int_op(0, OP_GT, res);
+  tt_int_op(res, OP_LT, 0);
 
  done:
   ;
