@@ -39,7 +39,7 @@ matrix:
     ## We run coverage with hardening off, which seems like enough
     # - env: HARDENING_OPTIONS=""
     ## We check asciidoc with distcheck, to make sure we remove doc products
-    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS=""
+    - env: DISTCHECK="yes" ASCIIDOC_OPTIONS="" SKIP_MAKE_CHECK="yes"
 
   ## Uncomment to allow the build to report success (with non-required
   ## sub-builds continuing to run) if all required sub-builds have
@@ -153,7 +153,7 @@ script:
   - echo "Configure flags are $CONFIGURE_FLAGS"
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
-  - if [[ "$DISTCHECK" == "" ]]; then make check; fi
+  - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then make check; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
   ## If this build was one that produced coverage, upload it.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p' || echo "Coverage failed"; fi
@@ -163,7 +163,7 @@ after_failure:
   ## But the log is too long for travis' rendered view, so tail it.
   - tail -1000 config.log || echo "tail failed"
   ## `make check` will leave a log file with more details of test failures.
-  - if [[ "$DISTCHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
+  - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
 
