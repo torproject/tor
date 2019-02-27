@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """
 Tor code best-practices tracker
@@ -47,69 +47,88 @@ ProblemVault = None
 #######################################################
 
 def consider_file_size(fname, f):
-    file_size = metrics.file_len(f)
+    """Consider file size issues for 'f' and return True if a new issue was found"""
+    file_size = metrics.get_file_len(f)
     if file_size > MAX_FILE_SIZE:
-        v = problem.FileSizeProblem(fname, file_size)
-        ProblemVault.register_problem(v)
+        p = problem.FileSizeProblem(fname, file_size)
+        return ProblemVault.register_problem(p)
+    return False
 
 def consider_includes(fname, f):
+    """Consider #include issues for 'f' and return True if a new issue was found"""
     include_count = metrics.get_include_count(f)
 
     if include_count > MAX_INCLUDE_COUNT:
-        v = problem.IncludeCountProblem(fname, include_count)
-        ProblemVault.register_problem(v)
+        p = problem.IncludeCountProblem(fname, include_count)
+        return ProblemVault.register_problem(p)
+    return False
 
 def consider_function_size(fname, f):
-    for name, lines in metrics.function_lines(f):
+    """Consider the function sizes for 'f' and return True if a new issue was found"""
+    found_new_issues = False
+
+    for name, lines in metrics.get_function_lines(f):
         # Don't worry about functions within our limits
         if lines <= MAX_FUNCTION_SIZE:
             continue
 
         # That's a big function! Issue a problem!
-        canonical_function_name = "%s:%s()" % (fname,name)
-        v = problem.FunctionSizeProblem(canonical_function_name, lines)
-        ProblemVault.register_problem(v)
+        canonical_function_name = "%s:%s()" % (fname, name)
+        p = problem.FunctionSizeProblem(canonical_function_name, lines)
+        found_new_issues |= ProblemVault.register_problem(p)
+
+    return found_new_issues
 
 #######################################################
 
 def consider_all_metrics(files_list):
-    """Consider metrics for all files"""
+    """Consider metrics for all files, and return True if new issues were found"""
+    found_new_issues = False
     for fname in files_list:
         with open(fname, 'r') as f:
-            consider_metrics_for_file(fname, f)
+            found_new_issues |= consider_metrics_for_file(fname, f)
+    return found_new_issues
 
 def consider_metrics_for_file(fname, f):
     """
-    Get metrics for file with filename 'fname' and file descriptor 'f'.
+    Consider the various metrics for file with filename 'fname' and file descriptor 'f'.
+    Return True if we found new issues.
     """
+    # Strip the useless part of the path
+    if fname.startswith(TOR_TOPDIR):
+        fname = fname[len(TOR_TOPDIR):]
+
+    found_new_issues = False
+
     # Get file length
-    consider_file_size(fname, f)
+    found_new_issues |= consider_file_size(fname, f)
 
     # Consider number of #includes
     f.seek(0)
-    consider_includes(fname, f)
+    found_new_issues |= consider_includes(fname, f)
 
     # Get function length
     f.seek(0)
-    consider_function_size(fname, f)
+    found_new_issues |= consider_function_size(fname, f)
+
+    return found_new_issues
 
 def main():
-    global ProblemVault
-
     # 1) Get all the .c files we care about
     files_list = util.get_tor_c_files(TOR_TOPDIR, EXCLUDE_SOURCE_DIRS)
 
     # 2) Initialize problem vault and load an optional exceptions file so that
     # we don't warn about the past
-    try:
-        with open(EXCEPTIONS_FILE, 'r') as exception_f:
-            ProblemVault = problem.ProblemVault(exception_f)
-    except IOError:
-        print "No exception file provided"
-        ProblemVault = problem.ProblemVault(None)
+    global ProblemVault
+    ProblemVault = problem.ProblemVault(EXCEPTIONS_FILE)
 
     # 3) Go through all the files and report problems if they are not exceptions
-    consider_all_metrics(files_list)
+    found_new_issues = consider_all_metrics(files_list)
+
+    if found_new_issues:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 if __name__ == '__main__':
     main()

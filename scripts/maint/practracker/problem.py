@@ -13,12 +13,15 @@ class ProblemVault(object):
     found in the code, and also the old problems we read from the exception
     file.
     """
-    def __init__(self, exception_file):
+    def __init__(self, exception_fname):
         # Exception dictionary: { problem.key() : Problem object }
         self.exceptions = {}
 
-        if exception_file:
-            self.register_exceptions(exception_file)
+        try:
+            with open(exception_fname, 'r') as exception_f:
+                self.register_exceptions(exception_f)
+        except IOError:
+            print("No exception file provided")
 
     def register_exceptions(self, exception_file):
         # Register exceptions
@@ -27,25 +30,27 @@ class ProblemVault(object):
             if problem is None:
                 continue
 
-            # XXX this might overwrite problems with the same key (e.g. MOCK_IMPL)
             self.exceptions[problem.key()] = problem
             #print "Registering exception: %s" % problem
 
     def register_problem(self, problem):
+        """
+        Register this problem to the problem value. Return True if it was a new
+        problem or it worsens an already existing problem.
+        """
         # This is a new problem, print it
         if problem.key() not in self.exceptions:
-            print problem
-            return
+            print(problem)
+            return True
 
         # If it's an old problem, we don't warn if the situation got better
         # (e.g. we went from 4k LoC to 3k LoC), but we do warn if the
         # situation worsened (e.g. we went from 60 includes to 80).
         if problem.is_worse_than(self.exceptions[problem.key()]):
-            print problem
-            return
-#        else:
-#            print "OK %s better than %s" % (problem, self.exceptions[problem.key()])
+            print(problem)
+            return True
 
+        return False
 
 class Problem(object):
     def __init__(self, problem_type, problem_location, metric_value):
@@ -91,6 +96,6 @@ def get_old_problem_from_exception_str(exception_str):
     elif problem_type == "function-size":
         return FunctionSizeProblem(problem_location, metric_value)
     else:
-        print "Unknown exception line %s" % exception_str
+        print("Unknown exception line {}".format(exception_str))
         return None
 
