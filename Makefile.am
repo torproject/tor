@@ -232,6 +232,11 @@ need-chutney-path:
 test-network: need-chutney-path $(TESTING_TOR_BINARY) src/tools/tor-gencert
 	$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_FLAGS)
 
+test-network-forgiving: need-chutney-path $(TESTING_TOR_BINARY) src/tools/tor-gencert
+	@ export TEST_NETWORK_FLAGS="$(TEST_NETWORK_FLAGS)"; \
+	export tor_srcdir=$(top_srcdir); \
+	$(top_srcdir)/src/test/test-network-forgiving.sh $(TEST_NETWORK_FLAGS)
+
 # Run all available tests using automake's test-driver
 # only run IPv6 tests if we can ping6 ::1 (localhost)
 # only run IPv6 tests if we can ping ::1 (localhost)
