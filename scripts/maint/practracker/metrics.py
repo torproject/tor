@@ -1,8 +1,12 @@
 #!/usr/bin/python
 
+# Implementation of various source code metrics.
+# These are currently ad-hoc string operations and regexps.
+# We might want to use a proper static analysis library in the future, if we want to get more advanced metrics.
+
 import re
 
-def file_len(f):
+def get_file_len(f):
     """Get file length of file"""
     for i, l in enumerate(f):
         pass
@@ -16,14 +20,20 @@ def get_include_count(f):
             include_count += 1
     return include_count
 
-def function_lines(f):
+def get_function_lines(f):
     """
     Return iterator which iterates over functions and returns (function name, function lines)
     """
 
-    # XXX Buggy! Doesn't work with MOCK_IMPL and ENABLE_GCC_WARNINGS
+    # Skip lines with these terms since they confuse our regexp
+    REGEXP_CONFUSE_TERMS = ["MOCK_IMPL", "ENABLE_GCC_WARNINGS", "ENABLE_GCC_WARNING", "DUMMY_TYPECHECK_INSTANCE",
+                            "DISABLE_GCC_WARNING", "DISABLE_GCC_WARNINGS"]
+
     in_function = False
     for lineno, line in enumerate(f):
+        if any(x in line for x in REGEXP_CONFUSE_TERMS):
+            continue
+
         if not in_function:
             # find the start of a function
             m = re.match(r'^([a-zA-Z_][a-zA-Z_0-9]*),?\(', line)
@@ -31,6 +41,7 @@ def function_lines(f):
                 func_name = m.group(1)
                 func_start = lineno
                 in_function = True
+
         else:
             # Fund the end of a function
             if line.startswith("}"):

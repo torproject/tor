@@ -40,6 +40,10 @@ class TestFunctionLength(unittest.TestCase):
         # All functions should have length 2
         for name, lines in metrics.function_lines(funcs):
             self.assertEqual(name, "fun")
+
+        funcs.seek(0)
+
+        for name, lines in metrics.function_lines(funcs):
             self.assertEqual(lines, 2)
 
 if __name__ == '__main__':
