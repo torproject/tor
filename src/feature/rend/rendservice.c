@@ -3012,6 +3012,10 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
 {
   origin_circuit_t *newcirc;
   cpath_build_state_t *newstate, *oldstate;
+  const char *rend_pk_digest;
+  rend_service_t *service = NULL;
+
+  int flags = CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_IS_INTERNAL;
 
   tor_assert(oldcirc->base_.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
   oldstate = oldcirc->build_state;
@@ -3026,13 +3030,31 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   log_info(LD_REND,"Reattempting rendezvous circuit to '%s'",
            safe_str(extend_info_describe(oldstate->chosen_exit)));
 
+  /* Look up the service. */
+  rend_pk_digest = (char *) rend_data_get_pk_digest(oldcirc->rend_data, NULL);
+  service = rend_service_get_by_pk_digest(rend_pk_digest);
+
+  if (!service) {
+    char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
+    base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
+                  rend_pk_digest, REND_SERVICE_ID_LEN);
+
+    log_warn(LD_BUG, "Internal error: Trying to relaunch a rendezvous circ "
+                     "for an unrecognized service %s.",
+                     safe_str_client(serviceid));
+    return;
+  }
+
+  if (hs_service_requires_uptime_circ(service->ports)) {
+    flags |= CIRCLAUNCH_NEED_UPTIME;
+  }
+
   /* You'd think Single Onion Services would want to retry the rendezvous
    * using a direct connection. But if it's blocked by a firewall, or the
    * service is IPv6-only, or the rend point avoiding becoming a one-hop
    * proxy, we need a 3-hop connection. */
   newcirc = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND,
-                            oldstate->chosen_exit,
-                            CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
+                            oldstate->chosen_exit, flags);
 
   if (!newcirc) {
     log_warn(LD_REND,"Couldn't relaunch rendezvous circuit to '%s'.",
