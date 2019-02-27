@@ -8,6 +8,14 @@ def file_len(f):
         pass
     return i + 1
 
+def get_include_count(f):
+    """Get number of #include statements in the file"""
+    include_count = 0
+    for line in f:
+        if re.match(r' *# *include', line):
+            include_count += 1
+    return include_count
+
 def function_lines(f):
     """
     Return iterator which iterates over functions and returns (function name, function lines)

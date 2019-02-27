@@ -57,10 +57,7 @@ def consider_file_size(fname, f, exceptions_str):
         print_violation_if_not_exception(violation_str, exceptions_str)
 
 def consider_includes(fname, f, exceptions_str):
-    include_count = 0
-    for _, line in enumerate(f):
-        if line.startswith("#include "):
-            include_count += 1
+    include_count = metrics.get_include_count(f)
 
     if include_count > MAX_INCLUDE_COUNT:
         violation_str = "violation include-count %s %d" % (fname, include_count)
