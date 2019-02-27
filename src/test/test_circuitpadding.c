@@ -1004,9 +1004,8 @@ test_circuitpadding_tokens(void *arg)
   mi = client_side->padding_info[0];
 
   // Pretend a non-padding cell was sent
-  // XXX: This messes us up.. Padding gets scheduled..
-  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   circpad_cell_event_nonpadding_received((circuit_t*)client_side);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   /* We have to save the infinity bin because one inf delay
    * could have been chosen when we transition to burst */
   circpad_hist_token_t inf_bin = mi->histogram[4];
@@ -1105,7 +1104,8 @@ test_circuitpadding_tokens(void *arg)
 
   /* 2.c. Bin 0 */
   {
-    tt_int_op(mi->histogram[0], OP_EQ, 1);
+    tt_int_op(mi->histogram[0], OP_EQ, 0);
+    mi->histogram[0] = 1;
     circpad_machine_remove_higher_token(mi,
          state->start_usec/2);
     tt_int_op(mi->histogram[0], OP_EQ, 0);
