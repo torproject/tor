@@ -161,7 +161,9 @@ EXTRA_DIST+= \
 	README						\
 	ReleaseNotes					\
 	scripts/maint/checkIncludes.py                  \
-	scripts/maint/checkSpace.pl
+	scripts/maint/checkSpace.pl \
+	scripts/maint/practracker
+
 
 ## This tells etags how to find mockable function definitions.
 AM_ETAGSFLAGS=--regex='{c}/MOCK_IMPL([^,]+,\W*\([a-zA-Z0-9_]+\)\W*,/\1/s'
@@ -224,7 +226,7 @@ shellcheck:
                 fi; \
 	fi
 
-check-local: check-spaces check-changes check-includes shellcheck
+check-local: check-spaces check-changes check-includes check-best-practices shellcheck
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
@@ -343,6 +345,11 @@ endif
 check-includes:
 if USEPYTHON
 	$(PYTHON) $(top_srcdir)/scripts/maint/checkIncludes.py
+endif
+
+check-best-practices:
+if USEPYTHON
+	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/practracker.py $(top_srcdir)
 endif
 
 check-docs: all
