@@ -713,10 +713,13 @@ managed_proxy_destroy(managed_proxy_t *mp,
   tor_free(mp->proxy_uri);
 
   /* do we want to terminate our process if it's still running? */
-  if (also_terminate_process && mp->process)
+  if (also_terminate_process && mp->process) {
+    /* Note that we do not call process_free(mp->process) here because we let
+     * the exit handler in managed_proxy_exit_callback() return `true` which
+     * makes the process subsystem deallocate the process_t. */
+    process_set_data(mp->process, NULL);
     process_terminate(mp->process);
-
-  process_free(mp->process);
+  }
 
   tor_free(mp);
 }
@@ -1823,6 +1826,9 @@ managed_proxy_stdout_callback(process_t *process,
 
   managed_proxy_t *mp = process_get_data(process);
 
+  if (BUG(mp == NULL))
+    return;
+
   handle_proxy_line(line, mp);
 
   if (proxy_configuration_finished(mp)) {
@@ -1846,6 +1852,9 @@ managed_proxy_stderr_callback(process_t *process,
 
   managed_proxy_t *mp = process_get_data(process);
 
+  if (BUG(mp == NULL))
+    return;
+
   log_warn(LD_PT, "Managed proxy at '%s' reported: %s", mp->argv[0], line);
 }
 
@@ -1862,18 +1871,8 @@ managed_proxy_exit_callback(process_t *process, process_exit_code_t exit_code)
           "Pluggable Transport process terminated with status code %" PRIu64,
           exit_code);
 
-  /* We detach ourself from the MP (if we are attached) and free ourself. */
-  managed_proxy_t *mp = process_get_data(process);
-
-  /* If we are still attached to the process, it is probably because our PT
-   * process crashed before we got to call process_set_data(p, NULL); */
-  if (BUG(mp != NULL)) {
-    /* FIXME(ahf): Our process stopped without us having told it to stop
-     * (crashed). Should we restart it here? */
-    mp->process = NULL;
-    process_set_data(process, NULL);
-  }
-
+  /* Returning true here means that the process subsystem will take care of
+   * calling process_free() on our process_t. */
   return true;
 }
 
