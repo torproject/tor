@@ -38,14 +38,12 @@ TOR_WKT_NAME="tor-wkt"
 #
 # First set of arrays are the maint-* branch and then the release-* branch.
 # New arrays need to be in the WORKTREE= array else they aren't considered.
-MAINT_033=( "maint-0.3.3" "maint-0.2.9" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.3" )
-MAINT_034=( "maint-0.3.4" "maint-0.3.3" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.4" )
+MAINT_034=( "maint-0.3.4" "maint-0.2.9" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.4" )
 MAINT_035=( "maint-0.3.5" "maint-0.3.4" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.5" )
 MAINT_040=( "maint-0.4.0" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.0" )
 MAINT_MASTER=( "master" "maint-0.4.0" "$GIT_PATH/$TOR_MASTER_NAME" )
 
 RELEASE_029=( "release-0.2.9" "maint-0.2.9" "$GIT_PATH/$TOR_WKT_NAME/release-0.2.9" )
-RELEASE_033=( "release-0.3.3" "maint-0.3.3" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.3" )
 RELEASE_034=( "release-0.3.4" "maint-0.3.4" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.4" )
 RELEASE_035=( "release-0.3.5" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.5" )
 RELEASE_040=( "release-0.4.0" "maint-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.0" )
@@ -58,9 +56,6 @@ RELEASE_040=( "release-0.4.0" "maint-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/release-0.4
 # Always the maint-* branch BEFORE then the release-*.
 WORKTREE=(
   RELEASE_029[@]
-
-  MAINT_033[@]
-  RELEASE_033[@]
 
   MAINT_034[@]
   RELEASE_034[@]

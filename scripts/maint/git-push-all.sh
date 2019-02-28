@@ -8,5 +8,4 @@ git push $UPSTREAM_BRANCH \
    {release,maint}-0.4.0 \
    {release,maint}-0.3.5 \
    {release,maint}-0.3.4 \
-   {release,maint}-0.3.3 \
    {release,maint}-0.2.9
