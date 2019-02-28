@@ -96,6 +96,6 @@ def get_old_problem_from_exception_str(exception_str):
     elif problem_type == "function-size":
         return FunctionSizeProblem(problem_location, metric_value)
     else:
-        print("Unknown exception line {}".format(exception_str))
+#        print("Unknown exception line '{}'".format(exception_str))
         return None
 
