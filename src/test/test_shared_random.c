@@ -690,7 +690,7 @@ test_vote(void *arg)
 
  done:
   UNMOCK(trusteddirserver_get_by_v3_auth_digest);
-  sr_state_free();
+  sr_state_free_all();
 }
 
 static const char *sr_state_str = "Version 1\n"
@@ -924,7 +924,7 @@ test_sr_compute_srv(void *arg)
 
  done:
   UNMOCK(trusteddirserver_get_by_v3_auth_digest);
-  sr_state_free();
+  sr_state_free_all();
 }
 
 /** Return a minimal vote document with a current SRV value set to
@@ -1190,7 +1190,7 @@ test_state_transition(void *arg)
   }
 
  done:
-  sr_state_free();
+  sr_state_free_all();
 }
 
 static void
