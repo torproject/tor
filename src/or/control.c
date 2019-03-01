@@ -3364,6 +3364,9 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       tor_assert(info);
     }
     circuit_append_new_exit(circ, info);
+    if (circ->build_state->desired_path_len > 1) {
+      circ->build_state->onehop_tunnel = 0;
+    }
     extend_info_free(info);
     first_node = 0;
   });
