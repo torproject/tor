@@ -669,7 +669,7 @@ tor_init(int argc, char *argv[])
     log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
     return -1;
   }
-  stream_choice_seed_weak_rng();
+
   if (tor_init_libevent_rng() < 0) {
     log_warn(LD_NET, "Problem initializing libevent RNG.");
   }
