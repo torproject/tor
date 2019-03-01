@@ -1,0 +1,24 @@
+#!/bin/sh
+
+git_toplevel=$(git rev-parse --show-toplevel)
+
+check_for_diffs() {
+        installed="$git_toplevel/.git/hooks/$1"
+        latest="$git_toplevel/scripts/maint/$1.git-hook"
+
+        if [ -e "$installed" ]
+        then
+               if ! cmp "$installed" "$latest" >/dev/null 2>&1
+               then
+                        echo "ATTENTION: $1 hook has changed:"
+                        echo "==============================="
+                        diff "$installed" "$latest"
+                        exit 1
+               fi
+        fi
+}
+
+check_for_diffs "pre-push"
+check_for_diffs "pre-commit"
+check_for_diffs "post-merge"
+
