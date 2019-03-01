@@ -68,6 +68,12 @@ unsigned crypto_fast_rng_get_uint(crypto_fast_rng_t *rng, unsigned limit);
 uint64_t crypto_fast_rng_get_uint64(crypto_fast_rng_t *rng, uint64_t limit);
 double crypto_fast_rng_get_double(crypto_fast_rng_t *rng);
 
+/**
+ * Using the fast_rng <b>rng</b>, yield true with probability
+ * 1/<b>n</b>. Otherwise yield false.
+ *
+ * <b>n</b> must not be zero.
+ **/
 #define crypto_fast_rng_one_in_n(rng, n)        \
   (0 == (crypto_fast_rng_get_uint((rng), (n))))
 
