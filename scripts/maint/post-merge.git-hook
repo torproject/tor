@@ -1,5 +1,13 @@
 #!/bin/sh
 
+# This is post-merge git hook script to check for changes in:
+# * git hook scripts
+# * helper scripts for using git efficiently.
+# If any changes are detected, a diff of them is printed.
+#
+# To install this script, copy it to .git/hooks/post-merge in local copy of
+# tor git repo and make sure it has permission to execute.
+
 git_toplevel=$(git rev-parse --show-toplevel)
 
 check_for_diffs() {
