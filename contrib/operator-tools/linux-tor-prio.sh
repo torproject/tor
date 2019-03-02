@@ -7,16 +7,16 @@
 ############################### README #################################
 
 # This script provides prioritization of Tor traffic below other
-# traffic on a Linux server. It has two modes of operation: UID based
-# and IP based.
+# traffic on a Linux server. It has two modes of operation: UID based 
+# and IP based. 
 
 # UID BASED PRIORITIZATION
 #
-# The UID based method requires that Tor be launched from
+# The UID based method requires that Tor be launched from 
 # a specific user ID. The "User" Tor config setting is
 # insufficient, as it sets the UID after the socket is created.
-# Here is a C wrapper you can use to execute Tor and drop privs before
-# it creates any sockets.
+# Here is a C wrapper you can use to execute Tor and drop privs before 
+# it creates any sockets. 
 #
 # Compile with:
 # gcc -DUID=`id -u tor` -DGID=`id -g tor` tor_wrap.c -o tor_wrap
@@ -32,20 +32,20 @@
 
 # IP BASED PRIORITIZATION
 #
-# The IP setting requires that a separate IP address be dedicated to Tor.
-# Your Torrc should be set to bind to this IP for "OutboundBindAddress",
+# The IP setting requires that a separate IP address be dedicated to Tor. 
+# Your Torrc should be set to bind to this IP for "OutboundBindAddress", 
 # "ListenAddress", and "Address".
 
 # GENERAL USAGE
 #
 # You should also tune the individual connection rate parameters below
-# to your individual connection. In particular, you should leave *some*
-# minimum amount of bandwidth for Tor, so that Tor users are not
-# completely choked out when you use your server's bandwidth. 30% is
+# to your individual connection. In particular, you should leave *some* 
+# minimum amount of bandwidth for Tor, so that Tor users are not 
+# completely choked out when you use your server's bandwidth. 30% is 
 # probably a reasonable choice. More is better of course.
 #
-# To start the shaping, run it as:
-#   ./linux-tor-prio.sh
+# To start the shaping, run it as: 
+#   ./linux-tor-prio.sh 
 #
 # To get status information (useful to verify packets are getting marked
 # and prioritized), run:
@@ -95,6 +95,7 @@ CHAIN=OUTPUT
 #CHAIN=PREROUTING
 #CHAIN=POSTROUTING
 
+MTU=1500
 AVG_PKT=900 # should be more like 600 for non-exit nodes
 
 # END USER TUNABLE PARAMETERS
