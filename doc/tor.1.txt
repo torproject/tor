@@ -147,8 +147,8 @@ instance, you can tell Tor to start listening for SOCKS connections on port
 9999 by passing --SocksPort 9999 or SocksPort 9999 to it on the command line,
 or by putting "SocksPort 9999" in the configuration file.  You will need to
 quote options with spaces in them: if you want Tor to log all debugging
-messages to debug.log, you will probably need to say --Log 'debug file
-debug.log'.
+messages to debug.log, you will probably need to say **--Log** `"debug file
+debug.log"`.
 
 Options on the command line override those in configuration files. See the
 next section for more information.
