@@ -300,9 +300,9 @@ test_circuitpadding_rtt(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
 
   timers_initialize();
   circpad_machines_init();
@@ -1017,9 +1017,9 @@ test_circuitpadding_tokens(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
 
   /* This is needed so that we are not considered to be dormant */
   note_user_activity(20);
@@ -1283,9 +1283,9 @@ test_circuitpadding_wronghop(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
 
   timers_initialize();
   circpad_machines_init();
@@ -1470,9 +1470,9 @@ test_circuitpadding_negotiation(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
 
   timers_initialize();
   circpad_machines_init();
@@ -1749,9 +1749,9 @@ test_circuitpadding_conditions(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
 
   /* This is needed so that we are not considered to be dormant */
   note_user_activity(20);
@@ -2299,9 +2299,9 @@ test_circuitpadding_global_rate_limiting(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
   timers_initialize();
 
   client_side = (circuit_t *)origin_circuit_new();
