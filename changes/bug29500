@@ -1,0 +1,3 @@
+  o Minor bugfixes (circuitpadding testing):
+    - Minor tweaks to avoid very rare test failures related to timers and
+      monotime. Fixes bug 29500; bugfix on 0.4.0.1-alpha
