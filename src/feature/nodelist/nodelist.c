@@ -2456,8 +2456,11 @@ compute_frac_paths_available(const networkstatus_t *consensus,
      * descriptors for those exits. (The bandwidth weight fraction does not
      * check for descriptors.)
      * If the exit bandwidth fraction is zero, there are no exits in the
-     * consensus at all. So it is safe to replace f_exit with f_mid. */
-    if (f_exit == 0.0) {
+     * consensus at all. So it is safe to replace f_exit with f_mid.
+     *
+     * f_exit is non-negative, but some compilers complain about float and ==
+     */
+    if (f_exit <= 0.0)) {
       f_exit = f_mid;
     }
   }
