@@ -18,7 +18,7 @@ def get_tor_c_files(tor_topdir):
 
             # Exclude the excluded paths
             full_path = os.path.join(root,filename)
-            if any(exclude_dir in full_path for exclude_dir in EXCLUDE_SOURCE_DIRS):
+            if any(os.path.normcase(exclude_dir) in full_path for exclude_dir in EXCLUDE_SOURCE_DIRS):
                 continue
 
             files_list.append(full_path)
