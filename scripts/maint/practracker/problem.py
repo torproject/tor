@@ -53,6 +53,10 @@ class ProblemVault(object):
         return False
 
 class Problem(object):
+    """
+    A generic problem in our source code. See the subclasses below for the
+    specific problems we are trying to tackle.
+    """
     def __init__(self, problem_type, problem_location, metric_value):
         self.problem_location = problem_location
         self.metric_value = int(metric_value)
@@ -72,14 +76,35 @@ class Problem(object):
         return "problem %s %s %s" % (self.problem_type, self.problem_location, self.metric_value)
 
 class FileSizeProblem(Problem):
+    """
+    Denotes a problem with the size of a .c file.
+
+    The 'problem_location' is the filesystem path of the .c file, and the
+    'metric_value' is the number of lines in the .c file.
+    """
     def __init__(self, problem_location, metric_value):
         super(FileSizeProblem, self).__init__("file-size", problem_location, metric_value)
 
 class IncludeCountProblem(Problem):
+    """
+    Denotes a problem with the number of #includes in a .c file.
+
+    The 'problem_location' is the filesystem path of the .c file, and the
+    'metric_value' is the number of #includes in the .c file.
+    """
     def __init__(self, problem_location, metric_value):
         super(IncludeCountProblem, self).__init__("include-count", problem_location, metric_value)
 
 class FunctionSizeProblem(Problem):
+    """
+    Denotes a problem with a size of a function in a .c file.
+
+    The 'problem_location' is "<path>:<function>()" where <path> is the
+    filesystem path of the .c file and <function> is the name of the offending
+    function.
+
+    The 'metric_value' is the size of the offending function in lines.
+    """
     def __init__(self, problem_location, metric_value):
         super(FunctionSizeProblem, self).__init__("function-size", problem_location, metric_value)
 
