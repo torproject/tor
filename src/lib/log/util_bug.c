@@ -96,7 +96,7 @@ tor_assertion_failed_(const char *fname, unsigned int line,
 void
 tor_bug_occurred_(const char *fname, unsigned int line,
                   const char *func, const char *expr,
-                  int once)
+                  int once, const char *fmt, ...)
 {
   char buf[256];
   const char *once_str = once ?
@@ -116,11 +116,22 @@ tor_bug_occurred_(const char *fname, unsigned int line,
       add_captured_bug(expr);
       return;
     }
+
+    va_list ap;
+    char *extra = NULL;
+
+    if (fmt) {
+      va_start(ap,fmt);
+      tor_vasprintf(&extra, fmt, ap);
+      va_end(ap);
+    }
+
     log_warn(LD_BUG, "%s:%u: %s: Non-fatal assertion %s failed.%s",
              fname, line, func, expr, once_str);
     tor_snprintf(buf, sizeof(buf),
-                 "Non-fatal assertion %s failed in %s at %s:%u",
-                 expr, func, fname, line);
+                 "Non-fatal assertion %s failed in %s at %s:%u%s%s",
+                 expr, func, fname, line, fmt ? " : " : "", extra);
+    tor_free(extra);
   }
   log_backtrace(LOG_WARN, LD_BUG, buf);
 
