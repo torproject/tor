@@ -46,7 +46,7 @@ crash(int x)
     *(volatile int *)0 = 0;
 #endif /* defined(__clang_analyzer__) || defined(__COVERITY__) */
   } else if (crashtype == 1) {
-    tor_assert(1 == 0);
+    tor_assertf(1 == 0, "%d != %d", 1, 0);
   } else if (crashtype == -1) {
     ;
   }
