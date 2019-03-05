@@ -58,7 +58,7 @@ problem function-size /src/core/or/relay.c:connection_ap_process_end_not_open() 
 problem function-size /src/core/or/relay.c:connection_edge_process_relay_cell_not_open() 139
 problem function-size /src/core/or/relay.c:connection_edge_process_relay_cell() 520
 problem function-size /src/core/or/relay.c:connection_edge_package_raw_inbuf() 130
-problem function-size /src/core/or/relay.c:circuit_resume_edge_reading_helper() 147
+problem function-size /src/core/or/relay.c:circuit_resume_edge_reading_helper() 148
 problem file-size /src/core/mainloop/mainloop.c 3050
 problem include-count /src/core/mainloop/mainloop.c 65
 problem function-size /src/core/mainloop/mainloop.c:conn_close_if_marked() 108
@@ -190,7 +190,7 @@ problem function-size /src/feature/rend/rendmid.c:rend_mid_establish_intro_legac
 problem function-size /src/feature/rend/rendparse.c:rend_parse_v2_service_descriptor() 187
 problem function-size /src/feature/rend/rendparse.c:rend_decrypt_introduction_points() 104
 problem function-size /src/feature/rend/rendparse.c:rend_parse_introduction_points() 131
-problem file-size /src/feature/rend/rendservice.c 4487
+problem file-size /src/feature/rend/rendservice.c 4509
 problem function-size /src/feature/rend/rendservice.c:rend_service_prune_list_impl_() 107
 problem function-size /src/feature/rend/rendservice.c:rend_config_service() 164
 problem function-size /src/feature/rend/rendservice.c:rend_service_load_auth_keys() 178
