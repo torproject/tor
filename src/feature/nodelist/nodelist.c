@@ -2460,7 +2460,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
      *
      * f_exit is non-negative, but some compilers complain about float and ==
      */
-    if (f_exit <= 0.0)) {
+    if (f_exit <= 0.0) {
       f_exit = f_mid;
     }
   }
