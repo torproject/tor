@@ -1,0 +1,3 @@
+  o Minor bugfixes (logging):
+    - Stop logging a BUG() warning when tor is waiting for exit descriptors.
+      Fixes bug 28656; bugfix on 0.3.5.1-alpha.
