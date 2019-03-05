@@ -7,6 +7,8 @@ problem is worse than a registered exception so that it only warns when things
 get worse.
 """
 
+import os.path
+
 class ProblemVault(object):
     """
     Singleton where we store the various new problems we
@@ -70,7 +72,10 @@ class Problem(object):
 
     def key(self):
         """Generate a unique key that describes this problem that can be used as a dictionary key"""
-        return "%s:%s" % (self.problem_location, self.problem_type)
+        # Problem location is a filesystem path, so we need to normalize this
+        # across platforms otherwise same paths are not gonna match.
+        canonical_location = os.path.normcase(self.problem_location)
+        return "%s:%s" % (canonical_location, self.problem_type)
 
     def __str__(self):
         return "problem %s %s %s" % (self.problem_type, self.problem_location, self.metric_value)
