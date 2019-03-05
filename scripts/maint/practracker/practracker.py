@@ -131,8 +131,10 @@ def main():
     # 3) Go through all the files and report problems if they are not exceptions
     found_new_issues = consider_all_metrics(files_list)
 
+    # If new issues were found, try to give out some advice to the developer on how to resolve it.
     if (found_new_issues):
-        print("practracker FAILED")
+        new_issues_str = "practracker FAILED as indicated by the problem lines above. Please use the exceptions file ({}) to find any previous state of these problems. If you are unable to fix the underlying best-practices issue right now then you need to either update the relevant exception line or add a new one.".format(exceptions_file)
+        print(new_issues_str)
 
     sys.exit(found_new_issues)
 
