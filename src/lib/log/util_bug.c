@@ -69,6 +69,7 @@ tor_set_failed_assertion_callback(void (*fn)(void))
 
 /** Helper for tor_assert: report the assertion failure. */
 void
+CHECK_PRINTF(5, 6)
 tor_assertion_failed_(const char *fname, unsigned int line,
                       const char *func, const char *expr,
                       const char *fmt, ...)
@@ -77,11 +78,18 @@ tor_assertion_failed_(const char *fname, unsigned int line,
   char *extra = NULL;
   va_list ap;
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
   if (fmt) {
     va_start(ap,fmt);
     tor_vasprintf(&extra, fmt, ap);
     va_end(ap);
   }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   log_err(LD_BUG, "%s:%u: %s: Assertion %s failed; aborting.",
           fname, line, func, expr);
@@ -94,6 +102,7 @@ tor_assertion_failed_(const char *fname, unsigned int line,
 
 /** Helper for tor_assert_nonfatal: report the assertion failure. */
 void
+CHECK_PRINTF(6, 7)
 tor_bug_occurred_(const char *fname, unsigned int line,
                   const char *func, const char *expr,
                   int once, const char *fmt, ...)
@@ -120,11 +129,18 @@ tor_bug_occurred_(const char *fname, unsigned int line,
     va_list ap;
     char *extra = NULL;
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
     if (fmt) {
       va_start(ap,fmt);
       tor_vasprintf(&extra, fmt, ap);
       va_end(ap);
     }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
     log_warn(LD_BUG, "%s:%u: %s: Non-fatal assertion %s failed.%s",
              fname, line, func, expr, once_str);
