@@ -33,17 +33,17 @@ struct smartlist_t;
 /// C_RUST_COUPLED: src/rust/protover/ffi.rs `translate_to_rust`
 /// C_RUST_COUPLED: src/rust/protover/protover.rs `Proto`
 typedef enum protocol_type_t {
-  PRT_LINK,
-  PRT_LINKAUTH,
-  PRT_RELAY,
-  PRT_DIRCACHE,
-  PRT_HSDIR,
-  PRT_HSINTRO,
-  PRT_HSREND,
-  PRT_DESC,
-  PRT_MICRODESC,
-  PRT_CONS,
-  PRT_PADDING,
+  PRT_LINK      = 0,
+  PRT_LINKAUTH  = 1,
+  PRT_RELAY     = 2,
+  PRT_DIRCACHE  = 3,
+  PRT_HSDIR     = 4,
+  PRT_HSINTRO   = 5,
+  PRT_HSREND    = 6,
+  PRT_DESC      = 7,
+  PRT_MICRODESC = 8,
+  PRT_CONS      = 9,
+  PRT_PADDING   = 10,
 } protocol_type_t;
 
 bool protover_contains_long_protocol_names(const char *s);
