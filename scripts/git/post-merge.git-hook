@@ -12,7 +12,7 @@ git_toplevel=$(git rev-parse --show-toplevel)
 
 check_for_diffs() {
         installed="$git_toplevel/.git/hooks/$1"
-        latest="$git_toplevel/scripts/maint/$1.git-hook"
+        latest="$git_toplevel/scripts/git/$1.git-hook"
 
         if [ -e "$installed" ]
         then
@@ -26,7 +26,7 @@ check_for_diffs() {
 }
 
 check_for_script_update() {
-        fullpath="$git_toplevel/scripts/maint/$1"
+        fullpath="$1"
 
         if ! git diff ORIG_HEAD HEAD --exit-code -- "$fullpath" >/dev/null
         then
@@ -39,6 +39,7 @@ check_for_diffs "pre-push"
 check_for_diffs "pre-commit"
 check_for_diffs "post-merge"
 
-check_for_script_update "git-merge-forward.sh"
-check_for_script_update "git-pull-all.sh"
-check_for_script_update "git-push-all.sh"
+for file in "$git_toplevel"/scripts/git/* ; do
+        check_for_script_update "$file"
+done
+
