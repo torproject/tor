@@ -20,7 +20,7 @@ check_for_diffs() {
                then
                         echo "ATTENTION: $1 hook has changed:"
                         echo "==============================="
-                        diff "$installed" "$latest"
+                        diff -u "$installed" "$latest"
                fi
         fi
 }
