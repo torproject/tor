@@ -6227,7 +6227,7 @@ test_util_map_anon_nofork(void *arg)
 #ifndef NOINHERIT_CAN_FAIL
   /* Only if NOINHERIT_CAN_FAIL should it be possible for us to get
    * INHERIT_KEEP behavior in this case. */
-  tt_assert(inherit, OP_NE, INHERIT_RES_KEEP);
+  tt_int_op(inherit, OP_NE, INHERIT_RES_KEEP);
 #else
   if (inherit == INHERIT_RES_KEEP) {
     /* Call this test "skipped", not "passed", since noinherit wasn't
