@@ -41,6 +41,27 @@
  * the child process. */
 #define INHERIT_ZERO 2
 
+/* Here we define the NOINHERIT_CAN_FAIL macro if and only if
+ * it's possible that ANONMAP_NOINHERIT might yield inheritable memory.
+ */
+#ifdef _WIN32
+/* Windows can't fork, so NOINHERIT is never needed. */
+#elif defined(HAVE_MINHERIT)
+/* minherit() will always have a working MAP_INHERIT_NONE or MAP_INHERIT_ZERO.
+ * NOINHERIT should always work.
+ */
+#elif defined(HAVE_MADVISE)
+/* madvise() sometimes has neither MADV_DONTFORK and MADV_WIPEONFORK.
+ * We need to be ready for the possibility it failed.
+ *
+ * (Linux added DONTFORK in 2.6.16 and WIPEONFORK in 4.14. If we someday
+ * require 2.6.16 or later, we can assume that DONTFORK will work.)
+ */
+#define NOINHERIT_CAN_FAIL
+#else
+#define NOINHERIT_CAN_FAIL
+#endif
+
 void *tor_mmap_anonymous(size_t sz, unsigned flags,
                          unsigned *inherit_result_out);
 void tor_munmap_anonymous(void *mapping, size_t sz);
