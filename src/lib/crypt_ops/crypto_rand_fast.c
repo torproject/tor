@@ -152,7 +152,7 @@ crypto_fast_rng_new(void)
 crypto_fast_rng_t *
 crypto_fast_rng_new_from_seed(const uint8_t *seed)
 {
-  unsigned inherit = INHERIT_KEEP;
+  unsigned inherit = INHERIT_RES_KEEP;
   /* We try to allocate this object as securely as we can, to avoid
    * having it get dumped, swapped, or shared after fork.
    */
@@ -164,7 +164,7 @@ crypto_fast_rng_new_from_seed(const uint8_t *seed)
   result->bytes_left = 0;
   result->n_till_reseed = RESEED_AFTER;
 #ifdef CHECK_PID
-  if (inherit == INHERIT_KEEP) {
+  if (inherit == INHERIT_RES_KEEP) {
     /* This value will neither be dropped nor zeroed after fork, so we need to
      * check our pid to make sure we are not sharing it across a fork.  This
      * can be expensive if the pid value isn't cached, sadly.
@@ -176,7 +176,7 @@ crypto_fast_rng_new_from_seed(const uint8_t *seed)
 #else
   /* We decided above that noinherit would always do _something_. Assert here
    * that we were correct. */
-  tor_assert(inherit != INHERIT_KEEP);
+  tor_assert(inherit != INHERIT_RES_KEEP);
 #endif
   return result;
 }
@@ -253,12 +253,12 @@ crypto_fast_rng_getbytes_impl(crypto_fast_rng_t *rng, uint8_t *out,
   if (rng->owner) {
     /* Note that we only need to do this check when we have owner set: that
      * is, when our attempt to block inheriting failed, and the result was
-     * INHERIT_KEEP.
+     * INHERIT_RES_KEEP.
      *
-     * If the result was INHERIT_DROP, then any attempt to access the rng
+     * If the result was INHERIT_RES_DROP, then any attempt to access the rng
      * memory after forking will crash.
      *
-     * If the result was INHERIT_ZERO, then forking will set the bytes_left
+     * If the result was INHERIT_RES_ZERO, then forking will set the bytes_left
      * and n_till_reseed fields to zero.  This function will call
      * crypto_fast_rng_refill(), which will in turn reseed the PRNG.
      *

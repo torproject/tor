@@ -33,13 +33,13 @@
 
 /** Possible value for inherit_result_out: the memory will be kept
  * by any child process. */
-#define INHERIT_KEEP 0
+#define INHERIT_RES_KEEP 0
 /** Possible value for inherit_result_out: the memory will be dropped in
  * the child process. Attempting to access it will likely cause a segfault. */
-#define INHERIT_DROP 1
+#define INHERIT_RES_DROP 1
 /** Possible value for inherit_result_out: the memory will be cleared in
  * the child process. */
-#define INHERIT_ZERO 2
+#define INHERIT_RES_ZERO 2
 
 /* Here we define the NOINHERIT_CAN_FAIL macro if and only if
  * it's possible that ANONMAP_NOINHERIT might yield inheritable memory.

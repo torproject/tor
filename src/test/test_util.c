@@ -6135,7 +6135,7 @@ test_util_map_anon(void *arg)
   /* Basic checks. */
   ptr = tor_mmap_anonymous(sz, 0, &inherit);
   tt_ptr_op(ptr, OP_NE, 0);
-  tt_int_op(inherit, OP_EQ, INHERIT_KEEP);
+  tt_int_op(inherit, OP_EQ, INHERIT_RES_KEEP);
   ptr[sz-1] = 3;
   tt_int_op(ptr[0], OP_EQ, 0);
   tt_int_op(ptr[sz-2], OP_EQ, 0);
@@ -6145,7 +6145,7 @@ test_util_map_anon(void *arg)
   tor_munmap_anonymous(ptr, sz);
   ptr = tor_mmap_anonymous(sz, ANONMAP_PRIVATE, &inherit);
   tt_ptr_op(ptr, OP_NE, 0);
-  tt_int_op(inherit, OP_EQ, INHERIT_KEEP);
+  tt_int_op(inherit, OP_EQ, INHERIT_RES_KEEP);
   ptr[sz-1] = 10;
   tt_int_op(ptr[0], OP_EQ, 0);
   tt_int_op(ptr[sz/2], OP_EQ, 0);
@@ -6207,16 +6207,16 @@ test_util_map_anon_nofork(void *arg)
   char buf[1];
   ssize_t r = read(pipefd[0], buf, 1);
 
-  if (inherit == INHERIT_ZERO) {
+  if (inherit == INHERIT_RES_ZERO) {
     // We should be seeing clear-on-fork behavior.
     tt_int_op((int)r, OP_EQ, 1); // child should send us a byte.
     tt_int_op(buf[0], OP_EQ, 0); // that byte should be zero.
-  } else if (inherit == INHERIT_DROP) {
+  } else if (inherit == INHERIT_RES_DROP) {
     // We should be seeing noinherit behavior.
     tt_int_op(r, OP_LE, 0); // child said nothing; it should have crashed.
   } else {
     // noinherit isn't implemented.
-    tt_int_op(inherit, OP_EQ, INHERIT_KEEP);
+    tt_int_op(inherit, OP_EQ, INHERIT_RES_KEEP);
     tt_int_op((int)r, OP_EQ, 1); // child should send us a byte.
     tt_int_op(buf[0], OP_EQ, 0xd0); // that byte should what we set it to.
   }
@@ -6227,9 +6227,9 @@ test_util_map_anon_nofork(void *arg)
 #ifndef NOINHERIT_CAN_FAIL
   /* Only if NOINHERIT_CAN_FAIL should it be possible for us to get
    * INHERIT_KEEP behavior in this case. */
-  tt_assert(inherit, OP_NE, INHERIT_KEEP);
+  tt_assert(inherit, OP_NE, INHERIT_RES_KEEP);
 #else
-  if (inherit == INHERIT_KEEP) {
+  if (inherit == INHERIT_RES_KEEP) {
     /* Call this test "skipped", not "passed", since noinherit wasn't
      * implemented. */
     tt_skip();

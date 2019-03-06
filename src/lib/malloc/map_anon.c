@@ -123,14 +123,14 @@ noinherit_mem(void *mem, size_t sz, unsigned *inherit_result_out)
 #ifdef FLAG_ZERO
   int r = MINHERIT(mem, sz, FLAG_ZERO);
   if (r == 0) {
-    *inherit_result_out = INHERIT_ZERO;
+    *inherit_result_out = INHERIT_RES_ZERO;
     return 0;
   }
 #endif
 #ifdef FLAG_NOINHERIT
   int r2 = MINHERIT(mem, sz, FLAG_NOINHERIT);
   if (r2 == 0) {
-    *inherit_result_out = INHERIT_DROP;
+    *inherit_result_out = INHERIT_RES_DROP;
   }
   return r2;
 #else
@@ -154,9 +154,9 @@ noinherit_mem(void *mem, size_t sz, unsigned *inherit_result_out)
  * Memory returned from this function must be released with
  * tor_munmap_anonymous().
  *
- * If <b>inherit_result_out</b> is non-NULL, set it to one of INHERIT_KEEP,
- * INHERIT_DROP, and INHERIT_ZERO, depending on the properties of the returned
- * memory.
+ * If <b>inherit_result_out</b> is non-NULL, set it to one of
+ * INHERIT_RES_KEEP, INHERIT_RES_DROP, or INHERIT_RES_ZERO, depending on the
+ * properties of the returned memory.
  *
  * [Note: OS people use the word "anonymous" here to mean that the memory
  * isn't associated with any file. This has *nothing* to do with the kind of
@@ -170,7 +170,7 @@ tor_mmap_anonymous(size_t sz, unsigned flags, unsigned *inherit_result_out)
   if (inherit_result_out == NULL) {
     inherit_result_out = &itmp;
   }
-  *inherit_result_out = INHERIT_KEEP;
+  *inherit_result_out = INHERIT_RES_KEEP;
 
 #if defined(_WIN32)
   HANDLE mapping = CreateFileMapping(INVALID_HANDLE_VALUE,
