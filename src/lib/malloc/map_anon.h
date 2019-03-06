@@ -31,11 +31,18 @@
  */
 #define ANONMAP_NOINHERIT (1u<<1)
 
-void *tor_mmap_anonymous(size_t sz, unsigned flags);
-void tor_munmap_anonymous(void *mapping, size_t sz);
+/** Possible value for inherit_result_out: the memory will be kept
+ * by any child process. */
+#define INHERIT_KEEP 0
+/** Possible value for inherit_result_out: the memory will be dropped in
+ * the child process. Attempting to access it will likely cause a segfault. */
+#define INHERIT_DROP 1
+/** Possible value for inherit_result_out: the memory will be cleared in
+ * the child process. */
+#define INHERIT_ZERO 2
 
-#ifdef TOR_UNIT_TESTS
-unsigned get_last_anon_map_noinherit(void);
-#endif
+void *tor_mmap_anonymous(size_t sz, unsigned flags,
+                         unsigned *inherit_result_out);
+void tor_munmap_anonymous(void *mapping, size_t sz);
 
 #endif /* !defined(TOR_MAP_ANON_H) */

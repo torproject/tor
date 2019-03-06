@@ -134,8 +134,8 @@ crypto_fast_rng_new_from_seed(const uint8_t *seed)
    * having it get dumped, swapped, or shared after fork.
    */
   crypto_fast_rng_t *result = tor_mmap_anonymous(sizeof(*result),
-                                ANONMAP_PRIVATE | ANONMAP_NOINHERIT);
-
+                                ANONMAP_PRIVATE | ANONMAP_NOINHERIT,
+                                NULL);
   memcpy(result->buf.seed, seed, SEED_LEN);
   /* Causes an immediate refill once the user asks for data. */
   result->bytes_left = 0;
