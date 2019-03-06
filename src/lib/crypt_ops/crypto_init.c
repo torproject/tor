@@ -152,6 +152,12 @@ crypto_prefork(void)
 #ifdef ENABLE_NSS
   crypto_nss_prefork();
 #endif
+  /* It is not safe to share a fast_rng object across a fork boundary unless
+   * we actually have zero-on-fork support in map_anon.c.  If we have
+   * drop-on-fork support, we will crash; if we have neither, we will yield
+   * a copy of the parent process's rng, which is scary and insecure.
+   */
+  destroy_thread_fast_rng();
 }
 
 /** Run operations that the crypto library requires to be happy again
