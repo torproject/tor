@@ -1444,6 +1444,81 @@ connection_edge_process_relay_cell_not_open(
 //  return -1;
 }
 
+/** Process a SENDME cell that arrived on <b>circ</b>. If it is a stream level
+ * cell, it is destined for the given <b>conn</b>. If it is a circuit level
+ * cell, it is destined for the <b>layer_hint</b>. The <b>domain</b> is the
+ * logging domain that should be used.
+ *
+ * Return 0 if everything went well or a negative value representing a circuit
+ * end reason on error for which the caller is responsible for closing it. */
+static int
+process_sendme_cell(const relay_header_t *rh, const cell_t *cell,
+                    circuit_t *circ, edge_connection_t *conn,
+                    crypt_path_t *layer_hint, int domain)
+{
+  int ret;
+
+  tor_assert(rh);
+
+  if (!rh->stream_id) {
+    /* Circuit level SENDME cell. */
+    ret = sendme_process_circuit_level(layer_hint, circ,
+                                       cell->payload + RELAY_HEADER_SIZE,
+                                       rh->length);
+    if (ret < 0) {
+      return ret;
+    }
+    /* Resume reading on any streams now that we've processed a valid
+     * SENDME cell that updated our package window. */
+    circuit_resume_edge_reading(circ, layer_hint);
+    /* We are done, the rest of the code is for the stream level. */
+    return 0;
+  }
+
+  /* No connection, might be half edge state. We are done if so. */
+  if (!conn) {
+    if (CIRCUIT_IS_ORIGIN(circ)) {
+      origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+      if (connection_half_edge_is_valid_sendme(ocirc->half_streams,
+                                               rh->stream_id)) {
+        circuit_read_valid_data(ocirc, rh->length);
+        log_info(domain, "Sendme cell on circ %u valid on half-closed "
+                         "stream id %d",
+                 ocirc->global_identifier, rh->stream_id);
+      }
+    }
+
+    log_info(domain, "SENDME cell dropped, unknown stream (streamid %d).",
+             rh->stream_id);
+    return 0;
+  }
+
+  /* Stream level SENDME cell. */
+  ret = sendme_process_stream_level(conn, circ, rh->length);
+  if (ret < 0) {
+    /* Means we need to close the circuit with reason ret. */
+    return ret;
+  }
+
+  /* We've now processed properly a SENDME cell, all windows have been
+   * properly updated, we'll read on the edge connection to see if we can
+   * get data out towards the end point (Exit or client) since we are now
+   * allowed to deliver more cells. */
+
+  if (circuit_queue_streams_are_blocked(circ)) {
+    /* Still waiting for queue to flush; don't touch conn */
+    return 0;
+  }
+  connection_start_reading(TO_CONN(conn));
+  /* handle whatever might still be on the inbuf */
+  if (connection_edge_package_raw_inbuf(conn, 1, NULL) < 0) {
+    /* (We already sent an end cell if possible) */
+    connection_mark_for_close(TO_CONN(conn));
+    return 0;
+  }
+  return 0;
+}
+
 /** An incoming relay cell has arrived on circuit <b>circ</b>. If
  * <b>conn</b> is NULL this is a control cell, else <b>cell</b> is
  * destined for <b>conn</b>.
@@ -1825,67 +1900,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                (unsigned)circ->n_circ_id, rh.stream_id);
       return 0;
     case RELAY_COMMAND_SENDME:
-    {
-      int ret;
-
-      if (!rh.stream_id) {
-        /* Circuit level SENDME cell. */
-        ret = sendme_process_circuit_level(layer_hint, circ,
-                                           cell->payload + RELAY_HEADER_SIZE,
-                                           rh.length);
-        if (ret < 0) {
-          return ret;
-        }
-        /* Resume reading on any streams now that we've processed a valid
-         * SENDME cell that updated our package window. */
-        circuit_resume_edge_reading(circ, layer_hint);
-        /* We are done, the rest of the code is for the stream level. */
-        return 0;
-      }
-
-      /* No connection, might be half edge state. We are done if so. */
-      if (!conn) {
-        if (CIRCUIT_IS_ORIGIN(circ)) {
-          origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-          if (connection_half_edge_is_valid_sendme(ocirc->half_streams,
-                                                   rh.stream_id)) {
-            circuit_read_valid_data(ocirc, rh.length);
-            log_info(domain, "Sendme cell on circ %u valid on half-closed "
-                             "stream id %d",
-                     ocirc->global_identifier, rh.stream_id);
-          }
-        }
-
-        log_info(domain, "SENDME cell dropped, unknown stream (streamid %d).",
-                 rh.stream_id);
-        return 0;
-      }
-
-      /* Stream level SENDME cell. */
-      ret = sendme_process_stream_level(conn, circ, rh.length);
-      if (ret < 0) {
-        /* Means we need to close the circuit with reason ret. */
-        return ret;
-      }
-
-      /* We've now processed properly a SENDME cell, all windows have been
-       * properly updated, we'll read on the edge connection to see if we can
-       * get data out towards the end point (Exit or client) since we are now
-       * allowed to deliver more cells. */
-
-      if (circuit_queue_streams_are_blocked(circ)) {
-        /* Still waiting for queue to flush; don't touch conn */
-        return 0;
-      }
-      connection_start_reading(TO_CONN(conn));
-      /* handle whatever might still be on the inbuf */
-      if (connection_edge_package_raw_inbuf(conn, 1, NULL) < 0) {
-        /* (We already sent an end cell if possible) */
-        connection_mark_for_close(TO_CONN(conn));
-        return 0;
-      }
-      return 0;
-    }
+      return process_sendme_cell(&rh, cell, circ, conn, layer_hint, domain);
     case RELAY_COMMAND_RESOLVE:
       if (layer_hint) {
         log_fn(LOG_PROTOCOL_WARN, LD_APP,
