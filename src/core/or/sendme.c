@@ -311,7 +311,7 @@ sendme_connection_edge_consider_sending(edge_connection_t *conn)
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if (connection_edge_send_command(conn, RELAY_COMMAND_SENDME,
                                      NULL, 0) < 0) {
-      log_warn(LD_APP, "connection_edge_send_command failed while sending "
+      log_warn(LD_BUG, "connection_edge_send_command failed while sending "
                        "a SENDME. Circuit probably closed, skipping.");
       goto end; /* The circuit's closed, don't continue */
     }
