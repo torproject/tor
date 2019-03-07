@@ -59,6 +59,49 @@ get_accept_min_version(void)
                                  SENDME_ACCEPT_MIN_VERSION_MAX);
 }
 
+/* Return true iff the given cell digest matches the first digest in the
+ * circuit sendme list. */
+static bool
+v1_digest_matches(const circuit_t *circ, const uint8_t *cell_digest)
+{
+  bool ret = false;
+  uint8_t *circ_digest = NULL;
+
+  tor_assert(circ);
+  tor_assert(cell_digest);
+
+  /* We shouldn't have received a SENDME if we have no digests. Log at
+   * protocol warning because it can be tricked by sending many SENDMEs
+   * without prior data cell. */
+  if (circ->sendme_last_digests == NULL ||
+      smartlist_len(circ->sendme_last_digests) == 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "We received a SENDME but we have no cell digests to match. "
+           "Closing circuit.");
+    goto no_match;
+  }
+
+  /* Pop the first element that was added (FIFO) and compare it. */
+  circ_digest = smartlist_get(circ->sendme_last_digests, 0);
+  smartlist_del_keeporder(circ->sendme_last_digests, 0);
+
+  /* Compare the digest with the one in the SENDME. This cell is invalid
+   * without a perfect match. */
+  if (tor_memneq(circ_digest, cell_digest, TRUNNEL_SENDME_V1_DIGEST_LEN)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "SENDME v1 cell digest do not match.");
+    goto no_match;
+  }
+  /* Digests matches! */
+  ret = true;
+
+ no_match:
+  /* This digest was popped from the circuit list. Regardless of what happens,
+   * we have no more use for it. */
+  tor_free(circ_digest);
+  return ret;
+}
+
 /* Return true iff the given decoded SENDME version 1 cell is valid and
  * matches the expected digest on the circuit.
  *
@@ -68,44 +111,11 @@ get_accept_min_version(void)
 static bool
 cell_v1_is_valid(const sendme_cell_t *cell, const circuit_t *circ)
 {
-  const uint8_t *cell_digest = NULL;
-
   tor_assert(cell);
   tor_assert(circ);
 
-  cell_digest = sendme_cell_getconstarray_data_v1_digest(cell);
-
-  /* We shouldn't have received this SENDME if we have no digests. Log at
-   * protocol warning because it can be tricked by sending many SENDMEs
-   * without prior data cell. */
-  if (circ->sendme_last_digests == NULL ||
-      smartlist_len(circ->sendme_last_digests) == 0) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "We received a SENDME but we have no cell digests to match. "
-           "Closing circuit.");
-    goto invalid;
-  }
-
-  /* Pop the first element that was added (FIFO) and compare it. */
-  {
-    uint8_t *digest = smartlist_get(circ->sendme_last_digests, 0);
-    smartlist_del_keeporder(circ->sendme_last_digests, 0);
-
-    /* Compare the digest with the one in the SENDME. This cell is invalid
-     * without a perfect match. */
-    if (tor_memcmp(digest, cell_digest, TRUNNEL_SENDME_V1_DIGEST_LEN)) {
-      tor_free(digest);
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "SENDME v1 cell digest do not match.");
-      goto invalid;
-    }
-    tor_free(digest);
-  }
-
-  /* Validated SENDME v1 cell. */
-  return 1;
- invalid:
-  return 0;
+  const uint8_t *cell_digest = sendme_cell_getconstarray_data_v1_digest(cell);
+  return v1_digest_matches(circ, cell_digest);
 }
 
 /* Return true iff the given cell version can be handled or if the minimum
