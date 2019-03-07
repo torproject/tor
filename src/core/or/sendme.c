@@ -215,7 +215,7 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
  * Return the size in bytes of the encoded cell in payload. A negative value
  * is returned on encoding failure. */
 STATIC ssize_t
-build_cell_payload_v1(crypto_digest_t *cell_digest, uint8_t *payload)
+build_cell_payload_v1(const uint8_t *cell_digest, uint8_t *payload)
 {
   ssize_t len = -1;
   sendme_cell_t *cell = NULL;
@@ -231,9 +231,8 @@ build_cell_payload_v1(crypto_digest_t *cell_digest, uint8_t *payload)
   sendme_cell_set_data_len(cell, TRUNNEL_SENDME_V1_DIGEST_LEN);
 
   /* Copy the digest into the data payload. */
-  crypto_digest_get_digest(cell_digest,
-                           (char *) sendme_cell_getarray_data_v1_digest(cell),
-                           sendme_cell_get_data_len(cell));
+  memcpy(sendme_cell_getarray_data_v1_digest(cell), cell_digest,
+         sendme_cell_get_data_len(cell));
 
   /* Finally, encode the cell into the payload. */
   len = sendme_cell_encode(payload, RELAY_PAYLOAD_SIZE, cell);
@@ -249,7 +248,7 @@ build_cell_payload_v1(crypto_digest_t *cell_digest, uint8_t *payload)
  * because we failed to send the cell on it. */
 static int
 send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
-                          crypto_digest_t *cell_digest)
+                          const uint8_t *cell_digest)
 {
   uint8_t emit_version;
   uint8_t payload[RELAY_PAYLOAD_SIZE];
@@ -340,7 +339,7 @@ sendme_connection_edge_consider_sending(edge_connection_t *conn)
 void
 sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
 {
-  crypto_digest_t *digest;
+  const uint8_t *digest;
 
   while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <=
           CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
@@ -539,7 +538,7 @@ sendme_note_stream_data_packaged(edge_connection_t *conn)
 void
 sendme_note_cell_digest(circuit_t *circ)
 {
-  uint8_t *digest;
+  const uint8_t *digest;
 
   tor_assert(circ);
 
@@ -555,16 +554,10 @@ sendme_note_cell_digest(circuit_t *circ)
     return;
   }
 
-  /* Only note the digest if we actually have the digest of the previous cell
-   * recorded. It should never happen in theory as we always record the last
-   * digest for the v1 SENDME. */
-  if (TO_OR_CIRCUIT(circ)->crypto.sendme_digest) {
-    digest = tor_malloc_zero(TRUNNEL_SENDME_V1_DIGEST_LEN);
-    crypto_digest_get_digest(TO_OR_CIRCUIT(circ)->crypto.sendme_digest,
-                             (char *) digest, TRUNNEL_SENDME_V1_DIGEST_LEN);
-    if (circ->sendme_last_digests == NULL) {
-      circ->sendme_last_digests = smartlist_new();
-    }
-    smartlist_add(circ->sendme_last_digests, digest);
+  /* Add the digest to the last seen list in the circuit. */
+  digest = TO_OR_CIRCUIT(circ)->crypto.sendme_digest;
+  if (circ->sendme_last_digests == NULL) {
+    circ->sendme_last_digests = smartlist_new();
   }
+  smartlist_add(circ->sendme_last_digests, tor_memdup(digest, DIGEST_LEN));
 }
