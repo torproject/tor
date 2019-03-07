@@ -982,7 +982,6 @@ circpad_send_padding_cell_for_callback(circpad_machine_state_t *mi)
   circuit_t *circ = mi->on_circ;
   int machine_idx = mi->machine_index;
   mi->padding_scheduled_at_usec = 0;
-  mi->is_padding_timer_scheduled = 0;
   circpad_statenum_t state = mi->current_state;
 
   // Make sure circuit didn't close on us
