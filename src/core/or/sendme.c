@@ -117,10 +117,10 @@ cell_version_is_valid(uint8_t cell_version)
 
   /* Can we handle this version? */
   if (accept_version > SENDME_MAX_SUPPORTED_VERSION) {
-    log_warn(LD_PROTOCOL, "Unable to handle SENDME version %u "
-                          "(from the consensus). We only support <= %d. "
-                          "Probably your tor is too old?",
-             cell_version, accept_version);
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Unable to handle SENDME version %u. We only support <= %d "
+           "(from consensus). Probably your tor is too old?",
+           accept_version, cell_version);
     goto invalid;
   }
 
