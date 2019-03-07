@@ -547,6 +547,8 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
   cell_t cell;
   relay_header_t rh;
   cell_direction_t cell_direction;
+  int random_bytes_len;
+  size_t random_bytes_offset = 0;
   /* XXXX NM Split this function into a separate versions per circuit type? */
 
   tor_assert(circ);
@@ -574,11 +576,20 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
 
   /* Add random bytes to the unused portion of the payload, to foil attacks
    * where the other side can predict all of the bytes in the payload and thus
-   * compute authenticated sendme cells without seeing the traffic.  See
-   * proposal 289. */
+   * compute authenticated sendme cells without seeing the traffic. See
+   * proposal 289.
+   *
+   * We'll skip the first 4 bytes of unused data because having some unused
+   * zero bytes has saved us a lot of times in the past. */
+  random_bytes_len = RELAY_PAYLOAD_SIZE -
+                     (RELAY_HEADER_SIZE + payload_len + 4);
+  if (random_bytes_len < 0) {
+    random_bytes_len = 0;
+  }
+  random_bytes_offset = RELAY_PAYLOAD_SIZE - random_bytes_len;
   crypto_fast_rng_getbytes(get_thread_fast_rng(),
-                           cell.payload + RELAY_HEADER_SIZE + payload_len,
-                           RELAY_PAYLOAD_SIZE - payload_len);
+                           cell.payload + random_bytes_offset,
+                           random_bytes_len);
 
   log_debug(LD_OR,"delivering %d cell %s.", relay_command,
             cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
