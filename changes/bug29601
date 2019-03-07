@@ -1,0 +1,6 @@
+  o Minor bugfixes (Windows, CI):
+    - Skip the Appveyor 32-bit Windows Server 2016 job, and 64-bit Windows
+      Server 2012 R2 job. The remaining 2 jobs still provide coverage of
+      64/32-bit, and Windows Server 2016/2012 R2. Also set fast_finish, so
+      failed jobs terminate the build immediately.
+      Fixes bug 29601; bugfix on 0.3.5.4-alpha.
