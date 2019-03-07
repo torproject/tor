@@ -156,12 +156,12 @@ test_v1_build_cell(void *arg)
   circ = TO_CIRCUIT(or_circ);
 
   cell_digest = crypto_digest_new();
-  crypto_digest_add_bytes(cell_digest, "AAAA", 4);
+  crypto_digest_add_bytes(cell_digest, "AAAAAAAAAAAAAAAAAAAA", 20);
   tt_assert(cell_digest);
 
-  /* SENDME v1 payload is 7 bytes. See spec. */
+  /* SENDME v1 payload is 3 bytes + 20 bytes digest. See spec. */
   ret = build_cell_payload_v1(cell_digest, payload);
-  tt_int_op(ret, OP_EQ, 7);
+  tt_int_op(ret, OP_EQ, 23);
 
   /* Validation. */
 

@@ -59,7 +59,8 @@ get_accept_min_version(void)
                                  SENDME_ACCEPT_MIN_VERSION_MAX);
 }
 
-/* Return true iff the given decoded SENDME version 1 cell is valid.
+/* Return true iff the given decoded SENDME version 1 cell is valid and
+ * matches the expected digest on the circuit.
  *
  * Validation is done by comparing the digest in the cell from the previous
  * cell we saw which tells us that the other side has in fact seen that cell.
@@ -67,14 +68,12 @@ get_accept_min_version(void)
 static bool
 cell_v1_is_valid(const sendme_cell_t *cell, const circuit_t *circ)
 {
-  sendme_data_v1_t *data = NULL;
+  const uint8_t *cell_digest = NULL;
 
   tor_assert(cell);
+  tor_assert(circ);
 
-  if (sendme_data_v1_parse(&data, sendme_cell_getconstarray_data(cell),
-                           sendme_cell_getlen_data(cell)) < 0) {
-    goto invalid;
-  }
+  cell_digest = sendme_cell_getconstarray_data_v1_digest(cell);
 
   /* We shouldn't have received this SENDME if we have no digests. Log at
    * protocol warning because it can be tricked by sending many SENDMEs
@@ -94,8 +93,7 @@ cell_v1_is_valid(const sendme_cell_t *cell, const circuit_t *circ)
 
     /* Compare the digest with the one in the SENDME. This cell is invalid
      * without a perfect match. */
-    if (tor_memcmp(digest, sendme_data_v1_getconstarray_digest(data),
-                   sendme_data_v1_getlen_digest(data))) {
+    if (tor_memcmp(digest, cell_digest, TRUNNEL_SENDME_V1_DIGEST_LEN)) {
       tor_free(digest);
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "SENDME v1 cell digest do not match.");
@@ -105,10 +103,8 @@ cell_v1_is_valid(const sendme_cell_t *cell, const circuit_t *circ)
   }
 
   /* Validated SENDME v1 cell. */
-  sendme_data_v1_free(data);
   return 1;
  invalid:
-  sendme_data_v1_free(data);
   return 0;
 }
 
@@ -213,39 +209,26 @@ build_cell_payload_v1(crypto_digest_t *cell_digest, uint8_t *payload)
 {
   ssize_t len = -1;
   sendme_cell_t *cell = NULL;
-  sendme_data_v1_t *data = NULL;
 
   tor_assert(cell_digest);
   tor_assert(payload);
 
   cell = sendme_cell_new();
-  data = sendme_data_v1_new();
 
   /* Building a payload for version 1. */
   sendme_cell_set_version(cell, 0x01);
+  /* Set the data length field for v1. */
+  sendme_cell_set_data_len(cell, TRUNNEL_SENDME_V1_DIGEST_LEN);
 
   /* Copy the digest into the data payload. */
   crypto_digest_get_digest(cell_digest,
-                           (char *) sendme_data_v1_getarray_digest(data),
-                           sendme_data_v1_getlen_digest(data));
-
-  /* Set the length of the data in the cell payload. It is the encoded length
-   * of the v1 data object. */
-  sendme_cell_setlen_data(cell, sendme_data_v1_encoded_len(data));
-  /* Encode into the cell's data field using its current length just set. */
-  if (sendme_data_v1_encode(sendme_cell_getarray_data(cell),
-                            sendme_cell_getlen_data(cell), data) < 0) {
-    goto end;
-  }
-  /* Set the DATA_LEN field to what we've just encoded. */
-  sendme_cell_set_data_len(cell, sendme_cell_getlen_data(cell));
+                           (char *) sendme_cell_getarray_data_v1_digest(cell),
+                           sendme_cell_get_data_len(cell));
 
   /* Finally, encode the cell into the payload. */
   len = sendme_cell_encode(payload, RELAY_PAYLOAD_SIZE, cell);
 
- end:
   sendme_cell_free(cell);
-  sendme_data_v1_free(data);
   return len;
 }
 
@@ -566,9 +549,9 @@ sendme_note_cell_digest(circuit_t *circ)
    * recorded. It should never happen in theory as we always record the last
    * digest for the v1 SENDME. */
   if (TO_OR_CIRCUIT(circ)->crypto.sendme_digest) {
-    digest = tor_malloc_zero(4);
+    digest = tor_malloc_zero(TRUNNEL_SENDME_V1_DIGEST_LEN);
     crypto_digest_get_digest(TO_OR_CIRCUIT(circ)->crypto.sendme_digest,
-                             (char *) digest, 4);
+                             (char *) digest, TRUNNEL_SENDME_V1_DIGEST_LEN);
     if (circ->sendme_last_digests == NULL) {
       circ->sendme_last_digests = smartlist_new();
     }
