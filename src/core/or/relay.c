@@ -2092,7 +2092,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   }
 
   /* Handle the circuit-level SENDME package window. */
-  if (sendme_circuit_data_packaged(circ, cpath_layer) < 0) {
+  if (sendme_note_circuit_data_packaged(circ, cpath_layer) < 0) {
     /* Package window has gone under 0. Protocol issue. */
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Circuit package window is below 0. Closing circuit.");
@@ -2101,7 +2101,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   }
 
   /* Handle the stream-level SENDME package window. */
-  if (sendme_stream_data_packaged(conn) < 0) {
+  if (sendme_note_stream_data_packaged(conn) < 0) {
     connection_stop_reading(TO_CONN(conn));
     log_debug(domain,"conn->package_window reached 0.");
     circuit_consider_stop_edge_reading(circ, cpath_layer);

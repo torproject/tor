@@ -491,7 +491,7 @@ sendme_stream_data_received(edge_connection_t *conn)
  * layer_hint is NULL, this means we are the Exit end point else we are the
  * Client. Update the package window and return its new value. */
 int
-sendme_circuit_data_packaged(circuit_t *circ, crypt_path_t *layer_hint)
+sendme_note_circuit_data_packaged(circuit_t *circ, crypt_path_t *layer_hint)
 {
   int package_window, domain;
 
@@ -518,7 +518,7 @@ sendme_circuit_data_packaged(circuit_t *circ, crypt_path_t *layer_hint)
 /* Called when a relay DATA cell is packaged for the given edge connection
  * conn. Update the package window and return its new value. */
 int
-sendme_stream_data_packaged(edge_connection_t *conn)
+sendme_note_stream_data_packaged(edge_connection_t *conn)
 {
   tor_assert(conn);
   return --conn->package_window;
