@@ -50,7 +50,7 @@ STATIC int get_accept_min_version(void);
 
 STATIC bool cell_version_is_valid(uint8_t cell_version);
 
-STATIC ssize_t build_cell_payload_v1(crypto_digest_t *cell_digest,
+STATIC ssize_t build_cell_payload_v1(const uint8_t *cell_digest,
                                      uint8_t *payload);
 STATIC bool sendme_is_valid(const circuit_t *circ,
                             const uint8_t *cell_payload,

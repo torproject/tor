@@ -26,7 +26,7 @@ struct relay_crypto_t {
   struct crypto_digest_t *b_digest;
 
   /** Digest used for the next SENDME cell if any. */
-  struct crypto_digest_t *sendme_digest;
+  uint8_t sendme_digest[DIGEST_LEN];
 };
 #undef crypto_cipher_t
 

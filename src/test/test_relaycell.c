@@ -705,7 +705,6 @@ test_circbw_relay(void *arg)
   circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_C_GENERAL, 0);
   circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
   circ->cpath->deliver_window = CIRCWINDOW_START;
-  circ->cpath->crypto.sendme_digest = crypto_digest_new();
 
   entryconn1 = fake_entry_conn(circ, 1);
   edgeconn = ENTRY_TO_EDGE_CONN(entryconn1);

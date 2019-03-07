@@ -16,6 +16,8 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/networkstatus_st.h"
 
+#include "lib/crypt_ops/crypto_digest.h"
+
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
@@ -64,7 +66,6 @@ test_v1_note_digest(void *arg)
   circuit_free_(circ);
   /* Points it to the OR circuit now. */
   circ = TO_CIRCUIT(or_circ);
-  or_circ->crypto.sendme_digest = crypto_digest_new();
 
   /* The package window has to be a multiple of CIRCWINDOW_INCREMENT minus 1
    * in order to catched the CIRCWINDOW_INCREMENT-nth cell. Try something that
@@ -144,7 +145,7 @@ test_v1_consensus_params(void *arg)
 static void
 test_v1_build_cell(void *arg)
 {
-  uint8_t payload[RELAY_PAYLOAD_SIZE];
+  uint8_t payload[RELAY_PAYLOAD_SIZE], digest[DIGEST_LEN];
   ssize_t ret;
   crypto_digest_t *cell_digest = NULL;
   or_circuit_t *or_circ = NULL;
@@ -156,11 +157,12 @@ test_v1_build_cell(void *arg)
   circ = TO_CIRCUIT(or_circ);
 
   cell_digest = crypto_digest_new();
-  crypto_digest_add_bytes(cell_digest, "AAAAAAAAAAAAAAAAAAAA", 20);
   tt_assert(cell_digest);
+  crypto_digest_add_bytes(cell_digest, "AAAAAAAAAAAAAAAAAAAA", 20);
+  crypto_digest_get_digest(cell_digest, (char *) digest, sizeof(digest));
 
   /* SENDME v1 payload is 3 bytes + 20 bytes digest. See spec. */
-  ret = build_cell_payload_v1(cell_digest, payload);
+  ret = build_cell_payload_v1(digest, payload);
   tt_int_op(ret, OP_EQ, 23);
 
   /* Validation. */
@@ -183,7 +185,6 @@ test_v1_build_cell(void *arg)
   teardown_capture_of_logs();
 
   /* Note the wrong digest in the circuit, cell should fail validation. */
-  or_circ->crypto.sendme_digest = crypto_digest_new();
   circ->package_window = CIRCWINDOW_INCREMENT + 1;
   sendme_note_cell_digest(circ);
   tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 1);
@@ -194,11 +195,8 @@ test_v1_build_cell(void *arg)
   expect_log_msg_containing("SENDME v1 cell digest do not match.");
   teardown_capture_of_logs();
 
-  /* Cleanup */
-  crypto_digest_free(or_circ->crypto.sendme_digest);
-
   /* Record the cell digest into the circuit, cell should validate. */
-  or_circ->crypto.sendme_digest = crypto_digest_dup(cell_digest);
+  memcpy(or_circ->crypto.sendme_digest, digest, sizeof(digest));
   circ->package_window = CIRCWINDOW_INCREMENT + 1;
   sendme_note_cell_digest(circ);
   tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 1);
