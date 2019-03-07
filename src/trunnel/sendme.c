@@ -43,8 +43,6 @@ static void
 sendme_cell_clear(sendme_cell_t *obj)
 {
   (void) obj;
-  TRUNNEL_DYNARRAY_WIPE(&obj->data);
-  TRUNNEL_DYNARRAY_CLEAR(&obj->data);
 }
 
 void
@@ -84,71 +82,40 @@ sendme_cell_set_data_len(sendme_cell_t *inp, uint16_t val)
   return 0;
 }
 size_t
-sendme_cell_getlen_data(const sendme_cell_t *inp)
+sendme_cell_getlen_data_v1_digest(const sendme_cell_t *inp)
 {
-  return TRUNNEL_DYNARRAY_LEN(&inp->data);
+  (void)inp;  return TRUNNEL_SENDME_V1_DIGEST_LEN;
 }
 
 uint8_t
-sendme_cell_get_data(sendme_cell_t *inp, size_t idx)
+sendme_cell_get_data_v1_digest(sendme_cell_t *inp, size_t idx)
 {
-  return TRUNNEL_DYNARRAY_GET(&inp->data, idx);
+  trunnel_assert(idx < TRUNNEL_SENDME_V1_DIGEST_LEN);
+  return inp->data_v1_digest[idx];
 }
 
 uint8_t
-sendme_cell_getconst_data(const sendme_cell_t *inp, size_t idx)
+sendme_cell_getconst_data_v1_digest(const sendme_cell_t *inp, size_t idx)
 {
-  return sendme_cell_get_data((sendme_cell_t*)inp, idx);
+  return sendme_cell_get_data_v1_digest((sendme_cell_t*)inp, idx);
 }
 int
-sendme_cell_set_data(sendme_cell_t *inp, size_t idx, uint8_t elt)
+sendme_cell_set_data_v1_digest(sendme_cell_t *inp, size_t idx, uint8_t elt)
 {
-  TRUNNEL_DYNARRAY_SET(&inp->data, idx, elt);
+  trunnel_assert(idx < TRUNNEL_SENDME_V1_DIGEST_LEN);
+  inp->data_v1_digest[idx] = elt;
   return 0;
-}
-int
-sendme_cell_add_data(sendme_cell_t *inp, uint8_t elt)
-{
-#if SIZE_MAX >= UINT16_MAX
-  if (inp->data.n_ == UINT16_MAX)
-    goto trunnel_alloc_failed;
-#endif
-  TRUNNEL_DYNARRAY_ADD(uint8_t, &inp->data, elt, {});
-  return 0;
- trunnel_alloc_failed:
-  TRUNNEL_SET_ERROR_CODE(inp);
-  return -1;
 }
 
 uint8_t *
-sendme_cell_getarray_data(sendme_cell_t *inp)
+sendme_cell_getarray_data_v1_digest(sendme_cell_t *inp)
 {
-  return inp->data.elts_;
+  return inp->data_v1_digest;
 }
 const uint8_t  *
-sendme_cell_getconstarray_data(const sendme_cell_t *inp)
+sendme_cell_getconstarray_data_v1_digest(const sendme_cell_t *inp)
 {
-  return (const uint8_t  *)sendme_cell_getarray_data((sendme_cell_t*)inp);
-}
-int
-sendme_cell_setlen_data(sendme_cell_t *inp, size_t newlen)
-{
-  uint8_t *newptr;
-#if UINT16_MAX < SIZE_MAX
-  if (newlen > UINT16_MAX)
-    goto trunnel_alloc_failed;
-#endif
-  newptr = trunnel_dynarray_setlen(&inp->data.allocated_,
-                 &inp->data.n_, inp->data.elts_, newlen,
-                 sizeof(inp->data.elts_[0]), (trunnel_free_fn_t) NULL,
-                 &inp->trunnel_error_code_);
-  if (newlen != 0 && newptr == NULL)
-    goto trunnel_alloc_failed;
-  inp->data.elts_ = newptr;
-  return 0;
- trunnel_alloc_failed:
-  TRUNNEL_SET_ERROR_CODE(inp);
-  return -1;
+  return (const uint8_t  *)sendme_cell_getarray_data_v1_digest((sendme_cell_t*)inp);
 }
 const char *
 sendme_cell_check(const sendme_cell_t *obj)
@@ -159,8 +126,18 @@ sendme_cell_check(const sendme_cell_t *obj)
     return "A set function failed on this object";
   if (! (obj->version == 0 || obj->version == 1))
     return "Integer out of bounds";
-  if (TRUNNEL_DYNARRAY_LEN(&obj->data) != obj->data_len)
-    return "Length mismatch for data";
+  switch (obj->version) {
+
+    case 0:
+      break;
+
+    case 1:
+      break;
+
+    default:
+        return "Bad tag for union";
+      break;
+  }
   return NULL;
 }
 
@@ -178,9 +155,21 @@ sendme_cell_encoded_len(const sendme_cell_t *obj)
 
   /* Length of u16 data_len */
   result += 2;
+  switch (obj->version) {
 
-  /* Length of u8 data[data_len] */
-  result += TRUNNEL_DYNARRAY_LEN(&obj->data);
+    case 0:
+      break;
+
+    case 1:
+
+      /* Length of u8 data_v1_digest[TRUNNEL_SENDME_V1_DIGEST_LEN] */
+      result += TRUNNEL_SENDME_V1_DIGEST_LEN;
+      break;
+
+    default:
+      trunnel_assert(0);
+      break;
+  }
   return result;
 }
 int
@@ -201,6 +190,8 @@ sendme_cell_encode(uint8_t *output, const size_t avail, const sendme_cell_t *obj
   const ssize_t encoded_len = sendme_cell_encoded_len(obj);
 #endif
 
+  uint8_t *backptr_data_len = NULL;
+
   if (NULL != (msg = sendme_cell_check(obj)))
     goto check_failed;
 
@@ -216,22 +207,43 @@ sendme_cell_encode(uint8_t *output, const size_t avail, const sendme_cell_t *obj
   written += 1; ptr += 1;
 
   /* Encode u16 data_len */
+  backptr_data_len = ptr;
   trunnel_assert(written <= avail);
   if (avail - written < 2)
     goto truncated;
   trunnel_set_uint16(ptr, trunnel_htons(obj->data_len));
   written += 2; ptr += 2;
-
-  /* Encode u8 data[data_len] */
   {
-    size_t elt_len = TRUNNEL_DYNARRAY_LEN(&obj->data);
-    trunnel_assert(obj->data_len == elt_len);
+    size_t written_before_union = written;
+
+    /* Encode union data[version] */
     trunnel_assert(written <= avail);
-    if (avail - written < elt_len)
-      goto truncated;
-    if (elt_len)
-      memcpy(ptr, obj->data.elts_, elt_len);
-    written += elt_len; ptr += elt_len;
+    switch (obj->version) {
+
+      case 0:
+        break;
+
+      case 1:
+
+        /* Encode u8 data_v1_digest[TRUNNEL_SENDME_V1_DIGEST_LEN] */
+        trunnel_assert(written <= avail);
+        if (avail - written < TRUNNEL_SENDME_V1_DIGEST_LEN)
+          goto truncated;
+        memcpy(ptr, obj->data_v1_digest, TRUNNEL_SENDME_V1_DIGEST_LEN);
+        written += TRUNNEL_SENDME_V1_DIGEST_LEN; ptr += TRUNNEL_SENDME_V1_DIGEST_LEN;
+        break;
+
+      default:
+        trunnel_assert(0);
+        break;
+    }
+    /* Write the length field back to data_len */
+    trunnel_assert(written >= written_before_union);
+#if UINT16_MAX < SIZE_MAX
+    if (written - written_before_union > UINT16_MAX)
+      goto check_failed;
+#endif
+    trunnel_set_uint16(backptr_data_len, trunnel_htons(written - written_before_union));
   }
 
 
@@ -279,21 +291,41 @@ sendme_cell_parse_into(sendme_cell_t *obj, const uint8_t *input, const size_t le
   CHECK_REMAINING(2, truncated);
   obj->data_len = trunnel_ntohs(trunnel_get_uint16(ptr));
   remaining -= 2; ptr += 2;
+  {
+    size_t remaining_after;
+    CHECK_REMAINING(obj->data_len, truncated);
+    remaining_after = remaining - obj->data_len;
+    remaining = obj->data_len;
 
-  /* Parse u8 data[data_len] */
-  CHECK_REMAINING(obj->data_len, truncated);
-  TRUNNEL_DYNARRAY_EXPAND(uint8_t, &obj->data, obj->data_len, {});
-  obj->data.n_ = obj->data_len;
-  if (obj->data_len)
-    memcpy(obj->data.elts_, ptr, obj->data_len);
-  ptr += obj->data_len; remaining -= obj->data_len;
+    /* Parse union data[version] */
+    switch (obj->version) {
+
+      case 0:
+        /* Skip to end of union */
+        ptr += remaining; remaining = 0;
+        break;
+
+      case 1:
+
+        /* Parse u8 data_v1_digest[TRUNNEL_SENDME_V1_DIGEST_LEN] */
+        CHECK_REMAINING(TRUNNEL_SENDME_V1_DIGEST_LEN, fail);
+        memcpy(obj->data_v1_digest, ptr, TRUNNEL_SENDME_V1_DIGEST_LEN);
+        remaining -= TRUNNEL_SENDME_V1_DIGEST_LEN; ptr += TRUNNEL_SENDME_V1_DIGEST_LEN;
+        break;
+
+      default:
+        goto fail;
+        break;
+    }
+    if (remaining != 0)
+      goto fail;
+    remaining = remaining_after;
+  }
   trunnel_assert(ptr + remaining == input + len_in);
   return len_in - remaining;
 
  truncated:
   return -2;
- trunnel_alloc_failed:
-  return -1;
  fail:
   result = -1;
   return result;
@@ -309,183 +341,6 @@ sendme_cell_parse(sendme_cell_t **output, const uint8_t *input, const size_t len
   result = sendme_cell_parse_into(*output, input, len_in);
   if (result < 0) {
     sendme_cell_free(*output);
-    *output = NULL;
-  }
-  return result;
-}
-sendme_data_v1_t *
-sendme_data_v1_new(void)
-{
-  sendme_data_v1_t *val = trunnel_calloc(1, sizeof(sendme_data_v1_t));
-  if (NULL == val)
-    return NULL;
-  return val;
-}
-
-/** Release all storage held inside 'obj', but do not free 'obj'.
- */
-static void
-sendme_data_v1_clear(sendme_data_v1_t *obj)
-{
-  (void) obj;
-}
-
-void
-sendme_data_v1_free(sendme_data_v1_t *obj)
-{
-  if (obj == NULL)
-    return;
-  sendme_data_v1_clear(obj);
-  trunnel_memwipe(obj, sizeof(sendme_data_v1_t));
-  trunnel_free_(obj);
-}
-
-size_t
-sendme_data_v1_getlen_digest(const sendme_data_v1_t *inp)
-{
-  (void)inp;  return 4;
-}
-
-uint8_t
-sendme_data_v1_get_digest(sendme_data_v1_t *inp, size_t idx)
-{
-  trunnel_assert(idx < 4);
-  return inp->digest[idx];
-}
-
-uint8_t
-sendme_data_v1_getconst_digest(const sendme_data_v1_t *inp, size_t idx)
-{
-  return sendme_data_v1_get_digest((sendme_data_v1_t*)inp, idx);
-}
-int
-sendme_data_v1_set_digest(sendme_data_v1_t *inp, size_t idx, uint8_t elt)
-{
-  trunnel_assert(idx < 4);
-  inp->digest[idx] = elt;
-  return 0;
-}
-
-uint8_t *
-sendme_data_v1_getarray_digest(sendme_data_v1_t *inp)
-{
-  return inp->digest;
-}
-const uint8_t  *
-sendme_data_v1_getconstarray_digest(const sendme_data_v1_t *inp)
-{
-  return (const uint8_t  *)sendme_data_v1_getarray_digest((sendme_data_v1_t*)inp);
-}
-const char *
-sendme_data_v1_check(const sendme_data_v1_t *obj)
-{
-  if (obj == NULL)
-    return "Object was NULL";
-  if (obj->trunnel_error_code_)
-    return "A set function failed on this object";
-  return NULL;
-}
-
-ssize_t
-sendme_data_v1_encoded_len(const sendme_data_v1_t *obj)
-{
-  ssize_t result = 0;
-
-  if (NULL != sendme_data_v1_check(obj))
-     return -1;
-
-
-  /* Length of u8 digest[4] */
-  result += 4;
-  return result;
-}
-int
-sendme_data_v1_clear_errors(sendme_data_v1_t *obj)
-{
-  int r = obj->trunnel_error_code_;
-  obj->trunnel_error_code_ = 0;
-  return r;
-}
-ssize_t
-sendme_data_v1_encode(uint8_t *output, const size_t avail, const sendme_data_v1_t *obj)
-{
-  ssize_t result = 0;
-  size_t written = 0;
-  uint8_t *ptr = output;
-  const char *msg;
-#ifdef TRUNNEL_CHECK_ENCODED_LEN
-  const ssize_t encoded_len = sendme_data_v1_encoded_len(obj);
-#endif
-
-  if (NULL != (msg = sendme_data_v1_check(obj)))
-    goto check_failed;
-
-#ifdef TRUNNEL_CHECK_ENCODED_LEN
-  trunnel_assert(encoded_len >= 0);
-#endif
-
-  /* Encode u8 digest[4] */
-  trunnel_assert(written <= avail);
-  if (avail - written < 4)
-    goto truncated;
-  memcpy(ptr, obj->digest, 4);
-  written += 4; ptr += 4;
-
-
-  trunnel_assert(ptr == output + written);
-#ifdef TRUNNEL_CHECK_ENCODED_LEN
-  {
-    trunnel_assert(encoded_len >= 0);
-    trunnel_assert((size_t)encoded_len == written);
-  }
-
-#endif
-
-  return written;
-
- truncated:
-  result = -2;
-  goto fail;
- check_failed:
-  (void)msg;
-  result = -1;
-  goto fail;
- fail:
-  trunnel_assert(result < 0);
-  return result;
-}
-
-/** As sendme_data_v1_parse(), but do not allocate the output object.
- */
-static ssize_t
-sendme_data_v1_parse_into(sendme_data_v1_t *obj, const uint8_t *input, const size_t len_in)
-{
-  const uint8_t *ptr = input;
-  size_t remaining = len_in;
-  ssize_t result = 0;
-  (void)result;
-
-  /* Parse u8 digest[4] */
-  CHECK_REMAINING(4, truncated);
-  memcpy(obj->digest, ptr, 4);
-  remaining -= 4; ptr += 4;
-  trunnel_assert(ptr + remaining == input + len_in);
-  return len_in - remaining;
-
- truncated:
-  return -2;
-}
-
-ssize_t
-sendme_data_v1_parse(sendme_data_v1_t **output, const uint8_t *input, const size_t len_in)
-{
-  ssize_t result;
-  *output = sendme_data_v1_new();
-  if (NULL == *output)
-    return -1;
-  result = sendme_data_v1_parse_into(*output, input, len_in);
-  if (result < 0) {
-    sendme_data_v1_free(*output);
     *output = NULL;
   }
   return result;
