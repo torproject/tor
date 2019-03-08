@@ -1,0 +1,6 @@
+  o Minor bugfixes (hidden service v2):
+    - When reloading tor (HUP) configured with hidden service(s), some
+      information weren't copy to the new service object. One problem with this
+      was that tor would wait at least the RendPostPeriod time before uploading
+      the descriptor if the reload happened before the descriptor needed to be
+      published. Fixes bug 23790; bugfix on 0.2.1.9-alpha.
