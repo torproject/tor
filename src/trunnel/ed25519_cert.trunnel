@@ -28,12 +28,6 @@ const LS_IPV6 = 0x01;
 const LS_LEGACY_ID = 0x02;
 const LS_ED25519_ID = 0x03;
 
-// XXX hs_link_specifier_dup() violates the opaqueness of link_specifier_t by
-//  taking its sizeof(). If we ever want to turn on TRUNNEL_OPAQUE, or
-//  if we ever make link_specifier contain other types, we will
-//  need to refactor that function to do the copy by encoding and decoding the
-//  object.
-
 // amended from tor.trunnel
 struct link_specifier {
   u8 ls_type;
