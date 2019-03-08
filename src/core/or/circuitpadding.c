@@ -61,6 +61,7 @@
 #include "core/or/crypt_path_st.h"
 #include "core/or/circuit_st.h"
 #include "core/or/origin_circuit_st.h"
+#include "core/or/or_circuit_st.h"
 #include "feature/nodelist/routerstatus_st.h"
 #include "feature/nodelist/node_st.h"
 #include "core/or/cell_st.h"
@@ -81,6 +82,7 @@ static double circpad_distribution_sample(circpad_distribution_t dist);
 /** Cached consensus params */
 static uint8_t circpad_global_max_padding_percent;
 static uint16_t circpad_global_allowed_cells;
+static uint16_t circpad_max_circ_queued_cells;
 
 /** Global cell counts, for rate limiting */
 static uint64_t circpad_global_padding_sent;
@@ -1027,10 +1029,17 @@ circpad_send_padding_cell_for_callback(circpad_machine_state_t *mi)
   } else {
     // If we're a non-origin circ, we can just send from here as if we're the
     // edge.
-    log_fn(LOG_INFO,LD_CIRC,
-          "Callback: Sending padding to non-origin circuit.");
-    relay_send_command_from_edge(0, mi->on_circ, RELAY_COMMAND_DROP, NULL,
-                                 0, NULL);
+    if (TO_OR_CIRCUIT(circ)->p_chan_cells.n <= circpad_max_circ_queued_cells) {
+      log_fn(LOG_INFO,LD_CIRC,
+             "Callback: Sending padding to non-origin circuit.");
+      relay_send_command_from_edge(0, mi->on_circ, RELAY_COMMAND_DROP, NULL,
+                                   0, NULL);
+    } else {
+      static ratelim_t cell_lim = RATELIM_INIT(600);
+      log_fn_ratelim(&cell_lim,LOG_NOTICE,LD_CIRC,
+                     "Too many cells (%d) in circ queue to send padding.",
+                      TO_OR_CIRCUIT(circ)->p_chan_cells.n);
+    }
   }
 
   rep_hist_padding_count_write(PADDING_TYPE_DROP);
@@ -1093,6 +1102,10 @@ circpad_new_consensus_params(const networkstatus_t *ns)
   circpad_global_max_padding_percent =
       networkstatus_get_param(ns, "circpad_global_max_padding_pct",
          0, 0, 100);
+
+  circpad_max_circ_queued_cells =
+      networkstatus_get_param(ns, "circpad_max_circ_queued_cells",
+         CIRCWINDOW_START_MAX, 0, 50*CIRCWINDOW_START_MAX);
 }
 
 /**
