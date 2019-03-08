@@ -48,6 +48,11 @@ RELEASE_034=( "release-0.3.4" "maint-0.3.4" "$GIT_PATH/$TOR_WKT_NAME/release-0.3
 RELEASE_035=( "release-0.3.5" "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.5" )
 RELEASE_040=( "release-0.4.0" "maint-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.0" )
 
+# The master branch path has to be the main repository thus contains the
+# origin that will be used to fetch the updates. All the worktrees are created
+# from that repository.
+ORIGIN_PATH="$GIT_PATH/$TOR_MASTER_NAME"
+
 ##########################
 # Git Worktree to manage #
 ##########################
@@ -146,6 +151,19 @@ function merge_branch
   fi
 }
 
+# Pull the given branch name.
+function merge_branch_origin
+{
+  local cmd="git merge --ff-only origin/$1"
+  printf "  %s Merging branch origin/%s..." "$MARKER" "$1"
+  if [ $DRY_RUN -eq 0 ]; then
+    msg=$( eval "$cmd" 2>&1 )
+    validate_ret $? "$msg"
+  else
+    printf "\\n      %s\\n" "${IWTH}$cmd${CNRM}"
+  fi
+}
+
 # Go into the worktree repository.
 function goto_repo
 {
@@ -154,6 +172,19 @@ function goto_repo
     exit 1
   fi
   cd "$1" || exit
+}
+
+# Fetch the origin. No arguments.
+function fetch_origin
+{
+  local cmd="git fetch origin"
+  printf "  %s Fetching origin..." "$MARKER"
+  if [ $DRY_RUN -eq 0 ]; then
+    msg=$( eval "$cmd" 2>&1 )
+    validate_ret $? "$msg"
+  else
+    printf "\\n      %s\\n" "${IWTH}$cmd${CNRM}"
+  fi
 }
 
 ###############
@@ -170,6 +201,10 @@ while getopts "n" opt; do
   esac
 done
 
+# First, fetch the origin.
+goto_repo "$ORIGIN_PATH"
+fetch_origin
+
 # Go over all configured worktree.
 for ((i=0; i<COUNT; i++)); do
   current=${!WORKTREE[$i]:0:1}
@@ -182,8 +217,8 @@ for ((i=0; i<COUNT; i++)); do
   goto_repo "$repo_path"
   # Checkout the current branch
   switch_branch "$current"
-  # Update the current branch with a pull to get the latest.
-  pull_branch "$current"
+  # Update the current branch with an origin merge to get the latest.
+  merge_branch_origin "$current"
   # Merge the previous branch. Ex: merge maint-0.2.5 into maint-0.2.9.
   merge_branch "$previous" "$current"
 done

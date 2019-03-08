@@ -47,6 +47,11 @@ RELEASE_034=( "release-0.3.4" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.4" )
 RELEASE_035=( "release-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.5" )
 RELEASE_040=( "release-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.0" )
 
+# The master branch path has to be the main repository thus contains the
+# origin that will be used to fetch the updates. All the worktrees are created
+# from that repository.
+ORIGIN_PATH="$GIT_PATH/$TOR_MASTER_NAME"
+
 ##########################
 # Git Worktree to manage #
 ##########################
@@ -121,10 +126,10 @@ function switch_branch
 }
 
 # Pull the given branch name.
-function pull_branch
+function merge_branch
 {
-  local cmd="git pull"
-  printf "  %s Pulling branch %s..." "$MARKER" "$1"
+  local cmd="git merge --ff-only origin/$1"
+  printf "  %s Merging branch origin/%s..." "$MARKER" "$1"
   if [ $DRY_RUN -eq 0 ]; then
     msg=$( eval "$cmd" 2>&1 )
     validate_ret $? "$msg"
@@ -143,6 +148,19 @@ function goto_repo
   cd "$1" || exit
 }
 
+# Fetch the origin. No arguments.
+function fetch_origin
+{
+  local cmd="git fetch origin"
+  printf "  %s Fetching origin..." "$MARKER"
+  if [ $DRY_RUN -eq 0 ]; then
+    msg=$( eval "$cmd" 2>&1 )
+    validate_ret $? "$msg"
+  else
+    printf "\\n      %s\\n" "${IWTH}$cmd${CNRM}"
+  fi
+}
+
 ###############
 # Entry point #
 ###############
@@ -157,6 +175,10 @@ while getopts "n" opt; do
   esac
 done
 
+# First, fetch the origin.
+goto_repo "$ORIGIN_PATH"
+fetch_origin
+
 # Go over all configured worktree.
 for ((i=0; i<COUNT; i++)); do
   current=${!WORKTREE[$i]:0:1}
@@ -168,6 +190,6 @@ for ((i=0; i<COUNT; i++)); do
   goto_repo "$repo_path"
   # Checkout the current branch
   switch_branch "$current"
-  # Update the current branch with a pull to get the latest.
-  pull_branch "$current"
+  # Update the current branch by merging the origin to get the latest.
+  merge_branch "$current"
 done
