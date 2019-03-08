@@ -1855,18 +1855,20 @@ link_specifier_dup(const link_specifier_t *src)
     goto err;
   }
 
-  ssize_t est_encoded_len = link_specifier_encoded_len(src);
-  if (BUG(est_encoded_len < 0)) {
+  ssize_t encoded_len_alloc = link_specifier_encoded_len(src);
+  if (BUG(encoded_len_alloc < 0)) {
     goto err;
   }
 
-  buf = tor_malloc_zero(est_encoded_len);
-  ssize_t encoded_len = link_specifier_encode(buf, est_encoded_len, src);
-  if (BUG(encoded_len < 0)) {
+  buf = tor_malloc_zero(encoded_len_alloc);
+  ssize_t encoded_len_data = link_specifier_encode(buf,
+                                                   encoded_len_alloc,
+                                                   src);
+  if (BUG(encoded_len_data < 0)) {
     goto err;
   }
 
-  ssize_t parsed_len = link_specifier_parse(&dup, buf, est_encoded_len);
+  ssize_t parsed_len = link_specifier_parse(&dup, buf, encoded_len_alloc);
   if (BUG(parsed_len < 0)) {
     goto err;
   }
