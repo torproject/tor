@@ -110,7 +110,7 @@ test_relay_close_circuit(void *arg)
   tt_int_op(new_count, OP_EQ, old_count + 1);
 
   /* Ensure our write totals are 0 */
-  tt_int_op(find_largest_max(write_array), OP_EQ, 0);
+  tt_u64_op(find_largest_max(write_array), OP_EQ, 0);
 
   /* Mark the circuit for close */
   circuit_mark_for_close(TO_CIRCUIT(orcirc), 0);
@@ -119,7 +119,7 @@ test_relay_close_circuit(void *arg)
   advance_obs(write_array);
   commit_max(write_array);
   /* Check for two cells plus overhead */
-  tt_int_op(find_largest_max(write_array), OP_EQ,
+  tt_u64_op(find_largest_max(write_array), OP_EQ,
                              2*(get_cell_network_size(nchan->wide_circ_ids)
                                 +TLS_PER_CELL_OVERHEAD));
 
@@ -229,4 +229,3 @@ struct testcase_t relay_tests[] = {
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

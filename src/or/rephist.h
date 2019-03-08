@@ -109,7 +109,6 @@ extern uint32_t rephist_total_num;
 #ifdef TOR_UNIT_TESTS
 extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1];
 extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
-typedef struct bw_array_t bw_array_t;
 extern bw_array_t *write_array;
 #endif
 
@@ -139,4 +138,3 @@ void rep_hist_prep_published_padding_counts(time_t now);
 void rep_hist_padding_count_timers(uint64_t num_timers);
 
 #endif /* !defined(TOR_REPHIST_H) */
-
