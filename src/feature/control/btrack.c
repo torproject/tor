@@ -24,6 +24,7 @@
 #include "feature/control/btrack_circuit.h"
 #include "feature/control/btrack_orconn.h"
 #include "feature/control/btrack_sys.h"
+#include "lib/pubsub/pubsub.h"
 #include "lib/subsys/subsys.h"
 
 static int
@@ -44,10 +45,17 @@ btrack_fini(void)
   btrack_circ_fini();
 }
 
+static int
+btrack_add_pubsub(pubsub_connector_t *connector)
+{
+  return btrack_orconn_add_pubsub(connector);
+}
+
 const subsys_fns_t sys_btrack = {
   .name = "btrack",
   .supported = true,
   .level = -30,
   .initialize = btrack_init,
   .shutdown = btrack_fini,
+  .add_pubsub = btrack_add_pubsub,
 };

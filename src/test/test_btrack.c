@@ -4,6 +4,7 @@
 #include "core/or/or.h"
 
 #include "test/test.h"
+#include "test_helpers.h"
 #include "test/log_test_helpers.h"
 
 #define OCIRC_EVENT_PRIVATE
@@ -12,20 +13,37 @@
 #include "core/or/orconn_event.h"
 
 static void
+send_state(const orconn_state_msg_t *msg_in)
+{
+  orconn_state_msg_t *msg = tor_malloc(sizeof(*msg));
+
+  *msg = *msg_in;
+  orconn_state_publish(msg);
+}
+
+static void
+send_status(const orconn_status_msg_t *msg_in)
+{
+  orconn_status_msg_t *msg = tor_malloc(sizeof(*msg));
+
+  *msg = *msg_in;
+  orconn_status_publish(msg);
+}
+
+static void
 test_btrack_launch(void *arg)
 {
-  orconn_event_msg_t conn;
+  orconn_state_msg_t conn;
   ocirc_event_msg_t circ;
 
   (void)arg;
-  conn.type = ORCONN_MSGTYPE_STATE;
-  conn.u.state.gid = 1;
-  conn.u.state.chan = 1;
-  conn.u.state.proxy_type = PROXY_NONE;
-  conn.u.state.state = OR_CONN_STATE_CONNECTING;
+  conn.gid = 1;
+  conn.chan = 1;
+  conn.proxy_type = PROXY_NONE;
+  conn.state = OR_CONN_STATE_CONNECTING;
 
   setup_full_capture_of_logs(LOG_DEBUG);
-  orconn_event_publish(&conn);
+  send_state(&conn);
   expect_log_msg_containing("ORCONN gid=1 chan=1 proxy_type=0 state=1");
   expect_no_log_msg_containing("ORCONN BEST_");
   teardown_capture_of_logs();
@@ -40,11 +58,11 @@ test_btrack_launch(void *arg)
   expect_log_msg_containing("ORCONN BEST_ANY state -1->1 gid=1");
   teardown_capture_of_logs();
 
-  conn.u.state.gid = 2;
-  conn.u.state.chan = 2;
+  conn.gid = 2;
+  conn.chan = 2;
 
   setup_full_capture_of_logs(LOG_DEBUG);
-  orconn_event_publish(&conn);
+  send_state(&conn);
   expect_log_msg_containing("ORCONN gid=2 chan=2 proxy_type=0 state=1");
   expect_no_log_msg_containing("ORCONN BEST_");
   teardown_capture_of_logs();
@@ -65,27 +83,26 @@ test_btrack_launch(void *arg)
 static void
 test_btrack_delete(void *arg)
 {
-  orconn_event_msg_t conn;
+  orconn_state_msg_t state;
+  orconn_status_msg_t status;
 
   (void)arg;
-  conn.type = ORCONN_MSGTYPE_STATE;
-  conn.u.state.gid = 1;
-  conn.u.state.chan = 1;
-  conn.u.state.proxy_type = PROXY_NONE;
-  conn.u.state.state = OR_CONN_STATE_CONNECTING;
+  state.gid = 1;
+  state.chan = 1;
+  state.proxy_type = PROXY_NONE;
+  state.state = OR_CONN_STATE_CONNECTING;
 
   setup_full_capture_of_logs(LOG_DEBUG);
-  orconn_event_publish(&conn);
+  send_state(&state);
   expect_log_msg_containing("ORCONN gid=1 chan=1 proxy_type=0");
   teardown_capture_of_logs();
 
-  conn.type = ORCONN_MSGTYPE_STATUS;
-  conn.u.status.gid = 1;
-  conn.u.status.status = OR_CONN_EVENT_CLOSED;
-  conn.u.status.reason = 0;
+  status.gid = 1;
+  status.status = OR_CONN_EVENT_CLOSED;
+  status.reason = 0;
 
   setup_full_capture_of_logs(LOG_DEBUG);
-  orconn_event_publish(&conn);
+  send_status(&status);
   expect_log_msg_containing("ORCONN DELETE gid=1 status=3 reason=0");
   teardown_capture_of_logs();
 
@@ -94,7 +111,7 @@ test_btrack_delete(void *arg)
 }
 
 struct testcase_t btrack_tests[] = {
-  { "launch", test_btrack_launch, TT_FORK, 0, NULL },
-  { "delete", test_btrack_delete, TT_FORK, 0, NULL },
+  { "launch", test_btrack_launch, TT_FORK, &helper_pubsub_setup, NULL },
+  { "delete", test_btrack_delete, TT_FORK, &helper_pubsub_setup, NULL },
   END_OF_TESTCASES
 };
