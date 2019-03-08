@@ -6,10 +6,10 @@ clone_depth: 50
 # But we compile using MinGW, not Visual Studio.
 # We use these images because they have different Windows versions.
 image:
-  # Windows Server 2012 R2
-  - Visual Studio 2015
   # Windows Server 2016
   - Visual Studio 2017
+  # Windows Server 2012 R2
+  - Visual Studio 2015
 
 environment:
   compiler: mingw
@@ -24,6 +24,25 @@ environment:
     mingw_prefix: mingw-w64-x86_64
     # hardening doesn't work with mingw-w64-x86_64-gcc, because it's gcc 8
     hardening: --disable-gcc-hardening
+
+matrix:
+  # Don't keep building failing jobs
+  fast_finish: true
+  # Skip the 32-bit Windows Server 2016 job, and the 64-bit Windows Server
+  # 2012 R2 job, to speed up the build.
+  # The environment variables must be listed without the 'environment' tag.
+  exclude:
+    - image: Visual Studio 2017
+      target: i686-w64-mingw32
+      compiler_path: mingw32
+      mingw_prefix: mingw-w64-i686
+      hardening:
+    - image: Visual Studio 2015
+      target: x86_64-w64-mingw32
+      compiler_path: mingw64
+      mingw_prefix: mingw-w64-x86_64
+      # hardening doesn't work with mingw-w64-x86_64-gcc, because it's gcc 8
+      hardening: --disable-gcc-hardening
 
 install:
 - ps: >-
