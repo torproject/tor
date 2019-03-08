@@ -1576,7 +1576,13 @@ setup_desc_intro_point(const ed25519_keypair_t *signing_kp,
   /* Copy link specifier(s). */
   SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
                           const link_specifier_t *, ls) {
+    if (BUG(!ls)) {
+      goto done;
+    }
     link_specifier_t *copy = link_specifier_dup(ls);
+    if (BUG(!copy)) {
+      goto done;
+    }
     smartlist_add(desc_ip->link_specifiers, copy);
   } SMARTLIST_FOREACH_END(ls);
 

@@ -327,9 +327,8 @@ encode_link_specifiers(const smartlist_t *specs)
   SMARTLIST_FOREACH_BEGIN(specs, const link_specifier_t *,
                           spec) {
     link_specifier_t *ls = link_specifier_dup(spec);
-    if (ls) {
-      link_specifier_list_add_spec(lslist, ls);
-    }
+    tor_assert(ls);
+    link_specifier_list_add_spec(lslist, ls);
   } SMARTLIST_FOREACH_END(spec);
 
   {
@@ -1191,8 +1190,14 @@ decode_link_specifiers(const char *encoded)
 
   for (i = 0; i < link_specifier_list_getlen_spec(specs); i++) {
     link_specifier_t *ls = link_specifier_list_get_spec(specs, i);
-    tor_assert(ls);
-    smartlist_add(results, link_specifier_dup(ls));
+    if (BUG(!ls)) {
+      goto err;
+    }
+    link_specifier_t *ls_dup = link_specifier_dup(ls);
+    if (BUG(!ls_dup)) {
+      goto err;
+    }
+    smartlist_add(results, ls_dup);
   }
 
   goto done;
