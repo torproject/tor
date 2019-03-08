@@ -31,7 +31,7 @@ check_for_script_update() {
         if ! git diff ORIG_HEAD HEAD --exit-code -- "$fullpath" >/dev/null
         then
                 echo "ATTENTION: $1 has changed:"
-                git diff ORIG_HEAD HEAD -- "$fullpath"
+                git --no-pager diff ORIG_HEAD HEAD -- "$fullpath"
         fi
 }
 
