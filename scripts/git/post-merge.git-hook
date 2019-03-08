@@ -39,7 +39,7 @@ check_for_diffs "pre-push"
 check_for_diffs "pre-commit"
 check_for_diffs "post-merge"
 
-for file in ls $git_toplevel/scripts/ ; do
+for file in "$git_toplevel"/scripts/* ; do
         check_for_script_update "$file"
 done
 
