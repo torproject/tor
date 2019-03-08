@@ -17,12 +17,17 @@
 #include "lib/buf/buffers.h"
 #include "app/config/config.h"
 #include "app/config/confparse.h"
+#include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/relay.h"
 #include "feature/nodelist/routerlist.h"
+#include "lib/dispatch/dispatch.h"
+#include "lib/dispatch/dispatch_naming.h"
+#include "lib/pubsub/pubsub_build.h"
+#include "lib/pubsub/pubsub_connect.h"
 #include "lib/encoding/confline.h"
 #include "lib/net/resolve.h"
 
@@ -303,3 +308,52 @@ helper_parse_options(const char *conf)
   }
   return opt;
 }
+
+/**
+ * Dispatch alertfn callback: flush all messages right now. Implements
+ * DELIV_IMMEDIATE.
+ **/
+static void
+alertfn_immediate(dispatch_t *d, channel_id_t chan, void *arg)
+{
+  (void) arg;
+  dispatch_flush(d, chan, INT_MAX);
+}
+
+/**
+ * Setup helper for tests that need pubsub active
+ *
+ * Does not hook up mainloop events.  Does set immediate delivery for
+ * all channels.
+ */
+void *
+helper_setup_pubsub(const struct testcase_t *testcase)
+{
+  dispatch_t *dispatcher = NULL;
+  pubsub_builder_t *builder = pubsub_builder_new();
+  channel_id_t chan = get_channel_id("orconn");
+
+  (void)testcase;
+  (void)subsystems_add_pubsub(builder);
+  dispatcher = pubsub_builder_finalize(builder, NULL);
+  tor_assert(dispatcher);
+  dispatch_set_alert_fn(dispatcher, chan, alertfn_immediate, NULL);
+  return dispatcher;
+}
+
+/**
+ * Cleanup helper for tests that need pubsub active
+ */
+int
+helper_cleanup_pubsub(const struct testcase_t *testcase, void *dispatcher_)
+{
+  dispatch_t *dispatcher = dispatcher_;
+
+  (void)testcase;
+  dispatch_free(dispatcher);
+  return 1;
+}
+
+const struct testcase_setup_t helper_pubsub_setup = {
+  helper_setup_pubsub, helper_cleanup_pubsub
+};

@@ -45,6 +45,10 @@
 #include "feature/control/btrack_orconn_cevent.h"
 #include "feature/control/btrack_orconn_maps.h"
 #include "lib/log/log.h"
+#include "lib/pubsub/pubsub.h"
+
+DECLARE_SUBSCRIBE(orconn_state, bto_state_rcvr);
+DECLARE_SUBSCRIBE(orconn_status, bto_status_rcvr);
 
 /** Pair of a best ORCONN GID and with its state */
 typedef struct bto_best_t {
@@ -110,16 +114,17 @@ bto_reset_bests(void)
  * message comes from code in connection_or.c.
  **/
 static void
-bto_state_rcvr(const orconn_state_msg_t *msg)
+bto_state_rcvr(const msg_t *msg, const orconn_state_msg_t *arg)
 {
   bt_orconn_t *bto;
 
-  bto = bto_find_or_new(msg->gid, msg->chan);
+  (void)msg;
+  bto = bto_find_or_new(arg->gid, arg->chan);
   log_debug(LD_BTRACK, "ORCONN gid=%"PRIu64" chan=%"PRIu64
             " proxy_type=%d state=%d",
-            msg->gid, msg->chan, msg->proxy_type, msg->state);
-  bto->proxy_type = msg->proxy_type;
-  bto->state = msg->state;
+            arg->gid, arg->chan, arg->proxy_type, arg->state);
+  bto->proxy_type = arg->proxy_type;
+  bto->state = arg->state;
   if (bto->is_orig)
     bto_update_bests(bto);
 }
@@ -130,30 +135,17 @@ bto_state_rcvr(const orconn_state_msg_t *msg)
  * control.c.
  **/
 static void
-bto_status_rcvr(const orconn_status_msg_t *msg)
+bto_status_rcvr(const msg_t *msg, const orconn_status_msg_t *arg)
 {
-  switch (msg->status) {
+  (void)msg;
+  switch (arg->status) {
   case OR_CONN_EVENT_FAILED:
   case OR_CONN_EVENT_CLOSED:
     log_info(LD_BTRACK, "ORCONN DELETE gid=%"PRIu64" status=%d reason=%d",
-             msg->gid, msg->status, msg->reason);
-    return bto_delete(msg->gid);
+             arg->gid, arg->status, arg->reason);
+    return bto_delete(arg->gid);
   default:
     break;
-  }
-}
-
-/** Dispatch to individual ORCONN message handlers */
-static void
-bto_event_rcvr(const orconn_event_msg_t *msg)
-{
-  switch (msg->type) {
-  case ORCONN_MSGTYPE_STATE:
-    return bto_state_rcvr(&msg->u.state);
-  case ORCONN_MSGTYPE_STATUS:
-    return bto_status_rcvr(&msg->u.status);
-  default:
-    tor_assert(false);
   }
 }
 
@@ -190,9 +182,18 @@ int
 btrack_orconn_init(void)
 {
   bto_init_maps();
-  orconn_event_subscribe(bto_event_rcvr);
   ocirc_event_subscribe(bto_chan_rcvr);
 
+  return 0;
+}
+
+int
+btrack_orconn_add_pubsub(pubsub_connector_t *connector)
+{
+  if (DISPATCH_ADD_SUB(connector, orconn, orconn_state))
+    return -1;
+  if (DISPATCH_ADD_SUB(connector, orconn, orconn_status))
+    return -1;
   return 0;
 }
 
