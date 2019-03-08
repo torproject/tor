@@ -28,7 +28,7 @@ check_for_diffs() {
 check_for_script_update() {
         fullpath="$git_toplevel/scripts/git/$1"
 
-        if ! git diff ORIG_HEAD HEAD --exit-code -- "$fullpath" >&2
+        if ! git diff ORIG_HEAD HEAD --exit-code -- "$fullpath" >/dev/null
         then
                 echo "ATTENTION: $1 has changed:"
                 git diff ORIG_HEAD HEAD -- "$fullpath"
