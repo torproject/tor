@@ -217,8 +217,6 @@ uint64_t hs_get_time_period_num(time_t now);
 uint64_t hs_get_next_time_period_num(time_t now);
 time_t hs_get_start_time_of_next_time_period(time_t now);
 
-link_specifier_t *hs_link_specifier_dup(const link_specifier_t *lspec);
-
 MOCK_DECL(int, hs_in_period_between_tp_and_srv,
           (const networkstatus_t *consensus, time_t now));
 

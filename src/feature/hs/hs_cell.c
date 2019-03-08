@@ -759,7 +759,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
     if (BUG(!lspec)) {
       goto done;
     }
-    link_specifier_t *lspec_dup = hs_link_specifier_dup(lspec);
+    link_specifier_t *lspec_dup = link_specifier_dup(lspec);
     if (BUG(!lspec_dup)) {
       goto done;
     }

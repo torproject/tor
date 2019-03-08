@@ -1009,24 +1009,6 @@ hs_build_address(const ed25519_public_key_t *key, uint8_t version,
   tor_assert(hs_address_is_valid(addr_out));
 }
 
-/* Return a newly allocated copy of lspec. */
-link_specifier_t *
-hs_link_specifier_dup(const link_specifier_t *lspec)
-{
-  link_specifier_t *result = link_specifier_new();
-  memcpy(result, lspec, sizeof(*result));
-  /* The unrecognized field is a dynamic array so make sure to copy its
-   * content and not the pointer. */
-  link_specifier_setlen_un_unrecognized(
-                  result, link_specifier_getlen_un_unrecognized(lspec));
-  if (link_specifier_getlen_un_unrecognized(result)) {
-    memcpy(link_specifier_getarray_un_unrecognized(result),
-           link_specifier_getconstarray_un_unrecognized(lspec),
-           link_specifier_getlen_un_unrecognized(result));
-  }
-  return result;
-}
-
 /* From a given ed25519 public key pk and an optional secret, compute a
  * blinded public key and put it in blinded_pk_out. This is only useful to
  * the client side because the client only has access to the identity public
