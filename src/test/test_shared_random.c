@@ -461,6 +461,8 @@ test_sr_setup_srv(int also_current)
          "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
          sizeof(srv->value));
 
+ /* sr_state_set_previous_srv() does not free() the old previous srv. */
+ state_del_previous_srv();
  sr_state_set_previous_srv(srv);
 
  if (also_current) {
@@ -470,6 +472,8 @@ test_sr_setup_srv(int also_current)
           "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
           sizeof(srv->value));
 
+   /* sr_state_set_previous_srv() does not free() the old current srv. */
+   state_del_current_srv();
    sr_state_set_current_srv(srv);
  }
 }
