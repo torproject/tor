@@ -1,8 +1,19 @@
-#! /bin/sh
+#!/bin/sh
+
+# use bash if it is available, as this script doesn't work well in non-bash sh
+# this will be fixed in #19699
+# there is no simple, portable way of checking the name of the shell, so we
+# exec bash even when sh is bash
+if [ -x /bin/bash -a "$USING_BASH" != true ]; then
+    # only do this once
+    export USING_BASH=true
+    exec /bin/bash "$0" "$@"
+fi
 
 # Please do not modify this script, it has been moved to chutney/tools
 
-ECHO_N="/bin/echo -n"
+export ECHO="${ECHO:-echo}"
+export ECHO_N="${ECHO_N:-/bin/echo -n}"
 
 # Output is prefixed with the name of the script
 myname=$(basename $0)
@@ -19,23 +30,24 @@ if [ "$TEST_NETWORK_RECURSING" != true ]; then
     # When we switch to using test-network.sh in chutney/tools, --dry-run
     # can be removed, because this script will find chutney, then pass all
     # arguments to chutney's test-network.sh
-    echo "$myname: Parsing command-line arguments to find \$CHUTNEY_PATH"
     export TEST_NETWORK_RECURSING=true
+    # passing arguments to a sourced script only works in bash
+    # this will be fixed in #19699
     . "$0" --dry-run "$@"
 
     # Call the chutney version of this script, if it exists, and we can find it
     if [ -d "$CHUTNEY_PATH" -a -x "$CHUTNEY_PATH/tools/test-network.sh" ]; then
         unset NETWORK_DRY_RUN
-        echo "$myname: Calling newer chutney script \
+        $ECHO "$myname: Calling newer chutney script \
 $CHUTNEY_PATH/tools/test-network.sh"
         "$CHUTNEY_PATH/tools/test-network.sh" "$@"
         exit $?
     else
-        echo "$myname: This script has moved to chutney/tools."
-        echo "$myname: Please update your chutney using 'git pull'."
+        $ECHO "$myname: This script has moved to chutney/tools."
+        $ECHO "$myname: Please update your chutney using 'git pull'."
         # When we switch to using test-network.sh in chutney/tools, we should
         # exit with a very loud failure here
-        echo "$myname: Falling back to the old tor version of the script."
+        $ECHO "$myname: Falling back to the old tor version of the script."
     fi
 fi
 
@@ -89,10 +101,14 @@ do
       # process arguments, but don't call any other scripts
       export NETWORK_DRY_RUN=true
       ;;
+    --quiet)
+      export ECHO=true
+      export ECHO_N=true
+      ;;
     *)
-      echo "$myname: Sorry, I don't know what to do with '$1'."
-      echo "$myname: Maybe chutney's test-network.sh understands '$1'."
-      echo "$myname: Please update your chutney using 'git pull', and set \
+      $ECHO "$myname: Sorry, I don't know what to do with '$1'."
+      $ECHO "$myname: Maybe chutney's test-network.sh understands '$1'."
+      $ECHO "$myname: Please update your chutney using 'git pull', and set \
 \$CHUTNEY_PATH"
       # continue processing arguments during a dry run
       if [ "$NETWORK_DRY_RUN" != true ]; then
@@ -113,15 +129,15 @@ if [ ! -d "$TOR_DIR" ]; then
     if [ -d "$BUILDDIR/src/or" -a -d "$BUILDDIR/src/tools" ]; then
         # Choose the build directory
         # But only if it looks like one
-        echo "$myname: \$TOR_DIR not set, trying \$BUILDDIR"
+        $ECHO "$myname: \$TOR_DIR not set, trying \$BUILDDIR"
         export TOR_DIR="$BUILDDIR"
     elif [ -d "$PWD/src/or" -a -d "$PWD/src/tools" ]; then
         # Guess the tor directory is the current directory
         # But only if it looks like one
-        echo "$myname: \$TOR_DIR not set, trying \$PWD"
+        $ECHO "$myname: \$TOR_DIR not set, trying \$PWD"
         export TOR_DIR="$PWD"
     else
-        echo "$myname: no \$TOR_DIR, chutney will use \$PATH for tor binaries"
+        $ECHO "$myname: no \$TOR_DIR, chutney will use \$PATH for tor binaries"
         unset TOR_DIR
     fi
 fi
@@ -133,19 +149,19 @@ fi
 #  - fail and tell the user how to clone the chutney repository
 if [ ! -d "$CHUTNEY_PATH" -o ! -x "$CHUTNEY_PATH/chutney" ]; then
     if [ -x "$PWD/chutney" ]; then
-        echo "$myname: \$CHUTNEY_PATH not valid, trying \$PWD"
+        $ECHO "$myname: \$CHUTNEY_PATH not valid, trying \$PWD"
         export CHUTNEY_PATH="$PWD"
     elif [ -d "$TOR_DIR" -a -d "$TOR_DIR/../chutney" -a \
            -x "$TOR_DIR/../chutney/chutney" ]; then
-        echo "$myname: \$CHUTNEY_PATH not valid, trying \$TOR_DIR/../chutney"
+        $ECHO "$myname: \$CHUTNEY_PATH not valid, trying \$TOR_DIR/../chutney"
         export CHUTNEY_PATH="$TOR_DIR/../chutney"
     else
         # TODO: work out how to package and install chutney,
         # so users can find it in $PATH
-        echo "$myname: missing 'chutney' in \$CHUTNEY_PATH ($CHUTNEY_PATH)"
-        echo "$myname: Get chutney: git clone https://git.torproject.org/\
+        $ECHO "$myname: missing 'chutney' in \$CHUTNEY_PATH ($CHUTNEY_PATH)"
+        $ECHO "$myname: Get chutney: git clone https://git.torproject.org/\
 chutney.git"
-        echo "$myname: Set \$CHUTNEY_PATH to a non-standard location: export \
+        $ECHO "$myname: Set \$CHUTNEY_PATH to a non-standard location: export \
 CHUTNEY_PATH=\`pwd\`/chutney"
         unset CHUTNEY_PATH
         exit 1
@@ -174,11 +190,13 @@ export CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
 # And finish up if we're doing a dry run
 if [ "$NETWORK_DRY_RUN" = true ]; then
     # we can't exit here, it breaks argument processing
-    return
+    # this only works in bash: return semantics are shell-specific
+    # this will be fixed in #19699
+    return 2>/dev/null || exit
 fi
 
 cd "$CHUTNEY_PATH"
-./tools/bootstrap-network.sh $NETWORK_FLAVOUR || exit 2
+./tools/bootstrap-network.sh $NETWORK_FLAVOUR || exit 3
 
 # Sleep some, waiting for the network to bootstrap.
 # TODO: Add chutney command 'bootstrap-status' and use that instead.
@@ -186,7 +204,7 @@ BOOTSTRAP_TIME=${BOOTSTRAP_TIME:-35}
 $ECHO_N "$myname: sleeping for $BOOTSTRAP_TIME seconds"
 n=$BOOTSTRAP_TIME; while [ $n -gt 0 ]; do
     sleep 1; n=$(expr $n - 1); $ECHO_N .
-done; echo ""
+done; $ECHO ""
 ./chutney verify $CHUTNEY_NETWORK
 VERIFY_EXIT_STATUS=$?
 # work around a bug/feature in make -j2 (or more)
