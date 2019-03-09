@@ -112,7 +112,7 @@ static const char sr_flag_ns_str[] = "shared-rand-participate";
 static int32_t num_srv_agreements_from_vote;
 
 /* Return a heap allocated copy of the SRV <b>orig</b>. */
-STATIC sr_srv_t *
+sr_srv_t *
 srv_dup(const sr_srv_t *orig)
 {
   sr_srv_t *duplicate = NULL;
