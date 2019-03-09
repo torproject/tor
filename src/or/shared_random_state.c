@@ -1037,7 +1037,7 @@ state_rotate_srv(void)
   /* First delete previous SRV from the state. Object will be freed. */
   state_del_previous_srv();
   /* Set previous SRV to a copy of the current one. */
-  sr_state_set_previous_srv(srv_dup(sr_state_get_current_srv()));
+  sr_state_set_previous_srv(sr_srv_dup(sr_state_get_current_srv()));
   /* Free and NULL the current srv. */
   sr_state_set_current_srv(NULL);
 }

@@ -129,7 +129,7 @@ const char *sr_commit_get_rsa_fpr(const sr_commit_t *commit)
 void sr_compute_srv(void);
 sr_commit_t *sr_generate_our_commit(time_t timestamp,
                                     const authority_cert_t *my_rsa_cert);
-sr_srv_t *srv_dup(const sr_srv_t *orig);
+sr_srv_t *sr_srv_dup(const sr_srv_t *orig);
 
 #ifdef SHARED_RANDOM_PRIVATE
 

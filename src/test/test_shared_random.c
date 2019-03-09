@@ -932,7 +932,7 @@ test_utils(void *arg)
 {
   (void) arg;
 
-  /* Testing srv_dup(). */
+  /* Testing sr_srv_dup(). */
   {
     sr_srv_t *srv = NULL, *dup_srv = NULL;
     const char *srv_value =
@@ -940,7 +940,7 @@ test_utils(void *arg)
     srv = tor_malloc_zero(sizeof(*srv));
     srv->num_reveals = 42;
     memcpy(srv->value, srv_value, sizeof(srv->value));
-    dup_srv = srv_dup(srv);
+    dup_srv = sr_srv_dup(srv);
     tt_assert(dup_srv);
     tt_u64_op(dup_srv->num_reveals, ==, srv->num_reveals);
     tt_mem_op(dup_srv->value, OP_EQ, srv->value, sizeof(srv->value));
@@ -1055,7 +1055,7 @@ test_state_transition(void *arg)
     test_sr_setup_srv(1);
     tt_assert(sr_state_get_current_srv());
     /* Take a copy of the data, because the state owns the pointer */
-    cur = srv_dup(sr_state_get_current_srv());
+    cur = sr_srv_dup(sr_state_get_current_srv());
     tt_assert(cur);
     /* After, the previous SRV should be the same as the old current SRV, and
      * the current SRV should be set to NULL */
@@ -1073,7 +1073,7 @@ test_state_transition(void *arg)
     test_sr_setup_srv(1);
     tt_assert(sr_state_get_current_srv());
     /* Take a copy of the data, because the state owns the pointer */
-    cur = srv_dup(sr_state_get_current_srv());
+    cur = sr_srv_dup(sr_state_get_current_srv());
     set_sr_phase(SR_PHASE_REVEAL);
     MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
     new_protocol_run(now);
