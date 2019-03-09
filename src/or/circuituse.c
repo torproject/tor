@@ -1384,7 +1384,7 @@ circuit_expire_old_circuits_serverside(time_t now)
      */
     if (or_circ->is_first_hop && !circ->n_chan &&
         !or_circ->n_streams && !or_circ->resolving_streams &&
-        or_circ->p_chan &&
+        or_circ->p_chan && !or_circ->rend_splice &&
         channel_when_last_xmit(or_circ->p_chan) <= cutoff) {
       log_info(LD_CIRC, "Closing circ_id %u (empty %d secs ago)",
                (unsigned)or_circ->p_circ_id,
