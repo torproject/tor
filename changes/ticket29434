@@ -1,0 +1,3 @@
+  o Removed features:
+    - Remove linux-tor-prio.sh script from contrib/operator-tools directory.
+      Resolves issue 29434.
