@@ -19,6 +19,7 @@
 #include "core/mainloop/connection.h"
 #include "core/mainloop/cpuworker.h"
 #include "core/mainloop/mainloop.h"
+#include "core/mainloop/mainloop_pubsub.h"
 #include "core/mainloop/netstatus.h"
 #include "core/or/channel.h"
 #include "core/or/channelpadding.h"
@@ -75,6 +76,7 @@
 #include "lib/net/resolve.h"
 
 #include "lib/process/waitpid.h"
+#include "lib/pubsub/pubsub_build.h"
 
 #include "lib/meminfo/meminfo.h"
 #include "lib/osinfo/uname.h"
@@ -807,6 +809,7 @@ tor_free_all(int postfork)
   }
   /* stuff in main.c */
 
+  tor_mainloop_disconnect_pubsub();
   tor_mainloop_free_all();
 
   if (!postfork) {
@@ -1407,6 +1410,15 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
      }
   }
 #endif /* defined(NT_SERVICE) */
+
+  {
+    pubsub_builder_t *builder = pubsub_builder_new();
+    int r = subsystems_add_pubsub(builder);
+    tor_assert(r == 0);
+    r = tor_mainloop_connect_pubsub(builder); // consumes builder
+    tor_assert(r == 0);
+  }
+
   {
     int init_rv = tor_init(argc, argv);
     if (init_rv) {
