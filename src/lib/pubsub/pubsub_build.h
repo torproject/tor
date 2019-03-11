@@ -14,6 +14,8 @@
 #ifndef TOR_PUBSUB_BUILD_H
 #define TOR_PUBSUB_BUILD_H
 
+#include "lib/dispatch/msgtypes.h"
+
 struct dispatch_t;
 
 /**
