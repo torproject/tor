@@ -44,6 +44,9 @@ flush_channel_event(mainloop_event_t *ev, void *arg)
   dispatch_flush(the_dispatcher, chan, INT_MAX);
 }
 
+/**
+ * Construct our global pubsub object from <b>builder</b>. Return 0 on
+ * success, -1 on failure. */
 int
 tor_mainloop_connect_pubsub(struct pubsub_builder_t *builder)
 {
@@ -54,6 +57,26 @@ tor_mainloop_connect_pubsub(struct pubsub_builder_t *builder)
   if (! the_dispatcher)
     goto err;
 
+  rv = 0;
+  goto done;
+ err:
+  tor_mainloop_disconnect_pubsub();
+ done:
+  return rv;
+}
+
+/**
+ * Install libevent events for all of the pubsub channels.
+ *
+ * Invoke this after tor_mainloop_connect_pubsub, and after libevent has been
+ * initialized.
+ */
+void
+tor_mainloop_connect_pubsub_events(void)
+{
+  tor_assert(the_dispatcher);
+  tor_assert(! alert_events);
+
   const size_t num_channels = get_num_channel_ids();
   alert_events = smartlist_new();
   for (size_t i = 0; i < num_channels; ++i) {
@@ -61,11 +84,6 @@ tor_mainloop_connect_pubsub(struct pubsub_builder_t *builder)
                   mainloop_event_postloop_new(flush_channel_event,
                                               (void*)(uintptr_t)(i)));
   }
-
-  rv = 0;
- err:
-  tor_mainloop_disconnect_pubsub();
-  return rv;
 }
 
 /**

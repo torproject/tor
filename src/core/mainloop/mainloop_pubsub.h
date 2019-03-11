@@ -16,6 +16,7 @@ typedef enum {
 } deliv_strategy_t;
 
 int tor_mainloop_connect_pubsub(struct pubsub_builder_t *builder);
+void tor_mainloop_connect_pubsub_events(void);
 int tor_mainloop_set_delivery_strategy(const char *msg_channel_name,
                                         deliv_strategy_t strategy);
 void tor_mainloop_disconnect_pubsub(void);
