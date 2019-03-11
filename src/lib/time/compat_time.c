@@ -522,7 +522,9 @@ monotime_init_internal(void)
     GetTickCount64_fn = (GetTickCount64_fn_t)
       GetProcAddress(h, "GetTickCount64");
   }
-  // FreeLibrary(h) ?
+  // We can't call FreeLibrary(h) here, because freeing the handle may
+  // unload the library, and cause future calls to GetTickCount64_fn()
+  // to fail. See 29642 for details.
 }
 
 void
