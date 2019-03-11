@@ -15,16 +15,28 @@ static void
 test_namemap_empty(void *arg)
 {
   (void)arg;
+
   namemap_t m;
   namemap_init(&m);
+  namemap_t m2 = NAMEMAP_INIT();
 
+  tt_uint_op(0, OP_EQ, namemap_get_size(&m));
   tt_uint_op(NAMEMAP_ERR, OP_EQ, namemap_get_id(&m, "hello"));
   tt_uint_op(NAMEMAP_ERR, OP_EQ, namemap_get_id(&m, "hello"));
   tt_uint_op(NAMEMAP_ERR, OP_EQ, namemap_get_id(&m, "hello128"));
   tt_uint_op(NAMEMAP_ERR, OP_EQ, namemap_get_id(&m, ""));
+  tt_uint_op(0, OP_EQ, namemap_get_size(&m));
+
+  tt_uint_op(0, OP_EQ, namemap_get_size(&m2));
+  tt_uint_op(NAMEMAP_ERR, OP_EQ, namemap_get_id(&m2, "hello"));
+  tt_uint_op(NAMEMAP_ERR, OP_EQ, namemap_get_id(&m2, "hello"));
+  tt_uint_op(NAMEMAP_ERR, OP_EQ, namemap_get_id(&m2, "hello128"));
+  tt_uint_op(NAMEMAP_ERR, OP_EQ, namemap_get_id(&m2, ""));
+  tt_uint_op(0, OP_EQ, namemap_get_size(&m));
 
  done:
   namemap_clear(&m);
+  namemap_clear(&m2);
 }
 
 static void

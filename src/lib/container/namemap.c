@@ -93,6 +93,7 @@ namemap_get_id_unchecked(const namemap_t *map,
   u.n.name[namelen] = 0;
   const mapped_name_t *found = HT_FIND(namemap_ht, &map->ht, &u.n);
   if (found) {
+    tor_assert(map->names);
     tor_assert(smartlist_get(map->names, found->intval) == found);
     return found->intval;
   }
@@ -158,6 +159,9 @@ namemap_get_or_create_id(namemap_t *map,
 size_t
 namemap_get_size(const namemap_t *map)
 {
+  if (PREDICT_UNLIKELY(map->names == NULL))
+    return 0;
+
   return smartlist_len(map->names);
 }
 
