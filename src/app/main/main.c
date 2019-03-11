@@ -1428,6 +1428,13 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
     }
   }
 
+  if (get_options()->command == CMD_RUN_TOR) {
+    tor_mainloop_connect_pubsub_events();
+    /* XXXX For each pubsub channel, its delivery strategy should be set at
+     * this XXXX point, using tor_mainloop_set_delivery_strategy().
+     */
+  }
+
   if (get_options()->Sandbox && get_options()->command == CMD_RUN_TOR) {
     sandbox_cfg_t* cfg = sandbox_init_filter();
 
