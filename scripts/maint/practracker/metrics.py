@@ -25,20 +25,20 @@ def get_function_lines(f):
     Return iterator which iterates over functions and returns (function name, function lines)
     """
 
-    # Skip lines with these terms since they confuse our regexp
+    # Skip lines that look like they are defining functions with these
+    # names: they aren't real function definitions.
     REGEXP_CONFUSE_TERMS = {"MOCK_IMPL", "ENABLE_GCC_WARNINGS", "ENABLE_GCC_WARNING", "DUMMY_TYPECHECK_INSTANCE",
                             "DISABLE_GCC_WARNING", "DISABLE_GCC_WARNINGS"}
 
     in_function = False
     for lineno, line in enumerate(f):
-        if any(x in line for x in REGEXP_CONFUSE_TERMS):
-            continue
-
         if not in_function:
             # find the start of a function
             m = re.match(r'^([a-zA-Z_][a-zA-Z_0-9]*),?\(', line)
             if m:
                 func_name = m.group(1)
+                if func_name in REGEXP_CONFUSE_TERMS:
+                    continue
                 func_start = lineno
                 in_function = True
 
