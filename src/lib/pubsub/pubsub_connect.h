@@ -19,7 +19,13 @@
 #include "lib/dispatch/msgtypes.h"
 
 struct pub_binding_t;
-struct pubsub_connector_t;
+/**
+ * A "dispatch connector" is a view of the dispatcher that a subsystem
+ * uses while initializing itself.  It is specific to the subsystem, and
+ * ensures that each subsystem doesn't need to identify itself
+ * repeatedly while registering its messages.
+ **/
+typedef struct pubsub_connector_t pubsub_connector_t;
 
 int pubsub_add_pub_(struct pubsub_connector_t *con,
                     struct pub_binding_t *out,

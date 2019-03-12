@@ -17,6 +17,7 @@
 #include "lib/dispatch/msgtypes.h"
 
 struct dispatch_t;
+struct pubsub_connector_t;
 
 /**
  * A "dispatch builder" is an incomplete dispatcher, used when
@@ -25,14 +26,6 @@ struct dispatch_t;
  * subsystems have registered, it is converted into a dispatch_t.
  **/
 typedef struct pubsub_builder_t pubsub_builder_t;
-
-/**
- * A "dispatch connector" is a view of the dispatcher that a subsystem
- * uses while initializing itself.  It is specific to the subsystem, and
- * ensures that each subsystem doesn't need to identify itself
- * repeatedly while registering its messages.
- **/
-typedef struct pubsub_connector_t pubsub_connector_t;
 
 /**
  * A "pubsub items" holds the configuration items used to configure a
@@ -65,16 +58,16 @@ void pubsub_builder_free_(pubsub_builder_t *);
  * register its messages.  The main-init code does this during susbsystem
  * initialization.
  */
-pubsub_connector_t *pubsub_connector_for_subsystem(pubsub_builder_t *,
-                                                   subsys_id_t);
+struct pubsub_connector_t *pubsub_connector_for_subsystem(pubsub_builder_t *,
+                                                          subsys_id_t);
 
 /**
  * The main-init code does this after subsystem initialization.
  */
 #define pubsub_connector_free(c) \
-  FREE_AND_NULL(pubsub_connector_t, pubsub_connector_free_, (c))
+  FREE_AND_NULL(struct pubsub_connector_t, pubsub_connector_free_, (c))
 
-void pubsub_connector_free_(pubsub_connector_t *);
+void pubsub_connector_free_(struct pubsub_connector_t *);
 
 /**
  * Constructs a dispatcher from a dispatch_builder, after checking that the
