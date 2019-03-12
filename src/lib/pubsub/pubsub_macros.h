@@ -268,12 +268,23 @@
   }                                                             \
   EAT_SEMICOLON
 
+/**
+ * Add a fake use of the publish function for 'messagename', so that
+ * the compiler does not call it unused.
+ */
+#define DISPATCH__FAKE_USE_OF_PUBFN_(messagename)                       \
+  do {                                                                  \
+    if (0) {                                                            \
+      publish_fn__##messagename((msg_arg_type__##messagename) 0);       \
+    }                                                                   \
+  } while (0)
+
 /*
  * This macro is for internal use.  It backs DISPATCH_ADD_PUB*()
  */
 #define DISPATCH_ADD_PUB_(connector, channel, messagename, flags)       \
-  (                                                                     \
-    ((void)publish_fn__ ##messagename),                                 \
+  do {                                                                  \
+    DISPATCH__FAKE_USE_OF_PUBFN_(messagename);                          \
     pubsub_add_pub_((connector),                                        \
                       &pub_binding__ ##messagename,                     \
                       get_channel_id(# channel),                        \
@@ -281,8 +292,8 @@
                       get_msg_type_id(msg_arg_name__ ## messagename),   \
                       (flags),                                          \
                       __FILE__,                                         \
-                      __LINE__)                                         \
-    )
+                    __LINE__);                                          \
+  } while (0)
 
 /**
  * Use a given connector and channel name to declare that this subsystem will
