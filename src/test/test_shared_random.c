@@ -548,7 +548,7 @@ test_encoding(void *arg)
 /** Setup some SRVs in our SR state. If <b>also_current</b> is set, then set
  *  both current and previous SRVs.
  *  Helper of test_vote() and test_sr_compute_srv().
- * You must call sr_state_free() to free the state at the end of each test
+ * You must call sr_state_free_all() to free the state at the end of each test
  * function (on pass or fail). */
 static void
 test_sr_setup_srv(int also_current)
@@ -1299,7 +1299,7 @@ test_utils_auth(void *arg)
 #endif
 
  done:
-  sr_state_free();
+  sr_state_free_all();
 }
 
 static void
