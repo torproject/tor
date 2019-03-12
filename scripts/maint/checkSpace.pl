@@ -18,6 +18,8 @@ if ($ARGV[0] =~ /^-/) {
 
 our %basenames = ();
 
+our %guardnames = ();
+
 for my $fn (@ARGV) {
     open(F, "$fn");
     my $lastnil = 0;
@@ -31,6 +33,10 @@ for my $fn (@ARGV) {
     } else {
         $basenames{$basename} = $fn;
     }
+    my $isheader = ($fn =~ /\.h/);
+    my $seenguard = 0;
+    my $guardname = "<none>";
+
     while (<F>) {
         ## Warn about windows-style newlines.
         #    (We insist on lines that end with a single LF character, not
@@ -112,6 +118,23 @@ for my $fn (@ARGV) {
                     next;
                 }
             }
+
+            if ($isheader) {
+                if ($seenguard == 0) {
+                    if (/ifndef\s+(\S+)/) {
+                        ++$seenguard;
+                        $guardname = $1;
+                    }
+                } elsif ($seenguard == 1) {
+                    if (/^\#define (\S+)/) {
+                        ++$seenguard;
+                        if ($1 ne $guardname) {
+                            msg "GUARD:$fn:$.: Header guard macro mismatch.\n";
+                        }
+                    }
+                }
+            }
+
             if (m!/\*.*?\*/!) {
                 s!\s*/\*.*?\*/!!;
             } elsif (m!/\*!) {
@@ -199,6 +222,15 @@ for my $fn (@ARGV) {
                     msg "$& :$fn:$.    (use tor_malloc, tor_free, etc)\n";
                 }
             }
+        }
+    }
+    if ($isheader && $C) {
+        if ($seenguard < 2) {
+            msg "$fn:No #ifndef/#define header guard pair found.\n";
+        } elsif ($guardnames{$guardname}) {
+            msg "$fn:Guard macro $guardname also used in $guardnames{$guardname}\n";
+        } else {
+            $guardnames{$guardname} = $fn;
         }
     }
     close(F);
