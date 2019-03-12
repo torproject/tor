@@ -133,7 +133,14 @@ def main():
 
     # If new issues were found, try to give out some advice to the developer on how to resolve it.
     if (found_new_issues):
-        new_issues_str = "practracker FAILED as indicated by the problem lines above. Please use the exceptions file ({}) to find any previous state of these problems. If you are unable to fix the underlying best-practices issue right now then you need to either update the relevant exception line or add a new one.".format(exceptions_file)
+        new_issues_str = """\
+FAILURE: practracker found new problems in the code: see warnings above.
+
+Please fix the problems if you can, and update the exceptions file
+({}) if you can't.
+
+See doc/HACKING/HelpfulTools.md for more information on using practracker.\
+""".format(exceptions_file)
         print(new_issues_str)
 
     sys.exit(found_new_issues)
