@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * @file pubsub_publish.h
+ * @file pubsub_publish.c
  * @brief Header for functions to publish using a pub_binding_t.
  **/
 
