@@ -26,8 +26,8 @@ def get_function_lines(f):
     """
 
     # Skip lines with these terms since they confuse our regexp
-    REGEXP_CONFUSE_TERMS = ["MOCK_IMPL", "ENABLE_GCC_WARNINGS", "ENABLE_GCC_WARNING", "DUMMY_TYPECHECK_INSTANCE",
-                            "DISABLE_GCC_WARNING", "DISABLE_GCC_WARNINGS"]
+    REGEXP_CONFUSE_TERMS = {"MOCK_IMPL", "ENABLE_GCC_WARNINGS", "ENABLE_GCC_WARNING", "DUMMY_TYPECHECK_INSTANCE",
+                            "DISABLE_GCC_WARNING", "DISABLE_GCC_WARNINGS"}
 
     in_function = False
     for lineno, line in enumerate(f):
@@ -43,7 +43,7 @@ def get_function_lines(f):
                 in_function = True
 
         else:
-            # Fund the end of a function
+            # Find the end of a function
             if line.startswith("}"):
                 n_lines = lineno - func_start
                 in_function = False
