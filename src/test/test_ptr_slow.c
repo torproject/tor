@@ -10,46 +10,65 @@
 #include <stdint.h>
 #include <limits.h>
 
-/** Check that all values of int can be cast to void * and back. */
+/** Assert that <b>a</b> can be cast to void * and back. */
+static void
+assert_int_voidptr_roundtrip(int a)
+{
+  intptr_t ap = (intptr_t)a;
+  void *b = (void *)ap;
+  intptr_t c = (intptr_t)b;
+  void *d = (void *)c;
+
+  tt_assert(ap == c);
+  tt_assert(b == d);
+
+ done:
+  return;
+}
+
 static void
 test_int_voidstar_interop(void *arg)
 {
   int a;
   (void)arg;
 
-  for (a = INT_MIN; a < INT_MAX; a++) {
-   intptr_t ap = (intptr_t)a;
-   void *b = (void *)ap;
-   intptr_t c = (intptr_t)b;
-   void *d = (void *)c;
-
-   tt_assert(ap == c);
-   tt_assert(b == d);
+  for (a = 0; a <= 1024; a++) {
+    assert_int_voidptr_roundtrip(a);
   }
+
+  for (a = INT_MAX-1024; a < INT_MAX; a++) {
+    assert_int_voidptr_roundtrip(a);
+  }
+}
+
+static void
+assert_uint_voidptr_roundtrip(unsigned int a)
+{
+ intptr_t ap = (intptr_t)a;
+ void *b = (void *)ap;
+ intptr_t c = (intptr_t)b;
+ void *d = (void *)c;
+
+ tt_assert(ap == c);
+ tt_assert(b == d);
 
  done:
   return;
 }
 
-/** Check that all values of unsigned int can be cast to void * and back. */
 static void
 test_uint_voidstar_interop(void *arg)
 {
   unsigned int a;
   (void)arg;
 
-  for (a = 0; a < UINT_MAX; a++) {
-   intptr_t ap = (intptr_t)a;
-   void *b = (void *)ap;
-   intptr_t c = (intptr_t)b;
-   void *d = (void *)c;
-
-   tt_assert(ap == c);
-   tt_assert(b == d);
+  for (a = 0; a <= 1024; a++) {
+    assert_uint_voidptr_roundtrip(a);
   }
 
- done:
-  return;
+  for (a = UINT_MAX-1024; a < UINT_MAX; a++) {
+    assert_uint_voidptr_roundtrip(a);
+  }
 }
 
 struct testcase_t slow_ptr_tests[] = {
