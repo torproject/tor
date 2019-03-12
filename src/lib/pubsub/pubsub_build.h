@@ -69,7 +69,7 @@ pubsub_connector_t *pubsub_connector_for_subsystem(pubsub_builder_t *,
                                                    subsys_id_t);
 
 /**
-` * The main-init code does this after subsystem initialization.
+ * The main-init code does this after subsystem initialization.
  */
 #define pubsub_connector_free(c) \
   FREE_AND_NULL(pubsub_connector_t, pubsub_connector_free_, (c))
