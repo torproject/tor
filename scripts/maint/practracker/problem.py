@@ -8,6 +8,7 @@ get worse.
 """
 
 import os.path
+import sys
 
 class ProblemVault(object):
     """
@@ -23,7 +24,7 @@ class ProblemVault(object):
             with open(exception_fname, 'r') as exception_f:
                 self.register_exceptions(exception_f)
         except IOError:
-            print("No exception file provided")
+            print("No exception file provided", file=sys.stderr)
 
     def register_exceptions(self, exception_file):
         # Register exceptions
