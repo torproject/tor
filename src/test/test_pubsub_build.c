@@ -193,7 +193,7 @@ test_pubsub_build_unused_message(void *arg)
   b = NULL;
   tt_assert(dispatcher);
   expect_log_msg_containing(
-     "Nobody is publishing or subscribing to message 2 (unused).");
+     "Nobody is publishing or subscribing to message");
 
  done:
   pubsub_builder_free(b);
