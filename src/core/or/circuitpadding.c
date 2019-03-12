@@ -222,8 +222,9 @@ circpad_machine_current_state(const circpad_machine_state_t *mi)
 }
 
 /**
- * Get the lower bound of a histogram bin. The upper bound is obtained by
- * calling this function with bin+1, and subtracting 1.
+ * Get the lower bound of a histogram bin.
+ *
+ * You can obtain the upper bound using histogram_get_bin_upper_bound().
  *
  * This function can also be called with 'bin' set to a value equal or greater
  * than histogram_len in which case the infinity bin is chosen and
@@ -273,8 +274,7 @@ circpad_get_histogram_bin_midpoint(const circpad_machine_state_t *mi,
                            int bin_index)
 {
   circpad_delay_t left_bound = circpad_histogram_bin_to_usec(mi, bin_index);
-  circpad_delay_t right_bound =
-    circpad_histogram_bin_to_usec(mi, bin_index+1)-1;
+  circpad_delay_t right_bound = histogram_get_bin_upper_bound(mi, bin_index);
 
   return left_bound + (right_bound - left_bound)/2;
 }
@@ -381,6 +381,8 @@ circpad_choose_state_length(circpad_machine_state_t *mi)
 /**
  * Sample a value from our iat_dist, and clamp it safely
  * to circpad_delay_t.
+ *
+ * Before returning, add <b>delay_shift</b> (can be zero) to the sampled value.
  */
 static circpad_delay_t
 circpad_distribution_sample_iat_delay(const circpad_state_t *state,

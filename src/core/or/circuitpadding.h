@@ -291,7 +291,8 @@ typedef struct circpad_state_t {
   /** The histogram itself: an array of uint16s of tokens, whose
    *  widths are exponentially spaced, in microseconds.
    *
-   *  This array must have histogram_len elements. */
+   *  This array must have histogram_len elements that are (non-strictly)
+   *  monotonically increasing. */
   circpad_hist_token_t histogram[CIRCPAD_MAX_HISTOGRAM_LEN];
   /* The histogram bin edges in usec.
    *
