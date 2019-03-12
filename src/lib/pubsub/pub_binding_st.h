@@ -5,8 +5,10 @@
 /* See LICENSE for licensing information */
 
 /**
- * @file pubsub_build.h
+ * @file pub_binding_st.h
  * @brief Declaration of pub_binding_t.
+ *
+ * This is an internal type for the pubsub implementation.
  */
 
 #ifndef TOR_PUB_BINDING_ST_H

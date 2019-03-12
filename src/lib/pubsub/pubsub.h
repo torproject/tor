@@ -30,6 +30,9 @@
  * Rather than using the dispatch module directly, a publishing module
  * receives a "binding" object that it uses to send messages with the right
  * settings.
+ *
+ * Most users of this module will want to use this header, and the
+ * pubsub_macros.h header for convenience.
  */
 
 /*

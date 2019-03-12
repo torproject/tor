@@ -175,7 +175,8 @@
  * Use this macro in a header to declare the existence of a given message,
  * taking a pointer as auxiliary data.
  *
- * "messagename" is a unique identifier for the message.
+ * "messagename" is a unique identifier for the message; it must be a valid
+ * C identifier.
  *
  * "typename" is a unique identifier for the type of the auxiliary data.
  *
@@ -199,7 +200,8 @@
  * Use this macro in a header to declare the existence of a given message,
  * taking an integer as auxiliary data.
  *
- * "messagename" is a unique identifier for the message.
+ * "messagename" is a unique identifier for the message; it must be a valid
+ * C identifier.
  *
  * "typename" is a unique identifier for the type of the auxiliary data.
  *
