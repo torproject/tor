@@ -44,9 +44,9 @@ test_int_voidstar_interop(void *arg)
 static void
 assert_uint_voidptr_roundtrip(unsigned int a)
 {
- intptr_t ap = (intptr_t)a;
+ uintptr_t ap = (uintptr_t)a;
  void *b = (void *)ap;
- intptr_t c = (intptr_t)b;
+ uintptr_t c = (uintptr_t)b;
  void *d = (void *)c;
 
  tt_assert(ap == c);
