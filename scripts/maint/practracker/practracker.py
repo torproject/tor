@@ -134,7 +134,7 @@ def main():
     # If new issues were found, try to give out some advice to the developer on how to resolve it.
     if (found_new_issues):
         new_issues_str = """\
-practracker found new problems in the code: see warnings above.
+FAILURE: practracker found new problems in the code: see warnings above.
 
 Please fix the problems if you can, and update the exceptions file
 ({}) if you can't.
