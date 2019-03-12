@@ -857,6 +857,9 @@ state_query_get_commit(const char *rsa_fpr)
 static void *
 state_query_get_(sr_state_object_t obj_type, const void *data)
 {
+  if (BUG(!sr_state))
+    return NULL;
+
   void *obj = NULL;
 
   switch (obj_type) {
@@ -890,6 +893,9 @@ state_query_get_(sr_state_object_t obj_type, const void *data)
 static void
 state_query_put_(sr_state_object_t obj_type, void *data)
 {
+  if (BUG(!sr_state))
+    return;
+
   switch (obj_type) {
   case SR_STATE_OBJ_COMMIT:
   {
@@ -939,6 +945,9 @@ state_query_put_(sr_state_object_t obj_type, void *data)
 static void
 state_query_del_all_(sr_state_object_t obj_type)
 {
+  if (BUG(!sr_state))
+    return;
+
   switch (obj_type) {
   case SR_STATE_OBJ_COMMIT:
   {
@@ -966,6 +975,9 @@ static void
 state_query_del_(sr_state_object_t obj_type, void *data)
 {
   (void) data;
+
+  if (BUG(!sr_state))
+    return;
 
   switch (obj_type) {
   case SR_STATE_OBJ_PREVSRV:
