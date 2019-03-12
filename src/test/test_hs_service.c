@@ -328,17 +328,18 @@ helper_create_service_with_clients(int num_clients)
 static hs_service_intro_point_t *
 helper_create_service_ip(void)
 {
-  hs_desc_link_specifier_t *ls;
-  hs_service_intro_point_t *ip = service_intro_point_new(NULL, 0, 0);
+  link_specifier_t *ls;
+  hs_service_intro_point_t *ip = service_intro_point_new(NULL);
   tor_assert(ip);
   /* Add a first unused link specifier. */
-  ls = tor_malloc_zero(sizeof(*ls));
-  ls->type = LS_IPV4;
+  ls = link_specifier_new();
+  link_specifier_set_ls_type(ls, LS_IPV4);
   smartlist_add(ip->base.link_specifiers, ls);
   /* Add a second link specifier used by a test. */
-  ls = tor_malloc_zero(sizeof(*ls));
-  ls->type = LS_LEGACY_ID;
-  memset(ls->u.legacy_id, 'A', sizeof(ls->u.legacy_id));
+  ls = link_specifier_new();
+  link_specifier_set_ls_type(ls, LS_LEGACY_ID);
+  memset(link_specifier_getarray_un_legacy_id(ls), 'A',
+         link_specifier_getlen_un_legacy_id(ls));
   smartlist_add(ip->base.link_specifiers, ls);
 
   return ip;
@@ -811,10 +812,11 @@ test_helper_functions(void *arg)
     const node_t *node = get_node_from_intro_point(ip);
     tt_ptr_op(node, OP_EQ, &mock_node);
     SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
-                            hs_desc_link_specifier_t *, ls) {
-      if (ls->type == LS_LEGACY_ID) {
+                            link_specifier_t *, ls) {
+      if (link_specifier_get_ls_type(ls) == LS_LEGACY_ID) {
         /* Change legacy id in link specifier which is not the mock node. */
-        memset(ls->u.legacy_id, 'B', sizeof(ls->u.legacy_id));
+        memset(link_specifier_getarray_un_legacy_id(ls), 'B',
+               link_specifier_getlen_un_legacy_id(ls));
       }
     } SMARTLIST_FOREACH_END(ls);
     node = get_node_from_intro_point(ip);

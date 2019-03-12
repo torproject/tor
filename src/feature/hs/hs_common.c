@@ -1010,24 +1010,6 @@ hs_build_address(const ed25519_public_key_t *key, uint8_t version,
   tor_assert(hs_address_is_valid(addr_out));
 }
 
-/* Return a newly allocated copy of lspec. */
-link_specifier_t *
-hs_link_specifier_dup(const link_specifier_t *lspec)
-{
-  link_specifier_t *result = link_specifier_new();
-  memcpy(result, lspec, sizeof(*result));
-  /* The unrecognized field is a dynamic array so make sure to copy its
-   * content and not the pointer. */
-  link_specifier_setlen_un_unrecognized(
-                  result, link_specifier_getlen_un_unrecognized(lspec));
-  if (link_specifier_getlen_un_unrecognized(result)) {
-    memcpy(link_specifier_getarray_un_unrecognized(result),
-           link_specifier_getconstarray_un_unrecognized(lspec),
-           link_specifier_getlen_un_unrecognized(result));
-  }
-  return result;
-}
-
 /* From a given ed25519 public key pk and an optional secret, compute a
  * blinded public key and put it in blinded_pk_out. This is only useful to
  * the client side because the client only has access to the identity public
@@ -1698,6 +1680,12 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
 
   tor_assert(lspecs);
 
+  if (smartlist_len(lspecs) == 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_REND, "Empty link specifier list.");
+    /* Return NULL. */
+    goto done;
+  }
+
   SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
     switch (link_specifier_get_ls_type(ls)) {
     case LS_IPV4:
@@ -1731,6 +1719,12 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
 
   /* Legacy ID is mandatory, and we require IPv4. */
   if (!have_v4 || !have_legacy_id) {
+    bool both = !have_v4 && !have_legacy_id;
+    log_fn(LOG_PROTOCOL_WARN, LD_REND, "Missing %s%s%s link specifier%s.",
+           !have_v4 ? "IPv4" : "",
+           both ? " and " : "",
+           !have_legacy_id ? "legacy ID" : "",
+           both ? "s" : "");
     goto done;
   }
 
@@ -1749,6 +1743,10 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
      * release. */
   } else {
     /* If we can't reach IPv4, return NULL. */
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Received an IPv4 link specifier, "
+           "but the address is not reachable: %s:%u",
+           fmt_addr(&addr_v4), port_v4);
     goto done;
   }
 
@@ -1756,7 +1754,7 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
 
  validate:
   /* We'll validate now that the address we've picked isn't a private one. If
-   * it is, are we allowing to extend to private address? */
+   * it is, are we allowed to extend to private addresses? */
   if (!extend_info_addr_is_allowed(&addr_v4)) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Requested address is private and we are not allowed to extend to "
@@ -1827,4 +1825,43 @@ hs_inc_rdv_stream_counter(origin_circuit_t *circ)
     /* Should not be called if this circuit is not for hidden service. */
     tor_assert_nonfatal_unreached();
   }
+}
+
+/* Return a newly allocated link specifier object that is a copy of dst. */
+link_specifier_t *
+link_specifier_dup(const link_specifier_t *src)
+{
+  link_specifier_t *dup = NULL;
+  uint8_t *buf = NULL;
+
+  if (BUG(!src)) {
+    goto err;
+  }
+
+  ssize_t encoded_len_alloc = link_specifier_encoded_len(src);
+  if (BUG(encoded_len_alloc < 0)) {
+    goto err;
+  }
+
+  buf = tor_malloc_zero(encoded_len_alloc);
+  ssize_t encoded_len_data = link_specifier_encode(buf,
+                                                   encoded_len_alloc,
+                                                   src);
+  if (BUG(encoded_len_data < 0)) {
+    goto err;
+  }
+
+  ssize_t parsed_len = link_specifier_parse(&dup, buf, encoded_len_alloc);
+  if (BUG(parsed_len < 0)) {
+    goto err;
+  }
+
+  goto done;
+
+ err:
+  dup = NULL;
+
+ done:
+  tor_free(buf);
+  return dup;
 }

@@ -280,9 +280,10 @@ describe_intro_point(const hs_service_intro_point_t *ip)
   const char *legacy_id = NULL;
 
   SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
-                          const hs_desc_link_specifier_t *, lspec) {
-    if (lspec->type == LS_LEGACY_ID) {
-      legacy_id = (const char *) lspec->u.legacy_id;
+                          const link_specifier_t *, lspec) {
+    if (link_specifier_get_ls_type(lspec) == LS_LEGACY_ID) {
+      legacy_id = (const char *)
+        link_specifier_getconstarray_un_legacy_id(lspec);
       break;
     }
   } SMARTLIST_FOREACH_END(lspec);
@@ -426,23 +427,16 @@ service_intro_point_free_void(void *obj)
 }
 
 /* Return a newly allocated service intro point and fully initialized from the
- * given extend_info_t ei if non NULL.
- * If is_legacy is true, we also generate the legacy key.
- * If supports_ed25519_link_handshake_any is true, we add the relay's ed25519
- * key to the link specifiers.
+ * given node_t node, if non NULL.
  *
- * If ei is NULL, returns a hs_service_intro_point_t with an empty link
+ * If node is NULL, returns a hs_service_intro_point_t with an empty link
  * specifier list and no onion key. (This is used for testing.)
  * On any other error, NULL is returned.
  *
- * ei must be an extend_info_t containing an IPv4 address. (We will add supoort
- * for IPv6 in a later release.) When calling extend_info_from_node(), pass
- * 0 in for_direct_connection to make sure ei always has an IPv4 address. */
+ * node must be an node_t with an IPv4 address. */
 STATIC hs_service_intro_point_t *
-service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy,
-                        unsigned int supports_ed25519_link_handshake_any)
+service_intro_point_new(const node_t *node)
 {
-  hs_desc_link_specifier_t *ls;
   hs_service_intro_point_t *ip;
 
   ip = tor_malloc_zero(sizeof(*ip));
@@ -472,12 +466,17 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy,
   ip->replay_cache = replaycache_new(0, 0);
 
   /* Initialize the base object. We don't need the certificate object. */
-  ip->base.link_specifiers = smartlist_new();
+  ip->base.link_specifiers = node_get_link_specifier_smartlist(node, 0);
+
+  if (node == NULL) {
+    goto done;
+  }
 
   /* Generate the encryption key for this intro point. */
   curve25519_keypair_generate(&ip->enc_key_kp, 0);
-  /* Figure out if this chosen node supports v3 or is legacy only. */
-  if (is_legacy) {
+  /* Figure out if this chosen node supports v3 or is legacy only.
+   * NULL nodes are used in the unit tests. */
+  if (!node_supports_ed25519_hs_intro(node)) {
     ip->base.is_only_legacy = 1;
     /* Legacy mode that is doesn't support v3+ with ed25519 auth key. */
     ip->legacy_key = crypto_pk_new();
@@ -490,40 +489,9 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy,
     }
   }
 
-  if (ei == NULL) {
-    goto done;
-  }
-
-  /* We'll try to add all link specifiers. Legacy is mandatory.
-   * IPv4 or IPv6 is required, and we always send IPv4. */
-  ls = hs_desc_link_specifier_new(ei, LS_IPV4);
-  /* It is impossible to have an extend info object without a v4. */
-  if (BUG(!ls)) {
-    goto err;
-  }
-  smartlist_add(ip->base.link_specifiers, ls);
-
-  ls = hs_desc_link_specifier_new(ei, LS_LEGACY_ID);
-  /* It is impossible to have an extend info object without an identity
-   * digest. */
-  if (BUG(!ls)) {
-    goto err;
-  }
-  smartlist_add(ip->base.link_specifiers, ls);
-
-  /* ed25519 identity key is optional for intro points. If the node supports
-   * ed25519 link authentication, we include it. */
-  if (supports_ed25519_link_handshake_any) {
-    ls = hs_desc_link_specifier_new(ei, LS_ED25519_ID);
-    if (ls) {
-      smartlist_add(ip->base.link_specifiers, ls);
-    }
-  }
-
-  /* IPv6 is not supported in this release. */
-
-  /* Finally, copy onion key from the extend_info_t object. */
-  memcpy(&ip->onion_key, &ei->curve25519_onion_key, sizeof(ip->onion_key));
+  /* Finally, copy onion key from the node. */
+  memcpy(&ip->onion_key, node_get_curve25519_onion_key(node),
+         sizeof(ip->onion_key));
 
  done:
   return ip;
@@ -656,16 +624,16 @@ get_objects_from_ident(const hs_ident_circuit_t *ident,
  * encountered in the link specifier list. Return NULL if it can't be found.
  *
  * The caller does NOT have ownership of the object, the intro point does. */
-static hs_desc_link_specifier_t *
+static link_specifier_t *
 get_link_spec_by_type(const hs_service_intro_point_t *ip, uint8_t type)
 {
-  hs_desc_link_specifier_t *lnk_spec = NULL;
+  link_specifier_t *lnk_spec = NULL;
 
   tor_assert(ip);
 
   SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
-                          hs_desc_link_specifier_t *, ls) {
-    if (ls->type == type) {
+                          link_specifier_t *, ls) {
+    if (link_specifier_get_ls_type(ls) == type) {
       lnk_spec = ls;
       goto end;
     }
@@ -681,7 +649,7 @@ get_link_spec_by_type(const hs_service_intro_point_t *ip, uint8_t type)
 STATIC const node_t *
 get_node_from_intro_point(const hs_service_intro_point_t *ip)
 {
-  const hs_desc_link_specifier_t *ls;
+  const link_specifier_t *ls;
 
   tor_assert(ip);
 
@@ -690,7 +658,8 @@ get_node_from_intro_point(const hs_service_intro_point_t *ip)
     return NULL;
   }
   /* XXX In the future, we want to only use the ed25519 ID (#22173). */
-  return node_get_by_id((const char *) ls->u.legacy_id);
+  return node_get_by_id(
+    (const char *) link_specifier_getconstarray_un_legacy_id(ls));
 }
 
 /* Given a service intro point, return the extend_info_t for it. This can
@@ -1557,7 +1526,7 @@ remember_failing_intro_point(const hs_service_intro_point_t *ip,
                              hs_service_descriptor_t *desc, time_t now)
 {
   time_t *time_of_failure, *prev_ptr;
-  const hs_desc_link_specifier_t *legacy_ls;
+  const link_specifier_t *legacy_ls;
 
   tor_assert(ip);
   tor_assert(desc);
@@ -1566,20 +1535,11 @@ remember_failing_intro_point(const hs_service_intro_point_t *ip,
   *time_of_failure = now;
   legacy_ls = get_link_spec_by_type(ip, LS_LEGACY_ID);
   tor_assert(legacy_ls);
-  prev_ptr = digestmap_set(desc->intro_points.failed_id,
-                           (const char *) legacy_ls->u.legacy_id,
-                           time_of_failure);
+  prev_ptr = digestmap_set(
+    desc->intro_points.failed_id,
+    (const char *) link_specifier_getconstarray_un_legacy_id(legacy_ls),
+    time_of_failure);
   tor_free(prev_ptr);
-}
-
-/* Copy the descriptor link specifier object from src to dst. */
-static void
-link_specifier_copy(hs_desc_link_specifier_t *dst,
-                    const hs_desc_link_specifier_t *src)
-{
-  tor_assert(dst);
-  tor_assert(src);
-  memcpy(dst, src, sizeof(hs_desc_link_specifier_t));
 }
 
 /* Using a given descriptor signing keypair signing_kp, a service intro point
@@ -1616,9 +1576,14 @@ setup_desc_intro_point(const ed25519_keypair_t *signing_kp,
 
   /* Copy link specifier(s). */
   SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
-                          const hs_desc_link_specifier_t *, ls) {
-    hs_desc_link_specifier_t *copy = tor_malloc_zero(sizeof(*copy));
-    link_specifier_copy(copy, ls);
+                          const link_specifier_t *, ls) {
+    if (BUG(!ls)) {
+      goto done;
+    }
+    link_specifier_t *copy = link_specifier_dup(ls);
+    if (BUG(!copy)) {
+      goto done;
+    }
     smartlist_add(desc_ip->link_specifiers, copy);
   } SMARTLIST_FOREACH_END(ls);
 
@@ -2107,7 +2072,6 @@ static hs_service_intro_point_t *
 pick_intro_point(unsigned int direct_conn, smartlist_t *exclude_nodes)
 {
   const node_t *node;
-  extend_info_t *info = NULL;
   hs_service_intro_point_t *ip = NULL;
   /* Normal 3-hop introduction point flags. */
   router_crn_flags_t flags = CRN_NEED_UPTIME | CRN_NEED_DESC;
@@ -2128,43 +2092,17 @@ pick_intro_point(unsigned int direct_conn, smartlist_t *exclude_nodes)
    * we don't want to use that node anymore. */
   smartlist_add(exclude_nodes, (void *) node);
 
-  /* We do this to ease our life but also this call makes appropriate checks
-   * of the node object such as validating ntor support for instance.
-   *
-   * We must provide an extend_info for clients to connect over a 3-hop path,
-   * so we don't pass direct_conn here. */
-  info = extend_info_from_node(node, 0);
-  if (BUG(info == NULL)) {
-    goto err;
-  }
+  /* Create our objects and populate them with the node information. */
+  ip = service_intro_point_new(node);
 
-  /* Let's do a basic sanity check here so that we don't end up advertising the
-   * ed25519 identity key of relays that don't actually support the link
-   * protocol */
-  if (!node_supports_ed25519_link_authentication(node, 0)) {
-    tor_assert_nonfatal(ed25519_public_key_is_zero(&info->ed_identity));
-  } else {
-    /* Make sure we *do* have an ed key if we support the link authentication.
-     * Sending an empty key would result in a failure to extend. */
-    tor_assert_nonfatal(!ed25519_public_key_is_zero(&info->ed_identity));
-  }
-
-  /* Create our objects and populate them with the node information.
-   * We don't care if the intro's link auth is compatible with us, because
-   * we are sending the ed25519 key to a remote client via the descriptor. */
-  ip = service_intro_point_new(info, !node_supports_ed25519_hs_intro(node),
-                               node_supports_ed25519_link_authentication(node,
-                                                                         0));
   if (ip == NULL) {
     goto err;
   }
 
-  log_info(LD_REND, "Picked intro point: %s", extend_info_describe(info));
-  extend_info_free(info);
+  log_info(LD_REND, "Picked intro point: %s", node_describe(node));
   return ip;
  err:
   service_intro_point_free(ip);
-  extend_info_free(info);
   return NULL;
 }
 

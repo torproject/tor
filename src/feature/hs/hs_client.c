@@ -546,13 +546,15 @@ find_desc_intro_point_by_legacy_id(const char *legacy_id,
   SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
                           hs_desc_intro_point_t *, ip) {
     SMARTLIST_FOREACH_BEGIN(ip->link_specifiers,
-                            const hs_desc_link_specifier_t *, lspec) {
+                            const link_specifier_t *, lspec) {
       /* Not all tor node have an ed25519 identity key so we still rely on the
        * legacy identity digest. */
-      if (lspec->type != LS_LEGACY_ID) {
+      if (link_specifier_get_ls_type(lspec) != LS_LEGACY_ID) {
         continue;
       }
-      if (fast_memneq(legacy_id, lspec->u.legacy_id, DIGEST_LEN)) {
+      if (fast_memneq(legacy_id,
+                      link_specifier_getconstarray_un_legacy_id(lspec),
+                      DIGEST_LEN)) {
         break;
       }
       /* Found it. */
@@ -771,24 +773,13 @@ STATIC extend_info_t *
 desc_intro_point_to_extend_info(const hs_desc_intro_point_t *ip)
 {
   extend_info_t *ei;
-  smartlist_t *lspecs = smartlist_new();
 
   tor_assert(ip);
 
-  /* We first encode the descriptor link specifiers into the binary
-   * representation which is a trunnel object. */
-  SMARTLIST_FOREACH_BEGIN(ip->link_specifiers,
-                          const hs_desc_link_specifier_t *, desc_lspec) {
-    link_specifier_t *lspec = hs_desc_lspec_to_trunnel(desc_lspec);
-    smartlist_add(lspecs, lspec);
-  } SMARTLIST_FOREACH_END(desc_lspec);
-
   /* Explicitly put the direct connection option to 0 because this is client
    * side and there is no such thing as a non anonymous client. */
-  ei = hs_get_extend_info_from_lspecs(lspecs, &ip->onion_key, 0);
+  ei = hs_get_extend_info_from_lspecs(ip->link_specifiers, &ip->onion_key, 0);
 
-  SMARTLIST_FOREACH(lspecs, link_specifier_t *, ls, link_specifier_free(ls));
-  smartlist_free(lspecs);
   return ei;
 }
 
