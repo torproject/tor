@@ -1316,40 +1316,48 @@ sample_geometric(uint32_t s, double p0, double p)
 
 /** Public API for probability distributions:
  *
- *  For each probability distribution we define each public functions
- *  (sample/cdf/sf/icdf/isf) as part of its dist_ops structure.
+ *  These are wrapper functions on top of the various probability distribution
+ *  operations using the generic <b>dist</b> structure.
+
+ *  These are the functions that should be used by consumers of this API.
  */
 
+/** Returns the name of the distribution in <b>dist</b>. */
 const char *
 dist_name(const struct dist *dist)
 {
   return dist->ops->name;
 }
 
+/* Sample a value from <b>dist</b> and return it. */
 double
 dist_sample(const struct dist *dist)
 {
   return dist->ops->sample(dist);
 }
 
+/** Compute the CDF of <b>dist</b> at <b>x</b>. */
 double
 dist_cdf(const struct dist *dist, double x)
 {
   return dist->ops->cdf(dist, x);
 }
 
+/** Compute the SF (Survival function) of <b>dist</b> at <b>x</b>. */
 double
 dist_sf(const struct dist *dist, double x)
 {
   return dist->ops->sf(dist, x);
 }
 
+/** Compute the iCDF (Inverse CDF) of <b>dist</b> at <b>x</b>. */
 double
 dist_icdf(const struct dist *dist, double p)
 {
   return dist->ops->icdf(dist, p);
 }
 
+/** Compute the iSF (Inverse Survival function) of <b>dist</b> at <b>x</b>. */
 double
 dist_isf(const struct dist *dist, double p)
 {
@@ -1418,6 +1426,10 @@ const struct dist_ops uniform_ops = {
   .icdf = uniform_icdf,
   .isf = uniform_isf,
 };
+
+/*******************************************************************/
+
+/** Private functions for each probability distribution. */
 
 /** Functions for logistic distribution: */
 
