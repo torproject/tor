@@ -9,7 +9,8 @@
  * @brief Header for functions that add relationships to a pubsub builder.
  *
  * These functions are used by modules that need to add publication and
- * subscription requests.
+ * subscription requests.  Most users will want to call these functions
+ * indirectly, via the macros in pubsub_macros.h.
  **/
 
 #ifndef TOR_PUBSUB_CONNECT_H
