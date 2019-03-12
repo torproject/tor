@@ -11,6 +11,7 @@
  **/
 
 #ifndef TOR_TORLOG_H
+#define TOR_TORLOG_H
 
 #include <stdarg.h>
 #include "lib/cc/torint.h"
@@ -278,5 +279,4 @@ MOCK_DECL(STATIC void, logv, (int severity, log_domain_mask_t domain,
     va_list ap) CHECK_PRINTF(5,0));
 #endif
 
-# define TOR_TORLOG_H
 #endif /* !defined(TOR_TORLOG_H) */
