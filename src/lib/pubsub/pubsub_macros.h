@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file msg.h
+ * \file pubsub_macros.h
  * \brief Macros to help with the publish/subscribe dispatch API.
  *
  * The dispatch API allows different subsystems of Tor to communicate with
