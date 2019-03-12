@@ -120,8 +120,8 @@ static const char sr_flag_ns_str[] = "shared-rand-participate";
 static int32_t num_srv_agreements_from_vote;
 
 /* Return a heap allocated copy of the SRV <b>orig</b>. */
-STATIC sr_srv_t *
-srv_dup(const sr_srv_t *orig)
+sr_srv_t *
+sr_srv_dup(const sr_srv_t *orig)
 {
   sr_srv_t *duplicate = NULL;
 
@@ -1253,8 +1253,8 @@ sr_act_post_consensus(const networkstatus_t *consensus)
      * decided by the majority. */
     sr_state_unset_fresh_srv();
     /* Set the SR values from the given consensus. */
-    sr_state_set_previous_srv(srv_dup(consensus->sr_info.previous_srv));
-    sr_state_set_current_srv(srv_dup(consensus->sr_info.current_srv));
+    sr_state_set_previous_srv(sr_srv_dup(consensus->sr_info.previous_srv));
+    sr_state_set_current_srv(sr_srv_dup(consensus->sr_info.current_srv));
   }
 
   /* Prepare our state so that it's ready for the next voting period. */
