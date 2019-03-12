@@ -900,14 +900,26 @@ state_query_put_(sr_state_object_t obj_type, void *data)
     break;
   }
   case SR_STATE_OBJ_CURSRV:
-    /* Always free the old SRV */
-    state_query_del_(SR_STATE_OBJ_CURSRV, NULL);
-    sr_state->current_srv = (sr_srv_t *) data;
+      /* Check if the new pointer is the same as the old one: if it is, it's
+       * probably a bug. The caller may have confused current and previous,
+       * or they may have forgotten to sr_srv_dup().
+       * Putting NULL multiple times is allowed. */
+    if (!BUG(data && sr_state->current_srv == (sr_srv_t *) data)) {
+      /* We own the old SRV, so we need to free it.  */
+      state_query_del_(SR_STATE_OBJ_CURSRV, NULL);
+      sr_state->current_srv = (sr_srv_t *) data;
+    }
     break;
   case SR_STATE_OBJ_PREVSRV:
-    /* Always free the old SRV */
-    state_query_del_(SR_STATE_OBJ_PREVSRV, NULL);
-    sr_state->previous_srv = (sr_srv_t *) data;
+      /* Check if the new pointer is the same as the old one: if it is, it's
+       * probably a bug. The caller may have confused current and previous,
+       * or they may have forgotten to sr_srv_dup().
+       * Putting NULL multiple times is allowed. */
+    if (!BUG(data && sr_state->previous_srv == (sr_srv_t *) data)) {
+      /* We own the old SRV, so we need to free it.  */
+      state_query_del_(SR_STATE_OBJ_PREVSRV, NULL);
+      sr_state->previous_srv = (sr_srv_t *) data;
+    }
     break;
   case SR_STATE_OBJ_VALID_AFTER:
     sr_state->valid_after = *((time_t *) data);
@@ -1059,7 +1071,9 @@ sr_state_get_phase(void)
   return *(sr_phase_t *) ptr;
 }
 
-/* Return the previous SRV value from our state. Value CAN be NULL. */
+/* Return the previous SRV value from our state. Value CAN be NULL.
+ * The state object owns the SRV, so the calling code should not free the SRV.
+ * Use sr_srv_dup() if you want to keep a copy of the SRV. */
 const sr_srv_t *
 sr_state_get_previous_srv(void)
 {
@@ -1078,7 +1092,9 @@ sr_state_set_previous_srv(const sr_srv_t *srv)
               NULL);
 }
 
-/* Return the current SRV value from our state. Value CAN be NULL. */
+/* Return the current SRV value from our state. Value CAN be NULL.
+ * The state object owns the SRV, so the calling code should not free the SRV.
+ * Use sr_srv_dup() if you want to keep a copy of the SRV. */
 const sr_srv_t *
 sr_state_get_current_srv(void)
 {
