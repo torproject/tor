@@ -1,8 +1,7 @@
-  o Minor bugfixes (address selection):
+  o Minor features (address selection):
     - Make Tor aware of the RFC 6598 (Carrier Grade NAT) IP range, which is the
       subnet 100.64.0.0/10. This is deployed by many ISPs as an alternative to
       RFC 1918 that does not break existing internal networks. This patch fixes
       security issues caused by RFC 6518 by blocking control ports on these
       addresses and warns users if client ports or ExtORPorts are listening on
-      a RFC 6598 address. Fixes bug 28525; bugfix on 0.4.1.1-alpha. Patch by
-      Neel Chauhan.
+      a RFC 6598 address. Closes ticket 28525. Patch by Neel Chauhan.
