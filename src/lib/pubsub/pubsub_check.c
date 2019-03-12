@@ -55,7 +55,7 @@ pubsub_build_adjacency_map(const pubsub_items_t *cfg)
 }
 
 /**
- * Helper: add a single pubsub_cft_t to an adjacency map.
+ * Helper: add a single pubsub_cfg_t to an adjacency map.
  **/
 static void
 pubsub_adjmap_add(pubsub_adjmap_t *map,
@@ -90,7 +90,7 @@ pubsub_adjmap_add(pubsub_adjmap_t *map,
   FREE_AND_NULL(pubsub_adjmap_t, pubsub_adjmap_free_, m)
 
 /**
- * Free everty element of an <b>n</b>-element array of smartlists, then
+ * Free every element of an <b>n</b>-element array of smartlists, then
  * free the array itself.
  **/
 static void
