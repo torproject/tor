@@ -129,6 +129,7 @@
 #define TOR_DISPATCH_MSG_H
 
 #include "lib/cc/compat_compiler.h"
+#include "lib/dispatch/dispatch_naming.h"
 #include "lib/pubsub/pub_binding_st.h"
 #include "lib/pubsub/pubsub_connect.h"
 #include "lib/pubsub/pubsub_flags.h"
