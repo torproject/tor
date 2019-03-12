@@ -49,6 +49,7 @@
 #include "lib/wallclock/approx_time.h"
 #include "lib/wallclock/time_to_tm.h"
 #include "lib/fdio/fdio.h"
+#include "lib/cc/ctassert.h"
 
 #ifdef HAVE_ANDROID_LOG_H
 #include <android/log.h>
@@ -1271,6 +1272,8 @@ static const char *domain_list[] = {
   "SCHED", "GUARD", "CONSDIFF", "DOS", "PROCESS", "PT", "BTRACK", "MESG",
   NULL
 };
+
+CTASSERT(ARRAY_LENGTH(domain_list) == N_LOGGING_DOMAINS + 1);
 
 /** Return a bitmask for the log domain for which <b>domain</b> is the name,
  * or 0 if there is no such name. */

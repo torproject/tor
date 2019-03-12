@@ -115,7 +115,7 @@
 #define LD_BTRACK    (1u<<28)
 /** Message-passing backend. */
 #define LD_MESG      (1u<<29)
-#define N_LOGGING_DOMAINS 29
+#define N_LOGGING_DOMAINS 30
 
 /** This log message is not safe to send to a callback-based logger
  * immediately.  Used as a flag, not a log domain. */
