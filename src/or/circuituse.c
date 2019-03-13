@@ -494,8 +494,7 @@ circuit_expire_building(void)
       cutoff = begindir_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)
       cutoff = close_cutoff;
-    else if (victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING ||
-             victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)
+    else if (victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)
       cutoff = c_intro_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
       cutoff = s_intro_cutoff;
@@ -614,12 +613,13 @@ circuit_expire_building(void)
           TO_ORIGIN_CIRCUIT(victim)->path_state = PATH_STATE_USE_FAILED;
           break;
         case CIRCUIT_PURPOSE_C_INTRODUCING:
-          /* We keep old introducing circuits around for
-           * a while in parallel, and they can end up "opened".
-           * We decide below if we're going to mark them timed
-           * out and eventually close them.
-           */
-          break;
+          /* That purpose means that the intro point circuit has been opened
+           * succesfully but the INTRODUCE1 cell hasn't been sent yet because
+           * the client is waiting for the rendezvous point circuit to open.
+           * Keep this circuit open while waiting for the rendezvous circuit.
+           * We let the circuit idle timeout take care of cleaning this
+           * circuit if it never used. */
+          continue;
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
         case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
         case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
@@ -713,8 +713,6 @@ circuit_expire_building(void)
             NULL)
           break;
         /* fallthrough! */
-      case CIRCUIT_PURPOSE_C_INTRODUCING:
-        /* connection_ap_handshake_attach_circuit() will relaunch for us */
       case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
         /* If we have reached this line, we want to spare the circ for now. */
