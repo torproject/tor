@@ -52,6 +52,19 @@ RELEASE_040=( "release-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.0" )
 # from that repository.
 ORIGIN_PATH="$GIT_PATH/$TOR_MASTER_NAME"
 
+# SC2034 -- shellcheck thinks that these are unused.  We know better.
+ACTUALLY_THESE_ARE_USED=<<EOF
+${MAINT_029[0]}
+${MAINT_034[0]}
+${MAINT_035[0]}
+${MAINT_040[0]}
+${MAINT_MASTER[0]}
+${RELEASE_029[0]}
+${RELEASE_034[0]}
+${RELEASE_035[0]}
+${RELEASE_040[0]}
+EOF
+
 ##########################
 # Git Worktree to manage #
 ##########################
