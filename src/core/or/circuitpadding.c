@@ -393,11 +393,14 @@ circpad_distribution_sample_iat_delay(const circpad_state_t *state,
   double val = circpad_distribution_sample(state->iat_dist);
   /* These comparisons are safe, because the output is in the range
    * [0, 2**32), and double has a precision of 53 bits. */
+  /* We want a positive sample value */
   val = MAX(0, val);
+  /* Respect the maximum sample setting */
   val = MIN(val, state->dist_max_sample_usec);
 
-  /* This addition is exact: val is at most 2**32-1, min_delay
-   * is at most 2**32-1, and doubles have a precision of 53 bits. */
+  /* Now apply the shift:
+   * This addition is exact: val is at most 2**32-1, delay_shift is at most
+   * 2**32-1, and doubles have a precision of 53 bits. */
   val += delay_shift;
 
   /* Clamp the distribution at infinite delay val */
