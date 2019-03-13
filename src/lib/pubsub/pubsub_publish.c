@@ -49,8 +49,10 @@ pubsub_pub_(const pub_binding_t *pub, msg_aux_data_t auxdata)
   if (BUG(pub->msg_template.msg >= d->n_msgs) ||
       BUG(pub->msg_template.channel >= d->n_queues)) {
     /* The message ID or channel ID was out of bounds. */
+    // LCOV_EXCL_START
     d->typefns[pub->msg_template.type].free_fn(auxdata);
     return -1;
+    // LCOV_EXCL_STOP
   }
 
   if (! d->table[pub->msg_template.msg]) {
