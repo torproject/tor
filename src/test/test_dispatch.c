@@ -170,6 +170,30 @@ test_dispatch_with_types(void *arg)
   dispatcher_in_use = NULL;
 }
 
+static void
+test_dispatch_bad_type_setup(void *arg)
+{
+  (void)arg;
+  static dispatch_typefns_t fns;
+  dispatch_cfg_t *cfg = dcfg_new();
+
+  tt_int_op(0, OP_EQ, dcfg_type_set_fns(cfg, 7, &coord_fns));
+
+  fns = coord_fns;
+  fns.fmt_fn = NULL;
+  tt_int_op(-1, OP_EQ, dcfg_type_set_fns(cfg, 7, &fns));
+
+  fns = coord_fns;
+  fns.free_fn = NULL;
+  tt_int_op(-1, OP_EQ, dcfg_type_set_fns(cfg, 7, &fns));
+
+  fns = coord_fns;
+  tt_int_op(0, OP_EQ, dcfg_type_set_fns(cfg, 7, &fns));
+
+ done:
+  dcfg_free(cfg);
+}
+
 #define T(name)                                                 \
   { #name, test_dispatch_ ## name, TT_FORK, NULL, NULL }
 
@@ -177,5 +201,6 @@ struct testcase_t dispatch_tests[] = {
   T(empty),
   T(simple),
   T(with_types),
+  T(bad_type_setup),
   END_OF_TESTCASES
 };
