@@ -142,6 +142,25 @@ test_namemap_internals(void *arg)
   namemap_clear(&m);
 }
 
+static void
+test_namemap_fmt(void *arg)
+{
+  (void)arg;
+  namemap_t m = NAMEMAP_INIT();
+
+  unsigned a = namemap_get_or_create_id(&m, "greetings");
+  unsigned b = namemap_get_or_create_id(&m, "earthlings");
+
+  tt_str_op(namemap_fmt_name(&m, a), OP_EQ, "greetings");
+  tt_str_op(namemap_fmt_name(&m, b), OP_EQ, "earthlings");
+  tt_int_op(a, OP_NE, 100);
+  tt_int_op(b, OP_NE, 100);
+  tt_str_op(namemap_fmt_name(&m, 100), OP_EQ, "{100}");
+
+ done:
+  namemap_clear(&m);
+}
+
 #define T(name) \
   { #name, test_namemap_ ## name , 0, NULL, NULL }
 
@@ -150,5 +169,6 @@ struct testcase_t namemap_tests[] = {
   T(toolong),
   T(blackbox),
   T(internals),
+  T(fmt),
   END_OF_TESTCASES
 };
