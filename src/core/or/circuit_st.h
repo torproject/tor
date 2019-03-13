@@ -13,7 +13,7 @@
 
 struct hs_token_t;
 struct circpad_machine_spec_t;
-struct circpad_machine_state_t;
+struct circpad_machine_runtime_t;
 
 /** Number of padding state machines on a circuit. */
 #define CIRCPAD_MAX_MACHINES (2)
@@ -193,8 +193,8 @@ struct circuit_t {
    *  and we can have up to CIRCPAD_MAX_MACHINES such machines. */
   const struct circpad_machine_spec_t *padding_machine[CIRCPAD_MAX_MACHINES];
 
-  /** Adaptive Padding machine info for above machines. This is the
-   *  per-circuit mutable information, such as the current state and
+  /** Adaptive Padding machine runtime info for above machines. This is
+   *  the per-circuit mutable information, such as the current state and
    *  histogram token counts. Some of it is optional (aka NULL).
    *  If a machine is being shut down, these indexes can be NULL
    *  without the corresponding padding_machine being NULL, while we
@@ -202,7 +202,7 @@ struct circuit_t {
    *
    *  Each element of this array corresponds to a different padding machine,
    *  and we can have up to CIRCPAD_MAX_MACHINES such machines. */
-  struct circpad_machine_state_t *padding_info[CIRCPAD_MAX_MACHINES];
+  struct circpad_machine_runtime_t *padding_info[CIRCPAD_MAX_MACHINES];
 };
 
 #endif
