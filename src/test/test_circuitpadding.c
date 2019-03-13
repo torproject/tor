@@ -333,7 +333,7 @@ test_circuitpadding_rtt(void *arg)
             OP_EQ,
             relay_side->padding_info[0]->rtt_estimate_usec+
             circpad_machine_current_state(
-             relay_side->padding_info[0])->start_usec);
+             relay_side->padding_info[0])->histogram_edges[0]);
 
   circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
   circpad_cell_event_nonpadding_received((circuit_t*)relay_side);
@@ -349,7 +349,7 @@ test_circuitpadding_rtt(void *arg)
             OP_EQ,
             relay_side->padding_info[0]->rtt_estimate_usec+
             circpad_machine_current_state(
-             relay_side->padding_info[0])->start_usec);
+             relay_side->padding_info[0])->histogram_edges[0]);
 
   /* Test 2: Termination of RTT measurement (from the previous test) */
   tt_int_op(relay_side->padding_info[0]->stop_rtt_update, OP_EQ, 1);
@@ -367,7 +367,7 @@ test_circuitpadding_rtt(void *arg)
             OP_EQ,
             relay_side->padding_info[0]->rtt_estimate_usec+
             circpad_machine_current_state(
-             relay_side->padding_info[0])->start_usec);
+             relay_side->padding_info[0])->histogram_edges[0]);
 
   /* Test 3: Make sure client side machine properly ignores RTT */
   circpad_cell_event_nonpadding_received((circuit_t*)client_side);
@@ -383,7 +383,7 @@ test_circuitpadding_rtt(void *arg)
   tt_int_op(circpad_histogram_bin_to_usec(client_side->padding_info[0], 0),
             OP_EQ,
             circpad_machine_current_state(
-                client_side->padding_info[0])->start_usec);
+                client_side->padding_info[0])->histogram_edges[0]);
  done:
   free_fake_orcirc(relay_side);
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
@@ -414,19 +414,23 @@ helper_create_basic_machine(void)
   circ_client_machine.states[CIRCPAD_STATE_BURST].
       next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_CANCEL;
 
-  // FIXME: Is this what we want?
   circ_client_machine.states[CIRCPAD_STATE_BURST].token_removal =
       CIRCPAD_TOKEN_REMOVAL_HIGHER;
 
-  // FIXME: Tune this histogram
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_len = 5;
-  circ_client_machine.states[CIRCPAD_STATE_BURST].start_usec = 500;
-  circ_client_machine.states[CIRCPAD_STATE_BURST].range_usec = 1000000;
+
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[0] = 500;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[1] = 2500;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[2] = 5000;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[3] = 10000;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[4] = 20000;
+
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[0] = 1;
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[1] = 0;
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[2] = 2;
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[3] = 2;
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram[4] = 2;
+
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_total_tokens = 7;
   circ_client_machine.states[CIRCPAD_STATE_BURST].use_rtt_estimate = 1;
 
@@ -458,14 +462,24 @@ helper_create_machine_with_big_histogram(circpad_removal_t removal_strategy)
   burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_HIGHER;
 
   burst_state->histogram_len = BIG_HISTOGRAM_LEN;
-  burst_state->start_usec = 0;
-  burst_state->range_usec = 1000;
 
   int n_tokens = 0;
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+  int i;
+  for (i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
     burst_state->histogram[i] = tokens_per_bin;
     n_tokens += tokens_per_bin;
   }
+
+  burst_state->histogram_edges[0] = 0;
+  burst_state->histogram_edges[1] = 1;
+  burst_state->histogram_edges[2] = 7;
+  burst_state->histogram_edges[3] = 15;
+  burst_state->histogram_edges[4] = 31;
+  burst_state->histogram_edges[5] = 62;
+  burst_state->histogram_edges[6] = 125;
+  burst_state->histogram_edges[7] = 250;
+  burst_state->histogram_edges[8] = 500;
+  burst_state->histogram_edges[9] = 1000;
 
   burst_state->histogram_total_tokens = n_tokens;
   burst_state->length_dist.type = CIRCPAD_DIST_UNIFORM;
@@ -527,10 +541,18 @@ test_circuitpadding_token_removal_higher(void *arg)
 
   /* Test left boundaries of each histogram bin: */
   const circpad_delay_t bin_left_bounds[] =
-    {0, 1, 7, 15, 31, 62, 125, 250, 500, CIRCPAD_DELAY_INFINITE};
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    {0, 1,    7,  15,  31,  62,  125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
+  for (int i = 0; i <= BIG_HISTOGRAM_LEN ; i++) {
     tt_uint_op(bin_left_bounds[i], OP_EQ,
                circpad_histogram_bin_to_usec(mi, i));
+  }
+
+  /* Test right boundaries of each histogram bin: */
+  const circpad_delay_t bin_right_bounds[] =
+    {0,    6,  14,  30,  61,  124, 249, 499, 999, CIRCPAD_DELAY_INFINITE-1};
+  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    tt_uint_op(bin_right_bounds[i], OP_EQ,
+               histogram_get_bin_upper_bound(mi, i));
   }
 
   /* Check that all bins have two tokens right now */
@@ -576,8 +598,8 @@ test_circuitpadding_token_removal_higher(void *arg)
   /* Test below the lowest bin, for coverage */
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
-  circ_client_machine.states[CIRCPAD_STATE_BURST].start_usec = 100;
-  mi->padding_scheduled_at_usec = current_time - 1;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[0] = 100;
+  mi->padding_scheduled_at_usec = current_time;
   circpad_machine_remove_token(mi);
   tt_int_op(mi->histogram[0], OP_EQ, 1);
 
@@ -624,8 +646,8 @@ test_circuitpadding_token_removal_lower(void *arg)
 
   /* Test left boundaries of each histogram bin: */
   const circpad_delay_t bin_left_bounds[] =
-    {0, 1, 7, 15, 31, 62, 125, 250, 500, CIRCPAD_DELAY_INFINITE};
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    {0, 1,    7,  15,  31,  62,  125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
+  for (int i = 0; i <= BIG_HISTOGRAM_LEN ; i++) {
     tt_uint_op(bin_left_bounds[i], OP_EQ,
                circpad_histogram_bin_to_usec(mi, i));
   }
@@ -673,7 +695,8 @@ test_circuitpadding_token_removal_lower(void *arg)
   /* Test above the highest bin, for coverage */
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
-  circ_client_machine.states[CIRCPAD_STATE_BURST].start_usec = 100;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].
+    histogram_edges[BIG_HISTOGRAM_LEN-2] = 100;
   mi->padding_scheduled_at_usec = current_time - 29202;
   circpad_machine_remove_token(mi);
   tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN-2], OP_EQ, 1);
@@ -721,8 +744,8 @@ test_circuitpadding_closest_token_removal(void *arg)
 
   /* Test left boundaries of each histogram bin: */
   const circpad_delay_t bin_left_bounds[] =
-    {0, 1, 7, 15, 31, 62, 125, 250, 500, CIRCPAD_DELAY_INFINITE};
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    {0, 1,    7,  15,  31,  62,  125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
+  for (int i = 0; i <= BIG_HISTOGRAM_LEN ; i++) {
     tt_uint_op(bin_left_bounds[i], OP_EQ,
                circpad_histogram_bin_to_usec(mi, i));
   }
@@ -769,7 +792,9 @@ test_circuitpadding_closest_token_removal(void *arg)
   /* Test below the lowest bin, for coverage */
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
-  circ_client_machine.states[CIRCPAD_STATE_BURST].start_usec = 100;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[0] = 100;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[1] = 101;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[2] = 120;
   mi->padding_scheduled_at_usec = current_time - 102;
   mi->histogram[0] = 0;
   circpad_machine_remove_token(mi);
@@ -778,7 +803,6 @@ test_circuitpadding_closest_token_removal(void *arg)
   /* Test above the highest bin, for coverage */
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
-  circ_client_machine.states[CIRCPAD_STATE_BURST].start_usec = 100;
   mi->padding_scheduled_at_usec = current_time - 29202;
   circpad_machine_remove_token(mi);
   tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN-2], OP_EQ, 1);
@@ -826,8 +850,8 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
 
   /* Test left boundaries of each histogram bin: */
   const circpad_delay_t bin_left_bounds[] =
-    {0, 1, 7, 15, 31, 62, 125, 250, 500, CIRCPAD_DELAY_INFINITE};
-  for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
+    {0, 1,    7,  15,  31,  62,  125, 250, 500, 1000, CIRCPAD_DELAY_INFINITE};
+  for (int i = 0; i <= BIG_HISTOGRAM_LEN ; i++) {
     tt_uint_op(bin_left_bounds[i], OP_EQ,
                circpad_histogram_bin_to_usec(mi, i));
   }
@@ -877,7 +901,9 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   /* Test below the lowest bin, for coverage */
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
-  circ_client_machine.states[CIRCPAD_STATE_BURST].start_usec = 100;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[0] = 100;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[1] = 101;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[2] = 120;
   mi->padding_scheduled_at_usec = current_time - 102;
   mi->histogram[0] = 0;
   circpad_machine_remove_token(mi);
@@ -886,7 +912,8 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   /* Test above the highest bin, for coverage */
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
-  circ_client_machine.states[CIRCPAD_STATE_BURST].start_usec = 100;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].
+    histogram_edges[BIG_HISTOGRAM_LEN-2] = 100;
   mi->padding_scheduled_at_usec = current_time - 29202;
   circpad_machine_remove_token(mi);
   tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN-2], OP_EQ, 1);
@@ -1043,7 +1070,7 @@ test_circuitpadding_tokens(void *arg)
 
   // Test 1: converting usec->bin->usec->bin
   // Bin 0+1 have different semantics.
-  for (circpad_delay_t i = 0; i <= state->start_usec+1; i++) {
+  for (circpad_delay_t i = 0; i <= state->histogram_edges[0]; i++) {
     int bin = circpad_histogram_usec_to_bin(client_side->padding_info[0],
                                             i);
     circpad_delay_t usec =
@@ -1053,8 +1080,9 @@ test_circuitpadding_tokens(void *arg)
     tt_int_op(bin, OP_EQ, bin2);
     tt_int_op(i, OP_LE, usec);
   }
-  for (circpad_delay_t i = state->start_usec+1;
-           i <= state->start_usec + state->range_usec; i++) {
+  for (circpad_delay_t i = state->histogram_edges[0]+1;
+       i <= state->histogram_edges[0] +
+         state->histogram_edges[state->histogram_len-2]; i++) {
     int bin = circpad_histogram_usec_to_bin(client_side->padding_info[0],
                                             i);
     circpad_delay_t usec =
@@ -1106,8 +1134,7 @@ test_circuitpadding_tokens(void *arg)
   /* 2.c. Bin 0 */
   {
     tt_int_op(mi->histogram[0], OP_EQ, 1);
-    circpad_machine_remove_higher_token(mi,
-         state->start_usec/2);
+    circpad_machine_remove_higher_token(mi, state->histogram_edges[0]/2);
     tt_int_op(mi->histogram[0], OP_EQ, 0);
   }
 
@@ -1126,8 +1153,7 @@ test_circuitpadding_tokens(void *arg)
   /* 3.a. Bin 0 */
   {
     tt_int_op(mi->histogram[0], OP_EQ, 1);
-    circpad_machine_remove_higher_token(mi,
-         state->start_usec/2);
+    circpad_machine_remove_higher_token(mi, state->histogram_edges[0]/2);
     tt_int_op(mi->histogram[0], OP_EQ, 0);
   }
 
@@ -1615,15 +1641,20 @@ helper_create_conditional_machine(void)
   ret->states[CIRCPAD_STATE_BURST].
       next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 
+  /* Use EXACT removal strategy, otherwise setup_tokens() does not work */
   ret->states[CIRCPAD_STATE_BURST].token_removal =
-      CIRCPAD_TOKEN_REMOVAL_NONE;
+      CIRCPAD_TOKEN_REMOVAL_EXACT;
 
   ret->states[CIRCPAD_STATE_BURST].histogram_len = 3;
-  ret->states[CIRCPAD_STATE_BURST].start_usec = 0;
-  ret->states[CIRCPAD_STATE_BURST].range_usec = 1000000;
+
+  ret->states[CIRCPAD_STATE_BURST].histogram_edges[0] = 0;
+  ret->states[CIRCPAD_STATE_BURST].histogram_edges[1] = 1;
+  ret->states[CIRCPAD_STATE_BURST].histogram_edges[2] = 1000000;
+
   ret->states[CIRCPAD_STATE_BURST].histogram[0] = 6;
   ret->states[CIRCPAD_STATE_BURST].histogram[1] = 0;
-  ret->states[CIRCPAD_STATE_BURST].histogram[1] = 0;
+  ret->states[CIRCPAD_STATE_BURST].histogram[2] = 0;
+
   ret->states[CIRCPAD_STATE_BURST].histogram_total_tokens = 6;
   ret->states[CIRCPAD_STATE_BURST].use_rtt_estimate = 0;
   ret->states[CIRCPAD_STATE_BURST].length_includes_nonpadding = 1;
@@ -1654,8 +1685,7 @@ helper_create_conditional_machines(void)
   add->conditions.state_mask = CIRCPAD_CIRC_BUILDING|
            CIRCPAD_CIRC_NO_STREAMS|CIRCPAD_CIRC_HAS_RELAY_EARLY;
   add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
-
-  smartlist_add(origin_padding_machines, add);
+  register_padding_machine(add, origin_padding_machines);
 
   add = helper_create_conditional_machine();
   add->machine_num = 3;
@@ -1674,15 +1704,15 @@ helper_create_conditional_machines(void)
   add->conditions.state_mask = CIRCPAD_CIRC_OPENED|
            CIRCPAD_CIRC_STREAMS|CIRCPAD_CIRC_HAS_NO_RELAY_EARLY;
   add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
-  smartlist_add(origin_padding_machines, add);
+  register_padding_machine(add, origin_padding_machines);
 
   add = helper_create_conditional_machine();
   add->machine_num = 2;
-  smartlist_add(relay_padding_machines, add);
+  register_padding_machine(add, relay_padding_machines);
 
   add = helper_create_conditional_machine();
   add->machine_num = 3;
-  smartlist_add(relay_padding_machines, add);
+  register_padding_machine(add, relay_padding_machines);
 }
 
 void
@@ -2069,48 +2099,48 @@ helper_circpad_circ_distribution_machine_setup(int min, int max)
   zero_st->iat_dist.type = CIRCPAD_DIST_UNIFORM;
   zero_st->iat_dist.param1 = min;
   zero_st->iat_dist.param2 = max;
-  zero_st->start_usec = min;
-  zero_st->range_usec = max;
+  zero_st->dist_added_shift_usec = min;
+  zero_st->dist_max_sample_usec = max;
 
   circpad_state_t *first_st = &circ_client_machine.states[1];
   first_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 2;
   first_st->iat_dist.type = CIRCPAD_DIST_LOGISTIC;
   first_st->iat_dist.param1 = min;
   first_st->iat_dist.param2 = max;
-  first_st->start_usec = min;
-  first_st->range_usec = max;
+  first_st->dist_added_shift_usec = min;
+  first_st->dist_max_sample_usec = max;
 
   circpad_state_t *second_st = &circ_client_machine.states[2];
   second_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 3;
   second_st->iat_dist.type = CIRCPAD_DIST_LOG_LOGISTIC;
   second_st->iat_dist.param1 = min;
   second_st->iat_dist.param2 = max;
-  second_st->start_usec = min;
-  second_st->range_usec = max;
+  second_st->dist_added_shift_usec = min;
+  second_st->dist_max_sample_usec = max;
 
   circpad_state_t *third_st = &circ_client_machine.states[3];
   third_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 4;
   third_st->iat_dist.type = CIRCPAD_DIST_GEOMETRIC;
   third_st->iat_dist.param1 = min;
   third_st->iat_dist.param2 = max;
-  third_st->start_usec = min;
-  third_st->range_usec = max;
+  third_st->dist_added_shift_usec = min;
+  third_st->dist_max_sample_usec = max;
 
   circpad_state_t *fourth_st = &circ_client_machine.states[4];
   fourth_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 5;
   fourth_st->iat_dist.type = CIRCPAD_DIST_WEIBULL;
   fourth_st->iat_dist.param1 = min;
   fourth_st->iat_dist.param2 = max;
-  fourth_st->start_usec = min;
-  fourth_st->range_usec = max;
+  fourth_st->dist_added_shift_usec = min;
+  fourth_st->dist_max_sample_usec = max;
 
   circpad_state_t *fifth_st = &circ_client_machine.states[5];
   fifth_st->next_state[CIRCPAD_EVENT_NONPADDING_RECV] = 6;
   fifth_st->iat_dist.type = CIRCPAD_DIST_PARETO;
   fifth_st->iat_dist.param1 = min;
   fifth_st->iat_dist.param2 = max;
-  fifth_st->start_usec = min;
-  fifth_st->range_usec = max;
+  fifth_st->dist_added_shift_usec = min;
+  fifth_st->dist_max_sample_usec = max;
 }
 
 /** Simple test that the padding delays sampled from a uniform distribution

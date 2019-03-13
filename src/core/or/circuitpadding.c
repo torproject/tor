@@ -224,25 +224,20 @@ circpad_machine_current_state(const circpad_machine_state_t *mi)
 }
 
 /**
- * Calculate the lower bound of a histogram bin. The upper bound
- * is obtained by calling this function with bin+1, and subtracting 1.
+ * Get the lower bound of a histogram bin.
  *
- * The 0th bin has a special value -- it only represents start_usec.
- * This is so we can specify a probability on 0-delay values.
+ * You can obtain the upper bound using histogram_get_bin_upper_bound().
  *
- * After bin 0, bins are exponentially spaced, so that each subsequent
- * bin is twice as large as the previous. This is done so that higher
- * time resolution is given to lower time values.
- *
- * The infinity bin is a the last bin in the array (histogram_len-1).
- * It has a usec value of CIRCPAD_DELAY_INFINITE (UINT32_MAX).
+ * This function can also be called with 'bin' set to a value equal or greater
+ * than histogram_len in which case the infinity bin is chosen and
+ * CIRCPAD_DELAY_INFINITE is returned.
  */
 STATIC circpad_delay_t
 circpad_histogram_bin_to_usec(const circpad_machine_state_t *mi,
                               circpad_hist_index_t bin)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
-  circpad_delay_t start_usec;
+  circpad_delay_t rtt_add_usec = 0;
 
   /* Our state should have been checked to be non-null by the caller
    * (circpad_machine_remove_token()) */
@@ -250,27 +245,29 @@ circpad_histogram_bin_to_usec(const circpad_machine_state_t *mi,
     return CIRCPAD_DELAY_INFINITE;
   }
 
-  if (state->use_rtt_estimate)
-    start_usec = mi->rtt_estimate_usec+state->start_usec;
-  else
-    start_usec = state->start_usec;
-
-  if (bin >= CIRCPAD_INFINITY_BIN(state))
+  /* The infinity bin has an upper bound of infinity, so make sure we return
+   * that if they ask for it. */
+  if (bin > CIRCPAD_INFINITY_BIN(mi)) {
     return CIRCPAD_DELAY_INFINITE;
+  }
 
-  if (bin == 0)
-    return start_usec;
+  /* If we are using an RTT estimate, consider it as well. */
+  if (state->use_rtt_estimate) {
+    rtt_add_usec = mi->rtt_estimate_usec;
+  }
 
-  if (bin == 1)
-    return start_usec+1;
+  return state->histogram_edges[bin] + rtt_add_usec;
+}
 
-  /* The bin widths double every index, so that we can have more resolution
-   * for lower time values in the histogram. */
-  const circpad_time_t bin_width_exponent =
-        1 << (CIRCPAD_INFINITY_BIN(state) - bin);
-  return (circpad_delay_t)MIN(start_usec +
-                              state->range_usec/bin_width_exponent,
-                              CIRCPAD_DELAY_INFINITE);
+/**
+ * Like circpad_histogram_bin_to_usec() but return the upper bound of bin.
+ * (The upper bound is included in the bin.)
+ */
+STATIC circpad_delay_t
+histogram_get_bin_upper_bound(const circpad_machine_state_t *mi,
+                              circpad_hist_index_t bin)
+{
+  return circpad_histogram_bin_to_usec(mi, bin+1) - 1;
 }
 
 /** Return the midpoint of the histogram bin <b>bin_index</b>. */
@@ -279,8 +276,7 @@ circpad_get_histogram_bin_midpoint(const circpad_machine_state_t *mi,
                            int bin_index)
 {
   circpad_delay_t left_bound = circpad_histogram_bin_to_usec(mi, bin_index);
-  circpad_delay_t right_bound =
-    circpad_histogram_bin_to_usec(mi, bin_index+1)-1;
+  circpad_delay_t right_bound = histogram_get_bin_upper_bound(mi, bin_index);
 
   return left_bound + (right_bound - left_bound)/2;
 }
@@ -289,19 +285,17 @@ circpad_get_histogram_bin_midpoint(const circpad_machine_state_t *mi,
  * Return the bin that contains the usec argument.
  * "Contains" is defined as us in [lower, upper).
  *
- * This function will never return the infinity bin (histogram_len-1),
- * in order to simplify the rest of the code.
- *
- * This means that technically the last bin (histogram_len-2)
- * has range [start_usec+range_usec, CIRCPAD_DELAY_INFINITE].
+ * This function will never return the infinity bin (histogram_len-1), in order
+ * to simplify the rest of the code, so if a usec is provided that falls above
+ * the highest non-infinity bin, that bin index will be returned.
  */
 STATIC circpad_hist_index_t
 circpad_histogram_usec_to_bin(const circpad_machine_state_t *mi,
                               circpad_delay_t usec)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
-  circpad_delay_t start_usec;
-  int32_t bin; /* Larger than return type to properly clamp overflow */
+  circpad_delay_t rtt_add_usec = 0;
+  circpad_hist_index_t bin;
 
   /* Our state should have been checked to be non-null by the caller
    * (circpad_machine_remove_token()) */
@@ -309,34 +303,25 @@ circpad_histogram_usec_to_bin(const circpad_machine_state_t *mi,
     return 0;
   }
 
-  if (state->use_rtt_estimate)
-    start_usec = mi->rtt_estimate_usec+state->start_usec;
-  else
-    start_usec = state->start_usec;
+  /* If we are using an RTT estimate, consider it as well. */
+  if (state->use_rtt_estimate) {
+    rtt_add_usec = mi->rtt_estimate_usec;
+  }
 
-  /* The first bin (#0) has zero width and starts (and ends) at start_usec. */
-  if (usec <= start_usec)
-    return 0;
+  /* Walk through the bins and check the upper bound of each bin, if 'usec' is
+   * less-or-equal to that, return that bin. If rtt_estimate is enabled then
+   * add that to the upper bound of each bin.
+   *
+   * We don't want to return the infinity bin here, so don't go there. */
+  for (bin = 0 ; bin < CIRCPAD_INFINITY_BIN(state) ; bin++) {
+    if (usec <= histogram_get_bin_upper_bound(mi, bin) + rtt_add_usec) {
+      return bin;
+    }
+  }
 
-  if (usec == start_usec+1)
-    return 1;
-
-  const circpad_time_t histogram_range_usec = state->range_usec;
-  /* We need to find the bin corresponding to our position in the range.
-   * Since bins are exponentially spaced in powers of two, we need to
-   * take the log2 of our position in histogram_range_usec. However,
-   * since tor_log2() returns the floor(log2(u64)), we have to adjust
-   * it to behave like ceil(log2(u64)). This is verified in our tests
-   * to properly invert the operation done in
-   * circpad_histogram_bin_to_usec(). */
-  bin = CIRCPAD_INFINITY_BIN(state) -
-    tor_log2(2*histogram_range_usec/(usec-start_usec+1));
-
-  /* Clamp the return value to account for timevals before the start
-   * of bin 0, or after the last bin. Don't return the infinity bin
-   * index. */
-  bin = MIN(MAX(bin, 1), CIRCPAD_INFINITY_BIN(state)-1);
-  return bin;
+  /* We don't want to return the infinity bin here, so if we still didn't find
+   * the right bin, return the highest non-infinity bin */
+  return CIRCPAD_INFINITY_BIN(state)-1;
 }
 
 /**
@@ -398,20 +383,22 @@ circpad_choose_state_length(circpad_machine_state_t *mi)
 /**
  * Sample a value from our iat_dist, and clamp it safely
  * to circpad_delay_t.
+ *
+ * Before returning, add <b>delay_shift</b> (can be zero) to the sampled value.
  */
 static circpad_delay_t
 circpad_distribution_sample_iat_delay(const circpad_state_t *state,
-                                      circpad_delay_t start_usec)
+                                      circpad_delay_t delay_shift)
 {
   double val = circpad_distribution_sample(state->iat_dist);
   /* These comparisons are safe, because the output is in the range
    * [0, 2**32), and double has a precision of 53 bits. */
   val = MAX(0, val);
-  val = MIN(val, state->range_usec);
+  val = MIN(val, state->dist_max_sample_usec);
 
-  /* This addition is exact: val is at most 2**32-1, start_usec
+  /* This addition is exact: val is at most 2**32-1, min_delay
    * is at most 2**32-1, and doubles have a precision of 53 bits. */
-  val += start_usec;
+  val += delay_shift;
 
   /* Clamp the distribution at infinite delay val */
   return (circpad_delay_t)MIN(tor_llround(val), CIRCPAD_DELAY_INFINITE);
@@ -431,7 +418,6 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
   const circpad_hist_token_t *histogram = NULL;
   circpad_hist_index_t curr_bin = 0;
   circpad_delay_t bin_start, bin_end;
-  circpad_delay_t start_usec;
   /* These three must all be larger than circpad_hist_token_t, because
    * we sum several circpad_hist_token_t values across the histogram */
   uint64_t curr_weight = 0;
@@ -440,14 +426,12 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
 
   tor_assert(state);
 
-  if (state->use_rtt_estimate)
-    start_usec = mi->rtt_estimate_usec+state->start_usec;
-  else
-    start_usec = state->start_usec;
-
   if (state->iat_dist.type != CIRCPAD_DIST_NONE) {
     /* Sample from a fixed IAT distribution and return */
-    return circpad_distribution_sample_iat_delay(state, start_usec);
+    circpad_delay_t iat_delay_shift = state->use_rtt_estimate ?
+      mi->rtt_estimate_usec + state->dist_added_shift_usec :
+      state->dist_added_shift_usec;
+    return circpad_distribution_sample_iat_delay(state, iat_delay_shift);
   } else if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE) {
     /* We have a mutable histogram. Do basic sanity check and apply: */
     if (BUG(!mi->histogram) ||
@@ -512,16 +496,13 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
    * function below samples from [bin_start, bin_end) */
   bin_end = circpad_histogram_bin_to_usec(mi, curr_bin+1);
 
-  /* Truncate the high bin in case it's the infinity bin:
-   * Don't actually schedule an "infinite"-1 delay */
-  bin_end = MIN(bin_end, start_usec+state->range_usec);
-
-  // Sample uniformly between histogram[i] to histogram[i+1]-1,
-  // but no need to sample if they are the same timeval (aka bin 0 or bin 1).
-  if (bin_end <= bin_start+1)
+  /* Bin edges are monotonically increasing so this is a bug. Handle it. */
+  if (BUG(bin_start > bin_end)) {
     return bin_start;
-  else
-    return (circpad_delay_t)crypto_rand_uint64_range(bin_start, bin_end);
+  }
+
+  /* Sample randomly from within the bin width */
+  return (circpad_delay_t)crypto_rand_uint64_range(bin_start, bin_end);
 }
 
 /**
@@ -627,7 +608,7 @@ circpad_machine_first_higher_index(const circpad_machine_state_t *mi,
   /* Don't remove from the infinity bin */
   for (; bin < CIRCPAD_INFINITY_BIN(mi); bin++) {
     if (mi->histogram[bin] &&
-        circpad_histogram_bin_to_usec(mi, bin+1) > target_bin_usec) {
+        histogram_get_bin_upper_bound(mi, bin) >= target_bin_usec) {
       return bin;
     }
   }
@@ -2083,16 +2064,92 @@ circpad_setup_machine_on_circ(circuit_t *on_circ,
   on_circ->padding_machine[machine->machine_index] = machine;
 }
 
-/* These padding machines are only used for tests pending #28634. */
 #ifdef TOR_UNIT_TESTS
+/** Validate a single state of a padding machine */
+static bool
+padding_machine_state_is_valid(const circpad_state_t *state)
+{
+  int b;
+  uint32_t tokens_count = 0;
+  circpad_delay_t prev_bin_edge = 0;
+
+  /* We only validate histograms */
+  if (!state->histogram_len) {
+    return true;
+  }
+
+  /* We need at least two bins in a histogram */
+  if (state->histogram_len < 2) {
+    log_warn(LD_GENERAL, "You can't have a histogram with less than 2 bins");
+    return false;
+  }
+
+  /* For each machine state, if it's a histogram, make sure all the
+   * histogram edges are well defined (i.e. are strictly monotonic). */
+  for (b = 0 ; b < state->histogram_len ; b++) {
+    /* Check that histogram edges are strictly increasing. Ignore the first
+     * edge since it can be zero. */
+    if (prev_bin_edge >= state->histogram_edges[b] && b > 0) {
+      log_warn(LD_GENERAL, "Histogram edges are not increasing [%u/%u]",
+               prev_bin_edge, state->histogram_edges[b]);
+      return false;
+    }
+
+    prev_bin_edge = state->histogram_edges[b];
+
+    /* Also count the number of tokens as we go through the histogram states */
+    tokens_count += state->histogram[b];
+  }
+  /* Verify that the total number of tokens is correct */
+  if (tokens_count != state->histogram_total_tokens) {
+    log_warn(LD_GENERAL, "Histogram token count is wrong [%u/%u]",
+             tokens_count, state->histogram_total_tokens);
+    return false;
+  }
+
+  return true;
+}
+
+/** Basic validation of padding machine */
+static bool
+padding_machine_is_valid(const circpad_machine_spec_t *machine)
+{
+  int i;
+
+  /* Validate the histograms of the padding machine */
+  for (i = 0 ; i < machine->num_states ; i++) {
+    if (!padding_machine_state_is_valid(&machine->states[i])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/* Validate and register <b>machine</b> into <b>machine_list</b>. If
+ * <b>machine_list</b> is NULL, then just validate. */
+STATIC void
+register_padding_machine(circpad_machine_spec_t *machine,
+                         smartlist_t *machine_list)
+{
+  if (!padding_machine_is_valid(machine)) {
+    log_warn(LD_GENERAL, "Machine #%u is invalid. Ignoring.",
+             machine->machine_num);
+    return;
+  }
+
+  if (machine_list) {
+    smartlist_add(machine_list, machine);
+  }
+}
+
+/* These padding machines are only used for tests pending #28634. */
 static void
 circpad_circ_client_machine_init(void)
 {
   circpad_machine_spec_t *circ_client_machine
       = tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
-  // XXX: Better conditions for merge.. Or disable this machine in
-  // merge?
   circ_client_machine->conditions.min_hops = 2;
   circ_client_machine->conditions.state_mask =
       CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED|CIRCPAD_CIRC_HAS_RELAY_EARLY;
@@ -2124,19 +2181,20 @@ circpad_circ_client_machine_init(void)
   circ_client_machine->states[CIRCPAD_STATE_BURST].token_removal =
       CIRCPAD_TOKEN_REMOVAL_CLOSEST;
 
-  // FIXME: Tune this histogram
   circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_len = 2;
-  circ_client_machine->states[CIRCPAD_STATE_BURST].start_usec = 500;
-  circ_client_machine->states[CIRCPAD_STATE_BURST].range_usec = 1000000;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_edges[0]= 500;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_edges[1]= 1000000;
+
   /* We have 5 tokens in the histogram, which means that all circuits will look
    * like they have 7 hops (since we start this machine after the second hop,
    * and tokens are decremented for any valid hops, and fake extends are
    * used after that -- 2+5==7). */
   circ_client_machine->states[CIRCPAD_STATE_BURST].histogram[0] = 5;
+
   circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_total_tokens = 5;
 
   circ_client_machine->machine_num = smartlist_len(origin_padding_machines);
-  smartlist_add(origin_padding_machines, circ_client_machine);
+  register_padding_machine(circ_client_machine, origin_padding_machines);
 }
 
 static void
@@ -2183,8 +2241,9 @@ circpad_circ_responder_machine_init(void)
   circ_responder_machine->states[CIRCPAD_STATE_BURST].use_rtt_estimate = 1;
   /* The histogram is 2 bins: an empty one, and infinity */
   circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram_len = 2;
-  circ_responder_machine->states[CIRCPAD_STATE_BURST].start_usec = 5000;
-  circ_responder_machine->states[CIRCPAD_STATE_BURST].range_usec = 1000000;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram_edges[0]= 500;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram_edges[1] =
+    1000000;
   /* During burst state we wait forever for padding to arrive.
 
      We are waiting for a padding cell from the client to come in, so that we
@@ -2215,8 +2274,14 @@ circpad_circ_responder_machine_init(void)
      before you send a padding response */
   circ_responder_machine->states[CIRCPAD_STATE_GAP].use_rtt_estimate = 1;
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_len = 6;
-  circ_responder_machine->states[CIRCPAD_STATE_GAP].start_usec = 5000;
-  circ_responder_machine->states[CIRCPAD_STATE_GAP].range_usec = 1000000;
+  /* Specify histogram bins */
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[0]= 500;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[1]= 1000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[2]= 2000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[3]= 4000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[4]= 8000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[5]= 16000;
+  /* Specify histogram tokens */
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[0] = 0;
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[1] = 1;
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[2] = 2;
@@ -2224,11 +2289,12 @@ circpad_circ_responder_machine_init(void)
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[4] = 1;
   /* Total number of tokens */
   circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_total_tokens = 6;
+
   circ_responder_machine->states[CIRCPAD_STATE_GAP].token_removal =
       CIRCPAD_TOKEN_REMOVAL_CLOSEST_USEC;
 
   circ_responder_machine->machine_num = smartlist_len(relay_padding_machines);
-  smartlist_add(relay_padding_machines, circ_responder_machine);
+  register_padding_machine(circ_responder_machine, relay_padding_machines);
 }
 #endif
 

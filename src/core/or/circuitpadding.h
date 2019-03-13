@@ -228,13 +228,18 @@ typedef uint16_t circpad_statenum_t;
 #define  CIRCPAD_STATENUM_MAX   (UINT16_MAX)
 
 /** A histogram is used to sample padding delays given a machine state.  This
- *  constant defines the maximum histogram width (i.e. the max number of bins)
+ *  constant defines the maximum histogram width (i.e. the max number of bins).
  *
- *  Each histogram bin is twice as large as the previous. Two exceptions: The
- *  first bin has zero width (which means that minimum delay is applied to the
- *  next padding cell), and the last bin (infinity bin) has infinite width
- *  (which means that the next padding cell will be delayed infinitely). */
-#define CIRCPAD_MAX_HISTOGRAM_LEN (sizeof(circpad_delay_t)*8 + 1)
+ * The current limit is arbitrary and could be raised if there is a need,
+ * however too many bins will be hard to serialize in the future.
+ *
+ * Memory concerns are not so great here since the corresponding histogram and
+ * histogram_edges arrays are global and not per-circuit.
+ *
+ * If we ever upgrade this to a value that can't be represented by 8-bits we
+ * also need to upgrade circpad_hist_index_t.
+ */
+#define CIRCPAD_MAX_HISTOGRAM_LEN (100)
 
 /**
  * A state of a padding state machine. The information here are immutable and
@@ -248,37 +253,59 @@ typedef uint16_t circpad_statenum_t;
  * or the consensus.
  */
 typedef struct circpad_state_t {
-  /** If a histogram is used for this state, this specifies the number of bins
-   *  of this histogram. Histograms must have at least 2 bins.
+  /**
+   * If a histogram is used for this state, this specifies the number of bins
+   * of this histogram. Histograms must have at least 2 bins.
    *
-   *  If a delay probability distribution is used for this state, this is set
-   *  to 0. */
+   * In particular, the following histogram:
+   *
+   * Tokens
+   *         +
+   *      10 |    +----+
+   *       9 |    |    |           +---------+
+   *       8 |    |    |           |         |
+   *       7 |    |    |     +-----+         |
+   *       6 +----+ Bin+-----+     |         +---------------+
+   *       5 |    | #1 |     |     |         |               |
+   *         | Bin|    | Bin | Bin |  Bin #4 |    Bin #5     |
+   *         | #0 |    | #2  | #3  |         | (infinity bin)|
+   *         |    |    |     |     |         |               |
+   *         |    |    |     |     |         |               |
+   *       0 +----+----+-----+-----+---------+---------------+
+   *         0   100  200   350   500      1000              ∞  microseconds
+   *
+   * would be specified the following way:
+   *    histogram_len = 6;
+   *    histogram[] =        {   6,  10,   6,  7,    9,     6 }
+   *    histogram_edges[] =  { 0, 100, 200, 350, 500, 1000 }
+   *
+   * The final bin is called the "infinity bin" and if it's chosen we don't
+   * schedule any padding. The infinity bin is strange because its lower edge
+   * is the max value of possible non-infinite delay allowed by this histogram,
+   * and its upper edge is CIRCPAD_DELAY_INFINITE. You can tell if the infinity
+   * bin is chosen by inspecting its bin index or inspecting its upper edge.
+   *
+   * If a delay probability distribution is used for this state, this is set
+   * to 0. */
   circpad_hist_index_t histogram_len;
   /** The histogram itself: an array of uint16s of tokens, whose
-   *  widths are exponentially spaced, in microseconds */
+   *  widths are exponentially spaced, in microseconds.
+   *
+   *  This array must have histogram_len elements that are strictly
+   *  monotonically increasing. */
   circpad_hist_token_t histogram[CIRCPAD_MAX_HISTOGRAM_LEN];
+  /* The histogram bin edges in usec.
+   *
+   * Each element of this array specifies the left edge of the corresponding
+   * bin. The rightmost edge is always infinity and is not specified in this
+   * array.
+   *
+   * This array must have histogram_len elements. */
+  circpad_delay_t histogram_edges[CIRCPAD_MAX_HISTOGRAM_LEN+1];
   /** Total number of tokens in this histogram. This is a constant and is *not*
    *  decremented every time we spend a token. It's used for initializing and
    *  refilling the histogram. */
   uint32_t histogram_total_tokens;
-
-  /** Minimum padding delay of this state in microseconds.
-   *
-   *  If histograms are used, this is the left (and right) bound of the first
-   *  bin (since it has zero width).
-   *
-   *  If a delay probability distribution is used, this represents the minimum
-   *  delay we can sample from the distribution.
-   */
-  circpad_delay_t start_usec;
-
-  /** If histograms are used, this is the width of the whole histogram in
-   *  microseconds, and it's used to calculate individual bin width.
-   *
-   *  If a delay probability distribution is used, this is used as the max
-   *  delay we can sample from the distribution.
-   */
-  circpad_delay_t range_usec;
 
   /**
    * Represents a delay probability distribution (aka IAT distribution). It's a
@@ -292,6 +319,16 @@ typedef struct circpad_state_t {
    * results of sampling from this distribution (range_sec is used as a max).
    */
   circpad_distribution_t iat_dist;
+  /*  If a delay probability distribution is used, this is used as the max
+   *  value we can sample from the distribution. However, RTT measurements and
+   *  dist_added_shift gets applied on top of this value to derive the final
+   *  padding delay. */
+  circpad_delay_t dist_max_sample_usec;
+  /*  If a delay probability distribution is used and this is set, we will add
+   *  this value on top of the value sampled from the IAT distribution to
+   *  derive the final padding delay (We also add the RTT measurement if it's
+   *  enabled.). */
+  circpad_delay_t dist_added_shift_usec;
 
   /**
    * The length dist is a parameterized way of encoding how long this
@@ -686,9 +723,17 @@ circpad_send_command_to_hop,(struct origin_circuit_t *circ, uint8_t hopnum,
                              uint8_t relay_command, const uint8_t *payload,
                              ssize_t payload_len));
 
+STATIC circpad_delay_t
+histogram_get_bin_upper_bound(const circpad_machine_state_t *mi,
+                              circpad_hist_index_t bin);
+
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *origin_padding_machines;
 extern smartlist_t *relay_padding_machines;
+
+STATIC void
+register_padding_machine(circpad_machine_spec_t *machine,
+                         smartlist_t *machine_list);
 #endif
 
 #endif
