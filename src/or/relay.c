@@ -1729,6 +1729,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
       if (circ->n_chan) {
         uint8_t trunc_reason = get_uint8(cell->payload + RELAY_HEADER_SIZE);
+        circuit_synchronize_written_or_bandwidth(circ, CIRCUIT_N_CHAN);
         circuit_clear_cell_queue(circ, circ->n_chan);
         channel_send_destroy(circ->n_circ_id, circ->n_chan,
                              trunc_reason);
