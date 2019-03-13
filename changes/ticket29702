@@ -1,0 +1,4 @@
+  o Testing:
+    - Specify torrc path (with empty file) when launching tor from
+      test_rebind.py; refrain from relying on default torrc path. Resolves
+      issue 29702.
