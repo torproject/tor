@@ -2,6 +2,7 @@
 /* See LICENSE for licensing information */
 
 #define DISPATCH_PRIVATE
+#define PUBSUB_PRIVATE
 
 #include "test/test.h"
 
@@ -119,13 +120,16 @@ test_pubsub_build_types_ok(void *arg)
   pubsub_builder_t *b = NULL;
   dispatch_t *dispatcher = NULL;
   pubsub_connector_t *c = NULL;
+  pubsub_items_t *items = NULL;
 
   b = pubsub_builder_new();
   seed_pubsub_builder_basic(b);
 
-  dispatcher = pubsub_builder_finalize(b, NULL);
+  dispatcher = pubsub_builder_finalize(b, &items);
   b = NULL;
   tt_assert(dispatcher);
+  tt_assert(items);
+  tt_int_op(smartlist_len(items->items), OP_EQ, 4);
 
   tt_int_op(dispatcher->n_types, OP_GE, 2);
   tt_assert(dispatcher->typefns);
@@ -138,6 +142,7 @@ test_pubsub_build_types_ok(void *arg)
   pubsub_connector_free(c);
   pubsub_builder_free(b);
   dispatch_free(dispatcher);
+  pubsub_items_free(items);
 }
 
 /* We fail if the same type is defined in two places with different functions.
