@@ -459,7 +459,7 @@ random_uniform_01(void)
    * system is broken.
    */
   z = 0;
-  while ((x = crypto_rand_u32()) == 0) {
+  while ((x = crypto_fast_rng_get_u32(get_thread_fast_rng())) == 0) {
     if (z >= 1088)
       /* Your bit sampler is broken.  Go home.  */
       return 0;
@@ -473,8 +473,8 @@ random_uniform_01(void)
    * occur only with measure zero in the uniform distribution on
    * [0, 1].
    */
-  hi = crypto_rand_u32() | UINT32_C(0x80000000);
-  lo = crypto_rand_u32() | UINT32_C(0x00000001);
+  hi = crypto_fast_rng_get_u32(get_thread_fast_rng()) | UINT32_C(0x80000000);
+  lo = crypto_fast_rng_get_u32(get_thread_fast_rng()) | UINT32_C(0x00000001);
 
   /* Round to nearest scaled significand in [2^63, 2^64].  */
   s = hi*(double)4294967296 + lo;
@@ -1437,7 +1437,7 @@ static double
 logistic_sample(const struct dist *dist)
 {
   const struct logistic *L = dist_to_const_logistic(dist);
-  uint32_t s = crypto_rand_u32();
+  uint32_t s = crypto_fast_rng_get_u32(get_thread_fast_rng());
   double t = random_uniform_01();
   double p0 = random_uniform_01();
 
@@ -1487,7 +1487,7 @@ static double
 log_logistic_sample(const struct dist *dist)
 {
   const struct log_logistic *LL = dist_to_const_log_logistic(dist);
-  uint32_t s = crypto_rand_u32();
+  uint32_t s = crypto_fast_rng_get_u32(get_thread_fast_rng());
   double p0 = random_uniform_01();
 
   return sample_log_logistic_scaleshape(s, p0, LL->alpha, LL->beta);
@@ -1536,7 +1536,7 @@ static double
 weibull_sample(const struct dist *dist)
 {
   const struct weibull *W = dist_to_const_weibull(dist);
-  uint32_t s = crypto_rand_u32();
+  uint32_t s = crypto_fast_rng_get_u32(get_thread_fast_rng());
   double p0 = random_uniform_01();
 
   return sample_weibull(s, p0, W->lambda, W->k);
@@ -1585,7 +1585,7 @@ static double
 genpareto_sample(const struct dist *dist)
 {
   const struct genpareto *GP = dist_to_const_genpareto(dist);
-  uint32_t s = crypto_rand_u32();
+  uint32_t s = crypto_fast_rng_get_u32(get_thread_fast_rng());
   double p0 = random_uniform_01();
 
   return sample_genpareto_locscale(s, p0, GP->mu, GP->sigma, GP->xi);
@@ -1634,7 +1634,7 @@ static double
 geometric_sample(const struct dist *dist)
 {
   const struct geometric *G = dist_to_const_geometric(dist);
-  uint32_t s = crypto_rand_u32();
+  uint32_t s = crypto_fast_rng_get_u32(get_thread_fast_rng());
   double p0 = random_uniform_01();
 
   return sample_geometric(s, p0, G->p);
