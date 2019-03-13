@@ -66,6 +66,9 @@ void crypto_fast_rng_free_(crypto_fast_rng_t *);
 
 unsigned crypto_fast_rng_get_uint(crypto_fast_rng_t *rng, unsigned limit);
 uint64_t crypto_fast_rng_get_uint64(crypto_fast_rng_t *rng, uint64_t limit);
+uint32_t crypto_fast_rng_get_u32(crypto_fast_rng_t *rng);
+uint64_t crypto_fast_rng_uint64_range(crypto_fast_rng_t *rng,
+                                      uint64_t min, uint64_t max);
 double crypto_fast_rng_get_double(crypto_fast_rng_t *rng);
 
 /**

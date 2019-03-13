@@ -155,6 +155,28 @@ crypto_fast_rng_get_uint64(crypto_fast_rng_t *rng, uint64_t limit)
 }
 
 /**
+ * As crypto_rand_u32, but extract the result from a crypto_fast_rng_t.
+ */
+uint32_t
+crypto_fast_rng_get_u32(crypto_fast_rng_t *rng)
+{
+  IMPLEMENT_RAND_UNSIGNED(uint32_t, UINT32_MAX, UINT32_MAX,
+                  crypto_fast_rng_getbytes(rng, (void*)&val, sizeof(val)));
+}
+
+/**
+ * As crypto_rand_uint64_range(), but extract the result from a
+ * crypto_fast_rng_t.
+ */
+uint64_t
+crypto_fast_rng_uint64_range(crypto_fast_rng_t *rng,
+                             uint64_t min, uint64_t max)
+{
+  tor_assert(min < max);
+  return min + crypto_fast_rng_get_uint64(rng, max - min);
+}
+
+/**
  * As crypto_rand_, but extract the result from a crypto_fast_rng_t.
  */
 double
@@ -164,3 +186,4 @@ crypto_fast_rng_get_double(crypto_fast_rng_t *rng)
   crypto_fast_rng_getbytes(rng, (void*)&u, sizeof(u));
   return ((double)u) / UINT_MAX_AS_DOUBLE;
 }
+

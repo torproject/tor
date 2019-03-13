@@ -449,7 +449,8 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
     histogram_total_tokens = state->histogram_total_tokens;
   }
 
-  bin_choice = crypto_rand_uint64(histogram_total_tokens);
+  bin_choice = crypto_fast_rng_get_uint64(get_thread_fast_rng(),
+                                          histogram_total_tokens);
 
   /* Skip all the initial zero bins */
   while (!histogram[curr_bin]) {
@@ -502,8 +503,8 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
     return bin_start;
   }
 
-  /* Sample randomly from within the bin width */
-  return (circpad_delay_t)crypto_rand_uint64_range(bin_start, bin_end);
+  return (circpad_delay_t)crypto_fast_rng_uint64_range(get_thread_fast_rng(),
+                                                       bin_start, bin_end);
 }
 
 /**
