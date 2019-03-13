@@ -1,0 +1,13 @@
+  o Minor bugfixes (Windows):
+    - Correctly identify Windows 8.1, Windows 10, and Windows Server 2008
+      and later from their NT versions.
+      Fixes bug 28096; bugfix on 0.2.2.34; reported by Keifer Bly.
+    - On recent Windows versions, the GetVersionEx() function may report
+      an earlier Windows version than the running OS. To avoid user
+      confusion, add "[or later]" to Tor's version string on affected
+      versions of Windows.
+      Fixes bug 28096; bugfix on 0.2.2.34; reported by Keifer Bly.
+    - Remove Windows versions that were never supported by the
+      GetVersionEx() function. Stop duplicating the latest Windows
+      version in get_uname().
+      Fixes bug 28096; bugfix on 0.2.2.34; reported by Keifer Bly.
