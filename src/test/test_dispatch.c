@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <string.h>
 
+static dispatch_t *dispatcher_in_use=NULL;
+
 /* Construct an empty dispatch_t. */
 static void
 test_dispatch_empty(void *arg)
@@ -44,9 +46,14 @@ simple_recv1(const msg_t *m)
   total_recv1_simple += m->aux_data__.u64;
 }
 
+static char *recv2_received = NULL;
+
 static void
 simple_recv2(const msg_t *m)
 {
+  tor_free(recv2_received);
+  recv2_received = dispatch_fmt_msg_data(dispatcher_in_use, m);
+
   total_recv2_simple += m->aux_data__.u64*10;
 }
 
@@ -73,6 +80,7 @@ test_dispatch_simple(void *arg)
 
   d = dispatch_new(cfg);
   tt_assert(d);
+  dispatcher_in_use = d;
 
   msg_aux_data_t data = {.u64 = 7};
   r = dispatch_send(d, 99, 0, 0, 0, data);
@@ -91,9 +99,12 @@ test_dispatch_simple(void *arg)
   tt_int_op(total_recv1_simple, OP_EQ, 0);
   tt_int_op(total_recv2_simple, OP_EQ, 140);
 
+  tt_str_op(recv2_received, OP_EQ, "<>"); // no format function was set.
+
  done:
   dispatch_free(d);
   dcfg_free(cfg);
+  tor_free(recv2_received);
 }
 
 struct coord { int x; int y; };
@@ -121,7 +132,6 @@ alert_run_immediate(dispatch_t *d, channel_id_t ch, void *arg)
   dispatch_flush(d, ch, INT_MAX);
 }
 
-static dispatch_t *dispatcher_in_use=NULL;
 static char *received_data=NULL;
 
 static void
