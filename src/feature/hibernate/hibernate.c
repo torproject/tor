@@ -309,6 +309,13 @@ accounting_is_enabled,(const or_options_t *options))
   return 0;
 }
 
+/** Return true if Tor is in dormant mode right now */
+bool
+accounting_tor_is_dormant(void)
+{
+  return hibernate_state == HIBERNATE_STATE_DORMANT;
+}
+
 /** If accounting is enabled, return how long (in seconds) this
  * interval lasts. */
 int

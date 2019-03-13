@@ -51,6 +51,7 @@
 #include "core/or/relay.h"
 #include "feature/stats/rephist.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/hibernate/hibernate.h"
 
 #include "core/or/channel.h"
 
@@ -965,11 +966,17 @@ circpad_send_padding_cell_for_callback(circpad_machine_state_t *mi)
   mi->padding_scheduled_at_usec = 0;
   circpad_statenum_t state = mi->current_state;
 
-  // Make sure circuit didn't close on us
+  /* Make sure circuit didn't close on us */
   if (mi->on_circ->marked_for_close) {
     log_fn(LOG_INFO,LD_CIRC,
            "Padding callback on a circuit marked for close. Ignoring.");
     return CIRCPAD_STATE_CHANGED;
+  }
+
+  /* Don't send padding if we are currently in dormant mode. */
+  if (accounting_tor_is_dormant()) {
+    log_info(LD_CIRC, "Not padding because we are dormant.");
+    return CIRCPAD_STATE_UNCHANGED;
   }
 
   /* If it's a histogram, reduce the token count */
