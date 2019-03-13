@@ -2703,22 +2703,33 @@ get_uname,(void))
 #ifdef _WIN32
         OSVERSIONINFOEX info;
         int i;
+        int is_client = 0;
+        int is_server = 0;
         const char *plat = NULL;
         static struct {
-          unsigned major; unsigned minor; const char *version;
+          unsigned major; unsigned minor;
+          const char *client_version; const char *server_version;
         } win_version_table[] = {
-          { 6, 2, "Windows 8" },
-          { 6, 1, "Windows 7" },
-          { 6, 0, "Windows Vista" },
-          { 5, 2, "Windows Server 2003" },
-          { 5, 1, "Windows XP" },
-          { 5, 0, "Windows 2000" },
-          /* { 4, 0, "Windows NT 4.0" }, */
-          { 4, 90, "Windows Me" },
-          { 4, 10, "Windows 98" },
-          /* { 4, 0, "Windows 95" } */
-          { 3, 51, "Windows NT 3.51" },
-          { 0, 0, NULL }
+    /* This table must be sorted in descending order.
+     * Sources:
+     *   https://en.wikipedia.org/wiki/List_of_Microsoft_Windows_versions
+     *   https://docs.microsoft.com/en-us/windows/desktop/api/winnt/
+     *     ns-winnt-_osversioninfoexa#remarks
+     */
+    /* Windows Server 2019 is indistinguishable from Windows Server 2016
+     * using GetVersionEx().
+    { 10,  0, NULL,                        "Windows Server 2019" }, */
+    { 10,  0, "Windows 10",                "Windows Server 2016" },
+    {  6,  3, "Windows 8.1",               "Windows Server 2012 R2" },
+    {  6,  2, "Windows 8",                 "Windows Server 2012" },
+    {  6,  1, "Windows 7",                 "Windows Server 2008 R2" },
+    {  6,  0, "Windows Vista",             "Windows Server 2008" },
+    {  5,  2, "Windows XP Professional",   "Windows Server 2003" },
+    /* Windows XP did not have a server version, but we need something here */
+    {  5,  1, "Windows XP",                "Windows XP Server" },
+    {  5,  0, "Windows 2000 Professional", "Windows 2000 Server" },
+    /* Earlier versions are not supported by GetVersionEx(). */
+    {  0,  0, NULL,                        NULL }
         };
         memset(&info, 0, sizeof(info));
         info.dwOSVersionInfoSize = sizeof(info);
@@ -2728,25 +2739,34 @@ get_uname,(void))
           uname_result_is_set = 1;
           return uname_result;
         }
-        if (info.dwMajorVersion == 4 && info.dwMinorVersion == 0) {
-          if (info.dwPlatformId == VER_PLATFORM_WIN32_NT)
-            plat = "Windows NT 4.0";
-          else
-            plat = "Windows 95";
+#ifdef VER_NT_SERVER
+        if (info.wProductType == VER_NT_SERVER ||
+            info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
+          is_server = 1;
         } else {
-          for (i=0; win_version_table[i].major>0; ++i) {
-            if (win_version_table[i].major == info.dwMajorVersion &&
-                win_version_table[i].minor == info.dwMinorVersion) {
-              plat = win_version_table[i].version;
-              break;
+          is_client = 1;
+        }
+#endif
+        /* Search the version table for a matching version */
+        for (i=0; win_version_table[i].major>0; ++i) {
+          if (win_version_table[i].major == info.dwMajorVersion &&
+              win_version_table[i].minor == info.dwMinorVersion) {
+            if (is_server) {
+              plat = win_version_table[i].server_version;
+            } else {
+              /* Use client versions for clients, and when we don't know if it
+              * is a client or a server. */
+              plat = win_version_table[i].client_version;
             }
+            break;
           }
         }
         if (plat) {
           strlcpy(uname_result, plat, sizeof(uname_result));
         } else {
-          if (info.dwMajorVersion > 6 ||
-              (info.dwMajorVersion==6 && info.dwMinorVersion>2))
+          if (info.dwMajorVersion > win_version_table[0].major ||
+              (info.dwMajorVersion == win_version_table[0].major &&
+               info.dwMinorVersion > win_version_table[0].minor))
             tor_snprintf(uname_result, sizeof(uname_result),
                          "Very recent version of Windows [major=%d,minor=%d]",
                          (int)info.dwMajorVersion,(int)info.dwMinorVersion);
@@ -2755,12 +2775,25 @@ get_uname,(void))
                          "Unrecognized version of Windows [major=%d,minor=%d]",
                          (int)info.dwMajorVersion,(int)info.dwMinorVersion);
         }
-#ifdef VER_NT_SERVER
-      if (info.wProductType == VER_NT_SERVER ||
-          info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
-        strlcat(uname_result, " [server]", sizeof(uname_result));
-      }
-#endif /* defined(VER_NT_SERVER) */
+        /* Now append extra information to the name.
+         *
+         * Microsoft's API documentation says that on Windows 8.1 and later,
+         * GetVersionEx returns Windows 8 (6.2) for applications without an
+         * app compatibility manifest (including tor's default build).
+         *
+         * But in our testing, we have seen the actual Windows version on
+         * Windows Server 2012 R2, even without a manifest. */
+        if (info.dwMajorVersion > 6 ||
+            (info.dwMajorVersion == 6 && info.dwMinorVersion >= 2)) {
+          /* When GetVersionEx() returns Windows 8, the actual OS may be any
+           * later version. */
+          strlcat(uname_result, " [or later]", sizeof(uname_result));
+        }
+        /* When we don't know if the OS is a client or server version, we use
+         * the client version, and this qualifier. */
+        if (!is_server && !is_client) {
+          strlcat(uname_result, " [client or server]", sizeof(uname_result));
+        }
 #else /* !(defined(_WIN32)) */
         /* LCOV_EXCL_START -- can't provoke uname failure */
         strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
