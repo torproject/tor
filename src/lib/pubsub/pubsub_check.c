@@ -155,8 +155,7 @@ format_flags(unsigned flags)
 static void
 pubsub_cfg_dump(const pubsub_cfg_t *cfg, int severity, const char *prefix)
 {
-  if (!prefix)
-    prefix = 0;
+  tor_assert(prefix);
 
   tor_log(severity, LD_MESG,
           "%s%s %s: %s{%s} on %s (%s) <%u %u %u %u %x> [%s:%d]",
