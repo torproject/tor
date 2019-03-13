@@ -493,7 +493,7 @@ helper_create_machine_with_big_histogram(circpad_removal_t removal_strategy)
 }
 
 static circpad_decision_t
-circpad_machine_schedule_padding_mock(circpad_machine_state_t *mi)
+circpad_machine_schedule_padding_mock(circpad_machine_runtime_t *mi)
 {
   (void)mi;
   return 0;
@@ -509,7 +509,7 @@ mock_monotime_absolute_usec(void)
 static void
 test_circuitpadding_token_removal_higher(void *arg)
 {
-  circpad_machine_state_t *mi;
+  circpad_machine_runtime_t *mi;
   (void)arg;
 
   /* Mock it up */
@@ -614,7 +614,7 @@ test_circuitpadding_token_removal_higher(void *arg)
 static void
 test_circuitpadding_token_removal_lower(void *arg)
 {
-  circpad_machine_state_t *mi;
+  circpad_machine_runtime_t *mi;
   (void)arg;
 
   /* Mock it up */
@@ -712,7 +712,7 @@ test_circuitpadding_token_removal_lower(void *arg)
 static void
 test_circuitpadding_closest_token_removal(void *arg)
 {
-  circpad_machine_state_t *mi;
+  circpad_machine_runtime_t *mi;
   (void)arg;
 
   /* Mock it up */
@@ -818,7 +818,7 @@ test_circuitpadding_closest_token_removal(void *arg)
 static void
 test_circuitpadding_closest_token_removal_usec(void *arg)
 {
-  circpad_machine_state_t *mi;
+  circpad_machine_runtime_t *mi;
   (void)arg;
 
   /* Mock it up */
@@ -929,7 +929,7 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
 static void
 test_circuitpadding_token_removal_exact(void *arg)
 {
-  circpad_machine_state_t *mi;
+  circpad_machine_runtime_t *mi;
   (void)arg;
 
   /* Mock it up */
@@ -990,7 +990,7 @@ void
 test_circuitpadding_tokens(void *arg)
 {
   const circpad_state_t *state;
-  circpad_machine_state_t *mi;
+  circpad_machine_runtime_t *mi;
   (void)arg;
 
   /** Test plan:
@@ -2157,7 +2157,7 @@ helper_circpad_circ_distribution_machine_setup(int min, int max)
 static void
 test_circuitpadding_sample_distribution(void *arg)
 {
-  circpad_machine_state_t *mi;
+  circpad_machine_runtime_t *mi;
   int n_samples;
   int n_states;
 
@@ -2202,7 +2202,7 @@ test_circuitpadding_sample_distribution(void *arg)
 }
 
 static circpad_decision_t
-circpad_machine_spec_transition_mock(circpad_machine_state_t *mi,
+circpad_machine_spec_transition_mock(circpad_machine_runtime_t *mi,
                                 circpad_event_t event)
 {
   (void) mi;
@@ -2217,7 +2217,7 @@ test_circuitpadding_machine_rate_limiting(void *arg)
 {
   (void) arg;
   bool retval;
-  circpad_machine_state_t *mi;
+  circpad_machine_runtime_t *mi;
   int i;
 
   /* Ignore machine transitions for the purposes of this function, we only
@@ -2285,7 +2285,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
 {
   (void) arg;
   bool retval;
-  circpad_machine_state_t *mi;
+  circpad_machine_runtime_t *mi;
   int i;
 
   /* Ignore machine transitions for the purposes of this function, we only
