@@ -33,6 +33,12 @@ class ProblemVault(object):
             if problem is None:
                 continue
 
+            # Fail if we see dup exceptions. There is really no reason to have dup exceptions.
+            if problem.key() in self.exceptions:
+                print("Duplicate exceptions lines found in exception file:\n\t{}\n\t{}\nAborting...".format(problem, self.exceptions[problem.key()]),
+                      file=sys.stderr)
+                sys.exit(1)
+
             self.exceptions[problem.key()] = problem
             #print "Registering exception: %s" % problem
 
