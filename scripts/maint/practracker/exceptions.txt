@@ -166,7 +166,9 @@ problem function-size /src/feature/dirauth/bwauth.c:dirserv_read_measured_bandwi
 problem function-size /src/feature/dirauth/dsigs_parse.c:networkstatus_parse_detached_signatures() 196
 problem function-size /src/feature/dirauth/voteflags.c:dirserv_compute_performance_thresholds() 172
 problem file-size /src/feature/hs/hs_service.c 4171
+problem function-size /src/feature/hs/hs_cell.c:hs_cell_parse_introduce2() 154
 problem function-size /src/feature/hs/hs_common.c:hs_get_responsible_hsdirs() 104
+problem function-size /src/feature/hs/hs_common.c:hs_get_extend_info_from_lspecs() 101
 problem function-size /src/feature/hs/hs_client.c:send_introduce1() 104
 problem function-size /src/feature/hs/hs_client.c:hs_config_client_authorization() 108
 problem function-size /src/feature/hs/hs_config.c:config_generic_service() 149
