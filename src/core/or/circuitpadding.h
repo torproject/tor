@@ -291,7 +291,7 @@ typedef struct circpad_state_t {
   /** The histogram itself: an array of uint16s of tokens, whose
    *  widths are exponentially spaced, in microseconds.
    *
-   *  This array must have histogram_len elements that are (non-strictly)
+   *  This array must have histogram_len elements that are strictly
    *  monotonically increasing. */
   circpad_hist_token_t histogram[CIRCPAD_MAX_HISTOGRAM_LEN];
   /* The histogram bin edges in usec.
@@ -730,6 +730,10 @@ histogram_get_bin_upper_bound(const circpad_machine_state_t *mi,
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *origin_padding_machines;
 extern smartlist_t *relay_padding_machines;
+
+STATIC void
+register_padding_machine(circpad_machine_spec_t *machine,
+                         smartlist_t *machine_list);
 #endif
 
 #endif

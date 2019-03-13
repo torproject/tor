@@ -494,12 +494,13 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
    * function below samples from [bin_start, bin_end) */
   bin_end = circpad_histogram_bin_to_usec(mi, curr_bin+1);
 
-  // Sample uniformly between histogram[i] to histogram[i+1]-1,
-  // but no need to sample if they are the same timeval (aka bin 0 or bin 1).
-  if (bin_end <= bin_start+1)
+  /* Bin edges are monotonically increasing so this is a bug. Handle it. */
+  if (BUG(bin_start > bin_end)) {
     return bin_start;
-  else
-    return (circpad_delay_t)crypto_rand_uint64_range(bin_start, bin_end);
+  }
+
+  /* Sample randomly from within the bin width */
+  return (circpad_delay_t)crypto_rand_uint64_range(bin_start, bin_end);
 }
 
 /**
@@ -2050,16 +2051,92 @@ circpad_setup_machine_on_circ(circuit_t *on_circ,
   on_circ->padding_machine[machine->machine_index] = machine;
 }
 
-/* These padding machines are only used for tests pending #28634. */
 #ifdef TOR_UNIT_TESTS
+/** Validate a single state of a padding machine */
+static bool
+padding_machine_state_is_valid(const circpad_state_t *state)
+{
+  int b;
+  uint32_t tokens_count = 0;
+  circpad_delay_t prev_bin_edge = 0;
+
+  /* We only validate histograms */
+  if (!state->histogram_len) {
+    return true;
+  }
+
+  /* We need at least two bins in a histogram */
+  if (state->histogram_len < 2) {
+    log_warn(LD_GENERAL, "You can't have a histogram with less than 2 bins");
+    return false;
+  }
+
+  /* For each machine state, if it's a histogram, make sure all the
+   * histogram edges are well defined (i.e. are strictly monotonic). */
+  for (b = 0 ; b < state->histogram_len ; b++) {
+    /* Check that histogram edges are strictly increasing. Ignore the first
+     * edge since it can be zero. */
+    if (prev_bin_edge >= state->histogram_edges[b] && b > 0) {
+      log_warn(LD_GENERAL, "Histogram edges are not increasing [%u/%u]",
+               prev_bin_edge, state->histogram_edges[b]);
+      return false;
+    }
+
+    prev_bin_edge = state->histogram_edges[b];
+
+    /* Also count the number of tokens as we go through the histogram states */
+    tokens_count += state->histogram[b];
+  }
+  /* Verify that the total number of tokens is correct */
+  if (tokens_count != state->histogram_total_tokens) {
+    log_warn(LD_GENERAL, "Histogram token count is wrong [%u/%u]",
+             tokens_count, state->histogram_total_tokens);
+    return false;
+  }
+
+  return true;
+}
+
+/** Basic validation of padding machine */
+static bool
+padding_machine_is_valid(const circpad_machine_spec_t *machine)
+{
+  int i;
+
+  /* Validate the histograms of the padding machine */
+  for (i = 0 ; i < machine->num_states ; i++) {
+    if (!padding_machine_state_is_valid(&machine->states[i])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/* Validate and register <b>machine</b> into <b>machine_list</b>. If
+ * <b>machine_list</b> is NULL, then just validate. */
+STATIC void
+register_padding_machine(circpad_machine_spec_t *machine,
+                         smartlist_t *machine_list)
+{
+  if (!padding_machine_is_valid(machine)) {
+    log_warn(LD_GENERAL, "Machine #%u is invalid. Ignoring.",
+             machine->machine_num);
+    return;
+  }
+
+  if (machine_list) {
+    smartlist_add(machine_list, machine);
+  }
+}
+
+/* These padding machines are only used for tests pending #28634. */
 static void
 circpad_circ_client_machine_init(void)
 {
   circpad_machine_spec_t *circ_client_machine
       = tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
-  // XXX: Better conditions for merge.. Or disable this machine in
-  // merge?
   circ_client_machine->conditions.min_hops = 2;
   circ_client_machine->conditions.state_mask =
       CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED|CIRCPAD_CIRC_HAS_RELAY_EARLY;
@@ -2091,7 +2168,6 @@ circpad_circ_client_machine_init(void)
   circ_client_machine->states[CIRCPAD_STATE_BURST].token_removal =
       CIRCPAD_TOKEN_REMOVAL_CLOSEST;
 
-  // FIXME: Tune this histogram
   circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_len = 2;
   circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_edges[0]= 500;
   circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_edges[1]= 1000000;
@@ -2105,7 +2181,7 @@ circpad_circ_client_machine_init(void)
   circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_total_tokens = 5;
 
   circ_client_machine->machine_num = smartlist_len(origin_padding_machines);
-  smartlist_add(origin_padding_machines, circ_client_machine);
+  register_padding_machine(circ_client_machine, origin_padding_machines);
 }
 
 static void
@@ -2205,7 +2281,7 @@ circpad_circ_responder_machine_init(void)
       CIRCPAD_TOKEN_REMOVAL_CLOSEST_USEC;
 
   circ_responder_machine->machine_num = smartlist_len(relay_padding_machines);
-  smartlist_add(relay_padding_machines, circ_responder_machine);
+  register_padding_machine(circ_responder_machine, relay_padding_machines);
 }
 #endif
 

@@ -794,7 +794,7 @@ test_circuitpadding_closest_token_removal(void *arg)
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[0] = 100;
-  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[1] = 100;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[1] = 101;
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[2] = 120;
   mi->padding_scheduled_at_usec = current_time - 102;
   mi->histogram[0] = 0;
@@ -903,7 +903,7 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[0] = 100;
-  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[1] = 100;
+  circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[1] = 101;
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[2] = 120;
   mi->padding_scheduled_at_usec = current_time - 102;
   mi->histogram[0] = 0;
@@ -1649,7 +1649,7 @@ helper_create_conditional_machine(void)
   ret->states[CIRCPAD_STATE_BURST].histogram_len = 3;
 
   ret->states[CIRCPAD_STATE_BURST].histogram_edges[0] = 0;
-  ret->states[CIRCPAD_STATE_BURST].histogram_edges[1] = 0;
+  ret->states[CIRCPAD_STATE_BURST].histogram_edges[1] = 1;
   ret->states[CIRCPAD_STATE_BURST].histogram_edges[2] = 1000000;
 
   ret->states[CIRCPAD_STATE_BURST].histogram[0] = 6;
@@ -1686,8 +1686,7 @@ helper_create_conditional_machines(void)
   add->conditions.state_mask = CIRCPAD_CIRC_BUILDING|
            CIRCPAD_CIRC_NO_STREAMS|CIRCPAD_CIRC_HAS_RELAY_EARLY;
   add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
-
-  smartlist_add(origin_padding_machines, add);
+  register_padding_machine(add, origin_padding_machines);
 
   add = helper_create_conditional_machine();
   add->machine_num = 3;
@@ -1706,15 +1705,15 @@ helper_create_conditional_machines(void)
   add->conditions.state_mask = CIRCPAD_CIRC_OPENED|
            CIRCPAD_CIRC_STREAMS|CIRCPAD_CIRC_HAS_NO_RELAY_EARLY;
   add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
-  smartlist_add(origin_padding_machines, add);
+  register_padding_machine(add, origin_padding_machines);
 
   add = helper_create_conditional_machine();
   add->machine_num = 2;
-  smartlist_add(relay_padding_machines, add);
+  register_padding_machine(add, relay_padding_machines);
 
   add = helper_create_conditional_machine();
   add->machine_num = 3;
-  smartlist_add(relay_padding_machines, add);
+  register_padding_machine(add, relay_padding_machines);
 }
 
 void
