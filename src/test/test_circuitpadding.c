@@ -17,6 +17,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitpadding.h"
+#include "core/mainloop/netstatus.h"
 #include "core/crypto/relay_crypto.h"
 #include "core/or/protover.h"
 #include "feature/nodelist/nodelist.h"
@@ -1021,6 +1022,9 @@ test_circuitpadding_tokens(void *arg)
   monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
   curr_mocked_time = 1*TOR_NSEC_PER_USEC;
 
+  /* This is needed so that we are not considered to be dormant */
+  note_user_activity(20);
+
   timers_initialize();
 
   helper_create_basic_machine();
@@ -1749,6 +1753,9 @@ test_circuitpadding_conditions(void *arg)
   monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
   monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
   curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+
+  /* This is needed so that we are not considered to be dormant */
+  note_user_activity(20);
 
   timers_initialize();
   helper_create_conditional_machines();

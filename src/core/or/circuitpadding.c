@@ -48,6 +48,7 @@
 #include "core/or/circuitpadding.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
+#include "core/mainloop/netstatus.h"
 #include "core/or/relay.h"
 #include "feature/stats/rephist.h"
 #include "feature/nodelist/networkstatus.h"
@@ -965,7 +966,7 @@ circpad_send_padding_cell_for_callback(circpad_machine_state_t *mi)
   mi->padding_scheduled_at_usec = 0;
   circpad_statenum_t state = mi->current_state;
 
-  // Make sure circuit didn't close on us
+  /* Make sure circuit didn't close on us */
   if (mi->on_circ->marked_for_close) {
     log_fn(LOG_INFO,LD_CIRC,
            "Padding callback on a circuit marked for close. Ignoring.");
@@ -1156,6 +1157,12 @@ circpad_machine_schedule_padding,(circpad_machine_state_t *mi))
   circpad_delay_t in_usec = 0;
   struct timeval timeout;
   tor_assert(mi);
+
+  /* Don't schedule padding if we are currently in dormant mode. */
+  if (!is_participating_on_network()) {
+    log_info(LD_CIRC, "Not scheduling padding because we are dormant.");
+    return CIRCPAD_STATE_UNCHANGED;
+  }
 
   // Don't pad in end (but  also don't cancel any previously
   // scheduled padding either).
