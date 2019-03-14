@@ -7,6 +7,8 @@ problem is worse than a registered exception so that it only warns when things
 get worse.
 """
 
+from __future__ import print_function
+
 import os.path
 import sys
 

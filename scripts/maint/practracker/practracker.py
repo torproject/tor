@@ -18,6 +18,8 @@ the source code and then get saved in the repository for ever after:
   $ python3 ./scripts/maint/practracker/practracker.py . > ./scripts/maint/practracker/exceptions.txt
 """
 
+from __future__ import print_function
+
 import os, sys
 
 import metrics
