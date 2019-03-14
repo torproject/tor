@@ -165,6 +165,10 @@
 
 /* Macro to declare common elements shared by DECLARE_MESSAGE and
  * DECLARE_MESSAGE_INT.  Don't call this directly.
+ *
+ * Note that the "msg_arg_name" string constant is defined in each
+ * translation unit.  This might be undesirable; we can tweak it in the
+ * future if need be.
  */
 #define DECLARE_MESSAGE_COMMON__(messagename, typename, c_type)         \
   typedef c_type msg_arg_type__ ##messagename;                          \
@@ -179,6 +183,8 @@
  * C identifier.
  *
  * "typename" is a unique identifier for the type of the auxiliary data.
+ * It needs to be defined somewhere in Tor, using
+ * "DISPATCH_DEFINE_TYPE."
  *
  * "c_type" is a C pointer type (like "char *" or "struct foo *").
  */
@@ -203,7 +209,8 @@
  * "messagename" is a unique identifier for the message; it must be a valid
  * C identifier.
  *
- * "typename" is a unique identifier for the type of the auxiliary data.
+ * "typename" is a unique identifier for the type of the auxiliary data.  It
+ * needs to be defined somewhere in Tor, using "DISPATCH_DEFINE_TYPE."
  *
  * "c_type" is a C integer type, like "int" or "bool".  It needs to fit inside
  * a uint64_t.
@@ -231,6 +238,8 @@
  *
  * Before you use this, you need to include the header where DECLARE_MESSAGE*()
  * was used for this message.
+ *
+ * You can only use this once per message in each subsystem.
  */
 #define DECLARE_PUBLISH(messagename)                                    \
   static pub_binding_t pub_binding__ ##messagename;                     \
@@ -256,6 +265,8 @@
  * "hookfn".  The type of this function will be:
  *     static void hookfn(const msg_t *, const c_type)
  * where c_type is the c type that you declared in the header.
+ *
+ * You can only use this once per message in each subsystem.
  */
 #define DECLARE_SUBSCRIBE(messagename, hookfn) \
   static void hookfn(const msg_t *,                             \
@@ -341,7 +352,8 @@
     DISPATCH_ADD_SUB_(connector, channel, messagename, DISP_FLAG_EXCL)
 
 /**
- * Publish a given message with a given argument.
+ * Publish a given message with a given argument.  (Takes ownership of the
+ * argument if it is a pointer.)
  */
 #define PUBLISH(messagename, arg)               \
   publish_fn__ ##messagename(arg)

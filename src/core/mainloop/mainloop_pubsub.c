@@ -123,6 +123,9 @@ alertfn_immediate(dispatch_t *d, channel_id_t chan, void *arg)
 
 /**
  * Set the strategy to be used for delivering messages on the named channel.
+ *
+ * This function needs to be called once globally for each channel, to
+ * set up how messages are delivered.
  **/
 int
 tor_mainloop_set_delivery_strategy(const char *msg_channel_name,
