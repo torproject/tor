@@ -186,17 +186,18 @@
  * It needs to be defined somewhere in Tor, using
  * "DISPATCH_REGISTER_TYPE."
  *
- * "c_type" is a C pointer type (like "char *" or "struct foo *").
+ * "c_ptr_type" is a C pointer type (like "char *" or "struct foo *").
+ * The "*" needs to be included.
  */
-#define DECLARE_MESSAGE(messagename, typename, c_type)                  \
-  DECLARE_MESSAGE_COMMON__(messagename, typename, c_type)               \
-  ATTR_UNUSED static inline c_type                                      \
+#define DECLARE_MESSAGE(messagename, typename, c_ptr_type)              \
+  DECLARE_MESSAGE_COMMON__(messagename, typename, c_ptr_type)           \
+  ATTR_UNUSED static inline c_ptr_type                                  \
   msg_arg_get__ ##messagename(msg_aux_data_t m)                         \
   {                                                                     \
     return m.ptr;                                                       \
   }                                                                     \
   ATTR_UNUSED static inline void                                        \
-  msg_arg_set__ ##messagename(msg_aux_data_t *m, c_type v)              \
+  msg_arg_set__ ##messagename(msg_aux_data_t *m, c_ptr_type v)          \
   {                                                                     \
     m->ptr = v;                                                         \
   }                                                                     \
