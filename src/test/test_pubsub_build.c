@@ -131,12 +131,30 @@ test_pubsub_build_types_ok(void *arg)
   tt_assert(items);
   tt_int_op(smartlist_len(items->items), OP_EQ, 4);
 
+  // Make sure that the bindings got build correctly.
+  SMARTLIST_FOREACH_BEGIN(items->items, pubsub_cfg_t *, item) {
+    if (item->is_publish) {
+      tt_assert(item->pub_binding);
+      tt_ptr_op(item->pub_binding->dispatch_ptr, OP_EQ, dispatcher);
+    }
+  } SMARTLIST_FOREACH_END(item);
+
   tt_int_op(dispatcher->n_types, OP_GE, 2);
   tt_assert(dispatcher->typefns);
 
   tt_assert(dispatcher->typefns[get_msg_type_id("int")].fmt_fn == ex_int_fmt);
   tt_assert(dispatcher->typefns[get_msg_type_id("string")].fmt_fn ==
             ex_str_fmt);
+
+  // Now clear the bindings, like we would do before freeing the
+  // the dispatcher.
+  pubsub_items_clear_bindings(items);
+  SMARTLIST_FOREACH_BEGIN(items->items, pubsub_cfg_t *, item) {
+    if (item->is_publish) {
+      tt_assert(item->pub_binding);
+      tt_ptr_op(item->pub_binding->dispatch_ptr, OP_EQ, NULL);
+    }
+  } SMARTLIST_FOREACH_END(item);
 
  done:
   pubsub_connector_free(c);
