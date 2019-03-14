@@ -281,11 +281,14 @@ pubsub_builder_finalize(pubsub_builder_t *builder,
   dispatch_t *dispatcher = NULL;
   tor_assert_nonfatal(builder->n_connectors == 0);
 
-  if (builder->n_errors)
-    goto err;
-
   if (pubsub_builder_check(builder) < 0)
     goto err;
+
+  if (builder->n_errors) {
+    log_warn(LD_GENERAL, "At least one error occurred previously when "
+             "configuring the dispatcher.");
+    goto err;
+  }
 
   dispatcher = dispatch_new(builder->cfg);
 
