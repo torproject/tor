@@ -171,100 +171,61 @@ pubsub_cfg_dump(const pubsub_cfg_t *cfg, int severity, const char *prefix)
 }
 
 /**
- * Check whether there are any errors or inconsistencies for the message
- * described by <b>msg</b> in <b>map</b>.  If there are problems, log about
- * them, and return -1.  Otherwise return 0.
+ * Helper: fill a bitarray <b>out</b> with entries corresponding to the
+ * subsystems listed in <b>items</b>.  If any subsystem is listed more than
+ * once, log a warning.  Return 0 on success, -1 on failure.
  **/
 static int
-lint_message(const pubsub_adjmap_t *map, message_id_t msg)
+get_message_bitarray(const pubsub_adjmap_t *map,
+                     message_id_t msg,
+                     const smartlist_t *items,
+                     const char *operation,
+                     bitarray_t **out)
 {
-  /* NOTE: Some of the checks in this function are maybe over-zealous, and we
-   * might not want to have them forever.  I've marked them with [?] below.
-   */
-  if (BUG(msg >= map->n_msgs))
-    return 0; // LCOV_EXCL_LINE
+  bool ok = true;
+  *out = bitarray_init_zero((unsigned)map->n_subsystems);
+  if (! items)
+    return 0;
 
-  const smartlist_t *pub = map->pub_by_msg[msg];
-  const smartlist_t *sub = map->sub_by_msg[msg];
+  SMARTLIST_FOREACH_BEGIN(items, const pubsub_cfg_t *, cfg) {
+    if (bitarray_is_set(*out, cfg->subsys)) {
+      log_warn(LD_MESG|LD_BUG,
+               "Message %u (%s) is configured to be %s by subsystem "
+               "%u (%s) more than once.",
+               msg, get_message_id_name(msg), operation,
+               cfg->subsys, get_subsys_id_name(cfg->subsys));
+      ok = false;
+    }
+    bitarray_set(*out, cfg->subsys);
+  } SMARTLIST_FOREACH_END(cfg);
 
-  const size_t n_pub = smartlist_len_opt(pub);
-  const size_t n_sub = smartlist_len_opt(sub);
+  return ok ? 0 : -1;
+}
 
-  if (n_pub == 0 && n_sub == 0) {
-    log_info(LD_MESG, "Nobody is publishing or subscribing to message %u "
-             "(%s).",
-             msg, get_message_id_name(msg));
-    return 0; // No publishers or subscribers: nothing to do.
-  }
-
-  /* We'll set this to false if there are any problems. */
+/**
+ * Helper for lint_message: check that all the pubsub_cfg_t items in the two
+ * respective smartlists obey our local graph topology rules.
+ *
+ * (Right now this is just a matter of "each subsystem only
+ * publishes/subscribes once; no subsystem is a publisher and subscriber for
+ * the same message.")
+ *
+ * Return 0 on success, -1 on failure.
+ **/
+static int
+lint_message_graph(const pubsub_adjmap_t *map,
+                   message_id_t msg,
+                   const smartlist_t *pub,
+                   const smartlist_t *sub)
+{
+  bitarray_t *published_by = NULL;
+  bitarray_t *subscribed_by = NULL;
   bool ok = true;
 
-  /* First make sure that if there are publishers, there are subscribers. */
-  if (n_pub == 0) {
-    log_warn(LD_MESG|LD_BUG,
-             "Message %u (%s) has subscribers, but no publishers.",
-            msg, get_message_id_name(msg));
+  if (get_message_bitarray(map, msg, pub, "published", &published_by) < 0)
     ok = false;
-  } else if (n_sub == 0) {
-    log_warn(LD_MESG|LD_BUG,
-             "Message %u (%s) has publishers, but no subscribers.",
-            msg, get_message_id_name(msg));
+  if (get_message_bitarray(map, msg, sub, "subscribed", &subscribed_by) < 0)
     ok = false;
-  }
-
-  /* The 'all' list has the publishers and the subscribers. */
-  smartlist_t *all = smartlist_new();
-  if (pub)
-    smartlist_add_all(all, pub);
-  if (sub)
-    smartlist_add_all(all, sub);
-  const pubsub_cfg_t *item0 = smartlist_get(all, 0);
-
-  /* Indicates which subsystems we've found publishing/subscribing here. */
-  bitarray_t *published_by = bitarray_init_zero((unsigned)map->n_subsystems);
-  bitarray_t *subscribed_by = bitarray_init_zero((unsigned)map->n_subsystems);
-  bool pub_excl = false, sub_excl = false, chan_same = true, type_same = true;
-
-  /* Make sure that the messages all have the same channel and type;
-   * check whether the DISP_FLAG_EXCL flag is used;
-   * and if any subsystem is publishing or subscribing to it twice [??].
-   */
-  SMARTLIST_FOREACH_BEGIN(all, const pubsub_cfg_t *, cfg) {
-    if (cfg->channel != item0->channel) {
-      chan_same = false;
-    }
-    if (cfg->type != item0->type) {
-      type_same = false;
-    }
-    if (cfg->flags & DISP_FLAG_EXCL) {
-      if (cfg->is_publish)
-        pub_excl = true;
-      else
-        sub_excl = true;
-    }
-    if (cfg->is_publish) {
-      if (bitarray_is_set(published_by, cfg->subsys)) {
-        log_warn(LD_MESG|LD_BUG,
-                 "Message %u (%s) is configured to be published by subsystem "
-                 "%u (%s) more than once.",
-                 msg, get_message_id_name(msg),
-                 cfg->subsys, get_subsys_id_name(cfg->subsys));
-        ok = false;
-      }
-      bitarray_set(published_by, cfg->subsys);
-    } else {
-      if (bitarray_is_set(subscribed_by, cfg->subsys)) {
-        log_warn(LD_MESG|LD_BUG,
-                 "Message %u (%s) is configured to be subscribed by subsystem "
-                 "%u (%s) more than once.",
-                 msg, get_message_id_name(msg),
-                 cfg->subsys, get_subsys_id_name(cfg->subsys));
-        ok = false;
-      }
-      bitarray_set(subscribed_by, cfg->subsys);
-    }
-  } SMARTLIST_FOREACH_END(cfg);
 
   /* Check whether any subsystem is publishing and subscribing the same
    * message. [??]
@@ -280,6 +241,49 @@ lint_message(const pubsub_adjmap_t *map, message_id_t msg)
       ok = false;
     }
   }
+
+  bitarray_free(published_by);
+  bitarray_free(subscribed_by);
+
+  return ok ? 0 : -1;
+}
+
+/**
+ * Helper for lint_message: check that all the pubsub_cfg_t items in the two
+ * respective smartlists have compatible flags, channels, and types.
+ **/
+static int
+lint_message_consistency(message_id_t msg,
+                         const smartlist_t *pub,
+                         const smartlist_t *sub)
+{
+  if (!smartlist_len_opt(pub) && !smartlist_len_opt(sub))
+    return 0; // LCOV_EXCL_LINE -- this was already checked.
+
+  /* The 'all' list has the publishers and the subscribers. */
+  smartlist_t *all = smartlist_new();
+  if (pub)
+    smartlist_add_all(all, pub);
+  if (sub)
+    smartlist_add_all(all, sub);
+
+  const pubsub_cfg_t *item0 = smartlist_get(all, 0);
+
+  /* Indicates which subsystems we've found publishing/subscribing here. */
+  bool pub_excl = false, sub_excl = false, chan_same = true, type_same = true;
+
+  /* Simple message consistency properties across messages.
+   */
+  SMARTLIST_FOREACH_BEGIN(all, const pubsub_cfg_t *, cfg) {
+    chan_same &= (cfg->channel == item0->channel);
+    type_same &= (cfg->type == item0->type);
+    if (cfg->is_publish)
+      pub_excl |= (cfg->flags & DISP_FLAG_EXCL) != 0;
+    else
+      sub_excl |= (cfg->flags & DISP_FLAG_EXCL) != 0;
+  } SMARTLIST_FOREACH_END(cfg);
+
+  bool ok = true;
 
   if (! chan_same) {
     log_warn(LD_MESG|LD_BUG,
@@ -314,16 +318,73 @@ lint_message(const pubsub_adjmap_t *map, message_id_t msg)
     ok = false;
   }
 
+  smartlist_free(all);
+
+  return ok ? 0 : -1;
+}
+
+/**
+ * Check whether there are any errors or inconsistencies for the message
+ * described by <b>msg</b> in <b>map</b>.  If there are problems, log about
+ * them, and return -1.  Otherwise return 0.
+ **/
+static int
+lint_message(const pubsub_adjmap_t *map, message_id_t msg)
+{
+  /* NOTE: Some of the checks in this function are maybe over-zealous, and we
+   * might not want to have them forever.  I've marked them with [?] below.
+   */
+  if (BUG(msg >= map->n_msgs))
+    return 0; // LCOV_EXCL_LINE
+
+  const smartlist_t *pub = map->pub_by_msg[msg];
+  const smartlist_t *sub = map->sub_by_msg[msg];
+
+  const size_t n_pub = smartlist_len_opt(pub);
+  const size_t n_sub = smartlist_len_opt(sub);
+
+  if (n_pub == 0 && n_sub == 0) {
+    log_info(LD_MESG, "Nobody is publishing or subscribing to message %u "
+             "(%s).",
+             msg, get_message_id_name(msg));
+    return 0; // No publishers or subscribers: nothing to do.
+  }
+  /* We'll set this to false if there are any problems. */
+  bool ok = true;
+
+  /* First make sure that if there are publishers, there are subscribers. */
+  if (n_pub == 0) {
+    log_warn(LD_MESG|LD_BUG,
+             "Message %u (%s) has subscribers, but no publishers.",
+            msg, get_message_id_name(msg));
+    ok = false;
+  } else if (n_sub == 0) {
+    log_warn(LD_MESG|LD_BUG,
+             "Message %u (%s) has publishers, but no subscribers.",
+            msg, get_message_id_name(msg));
+    ok = false;
+  }
+
+  /* Check the message graph topology. */
+  if (lint_message_graph(map, msg, pub, sub) < 0)
+    ok = false;
+
+  /* Check whether the messages have the same fields set on them. */
+  if (lint_message_consistency(msg, pub, sub) < 0)
+    ok = false;
+
   if (!ok) {
     /* There was a problem -- let's log all the publishers and subscribers on
      * this message */
-    SMARTLIST_FOREACH(all, pubsub_cfg_t *, cfg,
-                      pubsub_cfg_dump(cfg, LOG_WARN, "   "));
+    if (pub) {
+      SMARTLIST_FOREACH(pub, pubsub_cfg_t *, cfg,
+                        pubsub_cfg_dump(cfg, LOG_WARN, "   "));
+    }
+    if (sub) {
+      SMARTLIST_FOREACH(sub, pubsub_cfg_t *, cfg,
+                        pubsub_cfg_dump(cfg, LOG_WARN, "   "));
+    }
   }
-
-  smartlist_free(all);
-  bitarray_free(published_by);
-  bitarray_free(subscribed_by);
 
   return ok ? 0 : -1;
 }
