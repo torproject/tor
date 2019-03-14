@@ -107,6 +107,38 @@ test_dispatch_simple(void *arg)
   tor_free(recv2_received);
 }
 
+/* Construct a dispatch_t with a message and no reciever; make sure that it
+ * gets dropped properly. */
+static void
+test_dispatch_no_recipient(void *arg)
+{
+  (void)arg;
+
+  dispatch_t *d=NULL;
+  dispatch_cfg_t *cfg=NULL;
+  int r;
+
+  cfg = dcfg_new();
+  r = dcfg_msg_set_type(cfg,0,0);
+  r += dcfg_msg_set_chan(cfg,0,0);
+  tt_int_op(r, OP_EQ, 0);
+
+  d = dispatch_new(cfg);
+  tt_assert(d);
+  dispatcher_in_use = d;
+
+  msg_aux_data_t data = { .u64 = 7};
+  r = dispatch_send(d, 99, 0, 0, 0, data);
+  tt_int_op(r, OP_EQ, 0);
+
+  r = dispatch_flush(d, 0, INT_MAX);
+  tt_int_op(r, OP_EQ, 0);
+
+ done:
+  dispatch_free(d);
+  dcfg_free(cfg);
+}
+
 struct coord { int x; int y; };
 static void
 free_coord(msg_aux_data_t d)
@@ -210,6 +242,7 @@ test_dispatch_bad_type_setup(void *arg)
 struct testcase_t dispatch_tests[] = {
   T(empty),
   T(simple),
+  T(no_recipient),
   T(with_types),
   T(bad_type_setup),
   END_OF_TESTCASES
