@@ -37,9 +37,6 @@ dcfg_new(void)
   return cfg;
 }
 
-/** DOCDOC */
-#define ID_TO_VOID(id) ((void*)(uintptr_t)(id))
-
 /**
  * Associate a message with a datatype.  Return 0 on success, -1 if a
  * different type was previously associated with the message ID.
@@ -49,11 +46,12 @@ dcfg_msg_set_type(dispatch_cfg_t *cfg, message_id_t msg,
                   msg_type_id_t type)
 {
   smartlist_grow(cfg->type_by_msg, msg+1);
-  void *oldval = smartlist_get(cfg->type_by_msg, msg);
-  if (oldval != NULL && oldval != ID_TO_VOID(type)) {
+  msg_type_id_t *oldval = smartlist_get(cfg->type_by_msg, msg);
+  if (oldval != NULL && *oldval != type) {
     return -1;
   }
-  smartlist_set(cfg->type_by_msg, msg, ID_TO_VOID(type));
+  if (!oldval)
+    smartlist_set(cfg->type_by_msg, msg, tor_memdup(&type, sizeof(type)));
   return 0;
 }
 
@@ -66,11 +64,12 @@ dcfg_msg_set_chan(dispatch_cfg_t *cfg, message_id_t msg,
                   channel_id_t chan)
 {
   smartlist_grow(cfg->chan_by_msg, msg+1);
-  void *oldval = smartlist_get(cfg->chan_by_msg, msg);
-  if (oldval != NULL && oldval != ID_TO_VOID(chan)) {
+  channel_id_t *oldval = smartlist_get(cfg->chan_by_msg, msg);
+  if (oldval != NULL && *oldval != chan) {
     return -1;
   }
-  smartlist_set(cfg->chan_by_msg, msg, ID_TO_VOID(chan));
+  if (!oldval)
+    smartlist_set(cfg->chan_by_msg, msg, tor_memdup(&chan, sizeof(chan)));
   return 0;
 }
 
@@ -87,7 +86,8 @@ dcfg_type_set_fns(dispatch_cfg_t *cfg, msg_type_id_t type,
   if (oldfns && (oldfns->free_fn != fns->free_fn ||
                  oldfns->fmt_fn != fns->fmt_fn))
     return -1;
-  smartlist_set(cfg->fns_by_type, type, (dispatch_typefns_t *) fns);
+  if (!oldfns)
+    smartlist_set(cfg->fns_by_type, type, tor_memdup(fns, sizeof(*fns)));
   return 0;
 }
 
@@ -123,6 +123,9 @@ dcfg_free_(dispatch_cfg_t *cfg)
   if (!cfg)
     return;
 
+  SMARTLIST_FOREACH(cfg->type_by_msg, msg_type_id_t *, id, tor_free(id));
+  SMARTLIST_FOREACH(cfg->chan_by_msg, channel_id_t *, id, tor_free(id));
+  SMARTLIST_FOREACH(cfg->fns_by_type, dispatch_typefns_t *, f, tor_free(f));
   smartlist_free(cfg->type_by_msg);
   smartlist_free(cfg->chan_by_msg);
   smartlist_free(cfg->fns_by_type);

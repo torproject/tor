@@ -17,31 +17,35 @@
 #include "lib/dispatch/dispatch_cfg.h"
 #include "lib/dispatch/dispatch_cfg_st.h"
 
+#include "lib/cc/ctassert.h"
 #include "lib/intmath/cmp.h"
 #include "lib/malloc/malloc.h"
 #include "lib/log/util_bug.h"
 
 #include <string.h>
 
-/** Convert a void* in a smartlist to the corresponding integer. */
-#define VOID_TO_ID(p) ((intptr_t)(p))
-
-/** Given a smartlist full of void* fields encoding intptr_t values,
- * return the largest intptr_t, or dflt if the list is empty. */
-static intptr_t
-max_in_sl(const smartlist_t *sl, intptr_t dflt)
+/** Given a smartlist full of (possibly NULL) pointers to uint16_t values,
+ * return the largest value, or dflt if the list is empty. */
+static int
+max_in_sl(const smartlist_t *sl, int dflt)
 {
-  if (!smartlist_len(sl))
-    return dflt;
-  void *as_ptr = smartlist_get(sl, 0);
-  intptr_t max = VOID_TO_ID(as_ptr);
-  SMARTLIST_FOREACH_BEGIN(sl, void *, p) {
-    intptr_t i = VOID_TO_ID(p);
-    if (i > max)
-      max = i;
-  } SMARTLIST_FOREACH_END(p);
-  return max;
+  uint16_t *maxptr = NULL;
+  SMARTLIST_FOREACH_BEGIN(sl, uint16_t *, u) {
+    if (!maxptr)
+      maxptr = u;
+    else if (*u > *maxptr)
+      maxptr = u;
+  } SMARTLIST_FOREACH_END(u);
+
+  return maxptr ? *maxptr : dflt;
 }
+
+/* The above function is only safe to call if we are sure that channel_id_t
+ * and msg_type_id_t are really uint16_t.  They should be so defined in
+ * msgtypes.h, but let's be extra cautious.
+ */
+CTASSERT(sizeof(uint16_t) == sizeof(msg_type_id_t));
+CTASSERT(sizeof(uint16_t) == sizeof(channel_id_t));
 
 /** Helper: Format an unformattable message auxiliary data item: just return a
 * copy of the string <>. */
@@ -156,14 +160,14 @@ dispatch_new(const dispatch_cfg_t *cfg)
 
   /* Fill in the empty entries in the dispatch tables:
    * types and channels for each message. */
-  SMARTLIST_FOREACH_BEGIN(cfg->type_by_msg, smartlist_t *, type) {
+  SMARTLIST_FOREACH_BEGIN(cfg->type_by_msg, msg_type_id_t *, type) {
     if (d->table[type_sl_idx])
-      d->table[type_sl_idx]->type = VOID_TO_ID(type);
+      d->table[type_sl_idx]->type = *type;
   } SMARTLIST_FOREACH_END(type);
 
-  SMARTLIST_FOREACH_BEGIN(cfg->chan_by_msg, smartlist_t *, chan) {
+  SMARTLIST_FOREACH_BEGIN(cfg->chan_by_msg, channel_id_t *, chan) {
     if (d->table[chan_sl_idx])
-      d->table[chan_sl_idx]->channel = VOID_TO_ID(chan);
+      d->table[chan_sl_idx]->channel = *chan;
   } SMARTLIST_FOREACH_END(chan);
 
   return d;
