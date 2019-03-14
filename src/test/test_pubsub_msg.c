@@ -103,7 +103,7 @@ setup_dispatcher(const struct testcase_t *testcase)
 
   {
     con = pubsub_connector_for_subsystem(builder, get_subsys_id("types"));
-    pubsub_connector_define_type_(con,
+    pubsub_connector_register_type_(con,
                                     get_msg_type_id("string"),
                                     &stringfns,
                                     "nowhere.c", 99);

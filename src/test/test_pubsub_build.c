@@ -86,7 +86,7 @@ seed_dispatch_builder(pubsub_builder_t *b,
 
   {
     c = pubsub_connector_for_subsystem(b, get_subsys_id("sys1"));
-    DISPATCH_DEFINE_TYPE(c, int, &intfns);
+    DISPATCH_REGISTER_TYPE(c, int, &intfns);
     if (fl1 != FLAG_SKIP)
       DISPATCH_ADD_PUB_(c, main, bunch_of_coconuts, fl1);
     if (fl2 != FLAG_SKIP)
@@ -96,7 +96,7 @@ seed_dispatch_builder(pubsub_builder_t *b,
 
   {
     c = pubsub_connector_for_subsystem(b, get_subsys_id("sys2"));
-    DISPATCH_DEFINE_TYPE(c, string, &stringfns);
+    DISPATCH_REGISTER_TYPE(c, string, &stringfns);
     if (fl3 != FLAG_SKIP)
       DISPATCH_ADD_PUB_(c, main, yes_we_have_no, fl3);
     if (fl4 != FLAG_SKIP)
@@ -178,7 +178,7 @@ test_pubsub_build_types_decls_conflict(void *arg)
   {
     c = pubsub_connector_for_subsystem(b, get_subsys_id("sys3"));
     // Extra declaration of int: we don't allow this.
-    DISPATCH_DEFINE_TYPE(c, int, &stringfns);
+    DISPATCH_REGISTER_TYPE(c, int, &stringfns);
     pubsub_connector_free(c);
   }
 
