@@ -71,7 +71,7 @@
  *     }
  *
  * Where did these types come from?  Somewhere in the code, you need to call
- * DISPATCH_DEFINE_TYPE() to make sure that the dispatcher can manage the
+ * DISPATCH_REGISTER_TYPE() to make sure that the dispatcher can manage the
  * message auxiliary data.  It associates a vtbl-like structure with the
  * type name, so that the dispatcher knows how to manipulate the type you're
  * giving it.
@@ -100,7 +100,7 @@
  *            .fmt_fn = boolean_fmt,
  *            .free_fn = boolean_free,
  *        };
- *        DISPATCH_DEFINE_TYPE(con, boolean, &boolean_fns);
+ *        DISPATCH_REGISTER_TYPE(con, boolean, &boolean_fns);
  *    }
  *
  *
@@ -184,7 +184,7 @@
  *
  * "typename" is a unique identifier for the type of the auxiliary data.
  * It needs to be defined somewhere in Tor, using
- * "DISPATCH_DEFINE_TYPE."
+ * "DISPATCH_REGISTER_TYPE."
  *
  * "c_type" is a C pointer type (like "char *" or "struct foo *").
  */
@@ -210,7 +210,7 @@
  * C identifier.
  *
  * "typename" is a unique identifier for the type of the auxiliary data.  It
- * needs to be defined somewhere in Tor, using "DISPATCH_DEFINE_TYPE."
+ * needs to be defined somewhere in Tor, using "DISPATCH_REGISTER_TYPE."
  *
  * "c_type" is a C integer type, like "int" or "bool".  It needs to fit inside
  * a uint64_t.
@@ -362,8 +362,8 @@
  * Use a given connector to declare that the functions to be used to manipuate
  * a certain C type.
  **/
-#define DISPATCH_DEFINE_TYPE(con, type, fns)                    \
-  pubsub_connector_define_type_((con),                          \
+#define DISPATCH_REGISTER_TYPE(con, type, fns)                  \
+  pubsub_connector_register_type_((con),                        \
                                   get_msg_type_id(#type),       \
                                   (fns),                        \
                                   __FILE__,                     \

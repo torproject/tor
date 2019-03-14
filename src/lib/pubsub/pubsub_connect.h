@@ -45,10 +45,10 @@ int pubsub_add_sub_(struct pubsub_connector_t *con,
                     const char *file,
                     unsigned line);
 
-int pubsub_connector_define_type_(struct pubsub_connector_t *,
-                                  msg_type_id_t,
-                                  dispatch_typefns_t *,
-                                  const char *file,
-                                  unsigned line);
+int pubsub_connector_register_type_(struct pubsub_connector_t *,
+                                    msg_type_id_t,
+                                    dispatch_typefns_t *,
+                                    const char *file,
+                                    unsigned line);
 
 #endif

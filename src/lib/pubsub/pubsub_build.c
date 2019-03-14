@@ -208,16 +208,16 @@ pubsub_add_sub_(pubsub_connector_t *con,
 }
 
 /**
- * Use <b>con</b> to define a the functions to use for manipulating the type
+ * Use <b>con</b> to define the functions to use for manipulating the type
  * <b>type</b>.  Any function pointers left as NULL will be implemented as
  * no-ops.
  **/
 int
-pubsub_connector_define_type_(pubsub_connector_t *con,
-                              msg_type_id_t type,
-                              dispatch_typefns_t *fns,
-                              const char *file,
-                              unsigned line)
+pubsub_connector_register_type_(pubsub_connector_t *con,
+                                msg_type_id_t type,
+                                dispatch_typefns_t *fns,
+                                const char *file,
+                                unsigned line)
 {
   pubsub_type_cfg_t *cfg = tor_malloc_zero(sizeof(*cfg));
   cfg->type = type;
