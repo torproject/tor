@@ -101,6 +101,7 @@ problem function-size /src/app/main/main.c:dumpstats() 102
 problem function-size /src/app/main/main.c:tor_init() 136
 problem function-size /src/app/main/main.c:sandbox_init_filter() 291
 problem function-size /src/app/main/main.c:run_tor_main_loop() 105
+problem include-count /src/app/main/shutdown.c 55
 problem function-size /src/tools/tor-resolve.c:build_socks5_resolve_request() 104
 problem function-size /src/tools/tor-resolve.c:do_resolve() 173
 problem function-size /src/tools/tor-resolve.c:main() 112
