@@ -1,0 +1,7 @@
+  o Minor bugfixes (single onion services):
+    - Allow connections to single onion services to remain idle without
+      being disconnected. Relays acting as rendezvous points for
+      single onion services were mistakenly closing idle established
+      rendezvous circuits after 60 seconds, thinking that they are unused
+      directory-fetching circuits that had served their purpose. Fixes
+      bug 29665; bugfix on 0.2.1.26.
