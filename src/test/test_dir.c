@@ -7210,6 +7210,106 @@ test_dir_format_versions_list(void *arg)
   teardown_capture_of_logs();
 }
 
+static void
+test_dir_add_fingerprint(void *arg)
+{
+  (void)arg;
+  authdir_config_t *list;
+  int ret;
+  ed25519_secret_key_t seckey;
+  ed25519_public_key_t pubkey_good, pubkey_bad;
+
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+
+  setup_capture_of_logs(LOG_WARN);
+
+  /* RSA test - successful */
+  ret = add_fingerprint_to_dir("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                               list, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* RSA test - failure */
+  ret = add_fingerprint_to_dir("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+                               list, 0);
+  tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Couldn\'t decode fingerprint");
+
+  /* ed25519 test - successful */
+  ed25519_secret_key_generate(&seckey, 0);
+  ed25519_public_key_generate(&pubkey_good, &seckey);
+
+  ret = add_ed25519_to_dir(&pubkey_good, list, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* ed25519 test - failure */
+  digest256_from_base64((char *) pubkey_bad.pubkey, "gibberish");
+
+  ret = add_ed25519_to_dir(&pubkey_bad, list, 0);
+  tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Invalid ed25519 key");
+
+ done:
+  teardown_capture_of_logs();
+  dirserv_free_fingerprint_list();
+}
+
+static void
+test_dir_dirserv_load_fingerprint_file(void *arg)
+{
+  (void)arg;
+  char *fname = tor_strdup(get_fname("approved-routers"));
+
+  // Neither RSA nor ed25519
+  const char *router_lines_invalid =
+    "!badexit notafingerprint";
+  const char *router_lines_valid_rsa =
+    "!badexit AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+  const char *router_lines_invalid_rsa =
+    "!badexit ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ\n";
+  const char *router_lines_valid_ed25519 =
+    "!badexit wqfLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx/Q\n";
+  const char *router_lines_invalid_ed25519 =
+    "!badexit -qfLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx--\n";
+
+  // Test: Invalid Fingerprint (not RSA or ed25519)
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Unrecognized fingerprint type");
+  teardown_capture_of_logs();
+
+  // Test: Valid RSA
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_valid_rsa, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  teardown_capture_of_logs();
+
+  // Test: Invalid RSA
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid_rsa, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Valid ed25519
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_valid_ed25519, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  teardown_capture_of_logs();
+
+  // Test: Invalid ed25519
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid_ed25519, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+ done:
+  tor_free(fname);
+  dirserv_free_fingerprint_list();
+}
+
 #define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -7297,5 +7397,7 @@ struct testcase_t dir_tests[] = {
   DIR(platform_str, 0),
   DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   DIR(format_versions_list, TT_FORK),
+  DIR(add_fingerprint, TT_FORK),
+  DIR(dirserv_load_fingerprint_file, TT_FORK),
   END_OF_TESTCASES
 };
