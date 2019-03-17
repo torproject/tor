@@ -1850,6 +1850,21 @@ The following options are useful only for clients (that is, if
     After the first time Tor starts, it begins in dormant mode if it was
     dormant before, and not otherwise. (Default: 0)
 
+[[DormantCanceledByStartup]] **DormantCanceledByStartup** **0**|**1**::
+    By default, Tor starts in active mode if it was active the last time
+    it was shut down, and in dormant mode if it was dormant.  But if
+    this option is true, Tor treats every startup event as user
+    activity, and Tor will never start in Dormant mode, even if it has
+    been unused for a long time on previous runs. (Default: 0)
+ +
+    Note: Packagers and application developers should change the value of
+    this option only with great caution: it has the potential to
+    create spurious traffic on the network.  This option should only
+    be used if Tor is started by an affirmative user activity (like
+    clicking on an applcation or running a command), and not if Tor
+    is launched for some other reason (for example, by a startup
+    process, or by an application that launches itself on every login.)
+
 SERVER OPTIONS
 --------------
 
