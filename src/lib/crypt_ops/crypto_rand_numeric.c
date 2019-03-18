@@ -160,8 +160,9 @@ crypto_fast_rng_get_uint64(crypto_fast_rng_t *rng, uint64_t limit)
 uint32_t
 crypto_fast_rng_get_u32(crypto_fast_rng_t *rng)
 {
-  IMPLEMENT_RAND_UNSIGNED(uint32_t, UINT32_MAX, UINT32_MAX,
-                  crypto_fast_rng_getbytes(rng, (void*)&val, sizeof(val)));
+  uint32_t val;
+  crypto_fast_rng_getbytes(rng, (void*)&val, sizeof(val));
+  return val;
 }
 
 /**
