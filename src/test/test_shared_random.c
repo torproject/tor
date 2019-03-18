@@ -551,7 +551,7 @@ test_encoding(void *arg)
  *  If <b>also_current</b> is set, then set both current and previous SRVs.
  *  Otherwise, just set the previous SRV. (And clear the current SRV.)
  *
- * You must call sr_state_free() to free the state at the end of each test
+ * You must call sr_state_free_all() to free the state at the end of each test
  * function (on pass or fail). */
 static void
 test_sr_setup_srv(int also_current)
