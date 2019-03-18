@@ -155,6 +155,8 @@ script:
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$DISTCHECK" == "" ]]; then make check; fi
   - if [[ "$DISTCHECK" != "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
+  ## If this build was one that produced coverage, upload it.
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p'; fi
 
 after_failure:
   ## configure will leave a log file with more details of config failures.
@@ -165,9 +167,9 @@ after_failure:
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
 
-after_success:
-  ## If this build was one that produced coverage, upload it.
-  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p'; fi
+before_cache:
+    # Delete all .gcda files.
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then make reset-gcov; fi
 
 notifications:
   irc:
