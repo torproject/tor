@@ -224,6 +224,10 @@ after_success:
   ## If this build was one that produced coverage, upload it.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p'; fi
 
+before_cache:
+    # Delete all .gcda files.
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then make reset-gcov || true fi
+
 notifications:
   irc:
     channels:
