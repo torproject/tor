@@ -25,6 +25,11 @@
 #endif
 
 /**
+ * True iff the RNG is currently replaced.  Prevents double-replacement.
+ **/
+static bool rng_is_replaced = false;
+
+/**
  * Mutex to protect deterministic prng.
  *
  * Note that if you actually _use_ the prng from two threads at the same time,
@@ -82,6 +87,9 @@ crypto_rand_deterministic(char *out, size_t n)
 static void
 enable_deterministic_rng_impl(const uint8_t *seed, size_t seed_len)
 {
+  tor_assert(!rng_is_replaced);
+  tor_assert(crypto_rand == crypto_rand__real);
+
   memset(rng_seed, 0, sizeof(rng_seed));
   memcpy(rng_seed, seed, MIN(seed_len, sizeof(rng_seed)));
 
@@ -100,6 +108,8 @@ enable_deterministic_rng_impl(const uint8_t *seed, size_t seed_len)
   crypto_fast_rng_t *fast_rng = crypto_fast_rng_new_from_seed(fast_rng_seed);
   crypto_fast_rng_disable_reseed(fast_rng);
   stored_fast_rng = crypto_replace_thread_fast_rng(fast_rng);
+
+  rng_is_replaced = true;
 }
 
 /**
@@ -196,6 +206,9 @@ testing_prefilled_rng_reset(void)
 
 /**
  * Undo the overrides for our PRNG.  To be used at the end of testing.
+ *
+ * Note that this function should be safe to call even if the rng has not
+ * yet been replaced.
  **/
 void
 testing_disable_rng_override(void)
@@ -208,4 +221,6 @@ testing_disable_rng_override(void)
 
   crypto_fast_rng_t *rng = crypto_replace_thread_fast_rng(stored_fast_rng);
   crypto_fast_rng_free(rng);
+
+  rng_is_replaced = false;
 }
