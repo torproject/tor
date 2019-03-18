@@ -1,0 +1,121 @@
+/* Copyright (c) 2018-2019, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
+/**
+ * \file rng_test_helpers.c
+ * \brief Helpers for overriding PRNGs during unit tests.
+ *
+ * We define two PRNG overrides: a "reproducible PRNG" where the seed is
+ * chosen randomly but the stream can be replayed later on in case a bug is
+ * found, and a "deterministic PRNG" where the seed is fixed in the unit
+ * tests.
+ *
+ * Obviously, this code is testing-only.
+ */
+
+#include "orconfig.h"
+#include "core/or/or.h"
+
+#include "lib/crypt_ops/crypto_rand.h"
+
+#include "test/rng_test_helpers.h"
+
+#ifndef TOR_UNIT_TESTS
+#error "No. Never link this code into Tor proper."
+#endif
+
+/**
+ * Mutex to protect deterministic prng.
+ *
+ * Note that if you actually _use_ the prng from two threads at the same time,
+ * the results will probably be nondeterministic anyway.
+ */
+static tor_mutex_t *rng_mutex = NULL;
+
+/* This is the seed of the deterministic randomness. */
+static uint8_t rng_seed[16];
+static crypto_xof_t *rng_xof = NULL;
+
+/**
+ * Print the seed for our PRNG to stdout.  We use this when we're
+ **/
+void
+testing_dump_reproducible_rng_seed(void)
+{
+  printf("\n"
+         "Seed: %s\n",
+         hex_str((const char*)rng_seed, sizeof(rng_seed)));
+}
+
+/** Produce deterministic randomness for the stochastic tests using the global
+ * rng_xof output.
+ *
+ * This function produces deterministic data over multiple calls iff it's
+ * called in the same call order with the same 'n' parameter.
+ * If not, outputs will deviate. */
+static void
+crypto_rand_deterministic(char *out, size_t n)
+{
+  tor_assert(rng_xof);
+  tor_mutex_acquire(rng_mutex);
+  crypto_xof_squeeze_bytes(rng_xof, (uint8_t*)out, n);
+  tor_mutex_release(rng_mutex);
+}
+
+/**
+ * Implementation helper: override our crypto_rand() PRNG with a given seed of
+ * length <b>seed_len</b>.  Overlong seeds are truncated; short ones are
+ * padded.
+ **/
+static void
+enable_deterministic_rng_impl(const uint8_t *seed, size_t seed_len)
+{
+  memset(rng_seed, 0, sizeof(rng_seed));
+  memcpy(rng_seed, seed, MIN(seed_len, sizeof(rng_seed)));
+
+  rng_mutex = tor_mutex_new();
+
+  crypto_xof_free(rng_xof);
+  rng_xof = crypto_xof_new();
+  crypto_xof_add_bytes(rng_xof, rng_seed, sizeof(rng_seed));
+  MOCK(crypto_rand, crypto_rand_deterministic);
+}
+
+/**
+ * Replace our crypto_rand() prng with a variant that generates all of its
+ * output deterministically from a randomly chosen seed.  In the event of an
+ * error, you can log the seed later on with
+ * testing_dump_reproducible_rng_seed.
+ **/
+void
+testing_enable_reproducible_rng(void)
+{
+  uint8_t seed[16];
+  crypto_rand((char*)seed, sizeof(seed));
+  enable_deterministic_rng_impl(seed, sizeof(seed));
+}
+
+/**
+ * Replace our crypto_rand() prng with a variant that generates all of its
+ * output deterministically from a fixed seed.  This variant is mainly useful
+ * for cases when we don't want coverage to change between runs.
+ **/
+void
+testing_enable_deterministic_rng(void)
+{
+  static const uint8_t quotation[] =
+    "What will it be? A tree? A weed? "
+    "Each one is started from a seed."; // -- Mary Ann Hoberman
+  enable_deterministic_rng_impl(quotation, sizeof(quotation));
+}
+
+/**
+ * Undo the overrides for our PRNG.  To be used at the end of testing.
+ **/
+void
+testing_disable_rng_override(void)
+{
+  crypto_xof_free(rng_xof);
+  UNMOCK(crypto_rand);
+  tor_mutex_free(rng_mutex);
+}
