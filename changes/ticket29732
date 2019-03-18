@@ -1,0 +1,5 @@
+  o Minor features (testing):
+    - Tor's unit test code now contains a standard set of functions to
+      replace the PRNG with a deterministic or reproducible version for
+      testing. Previously, various tests implemented this in various ways.
+      Implements ticket 29732.
