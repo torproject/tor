@@ -99,6 +99,10 @@ testing_enable_reproducible_rng(void)
  * Replace our crypto_rand() prng with a variant that generates all of its
  * output deterministically from a fixed seed.  This variant is mainly useful
  * for cases when we don't want coverage to change between runs.
+ *
+ * USAGE NOTE: Test correctness SHOULD NOT depend on the specific output of
+ * this "rng".  If you need a specific output, use
+ * testing_enable_prefilled_rng() instead.
  **/
 void
 testing_enable_deterministic_rng(void)
@@ -109,6 +113,59 @@ testing_enable_deterministic_rng(void)
   enable_deterministic_rng_impl(quotation, sizeof(quotation));
 }
 
+static uint8_t *prefilled_rng_buffer = NULL;
+static size_t prefilled_rng_buflen;
+static size_t prefilled_rng_idx;
+
+/**
+ * crypto_rand() replacement that returns canned data.
+ **/
+static void
+crypto_rand_prefilled(char *out, size_t n)
+{
+  tor_mutex_acquire(rng_mutex);
+  while (n) {
+    size_t n_to_copy = MIN(prefilled_rng_buflen - prefilled_rng_idx, n);
+    memcpy(out, prefilled_rng_buffer + prefilled_rng_idx, n_to_copy);
+    out += n_to_copy;
+    n -= n_to_copy;
+    prefilled_rng_idx += n_to_copy;
+
+    if (prefilled_rng_idx == prefilled_rng_buflen) {
+      prefilled_rng_idx = 0;
+    }
+  }
+  tor_mutex_release(rng_mutex);
+}
+
+/**
+ * Replace our crypto_rand() prng with a variant that yields output
+ * from a buffer.  If it reaches the end of the buffer, it starts over.
+ **/
+void
+testing_enable_prefilled_rng(const void *buffer, size_t buflen)
+{
+  tor_assert(buflen > 0);
+  rng_mutex = tor_mutex_new();
+
+  prefilled_rng_buffer = tor_memdup(buffer, buflen);
+  prefilled_rng_buflen = buflen;
+  prefilled_rng_idx = 0;
+
+  MOCK(crypto_rand, crypto_rand_prefilled);
+}
+
+/**
+ * Reset the position in the prefilled RNG buffer to the start.
+ */
+void
+testing_prefilled_rng_reset(void)
+{
+  tor_mutex_acquire(rng_mutex);
+  prefilled_rng_idx = 0;
+  tor_mutex_release(rng_mutex);
+}
+
 /**
  * Undo the overrides for our PRNG.  To be used at the end of testing.
  **/
@@ -116,6 +173,7 @@ void
 testing_disable_rng_override(void)
 {
   crypto_xof_free(rng_xof);
+  tor_free(prefilled_rng_buffer);
   UNMOCK(crypto_rand);
   tor_mutex_free(rng_mutex);
 }
