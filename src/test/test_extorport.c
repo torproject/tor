@@ -18,6 +18,7 @@
 
 #include "test/test.h"
 #include "test/test_helpers.h"
+#include "test/rng_test_helpers.h"
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -303,16 +304,6 @@ test_ext_or_cookie_auth(void *arg)
 }
 
 static void
-crypto_rand_return_tse_str(char *to, size_t n)
-{
-  if (n != 32) {
-    TT_FAIL(("Asked for %d bytes, not 32", (int)n));
-    return;
-  }
-  memcpy(to, "te road There is always another ", 32);
-}
-
-static void
 test_ext_or_cookie_auth_testvec(void *arg)
 {
   char *reply=NULL, *client_hash=NULL;
@@ -326,7 +317,7 @@ test_ext_or_cookie_auth_testvec(void *arg)
   memcpy(ext_or_auth_cookie, "Gliding wrapt in a brown mantle," , 32);
   ext_or_auth_cookie_is_set = 1;
 
-  MOCK(crypto_rand, crypto_rand_return_tse_str);
+  testing_enable_prefilled_rng("te road There is always another ", 32);
 
   tt_int_op(0, OP_EQ,
             handle_client_auth_nonce(client_nonce, 32, &client_hash, &reply,
@@ -351,7 +342,7 @@ test_ext_or_cookie_auth_testvec(void *arg)
                  "33b3cd77ff79bd80c2074bbf438119a2");
 
  done:
-  UNMOCK(crypto_rand);
+  testing_disable_prefilled_rng();
   tor_free(reply);
   tor_free(client_hash);
   tor_free(mem_op_hex_tmp);
@@ -414,9 +405,9 @@ do_ext_or_handshake(or_connection_t *conn)
   CONTAINS("\x01\x00", 2);
   WRITE("\x01", 1);
   WRITE("But when I look ahead up the whi", 32);
-  MOCK(crypto_rand, crypto_rand_return_tse_str);
+  testing_enable_prefilled_rng("te road There is always another ", 32);
   tt_int_op(0, OP_EQ, connection_ext_or_process_inbuf(conn));
-  UNMOCK(crypto_rand);
+  testing_disable_prefilled_rng();
   tt_int_op(TO_CONN(conn)->state, OP_EQ,
             EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH);
   CONTAINS("\xec\x80\xed\x6e\x54\x6d\x3b\x36\xfd\xfc\x22\xfe\x13\x15\x41\x6b"
@@ -481,9 +472,9 @@ test_ext_or_handshake(void *arg)
   tt_int_op(0, OP_EQ, connection_ext_or_process_inbuf(conn));
   /* send the rest of the nonce. */
   WRITE("ahead up the whi", 16);
-  MOCK(crypto_rand, crypto_rand_return_tse_str);
+  testing_enable_prefilled_rng("te road There is always another ", 32);
   tt_int_op(0, OP_EQ, connection_ext_or_process_inbuf(conn));
-  UNMOCK(crypto_rand);
+  testing_disable_prefilled_rng();
   /* We should get the right reply from the server. */
   CONTAINS("\xec\x80\xed\x6e\x54\x6d\x3b\x36\xfd\xfc\x22\xfe\x13\x15\x41\x6b"
            "\x02\x9f\x1a\xde\x76\x10\xd9\x10\x87\x8b\x62\xee\xb7\x40\x38\x21"
@@ -582,7 +573,7 @@ test_ext_or_handshake(void *arg)
 
  done:
   UNMOCK(connection_write_to_buf_impl_);
-  UNMOCK(crypto_rand);
+  testing_disable_prefilled_rng();
   if (conn)
     connection_free_minimal(TO_CONN(conn));
 #undef CONTAINS
