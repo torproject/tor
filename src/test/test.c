@@ -12,6 +12,7 @@
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "app/config/or_state_st.h"
+#include "test/rng_test_helpers.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -354,18 +355,6 @@ test_onion_queues(void *arg)
   tor_free(onionskin);
 }
 
-static crypto_cipher_t *crypto_rand_aes_cipher = NULL;
-
-// Mock replacement for crypto_rand: Generates bytes from a provided AES_CTR
-// cipher in <b>crypto_rand_aes_cipher</b>.
-static void
-crypto_rand_deterministic_aes(char *out, size_t n)
-{
-  tor_assert(crypto_rand_aes_cipher);
-  memset(out, 0, n);
-  crypto_cipher_crypt_inplace(crypto_rand_aes_cipher, out, n);
-}
-
 static void
 test_circuit_timeout(void *arg)
 {
@@ -397,8 +386,7 @@ test_circuit_timeout(void *arg)
 
   // Use a deterministic RNG here, or else we'll get nondeterministic
   // coverage in some of the circuitstats functions.
-  MOCK(crypto_rand, crypto_rand_deterministic_aes);
-  crypto_rand_aes_cipher = crypto_cipher_new("xyzzyplughplover");
+  testing_enable_deterministic_rng();
 
   circuitbuild_running_unit_tests();
 #define timeout0 (build_time_t)(30*1000.0)
@@ -534,8 +522,8 @@ test_circuit_timeout(void *arg)
   circuit_build_times_free_timeouts(&final);
   or_state_free(state);
   teardown_periodic_events();
-  UNMOCK(crypto_rand);
-  crypto_cipher_free(crypto_rand_aes_cipher);
+
+  testing_disable_deterministic_rng();
 }
 
 /** Test encoding and parsing of rendezvous service descriptors. */
