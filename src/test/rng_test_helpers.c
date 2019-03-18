@@ -32,6 +32,11 @@
  */
 static tor_mutex_t *rng_mutex = NULL;
 
+/**
+ * Cached old value for the thread prng.
+ **/
+static crypto_fast_rng_t *stored_fast_rng = NULL;
+
 /** replacement for crypto_strongest_rand that delegates to crypto_rand. */
 static void
 mock_crypto_strongest_rand(uint8_t *out, size_t len)
@@ -87,12 +92,21 @@ enable_deterministic_rng_impl(const uint8_t *seed, size_t seed_len)
   crypto_xof_add_bytes(rng_xof, rng_seed, sizeof(rng_seed));
   MOCK(crypto_rand, crypto_rand_deterministic);
   MOCK(crypto_strongest_rand_, mock_crypto_strongest_rand);
+
+  uint8_t fast_rng_seed[CRYPTO_FAST_RNG_SEED_LEN];
+  memset(fast_rng_seed, 0xff, sizeof(fast_rng_seed));
+  memcpy(fast_rng_seed, rng_seed, MIN(sizeof(rng_seed),
+                                      sizeof(fast_rng_seed)));
+  crypto_fast_rng_t *fast_rng = crypto_fast_rng_new_from_seed(fast_rng_seed);
+  crypto_fast_rng_disable_reseed(fast_rng);
+  stored_fast_rng = crypto_replace_thread_fast_rng(fast_rng);
 }
 
 /**
- * Replace our crypto_rand() and crypto_strongest_rand() prngs with a variant
- * that generates all of its output deterministically from a randomly chosen
- * seed.  In the event of an error, you can log the seed later on with
+ * Replace our get_thread_fast_rng(), crypto_rand() and
+ * crypto_strongest_rand() prngs with a variant that generates all of its
+ * output deterministically from a randomly chosen seed.  In the event of an
+ * error, you can log the seed later on with
  * testing_dump_reproducible_rng_seed.
  **/
 void
@@ -104,10 +118,10 @@ testing_enable_reproducible_rng(void)
 }
 
 /**
- * Replace our crypto_rand() and crypto_strongest_rand() prngs with a variant
- * that generates all of its output deterministically from a fixed seed.  This
- * variant is mainly useful for cases when we don't want coverage to change
- * between runs.
+ * Replace our get_thread_fast_rng(), crypto_rand() and
+ * crypto_strongest_rand() prngs with a variant that generates all of its
+ * output deterministically from a fixed seed.  This variant is mainly useful
+ * for cases when we don't want coverage to change between runs.
  *
  * USAGE NOTE: Test correctness SHOULD NOT depend on the specific output of
  * this "rng".  If you need a specific output, use
@@ -151,6 +165,9 @@ crypto_rand_prefilled(char *out, size_t n)
  * Replace our crypto_rand() and crypto_strongest_rand() prngs with a variant
  * that yields output from a buffer.  If it reaches the end of the buffer, it
  * starts over.
+ *
+ * Note: the get_thread_fast_rng() prng is not replaced by this; we'll need
+ * more code to support that.
  **/
 void
 testing_enable_prefilled_rng(const void *buffer, size_t buflen)
@@ -188,4 +205,7 @@ testing_disable_rng_override(void)
   UNMOCK(crypto_rand);
   UNMOCK(crypto_strongest_rand_);
   tor_mutex_free(rng_mutex);
+
+  crypto_fast_rng_t *rng = crypto_replace_thread_fast_rng(stored_fast_rng);
+  crypto_fast_rng_free(rng);
 }
