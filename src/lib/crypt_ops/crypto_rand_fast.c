@@ -193,6 +193,26 @@ cipher_from_seed(const uint8_t *seed)
 }
 
 /**
+ * Helper: mix additional entropy into <b>rng</b> by using our XOF to mix the
+ * old value for the seed with some additional bytes from
+ * crypto_strongest_rand().
+ **/
+static void
+crypto_fast_rng_add_entopy(crypto_fast_rng_t *rng)
+{
+  crypto_xof_t *xof = crypto_xof_new();
+  crypto_xof_add_bytes(xof, rng->buf.seed, SEED_LEN);
+  {
+    uint8_t seedbuf[SEED_LEN];
+    crypto_strongest_rand(seedbuf, SEED_LEN);
+    crypto_xof_add_bytes(xof, seedbuf, SEED_LEN);
+    memwipe(seedbuf, 0, SEED_LEN);
+  }
+  crypto_xof_squeeze_bytes(xof, rng->buf.seed, SEED_LEN);
+  crypto_xof_free(xof);
+}
+
+/**
  * Helper: refill the seed bytes and output buffer of <b>rng</b>, using
  * the input seed bytes as input (key and IV) for the stream cipher.
  *
@@ -203,20 +223,8 @@ static void
 crypto_fast_rng_refill(crypto_fast_rng_t *rng)
 {
   if (rng->n_till_reseed-- == 0) {
-    /* It's time to reseed the RNG.  We'll do this by using our XOF to mix the
-     * old value for the seed with some additional bytes from
-     * crypto_strongest_rand(). */
-    crypto_xof_t *xof = crypto_xof_new();
-    crypto_xof_add_bytes(xof, rng->buf.seed, SEED_LEN);
-    {
-      uint8_t seedbuf[SEED_LEN];
-      crypto_strongest_rand(seedbuf, SEED_LEN);
-      crypto_xof_add_bytes(xof, seedbuf, SEED_LEN);
-      memwipe(seedbuf, 0, SEED_LEN);
-    }
-    crypto_xof_squeeze_bytes(xof, rng->buf.seed, SEED_LEN);
-    crypto_xof_free(xof);
-
+    /* It's time to reseed the RNG. */
+    crypto_fast_rng_add_entopy(rng);
     rng->n_till_reseed = RESEED_AFTER;
   }
   /* Now fill rng->buf with output from our stream cipher, initialized from
