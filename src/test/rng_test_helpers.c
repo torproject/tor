@@ -32,6 +32,13 @@
  */
 static tor_mutex_t *rng_mutex = NULL;
 
+/** replacement for crypto_strongest_rand that delegates to crypto_rand. */
+static void
+mock_crypto_strongest_rand(uint8_t *out, size_t len)
+{
+  crypto_rand((char *)out, len);
+}
+
 /* This is the seed of the deterministic randomness. */
 static uint8_t rng_seed[16];
 static crypto_xof_t *rng_xof = NULL;
@@ -79,12 +86,13 @@ enable_deterministic_rng_impl(const uint8_t *seed, size_t seed_len)
   rng_xof = crypto_xof_new();
   crypto_xof_add_bytes(rng_xof, rng_seed, sizeof(rng_seed));
   MOCK(crypto_rand, crypto_rand_deterministic);
+  MOCK(crypto_strongest_rand_, mock_crypto_strongest_rand);
 }
 
 /**
- * Replace our crypto_rand() prng with a variant that generates all of its
- * output deterministically from a randomly chosen seed.  In the event of an
- * error, you can log the seed later on with
+ * Replace our crypto_rand() and crypto_strongest_rand() prngs with a variant
+ * that generates all of its output deterministically from a randomly chosen
+ * seed.  In the event of an error, you can log the seed later on with
  * testing_dump_reproducible_rng_seed.
  **/
 void
@@ -96,9 +104,10 @@ testing_enable_reproducible_rng(void)
 }
 
 /**
- * Replace our crypto_rand() prng with a variant that generates all of its
- * output deterministically from a fixed seed.  This variant is mainly useful
- * for cases when we don't want coverage to change between runs.
+ * Replace our crypto_rand() and crypto_strongest_rand() prngs with a variant
+ * that generates all of its output deterministically from a fixed seed.  This
+ * variant is mainly useful for cases when we don't want coverage to change
+ * between runs.
  *
  * USAGE NOTE: Test correctness SHOULD NOT depend on the specific output of
  * this "rng".  If you need a specific output, use
@@ -139,8 +148,9 @@ crypto_rand_prefilled(char *out, size_t n)
 }
 
 /**
- * Replace our crypto_rand() prng with a variant that yields output
- * from a buffer.  If it reaches the end of the buffer, it starts over.
+ * Replace our crypto_rand() and crypto_strongest_rand() prngs with a variant
+ * that yields output from a buffer.  If it reaches the end of the buffer, it
+ * starts over.
  **/
 void
 testing_enable_prefilled_rng(const void *buffer, size_t buflen)
@@ -153,6 +163,7 @@ testing_enable_prefilled_rng(const void *buffer, size_t buflen)
   prefilled_rng_idx = 0;
 
   MOCK(crypto_rand, crypto_rand_prefilled);
+  MOCK(crypto_strongest_rand_, mock_crypto_strongest_rand);
 }
 
 /**
@@ -175,5 +186,6 @@ testing_disable_rng_override(void)
   crypto_xof_free(rng_xof);
   tor_free(prefilled_rng_buffer);
   UNMOCK(crypto_rand);
+  UNMOCK(crypto_strongest_rand_);
   tor_mutex_free(rng_mutex);
 }
