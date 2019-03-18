@@ -21,6 +21,7 @@
 #include "test/hs_test_helpers.h"
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
+#include "test/rng_test_helpers.h"
 
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 DISABLE_GCC_WARNING(overlength-strings)
@@ -29,13 +30,6 @@ DISABLE_GCC_WARNING(overlength-strings)
 #endif
 #include "test_hs_descriptor.inc"
 ENABLE_GCC_WARNING(overlength-strings)
-
-/* Mock function to fill all bytes with 1 */
-static void
-mock_crypto_strongest_rand(uint8_t *out, size_t out_len)
-{
-  memset(out, 1, out_len);
-}
 
 /* Test certificate encoding put in a descriptor. */
 static void
@@ -800,7 +794,7 @@ test_build_authorized_client(void *arg)
                 client_pubkey_b16,
                 strlen(client_pubkey_b16));
 
-  MOCK(crypto_strongest_rand_, mock_crypto_strongest_rand);
+  testing_enable_prefilled_rng("\x01", 1);
 
   hs_desc_build_authorized_client(subcredential,
                                   &client_auth_pk, &auth_ephemeral_sk,
@@ -816,7 +810,7 @@ test_build_authorized_client(void *arg)
  done:
   tor_free(desc_client);
   tor_free(mem_op_hex_tmp);
-  UNMOCK(crypto_strongest_rand_);
+  testing_disable_prefilled_rng();
 }
 
 struct testcase_t hs_descriptor[] = {
