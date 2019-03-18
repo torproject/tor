@@ -1714,6 +1714,8 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
     "bw=760 nick=Test rtt=380 time=2018-05-08T16:13:26\n";
   const char *relay_lines_bad =
     "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A\n";
+  const char *relay_lines_ignore =
+    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 vote=0\n";
 
   tor_asprintf(&header_lines_v100, "%ld\n", (long)timestamp);
   tor_asprintf(&header_lines_v110_no_terminator, "%ld\n%s", (long)timestamp,
@@ -1978,6 +1980,24 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
   smartlist_free(bw_file_headers);
   tor_free(bw_file_headers_str);
+
+  /* Test v1.x.x bandwidth line with vote=0.
+   * It will be ignored it and logged it at debug level. */
+  /* Create the bandwidth file */
+  tor_asprintf(&content, "%s%s%s",
+               header_lines_v110, relay_lines_v110, relay_lines_ignore);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+
+  /* Read the bandwidth file */
+  bw_file_headers = smartlist_new();
+  setup_full_capture_of_logs(LOG_DEBUG);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL,
+                                                       bw_file_headers));
+  SMARTLIST_FOREACH(bw_file_headers, char *, c, tor_free(c));
+  smartlist_free(bw_file_headers);
+  expect_log_msg_containing("Ignoring bandwidth file line");
+  teardown_capture_of_logs();
 
  done:
   tor_free(fname);
