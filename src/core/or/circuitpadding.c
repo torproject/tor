@@ -48,10 +48,10 @@
 #include "core/or/circuitpadding.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
+#include "core/mainloop/netstatus.h"
 #include "core/or/relay.h"
 #include "feature/stats/rephist.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/hibernate/hibernate.h"
 
 #include "core/or/channel.h"
 
@@ -974,12 +974,6 @@ circpad_send_padding_cell_for_callback(circpad_machine_runtime_t *mi)
     return CIRCPAD_STATE_CHANGED;
   }
 
-  /* Don't send padding if we are currently in dormant mode. */
-  if (accounting_tor_is_dormant()) {
-    log_info(LD_CIRC, "Not padding because we are dormant.");
-    return CIRCPAD_STATE_UNCHANGED;
-  }
-
   /* If it's a histogram, reduce the token count */
   if (mi->histogram && mi->histogram_len) {
     /* Basic sanity check on the histogram before removing anything */
@@ -1164,6 +1158,12 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
   circpad_delay_t in_usec = 0;
   struct timeval timeout;
   tor_assert(mi);
+
+  /* Don't schedule padding if we are currently in dormant mode. */
+  if (net_is_completely_disabled()) {
+    log_info(LD_CIRC, "Not scheduling padding because we are dormant.");
+    return CIRCPAD_STATE_UNCHANGED;
+  }
 
   // Don't pad in end (but  also don't cancel any previously
   // scheduled padding either).
