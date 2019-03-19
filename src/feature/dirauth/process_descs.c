@@ -215,8 +215,6 @@ dirserv_load_fingerprint_file(void)
   fingerprint_list_new = authdir_config_new();
 
   for (list=front; list; list=list->next) {
-    char digest_tmp[DIGEST_LEN];
-    char digest256_tmp[DIGEST256_LEN];
     router_status_t add_status = 0;
     nickname = list->key; fingerprint = list->value;
     tor_strstrip(fingerprint, " "); /* remove spaces */
@@ -233,22 +231,37 @@ dirserv_load_fingerprint_file(void)
     /* Check fingerprint type by key length, and if it's RSA or ed25519. */
     int is_ed25519 = (strlen(fingerprint) == BASE64_DIGEST256_LEN);
     int is_rsa = (strlen(fingerprint) == HEX_DIGEST_LEN);
-    int is_valid_key = is_ed25519 || is_rsa;
+    bool is_valid_fpr = true;
 
-    /* Check if we have a valid RSA or ed25519 key. If not, skip this entry. */
-    if (!is_valid_key ||
+    /* We only accept ed25519 or RSA keys */
+    if (!is_ed25519 && !is_rsa) {
+      is_valid_fpr = false;
+    }
+
+    tor_assert(is_ed25519 || is_rsa);
+
+    /* Decode ed25519 keys */
+    char digest256_tmp[DIGEST256_LEN];
+    if (is_ed25519 && digest256_from_base64(digest256_tmp, fingerprint) < 0) {
+      is_valid_fpr = false;
+    }
+
+    /* Decode RSA keys */
+    char digest_tmp[DIGEST_LEN];
+    if (is_rsa &&
         base16_decode(digest_tmp, sizeof(digest_tmp), fingerprint,
-                      HEX_DIGEST_LEN) != sizeof(digest_tmp) ||
-        digest256_from_base64(digest256_tmp, fingerprint) < 0) {
-      log_notice(LD_CONFIG,
-                 "Invalid fingerprint (nickname '%s', "
-                 "fingerprint %s). Skipping.",
-                 nickname, fingerprint);
+                      HEX_DIGEST_LEN) != sizeof(digest_tmp)) {
+      is_valid_fpr = false;
+    }
+
+    /* If this is not a valid key, log and skip */
+    if (!is_valid_fpr) {
+      log_notice(LD_CONFIG, "Invalid fingerprint (nickname '%s', "
+                 "fingerprint %s). Skipping.", nickname, fingerprint);
       continue;
     }
 
-    /* Here, we check is_ed25519 or is_rsa because keys which return 0 for
-     * both are skipped over in the statement above with !is_valid_key. */
+    /* It's a valid key, register it. */
     if (is_ed25519) {
       add_ed25519_to_dir(digest256_tmp, fingerprint_list_new, add_status);
     } else if (is_rsa) {
