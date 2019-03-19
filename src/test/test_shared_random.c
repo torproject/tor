@@ -606,7 +606,9 @@ test_encoding(void *arg)
 static void
 test_sr_setup_srv(int also_current)
 {
-  /* Clear both SRVs before starting. */
+  /* Clear both SRVs before starting.
+   * In 0.3.5 and earlier, sr_state_set_previous_srv() and
+   * sr_state_set_current_srv() do not free() the old srvs. */
   sr_state_clean_srvs();
 
   sr_srv_t *srv = tor_malloc_zero(sizeof(sr_srv_t));
