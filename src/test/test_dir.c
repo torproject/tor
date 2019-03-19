@@ -1706,6 +1706,23 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
   tor_free(content);
   tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
 
+  /* Test v1.x.x bandwidth line with vote=0.
+   * It will be ignored it and logged it at debug level. */
+  const char *relay_lines_ignore =
+    "node_id=$68A483E05A2ABDCA6DA5A3EF8DB5177638A27F80 bw=1024 vote=0\n";
+
+  /* Create the bandwidth file */
+  tor_asprintf(&content, "%ld\n%s%s", (long)timestamp, v110_header_lines,
+               relay_lines_ignore);
+  write_str_to_file(fname, content, 0);
+  tor_free(content);
+
+  /* Read the bandwidth file */
+  setup_full_capture_of_logs(LOG_DEBUG);
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL));
+  expect_log_msg_containing("Ignoring bandwidth file line");
+  teardown_capture_of_logs();
+
  done:
   tor_free(fname);
 }
