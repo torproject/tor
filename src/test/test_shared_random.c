@@ -54,6 +54,9 @@ init_authority_state(void)
    * the phase we are currently in which uses "now" as the starting
    * timestamp. Delete it before we do any testing below. */
   sr_state_delete_commits();
+  /* It's also possible that a current SRV has been generated, if we are at
+   * state transition time. But let's just forget about that SRV. */
+  sr_state_clean_srvs();
 
  done:
   UNMOCK(get_my_v3_authority_cert);
@@ -449,12 +452,20 @@ test_encoding(void *arg)
   ;
 }
 
-/** Setup some SRVs in our SR state. If <b>also_current</b> is set, then set
- *  both current and previous SRVs.
- *  Helper of test_vote() and test_sr_compute_srv(). */
+/** Setup some SRVs in our SR state.
+ *  If <b>also_current</b> is set, then set both current and previous SRVs.
+ *  Otherwise, just set the previous SRV. (And clear the current SRV.)
+ *
+ * You must call sr_state_free() to free the state at the end of each test
+ * function (on pass or fail). */
 static void
 test_sr_setup_srv(int also_current)
 {
+  /* Clear both SRVs before starting.
+   * In 0.3.5 and earlier, sr_state_set_previous_srv() and
+   * sr_state_set_current_srv() do not free() the old srvs. */
+  sr_state_clean_srvs();
+
   sr_srv_t *srv = tor_malloc_zero(sizeof(sr_srv_t));
   srv->num_reveals = 42;
   memcpy(srv->value,
