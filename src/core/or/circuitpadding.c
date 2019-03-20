@@ -2079,7 +2079,6 @@ circpad_setup_machine_on_circ(circuit_t *on_circ,
   on_circ->padding_machine[machine->machine_index] = machine;
 }
 
-#ifdef TOR_UNIT_TESTS
 /** Validate a single state of a padding machine */
 static bool
 padding_machine_state_is_valid(const circpad_state_t *state)
@@ -2143,9 +2142,9 @@ padding_machine_is_valid(const circpad_machine_spec_t *machine)
 
 /* Validate and register <b>machine</b> into <b>machine_list</b>. If
  * <b>machine_list</b> is NULL, then just validate. */
-STATIC void
-register_padding_machine(circpad_machine_spec_t *machine,
-                         smartlist_t *machine_list)
+void
+circpad_register_padding_machine(circpad_machine_spec_t *machine,
+                                 smartlist_t *machine_list)
 {
   if (!padding_machine_is_valid(machine)) {
     log_warn(LD_GENERAL, "Machine #%u is invalid. Ignoring.",
@@ -2158,6 +2157,7 @@ register_padding_machine(circpad_machine_spec_t *machine,
   }
 }
 
+#ifdef TOR_UNIT_TESTS
 /* These padding machines are only used for tests pending #28634. */
 static void
 circpad_circ_client_machine_init(void)
@@ -2209,7 +2209,8 @@ circpad_circ_client_machine_init(void)
   circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_total_tokens = 5;
 
   circ_client_machine->machine_num = smartlist_len(origin_padding_machines);
-  register_padding_machine(circ_client_machine, origin_padding_machines);
+  circpad_register_padding_machine(circ_client_machine,
+                                   origin_padding_machines);
 }
 
 static void
@@ -2309,7 +2310,8 @@ circpad_circ_responder_machine_init(void)
       CIRCPAD_TOKEN_REMOVAL_CLOSEST_USEC;
 
   circ_responder_machine->machine_num = smartlist_len(relay_padding_machines);
-  register_padding_machine(circ_responder_machine, relay_padding_machines);
+  circpad_register_padding_machine(circ_responder_machine,
+                                   relay_padding_machines);
 }
 #endif
 
