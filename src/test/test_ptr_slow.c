@@ -6,6 +6,7 @@
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "test/test.h"
+#include "test/ptr_helpers.h"
 
 #include <stdint.h>
 #include <limits.h>
@@ -15,9 +16,9 @@ static void
 assert_int_voidptr_roundtrip(int a)
 {
   intptr_t ap = (intptr_t)a;
-  void *b = (void *)ap;
-  intptr_t c = (intptr_t)b;
-  void *d = (void *)c;
+  void *b = cast_intptr_to_voidstar(ap);
+  intptr_t c = cast_voidstar_to_intptr(b);
+  void *d = cast_intptr_to_voidstar(c);
 
   tt_assert(ap == c);
   tt_assert(b == d);
@@ -45,9 +46,9 @@ static void
 assert_uint_voidptr_roundtrip(unsigned int a)
 {
  uintptr_t ap = (uintptr_t)a;
- void *b = (void *)ap;
- uintptr_t c = (uintptr_t)b;
- void *d = (void *)c;
+ void *b = cast_uintptr_to_voidstar(ap);
+ uintptr_t c = cast_voidstar_to_uintptr(b);
+ void *d = cast_uintptr_to_voidstar(c);
 
  tt_assert(ap == c);
  tt_assert(b == d);
