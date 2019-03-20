@@ -1160,7 +1160,7 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
   tor_assert(mi);
 
   /* Don't schedule padding if we are currently in dormant mode. */
-  if (is_participating_on_network()) {
+  if (!is_participating_on_network()) {
     log_info(LD_CIRC, "Not scheduling padding because we are dormant.");
     return CIRCPAD_STATE_UNCHANGED;
   }
