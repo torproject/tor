@@ -576,6 +576,9 @@ typedef uint8_t circpad_machine_num_t;
 
 /** Global state machine structure from the consensus */
 typedef struct circpad_machine_spec_t {
+  /* Just a user-friendly machine name for logs */
+  const char *name;
+
   /** Global machine number */
   circpad_machine_num_t machine_num;
 
@@ -685,6 +688,8 @@ bool circpad_padding_negotiated(struct circuit_t *circ,
                            circpad_machine_num_t machine,
                            uint8_t command,
                            uint8_t response);
+
+circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t circ_purpose);
 
 MOCK_DECL(circpad_decision_t,
 circpad_machine_schedule_padding,(circpad_machine_runtime_t *));

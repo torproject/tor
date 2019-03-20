@@ -35,6 +35,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/or/circuitmux.c		\
 	src/core/or/circuitmux_ewma.c		\
 	src/core/or/circuitpadding.c		\
+	src/core/or/circuitpadding_machines.c		\
 	src/core/or/circuitstats.c		\
 	src/core/or/circuituse.c		\
 	src/core/or/command.c			\
@@ -238,6 +239,7 @@ noinst_HEADERS +=					\
 	src/core/or/circuitmux_ewma.h			\
 	src/core/or/circuitstats.h			\
 	src/core/or/circuitpadding.h			\
+	src/core/or/circuitpadding_machines.h			\
 	src/core/or/circuituse.h			\
 	src/core/or/command.h				\
 	src/core/or/connection_edge.h			\
