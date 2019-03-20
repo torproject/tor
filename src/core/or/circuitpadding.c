@@ -376,7 +376,10 @@ circpad_choose_state_length(circpad_machine_runtime_t *mi)
   length = circpad_distribution_sample(state->length_dist);
   length = MAX(0, length);
   length += state->start_length;
-  length = MIN(length, state->max_length);
+
+  if (state->max_length) {
+    length = MIN(length, state->max_length);
+  }
 
   mi->state_length = clamp_double_to_int64(length);
 }
