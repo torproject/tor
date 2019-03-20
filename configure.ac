@@ -808,6 +808,16 @@ if test "x$enable_expensive_hardening" = "xyes"; then
       AC_MSG_ERROR([The compiler supports -fno-sanitize-recover, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
     fi
 
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize-trap=undefined], also_link, CFLAGS_UBSAN="-fsanitize-trap=undefined", true)
+    if test "$tor_cv_cflags__fsanitize_trap_undefined" = "yes" && test "$tor_can_link__fsanitize_trap_undefined" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fsanitize-trap=undefined, but for some reason I was not able to link when using it. That's unexpected: -fsanitize-trap=undefined is not supposed to require runtime support. If it does, with GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
+    fi
+
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize-undefined-trap-on-error], also_link, CFLAGS_UBSAN="-fsanitize-undefined-trap-on-error", true)
+    if test "$tor_cv_cflags__fsanitize_undefined_trap_on_error" = "yes" && test "$tor_can_link__fsanitize_undefined_trap_on_error" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fsanitize-undefined-trap-on-error, but for some reason I was not able to link when using it. That's unexpected: -fsanitize-undefined-trap-on-error is not supposed to require runtime support. If it does, with GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
+    fi
+
 TOR_CHECK_CFLAGS([-fno-omit-frame-pointer])
 fi
 
