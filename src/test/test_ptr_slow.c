@@ -33,7 +33,11 @@ test_int_voidstar_interop(void *arg)
   int a;
   (void)arg;
 
-  for (a = 0; a <= 1024; a++) {
+  for (a = -1024; a <= 1024; a++) {
+    assert_int_voidptr_roundtrip(a);
+  }
+
+  for (a = INT_MIN; a <= INT_MIN+1024; a++) {
     assert_int_voidptr_roundtrip(a);
   }
 
