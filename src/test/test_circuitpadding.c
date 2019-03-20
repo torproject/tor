@@ -1702,7 +1702,7 @@ helper_create_conditional_machines(void)
   add->conditions.state_mask = CIRCPAD_CIRC_BUILDING|
            CIRCPAD_CIRC_NO_STREAMS|CIRCPAD_CIRC_HAS_RELAY_EARLY;
   add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
-  register_padding_machine(add, origin_padding_machines);
+  circpad_register_padding_machine(add, origin_padding_machines);
 
   add = helper_create_conditional_machine();
   add->machine_num = 3;
@@ -1721,15 +1721,15 @@ helper_create_conditional_machines(void)
   add->conditions.state_mask = CIRCPAD_CIRC_OPENED|
            CIRCPAD_CIRC_STREAMS|CIRCPAD_CIRC_HAS_NO_RELAY_EARLY;
   add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
-  register_padding_machine(add, origin_padding_machines);
+  circpad_register_padding_machine(add, origin_padding_machines);
 
   add = helper_create_conditional_machine();
   add->machine_num = 2;
-  register_padding_machine(add, relay_padding_machines);
+  circpad_register_padding_machine(add, relay_padding_machines);
 
   add = helper_create_conditional_machine();
   add->machine_num = 3;
-  register_padding_machine(add, relay_padding_machines);
+  circpad_register_padding_machine(add, relay_padding_machines);
 }
 
 void
