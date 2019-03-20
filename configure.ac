@@ -798,6 +798,16 @@ if test "x$enable_expensive_hardening" = "xyes"; then
       AC_MSG_ERROR([The compiler supports -fsanitize=undefined, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
     fi
 
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fno-sanitize-recover=undefined], also_link, CFLAGS_UBSAN="-fno-sanitize-recover=undefined", true)
+    if test "$tor_cv_cflags__fno_sanitize_recover_undefined" = "yes" && test "$tor_can_link__fno_sanitize_recover_undefined" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fno-sanitize-recover=undefined, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
+    fi
+
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fno-sanitize-recover], also_link, CFLAGS_UBSAN="-fno-sanitize-recover", true)
+    if test "$tor_cv_cflags__fno_sanitize_recover" = "yes" && test "$tor_can_link__fno_sanitize_recover" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fno-sanitize-recover, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
+    fi
+
 TOR_CHECK_CFLAGS([-fno-omit-frame-pointer])
 fi
 
