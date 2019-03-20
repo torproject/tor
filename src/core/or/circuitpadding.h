@@ -698,6 +698,8 @@ circpad_machine_event_circ_has_no_relay_early(struct origin_circuit_t *circ);
 
 void circpad_machines_init(void);
 void circpad_machines_free(void);
+void circpad_register_padding_machine(circpad_machine_spec_t *machine,
+                                      smartlist_t *machine_list);
 
 void circpad_machine_states_init(circpad_machine_spec_t *machine,
                                  circpad_statenum_t num_states);
@@ -781,9 +783,6 @@ histogram_get_bin_upper_bound(const circpad_machine_runtime_t *mi,
 extern smartlist_t *origin_padding_machines;
 extern smartlist_t *relay_padding_machines;
 
-STATIC void
-register_padding_machine(circpad_machine_spec_t *machine,
-                         smartlist_t *machine_list);
 #endif
 
 #endif
