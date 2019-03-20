@@ -44,6 +44,12 @@ test_int_voidstar_interop(void *arg)
   for (a = INT_MAX-1024; a < INT_MAX; a++) {
     assert_int_voidptr_roundtrip(a);
   }
+
+  a = 1;
+  for (unsigned long i = 0; i < sizeof(int) * 8; i++) {
+    assert_int_voidptr_roundtrip(a);
+    a = (a << 1);
+  }
 }
 
 static void
@@ -73,6 +79,12 @@ test_uint_voidstar_interop(void *arg)
 
   for (a = UINT_MAX-1024; a < UINT_MAX; a++) {
     assert_uint_voidptr_roundtrip(a);
+  }
+
+  a = 1;
+  for (unsigned long i = 0; i < sizeof(int) * 8; i++) {
+    assert_uint_voidptr_roundtrip(a);
+    a = (a << 1);
   }
 }
 
