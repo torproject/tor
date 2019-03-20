@@ -46,6 +46,7 @@
 #include "lib/math/prob_distr.h"
 #include "core/or/or.h"
 #include "core/or/circuitpadding.h"
+#include "core/or/circuitpadding_machines.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/mainloop/netstatus.h"
@@ -72,8 +73,6 @@
 
 #include "app/config/config.h"
 
-static inline circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t
-                                          circ_purpose);
 static inline circpad_circuit_state_t circpad_circuit_state(
                                         origin_circuit_t *circ);
 static void circpad_setup_machine_on_circ(circuit_t *on_circ,
@@ -1979,7 +1978,6 @@ circpad_circuit_state(origin_circuit_t *circ)
  * Convert a normal circuit purpose into a bitmask that we can
  * use for determining matching circuits.
  */
-static inline
 circpad_purpose_mask_t
 circpad_circ_purpose_to_mask(uint8_t circ_purpose)
 {
@@ -2622,6 +2620,14 @@ circpad_machines_init(void)
 
   origin_padding_machines = smartlist_new();
   relay_padding_machines = smartlist_new();
+
+  /* Register machines for hiding client-side intro circuits */
+  circpad_machine_client_hide_intro_circuits(origin_padding_machines);
+  circpad_machine_relay_hide_intro_circuits(relay_padding_machines);
+
+  /* Register machines for hiding client-side rendezvous circuits */
+  circpad_machine_client_hide_rend_circuits(origin_padding_machines);
+  circpad_machine_relay_hide_rend_circuits(relay_padding_machines);
 
   // TODO: Parse machines from consensus and torrc
 #ifdef TOR_UNIT_TESTS
