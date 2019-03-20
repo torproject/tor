@@ -415,6 +415,8 @@ helper_create_basic_machine(void)
   /* Start, burst */
   circpad_machine_states_init(&circ_client_machine, 2);
 
+  circ_client_machine.name = "basic";
+
   circ_client_machine.states[CIRCPAD_STATE_START].
       next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
   circ_client_machine.states[CIRCPAD_STATE_START].use_rtt_estimate = 1;
