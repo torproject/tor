@@ -1160,12 +1160,32 @@ if test "$fragile_hardening" = "yes"; then
 
    TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=address], also_link, CFLAGS_ASAN="-fsanitize=address", true)
     if test "$tor_cv_cflags__fsanitize_address" = "yes" && test "$tor_can_link__fsanitize_address" != "yes"; then
-      AC_MSG_ERROR([The compiler supports -fsanitize=address, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
+      AC_MSG_ERROR([The compiler supports -fsanitize=address, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libasan.*, and with Clang you need libclang_rt.asan*])
     fi
 
    TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=undefined], also_link, CFLAGS_UBSAN="-fsanitize=undefined", true)
-    if test "$tor_cv_cflags__fsanitize_address" = "yes" && test "$tor_can_link__fsanitize_address" != "yes"; then
-      AC_MSG_ERROR([The compiler supports -fsanitize=undefined, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libasan.*, and with Clang you need libclang_rt.ubsan*])
+    if test "$tor_cv_cflags__fsanitize_undefined" = "yes" && test "$tor_can_link__fsanitize_undefined" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fsanitize=undefined, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
+    fi
+
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fno-sanitize-recover=undefined], also_link, CFLAGS_UBSAN="-fno-sanitize-recover=undefined", true)
+    if test "$tor_cv_cflags__fno_sanitize_recover_undefined" = "yes" && test "$tor_can_link__fno_sanitize_recover_undefined" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fno-sanitize-recover=undefined, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
+    fi
+
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fno-sanitize-recover], also_link, CFLAGS_UBSAN="-fno-sanitize-recover", true)
+    if test "$tor_cv_cflags__fno_sanitize_recover" = "yes" && test "$tor_can_link__fno_sanitize_recover" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fno-sanitize-recover, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
+    fi
+
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize-trap=undefined], also_link, CFLAGS_UBSAN="-fsanitize-trap=undefined", true)
+    if test "$tor_cv_cflags__fsanitize_trap_undefined" = "yes" && test "$tor_can_link__fsanitize_trap_undefined" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fsanitize-trap=undefined, but for some reason I was not able to link when using it. That's unexpected: -fsanitize-trap=undefined is not supposed to require runtime support. If it does, with GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
+    fi
+
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize-undefined-trap-on-error], also_link, CFLAGS_UBSAN="-fsanitize-undefined-trap-on-error", true)
+    if test "$tor_cv_cflags__fsanitize_undefined_trap_on_error" = "yes" && test "$tor_can_link__fsanitize_undefined_trap_on_error" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fsanitize-undefined-trap-on-error, but for some reason I was not able to link when using it. That's unexpected: -fsanitize-undefined-trap-on-error is not supposed to require runtime support. If it does, with GCC you need libubsan.*, and with Clang you need libclang_rt.ubsan*])
     fi
 
 TOR_CHECK_CFLAGS([-fno-omit-frame-pointer])
