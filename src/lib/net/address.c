@@ -117,8 +117,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
 {
   memset(sa_out, 0, len);
 
-  sa_family_t family = tor_addr_family(a);
-  if (family == AF_INET) {
+  if (tor_addr_is_v4(a)) {
     struct sockaddr_in *sin;
     if (len < (int)sizeof(struct sockaddr_in))
       return 0;
@@ -130,7 +129,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
     sin->sin_port = htons(port);
     sin->sin_addr.s_addr = tor_addr_to_ipv4n(a);
     return sizeof(struct sockaddr_in);
-  } else if (family == AF_INET6) {
+  } else if (tor_addr_is_v6(a)) {
     struct sockaddr_in6 *sin6;
     if (len < (int)sizeof(struct sockaddr_in6))
       return 0;
@@ -259,13 +258,12 @@ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
   uint32_t iph6[4];
 
   tor_assert(addr);
-  sa_family_t v_family = tor_addr_family(addr);
 
-  if (v_family == AF_INET) {
+  if (tor_addr_is_v4(addr)) {
     iph4 = tor_addr_to_ipv4h(addr);
   }
 
-  if (v_family == AF_INET6) {
+  if (tor_addr_is_v6(addr)) {
     const uint32_t *a32 = tor_addr_to_in6_addr32(addr);
     iph6[0] = ntohl(a32[0]);
     iph6[1] = ntohl(a32[1]);
@@ -284,7 +282,7 @@ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
       return 1;
 
     return 0;
-  } else if (v_family == AF_INET) {
+  } else if (tor_addr_is_v4(addr)) {
     /* special case for binding to 0.0.0.0 or 100.64/10 (RFC6598) */
     if (for_listening && (!iph4 || ((iph4 & 0xffc00000) == 0x64400000)))
       return 0;
@@ -302,7 +300,8 @@ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
   /* unknown address family... assume it's not safe for external use */
   /* rather than tor_assert(0) */
   log_warn(LD_BUG, "tor_addr_is_internal() called from %s:%d with a "
-           "non-IP address of type %d", filename, lineno, (int)v_family);
+           "non-IP address of type %d", filename, lineno,
+           (int) tor_addr_family(addr));
   tor_fragile_assert();
   return 1;
 }
@@ -460,7 +459,7 @@ tor_addr_to_PTR_name(char *out, size_t outlen,
   tor_assert(out);
   tor_assert(addr);
 
-  if (addr->family == AF_INET) {
+  if (tor_addr_is_v4(addr)) {
     uint32_t a = tor_addr_to_ipv4h(addr);
 
     return tor_snprintf(out, outlen, "%d.%d.%d.%d.in-addr.arpa",
@@ -468,7 +467,7 @@ tor_addr_to_PTR_name(char *out, size_t outlen,
                         (int)(uint8_t)((a>>8 )&0xff),
                         (int)(uint8_t)((a>>16)&0xff),
                         (int)(uint8_t)((a>>24)&0xff));
-  } else if (addr->family == AF_INET6) {
+  } else if (tor_addr_is_v6(addr)) {
     int i;
     char *cp = out;
     const uint8_t *bytes = tor_addr_to_in6_addr8(addr);
@@ -683,9 +682,9 @@ tor_addr_parse_mask_ports(const char *s,
     } else { /* pick an appropriate mask, as none was given */
       if (any_flag)
         bits = 0;  /* This is okay whether it's V6 or V4 (FIX V4-mapped V6!) */
-      else if (tor_addr_family(addr_out) == AF_INET)
+      else if (tor_addr_is_v4(addr_out))
         bits = 32;
-      else if (tor_addr_family(addr_out) == AF_INET6)
+      else if (tor_addr_is_v6(addr_out))
         bits = 128;
     }
     *maskbits_out = (maskbits_t) bits;
@@ -820,8 +819,7 @@ tor_addr_is_valid(const tor_addr_t *addr, int for_listening)
   }
 
   /* Only allow IPv4 0.0.0.0 for_listening. */
-  if (for_listening && addr->family == AF_INET
-      && tor_addr_to_ipv4h(addr) == 0) {
+  if (for_listening && tor_addr_is_v4(addr) && tor_addr_to_ipv4h(addr) == 0) {
     return 1;
   }
 
@@ -1491,12 +1489,11 @@ get_interface_addresses_raw,(int severity, sa_family_t family))
 int
 tor_addr_is_multicast(const tor_addr_t *a)
 {
-  sa_family_t family = tor_addr_family(a);
-  if (family == AF_INET) {
+  if (tor_addr_is_v4(a)) {
     uint32_t ipv4h = tor_addr_to_ipv4h(a);
     if ((ipv4h >> 24) == 0xe0)
       return 1; /* Multicast */
-  } else if (family == AF_INET6) {
+  } else if (tor_addr_is_v6(a)) {
     const uint8_t *a32 = tor_addr_to_in6_addr8(a);
     if (a32[0] == 0xff)
       return 1;

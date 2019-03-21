@@ -51,7 +51,7 @@ NS(test_main)(void *arg)
 
   nameserver_addr = configured_nameserver_address(0);
 
-  tt_assert(tor_addr_family(nameserver_addr) == AF_INET);
+  tt_assert(tor_addr_is_v4(nameserver_addr));
   tt_assert(tor_addr_eq_ipv4h(nameserver_addr, 0x7f000001));
 
 #ifndef _WIN32
@@ -65,7 +65,7 @@ NS(test_main)(void *arg)
 
   nameserver_addr = configured_nameserver_address(0);
 
-  tt_assert(tor_addr_family(nameserver_addr) == AF_INET);
+  tt_assert(tor_addr_is_v4(nameserver_addr));
   tt_assert(tor_addr_eq_ipv4h(nameserver_addr, 0x7f000001));
 #endif
 

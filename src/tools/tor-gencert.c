@@ -186,7 +186,7 @@ parse_commandline(int argc, char **argv)
         fprintf(stderr, "Can't resolve address/port for %s", addr_arg);
         return 1;
       }
-      if (tor_addr_family(&addr) != AF_INET) {
+      if (!tor_addr_is_v4(&addr)) {
         fprintf(stderr, "%s must resolve to an IPv4 address", addr_arg);
         return 1;
       }

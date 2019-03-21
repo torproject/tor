@@ -804,10 +804,8 @@ connection_ap_process_end_not_open(
             return 0;
           }
 
-          if ((tor_addr_family(&addr) == AF_INET &&
-                                          !conn->entry_cfg.ipv4_traffic) ||
-              (tor_addr_family(&addr) == AF_INET6 &&
-                                          !conn->entry_cfg.ipv6_traffic)) {
+          if ((tor_addr_is_v4(&addr) && !conn->entry_cfg.ipv4_traffic) ||
+              (tor_addr_is_v6(&addr) && !conn->entry_cfg.ipv6_traffic)) {
             log_fn(LOG_PROTOCOL_WARN, LD_APP,
                    "Got an EXITPOLICY failure on a connection with a "
                    "mismatched family. Closing.");
@@ -1163,11 +1161,11 @@ connection_ap_handshake_socks_got_resolved_cell(entry_connection_t *conn,
       if (!addr_hostname) {
         addr_hostname = addr;
       }
-    } else if (tor_addr_family(&addr->addr) == AF_INET) {
+    } else if (tor_addr_is_v4(&addr->addr)) {
       if (!addr_ipv4 && conn->entry_cfg.ipv4_traffic) {
         addr_ipv4 = addr;
       }
-    } else if (tor_addr_family(&addr->addr) == AF_INET6) {
+    } else if (tor_addr_is_v6(&addr->addr)) {
       if (!addr_ipv6 && conn->entry_cfg.ipv6_traffic) {
         addr_ipv6 = addr;
       }
@@ -1333,11 +1331,10 @@ connection_edge_process_relay_cell_not_open(
       connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_TORPROTOCOL);
       return 0;
     }
-    if (tor_addr_family(&addr) != AF_UNSPEC) {
+    if (!tor_addr_is_unspec(&addr)) {
       /* The family is not UNSPEC: so we were given an address in the
        * connected cell. (This is normal, except for BEGINDIR and onion
        * service streams.) */
-      const sa_family_t family = tor_addr_family(&addr);
       if (tor_addr_is_null(&addr) ||
           (get_options()->ClientDNSRejectInternalAddresses &&
            tor_addr_is_internal(&addr, 0))) {
@@ -1349,8 +1346,8 @@ connection_edge_process_relay_cell_not_open(
         return 0;
       }
 
-      if ((family == AF_INET && ! entry_conn->entry_cfg.ipv4_traffic) ||
-          (family == AF_INET6 && ! entry_conn->entry_cfg.ipv6_traffic)) {
+      if ((tor_addr_is_v4(&addr) && ! entry_conn->entry_cfg.ipv4_traffic) ||
+          (tor_addr_is_v6(&addr) && ! entry_conn->entry_cfg.ipv6_traffic)) {
         log_fn(LOG_PROTOCOL_WARN, LD_APP,
                "Got a connected cell to %s with unsupported address family."
                " Closing.", fmt_addr(&addr));

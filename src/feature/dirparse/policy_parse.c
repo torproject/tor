@@ -102,7 +102,7 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
    * Unlike descriptors, torrcs exit policy accept/reject can be followed by
    * either an IPv4 or IPv6 address. */
   if ((tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) &&
-       tor_addr_family(&r->addr) != AF_INET6) {
+       !tor_addr_is_v6(&r->addr)) {
     /* This is a non-fatal error, just ignore this one entry. */
     *malformed_list = 0;
     log_warn(LD_DIR, "IPv4 address '%s' with accept6/reject6 field type in "

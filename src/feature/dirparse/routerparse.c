@@ -1185,10 +1185,10 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
    * IPv6 addresses. Unlike torrcs, descriptor exit policies do not permit
    * accept/reject followed by IPv6. */
   if (((tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) &&
-       tor_addr_family(&newe->addr) == AF_INET)
+       tor_addr_is_v4(&newe->addr))
       ||
       ((tok->tp == K_ACCEPT || tok->tp == K_REJECT) &&
-       tor_addr_family(&newe->addr) == AF_INET6)) {
+       tor_addr_is_v6(&newe->addr))) {
     /* There's nothing the user can do about other relays' descriptors,
      * so we don't provide usage advice here. */
     log_warn(LD_DIR, "Mismatch between field type and address type in exit "

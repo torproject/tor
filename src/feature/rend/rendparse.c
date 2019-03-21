@@ -451,7 +451,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
       rend_intro_point_free(intro);
       goto err;
     }
-    if (tor_addr_family(&info->addr) != AF_INET) {
+    if (!tor_addr_is_v4(&info->addr)) {
       log_warn(LD_REND, "Introduction point address was not ipv4.");
       rend_intro_point_free(intro);
       goto err;

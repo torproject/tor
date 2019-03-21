@@ -709,7 +709,7 @@ test_md_parse(void *arg)
   test_memeq_hex(md->digest,
                  "409ebd87d23925a2732bd467a92813c9"
                  "21ca378fcb9ca193d354c51550b6d5e9");
-  tt_assert(tor_addr_family(&md->ipv6_addr) == AF_INET6);
+  tt_assert(tor_addr_is_v6(&md->ipv6_addr));
   tt_int_op(md->ipv6_orport, OP_EQ, 9090);
 
  done:

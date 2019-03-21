@@ -2477,18 +2477,16 @@ connection_or_send_versions(or_connection_t *conn, int v3_plus)
 static netinfo_addr_t *
 netinfo_addr_from_tor_addr(const tor_addr_t *tor_addr)
 {
-  sa_family_t addr_family = tor_addr_family(tor_addr);
-
-  if (BUG(addr_family != AF_INET && addr_family != AF_INET6))
+  if (BUG(!tor_addr_is_v4(tor_addr) && !tor_addr_is_v6(tor_addr)))
     return NULL;
 
   netinfo_addr_t *netinfo_addr = netinfo_addr_new();
 
-  if (addr_family == AF_INET) {
+  if (tor_addr_is_v4(tor_addr)) {
     netinfo_addr_set_addr_type(netinfo_addr, NETINFO_ADDR_TYPE_IPV4);
     netinfo_addr_set_len(netinfo_addr, 4);
     netinfo_addr_set_addr_ipv4(netinfo_addr, tor_addr_to_ipv4h(tor_addr));
-  } else if (addr_family == AF_INET6) {
+  } else if (tor_addr_is_v6(tor_addr)) {
     netinfo_addr_set_addr_type(netinfo_addr, NETINFO_ADDR_TYPE_IPV6);
     netinfo_addr_set_len(netinfo_addr, 16);
     uint8_t *ipv6_buf = netinfo_addr_getarray_addr_ipv6(netinfo_addr);

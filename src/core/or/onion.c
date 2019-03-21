@@ -243,7 +243,7 @@ check_extend_cell(const extend_cell_t *cell)
   if (tor_digest_is_zero((const char*)cell->node_id))
     return -1;
   /* We don't currently allow EXTEND2 cells without an IPv4 address */
-  if (tor_addr_family(&cell->orport_ipv4.addr) == AF_UNSPEC)
+  if (tor_addr_is_unspec(&cell->orport_ipv4.addr))
     return -1;
   if (cell->create_cell.cell_type == CELL_CREATE) {
     if (cell->cell_type != RELAY_COMMAND_EXTEND)
