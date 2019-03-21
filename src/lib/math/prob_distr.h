@@ -19,9 +19,22 @@ struct dist {
   const struct dist_ops *ops;
 };
 
+/** Assign the right ops to dist.dist_ops */
 #define DIST_BASE(OPS)  { .ops = (OPS) }
+
+/** A compile-time type-checking macro for use with DIST_BASE_TYPED. */
+#ifdef __COVERITY___
+/* Disable type-checking if coverity is enabled, since they don't like it */
+#define TYPE_CHECK_OBJ(OPS, OBJ, TYPE) 0
+#else
+#define TYPE_CHECK_OBJ(OPS, OBJ, TYPE) \
+  (0*sizeof(&(OBJ) - (const TYPE *)&(OBJ)))
+#endif
+
+/** Macro to initialize a distribution with the right OPS, while making sure
+ *  that OBJ is of the right TYPE */
 #define DIST_BASE_TYPED(OPS, OBJ, TYPE)                         \
-  DIST_BASE((OPS) + 0*sizeof(&(OBJ) - (const TYPE *)&(OBJ)))
+  DIST_BASE((OPS) + TYPE_CHECK_OBJ(OPS,OBJ,TYPE))
 
 const char *dist_name(const struct dist *);
 double dist_sample(const struct dist *);
