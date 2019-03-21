@@ -878,11 +878,11 @@ test_uniform_interval(void *arg)
  * is higher: 1 - Binom(0; n, alpha) = 1 - (1 - alpha)^n.  For n = 10,
  * this is about 10%, and for n = 100 it is well over 50%.
  *
- * We can drive it down by running each test twice, and accepting it if
- * it passes at least once; in that case, it is as if we used Binom(2;
- * 2, alpha) = alpha^2 as the false positive rate for each test, and
- * for n = 10 tests, it would be 0.1%, and for n = 100 tests, still
- * only 1%.
+ * Given that these tests will run with every CI job, we want to drive down the
+ * false positive rate. We can drive it down by running each test three times,
+ * and accepting it if it passes at least once; in that case, it is as if we
+ * used Binom(3; 2, alpha) = alpha^3 as the false positive rate for each test,
+ * and for n = 10 tests, it would be 0.00099%.
  *
  * The critical value for a chi^2 distribution with 100 degrees of
  * freedom and false positive rate alpha = 1% was taken from:
@@ -895,7 +895,7 @@ test_uniform_interval(void *arg)
 
 static const size_t NSAMPLES = 100000;
 /* Number of chances we give to the test to succeed. */
-static const unsigned NTRIALS = 2;
+static const unsigned NTRIALS = 3;
 /* Number of times we want the test to pass per NTRIALS. */
 static const unsigned NPASSES_MIN = 1;
 
