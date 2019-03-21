@@ -2064,7 +2064,8 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
 
   /* Read the bandwidth file */
   setup_full_capture_of_logs(LOG_DEBUG);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL, NULL));
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL, NULL,
+                                                       NULL));
   expect_log_msg_containing("Ignoring bandwidth file line");
   teardown_capture_of_logs();
 
@@ -2082,7 +2083,8 @@ test_dir_dirserv_read_measured_bandwidths(void *arg)
 
   /* Read the bandwidth file */
   setup_full_capture_of_logs(LOG_DEBUG);
-  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL, NULL));
+  tt_int_op(0, OP_EQ, dirserv_read_measured_bandwidths(fname, NULL, NULL,
+                                                       NULL));
   expect_log_msg_not_containing("Ignoring bandwidth file line");
   teardown_capture_of_logs();
 
