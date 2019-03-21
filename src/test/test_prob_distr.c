@@ -879,10 +879,13 @@ test_uniform_interval(void *arg)
  * this is about 10%, and for n = 100 it is well over 50%.
  *
  * Given that these tests will run with every CI job, we want to drive down the
- * false positive rate. We can drive it down by running each test three times,
+ * false positive rate. We can drive it down by running each test four times,
  * and accepting it if it passes at least once; in that case, it is as if we
- * used Binom(3; 2, alpha) = alpha^3 as the false positive rate for each test,
- * and for n = 10 tests, it would be 0.00099%.
+ * used Binom(4; 2, alpha) = alpha^4 as the false positive rate for each test,
+ * and for n = 10 tests, it would be 9.99999959506e-08. If each CI build has 14
+ * jobs, then the chance of a CI build failing is 1.39999903326e-06, which
+ * means that a CI build will break with probability 50% after about 495106
+ * builds.
  *
  * The critical value for a chi^2 distribution with 100 degrees of
  * freedom and false positive rate alpha = 1% was taken from:
@@ -895,7 +898,7 @@ test_uniform_interval(void *arg)
 
 static const size_t NSAMPLES = 100000;
 /* Number of chances we give to the test to succeed. */
-static const unsigned NTRIALS = 3;
+static const unsigned NTRIALS = 4;
 /* Number of times we want the test to pass per NTRIALS. */
 static const unsigned NPASSES_MIN = 1;
 
