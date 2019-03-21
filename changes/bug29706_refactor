@@ -1,4 +1,0 @@
-  o Minor bugfixes (memory management):
-    - Refactor the shared random state's memory management so that it actually
-      takes ownership of the shared random value pointers.
-      Fixes bug 29706; bugfix on 0.2.9.1-alpha.

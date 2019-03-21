@@ -1,4 +1,0 @@
-  o Minor bugfixes (pluggable transports):
-    - Fix an assertion failure crash bug when a pluggable transport process is
-      terminated during the bootstrap phase. Fixes bug 29562; bugfix on
-      0.4.0.1-alpha.

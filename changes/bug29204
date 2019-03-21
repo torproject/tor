@@ -1,4 +1,0 @@
-  o Minor bugfixes (circuitpadding):
-    - Inspect circuit-level cell queue before sending padding, to avoid
-      sending padding while too much data is queued. Fixes bug 29204;
-      bugfix on 0.4.0.1-alpha.
