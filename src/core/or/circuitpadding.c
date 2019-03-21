@@ -499,7 +499,7 @@ circpad_machine_sample_delay(circpad_machine_runtime_t *mi)
   bin_end = circpad_histogram_bin_to_usec(mi, curr_bin+1);
 
   /* Bin edges are monotonically increasing so this is a bug. Handle it. */
-  if (BUG(bin_start > bin_end)) {
+  if (BUG(bin_start >= bin_end)) {
     return bin_start;
   }
 

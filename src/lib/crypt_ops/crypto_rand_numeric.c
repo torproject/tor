@@ -173,12 +173,16 @@ uint64_t
 crypto_fast_rng_uint64_range(crypto_fast_rng_t *rng,
                              uint64_t min, uint64_t max)
 {
-  tor_assert(min < max);
+  /* Handle corrupted input */
+  if (BUG(min >= max)) {
+    return min;
+  }
+
   return min + crypto_fast_rng_get_uint64(rng, max - min);
 }
 
 /**
- * As crypto_rand_, but extract the result from a crypto_fast_rng_t.
+ * As crypto_rand_get_double() but extract the result from a crypto_fast_rng_t.
  */
 double
 crypto_fast_rng_get_double(crypto_fast_rng_t *rng)
