@@ -186,6 +186,8 @@ TEST_CFLAGS += -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-div
 # not "edge"
 endif
 
+TEST_NETWORK_FORGIVING_FLAGS=--allow-failures 2
+
 TEST_NETWORK_ALL_LOG_DIR=$(top_builddir)/test_network_log
 TEST_NETWORK_ALL_DRIVER_FLAGS=--color-tests yes
 
@@ -242,6 +244,9 @@ need-chutney-path:
 # Chutney can be cloned from https://git.torproject.org/chutney.git .
 test-network: need-chutney-path $(TESTING_TOR_BINARY) src/tools/tor-gencert
 	$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_FLAGS)
+
+test-network-forgiving: need-chutney-path $(TESTING_TOR_BINARY) src/tools/tor-gencert
+	$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_FLAGS) $(TEST_NETWORK_FORGIVING_FLAGS)
 
 # Run all available tests using automake's test-driver
 # only run IPv6 tests if we can ping6 ::1 (localhost)
