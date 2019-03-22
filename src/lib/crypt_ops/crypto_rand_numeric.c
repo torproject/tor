@@ -155,7 +155,34 @@ crypto_fast_rng_get_uint64(crypto_fast_rng_t *rng, uint64_t limit)
 }
 
 /**
- * As crypto_rand_, but extract the result from a crypto_fast_rng_t.
+ * As crypto_rand_u32, but extract the result from a crypto_fast_rng_t.
+ */
+uint32_t
+crypto_fast_rng_get_u32(crypto_fast_rng_t *rng)
+{
+  uint32_t val;
+  crypto_fast_rng_getbytes(rng, (void*)&val, sizeof(val));
+  return val;
+}
+
+/**
+ * As crypto_rand_uint64_range(), but extract the result from a
+ * crypto_fast_rng_t.
+ */
+uint64_t
+crypto_fast_rng_uint64_range(crypto_fast_rng_t *rng,
+                             uint64_t min, uint64_t max)
+{
+  /* Handle corrupted input */
+  if (BUG(min >= max)) {
+    return min;
+  }
+
+  return min + crypto_fast_rng_get_uint64(rng, max - min);
+}
+
+/**
+ * As crypto_rand_get_double() but extract the result from a crypto_fast_rng_t.
  */
 double
 crypto_fast_rng_get_double(crypto_fast_rng_t *rng)
@@ -164,3 +191,4 @@ crypto_fast_rng_get_double(crypto_fast_rng_t *rng)
   crypto_fast_rng_getbytes(rng, (void*)&u, sizeof(u));
   return ((double)u) / UINT_MAX_AS_DOUBLE;
 }
+

@@ -23,7 +23,7 @@
  * As specified by prop#254, clients can negotiate padding with relays by using
  * PADDING_NEGOTIATE cells. After successful padding negotiation, padding
  * machines are assigned to the circuit in their mutable form as a
- * circpad_machine_state_t.
+ * circpad_machine_runtime_t.
  *
  * Each state of a padding state machine can be either:
  * - A histogram that specifies inter-arrival padding delays.
@@ -48,6 +48,7 @@
 #include "core/or/circuitpadding.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
+#include "core/mainloop/netstatus.h"
 #include "core/or/relay.h"
 #include "feature/stats/rephist.h"
 #include "feature/nodelist/networkstatus.h"
@@ -187,11 +188,11 @@ circpad_circuit_free_all_machineinfos(circuit_t *circ)
 /**
  * Allocate a new mutable machineinfo structure.
  */
-STATIC circpad_machine_state_t *
+STATIC circpad_machine_runtime_t *
 circpad_circuit_machineinfo_new(circuit_t *on_circ, int machine_index)
 {
-  circpad_machine_state_t *mi =
-    tor_malloc_zero(sizeof(circpad_machine_state_t));
+  circpad_machine_runtime_t *mi =
+    tor_malloc_zero(sizeof(circpad_machine_runtime_t));
   mi->machine_index = machine_index;
   mi->on_circ = on_circ;
 
@@ -206,7 +207,7 @@ circpad_circuit_machineinfo_new(circuit_t *on_circ, int machine_index)
  * invalid state.
  */
 STATIC const circpad_state_t *
-circpad_machine_current_state(const circpad_machine_state_t *mi)
+circpad_machine_current_state(const circpad_machine_runtime_t *mi)
 {
   const circpad_machine_spec_t *machine = CIRCPAD_GET_MACHINE(mi);
 
@@ -233,7 +234,7 @@ circpad_machine_current_state(const circpad_machine_state_t *mi)
  * CIRCPAD_DELAY_INFINITE is returned.
  */
 STATIC circpad_delay_t
-circpad_histogram_bin_to_usec(const circpad_machine_state_t *mi,
+circpad_histogram_bin_to_usec(const circpad_machine_runtime_t *mi,
                               circpad_hist_index_t bin)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
@@ -264,7 +265,7 @@ circpad_histogram_bin_to_usec(const circpad_machine_state_t *mi,
  * (The upper bound is included in the bin.)
  */
 STATIC circpad_delay_t
-histogram_get_bin_upper_bound(const circpad_machine_state_t *mi,
+histogram_get_bin_upper_bound(const circpad_machine_runtime_t *mi,
                               circpad_hist_index_t bin)
 {
   return circpad_histogram_bin_to_usec(mi, bin+1) - 1;
@@ -272,7 +273,7 @@ histogram_get_bin_upper_bound(const circpad_machine_state_t *mi,
 
 /** Return the midpoint of the histogram bin <b>bin_index</b>. */
 static circpad_delay_t
-circpad_get_histogram_bin_midpoint(const circpad_machine_state_t *mi,
+circpad_get_histogram_bin_midpoint(const circpad_machine_runtime_t *mi,
                            int bin_index)
 {
   circpad_delay_t left_bound = circpad_histogram_bin_to_usec(mi, bin_index);
@@ -290,7 +291,7 @@ circpad_get_histogram_bin_midpoint(const circpad_machine_state_t *mi,
  * the highest non-infinity bin, that bin index will be returned.
  */
 STATIC circpad_hist_index_t
-circpad_histogram_usec_to_bin(const circpad_machine_state_t *mi,
+circpad_histogram_usec_to_bin(const circpad_machine_runtime_t *mi,
                               circpad_delay_t usec)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
@@ -330,7 +331,7 @@ circpad_histogram_usec_to_bin(const circpad_machine_state_t *mi,
  * Called after a state transition, or if the bins are empty.
  */
 STATIC void
-circpad_machine_setup_tokens(circpad_machine_state_t *mi)
+circpad_machine_setup_tokens(circpad_machine_runtime_t *mi)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
 
@@ -362,7 +363,7 @@ circpad_machine_setup_tokens(circpad_machine_state_t *mi)
  * Choose a length for this state (in cells), if specified.
  */
 static void
-circpad_choose_state_length(circpad_machine_state_t *mi)
+circpad_choose_state_length(circpad_machine_runtime_t *mi)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
   double length;
@@ -415,7 +416,7 @@ circpad_distribution_sample_iat_delay(const circpad_state_t *state,
  * that bin's [start,end) time range.
  */
 STATIC circpad_delay_t
-circpad_machine_sample_delay(circpad_machine_state_t *mi)
+circpad_machine_sample_delay(circpad_machine_runtime_t *mi)
 {
   const circpad_state_t *state = circpad_machine_current_state(mi);
   const circpad_hist_token_t *histogram = NULL;
@@ -451,7 +452,8 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
     histogram_total_tokens = state->histogram_total_tokens;
   }
 
-  bin_choice = crypto_rand_uint64(histogram_total_tokens);
+  bin_choice = crypto_fast_rng_get_uint64(get_thread_fast_rng(),
+                                          histogram_total_tokens);
 
   /* Skip all the initial zero bins */
   while (!histogram[curr_bin]) {
@@ -500,12 +502,12 @@ circpad_machine_sample_delay(circpad_machine_state_t *mi)
   bin_end = circpad_histogram_bin_to_usec(mi, curr_bin+1);
 
   /* Bin edges are monotonically increasing so this is a bug. Handle it. */
-  if (BUG(bin_start > bin_end)) {
+  if (BUG(bin_start >= bin_end)) {
     return bin_start;
   }
 
-  /* Sample randomly from within the bin width */
-  return (circpad_delay_t)crypto_rand_uint64_range(bin_start, bin_end);
+  return (circpad_delay_t)crypto_fast_rng_uint64_range(get_thread_fast_rng(),
+                                                       bin_start, bin_end);
 }
 
 /**
@@ -602,7 +604,7 @@ circpad_distribution_sample(circpad_distribution_t dist)
  * greater than the target, and that has tokens remaining.
  */
 static circpad_hist_index_t
-circpad_machine_first_higher_index(const circpad_machine_state_t *mi,
+circpad_machine_first_higher_index(const circpad_machine_runtime_t *mi,
                                    circpad_delay_t target_bin_usec)
 {
   circpad_hist_index_t bin = circpad_histogram_usec_to_bin(mi,
@@ -624,7 +626,7 @@ circpad_machine_first_higher_index(const circpad_machine_state_t *mi,
  * <b>target_bin_usec</b>, and that still has tokens remaining.
  */
 static circpad_hist_index_t
-circpad_machine_first_lower_index(const circpad_machine_state_t *mi,
+circpad_machine_first_lower_index(const circpad_machine_runtime_t *mi,
                                   circpad_delay_t target_bin_usec)
 {
   circpad_hist_index_t bin = circpad_histogram_usec_to_bin(mi,
@@ -645,7 +647,7 @@ circpad_machine_first_lower_index(const circpad_machine_state_t *mi,
  * greater than the target.
  */
 STATIC void
-circpad_machine_remove_higher_token(circpad_machine_state_t *mi,
+circpad_machine_remove_higher_token(circpad_machine_runtime_t *mi,
                                     circpad_delay_t target_bin_usec)
 {
   /* We need to remove the token from the first bin
@@ -666,7 +668,7 @@ circpad_machine_remove_higher_token(circpad_machine_state_t *mi,
  * lower than the target.
  */
 STATIC void
-circpad_machine_remove_lower_token(circpad_machine_state_t *mi,
+circpad_machine_remove_lower_token(circpad_machine_runtime_t *mi,
                                    circpad_delay_t target_bin_usec)
 {
   circpad_hist_index_t bin = circpad_machine_first_lower_index(mi,
@@ -695,7 +697,7 @@ circpad_machine_remove_lower_token(circpad_machine_state_t *mi,
  * If it is false, use bin index distance only.
  */
 STATIC void
-circpad_machine_remove_closest_token(circpad_machine_state_t *mi,
+circpad_machine_remove_closest_token(circpad_machine_runtime_t *mi,
                                      circpad_delay_t target_bin_usec,
                                      bool use_usec)
 {
@@ -777,7 +779,7 @@ circpad_machine_remove_closest_token(circpad_machine_state_t *mi,
  * If it is empty, do nothing.
  */
 static void
-circpad_machine_remove_exact(circpad_machine_state_t *mi,
+circpad_machine_remove_exact(circpad_machine_runtime_t *mi,
                              circpad_delay_t target_bin_usec)
 {
   circpad_hist_index_t bin = circpad_histogram_usec_to_bin(mi,
@@ -794,7 +796,7 @@ circpad_machine_remove_exact(circpad_machine_state_t *mi,
  * otherwise returns 0.
  */
 static circpad_decision_t
-check_machine_token_supply(circpad_machine_state_t *mi)
+check_machine_token_supply(circpad_machine_runtime_t *mi)
 {
   uint32_t histogram_total_tokens = 0;
 
@@ -834,7 +836,7 @@ check_machine_token_supply(circpad_machine_state_t *mi)
  * Returns 1 if we transition states, 0 otherwise.
  */
 STATIC circpad_decision_t
-circpad_machine_remove_token(circpad_machine_state_t *mi)
+circpad_machine_remove_token(circpad_machine_runtime_t *mi)
 {
   const circpad_state_t *state = NULL;
   circpad_time_t current_time;
@@ -961,14 +963,14 @@ circpad_send_command_to_hop,(origin_circuit_t *circ, uint8_t hopnum,
  * CIRCPAD_STATE_CHANGED. Otherwise return CIRCPAD_STATE_UNCHANGED.
  */
 circpad_decision_t
-circpad_send_padding_cell_for_callback(circpad_machine_state_t *mi)
+circpad_send_padding_cell_for_callback(circpad_machine_runtime_t *mi)
 {
   circuit_t *circ = mi->on_circ;
   int machine_idx = mi->machine_index;
   mi->padding_scheduled_at_usec = 0;
   circpad_statenum_t state = mi->current_state;
 
-  // Make sure circuit didn't close on us
+  /* Make sure circuit didn't close on us */
   if (mi->on_circ->marked_for_close) {
     log_fn(LOG_INFO,LD_CIRC,
            "Padding callback on a circuit marked for close. Ignoring.");
@@ -1047,7 +1049,7 @@ circpad_send_padding_cell_for_callback(circpad_machine_state_t *mi)
 /**
  * Tor-timer compatible callback that tells us to send a padding cell.
  *
- * Timers are associated with circpad_machine_state_t's. When the machineinfo
+ * Timers are associated with circpad_machine_runtime_t's. When the machineinfo
  * is freed on a circuit, the timers are cancelled. Since the lifetime
  * of machineinfo is always longer than the timers, handles are not
  * needed.
@@ -1056,7 +1058,7 @@ static void
 circpad_send_padding_callback(tor_timer_t *timer, void *args,
                               const struct monotime_t *time)
 {
-  circpad_machine_state_t *mi = ((circpad_machine_state_t*)args);
+  circpad_machine_runtime_t *mi = ((circpad_machine_runtime_t*)args);
   (void)timer; (void)time;
 
   if (mi && mi->on_circ) {
@@ -1106,7 +1108,7 @@ circpad_new_consensus_params(const networkstatus_t *ns)
  * Returns 1 if limits are set and we've hit them. Otherwise returns 0.
  */
 STATIC bool
-circpad_machine_reached_padding_limit(circpad_machine_state_t *mi)
+circpad_machine_reached_padding_limit(circpad_machine_runtime_t *mi)
 {
   const circpad_machine_spec_t *machine = CIRCPAD_GET_MACHINE(mi);
 
@@ -1154,11 +1156,17 @@ circpad_machine_reached_padding_limit(circpad_machine_state_t *mi)
  * 0 otherwise.
  */
 MOCK_IMPL(circpad_decision_t,
-circpad_machine_schedule_padding,(circpad_machine_state_t *mi))
+circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
 {
   circpad_delay_t in_usec = 0;
   struct timeval timeout;
   tor_assert(mi);
+
+  /* Don't schedule padding if we are currently in dormant mode. */
+  if (!is_participating_on_network()) {
+    log_info(LD_CIRC, "Not scheduling padding because we are dormant.");
+    return CIRCPAD_STATE_UNCHANGED;
+  }
 
   // Don't pad in end (but  also don't cancel any previously
   // scheduled padding either).
@@ -1244,7 +1252,7 @@ circpad_machine_schedule_padding,(circpad_machine_state_t *mi))
  * not access it.
  */
 static void
-circpad_machine_spec_transitioned_to_end(circpad_machine_state_t *mi)
+circpad_machine_spec_transitioned_to_end(circpad_machine_runtime_t *mi)
 {
   const circpad_machine_spec_t *machine = CIRCPAD_GET_MACHINE(mi);
 
@@ -1294,7 +1302,7 @@ circpad_machine_spec_transitioned_to_end(circpad_machine_state_t *mi)
  * Returns 1 if we transition states, 0 otherwise.
  */
 MOCK_IMPL(circpad_decision_t,
-circpad_machine_spec_transition,(circpad_machine_state_t *mi,
+circpad_machine_spec_transition,(circpad_machine_runtime_t *mi,
                             circpad_event_t event))
 {
   const circpad_state_t *state =
@@ -1375,7 +1383,7 @@ circpad_machine_spec_transition,(circpad_machine_state_t *mi,
  */
 static void
 circpad_estimate_circ_rtt_on_received(circuit_t *circ,
-                                      circpad_machine_state_t *mi)
+                                      circpad_machine_runtime_t *mi)
 {
   /* Origin circuits don't estimate RTT. They could do it easily enough,
    * but they have no reason to use it in any delay calculations. */
@@ -1422,7 +1430,7 @@ circpad_estimate_circ_rtt_on_received(circuit_t *circ,
  */
 static void
 circpad_estimate_circ_rtt_on_send(circuit_t *circ,
-                                  circpad_machine_state_t *mi)
+                                  circpad_machine_runtime_t *mi)
 {
   /* Origin circuits don't estimate RTT. They could do it easily enough,
    * but they have no reason to use it in any delay calculations. */
@@ -1567,7 +1575,7 @@ circpad_cell_event_padding_received(circuit_t *on_circ)
  * Return 1 if we decide to transition, 0 otherwise.
  */
 circpad_decision_t
-circpad_internal_event_infinity(circpad_machine_state_t *mi)
+circpad_internal_event_infinity(circpad_machine_runtime_t *mi)
 {
   return circpad_machine_spec_transition(mi, CIRCPAD_EVENT_INFINITY);
 }
@@ -1581,7 +1589,7 @@ circpad_internal_event_infinity(circpad_machine_state_t *mi)
  * Return 1 if we decide to transition, 0 otherwise.
  */
 circpad_decision_t
-circpad_internal_event_bins_empty(circpad_machine_state_t *mi)
+circpad_internal_event_bins_empty(circpad_machine_runtime_t *mi)
 {
   if (circpad_machine_spec_transition(mi, CIRCPAD_EVENT_BINS_EMPTY)
       == CIRCPAD_STATE_CHANGED) {
@@ -1600,7 +1608,7 @@ circpad_internal_event_bins_empty(circpad_machine_state_t *mi)
  * Return 1 if we decide to transition, 0 otherwise.
  */
 circpad_decision_t
-circpad_internal_event_state_length_up(circpad_machine_state_t *mi)
+circpad_internal_event_state_length_up(circpad_machine_runtime_t *mi)
 {
   return circpad_machine_spec_transition(mi, CIRCPAD_EVENT_LENGTH_COUNT);
 }
