@@ -1,14 +1,14 @@
 Changes in version 0.4.0.3-alpha - 2019-03-22
-  Tor 0.4.0.3-alpha is the third in its series; it fixes several bugs
-  from earlier versions.
+  Tor 0.4.0.3-alpha is the third in its series; it fixes several small
+  bugs from earlier versions.
 
   o Minor features (address selection):
-    - Make Tor aware of the RFC 6598 (Carrier Grade NAT) IP range, which
-      is the subnet 100.64.0.0/10. This is deployed by many ISPs as an
-      alternative to RFC 1918 that does not break existing internal
-      networks. This patch fixes security issues caused by RFC 6518 by
-      blocking control ports on these addresses and warns users if
-      client ports or ExtORPorts are listening on a RFC 6598 address.
+    - Treat the subnet 100.64.0.0/10 as public for some purposes;
+      private for others. This subnet is the RFC 6598 (Carrier Grade
+      NAT) IP range, and is deployed by many ISPs as an alternative to
+      RFC 1918 that does not break existing internal networks. Tor now
+      blocks SOCKS and control ports on these addresses and warns users
+      if client ports or ExtORPorts are listening on a RFC 6598 address.
       Closes ticket 28525. Patch by Neel Chauhan.
 
   o Minor features (geoip):
@@ -16,9 +16,9 @@ Changes in version 0.4.0.3-alpha - 2019-03-22
       Country database. Closes ticket 29666.
 
   o Minor bugfixes (circuitpadding):
-    - Inspect circuit-level cell queue before sending padding, to avoid
-      sending padding while too much data is queued. Fixes bug 29204;
-      bugfix on 0.4.0.1-alpha.
+    - Inspect the circuit-level cell queue before sending padding, to
+      avoid sending padding when too much data is queued. Fixes bug
+      29204; bugfix on 0.4.0.1-alpha.
 
   o Minor bugfixes (logging):
     - Correct a misleading error message when IPv4Only or IPv6Only is
@@ -29,7 +29,7 @@ Changes in version 0.4.0.3-alpha - 2019-03-22
       used to let Tor pick the port number. Previously, port 0 was
       logged instead of the actual port number. Fixes bug 29144; bugfix
       on 0.3.5.1-alpha. Patch from Kris Katterjohn.
-    - Stop logging a BUG() warning when tor is waiting for exit
+    - Stop logging a BUG() warning when Tor is waiting for exit
       descriptors. Fixes bug 28656; bugfix on 0.3.5.1-alpha.
 
   o Minor bugfixes (memory management):
@@ -42,19 +42,19 @@ Changes in version 0.4.0.3-alpha - 2019-03-22
       unit tests. Fixes bug 29599; bugfix on 0.2.9.1-alpha.
 
   o Minor bugfixes (pluggable transports):
-    - Fix an assertion failure crash bug when a pluggable transport
-      process is terminated during the bootstrap phase. Fixes bug 29562;
-      bugfix on 0.4.0.1-alpha.
+    - Fix an assertion failure crash bug when a pluggable transport is
+      terminated during the bootstrap phase. Fixes bug 29562; bugfix
+      on 0.4.0.1-alpha.
 
   o Minor bugfixes (Rust, protover):
-    - Add a missing "padding" value to the Rust implementation of
+    - Add a missing "Padding" value to the Rust implementation of
       protover. Fixes bug 29631; bugfix on 0.4.0.1-alpha.
 
   o Minor bugfixes (single onion services):
     - Allow connections to single onion services to remain idle without
-      being disconnected. Relays acting as rendezvous points for single
-      onion services were mistakenly closing idle established rendezvous
-      circuits after 60 seconds, thinking that they are unused
+      being disconnected. Previously, relays acting as rendezvous points
+      for single onion services were mistakenly closing idle rendezvous
+      circuits after 60 seconds, thinking that they were unused
       directory-fetching circuits that had served their purpose. Fixes
       bug 29665; bugfix on 0.2.1.26.
 
