@@ -36,6 +36,7 @@ assert_int_voidptr_roundtrip(int a)
   return;
 }
 
+/** Test for possibility of casting `int` to `void *` and back. */
 static void
 test_int_voidstar_interop(void *arg)
 {
@@ -61,6 +62,7 @@ test_int_voidstar_interop(void *arg)
   }
 }
 
+/** Assert that <b>a</b> can be cast to void * and back. */
 static void
 assert_uint_voidptr_roundtrip(unsigned int a)
 {
@@ -76,6 +78,7 @@ assert_uint_voidptr_roundtrip(unsigned int a)
   return;
 }
 
+/** Test for possibility of casting `int` to `void *` and back. */
 static void
 test_uint_voidstar_interop(void *arg)
 {
