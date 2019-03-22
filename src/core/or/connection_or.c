@@ -441,7 +441,7 @@ connection_or_state_publish(const or_connection_t *conn, uint8_t state)
     /* Do extra decoding because conn->proxy_type indicates the proxy
      * protocol that tor uses to talk with the transport plugin,
      * instead of PROXY_PLUGGABLE. */
-    tor_assert(conn->proxy_type != PROXY_NONE);
+    tor_assert_nonfatal(conn->proxy_type != PROXY_NONE);
     msg.u.state.proxy_type = PROXY_PLUGGABLE;
   } else {
     msg.u.state.proxy_type = conn->proxy_type;
