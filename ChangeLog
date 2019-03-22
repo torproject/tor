@@ -71,6 +71,8 @@ Changes in version 0.4.0.3-alpha - 2019-03-22
       29530; bugfix on 0.3.5.8.
     - Fix our gcov wrapper script to look for object files at the
       correct locations. Fixes bug 29435; bugfix on 0.3.5.1-alpha.
+    - Decrease the false positive rate of stochastic probability
+      distribution tests. Fixes bug 29693; bugfix on 0.4.0.1-alpha.
 
   o Minor bugfixes (Windows, CI):
     - Skip the Appveyor 32-bit Windows Server 2016 job, and 64-bit

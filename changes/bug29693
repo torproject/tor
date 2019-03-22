@@ -1,3 +1,0 @@
-  o Minor bugfixes (unit tests):
-    - Decrease the false positive rate of stochastic probability distribution
-      tests. Fixes bug 29693; bugfix on 0.4.0.1-alpha.
