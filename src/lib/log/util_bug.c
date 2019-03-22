@@ -74,7 +74,7 @@ tor_assertion_failed_(const char *fname, unsigned int line,
                       const char *func, const char *expr,
                       const char *fmt, ...)
 {
-  char buf[256];
+  char *buf = NULL;
   char *extra = NULL;
   va_list ap;
 
@@ -93,11 +93,11 @@ tor_assertion_failed_(const char *fname, unsigned int line,
 
   log_err(LD_BUG, "%s:%u: %s: Assertion %s failed; aborting.",
           fname, line, func, expr);
-  tor_snprintf(buf, sizeof(buf),
-               "Assertion %s failed in %s at %s:%u: %s",
+  tor_asprintf(&buf, "Assertion %s failed in %s at %s:%u: %s",
                expr, func, fname, line, extra ? extra : "");
   tor_free(extra);
   log_backtrace(LOG_ERR, LD_BUG, buf);
+  tor_free(buf);
 }
 
 /** Helper for tor_assert_nonfatal: report the assertion failure. */
@@ -107,7 +107,7 @@ tor_bug_occurred_(const char *fname, unsigned int line,
                   const char *func, const char *expr,
                   int once, const char *fmt, ...)
 {
-  char buf[256];
+  char *buf = NULL;
   const char *once_str = once ?
     " (Future instances of this warning will be silenced.)": "";
   if (! expr) {
@@ -144,12 +144,12 @@ tor_bug_occurred_(const char *fname, unsigned int line,
 
     log_warn(LD_BUG, "%s:%u: %s: Non-fatal assertion %s failed.%s",
              fname, line, func, expr, once_str);
-    tor_snprintf(buf, sizeof(buf),
-                 "Non-fatal assertion %s failed in %s at %s:%u%s%s",
+    tor_asprintf(&buf, "Non-fatal assertion %s failed in %s at %s:%u%s%s",
                  expr, func, fname, line, fmt ? " : " : "", extra);
     tor_free(extra);
   }
   log_backtrace(LOG_WARN, LD_BUG, buf);
+  tor_free(buf);
 
 #ifdef TOR_UNIT_TESTS
   if (failed_assertion_cb) {
