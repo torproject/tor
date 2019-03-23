@@ -67,7 +67,7 @@ static void add_fingerprint_to_dir(const char *fp,
                                    struct authdir_config_t *list,
                                    router_status_t add_status);
 
-static void add_ed25519_to_dir(const char *edkey,
+static void add_ed25519_to_dir(const ed25519_public_key_t *edkey,
                                struct authdir_config_t *list,
                                router_status_t add_status);
 
@@ -132,21 +132,21 @@ add_fingerprint_to_dir(const char *fp, authdir_config_t *list,
  * <b>list</b>, or-ing the currently set status flags with
  * <b>add_status</b>.
  */
-/* static */ void
-add_ed25519_to_dir(const char *edkey, authdir_config_t *list,
+static void
+add_ed25519_to_dir(const ed25519_public_key_t *edkey, authdir_config_t *list,
                    router_status_t add_status)
 {
   char *ed25519_key;
-  char d[DIGEST_LEN];
+  char d[ED25519_PUBKEY_LEN];
   router_status_t *status;
   tor_assert(edkey);
   tor_assert(list);
 
-  ed25519_key = tor_strdup(edkey);
+  ed25519_key = tor_strdup((char*) edkey->pubkey);
   tor_strstrip(ed25519_key, " ");
   if (digest256_from_base64(d, ed25519_key) < 0) {
     log_warn(LD_DIRSERV, "Couldn't decode ed25519 key \"%s\"",
-             escaped(edkey));
+             escaped((char*) edkey->pubkey));
     tor_free(ed25519_key);
     return;
   }
@@ -238,11 +238,16 @@ dirserv_load_fingerprint_file(void)
       is_valid_fpr = false;
     }
 
-    tor_assert(is_ed25519 || is_rsa);
+    if (!is_ed25519 || !is_rsa) {
+      log_notice(LD_CONFIG, "Invalid fingerprint (nickname '%s', "
+                 "fingerprint %s). Skipping.", nickname, fingerprint);
+      continue;
+    }
 
     /* Decode ed25519 keys */
-    char digest256_tmp[DIGEST256_LEN];
-    if (is_ed25519 && digest256_from_base64(digest256_tmp, fingerprint) < 0) {
+    ed25519_public_key_t ed25519_pubkey_tmp;
+    if (is_ed25519 && digest256_from_base64((char *) ed25519_pubkey_tmp.pubkey,
+                                            fingerprint) < 0) {
       is_valid_fpr = false;
     }
 
@@ -263,7 +268,8 @@ dirserv_load_fingerprint_file(void)
 
     /* It's a valid key, register it. */
     if (is_ed25519) {
-      add_ed25519_to_dir(digest256_tmp, fingerprint_list_new, add_status);
+      add_ed25519_to_dir(&ed25519_pubkey_tmp,
+                         fingerprint_list_new, add_status);
     } else if (is_rsa) {
       add_fingerprint_to_dir(fingerprint, fingerprint_list_new, add_status);
     }
@@ -494,6 +500,7 @@ dirserv_free_fingerprint_list(void)
 
   strmap_free(fingerprint_list->fp_by_name, tor_free_);
   digestmap_free(fingerprint_list->status_by_digest, tor_free_);
+  digest256map_free(fingerprint_list->status_by_digest256, tor_free_);
   tor_free(fingerprint_list);
 }
 
