@@ -1,3 +1,87 @@
+Changes in version 0.4.0.3-alpha - 2019-03-22
+  Tor 0.4.0.3-alpha is the third in its series; it fixes several small
+  bugs from earlier versions.
+
+  o Minor features (address selection):
+    - Treat the subnet 100.64.0.0/10 as public for some purposes;
+      private for others. This subnet is the RFC 6598 (Carrier Grade
+      NAT) IP range, and is deployed by many ISPs as an alternative to
+      RFC 1918 that does not break existing internal networks. Tor now
+      blocks SOCKS and control ports on these addresses and warns users
+      if client ports or ExtORPorts are listening on a RFC 6598 address.
+      Closes ticket 28525. Patch by Neel Chauhan.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the March 4 2019 Maxmind GeoLite2
+      Country database. Closes ticket 29666.
+
+  o Minor bugfixes (circuitpadding):
+    - Inspect the circuit-level cell queue before sending padding, to
+      avoid sending padding when too much data is queued. Fixes bug
+      29204; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (logging):
+    - Correct a misleading error message when IPv4Only or IPv6Only is
+      used but the resolved address can not be interpreted as an address
+      of the specified IP version. Fixes bug 13221; bugfix on
+      0.2.3.9-alpha. Patch from Kris Katterjohn.
+    - Log the correct port number for listening sockets when "auto" is
+      used to let Tor pick the port number. Previously, port 0 was
+      logged instead of the actual port number. Fixes bug 29144; bugfix
+      on 0.3.5.1-alpha. Patch from Kris Katterjohn.
+    - Stop logging a BUG() warning when Tor is waiting for exit
+      descriptors. Fixes bug 28656; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (memory management):
+    - Refactor the shared random state's memory management so that it
+      actually takes ownership of the shared random value pointers.
+      Fixes bug 29706; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (memory management, testing):
+    - Stop leaking parts of the shared random state in the shared-random
+      unit tests. Fixes bug 29599; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (pluggable transports):
+    - Fix an assertion failure crash bug when a pluggable transport is
+      terminated during the bootstrap phase. Fixes bug 29562; bugfix
+      on 0.4.0.1-alpha.
+
+  o Minor bugfixes (Rust, protover):
+    - Add a missing "Padding" value to the Rust implementation of
+      protover. Fixes bug 29631; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (single onion services):
+    - Allow connections to single onion services to remain idle without
+      being disconnected. Previously, relays acting as rendezvous points
+      for single onion services were mistakenly closing idle rendezvous
+      circuits after 60 seconds, thinking that they were unused
+      directory-fetching circuits that had served their purpose. Fixes
+      bug 29665; bugfix on 0.2.1.26.
+
+  o Minor bugfixes (stats):
+    - When ExtraInfoStatistics is 0, stop including PaddingStatistics in
+      relay and bridge extra-info documents. Fixes bug 29017; bugfix
+      on 0.3.1.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Downgrade some LOG_ERR messages in the address/* tests to
+      warnings. The LOG_ERR messages were occurring when we had no
+      configured network. We were failing the unit tests, because we
+      backported 28668 to 0.3.5.8, but did not backport 29530. Fixes bug
+      29530; bugfix on 0.3.5.8.
+    - Fix our gcov wrapper script to look for object files at the
+      correct locations. Fixes bug 29435; bugfix on 0.3.5.1-alpha.
+    - Decrease the false positive rate of stochastic probability
+      distribution tests. Fixes bug 29693; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (Windows, CI):
+    - Skip the Appveyor 32-bit Windows Server 2016 job, and 64-bit
+      Windows Server 2012 R2 job. The remaining 2 jobs still provide
+      coverage of 64/32-bit, and Windows Server 2016/2012 R2. Also set
+      fast_finish, so failed jobs terminate the build immediately. Fixes
+      bug 29601; bugfix on 0.3.5.4-alpha.
+
+
 Changes in version 0.3.5.8 - 2019-02-21
   Tor 0.3.5.8 backports serveral fixes from later releases, including fixes
   for an annoying SOCKS-parsing bug that affected users in earlier 0.3.5.x
