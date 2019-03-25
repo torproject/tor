@@ -6,7 +6,6 @@
 #include "orconfig.h"
 #define COMPAT_PRIVATE
 #define COMPAT_TIME_PRIVATE
-#define CONTROL_PRIVATE
 #define UTIL_PRIVATE
 #define UTIL_MALLOC_PRIVATE
 #define SOCKET_PRIVATE

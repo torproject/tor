@@ -70,7 +70,9 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/control/btrack_orconn_cevent.c	\
 	src/feature/control/btrack_orconn_maps.c	\
 	src/feature/control/control.c		\
+	src/feature/control/control_auth.c	\
 	src/feature/control/control_bootstrap.c	\
+	src/feature/control/control_cmd.c	\
 	src/feature/control/control_events.c	\
 	src/feature/control/control_fmt.c	\
 	src/feature/control/control_getinfo.c	\
@@ -290,6 +292,8 @@ noinst_HEADERS +=					\
 	src/feature/control/btrack_orconn_maps.h	\
 	src/feature/control/btrack_sys.h		\
 	src/feature/control/control.h			\
+	src/feature/control/control_auth.h		\
+	src/feature/control/control_cmd.h		\
 	src/feature/control/control_connection_st.h	\
 	src/feature/control/control_events.h	        \
 	src/feature/control/control_fmt.h		\

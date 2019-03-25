@@ -24,6 +24,7 @@
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
 #include "feature/control/control.h"
+#include "feature/control/control_cmd.h"
 #include "feature/control/control_events.h"
 #include "feature/control/control_fmt.h"
 #include "feature/control/control_getinfo.h"

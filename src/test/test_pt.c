@@ -7,7 +7,6 @@
 #define PT_PRIVATE
 #define UTIL_PRIVATE
 #define STATEFILE_PRIVATE
-//#define CONTROL_PRIVATE
 #define CONTROL_EVENTS_PRIVATE
 #define PROCESS_PRIVATE
 #include "core/or/or.h"
