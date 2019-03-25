@@ -11,6 +11,8 @@ def get_tor_c_files(tor_topdir):
     files_list = []
 
     for root, directories, filenames in os.walk(tor_topdir):
+        directories.sort()
+        filenames.sort()
         for filename in filenames:
             # We only care about .c files
             if not filename.endswith(".c"):
@@ -24,4 +26,3 @@ def get_tor_c_files(tor_topdir):
             files_list.append(full_path)
 
     return files_list
-
