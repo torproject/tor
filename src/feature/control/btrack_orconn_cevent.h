@@ -7,6 +7,7 @@
  **/
 
 #ifndef TOR_BTRACK_ORCONN_CEVENT_H
+#define TOR_BTRACK_ORCONN_CEVENT_H
 
 #include "feature/control/btrack_orconn.h"
 
