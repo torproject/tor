@@ -117,8 +117,8 @@ HEADER="""\
 # Welcome to the exceptions file for Tor's best-practices tracker!
 #
 # Each line of this file represents a single violation of Tor's best
-# practices -- ideally one that was grandfathered in from before practracker.py
-# existed.
+# practices -- typically, a violation that we had before practracker.py
+# first existed.
 #
 # There are three kinds of problems that we recognize right now:
 #   function-size -- a function of more than {MAX_FUNCTION_SIZE} lines.
@@ -142,17 +142,30 @@ HEADER="""\
 #
 # You can either edit this file by hand, or regenerate it completely by
 # running `make practracker-regen`.
+#
+# Remember: It is better to fix the problem than to add a new exception!
 
 """.format(**globals())
 
 def main(argv):
-    if (len(argv) != 2):
-        print("Usage:\n\t$ practracker.py <tor topdir>\n\t(e.g. $ practracker.py ~/tor/)")
-        return
+    import argparse
+
+    progname = argv[0]
+    parser = argparse.ArgumentParser(prog=progname)
+    parser.add_argument("--regen", action="store_true",
+                        help="Regenerate the exceptions file")
+    parser.add_argument("--exceptions",
+                        help="Override the location for the exceptions file")
+    parser.add_argument("topdir", default=".", nargs="?",
+                        help="Top-level directory for the tor source")
+    args = parser.parse_args(argv[1:])
 
     global TOR_TOPDIR
-    TOR_TOPDIR = sys.argv[1]
-    exceptions_file = os.path.join(TOR_TOPDIR, "scripts/maint/practracker", EXCEPTIONS_FNAME)
+    TOR_TOPDIR = args.topdir
+    if args.exceptions:
+        exceptions_file = args.exceptions
+    else:
+        exceptions_file = os.path.join(TOR_TOPDIR, "scripts/maint/practracker", EXCEPTIONS_FNAME)
 
     # 1) Get all the .c files we care about
     files_list = util.get_tor_c_files(TOR_TOPDIR)
@@ -160,13 +173,26 @@ def main(argv):
     # 2) Initialize problem vault and load an optional exceptions file so that
     # we don't warn about the past
     global ProblemVault
-    ProblemVault = problem.ProblemVault(exceptions_file)
+
+    if args.regen:
+        tmpname = exceptions_file + ".tmp"
+        tmpfile = open(tmpname, "w")
+        sys.stdout = tmpfile
+        sys.stdout.write(HEADER)
+        ProblemVault = problem.ProblemVault()
+    else:
+        ProblemVault = problem.ProblemVault(exceptions_file)
 
     # 3) Go through all the files and report problems if they are not exceptions
     found_new_issues = consider_all_metrics(files_list)
 
+    if args.regen:
+        tmpfile.close()
+        os.rename(tmpname, exceptions_file)
+        sys.exit(0)
+
     # If new issues were found, try to give out some advice to the developer on how to resolve it.
-    if (found_new_issues):
+    if found_new_issues and not args.regen:
         new_issues_str = """\
 FAILURE: practracker found new problems in the code: see warnings above.
 
