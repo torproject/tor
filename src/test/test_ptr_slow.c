@@ -11,15 +11,6 @@
 #include <stdint.h>
 #include <limits.h>
 
-#if SIZEOF_INT > SIZEOF_VOID_P
-#error "sizeof(int) > sizeof(void *) - Tor cannot be built on this platform!"
-#endif
-
-#if SIZEOF_UNSIGNED_INT > SIZEOF_VOID_P
-#error "sizeof(unsigned int) > sizeof(void *) - Tor cannot be built on this \
-platform!"
-#endif
-
 /** Assert that <b>a</b> can be cast to void * and back. */
 static void
 assert_int_voidptr_roundtrip(int a)
