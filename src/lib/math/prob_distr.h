@@ -43,6 +43,13 @@ struct dist {
 
 /** A compile-time type-checking macro for use with DIST_BASE_TYPED.
  *
+ *  This macro works by checking that &OBJ is a pointer type that is the same
+ *  type (except for qualifiers) as (const TYPE *)&OBJ. It's a C constraint
+ *  violation (which requires a diagnostic) if two pointers are different types
+ *  and are subtracted. The sizeof() forces compile-time evaluation, and the
+ *  multiplication by zero is to discard the result of the sizeof() from the
+ *  expression.
+ *
  *  We define this conditionally to suppress false positives from
  *  Coverity, which gets confused by the sizeof business.
  */
