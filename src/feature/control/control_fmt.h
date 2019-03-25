@@ -12,6 +12,7 @@
 #ifndef TOR_CONTROL_FMT_H
 #define TOR_CONTROL_FMT_H
 
+void connection_write_str_to_buf(const char *s, control_connection_t *conn);
 void connection_printf_to_buf(control_connection_t *conn,
                                      const char *format, ...)
   CHECK_PRINTF(2,3);

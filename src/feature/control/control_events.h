@@ -327,6 +327,14 @@ void append_cell_stats_by_command(smartlist_t *event_parts,
 void format_cell_stats(char **event_string, circuit_t *circ,
                        cell_stats_t *cell_stats);
 
+/** Helper structure: maps event values to their names. */
+struct control_event_t {
+  uint16_t event_code;
+  const char *event_name;
+};
+
+extern const struct control_event_t control_event_table[];
+
 #ifdef TOR_UNIT_TESTS
 MOCK_DECL(STATIC void,
           send_control_event_string,(uint16_t event, const char *msg));

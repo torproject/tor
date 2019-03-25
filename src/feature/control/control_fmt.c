@@ -23,6 +23,16 @@
 #include "core/or/socks_request_st.h"
 #include "feature/control/control_connection_st.h"
 
+/** Append a NUL-terminated string <b>s</b> to the end of
+ * <b>conn</b>-\>outbuf.
+ */
+void
+connection_write_str_to_buf(const char *s, control_connection_t *conn)
+{
+  size_t len = strlen(s);
+  connection_buf_add(s, len, TO_CONN(conn));
+}
+
 /** Acts like sprintf, but writes its formatted string to the end of
  * <b>conn</b>-\>outbuf. */
 void
