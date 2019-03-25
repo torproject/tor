@@ -113,6 +113,38 @@ def consider_metrics_for_file(fname, f):
 
     return found_new_issues
 
+HEADER="""\
+# Welcome to the exceptions file for Tor's best-practices tracker!
+#
+# Each line of this file represents a single violation of Tor's best
+# practices -- ideally one that was grandfathered in from before practracker.py
+# existed.
+#
+# There are three kinds of problems that we recognize right now:
+#   function-size -- a function of more than {MAX_FUNCTION_SIZE} lines.
+#   file-size -- a file of more than {MAX_FILE_SIZE} lines.
+#   include-count -- a file with more than {MAX_INCLUDE_COUNT} #includes.
+#
+# Each line below represents a single exception that practracker should
+# _ignore_. Each line has four parts:
+#  1. The word "problem".
+#  2. The kind of problem.
+#  3. The location of the problem: either a filename, or a
+#     filename:functionname pair.
+#  4. The magnitude of the problem to ignore.
+#
+# So for example, consider this line:
+#    problem file-size /src/core/or/connection_or.c 3200
+#
+# It tells practracker to allow the mentioned file to be up to 3200 lines
+# long, even though ordinarily it would warn about any file with more than
+# {MAX_FILE_SIZE} lines.
+#
+# You can either edit this file by hand, or regenerate it completely by
+# running `make practracker-regen`.
+
+""".format(**globals())
+
 def main():
     if (len(sys.argv) != 2):
         print("Usage:\n\t$ practracker.py <tor topdir>\n\t(e.g. $ practracker.py ~/tor/)")
