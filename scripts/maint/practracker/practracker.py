@@ -145,8 +145,8 @@ HEADER="""\
 
 """.format(**globals())
 
-def main():
-    if (len(sys.argv) != 2):
+def main(argv):
+    if (len(argv) != 2):
         print("Usage:\n\t$ practracker.py <tor topdir>\n\t(e.g. $ practracker.py ~/tor/)")
         return
 
@@ -180,4 +180,4 @@ See doc/HACKING/HelpfulTools.md for more information on using practracker.\
     sys.exit(found_new_issues)
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv)
