@@ -14,7 +14,7 @@
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/shared_random.h"

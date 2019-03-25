@@ -16,7 +16,7 @@
 #include "core/or/policies.h"
 #include "core/or/protover.h"
 #include "feature/client/transports.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirclient/dirclient.h"

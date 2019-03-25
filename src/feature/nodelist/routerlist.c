@@ -67,7 +67,7 @@
 #include "core/mainloop/mainloop.h"
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dirauth/reachability.h"

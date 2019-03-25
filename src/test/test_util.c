@@ -16,6 +16,7 @@
 #include "lib/buf/buffers.h"
 #include "app/config/config.h"
 #include "feature/control/control.h"
+#include "feature/control/control_fmt.h"
 #include "feature/client/transports.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"

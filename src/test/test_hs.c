@@ -6,7 +6,7 @@
  * \brief Unit tests for hidden service.
  **/
 
-#define CONTROL_PRIVATE
+#define CONTROL_EVENTS_PRIVATE
 #define CIRCUITBUILD_PRIVATE
 #define RENDCOMMON_PRIVATE
 #define RENDSERVICE_PRIVATE
@@ -15,6 +15,7 @@
 #include "core/or/or.h"
 #include "test/test.h"
 #include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "app/config/config.h"
 #include "feature/hs/hs_common.h"
 #include "feature/rend/rendcommon.h"

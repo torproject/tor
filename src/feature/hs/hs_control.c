@@ -7,7 +7,7 @@
  **/
 
 #include "core/or/or.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/hs/hs_client.h"

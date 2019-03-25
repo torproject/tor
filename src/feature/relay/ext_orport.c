@@ -20,7 +20,7 @@
 #include "core/or/or.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "app/config/config.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -659,4 +659,3 @@ ext_orport_free_all(void)
   if (ext_or_auth_cookie) /* Free the auth cookie */
     tor_free(ext_or_auth_cookie);
 }
-

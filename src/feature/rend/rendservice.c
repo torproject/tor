@@ -19,7 +19,7 @@
 #include "core/or/policies.h"
 #include "core/or/relay.h"
 #include "feature/client/circpathbias.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirclient/dirclient.h"
 #include "feature/dircommon/directory.h"
 #include "feature/hs/hs_common.h"

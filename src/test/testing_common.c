@@ -12,6 +12,7 @@
 #include "orconfig.h"
 #include "core/or/or.h"
 #include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "app/config/config.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
