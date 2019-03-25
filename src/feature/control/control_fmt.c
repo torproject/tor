@@ -392,3 +392,18 @@ decode_escaped_string(const char *start, size_t in_len_max,
 
   return end+1;
 }
+
+/** Return a longname the node whose identity is <b>id_digest</b>. If
+ * node_get_by_id() returns NULL, base 16 encoding of <b>id_digest</b> is
+ * returned instead.
+ *
+ * This function is not thread-safe.  Each call to this function invalidates
+ * previous values returned by this function.
+ */
+MOCK_IMPL(const char *,
+node_describe_longname_by_id,(const char *id_digest))
+{
+  static char longname[MAX_VERBOSE_NICKNAME_LEN+1];
+  node_get_verbose_nickname_by_id(id_digest, longname);
+  return longname;
+}

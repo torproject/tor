@@ -31,4 +31,6 @@ const char *decode_escaped_string(const char *start, size_t in_len_max,
                                   char **out, size_t *out_len);
 void send_control_done(control_connection_t *conn);
 
+MOCK_DECL(const char *, node_describe_longname_by_id,(const char *id_digest));
+
 #endif /* !defined(TOR_CONTROL_FMT_H) */

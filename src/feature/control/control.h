@@ -48,7 +48,6 @@ void enable_control_logging(void);
 void monitor_owning_controller_process(const char *process_spec);
 
 const char *rend_auth_type_to_string(rend_auth_type_t auth_type);
-MOCK_DECL(const char *, node_describe_longname_by_id,(const char *id_digest));
 void control_free_all(void);
 
 #ifdef CONTROL_MODULE_PRIVATE

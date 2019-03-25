@@ -33,91 +33,25 @@
  **/
 
 #define CONTROL_MODULE_PRIVATE
-#define CONTROL_EVENTS_PRIVATE
-#define OCIRC_EVENT_PRIVATE
 
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
 #include "app/main/main.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
-#include "core/or/channel.h"
-#include "core/or/channeltls.h"
-#include "core/or/circuitbuild.h"
-#include "core/or/circuitlist.h"
-#include "core/or/circuitstats.h"
-#include "core/or/circuituse.h"
-#include "core/or/command.h"
-#include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
-#include "core/or/ocirc_event.h"
-#include "core/or/policies.h"
-#include "core/or/reasons.h"
-#include "core/or/versions.h"
 #include "core/proto/proto_control0.h"
 #include "core/proto/proto_http.h"
-#include "feature/client/addressmap.h"
-#include "feature/client/bridges.h"
-#include "feature/client/dnsserv.h"
-#include "feature/client/entrynodes.h"
 #include "feature/control/control.h"
 #include "feature/control/control_auth.h"
 #include "feature/control/control_cmd.h"
 #include "feature/control/control_events.h"
 #include "feature/control/control_fmt.h"
-#include "feature/control/control_getinfo.h"
-#include "feature/control/fmt_serverstatus.h"
-#include "feature/control/getinfo_geoip.h"
-#include "feature/dircache/dirserv.h"
-#include "feature/dirclient/dirclient.h"
-#include "feature/dirclient/dlstatus.h"
-#include "feature/dircommon/directory.h"
-#include "feature/hibernate/hibernate.h"
-#include "feature/hs/hs_cache.h"
-#include "feature/hs/hs_common.h"
-#include "feature/hs/hs_control.h"
-#include "feature/hs_common/shared_random_client.h"
-#include "feature/nodelist/authcert.h"
-#include "feature/nodelist/dirlist.h"
-#include "feature/nodelist/microdesc.h"
-#include "feature/nodelist/networkstatus.h"
-#include "feature/nodelist/nodelist.h"
-#include "feature/nodelist/routerinfo.h"
-#include "feature/nodelist/routerlist.h"
-#include "feature/relay/router.h"
-#include "feature/relay/routermode.h"
-#include "feature/relay/selftest.h"
-#include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
-#include "feature/rend/rendparse.h"
 #include "feature/rend/rendservice.h"
-#include "feature/stats/geoip_stats.h"
-#include "feature/stats/predict_ports.h"
-#include "lib/buf/buffers.h"
-#include "lib/crypt_ops/crypto_rand.h"
-#include "lib/crypt_ops/crypto_util.h"
-#include "lib/encoding/confline.h"
-#include "lib/evloop/compat_libevent.h"
-#include "lib/version/torversion.h"
+#include "lib/evloop/procmon.h"
 
-#include "feature/dircache/cached_dir_st.h"
 #include "feature/control/control_connection_st.h"
-#include "core/or/cpath_build_state_st.h"
-#include "core/or/entry_connection_st.h"
-#include "feature/nodelist/extrainfo_st.h"
-#include "feature/nodelist/networkstatus_st.h"
-#include "feature/nodelist/node_st.h"
-#include "core/or/or_connection_st.h"
-#include "core/or/or_circuit_st.h"
-#include "core/or/origin_circuit_st.h"
-#include "feature/nodelist/microdesc_st.h"
-#include "feature/rend/rend_authorized_client_st.h"
-#include "feature/rend/rend_encoded_v2_service_descriptor_st.h"
-#include "feature/rend/rend_service_descriptor_st.h"
-#include "feature/nodelist/routerinfo_st.h"
-#include "feature/nodelist/routerlist_st.h"
-#include "core/or/socks_request_st.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -125,15 +59,6 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
-
-#ifndef _WIN32
-#include <pwd.h>
-#include <sys/resource.h>
-#endif
-
-#include "lib/crypt_ops/crypto_s2k.h"
-#include "lib/evloop/procmon.h"
-#include "lib/evloop/compat_libevent.h"
 
 /** Convert a connection_t* to an control_connection_t*; assert if the cast is
  * invalid. */
@@ -608,21 +533,6 @@ monitor_owning_controller_process(const char *process_spec)
     owning_controller_process_spec = NULL;
     tor_shutdown_event_loop_and_exit(1);
   }
-}
-
-/** Return a longname the node whose identity is <b>id_digest</b>. If
- * node_get_by_id() returns NULL, base 16 encoding of <b>id_digest</b> is
- * returned instead.
- *
- * This function is not thread-safe.  Each call to this function invalidates
- * previous values returned by this function.
- */
-MOCK_IMPL(const char *,
-node_describe_longname_by_id,(const char *id_digest))
-{
-  static char longname[MAX_VERBOSE_NICKNAME_LEN+1];
-  node_get_verbose_nickname_by_id(id_digest, longname);
-  return longname;
 }
 
 /** Free any leftover allocated memory of the control.c subsystem. */

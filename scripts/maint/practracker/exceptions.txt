@@ -109,8 +109,6 @@ problem function-size /src/tools/tor-gencert.c:parse_commandline() 111
 problem function-size /src/feature/keymgt/loadkey.c:ed_key_init_from_file() 333
 problem function-size /src/feature/dircommon/consdiff.c:gen_ed_diff() 204
 problem function-size /src/feature/dircommon/consdiff.c:apply_ed_diff() 159
-problem file-size /src/feature/control/control.c 7592
-problem include-count /src/feature/control/control.c 90
 problem function-size /src/feature/control/control_auth.c:handle_control_authenticate() 188
 problem function-size /src/feature/control/control_auth.c:handle_control_authchallenge() 115
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_misc() 109

@@ -16,6 +16,7 @@
 #include "test/test.h"
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
+#include "feature/control/control_fmt.h"
 #include "app/config/config.h"
 #include "feature/hs/hs_common.h"
 #include "feature/rend/rendcommon.h"
