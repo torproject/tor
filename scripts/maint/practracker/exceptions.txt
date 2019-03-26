@@ -53,7 +53,7 @@ problem function-size /src/app/main/main.c:tor_init() 136
 problem function-size /src/app/main/main.c:sandbox_init_filter() 291
 problem function-size /src/app/main/main.c:run_tor_main_loop() 105
 problem function-size /src/app/main/ntmain.c:nt_service_install() 125
-problem file-size /src/core/mainloop/connection.c 5548
+problem file-size /src/core/mainloop/connection.c 5554
 problem include-count /src/core/mainloop/connection.c 61
 problem function-size /src/core/mainloop/connection.c:connection_free_minimal() 184
 problem function-size /src/core/mainloop/connection.c:connection_listener_new() 328
@@ -111,7 +111,7 @@ problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_sen
 problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_socks_resolved() 106
 problem function-size /src/core/or/connection_edge.c:connection_exit_begin_conn() 184
 problem function-size /src/core/or/connection_edge.c:connection_exit_connect() 102
-problem file-size /src/core/or/connection_or.c 3111
+problem file-size /src/core/or/connection_or.c 3121
 problem include-count /src/core/or/connection_or.c 51
 problem function-size /src/core/or/connection_or.c:connection_or_group_set_badness_() 105
 problem function-size /src/core/or/connection_or.c:connection_or_client_learned_peer_id() 144
