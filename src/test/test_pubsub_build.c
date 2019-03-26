@@ -242,9 +242,9 @@ test_pubsub_build_missing_pubsub(void *arg)
   tt_assert(dispatcher == NULL);
 
   expect_log_msg_containing(
-       "Message 0 (bunch_of_coconuts) has publishers, but no subscribers.");
+       "Message \"bunch_of_coconuts\" has publishers, but no subscribers.");
   expect_log_msg_containing(
-       "Message 1 (yes_we_have_no) has subscribers, but no publishers.");
+       "Message \"yes_we_have_no\" has subscribers, but no publishers.");
 
  done:
   pubsub_builder_free(b);
@@ -311,7 +311,7 @@ test_pubsub_build_channels_conflict(void *arg)
   b = NULL;
   tt_assert(dispatcher == NULL);
 
-  expect_log_msg_containing("Message 0 (bunch_of_coconuts) is associated "
+  expect_log_msg_containing("Message \"bunch_of_coconuts\" is associated "
                             "with multiple inconsistent channels.");
 
  done:
@@ -350,7 +350,7 @@ test_pubsub_build_types_conflict(void *arg)
   b = NULL;
   tt_assert(dispatcher == NULL);
 
-  expect_log_msg_containing("Message 0 (bunch_of_coconuts) is associated "
+  expect_log_msg_containing("Message \"bunch_of_coconuts\" is associated "
                             "with multiple inconsistent message types.");
 
  done:
@@ -383,8 +383,8 @@ test_pubsub_build_pubsub_same(void *arg)
   b = NULL;
   tt_assert(dispatcher == NULL);
 
-  expect_log_msg_containing("Message 0 (bunch_of_coconuts) is published "
-                            "and subscribed by the same subsystem 0 (sys1)");
+  expect_log_msg_containing("Message \"bunch_of_coconuts\" is published "
+                            "and subscribed by the same subsystem \"sys1\".");
 
  done:
   pubsub_builder_free(b);
@@ -523,9 +523,11 @@ test_pubsub_build_pubsub_redundant(void *arg)
   tt_assert(dispatcher == NULL);
 
   expect_log_msg_containing(
-    "is configured to be published by subsystem 1 (sys2) more than once");
+    "Message \"yes_we_have_no\" is configured to be published by "
+    "subsystem \"sys2\" more than once.");
   expect_log_msg_containing(
-    "is configured to be subscribed by subsystem 1 (sys2) more than once");
+    "Message \"bunch_of_coconuts\" is configured to be subscribed by "
+    "subsystem \"sys2\" more than once.");
 
  done:
   pubsub_builder_free(b);

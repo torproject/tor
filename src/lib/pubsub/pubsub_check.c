@@ -190,10 +190,10 @@ get_message_bitarray(const pubsub_adjmap_t *map,
   SMARTLIST_FOREACH_BEGIN(items, const pubsub_cfg_t *, cfg) {
     if (bitarray_is_set(*out, cfg->subsys)) {
       log_warn(LD_MESG|LD_BUG,
-               "Message %u (%s) is configured to be %s by subsystem "
-               "%u (%s) more than once.",
-               msg, get_message_id_name(msg), operation,
-               cfg->subsys, get_subsys_id_name(cfg->subsys));
+               "Message \"%s\" is configured to be %s by subsystem "
+               "\"%s\" more than once.",
+               get_message_id_name(msg), operation,
+               get_subsys_id_name(cfg->subsys));
       ok = false;
     }
     bitarray_set(*out, cfg->subsys);
@@ -234,10 +234,10 @@ lint_message_graph(const pubsub_adjmap_t *map,
     if (bitarray_is_set(published_by, i) &&
         bitarray_is_set(subscribed_by, i)) {
       log_warn(LD_MESG|LD_BUG,
-               "Message %u (%s) is published and subscribed by the same "
-               "subsystem %u (%s)",
-               msg, get_message_id_name(msg),
-               i, get_subsys_id_name(i));
+               "Message \"%s\" is published and subscribed by the same "
+               "subsystem \"%s\".",
+               get_message_id_name(msg),
+               get_subsys_id_name(i));
       ok = false;
     }
   }
@@ -287,16 +287,16 @@ lint_message_consistency(message_id_t msg,
 
   if (! chan_same) {
     log_warn(LD_MESG|LD_BUG,
-             "Message %u (%s) is associated with multiple inconsistent "
+             "Message \"%s\" is associated with multiple inconsistent "
              "channels.",
-            msg, get_message_id_name(msg));
+             get_message_id_name(msg));
     ok = false;
   }
   if (! type_same) {
     log_warn(LD_MESG|LD_BUG,
-             "Message %u (%s) is associated with multiple inconsistent "
+             "Message \"%s\" is associated with multiple inconsistent "
              "message types.",
-            msg, get_message_id_name(msg));
+             get_message_id_name(msg));
     ok = false;
   }
 
@@ -305,16 +305,16 @@ lint_message_consistency(message_id_t msg,
    */
   if (pub_excl && smartlist_len(pub) > 1) {
     log_warn(LD_MESG|LD_BUG,
-             "Message %u (%s) has multiple publishers, but at least one is "
+             "Message \"%s\" has multiple publishers, but at least one is "
              "marked as exclusive.",
-            msg, get_message_id_name(msg));
+             get_message_id_name(msg));
     ok = false;
   }
   if (sub_excl && smartlist_len(sub) > 1) {
     log_warn(LD_MESG|LD_BUG,
-             "Message %u (%s) has multiple subscribers, but at least one is "
+             "Message \"%s\" has multiple subscribers, but at least one is "
              "marked as exclusive.",
-            msg, get_message_id_name(msg));
+             get_message_id_name(msg));
     ok = false;
   }
 
@@ -344,9 +344,9 @@ lint_message(const pubsub_adjmap_t *map, message_id_t msg)
   const size_t n_sub = smartlist_len_opt(sub);
 
   if (n_pub == 0 && n_sub == 0) {
-    log_info(LD_MESG, "Nobody is publishing or subscribing to message %u "
-             "(%s).",
-             msg, get_message_id_name(msg));
+    log_info(LD_MESG, "Nobody is publishing or subscribing to message "
+             "\"%s\".",
+             get_message_id_name(msg));
     return 0; // No publishers or subscribers: nothing to do.
   }
   /* We'll set this to false if there are any problems. */
@@ -355,13 +355,13 @@ lint_message(const pubsub_adjmap_t *map, message_id_t msg)
   /* First make sure that if there are publishers, there are subscribers. */
   if (n_pub == 0) {
     log_warn(LD_MESG|LD_BUG,
-             "Message %u (%s) has subscribers, but no publishers.",
-            msg, get_message_id_name(msg));
+             "Message \"%s\" has subscribers, but no publishers.",
+             get_message_id_name(msg));
     ok = false;
   } else if (n_sub == 0) {
     log_warn(LD_MESG|LD_BUG,
-             "Message %u (%s) has publishers, but no subscribers.",
-            msg, get_message_id_name(msg));
+             "Message \"%s\" has publishers, but no subscribers.",
+             get_message_id_name(msg));
     ok = false;
   }
 
