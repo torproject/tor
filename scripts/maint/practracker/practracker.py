@@ -46,6 +46,13 @@ TOR_TOPDIR = None
 
 #######################################################
 
+if sys.version_info[0] <= 2:
+    def open_file(fname):
+        return open(fname, 'r')
+else:
+    def open_file(fname):
+        return open(fname, 'r', encoding='utf-8')
+
 def consider_file_size(fname, f):
     """Consider file size issues for 'f' and return True if a new issue was found"""
     file_size = metrics.get_file_len(f)
@@ -85,7 +92,7 @@ def consider_all_metrics(files_list):
     """Consider metrics for all files, and return True if new issues were found"""
     found_new_issues = False
     for fname in files_list:
-        with open(fname, 'r') as f:
+        with open_file(fname) as f:
             found_new_issues |= consider_metrics_for_file(fname, f)
     return found_new_issues
 
