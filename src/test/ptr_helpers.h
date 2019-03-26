@@ -3,6 +3,9 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#ifndef TOR_PTR_HELPERS_H
+#define TOR_PTR_HELPERS_H
+
 #include <stdint.h>
 
 void *
@@ -16,3 +19,5 @@ cast_uintptr_to_voidstar(uintptr_t x);
 
 uintptr_t
 cast_voidstar_to_uintptr(void *x);
+
+#endif
