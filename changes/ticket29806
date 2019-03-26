@@ -1,0 +1,7 @@
+  o Minor features (bandwidth authority):
+    - Make bandwidth authorities to ignore relays that are reported in the
+      bandwidth file with the key-value "vote=0".
+      This change allows to report the relays that were not measured due
+      some failure and diagnose the reasons without the bandwidth being included in the
+      bandwidth authorities vote.
+      Closes ticket 29806.
