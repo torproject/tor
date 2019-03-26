@@ -290,8 +290,8 @@ tor_cert_describe_signature_status(const tor_cert_t *cert)
 }
 
 /** Return a new copy of <b>cert</b> */
-tor_cert_t *
-tor_cert_dup(const tor_cert_t *cert)
+MOCK_IMPL(tor_cert_t *,
+tor_cert_dup,(const tor_cert_t *cert))
 {
   tor_cert_t *newcert = tor_memdup(cert, sizeof(tor_cert_t));
   if (cert->encoded)
