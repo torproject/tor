@@ -13,9 +13,9 @@ practracker.py should be run with its second argument pointing to the Tor
 top-level source directory like this:
   $ python3 ./scripts/maint/practracker/practracker.py .
 
-The exceptions file is meant to be initialized once with the current state of
-the source code and then get saved in the repository for ever after:
-  $ python3 ./scripts/maint/practracker/practracker.py . > ./scripts/maint/practracker/exceptions.txt
+To regenerate the exceptions file so that it allows all current
+problems in the Tor source, use the --regen flag:
+  $ python3 --regen ./scripts/maint/practracker/practracker.py .
 """
 
 from __future__ import print_function
