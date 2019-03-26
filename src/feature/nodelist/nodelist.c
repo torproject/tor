@@ -49,7 +49,7 @@
 #include "core/or/protover.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/hs/hs_client.h"

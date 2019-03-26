@@ -26,7 +26,7 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/netstatus.h"
 #include "core/or/policies.h"

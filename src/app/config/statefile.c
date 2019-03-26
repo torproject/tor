@@ -36,7 +36,7 @@
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/netstatus.h"
 #include "core/mainloop/connection.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/client/entrynodes.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/stats/rephist.h"

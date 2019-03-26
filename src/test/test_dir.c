@@ -8,7 +8,7 @@
 
 #define BWAUTH_PRIVATE
 #define CONFIG_PRIVATE
-#define CONTROL_PRIVATE
+#define CONTROL_GETINFO_PRIVATE
 #define DIRCACHE_PRIVATE
 #define DIRCLIENT_PRIVATE
 #define DIRSERV_PRIVATE
@@ -32,7 +32,7 @@
 #include "core/or/versions.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
-#include "feature/control/control.h"
+#include "feature/control/control_getinfo.h"
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/dsigs_parse.h"

@@ -61,7 +61,7 @@
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dircommon/directory.h"

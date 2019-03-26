@@ -1,11 +1,14 @@
 /* Copyright (c) 2015-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define CONTROL_PRIVATE
+#define CONTROL_CMD_PRIVATE
+#define CONTROL_GETINFO_PRIVATE
 #include "core/or/or.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "feature/client/bridges.h"
 #include "feature/control/control.h"
+#include "feature/control/control_cmd.h"
+#include "feature/control/control_getinfo.h"
 #include "feature/client/entrynodes.h"
 #include "feature/hs/hs_common.h"
 #include "feature/nodelist/networkstatus.h"

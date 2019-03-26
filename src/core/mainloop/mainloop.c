@@ -73,6 +73,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
 #include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/reachability.h"
 #include "feature/dircache/consdiffmgr.h"

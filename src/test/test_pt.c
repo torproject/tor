@@ -7,12 +7,13 @@
 #define PT_PRIVATE
 #define UTIL_PRIVATE
 #define STATEFILE_PRIVATE
-#define CONTROL_PRIVATE
+#define CONTROL_EVENTS_PRIVATE
 #define PROCESS_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "app/config/confparse.h"
 #include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/client/transports.h"
 #include "core/or/circuitbuild.h"
 #include "app/config/statefile.h"

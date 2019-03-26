@@ -6,11 +6,13 @@
  * \brief Unit tests for hidden service control port event and command.
  **/
 
-#define CONTROL_PRIVATE
+#define CONTROL_EVENTS_PRIVATE
 
 #include "core/or/or.h"
 #include "test/test.h"
 #include "feature/control/control.h"
+#include "feature/control/control_events.h"
+#include "feature/control/control_fmt.h"
 #include "app/config/config.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_control.h"

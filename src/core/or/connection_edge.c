@@ -78,7 +78,7 @@
 #include "feature/client/addressmap.h"
 #include "feature/client/circpathbias.h"
 #include "feature/client/dnsserv.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
 #include "feature/hibernate/hibernate.h"

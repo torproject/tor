@@ -43,6 +43,8 @@
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
 #include "feature/control/control.h"
+#include "feature/control/control_auth.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/keypin.h"
 #include "feature/dirauth/process_descs.h"

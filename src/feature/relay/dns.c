@@ -59,7 +59,7 @@
 #include "core/or/connection_edge.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
