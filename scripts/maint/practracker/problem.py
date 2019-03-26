@@ -19,9 +19,12 @@ class ProblemVault(object):
     found in the code, and also the old problems we read from the exception
     file.
     """
-    def __init__(self, exception_fname):
+    def __init__(self, exception_fname=None):
         # Exception dictionary: { problem.key() : Problem object }
         self.exceptions = {}
+
+        if exception_fname == None:
+            return
 
         try:
             with open(exception_fname, 'r') as exception_f:
