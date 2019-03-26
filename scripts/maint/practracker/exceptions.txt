@@ -132,11 +132,12 @@ problem function-size /src/feature/dircache/dircache.c:handle_get_current_consen
 problem function-size /src/feature/dircache/dircache.c:directory_handle_command_post() 120
 problem function-size /src/feature/hibernate/hibernate.c:accounting_parse_options() 109
 problem function-size /src/feature/relay/routerkeys.c:load_ed_keys() 294
-problem file-size /src/feature/relay/router.c 3221
+problem file-size /src/feature/relay/router.c 3412
 problem include-count /src/feature/relay/router.c 56
 problem function-size /src/feature/relay/router.c:init_keys() 252
 problem function-size /src/feature/relay/router.c:get_my_declared_family() 114
 problem function-size /src/feature/relay/router.c:router_build_fresh_descriptor() 190
+problem function-size /src/feature/relay/router.c:router_build_fresh_unsigned_routerinfo() 140
 problem function-size /src/feature/relay/router.c:router_dump_router_to_string() 375
 problem function-size /src/feature/relay/router.c:extrainfo_dump_to_string() 208
 problem function-size /src/feature/relay/dns.c:dns_resolve_impl() 134
