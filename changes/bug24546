@@ -1,0 +1,5 @@
+  o Minor bugfixes (networking):
+    - Remove tor_addr_is_v4() to check for an IPv4 address and switch to
+      checking the address family directly with tor_addr_family(). Also, we
+      remove support for IPv4-mapped IPv6 addresses in tor_addr_is_v4().
+      Fixes bug 24546; bugfix on 0.2.0.3-alpha. Patch by Neel Chauhan.
