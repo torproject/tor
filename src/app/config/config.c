@@ -7661,10 +7661,12 @@ get_first_listener_addrport_string(int listener_type)
       /* If a listener is listening on INADDR_ANY, assume that it's
          also listening on 127.0.0.1, and point the transport proxy
          there: */
-      if (tor_addr_is_null(&cfg->addr))
-        address = tor_addr_is_v4(&cfg->addr) ? ipv4_localhost : ipv6_localhost;
-      else
+      if (tor_addr_is_null(&cfg->addr)) {
+        address = (tor_addr_family(&cfg->addr) == AF_INET) ? ipv4_localhost :
+                                                             ipv6_localhost;
+      } else {
         address = fmt_and_decorate_addr(&cfg->addr);
+      }
 
       /* If a listener is configured with port 'auto', we are forced
          to iterate all listener connections and find out in which

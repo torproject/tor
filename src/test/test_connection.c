@@ -84,7 +84,7 @@ test_conn_lookup_addr_helper(const char *address, int family, tor_addr_t *addr)
   /* XXXX - should we retry on transient failure? */
   tt_int_op(rv, OP_EQ, 0);
   tt_assert(tor_addr_is_loopback(addr));
-  tt_assert(tor_addr_is_v4(addr));
+  tt_assert(tor_addr_family(addr) == AF_INET);
 
   return;
 

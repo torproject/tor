@@ -1218,7 +1218,7 @@ node_get_link_specifier_smartlist(const node_t *node, bool direct_conn)
   /* We expect the node's primary address to be a valid IPv4 address.
    * This conforms to the protocol, which requires either an IPv4 or IPv6
    * address (or both). */
-  if (BUG(!tor_addr_is_v4(&ap.addr)) ||
+  if (BUG(tor_addr_family(&ap.addr) != AF_INET) ||
       BUG(!tor_addr_port_is_valid_ap(&ap, 0))) {
     return lspecs;
   }

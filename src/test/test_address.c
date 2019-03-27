@@ -144,7 +144,7 @@ static int
 smartlist_contains_ipv4_tor_addr(smartlist_t *smartlist)
 {
   SMARTLIST_FOREACH_BEGIN(smartlist, tor_addr_t *, tor_addr) {
-    if (tor_addr_is_v4(tor_addr)) {
+    if (tor_addr_family(tor_addr) == AF_INET) {
       return 1;
     }
   } SMARTLIST_FOREACH_END(tor_addr);
@@ -160,7 +160,7 @@ smartlist_contains_ipv6_tor_addr(smartlist_t *smartlist)
 {
   SMARTLIST_FOREACH_BEGIN(smartlist, tor_addr_t *, tor_addr) {
     /* Since there's no tor_addr_is_v6, assume all non-v4s are v6 */
-    if (!tor_addr_is_v4(tor_addr)) {
+    if (tor_addr_family(tor_addr) != AF_INET) {
       return 1;
     }
   } SMARTLIST_FOREACH_END(tor_addr);
@@ -1000,7 +1000,7 @@ test_address_get_if_addrs(void *arg)
     tt_assert(!tor_addr_is_multicast(&tor_addr));
     /* The address may or may not be an internal address */
 
-    tt_assert(tor_addr_is_v4(&tor_addr));
+    tt_assert(tor_addr_family(&tor_addr) == AF_INET);
   }
 
  done:
@@ -1023,7 +1023,7 @@ test_address_get_if_addrs6(void *arg)
     tt_assert(!tor_addr_is_multicast(&tor_addr));
     /* The address may or may not be an internal address */
 
-    tt_assert(!tor_addr_is_v4(&tor_addr));
+    tt_assert(tor_addr_family(&tor_addr) != AF_INET);
   }
 
  done:

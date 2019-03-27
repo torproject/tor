@@ -632,7 +632,7 @@ tor_addr_parse_mask_ports(const char *s,
     goto err;
   }
 
-  v4map = tor_addr_is_v4(addr_out);
+  v4map = tor_addr_family(addr_out) == AF_INET;
 
   /* Parse mask */
   if (maskbits_out) {
@@ -725,15 +725,6 @@ tor_addr_parse_mask_ports(const char *s,
  err:
   tor_free(base);
   return -1;
-}
-
-/** Return true iff address <b>addr</b> is native IPv4. Else, return false. */
-int
-tor_addr_is_v4(const tor_addr_t *addr)
-{
-  tor_assert(addr);
-
-  return tor_addr_family(addr) == AF_INET;
 }
 
 /** Determine whether an address <b>addr</b> is null, either all zeroes or
@@ -1027,9 +1018,9 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
   if (mbits == 0)
     return 0;
 
-  if (family1 == AF_INET6 && tor_addr_is_v4(addr1))
+  if (family1 == AF_INET6 && tor_addr_family(addr1) == AF_INET)
     v_family1 = AF_INET;
-  if (family2 == AF_INET6 && tor_addr_is_v4(addr2))
+  if (family2 == AF_INET6 && tor_addr_family(addr2) == AF_INET)
     v_family2 = AF_INET;
   if (v_family1 == v_family2) {
     /* One or both addresses are a mapped ipv4 address. */

@@ -1656,7 +1656,7 @@ addr_policy_append_reject_addr_filter(smartlist_t **dest,
   if (tor_addr_is_public_for_reject(addr)) {
 
     /* Reject IPv4 addresses and IPv6 addresses based on the filters */
-    int is_ipv4 = tor_addr_is_v4(addr);
+    int is_ipv4 = tor_addr_family(addr) == AF_INET;
     if ((is_ipv4 && ipv4_rules) || (!is_ipv4 && ipv6_rules)) {
       addr_policy_append_reject_addr(dest, addr);
     }
