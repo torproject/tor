@@ -5,9 +5,14 @@
 
 #include "orconfig.h"
 #include "app/main/subsysmgr.h"
-#include "lib/err/torerr.h"
 
+#include "lib/dispatch/dispatch_naming.h"
+#include "lib/dispatch/msgtypes.h"
+#include "lib/err/torerr.h"
 #include "lib/log/log.h"
+#include "lib/malloc/malloc.h"
+#include "lib/pubsub/pubsub_build.h"
+#include "lib/pubsub/pubsub_connect.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,6 +108,51 @@ subsystems_init_upto(int target_level)
   }
 
   return 0;
+}
+
+/**
+ * Add publish/subscribe relationships to <b>builder</b> for all
+ * initialized subsystems of level no more than <b>target_level</b>.
+ **/
+int
+subsystems_add_pubsub_upto(pubsub_builder_t *builder,
+                           int target_level)
+{
+  for (unsigned i = 0; i < n_tor_subsystems; ++i) {
+    const subsys_fns_t *sys = tor_subsystems[i];
+    if (!sys->supported)
+      continue;
+    if (sys->level > target_level)
+      break;
+    if (! sys_initialized[i])
+      continue;
+    int r = 0;
+    if (sys->add_pubsub) {
+      subsys_id_t sysid = get_subsys_id(sys->name);
+      raw_assert(sysid != ERROR_ID);
+      pubsub_connector_t *connector;
+      connector = pubsub_connector_for_subsystem(builder, sysid);
+      r = sys->add_pubsub(connector);
+      pubsub_connector_free(connector);
+    }
+    if (r < 0) {
+      fprintf(stderr, "BUG: subsystem %s (at %u) could not connect to "
+              "publish/subscribe system.", sys->name, sys->level);
+      raw_assert_unreached_msg("A subsystem couldn't be connected.");
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Add publish/subscribe relationships to <b>builder</b> for all
+ * initialized subsystems.
+ **/
+int
+subsystems_add_pubsub(pubsub_builder_t *builder)
+{
+  return subsystems_add_pubsub_upto(builder, MAX_SUBSYS_LEVEL);
 }
 
 /**

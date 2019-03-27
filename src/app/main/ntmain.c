@@ -24,6 +24,7 @@
 #include "app/config/config.h"
 #include "app/main/main.h"
 #include "app/main/ntmain.h"
+#include "app/main/shutdown.h"
 #include "core/mainloop/mainloop.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/fs/winlib.h"
