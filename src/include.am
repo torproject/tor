@@ -8,6 +8,7 @@ include src/lib/compress/include.am
 include src/lib/container/include.am
 include src/lib/crypt_ops/include.am
 include src/lib/defs/include.am
+include src/lib/dispatch/include.am
 include src/lib/encoding/include.am
 include src/lib/evloop/include.am
 include src/lib/fdio/include.am
@@ -24,6 +25,7 @@ include src/lib/malloc/include.am
 include src/lib/net/include.am
 include src/lib/osinfo/include.am
 include src/lib/process/include.am
+include src/lib/pubsub/include.am
 include src/lib/sandbox/include.am
 include src/lib/string/include.am
 include src/lib/subsys/include.am

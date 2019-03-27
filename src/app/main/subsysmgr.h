@@ -14,6 +14,11 @@ extern const unsigned n_tor_subsystems;
 int subsystems_init(void);
 int subsystems_init_upto(int level);
 
+struct pubsub_builder_t;
+int subsystems_add_pubsub_upto(struct pubsub_builder_t *builder,
+                               int target_level);
+int subsystems_add_pubsub(struct pubsub_builder_t *builder);
+
 void subsystems_shutdown(void);
 void subsystems_shutdown_downto(int level);
 
