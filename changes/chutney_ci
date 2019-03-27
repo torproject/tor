@@ -1,0 +1,3 @@
+  o Minor features (continuous integration):
+    - Our Travis configuration now uses Chutney to run some network
+      integration tests automatically. Closes ticket 29280.
