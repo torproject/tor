@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 # Copyright 2018 The Tor Project, Inc.  See LICENSE file for licensing info.
 
 """This script looks through all the directories for files matching *.c or
