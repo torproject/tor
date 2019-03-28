@@ -31,10 +31,19 @@ send_status(const orconn_status_msg_t *msg_in)
 }
 
 static void
+send_chan(const ocirc_chan_msg_t *msg_in)
+{
+  ocirc_chan_msg_t *msg = tor_malloc(sizeof(*msg));
+
+  *msg = *msg_in;
+  ocirc_chan_publish(msg);
+}
+
+static void
 test_btrack_launch(void *arg)
 {
   orconn_state_msg_t conn;
-  ocirc_event_msg_t circ;
+  ocirc_chan_msg_t circ;
 
   (void)arg;
   conn.gid = 1;
@@ -48,12 +57,11 @@ test_btrack_launch(void *arg)
   expect_no_log_msg_containing("ORCONN BEST_");
   teardown_capture_of_logs();
 
-  circ.type = OCIRC_MSGTYPE_CHAN;
-  circ.u.chan.chan = 1;
-  circ.u.chan.onehop = true;
+  circ.chan = 1;
+  circ.onehop = true;
 
   setup_full_capture_of_logs(LOG_DEBUG);
-  ocirc_event_publish(&circ);
+  send_chan(&circ);
   expect_log_msg_containing("ORCONN LAUNCH chan=1 onehop=1");
   expect_log_msg_containing("ORCONN BEST_ANY state -1->1 gid=1");
   teardown_capture_of_logs();
@@ -67,11 +75,11 @@ test_btrack_launch(void *arg)
   expect_no_log_msg_containing("ORCONN BEST_");
   teardown_capture_of_logs();
 
-  circ.u.chan.chan = 2;
-  circ.u.chan.onehop = false;
+  circ.chan = 2;
+  circ.onehop = false;
 
   setup_full_capture_of_logs(LOG_DEBUG);
-  ocirc_event_publish(&circ);
+  send_chan(&circ);
   expect_log_msg_containing("ORCONN LAUNCH chan=2 onehop=0");
   expect_log_msg_containing("ORCONN BEST_AP state -1->1 gid=2");
   teardown_capture_of_logs();
