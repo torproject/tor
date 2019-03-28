@@ -1,6 +1,7 @@
 #define TOR_CHANNEL_INTERNAL_
 #define TOR_TIMERS_PRIVATE
 #define CIRCUITPADDING_PRIVATE
+#define CIRCUITPADDING_MACHINES_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define CRYPT_PATH_PRIVATE
 
@@ -19,6 +20,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitpadding.h"
+#include "core/or/circuitpadding_machines.h"
 #include "core/mainloop/netstatus.h"
 #include "core/crypto/relay_crypto.h"
 #include "core/or/protover.h"
@@ -110,6 +112,15 @@ node_get_by_id_mock(const char *identity_digest)
   }
 
   return NULL;
+}
+
+static const node_t *
+circuit_get_nth_node_mock(origin_circuit_t *circ, int hop)
+{
+  (void) circ;
+  (void) hop;
+
+  return &padding_node;
 }
 
 static or_circuit_t *
@@ -2652,8 +2663,8 @@ test_circuitpadding_reduce_disable(void *arg)
   simulate_single_hop_extend(client_side, relay_side, 1);
 
   /* Verify that machine #0 is added */
-  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 0);
-  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 0);
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 2);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
 
   tt_int_op(
     circpad_machine_reached_padding_limit(client_side->padding_info[0]),
@@ -2698,8 +2709,8 @@ test_circuitpadding_reduce_disable(void *arg)
   simulate_single_hop_extend(client_side, relay_side, 1);
 
   /* Verify that machine #0 is added */
-  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 0);
-  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 0);
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 2);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
 
   tt_int_op(
     circpad_machine_reached_padding_limit(client_side->padding_info[0]),
@@ -2989,18 +3000,12 @@ helper_test_hs_machines(bool test_intro_circs)
   tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP);
 
-  /* For rendezvous circuit machines we can stop early since are simpler than
-   * the intro circuit machines. */
-  if (!test_intro_circs) {
-    tt_int_op(client_side->padding_info[0]->histogram[0], OP_EQ, 1);
-    goto done;
-  }
-
   /* Check that the state lengths have been sampled and are within range */
   circpad_machine_runtime_t *client_machine_runtime =
     client_side->padding_info[0];
   circpad_machine_runtime_t *relay_machine_runtime =
     relay_side->padding_info[0];
+
   if (test_intro_circs) {
     tt_int_op(client_machine_runtime->state_length, OP_GE,
               INTRO_MACHINE_MINIMUM_PADDING);
@@ -3127,5 +3132,6 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_closest_token_removal_usec, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_token_removal_exact, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_manage_circuit_lifetime, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_hs_machines, TT_FORK),
   END_OF_TESTCASES
 };
