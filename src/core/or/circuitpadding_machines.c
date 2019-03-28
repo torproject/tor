@@ -7,7 +7,8 @@
  *
  * \detail
  *
- * Introduce the various circuit padding machines that will be used by Tor circuits.
+ * Introduce the various circuit padding machines that will be used by Tor
+ * circuits.
  *
  * Right now this file introduces two machines that aim to hide the client-side
  * of onion service circuits against naive classifiers like the ones from the
