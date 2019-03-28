@@ -1,6 +1,7 @@
 #define TOR_CHANNEL_INTERNAL_
 #define TOR_TIMERS_PRIVATE
 #define CIRCUITPADDING_PRIVATE
+#define CIRCUITPADDING_MACHINES_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 
 #include "core/or/or.h"
@@ -17,6 +18,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitpadding.h"
+#include "core/or/circuitpadding_machines.h"
 #include "core/mainloop/netstatus.h"
 #include "core/crypto/relay_crypto.h"
 #include "core/or/protover.h"
@@ -106,6 +108,15 @@ node_get_by_id_mock(const char *identity_digest)
   }
 
   return NULL;
+}
+
+static const node_t *
+circuit_get_nth_node_mock(origin_circuit_t *circ, int hop)
+{
+  (void) circ;
+  (void) hop;
+
+  return &padding_node;
 }
 
 static or_circuit_t *
@@ -2398,6 +2409,174 @@ test_circuitpadding_global_rate_limiting(void *arg)
   smartlist_free(vote1.net_params);
 }
 
+/** Helper for the test_circuitpadding_hs_machines test:
+ *
+ *  - Create a client and relay circuit.
+ *  - Setup right circuit purpose and attach a machine to the client circuit.
+ *  - Verify that state transitions work as intended and state length gets
+ *    enforced.
+ *
+ *  This function is able to do this test both for intro and rend circuits
+ *  depending on the value of <b>test_intro_circs</b>.
+ */
+static void
+helper_test_hs_machines(bool test_intro_circs)
+{
+  /* Setup the circuits */
+  origin_circuit_t *origin_client_side = origin_circuit_new();
+  client_side = TO_CIRCUIT(origin_client_side);
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+
+  dummy_channel.cmux = circuitmux_alloc();
+  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
+  relay_side->purpose = CIRCUIT_PURPOSE_OR;
+
+  /* extend the client circ to two hops */
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  simulate_single_hop_extend(client_side, relay_side, 1);
+
+  /************************************/
+
+  /* Attaching the client machine now won't work here because of a wrong
+   * purpose */
+  tt_assert(!client_side->padding_machine[0]);
+  circpad_add_matching_machines(origin_client_side, origin_padding_machines);
+  tt_assert(!client_side->padding_machine[0]);
+
+  /* Change the purpose, see the machine getting attached */
+  client_side->purpose = test_intro_circs ?
+    CIRCUIT_PURPOSE_C_INTRODUCING : CIRCUIT_PURPOSE_C_REND_JOINED;
+  circpad_add_matching_machines(origin_client_side, origin_padding_machines);
+  tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_NE, NULL);
+
+  tt_ptr_op(relay_side->padding_info[0], OP_NE, NULL);
+  tt_ptr_op(relay_side->padding_machine[0], OP_NE, NULL);
+
+  /* Verify that the right machine is attached */
+  tt_str_op(client_side->padding_machine[0]->name, OP_EQ,
+            test_intro_circs ? "client_ip_circ" : "client_rp_circ");
+  tt_str_op(relay_side->padding_machine[0]->name, OP_EQ,
+            test_intro_circs ? "relay_ip_circ": "relay_rp_circ");
+
+  /***********************************/
+
+  /* Both machines are at START state */
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_START);
+  tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_START);
+
+  /* Send non-padding to move the machines from START to BURST */
+  circpad_cell_event_nonpadding_sent(client_side);
+  circpad_cell_event_nonpadding_sent(relay_side);
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_BURST);
+  tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_BURST);
+
+  /* Check that the state lengths have been sampled and are within range */
+  circpad_machine_runtime_t *client_machine_runtime =
+    client_side->padding_info[0];
+  circpad_machine_runtime_t *relay_machine_runtime =
+    relay_side->padding_info[0];
+  tt_int_op(client_machine_runtime->state_length, OP_GE,
+            HS_MACHINE_PADDING_MINIMUM_CLIENT);
+  tt_int_op(client_machine_runtime->state_length, OP_LT,
+            HS_MACHINE_PADDING_MAXIMUM_CLIENT);
+  tt_int_op(relay_machine_runtime->state_length, OP_GE,
+            HS_MACHINE_PADDING_MINIMUM_SERVICE);
+  tt_int_op(relay_machine_runtime->state_length, OP_LT,
+            HS_MACHINE_PADDING_MAXIMUM_SERVICE);
+
+  /* Send state_length worth of padding and see that the state goes to END */
+  int i;
+  for (i = client_machine_runtime->state_length ; i > 0 ; i--) {
+    circpad_send_padding_cell_for_callback(client_machine_runtime);
+  }
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_END);
+
+ done:
+  free_fake_orcirc(relay_side);
+  circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
+  circuitmux_free(dummy_channel.cmux);
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+}
+
+/** Test that the HS circuit padding machines work as intended. */
+static void
+test_circuitpadding_hs_machines(void *arg)
+{
+  (void)arg;
+
+  /* Test logic:
+   *
+   * 1) Register the HS machines, which aim to hide the presense of
+   *    onion service traffic on the client-side
+   *
+   * 2) Call helper_test_hs_machines() to perform tests for the intro circuit
+   *    machines and for the rend circuit machines.
+  */
+
+  MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
+  MOCK(circuit_package_relay_cell, circuit_package_relay_cell_mock);
+  MOCK(circuit_get_nth_node, circuit_get_nth_node_mock);
+  MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+
+  origin_padding_machines = smartlist_new();
+  relay_padding_machines = smartlist_new();
+
+  nodes_init();
+
+  monotime_init();
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+
+  timers_initialize();
+
+  /* This is needed so that we are not considered to be dormant */
+  note_user_activity(20);
+
+  /************************************/
+
+  /* Register the HS machines */
+  circpad_machine_client_hide_intro_circuits(origin_padding_machines);
+  circpad_machine_client_hide_rend_circuits(origin_padding_machines);
+  circpad_machine_relay_hide_intro_circuits(relay_padding_machines);
+  circpad_machine_relay_hide_rend_circuits(relay_padding_machines);
+
+  /***********************************/
+
+  /* Do the tests for the intro circuit machines */
+  helper_test_hs_machines(true);
+  /* Do the tests for the rend circuit machines */
+  helper_test_hs_machines(false);
+
+  timers_shutdown();
+  monotime_disable_test_mocking();
+
+  SMARTLIST_FOREACH_BEGIN(origin_padding_machines,
+                          circpad_machine_spec_t *, m) {
+    machine_spec_free(m);
+  } SMARTLIST_FOREACH_END(m);
+
+  SMARTLIST_FOREACH_BEGIN(relay_padding_machines,
+                          circpad_machine_spec_t *, m) {
+    machine_spec_free(m);
+  } SMARTLIST_FOREACH_END(m);
+
+  smartlist_free(origin_padding_machines);
+  smartlist_free(relay_padding_machines);
+
+  UNMOCK(circuitmux_attach_circuit);
+  UNMOCK(circuit_package_relay_cell);
+  UNMOCK(circuit_get_nth_node);
+  UNMOCK(circpad_machine_schedule_padding);
+}
+
 #define TEST_CIRCUITPADDING(name, flags) \
     { #name, test_##name, (flags), NULL, NULL }
 
@@ -2417,5 +2596,6 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_closest_token_removal, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_closest_token_removal_usec, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_token_removal_exact, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_hs_machines, TT_FORK),
   END_OF_TESTCASES
 };
