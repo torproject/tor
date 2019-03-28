@@ -132,34 +132,6 @@ STATIC smartlist_t *relay_padding_machines = NULL;
 #define FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END } STMT_END ;
 
 /**
- * Return a human-readable description for a circuit padding state.
- */
-static const char *
-circpad_state_to_string(circpad_statenum_t state)
-{
-  const char *descr;
-
-  switch (state) {
-  case CIRCPAD_STATE_START:
-    descr = "START";
-    break;
-  case CIRCPAD_STATE_BURST:
-    descr = "BURST";
-    break;
-  case CIRCPAD_STATE_GAP:
-    descr = "GAP";
-    break;
-  case CIRCPAD_STATE_END:
-    descr = "END";
-    break;
-  default:
-    descr = "CUSTOM"; // XXX: Just return # in static char buf?
-  }
-
-  return descr;
-}
-
-/**
  * Free the machineinfo at an index
  */
 static void
@@ -540,6 +512,8 @@ circpad_choose_state_length(circpad_machine_runtime_t *mi)
   }
 
   mi->state_length = clamp_double_to_int64(length);
+
+  log_info(LD_CIRC, "State length sampled to %"PRIu64".", mi->state_length);
 }
 
 /**
@@ -914,7 +888,7 @@ circpad_machine_remove_closest_token(circpad_machine_runtime_t *mi,
       bin_to_remove = lower;
     }
     mi->histogram[bin_to_remove]--;
-    log_debug(LD_GENERAL, "Removing token from bin %d", bin_to_remove);
+    log_debug(LD_CIRC, "Removing token from bin %d", bin_to_remove);
     return;
   } else {
     if (current - lower > higher - current) {
@@ -1224,14 +1198,16 @@ circpad_send_padding_cell_for_callback(circpad_machine_runtime_t *mi)
     circpad_send_command_to_hop(TO_ORIGIN_CIRCUIT(mi->on_circ),
                                 CIRCPAD_GET_MACHINE(mi)->target_hopnum,
                                 RELAY_COMMAND_DROP, NULL, 0);
-    log_fn(LOG_INFO,LD_CIRC, "Callback: Sending padding to origin circuit %u.",
-           TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier);
+    log_info(LD_CIRC, "Callback: Sending padding to origin circuit %u"
+             " (%d) [length: %"PRIu64"]",
+             TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier,
+             mi->on_circ->purpose, mi->state_length);
   } else {
     // If we're a non-origin circ, we can just send from here as if we're the
     // edge.
     if (TO_OR_CIRCUIT(circ)->p_chan_cells.n <= circpad_max_circ_queued_cells) {
-      log_fn(LOG_INFO,LD_CIRC,
-             "Callback: Sending padding to non-origin circuit.");
+      log_info(LD_CIRC, "Callback: Sending padding to circuit (%d)"
+               " [length: %"PRIu64"]", mi->on_circ->purpose, mi->state_length);
       relay_send_command_from_edge(0, mi->on_circ, RELAY_COMMAND_DROP, NULL,
                                    0, NULL);
       rep_hist_padding_count_write(PADDING_TYPE_DROP);
@@ -1599,9 +1575,8 @@ circpad_machine_spec_transition,(circpad_machine_runtime_t *mi,
      * a transition to itself. All non-specified events are ignored.
      */
     log_fn(LOG_INFO, LD_CIRC,
-           "Circpad machine %d transitioning from %s to %s",
-            mi->machine_index, circpad_state_to_string(mi->current_state),
-            circpad_state_to_string(s));
+           "Circpad machine %d transitioning from %u to %u",
+           mi->machine_index, mi->current_state, s);
 
     /* If this is not the same state, switch and init tokens,
      * otherwise just reschedule padding. */
@@ -2096,6 +2071,7 @@ circpad_add_matching_machines(origin_circuit_t *on_circ,
         if (circpad_negotiate_padding(on_circ, machine->machine_num,
                                   machine->target_hopnum,
                                   CIRCPAD_COMMAND_START) < 0) {
+          log_info(LD_CIRC, "Padding not negotiated. Cleaning machine");
           circpad_circuit_machineinfo_free_idx(circ, i);
           circ->padding_machine[i] = NULL;
           on_circ->padding_negotiation_failed = 1;
@@ -2369,6 +2345,16 @@ circpad_setup_machine_on_circ(circuit_t *on_circ,
                       == NULL);
   tor_assert_nonfatal(on_circ->padding_info[machine->machine_index] == NULL);
 
+  /* Log message */
+  if (CIRCUIT_IS_ORIGIN(on_circ)) {
+    log_info(LD_CIRC, "Registering machine %s to origin circ %u (%d)",
+             machine->name,
+             TO_ORIGIN_CIRCUIT(on_circ)->global_identifier, on_circ->purpose);
+  } else {
+    log_info(LD_CIRC, "Registering machine %s to non-origin circ (%d)",
+             machine->name, on_circ->purpose);
+  }
+
   on_circ->padding_info[machine->machine_index] =
       circpad_circuit_machineinfo_new(on_circ, machine->machine_index);
   on_circ->padding_machine[machine->machine_index] = machine;
@@ -2389,7 +2375,7 @@ padding_machine_state_is_valid(const circpad_state_t *state)
 
   /* We need at least two bins in a histogram */
   if (state->histogram_len < 2) {
-    log_warn(LD_GENERAL, "You can't have a histogram with less than 2 bins");
+    log_warn(LD_CIRC, "You can't have a histogram with less than 2 bins");
     return false;
   }
 
@@ -2399,7 +2385,7 @@ padding_machine_state_is_valid(const circpad_state_t *state)
     /* Check that histogram edges are strictly increasing. Ignore the first
      * edge since it can be zero. */
     if (prev_bin_edge >= state->histogram_edges[b] && b > 0) {
-      log_warn(LD_GENERAL, "Histogram edges are not increasing [%u/%u]",
+      log_warn(LD_CIRC, "Histogram edges are not increasing [%u/%u]",
                prev_bin_edge, state->histogram_edges[b]);
       return false;
     }
@@ -2411,7 +2397,7 @@ padding_machine_state_is_valid(const circpad_state_t *state)
   }
   /* Verify that the total number of tokens is correct */
   if (tokens_count != state->histogram_total_tokens) {
-    log_warn(LD_GENERAL, "Histogram token count is wrong [%u/%u]",
+    log_warn(LD_CIRC, "Histogram token count is wrong [%u/%u]",
              tokens_count, state->histogram_total_tokens);
     return false;
   }
@@ -2442,7 +2428,7 @@ circpad_register_padding_machine(circpad_machine_spec_t *machine,
                                  smartlist_t *machine_list)
 {
   if (!padding_machine_is_valid(machine)) {
-    log_warn(LD_GENERAL, "Machine #%u is invalid. Ignoring.",
+    log_warn(LD_CIRC, "Machine #%u is invalid. Ignoring.",
              machine->machine_num);
     return;
   }
@@ -2748,8 +2734,8 @@ circpad_negotiate_padding(origin_circuit_t *circ,
         &type)) < 0)
     return -1;
 
-  log_fn(LOG_INFO,LD_CIRC, "Negotiating padding on circuit %u",
-         circ->global_identifier);
+  log_fn(LOG_INFO,LD_CIRC, "Negotiating padding on circuit %u (%d)",
+         circ->global_identifier, TO_CIRCUIT(circ)->purpose);
 
   return circpad_send_command_to_hop(circ, target_hopnum,
                                      RELAY_COMMAND_PADDING_NEGOTIATE,
