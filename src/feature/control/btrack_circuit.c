@@ -109,51 +109,53 @@ btc_update_evtype(const ocirc_cevent_msg_t *msg, btc_best_t *best,
   return false;
 }
 
+DECLARE_SUBSCRIBE(ocirc_state, btc_state_rcvr);
+DECLARE_SUBSCRIBE(ocirc_cevent, btc_cevent_rcvr);
+DECLARE_SUBSCRIBE(ocirc_chan, btc_chan_rcvr);
+
 static void
-btc_state_rcvr(const ocirc_state_msg_t *msg)
+btc_state_rcvr(const msg_t *msg, const ocirc_state_msg_t *arg)
 {
+  (void)msg;
   log_debug(LD_BTRACK, "CIRC gid=%"PRIu32" state=%d onehop=%d",
-            msg->gid, msg->state, msg->onehop);
+            arg->gid, arg->state, arg->onehop);
 
-  btc_update_state(msg, &best_any_state, "ANY");
-  if (msg->onehop)
+  btc_update_state(arg, &best_any_state, "ANY");
+  if (arg->onehop)
     return;
-  btc_update_state(msg, &best_ap_state, "AP");
+  btc_update_state(arg, &best_ap_state, "AP");
 }
 
 static void
-btc_cevent_rcvr(const ocirc_cevent_msg_t *msg)
+btc_cevent_rcvr(const msg_t *msg, const ocirc_cevent_msg_t *arg)
 {
+  (void)msg;
   log_debug(LD_BTRACK, "CIRC gid=%"PRIu32" evtype=%d reason=%d onehop=%d",
-            msg->gid, msg->evtype, msg->reason, msg->onehop);
+            arg->gid, arg->evtype, arg->reason, arg->onehop);
 
-  btc_update_evtype(msg, &best_any_evtype, "ANY");
-  if (msg->onehop)
+  btc_update_evtype(arg, &best_any_evtype, "ANY");
+  if (arg->onehop)
     return;
-  btc_update_evtype(msg, &best_ap_evtype, "AP");
+  btc_update_evtype(arg, &best_ap_evtype, "AP");
 }
 
 static void
-btc_event_rcvr(const ocirc_event_msg_t *msg)
+btc_chan_rcvr(const msg_t *msg, const ocirc_chan_msg_t *arg)
 {
-  switch (msg->type) {
-  case OCIRC_MSGTYPE_STATE:
-    return btc_state_rcvr(&msg->u.state);
-  case OCIRC_MSGTYPE_CHAN:
-    log_debug(LD_BTRACK, "CIRC gid=%"PRIu32" chan=%"PRIu64" onehop=%d",
-              msg->u.chan.gid, msg->u.chan.chan, msg->u.chan.onehop);
-    break;
-  case OCIRC_MSGTYPE_CEVENT:
-    return btc_cevent_rcvr(&msg->u.cevent);
-  default:
-    break;
-  }
+  (void)msg;
+  log_debug(LD_BTRACK, "CIRC gid=%"PRIu32" chan=%"PRIu64" onehop=%d",
+            arg->gid, arg->chan, arg->onehop);
 }
 
 int
-btrack_circ_init(void)
+btrack_circ_add_pubsub(pubsub_connector_t *connector)
 {
-  ocirc_event_subscribe(btc_event_rcvr);
+  if (DISPATCH_ADD_SUB(connector, ocirc, ocirc_chan))
+    return -1;
+  if (DISPATCH_ADD_SUB(connector, ocirc, ocirc_cevent))
+    return -1;
+  if (DISPATCH_ADD_SUB(connector, ocirc, ocirc_state))
+    return -1;
   return 0;
 }
 

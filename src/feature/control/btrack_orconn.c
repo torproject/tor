@@ -49,6 +49,7 @@
 
 DECLARE_SUBSCRIBE(orconn_state, bto_state_rcvr);
 DECLARE_SUBSCRIBE(orconn_status, bto_status_rcvr);
+DECLARE_SUBSCRIBE(ocirc_chan, bto_chan_rcvr);
 
 /** Pair of a best ORCONN GID and with its state */
 typedef struct bto_best_t {
@@ -155,21 +156,18 @@ bto_status_rcvr(const msg_t *msg, const orconn_status_msg_t *arg)
  * and whether it's a one-hop circuit.
  **/
 static void
-bto_chan_rcvr(const ocirc_event_msg_t *msg)
+bto_chan_rcvr(const msg_t *msg, const ocirc_chan_msg_t *arg)
 {
   bt_orconn_t *bto;
 
-  /* Ignore other kinds of origin circuit events; we don't need them */
-  if (msg->type != OCIRC_MSGTYPE_CHAN)
-    return;
-
-  bto = bto_find_or_new(0, msg->u.chan.chan);
-  if (!bto->is_orig || (bto->is_onehop && !msg->u.chan.onehop)) {
+  (void)msg;
+  bto = bto_find_or_new(0, arg->chan);
+  if (!bto->is_orig || (bto->is_onehop && !arg->onehop)) {
     log_debug(LD_BTRACK, "ORCONN LAUNCH chan=%"PRIu64" onehop=%d",
-              msg->u.chan.chan, msg->u.chan.onehop);
+              arg->chan, arg->onehop);
   }
   bto->is_orig = true;
-  if (!msg->u.chan.onehop)
+  if (!arg->onehop)
     bto->is_onehop = false;
   bto_update_bests(bto);
 }
@@ -182,7 +180,6 @@ int
 btrack_orconn_init(void)
 {
   bto_init_maps();
-  ocirc_event_subscribe(bto_chan_rcvr);
 
   return 0;
 }
@@ -193,6 +190,8 @@ btrack_orconn_add_pubsub(pubsub_connector_t *connector)
   if (DISPATCH_ADD_SUB(connector, orconn, orconn_state))
     return -1;
   if (DISPATCH_ADD_SUB(connector, orconn, orconn_status))
+    return -1;
+  if (DISPATCH_ADD_SUB(connector, ocirc, ocirc_chan))
     return -1;
   return 0;
 }

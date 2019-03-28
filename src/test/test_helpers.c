@@ -338,6 +338,8 @@ helper_setup_pubsub(const struct testcase_t *testcase)
   dispatcher = pubsub_builder_finalize(builder, NULL);
   tor_assert(dispatcher);
   dispatch_set_alert_fn(dispatcher, chan, alertfn_immediate, NULL);
+  chan = get_channel_id("ocirc");
+  dispatch_set_alert_fn(dispatcher, chan, alertfn_immediate, NULL);
   return dispatcher;
 }
 

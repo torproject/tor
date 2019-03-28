@@ -522,14 +522,13 @@ origin_circuit_get_guard_state(origin_circuit_t *circ)
 static void
 circuit_chan_publish(const origin_circuit_t *circ, const channel_t *chan)
 {
-  ocirc_event_msg_t msg;
+  ocirc_chan_msg_t *msg = tor_malloc(sizeof(*msg));
 
-  msg.type = OCIRC_MSGTYPE_CHAN;
-  msg.u.chan.gid = circ->global_identifier;
-  msg.u.chan.chan = chan->global_identifier;
-  msg.u.chan.onehop = circ->build_state->onehop_tunnel;
+  msg->gid = circ->global_identifier;
+  msg->chan = chan->global_identifier;
+  msg->onehop = circ->build_state->onehop_tunnel;
 
-  ocirc_event_publish(&msg);
+  ocirc_chan_publish(msg);
 }
 
 /** Start establishing the first hop of our circuit. Figure out what

@@ -32,8 +32,6 @@ btrack_init(void)
 {
   if (btrack_orconn_init())
     return -1;
-  if (btrack_circ_init())
-    return -1;
 
   return 0;
 }
@@ -48,7 +46,12 @@ btrack_fini(void)
 static int
 btrack_add_pubsub(pubsub_connector_t *connector)
 {
-  return btrack_orconn_add_pubsub(connector);
+  if (btrack_orconn_add_pubsub(connector))
+    return -1;
+  if (btrack_circ_add_pubsub(connector))
+    return -1;
+
+  return 0;
 }
 
 const subsys_fns_t sys_btrack = {

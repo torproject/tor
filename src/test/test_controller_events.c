@@ -417,13 +417,12 @@ send_orconn_state(const orconn_state_msg_t *msg_in, uint8_t state)
 static void
 send_ocirc_chan(uint32_t gid, uint64_t chan, bool onehop)
 {
-  ocirc_event_msg_t msg;
+  ocirc_chan_msg_t *msg = tor_malloc(sizeof(*msg));
 
-  msg.type = OCIRC_MSGTYPE_CHAN;
-  msg.u.chan.gid = gid;
-  msg.u.chan.chan = chan;
-  msg.u.chan.onehop = onehop;
-  ocirc_event_publish(&msg);
+  msg->gid = gid;
+  msg->chan = chan;
+  msg->onehop = onehop;
+  ocirc_chan_publish(msg);
 }
 
 static void
