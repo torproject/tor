@@ -530,6 +530,8 @@ circpad_choose_state_length(circpad_machine_runtime_t *mi)
   }
 
   mi->state_length = clamp_double_to_int64(length);
+
+  log_info(LD_GENERAL, "State length sampled to %"PRIu64".", mi->state_length);
 }
 
 /**
@@ -1209,14 +1211,16 @@ circpad_send_padding_cell_for_callback(circpad_machine_runtime_t *mi)
     circpad_send_command_to_hop(TO_ORIGIN_CIRCUIT(mi->on_circ),
                                 CIRCPAD_GET_MACHINE(mi)->target_hopnum,
                                 RELAY_COMMAND_DROP, NULL, 0);
-    log_fn(LOG_INFO,LD_CIRC, "Callback: Sending padding to origin circuit %u.",
-           TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier);
+    log_info(LD_CIRC, "Callback: Sending padding to origin circuit %u"
+             " (%d) [length: %"PRIu64"]",
+             TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier,
+             mi->on_circ->purpose, mi->state_length);
   } else {
     // If we're a non-origin circ, we can just send from here as if we're the
     // edge.
     if (TO_OR_CIRCUIT(circ)->p_chan_cells.n <= circpad_max_circ_queued_cells) {
-      log_fn(LOG_INFO,LD_CIRC,
-             "Callback: Sending padding to non-origin circuit.");
+      log_info(LD_CIRC, "Callback: Sending padding to circuit (%d)"
+               " [length: %"PRIu64"]", mi->on_circ->purpose, mi->state_length);
       relay_send_command_from_edge(0, mi->on_circ, RELAY_COMMAND_DROP, NULL,
                                    0, NULL);
       rep_hist_padding_count_write(PADDING_TYPE_DROP);
@@ -2082,6 +2086,7 @@ circpad_add_matching_machines(origin_circuit_t *on_circ,
         if (circpad_negotiate_padding(on_circ, machine->machine_num,
                                   machine->target_hopnum,
                                   CIRCPAD_COMMAND_START) < 0) {
+          log_info(LD_GENERAL, "Padding not negotiated. Cleaning machine");
           circpad_circuit_machineinfo_free_idx(circ, i);
           circ->padding_machine[i] = NULL;
           on_circ->padding_negotiation_failed = 1;
@@ -2365,6 +2370,16 @@ circpad_setup_machine_on_circ(circuit_t *on_circ,
   tor_assert_nonfatal(on_circ->padding_machine[machine->machine_index]
                       == NULL);
   tor_assert_nonfatal(on_circ->padding_info[machine->machine_index] == NULL);
+
+  /* Log message */
+  if (CIRCUIT_IS_ORIGIN(on_circ)) {
+    log_warn(LD_GENERAL, "Registering machine %s to origin circ %u (%d)",
+             machine->name,
+             TO_ORIGIN_CIRCUIT(on_circ)->global_identifier, on_circ->purpose);
+  } else {
+    log_warn(LD_GENERAL, "Registering machine %s to non-origin circ (%d)",
+             machine->name, on_circ->purpose);
+  }
 
   on_circ->padding_info[machine->machine_index] =
       circpad_circuit_machineinfo_new(on_circ, machine->machine_index);
@@ -2745,8 +2760,8 @@ circpad_negotiate_padding(origin_circuit_t *circ,
         &type)) < 0)
     return -1;
 
-  log_fn(LOG_INFO,LD_CIRC, "Negotiating padding on circuit %u",
-         circ->global_identifier);
+  log_fn(LOG_INFO,LD_CIRC, "Negotiating padding on circuit %u (%d)",
+         circ->global_identifier, TO_CIRCUIT(circ)->purpose);
 
   return circpad_send_command_to_hop(circ, target_hopnum,
                                      RELAY_COMMAND_PADDING_NEGOTIATE,
