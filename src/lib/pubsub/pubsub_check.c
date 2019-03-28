@@ -303,14 +303,14 @@ lint_message_consistency(message_id_t msg,
   /* Enforce exclusive-ness for publishers and subscribers that have asked for
    * it.
    */
-  if (pub_excl && smartlist_len(pub) > 1) {
+  if (pub_excl && smartlist_len_opt(pub) > 1) {
     log_warn(LD_MESG|LD_BUG,
              "Message \"%s\" has multiple publishers, but at least one is "
              "marked as exclusive.",
              get_message_id_name(msg));
     ok = false;
   }
-  if (sub_excl && smartlist_len(sub) > 1) {
+  if (sub_excl && smartlist_len_opt(sub) > 1) {
     log_warn(LD_MESG|LD_BUG,
              "Message \"%s\" has multiple subscribers, but at least one is "
              "marked as exclusive.",
