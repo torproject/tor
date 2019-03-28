@@ -786,9 +786,16 @@ circpad_send_command_to_hop,(struct origin_circuit_t *circ, uint8_t hopnum,
                              uint8_t relay_command, const uint8_t *payload,
                              ssize_t payload_len));
 
+MOCK_DECL(STATIC const node_t *,
+circuit_get_nth_node,(origin_circuit_t *circ, int hop));
+
 STATIC circpad_delay_t
 histogram_get_bin_upper_bound(const circpad_machine_runtime_t *mi,
                               circpad_hist_index_t bin);
+
+STATIC void
+circpad_add_matching_machines(origin_circuit_t *on_circ,
+                              smartlist_t *machines_sl);
 
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *origin_padding_machines;

@@ -2020,7 +2020,8 @@ circpad_shutdown_old_machines(origin_circuit_t *on_circ)
 }
 
 /**
- * Negotiate new machines that would apply to this circuit.
+ * Negotiate new machines that would apply to this circuit, given the machines
+ * inside <b>machines_sl</b>.
  *
  * This function checks to see if we have any free machine indexes,
  * and for each free machine index, it initializes the most recently
@@ -2028,14 +2029,15 @@ circpad_shutdown_old_machines(origin_circuit_t *on_circ)
  * index and circuit conditions, and negotiates it with the appropriate
  * middle relay.
  */
-static void
-circpad_add_matching_machines(origin_circuit_t *on_circ)
+STATIC void
+circpad_add_matching_machines(origin_circuit_t *on_circ,
+                              smartlist_t *machines_sl)
 {
   circuit_t *circ = TO_CIRCUIT(on_circ);
 
 #ifdef TOR_UNIT_TESTS
   /* Tests don't have to init our padding machines */
-  if (!origin_padding_machines)
+  if (!machines_sl)
     return;
 #endif
 
@@ -2052,7 +2054,7 @@ circpad_add_matching_machines(origin_circuit_t *on_circ)
     /* We have a free machine index. Check the origin padding
      * machines in reverse order, so that more recently added
      * machines take priority over older ones. */
-    SMARTLIST_FOREACH_REVERSE_BEGIN(origin_padding_machines,
+    SMARTLIST_FOREACH_REVERSE_BEGIN(machines_sl,
                                     circpad_machine_spec_t *,
                                     machine) {
       /* Machine definitions have a specific target machine index.
@@ -2103,7 +2105,7 @@ circpad_machine_event_circ_added_hop(origin_circuit_t *on_circ)
 {
   /* Since our padding conditions do not specify a max_hops,
    * all we can do is add machines here */
-  circpad_add_matching_machines(on_circ);
+  circpad_add_matching_machines(on_circ, origin_padding_machines);
 }
 
 /**
@@ -2116,7 +2118,7 @@ void
 circpad_machine_event_circ_built(origin_circuit_t *circ)
 {
   circpad_shutdown_old_machines(circ);
-  circpad_add_matching_machines(circ);
+  circpad_add_matching_machines(circ, origin_padding_machines);
 }
 
 /**
@@ -2129,7 +2131,7 @@ void
 circpad_machine_event_circ_purpose_changed(origin_circuit_t *circ)
 {
   circpad_shutdown_old_machines(circ);
-  circpad_add_matching_machines(circ);
+  circpad_add_matching_machines(circ, origin_padding_machines);
 }
 
 /**
@@ -2143,7 +2145,7 @@ void
 circpad_machine_event_circ_has_no_relay_early(origin_circuit_t *circ)
 {
   circpad_shutdown_old_machines(circ);
-  circpad_add_matching_machines(circ);
+  circpad_add_matching_machines(circ, origin_padding_machines);
 }
 
 /**
@@ -2158,7 +2160,7 @@ void
 circpad_machine_event_circ_has_streams(origin_circuit_t *circ)
 {
   circpad_shutdown_old_machines(circ);
-  circpad_add_matching_machines(circ);
+  circpad_add_matching_machines(circ, origin_padding_machines);
 }
 
 /**
@@ -2173,7 +2175,7 @@ void
 circpad_machine_event_circ_has_no_streams(origin_circuit_t *circ)
 {
   circpad_shutdown_old_machines(circ);
-  circpad_add_matching_machines(circ);
+  circpad_add_matching_machines(circ, origin_padding_machines);
 }
 
 /**
@@ -2679,8 +2681,8 @@ circpad_node_supports_padding(const node_t *node)
  * Returns node_t from the consensus for that hop, if it is opened.
  * Otherwise returns NULL.
  */
-static const node_t *
-circuit_get_nth_node(origin_circuit_t *circ, int hop)
+MOCK_IMPL(STATIC const node_t *,
+circuit_get_nth_node,(origin_circuit_t *circ, int hop))
 {
   crypt_path_t *iter = circuit_get_cpath_hop(circ, hop);
 
