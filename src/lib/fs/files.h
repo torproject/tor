@@ -55,6 +55,8 @@ MOCK_DECL(int,tor_unlink,(const char *pathname));
 typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR, FN_EMPTY } file_status_t;
 
 file_status_t file_status(const char *filename);
+bool is_file(file_status_t file_type);
+bool is_dir(file_status_t file_type);
 
 int64_t tor_get_avail_disk_space(const char *path);
 

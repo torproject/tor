@@ -344,22 +344,20 @@ make_path_absolute(char *fname)
 
 /**** Helper functions of type glob_predicate_fn used for glob processing ****/
 
-/** Returns true if <b>file_type</b> represents an existing file (even if
- * empty). Returns false otherwise. */
+/** Wrapper to is_file of type glob_predicate_fn. */
 static bool
-is_file(file_status_t file_type, const char *pattern_after)
+is_file_pred(file_status_t file_type, const char *pattern_after)
 {
   (void)pattern_after;
-  return file_type != FN_ERROR && file_type != FN_NOENT && file_type != FN_DIR;
+  return is_file(file_type);
 }
 
-/** Returns true if <b>file_type</b> represents an existing directory. Returns
- * false otherwise. */
+/** Wrapper to is_dir of type glob_predicate_fn. */
 static bool
-is_dir(file_status_t file_type, const char *pattern_after)
+is_dir_pred(file_status_t file_type, const char *pattern_after)
 {
   (void)pattern_after;
-  return file_type == FN_DIR;
+  return is_dir(file_type);
 }
 
 #ifdef _WIN32
@@ -369,7 +367,7 @@ is_dir(file_status_t file_type, const char *pattern_after)
 static bool
 no_pattern_after(file_status_t file_type, const char *pattern_after)
 {
-  return file_type != FN_ERROR && file_type != FN_NOENT && !*pattern_after;
+  return (is_file(file_type) || is_dir(file_type)) && !*pattern_after;
 }
 
 /** Returns true if the path where <b>file_type</b> was obtained from points to
@@ -377,7 +375,7 @@ no_pattern_after(file_status_t file_type, const char *pattern_after)
 static bool
 dir_pattern_after(file_status_t file_type, const char *pattern_after)
 {
-  return is_dir(file_type, pattern_after) && *pattern_after;
+  return is_dir(file_type) && *pattern_after;
 }
 #endif /* defined(_WIN32) */
 
@@ -497,7 +495,7 @@ add_to_results(const char *path, smartlist_t *results)
   file_status_t file_type = file_status(path);
   char *clean_path = tor_strdup(path);
   clean_fname_for_stat(clean_path);
-  if (file_type != FN_ERROR && file_type != FN_NOENT) {
+  if (is_file(file_type) || is_dir(file_type)) {
     smartlist_add(results, clean_path);
   } else {
     tor_free(clean_path);
@@ -724,6 +722,6 @@ has_glob(const char *s)
 struct smartlist_t *
 get_glob_opened_files(const char *pattern)
 {
-  return process_glob(pattern, 0, tor_glob, handle_glob_opened_files, is_file,
-                      is_dir);
+  return process_glob(pattern, 0, tor_glob, handle_glob_opened_files,
+                      is_file_pred, is_dir_pred);
 }

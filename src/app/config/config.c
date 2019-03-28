@@ -5041,7 +5041,7 @@ find_torrc_filename(config_line_t *cmd_arg,
     /* didn't find one, try CONFDIR */
     const char *dflt = get_default_conf_file(defaults_file);
     file_status_t st = file_status(dflt);
-    if (dflt && (st == FN_FILE || st == FN_EMPTY)) {
+    if (dflt && is_file(st)) {
       fname = tor_strdup(dflt);
     } else {
 #ifndef _WIN32
@@ -5108,7 +5108,7 @@ load_torrc_from_disk(config_line_t *cmd_arg, int defaults_file)
   /* Open config file */
   file_status_t st = fname ? file_status(fname) : FN_EMPTY;
   if (fname == NULL ||
-      !(st == FN_FILE || st == FN_EMPTY) ||
+      !is_file(st) ||
       !(cf = read_file_to_str(fname,0,NULL))) {
     if (using_default_torrc == 1 || ignore_missing_torrc) {
       if (!defaults_file)

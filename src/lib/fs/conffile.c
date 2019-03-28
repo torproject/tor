@@ -137,7 +137,6 @@ config_get_file_list(const char *pattern, smartlist_t *opened_files)
   if (error_found) {
     SMARTLIST_FOREACH(file_list, char *, f, tor_free(f));
     smartlist_free(file_list);
-    file_list = NULL;
   }
 
   return file_list;
