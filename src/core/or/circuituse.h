@@ -47,6 +47,8 @@ void circuit_build_failed(origin_circuit_t *circ);
 /** Flag to set when we are trying to launch a v3 rendezvous circuit. We need
  *  to apply some additional filters on the node picked. */
 #define CIRCLAUNCH_IS_V3_RP (1<<4)
+/* Flag to set for predicted circs */
+#define CIRCLAUNCH_IS_PREDICTED (1<<5)
 origin_circuit_t *circuit_launch_by_extend_info(uint8_t purpose,
                                                 extend_info_t *info,
                                                 int flags);
