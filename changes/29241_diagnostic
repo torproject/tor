@@ -1,0 +1,4 @@
+  o Minor features (NSS, diagnostic):
+    - Try to log an error from NSS (if there is any) and a more useful
+      description of our situation if we are using NSS and a call to
+      SSL_ExportKeyingMaterial() fails.  Diagnostic for ticket 29241.
