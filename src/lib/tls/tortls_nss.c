@@ -152,6 +152,32 @@ we_like_auth_type(SSLAuthType at)
   }
 }
 
+/**
+ * Return true iff this ciphersuite will be hit by a mozilla bug 1312976,
+ * which makes TLS key exporters not work with TLS 1.2 non-SHA256
+ * ciphersuites.
+ **/
+static bool
+ciphersuite_has_nss_export_bug(const SSLCipherSuiteInfo *info)
+{
+  /* For more information on the bug, see
+     https://bugzilla.mozilla.org/show_bug.cgi?id=1312976 */
+
+  /* This bug only exists in TLS 1.2. */
+  if (info->authType == ssl_auth_tls13_any)
+    return false;
+
+  /* Sadly, there's no way to get this information from the
+   * CipherSuiteInfo object itself other than by looking at the
+   * name.  */
+  if (strstr(info->cipherSuiteName, "_SHA384") ||
+      strstr(info->cipherSuiteName, "_SHA512")) {
+    return true;
+  }
+
+  return false;
+}
+
 tor_tls_context_t *
 tor_tls_context_new(crypto_pk_t *identity,
                     unsigned int key_lifetime, unsigned flags, int is_client)
@@ -255,6 +281,12 @@ tor_tls_context_new(crypto_pk_t *identity,
         !we_like_ssl_kea(info.keaType) ||
         !we_like_mac_algorithm(info.macAlgorithm) ||
         !we_like_auth_type(info.authType)/* Requires NSS 3.24 */;
+
+      if (ciphersuite_has_nss_export_bug(&info)) {
+        /* SSL_ExportKeyingMaterial will fail; we can't use this cipher.
+         */
+        disable = 1;
+      }
 
       s = SSL_CipherPrefSet(ctx->ctx, ciphers[i],
                             disable ? PR_FALSE : PR_TRUE);
