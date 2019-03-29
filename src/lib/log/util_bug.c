@@ -69,7 +69,7 @@ tor_set_failed_assertion_callback(void (*fn)(void))
 
 /** Helper for tor_assert: report the assertion failure. */
 void
-__attribute__((format(printf, 5, 6)))
+CHECK_PRINTF(5, 6)
 tor_assertion_failed_(const char *fname, unsigned int line,
                       const char *func, const char *expr,
                       const char *fmt, ...)
@@ -102,7 +102,7 @@ tor_assertion_failed_(const char *fname, unsigned int line,
 
 /** Helper for tor_assert_nonfatal: report the assertion failure. */
 void
-__attribute__((format(printf, 6, 7)))
+CHECK_PRINTF(6, 7)
 tor_bug_occurred_(const char *fname, unsigned int line,
                   const char *func, const char *expr,
                   int once, const char *fmt, ...)
