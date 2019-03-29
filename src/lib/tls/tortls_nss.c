@@ -726,10 +726,18 @@ tor_tls_export_key_material,(tor_tls_t *tls, uint8_t *secrets_out,
   tor_assert(context_len <= UINT_MAX);
 
   SECStatus s;
+  /* Make sure that the error code is set here, so that we can be sure that
+   * any error code set after a failure was in fact caused by
+   * SSL_ExportKeyingMaterial. */
+  PR_SetError(PR_UNKNOWN_ERROR, 0);
   s = SSL_ExportKeyingMaterial(tls->ssl,
                                label, (unsigned)strlen(label),
                                PR_TRUE, context, (unsigned)context_len,
                                secrets_out, DIGEST256_LEN);
+  if (s != SECSuccess) {
+    tls_log_errors(tls, LOG_WARN, LD_CRYPTO,
+                   "exporting key material for a TLS handshake");
+  }
 
   return (s == SECSuccess) ? 0 : -1;
 }
