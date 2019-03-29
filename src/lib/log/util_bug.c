@@ -145,7 +145,8 @@ tor_bug_occurred_(const char *fname, unsigned int line,
     log_warn(LD_BUG, "%s:%u: %s: Non-fatal assertion %s failed.%s",
              fname, line, func, expr, once_str);
     tor_asprintf(&buf, "Non-fatal assertion %s failed in %s at %s:%u%s%s",
-                 expr, func, fname, line, fmt ? " : " : "", extra);
+                 expr, func, fname, line, fmt ? " : " : "",
+                 extra ? extra : "");
     tor_free(extra);
   }
   log_backtrace(LOG_WARN, LD_BUG, buf);
