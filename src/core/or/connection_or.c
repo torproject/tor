@@ -1984,12 +1984,21 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     base16_encode(expected_rsa, sizeof(expected_rsa), conn->identity_digest,
                   DIGEST_LEN);
     if (ed_peer_id) {
-      ed25519_public_to_base64(seen_ed, ed_peer_id);
+      int rv = 0;
+      rv = ed25519_public_to_base64(seen_ed, ed_peer_id);
+      if (BUG(rv < 0)) {
+        strlcpy(seen_ed, "could not format ed25519 key", sizeof(seen_ed));
+      }
     } else {
       strlcpy(seen_ed, "no ed25519 key", sizeof(seen_ed));
     }
     if (! ed25519_public_key_is_zero(&chan->ed25519_identity)) {
-      ed25519_public_to_base64(expected_ed, &chan->ed25519_identity);
+      int rv = 0;
+      rv = ed25519_public_to_base64(expected_ed, &chan->ed25519_identity);
+      if (BUG(rv < 0)) {
+        strlcpy(expected_ed, "could not format ed25519 key",
+                sizeof(expected_ed));
+      }
     } else {
       strlcpy(expected_ed, "no ed25519 key", sizeof(expected_ed));
     }

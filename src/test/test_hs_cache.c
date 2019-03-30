@@ -35,7 +35,10 @@ static char query_b64[256];
 static const char *
 helper_get_hsdir_query(const hs_descriptor_t *desc)
 {
-  ed25519_public_to_base64(query_b64, &desc->plaintext_data.blinded_pubkey);
+  int rv = 0;
+  rv = ed25519_public_to_base64(query_b64,
+                                &desc->plaintext_data.blinded_pubkey);
+  tor_assert(rv == 0);
   return query_b64;
 }
 

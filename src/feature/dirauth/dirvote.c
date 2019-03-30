@@ -3859,16 +3859,19 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
   {
     char idbuf[ED25519_BASE64_LEN+1];
     const char *keytype;
+    int rv = 0;
     if (ri->cache_info.signing_key_cert &&
         ri->cache_info.signing_key_cert->signing_key_included) {
       keytype = "ed25519";
-      ed25519_public_to_base64(idbuf,
-                               &ri->cache_info.signing_key_cert->signing_key);
+      rv = ed25519_public_to_base64(idbuf,
+                                &ri->cache_info.signing_key_cert->signing_key);
     } else {
       keytype = "rsa1024";
       digest_to_base64(idbuf, ri->cache_info.identity_digest);
     }
-    smartlist_add_asprintf(chunks, "id %s %s\n", keytype, idbuf);
+    if (! BUG(rv < 0)) {
+      smartlist_add_asprintf(chunks, "id %s %s\n", keytype, idbuf);
+    }
   }
 
   output = smartlist_join_strings(chunks, "", 0, NULL);

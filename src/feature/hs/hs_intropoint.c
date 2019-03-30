@@ -469,11 +469,14 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
     service_circ = hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
     if (service_circ == NULL) {
       char b64_key[ED25519_BASE64_LEN + 1];
-      ed25519_public_to_base64(b64_key, &auth_key);
-      log_info(LD_REND, "No intro circuit found for INTRODUCE1 cell "
-                        "with auth key %s from circuit %" PRIu32 ". "
-                        "Responding with NACK.",
-               safe_str(b64_key), client_circ->p_circ_id);
+      int rv = 0;
+      rv = ed25519_public_to_base64(b64_key, &auth_key);
+      if (! BUG(rv < 0)) {
+        log_info(LD_REND, "No intro circuit found for INTRODUCE1 cell "
+                          "with auth key %s from circuit %" PRIu32 ". "
+                          "Responding with NACK.",
+                 safe_str(b64_key), client_circ->p_circ_id);
+      }
       /* Inform the client that we don't know the requested service ID. */
       status = HS_INTRO_ACK_STATUS_UNKNOWN_ID;
       goto send_ack;
