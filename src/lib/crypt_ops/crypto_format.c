@@ -266,8 +266,8 @@ digest_to_base64(char *d64, const char *digest)
 
 /** Given a base64 encoded, nul-terminated digest in <b>d64</b> (without
  * trailing newline or = characters), decode it and store the result in the
- * first DIGEST_LEN bytes at <b>digest</b>. */
-/* XXXX unify with crypto_format.c code */
+ * first DIGEST_LEN bytes at <b>digest</b>.
+ * Returns 0 on success; -1 on failure. */
 int
 digest_from_base64(char *digest, const char *d64)
 {
@@ -279,13 +279,18 @@ digest_from_base64(char *digest, const char *d64)
 
 /** Base64 encode DIGEST256_LINE bytes from <b>digest</b>, remove the
  * trailing = characters, and store the nul-terminated result in the first
- * BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>. */
- /* XXXX unify with crypto_format.c code */
+ * BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>.
+ * Returns 0 on success; -1 if digest is NULL, or other failure. */
 int
 digest256_to_base64(char *d64, const char *digest)
 {
   char buf[256];
-  base64_encode(buf, sizeof(buf), digest, DIGEST256_LEN, 0);
+  int rv = 0;
+  rv = base64_encode(buf, sizeof(buf), digest, DIGEST256_LEN, 0);
+  /* Allow for trailing =s when checking length */
+  if (BUG(rv < BASE64_DIGEST256_LEN)) {
+    return -1;
+  }
   buf[BASE64_DIGEST256_LEN] = '\0';
   memcpy(d64, buf, BASE64_DIGEST256_LEN+1);
   return 0;
@@ -293,8 +298,8 @@ digest256_to_base64(char *d64, const char *digest)
 
 /** Given a base64 encoded, nul-terminated digest in <b>d64</b> (without
  * trailing newline or = characters), decode it and store the result in the
- * first DIGEST256_LEN bytes at <b>digest</b>. */
-/* XXXX unify with crypto_format.c code */
+ * first DIGEST256_LEN bytes at <b>digest</b>.
+ * Returns 0 on success; -1 on failure. */
 int
 digest256_from_base64(char *digest, const char *d64)
 {
