@@ -129,9 +129,4 @@ typedef int32_t ssize_t;
 #error "sizeof(int) > sizeof(void *) - Tor cannot be built on this platform!"
 #endif
 
-#if SIZEOF_UNSIGNED_INT > SIZEOF_VOID_P
-#error "sizeof(unsigned int) > sizeof(void *) - Tor cannot be built on this \
-platform!"
-#endif
-
 #endif /* !defined(TOR_TORINT_H) */
