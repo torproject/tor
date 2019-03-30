@@ -237,8 +237,11 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
         smartlist_add_strdup(chunks, "id ed25519 none\n");
       } else {
         char ed_b64[BASE64_DIGEST256_LEN+1];
-        digest256_to_base64(ed_b64, (const char*)vrs->ed25519_id);
-        smartlist_add_asprintf(chunks, "id ed25519 %s\n", ed_b64);
+        int rv = 0;
+        rv = digest256_to_base64(ed_b64, (const char*)vrs->ed25519_id);
+        if (! BUG(rv < 0)) {
+          smartlist_add_asprintf(chunks, "id ed25519 %s\n", ed_b64);
+        }
       }
     }
   }

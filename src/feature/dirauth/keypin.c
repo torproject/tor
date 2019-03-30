@@ -356,10 +356,17 @@ keypin_journal_append_entry(const uint8_t *rsa_id_digest,
   if (keypin_journal_fd == -1)
     return -1;
   char line[JOURNAL_LINE_LEN];
+  int rv = 0;
   digest_to_base64(line, (const char*)rsa_id_digest);
   line[BASE64_DIGEST_LEN] = ' ';
-  digest256_to_base64(line + BASE64_DIGEST_LEN + 1,
-                      (const char*)ed25519_id_key);
+  rv = digest256_to_base64(line + BASE64_DIGEST_LEN + 1,
+                           (const char*)ed25519_id_key);
+  if (BUG(rv < 0)) {
+    log_warn(LD_DIRSERV, "Error while formatting a line for the key-pinning "
+             "journal.");
+    keypin_close_journal();
+    return -1;
+  }
   line[BASE64_DIGEST_LEN+1+BASE64_DIGEST256_LEN] = '\n';
 
   if (write_all_to_fd(keypin_journal_fd, line, JOURNAL_LINE_LEN)<0) {

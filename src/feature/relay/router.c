@@ -2838,9 +2838,13 @@ router_dump_router_to_string(routerinfo_t *router,
                   router->cache_info.extra_info_digest, DIGEST_LEN);
     if (!tor_digest256_is_zero(router->cache_info.extra_info_digest256)) {
       char d256_64[BASE64_DIGEST256_LEN+1];
-      digest256_to_base64(d256_64, router->cache_info.extra_info_digest256);
-      tor_asprintf(&extra_info_line, "extra-info-digest %s %s\n",
-                   extra_info_digest, d256_64);
+      int rv = 0;
+      rv = digest256_to_base64(d256_64,
+                               router->cache_info.extra_info_digest256);
+      if (! BUG(rv < 0)) {
+        tor_asprintf(&extra_info_line, "extra-info-digest %s %s\n",
+                     extra_info_digest, d256_64);
+      }
     } else {
       tor_asprintf(&extra_info_line, "extra-info-digest %s\n",
                    extra_info_digest);

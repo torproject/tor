@@ -1526,7 +1526,8 @@ test_crypto_formats(void *arg)
   /* Encoding SHA256 */
   crypto_rand(data2, DIGEST256_LEN);
   memset(data2, 100, 1024);
-  digest256_to_base64(data2, data1);
+  int rv = digest256_to_base64(data2, data1);
+  tt_assert(rv == 0);
   tt_int_op(BASE64_DIGEST256_LEN,OP_EQ, strlen(data2));
   tt_int_op(100,OP_EQ, data2[BASE64_DIGEST256_LEN+2]);
   memset(data3, 99, 1024);

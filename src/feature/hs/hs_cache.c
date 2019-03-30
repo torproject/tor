@@ -243,9 +243,12 @@ cache_clean_v3_as_dir(time_t now, time_t global_cutoff)
     /* Logging. */
     {
       char key_b64[BASE64_DIGEST256_LEN + 1];
-      digest256_to_base64(key_b64, (const char *) key);
-      log_info(LD_REND, "Removing v3 descriptor '%s' from HSDir cache",
-               safe_str_client(key_b64));
+      int rv = 0;
+      rv = digest256_to_base64(key_b64, (const char *) key);
+      if (! BUG(rv < 0)) {
+        log_info(LD_REND, "Removing v3 descriptor '%s' from HSDir cache",
+                 safe_str_client(key_b64));
+      }
     }
   } DIGEST256MAP_FOREACH_END;
 
@@ -718,10 +721,13 @@ cache_clean_v3_as_client(time_t now)
     /* Logging. */
     {
       char key_b64[BASE64_DIGEST256_LEN + 1];
-      digest256_to_base64(key_b64, (const char *) key);
-      log_info(LD_REND, "Removing hidden service v3 descriptor '%s' "
-                        "from client cache",
-               safe_str_client(key_b64));
+      int rv = 0;
+      rv = digest256_to_base64(key_b64, (const char *) key);
+      if (! BUG(rv < 0)) {
+        log_info(LD_REND, "Removing hidden service v3 descriptor '%s' "
+                          "from client cache",
+                 safe_str_client(key_b64));
+      }
     }
   } DIGEST256MAP_FOREACH_END;
 

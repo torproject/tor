@@ -2273,8 +2273,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
       if (flavor == FLAV_MICRODESC &&
           !tor_digest256_is_zero(microdesc_digest)) {
         char m[BASE64_DIGEST256_LEN+1];
-        digest256_to_base64(m, microdesc_digest);
-        smartlist_add_asprintf(chunks, "m %s\n", m);
+        int rv = 0;
+        rv = digest256_to_base64(m, microdesc_digest);
+        if (! BUG(rv < 0)) {
+          smartlist_add_asprintf(chunks, "m %s\n", m);
+        }
       }
       /*     Next line is all flags.  The "\n" is missing. */
       smartlist_add(chunks,

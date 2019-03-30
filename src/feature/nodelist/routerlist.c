@@ -2349,7 +2349,12 @@ initiate_descriptor_downloads,(const routerstatus_t *source,
   for (; lo < hi; ++lo) {
     cp = tor_malloc(enc_digest_len);
     if (b64_256) {
-      digest256_to_base64(cp, smartlist_get(digests, lo));
+      int rv = 0;
+      rv = digest256_to_base64(cp, smartlist_get(digests, lo));
+      if (BUG(rv < 0)) {
+        tor_free(cp);
+        continue;
+      }
     } else {
       base16_encode(cp, enc_digest_len, smartlist_get(digests, lo),
                     digest_len);

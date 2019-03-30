@@ -3205,9 +3205,12 @@ dir_microdesc_download_failed(smartlist_t *failed,
 
     { /* Increment the failure count for this md fetch */
       char buf[BASE64_DIGEST256_LEN+1];
-      digest256_to_base64(buf, d);
-      log_info(LD_DIR, "Failed to download md %s from %s",
-               buf, hex_str(dir_id, DIGEST_LEN));
+      int rv = 0;
+      rv = digest256_to_base64(buf, d);
+      if (! BUG(rv < 0)) {
+        log_info(LD_DIR, "Failed to download md %s from %s",
+                 buf, hex_str(dir_id, DIGEST_LEN));
+      }
       download_status_increment_failure(dls, status_code, buf,
                                         server, now);
     }
