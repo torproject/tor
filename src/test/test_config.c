@@ -5650,6 +5650,128 @@ test_config_include_wildcards(void *data)
 }
 
 static void
+test_config_include_hidden(void *data)
+{
+  (void)data;
+
+  char *temp = NULL, *folder = NULL;
+  config_line_t *result = NULL;
+  char *dir = tor_strdup(get_fname("test_include_hidden"));
+  tt_ptr_op(dir, OP_NE, NULL);
+
+#ifdef _WIN32
+  tt_int_op(mkdir(dir), OP_EQ, 0);
+#else
+  tt_int_op(mkdir(dir, 0700), OP_EQ, 0);
+#endif
+
+  tor_asprintf(&folder, "%s"PATH_SEPARATOR"%s", dir, ".dotdir");
+
+#ifdef _WIN32
+  tt_int_op(mkdir(folder), OP_EQ, 0);
+#else
+  tt_int_op(mkdir(folder, 0700), OP_EQ, 0);
+#endif
+
+  tor_asprintf(&temp, "%s"PATH_SEPARATOR"%s", folder, ".dotfile");
+  tt_int_op(write_str_to_file(temp, "Test 1\n", 0), OP_EQ, 0);
+  tor_free(temp);
+
+  tor_asprintf(&temp, "%s"PATH_SEPARATOR"%s", folder, "file");
+  tt_int_op(write_str_to_file(temp, "Test 2\n", 0), OP_EQ, 0);
+  tor_free(temp);
+
+  char torrc_contents[1000];
+  int include_used;
+  int len = 0;
+  config_line_t *next;
+  char expected[10];
+
+  // test wildcards do not expand to dot folders (except for windows)
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR"*\n",
+               dir);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
+  tt_int_op(include_used, OP_EQ, 1);
+#ifdef _WIN32 // wildcard expansion includes dot files on Windows
+  for (next = result; next != NULL; next = next->next) {
+    tor_snprintf(expected, sizeof(expected), "%d", len + 2);
+    tt_str_op(next->key, OP_EQ, "Test");
+    tt_str_op(next->value, OP_EQ, expected);
+    len++;
+  }
+  tt_int_op(len, OP_EQ, 1);
+#else
+  tt_ptr_op(result, OP_EQ, NULL);
+#endif
+  config_free_lines(result);
+
+  // test wildcards match hidden folders when explicitly in the pattern
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR".*\n",
+               dir);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
+  tt_ptr_op(result, OP_NE, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+
+  len = 0;
+  for (next = result; next != NULL; next = next->next) {
+    tor_snprintf(expected, sizeof(expected), "%d", len + 2);
+    tt_str_op(next->key, OP_EQ, "Test");
+    tt_str_op(next->value, OP_EQ, expected);
+    len++;
+  }
+  tt_int_op(len, OP_EQ, 1);
+  config_free_lines(result);
+
+  // test hidden dir when explicitly included
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR".dotdir\n",
+               dir);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
+  tt_ptr_op(result, OP_NE, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+
+  len = 0;
+  for (next = result; next != NULL; next = next->next) {
+    tor_snprintf(expected, sizeof(expected), "%d", len + 2);
+    tt_str_op(next->key, OP_EQ, "Test");
+    tt_str_op(next->value, OP_EQ, expected);
+    len++;
+  }
+  tt_int_op(len, OP_EQ, 1);
+  config_free_lines(result);
+
+  // test hidden file when explicitly included
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR".dotdir"PATH_SEPARATOR".dotfile\n",
+               dir);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
+  tt_ptr_op(result, OP_NE, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+
+  len = 0;
+  for (next = result; next != NULL; next = next->next) {
+    tor_snprintf(expected, sizeof(expected), "%d", len + 1);
+    tt_str_op(next->key, OP_EQ, "Test");
+    tt_str_op(next->value, OP_EQ, expected);
+    len++;
+  }
+  tt_int_op(len, OP_EQ, 1);
+  config_free_lines(result);
+
+ done:
+  config_free_lines(result);
+  tor_free(folder);
+  tor_free(temp);
+  tor_free(dir);
+}
+
+static void
 test_config_dup_and_filter(void *arg)
 {
   (void)arg;
@@ -6150,6 +6272,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(include_flag_torrc_only, TT_FORK),
   CONFIG_TEST(include_flag_defaults_only, TT_FORK),
   CONFIG_TEST(include_wildcards, 0),
+  CONFIG_TEST(include_hidden, 0),
   CONFIG_TEST(dup_and_filter, 0),
   CONFIG_TEST(check_bridge_distribution_setting_not_a_bridge, TT_FORK),
   CONFIG_TEST(check_bridge_distribution_setting_valid, 0),
