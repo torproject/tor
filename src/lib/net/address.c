@@ -632,7 +632,7 @@ tor_addr_parse_mask_ports(const char *s,
     goto err;
   }
 
-  v4map = tor_addr_family(addr_out) == AF_INET;
+  v4map = (family == AF_INET);
 
   /* Parse mask */
   if (maskbits_out) {
