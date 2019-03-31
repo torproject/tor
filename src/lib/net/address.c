@@ -665,16 +665,6 @@ tor_addr_parse_mask_ports(const char *s,
           goto err;
         }
       }
-      if (family == AF_INET6 && v4map) {
-        if (bits > 32 && bits < 96) { /* Crazy */
-          log_warn(LD_GENERAL,
-                   "Bad mask bits %d for V4-mapped V6 address; rejecting.",
-                   bits);
-          goto err;
-        }
-        /* XXXX_IP6 is this really what we want? */
-        bits = 96 + bits%32; /* map v4-mapped masks onto 96-128 bits */
-      }
       if (any_flag) {
         log_warn(LD_GENERAL,
                  "Found bit prefix with wildcard address; rejecting");
