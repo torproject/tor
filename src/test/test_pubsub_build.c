@@ -493,48 +493,6 @@ test_pubsub_build_sub_many(void *arg)
   tor_free(sysname);
 }
 
-/* The same subsystem can only declare one publish or subscribe. */
-static void
-test_pubsub_build_pubsub_redundant(void *arg)
-{
-  (void)arg;
-  pubsub_builder_t *b = NULL;
-  dispatch_t *dispatcher = NULL;
-  pubsub_connector_t *c = NULL;
-
-  b = pubsub_builder_new();
-  seed_pubsub_builder_basic(b);
-  pub_binding_t btmp;
-
-  {
-    c = pubsub_connector_for_subsystem(b, get_subsys_id("sys2"));
-    DISPATCH_ADD_SUB(c, main, bunch_of_coconuts);
-    pubsub_add_pub_(c, &btmp, get_channel_id("main"),
-                    get_message_id("yes_we_have_no"),
-                    get_msg_type_id("string"),
-                    0 /* flags */,
-                    "somewhere.c", 22);
-    pubsub_connector_free(c);
-  };
-
-  setup_full_capture_of_logs(LOG_WARN);
-  dispatcher = pubsub_builder_finalize(b, NULL);
-  b = NULL;
-  tt_assert(dispatcher == NULL);
-
-  expect_log_msg_containing(
-    "Message \"yes_we_have_no\" is configured to be published by "
-    "subsystem \"sys2\" more than once.");
-  expect_log_msg_containing(
-    "Message \"bunch_of_coconuts\" is configured to be subscribed by "
-    "subsystem \"sys2\" more than once.");
-
- done:
-  pubsub_builder_free(b);
-  dispatch_free(dispatcher);
-  teardown_capture_of_logs();
-}
-
 /* It's fine to declare the excl flag. */
 static void
 test_pubsub_build_excl_ok(void *arg)
@@ -614,7 +572,6 @@ struct testcase_t pubsub_build_tests[] = {
   T(pubsub_same, TT_FORK),
   T(pubsub_multi, TT_FORK),
   T(sub_many, TT_FORK),
-  T(pubsub_redundant, TT_FORK),
   T(excl_ok, TT_FORK),
   T(excl_bad, TT_FORK),
   END_OF_TESTCASES
