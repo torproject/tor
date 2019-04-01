@@ -168,7 +168,7 @@ after_failure:
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
 
 before_cache:
-    # Delete all .gcda files.
+  ## Delete all gcov files.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then make reset-gcov; fi
 
 notifications:
