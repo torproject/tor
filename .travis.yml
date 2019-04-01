@@ -5,8 +5,10 @@ cache:
   ## cargo: true
   directories:
     - $HOME/.cargo
+    ## caching CARGO_TARGET_DIR actually slows down the build over time,
+    ## because old build products are never deleted.
     ## where we point CARGO_TARGET_DIR in all our cargo invocations
-    - $TRAVIS_BUILD_DIR/src/rust/target
+    #- $TRAVIS_BUILD_DIR/src/rust/target
 
 compiler:
   - gcc
@@ -209,6 +211,8 @@ script:
   - if [[ "$DISTCHECK" == "" && "$TEST_STEM" == "" ]]; then make check; fi
   - if [[ "$TEST_STEM" != "" ]]; then make src/app/tor test-stem; fi
   - if [[ "$DISTCHECK" != "" && "$TEST_STEM" == "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
+  ## If this build was one that produced coverage, upload it.
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p' || echo "Coverage failed"; fi
 
 after_failure:
   ## configure will leave a log file with more details of config failures.
@@ -220,9 +224,12 @@ after_failure:
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-core || echo "make failed"; fi
 
-after_success:
-  ## If this build was one that produced coverage, upload it.
-  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p'; fi
+before_cache:
+  ## Delete all gcov files.
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then make reset-gcov; fi
+  ## Delete the cargo registry before caching .cargo, because it's cheaper to
+  ## download the registry and throw it away, rather than caching it
+  - rm -rf $HOME/.cargo/registry
 
 notifications:
   irc:
