@@ -82,7 +82,7 @@ handle_control_resetconf(control_connection_t *conn, uint32_t len, char *body)
  * reply with a CONFVALUE or an ERROR message */
 static int
 handle_control_getconf(control_connection_t *conn, uint32_t body_len,
-                       const char *body)
+                       char *body)
 {
   smartlist_t *questions = smartlist_new();
   smartlist_t *answers = smartlist_new();
@@ -2206,109 +2206,207 @@ handle_control_del_onion(control_connection_t *conn,
   return 0;
 }
 
+/**
+ * Called when we get an obsolete command: tell the controller that it is
+ * obsolete.
+ */
+static int
+handle_control_obsolete(control_connection_t *conn,
+                        uint32_t arg_len,
+                        const char *args)
+{
+  (void)arg_len;
+  (void)args;
+  char *command = tor_strdup(conn->incoming_cmd);
+  tor_strupper(command);
+  connection_printf_to_buf(conn, "511 %s is obsolete.\r\n", command);
+  tor_free(command);
+  return 0;
+}
+
+/**
+ * Selects an API to a controller command.  See handler_fn_t for the
+ * possible types.
+ **/
+typedef enum handler_type_t {
+  hnd_legacy,
+  hnd_legacy_mut
+} handler_type_t;
+
+/**
+ * Union: a function pointer to a handler function for a controller command.
+ *
+ * This needs to be a union (rather than just a single pointer) since not
+ * all controller commands have the same type.
+ **/
+typedef union handler_fn_t {
+  /**
+   * A "legacy" handler takes a command's arguments as a nul-terminated
+   * string, and their length.  It may not change the contents of the
+   * arguments.  If the command is a multiline one, then the arguments may
+   * extend across multiple lines.
+   */
+  int (*legacy)(control_connection_t *conn,
+                uint32_t arg_len,
+                const char *args);
+  /**
+   * A "legacy_mut" handler is the same as a "legacy" one, except that it may
+   * change the contents of the command's arguments -- for example, by
+   * inserting NULs.  It may not deallocate them.
+   */
+  int (*legacy_mut)(control_connection_t *conn,
+                    uint32_t arg_len,
+                    char *args);
+} handler_fn_t;
+
+/**
+ * Definition for a controller command.
+ */
+typedef struct control_cmd_def_t {
+  /**
+   * The name of the command. If the command is multiline, the name must
+   * begin with "+".  This is not case-sensitive. */
+  const char *name;
+  /**
+   * Which API to use when calling the handler function.
+   */
+  handler_type_t handler_type;
+  /**
+   * A function to execute the command.
+   */
+  handler_fn_t handler;
+  /**
+   * Zero or more CMD_FL_* flags, or'd together.
+   */
+  unsigned flags;
+} control_cmd_def_t;
+
+/**
+ * Indicates that the command's arguments are sensitive, and should be
+ * memwiped after use.
+ */
+#define CMD_FL_WIPE (1u<<0)
+
+/**
+ * Macro: declare a command with a one-line argument and a given set of
+ * flags.
+ **/
+#define ONE_LINE(name, htype, flags)                            \
+  { #name,                                                      \
+      hnd_ ##htype,                                             \
+      { .htype = handle_control_ ##name },                      \
+      flags                                                     \
+  }
+/**
+ * Macro: declare a command with a multi-line argument and a given set of
+ * flags.
+ **/
+#define MULTLINE(name, htype, flags)                            \
+  { "+"#name,                                                   \
+      hnd_ ##htype,                                             \
+      { .htype = handle_control_ ##name },                      \
+      flags                                                     \
+  }
+/**
+ * Macro: declare an obsolete command. (Obsolete commands give a different
+ * error than non-existent ones.)
+ **/
+#define OBSOLETE(name)                          \
+  { #name,                                      \
+      hnd_legacy,                               \
+      { .legacy = handle_control_obsolete },    \
+      0                                         \
+  }
+
+/**
+ * An array defining all the recognized controller commands.
+ **/
+static const control_cmd_def_t CONTROL_COMMANDS[] =
+{
+  ONE_LINE(setconf, legacy_mut, 0),
+  ONE_LINE(resetconf, legacy_mut, 0),
+  ONE_LINE(getconf, legacy_mut, 0),
+  MULTLINE(loadconf, legacy, 0),
+  ONE_LINE(setevents, legacy, 0),
+  ONE_LINE(authenticate, legacy, 0),
+  ONE_LINE(saveconf, legacy, 0),
+  ONE_LINE(signal, legacy, 0),
+  ONE_LINE(takeownership, legacy, 0),
+  ONE_LINE(dropownership, legacy, 0),
+  ONE_LINE(mapaddress, legacy, 0),
+  ONE_LINE(getinfo, legacy, 0),
+  ONE_LINE(extendcircuit, legacy, 0),
+  ONE_LINE(setcircuitpurpose, legacy, 0),
+  OBSOLETE(setrouterpurpose),
+  ONE_LINE(attachstream, legacy, 0),
+  MULTLINE(postdescriptor, legacy, 0),
+  ONE_LINE(redirectstream, legacy, 0),
+  ONE_LINE(closestream, legacy, 0),
+  ONE_LINE(closecircuit, legacy, 0),
+  ONE_LINE(usefeature, legacy, 0),
+  ONE_LINE(resolve, legacy, 0),
+  ONE_LINE(protocolinfo, legacy, 0),
+  ONE_LINE(authchallenge, legacy, 0),
+  ONE_LINE(dropguards, legacy, 0),
+  ONE_LINE(hsfetch, legacy, 0),
+  MULTLINE(hspost, legacy, 0),
+  ONE_LINE(add_onion, legacy, CMD_FL_WIPE),
+  ONE_LINE(del_onion, legacy, CMD_FL_WIPE),
+};
+
+/**
+ * The number of entries in CONTROL_COMMANDS.
+ **/
+static const size_t N_CONTROL_COMMANDS = ARRAY_LENGTH(CONTROL_COMMANDS);
+
+/**
+ * Run a single control command, as defined by a control_cmd_def_t,
+ * with a given set of arguments.
+ */
+static int
+handle_single_control_command(const control_cmd_def_t *def,
+                              control_connection_t *conn,
+                              uint32_t cmd_data_len,
+                              char *args)
+{
+  int rv = 0;
+  switch (def->handler_type) {
+    case hnd_legacy:
+      if (def->handler.legacy(conn, cmd_data_len, args))
+        rv = -1;
+      break;
+    case hnd_legacy_mut:
+      if (def->handler.legacy_mut(conn, cmd_data_len, args))
+        rv = -1;
+      break;
+    default:
+      tor_assert_unreached();
+  }
+
+  if (def->flags & CMD_FL_WIPE)
+    memwipe(args, 0, cmd_data_len);
+
+  return rv;
+}
+
+/**
+ * Run a given controller command, as selected by the incoming_cmd field of
+ * <b>conn</b>.
+ */
 int
 handle_control_command(control_connection_t *conn,
-                            uint32_t cmd_data_len,
-                            char *args)
+                       uint32_t cmd_data_len,
+                       char *args)
 {
-  /* XXXX Why is this not implemented as a table like the GETINFO
-   * items are?  Even handling the plus signs at the beginnings of
-   * commands wouldn't be very hard with proper macros. */
-
-  if (!strcasecmp(conn->incoming_cmd, "SETCONF")) {
-    if (handle_control_setconf(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "RESETCONF")) {
-    if (handle_control_resetconf(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "GETCONF")) {
-    if (handle_control_getconf(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "+LOADCONF")) {
-    if (handle_control_loadconf(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "SETEVENTS")) {
-    if (handle_control_setevents(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "AUTHENTICATE")) {
-    if (handle_control_authenticate(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "SAVECONF")) {
-    if (handle_control_saveconf(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "SIGNAL")) {
-    if (handle_control_signal(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "TAKEOWNERSHIP")) {
-    if (handle_control_takeownership(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "DROPOWNERSHIP")) {
-    if (handle_control_dropownership(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "MAPADDRESS")) {
-    if (handle_control_mapaddress(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "GETINFO")) {
-    if (handle_control_getinfo(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "EXTENDCIRCUIT")) {
-    if (handle_control_extendcircuit(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "SETCIRCUITPURPOSE")) {
-    if (handle_control_setcircuitpurpose(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "SETROUTERPURPOSE")) {
-    connection_write_str_to_buf("511 SETROUTERPURPOSE is obsolete.\r\n", conn);
-  } else if (!strcasecmp(conn->incoming_cmd, "ATTACHSTREAM")) {
-    if (handle_control_attachstream(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "+POSTDESCRIPTOR")) {
-    if (handle_control_postdescriptor(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "REDIRECTSTREAM")) {
-    if (handle_control_redirectstream(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "CLOSESTREAM")) {
-    if (handle_control_closestream(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "CLOSECIRCUIT")) {
-    if (handle_control_closecircuit(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "USEFEATURE")) {
-    if (handle_control_usefeature(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "RESOLVE")) {
-    if (handle_control_resolve(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "PROTOCOLINFO")) {
-    if (handle_control_protocolinfo(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "AUTHCHALLENGE")) {
-    if (handle_control_authchallenge(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "DROPGUARDS")) {
-    if (handle_control_dropguards(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "HSFETCH")) {
-    if (handle_control_hsfetch(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "+HSPOST")) {
-    if (handle_control_hspost(conn, cmd_data_len, args))
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "ADD_ONION")) {
-    int ret = handle_control_add_onion(conn, cmd_data_len, args);
-    memwipe(args, 0, cmd_data_len); /* Scrub the private key. */
-    if (ret)
-      return -1;
-  } else if (!strcasecmp(conn->incoming_cmd, "DEL_ONION")) {
-    int ret = handle_control_del_onion(conn, cmd_data_len, args);
-    memwipe(args, 0, cmd_data_len); /* Scrub the service id/pk. */
-    if (ret)
-      return -1;
-  } else {
-    connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",
-                             conn->incoming_cmd);
+  for (unsigned i = 0; i < N_CONTROL_COMMANDS; ++i) {
+    const control_cmd_def_t *def = &CONTROL_COMMANDS[i];
+    if (!strcasecmp(conn->incoming_cmd, def->name)) {
+      return handle_single_control_command(def, conn, cmd_data_len, args);
+    }
   }
+
+  connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",
+                           conn->incoming_cmd);
 
   return 0;
 }
