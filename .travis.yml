@@ -5,9 +5,10 @@ cache:
   ## cargo: true
   directories:
     - $HOME/.cargo
-
-before_cache:
-  - rm -rf $HOME/.cargo/registry
+    ## caching CARGO_TARGET_DIR actually slows down the build over time,
+    ## because old build products are never deleted.
+    ## where we point CARGO_TARGET_DIR in all our cargo invocations
+    #- $TRAVIS_BUILD_DIR/src/rust/target
 
 compiler:
   - gcc
@@ -217,6 +218,9 @@ after_failure:
 before_cache:
   ## Delete all gcov files.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then make reset-gcov; fi
+  ## Delete the cargo registry before caching .cargo, because it's cheaper to
+  ## download the registry and throw it away, rather than caching it
+  - rm -rf $HOME/.cargo/registry
 
 notifications:
   irc:
