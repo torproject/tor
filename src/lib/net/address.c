@@ -261,10 +261,6 @@ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
   tor_assert(addr);
   sa_family_t v_family = tor_addr_family(addr);
 
-  if (v_family == AF_INET) {
-    iph4 = tor_addr_to_ipv4h(addr);
-  }
-
   if (v_family == AF_INET6) {
     const uint32_t *a32 = tor_addr_to_in6_addr32(addr);
     iph6[0] = ntohl(a32[0]);
@@ -285,6 +281,8 @@ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
 
     return 0;
   } else if (v_family == AF_INET) {
+    iph4 = tor_addr_to_ipv4h(addr);
+
     /* special case for binding to 0.0.0.0 or 100.64/10 (RFC6598) */
     if (for_listening && (!iph4 || ((iph4 & 0xffc00000) == 0x64400000)))
       return 0;
