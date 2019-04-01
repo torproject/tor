@@ -2398,6 +2398,10 @@ handle_control_command(control_connection_t *conn,
                        uint32_t cmd_data_len,
                        char *args)
 {
+  tor_assert(conn);
+  tor_assert(args);
+  tor_assert(args[cmd_data_len] == '\0');
+
   for (unsigned i = 0; i < N_CONTROL_COMMANDS; ++i) {
     const control_cmd_def_t *def = &CONTROL_COMMANDS[i];
     if (!strcasecmp(conn->incoming_cmd, def->name)) {
