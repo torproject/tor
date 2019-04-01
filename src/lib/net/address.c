@@ -533,7 +533,7 @@ tor_addr_parse_mask_ports(const char *s,
 {
   char *base = NULL, *address, *mask = NULL, *port = NULL, *rbracket = NULL;
   char *endptr;
-  int any_flag=0, v4map=0;
+  int any_flag=0;
   sa_family_t family;
   struct in6_addr in6_tmp;
   struct in_addr in_tmp = { .s_addr = 0 };
@@ -630,7 +630,7 @@ tor_addr_parse_mask_ports(const char *s,
     goto err;
   }
 
-  v4map = (family == AF_INET);
+  int v4map = (family == AF_INET);
 
   /* Parse mask */
   if (maskbits_out) {
