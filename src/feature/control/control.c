@@ -33,6 +33,7 @@
  **/
 
 #define CONTROL_MODULE_PRIVATE
+#define CONTROL_PRIVATE
 
 #include "core/or/or.h"
 #include "app/config/config.h"
@@ -274,6 +275,31 @@ peek_connection_has_http_command(connection_t *conn)
   return peek_buf_has_http_command(conn->inbuf);
 }
 
+/**
+ * Helper: take a nul-terminated command of given length, and find where
+ * the command starts and the argument begins.  Separate them with a NUL,
+ * and return a pointer to the arguments.
+ **/
+STATIC char *
+control_split_incoming_command(char *incoming_cmd, size_t *data_len)
+{
+  size_t cmd_len = 0;
+  while (cmd_len < *data_len
+         && !TOR_ISSPACE(incoming_cmd[cmd_len]))
+    ++cmd_len;
+
+  incoming_cmd[cmd_len]='\0';
+  char *args = incoming_cmd+cmd_len+1;
+  tor_assert(*data_len>cmd_len);
+  *data_len -= (cmd_len+1); /* skip the command and NUL we added after it */
+  while (TOR_ISSPACE(*args)) {
+    ++args;
+    --*data_len;
+  }
+
+  return args;
+}
+
 static const char CONTROLPORT_IS_NOT_AN_HTTP_PROXY_MSG[] =
   "HTTP/1.0 501 Tor ControlPort is not an HTTP proxy"
   "\r\nContent-Type: text/html; charset=iso-8859-1\r\n\r\n"
@@ -308,7 +334,6 @@ connection_control_process_inbuf(control_connection_t *conn)
 {
   size_t data_len;
   uint32_t cmd_data_len;
-  int cmd_len;
   char *args;
 
   tor_assert(conn);
@@ -400,22 +425,11 @@ connection_control_process_inbuf(control_connection_t *conn)
     /* Otherwise, read another line. */
   }
   data_len = conn->incoming_cmd_cur_len;
+
   /* Okay, we now have a command sitting on conn->incoming_cmd. See if we
    * recognize it.
    */
-  cmd_len = 0;
-  while ((size_t)cmd_len < data_len
-         && !TOR_ISSPACE(conn->incoming_cmd[cmd_len]))
-    ++cmd_len;
-
-  conn->incoming_cmd[cmd_len]='\0';
-  args = conn->incoming_cmd+cmd_len+1;
-  tor_assert(data_len>(size_t)cmd_len);
-  data_len -= (cmd_len+1); /* skip the command and NUL we added after it */
-  while (TOR_ISSPACE(*args)) {
-    ++args;
-    --data_len;
-  }
+  args = control_split_incoming_command(conn->incoming_cmd, &data_len);
 
   /* If the connection is already closing, ignore further commands */
   if (TO_CONN(conn)->marked_for_close) {
