@@ -6519,6 +6519,62 @@ test_dir_add_fingerprint(void *arg)
   dirserv_free_fingerprint_list();
 }
 
+static void
+test_dir_dirserv_load_fingerprint_file(void *arg)
+{
+  (void)arg;
+  char *fname = tor_strdup(get_fname("approved-routers"));
+
+  // Neither RSA nor ed25519
+  const char *router_lines_invalid =
+    "!badexit notafingerprint";
+  const char *router_lines_valid_rsa =
+    "!badexit AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+  const char *router_lines_invalid_rsa =
+    "!badexit ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ\n";
+  const char *router_lines_valid_ed25519 =
+    "!badexit wqfLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx/Q\n";
+  const char *router_lines_invalid_ed25519 =
+    "!badexit --fLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx--\n";
+
+  // Test: Invalid Fingerprint (not RSA or ed25519)
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Valid RSA
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_valid_rsa, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  teardown_capture_of_logs();
+
+  // Test: Invalid RSA
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid_rsa, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Valid ed25519
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_valid_ed25519, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  teardown_capture_of_logs();
+
+  // Test: Invalid ed25519
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_invalid_ed25519, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+ done:
+  tor_free(fname);
+  dirserv_free_fingerprint_list();
+}
+
 #define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -6592,5 +6648,6 @@ struct testcase_t dir_tests[] = {
   DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   DIR(format_versions_list, TT_FORK),
   DIR(add_fingerprint, TT_FORK),
+  DIR(dirserv_load_fingerprint_file, TT_FORK),
   END_OF_TESTCASES
 };
