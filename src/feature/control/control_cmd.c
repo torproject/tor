@@ -45,6 +45,7 @@
 #include "core/or/entry_connection_st.h"
 #include "core/or/origin_circuit_st.h"
 #include "core/or/socks_request_st.h"
+#include "feature/control/control_cmd_args_st.h"
 #include "feature/control/control_connection_st.h"
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
@@ -59,6 +60,87 @@ static int control_setconf_helper(control_connection_t *conn, uint32_t len,
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
  * finished authentication and is accepting commands. */
 #define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN)
+
+/**
+ * Release all storage held in <b>args</b>
+ **/
+void
+control_cmd_args_free_(control_cmd_args_t *args)
+{
+  if (! args)
+    return;
+
+  if (args->args) {
+    SMARTLIST_FOREACH(args->args, char *, c, tor_free(c));
+    smartlist_free(args->args);
+  }
+  tor_free(args->object);
+
+  tor_free(args);
+}
+
+/**
+ * Helper: parse the arguments to a command according to <b>syntax</b>.  On
+ * success, set *<b>error_out</b> to NULL and return a newly allocated
+ * control_cmd_args_t.  On failure, set *<b>error_out</b> to newly allocated
+ * error string, and return NULL.
+ **/
+STATIC control_cmd_args_t *
+control_cmd_parse_args(const char *command,
+                       const control_cmd_syntax_t *syntax,
+                       size_t body_len,
+                       const char *body,
+                       char **error_out)
+{
+  *error_out = NULL;
+  control_cmd_args_t *result = tor_malloc_zero(sizeof(control_cmd_args_t));
+  const char *cmdline;
+  char *cmdline_alloc = NULL;
+
+  result->command = command;
+
+  const char *eol = memchr(body, '\n', body_len);
+  if (syntax->want_object) {
+    if (! eol || (eol+1) == body+body_len) {
+      *error_out = tor_strdup("Empty body");
+      goto err;
+    }
+    cmdline_alloc = tor_memdup_nulterm(body, eol-body);
+    cmdline = cmdline_alloc;
+    ++eol;
+    result->object_len = read_escaped_data(eol, (body+body_len)-eol,
+                                           &result->object);
+  } else {
+    if (eol && (eol+1) != body+body_len) {
+      *error_out = tor_strdup("Unexpected body");
+      goto err;
+    }
+    cmdline = body;
+  }
+
+  result->args = smartlist_new();
+  smartlist_split_string(result->args, cmdline, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  size_t n_args = smartlist_len(result->args);
+  if (n_args < syntax->min_args) {
+    tor_asprintf(error_out, "Need at least %u argument(s)",
+                 syntax->min_args);
+    goto err;
+  } else if (n_args > syntax->max_args) {
+    tor_asprintf(error_out, "Cannot accept more than %u argument(s)",
+                 syntax->max_args);
+    goto err;
+  }
+
+  tor_assert_nonfatal(*error_out == NULL);
+  goto done;
+ err:
+  tor_assert_nonfatal(*error_out != NULL);
+  control_cmd_args_free(result);
+ done:
+  tor_free(cmdline_alloc);
+  return result;
+}
 
 /** Called when we receive a SETCONF message: parse the body and try
  * to update our configuration.  Reply with a DONE or ERROR message.
@@ -2230,7 +2312,8 @@ handle_control_obsolete(control_connection_t *conn,
  **/
 typedef enum handler_type_t {
   hnd_legacy,
-  hnd_legacy_mut
+  hnd_legacy_mut,
+  hnd_parsed,
 } handler_type_t;
 
 /**
@@ -2257,6 +2340,13 @@ typedef union handler_fn_t {
   int (*legacy_mut)(control_connection_t *conn,
                     uint32_t arg_len,
                     char *args);
+
+  /**
+   * A "parsed" handler expects its arguments in a pre-parsed format, in
+   * an immutable control_cmd_args_t *object.
+   **/
+  int (*parsed)(control_connection_t *conn,
+                const control_cmd_args_t *args);
 } handler_fn_t;
 
 /**
@@ -2279,6 +2369,10 @@ typedef struct control_cmd_def_t {
    * Zero or more CMD_FL_* flags, or'd together.
    */
   unsigned flags;
+  /**
+   * For parsed command: a syntax description.
+   */
+  const control_cmd_syntax_t *syntax;
 } control_cmd_def_t;
 
 /**
@@ -2287,16 +2381,27 @@ typedef struct control_cmd_def_t {
  */
 #define CMD_FL_WIPE (1u<<0)
 
-/**
- * Macro: declare a command with a one-line argument and a given set of
- * flags.
+#define SYNTAX_IGNORE { 0, UINT_MAX, false }
+
+/** Macro: declare a command with a one-line argument, a given set of flags,
+ * and a syntax definition.
  **/
-#define ONE_LINE(name, htype, flags)                            \
+#define ONE_LINE_(name, htype, flags, syntax)                   \
   { #name,                                                      \
       hnd_ ##htype,                                             \
       { .htype = handle_control_ ##name },                      \
-      flags                                                     \
+      flags,                                                    \
+      syntax,                                                   \
   }
+
+/** Macro: declare a parsed command with a one-line argument, a given set of
+ * flags, and a syntax definition.
+ **/
+#define ONE_LINE(name, htype, flags) \
+  ONE_LINE_(name, htype, flags, NULL)
+#define ONE_LINE_PARSED(name, flags, syntax) \
+  ONE_LINE_(name, parsed, flags, syntax)
+
 /**
  * Macro: declare a command with a multi-line argument and a given set of
  * flags.
@@ -2305,7 +2410,8 @@ typedef struct control_cmd_def_t {
   { "+"#name,                                                   \
       hnd_ ##htype,                                             \
       { .htype = handle_control_ ##name },                      \
-      flags                                                     \
+      flags,                                                    \
+      NULL                                                      \
   }
 /**
  * Macro: declare an obsolete command. (Obsolete commands give a different
@@ -2315,7 +2421,8 @@ typedef struct control_cmd_def_t {
   { #name,                                      \
       hnd_legacy,                               \
       { .legacy = handle_control_obsolete },    \
-      0                                         \
+      0,                                        \
+      NULL,                                     \
   }
 
 /**
@@ -2379,6 +2486,28 @@ handle_single_control_command(const control_cmd_def_t *def,
       if (def->handler.legacy_mut(conn, cmd_data_len, args))
         rv = -1;
       break;
+    case hnd_parsed: {
+      control_cmd_args_t *parsed_args;
+      char *err=NULL;
+      tor_assert(def->syntax);
+      parsed_args = control_cmd_parse_args(conn->incoming_cmd,
+                                           def->syntax,
+                                           cmd_data_len, args,
+                                           &err);
+      if (!parsed_args) {
+        connection_printf_to_buf(conn,
+                                 "512 Bad arguments to %s: %s\r\n",
+                                 conn->incoming_cmd, err?err:"");
+        tor_free(err);
+      } else {
+        if (BUG(err))
+          tor_free(err);
+        if (def->handler.parsed(conn, parsed_args))
+          rv = 0;
+        control_cmd_args_free(parsed_args);
+      }
+      break;
+    }
     default:
       tor_assert_unreached();
   }

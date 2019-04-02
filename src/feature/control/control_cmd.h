@@ -12,10 +12,18 @@
 #ifndef TOR_CONTROL_CMD_H
 #define TOR_CONTROL_CMD_H
 
+#include "lib/malloc/malloc.h"
+
 int handle_control_command(control_connection_t *conn,
                            uint32_t cmd_data_len,
                            char *args);
 void control_cmd_free_all(void);
+
+typedef struct control_cmd_args_t control_cmd_args_t;
+void control_cmd_args_free_(control_cmd_args_t *args);
+
+#define control_cmd_args_free(v) \
+  FREE_AND_NULL(control_cmd_args_t, control_cmd_args_free_, (v))
 
 #ifdef CONTROL_CMD_PRIVATE
 #include "lib/crypt_ops/crypto_ed25519.h"
@@ -38,6 +46,37 @@ STATIC int add_onion_helper_keyarg(const char *arg, int discard_pk,
 
 STATIC rend_authorized_client_t *add_onion_helper_clientauth(const char *arg,
                                    int *created, char **err_msg_out);
+
+/**
+ * Definition for the syntax of a controller command, as parsed by
+ * control_cmd_parse_args.
+ *
+ * WORK IN PROGRESS: This structure is going to get more complex as this
+ * branch goes on.
+ **/
+typedef struct control_cmd_syntax_t {
+  /**
+   * Lowest number of positional arguments that this command accepts.
+   * 0 for "it's okay not to have positional arguments."
+   **/
+  unsigned int min_args;
+  /**
+   * Highest number of positional arguments that this command accepts.
+   * UINT_MAX for no limit.
+   **/
+  unsigned int max_args;
+  /**
+   * True iff this command wants to be followed by a multiline object.
+   **/
+  bool want_object;
+} control_cmd_syntax_t;
+
+STATIC control_cmd_args_t *control_cmd_parse_args(
+                                   const char *command,
+                                   const control_cmd_syntax_t *syntax,
+                                   size_t body_len,
+                                   const char *body,
+                                   char **error_out);
 
 #endif /* defined(CONTROL_CMD_PRIVATE) */
 
