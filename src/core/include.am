@@ -298,6 +298,7 @@ noinst_HEADERS +=					\
 	src/feature/control/control.h			\
 	src/feature/control/control_auth.h		\
 	src/feature/control/control_cmd.h		\
+	src/feature/control/control_cmd_args_st.h	\
 	src/feature/control/control_connection_st.h	\
 	src/feature/control/control_events.h	        \
 	src/feature/control/control_fmt.h		\
