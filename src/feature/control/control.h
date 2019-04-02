@@ -60,4 +60,9 @@ int get_cached_network_liveness(void);
 void set_cached_network_liveness(int liveness);
 #endif /* defined(CONTROL_MODULE_PRIVATE) */
 
+#ifdef CONTROL_PRIVATE
+STATIC char *control_split_incoming_command(char *incoming_cmd,
+                                            size_t *data_len);
+#endif
+
 #endif /* !defined(TOR_CONTROL_H) */
