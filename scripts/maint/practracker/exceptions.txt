@@ -54,7 +54,7 @@ problem function-size /src/app/main/main.c:sandbox_init_filter() 291
 problem function-size /src/app/main/main.c:run_tor_main_loop() 105
 problem function-size /src/app/main/ntmain.c:nt_service_install() 125
 problem include-count /src/app/main/shutdown.c 52
-problem file-size /src/core/mainloop/connection.c 5558
+problem file-size /src/core/mainloop/connection.c 5559
 problem include-count /src/core/mainloop/connection.c 61
 problem function-size /src/core/mainloop/connection.c:connection_free_minimal() 185
 problem function-size /src/core/mainloop/connection.c:connection_listener_new() 328
@@ -152,7 +152,7 @@ problem function-size /src/feature/control/control_cmd.c:handle_control_add_onio
 problem function-size /src/feature/control/control_cmd.c:add_onion_helper_keyarg() 125
 problem function-size /src/feature/control/control_cmd.c:handle_control_command() 104
 problem function-size /src/feature/control/control_events.c:control_event_stream_status() 119
-problem include-count /src/feature/control/control_getinfo.c 52
+problem include-count /src/feature/control/control_getinfo.c 53
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_misc() 109
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_dir() 304
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_events() 236

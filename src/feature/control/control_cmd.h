@@ -25,28 +25,6 @@ void control_cmd_args_free_(control_cmd_args_t *args);
 #define control_cmd_args_free(v) \
   FREE_AND_NULL(control_cmd_args_t, control_cmd_args_free_, (v))
 
-#ifdef CONTROL_CMD_PRIVATE
-#include "lib/crypt_ops/crypto_ed25519.h"
-
-/* ADD_ONION secret key to create an ephemeral service. The command supports
- * multiple versions so this union stores the key and passes it to the HS
- * subsystem depending on the requested version. */
-typedef union add_onion_secret_key_t {
-  /* Hidden service v2 secret key. */
-  crypto_pk_t *v2;
-  /* Hidden service v3 secret key. */
-  ed25519_secret_key_t *v3;
-} add_onion_secret_key_t;
-
-STATIC int add_onion_helper_keyarg(const char *arg, int discard_pk,
-                                   const char **key_new_alg_out,
-                                   char **key_new_blob_out,
-                                   add_onion_secret_key_t *decoded_key,
-                                   int *hs_version, char **err_msg_out);
-
-STATIC rend_authorized_client_t *add_onion_helper_clientauth(const char *arg,
-                                   int *created, char **err_msg_out);
-
 /**
  * Definition for the syntax of a controller command, as parsed by
  * control_cmd_parse_args.
@@ -70,6 +48,28 @@ typedef struct control_cmd_syntax_t {
    **/
   bool want_object;
 } control_cmd_syntax_t;
+
+#ifdef CONTROL_CMD_PRIVATE
+#include "lib/crypt_ops/crypto_ed25519.h"
+
+/* ADD_ONION secret key to create an ephemeral service. The command supports
+ * multiple versions so this union stores the key and passes it to the HS
+ * subsystem depending on the requested version. */
+typedef union add_onion_secret_key_t {
+  /* Hidden service v2 secret key. */
+  crypto_pk_t *v2;
+  /* Hidden service v3 secret key. */
+  ed25519_secret_key_t *v3;
+} add_onion_secret_key_t;
+
+STATIC int add_onion_helper_keyarg(const char *arg, int discard_pk,
+                                   const char **key_new_alg_out,
+                                   char **key_new_blob_out,
+                                   add_onion_secret_key_t *decoded_key,
+                                   int *hs_version, char **err_msg_out);
+
+STATIC rend_authorized_client_t *add_onion_helper_clientauth(const char *arg,
+                                   int *created, char **err_msg_out);
 
 STATIC control_cmd_args_t *control_cmd_parse_args(
                                    const char *command,
