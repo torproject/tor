@@ -20,9 +20,137 @@
 #include "lib/net/resolve.h"
 
 #include "feature/control/control_connection_st.h"
+#include "feature/control/control_cmd_args_st.h"
 #include "feature/dirclient/download_status_st.h"
 #include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/node_st.h"
+
+typedef struct {
+  const char *input;
+  const char *expected_parse;
+  const char *expected_error;
+} parser_testcase_t;
+
+typedef struct {
+  const control_cmd_syntax_t *syntax;
+  size_t n_testcases;
+  const parser_testcase_t *testcases;
+} parse_test_params_t;
+
+static char *
+control_cmd_dump_args(const control_cmd_args_t *result)
+{
+  buf_t *buf = buf_new();
+  buf_add_string(buf, "{ args=[");
+  if (result->args) {
+    if (smartlist_len(result->args)) {
+        buf_add_string(buf, " ");
+    }
+    SMARTLIST_FOREACH_BEGIN(result->args, const char *, s) {
+      const bool last = (s_sl_idx == smartlist_len(result->args)-1);
+      buf_add_printf(buf, "%s%s ",
+                     escaped(s),
+                     last ? "" : ",");
+    } SMARTLIST_FOREACH_END(s);
+  }
+  buf_add_string(buf, "]");
+  if (result->object) {
+    buf_add_string(buf, ", obj=");
+    buf_add_string(buf, escaped(result->object));
+  }
+  buf_add_string(buf, " }");
+
+  char *encoded = buf_extract(buf, NULL);
+  buf_free(buf);
+  return encoded;
+}
+
+static void
+test_controller_parse_cmd(void *arg)
+{
+  const parse_test_params_t *params = arg;
+  control_cmd_args_t *result = NULL;
+  char *error = NULL;
+  char *encoded = NULL;
+
+  for (size_t i = 0; i < params->n_testcases; ++i) {
+    const parser_testcase_t *t = &params->testcases[i];
+    result = control_cmd_parse_args("EXAMPLE",
+                                    params->syntax,
+                                    strlen(t->input),
+                                    t->input,
+                                    &error);
+    // A valid test should expect exactly one parse or error.
+    tt_int_op((t->expected_parse == NULL), OP_NE,
+              (t->expected_error == NULL));
+    // We get a result or an error, not both.
+    tt_int_op((result == NULL), OP_EQ, (error != NULL));
+    // We got the one we expected.
+    tt_int_op((result == NULL), OP_EQ, (t->expected_parse == NULL));
+
+    if (result) {
+      encoded = control_cmd_dump_args(result);
+      tt_str_op(encoded, OP_EQ, t->expected_parse);
+    } else {
+      tt_str_op(error, OP_EQ, t->expected_error);
+    }
+
+    tor_free(error);
+    tor_free(encoded);
+    control_cmd_args_free(result);
+  }
+
+ done:
+  tor_free(error);
+  tor_free(encoded);
+  control_cmd_args_free(result);
+}
+
+#define OK(inp, out) \
+  { inp "\r\n", out, NULL }
+#define ERR(inp, err) \
+  { inp "\r\n", NULL, err }
+
+#define TESTPARAMS(syntax, array)                \
+  { &syntax,                                     \
+      ARRAY_LENGTH(array),                       \
+      array }
+
+static const parser_testcase_t one_to_three_tests[] = {
+   ERR("", "Need at least 1 argument(s)"),
+   ERR("   \t", "Need at least 1 argument(s)"),
+   OK("hello", "{ args=[ \"hello\" ] }"),
+   OK("hello world", "{ args=[ \"hello\", \"world\" ] }"),
+   OK("hello  world", "{ args=[ \"hello\", \"world\" ] }"),
+   OK("  hello  world", "{ args=[ \"hello\", \"world\" ] }"),
+   OK("  hello  world      ", "{ args=[ \"hello\", \"world\" ] }"),
+   OK("hello there world", "{ args=[ \"hello\", \"there\", \"world\" ] }"),
+   ERR("why hello there world", "Cannot accept more than 3 argument(s)"),
+   ERR("hello\r\nworld.\r\n.", "Unexpected body"),
+};
+
+static const control_cmd_syntax_t one_to_three_syntax = {
+   .min_args=1, .max_args=3
+};
+
+static const parse_test_params_t parse_one_to_three_params =
+  TESTPARAMS( one_to_three_syntax, one_to_three_tests );
+
+static const parser_testcase_t no_args_one_obj_tests[] = {
+  ERR("Hi there!\r\n.", "Cannot accept more than 0 argument(s)"),
+  ERR("", "Empty body"),
+  OK("\r\n", "{ args=[], obj=\"\\n\" }"),
+  OK("\r\nHello world\r\n", "{ args=[], obj=\"Hello world\\n\\n\" }"),
+  OK("\r\nHello\r\nworld\r\n", "{ args=[], obj=\"Hello\\nworld\\n\\n\" }"),
+  OK("\r\nHello\r\n..\r\nworld\r\n",
+     "{ args=[], obj=\"Hello\\n.\\nworld\\n\\n\" }"),
+};
+static const control_cmd_syntax_t no_args_one_obj_syntax = {
+   .min_args=0, .max_args=0,
+   .want_object=true,
+};
+static const parse_test_params_t parse_no_args_one_obj_params =
+  TESTPARAMS( no_args_one_obj_syntax, no_args_one_obj_tests );
 
 static void
 test_add_onion_helper_keyarg_v3(void *arg)
@@ -1617,7 +1745,13 @@ test_getinfo_md_all(void *arg)
   return;
 }
 
+#define PARSER_TEST(type)                                             \
+  { "parse/" #type, test_controller_parse_cmd, 0, &passthrough_setup, \
+      (void*)&parse_ ## type ## _params }
+
 struct testcase_t controller_tests[] = {
+  PARSER_TEST(one_to_three),
+  PARSER_TEST(no_args_one_obj),
   { "add_onion_helper_keyarg_v2", test_add_onion_helper_keyarg_v2, 0,
     NULL, NULL },
   { "add_onion_helper_keyarg_v3", test_add_onion_helper_keyarg_v3, 0,
