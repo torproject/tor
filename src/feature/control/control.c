@@ -276,25 +276,38 @@ peek_connection_has_http_command(connection_t *conn)
 }
 
 /**
- * Helper: take a nul-terminated command of given length, and find where
- * the command starts and the argument begins.  Separate them with a NUL,
- * and return a pointer to the arguments.
+ * Helper: take a nul-terminated command of given length, and find where the
+ * command starts and the arguments begin.  Separate them, allocate a new
+ * string in <b>current_cmd_out</b> for the command, and return a pointer
+ * to the arguments.
  **/
 STATIC char *
-control_split_incoming_command(char *incoming_cmd, size_t *data_len)
+control_split_incoming_command(char *incoming_cmd,
+                               size_t *data_len,
+                               char **current_cmd_out)
 {
+  const bool is_multiline = *data_len && incoming_cmd[0] == '+';
   size_t cmd_len = 0;
   while (cmd_len < *data_len
          && !TOR_ISSPACE(incoming_cmd[cmd_len]))
     ++cmd_len;
 
-  incoming_cmd[cmd_len]='\0';
-  char *args = incoming_cmd+cmd_len+1;
-  tor_assert(*data_len>cmd_len);
-  *data_len -= (cmd_len+1); /* skip the command and NUL we added after it */
-  while (TOR_ISSPACE(*args)) {
-    ++args;
-    --*data_len;
+  *current_cmd_out = tor_memdup_nulterm(incoming_cmd, cmd_len);
+  char *args = incoming_cmd+cmd_len;
+  tor_assert(*data_len>=cmd_len);
+  *data_len -= cmd_len;
+  if (is_multiline) {
+    // Only match horizontal space: any line after the first is data,
+    // not arguments.
+    while ((*args == '\t' || *args == ' ') && *data_len) {
+      ++args;
+      --*data_len;
+    }
+  } else {
+    while (TOR_ISSPACE(*args) && *data_len) {
+      ++args;
+      --*data_len;
+    }
   }
 
   return args;
@@ -429,7 +442,11 @@ connection_control_process_inbuf(control_connection_t *conn)
   /* Okay, we now have a command sitting on conn->incoming_cmd. See if we
    * recognize it.
    */
-  args = control_split_incoming_command(conn->incoming_cmd, &data_len);
+  tor_free(conn->current_cmd);
+  args = control_split_incoming_command(conn->incoming_cmd, &data_len,
+                                        &conn->current_cmd);
+  if (BUG(!conn->current_cmd))
+    return -1;
 
   /* If the connection is already closing, ignore further commands */
   if (TO_CONN(conn)->marked_for_close) {
@@ -437,14 +454,14 @@ connection_control_process_inbuf(control_connection_t *conn)
   }
 
   /* Otherwise, Quit is always valid. */
-  if (!strcasecmp(conn->incoming_cmd, "QUIT")) {
+  if (!strcasecmp(conn->current_cmd, "QUIT")) {
     connection_write_str_to_buf("250 closing connection\r\n", conn);
     connection_mark_and_flush(TO_CONN(conn));
     return 0;
   }
 
   if (conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH &&
-      !is_valid_initial_command(conn, conn->incoming_cmd)) {
+      !is_valid_initial_command(conn, conn->current_cmd)) {
     connection_write_str_to_buf("514 Authentication required.\r\n", conn);
     connection_mark_for_close(TO_CONN(conn));
     return 0;

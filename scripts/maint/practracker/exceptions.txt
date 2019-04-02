@@ -56,7 +56,7 @@ problem function-size /src/app/main/ntmain.c:nt_service_install() 125
 problem include-count /src/app/main/shutdown.c 52
 problem file-size /src/core/mainloop/connection.c 5558
 problem include-count /src/core/mainloop/connection.c 61
-problem function-size /src/core/mainloop/connection.c:connection_free_minimal() 184
+problem function-size /src/core/mainloop/connection.c:connection_free_minimal() 185
 problem function-size /src/core/mainloop/connection.c:connection_listener_new() 328
 problem function-size /src/core/mainloop/connection.c:connection_handle_listener_read() 161
 problem function-size /src/core/mainloop/connection.c:connection_connect_sockaddr() 103
