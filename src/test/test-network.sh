@@ -27,10 +27,6 @@ if echo "$@" | grep -e "--quiet" > /dev/null; then
   ECHO=true
 fi
 
-echo "CHUTNEY_PATH = $CHUTNEY_PATH"
-echo "TOR_DIR = $TOR_DIR"
-echo "ECHO = $ECHO"
-
 # optional: $TOR_DIR is the tor build directory
 # it's used to find the location of tor binaries
 # if it's not set:
