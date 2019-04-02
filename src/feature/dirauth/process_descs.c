@@ -404,6 +404,7 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
 {
   uint32_t result = 0;
   router_status_t *status_by_digest;
+  int is_ed25519 = (strlen(id_digest) == ED25519_PUBKEY_LEN);
 
   if (!fingerprint_list)
     fingerprint_list = authdir_config_new();
@@ -441,8 +442,14 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     return FP_REJECT;
   }
 
-  status_by_digest = digestmap_get(fingerprint_list->status_by_digest,
-                                   id_digest);
+  if (is_ed25519) {
+    status_by_digest = digest256map_get(fingerprint_list->status_by_digest256,
+                                        (uint8_t *) id_digest);
+  } else { /* RSA */
+    status_by_digest = digestmap_get(fingerprint_list->status_by_digest,
+                                     id_digest);
+  }
+
   if (status_by_digest)
     result |= *status_by_digest;
 
