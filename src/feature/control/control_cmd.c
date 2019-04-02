@@ -2299,7 +2299,7 @@ handle_control_obsolete(control_connection_t *conn,
 {
   (void)arg_len;
   (void)args;
-  char *command = tor_strdup(conn->incoming_cmd);
+  char *command = tor_strdup(conn->current_cmd);
   tor_strupper(command);
   connection_printf_to_buf(conn, "511 %s is obsolete.\r\n", command);
   tor_free(command);
@@ -2490,14 +2490,14 @@ handle_single_control_command(const control_cmd_def_t *def,
       control_cmd_args_t *parsed_args;
       char *err=NULL;
       tor_assert(def->syntax);
-      parsed_args = control_cmd_parse_args(conn->incoming_cmd,
+      parsed_args = control_cmd_parse_args(conn->current_cmd,
                                            def->syntax,
                                            cmd_data_len, args,
                                            &err);
       if (!parsed_args) {
         connection_printf_to_buf(conn,
                                  "512 Bad arguments to %s: %s\r\n",
-                                 conn->incoming_cmd, err?err:"");
+                                 conn->current_cmd, err?err:"");
         tor_free(err);
       } else {
         if (BUG(err))
@@ -2519,7 +2519,7 @@ handle_single_control_command(const control_cmd_def_t *def,
 }
 
 /**
- * Run a given controller command, as selected by the incoming_cmd field of
+ * Run a given controller command, as selected by the current_cmd field of
  * <b>conn</b>.
  */
 int
@@ -2533,13 +2533,13 @@ handle_control_command(control_connection_t *conn,
 
   for (unsigned i = 0; i < N_CONTROL_COMMANDS; ++i) {
     const control_cmd_def_t *def = &CONTROL_COMMANDS[i];
-    if (!strcasecmp(conn->incoming_cmd, def->name)) {
+    if (!strcasecmp(conn->current_cmd, def->name)) {
       return handle_single_control_command(def, conn, cmd_data_len, args);
     }
   }
 
   connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",
-                           conn->incoming_cmd);
+                           conn->current_cmd);
 
   return 0;
 }
