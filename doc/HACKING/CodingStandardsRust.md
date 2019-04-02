@@ -256,7 +256,7 @@ Here are some additional bits of advice and rules:
    or 2) should fail (i.e. in a unittest).
 
    You SHOULD NOT use `unwrap()` anywhere in which it is possible to handle the
-   potential error the eel operator, `?` or another non panicing way.
+   potential error with the eel operator, `?` or another non panicking way.
    For example, consider a function which parses a string into an integer:
 
         fn parse_port_number(config_string: &str) -> u16 {
