@@ -117,7 +117,7 @@ tor_bug_occurred_(const char *fname, unsigned int line,
     }
     log_warn(LD_BUG, "%s:%u: %s: This line should not have been reached.%s",
              fname, line, func, once_str);
-    tor_snprintf(buf, sizeof(buf),
+    tor_asprintf(&buf,
                  "Line unexpectedly reached at %s at %s:%u",
                  func, fname, line);
   } else {
