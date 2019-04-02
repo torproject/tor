@@ -55,6 +55,7 @@
 #include "core/or/origin_circuit_st.h"
 #include "core/or/socks_request_st.h"
 #include "feature/control/control_connection_st.h"
+#include "feature/control/control_cmd_args_st.h"
 #include "feature/dircache/cached_dir_st.h"
 #include "feature/nodelist/extrainfo_st.h"
 #include "feature/nodelist/microdesc_st.h"
@@ -1584,21 +1585,22 @@ handle_getinfo_helper(control_connection_t *control_conn,
   return 0; /* unrecognized */
 }
 
+const control_cmd_syntax_t getinfo_syntax = {
+  .max_args = UINT_MAX,
+};
+
 /** Called when we receive a GETINFO command.  Try to fetch all requested
  * information, and reply with information or error message. */
 int
-handle_control_getinfo(control_connection_t *conn, uint32_t len,
-                       const char *body)
+handle_control_getinfo(control_connection_t *conn,
+                       const control_cmd_args_t *args)
 {
-  smartlist_t *questions = smartlist_new();
+  const smartlist_t *questions = args->args;
   smartlist_t *answers = smartlist_new();
   smartlist_t *unrecognized = smartlist_new();
   char *ans = NULL;
   int i;
-  (void) len; /* body is NUL-terminated, so it's safe to ignore the length. */
 
-  smartlist_split_string(questions, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
     const char *errmsg = NULL;
 
@@ -1653,8 +1655,6 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
  done:
   SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
   smartlist_free(answers);
-  SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
-  smartlist_free(questions);
   SMARTLIST_FOREACH(unrecognized, char *, cp, tor_free(cp));
   smartlist_free(unrecognized);
 

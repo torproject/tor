@@ -160,13 +160,17 @@ handle_control_resetconf(control_connection_t *conn, uint32_t len, char *body)
   return control_setconf_helper(conn, len, body, 1);
 }
 
+static const control_cmd_syntax_t getconf_syntax = {
+  .max_args=UINT_MAX
+};
+
 /** Called when we receive a GETCONF message.  Parse the request, and
  * reply with a CONFVALUE or an ERROR message */
 static int
-handle_control_getconf(control_connection_t *conn, uint32_t body_len,
-                       char *body)
+handle_control_getconf(control_connection_t *conn,
+                       const control_cmd_args_t *args)
 {
-  smartlist_t *questions = smartlist_new();
+  const smartlist_t *questions = args->args;
   smartlist_t *answers = smartlist_new();
   smartlist_t *unrecognized = smartlist_new();
   char *msg = NULL;
@@ -174,9 +178,6 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
   const or_options_t *options = get_options();
   int i, len;
 
-  (void) body_len; /* body is NUL-terminated; so we can ignore len. */
-  smartlist_split_string(questions, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
     if (!option_is_recognized(q)) {
       smartlist_add(unrecognized, (char*) q);
@@ -221,8 +222,6 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
 
   SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
   smartlist_free(answers);
-  SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
-  smartlist_free(questions);
   smartlist_free(unrecognized);
 
   tor_free(msg);
@@ -230,17 +229,21 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
   return 0;
 }
 
+static const control_cmd_syntax_t loadconf_syntax = {
+  .want_object = true
+};
+
 /** Called when we get a +LOADCONF message. */
 static int
-handle_control_loadconf(control_connection_t *conn, uint32_t len,
-                         const char *body)
+handle_control_loadconf(control_connection_t *conn,
+                        const control_cmd_args_t *args)
 {
   setopt_err_t retval;
   char *errstring = NULL;
   const char *msg = NULL;
-  (void) len;
 
-  retval = options_init_from_string(NULL, body, CMD_RUN_TOR, NULL, &errstring);
+  retval = options_init_from_string(NULL, args->object,
+                                    CMD_RUN_TOR, NULL, &errstring);
 
   if (retval != SETOPT_OK)
     log_warn(LD_CONTROL,
@@ -276,20 +279,20 @@ handle_control_loadconf(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static const control_cmd_syntax_t setevents_syntax = {
+  .max_args = UINT_MAX
+};
+
 /** Called when we get a SETEVENTS message: update conn->event_mask,
  * and reply with DONE or ERROR. */
 static int
-handle_control_setevents(control_connection_t *conn, uint32_t len,
-                         const char *body)
+handle_control_setevents(control_connection_t *conn,
+                         const control_cmd_args_t *args)
 {
   int event_code;
   event_mask_t event_mask = 0;
-  smartlist_t *events = smartlist_new();
+  const smartlist_t *events = args->args;
 
-  (void) len;
-
-  smartlist_split_string(events, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(events, const char *, ev)
     {
       if (!strcasecmp(ev, "EXTENDED") ||
@@ -311,16 +314,12 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
         if (event_code == -1) {
           connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                    ev);
-          SMARTLIST_FOREACH(events, char *, e, tor_free(e));
-          smartlist_free(events);
           return 0;
         }
       }
       event_mask |= (((event_mask_t)1) << event_code);
     }
   SMARTLIST_FOREACH_END(ev);
-  SMARTLIST_FOREACH(events, char *, e, tor_free(e));
-  smartlist_free(events);
 
   conn->event_mask = event_mask;
 
@@ -348,23 +347,23 @@ handle_control_saveconf(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static const control_cmd_syntax_t signal_syntax = {
+  .min_args = 1,
+  .max_args = 1,
+};
+
 /** Called when we get a SIGNAL command. React to the provided signal, and
  * report success or failure. (If the signal results in a shutdown, success
  * may not be reported.) */
 static int
-handle_control_signal(control_connection_t *conn, uint32_t len,
-                      const char *body)
+handle_control_signal(control_connection_t *conn,
+                      const control_cmd_args_t *args)
 {
   int sig = -1;
   int i;
-  int n = 0;
-  char *s;
 
-  (void) len;
-
-  while (body[n] && ! TOR_ISSPACE(body[n]))
-    ++n;
-  s = tor_strndup(body, n);
+  tor_assert(smartlist_len(args->args) == 1);
+  const char *s = smartlist_get(args->args, 0);
 
   for (i = 0; signal_table[i].signal_name != NULL; ++i) {
     if (!strcasecmp(s, signal_table[i].signal_name)) {
@@ -376,7 +375,6 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
   if (sig < 0)
     connection_printf_to_buf(conn, "552 Unrecognized signal code \"%s\"\r\n",
                              s);
-  tor_free(s);
   if (sig < 0)
     return 0;
 
@@ -390,15 +388,18 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static const control_cmd_syntax_t takeownership_syntax = {
+  .max_args = UINT_MAX, // This should probably become zero. XXXXX
+};
+
 /** Called when we get a TAKEOWNERSHIP command.  Mark this connection
  * as an owning connection, so that we will exit if the connection
  * closes. */
 static int
-handle_control_takeownership(control_connection_t *conn, uint32_t len,
-                             const char *body)
+handle_control_takeownership(control_connection_t *conn,
+                             const control_cmd_args_t *args)
 {
-  (void)len;
-  (void)body;
+  (void)args;
 
   conn->is_owning_control_connection = 1;
 
@@ -410,15 +411,18 @@ handle_control_takeownership(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static const control_cmd_syntax_t dropownership_syntax = {
+  .max_args = UINT_MAX, // This should probably become zero. XXXXX
+};
+
 /** Called when we get a DROPOWNERSHIP command.  Mark this connection
  * as a non-owning connection, so that we will not exit if the connection
  * closes. */
 static int
-handle_control_dropownership(control_connection_t *conn, uint32_t len,
-                             const char *body)
+handle_control_dropownership(control_connection_t *conn,
+                             const control_cmd_args_t *args)
 {
-  (void)len;
-  (void)body;
+  (void)args;
 
   conn->is_owning_control_connection = 0;
 
@@ -1099,21 +1103,21 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static const control_cmd_syntax_t redirectstream_syntax = {
+  .min_args = 2,
+  .max_args = UINT_MAX, // XXX should be 3.
+};
+
 /** Called when we receive a REDIRECTSTERAM command.  Try to change the target
  * address of the named AP stream, and report success or failure. */
 static int
-handle_control_redirectstream(control_connection_t *conn, uint32_t len,
-                              const char *body)
+handle_control_redirectstream(control_connection_t *conn,
+                              const control_cmd_args_t *cmd_args)
 {
   entry_connection_t *ap_conn = NULL;
   char *new_addr = NULL;
   uint16_t new_port = 0;
-  smartlist_t *args;
-  (void) len;
-
-  args = getargs_helper("REDIRECTSTREAM", conn, body, 2, -1);
-  if (!args)
-    return 0;
+  const smartlist_t *args = cmd_args->args;
 
   if (!(ap_conn = get_stream(smartlist_get(args, 0)))
            || !ap_conn->socks_request) {
@@ -1133,8 +1137,6 @@ handle_control_redirectstream(control_connection_t *conn, uint32_t len,
     }
   }
 
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-  smartlist_free(args);
   if (!new_addr)
     return 0;
 
@@ -1147,23 +1149,26 @@ handle_control_redirectstream(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static const control_cmd_syntax_t closestream_syntax = {
+  .min_args = 2,
+  .max_args = UINT_MAX, /* XXXX This is the original behavior, but
+                         * maybe we should change the spec. */
+};
+
 /** Called when we get a CLOSESTREAM command; try to close the named stream
  * and report success or failure. */
 static int
-handle_control_closestream(control_connection_t *conn, uint32_t len,
-                           const char *body)
+handle_control_closestream(control_connection_t *conn,
+                           const control_cmd_args_t *cmd_args)
 {
   entry_connection_t *ap_conn=NULL;
   uint8_t reason=0;
-  smartlist_t *args;
   int ok;
-  (void) len;
+  const smartlist_t *args = cmd_args->args;
 
-  args = getargs_helper("CLOSESTREAM", conn, body, 2, -1);
-  if (!args)
-    return 0;
+  tor_assert(smartlist_len(args) >= 2);
 
-  else if (!(ap_conn = get_stream(smartlist_get(args, 0))))
+  if (!(ap_conn = get_stream(smartlist_get(args, 0))))
     connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
                              (char*)smartlist_get(args, 0));
   else {
@@ -1175,8 +1180,6 @@ handle_control_closestream(control_connection_t *conn, uint32_t len,
       ap_conn = NULL;
     }
   }
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-  smartlist_free(args);
   if (!ap_conn)
     return 0;
 
@@ -1269,19 +1272,20 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static const control_cmd_syntax_t protocolinfo_syntax = {
+  .max_args = UINT_MAX
+};
+
 /** Called when we get a PROTOCOLINFO command: send back a reply. */
 static int
-handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
-                            const char *body)
+handle_control_protocolinfo(control_connection_t *conn,
+                            const control_cmd_args_t *cmd_args)
 {
   const char *bad_arg = NULL;
-  smartlist_t *args;
-  (void)len;
+  const smartlist_t *args = cmd_args->args;
 
   conn->have_sent_protocolinfo = 1;
-  args = smartlist_new();
-  smartlist_split_string(args, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+
   SMARTLIST_FOREACH(args, const char *, arg, {
       int ok;
       tor_parse_long(arg, 10, 0, LONG_MAX, &ok, NULL);
@@ -1337,24 +1341,21 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
     tor_free(esc_cfile);
   }
  done:
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-  smartlist_free(args);
   return 0;
 }
+
+static const control_cmd_syntax_t usefeature_syntax = {
+  .max_args = UINT_MAX
+};
 
 /** Called when we get a USEFEATURE command: parse the feature list, and
  * set up the control_connection's options properly. */
 static int
 handle_control_usefeature(control_connection_t *conn,
-                          uint32_t len,
-                          const char *body)
+                          const control_cmd_args_t *cmd_args)
 {
-  smartlist_t *args;
+  const smartlist_t *args = cmd_args->args;
   int bad = 0;
-  (void) len; /* body is nul-terminated; it's safe to ignore the length */
-  args = smartlist_new();
-  smartlist_split_string(args, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(args, const char *, arg) {
       if (!strcasecmp(arg, "VERBOSE_NAMES"))
         ;
@@ -1372,22 +1373,19 @@ handle_control_usefeature(control_connection_t *conn,
     send_control_done(conn);
   }
 
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-  smartlist_free(args);
   return 0;
 }
+
+static const control_cmd_syntax_t dropguards_syntax = {
+  .max_args = 0,
+};
 
 /** Implementation for the DROPGUARDS command. */
 static int
 handle_control_dropguards(control_connection_t *conn,
-                          uint32_t len,
-                          const char *body)
+                          const control_cmd_args_t *args)
 {
-  smartlist_t *args;
-  (void) len; /* body is nul-terminated; it's safe to ignore the length */
-  args = smartlist_new();
-  smartlist_split_string(args, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  (void) args; /* We don't take arguments. */
 
   static int have_warned = 0;
   if (! have_warned) {
@@ -1397,15 +1395,9 @@ handle_control_dropguards(control_connection_t *conn,
     have_warned = 1;
   }
 
-  if (smartlist_len(args)) {
-    connection_printf_to_buf(conn, "512 Too many arguments to DROPGUARDS\r\n");
-  } else {
-    remove_all_entry_guards();
-    send_control_done(conn);
-  }
+  remove_all_entry_guards();
+  send_control_done(conn);
 
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-  smartlist_free(args);
   return 0;
 }
 
@@ -2202,19 +2194,19 @@ add_onion_helper_clientauth(const char *arg, int *created, char **err_msg)
   return client;
 }
 
+static const control_cmd_syntax_t del_onion_syntax = {
+  .min_args = 1, .max_args = 1,
+};
+
 /** Called when we get a DEL_ONION command; parse the body, and remove
  * the existing ephemeral Onion Service. */
 static int
 handle_control_del_onion(control_connection_t *conn,
-                          uint32_t len,
-                          const char *body)
+                         const control_cmd_args_t *cmd_args)
 {
   int hs_version = 0;
-  smartlist_t *args;
-  (void) len; /* body is nul-terminated; it's safe to ignore the length */
-  args = getargs_helper("DEL_ONION", conn, body, 1, 1);
-  if (!args)
-    return 0;
+  smartlist_t *args = cmd_args->args;
+  tor_assert(smartlist_len(args) == 1);
 
   const char *service_id = smartlist_get(args, 0);
   if (rend_valid_v2_service_id(service_id)) {
@@ -2280,11 +2272,6 @@ handle_control_del_onion(control_connection_t *conn,
   }
 
  out:
-  SMARTLIST_FOREACH(args, char *, cp, {
-    memwipe(cp, 0, strlen(cp));
-    tor_free(cp);
-  });
-  smartlist_free(args);
   return 0;
 }
 
@@ -2399,20 +2386,26 @@ typedef struct control_cmd_def_t {
  **/
 #define ONE_LINE(name, htype, flags) \
   ONE_LINE_(name, htype, flags, NULL)
-#define ONE_LINE_PARSED(name, flags, syntax) \
-  ONE_LINE_(name, parsed, flags, syntax)
+#define ONE_LINE_PARSED(name, flags) \
+  ONE_LINE_(name, parsed, flags, &name ##_syntax)
 
 /**
  * Macro: declare a command with a multi-line argument and a given set of
  * flags.
  **/
-#define MULTLINE(name, htype, flags)                            \
+#define MULTLINE_(name, htype, flags, syntax)                   \
   { "+"#name,                                                   \
       hnd_ ##htype,                                             \
       { .htype = handle_control_ ##name },                      \
       flags,                                                    \
-      NULL                                                      \
+      syntax                                                    \
   }
+
+#define MULTLINE(name, htype, flags) \
+  MULTLINE_(name, htype, flags, NULL)
+#define MULTLINE_PARSED(name, flags)                   \
+  MULTLINE_(name, parsed, flags, &name##_syntax)
+
 /**
  * Macro: declare an obsolete command. (Obsolete commands give a different
  * error than non-existent ones.)
@@ -2432,33 +2425,33 @@ static const control_cmd_def_t CONTROL_COMMANDS[] =
 {
   ONE_LINE(setconf, legacy_mut, 0),
   ONE_LINE(resetconf, legacy_mut, 0),
-  ONE_LINE(getconf, legacy_mut, 0),
-  MULTLINE(loadconf, legacy, 0),
-  ONE_LINE(setevents, legacy, 0),
+  ONE_LINE_PARSED(getconf, 0),
+  MULTLINE_PARSED(loadconf, 0),
+  ONE_LINE_PARSED(setevents, 0),
   ONE_LINE(authenticate, legacy, CMD_FL_WIPE),
   ONE_LINE(saveconf, legacy, 0),
-  ONE_LINE(signal, legacy, 0),
-  ONE_LINE(takeownership, legacy, 0),
-  ONE_LINE(dropownership, legacy, 0),
+  ONE_LINE_PARSED(signal, 0),
+  ONE_LINE_PARSED(takeownership, 0),
+  ONE_LINE_PARSED(dropownership, 0),
   ONE_LINE(mapaddress, legacy, 0),
-  ONE_LINE(getinfo, legacy, 0),
+  ONE_LINE_PARSED(getinfo, 0),
   ONE_LINE(extendcircuit, legacy, 0),
   ONE_LINE(setcircuitpurpose, legacy, 0),
   OBSOLETE(setrouterpurpose),
   ONE_LINE(attachstream, legacy, 0),
   MULTLINE(postdescriptor, legacy, 0),
-  ONE_LINE(redirectstream, legacy, 0),
-  ONE_LINE(closestream, legacy, 0),
+  ONE_LINE_PARSED(redirectstream, 0),
+  ONE_LINE_PARSED(closestream, 0),
   ONE_LINE(closecircuit, legacy, 0),
-  ONE_LINE(usefeature, legacy, 0),
+  ONE_LINE_PARSED(usefeature, 0),
   ONE_LINE(resolve, legacy, 0),
-  ONE_LINE(protocolinfo, legacy, 0),
+  ONE_LINE_PARSED(protocolinfo, 0),
   ONE_LINE(authchallenge, legacy, CMD_FL_WIPE),
-  ONE_LINE(dropguards, legacy, 0),
+  ONE_LINE_PARSED(dropguards, 0),
   ONE_LINE(hsfetch, legacy, 0),
   MULTLINE(hspost, legacy, 0),
   ONE_LINE(add_onion, legacy, CMD_FL_WIPE),
-  ONE_LINE(del_onion, legacy, CMD_FL_WIPE),
+  ONE_LINE_PARSED(del_onion, CMD_FL_WIPE),
 };
 
 /**
