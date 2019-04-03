@@ -31,15 +31,17 @@
  */
 #define ANONMAP_NOINHERIT (1u<<1)
 
-/** Possible value for inherit_result_out: the memory will be kept
- * by any child process. */
-#define INHERIT_RES_KEEP 0
-/** Possible value for inherit_result_out: the memory will be dropped in
- * the child process. Attempting to access it will likely cause a segfault. */
-#define INHERIT_RES_DROP 1
-/** Possible value for inherit_result_out: the memory will be cleared in
- * the child process. */
-#define INHERIT_RES_ZERO 2
+typedef enum {
+  /** Possible value for inherit_result_out: the memory will be kept
+   * by any child process. */
+  INHERIT_RES_KEEP=0,
+  /** Possible value for inherit_result_out: the memory will be dropped in the
+   * child process. Attempting to access it will likely cause a segfault. */
+  INHERIT_RES_DROP,
+  /** Possible value for inherit_result_out: the memory will be cleared in
+   * the child process. */
+  INHERIT_RES_ZERO
+} inherit_res_t;
 
 /* Here we define the NOINHERIT_CAN_FAIL macro if and only if
  * it's possible that ANONMAP_NOINHERIT might yield inheritable memory.
@@ -63,7 +65,7 @@
 #endif
 
 void *tor_mmap_anonymous(size_t sz, unsigned flags,
-                         unsigned *inherit_result_out);
+                         inherit_res_t *inherit_result_out);
 void tor_munmap_anonymous(void *mapping, size_t sz);
 
 #endif /* !defined(TOR_MAP_ANON_H) */

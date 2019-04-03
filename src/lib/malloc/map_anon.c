@@ -118,7 +118,7 @@ nodump_mem(void *mem, size_t sz)
  * *<b>inherit_result_out</b>.
  */
 static int
-noinherit_mem(void *mem, size_t sz, unsigned *inherit_result_out)
+noinherit_mem(void *mem, size_t sz, inherit_res_t *inherit_result_out)
 {
 #ifdef FLAG_ZERO
   int r = MINHERIT(mem, sz, FLAG_ZERO);
@@ -163,10 +163,11 @@ noinherit_mem(void *mem, size_t sz, unsigned *inherit_result_out)
  * anonymity that Tor is trying to provide.]
  */
 void *
-tor_mmap_anonymous(size_t sz, unsigned flags, unsigned *inherit_result_out)
+tor_mmap_anonymous(size_t sz, unsigned flags,
+                   inherit_res_t *inherit_result_out)
 {
   void *ptr;
-  unsigned itmp=0;
+  inherit_res_t itmp=0;
   if (inherit_result_out == NULL) {
     inherit_result_out = &itmp;
   }
