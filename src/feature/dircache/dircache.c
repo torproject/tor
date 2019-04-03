@@ -1478,13 +1478,10 @@ handle_get_next_bandwidth(dir_connection_t *conn,
         conn->compress_state = tor_compress_new(1, compress_method,
                                         choose_compression_level(len/2));
         log_debug(LD_DIR, "Compressing bandwidth file.");
-        connection_buf_add_compress(bandwidth, len, conn, 0);
-        /* Flush the compression state. */
-        connection_buf_add_compress("", 0, conn, 1);
       } else {
         log_debug(LD_DIR, "Not compressing bandwidth file.");
-        connection_buf_add(bandwidth, len, TO_CONN(conn));
       }
+      connection_dir_buf_add((const char*)bandwidth, len, conn, 1);
       tor_free(bandwidth);
       return 0;
     }
