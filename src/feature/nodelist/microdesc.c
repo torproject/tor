@@ -221,6 +221,13 @@ dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
   }
 
   md->off = tor_fd_getpos(fd);
+  const char *nulpos = memchr(md->body, 0, md->bodylen);
+  if (BUG(nulpos)) {
+    log_warn(LD_BUG, "About to dump a NUL into a microdescriptor file. "
+             "offset %"PRId64", bodylen %zu, nul position %zu",
+             (int64_t)md->off, md->bodylen,
+             (size_t)(nulpos - md->body));
+  }
   written = write_all_to_fd(fd, md->body, md->bodylen);
   if (written != (ssize_t)md->bodylen) {
     written = written < 0 ? 0 : written;
@@ -480,6 +487,17 @@ microdesc_cache_clear(microdesc_cache_t *cache)
   cache->bytes_dropped = 0;
 }
 
+static void
+warn_if_nul_found(const char *inp, size_t len, const char *description)
+{
+  const char *nul_found = memchr(inp, 0, len);
+  if (BUG(nul_found)) {
+    log_warn(LD_BUG, "Found unexpected NUL while reading %s, at "
+             "position %zu/%zu.",
+             description, (nul_found - inp), len);
+  }
+}
+
 /** Reload the contents of <b>cache</b> from disk.  If it is empty, load it
  * for the first time.  Return 0 on success, -1 on failure. */
 int
@@ -497,6 +515,7 @@ microdesc_cache_reload(microdesc_cache_t *cache)
 
   mm = cache->cache_content = tor_mmap_file(cache->cache_fname);
   if (mm) {
+    warn_if_nul_found(mm->data, mm->size, "microdesc cache");
     added = microdescs_add_to_cache(cache, mm->data, mm->data+mm->size,
                                     SAVED_IN_CACHE, 0, -1, NULL);
     if (added) {
@@ -509,6 +528,8 @@ microdesc_cache_reload(microdesc_cache_t *cache)
                                      RFTS_IGNORE_MISSING, &st);
   if (journal_content) {
     cache->journal_len = (size_t) st.st_size;
+    warn_if_nul_found(journal_content, cache->journal_len,
+                      "microdesc journal");
     added = microdescs_add_to_cache(cache, journal_content,
                                     journal_content+st.st_size,
                                     SAVED_IN_JOURNAL, 0, -1, NULL);
