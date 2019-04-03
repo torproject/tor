@@ -47,7 +47,7 @@ dump() { xxd -p "$1" | tr -d '\n '; }
 die() { echo "$1" >&2 ; exit 5; }
 check_dir() { [ -d "$1" ] || die "$1 did not exist"; }
 check_file() { [ -e "$1" ] || die "$1 did not exist"; }
-check_no_file() { [ -e "$1" ] && die "$1 was not supposed to exist" || true; }
+check_no_file() { if [ -e "$1" ]; then die "$1 was not supposed to exist"; fi }
 check_files_eq() { cmp "$1" "$2" || die "$1 and $2 did not match: $(dump "$1") vs $(dump "$2")"; }
 check_keys_eq() { check_files_eq "${SRC}/keys/${1}" "${ME}/keys/${1}"; }
 
