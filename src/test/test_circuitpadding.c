@@ -576,7 +576,7 @@ test_circuitpadding_token_removal_higher(void *arg)
     }
   }
 
-  /* Check that all lowe bins are not touched */
+  /* Check that all lower bins are not touched */
   for (i=0; i < 4 ; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
