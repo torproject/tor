@@ -76,6 +76,7 @@
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/reachability.h"
+#include "feature/dirauth/voteflags.h"
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
@@ -87,6 +88,7 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
+#include "feature/nodelist/routerlist_st.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"
@@ -1375,6 +1377,7 @@ CALLBACK(rotate_onion_key);
 CALLBACK(rotate_x509_certificate);
 CALLBACK(save_stability);
 CALLBACK(save_state);
+CALLBACK(set_bridge_running);
 CALLBACK(write_bridge_ns);
 CALLBACK(write_stats_file);
 CALLBACK(control_per_second_events);
@@ -1453,6 +1456,7 @@ STATIC periodic_event_item_t periodic_events[] = {
 
   /* Bridge Authority only. */
   CALLBACK(write_bridge_ns, BRIDGEAUTH, 0),
+  CALLBACK(set_bridge_running, BRIDGEAUTH, 0),
 
   /* Directory server only. */
   CALLBACK(clean_consdiffmgr, DIRSERVER, 0),
@@ -2579,6 +2583,27 @@ write_bridge_ns_callback(time_t now, const or_options_t *options)
     networkstatus_dump_bridge_status_to_file(now);
 #define BRIDGE_STATUSFILE_INTERVAL (30*60)
      return BRIDGE_STATUSFILE_INTERVAL;
+  }
+  return PERIODIC_EVENT_NO_UPDATE;
+}
+
+/**
+ * Periodic callback: if we're the bridge authority, set the running flag on
+ * bridges if they're reachable
+ */
+static int
+set_bridge_running_callback(time_t now, const or_options_t *options)
+{
+  if (options->BridgeAuthoritativeDir) {
+    routerlist_t *rl = router_get_routerlist();
+
+    SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
+      if (ri->purpose == ROUTER_PURPOSE_BRIDGE)
+        dirserv_set_router_is_running(ri, now);
+    } SMARTLIST_FOREACH_END(ri);
+
+#define SET_BRIDGES_RUNNING_INTERVAL (3*60)
+    return SET_BRIDGES_RUNNING_INTERVAL;
   }
   return PERIODIC_EVENT_NO_UPDATE;
 }
