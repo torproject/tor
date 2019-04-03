@@ -2526,7 +2526,7 @@ test_dir_handle_get_status_vote_next_bandwidth(void* data)
 
   /* Check cache lifetime */
   char expbuf[RFC1123_TIME_LEN+1];
-  time_t now = time(NULL);
+  time_t now = approx_time();
   /* BANDWIDTH_CACHE_LIFETIME is defined in dircache.c. */
   format_rfc1123_time(expbuf, (time_t)(now + 30*60));
   char *expires = NULL;
