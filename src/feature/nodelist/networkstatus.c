@@ -1761,8 +1761,11 @@ reload_consensus_from_file(const char *fname,
                                                flavor, flags, source_dir);
 #ifdef _WIN32
   if (rv < 0 && tor_memstr(map->data, map->size, "\r\n")) {
-    log_info(LD_GENERAL, "Found CRLF in consensus file %s; falling back to "
-             "read_file_to_string.", escaped(fname));
+    log_notice(LD_GENERAL, "Looks like the above failures are probably "
+               "because of a CRLF in consensus file %s; falling back to "
+               "read_file_to_string. Nothing to worry about: this file "
+               "was probably saved by an earlier version of Tor.",
+               escaped(fname));
     char *content = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
     rv = networkstatus_set_current_consensus(content, strlen(content),
                                              flavor, flags, source_dir);
