@@ -1,0 +1,3 @@
+  o Minor bugfixes (CI):
+    - Terminate test-stem if it takes more than 15 minutes to run.
+      Diagnostic for 29437. Fixes bug 30011; bugfix on 0.3.5.4-alpha.
