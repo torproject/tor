@@ -300,9 +300,9 @@ test_circuitpadding_rtt(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
 
   timers_initialize();
   circpad_machines_init();
@@ -590,7 +590,7 @@ test_circuitpadding_token_removal_higher(void *arg)
     }
   }
 
-  /* Check that all lowe bins are not touched */
+  /* Check that all lower bins are not touched */
   for (i=0; i < 4 ; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
@@ -1017,9 +1017,9 @@ test_circuitpadding_tokens(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
 
   /* This is needed so that we are not considered to be dormant */
   note_user_activity(20);
@@ -1034,9 +1034,8 @@ test_circuitpadding_tokens(void *arg)
   mi = client_side->padding_info[0];
 
   // Pretend a non-padding cell was sent
-  // XXX: This messes us up.. Padding gets scheduled..
-  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   circpad_cell_event_nonpadding_received((circuit_t*)client_side);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   /* We have to save the infinity bin because one inf delay
    * could have been chosen when we transition to burst */
   circpad_hist_token_t inf_bin = mi->histogram[4];
@@ -1136,7 +1135,8 @@ test_circuitpadding_tokens(void *arg)
 
   /* 2.c. Bin 0 */
   {
-    tt_int_op(mi->histogram[0], OP_EQ, 1);
+    tt_int_op(mi->histogram[0], OP_EQ, 0);
+    mi->histogram[0] = 1;
     circpad_machine_remove_higher_token(mi, state->histogram_edges[0]/2);
     tt_int_op(mi->histogram[0], OP_EQ, 0);
   }
@@ -1283,9 +1283,9 @@ test_circuitpadding_wronghop(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
 
   timers_initialize();
   circpad_machines_init();
@@ -1470,9 +1470,9 @@ test_circuitpadding_negotiation(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
 
   timers_initialize();
   circpad_machines_init();
@@ -1749,9 +1749,9 @@ test_circuitpadding_conditions(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
 
   /* This is needed so that we are not considered to be dormant */
   note_user_activity(20);
@@ -2299,9 +2299,9 @@ test_circuitpadding_global_rate_limiting(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
+  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
   timers_initialize();
 
   client_side = (circuit_t *)origin_circuit_new();
