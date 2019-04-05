@@ -320,18 +320,17 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     if (!tor_digest256_is_zero((const char *)v3_ns->bw_file_digest256)) {
       /* Encode the digest. */
       char b64_digest_bw_file[BASE64_DIGEST256_LEN+1] = {0};
-      if (digest256_to_base64(b64_digest_bw_file,
-                              (const char *)v3_ns->bw_file_digest256)>0) {
-        /* "bandwidth-file-digest" 1*(SP algorithm "=" digest) NL */
-        char *digest_algo_b64_digest_bw_file = NULL;
-        tor_asprintf(&digest_algo_b64_digest_bw_file, "%s=%s",
-                     crypto_digest_algorithm_get_name(DIGEST_ALG_BW_FILE),
-                     b64_digest_bw_file);
-        /* No need for tor_strdup(""), format_line_if_present does it. */
-        bw_file_digest = format_line_if_present(
+      digest256_to_base64(b64_digest_bw_file,
+                          (const char *)v3_ns->bw_file_digest256);
+      /* "bandwidth-file-digest" 1*(SP algorithm "=" digest) NL */
+      char *digest_algo_b64_digest_bw_file = NULL;
+      tor_asprintf(&digest_algo_b64_digest_bw_file, "%s=%s",
+                   crypto_digest_algorithm_get_name(DIGEST_ALG_BW_FILE),
+                   b64_digest_bw_file);
+      /* No need for tor_strdup(""), format_line_if_present does it. */
+      bw_file_digest = format_line_if_present(
           "bandwidth-file-digest", digest_algo_b64_digest_bw_file);
-        tor_free(digest_algo_b64_digest_bw_file);
-      }
+      tor_free(digest_algo_b64_digest_bw_file);
     }
 
     smartlist_add_asprintf(chunks,
