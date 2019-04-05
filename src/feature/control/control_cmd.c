@@ -40,6 +40,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"
+#include "lib/encoding/kvline.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/entry_connection_st.h"
@@ -74,10 +75,26 @@ control_cmd_args_free_(control_cmd_args_t *args)
     SMARTLIST_FOREACH(args->args, char *, c, tor_free(c));
     smartlist_free(args->args);
   }
+  config_free_lines(args->kwargs);
   tor_free(args->object);
 
   tor_free(args);
 }
+
+/**
+ * Return true iff any element of the NULL-terminated <b>array</b> matches
+ * <b>kwd</b>. Case-insensitive.
+ **/
+static bool
+string_array_contains_keyword(const char **array, const char *kwd)
+{
+  for (unsigned i = 0; array[i]; ++i) {
+    if (! strcasecmp(array[i], kwd))
+      return true;
+  }
+  return false;
+}
+
 
 /**
  * Helper: parse the arguments to a command according to <b>syntax</b>.  On
@@ -96,6 +113,7 @@ control_cmd_parse_args(const char *command,
   control_cmd_args_t *result = tor_malloc_zero(sizeof(control_cmd_args_t));
   const char *cmdline;
   char *cmdline_alloc = NULL;
+  tor_assert(syntax->max_args < INT_MAX || syntax->max_args == UINT_MAX);
 
   result->command = command;
 
@@ -120,16 +138,40 @@ control_cmd_parse_args(const char *command,
 
   result->args = smartlist_new();
   smartlist_split_string(result->args, cmdline, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,
+                         (int)(syntax->max_args+1));
   size_t n_args = smartlist_len(result->args);
   if (n_args < syntax->min_args) {
     tor_asprintf(error_out, "Need at least %u argument(s)",
                  syntax->min_args);
     goto err;
-  } else if (n_args > syntax->max_args) {
+  } else if (n_args > syntax->max_args && ! syntax->accept_keywords) {
     tor_asprintf(error_out, "Cannot accept more than %u argument(s)",
                  syntax->max_args);
     goto err;
+  }
+
+  if (n_args > syntax->max_args) {
+    tor_assert(n_args == syntax->max_args + 1);
+    tor_assert(syntax->accept_keywords);
+    char *remainder = smartlist_pop_last(result->args);
+    result->kwargs = kvline_parse(remainder, syntax->kvline_flags);
+    tor_free(remainder);
+    if (result->kwargs == NULL) {
+      tor_asprintf(error_out, "Cannot parse keyword argument(s)");
+      goto err;
+    }
+    if (syntax->allowed_keywords) {
+      /* Check for unpermitted arguments */
+      const config_line_t *line;
+      for (line = result->kwargs; line; line = line->next) {
+        if (! string_array_contains_keyword(syntax->allowed_keywords,
+                                            line->key)) {
+          tor_asprintf(error_out, "Unrecognized keyword argument %s",
+                       escaped(line->key));
+        }
+      }
+    }
   }
 
   tor_assert_nonfatal(*error_out == NULL);

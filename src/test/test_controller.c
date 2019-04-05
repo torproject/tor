@@ -18,6 +18,8 @@
 #include "test/test.h"
 #include "test/test_helpers.h"
 #include "lib/net/resolve.h"
+#include "lib/encoding/confline.h"
+#include "lib/encoding/kvline.h"
 
 #include "feature/control/control_connection_st.h"
 #include "feature/control/control_cmd_args_st.h"
@@ -57,6 +59,16 @@ control_cmd_dump_args(const control_cmd_args_t *result)
   if (result->object) {
     buf_add_string(buf, ", obj=");
     buf_add_string(buf, escaped(result->object));
+  }
+  if (result->kwargs) {
+    buf_add_string(buf, ", { ");
+    const config_line_t *line;
+    for (line = result->kwargs; line; line = line->next) {
+      const bool last = (line->next == NULL);
+      buf_add_printf(buf, "%s=%s%s ", line->key, escaped(line->value),
+                     last ? "" : ",");
+    }
+    buf_add_string(buf, "}");
   }
   buf_add_string(buf, " }");
 
@@ -151,6 +163,17 @@ static const control_cmd_syntax_t no_args_one_obj_syntax = {
 };
 static const parse_test_params_t parse_no_args_one_obj_params =
   TESTPARAMS( no_args_one_obj_syntax, no_args_one_obj_tests );
+
+static const parser_testcase_t no_args_kwargs_tests[] = {
+  OK("", "{ args=[] }"),
+};
+static const control_cmd_syntax_t no_args_kwargs_syntax = {
+   .min_args=0, .max_args=0,
+   .accept_keywords=true,
+   .kvline_flags=KV_OMIT_VALS
+};
+static const parse_test_params_t parse_no_args_kwargs_params =
+  TESTPARAMS( no_args_kwargs_syntax, no_args_kwargs_tests );
 
 static void
 test_add_onion_helper_keyarg_v3(void *arg)
@@ -1752,6 +1775,7 @@ test_getinfo_md_all(void *arg)
 struct testcase_t controller_tests[] = {
   PARSER_TEST(one_to_three),
   PARSER_TEST(no_args_one_obj),
+  PARSER_TEST(no_args_kwargs),
   { "add_onion_helper_keyarg_v2", test_add_onion_helper_keyarg_v2, 0,
     NULL, NULL },
   { "add_onion_helper_keyarg_v3", test_add_onion_helper_keyarg_v3, 0,
