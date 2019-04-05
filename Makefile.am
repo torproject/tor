@@ -148,9 +148,9 @@ test-full: need-stem-path need-chutney-path check test-network test-stem
 
 test-full-online: need-stem-path need-chutney-path check test-network test-stem-full
 
+# We can't delete the gcno files, because they are created when tor is compiled
 reset-gcov:
 	rm -f $(top_builddir)/src/*/*.gcda $(top_builddir)/src/*/*/*.gcda \
-	      $(top_builddir)/src/*/*.gcno $(top_builddir)/src/*/*/*.gcno \
 	      $(top_builddir)/src/*/*.gcov $(top_builddir)/src/*/*/*.gcov
 
 HTML_COVER_DIR=$(top_builddir)/coverage_html
