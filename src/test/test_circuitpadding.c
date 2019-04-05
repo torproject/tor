@@ -31,6 +31,12 @@
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
 
+/* Start our monotime mocking at 1 second past whatever monotime_init()
+ * thought the actual wall clock time was, for platforms with bad resolution
+ * and weird timevalues during monotime_init() before mocking. */
+#define MONOTIME_MOCK_START   (monotime_absolute_nsec()+\
+                               TOR_NSEC_PER_USEC*TOR_USEC_PER_SEC)
+
 extern smartlist_t *connection_array;
 
 circid_t get_unique_circ_id_by_chan(channel_t *chan);
@@ -287,6 +293,7 @@ test_circuitpadding_rtt(void *arg)
    * 3. Test client side circuit and non-application of RTT..
    */
   circpad_delay_t rtt_estimate;
+  int64_t actual_mocked_monotime_start;
   (void)arg;
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
@@ -300,9 +307,10 @@ test_circuitpadding_rtt(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
 
   timers_initialize();
   circpad_machines_init();
@@ -963,6 +971,7 @@ test_circuitpadding_tokens(void *arg)
 {
   const circpad_state_t *state;
   circpad_machine_state_t *mi;
+  int64_t actual_mocked_monotime_start;
   (void)arg;
 
   /** Test plan:
@@ -990,9 +999,10 @@ test_circuitpadding_tokens(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
 
   timers_initialize();
 
@@ -1235,6 +1245,7 @@ test_circuitpadding_wronghop(void *arg)
   cell_t cell;
   signed_error_t ret;
   origin_circuit_t *orig_client;
+  int64_t actual_mocked_monotime_start;
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
 
@@ -1254,9 +1265,10 @@ test_circuitpadding_wronghop(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
 
   timers_initialize();
   circpad_machines_init();
@@ -1427,6 +1439,7 @@ test_circuitpadding_negotiation(void *arg)
    *    a. Make sure padding negotiation is not sent
    * 3. Test failure to negotiate a machine due to desync.
    */
+  int64_t actual_mocked_monotime_start;
   (void)arg;
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
@@ -1441,9 +1454,10 @@ test_circuitpadding_negotiation(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
 
   timers_initialize();
   circpad_machines_init();
@@ -1703,6 +1717,7 @@ test_circuitpadding_conditions(void *arg)
    *  2. Test marking a circuit before padding callback fires
    *  3. Test freeing a circuit before padding callback fires
    */
+  int64_t actual_mocked_monotime_start;
   (void)arg;
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
 
@@ -1716,9 +1731,10 @@ test_circuitpadding_conditions(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
 
   timers_initialize();
   helper_create_conditional_machines();
@@ -1813,6 +1829,7 @@ test_circuitpadding_conditions(void *arg)
 void
 test_circuitpadding_circuitsetup_machine(void *arg)
 {
+  int64_t actual_mocked_monotime_start;
   /**
    * Test case plan:
    *
@@ -1838,9 +1855,10 @@ test_circuitpadding_circuitsetup_machine(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
 
   timers_initialize();
   circpad_machines_init();
@@ -2250,6 +2268,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
   bool retval;
   circpad_machine_state_t *mi;
   int i;
+  int64_t actual_mocked_monotime_start;
 
   /* Ignore machine transitions for the purposes of this function, we only
    * really care about padding counts */
@@ -2261,9 +2280,10 @@ test_circuitpadding_global_rate_limiting(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1000*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1000*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
   timers_initialize();
 
   client_side = (circuit_t *)origin_circuit_new();
