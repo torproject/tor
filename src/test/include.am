@@ -321,6 +321,7 @@ noinst_HEADERS+= \
 	src/test/hs_test_helpers.h \
 	src/test/log_test_helpers.h \
 	src/test/rend_test_helpers.h \
+	src/test/rng_test_helpers.h \
 	src/test/test.h \
 	src/test/ptr_helpers.h \
 	src/test/test_helpers.h \
