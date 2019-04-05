@@ -3,7 +3,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file control.c
+ * \file control_fmt.c
  * \brief Formatting functions for controller data.
  */
 
