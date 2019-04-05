@@ -44,6 +44,23 @@ typedef struct control_cmd_syntax_t {
    **/
   unsigned int max_args;
   /**
+   * If true, we should parse options after the positional arguments
+   * as a set of unordered flags and key=value arguments.
+   *
+   * Requires that max_args is not UINT_MAX.
+   **/
+  bool accept_keywords;
+  /**
+   * If accept_keywords is true, then only the keywords listed in this
+   * (NULL-terminated) array are valid keywords for this command.
+   **/
+  const char **allowed_keywords;
+  /**
+   * If accept_keywords is true, this option is passed to kvline_parse() as
+   * its flags.
+   **/
+  unsigned kvline_flags;
+  /**
    * True iff this command wants to be followed by a multiline object.
    **/
   bool want_object;

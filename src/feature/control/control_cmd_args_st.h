@@ -32,6 +32,10 @@ struct control_cmd_args_t {
    **/
   struct smartlist_t *args;
   /**
+   * Keyword arguments to the command.
+   **/
+  struct config_line_t *kwargs;
+  /**
    * Number of bytes in <b>object</b>; 0 if <b>object</b> is not set.
    **/
   size_t object_len;
