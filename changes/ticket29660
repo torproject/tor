@@ -1,0 +1,5 @@
+  o Code simplification and refactoring:
+    - Remove redundant return values in crypto_format, and the associated
+      return value checks elsewhere in the code. Make the implementations in
+      crypto_format consistent, and remove redundant code.
+      Resolves ticket 29660.
