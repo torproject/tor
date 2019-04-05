@@ -107,8 +107,7 @@ test_hs_desc_event(void *arg)
   memset(&blinded_pk, 'B', sizeof(blinded_pk));
   memset(&hsdir_rs, 0, sizeof(hsdir_rs));
   memcpy(hsdir_rs.identity_digest, HSDIR_EXIST_ID, DIGEST_LEN);
-  ret = ed25519_public_to_base64(base64_blinded_pk, &blinded_pk);
-  tt_int_op(ret, OP_EQ, 0);
+  ed25519_public_to_base64(base64_blinded_pk, &blinded_pk);
   memcpy(&ident.identity_pk, &identity_kp.pubkey,
          sizeof(ed25519_public_key_t));
   memcpy(&ident.blinded_pk, &blinded_pk, sizeof(blinded_pk));

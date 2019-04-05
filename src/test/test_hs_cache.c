@@ -238,9 +238,7 @@ helper_fetch_desc_from_hsdir(const ed25519_public_key_t *blinded_key)
   {
     char hsdir_cache_key[ED25519_BASE64_LEN+1];
 
-    retval = ed25519_public_to_base64(hsdir_cache_key,
-                                      blinded_key);
-    tt_int_op(retval, OP_EQ, 0);
+    ed25519_public_to_base64(hsdir_cache_key, blinded_key);
     tor_asprintf(&hsdir_query_str, GET("/tor/hs/3/%s"), hsdir_cache_key);
   }
 

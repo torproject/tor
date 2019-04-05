@@ -3914,8 +3914,7 @@ dirvote_format_microdesc_vote_line(char *out_buf, size_t out_buf_len,
                                ",");
   tor_assert(microdesc_consensus_methods);
 
-  if (digest256_to_base64(d64, md->digest)<0)
-    goto out;
+  digest256_to_base64(d64, md->digest);
 
   if (tor_snprintf(out_buf, out_buf_len, "m %s sha256=%s\n",
                    microdesc_consensus_methods, d64)<0)

@@ -2728,11 +2728,8 @@ router_dump_router_to_string(routerinfo_t *router,
       log_err(LD_BUG,"Couldn't base64-encode signing key certificate!");
       goto err;
     }
-    if (ed25519_public_to_base64(ed_fp_base64,
-                       &router->cache_info.signing_key_cert->signing_key)<0) {
-      log_err(LD_BUG,"Couldn't base64-encode identity key\n");
-      goto err;
-    }
+    ed25519_public_to_base64(ed_fp_base64,
+                            &router->cache_info.signing_key_cert->signing_key);
     tor_asprintf(&ed_cert_line, "identity-ed25519\n"
                  "-----BEGIN ED25519 CERT-----\n"
                  "%s"

@@ -181,8 +181,7 @@ ed25519_fmt(const ed25519_public_key_t *pkey)
     if (ed25519_public_key_is_zero(pkey)) {
       strlcpy(formatted, "<unset>", sizeof(formatted));
     } else {
-      int r = ed25519_public_to_base64(formatted, pkey);
-      tor_assert(!r);
+      ed25519_public_to_base64(formatted, pkey);
     }
   } else {
     strlcpy(formatted, "<null>", sizeof(formatted));
@@ -202,13 +201,17 @@ ed25519_public_from_base64(ed25519_public_key_t *pkey,
 
 /** Encode the public key <b>pkey</b> into the buffer at <b>output</b>,
  * which must have space for ED25519_BASE64_LEN bytes of encoded key,
- * plus one byte for a terminating NUL.  Return 0 on success, -1 on failure.
+ * plus one byte for a terminating NUL.
+ * Can not fail.
+ *
+ * Careful! ED25519_BASE64_LEN is one byte shorter than
+ * CURVE25519_BASE64_PADDED_LEN.
  */
-int
+void
 ed25519_public_to_base64(char *output,
                          const ed25519_public_key_t *pkey)
 {
-  return digest256_to_base64(output, (const char *)pkey->pubkey);
+  digest256_to_base64(output, (const char *)pkey->pubkey);
 }
 
 /** Encode the signature <b>sig</b> into the buffer at <b>output</b>,
@@ -281,15 +284,19 @@ digest_from_base64(char *digest, const char *d64)
 
 /** Base64 encode DIGEST256_LINE bytes from <b>digest</b>, remove the
  * trailing = characters, and store the nul-terminated result in the first
- * BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>. */
-int
+ * BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>.
+ * Can not fail. */
+void
 digest256_to_base64(char *d64, const char *digest)
 {
   char buf[256];
-  base64_encode(buf, sizeof(buf), digest, DIGEST256_LEN, 0);
-  buf[BASE64_DIGEST256_LEN] = '\0';
+  int n = base64_encode_nopad(buf, sizeof(buf),
+                              (const uint8_t *)digest, DIGEST256_LEN);
+  /* These asserts should always succeed, unless there is a bug in
+   * base64_encode_nopad(). */
+  tor_assert(n == BASE64_DIGEST256_LEN);
+  tor_assert(buf[BASE64_DIGEST256_LEN] == '\0');
   memcpy(d64, buf, BASE64_DIGEST256_LEN+1);
-  return 0;
 }
 
 /** Given a base64 encoded, nul-terminated digest in <b>d64</b> (without

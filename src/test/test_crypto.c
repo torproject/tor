@@ -2455,7 +2455,7 @@ test_crypto_ed25519_encode(void *arg)
 
   /* Test roundtrip. */
   tt_int_op(0, OP_EQ, ed25519_keypair_generate(&kp, 0));
-  tt_int_op(0, OP_EQ, ed25519_public_to_base64(buf, &kp.pubkey));
+  ed25519_public_to_base64(buf, &kp.pubkey);
   tt_int_op(ED25519_BASE64_LEN, OP_EQ, strlen(buf));
   tt_int_op(0, OP_EQ, ed25519_public_from_base64(&pk, buf));
   tt_mem_op(kp.pubkey.pubkey, OP_EQ, pk.pubkey, ED25519_PUBKEY_LEN);
