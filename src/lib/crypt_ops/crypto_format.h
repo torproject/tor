@@ -42,7 +42,7 @@ int ed25519_signature_from_base64(struct ed25519_signature_t *sig,
 int ed25519_signature_to_base64(char *output,
                                 const struct ed25519_signature_t *sig);
 
-int digest_to_base64(char *d64, const char *digest);
+void digest_to_base64(char *d64, const char *digest);
 int digest_from_base64(char *digest, const char *d64);
 int digest256_to_base64(char *d64, const char *digest);
 int digest256_from_base64(char *digest, const char *d64);

@@ -250,17 +250,21 @@ ed25519_signature_from_base64(ed25519_signature_t *sig,
   return 0;
 }
 
-/** Base64 encode DIGEST_LINE bytes from <b>digest</b>, remove the trailing =
+/** Base64 encode DIGEST_LEN bytes from <b>digest</b>, remove the trailing =
  * characters, and store the nul-terminated result in the first
- * BASE64_DIGEST_LEN+1 bytes of <b>d64</b>.  */
-int
+ * BASE64_DIGEST_LEN+1 bytes of <b>d64</b>.
+ * Can not fail. */
+void
 digest_to_base64(char *d64, const char *digest)
 {
   char buf[256];
-  base64_encode(buf, sizeof(buf), digest, DIGEST_LEN, 0);
-  buf[BASE64_DIGEST_LEN] = '\0';
+  int n = base64_encode_nopad(buf, sizeof(buf),
+                              (const uint8_t *)digest, DIGEST_LEN);
+  /* These asserts should always succeed, unless there is a bug in
+   * base64_encode_nopad(). */
+  tor_assert(n == BASE64_DIGEST_LEN);
+  tor_assert(buf[BASE64_DIGEST_LEN] == '\0');
   memcpy(d64, buf, BASE64_DIGEST_LEN+1);
-  return 0;
 }
 
 /** Given a base64 encoded, nul-terminated digest in <b>d64</b> (without
