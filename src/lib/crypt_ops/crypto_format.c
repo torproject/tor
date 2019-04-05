@@ -253,7 +253,6 @@ ed25519_signature_from_base64(ed25519_signature_t *sig,
 /** Base64 encode DIGEST_LINE bytes from <b>digest</b>, remove the trailing =
  * characters, and store the nul-terminated result in the first
  * BASE64_DIGEST_LEN+1 bytes of <b>d64</b>.  */
-/* XXXX unify with crypto_format.c code */
 int
 digest_to_base64(char *d64, const char *digest)
 {
@@ -267,7 +266,6 @@ digest_to_base64(char *d64, const char *digest)
 /** Given a base64 encoded, nul-terminated digest in <b>d64</b> (without
  * trailing newline or = characters), decode it and store the result in the
  * first DIGEST_LEN bytes at <b>digest</b>. */
-/* XXXX unify with crypto_format.c code */
 int
 digest_from_base64(char *digest, const char *d64)
 {
@@ -280,7 +278,6 @@ digest_from_base64(char *digest, const char *d64)
 /** Base64 encode DIGEST256_LINE bytes from <b>digest</b>, remove the
  * trailing = characters, and store the nul-terminated result in the first
  * BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>. */
- /* XXXX unify with crypto_format.c code */
 int
 digest256_to_base64(char *d64, const char *digest)
 {
@@ -294,7 +291,6 @@ digest256_to_base64(char *d64, const char *digest)
 /** Given a base64 encoded, nul-terminated digest in <b>d64</b> (without
  * trailing newline or = characters), decode it and store the result in the
  * first DIGEST256_LEN bytes at <b>digest</b>. */
-/* XXXX unify with crypto_format.c code */
 int
 digest256_from_base64(char *digest, const char *d64)
 {
