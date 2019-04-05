@@ -235,6 +235,18 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
       kv_flags = 0;
       ENCODE_ROUNDTRIP(kv_enc, kv_dec, config_free_lines_);
       break;
+    case 7:
+      kv_flags = KV_OMIT_VALS;
+      ENCODE_ROUNDTRIP(kv_enc, kv_dec, config_free_lines_);
+      break;
+    case 8:
+      kv_flags = KV_QUOTED;
+      ENCODE_ROUNDTRIP(kv_enc, kv_dec, config_free_lines_);
+      break;
+    case 9:
+      kv_flags = KV_QUOTED|KV_OMIT_VALS;
+      ENCODE_ROUNDTRIP(kv_enc, kv_dec, config_free_lines_);
+      break;
     }
 
   return 0;
