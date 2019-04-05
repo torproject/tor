@@ -321,8 +321,10 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
   return (int) enclen;
 }
 
-/** As base64_encode, but do not add any internal spaces or external padding
- * to the output stream. */
+/** As base64_encode, but do not add any internal spaces, and remove external
+ * padding from the output stream.
+ * dest must be at least base64_encode_size(srclen, 0), including space for
+ * the removed external padding. */
 int
 base64_encode_nopad(char *dest, size_t destlen,
                     const uint8_t *src, size_t srclen)
