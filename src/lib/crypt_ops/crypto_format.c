@@ -246,14 +246,11 @@ int
 ed25519_signature_from_base64(ed25519_signature_t *sig,
                               const char *input)
 {
-
   if (strlen(input) != ED25519_SIG_BASE64_LEN)
     return -1;
-  char buf[ED25519_SIG_BASE64_LEN+3];
+  char buf[ED25519_SIG_BASE64_LEN+1];
   memcpy(buf, input, ED25519_SIG_BASE64_LEN);
-  buf[ED25519_SIG_BASE64_LEN+0] = '=';
-  buf[ED25519_SIG_BASE64_LEN+1] = '=';
-  buf[ED25519_SIG_BASE64_LEN+2] = 0;
+  buf[ED25519_SIG_BASE64_LEN] = 0;
   char decoded[128];
   int n = base64_decode(decoded, sizeof(decoded), buf, strlen(buf));
   if (n < 0 || n != ED25519_SIG_LEN)
