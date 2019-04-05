@@ -396,6 +396,7 @@ static config_var_t option_vars_[] = {
   V(DormantClientTimeout,         INTERVAL, "24 hours"),
   V(DormantTimeoutDisabledByIdleStreams, BOOL,     "1"),
   V(DormantOnFirstStartup,       BOOL,      "0"),
+  V(DormantCanceledByStartup,    BOOL,      "0"),
   /* DoS circuit creation options. */
   V(DoSCircuitCreationEnabled,   AUTOBOOL, "auto"),
   V(DoSCircuitCreationMinConnections,      UINT, "0"),

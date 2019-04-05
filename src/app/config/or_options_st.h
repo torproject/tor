@@ -1092,6 +1092,11 @@ struct or_options_t {
   /** Boolean: true if Tor should be dormant the first time it starts with
    * a datadirectory; false otherwise. */
   int DormantOnFirstStartup;
+  /**
+   * Boolean: true if Tor should treat every startup event as cancelling
+   * a possible previous dormant state.
+   **/
+  int DormantCanceledByStartup;
 };
 
 #endif
