@@ -144,6 +144,10 @@ netstatus_load_from_state(const or_state_t *state, time_t now)
     last_activity = now - 60 * state->MinutesSinceUserActivity;
     participating_on_network = true;
   }
+  if (get_options()->DormantCanceledByStartup) {
+    last_activity = now;
+    participating_on_network = true;
+  }
   reset_user_activity(last_activity);
 }
 
