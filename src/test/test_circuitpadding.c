@@ -31,6 +31,12 @@
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
 
+/* Start our monotime mocking at 1 second past whatever monotime_init()
+ * thought the actual wall clock time was, for platforms with bad resolution
+ * and weird timevalues during monotime_init() before mocking. */
+#define MONOTIME_MOCK_START   (monotime_absolute_nsec()+\
+                               TOR_NSEC_PER_USEC*TOR_USEC_PER_SEC)
+
 extern smartlist_t *connection_array;
 
 circid_t get_unique_circ_id_by_chan(channel_t *chan);
@@ -287,6 +293,7 @@ test_circuitpadding_rtt(void *arg)
    * 3. Test client side circuit and non-application of RTT..
    */
   circpad_delay_t rtt_estimate;
+  int64_t actual_mocked_monotime_start;
   (void)arg;
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
@@ -300,9 +307,10 @@ test_circuitpadding_rtt(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
 
   timers_initialize();
   circpad_machines_init();
@@ -568,7 +576,7 @@ test_circuitpadding_token_removal_higher(void *arg)
     }
   }
 
-  /* Check that all lowe bins are not touched */
+  /* Check that all lower bins are not touched */
   for (i=0; i < 4 ; i++) {
     tt_int_op(mi->histogram[i], OP_EQ, 2);
   }
@@ -963,6 +971,7 @@ test_circuitpadding_tokens(void *arg)
 {
   const circpad_state_t *state;
   circpad_machine_state_t *mi;
+  int64_t actual_mocked_monotime_start;
   (void)arg;
 
   /** Test plan:
@@ -990,9 +999,10 @@ test_circuitpadding_tokens(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
 
   timers_initialize();
 
@@ -1004,9 +1014,8 @@ test_circuitpadding_tokens(void *arg)
   mi = client_side->padding_info[0];
 
   // Pretend a non-padding cell was sent
-  // XXX: This messes us up.. Padding gets scheduled..
-  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   circpad_cell_event_nonpadding_received((circuit_t*)client_side);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   /* We have to save the infinity bin because one inf delay
    * could have been chosen when we transition to burst */
   circpad_hist_token_t inf_bin = mi->histogram[4];
@@ -1105,7 +1114,8 @@ test_circuitpadding_tokens(void *arg)
 
   /* 2.c. Bin 0 */
   {
-    tt_int_op(mi->histogram[0], OP_EQ, 1);
+    tt_int_op(mi->histogram[0], OP_EQ, 0);
+    mi->histogram[0] = 1;
     circpad_machine_remove_higher_token(mi,
          state->start_usec/2);
     tt_int_op(mi->histogram[0], OP_EQ, 0);
@@ -1235,6 +1245,7 @@ test_circuitpadding_wronghop(void *arg)
   cell_t cell;
   signed_error_t ret;
   origin_circuit_t *orig_client;
+  int64_t actual_mocked_monotime_start;
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
 
@@ -1254,9 +1265,10 @@ test_circuitpadding_wronghop(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
 
   timers_initialize();
   circpad_machines_init();
@@ -1427,6 +1439,7 @@ test_circuitpadding_negotiation(void *arg)
    *    a. Make sure padding negotiation is not sent
    * 3. Test failure to negotiate a machine due to desync.
    */
+  int64_t actual_mocked_monotime_start;
   (void)arg;
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
@@ -1441,9 +1454,10 @@ test_circuitpadding_negotiation(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
 
   timers_initialize();
   circpad_machines_init();
@@ -1703,6 +1717,7 @@ test_circuitpadding_conditions(void *arg)
    *  2. Test marking a circuit before padding callback fires
    *  3. Test freeing a circuit before padding callback fires
    */
+  int64_t actual_mocked_monotime_start;
   (void)arg;
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
 
@@ -1716,9 +1731,10 @@ test_circuitpadding_conditions(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
 
   timers_initialize();
   helper_create_conditional_machines();
@@ -1807,255 +1823,6 @@ test_circuitpadding_conditions(void *arg)
   /* XXX: Free everything */
   return;
 }
-
-/** Disabled unstable test until #29298 is implemented (see #29122) */
-#if 0
-void
-test_circuitpadding_circuitsetup_machine(void *arg)
-{
-  /**
-   * Test case plan:
-   *
-   * 1. Simulate a normal circuit setup pattern
-   *    a. Application traffic
-   *
-   * FIXME: This should focus more on exercising the machine
-   * features rather than actual traffic patterns. For example,
-   * test cancellation and bins empty/refill
-   */
-  (void)arg;
-
-  MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
-
-  dummy_channel.cmux = circuitmux_alloc();
-  client_side = TO_CIRCUIT(origin_circuit_new());
-  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
-
-  relay_side->purpose = CIRCUIT_PURPOSE_OR;
-  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
-
-  nodes_init();
-
-  monotime_init();
-  monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
-
-  timers_initialize();
-  circpad_machines_init();
-
-  MOCK(circuit_package_relay_cell,
-       circuit_package_relay_cell_mock);
-  MOCK(node_get_by_id,
-       node_get_by_id_mock);
-
-  /* Test case #1: Build a 3 hop circuit, then wait and let pad */
-  simulate_single_hop_extend(client_side, relay_side, 1);
-  simulate_single_hop_extend(client_side, relay_side, 1);
-  simulate_single_hop_extend(client_side, relay_side, 1);
-
-  tt_int_op(n_client_cells, OP_EQ, 1);
-  tt_int_op(n_relay_cells, OP_EQ, 1);
-  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
-                CIRCPAD_STATE_BURST);
-  tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
-          CIRCPAD_STATE_BURST);
-
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  tt_int_op(relay_side->padding_info[0]->is_padding_timer_scheduled,
-            OP_EQ, 0);
-  timers_advance_and_run(2000);
-  tt_int_op(n_client_cells, OP_EQ, 2);
-  tt_int_op(n_relay_cells, OP_EQ, 1);
-
-  tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
-              CIRCPAD_STATE_GAP);
-
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  timers_advance_and_run(5000);
-  tt_int_op(n_client_cells, OP_EQ, 2);
-  tt_int_op(n_relay_cells, OP_EQ, 2);
-
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-  timers_advance_and_run(2000);
-  tt_int_op(n_client_cells, OP_EQ, 3);
-  tt_int_op(n_relay_cells, OP_EQ, 2);
-
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  timers_advance_and_run(5000);
-  tt_int_op(n_client_cells, OP_EQ, 3);
-  tt_int_op(n_relay_cells, OP_EQ, 3);
-
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-  timers_advance_and_run(2000);
-  tt_int_op(n_client_cells, OP_EQ, 4);
-  tt_int_op(n_relay_cells, OP_EQ, 3);
-
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  timers_advance_and_run(5000);
-  tt_int_op(n_client_cells, OP_EQ, 4);
-  tt_int_op(n_relay_cells, OP_EQ, 4);
-
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-  timers_advance_and_run(2000);
-  tt_int_op(n_client_cells, OP_EQ, 5);
-  tt_int_op(n_relay_cells, OP_EQ, 4);
-
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  timers_advance_and_run(5000);
-  tt_int_op(n_client_cells, OP_EQ, 5);
-  tt_int_op(n_relay_cells, OP_EQ, 5);
-
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-  timers_advance_and_run(2000);
-  tt_int_op(n_client_cells, OP_EQ, 6);
-  tt_int_op(n_relay_cells, OP_EQ, 5);
-
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  timers_advance_and_run(5000);
-  tt_int_op(n_client_cells, OP_EQ, 6);
-  tt_int_op(n_relay_cells, OP_EQ, 6);
-
-  tt_int_op(client_side->padding_info[0]->current_state,
-            OP_EQ, CIRCPAD_STATE_END);
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-  tt_int_op(relay_side->padding_info[0]->current_state,
-            OP_EQ, CIRCPAD_STATE_GAP);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-
-  /* Verify we can't schedule padding in END state */
-  circpad_decision_t ret =
-      circpad_machine_schedule_padding(client_side->padding_info[0]);
-  tt_int_op(ret, OP_EQ, CIRCPAD_STATE_UNCHANGED);
-
-  /* Simulate application traffic */
-  circpad_cell_event_nonpadding_sent(client_side);
-  circpad_deliver_unrecognized_cell_events(relay_side, CELL_DIRECTION_OUT);
-  circpad_deliver_unrecognized_cell_events(relay_side, CELL_DIRECTION_IN);
-  circpad_deliver_recognized_relay_cell_events(client_side, RELAY_COMMAND_DATA,
-                                  TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
-
-  tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
-  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
-
-  tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
-  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
-  tt_int_op(n_client_cells, OP_EQ, 6);
-  tt_int_op(n_relay_cells, OP_EQ, 7);
-
-  // Test timer cancellation
-  simulate_single_hop_extend(client_side, relay_side, 1);
-  simulate_single_hop_extend(client_side, relay_side, 1);
-  timers_advance_and_run(5000);
-  circpad_cell_event_padding_received(client_side);
-
-  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
-                CIRCPAD_STATE_BURST);
-  tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
-          CIRCPAD_STATE_GAP);
-
-  tt_int_op(n_client_cells, OP_EQ, 8);
-  tt_int_op(n_relay_cells, OP_EQ, 8);
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-
-  /* Test timer cancel due to state rules */
-  circpad_cell_event_nonpadding_sent(client_side);
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_EQ, 0);
-  circpad_cell_event_padding_received(client_side);
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-
-  /* Simulate application traffic to cancel timer */
-  circpad_cell_event_nonpadding_sent(client_side);
-  circpad_deliver_unrecognized_cell_events(relay_side, CELL_DIRECTION_OUT);
-  circpad_deliver_unrecognized_cell_events(relay_side, CELL_DIRECTION_IN);
-  circpad_deliver_recognized_relay_cell_events(client_side, RELAY_COMMAND_DATA,
-                                  TO_ORIGIN_CIRCUIT(client_side)->cpath->next);
-
-  tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
-  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
-
-  tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
-  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
-
-  /* No cells sent, except negotiate end from relay */
-  tt_int_op(n_client_cells, OP_EQ, 8);
-  tt_int_op(n_relay_cells, OP_EQ, 9);
-
-  /* Test mark for close and free */
-  simulate_single_hop_extend(client_side, relay_side, 1);
-  simulate_single_hop_extend(client_side, relay_side, 1);
-  timers_advance_and_run(5000);
-  circpad_cell_event_padding_received(client_side);
-
-  tt_int_op(n_client_cells, OP_EQ, 10);
-  tt_int_op(n_relay_cells, OP_EQ, 10);
-
-  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
-                CIRCPAD_STATE_BURST);
-  tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
-          CIRCPAD_STATE_GAP);
-
-  tt_u64_op(client_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  tt_u64_op(relay_side->padding_info[0]->padding_scheduled_at_usec,
-            OP_NE, 0);
-  circuit_mark_for_close(client_side, END_CIRC_REASON_FLAG_REMOTE);
-  free_fake_orcirc(relay_side);
-  timers_advance_and_run(5000);
-
-  /* No cells sent */
-  tt_int_op(n_client_cells, OP_EQ, 10);
-  tt_int_op(n_relay_cells, OP_EQ, 10);
-
- done:
-  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
-
-  circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
-  circuitmux_free(dummy_channel.cmux);
-  timers_shutdown();
-  monotime_disable_test_mocking();
-  UNMOCK(circuit_package_relay_cell);
-  UNMOCK(circuitmux_attach_circuit);
-
-  return;
-}
-#endif
 
 /** Helper function: Initializes a padding machine where every state uses the
  *  uniform probability distribution.  */
@@ -2250,6 +2017,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
   bool retval;
   circpad_machine_state_t *mi;
   int i;
+  int64_t actual_mocked_monotime_start;
 
   /* Ignore machine transitions for the purposes of this function, we only
    * really care about padding counts */
@@ -2261,9 +2029,10 @@ test_circuitpadding_global_rate_limiting(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  monotime_coarse_set_mock_time_nsec(1*TOR_NSEC_PER_USEC);
-  curr_mocked_time = 1*TOR_NSEC_PER_USEC;
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
   timers_initialize();
 
   client_side = (circuit_t *)origin_circuit_new();
@@ -2345,8 +2114,6 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_tokens, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_negotiation, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_wronghop, TT_FORK),
-  /** Disabled unstable test until #29298 is implemented (see #29122) */
-  //  TEST_CIRCUITPADDING(circuitpadding_circuitsetup_machine, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_conditions, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_rtt, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_sample_distribution, TT_FORK),
