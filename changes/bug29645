@@ -1,0 +1,4 @@
+  o Testing (CI):
+    - Run "make test" in Appveyor's CI, before running "make check".
+      The extra "make test" lets us see the hanging test on the console.
+      Diagnostic for ticket 29645.

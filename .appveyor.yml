@@ -97,6 +97,8 @@ test_script:
             Set-Location "${env:build}"
             Copy-Item "C:/msys64/${env:compiler_path}/bin/libssp-0.dll" -Destination "${env:build}/src/test"
             Copy-Item "C:/msys64/${env:compiler_path}/bin/zlib1.dll" -Destination "${env:build}/src/test"
+            <# diagnostic for test hang in 29645: see which test is hanging #>
+            Execute-Bash "VERBOSE=1 make -j2 test"
             Execute-Bash "VERBOSE=1 make -j2 check"
     }
 
