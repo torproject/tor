@@ -2461,7 +2461,7 @@ test_crypto_ed25519_encode(void *arg)
   tt_mem_op(kp.pubkey.pubkey, OP_EQ, pk.pubkey, ED25519_PUBKEY_LEN);
 
   tt_int_op(0, OP_EQ, ed25519_sign(&sig1, (const uint8_t*)"ABC", 3, &kp));
-  tt_int_op(0, OP_EQ, ed25519_signature_to_base64(buf, &sig1));
+  ed25519_signature_to_base64(buf, &sig1);
   tt_int_op(0, OP_EQ, ed25519_signature_from_base64(&sig2, buf));
   tt_mem_op(sig1.sig, OP_EQ, sig2.sig, ED25519_SIG_LEN);
 

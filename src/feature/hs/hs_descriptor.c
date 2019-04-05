@@ -1082,11 +1082,7 @@ desc_encode_v3(const hs_descriptor_t *desc,
       tor_free(encoded_str);
       goto err;
     }
-    if (ed25519_signature_to_base64(ed_sig_b64, &sig) < 0) {
-      log_warn(LD_BUG, "Can't base64 encode descriptor signature!");
-      tor_free(encoded_str);
-      goto err;
-    }
+    ed25519_signature_to_base64(ed_sig_b64, &sig);
     /* Create the signature line. */
     smartlist_add_asprintf(lines, "%s %s", str_signature, ed_sig_b64);
   }

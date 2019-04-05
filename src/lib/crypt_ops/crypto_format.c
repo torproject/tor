@@ -223,17 +223,20 @@ ed25519_public_to_base64(char *output,
 
 /** Encode the signature <b>sig</b> into the buffer at <b>output</b>,
  * which must have space for ED25519_SIG_BASE64_LEN bytes of encoded signature,
- * plus one byte for a terminating NUL.  Return 0 on success, -1 on failure.
+ * plus one byte for a terminating NUL.
+ * Can not fail.
  */
-int
+void
 ed25519_signature_to_base64(char *output,
                             const ed25519_signature_t *sig)
 {
   char buf[256];
   int n = base64_encode_nopad(buf, sizeof(buf), sig->sig, ED25519_SIG_LEN);
+  /* These asserts should always succeed, unless there is a bug in
+   * base64_encode_nopad(). */
   tor_assert(n == ED25519_SIG_BASE64_LEN);
+  tor_assert(buf[ED25519_SIG_BASE64_LEN] == '\0');
   memcpy(output, buf, ED25519_SIG_BASE64_LEN+1);
-  return 0;
 }
 
 /** Try to decode the string <b>input</b> into an ed25519 signature. On

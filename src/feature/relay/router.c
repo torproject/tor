@@ -2974,8 +2974,7 @@ router_dump_router_to_string(routerinfo_t *router,
     if (ed25519_sign(&sig, (const uint8_t*)digest, DIGEST256_LEN,
                      signing_keypair) < 0)
       goto err;
-    if (ed25519_signature_to_base64(buf, &sig) < 0)
-      goto err;
+    ed25519_signature_to_base64(buf, &sig);
 
     smartlist_add_asprintf(chunks, "%s\n", buf);
   }
@@ -3249,8 +3248,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
     if (ed25519_sign(&ed_sig, (const uint8_t*)sha256_digest, DIGEST256_LEN,
                      signing_keypair) < 0)
       goto err;
-    if (ed25519_signature_to_base64(buf, &ed_sig) < 0)
-      goto err;
+    ed25519_signature_to_base64(buf, &ed_sig);
 
     smartlist_add_asprintf(chunks, "%s\n", buf);
   }

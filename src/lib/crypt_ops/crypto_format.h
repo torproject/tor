@@ -39,8 +39,8 @@ const char *ed25519_fmt(const struct ed25519_public_key_t *pkey);
 
 int ed25519_signature_from_base64(struct ed25519_signature_t *sig,
                                   const char *input);
-int ed25519_signature_to_base64(char *output,
-                                const struct ed25519_signature_t *sig);
+void ed25519_signature_to_base64(char *output,
+                                 const struct ed25519_signature_t *sig);
 
 void digest_to_base64(char *d64, const char *digest);
 int digest_from_base64(char *digest, const char *d64);
