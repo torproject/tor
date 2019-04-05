@@ -133,6 +133,9 @@ addons:
       - docbook-xsl
       - docbook-xml
       - xmlto
+      ## Utilities
+      ## preventing or diagnosing hangs
+      - timelimit
   ## (OSX only)
   homebrew:
     packages:
@@ -156,6 +159,9 @@ addons:
       ## Always installed, because manual brew installs are hard to get right
       - asciidoc
       - xmlto
+      ## Utilities
+      ## preventing or diagnosing hangs
+      - timelimit
 
 ## (OSX only) Use the default OSX image
 ## See https://docs.travis-ci.com/user/reference/osx#os-x-version
@@ -204,7 +210,8 @@ script:
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$DISTCHECK" == "" && "$TEST_STEM" == "" ]]; then make check; fi
-  - if [[ "$TEST_STEM" != "" ]]; then make src/app/tor test-stem; fi
+  ## Diagnostic for bug 29437: kill stem if it hangs for 15 minutes
+  - if [[ "$TEST_STEM" != "" ]]; then timelimit -p -t 540 -T 30 make src/app/tor test-stem; fi
   - if [[ "$DISTCHECK" != "" && "$TEST_STEM" == "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
   ## If this build was one that produced coverage, upload it.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p' || echo "Coverage failed"; fi
