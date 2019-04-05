@@ -1458,7 +1458,8 @@ circpad_estimate_circ_rtt_on_send(circuit_t *circ,
 
     /* If the old RTT estimate is lower than this one, use this one, because
      * the circuit is getting longer. If this estimate is somehow
-     * faster than the previous, then maybe that was network jitter.
+     * faster than the previous, then maybe that was network jitter, or a
+     * bad monotonic clock source (so our ratchet returned a zero delta).
      * In that case, average them. */
     if (mi->rtt_estimate_usec < (circpad_delay_t)rtt_time) {
       mi->rtt_estimate_usec = (circpad_delay_t)rtt_time;
