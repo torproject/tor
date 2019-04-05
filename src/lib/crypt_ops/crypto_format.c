@@ -131,20 +131,27 @@ crypto_read_tagged_contents_from_file(const char *fname,
   return r;
 }
 
-/** Encode <b>pkey</b> as a base64-encoded string, without trailing "="
+/** Encode <b>pkey</b> as a base64-encoded string, including trailing "="
  * characters, in the buffer <b>output</b>, which must have at least
- * CURVE25519_BASE64_PADDED_LEN+1 bytes available.  Return 0 on success, -1 on
- * failure. */
-int
+ * CURVE25519_BASE64_PADDED_LEN+1 bytes available.
+ * Can not fail.
+ *
+ * Careful! CURVE25519_BASE64_PADDED_LEN is one byte longer than
+ * ED25519_BASE64_LEN.
+ */
+void
 curve25519_public_to_base64(char *output,
                             const curve25519_public_key_t *pkey)
 {
   char buf[128];
-  base64_encode(buf, sizeof(buf),
-                (const char*)pkey->public_key, CURVE25519_PUBKEY_LEN, 0);
-  buf[CURVE25519_BASE64_PADDED_LEN] = '\0';
+  int n = base64_encode(buf, sizeof(buf),
+                        (const char*)pkey->public_key,
+                        CURVE25519_PUBKEY_LEN, 0);
+  /* These asserts should always succeed, unless there is a bug in
+   * base64_encode(). */
+  tor_assert(n == CURVE25519_BASE64_PADDED_LEN);
+  tor_assert(buf[CURVE25519_BASE64_PADDED_LEN] == '\0');
   memcpy(output, buf, CURVE25519_BASE64_PADDED_LEN+1);
-  return 0;
 }
 
 /** Try to decode a base64-encoded curve25519 public key from <b>input</b>

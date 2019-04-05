@@ -2075,7 +2075,7 @@ test_crypto_curve25519_encode(void *arg)
 
   curve25519_secret_key_generate(&seckey, 0);
   curve25519_public_key_generate(&key1, &seckey);
-  tt_int_op(0, OP_EQ, curve25519_public_to_base64(buf, &key1));
+  curve25519_public_to_base64(buf, &key1);
   tt_int_op(CURVE25519_BASE64_PADDED_LEN, OP_EQ, strlen(buf));
 
   tt_int_op(0, OP_EQ, curve25519_public_from_base64(&key2, buf));
