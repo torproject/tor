@@ -29,7 +29,7 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 8490
+problem file-size /src/app/config/config.c 8491
 problem include-count /src/app/config/config.c 86
 problem function-size /src/app/config/config.c:options_act_reversible() 296
 problem function-size /src/app/config/config.c:options_act() 588
@@ -157,9 +157,9 @@ problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_misc
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_dir() 304
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_events() 236
 problem function-size /src/feature/dirauth/bwauth.c:dirserv_read_measured_bandwidths() 127
-problem file-size /src/feature/dirauth/dirvote.c 4729
+problem file-size /src/feature/dirauth/dirvote.c 4728
 problem include-count /src/feature/dirauth/dirvote.c 53
-problem function-size /src/feature/dirauth/dirvote.c:format_networkstatus_vote() 251
+problem function-size /src/feature/dirauth/dirvote.c:format_networkstatus_vote() 250
 problem function-size /src/feature/dirauth/dirvote.c:networkstatus_compute_bw_weights_v10() 235
 problem function-size /src/feature/dirauth/dirvote.c:networkstatus_compute_consensus() 962
 problem function-size /src/feature/dirauth/dirvote.c:networkstatus_add_detached_signatures() 123
@@ -276,7 +276,7 @@ problem function-size /src/lib/net/resolve.c:tor_addr_lookup() 110
 problem function-size /src/lib/net/socketpair.c:tor_ersatz_socketpair() 102
 problem function-size /src/lib/osinfo/uname.c:get_uname() 116
 problem function-size /src/lib/process/process_unix.c:process_unix_exec() 220
-problem function-size /src/lib/process/process_win32.c:process_win32_exec() 138
+problem function-size /src/lib/process/process_win32.c:process_win32_exec() 133
 problem function-size /src/lib/process/process_win32.c:process_win32_create_pipe() 112
 problem function-size /src/lib/process/restrict.c:set_max_file_descriptors() 102
 problem function-size /src/lib/process/setuid.c:switch_id() 156
