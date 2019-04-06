@@ -282,7 +282,7 @@ problem function-size /src/lib/process/restrict.c:set_max_file_descriptors() 102
 problem function-size /src/lib/process/setuid.c:switch_id() 156
 problem function-size /src/lib/sandbox/sandbox.c:prot_strings() 104
 problem function-size /src/lib/string/scanf.c:tor_vsscanf() 112
-problem function-size /src/lib/tls/tortls_nss.c:tor_tls_context_new() 147
+problem function-size /src/lib/tls/tortls_nss.c:tor_tls_context_new() 153
 problem function-size /src/lib/tls/tortls_openssl.c:tor_tls_context_new() 171
 problem function-size /src/lib/tls/x509_nss.c:tor_tls_create_certificate_internal() 126
 problem function-size /src/tools/tor-gencert.c:parse_commandline() 111
