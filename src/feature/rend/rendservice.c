@@ -18,6 +18,7 @@
 #include "core/or/circuituse.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
+#include "core/or/crypt_path.h"
 #include "feature/client/circpathbias.h"
 #include "feature/control/control_events.h"
 #include "feature/dirclient/dirclient.h"

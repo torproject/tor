@@ -51,6 +51,7 @@
 #include "core/or/ocirc_event.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
+#include "core/or/crypt_path.h"
 #include "feature/client/bridges.h"
 #include "feature/client/circpathbias.h"
 #include "feature/client/entrynodes.h"
@@ -91,7 +92,6 @@ static int circuit_deliver_create_cell(circuit_t *circ,
                                        const create_cell_t *create_cell,
                                        int relayed);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
-STATIC int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
 static int circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
@@ -2373,23 +2373,6 @@ count_acceptable_nodes, (const smartlist_t *nodes, int direct))
   return num;
 }
 
-/** Add <b>new_hop</b> to the end of the doubly-linked-list <b>head_ptr</b>.
- * This function is used to extend cpath by another hop.
- */
-void
-onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
-{
-  if (*head_ptr) {
-    new_hop->next = (*head_ptr);
-    new_hop->prev = (*head_ptr)->prev;
-    (*head_ptr)->prev->next = new_hop;
-    (*head_ptr)->prev = new_hop;
-  } else {
-    *head_ptr = new_hop;
-    new_hop->prev = new_hop->next = new_hop;
-  }
-}
-
 #ifdef TOR_UNIT_TESTS
 
 /** Unittest helper function: Count number of hops in cpath linked list. */
@@ -2760,28 +2743,6 @@ onion_extend_cpath(origin_circuit_t *circ)
 
   onion_append_hop(&circ->cpath, info);
   extend_info_free(info);
-  return 0;
-}
-
-/** Create a new hop, annotate it with information about its
- * corresponding router <b>choice</b>, and append it to the
- * end of the cpath <b>head_ptr</b>. */
-STATIC int
-onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
-{
-  crypt_path_t *hop = tor_malloc_zero(sizeof(crypt_path_t));
-
-  /* link hop into the cpath, at the end. */
-  onion_append_to_cpath(head_ptr, hop);
-
-  hop->magic = CRYPT_PATH_MAGIC;
-  hop->state = CPATH_STATE_CLOSED;
-
-  hop->extend_info = extend_info_dup(choice);
-
-  hop->package_window = circuit_initial_package_window();
-  hop->deliver_window = CIRCWINDOW_START;
-
   return 0;
 }
 
