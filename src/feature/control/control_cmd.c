@@ -54,8 +54,8 @@
 #include "feature/rend/rend_encoded_v2_service_descriptor_st.h"
 #include "feature/rend/rend_service_descriptor_st.h"
 
-static int control_setconf_helper(control_connection_t *conn, uint32_t len,
-                                  char *body,
+static int control_setconf_helper(control_connection_t *conn,
+                                  const control_cmd_args_t *args,
                                   int use_defaults);
 
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
@@ -195,22 +195,36 @@ config_lines_contain_flag(const config_line_t *lines, const char *flag)
   return line && !strcmp(line->value, "");
 }
 
+static const control_cmd_syntax_t setconf_syntax = {
+  .max_args=0,
+  .accept_keywords=true,
+  .kvline_flags=KV_OMIT_VALS|KV_QUOTED,
+};
+
 /** Called when we receive a SETCONF message: parse the body and try
  * to update our configuration.  Reply with a DONE or ERROR message.
  * Modifies the contents of body.*/
 static int
-handle_control_setconf(control_connection_t *conn, uint32_t len, char *body)
+handle_control_setconf(control_connection_t *conn,
+                       const control_cmd_args_t *args)
 {
-  return control_setconf_helper(conn, len, body, 0);
+  return control_setconf_helper(conn, args, 0);
 }
+
+static const control_cmd_syntax_t resetconf_syntax = {
+  .max_args=0,
+  .accept_keywords=true,
+  .kvline_flags=KV_OMIT_VALS|KV_QUOTED,
+};
 
 /** Called when we receive a RESETCONF message: parse the body and try
  * to update our configuration.  Reply with a DONE or ERROR message.
  * Modifies the contents of body. */
 static int
-handle_control_resetconf(control_connection_t *conn, uint32_t len, char *body)
+handle_control_resetconf(control_connection_t *conn,
+                         const control_cmd_args_t *args)
 {
-  return control_setconf_helper(conn, len, body, 1);
+  return control_setconf_helper(conn, args, 1);
 }
 
 static const control_cmd_syntax_t getconf_syntax = {
@@ -524,73 +538,17 @@ get_stream(const char *id)
  * contents of body.
  */
 static int
-control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
+control_setconf_helper(control_connection_t *conn,
+                       const control_cmd_args_t *args,
                        int use_defaults)
 {
   setopt_err_t opt_err;
-  config_line_t *lines=NULL;
-  char *start = body;
   char *errstring = NULL;
   const unsigned flags =
     CAL_CLEAR_FIRST | (use_defaults ? CAL_USE_DEFAULTS : 0);
 
-  char *config;
-  smartlist_t *entries = smartlist_new();
-
-  /* We have a string, "body", of the format '(key(=val|="val")?)' entries
-   * separated by space.  break it into a list of configuration entries. */
-  while (*body) {
-    char *eq = body;
-    char *key;
-    char *entry;
-    while (!TOR_ISSPACE(*eq) && *eq != '=')
-      ++eq;
-    key = tor_strndup(body, eq-body);
-    body = eq+1;
-    if (*eq == '=') {
-      char *val=NULL;
-      size_t val_len=0;
-      if (*body != '\"') {
-        char *val_start = body;
-        while (!TOR_ISSPACE(*body))
-          body++;
-        val = tor_strndup(val_start, body-val_start);
-        val_len = strlen(val);
-      } else {
-        body = (char*)extract_escaped_string(body, (len - (body-start)),
-                                             &val, &val_len);
-        if (!body) {
-          connection_write_str_to_buf("551 Couldn't parse string\r\n", conn);
-          SMARTLIST_FOREACH(entries, char *, cp, tor_free(cp));
-          smartlist_free(entries);
-          tor_free(key);
-          return 0;
-        }
-      }
-      tor_asprintf(&entry, "%s %s", key, val);
-      tor_free(key);
-      tor_free(val);
-    } else {
-      entry = key;
-    }
-    smartlist_add(entries, entry);
-    while (TOR_ISSPACE(*body))
-      ++body;
-  }
-
-  smartlist_add_strdup(entries, "");
-  config = smartlist_join_strings(entries, "\n", 0, NULL);
-  SMARTLIST_FOREACH(entries, char *, cp, tor_free(cp));
-  smartlist_free(entries);
-
-  if (config_get_lines(config, &lines, 0) < 0) {
-    log_warn(LD_CONTROL,"Controller gave us config lines we can't parse.");
-    connection_write_str_to_buf("551 Couldn't parse configuration\r\n",
-                                conn);
-    tor_free(config);
-    return 0;
-  }
-  tor_free(config);
+  // We need a copy here, since confparse.c wants to canonicalize cases.
+  config_line_t *lines = config_lines_dup(args->kwargs);
 
   opt_err = options_trial_assign(lines, flags, &errstring);
   {
@@ -2276,7 +2234,6 @@ handle_control_obsolete(control_connection_t *conn,
  **/
 typedef enum handler_type_t {
   hnd_legacy,
-  hnd_legacy_mut,
   hnd_parsed,
 } handler_type_t;
 
@@ -2296,15 +2253,6 @@ typedef union handler_fn_t {
   int (*legacy)(control_connection_t *conn,
                 uint32_t arg_len,
                 const char *args);
-  /**
-   * A "legacy_mut" handler is the same as a "legacy" one, except that it may
-   * change the contents of the command's arguments -- for example, by
-   * inserting NULs.  It may not deallocate them.
-   */
-  int (*legacy_mut)(control_connection_t *conn,
-                    uint32_t arg_len,
-                    char *args);
-
   /**
    * A "parsed" handler expects its arguments in a pre-parsed format, in
    * an immutable control_cmd_args_t *object.
@@ -2400,8 +2348,8 @@ typedef struct control_cmd_def_t {
  **/
 static const control_cmd_def_t CONTROL_COMMANDS[] =
 {
-  ONE_LINE(setconf, legacy_mut, 0),
-  ONE_LINE(resetconf, legacy_mut, 0),
+  ONE_LINE_PARSED(setconf, 0),
+  ONE_LINE_PARSED(resetconf, 0),
   ONE_LINE_PARSED(getconf, 0),
   MULTLINE_PARSED(loadconf, 0),
   ONE_LINE_PARSED(setevents, 0),
@@ -2450,10 +2398,6 @@ handle_single_control_command(const control_cmd_def_t *def,
   switch (def->handler_type) {
     case hnd_legacy:
       if (def->handler.legacy(conn, cmd_data_len, args))
-        rv = -1;
-      break;
-    case hnd_legacy_mut:
-      if (def->handler.legacy_mut(conn, cmd_data_len, args))
         rv = -1;
       break;
     case hnd_parsed: {
