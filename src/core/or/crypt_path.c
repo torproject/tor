@@ -154,10 +154,9 @@ circuit_init_cpath_crypto(crypt_path_t *cpath,
 
   tor_assert(cpath);
   tor_assert(cpath->private);
-  return relay_crypto_init(&cpath->private->crypto, key_data, key_data_len, reverse,
-                           is_hs_v3);
+  return relay_crypto_init(&cpath->private->crypto, key_data, key_data_len,
+                           reverse, is_hs_v3);
 }
-
 
 /** Deallocate space associated with the cpath node <b>victim</b>. */
 void
