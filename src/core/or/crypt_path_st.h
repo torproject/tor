@@ -24,6 +24,15 @@ struct onion_handshake_state_t {
   } u;
 };
 
+#ifdef CRYPT_PATH_PRIVATE
+
+/* The private parts of crypt path that don't need to be exposed to all the
+ * modules. */
+struct crypt_path_private_t {
+};
+
+#endif
+
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */
 struct crypt_path_t {
@@ -65,6 +74,10 @@ struct crypt_path_t {
                        * at this step? */
   int deliver_window; /**< How many cells are we willing to deliver originating
                        * at this step? */
+
+  /* Private parts of the crypt_path. Eventually everything should be
+   * private. */
+  struct crypt_path_private_t *private;
 };
 
 #endif
