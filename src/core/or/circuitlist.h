@@ -228,7 +228,6 @@ int circuit_count_pending_on_channel(channel_t *chan);
 #define circuit_mark_for_close(c, reason)                               \
   circuit_mark_for_close_((c), (reason), __LINE__, SHORT_FILE__)
 
-void assert_cpath_layer_ok(const crypt_path_t *cp);
 MOCK_DECL(void, assert_circuit_ok,(const circuit_t *c));
 void circuit_free_all(void);
 void circuits_handle_oom(size_t current_allocation);
