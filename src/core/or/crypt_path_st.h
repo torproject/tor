@@ -29,6 +29,9 @@ struct onion_handshake_state_t {
 /* The private parts of crypt path that don't need to be exposed to all the
  * modules. */
 struct crypt_path_private_t {
+  /** Cryptographic state used for encrypting and authenticating relay
+   * cells to and from this hop. */
+  relay_crypto_t crypto;
 };
 
 #endif
@@ -37,10 +40,6 @@ struct crypt_path_private_t {
  * performed by a circuit.  Used only at the client edge of a circuit. */
 struct crypt_path_t {
   uint32_t magic;
-
-  /** Cryptographic state used for encrypting and authenticating relay
-   * cells to and from this hop. */
-  relay_crypto_t crypto;
 
   /** Current state of the handshake as performed with the OR at this
    * step. */

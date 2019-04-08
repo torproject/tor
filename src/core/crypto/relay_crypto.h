@@ -27,5 +27,11 @@ void relay_crypto_clear(relay_crypto_t *crypto);
 
 void relay_crypto_assert_ok(const relay_crypto_t *crypto);
 
+void
+relay_crypt_one_payload(crypto_cipher_t *cipher, uint8_t *in);
+
+void
+relay_set_digest(crypto_digest_t *digest, cell_t *cell);
+
 #endif /* !defined(TOR_RELAY_CRYPTO_H) */
 
