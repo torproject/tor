@@ -133,7 +133,6 @@ static smartlist_t *circuits_pending_other_guards = NULL;
  * circuit_mark_for_close and which are waiting for circuit_about_to_free. */
 static smartlist_t *circuits_pending_close = NULL;
 
-static void circuit_free_cpath_node(crypt_path_t *victim);
 static void cpath_ref_decref(crypt_path_reference_t *cpath_ref);
 static void circuit_about_to_free_atexit(circuit_t *circ);
 static void circuit_about_to_free(circuit_t *circ);
@@ -1331,22 +1330,6 @@ circuit_free_all(void)
     }
   }
   HT_CLEAR(chan_circid_map, &chan_circid_map);
-}
-
-/** Deallocate space associated with the cpath node <b>victim</b>. */
-static void
-circuit_free_cpath_node(crypt_path_t *victim)
-{
-  if (!victim)
-    return;
-
-  relay_crypto_clear(&victim->crypto);
-  onion_handshake_state_release(&victim->handshake_state);
-  crypto_dh_free(victim->rend_dh_handshake_state);
-  extend_info_free(victim->extend_info);
-
-  memwipe(victim, 0xBB, sizeof(crypt_path_t)); /* poison memory */
-  tor_free(victim);
 }
 
 /** Release a crypt_path_reference_t*, which may be NULL. */
