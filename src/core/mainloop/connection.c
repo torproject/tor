@@ -82,6 +82,7 @@
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
+#include "core/or/crypt_path.h"
 #include "core/proto/proto_http.h"
 #include "core/proto/proto_socks.h"
 #include "feature/client/dnsserv.h"
