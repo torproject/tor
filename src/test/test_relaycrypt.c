@@ -10,7 +10,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "core/or/relay.h"
 #include "core/crypto/relay_crypto.h"
-
+#include "core/or/crypt_path.h"
 #include "core/or/cell_st.h"
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"

@@ -16,8 +16,49 @@
 #include "core/or/crypt_path.h"
 
 #include "core/crypto/relay_crypto.h"
+#include "core/or/circuitbuild.h"
+#include "core/or/circuitlist.h"
 
 #include "core/or/crypt_path_st.h"
+
+/** Add <b>new_hop</b> to the end of the doubly-linked-list <b>head_ptr</b>.
+ * This function is used to extend cpath by another hop.
+ */
+void
+onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
+{
+  if (*head_ptr) {
+    new_hop->next = (*head_ptr);
+    new_hop->prev = (*head_ptr)->prev;
+    (*head_ptr)->prev->next = new_hop;
+    (*head_ptr)->prev = new_hop;
+  } else {
+    *head_ptr = new_hop;
+    new_hop->prev = new_hop->next = new_hop;
+  }
+}
+
+/** Create a new hop, annotate it with information about its
+ * corresponding router <b>choice</b>, and append it to the
+ * end of the cpath <b>head_ptr</b>. */
+int
+onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
+{
+  crypt_path_t *hop = tor_malloc_zero(sizeof(crypt_path_t));
+
+  /* link hop into the cpath, at the end. */
+  onion_append_to_cpath(head_ptr, hop);
+
+  hop->magic = CRYPT_PATH_MAGIC;
+  hop->state = CPATH_STATE_CLOSED;
+
+  hop->extend_info = extend_info_dup(choice);
+
+  hop->package_window = circuit_initial_package_window();
+  hop->deliver_window = CIRCWINDOW_START;
+
+  return 0;
+}
 
 /** Verify that cpath <b>cp</b> has all of its invariants
  * correct. Trigger an assert if anything is invalid.

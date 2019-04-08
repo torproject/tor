@@ -51,7 +51,6 @@ MOCK_DECL(int, circuit_all_predicted_ports_handled, (time_t now,
 
 int circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info);
 int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);
-void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 extend_info_t *extend_info_new(const char *nickname,
                                const char *rsa_id_digest,
                                const struct ed25519_public_key_t *ed_id,

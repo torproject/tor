@@ -9,6 +9,7 @@
 #include "core/or/connection_or.h"
 #include "core/or/channel.h"
 #include "core/or/channeltls.h"
+#include "core/or/crypt_path.h"
 #include <event.h>
 #include "lib/evloop/compat_libevent.h"
 #include "lib/time/compat_time.h"
