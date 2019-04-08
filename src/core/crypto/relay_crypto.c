@@ -6,6 +6,7 @@
 
 #include "core/or/or.h"
 #include "core/or/circuitlist.h"
+#include "core/or/crypt_path.h"
 #include "app/config/config.h"
 #include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -21,7 +22,7 @@
 /** Update digest from the payload of cell. Assign integrity part to
  * cell.
  */
-static void
+void
 relay_set_digest(crypto_digest_t *digest, cell_t *cell)
 {
   char integrity[4];
@@ -85,7 +86,7 @@ relay_digest_matches(crypto_digest_t *digest, cell_t *cell)
  *
  * Note that we use the same operation for encrypting and for decrypting.
  */
-static void
+void
 relay_crypt_one_payload(crypto_cipher_t *cipher, uint8_t *in)
 {
   crypto_cipher_crypt_inplace(cipher, (char*) in, CELL_PAYLOAD_SIZE);
@@ -152,12 +153,12 @@ relay_decrypt_cell(circuit_t *circ, cell_t *cell,
         tor_assert(thishop);
 
         /* decrypt one layer */
-        relay_crypt_one_payload(thishop->crypto.b_crypto, cell->payload);
+        cpath_crypt_cell(thishop, cell->payload, true);
 
         relay_header_unpack(&rh, cell->payload);
         if (rh.recognized == 0) {
           /* it's possibly recognized. have to check digest to be sure. */
-          if (relay_digest_matches(thishop->crypto.b_digest, cell)) {
+          if (relay_digest_matches(cpath_get_incoming_digest(thishop), cell)) {
             *recognized = 1;
             *layer_hint = thishop;
             /* This cell is for us. Keep a record of this cell because we will
@@ -210,14 +211,14 @@ relay_encrypt_cell_outbound(cell_t *cell,
                             crypt_path_t *layer_hint)
 {
   crypt_path_t *thishop; /* counter for repeated crypts */
-  relay_set_digest(layer_hint->crypto.f_digest, cell);
+  cpath_set_cell_forward_digest(layer_hint, cell);
 
   thishop = layer_hint;
   /* moving from farthest to nearest hop */
   do {
     tor_assert(thishop);
     log_debug(LD_OR,"encrypting a layer of the relay cell.");
-    relay_crypt_one_payload(thishop->crypto.f_crypto, cell->payload);
+    cpath_crypt_cell(thishop, cell->payload, false);
 
     thishop = thishop->prev;
   } while (thishop != circ->cpath->prev);

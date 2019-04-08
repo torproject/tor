@@ -20,6 +20,7 @@
 #include "core/or/circuitlist.h"
 
 #include "core/or/crypt_path_st.h"
+#include "core/or/cell_st.h"
 
 /** Add <b>new_hop</b> to the end of the doubly-linked-list <b>head_ptr</b>.
  * This function is used to extend cpath by another hop.
@@ -96,7 +97,7 @@ assert_cpath_layer_ok(const crypt_path_t *cp)
   switch (cp->state)
     {
     case CPATH_STATE_OPEN:
-      relay_crypto_assert_ok(&cp->crypto);
+      relay_crypto_assert_ok(&cp->private->crypto);
       /* fall through */
     case CPATH_STATE_CLOSED:
       /*XXXX Assert that there's no handshake_state either. */
@@ -113,3 +114,31 @@ assert_cpath_layer_ok(const crypt_path_t *cp)
   tor_assert(cp->deliver_window >= 0);
 }
 
+/********************** cpath crypto API *******************************/
+
+/** Encrypt or decrypt <b>payload</b> using the crypto of <b>cpath</b>. Actual
+ *  operation decided by <b>is_decrypt</b>.  */
+void
+cpath_crypt_cell(const crypt_path_t *cpath, uint8_t *payload, bool is_decrypt)
+{
+  if (is_decrypt) {
+    relay_crypt_one_payload(cpath->private->crypto.b_crypto, payload);
+  } else {
+    relay_crypt_one_payload(cpath->private->crypto.f_crypto, payload);
+  }
+}
+
+/** Getter for the incoming digest of <b>cpath</b>. */
+struct crypto_digest_t *
+cpath_get_incoming_digest(const crypt_path_t *cpath)
+{
+  return cpath->private->crypto.b_digest;
+}
+
+/** Set the right integrity digest on the outgoing <b>cell</b> based on the
+ *  cell payload and update the forward digest of <b>cpath</b>. */
+void
+cpath_set_cell_forward_digest(crypt_path_t *cpath, cell_t *cell)
+{
+  relay_set_digest(cpath->private->crypto.f_digest, cell);
+}
