@@ -87,8 +87,7 @@ create_rend_cpath(const uint8_t *ntor_key_seed, size_t seed_len,
   }
 
   /* Setup the cpath */
-  cpath = tor_malloc_zero(sizeof(crypt_path_t));
-  cpath->magic = CRYPT_PATH_MAGIC;
+  cpath = crypt_path_new();
 
   if (circuit_init_cpath_crypto(cpath, (char*)keys, sizeof(keys),
                                 is_service_side, 1) < 0) {

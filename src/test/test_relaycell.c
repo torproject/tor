@@ -16,6 +16,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
+#include "core/or/crypt_path.h"
 #include "core/or/connection_edge.h"
 #include "core/or/relay.h"
 #include "test/test.h"
@@ -90,8 +91,7 @@ helper_create_origin_circuit(int purpose, int flags)
 
   circ = origin_circuit_init(purpose, flags);
   tor_assert(circ);
-  circ->cpath = tor_malloc_zero(sizeof(crypt_path_t));
-  circ->cpath->magic = CRYPT_PATH_MAGIC;
+  circ->cpath = crypt_path_new();
   circ->cpath->state = CPATH_STATE_OPEN;
   circ->cpath->package_window = circuit_initial_package_window();
   circ->cpath->deliver_window = CIRCWINDOW_START;

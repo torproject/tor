@@ -2158,8 +2158,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   launched->build_state->service_pending_final_cpath_ref->refcount = 1;
 
   launched->build_state->service_pending_final_cpath_ref->cpath = cpath =
-    tor_malloc_zero(sizeof(crypt_path_t));
-  cpath->magic = CRYPT_PATH_MAGIC;
+    crypt_path_new();
   launched->build_state->expiry_time = now + MAX_REND_TIMEOUT;
 
   cpath->rend_dh_handshake_state = dh;

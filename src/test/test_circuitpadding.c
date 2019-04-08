@@ -115,7 +115,7 @@ new_fake_orcirc(channel_t *nchan, channel_t *pchan)
 {
   or_circuit_t *orcirc = NULL;
   circuit_t *circ = NULL;
-  crypt_path_t tmp_cpath;
+  crypt_path_t *tmp_cpath;
   char whatevs_key[CPATH_KEY_MATERIAL_LEN];
 
   orcirc = tor_malloc_zero(sizeof(*orcirc));
@@ -144,13 +144,15 @@ new_fake_orcirc(channel_t *nchan, channel_t *pchan)
   circuit_set_p_circid_chan(orcirc, orcirc->p_circ_id, pchan);
   circuit_set_n_circid_chan(circ, circ->n_circ_id, nchan);
 
-  memset(&tmp_cpath, 0, sizeof(tmp_cpath));
-  if (circuit_init_cpath_crypto(&tmp_cpath, whatevs_key,
+  tmp_cpath = crypt_path_new();
+  if (circuit_init_cpath_crypto(tmp_cpath, whatevs_key,
                                 sizeof(whatevs_key), 0, 0)<0) {
     log_warn(LD_BUG,"Circuit initialization failed");
     return NULL;
   }
-  orcirc->crypto = tmp_cpath.private->crypto;
+  orcirc->crypto = tmp_cpath->private->crypto;
+  tor_free(tmp_cpath->private);
+  tor_free(tmp_cpath);
 
   return orcirc;
 }
@@ -1618,10 +1620,9 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
   circpad_cell_event_nonpadding_received((circuit_t*)client);
 
   // Add a hop to cpath
-  crypt_path_t *hop = tor_malloc_zero(sizeof(crypt_path_t));
+  crypt_path_t *hop = crypt_path_new();
   onion_append_to_cpath(&TO_ORIGIN_CIRCUIT(client)->cpath, hop);
 
-  hop->magic = CRYPT_PATH_MAGIC;
   hop->state = CPATH_STATE_OPEN;
 
   // add an extend info to indicate if this node supports padding or not.
