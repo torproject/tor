@@ -1,0 +1,5 @@
+  o Minor features (circuit padding):
+    - Add the ability to specify a probability with which matching padding
+      machines will apply to a circuit, to provide defense in depth to our
+      planned client-side onion service circuit obfuscation. Closes ticket
+      30092.

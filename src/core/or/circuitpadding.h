@@ -160,6 +160,12 @@ typedef struct circpad_machine_conditions_t {
    *  of the bits set in this bitmask */
   circpad_purpose_mask_t purpose_mask;
 
+  /**
+   * If all of the above conditions are met, apply this machine with
+   * the following probability (0,1.0). 0 means "always", to avoid
+   * dealing with equality comparisons to 1.0 in floating point. */
+  double apply_with_probability;
+
 } circpad_machine_conditions_t;
 
 /**

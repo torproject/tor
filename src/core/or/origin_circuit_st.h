@@ -165,6 +165,10 @@ struct origin_circuit_t {
    * not try to negotiate further circuit padding. */
   unsigned padding_negotiation_failed : 1;
 
+  /** If this flag is set, we've already tossed a coin to decide if we should
+   * apply a padding machine. Don't toss another. */
+  unsigned padding_apply_coin_tossed : 1;
+
   /**
    * Tristate variable to guard against pathbias miscounting
    * due to circuit purpose transitions changing the decision

@@ -1644,6 +1644,20 @@ circpad_machine_conditions_met(origin_circuit_t *circ,
   if (circuit_get_cpath_opened_len(circ) < machine->conditions.min_hops)
     return 0;
 
+  /* Check if we have a probability-based condition, and if
+   * we've tossed the coin yet. Do this last, because we only
+   * get to toss one coin per circuit.. We should only toss
+   * it if all conditions already applied. */
+  if (machine->conditions.apply_with_probability > 0 &&
+      !circ->padding_apply_coin_tossed) {
+    if (crypto_rand_double() <= machine->conditions.apply_with_probability) {
+      return 1;
+    }
+
+    circ->padding_apply_coin_tossed = 1;
+    return 0;
+  }
+
   return 1;
 }
 
