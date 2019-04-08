@@ -2,6 +2,7 @@
 #define TOR_TIMERS_PRIVATE
 #define CIRCUITPADDING_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define CRYPT_PATH_PRIVATE
 
 #include "core/or/or.h"
 #include "test.h"
@@ -149,7 +150,7 @@ new_fake_orcirc(channel_t *nchan, channel_t *pchan)
     log_warn(LD_BUG,"Circuit initialization failed");
     return NULL;
   }
-  orcirc->crypto = tmp_cpath.crypto;
+  orcirc->crypto = tmp_cpath.private->crypto;
 
   return orcirc;
 }
