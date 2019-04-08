@@ -62,6 +62,8 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
  * that appears at the start of a line, and adding a period-CRLF line at
  * the end. Replace all LF characters sequences with CRLF.  Return the number
  * of bytes in *<b>out</b>.
+ *
+ * This corresponds to CmdData in control-spec.txt.
  */
 size_t
 write_escaped_data(const char *data, size_t len, char **out)
@@ -118,7 +120,10 @@ write_escaped_data(const char *data, size_t len, char **out)
  * the contents of <b>data</b> into *<b>out</b>, removing any period
  * that appears at the start of a line, and replacing all CRLF sequences
  * with LF.   Return the number of
- * bytes in *<b>out</b>. */
+ * bytes in *<b>out</b>.
+ *
+ * This corresponds to CmdData in control-spec.txt.
+ */
 size_t
 read_escaped_data(const char *data, size_t len, char **out)
 {
