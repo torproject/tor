@@ -3,6 +3,8 @@
  * \brief Header file for crypt_path.c.
  **/
 
+crypt_path_t *crypt_path_new(void);
+
 /* rename */
 void assert_cpath_layer_ok(const crypt_path_t *cp);
 

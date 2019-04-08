@@ -26,6 +26,17 @@
 #include "core/or/crypt_path_st.h"
 #include "core/or/cell_st.h"
 
+/** Initialize and return a minimal crypt_path_t */
+crypt_path_t *
+crypt_path_new(void)
+{
+  crypt_path_t *cpath = tor_malloc_zero(sizeof(crypt_path_t));
+  cpath->magic = CRYPT_PATH_MAGIC;
+  cpath->private = tor_malloc_zero(sizeof(struct crypt_path_private_t));
+
+  return cpath;
+}
+
 /** Add <b>new_hop</b> to the end of the doubly-linked-list <b>head_ptr</b>.
  * This function is used to extend cpath by another hop.
  */
@@ -49,12 +60,11 @@ onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
 int
 onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
 {
-  crypt_path_t *hop = tor_malloc_zero(sizeof(crypt_path_t));
+  crypt_path_t *hop = crypt_path_new();
 
   /* link hop into the cpath, at the end. */
   onion_append_to_cpath(head_ptr, hop);
 
-  hop->magic = CRYPT_PATH_MAGIC;
   hop->state = CPATH_STATE_CLOSED;
 
   hop->extend_info = extend_info_dup(choice);
@@ -158,6 +168,7 @@ circuit_free_cpath_node(crypt_path_t *victim)
   onion_handshake_state_release(&victim->handshake_state);
   crypto_dh_free(victim->rend_dh_handshake_state);
   extend_info_free(victim->extend_info);
+  tor_free(victim->private);
 
   memwipe(victim, 0xBB, sizeof(crypt_path_t)); /* poison memory */
   tor_free(victim);
