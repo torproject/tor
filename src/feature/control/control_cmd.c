@@ -184,6 +184,17 @@ control_cmd_parse_args(const char *command,
   return result;
 }
 
+/**
+ * Return true iff <b>lines</b> contains <b>flags</b> as a no-value
+ * (keyword-only) entry.
+ **/
+static bool
+config_lines_contain_flag(const config_line_t *lines, const char *flag)
+{
+  const config_line_t *line = config_line_find_case(lines, flag);
+  return line && !strcmp(line->value, "");
+}
+
 /** Called when we receive a SETCONF message: parse the body and try
  * to update our configuration.  Reply with a DONE or ERROR message.
  * Modifies the contents of body.*/
@@ -370,15 +381,19 @@ handle_control_setevents(control_connection_t *conn,
   return 0;
 }
 
+static const control_cmd_syntax_t saveconf_syntax = {
+  .max_args = 0,
+  .accept_keywords = true,
+  .kvline_flags=KV_OMIT_VALS,
+};
+
 /** Called when we get a SAVECONF command. Try to flush the current options to
  * disk, and report success or failure. */
 static int
-handle_control_saveconf(control_connection_t *conn, uint32_t len,
-                        const char *body)
+handle_control_saveconf(control_connection_t *conn,
+                        const control_cmd_args_t *args)
 {
-  (void) len;
-
-  int force = !strcmpstart(body, "FORCE");
+  bool force = config_lines_contain_flag(args->kwargs, "FORCE");
   const or_options_t *options = get_options();
   if ((!force && options->IncludeUsed) || options_save_current() < 0) {
     connection_write_str_to_buf(
@@ -620,30 +635,27 @@ address_is_invalid_mapaddress_target(const char *addr)
     return address_is_invalid_destination(addr, 1);
 }
 
+static const control_cmd_syntax_t mapaddress_syntax = {
+  .max_args=0,
+  .accept_keywords=true,
+};
+
 /** Called when we get a MAPADDRESS command; try to bind all listed addresses,
  * and report success or failure. */
 static int
-handle_control_mapaddress(control_connection_t *conn, uint32_t len,
-                          const char *body)
+handle_control_mapaddress(control_connection_t *conn,
+                          const control_cmd_args_t *args)
 {
-  smartlist_t *elts;
-  smartlist_t *lines;
   smartlist_t *reply;
   char *r;
   size_t sz;
-  (void) len; /* body is NUL-terminated, so it's safe to ignore the length. */
 
-  lines = smartlist_new();
-  elts = smartlist_new();
   reply = smartlist_new();
-  smartlist_split_string(lines, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH_BEGIN(lines, char *, line) {
-    tor_strlower(line);
-    smartlist_split_string(elts, line, "=", 0, 2);
-    if (smartlist_len(elts) == 2) {
-      const char *from = smartlist_get(elts,0);
-      const char *to = smartlist_get(elts,1);
+  const config_line_t *line;
+  for (line = args->kwargs; line; line = line->next) {
+    const char *from = line->key;
+    const char *to = line->value;
+    {
       if (address_is_invalid_mapaddress_target(to)) {
         smartlist_add_asprintf(reply,
                      "512-syntax error: invalid address '%s'", to);
@@ -658,10 +670,10 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
                                                      type, tor_strdup(to));
         if (!address) {
           smartlist_add_asprintf(reply,
-                       "451-resource exhausted: skipping '%s'", line);
+                   "451-resource exhausted: skipping '%s=%s'", from,to);
           log_warn(LD_CONTROL,
                    "Unable to allocate address for '%s' in MapAddress msg",
-                   safe_str_client(line));
+                   safe_str_client(to));
         } else {
           smartlist_add_asprintf(reply, "250-%s=%s", address, to);
         }
@@ -671,27 +683,16 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
                                      ADDRMAPSRC_CONTROLLER, &msg) < 0) {
           smartlist_add_asprintf(reply,
                                  "512-syntax error: invalid address mapping "
-                                 " '%s': %s", line, msg);
+                                 " '%s=%s': %s", from, to, msg);
           log_warn(LD_CONTROL,
-                   "Skipping invalid argument '%s' in MapAddress msg: %s",
-                   line, msg);
+                   "Skipping invalid argument '%s=%s' in MapAddress msg: %s",
+                   from, to, msg);
         } else {
-          smartlist_add_asprintf(reply, "250-%s", line);
+          smartlist_add_asprintf(reply, "250-%s=%s", from, to);
         }
       }
-    } else {
-      smartlist_add_asprintf(reply, "512-syntax error: mapping '%s' is "
-                   "not of expected form 'foo=bar'.", line);
-      log_info(LD_CONTROL, "Skipping MapAddress '%s': wrong "
-                           "number of items.",
-                           safe_str_client(line));
     }
-    SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
-    smartlist_clear(elts);
-  } SMARTLIST_FOREACH_END(line);
-  SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
-  smartlist_free(lines);
-  smartlist_free(elts);
+  }
 
   if (smartlist_len(reply)) {
     ((char*)smartlist_get(reply,smartlist_len(reply)-1))[3] = ' ';
@@ -931,36 +932,36 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static const control_cmd_syntax_t setcircuitpurpose_syntax = {
+  .max_args=1,
+  .accept_keywords=true,
+};
+
 /** Called when we get a SETCIRCUITPURPOSE message. If we can find the
  * circuit and it's a valid purpose, change it. */
 static int
 handle_control_setcircuitpurpose(control_connection_t *conn,
-                                 uint32_t len, const char *body)
+                                 const control_cmd_args_t *args)
 {
   origin_circuit_t *circ = NULL;
   uint8_t new_purpose;
-  smartlist_t *args;
-  (void) len; /* body is NUL-terminated, so it's safe to ignore the length. */
+  const char *circ_id = smartlist_get(args->args,0);
 
-  args = getargs_helper("SETCIRCUITPURPOSE", conn, body, 2, -1);
-  if (!args)
-    goto done;
-
-  if (!(circ = get_circ(smartlist_get(args,0)))) {
-    connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
-                             (char*)smartlist_get(args, 0));
+  if (!(circ = get_circ(circ_id))) {
+    connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n", circ_id);
     goto done;
   }
 
   {
-    const char *purp = find_element_starting_with(args,1,"PURPOSE=");
+    const config_line_t *purp = config_line_find_case(args->kwargs, "PURPOSE");
     if (!purp) {
       connection_write_str_to_buf("552 No purpose given\r\n", conn);
       goto done;
     }
-    new_purpose = circuit_purpose_from_string(purp);
+    new_purpose = circuit_purpose_from_string(purp->value);
     if (new_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
-      connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
+      connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
+                               purp->value);
       goto done;
     }
   }
@@ -969,54 +970,50 @@ handle_control_setcircuitpurpose(control_connection_t *conn,
   connection_write_str_to_buf("250 OK\r\n", conn);
 
  done:
-  if (args) {
-    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-    smartlist_free(args);
-  }
   return 0;
 }
+
+static const char *attachstream_keywords[] = {
+  "HOP", NULL
+};
+static const control_cmd_syntax_t attachstream_syntax = {
+  .min_args=2, .max_args=2,
+  .accept_keywords=true,
+  .allowed_keywords=attachstream_keywords
+};
 
 /** Called when we get an ATTACHSTREAM message.  Try to attach the requested
  * stream, and report success or failure. */
 static int
-handle_control_attachstream(control_connection_t *conn, uint32_t len,
-                            const char *body)
+handle_control_attachstream(control_connection_t *conn,
+                            const control_cmd_args_t *args)
 {
   entry_connection_t *ap_conn = NULL;
   origin_circuit_t *circ = NULL;
-  int zero_circ;
-  smartlist_t *args;
   crypt_path_t *cpath=NULL;
   int hop=0, hop_line_ok=1;
-  (void) len;
+  const char *stream_id = smartlist_get(args->args, 0);
+  const char *circ_id = smartlist_get(args->args, 1);
+  int zero_circ = !strcmp(circ_id, "0");
+  const config_line_t *hoparg = config_line_find_case(args->kwargs, "HOP");
 
-  args = getargs_helper("ATTACHSTREAM", conn, body, 2, -1);
-  if (!args)
+  if (!(ap_conn = get_stream(stream_id))) {
+    connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n", stream_id);
     return 0;
-
-  zero_circ = !strcmp("0", (char*)smartlist_get(args,1));
-
-  if (!(ap_conn = get_stream(smartlist_get(args, 0)))) {
-    connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
-                             (char*)smartlist_get(args, 0));
-  } else if (!zero_circ && !(circ = get_circ(smartlist_get(args, 1)))) {
-    connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
-                             (char*)smartlist_get(args, 1));
+  } else if (!zero_circ && !(circ = get_circ(circ_id))) {
+    connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n", circ_id);
+    return 0;
   } else if (circ) {
-    const char *hopstring = find_element_starting_with(args,2,"HOP=");
-    if (hopstring) {
-      hopstring += strlen("HOP=");
-      hop = (int) tor_parse_ulong(hopstring, 10, 0, INT_MAX,
+    if (hoparg) {
+      hop = (int) tor_parse_ulong(hoparg->value, 10, 0, INT_MAX,
                                   &hop_line_ok, NULL);
       if (!hop_line_ok) { /* broken hop line */
-        connection_printf_to_buf(conn, "552 Bad value hop=%s\r\n", hopstring);
+        connection_printf_to_buf(conn, "552 Bad value hop=%s\r\n",
+                                 hoparg->value);
+        return 0;
       }
     }
   }
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-  smartlist_free(args);
-  if (!ap_conn || (!zero_circ && !circ) || !hop_line_ok)
-    return 0;
 
   if (ENTRY_TO_CONN(ap_conn)->state != AP_CONN_STATE_CONTROLLER_WAIT &&
       ENTRY_TO_CONN(ap_conn)->state != AP_CONN_STATE_CONNECT_WAIT &&
@@ -1071,59 +1068,49 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static const char *postdescriptor_keywords[] = {
+  "cache", "purpose", NULL,
+};
+
+static const control_cmd_syntax_t postdescriptor_syntax = {
+  .max_args = 0,
+  .accept_keywords = true,
+  .allowed_keywords = postdescriptor_keywords,
+  .want_object = true,
+};
+
 /** Called when we get a POSTDESCRIPTOR message.  Try to learn the provided
  * descriptor, and report success or failure. */
 static int
-handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
-                              const char *body)
+handle_control_postdescriptor(control_connection_t *conn,
+                              const control_cmd_args_t *args)
 {
-  char *desc;
   const char *msg=NULL;
   uint8_t purpose = ROUTER_PURPOSE_GENERAL;
   int cache = 0; /* eventually, we may switch this to 1 */
+  const config_line_t *line;
 
-  const char *cp = memchr(body, '\n', len);
-
-  if (cp == NULL) {
-    connection_printf_to_buf(conn, "251 Empty body\r\n");
-    return 0;
+  line = config_line_find_case(args->kwargs, "purpose");
+  if (line) {
+    purpose = router_purpose_from_string(line->value);
+    connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
+                             line->value);
+    goto done;
   }
-  ++cp;
-
-  char *cmdline = tor_memdup_nulterm(body, cp-body);
-  smartlist_t *args = smartlist_new();
-  smartlist_split_string(args, cmdline, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH_BEGIN(args, char *, option) {
-    if (!strcasecmpstart(option, "purpose=")) {
-      option += strlen("purpose=");
-      purpose = router_purpose_from_string(option);
-      if (purpose == ROUTER_PURPOSE_UNKNOWN) {
-        connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
-                                 option);
-        goto done;
-      }
-    } else if (!strcasecmpstart(option, "cache=")) {
-      option += strlen("cache=");
-      if (!strcasecmp(option, "no"))
-        cache = 0;
-      else if (!strcasecmp(option, "yes"))
-        cache = 1;
-      else {
-        connection_printf_to_buf(conn, "552 Unknown cache request \"%s\"\r\n",
-                                 option);
-        goto done;
-      }
-    } else { /* unrecognized argument? */
-      connection_printf_to_buf(conn,
-        "512 Unexpected argument \"%s\" to postdescriptor\r\n", option);
+  line = config_line_find_case(args->kwargs, "cache");
+  if (line) {
+    if (!strcasecmp(line->value, "no"))
+      cache = 0;
+    else if (!strcasecmp(line->value, "yes"))
+      cache = 1;
+    else {
+      connection_printf_to_buf(conn, "552 Unknown cache request \"%s\"\r\n",
+                               line->value);
       goto done;
     }
-  } SMARTLIST_FOREACH_END(option);
+  }
 
-  read_escaped_data(cp, len-(cp-body), &desc);
-
-  switch (router_load_single_router(desc, purpose, cache, &msg)) {
+  switch (router_load_single_router(args->object, purpose, cache, &msg)) {
   case -1:
     if (!msg) msg = "Could not parse descriptor";
     connection_printf_to_buf(conn, "554 %s\r\n", msg);
@@ -1137,11 +1124,7 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
     break;
   }
 
-  tor_free(desc);
  done:
-  SMARTLIST_FOREACH(args, char *, arg, tor_free(arg));
-  smartlist_free(args);
-  tor_free(cmdline);
   return 0;
 }
 
@@ -1230,38 +1213,29 @@ handle_control_closestream(control_connection_t *conn,
   return 0;
 }
 
+static const control_cmd_syntax_t closecircuit_syntax = {
+  .min_args=1, .max_args=1,
+  .accept_keywords=true,
+  .kvline_flags=KV_OMIT_VALS,
+  // XXXX we might want to exclude unrecognized flags, but for now we
+  // XXXX just ignore them for backward compatibility.
+};
+
 /** Called when we get a CLOSECIRCUIT command; try to close the named circuit
  * and report success or failure. */
 static int
-handle_control_closecircuit(control_connection_t *conn, uint32_t len,
-                            const char *body)
+handle_control_closecircuit(control_connection_t *conn,
+                            const control_cmd_args_t *args)
 {
+  const char *circ_id = smartlist_get(args->args, 0);
   origin_circuit_t *circ = NULL;
-  int safe = 0;
-  smartlist_t *args;
-  (void) len;
 
-  args = getargs_helper("CLOSECIRCUIT", conn, body, 1, -1);
-  if (!args)
+  if (!(circ=get_circ(circ_id))) {
+    connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n", circ_id);
     return 0;
-
-  if (!(circ=get_circ(smartlist_get(args, 0))))
-    connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
-                             (char*)smartlist_get(args, 0));
-  else {
-    int i;
-    for (i=1; i < smartlist_len(args); ++i) {
-      if (!strcasecmp(smartlist_get(args, i), "IfUnused"))
-        safe = 1;
-      else
-        log_info(LD_CONTROL, "Skipping unknown option %s",
-                 (char*)smartlist_get(args,i));
-    }
   }
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-  smartlist_free(args);
-  if (!circ)
-    return 0;
+
+  bool safe =  config_lines_contain_flag(args->kwargs, "IfUnused");
 
   if (!safe || !circ->p_streams) {
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_REQUESTED);
@@ -1271,36 +1245,43 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static const control_cmd_syntax_t resolve_syntax = {
+  .max_args=0,
+  .accept_keywords=true,
+  .kvline_flags=KV_OMIT_VALS,
+};
+
 /** Called when we get a RESOLVE command: start trying to resolve
  * the listed addresses. */
 static int
-handle_control_resolve(control_connection_t *conn, uint32_t len,
-                       const char *body)
+handle_control_resolve(control_connection_t *conn,
+                       const control_cmd_args_t *args)
 {
-  smartlist_t *args, *failed;
+  smartlist_t *failed;
   int is_reverse = 0;
-  (void) len; /* body is nul-terminated; it's safe to ignore the length */
 
   if (!(conn->event_mask & (((event_mask_t)1)<<EVENT_ADDRMAP))) {
     log_warn(LD_CONTROL, "Controller asked us to resolve an address, but "
              "isn't listening for ADDRMAP events.  It probably won't see "
              "the answer.");
   }
-  args = smartlist_new();
-  smartlist_split_string(args, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+
   {
-    const char *modearg = find_element_starting_with(args, 0, "mode=");
-    if (modearg && !strcasecmp(modearg, "mode=reverse"))
+    const config_line_t *modearg = config_line_find_case(args->kwargs, "mode");
+    if (modearg && !strcasecmp(modearg->value, "reverse"))
       is_reverse = 1;
   }
   failed = smartlist_new();
-  SMARTLIST_FOREACH(args, const char *, arg, {
-      if (!is_keyval_pair(arg)) {
-          if (dnsserv_launch_request(arg, is_reverse, conn)<0)
-            smartlist_add(failed, (char*)arg);
-      }
-  });
+  for (const config_line_t *line = args->kwargs; line; line = line->next) {
+    if (!strlen(line->value)) {
+      const char *addr = line->key;
+      if (dnsserv_launch_request(addr, is_reverse, conn)<0)
+        smartlist_add(failed, (char*)addr);
+    } else {
+      // XXXX arguably we should reject unrecognized keyword arguments,
+      // XXXX but the old implementation didn't do that.
+    }
+  }
 
   send_control_done(conn);
   SMARTLIST_FOREACH(failed, const char *, arg, {
@@ -1308,8 +1289,6 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
                                    "internal", 0);
   });
 
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-  smartlist_free(args);
   smartlist_free(failed);
   return 0;
 }
@@ -1443,30 +1422,33 @@ handle_control_dropguards(control_connection_t *conn,
   return 0;
 }
 
+static const char *hsfetch_keywords[] = {
+  "SERVER", NULL,
+};
+static const control_cmd_syntax_t hsfetch_syntax = {
+  .min_args = 1, .max_args = 1,
+  .accept_keywords = true,
+  .allowed_keywords = hsfetch_keywords,
+  .want_object = true,
+};
+
 /** Implementation for the HSFETCH command. */
 static int
-handle_control_hsfetch(control_connection_t *conn, uint32_t len,
-                       const char *body)
+handle_control_hsfetch(control_connection_t *conn,
+                       const control_cmd_args_t *args)
+
 {
-  int i;
-  char digest[DIGEST_LEN], *hsaddress = NULL, *arg1 = NULL, *desc_id = NULL;
-  smartlist_t *args = NULL, *hsdirs = NULL;
-  (void) len; /* body is nul-terminated; it's safe to ignore the length */
-  static const char *hsfetch_command = "HSFETCH";
+  char digest[DIGEST_LEN], *desc_id = NULL;
+  smartlist_t *hsdirs = NULL;
   static const char *v2_str = "v2-";
   const size_t v2_str_len = strlen(v2_str);
   rend_data_t *rend_query = NULL;
   ed25519_public_key_t v3_pk;
   uint32_t version;
-
-  /* Make sure we have at least one argument, the HSAddress. */
-  args = getargs_helper(hsfetch_command, conn, body, 1, -1);
-  if (!args) {
-    goto exit;
-  }
+  const char *hsaddress = NULL;
 
   /* Extract the first argument (either HSAddress or DescID). */
-  arg1 = smartlist_get(args, 0);
+  const char *arg1 = smartlist_get(args->args, 0);
   /* Test if it's an HS address without the .onion part. */
   if (rend_valid_v2_service_id(arg1)) {
     hsaddress = arg1;
@@ -1490,18 +1472,11 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
     goto done;
   }
 
-  static const char *opt_server = "SERVER=";
+  for (const config_line_t *line = args->kwargs; line; line = line->next) {
+    if (!strcasecmp(line->key, "SERVER")) {
+      const char *server = line->value;
 
-  /* Skip first argument because it's the HSAddress or DescID. */
-  for (i = 1; i < smartlist_len(args); ++i) {
-    const char *arg = smartlist_get(args, i);
-    const node_t *node;
-
-    if (!strcasecmpstart(arg, opt_server)) {
-      const char *server;
-
-      server = arg + strlen(opt_server);
-      node = node_get_by_hex_id(server, 0);
+      const node_t *node = node_get_by_hex_id(server, 0);
       if (!node) {
         connection_printf_to_buf(conn, "552 Server \"%s\" not found\r\n",
                                  server);
@@ -1514,9 +1489,7 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
       /* Valid server, add it to our local list. */
       smartlist_add(hsdirs, node->rs);
     } else {
-      connection_printf_to_buf(conn, "513 Unexpected argument \"%s\"\r\n",
-                               arg);
-      goto done;
+      tor_assert_nonfatal_unreached();
     }
   }
 
@@ -1532,9 +1505,8 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
   /* Using a descriptor ID, we force the user to provide at least one
    * hsdir server using the SERVER= option. */
   if (desc_id && (!hsdirs || !smartlist_len(hsdirs))) {
-      connection_printf_to_buf(conn, "512 %s option is required\r\n",
-                               opt_server);
-      goto done;
+    connection_printf_to_buf(conn, "512 SERVER option is required\r\n");
+    goto done;
   }
 
   /* We are about to trigger HSDir fetch so send the OK now because after
@@ -1552,96 +1524,75 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
   }
 
  done:
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-  smartlist_free(args);
   /* Contains data pointer that we don't own thus no cleanup. */
   smartlist_free(hsdirs);
   rend_data_free(rend_query);
- exit:
   return 0;
 }
+
+static const char *hspost_keywords[] = {
+  "SERVER", "HSADDRESS", NULL
+};
+static const control_cmd_syntax_t hspost_syntax = {
+  .min_args = 0, .max_args = 0,
+  .accept_keywords = true,
+  .want_object = true,
+  .allowed_keywords = hspost_keywords
+};
 
 /** Implementation for the HSPOST command. */
 static int
 handle_control_hspost(control_connection_t *conn,
-                      uint32_t len,
-                      const char *body)
+                      const control_cmd_args_t *args)
 {
-  static const char *opt_server = "SERVER=";
-  static const char *opt_hsaddress = "HSADDRESS=";
   smartlist_t *hs_dirs = NULL;
-  const char *encoded_desc = body;
-  size_t encoded_desc_len = len;
+  const char *encoded_desc = args->object;
+  size_t encoded_desc_len = args->object_len;
   const char *onion_address = NULL;
+  const config_line_t *line;
 
-  char *cp = memchr(body, '\n', len);
-  if (cp == NULL) {
-    connection_printf_to_buf(conn, "251 Empty body\r\n");
-    return 0;
-  }
-  char *argline = tor_strndup(body, cp-body);
+  for (line = args->kwargs; line; line = line->next) {
+    if (!strcasecmpstart(line->key, "SERVER")) {
+      const char *server = line->value;
+      const node_t *node = node_get_by_hex_id(server, 0);
 
-  smartlist_t *args = smartlist_new();
-
-  /* If any SERVER= or HSADDRESS= options were specified, try to parse
-   * the options line. */
-  if (!strcasecmpstart(argline, opt_server) ||
-      !strcasecmpstart(argline, opt_hsaddress)) {
-    /* encoded_desc begins after a newline character */
-    cp = cp + 1;
-    encoded_desc = cp;
-    encoded_desc_len = len-(cp-body);
-
-    smartlist_split_string(args, argline, " ",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    SMARTLIST_FOREACH_BEGIN(args, const char *, arg) {
-      if (!strcasecmpstart(arg, opt_server)) {
-        const char *server = arg + strlen(opt_server);
-        const node_t *node = node_get_by_hex_id(server, 0);
-
-        if (!node || !node->rs) {
-          connection_printf_to_buf(conn, "552 Server \"%s\" not found\r\n",
-                                   server);
-          goto done;
-        }
-        /* Valid server, add it to our local list. */
-        if (!hs_dirs)
-          hs_dirs = smartlist_new();
-        smartlist_add(hs_dirs, node->rs);
-      } else if (!strcasecmpstart(arg, opt_hsaddress)) {
-        const char *address = arg + strlen(opt_hsaddress);
-        if (!hs_address_is_valid(address)) {
-          connection_printf_to_buf(conn, "512 Malformed onion address\r\n");
-          goto done;
-        }
-        onion_address = address;
-      } else {
-        connection_printf_to_buf(conn, "512 Unexpected argument \"%s\"\r\n",
-                                 arg);
+      if (!node || !node->rs) {
+        connection_printf_to_buf(conn, "552 Server \"%s\" not found\r\n",
+                                 server);
         goto done;
       }
-    } SMARTLIST_FOREACH_END(arg);
+      /* Valid server, add it to our local list. */
+      if (!hs_dirs)
+        hs_dirs = smartlist_new();
+      smartlist_add(hs_dirs, node->rs);
+    } else if (!strcasecmpstart(line->key, "HSADDRESS")) {
+      const char *address = line->value;
+      if (!hs_address_is_valid(address)) {
+        connection_printf_to_buf(conn, "512 Malformed onion address\r\n");
+        goto done;
+      }
+      onion_address = address;
+    } else {
+      tor_assert_nonfatal_unreached();
+    }
   }
 
   /* Handle the v3 case. */
   if (onion_address) {
-    char *desc_str = NULL;
-    read_escaped_data(encoded_desc, encoded_desc_len, &desc_str);
-    if (hs_control_hspost_command(desc_str, onion_address, hs_dirs) < 0) {
+    if (hs_control_hspost_command(encoded_desc, onion_address, hs_dirs) < 0) {
       connection_printf_to_buf(conn, "554 Invalid descriptor\r\n");
     } else {
       send_control_done(conn);
     }
-    tor_free(desc_str);
     goto done;
   }
 
   /* From this point on, it is only v2. */
 
-  /* Read the dot encoded descriptor, and parse it. */
+  /*  parse it. */
   rend_encoded_v2_service_descriptor_t *desc =
       tor_malloc_zero(sizeof(rend_encoded_v2_service_descriptor_t));
-  read_escaped_data(encoded_desc, encoded_desc_len, &desc->desc_str);
+  desc->desc_str = tor_memdup_nulterm(encoded_desc, encoded_desc_len);
 
   rend_service_descriptor_t *parsed = NULL;
   char *intro_content = NULL;
@@ -1675,10 +1626,7 @@ handle_control_hspost(control_connection_t *conn,
   tor_free(intro_content);
   rend_encoded_v2_service_descriptor_free(desc);
  done:
-  tor_free(argline);
   smartlist_free(hs_dirs); /* Contents belong to the rend service code. */
-  SMARTLIST_FOREACH(args, char *, arg, tor_free(arg));
-  smartlist_free(args);
   return 0;
 }
 
@@ -1742,21 +1690,21 @@ get_detached_onion_services(void)
   return detached_onion_services;
 }
 
+static const char *add_onion_keywords[] = {
+   "Port", "Flags", "MaxStreams", "ClientAuth", NULL
+};
+static const control_cmd_syntax_t add_onion_syntax = {
+  .min_args = 1, .max_args = 1,
+  .accept_keywords = true,
+  .allowed_keywords = add_onion_keywords
+};
+
 /** Called when we get a ADD_ONION command; parse the body, and set up
  * the new ephemeral Onion Service. */
 static int
 handle_control_add_onion(control_connection_t *conn,
-                         uint32_t len,
-                         const char *body)
+                         const control_cmd_args_t *args)
 {
-  smartlist_t *args;
-  int arg_len;
-  (void) len; /* body is nul-terminated; it's safe to ignore the length */
-  args = getargs_helper("ADD_ONION", conn, body, 2, -1);
-  if (!args)
-    return 0;
-  arg_len = smartlist_len(args);
-
   /* Parse all of the arguments that do not involve handling cryptographic
    * material first, since there's no reason to touch that at all if any of
    * the other arguments are malformed.
@@ -1769,36 +1717,28 @@ handle_control_add_onion(control_connection_t *conn,
   int max_streams = 0;
   int max_streams_close_circuit = 0;
   rend_auth_type_t auth_type = REND_NO_AUTH;
-  /* Default to adding an anonymous hidden service if no flag is given */
   int non_anonymous = 0;
-  for (int i = 1; i < arg_len; i++) {
-    static const char *port_prefix = "Port=";
-    static const char *flags_prefix = "Flags=";
-    static const char *max_s_prefix = "MaxStreams=";
-    static const char *auth_prefix = "ClientAuth=";
+  const config_line_t *arg;
 
-    const char *arg = smartlist_get(args, (int)i);
-    if (!strcasecmpstart(arg, port_prefix)) {
+  for (arg = args->kwargs; arg; arg = arg->next) {
+    if (!strcasecmp(arg->key, "Port")) {
       /* "Port=VIRTPORT[,TARGET]". */
-      const char *port_str = arg + strlen(port_prefix);
-
       rend_service_port_config_t *cfg =
-          rend_service_parse_port_config(port_str, ",", NULL);
+          rend_service_parse_port_config(arg->value, ",", NULL);
       if (!cfg) {
         connection_printf_to_buf(conn, "512 Invalid VIRTPORT/TARGET\r\n");
         goto out;
       }
       smartlist_add(port_cfgs, cfg);
-    } else if (!strcasecmpstart(arg, max_s_prefix)) {
+    } else if (!strcasecmp(arg->key, "MaxStreams")) {
       /* "MaxStreams=[0..65535]". */
-      const char *max_s_str = arg + strlen(max_s_prefix);
       int ok = 0;
-      max_streams = (int)tor_parse_long(max_s_str, 10, 0, 65535, &ok, NULL);
+      max_streams = (int)tor_parse_long(arg->value, 10, 0, 65535, &ok, NULL);
       if (!ok) {
         connection_printf_to_buf(conn, "512 Invalid MaxStreams\r\n");
         goto out;
       }
-    } else if (!strcasecmpstart(arg, flags_prefix)) {
+    } else if (!strcasecmp(arg->key, "Flags")) {
       /* "Flags=Flag[,Flag]", where Flag can be:
        *   * 'DiscardPK' - If tor generates the keypair, do not include it in
        *                   the response.
@@ -1821,8 +1761,7 @@ handle_control_add_onion(control_connection_t *conn,
       smartlist_t *flags = smartlist_new();
       int bad = 0;
 
-      smartlist_split_string(flags, arg + strlen(flags_prefix), ",",
-                             SPLIT_IGNORE_BLANK, 0);
+      smartlist_split_string(flags, arg->value, ",", SPLIT_IGNORE_BLANK, 0);
       if (smartlist_len(flags) < 1) {
         connection_printf_to_buf(conn, "512 Invalid 'Flags' argument\r\n");
         bad = 1;
@@ -1851,11 +1790,12 @@ handle_control_add_onion(control_connection_t *conn,
       smartlist_free(flags);
       if (bad)
         goto out;
-    } else if (!strcasecmpstart(arg, auth_prefix)) {
+
+    } else if (!strcasecmp(arg->key, "ClientAuth")) {
       char *err_msg = NULL;
       int created = 0;
       rend_authorized_client_t *client =
-        add_onion_helper_clientauth(arg + strlen(auth_prefix),
+        add_onion_helper_clientauth(arg->value,
                                     &created, &err_msg);
       if (!client) {
         if (err_msg) {
@@ -1888,7 +1828,7 @@ handle_control_add_onion(control_connection_t *conn,
         smartlist_add(auth_created_clients, client);
       }
     } else {
-      connection_printf_to_buf(conn, "513 Invalid argument\r\n");
+      tor_assert_nonfatal_unreached();
       goto out;
     }
   }
@@ -1929,7 +1869,8 @@ handle_control_add_onion(control_connection_t *conn,
   char *key_new_blob = NULL;
   char *err_msg = NULL;
 
-  if (add_onion_helper_keyarg(smartlist_get(args, 0), discard_pk,
+  const char *onionkey = smartlist_get(args->args, 0);
+  if (add_onion_helper_keyarg(onionkey, discard_pk,
                               &key_new_alg, &key_new_blob, &pk, &hs_version,
                               &err_msg) < 0) {
     if (err_msg) {
@@ -2031,12 +1972,6 @@ handle_control_add_onion(control_connection_t *conn,
     // Do not free entries; they are the same as auth_clients
     smartlist_free(auth_created_clients);
   }
-
-  SMARTLIST_FOREACH(args, char *, cp, {
-    memwipe(cp, 0, strlen(cp));
-    tor_free(cp);
-  });
-  smartlist_free(args);
   return 0;
 }
 
@@ -2471,28 +2406,28 @@ static const control_cmd_def_t CONTROL_COMMANDS[] =
   MULTLINE_PARSED(loadconf, 0),
   ONE_LINE_PARSED(setevents, 0),
   ONE_LINE(authenticate, legacy, CMD_FL_WIPE),
-  ONE_LINE(saveconf, legacy, 0),
+  ONE_LINE_PARSED(saveconf, 0),
   ONE_LINE_PARSED(signal, 0),
   ONE_LINE_PARSED(takeownership, 0),
   ONE_LINE_PARSED(dropownership, 0),
-  ONE_LINE(mapaddress, legacy, 0),
+  ONE_LINE_PARSED(mapaddress, 0),
   ONE_LINE_PARSED(getinfo, 0),
   ONE_LINE(extendcircuit, legacy, 0),
-  ONE_LINE(setcircuitpurpose, legacy, 0),
+  ONE_LINE_PARSED(setcircuitpurpose, 0),
   OBSOLETE(setrouterpurpose),
-  ONE_LINE(attachstream, legacy, 0),
-  MULTLINE(postdescriptor, legacy, 0),
+  ONE_LINE_PARSED(attachstream, 0),
+  MULTLINE_PARSED(postdescriptor, 0),
   ONE_LINE_PARSED(redirectstream, 0),
   ONE_LINE_PARSED(closestream, 0),
-  ONE_LINE(closecircuit, legacy, 0),
+  ONE_LINE_PARSED(closecircuit, 0),
   ONE_LINE_PARSED(usefeature, 0),
-  ONE_LINE(resolve, legacy, 0),
+  ONE_LINE_PARSED(resolve, 0),
   ONE_LINE_PARSED(protocolinfo, 0),
   ONE_LINE(authchallenge, legacy, CMD_FL_WIPE),
   ONE_LINE_PARSED(dropguards, 0),
-  ONE_LINE(hsfetch, legacy, 0),
-  MULTLINE(hspost, legacy, 0),
-  ONE_LINE(add_onion, legacy, CMD_FL_WIPE),
+  ONE_LINE_PARSED(hsfetch, 0),
+  MULTLINE_PARSED(hspost, 0),
+  ONE_LINE_PARSED(add_onion, CMD_FL_WIPE),
   ONE_LINE_PARSED(del_onion, CMD_FL_WIPE),
 };
 
