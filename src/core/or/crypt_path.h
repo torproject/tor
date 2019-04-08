@@ -12,6 +12,10 @@ void assert_cpath_ok(const crypt_path_t *cp);
 /* rename */
 int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
+int circuit_init_cpath_crypto(crypt_path_t *cpath,
+                              const char *key_data, size_t key_data_len,
+                              int reverse, int is_hs_v3);
+
 /* rename */
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 
