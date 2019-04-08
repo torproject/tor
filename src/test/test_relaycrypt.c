@@ -51,8 +51,8 @@ testing_circuitset_setup(const struct testcase_t *testcase)
   cs->origin_circ->base_.purpose = CIRCUIT_PURPOSE_C_GENERAL;
   for (i=0; i<3; ++i) {
     crypt_path_t *hop = crypt_path_new();
-    relay_crypto_init(&hop->private->crypto, KEY_MATERIAL[i], sizeof(KEY_MATERIAL[i]),
-                      0, 0);
+    relay_crypto_init(&hop->private->crypto, KEY_MATERIAL[i],
+                      sizeof(KEY_MATERIAL[i]), 0, 0);
     hop->state = CPATH_STATE_OPEN;
     onion_append_to_cpath(&cs->origin_circ->cpath, hop);
     tt_ptr_op(hop, OP_EQ, cs->origin_circ->cpath->prev);
