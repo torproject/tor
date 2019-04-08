@@ -7,6 +7,12 @@
 # To install this script, copy it to .git/hooks/post-commit in local copy of
 # tor git repo and make sure it has permission to execute.
 
+set -e
+
 git_toplevel=$(git rev-parse --show-toplevel)
 
-python3 ./scripts/maint/practracker/practracker.py "$git_toplevel"
+cd "$git_toplevel" || exit 1
+
+if [ -e scripts/maint/practracker/practracker.py ]; then
+  python3 ./scripts/maint/practracker/practracker.py "$git_toplevel"
+fi
