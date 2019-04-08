@@ -95,7 +95,6 @@ string_array_contains_keyword(const char **array, const char *kwd)
   return false;
 }
 
-
 /**
  * Helper: parse the arguments to a command according to <b>syntax</b>.  On
  * success, set *<b>error_out</b> to NULL and return a newly allocated
@@ -169,6 +168,7 @@ control_cmd_parse_args(const char *command,
                                             line->key)) {
           tor_asprintf(error_out, "Unrecognized keyword argument %s",
                        escaped(line->key));
+          goto err;
         }
       }
     }
