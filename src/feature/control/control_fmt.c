@@ -342,20 +342,6 @@ get_escaped_string_length(const char *start, size_t in_len_max,
   return (int)(cp - start+1);
 }
 
-/** As decode_escaped_string, but does not decode the string: copies the
- * entire thing, including quotation marks. */
-const char *
-extract_escaped_string(const char *start, size_t in_len_max,
-                       char **out, size_t *out_len)
-{
-  int length = get_escaped_string_length(start, in_len_max, NULL);
-  if (length<0)
-    return NULL;
-  *out_len = length;
-  *out = tor_strndup(start, *out_len);
-  return start+length;
-}
-
 /** Given a pointer to a string starting at <b>start</b> containing
  * <b>in_len_max</b> characters, decode a string beginning with one double
  * quote, containing any number of non-quote characters or characters escaped
