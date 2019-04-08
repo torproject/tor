@@ -16,6 +16,9 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath,
                               const char *key_data, size_t key_data_len,
                               int reverse, int is_hs_v3);
 
+void
+circuit_free_cpath_node(crypt_path_t *victim);
+
 /* rename */
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 

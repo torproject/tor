@@ -16,8 +16,12 @@
 #include "core/or/crypt_path.h"
 
 #include "core/crypto/relay_crypto.h"
+#include "core/crypto/onion_crypto.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
+
+#include "lib/crypt_ops/crypto_dh.h"
+#include "lib/crypt_ops/crypto_util.h"
 
 #include "core/or/crypt_path_st.h"
 #include "core/or/cell_st.h"
@@ -143,6 +147,21 @@ circuit_init_cpath_crypto(crypt_path_t *cpath,
 }
 
 
+/** Deallocate space associated with the cpath node <b>victim</b>. */
+void
+circuit_free_cpath_node(crypt_path_t *victim)
+{
+  if (!victim)
+    return;
+
+  relay_crypto_clear(&victim->private->crypto);
+  onion_handshake_state_release(&victim->handshake_state);
+  crypto_dh_free(victim->rend_dh_handshake_state);
+  extend_info_free(victim->extend_info);
+
+  memwipe(victim, 0xBB, sizeof(crypt_path_t)); /* poison memory */
+  tor_free(victim);
+}
 
 /********************** cpath crypto API *******************************/
 
