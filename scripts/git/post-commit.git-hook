@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# This is post-commit hook script that runs practracker to find code style
+# violations. Note that it does not prevent the commit to be written to git
+# history if any code style violations are detected.
+#
+# To install this script, copy it to .git/hooks/post-commit in local copy of
+# tor git repo and make sure it has permission to execute.
+
+git_toplevel=$(git rev-parse --show-toplevel)
+
+python3 ./scripts/maint/practracker/practracker.py "$git_toplevel"

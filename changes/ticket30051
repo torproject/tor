@@ -1,0 +1,6 @@
+  o Minor features (developer tooling):
+    - Provide a post-commit git hook script to run practracker and let a
+      developer know if they made any code style violations in their last
+      commit. Now available as scripts/git/post-commit.git-hook. Closes
+      ticket 30051.
+
