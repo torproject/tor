@@ -114,6 +114,36 @@ assert_cpath_layer_ok(const crypt_path_t *cp)
   tor_assert(cp->deliver_window >= 0);
 }
 
+/** Initialize cpath-\>{f|b}_{crypto|digest} from the key material in key_data.
+ *
+ * If <b>is_hs_v3</b> is set, this cpath will be used for next gen hidden
+ * service circuits and <b>key_data</b> must be at least
+ * HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN bytes in length.
+ *
+ * If <b>is_hs_v3</b> is not set, key_data must contain CPATH_KEY_MATERIAL_LEN
+ * bytes, which are used as follows:
+ *   - 20 to initialize f_digest
+ *   - 20 to initialize b_digest
+ *   - 16 to key f_crypto
+ *   - 16 to key b_crypto
+ *
+ * (If 'reverse' is true, then f_XX and b_XX are swapped.)
+ *
+ * Return 0 if init was successful, else -1 if it failed.
+ */
+int
+circuit_init_cpath_crypto(crypt_path_t *cpath,
+                          const char *key_data, size_t key_data_len,
+                          int reverse, int is_hs_v3)
+{
+
+  tor_assert(cpath);
+  return relay_crypto_init(&cpath->private->crypto, key_data, key_data_len, reverse,
+                           is_hs_v3);
+}
+
+
+
 /********************** cpath crypto API *******************************/
 
 /** Encrypt or decrypt <b>payload</b> using the crypto of <b>cpath</b>. Actual
