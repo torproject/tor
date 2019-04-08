@@ -1272,19 +1272,6 @@ circpad_machine_transitioned_to_end(circpad_machineinfo_t *mi)
 {
   const circpad_machine_t *machine = CIRCPAD_GET_MACHINE(mi);
 
-  /** If this machine handles cirucit lifetime on its own, shut the circuit
-   *  down now if we must. */
-  if (machine->manage_circ_lifetime) {
-    circuit_t *on_circ = mi->on_circ;
-    if (on_circ->purpose == CIRCUIT_PURPOSE_C_CIRCUIT_PADDING) {
-      circuit_mark_for_close(on_circ, END_CIRC_REASON_FINISHED);
-      /* If we close the circuit, we don't want to send a negotiate
-       * cell right when we do, since that is an information leak
-       * that signals we were padding. So just return here. */
-      return;
-    }
-  }
-
   /*
    * We allow machines to shut down and delete themselves as opposed
    * to just going back to START or waiting forever in END so that

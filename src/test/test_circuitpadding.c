@@ -2415,9 +2415,6 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
   circpad_cell_event_nonpadding_received(client_side);
   tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
 
-  /* See that the circ got closed as a side-effect of transitioning to END */
-  tt_int_op(client_side->marked_for_close, OP_NE, 0);
-
   /* We just tested case (3) from the comments of
    * circpad_circuit_should_be_marked_for_close().
    * Now let's go for case (2). */
