@@ -78,6 +78,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/control/control_events.c	\
 	src/feature/control/control_fmt.c	\
 	src/feature/control/control_getinfo.c	\
+	src/feature/control/control_proto.c	\
 	src/feature/control/fmt_serverstatus.c  \
 	src/feature/control/getinfo_geoip.c	\
 	src/feature/dirauth/keypin.c		\
@@ -303,6 +304,7 @@ noinst_HEADERS +=					\
 	src/feature/control/control_events.h	        \
 	src/feature/control/control_fmt.h		\
 	src/feature/control/control_getinfo.h		\
+	src/feature/control/control_proto.h		\
 	src/feature/control/fmt_serverstatus.h		\
 	src/feature/control/getinfo_geoip.h		\
 	src/feature/dirauth/authmode.h			\

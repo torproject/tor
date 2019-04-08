@@ -28,6 +28,7 @@
 #include "feature/control/control_events.h"
 #include "feature/control/control_fmt.h"
 #include "feature/control/control_getinfo.h"
+#include "feature/control/control_proto.h"
 #include "feature/control/fmt_serverstatus.h"
 #include "feature/control/getinfo_geoip.h"
 #include "feature/dircache/dirserv.h"

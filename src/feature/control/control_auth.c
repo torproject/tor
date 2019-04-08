@@ -15,7 +15,7 @@
 #include "feature/control/control_auth.h"
 #include "feature/control/control_cmd_args_st.h"
 #include "feature/control/control_connection_st.h"
-#include "feature/control/control_fmt.h"
+#include "feature/control/control_proto.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"

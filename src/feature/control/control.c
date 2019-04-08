@@ -47,7 +47,7 @@
 #include "feature/control/control_auth.h"
 #include "feature/control/control_cmd.h"
 #include "feature/control/control_events.h"
-#include "feature/control/control_fmt.h"
+#include "feature/control/control_proto.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
 #include "lib/evloop/procmon.h"
