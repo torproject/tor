@@ -148,6 +148,7 @@ static const control_cmd_syntax_t one_to_three_syntax = {
 static const parse_test_params_t parse_one_to_three_params =
   TESTPARAMS( one_to_three_syntax, one_to_three_tests );
 
+// =
 static const parser_testcase_t no_args_one_obj_tests[] = {
   ERR("Hi there!\r\n.", "Cannot accept more than 0 argument(s)"),
   ERR("", "Empty body"),
@@ -166,6 +167,11 @@ static const parse_test_params_t parse_no_args_one_obj_params =
 
 static const parser_testcase_t no_args_kwargs_tests[] = {
   OK("", "{ args=[] }"),
+  OK(" ", "{ args=[] }"),
+  OK("hello there=world", "{ args=[], { hello=\"\", there=\"world\" } }"),
+  OK("hello there=world today",
+     "{ args=[], { hello=\"\", there=\"world\", today=\"\" } }"),
+  ERR("=Foo", "Cannot parse keyword argument(s)"),
 };
 static const control_cmd_syntax_t no_args_kwargs_syntax = {
    .min_args=0, .max_args=0,
@@ -174,6 +180,26 @@ static const control_cmd_syntax_t no_args_kwargs_syntax = {
 };
 static const parse_test_params_t parse_no_args_kwargs_params =
   TESTPARAMS( no_args_kwargs_syntax, no_args_kwargs_tests );
+
+static const char *one_arg_kwargs_allow_keywords[] = {
+  "Hello", "world", NULL
+};
+static const parser_testcase_t one_arg_kwargs_tests[] = {
+  ERR("", "Need at least 1 argument(s)"),
+  OK("Hi", "{ args=[ \"Hi\" ] }"),
+  ERR("hello there=world", "Unrecognized keyword argument \"there\""),
+  OK("Hi HELLO=foo", "{ args=[ \"Hi\" ], { HELLO=\"foo\" } }"),
+  OK("Hi world=\"bar baz\" hello  ",
+     "{ args=[ \"Hi\" ], { world=\"bar baz\", hello=\"\" } }"),
+};
+static const control_cmd_syntax_t one_arg_kwargs_syntax = {
+   .min_args=1, .max_args=1,
+   .accept_keywords=true,
+   .allowed_keywords=one_arg_kwargs_allow_keywords,
+   .kvline_flags=KV_OMIT_VALS|KV_QUOTED,
+};
+static const parse_test_params_t parse_one_arg_kwargs_params =
+  TESTPARAMS( one_arg_kwargs_syntax, one_arg_kwargs_tests );
 
 static void
 test_add_onion_helper_keyarg_v3(void *arg)
@@ -1776,6 +1802,7 @@ struct testcase_t controller_tests[] = {
   PARSER_TEST(one_to_three),
   PARSER_TEST(no_args_one_obj),
   PARSER_TEST(no_args_kwargs),
+  PARSER_TEST(one_arg_kwargs),
   { "add_onion_helper_keyarg_v2", test_add_onion_helper_keyarg_v2, 0,
     NULL, NULL },
   { "add_onion_helper_keyarg_v3", test_add_onion_helper_keyarg_v3, 0,
