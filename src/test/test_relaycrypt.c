@@ -3,6 +3,8 @@
  * Copyright (c) 2007-2019, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define CRYPT_PATH_PRIVATE
+
 #include "core/or/or.h"
 #include "core/or/circuitbuild.h"
 #define CIRCUITLIST_PRIVATE
@@ -49,7 +51,7 @@ testing_circuitset_setup(const struct testcase_t *testcase)
   cs->origin_circ->base_.purpose = CIRCUIT_PURPOSE_C_GENERAL;
   for (i=0; i<3; ++i) {
     crypt_path_t *hop = tor_malloc_zero(sizeof(*hop));
-    relay_crypto_init(&hop->crypto, KEY_MATERIAL[i], sizeof(KEY_MATERIAL[i]),
+    relay_crypto_init(&hop->private->crypto, KEY_MATERIAL[i], sizeof(KEY_MATERIAL[i]),
                       0, 0);
     hop->state = CPATH_STATE_OPEN;
     onion_append_to_cpath(&cs->origin_circ->cpath, hop);
