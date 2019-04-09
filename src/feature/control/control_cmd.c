@@ -594,7 +594,7 @@ address_is_invalid_mapaddress_target(const char *addr)
 }
 
 static const control_cmd_syntax_t mapaddress_syntax = {
-  .max_args=0,
+  .max_args=1,
   .accept_keywords=true,
 };
 
@@ -683,94 +683,61 @@ circuit_purpose_from_string(const char *string)
     return CIRCUIT_PURPOSE_UNKNOWN;
 }
 
-/** Return a newly allocated smartlist containing the arguments to the command
- * waiting in <b>body</b>. If there are fewer than <b>min_args</b> arguments,
- * or if <b>max_args</b> is nonnegative and there are more than
- * <b>max_args</b> arguments, send a 512 error to the controller, using
- * <b>command</b> as the command name in the error message. */
-static smartlist_t *
-getargs_helper(const char *command, control_connection_t *conn,
-               const char *body, int min_args, int max_args)
-{
-  smartlist_t *args = smartlist_new();
-  smartlist_split_string(args, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (smartlist_len(args) < min_args) {
-    connection_printf_to_buf(conn, "512 Missing argument to %s\r\n",command);
-    goto err;
-  } else if (max_args >= 0 && smartlist_len(args) > max_args) {
-    connection_printf_to_buf(conn, "512 Too many arguments to %s\r\n",command);
-    goto err;
-  }
-  return args;
- err:
-  SMARTLIST_FOREACH(args, char *, s, tor_free(s));
-  smartlist_free(args);
-  return NULL;
-}
-
-/** Helper.  Return the first element of <b>sl</b> at index <b>start_at</b> or
- * higher that starts with <b>prefix</b>, case-insensitive.  Return NULL if no
- * such element exists. */
-static const char *
-find_element_starting_with(smartlist_t *sl, int start_at, const char *prefix)
-{
-  int i;
-  for (i = start_at; i < smartlist_len(sl); ++i) {
-    const char *elt = smartlist_get(sl, i);
-    if (!strcasecmpstart(elt, prefix))
-      return elt;
-  }
-  return NULL;
-}
-
-/** Helper.  Return true iff s is an argument that we should treat as a
- * key-value pair. */
-static int
-is_keyval_pair(const char *s)
-{
-  /* An argument is a key-value pair if it has an =, and it isn't of the form
-   * $fingeprint=name */
-  return strchr(s, '=') && s[0] != '$';
-}
+static const control_cmd_syntax_t extendcircuit_syntax = {
+  .min_args=1,
+  .max_args=1, // see note in function
+  .accept_keywords=true,
+  .kvline_flags=KV_OMIT_VALS
+};
 
 /** Called when we get an EXTENDCIRCUIT message.  Try to extend the listed
  * circuit, and report success or failure. */
 static int
-handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
-                             const char *body)
+handle_control_extendcircuit(control_connection_t *conn,
+                             const control_cmd_args_t *args)
 {
-  smartlist_t *router_nicknames=NULL, *nodes=NULL;
+  smartlist_t *router_nicknames=smartlist_new(), *nodes=NULL;
   origin_circuit_t *circ = NULL;
-  int zero_circ;
   uint8_t intended_purpose = CIRCUIT_PURPOSE_C_GENERAL;
-  smartlist_t *args;
-  (void) len;
+  const config_line_t *kwargs = args->kwargs;
+  const char *circ_id = smartlist_get(args->args, 0);
+  const char *path_str = NULL;
+  char *path_str_alloc = NULL;
 
-  router_nicknames = smartlist_new();
+  /* The syntax for this command is unfortunate. The second argument is
+     optional, and is a comma-separated list long-format fingerprints, which
+     can (historically!) contain an equals sign.
 
-  args = getargs_helper("EXTENDCIRCUIT", conn, body, 1, -1);
-  if (!args)
-    goto done;
+     Here we check the second argument to see if it's a path, and if so we
+     remove it from the kwargs list and put it in path_str.
+  */
+  if (kwargs) {
+    const config_line_t *arg1 = kwargs;
+    if (!strcmp(arg1->value, "")) {
+      path_str = arg1->key;
+      kwargs = kwargs->next;
+    } else if (arg1->key[0] == '$') {
+      tor_asprintf(&path_str_alloc, "%s=%s", arg1->key, arg1->value);
+      path_str = path_str_alloc;
+      kwargs = kwargs->next;
+    }
+  }
 
-  zero_circ = !strcmp("0", (char*)smartlist_get(args,0));
+  const config_line_t *purpose_line = config_line_find_case(kwargs, "PURPOSE");
+  bool zero_circ = !strcmp("0", circ_id);
+
+  if (purpose_line) {
+    intended_purpose = circuit_purpose_from_string(purpose_line->value);
+    if (intended_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
+      connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
+                               purpose_line->value);
+      goto done;
+    }
+  }
 
   if (zero_circ) {
-    const char *purp = find_element_starting_with(args, 1, "PURPOSE=");
-
-    if (purp) {
-      intended_purpose = circuit_purpose_from_string(purp);
-      if (intended_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
-        connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
-        SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-        smartlist_free(args);
-        goto done;
-      }
-    }
-
-    if ((smartlist_len(args) == 1) ||
-        (smartlist_len(args) >= 2 && is_keyval_pair(smartlist_get(args, 1)))) {
-      // "EXTENDCIRCUIT 0" || EXTENDCIRCUIT 0 foo=bar"
+    if (!path_str) {
+      // "EXTENDCIRCUIT 0" with no path.
       circ = circuit_launch(intended_purpose, CIRCLAUNCH_NEED_CAPACITY);
       if (!circ) {
         connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
@@ -778,37 +745,24 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
         connection_printf_to_buf(conn, "250 EXTENDED %lu\r\n",
                   (unsigned long)circ->global_identifier);
       }
-      SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-      smartlist_free(args);
       goto done;
     }
-    // "EXTENDCIRCUIT 0 router1,router2" ||
-    // "EXTENDCIRCUIT 0 router1,router2 PURPOSE=foo"
   }
 
-  if (!zero_circ && !(circ = get_circ(smartlist_get(args,0)))) {
-    connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
-                             (char*)smartlist_get(args, 0));
-    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-    smartlist_free(args);
+  if (!zero_circ && !(circ = get_circ(circ_id))) {
+    connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n", circ_id);
     goto done;
   }
 
-  if (smartlist_len(args) < 2) {
-    connection_printf_to_buf(conn,
-                             "512 syntax error: not enough arguments.\r\n");
-    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-    smartlist_free(args);
+  if (!path_str) {
+    connection_printf_to_buf(conn, "512 syntax error: path required.\r\n");
     goto done;
   }
 
-  smartlist_split_string(router_nicknames, smartlist_get(args,1), ",", 0, 0);
-
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-  smartlist_free(args);
+  smartlist_split_string(router_nicknames, path_str, ",", 0, 0);
 
   nodes = smartlist_new();
-  int first_node = zero_circ;
+  bool first_node = zero_circ;
   SMARTLIST_FOREACH_BEGIN(router_nicknames, const char *, n) {
     const node_t *node = node_get_by_nickname(n, 0);
     if (!node) {
@@ -820,8 +774,9 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       goto done;
     }
     smartlist_add(nodes, (void*)node);
-    first_node = 0;
+    first_node = false;
   } SMARTLIST_FOREACH_END(n);
+
   if (!smartlist_len(nodes)) {
     connection_write_str_to_buf("512 No router names provided\r\n", conn);
     goto done;
@@ -887,6 +842,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   SMARTLIST_FOREACH(router_nicknames, char *, n, tor_free(n));
   smartlist_free(router_nicknames);
   smartlist_free(nodes);
+  tor_free(path_str_alloc);
   return 0;
 }
 
@@ -2360,7 +2316,7 @@ static const control_cmd_def_t CONTROL_COMMANDS[] =
   ONE_LINE_PARSED(dropownership, 0),
   ONE_LINE_PARSED(mapaddress, 0),
   ONE_LINE_PARSED(getinfo, 0),
-  ONE_LINE(extendcircuit, legacy, 0),
+  ONE_LINE_PARSED(extendcircuit, 0),
   ONE_LINE_PARSED(setcircuitpurpose, 0),
   OBSOLETE(setrouterpurpose),
   ONE_LINE_PARSED(attachstream, 0),
