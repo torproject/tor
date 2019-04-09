@@ -2171,16 +2171,18 @@ handle_control_del_onion(control_connection_t *conn,
   return 0;
 }
 
+static const control_cmd_syntax_t obsolete_syntax = {
+  .max_args = UINT_MAX
+};
+
 /**
  * Called when we get an obsolete command: tell the controller that it is
  * obsolete.
  */
 static int
 handle_control_obsolete(control_connection_t *conn,
-                        uint32_t arg_len,
-                        const char *args)
+                        const control_cmd_args_t *args)
 {
-  (void)arg_len;
   (void)args;
   char *command = tor_strdup(conn->current_cmd);
   tor_strupper(command);
@@ -2190,37 +2192,10 @@ handle_control_obsolete(control_connection_t *conn,
 }
 
 /**
- * Selects an API to a controller command.  See handler_fn_t for the
- * possible types.
+ * Function pointer to a handler function for a controller command.
  **/
-typedef enum handler_type_t {
-  hnd_legacy,
-  hnd_parsed,
-} handler_type_t;
-
-/**
- * Union: a function pointer to a handler function for a controller command.
- *
- * This needs to be a union (rather than just a single pointer) since not
- * all controller commands have the same type.
- **/
-typedef union handler_fn_t {
-  /**
-   * A "legacy" handler takes a command's arguments as a nul-terminated
-   * string, and their length.  It may not change the contents of the
-   * arguments.  If the command is a multiline one, then the arguments may
-   * extend across multiple lines.
-   */
-  int (*legacy)(control_connection_t *conn,
-                uint32_t arg_len,
-                const char *args);
-  /**
-   * A "parsed" handler expects its arguments in a pre-parsed format, in
-   * an immutable control_cmd_args_t *object.
-   **/
-  int (*parsed)(control_connection_t *conn,
-                const control_cmd_args_t *args);
-} handler_fn_t;
+typedef int (*handler_fn_t) (control_connection_t *conn,
+                             const control_cmd_args_t *args);
 
 /**
  * Definition for a controller command.
@@ -2230,10 +2205,6 @@ typedef struct control_cmd_def_t {
    * The name of the command. If the command is multiline, the name must
    * begin with "+".  This is not case-sensitive. */
   const char *name;
-  /**
-   * Which API to use when calling the handler function.
-   */
-  handler_type_t handler_type;
   /**
    * A function to execute the command.
    */
@@ -2254,43 +2225,27 @@ typedef struct control_cmd_def_t {
  */
 #define CMD_FL_WIPE (1u<<0)
 
-#define SYNTAX_IGNORE { 0, UINT_MAX, false }
-
 /** Macro: declare a command with a one-line argument, a given set of flags,
  * and a syntax definition.
  **/
-#define ONE_LINE_(name, htype, flags, syntax)                   \
-  { #name,                                                      \
-      hnd_ ##htype,                                             \
-      { .htype = handle_control_ ##name },                      \
+#define ONE_LINE(name, flags)                                   \
+  {                                                             \
+    #name,                                                      \
+      handle_control_ ##name,                                   \
       flags,                                                    \
-      syntax,                                                   \
-  }
-
-/** Macro: declare a parsed command with a one-line argument, a given set of
- * flags, and a syntax definition.
- **/
-#define ONE_LINE(name, htype, flags) \
-  ONE_LINE_(name, htype, flags, NULL)
-#define ONE_LINE_PARSED(name, flags) \
-  ONE_LINE_(name, parsed, flags, &name ##_syntax)
+      &name##_syntax,                                           \
+   }
 
 /**
  * Macro: declare a command with a multi-line argument and a given set of
  * flags.
  **/
-#define MULTLINE_(name, htype, flags, syntax)                   \
+#define MULTLINE(name, flags)                                   \
   { "+"#name,                                                   \
-      hnd_ ##htype,                                             \
-      { .htype = handle_control_ ##name },                      \
+      handle_control_ ##name,                                   \
       flags,                                                    \
-      syntax                                                    \
+      &name##_syntax                                            \
   }
-
-#define MULTLINE(name, htype, flags) \
-  MULTLINE_(name, htype, flags, NULL)
-#define MULTLINE_PARSED(name, flags)                   \
-  MULTLINE_(name, parsed, flags, &name##_syntax)
 
 /**
  * Macro: declare an obsolete command. (Obsolete commands give a different
@@ -2298,10 +2253,9 @@ typedef struct control_cmd_def_t {
  **/
 #define OBSOLETE(name)                          \
   { #name,                                      \
-      hnd_legacy,                               \
-      { .legacy = handle_control_obsolete },    \
+      handle_control_obsolete,                  \
       0,                                        \
-      NULL,                                     \
+      &obsolete_syntax,                         \
   }
 
 /**
@@ -2309,35 +2263,35 @@ typedef struct control_cmd_def_t {
  **/
 static const control_cmd_def_t CONTROL_COMMANDS[] =
 {
-  ONE_LINE_PARSED(setconf, 0),
-  ONE_LINE_PARSED(resetconf, 0),
-  ONE_LINE_PARSED(getconf, 0),
-  MULTLINE_PARSED(loadconf, 0),
-  ONE_LINE_PARSED(setevents, 0),
-  ONE_LINE_PARSED(authenticate, CMD_FL_WIPE),
-  ONE_LINE_PARSED(saveconf, 0),
-  ONE_LINE_PARSED(signal, 0),
-  ONE_LINE_PARSED(takeownership, 0),
-  ONE_LINE_PARSED(dropownership, 0),
-  ONE_LINE_PARSED(mapaddress, 0),
-  ONE_LINE_PARSED(getinfo, 0),
-  ONE_LINE_PARSED(extendcircuit, 0),
-  ONE_LINE_PARSED(setcircuitpurpose, 0),
+  ONE_LINE(setconf, 0),
+  ONE_LINE(resetconf, 0),
+  ONE_LINE(getconf, 0),
+  MULTLINE(loadconf, 0),
+  ONE_LINE(setevents, 0),
+  ONE_LINE(authenticate, CMD_FL_WIPE),
+  ONE_LINE(saveconf, 0),
+  ONE_LINE(signal, 0),
+  ONE_LINE(takeownership, 0),
+  ONE_LINE(dropownership, 0),
+  ONE_LINE(mapaddress, 0),
+  ONE_LINE(getinfo, 0),
+  ONE_LINE(extendcircuit, 0),
+  ONE_LINE(setcircuitpurpose, 0),
   OBSOLETE(setrouterpurpose),
-  ONE_LINE_PARSED(attachstream, 0),
-  MULTLINE_PARSED(postdescriptor, 0),
-  ONE_LINE_PARSED(redirectstream, 0),
-  ONE_LINE_PARSED(closestream, 0),
-  ONE_LINE_PARSED(closecircuit, 0),
-  ONE_LINE_PARSED(usefeature, 0),
-  ONE_LINE_PARSED(resolve, 0),
-  ONE_LINE_PARSED(protocolinfo, 0),
-  ONE_LINE_PARSED(authchallenge, CMD_FL_WIPE),
-  ONE_LINE_PARSED(dropguards, 0),
-  ONE_LINE_PARSED(hsfetch, 0),
-  MULTLINE_PARSED(hspost, 0),
-  ONE_LINE_PARSED(add_onion, CMD_FL_WIPE),
-  ONE_LINE_PARSED(del_onion, CMD_FL_WIPE),
+  ONE_LINE(attachstream, 0),
+  MULTLINE(postdescriptor, 0),
+  ONE_LINE(redirectstream, 0),
+  ONE_LINE(closestream, 0),
+  ONE_LINE(closecircuit, 0),
+  ONE_LINE(usefeature, 0),
+  ONE_LINE(resolve, 0),
+  ONE_LINE(protocolinfo, 0),
+  ONE_LINE(authchallenge, CMD_FL_WIPE),
+  ONE_LINE(dropguards, 0),
+  ONE_LINE(hsfetch, 0),
+  MULTLINE(hspost, 0),
+  ONE_LINE(add_onion, CMD_FL_WIPE),
+  ONE_LINE(del_onion, CMD_FL_WIPE),
 };
 
 /**
@@ -2356,35 +2310,25 @@ handle_single_control_command(const control_cmd_def_t *def,
                               char *args)
 {
   int rv = 0;
-  switch (def->handler_type) {
-    case hnd_legacy:
-      if (def->handler.legacy(conn, cmd_data_len, args))
-        rv = -1;
-      break;
-    case hnd_parsed: {
-      control_cmd_args_t *parsed_args;
-      char *err=NULL;
-      tor_assert(def->syntax);
-      parsed_args = control_cmd_parse_args(conn->current_cmd,
-                                           def->syntax,
-                                           cmd_data_len, args,
-                                           &err);
-      if (!parsed_args) {
-        connection_printf_to_buf(conn,
-                                 "512 Bad arguments to %s: %s\r\n",
-                                 conn->current_cmd, err?err:"");
-        tor_free(err);
-      } else {
-        if (BUG(err))
-          tor_free(err);
-        if (def->handler.parsed(conn, parsed_args))
-          rv = 0;
-        control_cmd_args_free(parsed_args);
-      }
-      break;
-    }
-    default:
-      tor_assert_unreached();
+
+  control_cmd_args_t *parsed_args;
+  char *err=NULL;
+  tor_assert(def->syntax);
+  parsed_args = control_cmd_parse_args(conn->current_cmd,
+                                       def->syntax,
+                                       cmd_data_len, args,
+                                       &err);
+  if (!parsed_args) {
+    connection_printf_to_buf(conn,
+                             "512 Bad arguments to %s: %s\r\n",
+                             conn->current_cmd, err?err:"");
+    tor_free(err);
+  } else {
+    if (BUG(err))
+      tor_free(err);
+    if (def->handler(conn, parsed_args))
+      rv = 0;
+    control_cmd_args_free(parsed_args);
   }
 
   if (def->flags & CMD_FL_WIPE)
