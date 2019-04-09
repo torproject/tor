@@ -8,6 +8,17 @@
  * \brief Functions dealing with layered circuit encryption. This file aims to
  *   provide an API around the crypt_path_t structure which holds crypto
  *   information about a specific hop of a circuit.
+ *
+ * TODO: We should eventually move all functions dealing and manipulating
+ *   crypt_path_t to this file, so that eventually we encapsulate more and more
+ *   of crypt_path_t. Here are some more functions that can be moved here with
+ *   some more effort:
+ *
+ *   - circuit_list_path_impl()
+ *   - Functions dealing with cpaths in HSv2 create_rend_cpath() and
+ *     create_rend_cpath_legacy()
+ *   - The cpath related parts of rend_service_receive_introduction() and
+ *     rend_client_send_introduction().
  **/
 
 #define CRYPT_PATH_PRIVATE
