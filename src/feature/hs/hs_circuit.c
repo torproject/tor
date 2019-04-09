@@ -89,7 +89,7 @@ create_rend_cpath(const uint8_t *ntor_key_seed, size_t seed_len,
   /* Setup the cpath */
   cpath = crypt_path_new();
 
-  if (circuit_init_cpath_crypto(cpath, (char*)keys, sizeof(keys),
+  if (cpath_init_circuit_crypto(cpath, (char*)keys, sizeof(keys),
                                 is_service_side, 1) < 0) {
     tor_free(cpath);
     goto err;
@@ -126,7 +126,7 @@ create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
     goto err;
   }
   /* ... and set up cpath. */
-  if (circuit_init_cpath_crypto(hop,
+  if (cpath_init_circuit_crypto(hop,
                                 keys+DIGEST_LEN, sizeof(keys)-DIGEST_LEN,
                                 0, 0) < 0)
     goto err;
@@ -177,7 +177,7 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
   circ->hs_circ_has_timed_out = 0;
 
   /* Append the hop to the cpath of this circuit */
-  onion_append_to_cpath(&circ->cpath, hop);
+  cpath_extend_linked_list(&circ->cpath, hop);
 
   /* In legacy code, 'pending_final_cpath' points to the final hop we just
    * appended to the cpath. We set the original pointer to NULL so that we
