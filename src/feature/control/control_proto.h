@@ -21,4 +21,28 @@ size_t write_escaped_data(const char *data, size_t len, char **out);
 size_t read_escaped_data(const char *data, size_t len, char **out);
 void send_control_done(control_connection_t *conn);
 
+void control_write_reply(control_connection_t *conn, int code, int c,
+                         const char *s);
+void control_vprintf_reply(control_connection_t *conn, int code, int c,
+                           const char *fmt, va_list ap)
+  CHECK_PRINTF(4, 0);
+void control_write_endreply(control_connection_t *conn, int code,
+                            const char *s);
+void control_printf_endreply(control_connection_t *conn, int code,
+                             const char *fmt, ...)
+  CHECK_PRINTF(3, 4);
+void control_write_midreply(control_connection_t *conn, int code,
+                            const char *s);
+void control_printf_midreply(control_connection_t *conn, int code,
+                             const char *fmt,
+                             ...)
+  CHECK_PRINTF(3, 4);
+void control_write_datareply(control_connection_t *conn, int code,
+                             const char *s);
+void control_printf_datareply(control_connection_t *conn, int code,
+                              const char *fmt,
+                              ...)
+  CHECK_PRINTF(3, 4);
+void control_write_data(control_connection_t *conn, const char *data);
+
 #endif /* !defined(TOR_CONTROL_PROTO_H) */
