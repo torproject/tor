@@ -394,10 +394,6 @@ buf_free(buf_t *buf)
 {
   if (!buf)
     return;
-  if (BUG(buf_out->datalen >= INT_MAX || buf_in->datalen >= INT_MAX))
-    return;
-  if (BUG(buf_out->datalen >= INT_MAX - buf_in->datalen))
-    return;
 
   buf_clear(buf);
   buf->magic = 0xdeadbeef;
@@ -2067,4 +2063,3 @@ assert_buf_ok(buf_t *buf)
     tor_assert(buf->datalen == total);
   }
 }
-
