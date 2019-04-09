@@ -16,6 +16,7 @@
 #include "lib/encoding/confline.h"
 #include "lib/encoding/cstring.h"
 #include "lib/encoding/kvline.h"
+#include "lib/encoding/qstring.h"
 #include "lib/malloc/malloc.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/string/printf.h"
@@ -111,11 +112,15 @@ kvline_can_encode_lines(const config_line_t *line, unsigned flags)
  * If KV_OMIT_VALS is set in <b>flags</b>, then an empty value is
  * encoded as 'Key', not as 'Key=' or 'Key=""'.  Mutually exclusive with
  * KV_OMIT_KEYS.
+ *
+ * KV_QUOTED_QSTRING is not supported.
  */
 char *
 kvline_encode(const config_line_t *line,
               unsigned flags)
 {
+  tor_assert(! (flags & KV_QUOTED_QSTRING));
+
   if (!kvline_can_encode_lines(line, flags))
     return NULL;
 
@@ -170,7 +175,7 @@ kvline_encode(const config_line_t *line,
  * allocated list of pairs on success, or NULL on failure.
  *
  * If KV_QUOTED is set in <b>flags</b>, then (double-)quoted values are
- * allowed. Otherwise, such values are not allowed.
+ * allowed and handled as C strings. Otherwise, such values are not allowed.
  *
  * If KV_OMIT_KEYS is set in <b>flags</b>, then values without keys are
  * allowed.  Otherwise, such values are not allowed.
@@ -178,6 +183,10 @@ kvline_encode(const config_line_t *line,
  * If KV_OMIT_VALS is set in <b>flags</b>, then keys without values are
  * allowed.  Otherwise, such keys are not allowed.  Mutually exclusive with
  * KV_OMIT_KEYS.
+ *
+ * If KV_QUOTED_QSTRING is set in <b>flags</b>, then double-quoted values
+ * are allowed and handled as QuotedStrings per qstring.c.  Do not add
+ * new users of this flag.
  */
 config_line_t *
 kvline_parse(const char *line, unsigned flags)
@@ -188,7 +197,8 @@ kvline_parse(const char *line, unsigned flags)
   const char *cp = line, *cplast = NULL;
   const bool omit_keys = (flags & KV_OMIT_KEYS) != 0;
   const bool omit_vals = (flags & KV_OMIT_VALS) != 0;
-  const bool quoted = (flags & KV_QUOTED) != 0;
+  const bool quoted = (flags & (KV_QUOTED|KV_QUOTED_QSTRING)) != 0;
+  const bool c_quoted = (flags & (KV_QUOTED)) != 0;
 
   config_line_t *result = NULL;
   config_line_t **next_line = &result;
@@ -236,7 +246,11 @@ kvline_parse(const char *line, unsigned flags)
       if (!quoted)
         goto err;
       size_t len=0;
-      cp = unescape_string(cp, &val, &len);
+      if (c_quoted) {
+        cp = unescape_string(cp, &val, &len);
+      } else {
+        cp = decode_qstring(cp, strlen(cp), &val, &len);
+      }
       if (cp == NULL || len != strlen(val)) {
         // The string contains a NUL or is badly coded.
         goto err;
@@ -260,8 +274,10 @@ kvline_parse(const char *line, unsigned flags)
     key = val = NULL;
   }
 
-  if (!kvline_can_encode_lines(result, flags)) {
-    goto err;
+  if (! (flags & KV_QUOTED_QSTRING)) {
+    if (!kvline_can_encode_lines(result, flags)) {
+      goto err;
+    }
   }
   return result;
 
