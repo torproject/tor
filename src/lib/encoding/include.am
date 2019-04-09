@@ -11,6 +11,7 @@ src_lib_libtor_encoding_a_SOURCES =			\
 	src/lib/encoding/keyval.c			\
 	src/lib/encoding/kvline.c			\
 	src/lib/encoding/pem.c				\
+	src/lib/encoding/qstring.c			\
 	src/lib/encoding/time_fmt.c
 
 src_lib_libtor_encoding_testing_a_SOURCES = \
@@ -25,4 +26,5 @@ noinst_HEADERS +=					\
 	src/lib/encoding/keyval.h			\
 	src/lib/encoding/kvline.h			\
 	src/lib/encoding/pem.h				\
+	src/lib/encoding/qstring.h			\
 	src/lib/encoding/time_fmt.h
