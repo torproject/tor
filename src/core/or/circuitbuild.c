@@ -1409,7 +1409,7 @@ circuit_finish_handshake(origin_circuit_t *circ,
 
   onion_handshake_state_release(&hop->handshake_state);
 
-  if (circuit_init_cpath_crypto(hop, keys, sizeof(keys), 0, 0)<0) {
+  if (cpath_init_circuit_crypto(hop, keys, sizeof(keys), 0, 0)<0) {
     return -END_CIRC_REASON_TORPROTOCOL;
   }
 
@@ -1461,7 +1461,7 @@ circuit_truncated(origin_circuit_t *circ, int reason)
     }
 
     layer->next = victim->next;
-    circuit_free_cpath_node(victim);
+    cpath_free(victim);
   }
 
   log_info(LD_CIRC, "finished");
@@ -2279,7 +2279,7 @@ circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
   state->chosen_exit = extend_info_dup(exit_ei);
 
   ++circ->build_state->desired_path_len;
-  onion_append_hop(&circ->cpath, exit_ei);
+  cpath_append_hop(&circ->cpath, exit_ei);
   return 0;
 }
 
@@ -2712,7 +2712,7 @@ onion_extend_cpath(origin_circuit_t *circ)
             extend_info_describe(info),
             cur_len+1, build_state_get_exit_nickname(state));
 
-  onion_append_hop(&circ->cpath, info);
+  cpath_append_hop(&circ->cpath, info);
   extend_info_free(info);
   return 0;
 }

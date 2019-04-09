@@ -41,7 +41,7 @@ crypt_path_new(void)
  * This function is used to extend cpath by another hop.
  */
 void
-onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
+cpath_extend_linked_list(crypt_path_t **head_ptr, crypt_path_t *new_hop)
 {
   if (*head_ptr) {
     new_hop->next = (*head_ptr);
@@ -58,12 +58,12 @@ onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
  * corresponding router <b>choice</b>, and append it to the
  * end of the cpath <b>head_ptr</b>. */
 int
-onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
+cpath_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
 {
   crypt_path_t *hop = crypt_path_new();
 
   /* link hop into the cpath, at the end. */
-  onion_append_to_cpath(head_ptr, hop);
+  cpath_extend_linked_list(head_ptr, hop);
 
   hop->state = CPATH_STATE_CLOSED;
 
@@ -79,12 +79,12 @@ onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
  * correct. Trigger an assert if anything is invalid.
  */
 void
-assert_cpath_ok(const crypt_path_t *cp)
+cpath_assert_ok(const crypt_path_t *cp)
 {
   const crypt_path_t *start = cp;
 
   do {
-    assert_cpath_layer_ok(cp);
+    cpath_assert_layer_ok(cp);
     /* layers must be in sequence of: "open* awaiting? closed*" */
     if (cp != start) {
       if (cp->state == CPATH_STATE_AWAITING_KEYS) {
@@ -102,7 +102,7 @@ assert_cpath_ok(const crypt_path_t *cp)
  * correct. Trigger an assert if anything is invalid.
  */
 void
-assert_cpath_layer_ok(const crypt_path_t *cp)
+cpath_assert_layer_ok(const crypt_path_t *cp)
 {
 //  tor_assert(cp->addr); /* these are zero for rendezvous extra-hops */
 //  tor_assert(cp->port);
@@ -147,7 +147,7 @@ assert_cpath_layer_ok(const crypt_path_t *cp)
  * Return 0 if init was successful, else -1 if it failed.
  */
 int
-circuit_init_cpath_crypto(crypt_path_t *cpath,
+cpath_init_circuit_crypto(crypt_path_t *cpath,
                           const char *key_data, size_t key_data_len,
                           int reverse, int is_hs_v3)
 {
@@ -160,7 +160,7 @@ circuit_init_cpath_crypto(crypt_path_t *cpath,
 
 /** Deallocate space associated with the cpath node <b>victim</b>. */
 void
-circuit_free_cpath_node(crypt_path_t *victim)
+cpath_free(crypt_path_t *victim)
 {
   if (!victim || BUG(!victim->private))
     return;

@@ -1148,7 +1148,7 @@ circuit_free_(circuit_t *circ)
 
     if (ocirc->build_state) {
         extend_info_free(ocirc->build_state->chosen_exit);
-        circuit_free_cpath_node(ocirc->build_state->pending_final_cpath);
+        cpath_free(ocirc->build_state->pending_final_cpath);
         cpath_ref_decref(ocirc->build_state->service_pending_final_cpath_ref);
     }
     tor_free(ocirc->build_state);
@@ -1266,10 +1266,10 @@ circuit_clear_cpath(origin_circuit_t *circ)
   while (cpath->next && cpath->next != head) {
     victim = cpath;
     cpath = victim->next;
-    circuit_free_cpath_node(victim);
+    cpath_free(victim);
   }
 
-  circuit_free_cpath_node(cpath);
+  cpath_free(cpath);
 
   circ->cpath = NULL;
 }
@@ -1332,7 +1332,7 @@ cpath_ref_decref(crypt_path_reference_t *cpath_ref)
 {
   if (cpath_ref != NULL) {
     if (--(cpath_ref->refcount) == 0) {
-      circuit_free_cpath_node(cpath_ref->cpath);
+      cpath_free(cpath_ref->cpath);
       tor_free(cpath_ref);
     }
   }
@@ -2824,7 +2824,7 @@ assert_circuit_ok,(const circuit_t *c))
                !smartlist_contains(circuits_pending_chans, c));
   }
   if (origin_circ && origin_circ->cpath) {
-    assert_cpath_ok(origin_circ->cpath);
+    cpath_assert_ok(origin_circ->cpath);
   }
   if (c->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED) {
     tor_assert(or_circ);
