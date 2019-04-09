@@ -81,6 +81,24 @@ control_cmd_args_free_(control_cmd_args_t *args)
   tor_free(args);
 }
 
+/** Erase all memory held in <b>args</b>. */
+void
+control_cmd_args_wipe(control_cmd_args_t *args)
+{
+  if (!args)
+    return;
+
+  if (args->args) {
+    SMARTLIST_FOREACH(args->args, char *, c, memwipe(c, 0, strlen(c)));
+  }
+  for (config_line_t *line = args->kwargs; line; line = line->next) {
+    memwipe(line->key, 0, strlen(line->key));
+    memwipe(line->value, 0, strlen(line->value));
+  }
+  if (args->object)
+    memwipe(args->object, 0, args->object_len);
+}
+
 /**
  * Return true iff any element of the NULL-terminated <b>array</b> matches
  * <b>kwd</b>. Case-insensitive.
@@ -2328,6 +2346,10 @@ handle_single_control_command(const control_cmd_def_t *def,
       tor_free(err);
     if (def->handler(conn, parsed_args))
       rv = 0;
+
+    if (def->flags & CMD_FL_WIPE)
+      control_cmd_args_wipe(parsed_args);
+
     control_cmd_args_free(parsed_args);
   }
 
