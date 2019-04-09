@@ -2457,7 +2457,6 @@ AC_CONFIG_FILES([
 	Doxyfile
 	Makefile
 	config.rust
-	contrib/dist/suse/tor.sh
 	contrib/operator-tools/tor.logrotate
 	contrib/dist/tor.sh
 	contrib/dist/torctl
