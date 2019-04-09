@@ -64,6 +64,13 @@ typedef struct control_cmd_syntax_t {
    * True iff this command wants to be followed by a multiline object.
    **/
   bool want_object;
+  /**
+   * True iff this command needs access to the raw body of the input.
+   *
+   * This should not be needed for pure commands; it is purely a legacy
+   * option.
+   **/
+  bool store_raw_body;
 } control_cmd_syntax_t;
 
 #ifdef CONTROL_CMD_PRIVATE

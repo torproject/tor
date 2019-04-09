@@ -116,6 +116,11 @@ control_cmd_parse_args(const char *command,
 
   result->command = command;
 
+  if (syntax->store_raw_body) {
+    tor_assert(body[body_len] == 0);
+    result->raw_body = body;
+  }
+
   const char *eol = memchr(body, '\n', body_len);
   if (syntax->want_object) {
     if (! eol || (eol+1) == body+body_len) {
@@ -2309,7 +2314,7 @@ static const control_cmd_def_t CONTROL_COMMANDS[] =
   ONE_LINE_PARSED(getconf, 0),
   MULTLINE_PARSED(loadconf, 0),
   ONE_LINE_PARSED(setevents, 0),
-  ONE_LINE(authenticate, legacy, CMD_FL_WIPE),
+  ONE_LINE_PARSED(authenticate, CMD_FL_WIPE),
   ONE_LINE_PARSED(saveconf, 0),
   ONE_LINE_PARSED(signal, 0),
   ONE_LINE_PARSED(takeownership, 0),
@@ -2327,7 +2332,7 @@ static const control_cmd_def_t CONTROL_COMMANDS[] =
   ONE_LINE_PARSED(usefeature, 0),
   ONE_LINE_PARSED(resolve, 0),
   ONE_LINE_PARSED(protocolinfo, 0),
-  ONE_LINE(authchallenge, legacy, CMD_FL_WIPE),
+  ONE_LINE_PARSED(authchallenge, CMD_FL_WIPE),
   ONE_LINE_PARSED(dropguards, 0),
   ONE_LINE_PARSED(hsfetch, 0),
   MULTLINE_PARSED(hspost, 0),
