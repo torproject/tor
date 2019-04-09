@@ -168,3 +168,109 @@ send_control_done(control_connection_t *conn)
 {
   connection_write_str_to_buf("250 OK\r\n", conn);
 }
+
+/** Write a reply to the control channel.
+ *
+ * @param conn control connection
+ * @param code numeric result code
+ * @param c separator character, usually ' ', '-', or '+'
+ * @param s string
+ */
+void
+control_write_reply(control_connection_t *conn, int code, int c, const char *s)
+{
+  connection_printf_to_buf(conn, "%03d%c%s\r\n", code, c, s);
+}
+
+/** Write a formatted reply to the control channel.
+ *
+ * @param conn control connection
+ * @param code numeric result code
+ * @param c separator character, usually ' ', '-', or '+'
+ * @param fmt format string
+ * @param ap va_list from caller
+ */
+void
+control_vprintf_reply(control_connection_t *conn, int code, int c,
+                      const char *fmt, va_list ap)
+{
+  char *buf = NULL;
+  int len;
+
+  len = tor_vasprintf(&buf, fmt, ap);
+  if (len < 0) {
+    log_err(LD_BUG, "Unable to format string for controller.");
+    tor_assert(0);
+  }
+  control_write_reply(conn, code, c, buf);
+  tor_free(buf);
+}
+
+/** Write an EndReplyLine */
+void
+control_write_endreply(control_connection_t *conn, int code, const char *s)
+{
+  control_write_reply(conn, code, ' ', s);
+}
+
+/** Write a formatted EndReplyLine */
+void
+control_printf_endreply(control_connection_t *conn, int code,
+                        const char *fmt, ...)
+{
+  va_list ap;
+
+  va_start(ap, fmt);
+  control_vprintf_reply(conn, code, ' ', fmt, ap);
+  va_end(ap);
+}
+
+/** Write a MidReplyLine */
+void
+control_write_midreply(control_connection_t *conn, int code, const char *s)
+{
+  control_write_reply(conn, code, '-', s);
+}
+
+/** Write a formatted MidReplyLine */
+void
+control_printf_midreply(control_connection_t *conn, int code, const char *fmt,
+                        ...)
+{
+  va_list ap;
+
+  va_start(ap, fmt);
+  control_vprintf_reply(conn, code, '-', fmt, ap);
+  va_end(ap);
+}
+
+/** Write a DataReplyLine */
+void
+control_write_datareply(control_connection_t *conn, int code, const char *s)
+{
+  control_write_reply(conn, code, '+', s);
+}
+
+/** Write a formatted DataReplyLine */
+void
+control_printf_datareply(control_connection_t *conn, int code, const char *fmt,
+                         ...)
+{
+  va_list ap;
+
+  va_start(ap, fmt);
+  control_vprintf_reply(conn, code, '+', fmt, ap);
+  va_end(ap);
+}
+
+/** Write a CmdData */
+void
+control_write_data(control_connection_t *conn, const char *data)
+{
+  char *esc = NULL;
+  size_t esc_len;
+
+  esc_len = write_escaped_data(data, strlen(data), &esc);
+  connection_buf_add(esc, esc_len, TO_CONN(conn));
+  tor_free(esc);
+}
