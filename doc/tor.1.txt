@@ -1230,6 +1230,8 @@ The following options are useful only for clients (that is, if
         information to anybody watching your network, and allow anybody
         to use your computer as an open proxy. +
  +
+    If multiple entries of this option are present in your configuration
+    file, Tor will perform stream isolation between listeners by default.
     The _isolation flags_ arguments give Tor rules for which streams
     received on this SocksPort are allowed to share circuits with one
     another.  Recognized isolation flags are:
@@ -1472,14 +1474,18 @@ The following options are useful only for clients (that is, if
     protocol instead of SOCKS. Set this to
     0 if you don't want to allow "HTTP CONNECT" connections. Set the port
     to "auto" to have Tor pick a port for you. This directive can be
-    specified multiple times to bind to multiple addresses/ports.  See
+    specified multiple times to bind to multiple addresses/ports. If multiple
+    entries of this option are present in your configuration file, Tor will
+    perform stream isolation between listeners by default. See
     SOCKSPort for an explanation of isolation flags. (Default: 0)
 
 [[TransPort]] **TransPort**  \['address':]__port__|**auto** [_isolation flags_]::
     Open this port to listen for transparent proxy connections.  Set this to
     0 if you don't want to allow transparent proxy connections.  Set the port
     to "auto" to have Tor pick a port for you. This directive can be
-    specified multiple times to bind to multiple addresses/ports.  See
+    specified multiple times to bind to multiple addresses/ports. If multiple
+    entries of this option are present in your configuration file, Tor will
+    perform stream isolation between listeners by default.  See
     SOCKSPort for an explanation of isolation flags. +
  +
     TransPort requires OS support for transparent proxies, such as BSDs' pf or
@@ -1516,7 +1522,9 @@ The following options are useful only for clients (that is, if
     included in old versions of FreeBSD, etc) using the NATD protocol.
     Use 0 if you don't want to allow NATD connections.  Set the port
     to "auto" to have Tor pick a port for you. This directive can be
-    specified multiple times to bind to multiple addresses/ports.  See
+    specified multiple times to bind to multiple addresses/ports.  If multiple
+    entries of this option are present in your configuration file, Tor will
+    perform stream isolation between listeners by default. See
     SocksPort for an explanation of isolation flags. +
  +
     This option is only for people who cannot use TransPort. (Default: 0)
