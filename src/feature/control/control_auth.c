@@ -17,6 +17,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"
+#include "lib/encoding/qstring.h"
 
 #include "lib/crypt_ops/crypto_s2k.h"
 
@@ -149,8 +150,8 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
   cp += strspn(cp, " \t\n\r");
   if (*cp == '"') {
     const char *newcp =
-      decode_escaped_string(cp, len - (cp - body),
-                            &client_nonce, &client_nonce_len);
+      decode_qstring(cp, len - (cp - body),
+                     &client_nonce, &client_nonce_len);
     if (newcp == NULL) {
       connection_write_str_to_buf("513 Invalid quoted client nonce\r\n",
                                   conn);
@@ -275,7 +276,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       return 0;
     }
   } else {
-    if (!decode_escaped_string(body, len, &password, &password_len)) {
+    if (!decode_qstring(body, len, &password, &password_len)) {
       connection_write_str_to_buf("551 Invalid quoted string.  You need "
             "to put the password in double quotes.\r\n", conn);
       connection_mark_for_close(TO_CONN(conn));
