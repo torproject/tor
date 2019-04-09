@@ -699,13 +699,6 @@ test_util_time(void *arg)
 
 #define CHECK_TIMEGM_ARG_OUT_OF_RANGE(msg) \
     CHECK_TIMEGM_WARNING("Out-of-range argument to tor_timegm")
-#define CHECK_POSSIBLE_TIMEGM_ARG_OUT_OF_RANGE(msg)             \
-  do {                                                          \
-    if (mock_saved_log_n_entries()) {                           \
-      expect_single_log_msg_containing("Out-of-range argument");\
-    }                                                           \
-    teardown_capture_of_logs();                                 \
-  } while (0)
 
   /* year */
 
@@ -894,7 +887,7 @@ test_util_time(void *arg)
   t_res = -1;
   CAPTURE();
   tor_gmtime_r(&t_res, &b_time);
-  CHECK_POSSIBLE_TIMEGM_ARG_OUT_OF_RANGE();
+  CHECK_POSSIBLE_EINVAL();
   tt_assert(b_time.tm_year == (1970-1900) ||
             b_time.tm_year == (1969-1900));
 
