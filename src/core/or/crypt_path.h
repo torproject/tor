@@ -32,4 +32,10 @@ cpath_get_incoming_digest(const crypt_path_t *cpath);
 void
 cpath_set_cell_forward_digest(crypt_path_t *cpath, cell_t *cell);
 
+crypt_path_t *cpath_get_next_non_open_hop(crypt_path_t *cpath);
+
+#if defined(TOR_UNIT_TESTS)
+unsigned int cpath_get_n_hops(crypt_path_t **head_ptr);
+#endif /* defined(TOR_UNIT_TESTS) */
+
 #endif

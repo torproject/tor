@@ -210,3 +210,44 @@ cpath_set_cell_forward_digest(crypt_path_t *cpath, cell_t *cell)
   tor_assert(cpath->private);
   relay_set_digest(cpath->private->crypto.f_digest, cell);
 }
+
+/************ other cpath functions ***************************/
+
+/** Return the first non-open hop in cpath, or return NULL if all
+ * hops are open. */
+crypt_path_t *
+cpath_get_next_non_open_hop(crypt_path_t *cpath)
+{
+  crypt_path_t *hop = cpath;
+  do {
+    if (hop->state != CPATH_STATE_OPEN)
+      return hop;
+    hop = hop->next;
+  } while (hop != cpath);
+  return NULL;
+}
+
+#ifdef TOR_UNIT_TESTS
+
+/** Unittest helper function: Count number of hops in cpath linked list. */
+unsigned int
+cpath_get_n_hops(crypt_path_t **head_ptr)
+{
+  unsigned int n_hops = 0;
+  crypt_path_t *tmp;
+
+  if (!*head_ptr) {
+    return 0;
+  }
+
+  tmp = *head_ptr;
+  do {
+    n_hops++;
+    tmp = tmp->next;
+  } while (tmp != *head_ptr);
+
+  return n_hops;
+}
+
+#endif /* defined(TOR_UNIT_TESTS) */
+

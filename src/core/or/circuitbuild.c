@@ -91,7 +91,6 @@ static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
 static int circuit_deliver_create_cell(circuit_t *circ,
                                        const create_cell_t *create_cell,
                                        int relayed);
-static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
 static int circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
@@ -547,7 +546,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   int should_launch = 0;
   const or_options_t *options = get_options();
 
-  firsthop = onion_next_hop_in_cpath(circ->cpath);
+  firsthop = cpath_get_next_non_open_hop(circ->cpath);
   tor_assert(firsthop);
   tor_assert(firsthop->extend_info);
 
@@ -948,7 +947,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
   tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
   tor_assert(circ->base_.state == CIRCUIT_STATE_BUILDING);
 
-  crypt_path_t *hop = onion_next_hop_in_cpath(circ->cpath);
+  crypt_path_t *hop = cpath_get_next_non_open_hop(circ->cpath);
   circuit_build_times_handle_completed_hop(circ);
 
   circpad_machine_event_circ_added_hop(circ);
@@ -1385,7 +1384,7 @@ circuit_finish_handshake(origin_circuit_t *circ,
   if (circ->cpath->state == CPATH_STATE_AWAITING_KEYS) {
     hop = circ->cpath;
   } else {
-    hop = onion_next_hop_in_cpath(circ->cpath);
+    hop = cpath_get_next_non_open_hop(circ->cpath);
     if (!hop) { /* got an extended when we're all done? */
       log_warn(LD_PROTOCOL,"got extended when circ already built? Closing.");
       return - END_CIRC_REASON_TORPROTOCOL;
@@ -2344,30 +2343,6 @@ count_acceptable_nodes, (smartlist_t *nodes, int direct))
   return num;
 }
 
-#ifdef TOR_UNIT_TESTS
-
-/** Unittest helper function: Count number of hops in cpath linked list. */
-unsigned int
-cpath_get_n_hops(crypt_path_t **head_ptr)
-{
-  unsigned int n_hops = 0;
-  crypt_path_t *tmp;
-
-  if (!*head_ptr) {
-    return 0;
-  }
-
-  tmp = *head_ptr;
-  do {
-    n_hops++;
-    tmp = tmp->next;
-  } while (tmp != *head_ptr);
-
-  return n_hops;
-}
-
-#endif /* defined(TOR_UNIT_TESTS) */
-
 /**
  * Build the exclude list for vanguard circuits.
  *
@@ -2640,20 +2615,6 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
   choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
   smartlist_free(excluded);
   return choice;
-}
-
-/** Return the first non-open hop in cpath, or return NULL if all
- * hops are open. */
-static crypt_path_t *
-onion_next_hop_in_cpath(crypt_path_t *cpath)
-{
-  crypt_path_t *hop = cpath;
-  do {
-    if (hop->state != CPATH_STATE_OPEN)
-      return hop;
-    hop = hop->next;
-  } while (hop != cpath);
-  return NULL;
 }
 
 /** Choose a suitable next hop for the circuit <b>circ</b>.
