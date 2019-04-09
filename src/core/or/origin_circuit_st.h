@@ -167,7 +167,10 @@ struct origin_circuit_t {
 
   /** If this flag is set, we've already tossed a coin to decide if we should
    * apply a padding machine. Don't toss another. */
-  unsigned padding_apply_coin_tossed : 1;
+  unsigned padding_apply_coin_tossed : 2;
+#define PADDING_COIN_NOT_CHECKED 0
+#define PADDING_COIN_APPLIED 1
+#define PADDING_COIN_NOT_APPLIED 2
 
   /**
    * Tristate variable to guard against pathbias miscounting
