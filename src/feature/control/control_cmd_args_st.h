@@ -43,6 +43,10 @@ struct control_cmd_args_t {
    * A multiline object passed with this command.
    **/
   char *object;
+  /**
+   * If set, a nul-terminated string containing the raw unparsed arguments.
+   **/
+  const char *raw_body;
 };
 
 #endif /* !defined(TOR_CONTROL_CMD_ST_H) */
