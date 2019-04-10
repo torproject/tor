@@ -166,7 +166,7 @@ read_escaped_data(const char *data, size_t len, char **out)
 void
 send_control_done(control_connection_t *conn)
 {
-  connection_write_str_to_buf("250 OK\r\n", conn);
+  control_write_endreply(conn, 250, "OK");
 }
 
 /** Write a reply to the control channel.

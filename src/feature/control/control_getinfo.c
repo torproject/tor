@@ -1608,7 +1608,7 @@ handle_control_getinfo(control_connection_t *conn,
     if (handle_getinfo_helper(conn, q, &ans, &errmsg) < 0) {
       if (!errmsg)
         errmsg = "Internal error";
-      connection_printf_to_buf(conn, "551 %s\r\n", errmsg);
+      control_write_endreply(conn, 551, errmsg);
       goto done;
     }
     if (!ans) {
@@ -1625,13 +1625,10 @@ handle_control_getinfo(control_connection_t *conn,
   if (smartlist_len(unrecognized)) {
     /* control-spec section 2.3, mid-reply '-' or end of reply ' ' */
     for (i=0; i < smartlist_len(unrecognized)-1; ++i)
-      connection_printf_to_buf(conn,
-                               "552-%s\r\n",
-                               (char *)smartlist_get(unrecognized, i));
-
-    connection_printf_to_buf(conn,
-                             "552 %s\r\n",
+      control_write_midreply(conn, 552,
                              (char *)smartlist_get(unrecognized, i));
+
+    control_write_endreply(conn, 552, (char *)smartlist_get(unrecognized, i));
     goto done;
   }
 
@@ -1645,7 +1642,7 @@ handle_control_getinfo(control_connection_t *conn,
       control_write_data(conn, v);
     }
   }
-  connection_write_str_to_buf("250 OK\r\n", conn);
+  send_control_done(conn);
 
  done:
   SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));

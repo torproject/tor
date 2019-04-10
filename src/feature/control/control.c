@@ -401,7 +401,7 @@ connection_control_process_inbuf(control_connection_t *conn)
         return 0;
       else if (r == -1) {
         if (data_len + conn->incoming_cmd_cur_len > MAX_COMMAND_LINE_LENGTH) {
-          connection_write_str_to_buf("500 Line too long.\r\n", conn);
+          control_write_endreply(conn, 500, "Line too long.");
           connection_stop_reading(TO_CONN(conn));
           connection_mark_and_flush(TO_CONN(conn));
         }
@@ -455,20 +455,20 @@ connection_control_process_inbuf(control_connection_t *conn)
 
   /* Otherwise, Quit is always valid. */
   if (!strcasecmp(conn->current_cmd, "QUIT")) {
-    connection_write_str_to_buf("250 closing connection\r\n", conn);
+    control_write_endreply(conn, 250, "closing connection");
     connection_mark_and_flush(TO_CONN(conn));
     return 0;
   }
 
   if (conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH &&
       !is_valid_initial_command(conn, conn->current_cmd)) {
-    connection_write_str_to_buf("514 Authentication required.\r\n", conn);
+    control_write_endreply(conn, 514, "Authentication required.");
     connection_mark_for_close(TO_CONN(conn));
     return 0;
   }
 
   if (data_len >= UINT32_MAX) {
-    connection_write_str_to_buf("500 A 4GB command? Nice try.\r\n", conn);
+    control_write_endreply(conn, 500, "A 4GB command? Nice try.");
     connection_mark_for_close(TO_CONN(conn));
     return 0;
   }
