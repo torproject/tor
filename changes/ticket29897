@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Refactor handle_get_next_bandwidth() to use connection_dir_buf_add().
-      Implements ticket 29897.

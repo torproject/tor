@@ -1,3 +1,0 @@
-  o Minor bugfixes (directory authorities):
-    - Actually include the bandwidth-file-digest line in directory authority
-      votes. Fixes bug 29959; bugfix on 0.4.0.2-alpha.

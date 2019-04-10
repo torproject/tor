@@ -1,9 +1,0 @@
-  o Minor bugfixes (security):
-    - Fix a potential double free bug when reading huge bandwidth files. The
-      issue is not exploitable in the current Tor network because the
-      vulnerable code is only reached when directory authorities read bandwidth
-      files, but bandwidth files come from a trusted source (usually the
-      authorities themselves). Furthermore, the issue is only exploitable in
-      rare (non-POSIX) 32-bit architectures which are not used by any of the
-      current authorities. Fixes bug 30040; bugfix on 0.3.5.1-alpha. Bug found
-      and fixed by Tobias Stoeckmann.

@@ -1,7 +1,0 @@
-  o Minor features (dormant mode):
-    - Add a DormantCanceledByStartup option to tell Tor that it should
-      treat a startup event as cancelling any previous dormant state.
-      Integrators should use this option with caution: it should
-      only be used if Tor is being started because of something that the
-      user did, and not if Tor is being automatically started in the
-      background. Closes ticket 29357.
