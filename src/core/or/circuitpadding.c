@@ -336,7 +336,7 @@ circpad_machine_setup_tokens(circpad_machine_runtime_t *mi)
 
   /* If this state doesn't exist, or doesn't have token removal,
    * free any previous state's histogram, and bail */
-  if (!state || state->token_removal == CIRCPAD_TOKEN_REMOVAL_NONE) {
+  if (!state) {
     if (mi->histogram) {
       tor_free(mi->histogram);
       mi->histogram = NULL;
