@@ -141,27 +141,26 @@ handle_control_authchallenge(control_connection_t *conn,
   char server_nonce_encoded[(2*SAFECOOKIE_SERVER_NONCE_LEN) + 1];
 
   if (strcasecmp(smartlist_get(args->args, 0), "SAFECOOKIE")) {
-    connection_write_str_to_buf("513 AUTHCHALLENGE only supports SAFECOOKIE "
-                                "authentication\r\n", conn);
+    control_write_endreply(conn, 513,
+                           "AUTHCHALLENGE only supports SAFECOOKIE " "authentication");
     goto fail;
   }
   if (!authentication_cookie_is_set) {
-    connection_write_str_to_buf("515 Cookie authentication is disabled\r\n",
-                                conn);
+    control_write_endreply(conn, 515, "Cookie authentication is disabled");
     goto fail;
   }
   if (args->kwargs == NULL || args->kwargs->next != NULL) {
     /*    connection_write_str_to_buf("512 AUTHCHALLENGE requires exactly "
                                 "2 arguments.\r\n", conn);
     */
-    connection_printf_to_buf(conn,
-                             "512 AUTHCHALLENGE dislikes argument list %s\r\n",
+    control_printf_endreply(conn, 512,
+                             "AUTHCHALLENGE dislikes argument list %s",
                              escaped(args->raw_body));
     goto fail;
   }
   if (strcmp(args->kwargs->key, "")) {
-    connection_write_str_to_buf("512 AUTHCHALLENGE does not accept keyword "
-                                "arguments.\r\n", conn);
+    control_write_endreply(conn, 512,
+                           "AUTHCHALLENGE does not accept keyword " "arguments.");
     goto fail;
   }
 
@@ -177,8 +176,7 @@ handle_control_authchallenge(control_connection_t *conn,
     client_nonce = tor_malloc(client_nonce_len);
     if (base16_decode(client_nonce, client_nonce_len, hex_nonce,
                       strlen(hex_nonce)) != (int)client_nonce_len) {
-      connection_write_str_to_buf("513 Invalid base16 client nonce\r\n",
-                                  conn);
+      control_write_endreply(conn, 513, "Invalid base16 client nonce");
       tor_free(client_nonce);
       goto fail;
     }
@@ -223,9 +221,8 @@ handle_control_authchallenge(control_connection_t *conn,
   base16_encode(server_nonce_encoded, sizeof(server_nonce_encoded),
                 server_nonce, sizeof(server_nonce));
 
-  connection_printf_to_buf(conn,
-                           "250 AUTHCHALLENGE SERVERHASH=%s "
-                           "SERVERNONCE=%s\r\n",
+  control_printf_endreply(conn, 250,
+                           "AUTHCHALLENGE SERVERHASH=%s " "SERVERNONCE=%s",
                            server_hash_encoded,
                            server_nonce_encoded);
 
@@ -263,13 +260,12 @@ handle_control_authenticate(control_connection_t *conn,
     password = tor_strdup("");
     password_len = 0;
   } else if (args->kwargs->next) {
-    connection_write_str_to_buf(
-             "512 Too many arguments to AUTHENTICATE.\r\n", conn);
+    control_write_endreply(conn, 512, "Too many arguments to AUTHENTICATE.");
     connection_mark_for_close(TO_CONN(conn));
     return 0;
   } else if (strcmp(args->kwargs->key, "")) {
-    connection_write_str_to_buf(
-             "512 AUTHENTICATE does not accept keyword arguments.\r\n", conn);
+    control_write_endreply(conn, 512,
+                           "AUTHENTICATE does not accept keyword arguments.");
     connection_mark_for_close(TO_CONN(conn));
     return 0;
   } else if (strchr(args->raw_body, '\"')) {
@@ -282,10 +278,8 @@ handle_control_authenticate(control_connection_t *conn,
     password = tor_malloc(password_len+1);
     if (base16_decode(password, password_len+1, hex_passwd, strlen(hex_passwd))
                       != (int) password_len) {
-      connection_write_str_to_buf(
-            "551 Invalid hexadecimal encoding.  Maybe you tried a plain text "
-            "password?  If so, the standard requires that you put it in "
-            "double quotes.\r\n", conn);
+      control_write_endreply(conn, 551,
+                             "Invalid hexadecimal encoding.  Maybe you tried a plain text " "password?  If so, the standard requires that you put it in " "double quotes.");
       connection_mark_for_close(TO_CONN(conn));
       tor_free(password);
       return 0;
@@ -418,7 +412,7 @@ handle_control_authenticate(control_connection_t *conn,
 
  err:
   tor_free(password);
-  connection_printf_to_buf(conn, "515 Authentication failed: %s\r\n", errstr);
+  control_printf_endreply(conn, 515, "Authentication failed: %s", errstr);
   connection_mark_for_close(TO_CONN(conn));
   if (sl) { /* clean up */
     SMARTLIST_FOREACH(sl, char *, str, tor_free(str));
