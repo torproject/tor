@@ -142,7 +142,8 @@ handle_control_authchallenge(control_connection_t *conn,
 
   if (strcasecmp(smartlist_get(args->args, 0), "SAFECOOKIE")) {
     control_write_endreply(conn, 513,
-                           "AUTHCHALLENGE only supports SAFECOOKIE " "authentication");
+                           "AUTHCHALLENGE only supports SAFECOOKIE "
+                           "authentication");
     goto fail;
   }
   if (!authentication_cookie_is_set) {
@@ -154,13 +155,14 @@ handle_control_authchallenge(control_connection_t *conn,
                                 "2 arguments.\r\n", conn);
     */
     control_printf_endreply(conn, 512,
-                             "AUTHCHALLENGE dislikes argument list %s",
-                             escaped(args->raw_body));
+                            "AUTHCHALLENGE dislikes argument list %s",
+                            escaped(args->raw_body));
     goto fail;
   }
   if (strcmp(args->kwargs->key, "")) {
     control_write_endreply(conn, 512,
-                           "AUTHCHALLENGE does not accept keyword " "arguments.");
+                           "AUTHCHALLENGE does not accept keyword "
+                           "arguments.");
     goto fail;
   }
 
@@ -222,9 +224,9 @@ handle_control_authchallenge(control_connection_t *conn,
                 server_nonce, sizeof(server_nonce));
 
   control_printf_endreply(conn, 250,
-                           "AUTHCHALLENGE SERVERHASH=%s " "SERVERNONCE=%s",
-                           server_hash_encoded,
-                           server_nonce_encoded);
+                          "AUTHCHALLENGE SERVERHASH=%s SERVERNONCE=%s",
+                          server_hash_encoded,
+                          server_nonce_encoded);
 
   tor_free(client_nonce);
   return 0;
@@ -279,7 +281,9 @@ handle_control_authenticate(control_connection_t *conn,
     if (base16_decode(password, password_len+1, hex_passwd, strlen(hex_passwd))
                       != (int) password_len) {
       control_write_endreply(conn, 551,
-                             "Invalid hexadecimal encoding.  Maybe you tried a plain text " "password?  If so, the standard requires that you put it in " "double quotes.");
+            "Invalid hexadecimal encoding.  Maybe you tried a plain text "
+            "password?  If so, the standard requires that you put it in "
+            "double quotes.");
       connection_mark_for_close(TO_CONN(conn));
       tor_free(password);
       return 0;

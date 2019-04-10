@@ -295,11 +295,11 @@ handle_control_getconf(control_connection_t *conn,
   if ((len = smartlist_len(unrecognized))) {
     for (i=0; i < len-1; ++i)
       control_printf_midreply(conn, 552,
-                               "Unrecognized configuration key \"%s\"",
-                               (char*)smartlist_get(unrecognized, i));
+                              "Unrecognized configuration key \"%s\"",
+                              (char*)smartlist_get(unrecognized, i));
     control_printf_endreply(conn, 552,
-                             "Unrecognized configuration key \"%s\"",
-                             (char*)smartlist_get(unrecognized, len-1));
+                            "Unrecognized configuration key \"%s\"",
+                            (char*)smartlist_get(unrecognized, len-1));
   } else if ((len = smartlist_len(answers))) {
     char *tmp = smartlist_get(answers, len-1);
     tor_assert(strlen(tmp)>4);
@@ -399,8 +399,7 @@ handle_control_setevents(control_connection_t *conn,
         }
 
         if (event_code == -1) {
-          control_printf_endreply(conn, 552, "Unrecognized event \"%s\"",
-                                   ev);
+          control_printf_endreply(conn, 552, "Unrecognized event \"%s\"", ev);
           return 0;
         }
       }
@@ -464,8 +463,7 @@ handle_control_signal(control_connection_t *conn,
   }
 
   if (sig < 0)
-    control_printf_endreply(conn, 552, "Unrecognized signal code \"%s\"",
-                             s);
+    control_printf_endreply(conn, 552, "Unrecognized signal code \"%s\"", s);
   if (sig < 0)
     return 0;
 
@@ -752,7 +750,7 @@ handle_control_extendcircuit(control_connection_t *conn,
     intended_purpose = circuit_purpose_from_string(purpose_line->value);
     if (intended_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
       control_printf_endreply(conn, 552, "Unknown purpose \"%s\"",
-                               purpose_line->value);
+                              purpose_line->value);
       goto done;
     }
   }
@@ -857,7 +855,7 @@ handle_control_extendcircuit(control_connection_t *conn,
   }
 
   control_printf_endreply(conn, 250, "EXTENDED %lu",
-                             (unsigned long)circ->global_identifier);
+                          (unsigned long)circ->global_identifier);
   if (zero_circ) /* send a 'launched' event, for completeness */
     circuit_event_status(circ, CIRC_EVENT_LAUNCHED, 0);
  done:
@@ -897,7 +895,7 @@ handle_control_setcircuitpurpose(control_connection_t *conn,
     new_purpose = circuit_purpose_from_string(purp->value);
     if (new_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
       control_printf_endreply(conn, 552, "Unknown purpose \"%s\"",
-                               purp->value);
+                              purp->value);
       goto done;
     }
   }
@@ -945,7 +943,7 @@ handle_control_attachstream(control_connection_t *conn,
                                   &hop_line_ok, NULL);
       if (!hop_line_ok) { /* broken hop line */
         control_printf_endreply(conn, 552, "Bad value hop=%s",
-                                 hoparg->value);
+                                hoparg->value);
         return 0;
       }
     }
@@ -1027,7 +1025,7 @@ handle_control_postdescriptor(control_connection_t *conn,
   if (line) {
     purpose = router_purpose_from_string(line->value);
     control_printf_endreply(conn, 552, "Unknown purpose \"%s\"",
-                             line->value);
+                            line->value);
     goto done;
   }
   line = config_line_find_case(args->kwargs, "cache");
@@ -1038,7 +1036,7 @@ handle_control_postdescriptor(control_connection_t *conn,
       cache = 1;
     else {
       control_printf_endreply(conn, 552, "Unknown cache request \"%s\"",
-                               line->value);
+                              line->value);
       goto done;
     }
   }
@@ -1080,7 +1078,7 @@ handle_control_redirectstream(control_connection_t *conn,
   if (!(ap_conn = get_stream(smartlist_get(args, 0)))
            || !ap_conn->socks_request) {
     control_printf_endreply(conn, 552, "Unknown stream \"%s\"",
-                             (char*)smartlist_get(args, 0));
+                            (char*)smartlist_get(args, 0));
   } else {
     int ok = 1;
     if (smartlist_len(args) > 2) { /* they included a port too */
@@ -1089,7 +1087,7 @@ handle_control_redirectstream(control_connection_t *conn,
     }
     if (!ok) {
       control_printf_endreply(conn, 512, "Cannot parse port \"%s\"",
-                               (char*)smartlist_get(args, 2));
+                              (char*)smartlist_get(args, 2));
     } else {
       new_addr = tor_strdup(smartlist_get(args, 1));
     }
@@ -1128,13 +1126,13 @@ handle_control_closestream(control_connection_t *conn,
 
   if (!(ap_conn = get_stream(smartlist_get(args, 0))))
     control_printf_endreply(conn, 552, "Unknown stream \"%s\"",
-                             (char*)smartlist_get(args, 0));
+                            (char*)smartlist_get(args, 0));
   else {
     reason = (uint8_t) tor_parse_ulong(smartlist_get(args,1), 10, 0, 255,
                                        &ok, NULL);
     if (!ok) {
       control_printf_endreply(conn, 552, "Unrecognized reason \"%s\"",
-                               (char*)smartlist_get(args, 1));
+                              (char*)smartlist_get(args, 1));
       ap_conn = NULL;
     }
   }
@@ -1250,7 +1248,7 @@ handle_control_protocolinfo(control_connection_t *conn,
     });
   if (bad_arg) {
     control_printf_endreply(conn, 513, "No such version %s",
-                             escaped(bad_arg));
+                            escaped(bad_arg));
     /* Don't tolerate bad arguments when not authenticated. */
     if (!STATE_IS_OPEN(TO_CONN(conn)->state))
       connection_mark_for_close(TO_CONN(conn));
@@ -1315,7 +1313,7 @@ handle_control_usefeature(control_connection_t *conn,
         ;
       else {
         control_printf_endreply(conn, 552, "Unrecognized feature \"%s\"",
-                                 arg);
+                                arg);
         bad = 1;
         break;
       }
@@ -1398,8 +1396,7 @@ handle_control_hsfetch(control_connection_t *conn,
     version = HS_VERSION_THREE;
     hs_parse_address(hsaddress, &v3_pk, NULL, NULL);
   } else {
-    control_printf_endreply(conn, 513, "Invalid argument \"%s\"",
-                             arg1);
+    control_printf_endreply(conn, 513, "Invalid argument \"%s\"", arg1);
     goto done;
   }
 
@@ -1409,8 +1406,7 @@ handle_control_hsfetch(control_connection_t *conn,
 
       const node_t *node = node_get_by_hex_id(server, 0);
       if (!node) {
-        control_printf_endreply(conn, 552, "Server \"%s\" not found",
-                                 server);
+        control_printf_endreply(conn, 552, "Server \"%s\" not found", server);
         goto done;
       }
       if (!hsdirs) {
@@ -1489,7 +1485,7 @@ handle_control_hspost(control_connection_t *conn,
 
       if (!node || !node->rs) {
         control_printf_endreply(conn, 552, "Server \"%s\" not found",
-                                 server);
+                                server);
         goto done;
       }
       /* Valid server, add it to our local list. */
@@ -1711,7 +1707,7 @@ handle_control_add_onion(control_connection_t *conn,
           non_anonymous = 1;
         } else {
           control_printf_endreply(conn, 512, "Invalid 'Flags' argument: %s",
-                                   escaped(flag));
+                                  escaped(flag));
           bad = 1;
           break;
         }
@@ -1786,8 +1782,8 @@ handle_control_add_onion(control_connection_t *conn,
      * (I've deliberately written them out in full here to aid searchability.)
      */
     control_printf_endreply(conn, 512,
-                             "Tor is in %sanonymous hidden service " "mode",
-                             non_anonymous ? "" : "non-");
+                            "Tor is in %sanonymous hidden service " "mode",
+                            non_anonymous ? "" : "non-");
     goto out;
   }
 
@@ -1847,7 +1843,7 @@ handle_control_add_onion(control_connection_t *conn,
     if (key_new_alg) {
       tor_assert(key_new_blob);
       control_printf_midreply(conn, 250, "PrivateKey=%s:%s",
-                               key_new_alg, key_new_blob);
+                              key_new_alg, key_new_blob);
     }
     if (auth_created_clients) {
       SMARTLIST_FOREACH(auth_created_clients, rend_authorized_client_t *, ac, {
@@ -2330,7 +2326,7 @@ handle_single_control_command(const control_cmd_def_t *def,
                                        &err);
   if (!parsed_args) {
     control_printf_endreply(conn, 512, "Bad arguments to %s: %s",
-                             conn->current_cmd, err?err:"");
+                            conn->current_cmd, err?err:"");
     tor_free(err);
   } else {
     if (BUG(err))
@@ -2371,7 +2367,7 @@ handle_control_command(control_connection_t *conn,
   }
 
   control_printf_endreply(conn, 510, "Unrecognized command \"%s\"",
-                           conn->current_cmd);
+                          conn->current_cmd);
 
   return 0;
 }
