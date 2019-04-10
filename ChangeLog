@@ -1,44 +1,46 @@
 Changes in version 0.4.0.4-rc - 2019-04-11
   Tor 0.4.0.4-rc is the first release candidate in its series; it fixes
-  several bugs from earlier versions, including some that had affected
-  stability.
+  several bugs from earlier versions, including some that had
+  affected stability.
 
   o Major bugfixes (NSS, relay):
-    - When running with NSS, disable TLS 1.2 ciphersuites that use SHA384
-      for their PRF. Due to an NSS bug, the TLS key exporters for these
-      ciphersuites don't work -- which caused relays to fail to handshake
-      with one another when these ciphersuites were enabled.
+    - When running with NSS, disable TLS 1.2 ciphersuites that use
+      SHA384 for their PRF. Due to an NSS bug, the TLS key exporters for
+      these ciphersuites don't work -- which caused relays to fail to
+      handshake with one another when these ciphersuites were enabled.
       Fixes bug 29241; bugfix on 0.3.5.1-alpha.
 
   o Minor features (bandwidth authority):
-    - Make bandwidth authorities to ignore relays that are reported in the
-      bandwidth file with the key-value "vote=0".
-      This change allows to report the relays that were not measured due
-      some failure and diagnose the reasons without the bandwidth being included in the
-      bandwidth authorities vote.
-      Closes ticket 29806.
+    - Make bandwidth authorities to ignore relays that are reported in
+      the bandwidth file with the key-value "vote=0". This change allows
+      to report the relays that were not measured due some failure and
+      diagnose the reasons without the bandwidth being included in the
+      bandwidth authorities vote. Closes ticket 29806.
 
   o Minor features (circuit padding):
-    - Stop warning about undefined behavior in the probability distribution
-      tests. Float division by zero may technically be undefined behaviour in
-      C, but it's well-defined in IEEE 754. Partial backport of 29298.
-      Closes ticket 29527; bugfix on 0.4.0.1-alpha.
+    - Stop warning about undefined behavior in the probability
+      distribution tests. Float division by zero may technically be
+      undefined behaviour in C, but it's well-defined in IEEE 754.
+      Partial backport of 29298. Closes ticket 29527; bugfix
+      on 0.4.0.1-alpha.
 
   o Minor features (continuous integration):
-    - On Travis Rust builds, cleanup Rust registry and refrain from caching
-      target/ directory to speed up builds. Resolves issue 29962.
+    - On Travis Rust builds, cleanup Rust registry and refrain from
+      caching target/ directory to speed up builds. Resolves
+      issue 29962.
 
   o Minor features (dircache):
     - When a directory authority is using a bandwidth file to obtain the
-      bandwidth values that will be included in the next vote, serve this
-      bandwidth file at /tor/status-vote/next/bandwidth. Closes ticket 21377.
+      bandwidth values that will be included in the next vote, serve
+      this bandwidth file at /tor/status-vote/next/bandwidth. Closes
+      ticket 21377.
 
   o Minor features (dormant mode):
     - Add a DormantCanceledByStartup option to tell Tor that it should
       treat a startup event as cancelling any previous dormant state.
-      Integrators should use this option with caution: it should
-      only be used if Tor is being started because of something that the
-      user did, and not if Tor is being automatically started in the
+      Integrators should use this option with caution: it should only be
+      used if Tor is being started because of something that the user
+      did, and not if Tor is being automatically started in the
       background. Closes ticket 29357.
 
   o Minor features (geoip):
@@ -48,22 +50,35 @@ Changes in version 0.4.0.4-rc - 2019-04-11
   o Minor features (NSS, diagnostic):
     - Try to log an error from NSS (if there is any) and a more useful
       description of our situation if we are using NSS and a call to
-      SSL_ExportKeyingMaterial() fails.  Diagnostic for ticket 29241.
+      SSL_ExportKeyingMaterial() fails. Diagnostic for ticket 29241.
+
+  o Minor bugfixes (security):
+    - Fix a potential double free bug when reading huge bandwidth files.
+      The issue is not exploitable in the current Tor network because
+      the vulnerable code is only reached when directory authorities
+      read bandwidth files, but bandwidth files come from a trusted
+      source (usually the authorities themselves). Furthermore, the
+      issue is only exploitable in rare (non-POSIX) 32-bit architectures
+      which are not used by any of the current authorities. Fixes bug
+      30040; bugfix on 0.3.5.1-alpha. Bug found and fixed by
+      Tobias Stoeckmann.
 
   o Minor bugfix (continuous integration):
-    - Reset coverage state on disk after Travis CI has finished. This is being
-      done to prevent future gcda file merge errors which causes the test suite
-      for the process subsystem to fail. The process subsystem was introduced
-      in 0.4.0.1-alpha. Fixes bug 29036; bugfix on 0.2.9.15.
+    - Reset coverage state on disk after Travis CI has finished. This is
+      being done to prevent future gcda file merge errors which causes
+      the test suite for the process subsystem to fail. The process
+      subsystem was introduced in 0.4.0.1-alpha. Fixes bug 29036; bugfix
+      on 0.2.9.15.
 
   o Minor bugfixes (bootstrap reporting):
     - During bootstrap reporting, correctly distinguish pluggable
-      transports from plain proxies. Fixes bug 28925; bugfix on
-      0.4.0.1-alpha.
+      transports from plain proxies. Fixes bug 28925; bugfix
+      on 0.4.0.1-alpha.
 
   o Minor bugfixes (C correctness):
-    - Fix an unlikely memory leak in consensus_diff_apply(). Fixes bug 29824;
-      bugfix on 0.3.1.1-alpha. This is Coverity warning CID 1444119.
+    - Fix an unlikely memory leak in consensus_diff_apply(). Fixes bug
+      29824; bugfix on 0.3.1.1-alpha. This is Coverity warning
+      CID 1444119.
 
   o Minor bugfixes (CI):
     - Terminate test-stem if it takes more than 9.5 minutes to run.
@@ -71,69 +86,61 @@ Changes in version 0.4.0.4-rc - 2019-04-11
       Diagnostic for 29437. Fixes bug 30011; bugfix on 0.3.5.4-alpha.
 
   o Minor bugfixes (circuitpadding testing):
-    - Minor tweaks to avoid very rare test failures related to timers and
-      monotime. Fixes bug 29500; bugfix on 0.4.0.1-alpha
+    - Minor tweaks to avoid very rare test failures related to timers
+      and monotime. Fixes bug 29500; bugfix on 0.4.0.1-alpha
 
   o Minor bugfixes (directory authorities):
-    - Actually include the bandwidth-file-digest line in directory authority
-      votes. Fixes bug 29959; bugfix on 0.4.0.2-alpha.
+    - Actually include the bandwidth-file-digest line in directory
+      authority votes. Fixes bug 29959; bugfix on 0.4.0.2-alpha.
 
   o Minor bugfixes (hardening):
     - Verify in more places that we are not about to create a buffer
-      with more than INT_MAX bytes, to avoid possible OOB access in the event
-      of bugs.  Fixes bug 30041; bugfix on 0.2.0.16.  Found and fixed by
-      Tobias Stoeckmann.
+      with more than INT_MAX bytes, to avoid possible OOB access in the
+      event of bugs. Fixes bug 30041; bugfix on 0.2.0.16. Found and
+      fixed by Tobias Stoeckmann.
 
   o Minor bugfixes (logging):
-    - On Windows, when errors cause us to reload a consensus from disk, tell
-      the user that we are retrying at log level "notice". Previously we only
-      logged this information at "info", which was confusing because the
-      errors themselves were logged at "warning". Improves previous fix for
-      28614.  Fixes bug 30004; bugfix on 0.4.0.2-alpha.
+    - On Windows, when errors cause us to reload a consensus from disk,
+      tell the user that we are retrying at log level "notice".
+      Previously we only logged this information at "info", which was
+      confusing because the errors themselves were logged at "warning".
+      Improves previous fix for 28614. Fixes bug 30004; bugfix
+      on 0.4.0.2-alpha.
 
   o Minor bugfixes (pluggable transports):
-    - Restore old behaviour when it comes to discovering the path of a given
-      Pluggable Transport exe-file. Fixes bug 29874; bugfix on 0.4.0.1-alpha.
-
-  o Minor bugfixes (security):
-    - Fix a potential double free bug when reading huge bandwidth files. The
-      issue is not exploitable in the current Tor network because the
-      vulnerable code is only reached when directory authorities read bandwidth
-      files, but bandwidth files come from a trusted source (usually the
-      authorities themselves). Furthermore, the issue is only exploitable in
-      rare (non-POSIX) 32-bit architectures which are not used by any of the
-      current authorities. Fixes bug 30040; bugfix on 0.3.5.1-alpha. Bug found
-      and fixed by Tobias Stoeckmann.
+    - Restore old behaviour when it comes to discovering the path of a
+      given Pluggable Transport exe-file. Fixes bug 29874; bugfix
+      on 0.4.0.1-alpha.
 
   o Minor bugfixes (testing):
-    - Backport the 0.3.4 src/test/test-network.sh to 0.2.9.
-      We need a recent test-network.sh to use new chutney features in CI.
-      Fixes bug 29703; bugfix on 0.2.9.1-alpha.
+    - Backport the 0.3.4 src/test/test-network.sh to 0.2.9. We need a
+      recent test-network.sh to use new chutney features in CI. Fixes
+      bug 29703; bugfix on 0.2.9.1-alpha.
 
   o Minor bugfixes (testing, windows):
-    - Fix a test failure caused by an unexpected bug warning in
-      our test for tor_gmtime_r(-1). Fixes bug 29922;
-      bugfix on 0.2.9.3-alpha.
+    - Fix a test failure caused by an unexpected bug warning in our test
+      for tor_gmtime_r(-1). Fixes bug 29922; bugfix on 0.2.9.3-alpha.
 
   o Minor bugfixes (TLS protocol, integration tests):
-    - When classifying a client's selection of TLS ciphers, if the client
-      ciphers are not yet available, do not cache the result. Previously,
-      we had cached the unavailability of the cipher list and never looked
-      again, which in turn led us to assume that the client only supported
-      the ancient V1 link protocol.  This, in turn, was causing Stem
-      integration tests to stall in some cases.
-      Fixes bug 30021; bugfix on 0.2.4.8-alpha.
+    - When classifying a client's selection of TLS ciphers, if the
+      client ciphers are not yet available, do not cache the result.
+      Previously, we had cached the unavailability of the cipher list
+      and never looked again, which in turn led us to assume that the
+      client only supported the ancient V1 link protocol. This, in turn,
+      was causing Stem integration tests to stall in some cases. Fixes
+      bug 30021; bugfix on 0.2.4.8-alpha.
 
   o Code simplification and refactoring:
-    - Introduce a connection_dir_buf_add() helper function that checks for
-      compress_state of dir_connection_t and automatically writes a string to
-      directory connection with or without compression. Resolves issue 28816.
-    - Refactor handle_get_next_bandwidth() to use connection_dir_buf_add().
-      Implements ticket 29897.
+    - Introduce a connection_dir_buf_add() helper function that checks
+      for compress_state of dir_connection_t and automatically writes a
+      string to directory connection with or without compression.
+      Resolves issue 28816.
+    - Refactor handle_get_next_bandwidth() to use
+      connection_dir_buf_add(). Implements ticket 29897.
 
   o Documentation:
-    - Clarify that Tor performs stream isolation between *Port listeners by
-      default. Resolves issue 29121.
+    - Clarify that Tor performs stream isolation between *Port listeners
+      by default. Resolves issue 29121.
 
 
 Changes in version 0.4.0.3-alpha - 2019-03-22
