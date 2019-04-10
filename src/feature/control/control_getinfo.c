@@ -1639,16 +1639,10 @@ handle_control_getinfo(control_connection_t *conn,
     char *k = smartlist_get(answers, i);
     char *v = smartlist_get(answers, i+1);
     if (!strchr(v, '\n') && !strchr(v, '\r')) {
-      connection_printf_to_buf(conn, "250-%s=", k);
-      connection_write_str_to_buf(v, conn);
-      connection_write_str_to_buf("\r\n", conn);
+      control_printf_midreply(conn, 250, "%s=%s", k, v);
     } else {
-      char *esc = NULL;
-      size_t esc_len;
-      esc_len = write_escaped_data(v, strlen(v), &esc);
-      connection_printf_to_buf(conn, "250+%s=\r\n", k);
-      connection_buf_add(esc, esc_len, TO_CONN(conn));
-      tor_free(esc);
+      control_printf_datareply(conn, 250, "%s=", k);
+      control_write_data(conn, v);
     }
   }
   connection_write_str_to_buf("250 OK\r\n", conn);

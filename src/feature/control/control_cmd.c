@@ -330,7 +330,6 @@ handle_control_loadconf(control_connection_t *conn,
 {
   setopt_err_t retval;
   char *errstring = NULL;
-  const char *msg = NULL;
 
   retval = options_init_from_string(NULL, args->object,
                                     CMD_RUN_TOR, NULL, &errstring);
@@ -340,31 +339,29 @@ handle_control_loadconf(control_connection_t *conn,
              "Controller gave us config file that didn't validate: %s",
              errstring);
 
+#define SEND_ERRMSG(code, msg)                          \
+  control_printf_endreply(conn, code, msg "%s%s",       \
+                          errstring ? ": " : "",        \
+                          errstring ? errstring : "")
   switch (retval) {
   case SETOPT_ERR_PARSE:
-    msg = "552 Invalid config file";
+    SEND_ERRMSG(552, "Invalid config file");
     break;
   case SETOPT_ERR_TRANSITION:
-    msg = "553 Transition not allowed";
+    SEND_ERRMSG(553, "Transition not allowed");
     break;
   case SETOPT_ERR_SETTING:
-    msg = "553 Unable to set option";
+    SEND_ERRMSG(553, "Unable to set option");
     break;
   case SETOPT_ERR_MISC:
   default:
-    msg = "550 Unable to load config";
+    SEND_ERRMSG(550, "Unable to load config");
     break;
   case SETOPT_OK:
+    send_control_done(conn);
     break;
   }
-  if (msg) {
-    if (errstring)
-      connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
-    else
-      connection_printf_to_buf(conn, "%s\r\n", msg);
-  } else {
-    send_control_done(conn);
-  }
+#undef SEND_ERRMSG
   tor_free(errstring);
   return 0;
 }
@@ -575,30 +572,32 @@ control_setconf_helper(control_connection_t *conn,
 
   opt_err = options_trial_assign(lines, flags, &errstring);
   {
-    const char *msg;
+#define SEND_ERRMSG(code, msg)                                  \
+    control_printf_endreply(conn, code, msg ": %s", errstring);
+
     switch (opt_err) {
       case SETOPT_ERR_MISC:
-        msg = "552 Unrecognized option";
+        SEND_ERRMSG(552, "Unrecognized option");
         break;
       case SETOPT_ERR_PARSE:
-        msg = "513 Unacceptable option value";
+        SEND_ERRMSG(513, "Unacceptable option value");
         break;
       case SETOPT_ERR_TRANSITION:
-        msg = "553 Transition not allowed";
+        SEND_ERRMSG(553, "Transition not allowed");
         break;
       case SETOPT_ERR_SETTING:
       default:
-        msg = "553 Unable to set option";
+        SEND_ERRMSG(553, "Unable to set option");
         break;
       case SETOPT_OK:
         config_free_lines(lines);
         send_control_done(conn);
         return 0;
     }
+#undef SEND_ERRMSG
     log_warn(LD_CONTROL,
              "Controller gave us config lines that didn't validate: %s",
              errstring);
-    connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
     config_free_lines(lines);
     tor_free(errstring);
     return 0;
@@ -1284,15 +1283,13 @@ handle_control_protocolinfo(control_connection_t *conn,
       smartlist_free(mlist);
     }
 
-    connection_printf_to_buf(conn,
-                             "250-PROTOCOLINFO 1\r\n"
-                             "250-AUTH METHODS=%s%s%s\r\n"
-                             "250-VERSION Tor=%s\r\n"
-                             "250 OK\r\n",
-                             methods,
-                             cookies?" COOKIEFILE=":"",
-                             cookies?esc_cfile:"",
-                             escaped(VERSION));
+    control_write_midreply(conn, 250, "PROTOCOLINFO 1");
+    control_printf_midreply(conn, 250, "AUTH METHODS=%s%s%s", methods,
+                            cookies?" COOKIEFILE=":"",
+                            cookies?esc_cfile:"");
+    control_printf_midreply(conn, 250, "VERSION Tor=%s", escaped(VERSION));
+    send_control_done(conn);
+
     tor_free(methods);
     tor_free(cfile);
     tor_free(abs_cfile);
