@@ -2207,6 +2207,7 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
 
   /* Check whether the circuitpadding subsystem wants to block this close */
   if (!circpad_circuit_should_be_marked_for_close(circ, reason)) {
+    log_warn(LD_GENERAL, "Don't close this yet!!!");
     return;
   }
 
