@@ -199,7 +199,7 @@ circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
   }
 
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, circ) {
-    circpad_machineinfo_t *mi = circ->padding_info[i];
+    circpad_machine_runtime_t *mi = circ->padding_info[i];
     if (!mi) {
       continue;
     }

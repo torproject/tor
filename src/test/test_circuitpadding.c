@@ -2575,6 +2575,7 @@ test_circuitpadding_hs_machines(void *arg)
   UNMOCK(circuit_package_relay_cell);
   UNMOCK(circuit_get_nth_node);
   UNMOCK(circpad_machine_schedule_padding);
+}
 
 /** Just a basic machine whose whole purpose is to reach the END state */
 static void
@@ -2596,7 +2597,7 @@ helper_create_ender_machine(void)
 static void
 test_circuitpadding_manage_circuit_lifetime(void *arg)
 {
-  circpad_machineinfo_t *mi;
+  circpad_machine_runtime_t *mi;
 
   (void) arg;
 
