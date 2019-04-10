@@ -1,0 +1,3 @@
+  o Minor bugfixes (documentation):
+    - Improve the documentation for MapAddress .exit.
+      Fixes bug 30109; bugfix on 0.1.0.1-rc.
