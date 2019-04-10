@@ -247,7 +247,7 @@ circpad_histogram_bin_to_usec(const circpad_machine_runtime_t *mi,
 
   /* The infinity bin has an upper bound of infinity, so make sure we return
    * that if they ask for it. */
-  if (bin > CIRCPAD_INFINITY_BIN(mi)) {
+  if (bin > CIRCPAD_INFINITY_BIN(state)) {
     return CIRCPAD_DELAY_INFINITE;
   }
 
