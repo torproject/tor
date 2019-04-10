@@ -1269,3 +1269,22 @@ hs_circ_cleanup(circuit_t *circ)
     hs_circuitmap_remove_circuit(circ);
   }
 }
+
+/**
+ * We're about to destroy, free, or change the purpose of this circuit
+ * immedaitely. Make sure everything hs-related is cleaned up and freed.
+ */
+void
+hs_circ_free(circuit_t *circ)
+{
+  hs_circ_cleanup(circ);
+
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+    crypto_pk_free(ocirc->intro_key);
+    rend_data_free(ocirc->rend_data);
+
+    hs_ident_circuit_free(ocirc->hs_ident);
+    ocirc->hs_ident = NULL;
+  }
+}
