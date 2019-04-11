@@ -2207,6 +2207,8 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
 
   /* Check whether the circuitpadding subsystem wants to block this close */
   if (!circpad_circuit_should_be_marked_for_close(circ, reason)) {
+    log_info(LD_GENERAL, "Circuit %d was not marked for close because of open"
+             " padding machine.", TO_ORIGIN_CIRCUIT(circ)->global_identifier);
     return;
   }
 

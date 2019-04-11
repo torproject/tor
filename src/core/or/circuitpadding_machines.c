@@ -206,11 +206,12 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
   client_machine->conditions.purpose_mask =
     circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCING)|
     circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)|
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACKED);
+    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACKED)|
+    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
 
-  /* XXX Keep the circuit alive even after the introduction has been finished,
+  /* Keep the circuit alive even after the introduction has been finished,
    * otherwise the short-term lifetime of the circuit will blow our cover */
-  // client_machine->manage_circ_lifetime = 1;
+  client_machine->manage_circ_lifetime = 1;
 
   /* Let the origin-side machine control the lifetime of the circuit. */
   client_machine->should_negotiate_end = 1;
