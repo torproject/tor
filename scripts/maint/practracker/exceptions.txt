@@ -119,7 +119,7 @@ problem function-size /src/core/or/connection_or.c:connection_or_client_learned_
 problem function-size /src/core/or/connection_or.c:connection_or_compute_authenticate_cell_body() 235
 problem file-size /src/core/or/policies.c 3163
 problem function-size /src/core/or/policies.c:policy_summarize() 107
-problem function-size /src/core/or/protover.c:protover_all_supported() 116
+problem function-size /src/core/or/protover.c:protover_all_supported() 117
 problem file-size /src/core/or/relay.c 3173
 problem function-size /src/core/or/relay.c:circuit_receive_relay_cell() 123
 problem function-size /src/core/or/relay.c:relay_send_command_from_edge_() 101
@@ -245,7 +245,7 @@ problem function-size /src/feature/rend/rendmid.c:rend_mid_establish_intro_legac
 problem function-size /src/feature/rend/rendparse.c:rend_parse_v2_service_descriptor() 187
 problem function-size /src/feature/rend/rendparse.c:rend_decrypt_introduction_points() 104
 problem function-size /src/feature/rend/rendparse.c:rend_parse_introduction_points() 131
-problem file-size /src/feature/rend/rendservice.c 4509
+problem file-size /src/feature/rend/rendservice.c 4510
 problem function-size /src/feature/rend/rendservice.c:rend_service_prune_list_impl_() 107
 problem function-size /src/feature/rend/rendservice.c:rend_config_service() 164
 problem function-size /src/feature/rend/rendservice.c:rend_service_load_auth_keys() 178
@@ -256,7 +256,7 @@ problem function-size /src/feature/rend/rendservice.c:rend_service_intro_has_ope
 problem function-size /src/feature/rend/rendservice.c:rend_service_rendezvous_has_opened() 117
 problem function-size /src/feature/rend/rendservice.c:directory_post_to_hs_dir() 108
 problem function-size /src/feature/rend/rendservice.c:upload_service_descriptor() 111
-problem function-size /src/feature/rend/rendservice.c:rend_consider_services_intro_points() 169
+problem function-size /src/feature/rend/rendservice.c:rend_consider_services_intro_points() 170
 problem function-size /src/feature/stats/rephist.c:rep_hist_load_mtbf_data() 185
 problem function-size /src/feature/stats/rephist.c:rep_hist_format_exit_stats() 148
 problem function-size /src/lib/compress/compress.c:tor_compress_impl() 133
