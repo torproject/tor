@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Add several assertions in an attempt to fix some Coverity warnings.
+      Closes ticket 30149.
