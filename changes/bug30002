@@ -1,0 +1,2 @@
+  o Code simplification and refactoring (shell scripts):
+    - Fix shellcheck warnings in test_key_expiration.sh. Resolves issue 30002.
