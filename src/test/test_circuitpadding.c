@@ -2416,7 +2416,7 @@ helper_create_ender_machine(void)
 static void
 test_circuitpadding_manage_circuit_lifetime(void *arg)
 {
-  circpad_machineinfo_t *mi;
+  circpad_machine_runtime_t *mi;
 
   (void) arg;
 

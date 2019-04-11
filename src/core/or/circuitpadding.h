@@ -596,10 +596,15 @@ typedef struct circpad_machine_spec_t {
 
   /** If this flag is enabled, don't close circuits that use this machine even
    *  if another part of Tor wants to close this circuit.
-
+   *
    *  If this flag is set, the circuitpadding subsystem will close circuits the
    *  moment the machine transitions to the END state, and only if the circuit
-   *  has already been asked to be closed by another part of Tor. */
+   *  has already been asked to be closed by another part of Tor.
+   *
+   *  Circuits that should have been closed but were kept open by a padding
+   *  machine are re-purposed to CIRCUIT_PURPOSE_C_CIRCUIT_PADDING, hence
+   *  machines should take that purpose into account if they are filtering
+   *  circuits by purpose. */
   unsigned manage_circ_lifetime : 1;
 
   /** This machine only kills fascists if the following conditions are met. */

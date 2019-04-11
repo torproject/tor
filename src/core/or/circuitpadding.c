@@ -200,7 +200,7 @@ circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
   }
 
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, circ) {
-    circpad_machineinfo_t *mi = circ->padding_info[i];
+    circpad_machine_runtime_t *mi = circ->padding_info[i];
     if (!mi) {
       continue;
     }
@@ -227,8 +227,16 @@ circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
      * circuit. */
     circuit_change_purpose(circ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
 
-    /* If the machine has reached the END state, close the circuit. */
-    return (mi->current_state == CIRCPAD_STATE_END) ? 1 : 0;
+    /* If the machine has reached the END state, close the circuit, otherwise
+       keep it alive. */
+    if (mi->current_state == CIRCPAD_STATE_END) {
+      return 1;
+    } else {
+      log_info(LD_GENERAL, "Circuit %d is not marked for close because of a "
+               " pending padding machine.", CIRCUIT_IS_ORIGIN(circ) ?
+               TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
+      return 0;
+    }
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
 
   return 1;
