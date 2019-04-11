@@ -434,7 +434,7 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
 
   /* Pick an HSDir from the responsible ones. The ownership of
    * responsible_hsdirs is given to this function so no need to free it. */
-  hsdir_rs = hs_pick_hsdir(responsible_hsdirs, base64_blinded_pubkey);
+  hsdir_rs = hs_pick_hsdir(responsible_hsdirs, base64_blinded_pubkey, NULL);
 
   return hsdir_rs;
 }

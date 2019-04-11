@@ -323,6 +323,16 @@ test_hs_desc_event(void *arg)
   tt_str_op(received_msg,OP_EQ, expected_msg);
   tor_free(received_msg);
 
+  /* test HSDir rate limited */
+  rend_query.auth_type = REND_NO_AUTH;
+  control_event_hsv2_descriptor_failed(&rend_query.base_, NULL,
+                                     "QUERY_RATE_LIMITED");
+  expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" NO_AUTH " \
+                 "UNKNOWN REASON=QUERY_RATE_LIMITED\r\n";
+  tt_assert(received_msg);
+  tt_str_op(received_msg,OP_EQ, expected_msg);
+  tor_free(received_msg);
+
   /* Test invalid content with no HSDir fingerprint. */
   char *exp_msg;
   control_event_hs_descriptor_content(rend_query.onion_address,
