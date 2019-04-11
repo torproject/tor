@@ -585,6 +585,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
   }
 
   weight_scale = networkstatus_get_weight_scale_param(NULL);
+  tor_assert(weight_scale >= 1);
 
   if (rule == WEIGHT_FOR_GUARD) {
     Wg = networkstatus_get_bw_weight(NULL, "Wgg", -1);
