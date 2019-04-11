@@ -816,7 +816,7 @@ load_ed_keys(const or_options_t *options, time_t now)
 
     /* Check/Create the key directory */
     if (create_keys_directory(options) < 0)
-      return -1;
+      goto err;
 
     char *fname;
     if (options->master_key_fname) {
@@ -1403,4 +1403,3 @@ routerkeys_free_all(void)
   rsa_ed_crosscert = NULL; // redundant
   rsa_ed_crosscert_len = 0;
 }
-

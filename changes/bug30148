@@ -1,0 +1,4 @@
+  o Minor bugfixes (memory leak):
+    - Avoid a minor memory leak that could occur on relays when
+      creating a keys directory failed. Fixes bug 30148; bugfix on
+      0.3.3.1-alpha.
