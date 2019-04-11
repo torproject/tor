@@ -24,7 +24,7 @@ Changes in version 0.4.0.4-rc - 2019-04-11
   o Minor features (circuit padding):
     - Stop warning about undefined behavior in the probability
       distribution tests. Float division by zero may technically be
-      undefined behaviour in C, but it's well-defined in IEEE 754.
+      undefined behavior in C, but it's well defined in IEEE 754.
       Partial backport of 29298. Closes ticket 29527; bugfix
       on 0.4.0.1-alpha.
 
@@ -87,7 +87,7 @@ Changes in version 0.4.0.4-rc - 2019-04-11
 
   o Minor bugfixes (circuitpadding testing):
     - Minor tweaks to avoid rare test failures related to timers and
-      monotime. Fixes bug 29500; bugfix on 0.4.0.1-alpha
+      monotonic time. Fixes bug 29500; bugfix on 0.4.0.1-alpha.
 
   o Minor bugfixes (directory authorities):
     - Actually include the bandwidth-file-digest line in directory
