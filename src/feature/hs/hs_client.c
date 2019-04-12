@@ -165,9 +165,7 @@ purge_hid_serv_request(const ed25519_public_key_t *identity_pk)
    * some point and we don't care about those anymore. */
   hs_build_blinded_pubkey(identity_pk, NULL, 0,
                           hs_get_time_period_num(0), &blinded_pk);
-  if (BUG(ed25519_public_to_base64(base64_blinded_pk, &blinded_pk) < 0)) {
-    return;
-  }
+  ed25519_public_to_base64(base64_blinded_pk, &blinded_pk);
   /* Purge last hidden service request from cache for this blinded key. */
   hs_purge_hid_serv_from_last_hid_serv_requests(base64_blinded_pk);
 }
@@ -354,7 +352,6 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
   ed25519_public_key_t blinded_pubkey;
   char base64_blinded_pubkey[ED25519_BASE64_LEN + 1];
   hs_ident_dir_conn_t hs_conn_dir_ident;
-  int retval;
 
   tor_assert(hsdir);
   tor_assert(onion_identity_pk);
@@ -363,10 +360,7 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
   hs_build_blinded_pubkey(onion_identity_pk, NULL, 0,
                           current_time_period, &blinded_pubkey);
   /* ...and base64 it. */
-  retval = ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
-  if (BUG(retval < 0)) {
-    return HS_CLIENT_FETCH_ERROR;
-  }
+  ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
 
   /* Copy onion pk to a dir_ident so that we attach it to the dir conn */
   hs_ident_dir_conn_init(onion_identity_pk, &blinded_pubkey,
@@ -405,7 +399,6 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
 STATIC routerstatus_t *
 pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
 {
-  int retval;
   char base64_blinded_pubkey[ED25519_BASE64_LEN + 1];
   uint64_t current_time_period = hs_get_time_period_num(0);
   smartlist_t *responsible_hsdirs = NULL;
@@ -418,10 +411,7 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
   hs_build_blinded_pubkey(onion_identity_pk, NULL, 0,
                           current_time_period, &blinded_pubkey);
   /* ...and base64 it. */
-  retval = ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
-  if (BUG(retval < 0)) {
-    return NULL;
-  }
+  ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
 
   /* Get responsible hsdirs of service for this time period */
   responsible_hsdirs = smartlist_new();

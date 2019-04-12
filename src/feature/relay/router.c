@@ -2728,11 +2728,8 @@ router_dump_router_to_string(routerinfo_t *router,
       log_err(LD_BUG,"Couldn't base64-encode signing key certificate!");
       goto err;
     }
-    if (ed25519_public_to_base64(ed_fp_base64,
-                       &router->cache_info.signing_key_cert->signing_key)<0) {
-      log_err(LD_BUG,"Couldn't base64-encode identity key\n");
-      goto err;
-    }
+    ed25519_public_to_base64(ed_fp_base64,
+                            &router->cache_info.signing_key_cert->signing_key);
     tor_asprintf(&ed_cert_line, "identity-ed25519\n"
                  "-----BEGIN ED25519 CERT-----\n"
                  "%s"
@@ -2977,8 +2974,7 @@ router_dump_router_to_string(routerinfo_t *router,
     if (ed25519_sign(&sig, (const uint8_t*)digest, DIGEST256_LEN,
                      signing_keypair) < 0)
       goto err;
-    if (ed25519_signature_to_base64(buf, &sig) < 0)
-      goto err;
+    ed25519_signature_to_base64(buf, &sig);
 
     smartlist_add_asprintf(chunks, "%s\n", buf);
   }
@@ -3252,8 +3248,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
     if (ed25519_sign(&ed_sig, (const uint8_t*)sha256_digest, DIGEST256_LEN,
                      signing_keypair) < 0)
       goto err;
-    if (ed25519_signature_to_base64(buf, &ed_sig) < 0)
-      goto err;
+    ed25519_signature_to_base64(buf, &ed_sig);
 
     smartlist_add_asprintf(chunks, "%s\n", buf);
   }

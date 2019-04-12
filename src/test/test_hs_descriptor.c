@@ -739,8 +739,7 @@ test_desc_signature(void *arg)
   ret = ed25519_sign_prefixed(&sig, (const uint8_t *) data, strlen(data),
                               "Tor onion service descriptor sig v3", &kp);
   tt_int_op(ret, OP_EQ, 0);
-  ret = ed25519_signature_to_base64(sig_b64, &sig);
-  tt_int_op(ret, OP_EQ, 0);
+  ed25519_signature_to_base64(sig_b64, &sig);
   /* Build the descriptor that should be valid. */
   tor_asprintf(&desc, "%ssignature %s\n", data, sig_b64);
   ret = desc_sig_is_valid(sig_b64, &kp.pubkey, desc, strlen(desc));
