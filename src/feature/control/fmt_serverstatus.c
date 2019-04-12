@@ -70,7 +70,6 @@ list_server_status_v1(smartlist_t *routers, char **router_status_out,
   /* We include v2 dir auths here too, because they need to answer
    * controllers. Eventually we'll deprecate this whole function;
    * see also networkstatus_getinfo_by_purpose(). */
-  int authdir = authdir_mode_publishes_statuses(options);
   tor_assert(router_status_out);
 
   rs_entries = smartlist_new();
