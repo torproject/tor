@@ -2595,12 +2595,7 @@ static int
 set_bridge_running_callback(time_t now, const or_options_t *options)
 {
   if (authdir_mode_bridge(options)) {
-    routerlist_t *rl = router_get_routerlist();
-
-    SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
-      if (ri->purpose == ROUTER_PURPOSE_BRIDGE)
-        dirserv_set_router_is_running(ri, now);
-    } SMARTLIST_FOREACH_END(ri);
+    dirserv_set_bridges_running(now);
 
 #define SET_BRIDGES_RUNNING_INTERVAL (5*60)
     return SET_BRIDGES_RUNNING_INTERVAL;

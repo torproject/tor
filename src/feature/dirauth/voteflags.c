@@ -29,6 +29,7 @@
 
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
+#include "feature/nodelist/routerlist_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
 
 #include "lib/container/order.h"
@@ -657,4 +658,21 @@ dirserv_set_routerstatus_testing(routerstatus_t *rs)
   } else if (options->TestingDirAuthVoteHSDirIsStrict) {
     rs->is_hs_dir = 0;
   }
+}
+
+/** Use dirserv_set_router_is_running() to set bridges as running if they're
+ * reachable.
+ *
+ * This function is called from set_bridge_running_callback() when running as
+ * a bridge authority.
+ */
+void
+dirserv_set_bridges_running(time_t now)
+{
+  routerlist_t *rl = router_get_routerlist();
+
+  SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
+    if (ri->purpose == ROUTER_PURPOSE_BRIDGE)
+      dirserv_set_router_is_running(ri, now);
+  } SMARTLIST_FOREACH_END(ri);
 }
