@@ -67,11 +67,11 @@ problem function-size /src/core/mainloop/connection.c:connection_handle_read_imp
 problem function-size /src/core/mainloop/connection.c:connection_buf_read_from_socket() 177
 problem function-size /src/core/mainloop/connection.c:connection_handle_write_impl() 241
 problem function-size /src/core/mainloop/connection.c:assert_connection_ok() 143
-problem file-size /src/core/mainloop/mainloop.c 3071
-problem include-count /src/core/mainloop/mainloop.c 68
+problem file-size /src/core/mainloop/mainloop.c 3051
+problem include-count /src/core/mainloop/mainloop.c 66
 problem function-size /src/core/mainloop/mainloop.c:conn_close_if_marked() 108
 problem function-size /src/core/mainloop/mainloop.c:run_connection_housekeeping() 123
-problem function-size /src/core/mainloop/mainloop.c:CALLBACK() 118
+problem function-size /src/core/mainloop/mainloop.c:CALLBACK() 116
 problem file-size /src/core/or/channel.c 3476
 problem function-size /src/core/or/channeltls.c:channel_tls_handle_var_cell() 160
 problem function-size /src/core/or/channeltls.c:channel_tls_process_versions_cell() 170
@@ -276,7 +276,7 @@ problem function-size /src/lib/net/resolve.c:tor_addr_lookup() 110
 problem function-size /src/lib/net/socketpair.c:tor_ersatz_socketpair() 102
 problem function-size /src/lib/osinfo/uname.c:get_uname() 116
 problem function-size /src/lib/process/process_unix.c:process_unix_exec() 220
-problem function-size /src/lib/process/process_win32.c:process_win32_exec() 133
+problem function-size /src/lib/process/process_win32.c:process_win32_exec() 138
 problem function-size /src/lib/process/process_win32.c:process_win32_create_pipe() 112
 problem function-size /src/lib/process/restrict.c:set_max_file_descriptors() 102
 problem function-size /src/lib/process/setuid.c:switch_id() 156

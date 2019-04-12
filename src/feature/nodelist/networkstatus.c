@@ -2409,7 +2409,7 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
 void
 networkstatus_dump_bridge_status_to_file(time_t now)
 {
-  char *status = networkstatus_getinfo_by_purpose("bridge", now);
+  char *status;
   char *fname = NULL;
   char *thresholds = NULL;
   char *published_thresholds_and_status = NULL;
@@ -2417,6 +2417,9 @@ networkstatus_dump_bridge_status_to_file(time_t now)
   const routerinfo_t *me = router_get_my_routerinfo();
   char fingerprint[FINGERPRINT_LEN+1];
   char *fingerprint_line = NULL;
+
+  dirserv_set_bridges_running(now);
+  status = networkstatus_getinfo_by_purpose("bridge", now);
 
   if (me && crypto_pk_get_fingerprint(me->identity_pkey,
                                       fingerprint, 0) >= 0) {
