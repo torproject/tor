@@ -1,0 +1,2 @@
+  o Code simplification and refactoring (shell scripts):
+    - Fix shellcheck warnings in fuzz_multi.sh. Resolves issue 30077.
