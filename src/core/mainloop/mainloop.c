@@ -2602,7 +2602,7 @@ set_bridge_running_callback(time_t now, const or_options_t *options)
         dirserv_set_router_is_running(ri, now);
     } SMARTLIST_FOREACH_END(ri);
 
-#define SET_BRIDGES_RUNNING_INTERVAL (3*60)
+#define SET_BRIDGES_RUNNING_INTERVAL (5*60)
     return SET_BRIDGES_RUNNING_INTERVAL;
   }
   return PERIODIC_EVENT_NO_UPDATE;
