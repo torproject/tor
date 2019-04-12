@@ -1981,13 +1981,6 @@ circpad_deliver_recognized_relay_cell_events(circuit_t *circ,
                                              uint8_t relay_command,
                                              crypt_path_t *layer_hint)
 {
-  /* Padding negotiate cells are ignored by the state machines
-   * for simplicity. */
-  if (relay_command == RELAY_COMMAND_PADDING_NEGOTIATE ||
-      relay_command == RELAY_COMMAND_PADDING_NEGOTIATED) {
-    return;
-  }
-
   if (relay_command == RELAY_COMMAND_DROP) {
     rep_hist_padding_count_read(PADDING_TYPE_DROP);
 
@@ -2024,16 +2017,12 @@ void
 circpad_deliver_sent_relay_cell_events(circuit_t *circ,
                                        uint8_t relay_command)
 {
-  /* Padding negotiate cells are ignored by the state machines
-   * for simplicity. */
-  if (relay_command == RELAY_COMMAND_PADDING_NEGOTIATE ||
-      relay_command == RELAY_COMMAND_PADDING_NEGOTIATED) {
-    return;
-  }
-
   /* RELAY_COMMAND_DROP is the multi-hop (aka circuit-level) padding cell in
    * tor. (CELL_PADDING is a channel-level padding cell, which is not relayed
-   * or processed here) */
+   * or processed here).
+   *
+   * We do generate events for PADDING_NEGOTIATE and PADDING_NEGOTIATED cells.
+   */
   if (relay_command == RELAY_COMMAND_DROP) {
     /* Optimization: The event for RELAY_COMMAND_DROP is sent directly
      * from circpad_send_padding_cell_for_callback(). This is to avoid
