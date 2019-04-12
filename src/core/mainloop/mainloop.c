@@ -2594,7 +2594,7 @@ write_bridge_ns_callback(time_t now, const or_options_t *options)
 static int
 set_bridge_running_callback(time_t now, const or_options_t *options)
 {
-  if (options->BridgeAuthoritativeDir) {
+  if (authdir_mode_bridge(options)) {
     routerlist_t *rl = router_get_routerlist();
 
     SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
