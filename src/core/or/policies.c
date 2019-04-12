@@ -1182,9 +1182,9 @@ validate_addr_policies(const or_options_t *options, char **msg)
 
   static int warned_about_nonexit = 0;
 
-  if (public_server_mode(options) &&
-      !warned_about_nonexit && options->ExitPolicy == NULL &&
-      options->ExitRelay == -1 && options->ReducedExitPolicy == 0) {
+  if (public_server_mode(options) && !warned_about_nonexit &&
+      options->ExitPolicy == NULL && options->ExitRelay == -1 &&
+      options->ReducedExitPolicy == 0 && options->IPv6Exit == 0) {
     warned_about_nonexit = 1;
     log_notice(LD_CONFIG, "By default, Tor does not run as an exit relay. "
                "If you want to be an exit relay, "
@@ -2142,8 +2142,9 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
 
   /* Short-circuit for non-exit relays, or for relays where we didn't specify
    * ExitPolicy or ReducedExitPolicy and ExitRelay is auto. */
-  if (or_options->ExitRelay == 0 || (or_options->ExitPolicy == NULL &&
-      or_options->ExitRelay == -1 && or_options->ReducedExitPolicy == 0)) {
+  if (or_options->ExitRelay == 0 ||
+      (or_options->ExitPolicy == NULL && or_options->ExitRelay == -1 &&
+       or_options->ReducedExitPolicy == 0 && or_options->IPv6Exit == 0)) {
     append_exit_policy_string(result, "reject *4:*");
     append_exit_policy_string(result, "reject *6:*");
     return 0;
