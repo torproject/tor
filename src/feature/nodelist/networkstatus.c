@@ -2405,7 +2405,8 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
   return answer;
 }
 
-/** Write out router status entries for all our bridge descriptors. */
+/** Write out router status entries for all our bridge descriptors. Here, we
+ * also mark routers as running. */
 void
 networkstatus_dump_bridge_status_to_file(time_t now)
 {
