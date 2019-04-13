@@ -1,0 +1,4 @@
+  o Minor features (defense in depth):
+    - In smartlist_remove_keeporder(), set any pointers that become
+      unused to NULL, in case a bug causes them to be used later. Closes
+      ticket 30176.  Patch from Tobias Stoeckmann.
