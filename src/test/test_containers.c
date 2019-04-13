@@ -1006,6 +1006,7 @@ test_container_smartlist_remove(void *arg)
   tt_ptr_op(smartlist_get(sl, 1), OP_EQ, &array[2]);
   tt_ptr_op(smartlist_get(sl, 2), OP_EQ, &array[1]);
   tt_ptr_op(smartlist_get(sl, 3), OP_EQ, &array[2]);
+  tt_ptr_op(sl->list[4], OP_EQ, NULL);
 
  done:
   smartlist_free(sl);
