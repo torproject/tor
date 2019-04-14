@@ -244,6 +244,7 @@ helper_fetch_desc_from_hsdir(const ed25519_public_key_t *blinded_key)
 
   /* Simulate an HTTP GET request to the HSDir */
   conn = dir_connection_new(AF_INET);
+  tt_assert(conn);
   tor_addr_from_ipv4h(&conn->base_.addr, 0x7f000001);
   TO_CONN(conn)->linked = 1;/* Pretend the conn is encrypted :) */
   retval = directory_handle_command_get(conn, hsdir_query_str,
