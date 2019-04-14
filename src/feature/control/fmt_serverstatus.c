@@ -66,7 +66,6 @@ list_server_status_v1(smartlist_t *routers, char **router_status_out,
   smartlist_t *rs_entries;
   time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
-  const or_options_t *options = get_options();
   /* We include v2 dir auths here too, because they need to answer
    * controllers. Eventually we'll deprecate this whole function;
    * see also networkstatus_getinfo_by_purpose(). */
