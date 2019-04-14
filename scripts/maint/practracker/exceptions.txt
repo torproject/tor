@@ -117,7 +117,7 @@ problem include-count /src/core/or/connection_or.c 51
 problem function-size /src/core/or/connection_or.c:connection_or_group_set_badness_() 105
 problem function-size /src/core/or/connection_or.c:connection_or_client_learned_peer_id() 144
 problem function-size /src/core/or/connection_or.c:connection_or_compute_authenticate_cell_body() 235
-problem file-size /src/core/or/policies.c 3163
+problem file-size /src/core/or/policies.c 3164
 problem function-size /src/core/or/policies.c:policy_summarize() 107
 problem function-size /src/core/or/protover.c:protover_all_supported() 116
 problem file-size /src/core/or/relay.c 3173
