@@ -143,12 +143,13 @@
 #ifdef ALL_BUGS_ARE_FATAL
 #define tor_assert_nonfatal_unreached() tor_assert(0)
 #define tor_assert_nonfatal(cond) tor_assert((cond))
-#define tor_assertf_nonfatal(cond, fmt, ...) tor_assertf(cond, fmt, ...)
+#define tor_assertf_nonfatal(cond, fmt, ...)    \
+  tor_assertf(cond, fmt, ##__VA_ARGS__)
 #define tor_assert_nonfatal_unreached_once() tor_assert(0)
 #define tor_assert_nonfatal_once(cond) tor_assert((cond))
 #define BUG(cond)                                                       \
   (ASSERT_PREDICT_UNLIKELY_(cond) ?                                     \
-   (tor_assertion_failed_(SHORT_FILE__,__LINE__,__func__,"!("#cond")"), \
+   (tor_assertion_failed_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",NULL), \
     tor_abort_(), 1)                                                    \
    : 0)
 #elif defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TESTS)
