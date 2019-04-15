@@ -13,6 +13,9 @@
 #define TOR_PATH_H
 
 #include <stdbool.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include "lib/cc/compat_compiler.h"
 
 #ifdef _WIN32
@@ -37,5 +40,12 @@ char *make_path_absolute(char *fname);
 struct smartlist_t *tor_glob(const char *pattern);
 bool has_glob(const char *s);
 struct smartlist_t *get_glob_opened_files(const char *pattern);
+#ifdef _WIN32
+void copy_path(TCHAR *dst, const char *src, size_t len);
+struct smartlist_t *get_files_in_folder(HANDLE handle,
+                                        WIN32_FIND_DATA *findData,
+                                        TCHAR *tpattern, const char *pattern,
+                                        bool use_fullpath);
+#endif /* defined(_WIN32) */
 
 #endif

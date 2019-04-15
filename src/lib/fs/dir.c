@@ -300,6 +300,29 @@ check_private_dir,(const char *dirname, cpd_check_t check,
   return 0;
 }
 
+#ifdef _WIN32
+/** Implementation of tor_listdir for win32. */
+static smartlist_t *
+tor_listdir_win32(const char *dirname)
+{
+  char *pattern=NULL;
+  TCHAR tpattern[MAX_PATH] = {0};
+  HANDLE handle;
+  WIN32_FIND_DATA findData;
+  tor_asprintf(&pattern, "%s\\*", dirname);
+  copy_path(tpattern, pattern, MAX_PATH);
+  if (INVALID_HANDLE_VALUE == (handle = FindFirstFile(tpattern, &findData))) {
+    tor_free(pattern);
+    return NULL;
+  }
+  smartlist_t *result = get_files_in_folder(handle, &findData, tpattern,
+                                            dirname, false);
+  FindClose(handle);
+  tor_free(pattern);
+  return result;
+}
+#endif /* defined(_WIN32) */
+
 /** Return a new list containing the filenames in the directory <b>dirname</b>.
  * Return NULL on error or if <b>dirname</b> is not a directory.
  */
@@ -308,45 +331,7 @@ tor_listdir, (const char *dirname))
 {
   smartlist_t *result;
 #ifdef _WIN32
-  char *pattern=NULL;
-  TCHAR tpattern[MAX_PATH] = {0};
-  char name[MAX_PATH*2+1] = {0};
-  HANDLE handle;
-  WIN32_FIND_DATA findData;
-  tor_asprintf(&pattern, "%s\\*", dirname);
-#ifdef UNICODE
-  mbstowcs(tpattern,pattern,MAX_PATH);
-#else
-  strlcpy(tpattern, pattern, MAX_PATH);
-#endif
-  if (INVALID_HANDLE_VALUE == (handle = FindFirstFile(tpattern, &findData))) {
-    tor_free(pattern);
-    return NULL;
-  }
-  result = smartlist_new();
-  while (1) {
-#ifdef UNICODE
-    wcstombs(name,findData.cFileName,MAX_PATH);
-    name[sizeof(name)-1] = '\0';
-#else
-    strlcpy(name,findData.cFileName,sizeof(name));
-#endif /* defined(UNICODE) */
-    if (strcmp(name, ".") &&
-        strcmp(name, "..")) {
-      smartlist_add_strdup(result, name);
-    }
-    if (!FindNextFile(handle, &findData)) {
-      DWORD err;
-      if ((err = GetLastError()) != ERROR_NO_MORE_FILES) {
-        char *errstr = format_win32_error(err);
-        log_warn(LD_FS, "Error reading directory '%s': %s", dirname, errstr);
-        tor_free(errstr);
-      }
-      break;
-    }
-  }
-  FindClose(handle);
-  tor_free(pattern);
+  result = tor_listdir_win32(dirname);
 #else /* !(defined(_WIN32)) */
   const char *prot_dname = sandbox_intern_string(dirname);
   DIR *d;

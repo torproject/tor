@@ -425,63 +425,100 @@ handle_glob_opened_files(const char *pattern, int start_sep, int end_sep,
 /*****************************************************************************/
 
 #ifdef _WIN32
-/** Returns a list of paths that match <b>pattern</b>. Retruns NULL on error.
- * Due to Windows API limitations, globs are only accepted on the last path
- * component. */
-static struct smartlist_t *
-unglob_file_name(const char *pattern)
+/** Removes the file name and the path separator preceding it from <b>path</b>.
+ * If there are no path separators, <b>path</b> becomes an empty string. */
+static void
+remove_filename(TCHAR *path)
 {
-  smartlist_t *result;
-  TCHAR tpattern[MAX_PATH] = {0};
-  char name[MAX_PATH*2+1] = {0};
-  HANDLE handle;
-  WIN32_FIND_DATA findData;
-#ifdef UNICODE
-  mbstowcs(tpattern,pattern,MAX_PATH);
-#else
-  strlcpy(tpattern, pattern, MAX_PATH);
-#endif
-  clean_fname_for_stat(tpattern);  // remove trailing backslash
-  if (file_status(tpattern) == FN_DIR) {
-    // special case: we want to return the directory and not the files inside
-    result = smartlist_new();
-    smartlist_add_strdup(result, tpattern);
-    return result;
-  }
-  if (INVALID_HANDLE_VALUE == (handle = FindFirstFile(tpattern, &findData))) {
-    return GetLastError() == ERROR_FILE_NOT_FOUND ? smartlist_new() : NULL;
-  }
   // remove file name and last path separator from tpattern
   // used later to create the full path
-  char *lastSep = strrchr(tpattern, *PATH_SEPARATOR);
-  char *lastSepUnix = strrchr(tpattern, '/');
-  lastSep = lastSep == NULL ? tpattern : lastSep;
-  lastSepUnix = lastSepUnix == NULL ? tpattern : lastSepUnix;
+  char *lastSep = strrchr(path, *PATH_SEPARATOR);
+  char *lastSepUnix = strrchr(path, '/');
+  lastSep = lastSep == NULL ? path : lastSep;
+  lastSepUnix = lastSepUnix == NULL ? path : lastSepUnix;
   lastSep = lastSep > lastSepUnix ? lastSep : lastSepUnix;
   *lastSep = '\0';
-  result = smartlist_new();
+}
+#endif /* defined(_WIN32) */
+
+#ifdef _WIN32
+/** Copies at most <b>len</b> characters from <b>src</b> to <b>dst</b>.
+ * Multibyte characters are converted to wide characters. */
+void
+copy_path(TCHAR *dst, const char *src, size_t len)
+{
+#ifdef UNICODE
+  mbstowcs(dst, src, len);
+#else
+  strlcpy(dst, src, len);
+#endif
+}
+#endif /* defined(_WIN32) */
+
+#ifdef _WIN32
+/** Returns a list of files present on the folder opened by <b>handle</b> and
+ * using <b>findData</b>. If <b>use_fullpath</b> is true, prepend <b>tpath</b>
+ * to each result. */
+struct smartlist_t *
+get_files_in_folder(HANDLE handle, WIN32_FIND_DATA *findData, TCHAR *tpath,
+                    const char *path, bool use_fullpath)
+{
+  char name[MAX_PATH*2+1] = {0};
+  smartlist_t *result = smartlist_new();
   while (1) {
 #ifdef UNICODE
-    wcstombs(name,findData.cFileName,MAX_PATH);
+    wcstombs(name, findData->cFileName, MAX_PATH);
     name[sizeof(name)-1] = '\0';
 #else
-    strlcpy(name,findData.cFileName,sizeof(name));
+    strlcpy(name, findData->cFileName, sizeof(name));
 #endif /* defined(UNICODE) */
     if (strcmp(name, ".") && strcmp(name, "..")) {
-      char *fullpath;
-      tor_asprintf(&fullpath, "%s"PATH_SEPARATOR"%s", tpattern, name);
-      smartlist_add(result, fullpath);
+      if (use_fullpath) {
+        char *fullpath;
+        tor_asprintf(&fullpath, "%s"PATH_SEPARATOR"%s", tpath, name);
+        smartlist_add(result, fullpath);
+      } else {
+        smartlist_add_strdup(result, name);
+      }
     }
-    if (!FindNextFile(handle, &findData)) {
+    if (!FindNextFile(handle, findData)) {
       DWORD err;
       if ((err = GetLastError()) != ERROR_NO_MORE_FILES) {
         char *errstr = format_win32_error(err);
-        log_warn(LD_FS, "Error reading directory '%s': %s", pattern, errstr);
+        log_warn(LD_FS, "Error reading directory '%s': %s", path, errstr);
         tor_free(errstr);
       }
       break;
     }
   }
+  return result;
+}
+#endif /* defined(_WIN32) */
+
+#ifdef _WIN32
+/** Returns a list of paths that match <b>pattern</b>. Retruns NULL on error.
+ * Due to Windows API limitations, globs are only accepted on the last path
+ * component. */
+static smartlist_t *
+unglob_file_name(const char *pattern)
+{
+  TCHAR tpattern[MAX_PATH] = {0};
+  HANDLE handle;
+  WIN32_FIND_DATA findData;
+  copy_path(tpattern, pattern, MAX_PATH);
+  clean_fname_for_stat(tpattern);  // remove trailing backslash
+  if (file_status(tpattern) == FN_DIR) {
+    // special case: we want to return the directory and not the files inside
+    smartlist_t *ret = smartlist_new();
+    smartlist_add_strdup(ret, tpattern);
+    return ret;
+  }
+  if (INVALID_HANDLE_VALUE == (handle = FindFirstFile(tpattern, &findData))) {
+    return GetLastError() == ERROR_FILE_NOT_FOUND ? smartlist_new() : NULL;
+  }
+  remove_filename(tpattern);  // used later to create the full path
+  smartlist_t *result = get_files_in_folder(handle, &findData, tpattern,
+                                            pattern, true);
   FindClose(handle);
   return result;
 }
