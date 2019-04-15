@@ -69,6 +69,8 @@ struct microdesc_cache_t {
 };
 
 static microdesc_cache_t *get_microdesc_cache_noload(void);
+static void warn_if_nul_found(const char *inp, size_t len, int64_t offset,
+                              const char *activity);
 
 /** Helper: computes a hash of <b>md</b> to place it in a hash table. */
 static inline unsigned int
@@ -221,14 +223,8 @@ dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
   }
 
   md->off = tor_fd_getpos(fd);
-  const char *nulpos = memchr(md->body, 0, md->bodylen);
-  if (BUG(nulpos)) {
-    log_warn(LD_BUG, "About to dump a NUL into a microdescriptor file. "
-             "offset %"PRId64", bodylen %"TOR_PRIuSZ", "
-             "nul position %"TOR_PRIuSZ".",
-             (int64_t)md->off, md->bodylen,
-             (size_t)(nulpos - md->body));
-  }
+  warn_if_nul_found(md->body, md->bodylen, (int64_t) md->off,
+                    "dumping a microdescriptor");
   written = write_all_to_fd(fd, md->body, md->bodylen);
   if (written != (ssize_t)md->bodylen) {
     written = written < 0 ? 0 : written;
@@ -489,13 +485,23 @@ microdesc_cache_clear(microdesc_cache_t *cache)
 }
 
 static void
-warn_if_nul_found(const char *inp, size_t len, const char *description)
+warn_if_nul_found(const char *inp, size_t len, int64_t offset,
+                  const char *activity)
 {
   const char *nul_found = memchr(inp, 0, len);
   if (BUG(nul_found)) {
-    log_warn(LD_BUG, "Found unexpected NUL while reading %s, at "
-             "position %"TOR_PRIuSZ"/%"TOR_PRIuSZ".",
-             description, (nul_found - inp), len);
+    log_warn(LD_BUG, "Found unexpected NUL while %s, offset %"PRId64
+             "at position %"TOR_PRIuSZ"/%"TOR_PRIuSZ".",
+             activity, offset, (nul_found - inp), len);
+    const char *start_excerpt_at, *eos = inp + len;
+    if ((nul_found - inp) >= 16)
+      start_excerpt_at = nul_found - 16;
+    else
+      start_excerpt_at = inp;
+    size_t excerpt_len = MIN(32, eos - start_excerpt_at);
+    char tmp[65];
+    base16_encode(tmp, sizeof(tmp), start_excerpt_at, excerpt_len);
+    log_warn(LD_BUG, "      surrounding string: %s", tmp);
   }
 }
 
@@ -516,7 +522,7 @@ microdesc_cache_reload(microdesc_cache_t *cache)
 
   mm = cache->cache_content = tor_mmap_file(cache->cache_fname);
   if (mm) {
-    warn_if_nul_found(mm->data, mm->size, "microdesc cache");
+    warn_if_nul_found(mm->data, mm->size, 0, "scanning microdesc cache");
     added = microdescs_add_to_cache(cache, mm->data, mm->data+mm->size,
                                     SAVED_IN_CACHE, 0, -1, NULL);
     if (added) {
@@ -529,8 +535,8 @@ microdesc_cache_reload(microdesc_cache_t *cache)
                                      RFTS_IGNORE_MISSING, &st);
   if (journal_content) {
     cache->journal_len = (size_t) st.st_size;
-    warn_if_nul_found(journal_content, cache->journal_len,
-                      "microdesc journal");
+    warn_if_nul_found(journal_content, cache->journal_len, 0,
+                      "reading microdesc journal");
     added = microdescs_add_to_cache(cache, journal_content,
                                     journal_content+st.st_size,
                                     SAVED_IN_JOURNAL, 0, -1, NULL);
