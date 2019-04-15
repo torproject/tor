@@ -224,7 +224,8 @@ dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
   const char *nulpos = memchr(md->body, 0, md->bodylen);
   if (BUG(nulpos)) {
     log_warn(LD_BUG, "About to dump a NUL into a microdescriptor file. "
-             "offset %"PRId64", bodylen %zu, nul position %zu",
+             "offset %"PRId64", bodylen %"TOR_PRIuSZ", "
+             "nul position %"TOR_PRIuSZ".",
              (int64_t)md->off, md->bodylen,
              (size_t)(nulpos - md->body));
   }
@@ -493,7 +494,7 @@ warn_if_nul_found(const char *inp, size_t len, const char *description)
   const char *nul_found = memchr(inp, 0, len);
   if (BUG(nul_found)) {
     log_warn(LD_BUG, "Found unexpected NUL while reading %s, at "
-             "position %zu/%zu.",
+             "position %"TOR_PRIuSZ"/%"TOR_PRIuSZ".",
              description, (nul_found - inp), len);
   }
 }
