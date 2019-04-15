@@ -24,6 +24,7 @@
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
 #include "feature/control/control_fmt.h"
+#include "feature/control/control_proto.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"

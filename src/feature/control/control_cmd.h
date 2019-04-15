@@ -12,10 +12,67 @@
 #ifndef TOR_CONTROL_CMD_H
 #define TOR_CONTROL_CMD_H
 
+#include "lib/malloc/malloc.h"
+
 int handle_control_command(control_connection_t *conn,
                            uint32_t cmd_data_len,
                            char *args);
 void control_cmd_free_all(void);
+
+typedef struct control_cmd_args_t control_cmd_args_t;
+void control_cmd_args_free_(control_cmd_args_t *args);
+void control_cmd_args_wipe(control_cmd_args_t *args);
+
+#define control_cmd_args_free(v) \
+  FREE_AND_NULL(control_cmd_args_t, control_cmd_args_free_, (v))
+
+/**
+ * Definition for the syntax of a controller command, as parsed by
+ * control_cmd_parse_args.
+ *
+ * WORK IN PROGRESS: This structure is going to get more complex as this
+ * branch goes on.
+ **/
+typedef struct control_cmd_syntax_t {
+  /**
+   * Lowest number of positional arguments that this command accepts.
+   * 0 for "it's okay not to have positional arguments."
+   **/
+  unsigned int min_args;
+  /**
+   * Highest number of positional arguments that this command accepts.
+   * UINT_MAX for no limit.
+   **/
+  unsigned int max_args;
+  /**
+   * If true, we should parse options after the positional arguments
+   * as a set of unordered flags and key=value arguments.
+   *
+   * Requires that max_args is not UINT_MAX.
+   **/
+  bool accept_keywords;
+  /**
+   * If accept_keywords is true, then only the keywords listed in this
+   * (NULL-terminated) array are valid keywords for this command.
+   **/
+  const char **allowed_keywords;
+  /**
+   * If accept_keywords is true, this option is passed to kvline_parse() as
+   * its flags.
+   **/
+  unsigned kvline_flags;
+  /**
+   * True iff this command wants to be followed by a multiline object.
+   **/
+  bool want_object;
+  /**
+   * True iff this command needs access to the raw body of the input.
+   *
+   * This should not be needed for pure commands; it is purely a legacy
+   * option.
+   **/
+  bool store_raw_body;
+} control_cmd_syntax_t;
 
 #ifdef CONTROL_CMD_PRIVATE
 #include "lib/crypt_ops/crypto_ed25519.h"
@@ -38,6 +95,13 @@ STATIC int add_onion_helper_keyarg(const char *arg, int discard_pk,
 
 STATIC rend_authorized_client_t *add_onion_helper_clientauth(const char *arg,
                                    int *created, char **err_msg_out);
+
+STATIC control_cmd_args_t *control_cmd_parse_args(
+                                   const char *command,
+                                   const control_cmd_syntax_t *syntax,
+                                   size_t body_len,
+                                   const char *body,
+                                   char **error_out);
 
 #endif /* defined(CONTROL_CMD_PRIVATE) */
 

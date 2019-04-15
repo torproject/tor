@@ -11,12 +11,16 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "feature/control/control.h"
+#include "feature/control/control_cmd.h"
 #include "feature/control/control_auth.h"
+#include "feature/control/control_cmd_args_st.h"
 #include "feature/control/control_connection_st.h"
-#include "feature/control/control_fmt.h"
+#include "feature/control/control_proto.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"
+#include "lib/encoding/kvline.h"
+#include "lib/encoding/qstring.h"
 
 #include "lib/crypt_ops/crypto_s2k.h"
 
@@ -116,12 +120,19 @@ decode_hashed_passwords(config_line_t *passwords)
   return NULL;
 }
 
+const control_cmd_syntax_t authchallenge_syntax = {
+   .min_args = 1,
+   .max_args = 1,
+   .accept_keywords=true,
+   .kvline_flags=KV_OMIT_KEYS|KV_QUOTED_QSTRING,
+   .store_raw_body=true
+};
+
 /** Called when we get an AUTHCHALLENGE command. */
 int
-handle_control_authchallenge(control_connection_t *conn, uint32_t len,
-                             const char *body)
+handle_control_authchallenge(control_connection_t *conn,
+                             const control_cmd_args_t *args)
 {
-  const char *cp = body;
   char *client_nonce;
   size_t client_nonce_len;
   char server_hash[DIGEST256_LEN];
@@ -129,63 +140,50 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
   char server_nonce[SAFECOOKIE_SERVER_NONCE_LEN];
   char server_nonce_encoded[(2*SAFECOOKIE_SERVER_NONCE_LEN) + 1];
 
-  cp += strspn(cp, " \t\n\r");
-  if (!strcasecmpstart(cp, "SAFECOOKIE")) {
-    cp += strlen("SAFECOOKIE");
-  } else {
-    connection_write_str_to_buf("513 AUTHCHALLENGE only supports SAFECOOKIE "
-                                "authentication\r\n", conn);
-    connection_mark_for_close(TO_CONN(conn));
-    return -1;
+  if (strcasecmp(smartlist_get(args->args, 0), "SAFECOOKIE")) {
+    control_write_endreply(conn, 513,
+                           "AUTHCHALLENGE only supports SAFECOOKIE "
+                           "authentication");
+    goto fail;
   }
-
   if (!authentication_cookie_is_set) {
-    connection_write_str_to_buf("515 Cookie authentication is disabled\r\n",
-                                conn);
-    connection_mark_for_close(TO_CONN(conn));
-    return -1;
+    control_write_endreply(conn, 515, "Cookie authentication is disabled");
+    goto fail;
+  }
+  if (args->kwargs == NULL || args->kwargs->next != NULL) {
+    /*    connection_write_str_to_buf("512 AUTHCHALLENGE requires exactly "
+                                "2 arguments.\r\n", conn);
+    */
+    control_printf_endreply(conn, 512,
+                            "AUTHCHALLENGE dislikes argument list %s",
+                            escaped(args->raw_body));
+    goto fail;
+  }
+  if (strcmp(args->kwargs->key, "")) {
+    control_write_endreply(conn, 512,
+                           "AUTHCHALLENGE does not accept keyword "
+                           "arguments.");
+    goto fail;
   }
 
-  cp += strspn(cp, " \t\n\r");
-  if (*cp == '"') {
-    const char *newcp =
-      decode_escaped_string(cp, len - (cp - body),
-                            &client_nonce, &client_nonce_len);
-    if (newcp == NULL) {
-      connection_write_str_to_buf("513 Invalid quoted client nonce\r\n",
-                                  conn);
-      connection_mark_for_close(TO_CONN(conn));
-      return -1;
-    }
-    cp = newcp;
+  bool contains_quote = strchr(args->raw_body, '\"');
+  if (contains_quote) {
+    /* The nonce was quoted */
+    client_nonce = tor_strdup(args->kwargs->value);
+    client_nonce_len = strlen(client_nonce);
   } else {
-    size_t client_nonce_encoded_len = strspn(cp, "0123456789ABCDEFabcdef");
-
-    client_nonce_len = client_nonce_encoded_len / 2;
-    client_nonce = tor_malloc_zero(client_nonce_len);
-
-    if (base16_decode(client_nonce, client_nonce_len,
-                      cp, client_nonce_encoded_len)
-                      != (int) client_nonce_len) {
-      connection_write_str_to_buf("513 Invalid base16 client nonce\r\n",
-                                  conn);
-      connection_mark_for_close(TO_CONN(conn));
+    /* The nonce was should be in hex. */
+    const char *hex_nonce = args->kwargs->value;
+    client_nonce_len = strlen(hex_nonce) / 2;
+    client_nonce = tor_malloc(client_nonce_len);
+    if (base16_decode(client_nonce, client_nonce_len, hex_nonce,
+                      strlen(hex_nonce)) != (int)client_nonce_len) {
+      control_write_endreply(conn, 513, "Invalid base16 client nonce");
       tor_free(client_nonce);
-      return -1;
+      goto fail;
     }
-
-    cp += client_nonce_encoded_len;
   }
 
-  cp += strspn(cp, " \t\n\r");
-  if (*cp != '\0' ||
-      cp != body + len) {
-    connection_write_str_to_buf("513 Junk at end of AUTHCHALLENGE command\r\n",
-                                conn);
-    connection_mark_for_close(TO_CONN(conn));
-    tor_free(client_nonce);
-    return -1;
-  }
   crypto_rand(server_nonce, SAFECOOKIE_SERVER_NONCE_LEN);
 
   /* Now compute and send the server-to-controller response, and the
@@ -225,63 +223,71 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
   base16_encode(server_nonce_encoded, sizeof(server_nonce_encoded),
                 server_nonce, sizeof(server_nonce));
 
-  connection_printf_to_buf(conn,
-                           "250 AUTHCHALLENGE SERVERHASH=%s "
-                           "SERVERNONCE=%s\r\n",
-                           server_hash_encoded,
-                           server_nonce_encoded);
+  control_printf_endreply(conn, 250,
+                          "AUTHCHALLENGE SERVERHASH=%s SERVERNONCE=%s",
+                          server_hash_encoded,
+                          server_nonce_encoded);
 
   tor_free(client_nonce);
   return 0;
+ fail:
+  connection_mark_for_close(TO_CONN(conn));
+  return -1;
 }
+
+const control_cmd_syntax_t authenticate_syntax = {
+   .max_args = 0,
+   .accept_keywords=true,
+   .kvline_flags=KV_OMIT_KEYS|KV_QUOTED_QSTRING,
+   .store_raw_body=true
+};
 
 /** Called when we get an AUTHENTICATE message.  Check whether the
  * authentication is valid, and if so, update the connection's state to
  * OPEN.  Reply with DONE or ERROR.
  */
 int
-handle_control_authenticate(control_connection_t *conn, uint32_t len,
-                            const char *body)
+handle_control_authenticate(control_connection_t *conn,
+                            const control_cmd_args_t *args)
 {
-  int used_quoted_string = 0;
+  bool used_quoted_string = false;
   const or_options_t *options = get_options();
   const char *errstr = "Unknown error";
   char *password;
   size_t password_len;
-  const char *cp;
-  int i;
   int bad_cookie=0, bad_password=0;
   smartlist_t *sl = NULL;
 
-  if (!len) {
+  if (args->kwargs == NULL) {
     password = tor_strdup("");
     password_len = 0;
-  } else if (TOR_ISXDIGIT(body[0])) {
-    cp = body;
-    while (TOR_ISXDIGIT(*cp))
-      ++cp;
-    i = (int)(cp - body);
-    tor_assert(i>0);
-    password_len = i/2;
-    password = tor_malloc(password_len + 1);
-    if (base16_decode(password, password_len+1, body, i)
+  } else if (args->kwargs->next) {
+    control_write_endreply(conn, 512, "Too many arguments to AUTHENTICATE.");
+    connection_mark_for_close(TO_CONN(conn));
+    return 0;
+  } else if (strcmp(args->kwargs->key, "")) {
+    control_write_endreply(conn, 512,
+                           "AUTHENTICATE does not accept keyword arguments.");
+    connection_mark_for_close(TO_CONN(conn));
+    return 0;
+  } else if (strchr(args->raw_body, '\"')) {
+    used_quoted_string = true;
+    password = tor_strdup(args->kwargs->value);
+    password_len = strlen(password);
+  } else {
+    const char *hex_passwd = args->kwargs->value;
+    password_len = strlen(hex_passwd) / 2;
+    password = tor_malloc(password_len+1);
+    if (base16_decode(password, password_len+1, hex_passwd, strlen(hex_passwd))
                       != (int) password_len) {
-      connection_write_str_to_buf(
-            "551 Invalid hexadecimal encoding.  Maybe you tried a plain text "
+      control_write_endreply(conn, 551,
+            "Invalid hexadecimal encoding.  Maybe you tried a plain text "
             "password?  If so, the standard requires that you put it in "
-            "double quotes.\r\n", conn);
+            "double quotes.");
       connection_mark_for_close(TO_CONN(conn));
       tor_free(password);
       return 0;
     }
-  } else {
-    if (!decode_escaped_string(body, len, &password, &password_len)) {
-      connection_write_str_to_buf("551 Invalid quoted string.  You need "
-            "to put the password in double quotes.\r\n", conn);
-      connection_mark_for_close(TO_CONN(conn));
-      return 0;
-    }
-    used_quoted_string = 1;
   }
 
   if (conn->safecookie_client_hash != NULL) {
@@ -410,7 +416,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
 
  err:
   tor_free(password);
-  connection_printf_to_buf(conn, "515 Authentication failed: %s\r\n", errstr);
+  control_printf_endreply(conn, 515, "Authentication failed: %s", errstr);
   connection_mark_for_close(TO_CONN(conn));
   if (sl) { /* clean up */
     SMARTLIST_FOREACH(sl, char *, str, tor_free(str));
