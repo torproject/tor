@@ -175,7 +175,7 @@
 ## Uncomment this if you want your relay to be an exit, with the default
 ## exit policy (or whatever exit policy you set below).
 ## (If ReducedExitPolicy, ExitPolicy, or IPv6Exit are set, relays are exits.
-## If neither exit policy option is set, relays are non-exits.)
+## If none of these options are set, relays are non-exits.)
 #ExitRelay 1
 
 ## Uncomment this if you want your relay to allow IPv6 exit traffic.
