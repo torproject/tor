@@ -2149,7 +2149,7 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
   int rv = 0;
 
   /* Short-circuit for non-exit relays, or for relays where we didn't specify
-   * ExitPolicy or ReducedExitPolicy and ExitRelay is auto. */
+   * ExitPolicy or ReducedExitPolicy or IPv6Exit and ExitRelay is auto. */
   if (or_options->ExitRelay == 0 ||
       policy_using_default_exit_options(or_options)) {
     append_exit_policy_string(result, "reject *4:*");
