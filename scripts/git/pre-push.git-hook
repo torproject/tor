@@ -27,6 +27,13 @@ ref_is_upstream_branch() {
         fi
 }
 
+workdir=$(git rev-parse --show-toplevel)
+if [ -x "$workdir/.git/hooks/pre-commit" ]; then
+  if ! "$workdir"/.git/hooks/pre-commit; then
+    exit 1
+  fi
+fi
+
 # shellcheck disable=SC2034
 while read -r local_ref local_sha remote_ref remote_sha
 do
