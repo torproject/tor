@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 # This script calls the equivalent script in chutney/tools
 
@@ -18,32 +18,14 @@ ECHO="${ECHO:-echo}"
 # Output is prefixed with the name of the script
 myname=$(basename "$0")
 
-# Save the arguments before we destroy them
-# This might not preserve arguments with spaces in them
-ORIGINAL_ARGS=( "$@" )
-
 # We need to find CHUTNEY_PATH, so that we can call the version of this script
 # in chutney/tools with the same arguments. We also need to respect --quiet.
-until [ -z "$1" ]
-do
-  case "$1" in
-    --chutney-path)
-      CHUTNEY_PATH="$2"
-      shift
-    ;;
-    --tor-path)
-      TOR_DIR="$2"
-      shift
-    ;;
-    --quiet)
-      ECHO=true
-    ;;
-    *)
-      # maybe chutney's test-network.sh can handle it
-    ;;
-  esac
-  shift
-done
+CHUTNEY_PATH=$(echo "$@" | awk -F '--chutney-path ' '{sub(" .*","",$2); print $2}')
+TOR_DIR=$(echo "$@" | awk -F '--tor-dir ' '{sub(" .*","",$2); print $2}')
+
+if echo "$@" | grep -e "--quiet" > /dev/null; then
+  ECHO=true
+fi
 
 # optional: $TOR_DIR is the tor build directory
 # it's used to find the location of tor binaries
@@ -99,7 +81,7 @@ if [ -d "$CHUTNEY_PATH" ] && [ -x "$TEST_NETWORK" ]; then
     # this may fail if some arguments have spaces in them
     # if so, set CHUTNEY_PATH before calling test-network.sh, and spaces
     # will be handled correctly
-    exec "$TEST_NETWORK" "${ORIGINAL_ARGS[@]}" # $ORIGINAL_ARGS
+    exec "$TEST_NETWORK" "$@"
 else
     $ECHO "$myname: Could not find tools/test-network.sh in CHUTNEY_PATH."
     $ECHO "$myname: Please update your chutney using 'git pull'."
