@@ -253,6 +253,12 @@ struct or_options_t {
    * disabled. */
   int CircuitPadding;
 
+  /** Boolean: if true, then this client will only use circuit padding
+   * algorithms that are known to use a low amount of overhead. If false,
+   * we will use all available circuit padding algorithms.
+   */
+  int ReducedCircuitPadding;
+
   /** To what authority types do we publish our descriptor? Choices are
    * "v1", "v2", "v3", "bridge", or "". */
   struct smartlist_t *PublishServerDescriptor;

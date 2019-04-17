@@ -963,6 +963,12 @@ The following options are useful only for clients (that is, if
     support (unlike ConnectionPadding, CircuitPadding cannot be force-enabled).
     (Default: 1)
 
+[[ReducedCircuitPadding]] **ReducedCircuitPadding** **0**|**1**::
+    If set to 1, Tor will only use circuit padding algorithms that have low
+    overhead. Only clients may set this option. This option should be offered
+    via the UI to mobile users for use where bandwidth may be expensive.
+    (Default: 0)
+
 [[ExcludeNodes]] **ExcludeNodes** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and address
     patterns of nodes to avoid when building a circuit. Country codes are

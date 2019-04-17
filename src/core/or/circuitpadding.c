@@ -82,6 +82,7 @@ static double circpad_distribution_sample(circpad_distribution_t dist);
 
 /** Cached consensus params */
 static uint8_t circpad_padding_disabled;
+static uint8_t circpad_padding_reduced;
 static uint8_t circpad_global_max_padding_percent;
 static uint16_t circpad_global_allowed_cells;
 static uint16_t circpad_max_circ_queued_cells;
@@ -1086,6 +1087,10 @@ circpad_new_consensus_params(const networkstatus_t *ns)
       networkstatus_get_param(ns, "circpad_padding_disabled",
          0, 0, 1);
 
+  circpad_padding_reduced =
+      networkstatus_get_param(ns, "circpad_padding_reduced",
+         0, 0, 1);
+
   circpad_global_allowed_cells =
       networkstatus_get_param(ns, "circpad_global_allowed_cells",
          0, 0, UINT16_MAX-1);
@@ -1640,6 +1645,14 @@ circpad_machine_conditions_met(origin_circuit_t *circ,
    * the effect of shutting down all machines, and not adding any more. */
   if (circpad_padding_disabled || !get_options()->CircuitPadding)
     return 0;
+
+  /* If the consensus or our torrc has selected reduced connection padding,
+   * then only allow this machine if it is flagged as acceptable under
+   * reduced padding conditions */
+  if (circpad_padding_reduced || get_options()->ReducedCircuitPadding) {
+    if (!machine->conditions.reduced_padding_ok)
+      return 0;
+  }
 
   if (!(circpad_circ_purpose_to_mask(TO_CIRCUIT(circ)->purpose)
       & machine->conditions.purpose_mask))
