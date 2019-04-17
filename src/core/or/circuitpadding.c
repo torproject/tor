@@ -1196,7 +1196,8 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
            "Padding machine has reached padding limit on circuit %u",
              TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier);
     } else {
-      log_fn(LOG_INFO, LD_CIRC,
+      static ratelim_t padding_lim = RATELIM_INIT(600);
+      log_fn_ratelim(&padding_lim,LOG_INFO,LD_CIRC,
            "Padding machine has reached padding limit on circuit %"PRIu64
            ", %d",
            mi->on_circ->n_chan ? mi->on_circ->n_chan->global_identifier : 0,
