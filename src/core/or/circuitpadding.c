@@ -1122,7 +1122,7 @@ circpad_machine_reached_padding_limit(circpad_machine_runtime_t *mi)
    * machine condition check happens, but machine checks only happen on
    * certain circuit events, and if padding is disabled due to some
    * network overload or DoS condition, we really want to stop ASAP. */
-  if (circpad_padding_disabled) {
+  if (circpad_padding_disabled || !get_options()->CircuitPadding) {
     return 1;
   }
 
@@ -1638,7 +1638,7 @@ circpad_machine_conditions_met(origin_circuit_t *circ,
 {
   /* If padding is disabled, no machines should match/apply. This has
    * the effect of shutting down all machines, and not adding any more. */
-  if (circpad_padding_disabled)
+  if (circpad_padding_disabled || !get_options()->CircuitPadding)
     return 0;
 
   if (!(circpad_circ_purpose_to_mask(TO_CIRCUIT(circ)->purpose)
