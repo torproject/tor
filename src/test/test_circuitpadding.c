@@ -2956,6 +2956,9 @@ helper_test_hs_machines(bool test_intro_circs)
   simulate_single_hop_extend(client_side, relay_side, 1);
   simulate_single_hop_extend(client_side, relay_side, 1);
 
+  /* machines only apply on opened circuits */
+  origin_client_side->has_opened = 1;
+
   /************************************/
 
   /* Attaching the client machine now won't work here because of a wrong
@@ -2966,7 +2969,7 @@ helper_test_hs_machines(bool test_intro_circs)
 
   /* Change the purpose, see the machine getting attached */
   client_side->purpose = test_intro_circs ?
-    CIRCUIT_PURPOSE_C_INTRODUCING : CIRCUIT_PURPOSE_C_REND_JOINED;
+    CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT : CIRCUIT_PURPOSE_C_REND_JOINED;
   circpad_add_matching_machines(origin_client_side, origin_padding_machines);
   tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
   tt_ptr_op(client_side->padding_machine[0], OP_NE, NULL);
@@ -2982,19 +2985,27 @@ helper_test_hs_machines(bool test_intro_circs)
 
   /***********************************/
 
-  /* Both machines are at START state */
+  /* Intro machines are at START state, but rend machines have already skipped
+   * to BURST because of the sent PADDING_NEGOTIATE. */
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
-            CIRCPAD_STATE_START);
+            test_intro_circs ? CIRCPAD_STATE_START : CIRCPAD_STATE_BURST);
   tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
-            CIRCPAD_STATE_START);
+            test_intro_circs ? CIRCPAD_STATE_START : CIRCPAD_STATE_BURST);
 
   /* Send non-padding to move the machines from START to BURST */
-  circpad_cell_event_nonpadding_sent(client_side);
-  circpad_cell_event_nonpadding_sent(relay_side);
+  circpad_cell_event_nonpadding_received(client_side);
+  circpad_cell_event_nonpadding_received(relay_side);
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
   tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
+
+  /* For rendezvous circuit machines we can stop early since are simpler than
+   * the intro circuit machines. */
+  if (!test_intro_circs) {
+    tt_int_op(client_side->padding_info[0]->histogram[0], OP_EQ, 1);
+    goto done;
+  }
 
   /* Check that the state lengths have been sampled and are within range */
   circpad_machine_runtime_t *client_machine_runtime =
@@ -3002,21 +3013,22 @@ helper_test_hs_machines(bool test_intro_circs)
   circpad_machine_runtime_t *relay_machine_runtime =
     relay_side->padding_info[0];
   tt_int_op(client_machine_runtime->state_length, OP_GE,
-            HS_MACHINE_PADDING_MINIMUM_CLIENT);
+            INTRO_MACHINE_MINIMUM_PADDING);
   tt_int_op(client_machine_runtime->state_length, OP_LT,
-            HS_MACHINE_PADDING_MAXIMUM_CLIENT);
+            INTRO_MACHINE_MAXIMUM_PADDING);
   tt_int_op(relay_machine_runtime->state_length, OP_GE,
-            HS_MACHINE_PADDING_MINIMUM_SERVICE);
+            INTRO_MACHINE_MINIMUM_PADDING);
   tt_int_op(relay_machine_runtime->state_length, OP_LT,
-            HS_MACHINE_PADDING_MAXIMUM_SERVICE);
+            INTRO_MACHINE_MAXIMUM_PADDING);
 
   /* Send state_length worth of padding and see that the state goes to END */
   int i;
-  for (i = client_machine_runtime->state_length ; i > 0 ; i--) {
+  for (i = (int) client_machine_runtime->state_length ; i > 0 ; i--) {
     circpad_send_padding_cell_for_callback(client_machine_runtime);
   }
-  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
-            CIRCPAD_STATE_END);
+  /* See that the machine has been teared down after all the length has been
+   * exhausted. */
+  tt_assert(!client_side->padding_info[0]);
 
  done:
   free_fake_orcirc(relay_side);
