@@ -1935,13 +1935,13 @@ is non-zero):
     exit according to the ExitPolicy option, the ReducedExitPolicy option,
     or the default ExitPolicy (if no other exit policy option is specified). +
  +
-    If ExitRelay is set to 0, no traffic is allowed to
-    exit, and the ExitPolicy and ReducedExitPolicy options are ignored. +
+    If ExitRelay is set to 0, no traffic is allowed to exit, and the
+    ExitPolicy, ReducedExitPolicy, and IPv6Exit options are ignored. +
  +
-    If ExitRelay is set to "auto", then Tor checks the ExitPolicy and
-    ReducedExitPolicy options. If either is set, Tor behaves as if ExitRelay
-    were set to 1. If neither exit policy option is set, Tor behaves as if
-    ExitRelay were set to 0. (Default: auto)
+    If ExitRelay is set to "auto", then Tor checks the ExitPolicy,
+    ReducedExitPolicy, and IPv6Exit options. If either is set, Tor behaves
+    as if ExitRelay were set to 1. If neither exit policy option is set, Tor
+    behaves as if ExitRelay were set to 0. (Default: auto)
 
 [[ExitPolicy]] **ExitPolicy** __policy__,__policy__,__...__::
     Set an exit policy for this server. Each policy is of the form
@@ -2136,8 +2136,9 @@ is non-zero):
     (Default: 0)
 
 [[IPv6Exit]] **IPv6Exit** **0**|**1**::
-    If set, and we are an exit node, allow clients to use us for IPv6
-    traffic. (Default: 0)
+    If set, and we are an exit node, allow clients to use us for IPv6 traffic.
+    When this option is set and ExitRelay is auto, we act as if ExitRelay
+    is 1. (Default: 0)
 
 [[MaxOnionQueueDelay]] **MaxOnionQueueDelay** __NUM__ [**msec**|**second**]::
     If we have more onionskins queued for processing than we can process in
