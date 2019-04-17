@@ -139,6 +139,7 @@ tor_free_all(int postfork)
   dos_free_all();
   circuitmux_ewma_free_all();
   accounting_free_all();
+  circpad_free_all();
 
   if (!postfork) {
     config_free_all();
