@@ -738,7 +738,13 @@ circpad_machine_spec_transition, (circpad_machine_runtime_t *mi,
 circpad_decision_t circpad_send_padding_cell_for_callback(
                                  circpad_machine_runtime_t *mi);
 
+void circpad_free_all(void);
+
 #ifdef CIRCUITPADDING_PRIVATE
+STATIC void  machine_spec_free_(circpad_machine_spec_t *m);
+#define machine_spec_free(chan) \
+  FREE_AND_NULL(circpad_machine_spec_t,machine_spec_free_, (m))
+
 STATIC circpad_delay_t
 circpad_machine_sample_delay(circpad_machine_runtime_t *mi);
 
