@@ -1100,6 +1100,24 @@ circpad_new_consensus_params(const networkstatus_t *ns)
 }
 
 /**
+ * Return true if padding is allowed by torrc and consensus.
+ */
+STATIC bool
+circpad_is_padding_allowed(void)
+{
+  /* If padding has been disabled in the consensus, don't send any more
+   * padding. Technically the machine should be shut down when the next
+   * machine condition check happens, but machine checks only happen on
+   * certain circuit events, and if padding is disabled due to some
+   * network overload or DoS condition, we really want to stop ASAP. */
+  if (circpad_padding_disabled || !get_options()->CircuitPadding) {
+    return 0;
+  }
+
+  return 1;
+}
+
+/**
  * Check this machine against its padding limits, as well as global
  * consensus limits.
  *
@@ -1116,15 +1134,6 @@ STATIC bool
 circpad_machine_reached_padding_limit(circpad_machine_runtime_t *mi)
 {
   const circpad_machine_spec_t *machine = CIRCPAD_GET_MACHINE(mi);
-
-  /* If padding has been disabled in the consensus, don't send any more
-   * padding. Technically the machine should be shut down when the next
-   * machine condition check happens, but machine checks only happen on
-   * certain circuit events, and if padding is disabled due to some
-   * network overload or DoS condition, we really want to stop ASAP. */
-  if (circpad_padding_disabled) {
-    return 1;
-  }
 
   /* If machine_padding_pct is non-zero, and we've sent more
    * than the allowed count of padding cells, then check our
@@ -1175,6 +1184,18 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
   circpad_delay_t in_usec = 0;
   struct timeval timeout;
   tor_assert(mi);
+
+  /* Don't schedule padding if it is disabled */
+  if (!circpad_is_padding_allowed()) {
+    static ratelim_t padding_lim = RATELIM_INIT(600);
+    log_fn_ratelim(&padding_lim,LOG_INFO,LD_CIRC,
+         "Padding has been disabled, but machine still on circuit %"PRIu64
+         ", %d",
+         mi->on_circ->n_chan ? mi->on_circ->n_chan->global_identifier : 0,
+         mi->on_circ->n_circ_id);
+
+    return CIRCPAD_STATE_UNCHANGED;
+  }
 
   /* Don't schedule padding if we are currently in dormant mode. */
   if (!is_participating_on_network()) {
@@ -1638,7 +1659,7 @@ circpad_machine_conditions_met(origin_circuit_t *circ,
 {
   /* If padding is disabled, no machines should match/apply. This has
    * the effect of shutting down all machines, and not adding any more. */
-  if (circpad_padding_disabled)
+  if (circpad_padding_disabled || !get_options()->CircuitPadding)
     return 0;
 
   if (!(circpad_circ_purpose_to_mask(TO_CIRCUIT(circ)->purpose)
