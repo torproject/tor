@@ -1,0 +1,890 @@
+(pseudo)random number generator:
+        prng
+        rand
+        rng  # preferred
+
+abbreviation:
+        abbrev
+
+absolute:
+        abs
+
+acceleration, accelerate:
+        accel
+
+accounting:
+        acct # proposed
+
+acknowledge, acknowledgment:
+        ack
+
+activate, active, activity:
+        ???
+
+address:
+        addr
+
+address family:
+        af
+
+adjacency:
+        adj
+
+advertise, advertised:
+        # switch to American spelling.
+
+algorithm:
+        alg
+
+allocate:
+        alloc # proposed
+
+annotation:
+        anno
+
+anonymous:
+        anon
+
+answer:
+        ans
+
+application proxy:
+        ap # obsolete term
+
+approximate:
+        approx
+
+argument:
+        arg
+
+array:
+        ???
+
+assign, assigned, assignment:
+        ???
+
+authenticate, authentication, authenticator, authorization, authorize:
+        auth
+
+authoritative:
+        ???
+
+authority:
+        auth
+
+authorzized:
+        # mispelled; fix.
+
+automatic, automatically:
+        auto
+
+available:
+        avail
+
+backtrace:
+        bt
+
+bandwidth:
+        bw
+
+base-16:
+        b16
+        hex
+
+base32:
+        b32
+
+base64:
+        b64
+
+basepoint:
+        bp
+
+benchmark:
+        bench
+
+bidirectional:
+        bidi
+
+big friendly network:
+        # testing only
+        bfn
+
+big-endian:
+        be
+
+bootstrap:
+        bstrap # proposed
+
+bootstrap tracking:
+        bt
+        btrack
+
+buffer:
+        buf
+
+build:
+        ???
+
+byte-order marker:
+        bom
+
+calculate, calculation:
+        calc
+
+callback:
+        cb
+        cback # Deprecate.
+
+cannibalize:
+        ???  # proposed: no abbreviation.
+
+canonical:
+        canon # Proposed.
+
+capability:
+        cap # proposed
+
+cell queue:
+        cq # testing only
+
+certificate:
+        cert
+
+challenge:
+        chal # proposed
+
+channel:
+        chan
+
+character:
+        char # proposed
+        chr  # deprecate
+
+circuit:
+        c # deprecate
+        circ
+
+circuit build timeout:
+        cbt
+
+circuit path:
+        cpath
+
+client:
+        c # deprecate
+        ??? # proposed: no abbreviation?
+
+comma-separated values:
+        csv
+
+command:
+        cmd
+
+command-line:
+        cl # deprecate
+        cmdline
+
+commit, commitment:
+        ??? # proposed: no abbreviation for commit.
+
+compare:
+        cmp
+
+compile-time:
+        ct
+
+compress:
+        ???
+
+concatenate:
+        concat
+
+condition, conditional:
+        cond
+
+configuration, configure:
+        cfg
+        conf # deprecate
+        config
+
+connect:
+        conn
+
+connection:
+        conn
+
+consensus:
+        cons
+
+consensus diff:
+        cd # deprecate outside of consensus diff modules.
+        consdiff
+
+consensus diff manager:
+        cdm
+
+constant:
+        const
+
+context:
+        ctx
+
+control, controller:
+        ???
+        ctl # proposed: standardize on this?
+
+count:
+        cnt
+
+counter:
+        ctr
+
+country code:
+        cc
+
+credential:
+        cred
+
+cryptographic, cryptography:
+        crypt  # can mostly omit?
+        crypto # can mostly omit?
+
+cumulative distribution function:
+        cdfs
+
+current:
+        cur   # prefer
+        curr  # deprecate
+
+data-independent:
+        di
+
+database:
+        db
+
+declaration, declare:
+        decl
+
+decode, decrypt:
+        dec
+
+decrease, decrement:
+        dec
+
+default:
+        dflt
+
+define:
+        def
+
+delete:
+        del
+
+delivery, delivery:
+        deliv # proposed
+
+denial of service:
+        dos
+
+describe, description:
+        desc  # deprecate
+        descr # proposed
+
+descriptor:
+        desc
+
+destination:
+        dest
+
+destroy:
+        ???
+
+detach:
+        ???
+
+deterministic:
+        determ # proposed
+
+difference:
+        diff
+
+diffie-hellman:
+        dh
+
+digest map:
+        dmap
+
+directory:
+        d
+        dir # preferred
+
+distribution, distributor:
+        dist # preferred
+        distr
+
+distributor:
+        dist
+
+double digest:
+        dd
+
+download:
+        dl
+
+duplicate:
+        dup
+
+dynamic:
+        dyn
+
+ed25519:
+        ed
+
+element:
+        elt
+
+elliptic curve:
+        ec
+
+encode, encrypt:
+        enc
+
+encrypted:
+        ???
+
+end-of-file:
+        eof
+
+end-of-string:
+        eos
+
+end-to-end:
+        e2e
+
+entry:
+        ent
+
+environment:
+        env
+
+equals:
+        eq
+
+error:
+        err
+
+escape:
+        esc
+
+escaped:
+        ??? # proposed: no abbreviation
+
+establish, established:
+        estab # proposed
+
+event:
+        ev
+        evt (rare) # deprecate
+
+exclude, exclusive:
+        excl
+
+execute:
+        exec
+
+expand, expire:
+        exp
+
+exponentially weighted moving average:
+        ewma
+
+extend:
+        ext??? # deprecate; too ambiguous
+
+extension:
+        ext
+
+extrainfo:
+        ei
+
+field:
+        ??? # proposed: no abbreviation
+
+file:
+        f # proposed: deprecate
+
+file descriptor:
+        fd
+
+filename:
+        fn # deprecate
+        fname
+
+filter:
+        filt
+
+final, finalize, finish:
+        fin  # preferred
+        fini # deprecate
+
+fingerprint:
+        fp
+
+format:
+        fmt
+
+forward:
+        fwd
+
+fraction:
+        frac
+
+frequency:
+        freq # proposed
+
+function:
+        fn   # preferred
+        func # deprecate
+
+greater than:
+        gt
+
+greatest common devisor:
+        gcd
+
+handle:
+        hnd # proposed
+
+handshake:
+        ??? # proposed: no abbreviation
+
+hash table:
+        ht
+
+hexadecimal:
+        hex
+
+hibernate, hibernating, hibernation:
+        ??? # proposed: rename entirely; it gets confused with dormancy.
+
+hidden service:
+        hs
+
+histogram:
+        hist
+
+history:
+        hist
+
+host-order:
+        h
+
+identification, identifier, identify:
+        id     # prefer for identity and identification
+        ident  # prefer for identify
+
+implement, implementation:
+        impl
+
+increase, increment:
+        inc   # prefer
+        incr  # deprecate
+
+index:
+        idx
+
+indirection, indirection:
+        ind
+
+information:
+        info
+
+initial, initialize:
+        init
+
+initialization vector:
+        iv
+
+input buffer:
+        inbuf
+
+insert:
+        ins # proposed
+
+integer:
+        int
+
+internet:
+        inet
+
+interoperateion:
+        interop
+
+introduce, introduction:
+        intro
+
+introduction point:
+        intro
+        intropoint
+
+isolate, isolation:
+        iso
+
+iterate, iterator:
+        iter
+
+key derivation function:
+        kdf
+
+key-and-value:
+        kv
+
+kilobytes:
+        kb
+
+length:
+        len
+
+less than:
+        lt
+
+library:
+        lib
+
+limit:
+        lim
+
+link specifier:
+        ls
+        lspec # prefer
+
+little-endian:
+        le
+
+managed proxy:
+        mp (testing only)
+
+manager:
+        mgr
+
+manipulate, manipulation:
+        manip
+
+maximal, maximum:
+        max
+
+mean time between failures:
+        mtbf
+
+memory:
+        mem
+
+message:
+        msg
+
+method:
+        ???
+
+microdescriptor:
+        md # prefer
+        microdesc # deprecate
+
+microseconds:
+        usec
+
+middle:
+        mid
+
+millisecond:
+        m
+        ms
+        msec # prefer
+
+minimal, minimum:
+        min
+
+miscellaneous:
+        misc
+
+monotonic:
+        mono
+
+multiplexer:
+        mux
+
+multiply:
+        mul # prefer
+        mult
+
+nanoseconds:
+        ns
+        nsec # prefer
+
+negate, negative:
+        neg
+
+network-order:
+        n
+
+networkstatus:
+        ns
+
+non-interruptable:
+        ni
+
+number:
+        n
+        num # prefer
+
+object:
+        obj
+
+onion router:
+        or
+
+operation:
+        ops
+
+option, optional:
+        opt
+
+or circuit:
+        ???
+
+or connection:
+        o
+        or_conn
+        orconn # prefer
+
+order-preserving encryption:
+        ope
+
+origin circuit:
+        ocirc # deprecate; ambiguous.
+
+out-of-bounds:
+        oob
+
+out-of-memory:
+        oom
+
+out-of-sockets:
+        oos
+
+output buffer:
+        outbuf
+
+padding:
+        pad
+
+parameter:
+        param
+
+password:
+        pass
+        passwd # preferred
+        pwd
+
+pinning:
+        pin
+
+pluggable transport:
+        pt
+
+pointer:
+        ptr
+
+position:
+        pos
+
+preferred:
+        pref
+
+primary:
+        prim
+
+privacy-enhanced mail:
+        pem
+
+private:
+        priv
+
+probability:
+        prob
+
+process:
+        ???
+
+process id:
+        pid
+
+protocol:
+        proto
+
+public, publish:
+        pub
+
+public key:
+        pk
+
+queue:
+        q
+
+random:
+        rand # preferred
+        rnd  # deprecate
+
+receive:
+        rcv  # deprecate
+        recv # preferred
+
+received:
+        rcdv
+
+receiver:
+        rcvr
+
+reference:
+        ref
+
+remove:
+        rm
+        rmv # preferred
+
+rendezvous:
+        rend
+
+rendezvous point:
+        rp
+
+reputation:
+        rep
+
+request:
+        req
+
+return:
+        ret
+
+round-trip time:
+        rtt
+
+router:
+        ??? # proposed: no abbreviation
+
+routerinfo:
+        ri
+
+routerstatus:
+        rs
+
+sandbox:
+        sb # only in sandbox code.
+
+second, secret, secure, security:
+        sec # too overloaded?
+
+secret key:
+        sk
+
+secret-to-key:
+        s2k
+
+serve, server:
+        serv
+
+service:
+        ??? # proposed: no abbrev?
+
+server descriptor:
+        sd
+
+severity:
+        sev
+
+shared random:
+        sr
+
+shared random value:
+        srv
+
+signal:
+        sig
+
+signature:
+        sig
+
+single onion service:
+        sos (rare)
+
+size:
+        sz (rare)
+
+smartlist:
+        sl (rare) # standardize?
+
+socket:
+        sock
+
+source:
+        src
+
+specifier, specify:
+        spec
+
+statistics:
+        stats
+
+status:
+        st
+        stat
+
+string:
+        str
+
+subscribe:
+        sub
+
+synchronize, synchronous:
+        sync
+
+system:
+        sys
+
+table:
+        tbl
+
+temporary:
+        tmp
+
+timeout:
+        ??? # proposed: no abbreviation, or say "delay" instead?
+
+transmit:
+        xmit
+
+unique:
+        uniq
+
+unmeasured bandwidth:
+        umbw
+
+unsigned integer:
+        uint
+
+value:
+        val
+
+variable:
+        var
+
+version:
+        ver
+
+virtual:
+        virt
+
+windows:
+        win
+
