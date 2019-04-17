@@ -1,0 +1,12 @@
+  o Minor bugfixes (circuit padding):
+    - Add a torrc option to disable circuit padding. Fixes bug 28693; bugfix
+      on 0.4.0.1-alpha.
+  o Minor bugfixes (circuit padding):
+    - Provide consensus parameter to fully disable circuit padding, to be used
+      in emergency network overload situations. Fixes bug 30173; bugfix on
+      0.4.0.1-alpha.
+  o Minor bugfixes (circuit padding):
+    - Allow circuit padding machines to specify that they do not contribute
+      much overhead, and provide consensus flags and torrc options to force
+      clients to only use low overhead machines. Fixes bug 29203; bugfix on
+      0.4.0.1-alpha.
