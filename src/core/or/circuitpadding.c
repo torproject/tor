@@ -81,6 +81,7 @@ static void circpad_setup_machine_on_circ(circuit_t *on_circ,
 static double circpad_distribution_sample(circpad_distribution_t dist);
 
 /** Cached consensus params */
+static uint8_t circpad_padding_disabled;
 static uint8_t circpad_global_max_padding_percent;
 static uint16_t circpad_global_allowed_cells;
 static uint16_t circpad_max_circ_queued_cells;
@@ -1081,6 +1082,10 @@ circpad_send_padding_callback(tor_timer_t *timer, void *args,
 void
 circpad_new_consensus_params(const networkstatus_t *ns)
 {
+  circpad_padding_disabled =
+      networkstatus_get_param(ns, "circpad_padding_disabled",
+         0, 0, 1);
+
   circpad_global_allowed_cells =
       networkstatus_get_param(ns, "circpad_global_allowed_cells",
          0, 0, UINT16_MAX-1);
@@ -1112,10 +1117,19 @@ circpad_machine_reached_padding_limit(circpad_machine_runtime_t *mi)
 {
   const circpad_machine_spec_t *machine = CIRCPAD_GET_MACHINE(mi);
 
+  /* If padding has been disabled in the consensus, don't send any more
+   * padding. Technically the machine should be shut down when the next
+   * machine condition check happens, but machine checks only happen on
+   * certain circuit events, and if padding is disabled due to some
+   * network overload or DoS condition, we really want to stop ASAP. */
+  if (circpad_padding_disabled) {
+    return 1;
+  }
+
   /* If machine_padding_pct is non-zero, and we've sent more
    * than the allowed count of padding cells, then check our
    * percent limits for this machine. */
-   if (machine->max_padding_percent &&
+  if (machine->max_padding_percent &&
       mi->padding_sent >= machine->allowed_padding_count) {
     uint32_t total_cells = mi->padding_sent + mi->nonpadding_sent;
 
@@ -1621,6 +1635,11 @@ static inline bool
 circpad_machine_conditions_met(origin_circuit_t *circ,
                                const circpad_machine_spec_t *machine)
 {
+  /* If padding is disabled, no machines should match/apply. This has
+   * the effect of shutting down all machines, and not adding any more. */
+  if (circpad_padding_disabled)
+    return 0;
+
   if (!(circpad_circ_purpose_to_mask(TO_CIRCUIT(circ)->purpose)
       & machine->conditions.purpose_mask))
     return 0;
