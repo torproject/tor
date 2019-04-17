@@ -2,3 +2,6 @@
     - Use the approx_time() function when setting the "Expires" header
       in directory replies, to make them more testable. Needed for
       ticket 30001.
+  o Minor bug fixes (testing):
+    - Check the time in the "Expires" header with approx_time().
+      Fixes bug 30001; bugfix on 0.4.0.4-rc.
