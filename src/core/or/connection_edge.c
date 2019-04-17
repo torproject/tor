@@ -2811,7 +2811,7 @@ connection_ap_process_natd(entry_connection_t *conn)
 }
 
 static const char HTTP_CONNECT_IS_NOT_AN_HTTP_PROXY_MSG[] =
-  "HTTP/1.0 405 Method Not Allowed\r\n";
+  "HTTP/1.0 405 Method Not Allowed\r\n"
   "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
   "<html>\n"
   "<head>\n"
