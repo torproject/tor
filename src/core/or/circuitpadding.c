@@ -37,6 +37,13 @@
  * When a padding machine reaches the END state, it gets wiped from the circuit
  * so that other padding machines can take over if needed (see
  * circpad_machine_spec_transitioned_to_end()).
+ *
+ ****************************
+ * General notes:
+ *
+ * All used machines should be heap allocated and placed into
+ * origin_padding_machines/relay_padding_machines so that they get correctly
+ * cleaned up by the circpad_free_all() function.
  **/
 
 #define CIRCUITPADDING_PRIVATE
@@ -247,7 +254,7 @@ circpad_histogram_bin_to_usec(const circpad_machine_runtime_t *mi,
 
   /* The infinity bin has an upper bound of infinity, so make sure we return
    * that if they ask for it. */
-  if (bin > CIRCPAD_INFINITY_BIN(mi)) {
+  if (bin > CIRCPAD_INFINITY_BIN(state)) {
     return CIRCPAD_DELAY_INFINITE;
   }
 
@@ -335,7 +342,10 @@ circpad_machine_setup_tokens(circpad_machine_runtime_t *mi)
   const circpad_state_t *state = circpad_machine_current_state(mi);
 
   /* If this state doesn't exist, or doesn't have token removal,
-   * free any previous state's histogram, and bail */
+   * free any previous state's runtime histogram, and bail.
+   *
+   * If we don't have a token removal strategy, we also don't need a runtime
+   * histogram and we rely on the immutable one in machine_spec_t. */
   if (!state || state->token_removal == CIRCPAD_TOKEN_REMOVAL_NONE) {
     if (mi->histogram) {
       tor_free(mi->histogram);

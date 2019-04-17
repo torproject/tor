@@ -160,6 +160,7 @@ tor_free_all(int postfork)
   circuitmux_ewma_free_all();
   accounting_free_all();
   protover_summary_cache_free_all();
+  circpad_free_all();
 
   if (!postfork) {
     config_free_all();

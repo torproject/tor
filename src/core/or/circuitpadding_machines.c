@@ -99,8 +99,9 @@ static void
 setup_burst_state_for_hiding_intro_circuits(circpad_state_t *burst_state,
                                             bool is_client)
 {
-  /* Token removal strategy for BURST state */
-  burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_CLOSEST;
+  /* Token removal strategy for BURST state. We pick the simplest one since we
+   * rely on the state length sampling and not the tokens. */
+  burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
 
   /* Histogram for BURST state:
    *
@@ -153,14 +154,7 @@ setup_burst_state_for_hiding_rend_circuits(circpad_state_t *burst_state,
                                            bool is_client)
 {
   /* Token removal strategy for BURST state */
-  burst_state->token_removal =
-      CIRCPAD_TOKEN_REMOVAL_CLOSEST;
-
-  /* Histogram for BURST state:
-   *
-   * We want a machine that will send a bunch of fake cells over a reasonable
-   * time frame, to obfuscate the fact that introduction circuits always send 4
-   * cells both ways */
+  burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
 
   /* Figure out the length of the BURST state so that it's randomized. See
      definition of these constants for rationale. */
@@ -218,6 +212,9 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
    * otherwise the short-term lifetime of the circuit will blow our cover */
   // client_machine->manage_circ_lifetime = 1;
 
+  /* Let the origin-side machine control the lifetime of the circuit. */
+  client_machine->should_negotiate_end = 1;
+
   /* Setup states and histograms */
   setup_state_machine_for_hiding_hs_circuits(client_machine);
   setup_burst_state_for_hiding_intro_circuits(
@@ -253,10 +250,6 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
 
   /* This is a relay-side machine */
   relay_machine->is_origin_side = 0;
-
-  /* No need to keep the circuit alive no our side, let the client control the
-   * circuit lifetime */
-  // relay_machine->manage_circ_lifetime = 0;
 
   /* Setup states and histograms */
   setup_state_machine_for_hiding_hs_circuits(relay_machine);
