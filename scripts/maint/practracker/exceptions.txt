@@ -102,7 +102,7 @@ problem function-size /src/core/or/circuituse.c:circuit_get_open_circ_or_launch(
 problem function-size /src/core/or/circuituse.c:connection_ap_handshake_attach_circuit() 244
 problem function-size /src/core/or/command.c:command_process_create_cell() 156
 problem function-size /src/core/or/command.c:command_process_relay_cell() 132
-problem file-size /src/core/or/connection_edge.c 4550
+problem file-size /src/core/or/connection_edge.c 4575
 problem include-count /src/core/or/connection_edge.c 64
 problem function-size /src/core/or/connection_edge.c:connection_ap_expire_beginning() 117
 problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_rewrite() 192
