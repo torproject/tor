@@ -430,6 +430,7 @@ get_options_test_data(const char *conf)
   // Being kinda lame and just fixing the immedate breakage for now..
   result->opt->ConnectionPadding = -1; // default must be "auto"
   result->opt->DormantClientTimeout = 1800; // must be over 600.
+  result->opt->CircuitPadding = 1; // default must be "1"
 
   rv = config_get_lines(conf, &cl, 1);
   tt_int_op(rv, OP_EQ, 0);
