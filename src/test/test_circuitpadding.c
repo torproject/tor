@@ -1683,8 +1683,11 @@ static void
 helper_create_conditional_machines(void)
 {
   circpad_machine_spec_t *add = helper_create_conditional_machine();
-  origin_padding_machines = smartlist_new();
-  relay_padding_machines = smartlist_new();
+
+  if (!origin_padding_machines)
+    origin_padding_machines = smartlist_new();
+  if (!relay_padding_machines)
+    relay_padding_machines = smartlist_new();
 
   add->machine_num = 2;
   add->is_origin_side = 1;
@@ -2396,6 +2399,155 @@ test_circuitpadding_global_rate_limiting(void *arg)
   smartlist_free(vote1.net_params);
 }
 
+/* Test reduced and disabled padding */
+static void
+test_circuitpadding_reduce_disable(void *arg)
+{
+  (void) arg;
+  int64_t actual_mocked_monotime_start;
+
+  MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
+
+  nodes_init();
+  dummy_channel.cmux = circuitmux_alloc();
+  relay_side = (circuit_t *)new_fake_orcirc(&dummy_channel,
+                                            &dummy_channel);
+  client_side = (circuit_t *)origin_circuit_new();
+  relay_side->purpose = CIRCUIT_PURPOSE_OR;
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+
+  circpad_machines_init();
+  helper_create_conditional_machines();
+
+  monotime_init();
+  monotime_enable_test_mocking();
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
+  timers_initialize();
+
+  /* This is needed so that we are not considered to be dormant */
+  note_user_activity(20);
+
+  MOCK(circuit_package_relay_cell,
+       circuit_package_relay_cell_mock);
+  MOCK(node_get_by_id,
+       node_get_by_id_mock);
+
+  /* Simulate extend. This should result in the original machine getting
+   * added, since the circuit is not built */
+  simulate_single_hop_extend(client_side, relay_side, 1);
+  simulate_single_hop_extend(client_side, relay_side, 1);
+
+  /* Verify that machine #2 is added */
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 2);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
+
+  /* Deliver a padding cell to the client, to trigger burst state */
+  circpad_cell_event_padding_sent(client_side);
+
+  /* This should have trigger length shutdown condition on client.. */
+  tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
+
+  /* Verify machine is gone from both sides */
+  tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+
+  /* Now test the reduced padding machine by setting up the consensus */
+  networkstatus_t vote1;
+  vote1.net_params = smartlist_new();
+  smartlist_split_string(vote1.net_params,
+         "circpad_padding_reduced=1", NULL, 0, 0);
+
+  /* Register reduced padding machine with the padding subsystem */
+  circpad_new_consensus_params(&vote1);
+
+  simulate_single_hop_extend(client_side, relay_side, 1);
+
+  /* Verify that machine #0 is added */
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 0);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 0);
+
+  tt_int_op(
+    circpad_machine_reached_padding_limit(client_side->padding_info[0]),
+    OP_EQ, 0);
+  tt_int_op(
+    circpad_machine_reached_padding_limit(relay_side->padding_info[0]),
+    OP_EQ, 0);
+
+  /* Test that machines get torn down when padding is disabled */
+  SMARTLIST_FOREACH(vote1.net_params, char *, cp, tor_free(cp));
+  smartlist_free(vote1.net_params);
+  vote1.net_params = smartlist_new();
+  smartlist_split_string(vote1.net_params,
+         "circpad_padding_disabled=1", NULL, 0, 0);
+
+  /* Register reduced padding machine with the padding subsystem */
+  circpad_new_consensus_params(&vote1);
+
+  tt_int_op(
+    circpad_machine_schedule_padding(client_side->padding_info[0]),
+    OP_EQ, CIRCPAD_STATE_UNCHANGED);
+  tt_int_op(
+    circpad_machine_schedule_padding(relay_side->padding_info[0]),
+    OP_EQ, CIRCPAD_STATE_UNCHANGED);
+
+  /* Signal that circuit is built: this event causes us to re-evaluate
+   * machine conditions (which don't apply because padding is disabled). */
+  circpad_machine_event_circ_built(TO_ORIGIN_CIRCUIT(client_side));
+
+  tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+
+  SMARTLIST_FOREACH(vote1.net_params, char *, cp, tor_free(cp));
+  smartlist_free(vote1.net_params);
+  vote1.net_params = NULL;
+  circpad_new_consensus_params(&vote1);
+
+  get_options_mutable()->ReducedCircuitPadding = 1;
+
+  simulate_single_hop_extend(client_side, relay_side, 1);
+
+  /* Verify that machine #0 is added */
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 0);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 0);
+
+  tt_int_op(
+    circpad_machine_reached_padding_limit(client_side->padding_info[0]),
+    OP_EQ, 0);
+  tt_int_op(
+    circpad_machine_reached_padding_limit(relay_side->padding_info[0]),
+    OP_EQ, 0);
+
+  get_options_mutable()->CircuitPadding = 0;
+
+  tt_int_op(
+    circpad_machine_schedule_padding(client_side->padding_info[0]),
+    OP_EQ, CIRCPAD_STATE_UNCHANGED);
+  tt_int_op(
+    circpad_machine_schedule_padding(relay_side->padding_info[0]),
+    OP_EQ, CIRCPAD_STATE_UNCHANGED);
+
+  /* Signal that circuit is built: this event causes us to re-evaluate
+   * machine conditions (which don't apply because padding is disabled). */
+
+  circpad_machine_event_circ_built(TO_ORIGIN_CIRCUIT(client_side));
+
+  tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
+
+ done:
+  free_fake_orcirc(relay_side);
+  circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
+  circuitmux_free(dummy_channel.cmux);
+}
+
 #define TEST_CIRCUITPADDING(name, flags) \
     { #name, test_##name, (flags), NULL, NULL }
 
@@ -2410,6 +2562,7 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_sample_distribution, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_machine_rate_limiting, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_global_rate_limiting, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_reduce_disable, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_token_removal_lower, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_token_removal_higher, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_closest_token_removal, TT_FORK),
