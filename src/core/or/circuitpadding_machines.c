@@ -26,32 +26,23 @@
  *
  * Client-side introduction circuit hiding machine:
  *
- *    This machine hides client-side introduction circuits by sending padding
- *    during circuit construction and also after the circuit has opened. The
- *    circuit is kept open until all the padding has been sent, since intro
- *    circuits are usually very short lived and this act as a
- *    distinguisher. Both sides of this machine send maximum 20 padding cells
- *    from each direction (so max 40 padding cells per circuit).
+ *    This machine hides client-side introduction circuits by making their
+ *    circuit consruction sequence look like normal general circuits that
+ *    download directory information. Furthermore, the circuits are kept open
+ *    until all the padding has been sent, since intro circuits are usually
+ *    very short lived and this act as a distinguisher. For more info see
+ *    circpad_machine_client_hide_intro_circuits() and the sec.
  *
  * Client-side rendezvous circuit hiding machine:
  *
- *    This machine hides client-side rendezvous circuits by sending padding
- *    during circuit construction and also after the circuit has opened. Both
- *    sides of this machine send maximum 20 padding cells from each direction
- *    (so max 40 padding cells per circuit).
+ *    This machine hides client-side rendezvous circuits by making their
+ *    circuit construction sequence look like normal general circuits. For more
+ *    details see circpad_machine_client_hide_rend_circuits() and the spec.
  *
- * TODO: An easy improvement for these machines would be to add another state
- *       to the padding machine so that we separate the circuit setup from the
- *       actual opened circuit. We want to send padding fast while in circuit
- *       setup to make sure that we detroy any circuit construction
- *       fingerprints, and then send padding slowly when the circuit is opened
- *       to pretend its fake traffic.
- *
- *       This improvement is not yet implemented both for KISS reasons, and
- *       also because to make such an improvement actually effective we would
- *       have to introduce per-state state_length, whereas now it's global to
- *       the machine (so that the different states have different randomized
- *       padding limits).
+ * TODO: These are simple machines that carefully manipulate the cells of the
+ *   initial circuit setup procedure to make them look like general
+ *   circuits. In the future, more states can be baked into their state machine
+ *   to do more advanced obfuscation.
  **/
 
 #define CIRCUITPADDING_MACHINES_PRIVATE
@@ -68,29 +59,27 @@
 
 /* Setup the simple state machine we use for all HS padding machines */
 static void
-setup_state_machine_for_hiding_hs_circuits(circpad_machine_spec_t *machine)
+setup_state_machine_for_hiding_intro_circuits(circpad_machine_spec_t *machine)
 {
   /* Two states: START, BURST (and END) */
   circpad_machine_states_init(machine, 2);
 
-  /* START -> BURST transition upon first cell received/sent */
+  /* START -> BURST transition upon first non-padding cell received/sent: We
+   * want to start sending padding right after receiving PADDING_NEGOTIATE. */
   machine->states[CIRCPAD_STATE_START].
     next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
-  machine->states[CIRCPAD_STATE_START].
-    next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_BURST;
 
-  /* BURST -> END transition when we finish all the tokens */
-  machine->states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_BINS_EMPTY] = CIRCPAD_STATE_END;
-  /* or when the length finishes */
+  /* BURST -> END transition when the length finishes */
   machine->states[CIRCPAD_STATE_BURST].
       next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 
-  /* Keep sending DROP cells without caring of what the other end is doing */
+  /* Keep sending DROP cells without care of what the other end is doing */
   machine->states[CIRCPAD_STATE_BURST].
       next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
   machine->states[CIRCPAD_STATE_BURST].
       next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
+  machine->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
 }
 
 /* Setup the BURST state of the machine that hides client-side intro
@@ -103,77 +92,29 @@ setup_burst_state_for_hiding_intro_circuits(circpad_state_t *burst_state,
    * rely on the state length sampling and not the tokens. */
   burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
 
-  /* Histogram for BURST state:
-   *
-   * We want a machine that will send up to 20 fake cells over a reasonable
-   * time frame, to obfuscate the fact that introduction circuits always send 4
-   * cells both ways */
-
-  /* Figure out the length of the BURST state so that it's randomized. See
-     definition of these constants for rationale. */
+  /* Figure out the length of the BURST state so that it's randomized. We will
+   * set the histogram such that we don't send any padding from the
+   * origin-side, so just tune these parameteres for the relay-side. */
   burst_state->length_dist.type = CIRCPAD_DIST_UNIFORM;
-  burst_state->length_dist.param1 = is_client ?
-    HS_MACHINE_PADDING_MINIMUM_CLIENT : HS_MACHINE_PADDING_MINIMUM_SERVICE;
-  burst_state->length_dist.param2 = is_client ?
-    HS_MACHINE_PADDING_MAXIMUM_CLIENT : HS_MACHINE_PADDING_MAXIMUM_SERVICE;
+  burst_state->length_dist.param1 = INTRO_MACHINE_MINIMUM_PADDING;
+  burst_state->length_dist.param2 = INTRO_MACHINE_MAXIMUM_PADDING;
 
-  /* We mainly care about destroying circuit construction fingerprints. Here is
-   * an example intro circuit construction, where the timestamp granularity is
-   * 1 millisecond:
-   *
-   * IP circuit relay cells:
-   *  0: 11:56:59.703 -> EXTEND2
-   *  1: 11:57:00.074 <- EXTENDED2
-   *  2: 11:57:00.075 -> EXTEND2
-   *  3: 11:57:00.243 <- EXTENDED2
-   *  4: 11:57:17.406 -> EXTEND
-   *  5: 11:57:17.708 <- EXTENDED
-   *  6: 11:57:17.709 -> INTRODUCE1
-   *  7: 11:57:17.904 <- INTRODUCE_ACK
-   *
-   * So with about 200 milliseconds latency between each cell, we appropriately
-   * set the histogram edges to from 30 milliseconds to 100 milliseconds, to
-   * account for faster connections.
-   */
-
-  /* Histogram is: (30 msecs, 100 msecs, infinity). */
+  /* Configure histogram */
   burst_state->histogram_len = 2;
-  burst_state->histogram_edges[0] = 30000;
-  burst_state->histogram_edges[1] = 100000;
+  if (is_client) {
+    /* For the origin-side machine we don't want to send any padding, so setup
+     * infinite delays. */
+    burst_state->histogram_edges[0] = CIRCPAD_DELAY_INFINITE-1;
+    burst_state->histogram_edges[1] = CIRCPAD_DELAY_INFINITE;
+  } else {
+    /* For the relay-side machine we want to batch padding instantly to pretend
+     * its an incoming directory download. So set the histogram edges tight:
+     * (1, 10ms, infinity). */
+    burst_state->histogram_edges[0] = 1000;
+    burst_state->histogram_edges[1] = 10000;
+  }
 
-  /* Maximum number of tokens for the BURST state */
-  burst_state->histogram[0] = 1000;
-  burst_state->histogram_total_tokens = 1000;
-}
-
-/* Setup the BURST state of the machine that hides client-side rend
- * circuits. If <b>is_client</b> is true, then this is the client-side part of
- * this machine, otherwise it's the service-side of this machine. */
-static void
-setup_burst_state_for_hiding_rend_circuits(circpad_state_t *burst_state,
-                                           bool is_client)
-{
-  /* Token removal strategy for BURST state */
-  burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
-
-  /* Figure out the length of the BURST state so that it's randomized. See
-     definition of these constants for rationale. */
-  burst_state->length_dist.type = CIRCPAD_DIST_UNIFORM;
-  burst_state->length_dist.param1 = is_client ?
-    HS_MACHINE_PADDING_MINIMUM_CLIENT : HS_MACHINE_PADDING_MINIMUM_SERVICE;
-  burst_state->length_dist.param2 = is_client ?
-    HS_MACHINE_PADDING_MAXIMUM_CLIENT : HS_MACHINE_PADDING_MAXIMUM_SERVICE;
-
-  /* Histogram is: (30 msecs, 100 msecs, infinity).
-   * See analysis above.
-  */
-  burst_state->histogram_len = 2;
-  burst_state->histogram_edges[0] = 30000;
-  burst_state->histogram_edges[1] = 100000;
-
-  /* Maximum number of tokens for the BURST state. We control the BURST state
-   * duration based on the length_dist so the token count does not really
-   * matter, it just needs to be bigger than all possible lengths. */
+  /* We don't really care about the tokens. So just put a high dummy value */
   burst_state->histogram[0] = 1000;
   burst_state->histogram_total_tokens = 1000;
 }
@@ -181,10 +122,6 @@ setup_burst_state_for_hiding_rend_circuits(circpad_state_t *burst_state,
 /** Create a client-side padding machine that aims to hide IP circuits. In
  *  particular, it keeps intro circuits alive until a bunch of fake traffic has
  *  been pushed through.
- *
- *  This aims to hide the fingerprint of client-side introduction circuits
- *  which is the fact that they are short-lived and always send 4 cells to the
- *  intro point (3 EXTEND and 1 INTRODUCE1) (section 5.1).
  */
 void
 circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
@@ -194,29 +131,53 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
 
   client_machine->name = "client_ip_circ";
 
-  client_machine->conditions.state_mask =
-    CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED;
+  client_machine->conditions.state_mask = CIRCPAD_CIRC_OPENED;
   client_machine->target_hopnum = 2;
 
   /* This is a client machine */
   client_machine->is_origin_side = 1;
 
-  /* For this machine we only pad in client-side introduction circuits even
-   * after introduction has finished */
+  /* We only want to pad introduction circuits, and we want to start padding
+   * only after the INTRODUCE1 cell has been sent, so set the purposes
+   * appropriately.
+   *
+   * In particular we want introduction circuits to blend as much as possible
+   * with general circuits. Most general circuits have the following initial
+   * relay cell sequence (outgoing cells marked in [brackets]):
+   *
+   * [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2 -> [BEGIN] -> CONNECTED
+   *
+   * followed usually by a [DATA] -> [DATA] -> DATA -> DATA.
+   *
+   * Whereas normal introduction circuits usually look like:
+   *
+   * [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2
+   *  -> [INTRODUCE1] -> INTRODUCE_ACK
+   *
+   * This means that up to the sixth cell, both general and intro circuits have
+   * identical cell sequences. After that we want to mimic the
+   * [DATA] -> [DATA] -> DATA -> DATA sequence, which we achieve by padding
+   * after the INTRODUCE1 has been sent which usually looks like:
+   *
+   *     [INTRODUCE1] -> [PADDING_NEGOTIATE] -> PADDING_NEGOTIATED -> INTRO_ACK
+   *
+   * effectively blending with general circuits up until the end of the circuit
+   * setup. */
   client_machine->conditions.purpose_mask =
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCING)|
     circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)|
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACKED);
+    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACKED)|
+    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
 
-  /* XXX Keep the circuit alive even after the introduction has been finished,
+  /* Keep the circuit alive even after the introduction has been finished,
    * otherwise the short-term lifetime of the circuit will blow our cover */
-  // client_machine->manage_circ_lifetime = 1;
+  client_machine->manage_circ_lifetime = 1;
 
-  /* Let the origin-side machine control the lifetime of the circuit. */
+  /* Let the client-side machine control the lifetime of the circuit.
+   * XXX This might act as a fingerprint at the end of the conn. */
   client_machine->should_negotiate_end = 1;
 
   /* Setup states and histograms */
-  setup_state_machine_for_hiding_hs_circuits(client_machine);
+  setup_state_machine_for_hiding_intro_circuits(client_machine);
   setup_burst_state_for_hiding_intro_circuits(
                          &client_machine->states[CIRCPAD_STATE_BURST],
                          true);
@@ -230,12 +191,9 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
            client_machine->machine_num);
 }
 
-/** Create a relay-side padding machine that aims to hide IP circuits.
- *
- *  This aims to hide the fingerprint of client-side introduction circuits
- *  which is the fact that they are short-lived and always send 4 cells to the
- *  intro point (3 EXTENDED and 1 INTRODUCE_ACK).
- */
+/** Create a relay-side padding machine that aims to hide IP circuits. See
+ *  comments on the function above for more details on the workings of the
+ *  machine. */
 void
 circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
 {
@@ -244,15 +202,14 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
 
   relay_machine->name = "relay_ip_circ";
 
-  relay_machine->conditions.state_mask =
-    CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED;
+  relay_machine->conditions.state_mask = CIRCPAD_CIRC_OPENED;
   relay_machine->target_hopnum = 2;
 
   /* This is a relay-side machine */
   relay_machine->is_origin_side = 0;
 
   /* Setup states and histograms */
-  setup_state_machine_for_hiding_hs_circuits(relay_machine);
+  setup_state_machine_for_hiding_intro_circuits(relay_machine);
   setup_burst_state_for_hiding_intro_circuits(
                  &relay_machine->states[CIRCPAD_STATE_BURST],
                  false);
@@ -266,12 +223,54 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
            relay_machine->machine_num);
 }
 
-/** Create a client-side padding machine that aims to hide rendezvous circuits.
- *
- *  This aims to hide the fingerprint of client-side rendezvous circuits which
- *  is the fact that they have a unique packet sequence (section 5.1), and also
- *  the fact that they have more 'client <- HS' cells than the other way around
- *  (section 3.2). */
+/************************** Rendezvous-circuit machine ***********************/
+
+/* Setup the burst state of the machine that hides client-side rend
+ * circuits. */
+static void
+setup_burst_state_for_hiding_rend_circuits(circpad_state_t *burst_state)
+{
+  /* Token removal strategy for BURST state */
+  burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_EXACT;
+
+  /* Histogram is: (0 msecs, 50 msecs, infinity). We want this to be fast so
+   * that the incoming PADDING_NEGOTIATED cell always arrives after the
+   * outgoing [DROP]. */
+  burst_state->histogram_len = 2;
+  burst_state->histogram_edges[0] = 0;
+  burst_state->histogram_edges[1] = 50000;
+
+  /* We just want one token, since we want to make the following pattern:
+   * [PADDING_NEGOTIATE] -> [DROP] -> PADDING_NEGOTIATED -> DROP */
+  burst_state->histogram[0] = 1;
+  burst_state->histogram_total_tokens = 1;
+}
+
+/* Setup the simple state machine we use for all HS padding machines */
+static void
+setup_state_machine_for_hiding_rend_circuits(circpad_machine_spec_t *machine)
+{
+  /* Two states: START, BURST (and END) */
+  circpad_machine_states_init(machine, 2);
+
+  /* START -> BURST transition upon sending the first non-padding cell (which
+   * is PADDING_NEGOTIATE) */
+  machine->states[CIRCPAD_STATE_START].
+    next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_BURST;
+
+  /* BURST -> BURST upon sending padding cells */
+  machine->states[CIRCPAD_STATE_BURST].
+    next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
+
+  /* BURST -> END transition when we finish all the tokens */
+  machine->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_END;
+  machine->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_BINS_EMPTY] = CIRCPAD_STATE_END;
+}
+
+/** Create a client-side padding machine that aims to hide rendezvous
+ *  circuits.*/
 void
 circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
 {
@@ -281,25 +280,46 @@ circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
   client_machine->name = "client_rp_circ";
 
   /* Only pad after the circuit has been built and pad to the middle */
-  client_machine->conditions.min_hops = 2;
-  client_machine->conditions.state_mask =
-    CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED;
+  client_machine->conditions.state_mask = CIRCPAD_CIRC_OPENED;
   client_machine->target_hopnum = 2;
 
   /* This is a client machine */
   client_machine->is_origin_side = 1;
 
+  /* We only want to pad rendezvous circuits, and we want to start padding only
+   * after the rendezvous circuit has been established.
+   *
+   * Following a similar argument as above we are aiming for padded rendezvous
+   * circuits to blend in with the initial cell sequence of general circuits
+   * which usually look like this:
+   *
+   * [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2 -> [BEGIN] -> CONNECTED
+   *
+   * followed usually by a [DATA] -> [DATA] -> DATA -> DATA sequence.
+   *
+   * Whereas normal rendezvous circuits usually look like:
+   *
+   * [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2 -> [ESTABLISH_REND]
+   *  -> REND_ESTABLISHED -> RENDEZVOUS2 -> [BEGIN]
+   *
+   * This means that up to the sixth cell, both general and intro circuits have
+   * identical cell sequences. After that we want to mimic a
+   * [DATA] -> [DATA] -> DATA -> DATA sequence, which we achieve by sending a
+   * [PADDING_NEGOTIATE] right after receiving REND_ESTABLISHED, followed by
+   * sending a [DROP] cell, and then receiving a PADDING_NEGOTIATED -> DROP
+   * sequence.
+   *
+   * Hence this way we make rendezvous circuits look like general circuits up
+   * till the end of the circuit setup. */
   client_machine->conditions.purpose_mask =
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_ESTABLISH_REND)|
+    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_JOINED)|
     circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_READY)|
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)|
-    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_JOINED);
+    circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED);
 
   /* Setup states and histograms */
-  setup_state_machine_for_hiding_hs_circuits(client_machine);
+  setup_state_machine_for_hiding_rend_circuits(client_machine);
   setup_burst_state_for_hiding_rend_circuits(
-                         &client_machine->states[CIRCPAD_STATE_BURST],
-                         true);
+                         &client_machine->states[CIRCPAD_STATE_BURST]);
 
   /* Register the machine */
   client_machine->machine_num = smartlist_len(machines_sl);
@@ -324,18 +344,16 @@ circpad_machine_relay_hide_rend_circuits(smartlist_t *machines_sl)
 
   /* Only pad after the circuit has been built and pad to the middle */
   relay_machine->conditions.min_hops = 2;
-  relay_machine->conditions.state_mask =
-    CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED;
+  relay_machine->conditions.state_mask = CIRCPAD_CIRC_OPENED;
   relay_machine->target_hopnum = 2;
 
   /* This is a relay-side machine */
   relay_machine->is_origin_side = 0;
 
   /* Setup states and histograms */
-  setup_state_machine_for_hiding_hs_circuits(relay_machine);
+  setup_state_machine_for_hiding_rend_circuits(relay_machine);
   setup_burst_state_for_hiding_rend_circuits(
-                 &relay_machine->states[CIRCPAD_STATE_BURST],
-                 false);
+                              &relay_machine->states[CIRCPAD_STATE_BURST]);
 
   /* Register the machine */
   relay_machine->machine_num = smartlist_len(machines_sl);
