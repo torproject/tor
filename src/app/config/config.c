@@ -597,6 +597,7 @@ static config_var_t option_vars_[] = {
   V(ConnectionPadding,           AUTOBOOL, "auto"),
   V(RefuseUnknownExits,          AUTOBOOL, "auto"),
   V(CircuitPadding,              BOOL,     "1"),
+  V(ReducedCircuitPadding,       BOOL,     "0"),
   V(RejectPlaintextPorts,        CSV,      ""),
   V(RelayBandwidthBurst,         MEMUNIT,  "0"),
   V(RelayBandwidthRate,          MEMUNIT,  "0"),
@@ -3744,6 +3745,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (server_mode(options) && options->CircuitPadding == 0) {
     REJECT("Relays cannot set CircuitPadding to 0. ");
+  }
+
+  if (server_mode(options) && options->ReducedCircuitPadding == 1) {
+    REJECT("Relays cannot set ReducedCircuitPadding. ");
   }
 
   if (options->BridgeDistribution) {
