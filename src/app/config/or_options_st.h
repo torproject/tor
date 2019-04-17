@@ -248,6 +248,11 @@ struct or_options_t {
    * pad to the server regardless of server support. */
   int ConnectionPadding;
 
+  /** Boolean: if true, then circuit padding will be negotiated by client
+   * and server, subject to consenus limits (default). If 0, it will be fully
+   * disabled. */
+  int CircuitPadding;
+
   /** To what authority types do we publish our descriptor? Choices are
    * "v1", "v2", "v3", "bridge", or "". */
   struct smartlist_t *PublishServerDescriptor;
