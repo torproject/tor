@@ -2603,6 +2603,36 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
   return 0;
 }
 
+/** Free memory allocated by this machine spec. */
+STATIC void
+machine_spec_free_(circpad_machine_spec_t *m)
+{
+  if (!m) return;
+
+  tor_free(m->states);
+  tor_free(m);
+}
+
+/** Free all memory allocated by the circuitpadding subsystem. */
+void
+circpad_free_all(void)
+{
+  if (origin_padding_machines) {
+    SMARTLIST_FOREACH_BEGIN(origin_padding_machines,
+                            circpad_machine_spec_t *, m) {
+      machine_spec_free(m);
+    } SMARTLIST_FOREACH_END(m);
+    smartlist_free(origin_padding_machines);
+  }
+  if (relay_padding_machines) {
+    SMARTLIST_FOREACH_BEGIN(relay_padding_machines,
+                            circpad_machine_spec_t *, m) {
+      machine_spec_free(m);
+    } SMARTLIST_FOREACH_END(m);
+    smartlist_free(relay_padding_machines);
+  }
+}
+
 /* Serialization */
 // TODO: Should we use keyword=value here? Are there helpers for that?
 #if 0
