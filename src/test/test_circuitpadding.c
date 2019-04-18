@@ -2478,6 +2478,8 @@ test_circuitpadding_reduce_disable(void *arg)
     OP_EQ, 0);
 
   /* Test that machines get torn down when padding is disabled */
+  SMARTLIST_FOREACH(vote1.net_params, char *, cp, tor_free(cp));
+  smartlist_free(vote1.net_params);
   vote1.net_params = smartlist_new();
   smartlist_split_string(vote1.net_params,
          "circpad_padding_disabled=1", NULL, 0, 0);
@@ -2492,13 +2494,14 @@ test_circuitpadding_reduce_disable(void *arg)
     circpad_machine_reached_padding_limit(relay_side->padding_info[0]),
     OP_EQ, 1);
 
-  /* Signal machine is built */
+  /* Signal that circuit is built: this event causes us to re-evaluate
+   * machine conditions (which don't apply because padding is disabled). */
   circpad_machine_event_circ_built(TO_ORIGIN_CIRCUIT(client_side));
 
   tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
   tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
-  tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
-  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
 
   SMARTLIST_FOREACH(vote1.net_params, char *, cp, tor_free(cp));
   smartlist_free(vote1.net_params);
@@ -2529,13 +2532,15 @@ test_circuitpadding_reduce_disable(void *arg)
     circpad_machine_reached_padding_limit(relay_side->padding_info[0]),
     OP_EQ, 1);
 
-  /* Signal machine is built */
+  /* Signal that circuit is built: this event causes us to re-evaluate
+   * machine conditions (which don't apply because padding is disabled). */
+
   circpad_machine_event_circ_built(TO_ORIGIN_CIRCUIT(client_side));
 
   tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
   tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
-  tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
-  tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
+  tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
 
  done:
   free_fake_orcirc(relay_side);
