@@ -73,6 +73,7 @@ typedef uint64_t circpad_time_t;
 
 /** The type for timer delays, in microseconds */
 typedef uint32_t circpad_delay_t;
+#define CIRCPAD_DELAY_UNITS_PER_SECOND  (1000*1000)
 
 /**
  * An infinite padding cell delay means don't schedule any padding --
@@ -84,6 +85,13 @@ typedef uint32_t circpad_delay_t;
  * activity on an onion service?
  */
 #define CIRCPAD_DELAY_INFINITE  (UINT32_MAX)
+
+/**
+ * This is the maximum delay that the circuit padding system can have, in
+ * seconds.
+ */
+#define CIRCPAD_DELAY_MAX_SECS   \
+    ((CIRCPAD_DELAY_INFINITE/CIRCPAD_DELAY_UNITS_PER_SECOND)+1)
 
 /**
  * Macro to clarify when we're checking the infinity bin.
@@ -514,6 +522,14 @@ typedef struct circpad_machine_runtime_t {
   uint16_t nonpadding_sent;
 
   /**
+   * Timestamp of the most recent cell event (sent, received, padding,
+   * non-padding), in seconds from approx_time().
+   *
+   * Used as an emergency break to stop holding padding circuits open.
+   */
+  time_t last_cell_time_sec;
+
+  /**
    * EWMA estimate of the RTT of the circuit from this hop
    * to the exit end, in microseconds. */
   circpad_delay_t rtt_estimate_usec;
@@ -594,6 +610,19 @@ typedef struct circpad_machine_spec_t {
    *  1-indexed (ie: hop #1 is guard, #2 middle, #3 exit). */
   unsigned target_hopnum : 3;
 
+  /** If this flag is enabled, don't close circuits that use this machine even
+   *  if another part of Tor wants to close this circuit.
+   *
+   *  If this flag is set, the circuitpadding subsystem will close circuits the
+   *  moment the machine transitions to the END state, and only if the circuit
+   *  has already been asked to be closed by another part of Tor.
+   *
+   *  Circuits that should have been closed but were kept open by a padding
+   *  machine are re-purposed to CIRCUIT_PURPOSE_C_CIRCUIT_PADDING, hence
+   *  machines should take that purpose into account if they are filtering
+   *  circuits by purpose. */
+  unsigned manage_circ_lifetime : 1;
+
   /** This machine only kills fascists if the following conditions are met. */
   circpad_machine_conditions_t conditions;
 
@@ -618,6 +647,8 @@ typedef struct circpad_machine_spec_t {
 } circpad_machine_spec_t;
 
 void circpad_new_consensus_params(const networkstatus_t *ns);
+
+int circpad_is_using_circuit_for_padding(circuit_t *circ, int reason);
 
 /**
  * The following are event call-in points that are of interest to
