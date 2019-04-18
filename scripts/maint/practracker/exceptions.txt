@@ -218,7 +218,7 @@ problem include-count /src/feature/nodelist/networkstatus.c 61
 problem function-size /src/feature/nodelist/networkstatus.c:networkstatus_check_consensus_signature() 176
 problem function-size /src/feature/nodelist/networkstatus.c:networkstatus_set_current_consensus() 293
 problem function-size /src/feature/nodelist/node_select.c:router_pick_directory_server_impl() 123
-problem function-size /src/feature/nodelist/node_select.c:compute_weighted_bandwidths() 205
+problem function-size /src/feature/nodelist/node_select.c:compute_weighted_bandwidths() 206
 problem function-size /src/feature/nodelist/node_select.c:router_pick_trusteddirserver_impl() 114
 problem function-size /src/feature/nodelist/nodelist.c:compute_frac_paths_available() 193
 problem file-size /src/feature/nodelist/routerlist.c 3234

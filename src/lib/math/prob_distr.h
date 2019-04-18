@@ -53,7 +53,7 @@ struct dist {
  *  We define this conditionally to suppress false positives from
  *  Coverity, which gets confused by the sizeof business.
  */
-#ifdef __COVERITY___
+#ifdef __COVERITY__
 #define TYPE_CHECK_OBJ(OPS, OBJ, TYPE) 0
 #else
 #define TYPE_CHECK_OBJ(OPS, OBJ, TYPE) \

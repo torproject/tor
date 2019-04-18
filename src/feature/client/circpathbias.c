@@ -176,6 +176,7 @@ pathbias_get_scale_threshold(const or_options_t *options)
 static double
 pathbias_get_scale_ratio(const or_options_t *options)
 {
+  (void) options;
   /*
    * The scale factor is the denominator for our scaling
    * of circuit counts for our path bias window.
@@ -185,7 +186,8 @@ pathbias_get_scale_ratio(const or_options_t *options)
    */
   int denominator = networkstatus_get_param(NULL, "pb_scalefactor",
                               2, 2, INT32_MAX);
-  (void) options;
+  tor_assert(denominator > 0);
+
   /**
    * The mult factor is the numerator for our scaling
    * of circuit counts for our path bias window. It
