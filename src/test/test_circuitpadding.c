@@ -41,6 +41,7 @@
                                TOR_NSEC_PER_USEC*TOR_USEC_PER_SEC)
 
 extern smartlist_t *connection_array;
+void circuit_expire_old_circuits_clientside(void);
 
 circid_t get_unique_circ_id_by_chan(channel_t *chan);
 void helper_create_basic_machine(void);
@@ -2398,6 +2399,192 @@ test_circuitpadding_global_rate_limiting(void *arg)
   smartlist_free(vote1.net_params);
 }
 
+/** Just a basic machine whose whole purpose is to reach the END state */
+static void
+helper_create_ender_machine(void)
+{
+  /* Start, burst */
+  circpad_machine_states_init(&circ_client_machine, 2);
+
+  circ_client_machine.states[CIRCPAD_STATE_START].
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_END;
+
+  circ_client_machine.conditions.state_mask = CIRCPAD_STATE_ALL;
+  circ_client_machine.conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
+}
+
+static time_t mocked_timeofday;
+/** Set timeval to a mock date and time. This is necessary
+ * to make tor_gettimeofday() mockable. */
+static void
+mock_tor_gettimeofday(struct timeval *timeval)
+{
+  timeval->tv_sec = mocked_timeofday;
+  timeval->tv_usec = 0;
+}
+
+/** Test manual managing of circuit lifetimes by the circuitpadding
+ *  subsystem. In particular this test goes through all the cases of the
+ *  circpad_is_using_circuit_for_padding() function, via
+ *  circuit_mark_for_close() as well as
+ *  circuit_expire_old_circuits_clientside(). */
+static void
+test_circuitpadding_manage_circuit_lifetime(void *arg)
+{
+  circpad_machine_runtime_t *mi;
+
+  (void) arg;
+
+  client_side = (circuit_t *)origin_circuit_new();
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  monotime_enable_test_mocking();
+  MOCK(tor_gettimeofday, mock_tor_gettimeofday);
+  mocked_timeofday = 23;
+
+  helper_create_ender_machine();
+
+  /* Enable manual circuit lifetime manage for this test */
+  circ_client_machine.manage_circ_lifetime = 1;
+
+  /* Test setup */
+  client_side->padding_machine[0] = &circ_client_machine;
+  client_side->padding_info[0] =
+    circpad_circuit_machineinfo_new(client_side, 0);
+  mi = client_side->padding_info[0];
+
+  tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_START);
+
+  /* Check that the circuit is not marked for close */
+  tt_int_op(client_side->marked_for_close, OP_EQ, 0);
+  tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_GENERAL);
+
+  /* Mark this circuit for close due to a remote reason */
+  circuit_mark_for_close(client_side,
+                         END_CIRC_REASON_FLAG_REMOTE|END_CIRC_REASON_NONE);
+  tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
+  tt_int_op(client_side->marked_for_close, OP_NE, 0);
+  tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_GENERAL);
+  client_side->marked_for_close = 0;
+
+  /* Mark this circuit for close due to a protocol issue */
+  circuit_mark_for_close(client_side, END_CIRC_REASON_TORPROTOCOL);
+  tt_int_op(client_side->marked_for_close, OP_NE, 0);
+  tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_GENERAL);
+  client_side->marked_for_close = 0;
+
+  /* Mark a measurement circuit for close */
+  client_side->purpose = CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT;
+  circuit_mark_for_close(client_side, END_CIRC_REASON_NONE);
+  tt_int_op(client_side->marked_for_close, OP_NE, 0);
+  tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT);
+  client_side->marked_for_close = 0;
+
+  /* Mark a general circuit for close */
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  circuit_mark_for_close(client_side, END_CIRC_REASON_NONE);
+
+  /* Check that this circuit is still not marked for close since we are
+   * managing the lifetime manually, but the circuit was tagged as such by the
+   * circpadding subsystem */
+  tt_int_op(client_side->marked_for_close, OP_EQ, 0);
+  tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
+
+  /* We just tested case (1) from the comments of
+   * circpad_circuit_should_be_marked_for_close() */
+
+  /* Transition the machine to the END state but did not delete its machine */
+  tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
+  circpad_cell_event_nonpadding_received(client_side);
+  tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
+
+  /* We just tested case (3) from the comments of
+   * circpad_circuit_should_be_marked_for_close().
+   * Now let's go for case (2). */
+
+  /* Reset the close mark */
+  client_side->marked_for_close = 0;
+
+  /* Mark this circuit for close */
+  circuit_mark_for_close(client_side, 0);
+
+  /* See that the circ got closed since we are already in END state */
+  tt_int_op(client_side->marked_for_close, OP_NE, 0);
+
+  /* We just tested case (2). Now let's see that case (4) is unreachable as
+     that comment claims */
+
+  /* First, reset all close marks and tags */
+  client_side->marked_for_close = 0;
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+
+  /* Now re-create the ender machine so that we can transition to END again */
+  /* Free up some stuff first */
+  circpad_circuit_free_all_machineinfos(client_side);
+  tor_free(circ_client_machine.states);
+  helper_create_ender_machine();
+
+  client_side->padding_machine[0] = &circ_client_machine;
+  client_side->padding_info[0] =
+    circpad_circuit_machineinfo_new(client_side, 0);
+  mi = client_side->padding_info[0];
+
+  /* Check we are in START. */
+  tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_START);
+
+  /* Test that we don't expire this circuit yet */
+  client_side->timestamp_dirty = 0;
+  client_side->state = CIRCUIT_STATE_OPEN;
+  tor_gettimeofday(&client_side->timestamp_began);
+  TO_ORIGIN_CIRCUIT(client_side)->circuit_idle_timeout = 23;
+  mocked_timeofday += 24;
+  circuit_expire_old_circuits_clientside();
+  circuit_expire_old_circuits_clientside();
+  circuit_expire_old_circuits_clientside();
+  tt_int_op(client_side->timestamp_dirty, OP_NE, 0);
+  tt_int_op(client_side->marked_for_close, OP_EQ, 0);
+  tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
+
+  /* Runaway circpad test: if the machine does not transition to end,
+   * test that after CIRCPAD_DELAY_MAX_SECS, we get marked anyway */
+  mocked_timeofday = client_side->timestamp_dirty
+      + get_options()->MaxCircuitDirtiness + 2;
+  client_side->padding_info[0]->last_cell_time_sec =
+      approx_time()-(CIRCPAD_DELAY_MAX_SECS+10);
+  circuit_expire_old_circuits_clientside();
+  tt_int_op(client_side->marked_for_close, OP_NE, 0);
+
+  /* Test back to normal: if we had activity, we won't close */
+  client_side->padding_info[0]->last_cell_time_sec = approx_time();
+  client_side->marked_for_close = 0;
+  circuit_expire_old_circuits_clientside();
+  tt_int_op(client_side->marked_for_close, OP_EQ, 0);
+
+  /* Transition to END, but before we're past the dirty timer */
+  mocked_timeofday = client_side->timestamp_dirty;
+  circpad_cell_event_nonpadding_received(client_side);
+  tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
+
+  /* Verify that the circuit was not closed. */
+  tt_int_op(client_side->marked_for_close, OP_EQ, 0);
+
+  /* Now that we are in END state, we can be closed by expiry, but via
+   * the timestamp_dirty path, not the idle path. So first test not dirty
+   * enough. */
+  mocked_timeofday = client_side->timestamp_dirty;
+  circuit_expire_old_circuits_clientside();
+  tt_int_op(client_side->marked_for_close, OP_EQ, 0);
+  mocked_timeofday = client_side->timestamp_dirty
+      + get_options()->MaxCircuitDirtiness + 2;
+  circuit_expire_old_circuits_clientside();
+  tt_int_op(client_side->marked_for_close, OP_NE, 0);
+
+ done:
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  tor_free(circ_client_machine.states);
+  monotime_disable_test_mocking();
+  UNMOCK(tor_gettimeofday);
+}
+
 #define TEST_CIRCUITPADDING(name, flags) \
     { #name, test_##name, (flags), NULL, NULL }
 
@@ -2417,5 +2604,6 @@ struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_closest_token_removal, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_closest_token_removal_usec, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_token_removal_exact, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_manage_circuit_lifetime, TT_FORK),
   END_OF_TESTCASES
 };
