@@ -70,7 +70,7 @@
 #include "core/or/origin_circuit_st.h"
 #include "core/or/socks_request_st.h"
 
-static void circuit_expire_old_circuits_clientside(void);
+STATIC void circuit_expire_old_circuits_clientside(void);
 static void circuit_increment_failure_count(void);
 
 /** Check whether the hidden service destination of the stream at
@@ -1471,7 +1471,7 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
 /** Find each circuit that has been unused for too long, or dirty
  * for too long and has no streams on it: mark it for close.
  */
-static void
+STATIC void
 circuit_expire_old_circuits_clientside(void)
 {
   struct timeval cutoff, now;
