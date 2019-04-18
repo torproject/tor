@@ -160,7 +160,22 @@ microdescs_parse_from_string(const char *s, const char *eos,
 
     if (tokenize_string(area, s, start_of_next_microdesc, tokens,
                         microdesc_token_table, flags)) {
-      log_warn(LD_DIR, "Unparseable microdescriptor");
+      const char *location;
+      switch (where) {
+        case SAVED_NOWHERE:
+          location = "download or generated string";
+          break;
+        case SAVED_IN_CACHE:
+          location = "cache";
+          break;
+        case SAVED_IN_JOURNAL:
+          location = "journal";
+          break;
+        default:
+          location = "unknown location";
+          break;
+      }
+      log_warn(LD_DIR, "Unparseable microdescriptor found in %s", location);
       goto next;
     }
 
