@@ -1939,9 +1939,10 @@ is non-zero):
     ExitPolicy, ReducedExitPolicy, and IPv6Exit options are ignored. +
  +
     If ExitRelay is set to "auto", then Tor checks the ExitPolicy,
-    ReducedExitPolicy, and IPv6Exit options. If either is set, Tor behaves
-    as if ExitRelay were set to 1. If neither exit policy option is set, Tor
-    behaves as if ExitRelay were set to 0. (Default: auto)
+    ReducedExitPolicy, and IPv6Exit options. If at least one of these options
+    is set, Tor behaves as if ExitRelay were set to 1. If none of these exit
+    policy options are set, Tor behaves as if ExitRelay were set to 0.
+    (Default: auto)
 
 [[ExitPolicy]] **ExitPolicy** __policy__,__policy__,__...__::
     Set an exit policy for this server. Each policy is of the form
