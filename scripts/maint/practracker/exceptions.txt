@@ -29,12 +29,12 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 8491
+problem file-size /src/app/config/config.c 8501
 problem include-count /src/app/config/config.c 86
 problem function-size /src/app/config/config.c:options_act_reversible() 296
 problem function-size /src/app/config/config.c:options_act() 588
 problem function-size /src/app/config/config.c:resolve_my_address() 192
-problem function-size /src/app/config/config.c:options_validate() 1207
+problem function-size /src/app/config/config.c:options_validate() 1215
 problem function-size /src/app/config/config.c:options_init_from_torrc() 202
 problem function-size /src/app/config/config.c:options_init_from_string() 173
 problem function-size /src/app/config/config.c:options_init_logs() 146
@@ -187,7 +187,7 @@ problem function-size /src/feature/dirclient/dirclient.c:handle_response_fetch_c
 problem function-size /src/feature/dircommon/consdiff.c:gen_ed_diff() 204
 problem function-size /src/feature/dircommon/consdiff.c:apply_ed_diff() 159
 problem function-size /src/feature/dirparse/authcert_parse.c:authority_cert_parse_from_string() 182
-problem function-size /src/feature/dirparse/microdesc_parse.c:microdescs_parse_from_string() 154
+problem function-size /src/feature/dirparse/microdesc_parse.c:microdescs_parse_from_string() 169
 problem function-size /src/feature/dirparse/ns_parse.c:routerstatus_parse_entry_from_string() 286
 problem function-size /src/feature/dirparse/ns_parse.c:networkstatus_verify_bw_weights() 389
 problem function-size /src/feature/dirparse/ns_parse.c:networkstatus_parse_vote_from_string() 638
