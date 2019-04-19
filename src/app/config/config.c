@@ -7061,13 +7061,13 @@ parse_port_config(smartlist_t *out,
                  portname, escaped(ports->value));
         goto err;
       }
-      if (bind_ipv4_only && tor_addr_family(&addr) == AF_INET6) {
-        log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv6",
+      if (bind_ipv4_only && tor_addr_family(&addr) != AF_INET) {
+        log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv4",
                  portname);
         goto err;
       }
-      if (bind_ipv6_only && tor_addr_family(&addr) == AF_INET) {
-        log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv4",
+      if (bind_ipv6_only && tor_addr_family(&addr) != AF_INET6) {
+        log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv6",
                  portname);
         goto err;
       }
