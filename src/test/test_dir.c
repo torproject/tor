@@ -6475,6 +6475,50 @@ test_dir_format_versions_list(void *arg)
   teardown_capture_of_logs();
 }
 
+static void
+test_dir_add_fingerprint(void *arg)
+{
+  (void)arg;
+  authdir_config_t *list;
+  int ret;
+  ed25519_secret_key_t seckey;
+  ed25519_public_key_t pubkey_good, pubkey_bad;
+
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+
+  setup_capture_of_logs(LOG_WARN);
+
+  /* RSA test - successful */
+  ret = add_fingerprint_to_dir("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                               list, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* RSA test - failure */
+  ret = add_fingerprint_to_dir("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+                               list, 0);
+  tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Couldn\'t decode fingerprint");
+
+  /* ed25519 test - successful */
+  ed25519_secret_key_generate(&seckey, 0);
+  ed25519_public_key_generate(&pubkey_good, &seckey);
+
+  ret = add_ed25519_to_dir(&pubkey_good, list, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* ed25519 test - failure */
+  digest256_from_base64((char *) pubkey_bad.pubkey, "gibberish");
+
+  ret = add_ed25519_to_dir(&pubkey_bad, list, 0);
+  tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Invalid ed25519 key");
+
+ done:
+  teardown_capture_of_logs();
+  dirserv_free_fingerprint_list();
+}
+
 #define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -6547,5 +6591,6 @@ struct testcase_t dir_tests[] = {
   DIR(platform_str, 0),
   DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   DIR(format_versions_list, TT_FORK),
+  DIR(add_fingerprint, TT_FORK),
   END_OF_TESTCASES
 };
