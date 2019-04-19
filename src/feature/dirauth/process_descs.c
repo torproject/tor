@@ -230,10 +230,8 @@ dirserv_load_fingerprint_file(void)
     /* We only accept ed25519 or RSA keys */
     if (!is_ed25519 && !is_rsa) {
       is_valid_fpr = false;
-    }
 
-    if (!is_ed25519 || !is_rsa) {
-      log_notice(LD_CONFIG, "Invalid fingerprint (nickname '%s', "
+      log_notice(LD_CONFIG, "Unrecognized fingerprint type (nickname '%s', "
                  "fingerprint %s). Skipping.", nickname, fingerprint);
       continue;
     }

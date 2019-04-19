@@ -6541,7 +6541,7 @@ test_dir_dirserv_load_fingerprint_file(void *arg)
   setup_capture_of_logs(LOG_NOTICE);
   write_str_to_file(fname, router_lines_invalid, 0);
   tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
-  expect_log_msg_containing("Invalid fingerprint");
+  expect_log_msg_containing("Unrecognized fingerprint type");
   teardown_capture_of_logs();
 
   // Test: Valid RSA
