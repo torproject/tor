@@ -1244,9 +1244,14 @@ hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
 
 /* We are about to close or free this <b>circ</b>. Clean it up from any
  * related HS data structures. This function can be called multiple times
- * safely for the same circuit. */
+ * safely for the same circuit.
+ *
+ * If <b>will_repurpose_circ</b> is set, then this circuit will be repurposed
+ * to a non-HS purpose, so also cleanup various HS structures that should not
+ * linger on it.
+ */
 void
-hs_circ_cleanup(circuit_t *circ)
+hs_circ_cleanup(circuit_t *circ, bool will_repurpose_circ)
 {
   tor_assert(circ);
 
@@ -1268,23 +1273,16 @@ hs_circ_cleanup(circuit_t *circ)
   if (circ->hs_token) {
     hs_circuitmap_remove_circuit(circ);
   }
-}
 
-/**
- * We're about to destroy, free, or change the purpose of this circuit
- * immedaitely. Make sure everything hs-related is cleaned up and freed.
- */
-void
-hs_circ_free(circuit_t *circ)
-{
-  hs_circ_cleanup(circ);
+  /* This circuit will be repurposed, clean the ident and other HS info. */
+  if (will_repurpose_circ) {
+    if (CIRCUIT_IS_ORIGIN(circ)) {
+      origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+      crypto_pk_free(ocirc->intro_key);
+      rend_data_free(ocirc->rend_data);
 
-  if (CIRCUIT_IS_ORIGIN(circ)) {
-    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-    crypto_pk_free(ocirc->intro_key);
-    rend_data_free(ocirc->rend_data);
-
-    hs_ident_circuit_free(ocirc->hs_ident);
-    ocirc->hs_ident = NULL;
+      hs_ident_circuit_free(ocirc->hs_ident);
+      ocirc->hs_ident = NULL;
+    }
   }
 }

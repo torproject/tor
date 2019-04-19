@@ -3046,7 +3046,7 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
    * any onion service material.. otherwise just clean it up. */
   if (circuit_purpose_is_hidden_service(circ->purpose) &&
      !circuit_purpose_is_hidden_service(new_purpose)) {
-    hs_circ_free(circ);
+    hs_circ_cleanup(circ, true);
   }
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
