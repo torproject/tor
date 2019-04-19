@@ -2279,7 +2279,7 @@ is non-zero):
     extra-info document. (Default: 0)
 
 [[PaddingStatistics]] **PaddingStatistics** **0**|**1**::
-    Relays only.
+    Relays and bridges only.
     When this option is enabled, Tor collects statistics for padding cells
     sent and received by this relay, in addition to total cell counts.
     These statistics are rounded, and omitted if traffic is low. This
