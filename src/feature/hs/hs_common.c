@@ -1635,7 +1635,10 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str,
     }
   } SMARTLIST_FOREACH_END(dir);
 
-  rate_limited = rate_limited_count == responsible_dirs_count;
+  if (rate_limited_count > 0 || responsible_dirs_count > 0) {
+    rate_limited = rate_limited_count == responsible_dirs_count;
+  }
+
   excluded_some =
     smartlist_len(usable_responsible_dirs) < smartlist_len(responsible_dirs);
 
