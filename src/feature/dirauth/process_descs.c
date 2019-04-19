@@ -44,7 +44,6 @@
 #define ROUTER_ALLOW_SKEW (60*60*12)
 
 static void directory_remove_invalid(void);
-struct authdir_config_t;
 static was_router_added_t dirserv_add_extrainfo(extrainfo_t *ei,
                                                 const char **msg);
 static uint32_t
@@ -60,26 +59,6 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
 #define FP_BADEXIT 16 /**< We'll tell clients not to use this as an exit. */
 /*                 32 Historically used to indicade Unnamed */
 
-/** Target of status_by_digest map. */
-typedef uint32_t router_status_t;
-
-static void add_fingerprint_to_dir(const char *fp,
-                                   struct authdir_config_t *list,
-                                   router_status_t add_status);
-
-static void add_ed25519_to_dir(const ed25519_public_key_t *edkey,
-                               struct authdir_config_t *list,
-                               router_status_t add_status);
-
-/** List of nickname-\>identity fingerprint mappings for all the routers
- * that we name.  Used to prevent router impersonation. */
-typedef struct authdir_config_t {
-  strmap_t *fp_by_name; /**< Map from lc nickname to fingerprint. */
-  digestmap_t *status_by_digest; /**< Map from digest to router_status_t. */
-  digest256map_t *status_by_digest256; /**< Map from digest256 to
-                                        * router_status_t. */
-} authdir_config_t;
-
 /** Should be static; exposed for testing. */
 static authdir_config_t *fingerprint_list = NULL;
 
@@ -90,14 +69,33 @@ authdir_config_new(void)
   authdir_config_t *list = tor_malloc_zero(sizeof(authdir_config_t));
   list->fp_by_name = strmap_new();
   list->status_by_digest = digestmap_new();
+  list->status_by_digest256 = digest256map_new();
   return list;
 }
 
+#ifdef TOR_UNIT_TESTS
+
+/** Initialize fingerprint_list to a new authdir_config_t. Used for tests. */
+void
+authdir_init_fingerprint_list(void)
+{
+  fingerprint_list = authdir_config_new();
+}
+
+/* Return the current fingerprint_list. Used for tests. */
+authdir_config_t *
+authdir_return_fingerprint_list(void)
+{
+  return fingerprint_list;
+}
+
+#endif /* defined(TOR_UNIT_TESTS) */
+
 /** Add the fingerprint <b>fp</b> to the smartlist of fingerprint_entry_t's
- * <b>list</b>, or-ing the currently set status flags with
- * <b>add_status</b>.
+ * <b>list</b>, or-ing the currently set status flags with <b>add_status</b>.
+ * Return -1 if we were unable to decode the key, else return 0.
  */
-/* static */ void
+int
 add_fingerprint_to_dir(const char *fp, authdir_config_t *list,
                        router_status_t add_status)
 {
@@ -114,7 +112,7 @@ add_fingerprint_to_dir(const char *fp, authdir_config_t *list,
     log_warn(LD_DIRSERV, "Couldn't decode fingerprint \"%s\"",
              escaped(fp));
     tor_free(fingerprint);
-    return;
+    return -1;
   }
 
   status = digestmap_get(list->status_by_digest, d);
@@ -125,41 +123,37 @@ add_fingerprint_to_dir(const char *fp, authdir_config_t *list,
 
   tor_free(fingerprint);
   *status |= add_status;
-  return;
+  return 0;
 }
 
 /** Add the ed25519 key <b>edkey</b> to the smartlist of fingerprint_entry_t's
- * <b>list</b>, or-ing the currently set status flags with
- * <b>add_status</b>.
+ * <b>list</b>, or-ing the currently set status flags with <b>add_status</b>.
+ * Return -1 if we were unable to decode the key, else return 0.
  */
-static void
+int
 add_ed25519_to_dir(const ed25519_public_key_t *edkey, authdir_config_t *list,
                    router_status_t add_status)
 {
-  char *ed25519_key;
-  char d[ED25519_PUBKEY_LEN];
   router_status_t *status;
+
   tor_assert(edkey);
   tor_assert(list);
 
-  ed25519_key = tor_strdup((char*) edkey->pubkey);
-  tor_strstrip(ed25519_key, " ");
-  if (digest256_from_base64(d, ed25519_key) < 0) {
-    log_warn(LD_DIRSERV, "Couldn't decode ed25519 key \"%s\"",
-             escaped((char*) edkey->pubkey));
-    tor_free(ed25519_key);
-    return;
+  if (ed25519_validate_pubkey(edkey) < 0) {
+    char ed25519_base64_key[ED25519_BASE64_LEN+1];
+    ed25519_public_to_base64(ed25519_base64_key, edkey);
+    log_warn(LD_DIRSERV, "Invalid ed25519 key \"%s\"", ed25519_base64_key);
+    return -1;
   }
 
-  status = digest256map_get(list->status_by_digest256, (const uint8_t *) d);
+  status = digest256map_get(list->status_by_digest256, edkey->pubkey);
   if (!status) {
     status = tor_malloc_zero(sizeof(router_status_t));
-    digest256map_set(list->status_by_digest256, (const uint8_t *) d, status);
+    digest256map_set(list->status_by_digest256, edkey->pubkey, status);
   }
 
-  tor_free(ed25519_key);
   *status |= add_status;
-  return;
+  return 0;
 }
 
 /** Add the fingerprint for this OR to the global list of recognized

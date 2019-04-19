@@ -12,6 +12,37 @@
 #ifndef TOR_RECV_UPLOADS_H
 #define TOR_RECV_UPLOADS_H
 
+#include "src/lib/crypt_ops/crypto_ed25519.h"
+
+struct authdir_config_t;
+
+/** Target of status_by_digest map. */
+typedef uint32_t router_status_t;
+
+int add_fingerprint_to_dir(const char *fp, struct authdir_config_t *list,
+                           router_status_t add_status);
+
+int add_ed25519_to_dir(const ed25519_public_key_t *edkey,
+                       struct authdir_config_t *list,
+                       router_status_t add_status);
+
+/** List of nickname-\>identity fingerprint mappings for all the routers
+ * that we name.  Used to prevent router impersonation. */
+typedef struct authdir_config_t {
+  strmap_t *fp_by_name; /**< Map from lc nickname to fingerprint. */
+  digestmap_t *status_by_digest; /**< Map from digest to router_status_t. */
+  digest256map_t *status_by_digest256; /**< Map from digest256 to
+                                        * router_status_t. */
+} authdir_config_t;
+
+#ifdef TOR_UNIT_TESTS
+
+void authdir_init_fingerprint_list(void);
+
+authdir_config_t *authdir_return_fingerprint_list(void);
+
+#endif /* defined(TOR_UNIT_TESTS) */
+
 int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
 int dirserv_add_own_fingerprint(crypto_pk_t *pk);
