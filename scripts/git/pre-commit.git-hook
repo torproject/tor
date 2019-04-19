@@ -39,3 +39,7 @@ fi
 if test -e scripts/maint/checkIncludes.py; then
     python scripts/maint/checkIncludes.py
 fi
+
+if [ -e scripts/maint/practracker/practracker.py ]; then
+  python3 ./scripts/maint/practracker/practracker.py "$workdir"
+fi

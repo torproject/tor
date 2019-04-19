@@ -34,6 +34,10 @@ if [ -x "$workdir/.git/hooks/pre-commit" ]; then
   fi
 fi
 
+if [ -e scripts/maint/practracker/practracker.py ]; then
+  python3 ./scripts/maint/practracker/practracker.py "$workdir"
+fi
+
 # shellcheck disable=SC2034
 while read -r local_ref local_sha remote_ref remote_sha
 do
