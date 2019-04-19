@@ -545,6 +545,8 @@ circuit_expire_building(void)
 
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *,victim) {
     struct timeval cutoff;
+    bool fixed_time = circuit_build_times_disabled(get_options());
+
     if (!CIRCUIT_IS_ORIGIN(victim) || /* didn't originate here */
         victim->marked_for_close)     /* don't mess with marked circs */
       continue;
@@ -599,17 +601,19 @@ circuit_expire_building(void)
         if (!TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout) {
           int first_hop_succeeded = TO_ORIGIN_CIRCUIT(victim)->cpath->state
                                       == CPATH_STATE_OPEN;
-          log_info(LD_CIRC,
-                 "No circuits are opened. Relaxing timeout for circuit %d "
-                 "(a %s %d-hop circuit in state %s with channel state %s).",
-                 TO_ORIGIN_CIRCUIT(victim)->global_identifier,
-                 circuit_purpose_to_string(victim->purpose),
-                 TO_ORIGIN_CIRCUIT(victim)->build_state ?
-                   TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len :
-                   -1,
-                 circuit_state_to_string(victim->state),
-                 victim->n_chan ?
-                    channel_state_to_string(victim->n_chan->state) : "none");
+          if (!fixed_time) {
+            log_info(LD_CIRC,
+                "No circuits are opened. Relaxing timeout for circuit %d "
+                "(a %s %d-hop circuit in state %s with channel state %s).",
+                TO_ORIGIN_CIRCUIT(victim)->global_identifier,
+                circuit_purpose_to_string(victim->purpose),
+                TO_ORIGIN_CIRCUIT(victim)->build_state ?
+                  TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len :
+                  -1,
+                circuit_state_to_string(victim->state),
+                victim->n_chan ?
+                   channel_state_to_string(victim->n_chan->state) : "none");
+          }
 
           /* We count the timeout here for CBT, because technically this
            * was a timeout, and the timeout value needs to reset if we
@@ -623,7 +627,8 @@ circuit_expire_building(void)
       } else {
         static ratelim_t relax_timeout_limit = RATELIM_INIT(3600);
         const double build_close_ms = get_circuit_build_close_time_ms();
-        log_fn_ratelim(&relax_timeout_limit, LOG_NOTICE, LD_CIRC,
+        if (!fixed_time) {
+          log_fn_ratelim(&relax_timeout_limit, LOG_NOTICE, LD_CIRC,
                  "No circuits are opened. Relaxed timeout for circuit %d "
                  "(a %s %d-hop circuit in state %s with channel state %s) to "
                  "%ldms. However, it appears the circuit has timed out "
@@ -637,6 +642,7 @@ circuit_expire_building(void)
                  victim->n_chan ?
                     channel_state_to_string(victim->n_chan->state) : "none",
                  (long)build_close_ms);
+        }
       }
     }
 
