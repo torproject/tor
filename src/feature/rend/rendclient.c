@@ -469,7 +469,7 @@ directory_get_from_hs_dir(const char *desc_id,
 
   /* Automatically pick an hs dir if none given. */
   if (!rs_hsdir) {
-    int rate_limited;
+    bool rate_limited;
 
     /* Determine responsible dirs. Even if we can't get all we want, work with
      * the ones we have. If it's empty, we'll notice in hs_pick_hsdir(). */

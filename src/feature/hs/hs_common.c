@@ -1598,14 +1598,14 @@ hs_purge_last_hid_serv_requests(void)
  *  NULL if no HSDirs are worth trying right now. */
 routerstatus_t *
 hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str,
-              int *is_rate_limited)
+              bool *is_rate_limited)
 {
   smartlist_t *usable_responsible_dirs = smartlist_new();
   const or_options_t *options = get_options();
   routerstatus_t *hs_dir;
   time_t now = time(NULL);
   int excluded_some;
-  int rate_limited;
+  bool rate_limited;
   int rate_limited_count = 0;
   int responsible_dirs_count = smartlist_len(responsible_dirs);
 
