@@ -35,7 +35,9 @@ if [ -x "$workdir/.git/hooks/pre-commit" ]; then
 fi
 
 if [ -e scripts/maint/practracker/practracker.py ]; then
-  python3 ./scripts/maint/practracker/practracker.py "$workdir"
+  if ! python3 ./scripts/maint/practracker/practracker.py "$workdir"; then
+    exit 1
+  fi
 fi
 
 # shellcheck disable=SC2034
