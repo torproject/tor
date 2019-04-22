@@ -47,10 +47,9 @@ static void directory_remove_invalid(void);
 static was_router_added_t dirserv_add_extrainfo(extrainfo_t *ei,
                                                 const char **msg);
 static uint32_t
-dirserv_get_status_impl(const char *fp, const char *nickname,
-                        uint32_t addr, uint16_t or_port,
-                        const char *platform, const char **msg,
-                        int severity);
+dirserv_get_status_impl(const char *fp, const uint8_t *ed25519_key,
+                        const char *nickname, uint32_t addr, uint16_t or_port,
+                        const char *platform, const char **msg, int severity);
 
 /*                 1  Historically used to indicate Named */
 #define FP_INVALID 2  /**< Believed invalid. */
@@ -307,9 +306,11 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
   }
 
   /* Check for the more usual versions to reject a router first. */
-  uint32_t r = dirserv_get_status_impl(d, router->nickname, router->addr,
-                                       router->or_port, router->platform,
-                                       msg, severity);
+  uint32_t r = dirserv_get_status_impl(d,
+      router->cache_info.signing_key_cert->signing_key.pubkey,
+      router->nickname, router->addr, router->or_port, router->platform, msg,
+      severity);
+
   if (r)
     return r;
 
@@ -342,14 +343,6 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
         }
         return FP_REJECT;
       }
-
-      /* Check status with ed25519 key. */
-      r = dirserv_get_status_impl(
-              (char *) router->cache_info.signing_key_cert->signing_key.pubkey,
-              router->nickname, router->addr, router->or_port,
-              router->platform, msg, severity);
-      if (r)
-        return r;
     }
   } else {
     /* No ed25519 key */
@@ -381,28 +374,27 @@ dirserv_would_reject_router(const routerstatus_t *rs)
 {
   uint32_t res;
 
-  res = dirserv_get_status_impl(rs->identity_digest, rs->nickname,
-                                rs->addr, rs->or_port,
-                                NULL, NULL, LOG_DEBUG);
+  res = dirserv_get_status_impl(rs->identity_digest,
+                                rs->ed25519_signing_key.pubkey, rs->nickname,
+                                rs->addr, rs->or_port, NULL, NULL, LOG_DEBUG);
 
   return (res & FP_REJECT) != 0;
 }
 
 /** Helper: As dirserv_router_get_status, but takes the router fingerprint
- * (hex, no spaces), nickname, address (used for logging only), IP address, OR
- * port and platform (logging only) as arguments.
+ * (hex, no spaces), ed25510 key, nickname, address (used for logging only),
+ * IP address, OR port and platform (logging only) as arguments.
  *
  * Log messages at 'severity'. (There's not much point in
  * logging that we're rejecting servers we'll not download.)
  */
 static uint32_t
-dirserv_get_status_impl(const char *id_digest, const char *nickname,
-                        uint32_t addr, uint16_t or_port,
+dirserv_get_status_impl(const char *id_digest, const uint8_t *ed25519_key,
+                        const char *nickname, uint32_t addr, uint16_t or_port,
                         const char *platform, const char **msg, int severity)
 {
   uint32_t result = 0;
   router_status_t *status_by_digest;
-  int is_ed25519 = (strlen(id_digest) == ED25519_PUBKEY_LEN);
 
   if (!fingerprint_list)
     fingerprint_list = authdir_config_new();
@@ -440,16 +432,17 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     return FP_REJECT;
   }
 
-  if (is_ed25519) {
-    status_by_digest = digest256map_get(fingerprint_list->status_by_digest256,
-                                        (uint8_t *) id_digest);
-  } else { /* RSA */
-    status_by_digest = digestmap_get(fingerprint_list->status_by_digest,
-                                     id_digest);
-  }
-
+  status_by_digest = digestmap_get(fingerprint_list->status_by_digest,
+                                   id_digest);
   if (status_by_digest)
     result |= *status_by_digest;
+
+  if (ed25519_key) {
+    status_by_digest = digest256map_get(fingerprint_list->status_by_digest256,
+                                        ed25519_key);
+    if (status_by_digest)
+      result |= *status_by_digest;
+  }
 
   if (result & FP_REJECT) {
     if (msg)

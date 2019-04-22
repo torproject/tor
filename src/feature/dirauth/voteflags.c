@@ -30,6 +30,7 @@
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
+#include "feature/nodelist/torcert.h"
 
 #include "lib/container/order.h"
 
@@ -607,6 +608,11 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->or_port = ri->or_port;
   rs->dir_port = ri->dir_port;
   rs->is_v2_dir = ri->supports_tunnelled_dir_requests;
+
+  if (ri->cache_info.signing_key_cert) {
+    ed25519_pubkey_copy(&rs->ed25519_signing_key,
+                        &ri->cache_info.signing_key_cert->signing_key);
+  }
 
   rs->is_staledesc =
     (ri->cache_info.published_on + DESC_IS_STALE_INTERVAL) < now;
