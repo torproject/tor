@@ -2810,6 +2810,31 @@ connection_ap_process_natd(entry_connection_t *conn)
   return connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
 }
 
+static const char HTTP_CONNECT_IS_NOT_AN_HTTP_PROXY_MSG[] =
+  "HTTP/1.0 405 Method Not Allowed\r\n"
+  "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
+  "<html>\n"
+  "<head>\n"
+  "<title>This is an HTTP CONNECT tunnel, not an full HTTP Proxy</title>\n"
+  "</head>\n"
+  "<body>\n"
+  "<h1>This is an HTTP CONNECT tunnel, not an HTTP proxy.</h1>\n"
+  "<p>\n"
+  "It appears you have configured your web browser to use this Tor port as\n"
+  "an HTTP proxy.\n"
+  "</p><p>\n"
+  "This is not correct: This port is configured as a CONNECT tunnel, not\n"
+  "an HTTP proxy. Please configure your client accordingly.  You can also\n"
+  "use HTTPS, then the client should automatically use HTTP CONNECT."
+  "</p>\n"
+  "<p>\n"
+  "See <a href=\"https://www.torproject.org/documentation.html\">"
+  "https://www.torproject.org/documentation.html</a> for more "
+  "information.\n"
+  "</p>\n"
+  "</body>\n"
+  "</html>\n";
+
 /** Called on an HTTP CONNECT entry connection when some bytes have arrived,
  * but we have not yet received a full HTTP CONNECT request.  Try to parse an
  * HTTP CONNECT request from the connection's inbuf.  On success, set up the
@@ -2850,7 +2875,7 @@ connection_ap_process_http_connect(entry_connection_t *conn)
   tor_assert(command);
   tor_assert(addrport);
   if (strcasecmp(command, "connect")) {
-    errmsg = "HTTP/1.0 405 Method Not Allowed\r\n\r\n";
+    errmsg = HTTP_CONNECT_IS_NOT_AN_HTTP_PROXY_MSG;
     goto err;
   }
 
