@@ -241,7 +241,8 @@ void hs_get_responsible_hsdirs(const struct ed25519_public_key_t *blinded_pk,
                               int use_second_hsdir_index,
                               int for_fetching, smartlist_t *responsible_dirs);
 routerstatus_t *hs_pick_hsdir(smartlist_t *responsible_dirs,
-                              const char *req_key_str, bool *is_rate_limited);
+                              const char *req_key_str,
+                              bool *is_rate_limited_out);
 
 time_t hs_hsdir_requery_period(const or_options_t *options);
 time_t hs_lookup_last_hid_serv_request(routerstatus_t *hs_dir,

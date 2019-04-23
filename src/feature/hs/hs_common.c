@@ -1590,7 +1590,7 @@ hs_purge_last_hid_serv_requests(void)
  *  one that we should use to fetch a descriptor right now. Take into account
  *  previous failed attempts at fetching this descriptor from HSDirs using the
  *  string identifier <b>req_key_str</b>. We return whether we are rate limited
- *  into *<b>is_rate_limited</b> if it is not NULL.
+ *  into *<b>is_rate_limited_out</b> if it is not NULL.
  *
  *  Steals ownership of <b>responsible_dirs</b>.
  *
@@ -1598,7 +1598,7 @@ hs_purge_last_hid_serv_requests(void)
  *  NULL if no HSDirs are worth trying right now. */
 routerstatus_t *
 hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str,
-              bool *is_rate_limited)
+              bool *is_rate_limited_out)
 {
   smartlist_t *usable_responsible_dirs = smartlist_new();
   const or_options_t *options = get_options();
@@ -1665,8 +1665,8 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str,
     hs_lookup_last_hid_serv_request(hs_dir, req_key_str, now, 1);
   }
 
-  if (is_rate_limited != NULL) {
-    *is_rate_limited = rate_limited;
+  if (is_rate_limited_out != NULL) {
+    *is_rate_limited_out = rate_limited;
   }
 
   return hs_dir;
