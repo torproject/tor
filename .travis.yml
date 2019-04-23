@@ -230,6 +230,7 @@ after_failure:
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-core || echo "make failed"; fi
+  - if [[ "$TEST_STEM" != "" ]]; then cat "$STEM_SOURCE_DIR"/test/data/tor_log || echo "cat failed"; fi
 
 before_cache:
   ## Delete all gcov files.
