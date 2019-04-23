@@ -1164,6 +1164,15 @@ authdir_policy_badexit_address(uint32_t addr, uint16_t port)
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); goto err; STMT_END
 
+/** Check <b>or_options</b> to determine whether or not we are using the
+ * default options for exit policy. Return true if so, false otherwise. */
+static int
+policy_using_default_exit_options(const or_options_t *or_options)
+{
+  return (or_options->ExitPolicy == NULL && or_options->ExitRelay == -1 &&
+          or_options->ReducedExitPolicy == 0 && or_options->IPv6Exit == 0);
+}
+
 /** Config helper: If there's any problem with the policy configuration
  * options in <b>options</b>, return -1 and set <b>msg</b> to a newly
  * allocated description of the error. Else return 0. */
@@ -1182,9 +1191,8 @@ validate_addr_policies(const or_options_t *options, char **msg)
 
   static int warned_about_nonexit = 0;
 
-  if (public_server_mode(options) &&
-      !warned_about_nonexit && options->ExitPolicy == NULL &&
-      options->ExitRelay == -1 && options->ReducedExitPolicy == 0) {
+  if (public_server_mode(options) && !warned_about_nonexit &&
+      policy_using_default_exit_options(options)) {
     warned_about_nonexit = 1;
     log_notice(LD_CONFIG, "By default, Tor does not run as an exit relay. "
                "If you want to be an exit relay, "
@@ -2141,9 +2149,9 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
   int rv = 0;
 
   /* Short-circuit for non-exit relays, or for relays where we didn't specify
-   * ExitPolicy or ReducedExitPolicy and ExitRelay is auto. */
-  if (or_options->ExitRelay == 0 || (or_options->ExitPolicy == NULL &&
-      or_options->ExitRelay == -1 && or_options->ReducedExitPolicy == 0)) {
+   * ExitPolicy or ReducedExitPolicy or IPv6Exit and ExitRelay is auto. */
+  if (or_options->ExitRelay == 0 ||
+      policy_using_default_exit_options(or_options)) {
     append_exit_policy_string(result, "reject *4:*");
     append_exit_policy_string(result, "reject *6:*");
     return 0;
