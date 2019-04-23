@@ -469,16 +469,19 @@ directory_get_from_hs_dir(const char *desc_id,
 
   /* Automatically pick an hs dir if none given. */
   if (!rs_hsdir) {
+    bool rate_limited = false;
+
     /* Determine responsible dirs. Even if we can't get all we want, work with
      * the ones we have. If it's empty, we'll notice in hs_pick_hsdir(). */
     smartlist_t *responsible_dirs = smartlist_new();
     hid_serv_get_responsible_directories(responsible_dirs, desc_id);
 
-    hs_dir = hs_pick_hsdir(responsible_dirs, desc_id_base32);
+    hs_dir = hs_pick_hsdir(responsible_dirs, desc_id_base32, &rate_limited);
     if (!hs_dir) {
       /* No suitable hs dir can be found, stop right now. */
-      control_event_hsv2_descriptor_failed(rend_query, NULL,
-                                           "QUERY_NO_HSDIR");
+      const char *query_response = (rate_limited) ? "QUERY_RATE_LIMITED" :
+                                                    "QUERY_NO_HSDIR";
+      control_event_hsv2_descriptor_failed(rend_query, NULL, query_response);
       control_event_hs_descriptor_content(rend_data_get_address(rend_query),
                                           desc_id_base32, NULL, NULL);
       return 0;

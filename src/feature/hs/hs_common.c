@@ -1589,20 +1589,25 @@ hs_purge_last_hid_serv_requests(void)
 /** Given the list of responsible HSDirs in <b>responsible_dirs</b>, pick the
  *  one that we should use to fetch a descriptor right now. Take into account
  *  previous failed attempts at fetching this descriptor from HSDirs using the
- *  string identifier <b>req_key_str</b>.
+ *  string identifier <b>req_key_str</b>. We return whether we are rate limited
+ *  into *<b>is_rate_limited</b> if it is not NULL.
  *
  *  Steals ownership of <b>responsible_dirs</b>.
  *
  *  Return the routerstatus of the chosen HSDir if successful, otherwise return
  *  NULL if no HSDirs are worth trying right now. */
 routerstatus_t *
-hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str)
+hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str,
+              bool *is_rate_limited)
 {
   smartlist_t *usable_responsible_dirs = smartlist_new();
   const or_options_t *options = get_options();
   routerstatus_t *hs_dir;
   time_t now = time(NULL);
   int excluded_some;
+  bool rate_limited = false;
+  int rate_limited_count = 0;
+  int responsible_dirs_count = smartlist_len(responsible_dirs);
 
   tor_assert(req_key_str);
 
@@ -1622,12 +1627,17 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str)
     if (last + hs_hsdir_requery_period(options) >= now ||
         !node || !node_has_preferred_descriptor(node, 0)) {
       SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
+      rate_limited_count++;
       continue;
     }
     if (!routerset_contains_node(options->ExcludeNodes, node)) {
       smartlist_add(usable_responsible_dirs, dir);
     }
   } SMARTLIST_FOREACH_END(dir);
+
+  if (rate_limited_count > 0 || responsible_dirs_count > 0) {
+    rate_limited = rate_limited_count == responsible_dirs_count;
+  }
 
   excluded_some =
     smartlist_len(usable_responsible_dirs) < smartlist_len(responsible_dirs);
@@ -1640,9 +1650,10 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str)
   smartlist_free(responsible_dirs);
   smartlist_free(usable_responsible_dirs);
   if (!hs_dir) {
+    const char *warn_str = (rate_limited) ? "we are rate limited." :
+                              "we requested them all recently without success";
     log_info(LD_REND, "Could not pick one of the responsible hidden "
-                      "service directories, because we requested them all "
-                      "recently without success.");
+                      "service directories, because %s.", warn_str);
     if (options->StrictNodes && excluded_some) {
       log_warn(LD_REND, "Could not pick a hidden service directory for the "
                "requested hidden service: they are all either down or "
@@ -1652,6 +1663,10 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str)
     /* Remember that we are requesting a descriptor from this hidden service
      * directory now. */
     hs_lookup_last_hid_serv_request(hs_dir, req_key_str, now, 1);
+  }
+
+  if (is_rate_limited != NULL) {
+    *is_rate_limited = rate_limited;
   }
 
   return hs_dir;
