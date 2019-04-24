@@ -6498,7 +6498,6 @@ test_dir_add_fingerprint(void *arg)
   ret = add_rsa_fingerprint_to_dir("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
                                    list, 0);
   tt_int_op(ret, OP_EQ, -1);
-  expect_log_msg_containing("Couldn\'t decode fingerprint");
 
   /* ed25519 test - successful */
   ed25519_secret_key_generate(&seckey, 0);
@@ -6512,7 +6511,6 @@ test_dir_add_fingerprint(void *arg)
 
   ret = add_ed25519_to_dir(&pubkey_bad, list, 0);
   tt_int_op(ret, OP_EQ, -1);
-  expect_log_msg_containing("Invalid ed25519 key");
 
  done:
   teardown_capture_of_logs();
@@ -6541,7 +6539,7 @@ test_dir_dirserv_load_fingerprint_file(void *arg)
   setup_capture_of_logs(LOG_NOTICE);
   write_str_to_file(fname, router_lines_invalid, 0);
   tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
-  expect_log_msg_containing("Unrecognized fingerprint type");
+  expect_log_msg_containing("Invalid fingerprint");
   teardown_capture_of_logs();
 
   // Test: Valid RSA

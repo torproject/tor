@@ -108,8 +108,6 @@ add_rsa_fingerprint_to_dir(const char *fp, authdir_config_t *list,
   tor_strstrip(fingerprint, " ");
   if (base16_decode(d, DIGEST_LEN,
                     fingerprint, strlen(fingerprint)) != DIGEST_LEN) {
-    log_warn(LD_DIRSERV, "Couldn't decode fingerprint \"%s\"",
-             escaped(fp));
     tor_free(fingerprint);
     return -1;
   }
@@ -141,7 +139,6 @@ add_ed25519_to_dir(const ed25519_public_key_t *edkey, authdir_config_t *list,
   if (ed25519_validate_pubkey(edkey) < 0) {
     char ed25519_base64_key[ED25519_BASE64_LEN+1];
     ed25519_public_to_base64(ed25519_base64_key, edkey);
-    log_warn(LD_DIRSERV, "Invalid ed25519 key \"%s\"", ed25519_base64_key);
     return -1;
   }
 
@@ -221,49 +218,30 @@ dirserv_load_fingerprint_file(void)
         add_status = FP_INVALID;
     }
 
-    /* Check fingerprint type by key length, and if it's RSA or ed25519. */
-    int is_ed25519 = (strlen(fingerprint) == BASE64_DIGEST256_LEN);
-    int is_rsa = (strlen(fingerprint) == HEX_DIGEST_LEN);
-    bool is_valid_fpr = true;
+    /* Check if fingerprint is RSA or ed25519 by verifying it. */
+    int ed25519_not_ok, rsa_not_ok;
 
-    /* We only accept ed25519 or RSA keys */
-    if (!is_ed25519 && !is_rsa) {
-      is_valid_fpr = false;
+    /* Attempt to add the RSA key. */
+    rsa_not_ok = add_rsa_fingerprint_to_dir(fingerprint, fingerprint_list_new,
+                                            add_status);
 
-      log_notice(LD_CONFIG, "Unrecognized fingerprint type (nickname '%s', "
-                 "fingerprint %s). Skipping.", nickname, fingerprint);
-      continue;
-    }
-
-    /* Decode ed25519 keys */
+    /* Check ed25519 key. We check the size to prevent buffer overflows.
+     * If valid, attempt to add it, */
     ed25519_public_key_t ed25519_pubkey_tmp;
-    if (is_ed25519 && digest256_from_base64((char *) ed25519_pubkey_tmp.pubkey,
-                                            fingerprint) < 0) {
-      is_valid_fpr = false;
-    }
-
-    /* Decode RSA keys */
-    char digest_tmp[DIGEST_LEN];
-    if (is_rsa &&
-        base16_decode(digest_tmp, sizeof(digest_tmp), fingerprint,
-                      HEX_DIGEST_LEN) != sizeof(digest_tmp)) {
-      is_valid_fpr = false;
+    if (strlen(fingerprint) == BASE64_DIGEST256_LEN &&
+        digest256_from_base64((char *) ed25519_pubkey_tmp.pubkey,
+                              fingerprint)) {
+      ed25519_not_ok = add_ed25519_to_dir(&ed25519_pubkey_tmp,
+                                          fingerprint_list_new, add_status);
+    } else {
+      ed25519_not_ok = -1;
     }
 
     /* If this is not a valid key, log and skip */
-    if (!is_valid_fpr) {
-      log_notice(LD_CONFIG, "Invalid fingerprint (nickname '%s', "
-                 "fingerprint %s). Skipping.", nickname, fingerprint);
+    if (ed25519_not_ok && rsa_not_ok) {
+      log_warn(LD_CONFIG, "Invalid fingerprint (nickname '%s', "
+               "fingerprint %s). Skipping.", nickname, fingerprint);
       continue;
-    }
-
-    /* It's a valid key, register it. */
-    if (is_ed25519) {
-      add_ed25519_to_dir(&ed25519_pubkey_tmp,
-                         fingerprint_list_new, add_status);
-    } else if (is_rsa) {
-      add_rsa_fingerprint_to_dir(fingerprint, fingerprint_list_new,
-                                 add_status);
     }
   }
 
