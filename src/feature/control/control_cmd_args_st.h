@@ -6,7 +6,7 @@
 
 /**
  * \file control_cmd_args_st.h
- * \brief Definition for contron_cmd_args_t
+ * \brief Definition for control_cmd_args_t
  **/
 
 #ifndef TOR_CONTROL_CMD_ST_H
