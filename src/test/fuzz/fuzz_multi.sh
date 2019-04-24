@@ -1,3 +1,5 @@
+#!/bin/sh
+
 MEMLIMIT_BYTES=21990500990976
 
 N_CPUS=1
@@ -6,9 +8,9 @@ if [ $# -ge 1 ]; then
     shift
 fi
 
-FILTER=echo
+FILTER="echo"
 
-for i in `seq -w "$N_CPUS"`; do
+for i in $(seq -w "$N_CPUS"); do
     if [ "$i" -eq 1 ]; then
         if [ "$N_CPUS" -eq 1 ]; then
             INSTANCE=""
