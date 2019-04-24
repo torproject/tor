@@ -277,8 +277,8 @@ peek_connection_has_http_command(connection_t *conn)
 
 /**
  * Helper: take a nul-terminated command of given length, and find where the
- * command starts and the argument begins.  Separate them; allocate a new
- * string in <b>current_cmd_out</b> for the command, and and return a pointer
+ * command starts and the arguments begin.  Separate them, allocate a new
+ * string in <b>current_cmd_out</b> for the command, and return a pointer
  * to the arguments.
  **/
 STATIC char *
