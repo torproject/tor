@@ -113,6 +113,38 @@ string_array_contains_keyword(const char **array, const char *kwd)
   return false;
 }
 
+/** Helper for argument parsing: check wither the keyword arguments just
+ * parsed in <b>result</b> were well-formed according to <b>syntax</b>.
+ *
+ * On success, return 0.  On failure, return -1 and set *<b>error_out</b>
+ * to a newly allocated error string.
+ **/
+static int
+kvline_check_keyword_args(const control_cmd_args_t *result,
+                          const control_cmd_syntax_t *syntax,
+                          char **error_out)
+{
+  if (result->kwargs == NULL) {
+    tor_asprintf(error_out, "Cannot parse keyword argument(s)");
+    return -1;
+  }
+
+  if (syntax->allowed_keywords) {
+    /* Check for unpermitted arguments */
+    const config_line_t *line;
+    for (line = result->kwargs; line; line = line->next) {
+      if (! string_array_contains_keyword(syntax->allowed_keywords,
+                                          line->key)) {
+        tor_asprintf(error_out, "Unrecognized keyword argument %s",
+                     escaped(line->key));
+        return -1;
+      }
+    }
+  }
+
+  return 0;
+}
+
 /**
  * Helper: parse the arguments to a command according to <b>syntax</b>.  On
  * success, set *<b>error_out</b> to NULL and return a newly allocated
@@ -174,26 +206,16 @@ control_cmd_parse_args(const char *command,
   }
 
   if (n_args > syntax->max_args) {
+    /* We have extra arguments after the positional arguments, and we didn't
+       treat them as an error, so they must count as keyword arguments: Either
+       K=V pairs, or flags, or both. */
     tor_assert(n_args == syntax->max_args + 1);
     tor_assert(syntax->accept_keywords);
     char *remainder = smartlist_pop_last(result->args);
     result->kwargs = kvline_parse(remainder, syntax->kvline_flags);
     tor_free(remainder);
-    if (result->kwargs == NULL) {
-      tor_asprintf(error_out, "Cannot parse keyword argument(s)");
+    if (kvline_check_keyword_args(result, syntax, error_out) < 0) {
       goto err;
-    }
-    if (syntax->allowed_keywords) {
-      /* Check for unpermitted arguments */
-      const config_line_t *line;
-      for (line = result->kwargs; line; line = line->next) {
-        if (! string_array_contains_keyword(syntax->allowed_keywords,
-                                            line->key)) {
-          tor_asprintf(error_out, "Unrecognized keyword argument %s",
-                       escaped(line->key));
-          goto err;
-        }
-      }
     }
   }
 
