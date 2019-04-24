@@ -19,8 +19,8 @@ struct authdir_config_t;
 /** Target of status_by_digest map. */
 typedef uint32_t router_status_t;
 
-int add_fingerprint_to_dir(const char *fp, struct authdir_config_t *list,
-                           router_status_t add_status);
+int add_rsa_fingerprint_to_dir(const char *fp, struct authdir_config_t *list,
+                               router_status_t add_status);
 
 int add_ed25519_to_dir(const ed25519_public_key_t *edkey,
                        struct authdir_config_t *list,

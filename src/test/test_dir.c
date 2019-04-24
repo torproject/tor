@@ -6490,13 +6490,13 @@ test_dir_add_fingerprint(void *arg)
   setup_capture_of_logs(LOG_WARN);
 
   /* RSA test - successful */
-  ret = add_fingerprint_to_dir("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-                               list, 0);
+  ret = add_rsa_fingerprint_to_dir("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                                   list, 0);
   tt_int_op(ret, OP_EQ, 0);
 
   /* RSA test - failure */
-  ret = add_fingerprint_to_dir("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
-                               list, 0);
+  ret = add_rsa_fingerprint_to_dir("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+                                   list, 0);
   tt_int_op(ret, OP_EQ, -1);
   expect_log_msg_containing("Couldn\'t decode fingerprint");
 

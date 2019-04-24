@@ -95,8 +95,8 @@ authdir_return_fingerprint_list(void)
  * Return -1 if we were unable to decode the key, else return 0.
  */
 int
-add_fingerprint_to_dir(const char *fp, authdir_config_t *list,
-                       router_status_t add_status)
+add_rsa_fingerprint_to_dir(const char *fp, authdir_config_t *list,
+                           router_status_t add_status)
 {
   char *fingerprint;
   char d[DIGEST_LEN];
@@ -167,7 +167,7 @@ dirserv_add_own_fingerprint(crypto_pk_t *pk)
   }
   if (!fingerprint_list)
     fingerprint_list = authdir_config_new();
-  add_fingerprint_to_dir(fp, fingerprint_list, 0);
+  add_rsa_fingerprint_to_dir(fp, fingerprint_list, 0);
   return 0;
 }
 
@@ -262,7 +262,8 @@ dirserv_load_fingerprint_file(void)
       add_ed25519_to_dir(&ed25519_pubkey_tmp,
                          fingerprint_list_new, add_status);
     } else if (is_rsa) {
-      add_fingerprint_to_dir(fingerprint, fingerprint_list_new, add_status);
+      add_rsa_fingerprint_to_dir(fingerprint, fingerprint_list_new,
+                                 add_status);
     }
   }
 
