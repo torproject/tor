@@ -286,6 +286,29 @@ send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
   return 0;
 }
 
+/*
+ * Public API
+ */
+
+/** Return true iff the next cell for the given cell window is expected to be
+ * a SENDME.
+ *
+ * We are able to know that because the package or deliver window value minus
+ * one cell (the possible SENDME cell) should be a multiple of the increment
+ * window value. */
+bool
+sendme_circuit_is_next_cell(int window)
+{
+  /* Is this the last cell before a SENDME? The idea is that if the package or
+   * deliver window reaches a multiple of the increment, after this cell, we
+   * should expect a SENDME. */
+  if (((window - 1) % CIRCWINDOW_INCREMENT) != 0) {
+    return false;
+  }
+  /* Next cell is expected to be a SENDME. */
+  return true;
+}
+
 /** Called when we've just received a relay data cell, when we've just
  * finished flushing all bytes to stream <b>conn</b>, or when we've flushed
  * *some* bytes to the stream <b>conn</b>.
@@ -550,7 +573,7 @@ sendme_note_cell_digest(circuit_t *circ)
   /* Is this the last cell before a SENDME? The idea is that if the
    * package_window reaches a multiple of the increment, after this cell, we
    * should expect a SENDME. */
-  if (((circ->package_window - 1) % CIRCWINDOW_INCREMENT) != 0) {
+  if (!sendme_circuit_is_next_cell(circ->package_window)) {
     return;
   }
 
