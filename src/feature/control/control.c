@@ -297,6 +297,8 @@ control_split_incoming_command(char *incoming_cmd,
   tor_assert(*data_len>=cmd_len);
   *data_len -= cmd_len;
   if (is_multiline) {
+    // Only match horizontal space: any line after the first is data,
+    // not arguments.
     while ((*args == '\t' || *args == ' ') && *data_len) {
       ++args;
       --*data_len;
