@@ -36,13 +36,13 @@ struct control_cmd_args_t {
    **/
   struct config_line_t *kwargs;
   /**
-   * Number of bytes in <b>object</b>; 0 if <b>object</b> is not set.
+   * Number of bytes in <b>cmddata</b>; 0 if <b>cmddata</b> is not set.
    **/
-  size_t object_len;
+  size_t cmddata_len;
   /**
    * A multiline object passed with this command.
    **/
-  char *object;
+  char *cmddata;
   /**
    * If set, a nul-terminated string containing the raw unparsed arguments.
    **/

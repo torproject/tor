@@ -76,7 +76,7 @@ control_cmd_args_free_(control_cmd_args_t *args)
     smartlist_free(args->args);
   }
   config_free_lines(args->kwargs);
-  tor_free(args->object);
+  tor_free(args->cmddata);
 
   tor_free(args);
 }
@@ -95,8 +95,8 @@ control_cmd_args_wipe(control_cmd_args_t *args)
     memwipe(line->key, 0, strlen(line->key));
     memwipe(line->value, 0, strlen(line->value));
   }
-  if (args->object)
-    memwipe(args->object, 0, args->object_len);
+  if (args->cmddata)
+    memwipe(args->cmddata, 0, args->cmddata_len);
 }
 
 /**
@@ -140,7 +140,7 @@ control_cmd_parse_args(const char *command,
   }
 
   const char *eol = memchr(body, '\n', body_len);
-  if (syntax->want_object) {
+  if (syntax->want_cmddata) {
     if (! eol || (eol+1) == body+body_len) {
       *error_out = tor_strdup("Empty body");
       goto err;
@@ -148,8 +148,8 @@ control_cmd_parse_args(const char *command,
     cmdline_alloc = tor_memdup_nulterm(body, eol-body);
     cmdline = cmdline_alloc;
     ++eol;
-    result->object_len = read_escaped_data(eol, (body+body_len)-eol,
-                                           &result->object);
+    result->cmddata_len = read_escaped_data(eol, (body+body_len)-eol,
+                                           &result->cmddata);
   } else {
     if (eol && (eol+1) != body+body_len) {
       *error_out = tor_strdup("Unexpected body");
@@ -320,7 +320,7 @@ handle_control_getconf(control_connection_t *conn,
 }
 
 static const control_cmd_syntax_t loadconf_syntax = {
-  .want_object = true
+  .want_cmddata = true
 };
 
 /** Called when we get a +LOADCONF message. */
@@ -332,7 +332,7 @@ handle_control_loadconf(control_connection_t *conn,
   char *errstring = NULL;
   const char *msg = NULL;
 
-  retval = options_init_from_string(NULL, args->object,
+  retval = options_init_from_string(NULL, args->cmddata,
                                     CMD_RUN_TOR, NULL, &errstring);
 
   if (retval != SETOPT_OK)
@@ -1013,7 +1013,7 @@ static const control_cmd_syntax_t postdescriptor_syntax = {
   .max_args = 0,
   .accept_keywords = true,
   .allowed_keywords = postdescriptor_keywords,
-  .want_object = true,
+  .want_cmddata = true,
 };
 
 /** Called when we get a POSTDESCRIPTOR message.  Try to learn the provided
@@ -1047,7 +1047,7 @@ handle_control_postdescriptor(control_connection_t *conn,
     }
   }
 
-  switch (router_load_single_router(args->object, purpose, cache, &msg)) {
+  switch (router_load_single_router(args->cmddata, purpose, cache, &msg)) {
   case -1:
     if (!msg) msg = "Could not parse descriptor";
     connection_printf_to_buf(conn, "554 %s\r\n", msg);
@@ -1366,7 +1366,7 @@ static const control_cmd_syntax_t hsfetch_syntax = {
   .min_args = 1, .max_args = 1,
   .accept_keywords = true,
   .allowed_keywords = hsfetch_keywords,
-  .want_object = true,
+  .want_cmddata = true,
 };
 
 /** Implementation for the HSFETCH command. */
@@ -1420,7 +1420,7 @@ handle_control_hsfetch(control_connection_t *conn,
         goto done;
       }
       if (!hsdirs) {
-        /* Stores routerstatus_t object for each specified server. */
+        /* Stores routerstatus_t cmddata for each specified server. */
         hsdirs = smartlist_new();
       }
       /* Valid server, add it to our local list. */
@@ -1473,7 +1473,7 @@ static const char *hspost_keywords[] = {
 static const control_cmd_syntax_t hspost_syntax = {
   .min_args = 0, .max_args = 0,
   .accept_keywords = true,
-  .want_object = true,
+  .want_cmddata = true,
   .allowed_keywords = hspost_keywords
 };
 
@@ -1483,8 +1483,8 @@ handle_control_hspost(control_connection_t *conn,
                       const control_cmd_args_t *args)
 {
   smartlist_t *hs_dirs = NULL;
-  const char *encoded_desc = args->object;
-  size_t encoded_desc_len = args->object_len;
+  const char *encoded_desc = args->cmddata;
+  size_t encoded_desc_len = args->cmddata_len;
   const char *onion_address = NULL;
   const config_line_t *line;
 

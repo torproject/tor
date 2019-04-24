@@ -56,9 +56,9 @@ control_cmd_dump_args(const control_cmd_args_t *result)
     } SMARTLIST_FOREACH_END(s);
   }
   buf_add_string(buf, "]");
-  if (result->object) {
+  if (result->cmddata) {
     buf_add_string(buf, ", obj=");
-    buf_add_string(buf, escaped(result->object));
+    buf_add_string(buf, escaped(result->cmddata));
   }
   if (result->kwargs) {
     buf_add_string(buf, ", { ");
@@ -160,7 +160,7 @@ static const parser_testcase_t no_args_one_obj_tests[] = {
 };
 static const control_cmd_syntax_t no_args_one_obj_syntax = {
    .min_args=0, .max_args=0,
-   .want_object=true,
+   .want_cmddata=true,
 };
 static const parse_test_params_t parse_no_args_one_obj_params =
   TESTPARAMS( no_args_one_obj_syntax, no_args_one_obj_tests );
