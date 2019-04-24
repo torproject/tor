@@ -12,7 +12,7 @@ cd "$workdir" || exit 1
 
 set -e
 
-if [ ! -z "ls ./changes/*" ]; then
+if [ -n "$(ls ./changes/)" ]; then
     python scripts/maint/lintChanges.py ./changes/*
 fi
 
@@ -26,7 +26,7 @@ if [ -d src/lib ]; then
          src/test/*.[ch] \
          src/test/*/*.[ch] \
          src/tools/*.[ch]
-elif [ -d src/common]; then
+elif [ -d src/common ]; then
     # This was the layout before 0.3.5
     perl scripts/maint/checkSpace.pl -C \
          src/common/*/*.[ch] \
