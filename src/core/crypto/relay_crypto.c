@@ -12,6 +12,7 @@
 #include "core/crypto/hs_ntor.h" // for HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN
 #include "core/or/relay.h"
 #include "core/crypto/relay_crypto.h"
+#include "core/or/sendme.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/or_circuit_st.h"
@@ -142,10 +143,11 @@ relay_decrypt_cell(circuit_t *circ, cell_t *cell,
           if (relay_digest_matches(thishop->crypto.b_digest, cell)) {
             *recognized = 1;
             *layer_hint = thishop;
-            /* Keep current digest of this cell for the possible SENDME. */
-            crypto_digest_get_digest(thishop->crypto.b_digest,
-                                     (char *) thishop->crypto.sendme_digest,
-                                     sizeof(thishop->crypto.sendme_digest));
+            /* This cell is for us. Keep a record of this cell because we will
+             * use it in the next SENDME cell. */
+            if (sendme_circuit_is_next_cell(thishop->deliver_window)) {
+              sendme_circuit_note_inbound_cell(thishop);
+            }
             return 0;
           }
         }
@@ -216,10 +218,13 @@ relay_encrypt_cell_inbound(cell_t *cell,
                            or_circuit_t *or_circ)
 {
   relay_set_digest(or_circ->crypto.b_digest, cell);
-  /* Keep a record of this cell, we might use it for validating the SENDME. */
-  crypto_digest_get_digest(or_circ->crypto.b_digest,
-                           (char *) or_circ->crypto.sendme_digest,
-                           sizeof(or_circ->crypto.sendme_digest));
+
+  /* We are about to send this cell outbound on the circuit. Keep a record of
+   * this cell if we are expecting that the next cell is a SENDME. */
+  if (sendme_circuit_is_next_cell(TO_CIRCUIT(or_circ)->package_window)) {
+    sendme_circuit_note_outbound_cell(or_circ);
+  }
+
   /* encrypt one layer */
   relay_crypt_one_payload(or_circ->crypto.b_crypto, cell->payload);
 }
