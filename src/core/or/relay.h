@@ -120,6 +120,7 @@ STATIC int cell_queues_check_size(void);
 STATIC int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                    edge_connection_t *conn,
                                    crypt_path_t *layer_hint);
+STATIC size_t get_pad_cell_offset(size_t payload_len);
 
 #endif /* defined(RELAY_PRIVATE) */
 
