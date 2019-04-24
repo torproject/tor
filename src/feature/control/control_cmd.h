@@ -64,7 +64,7 @@ typedef struct control_cmd_syntax_t {
   /**
    * True iff this command wants to be followed by a multiline object.
    **/
-  bool want_object;
+  bool want_cmddata;
   /**
    * True iff this command needs access to the raw body of the input.
    *
