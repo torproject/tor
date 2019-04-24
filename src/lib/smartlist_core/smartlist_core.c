@@ -177,6 +177,8 @@ smartlist_remove_keeporder(smartlist_t *sl, const void *element)
       sl->list[i++] = sl->list[j];
     }
   }
+  memset(sl->list + sl->num_used, 0,
+         sizeof(void *) * (num_used_orig - sl->num_used));
 }
 
 /** If <b>sl</b> is nonempty, remove and return the final element.  Otherwise,
