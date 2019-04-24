@@ -287,5 +287,5 @@ problem function-size /src/lib/tls/tortls_openssl.c:tor_tls_context_new() 171
 problem function-size /src/lib/tls/x509_nss.c:tor_tls_create_certificate_internal() 126
 problem function-size /src/tools/tor-gencert.c:parse_commandline() 111
 problem function-size /src/tools/tor-resolve.c:build_socks5_resolve_request() 104
-problem function-size /src/tools/tor-resolve.c:do_resolve() 173
+problem function-size /src/tools/tor-resolve.c:do_resolve() 175
 problem function-size /src/tools/tor-resolve.c:main() 112
