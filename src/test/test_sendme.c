@@ -6,11 +6,13 @@
 #define CIRCUITLIST_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define SENDME_PRIVATE
+#define RELAY_PRIVATE
 
 #include "core/or/circuit_st.h"
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
 #include "core/or/circuitlist.h"
+#include "core/or/relay.h"
 #include "core/or/sendme.h"
 
 #include "feature/nodelist/networkstatus.h"
@@ -209,12 +211,56 @@ test_v1_build_cell(void *arg)
   circuit_free_(circ);
 }
 
+static void
+test_cell_payload_pad(void *arg)
+{
+  size_t pad_offset, payload_len, expected_offset;
+
+  (void) arg;
+
+  /* Offset should be 0, not enough room for padding. */
+  payload_len = RELAY_PAYLOAD_SIZE;
+  pad_offset = get_pad_cell_offset(payload_len);
+  tt_int_op(pad_offset, OP_EQ, 0);
+  tt_int_op(CELL_PAYLOAD_SIZE - pad_offset, OP_LE, CELL_PAYLOAD_SIZE);
+
+  /* Still no room because we keep 4 extra bytes. */
+  pad_offset = get_pad_cell_offset(payload_len - 4);
+  tt_int_op(pad_offset, OP_EQ, 0);
+  tt_int_op(CELL_PAYLOAD_SIZE - pad_offset, OP_LE, CELL_PAYLOAD_SIZE);
+
+  /* We should have 1 byte of padding. Meaning, the offset should be the
+   * CELL_PAYLOAD_SIZE minus 1 byte. */
+  expected_offset = CELL_PAYLOAD_SIZE - 1;
+  pad_offset = get_pad_cell_offset(payload_len - 5);
+  tt_int_op(pad_offset, OP_EQ, expected_offset);
+  tt_int_op(CELL_PAYLOAD_SIZE - pad_offset, OP_LE, CELL_PAYLOAD_SIZE);
+
+  /* Now some arbitrary small payload length. The cell size is header + 10 +
+   * extra 4 bytes we keep so the offset should be there. */
+  expected_offset = RELAY_HEADER_SIZE + 10 + 4;
+  pad_offset = get_pad_cell_offset(10);
+  tt_int_op(pad_offset, OP_EQ, expected_offset);
+  tt_int_op(CELL_PAYLOAD_SIZE - pad_offset, OP_LE, CELL_PAYLOAD_SIZE);
+
+  /* Data length of 0. */
+  expected_offset = RELAY_HEADER_SIZE + 4;
+  pad_offset = get_pad_cell_offset(0);
+  tt_int_op(pad_offset, OP_EQ, expected_offset);
+  tt_int_op(CELL_PAYLOAD_SIZE - pad_offset, OP_LE, CELL_PAYLOAD_SIZE);
+
+ done:
+  ;
+}
+
 struct testcase_t sendme_tests[] = {
   { "v1_note_digest", test_v1_note_digest, TT_FORK,
     NULL, NULL },
   { "v1_consensus_params", test_v1_consensus_params, TT_FORK,
     NULL, NULL },
   { "v1_build_cell", test_v1_build_cell, TT_FORK,
+    NULL, NULL },
+  { "cell_payload_pad", test_cell_payload_pad, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES
