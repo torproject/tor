@@ -286,9 +286,36 @@ send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
   return 0;
 }
 
+/* Put the crypto.b_digest in the sendme_digest. */
+static void
+note_cell_digest(const relay_crypto_t *crypto)
+{
+  tor_assert(crypto);
+  crypto_digest_get_digest(crypto->b_digest, (char *) crypto->sendme_digest,
+                           sizeof(crypto->sendme_digest));
+}
+
 /*
  * Public API
  */
+
+/** Keep the current inbound cell digest for the next SENDME digest. This part
+ * is only done by the client as the circuit came back from the Exit. */
+void
+sendme_circuit_note_outbound_cell(or_circuit_t *or_circ)
+{
+  tor_assert(or_circ);
+  note_cell_digest(&or_circ->crypto);
+}
+
+/** Keep the current inbound cell digest for the next SENDME digest. This part
+ * is only done by the client as the circuit came back from the Exit. */
+void
+sendme_circuit_note_inbound_cell(crypt_path_t *cpath)
+{
+  tor_assert(cpath);
+  note_cell_digest(&cpath->crypto);
+}
 
 /** Return true iff the next cell for the given cell window is expected to be
  * a SENDME.
