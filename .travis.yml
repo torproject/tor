@@ -43,7 +43,7 @@ env:
     - RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
 
 matrix:
-  ## include creates builds with gcc, linux, sudo: false
+  ## include creates builds with gcc, linux
   include:
     ## We include a single coverage build with the best options for coverage
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
@@ -72,12 +72,6 @@ matrix:
   ## allow failures by env:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
   exclude:
-    ## Clang doesn't work in containerized builds, see below.
-    - compiler: clang
-      sudo: false
-    ## Non-containerized gcc are slow and redundant.
-    - compiler: gcc
-      sudo: required
     ## gcc on OSX is less useful, because the default compiler is clang.
     - compiler: gcc
       os: osx
@@ -92,20 +86,6 @@ matrix:
       os: linux
       ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
       env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
-
-## We don't need sudo. (The "apt:" stanza after this allows us to not need
-## sudo; otherwise, we would need it for getting dependencies.)
-##
-## But we use "sudo: required" to force non-containerized builds, working
-## around a Travis CI environment issue: clang LeakAnalyzer fails
-## because it requires ptrace and the containerized environment no
-## longer allows ptrace.
-## https://github.com/travis-ci/travis-ci/issues/9033
-##
-## In the matrix above, we exclude redundant combinations.
-sudo:
-  - false
-  - required
 
 ## (Linux only) Use the latest Linux image (Ubuntu Trusty)
 dist: trusty
