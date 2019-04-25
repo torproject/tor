@@ -749,7 +749,9 @@ extern smartlist_t *relay_padding_machines;
 STATIC void
 register_padding_machine(circpad_machine_spec_t *machine,
                          smartlist_t *machine_list);
-#endif
+STATIC bool
+circpad_machine_conditions_apply_probability(origin_circuit_t *circ,
+        const circpad_machine_spec_t *machine);
 
 #endif
 

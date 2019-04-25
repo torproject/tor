@@ -172,6 +172,14 @@ free_fake_origin_circuit(origin_circuit_t *circ)
   tor_free(circ);
 }
 
+int random_number = 4;
+void
+crypto_rand_mocked(char *to, size_t len)
+{
+  tor_assert(len == sizeof(int));
+  *(int *)to = random_number;
+}
+
 void dummy_nop_timer(void);
 
 //static int dont_stop_libevent = 0;
@@ -1779,6 +1787,12 @@ test_circuitpadding_conditions(void *arg)
        circuit_package_relay_cell_mock);
   MOCK(node_get_by_id,
        node_get_by_id_mock);
+  MOCK(crypto_rand,
+       crypto_rand_mocked);
+
+  /* Test probability-to-apply machine condition */
+  tt_int_op(circpad_machine_conditions_met(client_side,
+            circ_padding_machine), OP_EQ, 1); 
 
   /* Simulate extend. This should result in the original machine getting
    * added, since the circuit is not built */

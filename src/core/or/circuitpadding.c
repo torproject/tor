@@ -1615,9 +1615,50 @@ circpad_internal_event_state_length_up(circpad_machine_runtime_t *mi)
 }
 
 /**
+ * Check if a circuit padding machine should toss a coin before applying.
+ *
+ * This function assumes the machine would otherwise apply. So it only
+ * returns 0 if we lose the coin toss. If the machine conditions do not
+ * specify an apply probability, then the machine always applies at this point,
+ * so we return 1.
+ */
+STATIC bool
+circpad_machine_conditions_apply_probability(origin_circuit_t *circ,
+        const circpad_machine_spec_t *machine)
+{
+  /* Check if we have a probability-based condition, and if we've tossed
+   * the coin yet. Do this last, because we only get to toss one coin per
+   * circuit.. We should only toss it if all conditions already applied. */
+  if (machine->conditions.apply_with_probability > 0) {
+    /* If the coin has not been tossed, toss it and record result */
+    if (circ->padding_apply_coin_tossed == PADDING_COIN_NOT_CHECKED) {
+      if (crypto_rand_double() <= machine->conditions.apply_with_probability) {
+        circ->padding_apply_coin_tossed = PADDING_COIN_APPLIED;
+        return 1;
+      } else {
+        circ->padding_apply_coin_tossed = PADDING_COIN_NOT_APPLIED;
+        return 0;
+      }
+    } else if (circ->padding_apply_coin_tossed == PADDING_COIN_APPLIED) {
+      /* We did our coin toss before and won; this machine still applies. */
+      return 1;
+    }
+
+    /* We previously lost the coin toss; this machine does not apply. */
+    tor_assert_nonfatal(circ->padding_apply_coin_tossed ==
+                        PADDING_COIN_NOT_APPLIED);
+    return 0;
+  }
+
+  /* If apply_with_probability is <= 0 (aka not set), it is the same as
+   * "always apply if other conditions are met" */
+  return 1;
+}
+
+/**
  * Returns true if the circuit matches the conditions.
  */
-static inline bool
+STATIC bool
 circpad_machine_conditions_met(origin_circuit_t *circ,
                                const circpad_machine_spec_t *machine)
 {
@@ -1644,29 +1685,8 @@ circpad_machine_conditions_met(origin_circuit_t *circ,
   if (circuit_get_cpath_opened_len(circ) < machine->conditions.min_hops)
     return 0;
 
-  /* Check if we have a probability-based condition, and if we've tossed
-   * the coin yet. Do this last, because we only get to toss one coin per
-   * circuit.. We should only toss it if all conditions already applied. */
-  if (machine->conditions.apply_with_probability > 0) {
-    /* If the coin has not been tossed, toss it and record result */
-    if (circ->padding_apply_coin_tossed == PADDING_COIN_NOT_CHECKED) {
-      if (crypto_rand_double() <= machine->conditions.apply_with_probability) {
-        circ->padding_apply_coin_tossed = PADDING_COIN_APPLIED;
-        return 1;
-      } else {
-        circ->padding_apply_coin_tossed = PADDING_COIN_NOT_APPLIED;
-        return 0;
-      }
-    } else if (circ->padding_apply_coin_tossed == PADDING_COIN_APPLIED) {
-      /* We did our coin toss before and won; this machine still applies. */
-      return 1;
-    }
-
-    /* We previously lost the coin toss; this machine does not apply. */
-    tor_assert_nonfatal(circ->padding_apply_coin_tossed ==
-                        PADDING_COIN_NOT_APPLIED);
+  if (!circpad_machine_conditions_apply_probability(circ, machine))
     return 0;
-  }
 
   return 1;
 }
