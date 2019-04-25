@@ -124,7 +124,7 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
                            long cache_lifetime)
 {
   char date[RFC1123_TIME_LEN+1];
-  time_t now = time(NULL);
+  time_t now = approx_time();
   buf_t *buf = buf_new_with_capacity(1024);
 
   tor_assert(conn);
