@@ -125,7 +125,6 @@ tor_free_all(int postfork)
   }
   geoip_free_all();
   geoip_stats_free_all();
-  dirvote_free_all();
   routerlist_free_all();
   networkstatus_free_all();
   addressmap_free_all();
