@@ -18,7 +18,6 @@
 #include "app/main/shutdown.h"
 #include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
-#include "core/mainloop/mainloop.h"
 #include "core/mainloop/mainloop_pubsub.h"
 #include "core/or/channeltls.h"
 #include "core/or/circuitlist.h"
@@ -176,7 +175,6 @@ tor_free_all(int postfork)
   /* stuff in main.c */
 
   tor_mainloop_disconnect_pubsub();
-  tor_mainloop_free_all();
 
   if (!postfork) {
     release_lockfile();

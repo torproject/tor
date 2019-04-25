@@ -90,6 +90,7 @@ void mainloop_schedule_shutdown(int delay_sec);
 
 void tor_init_connection_lists(void);
 void initialize_mainloop_events(void);
+void initialize_periodic_events(void);
 void tor_mainloop_free_all(void);
 
 struct token_bucket_rw_t;
@@ -102,7 +103,6 @@ extern struct token_bucket_rw_t global_relayed_bucket;
 #ifdef MAINLOOP_PRIVATE
 STATIC int run_main_loop_until_done(void);
 STATIC void close_closeable_connections(void);
-STATIC void initialize_periodic_events(void);
 STATIC void teardown_periodic_events(void);
 STATIC int get_my_roles(const or_options_t *);
 STATIC int check_network_participation_callback(time_t now,

@@ -1550,7 +1550,7 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
 
 /** Set up all the members of mainloop_periodic_events[], and configure them
  * all to be launched from a callback. */
-STATIC void
+void
 initialize_periodic_events(void)
 {
   if (periodic_events_initialized)
@@ -1563,7 +1563,6 @@ initialize_periodic_events(void)
   }
 
   /* Set up all periodic events. We'll launch them by roles. */
-  periodic_events_setup_all();
 
 #define NAMED_CALLBACK(name) \
   STMT_BEGIN name ## _event = periodic_events_find( #name ); STMT_END
@@ -1575,12 +1574,6 @@ initialize_periodic_events(void)
   NAMED_CALLBACK(launch_descriptor_fetches);
   NAMED_CALLBACK(check_dns_honesty);
   NAMED_CALLBACK(save_state);
-
-  struct timeval one_second = { 1, 0 };
-  initialize_periodic_events_event = tor_evtimer_new(
-                  tor_libevent_get_base(),
-                  initialize_periodic_events_cb, NULL);
-  event_add(initialize_periodic_events_event, &one_second);
 }
 
 STATIC void
@@ -2778,6 +2771,13 @@ do_main_loop(void)
    */
   initialize_periodic_events();
   initialize_mainloop_events();
+  periodic_events_setup_all();
+
+  struct timeval one_second = { 1, 0 };
+  initialize_periodic_events_event = tor_evtimer_new(
+                  tor_libevent_get_base(),
+                  initialize_periodic_events_cb, NULL);
+  event_add(initialize_periodic_events_event, &one_second);
 
 #ifdef HAVE_SYSTEMD_209
   uint64_t watchdog_delay;
