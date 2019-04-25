@@ -113,7 +113,7 @@ string_array_contains_keyword(const char **array, const char *kwd)
   return false;
 }
 
-/** Helper for argument parsing: check wither the keyword arguments just
+/** Helper for argument parsing: check whether the keyword arguments just
  * parsed in <b>result</b> were well-formed according to <b>syntax</b>.
  *
  * On success, return 0.  On failure, return -1 and set *<b>error_out</b>
