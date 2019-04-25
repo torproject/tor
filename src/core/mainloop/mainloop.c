@@ -75,7 +75,6 @@
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
-#include "feature/dirauth/reachability.h"
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
@@ -105,9 +104,6 @@
 #include "lib/evloop/compat_libevent.h"
 
 #include <event2/event.h>
-
-#include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/authmode.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/entry_connection_st.h"
@@ -1346,7 +1342,6 @@ static int periodic_events_initialized = 0;
 #define CALLBACK(name) \
   static int name ## _callback(time_t, const or_options_t *)
 CALLBACK(add_entropy);
-CALLBACK(check_authority_cert);
 CALLBACK(check_canonical_channels);
 CALLBACK(check_descriptor);
 CALLBACK(check_dns_honesty);
@@ -1356,14 +1351,11 @@ CALLBACK(check_for_reachability_bw);
 CALLBACK(check_onion_keys_expiry_time);
 CALLBACK(clean_caches);
 CALLBACK(clean_consdiffmgr);
-CALLBACK(dirvote);
-CALLBACK(downrate_stability);
 CALLBACK(expire_old_ciruits_serverside);
 CALLBACK(fetch_networkstatus);
 CALLBACK(heartbeat);
 CALLBACK(hs_service);
 CALLBACK(launch_descriptor_fetches);
-CALLBACK(launch_reachability_tests);
 CALLBACK(prune_old_routers);
 CALLBACK(reachability_warnings);
 CALLBACK(record_bridge_stats);
@@ -1373,7 +1365,6 @@ CALLBACK(retry_dns);
 CALLBACK(retry_listeners);
 CALLBACK(rotate_onion_key);
 CALLBACK(rotate_x509_certificate);
-CALLBACK(save_stability);
 CALLBACK(save_state);
 CALLBACK(write_bridge_ns);
 CALLBACK(write_stats_file);
@@ -1428,15 +1419,6 @@ STATIC periodic_event_item_t mainloop_periodic_events[] = {
   CALLBACK(retry_dns, ROUTER, 0),
   CALLBACK(rotate_onion_key, ROUTER, 0),
 
-  /* Authorities (bridge and directory) only. */
-  CALLBACK(downrate_stability, AUTHORITIES, 0),
-  CALLBACK(launch_reachability_tests, AUTHORITIES, FL(NEED_NET)),
-  CALLBACK(save_stability, AUTHORITIES, 0),
-
-  /* Directory authority only. */
-  CALLBACK(check_authority_cert, DIRAUTH, 0),
-  CALLBACK(dirvote, DIRAUTH, FL(NEED_NET)),
-
   /* Relay only. */
   CALLBACK(check_canonical_channels, RELAY, FL(NEED_NET)),
   CALLBACK(check_dns_honesty, RELAY, FL(NEED_NET)),
@@ -1470,7 +1452,6 @@ STATIC periodic_event_item_t mainloop_periodic_events[] = {
  * can access them by name.  We also keep them inside periodic_events[]
  * so that we can implement "reset all timers" in a reasonable way. */
 static periodic_event_item_t *check_descriptor_event=NULL;
-static periodic_event_item_t *dirvote_event=NULL;
 static periodic_event_item_t *fetch_networkstatus_event=NULL;
 static periodic_event_item_t *launch_descriptor_fetches_event=NULL;
 static periodic_event_item_t *check_dns_honesty_event=NULL;
@@ -1569,7 +1550,6 @@ initialize_periodic_events(void)
 
   NAMED_CALLBACK(check_descriptor);
   NAMED_CALLBACK(prune_old_routers);
-  NAMED_CALLBACK(dirvote);
   NAMED_CALLBACK(fetch_networkstatus);
   NAMED_CALLBACK(launch_descriptor_fetches);
   NAMED_CALLBACK(check_dns_honesty);
@@ -1581,7 +1561,6 @@ teardown_periodic_events(void)
 {
   periodic_events_destroy_all();
   check_descriptor_event = NULL;
-  dirvote_event = NULL;
   fetch_networkstatus_event = NULL;
   launch_descriptor_fetches_event = NULL;
   check_dns_honesty_event = NULL;
@@ -1710,29 +1689,6 @@ mainloop_schedule_shutdown(int delay_sec)
     scheduled_shutdown_ev = mainloop_event_new(scheduled_shutdown_cb, NULL);
   }
   mainloop_event_schedule(scheduled_shutdown_ev, &delay_tv);
-}
-
-#define LONGEST_TIMER_PERIOD (30 * 86400)
-/** Helper: Return the number of seconds between <b>now</b> and <b>next</b>,
- * clipped to the range [1 second, LONGEST_TIMER_PERIOD]. */
-static inline int
-safe_timer_diff(time_t now, time_t next)
-{
-  if (next > now) {
-    /* There were no computers at signed TIME_MIN (1902 on 32-bit systems),
-     * and nothing that could run Tor. It's a bug if 'next' is around then.
-     * On 64-bit systems with signed TIME_MIN, TIME_MIN is before the Big
-     * Bang. We cannot extrapolate past a singularity, but there was probably
-     * nothing that could run Tor then, either.
-     **/
-    tor_assert(next > TIME_MIN + LONGEST_TIMER_PERIOD);
-
-    if (next - LONGEST_TIMER_PERIOD > now)
-      return LONGEST_TIMER_PERIOD;
-    return (int)(next - now);
-  } else {
-    return 1;
-  }
 }
 
 /** Perform regular maintenance tasks.  This function gets run once per
@@ -2001,102 +1957,6 @@ check_network_participation_callback(time_t now, const or_options_t *options)
  found_activity:
   note_user_activity(now);
   return CHECK_PARTICIPATION_INTERVAL;
-}
-
-/**
- * Periodic callback: if we're an authority, make sure we test
- * the routers on the network for reachability.
- */
-static int
-launch_reachability_tests_callback(time_t now, const or_options_t *options)
-{
-  if (authdir_mode_tests_reachability(options) &&
-      !net_is_disabled()) {
-    /* try to determine reachability of the other Tor relays */
-    dirserv_test_reachability(now);
-  }
-  return REACHABILITY_TEST_INTERVAL;
-}
-
-/**
- * Periodic callback: if we're an authority, discount the stability
- * information (and other rephist information) that's older.
- */
-static int
-downrate_stability_callback(time_t now, const or_options_t *options)
-{
-  (void)options;
-  /* 1d. Periodically, we discount older stability information so that new
-   * stability info counts more, and save the stability information to disk as
-   * appropriate. */
-  time_t next = rep_hist_downrate_old_runs(now);
-  return safe_timer_diff(now, next);
-}
-
-/**
- * Periodic callback: if we're an authority, record our measured stability
- * information from rephist in an mtbf file.
- */
-static int
-save_stability_callback(time_t now, const or_options_t *options)
-{
-  if (authdir_mode_tests_reachability(options)) {
-    if (rep_hist_record_mtbf_data(now, 1)<0) {
-      log_warn(LD_GENERAL, "Couldn't store mtbf data.");
-    }
-  }
-#define SAVE_STABILITY_INTERVAL (30*60)
-  return SAVE_STABILITY_INTERVAL;
-}
-
-/**
- * Periodic callback: if we're an authority, check on our authority
- * certificate (the one that authenticates our authority signing key).
- */
-static int
-check_authority_cert_callback(time_t now, const or_options_t *options)
-{
-  (void)now;
-  (void)options;
-  /* 1e. Periodically, if we're a v3 authority, we check whether our cert is
-   * close to expiring and warn the admin if it is. */
-  v3_authority_check_key_expiry();
-#define CHECK_V3_CERTIFICATE_INTERVAL (5*60)
-  return CHECK_V3_CERTIFICATE_INTERVAL;
-}
-
-/**
- * Scheduled callback: Run directory-authority voting functionality.
- *
- * The schedule is a bit complicated here, so dirvote_act() manages the
- * schedule itself.
- **/
-static int
-dirvote_callback(time_t now, const or_options_t *options)
-{
-  if (!authdir_mode_v3(options)) {
-    tor_assert_nonfatal_unreached();
-    return 3600;
-  }
-
-  time_t next = dirvote_act(options, now);
-  if (BUG(next == TIME_MAX)) {
-    /* This shouldn't be returned unless we called dirvote_act() without
-     * being an authority.  If it happens, maybe our configuration will
-     * fix itself in an hour or so? */
-    return 3600;
-  }
-  return safe_timer_diff(now, next);
-}
-
-/** Reschedule the directory-authority voting event.  Run this whenever the
- * schedule has changed. */
-void
-reschedule_dirvote(const or_options_t *options)
-{
-  if (authdir_mode_v3(options) && dirvote_event) {
-    periodic_event_reschedule(dirvote_event);
-  }
 }
 
 /**

@@ -97,4 +97,6 @@ periodic_event_item_t *periodic_events_find(const char *name);
 void periodic_events_rescan_by_roles(int roles, bool net_disabled);
 void periodic_events_destroy_all(void);
 
+int safe_timer_diff(time_t now, time_t next);
+
 #endif /* !defined(TOR_PERIODIC_H) */

@@ -323,3 +323,30 @@ periodic_events_destroy_all(void)
 
   smartlist_free(the_periodic_events);
 }
+
+#define LONGEST_TIMER_PERIOD (30 * 86400)
+/** Helper: Return the number of seconds between <b>now</b> and <b>next</b>,
+ * clipped to the range [1 second, LONGEST_TIMER_PERIOD].
+ *
+ * We use this to answer the question, "how many seconds is it from now until
+ * next" in periodic timer callbacks.  Don't use it for other purposes
+ **/
+int
+safe_timer_diff(time_t now, time_t next)
+{
+  if (next > now) {
+    /* There were no computers at signed TIME_MIN (1902 on 32-bit systems),
+     * and nothing that could run Tor. It's a bug if 'next' is around then.
+     * On 64-bit systems with signed TIME_MIN, TIME_MIN is before the Big
+     * Bang. We cannot extrapolate past a singularity, but there was probably
+     * nothing that could run Tor then, either.
+     **/
+    tor_assert(next > TIME_MIN + LONGEST_TIMER_PERIOD);
+
+    if (next - LONGEST_TIMER_PERIOD > now)
+      return LONGEST_TIMER_PERIOD;
+    return (int)(next - now);
+  } else {
+    return 1;
+  }
+}

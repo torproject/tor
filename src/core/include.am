@@ -176,6 +176,8 @@ LIBTOR_APP_TESTING_A_SOURCES = $(LIBTOR_APP_A_SOURCES)
 # The Directory Authority module.
 MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/authmode.c				\
+	src/feature/dirauth/dirauth_periodic.c			\
+	src/feature/dirauth/dirauth_sys.c			\
 	src/feature/dirauth/dircollate.c			\
 	src/feature/dirauth/dirvote.c				\
 	src/feature/dirauth/shared_random.c			\
@@ -308,6 +310,8 @@ noinst_HEADERS +=					\
 	src/feature/control/getinfo_geoip.h		\
 	src/feature/dirauth/authmode.h			\
 	src/feature/dirauth/bwauth.h			\
+	src/feature/dirauth/dirauth_periodic.h		\
+	src/feature/dirauth/dirauth_sys.h		\
 	src/feature/dirauth/dircollate.h		\
 	src/feature/dirauth/dirvote.h			\
 	src/feature/dirauth/dsigs_parse.h		\

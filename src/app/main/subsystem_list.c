@@ -24,6 +24,8 @@
 #include "lib/wallclock/wallclock_sys.h"
 #include "lib/process/process_sys.h"
 
+#include "feature/dirauth/dirauth_sys.h"
+
 #include <stddef.h>
 
 /**
@@ -47,6 +49,10 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_btrack, /* -30 */
 
   &sys_mainloop, /* 5 */
+
+#ifdef HAVE_MODULE_DIRAUTH
+  &sys_dirauth, /* 70 */
+#endif
 };
 
 const unsigned n_tor_subsystems = ARRAY_LENGTH(tor_subsystems);
