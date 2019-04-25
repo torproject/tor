@@ -1,0 +1,5 @@
+  o Code simplification and refactoring:
+    - Start move responsibility for knowing about periodic events to the
+      appropriate subsystems, so that the mainloop doesn't need to know all
+      the periodic events in the rest of the codebase.  Implements tickets
+      30293 and 30294.
