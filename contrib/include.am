@@ -3,7 +3,7 @@ EXTRA_DIST+= \
 	contrib/README					\
 	contrib/client-tools/torify			\
 	contrib/dist/rc.subr				\
-	contrib/dist/suse/tor.sh.in			\
+	contrib/dist/tor.sh				\
 	contrib/dist/torctl				\
 	contrib/dist/tor.service.in			\
 	contrib/operator-tools/tor-exit-notice.html	\
