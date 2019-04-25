@@ -51,6 +51,7 @@ test_pe_initialize(void *arg)
    * need to run the main loop and then wait for a second delaying the unit
    * tests. Instead, we'll test the callback work indepedently elsewhere. */
   initialize_periodic_events();
+  periodic_events_setup_all();
   set_network_participation(false);
   rescan_periodic_events(get_options());
 
@@ -110,6 +111,7 @@ test_pe_launch(void *arg)
 #endif
 
   initialize_periodic_events();
+  periodic_events_setup_all();
 
   /* Now that we've initialized, rescan the list to launch. */
   periodic_events_on_new_options(options);
@@ -300,6 +302,7 @@ test_pe_hs_service(void *arg)
   consider_hibernation(time(NULL));
   /* Initialize the events so we can enable them */
   initialize_periodic_events();
+  periodic_events_setup_all();
 
   /* Hack: We'll set a dumb fn() of each events so they don't get called when
    * dispatching them. We just want to test the state of the callbacks, not

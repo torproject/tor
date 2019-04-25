@@ -8,6 +8,7 @@
 #include "lib/cc/compat_compiler.h"
 #include "lib/cc/torint.h"
 
+#include "core/mainloop/mainloop_sys.h"
 #include "core/or/ocirc_event_sys.h"
 #include "core/or/orconn_event_sys.h"
 #include "feature/control/btrack_sys.h"
@@ -44,6 +45,8 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_orconn_event, /* -33 */
   &sys_ocirc_event, /* -32 */
   &sys_btrack, /* -30 */
+
+  &sys_mainloop, /* 5 */
 };
 
 const unsigned n_tor_subsystems = ARRAY_LENGTH(tor_subsystems);
