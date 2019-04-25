@@ -1587,6 +1587,13 @@ STATIC void
 teardown_periodic_events(void)
 {
   periodic_events_destroy_all();
+  check_descriptor_event = NULL;
+  dirvote_event = NULL;
+  fetch_networkstatus_event = NULL;
+  launch_descriptor_fetches_event = NULL;
+  check_dns_honesty_event = NULL;
+  save_state_event = NULL;
+  prune_old_routers_event = NULL;
   periodic_events_initialized = 0;
 }
 
@@ -1621,13 +1628,6 @@ rescan_periodic_events(const or_options_t *options)
 {
   tor_assert(options);
 
-  /* Avoid scanning the event list if we haven't initialized it yet. This is
-   * particularly useful for unit tests in order to avoid initializing main
-   * loop events everytime. */
-  if (!periodic_events_initialized) {
-    return;
-  }
-
   periodic_events_rescan_by_roles(get_my_roles(options), net_is_disabled());
 }
 
@@ -1636,13 +1636,7 @@ rescan_periodic_events(const or_options_t *options)
 void
 periodic_events_on_new_options(const or_options_t *options)
 {
-  /* Only if we've already initialized the events, rescan the list which will
-   * enable or disable events depending on our roles. This will be called at
-   * bootup and we don't want this function to initialize the events because
-   * they aren't set up at this stage. */
-  if (periodic_events_initialized) {
-    rescan_periodic_events(options);
-  }
+  rescan_periodic_events(options);
 }
 
 /**
@@ -2107,7 +2101,7 @@ dirvote_callback(time_t now, const or_options_t *options)
 void
 reschedule_dirvote(const or_options_t *options)
 {
-  if (periodic_events_initialized && authdir_mode_v3(options)) {
+  if (authdir_mode_v3(options) && dirvote_event) {
     periodic_event_reschedule(dirvote_event);
   }
 }
@@ -2753,8 +2747,7 @@ dns_servers_relaunch_checks(void)
 {
   if (server_mode(get_options())) {
     dns_reset_correctness_checks();
-    if (periodic_events_initialized) {
-      tor_assert(check_dns_honesty_event);
+    if (check_dns_honesty_event) {
       periodic_event_reschedule(check_dns_honesty_event);
     }
   }

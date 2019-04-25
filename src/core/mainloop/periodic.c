@@ -100,8 +100,8 @@ periodic_event_dispatch(mainloop_event_t *ev, void *data)
 void
 periodic_event_reschedule(periodic_event_item_t *event)
 {
-  /* Don't reschedule a disabled event. */
-  if (periodic_event_is_enabled(event)) {
+  /* Don't reschedule a disabled or uninitialized event. */
+  if (event->ev && periodic_event_is_enabled(event)) {
     periodic_event_set_interval(event, 1);
   }
 }
@@ -243,6 +243,9 @@ periodic_events_reset_all(void)
     return;
 
   SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+    if (!item->ev)
+      continue;
+
     periodic_event_reschedule(item);
   } SMARTLIST_FOREACH_END(item);
 }
@@ -277,6 +280,9 @@ periodic_events_rescan_by_roles(int roles, bool net_disabled)
     return;
 
   SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+    if (!item->ev)
+      continue;
+
     int enable = !!(item->roles & roles);
 
     /* Handle the event flags. */
