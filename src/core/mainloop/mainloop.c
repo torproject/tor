@@ -1387,7 +1387,7 @@ CALLBACK(second_elapsed);
   PERIODIC_EVENT(name, PERIODIC_EVENT_ROLE_ ## r, f)
 #define FL(name) (PERIODIC_EVENT_FLAG_ ## name)
 
-STATIC periodic_event_item_t periodic_events[] = {
+STATIC periodic_event_item_t mainloop_periodic_events[] = {
 
   /* Everyone needs to run these. They need to have very long timeouts for
    * that to be safe. */
@@ -1485,24 +1485,7 @@ static periodic_event_item_t *prune_old_routers_event=NULL;
 void
 reset_all_main_loop_timers(void)
 {
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_reschedule(&periodic_events[i]);
-  }
-}
-
-/** Return the member of periodic_events[] whose name is <b>name</b>.
- * Return NULL if no such event is found.
- */
-static periodic_event_item_t *
-find_periodic_event(const char *name)
-{
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    if (strcmp(name, periodic_events[i].name) == 0)
-      return &periodic_events[i];
-  }
-  return NULL;
+  periodic_events_reset_all();
 }
 
 /** Return a bitmask of the roles this tor instance is configured for using
@@ -1565,8 +1548,8 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
   rescan_periodic_events(get_options());
 }
 
-/** Set up all the members of periodic_events[], and configure them all to be
- * launched from a callback. */
+/** Set up all the members of mainloop_periodic_events[], and configure them
+ * all to be launched from a callback. */
 STATIC void
 initialize_periodic_events(void)
 {
@@ -1575,14 +1558,15 @@ initialize_periodic_events(void)
 
   periodic_events_initialized = 1;
 
-  /* Set up all periodic events. We'll launch them by roles. */
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_setup(&periodic_events[i]);
+  for (int i = 0; mainloop_periodic_events[i].name; ++i) {
+    periodic_events_add(&mainloop_periodic_events[i]);
   }
 
+  /* Set up all periodic events. We'll launch them by roles. */
+  periodic_events_setup_all();
+
 #define NAMED_CALLBACK(name) \
-  STMT_BEGIN name ## _event = find_periodic_event( #name ); STMT_END
+  STMT_BEGIN name ## _event = periodic_events_find( #name ); STMT_END
 
   NAMED_CALLBACK(check_descriptor);
   NAMED_CALLBACK(prune_old_routers);
@@ -1602,10 +1586,7 @@ initialize_periodic_events(void)
 STATIC void
 teardown_periodic_events(void)
 {
-  int i;
-  for (i = 0; periodic_events[i].name; ++i) {
-    periodic_event_destroy(&periodic_events[i]);
-  }
+  periodic_events_destroy_all();
   periodic_events_initialized = 0;
 }
 
@@ -1647,33 +1628,7 @@ rescan_periodic_events(const or_options_t *options)
     return;
   }
 
-  int roles = get_my_roles(options);
-
-  for (int i = 0; periodic_events[i].name; ++i) {
-    periodic_event_item_t *item = &periodic_events[i];
-
-    int enable = !!(item->roles & roles);
-
-    /* Handle the event flags. */
-    if (net_is_disabled() &&
-        (item->flags & PERIODIC_EVENT_FLAG_NEED_NET)) {
-      enable = 0;
-    }
-
-    /* Enable the event if needed. It is safe to enable an event that was
-     * already enabled. Same goes for disabling it. */
-    if (enable) {
-      log_debug(LD_GENERAL, "Launching periodic event %s", item->name);
-      periodic_event_enable(item);
-    } else {
-      log_debug(LD_GENERAL, "Disabling periodic event %s", item->name);
-      if (item->flags & PERIODIC_EVENT_FLAG_RUN_ON_DISABLE) {
-        periodic_event_schedule_and_disable(item);
-      } else {
-        periodic_event_disable(item);
-      }
-    }
-  }
+  periodic_events_rescan_by_roles(get_my_roles(options), net_is_disabled());
 }
 
 /* We just got new options globally set, see if we need to enabled or disable

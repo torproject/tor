@@ -113,7 +113,7 @@ extern smartlist_t *connection_array;
 
 /* We need the periodic_event_item_t definition. */
 #include "core/mainloop/periodic.h"
-extern periodic_event_item_t periodic_events[];
+extern periodic_event_item_t mainloop_periodic_events[];
 #endif
 #endif /* defined(MAIN_PRIVATE) */
 

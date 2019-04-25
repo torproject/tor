@@ -90,4 +90,11 @@ void periodic_event_enable(periodic_event_item_t *event);
 void periodic_event_disable(periodic_event_item_t *event);
 void periodic_event_schedule_and_disable(periodic_event_item_t *event);
 
+void periodic_events_add(periodic_event_item_t *item);
+void periodic_events_setup_all(void);
+void periodic_events_reset_all(void);
+periodic_event_item_t *periodic_events_find(const char *name);
+void periodic_events_rescan_by_roles(int roles, bool net_disabled);
+void periodic_events_destroy_all(void);
+
 #endif /* !defined(TOR_PERIODIC_H) */

@@ -6,9 +6,17 @@
  *
  * \brief Generic backend for handling periodic events.
  *
- * The events in this module are used by main.c to track items that need
+ * The events in this module are used to track items that need
  * to fire once every N seconds, possibly picking a new interval each time
- * that they fire.  See periodic_events[] in main.c for examples.
+ * that they fire.  See periodic_events[] in mainloop.c for examples.
+ *
+ * This module manages a global list of periodic_event_item_t objects,
+ * each corresponding to a single event.  To register an event, pass it to
+ * periodic_events_add() when initializing your subsystem.
+ *
+ * We expect that periodic_event_item_t objects will be statically allocated;
+ * we set them up and tear them down here, but we don't take ownership of
+ * them.
  */
 
 #include "core/or/or.h"
@@ -23,6 +31,11 @@
  * relative time.
  */
 static const int MAX_INTERVAL = 10 * 365 * 86400;
+
+/**
+ *
+ **/
+static smartlist_t *the_periodic_events = NULL;
 
 /** Set the event <b>event</b> to run in <b>next_interval</b> seconds from
  * now. */
@@ -183,4 +196,124 @@ periodic_event_schedule_and_disable(periodic_event_item_t *event)
   periodic_event_disable(event);
 
   mainloop_event_activate(event->ev);
+}
+
+/**
+ * Add <b>item</b> to the list of periodic events.
+ *
+ * Note that <b>item</b> should be statically allocated: we do not
+ * take ownership of it.
+ **/
+void
+periodic_events_add(periodic_event_item_t *item)
+{
+  if (!the_periodic_events)
+    the_periodic_events = smartlist_new();
+
+  if (BUG(smartlist_contains(the_periodic_events, item)))
+    return;
+
+  smartlist_add(the_periodic_events, item);
+}
+
+/** Set up all not-previously setup periodic events. */
+void
+periodic_events_setup_all(void)
+{
+  if (! the_periodic_events)
+    return;
+
+  SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+    if (item->ev)
+      continue;
+    periodic_event_setup(item);
+  } SMARTLIST_FOREACH_END(item);
+}
+
+/** Reset all the registered periodic events so we'll do all our actions again
+ * as if we just started up.
+ *
+ * Useful if our clock just moved back a long time from the future,
+ * so we don't wait until that future arrives again before acting.
+ */
+void
+periodic_events_reset_all(void)
+{
+  if (! the_periodic_events)
+    return;
+
+  SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+    periodic_event_reschedule(item);
+  } SMARTLIST_FOREACH_END(item);
+}
+
+/**
+ * Return the registered periodic event whose name is <b>name</b>.
+ * Return NULL if no such event is found.
+ */
+periodic_event_item_t *
+periodic_events_find(const char *name)
+{
+  if (! the_periodic_events)
+    return NULL;
+
+  SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+    if (strcmp(name, item->name) == 0)
+      return item;
+  } SMARTLIST_FOREACH_END(item);
+  return NULL;
+}
+
+/**
+ * Start or stop registered periodic events, depending on our current set of
+ * roles.
+ *
+ * Invoked when our list of roles, or the net_disabled flag has changed.
+ **/
+void
+periodic_events_rescan_by_roles(int roles, bool net_disabled)
+{
+  if (! the_periodic_events)
+    return;
+
+  SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+    int enable = !!(item->roles & roles);
+
+    /* Handle the event flags. */
+    if (net_disabled &&
+        (item->flags & PERIODIC_EVENT_FLAG_NEED_NET)) {
+      enable = 0;
+    }
+
+    /* Enable the event if needed. It is safe to enable an event that was
+     * already enabled. Same goes for disabling it. */
+    if (enable) {
+      log_debug(LD_GENERAL, "Launching periodic event %s", item->name);
+      periodic_event_enable(item);
+    } else {
+      log_debug(LD_GENERAL, "Disabling periodic event %s", item->name);
+      if (item->flags & PERIODIC_EVENT_FLAG_RUN_ON_DISABLE) {
+        periodic_event_schedule_and_disable(item);
+      } else {
+        periodic_event_disable(item);
+      }
+    }
+  } SMARTLIST_FOREACH_END(item);
+}
+
+/** Invoked at shutdown: free resources used in this module.
+ *
+ * Does not free the periodic_event_item_t object themselves, because we do
+ * not own them. */
+void
+periodic_events_destroy_all(void)
+{
+  if (! the_periodic_events)
+    return;
+
+  SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
+    periodic_event_destroy(item);
+  } SMARTLIST_FOREACH_END(item);
+
+  smartlist_free(the_periodic_events);
 }
