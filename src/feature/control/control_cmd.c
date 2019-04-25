@@ -129,16 +129,19 @@ kvline_check_keyword_args(const control_cmd_args_t *result,
     return -1;
   }
 
-  if (syntax->allowed_keywords) {
-    /* Check for unpermitted arguments */
-    const config_line_t *line;
-    for (line = result->kwargs; line; line = line->next) {
-      if (! string_array_contains_keyword(syntax->allowed_keywords,
-                                          line->key)) {
-        tor_asprintf(error_out, "Unrecognized keyword argument %s",
-                     escaped(line->key));
-        return -1;
-      }
+  if (! syntax->allowed_keywords) {
+    /* All keywords are permitted. */
+    return 0;
+  }
+
+  /* Check for unpermitted arguments */
+  const config_line_t *line;
+  for (line = result->kwargs; line; line = line->next) {
+    if (! string_array_contains_keyword(syntax->allowed_keywords,
+                                        line->key)) {
+      tor_asprintf(error_out, "Unrecognized keyword argument %s",
+                   escaped(line->key));
+      return -1;
     }
   }
 
