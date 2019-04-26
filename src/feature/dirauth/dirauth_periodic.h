@@ -7,7 +7,19 @@
 #ifndef DIRVOTE_PERIODIC_H
 #define DIRVOTE_PERIODIC_H
 
+#ifdef HAVE_MODULE_DIRAUTH
+
 void dirauth_add_periodic_events(void);
 void reschedule_dirvote(const or_options_t *options);
+
+#else
+
+static inline void
+reschedule_dirvote(const or_options_t *options)
+{
+  (void)options;
+}
+
+#endif
 
 #endif
