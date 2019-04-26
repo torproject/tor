@@ -109,7 +109,6 @@ cpath_assert_layer_ok(const crypt_path_t *cp)
 //  tor_assert(cp->port);
   tor_assert(cp);
   tor_assert(cp->magic == CRYPT_PATH_MAGIC);
-  tor_assert(cp->private);
   switch (cp->state)
     {
     case CPATH_STATE_OPEN:
@@ -154,7 +153,6 @@ cpath_init_circuit_crypto(crypt_path_t *cpath,
 {
 
   tor_assert(cpath);
-  tor_assert(cpath->private);
   return relay_crypto_init(&cpath->private->crypto, key_data, key_data_len,
                            reverse, is_hs_v3);
 }
@@ -163,7 +161,7 @@ cpath_init_circuit_crypto(crypt_path_t *cpath,
 void
 cpath_free(crypt_path_t *victim)
 {
-  if (!victim || BUG(!victim->private))
+  if (!victim)
     return;
 
   relay_crypto_clear(&victim->private->crypto);
@@ -182,9 +180,6 @@ cpath_free(crypt_path_t *victim)
 void
 cpath_crypt_cell(const crypt_path_t *cpath, uint8_t *payload, bool is_decrypt)
 {
-  tor_assert(cpath);
-  tor_assert(cpath->private);
-
   if (is_decrypt) {
     relay_crypt_one_payload(cpath->private->crypto.b_crypto, payload);
   } else {
@@ -196,8 +191,6 @@ cpath_crypt_cell(const crypt_path_t *cpath, uint8_t *payload, bool is_decrypt)
 struct crypto_digest_t *
 cpath_get_incoming_digest(const crypt_path_t *cpath)
 {
-  tor_assert(cpath);
-  tor_assert(cpath->private);
   return cpath->private->crypto.b_digest;
 }
 
@@ -206,8 +199,6 @@ cpath_get_incoming_digest(const crypt_path_t *cpath)
 void
 cpath_set_cell_forward_digest(crypt_path_t *cpath, cell_t *cell)
 {
-  tor_assert(cpath);
-  tor_assert(cpath->private);
   relay_set_digest(cpath->private->crypto.f_digest, cell);
 }
 
