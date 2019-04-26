@@ -16,7 +16,6 @@
 #include "core/or/circuituse.h"
 #include "core/or/connection_edge.h"
 #include "core/or/relay.h"
-#include "core/or/crypt_path.h"
 #include "feature/client/circpathbias.h"
 #include "feature/control/control_events.h"
 #include "feature/dirclient/dirclient.h"
@@ -195,7 +194,9 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   /* Initialize the pending_final_cpath and start the DH handshake. */
   cpath = rendcirc->build_state->pending_final_cpath;
   if (!cpath) {
-    cpath = rendcirc->build_state->pending_final_cpath = crypt_path_new();
+    cpath = rendcirc->build_state->pending_final_cpath =
+      tor_malloc_zero(sizeof(crypt_path_t));
+    cpath->magic = CRYPT_PATH_MAGIC;
     if (!(cpath->rend_dh_handshake_state = crypto_dh_new(DH_TYPE_REND))) {
       log_warn(LD_BUG, "Internal error: couldn't allocate DH.");
       status = -2;

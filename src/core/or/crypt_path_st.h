@@ -8,6 +8,9 @@
 #define CRYPT_PATH_ST_H
 
 #include "core/or/relay_crypto_st.h"
+struct crypto_dh_t;
+
+#define CRYPT_PATH_MAGIC 0x70127012u
 
 struct fast_handshake_state_t;
 struct ntor_handshake_state_t;
@@ -22,8 +25,6 @@ struct onion_handshake_state_t {
 };
 
 #ifdef CRYPT_PATH_PRIVATE
-
-#define CRYPT_PATH_MAGIC 0x70127012u
 
 /* The private parts of crypt path that don't need to be exposed to all the
  * modules. */
