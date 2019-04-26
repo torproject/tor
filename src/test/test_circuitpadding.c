@@ -150,7 +150,7 @@ new_fake_orcirc(channel_t *nchan, channel_t *pchan)
     log_warn(LD_BUG,"Circuit initialization failed");
     return NULL;
   }
-  orcirc->crypto = tmp_cpath.private->crypto;
+  orcirc->crypto = tmp_cpath.pvt_crypto;
 
   return orcirc;
 }
