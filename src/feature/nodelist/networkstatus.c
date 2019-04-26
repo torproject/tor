@@ -2381,7 +2381,6 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
   smartlist_t *statuses;
   const uint8_t purpose = router_purpose_from_string(purpose_string);
   routerstatus_t rs;
-  const int bridge_auth = authdir_mode_bridge(get_options());
 
   if (purpose == ROUTER_PURPOSE_UNKNOWN) {
     log_info(LD_DIR, "Unrecognized purpose '%s' when listing router statuses.",
@@ -2398,9 +2397,6 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
       continue;
     if (ri->purpose != purpose)
       continue;
-    /* TODO: modifying the running flag in a getinfo is a bad idea */
-    if (bridge_auth && ri->purpose == ROUTER_PURPOSE_BRIDGE)
-      dirserv_set_router_is_running(ri, now);
     /* then generate and write out status lines for each of them */
     set_routerstatus_from_routerinfo(&rs, node, ri, now, 0);
     smartlist_add(statuses, networkstatus_getinfo_helper_single(&rs));
@@ -2412,11 +2408,12 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
   return answer;
 }
 
-/** Write out router status entries for all our bridge descriptors. */
+/** Write out router status entries for all our bridge descriptors. Here, we
+ * also mark routers as running. */
 void
 networkstatus_dump_bridge_status_to_file(time_t now)
 {
-  char *status = networkstatus_getinfo_by_purpose("bridge", now);
+  char *status;
   char *fname = NULL;
   char *thresholds = NULL;
   char *published_thresholds_and_status = NULL;
@@ -2424,6 +2421,9 @@ networkstatus_dump_bridge_status_to_file(time_t now)
   const routerinfo_t *me = router_get_my_routerinfo();
   char fingerprint[FINGERPRINT_LEN+1];
   char *fingerprint_line = NULL;
+
+  dirserv_set_bridges_running(now);
+  status = networkstatus_getinfo_by_purpose("bridge", now);
 
   if (me && crypto_pk_get_fingerprint(me->identity_pkey,
                                       fingerprint, 0) >= 0) {
