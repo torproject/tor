@@ -225,7 +225,7 @@ noinst_HEADERS +=					\
 	src/core/mainloop/cpuworker.h			\
 	src/core/mainloop/mainloop.h			\
 	src/core/mainloop/mainloop_pubsub.h		\
-	src/core/mainloop/mainloop_sys.c	        \
+	src/core/mainloop/mainloop_sys.h	        \
 	src/core/mainloop/netstatus.h			\
 	src/core/mainloop/periodic.h			\
 	src/core/or/addr_policy_st.h			\
