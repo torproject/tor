@@ -112,7 +112,7 @@ cpath_assert_layer_ok(const crypt_path_t *cp)
   switch (cp->state)
     {
     case CPATH_STATE_OPEN:
-      relay_crypto_assert_ok(&cp->private->crypto);
+      relay_crypto_assert_ok(&cp->pvt_crypto);
       /* fall through */
     case CPATH_STATE_CLOSED:
       /*XXXX Assert that there's no handshake_state either. */
@@ -153,7 +153,7 @@ cpath_init_circuit_crypto(crypt_path_t *cpath,
 {
 
   tor_assert(cpath);
-  return relay_crypto_init(&cpath->private->crypto, key_data, key_data_len,
+  return relay_crypto_init(&cpath->pvt_crypto, key_data, key_data_len,
                            reverse, is_hs_v3);
 }
 
@@ -164,7 +164,7 @@ cpath_free(crypt_path_t *victim)
   if (!victim)
     return;
 
-  relay_crypto_clear(&victim->private->crypto);
+  relay_crypto_clear(&victim->pvt_crypto);
   onion_handshake_state_release(&victim->handshake_state);
   crypto_dh_free(victim->rend_dh_handshake_state);
   extend_info_free(victim->extend_info);
@@ -181,9 +181,9 @@ void
 cpath_crypt_cell(const crypt_path_t *cpath, uint8_t *payload, bool is_decrypt)
 {
   if (is_decrypt) {
-    relay_crypt_one_payload(cpath->private->crypto.b_crypto, payload);
+    relay_crypt_one_payload(cpath->pvt_crypto.b_crypto, payload);
   } else {
-    relay_crypt_one_payload(cpath->private->crypto.f_crypto, payload);
+    relay_crypt_one_payload(cpath->pvt_crypto.f_crypto, payload);
   }
 }
 
@@ -191,7 +191,7 @@ cpath_crypt_cell(const crypt_path_t *cpath, uint8_t *payload, bool is_decrypt)
 struct crypto_digest_t *
 cpath_get_incoming_digest(const crypt_path_t *cpath)
 {
-  return cpath->private->crypto.b_digest;
+  return cpath->pvt_crypto.b_digest;
 }
 
 /** Set the right integrity digest on the outgoing <b>cell</b> based on the
@@ -199,7 +199,7 @@ cpath_get_incoming_digest(const crypt_path_t *cpath)
 void
 cpath_set_cell_forward_digest(crypt_path_t *cpath, cell_t *cell)
 {
-  relay_set_digest(cpath->private->crypto.f_digest, cell);
+  relay_set_digest(cpath->pvt_crypto.f_digest, cell);
 }
 
 /************ other cpath functions ***************************/
