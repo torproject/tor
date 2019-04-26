@@ -197,6 +197,7 @@ big_fake_network_setup(const struct testcase_t *testcase)
       n->md->exit_policy = parse_short_policy("accept 443");
     }
 
+    n->nodelist_idx = smartlist_len(big_fake_net_nodes);
     smartlist_add(big_fake_net_nodes, n);
   }
 
