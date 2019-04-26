@@ -1540,7 +1540,7 @@ initialize_periodic_events(void)
   periodic_events_initialized = 1;
 
   for (int i = 0; mainloop_periodic_events[i].name; ++i) {
-    periodic_events_add(&mainloop_periodic_events[i]);
+    periodic_events_register(&mainloop_periodic_events[i]);
   }
 
   /* Set up all periodic events. We'll launch them by roles. */
@@ -1559,7 +1559,7 @@ initialize_periodic_events(void)
 STATIC void
 teardown_periodic_events(void)
 {
-  periodic_events_destroy_all();
+  periodic_events_disconnect_all();
   check_descriptor_event = NULL;
   fetch_networkstatus_event = NULL;
   launch_descriptor_fetches_event = NULL;
@@ -2630,7 +2630,7 @@ do_main_loop(void)
   tor_assert(periodic_events_initialized);
   initialize_mainloop_events();
 
-  periodic_events_setup_all();
+  periodic_events_connect_all();
 
   struct timeval one_second = { 1, 0 };
   initialize_periodic_events_event = tor_evtimer_new(
