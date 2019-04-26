@@ -3430,11 +3430,11 @@ __DataDirectory__**/hashed-fingerprint**::
 
 __DataDirectory__**/approved-routers**::
     Only used by authoritative directory servers. This file lists
-    the status of routers by their identity fingerprint.
-    Each line lists a status and a fingerprint separated by
+    the status of routers by their identity fingerprint or base64-encoded
+    ed25519 public key. Each line lists a status and a fingerprint separated by
     whitespace. See your **fingerprint** file in the __DataDirectory__ for an
     example line. If the status is **!reject** then descriptors from the
-    given identity (fingerprint) are rejected by this server. If it is
+    given identity (fingerprint/pubkey) are rejected by this server. If it is
     **!invalid** then descriptors are accepted but marked in the directory as
     not valid, that is, not recommended.
 
@@ -3493,10 +3493,6 @@ __DataDirectory__**/networkstatus-bridges**::
     Only used by authoritative bridge directories. Contains information
     about bridges that have self-reported themselves to the bridge
     authority.
-
-__DataDirectory__**/approved-routers**::
-    Authorities only. This file is used to configure which relays are
-    known to be valid, invalid, and so forth.
 
 __HiddenServiceDirectory__**/hostname**::
     The <base32-encoded-fingerprint>.onion domain name for this hidden service.
