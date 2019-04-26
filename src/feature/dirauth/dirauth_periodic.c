@@ -132,11 +132,11 @@ downrate_stability_callback(time_t now, const or_options_t *options)
 DECLARE_EVENT(downrate_stability, AUTHORITIES, 0);
 
 void
-dirauth_add_periodic_events(void)
+dirauth_register_periodic_events(void)
 {
-  periodic_events_add(&downrate_stability_event);
-  periodic_events_add(&launch_reachability_tests_event);
-  periodic_events_add(&save_stability_event);
-  periodic_events_add(&check_authority_cert_event);
-  periodic_events_add(&dirvote_event);
+  periodic_events_register(&downrate_stability_event);
+  periodic_events_register(&launch_reachability_tests_event);
+  periodic_events_register(&save_stability_event);
+  periodic_events_register(&check_authority_cert_event);
+  periodic_events_register(&dirvote_event);
 }

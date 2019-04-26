@@ -12,7 +12,12 @@
  *
  * This module manages a global list of periodic_event_item_t objects,
  * each corresponding to a single event.  To register an event, pass it to
- * periodic_events_add() when initializing your subsystem.
+ * periodic_events_register() when initializing your subsystem.
+ *
+ * Registering an event makes the periodic event subsystem know about it, but
+ * doesn't cause the event to get created immediately.  Before the event can
+ * be started, periodic_event_connect_all() must be called by mainloop.c to
+ * connect all the events to Libevent.
  *
  * We expect that periodic_event_item_t objects will be statically allocated;
  * we set them up and tear them down here, but we don't take ownership of
@@ -33,7 +38,8 @@
 static const int MAX_INTERVAL = 10 * 365 * 86400;
 
 /**
- *
+ * Global list of periodic events that have been registered with
+ * <b>periodic_event_register</a>.
  **/
 static smartlist_t *the_periodic_events = NULL;
 
@@ -106,9 +112,10 @@ periodic_event_reschedule(periodic_event_item_t *event)
   }
 }
 
-/** Initializes the libevent backend for a periodic event. */
+/** Connects a periodic event to the Libevent backend.  Does not launch the
+ * event immediately. */
 void
-periodic_event_setup(periodic_event_item_t *event)
+periodic_event_connect(periodic_event_item_t *event)
 {
   if (event->ev) { /* Already setup? This is a bug */
     log_err(LD_BUG, "Initial dispatch should only be done once.");
@@ -126,7 +133,7 @@ void
 periodic_event_launch(periodic_event_item_t *event)
 {
   if (! event->ev) { /* Not setup? This is a bug */
-    log_err(LD_BUG, "periodic_event_launch without periodic_event_setup");
+    log_err(LD_BUG, "periodic_event_launch without periodic_event_connect");
     tor_assert(0);
   }
   /* Event already enabled? This is a bug */
@@ -140,9 +147,9 @@ periodic_event_launch(periodic_event_item_t *event)
   periodic_event_dispatch(event->ev, event);
 }
 
-/** Release all storage associated with <b>event</b> */
-void
-periodic_event_destroy(periodic_event_item_t *event)
+/** Disconnect and unregister the periodic event in <b>event</b> */
+static void
+periodic_event_disconnect(periodic_event_item_t *event)
 {
   if (!event)
     return;
@@ -205,7 +212,7 @@ periodic_event_schedule_and_disable(periodic_event_item_t *event)
  * take ownership of it.
  **/
 void
-periodic_events_add(periodic_event_item_t *item)
+periodic_events_register(periodic_event_item_t *item)
 {
   if (!the_periodic_events)
     the_periodic_events = smartlist_new();
@@ -216,9 +223,11 @@ periodic_events_add(periodic_event_item_t *item)
   smartlist_add(the_periodic_events, item);
 }
 
-/** Set up all not-previously setup periodic events. */
+/**
+ * Make all registered periodic events connect to the libevent backend.
+ */
 void
-periodic_events_setup_all(void)
+periodic_events_connect_all(void)
 {
   if (! the_periodic_events)
     return;
@@ -226,11 +235,12 @@ periodic_events_setup_all(void)
   SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
     if (item->ev)
       continue;
-    periodic_event_setup(item);
+    periodic_event_connect(item);
   } SMARTLIST_FOREACH_END(item);
 }
 
-/** Reset all the registered periodic events so we'll do all our actions again
+/**
+ * Reset all the registered periodic events so we'll do all our actions again
  * as if we just started up.
  *
  * Useful if our clock just moved back a long time from the future,
@@ -307,18 +317,20 @@ periodic_events_rescan_by_roles(int roles, bool net_disabled)
   } SMARTLIST_FOREACH_END(item);
 }
 
-/** Invoked at shutdown: free resources used in this module.
+/**
+ * Invoked at shutdown: disconnect and unregister all periodic events.
  *
  * Does not free the periodic_event_item_t object themselves, because we do
- * not own them. */
+ * not own them.
+ */
 void
-periodic_events_destroy_all(void)
+periodic_events_disconnect_all(void)
 {
   if (! the_periodic_events)
     return;
 
   SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
-    periodic_event_destroy(item);
+    periodic_event_disconnect(item);
   } SMARTLIST_FOREACH_END(item);
 
   smartlist_free(the_periodic_events);
