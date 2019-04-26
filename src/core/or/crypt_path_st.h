@@ -24,15 +24,16 @@ struct onion_handshake_state_t {
   } u;
 };
 
+/** Macro to encapsulate private members of a struct.
+ *
+ *  Renames 'x' to '_x__private'.
+ */
+#define TOR_PRIV(x) _ ## x ## _ ## _private
+
 #ifdef CRYPT_PATH_PRIVATE
 
-/* The private parts of crypt path that don't need to be exposed to all the
- * modules. */
-struct crypt_path_private_t {
-  /** Cryptographic state used for encrypting and authenticating relay
-   * cells to and from this hop. */
-  relay_crypto_t crypto;
-};
+/* Helper macro to access private members of a struct. */
+#define pvt_crypto TOR_PRIV(crypto)
 
 #endif
 
@@ -74,9 +75,11 @@ struct crypt_path_t {
   int deliver_window; /**< How many cells are we willing to deliver originating
                        * at this step? */
 
-  /* Private parts of the crypt_path. Eventually everything should be
-   * private. */
-  struct crypt_path_private_t *private;
+  /*********************** Private members ****************************/
+
+  /** Private member: Cryptographic state used for encrypting and
+   * authenticating relay cells to and from this hop. */
+  relay_crypto_t TOR_PRIV(crypto);
 };
 
 #endif
