@@ -2610,8 +2610,6 @@ dns_servers_relaunch_checks(void)
 void
 initialize_mainloop_events(void)
 {
-  initialize_periodic_events();
-
   if (!schedule_active_linked_connections_event) {
     schedule_active_linked_connections_event =
       mainloop_event_postloop_new(schedule_active_linked_connections_cb, NULL);
@@ -2629,8 +2627,9 @@ do_main_loop(void)
   /* initialize the periodic events first, so that code that depends on the
    * events being present does not assert.
    */
-  initialize_periodic_events();
+  tor_assert(periodic_events_initialized);
   initialize_mainloop_events();
+
   periodic_events_setup_all();
 
   struct timeval one_second = { 1, 0 };
