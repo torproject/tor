@@ -39,13 +39,13 @@
 #include "feature/hs/hs_cache.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuitbuild.h"
-#include "core/or/crypt_path.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "feature/nodelist/networkstatus.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/crypt_path_st.h"
+#include "core/or/crypt_path.h"
 #include "feature/dircommon/dir_connection_st.h"
 #include "core/or/entry_connection_st.h"
 #include "core/or/extend_info_st.h"
@@ -146,7 +146,9 @@ helper_get_circ_and_stream_for_test(origin_circuit_t **circ_out,
 
   if (is_legacy) {
     /* Legacy: Setup rend data and final cpath */
-    or_circ->build_state->pending_final_cpath = crypt_path_new();
+    or_circ->build_state->pending_final_cpath =
+      tor_malloc_zero(sizeof(crypt_path_t));
+    or_circ->build_state->pending_final_cpath->magic = CRYPT_PATH_MAGIC;
     or_circ->build_state->pending_final_cpath->rend_dh_handshake_state =
       crypto_dh_new(DH_TYPE_REND);
     tt_assert(

@@ -6,8 +6,6 @@
 #ifndef CRYPT_PATH_H
 #define CRYPT_PATH_H
 
-crypt_path_t *crypt_path_new(void);
-
 void cpath_assert_layer_ok(const crypt_path_t *cp);
 
 void cpath_assert_ok(const crypt_path_t *cp);

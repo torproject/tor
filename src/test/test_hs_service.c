@@ -38,7 +38,6 @@
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
-#include "core/or/crypt_path.h"
 #include "core/or/connection_edge.h"
 #include "core/or/edge_connection_st.h"
 #include "core/or/relay.h"
@@ -62,6 +61,7 @@
 
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/crypt_path_st.h"
+#include "core/or/crypt_path.h"
 #include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/node_st.h"
 #include "core/or/origin_circuit_st.h"
@@ -221,7 +221,8 @@ helper_create_origin_circuit(int purpose, int flags)
 
   circ = origin_circuit_init(purpose, flags);
   tor_assert(circ);
-  circ->cpath = crypt_path_new();
+  circ->cpath = tor_malloc_zero(sizeof(crypt_path_t));
+  circ->cpath->magic = CRYPT_PATH_MAGIC;
   circ->cpath->state = CPATH_STATE_OPEN;
   circ->cpath->package_window = circuit_initial_package_window();
   circ->cpath->deliver_window = CIRCWINDOW_START;
