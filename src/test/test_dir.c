@@ -6654,6 +6654,54 @@ test_dir_dirserv_router_get_status(void *arg)
   routerinfo_free(ri);
 }
 
+static void
+test_dir_dirserv_would_reject_router(void *arg)
+{
+  authdir_config_t *list;
+  routerstatus_t rs;
+  ed25519_keypair_t kp;
+  char fp[HEX_DIGEST_LEN+1];
+
+  (void)arg;
+
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+
+  /* Set up the routerstatus */
+  memset(&rs, 0, sizeof(rs));
+  rs.addr = 0xc0a80001u;
+  rs.or_port = 9001;
+  strlcpy(rs.nickname, "Nicole", sizeof(rs.nickname));
+  memcpy(rs.identity_digest, "Cloud nine is great ", DIGEST_LEN);
+
+  ed25519_secret_key_from_seed(&kp.seckey,
+                          (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+  ed25519_public_key_generate(&kp.pubkey, &kp.seckey);
+  ed25519_pubkey_copy(&rs.ed25519_signing_key, &kp.pubkey);
+
+  base16_encode(fp, HEX_DIGEST_LEN + 1, rs.identity_digest, DIGEST_LEN);
+
+  /* Try an accepted router */
+  add_rsa_fingerprint_to_dir(fp, list, 0);
+  tt_assert(!dirserv_would_reject_router(&rs));
+  RESET_FP_LIST(list);
+
+  add_ed25519_to_dir(&kp.pubkey, list, 0);
+  tt_assert(!dirserv_would_reject_router(&rs));
+  RESET_FP_LIST(list);
+
+  /* Try a rejected router */
+  add_rsa_fingerprint_to_dir(fp, list, FP_REJECT);
+  tt_assert(dirserv_would_reject_router(&rs));
+  RESET_FP_LIST(list);
+
+  add_ed25519_to_dir(&kp.pubkey, list, FP_REJECT);
+  tt_assert(dirserv_would_reject_router(&rs));
+
+ done:
+  dirserv_free_fingerprint_list();
+}
+
 #define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -6729,5 +6777,6 @@ struct testcase_t dir_tests[] = {
   DIR(add_fingerprint, TT_FORK),
   DIR(dirserv_load_fingerprint_file, TT_FORK),
   DIR(dirserv_router_get_status, TT_FORK),
+  DIR(dirserv_would_reject_router, TT_FORK),
   END_OF_TESTCASES
 };
