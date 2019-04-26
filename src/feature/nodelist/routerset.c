@@ -378,7 +378,7 @@ routerset_get_all_nodes(smartlist_t *out, const routerset_t *routerset,
   } else {
     /* We need to iterate over the routerlist to get all the ones of the
      * right kind. */
-    smartlist_t *nodes = nodelist_get_list();
+    const smartlist_t *nodes = nodelist_get_list();
     SMARTLIST_FOREACH(nodes, const node_t *, node, {
         if (running_only && !node->is_running)
           continue;

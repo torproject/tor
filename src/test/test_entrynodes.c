@@ -67,7 +67,7 @@ static networkstatus_t *dummy_consensus = NULL;
 
 static smartlist_t *big_fake_net_nodes = NULL;
 
-static smartlist_t *
+static const smartlist_t *
 bfn_mock_nodelist_get_list(void)
 {
   return big_fake_net_nodes;

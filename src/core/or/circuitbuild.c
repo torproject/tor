@@ -1683,7 +1683,8 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
  * to handle the desired path length, return -1.
  */
 STATIC int
-new_route_len(uint8_t purpose, extend_info_t *exit_ei, smartlist_t *nodes)
+new_route_len(uint8_t purpose, extend_info_t *exit_ei,
+              const smartlist_t *nodes)
 {
   int routelen;
 
@@ -2345,7 +2346,7 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
  * particular router. See bug #25885.)
  */
 MOCK_IMPL(STATIC int,
-count_acceptable_nodes, (smartlist_t *nodes, int direct))
+count_acceptable_nodes, (const smartlist_t *nodes, int direct))
 {
   int num=0;
 

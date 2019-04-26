@@ -78,7 +78,7 @@ helper_setup_fake_routerlist(void)
 {
   int retval;
   routerlist_t *our_routerlist = NULL;
-  smartlist_t *our_nodelist = NULL;
+  const smartlist_t *our_nodelist = NULL;
 
   /* Read the file that contains our test descriptors. */
 

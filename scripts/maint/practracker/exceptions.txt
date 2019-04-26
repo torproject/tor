@@ -78,7 +78,7 @@ problem function-size /src/core/or/channeltls.c:channel_tls_process_versions_cel
 problem function-size /src/core/or/channeltls.c:channel_tls_process_netinfo_cell() 214
 problem function-size /src/core/or/channeltls.c:channel_tls_process_certs_cell() 246
 problem function-size /src/core/or/channeltls.c:channel_tls_process_authenticate_cell() 202
-problem file-size /src/core/or/circuitbuild.c 3060
+problem file-size /src/core/or/circuitbuild.c 3061
 problem include-count /src/core/or/circuitbuild.c 53
 problem function-size /src/core/or/circuitbuild.c:get_unique_circ_id_by_chan() 128
 problem function-size /src/core/or/circuitbuild.c:circuit_extend() 147

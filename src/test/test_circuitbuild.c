@@ -21,7 +21,7 @@ static smartlist_t dummy_nodes;
 static extend_info_t dummy_ei;
 
 static int
-mock_count_acceptable_nodes(smartlist_t *nodes, int direct)
+mock_count_acceptable_nodes(const smartlist_t *nodes, int direct)
 {
   (void)nodes;
 
