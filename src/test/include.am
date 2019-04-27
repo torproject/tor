@@ -33,6 +33,7 @@ endif
 if USEPYTHON
 TESTSCRIPTS += src/test/test_ntor.sh src/test/test_hs_ntor.sh src/test/test_bt.sh
 TESTSCRIPTS += src/test/test_rebind.sh
+TESTSCRIPTS += src/test/test_include.sh
 endif
 
 TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
@@ -378,6 +379,8 @@ EXTRA_DIST += \
 	src/test/slownacl_curve25519.py \
 	src/test/test_rebind.sh \
 	src/test/test_rebind.py \
+	src/test/test_include.sh \
+	src/test/test_include.py \
 	src/test/zero_length_keys.sh \
 	src/test/rust_supp.txt \
 	src/test/test_keygen.sh \
