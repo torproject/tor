@@ -110,12 +110,41 @@ it's a bugfix, mention what bug it fixes and when the bug was
 introduced.  To find out which Git tag the change was introduced in,
 you can use `git describe --contains <sha1 of commit>`.
 
-If at all possible, try to create this file in the same commit where you are
-making the change.  Please give it a distinctive name that no other branch will
-use for the lifetime of your change. To verify the format of the changes file,
-you can use `make check-changes`.  This is run automatically as part of
-`make check` -- if it fails, we must fix it before we release.  These
-checks are implemented in `scripts/maint/lintChanges.py`.
+If you don't know the commit, you can search the git diffs (-S) for the first
+instance of the feature (--reverse).
+
+For example, for #30224, we wanted to know when the bridge-distribution-request
+feature was introduced into Tor:
+    $ git log -S bridge-distribution-request --reverse
+    commit ebab521525
+    Author: Roger Dingledine <arma@torproject.org>
+    Date:   Sun Nov 13 02:39:16 2016 -0500
+
+        Add new BridgeDistribution config option
+
+    $ git describe --contains ebab521525
+    tor-0.3.2.3-alpha~15^2~4
+
+If you need to know all the Tor versions that contain a commit, use:
+    $ git tag --contains 9f2efd02a1 | sort -V
+    tor-0.2.5.16
+    tor-0.2.8.17
+    tor-0.2.9.14
+    tor-0.2.9.15
+    ...
+    tor-0.3.0.13
+    tor-0.3.1.9
+    tor-0.3.1.10
+    ...
+
+If at all possible, try to create the changes file in the same commit where
+you are making the change.  Please give it a distinctive name that no other
+branch will use for the lifetime of your change. We usually use "ticketNNNNN"
+or "bugNNNNN", where NNNNN is the ticket number. To verify the format of the
+changes file, you can use `make check-changes`.  This is run automatically as
+part of `make check` -- if it fails, we must fix it as soon as possible, so
+that our CI passes.  These checks are implemented in
+`scripts/maint/lintChanges.py`.
 
 Changes file style guide:
   * Changes files begin with "  o Header (subheading):".  The header
