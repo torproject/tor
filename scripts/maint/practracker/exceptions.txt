@@ -85,7 +85,7 @@ problem function-size /src/core/or/circuitbuild.c:circuit_extend() 147
 problem function-size /src/core/or/circuitbuild.c:choose_good_exit_server_general() 206
 problem include-count /src/core/or/circuitlist.c 54
 problem function-size /src/core/or/circuitlist.c:HT_PROTOTYPE() 128
-problem function-size /src/core/or/circuitlist.c:circuit_free_() 137
+problem function-size /src/core/or/circuitlist.c:circuit_free_() 143
 problem function-size /src/core/or/circuitlist.c:circuit_find_to_cannibalize() 102
 problem function-size /src/core/or/circuitlist.c:circuit_about_to_free() 120
 problem function-size /src/core/or/circuitlist.c:circuits_handle_oom() 117
@@ -102,8 +102,8 @@ problem function-size /src/core/or/circuituse.c:circuit_get_open_circ_or_launch(
 problem function-size /src/core/or/circuituse.c:connection_ap_handshake_attach_circuit() 244
 problem function-size /src/core/or/command.c:command_process_create_cell() 156
 problem function-size /src/core/or/command.c:command_process_relay_cell() 132
-problem file-size /src/core/or/connection_edge.c 4575
-problem include-count /src/core/or/connection_edge.c 64
+problem file-size /src/core/or/connection_edge.c 4595
+problem include-count /src/core/or/connection_edge.c 65
 problem function-size /src/core/or/connection_edge.c:connection_ap_expire_beginning() 117
 problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_rewrite() 192
 problem function-size /src/core/or/connection_edge.c:connection_ap_handle_onion() 188
@@ -122,11 +122,11 @@ problem function-size /src/core/or/policies.c:policy_summarize() 107
 problem function-size /src/core/or/protover.c:protover_all_supported() 116
 problem file-size /src/core/or/relay.c 3173
 problem function-size /src/core/or/relay.c:circuit_receive_relay_cell() 123
-problem function-size /src/core/or/relay.c:relay_send_command_from_edge_() 101
+problem function-size /src/core/or/relay.c:relay_send_command_from_edge_() 112
 problem function-size /src/core/or/relay.c:connection_ap_process_end_not_open() 194
 problem function-size /src/core/or/relay.c:connection_edge_process_relay_cell_not_open() 139
 problem function-size /src/core/or/relay.c:connection_edge_process_relay_cell() 520
-problem function-size /src/core/or/relay.c:connection_edge_package_raw_inbuf() 130
+problem function-size /src/core/or/relay.c:connection_edge_package_raw_inbuf() 132
 problem function-size /src/core/or/relay.c:circuit_resume_edge_reading_helper() 148
 problem function-size /src/core/or/scheduler_kist.c:kist_scheduler_run() 171
 problem function-size /src/core/or/scheduler_vanilla.c:vanilla_scheduler_run() 109
