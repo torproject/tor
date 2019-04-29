@@ -294,7 +294,7 @@ send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
 /** Keep the current inbound cell digest for the next SENDME digest. This part
  * is only done by the client as the circuit came back from the Exit. */
 void
-sendme_circuit_note_outbound_cell(or_circuit_t *or_circ)
+sendme_circuit_record_outbound_cell(or_circuit_t *or_circ)
 {
   tor_assert(or_circ);
   relay_crypto_record_sendme_digest(&or_circ->crypto);
@@ -303,7 +303,7 @@ sendme_circuit_note_outbound_cell(or_circuit_t *or_circ)
 /** Keep the current inbound cell digest for the next SENDME digest. This part
  * is only done by the client as the circuit came back from the Exit. */
 void
-sendme_circuit_note_inbound_cell(crypt_path_t *cpath)
+sendme_circuit_record_inbound_cell(crypt_path_t *cpath)
 {
   tor_assert(cpath);
   relay_crypto_record_sendme_digest(&cpath->crypto);
@@ -316,7 +316,7 @@ sendme_circuit_note_inbound_cell(crypt_path_t *cpath)
  * one cell (the possible SENDME cell) should be a multiple of the increment
  * window value. */
 bool
-sendme_circuit_is_next_cell(int window)
+sendme_circuit_cell_is_next(int window)
 {
   /* Is this the last cell before a SENDME? The idea is that if the package or
    * deliver window reaches a multiple of the increment, after this cell, we
@@ -578,7 +578,7 @@ sendme_note_stream_data_packaged(edge_connection_t *conn)
 /* Note the cell digest in the circuit sendme last digests FIFO if applicable.
  * It is safe to pass a circuit that isn't meant to track those digests. */
 void
-sendme_note_cell_digest(circuit_t *circ)
+sendme_record_cell_digest(circuit_t *circ)
 {
   const uint8_t *digest;
 
@@ -592,7 +592,7 @@ sendme_note_cell_digest(circuit_t *circ)
   /* Is this the last cell before a SENDME? The idea is that if the
    * package_window reaches a multiple of the increment, after this cell, we
    * should expect a SENDME. */
-  if (!sendme_circuit_is_next_cell(circ->package_window)) {
+  if (!sendme_circuit_cell_is_next(circ->package_window)) {
     return;
   }
 

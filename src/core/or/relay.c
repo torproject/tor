@@ -701,7 +701,7 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
    * we need to. This call needs to be after the circuit_package_relay_cell()
    * because the cell digest is set within that function. */
   if (relay_command == RELAY_COMMAND_DATA) {
-    sendme_note_cell_digest(circ);
+    sendme_record_cell_digest(circ);
   }
 
   return 0;
