@@ -220,7 +220,7 @@ shellcheck:
 	if command -v shellcheck; then \
 	        find $(top_srcdir)/scripts/ -name "*.sh" -exec shellcheck {} +; \
 	        if [ -d "$(top_srcdir)/scripts/test" ]; then \
-                        shellcheck $(top_srcdir)/scripts/test/cov-diff $(top_builddir)/scripts/test/coverage; \
+                        shellcheck $(top_srcdir)/scripts/test/cov-diff $(top_srcdir)/scripts/test/coverage; \
                 fi; \
 	fi
 
