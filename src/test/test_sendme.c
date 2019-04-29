@@ -43,7 +43,7 @@ free_mock_consensus(void)
 }
 
 static void
-test_v1_note_digest(void *arg)
+test_v1_record_digest(void *arg)
 {
   or_circuit_t *or_circ = NULL;
   origin_circuit_t *orig_circ = NULL;
@@ -61,7 +61,7 @@ test_v1_note_digest(void *arg)
   circ->purpose = CIRCUIT_PURPOSE_S_REND_JOINED;
 
   /* We should never note SENDME digest on origin circuit. */
-  sendme_note_cell_digest(circ);
+  sendme_record_cell_digest(circ);
   tt_assert(!circ->sendme_last_digests);
   /* We do not need the origin circuit for now. */
   orig_circ = NULL;
@@ -73,23 +73,23 @@ test_v1_note_digest(void *arg)
    * in order to catched the CIRCWINDOW_INCREMENT-nth cell. Try something that
    * shouldn't be noted. */
   circ->package_window = CIRCWINDOW_INCREMENT;
-  sendme_note_cell_digest(circ);
+  sendme_record_cell_digest(circ);
   tt_assert(!circ->sendme_last_digests);
 
   /* This should work now. Package window at CIRCWINDOW_INCREMENT + 1. */
   circ->package_window++;
-  sendme_note_cell_digest(circ);
+  sendme_record_cell_digest(circ);
   tt_assert(circ->sendme_last_digests);
   tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 1);
 
   /* Next cell in the package window shouldn't do anything. */
   circ->package_window++;
-  sendme_note_cell_digest(circ);
+  sendme_record_cell_digest(circ);
   tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 1);
 
   /* The next CIRCWINDOW_INCREMENT should add one more digest. */
   circ->package_window = (CIRCWINDOW_INCREMENT * 2) + 1;
-  sendme_note_cell_digest(circ);
+  sendme_record_cell_digest(circ);
   tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 2);
 
  done:
@@ -188,7 +188,7 @@ test_v1_build_cell(void *arg)
 
   /* Note the wrong digest in the circuit, cell should fail validation. */
   circ->package_window = CIRCWINDOW_INCREMENT + 1;
-  sendme_note_cell_digest(circ);
+  sendme_record_cell_digest(circ);
   tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 1);
   setup_full_capture_of_logs(LOG_INFO);
   tt_int_op(sendme_is_valid(circ, payload, sizeof(payload)), OP_EQ, false);
@@ -200,7 +200,7 @@ test_v1_build_cell(void *arg)
   /* Record the cell digest into the circuit, cell should validate. */
   memcpy(or_circ->crypto.sendme_digest, digest, sizeof(digest));
   circ->package_window = CIRCWINDOW_INCREMENT + 1;
-  sendme_note_cell_digest(circ);
+  sendme_record_cell_digest(circ);
   tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 1);
   tt_int_op(sendme_is_valid(circ, payload, sizeof(payload)), OP_EQ, true);
   /* After a validation, the last digests is always popped out. */
@@ -254,7 +254,7 @@ test_cell_payload_pad(void *arg)
 }
 
 struct testcase_t sendme_tests[] = {
-  { "v1_note_digest", test_v1_note_digest, TT_FORK,
+  { "v1_record_digest", test_v1_record_digest, TT_FORK,
     NULL, NULL },
   { "v1_consensus_params", test_v1_consensus_params, TT_FORK,
     NULL, NULL },

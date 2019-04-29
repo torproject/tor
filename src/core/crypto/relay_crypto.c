@@ -155,7 +155,7 @@ relay_decrypt_cell(circuit_t *circ, cell_t *cell,
             /* This cell is for us. Keep a record of this cell because we will
              * use it in the next SENDME cell. */
             if (sendme_circuit_is_next_cell(thishop->deliver_window)) {
-              sendme_circuit_note_inbound_cell(thishop);
+              sendme_circuit_record_inbound_cell(thishop);
             }
             return 0;
           }
@@ -231,7 +231,7 @@ relay_encrypt_cell_inbound(cell_t *cell,
   /* We are about to send this cell outbound on the circuit. Keep a record of
    * this cell if we are expecting that the next cell is a SENDME. */
   if (sendme_circuit_is_next_cell(TO_CIRCUIT(or_circ)->package_window)) {
-    sendme_circuit_note_outbound_cell(or_circ);
+    sendme_circuit_record_outbound_cell(or_circ);
   }
 
   /* encrypt one layer */
