@@ -91,6 +91,15 @@ relay_crypt_one_payload(crypto_cipher_t *cipher, uint8_t *in)
   crypto_cipher_crypt_inplace(cipher, (char*) in, CELL_PAYLOAD_SIZE);
 }
 
+/** Record the b_digest from <b>crypto</b> and put it in the sendme_digest. */
+void
+relay_crypto_record_sendme_digest(relay_crypto_t *crypto)
+{
+  tor_assert(crypto);
+  crypto_digest_get_digest(crypto->b_digest, (char *) crypto->sendme_digest,
+                           sizeof(crypto->sendme_digest));
+}
+
 /** Do the appropriate en/decryptions for <b>cell</b> arriving on
  * <b>circ</b> in direction <b>cell_direction</b>.
  *
