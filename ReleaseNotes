@@ -2,6 +2,566 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.0.x - 2019-0?-??
+  Blurb
+
+  o Major features (battery management, client, dormant mode):
+    - When Tor is running as a client, and it is unused for a long time,
+      it can now enter a "dormant" state. When Tor is dormant, it avoids
+      network and CPU activity until it is reawoken either by a user
+      request or by a controller command. For more information, see the
+      configuration options starting with "Dormant". Implements tickets
+      2149 and 28335.
+    - The client's memory of whether it is "dormant", and how long it
+      has spent idle, persists across invocations. Implements
+      ticket 28624.
+    - There is a DormantOnFirstStartup option that integrators can use
+      if they expect that in many cases, Tor will be installed but
+      not used.
+
+  o Major features (bootstrap reporting):
+    - When reporting bootstrap progress, report the first connection
+      uniformly, regardless of whether it's a connection for building
+      application circuits. This allows finer-grained reporting of early
+      progress than previously possible, with the improvements of ticket
+      27169. Closes tickets 27167 and 27103. Addresses ticket 27308.
+    - When reporting bootstrap progress, treat connecting to a proxy or
+      pluggable transport as separate from having successfully used that
+      proxy or pluggable transport to connect to a relay. Closes tickets
+      27100 and 28884.
+
+  o Major features (circuit padding):
+    - Implement preliminary support for the circuit padding portion of
+      Proposal 254. The implementation supports Adaptive Padding (aka
+      WTF-PAD) state machines for use between experimental clients and
+      relays. Support is also provided for APE-style state machines that
+      use probability distributions instead of histograms to specify
+      inter-packet delay. At the moment, Tor does not provide any
+      padding state machines that are used in normal operation: for now,
+      this feature exists solely for experimentation. Closes
+      ticket 28142.
+
+  o Major features (refactoring):
+    - Tor now uses an explicit list of its own subsystems when
+      initializing and shutting down. Previously, these systems were
+      managed implicitly in various places throughout the codebase.
+      (There may still be some subsystems using the old system.) Closes
+      ticket 28330.
+
+  o Major bugfixes (cell scheduler, KIST, security):
+    - Make KIST consider the outbuf length when computing what it can
+      put in the outbuf. Previously, KIST acted as though the outbuf
+      were empty, which could lead to the outbuf becoming too full. It
+      is possible that an attacker could exploit this bug to cause a Tor
+      client or relay to run out of memory and crash. Fixes bug 29168;
+      bugfix on 0.3.2.1-alpha. This issue is also being tracked as
+      TROVE-2019-001 and CVE-2019-8955.
+
+  o Major bugfixes (networking):
+    - Gracefully handle empty username/password fields in SOCKS5
+      username/password auth messsage and allow SOCKS5 handshake to
+      continue. Previously, we had rejected these handshakes, breaking
+      certain applications. Fixes bug 29175; bugfix on 0.3.5.1-alpha.
+
+  o Major bugfixes (NSS, relay):
+    - When running with NSS, disable TLS 1.2 ciphersuites that use
+      SHA384 for their PRF. Due to an NSS bug, the TLS key exporters for
+      these ciphersuites don't work -- which caused relays to fail to
+      handshake with one another when these ciphersuites were enabled.
+      Fixes bug 29241; bugfix on 0.3.5.1-alpha.
+
+  o Major bugfixes (windows, startup):
+    - When reading a consensus file from disk, detect whether it was
+      written in text mode, and re-read it in text mode if so. Always
+      write consensus files in binary mode so that we can map them into
+      memory later. Previously, we had written in text mode, which
+      confused us when we tried to map the file on windows. Fixes bug
+      28614; bugfix on 0.4.0.1-alpha.
+
+  o Minor features (address selection):
+    - Treat the subnet 100.64.0.0/10 as public for some purposes;
+      private for others. This subnet is the RFC 6598 (Carrier Grade
+      NAT) IP range, and is deployed by many ISPs as an alternative to
+      RFC 1918 that does not break existing internal networks. Tor now
+      blocks SOCKS and control ports on these addresses and warns users
+      if client ports or ExtORPorts are listening on a RFC 6598 address.
+      Closes ticket 28525. Patch by Neel Chauhan.
+
+  o Minor features (bandwidth authority):
+    - Make bandwidth authorities ignore relays that are reported in the
+      bandwidth file with the flag "vote=0". This change allows us to
+      report unmeasured relays for diagnostic reasons without including
+      their bandwidth in the bandwidth authorities' vote. Closes
+      ticket 29806.
+    - When a directory authority is using a bandwidth file to obtain the
+      bandwidth values that will be included in the next vote, serve
+      this bandwidth file at /tor/status-vote/next/bandwidth. Closes
+      ticket 21377.
+
+  o Minor features (bootstrap reporting):
+    - When reporting bootstrap progress, stop distinguishing between
+      situations where only internal paths are available and situations
+      where external paths are available. Previously, Tor would often
+      erroneously report that it had only internal paths. Closes
+      ticket 27402.
+
+  o Minor features (compilation):
+    - Compile correctly when OpenSSL is built with engine support
+      disabled, or with deprecated APIs disabled. Closes ticket 29026.
+      Patches from "Mangix".
+
+  o Minor features (continuous integration):
+    - On Travis Rust builds, cleanup Rust registry and refrain from
+      caching the "target/" directory to speed up builds. Resolves
+      issue 29962.
+    - Log Python version during each Travis CI job. Resolves
+      issue 28551.
+
+  o Minor features (controller):
+    - Add a DROPOWNERSHIP command to undo the effects of TAKEOWNERSHIP.
+      Implements ticket 28843.
+
+  o Minor features (developer tooling):
+    - Check that bugfix versions in changes files look like Tor versions
+      from the versions spec. Warn when bugfixes claim to be on a future
+      release. Closes ticket 27761.
+    - Provide a git pre-commit hook that disallows commiting if we have
+      any failures in our code and changelog formatting checks. It is
+      now available in scripts/maint/pre-commit.git-hook. Implements
+      feature 28976.
+    - Provide a git hook script to prevent "fixup!" and "squash!"
+      commits from ending up in the master branch, as scripts/main/pre-
+      push.git-hook. Closes ticket 27993.
+
+  o Minor features (directory authority):
+    - When a directory authority is using a bandwidth file to obtain
+      bandwidth values, include the digest of that file in the vote.
+      Closes ticket 26698.
+    - Directory authorities support a new consensus algorithm, under
+      which the family lines in microdescriptors are encoded in a
+      canonical form. This change makes family lines more compressible
+      in transit, and on the client. Closes ticket 28266; implements
+      proposal 298.
+
+  o Minor features (directory authority, relay):
+    - Authorities now vote on a "StaleDesc" flag to indicate that a
+      relay's descriptor is so old that the relay should upload again
+      soon. Relays treat this flag as a signal to upload a new
+      descriptor. This flag will eventually let us remove the
+      'published' date from routerstatus entries, and make our consensus
+      diffs much smaller. Closes ticket 26770; implements proposal 293.
+
+  o Minor features (dormant mode):
+    - Add a DormantCanceledByStartup option to tell Tor that it should
+      treat a startup event as cancelling any previous dormant state.
+      Integrators should use this option with caution: it should only be
+      used if Tor is being started because of something that the user
+      did, and not if Tor is being automatically started in the
+      background. Closes ticket 29357.
+
+  o Minor features (fallback directory mirrors):
+    - Update the fallback whitelist based on operator opt-ins and opt-
+      outs. Closes ticket 24805, patch by Phoul.
+
+  o Minor features (FreeBSD):
+    - On FreeBSD-based systems, warn relay operators if the
+      "net.inet.ip.random_id" sysctl (IP ID randomization) is disabled.
+      Closes ticket 28518.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the April 2 2019 Maxmind GeoLite2
+      Country database. Closes ticket 29992.
+
+  o Minor features (HTTP standards compliance):
+    - Stop sending the header "Content-type: application/octet-stream"
+      along with transparently compressed documents: this confused
+      browsers. Closes ticket 28100.
+
+  o Minor features (IPv6):
+    - We add an option ClientAutoIPv6ORPort, to make clients randomly
+      prefer a node's IPv4 or IPv6 ORPort. The random preference is set
+      every time a node is loaded from a new consensus or bridge config.
+      We expect that this option will enable clients to bootstrap more
+      quickly without having to determine whether they support IPv4,
+      IPv6, or both. Closes ticket 27490. Patch by Neel Chauhan.
+    - When using addrs_in_same_network_family(), avoid choosing circuit
+      paths that pass through the same IPv6 subnet more than once.
+      Previously, we only checked IPv4 subnets. Closes ticket 24393.
+      Patch by Neel Chauhan.
+
+  o Minor features (log messages):
+    - Improve log message in v3 onion services that could print out
+      negative revision counters. Closes ticket 27707. Patch
+      by "ffmancera".
+
+  o Minor features (memory usage):
+    - Save memory by storing microdescriptor family lists with a more
+      compact representation. Closes ticket 27359.
+    - Tor clients now use mmap() to read consensus files from disk, so
+      that they no longer need keep the full text of a consensus in
+      memory when parsing it or applying a diff. Closes ticket 27244.
+
+  o Minor features (NSS, diagnostic):
+    - Try to log an error from NSS (if there is any) and a more useful
+      description of our situation if we are using NSS and a call to
+      SSL_ExportKeyingMaterial() fails. Diagnostic for ticket 29241.
+
+  o Minor features (parsing):
+    - Directory authorities now validate that router descriptors and
+      ExtraInfo documents are in a valid subset of UTF-8, and reject
+      them if they are not. Closes ticket 27367.
+
+  o Minor features (performance):
+    - Cache the results of summarize_protocol_flags(), so that we don't
+      have to parse the same protocol-versions string over and over.
+      This should save us a huge number of malloc calls on startup, and
+      may reduce memory fragmentation with some allocators. Closes
+      ticket 27225.
+    - Remove a needless memset() call from get_token_arguments, thereby
+      speeding up the tokenization of directory objects by about 20%.
+      Closes ticket 28852.
+    - Replace parse_short_policy() with a faster implementation, to
+      improve microdescriptor parsing time. Closes ticket 28853.
+    - Speed up directory parsing a little by avoiding use of the non-
+      inlined strcmp_len() function. Closes ticket 28856.
+    - Speed up microdescriptor parsing by about 30%, to help improve
+      startup time. Closes ticket 28839.
+
+  o Minor features (pluggable transports):
+    - Add support for emitting STATUS updates to Tor's control port from
+      a pluggable transport process. Closes ticket 28846.
+    - Add support for logging to Tor's logging subsystem from a
+      pluggable transport process. Closes ticket 28180.
+
+  o Minor features (process management):
+    - Add a new process API for handling child processes. This new API
+      allows Tor to have bi-directional communication with child
+      processes on both Unix and Windows. Closes ticket 28179.
+    - Use the subsystem manager to initialize and shut down the process
+      module. Closes ticket 28847.
+
+  o Minor features (relay):
+    - When listing relay families, list them in canonical form including
+      the relay's own identity, and try to give a more useful set of
+      warnings. Part of ticket 28266 and proposal 298.
+
+  o Minor features (required protocols):
+    - Before exiting because of a missing required protocol, Tor will
+      now check the publication time of the consensus, and not exit
+      unless the consensus is newer than the Tor program's own release
+      date. Previously, Tor would not check the consensus publication
+      time, and so might exit because of a missing protocol that might
+      no longer be required in a current consensus. Implements proposal
+      297; closes ticket 27735.
+
+  o Minor features (testing):
+    - Treat all unexpected ERR and BUG messages as test failures. Closes
+      ticket 28668.
+    - Allow a HeartbeatPeriod of less than 30 minutes in testing Tor
+      networks. Closes ticket 28840. Patch by Rob Jansen.
+
+  o Minor bugfixes (security):
+    - Fix a potential double free bug when reading huge bandwidth files.
+      The issue is not exploitable in the current Tor network because
+      the vulnerable code is only reached when directory authorities
+      read bandwidth files, but bandwidth files come from a trusted
+      source (usually the authorities themselves). Furthermore, the
+      issue is only exploitable in rare (non-POSIX) 32-bit architectures,
+      which are not used by any of the current authorities. Fixes bug
+      30040; bugfix on 0.3.5.1-alpha. Bug found and fixed by
+      Tobias Stoeckmann.
+    - Verify in more places that we are not about to create a buffer
+      with more than INT_MAX bytes, to avoid possible OOB access in the
+      event of bugs. Fixes bug 30041; bugfix on 0.2.0.16. Found and
+      fixed by Tobias Stoeckmann.
+
+  o Minor bugfix (continuous integration):
+    - Reset coverage state on disk after Travis CI has finished. This
+      should prevent future coverage merge errors from causing the test
+      suite for the "process" subsystem to fail. The process subsystem
+      was introduced in 0.4.0.1-alpha. Fixes bug 29036; bugfix
+      on 0.2.9.15.
+    - Terminate test-stem if it takes more than 9.5 minutes to run.
+      (Travis terminates the job after 10 minutes of no output.)
+      Diagnostic for 29437. Fixes bug 30011; bugfix on 0.3.5.4-alpha.
+
+  o Minor bugfixes (build, compatibility, rust):
+    - Update Cargo.lock file to match the version made by the latest
+      version of Rust, so that "make distcheck" will pass again. Fixes
+      bug 29244; bugfix on 0.3.3.4-alpha.
+
+  o Minor bugfixes (C correctness):
+    - Fix an unlikely memory leak in consensus_diff_apply(). Fixes bug
+      29824; bugfix on 0.3.1.1-alpha. This is Coverity warning
+      CID 1444119.
+
+  o Minor bugfixes (client, clock skew):
+    - Bootstrap successfully even when Tor's clock is behind the clocks
+      on the authorities. Fixes bug 28591; bugfix on 0.2.0.9-alpha.
+    - Select guards even if the consensus has expired, as long as the
+      consensus is still reasonably live. Fixes bug 24661; bugfix
+      on 0.3.0.1-alpha.
+
+  o Minor bugfixes (compilation):
+    - Fix compilation warnings in test_circuitpadding.c. Fixes bug
+      29169; bugfix on 0.4.0.1-alpha.
+    - Silence a compiler warning in test-memwipe.c on OpenBSD. Fixes bug
+      29145; bugfix on 0.2.9.3-alpha. Patch from Kris Katterjohn.
+    - Compile correctly on OpenBSD; previously, we were missing some
+      headers required in order to detect it properly. Fixes bug 28938;
+      bugfix on 0.3.5.1-alpha. Patch from Kris Katterjohn.
+
+  o Minor bugfixes (directory clients):
+    - Mark outdated dirservers when Tor only has a reasonably live
+      consensus. Fixes bug 28569; bugfix on 0.3.2.5-alpha.
+
+  o Minor bugfixes (directory mirrors):
+    - Even when a directory mirror's clock is behind the clocks on the
+      authorities, we now allow the mirror to serve "future"
+      consensuses. Fixes bug 28654; bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (DNS):
+    - Gracefully handle an empty or absent resolve.conf file by falling
+      back to using "localhost" as a DNS server (and hoping it works).
+      Previously, we would just stop running as an exit. Fixes bug
+      21900; bugfix on 0.2.1.10-alpha.
+
+  o Minor bugfixes (documentation):
+    - Describe the contents of the v3 onion service client authorization
+      files correctly: They hold public keys, not private keys. Fixes
+      bug 28979; bugfix on 0.3.5.1-alpha. Spotted by "Felixix".
+
+  o Minor bugfixes (guards):
+    - In count_acceptable_nodes(), the minimum number is now one bridge
+      or guard node, and two non-guard nodes for a circuit. Previously,
+      we had added up the sum of all nodes with a descriptor, but that
+      could cause us to build failing circuits when we had either too
+      many bridges or not enough guard nodes. Fixes bug 25885; bugfix on
+      0.3.6.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (IPv6):
+    - Fix tor_ersatz_socketpair on IPv6-only systems. Previously, the
+      IPv6 socket was bound using an address family of AF_INET instead
+      of AF_INET6. Fixes bug 28995; bugfix on 0.3.5.1-alpha. Patch from
+      Kris Katterjohn.
+
+  o Minor bugfixes (linux seccomp sandbox):
+    - Fix startup crash when experimental sandbox support is enabled.
+      Fixes bug 29150; bugfix on 0.4.0.1-alpha. Patch by Peter Gerber.
+
+  o Minor bugfixes (logging):
+    - Correct a misleading error message when IPv4Only or IPv6Only is
+      used but the resolved address can not be interpreted as an address
+      of the specified IP version. Fixes bug 13221; bugfix on
+      0.2.3.9-alpha. Patch from Kris Katterjohn.
+    - Log the correct port number for listening sockets when "auto" is
+      used to let Tor pick the port number. Previously, port 0 was
+      logged instead of the actual port number. Fixes bug 29144; bugfix
+      on 0.3.5.1-alpha. Patch from Kris Katterjohn.
+    - Stop logging a BUG() warning when Tor is waiting for exit
+      descriptors. Fixes bug 28656; bugfix on 0.3.5.1-alpha.
+    - Avoid logging that we are relaxing a circuit timeout when that
+      timeout is fixed. Fixes bug 28698; bugfix on 0.2.4.7-alpha.
+    - Log more information at "warning" level when unable to read a
+      private key; log more information at "info" level when unable to
+      read a public key. We had warnings here before, but they were lost
+      during our NSS work. Fixes bug 29042; bugfix on 0.3.5.1-alpha.
+    - Rework rep_hist_log_link_protocol_counts() to iterate through all
+      link protocol versions when logging incoming/outgoing connection
+      counts. Tor no longer skips version 5, and we won't have to
+      remember to update this function when new link protocol version is
+      developed. Fixes bug 28920; bugfix on 0.2.6.10.
+
+  o Minor bugfixes (memory management):
+    - Refactor the shared random state's memory management so that it
+      actually takes ownership of the shared random value pointers.
+      Fixes bug 29706; bugfix on 0.2.9.1-alpha.
+    - Stop leaking parts of the shared random state in the shared-random
+      unit tests. Fixes bug 29599; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (misc):
+    - The amount of total available physical memory is now determined
+      using the sysctl identifier HW_PHYSMEM (rather than HW_USERMEM)
+      when it is defined and a 64-bit variant is not available. Fixes
+      bug 28981; bugfix on 0.2.5.4-alpha. Patch from Kris Katterjohn.
+
+  o Minor bugfixes (networking):
+    - Introduce additional checks into tor_addr_parse() to reject
+      certain incorrect inputs that previously were not detected. Fixes
+      bug 23082; bugfix on 0.2.0.10-alpha.
+
+  o Minor bugfixes (onion service v3, client):
+    - Stop logging a "BUG()" warning and stacktrace when we find a SOCKS
+      connection waiting for a descriptor that we actually have in the
+      cache. It turns out that this can actually happen, though it is
+      rare. Now, tor will recover and retry the descriptor. Fixes bug
+      28669; bugfix on 0.3.2.4-alpha.
+
+  o Minor bugfixes (onion services):
+    - Avoid crashing if ClientOnionAuthDir (incorrectly) contains more
+      than one private key for a hidden service. Fixes bug 29040; bugfix
+      on 0.3.5.1-alpha.
+    - In hs_cache_store_as_client() log an HSDesc we failed to parse at
+      "debug" level. Tor used to log it as a warning, which caused very
+      long log lines to appear for some users. Fixes bug 29135; bugfix
+      on 0.3.2.1-alpha.
+    - Stop logging "Tried to establish rendezvous on non-OR circuit..."
+      as a warning. Instead, log it as a protocol warning, because there
+      is nothing that relay operators can do to fix it. Fixes bug 29029;
+      bugfix on 0.2.5.7-rc.
+
+  o Minor bugfixes (periodic events):
+    - Refrain from calling routerlist_remove_old_routers() from
+      check_descriptor_callback(). Instead, create a new hourly periodic
+      event. Fixes bug 27929; bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (pluggable transports):
+    - Make sure that data is continously read from standard output and
+      standard error pipes of a pluggable transport child-process, to
+      avoid deadlocking when a pipe's buffer is full. Fixes bug 26360;
+      bugfix on 0.2.3.6-alpha.
+
+  o Minor bugfixes (scheduler):
+    - When re-adding channels to the pending list, check the correct
+      channel's sched_heap_idx. This issue has had no effect in mainline
+      Tor, but could have led to bugs down the road in improved versions
+      of our circuit scheduling code. Fixes bug 29508; bugfix
+      on 0.3.2.10.
+
+  o Minor bugfixes (single onion services):
+    - Allow connections to single onion services to remain idle without
+      being disconnected. Previously, relays acting as rendezvous points
+      for single onion services were mistakenly closing idle rendezvous
+      circuits after 60 seconds, thinking that they were unused
+      directory-fetching circuits that had served their purpose. Fixes
+      bug 29665; bugfix on 0.2.1.26.
+
+  o Minor bugfixes (stats):
+    - When ExtraInfoStatistics is 0, stop including PaddingStatistics in
+      relay and bridge extra-info documents. Fixes bug 29017; bugfix
+      on 0.3.1.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Backport the 0.3.4 src/test/test-network.sh to 0.2.9. We need a
+      recent test-network.sh to use new chutney features in CI. Fixes
+      bug 29703; bugfix on 0.2.9.1-alpha.
+    - Fix a test failure on Windows caused by an unexpected "BUG"
+      warning in our tests for tor_gmtime_r(-1). Fixes bug 29922; bugfix
+      on 0.2.9.3-alpha.
+    - Downgrade some LOG_ERR messages in the address/* tests to
+      warnings. The LOG_ERR messages were occurring when we had no
+      configured network. We were failing the unit tests, because we
+      backported 28668 to 0.3.5.8, but did not backport 29530. Fixes bug
+      29530; bugfix on 0.3.5.8.
+    - Fix our gcov wrapper script to look for object files at the
+      correct locations. Fixes bug 29435; bugfix on 0.3.5.1-alpha.
+    - Decrease the false positive rate of stochastic probability
+      distribution tests. Fixes bug 29693; bugfix on 0.4.0.1-alpha.
+    - Fix intermittent failures on an adaptive padding test. Fixes one
+      case of bug 29122; bugfix on 0.4.0.1-alpha.
+    - Disable an unstable circuit-padding test that was failing
+      intermittently because of an ill-defined small histogram. Such
+      histograms will be allowed again after 29298 is implemented. Fixes
+      a second case of bug 29122; bugfix on 0.4.0.1-alpha.
+    - Detect and suppress "bug" warnings from the util/time test on
+      Windows. Fixes bug 29161; bugfix on 0.2.9.3-alpha.
+    - Do not log an error-level message if we fail to find an IPv6
+      network interface from the unit tests. Fixes bug 29160; bugfix
+      on 0.2.7.3-rc.
+    - Instead of relying on hs_free_all() to clean up all onion service
+      objects in test_build_descriptors(), we now deallocate them one by
+      one. This lets Coverity know that we are not leaking memory there
+      and fixes CID 1442277. Fixes bug 28989; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (TLS protocol):
+    - When classifying a client's selection of TLS ciphers, if the
+      client ciphers are not yet available, do not cache the result.
+      Previously, we had cached the unavailability of the cipher list
+      and never looked again, which in turn led us to assume that the
+      client only supported the ancient V1 link protocol. This, in turn,
+      was causing Stem integration tests to stall in some cases. Fixes
+      bug 30021; bugfix on 0.2.4.8-alpha.
+
+  o Minor bugfixes (usability):
+    - Stop saying "Your Guard ..." in pathbias_measure_{use,close}_rate().
+      Some users took this phrasing to mean that the mentioned guard was
+      under their control or responsibility, which it is not. Fixes bug
+      28895; bugfix on Tor 0.3.0.1-alpha.
+
+  o Minor bugfixes (Windows, CI):
+    - Skip the Appveyor 32-bit Windows Server 2016 job, and 64-bit
+      Windows Server 2012 R2 job. The remaining 2 jobs still provide
+      coverage of 64/32-bit, and Windows Server 2016/2012 R2. Also set
+      fast_finish, so failed jobs terminate the build immediately. Fixes
+      bug 29601; bugfix on 0.3.5.4-alpha.
+
+  o Code simplification and refactoring:
+    - Introduce a connection_dir_buf_add() helper function that detects
+      whether compression is in use, and adds a string accordingly.
+      Resolves issue 28816.
+    - Refactor handle_get_next_bandwidth() to use
+      connection_dir_buf_add(). Implements ticket 29897.
+    - Reimplement NETINFO cell parsing and generation to rely on
+      trunnel-generated wire format handling code. Closes ticket 27325.
+    - Remove unnecessary unsafe code from the Rust macro "cstr!". Closes
+      ticket 28077.
+    - Rework SOCKS wire format handling to rely on trunnel-generated
+      parsing/generation code. Resolves ticket 27620.
+    - Split out bootstrap progress reporting from control.c into a
+      separate file. Part of ticket 27402.
+    - The .may_include files that we use to describe our directory-by-
+      directory dependency structure now describe a noncircular
+      dependency graph over the directories that they cover. Our
+      checkIncludes.py tool now enforces this noncircularity. Closes
+      ticket 28362.
+  o Code simplification and refactoring (onion service v3):
+    - Consolidate the authorized client descriptor cookie computation
+      code from client and service into one function. Closes
+      ticket 27549.
+
+  o Code simplification and refactoring (shell scripts):
+    - Cleanup scan-build.sh to silence shellcheck warnings. Closes
+      ticket 28007.
+    - Fix issues that shellcheck found in chutney-git-bisect.sh.
+      Resolves ticket 28006.
+    - Fix issues that shellcheck found in updateRustDependencies.sh.
+      Resolves ticket 28012.
+    - Fix shellcheck warnings in cov-diff script. Resolves issue 28009.
+    - Fix shellcheck warnings in run_calltool.sh. Resolves ticket 28011.
+    - Fix shellcheck warnings in run_trunnel.sh. Resolves issue 28010.
+    - Fix shellcheck warnings in scripts/test/coverage. Resolves
+      issue 28008.
+
+  o Documentation:
+    - Clarify that Tor performs stream isolation among *Port listeners
+      by default. Resolves issue 29121.
+    - In the manpage entry describing MapAddress torrc setting, use
+      example IP addresses from ranges specified for use in documentation
+      by RFC 5737. Resolves issue 28623.
+    - Mention that you cannot add a new onion service if Tor is already
+      running with Sandbox enabled. Closes ticket 28560.
+    - Improve ControlPort documentation. Mention that it accepts
+      address:port pairs, and can be used multiple times. Closes
+      ticket 28805.
+    - Document the exact output of "tor --version". Closes ticket 28889.
+
+  o Removed features:
+    - Remove the old check-tor script. Resolves issue 29072.
+    - Stop responding to the 'GETINFO status/version/num-concurring' and
+      'GETINFO status/version/num-versioning' control port commands, as
+      those were deprecated back in 0.2.0.30. Also stop listing them in
+      output of 'GETINFO info/names'. Resolves ticket 28757.
+    - The scripts used to generate and maintain the list of fallback
+      directories have been extracted into a new "fallback-scripts"
+      repository. Closes ticket 27914.
+
+  o Testing:
+    - Run shellcheck for scripts in the in scripts/ directory. Closes
+      ticket 28058.
+    - Add unit tests for tokenize_string() and get_next_token()
+      functions. Resolves ticket 27625.
+
+
 Changes in version 0.3.3.11 - 2019-01-07
   Tor 0.3.3.11 backports numerous fixes from later versions of Tor.
   numerous fixes, including an important fix for anyone using OpenSSL
