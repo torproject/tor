@@ -388,10 +388,10 @@ sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
     log_debug(LD_CIRC,"Queuing circuit sendme.");
     if (layer_hint) {
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
-      digest = layer_hint->crypto.sendme_digest;
+      digest = relay_crypto_get_sendme_digest(&layer_hint->crypto);
     } else {
       circ->deliver_window += CIRCWINDOW_INCREMENT;
-      digest = TO_OR_CIRCUIT(circ)->crypto.sendme_digest;
+      digest = relay_crypto_get_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto);
     }
     if (send_circuit_level_sendme(circ, layer_hint, digest) < 0) {
       return; /* The circuit's closed, don't continue */
@@ -597,7 +597,7 @@ sendme_record_cell_digest(circuit_t *circ)
   }
 
   /* Add the digest to the last seen list in the circuit. */
-  digest = TO_OR_CIRCUIT(circ)->crypto.sendme_digest;
+  digest = relay_crypto_get_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto);
   if (circ->sendme_last_digests == NULL) {
     circ->sendme_last_digests = smartlist_new();
   }
