@@ -316,7 +316,7 @@ sendme_circuit_record_inbound_cell(crypt_path_t *cpath)
  * one cell (the possible SENDME cell) should be a multiple of the increment
  * window value. */
 bool
-sendme_circuit_is_next_cell(int window)
+sendme_circuit_cell_is_next(int window)
 {
   /* Is this the last cell before a SENDME? The idea is that if the package or
    * deliver window reaches a multiple of the increment, after this cell, we
@@ -592,7 +592,7 @@ sendme_record_cell_digest(circuit_t *circ)
   /* Is this the last cell before a SENDME? The idea is that if the
    * package_window reaches a multiple of the increment, after this cell, we
    * should expect a SENDME. */
-  if (!sendme_circuit_is_next_cell(circ->package_window)) {
+  if (!sendme_circuit_cell_is_next(circ->package_window)) {
     return;
   }
 
