@@ -2488,11 +2488,11 @@ test_circuitpadding_reduce_disable(void *arg)
   circpad_new_consensus_params(&vote1);
 
   tt_int_op(
-    circpad_machine_reached_padding_limit(client_side->padding_info[0]),
-    OP_EQ, 1);
+    circpad_machine_schedule_padding(client_side->padding_info[0]),
+    OP_EQ, CIRCPAD_STATE_UNCHANGED);
   tt_int_op(
-    circpad_machine_reached_padding_limit(relay_side->padding_info[0]),
-    OP_EQ, 1);
+    circpad_machine_schedule_padding(relay_side->padding_info[0]),
+    OP_EQ, CIRCPAD_STATE_UNCHANGED);
 
   /* Signal that circuit is built: this event causes us to re-evaluate
    * machine conditions (which don't apply because padding is disabled). */
@@ -2526,11 +2526,11 @@ test_circuitpadding_reduce_disable(void *arg)
   get_options_mutable()->CircuitPadding = 0;
 
   tt_int_op(
-    circpad_machine_reached_padding_limit(client_side->padding_info[0]),
-    OP_EQ, 1);
+    circpad_machine_schedule_padding(client_side->padding_info[0]),
+    OP_EQ, CIRCPAD_STATE_UNCHANGED);
   tt_int_op(
-    circpad_machine_reached_padding_limit(relay_side->padding_info[0]),
-    OP_EQ, 1);
+    circpad_machine_schedule_padding(relay_side->padding_info[0]),
+    OP_EQ, CIRCPAD_STATE_UNCHANGED);
 
   /* Signal that circuit is built: this event causes us to re-evaluate
    * machine conditions (which don't apply because padding is disabled). */
