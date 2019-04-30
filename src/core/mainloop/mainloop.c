@@ -75,7 +75,6 @@
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
-#include "feature/dirauth/bridgeauth.h"
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
