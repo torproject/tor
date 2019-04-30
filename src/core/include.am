@@ -81,7 +81,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/control/control_getinfo.c	\
 	src/feature/control/fmt_serverstatus.c  \
 	src/feature/control/getinfo_geoip.c	\
-	src/feature/dirauth/keypin.c		\
 	src/feature/dircache/conscache.c	\
 	src/feature/dircache/consdiffmgr.c	\
 	src/feature/dircache/dircache.c		\
@@ -118,7 +117,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/hs_common/replaycache.c	\
 	src/feature/hs_common/shared_random_client.c	\
 	src/feature/keymgt/loadkey.c		\
-	src/feature/dirauth/keypin.c		\
 	src/feature/nodelist/authcert.c		\
 	src/feature/nodelist/describe.c		\
 	src/feature/nodelist/dirlist.c		\
@@ -173,6 +171,7 @@ MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/dirvote.c				\
 	src/feature/dirauth/dsigs_parse.c			\
 	src/feature/dirauth/guardfraction.c			\
+	src/feature/dirauth/keypin.c				\
 	src/feature/dirauth/process_descs.c			\
 	src/feature/dirauth/reachability.c			\
 	src/feature/dirauth/recommend_pkg.c			\
