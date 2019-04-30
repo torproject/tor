@@ -97,7 +97,6 @@ tor_cleanup(void)
     }
     if (authdir_mode_tests_reachability(options))
       rep_hist_record_mtbf_data(now, 0);
-    keypin_close_journal();
   }
 
   timers_shutdown();
