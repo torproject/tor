@@ -75,6 +75,7 @@
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
+#include "feature/dirauth/bridgeauth.h"
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
@@ -1366,7 +1367,6 @@ CALLBACK(retry_listeners);
 CALLBACK(rotate_onion_key);
 CALLBACK(rotate_x509_certificate);
 CALLBACK(save_state);
-CALLBACK(write_bridge_ns);
 CALLBACK(write_stats_file);
 CALLBACK(control_per_second_events);
 CALLBACK(second_elapsed);
@@ -1432,9 +1432,6 @@ STATIC periodic_event_item_t mainloop_periodic_events[] = {
   /* Client only. */
   /* XXXX this could be restricted to CLIENT+NET_PARTICIPANT */
   CALLBACK(rend_cache_failure_clean, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
-
-  /* Bridge Authority only. */
-  CALLBACK(write_bridge_ns, BRIDGEAUTH, 0),
 
   /* Directory server only. */
   CALLBACK(clean_consdiffmgr, DIRSERVER, 0),
@@ -2367,22 +2364,6 @@ check_dns_honesty_callback(time_t now, const or_options_t *options)
 
   dns_launch_correctness_checks();
   return 12*3600 + crypto_rand_int(12*3600);
-}
-
-/**
- * Periodic callback: if we're the bridge authority, write a networkstatus
- * file to disk.
- */
-static int
-write_bridge_ns_callback(time_t now, const or_options_t *options)
-{
-  /* 10. write bridge networkstatus file to disk */
-  if (options->BridgeAuthoritativeDir) {
-    networkstatus_dump_bridge_status_to_file(now);
-#define BRIDGE_STATUSFILE_INTERVAL (30*60)
-     return BRIDGE_STATUSFILE_INTERVAL;
-  }
-  return PERIODIC_EVENT_NO_UPDATE;
 }
 
 static int heartbeat_callback_first_time = 1;

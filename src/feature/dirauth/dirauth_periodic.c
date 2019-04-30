@@ -11,6 +11,7 @@
 #include "feature/dirauth/reachability.h"
 #include "feature/stats/rephist.h"
 
+#include "feature/dirauth/bridgeauth.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/dirauth_periodic.h"
 #include "feature/dirauth/authmode.h"
@@ -131,6 +132,23 @@ downrate_stability_callback(time_t now, const or_options_t *options)
 
 DECLARE_EVENT(downrate_stability, AUTHORITIES, 0);
 
+/**
+ * Periodic callback: if we're the bridge authority, write a networkstatus
+ * file to disk.
+ */
+static int
+write_bridge_ns_callback(time_t now, const or_options_t *options)
+{
+  if (options->BridgeAuthoritativeDir) {
+    bridgeauth_dump_bridge_status_to_file(now);
+#define BRIDGE_STATUSFILE_INTERVAL (30*60)
+     return BRIDGE_STATUSFILE_INTERVAL;
+  }
+  return PERIODIC_EVENT_NO_UPDATE;
+}
+
+DECLARE_EVENT(write_bridge_ns, BRIDGEAUTH, 0);
+
 void
 dirauth_register_periodic_events(void)
 {
@@ -139,4 +157,5 @@ dirauth_register_periodic_events(void)
   periodic_events_register(&save_stability_event);
   periodic_events_register(&check_authority_cert_event);
   periodic_events_register(&dirvote_event);
+  periodic_events_register(&write_bridge_ns_event);
 }
