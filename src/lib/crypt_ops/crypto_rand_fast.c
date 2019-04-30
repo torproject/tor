@@ -95,8 +95,13 @@ CTASSERT(KEY_BITS == 128 || KEY_BITS == 192 || KEY_BITS == 256);
 
 struct crypto_fast_rng_t {
   /** How many more fills does this buffer have before we should mix
-   * in the output of crypto_rand()? */
-  uint16_t n_till_reseed;
+   * in the output of crypto_strongest_rand()?
+   *
+   * This value may be negative if unit tests are enabled.  If so, it
+   * indicates that we should never mix in extra data from
+   * crypto_strongest_rand().
+   */
+  int16_t n_till_reseed;
   /** How many bytes are remaining in cbuf.bytes? */
   uint16_t bytes_left;
 #ifdef CHECK_PID
@@ -181,6 +186,18 @@ crypto_fast_rng_new_from_seed(const uint8_t *seed)
   return result;
 }
 
+#ifdef TOR_UNIT_TESTS
+/**
+ * Unit tests only: prevent a crypto_fast_rng_t from ever mixing in more
+ * entropy.
+ */
+void
+crypto_fast_rng_disable_reseed(crypto_fast_rng_t *rng)
+{
+  rng->n_till_reseed = -1;
+}
+#endif
+
 /**
  * Helper: create a crypto_cipher_t object from SEED_LEN bytes of
  * input.  The first KEY_LEN bytes are used as the stream cipher's key,
@@ -193,6 +210,26 @@ cipher_from_seed(const uint8_t *seed)
 }
 
 /**
+ * Helper: mix additional entropy into <b>rng</b> by using our XOF to mix the
+ * old value for the seed with some additional bytes from
+ * crypto_strongest_rand().
+ **/
+static void
+crypto_fast_rng_add_entopy(crypto_fast_rng_t *rng)
+{
+  crypto_xof_t *xof = crypto_xof_new();
+  crypto_xof_add_bytes(xof, rng->buf.seed, SEED_LEN);
+  {
+    uint8_t seedbuf[SEED_LEN];
+    crypto_strongest_rand(seedbuf, SEED_LEN);
+    crypto_xof_add_bytes(xof, seedbuf, SEED_LEN);
+    memwipe(seedbuf, 0, SEED_LEN);
+  }
+  crypto_xof_squeeze_bytes(xof, rng->buf.seed, SEED_LEN);
+  crypto_xof_free(xof);
+}
+
+/**
  * Helper: refill the seed bytes and output buffer of <b>rng</b>, using
  * the input seed bytes as input (key and IV) for the stream cipher.
  *
@@ -202,22 +239,19 @@ cipher_from_seed(const uint8_t *seed)
 static void
 crypto_fast_rng_refill(crypto_fast_rng_t *rng)
 {
-  if (rng->n_till_reseed-- == 0) {
-    /* It's time to reseed the RNG.  We'll do this by using our XOF to mix the
-     * old value for the seed with some additional bytes from
-     * crypto_strongest_rand(). */
-    crypto_xof_t *xof = crypto_xof_new();
-    crypto_xof_add_bytes(xof, rng->buf.seed, SEED_LEN);
-    {
-      uint8_t seedbuf[SEED_LEN];
-      crypto_strongest_rand(seedbuf, SEED_LEN);
-      crypto_xof_add_bytes(xof, seedbuf, SEED_LEN);
-      memwipe(seedbuf, 0, SEED_LEN);
-    }
-    crypto_xof_squeeze_bytes(xof, rng->buf.seed, SEED_LEN);
-    crypto_xof_free(xof);
-
+  rng->n_till_reseed--;
+  if (rng->n_till_reseed == 0) {
+    /* It's time to reseed the RNG. */
+    crypto_fast_rng_add_entopy(rng);
     rng->n_till_reseed = RESEED_AFTER;
+  } else if (rng->n_till_reseed < 0) {
+#ifdef TOR_UNIT_TESTS
+    /* Reseeding is disabled for testing; never do it on this prng. */
+    rng->n_till_reseed = -1;
+#else
+    /* If testing is disabled, this shouldn't be able to become negative. */
+    tor_assert_unreached();
+#endif
   }
   /* Now fill rng->buf with output from our stream cipher, initialized from
    * that seed value. */
@@ -362,6 +396,20 @@ destroy_thread_fast_rng(void)
   crypto_fast_rng_free(rng);
   tor_threadlocal_set(&thread_rng, NULL);
 }
+
+#ifdef TOR_UNIT_TESTS
+/**
+ * Replace the current thread's rng with <b>rng</b>. For use by the
+ * unit tests only.  Returns the previous thread rng.
+ **/
+crypto_fast_rng_t *
+crypto_replace_thread_fast_rng(crypto_fast_rng_t *rng)
+{
+  crypto_fast_rng_t *old_rng =  tor_threadlocal_get(&thread_rng);
+  tor_threadlocal_set(&thread_rng, rng);
+  return old_rng;
+}
+#endif
 
 /**
  * Initialize the global thread-local key that will be used to keep track
