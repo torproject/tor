@@ -150,12 +150,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/stats/rephist.c		\
 	src/feature/stats/predict_ports.c
 
-# These should eventually move into module_dirauth_sources, but for now
-# the separation is only in the code location.
-LIBTOR_APP_A_SOURCES += 			\
-	src/feature/dirauth/bwauth.c
-
-
 if BUILD_NT_SERVICES
 LIBTOR_APP_A_SOURCES += src/app/main/ntmain.c
 endif
@@ -172,6 +166,7 @@ LIBTOR_APP_TESTING_A_SOURCES = $(LIBTOR_APP_A_SOURCES)
 MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/authmode.c				\
         src/feature/dirauth/bridgeauth.c                        \
+	src/feature/dirauth/bwauth.c				\
 	src/feature/dirauth/dirauth_periodic.c			\
 	src/feature/dirauth/dirauth_sys.c			\
 	src/feature/dirauth/dircollate.c			\
