@@ -154,7 +154,6 @@ LIBTOR_APP_A_SOURCES = 				\
 # the separation is only in the code location.
 LIBTOR_APP_A_SOURCES += 			\
 	src/feature/dirauth/bwauth.c		\
-	src/feature/dirauth/reachability.c	\
 	src/feature/dirauth/voteflags.c
 
 if BUILD_NT_SERVICES
@@ -179,6 +178,7 @@ MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/dsigs_parse.c			\
 	src/feature/dirauth/guardfraction.c			\
 	src/feature/dirauth/process_descs.c			\
+	src/feature/dirauth/reachability.c			\
 	src/feature/dirauth/recommend_pkg.c			\
 	src/feature/dirauth/shared_random.c			\
 	src/feature/dirauth/shared_random_state.c
