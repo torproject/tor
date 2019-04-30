@@ -128,7 +128,6 @@ tor_free_all(int postfork)
   networkstatus_free_all();
   addressmap_free_all();
   dirserv_free_all();
-  dirserv_clear_measured_bw_cache();
   rend_cache_free_all();
   rend_service_authorization_free_all();
   rep_hist_free_all();
