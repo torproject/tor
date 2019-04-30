@@ -820,6 +820,8 @@ protover_all_supported(const char *s, char **missing_out)
        * ones and, if so, add them to unsupported->ranges. */
       if (versions->low != 0 && versions->high != 0) {
         smartlist_add(unsupported->ranges, versions);
+      } else {
+        tor_free(versions);
       }
       /* Finally, if we had something unsupported, add it to the list of
        * missing_some things and mark that there was something missing. */
@@ -828,7 +830,6 @@ protover_all_supported(const char *s, char **missing_out)
         all_supported = 0;
       } else {
         proto_entry_free(unsupported);
-        tor_free(versions);
       }
     } SMARTLIST_FOREACH_END(range);
 

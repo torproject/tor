@@ -4227,6 +4227,7 @@ rend_consider_services_intro_points(time_t now)
        * directly ourselves. */
       intro->extend_info = extend_info_from_node(node, 0);
       if (BUG(intro->extend_info == NULL)) {
+        tor_free(intro);
         break;
       }
       intro->intro_key = crypto_pk_new();

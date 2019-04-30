@@ -2027,8 +2027,12 @@ string_is_valid_nonrfc_hostname(const char *string)
 
   smartlist_split_string(components,string,".",0,0);
 
-  if (BUG(smartlist_len(components) == 0))
-    return 0; // LCOV_EXCL_LINE should be impossible given the earlier checks.
+  if (BUG(smartlist_len(components) == 0)) {
+    // LCOV_EXCL_START should be impossible given the earlier checks.
+    smartlist_free(components);
+    return 0;
+    // LCOV_EXCL_STOP
+  }
 
   /* Allow a single terminating '.' used rarely to indicate domains
    * are FQDNs rather than relative. */
