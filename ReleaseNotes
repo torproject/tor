@@ -2,7 +2,7 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
-Changes in version 0.4.0.x - 2019-0?-??
+Changes in version 0.4.0.5 - 2019-0?-??
   Blurb
 
   o Major features (battery management, client, dormant mode):
@@ -116,6 +116,9 @@ Changes in version 0.4.0.x - 2019-0?-??
       issue 29962.
     - Log Python version during each Travis CI job. Resolves
       issue 28551.
+    - In Travis, tell timelimit to use stem's backtrace signals, and
+      launch python directly from timelimit, so python receives the
+      signals from timelimit, rather than make. Closes ticket 30117.
 
   o Minor features (controller):
     - Add a DROPOWNERSHIP command to undo the effects of TAKEOWNERSHIP.
@@ -132,6 +135,11 @@ Changes in version 0.4.0.x - 2019-0?-??
     - Provide a git hook script to prevent "fixup!" and "squash!"
       commits from ending up in the master branch, as scripts/main/pre-
       push.git-hook. Closes ticket 27993.
+
+  o Minor features (diagnostic):
+    - Add more diagnostic log messages in an attempt to solve the issue
+      of NUL bytes appearing in a microdescriptor cache. Related to
+      ticket 28223.
 
   o Minor features (directory authority):
     - When a directory authority is using a bandwidth file to obtain
@@ -259,6 +267,9 @@ Changes in version 0.4.0.x - 2019-0?-??
       ticket 28668.
     - Allow a HeartbeatPeriod of less than 30 minutes in testing Tor
       networks. Closes ticket 28840. Patch by Rob Jansen.
+    - Use the approx_time() function when setting the "Expires" header
+      in directory replies, to make them more testable. Needed for
+      ticket 30001.
 
   o Minor bugfixes (security):
     - Fix a potential double free bug when reading huge bandwidth files.
@@ -421,12 +432,21 @@ Changes in version 0.4.0.x - 2019-0?-??
       avoid deadlocking when a pipe's buffer is full. Fixes bug 26360;
       bugfix on 0.2.3.6-alpha.
 
+  o Minor bugfixes (rust):
+    - Abort on panic in all build profiles, instead of potentially
+      unwinding into C code. Fixes bug 27199; bugfix on 0.3.3.1-alpha.
+
   o Minor bugfixes (scheduler):
     - When re-adding channels to the pending list, check the correct
       channel's sched_heap_idx. This issue has had no effect in mainline
       Tor, but could have led to bugs down the road in improved versions
       of our circuit scheduling code. Fixes bug 29508; bugfix
       on 0.3.2.10.
+
+  o Minor bugfixes (shellcheck):
+    - Look for scripts in their correct locations during "make
+      shellcheck". Previously we had looked in the wrong place during
+      out-of-tree builds. Fixes bug 30263; bugfix on 0.4.0.1-alpha.
 
   o Minor bugfixes (single onion services):
     - Allow connections to single onion services to remain idle without
@@ -472,6 +492,8 @@ Changes in version 0.4.0.x - 2019-0?-??
       objects in test_build_descriptors(), we now deallocate them one by
       one. This lets Coverity know that we are not leaking memory there
       and fixes CID 1442277. Fixes bug 28989; bugfix on 0.3.5.1-alpha.
+    - Check the time in the "Expires" header using approx_time(). Fixes
+      bug 30001; bugfix on 0.4.0.4-rc.
 
   o Minor bugfixes (TLS protocol):
     - When classifying a client's selection of TLS ciphers, if the
@@ -514,23 +536,6 @@ Changes in version 0.4.0.x - 2019-0?-??
       dependency graph over the directories that they cover. Our
       checkIncludes.py tool now enforces this noncircularity. Closes
       ticket 28362.
-  o Code simplification and refactoring (onion service v3):
-    - Consolidate the authorized client descriptor cookie computation
-      code from client and service into one function. Closes
-      ticket 27549.
-
-  o Code simplification and refactoring (shell scripts):
-    - Cleanup scan-build.sh to silence shellcheck warnings. Closes
-      ticket 28007.
-    - Fix issues that shellcheck found in chutney-git-bisect.sh.
-      Resolves ticket 28006.
-    - Fix issues that shellcheck found in updateRustDependencies.sh.
-      Resolves ticket 28012.
-    - Fix shellcheck warnings in cov-diff script. Resolves issue 28009.
-    - Fix shellcheck warnings in run_calltool.sh. Resolves ticket 28011.
-    - Fix shellcheck warnings in run_trunnel.sh. Resolves issue 28010.
-    - Fix shellcheck warnings in scripts/test/coverage. Resolves
-      issue 28008.
 
   o Documentation:
     - Clarify that Tor performs stream isolation among *Port listeners
@@ -560,6 +565,24 @@ Changes in version 0.4.0.x - 2019-0?-??
       ticket 28058.
     - Add unit tests for tokenize_string() and get_next_token()
       functions. Resolves ticket 27625.
+
+  o Code simplification and refactoring (onion service v3):
+    - Consolidate the authorized client descriptor cookie computation
+      code from client and service into one function. Closes
+      ticket 27549.
+
+  o Code simplification and refactoring (shell scripts):
+    - Cleanup scan-build.sh to silence shellcheck warnings. Closes
+      ticket 28007.
+    - Fix issues that shellcheck found in chutney-git-bisect.sh.
+      Resolves ticket 28006.
+    - Fix issues that shellcheck found in updateRustDependencies.sh.
+      Resolves ticket 28012.
+    - Fix shellcheck warnings in cov-diff script. Resolves issue 28009.
+    - Fix shellcheck warnings in run_calltool.sh. Resolves ticket 28011.
+    - Fix shellcheck warnings in run_trunnel.sh. Resolves issue 28010.
+    - Fix shellcheck warnings in scripts/test/coverage. Resolves
+      issue 28008.
 
 
 Changes in version 0.3.3.11 - 2019-01-07

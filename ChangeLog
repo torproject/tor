@@ -1,3 +1,35 @@
+Changes in version 0.4.0.5 - 2019-0?-??
+  Blurb
+
+  o Minor features (continuous integration):
+    - In Travis, tell timelimit to use stem's backtrace signals, and
+      launch python directly from timelimit, so python receives the
+      signals from timelimit, rather than make. Closes ticket 30117.
+
+  o Minor features (diagnostic):
+    - Add more diagnostic log messages in an attempt to solve the issue
+      of NUL bytes appearing in a microdescriptor cache. Related to
+      ticket 28223.
+
+  o Minor features (testing):
+    - Use the approx_time() function when setting the "Expires" header
+      in directory replies, to make them more testable. Needed for
+      ticket 30001.
+
+  o Minor bugfixes (rust):
+    - Abort on panic in all build profiles, instead of potentially
+      unwinding into C code. Fixes bug 27199; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (shellcheck):
+    - Look for scripts in their correct locations during "make
+      shellcheck". Previously we had looked in the wrong place during
+      out-of-tree builds. Fixes bug 30263; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Check the time in the "Expires" header using approx_time(). Fixes
+      bug 30001; bugfix on 0.4.0.4-rc.
+
+
 Changes in version 0.4.0.4-rc - 2019-04-11
   Tor 0.4.0.4-rc is the first release candidate in its series; it fixes
   several bugs from earlier versions, including some that had affected

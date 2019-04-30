@@ -1,4 +1,0 @@
-  o Testing (continuous integration):
-    - In Travis, tell timelimit to use stem's backtrace signals. And launch
-      python directly from timelimit, so python receives the signals from
-      timelimit, rather than make. Closes ticket 30117.
