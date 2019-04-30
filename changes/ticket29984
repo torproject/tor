@@ -1,0 +1,5 @@
+  o Minor bugfixes (controller protocol):
+    - Teach the controller parser to correctly distinguish an object
+      preceded by an argument list from one without. Previously, it
+      couldn't distinguish an argument list from the first line of a
+      multiline object. Fixes bug 29984; bugfix on 0.2.3.8-alpha.
