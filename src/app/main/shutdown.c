@@ -18,7 +18,6 @@
 #include "app/main/shutdown.h"
 #include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
-#include "core/mainloop/mainloop.h"
 #include "core/mainloop/mainloop_pubsub.h"
 #include "core/or/channeltls.h"
 #include "core/or/circuitlist.h"
@@ -126,7 +125,6 @@ tor_free_all(int postfork)
   }
   geoip_free_all();
   geoip_stats_free_all();
-  dirvote_free_all();
   routerlist_free_all();
   networkstatus_free_all();
   addressmap_free_all();
@@ -176,7 +174,6 @@ tor_free_all(int postfork)
   /* stuff in main.c */
 
   tor_mainloop_disconnect_pubsub();
-  tor_mainloop_free_all();
 
   if (!postfork) {
     release_lockfile();

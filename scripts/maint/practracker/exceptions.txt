@@ -29,8 +29,8 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 8491
-problem include-count /src/app/config/config.c 86
+problem file-size /src/app/config/config.c 8492
+problem include-count /src/app/config/config.c 87
 problem function-size /src/app/config/config.c:options_act_reversible() 296
 problem function-size /src/app/config/config.c:options_act() 588
 problem function-size /src/app/config/config.c:resolve_my_address() 192
@@ -214,7 +214,7 @@ problem function-size /src/feature/nodelist/authcert.c:trusted_dirs_load_certs_f
 problem function-size /src/feature/nodelist/authcert.c:authority_certs_fetch_missing() 296
 problem function-size /src/feature/nodelist/fmt_routerstatus.c:routerstatus_format_entry() 166
 problem function-size /src/feature/nodelist/microdesc.c:microdesc_cache_rebuild() 134
-problem include-count /src/feature/nodelist/networkstatus.c 61
+problem include-count /src/feature/nodelist/networkstatus.c 62
 problem function-size /src/feature/nodelist/networkstatus.c:networkstatus_check_consensus_signature() 176
 problem function-size /src/feature/nodelist/networkstatus.c:networkstatus_set_current_consensus() 293
 problem function-size /src/feature/nodelist/node_select.c:router_pick_directory_server_impl() 123

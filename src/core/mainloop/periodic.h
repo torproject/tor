@@ -83,11 +83,20 @@ periodic_event_is_enabled(const periodic_event_item_t *item)
 }
 
 void periodic_event_launch(periodic_event_item_t *event);
-void periodic_event_setup(periodic_event_item_t *event);
-void periodic_event_destroy(periodic_event_item_t *event);
+void periodic_event_connect(periodic_event_item_t *event);
+//void periodic_event_disconnect(periodic_event_item_t *event);
 void periodic_event_reschedule(periodic_event_item_t *event);
 void periodic_event_enable(periodic_event_item_t *event);
 void periodic_event_disable(periodic_event_item_t *event);
 void periodic_event_schedule_and_disable(periodic_event_item_t *event);
+
+void periodic_events_register(periodic_event_item_t *item);
+void periodic_events_connect_all(void);
+void periodic_events_reset_all(void);
+periodic_event_item_t *periodic_events_find(const char *name);
+void periodic_events_rescan_by_roles(int roles, bool net_disabled);
+void periodic_events_disconnect_all(void);
+
+int safe_timer_diff(time_t now, time_t next);
 
 #endif /* !defined(TOR_PERIODIC_H) */

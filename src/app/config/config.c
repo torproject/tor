@@ -156,6 +156,7 @@
 #include "lib/evloop/procmon.h"
 
 #include "feature/dirauth/dirvote.h"
+#include "feature/dirauth/dirauth_periodic.h"
 #include "feature/dirauth/recommend_pkg.h"
 #include "feature/dirauth/authmode.h"
 
