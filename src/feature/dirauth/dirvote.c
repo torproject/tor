@@ -4545,8 +4545,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
-      set_routerstatus_from_routerinfo(rs, node, ri, now,
-                                       listbadexits);
+      dirauth_set_routerstatus_from_routerinfo(rs, node, ri, now,
+                                               listbadexits);
 
       if (ri->cache_info.signing_key_cert) {
         memcpy(vrs->ed25519_id,

@@ -76,7 +76,6 @@ list_server_status_v1(smartlist_t *routers, char **router_status_out,
   SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     const node_t *node = node_get_by_id(ri->cache_info.identity_digest);
     tor_assert(node);
-
     if (for_controller) {
       char name_buf[MAX_VERBOSE_NICKNAME_LEN+2];
       char *cp = name_buf;

@@ -153,8 +153,8 @@ LIBTOR_APP_A_SOURCES = 				\
 # These should eventually move into module_dirauth_sources, but for now
 # the separation is only in the code location.
 LIBTOR_APP_A_SOURCES += 			\
-	src/feature/dirauth/bwauth.c		\
-	src/feature/dirauth/voteflags.c
+	src/feature/dirauth/bwauth.c
+
 
 if BUILD_NT_SERVICES
 LIBTOR_APP_A_SOURCES += src/app/main/ntmain.c
@@ -171,6 +171,7 @@ LIBTOR_APP_TESTING_A_SOURCES = $(LIBTOR_APP_A_SOURCES)
 # The Directory Authority module.
 MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/authmode.c				\
+        src/feature/dirauth/bridgeauth.c                        \
 	src/feature/dirauth/dirauth_periodic.c			\
 	src/feature/dirauth/dirauth_sys.c			\
 	src/feature/dirauth/dircollate.c			\
@@ -181,7 +182,8 @@ MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/reachability.c			\
 	src/feature/dirauth/recommend_pkg.c			\
 	src/feature/dirauth/shared_random.c			\
-	src/feature/dirauth/shared_random_state.c
+	src/feature/dirauth/shared_random_state.c               \
+	src/feature/dirauth/voteflags.c
 
 if BUILD_MODULE_DIRAUTH
 LIBTOR_APP_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
@@ -310,6 +312,7 @@ noinst_HEADERS +=					\
 	src/feature/control/fmt_serverstatus.h		\
 	src/feature/control/getinfo_geoip.h		\
 	src/feature/dirauth/authmode.h			\
+        src/feature/dirauth/bridgeauth.h                \
 	src/feature/dirauth/bwauth.h			\
 	src/feature/dirauth/dirauth_periodic.h		\
 	src/feature/dirauth/dirauth_sys.h		\

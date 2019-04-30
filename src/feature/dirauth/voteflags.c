@@ -546,38 +546,31 @@ should_publish_node_ipv6(const node_t *node, const routerinfo_t *ri,
      router_is_me(ri));
 }
 
-/** Extract status information from <b>ri</b> and from other authority
- * functions and store it in <b>rs</b>. <b>rs</b> is zeroed out before it is
- * set.
- *
- * We assume that ri-\>is_running has already been set, e.g. by
- *   dirserv_set_router_is_running(ri, now);
+/**
+ * Extract status information from <b>ri</b> and from other authority
+ * functions and store it in <b>rs</b>, as per
+ * <b>set_routerstatus_from_routerinfo</b>.  Additionally, sets information
+ * in from the authority subsystem.
  */
 void
-set_routerstatus_from_routerinfo(routerstatus_t *rs,
-                                 node_t *node,
-                                 const routerinfo_t *ri,
-                                 time_t now,
-                                 int listbadexits)
+dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
+                                         node_t *node,
+                                         const routerinfo_t *ri,
+                                         time_t now,
+                                         int listbadexits)
 {
   const or_options_t *options = get_options();
   uint32_t routerbw_kb = dirserv_get_credible_bandwidth_kb(ri);
 
-  memset(rs, 0, sizeof(routerstatus_t));
+  /* Set these flags so that set_routerstatus_from_routerinfo can copy them.
+   */
+  node->is_stable = !dirserv_thinks_router_is_unreliable(now, ri, 1, 0);
+  node->is_fast = !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
+  node->is_hs_dir = dirserv_thinks_router_is_hs_dir(ri, node, now);
 
-  rs->is_authority =
-    router_digest_is_trusted_dir(ri->cache_info.identity_digest);
+  set_routerstatus_from_routerinfo(rs, node, ri);
 
-  /* Already set by compute_performance_thresholds. */
-  rs->is_exit = node->is_exit;
-  rs->is_stable = node->is_stable =
-    !dirserv_thinks_router_is_unreliable(now, ri, 1, 0);
-  rs->is_fast = node->is_fast =
-    !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
-  rs->is_flagged_running = node->is_running; /* computed above */
-
-  rs->is_valid = node->is_valid;
-
+  /* Override rs->is_possible_guard. */
   if (node->is_fast && node->is_stable &&
       ri->supports_tunnelled_dir_requests &&
       ((options->AuthDirGuardBWGuarantee &&
@@ -593,31 +586,16 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     rs->is_possible_guard = 0;
   }
 
+  /* Override rs->is_bad_exit */
   rs->is_bad_exit = listbadexits && node->is_bad_exit;
-  rs->is_hs_dir = node->is_hs_dir =
-    dirserv_thinks_router_is_hs_dir(ri, node, now);
 
-  rs->is_named = rs->is_unnamed = 0;
-
-  rs->published_on = ri->cache_info.published_on;
-  memcpy(rs->identity_digest, node->identity, DIGEST_LEN);
-  memcpy(rs->descriptor_digest, ri->cache_info.signed_descriptor_digest,
-         DIGEST_LEN);
-  rs->addr = ri->addr;
-  strlcpy(rs->nickname, ri->nickname, sizeof(rs->nickname));
-  rs->or_port = ri->or_port;
-  rs->dir_port = ri->dir_port;
-  rs->is_v2_dir = ri->supports_tunnelled_dir_requests;
-
+  /* Set rs->is_staledesc. */
   rs->is_staledesc =
     (ri->cache_info.published_on + DESC_IS_STALE_INTERVAL) < now;
 
-  if (should_publish_node_ipv6(node, ri, now)) {
-    /* We're configured as having IPv6 connectivity. There's an IPv6
-       OR port and it's reachable so copy it to the routerstatus.  */
-    tor_addr_copy(&rs->ipv6_addr, &ri->ipv6_addr);
-    rs->ipv6_orport = ri->ipv6_orport;
-  } else {
+  if (! should_publish_node_ipv6(node, ri, now)) {
+    /* We're not configured as having IPv6 connectivity or the node isn't:
+     * zero its IPv6 information. */
     tor_addr_make_null(&rs->ipv6_addr, AF_INET6);
     rs->ipv6_orport = 0;
   }
