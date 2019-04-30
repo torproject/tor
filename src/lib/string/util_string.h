@@ -20,7 +20,13 @@ const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
                        size_t nlen);
 const void *tor_memstr(const void *haystack, size_t hlen,
                        const char *needle);
-int tor_mem_is_zero(const char *mem, size_t len);
+int fast_mem_is_zero(const char *mem, size_t len);
+#define fast_digest_is_zero(d) fast_mem_is_zero((d), DIGEST_LEN)
+#define fast_digetst256_is_zero(d) fast_mem_is_zero((d), DIGEST256_LEN)
+
+// XXXX remove this after we replace all users.
+#define tor_mem_is_zero fast_mem_is_zero
+
 int tor_digest_is_zero(const char *digest);
 int tor_digest256_is_zero(const char *digest);
 
