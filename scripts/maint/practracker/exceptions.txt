@@ -29,12 +29,12 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 8492
+problem file-size /src/app/config/config.c 8502
 problem include-count /src/app/config/config.c 87
 problem function-size /src/app/config/config.c:options_act_reversible() 296
 problem function-size /src/app/config/config.c:options_act() 588
 problem function-size /src/app/config/config.c:resolve_my_address() 192
-problem function-size /src/app/config/config.c:options_validate() 1207
+problem function-size /src/app/config/config.c:options_validate() 1215
 problem function-size /src/app/config/config.c:options_init_from_torrc() 202
 problem function-size /src/app/config/config.c:options_init_from_string() 173
 problem function-size /src/app/config/config.c:options_init_logs() 146
