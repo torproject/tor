@@ -157,7 +157,6 @@ LIBTOR_APP_A_SOURCES += 			\
 	src/feature/dirauth/dsigs_parse.c	\
 	src/feature/dirauth/guardfraction.c	\
 	src/feature/dirauth/reachability.c	\
-	src/feature/dirauth/recommend_pkg.c	\
 	src/feature/dirauth/process_descs.c	\
 	src/feature/dirauth/voteflags.c
 
@@ -180,6 +179,7 @@ MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/dirauth_sys.c			\
 	src/feature/dirauth/dircollate.c			\
 	src/feature/dirauth/dirvote.c				\
+	src/feature/dirauth/recommend_pkg.c			\
 	src/feature/dirauth/shared_random.c			\
 	src/feature/dirauth/shared_random_state.c
 
