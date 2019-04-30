@@ -2,6 +2,7 @@
 #define TOR_TIMERS_PRIVATE
 #define CIRCUITPADDING_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define CRYPT_PATH_PRIVATE
 
 #include "core/or/or.h"
 #include "test.h"
@@ -9,6 +10,7 @@
 #include "core/or/connection_or.h"
 #include "core/or/channel.h"
 #include "core/or/channeltls.h"
+#include "core/or/crypt_path.h"
 #include <event.h>
 #include "lib/evloop/compat_libevent.h"
 #include "lib/time/compat_time.h"
@@ -143,12 +145,12 @@ new_fake_orcirc(channel_t *nchan, channel_t *pchan)
   circuit_set_n_circid_chan(circ, circ->n_circ_id, nchan);
 
   memset(&tmp_cpath, 0, sizeof(tmp_cpath));
-  if (circuit_init_cpath_crypto(&tmp_cpath, whatevs_key,
+  if (cpath_init_circuit_crypto(&tmp_cpath, whatevs_key,
                                 sizeof(whatevs_key), 0, 0)<0) {
     log_warn(LD_BUG,"Circuit initialization failed");
     return NULL;
   }
-  orcirc->crypto = tmp_cpath.crypto;
+  orcirc->crypto = tmp_cpath.pvt_crypto;
 
   return orcirc;
 }
@@ -1617,7 +1619,7 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
 
   // Add a hop to cpath
   crypt_path_t *hop = tor_malloc_zero(sizeof(crypt_path_t));
-  onion_append_to_cpath(&TO_ORIGIN_CIRCUIT(client)->cpath, hop);
+  cpath_extend_linked_list(&TO_ORIGIN_CIRCUIT(client)->cpath, hop);
 
   hop->magic = CRYPT_PATH_MAGIC;
   hop->state = CPATH_STATE_OPEN;
@@ -1631,7 +1633,7 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
           digest, NULL, NULL, NULL,
           &addr, padding);
 
-  circuit_init_cpath_crypto(hop, whatevs_key, sizeof(whatevs_key), 0, 0);
+  cpath_init_circuit_crypto(hop, whatevs_key, sizeof(whatevs_key), 0, 0);
 
   hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;

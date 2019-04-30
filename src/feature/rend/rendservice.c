@@ -18,6 +18,7 @@
 #include "core/or/circuituse.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
+#include "core/or/crypt_path.h"
 #include "feature/client/circpathbias.h"
 #include "feature/control/control_events.h"
 #include "feature/dirclient/dirclient.h"
@@ -2163,7 +2164,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
 
   cpath->rend_dh_handshake_state = dh;
   dh = NULL;
-  if (circuit_init_cpath_crypto(cpath,
+  if (cpath_init_circuit_crypto(cpath,
                                 keys+DIGEST_LEN, sizeof(keys)-DIGEST_LEN,
                                 1, 0)<0)
     goto err;
@@ -3547,7 +3548,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
 
-  onion_append_to_cpath(&circuit->cpath, hop);
+  cpath_extend_linked_list(&circuit->cpath, hop);
   circuit->build_state->pending_final_cpath = NULL; /* prevent double-free */
 
   /* Change the circuit purpose. */

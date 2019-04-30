@@ -14,6 +14,7 @@
 #define CIRCUITBUILD_PRIVATE
 #define CIRCUITLIST_PRIVATE
 #define CONNECTION_PRIVATE
+#define CRYPT_PATH_PRIVATE
 
 #include "test/test.h"
 #include "test/test_helpers.h"
@@ -44,6 +45,7 @@
 
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/crypt_path_st.h"
+#include "core/or/crypt_path.h"
 #include "feature/dircommon/dir_connection_st.h"
 #include "core/or/entry_connection_st.h"
 #include "core/or/extend_info_st.h"
@@ -241,12 +243,14 @@ test_e2e_rend_circuit_setup_legacy(void *arg)
   tt_int_op(retval, OP_EQ, 1);
 
   /* Check the digest algo */
-  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->crypto.f_digest),
+  tt_int_op(
+         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.f_digest),
             OP_EQ, DIGEST_SHA1);
-  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->crypto.b_digest),
+  tt_int_op(
+         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.b_digest),
             OP_EQ, DIGEST_SHA1);
-  tt_assert(or_circ->cpath->crypto.f_crypto);
-  tt_assert(or_circ->cpath->crypto.b_crypto);
+  tt_assert(or_circ->cpath->pvt_crypto.f_crypto);
+  tt_assert(or_circ->cpath->pvt_crypto.b_crypto);
 
   /* Ensure that circ purpose was changed */
   tt_int_op(or_circ->base_.purpose, OP_EQ, CIRCUIT_PURPOSE_C_REND_JOINED);
@@ -311,12 +315,14 @@ test_e2e_rend_circuit_setup(void *arg)
   tt_int_op(retval, OP_EQ, 1);
 
   /* Check that the crypt path has prop224 algorithm parameters */
-  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->crypto.f_digest),
+  tt_int_op(
+         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.f_digest),
             OP_EQ, DIGEST_SHA3_256);
-  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->crypto.b_digest),
+  tt_int_op(
+         crypto_digest_get_algorithm(or_circ->cpath->pvt_crypto.b_digest),
             OP_EQ, DIGEST_SHA3_256);
-  tt_assert(or_circ->cpath->crypto.f_crypto);
-  tt_assert(or_circ->cpath->crypto.b_crypto);
+  tt_assert(or_circ->cpath->pvt_crypto.f_crypto);
+  tt_assert(or_circ->cpath->pvt_crypto.b_crypto);
 
   /* Ensure that circ purpose was changed */
   tt_int_op(or_circ->base_.purpose, OP_EQ, CIRCUIT_PURPOSE_C_REND_JOINED);
