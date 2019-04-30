@@ -14,7 +14,7 @@
 static int
 subsys_dirauth_initialize(void)
 {
-  dirauth_add_periodic_events();
+  dirauth_register_periodic_events();
   return 0;
 }
 

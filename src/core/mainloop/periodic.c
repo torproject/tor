@@ -147,9 +147,9 @@ periodic_event_launch(periodic_event_item_t *event)
   periodic_event_dispatch(event->ev, event);
 }
 
-/** Release all storage associated with <b>event</b> */
-void
-periodic_event_destroy(periodic_event_item_t *event)
+/** Disconnect and unregister the periodic event in <b>event</b> */
+static void
+periodic_event_disconnect(periodic_event_item_t *event)
 {
   if (!event)
     return;
@@ -330,7 +330,7 @@ periodic_events_disconnect_all(void)
     return;
 
   SMARTLIST_FOREACH_BEGIN(the_periodic_events, periodic_event_item_t *, item) {
-    periodic_event_destroy(item);
+    periodic_event_disconnect(item);
   } SMARTLIST_FOREACH_END(item);
 
   smartlist_free(the_periodic_events);

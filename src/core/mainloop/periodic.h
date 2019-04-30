@@ -84,7 +84,7 @@ periodic_event_is_enabled(const periodic_event_item_t *item)
 
 void periodic_event_launch(periodic_event_item_t *event);
 void periodic_event_connect(periodic_event_item_t *event);
-void periodic_event_destroy(periodic_event_item_t *event);
+//void periodic_event_disconnect(periodic_event_item_t *event);
 void periodic_event_reschedule(periodic_event_item_t *event);
 void periodic_event_enable(periodic_event_item_t *event);
 void periodic_event_disable(periodic_event_item_t *event);
