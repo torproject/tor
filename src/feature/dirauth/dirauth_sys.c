@@ -9,6 +9,8 @@
 #include "feature/dirauth/dirauth_sys.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/dirauth_periodic.h"
+#include "feature/dirauth/process_descs.h"
+
 #include "lib/subsys/subsys.h"
 
 static int
@@ -21,6 +23,7 @@ subsys_dirauth_initialize(void)
 static void
 subsys_dirauth_shutdown(void)
 {
+  dirserv_free_fingerprint_list();
   dirvote_free_all();
 }
 
