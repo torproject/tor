@@ -2087,14 +2087,14 @@ test_util_strmisc(void *arg)
   /* Test mem_is_zero */
   memset(buf,0,128);
   buf[128] = 'x';
-  tt_assert(tor_mem_is_zero(buf, 10));
-  tt_assert(tor_mem_is_zero(buf, 20));
-  tt_assert(tor_mem_is_zero(buf, 128));
-  tt_assert(!tor_mem_is_zero(buf, 129));
+  tt_assert(fast_mem_is_zero(buf, 10));
+  tt_assert(fast_mem_is_zero(buf, 20));
+  tt_assert(fast_mem_is_zero(buf, 128));
+  tt_assert(!fast_mem_is_zero(buf, 129));
   buf[60] = (char)255;
-  tt_assert(!tor_mem_is_zero(buf, 128));
+  tt_assert(!fast_mem_is_zero(buf, 128));
   buf[0] = (char)1;
-  tt_assert(!tor_mem_is_zero(buf, 10));
+  tt_assert(!fast_mem_is_zero(buf, 10));
 
   /* Test 'escaped' */
   tt_ptr_op(escaped(NULL), OP_EQ, NULL);
@@ -3789,7 +3789,7 @@ test_util_memarea(void *arg)
   tt_int_op(((uintptr_t)p3) % sizeof(void*),OP_EQ, 0);
   tt_assert(!memarea_owns_ptr(area, p3+8192));
   tt_assert(!memarea_owns_ptr(area, p3+30));
-  tt_assert(tor_mem_is_zero(p2, 52));
+  tt_assert(fast_mem_is_zero(p2, 52));
   /* Make sure we don't overalign. */
   p1 = memarea_alloc(area, 1);
   p2 = memarea_alloc(area, 1);

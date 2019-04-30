@@ -970,7 +970,7 @@ microdesc_list_missing_digest256(networkstatus_t *ns, microdesc_cache_t *cache,
       continue;
     if (skip && digest256map_get(skip, (const uint8_t*)rs->descriptor_digest))
       continue;
-    if (tor_mem_is_zero(rs->descriptor_digest, DIGEST256_LEN))
+    if (fast_mem_is_zero(rs->descriptor_digest, DIGEST256_LEN))
       continue;
     /* XXXX Also skip if we're a noncache and wouldn't use this router.
      * XXXX NM Microdesc

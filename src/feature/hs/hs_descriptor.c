@@ -678,7 +678,7 @@ get_auth_client_str(const hs_desc_authorized_client_t *client)
   char encrypted_cookie_b64[HS_DESC_ENCRYPED_COOKIE_LEN * 2];
 
 #define ASSERT_AND_BASE64(field) STMT_BEGIN                        \
-  tor_assert(!tor_mem_is_zero((char *) client->field,              \
+  tor_assert(!fast_mem_is_zero((char *) client->field,              \
                               sizeof(client->field)));             \
   ret = base64_encode_nopad(field##_b64, sizeof(field##_b64),      \
                             client->field, sizeof(client->field)); \
@@ -809,7 +809,7 @@ get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
     const curve25519_public_key_t *ephemeral_pubkey;
 
     ephemeral_pubkey = &desc->superencrypted_data.auth_ephemeral_pubkey;
-    tor_assert(!tor_mem_is_zero((char *) ephemeral_pubkey->public_key,
+    tor_assert(!fast_mem_is_zero((char *) ephemeral_pubkey->public_key,
                                 CURVE25519_PUBKEY_LEN));
 
     curve25519_public_to_base64(ephemeral_key_base64, ephemeral_pubkey);
@@ -1421,12 +1421,12 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
   tor_assert(desc);
   tor_assert(client);
   tor_assert(client_auth_sk);
-  tor_assert(!tor_mem_is_zero(
+  tor_assert(!fast_mem_is_zero(
         (char *) &desc->superencrypted_data.auth_ephemeral_pubkey,
         sizeof(desc->superencrypted_data.auth_ephemeral_pubkey)));
-  tor_assert(!tor_mem_is_zero((char *) client_auth_sk,
+  tor_assert(!fast_mem_is_zero((char *) client_auth_sk,
                               sizeof(*client_auth_sk)));
-  tor_assert(!tor_mem_is_zero((char *) desc->subcredential, DIGEST256_LEN));
+  tor_assert(!fast_mem_is_zero((char *) desc->subcredential, DIGEST256_LEN));
 
   /* Get the KEYS component to derive the CLIENT-ID and COOKIE-KEY. */
   keystream_length =
@@ -2571,7 +2571,7 @@ hs_desc_decode_descriptor(const char *encoded,
 
   /* Subcredentials are not optional. */
   if (BUG(!subcredential ||
-          tor_mem_is_zero((char*)subcredential, DIGEST256_LEN))) {
+          fast_mem_is_zero((char*)subcredential, DIGEST256_LEN))) {
     log_warn(LD_GENERAL, "Tried to decrypt without subcred. Impossible!");
     goto err;
   }
@@ -2884,13 +2884,13 @@ hs_desc_build_authorized_client(const uint8_t *subcredential,
   tor_assert(descriptor_cookie);
   tor_assert(client_out);
   tor_assert(subcredential);
-  tor_assert(!tor_mem_is_zero((char *) auth_ephemeral_sk,
+  tor_assert(!fast_mem_is_zero((char *) auth_ephemeral_sk,
                               sizeof(*auth_ephemeral_sk)));
-  tor_assert(!tor_mem_is_zero((char *) client_auth_pk,
+  tor_assert(!fast_mem_is_zero((char *) client_auth_pk,
                               sizeof(*client_auth_pk)));
-  tor_assert(!tor_mem_is_zero((char *) descriptor_cookie,
+  tor_assert(!fast_mem_is_zero((char *) descriptor_cookie,
                               HS_DESC_DESCRIPTOR_COOKIE_LEN));
-  tor_assert(!tor_mem_is_zero((char *) subcredential,
+  tor_assert(!fast_mem_is_zero((char *) subcredential,
                               DIGEST256_LEN));
 
   /* Get the KEYS part so we can derive the CLIENT-ID and COOKIE-KEY. */

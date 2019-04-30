@@ -448,7 +448,7 @@ test_hs_rend_data(void *arg)
   tt_int_op(client_v2->auth_type, OP_EQ, REND_BASIC_AUTH);
   tt_int_op(strlen(client_v2->onion_address), OP_EQ, 0);
   tt_mem_op(client_v2->desc_id_fetch, OP_EQ, desc_id, sizeof(desc_id));
-  tt_int_op(tor_mem_is_zero(client_v2->descriptor_cookie,
+  tt_int_op(fast_mem_is_zero(client_v2->descriptor_cookie,
                             sizeof(client_v2->descriptor_cookie)), OP_EQ, 1);
   tt_assert(client->hsdirs_fp);
   tt_int_op(smartlist_len(client->hsdirs_fp), OP_EQ, 0);

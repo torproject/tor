@@ -104,7 +104,7 @@ crypto_read_tagged_contents_from_file(const char *fname,
   prefix[32] = 0;
   /* Check type, extract tag. */
   if (strcmpstart(prefix, "== ") || strcmpend(prefix, " ==") ||
-      ! tor_mem_is_zero(prefix+strlen(prefix), 32-strlen(prefix))) {
+      ! fast_mem_is_zero(prefix+strlen(prefix), 32-strlen(prefix))) {
     saved_errno = EINVAL;
     goto end;
   }

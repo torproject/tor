@@ -395,7 +395,7 @@ test_client_pick_intro(void *arg)
     tt_assert(fetched_desc);
     tt_mem_op(fetched_desc->subcredential, OP_EQ, desc->subcredential,
               DIGEST256_LEN);
-    tt_assert(!tor_mem_is_zero((char*)fetched_desc->subcredential,
+    tt_assert(!fast_mem_is_zero((char*)fetched_desc->subcredential,
                                DIGEST256_LEN));
     tor_free(encoded);
   }
@@ -433,7 +433,7 @@ test_client_pick_intro(void *arg)
     for (int i = 0; i < 64; ++i) {
       extend_info_t *ip = client_get_random_intro(&service_kp.pubkey);
       tor_assert(ip);
-      tt_assert(!tor_mem_is_zero((char*)ip->identity_digest, DIGEST_LEN));
+      tt_assert(!fast_mem_is_zero((char*)ip->identity_digest, DIGEST_LEN));
       tt_mem_op(ip->identity_digest, OP_EQ, chosen_intro_ei->identity_digest,
                 DIGEST_LEN);
       extend_info_free(ip);

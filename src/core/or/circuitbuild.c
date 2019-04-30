@@ -2989,7 +2989,7 @@ extend_info_supports_ntor(const extend_info_t* ei)
 {
   tor_assert(ei);
   /* Valid ntor keys have at least one non-zero byte */
-  return !tor_mem_is_zero(
+  return !fast_mem_is_zero(
                           (const char*)ei->curve25519_onion_key.public_key,
                           CURVE25519_PUBKEY_LEN);
 }

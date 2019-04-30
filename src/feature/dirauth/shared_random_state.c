@@ -538,7 +538,7 @@ disk_state_put_commit_line(const sr_commit_t *commit, config_line_t *line)
   tor_assert(commit);
   tor_assert(line);
 
-  if (!tor_mem_is_zero(commit->encoded_reveal,
+  if (!fast_mem_is_zero(commit->encoded_reveal,
                        sizeof(commit->encoded_reveal))) {
     /* Add extra whitespace so we can format the line correctly. */
     tor_asprintf(&reveal_str, " %s", commit->encoded_reveal);

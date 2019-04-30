@@ -1746,7 +1746,7 @@ build_service_desc_superencrypted(const hs_service_t *service,
          sizeof(curve25519_public_key_t));
 
   /* Test that subcred is not zero because we might use it below */
-  if (BUG(tor_mem_is_zero((char*)desc->desc->subcredential, DIGEST256_LEN))) {
+  if (BUG(fast_mem_is_zero((char*)desc->desc->subcredential, DIGEST256_LEN))) {
     return -1;
   }
 
@@ -1812,9 +1812,9 @@ build_service_desc_plaintext(const hs_service_t *service,
 
   tor_assert(service);
   tor_assert(desc);
-  tor_assert(!tor_mem_is_zero((char *) &desc->blinded_kp,
+  tor_assert(!fast_mem_is_zero((char *) &desc->blinded_kp,
                               sizeof(desc->blinded_kp)));
-  tor_assert(!tor_mem_is_zero((char *) &desc->signing_kp,
+  tor_assert(!fast_mem_is_zero((char *) &desc->signing_kp,
                               sizeof(desc->signing_kp)));
 
   /* Set the subcredential. */
@@ -1864,7 +1864,7 @@ build_service_desc_keys(const hs_service_t *service,
   ed25519_keypair_t kp;
 
   tor_assert(desc);
-  tor_assert(!tor_mem_is_zero((char *) &service->keys.identity_pk,
+  tor_assert(!fast_mem_is_zero((char *) &service->keys.identity_pk,
              ED25519_PUBKEY_LEN));
 
   /* XXX: Support offline key feature (#18098). */
