@@ -239,7 +239,7 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
   uint32_t *uptimes, *bandwidths_kb, *bandwidths_excluding_exits_kb;
   long *tks;
   double *mtbfs, *wfus;
-  smartlist_t *nodelist;
+  const smartlist_t *nodelist;
   time_t now = time(NULL);
   const or_options_t *options = get_options();
 

@@ -1723,7 +1723,7 @@ test_current_time(void *arg)
 static size_t n_nodelist_get_list = 0;
 static smartlist_t *nodes = NULL;
 
-static smartlist_t *
+static const smartlist_t *
 mock_nodelist_get_list(void)
 {
   n_nodelist_get_list++;
