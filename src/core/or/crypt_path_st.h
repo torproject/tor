@@ -26,14 +26,14 @@ struct onion_handshake_state_t {
 
 /** Macro to encapsulate private members of a struct.
  *
- *  Renames 'x' to '_x__private'.
+ *  Renames 'x' to 'x_crypt_path_private_field'.
  */
-#define TOR_PRIV(x) _ ## x ## _ ## _private
+#define CRYPT_PATH_PRIV_FIELD(x) x ## _crypt_path_private_field
 
 #ifdef CRYPT_PATH_PRIVATE
 
 /* Helper macro to access private members of a struct. */
-#define pvt_crypto TOR_PRIV(crypto)
+#define pvt_crypto CRYPT_PATH_PRIV_FIELD(crypto)
 
 #endif
 
@@ -79,7 +79,7 @@ struct crypt_path_t {
 
   /** Private member: Cryptographic state used for encrypting and
    * authenticating relay cells to and from this hop. */
-  relay_crypto_t TOR_PRIV(crypto);
+  relay_crypto_t CRYPT_PATH_PRIV_FIELD(crypto);
 };
 
 #endif
