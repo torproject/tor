@@ -29,12 +29,12 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 8492
+problem file-size /src/app/config/config.c 8494
 problem include-count /src/app/config/config.c 87
 problem function-size /src/app/config/config.c:options_act_reversible() 296
 problem function-size /src/app/config/config.c:options_act() 588
 problem function-size /src/app/config/config.c:resolve_my_address() 192
-problem function-size /src/app/config/config.c:options_validate() 1207
+problem function-size /src/app/config/config.c:options_validate() 1209
 problem function-size /src/app/config/config.c:options_init_from_torrc() 202
 problem function-size /src/app/config/config.c:options_init_from_string() 173
 problem function-size /src/app/config/config.c:options_init_logs() 146
@@ -221,7 +221,7 @@ problem function-size /src/feature/nodelist/node_select.c:router_pick_directory_
 problem function-size /src/feature/nodelist/node_select.c:compute_weighted_bandwidths() 206
 problem function-size /src/feature/nodelist/node_select.c:router_pick_trusteddirserver_impl() 114
 problem function-size /src/feature/nodelist/nodelist.c:compute_frac_paths_available() 193
-problem file-size /src/feature/nodelist/routerlist.c 3234
+problem file-size /src/feature/nodelist/routerlist.c 3238
 problem function-size /src/feature/nodelist/routerlist.c:router_rebuild_store() 148
 problem function-size /src/feature/nodelist/routerlist.c:router_add_to_routerlist() 169
 problem function-size /src/feature/nodelist/routerlist.c:routerlist_remove_old_routers() 121
