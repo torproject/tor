@@ -16,16 +16,6 @@ echo "Running pre-push hook"
 
 z40=0000000000000000000000000000000000000000
 
-remote="$1"
-
-ref_is_upstream_branch() {
-        if [ "$1" == "refs/heads/master" ] ||
-                [[ "$1" == refs/heads/release-* ]] ||
-                [[ "$1" == refs/heads/maint-* ]]
-        then
-                return 1
-        fi
-}
 
 workdir=$(git rev-parse --show-toplevel)
 if [ -x "$workdir/.git/hooks/pre-commit" ]; then
@@ -39,6 +29,24 @@ if [ -e scripts/maint/practracker/practracker.py ]; then
     exit 1
   fi
 fi
+
+remote="$1"
+remote_loc="$2"
+
+if [[ "$remote_loc" != *github.com/torproject/tor.git ]] &&
+   [[ "$remote_loc" != *torproject.org/tor.git ]]; then
+  echo "Not pushing to upstream - refraining from further checks"
+  exit 0
+fi
+
+ref_is_upstream_branch() {
+        if [ "$1" == "refs/heads/master" ] ||
+                [[ "$1" == refs/heads/release-* ]] ||
+                [[ "$1" == refs/heads/maint-* ]]
+        then
+                return 1
+        fi
+}
 
 # shellcheck disable=SC2034
 while read -r local_ref local_sha remote_ref remote_sha
