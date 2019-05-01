@@ -1,0 +1,4 @@
+  o Minor bugfixes (Channel padding statistics):
+    - Channel padding write totals and padding-enabled totals are now
+      counted properly in relay extrainfo descriptors. Fixes bug 29231;
+      bugfix on 0.3.1.1-alpha
