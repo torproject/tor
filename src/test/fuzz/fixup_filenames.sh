@@ -8,9 +8,9 @@ if [ ! -d "$1" ] ; then
 fi
 
 for fn in "$1"/* ; do
-    prev=`basename "$fn"`
-    post=`sha256sum "$fn" | sed -e 's/ .*//;'`
-    if [ "$prev" == "$post" ] ; then
+    prev=$(basename "$fn")
+    post=$(sha256sum "$fn" | sed -e 's/ .*//;')
+    if [ "$prev" = "$post" ] ; then
       echo "OK $prev"
     else
       echo "mv $prev $post"
