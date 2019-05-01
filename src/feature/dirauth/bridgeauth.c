@@ -16,7 +16,7 @@
 /** Write out router status entries for all our bridge descriptors. Here, we
  * also mark routers as running. */
 void
-networkstatus_dump_bridge_status_to_file(time_t now)
+bridgeauth_dump_bridge_status_to_file(time_t now)
 {
   char *status;
   char *fname = NULL;
