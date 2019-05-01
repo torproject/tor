@@ -47,17 +47,13 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
-#include "feature/relay/onion_queue.h"
-#include "feature/relay/routerkeys.h"
 #include "feature/rend/rendcache.h"
 #include "feature/rend/rendclient.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/rephist.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/geoip/geoip.h"
-#include "src/feature/relay/router.h"
 
 void evdns_shutdown(int);
 
@@ -127,8 +123,6 @@ tor_free_all(int postfork)
   rend_cache_free_all();
   rend_service_authorization_free_all();
   rep_hist_free_all();
-  dns_free_all();
-  clear_pending_onions();
   circuit_free_all();
   circpad_machines_free();
   entry_guards_free_all();
@@ -141,7 +135,6 @@ tor_free_all(int postfork)
   nodelist_free_all();
   microdesc_free_all();
   routerparse_free_all();
-  ext_orport_free_all();
   control_free_all();
   protover_free_all();
   bridges_free_all();
@@ -155,8 +148,6 @@ tor_free_all(int postfork)
   if (!postfork) {
     config_free_all();
     or_state_free_all();
-    router_free_all();
-    routerkeys_free_all();
     policies_free_all();
   }
   if (!postfork) {
