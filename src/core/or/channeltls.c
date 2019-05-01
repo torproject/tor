@@ -1094,13 +1094,13 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
   entry_guards_note_internet_connectivity(get_guard_selection_info());
   rep_hist_padding_count_read(PADDING_TYPE_TOTAL);
 
-  if (TLS_CHAN_TO_BASE(chan)->currently_padding)
+  if (TLS_CHAN_TO_BASE(chan)->padding_enabled)
     rep_hist_padding_count_read(PADDING_TYPE_ENABLED_TOTAL);
 
   switch (cell->command) {
     case CELL_PADDING:
       rep_hist_padding_count_read(PADDING_TYPE_CELL);
-      if (TLS_CHAN_TO_BASE(chan)->currently_padding)
+      if (TLS_CHAN_TO_BASE(chan)->padding_enabled)
         rep_hist_padding_count_read(PADDING_TYPE_ENABLED_CELL);
       ++stats_n_padding_cells_processed;
       /* do nothing */
