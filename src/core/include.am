@@ -6,6 +6,7 @@ noinst_LIBRARIES += \
 	src/core/libtor-app-testing.a
 endif
 
+# ADD_C_FILE: INSERT SOURCES HERE.
 LIBTOR_APP_A_SOURCES = 				\
 	src/app/config/config.c			\
 	src/app/config/confparse.c		\
@@ -205,6 +206,7 @@ AM_CPPFLAGS += -DSHARE_DATADIR="\"$(datadir)\""		\
 src_core_libtor_app_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
 src_core_libtor_app_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
+# ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS +=					\
 	src/app/config/config.h				\
 	src/app/config/confparse.h			\

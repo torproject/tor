@@ -85,6 +85,8 @@ src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 src_test_test_SOURCES =
 
 if UNITTESTS_ENABLED
+
+# ADD_C_FILE: INSERT SOURCES HERE.
 src_test_test_SOURCES += \
 	src/test/log_test_helpers.c \
 	src/test/hs_test_helpers.c \
@@ -316,6 +318,7 @@ src_test_test_timers_LDADD = \
 	@TOR_LZMA_LIBS@
 src_test_test_timers_LDFLAGS = $(src_test_test_LDFLAGS)
 
+# ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS+= \
 	src/test/fakechans.h \
 	src/test/hs_test_helpers.h \
