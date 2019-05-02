@@ -129,8 +129,8 @@ cell_version_is_valid(uint8_t cell_version)
   /* Can we handle this version? */
   if (accept_version > SENDME_MAX_SUPPORTED_VERSION) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Unable to handle SENDME version %u. We only support <= %d "
-           "(from consensus). Probably your tor is too old?",
+           "Unable to accept SENDME version %u (from consensus). "
+           "We only support <= %d. Probably your tor is too old?",
            accept_version, cell_version);
     goto invalid;
   }
@@ -138,8 +138,7 @@ cell_version_is_valid(uint8_t cell_version)
   /* We only accept a SENDME cell from what the consensus tells us. */
   if (cell_version < accept_version) {
     log_info(LD_PROTOCOL, "Unacceptable SENDME version %d. Only "
-                          "accepting %u (taken from the consensus). "
-                          "Closing circuit.",
+                          "accepting %u (from consensus). Closing circuit.",
              cell_version, accept_version);
     goto invalid;
   }
