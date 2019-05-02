@@ -516,6 +516,10 @@ Changes in version 0.4.0.5 - 2019-05-02
       was causing Stem integration tests to stall in some cases. Fixes
       bug 30021; bugfix on 0.2.4.8-alpha.
 
+  o Minor bugfixes (UI):
+    - Lower log level of unlink() errors during bootstrap. Fixes bug
+      29930; bugfix on 0.4.0.1-alpha.
+
   o Minor bugfixes (usability):
     - Stop saying "Your Guard ..." in pathbias_measure_{use,close}_rate().
       Some users took this phrasing to mean that the mentioned guard was

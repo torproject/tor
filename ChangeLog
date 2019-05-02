@@ -41,6 +41,10 @@ Changes in version 0.4.0.5 - 2019-05-02
     - Check the time in the "Expires" header using approx_time(). Fixes
       bug 30001; bugfix on 0.4.0.4-rc.
 
+  o Minor bugfixes (UI):
+    - Lower log level of unlink() errors during bootstrap. Fixes bug
+      29930; bugfix on 0.4.0.1-alpha.
+
 
 Changes in version 0.4.0.4-rc - 2019-04-11
   Tor 0.4.0.4-rc is the first release candidate in its series; it fixes
