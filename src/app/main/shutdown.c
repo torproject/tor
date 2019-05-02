@@ -36,10 +36,6 @@
 #include "feature/control/control.h"
 #include "feature/control/control_auth.h"
 #include "feature/dirauth/authmode.h"
-#include "feature/dirauth/bwauth.h"
-#include "feature/dirauth/dirvote.h"
-#include "feature/dirauth/keypin.h"
-#include "feature/dirauth/process_descs.h"
 #include "feature/dirauth/shared_random.h"
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dircache/dirserv.h"
@@ -98,7 +94,6 @@ tor_cleanup(void)
     }
     if (authdir_mode_tests_reachability(options))
       rep_hist_record_mtbf_data(now, 0);
-    keypin_close_journal();
   }
 
   timers_shutdown();
@@ -128,9 +123,7 @@ tor_free_all(int postfork)
   routerlist_free_all();
   networkstatus_free_all();
   addressmap_free_all();
-  dirserv_free_fingerprint_list();
   dirserv_free_all();
-  dirserv_clear_measured_bw_cache();
   rend_cache_free_all();
   rend_service_authorization_free_all();
   rep_hist_free_all();

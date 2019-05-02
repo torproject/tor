@@ -82,7 +82,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/control/control_getinfo.c	\
 	src/feature/control/fmt_serverstatus.c  \
 	src/feature/control/getinfo_geoip.c	\
-	src/feature/dirauth/keypin.c		\
 	src/feature/dircache/conscache.c	\
 	src/feature/dircache/consdiffmgr.c	\
 	src/feature/dircache/dircache.c		\
@@ -119,7 +118,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/hs_common/replaycache.c	\
 	src/feature/hs_common/shared_random_client.c	\
 	src/feature/keymgt/loadkey.c		\
-	src/feature/dirauth/keypin.c		\
 	src/feature/nodelist/authcert.c		\
 	src/feature/nodelist/describe.c		\
 	src/feature/nodelist/dirlist.c		\
@@ -151,17 +149,6 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/stats/rephist.c		\
 	src/feature/stats/predict_ports.c
 
-# These should eventually move into module_dirauth_sources, but for now
-# the separation is only in the code location.
-LIBTOR_APP_A_SOURCES += 			\
-	src/feature/dirauth/bwauth.c		\
-	src/feature/dirauth/dsigs_parse.c	\
-	src/feature/dirauth/guardfraction.c	\
-	src/feature/dirauth/reachability.c	\
-	src/feature/dirauth/recommend_pkg.c	\
-	src/feature/dirauth/process_descs.c	\
-	src/feature/dirauth/voteflags.c
-
 if BUILD_NT_SERVICES
 LIBTOR_APP_A_SOURCES += src/app/main/ntmain.c
 endif
@@ -177,12 +164,21 @@ LIBTOR_APP_TESTING_A_SOURCES = $(LIBTOR_APP_A_SOURCES)
 # The Directory Authority module.
 MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/authmode.c				\
+        src/feature/dirauth/bridgeauth.c                        \
+	src/feature/dirauth/bwauth.c				\
 	src/feature/dirauth/dirauth_periodic.c			\
 	src/feature/dirauth/dirauth_sys.c			\
 	src/feature/dirauth/dircollate.c			\
 	src/feature/dirauth/dirvote.c				\
+	src/feature/dirauth/dsigs_parse.c			\
+	src/feature/dirauth/guardfraction.c			\
+	src/feature/dirauth/keypin.c				\
+	src/feature/dirauth/process_descs.c			\
+	src/feature/dirauth/reachability.c			\
+	src/feature/dirauth/recommend_pkg.c			\
 	src/feature/dirauth/shared_random.c			\
-	src/feature/dirauth/shared_random_state.c
+	src/feature/dirauth/shared_random_state.c               \
+	src/feature/dirauth/voteflags.c
 
 if BUILD_MODULE_DIRAUTH
 LIBTOR_APP_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)
@@ -312,6 +308,7 @@ noinst_HEADERS +=					\
 	src/feature/control/fmt_serverstatus.h		\
 	src/feature/control/getinfo_geoip.h		\
 	src/feature/dirauth/authmode.h			\
+        src/feature/dirauth/bridgeauth.h                \
 	src/feature/dirauth/bwauth.h			\
 	src/feature/dirauth/dirauth_periodic.h		\
 	src/feature/dirauth/dirauth_sys.h		\
