@@ -1,4 +1,0 @@
-  o Minor features (diagnostic):
-    - Add more diagnostic log messages in an attempt to solve
-      the issue of NUL bytes appearing in a microdescriptor cache.
-      Related to ticket 28223.

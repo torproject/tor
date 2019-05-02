@@ -1,4 +1,0 @@
-  o Minor bugfixes (pluggable transports):
-    - Restore old behaviour when it comes to discovering the path of a given
-      Pluggable Transport exe-file. Fixes bug 29874; bugfix on 0.4.0.1-alpha.
-

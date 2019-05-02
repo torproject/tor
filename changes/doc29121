@@ -1,3 +1,0 @@
-  o Documentation:
-    - Clarify that Tor performs stream isolation between *Port listeners by
-      default. Resolves issue 29121.

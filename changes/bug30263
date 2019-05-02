@@ -1,3 +1,0 @@
-  o Minor bugfixes (shellcheck):
-    - Stop looking for scripts in the build directory during
-      "make shellcheck". Fixes bug 30263; bugfix on 0.4.0.1-alpha.

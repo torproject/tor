@@ -1,5 +1,0 @@
-  o Minor bugfixes (logging):
-    - Log the correct port number for listening sockets when "auto" is
-      used to let Tor pick the port number.  Previously, port 0 was
-      logged instead of the actual port number.  Fixes bug 29144;
-      bugfix on 0.3.5.1-alpha.  Patch from Kris Katterjohn.
