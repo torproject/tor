@@ -12,6 +12,7 @@
 #include "core/crypto/hs_ntor.h" // for HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN
 #include "core/or/relay.h"
 #include "core/crypto/relay_crypto.h"
+#include "core/or/sendme.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/or_circuit_st.h"
@@ -90,6 +91,23 @@ relay_crypt_one_payload(crypto_cipher_t *cipher, uint8_t *in)
   crypto_cipher_crypt_inplace(cipher, (char*) in, CELL_PAYLOAD_SIZE);
 }
 
+/** Return the sendme_digest within the <b>crypto</b> object. */
+uint8_t *
+relay_crypto_get_sendme_digest(relay_crypto_t *crypto)
+{
+  tor_assert(crypto);
+  return crypto->sendme_digest;
+}
+
+/** Record the b_digest from <b>crypto</b> and put it in the sendme_digest. */
+void
+relay_crypto_record_sendme_digest(relay_crypto_t *crypto)
+{
+  tor_assert(crypto);
+  crypto_digest_get_digest(crypto->b_digest, (char *) crypto->sendme_digest,
+                           sizeof(crypto->sendme_digest));
+}
+
 /** Do the appropriate en/decryptions for <b>cell</b> arriving on
  * <b>circ</b> in direction <b>cell_direction</b>.
  *
@@ -142,6 +160,11 @@ relay_decrypt_cell(circuit_t *circ, cell_t *cell,
           if (relay_digest_matches(thishop->crypto.b_digest, cell)) {
             *recognized = 1;
             *layer_hint = thishop;
+            /* This cell is for us. Keep a record of this cell because we will
+             * use it in the next SENDME cell. */
+            if (sendme_circuit_cell_is_next(thishop->deliver_window)) {
+              sendme_circuit_record_inbound_cell(thishop);
+            }
             return 0;
           }
         }
@@ -212,6 +235,13 @@ relay_encrypt_cell_inbound(cell_t *cell,
                            or_circuit_t *or_circ)
 {
   relay_set_digest(or_circ->crypto.b_digest, cell);
+
+  /* We are about to send this cell outbound on the circuit. Keep a record of
+   * this cell if we are expecting that the next cell is a SENDME. */
+  if (sendme_circuit_cell_is_next(TO_CIRCUIT(or_circ)->package_window)) {
+    sendme_circuit_record_outbound_cell(or_circ);
+  }
+
   /* encrypt one layer */
   relay_crypt_one_payload(or_circ->crypto.b_crypto, cell->payload);
 }

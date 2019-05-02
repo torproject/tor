@@ -73,6 +73,7 @@
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
+#include "core/or/sendme.h"
 #include "core/proto/proto_http.h"
 #include "core/proto/proto_socks.h"
 #include "feature/client/addressmap.h"
@@ -767,7 +768,7 @@ connection_edge_flushed_some(edge_connection_t *conn)
 
       /* falls through. */
     case EXIT_CONN_STATE_OPEN:
-      connection_edge_consider_sending_sendme(conn);
+      sendme_connection_edge_consider_sending(conn);
       break;
   }
   return 0;
@@ -791,7 +792,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
   switch (conn->base_.state) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
-      connection_edge_consider_sending_sendme(conn);
+      sendme_connection_edge_consider_sending(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
     case AP_CONN_STATE_NATD_WAIT:
@@ -4562,6 +4563,25 @@ circuit_clear_isolation(origin_circuit_t *circ)
     tor_free(circ->socks_password);
   }
   circ->socks_username_len = circ->socks_password_len = 0;
+}
+
+/** Send an END and mark for close the given edge connection conn using the
+ * given reason that has to be a stream reason.
+ *
+ * Note: We don't unattached the AP connection (if applicable) because we
+ * don't want to flush the remaining data. This function aims at ending
+ * everything quickly regardless of the connection state.
+ *
+ * This function can't fail and does nothing if conn is NULL. */
+void
+connection_edge_end_close(edge_connection_t *conn, uint8_t reason)
+{
+  if (!conn) {
+    return;
+  }
+
+  connection_edge_end(conn, reason);
+  connection_mark_for_close(TO_CONN(conn));
 }
 
 /** Free all storage held in module-scoped variables for connection_edge.c */
