@@ -25,10 +25,7 @@
 #include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
 #include "core/or/dos.h"
-#include "core/or/policies.h"
-#include "core/or/protover.h"
 #include "core/or/scheduler.h"
-#include "core/or/versions.h"
 #include "feature/client/addressmap.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
@@ -136,19 +133,16 @@ tor_free_all(int postfork)
   microdesc_free_all();
   routerparse_free_all();
   control_free_all();
-  protover_free_all();
   bridges_free_all();
   consdiffmgr_free_all();
   hs_free_all();
   dos_free_all();
   circuitmux_ewma_free_all();
   accounting_free_all();
-  protover_summary_cache_free_all();
 
   if (!postfork) {
     config_free_all();
     or_state_free_all();
-    policies_free_all();
   }
   if (!postfork) {
 #ifndef _WIN32

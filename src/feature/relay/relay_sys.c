@@ -15,6 +15,7 @@
 #include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
 #include "feature/relay/onion_queue.h"
+#include "feature/relay/relay_periodic.h"
 #include "feature/relay/relay_sys.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/router.h"
@@ -24,6 +25,7 @@
 static int
 subsys_relay_initialize(void)
 {
+  relay_register_periodic_events();
   return 0;
 }
 
