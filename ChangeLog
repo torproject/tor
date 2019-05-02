@@ -1,5 +1,17 @@
-Changes in version 0.4.0.5 - 2019-0?-??
-  Blurb
+Changes in version 0.4.0.5 - 2019-05-02
+  This is the first stable release in the 0.4.0.x series. It contains
+  improvements for power management and bootstrap reporting, as well as
+  preliminary backend support for circuit padding to prevent some kinds
+  of traffic analysis. It also continues our work in refactoring Tor for
+  long-term maintainability.
+
+  Per our support policy, we will support the 0.4.0.x series for nine
+  months, or until three months after the release of a stable 0.4.1.x:
+  whichever is longer. If you need longer-term support, please stick
+  with 0.3.5.x, which will we plan to support until Feb 2022.
+
+  Below are the changes since 0.4.0.4-rc. For a complete list of changes
+  since 0.3.5.7, see the ReleaseNotes file.
 
   o Minor features (continuous integration):
     - In Travis, tell timelimit to use stem's backtrace signals, and

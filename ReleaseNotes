@@ -2,8 +2,20 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
-Changes in version 0.4.0.5 - 2019-0?-??
-  Blurb
+Changes in version 0.4.0.5 - 2019-05-02
+  This is the first stable release in the 0.4.0.x series. It contains
+  improvements for power management and bootstrap reporting, as well as
+  preliminary backend support for circuit padding to prevent some kinds
+  of traffic analysis. It also continues our work in refactoring Tor for
+  long-term maintainability.
+
+  Per our support policy, we will support the 0.4.0.x series for nine
+  months, or until three months after the release of a stable 0.4.1.x:
+  whichever is longer. If you need longer-term support, please stick
+  with 0.3.5.x, which will we plan to support until Feb 2022.
+
+  Below are the changes since 0.3.5.7. For a complete list of changes
+  since 0.4.0.4-rc, see the ChangeLog file.
 
   o Major features (battery management, client, dormant mode):
     - When Tor is running as a client, and it is unused for a long time,
