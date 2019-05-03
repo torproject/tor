@@ -31,6 +31,7 @@ fn translate_to_rust(c_proto: uint32_t) -> Result<Protocol, ProtoverError> {
         8 => Ok(Protocol::Microdesc),
         9 => Ok(Protocol::Cons),
         10 => Ok(Protocol::Padding),
+        11 => Ok(Protocol::FlowCtrl),
         _ => Err(ProtoverError::UnknownProtocol),
     }
 }
