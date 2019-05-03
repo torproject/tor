@@ -176,7 +176,8 @@ new Tor release:
    `/srv/dist-master.torproject.org/htdocs/` on dist-master. Run
    "static-update-component dist.torproject.org" on dist-master.
 
-   In the webwml.git repository, `include/versions.wmi` and `Makefile`
+   In the webwml.git repository, `include/versions.wmi` and `Makefile`.
+   In the project/web/tpo.git repository, update `databags/versions.ini`
    to note the new version.  Push these changes to master.
 
    (NOTE: Due to #17805, there can only be one stable version listed at
