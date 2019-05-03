@@ -36,7 +36,6 @@ int sendme_note_stream_data_packaged(edge_connection_t *conn);
 
 /* Track cell digest. */
 void sendme_record_cell_digest(circuit_t *circ);
-void sendme_circuit_record_inbound_cell(crypt_path_t *cpath);
 void sendme_circuit_record_outbound_cell(or_circuit_t *or_circ);
 
 /* Circuit level information. */

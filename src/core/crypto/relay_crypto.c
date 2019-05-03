@@ -164,7 +164,7 @@ relay_decrypt_cell(circuit_t *circ, cell_t *cell,
             /* This cell is for us. Keep a record of this cell because we will
              * use it in the next SENDME cell. */
             if (sendme_circuit_cell_is_next(thishop->deliver_window)) {
-              sendme_circuit_record_inbound_cell(thishop);
+              cpath_sendme_circuit_record_inbound_cell(thishop);
             }
             return 0;
           }
