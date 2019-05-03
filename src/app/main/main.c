@@ -923,7 +923,12 @@ sandbox_init_filter(void)
   }
 
   SMARTLIST_FOREACH(options->FilesOpenedByIncludes, char *, f, {
-    OPEN(f);
+    file_status_t file_type = file_status(f);
+    if (is_dir(file_type)) {
+      sandbox_cfg_allow_openat_filename(&cfg, tor_strdup(f));
+    } else {
+      OPEN(f);
+    }
   });
 
 #define RENAME_SUFFIX(name, suffix)        \
