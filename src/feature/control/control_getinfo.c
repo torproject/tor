@@ -28,6 +28,7 @@
 #include "feature/control/control_events.h"
 #include "feature/control/control_fmt.h"
 #include "feature/control/control_getinfo.h"
+#include "feature/control/control_proto.h"
 #include "feature/control/fmt_serverstatus.h"
 #include "feature/control/getinfo_geoip.h"
 #include "feature/dircache/dirserv.h"
@@ -1607,7 +1608,7 @@ handle_control_getinfo(control_connection_t *conn,
     if (handle_getinfo_helper(conn, q, &ans, &errmsg) < 0) {
       if (!errmsg)
         errmsg = "Internal error";
-      connection_printf_to_buf(conn, "551 %s\r\n", errmsg);
+      control_write_endreply(conn, 551, errmsg);
       goto done;
     }
     if (!ans) {
@@ -1624,13 +1625,10 @@ handle_control_getinfo(control_connection_t *conn,
   if (smartlist_len(unrecognized)) {
     /* control-spec section 2.3, mid-reply '-' or end of reply ' ' */
     for (i=0; i < smartlist_len(unrecognized)-1; ++i)
-      connection_printf_to_buf(conn,
-                               "552-%s\r\n",
-                               (char *)smartlist_get(unrecognized, i));
-
-    connection_printf_to_buf(conn,
-                             "552 %s\r\n",
+      control_write_midreply(conn, 552,
                              (char *)smartlist_get(unrecognized, i));
+
+    control_write_endreply(conn, 552, (char *)smartlist_get(unrecognized, i));
     goto done;
   }
 
@@ -1638,19 +1636,13 @@ handle_control_getinfo(control_connection_t *conn,
     char *k = smartlist_get(answers, i);
     char *v = smartlist_get(answers, i+1);
     if (!strchr(v, '\n') && !strchr(v, '\r')) {
-      connection_printf_to_buf(conn, "250-%s=", k);
-      connection_write_str_to_buf(v, conn);
-      connection_write_str_to_buf("\r\n", conn);
+      control_printf_midreply(conn, 250, "%s=%s", k, v);
     } else {
-      char *esc = NULL;
-      size_t esc_len;
-      esc_len = write_escaped_data(v, strlen(v), &esc);
-      connection_printf_to_buf(conn, "250+%s=\r\n", k);
-      connection_buf_add(esc, esc_len, TO_CONN(conn));
-      tor_free(esc);
+      control_printf_datareply(conn, 250, "%s=", k);
+      control_write_data(conn, v);
     }
   }
-  connection_write_str_to_buf("250 OK\r\n", conn);
+  send_control_done(conn);
 
  done:
   SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
