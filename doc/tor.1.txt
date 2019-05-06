@@ -1056,8 +1056,8 @@ The following options are useful only for clients (that is, if
 [[StrictNodes]] **StrictNodes** **0**|**1**::
     If StrictNodes is set to 1, Tor will treat solely the ExcludeNodes option
     as a requirement to follow for all the circuits you generate, even if
-    doing so will break functionality for you (StrictNodes applies to neither
-    ExcludeExitNodes nor to ExitNodes, nor to MiddleNodes).  If StrictNodes
+    doing so will break functionality for you (StrictNodes does not apply to
+    ExcludeExitNodes, ExitNodes, MiddleNodes, or MapAddress).  If StrictNodes
     is set to 0, Tor will still try to avoid nodes in the ExcludeNodes list,
     but it will err on the side of avoiding unexpected errors.
     Specifically, StrictNodes 0 tells Tor that it is okay to use an excluded
@@ -1153,7 +1153,9 @@ The following options are useful only for clients (that is, if
     "MapAddress \*.example.com \*.example.com.torserver.exit". (Note the
     leading "*." in each part of the directive.) You can also redirect all
     subdomains of a domain to a single address. For example, "MapAddress
-    *.example.com www.example.com". +
+    *.example.com www.example.com". If the specified exit is not available,
+    or the exit can not connect to the site, Tor will fail any connections
+    to the mapped address.+
  +
     NOTES:
 
@@ -1180,6 +1182,15 @@ The following options are useful only for clients (that is, if
 
     4. Using a wildcard to match only part of a string (as in *ample.com) is
     also invalid.
+
+    5. Tor maps hostnames and IP addresses separately. If you MapAddress
+       a DNS name, but use an IP address to connect, then Tor will ignore the
+       DNS name mapping.
+
+    6. MapAddress does not apply to redirects in the application protocol.
+       For example, HTTP redirects and alt-svc headers will ignore mappings
+       for the original address. You can use a wildcard mapping to handle
+       redirects within the same site.
 
 [[NewCircuitPeriod]] **NewCircuitPeriod** __NUM__::
     Every NUM seconds consider whether to build a new circuit. (Default: 30
