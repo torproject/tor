@@ -512,9 +512,9 @@ warn_if_nul_found(const char *inp, size_t len, int64_t offset,
 int
 microdesc_cache_reload(microdesc_cache_t *cache)
 {
-  struct stat st;
-  char *journal_content;
-  smartlist_t *added;
+  struct stat st = {0};
+  char *journal_content = NULL;
+  smartlist_t *added = NULL;
   tor_mmap_t *mm;
   int total = 0;
 
@@ -535,10 +535,16 @@ microdesc_cache_reload(microdesc_cache_t *cache)
 
   journal_content = read_file_to_str(cache->journal_fname,
                                      RFTS_IGNORE_MISSING, &st);
-  if (journal_content) {
+  if (journal_content && st.st_size) {
     cache->journal_len = (size_t) st.st_size;
     warn_if_nul_found(journal_content, cache->journal_len, 0,
                       "reading microdesc journal");
+
+    /* Replace all NUL bytes in journal_content with space character. */
+    for (size_t i = 0; i < (size_t)st.st_size-1; i++)
+      if (journal_content[i] == '\0')
+        journal_content[i] = ' ';
+
     added = microdescs_add_to_cache(cache, journal_content,
                                     journal_content+st.st_size,
                                     SAVED_IN_JOURNAL, 0, -1, NULL);
