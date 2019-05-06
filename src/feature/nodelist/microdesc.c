@@ -543,7 +543,7 @@ microdesc_cache_reload(microdesc_cache_t *cache)
                       "reading microdesc journal");
 
     /* Replace all NUL bytes in journal_content with space character. */
-    for (size_t i = 0; i < (size_t)st.st_size-1; i++)
+    for (size_t i = 0; i < (size_t)st.st_size; i++)
       if (journal_content[i] == '\0')
         journal_content[i] = ' ';
 
