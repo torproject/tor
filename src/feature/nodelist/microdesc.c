@@ -512,11 +512,13 @@ warn_if_nul_found(const char *inp, size_t len, int64_t offset,
 int
 microdesc_cache_reload(microdesc_cache_t *cache)
 {
-  struct stat st = {0};
+  struct stat st;
   char *journal_content = NULL;
   smartlist_t *added = NULL;
   tor_mmap_t *mm;
   int total = 0;
+
+  memset(&st, 0, sizeof(st));
 
   microdesc_cache_clear(cache);
 
