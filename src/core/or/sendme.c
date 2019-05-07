@@ -287,6 +287,29 @@ send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
   return 0;
 }
 
+/* Record the cell digest only if the next cell is expected to be a SENDME. */
+static void
+record_cell_digest_on_circ(circuit_t *circ, const uint8_t *sendme_digest,
+                           const int package_window)
+{
+  tor_assert(circ);
+  tor_assert(sendme_digest);
+
+  /* Is this the last cell before a SENDME? The idea is that if the
+   * package_window reaches a multiple of the increment, after this cell, we
+   * should expect a SENDME. */
+  if (!sendme_circuit_cell_is_next(package_window)) {
+    return;
+  }
+
+  /* Add the digest to the last seen list in the circuit. */
+  if (circ->sendme_last_digests == NULL) {
+    circ->sendme_last_digests = smartlist_new();
+  }
+  smartlist_add(circ->sendme_last_digests,
+                tor_memdup(sendme_digest, DIGEST_LEN));
+}
+
 /*
  * Public API
  */
@@ -571,31 +594,25 @@ sendme_note_stream_data_packaged(edge_connection_t *conn)
   return --conn->package_window;
 }
 
-/* Note the cell digest in the circuit sendme last digests FIFO if applicable.
- * It is safe to pass a circuit that isn't meant to track those digests. */
+/* Record the cell digest into the circuit sendme digest list depending on
+ * which edge we are. The digest is recorded only if we expect the next cell
+ * that we will receive is a SENDME so we can match the digest. */
 void
-sendme_record_cell_digest(circuit_t *circ)
+sendme_record_cell_digest_on_circ(circuit_t *circ, crypt_path_t *cpath)
 {
-  const uint8_t *digest;
+  int package_window;
+  uint8_t *sendme_digest;
 
   tor_assert(circ);
 
-  /* We only keep the cell digest if we are the Exit on that circuit and if
-   * this cell is the last one before the client should send a SENDME. */
-  if (CIRCUIT_IS_ORIGIN(circ)) {
-    return;
-  }
-  /* Is this the last cell before a SENDME? The idea is that if the
-   * package_window reaches a multiple of the increment, after this cell, we
-   * should expect a SENDME. */
-  if (!sendme_circuit_cell_is_next(circ->package_window)) {
-    return;
+  if (cpath) {
+    package_window = cpath->package_window;
+    sendme_digest = cpath_get_sendme_digest(cpath);
+  } else {
+    package_window = circ->package_window;
+    sendme_digest =
+      relay_crypto_get_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto);
   }
 
-  /* Add the digest to the last seen list in the circuit. */
-  digest = relay_crypto_get_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto);
-  if (circ->sendme_last_digests == NULL) {
-    circ->sendme_last_digests = smartlist_new();
-  }
-  smartlist_add(circ->sendme_last_digests, tor_memdup(digest, DIGEST_LEN));
+  record_cell_digest_on_circ(circ, sendme_digest, package_window);
 }
