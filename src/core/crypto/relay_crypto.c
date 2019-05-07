@@ -92,8 +92,8 @@ relay_crypt_one_payload(crypto_cipher_t *cipher, uint8_t *in)
 }
 
 /** Return the sendme_digest within the <b>crypto</b> object. */
-uint8_t *
-relay_crypto_get_sendme_digest(relay_crypto_t *crypto)
+const uint8_t *
+relay_crypto_get_sendme_digest(const relay_crypto_t *crypto)
 {
   tor_assert(crypto);
   return crypto->sendme_digest;
