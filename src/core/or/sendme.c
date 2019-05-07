@@ -25,20 +25,6 @@
 #include "lib/ctime/di_ops.h"
 #include "trunnel/sendme.h"
 
-/* The maximum supported version. Above that value, the cell can't be
- * recognized as a valid SENDME. */
-#define SENDME_MAX_SUPPORTED_VERSION 1
-
-/* The cell version constants for when emitting a cell. */
-#define SENDME_EMIT_MIN_VERSION_DEFAULT 0
-#define SENDME_EMIT_MIN_VERSION_MIN 0
-#define SENDME_EMIT_MIN_VERSION_MAX UINT8_MAX
-
-/* The cell version constants for when accepting a cell. */
-#define SENDME_ACCEPT_MIN_VERSION_DEFAULT 0
-#define SENDME_ACCEPT_MIN_VERSION_MIN 0
-#define SENDME_ACCEPT_MIN_VERSION_MAX UINT8_MAX
-
 /* Return the minimum version given by the consensus (if any) that should be
  * used when emitting a SENDME cell. */
 STATIC int
@@ -123,30 +109,41 @@ cell_v1_is_valid(const sendme_cell_t *cell, const circuit_t *circ)
 /* Return true iff the given cell version can be handled or if the minimum
  * accepted version from the consensus is known to us. */
 STATIC bool
-cell_version_is_valid(uint8_t cell_version)
+cell_version_can_be_handled(uint8_t cell_version)
 {
   int accept_version = get_accept_min_version();
 
-  /* Can we handle this version? */
+  /* We will first check if the consensus minimum accepted version can be
+   * handled by us and if not, regardless of the cell version we got, we can't
+   * continue. */
   if (accept_version > SENDME_MAX_SUPPORTED_VERSION) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Unable to accept SENDME version %u (from consensus). "
-           "We only support <= %d. Probably your tor is too old?",
-           accept_version, cell_version);
+           "We only support <= %u. Probably your tor is too old?",
+           accept_version, SENDME_MAX_SUPPORTED_VERSION);
     goto invalid;
   }
 
-  /* We only accept a SENDME cell from what the consensus tells us. */
+  /* Then, is this version below the accepted version from the consensus? If
+   * yes, we must not handle it. */
   if (cell_version < accept_version) {
-    log_info(LD_PROTOCOL, "Unacceptable SENDME version %d. Only "
+    log_info(LD_PROTOCOL, "Unacceptable SENDME version %u. Only "
                           "accepting %u (from consensus). Closing circuit.",
              cell_version, accept_version);
     goto invalid;
   }
 
-  return 1;
+  /* Is this cell version supported by us? */
+  if (cell_version > SENDME_MAX_SUPPORTED_VERSION) {
+    log_info(LD_PROTOCOL, "SENDME cell version %u is not supported by us. "
+                          "We only support <= %u",
+             cell_version, SENDME_MAX_SUPPORTED_VERSION);
+    goto invalid;
+  }
+
+  return true;
  invalid:
-  return 0;
+  return false;
 }
 
 /* Return true iff the encoded SENDME cell in cell_payload of length
@@ -183,7 +180,7 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
   }
 
   /* Validate that we can handle this cell version. */
-  if (!cell_version_is_valid(cell_version)) {
+  if (!cell_version_can_be_handled(cell_version)) {
     goto invalid;
   }
 
@@ -195,10 +192,13 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
     }
     break;
   case 0x00:
-    /* Fallthrough. Version 0, there is no work to be done on the payload so
-     * it is necessarily valid if we pass the version validation. */
+    /* Version 0, there is no work to be done on the payload so it is
+     * necessarily valid if we pass the version validation. */
+    break;
   default:
-    /* Unknown version means we can't handle it so fallback to version 0. */
+    log_warn(LD_PROTOCOL, "Unknown SENDME cell version %d received.",
+             cell_version);
+    tor_assert_nonfatal_unreached();
     break;
   }
 

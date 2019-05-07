@@ -122,9 +122,9 @@ test_v1_consensus_params(void *arg)
   smartlist_add(current_md_consensus->net_params,
                 (void *) "sendme_accept_min_version=1");
   /* Minimum acceptable value is 1. */
-  tt_int_op(cell_version_is_valid(1), OP_EQ, true);
+  tt_int_op(cell_version_can_be_handled(1), OP_EQ, true);
   /* Minimum acceptable value is 1 so a cell version of 0 is refused. */
-  tt_int_op(cell_version_is_valid(0), OP_EQ, false);
+  tt_int_op(cell_version_can_be_handled(0), OP_EQ, false);
 
  done:
   free_mock_consensus();
@@ -239,6 +239,33 @@ test_cell_payload_pad(void *arg)
   ;
 }
 
+static void
+test_cell_version_validation(void *arg)
+{
+  (void) arg;
+
+  /* We currently only support up to SENDME_MAX_SUPPORTED_VERSION so we are
+   * going to test the boundaries there. */
+
+  tt_assert(cell_version_can_be_handled(SENDME_MAX_SUPPORTED_VERSION));
+
+  /* Version below our supported should pass. */
+  tt_assert(cell_version_can_be_handled(SENDME_MAX_SUPPORTED_VERSION - 1));
+
+  /* Extra version from our supported should fail. */
+  tt_assert(!cell_version_can_be_handled(SENDME_MAX_SUPPORTED_VERSION + 1));
+
+  /* Simple check for version 0. */
+  tt_assert(cell_version_can_be_handled(0));
+
+  /* We MUST handle the default cell version that we emit or accept. */
+  tt_assert(cell_version_can_be_handled(SENDME_EMIT_MIN_VERSION_DEFAULT));
+  tt_assert(cell_version_can_be_handled(SENDME_ACCEPT_MIN_VERSION_DEFAULT));
+
+ done:
+  ;
+}
+
 struct testcase_t sendme_tests[] = {
   { "v1_record_digest", test_v1_record_digest, TT_FORK,
     NULL, NULL },
@@ -247,6 +274,8 @@ struct testcase_t sendme_tests[] = {
   { "v1_build_cell", test_v1_build_cell, TT_FORK,
     NULL, NULL },
   { "cell_payload_pad", test_cell_payload_pad, TT_FORK,
+    NULL, NULL },
+  { "cell_version_validation", test_cell_version_validation, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES

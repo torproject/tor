@@ -45,6 +45,20 @@ bool sendme_circuit_cell_is_next(int window);
 /* Private section starts. */
 #ifdef SENDME_PRIVATE
 
+/* The maximum supported version. Above that value, the cell can't be
+ * recognized as a valid SENDME. */
+#define SENDME_MAX_SUPPORTED_VERSION 1
+
+/* The cell version constants for when emitting a cell. */
+#define SENDME_EMIT_MIN_VERSION_DEFAULT 0
+#define SENDME_EMIT_MIN_VERSION_MIN 0
+#define SENDME_EMIT_MIN_VERSION_MAX UINT8_MAX
+
+/* The cell version constants for when accepting a cell. */
+#define SENDME_ACCEPT_MIN_VERSION_DEFAULT 0
+#define SENDME_ACCEPT_MIN_VERSION_MIN 0
+#define SENDME_ACCEPT_MIN_VERSION_MAX UINT8_MAX
+
 /*
  * Unit tests declaractions.
  */
@@ -53,7 +67,7 @@ bool sendme_circuit_cell_is_next(int window);
 STATIC int get_emit_min_version(void);
 STATIC int get_accept_min_version(void);
 
-STATIC bool cell_version_is_valid(uint8_t cell_version);
+STATIC bool cell_version_can_be_handled(uint8_t cell_version);
 
 STATIC ssize_t build_cell_payload_v1(const uint8_t *cell_digest,
                                      uint8_t *payload);
