@@ -586,12 +586,12 @@ test_circuitpadding_token_removal_higher(void *arg)
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 2);
 
     mi->padding_scheduled_at_usec = current_time - 57;
-    circpad_machine_remove_token(mi);
+    circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
 
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 1);
 
     mi->padding_scheduled_at_usec = current_time - 57;
-    circpad_machine_remove_token(mi);
+    circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
 
     /* Test that we cleaned out this bin. Don't do this in the case of the last
        bin since the tokens will get refilled */
@@ -610,7 +610,7 @@ test_circuitpadding_token_removal_higher(void *arg)
             CIRCPAD_STATE_BURST);
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[0] = 100;
   mi->padding_scheduled_at_usec = current_time;
-  circpad_machine_remove_token(mi);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   tt_int_op(mi->histogram[0], OP_EQ, 1);
 
  done:
@@ -683,12 +683,12 @@ test_circuitpadding_token_removal_lower(void *arg)
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 2);
 
     mi->padding_scheduled_at_usec = current_time - 57;
-    circpad_machine_remove_token(mi);
+    circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
 
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 1);
 
     mi->padding_scheduled_at_usec = current_time - 57;
-    circpad_machine_remove_token(mi);
+    circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
 
     /* Test that we cleaned out this bin. Don't do this in the case of the last
        bin since the tokens will get refilled */
@@ -708,7 +708,7 @@ test_circuitpadding_token_removal_lower(void *arg)
   circ_client_machine.states[CIRCPAD_STATE_BURST].
     histogram_edges[BIG_HISTOGRAM_LEN-2] = 100;
   mi->padding_scheduled_at_usec = current_time - 29202;
-  circpad_machine_remove_token(mi);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN-2], OP_EQ, 1);
 
  done:
@@ -780,12 +780,12 @@ test_circuitpadding_closest_token_removal(void *arg)
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 2);
 
     mi->padding_scheduled_at_usec = current_time - 57;
-    circpad_machine_remove_token(mi);
+    circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
 
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 1);
 
     mi->padding_scheduled_at_usec = current_time - 57;
-    circpad_machine_remove_token(mi);
+    circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
 
     /* Test that we cleaned out this bin. Don't do this in the case of the last
        bin since the tokens will get refilled */
@@ -807,14 +807,14 @@ test_circuitpadding_closest_token_removal(void *arg)
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[2] = 120;
   mi->padding_scheduled_at_usec = current_time - 102;
   mi->histogram[0] = 0;
-  circpad_machine_remove_token(mi);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   tt_int_op(mi->histogram[1], OP_EQ, 1);
 
   /* Test above the highest bin, for coverage */
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_BURST);
   mi->padding_scheduled_at_usec = current_time - 29202;
-  circpad_machine_remove_token(mi);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN-2], OP_EQ, 1);
 
  done:
@@ -889,12 +889,12 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 2);
 
     mi->padding_scheduled_at_usec = current_time - 57;
-    circpad_machine_remove_token(mi);
+    circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
 
     tt_int_op(mi->histogram[bin_to_remove], OP_EQ, 1);
 
     mi->padding_scheduled_at_usec = current_time - 57;
-    circpad_machine_remove_token(mi);
+    circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
 
     /* Test that we cleaned out this bin. Don't do this in the case of the last
        bin since the tokens will get refilled */
@@ -916,7 +916,7 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   circ_client_machine.states[CIRCPAD_STATE_BURST].histogram_edges[2] = 120;
   mi->padding_scheduled_at_usec = current_time - 102;
   mi->histogram[0] = 0;
-  circpad_machine_remove_token(mi);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   tt_int_op(mi->histogram[1], OP_EQ, 1);
 
   /* Test above the highest bin, for coverage */
@@ -925,7 +925,7 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   circ_client_machine.states[CIRCPAD_STATE_BURST].
     histogram_edges[BIG_HISTOGRAM_LEN-2] = 100;
   mi->padding_scheduled_at_usec = current_time - 29202;
-  circpad_machine_remove_token(mi);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   tt_int_op(mi->histogram[BIG_HISTOGRAM_LEN-2], OP_EQ, 1);
 
  done:
@@ -971,16 +971,16 @@ test_circuitpadding_token_removal_exact(void *arg)
   /* Ensure that we will clear out bin #4 with this usec */
   mi->padding_scheduled_at_usec = current_time - 57;
   tt_int_op(mi->histogram[4], OP_EQ, 2);
-  circpad_machine_remove_token(mi);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   mi->padding_scheduled_at_usec = current_time - 57;
   tt_int_op(mi->histogram[4], OP_EQ, 1);
-  circpad_machine_remove_token(mi);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   tt_int_op(mi->histogram[4], OP_EQ, 0);
 
   /* Ensure that we will not remove any other tokens even tho we try to, since
    * this is what the exact strategy dictates */
   mi->padding_scheduled_at_usec = current_time - 57;
-  circpad_machine_remove_token(mi);
+  circpad_cell_event_nonpadding_sent((circuit_t*)client_side);
   for (int i = 0; i < BIG_HISTOGRAM_LEN ; i++) {
     if (i != 4) {
       tt_int_op(mi->histogram[i], OP_EQ, 2);
