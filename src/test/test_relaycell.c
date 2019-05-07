@@ -812,7 +812,7 @@ test_circbw_relay(void *arg)
   ASSERT_UNCOUNTED_BW();
 
   /* Sendme on circuit with non-full window: counted */
-  PACK_CELL(0, RELAY_COMMAND_SENDME, "Data1234");
+  PACK_CELL(0, RELAY_COMMAND_SENDME, "");
   circ->cpath->package_window = 900;
   connection_edge_process_relay_cell(&cell, TO_CIRCUIT(circ), edgeconn,
                                      circ->cpath);
