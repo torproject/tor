@@ -286,6 +286,31 @@ send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
   return 0;
 }
 
+/* Record the cell digest only if the next cell is expected to be a SENDME. */
+static void
+record_cell_digest(circuit_t *circ, const relay_crypto_t *crypto,
+                   const int package_window)
+{
+  const uint8_t *digest;
+
+  tor_assert(circ);
+  tor_assert(crypto);
+
+  /* Is this the last cell before a SENDME? The idea is that if the
+   * package_window reaches a multiple of the increment, after this cell, we
+   * should expect a SENDME. */
+  if (!sendme_circuit_cell_is_next(package_window)) {
+    return;
+  }
+
+  /* Add the digest to the last seen list in the circuit. */
+  digest = relay_crypto_get_sendme_digest(crypto);
+  if (circ->sendme_last_digests == NULL) {
+    circ->sendme_last_digests = smartlist_new();
+  }
+  smartlist_add(circ->sendme_last_digests, tor_memdup(digest, DIGEST_LEN));
+}
+
 /*
  * Public API
  */
@@ -574,31 +599,37 @@ sendme_note_stream_data_packaged(edge_connection_t *conn)
   return --conn->package_window;
 }
 
-/* Note the cell digest in the circuit sendme last digests FIFO if applicable.
- * It is safe to pass a circuit that isn't meant to track those digests. */
+/* Record the cell digest on the client side. This is done with the
+ * information taken in the cpath but we still keep the SENDME cell digest in
+ * the circuit. The digest is recorded only if we expect the next cell on the
+ * circuit to be a SENDME else nothing is done. */
 void
-sendme_record_cell_digest(circuit_t *circ)
+sendme_client_record_cell_digest(const crypt_path_t *cpath, circuit_t *circ)
 {
-  const uint8_t *digest;
+  int package_window;
+  const relay_crypto_t *crypto;
+
+  tor_assert(cpath);
+  tor_assert(circ);
+
+  package_window = cpath->package_window;
+  crypto = &cpath->crypto;
+  record_cell_digest(circ, crypto, package_window);
+}
+
+/* Record the cell digest on the service side. This is done with the
+ * information taken in the OR circuit but we still keep the SENDME cell
+ * digest in the circuit base object. The digest is recorded only if we expect
+ * the next cell on the circuit to be a SENDME else nothing is done. */
+void
+sendme_exit_record_cell_digest(circuit_t *circ)
+{
+  int package_window;
+  const relay_crypto_t *crypto;
 
   tor_assert(circ);
 
-  /* We only keep the cell digest if we are the Exit on that circuit and if
-   * this cell is the last one before the client should send a SENDME. */
-  if (CIRCUIT_IS_ORIGIN(circ)) {
-    return;
-  }
-  /* Is this the last cell before a SENDME? The idea is that if the
-   * package_window reaches a multiple of the increment, after this cell, we
-   * should expect a SENDME. */
-  if (!sendme_circuit_cell_is_next(circ->package_window)) {
-    return;
-  }
-
-  /* Add the digest to the last seen list in the circuit. */
-  digest = relay_crypto_get_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto);
-  if (circ->sendme_last_digests == NULL) {
-    circ->sendme_last_digests = smartlist_new();
-  }
-  smartlist_add(circ->sendme_last_digests, tor_memdup(digest, DIGEST_LEN));
+  package_window = circ->package_window;
+  crypto = &TO_OR_CIRCUIT(circ)->crypto;
+  record_cell_digest(circ, crypto, package_window);
 }
