@@ -284,7 +284,7 @@ test_fast_handshake(void *arg)
   /* First, test an entire handshake. */
   memset(client_handshake, 0, sizeof(client_handshake));
   tt_int_op(0, OP_EQ, fast_onionskin_create(&state, client_handshake));
-  tt_assert(! tor_mem_is_zero((char*)client_handshake,
+  tt_assert(! fast_mem_is_zero((char*)client_handshake,
                               sizeof(client_handshake)));
 
   tt_int_op(0, OP_EQ,

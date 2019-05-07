@@ -226,7 +226,7 @@ load_ed_keys(const or_options_t *options, time_t now)
         tor_free(fname);
       }
     }
-    if (tor_mem_is_zero((char*)id->seckey.seckey, sizeof(id->seckey)))
+    if (safe_mem_is_zero((char*)id->seckey.seckey, sizeof(id->seckey)))
       sign_signing_key_with_id = NULL;
     else
       sign_signing_key_with_id = id;

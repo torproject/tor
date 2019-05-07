@@ -240,7 +240,7 @@ test_addr_ip6_helpers(void *arg)
   tt_int_op(0,OP_EQ, tor_addr_lookup("9000::5", AF_UNSPEC, &t1));
   tt_int_op(AF_INET6,OP_EQ, tor_addr_family(&t1));
   tt_int_op(0x90,OP_EQ, tor_addr_to_in6_addr8(&t1)[0]);
-  tt_assert(tor_mem_is_zero((char*)tor_addr_to_in6_addr8(&t1)+1, 14));
+  tt_assert(fast_mem_is_zero((char*)tor_addr_to_in6_addr8(&t1)+1, 14));
   tt_int_op(0x05,OP_EQ, tor_addr_to_in6_addr8(&t1)[15]);
 
   /* === Test pton: valid af_inet6 */
@@ -697,7 +697,7 @@ test_addr_ip6_helpers(void *arg)
                               &t1,&mask,&port1,&port2);
   tt_int_op(r,OP_EQ,AF_INET6);
   tt_int_op(tor_addr_family(&t1),OP_EQ,AF_INET6);
-  tt_assert(tor_mem_is_zero((const char*)tor_addr_to_in6_addr32(&t1), 16));
+  tt_assert(fast_mem_is_zero((const char*)tor_addr_to_in6_addr32(&t1), 16));
   tt_int_op(mask,OP_EQ,0);
   tt_int_op(port1,OP_EQ,1);
   tt_int_op(port2,OP_EQ,65535);

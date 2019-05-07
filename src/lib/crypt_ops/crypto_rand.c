@@ -36,6 +36,7 @@
 
 #include "lib/defs/digest_sizes.h"
 #include "lib/crypt_ops/crypto_digest.h"
+#include "lib/ctime/di_ops.h"
 
 #ifdef ENABLE_NSS
 #include "lib/crypt_ops/crypto_nss_mgt.h"
@@ -314,7 +315,7 @@ crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
       }
     }
 
-    if ((out_len < sanity_min_size) || !tor_mem_is_zero((char*)out, out_len))
+    if ((out_len < sanity_min_size) || !safe_mem_is_zero((char*)out, out_len))
       return 0;
   }
 

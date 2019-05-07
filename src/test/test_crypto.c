@@ -389,7 +389,7 @@ test_crypto_aes128(void *arg)
                                    "\xff\xff\xff\xff\xff\xff\xff\xff"
                                    "\xff\xff\xff\xff\xff\xff\xff\xff");
   crypto_cipher_crypt_inplace(env1, data2, 64);
-  tt_assert(tor_mem_is_zero(data2, 64));
+  tt_assert(fast_mem_is_zero(data2, 64));
 
  done:
   tor_free(mem_op_hex_tmp);
@@ -2134,7 +2134,7 @@ test_crypto_curve25519_persist(void *arg)
   tt_u64_op((uint64_t)st.st_size, OP_EQ,
             32+CURVE25519_PUBKEY_LEN+CURVE25519_SECKEY_LEN);
   tt_assert(fast_memeq(content, "== c25519v1: testing ==", taglen));
-  tt_assert(tor_mem_is_zero(content+taglen, 32-taglen));
+  tt_assert(fast_mem_is_zero(content+taglen, 32-taglen));
   cp = content + 32;
   tt_mem_op(keypair.seckey.secret_key,OP_EQ,
              cp,

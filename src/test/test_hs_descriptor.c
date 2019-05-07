@@ -126,7 +126,7 @@ test_descriptor_padding(void *arg)
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(tor_mem_is_zero((char *) padded_plaintext + plaintext_len,
+    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
                               padded_len - plaintext_len), OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */
@@ -143,7 +143,7 @@ test_descriptor_padding(void *arg)
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(tor_mem_is_zero((char *) padded_plaintext + plaintext_len,
+    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
                               padded_len - plaintext_len), OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */
@@ -160,7 +160,7 @@ test_descriptor_padding(void *arg)
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(tor_mem_is_zero((char *) padded_plaintext + plaintext_len,
+    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
                               padded_len - plaintext_len), OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */

@@ -192,7 +192,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
     }
 
     if (format == NS_V3_VOTE && vrs) {
-      if (tor_mem_is_zero((char*)vrs->ed25519_id, ED25519_PUBKEY_LEN)) {
+      if (fast_mem_is_zero((char*)vrs->ed25519_id, ED25519_PUBKEY_LEN)) {
         smartlist_add_strdup(chunks, "id ed25519 none\n");
       } else {
         char ed_b64[BASE64_DIGEST256_LEN+1];

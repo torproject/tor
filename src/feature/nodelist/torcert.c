@@ -74,7 +74,7 @@ tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
   tor_assert(real_len == alloc_len);
   tor_assert(real_len > ED25519_SIG_LEN);
   uint8_t *sig = encoded + (real_len - ED25519_SIG_LEN);
-  tor_assert(tor_mem_is_zero((char*)sig, ED25519_SIG_LEN));
+  tor_assert(fast_mem_is_zero((char*)sig, ED25519_SIG_LEN));
 
   ed25519_signature_t signature;
   if (ed25519_sign(&signature, encoded,

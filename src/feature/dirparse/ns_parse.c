@@ -1478,7 +1478,7 @@ networkstatus_parse_vote_from_string(const char *s,
     SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, vote_routerstatus_t *,
                             vrs) {
       if (! vrs->has_ed25519_listing ||
-          tor_mem_is_zero((const char *)vrs->ed25519_id, DIGEST256_LEN))
+          fast_mem_is_zero((const char *)vrs->ed25519_id, DIGEST256_LEN))
         continue;
       if (digest256map_get(ed_id_map, vrs->ed25519_id) != NULL) {
         log_warn(LD_DIR, "Vote networkstatus ed25519 identities were not "

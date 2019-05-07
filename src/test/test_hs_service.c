@@ -393,11 +393,11 @@ test_load_keys(void *arg)
   tt_assert(s);
 
   /* Ok we have the service object. Validate few things. */
-  tt_assert(!tor_mem_is_zero(s->onion_address, sizeof(s->onion_address)));
+  tt_assert(!fast_mem_is_zero(s->onion_address, sizeof(s->onion_address)));
   tt_int_op(hs_address_is_valid(s->onion_address), OP_EQ, 1);
-  tt_assert(!tor_mem_is_zero((char *) s->keys.identity_sk.seckey,
+  tt_assert(!fast_mem_is_zero((char *) s->keys.identity_sk.seckey,
                              ED25519_SECKEY_LEN));
-  tt_assert(!tor_mem_is_zero((char *) s->keys.identity_pk.pubkey,
+  tt_assert(!fast_mem_is_zero((char *) s->keys.identity_pk.pubkey,
                              ED25519_PUBKEY_LEN));
   /* Check onion address from identity key. */
   hs_build_address(&s->keys.identity_pk, s->config.version, addr);
@@ -677,7 +677,7 @@ test_service_intro_point(void *arg)
     ip = helper_create_service_ip();
     tt_assert(ip);
     /* Make sure the authentication keypair is not zeroes. */
-    tt_int_op(tor_mem_is_zero((const char *) &ip->auth_key_kp,
+    tt_int_op(fast_mem_is_zero((const char *) &ip->auth_key_kp,
                               sizeof(ed25519_keypair_t)), OP_EQ, 0);
     /* The introduce2_max MUST be in that range. */
     tt_u64_op(ip->introduce2_max, OP_GE,
@@ -1562,9 +1562,9 @@ test_build_update_descriptors(void *arg)
   tt_int_op(smartlist_len(ip_cur->base.link_specifiers), OP_EQ, 3);
   /* Make sure we have a valid encryption keypair generated when we pick an
    * intro point in the update process. */
-  tt_assert(!tor_mem_is_zero((char *) ip_cur->enc_key_kp.seckey.secret_key,
+  tt_assert(!fast_mem_is_zero((char *) ip_cur->enc_key_kp.seckey.secret_key,
                              CURVE25519_SECKEY_LEN));
-  tt_assert(!tor_mem_is_zero((char *) ip_cur->enc_key_kp.pubkey.public_key,
+  tt_assert(!fast_mem_is_zero((char *) ip_cur->enc_key_kp.pubkey.public_key,
                              CURVE25519_PUBKEY_LEN));
   tt_u64_op(ip_cur->time_to_expire, OP_GE, now +
             INTRO_POINT_LIFETIME_MIN_SECONDS);
@@ -1884,9 +1884,9 @@ test_rendezvous1_parsing(void *arg)
   }
 
   /* Send out the RENDEZVOUS1 and make sure that our mock func worked */
-  tt_assert(tor_mem_is_zero(rend1_payload, 32));
+  tt_assert(fast_mem_is_zero(rend1_payload, 32));
   hs_circ_service_rp_has_opened(service, service_circ);
-  tt_assert(!tor_mem_is_zero(rend1_payload, 32));
+  tt_assert(!fast_mem_is_zero(rend1_payload, 32));
   tt_int_op(rend1_payload_len, OP_EQ, HS_LEGACY_RENDEZVOUS_CELL_SIZE);
 
   /******************************/

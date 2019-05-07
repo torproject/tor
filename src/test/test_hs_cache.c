@@ -486,7 +486,7 @@ test_client_cache(void *arg)
                                        NULL, &published_desc_str);
     tt_int_op(retval, OP_EQ, 0);
     memcpy(wanted_subcredential, published_desc->subcredential, DIGEST256_LEN);
-    tt_assert(!tor_mem_is_zero((char*)wanted_subcredential, DIGEST256_LEN));
+    tt_assert(!fast_mem_is_zero((char*)wanted_subcredential, DIGEST256_LEN));
   }
 
   /* Test handle_response_fetch_hsdesc_v3() */

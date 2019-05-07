@@ -177,7 +177,7 @@ test_ext_or_init_auth(void *arg)
   /* Shouldn't be initialized already, or our tests will be a bit
    * meaningless */
   ext_or_auth_cookie = tor_malloc_zero(32);
-  tt_assert(tor_mem_is_zero((char*)ext_or_auth_cookie, 32));
+  tt_assert(fast_mem_is_zero((char*)ext_or_auth_cookie, 32));
 
   /* Now make sure we use a temporary file */
   fn = get_fname("ext_cookie_file");
@@ -202,7 +202,7 @@ test_ext_or_init_auth(void *arg)
   tt_mem_op(cp,OP_EQ, "! Extended ORPort Auth Cookie !\x0a", 32);
   tt_mem_op(cp+32,OP_EQ, ext_or_auth_cookie, 32);
   memcpy(cookie0, ext_or_auth_cookie, 32);
-  tt_assert(!tor_mem_is_zero((char*)ext_or_auth_cookie, 32));
+  tt_assert(!fast_mem_is_zero((char*)ext_or_auth_cookie, 32));
 
   /* Operation should be idempotent. */
   tt_int_op(0, OP_EQ, init_ext_or_cookie_authentication(1));

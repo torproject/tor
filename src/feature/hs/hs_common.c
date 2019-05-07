@@ -1025,7 +1025,7 @@ hs_build_blinded_pubkey(const ed25519_public_key_t *pk,
 
   tor_assert(pk);
   tor_assert(blinded_pk_out);
-  tor_assert(!tor_mem_is_zero((char *) pk, ED25519_PUBKEY_LEN));
+  tor_assert(!fast_mem_is_zero((char *) pk, ED25519_PUBKEY_LEN));
 
   build_blinded_key_param(pk, secret, secret_len,
                           time_period_num, get_time_period_length(), param);
@@ -1050,8 +1050,8 @@ hs_build_blinded_keypair(const ed25519_keypair_t *kp,
   tor_assert(kp);
   tor_assert(blinded_kp_out);
   /* Extra safety. A zeroed key is bad. */
-  tor_assert(!tor_mem_is_zero((char *) &kp->pubkey, ED25519_PUBKEY_LEN));
-  tor_assert(!tor_mem_is_zero((char *) &kp->seckey, ED25519_SECKEY_LEN));
+  tor_assert(!fast_mem_is_zero((char *) &kp->pubkey, ED25519_PUBKEY_LEN));
+  tor_assert(!fast_mem_is_zero((char *) &kp->seckey, ED25519_SECKEY_LEN));
 
   build_blinded_key_param(&kp->pubkey, secret, secret_len,
                           time_period_num, get_time_period_length(), param);
@@ -1283,15 +1283,15 @@ node_has_hsdir_index(const node_t *node)
 
   /* At this point, since the node has a desc, this node must also have an
    * hsdir index. If not, something went wrong, so BUG out. */
-  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index.fetch,
+  if (BUG(fast_mem_is_zero((const char*)node->hsdir_index.fetch,
                           DIGEST256_LEN))) {
     return 0;
   }
-  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index.store_first,
+  if (BUG(fast_mem_is_zero((const char*)node->hsdir_index.store_first,
                           DIGEST256_LEN))) {
     return 0;
   }
-  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index.store_second,
+  if (BUG(fast_mem_is_zero((const char*)node->hsdir_index.store_second,
                           DIGEST256_LEN))) {
     return 0;
   }

@@ -2973,7 +2973,7 @@ routerinfo_incompatible_with_extrainfo(const crypto_pk_t *identity_pkey,
   digest256_matches = tor_memeq(ei->digest256,
                                 sd->extra_info_digest256, DIGEST256_LEN);
   digest256_matches |=
-    tor_mem_is_zero(sd->extra_info_digest256, DIGEST256_LEN);
+    fast_mem_is_zero(sd->extra_info_digest256, DIGEST256_LEN);
 
   /* The identity must match exactly to have been generated at the same time
    * by the same router. */
@@ -3057,7 +3057,7 @@ routerinfo_has_curve25519_onion_key(const routerinfo_t *ri)
     return 0;
   }
 
-  if (tor_mem_is_zero((const char*)ri->onion_curve25519_pkey->public_key,
+  if (fast_mem_is_zero((const char*)ri->onion_curve25519_pkey->public_key,
                       CURVE25519_PUBKEY_LEN)) {
     return 0;
   }

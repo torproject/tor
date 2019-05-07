@@ -1654,7 +1654,7 @@ check_sockaddr(const struct sockaddr *sa, int len, int level)
              len,(int)sizeof(struct sockaddr_in6));
       ok = 0;
     }
-    if (tor_mem_is_zero((void*)sin6->sin6_addr.s6_addr, 16) ||
+    if (fast_mem_is_zero((void*)sin6->sin6_addr.s6_addr, 16) ||
         sin6->sin6_port == 0) {
       log_fn(level, LD_NET,
              "Address for new connection has address/port equal to zero.");

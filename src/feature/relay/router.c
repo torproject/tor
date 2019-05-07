@@ -244,7 +244,7 @@ expire_old_onion_keys(void)
     lastonionkey = NULL;
   }
 
-  /* We zero out the keypair. See the tor_mem_is_zero() check made in
+  /* We zero out the keypair. See the fast_mem_is_zero() check made in
    * construct_ntor_key_map() below. */
   memset(&last_curve25519_onion_key, 0, sizeof(last_curve25519_onion_key));
 
@@ -284,7 +284,7 @@ construct_ntor_key_map(void)
 {
   di_digest256_map_t *m = NULL;
 
-  if (!tor_mem_is_zero((const char*)
+  if (!fast_mem_is_zero((const char*)
                        curve25519_onion_key.pubkey.public_key,
                        CURVE25519_PUBKEY_LEN)) {
     dimap_add_entry(&m,
@@ -292,7 +292,7 @@ construct_ntor_key_map(void)
                     tor_memdup(&curve25519_onion_key,
                                sizeof(curve25519_keypair_t)));
   }
-  if (!tor_mem_is_zero((const char*)
+  if (!fast_mem_is_zero((const char*)
                           last_curve25519_onion_key.pubkey.public_key,
                        CURVE25519_PUBKEY_LEN)) {
     dimap_add_entry(&m,
@@ -1049,7 +1049,7 @@ init_keys(void)
       return -1;
 
     keydir = get_keydir_fname("secret_onion_key_ntor.old");
-    if (tor_mem_is_zero((const char *)
+    if (fast_mem_is_zero((const char *)
                            last_curve25519_onion_key.pubkey.public_key,
                         CURVE25519_PUBKEY_LEN) &&
         file_status(keydir) == FN_FILE) {

@@ -2531,7 +2531,7 @@ handle_response_fetch_microdesc(dir_connection_t *conn,
            conn->base_.port);
   tor_assert(conn->requested_resource &&
              !strcmpstart(conn->requested_resource, "d/"));
-  tor_assert_nonfatal(!tor_mem_is_zero(conn->identity_digest, DIGEST_LEN));
+  tor_assert_nonfatal(!fast_mem_is_zero(conn->identity_digest, DIGEST_LEN));
   which = smartlist_new();
   dir_split_resource_into_fingerprints(conn->requested_resource+2,
                                        which, NULL,

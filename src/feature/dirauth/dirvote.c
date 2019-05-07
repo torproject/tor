@@ -2599,7 +2599,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
       return -1;
     }
     for (alg = DIGEST_SHA1; alg < N_COMMON_DIGEST_ALGORITHMS; ++alg) {
-      if (!tor_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
+      if (!fast_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
         if (fast_memeq(target->digests.d[alg], digests->d[alg],
                        DIGEST256_LEN)) {
           ++n_matches;
@@ -2795,7 +2795,7 @@ networkstatus_get_detached_signatures(smartlist_t *consensuses)
       char d[HEX_DIGEST256_LEN+1];
       const char *alg_name =
         crypto_digest_algorithm_get_name(alg);
-      if (tor_mem_is_zero(ns->digests.d[alg], DIGEST256_LEN))
+      if (fast_mem_is_zero(ns->digests.d[alg], DIGEST256_LEN))
         continue;
       base16_encode(d, sizeof(d), ns->digests.d[alg], DIGEST256_LEN);
       smartlist_add_asprintf(elements, "additional-digest %s %s %s\n",
