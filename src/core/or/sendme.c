@@ -203,10 +203,10 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
 
   /* Valid cell. */
   sendme_cell_free(cell);
-  return 1;
+  return true;
  invalid:
   sendme_cell_free(cell);
-  return 0;
+  return false;
 }
 
 /* Build and encode a version 1 SENDME cell into payload, which must be at
@@ -442,6 +442,12 @@ sendme_process_circuit_level(crypt_path_t *layer_hint,
   tor_assert(circ);
   tor_assert(cell_payload);
 
+  /* Validate the SENDME cell. Depending on the version, different validation
+   * can be done. An invalid SENDME requires us to close the circuit. */
+  if (!sendme_is_valid(circ, cell_payload, cell_payload_len)) {
+    return -END_CIRC_REASON_TORPROTOCOL;
+  }
+
   /* If we are the origin of the circuit, we are the Client so we use the
    * layer hint (the Exit hop) for the package window tracking. */
   if (CIRCUIT_IS_ORIGIN(circ)) {
@@ -461,13 +467,6 @@ sendme_process_circuit_level(crypt_path_t *layer_hint,
      * are rate limited. */
     circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), cell_payload_len);
   } else {
-    /* Validate the SENDME cell. Depending on the version, different
-     * validation can be done. An invalid SENDME requires us to close the
-     * circuit. It is only done if we are the Exit of the circuit. */
-    if (!sendme_is_valid(circ, cell_payload, cell_payload_len)) {
-      return -END_CIRC_REASON_TORPROTOCOL;
-    }
-
     /* We aren't the origin of this circuit so we are the Exit and thus we
      * track the package window with the circuit object. */
     if ((circ->package_window + CIRCWINDOW_INCREMENT) >
