@@ -80,6 +80,10 @@ static void circpad_setup_machine_on_circ(circuit_t *on_circ,
                                         const circpad_machine_spec_t *machine);
 static double circpad_distribution_sample(circpad_distribution_t dist);
 
+
+static inline void circpad_machine_update_state_length(
+        circpad_machine_runtime_t *mi);
+
 /** Cached consensus params */
 static uint8_t circpad_global_max_padding_percent;
 static uint16_t circpad_global_allowed_cells;
@@ -808,6 +812,10 @@ check_machine_token_supply(circpad_machine_runtime_t *mi)
    * We also do not count infinity bin in histogram totals.
    */
   if (mi->histogram_len && mi->histogram) {
+    /* Ensure that we have a token removal strategy set */
+    const circpad_state_t *state = circpad_machine_current_state(mi);
+    tor_assert_nonfatal(state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE);
+
     for (circpad_hist_index_t b = 0; b < CIRCPAD_INFINITY_BIN(mi); b++)
       histogram_total_tokens += mi->histogram[b];
 
@@ -826,22 +834,59 @@ check_machine_token_supply(circpad_machine_runtime_t *mi)
 }
 
 /**
- * Remove a token from the bin corresponding to the delta since
- * last packet. If that bin is empty, choose a token based on
- * the specified removal strategy in the state machine.
+ * Count that a padding packet was sent.
  *
- * This function also updates and checks rate limit and state
- * limit counters.
- *
- * Returns 1 if we transition states, 0 otherwise.
+ * This updates our state length count, our machine rate limit counts,
+ * and if token removal is used, decrements the histogram.
  */
-STATIC circpad_decision_t
-circpad_machine_remove_token(circpad_machine_runtime_t *mi)
+static inline void
+circpad_machine_count_padding_sent(circpad_machine_runtime_t *mi)
 {
-  const circpad_state_t *state = NULL;
-  circpad_time_t current_time;
-  circpad_delay_t target_bin_usec;
+  /* If we have a valid state length bound, consider it */
+  if (mi->state_length != CIRCPAD_STATE_LENGTH_INFINITE &&
+      !BUG(mi->state_length <= 0)) {
+    mi->state_length--;
+  }
 
+  /*
+   * Update non-padding counts for rate limiting: We scale at UINT16_MAX
+   * because we only use this for a percentile limit of 2 sig figs, and
+   * space is scare in the machineinfo struct.
+   */
+  mi->padding_sent++;
+  if (mi->padding_sent == UINT16_MAX) {
+    mi->padding_sent /= 2;
+    mi->nonpadding_sent /= 2;
+  }
+
+  circpad_global_padding_sent++;
+
+  /* If we have a mutable histogram, reduce the token count from
+   * the chosen padding bin (this assumes we always send padding
+   * when we intended to). */
+  if (mi->histogram && mi->histogram_len) {
+    /* Ensure that we have a token removal strategy set */
+    const circpad_state_t *state = circpad_machine_current_state(mi);
+    tor_assert_nonfatal(state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE);
+
+    /* Basic sanity check on the histogram before removing anything */
+    if (!BUG(mi->chosen_bin >= mi->histogram_len) &&
+        !BUG(mi->histogram[mi->chosen_bin] == 0)) {
+      mi->histogram[mi->chosen_bin]--;
+    }
+  }
+}
+
+/**
+ * Count a nonpadding packet as being sent.
+ *
+ * This function updates our overhead accounting variables, as well
+ * as decrements the state limit packet counter, if the latter was
+ * flagged as applying to non-padding as well.
+ */
+static inline void
+circpad_machine_count_nonpadding_sent(circpad_machine_runtime_t *mi)
+{
   /* Update non-padding counts for rate limiting: We scale at UINT16_MAX
    * because we only use this for a percentile limit of 2 sig figs, and
    * space is scare in the machineinfo struct. */
@@ -851,12 +896,59 @@ circpad_machine_remove_token(circpad_machine_runtime_t *mi)
     mi->nonpadding_sent /= 2;
   }
 
+  /* Update any state packet length limits that apply */
+  circpad_machine_update_state_length(mi);
+
+  /* Remove a token from the histrogram, if applicable */
+  circpad_machine_remove_token(mi);
+}
+
+static inline void
+circpad_machine_update_state_length(circpad_machine_runtime_t *mi)
+{
+  const circpad_state_t *state = NULL;
+
+  if (mi->state_length != CIRCPAD_STATE_LENGTH_INFINITE)
+    return;
+
+  state = circpad_machine_current_state(mi);
+
+  /* If we are not in a padding state (like start or end), we're done */
+  if (!state)
+    return;
+
+  /* If we're enforcing a state length on non-padding packets,
+   * decrement it */
+  if (state->length_includes_nonpadding &&
+      mi->state_length > 0) {
+    mi->state_length--;
+  }
+}
+
+/**
+ * When a non-padding packet arrives, remove a token from the bin
+ * corresponding to the delta since last sent packet. If that bin
+ * is empty, choose a token based on the specified removal strategy
+ * in the state machine.
+ */
+STATIC void
+circpad_machine_remove_token(circpad_machine_runtime_t *mi)
+{
+  const circpad_state_t *state = NULL;
+  circpad_time_t current_time;
+  circpad_delay_t target_bin_usec;
+
   /* Dont remove any tokens if there was no padding scheduled */
   if (!mi->padding_scheduled_at_usec) {
-    return CIRCPAD_STATE_UNCHANGED;
+    return;
   }
 
   state = circpad_machine_current_state(mi);
+
+  /* Don't remove any tokens if we're not doing token removal */
+  if (!state || state->token_removal == CIRCPAD_TOKEN_REMOVAL_NONE)
+    return;
+
   current_time = monotime_absolute_usec();
 
   /* If we have scheduled padding some time in the future, we want to see what
@@ -875,20 +967,10 @@ circpad_machine_remove_token(circpad_machine_runtime_t *mi)
 
   /* If we are not in a padding state (like start or end), we're done */
   if (!state)
-    return CIRCPAD_STATE_UNCHANGED;
-
-  /* If we're enforcing a state length on non-padding packets,
-   * decrement it */
-  if (mi->state_length != CIRCPAD_STATE_LENGTH_INFINITE &&
-      state->length_includes_nonpadding &&
-      mi->state_length > 0) {
-    mi->state_length--;
-  }
+    return;
 
   /* Perform the specified token removal strategy */
   switch (state->token_removal) {
-    case CIRCPAD_TOKEN_REMOVAL_NONE:
-      break;
     case CIRCPAD_TOKEN_REMOVAL_CLOSEST_USEC:
       circpad_machine_remove_closest_token(mi, target_bin_usec, 1);
       break;
@@ -904,10 +986,14 @@ circpad_machine_remove_token(circpad_machine_runtime_t *mi)
     case CIRCPAD_TOKEN_REMOVAL_EXACT:
       circpad_machine_remove_exact(mi, target_bin_usec);
       break;
+    case CIRCPAD_TOKEN_REMOVAL_NONE:
+      tor_assert_nonfatal_unreached();
+      // fallthrough for log
+    default:
+      log_warn(LD_BUG, "Circpad: Unknown token removal strategy %d",
+               state->token_removal);
+      break;
   }
-
-  /* Check our token and state length limits */
-  return check_machine_token_supply(mi);
 }
 
 /**
@@ -977,34 +1063,7 @@ circpad_send_padding_cell_for_callback(circpad_machine_runtime_t *mi)
     return CIRCPAD_STATE_CHANGED;
   }
 
-  /* If it's a histogram, reduce the token count */
-  if (mi->histogram && mi->histogram_len) {
-    /* Basic sanity check on the histogram before removing anything */
-    if (BUG(mi->chosen_bin >= mi->histogram_len) ||
-        BUG(mi->histogram[mi->chosen_bin] == 0)) {
-      return CIRCPAD_STATE_CHANGED;
-    }
-
-    mi->histogram[mi->chosen_bin]--;
-  }
-
-  /* If we have a valid state length bound, consider it */
-  if (mi->state_length != CIRCPAD_STATE_LENGTH_INFINITE &&
-      !BUG(mi->state_length <= 0)) {
-    mi->state_length--;
-  }
-
-  /*
-   * Update non-padding counts for rate limiting: We scale at UINT16_MAX
-   * because we only use this for a percentile limit of 2 sig figs, and
-   * space is scare in the machineinfo struct.
-   */
-  mi->padding_sent++;
-  if (mi->padding_sent == UINT16_MAX) {
-    mi->padding_sent /= 2;
-    mi->nonpadding_sent /= 2;
-  }
-  circpad_global_padding_sent++;
+  circpad_machine_count_padding_sent(mi);
 
   if (CIRCUIT_IS_ORIGIN(mi->on_circ)) {
     circpad_send_command_to_hop(TO_ORIGIN_CIRCUIT(mi->on_circ),
@@ -1500,9 +1559,13 @@ circpad_cell_event_nonpadding_sent(circuit_t *on_circ)
     /* First, update any RTT estimate */
     circpad_estimate_circ_rtt_on_send(on_circ, on_circ->padding_info[i]);
 
-    /* Remove a token: this is the idea of adaptive padding, since we have an
-     * ideal distribution that we want our distribution to look like. */
-    if (!circpad_machine_remove_token(on_circ->padding_info[i])) {
+    /* Then, do accounting */
+    circpad_machine_count_nonpadding_sent(on_circ->padding_info[i]);
+
+    /* Check to see if we've run out of tokens for this state already,
+     * and if not, check for other state transitions */
+    if (check_machine_token_supply(on_circ->padding_info[i])
+        == CIRCPAD_STATE_UNCHANGED) {
       /* If removing a token did not cause a transition, check if
        * non-padding sent event should */
       circpad_machine_spec_transition(on_circ->padding_info[i],
