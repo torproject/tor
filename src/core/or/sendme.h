@@ -35,8 +35,9 @@ int sendme_note_circuit_data_packaged(circuit_t *circ,
 int sendme_note_stream_data_packaged(edge_connection_t *conn);
 
 /* Track cell digest. */
-void sendme_record_cell_digest(circuit_t *circ);
 void sendme_circuit_record_outbound_cell(or_circuit_t *or_circ);
+/* Record cell digest on circuit. */
+void sendme_record_cell_digest_on_circ(circuit_t *circ, crypt_path_t *cpath);
 
 /* Circuit level information. */
 bool sendme_circuit_cell_is_next(int window);
