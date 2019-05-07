@@ -80,7 +80,6 @@ static void circpad_setup_machine_on_circ(circuit_t *on_circ,
                                         const circpad_machine_spec_t *machine);
 static double circpad_distribution_sample(circpad_distribution_t dist);
 
-
 static inline void circpad_machine_update_state_length(
         circpad_machine_runtime_t *mi);
 
