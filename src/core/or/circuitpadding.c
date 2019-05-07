@@ -79,6 +79,7 @@ static inline circpad_circuit_state_t circpad_circuit_state(
 static void circpad_setup_machine_on_circ(circuit_t *on_circ,
                                         const circpad_machine_spec_t *machine);
 static double circpad_distribution_sample(circpad_distribution_t dist);
+static bool is_padding_allowed(void);
 
 /** Cached consensus params */
 static uint8_t circpad_padding_disabled;
@@ -1107,8 +1108,8 @@ circpad_new_consensus_params(const networkstatus_t *ns)
 /**
  * Return true if padding is allowed by torrc and consensus.
  */
-STATIC bool
-circpad_is_padding_allowed(void)
+static bool
+is_padding_allowed(void)
 {
   /* If padding has been disabled in the consensus, don't send any more
    * padding. Technically the machine should be shut down when the next
@@ -1191,7 +1192,7 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
   tor_assert(mi);
 
   /* Don't schedule padding if it is disabled */
-  if (!circpad_is_padding_allowed()) {
+  if (!is_padding_allowed()) {
     static ratelim_t padding_lim = RATELIM_INIT(600);
     log_fn_ratelim(&padding_lim,LOG_INFO,LD_CIRC,
          "Padding has been disabled, but machine still on circuit %"PRIu64
