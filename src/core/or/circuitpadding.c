@@ -988,9 +988,8 @@ circpad_machine_remove_token(circpad_machine_runtime_t *mi)
       circpad_machine_remove_exact(mi, target_bin_usec);
       break;
     case CIRCPAD_TOKEN_REMOVAL_NONE:
-      tor_assert_nonfatal_unreached();
-      // fallthrough for log
     default:
+      tor_assert_nonfatal_unreached();
       log_warn(LD_BUG, "Circpad: Unknown token removal strategy %d",
                state->token_removal);
       break;
