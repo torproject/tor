@@ -239,8 +239,17 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
 static void
 setup_obf_state_for_hiding_rend_circuits(circpad_state_t *obf_state)
 {
-  /* Token removal strategy for OBFUSCATE_CIRC_SETUP state */
-  obf_state->token_removal = CIRCPAD_TOKEN_REMOVAL_EXACT;
+  /* Don't use a token removal strategy since we don't want to use monotime
+     functions. We want this machine to be light. */
+  obf_state->token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
+
+  /* Instead, to control the volume of padding (we just want to send a single
+   * padding cell) we will use a static state length. We just want one token,
+   * since we want to make the following pattern:
+   * [PADDING_NEGOTIATE] -> [DROP] -> PADDING_NEGOTIATED -> DROP */
+  obf_state->length_dist.type = CIRCPAD_DIST_UNIFORM;
+  obf_state->length_dist.param1 = 1;
+  obf_state->length_dist.param2 = 2;
 
   /* Histogram is: (0 msecs, 50 msecs, infinity). We want this to be fast so
    * that the incoming PADDING_NEGOTIATED cell always arrives after the
@@ -249,8 +258,7 @@ setup_obf_state_for_hiding_rend_circuits(circpad_state_t *obf_state)
   obf_state->histogram_edges[0] = 0;
   obf_state->histogram_edges[1] = 50000;
 
-  /* We just want one token, since we want to make the following pattern:
-   * [PADDING_NEGOTIATE] -> [DROP] -> PADDING_NEGOTIATED -> DROP */
+  /* dummy amount of tokens. they dont matter */
   obf_state->histogram[0] = 1;
   obf_state->histogram_total_tokens = 1;
 }
@@ -277,7 +285,7 @@ setup_state_machine_for_hiding_rend_circuits(circpad_machine_spec_t *machine)
   machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
       next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_END;
   machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-      next_state[CIRCPAD_EVENT_BINS_EMPTY] = CIRCPAD_STATE_END;
+      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 }
 
 /** Create a client-side padding machine that aims to hide rendezvous
