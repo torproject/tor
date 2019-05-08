@@ -61,62 +61,71 @@
 static void
 setup_state_machine_for_hiding_intro_circuits(circpad_machine_spec_t *machine)
 {
-  /* Two states: START, BURST (and END) */
+  /* Two states: START, OBFUSCATE_CIRC_SETUP (and END) */
   circpad_machine_states_init(machine, 2);
 
-  /* START -> BURST transition upon first non-padding cell received/sent: We
-   * want to start sending padding right after receiving PADDING_NEGOTIATE. */
+  /* START -> OBFUSCATE_CIRC_SETUP transition upon first non-padding cell
+   * received/sent: We want to start sending padding right after receiving
+   * PADDING_NEGOTIATE. */
   machine->states[CIRCPAD_STATE_START].
-    next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
+    next_state[CIRCPAD_EVENT_NONPADDING_RECV] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
-  /* BURST -> END transition when the length finishes */
-  machine->states[CIRCPAD_STATE_BURST].
+  /* OBFUSCATE_CIRC_SETUP -> END transition when the length finishes */
+  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
       next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 
   /* Keep sending DROP cells without care of what the other end is doing */
-  machine->states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
-  machine->states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
-  machine->states[CIRCPAD_STATE_BURST].
-      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
+  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    next_state[CIRCPAD_EVENT_PADDING_SENT] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+
+  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    next_state[CIRCPAD_EVENT_PADDING_RECV] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+
+  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    next_state[CIRCPAD_EVENT_NONPADDING_RECV] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 }
 
-/* Setup the BURST state of the machine that hides client-side intro
- * circuits. */
+/* Setup the OBFUSCATE_CIRC_SETUP state of the machine that hides client-side
+ * intro circuits. */
 static void
-setup_burst_state_for_hiding_intro_circuits(circpad_state_t *burst_state,
+setup_obf_state_for_hiding_intro_circuits(circpad_state_t *obf_state,
                                             bool is_client)
 {
-  /* Token removal strategy for BURST state. We pick the simplest one since we
-   * rely on the state length sampling and not the tokens. */
-  burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
+  /* Token removal strategy for OBFUSCATE_CIRC_SETUP state. We pick the
+   * simplest one since we rely on the state length sampling and not the
+   * tokens. */
+  obf_state->token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
 
-  /* Figure out the length of the BURST state so that it's randomized. We will
-   * set the histogram such that we don't send any padding from the
-   * origin-side, so just tune these parameteres for the relay-side. */
-  burst_state->length_dist.type = CIRCPAD_DIST_UNIFORM;
-  burst_state->length_dist.param1 = INTRO_MACHINE_MINIMUM_PADDING;
-  burst_state->length_dist.param2 = INTRO_MACHINE_MAXIMUM_PADDING;
+  /* Figure out the length of the OBFUSCATE_CIRC_SETUP state so that it's
+   * randomized. We will set the histogram such that we don't send any padding
+   * from the origin-side, so just tune these parameteres for the
+   * relay-side. */
+  obf_state->length_dist.type = CIRCPAD_DIST_UNIFORM;
+  obf_state->length_dist.param1 = INTRO_MACHINE_MINIMUM_PADDING;
+  obf_state->length_dist.param2 = INTRO_MACHINE_MAXIMUM_PADDING;
 
   /* Configure histogram */
-  burst_state->histogram_len = 2;
+  obf_state->histogram_len = 2;
   if (is_client) {
     /* For the origin-side machine we don't want to send any padding, so setup
      * infinite delays. */
-    burst_state->histogram_edges[0] = CIRCPAD_DELAY_INFINITE-1;
-    burst_state->histogram_edges[1] = CIRCPAD_DELAY_INFINITE;
+    obf_state->histogram_edges[0] = CIRCPAD_DELAY_INFINITE-1;
+    obf_state->histogram_edges[1] = CIRCPAD_DELAY_INFINITE;
   } else {
     /* For the relay-side machine we want to batch padding instantly to pretend
      * its an incoming directory download. So set the histogram edges tight:
      * (1, 10ms, infinity). */
-    burst_state->histogram_edges[0] = 1000;
-    burst_state->histogram_edges[1] = 10000;
+    obf_state->histogram_edges[0] = 1000;
+    obf_state->histogram_edges[1] = 10000;
   }
 
   /* We don't really care about the tokens. So just put a high dummy value */
-  burst_state->histogram[0] = 1000;
-  burst_state->histogram_total_tokens = 1000;
+  obf_state->histogram[0] = 1000;
+  obf_state->histogram_total_tokens = 1000;
 }
 
 /** Create a client-side padding machine that aims to hide IP circuits. In
@@ -178,9 +187,9 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
 
   /* Setup states and histograms */
   setup_state_machine_for_hiding_intro_circuits(client_machine);
-  setup_burst_state_for_hiding_intro_circuits(
-                         &client_machine->states[CIRCPAD_STATE_BURST],
-                         true);
+  setup_obf_state_for_hiding_intro_circuits(
+                   &client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP],
+                   true);
 
   /* Register the machine */
   client_machine->machine_num = smartlist_len(machines_sl);
@@ -210,8 +219,8 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
 
   /* Setup states and histograms */
   setup_state_machine_for_hiding_intro_circuits(relay_machine);
-  setup_burst_state_for_hiding_intro_circuits(
-                 &relay_machine->states[CIRCPAD_STATE_BURST],
+  setup_obf_state_for_hiding_intro_circuits(
+                 &relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP],
                  false);
 
   /* Register the machine */
@@ -225,47 +234,49 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
 
 /************************** Rendezvous-circuit machine ***********************/
 
-/* Setup the burst state of the machine that hides client-side rend
+/* Setup the obf state of the machine that hides client-side rend
  * circuits. */
 static void
-setup_burst_state_for_hiding_rend_circuits(circpad_state_t *burst_state)
+setup_obf_state_for_hiding_rend_circuits(circpad_state_t *obf_state)
 {
-  /* Token removal strategy for BURST state */
-  burst_state->token_removal = CIRCPAD_TOKEN_REMOVAL_EXACT;
+  /* Token removal strategy for OBFUSCATE_CIRC_SETUP state */
+  obf_state->token_removal = CIRCPAD_TOKEN_REMOVAL_EXACT;
 
   /* Histogram is: (0 msecs, 50 msecs, infinity). We want this to be fast so
    * that the incoming PADDING_NEGOTIATED cell always arrives after the
    * outgoing [DROP]. */
-  burst_state->histogram_len = 2;
-  burst_state->histogram_edges[0] = 0;
-  burst_state->histogram_edges[1] = 50000;
+  obf_state->histogram_len = 2;
+  obf_state->histogram_edges[0] = 0;
+  obf_state->histogram_edges[1] = 50000;
 
   /* We just want one token, since we want to make the following pattern:
    * [PADDING_NEGOTIATE] -> [DROP] -> PADDING_NEGOTIATED -> DROP */
-  burst_state->histogram[0] = 1;
-  burst_state->histogram_total_tokens = 1;
+  obf_state->histogram[0] = 1;
+  obf_state->histogram_total_tokens = 1;
 }
 
 /* Setup the simple state machine we use for all HS padding machines */
 static void
 setup_state_machine_for_hiding_rend_circuits(circpad_machine_spec_t *machine)
 {
-  /* Two states: START, BURST (and END) */
+  /* Two states: START, OBFUSCATE_CIRC_SETUP (and END) */
   circpad_machine_states_init(machine, 2);
 
-  /* START -> BURST transition upon sending the first non-padding cell (which
-   * is PADDING_NEGOTIATE) */
+  /* START -> OBFUSCATE_CIRC_SETUP transition upon sending the first
+   * non-padding cell (which is PADDING_NEGOTIATE) */
   machine->states[CIRCPAD_STATE_START].
-    next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_BURST;
+    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
-  /* BURST -> BURST upon sending padding cells */
-  machine->states[CIRCPAD_STATE_BURST].
-    next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
+  /* OBFUSCATE_CIRC_SETUP -> OBFUSCATE_CIRC_SETUP upon sending padding cells */
+  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    next_state[CIRCPAD_EVENT_PADDING_SENT] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
-  /* BURST -> END transition when we finish all the tokens */
-  machine->states[CIRCPAD_STATE_BURST].
+  /* OBFUSCATE_CIRC_SETUP -> END transition when we finish all the tokens */
+  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
       next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_END;
-  machine->states[CIRCPAD_STATE_BURST].
+  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
       next_state[CIRCPAD_EVENT_BINS_EMPTY] = CIRCPAD_STATE_END;
 }
 
@@ -318,8 +329,8 @@ circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
 
   /* Setup states and histograms */
   setup_state_machine_for_hiding_rend_circuits(client_machine);
-  setup_burst_state_for_hiding_rend_circuits(
-                         &client_machine->states[CIRCPAD_STATE_BURST]);
+  setup_obf_state_for_hiding_rend_circuits(
+                  &client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]);
 
   /* Register the machine */
   client_machine->machine_num = smartlist_len(machines_sl);
@@ -352,8 +363,8 @@ circpad_machine_relay_hide_rend_circuits(smartlist_t *machines_sl)
 
   /* Setup states and histograms */
   setup_state_machine_for_hiding_rend_circuits(relay_machine);
-  setup_burst_state_for_hiding_rend_circuits(
-                              &relay_machine->states[CIRCPAD_STATE_BURST]);
+  setup_obf_state_for_hiding_rend_circuits(
+                   &relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]);
 
   /* Register the machine */
   relay_machine->machine_num = smartlist_len(machines_sl);
