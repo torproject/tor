@@ -1492,7 +1492,17 @@ circpad_estimate_circ_rtt_on_received(circuit_t *circ,
        mi->stop_rtt_update = 1;
     }
   } else {
-    mi->last_received_time_usec = monotime_absolute_usec();
+    const circpad_state_t *state = circpad_machine_current_state(mi);
+
+    /* Since monotime is unpredictably expensive, only update this field
+     * if rtt estimates are needed. Otherwise, stop the rtt update. */
+    if (state->use_rtt_estimate) {
+      mi->last_received_time_usec = monotime_absolute_usec();
+    } else {
+      /* Let's fast-path future decisions not to update rtt if the
+       * feature is not in use. */
+      mi->stop_rtt_update = 1;
+    }
   }
 }
 
