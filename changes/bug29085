@@ -1,0 +1,4 @@
+  o Code simplification and refactoring (circuit padding):
+    - Avoid calling monotime_absolute_usec() in circuit padding machines
+      that do not use token removal or circuit RTT estimation. Fixes bug
+      29085; bugfix on 0.4.0.1-alpha.
