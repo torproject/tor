@@ -1482,7 +1482,12 @@ circpad_estimate_circ_rtt_on_received(circuit_t *circ,
            ", %d) after two back to back packets. Current RTT: %d",
            circ->n_chan ?  circ->n_chan->global_identifier : 0,
            circ->n_circ_id, mi->rtt_estimate_usec);
-       mi->stop_rtt_update = 1;
+      mi->stop_rtt_update = 1;
+
+      if (!mi->rtt_estimate_usec) {
+        log_fn(LOG_NOTICE, LD_CIRC,
+               "Circpad: Got two cells back to back before estimating RTT.");
+      }
     }
   } else {
     const circpad_state_t *state = circpad_machine_current_state(mi);
