@@ -371,8 +371,9 @@ pathbias_should_count(origin_circuit_t *circ)
         !circ->build_state->onehop_tunnel) {
       if ((rate_msg = rate_limit_log(&count_limit, approx_time()))) {
         log_info(LD_BUG,
-               "One-hop circuit has length %d. Path state is %s. "
+               "One-hop circuit %d has length %d. Path state is %s. "
                "Circuit is a %s currently %s.%s",
+               circ->global_identifier,
                circ->build_state->desired_path_len,
                pathbias_state_to_string(circ->path_state),
                circuit_purpose_to_string(circ->base_.purpose),
@@ -437,8 +438,9 @@ pathbias_count_build_attempt(origin_circuit_t *circ)
       if ((rate_msg = rate_limit_log(&circ_attempt_notice_limit,
                                      approx_time()))) {
         log_info(LD_BUG,
-                "Opened circuit is in strange path state %s. "
+                "Opened circuit %d is in strange path state %s. "
                 "Circuit is a %s currently %s.%s",
+                circ->global_identifier,
                 pathbias_state_to_string(circ->path_state),
                 circuit_purpose_to_string(circ->base_.purpose),
                 circuit_state_to_string(circ->base_.state),
@@ -471,8 +473,9 @@ pathbias_count_build_attempt(origin_circuit_t *circ)
           if ((rate_msg = rate_limit_log(&circ_attempt_notice_limit,
                   approx_time()))) {
             log_info(LD_BUG,
-                   "Unopened circuit has strange path state %s. "
+                   "Unopened circuit %d has strange path state %s. "
                    "Circuit is a %s currently %s.%s",
+                   circ->global_identifier,
                    pathbias_state_to_string(circ->path_state),
                    circuit_purpose_to_string(circ->base_.purpose),
                    circuit_state_to_string(circ->base_.state),
@@ -541,8 +544,9 @@ pathbias_count_build_success(origin_circuit_t *circ)
         if ((rate_msg = rate_limit_log(&success_notice_limit,
                 approx_time()))) {
           log_info(LD_BUG,
-              "Succeeded circuit is in strange path state %s. "
+              "Succeeded circuit %d is in strange path state %s. "
               "Circuit is a %s currently %s.%s",
+              circ->global_identifier,
               pathbias_state_to_string(circ->path_state),
               circuit_purpose_to_string(circ->base_.purpose),
               circuit_state_to_string(circ->base_.state),
@@ -577,8 +581,9 @@ pathbias_count_build_success(origin_circuit_t *circ)
       if ((rate_msg = rate_limit_log(&success_notice_limit,
               approx_time()))) {
         log_info(LD_BUG,
-            "Opened circuit is in strange path state %s. "
+            "Opened circuit %d is in strange path state %s. "
             "Circuit is a %s currently %s.%s",
+            circ->global_identifier,
             pathbias_state_to_string(circ->path_state),
             circuit_purpose_to_string(circ->base_.purpose),
             circuit_state_to_string(circ->base_.state),
@@ -604,8 +609,9 @@ pathbias_count_use_attempt(origin_circuit_t *circ)
 
   if (circ->path_state < PATH_STATE_BUILD_SUCCEEDED) {
     log_notice(LD_BUG,
-        "Used circuit is in strange path state %s. "
+        "Used circuit %d is in strange path state %s. "
         "Circuit is a %s currently %s.",
+        circ->global_identifier,
         pathbias_state_to_string(circ->path_state),
         circuit_purpose_to_string(circ->base_.purpose),
         circuit_state_to_string(circ->base_.state));
