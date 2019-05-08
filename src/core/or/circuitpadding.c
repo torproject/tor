@@ -127,34 +127,6 @@ STATIC smartlist_t *relay_padding_machines = NULL;
 #define FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END } STMT_END ;
 
 /**
- * Return a human-readable description for a circuit padding state.
- */
-static const char *
-circpad_state_to_string(circpad_statenum_t state)
-{
-  const char *descr;
-
-  switch (state) {
-  case CIRCPAD_STATE_START:
-    descr = "START";
-    break;
-  case CIRCPAD_STATE_BURST:
-    descr = "BURST";
-    break;
-  case CIRCPAD_STATE_GAP:
-    descr = "GAP";
-    break;
-  case CIRCPAD_STATE_END:
-    descr = "END";
-    break;
-  default:
-    descr = "CUSTOM"; // XXX: Just return # in static char buf?
-  }
-
-  return descr;
-}
-
-/**
  * Free the machineinfo at an index
  */
 static void
@@ -1446,9 +1418,8 @@ circpad_machine_spec_transition,(circpad_machine_runtime_t *mi,
      * a transition to itself. All non-specified events are ignored.
      */
     log_fn(LOG_INFO, LD_CIRC,
-           "Circpad machine %d transitioning from %s to %s",
-            mi->machine_index, circpad_state_to_string(mi->current_state),
-            circpad_state_to_string(s));
+           "Circpad machine %d transitioning from %u to %u",
+           mi->machine_index, mi->current_state, s);
 
     /* If this is not the same state, switch and init tokens,
      * otherwise just reschedule padding. */
