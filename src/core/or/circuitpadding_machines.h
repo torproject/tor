@@ -16,6 +16,9 @@ void circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl);
 
 #ifdef CIRCUITPADDING_MACHINES_PRIVATE
 
+/** State of the padding machines that actually sends padding */
+#define CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP CIRCPAD_STATE_BURST
+
 /** Constants defining the amount of padding that a machine will send to hide
  *  HS circuits. The actual value is sampled uniformly random between the
  *  min/max values.
