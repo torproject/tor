@@ -1547,10 +1547,26 @@ circpad_estimate_circ_rtt_on_received(circuit_t *circ,
            ", %d) after two back to back packets. Current RTT: %d",
            circ->n_chan ?  circ->n_chan->global_identifier : 0,
            circ->n_circ_id, mi->rtt_estimate_usec);
-       mi->stop_rtt_update = 1;
+      mi->stop_rtt_update = 1;
+
+      if (!mi->rtt_estimate_usec) {
+        static ratelim_t rtt_lim = RATELIM_INIT(600);
+        log_fn_ratelim(&rtt_lim,LOG_NOTICE,LD_BUG,
+          "Circuit got two cells back to back before estimating RTT.");
+      }
     }
   } else {
-    mi->last_received_time_usec = monotime_absolute_usec();
+    const circpad_state_t *state = circpad_machine_current_state(mi);
+
+    /* Since monotime is unpredictably expensive, only update this field
+     * if rtt estimates are needed. Otherwise, stop the rtt update. */
+    if (state->use_rtt_estimate) {
+      mi->last_received_time_usec = monotime_absolute_usec();
+    } else {
+      /* Let's fast-path future decisions not to update rtt if the
+       * feature is not in use. */
+      mi->stop_rtt_update = 1;
+    }
   }
 }
 
@@ -1610,8 +1626,9 @@ circpad_estimate_circ_rtt_on_send(circuit_t *circ,
     mi->stop_rtt_update = 1;
 
     if (!mi->rtt_estimate_usec) {
-      log_fn(LOG_NOTICE, LD_CIRC,
-             "Got two cells back to back on a circuit before estimating RTT.");
+      static ratelim_t rtt_lim = RATELIM_INIT(600);
+      log_fn_ratelim(&rtt_lim,LOG_NOTICE,LD_BUG,
+        "Circuit sent two cells back to back before estimating RTT.");
     }
   }
 }
