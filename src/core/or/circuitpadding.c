@@ -1266,7 +1266,17 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
 
   /* in_usec = in microseconds */
   in_usec = circpad_machine_sample_delay(mi);
-  mi->padding_scheduled_at_usec = monotime_absolute_usec();
+  /* If we're using token removal, we need to know when the padding
+   * was scheduled at, so we can remove the appropriate token if
+   * a non-padding cell is sent before the padding timer expires.
+   *
+   * However, since monotime is unpredictably expensive, let's avoid
+   * using it for machines that don't need token removal. */
+  if (CIRCPAD_IS_TOKEN_REMOVAL_SUPPORTED(mi)) {
+    mi->padding_scheduled_at_usec = monotime_absolute_usec();
+  } else {
+    mi->padding_scheduled_at_usec = 1;
+  }
   log_fn(LOG_INFO,LD_CIRC,"\tPadding in %u usec", in_usec);
 
   // Don't schedule if we have infinite delay.
