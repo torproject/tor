@@ -63,6 +63,7 @@
 #include "core/or/circuituse.h"
 #include "core/or/circuitstats.h"
 #include "core/or/circuitpadding.h"
+#include "core/or/crypt_path.h"
 #include "core/mainloop/connection.h"
 #include "app/config/config.h"
 #include "core/or/connection_edge.h"
@@ -132,7 +133,6 @@ static smartlist_t *circuits_pending_other_guards = NULL;
  * circuit_mark_for_close and which are waiting for circuit_about_to_free. */
 static smartlist_t *circuits_pending_close = NULL;
 
-static void circuit_free_cpath_node(crypt_path_t *victim);
 static void cpath_ref_decref(crypt_path_reference_t *cpath_ref);
 static void circuit_about_to_free_atexit(circuit_t *circ);
 static void circuit_about_to_free(circuit_t *circ);
@@ -1148,7 +1148,7 @@ circuit_free_(circuit_t *circ)
 
     if (ocirc->build_state) {
         extend_info_free(ocirc->build_state->chosen_exit);
-        circuit_free_cpath_node(ocirc->build_state->pending_final_cpath);
+        cpath_free(ocirc->build_state->pending_final_cpath);
         cpath_ref_decref(ocirc->build_state->service_pending_final_cpath_ref);
     }
     tor_free(ocirc->build_state);
@@ -1272,10 +1272,10 @@ circuit_clear_cpath(origin_circuit_t *circ)
   while (cpath->next && cpath->next != head) {
     victim = cpath;
     cpath = victim->next;
-    circuit_free_cpath_node(victim);
+    cpath_free(victim);
   }
 
-  circuit_free_cpath_node(cpath);
+  cpath_free(cpath);
 
   circ->cpath = NULL;
 }
@@ -1332,29 +1332,13 @@ circuit_free_all(void)
   HT_CLEAR(chan_circid_map, &chan_circid_map);
 }
 
-/** Deallocate space associated with the cpath node <b>victim</b>. */
-static void
-circuit_free_cpath_node(crypt_path_t *victim)
-{
-  if (!victim)
-    return;
-
-  relay_crypto_clear(&victim->crypto);
-  onion_handshake_state_release(&victim->handshake_state);
-  crypto_dh_free(victim->rend_dh_handshake_state);
-  extend_info_free(victim->extend_info);
-
-  memwipe(victim, 0xBB, sizeof(crypt_path_t)); /* poison memory */
-  tor_free(victim);
-}
-
 /** Release a crypt_path_reference_t*, which may be NULL. */
 static void
 cpath_ref_decref(crypt_path_reference_t *cpath_ref)
 {
   if (cpath_ref != NULL) {
     if (--(cpath_ref->refcount) == 0) {
-      circuit_free_cpath_node(cpath_ref->cpath);
+      cpath_free(cpath_ref->cpath);
       tor_free(cpath_ref);
     }
   }
@@ -2785,59 +2769,6 @@ circuits_handle_oom(size_t current_allocation)
              n_dirconns_killed);
 }
 
-/** Verify that cpath layer <b>cp</b> has all of its invariants
- * correct. Trigger an assert if anything is invalid.
- */
-void
-assert_cpath_layer_ok(const crypt_path_t *cp)
-{
-//  tor_assert(cp->addr); /* these are zero for rendezvous extra-hops */
-//  tor_assert(cp->port);
-  tor_assert(cp);
-  tor_assert(cp->magic == CRYPT_PATH_MAGIC);
-  switch (cp->state)
-    {
-    case CPATH_STATE_OPEN:
-      relay_crypto_assert_ok(&cp->crypto);
-      /* fall through */
-    case CPATH_STATE_CLOSED:
-      /*XXXX Assert that there's no handshake_state either. */
-      tor_assert(!cp->rend_dh_handshake_state);
-      break;
-    case CPATH_STATE_AWAITING_KEYS:
-      /* tor_assert(cp->dh_handshake_state); */
-      break;
-    default:
-      log_fn(LOG_ERR, LD_BUG, "Unexpected state %d", cp->state);
-      tor_assert(0);
-    }
-  tor_assert(cp->package_window >= 0);
-  tor_assert(cp->deliver_window >= 0);
-}
-
-/** Verify that cpath <b>cp</b> has all of its invariants
- * correct. Trigger an assert if anything is invalid.
- */
-static void
-assert_cpath_ok(const crypt_path_t *cp)
-{
-  const crypt_path_t *start = cp;
-
-  do {
-    assert_cpath_layer_ok(cp);
-    /* layers must be in sequence of: "open* awaiting? closed*" */
-    if (cp != start) {
-      if (cp->state == CPATH_STATE_AWAITING_KEYS) {
-        tor_assert(cp->prev->state == CPATH_STATE_OPEN);
-      } else if (cp->state == CPATH_STATE_OPEN) {
-        tor_assert(cp->prev->state == CPATH_STATE_OPEN);
-      }
-    }
-    cp = cp->next;
-    tor_assert(cp);
-  } while (cp != start);
-}
-
 /** Verify that circuit <b>c</b> has all of its invariants
  * correct. Trigger an assert if anything is invalid.
  */
@@ -2899,7 +2830,7 @@ assert_circuit_ok,(const circuit_t *c))
                !smartlist_contains(circuits_pending_chans, c));
   }
   if (origin_circ && origin_circ->cpath) {
-    assert_cpath_ok(origin_circ->cpath);
+    cpath_assert_ok(origin_circ->cpath);
   }
   if (c->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED) {
     tor_assert(or_circ);

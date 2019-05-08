@@ -54,8 +54,8 @@ problem function-size /src/app/main/main.c:sandbox_init_filter() 291
 problem function-size /src/app/main/main.c:run_tor_main_loop() 105
 problem function-size /src/app/main/ntmain.c:nt_service_install() 125
 problem include-count /src/app/main/shutdown.c 52
-problem file-size /src/core/mainloop/connection.c 5559
-problem include-count /src/core/mainloop/connection.c 61
+problem file-size /src/core/mainloop/connection.c 5560
+problem include-count /src/core/mainloop/connection.c 62
 problem function-size /src/core/mainloop/connection.c:connection_free_minimal() 185
 problem function-size /src/core/mainloop/connection.c:connection_listener_new() 328
 problem function-size /src/core/mainloop/connection.c:connection_handle_listener_read() 161
@@ -79,11 +79,11 @@ problem function-size /src/core/or/channeltls.c:channel_tls_process_netinfo_cell
 problem function-size /src/core/or/channeltls.c:channel_tls_process_certs_cell() 246
 problem function-size /src/core/or/channeltls.c:channel_tls_process_authenticate_cell() 202
 problem file-size /src/core/or/circuitbuild.c 3061
-problem include-count /src/core/or/circuitbuild.c 53
+problem include-count /src/core/or/circuitbuild.c 54
 problem function-size /src/core/or/circuitbuild.c:get_unique_circ_id_by_chan() 128
 problem function-size /src/core/or/circuitbuild.c:circuit_extend() 147
 problem function-size /src/core/or/circuitbuild.c:choose_good_exit_server_general() 206
-problem include-count /src/core/or/circuitlist.c 54
+problem include-count /src/core/or/circuitlist.c 55
 problem function-size /src/core/or/circuitlist.c:HT_PROTOTYPE() 128
 problem function-size /src/core/or/circuitlist.c:circuit_free_() 143
 problem function-size /src/core/or/circuitlist.c:circuit_find_to_cannibalize() 102
@@ -245,7 +245,7 @@ problem function-size /src/feature/rend/rendmid.c:rend_mid_establish_intro_legac
 problem function-size /src/feature/rend/rendparse.c:rend_parse_v2_service_descriptor() 187
 problem function-size /src/feature/rend/rendparse.c:rend_decrypt_introduction_points() 104
 problem function-size /src/feature/rend/rendparse.c:rend_parse_introduction_points() 131
-problem file-size /src/feature/rend/rendservice.c 4510
+problem file-size /src/feature/rend/rendservice.c 4511
 problem function-size /src/feature/rend/rendservice.c:rend_service_prune_list_impl_() 107
 problem function-size /src/feature/rend/rendservice.c:rend_config_service() 164
 problem function-size /src/feature/rend/rendservice.c:rend_service_load_auth_keys() 178

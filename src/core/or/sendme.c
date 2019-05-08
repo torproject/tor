@@ -15,6 +15,7 @@
 #include "core/crypto/relay_crypto.h"
 #include "core/mainloop/connection.h"
 #include "core/or/cell_st.h"
+#include "core/or/crypt_path.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/or_circuit_st.h"
@@ -299,15 +300,6 @@ sendme_circuit_record_outbound_cell(or_circuit_t *or_circ)
   relay_crypto_record_sendme_digest(&or_circ->crypto);
 }
 
-/** Keep the current inbound cell digest for the next SENDME digest. This part
- * is only done by the client as the circuit came back from the Exit. */
-void
-sendme_circuit_record_inbound_cell(crypt_path_t *cpath)
-{
-  tor_assert(cpath);
-  relay_crypto_record_sendme_digest(&cpath->crypto);
-}
-
 /** Return true iff the next cell for the given cell window is expected to be
  * a SENDME.
  *
@@ -387,7 +379,7 @@ sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
     log_debug(LD_CIRC,"Queuing circuit sendme.");
     if (layer_hint) {
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
-      digest = relay_crypto_get_sendme_digest(&layer_hint->crypto);
+      digest = cpath_get_sendme_digest(layer_hint);
     } else {
       circ->deliver_window += CIRCWINDOW_INCREMENT;
       digest = relay_crypto_get_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto);

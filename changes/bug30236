@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Refactor and encapsulate parts of the codebase that manipulate
+      crypt_path_t objects. Resolves issue 30236.

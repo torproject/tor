@@ -82,6 +82,7 @@
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
+#include "core/or/crypt_path.h"
 #include "core/proto/proto_http.h"
 #include "core/proto/proto_socks.h"
 #include "feature/client/dnsserv.h"
@@ -5330,7 +5331,7 @@ assert_connection_ok(connection_t *conn, time_t now)
         tor_assert(entry_conn->socks_request->has_finished);
         if (!conn->marked_for_close) {
           tor_assert(ENTRY_TO_EDGE_CONN(entry_conn)->cpath_layer);
-          assert_cpath_layer_ok(ENTRY_TO_EDGE_CONN(entry_conn)->cpath_layer);
+          cpath_assert_layer_ok(ENTRY_TO_EDGE_CONN(entry_conn)->cpath_layer);
         }
       }
     }
