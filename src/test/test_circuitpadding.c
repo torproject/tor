@@ -2482,26 +2482,24 @@ helper_test_hs_machines(bool test_intro_circs)
   tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
             CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP);
 
-  /* For rendezvous circuit machines we can stop early since are simpler than
-   * the intro circuit machines. */
-  if (!test_intro_circs) {
-    tt_int_op(client_side->padding_info[0]->histogram[0], OP_EQ, 1);
-    goto done;
-  }
-
   /* Check that the state lengths have been sampled and are within range */
   circpad_machine_runtime_t *client_machine_runtime =
     client_side->padding_info[0];
   circpad_machine_runtime_t *relay_machine_runtime =
     relay_side->padding_info[0];
-  tt_int_op(client_machine_runtime->state_length, OP_GE,
-            INTRO_MACHINE_MINIMUM_PADDING);
-  tt_int_op(client_machine_runtime->state_length, OP_LT,
-            INTRO_MACHINE_MAXIMUM_PADDING);
-  tt_int_op(relay_machine_runtime->state_length, OP_GE,
-            INTRO_MACHINE_MINIMUM_PADDING);
-  tt_int_op(relay_machine_runtime->state_length, OP_LT,
-            INTRO_MACHINE_MAXIMUM_PADDING);
+  if (test_intro_circs) {
+    tt_int_op(client_machine_runtime->state_length, OP_GE,
+              INTRO_MACHINE_MINIMUM_PADDING);
+    tt_int_op(client_machine_runtime->state_length, OP_LT,
+              INTRO_MACHINE_MAXIMUM_PADDING);
+    tt_int_op(relay_machine_runtime->state_length, OP_GE,
+              INTRO_MACHINE_MINIMUM_PADDING);
+    tt_int_op(relay_machine_runtime->state_length, OP_LT,
+              INTRO_MACHINE_MAXIMUM_PADDING);
+  } else {
+    tt_int_op(client_machine_runtime->state_length, OP_EQ, 1);
+    tt_int_op(relay_machine_runtime->state_length, OP_EQ, 1);
+  }
 
   /* Send state_length worth of padding and see that the state goes to END */
   int i;
@@ -2510,7 +2508,8 @@ helper_test_hs_machines(bool test_intro_circs)
   }
   /* See that the machine has been teared down after all the length has been
    * exhausted. */
-  tt_assert(!client_side->padding_info[0]);
+  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+            CIRCPAD_STATE_END);
 
  done:
   free_fake_orcirc(relay_side);
