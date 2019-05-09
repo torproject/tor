@@ -483,8 +483,9 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
                                    RELAY_COMMAND_INTRODUCE2,
                                    (char *) request, request_len, NULL)) {
     log_warn(LD_PROTOCOL, "Unable to send INTRODUCE2 cell to the service.");
-    /* Inform the client that we can't relay the cell. */
-    status = HS_INTRO_ACK_STATUS_CANT_RELAY;
+    /* Inform the client that we can't relay the cell. Use the unknown ID
+     * status code since it means that we do not know the service. */
+    status = HS_INTRO_ACK_STATUS_UNKNOWN_ID;
     goto send_ack;
   }
 

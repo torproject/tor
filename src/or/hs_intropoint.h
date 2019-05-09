@@ -24,7 +24,6 @@ typedef enum {
   HS_INTRO_ACK_STATUS_SUCCESS    = 0x0000,
   HS_INTRO_ACK_STATUS_UNKNOWN_ID = 0x0001,
   HS_INTRO_ACK_STATUS_BAD_FORMAT = 0x0002,
-  HS_INTRO_ACK_STATUS_CANT_RELAY = 0x0003,
 } hs_intro_ack_status_t;
 
 /* Object containing introduction point common data between the service and
