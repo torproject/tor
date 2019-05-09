@@ -641,7 +641,7 @@ typedef struct circpad_machine_spec_t {
 
 void circpad_new_consensus_params(const networkstatus_t *ns);
 
-int circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason);
+int circpad_is_using_circuit_for_padding(circuit_t *circ, int reason);
 
 /**
  * The following are event call-in points that are of interest to

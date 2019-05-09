@@ -161,31 +161,26 @@ circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
   }
 }
 
-/** Check if the current active machine on this circuit wants to manage circuit
- * lifetimes on its own, and return true if the circuit should be marked for
- * close, or false otherwise.
+/**
+ * Return true if circpad has decided to hold the circuit open for additional
+ * padding.
  *
- * If the machine does not manage the circuit lifetime itself, we just close
- * the circuit if we get here. In the case where the machine manages the
- * circuit lifetime there are 3 cases under which we can find ourselves here:
+ * Padding machines can request to hold certain types of circuits open. Any
+ * non-measurement circuit that was closed for a normal, non-error reason code
+ * may be held open for up to CIRCPAD_DELAY_INFINITE microseconds between
+ * network-driven cell events.
  *
- * 1) Machine has *not* reached END state, and another subsystem wants to close
- *    the circuit: change the circuit purpose to ours but dont close it.
- *
- * 2) Machine has reached END state, and another subsystem wants to close the
- *    circuit now: close the circuit!
- *
- * 3) Another subsystem had tried to close the circuit, and the machine just
- *    reached END state: close the circuit.
+ * After CIRCPAD_DELAY_INFINITE microseconds of silence on a circuit, this
+ * function will no longer hold it open (it will return 0).
  */
 int
-circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
+circpad_is_using_circuit_for_padding(circuit_t *circ, int reason)
 {
   /* If the circuit purpose is measurement or path bias, don't
    * hold it open */
   if (circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING ||
       circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
-    return 1;
+    return 0;
   }
 
   /* If the circuit is closed for any reason other than these three valid,
@@ -196,55 +191,40 @@ circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
   if (!(reason == END_CIRC_REASON_NONE ||
         reason == END_CIRC_REASON_FINISHED ||
         reason == END_CIRC_REASON_IP_NOW_REDUNDANT)) {
-    return 1;
+    return 0;
   }
 
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, circ) {
     circpad_machine_runtime_t *mi = circ->padding_info[i];
     if (!mi) {
-      continue;
+      continue; // No padding runtime info; check next machine
     }
 
     const circpad_state_t *state = circpad_machine_current_state(mi);
 
-    /* If we're in END state (NULL here), then allow circ to get marked */
+    /* If we're in END state (NULL here), then check next machine */
     if (!state) {
-      continue;
+      continue; // check next machine
     }
 
     /* If the machine does not want to control the circuit close itself, then
-     * just close the circuit right now */
+     * check the next machine */
     if (!circ->padding_machine[i]->manage_circ_lifetime) {
-      return 1;
+      continue; // check next machine
     }
 
-    /* We now know that the machine controls when a circuit should be
-     * closed. In this case, we only want to close the circuit if another
-     * subsystem of Tor has already asked us to close this circuit AND the
-     * machine has reached the end state */
-
-    /* Change the circuit purpose regardless of whether we close the
-     * circuit. */
-    circuit_change_purpose(circ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
-
-    /* If we weren't marked dirty yet, let's pretend we're dirty now, to use
-     * that timer instead of the idle one (we're not supposed to look idle,
-     * after all) */
-    if (!circ->timestamp_dirty)
-      circ->timestamp_dirty = approx_time();
-
-    /* If the machine has reached the END state, close the circuit, otherwise
-       keep it alive. */
+    /* If the machine has reached the END state, we can close. Check next
+     * machine. */
     if (mi->current_state == CIRCPAD_STATE_END) {
-      return 1;
+      continue; // check next machine
     } else {
-      log_info(LD_GENERAL, "Circuit %d is not marked for close because of a "
+      log_info(LD_CIRC, "Circuit %d is not marked for close because of a "
                " pending padding machine.", CIRCUIT_IS_ORIGIN(circ) ?
                TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
 
       /* If the machine has had no network events at all within the
        * last circpad_delay_t timespan, it's in some deadlock state.
-       * It's Ok to close now. */
+       * Tell the caller that we don't own it anymore. */
       if (circ->padding_info[i]->last_cell_time_sec +
          (CIRCPAD_DELAY_INFINITE/CIRCPAD_DELAY_UNITS_PER_SECOND)+1
            < approx_time()) {
@@ -253,13 +233,24 @@ circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
                  CIRCUIT_IS_ORIGIN(circ) ?
                  TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
                  circuit_purpose_to_string(circ->purpose));
-        return 1;
+
+        return 0; // abort timer reached; mark the circuit for close now
       }
-      return 0;
+
+      /* If we weren't marked dirty yet, let's pretend we're dirty now, to use
+       * that timer instead of the idle one (we're not supposed to look idle,
+       * after all) */
+      if (!circ->timestamp_dirty)
+        circ->timestamp_dirty = approx_time();
+
+      /* Take ownership of the circuit */
+      circuit_change_purpose(circ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
+
+      return 1;
     }
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
 
-  return 1;
+  return 0; // No machine wanted to keep the circuit open; mark for close
 }
 
 /** Free all the machineinfos in <b>circ</b> that match <b>machine_num</b>. */
