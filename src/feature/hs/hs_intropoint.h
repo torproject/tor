@@ -19,13 +19,6 @@ typedef enum {
   HS_INTRO_AUTH_KEY_TYPE_ED25519 = 0x02,
 } hs_intro_auth_key_type_t;
 
-/* INTRODUCE_ACK status code. */
-typedef enum {
-  HS_INTRO_ACK_STATUS_SUCCESS    = 0x0000,
-  HS_INTRO_ACK_STATUS_UNKNOWN_ID = 0x0001,
-  HS_INTRO_ACK_STATUS_BAD_FORMAT = 0x0002,
-} hs_intro_ack_status_t;
-
 /* Object containing introduction point common data between the service and
  * the client side. */
 typedef struct hs_intropoint_t {

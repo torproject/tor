@@ -339,7 +339,7 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
  * Return 0 on success else a negative value on error which will close the
  * circuit. */
 static int
-send_introduce_ack_cell(or_circuit_t *circ, hs_intro_ack_status_t status)
+send_introduce_ack_cell(or_circuit_t *circ, uint16_t status)
 {
   int ret = -1;
   uint8_t *encoded_cell = NULL;
@@ -436,7 +436,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   int ret = -1;
   or_circuit_t *service_circ;
   trn_cell_introduce1_t *parsed_cell;
-  hs_intro_ack_status_t status = HS_INTRO_ACK_STATUS_SUCCESS;
+  uint16_t status = TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS;
 
   tor_assert(client_circ);
   tor_assert(request);
@@ -451,14 +451,14 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
            "Rejecting %s INTRODUCE1 cell. Responding with NACK.",
            cell_size == -1 ? "invalid" : "truncated");
     /* Inform client that the INTRODUCE1 has a bad format. */
-    status = HS_INTRO_ACK_STATUS_BAD_FORMAT;
+    status = TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT;
     goto send_ack;
   }
 
   /* Once parsed validate the cell format. */
   if (validate_introduce1_parsed_cell(parsed_cell) < 0) {
     /* Inform client that the INTRODUCE1 has bad format. */
-    status = HS_INTRO_ACK_STATUS_BAD_FORMAT;
+    status = TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT;
     goto send_ack;
   }
 
@@ -475,7 +475,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
                         "Responding with NACK.",
                safe_str(b64_key), client_circ->p_circ_id);
       /* Inform the client that we don't know the requested service ID. */
-      status = HS_INTRO_ACK_STATUS_UNKNOWN_ID;
+      status = TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID;
       goto send_ack;
     }
   }
@@ -488,12 +488,12 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
     log_warn(LD_PROTOCOL, "Unable to send INTRODUCE2 cell to the service.");
     /* Inform the client that we can't relay the cell. Use the unknown ID
      * status code since it means that we do not know the service. */
-    status = HS_INTRO_ACK_STATUS_UNKNOWN_ID;
+    status = TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID;
     goto send_ack;
   }
 
   /* Success! Send an INTRODUCE_ACK success status onto the client circuit. */
-  status = HS_INTRO_ACK_STATUS_SUCCESS;
+  status = TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS;
   ret = 0;
 
  send_ack:
