@@ -64,28 +64,39 @@ setup_state_machine_for_hiding_intro_circuits(circpad_machine_spec_t *machine)
   /* Two states: START, OBFUSCATE_CIRC_SETUP (and END) */
   circpad_machine_states_init(machine, 2);
 
-  /* START -> OBFUSCATE_CIRC_SETUP transition upon first non-padding cell
-   * received/sent: We want to start sending padding right after receiving
-   * PADDING_NEGOTIATE. */
+  /* For the relay-side machine, we want to transition
+   * START -> OBFUSCATE_CIRC_SETUP upon first non-padding
+   * cell sent (PADDING_NEGOTIATED in this case).
+   *
+   * For the origin-side machine, we transition to OBFUSCATE_CIRC_SETUP after
+   * sending PADDING_NEGOTIATE, and we stay there (without sending any padding)
+   * until we receive a STOP from the other side. */
   machine->states[CIRCPAD_STATE_START].
-    next_state[CIRCPAD_EVENT_NONPADDING_RECV] =
+    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
     CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
-  /* OBFUSCATE_CIRC_SETUP -> END transition when the length finishes */
+  /* For the relay-side, we want to transition from OBFUSCATE_CIRC_SETUP to END
+   * state when the length finishes.
+   *
+   * For the origin-side, we don't care because the relay-side machine is gonna
+   * END us. */
   machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
       next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 
-  /* Keep sending DROP cells without care of what the other end is doing */
+  /* Now let's define the OBF -> OBF transitions that maintain our padding
+   * flow:
+   *
+   * For the relay-side machine, we want to keep on sending padding bytes even
+   * when nothing else happens on this circuit. */
   machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
     next_state[CIRCPAD_EVENT_PADDING_SENT] =
     CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
-
+  /* For the relay-side machine, we need this transition so that we re-enter
+     the state, after PADDING_NEGOTIATED is sent. Otherwise, the remove token
+     function will disable the timer, and nothing will restart it since there
+     is no other motion on an intro circuit. */
   machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    next_state[CIRCPAD_EVENT_PADDING_RECV] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
-
-  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    next_state[CIRCPAD_EVENT_NONPADDING_RECV] =
+    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
     CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 }
 
@@ -115,17 +126,20 @@ setup_obf_state_for_hiding_intro_circuits(circpad_state_t *obf_state,
      * infinite delays. */
     obf_state->histogram_edges[0] = CIRCPAD_DELAY_INFINITE-1;
     obf_state->histogram_edges[1] = CIRCPAD_DELAY_INFINITE;
+    /* zero tokens */
+    obf_state->histogram[0] = 0;
   } else {
     /* For the relay-side machine we want to batch padding instantly to pretend
      * its an incoming directory download. So set the histogram edges tight:
      * (1, 10ms, infinity). */
     obf_state->histogram_edges[0] = 1000;
     obf_state->histogram_edges[1] = 10000;
+    /* padding is controlled by state length, so this is just a high value */
+    obf_state->histogram[0] = 1000;
   }
 
-  /* We don't really care about the tokens. So just put a high dummy value */
-  obf_state->histogram[0] = 1000;
-  obf_state->histogram_total_tokens = 1000;
+  /* just one bin, so setup the total tokens */
+  obf_state->histogram_total_tokens = obf_state->histogram[0];
 }
 
 /** Create a client-side padding machine that aims to hide IP circuits. In
@@ -181,10 +195,6 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
    * otherwise the short-term lifetime of the circuit will blow our cover */
   client_machine->manage_circ_lifetime = 1;
 
-  /* Let the client-side machine control the lifetime of the circuit.
-   * XXX This might act as a fingerprint at the end of the conn. */
-  client_machine->should_negotiate_end = 1;
-
   /* Setup states and histograms */
   setup_state_machine_for_hiding_intro_circuits(client_machine);
   setup_obf_state_for_hiding_intro_circuits(
@@ -216,6 +226,11 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
 
   /* This is a relay-side machine */
   relay_machine->is_origin_side = 0;
+
+  /* We want to negotiate END from this side after all our padding is done, so
+   * that the origin-side machine goes into END state, and eventually closes
+   * the circuit. */
+  relay_machine->should_negotiate_end = 1;
 
   /* Setup states and histograms */
   setup_state_machine_for_hiding_intro_circuits(relay_machine);
@@ -256,7 +271,7 @@ setup_obf_state_for_hiding_rend_circuits(circpad_state_t *obf_state)
    * outgoing [DROP]. */
   obf_state->histogram_len = 2;
   obf_state->histogram_edges[0] = 0;
-  obf_state->histogram_edges[1] = 50000;
+  obf_state->histogram_edges[1] = 1000;
 
   /* dummy amount of tokens. they dont matter */
   obf_state->histogram[0] = 1;
@@ -274,11 +289,6 @@ setup_state_machine_for_hiding_rend_circuits(circpad_machine_spec_t *machine)
    * non-padding cell (which is PADDING_NEGOTIATE) */
   machine->states[CIRCPAD_STATE_START].
     next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
-
-  /* OBFUSCATE_CIRC_SETUP -> OBFUSCATE_CIRC_SETUP upon sending padding cells */
-  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    next_state[CIRCPAD_EVENT_PADDING_SENT] =
     CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
   /* OBFUSCATE_CIRC_SETUP -> END transition when we finish all the tokens */

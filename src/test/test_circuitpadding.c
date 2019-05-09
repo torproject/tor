@@ -2988,11 +2988,9 @@ helper_test_hs_machines(bool test_intro_circs)
   /* Intro machines are at START state, but rend machines have already skipped
    * to OBFUSCATE_CIRC_SETUP because of the sent PADDING_NEGOTIATE. */
   tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
-            test_intro_circs ?
-            CIRCPAD_STATE_START : CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP);
+            CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP);
   tt_int_op(relay_side->padding_info[0]->current_state, OP_EQ,
-            test_intro_circs ?
-            CIRCPAD_STATE_START : CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP);
+            CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP);
 
   /*Send non-padding to move the machines from START to OBFUSCATE_CIRC_SETUP */
   circpad_cell_event_nonpadding_received(client_side);

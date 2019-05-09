@@ -2874,6 +2874,7 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
   }
 
   if (negotiated->command == CIRCPAD_COMMAND_STOP) {
+    log_info(LD_CIRC, "Received STOP command on PADDING_NEGOTIATED");
     /* There may not be a padding_info here if we shut down the
      * machine in circpad_shutdown_old_machines(). Or, if
      * circpad_add_matching_matchines() added a new machine,
