@@ -12,6 +12,9 @@ struct trn_cell_extension_st;
 struct link_specifier_st;
 #define TRUNNEL_SHA1_LEN 20
 #define TRUNNEL_REND_COOKIE_LEN 20
+#define TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS 0
+#define TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID 1
+#define TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT 2
 #if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_TRN_CELL_INTRODUCE1)
 struct trn_cell_introduce1_st {
   uint8_t legacy_key_id[TRUNNEL_SHA1_LEN];

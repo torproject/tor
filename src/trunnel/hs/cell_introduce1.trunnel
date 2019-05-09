@@ -12,6 +12,11 @@ extern struct link_specifier;
 const TRUNNEL_SHA1_LEN = 20;
 const TRUNNEL_REND_COOKIE_LEN = 20;
 
+/* Introduce ACK status code. */
+const TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS    = 0x0000;
+const TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID = 0x0001;
+const TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT = 0x0002;
+
 /* INTRODUCE1 payload. See details in section 3.2.1. */
 struct trn_cell_introduce1 {
   /* Always zeroed. MUST be checked explicitly by the caller. */
@@ -32,7 +37,9 @@ struct trn_cell_introduce1 {
 /* INTRODUCE_ACK payload. See details in section 3.2.2. */
 struct trn_cell_introduce_ack {
   /* Status of introduction. */
-  u16 status IN [0x0000, 0x0001, 0x0002];
+  u16 status IN [TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS,
+                 TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID,
+                 TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT];
 
   /* Extension(s). Reserved fields. */
   struct trn_cell_extension extensions;
