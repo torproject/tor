@@ -2474,6 +2474,7 @@ static const struct {
   { "--quiet",                TAKES_NO_ARGUMENT },
   { "--hush",                 TAKES_NO_ARGUMENT },
   { "--version",              TAKES_NO_ARGUMENT },
+  { "--list-modules",         TAKES_NO_ARGUMENT },
   { "--library-versions",     TAKES_NO_ARGUMENT },
   { "-h",                     TAKES_NO_ARGUMENT },
   { "--help",                 TAKES_NO_ARGUMENT },
@@ -5195,6 +5196,15 @@ options_init_from_torrc(int argc, char **argv)
 
   if (config_line_find(cmdline_only_options, "--version")) {
     printf("Tor version %s.\n",get_version());
+    return 1;
+  }
+
+  if (config_line_find(cmdline_only_options, "--list-modules")) {
+#define LIST_MODULE(m) do {                                     \
+      printf("%s: %s\n", #m, have_module_##m() ? "yes" : "no");  \
+    } while (0)
+    LIST_MODULE(dirauth);
+#undef LIST_MODULE
     return 1;
   }
 
