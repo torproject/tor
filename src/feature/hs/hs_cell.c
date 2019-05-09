@@ -889,9 +889,9 @@ hs_cell_parse_introduce_ack(const uint8_t *payload, size_t payload_len)
    * do a special case. */
   if (payload_len <= 1) {
     if (payload_len == 0) {
-      ret = HS_CELL_INTRO_ACK_SUCCESS;
+      ret = TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS;
     } else {
-      ret = HS_CELL_INTRO_ACK_FAILURE;
+      ret = TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID;
     }
     goto end;
   }
