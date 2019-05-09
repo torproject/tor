@@ -441,7 +441,8 @@ introduce1_set_auth_key(trn_cell_introduce1_t *cell,
   tor_assert(cell);
   tor_assert(data);
   /* There is only one possible type for a non legacy cell. */
-  trn_cell_introduce1_set_auth_key_type(cell, HS_INTRO_AUTH_KEY_TYPE_ED25519);
+  trn_cell_introduce1_set_auth_key_type(cell,
+                                   TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519);
   trn_cell_introduce1_set_auth_key_len(cell, ED25519_PUBKEY_LEN);
   trn_cell_introduce1_setlen_auth_key(cell, ED25519_PUBKEY_LEN);
   memcpy(trn_cell_introduce1_getarray_auth_key(cell),
@@ -514,7 +515,7 @@ hs_cell_build_establish_intro(const char *circ_nonce,
 
   /* Set AUTH_KEY_TYPE: 2 means ed25519 */
   trn_cell_establish_intro_set_auth_key_type(cell,
-                                             HS_INTRO_AUTH_KEY_TYPE_ED25519);
+                                    TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519);
 
   /* Set AUTH_KEY and AUTH_KEY_LEN field. Must also set byte-length of
    * AUTH_KEY to match */

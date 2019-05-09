@@ -12,13 +12,6 @@
 #include "crypto_curve25519.h"
 #include "torcert.h"
 
-/* Authentication key type in an ESTABLISH_INTRO cell. */
-typedef enum {
-  HS_INTRO_AUTH_KEY_TYPE_LEGACY0 = 0x00,
-  HS_INTRO_AUTH_KEY_TYPE_LEGACY1 = 0x01,
-  HS_INTRO_AUTH_KEY_TYPE_ED25519 = 0x02,
-} hs_intro_auth_key_type_t;
-
 /* Object containing introduction point common data between the service and
  * the client side. */
 typedef struct hs_intropoint_t {
