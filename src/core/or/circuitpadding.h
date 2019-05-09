@@ -73,6 +73,7 @@ typedef uint64_t circpad_time_t;
 
 /** The type for timer delays, in microseconds */
 typedef uint32_t circpad_delay_t;
+#define CIRCPAD_DELAY_UNITS_PER_SECOND  (1000*1000)
 
 /**
  * An infinite padding cell delay means don't schedule any padding --
@@ -512,6 +513,14 @@ typedef struct circpad_machine_runtime_t {
    *  overhead. When this reaches UINT16_MAX, we cut it and padding_sent in
    *  half. */
   uint16_t nonpadding_sent;
+
+  /**
+   * Timestamp of the most recent cell event (sent, received, padding,
+   * non-padding), in seconds from approx_time().
+   *
+   * Used as an emergency break to stop holding padding circuits open.
+   */
+  time_t last_cell_time_sec;
 
   /**
    * EWMA estimate of the RTT of the circuit from this hop

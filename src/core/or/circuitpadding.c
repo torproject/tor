@@ -241,6 +241,20 @@ circpad_circuit_should_be_marked_for_close(circuit_t *circ, int reason)
       log_info(LD_GENERAL, "Circuit %d is not marked for close because of a "
                " pending padding machine.", CIRCUIT_IS_ORIGIN(circ) ?
                TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
+
+      /* If the machine has had no network events at all within the
+       * last circpad_delay_t timespan, it's in some deadlock state.
+       * It's Ok to close now. */
+      if (circ->padding_info[i]->last_cell_time_sec +
+         (CIRCPAD_DELAY_INFINITE/CIRCPAD_DELAY_UNITS_PER_SECOND)+1
+           < approx_time()) {
+        log_notice(LD_BUG, "Circuit %d was not marked for close because of a "
+                 " pending padding machine for over an hour. Circuit is a %s",
+                 CIRCUIT_IS_ORIGIN(circ) ?
+                 TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
+                 circuit_purpose_to_string(circ->purpose));
+        return 1;
+      }
       return 0;
     }
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
@@ -282,6 +296,7 @@ circpad_circuit_machineinfo_new(circuit_t *on_circ, int machine_index)
     tor_malloc_zero(sizeof(circpad_machine_runtime_t));
   mi->machine_index = machine_index;
   mi->on_circ = on_circ;
+  mi->last_cell_time_sec = approx_time();
 
   return mi;
 }
@@ -1584,7 +1599,8 @@ circpad_cell_event_nonpadding_sent(circuit_t *on_circ)
 
   /* If there are no machines then this loop should not iterate */
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, on_circ) {
-    /* First, update any RTT estimate */
+    /* First, update any timestamps */
+    on_circ->padding_info[i]->last_cell_time_sec = approx_time();
     circpad_estimate_circ_rtt_on_send(on_circ, on_circ->padding_info[i]);
 
     /* Remove a token: this is the idea of adaptive padding, since we have an
@@ -1610,7 +1626,8 @@ void
 circpad_cell_event_nonpadding_received(circuit_t *on_circ)
 {
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, on_circ) {
-    /* First, update any RTT estimate */
+    /* First, update any timestamps */
+    on_circ->padding_info[i]->last_cell_time_sec = approx_time();
     circpad_estimate_circ_rtt_on_received(on_circ, on_circ->padding_info[i]);
 
     circpad_machine_spec_transition(on_circ->padding_info[i],
@@ -1630,6 +1647,7 @@ void
 circpad_cell_event_padding_sent(circuit_t *on_circ)
 {
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, on_circ) {
+    on_circ->padding_info[i]->last_cell_time_sec = approx_time();
     circpad_machine_spec_transition(on_circ->padding_info[i],
                              CIRCPAD_EVENT_PADDING_SENT);
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
@@ -1648,6 +1666,7 @@ circpad_cell_event_padding_received(circuit_t *on_circ)
 {
   /* identical to padding sent */
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, on_circ) {
+    on_circ->padding_info[i]->last_cell_time_sec = approx_time();
     circpad_machine_spec_transition(on_circ->padding_info[i],
                               CIRCPAD_EVENT_PADDING_RECV);
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
