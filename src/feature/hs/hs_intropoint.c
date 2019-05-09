@@ -78,7 +78,7 @@ verify_establish_intro_cell(const trn_cell_establish_intro_t *cell,
   /* We only reach this function if the first byte of the cell is 0x02 which
    * means that auth_key_type is of ed25519 type, hence this check should
    * always pass. See hs_intro_received_establish_intro().  */
-  if (BUG(cell->auth_key_type != HS_INTRO_AUTH_KEY_TYPE_ED25519)) {
+  if (BUG(cell->auth_key_type != TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519)) {
     return -1;
   }
 
@@ -318,10 +318,10 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
    * ESTABLISH_INTRO and pass it to the appropriate cell handler */
   const uint8_t first_byte = request[0];
   switch (first_byte) {
-    case HS_INTRO_AUTH_KEY_TYPE_LEGACY0:
-    case HS_INTRO_AUTH_KEY_TYPE_LEGACY1:
+    case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0:
+    case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1:
       return rend_mid_establish_intro_legacy(circ, request, request_len);
-    case HS_INTRO_AUTH_KEY_TYPE_ED25519:
+    case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519:
       return handle_establish_intro(circ, request, request_len);
     default:
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -399,7 +399,7 @@ validate_introduce1_parsed_cell(const trn_cell_introduce1_t *cell)
   /* The auth key of an INTRODUCE1 should be of type ed25519 thus leading to a
    * known fixed length as well. */
   if (trn_cell_introduce1_get_auth_key_type(cell) !=
-      HS_INTRO_AUTH_KEY_TYPE_ED25519) {
+      TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Rejecting invalid INTRODUCE1 cell auth key type. "
            "Responding with NACK.");

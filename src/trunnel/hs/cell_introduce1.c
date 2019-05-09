@@ -50,6 +50,7 @@ trn_cell_introduce1_new(void)
   trn_cell_introduce1_t *val = trunnel_calloc(1, sizeof(trn_cell_introduce1_t));
   if (NULL == val)
     return NULL;
+  val->auth_key_type = TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519;
   return val;
 }
 
@@ -121,7 +122,7 @@ trn_cell_introduce1_get_auth_key_type(const trn_cell_introduce1_t *inp)
 int
 trn_cell_introduce1_set_auth_key_type(trn_cell_introduce1_t *inp, uint8_t val)
 {
-  if (! ((val == 0 || val == 1 || val == 2))) {
+  if (! ((val == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519 || val == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0 || val == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1))) {
      TRUNNEL_SET_ERROR_CODE(inp);
      return -1;
   }
@@ -295,7 +296,7 @@ trn_cell_introduce1_check(const trn_cell_introduce1_t *obj)
     return "Object was NULL";
   if (obj->trunnel_error_code_)
     return "A set function failed on this object";
-  if (! (obj->auth_key_type == 0 || obj->auth_key_type == 1 || obj->auth_key_type == 2))
+  if (! (obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519 || obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0 || obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1))
     return "Integer out of bounds";
   if (TRUNNEL_DYNARRAY_LEN(&obj->auth_key) != obj->auth_key_len)
     return "Length mismatch for auth_key";
@@ -319,7 +320,7 @@ trn_cell_introduce1_encoded_len(const trn_cell_introduce1_t *obj)
   /* Length of u8 legacy_key_id[TRUNNEL_SHA1_LEN] */
   result += TRUNNEL_SHA1_LEN;
 
-  /* Length of u8 auth_key_type IN [0, 1, 2] */
+  /* Length of u8 auth_key_type IN [TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1] */
   result += 1;
 
   /* Length of u16 auth_key_len */
@@ -367,7 +368,7 @@ trn_cell_introduce1_encode(uint8_t *output, const size_t avail, const trn_cell_i
   memcpy(ptr, obj->legacy_key_id, TRUNNEL_SHA1_LEN);
   written += TRUNNEL_SHA1_LEN; ptr += TRUNNEL_SHA1_LEN;
 
-  /* Encode u8 auth_key_type IN [0, 1, 2] */
+  /* Encode u8 auth_key_type IN [TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1] */
   trunnel_assert(written <= avail);
   if (avail - written < 1)
     goto truncated;
@@ -451,11 +452,11 @@ trn_cell_introduce1_parse_into(trn_cell_introduce1_t *obj, const uint8_t *input,
   memcpy(obj->legacy_key_id, ptr, TRUNNEL_SHA1_LEN);
   remaining -= TRUNNEL_SHA1_LEN; ptr += TRUNNEL_SHA1_LEN;
 
-  /* Parse u8 auth_key_type IN [0, 1, 2] */
+  /* Parse u8 auth_key_type IN [TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1] */
   CHECK_REMAINING(1, truncated);
   obj->auth_key_type = (trunnel_get_uint8(ptr));
   remaining -= 1; ptr += 1;
-  if (! (obj->auth_key_type == 0 || obj->auth_key_type == 1 || obj->auth_key_type == 2))
+  if (! (obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519 || obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0 || obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1))
     goto fail;
 
   /* Parse u16 auth_key_len */
