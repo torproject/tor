@@ -1259,16 +1259,16 @@ load_client_keys(hs_service_t *service)
     client_key_file_path = hs_path_from_filename(client_keys_dir_path,
                                                  filename);
     client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
-    /* Free immediately after using it. */
-    tor_free(client_key_file_path);
 
     /* If we cannot read the file, continue with the next file. */
     if (!client_key_str)  {
       log_warn(LD_REND, "Client authorization file %s can't be read. "
                         "Corrupted or verify permission? Ignoring.",
                client_key_file_path);
+      tor_free(client_key_file_path);
       continue;
     }
+    tor_free(client_key_file_path);
 
     client = parse_authorized_client(client_key_str);
     /* Wipe and free immediately after using it. */
