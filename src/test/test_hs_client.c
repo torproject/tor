@@ -485,6 +485,17 @@ test_client_pick_intro(void *arg)
     SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
                             hs_desc_intro_point_t *, ip) {
       extend_info_t *intro_ei = desc_intro_point_to_extend_info(ip);
+      /* desc_intro_point_to_extend_info() doesn't return IPv6 intro points
+       * yet, because we can't extend to them. See #24404, #24451, and #24181.
+       */
+      if (intro_ei == NULL) {
+        /* Pretend we're making a direct connection, and that we can use IPv6
+         */
+        get_options_mutable()->ClientUseIPv6 = 1;
+        intro_ei = hs_get_extend_info_from_lspecs(ip->link_specifiers,
+                                                  &ip->onion_key, 1);
+        tt_assert(tor_addr_family(&intro_ei->addr) == AF_INET6);
+      }
       tt_assert(intro_ei);
       if (intro_ei) {
         const char *ptr;

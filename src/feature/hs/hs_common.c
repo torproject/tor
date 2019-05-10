@@ -1672,14 +1672,16 @@ hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str,
   return hs_dir;
 }
 
-/* From a list of link specifier, an onion key and if we are requesting a
- * direct connection (ex: single onion service), return a newly allocated
- * extend_info_t object. This function always returns an extend info with
- * an IPv4 address, or NULL.
+/* Given a list of link specifiers lspecs, a curve 25519 onion_key, and
+ * a direct connection boolean direct_conn (true for single onion services),
+ * return a newly allocated extend_info_t object.
+ *
+ * This function always returns an extend info with a valid IP address and
+ * ORPort, or NULL. If direct_conn is false, the IP address is always IPv4.
  *
  * It performs the following checks:
- *  if either IPv4 or legacy ID is missing, return NULL.
- *  if direct_conn, and we can't reach the IPv4 address, return NULL.
+ *  if there is no usable IP address, or legacy ID is missing, return NULL.
+ *  if direct_conn, and we can't reach any IP address, return NULL.
  */
 extend_info_t *
 hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
@@ -1688,12 +1690,22 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
 {
   int have_v4 = 0, have_legacy_id = 0, have_ed25519_id = 0;
   char legacy_id[DIGEST_LEN] = {0};
-  uint16_t port_v4 = 0;
-  tor_addr_t addr_v4;
   ed25519_public_key_t ed25519_pk;
   extend_info_t *info = NULL;
+  tor_addr_port_t ap;
 
-  tor_assert(lspecs);
+  tor_addr_make_null(&ap.addr, AF_UNSPEC);
+  ap.port = 0;
+
+  if (lspecs == NULL) {
+    log_warn(LD_BUG, "Specified link specifiers is null");
+    goto done;
+  }
+
+  if (onion_key == NULL) {
+    log_warn(LD_BUG, "Specified onion key is null");
+    goto done;
+  }
 
   if (smartlist_len(lspecs) == 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND, "Empty link specifier list.");
@@ -1704,11 +1716,14 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
   SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
     switch (link_specifier_get_ls_type(ls)) {
     case LS_IPV4:
-      /* Skip if we already seen a v4. */
-      if (have_v4) continue;
-      tor_addr_from_ipv4h(&addr_v4,
+      /* Skip if we already seen a v4. If direct_conn is true, we skip this
+       * block because fascist_firewall_choose_address_ls() will set ap. If
+       * direct_conn is false, set ap to the first IPv4 address and port in
+       * the link specifiers.*/
+      if (have_v4 || direct_conn) continue;
+      tor_addr_from_ipv4h(&ap.addr,
                           link_specifier_get_un_ipv4_addr(ls));
-      port_v4 = link_specifier_get_un_ipv4_port(ls);
+      ap.port = link_specifier_get_un_ipv4_port(ls);
       have_v4 = 1;
       break;
     case LS_LEGACY_ID:
@@ -1732,55 +1747,38 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
     }
   } SMARTLIST_FOREACH_END(ls);
 
-  /* Legacy ID is mandatory, and we require IPv4. */
-  if (!have_v4 || !have_legacy_id) {
-    bool both = !have_v4 && !have_legacy_id;
-    log_fn(LOG_PROTOCOL_WARN, LD_REND, "Missing %s%s%s link specifier%s.",
-           !have_v4 ? "IPv4" : "",
-           both ? " and " : "",
-           !have_legacy_id ? "legacy ID" : "",
-           both ? "s" : "");
+  /* Choose a preferred address first, but fall back to an allowed address. */
+  if (direct_conn)
+    fascist_firewall_choose_address_ls(lspecs, 0, &ap);
+
+  /* Legacy ID is mandatory, and we require an IP address. */
+  if (!tor_addr_port_is_valid_ap(&ap, 0)) {
+    /* If we're missing the IP address, log a warning and return NULL. */
+    log_info(LD_NET, "Unreachable or invalid IP address in link state");
+    goto done;
+  }
+  if (!have_legacy_id) {
+    /* If we're missing the legacy ID, log a warning and return NULL. */
+    log_warn(LD_PROTOCOL, "Missing Legacy ID in link state");
     goto done;
   }
 
-  /* We know we have IPv4, because we just checked. */
-  if (!direct_conn) {
-    /* All clients can extend to any IPv4 via a 3-hop path. */
-    goto validate;
-  } else if (direct_conn &&
-             fascist_firewall_allows_address_addr(&addr_v4, port_v4,
-                                                  FIREWALL_OR_CONNECTION,
-                                                  0, 0)) {
-    /* Direct connection and we can reach it in IPv4 so go for it. */
-    goto validate;
+  /* We will add support for falling back to a 3-hop path in a later
+   * release. */
 
-    /* We will add support for falling back to a 3-hop path in a later
-     * release. */
-  } else {
-    /* If we can't reach IPv4, return NULL. */
-    log_fn(LOG_PROTOCOL_WARN, LD_REND,
-           "Received an IPv4 link specifier, "
-           "but the address is not reachable: %s:%u",
-           fmt_addr(&addr_v4), port_v4);
-    goto done;
-  }
-
-  /* We will add support for IPv6 in a later release. */
-
- validate:
   /* We'll validate now that the address we've picked isn't a private one. If
    * it is, are we allowed to extend to private addresses? */
-  if (!extend_info_addr_is_allowed(&addr_v4)) {
+  if (!extend_info_addr_is_allowed(&ap.addr)) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Requested address is private and we are not allowed to extend to "
-           "it: %s:%u", fmt_addr(&addr_v4), port_v4);
+           "it: %s:%u", fmt_addr(&ap.addr), ap.port);
     goto done;
   }
 
   /* We do have everything for which we think we can connect successfully. */
   info = extend_info_new(NULL, legacy_id,
                          (have_ed25519_id) ? &ed25519_pk : NULL, NULL,
-                         onion_key, &addr_v4, port_v4);
+                         onion_key, &ap.addr, ap.port);
  done:
   return info;
 }

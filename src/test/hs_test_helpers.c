@@ -162,11 +162,8 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
     /* Add four intro points. */
     smartlist_add(desc->encrypted_data.intro_points,
               hs_helper_build_intro_point(signing_kp, now, "1.2.3.4", 0));
-/* IPv6-only introduction points are not supported yet, see #23588 */
-#if 0
     smartlist_add(desc->encrypted_data.intro_points,
               hs_helper_build_intro_point(signing_kp, now, "[2600::1]", 0));
-#endif
     smartlist_add(desc->encrypted_data.intro_points,
               hs_helper_build_intro_point(signing_kp, now, "3.2.1.4", 1));
     smartlist_add(desc->encrypted_data.intro_points,

@@ -1,0 +1,5 @@
+  o Minor bugfixes (v3 onion services):
+    - Stop ignoring IPv6 link specifiers sent to v3 onion services.
+      v3 onion service IPv6 support is still incomplete, see 23493 for
+      details. Fixes bug 23588; bugfix on 0.3.2.1-alpha.
+      Patch by Neel Chauhan.
