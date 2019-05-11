@@ -195,6 +195,10 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
    * otherwise the short-term lifetime of the circuit will blow our cover */
   client_machine->manage_circ_lifetime = 1;
 
+  /* Set padding machine limits to help guard against excessive padding */
+  client_machine->allowed_padding_count = INTRO_MACHINE_MAXIMUM_PADDING;
+  client_machine->max_padding_percent = 1;
+
   /* Setup states and histograms */
   setup_state_machine_for_hiding_intro_circuits(client_machine);
   setup_obf_state_for_hiding_intro_circuits(
@@ -231,6 +235,10 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
    * that the origin-side machine goes into END state, and eventually closes
    * the circuit. */
   relay_machine->should_negotiate_end = 1;
+
+  /* Set padding machine limits to help guard against excessive padding */
+  relay_machine->allowed_padding_count = INTRO_MACHINE_MAXIMUM_PADDING;
+  relay_machine->max_padding_percent = 1;
 
   /* Setup states and histograms */
   setup_state_machine_for_hiding_intro_circuits(relay_machine);
@@ -345,6 +353,10 @@ circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
     circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_READY)|
     circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED);
 
+  /* Set padding machine limits to help guard against excessive padding */
+  client_machine->allowed_padding_count = 1;
+  client_machine->max_padding_percent = 1;
+
   /* Setup states and histograms */
   setup_state_machine_for_hiding_rend_circuits(client_machine);
   setup_obf_state_for_hiding_rend_circuits(
@@ -378,6 +390,10 @@ circpad_machine_relay_hide_rend_circuits(smartlist_t *machines_sl)
 
   /* This is a relay-side machine */
   relay_machine->is_origin_side = 0;
+
+  /* Set padding machine limits to help guard against excessive padding */
+  relay_machine->allowed_padding_count = 1;
+  relay_machine->max_padding_percent = 1;
 
   /* Setup states and histograms */
   setup_state_machine_for_hiding_rend_circuits(relay_machine);
