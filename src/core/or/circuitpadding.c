@@ -163,15 +163,22 @@ circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
 
 /**
  * Return true if circpad has decided to hold the circuit open for additional
- * padding.
+ * padding. This function is used to take and retain ownership of certain
+ * types of circuits that have padding machines on them, that have been passed
+ * to circuit_mark_for_close().
  *
- * Padding machines can request to hold certain types of circuits open. Any
- * non-measurement circuit that was closed for a normal, non-error reason code
- * may be held open for up to CIRCPAD_DELAY_INFINITE microseconds between
+ * circuit_mark_for_close() calls this function to ask circpad if any padding
+ * machines want to keep the circuit open longer to pad.
+ *
+ * Any non-measurement circuit that was closed for a normal, non-error reason
+ * code may be held open for up to CIRCPAD_DELAY_INFINITE microseconds between
  * network-driven cell events.
  *
  * After CIRCPAD_DELAY_INFINITE microseconds of silence on a circuit, this
- * function will no longer hold it open (it will return 0).
+ * function will no longer hold it open (it will return 0 regardless of
+ * what the machines ask for, and thus circuit_expire_old_circuits_clientside()
+ * will close the circuit after roughly 1.25hr of idle time, maximum,
+ * regardless of the padding machine state.
  */
 int
 circpad_is_using_circuit_for_padding(circuit_t *circ, int reason)
@@ -236,9 +243,18 @@ circpad_is_using_circuit_for_padding(circuit_t *circ, int reason)
         return 0; // abort timer reached; mark the circuit for close now
       }
 
-      /* If we weren't marked dirty yet, let's pretend we're dirty now, to use
-       * that timer instead of the idle one (we're not supposed to look idle,
-       * after all) */
+      /* If we weren't marked dirty yet, let's pretend we're dirty now.
+       * ("Dirty" means that a circuit has been used for application traffic
+       * by Tor.. Dirty circuits have different expiry times, and are not
+       * considered in counts of built circuits, etc. By claiming that we're
+       * dirty, the rest of Tor will make decisions as if we were actually
+       * used by application data.
+       *
+       * This is most important for circuit_expire_old_circuits_clientside(),
+       * where we want that function to expire us after the padding machine
+       * has shut down, but using the MaxCircuitDirtiness timer instead of
+       * the idle circuit timer (again, we want this because we're not
+       * supposed to look idle to Guard nodes that can see our lifespan). */
       if (!circ->timestamp_dirty)
         circ->timestamp_dirty = approx_time();
 
