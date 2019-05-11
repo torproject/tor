@@ -2423,7 +2423,9 @@ mock_tor_gettimeofday(struct timeval *timeval)
 
 /** Test manual managing of circuit lifetimes by the circuitpadding
  *  subsystem. In particular this test goes through all the cases of the
- *  circpad_circuit_should_be_marked_for_close() function doc. */
+ *  circpad_is_using_circuit_for_padding() function, via
+ *  circuit_mark_for_close() as well as
+ *  circuit_expire_old_circuits_clientside(). */
 static void
 test_circuitpadding_manage_circuit_lifetime(void *arg)
 {
@@ -2540,7 +2542,23 @@ test_circuitpadding_manage_circuit_lifetime(void *arg)
   tt_int_op(client_side->marked_for_close, OP_EQ, 0);
   tt_int_op(client_side->purpose, OP_EQ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
 
-  /* Transition to END. */
+  /* Runaway circpad test: if the machine does not transition to end,
+   * test that after CIRCPAD_DELAY_MAX_SECS, we get marked anyway */
+  mocked_timeofday = client_side->timestamp_dirty
+      + get_options()->MaxCircuitDirtiness + 2;
+  client_side->padding_info[0]->last_cell_time_sec =
+      approx_time()-(CIRCPAD_DELAY_MAX_SECS+10);
+  circuit_expire_old_circuits_clientside();
+  tt_int_op(client_side->marked_for_close, OP_NE, 0);
+
+  /* Test back to normal: if we had activity, we won't close */
+  client_side->padding_info[0]->last_cell_time_sec = approx_time();
+  client_side->marked_for_close = 0;
+  circuit_expire_old_circuits_clientside();
+  tt_int_op(client_side->marked_for_close, OP_EQ, 0);
+
+  /* Transition to END, but before we're past the dirty timer */
+  mocked_timeofday = client_side->timestamp_dirty;
   circpad_cell_event_nonpadding_received(client_side);
   tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
 
