@@ -226,8 +226,7 @@ circpad_is_using_circuit_for_padding(circuit_t *circ, int reason)
        * last circpad_delay_t timespan, it's in some deadlock state.
        * Tell the caller that we don't own it anymore. */
       if (circ->padding_info[i]->last_cell_time_sec +
-         (time_t)(CIRCPAD_DELAY_INFINITE/CIRCPAD_DELAY_UNITS_PER_SECOND)+1
-           < approx_time()) {
+          (time_t)CIRCPAD_DELAY_MAX_SECS < approx_time()) {
         log_notice(LD_BUG, "Circuit %d was not marked for close because of a "
                  " pending padding machine for over an hour. Circuit is a %s",
                  CIRCUIT_IS_ORIGIN(circ) ?

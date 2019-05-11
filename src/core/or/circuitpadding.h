@@ -87,6 +87,13 @@ typedef uint32_t circpad_delay_t;
 #define CIRCPAD_DELAY_INFINITE  (UINT32_MAX)
 
 /**
+ * This is the maximum delay that the circuit padding system can have, in
+ * seconds.
+ */
+#define CIRCPAD_DELAY_MAX_SECS   \
+    ((CIRCPAD_DELAY_INFINITE/CIRCPAD_DELAY_UNITS_PER_SECOND)+1)
+
+/**
  * Macro to clarify when we're checking the infinity bin.
  *
  * Works with either circpad_state_t or circpad_machine_runtime_t
