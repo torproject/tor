@@ -16,6 +16,7 @@ echo "Running pre-push hook"
 
 z40=0000000000000000000000000000000000000000
 
+upstream_name=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
 
 workdir=$(git rev-parse --show-toplevel)
 if [ -x "$workdir/.git/hooks/pre-commit" ]; then
@@ -33,8 +34,9 @@ fi
 remote="$1"
 remote_loc="$2"
 
-if [[ "$remote_loc" != *github.com/torproject/tor.git ]] &&
-   [[ "$remote_loc" != *torproject.org/tor.git ]]; then
+remote_name=$(git remote --verbose | grep "$2" | awk '{print $1}' | head -n 1)
+
+if [[ "$remote_name" != "$upstream_name" ]]; then
   echo "Not pushing to upstream - refraining from further checks"
   exit 0
 fi
