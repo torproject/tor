@@ -829,6 +829,50 @@ check_machine_token_supply(circpad_machine_runtime_t *mi)
 }
 
 /**
+ * Count that a padding packet was sent.
+ *
+ * This updates our state length count, our machine rate limit counts,
+ * and if token removal is used, decrements the histogram.
+ */
+static inline void
+circpad_machine_count_padding_sent(circpad_machine_runtime_t *mi)
+{
+  /* If we have a valid state length bound, consider it */
+  if (mi->state_length != CIRCPAD_STATE_LENGTH_INFINITE &&
+      !BUG(mi->state_length <= 0)) {
+    mi->state_length--;
+  }
+
+  /*
+   * Update non-padding counts for rate limiting: We scale at UINT16_MAX
+   * because we only use this for a percentile limit of 2 sig figs, and
+   * space is scare in the machineinfo struct.
+   */
+  mi->padding_sent++;
+  if (mi->padding_sent == UINT16_MAX) {
+    mi->padding_sent /= 2;
+    mi->nonpadding_sent /= 2;
+  }
+
+  circpad_global_padding_sent++;
+
+  /* If we have a mutable histogram, reduce the token count from
+   * the chosen padding bin (this assumes we always send padding
+   * when we intended to). */
+  if (mi->histogram && mi->histogram_len) {
+    /* Ensure that we have a token removal strategy set */
+    const circpad_state_t *state = circpad_machine_current_state(mi);
+    tor_assert_nonfatal(state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE);
+
+    /* Basic sanity check on the histogram before removing anything */
+    if (!BUG(mi->chosen_bin >= mi->histogram_len) &&
+        !BUG(mi->histogram[mi->chosen_bin] == 0)) {
+      mi->histogram[mi->chosen_bin]--;
+    }
+  }
+}
+
+/**
  * Count a nonpadding packet as being sent.
  *
  * This function updates our overhead accounting variables, as well
@@ -1021,34 +1065,7 @@ circpad_send_padding_cell_for_callback(circpad_machine_runtime_t *mi)
     return CIRCPAD_STATE_CHANGED;
   }
 
-  /* If it's a histogram, reduce the token count */
-  if (mi->histogram && mi->histogram_len) {
-    /* Basic sanity check on the histogram before removing anything */
-    if (BUG(mi->chosen_bin >= mi->histogram_len) ||
-        BUG(mi->histogram[mi->chosen_bin] == 0)) {
-      return CIRCPAD_STATE_CHANGED;
-    }
-
-    mi->histogram[mi->chosen_bin]--;
-  }
-
-  /* If we have a valid state length bound, consider it */
-  if (mi->state_length != CIRCPAD_STATE_LENGTH_INFINITE &&
-      !BUG(mi->state_length <= 0)) {
-    mi->state_length--;
-  }
-
-  /*
-   * Update non-padding counts for rate limiting: We scale at UINT16_MAX
-   * because we only use this for a percentile limit of 2 sig figs, and
-   * space is scare in the machineinfo struct.
-   */
-  mi->padding_sent++;
-  if (mi->padding_sent == UINT16_MAX) {
-    mi->padding_sent /= 2;
-    mi->nonpadding_sent /= 2;
-  }
-  circpad_global_padding_sent++;
+  circpad_machine_count_padding_sent(mi);
 
   if (CIRCUIT_IS_ORIGIN(mi->on_circ)) {
     circpad_send_command_to_hop(TO_ORIGIN_CIRCUIT(mi->on_circ),
