@@ -331,6 +331,39 @@ circpad_histogram_usec_to_bin(const circpad_machine_runtime_t *mi,
 }
 
 /**
+ * Return true if the machine supports token removal.
+ *
+ * Token removal is equivalent to having a mutable histogram in the
+ * circpad_machine_runtime_t mutable info. So while we're at it,
+ * let's assert that everything is consistent between the mutable
+ * runtime and the readonly machine spec.
+ */
+static inline int
+circpad_is_token_removal_supported(circpad_machine_runtime_t *mi)
+{
+  /* No runtime histogram == no token removal */
+  if (mi->histogram == NULL) {
+    /* Machines that don't want token removal are trying to avoid
+     * potentially expensive mallocs, extra memory accesses, and/or
+     * potentially expensive monotime calls. Let's minimize checks
+     * and keep this path fast. */
+    tor_assert_nonfatal(mi->histogram_len == 0);
+    return 0;
+  } else {
+    /* Machines that do want token removal are less sensitive to performance.
+     * Let's spend some time to check that our state is consistent and sane */
+    const circpad_state_t *state = circpad_machine_current_state(mi);
+    tor_assert_nonfatal(state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE);
+    tor_assert_nonfatal(state->histogram_len == mi->histogram_len);
+    tor_assert_nonfatal(mi->histogram_len != 0);
+    return 1;
+  }
+
+  tor_assert_nonfatal_unreached();
+  return 0;
+}
+
+/**
  * This function frees any token bins allocated from a previous state
  *
  * Called after a state transition, or if the bins are empty.
@@ -441,13 +474,7 @@ circpad_machine_sample_delay(circpad_machine_runtime_t *mi)
       mi->rtt_estimate_usec + state->dist_added_shift_usec :
       state->dist_added_shift_usec;
     return circpad_distribution_sample_iat_delay(state, iat_delay_shift);
-  } else if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE) {
-    /* We have a mutable histogram. Do basic sanity check and apply: */
-    if (BUG(!mi->histogram) ||
-        BUG(mi->histogram_len != state->histogram_len)) {
-      return CIRCPAD_DELAY_INFINITE;
-    }
-
+  } else if (circpad_is_token_removal_supported(mi)) {
     histogram = mi->histogram;
     for (circpad_hist_index_t b = 0; b < state->histogram_len; b++)
       histogram_total_tokens += histogram[b];
@@ -812,7 +839,7 @@ check_machine_token_supply(circpad_machine_runtime_t *mi)
    *
    * We also do not count infinity bin in histogram totals.
    */
-  if (mi->histogram_len && mi->histogram) {
+  if (circpad_is_token_removal_supported(mi)) {
     for (circpad_hist_index_t b = 0; b < CIRCPAD_INFINITY_BIN(mi); b++)
       histogram_total_tokens += mi->histogram[b];
 
@@ -861,12 +888,8 @@ circpad_machine_count_padding_sent(circpad_machine_runtime_t *mi)
   /* If we have a mutable histogram, reduce the token count from
    * the chosen padding bin (this assumes we always send padding
    * when we intended to). */
-  if (mi->histogram && mi->histogram_len) {
-    /* Ensure that we have a token removal strategy set */
-    const circpad_state_t *state = circpad_machine_current_state(mi);
-    tor_assert_nonfatal(state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE);
-
-    /* Basic sanity check on the histogram before removing anything */
+  if (circpad_is_token_removal_supported(mi)) {
+    /* Check array bounds and token count before removing */
     if (!BUG(mi->chosen_bin >= mi->histogram_len) &&
         !BUG(mi->histogram[mi->chosen_bin] == 0)) {
       mi->histogram[mi->chosen_bin]--;
@@ -896,7 +919,7 @@ circpad_machine_count_nonpadding_sent(circpad_machine_runtime_t *mi)
   /* Update any state packet length limits that apply */
   circpad_machine_update_state_length_for_nonpadding(mi);
 
-  /* Remove a token from the histrogram, if applicable */
+  /* Remove a token from the histogram, if applicable */
   circpad_machine_remove_token(mi);
 }
 
@@ -1301,7 +1324,17 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
 
   /* in_usec = in microseconds */
   in_usec = circpad_machine_sample_delay(mi);
-  mi->padding_scheduled_at_usec = monotime_absolute_usec();
+  /* If we're using token removal, we need to know when the padding
+   * was scheduled at, so we can remove the appropriate token if
+   * a non-padding cell is sent before the padding timer expires.
+   *
+   * However, since monotime is unpredictably expensive, let's avoid
+   * using it for machines that don't need token removal. */
+  if (circpad_is_token_removal_supported(mi)) {
+    mi->padding_scheduled_at_usec = monotime_absolute_usec();
+  } else {
+    mi->padding_scheduled_at_usec = 1;
+  }
   log_fn(LOG_INFO,LD_CIRC,"\tPadding in %u usec", in_usec);
 
   // Don't schedule if we have infinite delay.
