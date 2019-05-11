@@ -443,7 +443,7 @@ circpad_machine_sample_delay(circpad_machine_runtime_t *mi)
     return circpad_distribution_sample_iat_delay(state, iat_delay_shift);
   } else if (state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE) {
     /* We have a mutable histogram. Do basic sanity check and apply: */
-    if (BUG(!mi->histogram) ||
+    if (BUG(!CIRCPAD_IS_TOKEN_REMOVAL_SUPPORTED(mi)) ||
         BUG(mi->histogram_len != state->histogram_len)) {
       return CIRCPAD_DELAY_INFINITE;
     }
@@ -812,7 +812,12 @@ check_machine_token_supply(circpad_machine_runtime_t *mi)
    *
    * We also do not count infinity bin in histogram totals.
    */
-  if (mi->histogram_len && mi->histogram) {
+  if (CIRCPAD_IS_TOKEN_REMOVAL_SUPPORTED(mi)) {
+    /* Ensure that we have a token removal strategy set */
+    const circpad_state_t *state = circpad_machine_current_state(mi);
+    tor_assert_nonfatal(state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE);
+    tor_assert_nonfatal(state->histogram_len == mi->histogram_len);
+
     for (circpad_hist_index_t b = 0; b < CIRCPAD_INFINITY_BIN(mi); b++)
       histogram_total_tokens += mi->histogram[b];
 
@@ -861,10 +866,11 @@ circpad_machine_count_padding_sent(circpad_machine_runtime_t *mi)
   /* If we have a mutable histogram, reduce the token count from
    * the chosen padding bin (this assumes we always send padding
    * when we intended to). */
-  if (mi->histogram && mi->histogram_len) {
+  if (CIRCPAD_IS_TOKEN_REMOVAL_SUPPORTED(mi)) {
     /* Ensure that we have a token removal strategy set */
     const circpad_state_t *state = circpad_machine_current_state(mi);
     tor_assert_nonfatal(state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE);
+    tor_assert_nonfatal(state->histogram_len == mi->histogram_len);
 
     /* Basic sanity check on the histogram before removing anything */
     if (!BUG(mi->chosen_bin >= mi->histogram_len) &&
@@ -896,7 +902,7 @@ circpad_machine_count_nonpadding_sent(circpad_machine_runtime_t *mi)
   /* Update any state packet length limits that apply */
   circpad_machine_update_state_length_for_nonpadding(mi);
 
-  /* Remove a token from the histrogram, if applicable */
+  /* Remove a token from the histogram, if applicable */
   circpad_machine_remove_token(mi);
 }
 
