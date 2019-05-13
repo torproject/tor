@@ -1107,7 +1107,7 @@ circpad_new_consensus_params(const networkstatus_t *ns)
 /**
  * Return true if padding is allowed by torrc and consensus.
  */
-STATIC bool
+static bool
 circpad_is_padding_allowed(void)
 {
   /* If padding has been disabled in the consensus, don't send any more
