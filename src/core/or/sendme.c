@@ -412,6 +412,11 @@ sendme_process_circuit_level(crypt_path_t *layer_hint,
   /* If we are the origin of the circuit, we are the Client so we use the
    * layer hint (the Exit hop) for the package window tracking. */
   if (CIRCUIT_IS_ORIGIN(circ)) {
+    /* If we are the origin of the circuit, it is impossible to not have a
+     * cpath. Just in case, bug on it and close the circuit. */
+    if (BUG(layer_hint == NULL)) {
+      return -END_CIRC_REASON_TORPROTOCOL;
+    }
     if ((layer_hint->package_window + CIRCWINDOW_INCREMENT) >
         CIRCWINDOW_START_MAX) {
       static struct ratelim_t exit_warn_ratelim = RATELIM_INIT(600);
