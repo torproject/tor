@@ -72,7 +72,7 @@ problem include-count /src/core/mainloop/mainloop.c 66
 problem function-size /src/core/mainloop/mainloop.c:conn_close_if_marked() 108
 problem function-size /src/core/mainloop/mainloop.c:run_connection_housekeeping() 123
 problem function-size /src/core/mainloop/mainloop.c:CALLBACK() 116
-problem file-size /src/core/or/channel.c 3476
+problem file-size /src/core/or/channel.c 3487
 problem function-size /src/core/or/channeltls.c:channel_tls_handle_var_cell() 160
 problem function-size /src/core/or/channeltls.c:channel_tls_process_versions_cell() 170
 problem function-size /src/core/or/channeltls.c:channel_tls_process_netinfo_cell() 214
@@ -112,7 +112,7 @@ problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_sen
 problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_socks_resolved() 106
 problem function-size /src/core/or/connection_edge.c:connection_exit_begin_conn() 184
 problem function-size /src/core/or/connection_edge.c:connection_exit_connect() 102
-problem file-size /src/core/or/connection_or.c 3121
+problem file-size /src/core/or/connection_or.c 3124
 problem include-count /src/core/or/connection_or.c 51
 problem function-size /src/core/or/connection_or.c:connection_or_group_set_badness_() 105
 problem function-size /src/core/or/connection_or.c:connection_or_client_learned_peer_id() 144

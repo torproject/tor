@@ -1020,6 +1020,7 @@ circpad_send_padding_cell_for_callback(circpad_machine_runtime_t *mi)
              "Callback: Sending padding to non-origin circuit.");
       relay_send_command_from_edge(0, mi->on_circ, RELAY_COMMAND_DROP, NULL,
                                    0, NULL);
+      rep_hist_padding_count_write(PADDING_TYPE_DROP);
     } else {
       static ratelim_t cell_lim = RATELIM_INIT(600);
       log_fn_ratelim(&cell_lim,LOG_NOTICE,LD_CIRC,
@@ -1028,7 +1029,6 @@ circpad_send_padding_cell_for_callback(circpad_machine_runtime_t *mi)
     }
   }
 
-  rep_hist_padding_count_write(PADDING_TYPE_DROP);
   /* This is a padding cell sent from the client or from the middle node,
    * (because it's invoked from circuitpadding.c) */
   circpad_cell_event_padding_sent(circ);

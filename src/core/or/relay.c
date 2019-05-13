@@ -2758,7 +2758,7 @@ set_streams_blocked_on_circ(circuit_t *circ, channel_t *chan,
 }
 
 /** Extract the command from a packed cell. */
-static uint8_t
+uint8_t
 packed_cell_get_command(const packed_cell_t *cell, int wide_circ_ids)
 {
   if (wide_circ_ids) {
