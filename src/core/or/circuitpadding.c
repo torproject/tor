@@ -81,6 +81,8 @@ static void circpad_setup_machine_on_circ(circuit_t *on_circ,
 static double circpad_distribution_sample(circpad_distribution_t dist);
 
 /** Cached consensus params */
+static uint8_t circpad_padding_disabled;
+static uint8_t circpad_padding_reduced;
 static uint8_t circpad_global_max_padding_percent;
 static uint16_t circpad_global_allowed_cells;
 static uint16_t circpad_max_circ_queued_cells;
@@ -1081,6 +1083,14 @@ circpad_send_padding_callback(tor_timer_t *timer, void *args,
 void
 circpad_new_consensus_params(const networkstatus_t *ns)
 {
+  circpad_padding_disabled =
+      networkstatus_get_param(ns, "circpad_padding_disabled",
+         0, 0, 1);
+
+  circpad_padding_reduced =
+      networkstatus_get_param(ns, "circpad_padding_reduced",
+         0, 0, 1);
+
   circpad_global_allowed_cells =
       networkstatus_get_param(ns, "circpad_global_allowed_cells",
          0, 0, UINT16_MAX-1);
@@ -1092,6 +1102,24 @@ circpad_new_consensus_params(const networkstatus_t *ns)
   circpad_max_circ_queued_cells =
       networkstatus_get_param(ns, "circpad_max_circ_queued_cells",
          CIRCWINDOW_START_MAX, 0, 50*CIRCWINDOW_START_MAX);
+}
+
+/**
+ * Return true if padding is allowed by torrc and consensus.
+ */
+STATIC bool
+circpad_is_padding_allowed(void)
+{
+  /* If padding has been disabled in the consensus, don't send any more
+   * padding. Technically the machine should be shut down when the next
+   * machine condition check happens, but machine checks only happen on
+   * certain circuit events, and if padding is disabled due to some
+   * network overload or DoS condition, we really want to stop ASAP. */
+  if (circpad_padding_disabled || !get_options()->CircuitPadding) {
+    return 0;
+  }
+
+  return 1;
 }
 
 /**
@@ -1115,7 +1143,7 @@ circpad_machine_reached_padding_limit(circpad_machine_runtime_t *mi)
   /* If machine_padding_pct is non-zero, and we've sent more
    * than the allowed count of padding cells, then check our
    * percent limits for this machine. */
-   if (machine->max_padding_percent &&
+  if (machine->max_padding_percent &&
       mi->padding_sent >= machine->allowed_padding_count) {
     uint32_t total_cells = mi->padding_sent + mi->nonpadding_sent;
 
@@ -1162,6 +1190,18 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
   struct timeval timeout;
   tor_assert(mi);
 
+  /* Don't schedule padding if it is disabled */
+  if (!circpad_is_padding_allowed()) {
+    static ratelim_t padding_lim = RATELIM_INIT(600);
+    log_fn_ratelim(&padding_lim,LOG_INFO,LD_CIRC,
+         "Padding has been disabled, but machine still on circuit %"PRIu64
+         ", %d",
+         mi->on_circ->n_chan ? mi->on_circ->n_chan->global_identifier : 0,
+         mi->on_circ->n_circ_id);
+
+    return CIRCPAD_STATE_UNCHANGED;
+  }
+
   /* Don't schedule padding if we are currently in dormant mode. */
   if (!is_participating_on_network()) {
     log_info(LD_CIRC, "Not scheduling padding because we are dormant.");
@@ -1182,7 +1222,8 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
            "Padding machine has reached padding limit on circuit %u",
              TO_ORIGIN_CIRCUIT(mi->on_circ)->global_identifier);
     } else {
-      log_fn(LOG_INFO, LD_CIRC,
+      static ratelim_t padding_lim = RATELIM_INIT(600);
+      log_fn_ratelim(&padding_lim,LOG_INFO,LD_CIRC,
            "Padding machine has reached padding limit on circuit %"PRIu64
            ", %d",
            mi->on_circ->n_chan ? mi->on_circ->n_chan->global_identifier : 0,
@@ -1621,6 +1662,19 @@ static inline bool
 circpad_machine_conditions_met(origin_circuit_t *circ,
                                const circpad_machine_spec_t *machine)
 {
+  /* If padding is disabled, no machines should match/apply. This has
+   * the effect of shutting down all machines, and not adding any more. */
+  if (circpad_padding_disabled || !get_options()->CircuitPadding)
+    return 0;
+
+  /* If the consensus or our torrc has selected reduced connection padding,
+   * then only allow this machine if it is flagged as acceptable under
+   * reduced padding conditions */
+  if (circpad_padding_reduced || get_options()->ReducedCircuitPadding) {
+    if (!machine->conditions.reduced_padding_ok)
+      return 0;
+  }
+
   if (!(circpad_circ_purpose_to_mask(TO_CIRCUIT(circ)->purpose)
       & machine->conditions.purpose_mask))
     return 0;
@@ -2166,6 +2220,7 @@ circpad_circ_client_machine_init(void)
   circ_client_machine->conditions.state_mask =
       CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED|CIRCPAD_CIRC_HAS_RELAY_EARLY;
   circ_client_machine->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
+  circ_client_machine->conditions.reduced_padding_ok = 1;
 
   circ_client_machine->target_hopnum = 2;
   circ_client_machine->is_origin_side = 1;

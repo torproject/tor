@@ -152,6 +152,17 @@ typedef struct circpad_machine_conditions_t {
   /** Only apply the machine *if* vanguards are enabled */
   unsigned requires_vanguards : 1;
 
+  /**
+   * This machine is ok to use if reduced padding is set in consensus
+   * or torrc. This machine will still be applied even if reduced padding
+   * is not set; this flag only acts to exclude machines that don't have
+   * it set when reduced padding is requested. Therefore, reduced padding
+   * machines should appear at the lowest priority in the padding machine
+   * lists (aka first in the list), so that non-reduced padding machines
+   * for the same purpose are given a chance to apply when reduced padding
+   * is not requested. */
+  unsigned reduced_padding_ok : 1;
+
   /** Only apply the machine *if* the circuit's state matches any of
    *  the bits set in this bitmask. */
   circpad_circuit_state_t state_mask;
