@@ -1,0 +1,7 @@
+  o Minor bugfixes (onion services, performance):
+    - If we are building circuits to onion services, in circuit_is_acceptable()
+      we only call tor_addr_parse() in places where we use the returned
+      family and address values from this function. Previously, we called
+      tor_addr_parse() in circuit_is_acceptable() even if it wasn't used.
+      This change will improve performance when building circuits. Fixes
+      bug 22210; bugfix on 0.2.8.12. Patch by Neel Chauhan
