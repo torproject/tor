@@ -49,7 +49,7 @@ problem function-size /src/app/config/confparse.c:config_assign_value() 205
 problem function-size /src/app/config/confparse.c:config_get_assigned_option() 129
 problem include-count /src/app/main/main.c 67
 problem function-size /src/app/main/main.c:dumpstats() 102
-problem function-size /src/app/main/main.c:tor_init() 136
+problem function-size /src/app/main/main.c:tor_init() 137
 problem function-size /src/app/main/main.c:sandbox_init_filter() 291
 problem function-size /src/app/main/main.c:run_tor_main_loop() 105
 problem function-size /src/app/main/ntmain.c:nt_service_install() 125
