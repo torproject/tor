@@ -5187,13 +5187,11 @@ options_init_from_torrc(int argc, char **argv)
   }
 
   if (config_line_find(cmdline_only_options, "--list-modules")) {
-    puts("dirauth: "
 #ifdef HAVE_MODULE_DIRAUTH
-         "yes"
+    puts("dirauth: yes");
 #else
-         "no"
+    puts("dirauth: no");
 #endif
-         );
     return 1;
   }
 
