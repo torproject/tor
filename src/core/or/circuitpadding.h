@@ -93,15 +93,6 @@ typedef uint32_t circpad_delay_t;
 #define CIRCPAD_INFINITY_BIN(mi)  ((mi)->histogram_len-1)
 
 /**
- * Macro to check if we have mutable histograms in circpad_machine_runtime_t.
- *
- * Having hutable histograms in the circpad_machine_runtime_t is equivalent to
- * circpad_state_t.token_removal != CIRCPAD_TOKEN_REMOVAL_NONE.
- */
-#define CIRCPAD_IS_TOKEN_REMOVAL_SUPPORTED(mi) \
-        ((mi)->histogram_len && (mi)->histogram)
-
-/**
  * These constants form a bitfield that specifies when a state machine
  * should be applied to a circuit.
  *
