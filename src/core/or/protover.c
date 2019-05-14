@@ -53,7 +53,8 @@ static const struct {
   { PRT_DESC, "Desc" },
   { PRT_MICRODESC, "Microdesc"},
   { PRT_PADDING, "Padding"},
-  { PRT_CONS, "Cons" }
+  { PRT_CONS, "Cons" },
+  { PRT_FLOWCTRL, "FlowCtrl"},
 };
 
 #define N_PROTOCOL_NAMES ARRAY_LENGTH(PROTOCOL_NAMES)
@@ -401,7 +402,8 @@ protover_get_supported_protocols(void)
 #endif
     "Microdesc=1-2 "
     "Relay=1-2 "
-    "Padding=1";
+    "Padding=1 "
+    "FlowCtrl=1";
 }
 
 /** The protocols from protover_get_supported_protocols(), as parsed into a
