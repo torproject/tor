@@ -17,6 +17,7 @@
 #include "core/or/or.h"
 
 #include "lib/crypt_ops/crypto_rand.h"
+#include "ext/tinytest.h"
 
 #include "test/rng_test_helpers.h"
 
@@ -54,7 +55,8 @@ static uint8_t rng_seed[16];
 static crypto_xof_t *rng_xof = NULL;
 
 /**
- * Print the seed for our PRNG to stdout.  We use this when we're
+ * Print the seed for our PRNG to stdout.  We use this when we're failed
+ * test that had a reproducible RNG set.
  **/
 void
 testing_dump_reproducible_rng_seed(void)
@@ -223,4 +225,17 @@ testing_disable_rng_override(void)
   crypto_fast_rng_free(rng);
 
   rng_is_replaced = false;
+}
+
+/**
+ * As testing_disable_rng_override(), but dump the seed if the current
+ * test has failed.
+ */
+void
+testing_disable_reproducible_rng(void)
+{
+  if (tinytest_cur_test_has_failed()) {
+    testing_dump_reproducible_rng_seed();
+  }
+  testing_disable_rng_override();
 }
