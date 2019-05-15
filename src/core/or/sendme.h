@@ -51,8 +51,10 @@ bool sendme_circuit_cell_is_next(int window);
 
 STATIC int get_emit_min_version(void);
 STATIC int get_accept_min_version(void);
+STATIC int get_dir_min_version(void);
 
-STATIC bool cell_version_is_valid(uint8_t cell_version);
+STATIC bool cell_version_is_valid(uint8_t cell_version,
+                                  const circuit_t *circ);
 
 STATIC ssize_t build_cell_payload_v1(const uint8_t *cell_digest,
                                      uint8_t *payload);

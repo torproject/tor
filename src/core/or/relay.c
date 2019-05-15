@@ -1670,6 +1670,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "from intermediary node. Dropping.");
         return 0;
       }
+      if (circ->purpose == CIRCUIT_PURPOSE_OR) {
+        /* Flag that this circuit just got a BEGIN_DIR and it is not an hidden
+         * service document request. */
+        TO_OR_CIRCUIT(circ)->begin_dir_seen = 1;
+      }
       if (conn) {
         log_fn(LOG_PROTOCOL_WARN, domain,
                "Begin cell for known stream. Dropping.");

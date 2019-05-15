@@ -39,6 +39,11 @@
 #define SENDME_ACCEPT_MIN_VERSION_MIN 0
 #define SENDME_ACCEPT_MIN_VERSION_MAX UINT8_MAX
 
+/* Minimum version allowed on a one-hop directory circuit. */
+#define SENDME_DIR_MIN_VERSION_DEFAULT 0
+#define SENDME_DIR_MIN_VERSION_MIN 0
+#define SENDME_DIR_MIN_VERSION_MAX UINT8_MAX
+
 /* Return the minimum version given by the consensus (if any) that should be
  * used when emitting a SENDME cell. */
 STATIC int
@@ -59,6 +64,17 @@ get_accept_min_version(void)
                                  SENDME_ACCEPT_MIN_VERSION_DEFAULT,
                                  SENDME_ACCEPT_MIN_VERSION_MIN,
                                  SENDME_ACCEPT_MIN_VERSION_MAX);
+}
+
+/* Return the minimum version that can be accepted on a one-hop directory
+ * circuit. This is taken from a consensus parameter if exists. */
+STATIC int
+get_dir_min_version(void)
+{
+  return networkstatus_get_param(NULL, "sendme_dir_min_version",
+                                 SENDME_DIR_MIN_VERSION_DEFAULT,
+                                 SENDME_DIR_MIN_VERSION_MIN,
+                                 SENDME_DIR_MIN_VERSION_MAX);
 }
 
 /* Return true iff the given cell digest matches the first digest in the
@@ -123,9 +139,16 @@ cell_v1_is_valid(const sendme_cell_t *cell, const circuit_t *circ)
 /* Return true iff the given cell version can be handled or if the minimum
  * accepted version from the consensus is known to us. */
 STATIC bool
-cell_version_is_valid(uint8_t cell_version)
+cell_version_is_valid(uint8_t cell_version, const circuit_t *circ)
 {
   int accept_version = get_accept_min_version();
+
+  /* We lookup a different consensus param when receiving a SENDME on a
+   * circuit that is for a directory request. It is only relevant if we are
+   * the directory server and thus on an OR circuit. */
+  if (CIRCUIT_IS_ORCIRC(circ) && CONST_TO_OR_CIRCUIT(circ)->begin_dir_seen) {
+    accept_version = get_dir_min_version();
+  }
 
   /* Can we handle this version? */
   if (accept_version > SENDME_MAX_SUPPORTED_VERSION) {
@@ -183,7 +206,7 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
   }
 
   /* Validate that we can handle this cell version. */
-  if (!cell_version_is_valid(cell_version)) {
+  if (!cell_version_is_valid(cell_version, circ)) {
     goto invalid;
   }
 

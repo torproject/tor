@@ -61,6 +61,13 @@ struct or_circuit_t {
    *  statistics. */
   unsigned int circuit_carries_hs_traffic_stats : 1;
 
+  /** If set, this circuit got a BEGIN_DIR, meaning a directory request, and
+   * not for any hidden service documents. We use this flag for SENDME
+   * mechanism in order to know if this circuit will serve a consensus for
+   * which we need to obey a specific consensus parameter about the minimal
+   * SENDME version we accept. */
+  unsigned int begin_dir_seen : 1;
+
   /** Number of cells that were removed from circuit queue; reset every
    * time when writing buffer stats to disk. */
   uint32_t processed_cells;

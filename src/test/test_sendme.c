@@ -99,7 +99,12 @@ test_v1_record_digest(void *arg)
 static void
 test_v1_consensus_params(void *arg)
 {
+  or_circuit_t *or_circ;
+
   (void) arg;
+
+  /* Circuit to test the sendme_dir_min_version. */
+  or_circ = or_circuit_new(1, NULL);
 
   setup_mock_consensus();
   tt_assert(current_md_consensus);
@@ -136,12 +141,33 @@ test_v1_consensus_params(void *arg)
   smartlist_add(current_md_consensus->net_params,
                 (void *) "sendme_accept_min_version=1");
   /* Minimum acceptable value is 1. */
-  tt_int_op(cell_version_is_valid(1), OP_EQ, true);
+  tt_int_op(cell_version_is_valid(1, TO_CIRCUIT(or_circ)), OP_EQ, true);
   /* Minimum acceptable value is 1 so a cell version of 0 is refused. */
-  tt_int_op(cell_version_is_valid(0), OP_EQ, false);
+  tt_int_op(cell_version_is_valid(0, TO_CIRCUIT(or_circ)), OP_EQ, false);
+  smartlist_clear(current_md_consensus->net_params);
+
+  /* Testing the directory request min version. */
+  smartlist_add(current_md_consensus->net_params,
+                (void *) "sendme_emit_min_version=1");
+  smartlist_add(current_md_consensus->net_params,
+                (void *) "sendme_accept_min_version=1");
+  smartlist_add(current_md_consensus->net_params,
+                (void *) "sendme_dir_min_version=0");
+  tt_int_op(get_dir_min_version(), OP_EQ, 0);
+  /* If the circuit is not for a directory request, the minimum version should
+   * be the accept_min_version. */
+  tt_int_op(cell_version_is_valid(1, TO_CIRCUIT(or_circ)), OP_EQ, true);
+  tt_int_op(cell_version_is_valid(0, TO_CIRCUIT(or_circ)), OP_EQ, false);
+  /* Flag the circuit to have seen a BEGIN_DIR so version 0 should be
+   * accepted. */
+  or_circ->begin_dir_seen = 1;
+  tt_int_op(cell_version_is_valid(0, TO_CIRCUIT(or_circ)), OP_EQ, true);
+  tt_int_op(cell_version_is_valid(1, TO_CIRCUIT(or_circ)), OP_EQ, true);
+  smartlist_clear(current_md_consensus->net_params);
 
  done:
   free_mock_consensus();
+  circuit_free_(TO_CIRCUIT(or_circ));
 }
 
 static void
