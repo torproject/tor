@@ -1900,6 +1900,9 @@ test_circuitpadding_state_length(void *arg)
   tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
 
  done:
+  tor_free(client_machine->states);
+  tor_free(client_machine);
+
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   free_fake_orcirc(relay_side);
 
