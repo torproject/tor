@@ -520,7 +520,6 @@ trn_cell_introduce_ack_new(void)
   trn_cell_introduce_ack_t *val = trunnel_calloc(1, sizeof(trn_cell_introduce_ack_t));
   if (NULL == val)
     return NULL;
-  val->status = TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT;
   return val;
 }
 
@@ -552,10 +551,6 @@ trn_cell_introduce_ack_get_status(const trn_cell_introduce_ack_t *inp)
 int
 trn_cell_introduce_ack_set_status(trn_cell_introduce_ack_t *inp, uint16_t val)
 {
-  if (! ((val == TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT || val == TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS || val == TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID))) {
-     TRUNNEL_SET_ERROR_CODE(inp);
-     return -1;
-  }
   inp->status = val;
   return 0;
 }
@@ -589,8 +584,6 @@ trn_cell_introduce_ack_check(const trn_cell_introduce_ack_t *obj)
     return "Object was NULL";
   if (obj->trunnel_error_code_)
     return "A set function failed on this object";
-  if (! (obj->status == TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT || obj->status == TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS || obj->status == TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID))
-    return "Integer out of bounds";
   {
     const char *msg;
     if (NULL != (msg = trn_cell_extension_check(obj->extensions)))
@@ -608,7 +601,7 @@ trn_cell_introduce_ack_encoded_len(const trn_cell_introduce_ack_t *obj)
      return -1;
 
 
-  /* Length of u16 status IN [TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT, TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS, TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID] */
+  /* Length of u16 status */
   result += 2;
 
   /* Length of struct trn_cell_extension extensions */
@@ -640,7 +633,7 @@ trn_cell_introduce_ack_encode(uint8_t *output, const size_t avail, const trn_cel
   trunnel_assert(encoded_len >= 0);
 #endif
 
-  /* Encode u16 status IN [TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT, TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS, TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID] */
+  /* Encode u16 status */
   trunnel_assert(written <= avail);
   if (avail - written < 2)
     goto truncated;
@@ -689,12 +682,10 @@ trn_cell_introduce_ack_parse_into(trn_cell_introduce_ack_t *obj, const uint8_t *
   ssize_t result = 0;
   (void)result;
 
-  /* Parse u16 status IN [TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT, TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS, TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID] */
+  /* Parse u16 status */
   CHECK_REMAINING(2, truncated);
   obj->status = trunnel_ntohs(trunnel_get_uint16(ptr));
   remaining -= 2; ptr += 2;
-  if (! (obj->status == TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT || obj->status == TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS || obj->status == TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID))
-    goto fail;
 
   /* Parse struct trn_cell_extension extensions */
   result = trn_cell_extension_parse(&obj->extensions, ptr, remaining);
@@ -709,9 +700,6 @@ trn_cell_introduce_ack_parse_into(trn_cell_introduce_ack_t *obj, const uint8_t *
   return -2;
  relay_fail:
   trunnel_assert(result < 0);
-  return result;
- fail:
-  result = -1;
   return result;
 }
 
