@@ -35,6 +35,7 @@
 #include "feature/nodelist/routerlist.h" // but...
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
+#include "feature/relay/relay_periodic.h"
 #include "feature/relay/router.h"
 #include "feature/relay/selftest.h"
 

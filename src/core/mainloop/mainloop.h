@@ -59,7 +59,6 @@ void directory_info_has_arrived(time_t now, int from_cache, int suppress_logs);
 void ip_address_changed(int at_interface);
 void dns_servers_relaunch_checks(void);
 void reset_all_main_loop_timers(void);
-void reschedule_descriptor_update_check(void);
 void reschedule_directory_downloads(void);
 void reschedule_or_state_save(void);
 void mainloop_schedule_postloop_cleanup(void);

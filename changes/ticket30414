@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Move most relay-only periodic events out of mainloop.c into the
+      relay subsystem. Closes ticket 30414.
