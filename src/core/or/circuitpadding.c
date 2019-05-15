@@ -183,7 +183,7 @@ circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
  * regardless of the padding machine state.
  */
 int
-circpad_is_using_circuit_for_padding(circuit_t *circ, int reason)
+circpad_marked_circuit_for_padding(circuit_t *circ, int reason)
 {
   /* If the circuit purpose is measurement or path bias, don't
    * hold it open */
