@@ -1550,8 +1550,9 @@ circpad_estimate_circ_rtt_on_received(circuit_t *circ,
       mi->stop_rtt_update = 1;
 
       if (!mi->rtt_estimate_usec) {
-        log_fn(LOG_NOTICE, LD_CIRC,
-               "Circpad: Got two cells back to back before estimating RTT.");
+        static ratelim_t rtt_lim = RATELIM_INIT(600);
+        log_fn_ratelim(&rtt_lim,LOG_NOTICE,LD_BUG,
+          "Circuit got two cells back to back before estimating RTT.");
       }
     }
   } else {
@@ -1625,8 +1626,9 @@ circpad_estimate_circ_rtt_on_send(circuit_t *circ,
     mi->stop_rtt_update = 1;
 
     if (!mi->rtt_estimate_usec) {
-      log_fn(LOG_NOTICE, LD_CIRC,
-             "Got two cells back to back on a circuit before estimating RTT.");
+      static ratelim_t rtt_lim = RATELIM_INIT(600);
+      log_fn_ratelim(&rtt_lim,LOG_NOTICE,LD_BUG,
+        "Circuit sent two cells back to back before estimating RTT.");
     }
   }
 }
