@@ -204,20 +204,20 @@ cpath_set_cell_forward_digest(crypt_path_t *cpath, cell_t *cell)
 
 /************ cpath sendme API ***************************/
 
-/** Keep the current inbound cell digest for the next SENDME digest. This part
- * is only done by the client as the circuit came back from the Exit. */
-void
-cpath_sendme_circuit_record_inbound_cell(crypt_path_t *cpath)
-{
-  tor_assert(cpath);
-  relay_crypto_record_sendme_digest(&cpath->pvt_crypto);
-}
-
 /** Return the sendme_digest of this <b>cpath</b>. */
 uint8_t *
 cpath_get_sendme_digest(crypt_path_t *cpath)
 {
   return relay_crypto_get_sendme_digest(&cpath->pvt_crypto);
+}
+
+/** Record the cell digest, indicated by is_foward_digest or not, as the
+ * SENDME cell digest. */
+void
+cpath_sendme_record_cell_digest(crypt_path_t *cpath, bool is_foward_digest)
+{
+  tor_assert(cpath);
+  relay_crypto_record_sendme_digest(&cpath->pvt_crypto, is_foward_digest);
 }
 
 /************ other cpath functions ***************************/

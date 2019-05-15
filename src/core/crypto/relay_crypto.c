@@ -100,12 +100,20 @@ relay_crypto_get_sendme_digest(relay_crypto_t *crypto)
   return crypto->sendme_digest;
 }
 
-/** Record the b_digest from <b>crypto</b> and put it in the sendme_digest. */
+/** Record the cell digest, indicated by is_foward_digest or not, as the
+ * SENDME cell digest. */
 void
-relay_crypto_record_sendme_digest(relay_crypto_t *crypto)
+relay_crypto_record_sendme_digest(relay_crypto_t *crypto,
+                                  bool is_foward_digest)
 {
+  struct crypto_digest_t *digest;
+
   tor_assert(crypto);
-  crypto_digest_get_digest(crypto->b_digest, (char *) crypto->sendme_digest,
+
+  (is_foward_digest) ? (digest = crypto->f_digest) :
+                       (digest = crypto->b_digest);
+
+  crypto_digest_get_digest(digest, (char *) crypto->sendme_digest,
                            sizeof(crypto->sendme_digest));
 }
 
@@ -161,11 +169,6 @@ relay_decrypt_cell(circuit_t *circ, cell_t *cell,
           if (relay_digest_matches(cpath_get_incoming_digest(thishop), cell)) {
             *recognized = 1;
             *layer_hint = thishop;
-            /* This cell is for us. Keep a record of this cell because we will
-             * use it in the next SENDME cell. */
-            if (sendme_circuit_cell_is_next(thishop->deliver_window)) {
-              cpath_sendme_circuit_record_inbound_cell(thishop);
-            }
             return 0;
           }
         }
@@ -213,6 +216,9 @@ relay_encrypt_cell_outbound(cell_t *cell,
   crypt_path_t *thishop; /* counter for repeated crypts */
   cpath_set_cell_forward_digest(layer_hint, cell);
 
+  /* Record cell digest as the SENDME digest if need be. */
+  sendme_record_sending_cell_digest(TO_CIRCUIT(circ), layer_hint);
+
   thishop = layer_hint;
   /* moving from farthest to nearest hop */
   do {
@@ -237,11 +243,8 @@ relay_encrypt_cell_inbound(cell_t *cell,
 {
   relay_set_digest(or_circ->crypto.b_digest, cell);
 
-  /* We are about to send this cell outbound on the circuit. Keep a record of
-   * this cell if we are expecting that the next cell is a SENDME. */
-  if (sendme_circuit_cell_is_next(TO_CIRCUIT(or_circ)->package_window)) {
-    sendme_circuit_record_outbound_cell(or_circ);
-  }
+  /* Record cell digest as the SENDME digest if need be. */
+  sendme_record_sending_cell_digest(TO_CIRCUIT(or_circ), NULL);
 
   /* encrypt one layer */
   relay_crypt_one_payload(or_circ->crypto.b_crypto, cell->payload);

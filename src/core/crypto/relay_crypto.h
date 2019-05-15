@@ -28,7 +28,10 @@ void relay_crypto_clear(relay_crypto_t *crypto);
 void relay_crypto_assert_ok(const relay_crypto_t *crypto);
 
 uint8_t *relay_crypto_get_sendme_digest(relay_crypto_t *crypto);
-void relay_crypto_record_sendme_digest(relay_crypto_t *crypto);
+
+void relay_crypto_record_sendme_digest(relay_crypto_t *crypto,
+                                       bool is_foward_digest);
+
 void
 relay_crypt_one_payload(crypto_cipher_t *cipher, uint8_t *in);
 
