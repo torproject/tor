@@ -160,11 +160,12 @@ parse_introduce2_encrypted(const uint8_t *decrypted_data,
   }
 
   if (trn_cell_introduce_encrypted_get_onion_key_type(enc_cell) !=
-      HS_CELL_ONION_KEY_TYPE_NTOR) {
+      TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR) {
     log_info(LD_REND, "INTRODUCE2 onion key type is invalid. Got %u but "
                       "expected %u on circuit %u for service %s",
              trn_cell_introduce_encrypted_get_onion_key_type(enc_cell),
-             HS_CELL_ONION_KEY_TYPE_NTOR, TO_CIRCUIT(circ)->n_circ_id,
+             TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR,
+             TO_CIRCUIT(circ)->n_circ_id,
              safe_str_client(service->onion_address));
     goto err;
   }
@@ -257,7 +258,7 @@ introduce1_set_encrypted_onion_key(trn_cell_introduce_encrypted_t *cell,
   tor_assert(onion_pk);
   /* There is only one possible key type for a non legacy cell. */
   trn_cell_introduce_encrypted_set_onion_key_type(cell,
-                                                  HS_CELL_ONION_KEY_TYPE_NTOR);
+                                   TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR);
   trn_cell_introduce_encrypted_set_onion_key_len(cell, CURVE25519_PUBKEY_LEN);
   trn_cell_introduce_encrypted_setlen_onion_key(cell, CURVE25519_PUBKEY_LEN);
   memcpy(trn_cell_introduce_encrypted_getarray_onion_key(cell), onion_pk,

@@ -723,7 +723,7 @@ trn_cell_introduce_encrypted_new(void)
   trn_cell_introduce_encrypted_t *val = trunnel_calloc(1, sizeof(trn_cell_introduce_encrypted_t));
   if (NULL == val)
     return NULL;
-  val->onion_key_type = 1;
+  val->onion_key_type = TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR;
   return val;
 }
 
@@ -827,7 +827,7 @@ trn_cell_introduce_encrypted_get_onion_key_type(const trn_cell_introduce_encrypt
 int
 trn_cell_introduce_encrypted_set_onion_key_type(trn_cell_introduce_encrypted_t *inp, uint8_t val)
 {
-  if (! ((val == 1))) {
+  if (! ((val == TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR))) {
      TRUNNEL_SET_ERROR_CODE(inp);
      return -1;
   }
@@ -1069,7 +1069,7 @@ trn_cell_introduce_encrypted_check(const trn_cell_introduce_encrypted_t *obj)
     if (NULL != (msg = trn_cell_extension_check(obj->extensions)))
       return msg;
   }
-  if (! (obj->onion_key_type == 1))
+  if (! (obj->onion_key_type == TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR))
     return "Integer out of bounds";
   if (TRUNNEL_DYNARRAY_LEN(&obj->onion_key) != obj->onion_key_len)
     return "Length mismatch for onion_key";
@@ -1102,7 +1102,7 @@ trn_cell_introduce_encrypted_encoded_len(const trn_cell_introduce_encrypted_t *o
   /* Length of struct trn_cell_extension extensions */
   result += trn_cell_extension_encoded_len(obj->extensions);
 
-  /* Length of u8 onion_key_type IN [1] */
+  /* Length of u8 onion_key_type IN [TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR] */
   result += 1;
 
   /* Length of u16 onion_key_len */
@@ -1166,7 +1166,7 @@ trn_cell_introduce_encrypted_encode(uint8_t *output, const size_t avail, const t
     goto fail; /* XXXXXXX !*/
   written += result; ptr += result;
 
-  /* Encode u8 onion_key_type IN [1] */
+  /* Encode u8 onion_key_type IN [TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR] */
   trunnel_assert(written <= avail);
   if (avail - written < 1)
     goto truncated;
@@ -1270,11 +1270,11 @@ trn_cell_introduce_encrypted_parse_into(trn_cell_introduce_encrypted_t *obj, con
   trunnel_assert((size_t)result <= remaining);
   remaining -= result; ptr += result;
 
-  /* Parse u8 onion_key_type IN [1] */
+  /* Parse u8 onion_key_type IN [TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR] */
   CHECK_REMAINING(1, truncated);
   obj->onion_key_type = (trunnel_get_uint8(ptr));
   remaining -= 1; ptr += 1;
-  if (! (obj->onion_key_type == 1))
+  if (! (obj->onion_key_type == TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR))
     goto fail;
 
   /* Parse u16 onion_key_len */
