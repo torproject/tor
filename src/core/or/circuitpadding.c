@@ -233,7 +233,10 @@ circpad_marked_circuit_for_padding(circuit_t *circ, int reason)
 
       /* If the machine has had no network events at all within the
        * last circpad_delay_t timespan, it's in some deadlock state.
-       * Tell the caller that we don't own it anymore. */
+       * Tell circuit_mark_for_close() that we don't own it anymore.
+       * This will allow circuit_expire_old_circuits_clientside() to
+       * close it.
+       */
       if (circ->padding_info[i]->last_cell_time_sec +
           (time_t)CIRCPAD_DELAY_MAX_SECS < approx_time()) {
         log_notice(LD_BUG, "Circuit %d was not marked for close because of a "
