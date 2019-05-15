@@ -1699,8 +1699,16 @@ void
 circpad_cell_event_padding_sent(circuit_t *on_circ)
 {
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, on_circ) {
-    circpad_machine_spec_transition(on_circ->padding_info[i],
+    /* Check to see if we've run out of tokens for this state already,
+     * and if not, check for other state transitions */
+    if (check_machine_token_supply(on_circ->padding_info[i])
+        == CIRCPAD_STATE_UNCHANGED) {
+      /* If removing a token did not cause a transition, check if
+       * non-padding sent event should */
+
+      circpad_machine_spec_transition(on_circ->padding_info[i],
                              CIRCPAD_EVENT_PADDING_SENT);
+    }
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
 }
 
