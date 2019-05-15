@@ -289,3 +289,4 @@ problem function-size /src/tools/tor-gencert.c:parse_commandline() 111
 problem function-size /src/tools/tor-resolve.c:build_socks5_resolve_request() 104
 problem function-size /src/tools/tor-resolve.c:do_resolve() 175
 problem function-size /src/tools/tor-resolve.c:main() 112
+problem function-size /src/core/or/circuitpadding.c:circpad_machine_schedule_padding() 107
