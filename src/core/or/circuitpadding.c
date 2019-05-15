@@ -224,48 +224,48 @@ circpad_marked_circuit_for_padding(circuit_t *circ, int reason)
      * machine. */
     if (mi->current_state == CIRCPAD_STATE_END) {
       continue; // check next machine
-    } else {
-      log_info(LD_CIRC, "Circuit %d is not marked for close because of a "
-               " pending padding machine.", CIRCUIT_IS_ORIGIN(circ) ?
-               TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
-
-      /* If the machine has had no network events at all within the
-       * last circpad_delay_t timespan, it's in some deadlock state.
-       * Tell circuit_mark_for_close() that we don't own it anymore.
-       * This will allow circuit_expire_old_circuits_clientside() to
-       * close it.
-       */
-      if (circ->padding_info[i]->last_cell_time_sec +
-          (time_t)CIRCPAD_DELAY_MAX_SECS < approx_time()) {
-        log_notice(LD_BUG, "Circuit %d was not marked for close because of a "
-                 " pending padding machine for over an hour. Circuit is a %s",
-                 CIRCUIT_IS_ORIGIN(circ) ?
-                 TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
-                 circuit_purpose_to_string(circ->purpose));
-
-        return 0; // abort timer reached; mark the circuit for close now
-      }
-
-      /* If we weren't marked dirty yet, let's pretend we're dirty now.
-       * ("Dirty" means that a circuit has been used for application traffic
-       * by Tor.. Dirty circuits have different expiry times, and are not
-       * considered in counts of built circuits, etc. By claiming that we're
-       * dirty, the rest of Tor will make decisions as if we were actually
-       * used by application data.
-       *
-       * This is most important for circuit_expire_old_circuits_clientside(),
-       * where we want that function to expire us after the padding machine
-       * has shut down, but using the MaxCircuitDirtiness timer instead of
-       * the idle circuit timer (again, we want this because we're not
-       * supposed to look idle to Guard nodes that can see our lifespan). */
-      if (!circ->timestamp_dirty)
-        circ->timestamp_dirty = approx_time();
-
-      /* Take ownership of the circuit */
-      circuit_change_purpose(circ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
-
-      return 1;
     }
+
+    log_info(LD_CIRC, "Circuit %d is not marked for close because of a "
+             " pending padding machine.", CIRCUIT_IS_ORIGIN(circ) ?
+             TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
+
+    /* If the machine has had no network events at all within the
+     * last circpad_delay_t timespan, it's in some deadlock state.
+     * Tell circuit_mark_for_close() that we don't own it anymore.
+     * This will allow circuit_expire_old_circuits_clientside() to
+     * close it.
+     */
+    if (circ->padding_info[i]->last_cell_time_sec +
+        (time_t)CIRCPAD_DELAY_MAX_SECS < approx_time()) {
+      log_notice(LD_BUG, "Circuit %d was not marked for close because of a "
+               " pending padding machine for over an hour. Circuit is a %s",
+               CIRCUIT_IS_ORIGIN(circ) ?
+               TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
+               circuit_purpose_to_string(circ->purpose));
+
+      return 0; // abort timer reached; mark the circuit for close now
+    }
+
+    /* If we weren't marked dirty yet, let's pretend we're dirty now.
+     * ("Dirty" means that a circuit has been used for application traffic
+     * by Tor.. Dirty circuits have different expiry times, and are not
+     * considered in counts of built circuits, etc. By claiming that we're
+     * dirty, the rest of Tor will make decisions as if we were actually
+     * used by application data.
+     *
+     * This is most important for circuit_expire_old_circuits_clientside(),
+     * where we want that function to expire us after the padding machine
+     * has shut down, but using the MaxCircuitDirtiness timer instead of
+     * the idle circuit timer (again, we want this because we're not
+     * supposed to look idle to Guard nodes that can see our lifespan). */
+    if (!circ->timestamp_dirty)
+      circ->timestamp_dirty = approx_time();
+
+    /* Take ownership of the circuit */
+    circuit_change_purpose(circ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
+
+    return 1;
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
 
   return 0; // No machine wanted to keep the circuit open; mark for close
