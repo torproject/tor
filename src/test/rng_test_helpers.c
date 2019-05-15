@@ -124,9 +124,22 @@ enable_deterministic_rng_impl(const uint8_t *seed, size_t seed_len)
 void
 testing_enable_reproducible_rng(void)
 {
-  uint8_t seed[16];
-  crypto_rand((char*)seed, sizeof(seed));
-  enable_deterministic_rng_impl(seed, sizeof(seed));
+  const char *provided_seed = getenv("TOR_TEST_RNG_SEED");
+  if (provided_seed) {
+    size_t hexlen = strlen(provided_seed);
+    size_t seedlen = hexlen / 2;
+    uint8_t *seed = tor_malloc(hexlen / 2);
+    if (base16_decode((char*)seed, seedlen, provided_seed, hexlen) < 0) {
+      puts("Cannot decode value in TOR_TEST_RNG_SEED");
+      exit(1);
+    }
+    enable_deterministic_rng_impl(seed, seedlen);
+    tor_free(seed);
+  } else {
+    uint8_t seed[16];
+    crypto_rand((char*)seed, sizeof(seed));
+    enable_deterministic_rng_impl(seed, sizeof(seed));
+  }
 }
 
 /**
