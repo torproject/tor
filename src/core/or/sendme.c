@@ -306,15 +306,6 @@ record_cell_digest_on_circ(circuit_t *circ, const uint8_t *sendme_digest)
  * Public API
  */
 
-/** Keep the current inbound cell digest for the next SENDME digest. This part
- * is only done by the client as the circuit came back from the Exit. */
-void
-sendme_circuit_record_outbound_cell(or_circuit_t *or_circ)
-{
-  tor_assert(or_circ);
-  relay_crypto_record_sendme_digest(&or_circ->crypto);
-}
-
 /** Return true iff the next cell for the given cell window is expected to be
  * a SENDME.
  *
@@ -582,7 +573,8 @@ int
 sendme_note_stream_data_packaged(edge_connection_t *conn)
 {
   tor_assert(conn);
-  return --conn->package_window;
+  log_debug(LD_APP, "Stream package_window now %d.", --conn->package_window);
+  return conn->package_window;
 }
 
 /* Record the cell digest into the circuit sendme digest list depending on
@@ -618,4 +610,53 @@ sendme_record_cell_digest_on_circ(circuit_t *circ, crypt_path_t *cpath)
   }
 
   record_cell_digest_on_circ(circ, sendme_digest);
+}
+
+/* Called once we decrypted a cell and recognized it. Record the cell digest
+ * as the next sendme digest only if the next cell we'll send on the circuit
+ * is expected to be a SENDME. */
+void
+sendme_record_received_cell_digest(circuit_t *circ, crypt_path_t *cpath)
+{
+  tor_assert(circ);
+
+  /* Only record if the next cell is expected to be a SENDME. */
+  if (!sendme_circuit_cell_is_next(cpath ? cpath->deliver_window :
+                                           circ->deliver_window)) {
+    return;
+  }
+
+  if (cpath) {
+    /* Record incoming digest. */
+    cpath_sendme_record_cell_digest(cpath, false);
+  } else {
+    /* Record foward digest. */
+    relay_crypto_record_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto, true);
+  }
+}
+
+/* Called once we encrypted a cell. Record the cell digest as the next sendme
+ * digest only if the next cell we expect to receive is a SENDME so we can
+ * match the digests. */
+void
+sendme_record_sending_cell_digest(circuit_t *circ, crypt_path_t *cpath)
+{
+  tor_assert(circ);
+
+  /* Only record if the next cell is expected to be a SENDME. */
+  if (!sendme_circuit_cell_is_next(cpath ? cpath->package_window:
+                                           circ->package_window)) {
+    goto end;
+  }
+
+  if (cpath) {
+    /* Record the forward digest. */
+    cpath_sendme_record_cell_digest(cpath, true);
+  } else {
+    /* Record the incoming digest. */
+    relay_crypto_record_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto, false);
+  }
+
+ end:
+  return;
 }

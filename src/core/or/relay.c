@@ -247,6 +247,10 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   if (recognized) {
     edge_connection_t *conn = NULL;
 
+    /* Recognized cell, the cell digest has been updated, we'll record it for
+     * the SENDME if need be. */
+    sendme_record_received_cell_digest(circ, layer_hint);
+
     if (circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING) {
       if (pathbias_check_probe_response(circ, cell) == -1) {
         pathbias_count_valid_cells(circ, cell);
