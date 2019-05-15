@@ -2577,7 +2577,7 @@ mock_tor_gettimeofday(struct timeval *timeval)
 
 /** Test manual managing of circuit lifetimes by the circuitpadding
  *  subsystem. In particular this test goes through all the cases of the
- *  circpad_is_using_circuit_for_padding() function, via
+ *  circpad_marked_circuit_for_padding() function, via
  *  circuit_mark_for_close() as well as
  *  circuit_expire_old_circuits_clientside(). */
 static void
