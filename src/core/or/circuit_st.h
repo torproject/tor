@@ -115,12 +115,11 @@ struct circuit_t {
    * list can not contain more than 10 digests of DIGEST_LEN bytes (20).
    *
    * At position i in the list, the digest corresponds to the
-   * ((CIRCWINDOW_INCREMENT * i) - 1)-nth cell received since we expect the
-   * (CIRCWINDOW_INCREMENT * i)-nth cell to be the SENDME and thus containing
-   * the previous cell digest.
+   * (CIRCWINDOW_INCREMENT * i)-nth cell received since we expect a SENDME to
+   * be received containing that cell digest.
    *
-   * For example, position 2 (starting at 0) means that we've received 299
-   * cells and the 299th cell digest is kept at index 2.
+   * For example, position 2 (starting at 0) means that we've received 300
+   * cells so the 300th cell digest is kept at index 2.
    *
    * At maximum, this list contains 200 bytes plus the smartlist overhead. */
   smartlist_t *sendme_last_digests;
