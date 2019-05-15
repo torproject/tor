@@ -2663,8 +2663,8 @@ test_circuitpadding_reduce_disable(void *arg)
   simulate_single_hop_extend(client_side, relay_side, 1);
 
   /* Verify that machine #0 is added */
-  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 0);
-  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 0);
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 2);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
 
   tt_int_op(
     circpad_machine_reached_padding_limit(client_side->padding_info[0]),
@@ -2709,8 +2709,8 @@ test_circuitpadding_reduce_disable(void *arg)
   simulate_single_hop_extend(client_side, relay_side, 1);
 
   /* Verify that machine #0 is added */
-  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 0);
-  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 0);
+  tt_int_op(client_side->padding_machine[0]->machine_num, OP_EQ, 2);
+  tt_int_op(relay_side->padding_machine[0]->machine_num, OP_EQ, 2);
 
   tt_int_op(
     circpad_machine_reached_padding_limit(client_side->padding_info[0]),
