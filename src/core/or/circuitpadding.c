@@ -253,7 +253,7 @@ circpad_histogram_bin_to_usec(const circpad_machine_runtime_t *mi,
 
   /* The infinity bin has an upper bound of infinity, so make sure we return
    * that if they ask for it. */
-  if (bin > CIRCPAD_INFINITY_BIN(mi)) {
+  if (bin > CIRCPAD_INFINITY_BIN(state)) {
     return CIRCPAD_DELAY_INFINITE;
   }
 
@@ -936,7 +936,7 @@ circpad_machine_update_state_length_for_nonpadding(
 {
   const circpad_state_t *state = NULL;
 
-  if (mi->state_length != CIRCPAD_STATE_LENGTH_INFINITE)
+  if (mi->state_length == CIRCPAD_STATE_LENGTH_INFINITE)
     return;
 
   state = circpad_machine_current_state(mi);
