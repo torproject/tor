@@ -166,6 +166,116 @@ circpad_circuit_machineinfo_free_idx(circuit_t *circ, int idx)
   }
 }
 
+/**
+ * Return true if circpad has decided to hold the circuit open for additional
+ * padding. This function is used to take and retain ownership of certain
+ * types of circuits that have padding machines on them, that have been passed
+ * to circuit_mark_for_close().
+ *
+ * circuit_mark_for_close() calls this function to ask circpad if any padding
+ * machines want to keep the circuit open longer to pad.
+ *
+ * Any non-measurement circuit that was closed for a normal, non-error reason
+ * code may be held open for up to CIRCPAD_DELAY_INFINITE microseconds between
+ * network-driven cell events.
+ *
+ * After CIRCPAD_DELAY_INFINITE microseconds of silence on a circuit, this
+ * function will no longer hold it open (it will return 0 regardless of
+ * what the machines ask for, and thus circuit_expire_old_circuits_clientside()
+ * will close the circuit after roughly 1.25hr of idle time, maximum,
+ * regardless of the padding machine state.
+ */
+int
+circpad_marked_circuit_for_padding(circuit_t *circ, int reason)
+{
+  /* If the circuit purpose is measurement or path bias, don't
+   * hold it open */
+  if (circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING ||
+      circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+    return 0;
+  }
+
+  /* If the circuit is closed for any reason other than these three valid,
+   * client-side close reasons, do not try to keep it open. It is probably
+   * damaged or unusable. Note this is OK with vanguards because
+   * controller-closed circuits have REASON=REQUESTED, so vanguards-closed
+   * circuits will not be held open (we want them to close ASAP). */
+  if (!(reason == END_CIRC_REASON_NONE ||
+        reason == END_CIRC_REASON_FINISHED ||
+        reason == END_CIRC_REASON_IP_NOW_REDUNDANT)) {
+    return 0;
+  }
+
+  FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, circ) {
+    circpad_machine_runtime_t *mi = circ->padding_info[i];
+    if (!mi) {
+      continue; // No padding runtime info; check next machine
+    }
+
+    const circpad_state_t *state = circpad_machine_current_state(mi);
+
+    /* If we're in END state (NULL here), then check next machine */
+    if (!state) {
+      continue; // check next machine
+    }
+
+    /* If the machine does not want to control the circuit close itself, then
+     * check the next machine */
+    if (!circ->padding_machine[i]->manage_circ_lifetime) {
+      continue; // check next machine
+    }
+
+    /* If the machine has reached the END state, we can close. Check next
+     * machine. */
+    if (mi->current_state == CIRCPAD_STATE_END) {
+      continue; // check next machine
+    }
+
+    log_info(LD_CIRC, "Circuit %d is not marked for close because of a "
+             " pending padding machine.", CIRCUIT_IS_ORIGIN(circ) ?
+             TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
+
+    /* If the machine has had no network events at all within the
+     * last circpad_delay_t timespan, it's in some deadlock state.
+     * Tell circuit_mark_for_close() that we don't own it anymore.
+     * This will allow circuit_expire_old_circuits_clientside() to
+     * close it.
+     */
+    if (circ->padding_info[i]->last_cell_time_sec +
+        (time_t)CIRCPAD_DELAY_MAX_SECS < approx_time()) {
+      log_notice(LD_BUG, "Circuit %d was not marked for close because of a "
+               " pending padding machine for over an hour. Circuit is a %s",
+               CIRCUIT_IS_ORIGIN(circ) ?
+               TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
+               circuit_purpose_to_string(circ->purpose));
+
+      return 0; // abort timer reached; mark the circuit for close now
+    }
+
+    /* If we weren't marked dirty yet, let's pretend we're dirty now.
+     * ("Dirty" means that a circuit has been used for application traffic
+     * by Tor.. Dirty circuits have different expiry times, and are not
+     * considered in counts of built circuits, etc. By claiming that we're
+     * dirty, the rest of Tor will make decisions as if we were actually
+     * used by application data.
+     *
+     * This is most important for circuit_expire_old_circuits_clientside(),
+     * where we want that function to expire us after the padding machine
+     * has shut down, but using the MaxCircuitDirtiness timer instead of
+     * the idle circuit timer (again, we want this because we're not
+     * supposed to look idle to Guard nodes that can see our lifespan). */
+    if (!circ->timestamp_dirty)
+      circ->timestamp_dirty = approx_time();
+
+    /* Take ownership of the circuit */
+    circuit_change_purpose(circ, CIRCUIT_PURPOSE_C_CIRCUIT_PADDING);
+
+    return 1;
+  } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
+
+  return 0; // No machine wanted to keep the circuit open; mark for close
+}
+
 /** Free all the machineinfos in <b>circ</b> that match <b>machine_num</b>. */
 static void
 free_circ_machineinfos_with_machine_num(circuit_t *circ, int machine_num)
@@ -200,6 +310,7 @@ circpad_circuit_machineinfo_new(circuit_t *on_circ, int machine_index)
     tor_malloc_zero(sizeof(circpad_machine_runtime_t));
   mi->machine_index = machine_index;
   mi->on_circ = on_circ;
+  mi->last_cell_time_sec = approx_time();
 
   return mi;
 }
@@ -1649,7 +1760,8 @@ circpad_cell_event_nonpadding_sent(circuit_t *on_circ)
 
   /* If there are no machines then this loop should not iterate */
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, on_circ) {
-    /* First, update any RTT estimate */
+    /* First, update any timestamps */
+    on_circ->padding_info[i]->last_cell_time_sec = approx_time();
     circpad_estimate_circ_rtt_on_send(on_circ, on_circ->padding_info[i]);
 
     /* Then, do accounting */
@@ -1679,7 +1791,8 @@ void
 circpad_cell_event_nonpadding_received(circuit_t *on_circ)
 {
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, on_circ) {
-    /* First, update any RTT estimate */
+    /* First, update any timestamps */
+    on_circ->padding_info[i]->last_cell_time_sec = approx_time();
     circpad_estimate_circ_rtt_on_received(on_circ, on_circ->padding_info[i]);
 
     circpad_machine_spec_transition(on_circ->padding_info[i],
@@ -1706,6 +1819,7 @@ circpad_cell_event_padding_sent(circuit_t *on_circ)
       /* If removing a token did not cause a transition, check if
        * non-padding sent event should */
 
+      on_circ->padding_info[i]->last_cell_time_sec = approx_time();
       circpad_machine_spec_transition(on_circ->padding_info[i],
                              CIRCPAD_EVENT_PADDING_SENT);
     }
@@ -1725,6 +1839,7 @@ circpad_cell_event_padding_received(circuit_t *on_circ)
 {
   /* identical to padding sent */
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, on_circ) {
+    on_circ->padding_info[i]->last_cell_time_sec = approx_time();
     circpad_machine_spec_transition(on_circ->padding_info[i],
                               CIRCPAD_EVENT_PADDING_RECV);
   } FOR_EACH_ACTIVE_CIRCUIT_MACHINE_END;
