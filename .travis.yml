@@ -42,7 +42,7 @@ matrix:
   ## include creates builds with gcc, linux
   include:
     ## We include a single coverage build with the best options for coverage
-    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
+    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS="" TOR_TEST_RNG_SEED="636f766572616765"
     ## We only want to check these build option combinations once
     ## (they shouldn't vary by compiler or OS)
     ## We run rust and coverage with hardening off, which seems like enough
