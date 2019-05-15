@@ -44,9 +44,7 @@ struct trn_cell_introduce1 {
 /* INTRODUCE_ACK payload. See details in section 3.2.2. */
 struct trn_cell_introduce_ack {
   /* Status of introduction. */
-  u16 status IN [TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS,
-                 TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID,
-                 TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT];
+  u16 status;
 
   /* Extension(s). Reserved fields. */
   struct trn_cell_extension extensions;
