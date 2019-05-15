@@ -55,6 +55,7 @@ void test_circuitpadding_conditions(void *arg);
 void test_circuitpadding_serialize(void *arg);
 void test_circuitpadding_rtt(void *arg);
 void test_circuitpadding_tokens(void *arg);
+void test_circuitpadding_state_length(void *arg);
 
 static void
 simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
@@ -1644,6 +1645,55 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
 }
 
 static circpad_machine_spec_t *
+helper_create_length_machine(void)
+{
+  circpad_machine_spec_t *ret =
+    tor_malloc_zero(sizeof(circpad_machine_spec_t));
+
+  /* Start, burst */
+  circpad_machine_states_init(ret, 2);
+
+  ret->states[CIRCPAD_STATE_START].
+      next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
+
+  ret->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_PADDING_SENT] = CIRCPAD_STATE_BURST;
+
+  ret->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
+
+  ret->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_BINS_EMPTY] = CIRCPAD_STATE_END;
+
+  /* No token removal.. end via state_length only */
+  ret->states[CIRCPAD_STATE_BURST].token_removal =
+      CIRCPAD_TOKEN_REMOVAL_NONE;
+
+  /* Let's have this one end after 12 packets */
+  ret->states[CIRCPAD_STATE_BURST].length_dist.type = CIRCPAD_DIST_UNIFORM;
+  ret->states[CIRCPAD_STATE_BURST].length_dist.param1 = 12;
+  ret->states[CIRCPAD_STATE_BURST].length_dist.param2 = 13;
+  ret->states[CIRCPAD_STATE_BURST].max_length = 12;
+
+  ret->states[CIRCPAD_STATE_BURST].histogram_len = 4;
+
+  ret->states[CIRCPAD_STATE_BURST].histogram_edges[0] = 0;
+  ret->states[CIRCPAD_STATE_BURST].histogram_edges[1] = 1;
+  ret->states[CIRCPAD_STATE_BURST].histogram_edges[2] = 1000000;
+  ret->states[CIRCPAD_STATE_BURST].histogram_edges[3] = 10000000;
+
+  ret->states[CIRCPAD_STATE_BURST].histogram[0] = 0;
+  ret->states[CIRCPAD_STATE_BURST].histogram[1] = 0;
+  ret->states[CIRCPAD_STATE_BURST].histogram[2] = 6;
+
+  ret->states[CIRCPAD_STATE_BURST].histogram_total_tokens = 6;
+  ret->states[CIRCPAD_STATE_BURST].use_rtt_estimate = 0;
+  ret->states[CIRCPAD_STATE_BURST].length_includes_nonpadding = 0;
+
+  return ret;
+}
+
+static circpad_machine_spec_t *
 helper_create_conditional_machine(void)
 {
   circpad_machine_spec_t *ret =
@@ -1736,6 +1786,135 @@ helper_create_conditional_machines(void)
   add = helper_create_conditional_machine();
   add->machine_num = 3;
   register_padding_machine(add, relay_padding_machines);
+}
+
+void
+test_circuitpadding_state_length(void *arg)
+{
+  /**
+   * Test plan:
+   *  * Explicitly test that with no token removal enabled, we hit
+   *    the state length limit due to either padding, or non-padding.
+   *  * Repeat test with an arbitrary token removal strategy, and
+   *    verify that if we run out of tokens due to padding before we
+   *    hit the state length, we still go to state end (all our
+   *    token removal tests only test nonpadding token removal).
+   */
+  int64_t actual_mocked_monotime_start;
+  (void)arg;
+  MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
+  MOCK(circpad_send_command_to_hop, circpad_send_command_to_hop_mock);
+
+  nodes_init();
+  dummy_channel.cmux = circuitmux_alloc();
+  relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel,
+                                            &dummy_channel));
+  client_side = TO_CIRCUIT(origin_circuit_new());
+  relay_side->purpose = CIRCUIT_PURPOSE_OR;
+  client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+
+  monotime_init();
+  monotime_enable_test_mocking();
+  actual_mocked_monotime_start = MONOTIME_MOCK_START;
+  monotime_set_mock_time_nsec(actual_mocked_monotime_start);
+  monotime_coarse_set_mock_time_nsec(actual_mocked_monotime_start);
+  curr_mocked_time = actual_mocked_monotime_start;
+
+  /* This is needed so that we are not considered to be dormant */
+  note_user_activity(20);
+
+  timers_initialize();
+  circpad_machine_spec_t *client_machine =
+      helper_create_length_machine();
+
+  MOCK(circuit_package_relay_cell,
+       circuit_package_relay_cell_mock);
+  MOCK(node_get_by_id,
+       node_get_by_id_mock);
+
+  client_side->padding_machine[0] = client_machine;
+  client_side->padding_info[0] =
+    circpad_circuit_machineinfo_new(client_side, 0);
+  circpad_machine_runtime_t *mi = client_side->padding_info[0];
+
+  circpad_cell_event_padding_sent(client_side);
+  tt_int_op(mi->state_length, OP_EQ, 12);
+  tt_ptr_op(mi->histogram, OP_EQ, NULL);
+
+  /* Verify that non-padding does not change our state length */
+  circpad_cell_event_nonpadding_sent(client_side);
+  tt_int_op(mi->state_length, OP_EQ, 12);
+
+  /* verify that sending padding changes our state length */
+  for (uint64_t i = mi->state_length-1; i > 0; i--) {
+    circpad_send_padding_cell_for_callback(mi);
+    tt_int_op(mi->state_length, OP_EQ, i);
+  }
+  circpad_send_padding_cell_for_callback(mi);
+
+  tt_int_op(mi->state_length, OP_EQ, -1);
+  tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
+
+  /* Restart machine */
+  mi->current_state = CIRCPAD_STATE_START;
+
+  /* Now, count nonpadding as part of the state length */
+  client_machine->states[CIRCPAD_STATE_BURST].length_includes_nonpadding = 1;
+
+  circpad_cell_event_padding_sent(client_side);
+  tt_int_op(mi->state_length, OP_EQ, 12);
+
+  /* Verify that non-padding does change our state length now */
+  for (uint64_t i = mi->state_length-1; i > 0; i--) {
+    circpad_cell_event_nonpadding_sent(client_side);
+    tt_int_op(mi->state_length, OP_EQ, i);
+  }
+
+  circpad_cell_event_nonpadding_sent(client_side);
+  tt_int_op(mi->state_length, OP_EQ, -1);
+  tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
+
+  /* Now, just test token removal when we send padding */
+  client_machine->states[CIRCPAD_STATE_BURST].token_removal =
+      CIRCPAD_TOKEN_REMOVAL_EXACT;
+
+  /* Restart machine */
+  mi->current_state = CIRCPAD_STATE_START;
+  circpad_cell_event_padding_sent(client_side);
+  tt_int_op(mi->state_length, OP_EQ, 12);
+  tt_ptr_op(mi->histogram, OP_NE, NULL);
+  tt_int_op(mi->chosen_bin, OP_EQ, 2);
+
+  /* verify that sending padding changes our state length and
+   * our histogram now */
+  for (uint32_t i = mi->histogram[2]-1; i > 0; i--) {
+    circpad_send_padding_cell_for_callback(mi);
+    tt_int_op(mi->chosen_bin, OP_EQ, 2);
+    tt_int_op(mi->histogram[2], OP_EQ, i);
+  }
+
+  tt_int_op(mi->state_length, OP_EQ, 7);
+  tt_int_op(mi->histogram[2], OP_EQ, 1);
+
+  circpad_send_padding_cell_for_callback(mi);
+  tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
+
+ done:
+  tor_free(client_machine->states);
+  tor_free(client_machine);
+
+  free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  free_fake_orcirc(relay_side);
+
+  circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
+  circuitmux_free(dummy_channel.cmux);
+  timers_shutdown();
+  monotime_disable_test_mocking();
+  UNMOCK(circuit_package_relay_cell);
+  UNMOCK(circuitmux_attach_circuit);
+  UNMOCK(node_get_by_id);
+
+  return;
 }
 
 void
@@ -2556,6 +2735,7 @@ test_circuitpadding_reduce_disable(void *arg)
 
 struct testcase_t circuitpadding_tests[] = {
   TEST_CIRCUITPADDING(circuitpadding_tokens, TT_FORK),
+  TEST_CIRCUITPADDING(circuitpadding_state_length, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_negotiation, TT_FORK),
   TEST_CIRCUITPADDING(circuitpadding_wronghop, TT_FORK),
   /** Disabled unstable test until #29298 is implemented (see #29122) */
