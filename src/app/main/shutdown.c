@@ -53,6 +53,8 @@
 #include "lib/geoip/geoip.h"
 
 void evdns_shutdown(int);
+// XXX: Lol this is some CI merge bullshit, don't merge this:
+void protover_summary_cache_free_all(void);
 
 /** Do whatever cleanup is necessary before shutting Tor down. */
 void
