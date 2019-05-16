@@ -255,35 +255,6 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
 
 /************************** Rendezvous-circuit machine ***********************/
 
-/* Setup the obf state of the machine that hides client-side rend
- * circuits. */
-static void
-setup_obf_state_for_hiding_rend_circuits(circpad_state_t *obf_state)
-{
-  /* Don't use a token removal strategy since we don't want to use monotime
-     functions. We want this machine to be light. */
-  obf_state->token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
-
-  /* Instead, to control the volume of padding (we just want to send a single
-   * padding cell) we will use a static state length. We just want one token,
-   * since we want to make the following pattern:
-   * [PADDING_NEGOTIATE] -> [DROP] -> PADDING_NEGOTIATED -> DROP */
-  obf_state->length_dist.type = CIRCPAD_DIST_UNIFORM;
-  obf_state->length_dist.param1 = 1;
-  obf_state->length_dist.param2 = 2;
-
-  /* Histogram is: (0 msecs, 50 msecs, infinity). We want this to be fast so
-   * that the incoming PADDING_NEGOTIATED cell always arrives after the
-   * outgoing [DROP]. */
-  obf_state->histogram_len = 2;
-  obf_state->histogram_edges[0] = 0;
-  obf_state->histogram_edges[1] = 1000;
-
-  /* dummy amount of tokens. they don't matter. we rely on state length. */
-  obf_state->histogram[0] = 1;
-  obf_state->histogram_total_tokens = 1;
-}
-
 /** Create a client-side padding machine that aims to hide rendezvous
  *  circuits.*/
 void
@@ -356,8 +327,41 @@ circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
   client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
       next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 
-  setup_obf_state_for_hiding_rend_circuits(
-                  &client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]);
+  /* Don't use a token removal strategy since we don't want to use monotime
+   * functions and we want to avoid mallocing histogram copies. We want
+   * this machine to be light. */
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
+
+  /* Instead, to control the volume of padding (we just want to send a single
+   * padding cell) we will use a static state length. We just want one token,
+   * since we want to make the following pattern:
+   * [PADDING_NEGOTIATE] -> [DROP] -> PADDING_NEGOTIATED -> DROP */
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    length_dist.type = CIRCPAD_DIST_UNIFORM;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    length_dist.param1 = 1;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    length_dist.param2 = 2; // rand(1,2) is always 1
+
+  /* Histogram is: (0 msecs, 1 msec, infinity). We want this to be fast so
+   * that we send our outgoing [DROP] before the PADDING_NEGOTIATED comes
+   * back from the relay side. */
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram_len = 2;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram_edges[0] = 0;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram_edges[1] = 1000;
+
+  /* We want a 100% probability of choosing an inter-packet delay of
+   * between 0 and 1ms. Since we don't use token removal,
+   * the number of tokens does not matter. (And also, state_length
+   * governs how many packets we send). */
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram[0] = 1;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram_total_tokens = 1;
 
   /* Register the machine */
   client_machine->machine_num = smartlist_len(machines_sl);
@@ -408,8 +412,41 @@ circpad_machine_relay_hide_rend_circuits(smartlist_t *machines_sl)
   relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
       next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
 
-  setup_obf_state_for_hiding_rend_circuits(
-                   &relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]);
+  /* Don't use a token removal strategy since we don't want to use monotime
+   * functions and we want to avoid mallocing histogram copies. We want
+   * this machine to be light. */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
+
+  /* Instead, to control the volume of padding (we just want to send a single
+   * padding cell) we will use a static state length. We just want one token,
+   * since we want to make the following pattern:
+   * [PADDING_NEGOTIATE] -> [DROP] -> PADDING_NEGOTIATED -> DROP */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    length_dist.type = CIRCPAD_DIST_UNIFORM;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    length_dist.param1 = 1;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    length_dist.param2 = 2; // rand(1,2) is always 1
+
+  /* Histogram is: (0 msecs, 1 msec, infinity). We want this to be fast so
+   * that the outgoing DROP cell is sent immediately after the
+   * PADDING_NEGOTIATED. */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram_len = 2;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram_edges[0] = 0;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram_edges[1] = 1000;
+
+  /* We want a 100% probability of choosing an inter-packet delay of
+   * between 0 and 1ms. Since we don't use token removal,
+   * the number of tokens does not matter. (And also, state_length
+   * governs how many packets we send). */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram[0] = 1;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram_total_tokens = 1;
 
   /* Register the machine */
   relay_machine->machine_num = smartlist_len(machines_sl);
