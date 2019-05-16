@@ -57,49 +57,6 @@
 #include "core/or/circuitpadding_machines.h"
 #include "core/or/circuitpadding.h"
 
-/* Setup the simple state machine we use for all HS padding machines */
-static void
-setup_state_machine_for_hiding_intro_circuits(circpad_machine_spec_t *machine)
-{
-  /* Two states: START, OBFUSCATE_CIRC_SETUP (and END) */
-  circpad_machine_states_init(machine, 2);
-
-  /* For the relay-side machine, we want to transition
-   * START -> OBFUSCATE_CIRC_SETUP upon first non-padding
-   * cell sent (PADDING_NEGOTIATED in this case).
-   *
-   * For the origin-side machine, we transition to OBFUSCATE_CIRC_SETUP after
-   * sending PADDING_NEGOTIATE, and we stay there (without sending any padding)
-   * until we receive a STOP from the other side. */
-  machine->states[CIRCPAD_STATE_START].
-    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
-
-  /* For the relay-side, we want to transition from OBFUSCATE_CIRC_SETUP to END
-   * state when the length finishes.
-   *
-   * For the origin-side, we don't care because the relay-side machine is gonna
-   * END us. */
-  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
-
-  /* Now let's define the OBF -> OBF transitions that maintain our padding
-   * flow:
-   *
-   * For the relay-side machine, we want to keep on sending padding bytes even
-   * when nothing else happens on this circuit. */
-  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    next_state[CIRCPAD_EVENT_PADDING_SENT] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
-  /* For the relay-side machine, we need this transition so that we re-enter
-     the state, after PADDING_NEGOTIATED is sent. Otherwise, the remove token
-     function will disable the timer, and nothing will restart it since there
-     is no other motion on an intro circuit. */
-  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
-}
-
 /* Setup the OBFUSCATE_CIRC_SETUP state of the machine that hides client-side
  * intro circuits. */
 static void
@@ -202,8 +159,19 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
   client_machine->allowed_padding_count = INTRO_MACHINE_MAXIMUM_PADDING;
   client_machine->max_padding_percent = 1;
 
-  /* Setup states and histograms */
-  setup_state_machine_for_hiding_intro_circuits(client_machine);
+  /* Two states: START, OBFUSCATE_CIRC_SETUP (and END) */
+  circpad_machine_states_init(client_machine, 2);
+
+  /* For the origin-side machine, we transition to OBFUSCATE_CIRC_SETUP after
+   * sending PADDING_NEGOTIATE, and we stay there (without sending any padding)
+   * until we receive a STOP from the other side. */
+  client_machine->states[CIRCPAD_STATE_START].
+    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+
+  /* origin-side machine has no event reactions while in
+   * CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP, so no more state transitions here). */
+
   setup_obf_state_for_hiding_intro_circuits(
                    &client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP],
                    true);
@@ -243,8 +211,37 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
   relay_machine->allowed_padding_count = INTRO_MACHINE_MAXIMUM_PADDING;
   relay_machine->max_padding_percent = 1;
 
-  /* Setup states and histograms */
-  setup_state_machine_for_hiding_intro_circuits(relay_machine);
+  /* Two states: START, OBFUSCATE_CIRC_SETUP (and END) */
+  circpad_machine_states_init(relay_machine, 2);
+
+  /* For the relay-side machine, we want to transition
+   * START -> OBFUSCATE_CIRC_SETUP upon first non-padding
+   * cell sent (PADDING_NEGOTIATED in this case).  */
+  relay_machine->states[CIRCPAD_STATE_START].
+    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+
+  /* For the relay-side, we want to transition from OBFUSCATE_CIRC_SETUP to END
+   * state when the length finishes. */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
+
+  /* Now let's define the OBF -> OBF transitions that maintain our padding
+   * flow:
+   *
+   * For the relay-side machine, we want to keep on sending padding bytes even
+   * when nothing else happens on this circuit. */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    next_state[CIRCPAD_EVENT_PADDING_SENT] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+  /* For the relay-side machine, we need this transition so that we re-enter
+     the state, after PADDING_NEGOTIATED is sent. Otherwise, the remove token
+     function will disable the timer, and nothing will restart it since there
+     is no other motion on an intro circuit. */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+
   setup_obf_state_for_hiding_intro_circuits(
                  &relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP],
                  false);
