@@ -169,23 +169,26 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
    * relay cell sequence (outgoing cells marked in [brackets]):
    *
    * [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2 -> [BEGIN] -> CONNECTED
-   *
-   * followed usually by a [DATA] -> [DATA] -> DATA -> DATA.
+   *   -> [DATA] -> [DATA] -> DATA -> DATA...(inbound data cells continue)
    *
    * Whereas normal introduction circuits usually look like:
    *
    * [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2
-   *  -> [INTRODUCE1] -> INTRODUCE_ACK
+   *   -> [INTRO1] -> INTRODUCE_ACK
    *
-   * This means that up to the sixth cell, both general and intro circuits have
-   * identical cell sequences. After that we want to mimic the
-   * [DATA] -> [DATA] -> DATA -> DATA sequence, which we achieve by padding
-   * after the INTRODUCE1 has been sent which usually looks like:
+   * This means that up to the sixth cell (first line of each sequence above),
+   * both general and intro circuits have identical cell sequences. After that
+   * we want to mimic the second line sequence of
+   *   -> [DATA] -> [DATA] -> DATA -> DATA...(inbound data cells continue)
    *
-   *     [INTRODUCE1] -> [PADDING_NEGOTIATE] -> PADDING_NEGOTIATED -> INTRO_ACK
+   * We achieve this by starting padding INTRODUCE1 has been sent. With padding
+   * negotiation cells, in the common case of the second line looks like:
+   *   -> [INTRO1] -> [PADDING_NEGOTIATE] -> PADDING_NEGOTIATED -> INTRO_ACK
    *
-   * effectively blending with general circuits up until the end of the circuit
-   * setup. */
+   * Then, the middle node will send between INTRO_MACHINE_MINIMUM_PADDING and
+   * INTRO_MACHINE_MAXIMUM_PADDING cells, to match the "...(inbound data cells
+   * continue)" portion of the trace (aka the rest of an HTTPS response body).
+   */
   client_machine->conditions.purpose_mask =
     circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)|
     circpad_circ_purpose_to_mask(CIRCUIT_PURPOSE_C_INTRODUCE_ACKED)|
@@ -326,25 +329,30 @@ circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
   /* We only want to pad rendezvous circuits, and we want to start padding only
    * after the rendezvous circuit has been established.
    *
-   * Following a similar argument as above we are aiming for padded rendezvous
-   * circuits to blend in with the initial cell sequence of general circuits
-   * which usually look like this:
+   * Following a similar argument as for intro circuits, we are aiming for
+   * padded rendezvous circuits to blend in with the initial cell sequence of
+   * general circuits which usually look like this:
    *
    * [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2 -> [BEGIN] -> CONNECTED
-   *
-   * followed usually by a [DATA] -> [DATA] -> DATA -> DATA sequence.
+   *    -> [DATA] -> [DATA] -> DATA -> DATA...(incoming cells continue)
    *
    * Whereas normal rendezvous circuits usually look like:
    *
-   * [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2 -> [ESTABLISH_REND]
-   *  -> REND_ESTABLISHED -> RENDEZVOUS2 -> [BEGIN]
+   * [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2 -> [EST_REND] -> REND_EST
+   *    -> REND2 -> [BEGIN]
    *
-   * This means that up to the sixth cell, both general and intro circuits have
-   * identical cell sequences. After that we want to mimic a
-   * [DATA] -> [DATA] -> DATA -> DATA sequence, which we achieve by sending a
-   * [PADDING_NEGOTIATE] right after receiving REND_ESTABLISHED, followed by
-   * sending a [DROP] cell, and then receiving a PADDING_NEGOTIATED -> DROP
-   * sequence.
+   * This means that up to the sixth cell (in the first line), both general and
+   * rend circuits have identical cell sequences.
+   *
+   * After that we want to mimic a [DATA] -> [DATA] -> DATA -> DATA sequence.
+   *
+   * With padding negotiation right after the REND_ESTABLISHED, the sequence
+   * becomes:
+   *
+   * [EXTEND2] -> EXTENDED2 -> [EXTEND2] -> EXTENDED2 -> [EST_REND] -> REND_EST
+   *    -> [PADDING_NEGOTIATE] -> [DROP] -> PADDING_NEGOTIATED -> DROP...
+   *
+   * After which normal application DATA cells continue on the circuit.
    *
    * Hence this way we make rendezvous circuits look like general circuits up
    * till the end of the circuit setup. */
