@@ -513,7 +513,7 @@ circpad_choose_state_length(circpad_machine_runtime_t *mi)
 
   mi->state_length = clamp_double_to_int64(length);
 
-  log_info(LD_GENERAL, "State length sampled to %"PRIu64".", mi->state_length);
+  log_info(LD_CIRC, "State length sampled to %"PRIu64".", mi->state_length);
 }
 
 /**
@@ -888,7 +888,7 @@ circpad_machine_remove_closest_token(circpad_machine_runtime_t *mi,
       bin_to_remove = lower;
     }
     mi->histogram[bin_to_remove]--;
-    log_debug(LD_GENERAL, "Removing token from bin %d", bin_to_remove);
+    log_debug(LD_CIRC, "Removing token from bin %d", bin_to_remove);
     return;
   } else {
     if (current - lower > higher - current) {
@@ -2071,7 +2071,7 @@ circpad_add_matching_machines(origin_circuit_t *on_circ,
         if (circpad_negotiate_padding(on_circ, machine->machine_num,
                                   machine->target_hopnum,
                                   CIRCPAD_COMMAND_START) < 0) {
-          log_info(LD_GENERAL, "Padding not negotiated. Cleaning machine");
+          log_info(LD_CIRC, "Padding not negotiated. Cleaning machine");
           circpad_circuit_machineinfo_free_idx(circ, i);
           circ->padding_machine[i] = NULL;
           on_circ->padding_negotiation_failed = 1;
@@ -2347,11 +2347,11 @@ circpad_setup_machine_on_circ(circuit_t *on_circ,
 
   /* Log message */
   if (CIRCUIT_IS_ORIGIN(on_circ)) {
-    log_warn(LD_GENERAL, "Registering machine %s to origin circ %u (%d)",
+    log_info(LD_CIRC, "Registering machine %s to origin circ %u (%d)",
              machine->name,
              TO_ORIGIN_CIRCUIT(on_circ)->global_identifier, on_circ->purpose);
   } else {
-    log_warn(LD_GENERAL, "Registering machine %s to non-origin circ (%d)",
+    log_info(LD_CIRC, "Registering machine %s to non-origin circ (%d)",
              machine->name, on_circ->purpose);
   }
 
@@ -2375,7 +2375,7 @@ padding_machine_state_is_valid(const circpad_state_t *state)
 
   /* We need at least two bins in a histogram */
   if (state->histogram_len < 2) {
-    log_warn(LD_GENERAL, "You can't have a histogram with less than 2 bins");
+    log_warn(LD_CIRC, "You can't have a histogram with less than 2 bins");
     return false;
   }
 
@@ -2385,7 +2385,7 @@ padding_machine_state_is_valid(const circpad_state_t *state)
     /* Check that histogram edges are strictly increasing. Ignore the first
      * edge since it can be zero. */
     if (prev_bin_edge >= state->histogram_edges[b] && b > 0) {
-      log_warn(LD_GENERAL, "Histogram edges are not increasing [%u/%u]",
+      log_warn(LD_CIRC, "Histogram edges are not increasing [%u/%u]",
                prev_bin_edge, state->histogram_edges[b]);
       return false;
     }
@@ -2397,7 +2397,7 @@ padding_machine_state_is_valid(const circpad_state_t *state)
   }
   /* Verify that the total number of tokens is correct */
   if (tokens_count != state->histogram_total_tokens) {
-    log_warn(LD_GENERAL, "Histogram token count is wrong [%u/%u]",
+    log_warn(LD_CIRC, "Histogram token count is wrong [%u/%u]",
              tokens_count, state->histogram_total_tokens);
     return false;
   }
@@ -2428,7 +2428,7 @@ circpad_register_padding_machine(circpad_machine_spec_t *machine,
                                  smartlist_t *machine_list)
 {
   if (!padding_machine_is_valid(machine)) {
-    log_warn(LD_GENERAL, "Machine #%u is invalid. Ignoring.",
+    log_warn(LD_CIRC, "Machine #%u is invalid. Ignoring.",
              machine->machine_num);
     return;
   }
