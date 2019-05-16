@@ -53,6 +53,7 @@
 #include "lib/math/prob_distr.h"
 #include "core/or/or.h"
 #include "core/or/circuitpadding.h"
+#include "core/or/circuitpadding_machines.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/mainloop/netstatus.h"
@@ -79,8 +80,6 @@
 
 #include "app/config/config.h"
 
-static inline circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t
-                                          circ_purpose);
 static inline circpad_circuit_state_t circpad_circuit_state(
                                         origin_circuit_t *circ);
 static void circpad_setup_machine_on_circ(circuit_t *on_circ,
@@ -492,7 +491,10 @@ circpad_machine_setup_tokens(circpad_machine_runtime_t *mi)
   const circpad_state_t *state = circpad_machine_current_state(mi);
 
   /* If this state doesn't exist, or doesn't have token removal,
-   * free any previous state's histogram, and bail */
+   * free any previous state's runtime histogram, and bail.
+   *
+   * If we don't have a token removal strategy, we also don't need a runtime
+   * histogram and we rely on the immutable one in machine_spec_t. */
   if (!state || state->token_removal == CIRCPAD_TOKEN_REMOVAL_NONE) {
     if (mi->histogram) {
       tor_free(mi->histogram);
@@ -1990,7 +1992,6 @@ circpad_circuit_state(origin_circuit_t *circ)
  * Convert a normal circuit purpose into a bitmask that we can
  * use for determining matching circuits.
  */
-static inline
 circpad_purpose_mask_t
 circpad_circ_purpose_to_mask(uint8_t circ_purpose)
 {
@@ -2623,6 +2624,14 @@ circpad_machines_init(void)
   origin_padding_machines = smartlist_new();
   relay_padding_machines = smartlist_new();
 
+  /* Register machines for hiding client-side intro circuits */
+  circpad_machine_client_hide_intro_circuits(origin_padding_machines);
+  circpad_machine_relay_hide_intro_circuits(relay_padding_machines);
+
+  /* Register machines for hiding client-side rendezvous circuits */
+  circpad_machine_client_hide_rend_circuits(origin_padding_machines);
+  circpad_machine_relay_hide_rend_circuits(relay_padding_machines);
+
   // TODO: Parse machines from consensus and torrc
 #ifdef TOR_UNIT_TESTS
   circpad_circ_client_machine_init();
@@ -2877,6 +2886,7 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
   }
 
   if (negotiated->command == CIRCPAD_COMMAND_STOP) {
+    log_info(LD_CIRC, "Received STOP command on PADDING_NEGOTIATED");
     /* There may not be a padding_info here if we shut down the
      * machine in circpad_shutdown_old_machines(). Or, if
      * circpad_add_matching_matchines() added a new machine,
