@@ -1,0 +1,4 @@
+  o Minor bugfixes (static analysis):
+    - Fix several spurious Coverity warnings about the unit tests, to lower our
+      chances of missing any real warnings in the future. Fixes bug 30150;
+      bugfix on 0.3.5.1-alpha and various other Tor versions.
