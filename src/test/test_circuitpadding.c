@@ -3007,10 +3007,10 @@ helper_test_hs_machines(bool test_intro_circs)
     relay_side->padding_info[0];
 
   if (test_intro_circs) {
-    tt_int_op(client_machine_runtime->state_length, OP_GE,
-              INTRO_MACHINE_MINIMUM_PADDING);
-    tt_int_op(client_machine_runtime->state_length, OP_LT,
-              INTRO_MACHINE_MAXIMUM_PADDING);
+    /* on the client side, we don't send any padding so
+     * state length is not set */
+    tt_int_op(client_machine_runtime->state_length, OP_EQ, -1);
+    /* relay side has state limits. check them */
     tt_int_op(relay_machine_runtime->state_length, OP_GE,
               INTRO_MACHINE_MINIMUM_PADDING);
     tt_int_op(relay_machine_runtime->state_length, OP_LT,
@@ -3020,15 +3020,28 @@ helper_test_hs_machines(bool test_intro_circs)
     tt_int_op(relay_machine_runtime->state_length, OP_EQ, 1);
   }
 
-  /* Send state_length worth of padding and see that the state goes to END */
-  int i;
-  for (i = (int) client_machine_runtime->state_length ; i > 0 ; i--) {
-    circpad_send_padding_cell_for_callback(client_machine_runtime);
+  if (test_intro_circs) {
+    int i;
+    /* Send state_length worth of padding from the relay and see that the
+     * client state goes to END */
+    for (i = (int) relay_machine_runtime->state_length ; i > 0 ; i--) {
+      circpad_send_padding_cell_for_callback(relay_machine_runtime);
+    }
+    /* See that the machine has been teared down after all the length has been
+     * exhausted (the padding info should now be null on both sides) */
+    tt_ptr_op(relay_side->padding_info[0], OP_EQ, NULL);
+    tt_ptr_op(client_side->padding_info[0], OP_EQ, NULL);
+  } else {
+    int i;
+    /* Send state_length worth of padding and see that the state goes to END */
+    for (i = (int) client_machine_runtime->state_length ; i > 0 ; i--) {
+      circpad_send_padding_cell_for_callback(client_machine_runtime);
+    }
+    /* See that the machine has been teared down after all the length has been
+     * exhausted. */
+    tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
+              CIRCPAD_STATE_END);
   }
-  /* See that the machine has been teared down after all the length has been
-   * exhausted. */
-  tt_int_op(client_side->padding_info[0]->current_state, OP_EQ,
-            CIRCPAD_STATE_END);
 
  done:
   free_fake_orcirc(relay_side);

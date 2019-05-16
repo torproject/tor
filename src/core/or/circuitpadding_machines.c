@@ -57,48 +57,6 @@
 #include "core/or/circuitpadding_machines.h"
 #include "core/or/circuitpadding.h"
 
-/* Setup the OBFUSCATE_CIRC_SETUP state of the machine that hides client-side
- * intro circuits. */
-static void
-setup_obf_state_for_hiding_intro_circuits(circpad_state_t *obf_state,
-                                            bool is_client)
-{
-  /* Token removal strategy for OBFUSCATE_CIRC_SETUP state. We pick the
-   * simplest one since we rely on the state length sampling and not the
-   * tokens. */
-  obf_state->token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
-
-  /* Figure out the length of the OBFUSCATE_CIRC_SETUP state so that it's
-   * randomized. We will set the histogram such that we don't send any padding
-   * from the origin-side, so just tune these parameteres for the
-   * relay-side. */
-  obf_state->length_dist.type = CIRCPAD_DIST_UNIFORM;
-  obf_state->length_dist.param1 = INTRO_MACHINE_MINIMUM_PADDING;
-  obf_state->length_dist.param2 = INTRO_MACHINE_MAXIMUM_PADDING;
-
-  /* Configure histogram */
-  obf_state->histogram_len = 2;
-  if (is_client) {
-    /* For the origin-side machine we don't want to send any padding, so setup
-     * infinite delays. */
-    obf_state->histogram_edges[0] = CIRCPAD_DELAY_INFINITE-1;
-    obf_state->histogram_edges[1] = CIRCPAD_DELAY_INFINITE;
-    /* zero tokens */
-    obf_state->histogram[0] = 0;
-  } else {
-    /* For the relay-side machine we want to batch padding instantly to pretend
-     * its an incoming directory download. So set the histogram edges tight:
-     * (1, 10ms, infinity). */
-    obf_state->histogram_edges[0] = 1000;
-    obf_state->histogram_edges[1] = 10000;
-    /* padding is controlled by state length, so this is just a high value */
-    obf_state->histogram[0] = 1000;
-  }
-
-  /* just one bin, so setup the total tokens */
-  obf_state->histogram_total_tokens = obf_state->histogram[0];
-}
-
 /** Create a client-side padding machine that aims to hide IP circuits. In
  *  particular, it keeps intro circuits alive until a bunch of fake traffic has
  *  been pushed through.
@@ -170,11 +128,11 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
     CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
   /* origin-side machine has no event reactions while in
-   * CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP, so no more state transitions here). */
+   * CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP, so no more state transitions here. */
 
-  setup_obf_state_for_hiding_intro_circuits(
-                   &client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP],
-                   true);
+  /* The client side should never send padding, so it does not need
+   * to specify token removal, or a histogram definition or state lengths.
+   * That is all controlled by the middle node. */
 
   /* Register the machine */
   client_machine->machine_num = smartlist_len(machines_sl);
@@ -242,9 +200,49 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
     next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
     CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
 
-  setup_obf_state_for_hiding_intro_circuits(
-                 &relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP],
-                 false);
+  /* Token removal strategy for OBFUSCATE_CIRC_SETUP state: Don't
+   * remove any tokens.
+   *
+   * We rely on the state length sampling and not token removal, to avoid
+   * the mallocs required to copy the histograms for token removal,
+   * and to avoid monotime calls needed to determine histogram
+   * bins for token removal. */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    token_removal = CIRCPAD_TOKEN_REMOVAL_NONE;
+
+  /* Figure out the length of the OBFUSCATE_CIRC_SETUP state so that it's
+   * randomized. The relay side will send between INTRO_MACHINE_MINIMUM_PADDING
+   * and INTRO_MACHINE_MAXIMUM_PADDING padding cells towards the client. */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    length_dist.type = CIRCPAD_DIST_UNIFORM;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    length_dist.param1 = INTRO_MACHINE_MINIMUM_PADDING;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    length_dist.param2 = INTRO_MACHINE_MAXIMUM_PADDING;
+
+  /* Configure histogram */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+     histogram_len = 2;
+
+  /* For the relay-side machine we want to batch padding instantly to pretend
+   * its an incoming directory download. So set the histogram edges tight:
+   * (1, 10ms, infinity). */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram_edges[0] = 1000;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram_edges[1] = 10000;
+
+  /* We put all our tokens in bin 0, which means we want 100% probability
+   * for choosing a inter-packet delay of between 1000 and 10000 microseconds
+   * (1 to 10ms). Since we only have 1 bin, it doesn't matter how many tokens
+   * there are, 1000 out of 1000 is 100% */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram[0] = 1000;
+
+  /* just one bin, so setup the total tokens */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+    histogram_total_tokens =
+      relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].histogram[0];
 
   /* Register the machine */
   relay_machine->machine_num = smartlist_len(machines_sl);
