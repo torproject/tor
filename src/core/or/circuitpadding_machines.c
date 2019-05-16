@@ -284,26 +284,6 @@ setup_obf_state_for_hiding_rend_circuits(circpad_state_t *obf_state)
   obf_state->histogram_total_tokens = 1;
 }
 
-/* Setup the simple state machine we use for all HS padding machines */
-static void
-setup_state_machine_for_hiding_rend_circuits(circpad_machine_spec_t *machine)
-{
-  /* Two states: START, OBFUSCATE_CIRC_SETUP (and END) */
-  circpad_machine_states_init(machine, 2);
-
-  /* START -> OBFUSCATE_CIRC_SETUP transition upon sending the first
-   * non-padding cell (which is PADDING_NEGOTIATE) */
-  machine->states[CIRCPAD_STATE_START].
-    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
-    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
-
-  /* OBFUSCATE_CIRC_SETUP -> END transition when we finish all the tokens */
-  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_END;
-  machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
-      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
-}
-
 /** Create a client-side padding machine that aims to hide rendezvous
  *  circuits.*/
 void
@@ -360,8 +340,22 @@ circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
   client_machine->allowed_padding_count = 1;
   client_machine->max_padding_percent = 1;
 
-  /* Setup states and histograms */
-  setup_state_machine_for_hiding_rend_circuits(client_machine);
+  /* Two states: START, OBFUSCATE_CIRC_SETUP (and END) */
+  circpad_machine_states_init(client_machine, 2);
+
+  /* START -> OBFUSCATE_CIRC_SETUP transition upon sending the first
+   * non-padding cell (which is PADDING_NEGOTIATE) */
+  client_machine->states[CIRCPAD_STATE_START].
+    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+
+  /* OBFUSCATE_CIRC_SETUP -> END transition when we send our first
+   * padding packet and/or hit the state length (the state length is 1). */
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_END;
+  client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
+
   setup_obf_state_for_hiding_rend_circuits(
                   &client_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]);
 
@@ -398,8 +392,22 @@ circpad_machine_relay_hide_rend_circuits(smartlist_t *machines_sl)
   relay_machine->allowed_padding_count = 1;
   relay_machine->max_padding_percent = 1;
 
-  /* Setup states and histograms */
-  setup_state_machine_for_hiding_rend_circuits(relay_machine);
+  /* Two states: START, OBFUSCATE_CIRC_SETUP (and END) */
+  circpad_machine_states_init(relay_machine, 2);
+
+  /* START -> OBFUSCATE_CIRC_SETUP transition upon sending the first
+   * non-padding cell (which is PADDING_NEGOTIATED) */
+  relay_machine->states[CIRCPAD_STATE_START].
+    next_state[CIRCPAD_EVENT_NONPADDING_SENT] =
+    CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP;
+
+  /* OBFUSCATE_CIRC_SETUP -> END transition when we send our first
+   * padding packet and/or hit the state length (the state length is 1). */
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_END;
+  relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP].
+      next_state[CIRCPAD_EVENT_LENGTH_COUNT] = CIRCPAD_STATE_END;
+
   setup_obf_state_for_hiding_rend_circuits(
                    &relay_machine->states[CIRCPAD_STATE_OBFUSCATE_CIRC_SETUP]);
 
