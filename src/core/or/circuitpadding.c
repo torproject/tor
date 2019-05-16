@@ -1726,13 +1726,12 @@ circpad_estimate_circ_rtt_on_send(circuit_t *circ,
      * to back. Stop estimating RTT in this case. Note that we only
      * stop RTT update if the circuit is opened, to allow for RTT estimates
      * of var cells during circ setup. */
-    mi->stop_rtt_update = 1;
-
-    if (!mi->rtt_estimate_usec) {
+    if (!mi->rtt_estimate_usec && !mi->stop_rtt_update) {
       static ratelim_t rtt_lim = RATELIM_INIT(600);
       log_fn_ratelim(&rtt_lim,LOG_NOTICE,LD_BUG,
         "Circuit sent two cells back to back before estimating RTT.");
     }
+    mi->stop_rtt_update = 1;
   }
 }
 
@@ -2821,6 +2820,7 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
                             const circpad_machine_spec_t *, m) {
       if (m->machine_num == negotiate->machine_type) {
         circpad_setup_machine_on_circ(circ, m);
+        circpad_cell_event_nonpadding_received(circ);
         goto done;
       }
     } SMARTLIST_FOREACH_END(m);
