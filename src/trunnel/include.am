@@ -11,7 +11,7 @@ TRUNNELINPUTS = \
 	src/trunnel/link_handshake.trunnel \
 	src/trunnel/pwbox.trunnel \
 	src/trunnel/channelpadding_negotiation.trunnel \
-	src/trunnel/sendme.trunnel \
+	src/trunnel/sendme.trunnel \
 	src/trunnel/socks5.trunnel \
 	src/trunnel/circpad_negotiation.trunnel
 

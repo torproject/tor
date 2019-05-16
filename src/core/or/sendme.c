@@ -157,7 +157,7 @@ cell_version_is_valid(uint8_t cell_version)
  *
  * This is the main critical function to make sure we can continue to
  * send/recv cells on a circuit. If the SENDME is invalid, the circuit should
- * be mark for close. */
+ * be marked for close by the caller. */
 STATIC bool
 sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
                 size_t cell_payload_len)
@@ -396,11 +396,11 @@ sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
  * the length of the SENDME cell payload (excluding the header). The
  * cell_payload is the payload.
  *
- * Return 0 on success that is the SENDME is valid and the package window has
- * been updated properly.
+ * Return 0 on success (the SENDME is valid and the package window has
+ * been updated properly).
  *
- * On error, a negative value is returned which indicate that the circuit must
- * be closed using the value as the reason for it. */
+ * On error, a negative value is returned, which indicates that the
+ * circuit must be closed using the value as the reason for it. */
 int
 sendme_process_circuit_level(crypt_path_t *layer_hint,
                              circuit_t *circ, const uint8_t *cell_payload,
@@ -462,11 +462,11 @@ sendme_process_circuit_level(crypt_path_t *layer_hint,
  * edge connection (stream) that the circuit circ is associated with. The
  * cell_body_len is the length of the payload (excluding the header).
  *
- * Return 0 on success that is the SENDME is valid and the package window has
- * been updated properly.
+ * Return 0 on success (the SENDME is valid and the package window has
+ * been updated properly).
  *
- * On error, a negative value is returned which indicate that the circuit must
- * be closed using the value as the reason for it. */
+ * On error, a negative value is returned, which indicates that the
+ * circuit must be closed using the value as the reason for it. */
 int
 sendme_process_stream_level(edge_connection_t *conn, circuit_t *circ,
                             uint16_t cell_body_len)

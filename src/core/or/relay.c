@@ -543,7 +543,7 @@ relay_command_to_string(uint8_t command)
 STATIC size_t
 get_pad_cell_offset(size_t data_len)
 {
-  /* This is never suppose to happen but in case it does, stop right away
+  /* This is never supposed to happen but in case it does, stop right away
    * because if tor is tricked somehow into not adding random bytes to the
    * payload with this function returning 0 for a bad data_len, the entire
    * authenticated SENDME design can be bypassed leading to bad denial of
@@ -577,7 +577,7 @@ pad_cell_payload(uint8_t *cell_payload, size_t data_len)
   }
 
   /* Remember here that the cell_payload is the length of the header and
-   * payload size so we offset it using the full lenght of the cell. */
+   * payload size so we offset it using the full length of the cell. */
   pad_len = CELL_PAYLOAD_SIZE - pad_offset;
   crypto_fast_rng_getbytes(get_thread_fast_rng(),
                            cell_payload + pad_offset, pad_len);
@@ -1621,7 +1621,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     }
   }
 
-  /* Tell circpad that we've recieved a recognized cell */
+  /* Tell circpad that we've received a recognized cell */
   circpad_deliver_recognized_relay_cell_events(circ, rh.command, layer_hint);
 
   /* either conn is NULL, in which case we've got a control cell, or else

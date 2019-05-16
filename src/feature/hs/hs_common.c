@@ -941,7 +941,7 @@ hs_parse_address(const char *address, ed25519_public_key_t *key_out,
   return -1;
 }
 
-/* Validate a given onion address. The length, the base32 decoding and
+/* Validate a given onion address. The length, the base32 decoding, and
  * checksum are validated. Return 1 if valid else 0. */
 int
 hs_address_is_valid(const char *address)
@@ -956,7 +956,7 @@ hs_address_is_valid(const char *address)
     goto invalid;
   }
 
-  /* Get the checksum it's suppose to be and compare it with what we have
+  /* Get the checksum it's supposed to be and compare it with what we have
    * encoded in the address. */
   build_hs_checksum(&service_pubkey, version, target_checksum);
   if (tor_memcmp(checksum, target_checksum, sizeof(checksum))) {
@@ -984,7 +984,7 @@ hs_address_is_valid(const char *address)
  * The returned address is base32 encoded and put in addr_out. The caller MUST
  * make sure the addr_out is at least HS_SERVICE_ADDR_LEN_BASE32 + 1 long.
  *
- * Format is as follow:
+ * Format is as follows:
  *     base32(PUBKEY || CHECKSUM || VERSION)
  *     CHECKSUM = H(".onion checksum" || PUBKEY || VERSION)
  * */

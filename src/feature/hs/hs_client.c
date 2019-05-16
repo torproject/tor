@@ -697,7 +697,7 @@ setup_intro_circ_auth_key(origin_circuit_t *circ)
   }
 
   /* Reaching this point means we didn't find any intro point for this circuit
-   * which is not suppose to happen. */
+   * which is not supposed to happen. */
   tor_assert_nonfatal_unreached();
 
  end:

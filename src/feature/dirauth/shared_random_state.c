@@ -937,7 +937,7 @@ state_query_del_all_(sr_state_object_t obj_type)
     } DIGESTMAP_FOREACH_END;
     break;
   }
-  /* The following object are _NOT_ suppose to be removed. */
+  /* The following objects are _NOT_ supposed to be removed. */
   case SR_STATE_OBJ_CURSRV:
   case SR_STATE_OBJ_PREVSRV:
   case SR_STATE_OBJ_PHASE:
