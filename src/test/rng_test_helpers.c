@@ -183,11 +183,14 @@ void
 testing_enable_prefilled_rng(const void *buffer, size_t buflen)
 {
   tor_assert(buflen > 0);
+  tor_assert(!rng_mutex);
   rng_mutex = tor_mutex_new();
 
+  tor_mutex_acquire(rng_mutex);
   prefilled_rng_buffer = tor_memdup(buffer, buflen);
   prefilled_rng_buflen = buflen;
   prefilled_rng_idx = 0;
+  tor_mutex_release(rng_mutex);
 
   MOCK(crypto_rand, crypto_rand_prefilled);
   MOCK(crypto_strongest_rand_, mock_crypto_strongest_rand);
