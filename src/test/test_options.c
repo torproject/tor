@@ -1343,29 +1343,6 @@ test_options_validate__token_bucket(void *ignored)
 }
 
 static void
-test_options_validate__recommended_packages(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  char *msg;
-  setup_capture_of_logs(LOG_WARN);
-  options_test_data_t *tdata = get_options_test_data(
-            "RecommendedPackages foo 1.2 http://foo.com sha1=123123123123\n"
-            "RecommendedPackages invalid-package-line\n");
-
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  expect_no_log_msg("Invalid RecommendedPackage line "
-            "invalid-package-line will be ignored\n");
-
- done:
-  escaped(NULL); // This will free the leaking memory from the previous escaped
-  teardown_capture_of_logs();
-  free_options_test_data(tdata);
-  tor_free(msg);
-}
-
-static void
 test_options_validate__fetch_dir(void *ignored)
 {
   (void)ignored;
@@ -4200,7 +4177,6 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(exclude_nodes),
   LOCAL_VALIDATE_TEST(node_families),
   LOCAL_VALIDATE_TEST(token_bucket),
-  LOCAL_VALIDATE_TEST(recommended_packages),
   LOCAL_VALIDATE_TEST(fetch_dir),
   LOCAL_VALIDATE_TEST(conn_limit),
   LOCAL_VALIDATE_TEST(paths_needed),

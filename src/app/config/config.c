@@ -593,7 +593,7 @@ static config_var_t option_vars_[] = {
   V(RecommendedVersions,         LINELIST, NULL),
   V(RecommendedClientVersions,   LINELIST, NULL),
   V(RecommendedServerVersions,   LINELIST, NULL),
-  V(RecommendedPackages,         LINELIST, NULL),
+  OBSOLETE("RecommendedPackages"),
   V(ReducedConnectionPadding,    BOOL,     "0"),
   V(ConnectionPadding,           AUTOBOOL, "auto"),
   V(RefuseUnknownExits,          AUTOBOOL, "auto"),
@@ -3519,13 +3519,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     COMPLAIN("You have asked to exclude certain relays from all positions "
              "in your circuits. Expect hidden services and other Tor "
              "features to be broken in unpredictable ways.");
-  }
-
-  for (cl = options->RecommendedPackages; cl; cl = cl->next) {
-    if (! validate_recommended_package_line(cl->value)) {
-      log_warn(LD_CONFIG, "Invalid RecommendedPackage line %s will be ignored",
-               escaped(cl->value));
-    }
   }
 
   if (options->AuthoritativeDir) {
