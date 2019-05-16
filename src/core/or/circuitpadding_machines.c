@@ -212,7 +212,7 @@ circpad_machine_client_hide_intro_circuits(smartlist_t *machines_sl)
   client_machine->machine_num = smartlist_len(machines_sl);
   circpad_register_padding_machine(client_machine, machines_sl);
 
-  log_warn(LD_GENERAL,
+  log_info(LD_CIRC,
            "Registered client intro point hiding padding machine (%u)",
            client_machine->machine_num);
 }
@@ -253,7 +253,7 @@ circpad_machine_relay_hide_intro_circuits(smartlist_t *machines_sl)
   relay_machine->machine_num = smartlist_len(machines_sl);
   circpad_register_padding_machine(relay_machine, machines_sl);
 
-  log_warn(LD_GENERAL,
+  log_info(LD_CIRC,
            "Registered relay intro circuit hiding padding machine (%u)",
            relay_machine->machine_num);
 }
@@ -374,7 +374,7 @@ circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl)
   client_machine->machine_num = smartlist_len(machines_sl);
   circpad_register_padding_machine(client_machine, machines_sl);
 
-  log_warn(LD_GENERAL,
+  log_info(LD_CIRC,
            "Registered client rendezvous circuit hiding padding machine (%u)",
            client_machine->machine_num);
 }
@@ -412,7 +412,7 @@ circpad_machine_relay_hide_rend_circuits(smartlist_t *machines_sl)
   relay_machine->machine_num = smartlist_len(machines_sl);
   circpad_register_padding_machine(relay_machine, machines_sl);
 
-  log_warn(LD_GENERAL,
+  log_info(LD_CIRC,
            "Registered relay rendezvous circuit hiding padding machine (%u)",
            relay_machine->machine_num);
 }
