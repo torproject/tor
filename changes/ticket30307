@@ -1,4 +1,0 @@
-  o Major features (performance):
-    - Update our node selection algorithm to exclude nodes in linear time.
-      Previously, the algorithm was quadratic, which could slow down heavily
-      used onion services.  Closes ticket 30307.

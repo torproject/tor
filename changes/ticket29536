@@ -1,9 +1,0 @@
-  o Minor features (performance, RNG):
-    - Tor now constructs a fast secure pseudorandom number generator for
-      each thread, to use for cases where performance is critical. This PRNG
-      is based on AES-CTR, using a buffering construction similar to
-      libottery and the (newer) OpenBSD arc4random() code.  It outperforms
-      OpenSSL 1.1.1a's CSPRNG by roughly a factor of 100 for small outputs.
-      Although we believe it to be cryptographically strong, we are only
-      using it when necessary for reasonable performance. Implements tickets
-      29023 and 29536.

@@ -1,3 +1,435 @@
+Changes in version 0.4.1.1-alpha - 2019-05-??
+  This is the first alpha in the 0.4.1.x series. It introduces
+  lightweight circuit padding to make some onion-service circuits harder
+  to distinguish, includes a new "authenticated SENDME" feature to make
+  certain denial-of-service attacks more difficult, and improves
+  performance in several areas.
+
+  o Major features (Circuit padding):
+    - Onion service clients will now add padding cells to the initial
+      portions of their INTRODUCE and RENDEZVOUS circuits, to make those
+      circuits' traffic patterns look more like general purpose Exit
+      traffic. The overhead for this is 2 extra cells in each direction
+      for RENDEZVOUS circuits, and 1 extra upstream cell and 10
+      downstream cells for INTRODUCE circuits. This will only be enabled
+      if the circuit's middle node supports this feature, too. (Clients
+      may specify fixed middle nodes with the MiddleNodes torrc
+      directive, and may force-disable this feature with the
+      CircuitPadding torrc directive). Closes ticket 28634.
+
+  o Major features (code organization):
+    - Tor now includes a generic publish-subscribe message-passing
+      subsystem that we can use to organize intermodule dependencies. We
+      hope to use this to reduce dependencies between modules that don't
+      need to be related, and to generally simplify our codebase. Closes
+      ticket 28226.
+
+  o Major features (controller protocol):
+    - Controller commands are now parsed using a generalized parsing
+      subsystem. Previously, each controller command was responsible for
+      parsing its own input. Closes ticket 30091.
+
+  o Major features (flow control):
+    - Implement authenticated SENDMEs detailed in proposal 289. A SENDME
+      cell now includes the digest of the last cell received so once the
+      end point receives the SENDME, it can confirm the other side's
+      knowledge of the previous cells that were sent. This behavior is
+      controlled by two new consensus parameters, see proposal for more
+      details. Fixes ticket 26288.
+
+  o Major features (performance):
+    - Update our node selection algorithm to exclude nodes in linear
+      time. Previously, the algorithm was quadratic, which could slow
+      down heavily used onion services. Closes ticket 30307.
+
+  o Minor feature (circuit padding):
+    - We now use a fast RNG when scheduling circuit padding. Part of
+      ticket 28636.
+
+  o Minor feature (maintenance scripts):
+    - Add to scripts/maint/ helper maintainer scripts used for git
+      maintenance. Closes ticket 29391.
+
+  o Minor features (circuit padding):
+    - Allow the padding machine designer to pick the edges of their
+      histogram instead of trying to compute them automatically using an
+      exponential formula. Resolves some undefined behavior in the case
+      of small histograms and allows greater flexibility on machine
+      design. Closes ticket 29298; bugfix on 0.4.0.1-alpha.
+    - Provide the ability for circuit padding machines to hold a circuit
+      open until they are done padding it. Closes ticket 28780.
+
+  o Minor features (compile-time modules):
+    - Add a --list-modules command to print a list of which compile-time
+      modules are enabled. Closes ticket 30452.
+
+  o Minor features (continuous integration):
+    - Remove sudo configuration lines from .travis.yml as they are no
+      longer needed with current Travis build environment. Resolves
+      issue 30213.
+
+  o Minor features (controller):
+    - Add onion service version 3 support to HSFETCH. Previously, only
+      version 2 onion services were supported. Closes ticket 25417.
+      Patch by Neel Chauhan
+
+  o Minor features (debugging):
+    - Introduce tor_assertf() and tor_assertf_nonfatal() to enable
+      logging of additional information during assert failure. Now we
+      can use format strings to include pieces of information that are
+      relevant for trouble shooting. Resolves ticket 29662.
+
+  o Minor features (defense in depth):
+    - In smartlist_remove_keeporder(), set any pointers that become
+      unused to NULL, in case a bug causes them to be used later. Closes
+      ticket 30176. Patch from Tobias Stoeckmann.
+    - Tor now uses a fast cryptographically strong PRNG even for
+      decisions that we do not believe are security-sensitive.
+      Previously, for performance reasons, we had used a trivially
+      predictable linear congruential generator algorithm for certain
+      load-balancing and statistical sampling decisions. Now we use our
+      fast RNG in those cases. Closes ticket 29542.
+
+  o Minor features (developer tooling):
+    - Call practracker from pre-push and pre-commit git hooks to let a
+      developer know if they made any code style violations in their
+      last commit. This should help preventing code style violations
+      appearing upstream. Closes ticket 30051.
+    - Call pre-commit git hook from pre-push hook to make sure we're
+      running documentation and code style checks before pushing to
+      remote git repository. Implements feature 30033.
+    - Modify git pre-push hook script to disallow pushing branches other
+      than master, release-* and maint-* to origin remote. Implements
+      feature 29532.
+
+  o Minor features (developer tools):
+    - Add a script to check that each header has a well-formed and
+      unique guard marco. Closes ticket 29756.
+    - Introduce a post-merge git hook script to check if we're pulling
+      in any changes to our git workspace management scripts from
+      upstream. Resolves issue 29588.
+
+  o Minor features (development tools):
+    - Tor's test scripts now check for files and functions that seem too
+      long and complicated. Existing overlong functions and files are
+      accepted for now, but should eventually be refactored. Closes
+      ticket 29221.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the May 13 2019 Maxmind GeoLite2
+      Country database. Closes ticket 30522.
+
+  o Minor features (git scripts):
+    - In git-pull-all.sh, also fetch the latest tor-github pull
+      requests. Implements ticket 30114.
+
+  o Minor features (HTTP tunnel):
+    - Return an informative web page when the HTTPTunnelPort is used as
+      an HTTP proxy. Closes ticket 27821, patch by "eighthave".
+
+  o Minor features (IPv6, v3 onion services):
+    - Make v3 onion services put IPv6 addresses in service descriptors.
+      Before this change, service descriptors only contained IPv4
+      addressesd. Implements 26992.
+
+  o Minor features (modularity):
+    - The --disable-module-dirauth compile-time option now disables even
+      more dirauth-only code. Closes ticket 30345.
+
+  o Minor features (performance):
+    - Use OpenSSL's implementations of SHA3 when available (in OpenSSL
+      1.1.1 and later), since they tend to be faster than tiny-keccak.
+      Closes ticket 28837.
+
+  o Minor features (performance, RNG):
+    - Tor now constructs a fast secure pseudorandom number generator for
+      each thread, to use for cases where performance is critical. This
+      PRNG is based on AES-CTR, using a buffering construction similar
+      to libottery and the (newer) OpenBSD arc4random() code. It
+      outperforms OpenSSL 1.1.1a's CSPRNG by roughly a factor of 100 for
+      small outputs. Although we believe it to be cryptographically
+      strong, we are only using it when necessary for reasonable
+      performance. Implements tickets 29023 and 29536.
+
+  o Minor features (testing):
+    - Tor's unit test code now contains a standard set of functions to
+      replace the PRNG with a deterministic or reproducible version for
+      testing. Previously, various tests implemented this in various
+      ways. Implements ticket 29732.
+    - We now have a script, cov-test-determinism.sh, to identify places
+      where our unit test coverage has become nondeterministic. Closes
+      ticket 29436.
+
+  o Minor bugfixes (bridge authority):
+    - We set bridges as running when we dump the bridge status to a
+      file. Previously, we set bridges as running in a GETINFO
+      controller, but these shouldn't modify vital data structures.
+      Fixes bug 24490; bugfix on 0.2.0.13-alpha. Patch by Neel Chauhan
+
+  o Minor bugfixes (Channel padding statistics):
+    - Channel padding write totals and padding-enabled totals are now
+      counted properly in relay extrainfo descriptors. Fixes bug 29231;
+      bugfix on 0.3.1.1-alpha
+
+  o Minor bugfixes (circuit padding):
+    - Add a torrc option to disable circuit padding. Fixes bug 28693;
+      bugfix on 0.4.0.1-alpha.
+    - Allow circuit padding machines to specify that they do not
+      contribute much overhead, and provide consensus flags and torrc
+      options to force clients to only use low overhead machines. Fixes
+      bug 29203; bugfix on 0.4.0.1-alpha.
+    - Provide consensus parameter to fully disable circuit padding, to
+      be used in emergency network overload situations. Fixes bug 30173;
+      bugfix on 0.4.0.1-alpha.
+    - The circuit padding subsystem does not schedule padding if dormant
+      mode is enabled. Fixes bug 28636; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (circuitpadding):
+    - Inspect circuit-level cell queue before sending padding, to avoid
+      sending padding while too much data is queued. Fixes bug 29204;
+      bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (compilation, unusual configuration):
+    - Avoid failures when building with ALL_BUGS_ARE_FAILED due to
+      missing declarations of abort(), and prevent other such failures
+      in the future. Fixes bug 30189; bugfix on 0.3.4.1-alpha.
+
+  o Minor bugfixes (controller protocol):
+    - Teach the controller parser to correctly distinguish an object
+      preceded by an argument list from one without. Previously, it
+      couldn't distinguish an argument list from the first line of a
+      multiline object. Fixes bug 29984; bugfix on 0.2.3.8-alpha.
+
+  o Minor bugfixes (developer tools):
+    - Update our pre-commit.git-hook script to work correctly on older
+      Tor branches and release branches without any changes files, and
+      to actually exit when something fails. Fixes bug 29553; bugfix
+      on 0.4.0.2-alpha.
+
+  o Minor bugfixes (dirauth, ipv6):
+    - If we are a durauth with IPv6 and are marking relays as running,
+      mark ourselves as reachable on IPv6. Fixes bug 24338; bugfix on
+      0.4.0.2-alpha. Patch by Neel Chauhan
+
+  o Minor bugfixes (documentation):
+    - Improve the documentation for MapAddress .exit. Fixes bug 30109;
+      bugfix on 0.1.0.1-rc.
+    - Improve the monotonic time module and function documentation.
+      Explain what "monotonic" actually means, and document some results
+      that have surprised people. Fixes bug 29640; bugfix
+      on 0.2.9.1-alpha.
+
+  o Minor bugfixes (documentation, manpage):
+    - Use proper formatting when providing an example on quoting options
+      that contain whitespace. Fixes bug 29635; bugfix on 0.2.3.18-rc.
+
+  o Minor bugfixes (lib):
+
+  o Minor bugfixes (logging):
+    - Do not log a warning for OpenSSL versions that should be
+      compatible. Fixes bug 30190; bugfix on 0.2.4.2-alpha
+
+  o Minor bugfixes (logging, configuration):
+    - Warn operators when MyFamily option is set but ContactInfo is
+      missing, as the latter should be set too. Fixes bug 25110; bugfix
+      on 0.3.3.1-alpha.
+
+  o Minor bugfixes (memory leak):
+    - Avoid a minor memory leak that could occur on relays when creating
+      a keys directory failed. Fixes bug 30148; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (onion services):
+    - Avoid a GCC 9.1.1 warning (and possible crash depending on libc
+      implemenation) when failing to load an onion service client
+      authorization file. Fixes bug 30475; bugfix on 0.3.5.1-alpha.
+    - If we are launching repeated HSFETCH queries and are rate-limited,
+      we introduce a new controller response QUERY_RATE_LIMITED instead
+      of QUERY_NO_HSDIR, while keeping the latter for when onion service
+      directories are missing a descriptor. Previously, we returned
+      QUERY_NO_HSDIR for both cases. Fixes bug 28269; bugfix on
+      0.3.1.1-alpha. Patch by Neel Chauhan
+    - If we are relaunching a circuit to a rendevous service in
+      rend_service_relaunch_rendezvous() and
+      hs_service_requires_uptime_circ() is true, the
+      CIRCLAUNCH_NEED_UPTIME flag is added to the circuit. Previously,
+      we only set this flag when we received a INTRODUCE2 cell in
+      rend_service_receive_introduction(). Fixes bug 17357; bugfix on
+      0.4.0.2-alpha. Patch by Neel Chauhan
+
+  o Minor bugfixes (onion services, performance):
+    - If we are building circuits to onion services, in
+      circuit_is_acceptable() we only call tor_addr_parse() in places
+      where we use the returned family and address values from this
+      function. Previously, we called tor_addr_parse() in
+      circuit_is_acceptable() even if it wasn't used. This change will
+      improve performance when building circuits. Fixes bug 22210;
+      bugfix on 0.2.8.12. Patch by Neel Chauhan
+
+  o Minor bugfixes (performance):
+    - When checking a node for bridge status, use a fast check to make
+      sure that its identity is set. Previously, we used a constant-time
+      check, which is not necessary when verifying a BUG() condition that
+      causes a stack trace. Fixes bug 30308; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (pluggable transports):
+    - Tor now sets TOR_PT_EXIT_ON_STDIN_CLOSE=1 for client transports as
+      well as servers. Fixes bug 25614; bugfix on 0.2.7.1-alpha.
+
+  o Minor bugfixes (probability distributions):
+    - Refactor and improve parts of the probability distribution code
+      that made Coverity complain. Fixes bug 29805; bugfix
+      on 0.4.0.1-alpha.
+
+  o Minor bugfixes (python):
+    - Stop assuming that /usr/bin/python3 exists. For scripts that work
+      with python2, use /usr/bin/python. Otherwise, use /usr/bin/env
+      python3. Fixes bug 29913; bugfix on 0.2.5.3-alpha.
+
+  o Minor bugfixes (relay):
+    - If we are are a relay and have IPv6Exit to 1 while ExitRelay is
+      auto, we act as if ExitRelay is 1. Previously, we ignored IPv6Exit
+      if ExitRelay was 0 or auto. Fixes bug 29613; bugfix on
+      0.3.5.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (stats):
+    - When ExtraInfoStatistics is 0, stop including bandwidth usage
+      statistics, GeoIPFile hashes, ServerTransportPlugin lines, and
+      bridge statistics by country in extra-info documents. Fixes bug
+      29018; bugfix on 0.2.4.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Call setrlimit() to disable core dumps in test_bt_cl.c instead of
+      using `ulimit -c` in test_bt.sh, which violates POSIX shell
+      compatibility. Fixes bug 29061; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (testing, v3 onion services):
+    - Fix some incorrect code in the v3 onion service unit tests. Fixes
+      bug 29243; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (tor-resolve):
+    - Fix a memory leak in tor-resolve that could happen if Tor gave it
+      a malformed SOCKS response. (Memory leaks in tor-resolve don't
+      actually matter, but it's good to fix them anyway.) Fixes bug
+      30151; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (unit tests):
+    - In the "routerkeys/*" tests, check the return values of mkdir()
+      for possible failures. Fixes bug 29939; bugfix on 0.2.7.2-alpha.
+      Found by Coverity as CID 1444254.
+    - Split test_utils_general() to several smaller test functions in
+      test_utils_general(). This makes it easier to perform resource
+      deallocation on assert failure and fixes Coverity warnings CID
+      1444117 and CID 1444118. Fixes bug 29823; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (v3 onion services):
+    - Stop ignoring IPv6 link specifiers sent to v3 onion services. v3
+      onion service IPv6 support is still incomplete, see 23493 for
+      details. Fixes bug 23588; bugfix on 0.3.2.1-alpha. Patch by
+      Neel Chauhan.
+
+  o Code simplification and refactoring:
+    - Abstract out the low-level formatting of replies on the control
+      port. Implements ticket 30007.
+    - Add several assertions in an attempt to fix some Coverity
+      warnings. Closes ticket 30149.
+    - Introduce a connection_dir_buf_add() helper function that checks
+      for compress_state of dir_connection_t and automatically writes a
+      string to directory connection with or without compression.
+      Resolves issue 28816.
+    - Make the base32_decode() API return the number of bytes written,
+      for consistency with base64_decode(). Closes ticket 28913.
+    - Move most relay-only periodic events out of mainloop.c into the
+      relay subsystem. Closes ticket 30414.
+    - Refactor and encapsulate parts of the codebase that manipulate
+      crypt_path_t objects. Resolves issue 30236.
+    - Refactor several places in our code that coverity incorrectly
+      believed that we might have memory leaks, so that we can analyze
+      our software more easily. Closes ticket 30147.
+    - Remove redundant return values in crypto_format, and the
+      associated return value checks elsewhere in the code. Make the
+      implementations in crypto_format consistent, and remove redundant
+      code. Resolves ticket 29660.
+    - Rename tor_mem_is_zero() to fast_mem_is_zero(), to emphasize that
+      it is not a constant-time function. Closes ticket 30309.
+    - Replace hs_desc_link_specifier_t with link_specifier_t, and remove
+      all hs_desc_link_specifier_t-specific code. Fixes bug 22781;
+      bugfix on 0.3.2.1-alpha.
+    - Simplify v3 onion service link specifier handling code. Fixes bug
+      23576; bugfix on 0.3.2.1-alpha.
+    - Split crypto_digest.c into three parts: 1) general code that does
+      not depend on either NSS or OpenSSL (stays in crypto_digest.c); 2)
+      code that depends on NSS API (moved to crypto_digest_nss.c); 3)
+      code that depends on OpenSSL API (moved to
+      crypto_digest_openssl.c). Resolves ticket 29108.
+    - Split up the control.c file into several submodules, in
+      preparation for distributing its current responsibilities
+      throughout the codebase. Closes ticket 29894.
+    - Start move responsibility for knowing about periodic events to the
+      appropriate subsystems, so that the mainloop doesn't need to know
+      all the periodic events in the rest of the codebase. Implements
+      tickets 30293 and 30294.
+
+  o Documentation:
+    - Document how to find git commits and tags for bug fixes in
+      CodingStandards.md. And update some changes file documentation.
+      Closes ticket 30261.
+
+  o Removed features:
+    - Remove linux-tor-prio.sh script from contrib/operator-tools
+      directory. Resolves issue 29434.
+    - Remove obsolete OpenSUSE initscript. Resolves issue 30076.
+    - Remove the obsolete script at contrib/dist/tor.sh.in. Resolves
+      issue 30075.
+
+  o Testing:
+    - Check that representative subsets of values of `int` and `unsigned
+      int` can be represented by `void *`. Resolves issue 29537.
+
+  o Code simplification and refactoring (circuit padding):
+    - Avoid calling monotime_absolute_usec() in circuit padding machines
+      that do not use token removal or circuit RTT estimation. Fixes bug
+      29085; bugfix on 0.4.0.1-alpha.
+
+  o Code simplification and refactoring (shell scripts):
+    - Cleanup autogen.sh to silence shellcheck warnings. Closes
+      ticket 26069.
+    - Cleanup test_keygen.sh to silence all shellcheck warnings. Closes
+      ticket 29062.
+    - Cleanup test_switch_id.sh to silence shellcheck warnings. Closes
+      ticket 29065.
+    - Fix issues shellcheck found in test_rebind.sh. Resolves
+      issue 29063.
+    - Fix shellcheck warning SC2006 in src/test/fuzz/minimize.sh.
+      Resolves issue 30079.
+    - Fix shellcheck warning in test_rust.sh. Fixes issue 29064.
+    - Fix shellcheck warning in torify script. Resolves issue 29070.
+    - Fix shellcheck warnings in asciidoc-helper.sh. Resolves
+      issue 29926.
+    - Fix shellcheck warnings in fuzz_multi.sh. Resolves issue 30077.
+    - Fix shellcheck warnings in fuzz_static_testcases.sh. Resolves
+      ticket 29059.
+    - Fix shellcheck warnings in nagios-check-tor-authority-cert script.
+      Resolves issue 29071.
+    - Fix shellcheck warnings in src/test/fuzz/fixup_filenames.sh.
+      Resolves issue 30078.
+    - Fix shellcheck warnings in test-network.sh. Resolves issue 29060.
+    - Fix shellcheck warnings in test_key_expiration.sh. Resolves
+      issue 30002.
+    - Fix shellcheck warnings in zero_length_keys.sh. Resolves
+      issue 29068.
+    - Fix test_workqueue_*.sh scripts to silence shellcheck SC2086
+      warnings. Fixes issue 29067.
+
+  o Testing (chutney):
+    - In "make test-network-all", test IPv6-only v3 single onion
+      services, using the chutney network single-onion-v23-ipv6-md. This
+      test will not pass until 23588 has been merged. Closes
+      ticket 27251.
+
+  o Testing (continuous integration):
+    - In Travis, show stem's tor log after failure. Closes ticket 30234.
+
+
 Changes in version 0.4.0.5 - 2019-05-02
   This is the first stable release in the 0.4.0.x series. It contains
   improvements for power management and bootstrap reporting, as well as

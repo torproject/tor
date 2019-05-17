@@ -1,3 +1,0 @@
-  o Minor bugfixes (documentation, manpage):
-    - Use proper formatting when providing an example on quoting options that
-      contain whitespace. Fixes bug 29635; bugfix on 0.2.3.18-rc.

@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Split up the control.c file into several submodules, in preparation
-      for distributing its current responsibilities throughout the codebase.
-      Closes ticket 29894.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (unit tests):
-    - In the "routerkeys/*" tests, check the return values of mkdir() for
-      possible failures. Fixes bug 29939; bugfix on 0.2.7.2-alpha. Found by
-      Coverity as CID 1444254.

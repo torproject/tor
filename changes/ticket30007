@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Abstract out the low-level formatting of replies on the control
-      port. Implements ticket 30007.

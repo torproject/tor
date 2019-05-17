@@ -1,5 +1,0 @@
-  o Minor bugfixes (unit tests):
-    - Split test_utils_general() to several smaller test functions in
-      test_utils_general(). This makes it easier to perform resource
-      deallocation on assert failure and fixes Coverity warnings CID 1444117
-      and CID 1444118. Fixes bug 29823; bugfix on 0.2.9.1-alpha.

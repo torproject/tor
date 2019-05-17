@@ -1,5 +1,0 @@
-  o Minor features (development tools):
-    - Tor's test scripts now check for files and functions that seem
-      too long and complicated.  Existing overlong functions and files are
-      accepted for now, but should eventually be refactored. Closes
-      ticket 29221.

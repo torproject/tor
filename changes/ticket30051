@@ -1,5 +1,0 @@
-  o Minor features (developer tooling):
-    - Call practracker from pre-push and pre-commit git hooks to let a
-      developer know if they made any code style violations in their last
-      commit. This should help preventing code style violations appearing
-      upstream. Closes ticket 30051.

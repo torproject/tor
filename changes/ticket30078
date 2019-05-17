@@ -1,3 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Fix shellcheck warnings in src/test/fuzz/fixup_filenames.sh. Resolves
-      issue 30078.

@@ -1,2 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Fix shellcheck warning in torify script. Resolves issue 29070.

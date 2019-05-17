@@ -1,7 +1,0 @@
-  o Minor bugfixes (onion services):
-    - If we are launching repeated HSFETCH queries and are rate-limited,
-      we introduce a new controller response QUERY_RATE_LIMITED instead
-      of QUERY_NO_HSDIR, while keeping the latter for when onion service
-      directories are missing a descriptor. Previously, we returned
-      QUERY_NO_HSDIR for both cases. Fixes bug 28269; bugfix on
-      0.3.1.1-alpha. Patch by Neel Chauhan

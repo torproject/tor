@@ -1,2 +1,0 @@
-  o Testing (continuous integration):
-    - In Travis, show stem's tor log after failure. Closes ticket 30234.

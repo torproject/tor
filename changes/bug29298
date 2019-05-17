@@ -1,6 +1,0 @@
-  o Minor features (circuit padding):
-    - Allow the padding machine designer to pick the edges of their histogram
-      instead of trying to compute them automatically using an exponential
-      formula. Resolves some undefined behavior in the case of small histograms
-      and allows greater flexibility on machine design. Closes ticket 29298;
-      bugfix on 0.4.0.1-alpha.

@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Make the base32_decode() API return the number of bytes written,
-      for consistency with base64_decode().
-      Closes ticket 28913.

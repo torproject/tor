@@ -1,3 +1,0 @@
-  o Removed features:
-    - Remove the obsolete script at contrib/dist/tor.sh.in. Resolves issue
-      30075.

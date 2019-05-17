@@ -1,4 +1,0 @@
-  o Major features (controller protocol):
-    - Controller commands are now parsed using a generalized parsing
-      subsystem. Previously, each controller command was responsible for
-      parsing its own input.  Closes ticket 30091.

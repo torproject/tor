@@ -1,4 +1,0 @@
-  o Testing (chutney):
-    - In "make test-network-all", test IPv6-only v3 single onion services,
-      using the chutney network single-onion-v23-ipv6-md. This test will
-      not pass until 23588 has been merged. Closes ticket 27251.

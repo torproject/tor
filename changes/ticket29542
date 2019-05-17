@@ -1,7 +1,0 @@
-  o Minor features (defense in depth):
-    - Tor now uses a fast cryptographically strong PRNG even for decisions
-      that we do not believe are security-sensitive.  Previously, for
-      performance reasons, we had used a trivially predictable linear
-      congruential generator algorithm for certain load-balancing and
-      statistical sampling decisions. Now we use our fast RNG in those cases.
-      Closes ticket 29542.

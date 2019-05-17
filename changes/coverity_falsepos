@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Refactor several places in our code that coverity incorrectly believed
-      that we might have memory leaks, so that we can analyze our software
-      more easily.  Closes ticket 30147.

@@ -1,5 +1,0 @@
-  o Minor bugfixes (tor-resolve):
-    - Fix a memory leak in tor-resolve that could happen if Tor gave it a
-      malformed SOCKS response.  (Memory leaks in tor-resolve don't actually
-      matter, but it's good to fix them anyway.)  Fixes bug 30151; bugfix on
-      0.4.0.1-alpha.

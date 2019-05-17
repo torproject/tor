@@ -1,3 +1,0 @@
-  o Testing:
-    - Check that representative subsets of values of `int` and `unsigned int`
-      can be represented by `void *`. Resolves issue 29537.

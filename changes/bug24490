@@ -1,5 +1,0 @@
-  o Minor bugfixes (bridge authority):
-    - We set bridges as running when we dump the bridge status to a file.
-      Previously, we set bridges as running in a GETINFO controller, but
-      these shouldn't modify vital data structures. Fixes bug 24490;
-      bugfix on 0.2.0.13-alpha. Patch by Neel Chauhan

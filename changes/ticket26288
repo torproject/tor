@@ -1,6 +1,0 @@
-  o Major features (flow control):
-    - Implement authenticated SENDMEs detailed in proposal 289. A SENDME cell
-      now includes the digest of the last cell received so once the end point
-      receives the SENDME, it can confirm the other side's knowledge of the
-      previous cells that were sent. This behavior is controlled by two new
-      consensus parameters, see proposal for more details. Fixes ticket 26288.

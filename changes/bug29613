@@ -1,5 +1,0 @@
-  o Minor bugfixes (relay):
-    - If we are are a relay and have IPv6Exit to 1 while ExitRelay is
-      auto, we act as if ExitRelay is 1. Previously, we ignored IPv6Exit
-      if ExitRelay was 0 or auto. Fixes bug 29613; bugfix on 0.3.5.1-alpha.
-      Patch by Neel Chauhan.

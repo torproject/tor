@@ -1,3 +1,0 @@
-  o Minor bugfixes (probability distributions):
-    - Refactor and improve parts of the probability distribution code that made
-      Coverity complain. Fixes bug 29805; bugfix on 0.4.0.1-alpha.

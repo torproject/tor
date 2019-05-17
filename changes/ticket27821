@@ -1,3 +1,0 @@
-  o Minor features (HTTP tunnel):
-    - Return an informative web page when the HTTPTunnelPort is used as an
-      HTTP proxy. Closes ticket 27821, patch by "eighthave".

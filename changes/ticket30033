@@ -1,4 +1,0 @@
-  o Minor features (developer tooling):
-    - Call pre-commit git hook from pre-push hook to make sure we're
-      running documentation and code style checks before pushing to remote
-      git repository. Implements feature 30033.

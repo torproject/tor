@@ -1,5 +1,0 @@
-  o Minor bugfixes (performance):
-    - When checking a node for bridge status, use a fast check to make sure
-      that its identity is set. Previously, we used a constant-time check,
-      which is not necessary when verifying a BUG() condition that causes
-      a stack trace. Fixes bug 30308; bugfix on 0.3.5.1-alpha.

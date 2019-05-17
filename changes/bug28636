@@ -1,8 +1,0 @@
-  o Minor bugfixes (circuit padding):
-    - The circuit padding subsystem does not schedule padding if dormant mode
-      is enabled. Fixes bug 28636; bugfix on 0.4.0.1-alpha.
-
-  o Minor feature (circuit padding):
-    - We now use a fast RNG when scheduling circuit padding. Part of ticket
-      28636.
-

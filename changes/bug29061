@@ -1,4 +1,0 @@
-  o Minor bugfixes (testing):
-    - Call setrlimit() to disable core dumps in test_bt_cl.c instead of
-      using `ulimit -c` in test_bt.sh, which violates POSIX shell
-      compatibility. Fixes bug 29061; bugfix on 0.3.5.1-alpha.

@@ -1,3 +1,0 @@
-  o Minor features (modularity):
-    - The --disable-module-dirauth compile-time option now disables
-      even more dirauth-only code. Closes ticket 30345.

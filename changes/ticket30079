@@ -1,3 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Fix shellcheck warning SC2006 in src/test/fuzz/minimize.sh. Resolves
-      issue 30079.

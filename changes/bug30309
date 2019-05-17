@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Rename tor_mem_is_zero() to fast_mem_is_zero(), to emphasize that
-      it is not a constant-time function. Closes ticket 30309.

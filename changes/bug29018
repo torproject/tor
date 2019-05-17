@@ -1,5 +1,0 @@
-  o Minor bugfixes (stats):
-    - When ExtraInfoStatistics is 0, stop including bandwidth usage statistics,
-      GeoIPFile hashes, ServerTransportPlugin lines, and bridge statistics
-      by country in extra-info documents. Fixes bug 29018;
-      bugfix on 0.2.4.1-alpha.

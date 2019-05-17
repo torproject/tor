@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-    - Split crypto_digest.c into three parts: 1) general code that does not
-      depend on either NSS or OpenSSL (stays in crypto_digest.c); 2) code that
-      depends on NSS API (moved to crypto_digest_nss.c); 3) code that depends
-      on OpenSSL API (moved to crypto_digest_openssl.c). Resolves ticket 29108.

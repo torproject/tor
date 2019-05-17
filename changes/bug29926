@@ -1,2 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Fix shellcheck warnings in asciidoc-helper.sh. Resolves issue 29926.

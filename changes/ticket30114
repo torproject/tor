@@ -1,3 +1,0 @@
-  o Minor features (git scripts):
-    - In git-pull-all.sh, also fetch the latest tor-github pull requests.
-      Implements ticket 30114.
