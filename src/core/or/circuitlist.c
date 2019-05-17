@@ -993,6 +993,7 @@ init_circuit_base(circuit_t *circ)
 
   circ->package_window = circuit_initial_package_window();
   circ->deliver_window = CIRCWINDOW_START;
+  circuit_reset_sendme_randomness(circ);
   cell_queue_init(&circ->n_chan_cells);
 
   smartlist_add(circuit_get_global_list(), circ);
