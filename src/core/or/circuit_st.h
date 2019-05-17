@@ -92,6 +92,10 @@ struct circuit_t {
   /** True iff this circuit has received a DESTROY cell in either direction */
   unsigned int received_destroy : 1;
 
+  /** True iff we have sent a sufficiently random data cell since last
+   * we reset send_randomness_after_n_cells. */
+  unsigned int have_sent_sufficiently_random_cell : 1;
+
   uint8_t state; /**< Current status of this circuit. */
   uint8_t purpose; /**< Why are we creating this circuit? */
 
@@ -104,6 +108,13 @@ struct circuit_t {
    * circuit-level sendme cells to indicate that we're willing to accept
    * more. */
   int deliver_window;
+  /**
+   * How many cells do we have until we need to send one that contains
+   * sufficient randomness?  Used to ensure that authenticated SENDME cells
+   * will reflect some unpredictable information.
+   **/
+  uint16_t send_randomness_after_n_cells;
+
   /** FIFO containing the digest of the cells that are just before a SENDME is
    * sent by the client. It is done at the last cell before our package_window
    * goes down to 0 which is when we expect a SENDME.
