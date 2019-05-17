@@ -603,6 +603,9 @@ typedef uint8_t circpad_machine_num_t;
 
 /** Global state machine structure from the consensus */
 typedef struct circpad_machine_spec_t {
+  /* Just a user-friendly machine name for logs */
+  const char *name;
+
   /** Global machine number */
   circpad_machine_num_t machine_num;
 
@@ -698,6 +701,8 @@ circpad_machine_event_circ_has_no_relay_early(struct origin_circuit_t *circ);
 
 void circpad_machines_init(void);
 void circpad_machines_free(void);
+void circpad_register_padding_machine(circpad_machine_spec_t *machine,
+                                      smartlist_t *machine_list);
 
 void circpad_machine_states_init(circpad_machine_spec_t *machine,
                                  circpad_statenum_t num_states);
@@ -726,6 +731,8 @@ bool circpad_padding_negotiated(struct circuit_t *circ,
                            uint8_t command,
                            uint8_t response);
 
+circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t circ_purpose);
+
 MOCK_DECL(circpad_decision_t,
 circpad_machine_schedule_padding,(circpad_machine_runtime_t *));
 
@@ -736,7 +743,13 @@ circpad_machine_spec_transition, (circpad_machine_runtime_t *mi,
 circpad_decision_t circpad_send_padding_cell_for_callback(
                                  circpad_machine_runtime_t *mi);
 
+void circpad_free_all(void);
+
 #ifdef CIRCUITPADDING_PRIVATE
+STATIC void  machine_spec_free_(circpad_machine_spec_t *m);
+#define machine_spec_free(chan) \
+  FREE_AND_NULL(circpad_machine_spec_t,machine_spec_free_, (m))
+
 STATIC circpad_delay_t
 circpad_machine_sample_delay(circpad_machine_runtime_t *mi);
 
@@ -773,17 +786,21 @@ circpad_send_command_to_hop,(struct origin_circuit_t *circ, uint8_t hopnum,
                              uint8_t relay_command, const uint8_t *payload,
                              ssize_t payload_len));
 
+MOCK_DECL(STATIC const node_t *,
+circuit_get_nth_node,(origin_circuit_t *circ, int hop));
+
 STATIC circpad_delay_t
 histogram_get_bin_upper_bound(const circpad_machine_runtime_t *mi,
                               circpad_hist_index_t bin);
+
+STATIC void
+circpad_add_matching_machines(origin_circuit_t *on_circ,
+                              smartlist_t *machines_sl);
 
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *origin_padding_machines;
 extern smartlist_t *relay_padding_machines;
 
-STATIC void
-register_padding_machine(circpad_machine_spec_t *machine,
-                         smartlist_t *machine_list);
 #endif
 
 #endif
