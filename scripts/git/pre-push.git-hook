@@ -8,6 +8,9 @@
 #
 # To install this script, copy it into .git/hooks/pre-push path in your
 # local copy of git repository. Make sure it has permission to execute.
+# Furthermore, make sure that TOR_UPSTREAM_REMOTE_NAME environment
+# variable is set to local name of git remote that corresponds to upstream
+# repository on e.g. git.torproject.org.
 #
 # The following sample script was used as starting point:
 # https://github.com/git/git/blob/master/templates/hooks--pre-push.sample
