@@ -334,11 +334,8 @@ coverage-html-full: all
 	lcov --remove "$(HTML_COVER_DIR)/lcov.tmp" --rc lcov_branch_coverage=1 'test/*' 'ext/tinytest*' '/usr/*' --output-file "$(HTML_COVER_DIR)/lcov.info"
 	genhtml --branch-coverage -o "$(HTML_COVER_DIR)" "$(HTML_COVER_DIR)/lcov.info"
 
-# Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
-# tinytest*.[ch]
-check-spaces:
-if USE_PERL
-	$(PERL) $(top_srcdir)/scripts/maint/checkSpace.pl -C \
+# For scripts: avoid src/ext and src/trunnel.
+OWNED_TOR_C_FILES=\
 		$(top_srcdir)/src/lib/*/*.[ch] \
 		$(top_srcdir)/src/core/*/*.[ch] \
 		$(top_srcdir)/src/feature/*/*.[ch] \
@@ -346,6 +343,11 @@ if USE_PERL
 		$(top_srcdir)/src/test/*.[ch] \
 		$(top_srcdir)/src/test/*/*.[ch] \
 		$(top_srcdir)/src/tools/*.[ch]
+
+check-spaces:
+if USE_PERL
+	$(PERL) $(top_srcdir)/scripts/maint/checkSpace.pl -C \
+		$(OWNED_TOR_C_FILES)
 endif
 
 check-includes:
@@ -455,6 +457,25 @@ version:
 	   echo -n "git: " ;\
 	   (cd "$(top_srcdir)" && git rev-parse --short=16 HEAD); \
 	fi
+
+.PHONY: autostyle-ifdefs
+autostyle-ifdefs:
+	$(PYTHON) scripts/maint/annotate_ifdef_directives $(OWNED_TOR_C_FILES)
+
+.PHONY: autostyle-ifdefs
+autostyle-operators:
+	$(PERL) scripts/coccinelle/test-operator-cleanup $(OWNED_TOR_C_FILES)
+
+.PHONY: rectify-includes
+rectify-includes:
+	$(PYTHON) scripts/maint/rectify_include_paths.py
+
+.PHONY: update-copyright
+update-copyright:
+	$(PERL) scripts/maint/updateCopyright.pl $(OWNED_TOR_C_FILES)
+
+.PHONY: autostyle
+autostyle: update-versions rustfmt autostyle-ifdefs rectify-includes
 
 mostlyclean-local:
 	rm -f $(top_builddir)/src/*/*.gc{da,no} $(top_builddir)/src/*/*/*.gc{da,no}
