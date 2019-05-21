@@ -289,18 +289,10 @@ send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
 
 /* Record the cell digest only if the next cell is expected to be a SENDME. */
 static void
-record_cell_digest_on_circ(circuit_t *circ, const uint8_t *sendme_digest,
-                           const int package_window)
+record_cell_digest_on_circ(circuit_t *circ, const uint8_t *sendme_digest)
 {
   tor_assert(circ);
   tor_assert(sendme_digest);
-
-  /* Is this the last cell before a SENDME? The idea is that if the
-   * package_window reaches a multiple of the increment, after this cell, we
-   * should expect a SENDME. */
-  if (!sendme_circuit_cell_is_next(package_window)) {
-    return;
-  }
 
   /* Add the digest to the last seen list in the circuit. */
   if (circ->sendme_last_digests == NULL) {
@@ -596,16 +588,28 @@ sendme_record_cell_digest_on_circ(circuit_t *circ, crypt_path_t *cpath)
 
   tor_assert(circ);
 
+  package_window = circ->package_window;
   if (cpath) {
     package_window = cpath->package_window;
+  }
+
+  /* Is this the last cell before a SENDME? The idea is that if the
+   * package_window reaches a multiple of the increment, after this cell, we
+   * should expect a SENDME. */
+  if (!sendme_circuit_cell_is_next(package_window)) {
+    return;
+  }
+
+  /* Getting the digest is expensive so we only do it once we are certain to
+   * record it on the circuit. */
+  if (cpath) {
     sendme_digest = cpath_get_sendme_digest(cpath);
   } else {
-    package_window = circ->package_window;
     sendme_digest =
       relay_crypto_get_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto);
   }
 
-  record_cell_digest_on_circ(circ, sendme_digest, package_window);
+  record_cell_digest_on_circ(circ, sendme_digest);
 }
 
 /* Called once we decrypted a cell and recognized it. Record the cell digest
