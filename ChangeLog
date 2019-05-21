@@ -5,7 +5,9 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
   certain denial-of-service attacks more difficult, and improves
   performance in several areas.
 
-  o Major features (Circuit padding):
+  o Code simplification and refactoring (circuit padding):
+
+  o Major features (circuit padding):
     - Onion service clients will now add padding cells to the initial
       portions of their INTRODUCE and RENDEZVOUS circuits, to make those
       circuits' traffic patterns look more like general purpose Exit
@@ -42,15 +44,19 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
       time. Previously, the algorithm was quadratic, which could slow
       down heavily used onion services. Closes ticket 30307.
 
-  o Minor feature (circuit padding):
-    - We now use a fast RNG when scheduling circuit padding. Part of
-      ticket 28636.
-
-  o Minor feature (maintenance scripts):
-    - Add to scripts/maint/ helper maintainer scripts used for git
-      maintenance. Closes ticket 29391.
+  o Major features (performance, RNG):
+    - Tor now constructs a fast secure pseudorandom number generator for
+      each thread, to use when performance is critical. This PRNG is
+      based on AES-CTR, using a buffering construction similar to
+      libottery and the (newer) OpenBSD arc4random() code. It
+      outperforms OpenSSL 1.1.1a's CSPRNG by roughly a factor of 100 for
+      small outputs. Although we believe it to be cryptographically
+      strong, we are only using it when necessary for reasonable
+      performance. Implements tickets 29023 and 29536.
 
   o Minor features (circuit padding):
+    - We now use a fast RNG when scheduling circuit padding. Part of
+      ticket 28636.
     - Allow the padding machine designer to pick the edges of their
       histogram instead of trying to compute them automatically using an
       exponential formula. Resolves some undefined behavior in the case
@@ -90,38 +96,23 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
       load-balancing and statistical sampling decisions. Now we use our
       fast RNG in those cases. Closes ticket 29542.
 
-  o Minor features (developer tooling):
-    - Call practracker from pre-push and pre-commit git hooks to let a
-      developer know if they made any code style violations in their
-      last commit. This should help preventing code style violations
-      appearing upstream. Closes ticket 30051.
-    - Call pre-commit git hook from pre-push hook to make sure we're
-      running documentation and code style checks before pushing to
-      remote git repository. Implements feature 30033.
-    - Modify git pre-push hook script to disallow pushing branches other
-      than master, release-* and maint-* to origin remote. Implements
-      feature 29532.
-
   o Minor features (developer tools):
-    - Add a script to check that each header has a well-formed and
-      unique guard marco. Closes ticket 29756.
-    - Introduce a post-merge git hook script to check if we're pulling
-      in any changes to our git workspace management scripts from
-      upstream. Resolves issue 29588.
-
-  o Minor features (development tools):
     - Tor's test scripts now check for files and functions that seem too
       long and complicated. Existing overlong functions and files are
       accepted for now, but should eventually be refactored. Closes
       ticket 29221.
+    - Add to scripts/maint/ helper maintainer scripts used for git
+      maintenance. Closes ticket 29391.
+    - Call practracker from pre-push and pre-commit git hooks to let a
+      developer know if they made any code style violations in their
+      last commit. This should help preventing code style violations
+      appearing upstream. Closes ticket 30051.
+    - Add a script to check that each header has a well-formed and
+      unique guard marco. Closes ticket 29756.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the May 13 2019 Maxmind GeoLite2
       Country database. Closes ticket 30522.
-
-  o Minor features (git scripts):
-    - In git-pull-all.sh, also fetch the latest tor-github pull
-      requests. Implements ticket 30114.
 
   o Minor features (HTTP tunnel):
     - Return an informative web page when the HTTPTunnelPort is used as
@@ -141,16 +132,6 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
       1.1.1 and later), since they tend to be faster than tiny-keccak.
       Closes ticket 28837.
 
-  o Minor features (performance, RNG):
-    - Tor now constructs a fast secure pseudorandom number generator for
-      each thread, to use for cases where performance is critical. This
-      PRNG is based on AES-CTR, using a buffering construction similar
-      to libottery and the (newer) OpenBSD arc4random() code. It
-      outperforms OpenSSL 1.1.1a's CSPRNG by roughly a factor of 100 for
-      small outputs. Although we believe it to be cryptographically
-      strong, we are only using it when necessary for reasonable
-      performance. Implements tickets 29023 and 29536.
-
   o Minor features (testing):
     - Tor's unit test code now contains a standard set of functions to
       replace the PRNG with a deterministic or reproducible version for
@@ -159,6 +140,8 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
     - We now have a script, cov-test-determinism.sh, to identify places
       where our unit test coverage has become nondeterministic. Closes
       ticket 29436.
+    - Check that representative subsets of values of `int` and `unsigned
+      int` can be represented by `void *`. Resolves issue 29537.
 
   o Minor bugfixes (bridge authority):
     - We set bridges as running when we dump the bridge status to a
@@ -166,7 +149,7 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
       controller, but these shouldn't modify vital data structures.
       Fixes bug 24490; bugfix on 0.2.0.13-alpha. Patch by Neel Chauhan
 
-  o Minor bugfixes (Channel padding statistics):
+  o Minor bugfixes (channel padding statistics):
     - Channel padding write totals and padding-enabled totals are now
       counted properly in relay extrainfo descriptors. Fixes bug 29231;
       bugfix on 0.3.1.1-alpha
@@ -183,13 +166,11 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
       bugfix on 0.4.0.1-alpha.
     - The circuit padding subsystem does not schedule padding if dormant
       mode is enabled. Fixes bug 28636; bugfix on 0.4.0.1-alpha.
-
-  o Minor bugfixes (circuitpadding):
     - Inspect circuit-level cell queue before sending padding, to avoid
       sending padding while too much data is queued. Fixes bug 29204;
       bugfix on 0.4.0.1-alpha.
 
-  o Minor bugfixes (compilation, unusual configuration):
+  o Minor bugfixes (compilation, unusual configurations):
     - Avoid failures when building with ALL_BUGS_ARE_FAILED due to
       missing declarations of abort(), and prevent other such failures
       in the future. Fixes bug 30189; bugfix on 0.3.4.1-alpha.
@@ -200,16 +181,10 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
       couldn't distinguish an argument list from the first line of a
       multiline object. Fixes bug 29984; bugfix on 0.2.3.8-alpha.
 
-  o Minor bugfixes (developer tools):
-    - Update our pre-commit.git-hook script to work correctly on older
-      Tor branches and release branches without any changes files, and
-      to actually exit when something fails. Fixes bug 29553; bugfix
-      on 0.4.0.2-alpha.
-
-  o Minor bugfixes (dirauth, ipv6):
-    - If we are a durauth with IPv6 and are marking relays as running,
-      mark ourselves as reachable on IPv6. Fixes bug 24338; bugfix on
-      0.4.0.2-alpha. Patch by Neel Chauhan
+  o Minor bugfixes (directory authority, ipv6):
+    - If we are a directory authity with IPv6 and are marking relays as
+      running, mark ourselves as reachable on IPv6. Fixes bug 24338;
+      bugfix on 0.4.0.2-alpha. Patch by Neel Chauhan
 
   o Minor bugfixes (documentation):
     - Improve the documentation for MapAddress .exit. Fixes bug 30109;
@@ -218,18 +193,12 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
       Explain what "monotonic" actually means, and document some results
       that have surprised people. Fixes bug 29640; bugfix
       on 0.2.9.1-alpha.
-
-  o Minor bugfixes (documentation, manpage):
     - Use proper formatting when providing an example on quoting options
       that contain whitespace. Fixes bug 29635; bugfix on 0.2.3.18-rc.
-
-  o Minor bugfixes (lib):
 
   o Minor bugfixes (logging):
     - Do not log a warning for OpenSSL versions that should be
       compatible. Fixes bug 30190; bugfix on 0.2.4.2-alpha
-
-  o Minor bugfixes (logging, configuration):
     - Warn operators when MyFamily option is set but ContactInfo is
       missing, as the latter should be set too. Fixes bug 25110; bugfix
       on 0.3.3.1-alpha.
@@ -255,6 +224,10 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
       we only set this flag when we received a INTRODUCE2 cell in
       rend_service_receive_introduction(). Fixes bug 17357; bugfix on
       0.4.0.2-alpha. Patch by Neel Chauhan
+    - Stop ignoring IPv6 link specifiers sent to v3 onion services. v3
+      onion service IPv6 support is still incomplete, see 23493 for
+      details. Fixes bug 23588; bugfix on 0.3.2.1-alpha. Patch by
+      Neel Chauhan.
 
   o Minor bugfixes (onion services, performance):
     - If we are building circuits to onion services, in
@@ -301,18 +274,8 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
     - Call setrlimit() to disable core dumps in test_bt_cl.c instead of
       using `ulimit -c` in test_bt.sh, which violates POSIX shell
       compatibility. Fixes bug 29061; bugfix on 0.3.5.1-alpha.
-
-  o Minor bugfixes (testing, v3 onion services):
     - Fix some incorrect code in the v3 onion service unit tests. Fixes
       bug 29243; bugfix on 0.3.2.1-alpha.
-
-  o Minor bugfixes (tor-resolve):
-    - Fix a memory leak in tor-resolve that could happen if Tor gave it
-      a malformed SOCKS response. (Memory leaks in tor-resolve don't
-      actually matter, but it's good to fix them anyway.) Fixes bug
-      30151; bugfix on 0.4.0.1-alpha.
-
-  o Minor bugfixes (unit tests):
     - In the "routerkeys/*" tests, check the return values of mkdir()
       for possible failures. Fixes bug 29939; bugfix on 0.2.7.2-alpha.
       Found by Coverity as CID 1444254.
@@ -321,11 +284,11 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
       deallocation on assert failure and fixes Coverity warnings CID
       1444117 and CID 1444118. Fixes bug 29823; bugfix on 0.2.9.1-alpha.
 
-  o Minor bugfixes (v3 onion services):
-    - Stop ignoring IPv6 link specifiers sent to v3 onion services. v3
-      onion service IPv6 support is still incomplete, see 23493 for
-      details. Fixes bug 23588; bugfix on 0.3.2.1-alpha. Patch by
-      Neel Chauhan.
+  o Minor bugfixes (tor-resolve):
+    - Fix a memory leak in tor-resolve that could happen if Tor gave it
+      a malformed SOCKS response. (Memory leaks in tor-resolve don't
+      actually matter, but it's good to fix them anyway.) Fixes bug
+      30151; bugfix on 0.4.0.1-alpha.
 
   o Code simplification and refactoring:
     - Abstract out the low-level formatting of replies on the control
@@ -380,12 +343,6 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
     - Remove obsolete OpenSUSE initscript. Resolves issue 30076.
     - Remove the obsolete script at contrib/dist/tor.sh.in. Resolves
       issue 30075.
-
-  o Testing:
-    - Check that representative subsets of values of `int` and `unsigned
-      int` can be represented by `void *`. Resolves issue 29537.
-
-  o Code simplification and refactoring (circuit padding):
     - Avoid calling monotime_absolute_usec() in circuit padding machines
       that do not use token removal or circuit RTT estimation. Fixes bug
       29085; bugfix on 0.4.0.1-alpha.
