@@ -318,7 +318,7 @@ sendme_circuit_cell_is_next(int window)
   /* Is this the last cell before a SENDME? The idea is that if the package or
    * deliver window reaches a multiple of the increment, after this cell, we
    * should expect a SENDME. */
-  if ((window % CIRCWINDOW_INCREMENT) != 0) {
+  if (((window - 1) % CIRCWINDOW_INCREMENT) != 0) {
     return false;
   }
   /* Next cell is expected to be a SENDME. */

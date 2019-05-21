@@ -55,14 +55,14 @@ test_v1_record_digest(void *arg)
   /* Points it to the OR circuit now. */
   circ = TO_CIRCUIT(or_circ);
 
-  /* The package window has to be a multiple of CIRCWINDOW_INCREMENT in order
-   * to catched the CIRCWINDOW_INCREMENT-nth cell. Try something that
+  /* The package window has to be a multiple of CIRCWINDOW_INCREMENT minus 1
+   * in order to catched the CIRCWINDOW_INCREMENT-nth cell. Try something that
    * shouldn't be noted. */
-  circ->package_window = CIRCWINDOW_INCREMENT - 1;
+  circ->package_window = CIRCWINDOW_INCREMENT;
   sendme_record_cell_digest_on_circ(circ, NULL);
   tt_assert(!circ->sendme_last_digests);
 
-  /* This should work now. Package window at CIRCWINDOW_INCREMENT. */
+  /* This should work now. Package window at CIRCWINDOW_INCREMENT + 1. */
   circ->package_window++;
   sendme_record_cell_digest_on_circ(circ, NULL);
   tt_assert(circ->sendme_last_digests);
@@ -74,7 +74,7 @@ test_v1_record_digest(void *arg)
   tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 1);
 
   /* The next CIRCWINDOW_INCREMENT should add one more digest. */
-  circ->package_window = (CIRCWINDOW_INCREMENT * 2);
+  circ->package_window = (CIRCWINDOW_INCREMENT * 2) + 1;
   sendme_record_cell_digest_on_circ(circ, NULL);
   tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 2);
 
@@ -173,7 +173,7 @@ test_v1_build_cell(void *arg)
   teardown_capture_of_logs();
 
   /* Note the wrong digest in the circuit, cell should fail validation. */
-  circ->package_window = CIRCWINDOW_INCREMENT;
+  circ->package_window = CIRCWINDOW_INCREMENT + 1;
   sendme_record_cell_digest_on_circ(circ, NULL);
   tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 1);
   setup_full_capture_of_logs(LOG_INFO);
@@ -185,7 +185,7 @@ test_v1_build_cell(void *arg)
 
   /* Record the cell digest into the circuit, cell should validate. */
   memcpy(or_circ->crypto.sendme_digest, digest, sizeof(digest));
-  circ->package_window = CIRCWINDOW_INCREMENT;
+  circ->package_window = CIRCWINDOW_INCREMENT + 1;
   sendme_record_cell_digest_on_circ(circ, NULL);
   tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 1);
   tt_int_op(sendme_is_valid(circ, payload, sizeof(payload)), OP_EQ, true);
