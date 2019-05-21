@@ -110,8 +110,10 @@ relay_crypto_record_sendme_digest(relay_crypto_t *crypto,
 
   tor_assert(crypto);
 
-  (is_foward_digest) ? (digest = crypto->f_digest) :
-                       (digest = crypto->b_digest);
+  digest = crypto->b_digest;
+  if (is_foward_digest) {
+    digest = crypto->f_digest;
+  }
 
   crypto_digest_get_digest(digest, (char *) crypto->sendme_digest,
                            sizeof(crypto->sendme_digest));
