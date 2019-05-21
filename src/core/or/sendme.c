@@ -623,7 +623,7 @@ sendme_record_received_cell_digest(circuit_t *circ, crypt_path_t *cpath)
   /* Only record if the next cell is expected to be a SENDME. */
   if (!sendme_circuit_cell_is_next(cpath ? cpath->deliver_window :
                                            circ->deliver_window)) {
-    goto end;
+    return;
   }
 
   if (cpath) {
@@ -633,9 +633,6 @@ sendme_record_received_cell_digest(circuit_t *circ, crypt_path_t *cpath)
     /* Record foward digest. */
     relay_crypto_record_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto, true);
   }
-
- end:
-  return;
 }
 
 /* Called once we encrypted a cell. Record the cell digest as the next sendme
