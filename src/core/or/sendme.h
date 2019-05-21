@@ -40,9 +40,6 @@ void sendme_record_cell_digest_on_circ(circuit_t *circ, crypt_path_t *cpath);
 void sendme_record_received_cell_digest(circuit_t *circ, crypt_path_t *cpath);
 void sendme_record_sending_cell_digest(circuit_t *circ, crypt_path_t *cpath);
 
-/* Circuit level information. */
-bool sendme_circuit_cell_is_next(int window);
-
 /* Private section starts. */
 #ifdef SENDME_PRIVATE
 

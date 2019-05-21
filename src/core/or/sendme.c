@@ -312,15 +312,29 @@ record_cell_digest_on_circ(circuit_t *circ, const uint8_t *sendme_digest)
  * We are able to know that because the package or deliver window value minus
  * one cell (the possible SENDME cell) should be a multiple of the increment
  * window value. */
-bool
-sendme_circuit_cell_is_next(int window)
+static bool
+circuit_sendme_cell_is_next(int window)
 {
-  /* Is this the last cell before a SENDME? The idea is that if the package or
-   * deliver window reaches a multiple of the increment, after this cell, we
-   * should expect a SENDME. */
+  /* At the start of the window, no SENDME will be expected. */
+  if (window == CIRCWINDOW_START) {
+    return false;
+  }
+
+  /* Are we at the limit of the increment and if not, we don't expect next
+   * cell is a SENDME.
+   *
+   * We test against the window minus 1 because when we are looking if the
+   * next cell is a SENDME, the window (either package or deliver) hasn't been
+   * decremented just yet so when this is called, we are currently processing
+   * the "window - 1" cell.
+   *
+   * This function is used when recording a cell digest and this is done quite
+   * low in the stack when decrypting or encrypting a cell. The window is only
+   * updated once the cell is actually put in the outbuf. */
   if (((window - 1) % CIRCWINDOW_INCREMENT) != 0) {
     return false;
   }
+
   /* Next cell is expected to be a SENDME. */
   return true;
 }
@@ -596,7 +610,7 @@ sendme_record_cell_digest_on_circ(circuit_t *circ, crypt_path_t *cpath)
   /* Is this the last cell before a SENDME? The idea is that if the
    * package_window reaches a multiple of the increment, after this cell, we
    * should expect a SENDME. */
-  if (!sendme_circuit_cell_is_next(package_window)) {
+  if (!circuit_sendme_cell_is_next(package_window)) {
     return;
   }
 
@@ -621,7 +635,7 @@ sendme_record_received_cell_digest(circuit_t *circ, crypt_path_t *cpath)
   tor_assert(circ);
 
   /* Only record if the next cell is expected to be a SENDME. */
-  if (!sendme_circuit_cell_is_next(cpath ? cpath->deliver_window :
+  if (!circuit_sendme_cell_is_next(cpath ? cpath->deliver_window :
                                            circ->deliver_window)) {
     return;
   }
@@ -644,7 +658,7 @@ sendme_record_sending_cell_digest(circuit_t *circ, crypt_path_t *cpath)
   tor_assert(circ);
 
   /* Only record if the next cell is expected to be a SENDME. */
-  if (!sendme_circuit_cell_is_next(cpath ? cpath->package_window:
+  if (!circuit_sendme_cell_is_next(cpath ? cpath->package_window :
                                            circ->package_window)) {
     goto end;
   }
