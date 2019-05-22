@@ -143,11 +143,13 @@ test_v1_build_cell(void *arg)
 
   or_circ = or_circuit_new(1, NULL);
   circ = TO_CIRCUIT(or_circ);
+  circ->sendme_last_digests = smartlist_new();
 
   cell_digest = crypto_digest_new();
   tt_assert(cell_digest);
   crypto_digest_add_bytes(cell_digest, "AAAAAAAAAAAAAAAAAAAA", 20);
   crypto_digest_get_digest(cell_digest, (char *) digest, sizeof(digest));
+  smartlist_add(circ->sendme_last_digests, tor_memdup(digest, sizeof(digest)));
 
   /* SENDME v1 payload is 3 bytes + 20 bytes digest. See spec. */
   ret = build_cell_payload_v1(digest, payload);
@@ -157,6 +159,8 @@ test_v1_build_cell(void *arg)
 
   /* An empty payload means SENDME version 0 thus valid. */
   tt_int_op(sendme_is_valid(circ, payload, 0), OP_EQ, true);
+  /* Current phoney digest should have been popped. */
+  tt_int_op(smartlist_len(circ->sendme_last_digests), OP_EQ, 0);
 
   /* An unparseable cell means invalid. */
   setup_full_capture_of_logs(LOG_INFO);
