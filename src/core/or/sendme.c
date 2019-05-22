@@ -47,47 +47,46 @@ get_accept_min_version(void)
                                  SENDME_ACCEPT_MIN_VERSION_MAX);
 }
 
+/* Pop the first cell digset on the given circuit from the SENDME last digests
+ * list. NULL is returned if the list is uninitialized or empty.
+ *
+ * The caller gets ownership of the returned digest thus is responsible for
+ * freeing the memory. */
+static uint8_t *
+pop_first_cell_digest(const circuit_t *circ)
+{
+  uint8_t *circ_digest;
+
+  tor_assert(circ);
+
+  if (circ->sendme_last_digests == NULL ||
+      smartlist_len(circ->sendme_last_digests) == 0) {
+    return NULL;
+  }
+
+  circ_digest = smartlist_get(circ->sendme_last_digests, 0);
+  smartlist_del_keeporder(circ->sendme_last_digests, 0);
+  return circ_digest;
+}
+
 /* Return true iff the given cell digest matches the first digest in the
  * circuit sendme list. */
 static bool
-v1_digest_matches(const circuit_t *circ, const uint8_t *cell_digest)
+v1_digest_matches(const uint8_t *circ_digest, const uint8_t *cell_digest)
 {
-  bool ret = false;
-  uint8_t *circ_digest = NULL;
-
-  tor_assert(circ);
+  tor_assert(circ_digest);
   tor_assert(cell_digest);
-
-  /* We shouldn't have received a SENDME if we have no digests. Log at
-   * protocol warning because it can be tricked by sending many SENDMEs
-   * without prior data cell. */
-  if (circ->sendme_last_digests == NULL ||
-      smartlist_len(circ->sendme_last_digests) == 0) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "We received a SENDME but we have no cell digests to match. "
-           "Closing circuit.");
-    goto no_match;
-  }
-
-  /* Pop the first element that was added (FIFO) and compare it. */
-  circ_digest = smartlist_get(circ->sendme_last_digests, 0);
-  smartlist_del_keeporder(circ->sendme_last_digests, 0);
 
   /* Compare the digest with the one in the SENDME. This cell is invalid
    * without a perfect match. */
   if (tor_memneq(circ_digest, cell_digest, TRUNNEL_SENDME_V1_DIGEST_LEN)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "SENDME v1 cell digest do not match.");
-    goto no_match;
+    return false;
   }
-  /* Digests matches! */
-  ret = true;
 
- no_match:
-  /* This digest was popped from the circuit list. Regardless of what happens,
-   * we have no more use for it. */
-  tor_free(circ_digest);
-  return ret;
+  /* Digests matches! */
+  return true;
 }
 
 /* Return true iff the given decoded SENDME version 1 cell is valid and
@@ -97,13 +96,13 @@ v1_digest_matches(const circuit_t *circ, const uint8_t *cell_digest)
  * cell we saw which tells us that the other side has in fact seen that cell.
  * See proposal 289 for more details. */
 static bool
-cell_v1_is_valid(const sendme_cell_t *cell, const circuit_t *circ)
+cell_v1_is_valid(const sendme_cell_t *cell, const uint8_t *circ_digest)
 {
   tor_assert(cell);
-  tor_assert(circ);
+  tor_assert(circ_digest);
 
   const uint8_t *cell_digest = sendme_cell_getconstarray_data_v1_digest(cell);
-  return v1_digest_matches(circ, cell_digest);
+  return v1_digest_matches(circ_digest, cell_digest);
 }
 
 /* Return true iff the given cell version can be handled or if the minimum
@@ -160,6 +159,7 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
                 size_t cell_payload_len)
 {
   uint8_t cell_version;
+  uint8_t *circ_digest = NULL;
   sendme_cell_t *cell = NULL;
 
   tor_assert(circ);
@@ -184,10 +184,24 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
     goto invalid;
   }
 
+  /* Pop the first element that was added (FIFO). We do that regardless of the
+   * version so we don't accumulate on the circuit if v0 is used by the other
+   * end point. */
+  circ_digest = pop_first_cell_digest(circ);
+  if (circ_digest == NULL) {
+    /* We shouldn't have received a SENDME if we have no digests. Log at
+     * protocol warning because it can be tricked by sending many SENDMEs
+     * without prior data cell. */
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "We received a SENDME but we have no cell digests to match. "
+           "Closing circuit.");
+    goto invalid;
+  }
+
   /* Validate depending on the version now. */
   switch (cell_version) {
   case 0x01:
-    if (!cell_v1_is_valid(cell, circ)) {
+    if (!cell_v1_is_valid(cell, circ_digest)) {
       goto invalid;
     }
     break;
@@ -204,9 +218,11 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
 
   /* Valid cell. */
   sendme_cell_free(cell);
+  tor_free(circ_digest);
   return true;
  invalid:
   sendme_cell_free(cell);
+  tor_free(circ_digest);
   return false;
 }
 
