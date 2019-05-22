@@ -1852,21 +1852,21 @@ test_circuitpadding_state_length(void *arg)
   circpad_machine_runtime_t *mi = client_side->padding_info[0];
 
   circpad_cell_event_padding_sent(client_side);
-  tt_int_op(mi->state_length, OP_EQ, 12);
+  tt_i64_op(mi->state_length, OP_EQ, 12);
   tt_ptr_op(mi->histogram, OP_EQ, NULL);
 
   /* Verify that non-padding does not change our state length */
   circpad_cell_event_nonpadding_sent(client_side);
-  tt_int_op(mi->state_length, OP_EQ, 12);
+  tt_i64_op(mi->state_length, OP_EQ, 12);
 
   /* verify that sending padding changes our state length */
   for (uint64_t i = mi->state_length-1; i > 0; i--) {
     circpad_send_padding_cell_for_callback(mi);
-    tt_int_op(mi->state_length, OP_EQ, i);
+    tt_i64_op(mi->state_length, OP_EQ, i);
   }
   circpad_send_padding_cell_for_callback(mi);
 
-  tt_int_op(mi->state_length, OP_EQ, -1);
+  tt_i64_op(mi->state_length, OP_EQ, -1);
   tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
 
   /* Restart machine */
@@ -1876,16 +1876,16 @@ test_circuitpadding_state_length(void *arg)
   client_machine->states[CIRCPAD_STATE_BURST].length_includes_nonpadding = 1;
 
   circpad_cell_event_padding_sent(client_side);
-  tt_int_op(mi->state_length, OP_EQ, 12);
+  tt_i64_op(mi->state_length, OP_EQ, 12);
 
   /* Verify that non-padding does change our state length now */
   for (uint64_t i = mi->state_length-1; i > 0; i--) {
     circpad_cell_event_nonpadding_sent(client_side);
-    tt_int_op(mi->state_length, OP_EQ, i);
+    tt_i64_op(mi->state_length, OP_EQ, i);
   }
 
   circpad_cell_event_nonpadding_sent(client_side);
-  tt_int_op(mi->state_length, OP_EQ, -1);
+  tt_i64_op(mi->state_length, OP_EQ, -1);
   tt_int_op(mi->current_state, OP_EQ, CIRCPAD_STATE_END);
 
   /* Now, just test token removal when we send padding */
@@ -1895,7 +1895,7 @@ test_circuitpadding_state_length(void *arg)
   /* Restart machine */
   mi->current_state = CIRCPAD_STATE_START;
   circpad_cell_event_padding_sent(client_side);
-  tt_int_op(mi->state_length, OP_EQ, 12);
+  tt_i64_op(mi->state_length, OP_EQ, 12);
   tt_ptr_op(mi->histogram, OP_NE, NULL);
   tt_int_op(mi->chosen_bin, OP_EQ, 2);
 
@@ -1907,7 +1907,7 @@ test_circuitpadding_state_length(void *arg)
     tt_int_op(mi->histogram[2], OP_EQ, i);
   }
 
-  tt_int_op(mi->state_length, OP_EQ, 7);
+  tt_i64_op(mi->state_length, OP_EQ, 7);
   tt_int_op(mi->histogram[2], OP_EQ, 1);
 
   circpad_send_padding_cell_for_callback(mi);
@@ -3009,15 +3009,15 @@ helper_test_hs_machines(bool test_intro_circs)
   if (test_intro_circs) {
     /* on the client side, we don't send any padding so
      * state length is not set */
-    tt_int_op(client_machine_runtime->state_length, OP_EQ, -1);
+    tt_i64_op(client_machine_runtime->state_length, OP_EQ, -1);
     /* relay side has state limits. check them */
-    tt_int_op(relay_machine_runtime->state_length, OP_GE,
+    tt_i64_op(relay_machine_runtime->state_length, OP_GE,
               INTRO_MACHINE_MINIMUM_PADDING);
-    tt_int_op(relay_machine_runtime->state_length, OP_LT,
+    tt_i64_op(relay_machine_runtime->state_length, OP_LT,
               INTRO_MACHINE_MAXIMUM_PADDING);
   } else {
-    tt_int_op(client_machine_runtime->state_length, OP_EQ, 1);
-    tt_int_op(relay_machine_runtime->state_length, OP_EQ, 1);
+    tt_i64_op(client_machine_runtime->state_length, OP_EQ, 1);
+    tt_i64_op(relay_machine_runtime->state_length, OP_EQ, 1);
   }
 
   if (test_intro_circs) {
