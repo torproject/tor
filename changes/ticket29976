@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Rework bootstrap tracking to use the new publish-subscribe
+      subsystem. Closes ticket 29976.
