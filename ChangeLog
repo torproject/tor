@@ -1,4 +1,4 @@
-Changes in version 0.4.1.1-alpha - 2019-05-??
+Changes in version 0.4.1.1-alpha - 2019-05-22
   This is the first alpha in the 0.4.1.x series. It introduces
   lightweight circuit padding to make some onion-service circuits harder
   to distinguish, includes a new "authenticated SENDME" feature to make
@@ -52,6 +52,18 @@ Changes in version 0.4.1.1-alpha - 2019-05-??
       small outputs. Although we believe it to be cryptographically
       strong, we are only using it when necessary for performance.
       Implements tickets 29023 and 29536.
+
+  o Major bugfixes (onion service v3):
+    - Fix an unreachable bug in which an introduction point would could
+      try to send an INTRODUCE_ACK with a status code that Trunnel would
+      refuse to encode, leading the relay to assert(). We've
+      consolidated the ABI values into trunnel now. Fixes bug 30454;
+      bugfix on 0.3.0.1-alpha.
+    - Client can now handle unknown status codes from a INTRODUCE_ACK
+      cells. (The NACK behavior will stay the same.) This will allow us
+      to extend status codes in the future without breaking the normal
+      client behavior. Fixes another part of bug 30454; bugfix
+      on 0.3.0.1-alpha.
 
   o Minor features (circuit padding):
     - We now use a fast PRNG when scheduling circuit padding. Part of
