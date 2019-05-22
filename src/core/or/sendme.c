@@ -25,20 +25,6 @@
 #include "lib/ctime/di_ops.h"
 #include "trunnel/sendme.h"
 
-/* The maximum supported version. Above that value, the cell can't be
- * recognized as a valid SENDME. */
-#define SENDME_MAX_SUPPORTED_VERSION 1
-
-/* The cell version constants for when emitting a cell. */
-#define SENDME_EMIT_MIN_VERSION_DEFAULT 0
-#define SENDME_EMIT_MIN_VERSION_MIN 0
-#define SENDME_EMIT_MIN_VERSION_MAX UINT8_MAX
-
-/* The cell version constants for when accepting a cell. */
-#define SENDME_ACCEPT_MIN_VERSION_DEFAULT 0
-#define SENDME_ACCEPT_MIN_VERSION_MIN 0
-#define SENDME_ACCEPT_MIN_VERSION_MAX UINT8_MAX
-
 /* Return the minimum version given by the consensus (if any) that should be
  * used when emitting a SENDME cell. */
 STATIC int
@@ -61,47 +47,53 @@ get_accept_min_version(void)
                                  SENDME_ACCEPT_MIN_VERSION_MAX);
 }
 
+/* Pop the first cell digset on the given circuit from the SENDME last digests
+ * list. NULL is returned if the list is uninitialized or empty.
+ *
+ * The caller gets ownership of the returned digest thus is responsible for
+ * freeing the memory. */
+static uint8_t *
+pop_first_cell_digest(const circuit_t *circ)
+{
+  uint8_t *circ_digest;
+
+  tor_assert(circ);
+
+  if (circ->sendme_last_digests == NULL ||
+      smartlist_len(circ->sendme_last_digests) == 0) {
+    return NULL;
+  }
+
+  /* More cell digest than the SENDME window is never suppose to happen. The
+   * cell should have been rejected before reaching this point due to its
+   * package_window down to 0 leading to a circuit close. Scream loudly but
+   * still pop the element so we don't memory leak. */
+  tor_assert_nonfatal(smartlist_len(circ->sendme_last_digests) <=
+                      CIRCWINDOW_START_MAX / CIRCWINDOW_INCREMENT);
+
+  circ_digest = smartlist_get(circ->sendme_last_digests, 0);
+  smartlist_del_keeporder(circ->sendme_last_digests, 0);
+  return circ_digest;
+}
+
 /* Return true iff the given cell digest matches the first digest in the
  * circuit sendme list. */
 static bool
-v1_digest_matches(const circuit_t *circ, const uint8_t *cell_digest)
+v1_digest_matches(const uint8_t *circ_digest, const uint8_t *cell_digest)
 {
-  bool ret = false;
-  uint8_t *circ_digest = NULL;
-
-  tor_assert(circ);
+  tor_assert(circ_digest);
   tor_assert(cell_digest);
-
-  /* We shouldn't have received a SENDME if we have no digests. Log at
-   * protocol warning because it can be tricked by sending many SENDMEs
-   * without prior data cell. */
-  if (circ->sendme_last_digests == NULL ||
-      smartlist_len(circ->sendme_last_digests) == 0) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "We received a SENDME but we have no cell digests to match. "
-           "Closing circuit.");
-    goto no_match;
-  }
-
-  /* Pop the first element that was added (FIFO) and compare it. */
-  circ_digest = smartlist_get(circ->sendme_last_digests, 0);
-  smartlist_del_keeporder(circ->sendme_last_digests, 0);
 
   /* Compare the digest with the one in the SENDME. This cell is invalid
    * without a perfect match. */
   if (tor_memneq(circ_digest, cell_digest, TRUNNEL_SENDME_V1_DIGEST_LEN)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "SENDME v1 cell digest do not match.");
-    goto no_match;
+    return false;
   }
-  /* Digests matches! */
-  ret = true;
 
- no_match:
-  /* This digest was popped from the circuit list. Regardless of what happens,
-   * we have no more use for it. */
-  tor_free(circ_digest);
-  return ret;
+  /* Digests matches! */
+  return true;
 }
 
 /* Return true iff the given decoded SENDME version 1 cell is valid and
@@ -111,42 +103,53 @@ v1_digest_matches(const circuit_t *circ, const uint8_t *cell_digest)
  * cell we saw which tells us that the other side has in fact seen that cell.
  * See proposal 289 for more details. */
 static bool
-cell_v1_is_valid(const sendme_cell_t *cell, const circuit_t *circ)
+cell_v1_is_valid(const sendme_cell_t *cell, const uint8_t *circ_digest)
 {
   tor_assert(cell);
-  tor_assert(circ);
+  tor_assert(circ_digest);
 
   const uint8_t *cell_digest = sendme_cell_getconstarray_data_v1_digest(cell);
-  return v1_digest_matches(circ, cell_digest);
+  return v1_digest_matches(circ_digest, cell_digest);
 }
 
 /* Return true iff the given cell version can be handled or if the minimum
  * accepted version from the consensus is known to us. */
 STATIC bool
-cell_version_is_valid(uint8_t cell_version)
+cell_version_can_be_handled(uint8_t cell_version)
 {
   int accept_version = get_accept_min_version();
 
-  /* Can we handle this version? */
+  /* We will first check if the consensus minimum accepted version can be
+   * handled by us and if not, regardless of the cell version we got, we can't
+   * continue. */
   if (accept_version > SENDME_MAX_SUPPORTED_VERSION) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Unable to accept SENDME version %u (from consensus). "
-           "We only support <= %d. Probably your tor is too old?",
-           accept_version, cell_version);
+           "We only support <= %u. Probably your tor is too old?",
+           accept_version, SENDME_MAX_SUPPORTED_VERSION);
     goto invalid;
   }
 
-  /* We only accept a SENDME cell from what the consensus tells us. */
+  /* Then, is this version below the accepted version from the consensus? If
+   * yes, we must not handle it. */
   if (cell_version < accept_version) {
-    log_info(LD_PROTOCOL, "Unacceptable SENDME version %d. Only "
+    log_info(LD_PROTOCOL, "Unacceptable SENDME version %u. Only "
                           "accepting %u (from consensus). Closing circuit.",
              cell_version, accept_version);
     goto invalid;
   }
 
-  return 1;
+  /* Is this cell version supported by us? */
+  if (cell_version > SENDME_MAX_SUPPORTED_VERSION) {
+    log_info(LD_PROTOCOL, "SENDME cell version %u is not supported by us. "
+                          "We only support <= %u",
+             cell_version, SENDME_MAX_SUPPORTED_VERSION);
+    goto invalid;
+  }
+
+  return true;
  invalid:
-  return 0;
+  return false;
 }
 
 /* Return true iff the encoded SENDME cell in cell_payload of length
@@ -163,6 +166,7 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
                 size_t cell_payload_len)
 {
   uint8_t cell_version;
+  uint8_t *circ_digest = NULL;
   sendme_cell_t *cell = NULL;
 
   tor_assert(circ);
@@ -183,31 +187,50 @@ sendme_is_valid(const circuit_t *circ, const uint8_t *cell_payload,
   }
 
   /* Validate that we can handle this cell version. */
-  if (!cell_version_is_valid(cell_version)) {
+  if (!cell_version_can_be_handled(cell_version)) {
+    goto invalid;
+  }
+
+  /* Pop the first element that was added (FIFO). We do that regardless of the
+   * version so we don't accumulate on the circuit if v0 is used by the other
+   * end point. */
+  circ_digest = pop_first_cell_digest(circ);
+  if (circ_digest == NULL) {
+    /* We shouldn't have received a SENDME if we have no digests. Log at
+     * protocol warning because it can be tricked by sending many SENDMEs
+     * without prior data cell. */
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "We received a SENDME but we have no cell digests to match. "
+           "Closing circuit.");
     goto invalid;
   }
 
   /* Validate depending on the version now. */
   switch (cell_version) {
   case 0x01:
-    if (!cell_v1_is_valid(cell, circ)) {
+    if (!cell_v1_is_valid(cell, circ_digest)) {
       goto invalid;
     }
     break;
   case 0x00:
-    /* Fallthrough. Version 0, there is no work to be done on the payload so
-     * it is necessarily valid if we pass the version validation. */
+    /* Version 0, there is no work to be done on the payload so it is
+     * necessarily valid if we pass the version validation. */
+    break;
   default:
-    /* Unknown version means we can't handle it so fallback to version 0. */
+    log_warn(LD_PROTOCOL, "Unknown SENDME cell version %d received.",
+             cell_version);
+    tor_assert_nonfatal_unreached();
     break;
   }
 
   /* Valid cell. */
   sendme_cell_free(cell);
-  return 1;
+  tor_free(circ_digest);
+  return true;
  invalid:
   sendme_cell_free(cell);
-  return 0;
+  tor_free(circ_digest);
+  return false;
 }
 
 /* Build and encode a version 1 SENDME cell into payload, which must be at
@@ -274,6 +297,8 @@ send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
   default:
     /* Unknown version, fallback to version 0 meaning no payload. */
     payload_len = 0;
+    log_debug(LD_PROTOCOL, "Emitting SENDME version 0 cell. "
+                           "Consensus emit version is %d", emit_version);
     break;
   }
 
@@ -287,18 +312,24 @@ send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
   return 0;
 }
 
+/* Record the cell digest only if the next cell is expected to be a SENDME. */
+static void
+record_cell_digest_on_circ(circuit_t *circ, const uint8_t *sendme_digest)
+{
+  tor_assert(circ);
+  tor_assert(sendme_digest);
+
+  /* Add the digest to the last seen list in the circuit. */
+  if (circ->sendme_last_digests == NULL) {
+    circ->sendme_last_digests = smartlist_new();
+  }
+  smartlist_add(circ->sendme_last_digests,
+                tor_memdup(sendme_digest, DIGEST_LEN));
+}
+
 /*
  * Public API
  */
-
-/** Keep the current inbound cell digest for the next SENDME digest. This part
- * is only done by the client as the circuit came back from the Exit. */
-void
-sendme_circuit_record_outbound_cell(or_circuit_t *or_circ)
-{
-  tor_assert(or_circ);
-  relay_crypto_record_sendme_digest(&or_circ->crypto);
-}
 
 /** Return true iff the next cell for the given cell window is expected to be
  * a SENDME.
@@ -306,15 +337,29 @@ sendme_circuit_record_outbound_cell(or_circuit_t *or_circ)
  * We are able to know that because the package or deliver window value minus
  * one cell (the possible SENDME cell) should be a multiple of the increment
  * window value. */
-bool
-sendme_circuit_cell_is_next(int window)
+static bool
+circuit_sendme_cell_is_next(int window)
 {
-  /* Is this the last cell before a SENDME? The idea is that if the package or
-   * deliver window reaches a multiple of the increment, after this cell, we
-   * should expect a SENDME. */
+  /* At the start of the window, no SENDME will be expected. */
+  if (window == CIRCWINDOW_START) {
+    return false;
+  }
+
+  /* Are we at the limit of the increment and if not, we don't expect next
+   * cell is a SENDME.
+   *
+   * We test against the window minus 1 because when we are looking if the
+   * next cell is a SENDME, the window (either package or deliver) hasn't been
+   * decremented just yet so when this is called, we are currently processing
+   * the "window - 1" cell.
+   *
+   * This function is used when recording a cell digest and this is done quite
+   * low in the stack when decrypting or encrypting a cell. The window is only
+   * updated once the cell is actually put in the outbuf. */
   if (((window - 1) % CIRCWINDOW_INCREMENT) != 0) {
     return false;
   }
+
   /* Next cell is expected to be a SENDME. */
   return true;
 }
@@ -372,6 +417,7 @@ sendme_connection_edge_consider_sending(edge_connection_t *conn)
 void
 sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
 {
+  bool sent_one_sendme = false;
   const uint8_t *digest;
 
   while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <=
@@ -387,6 +433,12 @@ sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
     if (send_circuit_level_sendme(circ, layer_hint, digest) < 0) {
       return; /* The circuit's closed, don't continue */
     }
+    /* Current implementation is not suppose to send multiple SENDME at once
+     * because this means we would use the same relay crypto digest for each
+     * SENDME leading to a mismatch on the other side and the circuit to
+     * collapse. Scream loudly if it ever happens so we can address it. */
+    tor_assert_nonfatal(!sent_one_sendme);
+    sent_one_sendme = true;
   }
 }
 
@@ -408,6 +460,12 @@ sendme_process_circuit_level(crypt_path_t *layer_hint,
 {
   tor_assert(circ);
   tor_assert(cell_payload);
+
+  /* Validate the SENDME cell. Depending on the version, different validation
+   * can be done. An invalid SENDME requires us to close the circuit. */
+  if (!sendme_is_valid(circ, cell_payload, cell_payload_len)) {
+    return -END_CIRC_REASON_TORPROTOCOL;
+  }
 
   /* If we are the origin of the circuit, we are the Client so we use the
    * layer hint (the Exit hop) for the package window tracking. */
@@ -433,13 +491,6 @@ sendme_process_circuit_level(crypt_path_t *layer_hint,
      * are rate limited. */
     circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), cell_payload_len);
   } else {
-    /* Validate the SENDME cell. Depending on the version, different
-     * validation can be done. An invalid SENDME requires us to close the
-     * circuit. It is only done if we are the Exit of the circuit. */
-    if (!sendme_is_valid(circ, cell_payload, cell_payload_len)) {
-      return -END_CIRC_REASON_TORPROTOCOL;
-    }
-
     /* We aren't the origin of this circuit so we are the Exit and thus we
      * track the package window with the circuit object. */
     if ((circ->package_window + CIRCWINDOW_INCREMENT) >
@@ -568,34 +619,90 @@ int
 sendme_note_stream_data_packaged(edge_connection_t *conn)
 {
   tor_assert(conn);
-  return --conn->package_window;
+  log_debug(LD_APP, "Stream package_window now %d.", --conn->package_window);
+  return conn->package_window;
 }
 
-/* Note the cell digest in the circuit sendme last digests FIFO if applicable.
- * It is safe to pass a circuit that isn't meant to track those digests. */
+/* Record the cell digest into the circuit sendme digest list depending on
+ * which edge we are. The digest is recorded only if we expect the next cell
+ * that we will receive is a SENDME so we can match the digest. */
 void
-sendme_record_cell_digest(circuit_t *circ)
+sendme_record_cell_digest_on_circ(circuit_t *circ, crypt_path_t *cpath)
 {
-  const uint8_t *digest;
+  int package_window;
+  uint8_t *sendme_digest;
 
   tor_assert(circ);
 
-  /* We only keep the cell digest if we are the Exit on that circuit and if
-   * this cell is the last one before the client should send a SENDME. */
-  if (CIRCUIT_IS_ORIGIN(circ)) {
-    return;
+  package_window = circ->package_window;
+  if (cpath) {
+    package_window = cpath->package_window;
   }
+
   /* Is this the last cell before a SENDME? The idea is that if the
    * package_window reaches a multiple of the increment, after this cell, we
    * should expect a SENDME. */
-  if (!sendme_circuit_cell_is_next(circ->package_window)) {
+  if (!circuit_sendme_cell_is_next(package_window)) {
     return;
   }
 
-  /* Add the digest to the last seen list in the circuit. */
-  digest = relay_crypto_get_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto);
-  if (circ->sendme_last_digests == NULL) {
-    circ->sendme_last_digests = smartlist_new();
+  /* Getting the digest is expensive so we only do it once we are certain to
+   * record it on the circuit. */
+  if (cpath) {
+    sendme_digest = cpath_get_sendme_digest(cpath);
+  } else {
+    sendme_digest =
+      relay_crypto_get_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto);
   }
-  smartlist_add(circ->sendme_last_digests, tor_memdup(digest, DIGEST_LEN));
+
+  record_cell_digest_on_circ(circ, sendme_digest);
+}
+
+/* Called once we decrypted a cell and recognized it. Record the cell digest
+ * as the next sendme digest only if the next cell we'll send on the circuit
+ * is expected to be a SENDME. */
+void
+sendme_record_received_cell_digest(circuit_t *circ, crypt_path_t *cpath)
+{
+  tor_assert(circ);
+
+  /* Only record if the next cell is expected to be a SENDME. */
+  if (!circuit_sendme_cell_is_next(cpath ? cpath->deliver_window :
+                                           circ->deliver_window)) {
+    return;
+  }
+
+  if (cpath) {
+    /* Record incoming digest. */
+    cpath_sendme_record_cell_digest(cpath, false);
+  } else {
+    /* Record foward digest. */
+    relay_crypto_record_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto, true);
+  }
+}
+
+/* Called once we encrypted a cell. Record the cell digest as the next sendme
+ * digest only if the next cell we expect to receive is a SENDME so we can
+ * match the digests. */
+void
+sendme_record_sending_cell_digest(circuit_t *circ, crypt_path_t *cpath)
+{
+  tor_assert(circ);
+
+  /* Only record if the next cell is expected to be a SENDME. */
+  if (!circuit_sendme_cell_is_next(cpath ? cpath->package_window :
+                                           circ->package_window)) {
+    goto end;
+  }
+
+  if (cpath) {
+    /* Record the forward digest. */
+    cpath_sendme_record_cell_digest(cpath, true);
+  } else {
+    /* Record the incoming digest. */
+    relay_crypto_record_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto, false);
+  }
+
+ end:
+  return;
 }

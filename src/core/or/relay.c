@@ -247,6 +247,10 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   if (recognized) {
     edge_connection_t *conn = NULL;
 
+    /* Recognized cell, the cell digest has been updated, we'll record it for
+     * the SENDME if need be. */
+    sendme_record_received_cell_digest(circ, layer_hint);
+
     if (circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING) {
       if (pathbias_check_probe_response(circ, cell) == -1) {
         pathbias_count_valid_cells(circ, cell);
@@ -701,7 +705,7 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
    * we need to. This call needs to be after the circuit_package_relay_cell()
    * because the cell digest is set within that function. */
   if (relay_command == RELAY_COMMAND_DATA) {
-    sendme_record_cell_digest(circ);
+    sendme_record_cell_digest_on_circ(circ, cpath_layer);
   }
 
   return 0;

@@ -34,15 +34,28 @@ int sendme_note_circuit_data_packaged(circuit_t *circ,
                                       crypt_path_t *layer_hint);
 int sendme_note_stream_data_packaged(edge_connection_t *conn);
 
-/* Track cell digest. */
-void sendme_record_cell_digest(circuit_t *circ);
-void sendme_circuit_record_outbound_cell(or_circuit_t *or_circ);
-
-/* Circuit level information. */
-bool sendme_circuit_cell_is_next(int window);
+/* Record cell digest on circuit. */
+void sendme_record_cell_digest_on_circ(circuit_t *circ, crypt_path_t *cpath);
+/* Record cell digest as the SENDME digest. */
+void sendme_record_received_cell_digest(circuit_t *circ, crypt_path_t *cpath);
+void sendme_record_sending_cell_digest(circuit_t *circ, crypt_path_t *cpath);
 
 /* Private section starts. */
 #ifdef SENDME_PRIVATE
+
+/* The maximum supported version. Above that value, the cell can't be
+ * recognized as a valid SENDME. */
+#define SENDME_MAX_SUPPORTED_VERSION 1
+
+/* The cell version constants for when emitting a cell. */
+#define SENDME_EMIT_MIN_VERSION_DEFAULT 0
+#define SENDME_EMIT_MIN_VERSION_MIN 0
+#define SENDME_EMIT_MIN_VERSION_MAX UINT8_MAX
+
+/* The cell version constants for when accepting a cell. */
+#define SENDME_ACCEPT_MIN_VERSION_DEFAULT 0
+#define SENDME_ACCEPT_MIN_VERSION_MIN 0
+#define SENDME_ACCEPT_MIN_VERSION_MAX UINT8_MAX
 
 /*
  * Unit tests declaractions.
@@ -52,7 +65,7 @@ bool sendme_circuit_cell_is_next(int window);
 STATIC int get_emit_min_version(void);
 STATIC int get_accept_min_version(void);
 
-STATIC bool cell_version_is_valid(uint8_t cell_version);
+STATIC bool cell_version_can_be_handled(uint8_t cell_version);
 
 STATIC ssize_t build_cell_payload_v1(const uint8_t *cell_digest,
                                      uint8_t *payload);
