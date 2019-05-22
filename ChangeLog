@@ -32,11 +32,11 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
   o Major features (flow control):
     - Implement authenticated SENDMEs as detailed in proposal 289. A
       SENDME cell now includes the digest of the traffic that it
-      acknowledges, so that once end point receives the SENDME, it can
-      confirm the other side's knowledge of the previous cells that were
-      sent, and prevent certain types of denial-of-service attacks. This
-      behavior is controlled by two new consensus parameters: see the
-      proposal for more details. Fixes ticket 26288.
+      acknowledges, so that once an end point receives the SENDME, it
+      can confirm the other side's knowledge of the previous cells that
+      were sent, and prevent certain types of denial-of-service attacks.
+      This behavior is controlled by two new consensus parameters: see
+      the proposal for more details. Fixes ticket 26288.
 
   o Major features (performance):
     - Our node selection algorithm now excludes nodes in linear time.
@@ -54,12 +54,12 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
       Implements tickets 29023 and 29536.
 
   o Major bugfixes (onion service v3):
-    - Fix an unreachable bug in which an introduction point would could
-      try to send an INTRODUCE_ACK with a status code that Trunnel would
-      refuse to encode, leading the relay to assert(). We've
-      consolidated the ABI values into trunnel now. Fixes bug 30454;
-      bugfix on 0.3.0.1-alpha.
-    - Client can now handle unknown status codes from a INTRODUCE_ACK
+    - Fix an unreachable bug in which an introduction point could try to
+      send an INTRODUCE_ACK with a status code that Trunnel would refuse
+      to encode, leading the relay to assert(). We've consolidated the
+      ABI values into Trunnel now. Fixes bug 30454; bugfix
+      on 0.3.0.1-alpha.
+    - Clients can now handle unknown status codes from INTRODUCE_ACK
       cells. (The NACK behavior will stay the same.) This will allow us
       to extend status codes in the future without breaking the normal
       client behavior. Fixes another part of bug 30454; bugfix
@@ -89,7 +89,7 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
   o Minor features (controller):
     - Add onion service version 3 support to the HSFETCH command.
       Previously, only version 2 onion services were supported. Closes
-      ticket 25417. Patch by Neel Chauhan
+      ticket 25417. Patch by Neel Chauhan.
 
   o Minor features (debugging):
     - Introduce tor_assertf() and tor_assertf_nonfatal() to enable
@@ -109,7 +109,7 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
       cases. Closes ticket 29542.
 
   o Minor features (developer tools):
-    - Tor's "practracker" test script nows check for files and functions
+    - Tor's "practracker" test script now checks for files and functions
       that seem too long and complicated. Existing overlong functions
       and files are accepted for now, but should eventually be
       refactored. Closes ticket 29221.
@@ -132,7 +132,7 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
   o Minor features (IPv6, v3 onion services):
     - Make v3 onion services put IPv6 addresses in service descriptors.
       Before this change, service descriptors only contained IPv4
-      addressesd. Implements 26992.
+      addresses. Implements 26992.
 
   o Minor features (modularity):
     - The "--disable-module-dirauth" compile-time option now disables
@@ -146,7 +146,7 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
   o Minor features (testing):
     - Tor's unit test code now contains helper functions to replace the
       PRNG with a deterministic or reproducible version for testing.
-      Previously, various tests did implemented this in various ways.
+      Previously, various tests implemented this in various ways.
       Implements ticket 29732.
     - We now have a script, cov-test-determinism.sh, to identify places
       where our unit test coverage has become nondeterministic. Closes
@@ -159,12 +159,12 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
       about to dump their status to a file. Previously, they set bridges
       as running in response to a GETINFO command, but those shouldn't
       modify data structures. Fixes bug 24490; bugfix on 0.2.0.13-alpha.
-      Patch by Neel Chauhan
+      Patch by Neel Chauhan.
 
   o Minor bugfixes (channel padding statistics):
     - Channel padding write totals and padding-enabled totals are now
       counted properly in relay extrainfo descriptors. Fixes bug 29231;
-      bugfix on 0.3.1.1-alpha
+      bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (circuit padding):
     - Add a "CircuitPadding" torrc option to disable circuit padding.
@@ -197,9 +197,9 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
       object. Fixes bug 29984; bugfix on 0.2.3.8-alpha.
 
   o Minor bugfixes (directory authority, ipv6):
-    - If we are a directory authority with IPv6 and are marking relays
-      as running, mark ourselves as reachable on IPv6. Fixes bug 24338;
-      bugfix on 0.4.0.2-alpha. Patch by Neel Chauhan
+    - Directory authorities with IPv6 support now always mark themselves
+      as reachable via IPv6. Fixes bug 24338; bugfix on 0.4.0.2-alpha.
+      Patch by Neel Chauhan.
 
   o Minor bugfixes (documentation):
     - Improve the documentation for using MapAddress with ".exit". Fixes
@@ -212,10 +212,10 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
       that contain whitespace. Fixes bug 29635; bugfix on 0.2.3.18-rc.
 
   o Minor bugfixes (logging):
-    - Do not log a warning when running with an OpenSSL version that
-      that should be compatible with the one we were built with.
-      Previously, we would warn whenever the version was different.
-      Fixes bug 30190; bugfix on 0.2.4.2-alpha
+    - Do not log a warning when running with an OpenSSL version other
+      than the one Tor was compiled with, if the two versions should be
+      compatible. Previously, we would warn whenever the version was
+      different. Fixes bug 30190; bugfix on 0.2.4.2-alpha.
     - Warn operators when the MyFamily option is set but ContactInfo is
       missing, as the latter should be set too. Fixes bug 25110; bugfix
       on 0.3.3.1-alpha.
@@ -233,10 +233,10 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
       rate-limiting, respond to the controller with a new response,
       "QUERY_RATE_LIMITED". Previously, we would log QUERY_NO_HSDIR for
       this case. Fixes bug 28269; bugfix on 0.3.1.1-alpha. Patch by
-      Neel Chauhan
-    - When relaunching a circuit to a rendevous service, mark the
+      Neel Chauhan.
+    - When relaunching a circuit to a rendezvous service, mark the
       circuit as needing high-uptime routers as appropriate. Fixes bug
-      17357; bugfix on 0.4.0.2-alpha. Patch by Neel Chauhan
+      17357; bugfix on 0.4.0.2-alpha. Patch by Neel Chauhan.
     - Stop ignoring IPv6 link specifiers sent to v3 onion services.
       (IPv6 support for v3 onion services is still incomplete: see
       ticket 23493 for details.) Fixes bug 23588; bugfix on
@@ -245,9 +245,9 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
   o Minor bugfixes (onion services, performance):
     - When building circuits to onion services, call tor_addr_parse()
       less often. Previously, we called tor_addr_parse() in
-      circuit_is_acceptable() even if its output it wasn't used. This
+      circuit_is_acceptable() even if its output wasn't used. This
       change should improve performance when building circuits. Fixes
-      bug 22210; bugfix on 0.2.8.12. Patch by Neel Chauhan
+      bug 22210; bugfix on 0.2.8.12. Patch by Neel Chauhan.
 
   o Minor bugfixes (performance):
     - When checking whether a node is a bridge, use a fast check to make
@@ -270,9 +270,9 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
       python3. Fixes bug 29913; bugfix on 0.2.5.3-alpha.
 
   o Minor bugfixes (relay):
-    - If we are are a relay and have IPv6Exit to 1 while ExitRelay is
-      auto, we act as if ExitRelay is 1. Previously, we ignored IPv6Exit
-      if ExitRelay was 0 or auto. Fixes bug 29613; bugfix on
+    - When running as a relay, if IPv6Exit is set to 1 while ExitRelay
+      is auto, act as if ExitRelay is 1. Previously, we would ignore
+      IPv6Exit if ExitRelay was 0 or auto. Fixes bug 29613; bugfix on
       0.3.5.1-alpha. Patch by Neel Chauhan.
 
   o Minor bugfixes (stats):
@@ -316,7 +316,7 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
       relay subsystem. Closes ticket 30414.
     - Refactor and encapsulate parts of the codebase that manipulate
       crypt_path_t objects. Resolves issue 30236.
-    - Refactor several places in our code that coverity incorrectly
+    - Refactor several places in our code that Coverity incorrectly
       believed might have memory leaks. Closes ticket 30147.
     - Remove redundant return values in crypto_format, and the
       associated return value checks elsewhere in the code. Make the
@@ -341,7 +341,7 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
 
   o Documentation:
     - Document how to find git commits and tags for bug fixes in
-      CodingStandards.md. Update some changes file documentation. Closes
+      CodingStandards.md. Update some file documentation. Closes
       ticket 30261.
 
   o Removed features:
