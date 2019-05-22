@@ -64,6 +64,13 @@ pop_first_cell_digest(const circuit_t *circ)
     return NULL;
   }
 
+  /* More cell digest than the SENDME window is never suppose to happen. The
+   * cell should have been rejected before reaching this point due to its
+   * package_window down to 0 leading to a circuit close. Scream loudly but
+   * still pop the element so we don't memory leak. */
+  tor_assert_nonfatal(smartlist_len(circ->sendme_last_digests) <=
+                      CIRCWINDOW_START_MAX / CIRCWINDOW_INCREMENT);
+
   circ_digest = smartlist_get(circ->sendme_last_digests, 0);
   smartlist_del_keeporder(circ->sendme_last_digests, 0);
   return circ_digest;
@@ -290,6 +297,8 @@ send_circuit_level_sendme(circuit_t *circ, crypt_path_t *layer_hint,
   default:
     /* Unknown version, fallback to version 0 meaning no payload. */
     payload_len = 0;
+    log_debug(LD_PROTOCOL, "Emitting SENDME version 0 cell. "
+                           "Consensus emit version is %d", emit_version);
     break;
   }
 
@@ -408,6 +417,7 @@ sendme_connection_edge_consider_sending(edge_connection_t *conn)
 void
 sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
 {
+  bool sent_one_sendme = false;
   const uint8_t *digest;
 
   while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <=
@@ -423,6 +433,12 @@ sendme_circuit_consider_sending(circuit_t *circ, crypt_path_t *layer_hint)
     if (send_circuit_level_sendme(circ, layer_hint, digest) < 0) {
       return; /* The circuit's closed, don't continue */
     }
+    /* Current implementation is not suppose to send multiple SENDME at once
+     * because this means we would use the same relay crypto digest for each
+     * SENDME leading to a mismatch on the other side and the circuit to
+     * collapse. Scream loudly if it ever happens so we can address it. */
+    tor_assert_nonfatal(!sent_one_sendme);
+    sent_one_sendme = true;
   }
 }
 
