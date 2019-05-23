@@ -348,11 +348,11 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "known-flags %s\n"
                  "flag-thresholds %s\n"
                  "params %s\n"
+                 "%s" /* bandwidth file headers */
+                 "%s" /* bandwidth file digest */
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n"
                  "%s" /* shared randomness information */
-                 "%s" /* bandwidth file headers */
-                 "%s" /* bandwidth file */
                  ,
                  v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
                  methods,
@@ -365,14 +365,13 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  flags,
                  flag_thresholds,
                  params,
+                 bw_headers_line ? bw_headers_line : "",
+                 bw_file_digest ? bw_file_digest: "",
                  voter->nickname, fingerprint, voter->address,
                  fmt_addr32(addr), voter->dir_port, voter->or_port,
                  voter->contact,
                  shared_random_vote_str ?
-                           shared_random_vote_str : "",
-                 bw_headers_line ?
-                           bw_headers_line : "",
-                 bw_file_digest ? bw_file_digest: "");
+                           shared_random_vote_str : "");
 
     tor_free(params);
     tor_free(flags);
