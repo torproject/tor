@@ -1049,9 +1049,11 @@ handle_control_postdescriptor(control_connection_t *conn,
   line = config_line_find_case(args->kwargs, "purpose");
   if (line) {
     purpose = router_purpose_from_string(line->value);
-    control_printf_endreply(conn, 552, "Unknown purpose \"%s\"",
-                            line->value);
-    goto done;
+    if (purpose == ROUTER_PURPOSE_UNKNOWN) {
+      control_printf_endreply(conn, 552, "Unknown purpose \"%s\"",
+                              line->value);
+      goto done;
+    }
   }
   line = config_line_find_case(args->kwargs, "cache");
   if (line) {
