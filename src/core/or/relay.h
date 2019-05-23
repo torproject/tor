@@ -123,6 +123,9 @@ STATIC int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                    edge_connection_t *conn,
                                    crypt_path_t *layer_hint);
 STATIC size_t get_pad_cell_offset(size_t payload_len);
+STATIC size_t connection_edge_get_inbuf_bytes_to_package(size_t n_available,
+                                                      int package_partial,
+                                                      circuit_t *on_circuit);
 
 #endif /* defined(RELAY_PRIVATE) */
 

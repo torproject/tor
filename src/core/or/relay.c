@@ -2055,7 +2055,7 @@ circuit_reset_sendme_randomness(circuit_t *circ)
  * Helper. Return the number of bytes that should be put into a cell from a
  * given edge connection on which <b>n_available</b> bytes are available.
  */
-static size_t
+STATIC size_t
 connection_edge_get_inbuf_bytes_to_package(size_t n_available,
                                            int package_partial,
                                            circuit_t *on_circuit)
