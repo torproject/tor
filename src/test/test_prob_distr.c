@@ -1119,13 +1119,14 @@ test_psi_dist_sample(const struct dist *dist)
 }
 
 static void
-dump_seed(void)
+write_stochastic_warning(void)
 {
-  printf("\n"
+  if (tinytest_cur_test_has_failed()) {
+    printf("\n"
          "NOTE: This is a stochastic test, and we expect it to fail from\n"
          "time to time, with some low probability. If you see it fail more\n"
          "than one trial in 100, though, please tell us.\n\n");
-  testing_dump_reproducible_rng_seed();
+  }
 }
 
 static void
@@ -1180,7 +1181,7 @@ test_stochastic_uniform(void *arg)
 
  done:
   if (tests_failed) {
-    dump_seed();
+    write_stochastic_warning();
   }
   testing_disable_reproducible_rng();
 }
@@ -1273,7 +1274,7 @@ test_stochastic_genpareto(void *arg)
 
  done:
   if (tests_failed) {
-    dump_seed();
+    write_stochastic_warning();
   }
   testing_disable_reproducible_rng();
 }
@@ -1301,7 +1302,7 @@ test_stochastic_geometric(void *arg)
 
  done:
   if (tests_failed) {
-    dump_seed();
+    write_stochastic_warning();
   }
   testing_disable_reproducible_rng();
 }
@@ -1328,7 +1329,7 @@ test_stochastic_logistic(void *arg)
 
  done:
   if (tests_failed) {
-    dump_seed();
+    write_stochastic_warning();
   }
   testing_disable_reproducible_rng();
 }
@@ -1337,7 +1338,6 @@ static void
 test_stochastic_log_logistic(void *arg)
 {
   bool ok = 0;
-  bool tests_failed = true;
   (void) arg;
 
   testing_enable_reproducible_rng();
@@ -1351,12 +1351,8 @@ test_stochastic_log_logistic(void *arg)
   ok = test_stochastic_log_logistic_impl(exp(-10), 1e-2);
   tt_assert(ok);
 
-  tests_failed = false;
-
  done:
-  if (tests_failed) {
-    dump_seed();
-  }
+  write_stochastic_warning();
   testing_disable_reproducible_rng();
 }
 
@@ -1364,7 +1360,6 @@ static void
 test_stochastic_weibull(void *arg)
 {
   bool ok = 0;
-  bool tests_failed = true;
   (void) arg;
 
   testing_enable_reproducible_rng();
@@ -1380,12 +1375,8 @@ test_stochastic_weibull(void *arg)
   ok = test_stochastic_weibull_impl(10, 1);
   tt_assert(ok);
 
-  tests_failed = false;
-
  done:
-  if (tests_failed) {
-    dump_seed();
-  }
+  write_stochastic_warning();
   testing_disable_reproducible_rng();
   UNMOCK(crypto_rand);
 }

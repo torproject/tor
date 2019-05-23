@@ -17,6 +17,7 @@
 #include "core/or/or.h"
 
 #include "lib/crypt_ops/crypto_rand.h"
+#include "ext/tinytest.h"
 
 #include "test/rng_test_helpers.h"
 
@@ -54,7 +55,8 @@ static uint8_t rng_seed[16];
 static crypto_xof_t *rng_xof = NULL;
 
 /**
- * Print the seed for our PRNG to stdout.  We use this when we're
+ * Print the seed for our PRNG to stdout.  We use this when we're failed
+ * test that had a reproducible RNG set.
  **/
 void
 testing_dump_reproducible_rng_seed(void)
@@ -122,9 +124,22 @@ enable_deterministic_rng_impl(const uint8_t *seed, size_t seed_len)
 void
 testing_enable_reproducible_rng(void)
 {
-  uint8_t seed[16];
-  crypto_rand((char*)seed, sizeof(seed));
-  enable_deterministic_rng_impl(seed, sizeof(seed));
+  const char *provided_seed = getenv("TOR_TEST_RNG_SEED");
+  if (provided_seed) {
+    size_t hexlen = strlen(provided_seed);
+    size_t seedlen = hexlen / 2;
+    uint8_t *seed = tor_malloc(hexlen / 2);
+    if (base16_decode((char*)seed, seedlen, provided_seed, hexlen) < 0) {
+      puts("Cannot decode value in TOR_TEST_RNG_SEED");
+      exit(1);
+    }
+    enable_deterministic_rng_impl(seed, seedlen);
+    tor_free(seed);
+  } else {
+    uint8_t seed[16];
+    crypto_rand((char*)seed, sizeof(seed));
+    enable_deterministic_rng_impl(seed, sizeof(seed));
+  }
 }
 
 /**
@@ -227,4 +242,17 @@ testing_disable_rng_override(void)
   crypto_fast_rng_free(rng);
 
   rng_is_replaced = false;
+}
+
+/**
+ * As testing_disable_rng_override(), but dump the seed if the current
+ * test has failed.
+ */
+void
+testing_disable_reproducible_rng(void)
+{
+  if (tinytest_cur_test_has_failed()) {
+    testing_dump_reproducible_rng_seed();
+  }
+  testing_disable_rng_override();
 }

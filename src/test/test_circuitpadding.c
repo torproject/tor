@@ -36,6 +36,8 @@
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
 
+#include "test/rng_test_helpers.h"
+
 /* Start our monotime mocking at 1 second past whatever monotime_init()
  * thought the actual wall clock time was, for platforms with bad resolution
  * and weird timevalues during monotime_init() before mocking. */
@@ -313,6 +315,7 @@ test_circuitpadding_rtt(void *arg)
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
   MOCK(circpad_send_command_to_hop, circpad_send_command_to_hop_mock);
+  testing_enable_reproducible_rng();
 
   dummy_channel.cmux = circuitmux_alloc();
   relay_side = TO_CIRCUIT(new_fake_orcirc(&dummy_channel, &dummy_channel));
@@ -416,6 +419,7 @@ test_circuitpadding_rtt(void *arg)
   UNMOCK(circuit_package_relay_cell);
   UNMOCK(circuitmux_attach_circuit);
   tor_free(circ_client_machine.states);
+  testing_disable_reproducible_rng();
 
   return;
 }
@@ -540,6 +544,7 @@ test_circuitpadding_token_removal_higher(void *arg)
   /* Mock it up */
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
   MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  testing_enable_reproducible_rng();
 
   /* Setup test environment (time etc.) */
   client_side = TO_CIRCUIT(origin_circuit_new());
@@ -633,6 +638,7 @@ test_circuitpadding_token_removal_higher(void *arg)
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
+  testing_disable_reproducible_rng();
 }
 
 /** Test lower token removal strategy by bin  */
@@ -645,6 +651,7 @@ test_circuitpadding_token_removal_lower(void *arg)
   /* Mock it up */
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
   MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  testing_enable_reproducible_rng();
 
   /* Setup test environment (time etc.) */
   client_side = TO_CIRCUIT(origin_circuit_new());
@@ -731,6 +738,7 @@ test_circuitpadding_token_removal_lower(void *arg)
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
+  testing_disable_reproducible_rng();
 }
 
 /** Test closest token removal strategy by bin  */
@@ -743,6 +751,7 @@ test_circuitpadding_closest_token_removal(void *arg)
   /* Mock it up */
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
   MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  testing_enable_reproducible_rng();
 
   /* Setup test environment (time etc.) */
   client_side = TO_CIRCUIT(origin_circuit_new());
@@ -837,6 +846,7 @@ test_circuitpadding_closest_token_removal(void *arg)
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
+  testing_disable_reproducible_rng();
 }
 
 /** Test closest token removal strategy with usec  */
@@ -849,6 +859,7 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   /* Mock it up */
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
   MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  testing_enable_reproducible_rng();
 
   /* Setup test environment (time etc.) */
   client_side = TO_CIRCUIT(origin_circuit_new());
@@ -948,6 +959,7 @@ test_circuitpadding_closest_token_removal_usec(void *arg)
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
+  testing_disable_reproducible_rng();
 }
 
 /** Test closest token removal strategy with usec  */
@@ -960,6 +972,7 @@ test_circuitpadding_token_removal_exact(void *arg)
   /* Mock it up */
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
   MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  testing_enable_reproducible_rng();
 
   /* Setup test environment (time etc.) */
   client_side = TO_CIRCUIT(origin_circuit_new());
@@ -1007,6 +1020,7 @@ test_circuitpadding_token_removal_exact(void *arg)
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
+  testing_disable_reproducible_rng();
 }
 
 #undef BIG_HISTOGRAM_LEN
@@ -1018,6 +1032,8 @@ test_circuitpadding_tokens(void *arg)
   circpad_machine_runtime_t *mi;
   int64_t actual_mocked_monotime_start;
   (void)arg;
+
+  testing_enable_reproducible_rng();
 
   /** Test plan:
    *
@@ -1272,6 +1288,7 @@ test_circuitpadding_tokens(void *arg)
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   monotime_disable_test_mocking();
   tor_free(circ_client_machine.states);
+  testing_disable_reproducible_rng();
 }
 
 void
@@ -1299,6 +1316,7 @@ test_circuitpadding_wronghop(void *arg)
   /* Mock this function so that our cell counting tests don't get confused by
    * padding that gets sent by scheduled timers. */
   MOCK(circpad_machine_schedule_padding,circpad_machine_schedule_padding_mock);
+  testing_enable_reproducible_rng();
 
   client_side = TO_CIRCUIT(origin_circuit_new());
   dummy_channel.cmux = circuitmux_alloc();
@@ -1472,6 +1490,7 @@ test_circuitpadding_wronghop(void *arg)
   UNMOCK(circuit_package_relay_cell);
   UNMOCK(circuitmux_attach_circuit);
   nodes_free();
+  testing_disable_reproducible_rng();
 }
 
 void
@@ -1952,6 +1971,7 @@ test_circuitpadding_conditions(void *arg)
   int64_t actual_mocked_monotime_start;
   (void)arg;
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
+  testing_enable_reproducible_rng();
 
   nodes_init();
   dummy_channel.cmux = circuitmux_alloc();
@@ -2056,6 +2076,7 @@ test_circuitpadding_conditions(void *arg)
 
  done:
   /* XXX: Free everything */
+  testing_disable_reproducible_rng();
   return;
 }
 
@@ -2385,6 +2406,7 @@ test_circuitpadding_sample_distribution(void *arg)
   /* mock this function so that we dont actually schedule any padding */
   MOCK(circpad_machine_schedule_padding,
        circpad_machine_schedule_padding_mock);
+  testing_enable_reproducible_rng();
 
   /* Initialize a machine with multiple probability distributions */
   circpad_machines_init();
@@ -2417,6 +2439,7 @@ test_circuitpadding_sample_distribution(void *arg)
  done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
   UNMOCK(circpad_machine_schedule_padding);
+  testing_disable_reproducible_rng();
 }
 
 static circpad_decision_t
@@ -2442,6 +2465,7 @@ test_circuitpadding_machine_rate_limiting(void *arg)
    * really care about padding counts */
   MOCK(circpad_machine_spec_transition, circpad_machine_spec_transition_mock);
   MOCK(circpad_send_command_to_hop, circpad_send_command_to_hop_mock);
+  testing_enable_reproducible_rng();
 
   /* Setup machine and circuits */
   client_side = TO_CIRCUIT(origin_circuit_new());
@@ -2495,6 +2519,7 @@ test_circuitpadding_machine_rate_limiting(void *arg)
 
  done:
   free_fake_origin_circuit(TO_ORIGIN_CIRCUIT(client_side));
+  testing_disable_reproducible_rng();
 }
 
 /* Test global padding rate limits */
@@ -2514,6 +2539,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
   MOCK(circuit_package_relay_cell,
        circuit_package_relay_cell_mock);
   MOCK(monotime_absolute_usec, mock_monotime_absolute_usec);
+  testing_enable_reproducible_rng();
 
   monotime_init();
   monotime_enable_test_mocking();
@@ -2593,6 +2619,7 @@ test_circuitpadding_global_rate_limiting(void *arg)
   circuitmux_free(dummy_channel.cmux);
   SMARTLIST_FOREACH(vote1.net_params, char *, cp, tor_free(cp));
   smartlist_free(vote1.net_params);
+  testing_disable_reproducible_rng();
 }
 
 /* Test reduced and disabled padding */
@@ -2603,6 +2630,7 @@ test_circuitpadding_reduce_disable(void *arg)
   int64_t actual_mocked_monotime_start;
 
   MOCK(circuitmux_attach_circuit, circuitmux_attach_circuit_mock);
+  testing_enable_reproducible_rng();
 
   nodes_init();
   dummy_channel.cmux = circuitmux_alloc();
@@ -2742,6 +2770,7 @@ test_circuitpadding_reduce_disable(void *arg)
   free_fake_orcirc(relay_side);
   circuitmux_detach_all_circuits(dummy_channel.cmux, NULL);
   circuitmux_free(dummy_channel.cmux);
+  testing_disable_reproducible_rng();
 }
 
 /** Just a basic machine whose whole purpose is to reach the END state */
