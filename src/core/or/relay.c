@@ -2040,8 +2040,8 @@ void
 circuit_reset_sendme_randomness(circuit_t *circ)
 {
   circ->have_sent_sufficiently_random_cell = 0;
-  circ->send_randomness_after_n_cells = CIRCWINDOW_START / 2 +
-    crypto_fast_rng_get_uint(get_thread_fast_rng(), CIRCWINDOW_START/2);
+  circ->send_randomness_after_n_cells = CIRCWINDOW_INCREMENT / 2 +
+    crypto_fast_rng_get_uint(get_thread_fast_rng(), CIRCWINDOW_INCREMENT / 2);
 }
 
 /**
