@@ -282,8 +282,8 @@ test_package_payload_len(void *arg)
   /* check initial conditions. */
   circuit_reset_sendme_randomness(c);
   tt_assert(! c->have_sent_sufficiently_random_cell);
-  tt_int_op(c->send_randomness_after_n_cells, OP_GE, CIRCWINDOW_START / 2);
-  tt_int_op(c->send_randomness_after_n_cells, OP_LT, CIRCWINDOW_START);
+  tt_int_op(c->send_randomness_after_n_cells, OP_GE, CIRCWINDOW_INCREMENT / 2);
+  tt_int_op(c->send_randomness_after_n_cells, OP_LT, CIRCWINDOW_INCREMENT);
 
   /* We have a bunch of cells before we need to send randomness, so the first
    * few can be packaged full. */
@@ -324,7 +324,8 @@ test_package_payload_len(void *arg)
   tt_int_op(n, OP_EQ, RELAY_PAYLOAD_SIZE);
   /* Now these will be reset. */
   tt_assert(! c->have_sent_sufficiently_random_cell);
-  tt_int_op(c->send_randomness_after_n_cells, OP_GE, CIRCWINDOW_START / 2);
+  tt_int_op(c->send_randomness_after_n_cells, OP_GE,
+            CIRCWINDOW_INCREMENT / 2 - 1);
 
   /* What would happen if we hadn't sent a sufficiently random cell? */
   c->send_randomness_after_n_cells = 0;
@@ -333,7 +334,8 @@ test_package_payload_len(void *arg)
   tt_int_op(n, OP_EQ, reduced_payload_size);
   /* Now these will be reset. */
   tt_assert(! c->have_sent_sufficiently_random_cell);
-  tt_int_op(c->send_randomness_after_n_cells, OP_GE, CIRCWINDOW_START / 2);
+  tt_int_op(c->send_randomness_after_n_cells, OP_GE,
+            CIRCWINDOW_INCREMENT / 2 - 1);
 
   /* Here is a fun case: if it's time to package a small cell, then
    * package_partial==0 should mean we accept that many bytes.
