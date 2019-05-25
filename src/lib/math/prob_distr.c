@@ -451,7 +451,6 @@ STATIC double
 random_uniform_01(void)
 {
   uint32_t z, x, hi, lo;
-  double s;
 
   /*
    * Draw an exponent, geometrically distributed, but give up if
@@ -467,20 +466,44 @@ random_uniform_01(void)
   }
   z += clz32(x);
 
+  hi = crypto_fast_rng_get_u32(get_thread_fast_rng());
+  lo = crypto_fast_rng_get_u32(get_thread_fast_rng());
+
+  return sample_uniform_01(z, hi, lo);
+}
+
+/**
+ * Map a geometric(1/2) exponent e and uniform random 32-bit integers
+ * hi and lo into a uniform random floating-point number in [0, 1].
+ */
+#include <assert.h>
+STATIC double
+sample_uniform_01(uint32_t e, uint32_t hi, uint32_t lo)
+{
+  double s;
+
   /*
    * Pick 32-bit halves of an odd normalized significand.
    * Picking it odd breaks ties in the subsequent rounding, which
    * occur only with measure zero in the uniform distribution on
    * [0, 1].
    */
-  hi = crypto_fast_rng_get_u32(get_thread_fast_rng()) | UINT32_C(0x80000000);
-  lo = crypto_fast_rng_get_u32(get_thread_fast_rng()) | UINT32_C(0x00000001);
+  hi |= UINT32_C(0x80000000);
+  lo |= UINT32_C(0x00000001);
 
   /* Round to nearest scaled significand in [2^63, 2^64].  */
   s = hi*(double)4294967296 + lo;
 
-  /* Rescale into [1/2, 1] and apply exponent in one swell foop.  */
-  return s * ldexp(1, -(64 + z));
+  /* Rescale into [1/2, 1].  This ldexp is constant-foldable.  */
+  s *= ldexp(1, -64);
+
+  /*
+   * Apply exponent.  Do this separately from the above ldexp, because
+   * some math libraries' ldexps are broken.
+   */
+  s *= ldexp(1, -e);
+
+  return s;
 }
 
 /*******************************************************************/

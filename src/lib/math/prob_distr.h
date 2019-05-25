@@ -220,6 +220,7 @@ STATIC double logithalf(double p0);
 STATIC double logit(double p);
 
 STATIC double random_uniform_01(void);
+STATIC double sample_uniform_01(uint32_t e, uint32_t hi, uint32_t lo);
 
 STATIC double logistic(double x);
 STATIC double cdf_logistic(double x, double mu, double sigma);

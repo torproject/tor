@@ -276,6 +276,92 @@ relerr(double expected, double actual)
 } while (0)
 
 /**
+ * Test that the deterministic sample_uniform_01 behaves as expected.
+ */
+static void
+test_uniform_01(void *arg)
+{
+  static const struct {
+    uint32_t e, hi, lo;
+    double x;
+  } cases[] = {
+    { 1088, 0x373c2528UL, 0x53b4b3d4UL, 0 },
+    { 1074, 0x00000000UL, 0x00000000UL, 0 },
+    { 1074, 0x00000000UL, 0x00000200UL, 0 },
+    { 1074, 0x00000000UL, 0x000003ffUL, 0 },
+    { 1074, 0x00000000UL, 0x00000400UL, 4.9406564584124654e-324 },
+    { 1074, 0x7fffffffUL, 0xffffffffUL, 4.9406564584124654e-324 },
+    { 1073, 0x00000000UL, 0x00000000UL, 4.9406564584124654e-324 },
+    { 1073, 0x1fffffffUL, 0xffffffffUL, 4.9406564584124654e-324 },
+    { 1073, 0x2fffffffUL, 0xffffffffUL, 4.9406564584124654e-324 },
+    { 1073, 0x3fffffffUL, 0xffffffffUL, 9.8813129168249309e-324 },
+    { 1022, 0x7fffffffUL, 0xfffff3ffUL, 2.2250738585072009e-308 },
+    { 1022, 0x7fffffffUL, 0xfffff400UL, 2.2250738585072014e-308 },
+    {    2, 0x00000000UL, 0x00000000UL, 0.12500 },
+    {    2, 0x20000000UL, 0x00000000UL, 0.15625 },
+    {    2, 0x40000000UL, 0x00000000UL, 0.18750 },
+    {    2, 0x60000000UL, 0x00000000UL, 0.21875 },
+    {    1, 0x00000000UL, 0x00000000UL, 0.25000 },
+    {    1, 0x20000000UL, 0x00000000UL, 0.31250 },
+    {    1, 0x40000000UL, 0x00000000UL, 0.37500 },
+    {    1, 0x60000000UL, 0x00000000UL, 0.43750 },
+    {    0, 0x00000000UL, 0x00000000UL, 0.50000 },
+    {    0, 0x20000000UL, 0x00000000UL, 0.62500 },
+    {    0, 0x40000000UL, 0x00000000UL, 0.75000 },
+    {    0, 0x60000000UL, 0x00000000UL, 0.87500 },
+    {    0, 0x7fffffffUL, 0xfffff200UL, 0.99999999999999978 },
+    {    0, 0x7fffffffUL, 0xfffff3ffUL, 0.99999999999999978 },
+    {    0, 0x7fffffffUL, 0xfffff400UL, 0.99999999999999989 },
+    {    0, 0x7fffffffUL, 0xfffff800UL, 0.99999999999999989 },
+    {    0, 0x7fffffffUL, 0xfffffbffUL, 0.99999999999999989 },
+    {    0, 0x7fffffffUL, 0xfffffc00UL, 1.00000000000000000 },
+    {    0, 0x7fffffffUL, 0xffffffffUL, 1.00000000000000000 },
+  };
+  size_t i;
+  bool ok = true;
+
+  (void) arg;
+
+  for (i = 0; i < arraycount(cases); i++) {
+    uint32_t e = cases[i].e;
+    uint32_t hi = cases[i].hi;
+    uint32_t lo = cases[i].lo;
+    double x = cases[i].x;
+    uint32_t hihi = 0;
+    uint32_t lolo = 0;
+
+    /*
+     * sample_uniform_01 should be invariant under changing the high
+     * bit of the high word and the low bit of the low word, so test
+     * all four possible toggles of those two bits.
+     */
+    for (hihi = 0; hihi < 2; hihi++) {
+      for (lolo = 0; lolo < 2; lolo++) {
+        double y = sample_uniform_01(e, hi ^ (hihi << 31), lo ^ lolo);
+
+        if (!(x <= y && y <= x)) {
+          log_warn(LD_GENERAL, "%s:%d: case %u:"
+                   " sample_uniform_01(%"PRIu32", %08"PRIx32", %08"PRIx32")"
+                   " = %.17g =/= %.17g\n",
+                   __func__, __LINE__, (unsigned)i,
+                   e, hi ^ (hihi << 31), lo ^ lolo,
+                   y, x);
+          ok = false;
+        }
+      }
+    }
+  }
+
+  if (!ok)
+    printf("fail uniform [0,1]\n");
+
+  tt_assert(ok);
+
+ done:
+  ;
+}
+
+/**
  * Test the logit and logistic functions.  Confirm that they agree with
  * the cdf, sf, icdf, and isf of the standard Logistic distribution.
  * Confirm that the sampler for the standard logistic distribution maps
@@ -1387,6 +1473,7 @@ struct testcase_t prob_distr_tests[] = {
   { "weibull", test_weibull, TT_FORK, NULL, NULL },
   { "genpareto", test_genpareto, TT_FORK, NULL, NULL },
   { "uniform_interval", test_uniform_interval, TT_FORK, NULL, NULL },
+  { "uniform_01", test_uniform_01, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 
