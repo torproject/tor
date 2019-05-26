@@ -37,7 +37,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/core/or/circuitmux.c		\
 	src/core/or/circuitmux_ewma.c		\
 	src/core/or/circuitpadding.c		\
-	src/core/or/circuitpadding_machines.c		\
+	src/core/or/circuitpadding_machines.c	\
 	src/core/or/circuitstats.c		\
 	src/core/or/circuituse.c		\
 	src/core/or/crypt_path.c		\
@@ -185,7 +185,7 @@ MODULE_DIRAUTH_SOURCES = 					\
 	src/feature/dirauth/reachability.c			\
 	src/feature/dirauth/recommend_pkg.c			\
 	src/feature/dirauth/shared_random.c			\
-	src/feature/dirauth/shared_random_state.c               \
+	src/feature/dirauth/shared_random_state.c		\
 	src/feature/dirauth/voteflags.c
 
 if BUILD_MODULE_DIRAUTH
@@ -231,7 +231,7 @@ noinst_HEADERS +=					\
 	src/core/mainloop/cpuworker.h			\
 	src/core/mainloop/mainloop.h			\
 	src/core/mainloop/mainloop_pubsub.h		\
-	src/core/mainloop/mainloop_sys.h	        \
+	src/core/mainloop/mainloop_sys.h		\
 	src/core/mainloop/netstatus.h			\
 	src/core/mainloop/periodic.h			\
 	src/core/or/addr_policy_st.h			\
@@ -248,7 +248,7 @@ noinst_HEADERS +=					\
 	src/core/or/circuitmux_ewma.h			\
 	src/core/or/circuitstats.h			\
 	src/core/or/circuitpadding.h			\
-	src/core/or/circuitpadding_machines.h			\
+	src/core/or/circuitpadding_machines.h		\
 	src/core/or/circuituse.h			\
 	src/core/or/command.h				\
 	src/core/or/connection_edge.h			\
