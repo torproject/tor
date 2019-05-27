@@ -1,0 +1,6 @@
+  o Minor bugfixes (onion services):
+    - When circuits timeout, count other onion service circuits when
+      determining if circuits are opened. This eliminates bogus
+      "No circuits are opened. Relaxed timeout for circuit..." messages
+      on clients that are performing only onion service activity. Fixes
+      bug 27049; bugfix on 0.2.2.2-alpha.

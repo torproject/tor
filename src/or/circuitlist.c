@@ -609,6 +609,30 @@ circuit_get_global_origin_circuit_list(void)
 }
 
 /**
+ * Return true if the circuit is a "full-path" circuit.
+ *
+ * This means its desired_route_len is either above DEFAULT_ROUTE_LEN or
+ * it's a Single Onion Service circuit.
+ */
+static int
+circuit_is_full_path(const origin_circuit_t *circ)
+{
+  if (!circ->build_state)
+    return 0;
+
+  if ((circ->rend_data || circ->hs_ident) &&
+      circ->build_state->desired_path_len == 1) {
+    return 1;
+  }
+
+  if (circ->build_state->desired_path_len >= DEFAULT_ROUTE_LEN) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
  * Return true if we have any opened general-purpose 3 hop
  * origin circuits.
  *
@@ -624,8 +648,7 @@ circuit_any_opened_circuits(void)
         next_circ->has_opened &&
         TO_CIRCUIT(next_circ)->state == CIRCUIT_STATE_OPEN &&
         TO_CIRCUIT(next_circ)->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT &&
-        next_circ->build_state &&
-        next_circ->build_state->desired_path_len == DEFAULT_ROUTE_LEN) {
+        circuit_is_full_path(next_circ)) {
       circuit_cache_opened_circuit_state(1);
       return 1;
     }
