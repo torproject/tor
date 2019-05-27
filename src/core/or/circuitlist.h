@@ -218,7 +218,7 @@ void circuit_mark_all_dirty_circs_as_unusable(void);
 void circuit_synchronize_written_or_bandwidth(const circuit_t *c,
                                               circuit_channel_direction_t dir);
 MOCK_DECL(void, circuit_mark_for_close_, (circuit_t *circ, int reason,
-                                          int line, const char *file));
+                                          int line, const char *cfile));
 int circuit_get_cpath_len(origin_circuit_t *circ);
 int circuit_get_cpath_opened_len(const origin_circuit_t *);
 void circuit_clear_cpath(origin_circuit_t *circ);

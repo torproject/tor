@@ -533,6 +533,10 @@ relay_command_to_string(uint8_t command)
   }
 }
 
+/** When padding a cell with randomness, leave this many zeros after the
+ * payload. */
+#define CELL_PADDING_GAP 4
+
 /** Return the offset where the padding should start. The <b>data_len</b> is
  * the relay payload length expected to be put in the cell. It can not be
  * bigger than RELAY_PAYLOAD_SIZE else this function assert().
@@ -556,7 +560,7 @@ get_pad_cell_offset(size_t data_len)
 
   /* If the offset is larger than the cell payload size, we return an offset
    * of zero indicating that no padding needs to be added. */
-  size_t offset = RELAY_HEADER_SIZE + data_len + 4;
+  size_t offset = RELAY_HEADER_SIZE + data_len + CELL_PADDING_GAP;
   if (offset >= CELL_PAYLOAD_SIZE) {
     return 0;
   }
@@ -2027,6 +2031,84 @@ uint64_t stats_n_data_cells_received = 0;
  * ever received were completely full of data. */
 uint64_t stats_n_data_bytes_received = 0;
 
+/**
+ * Called when initializing a circuit, or when we have reached the end of the
+ * window in which we need to send some randomness so that incoming sendme
+ * cells will be unpredictable.  Resets the flags and picks a new window.
+ */
+void
+circuit_reset_sendme_randomness(circuit_t *circ)
+{
+  circ->have_sent_sufficiently_random_cell = 0;
+  circ->send_randomness_after_n_cells = CIRCWINDOW_INCREMENT / 2 +
+    crypto_fast_rng_get_uint(get_thread_fast_rng(), CIRCWINDOW_INCREMENT / 2);
+}
+
+/**
+ * Any relay data payload containing fewer than this many real bytes is
+ * considered to have enough randomness to.
+ **/
+#define RELAY_PAYLOAD_LENGTH_FOR_RANDOM_SENDMES \
+  (RELAY_PAYLOAD_SIZE - CELL_PADDING_GAP - 16)
+
+/**
+ * Helper. Return the number of bytes that should be put into a cell from a
+ * given edge connection on which <b>n_available</b> bytes are available.
+ */
+STATIC size_t
+connection_edge_get_inbuf_bytes_to_package(size_t n_available,
+                                           int package_partial,
+                                           circuit_t *on_circuit)
+{
+  if (!n_available)
+    return 0;
+
+  /* Do we need to force this payload to have space for randomness? */
+  const bool force_random_bytes =
+    (on_circuit->send_randomness_after_n_cells == 0) &&
+    (! on_circuit->have_sent_sufficiently_random_cell);
+
+  /* At most how much would we like to send in this cell? */
+  size_t target_length;
+  if (force_random_bytes) {
+    target_length = RELAY_PAYLOAD_LENGTH_FOR_RANDOM_SENDMES;
+  } else {
+    target_length = RELAY_PAYLOAD_SIZE;
+  }
+
+  /* Decide how many bytes we will actually put into this cell. */
+  size_t package_length;
+  if (n_available >= target_length) { /* A full payload is available. */
+    package_length = target_length;
+  } else { /* not a full payload available */
+    if (package_partial)
+      package_length = n_available; /* just take whatever's available now */
+    else
+      return 0; /* nothing to do until we have a full payload */
+  }
+
+  /* If we reach this point, we will be definitely sending the cell. */
+  tor_assert_nonfatal(package_length > 0);
+
+  if (package_length <= RELAY_PAYLOAD_LENGTH_FOR_RANDOM_SENDMES) {
+    /* This cell will have enough randomness in the padding to make a future
+     * sendme cell unpredictable. */
+    on_circuit->have_sent_sufficiently_random_cell = 1;
+  }
+
+  if (on_circuit->send_randomness_after_n_cells == 0) {
+    /* Either this cell, or some previous cell, had enough padding to
+     * ensure sendme unpredictability. */
+    tor_assert_nonfatal(on_circuit->have_sent_sufficiently_random_cell);
+    /* Pick a new interval in which we need to send randomness. */
+    circuit_reset_sendme_randomness(on_circuit);
+  }
+
+  --on_circuit->send_randomness_after_n_cells;
+
+  return package_length;
+}
+
 /** If <b>conn</b> has an entire relay payload of bytes on its inbuf (or
  * <b>package_partial</b> is true), and the appropriate package windows aren't
  * empty, grab a cell and send it down the circuit.
@@ -2099,17 +2181,14 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     bytes_to_process = connection_get_inbuf_len(TO_CONN(conn));
   }
 
-  if (!bytes_to_process)
+  length = connection_edge_get_inbuf_bytes_to_package(bytes_to_process,
+                                                      package_partial, circ);
+  if (!length)
     return 0;
 
-  if (!package_partial && bytes_to_process < RELAY_PAYLOAD_SIZE)
-    return 0;
+  /* If we reach this point, we will definitely be packaging bytes into
+   * a cell. */
 
-  if (bytes_to_process > RELAY_PAYLOAD_SIZE) {
-    length = RELAY_PAYLOAD_SIZE;
-  } else {
-    length = bytes_to_process;
-  }
   stats_n_data_bytes_packaged += length;
   stats_n_data_cells_packaged += 1;
 

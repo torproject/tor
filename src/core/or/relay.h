@@ -42,6 +42,7 @@ int connection_edge_package_raw_inbuf(edge_connection_t *conn,
                                       int package_partial,
                                       int *max_cells);
 void connection_edge_consider_sending_sendme(edge_connection_t *conn);
+void circuit_reset_sendme_randomness(circuit_t *circ);
 
 extern uint64_t stats_n_data_cells_packaged;
 extern uint64_t stats_n_data_bytes_packaged;
@@ -122,6 +123,9 @@ STATIC int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                    edge_connection_t *conn,
                                    crypt_path_t *layer_hint);
 STATIC size_t get_pad_cell_offset(size_t payload_len);
+STATIC size_t connection_edge_get_inbuf_bytes_to_package(size_t n_available,
+                                                      int package_partial,
+                                                      circuit_t *on_circuit);
 
 #endif /* defined(RELAY_PRIVATE) */
 
