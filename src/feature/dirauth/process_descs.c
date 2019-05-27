@@ -47,7 +47,8 @@ static void directory_remove_invalid(void);
 static was_router_added_t dirserv_add_extrainfo(extrainfo_t *ei,
                                                 const char **msg);
 static uint32_t
-dirserv_get_status_impl(const char *fp, const uint8_t *ed25519_key,
+dirserv_get_status_impl(const char *fp,
+                        const ed25519_public_key_t *ed25519_public_key,
                         const char *nickname, uint32_t addr, uint16_t or_port,
                         const char *platform, const char **msg, int severity);
 
@@ -286,9 +287,8 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
 
   /* Check for the more usual versions to reject a router first. */
   uint32_t r = dirserv_get_status_impl(d,
-      router->cache_info.signing_key_cert->signing_key.pubkey,
-      router->nickname, router->addr, router->or_port, router->platform, msg,
-      severity);
+      &router->cache_info.signing_key_cert->signing_key, router->nickname,
+      router->addr, router->or_port, router->platform, msg, severity);
 
   if (r)
     return r;
@@ -354,7 +354,7 @@ dirserv_would_reject_router(const routerstatus_t *rs)
   uint32_t res;
 
   res = dirserv_get_status_impl(rs->identity_digest,
-                                rs->ed25519_signing_key.pubkey, rs->nickname,
+                                &rs->ed25519_signing_key, rs->nickname,
                                 rs->addr, rs->or_port, NULL, NULL, LOG_DEBUG);
 
   return (res & FP_REJECT) != 0;
@@ -368,7 +368,8 @@ dirserv_would_reject_router(const routerstatus_t *rs)
  * logging that we're rejecting servers we'll not download.)
  */
 static uint32_t
-dirserv_get_status_impl(const char *id_digest, const uint8_t *ed25519_key,
+dirserv_get_status_impl(const char *id_digest,
+                        const ed25519_public_key_t *ed25519_public_key,
                         const char *nickname, uint32_t addr, uint16_t or_port,
                         const char *platform, const char **msg, int severity)
 {
@@ -416,9 +417,9 @@ dirserv_get_status_impl(const char *id_digest, const uint8_t *ed25519_key,
   if (status_by_digest)
     result |= *status_by_digest;
 
-  if (ed25519_key) {
+  if (ed25519_public_key) {
     status_by_digest = digest256map_get(fingerprint_list->status_by_digest256,
-                                        ed25519_key);
+                                        ed25519_public_key->pubkey);
     if (status_by_digest)
       result |= *status_by_digest;
   }
