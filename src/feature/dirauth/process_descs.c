@@ -109,6 +109,8 @@ add_rsa_fingerprint_to_dir(const char *fp, authdir_config_t *list,
   tor_strstrip(fingerprint, " ");
   if (base16_decode(d, DIGEST_LEN,
                     fingerprint, strlen(fingerprint)) != DIGEST_LEN) {
+    log_warn(LD_DIRSERV, "Couldn't decode fingerprint \"%s\"",
+             escaped(fp));
     tor_free(fingerprint);
     return -1;
   }
@@ -140,6 +142,7 @@ add_ed25519_to_dir(const ed25519_public_key_t *edkey, authdir_config_t *list,
   if (ed25519_validate_pubkey(edkey) < 0) {
     char ed25519_base64_key[ED25519_BASE64_LEN+1];
     ed25519_public_to_base64(ed25519_base64_key, edkey);
+    log_warn(LD_DIRSERV, "Invalid ed25519 key \"%s\"", ed25519_base64_key);
     return -1;
   }
 
@@ -223,8 +226,13 @@ dirserv_load_fingerprint_file(void)
     int ed25519_not_ok, rsa_not_ok;
 
     /* Attempt to add the RSA key. */
-    rsa_not_ok = add_rsa_fingerprint_to_dir(fingerprint, fingerprint_list_new,
-                                            add_status);
+    if (strlen(fingerprint) == HEX_DIGEST_LEN) {
+      rsa_not_ok = add_rsa_fingerprint_to_dir(fingerprint,
+                                              fingerprint_list_new,
+                                              add_status);
+    } else {
+      rsa_not_ok = -1;
+    }
 
     /* Check ed25519 key. We check the size to prevent buffer overflows.
      * If valid, attempt to add it, */
@@ -285,13 +293,17 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
     return FP_REJECT;
   }
 
-  /* Check for the more usual versions to reject a router first. */
-  uint32_t r = dirserv_get_status_impl(d,
-      &router->cache_info.signing_key_cert->signing_key, router->nickname,
-      router->addr, router->or_port, router->platform, msg, severity);
+  /* First, check for the more common reasons to reject a router. */
 
-  if (r)
-    return r;
+  if (router->cache_info.signing_key_cert) {
+    /* This has an ed25519 identity key. */
+    uint32_t r = dirserv_get_status_impl(d,
+        &router->cache_info.signing_key_cert->signing_key, router->nickname,
+        router->addr, router->or_port, router->platform, msg, severity);
+
+    if (r)
+      return r;
+  }
 
   /* dirserv_get_status_impl already rejects versions older than 0.2.4.18-rc,
    * and onion_curve25519_pkey was introduced in 0.2.4.8-alpha.
@@ -361,7 +373,7 @@ dirserv_would_reject_router(const routerstatus_t *rs)
 }
 
 /** Helper: As dirserv_router_get_status, but takes the router fingerprint
- * (hex, no spaces), ed25510 key, nickname, address (used for logging only),
+ * (hex, no spaces), ed25519 key, nickname, address (used for logging only),
  * IP address, OR port and platform (logging only) as arguments.
  *
  * Log messages at 'severity'. (There's not much point in
@@ -426,14 +438,14 @@ dirserv_get_status_impl(const char *id_digest,
 
   if (result & FP_REJECT) {
     if (msg)
-      *msg = "Fingerprint is marked rejected -- if you think this is a "
-             "mistake please set a valid email address in ContactInfo and "
-             "send an email to bad-relays@lists.torproject.org mentioning "
-             "your fingerprint(s)?";
+      *msg = "Fingerprint and/or ed25519 identity is marked rejected -- if "
+             "you think this is a mistake please set a valid email address "
+             "in ContactInfo and send an email to "
+             "bad-relays@lists.torproject.org mentioning your fingerprint(s)?";
     return FP_REJECT;
   } else if (result & FP_INVALID) {
     if (msg)
-      *msg = "Fingerprint is marked invalid";
+      *msg = "Fingerprint and/or ed25519 identity is marked invalid";
   }
 
   if (authdir_policy_badexit_address(addr, or_port)) {
