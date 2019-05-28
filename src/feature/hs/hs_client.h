@@ -74,6 +74,8 @@ int hs_client_receive_rendezvous2(origin_circuit_t *circ,
 
 void hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident);
 void hs_client_desc_not_found(const hs_ident_dir_conn_t *ident);
+void hs_client_desc_missing_bad_client_auth(const hs_ident_dir_conn_t *ident,
+                                            hs_desc_decode_status_t status);
 
 extend_info_t *hs_client_get_random_intro_from_edge(
                                           const edge_connection_t *edge_conn);
