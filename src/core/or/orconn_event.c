@@ -36,24 +36,22 @@ orconn_event_free(msg_aux_data_t u)
 static char *
 orconn_state_fmt(msg_aux_data_t u)
 {
-  orconn_state_msg_t msg;
+  orconn_state_msg_t *msg = (orconn_state_msg_t *)u.ptr;
   char *s = NULL;
 
-  msg = *(orconn_state_msg_t *)u.ptr;
   tor_asprintf(&s, "<gid=%"PRIu64" chan=%"PRIu64" proxy_type=%d state=%d>",
-               msg.gid, msg.chan, msg.proxy_type, msg.state);
+               msg->gid, msg->chan, msg->proxy_type, msg->state);
   return s;
 }
 
 static char *
 orconn_status_fmt(msg_aux_data_t u)
 {
-  orconn_status_msg_t msg;
+  orconn_status_msg_t *msg = (orconn_status_msg_t *)u.ptr;
   char *s = NULL;
 
-  msg = *(orconn_status_msg_t *)u.ptr;
   tor_asprintf(&s, "<gid=%"PRIu64" status=%d reason=%d>",
-               msg.gid, msg.status, msg.reason);
+               msg->gid, msg->status, msg->reason);
   return s;
 }
 
