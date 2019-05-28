@@ -3517,10 +3517,16 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
                                     size_t replylen, int endreason)
 {
   char buf[256];
-  socks5_reply_status_t status =
-    stream_end_reason_to_socks5_response(endreason);
+  socks5_reply_status_t status;
 
   tor_assert(conn->socks_request); /* make sure it's an AP stream */
+
+  if (conn->socks_request->socks_use_extended_errors &&
+      conn->socks_request->socks_extended_error_code != 0) {
+    status = conn->socks_request->socks_extended_error_code;
+  } else {
+    status = stream_end_reason_to_socks5_response(endreason);
+  }
 
   if (!SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command)) {
     control_event_stream_status(conn, status==SOCKS5_SUCCEEDED ?

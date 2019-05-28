@@ -1899,6 +1899,8 @@ connection_init_accepted_conn(connection_t *conn,
           conn->state = AP_CONN_STATE_SOCKS_WAIT;
           TO_ENTRY_CONN(conn)->socks_request->socks_prefer_no_auth =
             listener->entry_cfg.socks_prefer_no_auth;
+          TO_ENTRY_CONN(conn)->socks_request->socks_use_extended_errors =
+            listener->entry_cfg.extended_socks5_codes;
           break;
         case CONN_TYPE_AP_TRANS_LISTENER:
           TO_ENTRY_CONN(conn)->is_transparent_ap = 1;
