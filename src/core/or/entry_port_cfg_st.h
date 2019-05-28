@@ -48,6 +48,9 @@ struct entry_port_cfg_t {
    * do we prefer IPv6? */
   unsigned int prefer_ipv6_virtaddr : 1;
 
+  /** For socks listeners: can we send back the extended SOCKS5 error code? */
+  unsigned int extended_socks5_codes : 1;
+
 };
 
 #endif /* !defined(ENTRY_PORT_CFG_ST_H) */

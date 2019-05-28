@@ -6954,7 +6954,7 @@ parse_port_config(smartlist_t *out,
       cache_ipv6 = 0, use_cached_ipv6 = 0,
       prefer_ipv6_automap = 1, world_writable = 0, group_writable = 0,
       relax_dirmode_check = 0,
-      has_used_unix_socket_only_option = 0;
+      has_used_unix_socket_only_option = 0, extended_errors = 0;
 
     int is_unix_tagged_addr = 0;
     const char *rest_of_line = NULL;
@@ -7193,6 +7193,9 @@ parse_port_config(smartlist_t *out,
         } else if (!strcasecmp(elt, "KeepAliveIsolateSOCKSAuth")) {
           socks_iso_keep_alive = ! no;
           continue;
+        } else if (!strcasecmp(elt, "ExtendedErrors")) {
+          extended_errors = ! no;
+          continue;
         }
 
         if (!strcasecmpend(elt, "s"))
@@ -7305,6 +7308,7 @@ parse_port_config(smartlist_t *out,
       if (! (isolation & ISO_SOCKSAUTH))
         cfg->entry_cfg.socks_prefer_no_auth = 1;
       cfg->entry_cfg.socks_iso_keep_alive = socks_iso_keep_alive;
+      cfg->entry_cfg.extended_socks5_codes = extended_errors;
 
       smartlist_add(out, cfg);
     }

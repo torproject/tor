@@ -29,8 +29,8 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 8518
-problem include-count /src/app/config/config.c 87
+problem file-size /src/app/config/config.c 8521
+problem include-count /src/app/config/config.c 88
 problem function-size /src/app/config/config.c:options_act_reversible() 296
 problem function-size /src/app/config/config.c:options_act() 589
 problem function-size /src/app/config/config.c:resolve_my_address() 192
@@ -42,7 +42,7 @@ problem function-size /src/app/config/config.c:parse_bridge_line() 104
 problem function-size /src/app/config/config.c:parse_transport_line() 191
 problem function-size /src/app/config/config.c:parse_dir_authority_line() 151
 problem function-size /src/app/config/config.c:parse_dir_fallback_line() 102
-problem function-size /src/app/config/config.c:parse_port_config() 452
+problem function-size /src/app/config/config.c:parse_port_config() 456
 problem function-size /src/app/config/config.c:parse_ports() 170
 problem function-size /src/app/config/config.c:getinfo_helper_config() 116
 problem function-size /src/app/config/confparse.c:config_assign_value() 205
