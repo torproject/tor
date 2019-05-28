@@ -825,6 +825,7 @@ test_desc_has_arrived_cleanup(void *arg)
   ed25519_keypair_t signing_kp;
   entry_connection_t *socks1 = NULL, *socks2 = NULL;
   hs_ident_dir_conn_t hs_dir_ident;
+  dir_connection_t *dir_conn = NULL;
 
   (void) arg;
 
@@ -881,9 +882,11 @@ test_desc_has_arrived_cleanup(void *arg)
    * SOCKS connection to be ended with a resolved failed. */
   hs_ident_dir_conn_init(&signing_kp.pubkey,
                          &desc->plaintext_data.blinded_pubkey, &hs_dir_ident);
-  hs_client_desc_has_arrived(&hs_dir_ident);
+  dir_conn = dir_connection_new(AF_INET);
+  dir_conn->hs_ident = hs_ident_dir_conn_dup(&hs_dir_ident);
+  hs_client_dir_fetch_done(dir_conn, "A reason", desc_str, 200);
+  connection_free_minimal(TO_CONN(dir_conn));
   tt_int_op(socks1->edge_.end_reason, OP_EQ, END_STREAM_REASON_RESOLVEFAILED);
-  /* XXX: MUST work with OP_EQ. */
   tt_int_op(socks2->edge_.end_reason, OP_EQ, END_STREAM_REASON_RESOLVEFAILED);
 
   /* Now let say tor cleans up the intro state cache which resets all intro
@@ -892,7 +895,6 @@ test_desc_has_arrived_cleanup(void *arg)
 
   /* Retrying all SOCKS which should basically do nothing since we don't have
    * any pending SOCKS connection in AP_CONN_STATE_RENDDESC_WAIT state. */
-  /* XXX: BUG() is triggered here, shouldn't if socks2 wasn't alive. */
   retry_all_socks_conn_waiting_for_desc();
 
  done:
