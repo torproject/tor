@@ -1046,3 +1046,14 @@ rend_circuit_pk_digest_eq(const origin_circuit_t *ocirc,
  match:
   return 1;
 }
+
+/* Cleanup the given circuit of all HS v2 data structure. */
+void
+rend_circ_cleanup(origin_circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* Both fields are set to NULL with these. */
+  crypto_pk_free(circ->intro_key);
+  rend_data_free(circ->rend_data);
+}

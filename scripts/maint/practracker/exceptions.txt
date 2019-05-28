@@ -92,7 +92,7 @@ problem function-size /src/core/or/circuitlist.c:circuits_handle_oom() 117
 problem function-size /src/core/or/circuitmux.c:circuitmux_set_policy() 110
 problem function-size /src/core/or/circuitmux.c:circuitmux_attach_circuit() 114
 problem function-size /src/core/or/circuitstats.c:circuit_build_times_parse_state() 124
-problem file-size /src/core/or/circuituse.c 3156
+problem file-size /src/core/or/circuituse.c 3162
 problem function-size /src/core/or/circuituse.c:circuit_is_acceptable() 133
 problem function-size /src/core/or/circuituse.c:circuit_expire_building() 394
 problem function-size /src/core/or/circuituse.c:circuit_log_ancient_one_hop_circuits() 126
