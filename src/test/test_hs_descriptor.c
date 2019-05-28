@@ -317,14 +317,14 @@ test_decode_descriptor(void *arg)
     hs_descriptor_free(decoded);
     ret = hs_desc_decode_descriptor(encoded, subcredential,
                                     NULL, &decoded);
-    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_ENCRYPTED_ERROR);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_NEED_CLIENT_AUTH);
     tt_assert(!decoded);
 
     /* If we have an invalid client secret key, the decoding must fail. */
     hs_descriptor_free(decoded);
     ret = hs_desc_decode_descriptor(encoded, subcredential,
                                     &invalid_client_kp.seckey, &decoded);
-    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_ENCRYPTED_ERROR);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_BAD_CLIENT_AUTH);
     tt_assert(!decoded);
 
     /* If we have the client secret key, the decoding must succeed and the
