@@ -69,6 +69,15 @@ typedef enum {
   HS_DESC_AUTH_ED25519 = 1
 } hs_desc_auth_type_t;
 
+/** Error code when decoding a descriptor. */
+typedef enum {
+  HS_DESC_DECODE_ENCRYPTED_ERROR = -4,
+  HS_DESC_DECODE_SUPERENC_ERROR  = -3,
+  HS_DESC_DECODE_PLAINTEXT_ERROR = -2,
+  HS_DESC_DECODE_GENERIC_ERROR   = -1,
+  HS_DESC_DECODE_OK              =  0,
+} hs_desc_decode_status_t;
+
 /** Introduction point information located in a descriptor. */
 typedef struct hs_desc_intro_point_t {
   /** Link specifier(s) which details how to extend to the relay. This list

@@ -1320,7 +1320,7 @@ hs_client_decode_descriptor(const char *desc_str,
   ret = hs_desc_decode_descriptor(desc_str, subcredential,
                                   client_auht_sk, desc);
   memwipe(subcredential, 0, sizeof(subcredential));
-  if (ret < 0) {
+  if (ret != HS_DESC_DECODE_OK) {
     goto err;
   }
 

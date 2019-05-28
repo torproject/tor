@@ -411,7 +411,7 @@ test_hsdir_revision_counter_check(void *arg)
 
     retval = hs_desc_decode_descriptor(received_desc_str,
                                        subcredential, NULL, &received_desc);
-    tt_int_op(retval, OP_EQ, 0);
+    tt_int_op(retval, OP_EQ, HS_DESC_DECODE_OK);
     tt_assert(received_desc);
 
     /* Check that the revision counter is correct */
@@ -444,7 +444,7 @@ test_hsdir_revision_counter_check(void *arg)
 
     retval = hs_desc_decode_descriptor(received_desc_str,
                                        subcredential, NULL, &received_desc);
-    tt_int_op(retval, OP_EQ, 0);
+    tt_int_op(retval, OP_EQ, HS_DESC_DECODE_OK);
     tt_assert(received_desc);
 
     /* Check that the revision counter is the latest */
