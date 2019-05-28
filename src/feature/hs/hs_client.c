@@ -42,6 +42,7 @@
 #include "core/or/entry_connection_st.h"
 #include "core/or/extend_info_st.h"
 #include "core/or/origin_circuit_st.h"
+#include "core/or/socks_request_st.h"
 
 /* Client-side authorizations for hidden services; map of service identity
  * public key to hs_client_service_authorization_t *. */
@@ -1751,6 +1752,29 @@ hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
   } SMARTLIST_FOREACH_END(entry_conn);
 
  end:
+  /* We don't have ownership of the objects in this list. */
+  smartlist_free(entry_conns);
+}
+
+/* This is called when a descriptor fetch was not found. Every entry
+ * connection that matches the requested onion service, its extended error
+ * code will be set accordingly. */
+void
+hs_client_desc_not_found(const hs_ident_dir_conn_t *ident)
+{
+  smartlist_t *entry_conns;
+
+  tor_assert(ident);
+
+  entry_conns = find_entry_conns(&ident->identity_pk);
+
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
+    /* Descriptor was not found. We'll flag the socks request with the
+     * extended error code. If it is supported, it will be sent back. */
+    entry_conn->socks_request->socks_extended_error_code =
+      SOCKS5_HS_NOT_FOUND;
+  } SMARTLIST_FOREACH_END(entry_conn);
+
   /* We don't have ownership of the objects in this list. */
   smartlist_free(entry_conns);
 }

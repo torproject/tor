@@ -176,7 +176,7 @@ problem function-size /src/feature/dircache/consdiffmgr.c:consdiffmgr_rescan_fla
 problem function-size /src/feature/dircache/consdiffmgr.c:consensus_diff_worker_threadfn() 132
 problem function-size /src/feature/dircache/dircache.c:handle_get_current_consensus() 166
 problem function-size /src/feature/dircache/dircache.c:directory_handle_command_post() 120
-problem file-size /src/feature/dirclient/dirclient.c 3218
+problem file-size /src/feature/dirclient/dirclient.c 3219
 problem include-count /src/feature/dirclient/dirclient.c 51
 problem function-size /src/feature/dirclient/dirclient.c:directory_get_from_dirserver() 131
 problem function-size /src/feature/dirclient/dirclient.c:directory_initiate_request() 201
