@@ -1257,6 +1257,188 @@ find_client_auth(const ed25519_public_key_t *service_identity_pk)
   return digest256map_get(client_auths, service_identity_pk->pubkey);
 }
 
+/* This is called when a descriptor has arrived following a fetch request and
+ * has been stored in the client cache. The given entry connections, matching
+ * the service identity key, will get attached to the service circuit. */
+static void
+client_desc_has_arrived(const smartlist_t *entry_conns)
+{
+  time_t now = time(NULL);
+
+  tor_assert(entry_conns);
+
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
+    const hs_descriptor_t *desc;
+    edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
+    const ed25519_public_key_t *identity_pk =
+      &edge_conn->hs_ident->identity_pk;
+
+    /* We were just called because we stored the descriptor for this service
+     * so not finding a descriptor means we have a bigger problem. */
+    desc = hs_cache_lookup_as_client(identity_pk);
+    if (BUG(desc == NULL)) {
+      goto end;
+    }
+
+    if (!hs_client_any_intro_points_usable(identity_pk, desc)) {
+      log_info(LD_REND, "Hidden service descriptor is unusable. "
+                        "Closing streams.");
+      connection_mark_unattached_ap(entry_conn,
+                                    END_STREAM_REASON_RESOLVEFAILED);
+      /* We are unable to use the descriptor so remove the directory request
+       * from the cache so the next connection can try again. */
+      note_connection_attempt_succeeded(edge_conn->hs_ident);
+      continue;
+    }
+
+    log_info(LD_REND, "Descriptor has arrived. Launching circuits.");
+
+    /* Mark connection as waiting for a circuit since we do have a usable
+     * descriptor now. */
+    mark_conn_as_waiting_for_circuit(&edge_conn->base_, now);
+  } SMARTLIST_FOREACH_END(entry_conn);
+
+ end:
+  return;
+}
+
+/* This is called when a descriptor fetch was successful but the descriptor
+ * couldn't be decrypted due to missing or bad client authorization. */
+static void
+client_desc_missing_bad_client_auth(const smartlist_t *entry_conns,
+                                    hs_desc_decode_status_t status)
+{
+  tor_assert(entry_conns);
+
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
+    socks5_reply_status_t code;
+    if (status == HS_DESC_DECODE_BAD_CLIENT_AUTH) {
+      code = SOCKS5_HS_BAD_CLIENT_AUTH;
+    } else if (status == HS_DESC_DECODE_NEED_CLIENT_AUTH) {
+      code = SOCKS5_HS_MISSING_CLIENT_AUTH;
+    } else {
+      /* We should not be called with another type of status. Recover by
+       * sending a generic error. */
+      tor_assert_nonfatal_unreached();
+      code = HS_DESC_DECODE_GENERIC_ERROR;
+    }
+    entry_conn->socks_request->socks_extended_error_code = code;
+  } SMARTLIST_FOREACH_END(entry_conn);
+}
+
+/* Called when we get a 200 directory fetch status code. */
+static void
+client_dir_fetch_200(dir_connection_t *dir_conn,
+                     const smartlist_t *entry_conns, const char *body)
+{
+  hs_desc_decode_status_t decode_status;
+
+  tor_assert(dir_conn);
+  tor_assert(entry_conns);
+  tor_assert(body);
+
+  /* We got something: Try storing it in the cache. */
+  decode_status = hs_cache_store_as_client(body,
+                                           &dir_conn->hs_ident->identity_pk);
+  switch (decode_status) {
+  case HS_DESC_DECODE_OK:
+  case HS_DESC_DECODE_NEED_CLIENT_AUTH:
+  case HS_DESC_DECODE_BAD_CLIENT_AUTH:
+    log_info(LD_REND, "Stored hidden service descriptor successfully.");
+    TO_CONN(dir_conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
+    if (decode_status == HS_DESC_DECODE_OK) {
+      client_desc_has_arrived(entry_conns);
+    } else {
+      /* This handles both client auth decode status. */
+      client_desc_missing_bad_client_auth(entry_conns, decode_status);
+      log_info(LD_REND, "Stored hidden service descriptor requires "
+                         "%s client authorization.",
+               decode_status == HS_DESC_DECODE_NEED_CLIENT_AUTH ? "missing"
+                                                                : "new");
+    }
+    /* Fire control port RECEIVED event. */
+    hs_control_desc_event_received(dir_conn->hs_ident,
+                                   dir_conn->identity_digest);
+    hs_control_desc_event_content(dir_conn->hs_ident,
+                                  dir_conn->identity_digest, body);
+    break;
+  case HS_DESC_DECODE_ENCRYPTED_ERROR:
+  case HS_DESC_DECODE_SUPERENC_ERROR:
+  case HS_DESC_DECODE_PLAINTEXT_ERROR:
+  case HS_DESC_DECODE_GENERIC_ERROR:
+  default:
+    log_info(LD_REND, "Failed to store hidden service descriptor. "
+                      "Descriptor decoding status: %d", decode_status);
+    /* Fire control port FAILED event. */
+    hs_control_desc_event_failed(dir_conn->hs_ident,
+                                 dir_conn->identity_digest, "BAD_DESC");
+    hs_control_desc_event_content(dir_conn->hs_ident,
+                                  dir_conn->identity_digest, NULL);
+    break;
+  }
+}
+
+/* Called when we get a 404 directory fetch status code. */
+static void
+client_dir_fetch_404(dir_connection_t *dir_conn,
+                     const smartlist_t *entry_conns)
+{
+  tor_assert(entry_conns);
+
+  /* Not there. We'll retry when connection_about_to_close_connection() tries
+   * to clean this conn up. */
+  log_info(LD_REND, "Fetching hidden service v3 descriptor not found: "
+                    "Retrying at another directory.");
+  /* Fire control port FAILED event. */
+  hs_control_desc_event_failed(dir_conn->hs_ident, dir_conn->identity_digest,
+                               "NOT_FOUND");
+  hs_control_desc_event_content(dir_conn->hs_ident, dir_conn->identity_digest,
+                                NULL);
+
+  /* Flag every entry connections that the descriptor was not found. */
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
+    entry_conn->socks_request->socks_extended_error_code =
+      SOCKS5_HS_NOT_FOUND;
+  } SMARTLIST_FOREACH_END(entry_conn);
+}
+
+/* Called when we get a 400 directory fetch status code. */
+static void
+client_dir_fetch_400(dir_connection_t *dir_conn, const char *reason)
+{
+  tor_assert(dir_conn);
+
+  log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
+                    "http status 400 (%s). Dirserver didn't like our "
+                    "query? Retrying at another directory.",
+           escaped(reason));
+
+  /* Fire control port FAILED event. */
+  hs_control_desc_event_failed(dir_conn->hs_ident, dir_conn->identity_digest,
+                               "QUERY_REJECTED");
+  hs_control_desc_event_content(dir_conn->hs_ident, dir_conn->identity_digest,
+                                NULL);
+}
+
+/* Called when we get an unexpected directory fetch status code. */
+static void
+client_dir_fetch_unexpected(dir_connection_t *dir_conn, const char *reason,
+                            const int status_code)
+{
+  tor_assert(dir_conn);
+
+  log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
+                    "http status %d (%s) response unexpected from HSDir "
+                    "server '%s:%d'. Retrying at another directory.",
+           status_code, escaped(reason), TO_CONN(dir_conn)->address,
+           TO_CONN(dir_conn)->port);
+  /* Fire control port FAILED event. */
+  hs_control_desc_event_failed(dir_conn->hs_ident, dir_conn->identity_digest,
+                               "UNEXPECTED");
+  hs_control_desc_event_content(dir_conn->hs_ident, dir_conn->identity_digest,
+                                NULL);
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -1708,103 +1890,36 @@ hs_config_client_authorization(const or_options_t *options,
   return ret;
 }
 
-/* This is called when a descriptor has arrived following a fetch request and
- * has been stored in the client cache. Every entry connection that matches
- * the service identity key in the ident will get attached to the hidden
- * service circuit. */
+/* Called when a descriptor directory fetch is done. The ident is the
+ * directory connection identifier, the decode_status is the descriptor
+ * decoding status and the request_status_code is the status code of the
+ * directory request. */
 void
-hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
-{
-  time_t now = time(NULL);
-  smartlist_t *entry_conns = NULL;
-
-  tor_assert(ident);
-
-  entry_conns = find_entry_conns(&ident->identity_pk);
-
-  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
-    const hs_descriptor_t *desc;
-    edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
-
-    /* We were just called because we stored the descriptor for this service
-     * so not finding a descriptor means we have a bigger problem. */
-    desc = hs_cache_lookup_as_client(&ident->identity_pk);
-    if (BUG(desc == NULL)) {
-      goto end;
-    }
-
-    if (!hs_client_any_intro_points_usable(&ident->identity_pk, desc)) {
-      log_info(LD_REND, "Hidden service descriptor is unusable. "
-                        "Closing streams.");
-      connection_mark_unattached_ap(entry_conn,
-                                    END_STREAM_REASON_RESOLVEFAILED);
-      /* We are unable to use the descriptor so remove the directory request
-       * from the cache so the next connection can try again. */
-      note_connection_attempt_succeeded(edge_conn->hs_ident);
-      continue;
-    }
-
-    log_info(LD_REND, "Descriptor has arrived. Launching circuits.");
-
-    /* Mark connection as waiting for a circuit since we do have a usable
-     * descriptor now. */
-    mark_conn_as_waiting_for_circuit(&edge_conn->base_, now);
-  } SMARTLIST_FOREACH_END(entry_conn);
-
- end:
-  /* We don't have ownership of the objects in this list. */
-  smartlist_free(entry_conns);
-}
-
-/* This is called when a descriptor fetch was not found. Every entry
- * connection that matches the requested onion service, its extended error
- * code will be set accordingly. */
-void
-hs_client_desc_not_found(const hs_ident_dir_conn_t *ident)
+hs_client_dir_fetch_done(dir_connection_t *dir_conn, const char *reason,
+                         const char *body, const int status_code)
 {
   smartlist_t *entry_conns;
 
-  tor_assert(ident);
+  tor_assert(dir_conn);
+  tor_assert(body);
 
-  entry_conns = find_entry_conns(&ident->identity_pk);
+  /* Get all related entry connections. */
+  entry_conns = find_entry_conns(&dir_conn->hs_ident->identity_pk);
 
-  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
-    /* Descriptor was not found. We'll flag the socks request with the
-     * extended error code. If it is supported, it will be sent back. */
-    entry_conn->socks_request->socks_extended_error_code =
-      SOCKS5_HS_NOT_FOUND;
-  } SMARTLIST_FOREACH_END(entry_conn);
-
-  /* We don't have ownership of the objects in this list. */
-  smartlist_free(entry_conns);
-}
-
-/* This is called when a descriptor fetch was successful but the descriptor
- * couldn't be decrypted due to missing or bad client authorization. */
-void
-hs_client_desc_missing_bad_client_auth(const hs_ident_dir_conn_t *ident,
-                                       hs_desc_decode_status_t status)
-{
-  smartlist_t *entry_conns;
-
-  tor_assert(ident);
-
-  entry_conns = find_entry_conns(&ident->identity_pk);
-
-  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
-    socks5_reply_status_t code;
-    if (status == HS_DESC_DECODE_BAD_CLIENT_AUTH) {
-      code = SOCKS5_HS_BAD_CLIENT_AUTH;
-    } else if (status == HS_DESC_DECODE_NEED_CLIENT_AUTH) {
-      code = SOCKS5_HS_MISSING_CLIENT_AUTH;
-    } else {
-      /* We should not be called with another type of status. Recover by
-       * sending a generic error. */
-      tor_assert_nonfatal_unreached();
-      code = HS_DESC_DECODE_GENERIC_ERROR;
-    }
-    entry_conn->socks_request->socks_extended_error_code = code;
-  } SMARTLIST_FOREACH_END(entry_conn);
+  switch (status_code) {
+  case 200:
+    client_dir_fetch_200(dir_conn, entry_conns, body);
+    break;
+  case 404:
+    client_dir_fetch_404(dir_conn, entry_conns);
+    break;
+  case 400:
+    client_dir_fetch_400(dir_conn, reason);
+    break;
+  default:
+    client_dir_fetch_unexpected(dir_conn, reason, status_code);
+    break;
+  }
 
   /* We don't have ownership of the objects in this list. */
   smartlist_free(entry_conns);
