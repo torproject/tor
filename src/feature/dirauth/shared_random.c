@@ -224,7 +224,7 @@ verify_commit_and_reveal(const sr_commit_t *commit)
 STATIC int
 commit_has_reveal_value(const sr_commit_t *commit)
 {
-  return !tor_mem_is_zero(commit->encoded_reveal,
+  return !fast_mem_is_zero(commit->encoded_reveal,
                           sizeof(commit->encoded_reveal));
 }
 
@@ -486,7 +486,7 @@ get_vote_line_from_commit(const sr_commit_t *commit, sr_phase_t phase)
   {
     /* Send a reveal value for this commit if we have one. */
     const char *reveal_str = commit->encoded_reveal;
-    if (tor_mem_is_zero(commit->encoded_reveal,
+    if (fast_mem_is_zero(commit->encoded_reveal,
                         sizeof(commit->encoded_reveal))) {
       reveal_str = "";
     }

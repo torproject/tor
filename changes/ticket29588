@@ -1,4 +1,0 @@
-  o Minor features (developer tools):
-    - Introduce a post-merge git hook script to check if we're pulling in any
-      changes to our git workspace management scripts from upstream. Resolves
-      issue 29588.

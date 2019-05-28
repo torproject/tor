@@ -10,6 +10,7 @@ get worse.
 from __future__ import print_function
 
 import os.path
+import re
 import sys
 
 class ProblemVault(object):
@@ -18,9 +19,12 @@ class ProblemVault(object):
     found in the code, and also the old problems we read from the exception
     file.
     """
-    def __init__(self, exception_fname):
+    def __init__(self, exception_fname=None):
         # Exception dictionary: { problem.key() : Problem object }
         self.exceptions = {}
+
+        if exception_fname == None:
+            return
 
         try:
             with open(exception_fname, 'r') as exception_f:
@@ -30,8 +34,15 @@ class ProblemVault(object):
 
     def register_exceptions(self, exception_file):
         # Register exceptions
-        for line in exception_file:
-            problem = get_old_problem_from_exception_str(line)
+        for lineno, line in enumerate(exception_file, 1):
+            try:
+                problem = get_old_problem_from_exception_str(line)
+            except ValueError as v:
+                print("Exception file line {} not recognized: {}"
+                      .format(lineno,v),
+                      file=sys.stderr)
+                continue
+
             if problem is None:
                 continue
 
@@ -122,11 +133,20 @@ class FunctionSizeProblem(Problem):
     def __init__(self, problem_location, metric_value):
         super(FunctionSizeProblem, self).__init__("function-size", problem_location, metric_value)
 
+comment_re = re.compile(r'#.*$')
+
 def get_old_problem_from_exception_str(exception_str):
-    try:
-        _, problem_type, problem_location, metric_value = exception_str.split(" ")
-    except ValueError:
+    orig_str = exception_str
+    exception_str = comment_re.sub("", exception_str)
+    fields = exception_str.split()
+    if len(fields) == 0:
+        # empty line or comment
         return None
+    elif len(fields) == 4:
+        # valid line
+        _, problem_type, problem_location, metric_value = fields
+    else:
+        raise ValueError("Misformatted line {!r}".format(orig_str))
 
     if problem_type == "file-size":
         return FileSizeProblem(problem_location, metric_value)
@@ -135,6 +155,4 @@ def get_old_problem_from_exception_str(exception_str):
     elif problem_type == "function-size":
         return FunctionSizeProblem(problem_location, metric_value)
     else:
-#        print("Unknown exception line '{}'".format(exception_str))
-        return None
-
+        raise ValueError("Unknown exception type {!r}".format(orig_str))

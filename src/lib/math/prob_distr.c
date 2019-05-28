@@ -46,26 +46,27 @@
 
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/cc/ctassert.h"
+#include "lib/log/util_bug.h"
 
 #include <float.h>
 #include <math.h>
 #include <stddef.h>
 
-/** Validators for downcasting macros below */
-#define validate_container_of(PTR, TYPE, FIELD)                         \
-  (0 * sizeof((PTR) - &((TYPE *)(((char *)(PTR)) -                      \
-      offsetof(TYPE, FIELD)))->FIELD))
-#define validate_const_container_of(PTR, TYPE, FIELD)                   \
-  (0 * sizeof((PTR) - &((const TYPE *)(((const char *)(PTR)) -          \
-      offsetof(TYPE, FIELD)))->FIELD))
-/** Downcasting macro */
-#define container_of(PTR, TYPE, FIELD)                                  \
-  ((TYPE *)(((char *)(PTR)) - offsetof(TYPE, FIELD))                    \
-    + validate_container_of(PTR, TYPE, FIELD))
-/** Constified downcasting macro */
-#define const_container_of(PTR, TYPE, FIELD)                            \
-  ((const TYPE *)(((const char *)(PTR)) - offsetof(TYPE, FIELD))        \
-    + validate_const_container_of(PTR, TYPE, FIELD))
+/** Declare a function that downcasts from a generic dist struct to the actual
+ *  subtype probablity distribution it represents. */
+#define DECLARE_PROB_DISTR_DOWNCAST_FN(name) \
+  static inline                           \
+  const struct name *                             \
+  dist_to_const_##name(const struct dist *obj) {    \
+    tor_assert(obj->ops == &name##_ops);            \
+    return SUBTYPE_P(obj, struct name, base);   \
+  }
+DECLARE_PROB_DISTR_DOWNCAST_FN(uniform)
+DECLARE_PROB_DISTR_DOWNCAST_FN(geometric)
+DECLARE_PROB_DISTR_DOWNCAST_FN(logistic)
+DECLARE_PROB_DISTR_DOWNCAST_FN(log_logistic)
+DECLARE_PROB_DISTR_DOWNCAST_FN(genpareto)
+DECLARE_PROB_DISTR_DOWNCAST_FN(weibull)
 
 /**
  * Count number of one bits in 32-bit word.
@@ -458,7 +459,7 @@ random_uniform_01(void)
    * system is broken.
    */
   z = 0;
-  while ((x = crypto_rand_u32()) == 0) {
+  while ((x = crypto_fast_rng_get_u32(get_thread_fast_rng())) == 0) {
     if (z >= 1088)
       /* Your bit sampler is broken.  Go home.  */
       return 0;
@@ -472,8 +473,8 @@ random_uniform_01(void)
    * occur only with measure zero in the uniform distribution on
    * [0, 1].
    */
-  hi = crypto_rand_u32() | UINT32_C(0x80000000);
-  lo = crypto_rand_u32() | UINT32_C(0x00000001);
+  hi = crypto_fast_rng_get_u32(get_thread_fast_rng()) | UINT32_C(0x80000000);
+  lo = crypto_fast_rng_get_u32(get_thread_fast_rng()) | UINT32_C(0x00000001);
 
   /* Round to nearest scaled significand in [2^63, 2^64].  */
   s = hi*(double)4294967296 + lo;
@@ -1315,40 +1316,48 @@ sample_geometric(uint32_t s, double p0, double p)
 
 /** Public API for probability distributions:
  *
- *  For each probability distribution we define each public functions
- *  (sample/cdf/sf/icdf/isf) as part of its dist_ops structure.
+ *  These are wrapper functions on top of the various probability distribution
+ *  operations using the generic <b>dist</b> structure.
+
+ *  These are the functions that should be used by consumers of this API.
  */
 
+/** Returns the name of the distribution in <b>dist</b>. */
 const char *
 dist_name(const struct dist *dist)
 {
   return dist->ops->name;
 }
 
+/* Sample a value from <b>dist</b> and return it. */
 double
 dist_sample(const struct dist *dist)
 {
   return dist->ops->sample(dist);
 }
 
+/** Compute the CDF of <b>dist</b> at <b>x</b>. */
 double
 dist_cdf(const struct dist *dist, double x)
 {
   return dist->ops->cdf(dist, x);
 }
 
+/** Compute the SF (Survival function) of <b>dist</b> at <b>x</b>. */
 double
 dist_sf(const struct dist *dist, double x)
 {
   return dist->ops->sf(dist, x);
 }
 
+/** Compute the iCDF (Inverse CDF) of <b>dist</b> at <b>x</b>. */
 double
 dist_icdf(const struct dist *dist, double p)
 {
   return dist->ops->icdf(dist, p);
 }
 
+/** Compute the iSF (Inverse Survival function) of <b>dist</b> at <b>x</b>. */
 double
 dist_isf(const struct dist *dist, double p)
 {
@@ -1360,8 +1369,7 @@ dist_isf(const struct dist *dist, double p)
 static double
 uniform_sample(const struct dist *dist)
 {
-  const struct uniform *U = const_container_of(dist, struct uniform,
-    base);
+  const struct uniform *U = dist_to_const_uniform(dist);
   double p0 = random_uniform_01();
 
   return sample_uniform_interval(p0, U->a, U->b);
@@ -1370,9 +1378,7 @@ uniform_sample(const struct dist *dist)
 static double
 uniform_cdf(const struct dist *dist, double x)
 {
-  const struct uniform *U = const_container_of(dist, struct uniform,
-    base);
-
+  const struct uniform *U = dist_to_const_uniform(dist);
   if (x < U->a)
     return 0;
   else if (x < U->b)
@@ -1384,8 +1390,7 @@ uniform_cdf(const struct dist *dist, double x)
 static double
 uniform_sf(const struct dist *dist, double x)
 {
-  const struct uniform *U = const_container_of(dist, struct uniform,
-    base);
+  const struct uniform *U = dist_to_const_uniform(dist);
 
   if (x > U->b)
     return 0;
@@ -1398,8 +1403,7 @@ uniform_sf(const struct dist *dist, double x)
 static double
 uniform_icdf(const struct dist *dist, double p)
 {
-  const struct uniform *U = const_container_of(dist, struct uniform,
-    base);
+  const struct uniform *U = dist_to_const_uniform(dist);
   double w = U->b - U->a;
 
   return (p < 0.5 ? (U->a + w*p) : (U->b - w*(1 - p)));
@@ -1408,8 +1412,7 @@ uniform_icdf(const struct dist *dist, double p)
 static double
 uniform_isf(const struct dist *dist, double p)
 {
-  const struct uniform *U = const_container_of(dist, struct uniform,
-    base);
+  const struct uniform *U = dist_to_const_uniform(dist);
   double w = U->b - U->a;
 
   return (p < 0.5 ? (U->b - w*p) : (U->a + w*(1 - p)));
@@ -1424,14 +1427,17 @@ const struct dist_ops uniform_ops = {
   .isf = uniform_isf,
 };
 
+/*******************************************************************/
+
+/** Private functions for each probability distribution. */
+
 /** Functions for logistic distribution: */
 
 static double
 logistic_sample(const struct dist *dist)
 {
-  const struct logistic *L = const_container_of(dist, struct logistic,
-    base);
-  uint32_t s = crypto_rand_u32();
+  const struct logistic *L = dist_to_const_logistic(dist);
+  uint32_t s = crypto_fast_rng_get_u32(get_thread_fast_rng());
   double t = random_uniform_01();
   double p0 = random_uniform_01();
 
@@ -1441,36 +1447,28 @@ logistic_sample(const struct dist *dist)
 static double
 logistic_cdf(const struct dist *dist, double x)
 {
-  const struct logistic *L = const_container_of(dist, struct logistic,
-    base);
-
+  const struct logistic *L = dist_to_const_logistic(dist);
   return cdf_logistic(x, L->mu, L->sigma);
 }
 
 static double
 logistic_sf(const struct dist *dist, double x)
 {
-  const struct logistic *L = const_container_of(dist, struct logistic,
-    base);
-
+  const struct logistic *L = dist_to_const_logistic(dist);
   return sf_logistic(x, L->mu, L->sigma);
 }
 
 static double
 logistic_icdf(const struct dist *dist, double p)
 {
-  const struct logistic *L = const_container_of(dist, struct logistic,
-    base);
-
+  const struct logistic *L = dist_to_const_logistic(dist);
   return icdf_logistic(p, L->mu, L->sigma);
 }
 
 static double
 logistic_isf(const struct dist *dist, double p)
 {
-  const struct logistic *L = const_container_of(dist, struct logistic,
-    base);
-
+  const struct logistic *L = dist_to_const_logistic(dist);
   return isf_logistic(p, L->mu, L->sigma);
 }
 
@@ -1488,9 +1486,8 @@ const struct dist_ops logistic_ops = {
 static double
 log_logistic_sample(const struct dist *dist)
 {
-  const struct log_logistic *LL = const_container_of(dist, struct
-    log_logistic, base);
-  uint32_t s = crypto_rand_u32();
+  const struct log_logistic *LL = dist_to_const_log_logistic(dist);
+  uint32_t s = crypto_fast_rng_get_u32(get_thread_fast_rng());
   double p0 = random_uniform_01();
 
   return sample_log_logistic_scaleshape(s, p0, LL->alpha, LL->beta);
@@ -1499,36 +1496,28 @@ log_logistic_sample(const struct dist *dist)
 static double
 log_logistic_cdf(const struct dist *dist, double x)
 {
-  const struct log_logistic *LL = const_container_of(dist,
-    struct log_logistic, base);
-
+  const struct log_logistic *LL = dist_to_const_log_logistic(dist);
   return cdf_log_logistic(x, LL->alpha, LL->beta);
 }
 
 static double
 log_logistic_sf(const struct dist *dist, double x)
 {
-  const struct log_logistic *LL = const_container_of(dist,
-    struct log_logistic, base);
-
+  const struct log_logistic *LL = dist_to_const_log_logistic(dist);
   return sf_log_logistic(x, LL->alpha, LL->beta);
 }
 
 static double
 log_logistic_icdf(const struct dist *dist, double p)
 {
-  const struct log_logistic *LL = const_container_of(dist,
-    struct log_logistic, base);
-
+  const struct log_logistic *LL = dist_to_const_log_logistic(dist);
   return icdf_log_logistic(p, LL->alpha, LL->beta);
 }
 
 static double
 log_logistic_isf(const struct dist *dist, double p)
 {
-  const struct log_logistic *LL = const_container_of(dist,
-    struct log_logistic, base);
-
+  const struct log_logistic *LL = dist_to_const_log_logistic(dist);
   return isf_log_logistic(p, LL->alpha, LL->beta);
 }
 
@@ -1546,9 +1535,8 @@ const struct dist_ops log_logistic_ops = {
 static double
 weibull_sample(const struct dist *dist)
 {
-  const struct weibull *W = const_container_of(dist, struct weibull,
-    base);
-  uint32_t s = crypto_rand_u32();
+  const struct weibull *W = dist_to_const_weibull(dist);
+  uint32_t s = crypto_fast_rng_get_u32(get_thread_fast_rng());
   double p0 = random_uniform_01();
 
   return sample_weibull(s, p0, W->lambda, W->k);
@@ -1557,36 +1545,28 @@ weibull_sample(const struct dist *dist)
 static double
 weibull_cdf(const struct dist *dist, double x)
 {
-  const struct weibull *W = const_container_of(dist, struct weibull,
-    base);
-
+  const struct weibull *W = dist_to_const_weibull(dist);
   return cdf_weibull(x, W->lambda, W->k);
 }
 
 static double
 weibull_sf(const struct dist *dist, double x)
 {
-  const struct weibull *W = const_container_of(dist, struct weibull,
-    base);
-
+  const struct weibull *W = dist_to_const_weibull(dist);
   return sf_weibull(x, W->lambda, W->k);
 }
 
 static double
 weibull_icdf(const struct dist *dist, double p)
 {
-  const struct weibull *W = const_container_of(dist, struct weibull,
-    base);
-
+  const struct weibull *W = dist_to_const_weibull(dist);
   return icdf_weibull(p, W->lambda, W->k);
 }
 
 static double
 weibull_isf(const struct dist *dist, double p)
 {
-  const struct weibull *W = const_container_of(dist, struct weibull,
-    base);
-
+  const struct weibull *W = dist_to_const_weibull(dist);
   return isf_weibull(p, W->lambda, W->k);
 }
 
@@ -1604,9 +1584,8 @@ const struct dist_ops weibull_ops = {
 static double
 genpareto_sample(const struct dist *dist)
 {
-  const struct genpareto *GP = const_container_of(dist, struct genpareto,
-    base);
-  uint32_t s = crypto_rand_u32();
+  const struct genpareto *GP = dist_to_const_genpareto(dist);
+  uint32_t s = crypto_fast_rng_get_u32(get_thread_fast_rng());
   double p0 = random_uniform_01();
 
   return sample_genpareto_locscale(s, p0, GP->mu, GP->sigma, GP->xi);
@@ -1615,36 +1594,28 @@ genpareto_sample(const struct dist *dist)
 static double
 genpareto_cdf(const struct dist *dist, double x)
 {
-  const struct genpareto *GP = const_container_of(dist, struct genpareto,
-    base);
-
+  const struct genpareto *GP = dist_to_const_genpareto(dist);
   return cdf_genpareto(x, GP->mu, GP->sigma, GP->xi);
 }
 
 static double
 genpareto_sf(const struct dist *dist, double x)
 {
-  const struct genpareto *GP = const_container_of(dist, struct genpareto,
-    base);
-
+  const struct genpareto *GP = dist_to_const_genpareto(dist);
   return sf_genpareto(x, GP->mu, GP->sigma, GP->xi);
 }
 
 static double
 genpareto_icdf(const struct dist *dist, double p)
 {
-  const struct genpareto *GP = const_container_of(dist, struct genpareto,
-    base);
-
+  const struct genpareto *GP = dist_to_const_genpareto(dist);
   return icdf_genpareto(p, GP->mu, GP->sigma, GP->xi);
 }
 
 static double
 genpareto_isf(const struct dist *dist, double p)
 {
-  const struct genpareto *GP = const_container_of(dist, struct genpareto,
-    base);
-
+  const struct genpareto *GP = dist_to_const_genpareto(dist);
   return isf_genpareto(p, GP->mu, GP->sigma, GP->xi);
 }
 
@@ -1662,8 +1633,8 @@ const struct dist_ops genpareto_ops = {
 static double
 geometric_sample(const struct dist *dist)
 {
-  const struct geometric *G = const_container_of(dist, struct geometric, base);
-  uint32_t s = crypto_rand_u32();
+  const struct geometric *G = dist_to_const_geometric(dist);
+  uint32_t s = crypto_fast_rng_get_u32(get_thread_fast_rng());
   double p0 = random_uniform_01();
 
   return sample_geometric(s, p0, G->p);
@@ -1672,7 +1643,7 @@ geometric_sample(const struct dist *dist)
 static double
 geometric_cdf(const struct dist *dist, double x)
 {
-  const struct geometric *G = const_container_of(dist, struct geometric, base);
+  const struct geometric *G = dist_to_const_geometric(dist);
 
   if (x < 1)
     return 0;
@@ -1683,7 +1654,7 @@ geometric_cdf(const struct dist *dist, double x)
 static double
 geometric_sf(const struct dist *dist, double x)
 {
-  const struct geometric *G = const_container_of(dist, struct geometric, base);
+  const struct geometric *G = dist_to_const_geometric(dist);
 
   if (x < 1)
     return 0;
@@ -1694,7 +1665,7 @@ geometric_sf(const struct dist *dist, double x)
 static double
 geometric_icdf(const struct dist *dist, double p)
 {
-  const struct geometric *G = const_container_of(dist, struct geometric, base);
+  const struct geometric *G = dist_to_const_geometric(dist);
 
   return log1p(-p)/log1p(-G->p);
 }
@@ -1702,7 +1673,7 @@ geometric_icdf(const struct dist *dist, double p)
 static double
 geometric_isf(const struct dist *dist, double p)
 {
-  const struct geometric *G = const_container_of(dist, struct geometric, base);
+  const struct geometric *G = dist_to_const_geometric(dist);
 
   return log(p)/log1p(-G->p);
 }

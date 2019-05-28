@@ -317,6 +317,14 @@ test_mainloop_dormant_load_state(void *arg)
   tt_assert(is_participating_on_network());
   tt_i64_op(get_last_user_activity_time(), OP_EQ, start - 123*60);
 
+  // If we would start dormant, but DormantCanceledByStartup is set, then
+  // we start up non-dormant.
+  state->Dormant = 1;
+  get_options_mutable()->DormantCanceledByStartup = 1;
+  netstatus_load_from_state(state, start);
+  tt_assert(is_participating_on_network());
+  tt_i64_op(get_last_user_activity_time(), OP_EQ, start);
+
  done:
   or_state_free(state);
 }

@@ -49,7 +49,8 @@
 #define ROUTERDESC_BY_DIGEST_CACHE_LIFETIME (48*60*60)
 #define ROBOTS_CACHE_LIFETIME (24*60*60)
 #define MICRODESC_CACHE_LIFETIME (48*60*60)
-
+/* Bandwidth files change every hour. */
+#define BANDWIDTH_CACHE_LIFETIME (30*60)
 /** Parse an HTTP request string <b>headers</b> of the form
  * \verbatim
  * "\%s [http[s]://]\%s HTTP/1..."
@@ -123,7 +124,7 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
                            long cache_lifetime)
 {
   char date[RFC1123_TIME_LEN+1];
-  time_t now = time(NULL);
+  time_t now = approx_time();
   buf_t *buf = buf_new_with_capacity(1024);
 
   tor_assert(conn);
@@ -351,12 +352,15 @@ static int handle_get_robots(dir_connection_t *conn,
                                 const get_handler_args_t *args);
 static int handle_get_networkstatus_bridges(dir_connection_t *conn,
                                 const get_handler_args_t *args);
+static int handle_get_next_bandwidth(dir_connection_t *conn,
+                                     const get_handler_args_t *args);
 
 /** Table for handling GET requests. */
 static const url_table_ent_t url_table[] = {
   { "/tor/", 0, handle_get_frontpage },
   { "/tor/status-vote/current/consensus", 1, handle_get_current_consensus },
   { "/tor/status-vote/current/", 1, handle_get_status_vote },
+  { "/tor/status-vote/next/bandwidth", 0, handle_get_next_bandwidth },
   { "/tor/status-vote/next/", 1, handle_get_status_vote },
   { "/tor/micro/d/", 1, handle_get_microdesc },
   { "/tor/server/", 1, handle_get_descriptor },
@@ -1450,6 +1454,39 @@ handle_get_networkstatus_bridges(dir_connection_t *conn,
     goto done;
   }
  done:
+  return 0;
+}
+
+/** Helper function for GET the bandwidth file used for the next vote */
+static int
+handle_get_next_bandwidth(dir_connection_t *conn,
+                          const get_handler_args_t *args)
+{
+  log_debug(LD_DIR, "Getting next bandwidth.");
+  const or_options_t *options = get_options();
+  const compress_method_t compress_method =
+    find_best_compression_method(args->compression_supported, 1);
+
+  if (options->V3BandwidthsFile) {
+    char *bandwidth = read_file_to_str(options->V3BandwidthsFile,
+                                       RFTS_IGNORE_MISSING, NULL);
+    if (bandwidth != NULL) {
+      ssize_t len = strlen(bandwidth);
+      write_http_response_header(conn, compress_method != NO_METHOD ? -1 : len,
+                                 compress_method, BANDWIDTH_CACHE_LIFETIME);
+      if (compress_method != NO_METHOD) {
+        conn->compress_state = tor_compress_new(1, compress_method,
+                                        choose_compression_level(len/2));
+        log_debug(LD_DIR, "Compressing bandwidth file.");
+      } else {
+        log_debug(LD_DIR, "Not compressing bandwidth file.");
+      }
+      connection_dir_buf_add((const char*)bandwidth, len, conn, 1);
+      tor_free(bandwidth);
+      return 0;
+    }
+  }
+  write_short_http_response(conn, 404, "Not found");
   return 0;
 }
 

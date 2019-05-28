@@ -5886,6 +5886,61 @@ test_config_kvline_parse(void *arg)
   tt_assert(lines);
   tt_str_op(lines->key, OP_EQ, "AB");
   tt_str_op(lines->value, OP_EQ, "");
+  config_free_lines(lines);
+
+  lines = kvline_parse("AB=", KV_OMIT_VALS);
+  tt_assert(lines);
+  tt_str_op(lines->key, OP_EQ, "AB");
+  tt_str_op(lines->value, OP_EQ, "");
+  config_free_lines(lines);
+
+  lines = kvline_parse(" AB ", KV_OMIT_VALS);
+  tt_assert(lines);
+  tt_str_op(lines->key, OP_EQ, "AB");
+  tt_str_op(lines->value, OP_EQ, "");
+  config_free_lines(lines);
+
+  lines = kvline_parse("AB", KV_OMIT_VALS);
+  tt_assert(lines);
+  tt_str_op(lines->key, OP_EQ, "AB");
+  tt_str_op(lines->value, OP_EQ, "");
+  enc = kvline_encode(lines, KV_OMIT_VALS);
+  tt_str_op(enc, OP_EQ, "AB");
+  tor_free(enc);
+  config_free_lines(lines);
+
+  lines = kvline_parse("AB=CD", KV_OMIT_VALS);
+  tt_assert(lines);
+  tt_str_op(lines->key, OP_EQ, "AB");
+  tt_str_op(lines->value, OP_EQ, "CD");
+  enc = kvline_encode(lines, KV_OMIT_VALS);
+  tt_str_op(enc, OP_EQ, "AB=CD");
+  tor_free(enc);
+  config_free_lines(lines);
+
+  lines = kvline_parse("AB=CD DE FGH=I", KV_OMIT_VALS);
+  tt_assert(lines);
+  tt_str_op(lines->key, OP_EQ, "AB");
+  tt_str_op(lines->value, OP_EQ, "CD");
+  tt_str_op(lines->next->key, OP_EQ, "DE");
+  tt_str_op(lines->next->value, OP_EQ, "");
+  tt_str_op(lines->next->next->key, OP_EQ, "FGH");
+  tt_str_op(lines->next->next->value, OP_EQ, "I");
+  enc = kvline_encode(lines, KV_OMIT_VALS);
+  tt_str_op(enc, OP_EQ, "AB=CD DE FGH=I");
+  tor_free(enc);
+  config_free_lines(lines);
+
+  lines = kvline_parse("AB=\"CD E\" DE FGH=\"I\"", KV_OMIT_VALS|KV_QUOTED);
+  tt_assert(lines);
+  tt_str_op(lines->key, OP_EQ, "AB");
+  tt_str_op(lines->value, OP_EQ, "CD E");
+  tt_str_op(lines->next->key, OP_EQ, "DE");
+  tt_str_op(lines->next->value, OP_EQ, "");
+  tt_str_op(lines->next->next->key, OP_EQ, "FGH");
+  tt_str_op(lines->next->next->value, OP_EQ, "I");
+  enc = kvline_encode(lines, KV_OMIT_VALS|KV_QUOTED);
+  tt_str_op(enc, OP_EQ, "AB=\"CD E\" DE FGH=I");
 
  done:
   config_free_lines(lines);

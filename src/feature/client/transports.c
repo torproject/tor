@@ -100,7 +100,7 @@
 #include "app/config/statefile.h"
 #include "core/or/connection_or.h"
 #include "feature/relay/ext_orport.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "lib/encoding/confline.h"
 #include "lib/encoding/kvline.h"
 

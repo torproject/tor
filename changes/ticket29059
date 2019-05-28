@@ -1,3 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Fix shellcheck warnings in fuzz_static_testcases.sh. Resolves ticket
-      29059.

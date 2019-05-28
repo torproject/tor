@@ -30,7 +30,7 @@
 #include "core/or/circuitstats.h"
 #include "app/config/config.h"
 #include "app/config/confparse.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"
@@ -44,6 +44,7 @@
 #include "lib/time/tvdiff.h"
 #include "lib/encoding/confline.h"
 #include "feature/dirauth/authmode.h"
+#include "feature/relay/relay_periodic.h"
 
 #include "core/or/crypt_path_st.h"
 #include "core/or/origin_circuit_st.h"
@@ -1420,6 +1421,7 @@ void
 circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 {
   time_t now = approx_time();
+  // XXXX this should use pubsub
   if (cbt->liveness.nonlive_timeouts > 0) {
     time_t time_since_live = now - cbt->liveness.network_last_live;
     log_notice(LD_CIRC,

@@ -15,66 +15,51 @@
 #include "app/config/statefile.h"
 #include "app/main/main.h"
 #include "app/main/ntmain.h"
+#include "app/main/shutdown.h"
 #include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/cpuworker.h"
 #include "core/mainloop/mainloop.h"
+#include "core/mainloop/mainloop_pubsub.h"
 #include "core/mainloop/netstatus.h"
 #include "core/or/channel.h"
 #include "core/or/channelpadding.h"
 #include "core/or/circuitpadding.h"
-#include "core/or/channeltls.h"
 #include "core/or/circuitlist.h"
-#include "core/or/circuitmux_ewma.h"
 #include "core/or/command.h"
-#include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
-#include "core/or/dos.h"
-#include "core/or/policies.h"
-#include "core/or/protover.h"
 #include "core/or/relay.h"
-#include "core/or/scheduler.h"
 #include "core/or/status.h"
-#include "core/or/versions.h"
 #include "feature/api/tor_api.h"
 #include "feature/api/tor_api_internal.h"
 #include "feature/client/addressmap.h"
-#include "feature/client/bridges.h"
-#include "feature/client/entrynodes.h"
-#include "feature/client/transports.h"
 #include "feature/control/control.h"
-#include "feature/dirauth/bwauth.h"
+#include "feature/control/control_auth.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/keypin.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dircache/consdiffmgr.h"
-#include "feature/dircache/dirserv.h"
 #include "feature/dirparse/routerparse.h"
 #include "feature/hibernate/hibernate.h"
-#include "feature/hs/hs_cache.h"
 #include "feature/nodelist/authcert.h"
-#include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
-#include "feature/relay/onion_queue.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"
 #include "feature/rend/rendcache.h"
-#include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
-#include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
 #include "lib/compress/compress.h"
 #include "lib/buf/buffers.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_s2k.h"
-#include "lib/geoip/geoip.h"
 #include "lib/net/resolve.h"
 
 #include "lib/process/waitpid.h"
+#include "lib/pubsub/pubsub_build.h"
 
 #include "lib/meminfo/meminfo.h"
 #include "lib/osinfo/uname.h"
@@ -90,7 +75,6 @@
 
 #include <event2/event.h>
 
-#include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/shared_random.h"
 
@@ -110,8 +94,6 @@
 #endif /* defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__) */
 #include <systemd/sd-daemon.h>
 #endif /* defined(HAVE_SYSTEMD) */
-
-void evdns_shutdown(int);
 
 #ifdef HAVE_RUST
 // helper function defined in Rust to output a log message indicating if tor is
@@ -579,6 +561,7 @@ tor_init(int argc, char *argv[])
       if (!strcmp(cl->key, "--version") || !strcmp(cl->key, "--digests") ||
           !strcmp(cl->key, "--list-torrc-options") ||
           !strcmp(cl->key, "--library-versions") ||
+          !strcmp(cl->key, "--list-modules") ||
           !strcmp(cl->key, "--hash-password") ||
           !strcmp(cl->key, "-h") || !strcmp(cl->key, "--help")) {
         if (quiet < 1)
@@ -742,86 +725,6 @@ release_lockfile(void)
   }
 }
 
-/** Free all memory that we might have allocated somewhere.
- * If <b>postfork</b>, we are a worker process and we want to free
- * only the parts of memory that we won't touch. If !<b>postfork</b>,
- * Tor is shutting down and we should free everything.
- *
- * Helps us find the real leaks with sanitizers and the like. Also valgrind
- * should then report 0 reachable in its leak report (in an ideal world --
- * in practice libevent, SSL, libc etc never quite free everything). */
-void
-tor_free_all(int postfork)
-{
-  if (!postfork) {
-    evdns_shutdown(1);
-  }
-  geoip_free_all();
-  geoip_stats_free_all();
-  dirvote_free_all();
-  routerlist_free_all();
-  networkstatus_free_all();
-  addressmap_free_all();
-  dirserv_free_fingerprint_list();
-  dirserv_free_all();
-  dirserv_clear_measured_bw_cache();
-  rend_cache_free_all();
-  rend_service_authorization_free_all();
-  rep_hist_free_all();
-  dns_free_all();
-  clear_pending_onions();
-  circuit_free_all();
-  circpad_machines_free();
-  entry_guards_free_all();
-  pt_free_all();
-  channel_tls_free_all();
-  channel_free_all();
-  connection_free_all();
-  connection_edge_free_all();
-  scheduler_free_all();
-  nodelist_free_all();
-  microdesc_free_all();
-  routerparse_free_all();
-  ext_orport_free_all();
-  control_free_all();
-  protover_free_all();
-  bridges_free_all();
-  consdiffmgr_free_all();
-  hs_free_all();
-  dos_free_all();
-  circuitmux_ewma_free_all();
-  accounting_free_all();
-  protover_summary_cache_free_all();
-
-  if (!postfork) {
-    config_free_all();
-    or_state_free_all();
-    router_free_all();
-    routerkeys_free_all();
-    policies_free_all();
-  }
-  if (!postfork) {
-#ifndef _WIN32
-    tor_getpwnam(NULL);
-#endif
-  }
-  /* stuff in main.c */
-
-  tor_mainloop_free_all();
-
-  if (!postfork) {
-    release_lockfile();
-  }
-  tor_libevent_free_all();
-
-  subsystems_shutdown();
-
-  /* Stuff in util.c and address.c*/
-  if (!postfork) {
-    esc_router_info(NULL);
-  }
-}
-
 /**
  * Remove the specified file, and log a warning if the operation fails for
  * any reason other than the file not existing. Ignores NULL filenames.
@@ -833,50 +736,6 @@ tor_remove_file(const char *filename)
     log_warn(LD_FS, "Couldn't unlink %s: %s",
                filename, strerror(errno));
   }
-}
-
-/** Do whatever cleanup is necessary before shutting Tor down. */
-void
-tor_cleanup(void)
-{
-  const or_options_t *options = get_options();
-  if (options->command == CMD_RUN_TOR) {
-    time_t now = time(NULL);
-    /* Remove our pid file. We don't care if there was an error when we
-     * unlink, nothing we could do about it anyways. */
-    tor_remove_file(options->PidFile);
-    /* Remove control port file */
-    tor_remove_file(options->ControlPortWriteToFile);
-    /* Remove cookie authentication file */
-    {
-      char *cookie_fname = get_controller_cookie_file_name();
-      tor_remove_file(cookie_fname);
-      tor_free(cookie_fname);
-    }
-    /* Remove Extended ORPort cookie authentication file */
-    {
-      char *cookie_fname = get_ext_or_auth_cookie_file_name();
-      tor_remove_file(cookie_fname);
-      tor_free(cookie_fname);
-    }
-    if (accounting_is_enabled(options))
-      accounting_record_bandwidth_usage(now, get_or_state());
-    or_state_mark_dirty(get_or_state(), 0); /* force an immediate save. */
-    or_state_save(now);
-    if (authdir_mode(options)) {
-      sr_save_and_cleanup();
-    }
-    if (authdir_mode_tests_reachability(options))
-      rep_hist_record_mtbf_data(now, 0);
-    keypin_close_journal();
-  }
-
-  timers_shutdown();
-
-  tor_free_all(0); /* We could move tor_free_all back into the ifdef below
-                      later, if it makes shutdown unacceptably slow.  But for
-                      now, leave it here: it's helped us catch bugs in the
-                      past. */
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */
@@ -1376,6 +1235,30 @@ run_tor_main_loop(void)
   return do_main_loop();
 }
 
+/** Install the publish/subscribe relationships for all the subsystems. */
+static void
+pubsub_install(void)
+{
+    pubsub_builder_t *builder = pubsub_builder_new();
+    int r = subsystems_add_pubsub(builder);
+    tor_assert(r == 0);
+    r = tor_mainloop_connect_pubsub(builder); // consumes builder
+    tor_assert(r == 0);
+}
+
+/** Connect the mainloop to its publish/subscribe message delivery events if
+ * appropriate, and configure the global channels appropriately. */
+static void
+pubsub_connect(void)
+{
+  if (get_options()->command == CMD_RUN_TOR) {
+    tor_mainloop_connect_pubsub_events();
+    /* XXXX For each pubsub channel, its delivery strategy should be set at
+     * this XXXX point, using tor_mainloop_set_delivery_strategy().
+     */
+  }
+}
+
 /* Main entry point for the Tor process.  Called from tor_main(), and by
  * anybody embedding Tor. */
 int
@@ -1407,6 +1290,9 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
      }
   }
 #endif /* defined(NT_SERVICE) */
+
+  pubsub_install();
+
   {
     int init_rv = tor_init(argc, argv);
     if (init_rv) {
@@ -1415,6 +1301,8 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
       goto done;
     }
   }
+
+  pubsub_connect();
 
   if (get_options()->Sandbox && get_options()->command == CMD_RUN_TOR) {
     sandbox_cfg_t* cfg = sandbox_init_filter();

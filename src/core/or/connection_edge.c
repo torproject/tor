@@ -73,12 +73,13 @@
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
+#include "core/or/sendme.h"
 #include "core/proto/proto_http.h"
 #include "core/proto/proto_socks.h"
 #include "feature/client/addressmap.h"
 #include "feature/client/circpathbias.h"
 #include "feature/client/dnsserv.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
 #include "feature/hibernate/hibernate.h"
@@ -767,7 +768,7 @@ connection_edge_flushed_some(edge_connection_t *conn)
 
       /* falls through. */
     case EXIT_CONN_STATE_OPEN:
-      connection_edge_consider_sending_sendme(conn);
+      sendme_connection_edge_consider_sending(conn);
       break;
   }
   return 0;
@@ -791,7 +792,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
   switch (conn->base_.state) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
-      connection_edge_consider_sending_sendme(conn);
+      sendme_connection_edge_consider_sending(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
     case AP_CONN_STATE_NATD_WAIT:
@@ -2810,6 +2811,31 @@ connection_ap_process_natd(entry_connection_t *conn)
   return connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
 }
 
+static const char HTTP_CONNECT_IS_NOT_AN_HTTP_PROXY_MSG[] =
+  "HTTP/1.0 405 Method Not Allowed\r\n"
+  "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
+  "<html>\n"
+  "<head>\n"
+  "<title>This is an HTTP CONNECT tunnel, not a full HTTP Proxy</title>\n"
+  "</head>\n"
+  "<body>\n"
+  "<h1>This is an HTTP CONNECT tunnel, not an HTTP proxy.</h1>\n"
+  "<p>\n"
+  "It appears you have configured your web browser to use this Tor port as\n"
+  "an HTTP proxy.\n"
+  "</p><p>\n"
+  "This is not correct: This port is configured as a CONNECT tunnel, not\n"
+  "an HTTP proxy. Please configure your client accordingly.  You can also\n"
+  "use HTTPS; then the client should automatically use HTTP CONNECT."
+  "</p>\n"
+  "<p>\n"
+  "See <a href=\"https://www.torproject.org/documentation.html\">"
+  "https://www.torproject.org/documentation.html</a> for more "
+  "information.\n"
+  "</p>\n"
+  "</body>\n"
+  "</html>\n";
+
 /** Called on an HTTP CONNECT entry connection when some bytes have arrived,
  * but we have not yet received a full HTTP CONNECT request.  Try to parse an
  * HTTP CONNECT request from the connection's inbuf.  On success, set up the
@@ -2850,7 +2876,7 @@ connection_ap_process_http_connect(entry_connection_t *conn)
   tor_assert(command);
   tor_assert(addrport);
   if (strcasecmp(command, "connect")) {
-    errmsg = "HTTP/1.0 405 Method Not Allowed\r\n\r\n";
+    errmsg = HTTP_CONNECT_IS_NOT_AN_HTTP_PROXY_MSG;
     goto err;
   }
 
@@ -4537,6 +4563,25 @@ circuit_clear_isolation(origin_circuit_t *circ)
     tor_free(circ->socks_password);
   }
   circ->socks_username_len = circ->socks_password_len = 0;
+}
+
+/** Send an END and mark for close the given edge connection conn using the
+ * given reason that has to be a stream reason.
+ *
+ * Note: We don't unattached the AP connection (if applicable) because we
+ * don't want to flush the remaining data. This function aims at ending
+ * everything quickly regardless of the connection state.
+ *
+ * This function can't fail and does nothing if conn is NULL. */
+void
+connection_edge_end_close(edge_connection_t *conn, uint8_t reason)
+{
+  if (!conn) {
+    return;
+  }
+
+  connection_edge_end(conn, reason);
+  connection_mark_for_close(TO_CONN(conn));
 }
 
 /** Free all storage held in module-scoped variables for connection_edge.c */

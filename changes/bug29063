@@ -1,2 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Fix issues shellcheck found in test_rebind.sh. Resolves issue 29063.

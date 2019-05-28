@@ -152,11 +152,6 @@ process_win32_exec(process_t *process)
   HANDLE stdin_pipe_read = NULL;
   HANDLE stdin_pipe_write = NULL;
   BOOL ret = FALSE;
-  const char *filename = process_get_command(process);
-
-  /* Not much we can do if we haven't been told what to start. */
-  if (BUG(filename == NULL))
-    return PROCESS_STATUS_ERROR;
 
   /* Setup our security attributes. */
   SECURITY_ATTRIBUTES security_attributes;
@@ -211,7 +206,7 @@ process_win32_exec(process_t *process)
   char *joined_argv = tor_join_win_cmdline((const char **)argv);
 
   /* Create the child process */
-  ret = CreateProcessA(filename,
+  ret = CreateProcessA(NULL,
                        joined_argv,
                        NULL,
                        NULL,

@@ -21,9 +21,6 @@ void release_lockfile(void);
 
 void tor_remove_file(const char *filename);
 
-void tor_cleanup(void);
-void tor_free_all(int postfork);
-
 int tor_init(int argc, char **argv);
 
 int run_tor_main_loop(void);

@@ -44,6 +44,7 @@ typedef enum protocol_type_t {
   PRT_MICRODESC = 8,
   PRT_CONS      = 9,
   PRT_PADDING   = 10,
+  PRT_FLOWCTRL  = 11,
 } protocol_type_t;
 
 bool protover_contains_long_protocol_names(const char *s);

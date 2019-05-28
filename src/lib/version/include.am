@@ -5,6 +5,7 @@ if UNITTESTS_ENABLED
 noinst_LIBRARIES += src/lib/libtor-version-testing.a
 endif
 
+# ADD_C_FILE: INSERT SOURCES HERE.
 src_lib_libtor_version_a_SOURCES =			\
 	src/lib/version/git_revision.c			\
 	src/lib/version/version.c
@@ -20,6 +21,7 @@ src/lib/version/git_revision.$(OBJEXT) \
   src/lib/version/src_lib_libtor_version_testing_a-git_revision.$(OBJEXT): \
 	micro-revision.i
 
+# ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS +=					\
 	src/lib/version/git_revision.h			\
 	src/lib/version/torversion.h

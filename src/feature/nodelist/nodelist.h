@@ -101,7 +101,7 @@ const struct curve25519_public_key_t *node_get_curve25519_onion_key(
                                   const node_t *node);
 crypto_pk_t *node_get_rsa_onion_key(const node_t *node);
 
-MOCK_DECL(smartlist_t *, nodelist_get_list, (void));
+MOCK_DECL(const smartlist_t *, nodelist_get_list, (void));
 
 /* Temporary during transition to multiple addresses.  */
 void node_get_addr(const node_t *node, tor_addr_t *addr_out);

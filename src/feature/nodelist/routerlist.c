@@ -67,7 +67,7 @@
 #include "core/mainloop/mainloop.h"
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dirauth/reachability.h"
@@ -1926,6 +1926,8 @@ routerlist_remove_old_routers(void)
 void
 routerlist_descriptors_added(smartlist_t *sl, int from_cache)
 {
+  // XXXX use pubsub mechanism here.
+
   tor_assert(sl);
   control_event_descriptors_changed(sl);
   SMARTLIST_FOREACH_BEGIN(sl, routerinfo_t *, ri) {
@@ -1933,7 +1935,9 @@ routerlist_descriptors_added(smartlist_t *sl, int from_cache)
       learned_bridge_descriptor(ri, from_cache);
     if (ri->needs_retest_if_added) {
       ri->needs_retest_if_added = 0;
+#ifdef HAVE_MODULE_DIRAUTH
       dirserv_single_reachability_test(approx_time(), ri);
+#endif
     }
   } SMARTLIST_FOREACH_END(ri);
 }
@@ -2969,7 +2973,7 @@ routerinfo_incompatible_with_extrainfo(const crypto_pk_t *identity_pkey,
   digest256_matches = tor_memeq(ei->digest256,
                                 sd->extra_info_digest256, DIGEST256_LEN);
   digest256_matches |=
-    tor_mem_is_zero(sd->extra_info_digest256, DIGEST256_LEN);
+    fast_mem_is_zero(sd->extra_info_digest256, DIGEST256_LEN);
 
   /* The identity must match exactly to have been generated at the same time
    * by the same router. */
@@ -3053,7 +3057,7 @@ routerinfo_has_curve25519_onion_key(const routerinfo_t *ri)
     return 0;
   }
 
-  if (tor_mem_is_zero((const char*)ri->onion_curve25519_pkey->public_key,
+  if (fast_mem_is_zero((const char*)ri->onion_curve25519_pkey->public_key,
                       CURVE25519_PUBKEY_LEN)) {
     return 0;
   }

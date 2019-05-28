@@ -1,4 +1,0 @@
-  o Minor bugfixes (logging, configuration):
-    - Warn operators when MyFamily option is set but ContactInfo
-      is missing, as the latter should be set too.
-      Fixes bug 25110; bugfix on 0.3.3.1-alpha.

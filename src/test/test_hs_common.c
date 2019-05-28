@@ -275,7 +275,7 @@ test_start_time_of_next_time_period(void *arg)
 static void
 cleanup_nodelist(void)
 {
-  smartlist_t *nodelist = nodelist_get_list();
+  const smartlist_t *nodelist = nodelist_get_list();
   SMARTLIST_FOREACH_BEGIN(nodelist, node_t *, node) {
     tor_free(node->md);
     node->md = NULL;

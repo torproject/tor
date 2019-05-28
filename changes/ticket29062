@@ -1,3 +1,0 @@
-  o Code simplification and refactoring (shell scripts):
-    - Cleanup test_keygen.sh to silence all shellcheck warnings. Closes
-      ticket 29062.

@@ -15,7 +15,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "app/config/config.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/hs/hs_client.h"

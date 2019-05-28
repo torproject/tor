@@ -39,7 +39,7 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dirauth/reachability.h"
@@ -437,7 +437,15 @@ connection_or_state_publish(const or_connection_t *conn, uint8_t state)
 
   msg.type = ORCONN_MSGTYPE_STATE;
   msg.u.state.gid = conn->base_.global_identifier;
-  msg.u.state.proxy_type = conn->proxy_type;
+  if (conn->is_pt) {
+    /* Do extra decoding because conn->proxy_type indicates the proxy
+     * protocol that tor uses to talk with the transport plugin,
+     * instead of PROXY_PLUGGABLE. */
+    tor_assert_nonfatal(conn->proxy_type != PROXY_NONE);
+    msg.u.state.proxy_type = PROXY_PLUGGABLE;
+  } else {
+    msg.u.state.proxy_type = conn->proxy_type;
+  }
   msg.u.state.state = state;
   if (conn->chan) {
     msg.u.state.chan = TLS_CHAN_TO_BASE(conn->chan)->global_identifier;
@@ -1472,7 +1480,7 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
   int r;
   tor_addr_t proxy_addr;
   uint16_t proxy_port;
-  int proxy_type;
+  int proxy_type, is_pt = 0;
 
   tor_assert(_addr);
   tor_assert(id_digest);
@@ -1516,13 +1524,15 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
   conn->is_outgoing = 1;
 
   /* If we are using a proxy server, find it and use it. */
-  r = get_proxy_addrport(&proxy_addr, &proxy_port, &proxy_type, TO_CONN(conn));
+  r = get_proxy_addrport(&proxy_addr, &proxy_port, &proxy_type, &is_pt,
+                         TO_CONN(conn));
   if (r == 0) {
     conn->proxy_type = proxy_type;
     if (proxy_type != PROXY_NONE) {
       tor_addr_copy(&addr, &proxy_addr);
       port = proxy_port;
       conn->base_.proxy_state = PROXY_INFANT;
+      conn->is_pt = is_pt;
     }
     connection_or_change_state(conn, OR_CONN_STATE_CONNECTING);
     connection_or_event_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
@@ -2298,6 +2308,8 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 
   cell_pack(&networkcell, cell, conn->wide_circ_ids);
 
+  /* We need to count padding cells from this non-packed code path
+   * since they are sent via chan->write_cell() (which is not packed) */
   rep_hist_padding_count_write(PADDING_TYPE_TOTAL);
   if (cell->command == CELL_PADDING)
     rep_hist_padding_count_write(PADDING_TYPE_CELL);
@@ -2308,7 +2320,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
   if (conn->chan) {
     channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
 
-    if (TLS_CHAN_TO_BASE(conn->chan)->currently_padding) {
+    if (TLS_CHAN_TO_BASE(conn->chan)->padding_enabled) {
       rep_hist_padding_count_write(PADDING_TYPE_ENABLED_TOTAL);
       if (cell->command == CELL_PADDING)
         rep_hist_padding_count_write(PADDING_TYPE_ENABLED_CELL);
@@ -2338,6 +2350,7 @@ connection_or_write_var_cell_to_buf,(const var_cell_t *cell,
   if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
     or_handshake_state_record_var_cell(conn, conn->handshake_state, cell, 0);
 
+  rep_hist_padding_count_write(PADDING_TYPE_TOTAL);
   /* Touch the channel's active timestamp if there is one */
   if (conn->chan)
     channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));

@@ -248,6 +248,17 @@ struct or_options_t {
    * pad to the server regardless of server support. */
   int ConnectionPadding;
 
+  /** Boolean: if true, then circuit padding will be negotiated by client
+   * and server, subject to consenus limits (default). If 0, it will be fully
+   * disabled. */
+  int CircuitPadding;
+
+  /** Boolean: if true, then this client will only use circuit padding
+   * algorithms that are known to use a low amount of overhead. If false,
+   * we will use all available circuit padding algorithms.
+   */
+  int ReducedCircuitPadding;
+
   /** To what authority types do we publish our descriptor? Choices are
    * "v1", "v2", "v3", "bridge", or "". */
   struct smartlist_t *PublishServerDescriptor;
@@ -1092,6 +1103,11 @@ struct or_options_t {
   /** Boolean: true if Tor should be dormant the first time it starts with
    * a datadirectory; false otherwise. */
   int DormantOnFirstStartup;
+  /**
+   * Boolean: true if Tor should treat every startup event as cancelling
+   * a possible previous dormant state.
+   **/
+  int DormantCanceledByStartup;
 };
 
 #endif

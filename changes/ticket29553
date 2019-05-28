@@ -1,5 +1,0 @@
-  o Minor bugfixes (developer tools):
-    - Update our pre-commit.git-hook script to work correctly on older Tor
-      branches and release branches without any changes files,
-      and to actually exit when something fails.  Fixes bug 29553; bugfix on
-      0.4.0.2-alpha.

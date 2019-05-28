@@ -5,8 +5,10 @@ cache:
   ## cargo: true
   directories:
     - $HOME/.cargo
+    ## caching CARGO_TARGET_DIR actually slows down the build over time,
+    ## because old build products are never deleted.
     ## where we point CARGO_TARGET_DIR in all our cargo invocations
-    - $TRAVIS_BUILD_DIR/src/rust/target
+    #- $TRAVIS_BUILD_DIR/src/rust/target
 
 compiler:
   - gcc
@@ -37,10 +39,10 @@ env:
     - RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
 
 matrix:
-  ## include creates builds with gcc, linux, sudo: false
+  ## include creates builds with gcc, linux
   include:
     ## We include a single coverage build with the best options for coverage
-    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
+    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS="" TOR_TEST_RNG_SEED="636f766572616765"
     ## We only want to check these build option combinations once
     ## (they shouldn't vary by compiler or OS)
     ## We run rust and coverage with hardening off, which seems like enough
@@ -69,12 +71,6 @@ matrix:
   ## allow failures by env:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
   exclude:
-    ## Clang doesn't work in containerized builds, see below.
-    - compiler: clang
-      sudo: false
-    ## Non-containerized gcc are slow and redundant.
-    - compiler: gcc
-      sudo: required
     ## gcc on OSX is less useful, because the default compiler is clang.
     - compiler: gcc
       os: osx
@@ -89,20 +85,6 @@ matrix:
       os: linux
       ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
       env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
-
-## We don't need sudo. (The "apt:" stanza after this allows us to not need
-## sudo; otherwise, we would need it for getting dependencies.)
-##
-## But we use "sudo: required" to force non-containerized builds, working
-## around a Travis CI environment issue: clang LeakAnalyzer fails
-## because it requires ptrace and the containerized environment no
-## longer allows ptrace.
-## https://github.com/travis-ci/travis-ci/issues/9033
-##
-## In the matrix above, we exclude redundant combinations.
-sudo:
-  - false
-  - required
 
 ## (Linux only) Use the latest Linux image (Ubuntu Trusty)
 dist: trusty
@@ -125,13 +107,16 @@ addons:
       - libseccomp-dev
       ## zstd doesn't exist in Ubuntu Trusty
       #- libzstd
+      - shellcheck
       ## Conditional build dependencies
       ## Always installed, so we don't need sudo
       - asciidoc
       - docbook-xsl
       - docbook-xml
       - xmlto
-      - shellcheck
+      ## Utilities
+      ## preventing or diagnosing hangs
+      - timelimit
   ## (OSX only)
   homebrew:
     packages:
@@ -151,11 +136,14 @@ addons:
       - pkg-config
       ## Optional build dependencies
       - ccache
+      - shellcheck
       ## Conditional build dependencies
       ## Always installed, because manual brew installs are hard to get right
       - asciidoc
       - xmlto
-      - shellcheck
+      ## Utilities
+      ## preventing or diagnosing hangs
+      - timelimit
 
 ## (OSX only) Use the default OSX image
 ## See https://docs.travis-ci.com/user/reference/osx#os-x-version
@@ -207,8 +195,11 @@ script:
   - ./configure $CONFIGURE_FLAGS
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - if [[ "$DISTCHECK" == "" && "$TEST_STEM" == "" ]]; then make check; fi
-  - if [[ "$TEST_STEM" != "" ]]; then make src/app/tor test-stem; fi
+  ## Diagnostic for bug 29437: kill stem if it hangs for 15 minutes
+  - if [[ "$TEST_STEM" != "" ]]; then make src/app/tor; timelimit -p -t 540 -s USR1 -T 30 -S ABRT python3 "$STEM_SOURCE_DIR"/run_tests.py --tor src/app/tor --integ --log notice --target RUN_ALL; fi
   - if [[ "$DISTCHECK" != "" && "$TEST_STEM" == "" ]]; then make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIGURE_FLAGS"; fi
+  ## If this build was one that produced coverage, upload it.
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p' || echo "Coverage failed"; fi
 
 after_failure:
   ## configure will leave a log file with more details of config failures.
@@ -219,10 +210,14 @@ after_failure:
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-core || echo "make failed"; fi
+  - if [[ "$TEST_STEM" != "" ]]; then cat "$STEM_SOURCE_DIR"/test/data/tor_log || echo "cat failed"; fi
 
-after_success:
-  ## If this build was one that produced coverage, upload it.
-  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then coveralls -b . --exclude src/test --exclude src/trunnel --gcov-options '\-p'; fi
+before_cache:
+  ## Delete all gcov files.
+  - if [[ "$COVERAGE_OPTIONS" != "" ]]; then make reset-gcov; fi
+  ## Delete the cargo registry before caching .cargo, because it's cheaper to
+  ## download the registry and throw it away, rather than caching it
+  - rm -rf $HOME/.cargo/registry
 
 notifications:
   irc:

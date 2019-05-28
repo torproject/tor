@@ -1,6 +1,5 @@
 orconfig.h
 
 ext/tor_queue.h
-timeout-bitops.c
-timeout-debug.h
-timeout.h
+ext/timeouts/*.h
+ext/timeouts/timeout-bitops.c

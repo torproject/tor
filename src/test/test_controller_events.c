@@ -4,6 +4,7 @@
 #define CONNECTION_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
 #define CONTROL_PRIVATE
+#define CONTROL_EVENTS_PRIVATE
 #define OCIRC_EVENT_PRIVATE
 #define ORCONN_EVENT_PRIVATE
 #include "core/or/or.h"
@@ -13,7 +14,7 @@
 #include "core/or/ocirc_event.h"
 #include "core/or/orconn_event.h"
 #include "core/mainloop/connection.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "test/test.h"
 
 #include "core/or/or_circuit_st.h"

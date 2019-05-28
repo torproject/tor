@@ -1,3 +1,0 @@
-  o Minor bugfixes (pluggable transports):
-    - Tor now sets TOR_PT_EXIT_ON_STDIN_CLOSE=1 for client transports as
-      well as servers. Fixes bug 25614; bugfix on 0.2.7.1-alpha.

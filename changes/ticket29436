@@ -1,4 +1,0 @@
-  o Minor features (testing):
-    - We now have a script, cov-test-determinism.sh, to identify places
-      where our unit test coverage has become nondeterministic.
-      Closes ticket 29436.

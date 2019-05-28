@@ -122,7 +122,6 @@ void signed_descs_update_status_from_consensus_networkstatus(
 
 char *networkstatus_getinfo_helper_single(const routerstatus_t *rs);
 char *networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now);
-void networkstatus_dump_bridge_status_to_file(time_t now);
 MOCK_DECL(int32_t, networkstatus_get_param,
           (const networkstatus_t *ns, const char *param_name,
            int32_t default_val, int32_t min_val, int32_t max_val));
@@ -148,6 +147,10 @@ int networkstatus_get_weight_scale_param(networkstatus_t *ns);
 void vote_routerstatus_free_(vote_routerstatus_t *rs);
 #define vote_routerstatus_free(rs) \
   FREE_AND_NULL(vote_routerstatus_t, vote_routerstatus_free_, (rs))
+
+void set_routerstatus_from_routerinfo(routerstatus_t *rs,
+                                      const node_t *node,
+                                      const routerinfo_t *ri);
 
 #ifdef NETWORKSTATUS_PRIVATE
 #ifdef TOR_UNIT_TESTS

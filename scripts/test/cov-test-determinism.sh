@@ -25,6 +25,9 @@ else
 fi
 
 if test "$run" = 1; then
+    # same seed as in travis.yml
+    TOR_TEST_RNG_SEED="636f766572616765"
+    export TOR_TEST_RNG_SEED
     while true; do
         make reset-gcov
         CD=coverage-raw/coverage-$(date +%s)

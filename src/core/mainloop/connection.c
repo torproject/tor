@@ -82,12 +82,14 @@
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
+#include "core/or/crypt_path.h"
 #include "core/proto/proto_http.h"
 #include "core/proto/proto_socks.h"
 #include "feature/client/dnsserv.h"
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
 #include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
@@ -696,6 +698,7 @@ connection_free_minimal(connection_t *conn)
     control_connection_t *control_conn = TO_CONTROL_CONN(conn);
     tor_free(control_conn->safecookie_client_hash);
     tor_free(control_conn->incoming_cmd);
+    tor_free(control_conn->current_cmd);
     if (control_conn->ephemeral_onion_services) {
       SMARTLIST_FOREACH(control_conn->ephemeral_onion_services, char *, cp, {
         memwipe(cp, 0, strlen(cp));
@@ -1652,7 +1655,7 @@ check_sockaddr(const struct sockaddr *sa, int len, int level)
              len,(int)sizeof(struct sockaddr_in6));
       ok = 0;
     }
-    if (tor_mem_is_zero((void*)sin6->sin6_addr.s6_addr, 16) ||
+    if (fast_mem_is_zero((void*)sin6->sin6_addr.s6_addr, 16) ||
         sin6->sin6_port == 0) {
       log_fn(level, LD_NET,
              "Address for new connection has address/port equal to zero.");
@@ -3788,6 +3791,10 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
     if (conn->linked_conn) {
       result = buf_move_to_buf(conn->inbuf, conn->linked_conn->outbuf,
                                &conn->linked_conn->outbuf_flushlen);
+      if (BUG(result<0)) {
+        log_warn(LD_BUG, "reading from linked connection buffer failed.");
+        return -1;
+      }
     } else {
       result = 0;
     }
@@ -5324,7 +5331,7 @@ assert_connection_ok(connection_t *conn, time_t now)
         tor_assert(entry_conn->socks_request->has_finished);
         if (!conn->marked_for_close) {
           tor_assert(ENTRY_TO_EDGE_CONN(entry_conn)->cpath_layer);
-          assert_cpath_layer_ok(ENTRY_TO_EDGE_CONN(entry_conn)->cpath_layer);
+          cpath_assert_layer_ok(ENTRY_TO_EDGE_CONN(entry_conn)->cpath_layer);
         }
       }
     }
@@ -5378,17 +5385,20 @@ assert_connection_ok(connection_t *conn, time_t now)
 }
 
 /** Fills <b>addr</b> and <b>port</b> with the details of the global
- *  proxy server we are using.
- *  <b>conn</b> contains the connection we are using the proxy for.
+ *  proxy server we are using. Store a 1 to the int pointed to by
+ *  <b>is_put_out</b> if the connection is using a pluggable
+ *  transport; store 0 otherwise. <b>conn</b> contains the connection
+ *  we are using the proxy for.
  *
  *  Return 0 on success, -1 on failure.
  */
 int
 get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
-                   const connection_t *conn)
+                   int *is_pt_out, const connection_t *conn)
 {
   const or_options_t *options = get_options();
 
+  *is_pt_out = 0;
   /* Client Transport Plugins can use another proxy, but that should be hidden
    * from the rest of tor (as the plugin is responsible for dealing with the
    * proxy), check it first, then check the rest of the proxy types to allow
@@ -5404,6 +5414,7 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
       tor_addr_copy(addr, &transport->addr);
       *port = transport->port;
       *proxy_type = transport->socks_version;
+      *is_pt_out = 1;
       return 0;
     }
 
@@ -5440,11 +5451,13 @@ log_failed_proxy_connection(connection_t *conn)
 {
   tor_addr_t proxy_addr;
   uint16_t proxy_port;
-  int proxy_type;
+  int proxy_type, is_pt;
 
-  if (get_proxy_addrport(&proxy_addr, &proxy_port, &proxy_type, conn) != 0)
+  if (get_proxy_addrport(&proxy_addr, &proxy_port, &proxy_type, &is_pt,
+                         conn) != 0)
     return; /* if we have no proxy set up, leave this function. */
 
+  (void)is_pt;
   log_warn(LD_NET,
            "The connection to the %s proxy server at %s just failed. "
            "Make sure that the proxy server is up and running.",

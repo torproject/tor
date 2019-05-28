@@ -4,7 +4,7 @@ dnl Copyright (c) 2007-2019, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_PREREQ([2.63])
-AC_INIT([tor],[0.4.1.0-alpha-dev])
+AC_INIT([tor],[0.4.1.1-alpha-dev])
 AC_CONFIG_SRCDIR([src/app/main/tor_main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -14,7 +14,7 @@ AC_CONFIG_MACRO_DIR([m4])
 # version number changes.  Tor uses it to make sure that it
 # only shuts down for missing "required protocols" when those protocols
 # are listed as required by a consensus after this date.
-AC_DEFINE(APPROX_RELEASE_DATE, ["2019-02-19"], # for 0.4.1.0-alpha-dev
+AC_DEFINE(APPROX_RELEASE_DATE, ["2019-05-22"], # for 0.4.1.1-alpha-dev
           [Approximate date when this software was released. (Updated when the version changes.)])
 
 # "foreign" means we don't follow GNU package layout standards
@@ -1605,6 +1605,7 @@ AC_CHECK_MEMBERS([struct timeval.tv_sec], , ,
 AC_CHECK_SIZEOF(char)
 AC_CHECK_SIZEOF(short)
 AC_CHECK_SIZEOF(int)
+AC_CHECK_SIZEOF(unsigned int)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
@@ -2456,9 +2457,7 @@ AC_CONFIG_FILES([
 	Doxyfile
 	Makefile
 	config.rust
-	contrib/dist/suse/tor.sh
 	contrib/operator-tools/tor.logrotate
-	contrib/dist/tor.sh
 	contrib/dist/torctl
 	contrib/dist/tor.service
 	src/config/torrc.sample

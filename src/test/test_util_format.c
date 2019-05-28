@@ -367,7 +367,7 @@ test_util_format_base32_decode(void *arg)
     ret = base32_decode(dst, real_dstlen, "#abcde", 6);
     tt_int_op(ret, OP_EQ, -1);
     /* Make sure the destination buffer has been zeroed even on error. */
-    tt_int_op(tor_mem_is_zero(dst, real_dstlen), OP_EQ, 1);
+    tt_int_op(fast_mem_is_zero(dst, real_dstlen), OP_EQ, 1);
   }
 
  done:

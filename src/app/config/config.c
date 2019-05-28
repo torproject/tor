@@ -86,6 +86,8 @@
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
 #include "feature/control/control.h"
+#include "feature/control/control_auth.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/guardfraction.h"
 #include "feature/dircache/consdiffmgr.h"
@@ -154,6 +156,7 @@
 #include "lib/evloop/procmon.h"
 
 #include "feature/dirauth/dirvote.h"
+#include "feature/dirauth/dirauth_periodic.h"
 #include "feature/dirauth/recommend_pkg.h"
 #include "feature/dirauth/authmode.h"
 
@@ -396,6 +399,7 @@ static config_var_t option_vars_[] = {
   V(DormantClientTimeout,         INTERVAL, "24 hours"),
   V(DormantTimeoutDisabledByIdleStreams, BOOL,     "1"),
   V(DormantOnFirstStartup,       BOOL,      "0"),
+  V(DormantCanceledByStartup,    BOOL,      "0"),
   /* DoS circuit creation options. */
   V(DoSCircuitCreationEnabled,   AUTOBOOL, "auto"),
   V(DoSCircuitCreationMinConnections,      UINT, "0"),
@@ -593,6 +597,8 @@ static config_var_t option_vars_[] = {
   V(ReducedConnectionPadding,    BOOL,     "0"),
   V(ConnectionPadding,           AUTOBOOL, "auto"),
   V(RefuseUnknownExits,          AUTOBOOL, "auto"),
+  V(CircuitPadding,              BOOL,     "1"),
+  V(ReducedCircuitPadding,       BOOL,     "0"),
   V(RejectPlaintextPorts,        CSV,      ""),
   V(RelayBandwidthBurst,         MEMUNIT,  "0"),
   V(RelayBandwidthRate,          MEMUNIT,  "0"),
@@ -2443,6 +2449,7 @@ static const struct {
   { "--quiet",                TAKES_NO_ARGUMENT },
   { "--hush",                 TAKES_NO_ARGUMENT },
   { "--version",              TAKES_NO_ARGUMENT },
+  { "--list-modules",         TAKES_NO_ARGUMENT },
   { "--library-versions",     TAKES_NO_ARGUMENT },
   { "-h",                     TAKES_NO_ARGUMENT },
   { "--help",                 TAKES_NO_ARGUMENT },
@@ -2662,6 +2669,13 @@ list_deprecated_options(void)
   for (d = option_deprecation_notes_; d->name; ++d) {
     printf("%s\n", d->name);
   }
+}
+
+/** Print all compile-time modules and their enabled/disabled status. */
+static void
+list_enabled_modules(void)
+{
+  printf("%s: %s\n", "dirauth", have_module_dirauth() ? "yes" : "no");
 }
 
 /** Last value actually set by resolve_my_address. */
@@ -3552,6 +3566,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
           options->V3AuthoritativeDir))
       REJECT("AuthoritativeDir is set, but none of "
              "(Bridge/V3)AuthoritativeDir is set.");
+#ifdef HAVE_MODULE_DIRAUTH
     /* If we have a v3bandwidthsfile and it's broken, complain on startup */
     if (options->V3BandwidthsFile && !old_options) {
       dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL,
@@ -3561,6 +3576,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (options->GuardfractionFile && !old_options) {
       dirserv_read_guardfraction_file(options->GuardfractionFile, NULL);
     }
+#endif
   }
 
   if (options->AuthoritativeDir && !options->DirPort_set)
@@ -3736,6 +3752,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (server_mode(options) && options->ReducedConnectionPadding != 0) {
     REJECT("Relays cannot set ReducedConnectionPadding. ");
+  }
+
+  if (server_mode(options) && options->CircuitPadding == 0) {
+    REJECT("Relays cannot set CircuitPadding to 0. ");
+  }
+
+  if (server_mode(options) && options->ReducedCircuitPadding == 1) {
+    REJECT("Relays cannot set ReducedCircuitPadding. ");
   }
 
   if (options->BridgeDistribution) {
@@ -5176,6 +5200,11 @@ options_init_from_torrc(int argc, char **argv)
 
   if (config_line_find(cmdline_only_options, "--version")) {
     printf("Tor version %s.\n",get_version());
+    return 1;
+  }
+
+  if (config_line_find(cmdline_only_options, "--list-modules")) {
+    list_enabled_modules();
     return 1;
   }
 

@@ -49,7 +49,7 @@
 #include "core/or/protover.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/hs/hs_client.h"
@@ -944,7 +944,7 @@ nodelist_ensure_freshness(networkstatus_t *ns)
 /** Return a list of a node_t * for every node we know about.  The caller
  * MUST NOT modify the list. (You can set and clear flags in the nodes if
  * you must, but you must not add or remove nodes.) */
-MOCK_IMPL(smartlist_t *,
+MOCK_IMPL(const smartlist_t *,
 nodelist_get_list,(void))
 {
   init_nodelist();
@@ -1859,7 +1859,7 @@ microdesc_has_curve25519_onion_key(const microdesc_t *md)
     return 0;
   }
 
-  if (tor_mem_is_zero((const char*)md->onion_curve25519_pkey->public_key,
+  if (fast_mem_is_zero((const char*)md->onion_curve25519_pkey->public_key,
                       CURVE25519_PUBKEY_LEN)) {
     return 0;
   }
@@ -1939,7 +1939,7 @@ node_set_country(node_t *node)
 void
 nodelist_refresh_countries(void)
 {
-  smartlist_t *nodes = nodelist_get_list();
+  const smartlist_t *nodes = nodelist_get_list();
   SMARTLIST_FOREACH(nodes, node_t *, node,
                     node_set_country(node));
 }

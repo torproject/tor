@@ -424,6 +424,7 @@ do_resolve(const char *hostname,
     if (parsed < 2) {
       log_err(LD_NET, "Failed to parse SOCKS5 method selection "
                       "message");
+      socks5_server_method_free(m);
       goto err;
     }
 

@@ -1,5 +1,0 @@
-  o Minor bugfixes (logging):
-    - Correct a misleading error message when IPv4Only or IPv6Only
-      is used but the resolved address can not be interpreted as an
-      address of the specified IP version.  Fixes bug 13221; bugfix
-      on 0.2.3.9-alpha.  Patch from Kris Katterjohn.

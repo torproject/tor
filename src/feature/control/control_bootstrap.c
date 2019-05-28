@@ -14,7 +14,7 @@
 #include "core/or/connection_st.h"
 #include "core/or/or_connection_st.h"
 #include "core/or/reasons.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/hibernate/hibernate.h"
 #include "lib/malloc/malloc.h"
 

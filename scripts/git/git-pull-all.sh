@@ -174,6 +174,19 @@ function fetch_origin
   fi
 }
 
+# Fetch tor-github pull requests. No arguments.
+function fetch_tor_github
+{
+  local cmd="git fetch tor-github"
+  printf "  %s Fetching tor-github..." "$MARKER"
+  if [ $DRY_RUN -eq 0 ]; then
+    msg=$( eval "$cmd" 2>&1 )
+    validate_ret $? "$msg"
+  else
+    printf "\\n      %s\\n" "${IWTH}$cmd${CNRM}"
+  fi
+}
+
 ###############
 # Entry point #
 ###############
@@ -188,8 +201,11 @@ while getopts "n" opt; do
   esac
 done
 
-# First, fetch the origin.
+# First, fetch tor-github.
 goto_repo "$ORIGIN_PATH"
+fetch_tor_github
+
+# Then, fetch the origin.
 fetch_origin
 
 # Go over all configured worktree.

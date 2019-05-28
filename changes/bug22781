@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Replace hs_desc_link_specifier_t with link_specifier_t,
-      and remove all hs_desc_link_specifier_t-specific code.
-      Fixes bug 22781; bugfix on 0.3.2.1-alpha.

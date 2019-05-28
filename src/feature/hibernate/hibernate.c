@@ -35,7 +35,7 @@ hibernating, phase 2:
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/defs/time.h"
 #include "feature/hibernate/hibernate.h"

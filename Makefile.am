@@ -41,6 +41,8 @@ TOR_UTIL_LIBS = \
         src/lib/libtor-geoip.a \
 	src/lib/libtor-process.a \
         src/lib/libtor-buf.a \
+	src/lib/libtor-pubsub.a \
+	src/lib/libtor-dispatch.a \
 	src/lib/libtor-time.a \
 	src/lib/libtor-fs.a \
 	src/lib/libtor-encoding.a \
@@ -72,6 +74,8 @@ TOR_UTIL_TESTING_LIBS = \
         src/lib/libtor-geoip-testing.a \
 	src/lib/libtor-process-testing.a \
         src/lib/libtor-buf-testing.a \
+	src/lib/libtor-pubsub-testing.a \
+	src/lib/libtor-dispatch-testing.a \
 	src/lib/libtor-time-testing.a \
 	src/lib/libtor-fs-testing.a \
 	src/lib/libtor-encoding-testing.a \
@@ -222,7 +226,7 @@ shellcheck:
 	if command -v shellcheck; then \
 	        find $(top_srcdir)/scripts/ -name "*.sh" -exec shellcheck {} +; \
 	        if [ -d "$(top_srcdir)/scripts/test" ]; then \
-                        shellcheck $(top_srcdir)/scripts/test/cov-diff $(top_builddir)/scripts/test/coverage; \
+                        shellcheck $(top_srcdir)/scripts/test/cov-diff $(top_srcdir)/scripts/test/coverage; \
                 fi; \
 	fi
 
@@ -297,8 +301,10 @@ test-full: need-stem-path need-chutney-path check test-network test-stem
 
 test-full-online: need-stem-path need-chutney-path check test-network test-stem-full
 
+# We can't delete the gcno files, because they are created when tor is compiled
 reset-gcov:
-	rm -f $(top_builddir)/src/*/*.gcda $(top_builddir)/src/*/*/*.gcda
+	rm -f $(top_builddir)/src/*/*.gcda $(top_builddir)/src/*/*/*.gcda \
+	      $(top_builddir)/src/*/*.gcov $(top_builddir)/src/*/*/*.gcov
 
 HTML_COVER_DIR=$(top_builddir)/coverage_html
 coverage-html: all
@@ -351,6 +357,9 @@ check-best-practices:
 if USEPYTHON
 	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/practracker.py $(top_srcdir)
 endif
+
+practracker-regen:
+	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/practracker.py --regen $(top_srcdir)
 
 check-docs: all
 	$(PERL) $(top_builddir)/scripts/maint/checkOptionDocs.pl

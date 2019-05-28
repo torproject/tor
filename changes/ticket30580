@@ -1,0 +1,4 @@
+  o Minor bugfixes (controller):
+    - POSTDESCRIPTOR requests should work again. Previously, they were
+      broken if a "purpose=" flag was specified.  Fixes bug 30580;
+      bugfix on 0.4.1.1-alpha.

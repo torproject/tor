@@ -20,7 +20,7 @@
 #include "core/or/orconn_event.h"
 #include "feature/control/btrack_orconn.h"
 #include "feature/control/btrack_orconn_cevent.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 
 /**
  * Have we completed our first OR connection?

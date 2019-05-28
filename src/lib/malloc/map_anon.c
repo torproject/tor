@@ -107,54 +107,34 @@ nodump_mem(void *mem, size_t sz)
 #endif
 }
 
-#ifdef TOR_UNIT_TESTS
-static unsigned last_anon_map_noinherit = ~0;
-/* Testing helper: return the outcome of the last call to noinherit_mem():
- * 0 if it did no good; 1 if it caused the memory not to be inherited, and
- * 2 if it caused the memory to be cleared on fork */
-unsigned
-get_last_anon_map_noinherit(void)
-{
-  return last_anon_map_noinherit;
-}
-static void
-set_last_anon_map_noinherit(unsigned f)
-{
-  last_anon_map_noinherit = f;
-}
-#else
-static void
-set_last_anon_map_noinherit(unsigned f)
-{
-  (void)f;
-}
-#endif
-
 /**
  * Helper: try to prevent the <b>sz</b> bytes at <b>mem</b> from being
  * accessible in child processes -- ideally by having them set to 0 after a
  * fork, and if that doesn't work, by having them unmapped after a fork.
  * Return 0 on success or if the facility is not available on this OS; return
  * -1 on failure.
+ *
+ * If we successfully make the memory uninheritable, adjust the value of
+ * *<b>inherit_result_out</b>.
  */
 static int
-noinherit_mem(void *mem, size_t sz)
+noinherit_mem(void *mem, size_t sz, inherit_res_t *inherit_result_out)
 {
-  set_last_anon_map_noinherit(0);
 #ifdef FLAG_ZERO
   int r = MINHERIT(mem, sz, FLAG_ZERO);
   if (r == 0) {
-    set_last_anon_map_noinherit(2);
+    *inherit_result_out = INHERIT_RES_ZERO;
     return 0;
   }
 #endif
 #ifdef FLAG_NOINHERIT
   int r2 = MINHERIT(mem, sz, FLAG_NOINHERIT);
   if (r2 == 0) {
-    set_last_anon_map_noinherit(1);
+    *inherit_result_out = INHERIT_RES_DROP;
   }
   return r2;
 #else
+  (void)inherit_result_out;
   (void)mem;
   (void)sz;
   return 0;
@@ -174,14 +154,25 @@ noinherit_mem(void *mem, size_t sz)
  * Memory returned from this function must be released with
  * tor_munmap_anonymous().
  *
+ * If <b>inherit_result_out</b> is non-NULL, set it to one of
+ * INHERIT_RES_KEEP, INHERIT_RES_DROP, or INHERIT_RES_ZERO, depending on the
+ * properties of the returned memory.
+ *
  * [Note: OS people use the word "anonymous" here to mean that the memory
  * isn't associated with any file. This has *nothing* to do with the kind of
  * anonymity that Tor is trying to provide.]
  */
 void *
-tor_mmap_anonymous(size_t sz, unsigned flags)
+tor_mmap_anonymous(size_t sz, unsigned flags,
+                   inherit_res_t *inherit_result_out)
 {
   void *ptr;
+  inherit_res_t itmp=0;
+  if (inherit_result_out == NULL) {
+    inherit_result_out = &itmp;
+  }
+  *inherit_result_out = INHERIT_RES_KEEP;
+
 #if defined(_WIN32)
   HANDLE mapping = CreateFileMapping(INVALID_HANDLE_VALUE,
                                      NULL, /*attributes*/
@@ -214,7 +205,7 @@ tor_mmap_anonymous(size_t sz, unsigned flags)
   }
 
   if (flags & ANONMAP_NOINHERIT) {
-    int noinherit_result = noinherit_mem(ptr, sz);
+    int noinherit_result = noinherit_mem(ptr, sz, inherit_result_out);
     raw_assert(noinherit_result == 0);
   }
 

@@ -348,7 +348,7 @@ int
 node_is_a_configured_bridge(const node_t *node)
 {
   /* First, let's try searching for a bridge with matching identity. */
-  if (BUG(tor_digest_is_zero(node->identity)))
+  if (BUG(fast_mem_is_zero(node->identity, DIGEST_LEN)))
     return 0;
 
   if (find_bridge_by_digest(node->identity) != NULL)

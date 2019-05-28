@@ -320,18 +320,17 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     if (!tor_digest256_is_zero((const char *)v3_ns->bw_file_digest256)) {
       /* Encode the digest. */
       char b64_digest_bw_file[BASE64_DIGEST256_LEN+1] = {0};
-      if (digest256_to_base64(b64_digest_bw_file,
-                              (const char *)v3_ns->bw_file_digest256)>0) {
-        /* "bandwidth-file-digest" 1*(SP algorithm "=" digest) NL */
-        char *digest_algo_b64_digest_bw_file = NULL;
-        tor_asprintf(&digest_algo_b64_digest_bw_file, "%s=%s",
-                     crypto_digest_algorithm_get_name(DIGEST_ALG_BW_FILE),
-                     b64_digest_bw_file);
-        /* No need for tor_strdup(""), format_line_if_present does it. */
-        bw_file_digest = format_line_if_present(
+      digest256_to_base64(b64_digest_bw_file,
+                          (const char *)v3_ns->bw_file_digest256);
+      /* "bandwidth-file-digest" 1*(SP algorithm "=" digest) NL */
+      char *digest_algo_b64_digest_bw_file = NULL;
+      tor_asprintf(&digest_algo_b64_digest_bw_file, "%s=%s",
+                   crypto_digest_algorithm_get_name(DIGEST_ALG_BW_FILE),
+                   b64_digest_bw_file);
+      /* No need for tor_strdup(""), format_line_if_present does it. */
+      bw_file_digest = format_line_if_present(
           "bandwidth-file-digest", digest_algo_b64_digest_bw_file);
-        tor_free(digest_algo_b64_digest_bw_file);
-      }
+      tor_free(digest_algo_b64_digest_bw_file);
     }
 
     smartlist_add_asprintf(chunks,
@@ -349,11 +348,11 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "known-flags %s\n"
                  "flag-thresholds %s\n"
                  "params %s\n"
+                 "%s" /* bandwidth file headers */
+                 "%s" /* bandwidth file digest */
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n"
                  "%s" /* shared randomness information */
-                 "%s" /* bandwidth file headers */
-                 "%s" /* bandwidth file */
                  ,
                  v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
                  methods,
@@ -366,14 +365,13 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  flags,
                  flag_thresholds,
                  params,
+                 bw_headers_line ? bw_headers_line : "",
+                 bw_file_digest ? bw_file_digest: "",
                  voter->nickname, fingerprint, voter->address,
                  fmt_addr32(addr), voter->dir_port, voter->or_port,
                  voter->contact,
                  shared_random_vote_str ?
-                           shared_random_vote_str : "",
-                 bw_headers_line ?
-                           bw_headers_line : "",
-                 bw_file_digest ? bw_file_digest: "");
+                           shared_random_vote_str : "");
 
     tor_free(params);
     tor_free(flags);
@@ -2600,7 +2598,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
       return -1;
     }
     for (alg = DIGEST_SHA1; alg < N_COMMON_DIGEST_ALGORITHMS; ++alg) {
-      if (!tor_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
+      if (!fast_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
         if (fast_memeq(target->digests.d[alg], digests->d[alg],
                        DIGEST256_LEN)) {
           ++n_matches;
@@ -2796,7 +2794,7 @@ networkstatus_get_detached_signatures(smartlist_t *consensuses)
       char d[HEX_DIGEST256_LEN+1];
       const char *alg_name =
         crypto_digest_algorithm_get_name(alg);
-      if (tor_mem_is_zero(ns->digests.d[alg], DIGEST256_LEN))
+      if (fast_mem_is_zero(ns->digests.d[alg], DIGEST256_LEN))
         continue;
       base16_encode(d, sizeof(d), ns->digests.d[alg], DIGEST256_LEN);
       smartlist_add_asprintf(elements, "additional-digest %s %s %s\n",
@@ -3915,8 +3913,7 @@ dirvote_format_microdesc_vote_line(char *out_buf, size_t out_buf_len,
                                ",");
   tor_assert(microdesc_consensus_methods);
 
-  if (digest256_to_base64(d64, md->digest)<0)
-    goto out;
+  digest256_to_base64(d64, md->digest);
 
   if (tor_snprintf(out_buf, out_buf_len, "m %s sha256=%s\n",
                    microdesc_consensus_methods, d64)<0)
@@ -4547,8 +4544,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
-      set_routerstatus_from_routerinfo(rs, node, ri, now,
-                                       listbadexits);
+      dirauth_set_routerstatus_from_routerinfo(rs, node, ri, now,
+                                               listbadexits);
 
       if (ri->cache_info.signing_key_cert) {
         memcpy(vrs->ed25519_id,

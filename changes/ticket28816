@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Introduce a connection_dir_buf_add() helper function that checks for
-      compress_state of dir_connection_t and automatically writes a string to
-      directory connection with or without compression. Resolves issue 28816.
