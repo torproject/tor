@@ -39,36 +39,33 @@ ocirc_event_free(msg_aux_data_t u)
 static char *
 ocirc_state_fmt(msg_aux_data_t u)
 {
-  ocirc_state_msg_t msg;
+  ocirc_state_msg_t *msg = (ocirc_state_msg_t *)u.ptr;
   char *s = NULL;
 
-  msg = *(ocirc_state_msg_t *)u.ptr;
   tor_asprintf(&s, "<gid=%"PRIu32" state=%d onehop=%d>",
-               msg.gid, msg.state, msg.onehop);
+               msg->gid, msg->state, msg->onehop);
   return s;
 }
 
 static char *
 ocirc_chan_fmt(msg_aux_data_t u)
 {
-  ocirc_chan_msg_t msg;
+  ocirc_chan_msg_t *msg = (ocirc_chan_msg_t *)u.ptr;
   char *s = NULL;
 
-  msg = *(ocirc_chan_msg_t *)u.ptr;
   tor_asprintf(&s, "<gid=%"PRIu32" chan=%"PRIu64" onehop=%d>",
-               msg.gid, msg.chan, msg.onehop);
+               msg->gid, msg->chan, msg->onehop);
   return s;
 }
 
 static char *
 ocirc_cevent_fmt(msg_aux_data_t u)
 {
-  ocirc_cevent_msg_t msg;
+  ocirc_cevent_msg_t *msg = (ocirc_cevent_msg_t *)u.ptr;
   char *s = NULL;
 
-  msg = *(ocirc_cevent_msg_t *)u.ptr;
   tor_asprintf(&s, "<gid=%"PRIu32" evtype=%d reason=%d onehop=%d>",
-               msg.gid, msg.evtype, msg.reason, msg.onehop);
+               msg->gid, msg->evtype, msg->reason, msg->onehop);
   return s;
 }
 
