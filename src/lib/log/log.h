@@ -194,6 +194,11 @@ void tor_log_get_logfile_names(struct smartlist_t *out);
 
 extern int log_global_min_severity_;
 
+#ifdef TOR_COVERAGE
+/* For coverage builds, we try to avoid our log_debug optimization, since it
+ * can have weird effects on internal macro coverage. */
+#define debug_logging_enabled() (1)
+#else
 static inline bool debug_logging_enabled(void);
 /**
  * Return true iff debug logging is enabled for at least one domain.
@@ -202,6 +207,7 @@ static inline bool debug_logging_enabled(void)
 {
   return PREDICT_UNLIKELY(log_global_min_severity_ == LOG_DEBUG);
 }
+#endif
 
 void log_fn_(int severity, log_domain_mask_t domain,
              const char *funcname, const char *format, ...)
