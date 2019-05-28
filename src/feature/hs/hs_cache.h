@@ -83,8 +83,8 @@ const hs_descriptor_t *
 hs_cache_lookup_as_client(const struct ed25519_public_key_t *key);
 const char *
 hs_cache_lookup_encoded_as_client(const struct ed25519_public_key_t *key);
-int hs_cache_store_as_client(const char *desc_str,
-                             const struct ed25519_public_key_t *identity_pk);
+hs_desc_decode_status_t hs_cache_store_as_client(const char *desc_str,
+                           const struct ed25519_public_key_t *identity_pk);
 void hs_cache_clean_as_client(time_t now);
 void hs_cache_purge_as_client(void);
 
