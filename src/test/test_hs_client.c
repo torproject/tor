@@ -393,7 +393,8 @@ test_client_pick_intro(void *arg)
     tt_assert(encoded);
 
     /* store it */
-    hs_cache_store_as_client(encoded, &service_kp.pubkey);
+    ret = hs_cache_store_as_client(encoded, &service_kp.pubkey);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
 
     /* fetch it to make sure it works */
     const hs_descriptor_t *fetched_desc =
@@ -852,7 +853,7 @@ test_desc_has_arrived_cleanup(void *arg)
 
   /* Store in the client cache. */
   ret = hs_cache_store_as_client(desc_str, &signing_kp.pubkey);
-  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
   cached_desc = hs_cache_lookup_as_client(&signing_kp.pubkey);
   tt_assert(cached_desc);
   hs_helper_desc_equal(desc, cached_desc);
@@ -953,7 +954,7 @@ test_close_intro_circuits_new_desc(void *arg)
 
     /* Store it */
     ret = hs_cache_store_as_client(encoded, &service_kp.pubkey);
-    tt_int_op(ret, OP_EQ, 0);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
     tor_free(encoded);
     tt_assert(hs_cache_lookup_as_client(&service_kp.pubkey));
   }
@@ -989,8 +990,8 @@ test_close_intro_circuits_new_desc(void *arg)
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(encoded);
 
-    hs_cache_store_as_client(encoded, &service_kp.pubkey);
-    tt_int_op(ret, OP_EQ, 0);
+    ret = hs_cache_store_as_client(encoded, &service_kp.pubkey);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
     tor_free(encoded);
     tt_assert(hs_cache_lookup_as_client(&service_kp.pubkey));
   }

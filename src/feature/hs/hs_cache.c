@@ -395,7 +395,8 @@ lookup_v3_desc_as_client(const uint8_t *key)
  * hs_cache_client_descriptor_t object. In case of error, return NULL. */
 static hs_cache_client_descriptor_t *
 cache_client_desc_new(const char *desc_str,
-                      const ed25519_public_key_t *service_identity_pk)
+                      const ed25519_public_key_t *service_identity_pk,
+                      hs_desc_decode_status_t *decode_status_out)
 {
   hs_desc_decode_status_t ret;
   hs_descriptor_t *desc = NULL;
@@ -429,6 +430,9 @@ cache_client_desc_new(const char *desc_str,
   client_desc->encoded_desc = tor_strdup(desc_str);
 
  end:
+  if (decode_status_out) {
+    *decode_status_out = ret;
+  }
   return client_desc;
 }
 
@@ -783,19 +787,34 @@ hs_cache_lookup_as_client(const ed25519_public_key_t *key)
   return NULL;
 }
 
-/** Public API: Given an encoded descriptor, store it in the client HS
- *  cache. Return -1 on error, 0 on success .*/
-int
+/** Public API: Given an encoded descriptor, store it in the client HS cache.
+ *  Return a decode status which changes how we handle the SOCKS connection
+ *  depending on its value:
+ *
+ *  HS_DESC_DECODE_OK: Returned on success. Descriptor was properly decoded
+ *                     and is now stored.
+ *
+ *  HS_DESC_DECODE_NEED_CLIENT_AUTH: Client authorization is needed but the
+ *                                   descriptor was still stored.
+ *
+ *  HS_DESC_DECODE_BAD_CLIENT_AUTH: Client authorization for this descriptor
+ *                                  was not usable but the descriptor was
+ *                                  still stored.
+ *
+ *  Any other codes means indicate where the error occured and the descriptor
+ *  was not stored. */
+hs_desc_decode_status_t
 hs_cache_store_as_client(const char *desc_str,
                          const ed25519_public_key_t *identity_pk)
 {
+  hs_desc_decode_status_t ret;
   hs_cache_client_descriptor_t *client_desc = NULL;
 
   tor_assert(desc_str);
   tor_assert(identity_pk);
 
   /* Create client cache descriptor object */
-  client_desc = cache_client_desc_new(desc_str, identity_pk);
+  client_desc = cache_client_desc_new(desc_str, identity_pk, &ret);
   if (!client_desc) {
     log_warn(LD_GENERAL, "HSDesc parsing failed!");
     log_debug(LD_GENERAL, "Failed to parse HSDesc: %s.", escaped(desc_str));
@@ -804,14 +823,15 @@ hs_cache_store_as_client(const char *desc_str,
 
   /* Push it to the cache */
   if (cache_store_as_client(client_desc) < 0) {
+    ret = HS_DESC_DECODE_GENERIC_ERROR;
     goto err;
   }
 
-  return 0;
+  return ret;
 
  err:
   cache_client_desc_free(client_desc);
-  return -1;
+  return ret;
 }
 
 /* Clean all client caches using the current time now. */
