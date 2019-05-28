@@ -1782,6 +1782,37 @@ hs_client_desc_not_found(const hs_ident_dir_conn_t *ident)
   smartlist_free(entry_conns);
 }
 
+/* This is called when a descriptor fetch was successful but the descriptor
+ * couldn't be decrypted due to missing or bad client authorization. */
+void
+hs_client_desc_missing_bad_client_auth(const hs_ident_dir_conn_t *ident,
+                                       hs_desc_decode_status_t status)
+{
+  smartlist_t *entry_conns;
+
+  tor_assert(ident);
+
+  entry_conns = find_entry_conns(&ident->identity_pk);
+
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
+    socks5_reply_status_t code;
+    if (status == HS_DESC_DECODE_BAD_CLIENT_AUTH) {
+      code = SOCKS5_HS_BAD_CLIENT_AUTH;
+    } else if (status == HS_DESC_DECODE_NEED_CLIENT_AUTH) {
+      code = SOCKS5_HS_MISSING_CLIENT_AUTH;
+    } else {
+      /* We should not be called with another type of status. Recover by
+       * sending a generic error. */
+      tor_assert_nonfatal_unreached();
+      code = HS_DESC_DECODE_GENERIC_ERROR;
+    }
+    entry_conn->socks_request->socks_extended_error_code = code;
+  } SMARTLIST_FOREACH_END(entry_conn);
+
+  /* We don't have ownership of the objects in this list. */
+  smartlist_free(entry_conns);
+}
+
 /** Return a newly allocated extend_info_t for a randomly chosen introduction
  * point for the given edge connection identifier ident. Return NULL if we
  * can't pick any usable introduction points. */

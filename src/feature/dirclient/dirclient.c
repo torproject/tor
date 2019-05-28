@@ -2734,21 +2734,40 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
     /* We got something: Try storing it in the cache. */
     decode_status = hs_cache_store_as_client(body,
                                              &conn->hs_ident->identity_pk);
-    if (decode_status != HS_DESC_DECODE_OK) {
-      log_info(LD_REND, "Failed to store hidden service descriptor");
+    switch (decode_status) {
+    case HS_DESC_DECODE_OK:
+    case HS_DESC_DECODE_NEED_CLIENT_AUTH:
+    case HS_DESC_DECODE_BAD_CLIENT_AUTH:
+      log_info(LD_REND, "Stored hidden service descriptor successfully.");
+      TO_CONN(conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
+      if (decode_status == HS_DESC_DECODE_OK) {
+        hs_client_desc_has_arrived(conn->hs_ident);
+      } else {
+        /* This handles both client auth decode status. */
+        hs_client_desc_missing_bad_client_auth(conn->hs_ident, decode_status);
+        log_info(LD_REND, "Stored hidden service descriptor requires "
+                          "%s client authorization.",
+                 decode_status == HS_DESC_DECODE_NEED_CLIENT_AUTH ? "missing"
+                                                                  : "new");
+      }
+      /* Fire control port RECEIVED event. */
+      hs_control_desc_event_received(conn->hs_ident, conn->identity_digest);
+      hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
+                                    body);
+      break;
+    case HS_DESC_DECODE_ENCRYPTED_ERROR:
+    case HS_DESC_DECODE_SUPERENC_ERROR:
+    case HS_DESC_DECODE_PLAINTEXT_ERROR:
+    case HS_DESC_DECODE_GENERIC_ERROR:
+    default:
+      log_info(LD_REND, "Failed to store hidden service descriptor. "
+                        "Descriptor decoding status: %d", decode_status);
       /* Fire control port FAILED event. */
       hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
                                    "BAD_DESC");
       hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
                                     NULL);
-    } else {
-      log_info(LD_REND, "Stored hidden service descriptor successfully.");
-      TO_CONN(conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
-      hs_client_desc_has_arrived(conn->hs_ident);
-      /* Fire control port RECEIVED event. */
-      hs_control_desc_event_received(conn->hs_ident, conn->identity_digest);
-      hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
-                                    body);
+      break;
     }
     break;
   case 404:
