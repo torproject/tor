@@ -339,7 +339,7 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len, int decorate)
       break;
     case AF_INET6:
       /* Shortest addr [ :: ] + \0 */
-      if (len < (3 + (decorate ? 2 : 0)))
+      if (len < (3u + (decorate ? 2 : 0)))
         return NULL;
 
       if (decorate)
