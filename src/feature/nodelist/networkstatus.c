@@ -316,6 +316,7 @@ routerstatus_free_(routerstatus_t *rs)
 {
   if (!rs)
     return;
+  tor_free(rs->ed25519_signing_key);
   tor_free(rs->exitsummary);
   tor_free(rs);
 }

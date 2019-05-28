@@ -21,8 +21,8 @@ struct routerstatus_t {
   /** Digest of the router's most recent descriptor or microdescriptor.
    * If it's a descriptor, we only use the first DIGEST_LEN bytes. */
   char descriptor_digest[DIGEST256_LEN];
-  ed25519_public_key_t ed25519_signing_key; /**< The ed25519 signing key of
-                                             * this router. */
+  ed25519_public_key_t *ed25519_signing_key; /**< The ed25519 signing key of
+                                              * this router. */
   uint32_t addr; /**< IPv4 address for this router, in host order. */
   uint16_t or_port; /**< IPv4 OR port for this router. */
   uint16_t dir_port; /**< Directory port for this router. */

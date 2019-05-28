@@ -6677,7 +6677,7 @@ test_dir_dirserv_would_reject_router(void *arg)
   ed25519_secret_key_from_seed(&kp.seckey,
                           (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
   ed25519_public_key_generate(&kp.pubkey, &kp.seckey);
-  ed25519_pubkey_copy(&rs.ed25519_signing_key, &kp.pubkey);
+  ed25519_pubkey_copy(rs.ed25519_signing_key, &kp.pubkey);
 
   base16_encode(fp, HEX_DIGEST_LEN + 1, rs.identity_digest, DIGEST_LEN);
 

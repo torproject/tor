@@ -610,8 +610,11 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->is_v2_dir = ri->supports_tunnelled_dir_requests;
 
   if (ri->cache_info.signing_key_cert) {
-    ed25519_pubkey_copy(&rs->ed25519_signing_key,
+    rs->ed25519_signing_key = tor_malloc_zero(sizeof(ed25519_public_key_t));
+    ed25519_pubkey_copy(rs->ed25519_signing_key,
                         &ri->cache_info.signing_key_cert->signing_key);
+  } else {
+    rs->ed25519_signing_key = NULL;
   }
 
   rs->is_staledesc =
