@@ -2722,91 +2722,13 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
   const char *reason = args->reason;
   const char *body = args->body;
   const size_t body_len = args->body_len;
-  hs_desc_decode_status_t decode_status;
 
   tor_assert(conn->hs_ident);
 
   log_info(LD_REND,"Received v3 hsdesc (body size %d, status %d (%s))",
            (int)body_len, status_code, escaped(reason));
 
-  switch (status_code) {
-  case 200:
-    /* We got something: Try storing it in the cache. */
-    decode_status = hs_cache_store_as_client(body,
-                                             &conn->hs_ident->identity_pk);
-    switch (decode_status) {
-    case HS_DESC_DECODE_OK:
-    case HS_DESC_DECODE_NEED_CLIENT_AUTH:
-    case HS_DESC_DECODE_BAD_CLIENT_AUTH:
-      log_info(LD_REND, "Stored hidden service descriptor successfully.");
-      TO_CONN(conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
-      if (decode_status == HS_DESC_DECODE_OK) {
-        hs_client_desc_has_arrived(conn->hs_ident);
-      } else {
-        /* This handles both client auth decode status. */
-        hs_client_desc_missing_bad_client_auth(conn->hs_ident, decode_status);
-        log_info(LD_REND, "Stored hidden service descriptor requires "
-                          "%s client authorization.",
-                 decode_status == HS_DESC_DECODE_NEED_CLIENT_AUTH ? "missing"
-                                                                  : "new");
-      }
-      /* Fire control port RECEIVED event. */
-      hs_control_desc_event_received(conn->hs_ident, conn->identity_digest);
-      hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
-                                    body);
-      break;
-    case HS_DESC_DECODE_ENCRYPTED_ERROR:
-    case HS_DESC_DECODE_SUPERENC_ERROR:
-    case HS_DESC_DECODE_PLAINTEXT_ERROR:
-    case HS_DESC_DECODE_GENERIC_ERROR:
-    default:
-      log_info(LD_REND, "Failed to store hidden service descriptor. "
-                        "Descriptor decoding status: %d", decode_status);
-      /* Fire control port FAILED event. */
-      hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
-                                   "BAD_DESC");
-      hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
-                                    NULL);
-      break;
-    }
-    break;
-  case 404:
-    /* Not there. We'll retry when connection_about_to_close_connection()
-     * tries to clean this conn up. */
-    log_info(LD_REND, "Fetching hidden service v3 descriptor not found: "
-                      "Retrying at another directory.");
-    /* Fire control port FAILED event. */
-    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
-                                 "NOT_FOUND");
-    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
-                                  NULL);
-    hs_client_desc_not_found(conn->hs_ident);
-    break;
-  case 400:
-    log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
-                      "http status 400 (%s). Dirserver didn't like our "
-                      "query? Retrying at another directory.",
-             escaped(reason));
-    /* Fire control port FAILED event. */
-    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
-                                 "QUERY_REJECTED");
-    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
-                                  NULL);
-    break;
-  default:
-    log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
-             "http status %d (%s) response unexpected from HSDir server "
-             "'%s:%d'. Retrying at another directory.",
-             status_code, escaped(reason), TO_CONN(conn)->address,
-             TO_CONN(conn)->port);
-    /* Fire control port FAILED event. */
-    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
-                                 "UNEXPECTED");
-    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
-                                  NULL);
-    break;
-  }
-
+  hs_client_dir_fetch_done(conn, reason, body, status_code);
   return 0;
 }
 
