@@ -2277,12 +2277,14 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
        * authorization is failing. */
       log_warn(LD_REND, "Client authorization for requested onion address "
                         "is invalid. Can't decrypt the descriptor.");
+      ret = HS_DESC_DECODE_BAD_CLIENT_AUTH;
     } else {
       /* Inform at notice level that the onion address requested can't be
        * reached without client authorization most likely. */
       log_notice(LD_REND, "Fail to decrypt descriptor for requested onion "
                         "address. It is likely requiring client "
                         "authorization.");
+      ret = HS_DESC_DECODE_NEED_CLIENT_AUTH;
     }
     goto err;
   }
@@ -2810,7 +2812,9 @@ hs_desc_encrypted_obj_size(const hs_desc_encrypted_data_t *data)
   size_t
 hs_desc_obj_size(const hs_descriptor_t *data)
 {
-  tor_assert(data);
+  if (data == NULL) {
+    return 0;
+  }
   return (hs_desc_plaintext_obj_size(&data->plaintext_data) +
           hs_desc_encrypted_obj_size(&data->encrypted_data) +
           sizeof(data->subcredential));

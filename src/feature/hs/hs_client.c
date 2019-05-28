@@ -1287,12 +1287,12 @@ hs_client_note_connection_attempt_succeeded(const edge_connection_t *conn)
  * newly allocated descriptor object.
  *
  * Return 0 on success else a negative value and desc is set to NULL. */
-int
+hs_desc_decode_status_t
 hs_client_decode_descriptor(const char *desc_str,
                             const ed25519_public_key_t *service_identity_pk,
                             hs_descriptor_t **desc)
 {
-  int ret;
+  hs_desc_decode_status_t ret;
   uint8_t subcredential[DIGEST256_LEN];
   ed25519_public_key_t blinded_pubkey;
   hs_client_service_authorization_t *client_auth = NULL;
@@ -1333,12 +1333,13 @@ hs_client_decode_descriptor(const char *desc_str,
     log_warn(LD_GENERAL, "Descriptor signing key certificate signature "
              "doesn't validate with computed blinded key: %s",
              tor_cert_describe_signature_status(cert));
+    ret = HS_DESC_DECODE_GENERIC_ERROR;
     goto err;
   }
 
-  return 0;
+  return HS_DESC_DECODE_OK;
  err:
-  return -1;
+  return ret;
 }
 
 /** Return true iff there are at least one usable intro point in the service
