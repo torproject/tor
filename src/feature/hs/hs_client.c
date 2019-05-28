@@ -100,7 +100,46 @@ fetch_status_should_close_socks(hs_client_fetch_status_t status)
   return 1;
 }
 
-/** Cancel all descriptor fetches currently in progress. */
+/* Return a newly allocated list of all the entry connections that matches the
+ * given service identity pk. If service_identity_pk is NULL, all entry
+ * connections with an hs_ident are returned.
+ *
+ * Caller must free the returned list but does NOT have ownership of the
+ * object inside thus they have to remain untouched. */
+static smartlist_t *
+find_entry_conns(const ed25519_public_key_t *service_identity_pk)
+{
+  time_t now = time(NULL);
+  smartlist_t *conns = NULL, *entry_conns = NULL;
+
+  entry_conns = smartlist_new();
+
+  conns = connection_list_by_type_state(CONN_TYPE_AP,
+                                        AP_CONN_STATE_RENDDESC_WAIT);
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
+    entry_connection_t *entry_conn = TO_ENTRY_CONN(base_conn);
+    const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
+
+    /* Only consider the entry connections that matches the service for which
+     * we just fetched its descriptor. */
+    if (!edge_conn->hs_ident ||
+        (service_identity_pk &&
+         !ed25519_pubkey_eq(service_identity_pk,
+                            &edge_conn->hs_ident->identity_pk))) {
+      continue;
+    }
+    assert_connection_ok(base_conn, now);
+
+    /* Validated! Add the entry connection to the list. */
+    smartlist_add(entry_conns, entry_conn);
+  } SMARTLIST_FOREACH_END(base_conn);
+
+  /* We don't have ownership of the objects in this list. */
+  smartlist_free(conns);
+  return entry_conns;
+}
+
+/* Cancel all descriptor fetches currently in progress. */
 static void
 cancel_descriptor_fetches(void)
 {
@@ -230,26 +269,13 @@ close_all_socks_conns_waiting_for_desc(const ed25519_public_key_t *identity_pk,
                                        int reason)
 {
   unsigned int count = 0;
-  time_t now = approx_time();
-  smartlist_t *conns =
-    connection_list_by_type_state(CONN_TYPE_AP, AP_CONN_STATE_RENDDESC_WAIT);
+  smartlist_t *entry_conns = find_entry_conns(identity_pk);
 
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
-    entry_connection_t *entry_conn = TO_ENTRY_CONN(base_conn);
-    const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
-
-    /* Only consider the entry connections that matches the service for which
-     * we tried to get the descriptor */
-    if (!edge_conn->hs_ident ||
-        !ed25519_pubkey_eq(identity_pk,
-                           &edge_conn->hs_ident->identity_pk)) {
-      continue;
-    }
-    assert_connection_ok(base_conn, now);
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
     /* Unattach the entry connection which will close for the reason. */
     connection_mark_unattached_ap(entry_conn, reason);
     count++;
-  } SMARTLIST_FOREACH_END(base_conn);
+  } SMARTLIST_FOREACH_END(entry_conn);
 
   if (count > 0) {
     char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
@@ -262,7 +288,7 @@ close_all_socks_conns_waiting_for_desc(const ed25519_public_key_t *identity_pk,
   }
 
   /* No ownership of the object(s) in this list. */
-  smartlist_free(conns);
+  smartlist_free(entry_conns);
 }
 
 /** Find all pending SOCKS connection waiting for a descriptor and retry them
@@ -270,18 +296,18 @@ close_all_socks_conns_waiting_for_desc(const ed25519_public_key_t *identity_pk,
 STATIC void
 retry_all_socks_conn_waiting_for_desc(void)
 {
-  smartlist_t *conns =
-    connection_list_by_type_state(CONN_TYPE_AP, AP_CONN_STATE_RENDDESC_WAIT);
+  smartlist_t *entry_conns = find_entry_conns(NULL);
 
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
     hs_client_fetch_status_t status;
-    const edge_connection_t *edge_conn =
-      ENTRY_TO_EDGE_CONN(TO_ENTRY_CONN(base_conn));
+    edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
+    connection_t *base_conn = &edge_conn->base_;
 
     /* Ignore non HS or non v3 connection. */
     if (edge_conn->hs_ident == NULL) {
       continue;
     }
+
     /* In this loop, we will possibly try to fetch a descriptor for the
      * pending connections because we just got more directory information.
      * However, the refetch process can cleanup all SOCKS request to the same
@@ -315,10 +341,10 @@ retry_all_socks_conn_waiting_for_desc(void)
      * closed or we are still missing directory information. Leave the
      * connection in renddesc wait state so when we get more info, we'll be
      * able to try it again. */
-  } SMARTLIST_FOREACH_END(base_conn);
+  } SMARTLIST_FOREACH_END(entry_conn);
 
   /* We don't have ownership of those objects. */
-  smartlist_free(conns);
+  smartlist_free(entry_conns);
 }
 
 /** A v3 HS circuit successfully connected to the hidden service. Update the
@@ -1689,25 +1715,15 @@ void
 hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
 {
   time_t now = time(NULL);
-  smartlist_t *conns = NULL;
+  smartlist_t *entry_conns = NULL;
 
   tor_assert(ident);
 
-  conns = connection_list_by_type_state(CONN_TYPE_AP,
-                                        AP_CONN_STATE_RENDDESC_WAIT);
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
-    const hs_descriptor_t *desc;
-    entry_connection_t *entry_conn = TO_ENTRY_CONN(base_conn);
-    const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
+  entry_conns = find_entry_conns(&ident->identity_pk);
 
-    /* Only consider the entry connections that matches the service for which
-     * we just fetched its descriptor. */
-    if (!edge_conn->hs_ident ||
-        !ed25519_pubkey_eq(&ident->identity_pk,
-                           &edge_conn->hs_ident->identity_pk)) {
-      continue;
-    }
-    assert_connection_ok(base_conn, now);
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
+    const hs_descriptor_t *desc;
+    edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
 
     /* We were just called because we stored the descriptor for this service
      * so not finding a descriptor means we have a bigger problem. */
@@ -1731,12 +1747,12 @@ hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
 
     /* Mark connection as waiting for a circuit since we do have a usable
      * descriptor now. */
-    mark_conn_as_waiting_for_circuit(base_conn, now);
-  } SMARTLIST_FOREACH_END(base_conn);
+    mark_conn_as_waiting_for_circuit(&edge_conn->base_, now);
+  } SMARTLIST_FOREACH_END(entry_conn);
 
  end:
   /* We don't have ownership of the objects in this list. */
-  smartlist_free(conns);
+  smartlist_free(entry_conns);
 }
 
 /** Return a newly allocated extend_info_t for a randomly chosen introduction
