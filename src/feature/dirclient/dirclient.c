@@ -2722,6 +2722,7 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
   const char *reason = args->reason;
   const char *body = args->body;
   const size_t body_len = args->body_len;
+  hs_desc_decode_status_t decode_status;
 
   tor_assert(conn->hs_ident);
 
@@ -2731,7 +2732,9 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
   switch (status_code) {
   case 200:
     /* We got something: Try storing it in the cache. */
-    if (hs_cache_store_as_client(body, &conn->hs_ident->identity_pk) < 0) {
+    decode_status = hs_cache_store_as_client(body,
+                                             &conn->hs_ident->identity_pk);
+    if (decode_status != HS_DESC_DECODE_OK) {
       log_info(LD_REND, "Failed to store hidden service descriptor");
       /* Fire control port FAILED event. */
       hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
