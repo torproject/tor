@@ -397,6 +397,7 @@ static hs_cache_client_descriptor_t *
 cache_client_desc_new(const char *desc_str,
                       const ed25519_public_key_t *service_identity_pk)
 {
+  hs_desc_decode_status_t ret;
   hs_descriptor_t *desc = NULL;
   hs_cache_client_descriptor_t *client_desc = NULL;
 
@@ -404,10 +405,18 @@ cache_client_desc_new(const char *desc_str,
   tor_assert(service_identity_pk);
 
   /* Decode the descriptor we just fetched. */
-  if (hs_client_decode_descriptor(desc_str, service_identity_pk, &desc) < 0) {
+  ret = hs_client_decode_descriptor(desc_str, service_identity_pk, &desc);
+  if (ret != HS_DESC_DECODE_OK &&
+      ret != HS_DESC_DECODE_NEED_CLIENT_AUTH &&
+      ret != HS_DESC_DECODE_BAD_CLIENT_AUTH) {
+    /* In the case of a missing or bad client authorization, we'll keep the
+     * descriptor in the cache because those credentials can arrive later. */
     goto end;
   }
-  tor_assert(desc);
+  /* Make sure we do have a descriptor if decoding was successful. */
+  if (ret == HS_DESC_DECODE_OK) {
+    tor_assert(desc);
+  }
 
   /* All is good: make a cache object for this descriptor */
   client_desc = tor_malloc_zero(sizeof(hs_cache_client_descriptor_t));
@@ -635,9 +644,11 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
   tor_assert(client_desc);
 
   /* Check if we already have a descriptor from this HS in cache. If we do,
-   * check if this descriptor is newer than the cached one */
+   * check if this descriptor is newer than the cached one only if we have a
+   * decoded descriptor. We do keep non-decoded descriptor that requires
+   * client authorization. */
   cache_entry = lookup_v3_desc_as_client(client_desc->key.pubkey);
-  if (cache_entry != NULL) {
+  if (cache_entry != NULL && cache_entry->desc != NULL) {
     /* If we have an entry in our cache that has a revision counter greater
      * than the one we just fetched, discard the one we fetched. */
     if (cache_entry->desc->plaintext_data.revision_counter >
@@ -756,8 +767,7 @@ hs_cache_lookup_as_client(const ed25519_public_key_t *key)
   tor_assert(key);
 
   cached_desc = lookup_v3_desc_as_client(key->pubkey);
-  if (cached_desc) {
-    tor_assert(cached_desc->desc);
+  if (cached_desc && cached_desc->desc) {
     return cached_desc->desc;
   }
 
