@@ -3052,6 +3052,12 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
 
   if (circ->purpose == new_purpose) return;
 
+  /* Take specific actions if we are repurposing a hidden service circuit. */
+  if (circuit_purpose_is_hidden_service(circ->purpose) &&
+      !circuit_purpose_is_hidden_service(new_purpose)) {
+    hs_circ_repurpose(circ);
+  }
+
   if (CIRCUIT_IS_ORIGIN(circ)) {
     char old_purpose_desc[80] = "";
 

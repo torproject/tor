@@ -16,6 +16,7 @@
 
 /* Cleanup function when the circuit is closed or/and freed. */
 void hs_circ_cleanup(circuit_t *circ);
+void hs_circ_repurpose(circuit_t *circ);
 
 /* Circuit API. */
 int hs_circ_service_intro_has_opened(hs_service_t *service,
