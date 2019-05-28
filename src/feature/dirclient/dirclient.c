@@ -2761,6 +2761,7 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
                                  "NOT_FOUND");
     hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
                                   NULL);
+    hs_client_desc_not_found(conn->hs_ident);
     break;
   case 400:
     log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
