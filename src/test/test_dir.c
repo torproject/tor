@@ -7383,6 +7383,7 @@ test_dir_dirserv_router_get_status(void *arg)
   add_ed25519_to_dir(&kp1.pubkey, list, FP_REJECT);
   ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
   tt_int_op(ret, OP_EQ, FP_REJECT);
+  RESET_FP_LIST(list);
 
  done:
   dirserv_free_fingerprint_list();
