@@ -7434,6 +7434,7 @@ test_dir_dirserv_would_reject_router(void *arg)
 
   add_ed25519_to_dir(&kp.pubkey, list, FP_REJECT);
   tt_assert(dirserv_would_reject_router(&rs));
+  RESET_FP_LIST(list);
 
  done:
   dirserv_free_fingerprint_list();
