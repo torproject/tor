@@ -126,7 +126,7 @@ token_bucket_ctr_dec(token_bucket_ctr_t *bucket, ssize_t n)
   return token_bucket_raw_dec(&bucket->counter, n);
 }
 
-static inline uint32_t
+static inline size_t
 token_bucket_ctr_get(const token_bucket_ctr_t *bucket)
 {
   return token_bucket_raw_get(&bucket->counter);
