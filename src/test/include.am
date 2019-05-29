@@ -193,6 +193,7 @@ src_test_test_SOURCES += \
 	src/test/test_status.c \
 	src/test/test_storagedir.c \
 	src/test/test_threads.c \
+	src/test/test_token_bucket.c \
 	src/test/test_tortls.c \
 	src/test/test_util.c \
 	src/test/test_util_format.c \
