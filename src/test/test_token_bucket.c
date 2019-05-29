@@ -49,10 +49,10 @@ test_token_bucket_ctr_adjust(void *arg)
   tt_uint_op(tb.cfg.burst, OP_EQ, BURST * 2);
 
   /* Decrease burst but still above bucket value. */
-  token_bucket_ctr_adjust(&tb, RATE, BURST * 1.5);
+  token_bucket_ctr_adjust(&tb, RATE, BURST + 10);
   tt_uint_op(tb.cfg.rate, OP_EQ, RATE);
   tt_uint_op(tb.counter.bucket, OP_EQ, BURST);
-  tt_uint_op(tb.cfg.burst, OP_EQ, BURST * 1.5);
+  tt_uint_op(tb.cfg.burst, OP_EQ, BURST + 10);
 
   /* Decrease burst below bucket value. */
   token_bucket_ctr_adjust(&tb, RATE, BURST - 1);
