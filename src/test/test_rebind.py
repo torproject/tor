@@ -83,13 +83,21 @@ if not os.path.exists(sys.argv[2]):
 tor_path = sys.argv[1]
 data_dir = sys.argv[2]
 
+empty_torrc_path = os.path.join(data_dir, 'empty_torrc')
+open(empty_torrc_path, 'w').close()
+empty_defaults_torrc_path = os.path.join(data_dir, 'empty_defaults_torrc')
+open(empty_defaults_torrc_path, 'w').close()
+
 tor_process = subprocess.Popen([tor_path,
                                '-DataDirectory', data_dir,
                                '-ControlPort', '127.0.0.1:{}'.format(control_port),
                                '-SOCKSPort', '127.0.0.1:{}'.format(socks_port),
                                '-Log', 'debug stdout',
                                '-LogTimeGranularity', '1',
-                               '-FetchServerDescriptors', '0'],
+                               '-FetchServerDescriptors', '0',
+                               '-f', empty_torrc_path,
+                               '--defaults-torrc', empty_defaults_torrc_path,
+                               ],
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
 
