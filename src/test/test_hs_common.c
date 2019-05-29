@@ -603,6 +603,10 @@ test_desc_reupload_logic(void *arg)
   SMARTLIST_FOREACH(ns->routerstatus_list,
                     routerstatus_t *, rs, routerstatus_free(rs));
   smartlist_clear(ns->routerstatus_list);
+  if (service) {
+    remove_service(get_hs_service_map(), service);
+    hs_service_free(service);
+  }
   networkstatus_vote_free(ns);
   cleanup_nodelist();
   hs_free_all();

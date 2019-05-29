@@ -878,6 +878,10 @@ test_helper_functions(void *arg)
 
  done:
   /* This will free the service and all objects associated to it. */
+  if (service) {
+    remove_service(get_hs_service_map(), service);
+    hs_service_free(service);
+  }
   hs_service_free_all();
   UNMOCK(node_get_by_id);
 }
@@ -887,7 +891,7 @@ static void
 test_intro_circuit_opened(void *arg)
 {
   int flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
-  hs_service_t *service;
+  hs_service_t *service = NULL;
   origin_circuit_t *circ = NULL;
 
   (void) arg;
@@ -935,6 +939,10 @@ test_intro_circuit_opened(void *arg)
 
  done:
   circuit_free_(TO_CIRCUIT(circ));
+  if (service) {
+    remove_service(get_hs_service_map(), service);
+    hs_service_free(service);
+  }
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
   UNMOCK(relay_send_command_from_edge_);
@@ -949,7 +957,7 @@ test_intro_established(void *arg)
   int flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
   uint8_t payload[RELAY_PAYLOAD_SIZE] = {0};
   origin_circuit_t *circ = NULL;
-  hs_service_t *service;
+  hs_service_t *service = NULL;
   hs_service_intro_point_t *ip = NULL;
 
   (void) arg;
@@ -1010,6 +1018,10 @@ test_intro_established(void *arg)
  done:
   if (circ)
     circuit_free_(TO_CIRCUIT(circ));
+  if (service) {
+    remove_service(get_hs_service_map(), service);
+    hs_service_free(service);
+  }
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
 }
@@ -1021,7 +1033,7 @@ test_rdv_circuit_opened(void *arg)
 {
   int flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
   origin_circuit_t *circ = NULL;
-  hs_service_t *service;
+  hs_service_t *service = NULL;
 
   (void) arg;
 
@@ -1052,6 +1064,10 @@ test_rdv_circuit_opened(void *arg)
 
  done:
   circuit_free_(TO_CIRCUIT(circ));
+  if (service) {
+    remove_service(get_hs_service_map(), service);
+    hs_service_free(service);
+  }
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
   UNMOCK(relay_send_command_from_edge_);
@@ -1139,6 +1155,10 @@ test_closing_intro_circs(void *arg)
     circuit_free_(TO_CIRCUIT(intro_circ));
   }
   /* Frees the service object. */
+  if (service) {
+    remove_service(get_hs_service_map(), service);
+    hs_service_free(service);
+  }
   hs_free_all();
   UNMOCK(assert_circuit_ok);
 }
@@ -1151,7 +1171,7 @@ test_introduce2(void *arg)
   int flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
   uint8_t payload[RELAY_PAYLOAD_SIZE] = {0};
   origin_circuit_t *circ = NULL;
-  hs_service_t *service;
+  hs_service_t *service = NULL;
   hs_service_intro_point_t *ip = NULL;
 
   (void) arg;
@@ -1218,6 +1238,10 @@ test_introduce2(void *arg)
   dummy_state = NULL;
   if (circ)
     circuit_free_(TO_CIRCUIT(circ));
+  if (service) {
+    remove_service(get_hs_service_map(), service);
+    hs_service_free(service);
+  }
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
 }
@@ -1302,6 +1326,10 @@ test_service_event(void *arg)
  done:
   hs_circuitmap_remove_circuit(TO_CIRCUIT(circ));
   circuit_free_(TO_CIRCUIT(circ));
+  if (service) {
+    remove_service(get_hs_service_map(), service);
+    hs_service_free(service);
+  }
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
 }
@@ -1312,7 +1340,7 @@ test_rotate_descriptors(void *arg)
 {
   int ret;
   time_t next_rotation_time, now;
-  hs_service_t *service;
+  hs_service_t *service = NULL;
   hs_service_descriptor_t *desc_next;
 
   (void) arg;
@@ -1404,6 +1432,10 @@ test_rotate_descriptors(void *arg)
   tt_assert(service->desc_next);
 
  done:
+  if (service) {
+    remove_service(get_hs_service_map(), service);
+    hs_service_free(service);
+  }
   hs_free_all();
   UNMOCK(get_or_state);
   UNMOCK(circuit_mark_for_close_);
@@ -1417,7 +1449,7 @@ test_build_update_descriptors(void *arg)
 {
   int ret;
   node_t *node;
-  hs_service_t *service;
+  hs_service_t *service = NULL;
   hs_service_intro_point_t *ip_cur, *ip_next;
   routerinfo_t ri;
 
@@ -1634,6 +1666,10 @@ test_build_update_descriptors(void *arg)
   tt_u64_op(service->desc_next->next_upload_time, OP_EQ, 0);
 
  done:
+  if (service) {
+    remove_service(get_hs_service_map(), service);
+    hs_service_free(service);
+  }
   hs_free_all();
   nodelist_free_all();
 }
