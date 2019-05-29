@@ -7363,6 +7363,15 @@ test_dir_dirserv_router_get_status(void *arg)
   crypto_pk_get_digest(ri->identity_pkey, d);
   base16_encode(fp, HEX_DIGEST_LEN + 1, d, DIGEST_LEN);
 
+  /* Try on an empty fingerprint list */
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, 0);
+  RESET_FP_LIST(list);
+
+  ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
+  tt_int_op(ret, OP_EQ, 0);
+  RESET_FP_LIST(list);
+
   /* Try an accepted router */
   add_rsa_fingerprint_to_dir(fp, list, 0);
   ret = dirserv_router_get_status(ri, &msg, LOG_INFO);
