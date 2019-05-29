@@ -28,6 +28,7 @@
 #include "feature/stats/rephist.h"
 
 #include "feature/nodelist/node_st.h"
+#include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
 #include "feature/nodelist/torcert.h"
