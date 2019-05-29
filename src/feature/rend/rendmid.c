@@ -18,6 +18,7 @@
 #include "feature/rend/rendmid.h"
 #include "feature/stats/rephist.h"
 #include "feature/hs/hs_circuitmap.h"
+#include "feature/hs/hs_dos.h"
 #include "feature/hs/hs_intropoint.h"
 
 #include "core/or/or_circuit_st.h"
@@ -177,6 +178,14 @@ rend_mid_introduce_legacy(or_circuit_t *circ, const uint8_t *request,
              "No intro circ found for INTRODUCE1 cell (%s) from circuit %u; "
              "responding with nack.",
              safe_str(serviceid), (unsigned)circ->p_circ_id);
+    goto err;
+  }
+
+  /* Before sending, lets make sure this cell can be sent on the service
+   * circuit asking the DoS defenses. */
+  if (!hs_dos_can_send_intro2(intro_circ)) {
+    log_info(LD_PROTOCOL, "Can't relay INTRODUCE1 v2 cell due to DoS "
+                          "limitations. Sending NACK to client.");
     goto err;
   }
 

@@ -119,6 +119,8 @@ helper_create_intro_circuit(void)
   or_circuit_t *circ = or_circuit_new(0, NULL);
   tt_assert(circ);
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
+  token_bucket_ctr_init(&circ->introduce2_bucket, 100, 100,
+                        (uint32_t) approx_time());
  done:
   return circ;
 }
