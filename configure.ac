@@ -1188,6 +1188,17 @@ m4_ifdef([AS_VAR_IF],[
        TOR_CHECK_LDFLAGS(-pie, "$all_ldflags_for_check", "$all_libs_for_check")
     fi
     TOR_TRY_COMPILE_WITH_CFLAGS(-fwrapv, also_link, CFLAGS_FWRAPV="-fwrapv", true)
+
+   AC_MSG_CHECKING([whether we can run hardened binaries])
+   AC_RUN_IFELSE([AC_LANG_PROGRAM([], [return 0;])],
+        [AC_MSG_RESULT([yes])],
+        [AC_MSG_RESULT([no])
+         AC_MSG_ERROR([dnl
+ We can link with compiler hardening options, but we can't run with them.
+ That's a bad sign! If you must, you can pass --disable-gcc-hardening to
+ configure, but it would be better to figure out what the underlying problem
+ is.])],
+        [AC_MSG_RESULT([cross])])
 fi
 
 if test "$fragile_hardening" = "yes"; then
