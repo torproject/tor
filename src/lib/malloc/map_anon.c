@@ -70,6 +70,11 @@
 
 #endif
 
+#if defined(HAVE_MINHERIT) && !defined(FLAG_ZERO) && !defined(FLAG_NOINHERIT)
+#warn "minherit() is defined, but we couldn't find the right flag for it."
+#warn "This is probably a bug in Tor's support for this platform."
+#endif
+
 /**
  * Helper: try to prevent the <b>sz</b> bytes at <b>mem</b> from being swapped
  * to disk.  Return 0 on success or if the facility is not available on this
