@@ -7446,6 +7446,7 @@ test_dir_dirserv_would_reject_router(void *arg)
   RESET_FP_LIST(list);
 
  done:
+  tor_free(rs.ed25519_signing_key);
   dirserv_free_fingerprint_list();
 }
 
