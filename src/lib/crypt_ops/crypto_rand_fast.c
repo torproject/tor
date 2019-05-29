@@ -181,7 +181,11 @@ crypto_fast_rng_new_from_seed(const uint8_t *seed)
 #else
   /* We decided above that noinherit would always do _something_. Assert here
    * that we were correct. */
-  tor_assert(inherit != INHERIT_RES_KEEP);
+  tor_assertf(inherit != INHERIT_RES_KEEP,
+              "We failed to create a non-inheritable memory region, even "
+              "though we believed such a failure to be impossible! This is "
+              "probably a bug in Tor support for your platform; please report "
+              "it.");
 #endif
   return result;
 }
