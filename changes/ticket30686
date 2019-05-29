@@ -1,0 +1,5 @@
+  o Minor features (logging):
+    - Give a more useful assertion failure message if we think we have
+      minherit() but we fail to make a region non-inheritable. Give a
+      compile-time warning if our support for minherit() is
+      incomplete. Closes ticket 30686.
