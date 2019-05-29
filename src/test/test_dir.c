@@ -7427,6 +7427,13 @@ test_dir_dirserv_would_reject_router(void *arg)
 
   base16_encode(fp, HEX_DIGEST_LEN + 1, rs.identity_digest, DIGEST_LEN);
 
+  /* Try an empty fingerprint list */
+  tt_assert(!dirserv_would_reject_router(&rs));
+  RESET_FP_LIST(list);
+
+  tt_assert(!dirserv_would_reject_router(&rs));
+  RESET_FP_LIST(list);
+
   /* Try an accepted router */
   add_rsa_fingerprint_to_dir(fp, list, 0);
   tt_assert(!dirserv_would_reject_router(&rs));
