@@ -1450,6 +1450,10 @@ hs_client_register_auth_credentials(hs_client_service_authorization_t *creds)
 
   tor_assert(creds);
 
+  if (!client_auths) {
+    client_auths = digest256map_new();
+  }
+
   if (hs_parse_address(creds->onion_address, &service_identity_pk,
                        NULL, NULL) < 0) {
     client_service_authorization_free(creds);
