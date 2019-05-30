@@ -44,5 +44,7 @@ deprecations of individual versions.
 5. Mail the end of life announcement to tor-announce, the packagers list,
    and tor-relays. The current list of packagers is in ReleasingTor.md.
 
-6. Get at least two of weasel/arma/Sebastian to remove the old version number
-   from their approved versions list.
+6. Ask at least two of weasel/arma/Sebastian to remove the old version
+   number from their approved versions list.
+
+7. Update the CoreTorReleases wiki page.
