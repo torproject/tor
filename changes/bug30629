@@ -1,0 +1,6 @@
+  o Minor bugfixes (shutdown, libevent, memory safety):
+    - Avoid use-after-free bugs when shutting down, by making sure that we
+      shut down libevent only after shutting down all of its users. We
+      believe these are harmless in practice, since they only occur on the
+      shutdown path, and do not involve any attacker-controlled data. Fixes
+      bug 30629; bugfix on 0.4.1.1-alpha.
