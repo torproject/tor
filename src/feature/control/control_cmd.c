@@ -26,6 +26,7 @@
 #include "feature/control/control.h"
 #include "feature/control/control_auth.h"
 #include "feature/control/control_cmd.h"
+#include "feature/control/control_hs.h"
 #include "feature/control/control_events.h"
 #include "feature/control/control_getinfo.h"
 #include "feature/control/control_proto.h"
@@ -1970,6 +1971,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
     decoded_key->v2 = pk;
     *hs_version = HS_VERSION_TWO;
   } else if (!strcasecmp(key_type_ed25519_v3, key_type)) {
+    /* parsing of private ed25519 key */
     /* "ED25519-V3:<Base64 Blob>" - Loading a pre-existing ed25519 key. */
     ed25519_secret_key_t *sk = tor_malloc_zero(sizeof(*sk));
     if (base64_decode((char *) sk->seckey, sizeof(sk->seckey), key_blob,
@@ -2315,6 +2317,7 @@ static const control_cmd_def_t CONTROL_COMMANDS[] =
   MULTLINE(hspost, 0),
   ONE_LINE(add_onion, CMD_FL_WIPE),
   ONE_LINE(del_onion, CMD_FL_WIPE),
+  ONE_LINE(onion_client_auth_add, CMD_FL_WIPE),
 };
 
 /**

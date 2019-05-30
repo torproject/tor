@@ -1441,6 +1441,32 @@ client_dir_fetch_unexpected(dir_connection_t *dir_conn, const char *reason,
                                 NULL);
 }
 
+/** Register the credential <b>creds</b> as part of the client auth subsystem.
+ *
+ * Takes ownership of <b>creds</b>.
+ **/
+hs_client_register_auth_status_t
+hs_client_register_auth_credentials(hs_client_service_authorization_t *creds)
+{
+  ed25519_public_key_t service_identity_pk;
+
+  tor_assert(creds);
+
+  if (hs_parse_address(creds->onion_address, &service_identity_pk,
+                       NULL, NULL) < 0) {
+    client_service_authorization_free(creds);
+    return REGISTER_FAIL_BAD_ADDRESS;
+  }
+
+  if (digest256map_get(client_auths, service_identity_pk.pubkey)) {
+    client_service_authorization_free(creds);
+    return REGISTER_FAIL_ALREADY_EXISTS;
+  }
+
+  digest256map_set(client_auths, service_identity_pk.pubkey, creds);
+  return REGISTER_SUCCESS;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -1663,16 +1689,18 @@ hs_client_receive_rendezvous_acked(origin_circuit_t *circ,
   return -1;
 }
 
-#define client_service_authorization_free(auth)                      \
-  FREE_AND_NULL(hs_client_service_authorization_t,                   \
-                client_service_authorization_free_, (auth))
-
-static void
+void
 client_service_authorization_free_(hs_client_service_authorization_t *auth)
 {
-  if (auth) {
-    memwipe(auth, 0, sizeof(*auth));
+  if (!auth) {
+    return;
   }
+
+  if (auth->nickname) {
+    tor_free(auth->nickname);
+  }
+
+  memwipe(auth, 0, sizeof(*auth));
   tor_free(auth);
 }
 
