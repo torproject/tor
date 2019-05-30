@@ -3,7 +3,9 @@ End of Life on an old release series
 ------------------------------------
 
 Here are the steps that the maintainer should take when an old Tor release
-series reaches End of Life:
+series reaches End of Life.  Note that they are _only_ for entire series that
+have reached their planned EOL: they do not apply to security-related
+deprecations of individual versions.
 
 === 0. Preliminaries
 
@@ -14,11 +16,6 @@ series reaches End of Life:
 1. A month before End of Life:
    Send the announcement to tor-announce, tor-talk, tor-relays, and the
    packagers.
-
-2. A few days before End of Life:
-   Get at least two of weasel/arma/Sebastian to
-   remove the old version number from their approved versions list.
-   Give them a few days to do this if you can.
 
 === 1. On the day
 
@@ -44,9 +41,8 @@ series reaches End of Life:
      - other tickets should be closed (if we won't fix them) or moved to a
        supported release (if we will fix them)
 
-5. Double-check: did the version get un-recommended in the consensus yet?
-   If not, don't announce until they have the up-to-date versions, or people
-   will get confused.
-
-6. Mail the end of life announcement to tor-announce, the packagers list,
+5. Mail the end of life announcement to tor-announce, the packagers list,
    and tor-relays. The current list of packagers is in ReleasingTor.md.
+
+6. Get at least two of weasel/arma/Sebastian to remove the old version number
+   from their approved versions list.
