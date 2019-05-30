@@ -254,17 +254,25 @@ circpad_marked_circuit_for_padding(circuit_t *circ, int reason)
   return 0; // No machine wanted to keep the circuit open; mark for close
 }
 
-/** Free all the machineinfos in <b>circ</b> that match <b>machine_num</b>. */
-static void
+/**
+ * Free all the machineinfos in <b>circ</b> that match <b>machine_num</b>.
+ *
+ * Returns true if any machineinfos with that number were freed.
+ * False otherwise. */
+static int
 free_circ_machineinfos_with_machine_num(circuit_t *circ, int machine_num)
 {
+  int found = 0;
   FOR_EACH_CIRCUIT_MACHINE_BEGIN(i) {
     if (circ->padding_machine[i] &&
         circ->padding_machine[i]->machine_num == machine_num) {
       circpad_circuit_machineinfo_free_idx(circ, i);
       circ->padding_machine[i] = NULL;
+      found = 1;
     }
   } FOR_EACH_CIRCUIT_MACHINE_END;
+
+  return found;
 }
 
 /**
@@ -2811,7 +2819,10 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
 
   if (negotiate->command == CIRCPAD_COMMAND_STOP) {
     /* Free the machine corresponding to this machine type */
-    free_circ_machineinfos_with_machine_num(circ, negotiate->machine_type);
+    if (free_circ_machineinfos_with_machine_num(circ,
+                negotiate->machine_type)) {
+      goto done;
+    }
     log_fn(LOG_WARN, LD_CIRC,
           "Received circuit padding stop command for unknown machine.");
     goto err;
