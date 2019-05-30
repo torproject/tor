@@ -31,7 +31,20 @@ typedef enum {
   HS_CLIENT_FETCH_PENDING      = 5,
 } hs_client_fetch_status_t;
 
-/** Client-side configuration of authorization for a service. */
+/* Status code of client auth credential registration */
+typedef enum {
+  /* We successfuly registered these credentials */
+  REGISTER_SUCCESS,
+  /* We failed to register these credentials, because they already exist. */
+  REGISTER_FAIL_ALREADY_EXISTS,
+  /* We failed to register these credentials, because of a bad HS address. */
+  REGISTER_FAIL_BAD_ADDRESS,
+} hs_client_register_auth_status_t;
+
+/** Flag to set when a client auth is permanent (saved on disk). */
+#define CLIENT_AUTH_FLAG_IS_PERMANENT (1<<0)
+
+/** Client-side configuration of client authorization */
 typedef struct hs_client_service_authorization_t {
   /* An curve25519 secret key used to compute decryption keys that
    * allow the client to decrypt the hidden service descriptor. */
@@ -39,7 +52,23 @@ typedef struct hs_client_service_authorization_t {
 
   /* An onion address that is used to connect to the onion service. */
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32+1];
+
+  /* An optional nickname for this client */
+  char *nickname;
+
+  /* Optional flags for this client. */
+  int flags;
 } hs_client_service_authorization_t;
+
+hs_client_register_auth_status_t
+hs_client_register_auth_credentials(hs_client_service_authorization_t *creds);
+
+#define client_service_authorization_free(auth)                      \
+  FREE_AND_NULL(hs_client_service_authorization_t,                   \
+                client_service_authorization_free_, (auth))
+
+void
+client_service_authorization_free_(hs_client_service_authorization_t *auth);
 
 void hs_client_note_connection_attempt_succeeded(
                                        const edge_connection_t *conn);

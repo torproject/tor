@@ -82,6 +82,7 @@ LIBTOR_APP_A_SOURCES = 				\
 	src/feature/control/control_auth.c	\
 	src/feature/control/control_bootstrap.c	\
 	src/feature/control/control_cmd.c	\
+	src/feature/control/control_hs.c	\
 	src/feature/control/control_events.c	\
 	src/feature/control/control_fmt.c	\
 	src/feature/control/control_getinfo.c	\
@@ -313,6 +314,7 @@ noinst_HEADERS +=					\
 	src/feature/control/control.h			\
 	src/feature/control/control_auth.h		\
 	src/feature/control/control_cmd.h		\
+	src/feature/control/control_hs.h		\
 	src/feature/control/control_cmd_args_st.h	\
 	src/feature/control/control_connection_st.h	\
 	src/feature/control/control_events.h		\

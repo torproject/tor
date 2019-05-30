@@ -187,8 +187,17 @@ test_hs_desc_event(void *arg)
   tor_free(expected_msg);
 }
 
+static void
+test_hs_control_onion_client_auth_add(void *arg)
+{
+  (void) arg;
+}
+
 struct testcase_t hs_control_tests[] = {
   { "hs_desc_event", test_hs_desc_event, TT_FORK,
+    NULL, NULL },
+  { "hs_control_onion_client_auth_add",
+    test_hs_control_onion_client_auth_add, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES
