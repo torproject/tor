@@ -226,6 +226,7 @@ extern struct testcase_t hs_common_tests[];
 extern struct testcase_t hs_config_tests[];
 extern struct testcase_t hs_control_tests[];
 extern struct testcase_t hs_descriptor[];
+extern struct testcase_t hs_dos_tests[];
 extern struct testcase_t hs_intropoint_tests[];
 extern struct testcase_t hs_ntor_tests[];
 extern struct testcase_t hs_service_tests[];

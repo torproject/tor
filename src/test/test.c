@@ -876,6 +876,7 @@ struct testgroup_t testgroups[] = {
   { "hs_config/", hs_config_tests },
   { "hs_control/", hs_control_tests },
   { "hs_descriptor/", hs_descriptor },
+  { "hs_dos/", hs_dos_tests },
   { "hs_intropoint/", hs_intropoint_tests },
   { "hs_ntor/", hs_ntor_tests },
   { "hs_service/", hs_service_tests },
