@@ -1385,7 +1385,6 @@ static const control_cmd_syntax_t hsfetch_syntax = {
   .min_args = 1, .max_args = 1,
   .accept_keywords = true,
   .allowed_keywords = hsfetch_keywords,
-  .want_cmddata = true,
 };
 
 /** Implementation for the HSFETCH command. */
