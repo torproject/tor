@@ -942,6 +942,34 @@ hs_cache_client_intro_state_purge(void)
                     "cache purged.");
 }
 
+/* This is called when new client authorization was added to the global state.
+ * It attemps to decode the descriptor of the given service identity key.
+ *
+ * Return true if decoding was successful else false. */
+bool
+hs_cache_client_new_auth_parse(const ed25519_public_key_t *service_pk)
+{
+  bool ret = false;
+  hs_cache_client_descriptor_t *cached_desc = NULL;
+
+  tor_assert(service_pk);
+
+  cached_desc = lookup_v3_desc_as_client(service_pk->pubkey);
+  if (cached_desc == NULL || cached_desc->desc != NULL) {
+    /* No entry for that service or the descriptor is already decoded. */
+    goto end;
+  }
+
+  /* Attempt a decode. If we are successful, inform the caller. */
+  if (hs_client_decode_descriptor(cached_desc->encoded_desc, service_pk,
+                                  &cached_desc->desc) == HS_DESC_DECODE_OK) {
+    ret = true;
+  }
+
+ end:
+  return ret;
+}
+
 /**************** Generics *********************************/
 
 /** Do a round of OOM cleanup on all directory caches. Return the amount of
