@@ -32,7 +32,7 @@
 problem file-size /src/app/config/config.c 8520
 problem include-count /src/app/config/config.c 88
 problem function-size /src/app/config/config.c:options_act_reversible() 296
-problem function-size /src/app/config/config.c:options_act() 588
+problem function-size /src/app/config/config.c:options_act() 590
 problem function-size /src/app/config/config.c:resolve_my_address() 192
 problem function-size /src/app/config/config.c:options_validate() 1220
 problem function-size /src/app/config/config.c:options_init_from_torrc() 210
@@ -136,7 +136,7 @@ problem function-size /src/feature/client/addressmap.c:addressmap_rewrite() 112
 problem function-size /src/feature/client/bridges.c:rewrite_node_address_for_bridge() 126
 problem function-size /src/feature/client/circpathbias.c:pathbias_measure_close_rate() 108
 problem function-size /src/feature/client/dnsserv.c:evdns_server_callback() 153
-problem file-size /src/feature/client/entrynodes.c 3817
+problem file-size /src/feature/client/entrynodes.c 3820
 problem function-size /src/feature/client/entrynodes.c:entry_guards_upgrade_waiting_circuits() 153
 problem function-size /src/feature/client/entrynodes.c:entry_guard_parse_from_state() 246
 problem function-size /src/feature/client/transports.c:handle_proxy_line() 108
