@@ -20,8 +20,11 @@ new Tor release:
 
 === I. Make sure it works
 
-1. Make sure that CI passes: have a look at Travis, Appveyor, and
-   Jenkins.  Make sure you're looking at the right branches.
+1. Make sure that CI passes: have a look at Travis
+   (https://travis-ci.org/torproject/tor/branches), Appveyor
+   (https://ci.appveyor.com/project/torproject/tor/history), and
+   Jenkins (https://jenkins.torproject.org/view/tor/).
+   Make sure you're looking at the right branches.
 
    If there are any unexplained failures, try to fix them or figure them
    out.
@@ -244,3 +247,5 @@ new Tor release:
    master branch.
 
 3. Keep an eye on the blog post, to moderate comments and answer questions.
+
+
