@@ -3300,6 +3300,9 @@ num_bridges_usable,(int use_maybe_reachable))
   }
 
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+    /* Not a bridge, or not one we are configured to be able to use. */
+    if (! guard->is_filtered_guard)
+      continue;
     /* Definitely not usable */
     if (guard->is_reachable == GUARD_REACHABLE_NO)
       continue;
