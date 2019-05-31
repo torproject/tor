@@ -99,6 +99,8 @@ const hs_cache_intro_state_t *hs_cache_client_intro_state_find(
 void hs_cache_client_intro_state_clean(time_t now);
 void hs_cache_client_intro_state_purge(void);
 
+bool hs_cache_client_new_auth_parse(const ed25519_public_key_t *service_pk);
+
 #ifdef HS_CACHE_PRIVATE
 #include "lib/crypt_ops/crypto_ed25519.h"
 
