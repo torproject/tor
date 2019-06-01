@@ -641,7 +641,7 @@ Changes in version 0.4.0.3-alpha - 2019-03-22
 
 
 Changes in version 0.3.5.8 - 2019-02-21
-  Tor 0.3.5.8 backports serveral fixes from later releases, including fixes
+  Tor 0.3.5.8 backports several fixes from later releases, including fixes
   for an annoying SOCKS-parsing bug that affected users in earlier 0.3.5.x
   releases.
 
@@ -660,7 +660,7 @@ Changes in version 0.3.5.8 - 2019-02-21
 
   o Major bugfixes (networking, backport from 0.4.0.2-alpha):
     - Gracefully handle empty username/password fields in SOCKS5
-      username/password auth messsage and allow SOCKS5 handshake to
+      username/password auth message and allow SOCKS5 handshake to
       continue. Previously, we had rejected these handshakes, breaking
       certain applications. Fixes bug 29175; bugfix on 0.3.5.1-alpha.
 
@@ -867,7 +867,7 @@ Changes in version 0.4.0.2-alpha - 2019-02-21
     - Check that bugfix versions in changes files look like Tor versions
       from the versions spec. Warn when bugfixes claim to be on a future
       release. Closes ticket 27761.
-    - Provide a git pre-commit hook that disallows commiting if we have
+    - Provide a git pre-commit hook that disallows committing if we have
       any failures in our code and changelog formatting checks. It is
       now available in scripts/maint/pre-commit.git-hook. Implements
       feature 28976.
