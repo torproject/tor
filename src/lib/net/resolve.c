@@ -82,30 +82,24 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
   tor_assert(addr);
   tor_assert(family == AF_INET || family == AF_INET6 || family == AF_UNSPEC);
 
-  /* Clear address before starting, to avoid returning uninitialised data */
-  memset(addr, 0, sizeof(tor_addr_t));
-
   if (!*name) {
     /* Empty address is an error. */
+    memset(addr, 0, sizeof(tor_addr_t));
     return -1;
   }
 
   /* Is it an IP address? */
   parsed_family = tor_addr_parse(addr, name);
 
-  if (parsed_family == AF_INET) {
-    /* It's an IPv4 IP. */
-    if (family == AF_INET6) {
+  if (parsed_family >= 0) {
+    /* If the IP address family matches, or was unspecified */
+    if (parsed_family == family || family == AF_UNSPEC) {
+      return 0;
+    } else {
+      /* Clear the address before returning an error. */
       memset(addr, 0, sizeof(tor_addr_t));
       return -1;
     }
-    return 0;
-  } else if (parsed_family == AF_INET6) {
-    if (family == AF_INET) {
-      memset(addr, 0, sizeof(tor_addr_t));
-      return -1;
-    }
-    return 0;
   } else {
     /* Clear the address after a failed tor_addr_parse(). */
     memset(addr, 0, sizeof(tor_addr_t));
