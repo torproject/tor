@@ -35,6 +35,8 @@
  * *<b>addr</b> to the proper IP address, in host byte order.  Returns 0
  * on success, -1 on failure; 1 on transient failure.
  *
+ * This function only accepts IPv4 addresses.
+ *
  * (This function exists because standard windows gethostbyname
  * doesn't treat raw IP addresses properly.)
  */
@@ -62,6 +64,9 @@ tor_lookup_hostname,(const char *name, uint32_t *addr))
  * <i>preferred</i> family, though another one may be returned if only one
  * family is implemented for this address.
  *
+ * Like tor_addr_parse(), this function accepts IPv6 addresses with or without
+ * square brackets.
+ *
  * Return 0 on success, -1 on failure; 1 on transient failure.
  */
 MOCK_IMPL(int,
@@ -70,26 +75,39 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
   /* Perhaps eventually this should be replaced by a tor_getaddrinfo or
    * something.
    */
-  struct in_addr iaddr;
-  struct in6_addr iaddr6;
+  int parsed_family = 0;
+
   tor_assert(name);
   tor_assert(addr);
   tor_assert(family == AF_INET || family == AF_INET6 || family == AF_UNSPEC);
+
+  /* Clear address before starting, to avoid returning uninitialised data */
+  memset(addr, 0, sizeof(tor_addr_t));
+
   if (!*name) {
     /* Empty address is an error. */
     return -1;
-  } else if (tor_inet_pton(AF_INET, name, &iaddr)) {
+  }
+
+  /* Is it an IP address? */
+  parsed_family = tor_addr_parse(addr, name);
+
+  if (parsed_family == AF_INET) {
     /* It's an IPv4 IP. */
-    if (family == AF_INET6)
+    if (family == AF_INET6) {
+      memset(addr, 0, sizeof(tor_addr_t));
       return -1;
-    tor_addr_from_in(addr, &iaddr);
+    }
     return 0;
-  } else if (tor_inet_pton(AF_INET6, name, &iaddr6)) {
-    if (family == AF_INET)
+  } else if (parsed_family == AF_INET6) {
+    if (family == AF_INET) {
+      memset(addr, 0, sizeof(tor_addr_t));
       return -1;
-    tor_addr_from_in6(addr, &iaddr6);
+    }
     return 0;
   } else {
+    /* Clear the address after a failed tor_addr_parse(). */
+    memset(addr, 0, sizeof(tor_addr_t));
 #ifdef HAVE_GETADDRINFO
     int err;
     struct addrinfo *res=NULL, *res_p;
@@ -179,51 +197,34 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
 
 /** Parse an address or address-port combination from <b>s</b>, resolve the
  * address as needed, and put the result in <b>addr_out</b> and (optionally)
- * <b>port_out</b>.  Return 0 on success, negative on failure. */
+ * <b>port_out</b>.
+ *
+ * Like tor_addr_port_parse(), this function accepts:
+ *  - IPv6 address and port, when the IPv6 address is in square brackets,
+ *  - IPv6 address with square brackets,
+ *  - IPv6 address without square brackets.
+ *
+ * Return 0 on success, negative on failure. */
 int
 tor_addr_port_lookup(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
 {
-  const char *port;
   tor_addr_t addr;
   uint16_t portval;
   char *tmp = NULL;
+  int rv = 0;
 
   tor_assert(s);
   tor_assert(addr_out);
 
   s = eat_whitespace(s);
 
-  if (*s == '[') {
-    port = strstr(s, "]");
-    if (!port)
-      goto err;
-    tmp = tor_strndup(s+1, port-(s+1));
-    port = port+1;
-    if (*port == ':')
-      port++;
-    else
-      port = NULL;
-  } else {
-    port = strchr(s, ':');
-    if (port)
-      tmp = tor_strndup(s, port-s);
-    else
-      tmp = tor_strdup(s);
-    if (port)
-      ++port;
-  }
+  rv = tor_addr_port_split(LOG_WARN, s, &tmp, &portval);
+  if (rv < 0)
+    goto err;
 
   if (tor_addr_lookup(tmp, AF_UNSPEC, &addr) != 0)
     goto err;
   tor_free(tmp);
-
-  if (port) {
-    portval = (int) tor_parse_long(port, 10, 1, 65535, NULL, NULL);
-    if (!portval)
-      goto err;
-  } else {
-    portval = 0;
-  }
 
   if (port_out)
     *port_out = portval;

@@ -373,7 +373,8 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len, int decorate)
  *
  * If <b>accept_regular</b> is set and the address is in neither recognized
  * reverse lookup hostname format, try parsing the address as a regular
- * IPv4 or IPv6 address too.
+ * IPv4 or IPv6 address too. This mode will accept IPv6 addresses with or
+ * without square brackets.
  */
 int
 tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
@@ -1204,6 +1205,10 @@ tor_addr_parse(tor_addr_t *addr, const char *src)
 
   tor_assert(addr && src);
 
+  /* Clear the address before starting, to avoid returning uninitialised data.
+   */
+  memset(addr, 0, sizeof(tor_addr_t));
+
   size_t len = strlen(src);
 
   if (len && src[0] == '[' && src[len - 1] == ']') {
@@ -1718,6 +1723,11 @@ get_interface_address6_list,(int severity,
  * form "ip" or "ip:0".  Otherwise, accept those forms, and set
  * *<b>port_out</b> to <b>default_port</b>.
  *
+ * This function accepts:
+ *  - IPv6 address and port, when the IPv6 address is in square brackets,
+ *  - IPv6 address with square brackets,
+ *  - IPv6 address without square brackets.
+ *
  * Return 0 on success, -1 on failure. */
 int
 tor_addr_port_parse(int severity, const char *addrport,
@@ -1755,9 +1765,17 @@ tor_addr_port_parse(int severity, const char *addrport,
 }
 
 /** Given an address of the form "host[:port]", try to divide it into its host
- * and port portions, setting *<b>address_out</b> to a newly allocated string
- * holding the address portion and *<b>port_out</b> to the port (or 0 if no
- * port is given).  Return 0 on success, -1 on failure. */
+ * and port portions.
+ *
+ * Like tor_addr_port_parse(), this function accepts:
+ *  - IPv6 address and port, when the IPv6 address is in square brackets,
+ *  - IPv6 address with square brackets,
+ *  - IPv6 address without square brackets.
+ *
+ * Sets *<b>address_out</b> to a newly allocated string holding the address
+ * portion, and *<b>port_out</b> to the port (or 0 if no port is given).
+ *
+ * Return 0 on success, -1 on failure. */
 int
 tor_addr_port_split(int severity, const char *addrport,
                     char **address_out, uint16_t *port_out)
@@ -1766,8 +1784,11 @@ tor_addr_port_split(int severity, const char *addrport,
   tor_assert(addrport);
   tor_assert(address_out);
   tor_assert(port_out);
+
   /* We need to check for IPv6 manually because the logic below doesn't
-   * do a good job on IPv6 addresses that lack a port. */
+   * do a good job on IPv6 addresses that lack a port.
+   * If an IPv6 address without square brackets is ambiguous, it gets parsed
+   * here as an address, rather than address:port. */
   if (tor_addr_parse(&a_tmp, addrport) == AF_INET6) {
     *port_out = 0;
     *address_out = tor_strdup(addrport);
