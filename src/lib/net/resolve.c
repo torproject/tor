@@ -59,6 +59,116 @@ tor_lookup_hostname,(const char *name, uint32_t *addr))
   return -1;
 }
 
+#ifdef HAVE_GETADDRINFO
+
+/* Host lookup helper for tor_addr_lookup(), when getaddrinfo() is
+ * available on this system.
+ *
+ * See tor_addr_lookup() for details.
+ */
+static int
+tor_addr_lookup_host_getaddrinfo(const char *name,
+                                 uint16_t family,
+                                 tor_addr_t *addr)
+{
+  int err;
+  struct addrinfo *res=NULL, *res_p;
+  struct addrinfo *best=NULL;
+  struct addrinfo hints;
+  int result = -1;
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = family;
+  hints.ai_socktype = SOCK_STREAM;
+  err = tor_getaddrinfo(name, NULL, &hints, &res);
+  /* The check for 'res' here shouldn't be necessary, but it makes static
+   * analysis tools happy. */
+  if (!err && res) {
+    best = NULL;
+    for (res_p = res; res_p; res_p = res_p->ai_next) {
+      if (family == AF_UNSPEC) {
+        if (res_p->ai_family == AF_INET) {
+          best = res_p;
+          break;
+        } else if (res_p->ai_family == AF_INET6 && !best) {
+          best = res_p;
+        }
+      } else if (family == res_p->ai_family) {
+        best = res_p;
+        break;
+      }
+    }
+    if (!best)
+      best = res;
+    if (best->ai_family == AF_INET) {
+      tor_addr_from_in(addr,
+                       &((struct sockaddr_in*)best->ai_addr)->sin_addr);
+      result = 0;
+    } else if (best->ai_family == AF_INET6) {
+      tor_addr_from_in6(addr,
+                        &((struct sockaddr_in6*)best->ai_addr)->sin6_addr);
+      result = 0;
+    }
+    tor_freeaddrinfo(res);
+    return result;
+  }
+  return (err == EAI_AGAIN) ? 1 : -1;
+}
+
+#else /* !(defined(HAVE_GETADDRINFO)) */
+
+/* Host lookup helper for tor_addr_lookup(), which calls getaddrinfo().
+ * Used when gethostbyname() is not available on this system.
+ *
+ * See tor_addr_lookup() for details.
+ */
+static int
+tor_addr_lookup_host_gethostbyname(const char *name,
+                                   tor_addr_t *addr)
+{
+  struct hostent *ent;
+  int err;
+#ifdef HAVE_GETHOSTBYNAME_R_6_ARG
+  char buf[2048];
+  struct hostent hostent;
+  int r;
+  r = gethostbyname_r(name, &hostent, buf, sizeof(buf), &ent, &err);
+#elif defined(HAVE_GETHOSTBYNAME_R_5_ARG)
+  char buf[2048];
+  struct hostent hostent;
+  ent = gethostbyname_r(name, &hostent, buf, sizeof(buf), &err);
+#elif defined(HAVE_GETHOSTBYNAME_R_3_ARG)
+  struct hostent_data data;
+  struct hostent hent;
+  memset(&data, 0, sizeof(data));
+  err = gethostbyname_r(name, &hent, &data);
+  ent = err ? NULL : &hent;
+#else
+  ent = gethostbyname(name);
+#ifdef _WIN32
+  err = WSAGetLastError();
+#else
+  err = h_errno;
+#endif /* defined(_WIN32) */
+#endif /* defined(HAVE_GETHOSTBYNAME_R_6_ARG) || ... */
+  if (ent) {
+    if (ent->h_addrtype == AF_INET) {
+      tor_addr_from_in(addr, (struct in_addr*) ent->h_addr);
+    } else if (ent->h_addrtype == AF_INET6) {
+      tor_addr_from_in6(addr, (struct in6_addr*) ent->h_addr);
+    } else {
+      tor_assert(0); // LCOV_EXCL_LINE: gethostbyname() returned bizarre type
+    }
+    return 0;
+  }
+#ifdef _WIN32
+  return (err == WSATRY_AGAIN) ? 1 : -1;
+#else
+  return (err == TRY_AGAIN) ? 1 : -1;
+#endif
+}
+
+#endif /* defined(HAVE_GETADDRINFO) */
+
 /** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
  * *<b>addr</b> to the proper IP address and family. The <b>family</b>
  * argument (which must be AF_INET, AF_INET6, or AF_UNSPEC) declares a
@@ -77,6 +187,7 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
    * something.
    */
   int parsed_family = 0;
+  int result = -1;
 
   tor_assert(name);
   tor_assert(addr);
@@ -84,8 +195,7 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
 
   if (!*name) {
     /* Empty address is an error. */
-    memset(addr, 0, sizeof(tor_addr_t));
-    return -1;
+    goto permfail;
   }
 
   /* Is it an IP address? */
@@ -94,100 +204,37 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
   if (parsed_family >= 0) {
     /* If the IP address family matches, or was unspecified */
     if (parsed_family == family || family == AF_UNSPEC) {
-      return 0;
+      goto success;
     } else {
-      /* Clear the address before returning an error. */
-      memset(addr, 0, sizeof(tor_addr_t));
-      return -1;
+      goto permfail;
     }
   } else {
     /* Clear the address after a failed tor_addr_parse(). */
     memset(addr, 0, sizeof(tor_addr_t));
 #ifdef HAVE_GETADDRINFO
-    int err;
-    struct addrinfo *res=NULL, *res_p;
-    struct addrinfo *best=NULL;
-    struct addrinfo hints;
-    int result = -1;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = family;
-    hints.ai_socktype = SOCK_STREAM;
-    err = tor_getaddrinfo(name, NULL, &hints, &res);
-    /* The check for 'res' here shouldn't be necessary, but it makes static
-     * analysis tools happy. */
-    if (!err && res) {
-      best = NULL;
-      for (res_p = res; res_p; res_p = res_p->ai_next) {
-        if (family == AF_UNSPEC) {
-          if (res_p->ai_family == AF_INET) {
-            best = res_p;
-            break;
-          } else if (res_p->ai_family == AF_INET6 && !best) {
-            best = res_p;
-          }
-        } else if (family == res_p->ai_family) {
-          best = res_p;
-          break;
-        }
-      }
-      if (!best)
-        best = res;
-      if (best->ai_family == AF_INET) {
-        tor_addr_from_in(addr,
-                         &((struct sockaddr_in*)best->ai_addr)->sin_addr);
-        result = 0;
-      } else if (best->ai_family == AF_INET6) {
-        tor_addr_from_in6(addr,
-                          &((struct sockaddr_in6*)best->ai_addr)->sin6_addr);
-        result = 0;
-      }
-      tor_freeaddrinfo(res);
-      return result;
-    }
-    return (err == EAI_AGAIN) ? 1 : -1;
+    result = tor_addr_lookup_host_getaddrinfo(name, family, addr);
+    goto done;
 #else /* !(defined(HAVE_GETADDRINFO)) */
-    struct hostent *ent;
-    int err;
-#ifdef HAVE_GETHOSTBYNAME_R_6_ARG
-    char buf[2048];
-    struct hostent hostent;
-    int r;
-    r = gethostbyname_r(name, &hostent, buf, sizeof(buf), &ent, &err);
-#elif defined(HAVE_GETHOSTBYNAME_R_5_ARG)
-    char buf[2048];
-    struct hostent hostent;
-    ent = gethostbyname_r(name, &hostent, buf, sizeof(buf), &err);
-#elif defined(HAVE_GETHOSTBYNAME_R_3_ARG)
-    struct hostent_data data;
-    struct hostent hent;
-    memset(&data, 0, sizeof(data));
-    err = gethostbyname_r(name, &hent, &data);
-    ent = err ? NULL : &hent;
-#else
-    ent = gethostbyname(name);
-#ifdef _WIN32
-    err = WSAGetLastError();
-#else
-    err = h_errno;
-#endif
-#endif /* defined(HAVE_GETHOSTBYNAME_R_6_ARG) || ... */
-    if (ent) {
-      if (ent->h_addrtype == AF_INET) {
-        tor_addr_from_in(addr, (struct in_addr*) ent->h_addr);
-      } else if (ent->h_addrtype == AF_INET6) {
-        tor_addr_from_in6(addr, (struct in6_addr*) ent->h_addr);
-      } else {
-        tor_assert(0); // LCOV_EXCL_LINE: gethostbyname() returned bizarre type
-      }
-      return 0;
-    }
-#ifdef _WIN32
-    return (err == WSATRY_AGAIN) ? 1 : -1;
-#else
-    return (err == TRY_AGAIN) ? 1 : -1;
-#endif
+    result = tor_addr_lookup_host_gethostbyname(name, addr);
+    goto done;
 #endif /* defined(HAVE_GETADDRINFO) */
   }
+
+ /* If we weren't successful, and haven't already set the result,
+  * assume it's a permanent failure */
+ permfail:
+  result = -1;
+  goto done;
+ success:
+  result = 0;
+
+ /* We have set the result, now it's time to clean up */
+ done:
+  if (result) {
+    /* Clear the address on error */
+    memset(addr, 0, sizeof(tor_addr_t));
+  }
+  return result;
 }
 
 /** Parse an address or address-port combination from <b>s</b>, resolve the
