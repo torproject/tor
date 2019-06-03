@@ -1496,6 +1496,13 @@ hs_client_remove_auth_credentials(const char *hsaddress)
   return REMOVAL_SUCCESS_NOT_FOUND;
 }
 
+/** Get the HS client auth map. */
+digest256map_t *
+get_hs_client_auths_map(void)
+{
+  return client_auths;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -2183,12 +2190,6 @@ hs_client_dir_info_changed(void)
 
 #ifdef TOR_UNIT_TESTS
 
-STATIC digest256map_t *
-get_hs_client_auths_map(void)
-{
-  return client_auths;
-}
-
 STATIC void
 set_hs_client_auths_map(digest256map_t *map)
 {
@@ -2196,3 +2197,4 @@ set_hs_client_auths_map(digest256map_t *map)
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
+
