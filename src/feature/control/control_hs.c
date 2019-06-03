@@ -140,8 +140,10 @@ handle_control_onion_client_auth_add(control_connection_t *conn,
   if (BUG(register_status == REGISTER_FAIL_BAD_ADDRESS)) {
     /* It's a bug because the service addr has already been validated above */
     control_printf_endreply(conn, 512, "Invalid v3 address \"%s\"", hsaddress);
-  } else if (register_status == REGISTER_FAIL_ALREADY_EXISTS) {
-    control_printf_endreply(conn, 551, "Client already exists");
+  } else if (register_status == REGISTER_SUCCESS_ALREADY_EXISTS) {
+    control_printf_endreply(conn, 251,"Client for onion existed and replaced");
+  } else if (register_status == REGISTER_SUCCESS_ALSO_DECRYPTED) {
+    control_printf_endreply(conn, 252,"Registered client and decrypted desc");
   } else if (register_status == REGISTER_SUCCESS) {
     control_printf_endreply(conn, 250, "OK");
   } else {
