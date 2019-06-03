@@ -1453,6 +1453,8 @@ hs_client_register_auth_status_t
 hs_client_register_auth_credentials(hs_client_service_authorization_t *creds)
 {
   ed25519_public_key_t service_identity_pk;
+  hs_client_service_authorization_t *old_creds = NULL;
+  hs_client_register_auth_status_t retval = REGISTER_SUCCESS;
 
   tor_assert(creds);
 
@@ -1466,13 +1468,22 @@ hs_client_register_auth_credentials(hs_client_service_authorization_t *creds)
     return REGISTER_FAIL_BAD_ADDRESS;
   }
 
-  if (digest256map_get(client_auths, service_identity_pk.pubkey)) {
-    client_service_authorization_free(creds);
-    return REGISTER_FAIL_ALREADY_EXISTS;
+  old_creds = digest256map_get(client_auths, service_identity_pk.pubkey);
+  if (old_creds) {
+    digest256map_remove(client_auths, service_identity_pk.pubkey);
+    client_service_authorization_free(old_creds);
+    retval = REGISTER_SUCCESS_ALREADY_EXISTS;
   }
 
   digest256map_set(client_auths, service_identity_pk.pubkey, creds);
-  return REGISTER_SUCCESS;
+
+  /** Now that we set the new credentials, also try to decrypt any cached
+   *  descriptors. */
+  if (hs_cache_client_new_auth_parse(&service_identity_pk)) {
+    retval = REGISTER_SUCCESS_ALSO_DECRYPTED;
+  }
+
+  return retval;
 }
 
 /** Remove client auth credentials for the service <b>hs_address</b>. */
