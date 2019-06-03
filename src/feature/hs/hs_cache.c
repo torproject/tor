@@ -932,6 +932,10 @@ hs_cache_client_new_auth_parse(const ed25519_public_key_t *service_pk)
 
   tor_assert(service_pk);
 
+  if (!hs_cache_v3_client) {
+    return false;
+  }
+
   cached_desc = lookup_v3_desc_as_client(service_pk->pubkey);
   if (cached_desc == NULL || cached_desc->desc != NULL) {
     /* No entry for that service or the descriptor is already decoded. */
