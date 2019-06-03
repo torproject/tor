@@ -41,6 +41,16 @@ typedef enum {
   REGISTER_FAIL_BAD_ADDRESS,
 } hs_client_register_auth_status_t;
 
+/* Status code of client auth credential removal */
+typedef enum {
+  /* We successfuly removed these credentials */
+  REMOVAL_SUCCESS,
+  /* No need to remove those credentials, because they were not there. */
+  REMOVAL_SUCCESS_NOT_FOUND,
+  /* We failed to register these credentials, because of a bad HS address. */
+  REMOVAL_BAD_ADDRESS,
+} hs_client_removal_auth_status_t;
+
 /** Flag to set when a client auth is permanent (saved on disk). */
 #define CLIENT_AUTH_FLAG_IS_PERMANENT (1<<0)
 
@@ -62,6 +72,9 @@ typedef struct hs_client_service_authorization_t {
 
 hs_client_register_auth_status_t
 hs_client_register_auth_credentials(hs_client_service_authorization_t *creds);
+
+hs_client_removal_auth_status_t
+hs_client_remove_auth_credentials(const char *hsaddress);
 
 #define client_service_authorization_free(auth)                      \
   FREE_AND_NULL(hs_client_service_authorization_t,                   \
