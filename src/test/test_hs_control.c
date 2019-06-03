@@ -193,6 +193,7 @@ test_hs_desc_event(void *arg)
   tor_free(expected_msg);
 }
 
+/** DOCDOCDOC */
 static void
 test_hs_control_good_onion_client_auth_add(void *arg)
 {
@@ -271,10 +272,48 @@ test_hs_control_good_onion_client_auth_add(void *arg)
   tt_assert(!client_jt4->nickname);
   tt_int_op(client_jt4->flags, OP_EQ, 0);
 
+  /* Now try to remove the auth credentials */
+  tor_free(conn.current_cmd);
+  conn.current_cmd = tor_strdup("ONION_CLIENT_AUTH_REMOVE");
+
+  /* First try with a wrong addr */
+  tor_free(args);
+  args = tor_strdup("thatsok");
+
+  retval = handle_control_command(&conn, strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, "512 Invalid v3 address \"thatsok\"\r\n");
+
+  client_jt4 = digest256map_get(client_auths, service_identity_pk_jt4.pubkey);
+  tt_assert(client_jt4);
+
+  /* Now actually remove them. */
+  args =tor_strdup("jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd");
+
+  retval = handle_control_command(&conn, strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, "250 OK\r\n");
+
+  client_jt4 = digest256map_get(client_auths, service_identity_pk_jt4.pubkey);
+  tt_assert(!client_jt4);
+
+  /* Now try another time (we should get 'already removed' msg) */
+  retval = handle_control_command(&conn, strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, "251 No credentials for "
+            "\"jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd\"\r\n");
+
+  client_jt4 = digest256map_get(client_auths, service_identity_pk_jt4.pubkey);
+  tt_assert(!client_jt4);
+
  done:
   tor_free(args);
   tor_free(cp1);
   buf_free(TO_CONN(&conn)->outbuf);
+  tor_free(conn.current_cmd);
   hs_client_free_all();
 }
 
