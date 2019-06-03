@@ -1475,6 +1475,31 @@ hs_client_register_auth_credentials(hs_client_service_authorization_t *creds)
   return REGISTER_SUCCESS;
 }
 
+/** Remove client auth credentials for the service <b>hs_address</b>. */
+hs_client_removal_auth_status_t
+hs_client_remove_auth_credentials(const char *hsaddress)
+{
+  ed25519_public_key_t service_identity_pk;
+
+  if (!client_auths) {
+    return REMOVAL_SUCCESS_NOT_FOUND;
+  }
+
+  if (hs_parse_address(hsaddress, &service_identity_pk, NULL, NULL) < 0) {
+    return REMOVAL_BAD_ADDRESS;
+  }
+
+  hs_client_service_authorization_t *cred = NULL;
+  cred = digest256map_remove(client_auths, service_identity_pk.pubkey);
+  /* digestmap_remove() returns the previously stored data if there were any */
+  if (cred) {
+    client_service_authorization_free(cred);
+    return REMOVAL_SUCCESS;
+  }
+
+  return REMOVAL_SUCCESS_NOT_FOUND;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */

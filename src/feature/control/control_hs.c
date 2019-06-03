@@ -159,3 +159,53 @@ handle_control_onion_client_auth_add(control_connection_t *conn,
   smartlist_free(flags);
   return retval;
 }
+
+/** Syntax details for ONION_CLIENT_AUTH_REMOVE */
+const control_cmd_syntax_t onion_client_auth_remove_syntax = {
+  .max_args = 1,
+  .accept_keywords = true,
+};
+
+/** Called when we get an ONION_CLIENT_AUTH_REMOVE command; parse the body, and
+ *  register the new client-side client auth credentials.
+ *    "ONION_CLIENT_AUTH_REMOVE" SP HSAddress
+ */
+int
+handle_control_onion_client_auth_remove(control_connection_t *conn,
+                                        const control_cmd_args_t *args)
+{
+  int retval = -1;
+
+  tor_assert(args);
+
+  int argc = smartlist_len(args->args);
+  if (argc < 1) {
+    control_printf_endreply(conn, 512,
+                            "Incomplete ONION_CLIENT_AUTH_REMOVE command");
+    goto err;
+  }
+
+  const char *hsaddress = smartlist_get(args->args, 0);
+  if (!hs_address_is_valid(hsaddress)) {
+    control_printf_endreply(conn, 512, "Invalid v3 address \"%s\"",hsaddress);
+    goto err;
+  }
+
+  hs_client_removal_auth_status_t removal_status;
+  removal_status = hs_client_remove_auth_credentials(hsaddress);
+  if (BUG(removal_status == REMOVAL_BAD_ADDRESS)) {
+    /* It's a bug because the service addr has already been validated above */
+    control_printf_endreply(conn, 512, "Invalid v3 address \"%s\"",hsaddress);
+  } else if (removal_status == REMOVAL_SUCCESS_NOT_FOUND) {
+    control_printf_endreply(conn, 251, "No credentials for \"%s\"",hsaddress);
+  } else if (removal_status == REMOVAL_SUCCESS) {
+    control_printf_endreply(conn, 250, "OK");
+  } else {
+    tor_assert_nonfatal_unreached();
+  }
+
+  retval = 0;
+
+ err:
+  return retval;
+}
