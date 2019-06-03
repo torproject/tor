@@ -619,7 +619,9 @@ int
 sendme_note_stream_data_packaged(edge_connection_t *conn)
 {
   tor_assert(conn);
-  log_debug(LD_APP, "Stream package_window now %d.", --conn->package_window);
+
+  --conn->package_window;
+  log_debug(LD_APP, "Stream package_window now %d.", conn->package_window);
   return conn->package_window;
 }
 

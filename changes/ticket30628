@@ -1,0 +1,5 @@
+  o Major bugfixes (Flow Control, SENDME):
+    - The decrement of the stream-level package window was done in a log_debug()
+      statement meaning that if the debug logs were not enabled, the decrement
+      would never happen and thus the window would be out of sync with the other
+      end point. Fixes bug 30628; bugfix on 0.4.1.1-alpha.
