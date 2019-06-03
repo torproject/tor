@@ -193,7 +193,8 @@ test_hs_desc_event(void *arg)
   tor_free(expected_msg);
 }
 
-/** DOCDOCDOC */
+/** Test that we can correctly add, remove and view client auth credentials
+ *  using the control port. */
 static void
 test_hs_control_good_onion_client_auth_add(void *arg)
 {
@@ -236,25 +237,27 @@ test_hs_control_good_onion_client_auth_add(void *arg)
                     "x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ= "
                     "ClientName=bob Flags=Permanent");
 
-  retval = handle_control_command(&conn, strlen(args), args);
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
 
   /* Check contents */
   cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
   tt_str_op(cp1, OP_EQ, "250 OK\r\n");
 
+  tor_free(cp1);
   tor_free(args);
 
   /* Register second service (even with an unrecognized argument) */
   args = tor_strdup("jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd "
            "x25519:eIIdIGoSZwI2Q/lSzpf92akGki5I+PZIDz37MA5BhlA= DropSound=No");
 
-  retval = handle_control_command(&conn, strlen(args), args);
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
 
   /* Check contents */
   cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
   tt_str_op(cp1, OP_EQ, "250 OK\r\n");
+  tor_free(cp1);
 
   client_auths = get_hs_client_auths_map();
   tt_assert(client_auths);
@@ -272,7 +275,43 @@ test_hs_control_good_onion_client_auth_add(void *arg)
   tt_assert(!client_jt4->nickname);
   tt_int_op(client_jt4->flags, OP_EQ, 0);
 
-  /* Now try to remove the auth credentials */
+  /* Now let's VIEW the auth credentials */
+  tor_free(conn.current_cmd);
+  conn.current_cmd = tor_strdup("ONION_CLIENT_AUTH_VIEW");
+
+  /* First go with no arguments, so that we view all the credentials */
+  tor_free(args);
+  args = tor_strdup("");
+
+#define VIEW_CORRECT_REPLY_NO_ADDR "250-ONION_CLIENT_AUTH_VIEW\r\n"   \
+  "250-CLIENT x25519:eIIdIGoSZwI2Q/lSzpf92akGki5I+PZIDz37MA5BhlA=\r\n"\
+  "250-CLIENT x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ= "   \
+  "ClientName=bob Flags=Permanent\r\n"                                \
+  "250 OK\r\n"
+
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, VIEW_CORRECT_REPLY_NO_ADDR);
+  tor_free(cp1);
+
+  /* Now specify an HS addr, and see that we only view those creds */
+  tor_free(args);
+  args =
+    tor_strdup("jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd");
+
+#define VIEW_CORRECT_REPLY_JT4 "250-ONION_CLIENT_AUTH_VIEW " \
+  "jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd\r\n"   \
+  "250-CLIENT x25519:eIIdIGoSZwI2Q/lSzpf92akGki5I+PZIDz37MA5BhlA=\r\n"\
+  "250 OK\r\n"
+
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, VIEW_CORRECT_REPLY_JT4);
+  tor_free(cp1);
+
+  /* Now try to REMOVE the auth credentials */
   tor_free(conn.current_cmd);
   conn.current_cmd = tor_strdup("ONION_CLIENT_AUTH_REMOVE");
 
@@ -280,34 +319,71 @@ test_hs_control_good_onion_client_auth_add(void *arg)
   tor_free(args);
   args = tor_strdup("thatsok");
 
-  retval = handle_control_command(&conn, strlen(args), args);
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
   cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
   tt_str_op(cp1, OP_EQ, "512 Invalid v3 address \"thatsok\"\r\n");
+  tor_free(cp1);
 
   client_jt4 = digest256map_get(client_auths, service_identity_pk_jt4.pubkey);
   tt_assert(client_jt4);
 
   /* Now actually remove them. */
+  tor_free(args);
   args =tor_strdup("jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd");
 
-  retval = handle_control_command(&conn, strlen(args), args);
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
   cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
   tt_str_op(cp1, OP_EQ, "250 OK\r\n");
+  tor_free(cp1);
 
   client_jt4 = digest256map_get(client_auths, service_identity_pk_jt4.pubkey);
   tt_assert(!client_jt4);
 
   /* Now try another time (we should get 'already removed' msg) */
-  retval = handle_control_command(&conn, strlen(args), args);
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
   cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
   tt_str_op(cp1, OP_EQ, "251 No credentials for "
-            "\"jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd\"\r\n");
+           "\"jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd\"\r\n");
+  tor_free(cp1);
 
   client_jt4 = digest256map_get(client_auths, service_identity_pk_jt4.pubkey);
   tt_assert(!client_jt4);
+
+  /* Now also remove the other one */
+  tor_free(args);
+  args =tor_strdup("2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd");
+
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, "250 OK\r\n");
+  tor_free(cp1);
+
+  /* Finally, do another VIEW and see that we get nothing. */
+  tor_free(conn.current_cmd);
+  conn.current_cmd = tor_strdup("ONION_CLIENT_AUTH_VIEW");
+  tor_free(args);
+  args = tor_strdup("");
+
+#define VIEW_CORRECT_REPLY_NOTHING "250-ONION_CLIENT_AUTH_VIEW\r\n250 OK\r\n"
+
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, VIEW_CORRECT_REPLY_NOTHING);
+  tor_free(cp1);
+
+  /* And a final VIEW with a wrong HS addr */
+  tor_free(args);
+  args = tor_strdup("house");
+
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, "512 Invalid v3 addr \"house\"\r\n");
 
  done:
   tor_free(args);
@@ -344,7 +420,7 @@ test_hs_control_bad_onion_client_auth_add(void *arg)
   args = tor_strdup(
                 "badaddr x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ=");
 
-  retval = handle_control_command(&conn, strlen(args), args);
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
 
   /* Check contents */
@@ -358,7 +434,7 @@ test_hs_control_bad_onion_client_auth_add(void *arg)
   args = tor_strdup("jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd "
                     "love:eIIdIGoSZwI2Q/lSzpf92akGki5I+PZIDz37MA5BhlA=");
 
-  retval = handle_control_command(&conn, strlen(args), args);
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
 
   /* Check contents */
@@ -372,7 +448,7 @@ test_hs_control_bad_onion_client_auth_add(void *arg)
   args = tor_strdup("jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd "
                     "x25519:QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUEK");
 
-  retval = handle_control_command(&conn, strlen(args), args);
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
 
   /* Check contents */
