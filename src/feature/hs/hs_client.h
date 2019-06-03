@@ -76,6 +76,8 @@ hs_client_register_auth_credentials(hs_client_service_authorization_t *creds);
 hs_client_removal_auth_status_t
 hs_client_remove_auth_credentials(const char *hsaddress);
 
+digest256map_t *get_hs_client_auths_map(void);
+
 #define client_service_authorization_free(auth)                      \
   FREE_AND_NULL(hs_client_service_authorization_t,                   \
                 client_service_authorization_free_, (auth))
@@ -153,12 +155,6 @@ MOCK_DECL(STATIC hs_client_fetch_status_t,
           fetch_v3_desc, (const ed25519_public_key_t *onion_identity_pk));
 
 STATIC void retry_all_socks_conn_waiting_for_desc(void);
-
-#ifdef TOR_UNIT_TESTS
-
-STATIC digest256map_t *get_hs_client_auths_map(void);
-
-#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(HS_CLIENT_PRIVATE) */
 

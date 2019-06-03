@@ -2328,6 +2328,7 @@ static const control_cmd_def_t CONTROL_COMMANDS[] =
   ONE_LINE(del_onion, CMD_FL_WIPE),
   ONE_LINE(onion_client_auth_add, CMD_FL_WIPE),
   ONE_LINE(onion_client_auth_remove, 0),
+  ONE_LINE(onion_client_auth_view, 0),
 };
 
 /**
