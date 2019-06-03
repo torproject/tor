@@ -1,0 +1,9 @@
+  o Major features (controller):
+    - New ONION_CLIENT_AUTH_ADD control port command to add client-side onion
+      service client authorization credentials. Closes part of ticket 30381.
+    - New ONION_CLIENT_AUTH_REMOVE control port command to remove client-side
+      onion service client authorization credentials. Closes part of ticket
+      30381.
+    - New ONION_CLIENT_AUTH_VIEW control port command to view stored
+      client-side onion service client authorization credentials. Closes part
+      of ticket 30381.

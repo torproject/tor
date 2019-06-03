@@ -33,7 +33,7 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 8459
+problem file-size /src/app/config/config.c 8463
 problem include-count /src/app/config/config.c 89
 problem function-size /src/app/config/config.c:options_act_reversible() 296
 problem function-size /src/app/config/config.c:options_act() 589
@@ -46,7 +46,7 @@ problem function-size /src/app/config/config.c:parse_bridge_line() 104
 problem function-size /src/app/config/config.c:parse_transport_line() 189
 problem function-size /src/app/config/config.c:parse_dir_authority_line() 150
 problem function-size /src/app/config/config.c:parse_dir_fallback_line() 101
-problem function-size /src/app/config/config.c:parse_port_config() 446
+problem function-size /src/app/config/config.c:parse_port_config() 450
 problem function-size /src/app/config/config.c:parse_ports() 168
 problem file-size /src/app/config/or_options_st.h 1121
 problem include-count /src/app/main/main.c 68
@@ -61,7 +61,7 @@ problem dependency-violation /src/core/crypto/onion_crypto.c 5
 problem dependency-violation /src/core/crypto/onion_fast.c 1
 problem dependency-violation /src/core/crypto/onion_tap.c 3
 problem dependency-violation /src/core/crypto/relay_crypto.c 9
-problem file-size /src/core/mainloop/connection.c 5575
+problem file-size /src/core/mainloop/connection.c 5577
 problem include-count /src/core/mainloop/connection.c 62
 problem function-size /src/core/mainloop/connection.c:connection_free_minimal() 185
 problem function-size /src/core/mainloop/connection.c:connection_listener_new() 324
@@ -87,7 +87,7 @@ problem dependency-violation /src/core/or/address_set.c 1
 problem dependency-violation /src/core/or/cell_queue_st.h 1
 problem file-size /src/core/or/channel.c 3487
 problem dependency-violation /src/core/or/channel.c 9
-problem file-size /src/core/or/channel.h 780
+problem file-size /src/core/or/channel.h 781
 problem dependency-violation /src/core/or/channel.h 1
 problem dependency-violation /src/core/or/channelpadding.c 6
 problem function-size /src/core/or/channeltls.c:channel_tls_handle_var_cell() 160
@@ -133,12 +133,12 @@ problem dependency-violation /src/core/or/circuituse.c 23
 problem function-size /src/core/or/command.c:command_process_create_cell() 156
 problem function-size /src/core/or/command.c:command_process_relay_cell() 132
 problem dependency-violation /src/core/or/command.c 8
-problem file-size /src/core/or/connection_edge.c 4601
+problem file-size /src/core/or/connection_edge.c 4633
 problem include-count /src/core/or/connection_edge.c 65
 problem function-size /src/core/or/connection_edge.c:connection_ap_expire_beginning() 117
 problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_rewrite() 193
 problem function-size /src/core/or/connection_edge.c:connection_ap_handle_onion() 185
-problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_rewrite_and_attach() 421
+problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_rewrite_and_attach() 420
 problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_send_begin() 111
 problem function-size /src/core/or/connection_edge.c:connection_ap_handshake_socks_resolved() 101
 problem function-size /src/core/or/connection_edge.c:connection_exit_begin_conn() 185
@@ -200,7 +200,7 @@ problem function-size /src/feature/control/control.c:connection_control_process_
 problem function-size /src/feature/control/control_auth.c:handle_control_authenticate() 186
 problem function-size /src/feature/control/control_cmd.c:handle_control_extendcircuit() 150
 problem function-size /src/feature/control/control_cmd.c:handle_control_add_onion() 256
-problem function-size /src/feature/control/control_cmd.c:add_onion_helper_keyarg() 117
+problem function-size /src/feature/control/control_cmd.c:add_onion_helper_keyarg() 118
 problem function-size /src/feature/control/control_events.c:control_event_stream_status() 118
 problem include-count /src/feature/control/control_getinfo.c 54
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_misc() 108
@@ -226,7 +226,7 @@ problem function-size /src/feature/dircache/consdiffmgr.c:consdiffmgr_rescan_fla
 problem function-size /src/feature/dircache/consdiffmgr.c:consensus_diff_worker_threadfn() 132
 problem function-size /src/feature/dircache/dircache.c:handle_get_current_consensus() 165
 problem function-size /src/feature/dircache/dircache.c:directory_handle_command_post() 119
-problem file-size /src/feature/dirclient/dirclient.c 3215
+problem file-size /src/feature/dirclient/dirclient.c 3160
 problem include-count /src/feature/dirclient/dirclient.c 51
 problem function-size /src/feature/dirclient/dirclient.c:directory_get_from_dirserver() 126
 problem function-size /src/feature/dirclient/dirclient.c:directory_initiate_request() 201
@@ -256,8 +256,8 @@ problem function-size /src/feature/hs/hs_descriptor.c:desc_encode_v3() 101
 problem function-size /src/feature/hs/hs_descriptor.c:decrypt_desc_layer() 111
 problem function-size /src/feature/hs/hs_descriptor.c:decode_introduction_point() 122
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_superencrypted_v3() 107
-problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_encrypted_v3() 107
-problem file-size /src/feature/hs/hs_service.c 4182
+problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_encrypted_v3() 109
+problem file-size /src/feature/hs/hs_service.c 4183
 problem function-size /src/feature/keymgt/loadkey.c:ed_key_init_from_file() 326
 problem function-size /src/feature/nodelist/authcert.c:trusted_dirs_load_certs_from_string() 123
 problem function-size /src/feature/nodelist/authcert.c:authority_certs_fetch_missing() 295
