@@ -209,3 +209,120 @@ handle_control_onion_client_auth_remove(control_connection_t *conn,
  err:
   return retval;
 }
+
+/** Helper: Return a newly allocated string with the encoding of client
+ *  authorization credentials */
+static char *
+encode_client_auth_cred_for_control_port(
+                                       hs_client_service_authorization_t *cred)
+{
+  smartlist_t *control_line = smartlist_new();
+  char x25519_b64[128];
+  char *msg_str = NULL;
+
+  tor_assert(cred);
+
+  if (base64_encode(x25519_b64, sizeof(x25519_b64),
+                    (char *)cred->enc_seckey.secret_key,
+                    sizeof(cred->enc_seckey.secret_key), 0) < 0) {
+    tor_assert_nonfatal_unreached();
+    goto err;
+  }
+
+  smartlist_add_asprintf(control_line, "CLIENT x25519:%s", x25519_b64);
+
+  if (cred->nickname) { /* nickname is optional */
+    smartlist_add_asprintf(control_line, " ClientName=%s", cred->nickname);
+  }
+
+  if (cred->flags) { /* flags are also optional */
+    if (cred->flags & CLIENT_AUTH_FLAG_IS_PERMANENT) {
+      smartlist_add_asprintf(control_line, " Flags=Permanent");
+    }
+  }
+
+  /* Join all the components into a single string */
+  msg_str = smartlist_join_strings(control_line, "", 0, NULL);
+
+ err:
+  SMARTLIST_FOREACH(control_line, char *, cp, tor_free(cp));
+  smartlist_free(control_line);
+
+  return msg_str;
+}
+
+/** Syntax details for ONION_CLIENT_AUTH_VIEW */
+const control_cmd_syntax_t onion_client_auth_view_syntax = {
+  .max_args = 1,
+  .accept_keywords = true,
+};
+
+/** Called when we get an ONION_CLIENT_AUTH_VIEW command; parse the body, and
+ *  register the new client-side client auth credentials.
+ *        "ONION_CLIENT_AUTH_VIEW" [SP HSAddress] CRLF
+ */
+int
+handle_control_onion_client_auth_view(control_connection_t *conn,
+                                      const control_cmd_args_t *args)
+{
+  int retval = -1;
+  const char *hsaddress = NULL;
+  /* We are gonna put all the credential strings into a smartlist, and sort it
+     before printing, so that we can get a guaranteed order of printing. */
+  smartlist_t *creds_str_list = smartlist_new();
+
+  tor_assert(args);
+
+  int argc = smartlist_len(args->args);
+  if (argc >= 1) {
+    hsaddress = smartlist_get(args->args, 0);
+    if (!hs_address_is_valid(hsaddress)) {
+      control_printf_endreply(conn, 512, "Invalid v3 addr \"%s\"", hsaddress);
+      goto err;
+    }
+  }
+
+  if (hsaddress) {
+    control_printf_midreply(conn, 250, "ONION_CLIENT_AUTH_VIEW %s", hsaddress);
+  } else {
+    control_printf_midreply(conn, 250, "ONION_CLIENT_AUTH_VIEW");
+  }
+
+  /* Create an iterator out of the digest256map */
+  digest256map_t *client_auths = get_hs_client_auths_map();
+  digest256map_iter_t *itr = digest256map_iter_init(client_auths);
+  while (!digest256map_iter_done(itr)) {
+    const uint8_t *service_pubkey;
+    void *valp;
+    digest256map_iter_get(itr, &service_pubkey, &valp);
+    tor_assert(valp);
+    hs_client_service_authorization_t *cred = valp;
+
+    /* If a specific HS address was requested, only print creds for that one */
+    if (hsaddress && strcmp(cred->onion_address, hsaddress)) {
+      itr = digest256map_iter_next(client_auths, itr);
+      continue;
+    }
+
+    char *encoding_str = encode_client_auth_cred_for_control_port(cred);
+    tor_assert_nonfatal(encoding_str);
+    smartlist_add(creds_str_list, encoding_str);
+
+    itr = digest256map_iter_next(client_auths, itr);
+  }
+
+  /* We got everything: Now sort the strings and print them */
+  smartlist_sort_strings(creds_str_list);
+  SMARTLIST_FOREACH_BEGIN(creds_str_list, char *, c) {
+    control_printf_midreply(conn, 250, "%s", c);
+  } SMARTLIST_FOREACH_END(c);
+
+  send_control_done(conn);
+
+  retval = 0;
+
+ err:
+  SMARTLIST_FOREACH(creds_str_list, char *, cp, tor_free(cp));
+  smartlist_free(creds_str_list);
+  return retval;
+}
