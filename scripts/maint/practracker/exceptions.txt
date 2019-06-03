@@ -149,7 +149,7 @@ problem function-size /src/feature/control/control_cmd.c:handle_control_extendci
 problem function-size /src/feature/control/control_cmd.c:handle_control_hsfetch() 114
 problem function-size /src/feature/control/control_cmd.c:handle_control_hspost() 117
 problem function-size /src/feature/control/control_cmd.c:handle_control_add_onion() 293
-problem function-size /src/feature/control/control_cmd.c:add_onion_helper_keyarg() 125
+problem function-size /src/feature/control/control_cmd.c:add_onion_helper_keyarg() 126
 problem function-size /src/feature/control/control_cmd.c:handle_control_command() 104
 problem function-size /src/feature/control/control_events.c:control_event_stream_status() 119
 problem include-count /src/feature/control/control_getinfo.c 54
