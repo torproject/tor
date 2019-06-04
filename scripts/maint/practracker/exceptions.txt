@@ -54,7 +54,7 @@ problem function-size /src/app/main/main.c:sandbox_init_filter() 291
 problem function-size /src/app/main/main.c:run_tor_main_loop() 105
 problem function-size /src/app/main/ntmain.c:nt_service_install() 125
 problem include-count /src/app/main/shutdown.c 52
-problem file-size /src/core/mainloop/connection.c 5560
+problem file-size /src/core/mainloop/connection.c 5570
 problem include-count /src/core/mainloop/connection.c 62
 problem function-size /src/core/mainloop/connection.c:connection_free_minimal() 185
 problem function-size /src/core/mainloop/connection.c:connection_listener_new() 328
