@@ -42,7 +42,10 @@ typedef enum was_router_added_t {
   ROUTER_CERTS_EXPIRED = -8,
   /* We couldn't format the annotations for this router. This is a directory
    * authority bug. */
-  ROUTER_AUTHDIR_BUG_ANNOTATIONS = -10
+  ROUTER_AUTHDIR_BUG_ANNOTATIONS = -10,
+  /* This router has an unexpected purpose. This is a directory authority bug.
+   */
+  ROUTER_AUTHDIR_BUG_PURPOSE = -11
 } was_router_added_t;
 
 /** How long do we avoid using a directory server after it's given us a 503? */
@@ -143,6 +146,9 @@ was_router_added_t router_add_extrainfo_to_routerlist(
                                         int from_cache, int from_fetch);
 void routerlist_descriptors_added(smartlist_t *sl, int from_cache);
 void routerlist_remove_old_routers(void);
+
+int router_purpose_is_acceptable(uint8_t requested_purpose,
+                                 const routerinfo_t *ri);
 int router_load_single_router(const char *s, uint8_t purpose, int cache,
                               const char **msg);
 int router_load_routers_from_string(const char *s, const char *eos,

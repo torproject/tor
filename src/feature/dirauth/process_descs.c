@@ -565,8 +565,12 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
                                      annotation_buf, NULL)) {
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
         msg_out = NULL;
-        tor_assert(ri->purpose == purpose);
-        r_tmp = dirserv_add_descriptor(ri, &msg_out, source);
+        if (BUG(!router_purpose_is_acceptable(purpose, ri))) {
+          msg_out = "Parsed descriptor had unexpected purpose.";
+          r_tmp = ROUTER_AUTHDIR_BUG_PURPOSE;
+        } else {
+          r_tmp = dirserv_add_descriptor(ri, &msg_out, source);
+        }
         if (WRA_MORE_SEVERE(r_tmp, r)) {
           r = r_tmp;
           *msg = msg_out;

@@ -1943,6 +1943,35 @@ routerlist_descriptors_added(smartlist_t *sl, int from_cache)
   } SMARTLIST_FOREACH_END(ri);
 }
 
+/** Is ri->purpose an acceptable purpose for requested_purpose, based on the
+ * other fields in ri?
+ *
+ * The bridge-distribution-request line changes a router's purpose from
+ * general to bridge, but leaves controller routers as-is.
+ *
+ * Returns true if the check passes, and false if it does not.
+ */
+int
+router_purpose_is_acceptable(uint8_t requested_purpose, const routerinfo_t *ri)
+{
+  /* Matching purposes are always ok */
+  if (ri->purpose == requested_purpose) {
+    return 1;
+  }
+
+  /* We should never change a controller purpose */
+  if (requested_purpose == ROUTER_PURPOSE_CONTROLLER) {
+    return ri->purpose == ROUTER_PURPOSE_CONTROLLER;
+  }
+
+  /* Bridge descriptors should always have a bridge purpose */
+  if (ri->has_bridge_distribution_request) {
+    return ri->purpose == ROUTER_PURPOSE_BRIDGE;
+  }
+
+  return 0;
+}
+
 /**
  * Code to parse a single router descriptor and insert it into the
  * routerlist.  Return -1 if the descriptor was ill-formed; 0 if the
@@ -1976,7 +2005,10 @@ router_load_single_router(const char *s, uint8_t purpose, int cache,
     *msg = "Couldn't parse router descriptor.";
     return -1;
   }
-  tor_assert(ri->purpose == purpose);
+  if (BUG(!router_purpose_is_acceptable(purpose, ri))) {
+    *msg = "Mismatched purpose on router descriptor.";
+    return -1;
+  }
   if (router_is_me(ri)) {
     log_warn(LD_DIR, "Router's identity key matches mine; dropping.");
     *msg = "Router's identity key matches mine.";

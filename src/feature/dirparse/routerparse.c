@@ -567,6 +567,11 @@ router_parse_entry_from_string(const char *s, const char *end,
    * line. */
   if (find_opt_by_keyword(tokens, K_BRIDGE_DISTRIBUTION)) {
     router->has_bridge_distribution_request = 1;
+    /* If it has a bridge-distribution-request line, it's a bridge, not a
+     * general-purpose router. If it's a controller router, leave it alone. */
+    if (router->purpose == ROUTER_PURPOSE_GENERAL) {
+      router->purpose = ROUTER_PURPOSE_BRIDGE;
+    }
   }
 
   router->cache_info.send_unencrypted =

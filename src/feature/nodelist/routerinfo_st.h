@@ -98,8 +98,9 @@ struct routerinfo_t {
  * ask for it by identity. */
 #define ROUTER_PURPOSE_CONTROLLER 1
 /** Tor should use this router only for bridge positions in circuits: we got
- * it via a directory request from the bridge itself, or a bridge
- * authority. */
+ * it via a directory request from the bridge itself, or a bridge authority.
+ * We also use this purpose for descriptors that contain a bridge distribution
+ * line. (See bridge_distribution_request below for details.) */
 #define ROUTER_PURPOSE_BRIDGE 2
 /** Tor should not use this router; it was marked in cached-descriptors with
  * a purpose we didn't recognize. */
