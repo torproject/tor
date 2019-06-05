@@ -871,6 +871,7 @@ struct testgroup_t testgroups[] = {
   { "guardfraction/", guardfraction_tests },
   { "hs_cache/", hs_cache },
   { "hs_cell/", hs_cell_tests },
+  { "hs_circ/", hs_circ_tests },
   { "hs_client/", hs_client_tests },
   { "hs_common/", hs_common_tests },
   { "hs_config/", hs_config_tests },
