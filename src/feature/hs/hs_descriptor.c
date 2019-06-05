@@ -1968,6 +1968,7 @@ decode_intro_points(const hs_descriptor_t *desc,
   SMARTLIST_FOREACH(intro_points, char *, a, tor_free(a));
   smartlist_free(intro_points);
 }
+
 /* Return 1 iff the given base64 encoded signature in b64_sig from the encoded
  * descriptor in encoded_desc validates the descriptor content. */
 STATIC int
