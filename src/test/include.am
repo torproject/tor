@@ -145,7 +145,6 @@ src_test_test_SOURCES += \
 	src/test/test_hs_common.c \
 	src/test/test_hs_config.c \
 	src/test/test_hs_cell.c \
-	src/test/test_hs_circ.c \
 	src/test/test_hs_ntor.c \
 	src/test/test_hs_service.c \
 	src/test/test_hs_client.c  \
