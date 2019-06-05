@@ -1,4 +1,4 @@
-Changes in version 0.4.1.2-alpha - 2019-06-05
+Changes in version 0.4.1.2-alpha - 2019-06-06
   Tor 0.4.1.2-alpha resolves numerous bugs--some of them from the
   previous alpha, and some much older. It also contains minor testing
   improvements, and an improvement to the security of our authenticated
