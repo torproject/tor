@@ -40,9 +40,13 @@ new Tor release:
     * clang scan-build.  (See the script in ./scripts/test/scan_build.sh)
 
     * make test-network and make test-network-all (with
-      --enable-expensive-hardening)
+      --enable-fragile-hardening)
 
     * Running Tor yourself and making sure that it actually works for you.
+
+    * Running Tor under valgrind.  (Our 'fragile hardening' doesn't cover
+      libevent and openssl, so using valgrind will sometimes find extra
+      memory leaks.)
 
 
 === II. Write a changelog
