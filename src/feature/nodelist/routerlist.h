@@ -40,6 +40,9 @@ typedef enum was_router_added_t {
   ROUTER_WAS_TOO_OLD = -7, /* note contrast with 'ROUTER_IS_ALREADY_KNOWN' */
   /* Some certs on this router are expired. */
   ROUTER_CERTS_EXPIRED = -8,
+  /* This router is a bridge, but this authority does not distribute bridges.
+   */
+  ROUTER_BRIDGE_NOT_ACCEPTED = -9,
   /* We couldn't format the annotations for this router. This is a directory
    * authority bug. */
   ROUTER_AUTHDIR_BUG_ANNOTATIONS = -10,

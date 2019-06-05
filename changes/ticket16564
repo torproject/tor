@@ -1,0 +1,4 @@
+  o Minor features (bridges, authorities):
+    - Reject bridge descriptors if they are submitted to a relay authority.
+      Also reject bridge descriptors on relays and clients, if tor was
+      expecting relay descriptors. Closes ticket 16564.

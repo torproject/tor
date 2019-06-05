@@ -1544,6 +1544,12 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       routerinfo_free(router);
       return ROUTER_AUTHDIR_REJECTS;
     }
+  } else if (authdir_mode(options)
+             && router->has_bridge_distribution_request
+             && !authdir_mode_bridge(options)) {
+    *msg = "This authority does not accept bridge descriptors.";
+    routerinfo_free(router);
+    return ROUTER_AUTHDIR_REJECTS;
   } else if (from_fetch) {
     /* Only check the descriptor digest against the network statuses when
      * we are receiving in response to a fetch. */
@@ -2007,6 +2013,11 @@ router_load_single_router(const char *s, uint8_t purpose, int cache,
   }
   if (BUG(!router_purpose_is_acceptable(purpose, ri))) {
     *msg = "Mismatched purpose on router descriptor.";
+    return -1;
+  }
+  if (ri->purpose != purpose) {
+    log_warn(LD_DIR, "Router is a bridge, but purpose is general; dropping.");
+    *msg = "Bridge routers can't be used as general-purpose routers.";
     return -1;
   }
   if (router_is_me(ri)) {

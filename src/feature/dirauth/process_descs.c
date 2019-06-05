@@ -568,6 +568,10 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
         if (BUG(!router_purpose_is_acceptable(purpose, ri))) {
           msg_out = "Parsed descriptor had unexpected purpose.";
           r_tmp = ROUTER_AUTHDIR_BUG_PURPOSE;
+        } else if (ri->has_bridge_distribution_request
+                   && purpose != ROUTER_PURPOSE_BRIDGE) {
+          msg_out = "Bridge descriptors are not accepted by this authority.";
+          r_tmp = ROUTER_BRIDGE_NOT_ACCEPTED;
         } else {
           r_tmp = dirserv_add_descriptor(ri, &msg_out, source);
         }
