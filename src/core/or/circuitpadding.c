@@ -2429,7 +2429,7 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
   circpad_negotiate_t *negotiate;
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
-    log_fn(LOG_WARN, LD_CIRC,
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
            "Padding negotiate cell unsupported at origin.");
     return -1;
   }
@@ -2494,7 +2494,7 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
 
   /* Verify this came from the expected hop */
   if (!circpad_padding_is_from_expected_hop(circ, layer_hint)) {
-    log_fn(LOG_WARN, LD_CIRC,
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
            "Padding negotiated cell from wrong hop!");
     return -1;
   }
@@ -2520,7 +2520,7 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
     // and be sad
     free_circ_machineinfos_with_machine_num(circ, negotiated->machine_type);
     TO_ORIGIN_CIRCUIT(circ)->padding_negotiation_failed = 1;
-    log_fn(LOG_INFO, LD_CIRC,
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
            "Middle node did not accept our padding request.");
   }
 
