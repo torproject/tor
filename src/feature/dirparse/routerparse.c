@@ -121,6 +121,8 @@ const token_rule_t routerdesc_token_table[] = {
   A01("@purpose",            A_PURPOSE,             GE(1),   NO_OBJ ),
   T01("tunnelled-dir-server",K_DIR_TUNNELLED,       NO_ARGS, NO_OBJ ),
 
+  T01("bridge-distribution-request", K_BRIDGE_DISTRIBUTION, GE(1), NO_OBJ ),
+
   END_OF_TABLE
 };
 
@@ -559,6 +561,14 @@ router_parse_entry_from_string(const char *s, const char *end,
   } else {
     router->purpose = ROUTER_PURPOSE_GENERAL;
   }
+
+  /* This router is a bridge if its descriptor has a
+   * "bridge-distribution-request" line. Legacy bridges may be missing this
+   * line. */
+  if (find_opt_by_keyword(tokens, K_BRIDGE_DISTRIBUTION)) {
+    router->has_bridge_distribution_request = 1;
+  }
+
   router->cache_info.send_unencrypted =
     (router->purpose == ROUTER_PURPOSE_GENERAL) ? 1 : 0;
 

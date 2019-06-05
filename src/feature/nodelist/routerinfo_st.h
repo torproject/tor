@@ -110,6 +110,12 @@ struct routerinfo_t {
    * things; see notes on ROUTER_PURPOSE_* macros above.
    */
   uint8_t purpose;
+
+  /** Does the descriptor contain a "bridge-distribution-request" line?
+   *  Tor currently ignores the option value on bridge distribution lines,
+   *  because those values will be handled by BridgeDB.
+   *  See check_bridge_distribution_setting() for a list of possible values. */
+  unsigned int has_bridge_distribution_request:1;
 };
 
 #endif /* !defined(ROUTERINFO_ST_H) */
