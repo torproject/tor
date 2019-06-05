@@ -71,8 +71,6 @@ int rend_non_anonymous_mode_enabled(const or_options_t *options);
 void assert_circ_anonymity_ok(const origin_circuit_t *circ,
                               const or_options_t *options);
 
-void rend_circ_cleanup(origin_circuit_t *circ);
-
 #ifdef RENDCOMMON_PRIVATE
 
 STATIC int
