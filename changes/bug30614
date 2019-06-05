@@ -1,4 +1,0 @@
-  o Minor bugfixes (NetBSD):
-    - Fix usage of minherit() on NetBSD and other platforms that define
-      MAP_INHERIT_{ZERO,NONE} instead of INHERIT_{ZERO,NONE}. Fixes bug
-      30614; bugfix on 0.4.0.2-alpha. Patch from Taylor Campbell.

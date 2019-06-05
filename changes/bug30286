@@ -1,4 +1,0 @@
-  o Minor bugfixes (developer tooling):
-    - Fix pre-push hook to refrain from rejecting fixup and squash commits
-      when pushing to non-upstream git remote. Fixes bug 30286; bugfix on
-      0.4.0.1-alpha.

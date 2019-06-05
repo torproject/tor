@@ -1,4 +1,0 @@
-  o Minor features (maintenance):
-    - Add a new "make autostyle" target that developers can use to
-      apply all automatic Tor style and consistency conversions to the
-      codebase. Closes ticket 30539.

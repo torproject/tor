@@ -1,4 +1,0 @@
-  o Minor features (testing):
-    - When running tests in coverage mode, take additional care to make
-      our coverage deterministic, so that we can accurately track changes in
-      code coverage. Closes ticket 30519.

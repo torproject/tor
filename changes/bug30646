@@ -1,4 +1,0 @@
-  o Minor bugfixes (controller):
-    - Repair the HSFETCH command so that it works again. Previously, it
-      expected a body when it shouldn't have. Fixes bug 30646; bugfix on
-      0.4.1.1-alpha.
