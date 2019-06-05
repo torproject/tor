@@ -1459,12 +1459,13 @@ router_descriptor_is_older_than,(const routerinfo_t *router, int seconds))
 }
 
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
- * older entries (if any) with the same key.  Note: Callers should not hold
- * their pointers to <b>router</b> if this function fails; <b>router</b>
- * will either be inserted into the routerlist or freed. Similarly, even
- * if this call succeeds, they should not hold their pointers to
- * <b>router</b> after subsequent calls with other routerinfo's -- they
- * might cause the original routerinfo to get freed.
+ * older entries (if any) with the same key.
+ *
+ * Note: Callers should not hold their pointers to <b>router</b> if this
+ * function fails; <b>router</b> will either be inserted into the routerlist or
+ * freed. Similarly, even if this call succeeds, they should not hold their
+ * pointers to <b>router</b> after subsequent calls with other routerinfo's --
+ * they might cause the original routerinfo to get freed.
  *
  * Returns the status for the operation. Might set *<b>msg</b> if it wants
  * the poster of the router to know something.
