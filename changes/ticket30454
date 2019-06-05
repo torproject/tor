@@ -1,0 +1,10 @@
+  o Major bugfixes (hidden service v3):
+    - An intro point could try to send an INTRODUCE_ACK with a status code
+      that it wasn't able to encode leading to a hard assert() of the relay.
+      Fortunately, that specific code path can not be reached thus this issue
+      can't be triggered. We've consolidated the ABI values into trunnel now.
+      Fixes bug 30454; bugfix on 0.3.0.1-alpha.
+    - HSv3 client will now be able to properly handle unknown status code from
+      a INTRODUCE_ACK cell (nack) even if they do not know it. The NACK
+      behavior will stay the same. This will allow us to extend status code if
+      we want in the future without breaking the normal client behavior.
