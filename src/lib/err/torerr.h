@@ -45,4 +45,4 @@ void tor_log_sigsafe_err_set_granularity(int ms);
 int format_hex_number_sigsafe(unsigned long x, char *buf, int max_len);
 int format_dec_number_sigsafe(unsigned long x, char *buf, int max_len);
 
-#endif /* !defined(TOR_TORLOG_H) */
+#endif /* !defined(TOR_TORERR_H) */

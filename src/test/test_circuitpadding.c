@@ -6,7 +6,7 @@
 #define CRYPT_PATH_PRIVATE
 
 #include "core/or/or.h"
-#include "test.h"
+#include "test/test.h"
 #include "lib/testsupport/testsupport.h"
 #include "core/or/connection_or.h"
 #include "core/or/channel.h"
@@ -2329,7 +2329,7 @@ test_circuitpadding_circuitsetup_machine(void *arg)
 
   return;
 }
-#endif
+#endif /* 0 */
 
 /** Helper function: Initializes a padding machine where every state uses the
  *  uniform probability distribution.  */

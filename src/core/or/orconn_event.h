@@ -117,4 +117,4 @@ void orconn_event_subscribe(orconn_event_rcvr_t);
 void orconn_event_publish(const orconn_event_msg_t *);
 #endif
 
-#endif  /* defined(TOR_ORCONN_EVENT_H) */
+#endif /* !defined(TOR_ORCONN_EVENT_H) */

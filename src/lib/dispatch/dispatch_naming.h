@@ -43,4 +43,4 @@ size_t get_num_msg_type_ids(void);
 
 void dispatch_naming_init(void);
 
-#endif
+#endif /* !defined(TOR_DISPATCH_NAMING_H) */

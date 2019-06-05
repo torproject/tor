@@ -344,7 +344,7 @@ monotime_coarse_diff_msec32(const monotime_coarse_t *start,
 #else
 #define USING_32BIT_MSEC_HACK
   return monotime_coarse_diff_msec32_(start, end);
-#endif
+#endif /* SIZEOF_VOID_P == 8 */
 }
 
 #ifdef TOR_UNIT_TESTS

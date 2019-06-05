@@ -1367,7 +1367,7 @@ test_utils_auth(void *arg)
     sr_state_set_current_srv(sr_state_get_current_srv());
     sr_state_set_previous_srv(sr_state_get_previous_srv());
   }
-#endif
+#endif /* 0 */
 
  done:
   sr_state_free_all();

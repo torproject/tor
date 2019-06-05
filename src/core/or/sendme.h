@@ -73,8 +73,8 @@ STATIC bool sendme_is_valid(const circuit_t *circ,
                             const uint8_t *cell_payload,
                             size_t cell_payload_len);
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 
-#endif /* SENDME_PRIVATE */
+#endif /* defined(SENDME_PRIVATE) */
 
 #endif /* !defined(TOR_SENDME_H) */

@@ -1394,7 +1394,7 @@ configured_nameserver_address(const size_t idx)
 
  return NULL;
 }
-#endif
+#endif /* defined(HAVE_EVDNS_BASE_GET_NAMESERVER_ADDR) */
 
 /** Configure eventdns nameservers if force is true, or if the configuration
  * has changed since the last time we called this function, or if we failed on

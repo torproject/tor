@@ -14,4 +14,4 @@
 void test_conn_lookup_addr_helper(const char *address,
                                   int family, tor_addr_t *addr);
 
-#endif
+#endif /* !defined(TOR_TEST_CONNECTION_H) */

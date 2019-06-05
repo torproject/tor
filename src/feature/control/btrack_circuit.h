@@ -12,4 +12,4 @@
 int btrack_circ_init(void);
 void btrack_circ_fini(void);
 
-#endif  /* defined(TOR_BTRACK_CIRCUIT_H) */
+#endif /* !defined(TOR_BTRACK_CIRCUIT_H) */

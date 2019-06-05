@@ -45,4 +45,4 @@ struct nodefamily_t {
 #define NODEFAMILY_MEMBER_PTR(nf, i) \
   (&((nf)->family_members[(i) * NODEFAMILY_MEMBER_LEN]))
 
-#endif
+#endif /* !defined(TOR_NODEFAMILY_ST_H) */

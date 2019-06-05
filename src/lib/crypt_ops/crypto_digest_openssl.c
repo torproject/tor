@@ -70,7 +70,7 @@ crypto_digest256(char *digest, const char *m, size_t len,
 #else
     ret = (sha3_256((uint8_t *)digest, DIGEST256_LEN,(const uint8_t *)m, len)
            > -1);
-#endif
+#endif /* defined(OPENSSL_HAS_SHA3) */
   }
 
   if (!ret)
@@ -100,7 +100,7 @@ crypto_digest512(char *digest, const char *m, size_t len,
 #else
     ret = (sha3_512((uint8_t*)digest, DIGEST512_LEN, (const uint8_t*)m, len)
            > -1);
-#endif
+#endif /* defined(OPENSSL_HAS_SHA3) */
   }
 
   if (!ret)
@@ -167,7 +167,7 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
     case DIGEST_SHA3_256: /* Fall through */
     case DIGEST_SHA3_512:
       return END_OF_FIELD(d.sha3);
-#endif
+#endif /* defined(OPENSSL_HAS_SHA3) */
     default:
       tor_assert(0); // LCOV_EXCL_LINE
       return 0;      // LCOV_EXCL_LINE
@@ -212,14 +212,14 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
         return NULL;
       }
       break;
-#else
+#else /* !(defined(OPENSSL_HAS_SHA3)) */
     case DIGEST_SHA3_256:
       keccak_digest_init(&r->d.sha3, 256);
       break;
     case DIGEST_SHA3_512:
       keccak_digest_init(&r->d.sha3, 512);
       break;
-#endif
+#endif /* defined(OPENSSL_HAS_SHA3) */
     default:
       tor_assert_unreached();
     }
@@ -271,7 +271,7 @@ crypto_digest_free_(crypto_digest_t *digest)
       EVP_MD_CTX_free(digest->d.md);
     }
   }
-#endif
+#endif /* defined(OPENSSL_HAS_SHA3) */
   size_t bytes = crypto_digest_alloc_bytes(digest->algorithm);
   memwipe(digest, 0, bytes);
   tor_free(digest);
@@ -310,12 +310,12 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
       tor_assert(r);
   }
       break;
-#else
+#else /* !(defined(OPENSSL_HAS_SHA3)) */
     case DIGEST_SHA3_256: /* FALLSTHROUGH */
     case DIGEST_SHA3_512:
       keccak_digest_update(&digest->d.sha3, (const uint8_t *)data, len);
       break;
-#endif
+#endif /* defined(OPENSSL_HAS_SHA3) */
     default:
       /* LCOV_EXCL_START */
       tor_fragile_assert();
@@ -354,12 +354,12 @@ crypto_digest_get_digest(crypto_digest_t *digest,
     EVP_MD_CTX_free(tmp);
     tor_assert(res == 1);
     goto done;
-#else
+#else /* !(defined(OPENSSL_HAS_SHA3)) */
     /* Tiny-Keccak handles copying into a temporary ctx, and also can handle
      * short output buffers by truncating appropriately. */
     keccak_digest_sum(&digest->d.sha3, (uint8_t *)out, out_len);
     return;
-#endif
+#endif /* defined(OPENSSL_HAS_SHA3) */
   }
 
   const size_t alloc_bytes = crypto_digest_alloc_bytes(digest->algorithm);
@@ -412,7 +412,7 @@ crypto_digest_dup(const crypto_digest_t *digest)
     result->d.md = EVP_MD_CTX_new();
     EVP_MD_CTX_copy(result->d.md, digest->d.md);
   }
-#endif
+#endif /* defined(OPENSSL_HAS_SHA3) */
   return result;
 }
 
@@ -458,7 +458,7 @@ crypto_digest_assign(crypto_digest_t *into,
     EVP_MD_CTX_copy(into->d.md, from->d.md);
     return;
   }
-#endif
+#endif /* defined(OPENSSL_HAS_SHA3) */
 
   memcpy(into,from,alloc_bytes);
 }

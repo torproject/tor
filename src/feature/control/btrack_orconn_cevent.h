@@ -15,4 +15,4 @@ void bto_cevent_anyconn(const bt_orconn_t *);
 void bto_cevent_apconn(const bt_orconn_t *);
 void bto_cevent_reset(void);
 
-#endif  /* defined(TOR_BTRACK_ORCONN_CEVENT_H) */
+#endif /* !defined(TOR_BTRACK_ORCONN_CEVENT_H) */

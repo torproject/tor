@@ -108,7 +108,7 @@ test_pe_launch(void *arg)
     periodic_event_item_t *item = &periodic_events[i];
     tt_int_op(periodic_event_is_enabled(item), OP_EQ, 0);
   }
-#endif
+#endif /* 0 */
 
   initialize_periodic_events();
   periodic_events_connect_all();

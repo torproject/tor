@@ -112,6 +112,6 @@ token_bucket_rw_get_write(const token_bucket_rw_t *bucket)
 
 STATIC uint32_t rate_per_sec_to_rate_per_step(uint32_t rate);
 
-#endif
+#endif /* defined(TOKEN_BUCKET_PRIVATE) */
 
-#endif /* TOR_TOKEN_BUCKET_H */
+#endif /* !defined(TOR_TOKEN_BUCKET_H) */

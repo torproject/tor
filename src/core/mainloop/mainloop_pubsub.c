@@ -6,9 +6,9 @@
 
 #include "orconfig.h"
 
-#include "src/core/or/or.h"
-#include "src/core/mainloop/mainloop.h"
-#include "src/core/mainloop/mainloop_pubsub.h"
+#include "core/or/or.h"
+#include "core/mainloop/mainloop.h"
+#include "core/mainloop/mainloop_pubsub.h"
 
 #include "lib/container/smartlist.h"
 #include "lib/dispatch/dispatch.h"

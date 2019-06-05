@@ -3551,7 +3551,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     tor_free(t);
     t = format_recommended_version_list(options->RecommendedServerVersions, 1);
     tor_free(t);
-#endif
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
 
     if (options->UseEntryGuards) {
       log_info(LD_CONFIG, "Authoritative directory servers can't set "
@@ -3577,7 +3577,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (options->GuardfractionFile && !old_options) {
       dirserv_read_guardfraction_file(options->GuardfractionFile, NULL);
     }
-#endif
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
   }
 
   if (options->AuthoritativeDir && !options->DirPort_set)
@@ -4605,7 +4605,7 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
 #else
 /* On a 32-bit platform, we can't have 8GB of ram. */
 #define RAM_IS_VERY_LARGE(x) (0)
-#endif
+#endif /* SIZEOF_SIZE_T > 4 */
 
       if (RAM_IS_VERY_LARGE(ram)) {
         /* If we have 8 GB, or more, RAM available, we set the MaxMemInQueues
@@ -5777,7 +5777,7 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
 #else
         log_warn(LD_CONFIG, "Android logging is not supported"
                             " on this system. Sorry.");
-#endif // HAVE_ANDROID_LOG_H.
+#endif /* defined(HAVE_ANDROID_LOG_H) */
         goto cleanup;
       }
     }

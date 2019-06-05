@@ -86,4 +86,4 @@ void ocirc_event_subscribe(ocirc_event_rcvr_t fn);
 void ocirc_event_publish(const ocirc_event_msg_t *msg);
 #endif
 
-#endif  /* defined(TOR_OCIRC_EVENT_STATE_H) */
+#endif /* !defined(TOR_OCIRC_EVENT_H) */

@@ -9,4 +9,4 @@
 
 extern const struct subsys_fns_t sys_dirauth;
 
-#endif
+#endif /* !defined(DIRAUTH_SYS_H) */

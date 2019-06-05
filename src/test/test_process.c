@@ -594,7 +594,7 @@ test_unix(void *arg)
 
  done:
   process_free(process);
-#endif
+#endif /* !defined(_WIN32) */
 }
 
 static void
@@ -649,7 +649,7 @@ test_win32(void *arg)
  done:
   tor_free(joined_argv);
   process_free(process);
-#endif
+#endif /* defined(_WIN32) */
 }
 
 struct testcase_t process_tests[] = {

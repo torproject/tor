@@ -5066,7 +5066,7 @@ test_config_include_no_permission(void *data)
     chmod(dir, 0700);
   tor_free(dir);
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 static void
 test_config_include_recursion_before_after(void *data)
@@ -5698,7 +5698,7 @@ test_config_compute_max_mem_in_queues(void *data)
 #else
   /* We are on a 32-bit system. */
   tt_u64_op(compute_real_max_mem_in_queues(0, 0), OP_EQ, GIGABYTE(1));
-#endif
+#endif /* SIZEOF_VOID_P >= 8 */
 
   /* We are able to detect the amount of RAM on the system. */
   total_system_memory_return = 0;
@@ -5739,7 +5739,7 @@ test_config_compute_max_mem_in_queues(void *data)
   /* We will at maximum get MAX_DEFAULT_MEMORY_QUEUE_SIZE here. */
   tt_u64_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
             MAX_DEFAULT_MEMORY_QUEUE_SIZE);
-#endif
+#endif /* SIZEOF_SIZE_T > 4 */
 
  done:
   UNMOCK(get_total_system_memory);

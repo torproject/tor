@@ -30,4 +30,4 @@ struct relay_crypto_t {
 };
 #undef crypto_cipher_t
 
-#endif
+#endif /* !defined(RELAY_CRYPTO_ST_H) */

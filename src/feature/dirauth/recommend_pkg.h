@@ -24,6 +24,6 @@ validate_recommended_package_line(const char *line)
   return 0;
 }
 
-#endif
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
 
-#endif
+#endif /* !defined(TOR_RECOMMEND_PKG_H) */

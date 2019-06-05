@@ -30,6 +30,6 @@ void circpad_machine_client_hide_rend_circuits(smartlist_t *machines_sl);
  *  The actual value will be sampled between the min and max.*/
 #define INTRO_MACHINE_MAXIMUM_PADDING 10
 
-#endif
+#endif /* defined(CIRCUITPADDING_MACHINES_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CIRCUITPADDING_MACHINES_H) */

@@ -9,4 +9,4 @@
 
 extern const struct subsys_fns_t sys_mainloop;
 
-#endif
+#endif /* !defined(MAINLOOP_SYS_H) */

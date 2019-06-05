@@ -135,7 +135,7 @@ get_win32_test_binary_path(void)
  done:
   return NULL;
 }
-#endif
+#endif /* defined(_WIN32) */
 
 static void
 main_loop_timeout_cb(periodic_timer_t *timer, void *data)

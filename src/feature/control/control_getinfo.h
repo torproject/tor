@@ -58,4 +58,4 @@ STATIC int getinfo_helper_current_time(
     const char **errmsg);
 #endif /* defined(CONTROL_GETINFO_PRIVATE) */
 
-#endif /* !defined(TOR_CONTROL_GETINFO) */
+#endif /* !defined(TOR_CONTROL_GETINFO_H) */

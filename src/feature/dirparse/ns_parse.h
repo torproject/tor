@@ -42,6 +42,6 @@ STATIC routerstatus_t *routerstatus_parse_entry_from_string(
                                      vote_routerstatus_t *vote_rs,
                                      int consensus_method,
                                      consensus_flavor_t flav);
-#endif
+#endif /* defined(NS_PARSE_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_NS_PARSE_H) */

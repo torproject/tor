@@ -304,7 +304,7 @@ monotime_coarse_get(monotime_coarse_t *out)
 #endif /* defined(TOR_UNIT_TESTS) */
   out->abstime_ = mach_approximate_time();
 }
-#endif
+#endif /* defined(HAVE_MACH_APPROXIMATE_TIME) */
 
 /**
  * Return the number of nanoseconds between <b>start</b> and <b>end</b>.
@@ -767,7 +767,7 @@ monotime_coarse_zero(monotime_coarse_t *out)
 {
   memset(out, 0, sizeof(*out));
 }
-#endif
+#endif /* defined(MONOTIME_COARSE_TYPE_IS_DIFFERENT) */
 
 int64_t
 monotime_diff_usec(const monotime_t *start,
@@ -833,7 +833,7 @@ monotime_coarse_absolute_msec(void)
 {
   return monotime_coarse_absolute_nsec() / ONE_MILLION;
 }
-#else
+#else /* !(defined(MONOTIME_COARSE_FN_IS_DIFFERENT)) */
 #define initialized_at_coarse initialized_at
 #endif /* defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
 
@@ -865,7 +865,7 @@ monotime_msec_to_approx_coarse_stamp_units(uint64_t msec)
     mach_time_info.numer;
   return abstime_val >> monotime_shift;
 }
-#else
+#else /* !(defined(__APPLE__)) */
 uint64_t
 monotime_coarse_stamp_units_to_approx_msec(uint64_t units)
 {
@@ -876,4 +876,4 @@ monotime_msec_to_approx_coarse_stamp_units(uint64_t msec)
 {
   return (msec * STAMP_TICKS_PER_SECOND) / 1000;
 }
-#endif
+#endif /* defined(__APPLE__) */

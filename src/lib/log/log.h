@@ -207,7 +207,7 @@ static inline bool debug_logging_enabled(void)
 {
   return PREDICT_UNLIKELY(log_global_min_severity_ == LOG_DEBUG);
 }
-#endif
+#endif /* defined(TOR_COVERAGE) */
 
 void log_fn_(int severity, log_domain_mask_t domain,
              const char *funcname, const char *format, ...)

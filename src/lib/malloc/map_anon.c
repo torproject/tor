@@ -59,7 +59,7 @@
 #define FLAG_NOINHERIT VM_INHERIT_NONE
 #elif defined(MAP_INHERIT_NONE)
 #define FLAG_NOINHERIT MAP_INHERIT_NONE
-#endif
+#endif /* defined(INHERIT_NONE) || ... */
 
 #elif defined(HAVE_MADVISE)
 
@@ -72,7 +72,7 @@
 #define FLAG_NOINHERIT MADV_DONTFORK
 #endif
 
-#endif
+#endif /* defined(HAVE_MINHERIT) || ... */
 
 /**
  * Helper: try to prevent the <b>sz</b> bytes at <b>mem</b> from being swapped
@@ -91,7 +91,7 @@ lock_mem(void *mem, size_t sz)
   (void) sz;
 
   return 0;
-#endif
+#endif /* defined(_WIN32) || ... */
 }
 
 /**
@@ -108,7 +108,7 @@ nodump_mem(void *mem, size_t sz)
   (void) mem;
   (void) sz;
   return 0;
-#endif
+#endif /* defined(MADV_DONTDUMP) */
 }
 
 /**
@@ -130,19 +130,19 @@ noinherit_mem(void *mem, size_t sz, inherit_res_t *inherit_result_out)
     *inherit_result_out = INHERIT_RES_ZERO;
     return 0;
   }
-#endif
+#endif /* defined(FLAG_ZERO) */
 #ifdef FLAG_NOINHERIT
   int r2 = MINHERIT(mem, sz, FLAG_NOINHERIT);
   if (r2 == 0) {
     *inherit_result_out = INHERIT_RES_DROP;
   }
   return r2;
-#else
+#else /* !(defined(FLAG_NOINHERIT)) */
   (void)inherit_result_out;
   (void)mem;
   (void)sz;
   return 0;
-#endif
+#endif /* defined(FLAG_NOINHERIT) */
 }
 
 /**
@@ -199,7 +199,7 @@ tor_mmap_anonymous(size_t sz, unsigned flags,
   raw_assert(ptr != NULL);
 #else
   ptr = tor_malloc_zero(sz);
-#endif
+#endif /* defined(_WIN32) || ... */
 
   if (flags & ANONMAP_PRIVATE) {
     int lock_result = lock_mem(ptr, sz);
@@ -234,5 +234,5 @@ tor_munmap_anonymous(void *mapping, size_t sz)
 #else
   (void)sz;
   tor_free(mapping);
-#endif
+#endif /* defined(_WIN32) || ... */
 }

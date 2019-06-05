@@ -43,4 +43,4 @@ uint8_t *cpath_get_sendme_digest(crypt_path_t *cpath);
 unsigned int cpath_get_n_hops(crypt_path_t **head_ptr);
 #endif /* defined(TOR_UNIT_TESTS) */
 
-#endif
+#endif /* !defined(CRYPT_PATH_H) */

@@ -702,4 +702,4 @@ process_unix_close_file_descriptors(process_unix_t *unix_process)
   return success;
 }
 
-#endif /* defined(_WIN32). */
+#endif /* !defined(_WIN32) */

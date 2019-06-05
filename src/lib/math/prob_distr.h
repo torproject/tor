@@ -58,7 +58,7 @@ struct dist {
 #else
 #define TYPE_CHECK_OBJ(OPS, OBJ, TYPE) \
   (0*sizeof(&(OBJ) - (const TYPE *)&(OBJ)))
-#endif
+#endif /* defined(__COVERITY__) */
 
 /**
 * Typed initializer element for struct dist using the specified struct
@@ -248,6 +248,6 @@ STATIC double icdf_genpareto(double p, double mu, double sigma, double xi);
 STATIC double isf_genpareto(double p, double mu, double sigma, double xi);
 STATIC double sample_genpareto(uint32_t s, double p0, double xi);
 
-#endif
+#endif /* defined(PROB_DISTR_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_PROB_DISTR_H) */

@@ -10,4 +10,4 @@
 
 extern const struct subsys_fns_t sys_ocirc_event;
 
-#endif  /* defined(TOR_OCIRC_EVENT_H) */
+#endif /* !defined(TOR_OCIRC_EVENT_SYS_H) */

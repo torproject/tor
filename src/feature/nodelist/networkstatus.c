@@ -1772,7 +1772,7 @@ reload_consensus_from_file(const char *fname,
                                              flavor, flags, source_dir);
     tor_free(content);
   }
-#endif
+#endif /* defined(_WIN32) */
   if (rv < -1) {
     log_warn(LD_GENERAL, "Couldn't set consensus from cache file %s",
              escaped(fname));

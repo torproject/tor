@@ -1110,4 +1110,4 @@ struct or_options_t {
   int DormantCanceledByStartup;
 };
 
-#endif
+#endif /* !defined(TOR_OR_OPTIONS_ST_H) */

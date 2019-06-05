@@ -20,4 +20,4 @@ cast_uintptr_to_voidstar(uintptr_t x);
 uintptr_t
 cast_voidstar_to_uintptr(void *x);
 
-#endif
+#endif /* !defined(TOR_PTR_HELPERS_H) */

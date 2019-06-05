@@ -46,7 +46,7 @@ main(int argc, char **argv)
       return 1;
     }
   }
-#endif
+#endif /* 0 */
 
   crypto_fast_rng_t *rng = crypto_fast_rng_new();
   while (1) {

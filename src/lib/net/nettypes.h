@@ -41,4 +41,4 @@ typedef int socklen_t;
 #define TOR_INVALID_SOCKET (-1)
 #endif /* defined(_WIN32) */
 
-#endif
+#endif /* !defined(TOR_NET_TYPES_H) */

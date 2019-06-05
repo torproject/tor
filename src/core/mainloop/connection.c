@@ -1476,7 +1476,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
         goto err;
       }
     }
-#endif /* __APPLE__ */
+#endif /* !defined(__APPLE__) */
 #endif /* defined(HAVE_SYS_UN_H) */
   } else {
     log_err(LD_BUG, "Got unexpected address family %d.",
@@ -2856,7 +2856,7 @@ retry_listener_ports(smartlist_t *old_conns,
           SMARTLIST_DEL_CURRENT(old_conns, conn);
           break;
         }
-#endif
+#endif /* defined(ENABLE_LISTENER_REBIND) */
       }
     } SMARTLIST_FOREACH_END(wanted);
 
@@ -2958,7 +2958,7 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
                conn_type_to_string(old_conn->type), old_conn->address,
                old_conn->port, new_conn->address, new_conn->port);
   } SMARTLIST_FOREACH_END(r);
-#endif
+#endif /* defined(ENABLE_LISTENER_REBIND) */
 
   /* Any members that were still in 'listeners' don't correspond to
    * any configured port.  Kill 'em. */
@@ -3957,9 +3957,9 @@ update_send_buffer_size(tor_socket_t sock)
       &isb, sizeof(isb), &bytesReturned, NULL, NULL)) {
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&isb, sizeof(isb));
   }
-#else
+#else /* !(defined(_WIN32)) */
   (void) sock;
-#endif
+#endif /* defined(_WIN32) */
 }
 
 /** Try to flush more bytes onto <b>conn</b>-\>s.

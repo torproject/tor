@@ -30,9 +30,9 @@ typedef struct bt_orconn_t {
   bool is_onehop;           /**< Is this for a one-hop circuit? */
 } bt_orconn_t;
 
-#endif  /* defined(BTRACK_ORCONN_PRIVATE) */
+#endif /* defined(BTRACK_ORCONN_PRIVATE) */
 
 int btrack_orconn_init(void);
 void btrack_orconn_fini(void);
 
-#endif  /* defined(TOR_BTRACK_ORCONN_H) */
+#endif /* !defined(TOR_BTRACK_ORCONN_H) */

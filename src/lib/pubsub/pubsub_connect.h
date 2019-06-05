@@ -51,4 +51,4 @@ int pubsub_connector_register_type_(struct pubsub_connector_t *,
                                     const char *file,
                                     unsigned line);
 
-#endif
+#endif /* !defined(TOR_PUBSUB_CONNECT_H) */

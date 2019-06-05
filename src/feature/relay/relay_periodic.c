@@ -24,7 +24,7 @@
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
-#include "src/feature/stats/predict_ports.h"
+#include "feature/stats/predict_ports.h"
 
 #include "lib/crypt_ops/crypto_rand.h"
 

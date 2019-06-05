@@ -32,4 +32,4 @@ unsigned namemap_get_or_create_id(namemap_t *map,
 size_t namemap_get_size(const namemap_t *map);
 void namemap_clear(namemap_t *map);
 
-#endif
+#endif /* !defined(TOR_NAMEMAP_H) */

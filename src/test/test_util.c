@@ -6116,9 +6116,9 @@ test_util_log_mallinfo(void *arg)
   } else {
     tt_u64_op(mem1, OP_LT, mem2);
   }
-#else
+#else /* !(defined(HAVE_MALLINFO)) */
   tt_skip();
-#endif
+#endif /* defined(HAVE_MALLINFO) */
  done:
   teardown_capture_of_logs();
   tor_free(log1);
@@ -6175,7 +6175,7 @@ test_util_map_anon_nofork(void *arg)
   tt_skip();
  done:
   ;
-#else
+#else /* !(defined(_WIN32)) */
   /* We have the right OS support.  We're going to try marking the buffer as
    * either zero-on-fork or as drop-on-fork, whichever is supported.  Then we
    * will fork and send a byte back to the parent process.  This will either
@@ -6236,7 +6236,7 @@ test_util_map_anon_nofork(void *arg)
      * implemented. */
     tt_skip();
   }
-#endif
+#endif /* !defined(NOINHERIT_CAN_FAIL) */
 
  done:
   tor_munmap_anonymous(ptr, sz);
@@ -6246,7 +6246,7 @@ test_util_map_anon_nofork(void *arg)
   if (pipefd[1] >= 0) {
     close(pipefd[1]);
   }
-#endif
+#endif /* defined(_WIN32) */
 }
 
 #define UTIL_LEGACY(name)                                               \

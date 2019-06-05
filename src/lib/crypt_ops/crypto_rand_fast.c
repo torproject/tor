@@ -182,7 +182,7 @@ crypto_fast_rng_new_from_seed(const uint8_t *seed)
   /* We decided above that noinherit would always do _something_. Assert here
    * that we were correct. */
   tor_assert(inherit != INHERIT_RES_KEEP);
-#endif
+#endif /* defined(CHECK_PID) || ... */
   return result;
 }
 
@@ -196,7 +196,7 @@ crypto_fast_rng_disable_reseed(crypto_fast_rng_t *rng)
 {
   rng->n_till_reseed = -1;
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /**
  * Helper: create a crypto_cipher_t object from SEED_LEN bytes of
@@ -251,7 +251,7 @@ crypto_fast_rng_refill(crypto_fast_rng_t *rng)
 #else
     /* If testing is disabled, this shouldn't be able to become negative. */
     tor_assert_unreached();
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
   }
   /* Now fill rng->buf with output from our stream cipher, initialized from
    * that seed value. */
@@ -302,7 +302,7 @@ crypto_fast_rng_getbytes_impl(crypto_fast_rng_t *rng, uint8_t *out,
      */
     tor_assert(rng->owner == getpid());
   }
-#endif
+#endif /* defined(CHECK_PID) */
 
   size_t bytes_to_yield = n;
 
@@ -356,7 +356,7 @@ crypto_fast_rng_get_bytes_used_per_stream(void)
 {
   return BUFLEN;
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /**
  * Thread-local instance for our fast RNG.
@@ -409,7 +409,7 @@ crypto_replace_thread_fast_rng(crypto_fast_rng_t *rng)
   tor_threadlocal_set(&thread_rng, rng);
   return old_rng;
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /**
  * Initialize the global thread-local key that will be used to keep track

@@ -32,7 +32,7 @@
 DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/dh.h>
 ENABLE_GCC_WARNING(redundant-decls)
-#endif
+#endif /* defined(ENABLE_OPENSSL) */
 
 /** Run unit tests for Diffie-Hellman functionality. */
 static void
@@ -190,7 +190,7 @@ test_crypto_dh(void *arg)
     DH_get0_key(dh4, &pk, &sk);
 #else
     pk = dh4->pub_key;
-#endif
+#endif /* defined(OPENSSL_1_1_API) */
     tt_assert(pk);
     tt_int_op(BN_num_bytes(pk), OP_LE, DH1024_KEY_LEN);
     tt_int_op(BN_num_bytes(pk), OP_GT, 0);
@@ -207,7 +207,7 @@ test_crypto_dh(void *arg)
     tt_int_op(s1len, OP_GT, 0);
     tt_mem_op(s1, OP_EQ, s2, s1len);
   }
-#endif
+#endif /* defined(ENABLE_OPENSSL) */
 
  done:
   crypto_dh_free(dh1);
@@ -219,7 +219,7 @@ test_crypto_dh(void *arg)
     DH_free(dh4);
   if (pubkey_tmp)
     BN_free(pubkey_tmp);
-#endif
+#endif /* defined(ENABLE_OPENSSL) */
 }
 
 static void
@@ -248,7 +248,7 @@ test_crypto_openssl_version(void *arg)
   tt_int_op(a, OP_GE, 0);
   tt_int_op(b, OP_GE, 0);
   tt_int_op(c, OP_GE, 0);
-#endif
+#endif /* defined(ENABLE_NSS) */
 
  done:
   ;

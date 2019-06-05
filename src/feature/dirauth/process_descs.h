@@ -36,4 +36,4 @@ void dirserv_set_node_flags_from_authoritative_status(node_t *node,
 
 int dirserv_would_reject_router(const routerstatus_t *rs);
 
-#endif
+#endif /* !defined(TOR_RECV_UPLOADS_H) */

@@ -77,4 +77,4 @@ typedef struct dispatch_typefns_t {
   char *(*fmt_fn)(msg_aux_data_t);
 } dispatch_typefns_t;
 
-#endif
+#endif /* !defined(TOR_DISPATCH_MSGTYPES_H) */

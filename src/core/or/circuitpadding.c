@@ -2595,7 +2595,7 @@ circpad_circ_responder_machine_init(void)
   circpad_register_padding_machine(circ_responder_machine,
                                    relay_padding_machines);
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /**
  * Initialize all of our padding machines.
@@ -2977,4 +2977,4 @@ circpad_string_to_machine(const char *str)
   return NULL;
 }
 
-#endif
+#endif /* 0 */

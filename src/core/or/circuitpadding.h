@@ -10,7 +10,7 @@
 #ifndef TOR_CIRCUITPADDING_H
 #define TOR_CIRCUITPADDING_H
 
-#include "src/trunnel/circpad_negotiation.h"
+#include "trunnel/circpad_negotiation.h"
 #include "lib/evloop/timers.h"
 
 struct circuit_t;
@@ -803,6 +803,6 @@ extern smartlist_t *relay_padding_machines;
 
 #endif
 
-#endif
+#endif /* defined(CIRCUITPADDING_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CIRCUITPADDING_H) */

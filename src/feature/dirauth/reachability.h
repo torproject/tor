@@ -33,4 +33,4 @@ int dirserv_should_launch_reachability_test(const routerinfo_t *ri,
 void dirserv_single_reachability_test(time_t now, routerinfo_t *router);
 void dirserv_test_reachability(time_t now);
 
-#endif
+#endif /* !defined(TOR_REACHABILITY_H) */
