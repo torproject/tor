@@ -8,6 +8,9 @@
 #
 # To install this script, copy it into .git/hooks/pre-push path in your
 # local copy of git repository. Make sure it has permission to execute.
+# Furthermore, make sure that TOR_UPSTREAM_REMOTE_NAME environment
+# variable is set to local name of git remote that corresponds to upstream
+# repository on e.g. git.torproject.org.
 #
 # The following sample script was used as starting point:
 # https://github.com/git/git/blob/master/templates/hooks--pre-push.sample
@@ -16,16 +19,7 @@ echo "Running pre-push hook"
 
 z40=0000000000000000000000000000000000000000
 
-remote="$1"
-
-ref_is_upstream_branch() {
-        if [ "$1" == "refs/heads/master" ] ||
-                [[ "$1" == refs/heads/release-* ]] ||
-                [[ "$1" == refs/heads/maint-* ]]
-        then
-                return 1
-        fi
-}
+upstream_name=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
 
 workdir=$(git rev-parse --show-toplevel)
 if [ -x "$workdir/.git/hooks/pre-commit" ]; then
@@ -39,6 +33,25 @@ if [ -e scripts/maint/practracker/practracker.py ]; then
     exit 1
   fi
 fi
+
+remote="$1"
+remote_loc="$2"
+
+remote_name=$(git remote --verbose | grep "$2" | awk '{print $1}' | head -n 1)
+
+if [[ "$remote_name" != "$upstream_name" ]]; then
+  echo "Not pushing to upstream - refraining from further checks"
+  exit 0
+fi
+
+ref_is_upstream_branch() {
+        if [ "$1" == "refs/heads/master" ] ||
+                [[ "$1" == refs/heads/release-* ]] ||
+                [[ "$1" == refs/heads/maint-* ]]
+        then
+                return 1
+        fi
+}
 
 # shellcheck disable=SC2034
 while read -r local_ref local_sha remote_ref remote_sha
