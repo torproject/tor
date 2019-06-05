@@ -2,7 +2,7 @@ Changes in version 0.4.1.2-alpha - 2019-06-05
   Tor 0.4.1.2-alpha resolves numerous bugs--some of them from the
   previous alpha, and some much older. It also contains minor testing
   improvements, and an improvement to the security of our authenticated
-  sendme implementation.
+  SENDME implementation.
 
   o Major bugfixes (bridges):
     - Consider our directory information to have changed when our list
@@ -16,26 +16,27 @@ Changes in version 0.4.1.2-alpha - 2019-06-05
       and delay fetching router descriptors for the new ones. Fixes part
       of bug 29875; bugfix on 0.3.0.1-alpha.
 
-  o Major bugfixes (Flow Control, SENDME):
-    - The decrement of the stream-level package window was done in a
-      log_debug() statement meaning that if the debug logs were not
-      enabled, the decrement would never happen and thus the window
-      would be out of sync with the other end point. Fixes bug 30628;
-      bugfix on 0.4.1.1-alpha.
+  o Major bugfixes (flow control, SENDME):
+    - Decrement the stream-level package window after packaging a cell.
+      Previously, it was done inside a log_debug() call, meaning that if
+      debug logs were not enabled, the decrement would never happen, and
+      thus the window would be out of sync with the other end point.
+      Fixes bug 30628; bugfix on 0.4.1.1-alpha.
 
-  o Major bugfixes (Onion service reachability):
+  o Major bugfixes (onion service reachability):
     - Properly clean up the introduction point map and associated state
       when circuits change purpose from onion service circuits to
-      pathbias, measurement, or other circuit types. This should fix
-      some instances of introduction point failure. Fixes bug 29034;
-      bugfix on 0.3.2.1-alpha.
+      pathbias, measurement, or other circuit types. This may fix some
+      instances of introduction point failure. Fixes bug 29034; bugfix
+      on 0.3.2.1-alpha.
 
   o Minor features (authenticated SENDME):
     - Ensure that there is enough randomness on every circuit to prevent
-      an attacker from successfully predicting what SENDME cells they
-      will need to send: at a random interval, if we have not send
-      randomness already, leave some extra space at the end of a cell
-      that we can fill with random bytes. Closes ticket 26846.
+      an attacker from successfully predicting the hashes they will need
+      to include in authenticated SENDME cells. At a random interval, if
+      we have not sent randomness already, we now leave some extra space
+      at the end of a cell that we can fill with random bytes. Closes
+      ticket 26846.
 
   o Minor features (continuous integration):
     - When running coverage builds on Travis, we now set
@@ -71,9 +72,9 @@ Changes in version 0.4.1.2-alpha - 2019-06-05
       on 0.4.1.1-alpha.
 
   o Minor bugfixes (developer tooling):
-    - Fix pre-push hook to refrain from rejecting fixup and squash
-      commits when pushing to non-upstream git remote. Fixes bug 30286;
-      bugfix on 0.4.0.1-alpha.
+    - Fix pre-push hook to allow fixup and squash commits when pushing
+      to non-upstream git remote. Fixes bug 30286; bugfix
+      on 0.4.0.1-alpha.
 
   o Minor bugfixes (directory authority):
     - Move the "bandwidth-file-headers" line in directory authority
@@ -88,7 +89,8 @@ Changes in version 0.4.1.2-alpha - 2019-06-05
   o Minor bugfixes (out-of-memory handler):
     - When purging the DNS cache because of an out-of-memory condition,
       try purging just the older entries at first. Previously, we would
-      purge the whole thing. Fixes bug 29617; bugfix on 0.3.5.1-alpha.
+      always purge the whole thing. Fixes bug 29617; bugfix
+      on 0.3.5.1-alpha.
 
   o Minor bugfixes (portability):
     - Avoid crashing in our tor_vasprintf() implementation on systems
@@ -107,9 +109,8 @@ Changes in version 0.4.1.2-alpha - 2019-06-05
 
   o Minor bugfixes (static analysis):
     - Fix several spurious Coverity warnings about the unit tests, to
-      lower our chances of missing any real warnings in the future.
-      Fixes bug 30150; bugfix on 0.3.5.1-alpha and various other
-      Tor versions.
+      lower our chances of missing real warnings in the future. Fixes
+      bug 30150; bugfix on 0.3.5.1-alpha and various other Tor versions.
 
   o Testing:
     - Specify torrc paths (with empty files) when launching tor in
