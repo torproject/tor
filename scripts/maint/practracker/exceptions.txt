@@ -189,7 +189,7 @@ problem function-size /src/feature/dirparse/ns_parse.c:networkstatus_verify_bw_w
 problem function-size /src/feature/dirparse/ns_parse.c:networkstatus_parse_vote_from_string() 638
 problem function-size /src/feature/dirparse/parsecommon.c:tokenize_string() 103
 problem function-size /src/feature/dirparse/parsecommon.c:get_next_token() 159
-problem function-size /src/feature/dirparse/routerparse.c:router_parse_entry_from_string() 554
+problem function-size /src/feature/dirparse/routerparse.c:router_parse_entry_from_string() 567
 problem function-size /src/feature/dirparse/routerparse.c:extrainfo_parse_entry_from_string() 210
 problem function-size /src/feature/hibernate/hibernate.c:accounting_parse_options() 109
 problem function-size /src/feature/hs/hs_cell.c:hs_cell_build_establish_intro() 115
@@ -216,9 +216,8 @@ problem function-size /src/feature/nodelist/node_select.c:router_pick_directory_
 problem function-size /src/feature/nodelist/node_select.c:compute_weighted_bandwidths() 206
 problem function-size /src/feature/nodelist/node_select.c:router_pick_trusteddirserver_impl() 114
 problem function-size /src/feature/nodelist/nodelist.c:compute_frac_paths_available() 193
-problem file-size /src/feature/nodelist/routerlist.c 3238
+problem file-size /src/feature/nodelist/routerlist.c 3483
 problem function-size /src/feature/nodelist/routerlist.c:router_rebuild_store() 148
-problem function-size /src/feature/nodelist/routerlist.c:router_add_to_routerlist() 169
 problem function-size /src/feature/nodelist/routerlist.c:routerlist_remove_old_routers() 121
 problem function-size /src/feature/nodelist/routerlist.c:update_consensus_router_descriptor_downloads() 136
 problem function-size /src/feature/nodelist/routerlist.c:update_extrainfo_downloads() 103
