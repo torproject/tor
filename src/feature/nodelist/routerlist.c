@@ -1848,8 +1848,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   if (result != ROUTER_CONTINUE_CHECKS)
     return result;
 
-  /* We haven't seen a router with this identity before. Add it to the end of
-   * the list. */
+  /* We haven't seen a router with this identity before, and it passes all our
+   * checks. Add it to the end of the list. */
   routerlist_insert(routerlist, router);
   if (!from_cache) {
     signed_desc_append_to_journal(&router->cache_info,

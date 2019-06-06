@@ -460,6 +460,9 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
  *
  * If the router is rejected, set *<b>msg</b> to an explanation of why.
  *
+ * If the router is accepted, set *<b>valid_out</b> to this authority's opinion
+ * of its validity.
+ *
  * If <b>complain</b> then explain at log-level 'notice' why we refused
  * a descriptor; else explain at log-level 'info'.
  */
