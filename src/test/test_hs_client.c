@@ -25,6 +25,7 @@
 #include "app/config/config.h"
 #include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_dh.h"
+#include "lib/crypt_ops/crypto_rand.h"
 #include "core/or/channeltls.h"
 #include "feature/dircommon/directory.h"
 #include "core/mainloop/mainloop.h"
@@ -90,6 +91,24 @@ helper_config_client(const char *conf, int validate_only)
  done:
   or_options_free(options);
   return ret;
+}
+
+static void
+helper_add_random_client_auth(const ed25519_public_key_t *service_pk)
+{
+  char *conf = NULL;
+#define conf_fmt "ClientOnionAuthDir %s\n"
+  tor_asprintf(&conf, conf_fmt, get_fname("auth_keys"));
+#undef conf_fmt
+  helper_config_client(conf, 0);
+  tor_free(conf);
+
+  digest256map_t *client_auths = get_hs_client_auths_map();
+  hs_client_service_authorization_t *auth =
+    tor_malloc_zero(sizeof(hs_client_service_authorization_t));
+  curve25519_secret_key_generate(&auth->enc_seckey, 0);
+  hs_build_address(service_pk, HS_VERSION_THREE, auth->onion_address);
+  digest256map_set(client_auths, service_pk->pubkey, auth);
 }
 
 /* Test helper function: Setup a circuit and a stream with the same hidden
@@ -548,6 +567,17 @@ mock_connection_mark_unattached_ap_(entry_connection_t *conn, int endreason,
   /* This function ultimately will flag this so make sure we do also in the
    * MOCK one so we can assess closed connections vs open ones. */
   conn->edge_.base_.marked_for_close = 1;
+}
+
+static void
+mock_connection_mark_unattached_ap_no_close(entry_connection_t *conn,
+                                            int endreason, int line,
+                                            const char *file)
+{
+  (void) conn;
+  (void) endreason;
+  (void) line;
+  (void) file;
 }
 
 static void
@@ -1094,6 +1124,108 @@ test_close_intro_circuits_cache_clean(void *arg)
   UNMOCK(networkstatus_get_live_consensus);
 }
 
+static void
+test_socks_hs_errors(void *arg)
+{
+  int ret;
+  char *desc_encoded = NULL;
+  ed25519_keypair_t service_kp;
+  ed25519_keypair_t signing_kp;
+  entry_connection_t *socks_conn = NULL;
+  dir_connection_t *dir_conn = NULL;
+  hs_descriptor_t *desc = NULL;
+  uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+
+  (void) arg;
+
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+  MOCK(connection_mark_unattached_ap_,
+       mock_connection_mark_unattached_ap_no_close);
+  MOCK(read_file_to_str, mock_read_file_to_str);
+  MOCK(tor_listdir, mock_tor_listdir);
+  MOCK(check_private_dir, mock_check_private_dir);
+
+    /* Set consensus time */
+  parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.valid_after);
+  parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                           &mock_ns.fresh_until);
+  parse_rfc1123_time("Sat, 26 Oct 1985 16:00:00 UTC",
+                           &mock_ns.valid_until);
+
+  hs_init();
+
+  ret = ed25519_keypair_generate(&service_kp, 0);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = ed25519_keypair_generate(&signing_kp, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  socks_conn = helper_build_socks_connection(&service_kp.pubkey,
+                                             AP_CONN_STATE_RENDDESC_WAIT);
+  tt_assert(socks_conn);
+
+  /* Create directory connection. */
+  dir_conn = dir_connection_new(AF_INET);
+  dir_conn->hs_ident = tor_malloc_zero(sizeof(hs_ident_dir_conn_t));
+  TO_CONN(dir_conn)->purpose = DIR_PURPOSE_FETCH_HSDESC;
+  ed25519_pubkey_copy(&dir_conn->hs_ident->identity_pk, &service_kp.pubkey);
+
+  /* Encode descriptor so we can decode it. */
+  desc = hs_helper_build_hs_desc_with_ip(&service_kp);
+  tt_assert(desc);
+
+  crypto_rand((char *) descriptor_cookie, sizeof(descriptor_cookie));
+  ret = hs_desc_encode_descriptor(desc, &service_kp, descriptor_cookie,
+                                  &desc_encoded);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_assert(desc_encoded);
+
+  /* Try decoding. Point this to an existing descriptor. The following should
+   * fail thus the desc_out should be set to NULL. */
+  hs_descriptor_t *desc_out = desc;
+  ret = hs_client_decode_descriptor(desc_encoded, &service_kp.pubkey,
+                                    &desc_out);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_NEED_CLIENT_AUTH);
+  tt_assert(desc_out == NULL);
+
+  /* The caching will fail to decrypt because the descriptor_cookie used above
+   * is not known to the HS subsystem. This will lead to a missing client
+   * auth. */
+  hs_client_dir_fetch_done(dir_conn, "Reason", desc_encoded, 200);
+
+  tt_int_op(socks_conn->socks_request->socks_extended_error_code, OP_EQ,
+            SOCKS5_HS_MISSING_CLIENT_AUTH);
+
+  /* Add in the global client auth list bad creds for this service. */
+  helper_add_random_client_auth(&service_kp.pubkey);
+
+  ret = hs_client_decode_descriptor(desc_encoded, &service_kp.pubkey,
+                                    &desc_out);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_BAD_CLIENT_AUTH);
+  tt_assert(desc_out == NULL);
+
+  /* Simmulate a fetch done again. This should replace the cached descriptor
+   * and signal a bad client authorization. */
+  hs_client_dir_fetch_done(dir_conn, "Reason", desc_encoded, 200);
+  tt_int_op(socks_conn->socks_request->socks_extended_error_code, OP_EQ,
+            SOCKS5_HS_BAD_CLIENT_AUTH);
+
+ done:
+  connection_free_minimal(ENTRY_TO_CONN(socks_conn));
+  connection_free_minimal(TO_CONN(dir_conn));
+  hs_descriptor_free(desc);
+  tor_free(desc_encoded);
+
+  hs_free_all();
+
+  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(connection_mark_unattached_ap_);
+  UNMOCK(read_file_to_str);
+  UNMOCK(tor_listdir);
+  UNMOCK(check_private_dir);
+}
+
 struct testcase_t hs_client_tests[] = {
   { "e2e_rend_circuit_setup_legacy", test_e2e_rend_circuit_setup_legacy,
     TT_FORK, NULL, NULL },
@@ -1115,6 +1247,9 @@ struct testcase_t hs_client_tests[] = {
     TT_FORK, NULL, NULL },
   { "close_intro_circuits_cache_clean", test_close_intro_circuits_cache_clean,
     TT_FORK, NULL, NULL },
+
+  /* SOCKS5 Extended Error Code. */
+  { "socks_hs_errors", test_socks_hs_errors, TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
 };
