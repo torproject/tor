@@ -1485,7 +1485,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 {
   const char *id_digest;
   const or_options_t *options = get_options();
-  int authdir = authdir_mode_handles_descs(options, router->purpose);
+  int authdir_handles_purpose = authdir_mode_handles_descs(options,
+                                                           router->purpose);
   int authdir_believes_valid = 0;
   routerinfo_t *old_router;
   networkstatus_t *consensus =
@@ -1536,7 +1537,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     }
   }
 
-  if (authdir) {
+  if (authdir_handles_purpose) {
     if (authdir_wants_to_reject_router(router, msg,
                                        !from_cache && !from_fetch,
                                        &authdir_believes_valid)) {
@@ -1584,7 +1585,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   }
 
   if (router->purpose == ROUTER_PURPOSE_GENERAL &&
-      consensus && !in_consensus && !authdir) {
+      consensus && !in_consensus && !authdir_handles_purpose) {
     /* If it's a general router not listed in the consensus, then don't
      * consider replacing the latest router with it. */
     if (!from_cache && should_cache_old_descriptors())
