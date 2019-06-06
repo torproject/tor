@@ -1564,6 +1564,17 @@ router_reject_authdir_bridge_desc_helper(routerinfo_t *router,
 
 #endif /* defined(HAVE_MODULE_DIRAUTH) */
 
+/* Insert router into the old routerlist, and journal if needed. */
+static void
+routerlist_insert_old_and_journal_if_needed(routerinfo_t *router,
+                                            int from_cache)
+{
+  if (!from_cache && should_cache_old_descriptors())
+    signed_desc_append_to_journal(&router->cache_info,
+                                  &routerlist->desc_store);
+  routerlist_insert_old(routerlist, router);
+}
+
 /* Outdated fetch helper for router_add_to_routerlist().
  *
  * Returns ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS if the descriptor is old,
@@ -1586,13 +1597,9 @@ router_add_to_routerlist_outdated_fetch_helper(routerinfo_t *router,
       log_info(LD_DIR,
                "Received a no-longer-recognized descriptor for router %s",
                router_describe(router));
-      *msg = "Router descriptor is not referenced by any network-status.";
-
       /* Only journal this desc if we want to keep old descriptors */
-      if (!from_cache && should_cache_old_descriptors())
-        signed_desc_append_to_journal(&router->cache_info,
-                                      &routerlist->desc_store);
-      routerlist_insert_old(routerlist, router);
+      routerlist_insert_old_and_journal_if_needed(router, from_cache);
+      *msg = "Router descriptor is not referenced by any network-status.";
       return ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS;
     }
   }
@@ -1645,10 +1652,7 @@ router_reject_not_in_consensus_helper(routerinfo_t *router, const char **msg,
       consensus && !in_consensus && !authdir_handles_purpose) {
     /* If it's a general router not listed in the consensus, then don't
      * consider replacing the latest router with it. */
-    if (!from_cache && should_cache_old_descriptors())
-      signed_desc_append_to_journal(&router->cache_info,
-                                    &routerlist->desc_store);
-    routerlist_insert_old(routerlist, router);
+    routerlist_insert_old_and_journal_if_needed(router, from_cache);
     *msg = "Skipping router descriptor: not in consensus.";
     return ROUTER_NOT_IN_CONSENSUS;
   }
@@ -1675,10 +1679,7 @@ router_add_to_routerlist_same_id_helper(routerinfo_t *router, const char **msg,
       log_debug(LD_DIR, "Not-new descriptor for router %s",
                 router_describe(router));
       /* Only journal this desc if we'll be serving it. */
-      if (!from_cache && should_cache_old_descriptors())
-        signed_desc_append_to_journal(&router->cache_info,
-                                      &routerlist->desc_store);
-      routerlist_insert_old(routerlist, router);
+      routerlist_insert_old_and_journal_if_needed(router, from_cache);
       *msg = "Router descriptor was not new.";
       return ROUTER_IS_ALREADY_KNOWN;
     } else {
