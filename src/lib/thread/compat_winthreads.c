@@ -12,6 +12,7 @@
 
 #ifdef _WIN32
 
+#include <winsock2.h>
 #include <windows.h>
 #include <process.h>
 #include "lib/thread/threads.h"
