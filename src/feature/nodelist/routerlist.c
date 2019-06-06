@@ -1628,34 +1628,17 @@ router_reject_outdated_bridge_desc_helper(routerinfo_t *router,
   return ROUTER_CONTINUE_CHECKS;
 }
 
-/* Consensus helper for router_add_to_routerlist().
+/* Not in consensus helper for router_add_to_routerlist_consensus_helper().
  *
  * Returns ROUTER_CONTINUE_CHECKS if the checks are inconclusive, otherwise
- * returns a was_router_added_t describing the status of router. */
+ * returns ROUTER_NOT_IN_CONSENSUS. */
 static was_router_added_t
-router_add_to_routerlist_consensus_helper(routerinfo_t *router,
-                                          const char **msg,
-                                          int from_cache,
-                                          int authdir_handles_purpose,
-                                          int authdir_believes_valid,
-                                          routerinfo_t *old_router)
+router_reject_not_in_consensus_helper(routerinfo_t *router, const char **msg,
+                                      int from_cache,
+                                      int authdir_handles_purpose,
+                                      const networkstatus_t *consensus,
+                                      int in_consensus)
 {
-  const char *id_digest = router->cache_info.identity_digest;
-  networkstatus_t *consensus =
-    networkstatus_get_latest_consensus_by_flavor(FLAV_NS);
-  int in_consensus = 0;
-
-  /* We no longer need a router with this descriptor digest. */
-  if (consensus) {
-    routerstatus_t *rs = networkstatus_vote_find_mutable_entry(
-                                                     consensus, id_digest);
-    if (rs && tor_memeq(rs->descriptor_digest,
-                      router->cache_info.signed_descriptor_digest,
-                      DIGEST_LEN)) {
-      in_consensus = 1;
-    }
-  }
-
   if (router->purpose == ROUTER_PURPOSE_GENERAL &&
       consensus && !in_consensus && !authdir_handles_purpose) {
     /* If it's a general router not listed in the consensus, then don't
@@ -1668,6 +1651,20 @@ router_add_to_routerlist_consensus_helper(routerinfo_t *router,
     return ROUTER_NOT_IN_CONSENSUS;
   }
 
+  return ROUTER_CONTINUE_CHECKS;
+}
+
+/* Same identity key helper for router_add_to_routerlist_consensus_helper().
+ *
+ * Returns ROUTER_CONTINUE_CHECKS if the checks are inconclusive, otherwise
+ * returns a was_router_added_t describing the status of router. */
+static was_router_added_t
+router_add_to_routerlist_same_id_helper(routerinfo_t *router, const char **msg,
+                                        int from_cache,
+                                        int authdir_believes_valid,
+                                        routerinfo_t *old_router,
+                                        int in_consensus)
+{
   /* If we have a router with the same identity key, choose the newer one. */
   if (old_router) {
     if (!in_consensus && (router->cache_info.published_on <=
@@ -1698,12 +1695,72 @@ router_add_to_routerlist_consensus_helper(routerinfo_t *router,
     }
   }
 
+  return ROUTER_CONTINUE_CHECKS;
+}
+
+/* Old descriptor helper for router_add_to_routerlist_consensus_helper().
+ *
+ * Returns ROUTER_CONTINUE_CHECKS if the checks are inconclusive, otherwise
+ * returns ROUTER_WAS_TOO_OLD. */
+static was_router_added_t
+router_reject_old_desc_helper(routerinfo_t *router, const char **msg,
+                              int from_cache, int in_consensus)
+{
   if (!in_consensus && from_cache &&
       router_descriptor_is_older_than(router, OLD_ROUTER_DESC_MAX_AGE)) {
     *msg = "Router descriptor was really old.";
     routerinfo_free(router);
     return ROUTER_WAS_TOO_OLD;
   }
+
+  return ROUTER_CONTINUE_CHECKS;
+}
+
+/* Consensus helper for router_add_to_routerlist().
+ *
+ * Returns ROUTER_CONTINUE_CHECKS if the checks are inconclusive, otherwise
+ * returns a was_router_added_t describing the status of router. */
+static was_router_added_t
+router_add_to_routerlist_consensus_helper(routerinfo_t *router,
+                                          const char **msg,
+                                          int from_cache,
+                                          int authdir_handles_purpose,
+                                          int authdir_believes_valid,
+                                          routerinfo_t *old_router)
+{
+  const char *id_digest = router->cache_info.identity_digest;
+  networkstatus_t *consensus =
+    networkstatus_get_latest_consensus_by_flavor(FLAV_NS);
+  int in_consensus = 0;
+  was_router_added_t result = ROUTER_CONTINUE_CHECKS;
+
+  /* We no longer need a router with this descriptor digest. */
+  if (consensus) {
+    routerstatus_t *rs = networkstatus_vote_find_mutable_entry(consensus,
+                                                               id_digest);
+    if (rs && tor_memeq(rs->descriptor_digest,
+                        router->cache_info.signed_descriptor_digest,
+                        DIGEST_LEN)) {
+      in_consensus = 1;
+    }
+  }
+
+  result = router_reject_not_in_consensus_helper(router, msg, from_cache,
+                                                 authdir_handles_purpose,
+                                                 consensus, in_consensus);
+  if (result != ROUTER_CONTINUE_CHECKS)
+    return result;
+
+  result = router_add_to_routerlist_same_id_helper(router, msg, from_cache,
+                                                   authdir_believes_valid,
+                                                   old_router, in_consensus);
+  if (result != ROUTER_CONTINUE_CHECKS)
+    return result;
+
+  result = router_reject_old_desc_helper(router, msg, from_cache,
+                                         in_consensus);
+  if (result != ROUTER_CONTINUE_CHECKS)
+    return result;
 
   return ROUTER_CONTINUE_CHECKS;
 }
