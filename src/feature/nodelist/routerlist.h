@@ -17,6 +17,8 @@
 typedef enum was_router_added_t {
   /* Router was added successfully. */
   ROUTER_ADDED_SUCCESSFULLY = 1,
+  /* Continue evaluating router. */
+  ROUTER_CONTINUE_CHECKS = 0,
   /* Extrainfo document was rejected because no corresponding router
    * descriptor was found OR router descriptor was rejected because
    * it was incompatible with its extrainfo document. */

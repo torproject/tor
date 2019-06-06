@@ -1458,50 +1458,13 @@ router_descriptor_is_older_than,(const routerinfo_t *router, int seconds))
   return router->cache_info.published_on < approx_time() - seconds;
 }
 
-/** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
- * older entries (if any) with the same key.
+/* Certificate expiry rejection helper for router_add_to_routerlist().
  *
- * Note: Callers should not hold their pointers to <b>router</b> if this
- * function fails; <b>router</b> will either be inserted into the routerlist or
- * freed. Similarly, even if this call succeeds, they should not hold their
- * pointers to <b>router</b> after subsequent calls with other routerinfo's --
- * they might cause the original routerinfo to get freed.
- *
- * Returns the status for the operation. Might set *<b>msg</b> if it wants
- * the poster of the router to know something.
- *
- * If <b>from_cache</b>, this descriptor came from our disk cache. If
- * <b>from_fetch</b>, we received it in response to a request we made.
- * (If both are false, that means it was uploaded to us as an auth dir
- * server or via the controller.)
- *
- * This function should be called *after*
- * routers_update_status_from_consensus_networkstatus; subsequently, you
- * should call router_rebuild_store and routerlist_descriptors_added.
- */
-was_router_added_t
-router_add_to_routerlist(routerinfo_t *router, const char **msg,
-                         int from_cache, int from_fetch)
+ * Returns ROUTER_CERTS_EXPIRED on failure, and ROUTER_CONTINUE_CHECKS if the
+ * checks were inconclusive. */
+static was_router_added_t
+router_reject_cert_helper(routerinfo_t *router, const char **msg)
 {
-  const char *id_digest;
-  const or_options_t *options = get_options();
-  int authdir_handles_purpose = authdir_mode_handles_descs(options,
-                                                           router->purpose);
-  int authdir_believes_valid = 0;
-  routerinfo_t *old_router;
-  networkstatus_t *consensus =
-    networkstatus_get_latest_consensus_by_flavor(FLAV_NS);
-  int in_consensus = 0;
-
-  tor_assert(msg);
-
-  if (!routerlist)
-    router_get_routerlist();
-
-  id_digest = router->cache_info.identity_digest;
-
-  old_router = router_get_mutable_by_digest(id_digest);
-
   /* Make sure that it isn't expired. */
   if (router->cert_expiration_time < approx_time()) {
     routerinfo_free(router);
@@ -1509,6 +1472,18 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     return ROUTER_CERTS_EXPIRED;
   }
 
+  return ROUTER_CONTINUE_CHECKS;
+}
+
+/* Same descriptor rejection helper for router_add_to_routerlist().
+ *
+ * Returns ROUTER_IS_ALREADY_KNOWN on failure, and ROUTER_CONTINUE_CHECKS if
+ * the checks were inconclusive, or if the descriptor is not the same as any
+ * existing descriptor. */
+static was_router_added_t
+router_reject_same_desc_helper(routerinfo_t *router, const char **msg,
+                               const routerinfo_t *old_router)
+{
   /* Make sure that we haven't already got this exact descriptor. */
   if (sdmap_get(routerlist->desc_digest_map,
                 router->cache_info.signed_descriptor_digest)) {
@@ -1527,6 +1502,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       log_info(LD_DIR, "Replacing non-bridge descriptor with bridge "
                "descriptor for router %s",
                router_describe(router));
+      return ROUTER_CONTINUE_CHECKS;
     } else {
       log_info(LD_DIR,
                "Dropping descriptor that we already have for router %s",
@@ -1537,22 +1513,66 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     }
   }
 
+  return ROUTER_CONTINUE_CHECKS;
+}
+
+/* Authdir rejection helper for router_add_to_routerlist().
+ *
+ * Returns ROUTER_AUTHDIR_REJECTS on failure, and ROUTER_CONTINUE_CHECKS if
+ * the checks were inconclusive, or if the descriptor is not handled by this
+ * directory authority. */
+static was_router_added_t
+router_reject_authdir_helper(routerinfo_t *router, const char **msg,
+                             int complain, int authdir_handles_purpose,
+                             int *authdir_believes_valid)
+{
   if (authdir_handles_purpose) {
     if (authdir_wants_to_reject_router(router, msg,
-                                       !from_cache && !from_fetch,
-                                       &authdir_believes_valid)) {
+                                       complain,
+                                       authdir_believes_valid)) {
       tor_assert(*msg);
       routerinfo_free(router);
       return ROUTER_AUTHDIR_REJECTS;
     }
-  } else if (authdir_mode(options)
-             && router->has_bridge_distribution_request
-             && !authdir_mode_bridge(options)) {
+  }
+
+  return ROUTER_CONTINUE_CHECKS;
+}
+
+/* Authdir bridge desc rejection helper for router_add_to_routerlist().
+ *
+ * Returns ROUTER_AUTHDIR_REJECTS on failure, and ROUTER_CONTINUE_CHECKS if
+ * the checks were inconclusive. */
+static was_router_added_t
+router_reject_authdir_bridge_desc_helper(routerinfo_t *router,
+                                         const char **msg,
+                                         const or_options_t *options)
+{
+  if (authdir_mode(options)
+      && router->has_bridge_distribution_request
+      && !authdir_mode_bridge(options)) {
+    /* We do this extra check for better diagnostics, because
+     * authdir_handles_purpose is false for bridge descriptors on non-bridge
+     * authorities. */
     *msg = "This authority does not accept bridge descriptors.";
     routerinfo_free(router);
     return ROUTER_AUTHDIR_REJECTS;
   }
 
+  return ROUTER_CONTINUE_CHECKS;
+}
+
+/* Outdated fetch helper for router_add_to_routerlist().
+ *
+ * Returns ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS if the descriptor is old,
+ * and we have cached it because we are a directory cache (or directory
+ * authority), and ROUTER_CONTINUE_CHECKS if the descriptor was not added for
+ * this reason. */
+static was_router_added_t
+router_add_to_routerlist_outdated_fetch_helper(routerinfo_t *router,
+                                               const char **msg,
+                                               int from_cache, int from_fetch)
+{
   if (from_fetch) {
     /* Only check the descriptor digest against the network statuses when
      * we are receiving in response to a fetch. */
@@ -1575,6 +1595,56 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     }
   }
 
+  return ROUTER_CONTINUE_CHECKS;
+}
+
+/* Outdated cached bridge descriptor rejection helper for
+ * router_add_to_routerlist().
+ *
+ * Returns ROUTER_WAS_NOT_WANTED if the descriptor a cached descriptor for a
+ * bridge that is no longer configured, and ROUTER_CONTINUE_CHECKS if the
+ * checks pass. */
+static was_router_added_t
+router_reject_outdated_bridge_desc_helper(routerinfo_t *router,
+                                          const char **msg,
+                                          int from_cache,
+                                          const or_options_t *options)
+{
+  /* If we're reading a bridge descriptor from our cache, and we don't
+   * recognize it as one of our currently configured bridges, drop the
+   * descriptor. Otherwise we could end up using it as one of our entry
+   * guards even if it isn't in our Bridge config lines. */
+  if (router->purpose == ROUTER_PURPOSE_BRIDGE && from_cache &&
+      !authdir_mode_bridge(options) &&
+      !routerinfo_is_a_configured_bridge(router)) {
+    log_info(LD_DIR, "Dropping bridge descriptor for %s because we have "
+             "no bridge configured at that address.",
+             safe_str_client(router_describe(router)));
+    *msg = "Router descriptor was not a configured bridge.";
+    routerinfo_free(router);
+    return ROUTER_WAS_NOT_WANTED;
+  }
+
+  return ROUTER_CONTINUE_CHECKS;
+}
+
+/* Consensus helper for router_add_to_routerlist().
+ *
+ * Returns ROUTER_CONTINUE_CHECKS if the checks are inconclusive, otherwise
+ * returns a was_router_added_t describing the status of router. */
+static was_router_added_t
+router_add_to_routerlist_consensus_helper(routerinfo_t *router,
+                                          const char **msg,
+                                          int from_cache,
+                                          int authdir_handles_purpose,
+                                          int authdir_believes_valid,
+                                          routerinfo_t *old_router)
+{
+  const char *id_digest = router->cache_info.identity_digest;
+  networkstatus_t *consensus =
+    networkstatus_get_latest_consensus_by_flavor(FLAV_NS);
+  int in_consensus = 0;
+
   /* We no longer need a router with this descriptor digest. */
   if (consensus) {
     routerstatus_t *rs = networkstatus_vote_find_mutable_entry(
@@ -1596,21 +1666,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     routerlist_insert_old(routerlist, router);
     *msg = "Skipping router descriptor: not in consensus.";
     return ROUTER_NOT_IN_CONSENSUS;
-  }
-
-  /* If we're reading a bridge descriptor from our cache, and we don't
-   * recognize it as one of our currently configured bridges, drop the
-   * descriptor. Otherwise we could end up using it as one of our entry
-   * guards even if it isn't in our Bridge config lines. */
-  if (router->purpose == ROUTER_PURPOSE_BRIDGE && from_cache &&
-      !authdir_mode_bridge(options) &&
-      !routerinfo_is_a_configured_bridge(router)) {
-    log_info(LD_DIR, "Dropping bridge descriptor for %s because we have "
-             "no bridge configured at that address.",
-             safe_str_client(router_describe(router)));
-    *msg = "Router descriptor was not a configured bridge.";
-    routerinfo_free(router);
-    return ROUTER_WAS_NOT_WANTED;
   }
 
   /* If we have a router with the same identity key, choose the newer one. */
@@ -1649,6 +1704,87 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     routerinfo_free(router);
     return ROUTER_WAS_TOO_OLD;
   }
+
+  return ROUTER_CONTINUE_CHECKS;
+}
+
+/** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
+ * older entries (if any) with the same key.
+ *
+ * Note: Callers should not hold their pointers to <b>router</b> if this
+ * function fails; <b>router</b> will either be inserted into the routerlist or
+ * freed. Similarly, even if this call succeeds, they should not hold their
+ * pointers to <b>router</b> after subsequent calls with other routerinfo's --
+ * they might cause the original routerinfo to get freed.
+ *
+ * Returns the status for the operation. Might set *<b>msg</b> if it wants
+ * the poster of the router to know something.
+ *
+ * If <b>from_cache</b>, this descriptor came from our disk cache. If
+ * <b>from_fetch</b>, we received it in response to a request we made.
+ * (If both are false, that means it was uploaded to us as an auth dir
+ * server or via the controller.)
+ *
+ * This function should be called *after*
+ * routers_update_status_from_consensus_networkstatus; subsequently, you
+ * should call router_rebuild_store and routerlist_descriptors_added.
+ */
+was_router_added_t
+router_add_to_routerlist(routerinfo_t *router, const char **msg,
+                         int from_cache, int from_fetch)
+{
+  const or_options_t *options = get_options();
+  int authdir_handles_purpose = authdir_mode_handles_descs(options,
+                                                           router->purpose);
+  int authdir_believes_valid = 0;
+  routerinfo_t *old_router;
+  was_router_added_t result = ROUTER_CONTINUE_CHECKS;
+
+  tor_assert(msg);
+
+  if (!routerlist)
+    router_get_routerlist();
+
+  old_router = router_get_mutable_by_digest(
+                                          router->cache_info.identity_digest);
+
+  result = router_reject_cert_helper(router, msg);
+  if (result != ROUTER_CONTINUE_CHECKS)
+    return result;
+
+  result = router_reject_same_desc_helper(router, msg, old_router);
+  if (result != ROUTER_CONTINUE_CHECKS)
+    return result;
+
+  result = router_reject_authdir_helper(router, msg,
+                                        !from_cache && !from_fetch,
+                                        authdir_handles_purpose,
+                                        &authdir_believes_valid);
+  if (result != ROUTER_CONTINUE_CHECKS)
+    return result;
+
+  result = router_reject_authdir_bridge_desc_helper(router, msg,
+                                                    options);
+  if (result != ROUTER_CONTINUE_CHECKS)
+    return result;
+
+  result = router_add_to_routerlist_outdated_fetch_helper(router, msg,
+                                                          from_cache,
+                                                          from_fetch);
+  if (result != ROUTER_CONTINUE_CHECKS)
+    return result;
+
+  result = router_reject_outdated_bridge_desc_helper(router, msg, from_cache,
+                                                     options);
+  if (result != ROUTER_CONTINUE_CHECKS)
+    return result;
+
+  result = router_add_to_routerlist_consensus_helper(router, msg, from_cache,
+                                                     authdir_handles_purpose,
+                                                     authdir_believes_valid,
+                                                     old_router);
+  if (result != ROUTER_CONTINUE_CHECKS)
+    return result;
 
   /* We haven't seen a router with this identity before. Add it to the end of
    * the list. */
