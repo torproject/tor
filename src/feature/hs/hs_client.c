@@ -2140,4 +2140,10 @@ get_hs_client_auths_map(void)
   return client_auths;
 }
 
+STATIC void
+set_hs_client_auths_map(digest256map_t *map)
+{
+  client_auths = map;
+}
+
 #endif /* defined(TOR_UNIT_TESTS) */
