@@ -1,0 +1,4 @@
+  o Minor bugfixes (directory authorities):
+    - Cache outdated fetched descriptors on directory authorities.
+      (Directory caches already cache outdated fetched descriptors.)
+      Fixes bug 30782; bugfix on 0.1.1.13-alpha.

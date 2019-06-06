@@ -1551,7 +1551,9 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     *msg = "This authority does not accept bridge descriptors.";
     routerinfo_free(router);
     return ROUTER_AUTHDIR_REJECTS;
-  } else if (from_fetch) {
+  }
+
+  if (from_fetch) {
     /* Only check the descriptor digest against the network statuses when
      * we are receiving in response to a fetch. */
 
