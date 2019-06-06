@@ -424,6 +424,163 @@ test_circuitpadding_rtt(void *arg)
   return;
 }
 
+/* These padding machines are only used for tests pending #28634. */
+static void
+circpad_circ_client_machine_init(void)
+{
+  circpad_machine_spec_t *circ_client_machine
+      = tor_malloc_zero(sizeof(circpad_machine_spec_t));
+
+  circ_client_machine->conditions.min_hops = 2;
+  circ_client_machine->conditions.state_mask =
+      CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED|CIRCPAD_CIRC_HAS_RELAY_EARLY;
+  circ_client_machine->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
+  circ_client_machine->conditions.reduced_padding_ok = 1;
+
+  circ_client_machine->target_hopnum = 2;
+  circ_client_machine->is_origin_side = 1;
+
+  /* Start, gap, burst */
+  circpad_machine_states_init(circ_client_machine, 3);
+
+  circ_client_machine->states[CIRCPAD_STATE_START].
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
+
+  circ_client_machine->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
+
+  /* If we are in burst state, and we send a non-padding cell, then we cancel
+     the timer for the next padding cell:
+     We dont want to send fake extends when actual extends are going on */
+  circ_client_machine->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_CANCEL;
+
+  circ_client_machine->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_BINS_EMPTY] = CIRCPAD_STATE_END;
+
+  circ_client_machine->states[CIRCPAD_STATE_BURST].token_removal =
+      CIRCPAD_TOKEN_REMOVAL_CLOSEST;
+
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_len = 2;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_edges[0]= 500;
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_edges[1]= 1000000;
+
+  /* We have 5 tokens in the histogram, which means that all circuits will look
+   * like they have 7 hops (since we start this machine after the second hop,
+   * and tokens are decremented for any valid hops, and fake extends are
+   * used after that -- 2+5==7). */
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram[0] = 5;
+
+  circ_client_machine->states[CIRCPAD_STATE_BURST].histogram_total_tokens = 5;
+
+  circ_client_machine->machine_num = smartlist_len(origin_padding_machines);
+  circpad_register_padding_machine(circ_client_machine,
+                                   origin_padding_machines);
+}
+
+static void
+circpad_circ_responder_machine_init(void)
+{
+  circpad_machine_spec_t *circ_responder_machine
+      = tor_malloc_zero(sizeof(circpad_machine_spec_t));
+
+  /* Shut down the machine after we've sent enough packets */
+  circ_responder_machine->should_negotiate_end = 1;
+
+  /* The relay-side doesn't care what hopnum it is, but for consistency,
+   * let's match the client */
+  circ_responder_machine->target_hopnum = 2;
+  circ_responder_machine->is_origin_side = 0;
+
+  /* Start, gap, burst */
+  circpad_machine_states_init(circ_responder_machine, 3);
+
+  /* This is the settings of the state machine. In the future we are gonna
+     serialize this into the consensus or the torrc */
+
+  /* We transition to the burst state on padding receive and on non-padding
+   * recieve */
+  circ_responder_machine->states[CIRCPAD_STATE_START].
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
+  circ_responder_machine->states[CIRCPAD_STATE_START].
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_BURST;
+
+  /* Inside the burst state we _stay_ in the burst state when a non-padding
+   * is sent */
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_BURST;
+
+  /* Inside the burst state we transition to the gap state when we receive a
+   * padding cell */
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_GAP;
+
+  /* These describe the padding charasteristics when in burst state */
+
+  /* use_rtt_estimate tries to estimate how long padding cells take to go from
+     C->M, and uses that as what as the base of the histogram */
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].use_rtt_estimate = 1;
+  /* The histogram is 2 bins: an empty one, and infinity */
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram_len = 2;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram_edges[0]= 500;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram_edges[1] =
+    1000000;
+  /* During burst state we wait forever for padding to arrive.
+
+     We are waiting for a padding cell from the client to come in, so that we
+     respond, and we immitate how extend looks like */
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram[0] = 0;
+  // Only infinity bin:
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram[1] = 1;
+  circ_responder_machine->states[CIRCPAD_STATE_BURST].
+      histogram_total_tokens = 1;
+
+  /* From the gap state, we _stay_ in the gap state, when we receive padding
+   * or non padding */
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].
+      next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_GAP;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].
+      next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_GAP;
+
+  /* And from the gap state, we go to the end, when the bins are empty or a
+   * non-padding cell is sent */
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].
+      next_state[CIRCPAD_EVENT_BINS_EMPTY] = CIRCPAD_STATE_END;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].
+      next_state[CIRCPAD_EVENT_NONPADDING_SENT] = CIRCPAD_STATE_END;
+
+  // FIXME: Tune this histogram
+
+  /* The gap state is the delay you wait after you receive a padding cell
+     before you send a padding response */
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].use_rtt_estimate = 1;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_len = 6;
+  /* Specify histogram bins */
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[0]= 500;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[1]= 1000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[2]= 2000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[3]= 4000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[4]= 8000;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_edges[5]= 16000;
+  /* Specify histogram tokens */
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[0] = 0;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[1] = 1;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[2] = 2;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[3] = 2;
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram[4] = 1;
+  /* Total number of tokens */
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].histogram_total_tokens = 6;
+
+  circ_responder_machine->states[CIRCPAD_STATE_GAP].token_removal =
+      CIRCPAD_TOKEN_REMOVAL_CLOSEST_USEC;
+
+  circ_responder_machine->machine_num = smartlist_len(relay_padding_machines);
+  circpad_register_padding_machine(circ_responder_machine,
+                                   relay_padding_machines);
+}
+
 void
 helper_create_basic_machine(void)
 {
