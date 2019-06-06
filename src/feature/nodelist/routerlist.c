@@ -131,7 +131,7 @@ DECLARE_TYPED_DIGESTMAP_FNS(eimap_, digest_ei_map_t, extrainfo_t)
 #define sdmap_free(map, fn) MAP_FREE_AND_NULL(sdmap, (map), (fn))
 
 /* static function prototypes */
-static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
+static int signed_desc_digest_is_recognized(const signed_descriptor_t *desc);
 static const char *signed_descriptor_get_body_impl(
                                               const signed_descriptor_t *desc,
                                               int with_annotations);
@@ -2439,7 +2439,7 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
 /** Return true iff the latest ns-flavored consensus includes a descriptor
  * whose digest is that of <b>desc</b>. */
 static int
-signed_desc_digest_is_recognized(signed_descriptor_t *desc)
+signed_desc_digest_is_recognized(const signed_descriptor_t *desc)
 {
   const routerstatus_t *rs;
   networkstatus_t *consensus = networkstatus_get_latest_consensus_by_flavor(
