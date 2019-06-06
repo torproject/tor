@@ -68,3 +68,17 @@ authdir_mode_bridge(const or_options_t *options)
 {
   return authdir_mode(options) && options->BridgeAuthoritativeDir != 0;
 }
+
+/* Does this authority reject this router due to its
+ * bridge-distribution-request line?
+ *
+ * Returns true if this is a non-bridge authority and the router is requesting
+ * distribution as a bridge, and false otherwise. */
+int
+authdir_mode_rejects_bridge_distribution(const or_options_t *options,
+                                         const routerinfo_t *router)
+{
+  return (authdir_mode(options)
+          && router->has_bridge_distribution_request
+          && !authdir_mode_bridge(options));
+}

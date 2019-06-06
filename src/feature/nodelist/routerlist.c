@@ -1516,6 +1516,8 @@ router_reject_same_desc_helper(routerinfo_t *router, const char **msg,
   return ROUTER_CONTINUE_CHECKS;
 }
 
+#ifdef HAVE_MODULE_DIRAUTH
+
 /* Authdir rejection helper for router_add_to_routerlist().
  *
  * Returns ROUTER_AUTHDIR_REJECTS on failure, and ROUTER_CONTINUE_CHECKS if
@@ -1548,9 +1550,7 @@ router_reject_authdir_bridge_desc_helper(routerinfo_t *router,
                                          const char **msg,
                                          const or_options_t *options)
 {
-  if (authdir_mode(options)
-      && router->has_bridge_distribution_request
-      && !authdir_mode_bridge(options)) {
+  if (authdir_mode_rejects_bridge_distribution(options, router)) {
     /* We do this extra check for better diagnostics, because
      * authdir_handles_purpose is false for bridge descriptors on non-bridge
      * authorities. */
@@ -1561,6 +1561,8 @@ router_reject_authdir_bridge_desc_helper(routerinfo_t *router,
 
   return ROUTER_CONTINUE_CHECKS;
 }
+
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
 
 /* Outdated fetch helper for router_add_to_routerlist().
  *
@@ -1813,6 +1815,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   if (result != ROUTER_CONTINUE_CHECKS)
     return result;
 
+#ifdef HAVE_MODULE_DIRAUTH
   result = router_reject_authdir_helper(router, msg,
                                         !from_cache && !from_fetch,
                                         authdir_handles_purpose,
@@ -1824,6 +1827,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                                                     options);
   if (result != ROUTER_CONTINUE_CHECKS)
     return result;
+#endif
 
   result = router_add_to_routerlist_outdated_fetch_helper(router, msg,
                                                           from_cache,

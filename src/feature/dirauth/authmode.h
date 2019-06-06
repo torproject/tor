@@ -18,6 +18,8 @@ int authdir_mode_handles_descs(const or_options_t *options, int purpose);
 int authdir_mode_publishes_statuses(const or_options_t *options);
 int authdir_mode_tests_reachability(const or_options_t *options);
 int authdir_mode_bridge(const or_options_t *options);
+int authdir_mode_rejects_bridge_distribution(const or_options_t *options,
+                                             const routerinfo_t *router);
 
 /* Return true iff we believe ourselves to be a v3 authoritative directory
  * server. */
@@ -37,6 +39,8 @@ authdir_mode_v3(const or_options_t *options)
 #define authdir_mode_publishes_statuses(options) (((void)(options)),0)
 #define authdir_mode_tests_reachability(options) (((void)(options)),0)
 #define authdir_mode_bridge(options) (((void)(options)),0)
+#define authdir_mode_rejects_bridge_distribution(options, router) \
+  (((void)(options)),((void)(router)),0)
 #define authdir_mode_v3(options) (((void)(options)),0)
 
 #define have_module_dirauth() (0)

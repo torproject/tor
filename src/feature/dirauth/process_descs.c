@@ -18,6 +18,7 @@
 #include "app/config/config.h"
 #include "core/or/policies.h"
 #include "core/or/versions.h"
+#include "feature/dirauth/authmode.h"
 #include "feature/dirauth/keypin.h"
 #include "feature/dirauth/reachability.h"
 #include "feature/dirclient/dlstatus.h"
@@ -220,8 +221,10 @@ dirserv_load_fingerprint_file(void)
  * - a nickname/identity key combination that we recognize from the fingerprint
  *   list,
  * - an IP we automatically act on according to our configuration,
- * - an appropriate version, and
- * - matching pinned keys.
+ * - an appropriate version,
+ * - an ntor onion key,
+ * - matching pinned identity keys, and
+ * - a matching bridge-distribution-request line.
  *
  * Return the appropriate router status.
  *
@@ -232,7 +235,8 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
                           int severity)
 {
   char d[DIGEST_LEN];
-  const int key_pinning = get_options()->AuthDirPinKeys;
+  const or_options_t *options = get_options();
+  const int key_pinning = options->AuthDirPinKeys;
 
   if (crypto_pk_get_digest(router->identity_pkey, d)) {
     log_warn(LD_BUG,"Error computing fingerprint");
@@ -296,6 +300,12 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
       }
 #endif /* defined(DISABLE_DISABLING_ED25519) */
     }
+  }
+
+  if (authdir_mode_rejects_bridge_distribution(options, router)) {
+    if (msg)
+      *msg = "This authority does not accept bridge descriptors.";
+    return FP_REJECT;
   }
 
   return 0;
