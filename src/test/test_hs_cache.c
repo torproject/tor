@@ -20,6 +20,7 @@
 #include "core/mainloop/connection.h"
 #include "core/proto/proto_http.h"
 #include "lib/crypt_ops/crypto_format.h"
+#include "lib/crypt_ops/crypto_rand.h"
 
 #include "feature/dircommon/dir_connection_st.h"
 #include "feature/nodelist/networkstatus_st.h"
@@ -548,6 +549,83 @@ test_client_cache(void *arg)
   }
 }
 
+/** Test that we can store HS descriptors in the client HS cache. */
+static void
+test_client_cache_decrypt(void *arg)
+{
+  int ret;
+  char *desc_encoded = NULL;
+  uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+  curve25519_keypair_t client_kp;
+  ed25519_keypair_t service_kp;
+  hs_descriptor_t *desc = NULL;
+  const hs_descriptor_t *search_desc;
+  const char *search_desc_encoded;
+
+  (void) arg;
+
+  /* Initialize HSDir cache subsystem */
+  hs_init();
+
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  /* Set consensus time */
+  parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                     &mock_ns.valid_after);
+  parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                     &mock_ns.fresh_until);
+  parse_rfc1123_time("Sat, 26 Oct 1985 16:00:00 UTC",
+                     &mock_ns.valid_until);
+
+  /* Generate a valid descriptor with normal values. */
+  {
+    ret = ed25519_keypair_generate(&service_kp, 0);
+    tt_int_op(ret, OP_EQ, 0);
+    ret = curve25519_keypair_generate(&client_kp, 0);
+    tt_int_op(ret, OP_EQ, 0);
+    crypto_rand((char *) descriptor_cookie, sizeof(descriptor_cookie));
+
+    desc = hs_helper_build_hs_desc_with_client_auth(descriptor_cookie,
+                                                    &client_kp.pubkey,
+                                                    &service_kp);
+    tt_assert(desc);
+    ret = hs_desc_encode_descriptor(desc, &service_kp, descriptor_cookie,
+                                    &desc_encoded);
+    tt_int_op(ret, OP_EQ, 0);
+  }
+
+  /* Put it in the cache. Should not be decrypted since the client
+   * authorization creds were not added to the global map. */
+  ret = hs_cache_store_as_client(desc_encoded, &service_kp.pubkey);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_NEED_CLIENT_AUTH);
+
+  /* We should not be able to decrypt anything. */
+  ret = hs_cache_client_new_auth_parse(&service_kp.pubkey);
+  tt_int_op(ret, OP_EQ, false);
+
+  /* Add client auth to global map. */
+  hs_helper_add_client_auth(&service_kp.pubkey, &client_kp.seckey);
+
+  /* We should not be able to decrypt anything. */
+  ret = hs_cache_client_new_auth_parse(&service_kp.pubkey);
+  tt_int_op(ret, OP_EQ, true);
+
+  /* Lookup the cache to make sure it is usable and there. */
+  search_desc = hs_cache_lookup_as_client(&service_kp.pubkey);
+  tt_assert(search_desc);
+  search_desc_encoded = hs_cache_lookup_encoded_as_client(&service_kp.pubkey);
+  tt_mem_op(search_desc_encoded, OP_EQ, desc_encoded, strlen(desc_encoded));
+
+ done:
+  hs_descriptor_free(desc);
+  tor_free(desc_encoded);
+
+  hs_free_all();
+
+  UNMOCK(networkstatus_get_live_consensus);
+}
+
 struct testcase_t hs_cache[] = {
   /* Encoding tests. */
   { "directory", test_directory, TT_FORK,
@@ -559,6 +637,8 @@ struct testcase_t hs_cache[] = {
   { "upload_and_download_hs_desc", test_upload_and_download_hs_desc, TT_FORK,
     NULL, NULL },
   { "client_cache", test_client_cache, TT_FORK,
+    NULL, NULL },
+  { "client_cache_decrypt", test_client_cache_decrypt, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES

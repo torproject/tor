@@ -115,6 +115,7 @@ STATIC void retry_all_socks_conn_waiting_for_desc(void);
 #ifdef TOR_UNIT_TESTS
 
 STATIC digest256map_t *get_hs_client_auths_map(void);
+STATIC void set_hs_client_auths_map(digest256map_t *map);
 
 #endif /* defined(TOR_UNIT_TESTS) */
 
