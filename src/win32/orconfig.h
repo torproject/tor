@@ -218,7 +218,7 @@
 #define USING_TWOS_COMPLEMENT
 
 /* Version number of package */
-#define VERSION "0.4.1.2-alpha"
+#define VERSION "0.4.1.2-alpha-dev"
 
 
 
