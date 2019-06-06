@@ -1494,6 +1494,8 @@ test_circuitpadding_wronghop(void *arg)
 
   timers_initialize();
   circpad_machines_init();
+  helper_create_circsetup_origin_machine();
+  helper_create_circsetup_relay_machine();
 
   MOCK(node_get_by_id,
        node_get_by_id_mock);
@@ -1684,6 +1686,8 @@ test_circuitpadding_negotiation(void *arg)
 
   timers_initialize();
   circpad_machines_init();
+  helper_create_circsetup_origin_machine();
+  helper_create_circsetup_relay_machine();
 
   MOCK(node_get_by_id,
        node_get_by_id_mock);
@@ -2547,6 +2551,8 @@ test_circuitpadding_reduce_disable(void *arg)
   client_side->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
   circpad_machines_init();
+  helper_create_circsetup_origin_machine();
+  helper_create_circsetup_relay_machine();
   helper_create_conditional_machines();
 
   monotime_init();
