@@ -1,4 +1,4 @@
-/* trunnel.c -- copied from Trunnel v1.5.2
+/* trunnel.c -- copied from Trunnel v1.5.3
  * https://gitweb.torproject.org/trunnel.git
  * You probably shouldn't edit this file.
  */
@@ -13,6 +13,10 @@
 #include "trunnel-impl.h"
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
 
 #if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && \
 	__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -31,7 +35,7 @@
 #    define IS_LITTLE_ENDIAN
 #  endif
 #else
-# if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+# if defined(__FreeBSD__) || defined(__NetBSD__) || defined(OpenBSD)
 #  include <sys/endian.h>
 # else
 #  include <endian.h>
