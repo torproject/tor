@@ -5399,6 +5399,11 @@ test_util_socketpair(void *arg)
     tt_skip();
   }
 #endif /* defined(__FreeBSD__) */
+  if (ersatz && socketpair_result == -ENETUNREACH) {
+    /* We can also fail with -ENETUNREACH if we have no network stack at
+     * all. */
+    tt_skip();
+  }
   tt_int_op(0, OP_EQ, socketpair_result);
 
   tt_assert(SOCKET_OK(fds[0]));
