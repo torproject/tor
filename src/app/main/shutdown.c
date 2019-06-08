@@ -160,8 +160,6 @@ tor_free_all(int postfork)
 
   subsystems_shutdown();
 
-  tor_libevent_free_all();
-
   /* Stuff in util.c and address.c*/
   if (!postfork) {
     esc_router_info(NULL);

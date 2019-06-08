@@ -653,10 +653,6 @@ tor_init(int argc, char *argv[])
     return -1;
   }
 
-  if (tor_init_libevent_rng() < 0) {
-    log_warn(LD_NET, "Problem initializing libevent RNG.");
-  }
-
   /* Scan/clean unparseable descriptors; after reading config */
   routerparse_init();
 

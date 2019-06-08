@@ -25,6 +25,7 @@
 #include "lib/time/time_sys.h"
 #include "lib/tls/tortls_sys.h"
 #include "lib/wallclock/wallclock_sys.h"
+#include "lib/evloop/evloop_sys.h"
 
 #include "feature/dirauth/dirauth_sys.h"
 
@@ -49,6 +50,8 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_orconn_event, /* -33 */
   &sys_ocirc_event, /* -32 */
   &sys_btrack, /* -30 */
+
+  &sys_evloop, /* -20 */
 
   &sys_mainloop, /* 5 */
   &sys_or, /* 20 */
