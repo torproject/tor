@@ -1,0 +1,3 @@
+  o Testing:
+    - Run shellcheck for all non-third-party shell scripts that are shipped
+      with Tor. Closes ticket 29533.
