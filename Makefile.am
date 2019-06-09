@@ -231,6 +231,9 @@ shellcheck:
                 if [ -e "$(top_srcdir)/contrib/dirauth-tools/nagios-check-tor-authority-cert" ]; then \
                         shellcheck "$(top_srcdir)/contrib/dirauth-tools/nagios-check-tor-authority-cert"; \
                 fi; \
+                if [ -e "$(top_srcdir)/contrib/client-tools/torify" ]; then \
+                        shellcheck "$(top_srcdir)/contrib/client-tools/torify"; \
+                fi; \
                 if [ -d "$(top_srcdir)/scripts/git" ]; then \
                         shellcheck $(top_srcdir)/scripts/git/*.git-hook; \
                 fi; \
