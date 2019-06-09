@@ -35,7 +35,6 @@ if [ -e scripts/maint/practracker/practracker.py ]; then
 fi
 
 remote="$1"
-remote_loc="$2"
 
 remote_name=$(git remote --verbose | grep "$2" | awk '{print $1}' | head -n 1)
 
