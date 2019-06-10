@@ -14,7 +14,7 @@
 #     ... which means that the tor worktrees are in /home/<user>/git/tor-wkt
 
 # Where are all those git repositories?
-GIT_PATH="FULL_PATH_TO_GIT_REPOSITORY_DIRECTORY"
+GIT_PATH=${TOR_FULL_GIT_PATH:-"FULL_PATH_TO_GIT_REPOSITORY_DIRECTORY"}
 # The tor master git repository directory from which all the worktree have
 # been created.
 TOR_MASTER_NAME="tor"
