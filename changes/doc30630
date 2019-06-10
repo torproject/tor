@@ -1,0 +1,3 @@
+  o Documentation:
+    - Mention URLs for Travis/Appveyor/Jenkins in ReleasingTor.md. Closes
+      ticket 30630.
