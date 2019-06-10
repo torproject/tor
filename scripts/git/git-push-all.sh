@@ -5,7 +5,7 @@ UPSTREAM_BRANCH="upstream"
 
 git push $UPSTREAM_BRANCH \
    master \
+   {release,maint}-0.4.1 \
    {release,maint}-0.4.0 \
    {release,maint}-0.3.5 \
-   {release,maint}-0.3.4 \
    {release,maint}-0.2.9
