@@ -1,0 +1,5 @@
+  o Minor bugfixes (testing):
+    - Skip test_rebind when the TOR_SKIP_TEST_REBIND environmental variable is
+      set. Fixes bug 30713; bugfix on 0.3.5.1-alpha.
+    - Skip test_rebind on macOS in Travis, because it is unreliable on
+      macOS on Travis. Fixes bug 30713; bugfix on 0.3.5.1-alpha.
