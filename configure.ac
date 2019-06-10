@@ -2458,7 +2458,6 @@ AC_CONFIG_FILES([
 	Makefile
 	config.rust
 	contrib/operator-tools/tor.logrotate
-	contrib/dist/torctl
 	contrib/dist/tor.service
 	src/config/torrc.sample
 	src/config/torrc.minimal
