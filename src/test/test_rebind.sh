@@ -7,7 +7,7 @@ if test "$UNAME_OS" = 'CYGWIN' || \
    test "$UNAME_OS" = 'MSYS' || \
    test "$UNAME_OS" = 'MINGW'; then
   if test "$APPVEYOR" = 'True'; then
-    echo "This test is disabled on Windows CI, as it requires firewall examptions. Skipping." >&2
+    echo "This test is disabled on Windows CI, as it requires firewall exemptions. Skipping." >&2
     exit 77
   fi
 fi
