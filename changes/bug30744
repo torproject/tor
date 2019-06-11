@@ -1,0 +1,3 @@
+  o Minor bugfixes (continuous integration):
+    - Allow the test-stem job to fail in Travis, because it sometimes hangs.
+      Fixes bug 30744; bugfix on 0.3.5.4-alpha.

@@ -39,7 +39,7 @@ env:
     - RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
 
 matrix:
-  ## include creates builds with gcc, linux, sudo: false
+  ## include creates builds with gcc, linux
   include:
     ## We include a single coverage build with the best options for coverage
     - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
@@ -70,13 +70,11 @@ matrix:
   ## Careful! We use global envs, which makes it hard to exclude or
   ## allow failures by env:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
+  allow_failures:
+    ## test-stem sometimes hangs on Travis
+    - env: TEST_STEM="yes"
+
   exclude:
-    ## Clang doesn't work in containerized builds, see below.
-    - compiler: clang
-      sudo: false
-    ## Non-containerized gcc are slow and redundant.
-    - compiler: gcc
-      sudo: required
     ## gcc on OSX is less useful, because the default compiler is clang.
     - compiler: gcc
       os: osx
@@ -91,20 +89,6 @@ matrix:
       os: linux
       ## TOR_RUST_DEPENDENCIES is spelt RUST_DEPENDENCIES in 0.3.2
       env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true HARDENING_OPTIONS=""
-
-## We don't need sudo. (The "apt:" stanza after this allows us to not need
-## sudo; otherwise, we would need it for getting dependencies.)
-##
-## But we use "sudo: required" to force non-containerized builds, working
-## around a Travis CI environment issue: clang LeakAnalyzer fails
-## because it requires ptrace and the containerized environment no
-## longer allows ptrace.
-## https://github.com/travis-ci/travis-ci/issues/9033
-##
-## In the matrix above, we exclude redundant combinations.
-sudo:
-  - false
-  - required
 
 ## (Linux only) Use the latest Linux image (Ubuntu Trusty)
 dist: trusty
@@ -204,6 +188,8 @@ install:
   - if [[ "$TEST_STEM" != "" ]]; then pushd stem; python -c "from stem import stem; print(stem.__version__);"; git log -1; popd; fi
 
 script:
+  # Skip test_rebind on macOS
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export TOR_SKIP_TEST_REBIND=true; fi
   - ./autogen.sh
   - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $NSS_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
   - echo "Configure flags are $CONFIGURE_FLAGS"
@@ -225,6 +211,7 @@ after_failure:
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-core || echo "make failed"; fi
+  - if [[ "$TEST_STEM" != "" ]]; then cat "$STEM_SOURCE_DIR"/test/data/tor_log || echo "cat failed"; fi
 
 before_cache:
   ## Delete all gcov files.
