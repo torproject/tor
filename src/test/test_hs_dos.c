@@ -26,6 +26,8 @@ test_can_send_intro2(void *arg)
 
   (void) arg;
 
+  hs_dos_init();
+
   or_circ =  or_circuit_new(1, NULL);
 
   /* Make that circuit a service intro point. */

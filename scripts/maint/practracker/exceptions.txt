@@ -47,9 +47,9 @@ problem function-size /src/app/config/config.c:parse_ports() 170
 problem function-size /src/app/config/config.c:getinfo_helper_config() 116
 problem function-size /src/app/config/confparse.c:config_assign_value() 205
 problem function-size /src/app/config/confparse.c:config_get_assigned_option() 129
-problem include-count /src/app/main/main.c 67
+problem include-count /src/app/main/main.c 68
 problem function-size /src/app/main/main.c:dumpstats() 102
-problem function-size /src/app/main/main.c:tor_init() 137
+problem function-size /src/app/main/main.c:tor_init() 141
 problem function-size /src/app/main/main.c:sandbox_init_filter() 291
 problem function-size /src/app/main/main.c:run_tor_main_loop() 105
 problem function-size /src/app/main/ntmain.c:nt_service_install() 126
@@ -209,7 +209,7 @@ problem function-size /src/feature/nodelist/authcert.c:trusted_dirs_load_certs_f
 problem function-size /src/feature/nodelist/authcert.c:authority_certs_fetch_missing() 296
 problem function-size /src/feature/nodelist/fmt_routerstatus.c:routerstatus_format_entry() 166
 problem function-size /src/feature/nodelist/microdesc.c:microdesc_cache_rebuild() 134
-problem include-count /src/feature/nodelist/networkstatus.c 62
+problem include-count /src/feature/nodelist/networkstatus.c 63
 problem function-size /src/feature/nodelist/networkstatus.c:networkstatus_check_consensus_signature() 176
 problem function-size /src/feature/nodelist/networkstatus.c:networkstatus_set_current_consensus() 293
 problem function-size /src/feature/nodelist/node_select.c:router_pick_directory_server_impl() 123

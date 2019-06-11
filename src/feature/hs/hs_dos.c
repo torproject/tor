@@ -7,13 +7,83 @@
 
 #define HS_DOS_PRIVATE
 
+#include "core/or/or.h"
+#include "app/config/config.h"
+
 #include "core/or/circuitlist.h"
 
+#include "feature/nodelist/networkstatus.h"
+#include "feature/relay/routermode.h"
+
+#include "lib/evloop/token_bucket.h"
+
 #include "hs_dos.h"
+
+/* Default values. */
+#define HS_DOS_INTRODUCE_CELL_RATE_PER_SEC 25
+#define HS_DOS_INTRODUCE_CELL_BURST_PER_SEC 200
+
+/* Consensus parameters. */
+static uint32_t hs_dos_introduce_rate_per_sec;
+static uint32_t hs_dos_introduce_burst_per_sec;
+
+/* Return the parameter for the introduction rate per sec. */
+static uint32_t
+get_param_rate_per_sec(const networkstatus_t *ns)
+{
+  return networkstatus_get_param(ns, "HSDoSIntroduceRate",
+                                 HS_DOS_INTRODUCE_CELL_RATE_PER_SEC,
+                                 0, INT32_MAX);
+}
+
+/* Return the parameter for the introduction burst per sec. */
+static uint32_t
+get_param_burst_per_sec(const networkstatus_t *ns)
+{
+  return networkstatus_get_param(ns, "HSDoSIntroduceBurst",
+                                 HS_DOS_INTRODUCE_CELL_BURST_PER_SEC,
+                                 0, INT32_MAX);
+}
+
+/* Set consensus parameters. */
+static void
+set_consensus_parameters(const networkstatus_t *ns)
+{
+  hs_dos_introduce_rate_per_sec = get_param_rate_per_sec(ns);
+  hs_dos_introduce_burst_per_sec = get_param_burst_per_sec(ns);
+}
 
 /*
  * Public API.
  */
+
+/* Return the INTRODUCE2 cell rate per second. */
+uint32_t
+hs_dos_get_intro2_rate(void)
+{
+  return hs_dos_introduce_rate_per_sec;
+}
+
+/* Return the INTRODUCE2 cell burst per second. */
+uint32_t
+hs_dos_get_intro2_burst(void)
+{
+  return hs_dos_introduce_burst_per_sec;
+}
+
+/* Called when the consensus has changed. We might have new consensus
+ * parameters to look at. */
+void
+hs_dos_consensus_has_changed(const networkstatus_t *ns)
+{
+  /* No point on updating these values if we are not a public relay that can
+   * be picked to be an introduction point. */
+  if (!public_server_mode(get_options())) {
+    return;
+  }
+
+  set_consensus_parameters(ns);
+}
 
 /* Return true iff an INTRODUCE2 cell can be sent on the given service
  * introduction circuit. */
@@ -46,4 +116,11 @@ hs_dos_can_send_intro2(or_circuit_t *s_intro_circ)
 
   /* Finally, we can send a new INTRODUCE2 if there are still tokens. */
   return token_bucket_ctr_get(&s_intro_circ->introduce2_bucket) > 0;
+}
+
+/* Initialize the onion service Denial of Service subsystem. */
+void
+hs_dos_init(void)
+{
+  set_consensus_parameters(NULL);
 }
