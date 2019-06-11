@@ -216,7 +216,7 @@ problem function-size /src/feature/nodelist/node_select.c:router_pick_directory_
 problem function-size /src/feature/nodelist/node_select.c:compute_weighted_bandwidths() 206
 problem function-size /src/feature/nodelist/node_select.c:router_pick_trusteddirserver_impl() 114
 problem function-size /src/feature/nodelist/nodelist.c:compute_frac_paths_available() 193
-problem file-size /src/feature/nodelist/routerlist.c 3238
+problem file-size /src/feature/nodelist/routerlist.c 3239
 problem function-size /src/feature/nodelist/routerlist.c:router_rebuild_store() 148
 problem function-size /src/feature/nodelist/routerlist.c:router_add_to_routerlist() 169
 problem function-size /src/feature/nodelist/routerlist.c:routerlist_remove_old_routers() 121

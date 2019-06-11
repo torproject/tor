@@ -216,9 +216,14 @@ dirserv_load_fingerprint_file(void)
 
 #define DISABLE_DISABLING_ED25519
 
-/** Check whether <b>router</b> has a nickname/identity key combination that
- * we recognize from the fingerprint list, or an IP we automatically act on
- * according to our configuration.  Return the appropriate router status.
+/** Check whether <b>router</b> has:
+ * - a nickname/identity key combination that we recognize from the fingerprint
+ *   list,
+ * - an IP we automatically act on according to our configuration,
+ * - an appropriate version, and
+ * - matching pinned keys.
+ *
+ * Return the appropriate router status.
  *
  * If the status is 'FP_REJECT' and <b>msg</b> is provided, set
  * *<b>msg</b> to an explanation of why. */
@@ -236,7 +241,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
     return FP_REJECT;
   }
 
-  /* Check for the more usual versions to reject a router first. */
+  /* Check for the more common reasons to reject a router first. */
   const uint32_t r = dirserv_get_status_impl(d, router->nickname,
                                              router->addr, router->or_port,
                                              router->platform, msg, severity);
@@ -535,7 +540,7 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
   int general = purpose == ROUTER_PURPOSE_GENERAL;
   tor_assert(msg);
 
-  r=ROUTER_ADDED_SUCCESSFULLY; /*Least severe return value. */
+  r=ROUTER_ADDED_SUCCESSFULLY; /* Least severe return value. */
 
   if (!string_is_utf8_no_bom(desc, desclen)) {
     *msg = "descriptor(s) or extrainfo(s) not valid UTF-8 or had BOM.";
@@ -551,9 +556,7 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
                    !general ? router_purpose_to_string(purpose) : "",
                    !general ? "\n" : "")<0) {
     *msg = "Couldn't format annotations";
-    /* XXX Not cool: we return -1 below, but (was_router_added_t)-1 is
-     * ROUTER_BAD_EI, which isn't what's gone wrong here. :( */
-    return -1;
+    return ROUTER_AUTHDIR_BUG_ANNOTATIONS;
   }
 
   s = desc;
