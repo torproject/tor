@@ -70,6 +70,10 @@ matrix:
   ## Careful! We use global envs, which makes it hard to exclude or
   ## allow failures by env:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
+  allow_failures:
+    ## test-stem sometimes hangs on Travis
+    - env: TEST_STEM="yes"
+
   exclude:
     ## gcc on OSX is less useful, because the default compiler is clang.
     - compiler: gcc
