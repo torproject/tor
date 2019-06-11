@@ -17,9 +17,9 @@
 GIT_PATH=${TOR_FULL_GIT_PATH:-"FULL_PATH_TO_GIT_REPOSITORY_DIRECTORY"}
 # The tor master git repository directory from which all the worktree have
 # been created.
-TOR_MASTER_NAME="tor"
+TOR_MASTER_NAME=${TOR_MASTER_NAME:-"tor"}
 # The worktrees location (directory).
-TOR_WKT_NAME="tor-wkt"
+TOR_WKT_NAME=${TOR_WKT_NAME:-"tor-wkt"}
 
 #########################
 # End of configuration. #
