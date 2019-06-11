@@ -272,6 +272,7 @@ extern struct testcase_t sr_tests[];
 extern struct testcase_t status_tests[];
 extern struct testcase_t storagedir_tests[];
 extern struct testcase_t thread_tests[];
+extern struct testcase_t token_bucket_tests[];
 extern struct testcase_t tortls_openssl_tests[];
 extern struct testcase_t tortls_tests[];
 extern struct testcase_t util_format_tests[];

@@ -916,6 +916,7 @@ struct testgroup_t testgroups[] = {
   { "socks/", socks_tests },
   { "status/" , status_tests },
   { "storagedir/", storagedir_tests },
+  { "token_bucket/", token_bucket_tests },
   { "tortls/", tortls_tests },
 #ifndef ENABLE_NSS
   { "tortls/openssl/", tortls_openssl_tests },
