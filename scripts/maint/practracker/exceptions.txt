@@ -189,7 +189,7 @@ problem function-size /src/feature/dirparse/ns_parse.c:networkstatus_verify_bw_w
 problem function-size /src/feature/dirparse/ns_parse.c:networkstatus_parse_vote_from_string() 638
 problem function-size /src/feature/dirparse/parsecommon.c:tokenize_string() 103
 problem function-size /src/feature/dirparse/parsecommon.c:get_next_token() 159
-problem function-size /src/feature/dirparse/routerparse.c:router_parse_entry_from_string() 554
+problem function-size /src/feature/dirparse/routerparse.c:router_parse_entry_from_string() 557
 problem function-size /src/feature/dirparse/routerparse.c:extrainfo_parse_entry_from_string() 210
 problem function-size /src/feature/hibernate/hibernate.c:accounting_parse_options() 109
 problem function-size /src/feature/hs/hs_cell.c:hs_cell_build_establish_intro() 115
