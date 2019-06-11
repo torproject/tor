@@ -14,7 +14,7 @@
 #     ... which means that the tor worktrees are in /home/<user>/git/tor-wkt
 
 # Where are all those git repositories?
-GIT_PATH="FULL_PATH_TO_GIT_REPOSITORY_DIRECTORY"
+GIT_PATH=${TOR_FULL_GIT_PATH:-"FULL_PATH_TO_GIT_REPOSITORY_DIRECTORY"}
 # The tor master git repository directory from which all the worktree have
 # been created.
 TOR_MASTER_NAME="tor"
@@ -37,15 +37,15 @@ TOR_WKT_NAME="tor-wkt"
 # First set of arrays are the maint-* branch and then the release-* branch.
 # New arrays need to be in the WORKTREE= array else they aren't considered.
 MAINT_029=( "maint-0.2.9" "$GIT_PATH/$TOR_WKT_NAME/maint-0.2.9" )
-MAINT_034=( "maint-0.3.4" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.4" )
 MAINT_035=( "maint-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/maint-0.3.5" )
 MAINT_040=( "maint-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.0" )
+MAINT_041=( "maint-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/maint-0.4.1" )
 MAINT_MASTER=( "master" "$GIT_PATH/$TOR_MASTER_NAME" )
 
 RELEASE_029=( "release-0.2.9" "$GIT_PATH/$TOR_WKT_NAME/release-0.2.9" )
-RELEASE_034=( "release-0.3.4" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.4" )
 RELEASE_035=( "release-0.3.5" "$GIT_PATH/$TOR_WKT_NAME/release-0.3.5" )
 RELEASE_040=( "release-0.4.0" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.0" )
+RELEASE_041=( "release-0.4.1" "$GIT_PATH/$TOR_WKT_NAME/release-0.4.1" )
 
 # The master branch path has to be the main repository thus contains the
 # origin that will be used to fetch the updates. All the worktrees are created
@@ -55,14 +55,14 @@ ORIGIN_PATH="$GIT_PATH/$TOR_MASTER_NAME"
 # SC2034 -- shellcheck thinks that these are unused.  We know better.
 ACTUALLY_THESE_ARE_USED=<<EOF
 ${MAINT_029[0]}
-${MAINT_034[0]}
 ${MAINT_035[0]}
 ${MAINT_040[0]}
+${MAINT_041[0]}
 ${MAINT_MASTER[0]}
 ${RELEASE_029[0]}
-${RELEASE_034[0]}
 ${RELEASE_035[0]}
 ${RELEASE_040[0]}
+${RELEASE_041[0]}
 EOF
 
 ##########################
@@ -75,14 +75,14 @@ WORKTREE=(
   MAINT_029[@]
   RELEASE_029[@]
 
-  MAINT_034[@]
-  RELEASE_034[@]
-
   MAINT_035[@]
   RELEASE_035[@]
 
   MAINT_040[@]
   RELEASE_040[@]
+
+  MAINT_041[@]
+  RELEASE_041[@]
 
   MAINT_MASTER[@]
 )
