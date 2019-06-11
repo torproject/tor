@@ -1,0 +1,3 @@
+  o Minor bugfixes (circuit isolation):
+    - Fix a logic error that prevented the SessionGroup sub-option from
+      being accepted. Fixes bug 22619; bugfix on 0.2.7.2-alpha.
