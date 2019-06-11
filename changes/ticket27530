@@ -1,0 +1,4 @@
+  o Minor features (compilation):
+    - Log a more useful error message when we are compiling and one of the
+      compile-time hardening options we have selected can be linked but
+      not executed. Closes ticket 27530.
