@@ -172,34 +172,20 @@ pubsub_cfg_dump(const pubsub_cfg_t *cfg, int severity, const char *prefix)
 
 /**
  * Helper: fill a bitarray <b>out</b> with entries corresponding to the
- * subsystems listed in <b>items</b>.  If any subsystem is listed more than
- * once, log a warning.  Return 0 on success, -1 on failure.
+ * subsystems listed in <b>items</b>.
  **/
-static int
+static void
 get_message_bitarray(const pubsub_adjmap_t *map,
-                     message_id_t msg,
                      const smartlist_t *items,
-                     const char *operation,
                      bitarray_t **out)
 {
-  bool ok = true;
   *out = bitarray_init_zero((unsigned)map->n_subsystems);
   if (! items)
-    return 0;
+    return;
 
   SMARTLIST_FOREACH_BEGIN(items, const pubsub_cfg_t *, cfg) {
-    if (bitarray_is_set(*out, cfg->subsys)) {
-      log_warn(LD_MESG|LD_BUG,
-               "Message \"%s\" is configured to be %s by subsystem "
-               "\"%s\" more than once.",
-               get_message_id_name(msg), operation,
-               get_subsys_id_name(cfg->subsys));
-      ok = false;
-    }
     bitarray_set(*out, cfg->subsys);
   } SMARTLIST_FOREACH_END(cfg);
-
-  return ok ? 0 : -1;
 }
 
 /**
@@ -222,10 +208,8 @@ lint_message_graph(const pubsub_adjmap_t *map,
   bitarray_t *subscribed_by = NULL;
   bool ok = true;
 
-  if (get_message_bitarray(map, msg, pub, "published", &published_by) < 0)
-    ok = false;
-  if (get_message_bitarray(map, msg, sub, "subscribed", &subscribed_by) < 0)
-    ok = false;
+  get_message_bitarray(map, pub, &published_by);
+  get_message_bitarray(map, sub, &subscribed_by);
 
   /* Check whether any subsystem is publishing and subscribing the same
    * message. [??]

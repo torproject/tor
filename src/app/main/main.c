@@ -1256,6 +1256,8 @@ pubsub_connect(void)
     /* XXXX For each pubsub channel, its delivery strategy should be set at
      * this XXXX point, using tor_mainloop_set_delivery_strategy().
      */
+    tor_mainloop_set_delivery_strategy("orconn", DELIV_IMMEDIATE);
+    tor_mainloop_set_delivery_strategy("ocirc", DELIV_IMMEDIATE);
   }
 }
 

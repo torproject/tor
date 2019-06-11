@@ -197,7 +197,7 @@ test_circuitstats_hoplen(void *arg)
 }
 
 #define TEST_CIRCUITSTATS(name, flags) \
-    { #name, test_##name, (flags), NULL, NULL }
+    { #name, test_##name, (flags), &helper_pubsub_setup, NULL }
 
 struct testcase_t circuitstats_tests[] = {
   TEST_CIRCUITSTATS(circuitstats_hoplen, TT_FORK),

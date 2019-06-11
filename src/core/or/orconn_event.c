@@ -17,65 +17,83 @@
  **/
 
 #include "core/or/or.h"
+#include "lib/pubsub/pubsub.h"
 #include "lib/subsys/subsys.h"
 
 #define ORCONN_EVENT_PRIVATE
 #include "core/or/orconn_event.h"
 #include "core/or/orconn_event_sys.h"
 
-/** List of subscribers */
-static smartlist_t *orconn_event_rcvrs;
+DECLARE_PUBLISH(orconn_state);
+DECLARE_PUBLISH(orconn_status);
 
-/** Initialize subscriber list */
-static int
-orconn_event_init(void)
+static void
+orconn_event_free(msg_aux_data_t u)
 {
-  orconn_event_rcvrs = smartlist_new();
+  tor_free_(u.ptr);
+}
+
+static char *
+orconn_state_fmt(msg_aux_data_t u)
+{
+  orconn_state_msg_t *msg = (orconn_state_msg_t *)u.ptr;
+  char *s = NULL;
+
+  tor_asprintf(&s, "<gid=%"PRIu64" chan=%"PRIu64" proxy_type=%d state=%d>",
+               msg->gid, msg->chan, msg->proxy_type, msg->state);
+  return s;
+}
+
+static char *
+orconn_status_fmt(msg_aux_data_t u)
+{
+  orconn_status_msg_t *msg = (orconn_status_msg_t *)u.ptr;
+  char *s = NULL;
+
+  tor_asprintf(&s, "<gid=%"PRIu64" status=%d reason=%d>",
+               msg->gid, msg->status, msg->reason);
+  return s;
+}
+
+static dispatch_typefns_t orconn_state_fns = {
+  .free_fn = orconn_event_free,
+  .fmt_fn = orconn_state_fmt,
+};
+
+static dispatch_typefns_t orconn_status_fns = {
+  .free_fn = orconn_event_free,
+  .fmt_fn = orconn_status_fmt,
+};
+
+static int
+orconn_add_pubsub(struct pubsub_connector_t *connector)
+{
+  if (DISPATCH_REGISTER_TYPE(connector, orconn_state, &orconn_state_fns))
+    return -1;
+  if (DISPATCH_REGISTER_TYPE(connector, orconn_status, &orconn_status_fns))
+    return -1;
+  if (DISPATCH_ADD_PUB(connector, orconn, orconn_state) != 0)
+    return -1;
+  if (DISPATCH_ADD_PUB(connector, orconn, orconn_status) != 0)
+    return -1;
   return 0;
 }
 
-/** Free subscriber list */
-static void
-orconn_event_fini(void)
+void
+orconn_state_publish(orconn_state_msg_t *msg)
 {
-  smartlist_free(orconn_event_rcvrs);
+  PUBLISH(orconn_state, msg);
 }
 
-/**
- * Subscribe to messages about OR connection events
- *
- * Register a callback function to receive messages about ORCONNs.
- * The publisher calls this function synchronously.
- **/
 void
-orconn_event_subscribe(orconn_event_rcvr_t fn)
+orconn_status_publish(orconn_status_msg_t *msg)
 {
-  tor_assert(fn);
-  /* Don't duplicate subscriptions. */
-  if (smartlist_contains(orconn_event_rcvrs, fn))
-    return;
-
-  smartlist_add(orconn_event_rcvrs, fn);
-}
-
-/**
- * Publish a message about OR connection events
- *
- * This calls the subscriber receiver function synchronously.
- **/
-void
-orconn_event_publish(const orconn_event_msg_t *msg)
-{
-  SMARTLIST_FOREACH_BEGIN(orconn_event_rcvrs, orconn_event_rcvr_t, fn) {
-    tor_assert(fn);
-    (*fn)(msg);
-  } SMARTLIST_FOREACH_END(fn);
+  PUBLISH(orconn_status, msg);
 }
 
 const subsys_fns_t sys_orconn_event = {
   .name = "orconn_event",
   .supported = true,
   .level = -33,
-  .initialize = orconn_event_init,
-  .shutdown = orconn_event_fini,
+  .add_pubsub = orconn_add_pubsub,
 };

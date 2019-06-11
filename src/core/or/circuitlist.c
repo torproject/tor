@@ -496,17 +496,16 @@ int
 circuit_event_status(origin_circuit_t *circ, circuit_status_event_t tp,
                      int reason_code)
 {
-  ocirc_event_msg_t msg;
+  ocirc_cevent_msg_t *msg = tor_malloc(sizeof(*msg));
 
   tor_assert(circ);
 
-  msg.type = OCIRC_MSGTYPE_CEVENT;
-  msg.u.cevent.gid = circ->global_identifier;
-  msg.u.cevent.evtype = tp;
-  msg.u.cevent.reason = reason_code;
-  msg.u.cevent.onehop = circ->build_state->onehop_tunnel;
+  msg->gid = circ->global_identifier;
+  msg->evtype = tp;
+  msg->reason = reason_code;
+  msg->onehop = circ->build_state->onehop_tunnel;
 
-  ocirc_event_publish(&msg);
+  ocirc_cevent_publish(msg);
   return control_event_circuit_status(circ, tp, reason_code);
 }
 
@@ -514,26 +513,25 @@ circuit_event_status(origin_circuit_t *circ, circuit_status_event_t tp,
  * Helper function to publish a state change message
  *
  * circuit_set_state() calls this to notify subscribers about a change
- * of the state of an origin circuit.
+ * of the state of an origin circuit.  @a circ must be an origin
+ * circuit.
  **/
 static void
 circuit_state_publish(const circuit_t *circ)
 {
-  ocirc_event_msg_t msg;
+  ocirc_state_msg_t *msg = tor_malloc(sizeof(*msg));
   const origin_circuit_t *ocirc;
 
-  if (!CIRCUIT_IS_ORIGIN(circ))
-    return;
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
   ocirc = CONST_TO_ORIGIN_CIRCUIT(circ);
   /* Only inbound OR circuits can be in this state, not origin circuits. */
   tor_assert(circ->state != CIRCUIT_STATE_ONIONSKIN_PENDING);
 
-  msg.type = OCIRC_MSGTYPE_STATE;
-  msg.u.state.gid = ocirc->global_identifier;
-  msg.u.state.state = circ->state;
-  msg.u.state.onehop = ocirc->build_state->onehop_tunnel;
+  msg->gid = ocirc->global_identifier;
+  msg->state = circ->state;
+  msg->onehop = ocirc->build_state->onehop_tunnel;
 
-  ocirc_event_publish(&msg);
+  ocirc_state_publish(msg);
 }
 
 /** Change the state of <b>circ</b> to <b>state</b>, adding it to or removing
@@ -565,7 +563,8 @@ circuit_set_state(circuit_t *circ, uint8_t state)
   if (state == CIRCUIT_STATE_GUARD_WAIT || state == CIRCUIT_STATE_OPEN)
     tor_assert(!circ->n_chan_create_cell);
   circ->state = state;
-  circuit_state_publish(circ);
+  if (CIRCUIT_IS_ORIGIN(circ))
+    circuit_state_publish(circ);
 }
 
 /** Append to <b>out</b> all circuits in state CHAN_WAIT waiting for
