@@ -68,6 +68,7 @@
 #include "feature/dircommon/voting_schedule.h"
 #include "feature/dirparse/ns_parse.h"
 #include "feature/hibernate/hibernate.h"
+#include "feature/hs/hs_dos.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/fmt_routerstatus.h"
@@ -1674,6 +1675,7 @@ notify_before_networkstatus_changes(const networkstatus_t *old_c,
   notify_control_networkstatus_changed(old_c, new_c);
   dos_consensus_has_changed(new_c);
   relay_consensus_has_changed(new_c);
+  hs_dos_consensus_has_changed(new_c);
 }
 
 /* Called after a new consensus has been put in the global state. It is safe

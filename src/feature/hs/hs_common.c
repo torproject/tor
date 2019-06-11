@@ -21,6 +21,7 @@
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_common.h"
+#include "feature/hs/hs_dos.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_service.h"
 #include "feature/hs_common/shared_random_client.h"
@@ -30,6 +31,7 @@
 #include "feature/nodelist/routerset.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
+#include "feature/relay/routermode.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 

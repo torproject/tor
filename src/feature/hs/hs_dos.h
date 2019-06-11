@@ -12,26 +12,19 @@
 
 #include "core/or/or_circuit_st.h"
 
-#include "lib/evloop/token_bucket.h"
+#include "feature/nodelist/networkstatus_st.h"
 
-#define HS_DOS_INTRODUCE_CELL_RATE_PER_SEC 25
-#define HS_DOS_INTRODUCE_CELL_BURST_PER_SEC 200
+/* Init */
+void hs_dos_init(void);
+
+/* Consensus. */
+void hs_dos_consensus_has_changed(const networkstatus_t *ns);
 
 bool hs_dos_can_send_intro2(or_circuit_t *s_intro_circ);
 
-/* Return the INTRODUCE2 cell rate per second. */
-static inline
-uint32_t hs_dos_get_intro2_rate(void)
-{
-  return HS_DOS_INTRODUCE_CELL_RATE_PER_SEC;
-}
-
-/* Return the INTRODUCE2 cell burst per second. */
-static inline
-uint32_t hs_dos_get_intro2_burst(void)
-{
-  return HS_DOS_INTRODUCE_CELL_BURST_PER_SEC;
-}
+/* Getters. */
+uint32_t hs_dos_get_intro2_rate(void);
+uint32_t hs_dos_get_intro2_burst(void);
 
 #ifdef HS_DOS_PRIVATE
 

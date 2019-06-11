@@ -26,6 +26,7 @@
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_common.h"
+#include "feature/hs/hs_dos.h"
 #include "feature/hs/hs_intropoint.h"
 #include "feature/hs/hs_service.h"
 
@@ -185,6 +186,8 @@ test_establish_intro_wrong_purpose(void *arg)
 
   (void)arg;
 
+  hs_dos_init();
+
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   memcpy(intro_circ->rend_circ_nonce, circ_nonce, DIGEST_LEN);
@@ -227,6 +230,8 @@ test_establish_intro_wrong_keytype(void *arg)
 
   (void) arg;
 
+  hs_dos_init();
+
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
@@ -253,6 +258,8 @@ test_establish_intro_wrong_keytype2(void *arg)
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);
 
   (void) arg;
+
+  hs_dos_init();
 
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -289,6 +296,8 @@ test_establish_intro_wrong_mac(void *arg)
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);
 
   (void) arg;
+
+  hs_dos_init();
 
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -362,6 +371,8 @@ test_establish_intro_wrong_auth_key_len(void *arg)
 
   (void) arg;
 
+  hs_dos_init();
+
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
@@ -407,6 +418,8 @@ test_establish_intro_wrong_sig_len(void *arg)
 
   (void) arg;
 
+  hs_dos_init();
+
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
@@ -450,6 +463,8 @@ test_establish_intro_wrong_sig(void *arg)
 
   (void) arg;
 
+  hs_dos_init();
+
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
@@ -487,6 +502,8 @@ helper_establish_intro_v3(or_circuit_t *intro_circ)
 
   tt_assert(intro_circ);
 
+  hs_dos_init();
+
   /* Prepare the circuit for the incoming ESTABLISH_INTRO */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
@@ -521,6 +538,8 @@ helper_establish_intro_v2(or_circuit_t *intro_circ)
   char circ_nonce[DIGEST_LEN] = {0};
 
   tt_assert(intro_circ);
+
+  hs_dos_init();
 
   /* Prepare the circuit for the incoming ESTABLISH_INTRO */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
