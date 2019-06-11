@@ -23,7 +23,7 @@
 #include "core/or/sendme.h"
 #include "feature/nodelist/networkstatus.h"
 #include "lib/ctime/di_ops.h"
-#include "trunnel/sendme.h"
+#include "trunnel/sendme_cell.h"
 
 /* Return the minimum version given by the consensus (if any) that should be
  * used when emitting a SENDME cell. */
