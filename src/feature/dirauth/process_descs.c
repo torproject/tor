@@ -237,11 +237,14 @@ dirserv_load_fingerprint_file(void)
     /* Check ed25519 key. We check the size to prevent buffer overflows.
      * If valid, attempt to add it, */
     ed25519_public_key_t ed25519_pubkey_tmp;
-    if (strlen(fingerprint) == BASE64_DIGEST256_LEN &&
-        !digest256_from_base64((char *) ed25519_pubkey_tmp.pubkey,
-                               fingerprint)) {
-      ed25519_not_ok = add_ed25519_to_dir(&ed25519_pubkey_tmp,
-                                          fingerprint_list_new, add_status);
+    if (strlen(fingerprint) == BASE64_DIGEST256_LEN) {
+      if (!digest256_from_base64((char *) ed25519_pubkey_tmp.pubkey,
+                                 fingerprint)) {
+        ed25519_not_ok = add_ed25519_to_dir(&ed25519_pubkey_tmp,
+                                            fingerprint_list_new, add_status);
+      } else {
+        ed25519_not_ok = -1;
+      }
     } else {
       ed25519_not_ok = -1;
     }
