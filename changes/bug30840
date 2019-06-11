@@ -1,0 +1,4 @@
+  o Minor bugfixes (git scripts):
+    - Stop hard-coding the bash path in the git scripts. Some OSes don't
+      have bash in /usr/bin, others have an ancient bash at this path.
+      Fixes bug 30840; bugfix on 0.4.0.1-alpha.

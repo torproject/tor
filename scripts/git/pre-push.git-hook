@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # git pre-push hook script to:
 # 1) prevent "fixup!" and "squash!" commit from ending up in master, release-*
