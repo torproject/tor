@@ -1,0 +1,4 @@
+  o Testing:
+    - Specify torrc paths (with empty files) when launching tor in
+      integration tests; refrain from reading user and system torrcs.
+      Resolves issue 29702.
