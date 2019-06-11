@@ -2445,6 +2445,8 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
     /* Free the machine corresponding to this machine type */
     if (free_circ_machineinfos_with_machine_num(circ,
                 negotiate->machine_type)) {
+      log_info(LD_CIRC, "Received STOP command for machine %u",
+               negotiate->machine_type);
       goto done;
     }
     log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
@@ -2494,7 +2496,7 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
 
   /* Verify this came from the expected hop */
   if (!circpad_padding_is_from_expected_hop(circ, layer_hint)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
+    log_fn(LOG_WARN, LD_CIRC,
            "Padding negotiated cell from wrong hop!");
     return -1;
   }
