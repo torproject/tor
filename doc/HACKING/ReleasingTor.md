@@ -247,9 +247,11 @@ new Tor release:
     `maint-x.y.z` branch to "newversion-dev", and do a `merge -s ours`
     merge to avoid taking that change into master.
 
-2. Forward-port the ChangeLog (and ReleaseNotes if appropriate) to the
+2. If there is a new `maint-x.y.z` branch, create a Travis CI cron job that
+   builds the release every week. (It's ok to skip the weekly build if the
+   branch was updated in the last 24 hours.)
+
+3. Forward-port the ChangeLog (and ReleaseNotes if appropriate) to the
    master branch.
 
-3. Keep an eye on the blog post, to moderate comments and answer questions.
-
-
+4. Keep an eye on the blog post, to moderate comments and answer questions.
