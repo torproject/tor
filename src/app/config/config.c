@@ -8180,7 +8180,6 @@ getinfo_helper_config(control_connection_t *conn,
         case CONFIG_TYPE_POSINT: type = "Integer"; break;
         case CONFIG_TYPE_UINT64: type = "Integer"; break;
         case CONFIG_TYPE_INT: type = "SignedInteger"; break;
-        case CONFIG_TYPE_PORT: type = "Port"; break;
         case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break;
         case CONFIG_TYPE_MSEC_INTERVAL: type = "TimeMsecInterval"; break;
         case CONFIG_TYPE_MEMUNIT: type = "DataSize"; break;

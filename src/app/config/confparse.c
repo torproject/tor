@@ -174,17 +174,11 @@ config_assign_value(const config_format_t *fmt, void *options,
 
   switch (var->type) {
 
-  case CONFIG_TYPE_PORT:
-    if (!strcasecmp(c->value, "auto")) {
-      *(int *)lvalue = CFG_AUTO_PORT;
-      break;
-    }
-    /* fall through */
   case CONFIG_TYPE_INT:
   case CONFIG_TYPE_POSINT:
     i = (int)tor_parse_long(c->value, 10,
                             var->type==CONFIG_TYPE_INT ? INT_MIN : 0,
-                            var->type==CONFIG_TYPE_PORT ? 65535 : INT_MAX,
+                            INT_MAX,
                             &ok, NULL);
     if (!ok) {
       tor_asprintf(msg,
@@ -570,13 +564,6 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
       }
       escape_val = 0; /* Can't need escape. */
       break;
-    case CONFIG_TYPE_PORT:
-      if (*(int*)value == CFG_AUTO_PORT) {
-        result->value = tor_strdup("auto");
-        escape_val = 0;
-        break;
-      }
-      /* fall through */
     case CONFIG_TYPE_CSV_INTERVAL:
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_MSEC_INTERVAL:
@@ -788,7 +775,6 @@ config_clear(const config_format_t *fmt, void *options,
     case CONFIG_TYPE_MSEC_INTERVAL:
     case CONFIG_TYPE_POSINT:
     case CONFIG_TYPE_INT:
-    case CONFIG_TYPE_PORT:
     case CONFIG_TYPE_BOOL:
       *(int*)lvalue = 0;
       break;
