@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # To install this script, copy it to .git/hooks/pre-commit in local copy of
 # tor git repo and make sure it has permission to execute.

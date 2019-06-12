@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # The remote upstream branch on which git.torproject.org/tor.git points to.
 UPSTREAM_BRANCH=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
