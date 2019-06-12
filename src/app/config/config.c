@@ -317,7 +317,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("AuthDirRejectUnlisted"),
   OBSOLETE("AuthDirListBadDirs"),
   V(AuthDirListBadExits,         BOOL,     "0"),
-  V(AuthDirMaxServersPerAddr,    UINT,     "2"),
+  V(AuthDirMaxServersPerAddr,    POSINT,     "2"),
   OBSOLETE("AuthDirMaxServersPerAuthAddr"),
   V(AuthDirHasIPv6Connectivity,  BOOL,     "0"),
   VAR("AuthoritativeDirectory",  BOOL, AuthoritativeDir,    "0"),
@@ -352,7 +352,7 @@ static config_var_t option_vars_[] = {
   V(ClientUseIPv6,               BOOL,     "0"),
   V(ClientUseIPv4,               BOOL,     "1"),
   V(ConsensusParams,             STRING,   NULL),
-  V(ConnLimit,                   UINT,     "1000"),
+  V(ConnLimit,                   POSINT,     "1000"),
   V(ConnDirectionStatistics,     BOOL,     "0"),
   V(ConstrainedSockets,          BOOL,     "0"),
   V(ConstrainedSockSize,         MEMUNIT,  "8192"),
@@ -402,14 +402,14 @@ static config_var_t option_vars_[] = {
   V(DormantCanceledByStartup,    BOOL,      "0"),
   /* DoS circuit creation options. */
   V(DoSCircuitCreationEnabled,   AUTOBOOL, "auto"),
-  V(DoSCircuitCreationMinConnections,      UINT, "0"),
-  V(DoSCircuitCreationRate,      UINT,     "0"),
-  V(DoSCircuitCreationBurst,     UINT,     "0"),
+  V(DoSCircuitCreationMinConnections,      POSINT, "0"),
+  V(DoSCircuitCreationRate,      POSINT,     "0"),
+  V(DoSCircuitCreationBurst,     POSINT,     "0"),
   V(DoSCircuitCreationDefenseType,         INT,  "0"),
   V(DoSCircuitCreationDefenseTimePeriod,   INTERVAL, "0"),
   /* DoS connection options. */
   V(DoSConnectionEnabled,        AUTOBOOL, "auto"),
-  V(DoSConnectionMaxConcurrentCount,       UINT, "0"),
+  V(DoSConnectionMaxConcurrentCount,       POSINT, "0"),
   V(DoSConnectionDefenseType,    INT,      "0"),
   /* DoS single hop client options. */
   V(DoSRefuseSingleHopClientRendezvous,    AUTOBOOL, "auto"),
@@ -522,7 +522,7 @@ static config_var_t option_vars_[] = {
   VAR("MapAddress",              LINELIST, AddressMap,           NULL),
   V(MaxAdvertisedBandwidth,      MEMUNIT,  "1 GB"),
   V(MaxCircuitDirtiness,         INTERVAL, "10 minutes"),
-  V(MaxClientCircuitsPending,    UINT,     "32"),
+  V(MaxClientCircuitsPending,    POSINT,     "32"),
   V(MaxConsensusAgeForDiffs,     INTERVAL, "0 seconds"),
   VAR("MaxMemInQueues",          MEMUNIT,   MaxMemInQueues_raw, "0"),
   OBSOLETE("MaxOnionsPending"),
@@ -539,10 +539,10 @@ static config_var_t option_vars_[] = {
   OBSOLETE("WarnUnsafeSocks"),
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
   V(NoExec,                      BOOL,     "0"),
-  V(NumCPUs,                     UINT,     "0"),
-  V(NumDirectoryGuards,          UINT,     "0"),
-  V(NumEntryGuards,              UINT,     "0"),
-  V(NumPrimaryGuards,            UINT,     "0"),
+  V(NumCPUs,                     POSINT,     "0"),
+  V(NumDirectoryGuards,          POSINT,     "0"),
+  V(NumEntryGuards,              POSINT,     "0"),
+  V(NumPrimaryGuards,            POSINT,     "0"),
   V(OfflineMasterKey,            BOOL,     "0"),
   OBSOLETE("ORListenAddress"),
   VPORT(ORPort),
@@ -666,7 +666,7 @@ static config_var_t option_vars_[] = {
   V(V3AuthVotingInterval,        INTERVAL, "1 hour"),
   V(V3AuthVoteDelay,             INTERVAL, "5 minutes"),
   V(V3AuthDistDelay,             INTERVAL, "5 minutes"),
-  V(V3AuthNIntervalsValid,       UINT,     "3"),
+  V(V3AuthNIntervalsValid,       POSINT,     "3"),
   V(V3AuthUseLegacyKey,          BOOL,     "0"),
   V(V3BandwidthsFile,            FILENAME, NULL),
   V(GuardfractionFile,           FILENAME, NULL),
@@ -715,7 +715,7 @@ static config_var_t option_vars_[] = {
    * blocked), but we also don't want to fail if only some mirrors are
    * blackholed. Clients will try 3 directories simultaneously.
    * (Relays never use simultaneous connections.) */
-  V(ClientBootstrapConsensusMaxInProgressTries, UINT, "3"),
+  V(ClientBootstrapConsensusMaxInProgressTries, POSINT, "3"),
   /* When a client has any running bridges, check each bridge occasionally,
     * whether or not that bridge is actually up. */
   V(TestingBridgeDownloadInitialDelay, CSV_INTERVAL,"10800"),
@@ -749,7 +749,7 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(DirAllowPrivateAddresses,    BOOL,     "1"),
   V(EnforceDistinctSubnets,      BOOL,     "0"),
   V(AssumeReachable,             BOOL,     "1"),
-  V(AuthDirMaxServersPerAddr,    UINT,     "0"),
+  V(AuthDirMaxServersPerAddr,    POSINT,     "0"),
   V(ClientBootstrapConsensusAuthorityDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(ClientBootstrapConsensusFallbackDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay, CSV_INTERVAL,
@@ -8177,7 +8177,7 @@ getinfo_helper_config(control_connection_t *conn,
       switch (var->type) {
         case CONFIG_TYPE_STRING: type = "String"; break;
         case CONFIG_TYPE_FILENAME: type = "Filename"; break;
-        case CONFIG_TYPE_UINT: type = "Integer"; break;
+        case CONFIG_TYPE_POSINT: type = "Integer"; break;
         case CONFIG_TYPE_UINT64: type = "Integer"; break;
         case CONFIG_TYPE_INT: type = "SignedInteger"; break;
         case CONFIG_TYPE_PORT: type = "Port"; break;

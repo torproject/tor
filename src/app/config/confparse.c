@@ -181,7 +181,7 @@ config_assign_value(const config_format_t *fmt, void *options,
     }
     /* fall through */
   case CONFIG_TYPE_INT:
-  case CONFIG_TYPE_UINT:
+  case CONFIG_TYPE_POSINT:
     i = (int)tor_parse_long(c->value, 10,
                             var->type==CONFIG_TYPE_INT ? INT_MIN : 0,
                             var->type==CONFIG_TYPE_PORT ? 65535 : INT_MAX,
@@ -580,7 +580,7 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
     case CONFIG_TYPE_CSV_INTERVAL:
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_MSEC_INTERVAL:
-    case CONFIG_TYPE_UINT:
+    case CONFIG_TYPE_POSINT:
     case CONFIG_TYPE_INT:
       /* This means every or_options_t uint or bool element
        * needs to be an int. Not, say, a uint16_t or char. */
@@ -786,7 +786,7 @@ config_clear(const config_format_t *fmt, void *options,
     case CONFIG_TYPE_CSV_INTERVAL:
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_MSEC_INTERVAL:
-    case CONFIG_TYPE_UINT:
+    case CONFIG_TYPE_POSINT:
     case CONFIG_TYPE_INT:
     case CONFIG_TYPE_PORT:
     case CONFIG_TYPE_BOOL:
