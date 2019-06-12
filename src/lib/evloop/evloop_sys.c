@@ -13,12 +13,15 @@
 #include "lib/subsys/subsys.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/evloop/evloop_sys.h"
+#include "lib/log/log.h"
 
 static int
 subsys_evloop_initialize(void)
 {
-  if (tor_init_libevent_rng() < 0)
+  if (tor_init_libevent_rng() < 0) {
+    log_warn(LD_NET, "Problem initializing libevent RNG.");
     return -1;
+  }
   return 0;
 }
 
