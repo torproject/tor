@@ -1760,6 +1760,13 @@ tor_addr_port_parse(int severity, const char *addrport,
   retval = 0;
 
  done:
+  /* Clear the address and port on error, to avoid returning uninitialised or
+   * partly parsed data.
+   */
+  if (retval == -1) {
+    memset(address_out, 0, sizeof(tor_addr_t));
+    *port_out = 0;
+  }
   tor_free(addr_tmp);
   return retval;
 }
@@ -1828,8 +1835,7 @@ tor_addr_port_split(int severity, const char *addrport,
     tor_free(address_);
   }
 
-  if (port_out)
-    *port_out = ok ? ((uint16_t) port_) : 0;
+  *port_out = ok ? ((uint16_t) port_) : 0;
 
   return ok ? 0 : -1;
 }

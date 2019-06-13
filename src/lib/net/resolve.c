@@ -47,6 +47,11 @@ tor_lookup_hostname,(const char *name, uint32_t *addr))
   tor_addr_t myaddr;
   int ret;
 
+  if (BUG(!addr))
+    return -1;
+
+  *addr = 0;
+
   if ((ret = tor_addr_lookup(name, AF_INET, &myaddr)))
     return ret;
 
@@ -250,7 +255,7 @@ int
 tor_addr_port_lookup(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
 {
   tor_addr_t addr;
-  uint16_t portval;
+  uint16_t portval = 0;
   char *tmp = NULL;
   int rv = 0;
 
@@ -273,6 +278,10 @@ tor_addr_port_lookup(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
 
   return 0;
  err:
+  /* Clear the address and port on error */
+  memset(addr_out, 0, sizeof(tor_addr_t));
+  if (port_out)
+    *port_out = 0;
   tor_free(tmp);
   return -1;
 }
