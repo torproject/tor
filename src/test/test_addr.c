@@ -793,45 +793,72 @@ test_addr_ip6_helpers(void *arg)
     tt_int_op(port, OP_EQ, 0); \
   STMT_END
 
-/* Test that addr_str successfully parses as a canonical IPv4 address. */
+/* Test that addr_str successfully parses as a canonical IPv4 address.
+ * Use tor_addr_parse(), and tor_addr_port_parse() with a default port.
+ * Also check that tor_addr_port_parse() fails without a default port. */
 #define TEST_ADDR_V4_PARSE_CANONICAL(addr_str) \
-  TEST_ADDR_PARSE_FMT(addr_str, AF_INET, 0, addr_str)
+  STMT_BEGIN \
+    TEST_ADDR_PARSE_FMT(addr_str, AF_INET, 0, addr_str); \
+    TEST_ADDR_PORT_PARSE_FMT(addr_str, 111, AF_INET, 0, \
+                             addr_str, 111); \
+    TEST_ADDR_PORT_PARSE_XFAIL(addr_str, -1); \
+  STMT_END
 
 /* Test that addr_str successfully parses as a canonical fmt_decorated
- * IPv6 address. */
+ * IPv6 address.
+ * Use tor_addr_parse(), and tor_addr_port_parse() with a default port.
+ * Also check that tor_addr_port_parse() fails without a default port. */
 #define TEST_ADDR_V6_PARSE_CANONICAL(addr_str, fmt_decorated) \
-  TEST_ADDR_PARSE_FMT(addr_str, AF_INET6, fmt_decorated, addr_str)
+  STMT_BEGIN \
+    TEST_ADDR_PARSE_FMT(addr_str, AF_INET6, fmt_decorated, addr_str); \
+    TEST_ADDR_PORT_PARSE_FMT(addr_str, 222, AF_INET6, fmt_decorated, \
+                             addr_str, 222); \
+    TEST_ADDR_PORT_PARSE_XFAIL(addr_str, -1); \
+  STMT_END
 
 /* Test that addr_str successfully parses, and the fmt_decorated canonical
- * IPv6 string is expect_str. */
+ * IPv6 string is expect_str.
+ * Use tor_addr_parse(), and tor_addr_port_parse() with a default port.
+ * Also check that tor_addr_port_parse() fails without a default port. */
 #define TEST_ADDR_V6_PARSE(addr_str, fmt_decorated, expect_str) \
-  TEST_ADDR_PARSE_FMT(addr_str, AF_INET6, fmt_decorated, expect_str)
+  STMT_BEGIN \
+    TEST_ADDR_PARSE_FMT(addr_str, AF_INET6, fmt_decorated, expect_str); \
+    TEST_ADDR_PORT_PARSE_FMT(addr_str, 333, AF_INET6, fmt_decorated, \
+                             expect_str, 333); \
+    TEST_ADDR_PORT_PARSE_XFAIL(addr_str, -1); \
+  STMT_END
 
 /* Test that addr_port_str successfully parses to the canonical IPv4 address
- * string expect_str, and port expect_port. */
+ * string expect_str, and port expect_port.
+ * Check with and without a default port. */
 #define TEST_ADDR_V4_PORT_PARSE(addr_port_str, expect_str, expect_port) \
-  TEST_ADDR_PORT_PARSE_FMT(addr_port_str, -1, AF_INET, 0, expect_str, \
-                           expect_port)
+  STMT_BEGIN \
+    TEST_ADDR_PORT_PARSE_FMT(addr_port_str,  -1, AF_INET, 0, expect_str, \
+                             expect_port); \
+    TEST_ADDR_PORT_PARSE_FMT(addr_port_str, 444, AF_INET, 0, expect_str, \
+                             expect_port); \
+  STMT_END
 
 /* Test that addr_port_str successfully parses to the canonical undecorated
- * IPv6 address string expect_str, and port expect_port. */
+ * IPv6 address string expect_str, and port expect_port.
+ * Check with and without a default port. */
 #define TEST_ADDR_V6_PORT_PARSE(addr_port_str, expect_str, expect_port) \
-  TEST_ADDR_PORT_PARSE_FMT(addr_port_str, -1, AF_INET6, 0, expect_str, \
-                           expect_port)
+  STMT_BEGIN \
+    TEST_ADDR_PORT_PARSE_FMT(addr_port_str,  -1, AF_INET6, 0, expect_str, \
+                             expect_port); \
+    TEST_ADDR_PORT_PARSE_FMT(addr_port_str, 555, AF_INET6, 0, expect_str, \
+                             expect_port); \
+  STMT_END
 
-/* Test that addr_port_str and default_port successfully parse to the canonical
- * IPv4 address string expect_str, and port expect_port. */
-#define TEST_ADDR_V4_PORT_DEF_PARSE(addr_port_str, default_port, expect_str, \
-                                    expect_port) \
-  TEST_ADDR_PORT_PARSE_FMT(addr_port_str, default_port, AF_INET, 0, \
-                           expect_str, expect_port)
-
-/* Test that addr_port_str successfully parses to the canonical undecorated
- * IPv6 address string expect_str, and port expect_port. */
-#define TEST_ADDR_V6_PORT_DEF_PARSE(addr_port_str, default_port, expect_str, \
-                                    expect_port) \
-  TEST_ADDR_PORT_PARSE_FMT(addr_port_str, default_port, AF_INET6, 0, \
-                           expect_str, expect_port)
+/* Test that addr_str fails to parse due to a bad address or port.
+ * Use tor_addr_parse(), and tor_addr_port_parse() with and without a
+ * default port. */
+#define TEST_ADDR_PARSE_XFAIL_MALFORMED(addr_str) \
+  STMT_BEGIN \
+    TEST_ADDR_PARSE_XFAIL(addr_str); \
+    TEST_ADDR_PORT_PARSE_XFAIL(addr_str,  -1); \
+    TEST_ADDR_PORT_PARSE_XFAIL(addr_str, 666); \
+  STMT_END
 
 /** Test tor_addr_parse() and tor_addr_port_parse(). */
 static void
@@ -852,76 +879,59 @@ test_addr_parse(void *arg)
                      "11:22::33:44:102:304");
 
   /* Empty string. */
-  TEST_ADDR_PARSE_XFAIL("");
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("");
 
   /* Square brackets around IPv4 address. */
-  TEST_ADDR_PARSE_XFAIL("[192.0.2.1]");
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("[192.0.2.1]");
 
   /* Only left square bracket. */
-  TEST_ADDR_PARSE_XFAIL("[11:22::33:44");
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("[11:22::33:44");
 
   /* Only right square bracket. */
-  TEST_ADDR_PARSE_XFAIL("11:22::33:44]");
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("11:22::33:44]");
 
   /* Leading colon. */
-  TEST_ADDR_PARSE_XFAIL(":11:22::33:44");
+  TEST_ADDR_PARSE_XFAIL_MALFORMED(":11:22::33:44");
 
   /* Trailing colon. */
-  TEST_ADDR_PARSE_XFAIL("11:22::33:44:");
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("11:22::33:44:");
 
   /* Too many hex words in IPv4-mapped IPv6 address. */
-  TEST_ADDR_PARSE_XFAIL("11:22:33:44:55:66:77:88:1.2.3.4");
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("11:22:33:44:55:66:77:88:1.2.3.4");
 
   /* IPv6 address with port and no brackets */
-  TEST_ADDR_PARSE_XFAIL("11:22::33:44:12345");
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("11:22::33:44:12345");
 
   /* Correct calls. */
   TEST_ADDR_V4_PORT_PARSE("192.0.2.1:1234", "192.0.2.1", 1234);
-
   TEST_ADDR_V6_PORT_PARSE("[::1]:1234", "::1", 1234);
 
   /* Domain name. */
-  TEST_ADDR_PORT_PARSE_XFAIL("torproject.org:1234", -1);
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("torproject.org:1234");
 
   /* Only IP. */
-  TEST_ADDR_PORT_PARSE_XFAIL("192.0.2.2", -1);
-  TEST_ADDR_V4_PORT_DEF_PARSE("192.0.2.2", 200, "192.0.2.2", 200);
-
-  TEST_ADDR_PORT_PARSE_XFAIL("[::1]", -1);
-  TEST_ADDR_V6_PORT_DEF_PARSE("[::1]", 400, "::1", 400);
+  TEST_ADDR_V4_PARSE_CANONICAL("192.0.2.2");
+  TEST_ADDR_V6_PARSE_CANONICAL("[::1]", 1);
 
   /* Allow IPv6 without square brackets, when there is no port, but only if
    * there is a default port */
-  TEST_ADDR_PORT_PARSE_XFAIL("::1", -1);
-  TEST_ADDR_V6_PORT_DEF_PARSE("::1", 600, "::1", 600);
+  TEST_ADDR_V6_PARSE_CANONICAL("::1", 0);
 
   /* Bad port. */
-  TEST_ADDR_PORT_PARSE_XFAIL("192.0.2.2:66666",  -1);
-  TEST_ADDR_PORT_PARSE_XFAIL("192.0.2.2:66666", 200);
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("192.0.2.2:66666");
 
   /* Only domain name */
-  TEST_ADDR_PORT_PARSE_XFAIL("torproject.org",  -1);
-  TEST_ADDR_PORT_PARSE_XFAIL("torproject.org", 200);
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("torproject.org");
 
   /* Bad IPv4 address */
-  TEST_ADDR_PORT_PARSE_XFAIL("192.0.2:1234",  -1);
-  TEST_ADDR_PORT_PARSE_XFAIL("192.0.2:1234", 200);
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("192.0.2:1234");
 
   /* Bad IPv4 address and port: brackets */
-  TEST_ADDR_PORT_PARSE_XFAIL("[192.0.2.3]:12345",  -1);
-  TEST_ADDR_PORT_PARSE_XFAIL("[192.0.2.3]:12345", 200);
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("[192.0.2.3]:12345");
 
   /* Bad IPv6 addresses and ports: no brackets */
-  TEST_ADDR_PORT_PARSE_XFAIL("::1:12345",  -1);
-  TEST_ADDR_PORT_PARSE_XFAIL("::1:12345", 200);
-
-  TEST_ADDR_PORT_PARSE_XFAIL("11:22::33:44:12345",  -1);
-  TEST_ADDR_PORT_PARSE_XFAIL("11:22::33:44:12345", 200);
-
-  /* Make sure that the default port has lower priority than the real
-     one */
-  TEST_ADDR_V4_PORT_DEF_PARSE("192.0.2.2:1337", 200, "192.0.2.2", 1337);
-  TEST_ADDR_V6_PORT_DEF_PARSE("[::1]:1369", 200, "::1", 1369);
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("::1:12345");
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("11:22::33:44:12345");
 
  done:
   ;
