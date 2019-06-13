@@ -837,57 +837,130 @@ test_addr_ip6_helpers(void *arg)
       tt_int_op(addr32h, OP_EQ, 0); \
   STMT_END
 
+/* Test that addr_str successfully parses as a require_family IP address using
+ * tor_addr_lookup(), and:
+ *  - the address has family expect_family,
+ *  - the fmt_decorated result of tor_addr_to_str() is expect_str.
+ */
+#define TEST_ADDR_LOOKUP_FMT(addr_str, require_family, expect_family, \
+                             fmt_decorated, expect_str) \
+  STMT_BEGIN \
+    int r; \
+    tor_addr_t addr; \
+    char buf[TOR_ADDR_BUF_LEN]; \
+    const char *sv; \
+    r = tor_addr_lookup(addr_str, require_family, &addr); \
+    tt_int_op(r, OP_EQ, 0); \
+    tt_int_op(tor_addr_family(&addr), OP_EQ, expect_family); \
+    sv = tor_addr_to_str(buf, &addr, sizeof(buf), fmt_decorated); \
+    tt_str_op(sv, OP_EQ, buf); \
+    tt_str_op(buf, OP_EQ, expect_str); \
+  STMT_END
+
+/* Test that bad_str fails to parse as a require_family IP address using
+ * tor_addr_lookup(), with a permanent failure, and:
+ *  - the returned address is null.
+ */
+#define TEST_ADDR_LOOKUP_XFAIL(bad_str, require_family) \
+  STMT_BEGIN \
+    int r; \
+    tor_addr_t addr; \
+    r = tor_addr_lookup(bad_str, require_family, &addr); \
+    tt_int_op(r, OP_EQ, -1); \
+    tt_assert(tor_addr_is_null(&addr)); \
+  STMT_END
+
+/* Test that looking up host_string as a require_family IP address using
+ * tor_addr_lookup(),  does something sensible:
+ *  - the result is -1, 0, or 1.
+ *  - if the result is a failure, the returned address is null.
+ * We can't rely on the result of this function, because it depends on the
+ * network.
+ */
+#define TEST_HOST_LOOKUP(host_str, require_family) \
+  STMT_BEGIN \
+    int r; \
+    tor_addr_t addr; \
+    r = tor_addr_lookup(host_str, require_family, &addr); \
+    tt_int_op(r, OP_GE, -1); \
+    tt_int_op(r, OP_LE, 1); \
+    if (r != 0) \
+      tt_assert(tor_addr_is_null(&addr)); \
+  STMT_END
+
 /* Test that addr_str successfully parses as a canonical IPv4 address.
  * Check for successful parsing using:
  *  - tor_addr_parse(),
  *  - tor_addr_port_parse() with a default port,
- *  - tor_lookup_hostname().
+ *  - tor_lookup_hostname(),
+ *  - tor_addr_lookup() with AF_INET,
+ *  - tor_addr_lookup() with AF_UNSPEC.
  * Check for failures using:
- *  - tor_addr_port_parse() without a default port, because there is no port.
+ *  - tor_addr_port_parse() without a default port, because there is no port,
+ *  - tor_addr_lookup() with AF_INET6.
  */
 #define TEST_ADDR_V4_PARSE_CANONICAL(addr_str) \
   STMT_BEGIN \
     TEST_ADDR_PARSE_FMT(addr_str, AF_INET, 0, addr_str); \
     TEST_ADDR_PORT_PARSE_FMT(addr_str, 111, AF_INET, 0, \
                              addr_str, 111); \
-    TEST_ADDR_PORT_PARSE_XFAIL(addr_str, -1); \
     TEST_ADDR_V4_LOOKUP_HOSTNAME(addr_str, addr_str); \
+    TEST_ADDR_LOOKUP_FMT(addr_str, AF_INET, AF_INET, 0, addr_str); \
+    TEST_ADDR_LOOKUP_FMT(addr_str, AF_UNSPEC, AF_INET, 0, addr_str); \
+    TEST_ADDR_PORT_PARSE_XFAIL(addr_str, -1); \
+    TEST_ADDR_LOOKUP_XFAIL(addr_str, AF_INET6); \
   STMT_END
 
 /* Test that addr_str successfully parses as a canonical fmt_decorated
  * IPv6 address.
  * Check for successful parsing using:
  *  - tor_addr_parse(),
- *  - tor_addr_port_parse() with a default port.
+ *  - tor_addr_port_parse() with a default port,
+ *  - tor_addr_lookup() with AF_INET6,
+ *  - tor_addr_lookup() with AF_UNSPEC.
  * Check for failures using:
  *  - tor_addr_port_parse() without a default port, because there is no port,
- *  - tor_lookup_hostname(), because it only supports IPv4.
+ *  - tor_lookup_hostname(), because it only supports IPv4,
+ *  - tor_addr_lookup() with AF_INET.
  */
 #define TEST_ADDR_V6_PARSE_CANONICAL(addr_str, fmt_decorated) \
   STMT_BEGIN \
     TEST_ADDR_PARSE_FMT(addr_str, AF_INET6, fmt_decorated, addr_str); \
     TEST_ADDR_PORT_PARSE_FMT(addr_str, 222, AF_INET6, fmt_decorated, \
                              addr_str, 222); \
+    TEST_ADDR_LOOKUP_FMT(addr_str, AF_INET6, AF_INET6, fmt_decorated, \
+                         addr_str); \
+    TEST_ADDR_LOOKUP_FMT(addr_str, AF_UNSPEC, AF_INET6, fmt_decorated, \
+                         addr_str); \
     TEST_ADDR_PORT_PARSE_XFAIL(addr_str, -1); \
     TEST_ADDR_V4_LOOKUP_XFAIL(addr_str); \
+    TEST_ADDR_LOOKUP_XFAIL(addr_str, AF_INET); \
   STMT_END
 
 /* Test that addr_str successfully parses, and the fmt_decorated canonical
  * IPv6 string is expect_str.
  * Check for successful parsing using:
  *  - tor_addr_parse(),
- *  - tor_addr_port_parse() with a default port.
+ *  - tor_addr_port_parse() with a default port,
+ *  - tor_addr_lookup() with AF_INET6,
+ *  - tor_addr_lookup() with AF_UNSPEC.
  * Check for failures using:
  *  - tor_addr_port_parse() without a default port, because there is no port.
- *  - tor_lookup_hostname(), because it only supports IPv4.
+ *  - tor_lookup_hostname(), because it only supports IPv4,
+ *  - tor_addr_lookup() with AF_INET.
  */
 #define TEST_ADDR_V6_PARSE(addr_str, fmt_decorated, expect_str) \
   STMT_BEGIN \
     TEST_ADDR_PARSE_FMT(addr_str, AF_INET6, fmt_decorated, expect_str); \
     TEST_ADDR_PORT_PARSE_FMT(addr_str, 333, AF_INET6, fmt_decorated, \
                              expect_str, 333); \
+    TEST_ADDR_LOOKUP_FMT(addr_str, AF_INET6, AF_INET6, fmt_decorated, \
+                         expect_str); \
+    TEST_ADDR_LOOKUP_FMT(addr_str, AF_UNSPEC, AF_INET6, fmt_decorated, \
+                         expect_str); \
     TEST_ADDR_PORT_PARSE_XFAIL(addr_str, -1); \
     TEST_ADDR_V4_LOOKUP_XFAIL(addr_str); \
+    TEST_ADDR_LOOKUP_XFAIL(addr_str, AF_INET); \
   STMT_END
 
 /* Test that addr_port_str successfully parses to the canonical IPv4 address
@@ -898,6 +971,8 @@ test_addr_ip6_helpers(void *arg)
  * Check for failures using:
  *  - tor_addr_parse(), because there is a port,
  *  - tor_lookup_hostname(), because there is a port.
+ *  - tor_addr_lookup(), regardless of the address family, because there is a
+ *    port.
  */
 #define TEST_ADDR_V4_PORT_PARSE(addr_port_str, expect_str, expect_port) \
   STMT_BEGIN \
@@ -907,6 +982,9 @@ test_addr_ip6_helpers(void *arg)
                              expect_port); \
     TEST_ADDR_PARSE_XFAIL(addr_port_str); \
     TEST_ADDR_V4_LOOKUP_XFAIL(addr_port_str); \
+    TEST_ADDR_LOOKUP_XFAIL(addr_port_str, AF_INET); \
+    TEST_ADDR_LOOKUP_XFAIL(addr_port_str, AF_UNSPEC); \
+    TEST_ADDR_LOOKUP_XFAIL(addr_port_str, AF_INET6); \
   STMT_END
 
 /* Test that addr_port_str successfully parses to the canonical undecorated
@@ -917,7 +995,9 @@ test_addr_ip6_helpers(void *arg)
  * Check for failures using:
  *  - tor_addr_parse(), because there is a port,
  *  - tor_lookup_hostname(), because there is a port, and because it only
- *    supports IPv4.
+ *    supports IPv4,
+ *  - tor_addr_lookup(), regardless of the address family, because there is a
+ *    port.
  */
 #define TEST_ADDR_V6_PORT_PARSE(addr_port_str, expect_str, expect_port) \
   STMT_BEGIN \
@@ -927,26 +1007,34 @@ test_addr_ip6_helpers(void *arg)
                              expect_port); \
     TEST_ADDR_PARSE_XFAIL(addr_port_str); \
     TEST_ADDR_V4_LOOKUP_XFAIL(addr_port_str); \
+    TEST_ADDR_LOOKUP_XFAIL(addr_port_str, AF_INET6); \
+    TEST_ADDR_LOOKUP_XFAIL(addr_port_str, AF_UNSPEC); \
+    TEST_ADDR_LOOKUP_XFAIL(addr_port_str, AF_INET); \
   STMT_END
 
 /* Test that addr_str fails to parse due to a bad address or port.
  * Check for failures using:
  *  - tor_addr_parse(),
  *  - tor_addr_port_parse() without a default port,
- *  - tor_addr_port_parse() with a default port.
- *  - tor_lookup_hostname().
+ *  - tor_addr_port_parse() with a default port,
+ *  - tor_lookup_hostname(),
+ *  - tor_addr_lookup(), regardless of the address family.
  */
-#define TEST_ADDR_PARSE_XFAIL_MALFORMED(addr_str) \
+#define TEST_ADDR_PARSE_XFAIL_MALFORMED(bad_str) \
   STMT_BEGIN \
-    TEST_ADDR_PARSE_XFAIL(addr_str); \
-    TEST_ADDR_PORT_PARSE_XFAIL(addr_str,  -1); \
-    TEST_ADDR_PORT_PARSE_XFAIL(addr_str, 666); \
-    TEST_ADDR_V4_LOOKUP_XFAIL(addr_str); \
+    TEST_ADDR_PARSE_XFAIL(bad_str); \
+    TEST_ADDR_PORT_PARSE_XFAIL(bad_str,  -1); \
+    TEST_ADDR_PORT_PARSE_XFAIL(bad_str, 666); \
+    TEST_ADDR_V4_LOOKUP_XFAIL(bad_str); \
+    TEST_ADDR_LOOKUP_XFAIL(bad_str, AF_UNSPEC); \
+    TEST_ADDR_LOOKUP_XFAIL(bad_str, AF_INET); \
+    TEST_ADDR_LOOKUP_XFAIL(bad_str, AF_INET6); \
   STMT_END
 
 /* Test that host_str is treated as a hostname, and not an address.
- * Check for success or failure using:
- *  - tor_lookup_hostname(), because it depends on the network.
+ * Check for success or failure using the network-dependent functions:
+ *  - tor_lookup_hostname(),
+ *  - tor_addr_lookup(), regardless of the address family.
  * Check for failures using:
  *  - tor_addr_parse(),
  *  - tor_addr_port_parse() without a default port,
@@ -955,6 +1043,9 @@ test_addr_ip6_helpers(void *arg)
 #define TEST_HOSTNAME(host_str) \
   STMT_BEGIN \
     TEST_HOST_V4_LOOKUP(host_str); \
+    TEST_HOST_LOOKUP(host_str, AF_UNSPEC); \
+    TEST_HOST_LOOKUP(host_str, AF_INET); \
+    TEST_HOST_LOOKUP(host_str, AF_INET6); \
     TEST_ADDR_PARSE_XFAIL(host_str); \
     TEST_ADDR_PORT_PARSE_XFAIL(host_str,  -1); \
     TEST_ADDR_PORT_PARSE_XFAIL(host_str, 777); \
@@ -963,17 +1054,22 @@ test_addr_ip6_helpers(void *arg)
 /* Test that host_port_str is treated as a hostname and port, and not a
  * hostname or an address.
  * Check for failures using:
- *  - tor_lookup_hostname(), because it doesn't support ports,
  *  - tor_addr_parse(),
  *  - tor_addr_port_parse() without a default port,
- *  - tor_addr_port_parse() with a default port.
+ *  - tor_addr_port_parse() with a default port,
+ *  - tor_lookup_hostname(), because it doesn't support ports,
+ *  - tor_addr_lookup(), regardless of the address family, because it doesn't
+ *    support ports.
  */
 #define TEST_HOSTNAME_PORT(host_port_str) \
   STMT_BEGIN \
-    TEST_ADDR_V4_LOOKUP_XFAIL(host_port_str); \
     TEST_ADDR_PARSE_XFAIL(host_port_str); \
     TEST_ADDR_PORT_PARSE_XFAIL(host_port_str,  -1); \
     TEST_ADDR_PORT_PARSE_XFAIL(host_port_str, 888); \
+    TEST_ADDR_V4_LOOKUP_XFAIL(host_port_str); \
+    TEST_ADDR_LOOKUP_XFAIL(host_port_str, AF_UNSPEC); \
+    TEST_ADDR_LOOKUP_XFAIL(host_port_str, AF_INET); \
+    TEST_ADDR_LOOKUP_XFAIL(host_port_str, AF_INET6); \
   STMT_END
 
 /** Test tor_addr_parse() and tor_addr_port_parse(). */
@@ -1040,6 +1136,8 @@ test_addr_parse(void *arg)
   TEST_ADDR_V6_PORT_PARSE("[::1]:1234", "::1", 1234);
 
   /* Domain name. */
+  TEST_HOSTNAME("localhost");
+  TEST_HOSTNAME_PORT("localhost:1234");
   TEST_HOSTNAME("torproject.org");
   TEST_HOSTNAME_PORT("torproject.org:1234");
 
