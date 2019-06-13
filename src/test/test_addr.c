@@ -788,6 +788,10 @@ test_addr_parse(void *arg)
   r= tor_addr_parse(&addr, "11:22:33:44:55:66:77:88:1.2.3.4");
   tt_int_op(r,OP_EQ, -1);
 
+  /* IPv6 address with port and no brackets */
+  r= tor_addr_parse(&addr, "11:22::33:44:12345");
+  tt_int_op(r, OP_EQ, -1);
+
   /* Correct call. */
   r= tor_addr_port_parse(LOG_DEBUG,
                          "192.0.2.1:1234",
@@ -834,6 +838,18 @@ test_addr_parse(void *arg)
   tt_int_op(r, OP_EQ, 0);
   tt_int_op(port,OP_EQ,400);
 
+  /* Allow IPv6 without square brackets, when there is no port */
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "::1",
+                         &addr, &port, -1);
+  tt_int_op(r, OP_EQ, -1);
+
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "::1",
+                         &addr, &port, 600);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(port,OP_EQ,600);
+
   /* Bad port. */
   r= tor_addr_port_parse(LOG_DEBUG,
                          "192.0.2.2:66666",
@@ -854,9 +870,26 @@ test_addr_parse(void *arg)
                          &addr, &port, 200);
   tt_int_op(r, OP_EQ, -1);
 
-  /* Bad IP address */
+  /* Bad IPv4 address */
   r= tor_addr_port_parse(LOG_DEBUG,
                          "192.0.2:1234",
+                         &addr, &port, -1);
+  tt_int_op(r, OP_EQ, -1);
+
+  /* Bad IPv4 address and port: brackets */
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "[192.0.2.3]:12345",
+                         &addr, &port, -1);
+  tt_int_op(r, OP_EQ, -1);
+
+  /* Bad IPv6 addresses and ports: no brackets */
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "::1:12345",
+                         &addr, &port, -1);
+  tt_int_op(r, OP_EQ, -1);
+
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "11:22::33:44:12345",
                          &addr, &port, -1);
   tt_int_op(r, OP_EQ, -1);
 
