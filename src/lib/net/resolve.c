@@ -258,32 +258,66 @@ tor_addr_port_lookup(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
   uint16_t portval = 0;
   char *tmp = NULL;
   int rv = 0;
+  int result;
 
   tor_assert(s);
   tor_assert(addr_out);
 
   s = eat_whitespace(s);
 
+  /* Try parsing s as an address:port first, so we don't have to duplicate
+   * the logic that rejects IPv6:Port with no square brackets. */
+  rv = tor_addr_port_parse(LOG_WARN, s, &addr, &portval, 0);
+  /* That was easy, no DNS required. */
+  if (rv == 0)
+    goto success;
+
+  /* Now let's check for malformed IPv6 addresses and ports:
+   * tor_addr_port_parse() requires squared brackes if there is a port,
+   * and we want tor_addr_port_lookup() to have the same requirement.
+   * But we strip the port using tor_addr_port_split(), so tor_addr_lookup()
+   * only sees the address, and will accept it without square brackets. */
+  int family = tor_addr_parse(&addr, s);
+  /* If tor_addr_parse() succeeds where tor_addr_port_parse() failed, we need
+   * to reject this address as malformed. */
+  if (family >= 0) {
+    /* Double-check it's an IPv6 address. If not, we have a parsing bug.
+     */
+    tor_assertf_nonfatal(family == AF_INET6,
+                         "Wrong family: %d (should be IPv6: %d) which "
+                         "failed IP:port parsing, but passed IP parsing. "
+                         "input string: '%s'; parsed address: '%s'.",
+                         family, AF_INET6, s, fmt_addr(&addr));
+    goto err;
+  }
+
+  /* Now we have a hostname. Let's split off the port, if any. */
   rv = tor_addr_port_split(LOG_WARN, s, &tmp, &portval);
   if (rv < 0)
     goto err;
 
+  /* And feed the hostname to the lookup function. */
   if (tor_addr_lookup(tmp, AF_UNSPEC, &addr) != 0)
     goto err;
-  tor_free(tmp);
 
+ success:
   if (port_out)
     *port_out = portval;
   tor_addr_copy(addr_out, &addr);
+  result = 0;
+  goto done;
 
-  return 0;
  err:
   /* Clear the address and port on error */
   memset(addr_out, 0, sizeof(tor_addr_t));
   if (port_out)
     *port_out = 0;
+  result = -1;
+
+ /* We have set the result, now it's time to clean up */
+ done:
   tor_free(tmp);
-  return -1;
+  return result;
 }
 
 #ifdef USE_SANDBOX_GETADDRINFO
