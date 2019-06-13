@@ -207,3 +207,11 @@ replaycache_scrub_if_needed(replaycache_t *r)
   replaycache_scrub_if_needed_internal(time(NULL), r);
 }
 
+/** Return the number of entries in <b>r</b>. */
+int
+replaycache_size(const replaycache_t *r)
+{
+  tor_assert(r);
+  return digest256map_size(r->digests_seen);
+}
+
