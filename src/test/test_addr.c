@@ -724,188 +724,204 @@ test_addr_ip6_helpers(void *arg)
   ;
 }
 
+/* Test that addr_str successfully parses, and:
+ *  - the address has family expect_family,
+ *  - the fmt_decorated result of tor_addr_to_str() is expect_str.
+ */
+#define TEST_ADDR_PARSE_FMT(addr_str, expect_family, fmt_decorated, \
+                            expect_str) \
+  STMT_BEGIN \
+    int r; \
+    tor_addr_t addr; \
+    char buf[TOR_ADDR_BUF_LEN]; \
+    const char *sv; \
+    r = tor_addr_parse(&addr, addr_str); \
+    tt_int_op(r, OP_EQ, expect_family); \
+    sv = tor_addr_to_str(buf, &addr, sizeof(buf), fmt_decorated); \
+    tt_str_op(sv, OP_EQ, buf); \
+    tt_str_op(buf, OP_EQ, expect_str); \
+  STMT_END
+
+/* Test that addr_str fails to parse, and:
+ *  - the returned address is null.
+ */
+#define TEST_ADDR_PARSE_XFAIL(addr_str) \
+  STMT_BEGIN \
+    int r; \
+    tor_addr_t addr; \
+    r = tor_addr_parse(&addr, addr_str); \
+    tt_int_op(r, OP_EQ, -1); \
+    tt_assert(tor_addr_is_null(&addr)); \
+  STMT_END
+
+/* Test that addr_port_str and default_port successfully parse, and:
+ *  - the address has family expect_family,
+ *  - the fmt_decorated result of tor_addr_to_str() is expect_str,
+ *  - the port is expect_port.
+ */
+#define TEST_ADDR_PORT_PARSE_FMT(addr_port_str, default_port, expect_family, \
+                                 fmt_decorated, expect_str, expect_port) \
+  STMT_BEGIN \
+    int r; \
+    tor_addr_t addr; \
+    uint16_t port; \
+    char buf[TOR_ADDR_BUF_LEN]; \
+    const char *sv; \
+    r = tor_addr_port_parse(LOG_DEBUG, addr_port_str, &addr, &port, \
+                            default_port); \
+    tt_int_op(r, OP_EQ, 0); \
+    tt_int_op(tor_addr_family(&addr), OP_EQ, expect_family); \
+    sv = tor_addr_to_str(buf, &addr, sizeof(buf), fmt_decorated); \
+    tt_str_op(sv, OP_EQ, buf); \
+    tt_str_op(buf, OP_EQ, expect_str); \
+    tt_int_op(port, OP_EQ, expect_port); \
+  STMT_END
+
+/* Test that addr_port_str and default_port fail to parse, and:
+ *  - the returned address is null,
+ *  - the returned port is 0.
+ */
+#define TEST_ADDR_PORT_PARSE_XFAIL(addr_port_str, default_port) \
+  STMT_BEGIN \
+    int r; \
+    tor_addr_t addr; \
+    uint16_t port; \
+    r = tor_addr_port_parse(LOG_DEBUG, addr_port_str, &addr, &port, \
+                            default_port); \
+    tt_int_op(r, OP_EQ, -1); \
+    tt_assert(tor_addr_is_null(&addr)); \
+    tt_int_op(port, OP_EQ, 0); \
+  STMT_END
+
+/* Test that addr_str successfully parses as a canonical IPv4 address. */
+#define TEST_ADDR_V4_PARSE_CANONICAL(addr_str) \
+  TEST_ADDR_PARSE_FMT(addr_str, AF_INET, 0, addr_str)
+
+/* Test that addr_str successfully parses as a canonical fmt_decorated
+ * IPv6 address. */
+#define TEST_ADDR_V6_PARSE_CANONICAL(addr_str, fmt_decorated) \
+  TEST_ADDR_PARSE_FMT(addr_str, AF_INET6, fmt_decorated, addr_str)
+
+/* Test that addr_str successfully parses, and the fmt_decorated canonical
+ * IPv6 string is expect_str. */
+#define TEST_ADDR_V6_PARSE(addr_str, fmt_decorated, expect_str) \
+  TEST_ADDR_PARSE_FMT(addr_str, AF_INET6, fmt_decorated, expect_str)
+
+/* Test that addr_port_str successfully parses to the canonical IPv4 address
+ * string expect_str, and port expect_port. */
+#define TEST_ADDR_V4_PORT_PARSE(addr_port_str, expect_str, expect_port) \
+  TEST_ADDR_PORT_PARSE_FMT(addr_port_str, -1, AF_INET, 0, expect_str, \
+                           expect_port)
+
+/* Test that addr_port_str successfully parses to the canonical undecorated
+ * IPv6 address string expect_str, and port expect_port. */
+#define TEST_ADDR_V6_PORT_PARSE(addr_port_str, expect_str, expect_port) \
+  TEST_ADDR_PORT_PARSE_FMT(addr_port_str, -1, AF_INET6, 0, expect_str, \
+                           expect_port)
+
+/* Test that addr_port_str and default_port successfully parse to the canonical
+ * IPv4 address string expect_str, and port expect_port. */
+#define TEST_ADDR_V4_PORT_DEF_PARSE(addr_port_str, default_port, expect_str, \
+                                    expect_port) \
+  TEST_ADDR_PORT_PARSE_FMT(addr_port_str, default_port, AF_INET, 0, \
+                           expect_str, expect_port)
+
+/* Test that addr_port_str successfully parses to the canonical undecorated
+ * IPv6 address string expect_str, and port expect_port. */
+#define TEST_ADDR_V6_PORT_DEF_PARSE(addr_port_str, default_port, expect_str, \
+                                    expect_port) \
+  TEST_ADDR_PORT_PARSE_FMT(addr_port_str, default_port, AF_INET6, 0, \
+                           expect_str, expect_port)
+
 /** Test tor_addr_parse() and tor_addr_port_parse(). */
 static void
 test_addr_parse(void *arg)
 {
-  int r;
-  tor_addr_t addr;
-  char buf[TOR_ADDR_BUF_LEN];
-  uint16_t port = 0;
-
-  /* Correct call. */
   (void)arg;
-  r= tor_addr_parse(&addr, "192.0.2.1");
-  tt_int_op(r,OP_EQ, AF_INET);
-  tor_addr_to_str(buf, &addr, sizeof(buf), 0);
-  tt_str_op(buf,OP_EQ, "192.0.2.1");
 
-  r= tor_addr_parse(&addr, "11:22::33:44");
-  tt_int_op(r,OP_EQ, AF_INET6);
-  tor_addr_to_str(buf, &addr, sizeof(buf), 0);
-  tt_str_op(buf,OP_EQ, "11:22::33:44");
+  /* Correct calls. */
+  TEST_ADDR_V4_PARSE_CANONICAL("192.0.2.1");
 
-  r= tor_addr_parse(&addr, "[11:22::33:44]");
-  tt_int_op(r,OP_EQ, AF_INET6);
-  tor_addr_to_str(buf, &addr, sizeof(buf), 0);
-  tt_str_op(buf,OP_EQ, "11:22::33:44");
+  TEST_ADDR_V6_PARSE_CANONICAL("11:22::33:44", 0);
+  TEST_ADDR_V6_PARSE_CANONICAL("[11:22::33:44]", 1);
 
-  r= tor_addr_parse(&addr, "11:22:33:44:55:66:1.2.3.4");
-  tt_int_op(r,OP_EQ, AF_INET6);
-  tor_addr_to_str(buf, &addr, sizeof(buf), 0);
-  tt_str_op(buf,OP_EQ, "11:22:33:44:55:66:102:304");
+  TEST_ADDR_V6_PARSE("11:22:33:44:55:66:1.2.3.4", 0,
+                     "11:22:33:44:55:66:102:304");
 
-  r= tor_addr_parse(&addr, "11:22::33:44:1.2.3.4");
-  tt_int_op(r,OP_EQ, AF_INET6);
-  tor_addr_to_str(buf, &addr, sizeof(buf), 0);
-  tt_str_op(buf,OP_EQ, "11:22::33:44:102:304");
+  TEST_ADDR_V6_PARSE("11:22::33:44:1.2.3.4", 0,
+                     "11:22::33:44:102:304");
 
   /* Empty string. */
-  r= tor_addr_parse(&addr, "");
-  tt_int_op(r,OP_EQ, -1);
+  TEST_ADDR_PARSE_XFAIL("");
 
   /* Square brackets around IPv4 address. */
-  r= tor_addr_parse(&addr, "[192.0.2.1]");
-  tt_int_op(r,OP_EQ, -1);
+  TEST_ADDR_PARSE_XFAIL("[192.0.2.1]");
 
   /* Only left square bracket. */
-  r= tor_addr_parse(&addr, "[11:22::33:44");
-  tt_int_op(r,OP_EQ, -1);
+  TEST_ADDR_PARSE_XFAIL("[11:22::33:44");
 
   /* Only right square bracket. */
-  r= tor_addr_parse(&addr, "11:22::33:44]");
-  tt_int_op(r,OP_EQ, -1);
+  TEST_ADDR_PARSE_XFAIL("11:22::33:44]");
 
   /* Leading colon. */
-  r= tor_addr_parse(&addr, ":11:22::33:44");
-  tt_int_op(r,OP_EQ, -1);
+  TEST_ADDR_PARSE_XFAIL(":11:22::33:44");
 
   /* Trailing colon. */
-  r= tor_addr_parse(&addr, "11:22::33:44:");
-  tt_int_op(r,OP_EQ, -1);
+  TEST_ADDR_PARSE_XFAIL("11:22::33:44:");
 
   /* Too many hex words in IPv4-mapped IPv6 address. */
-  r= tor_addr_parse(&addr, "11:22:33:44:55:66:77:88:1.2.3.4");
-  tt_int_op(r,OP_EQ, -1);
+  TEST_ADDR_PARSE_XFAIL("11:22:33:44:55:66:77:88:1.2.3.4");
 
   /* IPv6 address with port and no brackets */
-  r= tor_addr_parse(&addr, "11:22::33:44:12345");
-  tt_int_op(r, OP_EQ, -1);
+  TEST_ADDR_PARSE_XFAIL("11:22::33:44:12345");
 
-  /* Correct call. */
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "192.0.2.1:1234",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, 0);
-  tor_addr_to_str(buf, &addr, sizeof(buf), 0);
-  tt_str_op(buf,OP_EQ, "192.0.2.1");
-  tt_int_op(port,OP_EQ, 1234);
+  /* Correct calls. */
+  TEST_ADDR_V4_PORT_PARSE("192.0.2.1:1234", "192.0.2.1", 1234);
 
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "[::1]:1234",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, 0);
-  tor_addr_to_str(buf, &addr, sizeof(buf), 0);
-  tt_str_op(buf,OP_EQ, "::1");
-  tt_int_op(port,OP_EQ, 1234);
+  TEST_ADDR_V6_PORT_PARSE("[::1]:1234", "::1", 1234);
 
   /* Domain name. */
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "torproject.org:1234",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("torproject.org:1234", -1);
 
   /* Only IP. */
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "192.0.2.2",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("192.0.2.2", -1);
+  TEST_ADDR_V4_PORT_DEF_PARSE("192.0.2.2", 200, "192.0.2.2", 200);
 
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "192.0.2.2",
-                         &addr, &port, 200);
-  tt_int_op(r, OP_EQ, 0);
-  tt_int_op(port,OP_EQ,200);
+  TEST_ADDR_PORT_PARSE_XFAIL("[::1]", -1);
+  TEST_ADDR_V6_PORT_DEF_PARSE("[::1]", 400, "::1", 400);
 
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "[::1]",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, -1);
-
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "[::1]",
-                         &addr, &port, 400);
-  tt_int_op(r, OP_EQ, 0);
-  tt_int_op(port,OP_EQ,400);
-
-  /* Allow IPv6 without square brackets, when there is no port */
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "::1",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, -1);
-
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "::1",
-                         &addr, &port, 600);
-  tt_int_op(r, OP_EQ, 0);
-  tt_int_op(port,OP_EQ,600);
+  /* Allow IPv6 without square brackets, when there is no port, but only if
+   * there is a default port */
+  TEST_ADDR_PORT_PARSE_XFAIL("::1", -1);
+  TEST_ADDR_V6_PORT_DEF_PARSE("::1", 600, "::1", 600);
 
   /* Bad port. */
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "192.0.2.2:66666",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, -1);
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "192.0.2.2:66666",
-                         &addr, &port, 200);
-  tt_int_op(r, OP_EQ, -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("192.0.2.2:66666",  -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("192.0.2.2:66666", 200);
 
   /* Only domain name */
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "torproject.org",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, -1);
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "torproject.org",
-                         &addr, &port, 200);
-  tt_int_op(r, OP_EQ, -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("torproject.org",  -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("torproject.org", 200);
 
   /* Bad IPv4 address */
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "192.0.2:1234",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("192.0.2:1234",  -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("192.0.2:1234", 200);
 
   /* Bad IPv4 address and port: brackets */
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "[192.0.2.3]:12345",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("[192.0.2.3]:12345",  -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("[192.0.2.3]:12345", 200);
 
   /* Bad IPv6 addresses and ports: no brackets */
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "::1:12345",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("::1:12345",  -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("::1:12345", 200);
 
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "11:22::33:44:12345",
-                         &addr, &port, -1);
-  tt_int_op(r, OP_EQ, -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("11:22::33:44:12345",  -1);
+  TEST_ADDR_PORT_PARSE_XFAIL("11:22::33:44:12345", 200);
 
   /* Make sure that the default port has lower priority than the real
      one */
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "192.0.2.2:1337",
-                         &addr, &port, 200);
-  tt_int_op(r, OP_EQ, 0);
-  tt_int_op(port,OP_EQ,1337);
-
-  r= tor_addr_port_parse(LOG_DEBUG,
-                         "[::1]:1369",
-                         &addr, &port, 200);
-  tt_int_op(r, OP_EQ, 0);
-  tt_int_op(port,OP_EQ,1369);
+  TEST_ADDR_V4_PORT_DEF_PARSE("192.0.2.2:1337", 200, "192.0.2.2", 1337);
+  TEST_ADDR_V6_PORT_DEF_PARSE("[::1]:1369", 200, "::1", 1369);
 
  done:
   ;
