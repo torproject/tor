@@ -901,6 +901,23 @@ test_addr_parse(void *arg)
 
   /* IPv6 address with port and no brackets */
   TEST_ADDR_PARSE_XFAIL_MALFORMED("11:22::33:44:12345");
+  /* Is it a port, or are there too many hex words?
+   * We reject it either way. */
+  TEST_ADDR_PARSE_XFAIL_MALFORMED("11:22:33:44:55:66:77:88:99");
+  /* But we accept it if it has square brackets. */
+  TEST_ADDR_V6_PORT_PARSE("[11:22:33:44:55:66:77:88]:99",
+                           "11:22:33:44:55:66:77:88",99);
+
+  /* This is an IPv6 address */
+  TEST_ADDR_V6_PARSE_CANONICAL("11:22:33:44:55:66:77:88", 0);
+  TEST_ADDR_V6_PARSE_CANONICAL("[11:22:33:44:55:66:77:88]", 1);
+
+  /* And this is an ambiguous case, which is interpreted as an IPv6 address. */
+  TEST_ADDR_V6_PARSE_CANONICAL("11:22::88:99", 0);
+  /* Use square brackets to resolve the ambiguity */
+  TEST_ADDR_V6_PARSE_CANONICAL("[11:22::88:99]", 1);
+  TEST_ADDR_V6_PORT_PARSE("[11:22::88]:99",
+                           "11:22::88",99);
 
   /* Correct calls. */
   TEST_ADDR_V4_PORT_PARSE("192.0.2.1:1234", "192.0.2.1", 1234);
