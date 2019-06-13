@@ -35,8 +35,7 @@
  * *<b>addr</b> to the proper IP address, in host byte order.  Returns 0
  * on success, -1 on failure; 1 on transient failure.
  *
- * Like tor_addr_parse(), this function accepts IPv6 addresses with or without
- * square brackets.
+ * This function only accepts IPv4 addresses.
  *
  * (This function exists because standard windows gethostbyname
  * doesn't treat raw IP addresses properly.)

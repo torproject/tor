@@ -373,7 +373,8 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len, int decorate)
  *
  * If <b>accept_regular</b> is set and the address is in neither recognized
  * reverse lookup hostname format, try parsing the address as a regular
- * IPv4 or IPv6 address too.
+ * IPv4 or IPv6 address too. This mode will accept IPv6 addresses with or
+ * without square brackets.
  */
 int
 tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
@@ -1785,7 +1786,9 @@ tor_addr_port_split(int severity, const char *addrport,
   tor_assert(port_out);
 
   /* We need to check for IPv6 manually because the logic below doesn't
-   * do a good job on IPv6 addresses that lack a port. */
+   * do a good job on IPv6 addresses that lack a port.
+   * If an IPv6 address without square brackets is ambiguous, it gets parsed
+   * here as an address, rather than address:port. */
   if (tor_addr_parse(&a_tmp, addrport) == AF_INET6) {
     *port_out = 0;
     *address_out = tor_strdup(addrport);
