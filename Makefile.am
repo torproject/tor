@@ -41,6 +41,7 @@ TOR_UTIL_LIBS = \
         src/lib/libtor-geoip.a \
 	src/lib/libtor-process.a \
         src/lib/libtor-buf.a \
+	src/lib/libtor-confmgt.a \
 	src/lib/libtor-pubsub.a \
 	src/lib/libtor-dispatch.a \
 	src/lib/libtor-time.a \
@@ -54,7 +55,6 @@ TOR_UTIL_LIBS = \
 	src/lib/libtor-math.a \
 	src/lib/libtor-meminfo.a \
 	src/lib/libtor-osinfo.a \
-	src/lib/libtor-confmgt.a \
 	src/lib/libtor-log.a \
 	src/lib/libtor-lock.a \
 	src/lib/libtor-fdio.a \
@@ -75,6 +75,7 @@ TOR_UTIL_TESTING_LIBS = \
         src/lib/libtor-geoip-testing.a \
 	src/lib/libtor-process-testing.a \
         src/lib/libtor-buf-testing.a \
+	src/lib/libtor-confmgt-testing.a \
 	src/lib/libtor-pubsub-testing.a \
 	src/lib/libtor-dispatch-testing.a \
 	src/lib/libtor-time-testing.a \
@@ -89,7 +90,6 @@ TOR_UTIL_TESTING_LIBS = \
 	src/lib/libtor-meminfo-testing.a \
 	src/lib/libtor-osinfo-testing.a \
 	src/lib/libtor-term-testing.a \
-	src/lib/libtor-confmgt-testing.a \
 	src/lib/libtor-log-testing.a \
 	src/lib/libtor-lock-testing.a \
 	src/lib/libtor-fdio-testing.a \

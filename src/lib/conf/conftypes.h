@@ -7,6 +7,22 @@
 /**
  * @file conftypes.h
  * @brief Types used to specify configurable options.
+ *
+ * This header defines the types that different modules will use in order to
+ * declare their configuration and state variables, and tell the configuration
+ * management code about those variables.  From the individual module's point
+ * of view, its configuration and state are simply data structures.
+ *
+ * For defining new variable types, see var_type_def_st.h.
+ *
+ * For the code that manipulates variables defined via this module, see
+ * lib/confmgt/, especially typedvar.h and (later) structvar.h.  The
+ * configuration manager is responsible for encoding, decoding, and
+ * maintaining the configuration structures used by the various modules.
+ *
+ * STATUS NOTE: This is a work in process refactoring.  It is not yet possible
+ *   for modules to define their own variables, and much of the configuration
+ *   management code is still in src/app/config/.
  **/
 
 #ifndef TOR_SRC_LIB_CONF_CONFTYPES_H

@@ -469,9 +469,9 @@ static const badval_test_t bv_badcsvi2 =
   { "csv_interval cl,10\n", "malformed" };
 static const badval_test_t bv_nonoption = { "fnord 10\n", "Unknown option" };
 static const badval_test_t bv_badmem = { "mem 3 trits\n", "malformed" };
-static const badval_test_t bv_badbool = { "boolean 7\n", "expects 0 or 1" };
+static const badval_test_t bv_badbool = { "boolean 7\n", "Unrecognized value"};
 static const badval_test_t bv_badabool =
-  { "autobool 7\n", "expects 0, 1, or 'auto'" };
+  { "autobool 7\n", "Unrecognized value" };
 static const badval_test_t bv_badtime = { "time lunchtime\n", "Invalid time" };
 static const badval_test_t bv_virt = { "MixedLines 7\n", "virtual option" };
 static const badval_test_t bv_rs = { "Routerset 2.2.2.2.2\n", "Invalid" };
