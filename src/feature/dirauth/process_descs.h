@@ -35,6 +35,17 @@ typedef struct authdir_config_t {
                                         * router_status_t. */
 } authdir_config_t;
 
+#if defined(PROCESS_DESCS_PRIVATE) || defined(TOR_UNIT_TESTS)
+
+/*                 1  Historically used to indicate Named */
+#define FP_INVALID 2  /**< Believed invalid. */
+#define FP_REJECT  4  /**< We will not publish this router. */
+/*                 8  Historically used to avoid using this as a dir. */
+#define FP_BADEXIT 16 /**< We'll tell clients not to use this as an exit. */
+/*                 32 Historically used to indicade Unnamed */
+
+#endif /* defined(TOR_UNIT_TESTS) */
+
 #ifdef TOR_UNIT_TESTS
 
 void authdir_init_fingerprint_list(void);

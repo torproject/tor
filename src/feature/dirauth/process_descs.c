@@ -12,6 +12,8 @@
  * them make those decisions.
  **/
 
+#define PROCESS_DESCS_PRIVATE
+
 #include "core/or/or.h"
 #include "feature/dirauth/process_descs.h"
 
@@ -51,13 +53,6 @@ dirserv_get_status_impl(const char *fp,
                         const ed25519_public_key_t *ed25519_public_key,
                         const char *nickname, uint32_t addr, uint16_t or_port,
                         const char *platform, const char **msg, int severity);
-
-/*                 1  Historically used to indicate Named */
-#define FP_INVALID 2  /**< Believed invalid. */
-#define FP_REJECT  4  /**< We will not publish this router. */
-/*                 8  Historically used to avoid using this as a dir. */
-#define FP_BADEXIT 16 /**< We'll tell clients not to use this as an exit. */
-/*                 32 Historically used to indicade Unnamed */
 
 /** Should be static; exposed for testing. */
 static authdir_config_t *fingerprint_list = NULL;
