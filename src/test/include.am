@@ -120,6 +120,7 @@ src_test_test_SOURCES += \
 	src/test/test_circuitstats.c \
 	src/test/test_compat_libevent.c \
 	src/test/test_config.c \
+	src/test/test_confparse.c \
 	src/test/test_connection.c \
 	src/test/test_conscache.c \
 	src/test/test_consdiff.c \

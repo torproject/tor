@@ -228,4 +228,9 @@ void warn_deprecated_option(const char *what, const char *why);
 #define CFG_EQ_LINELIST(a,b,opt) config_lines_eq((a)->opt, (b)->opt)
 #define CFG_EQ_ROUTERSET(a,b,opt) routerset_equal((a)->opt, (b)->opt)
 
+#ifdef CONFPARSE_PRIVATE
+STATIC void config_reset_line(const config_format_t *fmt, void *options,
+                              const char *key, int use_defaults);
+#endif
+
 #endif /* !defined(TOR_CONFPARSE_H) */
