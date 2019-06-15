@@ -741,7 +741,7 @@ process_win32_cleanup_handle(process_win32_handle_t *handle)
                format_win32_error(error_code));
     }
   }
-#endif
+#endif /* 0 */
 
   /* Close our handle. */
   if (handle->pipe != INVALID_HANDLE_VALUE) {
@@ -1084,4 +1084,4 @@ tor_join_win_cmdline(const char *argv[])
   return joined_argv;
 }
 
-#endif /* ! defined(_WIN32). */
+#endif /* defined(_WIN32) */

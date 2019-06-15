@@ -89,4 +89,4 @@ void pubsub_items_clear_bindings(pubsub_items_t *items);
   FREE_AND_NULL(pubsub_items_t, pubsub_items_free_, (cfg))
 void pubsub_items_free_(pubsub_items_t *cfg);
 
-#endif
+#endif /* !defined(TOR_PUBSUB_BUILD_H) */

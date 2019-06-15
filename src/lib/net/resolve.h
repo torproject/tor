@@ -55,4 +55,4 @@ void tor_free_getaddrinfo_cache(void);
 void sandbox_disable_getaddrinfo_cache(void);
 void tor_make_getaddrinfo_cache_active(void);
 
-#endif
+#endif /* !defined(TOR_RESOLVE_H) */

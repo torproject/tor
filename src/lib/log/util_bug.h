@@ -80,10 +80,10 @@
     tor__assert_tmp_value__;                    \
   } )
 #define ASSERT_PREDICT_LIKELY_(e) ASSERT_PREDICT_UNLIKELY_(e)
-#else
+#else /* !(defined(TOR_UNIT_TESTS) && defined(__GNUC__)) */
 #define ASSERT_PREDICT_UNLIKELY_(e) PREDICT_UNLIKELY(e)
 #define ASSERT_PREDICT_LIKELY_(e) PREDICT_LIKELY(e)
-#endif
+#endif /* defined(TOR_UNIT_TESTS) && defined(__GNUC__) */
 
 /* Sometimes we don't want to use assertions during branch coverage tests; it
  * leads to tons of unreached branches which in reality are only assertions we
@@ -96,7 +96,7 @@
   (void)(a);                                                            \
   (void)(fmt);                                                          \
   STMT_END
-#else
+#else /* !(defined(TOR_UNIT_TESTS) && ... */
 /** Like assert(3), but send assertion failures to the log as well as to
  * stderr. */
 #define tor_assert(expr) tor_assertf(expr, NULL)

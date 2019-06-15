@@ -23,7 +23,7 @@
 #include "core/or/sendme.h"
 #include "feature/nodelist/networkstatus.h"
 #include "lib/ctime/di_ops.h"
-#include "trunnel/sendme.h"
+#include "trunnel/sendme_cell.h"
 
 /* Return the minimum version given by the consensus (if any) that should be
  * used when emitting a SENDME cell. */
@@ -619,7 +619,9 @@ int
 sendme_note_stream_data_packaged(edge_connection_t *conn)
 {
   tor_assert(conn);
-  log_debug(LD_APP, "Stream package_window now %d.", --conn->package_window);
+
+  --conn->package_window;
+  log_debug(LD_APP, "Stream package_window now %d.", conn->package_window);
   return conn->package_window;
 }
 

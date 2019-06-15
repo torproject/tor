@@ -18,7 +18,7 @@
 #include "core/or/circuituse.h"
 #include "core/or/or_periodic.h"
 
-#include "src/feature/relay/routermode.h"
+#include "feature/relay/routermode.h"
 
 #define DECLARE_EVENT(name, roles, flags)         \
   static periodic_event_item_t name ## _event =   \

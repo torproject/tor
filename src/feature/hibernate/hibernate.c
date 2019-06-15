@@ -57,7 +57,7 @@ hibernating, phase 2:
  * Coverity. Here's a kludge to unconfuse it.
  */
 #   define __INCLUDE_LEVEL__ 2
-# endif /* defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__) */
+#endif /* defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__) */
 #include <systemd/sd-daemon.h>
 #endif /* defined(HAVE_SYSTEMD) */
 
@@ -893,7 +893,7 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
      */
     sd_notifyf(0, "EXTEND_TIMEOUT_USEC=%" PRIu64,
             ((uint64_t)(options->ShutdownWaitLength) + 30) * TOR_USEC_PER_SEC);
-#endif
+#endif /* defined(HAVE_SYSTEMD) */
   } else { /* soft limit reached */
     hibernate_end_time = interval_end_time;
   }

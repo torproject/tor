@@ -403,14 +403,23 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     } else {
       log_info(LD_REND,"...Found no rend circ. Dropping on the floor.");
     }
+    /* Save the rend data digest to a temporary object so that we don't access
+     * it after we mark the circuit for close. */
+    const uint8_t *rend_digest_tmp = NULL;
+    size_t digest_len;
+    uint8_t *cached_rend_digest = NULL;
+    rend_digest_tmp = rend_data_get_pk_digest(circ->rend_data, &digest_len);
+    cached_rend_digest = tor_malloc_zero(digest_len);
+    memcpy(cached_rend_digest, rend_digest_tmp, digest_len);
+
     /* close the circuit: we won't need it anymore. */
     circuit_change_purpose(TO_CIRCUIT(circ),
                            CIRCUIT_PURPOSE_C_INTRODUCE_ACKED);
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
 
     /* close any other intros launched in parallel */
-    rend_client_close_other_intros(rend_data_get_pk_digest(circ->rend_data,
-                                                           NULL));
+    rend_client_close_other_intros(cached_rend_digest);
+    tor_free(cached_rend_digest); /* free the temporary digest */
   } else {
     /* It's a NAK; the introduction point didn't relay our request. */
     circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_INTRODUCING);

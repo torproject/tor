@@ -25,7 +25,7 @@ void dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                               int listbadexits);
 
 void dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil);
-#endif
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
 
 void dirserv_set_bridges_running(time_t now);
 
@@ -34,6 +34,6 @@ void dirserv_set_bridges_running(time_t now);
  * StaleDesc flag. */
 #define DESC_IS_STALE_INTERVAL (18*60*60)
 STATIC void dirserv_set_routerstatus_testing(routerstatus_t *rs);
-#endif
+#endif /* defined(VOTEFLAGS_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_VOTEFLAGS_H) */

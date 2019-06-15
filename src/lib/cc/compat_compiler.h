@@ -229,4 +229,4 @@
 #define EAT_SEMICOLON                                   \
   struct dummy_semicolon_eater__
 
-#endif /* !defined(TOR_COMPAT_H) */
+#endif /* !defined(TOR_COMPAT_COMPILER_H) */

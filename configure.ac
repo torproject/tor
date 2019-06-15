@@ -4,7 +4,7 @@ dnl Copyright (c) 2007-2019, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_PREREQ([2.63])
-AC_INIT([tor],[0.4.1.1-alpha-dev])
+AC_INIT([tor],[0.4.2.0-alpha-dev])
 AC_CONFIG_SRCDIR([src/app/main/tor_main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -14,7 +14,7 @@ AC_CONFIG_MACRO_DIR([m4])
 # version number changes.  Tor uses it to make sure that it
 # only shuts down for missing "required protocols" when those protocols
 # are listed as required by a consensus after this date.
-AC_DEFINE(APPROX_RELEASE_DATE, ["2019-05-22"], # for 0.4.1.1-alpha-dev
+AC_DEFINE(APPROX_RELEASE_DATE, ["2019-06-10"], # for 0.4.2.0-alpha-dev
           [Approximate date when this software was released. (Updated when the version changes.)])
 
 # "foreign" means we don't follow GNU package layout standards
@@ -1188,6 +1188,17 @@ m4_ifdef([AS_VAR_IF],[
        TOR_CHECK_LDFLAGS(-pie, "$all_ldflags_for_check", "$all_libs_for_check")
     fi
     TOR_TRY_COMPILE_WITH_CFLAGS(-fwrapv, also_link, CFLAGS_FWRAPV="-fwrapv", true)
+
+   AC_MSG_CHECKING([whether we can run hardened binaries])
+   AC_RUN_IFELSE([AC_LANG_PROGRAM([], [return 0;])],
+        [AC_MSG_RESULT([yes])],
+        [AC_MSG_RESULT([no])
+         AC_MSG_ERROR([dnl
+ We can link with compiler hardening options, but we can't run with them.
+ That's a bad sign! If you must, you can pass --disable-gcc-hardening to
+ configure, but it would be better to figure out what the underlying problem
+ is.])],
+        [AC_MSG_RESULT([cross])])
 fi
 
 if test "$fragile_hardening" = "yes"; then
@@ -2458,7 +2469,6 @@ AC_CONFIG_FILES([
 	Makefile
 	config.rust
 	contrib/operator-tools/tor.logrotate
-	contrib/dist/torctl
 	contrib/dist/tor.service
 	src/config/torrc.sample
 	src/config/torrc.minimal

@@ -156,6 +156,6 @@ typedef struct pubsub_adjmap_t {
   struct smartlist_t **sub_by_msg;
 } pubsub_adjmap_t;
 
-#endif
+#endif /* defined(PUBSUB_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_PUBSUB_BUILDER_ST_H) */

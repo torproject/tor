@@ -9,6 +9,8 @@
 #ifndef TOR_BTRACK_ORCONN_H
 #define TOR_BTRACK_ORCONN_H
 
+#include "lib/pubsub/pubsub.h"
+
 #ifdef BTRACK_ORCONN_PRIVATE
 
 #include "ht.h"
@@ -30,9 +32,10 @@ typedef struct bt_orconn_t {
   bool is_onehop;           /**< Is this for a one-hop circuit? */
 } bt_orconn_t;
 
-#endif  /* defined(BTRACK_ORCONN_PRIVATE) */
+#endif /* defined(BTRACK_ORCONN_PRIVATE) */
 
 int btrack_orconn_init(void);
+int btrack_orconn_add_pubsub(pubsub_connector_t *);
 void btrack_orconn_fini(void);
 
-#endif  /* defined(TOR_BTRACK_ORCONN_H) */
+#endif /* !defined(TOR_BTRACK_ORCONN_H) */

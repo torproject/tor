@@ -99,7 +99,7 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
     (void)useAccel;
     (void)accelName;
     (void)accelDir;
-#endif
+#endif /* defined(ENABLE_OPENSSL) */
 #ifdef ENABLE_NSS
     if (crypto_nss_late_init() < 0)
       return -1;

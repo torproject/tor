@@ -111,4 +111,4 @@ void dispatch_free_msg_(const dispatch_t *d, msg_t *msg);
 
 char *dispatch_fmt_msg_data(const dispatch_t *d, const msg_t *msg);
 
-#endif
+#endif /* !defined(TOR_DISPATCH_H) */

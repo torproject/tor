@@ -157,7 +157,6 @@ tor_free_all(int postfork)
   if (!postfork) {
     release_lockfile();
   }
-  tor_libevent_free_all();
 
   subsystems_shutdown();
 

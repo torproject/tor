@@ -35,7 +35,7 @@ struct onion_handshake_state_t {
 /* Helper macro to access private members of a struct. */
 #define pvt_crypto CRYPT_PATH_PRIV_FIELD(crypto)
 
-#endif
+#endif /* defined(CRYPT_PATH_PRIVATE) */
 
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */
@@ -82,4 +82,4 @@ struct crypt_path_t {
   relay_crypto_t CRYPT_PATH_PRIV_FIELD(crypto);
 };
 
-#endif
+#endif /* !defined(CRYPT_PATH_ST_H) */

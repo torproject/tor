@@ -370,4 +370,4 @@
                                   __FILE__,                     \
                                   __LINE__)
 
-#endif
+#endif /* !defined(TOR_DISPATCH_MSG_H) */

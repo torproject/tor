@@ -39,7 +39,7 @@
     (tvout)->tv_sec += (tvout)->tv_usec / 1000000;                  \
     (tvout)->tv_usec %= 1000000;                                    \
   } while (0)
-#endif
+#endif /* defined(TOR_COVERAGE) */
 
 #ifndef timeradd
 /** Replacement for timeradd on platforms that do not have it: sets tvout to
@@ -83,4 +83,4 @@
    ((tv1)->tv_sec op (tv2)->tv_sec))
 #endif /* !defined(timercmp) */
 
-#endif
+#endif /* !defined(TOR_TIMEVAL_H) */

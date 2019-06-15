@@ -271,9 +271,14 @@ dirserv_load_fingerprint_file(void)
 
 #define DISABLE_DISABLING_ED25519
 
-/** Check whether <b>router</b> has a nickname/identity key combination that
- * we recognize from the fingerprint list, or an IP we automatically act on
- * according to our configuration.  Return the appropriate router status.
+/** Check whether <b>router</b> has:
+ * - a nickname/identity key combination that we recognize from the fingerprint
+ *   list,
+ * - an IP we automatically act on according to our configuration,
+ * - an appropriate version, and
+ * - matching pinned keys.
+ *
+ * Return the appropriate router status.
  *
  * If the status is 'FP_REJECT' and <b>msg</b> is provided, set
  * *<b>msg</b> to an explanation of why. */
@@ -283,6 +288,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
 {
   char d[DIGEST_LEN];
   const int key_pinning = get_options()->AuthDirPinKeys;
+  uint32_t r;
 
   if (crypto_pk_get_digest(router->identity_pkey, d)) {
     log_warn(LD_BUG,"Error computing fingerprint");
@@ -292,16 +298,19 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
   }
 
   /* First, check for the more common reasons to reject a router. */
-
   if (router->cache_info.signing_key_cert) {
     /* This has an ed25519 identity key. */
     uint32_t r = dirserv_get_status_impl(d,
         &router->cache_info.signing_key_cert->signing_key, router->nickname,
         router->addr, router->or_port, router->platform, msg, severity);
-
-    if (r)
-      return r;
+  } else {
+    uint32_t r = dirserv_get_status_impl(d, NULL, router->nickname,
+                                         router->addr, router->or_port,
+                                         router->platform, msg, severity);
   }
+
+  if (r)
+    return r;
 
   /* dirserv_get_status_impl already rejects versions older than 0.2.4.18-rc,
    * and onion_curve25519_pkey was introduced in 0.2.4.8-alpha.
@@ -604,7 +613,7 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
   int general = purpose == ROUTER_PURPOSE_GENERAL;
   tor_assert(msg);
 
-  r=ROUTER_ADDED_SUCCESSFULLY; /*Least severe return value. */
+  r=ROUTER_ADDED_SUCCESSFULLY; /* Least severe return value. */
 
   if (!string_is_utf8_no_bom(desc, desclen)) {
     *msg = "descriptor(s) or extrainfo(s) not valid UTF-8 or had BOM.";
@@ -620,9 +629,7 @@ dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
                    !general ? router_purpose_to_string(purpose) : "",
                    !general ? "\n" : "")<0) {
     *msg = "Couldn't format annotations";
-    /* XXX Not cool: we return -1 below, but (was_router_added_t)-1 is
-     * ROUTER_BAD_EI, which isn't what's gone wrong here. :( */
-    return -1;
+    return ROUTER_AUTHDIR_BUG_ANNOTATIONS;
   }
 
   s = desc;

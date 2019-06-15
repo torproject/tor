@@ -1,3 +1,123 @@
+Changes in version 0.4.1.2-alpha - 2019-06-06
+  Tor 0.4.1.2-alpha resolves numerous bugs--some of them from the
+  previous alpha, and some much older. It also contains minor testing
+  improvements, and an improvement to the security of our authenticated
+  SENDME implementation.
+
+  o Major bugfixes (bridges):
+    - Consider our directory information to have changed when our list
+      of bridges changes. Previously, Tor would not re-compute the
+      status of its directory information when bridges changed, and
+      therefore would not realize that it was no longer able to build
+      circuits. Fixes part of bug 29875.
+    - Do not count previously configured working bridges towards our
+      total of working bridges. Previously, when Tor's list of bridges
+      changed, it would think that the old bridges were still usable,
+      and delay fetching router descriptors for the new ones. Fixes part
+      of bug 29875; bugfix on 0.3.0.1-alpha.
+
+  o Major bugfixes (flow control, SENDME):
+    - Decrement the stream-level package window after packaging a cell.
+      Previously, it was done inside a log_debug() call, meaning that if
+      debug logs were not enabled, the decrement would never happen, and
+      thus the window would be out of sync with the other end point.
+      Fixes bug 30628; bugfix on 0.4.1.1-alpha.
+
+  o Major bugfixes (onion service reachability):
+    - Properly clean up the introduction point map and associated state
+      when circuits change purpose from onion service circuits to
+      pathbias, measurement, or other circuit types. This may fix some
+      instances of introduction point failure. Fixes bug 29034; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor features (authenticated SENDME):
+    - Ensure that there is enough randomness on every circuit to prevent
+      an attacker from successfully predicting the hashes they will need
+      to include in authenticated SENDME cells. At a random interval, if
+      we have not sent randomness already, we now leave some extra space
+      at the end of a cell that we can fill with random bytes. Closes
+      ticket 26846.
+
+  o Minor features (continuous integration):
+    - When running coverage builds on Travis, we now set
+      TOR_TEST_RNG_SEED, to avoid RNG-based coverage differences. Part
+      of ticket 28878.
+
+  o Minor features (maintenance):
+    - Add a new "make autostyle" target that developers can use to apply
+      all automatic Tor style and consistency conversions to the
+      codebase. Closes ticket 30539.
+
+  o Minor features (testing):
+    - The circuitpadding tests now use a reproducible RNG implementation,
+      so that if a test fails, we can learn why. Part of ticket 28878.
+    - Tor's tests now support an environment variable, TOR_TEST_RNG_SEED,
+      to set the RNG seed for tests that use a reproducible RNG. Part of
+      ticket 28878.
+    - When running tests in coverage mode, take additional care to make
+      our coverage deterministic, so that we can accurately track
+      changes in code coverage. Closes ticket 30519.
+
+  o Minor bugfixes (configuration, proxies):
+    - Fix a bug that prevented us from supporting SOCKS5 proxies that
+      want authentication along with configured (but unused!)
+      ClientTransportPlugins. Fixes bug 29670; bugfix on 0.2.6.1-alpha.
+
+  o Minor bugfixes (controller):
+    - POSTDESCRIPTOR requests should work again. Previously, they were
+      broken if a "purpose=" flag was specified. Fixes bug 30580; bugfix
+      on 0.4.1.1-alpha.
+    - Repair the HSFETCH command so that it works again. Previously, it
+      expected a body when it shouldn't have. Fixes bug 30646; bugfix
+      on 0.4.1.1-alpha.
+
+  o Minor bugfixes (developer tooling):
+    - Fix pre-push hook to allow fixup and squash commits when pushing
+      to non-upstream git remote. Fixes bug 30286; bugfix
+      on 0.4.0.1-alpha.
+
+  o Minor bugfixes (directory authority):
+    - Move the "bandwidth-file-headers" line in directory authority
+      votes so that it conforms to dir-spec.txt. Fixes bug 30316; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (NetBSD):
+    - Fix usage of minherit() on NetBSD and other platforms that define
+      MAP_INHERIT_{ZERO,NONE} instead of INHERIT_{ZERO,NONE}. Fixes bug
+      30614; bugfix on 0.4.0.2-alpha. Patch from Taylor Campbell.
+
+  o Minor bugfixes (out-of-memory handler):
+    - When purging the DNS cache because of an out-of-memory condition,
+      try purging just the older entries at first. Previously, we would
+      always purge the whole thing. Fixes bug 29617; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (portability):
+    - Avoid crashing in our tor_vasprintf() implementation on systems
+      that define neither vasprintf() nor _vscprintf(). (This bug has
+      been here long enough that we question whether people are running
+      Tor on such systems, but we're applying the fix out of caution.)
+      Fixes bug 30561; bugfix on 0.2.8.2-alpha. Found and fixed by
+      Tobias Stoeckmann.
+
+  o Minor bugfixes (shutdown, libevent, memory safety):
+    - Avoid use-after-free bugs when shutting down, by making sure that
+      we shut down libevent only after shutting down all of its users.
+      We believe these are harmless in practice, since they only occur
+      on the shutdown path, and do not involve any attacker-controlled
+      data. Fixes bug 30629; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (static analysis):
+    - Fix several spurious Coverity warnings about the unit tests, to
+      lower our chances of missing real warnings in the future. Fixes
+      bug 30150; bugfix on 0.3.5.1-alpha and various other Tor versions.
+
+  o Testing:
+    - Specify torrc paths (with empty files) when launching tor in
+      integration tests; refrain from reading user and system torrcs.
+      Resolves issue 29702.
+
+
 Changes in version 0.4.1.1-alpha - 2019-05-22
   This is the first alpha in the 0.4.1.x series. It introduces
   lightweight circuit padding to make some onion-service circuits harder
@@ -641,7 +761,7 @@ Changes in version 0.4.0.3-alpha - 2019-03-22
 
 
 Changes in version 0.3.5.8 - 2019-02-21
-  Tor 0.3.5.8 backports serveral fixes from later releases, including fixes
+  Tor 0.3.5.8 backports several fixes from later releases, including fixes
   for an annoying SOCKS-parsing bug that affected users in earlier 0.3.5.x
   releases.
 
@@ -660,7 +780,7 @@ Changes in version 0.3.5.8 - 2019-02-21
 
   o Major bugfixes (networking, backport from 0.4.0.2-alpha):
     - Gracefully handle empty username/password fields in SOCKS5
-      username/password auth messsage and allow SOCKS5 handshake to
+      username/password auth message and allow SOCKS5 handshake to
       continue. Previously, we had rejected these handshakes, breaking
       certain applications. Fixes bug 29175; bugfix on 0.3.5.1-alpha.
 
@@ -867,7 +987,7 @@ Changes in version 0.4.0.2-alpha - 2019-02-21
     - Check that bugfix versions in changes files look like Tor versions
       from the versions spec. Warn when bugfixes claim to be on a future
       release. Closes ticket 27761.
-    - Provide a git pre-commit hook that disallows commiting if we have
+    - Provide a git pre-commit hook that disallows committing if we have
       any failures in our code and changelog formatting checks. It is
       now available in scripts/maint/pre-commit.git-hook. Implements
       feature 28976.

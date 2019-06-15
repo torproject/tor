@@ -754,7 +754,7 @@ tor_shutdown_event_loop_for_restart_cb(
   tor_event_free(tor_shutdown_event_loop_for_restart_event);
   tor_shutdown_event_loop_and_exit(0);
 }
-#endif
+#endif /* defined(ENABLE_RESTART_DEBUGGING) */
 
 /**
  * After finishing the current callback (if any), shut down the main loop,
@@ -2375,7 +2375,7 @@ do_main_loop(void)
       event_add(tor_shutdown_event_loop_for_restart_event, &restart_after);
     }
   }
-#endif
+#endif /* defined(ENABLE_RESTART_DEBUGGING) */
 
   return run_main_loop_until_done();
 }

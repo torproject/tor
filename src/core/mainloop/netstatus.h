@@ -21,4 +21,4 @@ void netstatus_flush_to_state(or_state_t *state, time_t now);
 void netstatus_load_from_state(const or_state_t *state, time_t now);
 void netstatus_note_clock_jumped(time_t seconds_diff);
 
-#endif
+#endif /* !defined(TOR_NETSTATUS_H) */

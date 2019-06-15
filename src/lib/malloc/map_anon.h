@@ -62,7 +62,7 @@ typedef enum {
 #define NOINHERIT_CAN_FAIL
 #else
 #define NOINHERIT_CAN_FAIL
-#endif
+#endif /* defined(_WIN32) || ... */
 
 void *tor_mmap_anonymous(size_t sz, unsigned flags,
                          inherit_res_t *inherit_result_out);

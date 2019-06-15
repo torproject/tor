@@ -229,4 +229,4 @@ struct circuit_t {
   struct circpad_machine_runtime_t *padding_info[CIRCPAD_MAX_MACHINES];
 };
 
-#endif
+#endif /* !defined(CIRCUIT_ST_H) */

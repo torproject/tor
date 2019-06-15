@@ -121,7 +121,6 @@ struct or_options_t {
   struct config_line_t *RecommendedVersions;
   struct config_line_t *RecommendedClientVersions;
   struct config_line_t *RecommendedServerVersions;
-  struct config_line_t *RecommendedPackages;
   /** Whether dirservers allow router descriptors with private IPs. */
   int DirAllowPrivateAddresses;
   /** Whether routers accept EXTEND cells to routers with private IPs. */
@@ -1110,4 +1109,4 @@ struct or_options_t {
   int DormantCanceledByStartup;
 };
 
-#endif
+#endif /* !defined(TOR_OR_OPTIONS_ST_H) */

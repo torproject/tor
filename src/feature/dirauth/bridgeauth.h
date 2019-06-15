@@ -9,4 +9,4 @@
 
 void bridgeauth_dump_bridge_status_to_file(time_t now);
 
-#endif
+#endif /* !defined(TOR_DIRAUTH_BRIDGEAUTH_H) */

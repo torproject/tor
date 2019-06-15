@@ -353,7 +353,7 @@ set_server_identity_key_digest_testing(const uint8_t *digest)
 {
   memcpy(server_identitykey_digest, digest, DIGEST_LEN);
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /** Make sure that we have set up our identity keys to match or not match as
  * appropriate, and die with an assertion if we have not. */

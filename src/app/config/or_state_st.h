@@ -96,4 +96,4 @@ struct or_state_t {
   int Dormant;
 };
 
-#endif
+#endif /* !defined(TOR_OR_STATE_ST_H) */

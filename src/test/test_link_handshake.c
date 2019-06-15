@@ -948,7 +948,7 @@ test_link_handshake_send_authchallenge(void *arg)
 #else
   tt_int_op(36, OP_EQ, cell1->payload_len);
   tt_int_op(36, OP_EQ, cell2->payload_len);
-#endif
+#endif /* defined(HAVE_WORKING_TOR_TLS_GET_TLSSECRETS) */
   tt_int_op(0, OP_EQ, cell1->circ_id);
   tt_int_op(0, OP_EQ, cell2->circ_id);
   tt_int_op(CELL_AUTH_CHALLENGE, OP_EQ, cell1->command);
@@ -960,7 +960,7 @@ test_link_handshake_send_authchallenge(void *arg)
 #else
   tt_mem_op("\x00\x01\x00\x03", OP_EQ, cell1->payload + 32, 4);
   tt_mem_op("\x00\x01\x00\x03", OP_EQ, cell2->payload + 32, 4);
-#endif
+#endif /* defined(HAVE_WORKING_TOR_TLS_GET_TLSSECRETS) */
   tt_mem_op(cell1->payload, OP_NE, cell2->payload, 32);
 
  done:

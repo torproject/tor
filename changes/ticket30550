@@ -1,0 +1,2 @@
+  o Removed features:
+    - Remove torctl.in from contrib/dist directory. Resolves ticket 30550.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (out-of-memory handler):
-    - When purging the DNS cache because of an out-of-memory condition,
-      try purging just the older entries at first.  Previously, we would
-      purge the whole thing. Fixes bug 29617; bugfix on 0.3.5.1-alpha.

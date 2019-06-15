@@ -421,7 +421,7 @@ tor_make_getaddrinfo_cache_active(void)
 {
   sandbox_getaddrinfo_is_active = 1;
 }
-#else
+#else /* !(defined(USE_SANDBOX_GETADDRINFO)) */
 void
 sandbox_disable_getaddrinfo_cache(void)
 {
@@ -430,4 +430,4 @@ void
 tor_make_getaddrinfo_cache_active(void)
 {
 }
-#endif
+#endif /* defined(USE_SANDBOX_GETADDRINFO) */

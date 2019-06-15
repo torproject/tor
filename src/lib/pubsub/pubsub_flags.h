@@ -29,4 +29,4 @@
  */
 #define DISP_FLAG_STUB (1u<<1)
 
-#endif
+#endif /* !defined(TOR_PUBSUB_FLAGS_H) */

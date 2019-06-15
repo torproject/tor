@@ -116,4 +116,4 @@ const char *tor_socket_strerror(int e);
 #define SIO_IDEAL_SEND_BACKLOG_QUERY 0x4004747b
 #endif
 
-#endif
+#endif /* !defined(TOR_SOCKET_H) */

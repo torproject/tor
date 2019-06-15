@@ -1,0 +1,3 @@
+  o Minor feature (token bucket):
+    - Implement a generic token bucket that uses a single counter. This will be
+      useful for the anti-DoS onion service work. Closes ticket 30687.

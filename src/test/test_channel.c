@@ -1540,6 +1540,10 @@ test_channel_listener(void *arg)
   channel_listener_dump_statistics(chan, LOG_INFO);
 
  done:
+  if (chan) {
+    channel_listener_unregister(chan);
+    tor_free(chan);
+  }
   channel_free_all();
 }
 
@@ -1566,4 +1570,3 @@ struct testcase_t channel_tests[] = {
     NULL, NULL },
   END_OF_TESTCASES
 };
-

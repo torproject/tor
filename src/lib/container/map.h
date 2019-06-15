@@ -258,4 +258,4 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
     return digestmap_iter_done((digestmap_iter_t*)iter);                \
   }
 
-#endif /* !defined(TOR_CONTAINER_H) */
+#endif /* !defined(TOR_MAP_H) */

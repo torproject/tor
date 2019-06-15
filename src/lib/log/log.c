@@ -155,7 +155,7 @@ severity_to_android_log_priority(int severity)
       // LCOV_EXCL_STOP
   }
 }
-#endif // HAVE_ANDROID_LOG_H.
+#endif /* defined(HAVE_ANDROID_LOG_H) */
 
 /** A mutex to guard changes to logfiles and logging. */
 static tor_mutex_t log_mutex;
@@ -1233,7 +1233,7 @@ add_android_log(const log_severity_list_t *severity,
   UNLOCK_LOGS();
   return 0;
 }
-#endif // HAVE_ANDROID_LOG_H.
+#endif /* defined(HAVE_ANDROID_LOG_H) */
 
 /** If <b>level</b> is a valid log severity, return the corresponding
  * numeric value.  Otherwise, return -1. */

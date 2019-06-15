@@ -220,7 +220,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                           networkstatus_t *v3_ns)
 {
   smartlist_t *chunks = smartlist_new();
-  char *packages = NULL;
   char fingerprint[FINGERPRINT_LEN+1];
   char digest[DIGEST_LEN];
   uint32_t addr;
@@ -245,19 +244,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
   server_versions_line = format_line_if_present("server-versions",
                                                 v3_ns->server_versions);
   protocols_lines = format_protocols_lines_for_vote(v3_ns);
-
-  if (v3_ns->package_lines) {
-    smartlist_t *tmp = smartlist_new();
-    SMARTLIST_FOREACH(v3_ns->package_lines, const char *, p,
-                      if (validate_recommended_package_line(p))
-                        smartlist_add_asprintf(tmp, "package %s\n", p));
-    smartlist_sort_strings(tmp);
-    packages = smartlist_join_strings(tmp, "", 0, NULL);
-    SMARTLIST_FOREACH(tmp, char *, cp, tor_free(cp));
-    smartlist_free(tmp);
-  } else {
-    packages = tor_strdup("");
-  }
 
     /* Get shared random commitments/reveals line(s). */
   shared_random_vote_str = sr_get_string_for_vote();
@@ -344,7 +330,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "voting-delay %d %d\n"
                  "%s%s" /* versions */
                  "%s" /* protocols */
-                 "%s" /* packages */
                  "known-flags %s\n"
                  "flag-thresholds %s\n"
                  "params %s\n"
@@ -361,7 +346,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  client_versions_line,
                  server_versions_line,
                  protocols_lines,
-                 packages,
                  flags,
                  flag_thresholds,
                  params,
@@ -460,7 +444,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
   tor_free(client_versions_line);
   tor_free(server_versions_line);
   tor_free(protocols_lines);
-  tor_free(packages);
 
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_free(chunks);
@@ -4667,15 +4650,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                v3_out->recommended_relay_protocols, NULL));
   tor_assert_nonfatal(protover_all_supported(
                                v3_out->recommended_client_protocols, NULL));
-
-  v3_out->package_lines = smartlist_new();
-  {
-    config_line_t *cl;
-    for (cl = get_options()->RecommendedPackages; cl; cl = cl->next) {
-      if (validate_recommended_package_line(cl->value))
-        smartlist_add_strdup(v3_out->package_lines, cl->value);
-    }
-  }
 
   v3_out->known_flags = smartlist_new();
   smartlist_split_string(v3_out->known_flags,

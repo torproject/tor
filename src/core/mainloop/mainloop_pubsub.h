@@ -21,4 +21,4 @@ int tor_mainloop_set_delivery_strategy(const char *msg_channel_name,
                                         deliv_strategy_t strategy);
 void tor_mainloop_disconnect_pubsub(void);
 
-#endif
+#endif /* !defined(TOR_MAINLOOP_PUBSUB_H) */

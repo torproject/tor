@@ -34,7 +34,7 @@ static int tor_check_dh_key(int severity, const BIGNUM *bn);
 struct crypto_dh_t {
   DH *dh; /**< The openssl DH object */
 };
-#endif
+#endif /* !defined(ENABLE_NSS) */
 
 static DH *new_openssl_dh_from_params(BIGNUM *p, BIGNUM *g);
 
@@ -100,7 +100,7 @@ crypto_validate_dh_params(const BIGNUM *p, const BIGNUM *g)
     DH_free(dh);
   return ret;
 }
-#endif
+#endif /* 0 */
 
 /**
  * Helper: convert <b>hex<b> to a bignum, and return it.  Assert that the
@@ -202,7 +202,7 @@ crypto_dh_new(int dh_type)
     tor_free(res); // sets res to NULL.
   return res;
 }
-#endif
+#endif /* !defined(ENABLE_NSS) */
 
 /** Create and return a new openssl DH from a given prime and generator. */
 static DH *
@@ -461,7 +461,7 @@ crypto_dh_free_(crypto_dh_t *dh)
   DH_free(dh->dh);
   tor_free(dh);
 }
-#endif
+#endif /* !defined(ENABLE_NSS) */
 
 void
 crypto_dh_free_all_openssl(void)

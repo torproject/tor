@@ -47,7 +47,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 ENABLE_GCC_WARNING(redundant-decls)
-#endif
+#endif /* defined(ENABLE_OPENSSL) */
 
 #ifdef ENABLE_NSS
 #include <pk11pub.h>
@@ -419,7 +419,7 @@ crypto_seed_openssl_rng(void)
   else
     return -1;
 }
-#endif
+#endif /* defined(ENABLE_OPENSSL) */
 
 #ifdef ENABLE_NSS
 /**
@@ -442,7 +442,7 @@ crypto_seed_nss_rng(void)
 
   return load_entropy_ok ? 0 : -1;
 }
-#endif
+#endif /* defined(ENABLE_NSS) */
 
 /**
  * Seed the RNG for any and all crypto libraries that we're using with bytes
@@ -520,13 +520,13 @@ crypto_rand_unmocked(char *to, size_t n)
 
 #undef BUFLEN
   }
-#else
+#else /* !(defined(ENABLE_NSS)) */
   int r = RAND_bytes((unsigned char*)to, (int)n);
   /* We consider a PRNG failure non-survivable. Let's assert so that we get a
    * stack trace about where it happened.
    */
   tor_assert(r >= 0);
-#endif
+#endif /* defined(ENABLE_NSS) */
 }
 
 /**
@@ -627,6 +627,6 @@ crypto_force_rand_ssleay(void)
     RAND_set_rand_method(default_method);
     return 1;
   }
-#endif
+#endif /* defined(ENABLE_OPENSSL) */
   return 0;
 }

@@ -4569,16 +4569,14 @@ test_config_parse_port_config__ports__ports_given(void *data)
                           "127.0.0.44", 0, CL_PORT_NO_STREAM_OPTIONS);
   tt_int_op(ret, OP_EQ, -1);
 
-  // TODO: this seems wrong. Shouldn't it be the other way around?
-  // Potential bug.
-  // Test failure for a SessionGroup argument with valid value but with stream
-  // options allowed
+  // Test failure for a SessionGroup argument with valid value but with no
+  // stream options allowed
   config_free_lines(config_port_invalid); config_port_invalid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
   config_port_invalid = mock_config_line("DNSPort", "42 SessionGroup=123");
   ret = parse_port_config(slout, config_port_invalid, "DNS", 0,
-                          "127.0.0.44", 0, 0);
+                          "127.0.0.44", 0, CL_PORT_NO_STREAM_OPTIONS);
   tt_int_op(ret, OP_EQ, -1);
 
   // Test failure for more than one SessionGroup argument
@@ -4588,7 +4586,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   config_port_invalid = mock_config_line("DNSPort", "42 SessionGroup=123 "
                                          "SessionGroup=321");
   ret = parse_port_config(slout, config_port_invalid, "DNS", 0,
-                          "127.0.0.44", 0, CL_PORT_NO_STREAM_OPTIONS);
+                          "127.0.0.44", 0, 0);
   tt_int_op(ret, OP_EQ, -1);
 
   // Test success with a sessiongroup options
@@ -4597,7 +4595,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   smartlist_clear(slout);
   config_port_valid = mock_config_line("DNSPort", "42 SessionGroup=1111122");
   ret = parse_port_config(slout, config_port_valid, "DNS", 0,
-                          "127.0.0.44", 0, CL_PORT_NO_STREAM_OPTIONS);
+                          "127.0.0.44", 0, 0);
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(slout), OP_EQ, 1);
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
@@ -5066,7 +5064,7 @@ test_config_include_no_permission(void *data)
     chmod(dir, 0700);
   tor_free(dir);
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 static void
 test_config_include_recursion_before_after(void *data)
@@ -5698,7 +5696,7 @@ test_config_compute_max_mem_in_queues(void *data)
 #else
   /* We are on a 32-bit system. */
   tt_u64_op(compute_real_max_mem_in_queues(0, 0), OP_EQ, GIGABYTE(1));
-#endif
+#endif /* SIZEOF_VOID_P >= 8 */
 
   /* We are able to detect the amount of RAM on the system. */
   total_system_memory_return = 0;
@@ -5739,7 +5737,7 @@ test_config_compute_max_mem_in_queues(void *data)
   /* We will at maximum get MAX_DEFAULT_MEMORY_QUEUE_SIZE here. */
   tt_u64_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
             MAX_DEFAULT_MEMORY_QUEUE_SIZE);
-#endif
+#endif /* SIZEOF_SIZE_T > 4 */
 
  done:
   UNMOCK(get_total_system_memory);

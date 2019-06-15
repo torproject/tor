@@ -22,7 +22,7 @@
 /* If C11 is available, just use _Static_assert.  */
 #define CTASSERT(x) _Static_assert((x), #x)
 
-#else
+#else /* !(__STDC_VERSION__ >= 201112L) */
 
 /*
  * If C11 is not available, expand __COUNTER__, or __INCLUDE_LEVEL__
@@ -42,12 +42,12 @@
 #else
 /* hope it's unique enough */
 #define CTASSERT(x) CTASSERT_EXPN((x), l, __LINE__)
-#endif
+#endif /* defined(__COUNTER__) || ... */
 
 #define CTASSERT_EXPN(x, a, b) CTASSERT_DECL(x, a, b)
 #define CTASSERT_DECL(x, a, b) \
   typedef char tor_ctassert_##a##_##b[(x) ? 1 : -1] ATTR_UNUSED
 
-#endif
+#endif /* __STDC_VERSION__ >= 201112L */
 
 #endif /* !defined(TOR_CTASSERT_H) */

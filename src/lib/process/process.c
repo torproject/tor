@@ -83,7 +83,7 @@ struct process_t {
 #else
   /** Our Win32 process handle. */
   process_win32_t *win32_process;
-#endif
+#endif /* !defined(_WIN32) */
 };
 
 /** Convert a given process status in <b>status</b> to its string
@@ -205,7 +205,7 @@ process_new(const char *command)
 #else
   /* Prepare our Win32 process handle. */
   process->win32_process = process_win32_new();
-#endif
+#endif /* !defined(_WIN32) */
 
   smartlist_add(processes, process);
 
@@ -240,7 +240,7 @@ process_free_(process_t *process)
 #else
   /* Cleanup our Win32 process handle. */
   process_win32_free(process->win32_process);
-#endif
+#endif /* !defined(_WIN32) */
 
   smartlist_remove(processes, process);
 
@@ -513,7 +513,7 @@ process_get_unix_process(const process_t *process)
   tor_assert(process->unix_process);
   return process->unix_process;
 }
-#else
+#else /* !(!defined(_WIN32)) */
 /** Get the internal handle for Windows backend. */
 process_win32_t *
 process_get_win32_process(const process_t *process)
@@ -522,7 +522,7 @@ process_get_win32_process(const process_t *process)
   tor_assert(process->win32_process);
   return process->win32_process;
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 /** Write <b>size</b> bytes of <b>data</b> to the given process's standard
  * input. */

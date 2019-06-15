@@ -47,4 +47,4 @@ char *nodefamily_canonicalize(const char *s, const uint8_t *rsa_id_self,
 
 void nodefamily_free_all(void);
 
-#endif
+#endif /* !defined(TOR_NODEFAMILY_H) */

@@ -112,7 +112,7 @@ extern smartlist_t *connection_array;
 /* We need the periodic_event_item_t definition. */
 #include "core/mainloop/periodic.h"
 extern periodic_event_item_t mainloop_periodic_events[];
-#endif
-#endif /* defined(MAIN_PRIVATE) */
+#endif /* defined(TOR_UNIT_TESTS) */
+#endif /* defined(MAINLOOP_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_MAINLOOP_H) */

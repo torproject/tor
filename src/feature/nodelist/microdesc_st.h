@@ -78,4 +78,4 @@ struct microdesc_t {
   struct short_policy_t *ipv6_exit_policy;
 };
 
-#endif
+#endif /* !defined(MICRODESC_ST_H) */

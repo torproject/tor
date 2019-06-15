@@ -1,0 +1,3 @@
+  o Minor bugfixes (directory authorities):
+    - Return a distinct status when formatting annotations fails.
+      Fixes bug 30780; bugfix on 0.2.0.8-alpha.

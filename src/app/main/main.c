@@ -653,10 +653,6 @@ tor_init(int argc, char *argv[])
     return -1;
   }
 
-  if (tor_init_libevent_rng() < 0) {
-    log_warn(LD_NET, "Problem initializing libevent RNG.");
-  }
-
   /* Scan/clean unparseable descriptors; after reading config */
   routerparse_init();
 
@@ -1256,6 +1252,8 @@ pubsub_connect(void)
     /* XXXX For each pubsub channel, its delivery strategy should be set at
      * this XXXX point, using tor_mainloop_set_delivery_strategy().
      */
+    tor_mainloop_set_delivery_strategy("orconn", DELIV_IMMEDIATE);
+    tor_mainloop_set_delivery_strategy("ocirc", DELIV_IMMEDIATE);
   }
 }
 

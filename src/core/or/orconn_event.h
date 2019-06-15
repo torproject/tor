@@ -16,6 +16,8 @@
 #ifndef TOR_ORCONN_EVENT_H
 #define TOR_ORCONN_EVENT_H
 
+#include "lib/pubsub/pubsub.h"
+
 /**
  * @name States of OR connections
  *
@@ -62,12 +64,6 @@ typedef enum or_conn_status_event_t {
   OR_CONN_EVENT_NEW          = 4,
 } or_conn_status_event_t;
 
-/** Discriminant values for orconn event message */
-typedef enum orconn_msgtype_t {
-  ORCONN_MSGTYPE_STATE,
-  ORCONN_MSGTYPE_STATUS,
-} orconn_msgtype_t;
-
 /**
  * Message for orconn state update
  *
@@ -83,6 +79,8 @@ typedef struct orconn_state_msg_t {
   uint8_t state;                /**< new connection state */
 } orconn_state_msg_t;
 
+DECLARE_MESSAGE(orconn_state, orconn_state, orconn_state_msg_t *);
+
 /**
  * Message for orconn status event
  *
@@ -95,26 +93,11 @@ typedef struct orconn_status_msg_t {
   int reason;                   /**< reason */
 } orconn_status_msg_t;
 
-/** Discriminated union for the actual message */
-typedef struct orconn_event_msg_t {
-  int type;
-  union {
-    orconn_state_msg_t state;
-    orconn_status_msg_t status;
-  } u;
-} orconn_event_msg_t;
-
-/**
- * Receiver function pointer for OR subscribers
- *
- * This function gets called synchronously by the publisher.
- **/
-typedef void (*orconn_event_rcvr_t)(const orconn_event_msg_t *);
-
-void orconn_event_subscribe(orconn_event_rcvr_t);
+DECLARE_MESSAGE(orconn_status, orconn_status, orconn_status_msg_t *);
 
 #ifdef ORCONN_EVENT_PRIVATE
-void orconn_event_publish(const orconn_event_msg_t *);
+void orconn_state_publish(orconn_state_msg_t *);
+void orconn_status_publish(orconn_status_msg_t *);
 #endif
 
-#endif  /* defined(TOR_ORCONN_EVENT_H) */
+#endif /* !defined(TOR_ORCONN_EVENT_H) */

@@ -587,6 +587,6 @@ struct testcase_t extorport_tests[] = {
   { "cookie_auth", test_ext_or_cookie_auth, TT_FORK, NULL, NULL },
   { "cookie_auth_testvec", test_ext_or_cookie_auth_testvec, TT_FORK,
     NULL, NULL },
-  { "handshake", test_ext_or_handshake, TT_FORK, NULL, NULL },
+  { "handshake", test_ext_or_handshake, TT_FORK, &helper_pubsub_setup, NULL },
   END_OF_TESTCASES
 };

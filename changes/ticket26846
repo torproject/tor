@@ -1,6 +1,0 @@
-  o Minor features (authenticated SENDME):
-    - Ensure that there is enough randomness on every circuit
-      to prevent an attacker from successfully predicting what SENDME cells
-      they will need to send: at a random interval, if we have not send
-      randomness already, leave some extra space at the end of a cell that
-      we can fill with random bytes.  Closes ticket 26846.

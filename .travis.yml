@@ -70,6 +70,10 @@ matrix:
   ## Careful! We use global envs, which makes it hard to exclude or
   ## allow failures by env:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
+  allow_failures:
+    ## test-stem sometimes hangs on Travis
+    - env: TEST_STEM="yes"
+
   exclude:
     ## gcc on OSX is less useful, because the default compiler is clang.
     - compiler: gcc
@@ -189,6 +193,8 @@ install:
   - if [[ "$TEST_STEM" != "" ]]; then pushd stem; python -c "from stem import stem; print(stem.__version__);"; git log -1; popd; fi
 
 script:
+  # Skip test_rebind on macOS
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export TOR_SKIP_TEST_REBIND=true; fi
   - ./autogen.sh
   - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $NSS_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
   - echo "Configure flags are $CONFIGURE_FLAGS"

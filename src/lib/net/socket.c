@@ -84,9 +84,9 @@ check_network_configuration(bool server_mode)
                "so your relay makes it harder to figure out how busy it is.");
     }
   }
-#else
+#else /* !(defined(__FreeBSD__)) */
   (void) server_mode;
-#endif
+#endif /* defined(__FreeBSD__) */
 }
 
 /* When set_max_file_sockets() is called, update this with the max file
@@ -487,11 +487,11 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
   r = socketpair(family, type, protocol, fd);
   if (r < 0)
     return -errno;
-#else
+#else /* !(defined(HAVE_SOCKETPAIR) && !defined(_WIN32)) */
   r = tor_ersatz_socketpair(family, type, protocol, fd);
   if (r < 0)
     return -r;
-#endif
+#endif /* defined(HAVE_SOCKETPAIR) && !defined(_WIN32) */
 
 #if defined(FD_CLOEXEC)
   if (SOCKET_OK(fd[0])) {

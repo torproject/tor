@@ -44,4 +44,4 @@ struct control_connection_t {
   char *current_cmd;
 };
 
-#endif
+#endif /* !defined(CONTROL_CONNECTION_ST_H) */

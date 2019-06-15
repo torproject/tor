@@ -81,5 +81,5 @@ struct routerstatus_t {
 
 };
 
-#endif
+#endif /* !defined(ROUTERSTATUS_ST_H) */
 

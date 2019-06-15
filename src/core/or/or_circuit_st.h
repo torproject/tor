@@ -71,5 +71,5 @@ struct or_circuit_t {
   uint64_t total_cell_waiting_time;
 };
 
-#endif
+#endif /* !defined(OR_CIRCUIT_ST_H) */
 

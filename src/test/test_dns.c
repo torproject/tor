@@ -67,7 +67,7 @@ NS(test_main)(void *arg)
 
   tt_assert(tor_addr_family(nameserver_addr) == AF_INET);
   tt_assert(tor_addr_eq_ipv4h(nameserver_addr, 0x7f000001));
-#endif
+#endif /* !defined(_WIN32) */
 
   UNMOCK(get_options);
 
@@ -77,7 +77,7 @@ NS(test_main)(void *arg)
 }
 
 #undef NS_SUBMODULE
-#endif
+#endif /* defined(HAVE_EVDNS_BASE_GET_NAMESERVER_ADDR) */
 
 #define NS_SUBMODULE clip_ttl
 
