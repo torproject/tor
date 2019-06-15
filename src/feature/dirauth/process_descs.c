@@ -300,13 +300,13 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
   /* First, check for the more common reasons to reject a router. */
   if (router->cache_info.signing_key_cert) {
     /* This has an ed25519 identity key. */
-    uint32_t r = dirserv_get_status_impl(d,
+    r = dirserv_get_status_impl(d,
         &router->cache_info.signing_key_cert->signing_key, router->nickname,
         router->addr, router->or_port, router->platform, msg, severity);
   } else {
-    uint32_t r = dirserv_get_status_impl(d, NULL, router->nickname,
-                                         router->addr, router->or_port,
-                                         router->platform, msg, severity);
+    r = dirserv_get_status_impl(d, NULL, router->nickname, router->addr,
+                                router->or_port, router->platform, msg,
+                                severity);
   }
 
   if (r)
