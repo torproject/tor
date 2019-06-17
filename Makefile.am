@@ -224,9 +224,18 @@ test: all
 shellcheck:
         # Only use shellcheck if it is present
 	if command -v shellcheck; then \
-	        find $(top_srcdir)/scripts/ -name "*.sh" -exec shellcheck {} +; \
+                find "$(top_srcdir)" -name "*.sh" -not -path "$(top_srcdir)/src/ext/*" -exec shellcheck {} +; \
 	        if [ -d "$(top_srcdir)/scripts/test" ]; then \
                         shellcheck $(top_srcdir)/scripts/test/cov-diff $(top_srcdir)/scripts/test/coverage; \
+                fi; \
+                if [ -e "$(top_srcdir)/contrib/dirauth-tools/nagios-check-tor-authority-cert" ]; then \
+                        shellcheck "$(top_srcdir)/contrib/dirauth-tools/nagios-check-tor-authority-cert"; \
+                fi; \
+                if [ -e "$(top_srcdir)/contrib/client-tools/torify" ]; then \
+                        shellcheck "$(top_srcdir)/contrib/client-tools/torify"; \
+                fi; \
+                if [ -d "$(top_srcdir)/scripts/git" ]; then \
+                        shellcheck $(top_srcdir)/scripts/git/*.git-hook; \
                 fi; \
 	fi
 
