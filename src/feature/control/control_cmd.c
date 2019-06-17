@@ -703,9 +703,8 @@ handle_control_mapaddress(control_connection_t *conn,
     connection_buf_add(r, sz, TO_CONN(conn));
     tor_free(r);
   } else {
-    const char *response =
-      "512 syntax error: not enough arguments to mapaddress.\r\n";
-    connection_buf_add(response, strlen(response), TO_CONN(conn));
+    control_write_endreply(conn, 512, "syntax error: "
+                           "not enough arguments to mapaddress.");
   }
 
   SMARTLIST_FOREACH(reply, char *, cp, tor_free(cp));
@@ -845,7 +844,7 @@ handle_control_extendcircuit(control_connection_t *conn,
                "addresses that are allowed by the firewall configuration; "
                "circuit marked for closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), -END_CIRC_REASON_CONNECTFAILED);
-      connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
+      control_write_endreply(conn, 551, "Couldn't start circuit");
       goto done;
     }
     circuit_append_new_exit(circ, info);
@@ -1876,8 +1875,8 @@ handle_control_add_onion(control_connection_t *conn,
         char *encoded = rend_auth_encode_cookie(ac->descriptor_cookie,
                                                 auth_type);
         tor_assert(encoded);
-        connection_printf_to_buf(conn, "250-ClientAuth=%s:%s\r\n",
-                                 ac->client_name, encoded);
+        control_printf_midreply(conn, 250, "ClientAuth=%s:%s",
+                                ac->client_name, encoded);
         memwipe(encoded, 0, strlen(encoded));
         tor_free(encoded);
       });
