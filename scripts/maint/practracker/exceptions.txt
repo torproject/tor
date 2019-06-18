@@ -135,8 +135,8 @@ problem function-size /src/feature/client/addressmap.c:addressmap_rewrite() 112
 problem function-size /src/feature/client/bridges.c:rewrite_node_address_for_bridge() 126
 problem function-size /src/feature/client/circpathbias.c:pathbias_measure_close_rate() 108
 problem function-size /src/feature/client/dnsserv.c:evdns_server_callback() 153
-problem file-size /src/feature/client/entrynodes.c 3820
-problem function-size /src/feature/client/entrynodes.c:entry_guards_upgrade_waiting_circuits() 153
+problem file-size /src/feature/client/entrynodes.c 3824
+problem function-size /src/feature/client/entrynodes.c:entry_guards_upgrade_waiting_circuits() 157
 problem function-size /src/feature/client/entrynodes.c:entry_guard_parse_from_state() 246
 problem function-size /src/feature/client/transports.c:handle_proxy_line() 108
 problem function-size /src/feature/client/transports.c:parse_method_line_helper() 112
