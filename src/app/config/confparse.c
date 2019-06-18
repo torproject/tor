@@ -175,18 +175,8 @@ config_assign_value(const config_format_t *fmt, void *options,
 
   if (var->type == CONFIG_TYPE_ROUTERSET) {
     // XXXX make the backend extensible so that we don't have to
-    // XXXX handle ROUTERSET specially.
-
-    if (*(routerset_t**)lvalue) {
-      routerset_free(*(routerset_t**)lvalue);
-    }
-    *(routerset_t**)lvalue = routerset_new();
-    if (routerset_parse(*(routerset_t**)lvalue, c->value, c->key)<0) {
-      tor_asprintf(msg, "Invalid exit list '%s' for option '%s'",
-                   c->value, c->key);
-      return -1;
-    }
-    return 0;
+    // XXXX special-case this type.
+    return typed_var_kvassign_ex(lvalue, c, msg, &routerset_type_defn);
   }
 
   return typed_var_kvassign(lvalue, c, msg, var->type);
@@ -377,10 +367,8 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
 
   if (var->type == CONFIG_TYPE_ROUTERSET) {
     // XXXX make the backend extensible so that we don't have to
-    // XXXX handle ROUTERSET specially.
-    result = tor_malloc_zero(sizeof(config_line_t));
-    result->key = tor_strdup(var->name);
-    result->value = routerset_to_string(*(routerset_t**)value);
+    // XXXX special-case this type.
+    result = typed_var_kvencode_ex(var->name, value, &routerset_type_defn);
   } else {
     result = typed_var_kvencode(var->name, value, var->type);
   }
@@ -512,12 +500,7 @@ config_clear(const config_format_t *fmt, void *options,
   void *lvalue = STRUCT_VAR_P(options, var->var_offset);
   (void)fmt; /* unused */
   if (var->type == CONFIG_TYPE_ROUTERSET) {
-    // XXXX make the backend extensible so that we don't have to
-    // XXXX handle ROUTERSET specially.
-    if (*(routerset_t**)lvalue) {
-      routerset_free(*(routerset_t**)lvalue);
-      *(routerset_t**)lvalue = NULL;
-    }
+    typed_var_free_ex(lvalue, &routerset_type_defn);
     return;
   }
 
