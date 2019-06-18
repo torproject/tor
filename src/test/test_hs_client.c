@@ -1038,7 +1038,7 @@ test_socks_hs_errors(void *arg)
   ed25519_keypair_t signing_kp;
   entry_connection_t *socks_conn = NULL;
   dir_connection_t *dir_conn = NULL;
-  hs_descriptor_t *desc;
+  hs_descriptor_t *desc = NULL;
   uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
 
   (void) arg;
