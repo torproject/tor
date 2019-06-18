@@ -105,6 +105,12 @@ if test "$enable_memory_sentinels" = "no"; then
            [Defined if we're turning off memory safety code to look for bugs])
 fi
 
+AC_ARG_ENABLE(manpage,
+              AS_HELP_STRING(--disable-manpage, [Disable manpage generation.]))
+
+AC_ARG_ENABLE(html-manual,
+              AS_HELP_STRING(--disable-html-manual, [Disable HTML documentation.]))
+
 AC_ARG_ENABLE(asciidoc,
      AS_HELP_STRING(--disable-asciidoc, [don't use asciidoc (disables building of manpages)]),
      [case "${enableval}" in
@@ -299,6 +305,8 @@ AC_PATH_PROG([ASCIIDOC], [asciidoc], none)
 AC_PATH_PROGS([A2X], [a2x a2x.py], none)
 
 AM_CONDITIONAL(USE_ASCIIDOC, test "x$asciidoc" = "xtrue")
+AM_CONDITIONAL(BUILD_MANPAGE, [test "x$enable_manpage" != "xno"])
+AM_CONDITIONAL(BUILD_HTML_DOCS, [test "x$enable_html_manual" != "xno"])
 
 AM_PROG_CC_C_O
 AC_PROG_CC_C99
