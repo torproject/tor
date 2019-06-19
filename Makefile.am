@@ -230,7 +230,7 @@ shellcheck:
                 fi; \
 	fi
 
-check-local: check-spaces check-changes check-includes check-best-practices shellcheck
+check-local: check-spaces check-changes check-includes shellcheck
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
