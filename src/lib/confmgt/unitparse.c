@@ -128,10 +128,14 @@ config_parse_units(const char *val, const unit_table_t *u, int *ok)
     use_float = 1;
   }
 
-  if (!cp) {
+  if (BUG(!cp)) {
+    // cp should always be non-NULL if the parse operation succeeds.
+
+    // LCOV_EXCL_START
     *ok = 1;
     v = use_float ? ((uint64_t)d) :  v;
     goto done;
+    // LCOV_EXCL_STOP
   }
 
   cp = (char*) eat_whitespace(cp);
