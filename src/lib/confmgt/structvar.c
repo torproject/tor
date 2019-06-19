@@ -25,6 +25,8 @@
 #include "lib/confmgt/typedvar.h"
 #include "lib/log/util_bug.h"
 
+#include "lib/confmgt/var_type_def_st.h"
+
 #include <stddef.h>
 
 /**
@@ -197,4 +199,28 @@ struct_var_kvencode(const void *object, const struct_member_t *member)
   const var_type_def_t *def = get_type_def(member);
 
   return typed_var_kvencode_ex(member->name, p, def);
+}
+
+/**
+ * Return the official name of this struct member.
+ **/
+const char *
+struct_var_get_name(const struct_member_t *member)
+{
+  return member->name;
+}
+
+/**
+ * Return the type name for this struct member.
+ *
+ * Do not use the output of this function to inspect a type within Tor.  It is
+ * suitable for debugging, informing the controller or user of a variable's
+ * type, etc.
+ **/
+const char *
+struct_var_get_typename(const struct_member_t *member)
+{
+  const var_type_def_t *def = get_type_def(member);
+
+  return def ? def->name : NULL;
 }

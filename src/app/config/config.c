@@ -111,6 +111,7 @@
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
 #include "lib/compress/compress.h"
+#include "lib/confmgt/structvar.h"
 #include "lib/crypt_ops/crypto_init.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -8195,37 +8196,10 @@ getinfo_helper_config(control_connection_t *conn,
     int i;
     for (i = 0; option_vars_[i].member.name; ++i) {
       const config_var_t *var = &option_vars_[i];
-      const char *type;
       /* don't tell controller about triple-underscore options */
       if (!strncmp(option_vars_[i].member.name, "___", 3))
         continue;
-      switch (var->member.type) {
-        case CONFIG_TYPE_STRING: type = "String"; break;
-        case CONFIG_TYPE_FILENAME: type = "Filename"; break;
-        case CONFIG_TYPE_POSINT: type = "Integer"; break;
-        case CONFIG_TYPE_UINT64: type = "Integer"; break;
-        case CONFIG_TYPE_INT: type = "SignedInteger"; break;
-        case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break;
-        case CONFIG_TYPE_MSEC_INTERVAL: type = "TimeMsecInterval"; break;
-        case CONFIG_TYPE_MEMUNIT: type = "DataSize"; break;
-        case CONFIG_TYPE_DOUBLE: type = "Float"; break;
-        case CONFIG_TYPE_BOOL: type = "Boolean"; break;
-        case CONFIG_TYPE_AUTOBOOL: type = "Boolean+Auto"; break;
-        case CONFIG_TYPE_ISOTIME: type = "Time"; break;
-        case CONFIG_TYPE_ROUTERSET: type = "RouterList"; break;
-        case CONFIG_TYPE_CSV: type = "CommaList"; break;
-        /* This type accepts more inputs than TimeInterval, but it ignores
-         * everything after the first entry, so we may as well pretend
-         * it's a TimeInterval. */
-        case CONFIG_TYPE_CSV_INTERVAL: type = "TimeInterval"; break;
-        case CONFIG_TYPE_LINELIST: type = "LineList"; break;
-        case CONFIG_TYPE_LINELIST_S: type = "Dependent"; break;
-        case CONFIG_TYPE_LINELIST_V: type = "Virtual"; break;
-        default:
-        case CONFIG_TYPE_OBSOLETE:
-        case CONFIG_TYPE_EXTENDED:
-          type = NULL; break;
-      }
+      const char *type = struct_var_get_typename(&var->member);
       if (!type)
         continue;
       smartlist_add_asprintf(sl, "%s %s\n",var->member.name,type);
