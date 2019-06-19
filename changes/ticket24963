@@ -1,0 +1,5 @@
+  o Minor feature (onion service):
+    - Disallow single hop clients to introduce directly at the introduction
+      point. We've removed Tor2web a while back and rendezvous are blocked at
+      the relays. This is to remove load off the network from spammy clients.
+      Close ticket 24963.
