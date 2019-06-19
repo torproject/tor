@@ -673,3 +673,21 @@ config_dump(const config_format_t *fmt, const void *default_options,
   }
   return result;
 }
+
+/**
+ * Return true if every member of <b>options</b> is in-range and well-formed.
+ * Return false otherwise.  Log errors at level <b>severity</b>.
+ */
+bool
+config_check_ok(const config_format_t *fmt, const void *options, int severity)
+{
+  bool all_ok = true;
+  for (int i=0; fmt->vars[i].member.name; ++i) {
+    if (!struct_var_ok(options, &fmt->vars[i].member)) {
+      log_fn(severity, LD_BUG, "Invalid value for %s",
+             fmt->vars[i].member.name);
+      all_ok = false;
+    }
+  }
+  return all_ok;
+}

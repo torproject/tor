@@ -138,6 +138,8 @@ void *config_dup(const config_format_t *fmt, const void *old);
 char *config_dump(const config_format_t *fmt, const void *default_options,
                   const void *options, int minimal,
                   int comment_defaults);
+bool config_check_ok(const config_format_t *fmt, const void *options,
+                     int severity);
 int config_assign(const config_format_t *fmt, void *options,
                   struct config_line_t *list,
                   unsigned flags, char **msg);
