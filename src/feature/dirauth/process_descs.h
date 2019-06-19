@@ -56,7 +56,8 @@ authdir_config_t *authdir_return_fingerprint_list(void);
 
 int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
-int dirserv_add_own_fingerprint(crypto_pk_t *pk);
+int dirserv_add_own_fingerprint(crypto_pk_t *pk,
+                                const ed25519_public_key_t *edkey);
 
 enum was_router_added_t dirserv_add_multiple_descriptors(
                                      const char *desc, size_t desclen,
