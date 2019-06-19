@@ -68,7 +68,7 @@ static void disk_state_free_cb(void *);
 
 /* Array of variables that are saved to disk as a persistent state. */
 static config_var_t state_vars[] = {
-  V(Version,                    UINT, "0"),
+  V(Version,                    POSINT, "0"),
   V(TorVersion,                 STRING, NULL),
   V(ValidAfter,                 ISOTIME, NULL),
   V(ValidUntil,                 ISOTIME, NULL),

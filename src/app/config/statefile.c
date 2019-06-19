@@ -105,19 +105,19 @@ static config_var_t state_vars_[] = {
   V(HidServRevCounter,            LINELIST, NULL),
 
   V(BWHistoryReadEnds,                ISOTIME,  NULL),
-  V(BWHistoryReadInterval,            UINT,     "900"),
+  V(BWHistoryReadInterval,            POSINT,     "900"),
   V(BWHistoryReadValues,              CSV,      ""),
   V(BWHistoryReadMaxima,              CSV,      ""),
   V(BWHistoryWriteEnds,               ISOTIME,  NULL),
-  V(BWHistoryWriteInterval,           UINT,     "900"),
+  V(BWHistoryWriteInterval,           POSINT,     "900"),
   V(BWHistoryWriteValues,             CSV,      ""),
   V(BWHistoryWriteMaxima,             CSV,      ""),
   V(BWHistoryDirReadEnds,             ISOTIME,  NULL),
-  V(BWHistoryDirReadInterval,         UINT,     "900"),
+  V(BWHistoryDirReadInterval,         POSINT,     "900"),
   V(BWHistoryDirReadValues,           CSV,      ""),
   V(BWHistoryDirReadMaxima,           CSV,      ""),
   V(BWHistoryDirWriteEnds,            ISOTIME,  NULL),
-  V(BWHistoryDirWriteInterval,        UINT,     "900"),
+  V(BWHistoryDirWriteInterval,        POSINT,     "900"),
   V(BWHistoryDirWriteValues,          CSV,      ""),
   V(BWHistoryDirWriteMaxima,          CSV,      ""),
 
@@ -128,12 +128,12 @@ static config_var_t state_vars_[] = {
   V(LastRotatedOnionKey,              ISOTIME,  NULL),
   V(LastWritten,                      ISOTIME,  NULL),
 
-  V(TotalBuildTimes,                  UINT,     NULL),
-  V(CircuitBuildAbandonedCount,       UINT,     "0"),
+  V(TotalBuildTimes,                  POSINT,     NULL),
+  V(CircuitBuildAbandonedCount,       POSINT,     "0"),
   VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
   VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
 
-  V(MinutesSinceUserActivity,         UINT,     NULL),
+  V(MinutesSinceUserActivity,         POSINT,     NULL),
   V(Dormant,                          AUTOBOOL, "auto"),
 
   END_OF_CONFIG_VARS

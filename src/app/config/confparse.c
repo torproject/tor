@@ -21,6 +21,7 @@
  * specified, and a linked list of key-value pairs.
  */
 
+#define CONFPARSE_PRIVATE
 #include "core/or/or.h"
 #include "app/config/confparse.h"
 #include "feature/nodelist/routerset.h"
@@ -87,7 +88,7 @@ const char *
 config_find_deprecation(const config_format_t *fmt, const char *key)
 {
   if (BUG(fmt == NULL) || BUG(key == NULL))
-    return NULL;
+    return NULL; // LCOV_EXCL_LINE
   if (fmt->deprecations == NULL)
     return NULL;
 
@@ -174,17 +175,11 @@ config_assign_value(const config_format_t *fmt, void *options,
 
   switch (var->type) {
 
-  case CONFIG_TYPE_PORT:
-    if (!strcasecmp(c->value, "auto")) {
-      *(int *)lvalue = CFG_AUTO_PORT;
-      break;
-    }
-    /* fall through */
   case CONFIG_TYPE_INT:
-  case CONFIG_TYPE_UINT:
+  case CONFIG_TYPE_POSINT:
     i = (int)tor_parse_long(c->value, 10,
                             var->type==CONFIG_TYPE_INT ? INT_MIN : 0,
-                            var->type==CONFIG_TYPE_PORT ? 65535 : INT_MAX,
+                            INT_MAX,
                             &ok, NULL);
     if (!ok) {
       tor_asprintf(msg,
@@ -225,6 +220,7 @@ config_assign_value(const config_format_t *fmt, void *options,
       tor_asprintf(msg,
           "Interval '%s %s' is malformed or out of bounds.",
           c->key, c->value);
+      tor_free(tmp);
       return -1;
     }
     *(int *)lvalue = i;
@@ -358,9 +354,11 @@ config_assign_value(const config_format_t *fmt, void *options,
     tor_asprintf(msg,
         "You may not provide a value for virtual option '%s'", c->key);
     return -1;
+    // LCOV_EXCL_START
   default:
-    tor_assert(0);
+    tor_assert_unreached();
     break;
+    // LCOV_EXCL_STOP
   }
   return 0;
 }
@@ -461,7 +459,9 @@ config_assign_line(const config_format_t *fmt, void *options,
     }
     return 0;
   } else if (c->command == CONFIG_LINE_CLEAR && !clear_first) {
-    config_reset(fmt, options, var, use_defaults);
+    // XXXX This is unreachable, since a CLEAR line always has an
+    // XXXX empty value.
+    config_reset(fmt, options, var, use_defaults); // LCOV_EXCL_LINE
   }
 
   if (options_seen && (var->type != CONFIG_TYPE_LINELIST &&
@@ -483,7 +483,7 @@ config_assign_line(const config_format_t *fmt, void *options,
 
 /** Restore the option named <b>key</b> in options to its default value.
  * Called from config_assign(). */
-static void
+STATIC void
 config_reset_line(const config_format_t *fmt, void *options,
                   const char *key, int use_defaults)
 {
@@ -570,17 +570,10 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
       }
       escape_val = 0; /* Can't need escape. */
       break;
-    case CONFIG_TYPE_PORT:
-      if (*(int*)value == CFG_AUTO_PORT) {
-        result->value = tor_strdup("auto");
-        escape_val = 0;
-        break;
-      }
-      /* fall through */
     case CONFIG_TYPE_CSV_INTERVAL:
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_MSEC_INTERVAL:
-    case CONFIG_TYPE_UINT:
+    case CONFIG_TYPE_POSINT:
     case CONFIG_TYPE_INT:
       /* This means every or_options_t uint or bool element
        * needs to be an int. Not, say, a uint16_t or char. */
@@ -638,12 +631,14 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
       tor_free(result);
       result = config_lines_dup(*(const config_line_t**)value);
       break;
+      // LCOV_EXCL_START
     default:
       tor_free(result->key);
       tor_free(result);
       log_warn(LD_BUG,"Unknown type %d for known key '%s'",
                var->type, key);
       return NULL;
+      // LCOV_EXCL_STOP
     }
 
   if (escape_val) {
@@ -786,9 +781,8 @@ config_clear(const config_format_t *fmt, void *options,
     case CONFIG_TYPE_CSV_INTERVAL:
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_MSEC_INTERVAL:
-    case CONFIG_TYPE_UINT:
+    case CONFIG_TYPE_POSINT:
     case CONFIG_TYPE_INT:
-    case CONFIG_TYPE_PORT:
     case CONFIG_TYPE_BOOL:
       *(int*)lvalue = 0;
       break;
@@ -843,8 +837,10 @@ config_reset(const config_format_t *fmt, void *options,
     c->key = tor_strdup(var->name);
     c->value = tor_strdup(var->initvalue);
     if (config_assign_value(fmt, options, c, &msg) < 0) {
+      // LCOV_EXCL_START
       log_warn(LD_BUG, "Failed to assign default: %s", msg);
       tor_free(msg); /* if this happens it's a bug */
+      // LCOV_EXCL_STOP
     }
     config_free_lines(c);
   }
@@ -910,10 +906,12 @@ config_dup(const config_format_t *fmt, const void *old)
     if (line) {
       char *msg = NULL;
       if (config_assign(fmt, newopts, line, 0, &msg) < 0) {
+        // LCOV_EXCL_START
         log_err(LD_BUG, "config_get_assigned_option() generated "
                 "something we couldn't config_assign(): %s", msg);
         tor_free(msg);
         tor_assert(0);
+        // LCOV_EXCL_STOP
       }
     }
     config_free_lines(line);
@@ -962,9 +960,11 @@ config_dump(const config_format_t *fmt, const void *default_options,
   /* XXX use a 1 here so we don't add a new log line while dumping */
   if (default_options == NULL) {
     if (fmt->validate_fn(NULL, defaults_tmp, defaults_tmp, 1, &msg) < 0) {
+      // LCOV_EXCL_START
       log_err(LD_BUG, "Failed to validate default config: %s", msg);
       tor_free(msg);
       tor_assert(0);
+      // LCOV_EXCL_STOP
     }
   }
 
