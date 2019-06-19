@@ -542,17 +542,15 @@ config_is_same(const config_format_t *fmt,
                const void *o1, const void *o2,
                const char *name)
 {
-  config_line_t *c1, *c2;
-  int r = 1;
   CONFIG_CHECK(fmt, o1);
   CONFIG_CHECK(fmt, o2);
 
-  c1 = config_get_assigned_option(fmt, o1, name, 0);
-  c2 = config_get_assigned_option(fmt, o2, name, 0);
-  r = config_lines_eq(c1, c2);
-  config_free_lines(c1);
-  config_free_lines(c2);
-  return r;
+  const config_var_t *var = config_find_option(fmt, name);
+  if (!var) {
+    return true;
+  }
+
+  return struct_var_eq(o1, o2, &var->member);
 }
 
 /** Copy storage held by <b>old</b> into a new or_options_t and return it. */
@@ -561,7 +559,6 @@ config_dup(const config_format_t *fmt, const void *old)
 {
   void *newopts;
   int i;
-  config_line_t *line;
 
   newopts = config_new(fmt);
   for (i=0; fmt->vars[i].member.name; ++i) {
@@ -569,19 +566,13 @@ config_dup(const config_format_t *fmt, const void *old)
       continue;
     if (fmt->vars[i].member.type == CONFIG_TYPE_OBSOLETE)
       continue;
-    line = config_get_assigned_option(fmt, old, fmt->vars[i].member.name, 0);
-    if (line) {
-      char *msg = NULL;
-      if (config_assign(fmt, newopts, line, 0, &msg) < 0) {
-        // LCOV_EXCL_START
-        log_err(LD_BUG, "config_get_assigned_option() generated "
-                "something we couldn't config_assign(): %s", msg);
-        tor_free(msg);
-        tor_assert(0);
-        // LCOV_EXCL_STOP
-      }
+    if (struct_var_copy(newopts, old, &fmt->vars[i].member) < 0) {
+      // LCOV_EXCL_START
+      log_err(LD_BUG, "Unable to copy value for %s.",
+              fmt->vars[i].member.name);
+      tor_assert_unreached();
+      // LCOV_EXCL_STOP
     }
-    config_free_lines(line);
   }
   return newopts;
 }
