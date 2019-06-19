@@ -48,15 +48,17 @@ typedef struct test_struct_t {
 
 static test_struct_t test_struct_t_dummy;
 
-#define VAR(name,conftype,member,initvalue)                             \
-  { name, CONFIG_TYPE_##conftype, offsetof(test_struct_t, member),      \
+#define VAR(varname,conftype,member,initvalue)                          \
+  { { .name = varname,                                                  \
+        .type = CONFIG_TYPE_##conftype,                                 \
+        .offset = offsetof(test_struct_t, member), },                   \
       initvalue CONF_TEST_MEMBERS(test_struct_t, conftype, member) }
 
 #define V(name,conftype,initvalue)                                      \
   VAR( #name, conftype, name, initvalue )
 
-#define OBSOLETE(name)                          \
-  { name, CONFIG_TYPE_OBSOLETE, 0, NULL, {.INT=NULL} }
+#define OBSOLETE(varname)                                               \
+  { { .name=varname, .type=CONFIG_TYPE_OBSOLETE }, NULL, {.INT=NULL} }
 
 static config_var_t test_vars[] = {
   V(s, STRING, "hello"),
@@ -79,7 +81,14 @@ static config_var_t test_vars[] = {
   VAR("LineTypeA", LINELIST_S, mixed_lines, NULL),
   VAR("LineTypeB", LINELIST_S, mixed_lines, NULL),
   OBSOLETE("obsolete"),
-  V(routerset, ROUTERSET, NULL),
+  {
+   { .name = "routerset",
+     .type = CONFIG_TYPE_ROUTERSET,
+     .type_def = &ROUTERSET_type_defn,
+     .offset = offsetof(test_struct_t, routerset),
+   },
+   NULL, {.INT=NULL}
+  },
   VAR("__HiddenInt", POSINT, hidden_int, "0"),
   VAR("MixedHiddenLines", LINELIST_V, mixed_hidden_lines, NULL),
   VAR("__HiddenLineA", LINELIST_S, mixed_hidden_lines, NULL),
@@ -757,7 +766,11 @@ test_confparse_get_assigned(void *arg)
 /* Another variant, which accepts and stores unrecognized lines.*/
 #define ETEST_MAGIC 13371337
 
-static config_var_t extra = VAR("__extra", LINELIST, extra_lines, NULL);
+static struct_member_t extra = {
+  .name = "__extra",
+  .type = CONFIG_TYPE_LINELIST,
+  .offset = offsetof(test_struct_t, extra_lines),
+};
 
 static config_format_t etest_fmt = {
   sizeof(test_struct_t),

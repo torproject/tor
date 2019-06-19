@@ -519,7 +519,7 @@ static const var_type_fns_t routerset_type_fns = {
   .copy = routerset_copy
 };
 
-const var_type_def_t routerset_type_defn = {
+const var_type_def_t ROUTERSET_type_defn = {
   .name = "RouterList",
   .fns = &routerset_type_fns
 };

@@ -29,8 +29,7 @@
 #include "lib/confmgt/unitparse.h"
 #include "lib/container/bitarray.h"
 #include "lib/encoding/confline.h"
-
-#include "lib/confmgt/typedvar.h"
+#include "lib/confmgt/structvar.h"
 
 static void config_reset(const config_format_t *fmt, void *options,
                          const config_var_t *var, int use_defaults);
@@ -110,17 +109,17 @@ config_find_option_mutable(config_format_t *fmt, const char *key)
   if (!keylen)
     return NULL; /* if they say "--" on the command line, it's not an option */
   /* First, check for an exact (case-insensitive) match */
-  for (i=0; fmt->vars[i].name; ++i) {
-    if (!strcasecmp(key, fmt->vars[i].name)) {
+  for (i=0; fmt->vars[i].member.name; ++i) {
+    if (!strcasecmp(key, fmt->vars[i].member.name)) {
       return &fmt->vars[i];
     }
   }
   /* If none, check for an abbreviated match */
-  for (i=0; fmt->vars[i].name; ++i) {
-    if (!strncasecmp(key, fmt->vars[i].name, keylen)) {
+  for (i=0; fmt->vars[i].member.name; ++i) {
+    if (!strncasecmp(key, fmt->vars[i].member.name, keylen)) {
       log_warn(LD_CONFIG, "The abbreviation '%s' is deprecated. "
                "Please use '%s' instead",
-               key, fmt->vars[i].name);
+               key, fmt->vars[i].member.name);
       return &fmt->vars[i];
     }
   }
@@ -144,7 +143,7 @@ static int
 config_count_options(const config_format_t *fmt)
 {
   int i;
-  for (i=0; fmt->vars[i].name; ++i)
+  for (i=0; fmt->vars[i].member.name; ++i)
     ;
   return i;
 }
@@ -163,23 +162,14 @@ config_assign_value(const config_format_t *fmt, void *options,
                     config_line_t *c, char **msg)
 {
   const config_var_t *var;
-  void *lvalue;
 
   CONFIG_CHECK(fmt, options);
 
   var = config_find_option(fmt, c->key);
   tor_assert(var);
-  tor_assert(!strcmp(c->key, var->name));
+  tor_assert(!strcmp(c->key, var->member.name));
 
-  lvalue = STRUCT_VAR_P(options, var->var_offset);
-
-  if (var->type == CONFIG_TYPE_ROUTERSET) {
-    // XXXX make the backend extensible so that we don't have to
-    // XXXX special-case this type.
-    return typed_var_kvassign_ex(lvalue, c, msg, &routerset_type_defn);
-  }
-
-  return typed_var_kvassign(lvalue, c, msg, var->type);
+  return struct_var_kvassign(options, c, msg, &var->member);
 }
 
 /** Mark every linelist in <b>options</b> "fragile", so that fresh assignments
@@ -191,14 +181,14 @@ config_mark_lists_fragile(const config_format_t *fmt, void *options)
   tor_assert(fmt);
   tor_assert(options);
 
-  for (i = 0; fmt->vars[i].name; ++i) {
+  for (i = 0; fmt->vars[i].member.name; ++i) {
     const config_var_t *var = &fmt->vars[i];
     config_line_t *list;
-    if (var->type != CONFIG_TYPE_LINELIST &&
-        var->type != CONFIG_TYPE_LINELIST_V)
+    if (var->member.type != CONFIG_TYPE_LINELIST &&
+        var->member.type != CONFIG_TYPE_LINELIST_V)
       continue;
 
-    list = *(config_line_t **)STRUCT_VAR_P(options, var->var_offset);
+    list = *(config_line_t **)STRUCT_VAR_P(options, var->member.offset);
     if (list)
       list->fragile = 1;
   }
@@ -238,7 +228,7 @@ config_assign_line(const config_format_t *fmt, void *options,
   var = config_find_option(fmt, c->key);
   if (!var) {
     if (fmt->extra) {
-      void *lvalue = STRUCT_VAR_P(options, fmt->extra->var_offset);
+      void *lvalue = STRUCT_VAR_P(options, fmt->extra->offset);
       log_info(LD_CONFIG,
                "Found unrecognized option '%s'; saving it.", c->key);
       config_line_append((config_line_t**)lvalue, c->key, c->value);
@@ -251,22 +241,22 @@ config_assign_line(const config_format_t *fmt, void *options,
   }
 
   /* Put keyword into canonical case. */
-  if (strcmp(var->name, c->key)) {
+  if (strcmp(var->member.name, c->key)) {
     tor_free(c->key);
-    c->key = tor_strdup(var->name);
+    c->key = tor_strdup(var->member.name);
   }
 
   const char *deprecation_msg;
   if (warn_deprecations &&
-      (deprecation_msg = config_find_deprecation(fmt, var->name))) {
-    warn_deprecated_option(var->name, deprecation_msg);
+      (deprecation_msg = config_find_deprecation(fmt, var->member.name))) {
+    warn_deprecated_option(var->member.name, deprecation_msg);
   }
 
   if (!strlen(c->value)) {
     /* reset or clear it, then return */
     if (!clear_first) {
-      if ((var->type == CONFIG_TYPE_LINELIST ||
-           var->type == CONFIG_TYPE_LINELIST_S) &&
+      if ((var->member.type == CONFIG_TYPE_LINELIST ||
+           var->member.type == CONFIG_TYPE_LINELIST_S) &&
           c->command != CONFIG_LINE_CLEAR) {
         /* We got an empty linelist from the torrc or command line.
            As a special case, call this an error. Warn and ignore. */
@@ -283,14 +273,14 @@ config_assign_line(const config_format_t *fmt, void *options,
     config_reset(fmt, options, var, use_defaults); // LCOV_EXCL_LINE
   }
 
-  if (options_seen && (var->type != CONFIG_TYPE_LINELIST &&
-                       var->type != CONFIG_TYPE_LINELIST_S)) {
+  if (options_seen && (var->member.type != CONFIG_TYPE_LINELIST &&
+                       var->member.type != CONFIG_TYPE_LINELIST_S)) {
     /* We're tracking which options we've seen, and this option is not
      * supposed to occur more than once. */
     int var_index = (int)(var - fmt->vars);
     if (bitarray_is_set(options_seen, var_index)) {
       log_warn(LD_CONFIG, "Option '%s' used more than once; all but the last "
-               "value will be ignored.", var->name);
+               "value will be ignored.", var->member.name);
     }
     bitarray_set(options_seen, var_index);
   }
@@ -352,7 +342,6 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
                            const char *key, int escape_val)
 {
   const config_var_t *var;
-  const void *value;
   config_line_t *result;
   tor_assert(options && key);
 
@@ -363,15 +352,8 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
     log_warn(LD_CONFIG, "Unknown option '%s'.  Failing.", key);
     return NULL;
   }
-  value = STRUCT_VAR_P(options, var->var_offset);
 
-  if (var->type == CONFIG_TYPE_ROUTERSET) {
-    // XXXX make the backend extensible so that we don't have to
-    // XXXX special-case this type.
-    result = typed_var_kvencode_ex(var->name, value, &routerset_type_defn);
-  } else {
-    result = typed_var_kvencode(var->name, value, var->type);
-  }
+  result = struct_var_kvencode(options, &var->member);
 
   if (escape_val) {
     config_line_t *line;
@@ -497,14 +479,10 @@ static void
 config_clear(const config_format_t *fmt, void *options,
              const config_var_t *var)
 {
-  void *lvalue = STRUCT_VAR_P(options, var->var_offset);
-  (void)fmt; /* unused */
-  if (var->type == CONFIG_TYPE_ROUTERSET) {
-    typed_var_free_ex(lvalue, &routerset_type_defn);
-    return;
-  }
 
-  typed_var_free(lvalue, var->type);
+  (void)fmt; /* unused */
+
+  struct_var_free(options, &var->member);
 }
 
 /** Clear the option indexed by <b>var</b> in <b>options</b>. Then if
@@ -522,7 +500,7 @@ config_reset(const config_format_t *fmt, void *options,
     return; /* all done */
   if (var->initvalue) {
     c = tor_malloc_zero(sizeof(config_line_t));
-    c->key = tor_strdup(var->name);
+    c->key = tor_strdup(var->member.name);
     c->value = tor_strdup(var->initvalue);
     if (config_assign_value(fmt, options, c, &msg) < 0) {
       // LCOV_EXCL_START
@@ -545,10 +523,11 @@ config_free_(const config_format_t *fmt, void *options)
 
   tor_assert(fmt);
 
-  for (i=0; fmt->vars[i].name; ++i)
+  for (i=0; fmt->vars[i].member.name; ++i)
     config_clear(fmt, options, &(fmt->vars[i]));
+
   if (fmt->extra) {
-    config_line_t **linep = STRUCT_VAR_P(options, fmt->extra->var_offset);
+    config_line_t **linep = STRUCT_VAR_P(options, fmt->extra->offset);
     config_free_lines(*linep);
     *linep = NULL;
   }
@@ -585,12 +564,12 @@ config_dup(const config_format_t *fmt, const void *old)
   config_line_t *line;
 
   newopts = config_new(fmt);
-  for (i=0; fmt->vars[i].name; ++i) {
-    if (fmt->vars[i].type == CONFIG_TYPE_LINELIST_S)
+  for (i=0; fmt->vars[i].member.name; ++i) {
+    if (fmt->vars[i].member.type == CONFIG_TYPE_LINELIST_S)
       continue;
-    if (fmt->vars[i].type == CONFIG_TYPE_OBSOLETE)
+    if (fmt->vars[i].member.type == CONFIG_TYPE_OBSOLETE)
       continue;
-    line = config_get_assigned_option(fmt, old, fmt->vars[i].name, 0);
+    line = config_get_assigned_option(fmt, old, fmt->vars[i].member.name, 0);
     if (line) {
       char *msg = NULL;
       if (config_assign(fmt, newopts, line, 0, &msg) < 0) {
@@ -615,7 +594,7 @@ config_init(const config_format_t *fmt, void *options)
   const config_var_t *var;
   CONFIG_CHECK(fmt, options);
 
-  for (i=0; fmt->vars[i].name; ++i) {
+  for (i=0; fmt->vars[i].member.name; ++i) {
     var = &fmt->vars[i];
     if (!var->initvalue)
       continue; /* defaults to NULL or 0 */
@@ -657,22 +636,23 @@ config_dump(const config_format_t *fmt, const void *default_options,
   }
 
   elements = smartlist_new();
-  for (i=0; fmt->vars[i].name; ++i) {
+  for (i=0; fmt->vars[i].member.name; ++i) {
     int comment_option = 0;
-    if (fmt->vars[i].type == CONFIG_TYPE_OBSOLETE ||
-        fmt->vars[i].type == CONFIG_TYPE_LINELIST_S)
+    if (fmt->vars[i].member.type == CONFIG_TYPE_OBSOLETE ||
+        fmt->vars[i].member.type == CONFIG_TYPE_LINELIST_S)
       continue;
     /* Don't save 'hidden' control variables. */
-    if (!strcmpstart(fmt->vars[i].name, "__"))
+    if (!strcmpstart(fmt->vars[i].member.name, "__"))
       continue;
-    if (minimal && config_is_same(fmt, options, defaults, fmt->vars[i].name))
+    if (minimal && config_is_same(fmt, options, defaults,
+                                  fmt->vars[i].member.name))
       continue;
     else if (comment_defaults &&
-             config_is_same(fmt, options, defaults, fmt->vars[i].name))
+             config_is_same(fmt, options, defaults, fmt->vars[i].member.name))
       comment_option = 1;
 
     line = assigned =
-      config_get_assigned_option(fmt, options, fmt->vars[i].name, 1);
+      config_get_assigned_option(fmt, options, fmt->vars[i].member.name, 1);
 
     for (; line; line = line->next) {
       if (!strcmpstart(line->key, "__")) {
@@ -688,7 +668,7 @@ config_dump(const config_format_t *fmt, const void *default_options,
   }
 
   if (fmt->extra) {
-    line = *(config_line_t**)STRUCT_VAR_P(options, fmt->extra->var_offset);
+    line = *(config_line_t**)STRUCT_VAR_P(options, fmt->extra->offset);
     for (; line; line = line->next) {
       smartlist_add_asprintf(elements, "%s %s\n", line->key, line->value);
     }

@@ -45,7 +45,7 @@ void routerset_free_(routerset_t *routerset);
 int routerset_len(const routerset_t *set);
 
 struct var_type_def_t;
-extern const struct var_type_def_t routerset_type_defn;
+extern const struct var_type_def_t ROUTERSET_type_defn;
 
 #ifdef ROUTERSET_PRIVATE
 #include "lib/container/bitarray.h"
