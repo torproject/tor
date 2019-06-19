@@ -73,10 +73,10 @@ typedef enum config_type_t {
 typedef union {
   char **STRING;
   char **FILENAME;
-  int *POSINT; /* yes, really: Even though the confparse type is called
-                * "POSINT", it still uses the C int type -- it just enforces
-                * that the values are in range [0,INT_MAX].
-              */
+  int *POSINT; /* yes, this is really an int, and not an unsigned int.  For
+                * historical reasons, many configuration values are restricted
+                * to the range [0,INT_MAX], and stored in signed ints.
+                */
   uint64_t *UINT64;
   int *INT;
   int *INTERVAL;
