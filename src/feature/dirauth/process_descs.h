@@ -52,7 +52,7 @@ void authdir_init_fingerprint_list(void);
 
 authdir_config_t *authdir_return_fingerprint_list(void);
 
-#endif /* defined(TOR_UNIT_TESTS) */
+#endif /* defined(PROCESS_DESCS_PRIVATE) || defined(TOR_UNIT_TESTS) */
 
 int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
