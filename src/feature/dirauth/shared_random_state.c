@@ -94,8 +94,11 @@ static struct_member_t state_extra_var = {
 /* Configuration format of sr_disk_state_t. */
 static const config_format_t state_format = {
   sizeof(sr_disk_state_t),
-  SR_DISK_STATE_MAGIC,
-  offsetof(sr_disk_state_t, magic_),
+  {
+   "sr_disk_state_t",
+   SR_DISK_STATE_MAGIC,
+   offsetof(sr_disk_state_t, magic_),
+  },
   NULL,
   NULL,
   state_vars,

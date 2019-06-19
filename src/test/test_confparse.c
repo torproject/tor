@@ -131,8 +131,11 @@ static void test_free_cb(void *options);
 
 static config_format_t test_fmt = {
   sizeof(test_struct_t),
-  TEST_MAGIC,
-  offsetof(test_struct_t, magic),
+  {
+   "test_struct_t",
+   TEST_MAGIC,
+   offsetof(test_struct_t, magic),
+  },
   test_abbrevs,
   test_deprecation_notes,
   test_vars,
@@ -774,8 +777,11 @@ static struct_member_t extra = {
 
 static config_format_t etest_fmt = {
   sizeof(test_struct_t),
-  ETEST_MAGIC,
-  offsetof(test_struct_t, magic),
+  {
+   "test_struct_t (with extra lines)",
+   ETEST_MAGIC,
+   offsetof(test_struct_t, magic),
+  },
   test_abbrevs,
   test_deprecation_notes,
   test_vars,

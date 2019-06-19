@@ -39,7 +39,7 @@ void *
 config_new(const config_format_t *fmt)
 {
   void *opts = tor_malloc_zero(fmt->size);
-  *(uint32_t*)STRUCT_VAR_P(opts, fmt->magic_offset) = fmt->magic;
+  struct_set_magic(opts, &fmt->magic);
   CONFIG_CHECK(fmt, opts);
   return opts;
 }

@@ -96,9 +96,7 @@ typedef void (*free_cfg_fn_t)(void*);
  * configuration or storage format. */
 typedef struct config_format_t {
   size_t size; /**< Size of the struct that everything gets parsed into. */
-  uint32_t magic; /**< Required 'magic value' to make sure we have a struct
-                   * of the right type. */
-  off_t magic_offset; /**< Offset of the magic value within the struct. */
+  struct_magic_decl_t magic; /**< Magic number info for this struct. */
   config_abbrev_t *abbrevs; /**< List of abbreviations that we expand when
                              * parsing this format. */
   const config_deprecation_t *deprecations; /** List of deprecated options */
@@ -114,9 +112,8 @@ typedef struct config_format_t {
 /** Macro: assert that <b>cfg</b> has the right magic field for format
  * <b>fmt</b>. */
 #define CONFIG_CHECK(fmt, cfg) STMT_BEGIN                               \
-    tor_assert(fmt && cfg);                                             \
-    tor_assert((fmt)->magic ==                                          \
-               *(uint32_t*)STRUCT_VAR_P(cfg,fmt->magic_offset));        \
+    tor_assert(fmt);                                                    \
+    struct_check_magic((cfg), &fmt->magic);                             \
   STMT_END
 
 #define CAL_USE_DEFAULTS      (1u<<0)

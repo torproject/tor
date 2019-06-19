@@ -166,8 +166,11 @@ static struct_member_t state_extra_var = {
 /** Configuration format for or_state_t. */
 static const config_format_t state_format = {
   sizeof(or_state_t),
-  OR_STATE_MAGIC,
-  offsetof(or_state_t, magic_),
+  {
+   "or_state_t",
+   OR_STATE_MAGIC,
+   offsetof(or_state_t, magic_),
+  },
   state_abbrevs_,
   NULL,
   state_vars_,

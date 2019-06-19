@@ -877,8 +877,11 @@ static void set_protocol_warning_severity_level(int warning_severity);
 /** Configuration format for or_options_t. */
 STATIC config_format_t options_format = {
   sizeof(or_options_t),
-  OR_OPTIONS_MAGIC,
-  offsetof(or_options_t, magic_),
+  {
+   "or_options_t",
+   OR_OPTIONS_MAGIC,
+   offsetof(or_options_t, magic_),
+  },
   option_abbrevs_,
   option_deprecation_notes_,
   option_vars_,
