@@ -290,6 +290,8 @@ test_confparse_assign_simple(void *arg)
   tt_str_op(tst->mixed_hidden_lines->next->value, OP_EQ, "ABC");
   tt_assert(!tst->mixed_hidden_lines->next->next);
 
+  tt_assert(config_check_ok(&test_fmt, tst, LOG_ERR));
+
  done:
   config_free(&test_fmt, tst);
 }
@@ -343,6 +345,8 @@ test_confparse_assign_deprecated(void *arg)
   expect_single_log_msg_containing("This integer is deprecated.");
 
   tt_int_op(tst->deprecated_int, OP_EQ, 7);
+
+  tt_assert(config_check_ok(&test_fmt, tst, LOG_ERR));
 
  done:
   teardown_capture_of_logs();
@@ -489,6 +493,8 @@ static const badval_test_t bv_badabool =
 static const badval_test_t bv_badtime = { "time lunchtime\n", "Invalid time" };
 static const badval_test_t bv_virt = { "MixedLines 7\n", "virtual option" };
 static const badval_test_t bv_rs = { "Routerset 2.2.2.2.2\n", "Invalid" };
+static const badval_test_t bv_big_interval =
+  { "interval 1000 months", "too large" };
 
 /* Try config_dump(), and make sure it behaves correctly */
 static void
@@ -885,6 +891,18 @@ test_confparse_unitparse(void *args)
   ;
 }
 
+static void
+test_confparse_check_ok_fail(void *arg)
+{
+  (void)arg;
+  test_struct_t *tst = config_new(&test_fmt);
+  tst->pos = -10;
+  tt_assert(! config_check_ok(&test_fmt, tst, LOG_INFO));
+
+ done:
+  config_free(&test_fmt, tst);
+}
+
 #define CONFPARSE_TEST(name, flags)                          \
   { #name, test_confparse_ ## name, flags, NULL, NULL }
 
@@ -912,6 +930,7 @@ struct testcase_t confparse_tests[] = {
   BADVAL_TEST(badtime),
   BADVAL_TEST(virt),
   BADVAL_TEST(rs),
+  BADVAL_TEST(big_interval),
   CONFPARSE_TEST(dump, 0),
   CONFPARSE_TEST(reset, 0),
   CONFPARSE_TEST(reassign, 0),
@@ -919,5 +938,6 @@ struct testcase_t confparse_tests[] = {
   CONFPARSE_TEST(get_assigned, 0),
   CONFPARSE_TEST(extra_lines, 0),
   CONFPARSE_TEST(unitparse, 0),
+  CONFPARSE_TEST(check_ok_fail, 0),
   END_OF_TESTCASES
 };
