@@ -49,13 +49,9 @@ typedef struct test_struct_t {
 static test_struct_t test_struct_t_dummy;
 
 #define VAR(varname,conftype,member,initvalue)                          \
-  { { .name = varname,                                                  \
-        .type = CONFIG_TYPE_##conftype,                                 \
-        .offset = offsetof(test_struct_t, member), },                   \
-      initvalue CONF_TEST_MEMBERS(test_struct_t, conftype, member) }
-
-#define V(name,conftype,initvalue)                                      \
-  VAR( #name, conftype, name, initvalue )
+  CONFIG_VAR_ETYPE(test_struct_t, varname, conftype, member, initvalue)
+#define V(member,conftype,initvalue)            \
+  VAR(#member, conftype, member, initvalue)
 
 #define OBSOLETE(varname)                                               \
   { { .name=varname, .type=CONFIG_TYPE_OBSOLETE }, NULL, {.INT=NULL} }
@@ -83,7 +79,7 @@ static config_var_t test_vars[] = {
   OBSOLETE("obsolete"),
   {
    { .name = "routerset",
-     .type = CONFIG_TYPE_ROUTERSET,
+     .type = CONFIG_TYPE_EXTENDED,
      .type_def = &ROUTERSET_type_defn,
      .offset = offsetof(test_struct_t, routerset),
    },

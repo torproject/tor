@@ -29,6 +29,9 @@
 #define TOR_SRC_LIB_CONF_CONFTYPES_H
 
 #include "lib/cc/torint.h"
+#ifdef TOR_UNIT_TESTS
+#include "lib/conf/conftesting.h"
+#endif
 
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
@@ -59,9 +62,6 @@ typedef enum config_type_t {
   CONFIG_TYPE_LINELIST_V,   /**< Catch-all "virtual" option to summarize
                              * context-sensitive config lines when fetching.
                              */
-  // XXXX this doesn't belong at this level of abstraction.
-  CONFIG_TYPE_ROUTERSET,    /**< A list of router names, addrs, and fps,
-                             * parsed into a routerset_t. */
   CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
   CONFIG_TYPE_EXTENDED,     /**< Extended type; definition will appear in
                              * pointer. */
@@ -104,37 +104,6 @@ typedef struct struct_magic_decl_t {
   uint32_t magic_val;
   int magic_offset;
 } struct_magic_decl_t;
-
-#ifdef TOR_UNIT_TESTS
-/**
- * Union used when building in test mode typechecking the members of a type
- * used with confparse.c.  See CONF_CHECK_VAR_TYPE for a description of how
- * it is used. */
-typedef union {
-  char **STRING;
-  char **FILENAME;
-  int *POSINT; /* yes, this is really an int, and not an unsigned int.  For
-                * historical reasons, many configuration values are restricted
-                * to the range [0,INT_MAX], and stored in signed ints.
-                */
-  uint64_t *UINT64;
-  int *INT;
-  int *INTERVAL;
-  int *MSEC_INTERVAL;
-  uint64_t *MEMUNIT;
-  double *DOUBLE;
-  int *BOOL;
-  int *AUTOBOOL;
-  time_t *ISOTIME;
-  struct smartlist_t **CSV;
-  int *CSV_INTERVAL;
-  struct config_line_t **LINELIST;
-  struct config_line_t **LINELIST_S;
-  struct config_line_t **LINELIST_V;
-  // XXXX this doesn't belong at this level of abstraction.
-  struct routerset_t **ROUTERSET;
-} confparse_dummy_values_t;
-#endif /* defined(TOR_UNIT_TESTS) */
 
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {

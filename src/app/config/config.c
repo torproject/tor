@@ -259,28 +259,12 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
  * or_options_t.<b>member</b>"
  */
 #define VAR(varname,conftype,member,initvalue)                          \
-  { { .name = varname,                                                  \
-        .type = CONFIG_TYPE_ ## conftype,                               \
-        .offset = offsetof(or_options_t, member),                       \
-        },                                                              \
-      initvalue CONF_TEST_MEMBERS(or_options_t, conftype, member) }
-
-#ifdef TOR_UNIT_TESTS
-#define DUMMY_TEST_MEMBERS , {.INT=NULL}
-#else
-#define DUMMY_TEST_MEMBERS
-#endif
+  CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member, initvalue)
 
 /* As VAR, but uses a type definition in addition to a type enum. */
 #define VAR_D(varname,conftype,member,initvalue)                        \
-  { { .name = varname,                                                  \
-        .type = CONFIG_TYPE_ ## conftype,                               \
-        .type_def = &conftype ## _type_defn,                            \
-        .offset = offsetof(or_options_t, member),                       \
-        },                                                              \
-      initvalue DUMMY_TEST_MEMBERS }
+  CONFIG_VAR_DEFN(or_options_t, varname, conftype, member, initvalue)
 
-/** As VAR, but the option name and member name are the same. */
 #define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)
 
@@ -289,9 +273,7 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
   VAR_D(#member, type, member, initvalue)
 
 /** An entry for config_vars: "The option <b>varname</b> is obsolete." */
-#define OBSOLETE(varname) \
-  { { .name = varname, .type = CONFIG_TYPE_OBSOLETE, }, NULL   \
-    DUMMY_TEST_MEMBERS }
+#define OBSOLETE(varname) CONFIG_VAR_OBSOLETE(varname)
 
 /**
  * Macro to declare *Port options.  Each one comes in three entries.

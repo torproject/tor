@@ -14,6 +14,7 @@
 #define TOR_CONFPARSE_H
 
 #include "lib/conf/conftypes.h"
+#include "lib/conf/confmacros.h"
 
 /** An abbreviation for a configuration option allowed on the command line. */
 typedef struct config_abbrev_t {
@@ -31,44 +32,6 @@ typedef struct config_deprecation_t {
 /* Handy macro for declaring "In the config file or on the command line,
  * you can abbreviate <b>tok</b>s as <b>tok</b>". */
 #define PLURAL(tok) { #tok, #tok "s", 0, 0 }
-
-/* Macros to define extra members inside config_var_t fields, and at the
- * end of a list of them.
- */
-#ifdef TOR_UNIT_TESTS
-/* This is a somewhat magic type-checking macro for users of confparse.c.
- * It initializes a union member "confparse_dummy_values_t.conftype" with
- * the address of a static member "tp_dummy.member".   This
- * will give a compiler warning unless the member field is of the correct
- * type.
- *
- * (This warning is mandatory, because a type mismatch here violates the type
- * compatibility constraint for simple assignment, and requires a diagnostic,
- * according to the C spec.)
- *
- * For example, suppose you say:
- *     "CONF_CHECK_VAR_TYPE(or_options_t, STRING, Address)".
- * Then this macro will evaluate to:
- *     { .STRING = &or_options_t_dummy.Address }
- * And since confparse_dummy_values_t.STRING has type "char **", that
- * expression will create a warning unless or_options_t.Address also
- * has type "char *".
- */
-#define CONF_CHECK_VAR_TYPE(tp, conftype, member)       \
-  { . conftype = &tp ## _dummy . member }
-#define CONF_TEST_MEMBERS(tp, conftype, member) \
-  , CONF_CHECK_VAR_TYPE(tp, conftype, member)
-#define END_OF_CONFIG_VARS                                      \
-  { { .name = NULL }, NULL, { .INT=NULL } }
-#define DUMMY_TYPECHECK_INSTANCE(tp)            \
-  static tp tp ## _dummy
-#else /* !(defined(TOR_UNIT_TESTS)) */
-#define CONF_TEST_MEMBERS(tp, conftype, member)
-#define END_OF_CONFIG_VARS { { .name = NULL, }, NULL }
-/* Repeatedly declarable incomplete struct to absorb redundant semicolons */
-#define DUMMY_TYPECHECK_INSTANCE(tp)            \
-  struct tor_semicolon_eater
-#endif /* defined(TOR_UNIT_TESTS) */
 
 /** Type of a callback to validate whether a given configuration is
  * well-formed and consistent. See options_trial_assign() for documentation

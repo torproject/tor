@@ -51,15 +51,11 @@ static const char dstate_cur_srv_key[] = "SharedRandCurrentValue";
  * members with CONF_CHECK_VAR_TYPE. */
 DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 
-/* These next two are duplicates or near-duplicates from config.c */
-#define VAR(varname, conftype, member, initvalue)                       \
-  { { .name = varname,                                                  \
-      .type = CONFIG_TYPE_ ## conftype,                                 \
-      .offset = offsetof(sr_disk_state_t, member), },                   \
-    initvalue CONF_TEST_MEMBERS(sr_disk_state_t, conftype, member) }
-/* As VAR, but the option name and member name are the same. */
-#define V(member, conftype, initvalue) \
+#define VAR(varname,conftype,member,initvalue)                          \
+  CONFIG_VAR_ETYPE(sr_disk_state_t, varname, conftype, member, initvalue)
+#define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)
+
 /* Our persistent state magic number. */
 #define SR_DISK_STATE_MAGIC 0x98AB1254
 

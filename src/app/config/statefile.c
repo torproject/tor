@@ -70,14 +70,9 @@ static config_abbrev_t state_abbrevs_[] = {
  * members with CONF_CHECK_VAR_TYPE. */
 DUMMY_TYPECHECK_INSTANCE(or_state_t);
 
-/*XXXX these next two are duplicates or near-duplicates from config.c */
 #define VAR(varname,conftype,member,initvalue)                          \
-  { { .name = varname,                                                  \
-      .type = CONFIG_TYPE_ ## conftype,                                 \
-      .offset = offsetof(or_state_t, member), },                        \
-      initvalue CONF_TEST_MEMBERS(or_state_t, conftype, member) }
-/** As VAR, but the option name and member name are the same. */
-#define V(member,conftype,initvalue)                                    \
+  CONFIG_VAR_ETYPE(or_state_t, varname, conftype, member, initvalue)
+#define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)
 
 /** Array of "state" variables saved to the ~/.tor/state file. */
