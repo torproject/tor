@@ -44,7 +44,7 @@ typedef struct authdir_config_t {
 #define FP_BADEXIT 16 /**< We'll tell clients not to use this as an exit. */
 /*                 32 Historically used to indicade Unnamed */
 
-#endif /* defined(TOR_UNIT_TESTS) */
+#endif /* defined(PROCESS_DESCS_PRIVATE) || defined(TOR_UNIT_TESTS) */
 
 #ifdef TOR_UNIT_TESTS
 
@@ -52,7 +52,7 @@ void authdir_init_fingerprint_list(void);
 
 authdir_config_t *authdir_return_fingerprint_list(void);
 
-#endif /* defined(PROCESS_DESCS_PRIVATE) || defined(TOR_UNIT_TESTS) */
+#endif /* defined(TOR_UNIT_TESTS) */
 
 int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);

@@ -7314,8 +7314,6 @@ test_dir_dirserv_load_fingerprint_file(void *arg)
     list = authdir_return_fingerprint_list(); \
   STMT_END
 
-#define FP_REJECT 4
-
 static void
 test_dir_dirserv_router_get_status(void *arg)
 {
