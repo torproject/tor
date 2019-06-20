@@ -68,8 +68,8 @@ typedef union {
 #define CONF_CHECK_VAR_TYPE(tp, conftype, member)       \
   { . conftype = &tp ## _dummy . member }
 #define CONF_TEST_MEMBERS(tp, conftype, member) \
-  , CONF_CHECK_VAR_TYPE(tp, conftype, member)
-#define DUMMY_CONF_TEST_MEMBERS , { .INT=NULL }
+  , .var_ptr_dummy=CONF_CHECK_VAR_TYPE(tp, conftype, member)
+#define DUMMY_CONF_TEST_MEMBERS , .var_ptr_dummy={ .INT=NULL }
 #define DUMMY_TYPECHECK_INSTANCE(tp)            \
   static tp tp ## _dummy
 

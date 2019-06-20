@@ -19,7 +19,7 @@
  * Used to indicate the end of an array of configuration variables.
  **/
 #define END_OF_CONFIG_VARS                                      \
-  { { .name = NULL }, NULL DUMMY_CONF_TEST_MEMBERS }
+  { .member = { .name = NULL } DUMMY_CONF_TEST_MEMBERS }
 
 /**
  * Declare a config_var_t as a member named <b>membername</b> of the structure

@@ -110,7 +110,8 @@ typedef struct config_var_t {
   struct_member_t member; /** A struct member corresponding to this
                            * variable. */
   const char *initvalue; /**< String (or null) describing initial value. */
-
+  uint32_t flags; /**< One or more flags describing special handling for this
+                   * variable */
 #ifdef TOR_UNIT_TESTS
   /** Used for compiler-magic to typecheck the corresponding field in the
    * corresponding struct. Only used in unit test mode, at compile-time. */

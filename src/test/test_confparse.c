@@ -52,9 +52,8 @@ static test_struct_t test_struct_t_dummy;
   CONFIG_VAR_ETYPE(test_struct_t, varname, conftype, member, initvalue)
 #define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)
-
-#define OBSOLETE(varname)                                               \
-  { { .name=varname, .type=CONFIG_TYPE_OBSOLETE }, NULL, {.INT=NULL} }
+#define OBSOLETE(varname)                       \
+  CONFIG_VAR_OBSOLETE(varname)
 
 static config_var_t test_vars[] = {
   V(s, STRING, "hello"),
@@ -78,12 +77,11 @@ static config_var_t test_vars[] = {
   VAR("LineTypeB", LINELIST_S, mixed_lines, NULL),
   OBSOLETE("obsolete"),
   {
-   { .name = "routerset",
-     .type = CONFIG_TYPE_EXTENDED,
-     .type_def = &ROUTERSET_type_defn,
-     .offset = offsetof(test_struct_t, routerset),
-   },
-   NULL, {.INT=NULL}
+   .member = { .name = "routerset",
+               .type = CONFIG_TYPE_EXTENDED,
+               .type_def = &ROUTERSET_type_defn,
+               .offset = offsetof(test_struct_t, routerset),
+             },
   },
   VAR("__HiddenInt", POSINT, hidden_int, "0"),
   VAR("MixedHiddenLines", LINELIST_V, mixed_hidden_lines, NULL),
