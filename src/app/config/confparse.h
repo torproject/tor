@@ -32,19 +32,6 @@ typedef struct config_deprecation_t {
  * you can abbreviate <b>tok</b>s as <b>tok</b>". */
 #define PLURAL(tok) { #tok, #tok "s", 0, 0 }
 
-/** A variable allowed in the configuration file or on the command line. */
-typedef struct config_var_t {
-  struct_member_t member; /** A struct member corresponding to this
-                           * variable. */
-  const char *initvalue; /**< String (or null) describing initial value. */
-
-#ifdef TOR_UNIT_TESTS
-  /** Used for compiler-magic to typecheck the corresponding field in the
-   * corresponding struct. Only used in unit test mode, at compile-time. */
-  confparse_dummy_values_t var_ptr_dummy;
-#endif
-} config_var_t;
-
 /* Macros to define extra members inside config_var_t fields, and at the
  * end of a list of them.
  */

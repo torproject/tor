@@ -136,4 +136,17 @@ typedef union {
 } confparse_dummy_values_t;
 #endif /* defined(TOR_UNIT_TESTS) */
 
+/** A variable allowed in the configuration file or on the command line. */
+typedef struct config_var_t {
+  struct_member_t member; /** A struct member corresponding to this
+                           * variable. */
+  const char *initvalue; /**< String (or null) describing initial value. */
+
+#ifdef TOR_UNIT_TESTS
+  /** Used for compiler-magic to typecheck the corresponding field in the
+   * corresponding struct. Only used in unit test mode, at compile-time. */
+  confparse_dummy_values_t var_ptr_dummy;
+#endif
+} config_var_t;
+
 #endif /* !defined(TOR_SRC_LIB_CONF_CONFTYPES_H) */
