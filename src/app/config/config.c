@@ -259,11 +259,11 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
  * or_options_t.<b>member</b>"
  */
 #define VAR(varname,conftype,member,initvalue)                          \
-  CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member, initvalue)
+  CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member, 0, initvalue)
 
 /* As VAR, but uses a type definition in addition to a type enum. */
 #define VAR_D(varname,conftype,member,initvalue)                        \
-  CONFIG_VAR_DEFN(or_options_t, varname, conftype, member, initvalue)
+  CONFIG_VAR_DEFN(or_options_t, varname, conftype, member, 0, initvalue)
 
 #define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)

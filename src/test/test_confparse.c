@@ -49,7 +49,7 @@ typedef struct test_struct_t {
 static test_struct_t test_struct_t_dummy;
 
 #define VAR(varname,conftype,member,initvalue)                          \
-  CONFIG_VAR_ETYPE(test_struct_t, varname, conftype, member, initvalue)
+  CONFIG_VAR_ETYPE(test_struct_t, varname, conftype, member, 0, initvalue)
 #define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)
 #define OBSOLETE(varname)                       \

@@ -30,12 +30,14 @@
  * Most modules that use this macro should wrap it in a local macro that
  * sets structtype to the local configuration type.
  **/
-#define CONFIG_VAR_ETYPE(structtype, varname, vartype, membername, initval) \
+#define CONFIG_VAR_ETYPE(structtype, varname, vartype, membername,      \
+                         varflags, initval)                             \
   { .member =                                                           \
     { .name = varname,                                                  \
       .type = CONFIG_TYPE_ ## vartype,                                  \
       .offset = offsetof(structtype, membername),                       \
     },                                                                  \
+    .flags = varflags,                                                  \
     .initvalue = initval                                                \
     CONF_TEST_MEMBERS(structtype, vartype, membername)                  \
   }
@@ -44,13 +46,15 @@
  * As CONFIG_VAR_XTYPE, but declares a value using an extension type whose
  * type definition is <b>vartype</b>_type_defn.
  **/
-#define CONFIG_VAR_DEFN(structtype, varname, vartype, membername, initval) \
+#define CONFIG_VAR_DEFN(structtype, varname, vartype, membername,       \
+                        varflags, initval)                              \
   { .member =                                                           \
-    { .name = varname,                                                  \
+      { .name = varname,                                                \
       .type = CONFIG_TYPE_EXTENDED,                                     \
       .type_def = &vartype ## _type_defn,                               \
       .offset = offsetof(structtype, membername),                       \
     },                                                                  \
+    .flags = varflags,                                                  \
     .initvalue = initval                                                \
     CONF_TEST_MEMBERS(structtype, vartype, membername)                  \
   }

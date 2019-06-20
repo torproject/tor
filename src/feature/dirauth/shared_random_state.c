@@ -52,7 +52,7 @@ static const char dstate_cur_srv_key[] = "SharedRandCurrentValue";
 DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
 
 #define VAR(varname,conftype,member,initvalue)                          \
-  CONFIG_VAR_ETYPE(sr_disk_state_t, varname, conftype, member, initvalue)
+  CONFIG_VAR_ETYPE(sr_disk_state_t, varname, conftype, member, 0, initvalue)
 #define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)
 

@@ -71,7 +71,7 @@ static config_abbrev_t state_abbrevs_[] = {
 DUMMY_TYPECHECK_INSTANCE(or_state_t);
 
 #define VAR(varname,conftype,member,initvalue)                          \
-  CONFIG_VAR_ETYPE(or_state_t, varname, conftype, member, initvalue)
+  CONFIG_VAR_ETYPE(or_state_t, varname, conftype, member, 0, initvalue)
 #define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)
 
