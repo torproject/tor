@@ -163,8 +163,14 @@ dirserv_add_own_fingerprint(crypto_pk_t *pk, const ed25519_public_key_t *edkey)
   }
   if (!fingerprint_list)
     fingerprint_list = authdir_config_new();
-  add_rsa_fingerprint_to_dir(fp, fingerprint_list, 0);
-  add_ed25519_to_dir(edkey, fingerprint_list, 0);
+  if (add_rsa_fingerprint_to_dir(fp, fingerprint_list, 0) < 0) {
+    log_err(LD_BUG, "Error adding RSA fingerprint");
+    return -1;
+  }
+  if (add_ed25519_to_dir(edkey, fingerprint_list, 0) < 0) {
+    log_err(LD_BUG, "Error adding ed25519 key");
+    return -1;
+  }
   return 0;
 }
 
