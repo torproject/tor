@@ -122,6 +122,15 @@ struct var_type_fns_t {
    * values are valid.
    **/
   bool (*ok)(const void *value, const void *params);
+  /**
+   * Mark a value of this variable as "fragile", so that future attempts to
+   * assign to this variable will replace rather than extending it.
+   *
+   * The default implementation for this function does nothing.
+   *
+   * Only meaningful for types with is_cumulative set.
+   **/
+  void (*mark_fragile)(void *value, const void *params);
 };
 
 /**
@@ -142,6 +151,17 @@ struct var_type_def_t {
    * calling the functions in this type's function table.
    */
   const void *params;
+
+  /** True iff a variable of this type can never be set directly by name. */
+  bool is_unsettable;
+  /** True iff a variable of this type is always contained in another
+   * variable, and as such doesn't need to be dumped or copied
+   * independently. */
+  bool is_contained;
+  /** True iff a variable of this type can be set more than once without
+   * destroying older values. Such variables should implement "mark_fragile".
+   */
+  bool is_cumulative;
 };
 
 #endif /* !defined(TOR_LIB_CONFMGT_VAR_TYPE_DEF_ST_H) */

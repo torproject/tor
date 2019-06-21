@@ -960,8 +960,8 @@ set_options(or_options_t *new_val, char **msg)
     for (i=0; options_format.vars[i].member.name; ++i) {
       const config_var_t *var = &options_format.vars[i];
       const char *var_name = var->member.name;
-      if (var->member.type == CONFIG_TYPE_LINELIST_S ||
-          var->member.type == CONFIG_TYPE_OBSOLETE) {
+      if (config_var_is_contained(var)) {
+        /* something else will check this var, or it doesn't need checking */
         continue;
       }
       if (!config_is_same(&options_format, new_val, old_options, var_name)) {
@@ -2663,9 +2663,10 @@ list_torrc_options(void)
   int i;
   for (i = 0; option_vars_[i].member.name; ++i) {
     const config_var_t *var = &option_vars_[i];
-    if (var->member.type == CONFIG_TYPE_OBSOLETE ||
-        var->member.type == CONFIG_TYPE_LINELIST_V)
+    if (! config_var_is_settable(var)) {
+      /* This variable cannot be set, or cannot be set by this name. */
       continue;
+    }
     printf("%s\n", var->member.name);
   }
 }

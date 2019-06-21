@@ -105,6 +105,12 @@ typedef struct struct_magic_decl_t {
   int magic_offset;
 } struct_magic_decl_t;
 
+/**
+ * Flag to indicate that an option is obsolete. Any attempt to set or
+ * fetch this option should produce a warning.
+ **/
+#define CVFLAG_OBSOLETE  (1u<<0)
+
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {
   struct_member_t member; /** A struct member corresponding to this

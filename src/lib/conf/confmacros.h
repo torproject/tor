@@ -60,6 +60,8 @@
   }
 
 #define CONFIG_VAR_OBSOLETE(varname)            \
-  { .member = { .name = varname, .type = CONFIG_TYPE_OBSOLETE } }
+  { .member = { .name = varname, .type = CONFIG_TYPE_OBSOLETE },        \
+    .flags = CVFLAG_OBSOLETE                                            \
+  }
 
 #endif /* !defined(TOR_LIB_CONF_CONFMACROS_H) */
