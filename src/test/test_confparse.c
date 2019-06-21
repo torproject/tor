@@ -55,7 +55,7 @@ static test_struct_t test_struct_t_dummy;
 #define OBSOLETE(varname)                       \
   CONFIG_VAR_OBSOLETE(varname)
 
-static config_var_t test_vars[] = {
+static const config_var_t test_vars[] = {
   V(s, STRING, "hello"),
   V(fn, FILENAME, NULL),
   V(pos, POSINT, NULL),
@@ -123,7 +123,7 @@ static void test_free_cb(void *options);
 
 #define TEST_MAGIC 0x1337
 
-static config_format_t test_fmt = {
+static const config_format_t test_fmt = {
   sizeof(test_struct_t),
   {
    "test_struct_t",

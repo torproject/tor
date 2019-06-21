@@ -191,7 +191,7 @@ static const char unix_q_socket_prefix[] = "unix:\"";
 
 /** A list of abbreviations and aliases to map command-line options, obsolete
  * option names, or alternative option names, to their current values. */
-static config_abbrev_t option_abbrevs_[] = {
+static const config_abbrev_t option_abbrevs_[] = {
   PLURAL(AuthDirBadDirCC),
   PLURAL(AuthDirBadExitCC),
   PLURAL(AuthDirInvalidCC),
@@ -301,7 +301,7 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
  * abbreviations, order is significant, since the first matching option will
  * be chosen first.
  */
-static config_var_t option_vars_[] = {
+static const config_var_t option_vars_[] = {
   V(AccountingMax,               MEMUNIT,  "0 bytes"),
   VAR("AccountingRule",          STRING,   AccountingRule_option,  "max"),
   V(AccountingStart,             STRING,   NULL),
@@ -851,7 +851,7 @@ static void set_protocol_warning_severity_level(int warning_severity);
 #define OR_OPTIONS_MAGIC 9090909
 
 /** Configuration format for or_options_t. */
-STATIC config_format_t options_format = {
+STATIC const config_format_t options_format = {
   sizeof(or_options_t),
   {
    "or_options_t",

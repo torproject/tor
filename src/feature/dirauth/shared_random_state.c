@@ -65,7 +65,7 @@ disk_state_validate_cb(void *old_state, void *state, void *default_state,
 static void disk_state_free_cb(void *);
 
 /* Array of variables that are saved to disk as a persistent state. */
-static config_var_t state_vars[] = {
+static const config_var_t state_vars[] = {
   V(Version,                    POSINT, "0"),
   V(TorVersion,                 STRING, NULL),
   V(ValidAfter,                 ISOTIME, NULL),
@@ -81,7 +81,7 @@ static config_var_t state_vars[] = {
 
 /* "Extra" variable in the state that receives lines we can't parse. This
  * lets us preserve options from versions of Tor newer than us. */
-static struct_member_t state_extra_var = {
+static const struct_member_t state_extra_var = {
   .name = "__extra",
   .type = CONFIG_TYPE_LINELIST,
   .offset = offsetof(sr_disk_state_t, ExtraLines),

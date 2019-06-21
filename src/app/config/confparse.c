@@ -100,9 +100,13 @@ config_find_deprecation(const config_format_t *fmt, const char *key)
   return NULL;
 }
 
-/** As config_find_option, but return a non-const pointer. */
-config_var_t *
-config_find_option_mutable(config_format_t *fmt, const char *key)
+/** If <b>key</b> is a configuration option, return the corresponding const
+ * config_var_t.  Otherwise, if <b>key</b> is a non-standard abbreviation,
+ * warn, and return the corresponding const config_var_t.  Otherwise return
+ * NULL.
+ */
+const config_var_t *
+config_find_option(const config_format_t *fmt, const char *key)
 {
   int i;
   size_t keylen = strlen(key);
@@ -125,17 +129,6 @@ config_find_option_mutable(config_format_t *fmt, const char *key)
   }
   /* Okay, unrecognized option */
   return NULL;
-}
-
-/** If <b>key</b> is a configuration option, return the corresponding const
- * config_var_t.  Otherwise, if <b>key</b> is a non-standard abbreviation,
- * warn, and return the corresponding const config_var_t.  Otherwise return
- * NULL.
- */
-const config_var_t *
-config_find_option(const config_format_t *fmt, const char *key)
-{
-  return config_find_option_mutable((config_format_t*)fmt, key);
 }
 
 /** Return the number of option entries in <b>fmt</b>. */

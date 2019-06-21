@@ -47,16 +47,17 @@ typedef void (*free_cfg_fn_t)(void*);
 typedef struct config_format_t {
   size_t size; /**< Size of the struct that everything gets parsed into. */
   struct_magic_decl_t magic; /**< Magic number info for this struct. */
-  config_abbrev_t *abbrevs; /**< List of abbreviations that we expand when
-                             * parsing this format. */
+  const config_abbrev_t *abbrevs; /**< List of abbreviations that we expand
+                             * when parsing this format. */
   const config_deprecation_t *deprecations; /** List of deprecated options */
-  config_var_t *vars; /**< List of variables we recognize, their default
-                       * values, and where we stick them in the structure. */
+  const config_var_t *vars; /**< List of variables we recognize, their default
+                             * values, and where we stick them in the
+                             * structure. */
   validate_fn_t validate_fn; /**< Function to validate config. */
   free_cfg_fn_t free_fn; /**< Function to free the configuration. */
   /** If present, extra denotes a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
-  struct_member_t *extra;
+  const struct_member_t *extra;
 } config_format_t;
 
 /** Macro: assert that <b>cfg</b> has the right magic field for format
@@ -93,8 +94,6 @@ bool config_check_ok(const config_format_t *fmt, const void *options,
 int config_assign(const config_format_t *fmt, void *options,
                   struct config_line_t *list,
                   unsigned flags, char **msg);
-config_var_t *config_find_option_mutable(config_format_t *fmt,
-                                         const char *key);
 const char *config_find_deprecation(const config_format_t *fmt,
                                      const char *key);
 const config_var_t *config_find_option(const config_format_t *fmt,
