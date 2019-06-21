@@ -41,15 +41,7 @@ using_pt(const bt_orconn_t *bto)
 static bool
 using_proxy(const bt_orconn_t *bto)
 {
-  switch (bto->proxy_type) {
-  case PROXY_CONNECT:
-  case PROXY_SOCKS4:
-  case PROXY_SOCKS5:
-    return true;
-  case PROXY_NONE:
-  default:
-    return false;
-  }
+  return bto->proxy_type != PROXY_NONE;
 }
 
 /**
