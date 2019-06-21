@@ -183,7 +183,7 @@ static void set_constrained_socket_buffers(tor_socket_t sock, int size);
 static const char *connection_proxy_state_to_string(int state);
 static int connection_read_https_proxy_response(connection_t *conn);
 static void connection_send_socks5_connect(connection_t *conn);
-static const char *proxy_type_to_string(int proxy_type);
+static const char *proxy_type_to_string(proxy_type_t proxy_type);
 static bool conn_is_pluggable_transport(const connection_t *conn);
 const tor_addr_t *conn_get_outbound_address(sa_family_t family,
                   const or_options_t *options, unsigned int conn_type);
@@ -5392,7 +5392,7 @@ assert_connection_ok(connection_t *conn, time_t now)
  *  Return 0 on success, -1 on failure.
  */
 int
-get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
+get_proxy_addrport(tor_addr_t *addr, uint16_t *port, proxy_type_t *proxy_type,
                    int *is_pt_out, const connection_t *conn)
 {
   const or_options_t *options = get_options();
@@ -5450,7 +5450,8 @@ log_failed_proxy_connection(connection_t *conn)
 {
   tor_addr_t proxy_addr;
   uint16_t proxy_port;
-  int proxy_type, is_pt;
+  int is_pt;
+  proxy_type_t proxy_type;
 
   if (get_proxy_addrport(&proxy_addr, &proxy_port, &proxy_type, &is_pt,
                          conn) != 0)
@@ -5465,16 +5466,19 @@ log_failed_proxy_connection(connection_t *conn)
 
 /** Return string representation of <b>proxy_type</b>. */
 static const char *
-proxy_type_to_string(int proxy_type)
+proxy_type_to_string(proxy_type_t proxy_type)
 {
   switch (proxy_type) {
   case PROXY_CONNECT:   return "HTTP";
   case PROXY_SOCKS4:    return "SOCKS4";
   case PROXY_SOCKS5:    return "SOCKS5";
   case PROXY_NONE:      return "NULL";
-  default:              tor_assert(0);
   }
-  return NULL; /*Unreached*/
+
+  /* LCOV_EXCL_START */
+  tor_assert_unreached();
+  return NULL;
+  /* LCOV_EXCL_STOP */
 }
 
 /** Call connection_free_minimal() on every connection in our array, and

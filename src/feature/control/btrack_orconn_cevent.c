@@ -46,6 +46,7 @@ using_proxy(const bt_orconn_t *bto)
   case PROXY_SOCKS4:
   case PROXY_SOCKS5:
     return true;
+  case PROXY_NONE:
   default:
     return false;
   }

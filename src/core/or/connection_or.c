@@ -742,7 +742,7 @@ connection_or_finished_flushing(or_connection_t *conn)
 int
 connection_or_finished_connecting(or_connection_t *or_conn)
 {
-  const int proxy_type = or_conn->proxy_type;
+  const proxy_type_t proxy_type = or_conn->proxy_type;
   connection_t *conn;
 
   tor_assert(or_conn);
@@ -1472,7 +1472,8 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
   int r;
   tor_addr_t proxy_addr;
   uint16_t proxy_port;
-  int proxy_type, is_pt = 0;
+  int is_pt = 0;
+  proxy_type_t proxy_type;
 
   tor_assert(_addr);
   tor_assert(id_digest);

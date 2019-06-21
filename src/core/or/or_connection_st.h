@@ -48,6 +48,7 @@ struct or_connection_t {
                        * or went to.  The <b>addr</b> field is prone to
                        * getting overridden by the address from the router
                        * descriptor matching <b>identity_digest</b>. */
+  proxy_type_t proxy_type; /**< One of PROXY_NONE...PROXY_SOCKS5 */
 
   /** Should this connection be used for extending circuits to the server
    * matching the <b>identity_digest</b> field?  Set to true if we're pretty
@@ -58,7 +59,6 @@ struct or_connection_t {
 
   /** True iff this is an outgoing connection. */
   unsigned int is_outgoing:1;
-  unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
   unsigned int wide_circ_ids:1;
   /** True iff this connection has had its bootstrap failure logged with
    * control_event_bootstrap_problem. */

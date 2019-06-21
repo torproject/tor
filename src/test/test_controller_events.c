@@ -397,7 +397,7 @@ test_cntev_dirboot_defer_orconn(void *arg)
 
 static void
 setup_orconn_state(orconn_state_msg_t *msg, uint64_t gid, uint64_t chan,
-                   int proxy_type, bool is_pt)
+                   proxy_type_t proxy_type, bool is_pt)
 {
   msg->gid = gid;
   msg->chan = chan;

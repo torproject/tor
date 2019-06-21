@@ -75,7 +75,7 @@ typedef enum or_conn_status_event_t {
 typedef struct orconn_state_msg_t {
   uint64_t gid;                 /**< connection's global ID */
   uint64_t chan;                /**< associated channel ID */
-  int proxy_type;               /**< connection's proxy type */
+  proxy_type_t proxy_type;      /**< connection's proxy type */
   uint8_t state;                /**< new connection state */
   bool is_pt;                   /**< connection is a PT */
 } orconn_state_msg_t;

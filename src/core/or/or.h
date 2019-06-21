@@ -163,13 +163,13 @@ struct curve25519_public_key_t;
 /** How old do we let a saved descriptor get before force-removing it? */
 #define OLD_ROUTER_DESC_MAX_AGE (60*60*24*5)
 
-/* Proxy client types */
-#define PROXY_NONE 0
-#define PROXY_CONNECT 1
-#define PROXY_SOCKS4 2
-#define PROXY_SOCKS5 3
-/* !!!! If there is ever a PROXY_* type over 3, we must grow the proxy_type
- * field in or_connection_t */
+/** Proxy client types */
+typedef enum proxy_type_t {
+  PROXY_NONE    = 0,
+  PROXY_CONNECT = 1,
+  PROXY_SOCKS4  = 2,
+  PROXY_SOCKS5  = 3
+} proxy_type_t;
 
 /** How many circuits do we want simultaneously in-progress to handle
  * a given stream? */
