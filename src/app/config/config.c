@@ -265,6 +265,13 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
 #define VAR_D(varname,conftype,member,initvalue)                        \
   CONFIG_VAR_DEFN(or_options_t, varname, conftype, member, 0, initvalue)
 
+#define VAR_NODUMP(varname,conftype,member,initvalue)             \
+  CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member,       \
+                   CVFLAG_NODUMP, initvalue)
+#define VAR_INVIS(varname,conftype,member,initvalue)              \
+  CONFIG_VAR_ETYPE(or_options_t, varname, conftype, member,       \
+                   CVFLAG_NODUMP|CVFLAG_INVISIBLE, initvalue)
+
 #define V(member,conftype,initvalue)            \
   VAR(#member, conftype, member, initvalue)
 
@@ -285,7 +292,7 @@ DUMMY_TYPECHECK_INSTANCE(or_options_t);
 #define VPORT(member)                                           \
   VAR(#member "Lines", LINELIST_V, member ## _lines, NULL),     \
   VAR(#member, LINELIST_S, member ## _lines, NULL),             \
-  VAR("__" #member, LINELIST_S, member ## _lines, NULL)
+  VAR_NODUMP("__" #member, LINELIST_S, member ## _lines, NULL)
 
 /** UINT64_MAX as a decimal string */
 #define UINT64_MAX_STRING "18446744073709551615"
@@ -682,15 +689,17 @@ static config_var_t option_vars_[] = {
   V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),
   OBSOLETE("UseFilteringSSLBufferevents"),
   OBSOLETE("__UseFilteringSSLBufferevents"),
-  VAR("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
-  VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
-  VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
-  VAR("__DisableSignalHandlers", BOOL,  DisableSignalHandlers,    "0"),
-  VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
-  VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
+  VAR_NODUMP("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
+  VAR_NODUMP("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
+  VAR_NODUMP("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
+  VAR_NODUMP("__DisableSignalHandlers", BOOL,  DisableSignalHandlers,    "0"),
+  VAR_NODUMP("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
+  VAR_NODUMP("__HashedControlSessionPassword", LINELIST,
+             HashedControlSessionPassword,
       NULL),
-  VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
-  VAR("__OwningControllerFD", UINT64, OwningControllerFD, UINT64_MAX_STRING),
+  VAR_NODUMP("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
+  VAR_NODUMP("__OwningControllerFD", UINT64, OwningControllerFD,
+             UINT64_MAX_STRING),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
   V(TestingServerDownloadInitialDelay, CSV_INTERVAL, "0"),
   V(TestingClientDownloadInitialDelay, CSV_INTERVAL, "0"),
@@ -743,7 +752,8 @@ static config_var_t option_vars_[] = {
   V(TestingDirAuthVoteGuardIsStrict,  BOOL,     "0"),
   V_D(TestingDirAuthVoteHSDir, ROUTERSET, NULL),
   V(TestingDirAuthVoteHSDirIsStrict,  BOOL,     "0"),
-  VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "0"),
+  VAR_INVIS("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_,
+            "0"),
 
   END_OF_CONFIG_VARS
 };
@@ -783,7 +793,8 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(TestingDirConnectionMaxStall, INTERVAL, "30 seconds"),
   V(TestingEnableConnBwEvent,    BOOL,     "1"),
   V(TestingEnableCellStatsEvent, BOOL,     "1"),
-  VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "1"),
+  VAR_INVIS("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_,
+             "1"),
   V(RendPostPeriod,              INTERVAL, "2 minutes"),
 
   END_OF_CONFIG_VARS
@@ -8180,7 +8191,7 @@ getinfo_helper_config(control_connection_t *conn,
     for (i = 0; option_vars_[i].member.name; ++i) {
       const config_var_t *var = &option_vars_[i];
       /* don't tell controller about triple-underscore options */
-      if (!strncmp(option_vars_[i].member.name, "___", 3))
+      if (option_vars_[i].flags & CVFLAG_INVISIBLE)
         continue;
       const char *type = struct_var_get_typename(&var->member);
       if (!type)

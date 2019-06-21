@@ -642,7 +642,7 @@ config_dump(const config_format_t *fmt, const void *default_options,
       continue;
     }
     /* Don't save 'hidden' control variables. */
-    if (!strcmpstart(fmt->vars[i].member.name, "__"))
+    if (fmt->vars[i].flags & CVFLAG_NODUMP)
       continue;
     if (minimal && config_is_same(fmt, options, defaults,
                                   fmt->vars[i].member.name))
