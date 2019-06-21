@@ -66,7 +66,11 @@ bto_cevent_anyconn(const bt_orconn_t *bto)
     /* Exactly what kind of thing we're connecting to isn't
      * information we directly get from the states in connection_or.c,
      * so decode it here. */
-    if (using_pt(bto))
+    if (using_pt(bto) && using_proxy(bto)) {
+      /* Make sure these are in the right order from the below. */
+      control_event_bootstrap(BOOTSTRAP_STATUS_CONN_PT, 0);
+      control_event_bootstrap(BOOTSTRAP_STATUS_CONN_PROXY, 0);
+    } else if (using_pt(bto))
       control_event_bootstrap(BOOTSTRAP_STATUS_CONN_PT, 0);
     else if (using_proxy(bto))
       control_event_bootstrap(BOOTSTRAP_STATUS_CONN_PROXY, 0);
@@ -77,10 +81,11 @@ bto_cevent_anyconn(const bt_orconn_t *bto)
     /* Similarly, starting a proxy handshake means the TCP connect()
      * succeeded to the proxy.  Let's be specific about what kind of
      * proxy. */
+    if (using_proxy(bto))
+      control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DONE_PROXY, 0);
+
     if (using_pt(bto))
       control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DONE_PT, 0);
-    else if (using_proxy(bto))
-      control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DONE_PROXY, 0);
     break;
   case OR_CONN_STATE_TLS_HANDSHAKING:
     control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DONE, 0);
