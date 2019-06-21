@@ -7457,6 +7457,34 @@ test_dir_dirserv_would_reject_router(void *arg)
   dirserv_free_fingerprint_list();
 }
 
+static void
+test_dir_dirserv_add_own_fingerprint(void *arg)
+{
+  authdir_config_t *list;
+  char digest[DIGEST_LEN];
+  crypto_pk_t *pk = pk_generate(0);
+
+  (void)arg;
+
+  init_mock_ed_keys(pk);
+  authdir_init_fingerprint_list();
+  list = authdir_return_fingerprint_list();
+  dirserv_add_own_fingerprint(pk, get_master_identity_key());
+
+  /* Check if we have a RSA key. */
+  crypto_pk_get_digest(pk, digest);
+  tt_assert(digestmap_get(list->status_by_digest, digest));
+
+  /* Check if we have a ed25519 key. */
+  tt_assert(digest256map_get(list->status_by_digest256,
+                             get_master_identity_key()->pubkey));
+
+  RESET_FP_LIST(list);
+
+ done:
+  dirserv_free_fingerprint_list();
+}
+
 #define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -7548,5 +7576,6 @@ struct testcase_t dir_tests[] = {
   DIR(dirserv_load_fingerprint_file, TT_FORK),
   DIR(dirserv_router_get_status, TT_FORK),
   DIR(dirserv_would_reject_router, TT_FORK),
+  DIR(dirserv_add_own_fingerprint, TT_FORK),
   END_OF_TESTCASES
 };
