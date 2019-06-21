@@ -5393,11 +5393,11 @@ assert_connection_ok(connection_t *conn, time_t now)
  */
 int
 get_proxy_addrport(tor_addr_t *addr, uint16_t *port, proxy_type_t *proxy_type,
-                   int *is_pt_out, const connection_t *conn)
+                   bool *is_pt_out, const connection_t *conn)
 {
   const or_options_t *options = get_options();
 
-  *is_pt_out = 0;
+  *is_pt_out = false;
   /* Client Transport Plugins can use another proxy, but that should be hidden
    * from the rest of tor (as the plugin is responsible for dealing with the
    * proxy), check it first, then check the rest of the proxy types to allow
@@ -5413,7 +5413,7 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, proxy_type_t *proxy_type,
       tor_addr_copy(addr, &transport->addr);
       *port = transport->port;
       *proxy_type = transport->socks_version;
-      *is_pt_out = 1;
+      *is_pt_out = true;
       return 0;
     }
 
@@ -5450,7 +5450,7 @@ log_failed_proxy_connection(connection_t *conn)
 {
   tor_addr_t proxy_addr;
   uint16_t proxy_port;
-  int is_pt;
+  bool is_pt;
   proxy_type_t proxy_type;
 
   if (get_proxy_addrport(&proxy_addr, &proxy_port, &proxy_type, &is_pt,

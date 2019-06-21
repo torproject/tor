@@ -1472,7 +1472,7 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
   int r;
   tor_addr_t proxy_addr;
   uint16_t proxy_port;
-  int is_pt = 0;
+  bool is_pt = 0;
   proxy_type_t proxy_type;
 
   tor_assert(_addr);

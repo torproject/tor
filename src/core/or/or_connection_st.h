@@ -68,7 +68,7 @@ struct or_connection_t {
    * insure we have a coherent count of concurrent connection. */
   unsigned int tracked_for_dos_mitigation : 1;
   /** True iff this connection is using a pluggable transport */
-  unsigned int is_pt : 1;
+  bool is_pt : 1;
 
   uint16_t link_proto; /**< What protocol version are we using? 0 for
                         * "none negotiated yet." */
