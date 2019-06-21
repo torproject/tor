@@ -125,6 +125,7 @@ bto_state_rcvr(const msg_t *msg, const orconn_state_msg_t *arg)
             " proxy_type=%d state=%d",
             arg->gid, arg->chan, arg->proxy_type, arg->state);
   bto->proxy_type = arg->proxy_type;
+  bto->is_pt = arg->is_pt;
   bto->state = arg->state;
   if (bto->is_orig)
     bto_update_bests(bto);

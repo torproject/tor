@@ -184,7 +184,7 @@ static const char *connection_proxy_state_to_string(int state);
 static int connection_read_https_proxy_response(connection_t *conn);
 static void connection_send_socks5_connect(connection_t *conn);
 static const char *proxy_type_to_string(int proxy_type);
-static int conn_get_proxy_type(const connection_t *conn);
+static bool conn_is_pluggable_transport(const connection_t *conn);
 const tor_addr_t *conn_get_outbound_address(sa_family_t family,
                   const or_options_t *options, unsigned int conn_type);
 static void reenable_blocked_connection_init(const or_options_t *options);
@@ -2285,34 +2285,24 @@ connection_proxy_state_to_string(int state)
   return states[state];
 }
 
-/** Returns the proxy type used by tor for a single connection, for
- *  logging or high-level purposes. Don't use it to fill the
- *  <b>proxy_type</b> field of or_connection_t; use the actual proxy
- *  protocol instead.*/
-static int
-conn_get_proxy_type(const connection_t *conn)
+/** Returns true iff the given connection in <b>conn</b> is a pluggable
+ * transport connection. */
+static bool
+conn_is_pluggable_transport(const connection_t *conn)
 {
   const or_options_t *options = get_options();
 
   if (options->ClientTransportPlugin) {
     /* If we have plugins configured *and* this addr/port is a known bridge
-     * with a transport, then we should be PROXY_PLUGGABLE. */
+     * with a transport, then we should return true. */
     const transport_t *transport = NULL;
     int r;
     r = get_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
     if (r == 0 && transport)
-      return PROXY_PLUGGABLE;
+      return true;
   }
 
-  /* In all other cases, we're using a global proxy. */
-  if (options->HTTPSProxy)
-    return PROXY_CONNECT;
-  else if (options->Socks4Proxy)
-    return PROXY_SOCKS4;
-  else if (options->Socks5Proxy)
-    return PROXY_SOCKS5;
-  else
-    return PROXY_NONE;
+  return false;
 }
 
 /* One byte for the version, one for the command, two for the
@@ -2392,7 +2382,7 @@ connection_proxy_connect(connection_t *conn, int type)
            arguments to transmit. If we do, compress all arguments to
            a single string in 'socks_args_string': */
 
-        if (conn_get_proxy_type(conn) == PROXY_PLUGGABLE) {
+        if (conn_is_pluggable_transport(conn)) {
           socks_args_string =
             pt_get_socks_args_for_proxy_addrport(&conn->addr, conn->port);
           if (socks_args_string)
@@ -2452,7 +2442,7 @@ connection_proxy_connect(connection_t *conn, int type)
          Socks5ProxyUsername or if we want to pass arguments to our
          pluggable transport proxy: */
       if ((options->Socks5ProxyUsername) ||
-          (conn_get_proxy_type(conn) == PROXY_PLUGGABLE &&
+          (conn_is_pluggable_transport(conn) &&
            (get_socks_args_by_bridge_addrport(&conn->addr, conn->port)))) {
       /* number of auth methods */
         buf[1] = 2;
@@ -2645,7 +2635,7 @@ connection_read_proxy_handshake(connection_t *conn)
         const char *user, *pass;
         char *socks_args_string = NULL;
 
-        if (conn_get_proxy_type(conn) == PROXY_PLUGGABLE) {
+        if (conn_is_pluggable_transport(conn)) {
           socks_args_string =
             pt_get_socks_args_for_proxy_addrport(&conn->addr, conn->port);
           if (!socks_args_string) {
@@ -5466,11 +5456,10 @@ log_failed_proxy_connection(connection_t *conn)
                          conn) != 0)
     return; /* if we have no proxy set up, leave this function. */
 
-  (void)is_pt;
   log_warn(LD_NET,
            "The connection to the %s proxy server at %s just failed. "
            "Make sure that the proxy server is up and running.",
-           proxy_type_to_string(proxy_type),
+           is_pt ? "Pluggable Transport" : proxy_type_to_string(proxy_type),
            fmt_addrport(&proxy_addr, proxy_port));
 }
 
@@ -5482,7 +5471,6 @@ proxy_type_to_string(int proxy_type)
   case PROXY_CONNECT:   return "HTTP";
   case PROXY_SOCKS4:    return "SOCKS4";
   case PROXY_SOCKS5:    return "SOCKS5";
-  case PROXY_PLUGGABLE: return "pluggable transports SOCKS";
   case PROXY_NONE:      return "NULL";
   default:              tor_assert(0);
   }

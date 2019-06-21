@@ -397,11 +397,12 @@ test_cntev_dirboot_defer_orconn(void *arg)
 
 static void
 setup_orconn_state(orconn_state_msg_t *msg, uint64_t gid, uint64_t chan,
-                   int proxy_type)
+                   int proxy_type, bool is_pt)
 {
   msg->gid = gid;
   msg->chan = chan;
   msg->proxy_type = proxy_type;
+  msg->is_pt = is_pt;
 }
 
 static void
@@ -433,7 +434,7 @@ test_cntev_orconn_state(void *arg)
   (void)arg;
   MOCK(queue_control_event_string, mock_queue_control_event_string);
   control_testing_set_global_event_mask(EVENT_MASK_(EVENT_STATUS_CLIENT));
-  setup_orconn_state(&conn, 1, 1, PROXY_NONE);
+  setup_orconn_state(&conn, 1, 1, PROXY_NONE, false);
 
   send_orconn_state(&conn, OR_CONN_STATE_CONNECTING);
   send_ocirc_chan(1, 1, true);
@@ -472,7 +473,7 @@ test_cntev_orconn_state_pt(void *arg)
   (void)arg;
   MOCK(queue_control_event_string, mock_queue_control_event_string);
   control_testing_set_global_event_mask(EVENT_MASK_(EVENT_STATUS_CLIENT));
-  setup_orconn_state(&conn, 1, 1, PROXY_PLUGGABLE);
+  setup_orconn_state(&conn, 1, 1, PROXY_NONE, true);
   send_ocirc_chan(1, 1, true);
 
   send_orconn_state(&conn, OR_CONN_STATE_CONNECTING);
@@ -507,7 +508,7 @@ test_cntev_orconn_state_proxy(void *arg)
   (void)arg;
   MOCK(queue_control_event_string, mock_queue_control_event_string);
   control_testing_set_global_event_mask(EVENT_MASK_(EVENT_STATUS_CLIENT));
-  setup_orconn_state(&conn, 1, 1, PROXY_CONNECT);
+  setup_orconn_state(&conn, 1, 1, PROXY_CONNECT, false);
   send_ocirc_chan(1, 1, true);
 
   send_orconn_state(&conn, OR_CONN_STATE_CONNECTING);

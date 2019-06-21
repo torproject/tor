@@ -435,16 +435,10 @@ connection_or_state_publish(const or_connection_t *conn, uint8_t state)
   orconn_state_msg_t *msg = tor_malloc(sizeof(*msg));
 
   msg->gid = conn->base_.global_identifier;
-  if (conn->is_pt) {
-    /* Do extra decoding because conn->proxy_type indicates the proxy
-     * protocol that tor uses to talk with the transport plugin,
-     * instead of PROXY_PLUGGABLE. */
-    tor_assert_nonfatal(conn->proxy_type != PROXY_NONE);
-    msg->proxy_type = PROXY_PLUGGABLE;
-  } else {
-    msg->proxy_type = conn->proxy_type;
-  }
+  msg->is_pt = conn->is_pt;
+  msg->proxy_type = conn->proxy_type;
   msg->state = state;
+
   if (conn->chan) {
     msg->chan = TLS_CHAN_TO_BASE(conn->chan)->global_identifier;
   } else {

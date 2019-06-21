@@ -30,6 +30,7 @@ typedef struct bt_orconn_t {
   uint8_t state;                   /**< State of this ORCONN */
   bool is_orig;             /**< Does this carry an origin circuit? */
   bool is_onehop;           /**< Is this for a one-hop circuit? */
+  bool is_pt;               /**< Is this a PT connection? */
 } bt_orconn_t;
 
 #endif /* defined(BTRACK_ORCONN_PRIVATE) */

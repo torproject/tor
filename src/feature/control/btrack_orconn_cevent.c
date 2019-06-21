@@ -34,7 +34,7 @@ static bool bto_first_orconn = false;
 static bool
 using_pt(const bt_orconn_t *bto)
 {
-  return bto->proxy_type == PROXY_PLUGGABLE;
+  return bto->is_pt;
 }
 
 /** Is the ORCONN using a non-PT proxy? */

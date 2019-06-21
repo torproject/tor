@@ -77,6 +77,7 @@ typedef struct orconn_state_msg_t {
   uint64_t chan;                /**< associated channel ID */
   int proxy_type;               /**< connection's proxy type */
   uint8_t state;                /**< new connection state */
+  bool is_pt;                   /**< connection is a PT */
 } orconn_state_msg_t;
 
 DECLARE_MESSAGE(orconn_state, orconn_state, orconn_state_msg_t *);
