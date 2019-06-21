@@ -7261,6 +7261,10 @@ test_dir_dirserv_load_fingerprint_file(void *arg)
   // Neither RSA nor ed25519
   const char *router_lines_invalid =
     "!badexit notafingerprint";
+  const char *router_lines_too_long =
+    "!badexit thisisareallylongstringthatislongerthanafingerprint\n";
+  const char *router_lines_bad_fmt_str =
+    "!badexit ABCDEFGH|%1$p|%2$p|%3$p|%4$p|%5$p|%6$p\n";
   const char *router_lines_valid_rsa =
     "!badexit AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
   const char *router_lines_invalid_rsa =
@@ -7273,6 +7277,20 @@ test_dir_dirserv_load_fingerprint_file(void *arg)
   // Test: Invalid Fingerprint (not RSA or ed25519)
   setup_capture_of_logs(LOG_NOTICE);
   write_str_to_file(fname, router_lines_invalid, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Very long string (longer than RSA or ed25519 key)
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_too_long, 0);
+  tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
+  expect_log_msg_containing("Invalid fingerprint");
+  teardown_capture_of_logs();
+
+  // Test: Formt string exploit
+  setup_capture_of_logs(LOG_NOTICE);
+  write_str_to_file(fname, router_lines_bad_fmt_str, 0);
   tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);
   expect_log_msg_containing("Invalid fingerprint");
   teardown_capture_of_logs();
