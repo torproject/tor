@@ -191,8 +191,9 @@ install:
   - python --version
   ## run stem tests if they are enabled.
   - if [[ "$TEST_STEM" != "" ]]; then pushd stem; python -c "from stem import stem; print(stem.__version__);"; git log -1; popd; fi
-  ## We don't want Tor tests to depends on default configuration file at
-  ## ~/.torrc. So we put some random bytes in there, to make sure it doesn't.
+  ## We don't want Tor tests to depend on default configuration file at
+  ## ~/.torrc. So we put some random bytes in there, to make sure we get build
+  ## failures in case Tor is reading it during CI jobs.
   - dd ibs=1 count=1024 if=/dev/urandom > ~/.torrc
 
 script:
