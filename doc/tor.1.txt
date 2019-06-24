@@ -2451,8 +2451,10 @@ is non-zero):
 [[ExtraInfoStatistics]] **ExtraInfoStatistics** **0**|**1**::
     When this option is enabled, Tor includes previously gathered statistics in
     its extra-info documents that it uploads to the directory authorities.
-    Disabling this option also disables bandwidth usage statistics, GeoIPFile
-    hashes, and ServerTransportPlugin lists in the extra-info file.
+    Disabling this option also removes bandwidth usage statistics, and
+    GeoIPFile and GeoIPv6File hashes from the extra-info file. Bridge
+    ServerTransportPlugin lines are always includes in the extra-info file,
+    because they are required by BridgeDB.
     (Default: 1)
 
 [[ExtendAllowPrivateAddresses]] **ExtendAllowPrivateAddresses** **0**|**1**::
