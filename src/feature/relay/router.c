@@ -3259,11 +3259,13 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   while (strlen(s) > MAX_EXTRAINFO_UPLOAD_SIZE - DIROBJ_MAX_SIG_LEN) {
     /* So long as there are at least two chunks (one for the initial
      * extra-info line and one for the router-signature), we can keep removing
-     * things. */
-    if (smartlist_len(chunks) > 2) {
-      /* We remove the next-to-last element (remember, len-1 is the last
-         element), since we need to keep the router-signature element. */
-      int idx = smartlist_len(chunks) - 2;
+     * things. If emit_ed_sigs is true, we also keep 2 additional chunks at the
+     * end for the ed25519 signature. */
+    const int required_chunks = emit_ed_sigs ? 4 : 2;
+    if (smartlist_len(chunks) > required_chunks) {
+      /* We remove the next-to-last or 4th-last element (remember, len-1 is the
+       * last element), since we need to keep the router-signature elements. */
+      int idx = smartlist_len(chunks) - required_chunks;
       char *e = smartlist_get(chunks, idx);
       smartlist_del_keeporder(chunks, idx);
       log_warn(LD_GENERAL, "We just generated an extra-info descriptor "
