@@ -1,3 +1,46 @@
+Changes in version 0.4.1.3-alpha - 2019-06-24
+  Tor 0.4.1.3-alpha resolves numerous bugs left over from the previous
+  alpha, most of them from earlier release series.
+
+  o Major bugfixes (Onion service reachability):
+    - Properly clean up the introduction point map when circuits change
+      purpose from onion service circuits to pathbias, measurement, or
+      other circuit types. This should fix some service-side instances
+      of introduction point failure. Fixes bug 29034; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the June 10 2019 Maxmind GeoLite2
+      Country database. Closes ticket 30852.
+
+  o Minor features (logging):
+    - Give a more useful assertion failure message if we think we have
+      minherit() but we fail to make a region non-inheritable. Give a
+      compile-time warning if our support for minherit() is incomplete.
+      Closes ticket 30686.
+
+  o Minor bugfixes (circuit isolation):
+    - Fix a logic error that prevented the SessionGroup sub-option from
+      being accepted. Fixes bug 22619; bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (continuous integration):
+    - Allow the test-stem job to fail in Travis, because it sometimes
+      hangs. Fixes bug 30744; bugfix on 0.3.5.4-alpha.
+    - Skip test_rebind on macOS in Travis, because it is unreliable on
+      macOS on Travis. Fixes bug 30713; bugfix on 0.3.5.1-alpha.
+    - Skip test_rebind when the TOR_SKIP_TEST_REBIND environmental
+      variable is set. Fixes bug 30713; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (directory authorities):
+    - Stop crashing after parsing an unknown descriptor purpose
+      annotation. We think this bug can only be triggered by modifying a
+      local file. Fixes bug 30781; bugfix on 0.2.0.8-alpha.
+
+  o Documentation:
+    - Mention URLs for Travis/Appveyor/Jenkins in ReleasingTor.md.
+      Closes ticket 30630.
+
+
 Changes in version 0.4.1.2-alpha - 2019-06-06
   Tor 0.4.1.2-alpha resolves numerous bugs--some of them from the
   previous alpha, and some much older. It also contains minor testing
