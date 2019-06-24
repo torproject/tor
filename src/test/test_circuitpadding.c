@@ -525,7 +525,7 @@ helper_create_circsetup_relay_machine(void)
   circ_relay_machine->states[CIRCPAD_STATE_BURST].use_rtt_estimate = 1;
   /* The histogram is 2 bins: an empty one, and infinity */
   circ_relay_machine->states[CIRCPAD_STATE_BURST].histogram_len = 2;
-  circ_relay_machine->states[CIRCPAD_STATE_BURST].histogram_edges[0]= 500;
+  circ_relay_machine->states[CIRCPAD_STATE_BURST].histogram_edges[0]= 2000;
   circ_relay_machine->states[CIRCPAD_STATE_BURST].histogram_edges[1] =
     1000000;
   /* During burst state we wait forever for padding to arrive.
@@ -559,11 +559,11 @@ helper_create_circsetup_relay_machine(void)
   circ_relay_machine->states[CIRCPAD_STATE_GAP].use_rtt_estimate = 1;
   circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_len = 6;
   /* Specify histogram bins */
-  circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_edges[0]= 500;
-  circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_edges[1]= 1000;
-  circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_edges[2]= 2000;
-  circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_edges[3]= 4000;
-  circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_edges[4]= 8000;
+  circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_edges[0]= 2500;
+  circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_edges[1]= 3000;
+  circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_edges[2]= 4000;
+  circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_edges[3]= 5000;
+  circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_edges[4]= 10000;
   circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram_edges[5]= 16000;
   /* Specify histogram tokens */
   circ_relay_machine->states[CIRCPAD_STATE_GAP].histogram[0] = 0;
