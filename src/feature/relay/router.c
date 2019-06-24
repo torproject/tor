@@ -3158,6 +3158,8 @@ extrainfo_dump_to_string_header_helper(
     ed_cert_line = tor_strdup("");
   }
 
+  /* This is the first chunk in the file. If the file is too big, other chunks
+   * are removed. So we must only add one chunk here. */
   tor_asprintf(&pre, "extra-info %s %s\n%spublished %s\n",
                extrainfo->nickname, identity,
                ed_cert_line,
@@ -3186,6 +3188,10 @@ extrainfo_dump_to_string_stats_helper(smartlist_t *chunks,
   const or_options_t *options = get_options();
   char *contents = NULL;
   time_t now = time(NULL);
+
+  /* If the file is too big, these chunks are removed, starting with the last
+   * chunk. So each chunk must be a complete line, and the file must be valid
+   * after each chunk. */
 
   /* Add information about the pluggable transports we support, even if we
    * are not publishing statistics. This information is needed by BridgeDB
@@ -3269,6 +3275,8 @@ extrainfo_dump_to_string_ed_sig_helper(
   char buf[ED25519_SIG_BASE64_LEN+1];
   int rv = -1;
 
+  /* These are two of the three final chunks in the file. If the file is too
+   * big, other chunks are removed. So we must only add two chunks here. */
   smartlist_add_strdup(chunks, "router-sig-ed25519 ");
   crypto_digest_smartlist_prefix(sha256_digest, DIGEST256_LEN,
                                  ED_DESC_SIGNATURE_PREFIX,
@@ -3362,6 +3370,8 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
       goto err;
   }
 
+  /* This is one of the three final chunks in the file. If the file is too big,
+   * other chunks are removed. So we must only add one chunk here. */
   smartlist_add_strdup(chunks, "router-signature\n");
   s = smartlist_join_strings(chunks, "", 0, NULL);
 
