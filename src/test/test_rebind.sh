@@ -12,8 +12,6 @@ if test "$UNAME_OS" = 'CYGWIN' || \
   fi
 fi
 
-exitcode=0
-
 tmpdir=
 clean () {
   if [ -n "$tmpdir" ] && [ -d "$tmpdir" ]; then
