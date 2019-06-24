@@ -1,0 +1,3 @@
+  o Minor bugfixes (Circuit padding tests):
+    - Re-enable a circuit padding test that was disabled during 0.4.1
+      development. Fixes bug 30578; bugfix on 0.4.1.1-alpha.
