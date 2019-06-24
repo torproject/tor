@@ -1906,16 +1906,19 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
 }
 
 /* Given a descriptor string at <b>data</b>, decode all possible introduction
- * points that we can find. Add the introduction point object to desc_enc as we
- * find them. This function can't fail and it is possible that zero
- * introduction points can be decoded. */
-static void
+ * points that we can find. Add the introduction point object to desc_enc as
+ * we find them. It is possible that zero introduction points can be decoded,
+ * and this function fails only on duplicate intro points. Returns -1 on a
+ * duplicate intro point, 0 otherwise. */
+static int
 decode_intro_points(const hs_descriptor_t *desc,
                     hs_desc_encrypted_data_t *desc_enc,
                     const char *data)
 {
   smartlist_t *chunked_desc = smartlist_new();
   smartlist_t *intro_points = smartlist_new();
+  strmap_t *intro_point_map = strmap_new();
+  int ret = 0;
 
   tor_assert(desc);
   tor_assert(desc_enc);
@@ -1952,6 +1955,13 @@ decode_intro_points(const hs_descriptor_t *desc,
 
   /* Parse the intro points! */
   SMARTLIST_FOREACH_BEGIN(intro_points, const char *, intro_point) {
+    if (strmap_get(intro_point_map, intro_point) == NULL) {
+      strmap_set(intro_point_map, intro_point, (void *) 1);
+    } else {
+      ret = -1;
+      goto done;
+    }
+
     hs_desc_intro_point_t *ip = decode_introduction_point(desc, intro_point);
     if (!ip) {
       /* Malformed introduction point section. We'll ignore this introduction
@@ -1967,6 +1977,9 @@ decode_intro_points(const hs_descriptor_t *desc,
   smartlist_free(chunked_desc);
   SMARTLIST_FOREACH(intro_points, char *, a, tor_free(a));
   smartlist_free(intro_points);
+  strmap_free(intro_point_map, NULL);
+
+  return ret;
 }
 
 /* Return 1 iff the given base64 encoded signature in b64_sig from the encoded
@@ -2325,7 +2338,12 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
   /* Initialize the descriptor's introduction point list before we start
    * decoding. Having 0 intro point is valid. Then decode them all. */
   desc_encrypted_out->intro_points = smartlist_new();
-  decode_intro_points(desc, desc_encrypted_out, message);
+
+  if (decode_intro_points(desc, desc_encrypted_out, message) < 0) {
+    log_warn(LD_REND, "We have gotten duplicate intro points. "
+                      "Rejecting descriptor.");
+    goto err;
+  }
 
   /* Validation of maximum introduction points allowed. */
   if (smartlist_len(desc_encrypted_out->intro_points) >
