@@ -3113,33 +3113,22 @@ load_stats_file(const char *filename, const char *end_line, time_t now,
   return r;
 }
 
-/** Write the contents of <b>extrainfo</b>, to * *<b>s_out</b>, signing them
- * with <b>ident_key</b>.
- *
- * If ExtraInfoStatistics is 1, also write aggregated statistics and related
- * configuration data before signing. Most statistics also have an option that
- * enables or disables that particular statistic.
- *
- * Return 0 on success, negative on failure. */
-int
-extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
-                         crypto_pk_t *ident_key,
-                         const ed25519_keypair_t *signing_keypair)
+/** Add header strings to chunks, based on the extrainfo object extrainfo,
+ * and ed25519 keypair signing_keypair, if emit_ed_sigs is true.
+ * Helper for extrainfo_dump_to_string().
+ * Returns 0 on success, negative on failure. */
+static int
+extrainfo_dump_to_string_header_helper(
+                                     smartlist_t *chunks,
+                                     const extrainfo_t *extrainfo,
+                                     const ed25519_keypair_t *signing_keypair,
+                                     int emit_ed_sigs)
 {
-  const or_options_t *options = get_options();
   char identity[HEX_DIGEST_LEN+1];
   char published[ISO_TIME_LEN+1];
-  char digest[DIGEST_LEN];
-  int result;
-  static int write_stats_to_extrainfo = 1;
-  char sig[DIROBJ_MAX_SIG_LEN+1];
-  char *s = NULL, *pre, *contents, *cp, *s_dup = NULL;
-  time_t now = time(NULL);
-  smartlist_t *chunks = smartlist_new();
-  extrainfo_t *ei_tmp = NULL;
-  const int emit_ed_sigs = signing_keypair &&
-    extrainfo->cache_info.signing_key_cert;
   char *ed_cert_line = NULL;
+  char *pre = NULL;
+  int rv = -1;
 
   base16_encode(identity, sizeof(identity),
                 extrainfo->cache_info.identity_digest, DIGEST_LEN);
@@ -3175,6 +3164,38 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                published);
   smartlist_add(chunks, pre);
 
+  rv = 0;
+  goto done;
+
+ err:
+  rv = -1;
+
+ done:
+  tor_free(ed_cert_line);
+  return rv;
+}
+
+/** Add pluggable transport and statistics strings to chunks, skipping
+ * statistics if write_stats_to_extrainfo is false.
+ * Helper for extrainfo_dump_to_string().
+ * Can not fail. */
+static void
+extrainfo_dump_to_string_stats_helper(smartlist_t *chunks,
+                                      int write_stats_to_extrainfo)
+{
+  const or_options_t *options = get_options();
+  char *contents = NULL;
+  time_t now = time(NULL);
+
+  /* Add information about the pluggable transports we support, even if we
+   * are not publishing statistics. This information is needed by BridgeDB
+   * to distribute bridges. */
+  if (options->ServerTransportPlugin) {
+    char *pluggable_transports = pt_get_extra_info_descriptor_string();
+    if (pluggable_transports)
+      smartlist_add(chunks, pluggable_transports);
+  }
+
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
     /* Bandwidth usage stats don't have their own option */
@@ -3182,6 +3203,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
       contents = rep_hist_get_bandwidth_lines();
       smartlist_add(chunks, contents);
     }
+    /* geoip hashes aren't useful unless we are publishing other stats */
     if (geoip_is_loaded(AF_INET))
       smartlist_add_asprintf(chunks, "geoip-db-digest %s\n",
                              geoip_db_digest(AF_INET));
@@ -3223,12 +3245,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
       if (contents)
         smartlist_add(chunks, contents);
     }
-    /* Add information about the pluggable transports we support. */
-    if (options->ServerTransportPlugin) {
-      char *pluggable_transports = pt_get_extra_info_descriptor_string();
-      if (pluggable_transports)
-        smartlist_add(chunks, pluggable_transports);
-    }
+    /* bridge statistics */
     if (should_record_bridge_info(options)) {
       const char *bridge_stats = geoip_get_bridge_stats_extrainfo(now);
       if (bridge_stats) {
@@ -3236,21 +3253,113 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
       }
     }
   }
+}
+
+/** Add an ed25519 signature of chunks to chunks, using the ed25519 keypair
+ * signing_keypair.
+ * Helper for extrainfo_dump_to_string().
+ * Returns 0 on success, negative on failure. */
+static int
+extrainfo_dump_to_string_ed_sig_helper(
+                                     smartlist_t *chunks,
+                                     const ed25519_keypair_t *signing_keypair)
+{
+  char sha256_digest[DIGEST256_LEN];
+  ed25519_signature_t ed_sig;
+  char buf[ED25519_SIG_BASE64_LEN+1];
+  int rv = -1;
+
+  smartlist_add_strdup(chunks, "router-sig-ed25519 ");
+  crypto_digest_smartlist_prefix(sha256_digest, DIGEST256_LEN,
+                                 ED_DESC_SIGNATURE_PREFIX,
+                                 chunks, "", DIGEST_SHA256);
+  if (ed25519_sign(&ed_sig, (const uint8_t*)sha256_digest, DIGEST256_LEN,
+                   signing_keypair) < 0)
+    goto err;
+  ed25519_signature_to_base64(buf, &ed_sig);
+
+  smartlist_add_asprintf(chunks, "%s\n", buf);
+
+  rv = 0;
+  goto done;
+
+ err:
+  rv = -1;
+
+ done:
+  return rv;
+}
+
+/** Add an RSA signature of extrainfo_string to chunks, using the RSA key
+ * ident_key.
+ * Helper for extrainfo_dump_to_string().
+ * Returns 0 on success, negative on failure. */
+static int
+extrainfo_dump_to_string_rsa_sig_helper(smartlist_t *chunks,
+                                        crypto_pk_t *ident_key,
+                                        const char *extrainfo_string)
+{
+  char sig[DIROBJ_MAX_SIG_LEN+1];
+  char digest[DIGEST_LEN];
+  int rv = -1;
+
+  memset(sig, 0, sizeof(sig));
+  if (router_get_extrainfo_hash(extrainfo_string, strlen(extrainfo_string),
+                                digest) < 0 ||
+      router_append_dirobj_signature(sig, sizeof(sig), digest, DIGEST_LEN,
+                                     ident_key) < 0) {
+    log_warn(LD_BUG, "Could not append signature to extra-info "
+                     "descriptor.");
+    goto err;
+  }
+  smartlist_add_strdup(chunks, sig);
+
+  rv = 0;
+  goto done;
+
+ err:
+  rv = -1;
+
+ done:
+  return rv;
+}
+
+/** Write the contents of <b>extrainfo</b>, to * *<b>s_out</b>, signing them
+ * with <b>ident_key</b>.
+ *
+ * If ExtraInfoStatistics is 1, also write aggregated statistics and related
+ * configuration data before signing. Most statistics also have an option that
+ * enables or disables that particular statistic.
+ *
+ * Always write pluggable transport lines.
+ *
+ * Return 0 on success, negative on failure. */
+int
+extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
+                         crypto_pk_t *ident_key,
+                         const ed25519_keypair_t *signing_keypair)
+{
+  int result;
+  static int write_stats_to_extrainfo = 1;
+  char *s = NULL, *cp, *s_dup = NULL;
+  smartlist_t *chunks = smartlist_new();
+  extrainfo_t *ei_tmp = NULL;
+  const int emit_ed_sigs = signing_keypair &&
+    extrainfo->cache_info.signing_key_cert;
+  int rv = 0;
+
+  rv = extrainfo_dump_to_string_header_helper(chunks, extrainfo,
+                                              signing_keypair,
+                                              emit_ed_sigs);
+  if (rv < 0)
+    goto err;
+
+  extrainfo_dump_to_string_stats_helper(chunks, write_stats_to_extrainfo);
 
   if (emit_ed_sigs) {
-    char sha256_digest[DIGEST256_LEN];
-    smartlist_add_strdup(chunks, "router-sig-ed25519 ");
-    crypto_digest_smartlist_prefix(sha256_digest, DIGEST256_LEN,
-                                   ED_DESC_SIGNATURE_PREFIX,
-                                   chunks, "", DIGEST_SHA256);
-    ed25519_signature_t ed_sig;
-    char buf[ED25519_SIG_BASE64_LEN+1];
-    if (ed25519_sign(&ed_sig, (const uint8_t*)sha256_digest, DIGEST256_LEN,
-                     signing_keypair) < 0)
+    rv = extrainfo_dump_to_string_ed_sig_helper(chunks, signing_keypair);
+    if (rv < 0)
       goto err;
-    ed25519_signature_to_base64(buf, &ed_sig);
-
-    smartlist_add_asprintf(chunks, "%s\n", buf);
   }
 
   smartlist_add_strdup(chunks, "router-signature\n");
@@ -3280,15 +3389,10 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
     }
   }
 
-  memset(sig, 0, sizeof(sig));
-  if (router_get_extrainfo_hash(s, strlen(s), digest) < 0 ||
-      router_append_dirobj_signature(sig, sizeof(sig), digest, DIGEST_LEN,
-                                     ident_key) < 0) {
-    log_warn(LD_BUG, "Could not append signature to extra-info "
-                     "descriptor.");
+  rv = extrainfo_dump_to_string_rsa_sig_helper(chunks, ident_key, s);
+  if (rv < 0)
     goto err;
-  }
-  smartlist_add_strdup(chunks, sig);
+
   tor_free(s);
   s = smartlist_join_strings(chunks, "", 0, NULL);
 
@@ -3324,7 +3428,6 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   SMARTLIST_FOREACH(chunks, char *, chunk, tor_free(chunk));
   smartlist_free(chunks);
   tor_free(s_dup);
-  tor_free(ed_cert_line);
   extrainfo_free(ei_tmp);
 
   return result;
