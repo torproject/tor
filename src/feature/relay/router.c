@@ -3175,6 +3175,15 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                published);
   smartlist_add(chunks, pre);
 
+  /* Add information about the pluggable transports we support, even if we
+   * are not publishing statistics. This information is needed by BridgeDB
+   * to distribute bridges. */
+  if (options->ServerTransportPlugin) {
+    char *pluggable_transports = pt_get_extra_info_descriptor_string();
+    if (pluggable_transports)
+      smartlist_add(chunks, pluggable_transports);
+  }
+
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
     /* Bandwidth usage stats don't have their own option */
@@ -3182,6 +3191,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
       contents = rep_hist_get_bandwidth_lines();
       smartlist_add(chunks, contents);
     }
+    /* geoip hashes aren't useful unless we are publishing other stats */
     if (geoip_is_loaded(AF_INET))
       smartlist_add_asprintf(chunks, "geoip-db-digest %s\n",
                              geoip_db_digest(AF_INET));
@@ -3223,12 +3233,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
       if (contents)
         smartlist_add(chunks, contents);
     }
-    /* Add information about the pluggable transports we support. */
-    if (options->ServerTransportPlugin) {
-      char *pluggable_transports = pt_get_extra_info_descriptor_string();
-      if (pluggable_transports)
-        smartlist_add(chunks, pluggable_transports);
-    }
+    /* bridge statistics */
     if (should_record_bridge_info(options)) {
       const char *bridge_stats = geoip_get_bridge_stats_extrainfo(now);
       if (bridge_stats) {
