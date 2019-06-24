@@ -447,13 +447,18 @@ GENERAL OPTIONS
     setting for DataDirectoryGroupReadable when the CacheDirectory is the
     same as the DataDirectory, and 0 otherwise. (Default: auto)
 
-[[FallbackDir]] **FallbackDir** __ipv4address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__] [ipv6=**[**__ipv6address__**]**:__orport__]::
-    When we're unable to connect to any directory cache for directory info
-    (usually because we don't know about any yet) we try a directory authority.
-    Clients also simultaneously try a FallbackDir, to avoid hangs on client
-    startup if a directory authority is down. Clients retry FallbackDirs more
-    often than directory authorities, to reduce the load on the directory
-    authorities.
+[[FallbackDir]] **FallbackDir** __ipv4address__:__dirport__ orport=__orport__ id=__fingerprint__ [weight=__num__] [ipv6=**[**__ipv6address__**]**:__orport__]::
+    When tor is unable to connect to any directory cache for directory info
+    (usually because it doesn't know about any yet) it tries a hard-coded
+    directory. Relays try one directory authority at a time. Clients try
+    multiple directory authorities and FallbackDirs, to avoid hangs on
+    startup if a hard-coded directory is down. Clients wait for a few seconds
+    between each attempt, and retry FallbackDirs more often than directory
+    authorities, to reduce the load on the directory authorities.  +
+ +
+    FallbackDirs should be stable relays with the same IP addresses, ports,
+    and identity keys. They must have a DirPort. +
+ +
     By default, the directory authorities are also FallbackDirs. Specifying a
     FallbackDir replaces Tor's default hard-coded FallbackDirs (if any).
     (See the **DirAuthority** entry for an explanation of each flag.)
@@ -463,30 +468,36 @@ GENERAL OPTIONS
     FallbackDir line is present, it replaces the hard-coded FallbackDirs,
     regardless of the value of UseDefaultFallbackDirs.) (Default: 1)
 
-[[DirAuthority]] **DirAuthority** [__nickname__] [**flags**] __ipv4address__:__port__ __fingerprint__::
+[[DirAuthority]] **DirAuthority** [__nickname__] [**flags**] __ipv4address__:__dirport__ __fingerprint__::
     Use a nonstandard authoritative directory server at the provided address
     and port, with the specified key fingerprint. This option can be repeated
     many times, for multiple authoritative directory servers. Flags are
     separated by spaces, and determine what kind of an authority this directory
     is. By default, an authority is not authoritative for any directory style
-    or version unless an appropriate flag is given.
+    or version unless an appropriate flag is given. +
+ +
+    Directory authorities should be stable relays with the same IP addresses,
+    ports, and identity keys. They must have a DirPort. +
+ +
     Tor will use this authority as a bridge authoritative directory if the
-    "bridge" flag is set. If a flag "orport=**port**" is given, Tor will use the
-    given port when opening encrypted tunnels to the dirserver. If a flag
-    "weight=**num**" is given, then the directory server is chosen randomly
-    with probability proportional to that weight (default 1.0). If a
+    "bridge" flag is set. If a flag "orport=**orport**" is given, Tor will
+    use the given port when opening encrypted tunnels to the dirserver. If a
+    flag "weight=**num**" is given, then the directory server is chosen
+    randomly with probability proportional to that weight (default 1.0). If a
     flag "v3ident=**fp**" is given, the dirserver is a v3 directory authority
     whose v3 long-term signing key has the fingerprint **fp**. Lastly,
     if an "ipv6=**[**__ipv6address__**]**:__orport__" flag is present, then
-    the directory
-    authority is listening for IPv6 connections on the indicated IPv6 address
-    and OR Port. +
+    the directory authority is listening for IPv6 connections on the
+    indicated IPv6 address and OR Port. +
  +
     Tor will contact the authority at __ipv4address__ to
-    download directory documents. The provided __port__ value is a dirport;
-    clients ignore this in favor of the specified "orport=" value.  If an
-    IPv6 ORPort is supplied, Tor will
-    also download directory documents at the IPv6 ORPort. +
+    download directory documents. Clients always use the ORPort. Relays
+    usually use the DirPort, but will use the ORPort in some circumstances.
+    If an IPv6 ORPort is supplied, clients will also download directory
+    documents at the IPv6 ORPort, if they are configured to use IPv6. +
+ +
+    Directory authorities should be stable relays with the same IP addresses,
+    ports, and identity keys. They must have a DirPort. +
  +
     If no **DirAuthority** line is given, Tor will use the default directory
     authorities. NOTE: this option is intended for setting up a private Tor
