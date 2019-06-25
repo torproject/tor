@@ -241,6 +241,11 @@ typedef struct hs_service_config_t {
 
   /* Does this service export the circuit ID of its clients? */
   hs_circuit_id_protocol_t circuit_id_protocol;
+
+  /* DoS defenses. For the ESTABLISH_INTRO cell extension. */
+  unsigned int has_dos_defense_enabled : 1;
+  uint32_t intro_dos_rate_per_sec;
+  uint32_t intro_dos_burst_per_sec;
 } hs_service_config_t;
 
 /* Service state. */
