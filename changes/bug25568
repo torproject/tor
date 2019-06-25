@@ -1,0 +1,7 @@
+  o Minor bugfixes (onion services):
+    - When a client receives an intro point descriptor, reject duplicate
+      entries when we are processing the descriptor. This prevents clients
+      from re-trying intro points which have failed, and affects both
+      version 2 and version 3 onion services. Previously, we re-try
+      duplicate entries even if they have failed Fixes bug 25568;
+      bugfix on 0.1.0.1-rc. Patch by Neel Chauhan.
