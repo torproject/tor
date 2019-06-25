@@ -14,6 +14,7 @@
 #include "feature/dirparse/sigcommon.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendparse.h"
+#include "lib/container/map.h"
 #include "lib/memarea/memarea.h"
 
 #include "core/or/extend_info_st.h"
@@ -386,6 +387,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
   extend_info_t *info;
   int result, num_ok=1;
   memarea_t *area = NULL;
+  strmap_t *ipo_map = NULL;
   tor_assert(parsed);
   /** Function may only be invoked once. */
   tor_assert(!parsed->intro_nodes);
@@ -399,6 +401,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
   tokens = smartlist_new();
   parsed->intro_nodes = smartlist_new();
   area = memarea_new();
+  ipo_map = strmap_new();
 
   while (!fast_memcmpstart(current_ipo, end_of_intro_points-current_ipo,
                       "introduction-point ")) {
@@ -410,6 +413,16 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
     else
       eos = eos+1;
     tor_assert(eos <= intro_points_encoded+intro_points_encoded_size);
+    /* See if this is a duplicate intro point descriptor. */
+    char *ipo_line = tor_strndup(current_ipo, eos - current_ipo);
+    if (strmap_get(ipo_map, ipo_line) == NULL) { /* We aren't a duplicate. */
+      strmap_set(ipo_map, ipo_line, (void *) 1);
+      tor_free(ipo_line);
+    } else { /* We are a duplicate. */
+      log_warn(LD_REND, "Got duplicate introduction point");
+      tor_free(ipo_line);
+      goto err;
+    }
     /* Free tokens and clear token list. */
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_clear(tokens);
@@ -504,6 +517,8 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
   }
   if (area)
     memarea_drop_all(area);
+  if (ipo_map)
+    strmap_free(ipo_map, NULL);
 
   return result;
 }
