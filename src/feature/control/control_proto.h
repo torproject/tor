@@ -21,8 +21,8 @@ size_t write_escaped_data(const char *data, size_t len, char **out);
 size_t read_escaped_data(const char *data, size_t len, char **out);
 void send_control_done(control_connection_t *conn);
 
-void control_write_reply(control_connection_t *conn, int code, int c,
-                         const char *s);
+MOCK_DECL(void, control_write_reply, (control_connection_t *conn, int code,
+                                      int c, const char *s));
 void control_vprintf_reply(control_connection_t *conn, int code, int c,
                            const char *fmt, va_list ap)
   CHECK_PRINTF(4, 0);
