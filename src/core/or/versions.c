@@ -450,7 +450,9 @@ memoize_protover_summary(protover_summary_flags_t *out,
                                     PROTOVER_HS_RENDEZVOUS_POINT_V3);
   out->supports_hs_setup_padding =
     protocol_list_supports_protocol(protocols, PRT_PADDING,
-              PROTOVER_HS_SETUP_PADDING);
+                                    PROTOVER_HS_SETUP_PADDING);
+  out->supports_establish_intro_dos_extension =
+    protocol_list_supports_protocol(protocols, PRT_HSINTRO, 5);
 
   protover_summary_flags_t *new_cached = tor_memdup(out, sizeof(*out));
   cached = strmap_set(protover_summary_map, protocols, new_cached);
