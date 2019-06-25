@@ -242,6 +242,9 @@ set_service_default_config(hs_service_config_t *c,
   c->is_single_onion = 0;
   c->dir_group_readable = 0;
   c->is_ephemeral = 0;
+  c->has_dos_defense_enabled = HS_CONFIG_V3_DOS_DEFENSE_DEFAULT;
+  c->intro_dos_rate_per_sec = HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_DEFAULT;
+  c->intro_dos_burst_per_sec = HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT;
 }
 
 /* From a service configuration object config, clear everything from it
