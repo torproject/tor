@@ -392,7 +392,7 @@ protover_get_supported_protocols(void)
     "Desc=1-2 "
     "DirCache=1-2 "
     "HSDir=1-2 "
-    "HSIntro=3-4 "
+    "HSIntro=3-5 "
     "HSRend=1-2 "
     "Link=1-5 "
 #ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
