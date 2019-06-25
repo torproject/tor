@@ -1949,6 +1949,11 @@ decode_intro_points(const hs_descriptor_t *desc,
         continue;
       }
 
+      /* Strip last newline */
+      if (chunk[strlen(chunk) - 1] == '\n') {
+        chunk[strlen(chunk) - 1] = '\0';
+      }
+
       smartlist_add_asprintf(intro_points, "%s %s", str_intro_point, chunk);
     } SMARTLIST_FOREACH_END(chunk);
   }
@@ -2688,6 +2693,7 @@ hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
     ret = hs_desc_decode_descriptor(*encoded_out, desc->subcredential,
                                     NULL, NULL);
     if (BUG(ret < 0)) {
+      tor_free(*encoded_out);
       goto err;
     }
   }

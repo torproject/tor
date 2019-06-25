@@ -207,6 +207,151 @@ hs_helper_build_hs_desc_no_ip(const ed25519_keypair_t *signing_kp)
   return hs_helper_build_hs_desc_impl(1, signing_kp);
 }
 
+/* Return a valid hs_descriptor_t object with duplicate intro points. */
+hs_descriptor_t *
+hs_helper_build_hs_desc_with_dup_ip(const ed25519_keypair_t *signing_kp)
+{
+  int ret;
+  int i;
+  time_t now = approx_time();
+  ed25519_keypair_t blinded_kp;
+  curve25519_keypair_t auth_ephemeral_kp;
+  hs_descriptor_t *descp = NULL, *desc = tor_malloc_zero(sizeof(*desc));
+
+  desc->plaintext_data.version = HS_DESC_SUPPORTED_FORMAT_VERSION_MAX;
+
+  /* Copy only the public key into the descriptor. */
+  memcpy(&desc->plaintext_data.signing_pubkey, &signing_kp->pubkey,
+         sizeof(ed25519_public_key_t));
+
+  uint64_t current_time_period = hs_get_time_period_num(0);
+  hs_build_blinded_keypair(signing_kp, NULL, 0,
+                           current_time_period, &blinded_kp);
+  /* Copy only the public key into the descriptor. */
+  memcpy(&desc->plaintext_data.blinded_pubkey, &blinded_kp.pubkey,
+         sizeof(ed25519_public_key_t));
+
+  desc->plaintext_data.signing_key_cert =
+    tor_cert_create(&blinded_kp, CERT_TYPE_SIGNING_HS_DESC,
+                    &signing_kp->pubkey, now, 3600,
+                    CERT_FLAG_INCLUDE_SIGNING_KEY);
+  tt_assert(desc->plaintext_data.signing_key_cert);
+  desc->plaintext_data.revision_counter = 42;
+  desc->plaintext_data.lifetime_sec = 3 * 60 * 60;
+
+  hs_get_subcredential(&signing_kp->pubkey, &blinded_kp.pubkey,
+                    desc->subcredential);
+
+  /* Setup superencrypted data section. */
+  ret = curve25519_keypair_generate(&auth_ephemeral_kp, 0);
+  tt_int_op(ret, ==, 0);
+  memcpy(&desc->superencrypted_data.auth_ephemeral_pubkey,
+         &auth_ephemeral_kp.pubkey,
+         sizeof(curve25519_public_key_t));
+
+  desc->superencrypted_data.clients = smartlist_new();
+  for (i = 0; i < HS_DESC_AUTH_CLIENT_MULTIPLE; i++) {
+    hs_desc_authorized_client_t *desc_client =
+      hs_desc_build_fake_authorized_client();
+    smartlist_add(desc->superencrypted_data.clients, desc_client);
+  }
+
+  /* Setup encrypted data section. */
+  desc->encrypted_data.create2_ntor = 1;
+  desc->encrypted_data.intro_auth_types = smartlist_new();
+  desc->encrypted_data.single_onion_service = 1;
+  smartlist_add(desc->encrypted_data.intro_auth_types, tor_strdup("ed25519"));
+  desc->encrypted_data.intro_points = smartlist_new();
+
+  {
+    ed25519_keypair_t auth_kp;
+    hs_desc_intro_point_t *ip_a = hs_desc_intro_point_new();
+    hs_desc_intro_point_t *ip_b = hs_desc_intro_point_new();
+
+    /* For a usable intro point we need at least two link specifiers: One
+     * legacy keyid and one ipv4 */
+    {
+      tor_addr_t a;
+      tor_addr_make_unspec(&a);
+      link_specifier_t *ls_legacy_a = link_specifier_new(), *ls_legacy_b;
+      link_specifier_t *ls_ip_a = link_specifier_new(), *ls_ip_b;
+      link_specifier_set_ls_type(ls_legacy_a, LS_LEGACY_ID);
+      memset(link_specifier_getarray_un_legacy_id(ls_legacy_a), 'C',
+             link_specifier_getlen_un_legacy_id(ls_legacy_a));
+      int family = tor_addr_parse(&a, "1.0.0.1");
+      switch (family) {
+        case AF_INET:
+          link_specifier_set_ls_type(ls_ip_a, LS_IPV4);
+          link_specifier_set_un_ipv4_addr(ls_ip_a, tor_addr_to_ipv4h(&a));
+          link_specifier_set_un_ipv4_port(ls_ip_a, 9001);
+          break;
+        default:
+          /* Stop the test, not supposed to have an error.
+           * Compare with -1 to show the actual family.
+           */
+          tt_int_op(family, OP_EQ, -1);
+      }
+      ls_legacy_b = link_specifier_dup(ls_legacy_a);
+      ls_ip_b = link_specifier_dup(ls_ip_a);
+
+      smartlist_add(ip_a->link_specifiers, ls_legacy_a);
+      smartlist_add(ip_a->link_specifiers, ls_ip_a);
+      smartlist_add(ip_b->link_specifiers, ls_legacy_b);
+      smartlist_add(ip_b->link_specifiers, ls_ip_b);
+    }
+
+    ret = ed25519_keypair_generate(&auth_kp, 0);
+    tt_int_op(ret, ==, 0);
+    ip_a->auth_key_cert = tor_cert_create(signing_kp,
+                                          CERT_TYPE_AUTH_HS_IP_KEY,
+                                          &auth_kp.pubkey, now,
+                                          HS_DESC_CERT_LIFETIME,
+                                          CERT_FLAG_INCLUDE_SIGNING_KEY);
+    tt_assert(ip_a->auth_key_cert);
+    ip_b->auth_key_cert = tor_cert_create(signing_kp,
+                                          CERT_TYPE_AUTH_HS_IP_KEY,
+                                          &auth_kp.pubkey, now,
+                                          HS_DESC_CERT_LIFETIME,
+                                          CERT_FLAG_INCLUDE_SIGNING_KEY);
+    tt_assert(ip_b->auth_key_cert);
+
+    /* Encryption key. */
+    {
+      int signbit;
+      curve25519_keypair_t curve25519_kp;
+      ed25519_keypair_t ed25519_kp;
+      tor_cert_t *cross_cert_a, *cross_cert_b;
+
+      ret = curve25519_keypair_generate(&curve25519_kp, 0);
+      tt_int_op(ret, ==, 0);
+      ed25519_keypair_from_curve25519_keypair(&ed25519_kp, &signbit,
+                                              &curve25519_kp);
+      cross_cert_a = tor_cert_create(signing_kp, CERT_TYPE_CROSS_HS_IP_KEYS,
+                                     &ed25519_kp.pubkey, time(NULL),
+                                     HS_DESC_CERT_LIFETIME,
+                                     CERT_FLAG_INCLUDE_SIGNING_KEY);
+      tt_assert(cross_cert_a);
+      ip_a->enc_key_cert = cross_cert_a;
+      cross_cert_b = tor_cert_create(signing_kp, CERT_TYPE_CROSS_HS_IP_KEYS,
+                                     &ed25519_kp.pubkey, time(NULL),
+                                     HS_DESC_CERT_LIFETIME,
+                                     CERT_FLAG_INCLUDE_SIGNING_KEY);
+      tt_assert(cross_cert_b);
+      ip_b->enc_key_cert = cross_cert_b;
+    }
+
+    smartlist_add(desc->encrypted_data.intro_points, ip_a);
+    smartlist_add(desc->encrypted_data.intro_points, ip_b);
+  }
+
+  descp = desc;
+ done:
+  if (descp == NULL)
+    tor_free(desc);
+
+  return descp;
+}
+
 void
 hs_helper_desc_equal(const hs_descriptor_t *desc1,
                      const hs_descriptor_t *desc2)

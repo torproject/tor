@@ -576,6 +576,34 @@ test_decode_bad_signature(void *arg)
 }
 
 static void
+test_decode_duplicate_intro(void *arg)
+{
+  int ret;
+  char *encoded = NULL;
+  ed25519_keypair_t signing_kp;
+  hs_descriptor_t *desc = NULL;
+  uint8_t subcredential[DIGEST256_LEN];
+
+  (void) arg;
+
+  ret = ed25519_keypair_generate(&signing_kp, 0);
+  tt_int_op(ret, OP_EQ, 0);
+  desc = hs_helper_build_hs_desc_with_dup_ip(&signing_kp);
+
+  hs_helper_get_subcred_from_identity_keypair(&signing_kp,
+                                              subcredential);
+
+  /* We just need this as it attempts hs_desc_decode_descriptor() */
+  tor_capture_bugs_(1);
+  ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
+  tt_int_op(ret, OP_EQ, -1);
+
+ done:
+  hs_descriptor_free(desc);
+  tor_free(encoded);
+}
+
+static void
 test_decode_plaintext(void *arg)
 {
   int ret;
@@ -831,6 +859,8 @@ struct testcase_t hs_descriptor[] = {
   { "decode_plaintext", test_decode_plaintext, TT_FORK,
     NULL, NULL },
   { "decode_bad_signature", test_decode_bad_signature, TT_FORK,
+    NULL, NULL },
+  { "decode_duplicate_intro", test_decode_duplicate_intro, TT_FORK,
     NULL, NULL },
 
   /* Misc. */
