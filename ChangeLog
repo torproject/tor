@@ -28,7 +28,7 @@ Changes in version 0.4.1.3-alpha - 2019-06-25
       hangs. Fixes bug 30744; bugfix on 0.3.5.4-alpha.
     - Skip test_rebind on macOS in Travis, because it is unreliable on
       macOS on Travis. Fixes bug 30713; bugfix on 0.3.5.1-alpha.
-    - Skip test_rebind when the TOR_SKIP_TEST_REBIND environmental
+    - Skip test_rebind when the TOR_SKIP_TEST_REBIND environment
       variable is set. Fixes bug 30713; bugfix on 0.3.5.1-alpha.
 
   o Minor bugfixes (directory authorities):
@@ -37,10 +37,10 @@ Changes in version 0.4.1.3-alpha - 2019-06-25
       local file. Fixes bug 30781; bugfix on 0.2.0.8-alpha.
 
   o Minor bugfixes (pluggable transports):
-    - Always publish bridge pluggable transport information in the extra
-      info descriptor, even if ExtraInfoStatistics is 0. This
-      information is needed by BridgeDB. Fixes bug 30956; bugfix
-      on 0.4.1.1-alpha.
+    - When running as a bridge with pluggable transports, always publish
+      pluggable transport information in our extrainfo descriptor, even
+      if ExtraInfoStatistics is 0. This information is needed by
+      BridgeDB. Fixes bug 30956; bugfix on 0.4.1.1-alpha.
 
   o Documentation:
     - Mention URLs for Travis/Appveyor/Jenkins in ReleasingTor.md.
