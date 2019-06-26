@@ -703,9 +703,8 @@ handle_control_mapaddress(control_connection_t *conn,
     connection_buf_add(r, sz, TO_CONN(conn));
     tor_free(r);
   } else {
-    const char *response =
-      "512 syntax error: not enough arguments to mapaddress.\r\n";
-    connection_buf_add(response, strlen(response), TO_CONN(conn));
+    control_write_endreply(conn, 512, "syntax error: "
+                           "not enough arguments to mapaddress.");
   }
 
   SMARTLIST_FOREACH(reply, char *, cp, tor_free(cp));
@@ -845,7 +844,7 @@ handle_control_extendcircuit(control_connection_t *conn,
                "addresses that are allowed by the firewall configuration; "
                "circuit marked for closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), -END_CIRC_REASON_CONNECTFAILED);
-      connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
+      control_write_endreply(conn, 551, "Couldn't start circuit");
       goto done;
     }
     circuit_append_new_exit(circ, info);
@@ -1744,16 +1743,10 @@ handle_control_add_onion(control_connection_t *conn,
         goto out;
 
     } else if (!strcasecmp(arg->key, "ClientAuth")) {
-      char *err_msg = NULL;
       int created = 0;
       rend_authorized_client_t *client =
-        add_onion_helper_clientauth(arg->value,
-                                    &created, &err_msg);
+        add_onion_helper_clientauth(arg->value, &created, conn);
       if (!client) {
-        if (err_msg) {
-          connection_write_str_to_buf(err_msg, conn);
-          tor_free(err_msg);
-        }
         goto out;
       }
 
@@ -1818,19 +1811,13 @@ handle_control_add_onion(control_connection_t *conn,
   add_onion_secret_key_t pk = { NULL };
   const char *key_new_alg = NULL;
   char *key_new_blob = NULL;
-  char *err_msg = NULL;
 
   const char *onionkey = smartlist_get(args->args, 0);
   if (add_onion_helper_keyarg(onionkey, discard_pk,
                               &key_new_alg, &key_new_blob, &pk, &hs_version,
-                              &err_msg) < 0) {
-    if (err_msg) {
-      connection_write_str_to_buf(err_msg, conn);
-      tor_free(err_msg);
-    }
+                              conn) < 0) {
     goto out;
   }
-  tor_assert(!err_msg);
 
   /* Hidden service version 3 don't have client authentication support so if
    * ClientAuth was given, send back an error. */
@@ -1876,8 +1863,8 @@ handle_control_add_onion(control_connection_t *conn,
         char *encoded = rend_auth_encode_cookie(ac->descriptor_cookie,
                                                 auth_type);
         tor_assert(encoded);
-        connection_printf_to_buf(conn, "250-ClientAuth=%s:%s\r\n",
-                                 ac->client_name, encoded);
+        control_printf_midreply(conn, 250, "ClientAuth=%s:%s",
+                                ac->client_name, encoded);
         memwipe(encoded, 0, strlen(encoded));
         tor_free(encoded);
       });
@@ -1930,27 +1917,30 @@ handle_control_add_onion(control_connection_t *conn,
  * ADD_ONION command. Return a new crypto_pk_t and if a new key was generated
  * and the private key not discarded, the algorithm and serialized private key,
  * or NULL and an optional control protocol error message on failure.  The
- * caller is responsible for freeing the returned key_new_blob and err_msg.
+ * caller is responsible for freeing the returned key_new_blob.
  *
  * Note: The error messages returned are deliberately vague to avoid echoing
  * key material.
+ *
+ * Note: conn is only used for writing control replies. For testing
+ * purposes, it can be NULL if control_write_reply() is appropriately
+ * mocked.
  */
 STATIC int
 add_onion_helper_keyarg(const char *arg, int discard_pk,
                         const char **key_new_alg_out, char **key_new_blob_out,
                         add_onion_secret_key_t *decoded_key, int *hs_version,
-                        char **err_msg_out)
+                        control_connection_t *conn)
 {
   smartlist_t *key_args = smartlist_new();
   crypto_pk_t *pk = NULL;
   const char *key_new_alg = NULL;
   char *key_new_blob = NULL;
-  char *err_msg = NULL;
   int ret = -1;
 
   smartlist_split_string(key_args, arg, ":", SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(key_args) != 2) {
-    err_msg = tor_strdup("512 Invalid key type/blob\r\n");
+    control_write_endreply(conn, 512, "Invalid key type/blob");
     goto err;
   }
 
@@ -1967,12 +1957,12 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
     /* "RSA:<Base64 Blob>" - Loading a pre-existing RSA1024 key. */
     pk = crypto_pk_base64_decode_private(key_blob, strlen(key_blob));
     if (!pk) {
-      err_msg = tor_strdup("512 Failed to decode RSA key\r\n");
+      control_write_endreply(conn, 512, "Failed to decode RSA key");
       goto err;
     }
     if (crypto_pk_num_bits(pk) != PK_BYTES*8) {
       crypto_pk_free(pk);
-      err_msg = tor_strdup("512 Invalid RSA key size\r\n");
+      control_write_endreply(conn, 512, "Invalid RSA key size");
       goto err;
     }
     decoded_key->v2 = pk;
@@ -1983,7 +1973,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
     if (base64_decode((char *) sk->seckey, sizeof(sk->seckey), key_blob,
                       strlen(key_blob)) != sizeof(sk->seckey)) {
       tor_free(sk);
-      err_msg = tor_strdup("512 Failed to decode ED25519-V3 key\r\n");
+      control_write_endreply(conn, 512, "Failed to decode ED25519-V3 key");
       goto err;
     }
     decoded_key->v3 = sk;
@@ -1995,15 +1985,15 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       /* "RSA1024", RSA 1024 bit, also currently "BEST" by default. */
       pk = crypto_pk_new();
       if (crypto_pk_generate_key(pk)) {
-        tor_asprintf(&err_msg, "551 Failed to generate %s key\r\n",
-                     key_type_rsa1024);
+        control_printf_endreply(conn, 551, "Failed to generate %s key",
+                                key_type_rsa1024);
         goto err;
       }
       if (!discard_pk) {
         if (crypto_pk_base64_encode_private(pk, &key_new_blob)) {
           crypto_pk_free(pk);
-          tor_asprintf(&err_msg, "551 Failed to encode %s key\r\n",
-                       key_type_rsa1024);
+          control_printf_endreply(conn, 551, "Failed to encode %s key",
+                                  key_type_rsa1024);
           goto err;
         }
         key_new_alg = key_type_rsa1024;
@@ -2014,8 +2004,8 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       ed25519_secret_key_t *sk = tor_malloc_zero(sizeof(*sk));
       if (ed25519_secret_key_generate(sk, 1) < 0) {
         tor_free(sk);
-        tor_asprintf(&err_msg, "551 Failed to generate %s key\r\n",
-                     key_type_ed25519_v3);
+        control_printf_endreply(conn, 551, "Failed to generate %s key",
+                                key_type_ed25519_v3);
         goto err;
       }
       if (!discard_pk) {
@@ -2025,8 +2015,8 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
                           sizeof(sk->seckey), 0) != (len - 1)) {
           tor_free(sk);
           tor_free(key_new_blob);
-          tor_asprintf(&err_msg, "551 Failed to encode %s key\r\n",
-                       key_type_ed25519_v3);
+          control_printf_endreply(conn, 551, "Failed to encode %s key",
+                                  key_type_ed25519_v3);
           goto err;
         }
         key_new_alg = key_type_ed25519_v3;
@@ -2034,11 +2024,11 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       decoded_key->v3 = sk;
       *hs_version = HS_VERSION_THREE;
     } else {
-      err_msg = tor_strdup("513 Invalid key type\r\n");
+      control_write_endreply(conn, 513, "Invalid key type");
       goto err;
     }
   } else {
-    err_msg = tor_strdup("513 Invalid key type\r\n");
+    control_write_endreply(conn, 513, "Invalid key type");
     goto err;
   }
 
@@ -2052,11 +2042,6 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   });
   smartlist_free(key_args);
 
-  if (err_msg_out) {
-    *err_msg_out = err_msg;
-  } else {
-    tor_free(err_msg);
-  }
   *key_new_alg_out = key_new_alg;
   *key_new_blob_out = key_new_blob;
 
@@ -2066,27 +2051,30 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
 /** Helper function to handle parsing a ClientAuth argument to the
  * ADD_ONION command.  Return a new rend_authorized_client_t, or NULL
  * and an optional control protocol error message on failure.  The
- * caller is responsible for freeing the returned auth_client and err_msg.
+ * caller is responsible for freeing the returned auth_client.
  *
  * If 'created' is specified, it will be set to 1 when a new cookie has
  * been generated.
+ *
+ * Note: conn is only used for writing control replies. For testing
+ * purposes, it can be NULL if control_write_reply() is appropriately
+ * mocked.
  */
 STATIC rend_authorized_client_t *
-add_onion_helper_clientauth(const char *arg, int *created, char **err_msg)
+add_onion_helper_clientauth(const char *arg, int *created,
+                            control_connection_t *conn)
 {
   int ok = 0;
 
   tor_assert(arg);
   tor_assert(created);
-  tor_assert(err_msg);
-  *err_msg = NULL;
 
   smartlist_t *auth_args = smartlist_new();
   rend_authorized_client_t *client =
     tor_malloc_zero(sizeof(rend_authorized_client_t));
   smartlist_split_string(auth_args, arg, ":", 0, 0);
   if (smartlist_len(auth_args) < 1 || smartlist_len(auth_args) > 2) {
-    *err_msg = tor_strdup("512 Invalid ClientAuth syntax\r\n");
+    control_write_endreply(conn, 512, "Invalid ClientAuth syntax");
     goto err;
   }
   client->client_name = tor_strdup(smartlist_get(auth_args, 0));
@@ -2096,7 +2084,7 @@ add_onion_helper_clientauth(const char *arg, int *created, char **err_msg)
                                 client->descriptor_cookie,
                                 NULL, &decode_err_msg) < 0) {
       tor_assert(decode_err_msg);
-      tor_asprintf(err_msg, "512 %s\r\n", decode_err_msg);
+      control_write_endreply(conn, 512, decode_err_msg);
       tor_free(decode_err_msg);
       goto err;
     }
@@ -2107,7 +2095,7 @@ add_onion_helper_clientauth(const char *arg, int *created, char **err_msg)
   }
 
   if (!rend_valid_client_name(client->client_name)) {
-    *err_msg = tor_strdup("512 Invalid name in ClientAuth\r\n");
+    control_write_endreply(conn, 512, "Invalid name in ClientAuth");
     goto err;
   }
 
