@@ -22,14 +22,20 @@
  */
 
 #define CONFPARSE_PRIVATE
-#include "core/or/or.h"
+#include "orconfig.h"
 #include "app/config/confparse.h"
-#include "feature/nodelist/routerset.h"
 
+#include "lib/confmgt/structvar.h"
 #include "lib/confmgt/unitparse.h"
 #include "lib/container/bitarray.h"
+#include "lib/container/smartlist.h"
 #include "lib/encoding/confline.h"
-#include "lib/confmgt/structvar.h"
+#include "lib/log/escape.h"
+#include "lib/log/log.h"
+#include "lib/log/util_bug.h"
+#include "lib/string/compat_ctype.h"
+#include "lib/string/printf.h"
+#include "lib/string/util_string.h"
 
 static void config_reset(const config_format_t *fmt, void *options,
                          const config_var_t *var, int use_defaults);

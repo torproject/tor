@@ -15,6 +15,7 @@
 
 #include "lib/conf/conftypes.h"
 #include "lib/conf/confmacros.h"
+#include "lib/testsupport/testsupport.h"
 
 /** An abbreviation for a configuration option allowed on the command line. */
 typedef struct config_abbrev_t {
