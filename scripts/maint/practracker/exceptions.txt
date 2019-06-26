@@ -266,7 +266,6 @@ problem function-size /src/lib/math/prob_distr.c:sample_uniform_interval() 145
 problem function-size /src/lib/net/address.c:tor_addr_parse_mask_ports() 198
 problem function-size /src/lib/net/address.c:tor_addr_compare_masked() 111
 problem function-size /src/lib/net/inaddr.c:tor_inet_pton() 107
-problem function-size /src/lib/net/resolve.c:tor_addr_lookup() 110
 problem function-size /src/lib/net/socketpair.c:tor_ersatz_socketpair() 102
 problem function-size /src/lib/osinfo/uname.c:get_uname() 116
 problem function-size /src/lib/process/process_unix.c:process_unix_exec() 220
