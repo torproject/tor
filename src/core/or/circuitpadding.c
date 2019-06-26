@@ -254,17 +254,25 @@ circpad_marked_circuit_for_padding(circuit_t *circ, int reason)
   return 0; // No machine wanted to keep the circuit open; mark for close
 }
 
-/** Free all the machineinfos in <b>circ</b> that match <b>machine_num</b>. */
-static void
+/**
+ * Free all the machineinfos in <b>circ</b> that match <b>machine_num</b>.
+ *
+ * Returns true if any machineinfos with that number were freed.
+ * False otherwise. */
+static int
 free_circ_machineinfos_with_machine_num(circuit_t *circ, int machine_num)
 {
+  int found = 0;
   FOR_EACH_CIRCUIT_MACHINE_BEGIN(i) {
     if (circ->padding_machine[i] &&
         circ->padding_machine[i]->machine_num == machine_num) {
       circpad_circuit_machineinfo_free_idx(circ, i);
       circ->padding_machine[i] = NULL;
+      found = 1;
     }
   } FOR_EACH_CIRCUIT_MACHINE_END;
+
+  return found;
 }
 
 /**
@@ -2797,22 +2805,27 @@ circpad_handle_padding_negotiate(circuit_t *circ, cell_t *cell)
   circpad_negotiate_t *negotiate;
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
-    log_fn(LOG_WARN, LD_PROTOCOL,
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
            "Padding negotiate cell unsupported at origin.");
     return -1;
   }
 
   if (circpad_negotiate_parse(&negotiate, cell->payload+RELAY_HEADER_SIZE,
                                CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE) < 0) {
-    log_fn(LOG_WARN, LD_CIRC,
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
           "Received malformed PADDING_NEGOTIATE cell; dropping.");
     return -1;
   }
 
   if (negotiate->command == CIRCPAD_COMMAND_STOP) {
     /* Free the machine corresponding to this machine type */
-    free_circ_machineinfos_with_machine_num(circ, negotiate->machine_type);
-    log_fn(LOG_WARN, LD_CIRC,
+    if (free_circ_machineinfos_with_machine_num(circ,
+                negotiate->machine_type)) {
+      log_info(LD_CIRC, "Received STOP command for machine %u",
+               negotiate->machine_type);
+      goto done;
+    }
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
           "Received circuit padding stop command for unknown machine.");
     goto err;
   } else if (negotiate->command == CIRCPAD_COMMAND_START) {
@@ -2853,21 +2866,21 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
   circpad_negotiated_t *negotiated;
 
   if (!CIRCUIT_IS_ORIGIN(circ)) {
-    log_fn(LOG_WARN, LD_PROTOCOL,
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
            "Padding negotiated cell unsupported at non-origin.");
     return -1;
   }
 
   /* Verify this came from the expected hop */
   if (!circpad_padding_is_from_expected_hop(circ, layer_hint)) {
-    log_fn(LOG_WARN, LD_PROTOCOL,
+    log_fn(LOG_WARN, LD_CIRC,
            "Padding negotiated cell from wrong hop!");
     return -1;
   }
 
   if (circpad_negotiated_parse(&negotiated, cell->payload+RELAY_HEADER_SIZE,
                                CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE) < 0) {
-    log_fn(LOG_WARN, LD_CIRC,
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
           "Received malformed PADDING_NEGOTIATED cell; "
           "dropping.");
     return -1;
@@ -2887,7 +2900,7 @@ circpad_handle_padding_negotiated(circuit_t *circ, cell_t *cell,
     // and be sad
     free_circ_machineinfos_with_machine_num(circ, negotiated->machine_type);
     TO_ORIGIN_CIRCUIT(circ)->padding_negotiation_failed = 1;
-    log_fn(LOG_INFO, LD_CIRC,
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
            "Middle node did not accept our padding request.");
   }
 
