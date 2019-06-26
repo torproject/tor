@@ -185,7 +185,7 @@ TEST_CFLAGS=
 TEST_CPPFLAGS=-DTOR_UNIT_TESTS @TOR_MODULES_ALL_ENABLED@
 TEST_NETWORK_FLAGS=--hs-multi-client 1
 endif
-TEST_NETWORK_WARNING_FLAGS=--quiet --only-warnings
+TEST_NETWORK_SHOW_WARNINGS_FOR_LAST_RUN_FLAGS=--quiet --only-warnings
 
 if LIBFUZZER_ENABLED
 TEST_CFLAGS += -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-div
@@ -259,12 +259,15 @@ test-network: need-chutney-path $(TESTING_TOR_BINARY) src/tools/tor-gencert
 	$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_FLAGS)
 
 # Run all available tests using automake's test-driver
-# only run IPv6 tests if we can ping6 ::1 (localhost)
-# only run IPv6 tests if we can ping ::1 (localhost)
-# some IPv6 tests will fail without an IPv6 DNS server (see #16971 and #17011)
-# only run mixed tests if we have a tor-stable binary
-# Try the syntax for BSD ping6, Linux ping6, and Linux ping -6,
-# because they're incompatible
+#   - only run IPv6 tests if we can ping6 or ping -6 ::1 (localhost)
+#     we try the syntax for BSD ping6, Linux ping6, and Linux ping -6,
+#     because they're incompatible
+#   - some IPv6 tests may fail without an IPv6 DNS server
+#     (see #16971 and #17011)
+#   - only run mixed tests if we have a tor-stable binary
+#   - show tor warnings on the console after each network run
+#     (otherwise, warnings go to the logs, and people don't see them unless
+#     there is a network failure)
 test-network-all: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/tor-gencert
 	mkdir -p $(TEST_NETWORK_ALL_LOG_DIR)
 	rm -f $(TEST_NETWORK_ALL_LOG_DIR)/*.log $(TEST_NETWORK_ALL_LOG_DIR)/*.trs
@@ -288,7 +291,7 @@ test-network-all: need-chutney-path test-driver $(TESTING_TOR_BINARY) src/tools/
 	done; \
 	for f in $$flavors; do \
 		$(SHELL) $(top_srcdir)/test-driver --test-name $$f --log-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.log --trs-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.trs $(TEST_NETWORK_ALL_DRIVER_FLAGS) $(top_srcdir)/src/test/test-network.sh --flavor $$f $(TEST_NETWORK_FLAGS); \
-		$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_WARNING_FLAGS); \
+		$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_SHOW_WARNINGS_FOR_LAST_RUN_FLAGS); \
 	done; \
 	echo "Log and result files are available in $(TEST_NETWORK_ALL_LOG_DIR)."; \
 	! grep -q FAIL $(TEST_NETWORK_ALL_LOG_DIR)/*.trs
