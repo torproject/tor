@@ -1,0 +1,6 @@
+  o Major bugfixes (circuit build, guard):
+    - When considering upgrading circuits from "waiting for guard" to "open",
+      always ignore the ones that are mark for close. Else, we can end up in
+      the situation where a subsystem is notified of that circuit opening but
+      still marked for close leading to undesirable behavior. Fixes bug 30871;
+      bugfix on 0.3.0.1-alpha.

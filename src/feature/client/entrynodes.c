@@ -2611,6 +2611,10 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
     entry_guard_t *guard = entry_guard_handle_get(state->guard);
     if (!guard || guard->in_selection != gs)
       continue;
+    if (TO_CIRCUIT(circ)->marked_for_close) {
+      /* Don't consider any marked for close circuits. */
+      continue;
+    }
 
     smartlist_add(all_circuits, circ);
   } SMARTLIST_FOREACH_END(circ);
