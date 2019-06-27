@@ -39,7 +39,7 @@ static uint32_t hs_dos_introduce_burst_per_sec =
 static uint32_t
 get_param_rate_per_sec(const networkstatus_t *ns)
 {
-  return networkstatus_get_param(ns, "HSDoSIntroduceRate",
+  return networkstatus_get_param(ns, "HiddenServiceEnableIntroDoSRatePerSec",
                                  HS_DOS_INTRODUCE_CELL_RATE_PER_SEC,
                                  0, INT32_MAX);
 }
@@ -48,7 +48,7 @@ get_param_rate_per_sec(const networkstatus_t *ns)
 static uint32_t
 get_param_burst_per_sec(const networkstatus_t *ns)
 {
-  return networkstatus_get_param(ns, "HSDoSIntroduceBurst",
+  return networkstatus_get_param(ns, "HiddenServiceEnableIntroDoSBurstPerSec",
                                  HS_DOS_INTRODUCE_CELL_BURST_PER_SEC,
                                  0, INT32_MAX);
 }
