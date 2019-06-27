@@ -2029,6 +2029,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   }
   stage_descr = NULL;
 
+  /* increment counter */
   /* Increment INTRODUCE2 counter */
   ++(intro_point->accepted_introduce2_count);
 
@@ -3908,6 +3909,7 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
 
   if (intro_point_accepted_intro_count(intro) >=
       intro->max_introductions) {
+    /* instead of expiring, just reset the thing */
     /* This intro point has been used too many times.  Expire it now. */
     return 1;
   }

@@ -2176,27 +2176,6 @@ test_export_client_circuit_id(void *arg)
   tor_free(cp2);
 }
 
-static ssize_t
-hs_cell_parse_introduce2_mock(hs_cell_introduce2_data_t *data,
-                              const origin_circuit_t *circ,
-                              const hs_service_t *service)
-{
-  (void) circ;
-  (void) service;
-  static int i = 0;
-
-  memset(data->rendezvous_cookie, 0, sizeof(data->rendezvous_cookie));
-
-  set_uint32(data->rendezvous_cookie, (uint32_t) i);
-  /* Use this arbitrary circuit flag, as a way to denote whether we want to
-     change the rendezvous cookie or remain the same. */
-  if (!circ->is_ancient) {
-    i++;
-  }
-
-  return 0;
-}
-
 static void
 launch_rendezvous_point_circuit_mock(const hs_service_t *service,
                                      const hs_service_intro_point_t *ip,
@@ -2228,6 +2207,36 @@ networkstatus_get_param_mock(const networkstatus_t *ns,
   }
 }
 
+static ssize_t
+helper_create_introduce2(hs_service_intro_point_t *ip,
+                         uint8_t *cell_out)
+{
+  hs_cell_introduce1_data_t intro1_data;
+  ssize_t payload_len;
+
+  intro1_data.is_legacy = 0;
+  intro1_data.auth_pk = &ip->auth_key_kp.pubkey;
+  intro1_data.enc_pk = &ip->enc_key_kp.pubkey;
+  intro1_data.subcredential = tor_malloc_zero(DIGEST256_LEN);
+  intro1_data.onion_pk = &ip->onion_key;
+  intro1_data.rendezvous_cookie = tor_malloc_zero(REND_COOKIE_LEN);
+  /* wtf */
+  curve25519_keypair_t tmp_kp;
+  curve25519_keypair_generate(&tmp_kp, 0);
+  intro1_data.client_kp = &tmp_kp;
+  /* XXX */
+  intro1_data.link_specifiers = smartlist_new();
+  /* chaos */
+  link_specifier_t *ls = smartlist_get(ip->base.link_specifiers, 0);
+  smartlist_add(intro1_data.link_specifiers, ls);
+
+  /* just enough to get by hs_cell_parse_introduce2() */
+
+  payload_len = hs_cell_build_introduce1(&intro1_data, cell_out);
+
+  return payload_len;
+}
+
 static void
 test_intro_replay_cache_expiration(void *arg)
 {
@@ -2240,14 +2249,20 @@ test_intro_replay_cache_expiration(void *arg)
   uint8_t subcredential[12] = {0};
   uint8_t payload[12] = {0};
 
-  MOCK(hs_cell_parse_introduce2, hs_cell_parse_introduce2_mock);
   MOCK(launch_rendezvous_point_circuit, launch_rendezvous_point_circuit_mock);
   MOCK(networkstatus_get_param, networkstatus_get_param_mock);
 
-  hs_service_intro_point_t *ip = service_intro_point_new(NULL);
+  hs_service_intro_point_t *ip = helper_create_service_ip();
 
   retval = intro_point_should_expire(ip, approx_time());
   tt_int_op(retval, OP_EQ, 0);
+
+  {
+    uint8_t cell[RELAY_PAYLOAD_SIZE] = {0};
+    retval = helper_create_introduce2(ip, cell);
+    tt_int_op(retval, OP_GE, 0);
+  }
+
 
   /* 1) First of all let's test that the replay cache works:
    *

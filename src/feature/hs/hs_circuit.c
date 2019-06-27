@@ -961,6 +961,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
 
   /* At this point, we just confirmed that the full INTRODUCE2 cell is valid
    * so increment our counter that we've seen one on this intro point. */
+  /* increment introduce2 count v3 */
   ip->introduce2_count++;
 
   /* Launch rendezvous circuit with the onion key and rend cookie. */

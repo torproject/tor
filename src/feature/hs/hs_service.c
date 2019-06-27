@@ -2288,6 +2288,7 @@ update_all_descriptors_intro_points(time_t now)
 
 /* Return true iff the given intro point has expired that is it has been used
  * for too long or we've reached our max seen INTRODUCE2 cell. */
+/* XXX rename */
 STATIC int
 intro_point_should_expire(const hs_service_intro_point_t *ip,
                           time_t now)

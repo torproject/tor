@@ -1060,6 +1060,7 @@ typedef struct rend_encoded_v2_service_descriptor_t
  * introduction point.  See also rend_intro_point_t.unreachable_count. */
 #define MAX_INTRO_POINT_REACHABILITY_FAILURES 5
 
+/* expiration */
 /** The minimum and maximum number of distinct INTRODUCE2 cells which a
  * hidden service's introduction point will receive before it begins to
  * expire. */
