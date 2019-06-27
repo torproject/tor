@@ -29,11 +29,24 @@
  * but never goes above that burst value. */
 #define HS_DOS_INTRODUCE_CELL_BURST_PER_SEC 200
 
+/* Default value of the consensus parameter enabling or disabling the
+ * introduction DoS defense. Disabled by default. */
+#define HS_DOS_INTRODUCE_ENABLED_DEFAULT 0
+
 /* Consensus parameters. */
 static uint32_t hs_dos_introduce_rate_per_sec =
   HS_DOS_INTRODUCE_CELL_RATE_PER_SEC;
 static uint32_t hs_dos_introduce_burst_per_sec =
   HS_DOS_INTRODUCE_CELL_BURST_PER_SEC;
+static uint32_t hs_dos_introduce_enabled =
+  HS_DOS_INTRODUCE_ENABLED_DEFAULT;
+
+static uint32_t
+get_param_intro_dos_enabled(const networkstatus_t *ns)
+{
+  return networkstatus_get_param(ns, "HiddenServiceEnableIntroDoSDefense",
+                                 HS_DOS_INTRODUCE_ENABLED_DEFAULT, 0, 1);
+}
 
 /* Return the parameter for the introduction rate per sec. */
 static uint32_t
@@ -59,6 +72,7 @@ set_consensus_parameters(const networkstatus_t *ns)
 {
   hs_dos_introduce_rate_per_sec = get_param_rate_per_sec(ns);
   hs_dos_introduce_burst_per_sec = get_param_burst_per_sec(ns);
+  hs_dos_introduce_enabled = get_param_intro_dos_enabled(ns);
 }
 
 /*
@@ -99,6 +113,11 @@ bool
 hs_dos_can_send_intro2(or_circuit_t *s_intro_circ)
 {
   tor_assert(s_intro_circ);
+
+  /* Always allowed if the defense is disabled. */
+  if (!hs_dos_introduce_enabled) {
+    return true;
+  }
 
   /* Should not happen but if so, scream loudly. */
   if (BUG(TO_CIRCUIT(s_intro_circ)->purpose != CIRCUIT_PURPOSE_INTRO_POINT)) {
