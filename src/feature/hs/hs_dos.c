@@ -3,6 +3,17 @@
 
 /**
  * \file hs_dos.c
+ * \brief Implement denial of service mitigation for the onion service
+ *        subsystem.
+ *
+ * This module defenses:
+ *
+ * - Introduction Rate Limiting: If enabled by the consensus, an introduction
+ *   point will rate limit client introduction towards the service (INTRODUCE2
+ *   cells). It uses a token bucket model with a rate and burst per second.
+ *
+ *   Proposal 305 will expand this module by allowing an operator to define
+ *   these values into the ESTABLISH_INTRO cell. Not yet implemented.
  **/
 
 #define HS_DOS_PRIVATE
