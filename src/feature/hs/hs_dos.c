@@ -19,8 +19,14 @@
 
 #include "hs_dos.h"
 
-/* Default values. */
+/* Default value of the allowed INTRODUCE2 cell rate per second. Above that
+ * value per second, the introduction is denied. */
 #define HS_DOS_INTRODUCE_CELL_RATE_PER_SEC 25
+
+/* Default value of the allowed INTRODUCE2 cell burst per second. This is the
+ * maximum value a token bucket has per second. We thus allow up to this value
+ * of INTRODUCE2 cell per second but the bucket is refilled by the rate value
+ * but never goes above that burst value. */
 #define HS_DOS_INTRODUCE_CELL_BURST_PER_SEC 200
 
 /* Consensus parameters. */
