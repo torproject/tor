@@ -30,8 +30,10 @@
 #define HS_DOS_INTRODUCE_CELL_BURST_PER_SEC 200
 
 /* Consensus parameters. */
-static uint32_t hs_dos_introduce_rate_per_sec;
-static uint32_t hs_dos_introduce_burst_per_sec;
+static uint32_t hs_dos_introduce_rate_per_sec =
+  HS_DOS_INTRODUCE_CELL_RATE_PER_SEC;
+static uint32_t hs_dos_introduce_burst_per_sec =
+  HS_DOS_INTRODUCE_CELL_BURST_PER_SEC;
 
 /* Return the parameter for the introduction rate per sec. */
 static uint32_t
