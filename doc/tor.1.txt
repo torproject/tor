@@ -456,7 +456,7 @@ GENERAL OPTIONS
     between each attempt, and retry FallbackDirs more often than directory
     authorities, to reduce the load on the directory authorities.  +
  +
-    FallbackDirs should be stable relays with the same IP addresses, ports,
+    FallbackDirs should be stable relays with stable IP addresses, ports,
     and identity keys. They must have a DirPort. +
  +
     By default, the directory authorities are also FallbackDirs. Specifying a
@@ -476,9 +476,6 @@ GENERAL OPTIONS
     is. By default, an authority is not authoritative for any directory style
     or version unless an appropriate flag is given. +
  +
-    Directory authorities should be stable relays with the same IP addresses,
-    ports, and identity keys. They must have a DirPort. +
- +
     Tor will use this authority as a bridge authoritative directory if the
     "bridge" flag is set. If a flag "orport=**orport**" is given, Tor will
     use the given port when opening encrypted tunnels to the dirserver. If a
@@ -495,9 +492,6 @@ GENERAL OPTIONS
     usually use the DirPort, but will use the ORPort in some circumstances.
     If an IPv6 ORPort is supplied, clients will also download directory
     documents at the IPv6 ORPort, if they are configured to use IPv6. +
- +
-    Directory authorities should be stable relays with the same IP addresses,
-    ports, and identity keys. They must have a DirPort. +
  +
     If no **DirAuthority** line is given, Tor will use the default directory
     authorities. NOTE: this option is intended for setting up a private Tor
