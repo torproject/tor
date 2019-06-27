@@ -7,16 +7,37 @@
  */
 
 #define CIRCUITLIST_PRIVATE
+#define NETWORKSTATUS_PRIVATE
 
 #include "test/test.h"
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
+
+#include "app/config/config.h"
 
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/or_circuit_st.h"
 
 #include "feature/hs/hs_dos.h"
+#include "feature/nodelist/networkstatus.h"
+
+static void
+setup_mock_consensus(void)
+{
+  current_ns_consensus = tor_malloc_zero(sizeof(networkstatus_t));
+  current_ns_consensus->net_params = smartlist_new();
+  smartlist_add(current_ns_consensus->net_params,
+                (void *) "HiddenServiceEnableIntroDoSDefense=1");
+  hs_dos_consensus_has_changed(current_ns_consensus);
+}
+
+static void
+free_mock_consensus(void)
+{
+  smartlist_free(current_ns_consensus->net_params);
+  tor_free(current_ns_consensus);
+}
 
 static void
 test_can_send_intro2(void *arg)
@@ -26,7 +47,11 @@ test_can_send_intro2(void *arg)
 
   (void) arg;
 
+  hs_init();
   hs_dos_init();
+
+  get_options_mutable()->ORPort_set = 1;
+  setup_mock_consensus();
 
   or_circ =  or_circuit_new(1, NULL);
 
@@ -95,6 +120,9 @@ test_can_send_intro2(void *arg)
 
  done:
   circuit_free_(TO_CIRCUIT(or_circ));
+
+  hs_free_all();
+  free_mock_consensus();
 }
 
 struct testcase_t hs_dos_tests[] = {

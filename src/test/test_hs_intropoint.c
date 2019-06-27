@@ -186,8 +186,6 @@ test_establish_intro_wrong_purpose(void *arg)
 
   (void)arg;
 
-  hs_dos_init();
-
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   memcpy(intro_circ->rend_circ_nonce, circ_nonce, DIGEST_LEN);
@@ -230,8 +228,6 @@ test_establish_intro_wrong_keytype(void *arg)
 
   (void) arg;
 
-  hs_dos_init();
-
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
@@ -258,8 +254,6 @@ test_establish_intro_wrong_keytype2(void *arg)
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);
 
   (void) arg;
-
-  hs_dos_init();
 
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -296,8 +290,6 @@ test_establish_intro_wrong_mac(void *arg)
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);
 
   (void) arg;
-
-  hs_dos_init();
 
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -371,8 +363,6 @@ test_establish_intro_wrong_auth_key_len(void *arg)
 
   (void) arg;
 
-  hs_dos_init();
-
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
@@ -418,8 +408,6 @@ test_establish_intro_wrong_sig_len(void *arg)
 
   (void) arg;
 
-  hs_dos_init();
-
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
@@ -463,8 +451,6 @@ test_establish_intro_wrong_sig(void *arg)
 
   (void) arg;
 
-  hs_dos_init();
-
   /* Get the auth key of the intro point */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
@@ -502,8 +488,6 @@ helper_establish_intro_v3(or_circuit_t *intro_circ)
 
   tt_assert(intro_circ);
 
-  hs_dos_init();
-
   /* Prepare the circuit for the incoming ESTABLISH_INTRO */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
   helper_prepare_circ_for_intro(intro_circ, circ_nonce);
@@ -538,8 +522,6 @@ helper_establish_intro_v2(or_circuit_t *intro_circ)
   char circ_nonce[DIGEST_LEN] = {0};
 
   tt_assert(intro_circ);
-
-  hs_dos_init();
 
   /* Prepare the circuit for the incoming ESTABLISH_INTRO */
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -921,42 +903,63 @@ test_received_introduce1_handling(void *arg)
   UNMOCK(relay_send_command_from_edge_);
 }
 
+static void *
+hs_subsystem_setup_fn(const struct testcase_t *tc)
+{
+  (void) tc;
+
+  return NULL;
+}
+
+static int
+hs_subsystem_cleanup_fn(const struct testcase_t *tc, void *arg)
+{
+  (void) tc;
+  (void) arg;
+
+  return 1;
+}
+
+static struct testcase_setup_t test_setup = {
+  hs_subsystem_setup_fn, hs_subsystem_cleanup_fn
+};
+
 struct testcase_t hs_intropoint_tests[] = {
   { "intro_point_registration",
-    test_intro_point_registration, TT_FORK, NULL, NULL },
+    test_intro_point_registration, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_keytype",
-    test_establish_intro_wrong_keytype, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_keytype, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_keytype2",
-    test_establish_intro_wrong_keytype2, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_keytype2, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_purpose",
-    test_establish_intro_wrong_purpose, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_purpose, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_sig",
-    test_establish_intro_wrong_sig, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_sig, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_sig_len",
-    test_establish_intro_wrong_sig_len, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_sig_len, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_auth_key_len",
-    test_establish_intro_wrong_auth_key_len, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_auth_key_len, TT_FORK, NULL, &test_setup},
 
   { "receive_establish_intro_wrong_mac",
-    test_establish_intro_wrong_mac, TT_FORK, NULL, NULL },
+    test_establish_intro_wrong_mac, TT_FORK, NULL, &test_setup},
 
   { "introduce1_suitable_circuit",
-    test_introduce1_suitable_circuit, TT_FORK, NULL, NULL },
+    test_introduce1_suitable_circuit, TT_FORK, NULL, &test_setup},
 
   { "introduce1_is_legacy",
-    test_introduce1_is_legacy, TT_FORK, NULL, NULL },
+    test_introduce1_is_legacy, TT_FORK, NULL, &test_setup},
 
   { "introduce1_validation",
-    test_introduce1_validation, TT_FORK, NULL, NULL },
+    test_introduce1_validation, TT_FORK, NULL, &test_setup},
 
   { "received_introduce1_handling",
-    test_received_introduce1_handling, TT_FORK, NULL, NULL },
+    test_received_introduce1_handling, TT_FORK, NULL, &test_setup},
 
   END_OF_TESTCASES
 };
