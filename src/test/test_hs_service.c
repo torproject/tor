@@ -332,10 +332,10 @@ helper_create_service_with_clients(int num_clients)
 /* Helper: Return a newly allocated service intro point with two link
  * specifiers, one IPv4 and one legacy ID set to As. */
 static hs_service_intro_point_t *
-helper_create_service_ip(void)
+helper_create_service_ip(const node_t *node)
 {
   link_specifier_t *ls;
-  hs_service_intro_point_t *ip = service_intro_point_new(NULL);
+  hs_service_intro_point_t *ip = service_intro_point_new(node);
   tor_assert(ip);
   /* Add a first unused link specifier. */
   ls = link_specifier_new();
@@ -680,7 +680,7 @@ test_service_intro_point(void *arg)
   /* Test simple creation of an object. */
   {
     time_t now = time(NULL);
-    ip = helper_create_service_ip();
+    ip = helper_create_service_ip(NULL);
     tt_assert(ip);
     /* Make sure the authentication keypair is not zeroes. */
     tt_int_op(fast_mem_is_zero((const char *) &ip->auth_key_kp,
@@ -774,7 +774,7 @@ test_helper_functions(void *arg)
 
   service = helper_create_service();
 
-  ip = helper_create_service_ip();
+  ip = helper_create_service_ip(NULL);
   /* Immediately add the intro point to the service so the free service at the
    * end cleans it as well. */
   service_intro_point_add(service->desc_current->intro_points.map, ip);
@@ -926,7 +926,7 @@ test_intro_circuit_opened(void *arg)
 
   /* Set an IP object now for this circuit. */
   {
-    hs_service_intro_point_t *ip = helper_create_service_ip();
+    hs_service_intro_point_t *ip = helper_create_service_ip(NULL);
     service_intro_point_add(service->desc_current->intro_points.map, ip);
     /* Update ident to contain the intro point auth key. */
     ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
@@ -1004,7 +1004,7 @@ test_intro_established(void *arg)
 
   /* Set an IP object now for this circuit. */
   {
-    ip = helper_create_service_ip();
+    ip = helper_create_service_ip(NULL);
     service_intro_point_add(service->desc_current->intro_points.map, ip);
     /* Update ident to contain the intro point auth key. */
     ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
@@ -1101,7 +1101,7 @@ test_closing_intro_circs(void *arg)
   /* Initialize service */
   service = helper_create_service();
   /* Initialize intro point */
-  ip = helper_create_service_ip();
+  ip = helper_create_service_ip(NULL);
   tt_assert(ip);
   service_intro_point_add(service->desc_current->intro_points.map, ip);
 
@@ -1221,7 +1221,7 @@ test_introduce2(void *arg)
 
   /* Set an IP object now for this circuit. */
   {
-    ip = helper_create_service_ip();
+    ip = helper_create_service_ip(NULL);
     service_intro_point_add(service->desc_current->intro_points.map, ip);
     /* Update ident to contain the intro point auth key. */
     ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
@@ -1273,7 +1273,7 @@ test_service_event(void *arg)
   /* Currently this consists of cleaning invalid intro points. So adding IPs
    * here that should get cleaned up. */
   {
-    hs_service_intro_point_t *ip = helper_create_service_ip();
+    hs_service_intro_point_t *ip = helper_create_service_ip(NULL);
     service_intro_point_add(service->desc_current->intro_points.map, ip);
     /* This run will remove the IP because we have no circuits nor node_t
      * associated with it. */
@@ -1285,7 +1285,7 @@ test_service_event(void *arg)
      * that matches the identity of this IP. */
     routerinfo_t ri;
     memset(&ri, 0, sizeof(ri));
-    ip = helper_create_service_ip();
+    ip = helper_create_service_ip(NULL);
     service_intro_point_add(service->desc_current->intro_points.map, ip);
     memset(ri.cache_info.identity_digest, 'A', DIGEST_LEN);
     /* This triggers a node_t creation. */
@@ -1296,7 +1296,7 @@ test_service_event(void *arg)
               OP_EQ, 0);
     /* No removal but no circuit so this means the IP object will stay in the
      * descriptor map so we can retry it. */
-    ip = helper_create_service_ip();
+    ip = helper_create_service_ip(NULL);
     service_intro_point_add(service->desc_current->intro_points.map, ip);
     ip->circuit_established = 1;  /* We'll test that, it MUST be 0 after. */
     run_housekeeping_event(now);
@@ -1309,7 +1309,7 @@ test_service_event(void *arg)
               OP_EQ, 0);
     /* Now, we'll create an IP with a registered circuit. The IP object
      * shouldn't go away. */
-    ip = helper_create_service_ip();
+    ip = helper_create_service_ip(NULL);
     service_intro_point_add(service->desc_current->intro_points.map, ip);
     ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
                         &ip->auth_key_kp.pubkey);
