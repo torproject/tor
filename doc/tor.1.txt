@@ -37,7 +37,7 @@ Project's website.
 
 COMMAND-LINE OPTIONS
 --------------------
-[[opt-h]] **-h**, **-help**::
+[[opt-h]] **-h**, **--help**::
     Display a short help message and exit.
 
 [[opt-f]] **-f** __FILE__::
