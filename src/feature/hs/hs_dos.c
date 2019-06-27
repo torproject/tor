@@ -23,6 +23,7 @@
 
 #include "core/or/circuitlist.h"
 
+#include "feature/hs/hs_circuitmap.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/relay/routermode.h"
 
@@ -77,6 +78,25 @@ get_param_burst_per_sec(const networkstatus_t *ns)
                                  0, INT32_MAX);
 }
 
+/* Go over all introduction circuit relay side and adjust their rate/burst
+ * values using the global parameters. This is called right after the
+ * consensus parameters might have changed. */
+static void
+update_intro_circuits(void)
+{
+  /* Returns all HS version intro circuits. */
+  smartlist_t *intro_circs = hs_circuitmap_get_all_intro_circ_relay_side();
+
+  SMARTLIST_FOREACH_BEGIN(intro_circs, circuit_t *, circ) {
+    /* Adjust the rate/burst value that might have changed. */
+    token_bucket_ctr_adjust(&TO_OR_CIRCUIT(circ)->introduce2_bucket,
+                            hs_dos_get_intro2_rate(),
+                            hs_dos_get_intro2_burst());
+  } SMARTLIST_FOREACH_END(circ);
+
+  smartlist_free(intro_circs);
+}
+
 /* Set consensus parameters. */
 static void
 set_consensus_parameters(const networkstatus_t *ns)
@@ -84,6 +104,10 @@ set_consensus_parameters(const networkstatus_t *ns)
   hs_dos_introduce_rate_per_sec = get_param_rate_per_sec(ns);
   hs_dos_introduce_burst_per_sec = get_param_burst_per_sec(ns);
   hs_dos_introduce_enabled = get_param_intro_dos_enabled(ns);
+
+  /* The above might have changed which means we need to go through all
+   * introduction circuits (relay side) and update the token buckets. */
+  update_intro_circuits();
 }
 
 /*
