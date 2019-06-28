@@ -61,7 +61,6 @@ main(int argc, char **argv)
 
   const struct tm *expires_at = localtime(&expiration);
 
-
   setlocale(LC_TIME, "en_US_POSIX");
 
 /* Yes, we're fine with RFC822 being written in 1982 and not addressing Y2K. */
