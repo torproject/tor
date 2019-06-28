@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <locale.h>
 
 #include "trunnel/ed25519_cert.h"
 #include "lib/cc/torint.h"  /* TOR_PRIdSZ */
@@ -55,9 +56,26 @@ main(int argc, char **argv)
     return -5;
   }
 
-  time_t expires_at = (time_t)cert->exp_field * 60 * 60;
+  const time_t expiration = (const time_t)cert->exp_field * 60 * 60;
 
-  printf("Expires at: %s", ctime(&expires_at));
+  const struct tm *expires_at = localtime(&expiration);
+
+  char rfc822_str[16] = "";
+
+  setlocale(LC_TIME, "en_US_POSIX");
+
+/* Yes, we're fine with RFC822 being written in 1982 and not addressing Y2K. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-y2k"
+  strftime(rfc822_str, sizeof(rfc822_str), "%a, %d %b %y %T %z", expires_at);
+  // Format string taken from Linux strftime(3) manpage.
+#pragma GCC diagnostic pop
+
+  // XXX: On macOS, %z prints a single digit for timezone offset.
+
+  printf("Expires at: %s\n", ctime(&expiration));
+  printf("RFC 822 timestamp: %s\n", rfc822_str);
+  printf("UNIX timestamp: %ld\n", expiration);
 
   ed25519_cert_free(cert);
 
