@@ -16,6 +16,7 @@ int
 main(int argc, char **argv)
 {
   ed25519_cert_t *cert = NULL;
+  char rfc822_str[64] = "";
 
   if (argc != 2) {
     fprintf(stderr, "Usage:\n");
@@ -60,20 +61,21 @@ main(int argc, char **argv)
 
   const struct tm *expires_at = localtime(&expiration);
 
-  char rfc822_str[16] = "";
 
   setlocale(LC_TIME, "en_US_POSIX");
 
 /* Yes, we're fine with RFC822 being written in 1982 and not addressing Y2K. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-y2k"
-  strftime(rfc822_str, sizeof(rfc822_str), "%a, %d %b %y %T %z", expires_at);
+  if (strftime(rfc822_str, sizeof(rfc822_str), "%a, %d %b %y %T %z",
+        expires_at) == 0) {
+    fprintf(stderr, "strftime failed to format timestamp\n");
+    return -6;
+  }
   // Format string taken from Linux strftime(3) manpage.
 #pragma GCC diagnostic pop
 
-  // XXX: On macOS, %z prints a single digit for timezone offset.
-
-  printf("Expires at: %s\n", ctime(&expiration));
+  printf("Expires at: %s", ctime(&expiration));
   printf("RFC 822 timestamp: %s\n", rfc822_str);
   printf("UNIX timestamp: %ld\n", (long int)expiration);
 
