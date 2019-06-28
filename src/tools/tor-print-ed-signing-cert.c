@@ -75,7 +75,7 @@ main(int argc, char **argv)
 
   printf("Expires at: %s\n", ctime(&expiration));
   printf("RFC 822 timestamp: %s\n", rfc822_str);
-  printf("UNIX timestamp: %ld\n", expiration);
+  printf("UNIX timestamp: %ld\n", (long int)expiration);
 
   ed25519_cert_free(cert);
 
