@@ -1,22 +1,47 @@
 /* type=fallback */
 /* version=2.0.0 */
 /* timestamp=20190625114911 */
+/* timestamp0=20190625114911 */
+/* timestamp1=20190628085927 */
 /* source=whitelist */
 /* ===== */
-/* Whitelist excluded 1550 of 1711 candidates. */
+/* 0: Whitelist excluded 1550 of 1711 candidates. */
+/* 1: Whitelist excluded 1601 of 1765 candidates. */
 /* Checked IPv4 DirPorts served a consensus within 15.0s. */
 /*
+0:
 Final Count: 140 (Eligible 161, Target 414 (2072 * 0.20), Max 200)
 Excluded: 21 (Same Operator 16, Failed/Skipped Download 3, Excess 2)
 Bandwidth Range: 0.5 - 54.5 MByte/s
+
+MERGED WITH:
+
+1:
+Final Count: 140 (Eligible 164, Target 414 (2073 * 0.20), Max 200)
+Excluded: 24 (Same Operator 16, Failed/Skipped Download 4, Excess 4)
+Bandwidth Range: 0.8 - 54.5 MByte/s
 */
 /*
+):
 Onionoo Source: details Date: 2019-06-25 10:00:00 Version: 7.0
 URL: https:onionoo.torproject.orgdetails?fieldsfingerprint%2Cnickname%2Ccontact%2Clast_changed_address_or_port%2Cconsensus_weight%2Cadvertised_bandwidth%2Cor_addresses%2Cdir_address%2Crecommended_version%2Cflags%2Ceffective_family%2Cplatform&flagV2Dir&typerelay&last_seen_days-0&first_seen_days90-
+
+MERGED WITH:
+
+1:
+Onionoo Source: details Date: 2019-06-28 07:00:00 Version: 7.0
+URL: https:onionoo.torproject.orgdetails?fieldsfingerprint%2Cnickname%2Ccontact%2Clast_changed_address_or_port%2Cconsensus_weight%2Cadvertised_bandwidth%2Cor_addresses%2Cdir_address%2Crecommended_version%2Cflags%2Ceffective_family%2Cplatform&last_seen_days-0&flagV2Dir&first_seen_days90-&typerelay&order-consensus_weight%2Cfirst_seen
 */
 /*
+0:
 Onionoo Source: uptime Date: 2019-06-25 10:00:00 Version: 7.0
 URL: https:onionoo.torproject.orguptime?first_seen_days90-&flagV2Dir&typerelay&last_seen_days-0
+
+MERGED WITH:
+
+1:
+Onionoo Source: uptime Date: 2019-06-28 07:00:00 Version: 7.0
+URL: https:onionoo.torproject.orguptime?first_seen_days90-&flagV2Dir&typerelay&order-consensus_weight%2Cfirst_seen&last_seen_days-0
 */
 /* ===== */
 "185.13.39.197:80 orport=443 id=001524DD403D729F08F7E5D77813EF12756CFA8D"
@@ -255,6 +280,12 @@ URL: https:onionoo.torproject.orguptime?first_seen_days90-&flagV2Dir&typerelay&l
 /* extrainfo=0 */
 /* ===== */
 ,
+"50.7.74.170:80 orport=443 id=5BF17163CBE73D8CD9FDBE030C944EA05707DA93"
+" ipv6=[2001:49f0:d002:2::58]:443"
+/* nickname=theia8 */
+/* extrainfo=0 */
+/* ===== */
+,
 "172.98.193.43:80 orport=443 id=5E56738E7F97AA81DEEF59AF28494293DFBFCCDF"
 /* nickname=Backplane */
 /* extrainfo=0 */
@@ -312,6 +343,11 @@ URL: https:onionoo.torproject.orguptime?first_seen_days90-&flagV2Dir&typerelay&l
 /* extrainfo=0 */
 /* ===== */
 ,
+"77.247.181.166:80 orport=443 id=77131D7E2EC1CA9B8D737502256DA9103599CE51"
+/* nickname=CriticalMass */
+/* extrainfo=0 */
+/* ===== */
+,
 "5.196.23.64:9030 orport=9001 id=775B0FAFDE71AADC23FFC8782B7BEB1D5A92733E"
 /* nickname=Aerodynamik01 */
 /* extrainfo=0 */
@@ -330,6 +366,11 @@ URL: https:onionoo.torproject.orguptime?first_seen_days90-&flagV2Dir&typerelay&l
 ,
 "77.247.181.162:80 orport=443 id=7BFB908A3AA5B491DA4CA72CCBEE0E1F2A939B55"
 /* nickname=sofia */
+/* extrainfo=0 */
+/* ===== */
+,
+"185.220.101.48:10048 orport=20048 id=7E281CD2C315C4F7A84BC7C8721C3BC974DDBFA3"
+/* nickname=niftyporcupine */
 /* extrainfo=0 */
 /* ===== */
 ,
@@ -452,6 +493,11 @@ URL: https:onionoo.torproject.orguptime?first_seen_days90-&flagV2Dir&typerelay&l
 /* extrainfo=0 */
 /* ===== */
 ,
+"185.220.101.49:10049 orport=20049 id=9B816A5B3EB20B8E4E9B9D1FBA299BD3F40F0320"
+/* nickname=niftypygmyjerboa */
+/* extrainfo=0 */
+/* ===== */
+,
 "86.105.212.130:9030 orport=443 id=9C900A7F6F5DD034CFFD192DAEC9CCAA813DB022"
 /* nickname=firstor2 */
 /* extrainfo=0 */
@@ -511,6 +557,12 @@ URL: https:onionoo.torproject.orguptime?first_seen_days90-&flagV2Dir&typerelay&l
 "45.79.108.130:9030 orport=9001 id=AEDAC7081AE14B8D241ECF0FF17A2858AB4383D0"
 " ipv6=[2600:3c01:e000:131::8000:0]:9001"
 /* nickname=linss */
+/* extrainfo=0 */
+/* ===== */
+,
+"5.9.147.226:9030 orport=9001 id=B0553175AADB0501E5A61FC61CEA3970BE130FF2"
+" ipv6=[2a01:4f8:190:30e1::2]:9001"
+/* nickname=zwiubel */
 /* extrainfo=0 */
 /* ===== */
 ,
@@ -662,6 +714,12 @@ URL: https:onionoo.torproject.orguptime?first_seen_days90-&flagV2Dir&typerelay&l
 /* extrainfo=0 */
 /* ===== */
 ,
+"50.7.74.174:80 orport=443 id=D50101A2ABD09DC245F7E96C0818D003CDD62351"
+" ipv6=[2001:49f0:d002:2::56]:443"
+/* nickname=theia6 */
+/* extrainfo=0 */
+/* ===== */
+,
 "37.187.115.157:9030 orport=9001 id=D5039E1EBFD96D9A3F9846BF99EC9F75EDDE902A"
 /* nickname=Janky328891 */
 /* extrainfo=0 */
@@ -688,6 +746,12 @@ URL: https:onionoo.torproject.orguptime?first_seen_days90-&flagV2Dir&typerelay&l
 /* extrainfo=0 */
 /* ===== */
 ,
+"178.33.183.251:80 orport=443 id=DD823AFB415380A802DCAEB9461AE637604107FB"
+" ipv6=[2001:41d0:2:a683::251]:443"
+/* nickname=grenouille */
+/* extrainfo=0 */
+/* ===== */
+,
 "171.25.193.20:80 orport=443 id=DD8BD7307017407FCC36F8D04A688F74A0774C02"
 " ipv6=[2001:67c:289c::20]:443"
 /* nickname=DFRI0 */
@@ -702,6 +766,11 @@ URL: https:onionoo.torproject.orguptime?first_seen_days90-&flagV2Dir&typerelay&l
 ,
 "166.70.207.2:9130 orport=9101 id=E41B16F7DDF52EBB1DB4268AB2FE340B37AD8904"
 /* nickname=xmission1 */
+/* extrainfo=0 */
+/* ===== */
+,
+"185.100.86.182:9030 orport=8080 id=E51620B90DCB310138ED89EDEDD0A5C361AAE24E"
+/* nickname=NormalCitizen */
 /* extrainfo=0 */
 /* ===== */
 ,
