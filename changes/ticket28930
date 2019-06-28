@@ -1,0 +1,6 @@
+  o Code simplification and refactoring (bootstrap):
+    - We simplify the PT and Proxy handling code in Tor such that PT's are no
+      longer considered a Proxy itself. This allows us to be more specific
+      during bootstrap in cases where a PT itself might also have to use a proxy for
+      connectivity. Implements ticket 28930.
+
