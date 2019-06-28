@@ -478,8 +478,6 @@ test_cntev_orconn_state_pt(void *arg)
 
   send_orconn_state(&conn, OR_CONN_STATE_CONNECTING);
   assert_bootmsg("1 TAG=conn_pt");
-  send_orconn_state(&conn, OR_CONN_STATE_PROXY_HANDSHAKING);
-  assert_bootmsg("2 TAG=conn_done_pt");
   send_orconn_state(&conn, OR_CONN_STATE_TLS_HANDSHAKING);
   assert_bootmsg("10 TAG=conn_done");
   send_orconn_state(&conn, OR_CONN_STATE_OR_HANDSHAKING_V3);
@@ -512,9 +510,9 @@ test_cntev_orconn_state_proxy(void *arg)
   send_ocirc_chan(1, 1, true);
 
   send_orconn_state(&conn, OR_CONN_STATE_CONNECTING);
-  assert_bootmsg("3 TAG=conn_proxy");
+  assert_bootmsg("2 TAG=conn_proxy");
   send_orconn_state(&conn, OR_CONN_STATE_PROXY_HANDSHAKING);
-  assert_bootmsg("4 TAG=conn_done_proxy");
+  assert_bootmsg("3 TAG=conn_done_proxy");
   send_orconn_state(&conn, OR_CONN_STATE_TLS_HANDSHAKING);
   assert_bootmsg("10 TAG=conn_done");
   send_orconn_state(&conn, OR_CONN_STATE_OR_HANDSHAKING_V3);
