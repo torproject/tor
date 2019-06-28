@@ -66,7 +66,7 @@ main(int argc, char **argv)
 /* Yes, we're fine with RFC822 being written in 1982 and not addressing Y2K. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-y2k"
-  if (strftime(rfc822_str, sizeof(rfc822_str), "%a, %d %b %y %T %z",
+  if (strftime(rfc822_str, sizeof(rfc822_str), "%a, %d %b %y %H:%M:%S %z",
         expires_at) == 0) {
     fprintf(stderr, "strftime failed to format timestamp\n");
     return -6;
