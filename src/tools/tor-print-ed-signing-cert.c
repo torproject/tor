@@ -71,7 +71,8 @@ main(int argc, char **argv)
     fprintf(stderr, "strftime failed to format timestamp\n");
     return -6;
   }
-  // Format string taken from Linux strftime(3) manpage.
+  // Format string based on one from Linux strftime(3) manpage (changed %T
+  // to %H:%M:S to make it compile on Windows CI).
 #pragma GCC diagnostic pop
 
   printf("Expires at: %s", ctime(&expiration));
