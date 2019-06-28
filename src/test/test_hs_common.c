@@ -502,6 +502,7 @@ test_desc_reupload_logic(void *arg)
                 pubkey_hex, strlen(pubkey_hex));
   hs_build_address(&pubkey, HS_VERSION_THREE, onion_addr);
   service = tor_malloc_zero(sizeof(hs_service_t));
+  tt_assert(service);
   memcpy(service->onion_address, onion_addr, sizeof(service->onion_address));
   ed25519_secret_key_generate(&service->keys.identity_sk, 0);
   ed25519_public_key_generate(&service->keys.identity_pk,

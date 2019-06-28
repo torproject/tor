@@ -1265,6 +1265,7 @@ test_service_event(void *arg)
 
   /* Set a service for this circuit. */
   service = helper_create_service();
+  tt_assert(service);
   ed25519_pubkey_copy(&circ->hs_ident->identity_pk,
                       &service->keys.identity_pk);
 
