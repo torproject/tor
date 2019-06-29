@@ -450,6 +450,9 @@ circpad_is_token_removal_supported(circpad_machine_runtime_t *mi)
     /* Machines that do want token removal are less sensitive to performance.
      * Let's spend some time to check that our state is consistent and sane */
     const circpad_state_t *state = circpad_machine_current_state(mi);
+    if (BUG(!state)) {
+      return 1;
+    }
     tor_assert_nonfatal(state->token_removal != CIRCPAD_TOKEN_REMOVAL_NONE);
     tor_assert_nonfatal(state->histogram_len == mi->histogram_len);
     tor_assert_nonfatal(mi->histogram_len != 0);
@@ -1667,6 +1670,9 @@ circpad_estimate_circ_rtt_on_received(circuit_t *circ,
     }
   } else {
     const circpad_state_t *state = circpad_machine_current_state(mi);
+    if (BUG(!state)) {
+      return;
+    }
 
     /* Since monotime is unpredictably expensive, only update this field
      * if rtt estimates are needed. Otherwise, stop the rtt update. */
