@@ -1083,8 +1083,11 @@ circpad_machine_remove_token(circpad_machine_runtime_t *mi)
 
   state = circpad_machine_current_state(mi);
 
+  /* If we are not in a padding state (like start or end), we're done */
+  if (!state)
+    return;
   /* Don't remove any tokens if we're not doing token removal */
-  if (!state || state->token_removal == CIRCPAD_TOKEN_REMOVAL_NONE)
+  if (state->token_removal == CIRCPAD_TOKEN_REMOVAL_NONE)
     return;
 
   current_time = monotime_absolute_usec();
@@ -1102,10 +1105,6 @@ circpad_machine_remove_token(circpad_machine_runtime_t *mi)
     mi->is_padding_timer_scheduled = 0;
     timer_disable(mi->padding_timer);
   }
-
-  /* If we are not in a padding state (like start or end), we're done */
-  if (!state)
-    return;
 
   /* Perform the specified token removal strategy */
   switch (state->token_removal) {
