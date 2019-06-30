@@ -1,0 +1,4 @@
+  o Minor bugfixes (onion services):
+    - When connecting to an intro point that has been specified multiple times
+      in a descriptor, do not connect to ones which are marked as "failed".
+      Fixes bug 25568; bugfix on 0.1.0.1-rc. Patch by Neel Chauhan.
