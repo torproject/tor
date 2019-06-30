@@ -49,6 +49,9 @@ static digest256map_t *client_auths = NULL;
 
 #include "trunnel/hs/cell_introduce1.h"
 
+static int intro_point_is_usable(const ed25519_public_key_t *service_pk,
+                                 const hs_desc_intro_point_t *ip);
+
 /* Return a human-readable string for the client fetch status code. */
 static const char *
 fetch_status_to_string(hs_client_fetch_status_t status)
@@ -610,6 +613,14 @@ send_introduce1(origin_circuit_t *intro_circ,
     /* If we can find a descriptor from this introduction circuit ident, we
      * must have a valid intro point object. Permanent error. */
     goto perm_err;
+  }
+
+  if (!intro_point_is_usable(service_identity_pk, ip)) {
+    log_info(LD_REND, "We have attempted to connect to a failed intro point "
+                      "for service %s on circuit %u",
+                      safe_str_client(onion_address),
+                      TO_CIRCUIT(intro_circ)->n_circ_id);
+    goto tran_err;
   }
 
   /* Send the INTRODUCE1 cell. */

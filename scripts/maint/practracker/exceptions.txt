@@ -194,7 +194,7 @@ problem function-size /src/feature/dirparse/routerparse.c:extrainfo_parse_entry_
 problem function-size /src/feature/hibernate/hibernate.c:accounting_parse_options() 109
 problem function-size /src/feature/hs/hs_cell.c:hs_cell_build_establish_intro() 115
 problem function-size /src/feature/hs/hs_cell.c:hs_cell_parse_introduce2() 154
-problem function-size /src/feature/hs/hs_client.c:send_introduce1() 104
+problem function-size /src/feature/hs/hs_client.c:send_introduce1() 112
 problem function-size /src/feature/hs/hs_client.c:hs_config_client_authorization() 108
 problem function-size /src/feature/hs/hs_common.c:hs_get_responsible_hsdirs() 104
 problem function-size /src/feature/hs/hs_config.c:config_generic_service() 140
