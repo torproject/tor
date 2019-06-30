@@ -233,7 +233,7 @@ problem function-size /src/feature/relay/router.c:router_build_fresh_unsigned_ro
 problem function-size /src/feature/relay/router.c:router_dump_router_to_string() 371
 problem function-size /src/feature/relay/routerkeys.c:load_ed_keys() 294
 problem function-size /src/feature/rend/rendcache.c:rend_cache_store_v2_desc_as_client() 193
-problem function-size /src/feature/rend/rendclient.c:rend_client_send_introduction() 220
+problem function-size /src/feature/rend/rendclient.c:rend_client_send_introduction() 230
 problem function-size /src/feature/rend/rendcommon.c:rend_encode_v2_descriptors() 225
 problem function-size /src/feature/rend/rendmid.c:rend_mid_establish_intro_legacy() 104
 problem function-size /src/feature/rend/rendparse.c:rend_parse_v2_service_descriptor() 187

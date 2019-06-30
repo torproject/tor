@@ -121,6 +121,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   crypt_path_t *cpath;
   off_t dh_offset;
   crypto_pk_t *intro_key = NULL;
+  char *identity = NULL;
   int status = 0;
   const char *onion_address;
 
@@ -165,6 +166,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     if (tor_memeq(introcirc->build_state->chosen_exit->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN)) {
       intro_key = intro->intro_key;
+      identity = introcirc->build_state->chosen_exit->identity_digest;
       break;
     }
   });
@@ -189,6 +191,14 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     log_warn(LD_BUG, "Internal error: couldn't hash public key.");
     status = -2;
     goto perm_err;
+  }
+  if (rend_cache_v2_intro_has_failure((uint8_t *) identity, onion_address)) {
+    log_info(LD_REND, "We have attempted to connect to a failed intro point "
+                      "for service %s on circuit %u",
+                      safe_str_client(onion_address),
+                      TO_CIRCUIT(introcirc)->n_circ_id);
+    status = -1;
+    goto cleanup;
   }
 
   /* Initialize the pending_final_cpath and start the DH handshake. */

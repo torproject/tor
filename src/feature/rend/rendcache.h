@@ -71,6 +71,8 @@ int rend_cache_lookup_entry(const char *query, int version,
 int rend_cache_lookup_v2_desc_as_service(const char *query,
                                          rend_cache_entry_t **entry_out);
 int rend_cache_lookup_v2_desc_as_dir(const char *query, const char **desc);
+int rend_cache_v2_intro_has_failure(const uint8_t *identity,
+                                    const char *service_id);
 
 int rend_cache_store_v2_desc_as_dir(const char *desc);
 int rend_cache_store_v2_desc_as_service(const char *desc);

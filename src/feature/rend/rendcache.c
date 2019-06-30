@@ -361,6 +361,19 @@ cache_failure_intro_lookup(const uint8_t *identity, const char *service_id,
   return 0;
 }
 
+/** CHeck if we have a failure for a relay with the identity digest
+ * <b>identity</b> which has DIGEST_LEN bytes and service ID <b>service_id</b>
+ * which is a null-terminated string. If found, return 1, else return 0. */
+int
+rend_cache_v2_intro_has_failure(const uint8_t *identity,
+                                const char *service_id)
+{
+  rend_cache_failure_intro_t *intro_entry;
+  int ret = cache_failure_intro_lookup(identity, service_id, &intro_entry);
+
+  return ret;
+}
+
 /** Allocate a new cache failure intro object and copy the content from
  * <b>entry</b> to this newly allocated object. Return it. */
 static rend_cache_failure_intro_t *
