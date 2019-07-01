@@ -35,15 +35,11 @@ struct rend_intro_point_t {
    * included in the last HS descriptor we generated. */
   unsigned int listed_in_last_desc : 1;
 
-  /** (Service side only) A replay cache recording the RSA-encrypted parts
-   * of INTRODUCE2 cells this intro point's circuit has received.  This is
-   * used to prevent replay attacks. */
+  /** (Service side only) A replay cache recording the RSA-encrypted parts of
+   * INTRODUCE2 cells this intro point's circuit has received.  This is used to
+   * prevent replay attacks. We wipe this replay cache according to
+   * 'max_introductions'. */
   struct replaycache_t *accepted_intro_rsa_parts;
-
-  /** (Service side only) Count of INTRODUCE2 cells accepted from this
-   * intro point.
-   */
-  int accepted_introduce2_count;
 
   /** (Service side only) Maximum number of INTRODUCE2 cells that this IP
    * will accept. This is a random value between

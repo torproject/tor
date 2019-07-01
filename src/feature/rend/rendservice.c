@@ -78,7 +78,6 @@ static extend_info_t *find_rp_for_intro(
     const rend_intro_cell_t *intro,
     char **err_msg_out);
 
-static int intro_point_accepted_intro_count(rend_intro_point_t *intro);
 static int intro_point_should_expire_now(rend_intro_point_t *intro,
                                          time_t now);
 static int rend_service_derive_key_digests(struct rend_service_t *s);
@@ -2029,9 +2028,6 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   }
   stage_descr = NULL;
 
-  /* Increment INTRODUCE2 counter */
-  ++(intro_point->accepted_introduce2_count);
-
   /* Find the rendezvous point */
   rp = find_rp_for_intro(parsed_req, &err_msg);
   if (!rp) {
@@ -3884,14 +3880,6 @@ upload_service_descriptor(rend_service_t *service)
   service->desc_is_dirty = 0;
 }
 
-/** Return the number of INTRODUCE2 cells this hidden service has received
- * from this intro point. */
-static int
-intro_point_accepted_intro_count(rend_intro_point_t *intro)
-{
-  return intro->accepted_introduce2_count;
-}
-
 /** Return non-zero iff <b>intro</b> should 'expire' now (i.e. we
  * should stop publishing it in new descriptors and eventually close
  * it). */
@@ -3906,10 +3894,14 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
     return 0;
   }
 
-  if (intro_point_accepted_intro_count(intro) >=
+  if (intro->accepted_intro_rsa_parts &&
+      replaycache_size(intro->accepted_intro_rsa_parts) >=
       intro->max_introductions) {
-    /* This intro point has been used too many times.  Expire it now. */
-    return 1;
+    /* This intro point has been used too many times. Cycle its replay cache */
+    replaycache_free(intro->accepted_intro_rsa_parts);
+    intro->accepted_intro_rsa_parts = replaycache_new(0, 0);
+    log_info(LD_GENERAL, "We did %d intros. Refreshing replay cache.",
+             replaycache_size(intro->accepted_intro_rsa_parts));
   }
 
   if (intro->time_to_expire == -1) {
