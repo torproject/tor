@@ -151,6 +151,10 @@ install:
   ## Finally, list installed package versions
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then dpkg-query --show; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew list --versions; fi
+  ## Get python version
+  - python --version
+  ## If we're running chutney, show the chutney commit
+  - if [[ "$CHUTNEY" != "" ]]; then pushd "$CHUTNEY_PATH"; git log -1 ; popd ; fi
 
 script:
   - ./autogen.sh
