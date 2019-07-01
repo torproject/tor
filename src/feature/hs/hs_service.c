@@ -2295,10 +2295,6 @@ intro_point_should_expire(const hs_service_intro_point_t *ip,
 {
   tor_assert(ip);
 
-  if (ip->introduce2_count >= ip->introduce2_max) {
-    goto expired;
-  }
-
   if (ip->time_to_expire <= now) {
     goto expired;
   }
