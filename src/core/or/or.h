@@ -1083,10 +1083,10 @@ typedef struct rend_encoded_v2_service_descriptor_t
  *  So if we cycle the replay cache after 150k to 300k introductions, this
  *  means that the replay cache size will be between 8.4MB and 16.8MB.
  */
-#define INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS 16384
+#define INTRO_POINT_REPLAY_CACHE_MIN_INTRODUCTIONS 16384
 /* Double the minimum value so the interval is [min, min * 2]. */
 #define INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS \
-  (INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS * 2)
+  (INTRO_POINT_REPLAY_CACHE_MIN_INTRODUCTIONS * 2)
 
 /** The minimum number of seconds that an introduction point will last
  * before expiring due to old age.  (If it receives

@@ -54,8 +54,10 @@ typedef struct hs_service_intro_point_t {
    * object legacy flag is set. */
   uint8_t legacy_key_digest[DIGEST_LEN];
 
-  /* Maximum number of INTRODUCE2 cell this intro point should accept. */
-  uint64_t introduce2_max;
+  /* Maximum number of INTRODUCE2 cell this intro point should accept before we
+   * wipe its replay cache and start all over again. Also see
+   * INTRO_POINT_REPLAY_CACHE_MIN_INTRODUCTIONS */
+  uint64_t replay_cache_max_introduce2;
 
   /* The time at which this intro point should expire and stop being used. */
   time_t time_to_expire;
@@ -71,9 +73,8 @@ typedef struct hs_service_intro_point_t {
 
   /* Replay cache recording the encrypted part of an INTRODUCE2 cell that the
    * circuit associated with this intro point has received. This is used to
-   * prevent replay attacks. See INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS for
-   * more details.
-   */
+   * prevent replay attacks. See INTRO_POINT_REPLAY_CACHE_MIN_INTRODUCTIONS for
+   * more details. */
   replaycache_t *replay_cache;
 } hs_service_intro_point_t;
 
