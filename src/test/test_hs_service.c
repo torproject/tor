@@ -2323,12 +2323,11 @@ test_intro_replay_cache_expiration(void *arg)
 
   /* 2) Now we want to test that our replaycache has a maximum intro2 limit.
    *
-   * Start using a different rend cookie for every intro2 cell and send lots of
-   * them. */
+   *    Send a lot of INTRO2 cells and see that the replaycache is filled
+   *    properly. Don't pass the maximum introduction limit otherwise the
+   *    replaycache is gonna get wiped. */
   for (i = 0 ; i < 9 ; i++) {
-    /* Send enough intro2 so that it doesn't expire */
-    retval = intro_point_should_expire(ip, approx_time());
-    tt_int_op(retval, OP_EQ, 0);
+    check_intro_point_replay_cache(ip);
 
     retval = helper_create_introduce2(ip, cell);
     tt_int_op(retval, OP_GE, 0);
@@ -2341,9 +2340,10 @@ test_intro_replay_cache_expiration(void *arg)
   /* Check the contents of the replaycache */
   tt_int_op(replaycache_size(ip->replay_cache), OP_EQ, 10);
 
-  /* That last intro2 should make it expire: */
-  retval = intro_point_should_expire(ip, approx_time());
-  tt_int_op(retval, OP_EQ, 1);
+  /* Now that we have 10 INTRO2, the replay cache has surpassed its limit and
+   * should be wiped: */
+  check_intro_point_replay_cache(ip);
+  tt_int_op(replaycache_size(ip->replay_cache), OP_EQ, 0);
 
  done:
   tor_free(mock_node.ri->onion_curve25519_pkey);
