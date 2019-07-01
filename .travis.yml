@@ -43,7 +43,6 @@ matrix:
     # We also try running a hardened clang build with chutney on Linux.
     - env: CHUTNEY="yes" SKIP_MAKE_CHECK="yes" CHUTNEY_ALLOW_FAILURES="2"
       compiler: clang
-      os: linux
 
   ## Uncomment to allow the build to report success (with non-required
   ## sub-builds continuing to run) if all required sub-builds have
