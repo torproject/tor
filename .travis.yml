@@ -172,6 +172,7 @@ after_failure:
   - if [[ "$SKIP_MAKE_CHECK" == "" ]]; then cat test-suite.log || echo "cat failed"; fi
   ## `make distcheck` puts it somewhere different.
   - if [[ "$DISTCHECK" != "" ]]; then make show-distdir-testlog || echo "make failed"; fi
+  - if [[ "$CHUTNEY" != "" ]]; then ls test_network_log || echo "ls failed"; cat test_network_log/* || echo "cat failed"; fi
 
 before_cache:
   ## Delete all gcov files.
