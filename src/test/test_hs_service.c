@@ -872,11 +872,6 @@ test_helper_functions(void *arg)
     /* This newly created IP from above shouldn't expire now. */
     ret = intro_point_should_expire(ip, now);
     tt_int_op(ret, OP_EQ, 0);
-    /* Maximum number of INTRODUCE2 cell reached, it should expire. */
-    ip->introduce2_count = INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS + 1;
-    ret = intro_point_should_expire(ip, now);
-    tt_int_op(ret, OP_EQ, 1);
-    ip->introduce2_count = 0;
     /* It should expire if time to expire has been reached. */
     ip->time_to_expire = now - 1000;
     ret = intro_point_should_expire(ip, now);
@@ -1238,7 +1233,8 @@ test_introduce2(void *arg)
    * behaviour differently. */
   ret = hs_service_receive_introduce2(circ, payload, sizeof(payload));
   tt_int_op(ret, OP_EQ, -1);
-  tt_u64_op(ip->introduce2_count, OP_EQ, 0);
+  tt_int_op(replaycache_size(service->state.replay_cache_rend_cookie),
+            OP_EQ, 0);
 
  done:
   or_state_free(dummy_state);
