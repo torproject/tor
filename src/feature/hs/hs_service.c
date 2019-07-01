@@ -2289,19 +2289,12 @@ update_all_descriptors_intro_points(time_t now)
 /* Return true iff the given intro point has expired that is it has been used
  * for too long or we've reached our max seen INTRODUCE2 cell. */
 STATIC int
-intro_point_should_expire(const hs_service_intro_point_t *ip,
+intro_point_should_expire(hs_service_intro_point_t *ip,
                           time_t now)
 {
   tor_assert(ip);
 
-  if (ip->time_to_expire <= now) {
-    goto expired;
-  }
-
-  /* Not expiring. */
-  return 0;
- expired:
-  return 1;
+  return ip->time_to_expire <= now;
 }
 
 /* Go over the given set of intro points for each service and remove any
@@ -2510,6 +2503,32 @@ rotate_all_descriptors(time_t now)
   } FOR_EACH_SERVICE_END;
 }
 
+/** Check the replay cache of this intro point, and wipe it if needed. */
+STATIC void
+check_intro_point_replay_cache(hs_service_intro_point_t *ip)
+{
+  if ((size_t) replaycache_size(ip->replay_cache) >= ip->introduce2_max) {
+    replaycache_free(ip->replay_cache);
+    ip->replay_cache = replaycache_new(0, 0);
+  }
+}
+
+/** Make sure that all intro point replay caches are well maintained. */
+static void
+maintain_intro_point_replay_caches(hs_service_t *service)
+{
+  tor_assert(service);
+
+  /* For both descriptors, see if any intro points have passed their
+   * introduction limit and their replay cache needs to be refreshed. */
+  FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+    DIGEST256MAP_FOREACH_MODIFY(desc->intro_points.map, key,
+                                hs_service_intro_point_t *, ip) {
+      check_intro_point_replay_cache(ip);
+    } DIGEST256MAP_FOREACH_END;
+  } FOR_EACH_DESCRIPTOR_END;
+}
+
 /* Scheduled event run from the main loop. Make sure all our services are up
  * to date and ready for the other scheduled events. This includes looking at
  * the introduction points status and descriptor rotation time. */
@@ -2533,6 +2552,9 @@ run_housekeeping_event(time_t now)
 
     /* Cleanup invalid intro points from the service descriptor. */
     cleanup_intro_points(service, now);
+
+    /* Maintain the intro point replay caches */
+    maintain_intro_point_replay_caches(service);
 
     /* Remove expired failing intro point from the descriptor failed list. We
      * reset them at each INTRO_CIRC_RETRY_PERIOD. */
