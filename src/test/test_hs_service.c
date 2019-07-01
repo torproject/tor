@@ -22,6 +22,7 @@
 #define TOR_CHANNEL_INTERNAL_
 #define HS_CLIENT_PRIVATE
 #define CRYPT_PATH_PRIVATE
+#define REPLAYCACHE_PRIVATE
 
 #include "test/test.h"
 #include "test/test_helpers.h"
@@ -45,6 +46,7 @@
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/shared_random_state.h"
 #include "feature/dircommon/voting_schedule.h"
+#include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"
@@ -2174,6 +2176,124 @@ test_export_client_circuit_id(void *arg)
   tor_free(cp2);
 }
 
+static ssize_t
+hs_cell_parse_introduce2_mock(hs_cell_introduce2_data_t *data,
+                              const origin_circuit_t *circ,
+                              const hs_service_t *service)
+{
+  (void) circ;
+  (void) service;
+  static int i = 0;
+
+  memset(data->rendezvous_cookie, 0, sizeof(data->rendezvous_cookie));
+
+  set_uint32(data->rendezvous_cookie, (uint32_t) i);
+  /* Use this arbitrary circuit flag, as a way to denote whether we want to
+     change the rendezvous cookie or remain the same. */
+  if (!circ->is_ancient) {
+    i++;
+  }
+
+  return 0;
+}
+
+static void
+launch_rendezvous_point_circuit_mock(const hs_service_t *service,
+                                     const hs_service_intro_point_t *ip,
+                                     const hs_cell_introduce2_data_t *data)
+{
+  (void) service;
+  (void) ip;
+  (void) data;
+
+  return;
+}
+
+static int32_t
+networkstatus_get_param_mock(const networkstatus_t *ns,
+                             const char *param_name, int32_t default_val,
+                             int32_t min_val, int32_t max_val)
+{
+  (void) ns;
+  (void) default_val;
+  (void) min_val;
+  (void) max_val;
+
+  if (!strcmp(param_name, "hs_intro_min_introduce2")) {
+    return 10;
+  } else if (!strcmp(param_name, "hs_intro_max_introduce2")) {
+    return 11;
+  } else {
+    return networkstatus_get_param__real(ns, param_name, default_val, min_val, max_val);
+  }
+}
+
+static void
+test_intro_replay_cache_expiration(void *arg)
+{
+  int retval, i;
+
+  (void) arg;
+
+  hs_service_t *service = hs_service_new(get_options());
+  origin_circuit_t circ;
+  uint8_t subcredential[12] = {0};
+  uint8_t payload[12] = {0};
+
+  MOCK(hs_cell_parse_introduce2, hs_cell_parse_introduce2_mock);
+  MOCK(launch_rendezvous_point_circuit, launch_rendezvous_point_circuit_mock);
+  MOCK(networkstatus_get_param, networkstatus_get_param_mock);
+
+  hs_service_intro_point_t *ip = service_intro_point_new(NULL);
+
+  retval = intro_point_should_expire(ip, approx_time());
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* 1) First of all let's test that the replay cache works:
+   *
+   * Send an intro2, but ask our mock function to not change the rendezvous
+   * cookie so that the replay cache triggers the second time.
+   */
+  circ.is_ancient = 1;
+  retval = hs_circ_handle_introduce2(service, &circ, ip, subcredential,
+                                     payload, sizeof(payload));
+  tt_int_op(retval, OP_EQ, 0);
+  /* Now send another one with the same rend cookie and see that the replay
+   * cache triggers: */
+  circ.is_ancient = 0;
+  retval = hs_circ_handle_introduce2(service, &circ, ip, subcredential,
+                                     payload, sizeof(payload));
+  tt_int_op(retval, OP_EQ, -1);
+
+  /* 2) Now we want to test that our replaycache has a maximum intro2 limit.
+   *
+   * Start using a different rend cookie for every intro2 cell and send lots of
+   * them. */
+  for (i = 0 ; i < 9 ; i++) {
+    /* Send enough intro2 so that it doesn't expire */
+    retval = intro_point_should_expire(ip, approx_time());
+    tt_int_op(retval, OP_EQ, 0);
+
+    retval = hs_circ_handle_introduce2(service, &circ, ip, subcredential,
+                                       payload, sizeof(payload));
+    tt_int_op(retval, OP_EQ, 0);
+  }
+
+  /* xxx what about ip->replay_cache */
+
+  /* Check the contents of the replaycache */
+  tt_int_op(replaycache_size(service->state.replay_cache_rend_cookie),
+            OP_EQ, 10);
+
+  /* That last intro2 should make it expire: */
+  retval = intro_point_should_expire(ip, approx_time());
+  tt_int_op(retval, OP_EQ, 1);
+
+ done:
+  service_intro_point_free(ip);
+  hs_service_free(service);
+}
+
 struct testcase_t hs_service_tests[] = {
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup, TT_FORK,
     NULL, NULL },
@@ -2217,6 +2337,9 @@ struct testcase_t hs_service_tests[] = {
     TT_FORK, NULL, NULL },
   { "export_client_circuit_id", test_export_client_circuit_id, TT_FORK,
     NULL, NULL },
+  { "intro_replay_cache_expiration", test_intro_replay_cache_expiration, TT_FORK,
+    NULL, NULL },
+
 
   END_OF_TESTCASES
 };
