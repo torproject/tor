@@ -71,7 +71,9 @@ typedef struct hs_service_intro_point_t {
 
   /* Replay cache recording the encrypted part of an INTRODUCE2 cell that the
    * circuit associated with this intro point has received. This is used to
-   * prevent replay attacks. */
+   * prevent replay attacks. See INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS for
+   * more details.
+   */
   replaycache_t *replay_cache;
 } hs_service_intro_point_t;
 
@@ -432,6 +434,8 @@ STATIC int service_authorized_client_config_equal(
                                          const hs_service_config_t *config2);
 
 STATIC void service_clear_config(hs_service_config_t *config);
+
+STATIC void check_intro_point_replay_cache(hs_service_intro_point_t *ip);
 
 #endif /* defined(HS_SERVICE_PRIVATE) */
 
