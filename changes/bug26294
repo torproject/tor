@@ -1,0 +1,4 @@
+  o Major features (onion services):
+    - We no longer rotate introduction points after a certain number of
+      introductions. This improves the stability and performance of onion
+      services under stress. Closes ticket 26294.
