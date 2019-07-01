@@ -193,7 +193,7 @@ problem function-size /src/feature/dirparse/routerparse.c:router_parse_entry_fro
 problem function-size /src/feature/dirparse/routerparse.c:extrainfo_parse_entry_from_string() 210
 problem function-size /src/feature/hibernate/hibernate.c:accounting_parse_options() 109
 problem function-size /src/feature/hs/hs_cell.c:hs_cell_build_establish_intro() 115
-problem function-size /src/feature/hs/hs_cell.c:hs_cell_parse_introduce2() 154
+problem function-size /src/feature/hs/hs_cell.c:hs_cell_parse_introduce2() 155
 problem function-size /src/feature/hs/hs_client.c:send_introduce1() 104
 problem function-size /src/feature/hs/hs_client.c:hs_config_client_authorization() 108
 problem function-size /src/feature/hs/hs_common.c:hs_get_responsible_hsdirs() 104
@@ -203,7 +203,7 @@ problem function-size /src/feature/hs/hs_descriptor.c:decrypt_desc_layer() 110
 problem function-size /src/feature/hs/hs_descriptor.c:decode_introduction_point() 122
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_superencrypted_v3() 109
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_encrypted_v3() 109
-problem file-size /src/feature/hs/hs_service.c 4109
+problem file-size /src/feature/hs/hs_service.c 4128
 problem function-size /src/feature/keymgt/loadkey.c:ed_key_init_from_file() 333
 problem function-size /src/feature/nodelist/authcert.c:trusted_dirs_load_certs_from_string() 124
 problem function-size /src/feature/nodelist/authcert.c:authority_certs_fetch_missing() 296
