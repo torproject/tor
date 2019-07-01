@@ -40,11 +40,6 @@ struct rend_intro_point_t {
    * used to prevent replay attacks. */
   struct replaycache_t *accepted_intro_rsa_parts;
 
-  /** (Service side only) Count of INTRODUCE2 cells accepted from this
-   * intro point.
-   */
-  int accepted_introduce2_count;
-
   /** (Service side only) Maximum number of INTRODUCE2 cells that this IP
    * will accept. This is a random value between
    * INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS and
