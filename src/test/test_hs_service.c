@@ -690,11 +690,11 @@ test_service_intro_point(void *arg)
     /* Make sure the authentication keypair is not zeroes. */
     tt_int_op(fast_mem_is_zero((const char *) &ip->auth_key_kp,
                               sizeof(ed25519_keypair_t)), OP_EQ, 0);
-    /* The introduce2_max MUST be in that range. */
-    tt_u64_op(ip->introduce2_max, OP_GE,
-              INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS);
-    tt_u64_op(ip->introduce2_max, OP_LE,
-              INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS);
+    /* The replay_cache_max_introduce2 MUST be in that range. */
+    tt_u64_op(ip->replay_cache_max_introduce2, OP_GE,
+              INTRO_POINT_REPLAY_CACHE_MIN_INTRODUCTIONS);
+    tt_u64_op(ip->replay_cache_max_introduce2, OP_LE,
+              INTRO_POINT_REPLAY_CACHE_MAX_INTRODUCTIONS);
     /* Time to expire MUST also be in that range. We subtract 500 seconds
      * because there could be a gap between setting now and the time taken in
      * service_intro_point_new. On ARM and other older CPUs, it can be
@@ -860,10 +860,10 @@ test_helper_functions(void *arg)
   /* Testing intro_point_should_expire(). */
   {
     /* Just some basic test of the current state. */
-    tt_u64_op(ip->introduce2_max, OP_GE,
-              INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS);
-    tt_u64_op(ip->introduce2_max, OP_LE,
-              INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS);
+    tt_u64_op(ip->replay_cache_max_introduce2, OP_GE,
+              INTRO_POINT_REPLAY_CACHE_MIN_INTRODUCTIONS);
+    tt_u64_op(ip->replay_cache_max_introduce2, OP_LE,
+              INTRO_POINT_REPLAY_CACHE_MAX_INTRODUCTIONS);
     tt_u64_op(ip->time_to_expire, OP_GE,
               now + INTRO_POINT_LIFETIME_MIN_SECONDS);
     tt_u64_op(ip->time_to_expire, OP_LE,

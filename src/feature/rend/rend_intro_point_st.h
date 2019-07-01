@@ -43,8 +43,8 @@ struct rend_intro_point_t {
 
   /** (Service side only) Maximum number of INTRODUCE2 cells that this IP
    * will accept. This is a random value between
-   * INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS and
-   * INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS. */
+   * INTRO_POINT_REPLAY_CACHE_MIN_INTRODUCTIONS and
+   * INTRO_POINT_REPLAY_CACHE_MAX_INTRODUCTIONS. */
   int max_introductions;
 
   /** (Service side only) The time at which this intro point was first

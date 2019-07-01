@@ -307,7 +307,7 @@ get_intro_point_min_introduce2(void)
   /* The [0, 2147483647] range is quite large to accommodate anything we decide
    * in the future. */
   return networkstatus_get_param(NULL, "hs_intro_min_introduce2",
-                                 INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS,
+                                 INTRO_POINT_REPLAY_CACHE_MIN_INTRODUCTIONS,
                                  0, INT32_MAX);
 }
 
@@ -320,7 +320,7 @@ get_intro_point_max_introduce2(void)
   /* The [0, 2147483647] range is quite large to accommodate anything we decide
    * in the future. */
   return networkstatus_get_param(NULL, "hs_intro_max_introduce2",
-                                 INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS,
+                                 INTRO_POINT_REPLAY_CACHE_MAX_INTRODUCTIONS,
                                  0, INT32_MAX);
 }
 
@@ -450,8 +450,8 @@ service_intro_point_new(const node_t *node)
     if (BUG(max_introduce2_cells < min_introduce2_cells)) {
       goto err;
     }
-    ip->introduce2_max = crypto_rand_int_range(min_introduce2_cells,
-                                               max_introduce2_cells);
+    ip->replay_cache_max_introduce2 =
+      crypto_rand_int_range(min_introduce2_cells, max_introduce2_cells);
   }
   { /* Set intro point lifetime */
     int32_t intro_point_min_lifetime = get_intro_point_min_lifetime();
@@ -2507,7 +2507,8 @@ rotate_all_descriptors(time_t now)
 STATIC void
 check_intro_point_replay_cache(hs_service_intro_point_t *ip)
 {
-  if ((size_t) replaycache_size(ip->replay_cache) >= ip->introduce2_max) {
+  if ((size_t) replaycache_size(ip->replay_cache) >=
+      ip->replay_cache_max_introduce2) {
     log_info(LD_GENERAL, "We just did %d intros. Refreshing replay cache.",
              replaycache_size(ip->replay_cache));
     replaycache_free(ip->replay_cache);

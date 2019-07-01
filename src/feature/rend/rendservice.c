@@ -4229,8 +4229,8 @@ rend_consider_services_intro_points(time_t now)
       intro->time_published = -1;
       intro->time_to_expire = -1;
       intro->max_introductions =
-        crypto_rand_int_range(INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS,
-                              INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS);
+        crypto_rand_int_range(INTRO_POINT_REPLAY_CACHE_MIN_INTRODUCTIONS,
+                              INTRO_POINT_REPLAY_CACHE_MAX_INTRODUCTIONS);
       smartlist_add(service->intro_nodes, intro);
       log_info(LD_REND, "Picked router %s as an intro point for %s.",
                safe_str_client(node_describe(node)),
