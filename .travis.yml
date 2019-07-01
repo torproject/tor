@@ -53,7 +53,7 @@ matrix:
     - env: CHUTNEY="yes" SKIP_MAKE_CHECK="yes" CHUTNEY_ALLOW_FAILURES="2"
       compiler: clang
     # We clone our stem repo and run `make test-stem`
-    - env: TEST_STEM="yes"
+    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
     ## Check rust online with distcheck, to make sure we remove rust products
     - env: DISTCHECK="yes" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
     ## Check disable module dirauth with and without rust
@@ -75,7 +75,7 @@ matrix:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
   allow_failures:
     ## test-stem sometimes hangs on Travis
-    - env: TEST_STEM="yes"
+    - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
 
   exclude:
     ## gcc on OSX is less useful, because the default compiler is clang.
@@ -178,6 +178,7 @@ install:
   - if [[ "$TOR_RUST_DEPENDENCIES" == "true" ]]; then export TOR_RUST_DEPENDENCIES=$PWD/src/ext/rust/crates; fi
   ## If we're running chutney, install it.
   - if [[ "$CHUTNEY" != "" ]]; then git clone --depth 1 https://github.com/torproject/chutney.git ; export CHUTNEY_PATH="$(pwd)/chutney"; fi
+  ## If we're running stem, install it.
   - if [[ "$TEST_STEM" != "" ]]; then git clone --depth 1 https://github.com/torproject/stem.git ; export STEM_SOURCE_DIR=`pwd`/stem; fi
   ##
   ## Finally, list installed package versions
@@ -194,6 +195,7 @@ install:
   - python --version
   ## If we're running chutney, show the chutney commit
   - if [[ "$CHUTNEY" != "" ]]; then pushd "$CHUTNEY_PATH"; git log -1 ; popd ; fi
+  ## If we're running stem, show the stem version and commit
   - if [[ "$TEST_STEM" != "" ]]; then pushd stem; python -c "from stem import stem; print(stem.__version__);"; git log -1; popd; fi
 
 script:
